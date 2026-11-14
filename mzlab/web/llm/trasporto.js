@@ -11,6 +11,7 @@
   const st = { provider: "", local: false, owner: "", labels: {}, port: null };
   /** the key lives here and nowhere else; it is never posted out of this document @type {string} */
   let key = "";
+  let initGen = 0;
   /** @type {Map<string, AbortController>} */
   const live = new Map();
 
@@ -30,17 +31,21 @@
     });
   };
   // the stored key is encrypted with a CryptoKey that cannot be exported: a copy of the disk does not give the key (a script of this origin could still ask this document to decrypt)
-  const wrapKey = async () => {
+  // one get-or-create at a time: two callers with nothing stored would each generate a key and the later write would orphan what the first one encrypted
+  /** @type {Promise<CryptoKey> | null} */
+  let wrapping = null;
+  const wrapKey = () => wrapping || (wrapping = (async () => {
     const old = await store("wrap");
     if (old && old.key) return /** @type {CryptoKey} */ (old.key);
     const k = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
     await store("wrap", { key: k });
     return k;
-  };
-  const remember = async (/** @type {string} */ v) => {
+  })().catch(e => { wrapping = null; throw e; }));
+  // `provider` is the one of the click, not of whatever init has landed while the key was being encrypted
+  const remember = async (/** @type {string} */ v, /** @type {string} */ provider) => {
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const data = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await wrapKey(), new TextEncoder().encode(v));
-    await store("k:" + st.provider, { iv, data });
+    await store("k:" + provider, { iv, data });
   };
   const recall = async () => {
     try {
@@ -57,20 +62,38 @@
     $("hint").textContent = st.labels[st.local ? "local" : "hint"] || "";
     say(st.local ? "local" : key ? "set" : "none");
   };
+  // the origins this provider's key may reach, from the registry the site serves (`fornitori-1.json`, same bytes as the crate) and the one proxy-host constant: never from the page's request
+  /** @type {Promise<any[]> | null} */
+  let registry = null;
+  const origins = async () => {
+    // a failed fetch is not kept: the next send asks again
+    registry = registry || fetch("fornitori-1.json", { credentials: "omit" }).then(r => r.json()).then(j => j.providers || []).catch(e => { registry = null; throw e; });
+    const p = (await registry).find(x => x.id === st.provider);
+    if (!p) return [];
+    const out = [new URL(p.base_url).origin];
+    if (p.session_headers) {
+      const m = /^export const PROXY_HOST = "(https:\/\/[a-z0-9.-]+(?::[0-9]{1,5})?)?";$/m.exec(await (await fetch("proxy-host.js", { credentials: "omit" })).text());
+      if (m && m[1]) out.push(new URL(m[1]).origin);
+    }
+    return out;
+  };
   const post = (/** @type {any} */ m) => { if (st.port) st.port.postMessage(m); };
 
   /** @param {{id: string, request: {url: string, headers: string[][], body: string, auth: {header: string, prefix: string}}}} m */
   const send = async m => {
-    const { id, request: r } = m, ctl = new AbortController();
+    const { id, request: r } = m, ctl = new AbortController(), gen = initGen;
     live.set(id, ctl);
     try {
-      if (!/^https?:\/\//.test(r.url)) throw { key: "err.llm.network", params: { reason: "url" } };
+      let ok = false;
+      try { ok = /^https?:\/\//.test(r.url) && (await origins()).includes(new URL(r.url).origin); } catch (_) { /* no registry: nothing leaves */ }
+      // the origins were taken for the provider of this send: if an init landed while they were fetched, the key now held is another provider's (nothing is awaited from here to the fetch)
+      if (!ok || gen !== initGen) throw { key: "err.llm.network", params: { reason: "url" } };
       const headers = new Headers(/** @type {[string, string][]} */ (r.headers));
       if (r.auth.header) {
         if (!key) throw { key: "err.llm.auth", params: { reason: "nokey" } };
         headers.set(r.auth.header, r.auth.prefix + key);
       } else if (st.owner && key) headers.set(st.owner, key);
-      const res = await fetch(r.url, { method: "POST", headers, body: r.body, signal: ctl.signal, credentials: "omit", referrerPolicy: "no-referrer" });
+      const res = await fetch(r.url, { method: "POST", headers, body: r.body, signal: ctl.signal, credentials: "omit", redirect: "error", referrerPolicy: "no-referrer" });
       post({ t: "head", id, status: res.status, spend: res.headers.get("x-mzlab-spend") || "", soft: !!res.headers.get("x-mzlab-soft") });
       const rd = res.body && res.body.getReader();
       if (rd) for (;;) { const { done, value } = await rd.read(); if (done) break; const b = value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength); st.port && st.port.postMessage({ t: "chunk", id, bytes: b }, [b]); }
@@ -93,11 +116,15 @@
     if (ev.origin !== location.origin || ev.source !== window.parent) return;
     const m = ev.data || {};
     if (m.op === "init") {
+      // provider and key change together: the key is dropped before anything is awaited, and a recall of an earlier init never lands on a later one
+      key = ""; const gen = ++initGen;
       st.provider = String(m.provider || ""); st.local = !!m.local; st.owner = String(m.owner || ""); st.labels = m.labels || {};
       $("t-key").textContent = st.labels.key || ""; $("b-use").textContent = st.labels.use || ""; $("b-forget").textContent = st.labels.forget || ""; $("t-remember").textContent = st.labels.remember || "";
       $("key").setAttribute("aria-label", st.labels.key || "");
       if (ev.ports[0]) { st.port = ev.ports[0]; st.port.onmessage = onPort; }
-      key = st.local ? "" : await recall();
+      const k = st.local ? "" : await recall();
+      if (gen !== initGen) return;
+      key = k;
       $("remember").checked = !!key;
       paint();
       window.parent.postMessage({ op: "ready", hasKey: !!key }, location.origin);
@@ -105,7 +132,8 @@
   });
   $("b-use").addEventListener("click", async () => {
     key = $("key").value.trim(); $("key").value = "";
-    try { if (($("remember").checked || st.owner) && key) await remember(key); else await store("k:" + st.provider, null); } catch (_) { /* storage blocked: the key stays for this session */ }
+    const provider = st.provider;
+    try { if (($("remember").checked || st.owner) && key) await remember(key, provider); else await store("k:" + provider, null); } catch (_) { /* storage blocked: the key stays for this session */ }
     paint(); window.parent.postMessage({ op: "key", hasKey: !!key }, location.origin);
   });
   $("b-forget").addEventListener("click", async () => {

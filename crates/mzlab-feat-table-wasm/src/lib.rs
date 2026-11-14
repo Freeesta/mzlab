@@ -8,10 +8,8 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use wasm_bindgen::prelude::*;
 
-pub mod core;
-pub mod filterspec;
-pub mod pol;
-pub mod rows_mgf;
+// plain-Rust modules live in `mzlab-ops`; re-exported under their old paths
+pub use mzlab_ops::run::table::{core, filterspec, pol, rows_mgf};
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-table/1";

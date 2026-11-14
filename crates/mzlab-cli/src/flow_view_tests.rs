@@ -9,7 +9,7 @@ use mzlab_core::drawing;
 use mzlab_core::samples;
 use mzlab_core::step::DataType;
 use mzlab_feat::store::read_table;
-use mzlab_feat_table_wasm::core::table_of_view;
+use mzlab_ops::run::table::core::table_of_view;
 
 use crate::flow_stats_tests::{campioni_2, design, table};
 

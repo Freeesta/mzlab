@@ -9,7 +9,7 @@ use mzlab_core::json::{round, Out};
 use super::dig::{Cand, Dig};
 use super::network_pred::{predecessors, related};
 use crate::hypo::{Counts, Rules};
-use crate::network::arcs::{best_pairs, counts, neutral_mass};
+use crate::netarcs::{best_pairs, counts, neutral_mass};
 
 #[cfg(test)]
 mod golden;

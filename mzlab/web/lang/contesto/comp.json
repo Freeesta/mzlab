@@ -1,0 +1,9 @@
+{
+  "comp.xlsx.prefix": "Inizio del nome del file scaricato; solo lettere minuscole senza accento.",
+  "comp.count": "Conteggio dei candidati nella finestra «Formule compatibili»; {n} = numero.",
+  "comp.sc.obs": "Numero di picchi isotopici trovati nello spettro; {n}.",
+  "comp.terms": "Termini del punteggio di un candidato (0-1): {m} massa, {i} isotopi, {f} frammenti.",
+  "comp.det.limits": "Soglie del punteggio isotopico: {r} risoluzione a m/z 200, {p} errore in ppm, {s} errore sull'intensità in %, {mn} soglia in %, {w} pesi.",
+  "comp.first": "Seguito di comp.count; {n} = quanti ne sono mostrati.",
+  "comp.scored": "Sotto «Formule compatibili»: il punteggio isotopi/frammenti è stato calcolato solo per le {n} masse più vicine su {m} candidati; numeri."
+}

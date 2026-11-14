@@ -1,4 +1,4 @@
-//! The routes `feat/untargeted/*` of the app give the same bytes as the steps of the `.wasm` `untargeted` (`mzlab_feat_wasm::untargeted`) run directly on the same
+//! The routes `feat/untargeted/*` of the app give the same bytes as the steps of the `.wasm` `untargeted` (`mzlab_ops::run::feat::untargeted`) run directly on the same
 //! `.mzidx`: the `.mzfeatf` of every file and the `.mzfeat` of the series, on the high-resolution examples.
 use std::fs::File;
 use std::path::Path;
@@ -8,7 +8,7 @@ use mzlab_core::idxread::Index;
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
 use mzlab_feat::untargeted::pipeline::UntParams;
-use mzlab_feat_wasm::untargeted;
+use mzlab_ops::run::feat::untargeted;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
@@ -20,6 +20,8 @@ const NAMES: [&str; 4] = [
 ];
 // the examples are small and weak: thresholds well under the defaults of the batch of mzmine
 const PARAMS: &str = r#"{"engine":"untargeted","adap":{"noise":1000,"min_group_intensity":1000,"min_highest":3000},"resolve":{"min_abs_height":3000}}"#;
+/// The same with the opt-in correlation of the identity links (`ident.min_corr`).
+const PARAMS_CORR: &str = r#"{"engine":"untargeted","adap":{"noise":1000,"min_group_intensity":1000,"min_highest":3000},"resolve":{"min_abs_height":3000},"ident":{"min_corr":0.8}}"#;
 
 fn text(a: Answer) -> String {
     match a {
@@ -54,6 +56,16 @@ impl mzlab_feat::slabs::Stored for Held {
 
 #[test]
 fn the_routes_give_the_bytes_of_the_steps() {
+    routes_match(PARAMS);
+}
+
+/// The option reaches the app like the `.wasm`: the routes give the bytes of the steps run with it.
+#[test]
+fn the_routes_give_the_bytes_of_the_steps_with_the_ident_correlation() {
+    routes_match(PARAMS_CORR);
+}
+
+fn routes_match(params: &str) {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let data = tempfile::tempdir().unwrap();
     let st = State::new();
@@ -69,7 +81,7 @@ fn the_routes_give_the_bytes_of_the_steps() {
         .iter()
         .map(|n| st.indexer().unwrap().path(n).unwrap())
         .collect();
-    let p = UntParams::from_json(PARAMS).unwrap();
+    let p = UntParams::from_json(params).unwrap();
     let call = |op: &str, v: Value| -> Value {
         serde_json::from_str(&text(st.rpc(op, &v, &[]).unwrap())).unwrap()
     };
@@ -79,7 +91,7 @@ fn the_routes_give_the_bytes_of_the_steps() {
         untargeted::detect_to(&mut open(path), n, &p, &mut direct).unwrap();
         let got = call(
             "feat/untargeted/detect",
-            json!({"name": n, "params": PARAMS}),
+            json!({"name": n, "params": params}),
         );
         assert_eq!(got["sha256"], sha(&direct), "{n}");
         stored.push(direct);
@@ -96,7 +108,7 @@ fn the_routes_give_the_bytes_of_the_steps() {
     .unwrap();
     let got = call(
         "feat/untargeted/align",
-        json!({"names": NAMES, "params": PARAMS}),
+        json!({"names": NAMES, "params": params}),
     );
     assert_eq!(got["sha256"], sha(&table));
     assert_eq!(got["bytes"], table.len());

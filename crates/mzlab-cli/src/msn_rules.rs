@@ -1,5 +1,5 @@
 //! `mzlab-cli msn-rules RECORD...`: the rules of `fragrules/1` judged on public library spectra (MassBank records, MSP) with a known SMILES. One line of
-//! numbers per record (`msn_rules_prova`); `msn-rules sum` adds the lines up (`msn_rules_somma`). The protocol is in `docs/agenti/msn-regole-prove.md`.
+//! numbers per record (`msn_rules_prova`); `msn-rules sum` adds the lines up (`msn_rules_somma`). The protocol is in `docs/agenti/msn-manuale.md`.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;

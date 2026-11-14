@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from cargo_util import build
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
@@ -30,9 +31,9 @@ def built(tmp_path_factory):
     ser = root / "ser"
     run("python3", "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(ser))
     idx = sorted(str(p) for p in ser.glob("*.mzidx"))
-    run("cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "native")
-    run("cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-table-wasm", "--example", "table")
-    run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-table-wasm")
+    build("-p", "mzlab-feat-wasm", "--example", "native", runner=run)
+    build("-p", "mzlab-feat-table-wasm", "--example", "table", runner=run)
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-table-wasm", runner=run)
     pkg = root / "pkg"
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_feat_table_wasm.wasm")
     series = root / "series"

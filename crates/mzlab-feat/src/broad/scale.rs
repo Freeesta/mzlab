@@ -4,7 +4,7 @@ use crate::sortc::SortC;
 use mzlab_core::error::Result;
 
 use crate::centwave::ricker;
-use crate::trace::{filled, reserve};
+use crate::trace_base::{filled, reserve};
 
 /// The taps of the Ricker wavelet of standard deviation `s` samples, computed once per scale: `w[k]` is `ricker(k / s)`, which is even, so one side serves both.
 pub(super) struct Kernel {

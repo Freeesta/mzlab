@@ -1,6 +1,6 @@
 """Accessibility of the HR bench (WCAG 2.2 AA): axe-core (serious/critical) on the bench, the formula calculator and the information bar, accessible names on
 every control, Tab reaching the visible controls with a visible focus indicator, no keyboard trap, target size >= 24 px (2.5.8) and live regions for dynamic
-updates. Known gaps live in docs/agenti/a11y-da-sistemare.md. Fails (does not skip) when axe is missing: in CI that is a failure."""
+updates. Known gaps live in docs/agenti/accessibilita.md. Fails (does not skip) when axe is missing: in CI that is a failure."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

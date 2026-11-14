@@ -1,0 +1,9 @@
+uscita = "wasm-lettori/thermo"
+pacchetto = "mzlab-lettori-wasm"
+feature = "thermo"
+senza_default = true
+wasm_opt = "@estesi"
+parte = "lettori"
+tetto = 774144
+misura = 767792
+nota = "Thermo reader"

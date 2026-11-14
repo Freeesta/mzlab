@@ -48,23 +48,22 @@ Counts per area. `identifiers` and `keys` are distinct names per file, summed ov
 | `mzlab/*.py` | 0 | 3 | 0 | 0 |
 | other | 2 | 26 | 2 (the workflow files themselves) | 0 |
 
-- Notes of the map: `GITHUB` = a `.github/` file names the old path (crate names included): it is renamed only with Federico, together with the workflow. `MERGE` = the new directory exists (`tests/dati` → `tests/data`). `COLLISION` = two sources, an existing file, or a module directory next to another module's file get the same path (none left). `REORDERED` = a word-order rule fired: read the row before the rename.
+- Notes of the map: `GITHUB` = a `.github/` file names the old path (crate names included): it is renamed only in the final batch, together with the workflow. `MERGE` = the new directory exists (`tests/dati` → `tests/data`). `COLLISION` = two sources, an existing file, or a module directory next to another module's file get the same path (none left). `REORDERED` = a word-order rule fired: read the row before the rename.
 - Crate renames (`mzlab-lettori` → `mzlab-readers`, `mzlab-picchi` → `mzlab-peaks`, `mzlab-rotte-wasm` → `mzlab-routes-wasm`, `mzlab-msngrafo-wasm`, `mzlab-msnfigura-wasm`, `mzlab-msnregole-wasm`, `mzlab-lettori-wasm`, `mzlab-feat-grafo-wasm`) also rename the `.wasm` files: `sw.js` precache, `tools/build_site.py`, the caps of `wasm-tetti.md` and the size checks follow.
 
-## Scope (decisions of Federico)
+## Scope (decisions)
 - Out of scope: the Markdown prose of `docs/` stays Italian (15100 lines); only `docs/` file and directory names are renamed, and only those without the `GITHUB` note.
 - Kept as they are, never renamed: serialized names (schema names and JSON keys of saved files such as `campioni/2`, `corsa/1`, `metodo/1`, `mzflow/1` keys `formato`, `programma`, `operazioni`; OPFS paths; IndexedDB and `localStorage` keys; regex literals that read old Italian session titles). Renaming them would break files users already saved.
-- The 49 `GITHUB` paths (workflows, `docs/agenti`, `docs/schemi`, `docs/utenti`, `mzlab-lettori`, `mzlab-feat-grafo-wasm`, tools run by workflows, `fuzz/regressioni`, `tests/golden/librerie`, `tools/banco_wasm`, `tools/tipi`) are a separate final batch, started only with Federico's explicit approval at that point.
-- Queue gates: identifier batches go one area per PR while fewer than 7 PRs are open; `git mv` renames only while fewer than 4 are open. One English PR at a time, announced to the coordinator before the push.
+- The 49 `GITHUB` paths (workflows, `docs/agenti`, `docs/schemi`, `docs/utenti`, `mzlab-lettori`, `mzlab-feat-grafo-wasm`, tools run by workflows, `fuzz/regressioni`, `tests/golden/librerie`, `tools/banco_wasm`, `tools/tipi`) are a separate final batch, started only with the owner's explicit approval at that point.
+- Queue gates: identifier batches go one area per PR while fewer than 7 PRs are open; `git mv` renames only while fewer than 4 are open. One English PR at a time.
 
-## Batch plan, by risk
-1. Comments, all areas in one PR (`tests/data/nomi_tp/` docstrings, section rulers, test docstrings): no behaviour. Comments that only name an Italian identifier, CLI flag, schema key or quoted UI string change with that name.
-2. Local identifiers, one area per PR, in this order: `tools/`, `tests/`, `crates/` non-`pub` items, then `TP_Mine/` and `flow/`, then `mzlab/web/` (classic-script globals such as `TITOLI`, `MAPPA`, `REGISTRO` are shared across files: one global per commit, with every user).
-3. Public Rust API and wasm exports (`pub fn`, `#[wasm_bindgen]` names called from JS): crate by crate, site and app together, parity tests unchanged.
-4. Keys seen from outside: CSS ids/classes and `data-*` (e2e selectors and `tour.js` follow), lang keys (717, `tools/controlla_i18n.py` and `lang/contesto.json` follow), CLI flags (`--strutture`, `--cicli`, `--giri`) with the old flag kept as an alias for one release. Serialized names are not part of it.
-5. File renames with `git mv`, smallest coupling first: `mzlab/*.py` (3), `flow/` (1), `TP_Mine/` (27), `tests_e2e/` (467, plus the `AREAS` map of `tools/verifica.py`), `tests/` (423 + 25 directories), `tools/` (265 + 6 directories), `mzlab/web/` (300: `index.html` order, `sw.js`, `tools/build_site.py`), `crates/` (551 + 54 directories, crate renames last), `docs/` names last. Rows with the `GITHUB` note are left for the final batch.
-6. Final batch, only with Federico: the `GITHUB` paths together with the workflows that name them.
-- Rust identifiers of steps 2-3 go only when the name is defined nowhere but as a `fn`, method, local or `const` (no field, variant, type, module, macro body or attribute; no `#[wasm_bindgen]`, `#[tauri::command]` or `no_mangle` export), as a `fn`, method or `const` is named in no non-Rust code file and in no backticked doc span (a local is seen by no other file), and its English name is not already a token of any file using it. Test names that cite a serialized key, a schema (`campioni/2`) or a route name keep that word.
+## Rename rules
+- Comments that only name an Italian identifier, CLI flag, schema key or quoted UI string change with that name.
+- Classic-script globals (`TITOLI`, `MAPPA`, `REGISTRO`, …) are shared across files: one global per commit, with every user.
+- Public Rust API and wasm exports (`pub fn`, `#[wasm_bindgen]` names called from JS): crate by crate, site and app together, parity tests unchanged.
+- Keys seen from outside: CSS ids/classes and `data-*` (e2e selectors and `tour.js` follow), lang keys (`tools/controlla_i18n.py` and `lang/contesto/<area>.json` follow), CLI flags (`--strutture`, `--cicli`, `--giri`) with the old flag kept as an alias for one release.
+- File renames with `git mv`: `tests_e2e/` renames update the `AREAS` map of `tools/verifica.py`; `mzlab/web/` renames update the `index.html` order, `sw.js` and `tools/build_site.py`; crate renames go last in `crates/`, `docs/` names last overall; rows with the `GITHUB` note wait for the final batch.
+- Rust identifiers (local and public) go only when the name is defined nowhere but as a `fn`, method, local or `const` (no field, variant, type, module, macro body or attribute; no `#[wasm_bindgen]`, `#[tauri::command]` or `no_mangle` export), as a `fn`, method or `const` is named in no non-Rust code file and in no backticked doc span (a local is seen by no other file), and its English name is not already a token of any file using it. Test names that cite a serialized key, a schema (`campioni/2`) or a route name keep that word.
 
 ## Tabui: English only
 - Rules: every Tabui text (interface, tables, tooltips, reports, exported columns) is English; «formula» is never bare (`Neutral formula`, `Ion formula`, `neutral_formula`); no decorative Unicode; no `lang/` keys, tooltips only in `TP_Mine/js/40_tabui_testi.js` (`TABUI_T.en`). Guard: `python3 -m pytest tests/test_tabui_inglese.py`.

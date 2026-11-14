@@ -1,0 +1,7 @@
+uscita = "wasm"
+pacchetto = "mzlab-wasm"
+wasm_opt = "@motore"
+parte = "core"
+tetto = 2174976
+misura = 2157096
+nota = "engine: mzlab-core at O3 leaves 3.4 % margin; every growth is recorded in docs/agenti/wasm-tetti-misure.md"

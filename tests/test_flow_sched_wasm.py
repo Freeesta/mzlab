@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from cargo_util import build
 
 ROOT = Path(__file__).resolve().parents[1]
 CASES = ROOT / "crates/mzlab-core/tests/data/sched_cases.json"
@@ -17,7 +18,7 @@ def run(*a):
 
 
 def test_wasm_scheduler_replays_the_shared_cases(tmp_path):
-    run("cargo", "build", "--release", "--locked", "-q", "--target", "wasm32-unknown-unknown", "-p", "mzlab-rotte-wasm")
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-rotte-wasm", runner=run)
     pkg = tmp_path / "pkg"
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_rotte_wasm.wasm")
     out = run("node", str(ROOT / "tests/flow_sched_nodo.js"), str(pkg), str(CASES))

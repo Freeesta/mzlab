@@ -43,3 +43,32 @@ Esito: **adottata** (vedi `misure-velocita.md`), **scartata** (numeri sotto sogl
 | 6/11 | Per-block min/max cache of dense traces (`decima.js`), so a draw reads blocks instead of points | scartata | one SRM trace of 10^6 points: whole view already 11 ms per draw, zoom 0.9 ms, wheel, drag and hover at 16.7 ms frames (`misure-grafici.md`) | a profile shows `rawLine` or `extent` above a frame (16 ms) |
 | 6/11 | Dense overlaid traces drawn as one filled area (column max down to the baseline) instead of a 1 px stroke | scartata | 20 SRM files × 10^5 points: no gain over the 1 px envelope stroke (`hairline`), and the area hides the traces behind | — |
 | 6/11 | Y zoom: the triangles above the plot read the binary-search window with a `for` loop instead of a `forEach` over every point (`grafici.js`) | scartata | 20 × 10^5 points, y zoom 0-300: 326.5 → 330.3 ms per draw; the cost was the raster of strokes ending 10^5 px above the canvas (`DECIMA.clipY`, adopted); after it the loop is ~16 ms of 142 in a profile and `grafici.js` has no startup bytes to spare | `grafici.js` gets startup room |
+
+## CI: misure dei job Rust e tagli scartati
+Cosa è misurato e perché non si fa; come funziona la CI: `ci-veloce.md`.
+
+- **Misura dei job Rust** (mediana su PR verdi, cache calde, secondi): `rust` (feat) 107, `rust-core` 172, `rust-misc` 155, `rust-wasm` 186, `rust-lint` 30, `deny` 23; tempo totale del workflow 563. Il percorso Rust è il più lento fra `rust-core`, `rust-det` e `rust-wasm`: abbassarne uno solo sposta il collo di bottiglia sugli altri.
+- **Tagli valutati e scartati**: dividere `rust-wasm` (meno di 60 s), un quarto gruppo di test fra `rust-core` e `rust-misc` (circa 0) e un job `sito-wasm-lettori` a parte (un runner in più, con la coda che pesa di più).
+- **Tagli scartati con misura locale (4 CPU)**: `rust-det` (build nativo + WASI, `release` con LTO): sorgenti toccati 356 s, con `ci_cargo_mtime.py restore` 3 s; con LTO spento e opt-level 3 296 s (−17 %, ma non è più il profilo del prodotto).
+  Cargo tiene il lock della cartella di build: due `cargo build` in parallelo sullo stesso `target/` (nativo e wasip1) si accodano (373 s contro 356 s). `rust-core` (159 binari di test, 505 s di CPU di compilazione): opt-level 1 costruisce da zero in circa 137 s contro 200 s ma i test durano 144 s contro 121 s, saldo circa −40 s da costruzione piena e +23 s da cache pulita; scartato.
+  Quando cambia una crate di base (`mzlab-core`) ogni binario a valle si ricompila: il guadagno degli mtime resta sui commit che non toccano `crates/` o toccano solo foglie.
+- **Build unica a monte, stimata e scartata**: un job per commit che compila core+feat+cli (nativo e wasm32, profilo prodotto) e pubblica `target/` come cache per sha, riusato da det, solo311 e wasm. Quei job compilano in parallelo la stessa cosa (det 290 s, solo311 380 s sui run pesanti); con il job a monte il percorso diventa build a freddo (circa 210-250 s) + ripristino della cache (circa 45 s misurati per `target`) + il resto del consumatore (20-60 s), cioè 280-350 s: nessun guadagno di tempo di attesa, solo minuti di runner.
+- **Proposta aperta (codice di prodotto)**: ogni modifica a una crate di base ricompila a valle `mzlab-feat` (99 s a freddo), `mzlab-cli` (75 s) e `mzlab-core` (58 s), tutte con LTO e un solo codegen unit, in ogni job che costruisce il profilo prodotto.
+  Ridurre la fan-out toglierebbe la ricompilazione, non spostarla: `mzlab-cli` dovrebbe dipendere solo dalle crate che usa davvero, le funzioni di foglia (libreria spettrale, chimica, LLM) dietro feature o crate separate, e `mzlab-feat` non dovrebbe ricompilare per un cambio in una foglia. Misura da fare prima: `cargo build --timings` per commit tipo di main e quanti crate invalida.
+
+## WebAssembly: leve scartate
+Misure e stato del build in `wasm-potenziale.md` (§3 numeri, §4 supporto dei browser). Ognuna scartata; si riprova solo con la condizione scritta.
+- **Thread wasm**: in Rust stabile `wasm32-unknown-unknown` non ha `atomics` (servono nightly, `-Zbuild-std`, `wasm-bindgen-rayon`) e GitHub Pages non manda COOP/COEP (un service worker alla `coi-serviceworker` chiede un ricaricamento alla prima visita e `require-corp` ovunque; Safari senza `credentialless`). Fra file il pool già scala ×4 (1, 2, 4 worker in 444, 449, 456 ms). Riprovare se `atomics` arriva in stable e l'hosting manda COOP/COEP.
+- **memory64**: Safari solo Technology Preview; i puntatori a 64 bit costano controlli dei limiti in più; budget e spill stanno già sotto 4 GiB (`memoria.md`). Riprovare se Safari lo spedisce e un file reale supera 4 GiB.
+- **Relaxed SIMD**: risultati diversi fra CPU (FMA, min/max, dot), rompe il determinismo bit per bit. Non si riprova.
+- **Exception handling**: serve `panic = "unwind"` e quindi `-Zbuild-std` (nightly). Riprovare con unwind in stable per wasm.
+- **SIMD esplicito** (`core::arch::wasm32`, `portable_simd`): i cicli caldi sono XML/base64/inflate (non vettoriali) e AsLS/centroidi (dipendenze in sequenza); `portable_simd` è nightly. Riprovare se un profilo mostra un ciclo vettorizzabile in cima.
+- **`DecompressionStream`** per gli array base64+zlib: asincrono e per array (migliaia di pochi KB), più lento dell'inflate in wasm.
+- **Doppio build** (baseline + veloce, `wasm-feature-detect`): tutti i bersagli hanno SIMD128; costerebbe ~600 s di CPU in CI per PR, il doppio dei byte in `site/` e delle prove e2e.
+- **O2 / Os**: O2 come O3 (centroidi più lenti, 547 KB); Os a metà (499 KB, lettura HR 1168 ms in Node).
+- **Livello di `wasm-opt`**: `-O3` contro `-Oz` dopo rustc O3 entro il rumore (537 contro 535 KB): conta solo `opt-level` di rustc; resta `-Oz`.
+- **`wasm32v1-none`** (`no_std`) e **`-Zbuild-std`** (nightly): non fanno per un motore con `std` e toolchain fissata.
+- **Altre proposte**: tail calls ed extended-const senza effetto sul codice Rust; multi-memory e JS String Builtins non usati da `wasm-bindgen` 0.2.129; WasmGC irrilevante (Rust ha la sua memoria lineare).
+- **Cache dei `Module` compilati in IndexedDB**: non più supportata dai browser; V8 mette in cache da sé il codice delle risposte HTTP in cache; compilazione 10-19 ms per modulo.
+- **I/O**: la copia JS → wasm (~10 GB/s) è < 1 % della lettura mzML (~80-140 MB/s); nessuna leva.
+- **`simd-json`** al posto di `serde_json`: vuole SIMD x86/NEON e non è più veloce in wasm.

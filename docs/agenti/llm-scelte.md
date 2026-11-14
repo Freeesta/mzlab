@@ -1,5 +1,5 @@
 # LLM: principi, scelte e proposte aperte
-Le regole di fondo dell'assistente e degli agenti esterni che restano vincolanti; il codice che c'è sta in `llm.md`, `llm-subagenti.md`, `llm-lettori.md`, `assistente-proxy.md` e `per-agenti.md`.
+Le regole di fondo dell'assistente e degli agenti esterni che restano vincolanti; il codice che c'è sta in `llm.md`, `llm-subagenti.md`, `assistente-proxy.md` e `per-agenti.md`.
 
 ## Principi
 - Opt-in esplicito, per persona: spento di default su sito e desktop; si accende in Impostazioni con la finestra di consenso. Nessuna richiesta verso un fornitore prima del consenso (un e2e conta le richieste) e zero byte scaricati da chi non lo accende; i tetti dei `.wasm` esistenti non cambiano.

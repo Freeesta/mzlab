@@ -15,7 +15,8 @@ use mzlab_core::idxread::{Index, ReadAt};
 use crate::axis::half;
 use crate::sweep::windows;
 use crate::table::{FileFeatures, FLAG_PURITY_EST};
-use crate::trace::{filled, reserve, Params};
+use crate::trace::Params;
+use crate::trace_base::{filled, reserve};
 
 #[derive(Debug, Clone)]
 pub struct Ms2Params {
@@ -259,7 +260,7 @@ pub fn link<R: ReadAt>(
     };
     let cands = candidates(index, &ids, &rt, p.polarity, q)?;
     let prs = pairs(f, &cands, &rt, margin_minutes(&rt, q.margin_s))?;
-    let max_peaks = (p.budget / 24).clamp(1024, crate::trace::SLAB_PEAKS);
+    let max_peaks = (p.budget / 24).clamp(1024, crate::trace_base::SLAB_PEAKS);
     let mut tri = purities(index, si, f, &cands, &prs, q, max_peaks)?;
     sortc::by(&mut tri, |a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
     for &(i, scan, pur, est) in &tri {

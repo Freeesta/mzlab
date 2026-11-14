@@ -1,0 +1,10 @@
+uscita = "wasm-feat/untargeted"
+pacchetto = "mzlab-feat-wasm"
+feature = "untargeted"
+senza_default = true
+chiavi = { untargeted = 11 }
+wasm_opt = "@motore"
+parte = "b"
+tetto = 585728
+misura = 470779
+nota = "+2.4 % over 512000 for the broad-band mark and the blank rule (measured 512259), decision of the Coordinator"

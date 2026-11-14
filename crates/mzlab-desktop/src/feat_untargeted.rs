@@ -1,11 +1,11 @@
-//! The routes `feat/untargeted/detect` and `feat/untargeted/align` of `rpc`: the pipeline after mzmine 3.9.0 (`mzlab_feat_wasm::untargeted`, the steps the `.wasm` `untargeted`
+//! The routes `feat/untargeted/detect` and `feat/untargeted/align` of `rpc`: the pipeline after mzmine 3.9.0 (`mzlab_ops::run::feat::untargeted`, the steps the `.wasm` `untargeted`
 //! runs) over the `.mzidx` of the index folder, with the same state as `feat/detect` and `feat/align` (the `.mzfeatf` of each file, the table), so that the views of the Pipeline
 //! panel read its table unchanged. `feat/formula_id` (`{mz[], y[], feature_mz, params}`) answers the JSON `formula_id/1` of `mzlab_feat::untargeted::formula_id`. `{op: "feat/untargeted/detect", name, params}` and `{op: "feat/untargeted/align", names, params}`; `params` is the JSON text of the recipe.
 
 use mzlab_core::{Error, Result};
 use mzlab_feat::untargeted::formula_id::{identify, to_json, Opts};
 use mzlab_feat::untargeted::pipeline::UntParams;
-use mzlab_feat_wasm::untargeted;
+use mzlab_ops::run::feat::untargeted;
 use serde_json::Value;
 
 use crate::engine::State;

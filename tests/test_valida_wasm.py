@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from cargo_util import build
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
@@ -20,8 +21,8 @@ def run(*a, ok=(0,)):
 @pytest.fixture(scope="module")
 def built(tmp_path_factory):
     root = tmp_path_factory.mktemp("valida")
-    run("cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-cli")
-    run("cargo", "build", "--release", "--locked", "-q", "--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", "valida")
+    build("-p", "mzlab-cli", runner=run)
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", "valida", runner=run)
     pkg = root / "pkg"
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_lettori_wasm.wasm")
     pytest.importorskip("numpy")

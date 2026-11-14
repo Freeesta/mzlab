@@ -7,7 +7,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 import pytest
-from cargo_util import build_example, run
+from cargo_util import build, build_example, cli, example, run
 
 ROOT = Path(__file__).resolve().parents[1]
 MZML = ROOT / "tests" / "golden" / "ref" / "msntree_rotta" / "msn.mzML"
@@ -19,10 +19,10 @@ pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm
 def pkg(tmp_path_factory):
     d = tmp_path_factory.mktemp("msnregole")
     for crate in ("mzlab-msnregole-wasm", "mzlab-msngrafo-wasm"):
-        run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", crate)
+        build("--target", "wasm32-unknown-unknown", "-p", crate)
         run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / crate), f"target/wasm32-unknown-unknown/release/{crate.replace('-', '_')}.wasm")
     build_example("mzlab-core", "mzidx")
-    run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-core", "--example", "mzidx", "--", str(MZML), str(d / "msn.mzidx"))
+    example("mzlab-core", "mzidx", str(MZML), str(d / "msn.mzidx"))
     return d
 
 
@@ -44,6 +44,6 @@ def test_graph_with_the_expectations_of_the_wasm_is_the_graph_of_the_command(pkg
     base = f"formula=C14H15N3O5%2B&regole=1&smiles={quote(SMILES, safe='')}"
     query = f"{base}&attese={quote(expectations(pkg, SMILES), safe='')}"
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "mzlab-msngrafo-wasm"), str(pkg / "msn.mzidx"), str(MZML), query).stdout
-    want = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", SMILES, "--regole").stdout
+    want = cli("msn-graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", SMILES, "--regole").stdout
     assert got + "\n" == want
     assert '"regole":' in got

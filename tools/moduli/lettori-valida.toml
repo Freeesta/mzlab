@@ -1,0 +1,9 @@
+uscita = "wasm-lettori/valida"
+pacchetto = "mzlab-lettori-wasm"
+feature = "valida"
+senza_default = true
+wasm_opt = "@estesi"
+parte = "lettori"
+tetto = 479744
+misura = 478229
+nota = "the mzML validator, no reader, its own module"

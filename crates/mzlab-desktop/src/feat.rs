@@ -1,4 +1,4 @@
-//! mzFinder in the app: the routes `feat/*` of `rpc`, the native twin of `TP_Mine/files/feat-worker.js`. The steps are the ones the `.wasm` runs (`mzlab_feat_wasm::run`),
+//! mzFinder in the app: the routes `feat/*` of `rpc`, the native twin of `TP_Mine/files/feat-worker.js`. The steps are the ones the `.wasm` runs (`mzlab_ops::run::feat::run`),
 //! over the `.mzidx` of the index folder of the app (`idxbuild.rs`), so the `.mzfeat` has the same bytes as the one of the site. What a step leaves (the `.mzfeatf` of each file,
 //! the table, the hypotheses, the Dig) stays in `FeatState`, because the page does not hold bytes of files here: it names the registered files and asks for the next step.
 //! The routes `finder/*` are in `feat_finder.rs`. Errors are `{error_key, params}` like the rest of `rpc`.
@@ -12,7 +12,7 @@ use mzlab_core::{Error, Result};
 use mzlab_feat::legacy::dig::Dig;
 use mzlab_feat::legacy::lr::LrDig;
 use mzlab_feat::store::Slice;
-use mzlab_feat_wasm::run::{self, HypoRun};
+use mzlab_ops::run::feat::run::{self, HypoRun};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
@@ -54,7 +54,7 @@ impl State {
         let name = p["name"].as_str().unwrap_or("");
         let mut ix = self.open_idx(name)?;
         let r = run::recipe_for(p["recipe"].as_str().unwrap_or(""), &mut ix)?;
-        mzlab_feat_wasm::estimate::detect_fits(&mut ix, &r, step_budget().cap())?;
+        mzlab_ops::run::feat::estimate::detect_fits(&mut ix, &r, step_budget().cap())?;
         // The page asks for several files at once: the pool of the index builds (cores - 1, at most 4) bounds how many run together and leaves a core to the window.
         let bytes = self
             .indexer()?
@@ -73,7 +73,7 @@ impl State {
         let mb = p["budget_mb"]
             .as_f64()
             .unwrap_or_else(crate::ram::native_budget_mb);
-        text(mzlab_feat_wasm::estimate::detect_estimate_json(
+        text(mzlab_ops::run::feat::estimate::detect_estimate_json(
             &mut ix, &r, mb,
         )?)
     }
@@ -113,7 +113,7 @@ impl State {
         let mut ix = self.open_idx(p["name"].as_str().unwrap_or(""))?;
         let r = run::recipe_for(p["recipe"].as_str().unwrap_or(""), &mut ix)?;
         let budget = step_budget();
-        text(mzlab_feat_wasm::family::record(
+        text(mzlab_ops::run::feat::family::record(
             &mut ix,
             p["name"].as_str().unwrap_or(""),
             &r,
@@ -218,7 +218,7 @@ impl State {
     /// `feat/table`: the table held by the last `feat/align` or `feat/evidence`. `kind` = `view`, `report`, `qc`, `check` (`tabcheck/1`; `polarity`, `options`), `plausible` (`plausible/1`; `options`), `samples`, `export` (`export_kind`), `ms2`
     /// (`export_kind`, the indexes of `names`) as the Pipeline panel asks of `mzlab-feat-table-wasm`; `bytes` = a piece (`off`, `len`) of the `.mzfeat`.
     fn feat_table(&self, p: &Value) -> Result<Answer> {
-        use mzlab_feat_table_wasm::core as t;
+        use mzlab_ops::run::table::core as t;
         let s = |k: &str| p[k].as_str().unwrap_or("");
         let kind = s("kind");
         if kind == "samples" {
@@ -299,14 +299,14 @@ impl State {
     /// `feat/table` with `kind` = `check`: the `tabcheck/1` of the held table under the view `spec`; `options` is the JSON text of `core::tabcheck_json`. `plausible`: the `plausible/1` read with the `options` text of `plausible::Limits::from_json`.
     fn check_text(kind: &str, at: &mut Slice, size: u64, p: &Value, pol: i32) -> Result<String> {
         if kind == "plausible" {
-            return mzlab_feat_table_wasm::core::plausible_json(
+            return mzlab_ops::run::table::core::plausible_json(
                 at,
                 size,
                 p["options"].as_str().unwrap_or(""),
             );
         }
         let s = |k: &str| p[k].as_str().unwrap_or("");
-        mzlab_feat_table_wasm::core::tabcheck_json(
+        mzlab_ops::run::table::core::tabcheck_json(
             at,
             size,
             s("samples"),

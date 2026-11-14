@@ -1,4 +1,5 @@
-"""tools/ci_e2e_cambiati.py: the job `e2e-cambiati` runs the e2e of the changed files minus the smoke round and the tests of other jobs; a core file or documents only run none."""
+"""tools/ci_e2e_cambiati.py: the job `e2e-cambiati` runs the e2e of the changed files minus the smoke round and the tests of other jobs; a core file runs a bounded safety set, documents only run none."""
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -14,9 +15,19 @@ def test_documents_only_run_nothing():
     assert tests == [] and why
 
 
-def test_a_core_file_runs_nothing_and_names_the_night():
+def test_a_core_file_runs_a_bounded_safety_set():
     tests, why = ci.pick({"tests_e2e/lib.py"})
-    assert tests == [] and "notte.yml" in why
+    cost = json.loads(ci.GREEN.read_text(encoding="utf-8"))
+    assert tests and tests == sorted(tests) and len(set(tests)) == len(tests) and "areas covered" in why
+    assert all((ROOT / "tests_e2e" / f"{n}.py").exists() for n in tests)
+    assert sum(cost[n] for n in tests) <= ci.BUDGET_S and max(cost[n] for n in tests) <= ci.TEST_CAP_S
+    assert not set(tests) & (set(verifica.SMOKE) | set(verifica.SMOKE_CHROMIUM_LINUX))
+    assert not any(verifica.NEEDS.get(n, set()) & ci.ELSEWHERE for n in tests)
+    assert set(tests) <= set(cost)   # only what passed on the runner in the nightly
+
+
+def test_the_safety_set_is_the_same_for_every_core_file():
+    assert ci.pick({"tools/pre_pr.py"})[0] == ci.pick({"tests_e2e/lib.py"})[0]
 
 
 def test_an_area_file_runs_its_tests_without_the_smoke_round():

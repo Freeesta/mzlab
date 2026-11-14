@@ -1,0 +1,152 @@
+"""Data of the site's .wasm modules: one tools/moduli/<name>.toml each (output, cargo package, features, wasm-opt set, build part, cap, note, last measure).
+The only reader of those files: `--elenco <part>` (names, for the shell scripts), `--riga <name>` (how to build one), `--tetto <name>`,
+`--manifest <wasm-feat dir>` (writes its manifest.json from a build),
+`--misura <site/static dir>` (writes `misura` = bytes after wasm-opt of every module from a real build; the only writer of that field), `--controlla [--base <git ref>]`.
+Cap rule (docs/agenti/wasm-tetti.md): a cap rises by at most 10 % per new function and never in a workflow; with --base a cap above 1.10 x its base value fails."""
+import argparse
+import hashlib
+import json
+import re
+import subprocess
+import sys
+import tomllib
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+DIR = ROOT / "tools" / "moduli"
+PARTI = ("core", "a", "b", "lettori")
+OPT = ("@motore", "@estesi")
+CAMPI = {"uscita": str, "pacchetto": str, "wasm_opt": str, "parte": str, "tetto": int, "nota": str}
+
+
+def carica(testi: dict[str, str] | None = None) -> dict[str, dict]:
+    """name -> record, in file-name order; `testi` (name -> toml text) replaces the files, for a git base."""
+    if testi is None:
+        testi = {p.stem: p.read_text(encoding="utf-8") for p in sorted(DIR.glob("*.toml"))}
+    return {n: tomllib.loads(t) for n, t in sorted(testi.items())}
+
+
+def da_base(ref: str) -> dict[str, dict]:
+    # an unknown ref must fail, never read as "no modules" (every cap would then look new and pass)
+    elenco = subprocess.run(["git", "ls-tree", "--name-only", ref, "tools/moduli/"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split()
+    testi = {Path(f).stem: subprocess.run(["git", "show", f"{ref}:{f}"], cwd=ROOT, capture_output=True, text=True, check=True).stdout for f in elenco if f.endswith(".toml")}
+    return carica(testi)
+
+
+def errori(mod: dict[str, dict]) -> list[str]:
+    err = []
+    uscite = {}
+    for n, r in mod.items():
+        for c, tipo in CAMPI.items():
+            if not isinstance(r.get(c), tipo) or isinstance(r.get(c), bool):
+                err.append(f"{n}: field `{c}` missing or not {tipo.__name__}")
+        if r.get("parte") not in PARTI:
+            err.append(f"{n}: parte must be one of {PARTI}")
+        if r.get("wasm_opt") not in OPT:
+            err.append(f"{n}: wasm_opt must be one of {OPT}")
+        if isinstance(r.get("tetto"), int) and r["tetto"] <= 0:
+            err.append(f"{n}: tetto must be positive")
+        if "misura" in r and (not isinstance(r["misura"], int) or r["misura"] >= r.get("tetto", 0)):
+            err.append(f"{n}: misura {r['misura']} not below the cap")
+        if "\n" in str(r.get("nota", "")):
+            err.append(f"{n}: nota is one line")
+        if r.get("uscita") in uscite:
+            err.append(f"{n}: uscita {r['uscita']} already used by {uscite[r['uscita']]}")
+        uscite[r.get("uscita")] = n
+    return err
+
+
+def cambi(mod: dict[str, dict], base: dict[str, dict]) -> list[str]:
+    """Every changed cap, one line each; a line starting with FAIL is above the allowed 1.10 x base. NEW / REMOVED lines show a module added or dropped (not a failure)."""
+    out = []
+    for n, r in mod.items():
+        if n not in base:
+            out.append(f"NEW {n}: cap {r['tetto']} — a new .wasm module is an owner decision")
+    out += [f"REMOVED {n}" for n in base if n not in mod]
+    for n, r in mod.items():
+        if n in base and r["tetto"] != base[n]["tetto"]:
+            b = base[n]["tetto"]
+            out.append(f"{'FAIL ' if r['tetto'] > b * 1.10 else ''}{n}: {b} -> {r['tetto']} ({(r['tetto'] / b - 1) * 100:+.1f} %)")
+    return out
+
+
+def riga(r: dict) -> str:
+    """`out dir|package|cargo flags|cap|wasm-opt set` for the build scripts (`|` keeps an empty field in place)."""
+    flags = ("--no-default-features " if r.get("senza_default") else "") + (f"--features {r['feature']}" if r.get("feature") else "")
+    return "|".join((r["uscita"], r["pacchetto"], flags.strip(), str(r["tetto"]), r["wasm_opt"]))
+
+
+def manifesto(mod: dict[str, dict], o: Path) -> None:
+    """manifest.json of wasm-feat: one key per `chiavi` entry, in the order of its number; modules fused in one .wasm (hr, attributio-all) repeat their entry."""
+    voci = {}
+    for r in mod.values():
+        for chiave, pos in r.get("chiavi", {}).items():
+            d, stem = r["uscita"].rsplit("/", 1)[1], r["pacchetto"].replace("-", "_")
+            sha = hashlib.sha256((o / d / f"{stem}_bg.wasm").read_bytes()).hexdigest()
+            voci[pos] = (chiave, {"js": f"{d}/{stem}.js", "wasm": f"{d}/{stem}_bg.wasm", "sha256": sha})
+    m = dict(voci[p] for p in sorted(voci))
+    m["attributio_rev"]["classes"] = "attributio-all/classi-1.json"   # the table of classes beside the fused attributio module
+    (o / "manifest.json").write_text(json.dumps(m, indent=1), encoding="utf-8")
+
+
+def misure(mod: dict[str, dict], static: Path) -> list[str]:
+    """Rewrites `misura = N` in every toml from the built <static>/<uscita>/<package>_bg.wasm; nothing is written if a file is missing or above its cap."""
+    nuovi, err = {}, []
+    for n, r in mod.items():
+        w = static / r["uscita"] / f"{r['pacchetto'].replace('-', '_')}_bg.wasm"
+        if not w.is_file():
+            err.append(f"{n}: {w} not built")
+            continue
+        nuovi[n] = w.stat().st_size
+        if nuovi[n] >= r["tetto"]:   # same rule as tools/wasm_opt.sh: a module equal to its cap fails
+            err.append(f"{n}: measured {nuovi[n]} not below the cap {r['tetto']}")
+    if err:
+        return err
+    for n, b in nuovi.items():
+        f = DIR / f"{n}.toml"
+        t = f.read_text(encoding="utf-8")
+        t = re.sub(r"^misura = .*\n", "", t, flags=re.M)
+        t = re.sub(r"^(tetto = .*\n)", rf"\g<1>misura = {b}\n", t, flags=re.M)
+        f.write_text(t, encoding="utf-8")
+    return []
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    g = ap.add_mutually_exclusive_group(required=True)
+    g.add_argument("--elenco", choices=PARTI, metavar="PART")
+    g.add_argument("--tetto", metavar="NAME")
+    g.add_argument("--riga", metavar="NAME")
+    g.add_argument("--manifest", metavar="DIR")
+    g.add_argument("--misura", metavar="DIR")
+    g.add_argument("--controlla", action="store_true")
+    ap.add_argument("--base", metavar="REF")
+    a = ap.parse_args()
+    mod = carica()
+    if a.elenco:
+        print("\n".join(n for n, r in mod.items() if r["parte"] == a.elenco))
+    elif a.tetto or a.riga:
+        n = a.tetto or a.riga
+        if n not in mod:
+            print(f"unknown module {n}", file=sys.stderr)
+            return 2
+        print(mod[n]["tetto"] if a.tetto else riga(mod[n]))
+    elif a.manifest:
+        manifesto(mod, Path(a.manifest))
+    elif a.misura:
+        err = misure(mod, Path(a.misura))
+        print("\n".join(err) if err else f"{len(mod)} measures written")
+        return 1 if err else 0
+    else:
+        err = errori(mod)
+        if a.base:
+            c = cambi(mod, da_base(a.base))
+            print("\n".join(x for x in c if not x.startswith("FAIL")) or ("" if c else "0 caps changed"))
+            err += [x for x in c if x.startswith("FAIL")]
+        print("\n".join(err) if err else f"{len(mod)} modules, data complete")
+        return 1 if err else 0
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,7 +1,6 @@
 //! Table of the features of a series aligned across files.
 
-pub use crate::aligned_meta::{RowMeta, RowQ, NO_FILE};
-pub use crate::rowident::RowIdent;
+pub use crate::aligned_meta::{RowIdent, RowMeta, RowQ, NO_FILE};
 
 /// Cell states of `Aligned::state` (one per row and file; never read `area > 0` as presence).
 /// A peak was found in the file by the detection.
@@ -45,7 +44,7 @@ pub struct Aligned {
     /// Neutral mass, adduct and source of each row (`RowIdent::compute`, after the last sort); empty when not computed.
     pub ident: RowIdent,
     /// The view of the transformation products (`tp::build`); empty when not computed.
-    pub tp: crate::tp::TpBlock,
+    pub tp: crate::tp_block::TpBlock,
     /// Isotope group, charge and identity (family) of each row (`untargeted::{isotopes,ident}`); empty when not computed.
     pub iso: IsoBlock,
 }

@@ -7,7 +7,7 @@ import urllib.parse
 from pathlib import Path
 
 import pytest
-from cargo_util import build_example, run
+from cargo_util import build, build_example, cli, cli_argv, example, run
 
 ROOT = Path(__file__).resolve().parents[1]
 MZML = ROOT / "tests" / "golden" / "ref" / "msntree_rotta" / "msn.mzML"
@@ -17,10 +17,10 @@ pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm
 @pytest.fixture(scope="module")
 def pkg(tmp_path_factory):
     d = tmp_path_factory.mktemp("msngrafo")
-    run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-msngrafo-wasm")
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-msngrafo-wasm")
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), "target/wasm32-unknown-unknown/release/mzlab_msngrafo_wasm.wasm")
     build_example("mzlab-core", "mzidx")
-    run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-core", "--example", "mzidx", "--", str(MZML), str(d / "msn.mzidx"))
+    example("mzlab-core", "mzidx", str(MZML), str(d / "msn.mzidx"))
     return d
 
 
@@ -33,7 +33,7 @@ def pkg(tmp_path_factory):
 ])
 def test_wasm_and_cli_give_the_same_graph(pkg, query, args):
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), query).stdout
-    want = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(MZML), *args).stdout
+    want = cli("msn-graph", str(MZML), *args).stdout
     assert got + "\n" == want  # the command line ends its output with a newline
     assert '"formato":"msngrafo/2"' in got
     assert ('"strutture":{' in got) == ("strutture=" in query)
@@ -45,7 +45,7 @@ def test_the_whole_structure_and_the_molfile_are_the_same_in_cli_and_wasm(pkg, t
     smiles = "CCOC(=O)c1c[nH]c2ccccc12"
     q = "formula=C14H15N3O5%2B&smiles=" + "CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12" + "&strutture=tutti&molfile=" + urllib.parse.quote(mol.read_text(encoding="utf-8"))
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), q).stdout
-    want = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", smiles, "--strutture", "tutti", "--molfile", str(mol)).stdout
+    want = cli("msn-graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", smiles, "--strutture", "tutti", "--molfile", str(mol)).stdout
     assert got + "\n" == want
     doc = json.loads(got)
     assert doc["opzioni"]["molfile"].startswith("\n  mzlab")
@@ -53,12 +53,12 @@ def test_the_whole_structure_and_the_molfile_are_the_same_in_cli_and_wasm(pkg, t
 
 
 def test_complete_adds_the_view_with_the_same_bytes_in_cli_and_wasm(pkg, tmp_path):
-    full = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(MZML), "--formula", "C14H15N3O5+").stdout
+    full = cli("msn-graph", str(MZML), "--formula", "C14H15N3O5+").stdout
     doc = json.loads(full)
     assert list(doc)[-1] == "vista" and doc["vista"]["algoritmo"] == "best-path/1"
     old = tmp_path / "old.json"
     old.write_text(full[:full.index(',"vista":')] + "}", encoding="utf-8")
-    via_cli = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", "complete", str(old)).stdout
+    via_cli = cli("msn-graph", "complete", str(old)).stdout
     via_wasm = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), str(old), "completa").stdout
     assert via_cli == full and via_wasm + "\n" == full
     notgraph = tmp_path / "x.json"
@@ -76,7 +76,7 @@ def test_a_bad_number_is_a_keyed_error(pkg):
 def test_wasm_and_cli_give_the_same_export(pkg, fmt, clean):
     q = f"formato={fmt}" + ("&pulito=1" if clean else "")
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), q, "export").stdout
-    want = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(MZML), "--export", fmt, *(["--pulito"] if clean else [])).stdout
+    want = cli("msn-graph", str(MZML), "--export", fmt, *(["--pulito"] if clean else [])).stdout
     assert got == want and got.strip()
 
 
@@ -125,7 +125,7 @@ def test_a_tiny_budget_is_the_same_calm_refusal_in_cli_and_wasm(pkg):
     # the spectra of a consensus over the budget (`budget_mb` of the page, `--budget-mb` of the command line) end in error.memoryBudget, phase msnGraph
     r = subprocess.run(["node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), "budget_mb=0.0001"], capture_output=True, encoding="utf-8")
     assert r.returncode != 0 and '"error_key":"error.memoryBudget"' in r.stderr and '"fase":"msnGraph"' in r.stderr, r.stderr[-800:]
-    c = subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(MZML), "--budget-mb", "0.0001"], cwd=ROOT, capture_output=True, encoding="utf-8")
+    c = subprocess.run(cli_argv("msn-graph", str(MZML), "--budget-mb", "0.0001"), cwd=ROOT, capture_output=True, encoding="utf-8")
     assert c.returncode != 0 and "error.memoryBudget, fase=msnGraph" in c.stderr, c.stderr[-800:]
     stima = r.stderr.split('"stima_mb":"')[1].split('"')[0]
     assert f"about {stima} MB" in c.stderr
