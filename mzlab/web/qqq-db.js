@@ -200,8 +200,9 @@ export function migrateIdb(newDb, oldName = DB_OLD) {
 }
 
 // A function that gives one connection for the whole life of the worker; it closes itself when another tab needs to upgrade the database.
-/** @param {() => void} [onblocked] */
-export function lab(onblocked) {
+/** @param {() => void} [onblocked]
+ * @param {boolean} [migrate] false: no migration of the legacy database (the page's own reads must not wait for it) */
+export function lab(onblocked, migrate = true) {
   /** @type {Promise<IDBDatabase> | null} */ let dbP = null;
   return () => dbP || (dbP = new Promise((res, rej) => {
     const r = indexedDB.open(DB_NAME, DB_VER);
@@ -211,7 +212,7 @@ export function lab(onblocked) {
       const db = r.result;
       db.onversionchange = () => { db.close(); dbP = null; };
       try {
-        await migrateIdb(db, DB_OLD);
+        if (migrate) await migrateIdb(db, DB_OLD);
       } catch (e) {
         console.warn("[mzLab] idb migration:", e);
       }

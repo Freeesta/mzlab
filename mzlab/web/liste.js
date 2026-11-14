@@ -320,7 +320,7 @@ const LISTE = (() => {
   async function idbOpen() {
     if (typeof indexedDB === "undefined") return null;
     try {
-      getDb = getDb || import("./qqq-db.js").then(m => m.lab(() => window.dispatchEvent(new Event("mzlab:db-blocked"))));     // browser.js shows the same message as for the engine's own open
+      getDb = getDb || import("./qqq-db.js").then(m => m.lab(() => window.dispatchEvent(new Event("mzlab:db-blocked")), false));     // browser.js shows the same message as for the engine's own open
       return await (await getDb)();
     } catch (_) { return null; }
   }
