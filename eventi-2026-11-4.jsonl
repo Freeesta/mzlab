@@ -22417,3 +22417,4 @@
 {"v":1,"ts_utc":"2026-11-14T09:06:18Z","tipo":"coda","k":"2026-11-14T09:06:18Z","aperte":10,"indietro":5,"sporche":4,"verdi_in_attesa":1,"piu_vecchia_aperta_s":38184,"piu_vecchia_verde_s":236}
 {"v":1,"tipo":"pr","pr":3271,"sha":"d002cd7eb8c4330897be807e3078a2e343a848ba","ts_utc":"2026-11-14T09:01:48Z","azione":"unita","aperta_s":1957,"commit_n":2,"cause_commit":{"merge di main":1},"merge_main":1,"righe_piu":127,"righe_meno":0,"file_n":2,"file":["crates/mzlab-feat/tests/align_drift.rs","docs/agenti/mzfeat-broad.md"],"aree":{"rust":1,"docs":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":151}
 {"v":1,"ts_utc":"2026-11-14T09:05:35Z","azione":"aperta","tipo":"pr","pr":3277,"sha":"12baeeb5d710afc11cae796ccb601dab466626d2"}
+{"v":1,"ts_utc":"2026-11-14T09:07:56Z","azione":"aperta","tipo":"pr","pr":3278,"sha":"bf32077993bd68a05d8e071df471b65b18506fef"}
