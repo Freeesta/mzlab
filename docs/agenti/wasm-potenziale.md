@@ -121,3 +121,26 @@ Banco: crate di prova fuori dal repository con le funzioni vere di `mzlab-core` 
 ## 9. Come rifare le misure
 Il banco (DEV-5) costruisce lo stesso crate nelle varianti `base` (`z`, `-Oz`), `o3`, `o3simd`, `o3simd_zrs`, `mix` e lo esegue in Node (`initSync`) e in Chromium (Playwright, `compileStreaming`) con il mzML HR sintetico da 87 MB generato da `mzmlwrite` (seme fisso) e `B_FullMass-t15` di `dati_sintetici.py`. Ogni variante deve dare le stesse somme di controllo; i tempi si confrontano solo sulla stessa macchina, mediana di 5 giri.
 Nel cloud il banco non gira (`tools/wasm_opt.sh` solo in CI): il workflow `banco-wasm.yml` (solo `workflow_dispatch`, ingressi `varianti` e `giri`) lo lancia in CI su un ramo e scrive la tabella dei tempi nel riassunto del run; è un solo ramo per volta (per confrontare due rami si lancia due volte).
+
+## 10. Collegamento con LTO reale
+Con `crate-type = ["cdylib", "rlib"]` cargo scarta `lto = true`: i moduli del sito sono collegati senza LTO. `cargo rustc --crate-type cdylib` costruisce solo la cdylib e l'LTO gira. Il banco ha le varianti `lto1` e `lto16` (stesso profilo e stesso `-O3` di `site_z`, 1 o 16 unità di codegen), da confrontare con `site_z`.
+Misure (4 vCPU, Chromium 153 e Node 22, mediana di 5 giri, stesse somme di controllo in tutte le varianti; ms, base = `site_z`). Peso del banco dopo `wasm-opt -O3`: 656 055 B → 600 914 (`lto1`) → 579 129 (`lto16`).
+
+| lavoro | Chromium base | `lto1` | `lto16` | Node base | `lto1` | `lto16` |
+|---|---|---|---|---|---|---|
+| lettura mzML HR | 742,7 | 757,9 | 651,2 | 837,7 | 840,5 | 816,8 |
+| indice HR | 3376,3 | 3428,9 | 3227,6 | 3670,3 | 3658,6 | 3522,8 |
+| 200 XIC dall'indice HR | 22,9 | 27,3 | 25,0 | 23,4 | 29,8 | 26,1 |
+| centroidi 100 scansioni HR | 1076,3 | 1048,3 | 1068,5 | 1069,3 | 1034,6 | 1080,8 |
+| 50 XIC + picchi HR | 24,2 | 21,7 | 21,8 | 20,7 | 21,5 | 21,4 |
+| entropia 300×300 MS2 | 611,8 | 636,7 | 612,7 | 659,6 | 612,7 | 619,2 |
+| lettura mzML LR | 19,5 | 18,3 | 15,6 | 20,7 | 18,4 | 19,8 |
+| indice LR | 51,0 | 42,8 | 45,2 | 47,7 | 44,0 | 47,4 |
+| 200 XIC dall'indice LR | 2,8 | 2,5 | 2,7 | 2,7 | 2,7 | 2,9 |
+| 50 XIC + picchi (AsLS) LR | 40,9 | 37,8 | 58,0 | 48,8 | 46,4 | 44,5 |
+| 200 composizioni | 2683,8 | 2707,4 | 2753,9 | 2682,5 | 2717,7 | 2692,3 |
+| inflate 64 MB | 333,1 | 330,7 | 305,5 | 327,0 | 314,1 | 336,6 |
+| SHA-256 + SHA-1 64 MB | 492,3 | 517,7 | 563,7 | 555,5 | 505,9 | 557,2 |
+
+"200 XIC dall'indice HR" è più lento di `base` in entrambe le varianti e in entrambi i motori (+9-27 %); i lavori sotto i 30 ms oscillano di qualche ms fra i giri.
+

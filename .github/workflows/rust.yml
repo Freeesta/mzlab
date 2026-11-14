@@ -7,8 +7,6 @@ on:
   push:
     branches: [main]
   pull_request:
-  # merge queue: rust-ok is a required check and must report on the queue branch too
-  merge_group:
 
 permissions:
   contents: read

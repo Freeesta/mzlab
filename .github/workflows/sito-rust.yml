@@ -1,5 +1,5 @@
 # The built site with the Rust engine (.wasm) driven by the e2e tests that need it: e2e_rust, e2e_mzidx, e2e_progressivo.
-# Runs on every pull request, on the merge queue (merge_group), on every push to main (the deploy gate of pages.yml waits for it), by hand and once a night on main. `sito-changes` decides from the changed paths whether the build and the e2e run; the jobs it skips
+# Runs on every pull request, on every push to main (the deploy gate of pages.yml waits for it), by hand and once a night on main. `sito-changes` decides from the changed paths whether the build and the e2e run; the jobs it skips
 # report "skipped", which a required check accepts, so `sito` can be required without hanging a pull request that touches none of those paths.
 # `sito-wasm-core`, `sito-wasm-feat-a` and `sito-wasm-feat-b` build the .wasm in parallel and hand them over as artifacts; `sito-e2e` runs the quick checks of tools/verifica.py
 # (JS syntax and the shell, i18n, code map, sizes), builds the site, adds the artifacts and runs the e2e; `sito` is the summary (like rust-ok). pytest is not repeated here: test.yml runs it on every pull request
@@ -14,9 +14,6 @@ on:
   schedule:
     - cron: "11 3 * * *"
   pull_request:
-  # merge queue: GitHub ignores `paths` on merge_group, so `sito-changes` filters on the diff of the queue branch against its base
-  merge_group:
-    types: [checks_requested]
   workflow_dispatch:
     inputs:
       solo:
