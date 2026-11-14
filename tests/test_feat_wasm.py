@@ -135,21 +135,25 @@ def test_the_isotope_finder_gives_the_same_bytes_native_and_in_node(built):
 
 
 WINDOW = '{"fill": true, "layers": [{"step": "features.detect", "params": {"area_from": "window"}}]}'
+CHANNEL = '{"fill": true, "layers": [{"step": "features.detect", "params": {"area_from": "channel"}}]}'
 
 
-def test_the_window_area_gives_the_same_bytes_native_and_in_node(built):
-    """`area_from` = `window` of `features.detect` (the area of a row summed over its quality window) writes the same `.mzfeatf` of every file and
-    the same `series.mzfeat` in the .wasm as natively, and not the files of the default `channel`. `series_evid.mzfeat` is left out as above."""
+def test_the_channel_area_gives_the_same_bytes_native_and_in_node(built):
+    """`area_from` = `channel` of `features.detect` (the area of the points of the trace that found the row) writes the same `.mzfeatf` of every
+    file and the same `series.mzfeat` in the .wasm as natively, and not the files of the default `window` (the area of a row summed over its quality
+    window), which are those of the explicit `window`. `series_evid.mzfeat` is left out as above."""
     root, idx, pkg = built
-    _, nat_dir = native(root, idx, "nat_window", "--recipe", WINDOW)
-    _, wasm_dir = wasm(root, idx, pkg, "wasm_window", "--recipe", WINDOW)
-    _, def_dir = native(root, idx, "nat_channel", "--recipe", '{"fill": true, "layers": []}')
+    _, nat_dir = native(root, idx, "nat_channel", "--recipe", CHANNEL)
+    _, wasm_dir = wasm(root, idx, pkg, "wasm_channel", "--recipe", CHANNEL)
+    _, def_dir = native(root, idx, "nat_window", "--recipe", '{"fill": true, "layers": []}')
+    _, win_dir = native(root, idx, "nat_window_explicit", "--recipe", WINDOW)
+    assert all((def_dir / p.name).read_bytes() == p.read_bytes() for p in win_dir.iterdir() if p.name != "series_evid.mzfeat"), "window is the default"
     names = sorted(p.name for p in nat_dir.iterdir() if p.name != "series_evid.mzfeat")
     assert "series.mzfeat" in names and len(names) > 1
     for f in names:
         assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
     feats = [f for f in names if f.endswith(".mzfeatf")]
-    assert feats and any((nat_dir / f).read_bytes() != (def_dir / f).read_bytes() for f in feats), "window and channel give the same files: the test proves nothing"
+    assert feats and any((nat_dir / f).read_bytes() != (def_dir / f).read_bytes() for f in feats), "channel and window give the same files: the test proves nothing"
 
 
 XIC = '{"fill": true, "layers": [{"step": "features.detect", "params": {"area_from": "xic"}}]}'
@@ -171,21 +175,25 @@ def test_the_xic_area_gives_the_same_bytes_native_and_in_node(built):
 
 
 WIDE = '{"fill": true, "layers": [{"step": "features.detect", "params": {"stitch": "wide"}}]}'
+STRICT = '{"fill": true, "layers": [{"step": "features.detect", "params": {"stitch": "strict"}}]}'
 
 
-def test_the_wide_stitch_gives_the_same_bytes_native_and_in_node(built):
-    """`stitch` = `wide` of `features.detect` (touching pieces of neighbouring channels joined at any height) writes the same files in the .wasm as
-    natively, and not the files of the default `strict`. `series_evid.mzfeat` is left out as above."""
+def test_the_strict_stitch_gives_the_same_bytes_native_and_in_node(built):
+    """`stitch` = `strict` of `features.detect` (only overlapping pieces, or touching ones above 2e6) writes the same files in the .wasm as
+    natively, and not the files of the default `wide` (touching pieces joined at any height), which are those of the explicit `wide`.
+    `series_evid.mzfeat` is left out as above."""
     root, idx, pkg = built
-    _, nat_dir = native(root, idx, "nat_wide", "--recipe", WIDE)
-    _, wasm_dir = wasm(root, idx, pkg, "wasm_wide", "--recipe", WIDE)
-    _, def_dir = native(root, idx, "nat_strict", "--recipe", '{"fill": true, "layers": []}')
+    _, nat_dir = native(root, idx, "nat_strict", "--recipe", STRICT)
+    _, wasm_dir = wasm(root, idx, pkg, "wasm_strict", "--recipe", STRICT)
+    _, def_dir = native(root, idx, "nat_wide", "--recipe", '{"fill": true, "layers": []}')
+    _, wide_dir = native(root, idx, "nat_wide_explicit", "--recipe", WIDE)
+    assert all((def_dir / p.name).read_bytes() == p.read_bytes() for p in wide_dir.iterdir() if p.name != "series_evid.mzfeat"), "wide is the default"
     names = sorted(p.name for p in nat_dir.iterdir() if p.name != "series_evid.mzfeat")
     assert "series.mzfeat" in names and len(names) > 1
     for f in names:
         assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
     feats = [f for f in names if f.endswith(".mzfeatf")]
-    assert feats and any((nat_dir / f).read_bytes() != (def_dir / f).read_bytes() for f in feats), "wide and strict give the same files: the test proves nothing"
+    assert feats and any((nat_dir / f).read_bytes() != (def_dir / f).read_bytes() for f in feats), "strict and wide give the same files: the test proves nothing"
 
 @pytest.mark.parametrize("mode", ["ion", "family"])
 def test_a_reduced_budget_gives_the_same_sha256_native_and_in_node(built, mode):
