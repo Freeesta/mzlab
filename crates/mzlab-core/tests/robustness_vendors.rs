@@ -76,11 +76,26 @@ fn root() -> PathBuf {
 fn catalogue_text(key: &str) -> Option<String> {
     static CAT: OnceLock<String> = OnceLock::new();
     let cat = CAT.get_or_init(|| {
-        std::fs::read_to_string(root().join("mzlab/web/lang/en/errori.js")).unwrap_or_default()
+        let dir = root().join("mzlab/web/lang/en");
+        let mut names: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| {
+                p.file_name()
+                    .is_some_and(|n| n.to_string_lossy().starts_with("errori-"))
+            })
+            .collect();
+        names.sort();
+        names
+            .iter()
+            .map(|p| std::fs::read_to_string(p).unwrap_or_default())
+            .collect::<Vec<_>>()
+            .join("\n")
     });
     let at = cat.find(&format!("\"{key}\":"))? + key.len() + 3;
     let rest = cat[at..].trim_start().strip_prefix('"')?;
-    Some(rest[..rest.find("\",\n")?].to_string())
+    Some(rest[..rest.find("\",\n").or_else(|| rest.find("\"\n"))?].to_string())
 }
 
 /// Runs the bench on `seed` and then judges the keys met: in the catalogue, and without the raw detail in the sentence.
