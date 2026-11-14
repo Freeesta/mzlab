@@ -280,13 +280,15 @@ def main() -> None:
     ap.add_argument("--pyodide-dir", type=Path, help="accepted, no effect (the site carries no Python)")
     ap.add_argument("--no-pyodide", action="store_true", help="accepted, no effect (the site carries no Python)")
     ap.add_argument("--out", type=Path, default=ROOT / "site")
-    ap.add_argument("--build-json", action="store_true", help="only write static/build.json and seal the service worker again, once the .wasm files are in the site")
+    ap.add_argument("--build-json", action="store_true", help="only write static/build.json, seal the service worker and write the manifest again, once the .wasm files are in the site")
     a = ap.parse_args()
     out = a.out
     if a.build_json:
         ver = json.loads((out / "static" / "build.json").read_text(encoding="utf-8"))["version"]
         write_build_json(out, ver)
         seal_sw(out)
+        # LAST: the manifest hashes build.json and the .wasm files that were not there when the first one was written
+        write_manifest(out, json.loads((out / "static" / "build.json").read_text(encoding="utf-8"))["commit"])
         return
     lab = lab_expiry()
     if out.exists():
