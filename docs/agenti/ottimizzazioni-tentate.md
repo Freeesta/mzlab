@@ -55,3 +55,20 @@ Cosa è misurato e perché non si fa; come funziona la CI: `ci-veloce.md`.
 - **Build unica a monte, stimata e scartata**: un job per commit che compila core+feat+cli (nativo e wasm32, profilo prodotto) e pubblica `target/` come cache per sha, riusato da det, solo311 e wasm. Quei job compilano in parallelo la stessa cosa (det 290 s, solo311 380 s sui run pesanti); con il job a monte il percorso diventa build a freddo (circa 210-250 s) + ripristino della cache (circa 45 s misurati per `target`) + il resto del consumatore (20-60 s), cioè 280-350 s: nessun guadagno di tempo di attesa, solo minuti di runner.
 - **Proposta aperta (codice di prodotto)**: ogni modifica a una crate di base ricompila a valle `mzlab-feat` (99 s a freddo), `mzlab-cli` (75 s) e `mzlab-core` (58 s), tutte con LTO e un solo codegen unit, in ogni job che costruisce il profilo prodotto.
   Ridurre la fan-out toglierebbe la ricompilazione, non spostarla: `mzlab-cli` dovrebbe dipendere solo dalle crate che usa davvero, le funzioni di foglia (libreria spettrale, chimica, LLM) dietro feature o crate separate, e `mzlab-feat` non dovrebbe ricompilare per un cambio in una foglia. Misura da fare prima: `cargo build --timings` per commit tipo di main e quanti crate invalida.
+
+## WebAssembly: leve scartate
+Misure e stato del build in `wasm-potenziale.md` (§3 numeri, §4 supporto dei browser). Ognuna scartata; si riprova solo con la condizione scritta.
+- **Thread wasm**: in Rust stabile `wasm32-unknown-unknown` non ha `atomics` (servono nightly, `-Zbuild-std`, `wasm-bindgen-rayon`) e GitHub Pages non manda COOP/COEP (un service worker alla `coi-serviceworker` chiede un ricaricamento alla prima visita e `require-corp` ovunque; Safari senza `credentialless`). Fra file il pool già scala ×4 (1, 2, 4 worker in 444, 449, 456 ms). Riprovare se `atomics` arriva in stable e l'hosting manda COOP/COEP.
+- **memory64**: Safari solo Technology Preview; i puntatori a 64 bit costano controlli dei limiti in più; budget e spill stanno già sotto 4 GiB (`memoria.md`). Riprovare se Safari lo spedisce e un file reale supera 4 GiB.
+- **Relaxed SIMD**: risultati diversi fra CPU (FMA, min/max, dot), rompe il determinismo bit per bit. Non si riprova.
+- **Exception handling**: serve `panic = "unwind"` e quindi `-Zbuild-std` (nightly). Riprovare con unwind in stable per wasm.
+- **SIMD esplicito** (`core::arch::wasm32`, `portable_simd`): i cicli caldi sono XML/base64/inflate (non vettoriali) e AsLS/centroidi (dipendenze in sequenza); `portable_simd` è nightly. Riprovare se un profilo mostra un ciclo vettorizzabile in cima.
+- **`DecompressionStream`** per gli array base64+zlib: asincrono e per array (migliaia di pochi KB), più lento dell'inflate in wasm.
+- **Doppio build** (baseline + veloce, `wasm-feature-detect`): tutti i bersagli hanno SIMD128; costerebbe ~600 s di CPU in CI per PR, il doppio dei byte in `site/` e delle prove e2e.
+- **O2 / Os**: O2 come O3 (centroidi più lenti, 547 KB); Os a metà (499 KB, lettura HR 1168 ms in Node).
+- **Livello di `wasm-opt`**: `-O3` contro `-Oz` dopo rustc O3 entro il rumore (537 contro 535 KB): conta solo `opt-level` di rustc; resta `-Oz`.
+- **`wasm32v1-none`** (`no_std`) e **`-Zbuild-std`** (nightly): non fanno per un motore con `std` e toolchain fissata.
+- **Altre proposte**: tail calls ed extended-const senza effetto sul codice Rust; multi-memory e JS String Builtins non usati da `wasm-bindgen` 0.2.129; WasmGC irrilevante (Rust ha la sua memoria lineare).
+- **Cache dei `Module` compilati in IndexedDB**: non più supportata dai browser; V8 mette in cache da sé il codice delle risposte HTTP in cache; compilazione 10-19 ms per modulo.
+- **I/O**: la copia JS → wasm (~10 GB/s) è < 1 % della lettura mzML (~80-140 MB/s); nessuna leva.
+- **`simd-json`** al posto di `serde_json`: vuole SIMD x86/NEON e non è più veloce in wasm.

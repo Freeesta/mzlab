@@ -17,7 +17,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | mappa del percorso di apertura di ogni file (clic → schermo, sito e app, per formato), strategie presenti/assenti, lotti di file per assistenti esterni (`tools/batch_gemini.py`) | `docs/agenti/caricamento-mappa.md` |
 | carica una cartella, cartella puntata e ricordata (elenco in grigio, «Altri», desktop), riscaldamento in background dei file della cartella puntata (coda, `lr_warm`, `lr_warm_claim`) | `docs/agenti/dati-cartella.md` |
 | mappa RT×m/z, mirino, navigazione | `docs/agenti/dati-mappa.md` |
-| velocità della mappa: misure dei gesti (`tools/bench_map.py`), diagnosi e pacchetti P1-P10; visore 3D (`mappa3d.js`, `failure3d`, comandi e menu, precarico `preload3d`) | `docs/agenti/mappa-fluida.md` |
+| velocità della mappa: misure dei gesti (`tools/bench_map.py`), diagnosi e lavori aperti; visore 3D (`mappa3d.js`, `failure3d`, comandi e menu, precarico `preload3d`) | `docs/agenti/mappa-fluida.md` |
 | costo del disegno dei cromatogrammi su tracce dense (`tools/bench_charts.py`: 10^6 punti, 20 file sovrapposti, rotella, trascinamento, ridimensionamento, linea di 1 px); tabella HR di 100 000 righe nella «Statistica» (`tools/bench_table_hr.py`: grafico KMD, clic, tabella «Dati») | `docs/agenti/misure-grafici.md` |
 | liste, correzione, flusso di lavoro, QA/QC, statistica, rapporto | `docs/agenti/dati-strumenti.md` |
 | calcolatrice (gruppi «cosa può essere» sotto il numero), pannello Addotti, fatti sui dati del 3200, gradiente, tracce analogiche, tabelle dei dati, tema | `docs/agenti/dati-3200.md` |
@@ -74,7 +74,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | lista integrata di pesticidi e contaminanti ambientali (`mzlab/chem/pesticides.csv`, `pesticides_meta.json`, `tools/download_pesticides.py`, seconda lista di `contaminanti.json`) | `docs/agenti/pesticidi.md` |
 | liste dell'utente (trasformazioni, addotti, sospetti: CSV con errori per riga, `liste/1`, SHA-256 per `prov/1`) | `docs/agenti/liste.md` |
 | database delle molecole (`crates/mzlab-core/src/molecules/`, `molecules/1`: record, CSV e JSON canonico, ricerca, livelli catalogo/importata/utente, catalogo `mzlab/web/molecole/catalogo.csv`, rotte `api/molecules/*`) | `docs/agenti/molecules.md` |
-| canali dei dati (file → canali: TIC, filtri/transizioni/precursori, UV, analogici; tipo di esperimento come etichetta; piano DEV-a…f) | `docs/agenti/canali-dati.md` |
+| canali dei dati (file → canali: TIC, filtri/transizioni/precursori, UV, analogici; tipo di esperimento come etichetta; lavori aperti) | `docs/agenti/canali-dati.md` |
 | ruoli dei file, tempi e metadati dei campioni (`campioni/2` e `/3`, `mzlab-core/src/samples/`: proposte dai nomi, modelli di nome, CSV, colonne libere, dati dal file, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |
 | derivati (`.mzidx`, `.mzfeat`, `.mzfeatf`) di formato più nuovo del programma: `error.newerFormat`, sola lettura | `docs/agenti/formato-nuovo.md` |
 | tetti dei .wasm di mzFinder, moduli fusi (gruppo HR e Attributio) | `docs/agenti/wasm-tetti.md` |
