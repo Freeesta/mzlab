@@ -156,6 +156,21 @@ impl WriteAt for Vec<u8> {
     }
 }
 
+#[cfg(test)]
+mod write_at_tests {
+    use super::*;
+
+    #[test]
+    fn a_write_past_the_address_space_is_the_memory_error_and_not_a_panic() {
+        let mut v: Vec<u8> = Vec::new();
+        let e = v.write_at(u64::MAX - 1, &[1, 2, 3]).unwrap_err();
+        assert_eq!(e.key, "error.memoryBudget");
+        assert!(v.is_empty());
+        v.write_at(2, &[7]).unwrap();
+        assert_eq!(v, [0, 0, 7]);
+    }
+}
+
 /// A sink that writes in order, counts the bytes and keeps the SHA-256 of everything written. A write that is not at the end is an error.
 pub struct Hashing<W: WriteAt> {
     inner: W,
@@ -242,16 +257,6 @@ mod tests {
             buf.copy_from_slice(&self.0[off as usize..off as usize + buf.len()]);
             Ok(())
         }
-    }
-
-    #[test]
-    fn a_write_past_the_address_space_is_the_memory_error_and_not_a_panic() {
-        let mut v: Vec<u8> = Vec::new();
-        let e = v.write_at(u64::MAX - 1, &[1, 2, 3]).unwrap_err();
-        assert_eq!(e.key, "error.memoryBudget");
-        assert!(v.is_empty());
-        v.write_at(2, &[7]).unwrap();
-        assert_eq!(v, [0, 0, 7]);
     }
 
     #[test]
