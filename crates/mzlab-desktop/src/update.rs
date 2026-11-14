@@ -514,33 +514,9 @@ fn mime(rel: &str) -> &'static str {
     }
 }
 
-/// The file of the updated folder for a request path of the window (`/` = the page), if it is there. Anything else (and any path that
-/// tries to leave the folder) returns `None` and the embedded copy answers.
-pub fn serve_override(web: &Path, req_path: &str) -> Option<(Vec<u8>, &'static str)> {
-    let rel = req_path.trim_start_matches('/');
-    let rel = if rel.is_empty() { "index.html" } else { rel };
-    if safe_rel(rel).is_err() {
-        return None;
-    }
-    // the path as the file system reads it (`static//x` and `static/./x` are `static/x`), compared without case (Windows and macOS are
-    // case-insensitive): the native files belong to the binary and are never downloaded, so the embedded copy always answers
-    let rel = Path::new(rel)
-        .components()
-        .filter_map(|c| c.as_os_str().to_str())
-        .collect::<Vec<_>>()
-        .join("/");
-    let rel = rel.as_str();
-    if rel.eq_ignore_ascii_case(CHECK) || NATIVE.iter().any(|n| rel.eq_ignore_ascii_case(n)) {
-        return None;
-    }
-    let p: PathBuf = web.join(rel);
-    let body = fs::read(&p).ok()?;
-    Some((body, mime(rel)))
-}
-
-#[cfg(test)]
-#[path = "update_serve_tests.rs"]
-mod serve_tests;
+#[path = "update_serve.rs"]
+mod serve;
+pub use serve::serve_override;
 
 #[cfg(test)]
 mod tests {
