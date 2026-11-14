@@ -31,13 +31,16 @@
     });
   };
   // the stored key is encrypted with a CryptoKey that cannot be exported: a copy of the disk does not give the key (a script of this origin could still ask this document to decrypt)
-  const wrapKey = async () => {
+  // one get-or-create at a time: two callers with nothing stored would each generate a key and the later write would orphan what the first one encrypted
+  /** @type {Promise<CryptoKey> | null} */
+  let wrapping = null;
+  const wrapKey = () => wrapping || (wrapping = (async () => {
     const old = await store("wrap");
     if (old && old.key) return /** @type {CryptoKey} */ (old.key);
     const k = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
     await store("wrap", { key: k });
     return k;
-  };
+  })().catch(e => { wrapping = null; throw e; }));
   // `provider` is the one of the click, not of whatever init has landed while the key was being encrypted
   const remember = async (/** @type {string} */ v, /** @type {string} */ provider) => {
     const iv = crypto.getRandomValues(new Uint8Array(12));
