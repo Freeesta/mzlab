@@ -99,6 +99,7 @@ mod recipe_lr;
 pub mod regulatory;
 pub mod report;
 pub mod resolve;
+pub mod netarcs;
 pub mod network;
 pub mod row;
 pub mod rowident;
