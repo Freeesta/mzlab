@@ -44,8 +44,10 @@ export function mount(p) {
     b.setAttribute("aria-haspopup", "dialog"); b.setAttribute("aria-expanded", "false");
     wire(p, b);
     const g = document.createElement("span"); g.className = "tbg"; g.append(b);
-    const dl = p.el.querySelector('[data-a="dl"]')?.closest(".tbg");
-    if (dl) dl.before(g); else p.el.querySelector(".tbs")?.append(g);
+    const dl = /** @type {(HTMLElement & Bag) | null | undefined} */ (p.el.querySelector('[data-a="dl"]')?.closest(".tbg"));
+    // a tight header may hold the download group in «⋯»: the button goes before the place it left, in the header (fitHd then moves it if needed), never into the menu untracked
+    const at = dl && dl.closest(".hmore") ? dl._ph : dl;
+    if (at) at.before(g); else p.el.querySelector(".tbs")?.append(g);
     fitHdSoon(/** @type {any} */ (p));
   }
   if (!b) return;
