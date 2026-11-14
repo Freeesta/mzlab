@@ -56,10 +56,18 @@ pub const SPLIT_GAP: f64 = 0.03;
 pub const WEAK_FILES: usize = 5;
 
 impl Default for Recipe {
+    /// The high-resolution recipe. Unlike the bare `Params`/`QParams` defaults (kept for the frozen parity answers), it sums the area of a row over its
+    /// quality window and stitches touching pieces of neighbouring channels at any height (`area_from` = `window`, `stitch` = `wide`): on ions whose
+    /// m/z wanders across a channel border the channel area and the strict stitch lose area and split rows (`mzfeat-prove.md`, MISURA bordo_canale).
     fn default() -> Self {
+        let mut steps = Steps::default();
+        steps.quality.area_window = true;
         Recipe {
-            detect: Params::default(),
-            steps: Steps::default(),
+            detect: Params {
+                stitch_wide: true,
+                ..Params::default()
+            },
+            steps,
             fam: FamParams::default(),
             mode: Mode::Family,
             align: FamAlignParams {

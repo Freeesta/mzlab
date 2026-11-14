@@ -204,17 +204,17 @@ fn isotope_params() -> Vec<Param> {
     ]
 }
 
-/// How the pieces of a trace are joined and where the area of a row comes from; the defaults give the bytes of the files made before them.
+/// How the pieces of a trace are joined and where the area of a row comes from: `window` and `wide` at high resolution, `channel` and `strict` in the unit preset.
 fn trace_choices() -> Vec<Param> {
     vec![
         Param::choice("area_from", "Area from", &["channel", "window", "xic"])
-            .default_str("channel")
-            .doc("Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area.")
+            .default_str("window")
+            .doc("Window (default at high resolution) sums every point of the quality window over the row's scans, so a wandering m/z keeps its area; channel sums only the points of the channel segment that found the row.")
             .tip("Window sums the quality trace over the row; xic integrates it by trapezoid on the real retention times.")
             .advanced(),
         Param::choice("stitch", "Stitch", &["strict", "wide"])
-            .default_str("strict")
-            .doc("Wide also joins touching low pieces of neighbouring channels, so an ion whose m/z wanders ±3 ppm stays one row.")
+            .default_str("wide")
+            .doc("Wide (default at high resolution) also joins touching low pieces of neighbouring channels, so an ion whose m/z wanders ±3 ppm stays one row; strict joins only overlapping pieces or touching ones above 2e6.")
             .advanced(),
     ]
 }
@@ -266,6 +266,8 @@ fn preset_lr() -> Preset {
             ("floor", num(3_000.0)),
             ("min_height", num(7_000.0)),
             ("min_snr", num(3.0)),
+            ("area_from", text("channel")),
+            ("stitch", text("strict")),
         ],
         evidence: "LR_FLOOR, LR_MIN_HEIGHT and LR_MIN_SNR of recipe_lr.rs; the preview proposes the values of each file; on profile scans the floor is the mode of the noise lump",
         algorithm: Some("masstrace"),
