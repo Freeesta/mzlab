@@ -42,3 +42,26 @@ def test_tetti_come_i_workflow():
         for nome, etichetta in (("motore", "engine"), ("librerie", "libraries")):
             cap = re.findall(rf"tools/wasm_opt\.sh \S+ (\d+) {etichetta} @motore", testo)
             assert cap and all(int(c) == mod[nome]["tetto"] for c in cap), f"{wf}: {nome} {cap} != {mod[nome]['tetto']}"
+
+
+def _con(tetto):
+    return {"m": {"tetto": tetto}}
+
+
+def test_regola_del_dieci_per_cento():
+    base = _con(1000)
+    assert moduli.cambi(_con(1000), base) == []
+    assert moduli.cambi(_con(900), base) == ["m: 1000 -> 900 (-10.0 %)"]       # lower is allowed
+    assert not moduli.cambi(_con(1100), base)[0].startswith("FAIL")             # +10 % exactly
+    assert moduli.cambi(_con(1101), base)[0].startswith("FAIL")                 # above 1.10 x
+    assert moduli.cambi({"nuovo": {"tetto": 5}}, base) == []                    # a new module has no base
+
+
+def test_base_sconosciuta_fallisce():
+    r = subprocess.run([sys.executable, str(ROOT / "tools/moduli.py"), "--controlla", "--base", "no-such-ref-0000"], capture_output=True, text=True)
+    assert r.returncode != 0
+
+
+def test_base_head_nessun_cambio():
+    r = subprocess.run([sys.executable, str(ROOT / "tools/moduli.py"), "--controlla", "--base", "HEAD"], capture_output=True, text=True)
+    assert r.returncode == 0 and "0 caps changed" in r.stdout, r.stdout + r.stderr
