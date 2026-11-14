@@ -2,6 +2,7 @@
 
 Used by the checks and tests that look at the texts (lang/it.js and en.js are only the loaders of the browser)."""
 import json
+import re
 from pathlib import Path
 
 LANG = Path(__file__).resolve().parent.parent / "mzlab" / "web" / "lang"
@@ -42,3 +43,19 @@ def catalog(lang: str) -> dict[str, str]:
 def testo(lang: str) -> str:
     """The catalog as one text (for the checks that look for a quoted key)."""
     return "\n".join(p.read_text(encoding="utf-8") for p in parti(lang))
+
+
+def contesto_problems(it: dict[str, str], param_re: str = r"\{[A-Za-z_]") -> list[str]:
+    """Descriptions live in lang/contesto/<area>.json (same stem as the area file of the key); the description of a key no catalog has
+    stays in orfane.json. Reports a description in the wrong file or twice, and a key with parameters (`{name`) that has none."""
+    area = {k: p.stem for p in parti("it") for k in parte(p)}
+    errs: list[str] = []
+    seen: dict[str, str] = {}
+    for f in sorted((LANG / "contesto").glob("*.json")):
+        for k in json.loads(f.read_text(encoding="utf-8")):
+            if k in seen:
+                errs.append(f"contesto/{f.name}: description of {k} is also in contesto/{seen[k]}")
+            seen[k] = f.name
+            if f.stem != area.get(k, "orfane"):
+                errs.append(f"contesto/{f.name}: description of {k} belongs in contesto/{area.get(k, 'orfane')}.json")
+    return errs + [f"contesto/: missing description for the key with parameters: {k}" for k in sorted(it) if re.search(param_re, it[k]) and k not in seen]

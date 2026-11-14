@@ -1,0 +1,9 @@
+uscita = "wasm-lettori/agilent"
+pacchetto = "mzlab-lettori-wasm"
+feature = "agilent"
+senza_default = true
+wasm_opt = "@estesi"
+parte = "lettori"
+tetto = 606208
+misura = 563842
+nota = "zlib-rs +30 KB; picchi at O3 +79-228 B; rounded to 256 B"

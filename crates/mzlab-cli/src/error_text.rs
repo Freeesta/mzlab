@@ -1,8 +1,14 @@
-//! The English text of an engine error for the terminal: the catalogue the page shows (`mzlab/web/lang/en/errori.js`) with its `{param}` filled in,
+//! The English text of an engine error for the terminal: the catalogue the page shows (`mzlab/web/lang/en/errori-*.js`) with its `{param}` filled in,
 //! and the key kept in brackets so the message can still be searched or matched by scripts. A message that does not start with a known key passes
 //! unchanged (usage errors, file-system errors).
 
-const CATALOG: &str = include_str!("../../../mzlab/web/lang/en/errori.js");
+const CATALOG: &str = concat!(
+    include_str!("../../../mzlab/web/lang/en/errori-a-m.js"),
+    include_str!("../../../mzlab/web/lang/en/errori-file.js"),
+    include_str!("../../../mzlab/web/lang/en/errori-flow.js"),
+    include_str!("../../../mzlab/web/lang/en/errori-llm.js"),
+    include_str!("../../../mzlab/web/lang/en/errori-n-w.js"),
+);
 
 /// The people's names of the memory phases (`memory.phase.<id>`), the ones the page puts in the same sentence.
 const PHASES: &str = include_str!("../../../mzlab/web/lang/en/altre-lv-predef.js");

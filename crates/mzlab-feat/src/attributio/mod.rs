@@ -15,6 +15,8 @@ pub mod error;
 pub mod export;
 pub mod formula;
 pub mod frame;
+#[cfg(feature = "untargeted")]
+pub mod from_untargeted;
 pub mod gradient;
 pub mod gradient_pick;
 pub mod identity;

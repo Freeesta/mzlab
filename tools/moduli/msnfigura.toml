@@ -1,0 +1,8 @@
+uscita = "wasm-feat/msnfigura"
+pacchetto = "mzlab-msnfigura-wasm"
+chiavi = { msnfigura = 17 }
+wasm_opt = "@motore"
+parte = "a"
+tetto = 512000
+misura = 319724
+nota = "SVG and stand-alone HTML of msngrafo/1, loaded only by msn.figure; standard cap"

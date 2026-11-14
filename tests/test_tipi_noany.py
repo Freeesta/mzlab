@@ -22,7 +22,7 @@ def test_a_strict3_error_fails_even_when_the_base_is_silent(monkeypatch, tmp_pat
 
 def test_strict3_files_are_generated_and_merged_by_the_tool():
     assert set(gg.strict_all()) >= {"stretto3.json", "stretto3-worker.json"}
-    assert {"tools/tipi/stretto3.json", "tools/tipi/stretto3-worker.json"} <= set(fm.GENERATI)
+    assert not [f for f in fm.GENERATI if f.startswith("tools/tipi/")]   # git-ignored: nothing to merge
     assert {"stretto3", "stretto3-worker"} <= set(ct.PROGETTI)
 
 
@@ -36,6 +36,10 @@ def test_a_noany_file_is_in_strict3_only():
     assert json.loads(gg.strict_all()["stretto3.json"])["compilerOptions"]["noImplicitAny"] is True
 
 
-def test_the_committed_strict3_matches_the_generator():
-    for name, text in gg.strict_all().items():
-        assert (ROOT / "tools" / "tipi" / name).read_text() == text, name
+def test_generated_type_files_are_deterministic_and_not_committed():
+    """The type files are rebuilt before every type check: two runs give identical bytes and git tracks none of them."""
+    import subprocess
+    a, b = gg.generati(), gg.generati()
+    assert a == b and len(a) == 8 and all(v.endswith("\n") for v in a.values())
+    tracked = subprocess.run(["git", "ls-files", "tools/tipi"], cwd=ROOT, capture_output=True, text=True).stdout.split()
+    assert not [f for f in tracked if f.rsplit("/", 1)[-1] in a]

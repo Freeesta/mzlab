@@ -68,6 +68,7 @@ def steps(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
         ("soglie di dimensione", [PY, "tools/controlla.py"]),
         ("percorsi nei documenti", [PY, "tools/check_link_docs.py"]),
         ("lingue (i18n)", [PY, "tools/controlla_i18n.py"]),
+        ("tetti dei moduli .wasm contro la base", [PY, "tools/moduli.py", "--controlla", "--base", "origin/main"]),
     ]
     if shutil.which("node") and changed("mzlab/web/"):
         p.append(("sintassi JS (job javascript)", JS_SYNTAX))

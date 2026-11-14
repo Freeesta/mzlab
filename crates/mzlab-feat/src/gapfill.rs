@@ -10,7 +10,8 @@ use mzlab_core::idxread::{Index, ReadAt};
 use crate::rtmap::RtMap;
 use crate::sweep::{ppm_ranges, windows};
 use crate::table::{Aligned, CELL_ABSENT, CELL_FILLED, CELL_NA};
-use crate::trace::{reserve, Params, SLAB_PEAKS};
+use crate::trace::Params;
+use crate::trace_base::{reserve, SLAB_PEAKS};
 
 /// Parameters of the integration (defaults of `fill_gaps` and `trace_area`).
 #[derive(Clone, Copy)]

@@ -2,7 +2,7 @@
 
 use crate::{build_index, open};
 use mzlab_core::error::Result;
-use mzlab_feat_wasm::run;
+use mzlab_ops::run::feat::run;
 use std::path::PathBuf;
 
 /// `f(0..n)` on up to one thread per core (the order of the results is the order of the indices); in sequence on WASI, which has no threads.
@@ -100,7 +100,7 @@ fn detect_strong(
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
     let mut ix = open(&idxs[k])?;
     let cap = mzlab_core::budget::MemBudget::mb(mzlab_core::budget_auto::native_auto_mb()).cap();
-    mzlab_feat_wasm::estimate::detect_fits(&mut ix, recipe, cap)?;
+    mzlab_ops::run::feat::estimate::detect_fits(&mut ix, recipe, cap)?;
     run::detect(&mut ix, &name, recipe)
 }
 

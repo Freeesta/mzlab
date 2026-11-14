@@ -1,0 +1,7 @@
+{
+  "draw.cip.found": "Stato della scheda dei descrittori CIP del Disegno; {n} = numero di etichette R/S ed E/Z trovate.",
+  "draw.cip.fail": "Stato della scheda dei descrittori CIP quando il calcolo non riesce; {message} = l'errore.",
+  "draw.cip.atom": "Riga di un centro stereogenico; {atom} = simbolo e numero dell'atomo (C2), {label} = R o S.",
+  "draw.cip.atomLow": "Riga di un centro pseudoasimmetrico; {atom} = simbolo e numero dell'atomo, {label} = r o s minuscolo.",
+  "draw.cip.bond": "Riga di un doppio legame; {a} e {b} = i due atomi (C4, C5), {label} = E o Z."
+}

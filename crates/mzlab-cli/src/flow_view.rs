@@ -1,5 +1,5 @@
 //! A `table.filter` view read by a step that wants a `.mzfeat`: before the step runs, every view on one of its `table` ports becomes the table it stands
-//! for (`mzlab_feat_table_wasm::core::table_of_view`, the function the `table` `.wasm` exports), written once per view in the working folder with the lineage of
+//! for (`mzlab_ops::run::table::core::table_of_view`, the function the `table` `.wasm` exports), written once per view in the working folder with the lineage of
 //! the table it was made from. The exports read the view itself (they write the rows it keeps from the whole table). Called by `flow::dispatch`; declared in `flow_export`.
 
 use std::io::Read;
@@ -9,7 +9,7 @@ use crate::flow::{io, FileRunner};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::step::DataType;
-use mzlab_feat_table_wasm::core::{is_view, table_of_view, view_origin};
+use mzlab_ops::run::table::core::{is_view, table_of_view, view_origin};
 
 /// Number of the next temporary file, so that two threads never write the same one.
 static PART: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);

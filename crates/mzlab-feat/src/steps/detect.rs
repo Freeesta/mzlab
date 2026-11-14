@@ -204,17 +204,18 @@ fn isotope_params() -> Vec<Param> {
     ]
 }
 
-/// How the pieces of a trace are joined and where the area of a row comes from; the defaults give the bytes of the files made before them.
+/// How the pieces of a trace are joined and where the area of a row comes from: `window` and `wide` at high resolution, `channel` and `strict` in the unit preset.
 fn trace_choices() -> Vec<Param> {
     vec![
         Param::choice("area_from", "Area from", &["channel", "window", "xic"])
-            .default_str("channel")
+            .default_str("window")
             .doc("Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area.")
             .tip("Window sums the quality trace over the row; xic integrates it by trapezoid on the real retention times.")
             .advanced(),
         Param::choice("stitch", "Stitch", &["strict", "wide"])
-            .default_str("strict")
+            .default_str("wide")
             .doc("Wide also joins touching low pieces of neighbouring channels, so an ion whose m/z wanders ±3 ppm stays one row.")
+            .tip("Wide (default at high resolution) joins touching low pieces of neighbouring channels so a wandering ion stays one row.")
             .advanced(),
     ]
 }
@@ -266,6 +267,8 @@ fn preset_lr() -> Preset {
             ("floor", num(3_000.0)),
             ("min_height", num(7_000.0)),
             ("min_snr", num(3.0)),
+            ("area_from", text("channel")),
+            ("stitch", text("strict")),
         ],
         evidence: "LR_FLOOR, LR_MIN_HEIGHT and LR_MIN_SNR of recipe_lr.rs; the preview proposes the values of each file; on profile scans the floor is the mode of the noise lump",
         algorithm: Some("masstrace"),

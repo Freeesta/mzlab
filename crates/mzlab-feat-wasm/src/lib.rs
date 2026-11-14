@@ -27,34 +27,49 @@ use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
 #[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
 mod blocks_js;
-#[cfg(any(feature = "detect", feature = "untargeted"))]
-pub mod cache;
-#[cfg(feature = "detect")]
-pub mod family;
 #[cfg(feature = "finder")]
 pub mod finder;
 #[cfg(feature = "finder_edge")]
 pub mod finder_edge;
-#[cfg(feature = "interp")]
-pub mod interp;
 #[cfg(feature = "finder_msn")]
 pub mod msn;
 pub mod progress_js;
-pub mod run;
-pub mod spill_js; pub mod run_evid; pub mod series_js;
+// the plain modules live in `mzlab-ops`; re-exported under their old paths
+pub use mzlab_ops::run::feat::{estimate, run, run_evid, run_tp};
+#[cfg(any(feature = "detect", feature = "untargeted"))]
+pub use mzlab_ops::run::feat::cache;
+#[cfg(feature = "detect")]
+pub use mzlab_ops::run::feat::family;
+#[cfg(feature = "interp")]
+pub use mzlab_ops::run::feat::interp;
+#[cfg(feature = "untargeted")]
+pub use mzlab_ops::run::feat::untargeted;
+#[cfg(any(feature = "detect", feature = "untargeted"))]
+mod cache_js;
+#[cfg(feature = "detect")]
+mod family_js;
+#[cfg(feature = "interp")]
+mod interp_js;
+#[cfg(feature = "detect")]
+mod estimate_js;
+#[cfg(feature = "proofs")]
+mod run_dig_js;
+#[cfg(feature = "proofs")]
+mod run_tp_js;
+#[cfg(feature = "detect")]
+pub use mzlab_ops::run::feat::run_estimate;
+#[cfg(feature = "proofs")]
+pub use mzlab_ops::run::feat::state;
+#[cfg(feature = "detect")]
+mod run_meta_js;
+pub mod spill_js; pub mod series_js;
 #[cfg(any(feature = "flow_ms2", feature = "flow_formula"))]
 pub mod run_ms2;
 #[cfg(feature = "flow_tab")]
 pub mod run_tab;
 #[cfg(feature = "flow_stat")]
 pub mod run_stat;
-#[cfg(feature = "detect")]
-pub mod run_estimate;
-pub mod run_tp; pub mod estimate;
-#[cfg(feature = "proofs")]
-pub mod state;
-#[cfg(feature = "untargeted")]
-pub mod untargeted;
+
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-wasm/1";
@@ -408,7 +423,10 @@ pub fn build_evidence_to(
         let size = table_size as u64;
         let mut files = stored.map(|files| JsStored { files });
         let sizes = mzidx_sizes.unwrap_or_default();
-        let mut open = |k: usize| open_one(mzidx_read.as_ref().expect("read"), k, sizes[k]);
+        let mut open = |k: usize| {
+            let size = *sizes.get(k).ok_or_else(|| Error::new("error.badIndex"))?;
+            open_one(mzidx_read.as_ref().expect("read"), k, size)
+        };
         let src = match (files.as_mut(), mzidx_read.is_some() && !sizes.is_empty()) {
             (Some(stored), true) => Some(run::RowSources {
                 stored,
@@ -496,7 +514,10 @@ pub fn align_untargeted_to(
     let p = mzlab_feat::untargeted::pipeline::UntParams::from_json(params).map_err(js_err)?;
     let budget = MemBudget::from_request(budget_mb);
     let mut src = JsStored { files };
-    let open = |k| open_one(&read, k, sizes[k]);
+    let open = |k| {
+        let size = *sizes.get(k).ok_or_else(|| Error::new("error.badIndex"))?;
+        open_one(&read, k, size)
+    };
     to_sink(write, |sink| {
         untargeted::align_to(&mut src, &budget, &p, open, sink)
     })

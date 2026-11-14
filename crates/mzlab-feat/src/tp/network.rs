@@ -14,7 +14,7 @@ use super::*;
 use crate::aligned::{Aligned, CELL_ABSENT};
 use crate::evid::{match_hypotheses, match_hypotheses_for};
 use crate::hypo::{counts_of, HypoParams, Hypothesis, Registry, Rules, SRC_NETWORK};
-use crate::trace::filled;
+use crate::trace_base::filled;
 
 /// Thresholds of the network.
 #[derive(Debug, Clone, PartialEq)]

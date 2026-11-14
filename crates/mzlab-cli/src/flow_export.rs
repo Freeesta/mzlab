@@ -1,4 +1,4 @@
-//! The native executors of `export.table_csv` and `export.mztab`: the table file (`mzlab_feat_table_wasm::core::table_file`, the one the page
+//! The native executors of `export.table_csv` and `export.mztab`: the table file (`mzlab_ops::run::table::core::table_file`, the one the page
 //! downloads) of a `.mzfeat` with the roles of the samples file, as CSV or as mzTab-M, so the plan and the page write the same bytes.
 
 use std::path::PathBuf;
@@ -10,14 +10,14 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::step::DataType;
 use mzlab_feat::store::Slice;
-use mzlab_feat_table_wasm::core::{table_file, view_origin};
-use mzlab_feat_table_wasm::pol;
+use mzlab_ops::run::table::core::{table_file, view_origin};
+use mzlab_ops::run::table::pol;
 
 /// A view read by a step that wants a `.mzfeat` (every step but these exports): the table it stands for.
 #[path = "flow_view.rs"]
 pub(crate) mod view;
 
-/// Polarity of the table: the rule of `mzlab_feat_table_wasm::pol` (the recipe, else the files of its lineage), the one the browser applies.
+/// Polarity of the table: the rule of `mzlab_ops::run::table::pol` (the recipe, else the files of its lineage), the one the browser applies.
 pub(crate) fn polarity_of(table: &[u8], files: &[PathBuf]) -> Result<i32> {
     let ix: Vec<_> = files.iter().filter_map(|p| open(p).ok()).collect();
     pol::of_table(&mut Slice(table), table.len() as u64, &ix)

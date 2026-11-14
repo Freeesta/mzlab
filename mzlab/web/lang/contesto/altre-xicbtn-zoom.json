@@ -1,0 +1,9 @@
+{
+  "xicbtn.n": "Suggerimento del pulsante XIC con più file sovrapposti; {n} = numero di file.",
+  "zoom.mz": "Scritta sul grafico ingrandito; {lo} e {hi} = estremi in m/z.",
+  "zoom.rt": "Scritta sul grafico ingrandito; {lo} e {hi} = estremi in minuti.",
+  "xicbtn.apex": "Riga sotto lo XIC nato dal pulsante dello spettro; {rt} = RT dell'apice (min), {y} = intensità dell'apice.",
+  "xicbtn.ion.aria": "Nome accessibile dell'etichetta dello ione accanto al pulsante XIC; {ion} = ione e finestra (es. m/z 301.1410 ± 5 ppm).",
+  "xicbtn.picked": "Annuncio dopo la scelta di un picco nello spettro; {ion} = ione e finestra.",
+  "xicbtn.pop.tol": "Etichetta del campo tolleranza; {unit} = ppm (alta risoluzione) o Da (risoluzione unitaria)."
+}

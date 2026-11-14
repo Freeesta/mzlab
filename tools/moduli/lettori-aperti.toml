@@ -1,0 +1,9 @@
+uscita = "wasm-lettori/aperti"
+pacchetto = "mzlab-lettori-wasm"
+feature = "aperti"
+senza_default = true
+wasm_opt = "@estesi"
+parte = "lettori"
+tetto = 563200
+misura = 562454
+nota = "readers with indexed-mzML writer; aperti and sciex count a scan that does not decode (+1.9 KB); measured plus margin, rounded to 512 B"

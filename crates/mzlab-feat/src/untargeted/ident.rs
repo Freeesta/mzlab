@@ -9,10 +9,12 @@
 //! group.
 //!
 //! Difference from mzmine: its networking first groups the features by RT and by the correlation of their peak shapes (metaMSEcorrelate; also the
-//! intensity profile across samples) and only then looks for adducts inside a group. Here neither correlation is used: the link is by neutral mass and
-//! RT alone, so two ions of compatible mass and RT are linked even if their profiles across samples disagree (a false link is possible). The 4.10.90 gold
-//! data has no networking output, so there is no external value to test a correlation criterion against and no parity with mzmine is claimed for this
-//! step (it is claimed for ADAP, resolver, join, gap filling and isotopes). The correlation across common samples lives in `legacy/identity.rs`.
+//! intensity profile across samples) and only then looks for adducts inside a group. Here by default neither correlation is used: the link is by neutral
+//! mass and RT alone, so two ions of compatible mass and RT are linked even if their profiles across samples disagree (a false link is possible). The
+//! opt-in `IdentParams::min_corr` keeps a link only when the area profiles of the two ions across the files correlate (Pearson, files where both are
+//! detected). The 4.10.90 gold data has no networking output, so there is no external value to test a correlation criterion against and no parity with
+//! mzmine is claimed for this step (it is claimed for ADAP, resolver, join, gap filling and isotopes). The correlation across common samples also lives
+//! in `legacy/identity.rs`.
 
 use super::isotopes::{items_of, IsoGroups};
 use crate::axis::half;
@@ -20,16 +22,22 @@ use crate::evid::HYPOTHESIS_PPM;
 use crate::hypo::{Dir, Hypothesis, SRC_NETWORK};
 use crate::rowident::RowIdent;
 use crate::sortc::SortC;
-use crate::table::Aligned;
+use crate::table::{Aligned, CELL_DETECTED};
 use mzlab_core::elements::{adducts, ion_mz};
 
+/// Fewest files where both ions are detected for their profiles to be judged; with fewer the link stays.
+pub const MIN_COMMON: usize = 4;
+
 /// Tolerances of the link.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct IdentParams {
     /// Largest RT distance between two linked ions, minutes.
     pub rt_tol: f64,
     /// Window of m/z on the neutral masses: ppm if positive, Da if negative.
     pub win: f64,
+    /// A link is kept only when the area profiles of its two ions across the files correlate at this value or more (Pearson over the files where both
+    /// are detected, `MIN_COMMON` at least); 0 = off, the default.
+    pub min_corr: f64,
 }
 
 impl Default for IdentParams {
@@ -37,8 +45,44 @@ impl Default for IdentParams {
         IdentParams {
             rt_tol: 0.1,
             win: HYPOTHESIS_PPM,
+            min_corr: 0.0,
         }
     }
+}
+
+// By hand so that the text (it enters the fingerprint of the recipe) is the old one while the option is off.
+impl std::fmt::Debug for IdentParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut d = f.debug_struct("IdentParams");
+        d.field("rt_tol", &self.rt_tol).field("win", &self.win);
+        if self.min_corr != 0.0 {
+            d.field("min_corr", &self.min_corr);
+        }
+        d.finish()
+    }
+}
+
+/// Pearson correlation of the areas of rows `a` and `b` over the files where both are detected; `None` when fewer than `MIN_COMMON` files or a profile is flat.
+fn profile_corr(t: &Aligned, a: usize, b: usize) -> Option<f64> {
+    let both: Vec<(f64, f64)> = (0..t.n_files)
+        .map(|k| (t.cell(a, k), t.cell(b, k)))
+        .filter(|&(x, y)| t.state[x] == CELL_DETECTED && t.state[y] == CELL_DETECTED)
+        .map(|(x, y)| (t.area[x], t.area[y]))
+        .collect();
+    if both.len() < MIN_COMMON {
+        return None;
+    }
+    let n = both.len() as f64;
+    let (mx, my) = (
+        both.iter().map(|p| p.0).sum::<f64>() / n,
+        both.iter().map(|p| p.1).sum::<f64>() / n,
+    );
+    let cov: f64 = both.iter().map(|p| (p.0 - mx) * (p.1 - my)).sum();
+    let (vx, vy) = (
+        both.iter().map(|p| (p.0 - mx).powi(2)).sum::<f64>(),
+        both.iter().map(|p| (p.1 - my).powi(2)).sum::<f64>(),
+    );
+    (vx > 0.0 && vy > 0.0).then(|| cov / (vx * vy).sqrt())
 }
 
 /// The identity columns and the family id of each row (1-based in the order the families are found, 0 = alone).
@@ -84,7 +128,9 @@ fn linked(
             .map(|j| (j, (t.mz[b] - ads[j].1 - neutral).abs()))
             .filter(|&(_, d)| d <= tol)
             .min_by(|a, b| a.1.total_cmp(&b.1));
-        if let Some((j, _)) = best {
+        let agrees =
+            p.min_corr <= 0.0 || profile_corr(t, anchor, b).is_none_or(|r| r >= p.min_corr);
+        if let (Some((j, _)), true) = (best, agrees) {
             out.push((b, j));
         }
     }

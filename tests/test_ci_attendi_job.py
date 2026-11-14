@@ -1,5 +1,7 @@
 """tools/ci_attendi_job.py: sito-e2e goes on only when every .wasm job succeeded, and stops at the first one that did not."""
+import io
 import sys
+import urllib.error
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
@@ -91,3 +93,30 @@ def test_an_api_error_is_retried():
 def test_gives_up_after_the_timeout():
     code, _ = run([[job(n, "in_progress") for n in NAMES]] * 3, timeout=-1)
     assert code == 1
+
+
+def http_error(code, retry_after=None):
+    hdr = {"Retry-After": retry_after} if retry_after else {}
+    return urllib.error.HTTPError("u", code, "x", hdr, io.BytesIO(b""))
+
+
+def test_a_refused_request_backs_off_and_honours_retry_after():
+    assert w.retry_delay(http_error(403, "90"), 0) == 90
+    assert w.retry_delay(http_error(429, "9999"), 0) == w.BACKOFF_MAX
+    assert [w.retry_delay(http_error(403), n) for n in (0, 1, 2)] == [10, 20, 40]
+    assert w.retry_delay(OSError("reset"), 20) == w.BACKOFF_MAX
+
+
+def test_the_poll_after_a_403_sleeps_the_backoff_and_a_good_poll_resets_it():
+    ok = [job(n, "in_progress") for n in NAMES]
+    calls = iter([http_error(403, "60"), http_error(403), ok, [job(n, "completed", "success") for n in NAMES]])
+
+    def fetch():
+        x = next(calls)
+        if isinstance(x, Exception):
+            raise x
+        return x
+
+    slept = []
+    assert w.wait(NAMES, fetch=fetch, sleep=slept.append) == 0
+    assert slept == [60, 20, w.POLL]

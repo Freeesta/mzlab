@@ -8,7 +8,7 @@ use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::Error;
 use mzlab_core::json::parse;
 use mzlab_feat::store::Slice;
-use mzlab_feat_table_wasm::core::ms2_file;
+use mzlab_ops::run::table::core::ms2_file;
 
 use crate::flow_link_tests::{fixture, hypotheses, series, FORMULA};
 

@@ -4,9 +4,9 @@
 
 use mzlab_core::error::Result;
 
-use crate::trace::filled;
 use crate::axis::half;
 use crate::table::{Aligned, FileFeatures, RowMeta, RowQ, CELL_DETECTED, NO_FILE, ROLE_ISOTOPE};
+use crate::trace_base::filled;
 
 /// Distance in m/z (ppm) between the mean m/z of a row and the peak of a file that belongs to it (the alignment accepts up to 10 ppm of span).
 pub const WINDOW_PPM: f64 = 15.0;

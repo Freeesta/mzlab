@@ -18,22 +18,20 @@ use crate::centwave::{self, Peak};
 use crate::channels::{segments, stitch};
 use crate::post::{finish, median_interval, Row};
 use crate::table::FileFeatures;
+use crate::trace_base::{reserve, BYTES_PER_PEAK};
+
+/// The old path of the memory base, which lives in `trace_base` so that the modules that only allocate do not depend on `trace`.
+pub use crate::trace_base::{FLOOR, MIN_HEIGHT, SLAB_PEAKS, TOUCH_HEIGHT};
 
 pub const CHANNEL_PPM: f64 = 4e-6;
-pub const FLOOR: f64 = 2e4;
-pub const MIN_HEIGHT: f64 = 2e5;
 pub const MIN_POINTS: u32 = 5;
 pub const LONG_TRACE: u32 = 400;
 /// Scans of a series for the common mode: the shortest trace that `TraceBank` counts as persistent.
 const PERSISTENT_SCANS: usize = 400;
 /// Scans a trace may miss between two of its points (0 = consecutive scans), as `gapfill::Params::max_gap`.
 pub const MAX_GAP: u32 = 1;
-pub const SLAB_PEAKS: usize = 1_500_000;
-pub const TOUCH_HEIGHT: f64 = 2e6;
 /// A slab never ends at a smaller gap (ppm) between neighbouring peaks.
 pub const SLAB_GAP_PPM: f64 = 50.0;
-/// Bytes of working memory per peak of a slab (m/z, intensity, scan, log m/z, channel, ...).
-pub(crate) const BYTES_PER_PEAK: usize = 64;
 
 #[derive(Clone)]
 pub struct Params {
@@ -89,18 +87,6 @@ impl Params {
 /// True when the broad-band pass is on: a band longer than `long_trace` scans is then a peak, not background.
 fn broad_on(p: &Params) -> bool {
     matches!(&p.peak, Peak::CentWave(cw) if cw.broad.enabled)
-}
-
-pub(crate) fn reserve<T>(v: &mut Vec<T>, extra: usize) -> Result<()> {
-    v.try_reserve(extra).map_err(|_| Error::memory_budget())
-}
-
-/// `vec![value; n]` that refuses with `error.memoryBudget` instead of aborting when the allocation fails.
-pub(crate) fn filled<T: Clone>(n: usize, value: T) -> Result<Vec<T>> {
-    let mut v = Vec::new();
-    reserve(&mut v, n)?;
-    v.resize(n, value);
-    Ok(v)
 }
 
 /// One slab of peaks (m/z ascending, above the floor) through both grids.
@@ -369,17 +355,4 @@ fn common_mode_params<R: ReadAt>(
         c.broad.common = share(Some(cm));
     }
     Ok(Some(q))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::filled;
-
-    #[test]
-    fn filled_gives_the_vec_or_refuses_with_the_key() {
-        assert_eq!(filled(3, 7u8).unwrap(), vec![7, 7, 7]);
-        assert!(filled::<f64>(0, 0.0).unwrap().is_empty());
-        let e = filled::<u64>(usize::MAX / 16, 0).unwrap_err();
-        assert_eq!(e.key, "error.memoryBudget");
-    }
 }

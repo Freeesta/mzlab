@@ -14,8 +14,8 @@ use mzlab_core::mzml::Spectrum;
 use mzlab_core::mzmlwrite::{Header, MzmlWriter};
 use mzlab_core::upload::prepare;
 use mzlab_feat::store::Slice;
-use mzlab_feat_table_wasm::core::{samples_json, table_file};
-use mzlab_feat_wasm::run;
+use mzlab_ops::run::feat::run;
+use mzlab_ops::run::table::core::{samples_json, table_file};
 
 /// An mzML of Q1 scans every 3 s: a flat noise floor and two ions, one growing with the treatment time `t`.
 pub(crate) fn mzml(t: f64) -> Vec<u8> {

@@ -1,4 +1,4 @@
-//! The rule that ties an MS2 to a feature (`docs/agenti/mzfinder-ms2-regola.md`): the precursor within the tolerance of the m/z read in the table AND the
+//! The rule that ties an MS2 to a feature (`docs/agenti/mzfinder-ms2.md`): the precursor within the tolerance of the m/z read in the table AND the
 //! scans inside the peak of the feature. A feature of the synthetic series with its read m/z: row 7 at 7.4 min, read 257.3595 (m/z of the table).
 
 use super::*;

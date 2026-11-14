@@ -1,0 +1,18 @@
+{
+  "int.split.mark": "aria-label di un marcatore della divisione nelle valli; {rt} = tempo della linea verticale in minuti, 3 decimali.",
+  "int.base.tip": "Riga del riquadro sull'etichetta «A = …» di un'integrazione: la linea di base usata; {b} = nome della modalità (int.base.tag.*).",
+  "int.follow.sn": "Riquadro sull'etichetta di una finestra che segue il campione (SIM/MRM): rapporto segnale/rumore misurato dal motore; {sn} = numero, «…» in attesa, «—» senza picco.",
+  "canali.manint.cp.aria": "Nome accessibile di una cella copiabile (apice, area, altezza) della tabella «Integrazioni manuali»; {c} = intestazione della colonna, {v} = valore mostrato.",
+  "int.follow.note": "Riquadro sull'etichetta di una finestra che segue il campione: da quale campione viene e come diventa una riga della tabella; {f} = nome del campione dove è stata tracciata.",
+  "int.anchor.a": "Suggerimento (title e aria-label) del primo punto di ancoraggio di un'integrazione SIM/MRM; {rt} = tempo in minuti, {y} = intensità, {m} = modo di aggancio (Segui la curva, A zero, Manuale).",
+  "int.anchor.b": "Come int.anchor.a, per il secondo punto di ancoraggio.",
+  "canali.manint.title": "Titolo della carta delle integrazioni manuali in Dati; {n} = numero di finestre integrate.",
+  "canali.manint.show.aria": "Etichetta del pulsante che mostra il grafico di un'integrazione; {ch} = canale (m/z o transizione), {s} = campione.",
+  "canali.manint.del.aria": "Etichetta del pulsante che elimina un'integrazione; {ch} = canale (m/z o transizione), {s} = campione.",
+  "canali.sim.ion": "Nome di un canale SIM di cui il file non dà l'm/z; {n} = posizione del canale (1, 2, …).",
+  "canali.sim.cell": "Cella «Esperimento» della tabella dei file per un file SIM; {n} = numero di ioni monitorati.",
+  "canali.btn.aria": "Nome accessibile del pulsante dei canali; {n} = numero di canali tracciati.",
+  "canali.pick.ck": "Suggerimento al passaggio sulla casella di una riga del selettore di transizioni / ioni SIM; {et} = etichetta del canale (m/z).",
+  "canali.row": "Descrizione letta da screen reader di una riga dell'albero dei canali; {et} = etichetta del canale, {n} = numero di punti (scansioni), {a} e {b} = tempo iniziale e finale in minuti.",
+  "canali.kind.aria": "Nome accessibile del pulsante che sceglie cosa traccia il cromatogramma; {v} = testo del pulsante (per esempio TIC o TIC + 1)."
+}

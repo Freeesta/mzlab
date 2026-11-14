@@ -1,0 +1,7 @@
+{
+  "valida.title": "Titolo della finestra «Valida mzML»; {name} = nome del file (già protetto).",
+  "valida.caption": "Didascalia e nome accessibile della tabella dei problemi trovati; {name} = nome del file.",
+  "valida.counts": "Riga di riepilogo della validazione; {spectra}, {chroms} = numero di spettri e cromatogrammi del file; {errors}, {warnings} = numero di errori e di avvisi.",
+  "valida.more": "Nota sotto la tabella quando i problemi sono più delle righe mostrate; {n} = righe mostrate, {total} = problemi trovati.",
+  "valida.fail": "Messaggio quando la validazione non è riuscita; {detail} = causa tecnica (testo dell'errore)."
+}

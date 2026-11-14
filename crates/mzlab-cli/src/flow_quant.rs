@@ -1,11 +1,11 @@
 //! `quant.calibrate@1`: applies the calibration curves the user imported (slope, intercept, linear range per compound, made in a spreadsheet) to the
 //! areas of a feature table and writes a long CSV of concentrations with a flag per cell. It never fits a line: the standards are not read.
-//! The text is `mzlab_feat_table_wasm::quant::quant_text`, shared with the browser (`table`); this file only reads and writes the files. Called by `flow.rs`.
+//! The text is `mzlab_ops::run::table::quant::quant_text`, shared with the browser (`table`); this file only reads and writes the files. Called by `flow.rs`.
 
 use mzlab_core::error::Result;
 use mzlab_core::flow::Job;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
-use mzlab_feat_table_wasm::quant::{quant_text, DEFAULT_MZ_TOL, DEFAULT_RT_TOL};
+use mzlab_ops::run::table::quant::{quant_text, DEFAULT_MZ_TOL, DEFAULT_RT_TOL};
 
 use crate::flow::{io, read_one, FileRunner, Made};
 

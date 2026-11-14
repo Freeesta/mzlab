@@ -1,0 +1,8 @@
+uscita = "wasm-feat/chem"
+pacchetto = "mzlab-chem-wasm"
+chiavi = { chem = 14 }
+wasm_opt = "@motore"
+parte = "a"
+tetto = 569344
+misura = 566361
+nota = "ETKDG geometry and GFN2-xTB of the parent; measured 551415 (+3 %)"
