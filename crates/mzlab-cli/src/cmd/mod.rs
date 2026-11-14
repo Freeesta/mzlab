@@ -1,6 +1,7 @@
 //! The table of commands: each family file lists its commands as `Entry` values; `find` looks a command up and `help` prints `--help` from the same rows.
 //! A command with an empty `help` is listed on the line of another one.
 
+mod docs;
 mod features;
 mod flow;
 mod library;
@@ -22,7 +23,7 @@ pub(crate) struct Entry {
 }
 
 /// The families in the order of the help text.
-static FAMILIES: [&[Entry]; 7] = [
+static FAMILIES: [&[Entry]; 8] = [
     features::TABLE,
     flow::TABLE,
     llm::TABLE,
@@ -30,6 +31,7 @@ static FAMILIES: [&[Entry]; 7] = [
     mol::TABLE,
     traces::TABLE,
     library::TABLE,
+    docs::TABLE,
 ];
 
 pub(crate) fn entries() -> impl Iterator<Item = &'static Entry> {
@@ -50,6 +52,30 @@ pub(crate) fn canonical(word: &str) -> &str {
     entries()
         .find(|e| e.aliases.contains(&word))
         .map_or(word, |e| e.name)
+}
+
+/// The command list of `docs/agenti/cli.md` (between its marker lines), written by `mzlab-cli help-md` and `tools/cli_doc.py`: the names in table order, wrapped under 480 characters.
+pub(crate) fn list_md() -> String {
+    let mut out = String::new();
+    let mut line = String::new();
+    for e in entries().filter(|e| e.name != "help-md" && e.name != "flow") {
+        let old: Vec<String> = e.aliases.iter().map(|a| format!("`{a}`")).collect();
+        let item = if old.is_empty() {
+            format!("`{}`", e.name)
+        } else {
+            format!("`{}` (old: {})", e.name, old.join(", "))
+        };
+        if !line.is_empty() && line.len() + item.len() + 2 > 480 {
+            out += &format!("{line}\n");
+            line.clear();
+        }
+        line += &(if line.is_empty() {
+            item
+        } else {
+            format!(", {item}")
+        });
+    }
+    out + &line + "\n"
 }
 
 const HEAD: &str = "mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.";
