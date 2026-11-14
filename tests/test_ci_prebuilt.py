@@ -123,3 +123,25 @@ def test_every_cargo_util_helper_a_test_calls_is_imported_or_defined():
         used = {n.func.id for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in helpers}
         bad += [f"{f.name}: {h}" for h in sorted(used - known)]
     assert not bad, bad
+
+
+def test_prebuilt_restores_the_cache_the_shards_save():
+    """The path list is part of the cache version: a `prebuilt` restore with other paths than the shard's save never hits (every group rebuilt from zero)."""
+    lines = (ROOT / ".github/workflows/test.yml").read_text(encoding="utf-8").splitlines()
+
+    def blocks(start: str, end: str) -> list[list[str]]:
+        a, b = lines.index(f"  {start}:"), lines.index(f"  {end}:")
+        out = []
+        for k in range(a, b):
+            if lines[k].strip() == "path: |":
+                ind = len(lines[k]) - len(lines[k].lstrip())
+                body = []
+                for ln in lines[k + 1:b]:
+                    if not ln.strip() or len(ln) - len(ln.lstrip()) <= ind:
+                        break
+                    body.append(ln.strip())
+                if "target" in body:
+                    out.append(sorted(body))
+        return out
+    pre, shard = blocks("prebuilt", "pytest-shard"), blocks("pytest-shard", "pytest")
+    assert len(pre) == 1 and len(shard) == 2 and shard[0] == shard[1] == pre[0]
