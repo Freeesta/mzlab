@@ -117,6 +117,10 @@ name = "untargeted_ident"
 required-features = ["untargeted"]
 
 [[test]]
+name = "untargeted_ident_corr"
+required-features = ["untargeted"]
+
+[[test]]
 name = "untargeted_to_attributio"
 required-features = ["untargeted", "attributio"]
 
