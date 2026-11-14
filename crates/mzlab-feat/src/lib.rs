@@ -24,6 +24,7 @@ mod channels;
 pub mod chem;
 pub mod classes;
 pub mod deconvolve;
+pub mod detect_route;
 pub mod dia;
 pub mod drift;
 pub mod evid;
