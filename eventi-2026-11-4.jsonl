@@ -20225,3 +20225,4 @@
 {"v":1,"ts_utc":"2026-11-14T05:07:43Z","azione":"push","titolo":"CI: the drawing e2e need the CI-built .wasm (left out of e2e-cambiati); e2e_fondo_piatto off the allow list","merge_main":false,"aree":{"docs":1,"tools":2},"tipo":"pr","pr":3235,"sha":"99a40c040f9d9770940f72f9b054495e334a0cd2"}
 {"v":1,"ts_utc":"2026-11-14T05:35:42Z","azione":"aperta","tipo":"pr","pr":3257,"sha":"3a5e8883f1fa3dbc0e14b19ce45a92aec351f3f6"}
 {"v":1,"ts_utc":"2026-11-14T05:37:26Z","azione":"push","titolo":"CI: six more e2e that need the CI-built .wasm leave the changed-files job","merge_main":false,"aree":{"tools":1},"tipo":"pr","pr":3235,"sha":"965d5560583a95aaaf97cfca712ff31395c78576"}
+{"v":1,"ts_utc":"2026-11-14T05:38:54Z","azione":"push","titolo":"CI: last attempt, safety set of light tests only (30 s each, 600 s total, no Ketcher/worker/heavy fixtures)","merge_main":false,"aree":{"docs":2,"tools":2},"tipo":"pr","pr":3235,"sha":"cd64252c1fa341d1f3e2b5943d55c952f44e2d34"}
