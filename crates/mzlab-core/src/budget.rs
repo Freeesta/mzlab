@@ -145,7 +145,9 @@ impl WriteAt for Vec<u8> {
     fn write_at(&mut self, off: u64, data: &[u8]) -> Result<()> {
         // an offset past usize (wasm32) or a sum that wraps is the same refusal as a failed grow, never a wrong write or a panic
         let off = usize::try_from(off).map_err(|_| Error::memory_budget())?;
-        let end = off.checked_add(data.len()).ok_or_else(Error::memory_budget)?;
+        let end = off
+            .checked_add(data.len())
+            .ok_or_else(Error::memory_budget)?;
         if self.len() < end {
             self.try_reserve(end - self.len())
                 .map_err(|_| Error::memory_budget())?;
