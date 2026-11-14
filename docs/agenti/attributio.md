@@ -21,7 +21,7 @@ Attributio vive dentro Flow (`flow/`), che si registra in `QTOOLS` senza condizi
 - **Prova delle letture**: `cargo test --release -p mzlab-feat --features attributio --test attributio_letture --test attributio_standard` (16 prove, helper in `tests/attributio_common/`: parità con `sintetica/{campagna,letture,rilevazione,sirius,standard,decisioni}.json` e `sorbenti/sorbenti.json`, casi a mano per TOML, unione delle decisioni e messaggi d'errore; con `MZLAB_DATI` legge le campagne vere e stampa le righe per fonte, senza si salta).
 - **Pannello e `.wasm`**: tabella dei livelli, crate `mzlab-attributio-wasm`, rotta desktop e pagina in `docs/agenti/attributio-pannello.md`; il Banco 2b (revisione, lista di controllo, alternative, decisioni) è in `docs/agenti/attributio-banco.md`.
 - **Campagna sintetica**: `tests/data/attributio/campagna_sintetica/` (inventata, 148 KB, 15 feature: POS 1-6 e 8-14, NEG 1-2; `livelli_attesi.csv` con colonne `_pol;_id;mz;rt;level;level_sub;level_basis;name;level_decisive`); provenienza e sha256 in `tests/data/attributio/LEGGIMI.md`.
-- **Revisione (AT-05)**: abbinamento spettrale, indice delle librerie, fonti e impostazioni in `crates/mzlab-feat/src/attributio/review/`; moduli, differenze volute e prova in `docs/agenti/attributio-abbinamento.md`.
+- **Revisione (AT-05)**: abbinamento spettrale, indice delle librerie, fonti e impostazioni in `crates/mzlab-feat/src/attributio/review/`; moduli, differenze volute e prova in `docs/agenti/attributio-revisione.md`.
 - **Dati di registro, liste e pericolo**: `crates/mzlab-feat/src/attributio/tox/`, istantanee in testo, nessuna rete:
   - `vocab.rs`: parole in inglese, alias italiani in sola lettura.
   - `ghs.rs`: categorie CLP/GHS acute e croniche (`classify`, `from_h_codes`).

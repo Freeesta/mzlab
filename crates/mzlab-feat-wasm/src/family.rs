@@ -1,5 +1,5 @@
 //! The `famiglia/1` record of one file on demand (`family_record`): L1-L3 done again keeping the families with their arcs and proofs, which neither the
-//! `.mzfeatf` nor the `.mzfeat` store. Built into the `.wasm` of the feature `detect`; the page asks for it per file (`docs/agenti/mzfeat-wasm-famiglia.md`).
+//! `.mzfeatf` nor the `.mzfeat` store. Built into the `.wasm` of the feature `detect`; the page asks for it per file (`docs/agenti/mzfeat-wasm-pannello.md`).
 
 use js_sys::Function;
 use mzlab_core::budget::MemBudget;
