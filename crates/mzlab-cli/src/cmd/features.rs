@@ -87,5 +87,5 @@ pub(crate) static TABLE: &[Entry] = &[Entry {
     name: "features",
     aliases: &[],
     help: "mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params FILE.json]",
-    run: run,
+    run,
 }];
