@@ -123,3 +123,14 @@ def test_every_cargo_util_helper_a_test_calls_is_imported_or_defined():
         used = {n.func.id for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in helpers}
         bad += [f"{f.name}: {h}" for h in sorted(used - known)]
     assert not bad, bad
+
+
+def test_prebuilt_restores_the_cache_the_shards_save():
+    """The path list is part of the cache version: a `prebuilt` restore with other paths than the shard's save never hits (every group rebuilt from zero)."""
+    import yaml
+    jobs = yaml.safe_load((ROOT / ".github/workflows/test.yml").read_text(encoding="utf-8"))["jobs"]
+
+    def paths(job: str, action: str) -> list[str]:
+        step = next(s for s in jobs[job]["steps"] if str(s.get("uses", "")).startswith(f"actions/cache/{action}@") and "target" in s["with"]["path"])
+        return sorted(step["with"]["path"].split())
+    assert paths("prebuilt", "restore") == paths("pytest-shard", "save")
