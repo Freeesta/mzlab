@@ -25006,3 +25006,4 @@
 {"v":1,"ts_utc":"2026-11-14T12:27:09Z","tipo":"coda","k":"2026-11-14T12:27:09Z","aperte":9,"indietro":5,"sporche":3,"verdi_in_attesa":2,"piu_vecchia_aperta_s":50235,"piu_vecchia_verde_s":345}
 {"v":1,"ts_utc":"2026-11-14T12:20:38Z","azione":"aperta","tipo":"pr","pr":3297,"sha":"d7a9a381d82d5479ab4adae7f734cf3d8bac806b"}
 {"v":1,"ts_utc":"2026-11-14T12:22:00Z","azione":"aperta","tipo":"pr","pr":3298,"sha":"5cabf886aa23df3f4e0e3f67436e7b382201ac72"}
+{"v":1,"ts_utc":"2026-11-14T12:35:23Z","azione":"aperta","tipo":"pr","pr":3299,"sha":"00ef4bd644b876a4ef4d27174bc375a636cd5077"}
