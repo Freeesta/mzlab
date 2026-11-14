@@ -164,18 +164,22 @@ impl State {
             return text("null".to_string());
         };
         let mut ix = self.open_idx(first)?;
-        let r = mzlab_feat_wasm::run::recipe_for("", &mut ix)?;
-        let pv: Value = serde_json::from_str(&mzlab_feat_wasm::run::preview(&mut ix, &r, false)?)
-            .map_err(|_| Error::new("error.badRecipe"))?;
+        let r = mzlab_ops::run::feat::run::recipe_for("", &mut ix)?;
+        let pv: Value =
+            serde_json::from_str(&mzlab_ops::run::feat::run::preview(&mut ix, &r, false)?)
+                .map_err(|_| Error::new("error.badRecipe"))?;
         let mut out = serde_json::json!({ "da": pv["da"], "rt_tol": pv["rt_tol"], "dead": pv["dead"], "fwhm": pv["fwhm"] });
         let mz = p["mz"].as_f64().unwrap_or(0.0);
         if ns.len() > 1 && mz > 0.0 {
             let mut all = Vec::new();
             for n in &ns {
                 let mut ix = self.open_idx(n)?;
-                let r = mzlab_feat_wasm::run::recipe_for("", &mut ix)?;
+                let r = mzlab_ops::run::feat::run::recipe_for("", &mut ix)?;
                 all.push(
-                    mzlab_feat::store::read_file(&mzlab_feat_wasm::run::detect(&mut ix, n, &r)?)?.0,
+                    mzlab_feat::store::read_file(&mzlab_ops::run::feat::run::detect(
+                        &mut ix, n, &r,
+                    )?)?
+                    .0,
                 );
             }
             let refs: Vec<&mzlab_feat::table::FileFeatures> = all.iter().collect();

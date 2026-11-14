@@ -478,7 +478,7 @@ pub fn evidence_to<R: ReadAt, W: WriteAt>(
     evidence_roles_to(table, size, hypo, minutes, None, parent, r, budget, sink)
 }
 
-pub use crate::run_evid::{evidence_roles_to, evidence_sources_to, RowSources};
+pub use super::run_evid::{evidence_roles_to, evidence_sources_to, RowSources};
 
 /// Preview of one file (see `mzlab_feat::params`): the floor of the recipe is used if it was given, else the one estimated from the intensities.
 pub fn preview<R: ReadAt>(index: &mut Index<R>, r: &Recipe, floor_given: bool) -> Result<String> {

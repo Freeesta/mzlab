@@ -40,8 +40,11 @@ pub mod interp;
 #[cfg(feature = "finder_msn")]
 pub mod msn;
 pub mod progress_js;
-pub mod run;
-pub mod spill_js; pub mod run_evid; pub mod series_js;
+// the plain modules live in `mzlab-ops`; re-exported under their old paths
+pub use mzlab_ops::run::feat::{run, run_evid};
+#[cfg(feature = "detect")]
+mod run_meta_js;
+pub mod spill_js; pub mod series_js;
 #[cfg(any(feature = "flow_ms2", feature = "flow_formula"))]
 pub mod run_ms2;
 #[cfg(feature = "flow_tab")]
@@ -49,10 +52,10 @@ pub mod run_tab;
 #[cfg(feature = "flow_stat")]
 pub mod run_stat;
 #[cfg(feature = "detect")]
-pub mod run_estimate;
+pub use mzlab_ops::run::feat::run_estimate;
 pub mod run_tp; pub mod estimate;
 #[cfg(feature = "proofs")]
-pub mod state;
+pub use mzlab_ops::run::feat::state;
 #[cfg(feature = "untargeted")]
 pub mod untargeted;
 

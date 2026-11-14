@@ -5,7 +5,7 @@ use mzlab_core::idxread::Index;
 use mzlab_core::json::{parse, Value};
 use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::upload::prepare;
-use mzlab_feat_wasm::run;
+use mzlab_ops::run::feat::run;
 
 use crate::flow_run_tests::fixture;
 

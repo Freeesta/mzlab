@@ -7,7 +7,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_feat::hypo::{Dir, Hypothesis, Registry};
 use mzlab_feat::target::{Cell, TargetResult, TargetRow};
 
-use crate::run::HypoRun;
+use super::run::HypoRun;
 
 const MAGIC: &[u8; 8] = b"MZHYPO02";
 

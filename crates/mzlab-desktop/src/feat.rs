@@ -1,4 +1,4 @@
-//! mzFinder in the app: the routes `feat/*` of `rpc`, the native twin of `TP_Mine/files/feat-worker.js`. The steps are the ones the `.wasm` runs (`mzlab_feat_wasm::run`),
+//! mzFinder in the app: the routes `feat/*` of `rpc`, the native twin of `TP_Mine/files/feat-worker.js`. The steps are the ones the `.wasm` runs (`mzlab_ops::run::feat::run`),
 //! over the `.mzidx` of the index folder of the app (`idxbuild.rs`), so the `.mzfeat` has the same bytes as the one of the site. What a step leaves (the `.mzfeatf` of each file,
 //! the table, the hypotheses, the Dig) stays in `FeatState`, because the page does not hold bytes of files here: it names the registered files and asks for the next step.
 //! The routes `finder/*` are in `feat_finder.rs`. Errors are `{error_key, params}` like the rest of `rpc`.
@@ -12,7 +12,7 @@ use mzlab_core::{Error, Result};
 use mzlab_feat::legacy::dig::Dig;
 use mzlab_feat::legacy::lr::LrDig;
 use mzlab_feat::store::Slice;
-use mzlab_feat_wasm::run::{self, HypoRun};
+use mzlab_ops::run::feat::run::{self, HypoRun};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
