@@ -1,5 +1,5 @@
 """A true reset: what a student loads stays in the browser after a reload (the page says so once); «Full reset» removes files, session, notebook, OPFS, IndexedDB,
-caches, service workers and preferences by NAME (also folders and databases that this test invents, as other parts of the program do); «Files and session only» keeps the
+caches, service workers and preferences by NAME (also folders and databases that this test invents, as other parts of the program do); «Files» keeps the
 preferences, the language and the saved libraries. The one entry is the header button «New session» (dialog with both and Cancel), also ?reset=all|1|files. Full reset also drops the program's own caches and worker (it is the guaranteed way to fetch the new version) and the page it reloads ends isolated by itself."""
 # covers: mzlab/web/reset.js, mzlab/web/settings.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -63,7 +63,10 @@ try:
         step("?reset=files: no files or session, folders and databases removed by name, libraries and preferences stay", partial)
         def full_cmd():
             load_files(); pg.click("#newrun"); pg.wait_for_selector("#resetdlg[open]")
-            txt = pg.inner_text("#resetdlg"); assert "Start a new session?" in txt and "Choose what to delete." not in txt and "Full reset" in txt and "Everything, as the first time" in txt and "Files and session only" in txt and "Cancel" in txt, txt
+            txt = pg.inner_text("#resetdlg"); assert "Start a new session?" in txt and "Choose what to delete." not in txt and "Full reset" in txt and "Everything, as the first time" not in txt and "Keeps preferences" not in txt and "Cancel" in txt, txt
+            lab = pg.evaluate("[...document.querySelectorAll('#resetdlg button')].map(b => [b.dataset.reset, b.textContent.trim()])")
+            assert lab == [["files", "Files"], ["all", "Full reset"], ["", "Cancel"]], ("the milder button first, the red one second, then Cancel", lab)
+            assert pg.evaluate("document.activeElement.classList.contains('rs-cancel')"), "the first focus is Cancel, never the destructive button"
             hs = pg.evaluate("[...document.querySelectorAll('#resetdlg button')].map(b => b.getBoundingClientRect().height)"); assert all(round(h, 2) >= 44 for h in hs), hs
             assert pg.evaluate("(() => { const p = document.createElement('span'); p.style.color = 'var(--on-accent)'; p.style.background = 'var(--bad)'; document.body.appendChild(p); const c = getComputedStyle(p).backgroundColor; p.remove(); return c === getComputedStyle(document.querySelector('#resetdlg [data-reset=all]')).backgroundColor; })()"), "the wide button is red (CSS variable)"
             pg.click("#resetdlg [data-reset=all]"); pg.wait_for_function("location.search.includes('riparti')", timeout=30000); ready_start(pg)
@@ -131,9 +134,33 @@ try:
             wait_for_js(pg, "(async () => { const n = []; for await (const [k] of (await navigator.storage.getDirectory()).entries()) n.push(k); return n.includes('librerie') && !S.sess; })()", 30000)   # settled: the reset finished writing
             s = pg.evaluate(STATE)
             assert s["files"] == 0 and not s["sess"] and s["mzlab"] == [], s                     # memory released: the files and their indexes are gone
-            assert "librerie" in s["opfs"] and "mzlab.lang" in s["ls"], s                         # the same as «Files and session only»
+            assert "librerie" in s["opfs"] and "mzlab.lang" in s["ls"], s                         # the same as «Files»
             stage(pg, [EX / "FullScan_t0.mzML"]); pg.click("#opbtn"); ready(pg); assert pg.evaluate("E.files.length") >= 1, "loading again works"
-        step("«Files and session only»: empty list, memory released, loading again works", clear_all)
+        step("«Files»: empty list, memory released, loading again works", clear_all)
+        def keep_work():
+            # what the user made survives «Files»: the drawing, a saved list, a saved molecule; the loaded files and the open-files list do not
+            pg.goto(base + "?reset=files"); pg.wait_for_function("!location.search.includes('reset')", timeout=30000); ready_start(pg)      # a clean start: the step before leaves a session
+            pg.evaluate("location.hash = '#/draw'"); pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
+            KJ = "document.querySelector('#kframe').contentWindow.ketcher"
+            wait_for_js(pg, f"!!({KJ} && {KJ}.editor)"); pg.evaluate(f"{KJ}.setMolecule('CC(=O)Nc1ccc(O)cc1')"); wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 11")
+            NBKET = "(async () => { try { return !!JSON.parse(await (await fetch('api/notebook')).text()).ket; } catch (e) { return false; } })()"
+            wait_for_js(pg, NBKET, 15000)                                                       # the notebook holds the drawing
+            pg.evaluate("""(async () => { const db = await new Promise((ok, no) => { const q = indexedDB.open(NOMI.DB); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); });
+              await new Promise((ok, no) => { const t = db.transaction(['liste_utente', 'molecole'], 'readwrite'); t.objectStore('liste_utente').put({ id: 'keep-list', name: 'my list' }); t.objectStore('molecole').put({ id: 'keep-mol', name: 'my molecule' }); t.oncomplete = ok; t.onerror = () => no(t.error); }); db.close(); })()""")
+            load_files(); pg.evaluate("location.hash = '#/draw'")
+            wait_for_js(pg, "(async () => { try { return (JSON.parse(await (await fetch('api/notebook')).text()).session || []).length > 0; } catch (e) { return false; } })()", 15000)   # the notebook names the open files
+            pg.click("#newrun"); pg.wait_for_selector("#resetdlg[open]"); pg.click("#resetdlg [data-reset=files]")
+            pg.wait_for_function("location.search === '' && window.qqReady && typeof E !== 'undefined' && E.files.length === 0", timeout=60000)
+            got = pg.evaluate("""(async () => { const db = await new Promise(ok => { const q = indexedDB.open(NOMI.DB); q.onsuccess = () => ok(q.result); });
+              const one = (st, k) => new Promise(ok => { const g = db.transaction(st).objectStore(st).get(k); g.onsuccess = () => ok(g.result || null); }), all = st => new Promise(ok => { const g = db.transaction(st).objectStore(st).count(); g.onsuccess = () => ok(g.result); });
+              const r = { list: await one('liste_utente', 'keep-list'), mol: await one('molecole', 'keep-mol'), files: await all('files'), manifest: await all('manifest') }; db.close(); return r; })()""")
+            assert got["list"] and got["mol"], ("the saved list and molecule stay", got)
+            assert got["files"] == 0 and got["manifest"] == 0, ("the loaded files are gone", got)
+            wait_for_js(pg, NBKET, 30000)
+            assert pg.evaluate("(async () => (JSON.parse(await (await fetch('api/notebook')).text()).session || []).length)()") == 0, "the open-files list is gone"
+            pg.click("#nav [data-v=draw]"); pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
+            wait_for_js(pg, f"!!({KJ} && {KJ}.editor) && {KJ}.editor.struct().atoms.size === 11", 30000)
+        step("«Files» keeps the drawing, a saved list and a saved molecule, and removes the loaded files (the full reset removes all, see above)", keep_work)
         b.close()
     r.close()
 except Exception as e:
