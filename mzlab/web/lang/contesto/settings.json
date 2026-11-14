@@ -1,0 +1,15 @@
+{
+  "settings.libs.title": "Librerie caricate qui; la ricerca parte dal clic destro su uno spettro MS2 (parte HR).",
+  "settings.cen.ask": "Conferma prima di creare le copie a un punto per picco; {n} = numero di file, {size} = spazio massimo, già formattato (es. 120 MB).",
+  "settings.cen.run": "Avanzamento della riduzione: {n} = file in corso, {m} = file in tutto, {name} = nome del file.",
+  "export.done": "Esito dell'esportazione dei dati: {name} = nome del file scaricato, {n} = numero di file nell'archivio (manifesto compreso).",
+  "import.ls": "Anteprima del ripristino: {n} = voci delle impostazioni nel file, {m} = quante differiscono dal valore attuale.",
+  "import.idb": "Anteprima del ripristino: {store} = nome dell'archivio (taccuino, liste, molecole…), {n} = numero di record nel file.",
+  "import.lib": "Anteprima del ripristino: {n} = numero di file di libreria nel file.",
+  "import.partial": "Esito del ripristino: {n} = file di libreria non scritti perché in uso.",
+  "settings.cen.done": "Fine della riduzione; {n} = copie create.",
+  "settings.cen.stopped": "Riduzione annullata dall'utente; {n} = copie già create.",
+  "settings.cen.fail": "Errore su un file della riduzione; {name} = nome del file.",
+  "settings.mem.status": "Riga di stato del budget di memoria nelle impostazioni; {mb} = budget in MB, {scans} = scansioni massime circa, {reason} = motivo della scelta, {conf} = affidabilità.",
+  "settings.mem.inputs": "Dati della macchina usati per scegliere il budget; {gb} = memoria del dispositivo in GB, {cores} = core logici, {hard} = limite massimo in MB."
+}

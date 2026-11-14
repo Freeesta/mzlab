@@ -12,7 +12,7 @@ What is checked (specification: PROMPT_INGLESE.md of the data repository, sectio
     motivated exceptions are in tools/i18n_eccezioni.txt;
  5. the glossary (lang/glossario.json): if the Italian text contains an Italian form of an entry, the English text must contain an
     English form and none of the forms to avoid;
- 6. lang/contesto.json describes every key that has parameters;
+ 6. lang/contesto/<area>.json (same stem as lang/it/<area>.js) describes every key that has parameters, each in the file of its key's area;
  7. every `err.*` / `error.*` / `warn.*` key a web crate can send (literals in crates/, see CRATE_*) has a text in both languages
     (the allow list CRATE_SENZA_TESTO says why a key never reaches a student).
 The catalogs are plain JSON inside `I18N.add("xx", { ... });`: the first and the last line are cut off and the rest is parsed as JSON.
@@ -478,10 +478,7 @@ def run(listing: bool = False) -> list[str]:
     check_italian(errs, listing)
     check_glossary(it, en, errs)
     check_names({"it": it, "en": en}, errs)
-    ctx = json.loads((LANG / "contesto.json").read_text(encoding="utf-8"))
-    for k in sorted(it):
-        if PARAM_RE.search(it[k]) and k not in ctx:
-            errs.append(f"contesto.json: missing description for the key with parameters: {k}")
+    errs += lang_catalog.contesto_problems(it)
     return errs
 
 

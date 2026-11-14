@@ -1,0 +1,17 @@
+{
+  "mappa.grp.row": "Riga di gruppo nella tabella dei punti segnati (solo HR); {g} = numero del gruppo, {shape} = nome della forma dei suoi punti, {n} = quanti punti, {members} = numeri dei punti.",
+  "mappa.grp.fold": "Pulsante che comprime la riga di un gruppo di punti segnati; {g} = numero del gruppo.",
+  "mappa.grp.unfold": "Pulsante che espande la riga di un gruppo di punti segnati; {g} = numero del gruppo.",
+  "mappa.tab.ref.pick": "Pulsante della tabella dei punti segnati nella mappa; {n} = numero del punto.",
+  "mappa.lbl.tip": "Tooltip di un'etichetta m/z dello spettro laterale della mappa; {mz} = m/z del picco, {snr} = rapporto segnale/rumore locale.",
+  "mappa.read.scan": "Lettura del mirino della mappa; {n} = numero d'ordine della scansione nel file.",
+  "mappa.tab.title": "Titolo della tabella dei punti segnati sotto la mappa; {n} = quanti punti.",
+  "mapnav.where": "Prima riga del menu del tasto destro della mappa; {at} = coordinate già formattate (RT, m/z, intensità) del punto su cui agiscono i comandi.",
+  "mapnav.where.locked": "Come sopra, quando il mirino è bloccato; {at} = coordinate già formattate del punto bloccato.",
+  "mapex.spec.cap": "Didascalia sotto lo spettro laterale della mappa; {a} e {b} = estremi della finestra di RT del riquadro, in minuti, già formattati.",
+  "mapfeat.read": "Lettura al passaggio su un marcatore di Tabui sulla mappa; {mz} = m/z, {rt} = RT in minuti, {v} = intensità, già formattati.",
+  "mapfeat.title": "Titolo del blocco «Come è stata trovata»; {id} = identificativo della feature in Tabui.",
+  "mapfeat.win": "Finestra m/z dell'ione di una feature; {mz} = m/z, {ppm} = tolleranza in ppm, {a} e {b} = estremi della finestra.",
+  "mapfeat.edges.auto": "Bordi del picco calcolati dalla pagina; {a} e {b} = RT in minuti.",
+  "mapfeat.edges.rec": "Bordi dell'integrazione registrati da Tabui; {a} e {b} = RT in minuti."
+}

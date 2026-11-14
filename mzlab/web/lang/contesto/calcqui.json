@@ -1,0 +1,7 @@
+{
+  "calc.add.hitDa": "Riga sopra la tabella degli addotti in bassa risoluzione quando l'm/z osservata combacia; {adduct} con apici (HTML), {ppm} scarto in Da con segno e due decimali.",
+  "calc.add.noneDa": "Riga sopra la tabella in bassa risoluzione quando nessun addotto combacia; {tol} = tolleranza in Da.",
+  "cq.all": "Pulsante che apre tutte le righe di un gruppo di candidati; {n} = numero totale di righe.",
+  "cq.none": "Riga sotto la calcolatrice quando nulla corrisponde al numero; {tol} = tolleranza con l'unità (es. «5 ppm» o «0.5 Da»).",
+  "cq.liste.err": "Riga nella scheda Contaminanti quando le liste integrate non si sono potute leggere (rete o motore); non è un «nessun risultato»."
+}

@@ -61,3 +61,11 @@ def test_controlla_i18n_reports_the_duplicate(tmp_path, monkeypatch):
     import controlla_i18n
     _fake_catalog(tmp_path, monkeypatch, {"it": {"a.js": ['  "k.a": "1",', '  "k.a": "2"']}, "en": {"a.js": ['  "k.a": "1"']}})
     assert any("twice" in e for e in controlla_i18n.run())
+
+
+def test_description_in_the_wrong_area_file_is_reported(tmp_path, monkeypatch):
+    _fake_catalog(tmp_path, monkeypatch, {"it": {"a.js": ['  "a.x": "{n}"'], "b.js": ['  "b.y": "{n}"']}})
+    (tmp_path / "contesto").mkdir()
+    (tmp_path / "contesto" / "a.json").write_text('{"a.x": "d", "b.y": "d"}', encoding="utf-8")
+    errs = lang_catalog.contesto_problems(lang_catalog.catalog("it"))
+    assert errs == ["contesto/a.json: description of b.y belongs in contesto/b.json"]
