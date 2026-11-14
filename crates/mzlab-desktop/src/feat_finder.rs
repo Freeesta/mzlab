@@ -280,7 +280,7 @@ impl State {
         let s = |k: &str| p[k].as_str().unwrap_or("");
         // with `campioni` (the `campioni/2` of the files) the answer carries `gruppi` for two or more conditions; `infos` = the rows' best hypothesis
         if !s("campioni").is_empty() {
-            return text(mzlab_feat_table_wasm::core::tp_table_cond_json(
+            return text(mzlab_ops::run::table::core::tp_table_cond_json(
                 &mut Slice(table),
                 table.len() as u64,
                 s("samples"),
@@ -289,7 +289,7 @@ impl State {
                 s("infos"),
             )?);
         }
-        text(mzlab_feat_table_wasm::core::tp_table_json(
+        text(mzlab_ops::run::table::core::tp_table_json(
             &mut Slice(table),
             table.len() as u64,
             s("samples"),

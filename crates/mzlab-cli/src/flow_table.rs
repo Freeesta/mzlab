@@ -7,18 +7,18 @@ use mzlab_core::flow::Artifact;
 use mzlab_core::flow::Job;
 use mzlab_core::step::DataType;
 use mzlab_feat::store::Slice;
-use mzlab_feat_table_wasm::core::view_json_origin;
-use mzlab_feat_table_wasm::filterspec;
+use mzlab_ops::run::table::core::view_json_origin;
+use mzlab_ops::run::table::filterspec;
 
 /// The samples as `campioni/1` text, whichever of the two schemas the file has (the rule is shared with the browser).
 pub(crate) fn samples_text(bytes: &[u8]) -> Result<String> {
-    mzlab_feat_table_wasm::pol::samples_v1(bytes)
+    mzlab_ops::run::table::pol::samples_v1(bytes)
 }
 
 /// The `view` text of the table under the rules of the job.
 pub fn filter_text(job: &Job, table: &[u8], samples: &[u8]) -> Result<String> {
     let samples =
-        &mzlab_feat_table_wasm::pol::samples_like(&mut Slice(table), table.len() as u64, samples)?;
+        &mzlab_ops::run::table::pol::samples_like(&mut Slice(table), table.len() as u64, samples)?;
     let samples = samples.as_bytes();
     let spec = filterspec::spec_with_samples(&job.resolved.params, samples);
     let samples = samples_text(samples)?;

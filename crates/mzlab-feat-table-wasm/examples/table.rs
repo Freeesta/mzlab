@@ -7,7 +7,7 @@ use std::path::Path;
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::idxread::Index;
 use mzlab_feat::store::Slice;
-use mzlab_feat_table_wasm::core;
+use mzlab_ops::run::table::core;
 
 fn main() {
     let a: Vec<String> = std::env::args().skip(1).collect();

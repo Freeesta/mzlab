@@ -2348,11 +2348,11 @@ dependencies = [
  "mzlab-chem",
  "mzlab-core",
  "mzlab-feat",
- "mzlab-feat-table-wasm",
  "mzlab-feat-wasm",
  "mzlab-lettori",
  "mzlab-lib",
  "mzlab-llm",
+ "mzlab-ops",
  "resvg",
  "rustls",
  "serde_json",
@@ -2387,11 +2387,11 @@ dependencies = [
  "mzlab-cli",
  "mzlab-core",
  "mzlab-feat",
- "mzlab-feat-table-wasm",
  "mzlab-feat-wasm",
  "mzlab-lettori",
  "mzlab-lib",
  "mzlab-llm",
+ "mzlab-ops",
  "rayon",
  "serde",
  "serde_json",
@@ -2441,6 +2441,7 @@ dependencies = [
  "js-sys",
  "mzlab-core",
  "mzlab-feat",
+ "mzlab-ops",
  "wasm-bindgen",
 ]
 
@@ -2583,6 +2584,14 @@ dependencies = [
  "mzlab-core",
  "mzlab-feat",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "mzlab-ops"
+version = "1.0.0"
+dependencies = [
+ "mzlab-core",
+ "mzlab-feat",
 ]
 
 [[package]]
