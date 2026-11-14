@@ -1,0 +1,8 @@
+{
+  "ref.cap": "Avviso quando la tabella è troncata. {n} = numero massimo di righe mostrate.",
+  "ref.count": "Conteggio sopra la tabella della differenza dal riferimento. {n} = righe mostrate, {tot} = righe che passano i filtri, {all} = feature della tabella.",
+  "ref.ident.adduct": "Nota in una cella: la riga potrebbe essere un addotto della stessa molecola di un'altra riga. {as} = addotto di questa riga, {other} = ID dell'altra riga, {oas} = addotto dell'altra riga.",
+  "ref.ident.isf": "Nota in una cella: la riga potrebbe essere un frammento in sorgente di un'altra riga. {loss} = formula della perdita neutra, {other} = ID dell'altra riga.",
+  "ref.row.aria": "Etichetta per lettori di schermo di una riga della tabella. {id} = ID della feature, {mz} = m/z, {rt} = tempo di ritenzione in minuti.",
+  "ref.sum": "Riepilogo della differenza dal riferimento. {k} = tenute, {d} = scartate, {thr} = fattore della soglia, {min} = file trattati minimi sopra la soglia."
+}
