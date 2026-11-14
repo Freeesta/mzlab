@@ -31,8 +31,8 @@ def test_ogni_modulo_costruito_da_uno_script():
         if r["parte"] != "core":
             assert (ROOT / "crates" / r["pacchetto"] / "Cargo.toml").is_file(), n
     chiavi = [k for r in mod.values() for k in r.get("chiavi", {})]
-    assert len(chiavi) == len(set(chiavi)) == 27
-    assert sorted(p for r in mod.values() for p in r.get("chiavi", {}).values()) == list(range(1, 28))
+    assert len(chiavi) == len(set(chiavi)) == 28
+    assert sorted(p for r in mod.values() for p in r.get("chiavi", {}).values()) == list(range(1, 29))
 
 
 def test_tetti_dei_workflow_dal_dato():
