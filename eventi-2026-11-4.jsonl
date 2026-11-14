@@ -27671,3 +27671,4 @@
 {"v":1,"ts_utc":"2026-11-14T16:08:54Z","tipo":"carico","k":"2026-11-14T16:0","job_in_coda":6,"job_in_corso":40}
 {"v":1,"ts_utc":"2026-11-14T16:10:59Z","tipo":"coda","k":"2026-11-14T16:10:59Z","aperte":5,"indietro":2,"sporche":3,"verdi_in_attesa":0,"piu_vecchia_aperta_s":63665,"piu_vecchia_verde_s":null}
 {"v":1,"ts_utc":"2026-11-14T16:11:14Z","tipo":"coda","k":"2026-11-14T16:11:14Z","aperte":5,"indietro":2,"sporche":3,"verdi_in_attesa":0,"piu_vecchia_aperta_s":63680,"piu_vecchia_verde_s":null}
+{"v":1,"ts_utc":"2026-11-14T16:12:11Z","azione":"push","titolo":"Give the stitch parameter a short tip and keep the help texts unchanged","merge_main":false,"aree":{"rust":1,"docs":3,"test":3},"tipo":"pr","pr":3313,"sha":"7ffba9ddc2de90913474a01ca3318a2e8e4a7686"}
