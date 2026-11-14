@@ -61,11 +61,11 @@ try:
             assert "9.9" in box()
         step("a newer app is needed: link to the releases", newapp)
         def newapp_no_link():
-            pg.evaluate("window.__sp = SITO_PUBBLICO.scaricaApp; SITO_PUBBLICO.scaricaApp = false")
+            pg.evaluate("window.__sp = SITO_PUBBLICO; window.SITO_PUBBLICO = Object.freeze({scaricaApp: false})")
             run({"status": "newapp", "min": "9.9"}, False)
             assert "9.9" in box() and pg.query_selector("#updbox a") is None, box()
             assert pg.query_selector("#updbox [data-a=close]")
-            pg.evaluate("SITO_PUBBLICO.scaricaApp = window.__sp")
+            pg.evaluate("window.SITO_PUBBLICO = window.__sp")
         step("a newer app is needed with no public download: the text shows, without the link", newapp_no_link)
         def error_detail_copy():
             run({"status": "available", "files": 1, "bytes": 1000, "version": "abc123"}, False)
@@ -75,7 +75,7 @@ try:
             pg.evaluate("window.__clip = ''; navigator.clipboard.writeText = async t => { window.__clip = t; }")
             pg.click("#updbox [data-a=copy]"); pg.wait_for_function("__clip !== ''")
             c = pg.evaluate("__clip")
-            assert "update.error.hash" in c and "static/a.js: got 2/aaaa1111" in c and "abc123" in c and "dev" in c, c
+            assert "update.error.hash" in c and "static/a.js: got 2/aaaa1111" in c and "abc123" in c and pg.evaluate("MZLAB_COMMIT") in c, c
         step("a failed update shows the failed file and «Copy details» copies key, detail, commit and manifest version", error_detail_copy)
         def last_after_answer():
             pg.evaluate("localStorage.removeItem('mzlab.upd.last')")
