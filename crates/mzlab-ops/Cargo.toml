@@ -7,9 +7,8 @@ license.workspace = true
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }
-# no default features: each bridge picks its own set through the features below, so a .wasm never gets `chem` it did not have;
-# `legacy` for `run_tp` (the parent of the series, `legacy::series::parent`, and the offset of the unit axis)
-mzlab-feat = { path = "../mzlab-feat", default-features = false, features = ["legacy"] }
+# no default features: each bridge picks its own set through the features below, so a .wasm never gets `chem` or `legacy` it did not have
+mzlab-feat = { path = "../mzlab-feat", default-features = false }
 
 [features]
 # `table`: the modules of `run::table` (they read the rows of the block `interp/1` for the network of the products, `rete`)

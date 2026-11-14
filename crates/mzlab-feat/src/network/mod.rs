@@ -4,17 +4,13 @@
 
 /// The old path of `netarcs`, which lives at the top so that the Dig of `legacy` does not depend on the products network.
 pub use crate::netarcs as arcs;
-#[cfg(feature = "interp")]
 mod interp_in;
 mod json;
 mod layout;
-#[cfg(feature = "interp")]
 mod run;
 
-#[cfg(feature = "interp")]
 pub use interp_in::rows_from_interp;
 pub use json::SCHEMA;
-#[cfg(feature = "interp")]
 pub use run::network_text;
 
 use crate::hypo::Rules;

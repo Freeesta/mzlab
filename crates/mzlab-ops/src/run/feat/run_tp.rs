@@ -10,12 +10,11 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{parse, Out, Value};
 use mzlab_feat::hypo::{generate, HypoParams, Inputs, Rules, Structure};
-use mzlab_feat::legacy::lr::rows::OFFSET_MAX;
-use mzlab_feat::legacy::series;
 use mzlab_feat::recipe::Recipe;
+use mzlab_feat::series_parent;
 use mzlab_feat::slabs::Stored;
 use mzlab_feat::store::{read_table_from, Slice};
-use mzlab_feat::tp::TpRoles;
+use mzlab_feat::tp::{TpRoles, OFFSET_MAX};
 
 // `lib.rs` is at its line limit, so the Dig inputs of `tp.dig_lr` (shared by the CLI and the browser) hang here.
 #[path = "run_dig.rs"]
@@ -171,7 +170,7 @@ pub fn polarity_of(given: Option<f64>, recipe: &Recipe) -> i8 {
     }
 }
 
-/// The parent as the interpretation reads it (`series::parent`): the SMILES or the neutral formula, the adduct of the polarity and the time.
+/// The parent as the interpretation reads it (`series_parent::parent`): the SMILES or the neutral formula, the adduct of the polarity and the time.
 pub fn parent_json(p: &LinkParent, polarity: i8, rt: f64) -> String {
     let mut o = Out::default();
     o.raw("{");
@@ -188,7 +187,7 @@ pub fn parent_json(p: &LinkParent, polarity: i8, rt: f64) -> String {
 
 /// The m/z of the ion of the parent in the polarity.
 fn parent_mz(p: &LinkParent, polarity: i8) -> Result<f64> {
-    let parent = series::parent(&parent_json(p, polarity, 0.0))
+    let parent = series_parent::parent(&parent_json(p, polarity, 0.0))
         .map_err(|e| Error::new("error.interp.failed").with("detail", e))?;
     Ok(parent.mz)
 }

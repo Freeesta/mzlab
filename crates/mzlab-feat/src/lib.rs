@@ -87,6 +87,7 @@ pub mod norm;
 mod histbin;
 #[cfg(feature = "chem")]
 pub mod parent;
+pub mod parent_formula;
 pub mod params;
 pub mod params_drift;
 pub mod params_height;
@@ -106,7 +107,7 @@ pub mod regulatory;
 pub mod report;
 pub mod resolve;
 pub mod netarcs;
-#[cfg(feature = "legacy")]
+#[cfg(feature = "interp")]
 pub mod network;
 pub mod row;
 pub mod rowident;
@@ -116,6 +117,7 @@ pub mod rtwarp;
 pub mod runorder;
 pub mod samples;
 pub mod series;
+pub mod series_parent;
 pub mod slabs;
 pub mod spill;
 pub use mzlab_core::sortc;
