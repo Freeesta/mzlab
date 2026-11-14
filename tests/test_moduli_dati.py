@@ -56,7 +56,20 @@ def test_regola_del_dieci_per_cento():
     assert moduli.cambi(_con(900), base) == ["m: 1000 -> 900 (-10.0 %)"]       # lower is allowed
     assert not moduli.cambi(_con(1100), base)[0].startswith("FAIL")             # +10 % exactly
     assert moduli.cambi(_con(1101), base)[0].startswith("FAIL")                 # above 1.10 x
-    assert moduli.cambi({"nuovo": {"tetto": 5}}, base) == []                    # a new module has no base
+
+
+def test_modulo_nuovo_e_tolto_si_vedono():
+    base = _con(1000)
+    nuovo = moduli.cambi({**_con(1000), "nuovo": {"tetto": 5}}, base)
+    assert nuovo == ["NEW nuovo: cap 5 — a new .wasm module is an owner decision"]
+    assert moduli.cambi({}, base) == ["REMOVED m"]
+    assert not any(x.startswith("FAIL") for x in nuovo)                         # shown, never a failure
+
+
+def test_misura_uguale_al_tetto_fallisce():
+    r = {"m": {"tetto": 100, "misura": 100}}
+    assert any("misura 100" in e for e in moduli.errori(r))                     # same rule as tools/wasm_opt.sh: `>=` fails
+    assert not any("misura" in e for e in moduli.errori({"m": {"tetto": 100, "misura": 99}}))
 
 
 def test_base_sconosciuta_fallisce():
@@ -102,7 +115,7 @@ def test_misura_non_scrive_se_manca_o_supera(tmp_path, monkeypatch):
     assert moduli.misure(moduli.carica(), static)
     assert {f.name: f.read_text() for f in dati.glob("*.toml")} == prima       # nothing half-written
     dati2, static2 = _finto(tmp_path / "b", monkeypatch, 10 ** 8)
-    assert any("above the cap" in e for e in moduli.misure(moduli.carica(), static2))
+    assert any("not below the cap" in e for e in moduli.misure(moduli.carica(), static2))
 
 
 def test_ogni_modulo_ha_la_misura():
