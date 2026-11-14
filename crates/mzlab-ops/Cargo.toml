@@ -1,0 +1,11 @@
+[package]
+name = "mzlab-ops"
+description = "native home of what orchestrates the engines for a transport (runs, ops, virtual file system); plain Rust, no JS dependency, shared by the bridges, the CLI and the desktop app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+mzlab-core = { path = "../mzlab-core" }
+# `interp`: only to read the rows of the block `interp/1` for the network of the products (`rete`)
+mzlab-feat = { path = "../mzlab-feat", features = ["interp"] }
