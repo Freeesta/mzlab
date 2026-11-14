@@ -8,7 +8,7 @@ window.DESKUPD = (() => {
   const T = () => window.__TAURI__;
   const live = () => !!(window.MZLAB_DESKTOP && T() && T().core);
   const mb = b => I18N.fix(b / 1e6, 1);
-  let box = null, busy = false, quiet = false;     // quiet: the check in flight is the silent one
+  let box = null, busy = false, quiet = false, lastErr = null, ver = "";     // quiet: the check in flight is the silent one
 
   function show(html, buttons, title) {
     if (!box || !box.isConnected) {
@@ -29,14 +29,29 @@ window.DESKUPD = (() => {
       : k === "update.error.hash" ? "update.error.hash" : k === "update.error.newapp" ? "update.error.newapp" : "update.error.io");
   };
 
+  // an error with its detail (the failed file) under the message, and a button that copies what a bug report needs
+  function fail(r) {
+    lastErr = r;
+    const d = r.detail ? `<div style="margin-top:4px;font-size:.85em;opacity:.8;word-break:break-all">${EH(String(r.detail))}</div>` : "";
+    show(EH(errText(r)) + d, [["copy", I18N.t("update.copy")], closeBtn()]);
+  }
+  const details = () => ["mzLab " + (window.MZLAB_VERSION || "?") + " (" + (window.MZLAB_COMMIT || "?") + ")", "manifest: " + (ver || "?"),
+    "key: " + String(lastErr && lastErr.error_key || ""), "detail: " + String(lastErr && lastErr.detail || "")].join("\n");
+  async function copy() {
+    const b = box && box.querySelector("[data-a=copy]");
+    try { await navigator.clipboard.writeText(details()); if (b) b.textContent = I18N.t("update.copied"); } catch (_) { /* no clipboard: the text stays on screen */ }
+  }
+
   function offer(r, silent) {
+    if (r.version) ver = r.version;
     if (r.status === "uptodate") { if (silent) return; show(EH(I18N.t("update.uptodate")), [closeBtn()]); }
     else if (r.status === "available") {
       show(EH(I18N.t("update.available", { files: r.files, size: mb(r.bytes) })), [["go", I18N.t("update.download")], closeBtn()], silent ? I18N.t("update.notice") : "");
     } else if (r.status === "newapp") {
-      if (!SITO_PUBBLICO.scaricaApp) return;
-      show(`${EH(I18N.t("update.newapp", { min: r.min }))}<br><a href="${REL}" target="_blank" rel="noopener noreferrer">${REL}</a>`, [closeBtn()]);
-    } else if (!silent) show(EH(errText(r)), [closeBtn()]);
+      // without a public app download (SITO_PUBBLICO.scaricaApp false) the text stays, the link goes: a manual check never hangs on «Checking…»
+      const link = SITO_PUBBLICO.scaricaApp ? `<br><a href="${REL}" target="_blank" rel="noopener noreferrer">${REL}</a>` : "";
+      show(EH(I18N.t("update.newapp", { min: r.min })) + link, [closeBtn()]);
+    } else if (!silent) fail(r);
   }
 
   async function check(silent) {
@@ -47,9 +62,13 @@ window.DESKUPD = (() => {
       return;
     }
     busy = true; quiet = silent;
-    try { localStorage.setItem(KEY, String(Date.now())); } catch (_) { /* optional */ }
     if (!silent) show(EH(I18N.t("update.checking")), []);
-    try { const r = JSON.parse(await T().core.invoke("update_check")); offer(r, quiet); }
+    try {
+      const r = JSON.parse(await T().core.invoke("update_check"));
+      // the day's check counts only after an answer that is not «offline»: an offline start is tried again
+      if (r.error_key !== "update.error.offline") try { localStorage.setItem(KEY, String(Date.now())); } catch (_) { /* optional */ }
+      offer(r, quiet);
+    }
     catch (_) { if (!quiet) show(EH(I18N.t("update.error.io")), [closeBtn()]); }
     busy = false;
   }
@@ -66,13 +85,13 @@ window.DESKUPD = (() => {
       });
       const r = JSON.parse(await T().core.invoke("update_apply"));
       if (r.status === "ready") show(EH(I18N.t("update.ready")), [["restart", I18N.t("update.restart")], closeBtn()]);
-      else show(EH(errText(r)), [closeBtn()]);
+      else fail(r);
     } catch (_) { show(EH(I18N.t("update.error.io")), [closeBtn()]); }
     if (un) un();
     busy = false;
   }
 
-  const ACT = { close, go, restart: () => T().core.invoke("update_restart") };
+  const ACT = { close, go, copy, restart: () => T().core.invoke("update_restart") };
 
   // row of the settings popup (only in the desktop app)
   const row = () => live() ? `<div class="imp-fld" title="${I18N.t("update.settings.title")}"><span><span class="ic">${window.IMPCOMP ? IMPCOMP.GICON.update : ""}</span>${I18N.t("update.settings.label")}</span><button id="uip-upd" type="button">${I18N.t("update.settings.button")}</button></div>` : "";
