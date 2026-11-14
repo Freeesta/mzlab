@@ -2,7 +2,7 @@
 //! «Scarica .mzML», each with the reader as it is and with the centroids of `lettori_centroidi`. The member is read through a 256 KB block
 //! cache like the `thermo` module's `JsMember` (`--blocks N` blocks, 3 by default), and the number of reads asked of it, the blocks fetched and the bytes asked, fetched and
 //! fetched again are counted (in the browser each fetch is a JS call).
-//! `cargo run --release --example raw_times -- FILE.raw [--no-cen] [--no-mzml] [--blocks N] [--threads N] [--sha]`; numbers in `docs/studi/RAW_VELOCE.md`.
+//! `cargo run --release --example raw_times -- FILE.raw [--no-cen] [--no-mzml] [--blocks N] [--threads N] [--sha]`; numbers in `docs/agenti/thermo-velocita.md`.
 use std::cell::Cell;
 use std::fs::File;
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};

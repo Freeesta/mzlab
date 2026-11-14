@@ -1,6 +1,6 @@
 """Summary of the JSON written by tests_e2e/misura_ricarica.py: one table row per step (cold, warm, file, reset, warm-after-reset) and, with
 --dettaglio STEP, the waterfall of that step (what was fetched before the first paint and before the page was usable, by kind, the slowest files,
-the long tasks, what the service worker asked the network). Used by docs/studi/VELOCITA_RICARICA.md.
+the long tasks, what the service worker asked the network).
 """
 from __future__ import annotations
 

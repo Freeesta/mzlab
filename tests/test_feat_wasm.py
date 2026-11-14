@@ -151,6 +151,24 @@ def test_the_window_area_gives_the_same_bytes_native_and_in_node(built):
     assert feats and any((nat_dir / f).read_bytes() != (def_dir / f).read_bytes() for f in feats), "window and channel give the same files: the test proves nothing"
 
 
+XIC = '{"fill": true, "layers": [{"step": "features.detect", "params": {"area_from": "xic"}}]}'
+
+
+def test_the_xic_area_gives_the_same_bytes_native_and_in_node(built):
+    """`area_from` = `xic` (the trapezoid of the quality trace on the real retention times) writes the same files in the .wasm as natively, and
+    not the files of `window`. `series_evid.mzfeat` is left out as above."""
+    root, idx, pkg = built
+    _, nat_dir = native(root, idx, "nat_xic", "--recipe", XIC)
+    _, wasm_dir = wasm(root, idx, pkg, "wasm_xic", "--recipe", XIC)
+    _, win_dir = native(root, idx, "nat_xic_window", "--recipe", WINDOW)
+    names = sorted(p.name for p in nat_dir.iterdir() if p.name != "series_evid.mzfeat")
+    assert "series.mzfeat" in names and len(names) > 1
+    for f in names:
+        assert (nat_dir / f).read_bytes() == (wasm_dir / f).read_bytes(), f
+    feats = [f for f in names if f.endswith(".mzfeatf")]
+    assert feats and any((nat_dir / f).read_bytes() != (win_dir / f).read_bytes() for f in feats), "xic and window give the same files: the test proves nothing"
+
+
 WIDE = '{"fill": true, "layers": [{"step": "features.detect", "params": {"stitch": "wide"}}]}'
 
 

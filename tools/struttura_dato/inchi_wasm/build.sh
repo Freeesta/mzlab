@@ -1,5 +1,5 @@
 #!/bin/bash
-# Measure only (docs/studi/STRUTTURA_DATO_PROVE.md): builds the IUPAC InChI 1.07.5 C library (MIT) to wasm32-wasi with zig cc and runs it on molfiles.
+# Measure only: builds the IUPAC InChI 1.07.5 C library (MIT) to wasm32-wasi with zig cc and runs it on molfiles.
 # Nothing here goes into the site. Needs: git, node, pip install ziglang. Usage: bash build.sh <work dir> [<molfile dir>]
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"

@@ -1,6 +1,6 @@
 """Header walk: on every view (Dati, Disegno, Flow, Tabui), without samples and with one, every header button opens its window, menu or panel and
 Esc (or the same button) closes it; the page comes back to the state it had and no main block (header, side panel, toolbar, work area, panels)
-has moved. Leaving Dati for another view and coming back moves nothing (and slides nothing, with motion on); the page is never taller than the window; the first file keeps the width of the side panel; the Flow bar does not jump when its late part arrives; no console error, no failed request. Audit: docs/studi/AUDIT_PAGINE.md."""
+has moved. Leaving Dati for another view and coming back moves nothing (and slides nothing, with motion on); the page is never taller than the window; the first file keeps the width of the side panel; the Flow bar does not jump when its late part arrives; no console error, no failed request. Audit: tests_e2e/audit_pagine.py."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
