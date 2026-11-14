@@ -279,3 +279,54 @@ fn a_redirect_of_the_provider_is_not_followed_with_the_key() {
         "{ev}"
     );
 }
+
+#[test]
+fn an_aborted_job_is_freed_and_a_late_poll_says_done() {
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    let srv = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = srv.local_addr().unwrap().port();
+    let t = std::thread::spawn(move || {
+        let (mut c, _) = srv.accept().unwrap();
+        let mut buf = [0u8; 2048];
+        let _ = c.read(&mut buf);
+        let _ = write!(c, "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: 2\r\nConnection: close\r\n\r\n: ");
+    });
+    let p = find("anthropic").unwrap();
+    let req = Request {
+        url: format!("http://127.0.0.1:{port}/v1/messages"),
+        headers: vec![],
+        body: "{}".into(),
+        auth: provider::AuthSlot {
+            header: String::new(),
+            prefix: String::new(),
+        },
+    };
+    // the page already called llm/abort: the flag is set before the thread drains the answer
+    let abort = Arc::new(AtomicBool::new(true));
+    let id = with_jobs(|n, m| {
+        *n += 1;
+        m.insert(
+            *n,
+            Job {
+                abort: abort.clone(),
+                ..Job::default()
+            },
+        );
+        *n
+    });
+    run(id, p, false, req, None, abort);
+    t.join().unwrap();
+    assert!(
+        !with_jobs(|_, m| m.contains_key(&id)),
+        "the aborted job stays in JOBS"
+    );
+    let late = poll(&id.to_string()).unwrap();
+    let crate::rpc::Answer::Text(body) = late else {
+        panic!("poll answers text")
+    };
+    assert!(
+        body.contains("\"done\":true") && body.contains("\"events\":[]"),
+        "{body}"
+    );
+}

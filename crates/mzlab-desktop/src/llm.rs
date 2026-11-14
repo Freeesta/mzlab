@@ -267,6 +267,12 @@ fn finish_job(id: u64) {
     });
 }
 
+fn drop_job(id: u64) {
+    with_jobs(|_, m| {
+        m.remove(&id);
+    });
+}
+
 /// `llm/key/set` stores the key of a provider, `llm/key/forget` drops it; the file is the only place a key lives.
 fn key_route(path: &PathBuf, op: &str, p: &Value) -> Result<Answer> {
     let s = |k: &str| p[k].as_str().unwrap_or("");
@@ -286,13 +292,14 @@ fn key_route(path: &PathBuf, op: &str, p: &Value) -> Result<Answer> {
 }
 
 /// Feeds the bytes of an answer to the decoder of the provider until the end, an abort or a read error.
+/// An abort frees the job: the page stops polling after `llm/abort`, and a late poll of a missing id already answers `done`.
 fn drain(id: u64, resp: ureq::Response, mut stream: Stream, abort: &AtomicBool) {
     keep_spend(id, &resp);
     let mut rd = resp.into_reader();
     let mut buf = [0u8; 4096];
     loop {
         if abort.load(Ordering::Relaxed) {
-            return push_events(id, &[Event::error("err.llm.aborted", &[])]);
+            return drop_job(id);
         }
         match rd.read(&mut buf) {
             Ok(0) => break,
