@@ -11,6 +11,7 @@ use wasm_bindgen::prelude::*;
 pub mod core;
 pub mod filterspec;
 pub mod pol;
+pub mod quant;
 pub mod rows_mgf;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
