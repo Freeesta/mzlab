@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from cargo_util import build, example
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")

@@ -105,3 +105,21 @@ def test_no_test_module_redefines_what_it_imports_from_cargo_util():
         imported = {a.asname or a.name for n in tree.body if isinstance(n, ast.ImportFrom) and n.module == "cargo_util" for a in n.names}
         bad += [f"{f.name}:{n.lineno} {n.name}" for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in imported]
     assert not bad, bad
+
+
+def test_every_cargo_util_helper_a_test_calls_is_imported_or_defined():
+    """A call to build/cli/example/... in a module that neither imports nor defines it fails only when its fixture runs (and only where cargo is installed)."""
+    helpers, bad = {"build", "cli", "example", "installed", "cli_argv", "example_argv", "build_example"}, []
+    for f in sorted((ROOT / "tests").glob("test_*.py")) + [ROOT / "tests" / "conftest.py"]:
+        tree = ast.parse(f.read_text(encoding="utf-8"))
+        known = set()
+        for n in ast.walk(tree):
+            if isinstance(n, ast.ImportFrom):
+                known |= {a.asname or a.name for a in n.names}
+            elif isinstance(n, (ast.FunctionDef, ast.ClassDef)):
+                known.add(n.name)
+            elif isinstance(n, ast.Name) and isinstance(n.ctx, ast.Store):
+                known.add(n.id)
+        used = {n.func.id for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in helpers}
+        bad += [f"{f.name}: {h}" for h in sorted(used - known)]
+    assert not bad, bad
