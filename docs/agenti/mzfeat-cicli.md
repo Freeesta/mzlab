@@ -3,7 +3,7 @@ Grafo dei moduli di primo livello di `crates/mzlab-feat/src` (quelli di `lib.rs`
 
 ## Come si misura
 - Nodo = modulo di primo livello (`X.rs` più `X/**`); arco X → Y = un percorso `crate::Y` o `super::Y` (anche dentro `use crate::{…}`) in un file di X, esclusi commenti, stringhe, file e blocchi `#[cfg(test)]` e i `*_tests.rs`. Righe = righe dei file di codice del modulo, senza i test.
-- Ciclo = componente fortemente connessa (Tarjan). Un `pub use` che tiene soltanto il vecchio percorso pubblico di un elemento spostato non conta come arco (nessun codice dipende dal modulo di sopra); questi `pub use` sono elencati nella PR del taglio e si tolgono alla separazione in crate, quando i chiamanti puntano alla crate nuova.
+- Ciclo = componente fortemente connessa (Tarjan). Un `pub use` che tiene soltanto il vecchio percorso pubblico di un elemento spostato non conta come arco (nessun codice dipende dal modulo di sopra); questi `pub use` sono elencati nella PR del taglio e restano finché i chiamanti usano il vecchio percorso.
 - Lo script è usa e getta (non è un tool del repository): il suo esito si incolla nel corpo di ogni PR, prima → dopo.
 
 ## Il ciclo oggi
@@ -49,6 +49,7 @@ Numeri = ciclo più grande dopo il taglio, cumulato nell'ordine qui sotto (simul
 
 Dopo l'8 restano cicli locali di ≤ 9 moduli: `trace`, `centwave`, `channels`, `broad*`, `post`, `quality` (2 847 righe); `legacy`, `groups`, `lists`, `transitions` (17 992); `store`, `store_read`, `evid`, `rowident` (2 926); `weakfile`, `series`, `spill`, `slabs`; `filters*`; `params*`.
 
-## Dopo i tagli: separazione in crate
-- La crate del motore di attribuzione prende `attributio/` con `flow_regulatory`, `flow_rtpredict`, `normative` e i file di `flow_formula`; dipende dalla `mzlab-feat` snella, che non ne riesporta nulla; i ponti (`mzlab-attributio-wasm`, `mzlab-normative-wasm`, CLI, app) e i test la usano direttamente. Una crate con cicli caldi riceve la stessa riga `opt-level` di `mzlab-feat` in ogni profilo di `Cargo.toml`; dopo la separazione si misura ogni `.wasm` contro il suo tetto.
-- L'ordine delle separazioni seguenti va per righe tolte alle build leggere (`untargeted`, `flowtab`, `flowstat`): il primo candidato è `legacy` (12 460 righe lette da `untargeted`), raggiungibile da `flowtab` per `transitions` → `legacy::lr` e `groups` → `legacy::lr`.
+## Dopo i tagli: `legacy` dietro una feature
+- Nessuna crate nuova per il motore di attribuzione: `attributio` sta già dietro la sua feature e le build leggere non ne leggono nessun file, quindi una crate a parte non toglie loro nulla.
+- Dopo i tagli dentro la crate, `legacy` (12 460 righe lette da `untargeted`) va dietro una feature di cargo, accesa solo dove serve la bassa risoluzione: prima si tagliano gli archi `transitions` → `legacy::lr` e `groups` → `legacy::lr`, da cui `flowtab` e `flowstat` raggiungono `legacy`. Una separazione in crate si fa solo se una misura mostra un risparmio che la feature non dà.
+- Senza LTO vero i margini sotto il tetto sono di pochi KB (`hr`, `table`): ogni PR misura ogni modulo `.wasm` prima e dopo.
