@@ -411,7 +411,10 @@ pub fn build_evidence_to(
         let size = table_size as u64;
         let mut files = stored.map(|files| JsStored { files });
         let sizes = mzidx_sizes.unwrap_or_default();
-        let mut open = |k: usize| open_one(mzidx_read.as_ref().expect("read"), k, sizes[k]);
+        let mut open = |k: usize| {
+            let size = *sizes.get(k).ok_or_else(|| Error::new("error.badIndex"))?;
+            open_one(mzidx_read.as_ref().expect("read"), k, size)
+        };
         let src = match (files.as_mut(), mzidx_read.is_some() && !sizes.is_empty()) {
             (Some(stored), true) => Some(run::RowSources {
                 stored,
@@ -499,7 +502,10 @@ pub fn align_untargeted_to(
     let p = mzlab_feat::untargeted::pipeline::UntParams::from_json(params).map_err(js_err)?;
     let budget = MemBudget::from_request(budget_mb);
     let mut src = JsStored { files };
-    let open = |k| open_one(&read, k, sizes[k]);
+    let open = |k| {
+        let size = *sizes.get(k).ok_or_else(|| Error::new("error.badIndex"))?;
+        open_one(&read, k, size)
+    };
     to_sink(write, |sink| {
         untargeted::align_to(&mut src, &budget, &p, open, sink)
     })

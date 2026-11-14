@@ -1,6 +1,6 @@
 //! MEASURE (no default is changed): alignment of 20 files with a linear RT drift (+0.008 min per injection) where two isomers of the same m/z sit 0.14 min
 //! apart (FWHM 0.06) and a third, minor one is in 5 files only. Rows, merged isomers and lost cells are pinned for `rt_warp` off/piecewise/loess,
-//! `max_rt_span` and both modes (ion, family); see `docs/agenti/mzfeat-rt.md` (MISURA lines).
+//! `max_rt_span` and both modes (ion, family); see `docs/agenti/mzfeat-broad.md` (MISURA lines).
 
 use mzlab_feat::align::AlignParams;
 use mzlab_feat::famalign::{align_families, align_ions, FamAlignParams};

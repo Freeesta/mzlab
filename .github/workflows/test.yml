@@ -100,8 +100,8 @@ jobs:
       contents: read
       actions: read   # tools/ci_cache_fresca.py lists the caches of main
     runs-on: ubuntu-latest
-    # safety net only: the run lasts far less since the crates of the cache are reused (tools/ci_cargo_mtime.py)
-    timeout-minutes: 30
+    # safety net only: the wait for the prebuilt jobs (own limit, below) and the tests (own limit) each have their own ceiling, so a late runner does not eat the test time
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -183,8 +183,10 @@ jobs:
       - id: prebuilt
         if: steps.solo.outputs.solo != 'true' && steps.aree.outputs.cargo != 'false'
         continue-on-error: true
+        timeout-minutes: 22
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          MZLAB_ATTENDI_MIN: 20   # past it the shard builds for itself (continue-on-error)
         run: python3 tools/ci_attendi_job.py "prebuilt (native)" "prebuilt (wasm-a)" "prebuilt (wasm-b)"
       - if: steps.prebuilt.outcome == 'success'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -201,6 +203,7 @@ jobs:
       # binaries and .wasm and compares their output, identical on every Python; the 3.11 `solo311` shard runs only them, minus the files that rust-wasm runs on the same diff.
       - name: Unit tests
         if: steps.solo.outputs.solo != 'true'
+        timeout-minutes: 30
         env:
           PYTHONPATH: tools
           PARTE: ${{ matrix.parte }}
@@ -327,6 +330,11 @@ jobs:
             target
           key: sito-e2e-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
           restore-keys: sito-e2e-${{ runner.os }}-
+      # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        if: steps.solo.outputs.solo != 'true'
+        run: python3 tools/ci_cargo_mtime.py restore
       - name: Install
         if: steps.solo.outputs.kind != 'doc'
         run: |
@@ -351,6 +359,12 @@ jobs:
           name: wasm-dimensioni
           path: wasm-dimensioni.json
           retention-days: 3
+      # incremental data only bloats the cache; the record vouches for the sources of the crates this run compiled, so the next run reuses them
+      - name: Record the tree of the cache
+        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        run: |
+          find target -maxdepth 4 -type d -name incremental -prune -exec rm -rf {} + || true
+          python3 tools/ci_cargo_mtime.py record
       # saved after the smoke tests have built the site and its .wasm (main only; a red test does not lose it)
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}

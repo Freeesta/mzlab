@@ -288,3 +288,19 @@ def test_a_budget_that_fits_nothing_is_refused_with_the_key_and_the_files_saved(
     assert "error.memoryBudget" in p.stderr and "align" in p.stderr
     # the phase before is already saved
     assert len(list(out.glob("*.mzfeatf"))) == len(idx) and not (out / "series_evid.mzfeat").exists()
+
+
+@pytest.fixture(scope="module")
+def built_sizes(built, tmp_path_factory):
+    """The same series with a .wasm that also carries `untargeted` (default features + untargeted)."""
+    root, idx, _ = built
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--features", "untargeted", runner=run)
+    pkg = tmp_path_factory.mktemp("pkg_sizes")
+    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm")
+    return idx, pkg
+
+
+def test_fewer_sizes_than_files_is_an_error_and_not_a_trap(built_sizes):
+    idx, pkg = built_sizes
+    out = run("node", str(ROOT / "tests" / "feat_wasm_sizes_node.js"), str(pkg), str(ROOT / "TP_Mine/data/regole_tp_2.json"), *idx)
+    assert out.splitlines() == ["ok align_untargeted_to", "ok align_untargeted_to afterwards", "ok build_evidence_to", "ok build_evidence_to afterwards"], out

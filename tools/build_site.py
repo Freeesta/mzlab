@@ -330,6 +330,8 @@ def main() -> None:
     # the subset of the public demo (provider `mzlab-demo`), the catalog the proxy allows; and the one constant of its host
     shutil.copy2(ROOT / "docs" / "schemi" / "strumenti-demo-1.json", static / "llm" / "strumenti-demo-1.json")
     check_proxy_host(static)
+    # the provider registry beside the transport: its iframe derives the origin each key may reach from it, never from the page
+    shutil.copy2(ROOT / "crates" / "mzlab-llm" / "data" / "fornitori-1.json", static / "llm" / "fornitori-1.json")
     # the prompts and roles of the assistant's subagents: data fetched on request, the same bytes as in the crate
     shutil.copytree(ROOT / "crates" / "mzlab-llm" / "data" / "assist", static / "llm" / "assist")
     bad = python_files(out)
