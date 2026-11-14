@@ -53,7 +53,6 @@ PROBE = r"""(() => {
     v.nav = { type: n.type, workerStart: n.workerStart, fetchStart: n.fetchStart, requestStart: n.requestStart, responseStart: n.responseStart, responseEnd: n.responseEnd };
     v.res = performance.getEntriesByType("resource").map(e => [e.name.replace(location.origin, ""), Math.round(e.startTime), Math.round(e.responseEnd), e.transferSize, e.encodedBodySize]);
     v.coi = !!window.crossOriginIsolated; return JSON.parse(JSON.stringify(v)); };
-  addEventListener("pagehide", () => { try { const s = v.snap(); if (!window.crossOriginIsolated) localStorage.setItem("__a1", JSON.stringify(s)); } catch (_) {} });
   try { localStorage.setItem("mzlab.tour.lr", JSON.stringify({ stato: "saltato" })); localStorage.setItem("mzlab.barra.hint", "1"); localStorage.setItem("mzlab.pannelli.affianca.hint", "1"); } catch (_) {}
 })();"""
 USABLE = "!!(window.__a && __a.m.ready && __a.m.drop && window.crossOriginIsolated)"
@@ -135,7 +134,6 @@ def one(b, base, scen: str, rtt: int, cpu: int, mirror: bool, loads: int = 2) ->
     res = {}
     if scen == "cold":
         snap = pg.evaluate("__a.snap()")
-        p1 = json.loads(pg.evaluate("localStorage.getItem('__a1') || 'null'") or "null")
         t2 = snap["t0"]
         e1 = [r for r in log[l_start:] if t_goto - 50 <= r[0] < t2 and not r[1].startswith("api/")]
         paths1 = {r[1] for r in e1}
@@ -144,8 +142,7 @@ def one(b, base, scen: str, rtt: int, cpu: int, mirror: bool, loads: int = 2) ->
         net2 = {r[1]: r[2] for r in e2}
         both = {x for x in p2 if x in paths1 or x == ""}
         res.update(page_metrics(snap, thr, log, 0, l_start))
-        res.update({"p1_req": len(e1), "p1_kb": round(sum(r[3] for r in e1) / 1024), "p1_res_done": len(p1["res"]) if p1 else None,
-                    "p2_files": len(p2), "p2_shared": len(both), "p2_net200": len([x for x in both if net2.get(x) == 200]), "p2_net304": len([x for x in both if net2.get(x) == 304]),
+        res.update({"p1_req": len(e1), "p1_kb": round(sum(r[3] for r in e1) / 1024), "p2_files": len(p2), "p2_shared": len(both), "p2_net200": len([x for x in both if net2.get(x) == 200]), "p2_net304": len([x for x in both if net2.get(x) == 304]),
                     "p2_httpcache": len([x for x in both if x not in net2]), "p2_new": len(p2 - both), "p2_srv_req": len(e2),
                     "p2_srv_kb": round(sum(r[3] for r in e2) / 1024), "usable": snap["m"]["ready"]})
     else:
@@ -243,7 +240,7 @@ def report(results: dict) -> None:
             for r in runs:
                 c[r.get("last_step")] = c.get(r.get("last_step"), 0) + 1
             print(f"last step before qqReady, {scen} rtt {rtt} ×{cpu}: {c}")
-    rows(lambda s: s == "cold", "Isolation reload (cold)", ["p1_req", "p1_kb", "p1_res_done", "p2_files", "p2_shared", "p2_net200", "p2_net304", "p2_httpcache", "p2_new", "usable"])
+    rows(lambda s: s == "cold", "Isolation reload (cold)", ["p1_req", "p1_kb", "p2_files", "p2_shared", "p2_net200", "p2_net304", "p2_httpcache", "p2_new", "usable"])
     for (scen, rtt, cpu), runs in results.items():
         if scen.startswith("trace") and runs:
             print(f"\n### Code cache, {scen} ×{cpu}, traced load = reload {runs[0]['reloads']} after the first visit ({len(runs)} runs)\n\n| group | compile events | hits | rejected | streamed | compile ms (main/worker thread, eager) |\n|---|---|---|---|---|---|")
