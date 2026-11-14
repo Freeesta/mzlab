@@ -121,6 +121,7 @@ I18N.add("en", {
   "load.hrmix.lr": "LR only ({n})",
   "load.hrmix.hr": "HR only ({n})",
   "load.cols.btn": "Columns…",
+  "load.cols.plus": "Add column",
   "load.cols.head": "Table columns",
   "load.cols.preset": "Preset columns",
   "load.cols.custom": "Custom columns",

@@ -464,6 +464,8 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 .ldtab .ldname{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 .ldtab col.c-x{width:120px}
 .samphead #colsbtn{margin-left:8px}
+.ldtab th.colplus{text-align:center}
+.tg-head .tg-name{cursor:text;border-radius:3px}.tg-head .tg-name:focus-visible{outline:2px solid var(--accent)}.tg-head .tg-edit{font:inherit;padding:1px 4px}.tg-head .tg-err{color:var(--bad);margin-left:6px}
 .colsdlg{width:min(640px,94vw);max-width:none;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);padding:16px}
 .colsdlg::backdrop{background:rgba(0,0,0,.4)}
 /* preset columns: a grid of equal cells (two at the dialog width, one on a phone), the box right before its label, both centred on one line */

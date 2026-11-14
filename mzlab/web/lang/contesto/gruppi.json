@@ -19,6 +19,8 @@
   "groups.undo.ungroup": "Name of the undo step after a group is ungrouped.",
   "groups.dnd.doneFiles": "Spoken after files from the desktop are dropped on a group header; they join it as they are read.",
   "groups.tab.grip": "Tooltip of the grip of a row of the loading table (the handle to drag the file onto a group).",
+  "groups.tab.rename": "Label of the editable name of a group header in the loading table (double click, F2 or Enter renames it); {g} = group name.",
+  "groups.tab.dup": "Inline message under the rename field when another group already has the name; {g} = the refused name.",
   "groups.tab.fold": "Label of the fold button of a group header of the loading table; {g} = group name.",
   "groups.tab.open": "Label of the unfold button of a folded group header of the loading table; {g} = group name.",
   "groups.tab.count": "Number of files of a group, shown in its header row of the loading table.",
