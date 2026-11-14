@@ -18,8 +18,11 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+#[path = "update_http.rs"]
+mod http;
 #[path = "update_serve.rs"]
 mod serve;
+pub use http::Http;
 
 /// Where the published site lives; the only host the program talks to.
 pub const SITE: &str = "https://freeesta.github.io/mzlab/";
@@ -97,58 +100,9 @@ pub struct Progress {
 /// Where the files come from (the site, or a map in the tests). `Sync`: the worker threads of `apply` share it.
 pub trait Source: Sync {
     fn get(&self, rel: &str) -> Result<Vec<u8>, UpdateError>;
-}
-
-/// The published site over HTTPS: no redirects (the host cannot change), time limits, size limit.
-pub struct Http {
-    agent: ureq::Agent,
-    base: String,
-}
-
-impl Http {
-    pub fn new() -> Self {
-        Self::with_base(SITE)
-    }
-    pub fn with_base(base: &str) -> Self {
-        let agent = ureq::AgentBuilder::new()
-            .redirects(0)
-            .timeout_connect(Duration::from_secs(10))
-            .timeout_read(Duration::from_secs(60))
-            .user_agent("mzlab-desktop")
-            .build();
-        Http {
-            agent,
-            base: base.to_string(),
-        }
-    }
-}
-
-impl Default for Http {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Source for Http {
-    fn get(&self, rel: &str) -> Result<Vec<u8>, UpdateError> {
-        safe_rel(rel)?;
-        let url = format!("{}{}", self.base, rel);
-        let resp = self.agent.get(&url).call().map_err(|e| match e {
-            ureq::Error::Status(code, _) => UpdateError::new("update.error.http", code.to_string()),
-            ureq::Error::Transport(t) => UpdateError::new("update.error.offline", t.to_string()),
-        })?;
-        if resp.status() != 200 {
-            return Err(UpdateError::new(
-                "update.error.http",
-                resp.status().to_string(),
-            )); // with no redirects a 3xx comes back as a response
-        }
-        let mut body = Vec::new();
-        resp.into_reader()
-            .take(600 << 20)
-            .read_to_end(&mut body)
-            .map_err(|e| UpdateError::new("update.error.offline", e.to_string()))?;
-        Ok(body)
+    /// The same file asked again with the manifest version as cache buster (a stale CDN/proxy copy); sources with no cache ignore it.
+    fn get_versioned(&self, rel: &str, _version: &str) -> Result<Vec<u8>, UpdateError> {
+        self.get(rel)
     }
 }
 
@@ -317,10 +271,31 @@ fn write_check(root: &Path) -> Result<(), UpdateError> {
 const THREADS: usize = 8;
 
 /// Fetches one changed file, checks size and SHA-256 and writes it into `next` (`index.html` is patched first).
-fn fetch_one(next: &Path, rel: &str, want: &Entry, src: &dyn Source) -> Result<u64, UpdateError> {
+/// A size or hash mismatch is retried once with `?v=<manifest version>` (a stale cached copy); a second one is `update.error.hash` with what was got and wanted.
+fn fetch_one(
+    next: &Path,
+    rel: &str,
+    want: &Entry,
+    version: &str,
+    src: &dyn Source,
+) -> Result<u64, UpdateError> {
+    let ok = |b: &[u8]| b.len() as u64 == want.size && sha256_hex(b) == want.sha256;
     let mut body = src.get(rel)?;
-    if body.len() as u64 != want.size || sha256_hex(&body) != want.sha256 {
-        return Err(UpdateError::new("update.error.hash", rel));
+    if !ok(&body) {
+        body = src.get_versioned(rel, version)?;
+        if !ok(&body) {
+            let h = sha256_hex(&body);
+            return Err(UpdateError::new(
+                "update.error.hash",
+                format!(
+                    "{rel}: got {}/{}, want {}/{}, tries 2",
+                    body.len(),
+                    &h[..8],
+                    want.size,
+                    &want.sha256[..8.min(want.sha256.len())]
+                ),
+            ));
+        }
     }
     if rel == "index.html" {
         body = patch_index(&String::from_utf8_lossy(&body))?.into_bytes();
@@ -351,7 +326,13 @@ fn download_all(
                 if i >= files.len() || abort.load(Ordering::Relaxed) {
                     break;
                 }
-                let r = fetch_one(next, &files[i], &remote.files[&files[i]], src);
+                let r = fetch_one(
+                    next,
+                    &files[i],
+                    &remote.files[&files[i]],
+                    &remote.version,
+                    src,
+                );
                 if r.is_err() {
                     abort.store(true, Ordering::Relaxed);
                 }
@@ -445,6 +426,28 @@ pub fn apply(
     }
     swap_dirs(&web, &next, &old)?;
     Ok(files.len())
+}
+
+/// `apply`, and on `update.error.hash` the manifest is fetched once more: if the site was republished meanwhile, the diff is redone once against the new one.
+pub fn apply_refetch(
+    data: &Path,
+    local: &Manifest,
+    remote: &Manifest,
+    native: &str,
+    src: &dyn Source,
+    mut on: impl FnMut(Progress),
+) -> Result<usize, UpdateError> {
+    match apply(data, local, remote, native, src, &mut on) {
+        Err(e) if e.key == "update.error.hash" => {
+            let fresh = parse_manifest(&src.get(MANIFEST)?)?;
+            if fresh == *remote {
+                Err(e)
+            } else {
+                apply(data, local, &fresh, native, src, on)
+            }
+        }
+        r => r,
+    }
 }
 
 /// At start: finishes or undoes an interrupted swap, then sets a damaged `web/` aside so that the embedded copy is served.

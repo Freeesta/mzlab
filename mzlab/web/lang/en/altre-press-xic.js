@@ -37,6 +37,8 @@ I18N.add("en", {
   "update.restart": "Restart now",
   "release.new": "New version {version} available",
   "release.get": "Download",
+  "update.copy": "Copy details",
+  "update.copied": "Copied",
   "update.close": "Close",
   "update.newapp": "This update needs a newer version of the desktop app (at least {min}). Download the latest installer from:",
   "update.error.offline": "No internet connection: try again later. Nothing was changed.",

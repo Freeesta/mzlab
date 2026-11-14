@@ -60,6 +60,30 @@ try:
             a = pg.query_selector("#updbox a"); assert a and "github.com/Freeesta/mzlab" in a.get_attribute("href") and a.get_attribute("rel") == "noopener noreferrer"
             assert "9.9" in box()
         step("a newer app is needed: link to the releases", newapp)
+        def newapp_no_link():
+            pg.evaluate("window.__sp = SITO_PUBBLICO; window.SITO_PUBBLICO = Object.freeze({scaricaApp: false})")
+            run({"status": "newapp", "min": "9.9"}, False)
+            assert "9.9" in box() and pg.query_selector("#updbox a") is None, box()
+            assert pg.query_selector("#updbox [data-a=close]")
+            pg.evaluate("window.SITO_PUBBLICO = window.__sp")
+        step("a newer app is needed with no public download: the text shows, without the link", newapp_no_link)
+        def error_detail_copy():
+            run({"status": "available", "files": 1, "bytes": 1000, "version": "abc123"}, False)
+            pg.evaluate("window.__reply.update_apply={status:'error',error_key:'update.error.hash',detail:'static/a.js: got 2/aaaa1111, want 3/bbbb2222, tries 2'}")
+            pg.click("#updbox [data-a=go]"); pg.wait_for_selector("#updbox [data-a=copy]")
+            assert "static/a.js: got 2/aaaa1111" in box(), box()
+            pg.evaluate("window.__clip = ''; navigator.clipboard.writeText = async t => { window.__clip = t; }")
+            pg.click("#updbox [data-a=copy]"); pg.wait_for_function("__clip !== ''")
+            c = pg.evaluate("__clip")
+            assert "update.error.hash" in c and "static/a.js: got 2/aaaa1111" in c and "abc123" in c and pg.evaluate("MZLAB_COMMIT") in c, c
+        step("a failed update shows the failed file and «Copy details» copies key, detail, commit and manifest version", error_detail_copy)
+        def last_after_answer():
+            pg.evaluate("localStorage.removeItem('mzlab.upd.last')")
+            run({"status": "error", "error_key": "update.error.offline"}, True)
+            assert pg.evaluate("localStorage.getItem('mzlab.upd.last')") is None, "offline must not count as checked"
+            run({"status": "uptodate"}, True)
+            assert pg.evaluate("localStorage.getItem('mzlab.upd.last')") is not None
+        step("the day's check is recorded only after an answer that is not offline", last_after_answer)
         def upd(): return pg.evaluate("__calls.filter(c => c.startsWith('update'))")       # the page makes other desktop calls on load (the data folder)
         def once_a_day():
             pg.evaluate("window.__calls=[]"); pg.evaluate("localStorage.setItem('mzlab.upd.last',String(Date.now()))")
