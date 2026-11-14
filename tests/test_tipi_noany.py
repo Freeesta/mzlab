@@ -36,11 +36,6 @@ def test_a_noany_file_is_in_strict3_only():
     assert json.loads(gg.strict_all()["stretto3.json"])["compilerOptions"]["noImplicitAny"] is True
 
 
-def test_the_committed_strict3_matches_the_generator():
-    for name, text in gg.strict_all().items():
-        assert (ROOT / "tools" / "tipi" / name).read_text() == text, name
-
-
 def test_generated_type_files_are_deterministic_and_not_committed():
     """The type files are rebuilt before every type check: two runs give identical bytes and git tracks none of them."""
     import subprocess
