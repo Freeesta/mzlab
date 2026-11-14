@@ -1,0 +1,1121 @@
+=== mzlab-cli 
+exit 0
+--- stdout
+mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
+
+usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params FILE.json]
+       mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan (flow run --help)
+       mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)
+       mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)
+       mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
+       mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/1 record of a run; flow verify RECORD checks its fingerprints
+       mzlab-cli llm tools [--out FILE]   the catalog strumenti/1 of the assistant tools (llm tools --help)
+       mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the events a recording gives for a conversation, one per line
+       mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
+       mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
+       mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help); dda-window FILE --from MIN --to MIN: the MS2 of a window by precursor (dda-window --help)
+       mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help); ion-mz TEXT [--adduct A]: the m/z of an ion with a signed shift (ion-mz --help)
+       mzlab-cli match-mz X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adduct shifts, known contaminants, as candidates (match-mz --help)
+       mzlab-cli mol-label REQUEST.json|- [--out PATH]   formula, charge and masses of drawn structures and arrows as JSON (mol-label --help); mol-anal: average mass, mass % and theoretical isotope pattern of one structure (mol-anal --help)
+       mzlab-cli mol-check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges) as JSON (mol-check --help); mol-cip: its R/S and E/Z (mol-cip --help); mol-hilite: the atoms an evidence colours (mol-hilite --help); mol-sel REQUEST.json|-: masses, heavy atoms and rings of a selection (mol-sel --help); mol-link REQUEST.json|-: the PubChem, ChEBI and BioTransformer URLs of a structure (mol-link --help); mol-export MOLFILE|-: the drawing as .mol or .sdf (mol-export --help)
+       mzlab-cli mol-cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut as JSON (mol-cut --help); mol-mech REQUEST.json|-: whether the curved arrows of a drawn mechanism are well formed (mol-mech --help); mol-search --sub QUERY TARGET...: where a substructure occurs in structures (mol-search --help)
+       mzlab-cli samples vars|group ...   how the file names split the files, as JSON (samples --help)
+       mzlab-cli peak-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peak-edges --help)
+       mzlab-cli manual-table FILE... --set windows=PATH   the integrations drawn by hand on transition / SIM traces, as CSV (manual-table --help); peak-split FILE... --set tr=J --set a=MIN --set b=MIN: one of them split at its valleys (peak-split --help)
+       mzlab-cli peak-auto TRACE.csv [--from MIN --to MIN] [--set NAME=VALUE...]   every peak of a high-resolution trace (peak-auto --help); peak-area: one peak from zero or a line (peak-area --help); peak-window: where a dragged window end goes (peak-window --help)
+       mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
+       mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
+       mzlab-cli msn-rules RECORD... | sum LINES...   the fragmentation rules judged on library spectra (msn-rules --help)
+       mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
+       mzlab-cli validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1 (validate --help)
+       mzlab-cli normative build --cache DIR --out DIR   build the EU and US regulatory lists from the official sources (native only; normative --help); insilico pack CSV OUT   the spectra.insilico candidate package
+
+  FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
+  --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
+  --preset NAME      auto (default: both polarities as the panel does), pos or neg
+  --params FILE.json the numbers of the panel Pipeline: {"polarity", "mode", "floor", "min_height", "min_points", "ppm", "rt_tol", "fill"}
+  --help             this text
+
+old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl
+--- stderr
+
+=== mzlab-cli --help
+exit 0
+--- stdout
+mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
+
+usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params FILE.json]
+       mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan (flow run --help)
+       mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)
+       mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)
+       mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
+       mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/1 record of a run; flow verify RECORD checks its fingerprints
+       mzlab-cli llm tools [--out FILE]   the catalog strumenti/1 of the assistant tools (llm tools --help)
+       mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the events a recording gives for a conversation, one per line
+       mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
+       mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
+       mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help); dda-window FILE --from MIN --to MIN: the MS2 of a window by precursor (dda-window --help)
+       mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help); ion-mz TEXT [--adduct A]: the m/z of an ion with a signed shift (ion-mz --help)
+       mzlab-cli match-mz X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adduct shifts, known contaminants, as candidates (match-mz --help)
+       mzlab-cli mol-label REQUEST.json|- [--out PATH]   formula, charge and masses of drawn structures and arrows as JSON (mol-label --help); mol-anal: average mass, mass % and theoretical isotope pattern of one structure (mol-anal --help)
+       mzlab-cli mol-check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges) as JSON (mol-check --help); mol-cip: its R/S and E/Z (mol-cip --help); mol-hilite: the atoms an evidence colours (mol-hilite --help); mol-sel REQUEST.json|-: masses, heavy atoms and rings of a selection (mol-sel --help); mol-link REQUEST.json|-: the PubChem, ChEBI and BioTransformer URLs of a structure (mol-link --help); mol-export MOLFILE|-: the drawing as .mol or .sdf (mol-export --help)
+       mzlab-cli mol-cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut as JSON (mol-cut --help); mol-mech REQUEST.json|-: whether the curved arrows of a drawn mechanism are well formed (mol-mech --help); mol-search --sub QUERY TARGET...: where a substructure occurs in structures (mol-search --help)
+       mzlab-cli samples vars|group ...   how the file names split the files, as JSON (samples --help)
+       mzlab-cli peak-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peak-edges --help)
+       mzlab-cli manual-table FILE... --set windows=PATH   the integrations drawn by hand on transition / SIM traces, as CSV (manual-table --help); peak-split FILE... --set tr=J --set a=MIN --set b=MIN: one of them split at its valleys (peak-split --help)
+       mzlab-cli peak-auto TRACE.csv [--from MIN --to MIN] [--set NAME=VALUE...]   every peak of a high-resolution trace (peak-auto --help); peak-area: one peak from zero or a line (peak-area --help); peak-window: where a dragged window end goes (peak-window --help)
+       mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
+       mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
+       mzlab-cli msn-rules RECORD... | sum LINES...   the fragmentation rules judged on library spectra (msn-rules --help)
+       mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
+       mzlab-cli validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1 (validate --help)
+       mzlab-cli normative build --cache DIR --out DIR   build the EU and US regulatory lists from the official sources (native only; normative --help); insilico pack CSV OUT   the spectra.insilico candidate package
+
+  FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
+  --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
+  --preset NAME      auto (default: both polarities as the panel does), pos or neg
+  --params FILE.json the numbers of the panel Pipeline: {"polarity", "mode", "floor", "min_height", "min_points", "ppm", "rt_tol", "fill"}
+  --help             this text
+
+old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl
+--- stderr
+
+=== mzlab-cli -h
+exit 0
+--- stdout
+mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
+
+usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params FILE.json]
+       mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan (flow run --help)
+       mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)
+       mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)
+       mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
+       mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/1 record of a run; flow verify RECORD checks its fingerprints
+       mzlab-cli llm tools [--out FILE]   the catalog strumenti/1 of the assistant tools (llm tools --help)
+       mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the events a recording gives for a conversation, one per line
+       mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
+       mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
+       mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help); dda-window FILE --from MIN --to MIN: the MS2 of a window by precursor (dda-window --help)
+       mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help); ion-mz TEXT [--adduct A]: the m/z of an ion with a signed shift (ion-mz --help)
+       mzlab-cli match-mz X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adduct shifts, known contaminants, as candidates (match-mz --help)
+       mzlab-cli mol-label REQUEST.json|- [--out PATH]   formula, charge and masses of drawn structures and arrows as JSON (mol-label --help); mol-anal: average mass, mass % and theoretical isotope pattern of one structure (mol-anal --help)
+       mzlab-cli mol-check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges) as JSON (mol-check --help); mol-cip: its R/S and E/Z (mol-cip --help); mol-hilite: the atoms an evidence colours (mol-hilite --help); mol-sel REQUEST.json|-: masses, heavy atoms and rings of a selection (mol-sel --help); mol-link REQUEST.json|-: the PubChem, ChEBI and BioTransformer URLs of a structure (mol-link --help); mol-export MOLFILE|-: the drawing as .mol or .sdf (mol-export --help)
+       mzlab-cli mol-cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut as JSON (mol-cut --help); mol-mech REQUEST.json|-: whether the curved arrows of a drawn mechanism are well formed (mol-mech --help); mol-search --sub QUERY TARGET...: where a substructure occurs in structures (mol-search --help)
+       mzlab-cli samples vars|group ...   how the file names split the files, as JSON (samples --help)
+       mzlab-cli peak-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peak-edges --help)
+       mzlab-cli manual-table FILE... --set windows=PATH   the integrations drawn by hand on transition / SIM traces, as CSV (manual-table --help); peak-split FILE... --set tr=J --set a=MIN --set b=MIN: one of them split at its valleys (peak-split --help)
+       mzlab-cli peak-auto TRACE.csv [--from MIN --to MIN] [--set NAME=VALUE...]   every peak of a high-resolution trace (peak-auto --help); peak-area: one peak from zero or a line (peak-area --help); peak-window: where a dragged window end goes (peak-window --help)
+       mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
+       mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
+       mzlab-cli msn-rules RECORD... | sum LINES...   the fragmentation rules judged on library spectra (msn-rules --help)
+       mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
+       mzlab-cli validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1 (validate --help)
+       mzlab-cli normative build --cache DIR --out DIR   build the EU and US regulatory lists from the official sources (native only; normative --help); insilico pack CSV OUT   the spectra.insilico candidate package
+
+  FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
+  --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
+  --preset NAME      auto (default: both polarities as the panel does), pos or neg
+  --params FILE.json the numbers of the panel Pipeline: {"polarity", "mode", "floor", "min_height", "min_points", "ppm", "rt_tol", "fill"}
+  --help             this text
+
+old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl
+--- stderr
+
+=== mzlab-cli nosuchcommand
+exit 2
+--- stdout
+--- stderr
+error: unknown command nosuchcommand
+(mzlab-cli --help)
+
+=== mzlab-cli flow
+exit 2
+--- stdout
+--- stderr
+error: usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow check PLAN.json | mzlab-cli flow report RUNDIR [--out FILE] | mzlab-cli flow record RUNDIR --roles ROLES.json | mzlab-cli flow verify RECORD | mzlab-cli flow command PLAN.json
+(mzlab-cli flow --help)
+
+=== mzlab-cli flow --help
+exit 2
+--- stdout
+--- stderr
+error: usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow check PLAN.json | mzlab-cli flow report RUNDIR [--out FILE] | mzlab-cli flow record RUNDIR --roles ROLES.json | mzlab-cli flow verify RECORD | mzlab-cli flow command PLAN.json
+(mzlab-cli flow --help --help)
+
+=== mzlab-cli flow nosuch
+exit 2
+--- stdout
+--- stderr
+error: usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow check PLAN.json | mzlab-cli flow report RUNDIR [--out FILE] | mzlab-cli flow record RUNDIR --roles ROLES.json | mzlab-cli flow verify RECORD | mzlab-cli flow command PLAN.json
+(mzlab-cli flow nosuch --help)
+
+=== mzlab-cli features --help
+exit 0
+--- stdout
+mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.
+
+usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params FILE.json]
+       mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan (flow run --help)
+       mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)
+       mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)
+       mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
+       mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/1 record of a run; flow verify RECORD checks its fingerprints
+       mzlab-cli llm tools [--out FILE]   the catalog strumenti/1 of the assistant tools (llm tools --help)
+       mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the events a recording gives for a conversation, one per line
+       mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
+       mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
+       mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help); dda-window FILE --from MIN --to MIN: the MS2 of a window by precursor (dda-window --help)
+       mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help); ion-mz TEXT [--adduct A]: the m/z of an ion with a signed shift (ion-mz --help)
+       mzlab-cli match-mz X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adduct shifts, known contaminants, as candidates (match-mz --help)
+       mzlab-cli mol-label REQUEST.json|- [--out PATH]   formula, charge and masses of drawn structures and arrows as JSON (mol-label --help); mol-anal: average mass, mass % and theoretical isotope pattern of one structure (mol-anal --help)
+       mzlab-cli mol-check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges) as JSON (mol-check --help); mol-cip: its R/S and E/Z (mol-cip --help); mol-hilite: the atoms an evidence colours (mol-hilite --help); mol-sel REQUEST.json|-: masses, heavy atoms and rings of a selection (mol-sel --help); mol-link REQUEST.json|-: the PubChem, ChEBI and BioTransformer URLs of a structure (mol-link --help); mol-export MOLFILE|-: the drawing as .mol or .sdf (mol-export --help)
+       mzlab-cli mol-cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut as JSON (mol-cut --help); mol-mech REQUEST.json|-: whether the curved arrows of a drawn mechanism are well formed (mol-mech --help); mol-search --sub QUERY TARGET...: where a substructure occurs in structures (mol-search --help)
+       mzlab-cli samples vars|group ...   how the file names split the files, as JSON (samples --help)
+       mzlab-cli peak-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peak-edges --help)
+       mzlab-cli manual-table FILE... --set windows=PATH   the integrations drawn by hand on transition / SIM traces, as CSV (manual-table --help); peak-split FILE... --set tr=J --set a=MIN --set b=MIN: one of them split at its valleys (peak-split --help)
+       mzlab-cli peak-auto TRACE.csv [--from MIN --to MIN] [--set NAME=VALUE...]   every peak of a high-resolution trace (peak-auto --help); peak-area: one peak from zero or a line (peak-area --help); peak-window: where a dragged window end goes (peak-window --help)
+       mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
+       mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
+       mzlab-cli msn-rules RECORD... | sum LINES...   the fragmentation rules judged on library spectra (msn-rules --help)
+       mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
+       mzlab-cli validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1 (validate --help)
+       mzlab-cli normative build --cache DIR --out DIR   build the EU and US regulatory lists from the official sources (native only; normative --help); insilico pack CSV OUT   the spectra.insilico candidate package
+
+  FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
+  --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
+  --preset NAME      auto (default: both polarities as the panel does), pos or neg
+  --params FILE.json the numbers of the panel Pipeline: {"polarity", "mode", "floor", "min_height", "min_points", "ppm", "rt_tol", "fill"}
+  --help             this text
+
+old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl
+--- stderr
+
+=== mzlab-cli steps --help
+exit 0
+--- stdout
+mzlab-cli steps: the steps a Flow plan can use, from the registry of this program.
+
+usage: mzlab-cli steps [--json] [--id ID[@VERSION]]
+
+  (no option)       one line per step: id@version, `native` when `flow run` executes it (else `page`: only the Flow page does), title
+  --json            the step/1 descriptors as a JSON array, each with "executable_native" at the end
+  --id ID[@V]       one step only (with --json one step/1 object); without @V the highest version
+  --help            this text
+
+exit codes: 0 done, 2 usage or an unknown step (err.flow.step.unknown)
+--- stderr
+
+=== mzlab-cli llm --help
+exit 2
+--- stdout
+--- stderr
+error: usage: mzlab-cli llm tools [--demo] [--out FILE]   the catalog strumenti/1 of the assistant tools (stdout, or FILE); --demo: the subset of the public demo
+mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the normalized events of a recording, one JSON line per event (stdout);
+  the turn defaults to the number of assistant messages of the conversation; --strict also compares the SHA-256 of the request
+mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 the assistant gets from a run folder (stdout)
+mzlab-cli llm eval CASES_DIR --replay DIR   score the evaluation cases against their recordings DIR/<id>.jsonl (exit 1 if one fails)
+mzlab-cli llm inspect DIR [--budget N] [--hide-names]   the ispezione/1 of the mzML files of a folder, without a model (stdout)
+mzlab-cli llm params DIR [--answers FILE] [--budget N] [--hide-names]   the proposta-param/1 of the rules for the same files (stdout)
+(mzlab-cli llm --help --help)
+
+=== mzlab-cli msn-graph --help
+exit 0
+--- stdout
+mzlab-cli msn-graph: the fragmentation graph (msngrafo/2) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
+
+usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
+       mzlab-cli msn-graph FILE.mzML --formula ION --truth TRUTH.json --summary
+       mzlab-cli msn-graph compare A.json B.json [--out PATH]
+       mzlab-cli msn-graph complete IN.json [--out PATH]
+       mzlab-cli msn-graph figure IN.json [--figure svg,html,png] [--view tree|radial] [--out STEM]
+
+  --formula ION        the ion of the root: C13H25N4O3S+, C13H24N4O3S+H or "C13H24N4O3S [M+H]+"; without it, masses only
+  --smiles TEXT        written back in the JSON; with --structures, the structure that is cleaved
+  --molfile FILE       the 2D structure of the molecule (a molfile), written back in the JSON for the drawings of the root and of the fragments
+  --structures NODE    add to the JSON the key `strutture`: the bonds of --smiles whose cleavage gives the m/z of the node nK of the graph (candidates, with the
+                       ppm and the peaks of its spectrum that the same piece explains); `all` = the key `strutture_tutti`, those of every node of level 2
+                       or more that has a cleavage
+  --interpret          add to the JSON the key `interpretazione`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the
+                       activations that observed it (param interpret)
+  --loss-ppm N         window of the loss match by mass, ppm of the precursor m/z (10) (param loss_ppm)
+  --rules              add to the JSON the key `regole`: the fragmentation rules of the table `fragrules/1` that the formulas alone decide (which rule explains the loss
+                       of an arc, even-electron check, trap cut-off, composite and stepped losses) and the evidence `regola` of the candidates (param rules)
+  --cutoff-q N         q of the trap cut-off, fragments below q/0.908 of the precursor m/z are not observable in a trap CID (0.25) (param cutoff_q)
+  --loss-tol-mda N     tolerance of a loss against a rule, mDa (3) (param loss_tol_mda)
+  --breaks             add to the JSON the key `rotture`: the sets of atoms of --smiles (one or two bonds cut, a few hydrogens moved) that give the m/z of each
+                       node, the arcs they explain and the share of each spectrum's intensity explained (hypotheses, never an assignment) (param breaks)
+  --h-max N            hydrogens moved at most beyond the plain cleavage, for --breaks (2) (param h_max)
+  --max-bonds N        bonds cut at most, 1 or 2, for --breaks (2) (param max_bonds)
+  --struct-ppm N       window of those cleavages and of --breaks, ppm (10) (param struct_ppm)
+  --ppm-formula N      window of the sub-formulas, ppm (10) (param ppm_formula)
+  --low-mz N           below this m/z the window may widen (150) (param low_mz)
+  --wide-ppm N         the wider window, ppm (20), for a candidate with --min-evidence evidences (1) (params wide_ppm, min_evidence)
+  --activation A       only the spectra of this activation (cid, hcd, ...) (param activation)
+  --isotopes           keep the M+1 peaks as nodes (param isotopes)
+  --pick MZ=ION        the formula chosen for the node at MZ (repeatable) (param pick)
+  --truth FILE         paths and formulas expected ({nodes: [{path, formula}]})
+  --summary            one line of numbers instead of the graph
+  --export FORMAT      the spectra of the tree as csv, mgf or msp text instead of the graph
+  --clean              with --export: only the peaks a node of the graph explains
+  --node ID            with --export: nK = the spectra of which node nK of the graph is the precursor; msn:<id> or <id> = those of that node of
+                       the tree; tutto = all
+  --figure LIST        with --out: also write the figures of the graph next to it (g.json → g.svg, g.html, g.png): svg, html (one file, no external
+                       resource, two views, data table) and png (only in a build with the cargo feature `png`)
+  --view V             the view the figures open on: tree (default) or radial
+  --budget-mb N        memory the spectra of one consensus may take, MB (default: the budget of this machine); over it the calm error.memoryBudget
+  --out PATH           write there instead of the standard output
+
+  figure               the figures of a graph already made (after `complete` if it has no `vista`): STEM.svg and STEM.html, STEM.png with --figure
+  complete             adds the key `vista` (levels, best path, tree and radial layout) to an msngrafo/1 that has not got it, with the bytes the engine writes
+  compare              validates a tree measured twice: two msngrafo/1 files in, a JSON (msnconfronto/1) out with the numbers of the five criteria
+                       (isolated nodes, arcs of rel >= 10 %, formulas, MS2 entropy >= 0.8 per energy, m/z shift <= 3 ppm) and `convalidata`
+
+old names still accepted: --mz-basso --ppm-basso --prove-min --attivazione --isotopi --scelta --verita --riassunto --pulito --nodo --strutture --interpreta --ppm-perdita --regole --toll-perdita-mda --figura --vista --rotture --max-legami --ppm-struttura (values albero|radiale, tutti)
+--- stderr
+
+=== mzlab-cli channels --help
+exit 0
+--- stdout
+mzlab-cli channels: the channels of a file (TIC, BPC, one per scan type or precursor, one per SRM transition) as JSON (canali/1).
+
+usage: mzlab-cli channels FILE [--sample ID] [--channel ID [--rt T0[,T1]] [--n N]] [--out PATH]
+
+  FILE        an mzML, or any single file the app reads (.raw, mzXML, ...); SRM, SIC, UV and analog channels only for an mzML
+  --sample ID the sample of a file with several (.wiff), by its id (default: the first; the others are named on the standard error)
+  --channel ID the trace of a UV or analog channel (uv:twc, uv:<nm>±<bw>, an:<i>) instead of the list; with --rt (minutes) the UV spectrum of uv:twc;
+              uv:auto prints the XWC band proposed from the DAD matrix ({nm, bw, rt, n}), in the --rt window when given
+  --n N       points at most per extreme of an analog trace (default 2000)
+  --out PATH  write there instead of the standard output
+
+old names still accepted: canali, --canale
+--- stderr
+
+=== mzlab-cli canali --help
+exit 0
+--- stdout
+mzlab-cli channels: the channels of a file (TIC, BPC, one per scan type or precursor, one per SRM transition) as JSON (canali/1).
+
+usage: mzlab-cli channels FILE [--sample ID] [--channel ID [--rt T0[,T1]] [--n N]] [--out PATH]
+
+  FILE        an mzML, or any single file the app reads (.raw, mzXML, ...); SRM, SIC, UV and analog channels only for an mzML
+  --sample ID the sample of a file with several (.wiff), by its id (default: the first; the others are named on the standard error)
+  --channel ID the trace of a UV or analog channel (uv:twc, uv:<nm>±<bw>, an:<i>) instead of the list; with --rt (minutes) the UV spectrum of uv:twc;
+              uv:auto prints the XWC band proposed from the DAD matrix ({nm, bw, rt, n}), in the --rt window when given
+  --n N       points at most per extreme of an analog trace (default 2000)
+  --out PATH  write there instead of the standard output
+
+old names still accepted: canali, --canale
+--- stderr
+
+=== mzlab-cli dda-window --help
+exit 0
+--- stdout
+mzlab-cli dda-window: the MS2 started from the survey scans of a time window, one group per precursor, as JSON (the «N MS²» list of the page).
+
+usage: mzlab-cli dda-window FILE --from MIN --to MIN [--set hr=1|0] [--out PATH]
+
+  FILE        an mzML, or any single file the app reads (.raw, mzXML, ...)
+  --from MIN  start of the window (minutes); --to MIN its end (equal = one scan)
+  --set hr=0  read the file as low resolution (precursors grouped within 0.5 Da), as the page with high resolution off; default hr=1
+  --out PATH  write there instead of the standard output
+--- stderr
+
+=== mzlab-cli ion-pattern --help
+exit 0
+--- stdout
+mzlab-cli ion-pattern: the unit-resolution isotope pattern of a formula with an adduct, as JSON.
+
+usage: mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]
+
+  FORMULA     the neutral formula, e.g. C9H8O4
+  ADDUCT      an adduct of the catalogue, e.g. "[M+H]+"
+  --out PATH  write there instead of the standard output
+
+The answer is {"n": element counts of the ion, "z": charge, "peaks": [{"off": nominal offset, "mz", "rel": % of the highest}]}.
+--- stderr
+
+=== mzlab-cli ion-mz --help
+exit 0
+--- stdout
+mzlab-cli ion-mz: the m/z of an ion text, with an optional signed shift, as JSON.
+
+usage: mzlab-cli ion-mz TEXT [--adduct ADDUCT] [--out PATH]
+
+  TEXT           a neutral formula (C9H8O4) or an m/z with a shift (288.2+16); a signed number closing the text
+                 is added to the m/z after the adduct, as a literal Da value (+16 is 16.000, not an oxygen)
+  --adduct A     an adduct of the catalogue, e.g. "[M+H]+"; "none" = the text is already the ion
+  --out PATH     write there instead of the standard output
+
+The answer is {"formula", "neutral", "adducts", "adduct", "mz", "mz5", "mz1", "nominal", "offset" (only with a shift)}.
+The m/z is a candidate to extract, never an identification.
+--- stderr
+
+=== mzlab-cli match-mz --help
+exit 0
+--- stdout
+mzlab-cli match-mz: what a number is compatible with, as JSON. Candidates with their error, never an identification.
+
+usage: mzlab-cli match-mz X --tables FILE.json [--set NAME=VALUE...] [--out PATH]
+
+  X               the number: a neutral-loss mass, an adduct shift or the m/z of a known contaminant
+  --tables FILE   the tables to look in, one JSON object {"losses":[{id,f}], "adducts":[{id,k,add|sub,z}], "contam":[{id,mz,pol}]}
+  --set hr=1      high resolution: windows in mDa (losses, adducts) and ppm (contaminants); without it the window is +-0.5 Da
+  --set mda=N     window of losses and adduct shifts in mDa (high resolution, default 3)
+  --set ppm=N     window of contaminants in ppm (high resolution, default 5)
+  --set pol=+|-   keep the adducts and contaminants of that polarity (default both)
+  --out PATH      write there instead of the standard output
+
+The answer is {"x", "hr", "hits": [{kind, id, ...}], "more", "tol"}; uses the same tables as the Addotti e perdite page.
+--- stderr
+
+=== mzlab-cli background --help
+exit 0
+--- stdout
+mzlab-cli background: the TIC or BPC of a file without its chemical background, as JSON.
+
+usage: mzlab-cli background FILE [--blank FILE] [--set NAME=VALUE...] [--out PATH]
+
+  FILE        an mzML, or any single file the app reads (.raw, mzXML, ...)
+  --blank     a blank sample: with mode=blank its persistent ions and their levels are the background
+  --set       kind=tic|bpc, level=N, mode=auto|quiet|blank, action=subtract|exclude, persist=0.8, res=auto|unit|hr,
+              bin=1 (Da), ppm=10, block=0.01, window=15, floor=1|0, rt0=MIN, rt1=MIN (mode=quiet),
+              ex=MZ:TOL,... (windows taken out), keep=MZ,... (ions left raw); NAME may carry an instance prefix (background.mode=quiet)
+  --out PATH  write there instead of the standard output
+  output      {"rt","y","raw","kind","ions":[{mz,lo,hi,persistence,cv,level,share,confidence}],"removed","windows","floor","params"}
+--- stderr
+
+=== mzlab-cli mol-label --help
+exit 0
+--- stdout
+mzlab-cli mol-label: formula, charge and masses of drawn structures and the change across reaction arrows, as JSON (etich/1).
+
+usage: mzlab-cli mol-label REQUEST.json|- [--out PATH]
+
+  REQUEST.json  {"structures": [[{"el", "iso", "h", "q"}, ...], ...], "arrows": [[before, after], ...]}: element, mass number
+                (0 or absent = natural), implicit hydrogens and charge of every atom; - reads the standard input
+                optional "deltas": ["+O", ...] by structure: the delta of its brackets, added to formula and masses
+  --out PATH    write there instead of the standard output
+
+The answer is {"format": "etich/1", "structures": [{formula, text, charge, mass, nominal, mz, delta?} or {error, label}],
+"arrows": [{gain, loss, isotopologue, dm, dnominal} or null]}.
+--- stderr
+
+=== mzlab-cli mol-anal --help
+exit 0
+--- stdout
+mzlab-cli mol-anal: average mass, mass % per element and the theoretical isotope pattern of one drawn structure, as JSON (anal/1).
+
+usage: mzlab-cli mol-anal REQUEST.json|- [--out PATH]
+
+  REQUEST.json  {"atoms": [{"el", "iso", "h", "q", "r"}, ...]}: the atoms of one structure as mol-label reads them; - reads the standard input
+  --out PATH    write there instead of the standard output
+
+The answer is {"format": "anal/1", "structure": {the etich/1 fields}, "average", "composition": [{el, count, pct}],
+"pattern": [{off, mz, rel, abund}]}: sticks grouped by nominal mass, m/z of the ion (mass of a neutral), % of the tallest and of the total.
+Theory for the drawn formula: nothing is compared with a spectrum.
+--- stderr
+
+=== mzlab-cli mol-check --help
+exit 0
+--- stdout
+mzlab-cli mol-check: what is wrong in a drawing (valence, charge, isotope, wedges, aromatic rings, query atoms), as JSON (check/1).
+
+usage: mzlab-cli mol-check REQUEST.json|- [--out PATH]
+
+  REQUEST.json  {"molfile": "..."}: the V2000 or V3000 molfile of the drawing; - reads the standard input
+  --out PATH    write there instead of the standard output
+
+The answer is {"format": "check/1", "atoms", "pieces", "warnings": [{code, level, atoms, bonds, ...}]}: codes valence,
+valenceCharge, charge, isotope, kekule, wedgeMultiple, wedgeNoCentre, wedgeUndecided (level warn) and query, queryBond, pieces (level note);
+atoms are 0-based in the order of the molfile. The check speaks of the drawing only, never of data.
+--- stderr
+
+=== mzlab-cli mol-cip --help
+exit 0
+--- stdout
+mzlab-cli mol-cip: the CIP descriptors of the stereo drawn in a structure (R/S, r/s, E/Z), as JSON (cip/1).
+
+usage: mzlab-cli mol-cip REQUEST.json|- [--out PATH]
+
+  REQUEST.json  {"molfile": "..."}: the V2000 or V3000 molfile of the drawing; - reads the standard input
+  --out PATH    write there instead of the standard output
+
+The answer is {"format": "cip/1", "atoms": [{atom, label}], "bonds": [{a, b, label}]} with atoms 0-based in the order of the
+molfile; only stereo the drawing defines gets a label, and a unit whose ligands the rules cannot tell apart gets none. "skip" (query, kekule,
+tooBig) says why no label was given. Mass spectrometry cannot tell stereoisomers apart: the labels describe the drawing, not a sample.
+--- stderr
+
+=== mzlab-cli mol-hilite --help
+exit 0
+--- stdout
+mzlab-cli mol-hilite: the atoms and bonds of a drawing that a piece of evidence points at, as JSON (hilite/1).
+
+usage: mzlab-cli mol-hilite REQUEST.json|- [--out PATH]
+
+  REQUEST.json  {"molfile": "...", "world": "hr"|"lr", "selected": [atom], "layers": [...]}; - reads the standard input
+  --out PATH    write there instead of the standard output
+
+A layer is {kind: "moiety", query} (a SMILES or molfile found in the drawing), {kind: "sites", smiles, atoms} or {kind: "cuts", smiles,
+bonds: [[a, b]]} (numbered from 0 on that SMILES, carried onto the drawing through a match of it), each with an optional label. The answer is
+{"format": "hilite/1", "layers": [{kind, label, atoms, bonds}]} with atoms 0-based in the order of the molfile; "skip" (noMatch, lr,
+tooBig) says why a layer is empty. In the LR world only the selected atoms are kept. A coloured atom is where the evidence points, not a proof.
+--- stderr
+
+=== mzlab-cli mol-sel --help
+exit 0
+--- stdout
+mzlab-cli mol-sel: formula, charge, masses, heavy atoms, rings and aromatic rings of a drawn structure, as JSON (sel/1).
+
+usage: mzlab-cli mol-sel REQUEST.json|- [--out PATH]
+
+  REQUEST.json  {"molfile": V2000 text, "part": true|false}: the structure as drawn (open valences filled with H), part = a selection;
+                - reads the standard input
+  --out PATH    write there instead of the standard output
+
+The answer is {"format": "sel/1", "part", "label": {formula, text, charge, mass, nominal, mz, ...} (as etich/1), "average",
+"heavy", "atoms", "pieces", "rings", "aromaticAtoms", "aromaticRings"}.
+--- stderr
+
+=== mzlab-cli mol-link --help
+exit 0
+--- stdout
+mzlab-cli mol-link: the outside lookups of a drawn structure (PubChem, ChEBI, BioTransformer) as JSON (link/1).
+
+usage: mzlab-cli mol-link REQUEST.json|- [--out PATH]
+
+  REQUEST.json  {"smiles": text, "inchi": text (optional), "part": true|false}: part = a selection;
+                - reads the standard input
+  --out PATH    write there instead of the standard output
+
+The answer is {"format": "link/1", "part", "preferred": the PubChem row to put first, "links": [{"id", "url", "copy"}]};
+copy is the text to put on the clipboard before opening url (null when the URL carries the structure). Nothing is fetched.
+--- stderr
+
+=== mzlab-cli mol-export --help
+exit 0
+--- stdout
+mzlab-cli mol-export: a drawing as a plain .mol or .sdf file (sdf/1).
+
+usage: mzlab-cli mol-export MOLFILE|- [--set NAME=VALUE...] [--out PATH]
+
+  MOLFILE        a V2000 or V3000 molfile (- reads the standard input)
+  --set format   sdf (default: one record per connected structure, with data items) or mol (the whole drawing in one record)
+  --set ion      none (default) or an adduct: [M+H]+ [M+NH4]+ [M+Na]+ [M+K]+ [M-H]- [M+Cl]- [M+HCOO]-
+  --set name     the title line of every record (default empty)
+  --out PATH     write there instead of the standard output
+
+Every SDF record has the data items MZLAB_FORMULA, MZLAB_EXACT_MASS, MZLAB_ION and MZLAB_MZ (the adduct of a neutral structure, or
+"drawn" for a charged one; none without an ion) and MZLAB_HASH (the mol1: id of the structure). V2000, or V3000 above 999 atoms or
+bonds or with enhanced-stereo groups. The m/z is a candidate to look for, not an identification.
+--- stderr
+
+=== mzlab-cli mol-cut --help
+exit 0
+--- stdout
+mzlab-cli mol-cut: the pieces of a cut across bonds of a structure, as JSON (cut/1).
+
+usage: mzlab-cli mol-cut MOLFILE|- --set bonds=A-B[,C-D...] [--set NAME=VALUE...] [--out PATH]
+
+  MOLFILE         a V2000 molfile (- reads the standard input); atoms are numbered from 0 in file order
+  --set bonds     the cut bonds as atom pairs, e.g. 0-1,4-5 (several bonds of a ring give two pieces)
+  --set mode      homolytic (default: each side keeps one electron, radical marks), heterolytic (+ on one side, - on the other,
+                  single bonds only) or hydrogen (each side closes with one H per bond order)
+  --set cation    heterolytic: the atom of each cut bond that takes the +, in the order of bonds (default the first atom of each pair)
+  --set gap       how far the pieces move apart, in bond lengths (default 1)
+  --out PATH      write there instead of the standard output
+
+The answer is {"format": "cut/1", "mode", "atoms": [{i, charge, radical, h, pin}], "pieces": [{atoms, shift, label}]}:
+every piece with formula, charge, exact mass, m/z (charged pieces only), unpaired electrons, electron count and kind. The pieces are
+candidates to judge; no cut is ranked.
+--- stderr
+
+=== mzlab-cli mol-mech --help
+exit 0
+--- stdout
+mzlab-cli mol-mech: whether the curved arrows of a mechanism are well formed, as JSON (mecc/1). Form only: it never says
+which mechanism is right.
+
+usage: mzlab-cli mol-mech REQUEST.json|- [--out PATH]
+
+  REQUEST.json  {"molfile": V2000 text, "arrows": [{"kind": "pair"|"single", "from": {"lone"|"radical": ATOM} or {"bond": [A, B]},
+                "to": {"atom": ATOM} or {"bond": [A, B]}}, ...], "lone": [[ATOM, PAIRS], ...]}: atoms are 0-based positions of the
+                molfile; pair = full head (two electrons), single = half head (one); - reads the standard input
+  --out PATH    write there instead of the standard output
+
+The answer is {"format": "mecc/1", "arrows": [{kind, from, to, electrons, ok, problem?}], "lone": [{atom, pairs, max?, ok}],
+"ok"}; problem is noLonePair, noRadical, pairFromRadical, noBond or same.
+--- stderr
+
+=== mzlab-cli mol-search --help
+exit 0
+--- stdout
+mzlab-cli mol-search: where a substructure occurs in structures, as JSON (sub/1).
+
+usage: mzlab-cli mol-search --sub QUERY TARGET... [--set NAME=VALUE...] [--out PATH]
+       mzlab-cli mol-search --sub QUERY --db LIST [--set NAME=VALUE...] [--out PATH]
+
+  QUERY           the substructure: a molfile (V2000/V3000, with atom lists, generic atoms A Q X * and query bonds) or a
+                  SMILES; a path to a file or the text itself (- reads the standard input)
+  TARGET          one or more structures, each a path to a molfile or a SMILES file, or a SMILES
+  --db LIST       a structure list instead of targets: an SDF, a SMILES list (one per line, SMILES then name) or a table with a
+                  smiles column such as the molecules catalogue (mzlab/web/molecole/catalogo.csv); a path or - for the standard input
+  --set stereo    1 = defined stereo centres and double bonds of the query must be the same in the target (default 0)
+  --set max       at most this many matches per target (1-1000, default 1000)
+  --out PATH      write there instead of the standard output
+
+The answer is {"format": "sub/1", "atoms", "stereo", "hits": [{i, n, maps}], "errors": [{i, error}]}: for every target that
+contains the query, its distinct matches as the target atoms (from 0) of each query atom; explicit query hydrogens ask for at least that
+many hydrogens and have no column. With --db the answer is {"format": "subdb/1", "atoms", "stereo", "source", "total", "skipped",
+"hits": [{i, name, id, structure, n, maps}], "errors": [{i, name, error}]}. A hit is a suspect to check, never an identification.
+--- stderr
+
+=== mzlab-cli samples --help
+exit 0
+--- stdout
+mzlab-cli samples: how the names of a set of files split them (nomivar/1), as JSON.
+
+usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
+       mzlab-cli samples group NAME...
+
+  --names FILE|-  one file name per line (default: the standard input)
+  --pos N         also the manual variable of the N-th token (1 = first, -1 = last), cut at --sep (default "_-. ")
+  --has a,b       also the manual variable of terms: a file goes to the first term equal to one of its tokens
+  --substring     with --has: the term may be inside a token (O2 then catches H2O2)
+  group           the name of a group made of NAMEs: their common tokens in order, empty when none
+
+old names still accepted: campioni, variabili, nome-gruppo
+--- stderr
+
+=== mzlab-cli campioni --help
+exit 0
+--- stdout
+mzlab-cli samples: how the names of a set of files split them (nomivar/1), as JSON.
+
+usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
+       mzlab-cli samples group NAME...
+
+  --names FILE|-  one file name per line (default: the standard input)
+  --pos N         also the manual variable of the N-th token (1 = first, -1 = last), cut at --sep (default "_-. ")
+  --has a,b       also the manual variable of terms: a file goes to the first term equal to one of its tokens
+  --substring     with --has: the term may be inside a token (O2 then catches H2O2)
+  group           the name of a group made of NAMEs: their common tokens in order, empty when none
+
+old names still accepted: campioni, variabili, nome-gruppo
+--- stderr
+
+=== mzlab-cli peak-edges --help
+exit 0
+--- stdout
+mzlab-cli peak-edges: the limits of the peak at a time on a low-resolution trace, as JSON.
+
+usage: mzlab-cli peak-edges TRACE.csv|- --at MIN [--ref MIN] [--mrm] [--set NAME=VALUE...]
+
+  TRACE.csv    two columns, RT (min) and intensity; - = the standard input
+  --at MIN     the time of the click
+  --ref MIN    base width of the peaks already integrated (used with --set constrain=PERCENT)
+  --mrm        the trace is an MRM transition
+  --set        the page dialog: win, edge_frac, sn_min, multi, tail; engine only: area_noise, noise (mad|rms|manual), min_half, constrain, nr0, nr1
+  output       {"edges":[t0,t1]}, or {"edges":null} when the S/N is under sn_min
+
+old names still accepted: peaks-edges, areaNoise, edgeFrac, snMin, minHalf
+--- stderr
+
+=== mzlab-cli peaks-edges --help
+exit 0
+--- stdout
+mzlab-cli peak-edges: the limits of the peak at a time on a low-resolution trace, as JSON.
+
+usage: mzlab-cli peak-edges TRACE.csv|- --at MIN [--ref MIN] [--mrm] [--set NAME=VALUE...]
+
+  TRACE.csv    two columns, RT (min) and intensity; - = the standard input
+  --at MIN     the time of the click
+  --ref MIN    base width of the peaks already integrated (used with --set constrain=PERCENT)
+  --mrm        the trace is an MRM transition
+  --set        the page dialog: win, edge_frac, sn_min, multi, tail; engine only: area_noise, noise (mad|rms|manual), min_half, constrain, nr0, nr1
+  output       {"edges":[t0,t1]}, or {"edges":null} when the S/N is under sn_min
+
+old names still accepted: peaks-edges, areaNoise, edgeFrac, snMin, minHalf
+--- stderr
+
+=== mzlab-cli manual-table --help
+exit 0
+--- stdout
+mzlab-cli manual-table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
+
+usage: mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--out PATH]
+
+  FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in the order of the page
+  --set windows=PATH  a JSON list of windows [{"file": I, "tr": J, "a": MIN, "b": MIN, "baseline": "zero"|"edges"|"line", "line": [t0, y0, t1, y1], "label": NAME}]:
+                      I = the sample (from 0, in the order above), J = its transition in the list of the file, a and b the edges in min,
+                      NAME the name given to the window (at most 40 characters, optional)
+  --set sums=true     after the windows of each channel a row sum with the sum of their areas
+  --out PATH  write there instead of the standard output
+
+Columns: channel (m/z of a SIM ion, q1>q3 of a transition, ion N without Q1), name, sample, start_min, end_min, apex_rt_min, area (counts x s),
+height, snr (peak1d around the window), baseline, label (the name of the window). Rows grouped by channel, then by sample. Areas and heights in scientific notation with a decimal
+point (7.84077E+04), read as numbers by a spreadsheet in any locale.
+--- stderr
+
+=== mzlab-cli peak-split --help
+exit 0
+--- stdout
+mzlab-cli peak-split: one integration drawn by hand on a transition / SIM trace, split at its valleys.
+
+usage: mzlab-cli peak-split FILE... --set tr=J --set a=MIN --set b=MIN [--set NAME=VALUE...] [--out PATH]
+
+  FILE        an mzML, or a vendor file the app reads, in the order of the page (as manual-table)
+  --set file=I        the sample (from 0, default 0) and --set tr=J its transition in the list of the file
+  --set a=MIN --set b=MIN   the edges of the window
+  --set baseline=zero|edges|line   default zero; line needs --set line=t0,y0,t1,y1
+  --set depth=X       0..1, default 0.1: a valley splits when the smaller of its two peaks rises above it by X times the highest point of the
+                      window (trace minus baseline); a shoulder, without a minimum, is never split
+  --set split=auto|MIN[,MIN...]   cut the window there (auto = at the valleys found at depth) and print its table
+  --set label=NAME    the name of the window (the last column of the table)
+  --out PATH  write there instead of the standard output
+
+Without split: {"splits":[MIN,...]}, the times of the valleys. With split: the CSV of manual-table for this window, a row per part between drop
+lines on the window's baseline (overlap = drop, pv = Hp/Hv: the height of the part over the higher valley next to it; Ph. Eur. 2.2.46 takes the
+value of the smaller peak). The areas of the parts add up to the area of the whole window.
+--- stderr
+
+=== mzlab-cli peak-auto --help
+exit 0
+--- stdout
+mzlab-cli peak-auto: every peak of a high-resolution trace with its baseline, as JSON.
+
+usage: mzlab-cli peak-auto TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VALUE...]
+
+  TRACE.csv    two columns, RT (min) and intensity; - = the standard input
+  --from/--to  the stretch whose apexes count (default: the whole trace)
+  --set        the page dialog: hr_smooth (points, odd), hr_sn; engine only: hr_prom (% of the tallest), hr_scans, hr_half (points, 0 = auto), hr_slope (%);
+               the area of every peak: baseline = zero (default: any background under the peak is part of the area), edges (the line b0-b1),
+               or line with base_y0, base_t0, base_y1, base_t1 (see peak-area --help)
+  output       {"peaks":[{"t0":MIN,"t1":MIN,"b0":BASELINE,"b1":BASELINE,"area":COUNTS_MIN,"baseline":MODE}...]}; with zero or line each
+               peak also has "below" (COUNTS_MIN, the part under the line) and its area is the signed one against that line
+--- stderr
+
+=== mzlab-cli peak-area --help
+exit 0
+--- stdout
+mzlab-cli peak-area: the area of a peak between two boundaries, from zero or from a line you set, as JSON.
+
+usage: mzlab-cli peak-area TRACE.csv|- --from MIN --to MIN [--set baseline=zero|line] [--set NAME=VALUE...]
+
+  TRACE.csv    two columns, RT (min) and intensity; - = the standard input
+  --from/--to  the boundaries (each taken to the nearest point of the trace)
+  --set        baseline: zero (y = 0, the default: any background under the peak is part of the area) or line; a line: base_y0 (counts), base_t0, base_y1, base_t1 (min, counts;
+               base_y1 absent = base_y0, a level). edges, the line between the boundaries, is the page's own (picchi.js)
+  output       {"baseline":MODE,"area":COUNTS_S,"below":COUNTS_S,"height":COUNTS,"rt":MIN}: area signed, below = the part under the line
+--- stderr
+
+=== mzlab-cli peak-window --help
+exit 0
+--- stdout
+mzlab-cli peak-window: where one end of an integration window goes when it is dragged along the trace, as JSON.
+
+usage: mzlab-cli peak-window TRACE.csv|- --end MIN --other MIN (--at MIN | --step N) [--min MIN] [--max MIN]
+
+  TRACE.csv    two columns, RT (min) and intensity; - = the standard input
+  --end        the end being moved; --other the other end of the window
+  --at         where the pointer is (the nearest point of the trace); --step N: N points from --end (negative = earlier), the keyboard
+  --min/--max  the borders of the neighbouring integrations: the end may touch them, never cross them
+  output       {"t":MIN,"i":INDEX}: a point of the trace, at least one point before (or after) --other
+--- stderr
+
+=== mzlab-cli explain-missing --help
+exit 0
+--- stdout
+mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv [--ppm N] [--rt-tol MIN] [--out FILE]
+  TABLE.mzfeat   the table of a run (the output of tp.link or later)
+  EXPECTED.csv   one expected product per line: id,mz,rt (a header line is skipped)
+  --ppm N        mass window of a row for an expected m/z (default 5)
+  --rt-tol MIN   RT window in minutes (default 0.3)
+output: one CSV line per expected product: id, mz, rt, rows_mz (rows within the mass window), rows_in (also within the RT window), best_ppm, best_drt,
+  detected, filled (cells of the best row), max_height, max_area, tp_status, stage (view | F1..F5 | absorbed | no_row_mz | rt_off), nearest_ppm, nearest_drt,
+  kinship (0-4), q_shape, q_snr (peak quality of the best row), rank_now (place of the best row in the view: kinship, then largest area), view_size, q_reason (bits 1 shape, 2 S/N, 4 points: why F1 hides the row), rank_k1..k3 (other orderings of the view: k1 kinship, peaks detected, area; k2 kinship, sources agreeing (`via`), peaks detected; k3 kinship, then log10 area + 1.5 x share of files detected + 0.5 x sources + peak shape), kin_rank / kin_size (place of the best row among the view rows of its own kinship, in view order, and the size of that group), singles_above (rows above it in the view seen in one file only), view_single_pct (percent of the whole view seen in one file only), absorbed_row / absorbed_mz / absorbed_rt (stage absorbed: the family row that holds the expected ion as a member although its own m/z or RT is outside the windows; empty otherwise)
+--- stderr
+
+=== mzlab-cli msn-lib --help
+exit 0
+--- stdout
+mzlab-cli msn-lib: the library of MSn trees (msnlib/1).
+
+usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
+       mzlab-cli msn-lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
+       mzlab-cli msn-lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH]
+       mzlab-cli msn-lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
+
+  add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
+          The options are those of `msn-graph` (--help of that command)
+  build   one entry per row of the manifest (tab separated, header): id, formula_neutra, addotto_atteso, file (relative to DIR, by default the folder
+          of the manifest); optional smiles, attivazione. The ion is "<formula_neutra> <addotto_atteso>". Writes LIB.json next to the manifest unless --out
+  export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
+          --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
+          --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
+  search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
+          msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
+          --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
+          --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
+
+old names still accepted: --pulito --tutti --annota --formato --min-prove
+--- stderr
+
+=== mzlab-cli msn-rules --help
+exit 0
+--- stdout
+mzlab-cli msn-rules: the fragmentation rules judged on library spectra with a known structure.
+
+usage: mzlab-cli msn-rules RECORD... [--list FILE] [--smiles S] [--activation A] [--rules] [--decoy SEME] [--out PATH]
+       mzlab-cli msn-rules sum LINES... [--out PATH]
+
+  RECORD...         MassBank records (one spectrum each) or MSP files; --list: a file with one path per line
+  --smiles S        the structure, when the record has none (one record)
+  --activation A    cid (trap type) or hcd (beam type), for a file that does not say (MSP)
+  --rules           also the peaks explained with the rules of the formula and of the structure, and the peaks per rule id
+  --decoy SEME      the same numbers on three decoys: the structure rewired (same formula), the spectrum of another record with the same nominal
+                    precursor, the losses shifted by 0.0137 Da; SEME fixes the choice, the same seed gives the same lines
+  sum               the lines of the records added up per stratum (trap CID, HCD, Q-TOF, other beam) and polarity: coverage of (c) against the decoys,
+                    peaks per rule, decoy rate per rule and the thresholds of the protocol (a rule with fewer than 20 applications is not measured)
+
+Peaks above 2 % of the base peak, 10 ppm (20 below m/z 150) for a fragment, 3 mDa for a loss. Output: a JSON line per record, numbers only.
+
+old names still accepted: --lista --attivazione --regole somma
+--- stderr
+
+=== mzlab-cli convert --help
+exit 0
+--- stdout
+mzlab-cli convert: vendor files to indexed mzML, the step convert.mzml of the Flow page.
+
+usage: mzlab-cli convert INPUT... --out FOLDER [--compression KIND] [--zlib N] [--numpress] [--peaks WHICH] [--workers N] [--report FILE.json] [--fresh] [--set conv.NAME=VALUE...]
+
+  INPUT...             a file, a maker's folder (.D, .d, .raw) or a folder to look through; a .wiff is taken with its .wiff.scan, and a dataset
+                       with several samples gives one mzML per sample
+  --out FOLDER         where the mzML files are written: NAME.mzML (NAME-ID.mzML for the sample ID of a dataset with several); the cache is in
+                       FOLDER/.convert
+  --compression KIND   standard (zlib level 2, default), smallest (zlib and MS-Numpress) or none (uncompressed): the short form of the two options below
+  --zlib N, --numpress zlib level of the arrays, 0 (none) to 9 (smallest), default 2; MS-Numpress coding of m/z and intensities
+  --peaks WHICH        the peaks written: file (those of the file, default; a profile file keeps its points and the run warns), profile (the
+                       points of the profile) or mzlab (centroids of mzLab)
+  --workers N          files converted at once (default: the cores but one, 1 to 4, fewer when the memory budget of the computer does not give
+                       each its share, with a note; the bytes written do not depend on it)
+  --report FILE.json   one object per input: ingresso, uscita, sha256, spettri, secondi, saltato, conv/1, avvisi (centroidi with --peaks mzlab); or ingresso, errore, causa
+  --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
+                       program is not converted again
+  --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
+  --help               this text
+
+progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 3 a file was written with scans missing (conv/1 parziale; a
+warning line names it), 4 an input is missing or holds nothing to convert
+--- stderr
+
+=== mzlab-cli validate --help
+exit 0
+--- stdout
+mzlab-cli validate: is the mzML valid (structure, PSI-MS vocabulary, index and SHA-1)?
+
+usage: mzlab-cli validate FILE.mzML... [--json] [--help]
+
+  FILE...   one or more mzML (plain or indexedmzML)
+  --json    one JSON array on the standard output, an object per file: {file, valid, indexed, spectra, chromatograms, problems: [{severity, path, code, message}]}
+
+Without --json each finding is a line `error|warning PATH MESSAGE` (PATH is the XML path, MESSAGE starts with the code of the check); with
+several files each line starts with `FILE: `. The summary of every file goes to the standard error. Exit code: 0 no error in any file,
+1 at least one error, 2 usage or a file that cannot be read. Warnings (obsolete terms, a value without its unit) never change the code.
+--- stderr
+
+=== mzlab-cli normative --help
+exit 0
+--- stdout
+mzlab-cli normative: the regulatory lists built from the official sources.
+
+usage: mzlab-cli normative pack IN OUT       the data release of the committed lists: OUT/normative.mzsus, zlib pieces and catalogo.json (no network)
+       mzlab-cli normative listings PATH     the listings JSON of a package folder or a .mzsus file
+       mzlab-cli normative import-official READER CSV SIDECAR OUT [--file NAME] [--date YYYY-MM-DD]
+                                             your own copy of the ECHA Candidate List (svhc) or Proposition 65 (ca_prop65) as a private .mzsus (no network)
+       mzlab-cli normative build --cache DIR --out DIR [--only ID...] [--update-pins] [--no-resolve] [--allow-large]
+                                 [--sources FILE] [--overrides FILE]
+
+  --cache DIR     where downloads are kept (one file per URL with its SHA-256 and date); a warm cache makes the build offline and byte-identical
+  --out DIR       writes lists/ID.csv, provenance.json and unresolved.tsv there
+  --only ID...    build these lists only (the others keep their files)
+  --update-pins   write the SHA-256 of what was read into sources.json (without it a changed source stops the build)
+  --no-resolve    read the entries and count them, no structures (a check of the readers)
+  --allow-large   accept downloads above 90 MB (PubChem and SusDat files)
+  --sources FILE  default OUT/sources.json
+  --overrides FILE  default OUT/overrides.tsv (list_id;entry_ref;cas;inchikey;reason)
+
+exit: 0 done; 1 a list kept its last good file (stale); 2 usage or sources.json; 3 pin mismatch; 4 download too large; 5 a resolver source failed; 6 file error
+--- stderr
+
+=== mzlab-cli insilico --help
+exit 0
+--- stdout
+usage: mzlab-cli insilico pack PUBCHEMLITE_CSV OUT [--version TEXT] [--doi TEXT] [--piece-raw BYTES]
+  writes OUT/catalogo.json (insilico/1) and the mass-range pieces OUT/NNN.bin (zlib, cut every BYTES of rows, default 12 MiB); no network, same input, same bytes
+--- stderr
+
+=== mzlab-cli flow run --help
+exit 0
+--- stdout
+mzlab-cli flow run: runs a whole mzflow/2 plan (the plan of the Flow page) on files.
+
+usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] [--out FOLDER] [--set INSTANCE.NAME=VALUE...] [--workers N] [--budget-mb N] [--dry-run] [--fresh]
+                          [--json] [--progress text|jsonl] [--events]
+
+  PLAN.json                the plan; its inputs are files named in it
+  --in FILE|FOLDER...      where the inputs are: a file is matched by its name, a folder holds files with those names (default: the folder of the plan)
+  --out FOLDER             the run folder: plan.json (the plan as run), one file per step, prov.json and corsa.json
+  --set INSTANCE.NAME=V    a parameter of a step instance (INSTANCE is its id, or the step id when the plan has one instance of it);
+                           NAME may also be `algorithm` or `preset`; repeat for more
+  --workers N              threads for the steps of a level and the files of a per-file step (default: the cores but one, 1 to 4, as the
+                           desktop app; the outputs do not depend on it)
+  --budget-mb N            working memory of the alignment in MB (default: a share of the RAM); a series that does not fit in memory is aligned
+                           in slabs of m/z, and the outputs are the same bytes whatever N is
+  --dry-run                checks the plan, the settings and the inputs and prints what would run; writes nothing
+  --fresh                  computes every step again; without it a step whose inputs, parameters and program are those of a run already in
+                           FOLDER is reused (`... reused`, `cached` in prov.json)
+  --json                   one JSON document on stdout, flowrun/1 (flowdry/1 with --dry-run; errore/1 when the command stops); stderr and files are the same
+  --progress jsonl         one JSON line per job on stderr instead of `[3/9] ...`: {"job", "of", "instance", "item", "status", "ms"} (default: text)
+  --events                 the flowlive/1 events of the run on stdout, one JSON line each, as they happen (not with --json); the files and prov.json are the same
+  --help                   this text
+
+exit codes: 0 done, 1 a step failed (the others are written), 2 usage, 3 the plan is not valid, 4 an input is missing or does not match
+
+old names still accepted: --jsonl
+--- stderr
+
+=== mzlab-cli flow check --help
+exit 0
+--- stdout
+mzlab-cli flow check: is a plan valid? Checks it as `flow run` does, without looking for the input files.
+
+usage: mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]
+
+  --set INSTANCE.NAME=V    as in `flow run`; the setting is checked with the rest of the plan
+  --json                   one flowcheck/1 document on stdout: {"valid", "problems": [{instance, port, error_key, params}]}
+  --help                   this text
+
+exit codes: 0 valid, 2 usage, 3 the plan is not valid (also a step that has no native executor: err.flow.step.native), 4 the plan cannot be read
+--- stderr
+
+=== mzlab-cli flow report --help
+exit 2
+--- stdout
+--- stderr
+error: unknown option --help
+(mzlab-cli flow report --help)
+
+=== mzlab-cli flow record --help
+exit 2
+--- stdout
+--- stderr
+error: unknown option --help
+(mzlab-cli flow record --help)
+
+=== mzlab-cli flow verify --help
+exit 2
+--- stdout
+--- stderr
+error: unknown option --help
+(mzlab-cli flow verify --help)
+
+=== mzlab-cli flow command --help
+exit 2
+--- stdout
+--- stderr
+error: --help: No such file or directory (os error 2)
+(mzlab-cli flow command --help)
+
+=== mzlab-cli llm tools --help
+exit 0
+--- stdout
+mzlab-cli llm tools [--demo] [--out FILE]   the catalog strumenti/1 of the assistant tools (stdout, or FILE); --demo: the subset of the public demo
+mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the normalized events of a recording, one JSON line per event (stdout);
+  the turn defaults to the number of assistant messages of the conversation; --strict also compares the SHA-256 of the request
+mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 the assistant gets from a run folder (stdout)
+mzlab-cli llm eval CASES_DIR --replay DIR   score the evaluation cases against their recordings DIR/<id>.jsonl (exit 1 if one fails)
+mzlab-cli llm inspect DIR [--budget N] [--hide-names]   the ispezione/1 of the mzML files of a folder, without a model (stdout)
+mzlab-cli llm params DIR [--answers FILE] [--budget N] [--hide-names]   the proposta-param/1 of the rules for the same files (stdout)
+--- stderr
+
+=== mzlab-cli llm replay --help
+exit 0
+--- stdout
+mzlab-cli llm tools [--demo] [--out FILE]   the catalog strumenti/1 of the assistant tools (stdout, or FILE); --demo: the subset of the public demo
+mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the normalized events of a recording, one JSON line per event (stdout);
+  the turn defaults to the number of assistant messages of the conversation; --strict also compares the SHA-256 of the request
+mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 the assistant gets from a run folder (stdout)
+mzlab-cli llm eval CASES_DIR --replay DIR   score the evaluation cases against their recordings DIR/<id>.jsonl (exit 1 if one fails)
+mzlab-cli llm inspect DIR [--budget N] [--hide-names]   the ispezione/1 of the mzML files of a folder, without a model (stdout)
+mzlab-cli llm params DIR [--answers FILE] [--budget N] [--hide-names]   the proposta-param/1 of the rules for the same files (stdout)
+--- stderr
+
+=== mzlab-cli llm context --help
+exit 2
+--- stdout
+--- stderr
+error: unknown option --help
+(mzlab-cli llm context --help)
+
+=== mzlab-cli llm inspect --help
+exit 2
+--- stdout
+--- stderr
+error: unknown option --help
+(mzlab-cli llm inspect --help)
+
+=== mzlab-cli llm params --help
+exit 2
+--- stdout
+--- stderr
+error: unknown option --help
+(mzlab-cli llm params --help)
+
+=== mzlab-cli llm eval --help
+exit 2
+--- stdout
+--- stderr
+error: unknown option --help
+(mzlab-cli llm eval --help)
+
+=== mzlab-cli msn-lib add --help
+exit 0
+--- stdout
+mzlab-cli msn-lib: the library of MSn trees (msnlib/1).
+
+usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
+       mzlab-cli msn-lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
+       mzlab-cli msn-lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH]
+       mzlab-cli msn-lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
+
+  add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
+          The options are those of `msn-graph` (--help of that command)
+  build   one entry per row of the manifest (tab separated, header): id, formula_neutra, addotto_atteso, file (relative to DIR, by default the folder
+          of the manifest); optional smiles, attivazione. The ion is "<formula_neutra> <addotto_atteso>". Writes LIB.json next to the manifest unless --out
+  export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
+          --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
+          --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
+  search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
+          msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
+          --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
+          --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
+
+old names still accepted: --pulito --tutti --annota --formato --min-prove
+--- stderr
+
+=== mzlab-cli msn-lib build --help
+exit 0
+--- stdout
+mzlab-cli msn-lib: the library of MSn trees (msnlib/1).
+
+usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
+       mzlab-cli msn-lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
+       mzlab-cli msn-lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH]
+       mzlab-cli msn-lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
+
+  add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
+          The options are those of `msn-graph` (--help of that command)
+  build   one entry per row of the manifest (tab separated, header): id, formula_neutra, addotto_atteso, file (relative to DIR, by default the folder
+          of the manifest); optional smiles, attivazione. The ion is "<formula_neutra> <addotto_atteso>". Writes LIB.json next to the manifest unless --out
+  export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
+          --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
+          --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
+  search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
+          msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
+          --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
+          --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
+
+old names still accepted: --pulito --tutti --annota --formato --min-prove
+--- stderr
+
+=== mzlab-cli msn-lib export --help
+exit 0
+--- stdout
+mzlab-cli msn-lib: the library of MSn trees (msnlib/1).
+
+usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
+       mzlab-cli msn-lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
+       mzlab-cli msn-lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH]
+       mzlab-cli msn-lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
+
+  add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
+          The options are those of `msn-graph` (--help of that command)
+  build   one entry per row of the manifest (tab separated, header): id, formula_neutra, addotto_atteso, file (relative to DIR, by default the folder
+          of the manifest); optional smiles, attivazione. The ion is "<formula_neutra> <addotto_atteso>". Writes LIB.json next to the manifest unless --out
+  export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
+          --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
+          --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
+  search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
+          msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
+          --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
+          --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
+
+old names still accepted: --pulito --tutti --annota --formato --min-prove
+--- stderr
+
+=== mzlab-cli msn-lib search --help
+exit 0
+--- stdout
+mzlab-cli msn-lib: the library of MSn trees (msnlib/1).
+
+usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
+       mzlab-cli msn-lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
+       mzlab-cli msn-lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH]
+       mzlab-cli msn-lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
+
+  add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
+          The options are those of `msn-graph` (--help of that command)
+  build   one entry per row of the manifest (tab separated, header): id, formula_neutra, addotto_atteso, file (relative to DIR, by default the folder
+          of the manifest); optional smiles, attivazione. The ion is "<formula_neutra> <addotto_atteso>". Writes LIB.json next to the manifest unless --out
+  export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
+          --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
+          --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
+  search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
+          msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
+          --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
+          --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
+
+old names still accepted: --pulito --tutti --annota --formato --min-prove
+--- stderr
+
+=== mzlab-cli normative build --help
+exit 0
+--- stdout
+mzlab-cli normative: the regulatory lists built from the official sources.
+
+usage: mzlab-cli normative pack IN OUT       the data release of the committed lists: OUT/normative.mzsus, zlib pieces and catalogo.json (no network)
+       mzlab-cli normative listings PATH     the listings JSON of a package folder or a .mzsus file
+       mzlab-cli normative import-official READER CSV SIDECAR OUT [--file NAME] [--date YYYY-MM-DD]
+                                             your own copy of the ECHA Candidate List (svhc) or Proposition 65 (ca_prop65) as a private .mzsus (no network)
+       mzlab-cli normative build --cache DIR --out DIR [--only ID...] [--update-pins] [--no-resolve] [--allow-large]
+                                 [--sources FILE] [--overrides FILE]
+
+  --cache DIR     where downloads are kept (one file per URL with its SHA-256 and date); a warm cache makes the build offline and byte-identical
+  --out DIR       writes lists/ID.csv, provenance.json and unresolved.tsv there
+  --only ID...    build these lists only (the others keep their files)
+  --update-pins   write the SHA-256 of what was read into sources.json (without it a changed source stops the build)
+  --no-resolve    read the entries and count them, no structures (a check of the readers)
+  --allow-large   accept downloads above 90 MB (PubChem and SusDat files)
+  --sources FILE  default OUT/sources.json
+  --overrides FILE  default OUT/overrides.tsv (list_id;entry_ref;cas;inchikey;reason)
+
+exit: 0 done; 1 a list kept its last good file (stale); 2 usage or sources.json; 3 pin mismatch; 4 download too large; 5 a resolver source failed; 6 file error
+--- stderr
+
+=== mzlab-cli insilico pack --help
+exit 2
+--- stdout
+--- stderr
+error: unknown option --help
+usage: mzlab-cli insilico pack PUBCHEMLITE_CSV OUT [--version TEXT] [--doi TEXT] [--piece-raw BYTES]
+  writes OUT/catalogo.json (insilico/1) and the mass-range pieces OUT/NNN.bin (zlib, cut every BYTES of rows, default 12 MiB); no network, same input, same bytes
+(mzlab-cli insilico --help)
+
+=== mzlab-cli msn-graph figure --help
+exit 2
+--- stdout
+--- stderr
+error: unknown argument --help
+(mzlab-cli msn-graph --help)
+
