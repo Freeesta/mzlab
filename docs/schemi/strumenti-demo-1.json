@@ -768,12 +768,12 @@
                   {
                     "enum":["channel","window","xic"],
                     "default":"window",
-                    "description":"Window (default at high resolution) sums every point of the quality window over the row's scans, so a wandering m/z keeps its area."
+                    "description":"Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area."
                   },
                   {
                     "enum":["strict","wide"],
                     "default":"wide",
-                    "description":"Wide (default at high resolution) also joins touching low pieces of neighbouring channels, so an ion whose m/z wanders ±3 ppm stays one row."
+                    "description":"Wide also joins touching low pieces of neighbouring channels, so an ion whose m/z wanders ±3 ppm stays one row."
                   },
                   {
                     "type":"number",
