@@ -167,7 +167,7 @@
      "items": {
       "$ref": "#/$defs/dataType"
      },
-     "description": "other types this input takes besides type (COMUNICAZIONE.md §2)"
+     "description": "other types this input takes besides type (docs/agenti/rust-step.md, wiring rules)"
     },
     "requires": {
      "$ref": "#/$defs/facets",

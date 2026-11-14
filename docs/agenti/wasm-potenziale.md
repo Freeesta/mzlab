@@ -115,7 +115,7 @@ Banco: crate di prova fuori dal repository con le funzioni vere di `mzlab-core` 
 - **Tetti**: motore da 1 884 160 a ≈ 2 572 288 B (2 336 860 × 1,10 arrotondato a 4 KiB) se si accetta O3 su `mzlab-core`; HR e Attributio +3 % e +1 % (restano sotto i tetti: HR 1 324 332 contro `limit_hr` 1 339 392, di poco; Attributio 1 403 170 contro 1 536 000).
 - **Lettori**: peso a O3 da misurare in DEV-2 (`opentfraw` e `mzlab-lettori` fra i crate caldi).
 - **Browser minimi dichiarati** (il solo posto che li fissa): Chrome/Edge 111, Firefox 121, Safari 16.4. Il motore richiede SIMD128, OPFS e gli handle sincroni (`capacita.js`), `DecompressionStream` chiede Firefox 113, `:has()` Chrome 105 e Firefox 121. Sotto il pavimento il codice non ha ripieghi per `ResizeObserver`, `IntersectionObserver`, `MutationObserver`.
-- **zlib-rs**: è una feature di un crate già presente (non una dipendenza nuova), ma cambia i byte compressi del convertitore: o solo decompressione (zlib-rs diretto per l'inflate, miniz per scrivere) o `conv/1` nuova con prima/dopo (già previsto in `docs/studi/raw-mzml-immediato/DUBBI.md` punto 5).
+- **zlib-rs**: è una feature di un crate già presente (non una dipendenza nuova), ma cambia i byte compressi del convertitore: o solo decompressione (zlib-rs diretto per l'inflate, miniz per scrivere) o `conv/1` nuova con prima/dopo (criterio F10 di `raw-mzml.md`).
 - **binaryen da GitHub** al posto di npm (`wasm-opt@1.4.0` è fermo dal 2023; `wasm-opt@2.0.1` è del 17 ott 2026, troppo nuovo e con pacchetti per piattaforma): tarball `version_133` con SHA-256 fissato.
 
 ## 9. Come rifare le misure
