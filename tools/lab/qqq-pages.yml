@@ -476,6 +476,22 @@ jobs:
           tools/build_feat_wasm.sh site/static manifest
       - name: Record the .wasm modules in static/build.json (they are in place now)
         run: python3 tools/build_site.py --build-json
+      # the desktop app refuses an update whose file differs from its manifest entry: check the published bytes, build.json included
+      - name: The manifest matches the site, byte for byte
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib
+          out = pathlib.Path("site")
+          m = json.loads((out / "static" / "manifest.json").read_text(encoding="utf-8"))
+          bad = []
+          for rel, e in m["files"].items():
+              d = (out / rel).read_bytes()
+              if (len(d), hashlib.sha256(d).hexdigest()) != (e["size"], e["sha256"]):
+                  bad.append(rel)
+          assert "static/build.json" in m["files"], "build.json missing from the manifest"
+          assert not bad, f"manifest differs from the site: {bad[:5]}"
+          print(f"manifest ok: {len(m['files'])} files")
+          PY
       # the built modules, for .github/workflows/metriche.yml (sizes per commit, measured off this critical path; small, kept 1 day)
       - name: .wasm modules for the metrics
         if: github.ref == 'refs/heads/main'
