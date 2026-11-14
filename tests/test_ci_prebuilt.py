@@ -127,10 +127,21 @@ def test_every_cargo_util_helper_a_test_calls_is_imported_or_defined():
 
 def test_prebuilt_restores_the_cache_the_shards_save():
     """The path list is part of the cache version: a `prebuilt` restore with other paths than the shard's save never hits (every group rebuilt from zero)."""
-    import yaml
-    jobs = yaml.safe_load((ROOT / ".github/workflows/test.yml").read_text(encoding="utf-8"))["jobs"]
+    lines = (ROOT / ".github/workflows/test.yml").read_text(encoding="utf-8").splitlines()
 
-    def paths(job: str, action: str) -> list[str]:
-        step = next(s for s in jobs[job]["steps"] if str(s.get("uses", "")).startswith(f"actions/cache/{action}@") and "target" in s["with"]["path"])
-        return sorted(step["with"]["path"].split())
-    assert paths("prebuilt", "restore") == paths("pytest-shard", "save")
+    def blocks(start: str, end: str) -> list[list[str]]:
+        a, b = lines.index(f"  {start}:"), lines.index(f"  {end}:")
+        out = []
+        for k in range(a, b):
+            if lines[k].strip() == "path: |":
+                ind = len(lines[k]) - len(lines[k].lstrip())
+                body = []
+                for ln in lines[k + 1:b]:
+                    if not ln.strip() or len(ln) - len(ln.lstrip()) <= ind:
+                        break
+                    body.append(ln.strip())
+                if "target" in body:
+                    out.append(sorted(body))
+        return out
+    pre, shard = blocks("prebuilt", "pytest-shard"), blocks("pytest-shard", "pytest")
+    assert len(pre) == 1 and len(shard) == 2 and shard[0] == shard[1] == pre[0]
