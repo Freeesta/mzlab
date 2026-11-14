@@ -315,54 +315,38 @@ const LISTE = (() => {
   const labRows = () => { const r = rd(KEY_ROWS, []); return Array.isArray(r) ? r.filter(x => x && x.mz > 0) : []; };
   const saveRows = (/** @type {Bag[]} */ rows) => { wr(KEY_ROWS, rows); reindex(); if (typeof redrawAll === "function") redrawAll(); };
 
-  // The same self-closing connection as the engine (lab() in qqq-db.js): an idle one would block the reset's deleteDatabase.
-  /** @type {Promise<() => Promise<IDBDatabase>> | null} */ let getDb = null;
-  async function idbOpen() {
-    if (typeof indexedDB === "undefined") return null;
+  // One short connection per operation, closed when its transaction ends: an idle one would block the reset's deleteDatabase.
+  function idbOpen() {
+    return new Promise(async res => {
+      if (typeof indexedDB === "undefined") return res(null);
+      try {
+        // the schema is written once (qqq-db.js)
+        const { DB_NAME, DB_VER, upgrade } = await import("./qqq-db.js");
+        const req = indexedDB.open(DB_NAME, DB_VER);
+        req.onupgradeneeded = () => upgrade(req.result);
+        req.onsuccess = () => { const db = req.result; db.onversionchange = () => db.close(); res(db); };
+        req.onerror = () => res(null);
+        req.onblocked = () => window.dispatchEvent(new Event("mzlab:db-blocked"));     // browser.js shows the same message as for the engine's own open
+      } catch (_) { res(null); }
+    });
+  }
+
+  async function idbRun(/** @type {IDBTransactionMode} */ mode, /** @type {(s: IDBObjectStore) => IDBRequest} */ fn) {
+    const db = await idbOpen();
+    if (!db) return undefined;
     try {
-      getDb = getDb || import("./qqq-db.js").then(m => m.lab(() => window.dispatchEvent(new Event("mzlab:db-blocked")), false));     // browser.js shows the same message as for the engine's own open
-      return await (await getDb)();
-    } catch (_) { return null; }
+      return await new Promise(res => {
+        try {
+          const t = db.transaction(IDB_STORE, mode), r = fn(t.objectStore(IDB_STORE));
+          t.oncomplete = () => res(r.result);
+          t.onerror = t.onabort = () => res(undefined);
+        } catch (_) { res(undefined); }
+      });
+    } finally { db.close(); }
   }
-
-  async function idbGetUserLists() {
-    const db = await idbOpen();
-    if (!db) return [];
-    return new Promise(res => {
-      try {
-        const t = db.transaction(IDB_STORE, "readonly");
-        const req = t.objectStore(IDB_STORE).getAll();
-        req.onsuccess = () => res(req.result || []);
-        req.onerror = () => res([]);
-      } catch (_) { res([]); }
-    });
-  }
-
-  async function idbSaveUserList(/** @type {Bag} */ list) {
-    const db = await idbOpen();
-    if (!db) return;
-    return new Promise(/** @param {(v?: any) => void} res */ res => {
-      try {
-        const t = db.transaction(IDB_STORE, "readwrite");
-        t.objectStore(IDB_STORE).put(list);
-        t.oncomplete = () => res();
-        t.onerror = () => res();
-      } catch (_) { res(); }
-    });
-  }
-
-  async function idbDeleteUserList(/** @type {string} */ id) {
-    const db = await idbOpen();
-    if (!db) return;
-    return new Promise(/** @param {(v?: any) => void} res */ res => {
-      try {
-        const t = db.transaction(IDB_STORE, "readwrite");
-        t.objectStore(IDB_STORE).delete(id);
-        t.oncomplete = () => res();
-        t.onerror = () => res();
-      } catch (_) { res(); }
-    });
-  }
+  const idbGetUserLists = async () => (await idbRun("readonly", s => s.getAll())) || [];
+  const idbSaveUserList = (/** @type {Bag} */ list) => idbRun("readwrite", s => s.put(list));
+  const idbDeleteUserList = (/** @type {string} */ id) => idbRun("readwrite", s => s.delete(id));
 
   // Per-list switches exist only when there are two or more lists (the built-in ones are Keller and the pesticides); a single list is always on, whatever an old stored choice says
   const activeMap = () => (ST.lists.length + ST.userLists.length < 2 ? {} : rd(KEY_LISTS, {}));
