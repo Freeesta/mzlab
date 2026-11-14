@@ -279,10 +279,14 @@ jobs:
           echo "pytest-shard: $ESITO"
           [ "$ESITO" = success ]
 
-  # The e2e smoke tests (tools/verifica.py --fumo: SMOKE) against the local Python server.
-  # No Pyodide here: the engine of the site is tried by hand (see docs/agenti/).
-  browser:
-    name: browser (ubuntu-latest, chromium)
+  # The e2e smoke tests (tools/verifica.py --fumo: SMOKE) against the local Python server, in two halves (--parte K/N deals the slow ones round-robin) on two runners.
+  # No Pyodide here: the engine of the site is tried by hand (see docs/agenti/). The required name `browser (ubuntu-latest, chromium)` is the gate job below.
+  browser-shard:
+    name: browser-shard (${{ matrix.parte }})
+    strategy:
+      fail-fast: false
+      matrix:
+        parte: ["1/2", "2/2"]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -333,19 +337,19 @@ jobs:
           python -m pip install -e ".[test]" playwright axe-playwright-python
           python -m playwright install --with-deps chromium
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: steps.solo.outputs.kind != 'doc' && github.ref == 'refs/heads/main' && steps.pwcache.outputs.cache-hit != 'true'
+        if: steps.solo.outputs.kind != 'doc' && matrix.parte == '1/2' && github.ref == 'refs/heads/main' && steps.pwcache.outputs.cache-hit != 'true'
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.pwcache.outputs.cache-primary-key }}
       - name: Smoke tests
         if: steps.solo.outputs.solo != 'true'
-        run: python tools/verifica.py --browser chromium --fumo
+        run: python tools/verifica.py --browser chromium --fumo --parte ${{ matrix.parte }}
       # size of every built .wasm against its cap, for tools/ci_metrics.py (small, kept 3 days)
       - name: Size of the .wasm
-        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' }}
+        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.parte == '1/2' }}
         run: python3 tools/ci_wasm_dimensioni.py site wasm-dimensioni.json
       - name: Size of the .wasm (artifact)
-        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && hashFiles('wasm-dimensioni.json') != '' }}
+        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.parte == '1/2' && hashFiles('wasm-dimensioni.json') != '' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: wasm-dimensioni
@@ -353,7 +357,7 @@ jobs:
           retention-days: 3
       # saved after the smoke tests have built the site and its .wasm (main only; a red test does not lose it)
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        if: ${{ !cancelled() && matrix.parte == '1/2' && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
         with:
           path: |
             ~/.cargo/registry
@@ -374,10 +378,24 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: verifica-ubuntu-chromium
+          name: verifica-ubuntu-chromium-${{ strategy.job-index }}
           path: .verifica/
           include-hidden-files: true
           if-no-files-found: ignore
+
+  # Gate with the required name: green only when both halves are green (a skipped or cancelled half is not).
+  browser:
+    name: browser (ubuntu-latest, chromium)
+    needs: browser-shard
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          ESITO: ${{ needs.browser-shard.result }}
+        run: |
+          echo "browser-shard: $ESITO"
+          [ "$ESITO" = success ]
 
   # Pull requests only, NOT a required check: the e2e of the changed files (tools/ci_e2e_cambiati.py, the map of tools/verifica.py) minus the smoke round of `browser`
   # and the tests of sito-e2e and the night. A core file selects every e2e: this job then runs none and says so, notte.yml runs them all. Caches are restored, never saved.
