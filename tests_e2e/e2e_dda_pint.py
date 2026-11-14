@@ -1,6 +1,7 @@
 """DDA file whose index gives no precursor intensity (a Thermo .raw; here a synthetic mzML with its `peak intensity` hidden, same bytes long):
 «Segui questo ione» and a row of the precursor list open the most intense MS2 of that precursor, the intensity read by the engine from the parent
 Full Scans (`/api/dda_window` with `mz`), the same MS2 a reading of each parent scan around the precursor gives, not just the first one."""
+# covers: mzlab/web/dda.js, crates/mzlab-core/src/ddafinestra.rs
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

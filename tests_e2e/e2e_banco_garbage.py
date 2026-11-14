@@ -2,6 +2,7 @@
 concentration), «XIC from formula» (ppm, minimum intensity), a new XIC trace (ppm) and the subtraction popover (internal standard m/z, RT tolerance); each
 field refuses letters, 1e999, empty where a value is due, out-of-bound numbers and decimals where a whole number is due with one note and the old value, the
 state does not change and no request carries NaN, Infinity or undefined; a comma decimal is taken."""
+# covers: mzlab/web/campi.js, mzlab/web/banco.js, mzlab/web/sottrazione.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

@@ -1,5 +1,6 @@
 # e2e_tabella_demo: the sample table lists the example files after loading the demo AND after a reload (the session comes back from the engine:
 # the rows of the table were once missing there), in the order of the set, with role, time and size filled in; the same rows as the side list
+# covers: mzlab/web/shell.js
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

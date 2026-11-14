@@ -1,4 +1,5 @@
 """C1: the ?perf meter. Absent without ?perf; with it: a box with api calls (with no Python timing: the engine of the site is Rust), panel draws and a «Copia» button."""
+# covers: mzlab/web/perf.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

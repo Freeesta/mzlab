@@ -2,6 +2,7 @@
 unticked and ticked again opens on ion B; with two samples ticked ion B applies to both; a sample removed and another one with ion B ticked opens on ion B; a sample
 of another list (no ion B) opens on the default, with no error. Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root:
 python3 tests_e2e/e2e_sim_memoria.py"""
+# covers: mzlab/web/tabs.js
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

@@ -1,5 +1,6 @@
 """QA/QC dormant: with the switch off (default) nothing of it is in the DOM, the bar, «Altro», the palette, the tour or the notebook and the
 console is quiet; with it on (?qaqc=1 / mzlab.dev.qaqc) the button, the panel and the palette command are there."""
+# covers: mzlab/web/qaqc.js, mzlab/web/features.js
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

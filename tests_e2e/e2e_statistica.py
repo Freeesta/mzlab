@@ -1,4 +1,6 @@
 """Statistica panel: sample metadata (low and high resolution), time profile, blank subtraction, exploratory PCA (high resolution only)."""
+# covers: mzlab/web/profilo.js, mzlab/web/tabella.js, mzlab/web/bianco.js, mzlab/web/pca.js, mzlab/statistica.py, tools/dati_sintetici.py
+# covers: mzlab/web/stat.js, mzlab/web/campioni.js, mzlab/web/campioni-doc.js, mzlab/web/campioni-tabella.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import numpy as np

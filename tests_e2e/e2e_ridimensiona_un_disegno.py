@@ -1,5 +1,6 @@
 """Window resize: one draw() per panel (the window listener, the workspace observer and the panel observer used to draw it three times), and the
 picture is the one a fresh draw gives. A panel whose canvas changes size is still redrawn, and so is one whose last draw was skipped while hidden."""
+# covers: mzlab/web/barra.js, mzlab/web/grafici.js, mzlab/web/eventi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

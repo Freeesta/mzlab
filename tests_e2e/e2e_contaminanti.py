@@ -3,6 +3,7 @@
 - Header button: #np-liste opens the lists dialog.
 - Low resolution (unit resolution): NO automatic annotations on spectra or on hover; right-click context menu has «Cerca nelle liste dei contaminanti…» which opens filtered on nominal m/z (±0.5 Da) ordered by proximity; educational introductory text.
 """
+# covers: mzlab/web/liste.js, mzlab/web/barra.js, mzlab/web/picchi.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

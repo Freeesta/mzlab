@@ -1,5 +1,6 @@
 """The side panel is docked: hidden, or at full height on the left or right edge; the workspace narrows to the space left (never under it).
 Always-visible header button, tool buttons, Ctrl/Cmd+B, side, sheet on narrow screens, themes, old saved states. No JS errors."""
+# covers: mzlab/web/transizioni, mzlab/web/barra.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

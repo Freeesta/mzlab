@@ -1,5 +1,6 @@
 """UV spectrum of the DAD: a double click on the PDA map or on the PDA trace of a SCIEX .wiff opens the UV spectrum (nm, mAU) of that time under the graph, with its
 table of the data; a file with only the PDA trace (no optical matrix) answers with a clear message and opens nothing. Synthetic pair (tools/wiff_riferimento.py); the demo FullScan_t10.mzML carries its matrix in the TWC chromatogram."""
+# covers: mzlab/web/uv-spettro.js, mzlab/web/uv-azioni.js, mzlab/web/lr-method.js
 import sys, os, math, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from pathlib import Path

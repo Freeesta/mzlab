@@ -1,4 +1,5 @@
 """B3: high-resolution spectra: own centroids, decimals of the profile, ruler in mDa, isotope pattern with ppm errors; QqQ and the 'off' switch unchanged."""
+# covers: mzlab/web/hr.js, mzlab/reader/profile.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, real_cuttings, load

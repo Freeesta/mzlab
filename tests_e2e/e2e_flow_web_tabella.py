@@ -1,6 +1,7 @@
 """Flow «This browser» table at the end of a run (flow/lazy/flow-run-end.js, flow-results.js): a run in the browser opens series.mzfeat from OPFS as the «Feature table» view under the canvas, with the same rows as
 PIPEV.readFeat of the file; after a reload the Results of the step offer «Open series.mzfeat» again; no request the engine cannot serve (MZLAB_LR_MISS empty); axe finds nothing serious in the view.
 Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen and numpy: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_web_tabella.py"""
+# covers: flow/lazy/flow-run-end.js, flow/lazy/flow-results.js, flow/lazy/flow-web-ui.js
 import json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
 from playwright.sync_api import sync_playwright

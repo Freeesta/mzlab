@@ -1,6 +1,7 @@
 """Datasets of a maker read as they are (mzlab/web/rust-nativo.js, natives.rs): a synthetic Agilent .D folder (tools/agilent_sintetico.py, no laboratory data) is listed as a sample, indexed straight from
 its files (no mzML is made), answers the TIC route, and «Download .mzML» writes its mzML on request (one spectrum per scan); a folder that no reader knows is an error with a key. Needs the site and the
 .wasm: python tools/build_site.py (the .wasm is copied from site/static/wasm or built). MZLAB_PIPE_SITE=<built site> reuses a site. Run from the repo root: python3 tests_e2e/e2e_lettori.py"""
+# covers: mzlab/web/conversione.js, mzlab/web/rust-nativo, mzlab/web/nativo
 import base64, hashlib, json, os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright

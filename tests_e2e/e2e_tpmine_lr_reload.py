@@ -1,5 +1,6 @@
 """mzFinder, low resolution: files opened in the Data tab with the Rust engine live in OPFS (not IndexedDB); «Reload from Data» must find them.
 Synthetic Full Scan series (TP_Mine/tests/lr_synth.py). Run from the repo root: python3 tests_e2e/e2e_tpmine_lr_reload.py"""
+# covers: TP_Mine/
 import os, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright

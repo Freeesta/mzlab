@@ -1,5 +1,6 @@
 """Prompt 2, block 1: right click takes the SAME peak as the label, one live spectrum per chromatogram, XIC straight from the spectrum, overlay entries,
 'Ripristina zoom' first, grey dashed annotations that disappear out of the zoom, RT with 2 decimals."""
+# covers: mzlab/web/pannelli.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

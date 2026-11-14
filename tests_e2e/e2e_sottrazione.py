@@ -1,5 +1,6 @@
 """Subtraction of the reference (blank or t0): one command, the same difference on traces, spectrum and map; factor, clip, keyboard, × back to the raw data.
 Synthetic series SUB_t0/t10/t20: the parent (m/z 253.3, RT 5.2) falls, the product (301.3, RT 6.4) appears, a line at 150.2 is in every file, drift of 0.05 min, gain 1.3 at t20."""
+# covers: mzlab/web/sottrazione.js, mzlab/differenza.py, mzlab/web/pannelli.js, mzlab/web/fondo-piatto.js, mzlab/web/fondo.js, mzlab/web/grafici.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from synth import make_subtraction

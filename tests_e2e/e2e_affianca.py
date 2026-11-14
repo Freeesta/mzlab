@@ -1,4 +1,5 @@
 # e2e_affianca: grip of the panels: drag to a side zone, menu (no dragging), Alt+arrows, Esc, divider, undo (Ctrl+Z), narrow window
+# covers: mzlab/web/affianca.js
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

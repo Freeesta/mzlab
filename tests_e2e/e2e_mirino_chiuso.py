@@ -1,4 +1,5 @@
 """Closing a panel while its crosshair is shown: the line it put on the linked panels (same time axis) goes with it."""
+# covers: mzlab/web/pannelli.js, mzlab/web/grafici.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

@@ -3,6 +3,7 @@ read in place from the user's Files: every sample loads, no member is copied, th
 the one built from the copy, the members read in place are hashed by the hash workers (each stub records their SHA-1: the builder does not read them
 once more for it), and after a reload a calm notice per sample says to load it again while stubs, members and indexes go (no «interrupted
 copy» notice). The browser's limit is set over CDP (Storage.overrideQuotaForOrigin). Needs the site: python3 tools/prepara_sito.py"""
+# covers: mzlab/web/rust-nativo, mzlab/web/rust-sul-posto, mzlab/web/impronta
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

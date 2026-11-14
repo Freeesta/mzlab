@@ -1,5 +1,6 @@
 """Shortcuts of the registry azioni/1: one keydown runs the field `scorciatoia` of the actions. Letters only with the focus on a chart and never in a text field;
 Ctrl/⌘ and Alt+1-2 anywhere; the panel «Shortcuts» (key ?) lists the registry (axe clean); the keys of the registry in the palette."""
+# covers: mzlab/web/azioni.js, mzlab/web/azioni-tasti.js, mzlab/web/azioni-esc.js, mzlab/web/paletta.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

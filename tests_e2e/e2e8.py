@@ -1,5 +1,6 @@
 """Panel interaction: active panel + arrows = scan by scan, zoom feedback (rectangle, bar, 'Vista intera'),
 PNG/CSV names and PNG metadata, right-click menu above panels after many clicks."""
+# covers: mzlab/web/scroll.js, mzlab/web/xlsx.js
 import sys, os, struct, zlib; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

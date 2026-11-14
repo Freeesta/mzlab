@@ -1,6 +1,7 @@
 """Adding and removing data in the single landing: «+» reopens the landing with «Back to work!» (Esc and the button give the work back as it was), the X of the toolbar
 leaves the landing (a click on a file brings its panel back), removing every file shows the landing and Undo brings files and panels back, and a reload after
 remove + Undo still shows the file (F8 of CARICAMENTO_STABILITA)."""
+# covers: mzlab/web/lista-file.js
 import sys, os, re; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

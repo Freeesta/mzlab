@@ -1,5 +1,6 @@
 """Panel headers (HR): one low row, never wrapped or cut at 1280/1440/1680 px, at 700/900/1200 px, with the drawer open or pinned and on iPad
 (1024×1366 and 1366×1024, also rotating); below the usable width the groups go into the «⋯» menu (and come back with the space); the chart stays at least 100 px tall."""
+# covers: mzlab/web/banco.js, mzlab/web/pannelli.js
 import sys, os, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

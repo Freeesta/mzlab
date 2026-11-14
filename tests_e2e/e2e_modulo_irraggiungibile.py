@@ -1,6 +1,7 @@
 # e2e_modulo_irraggiungibile: a profile .D (tools/agilent_sintetico.py write_lcms) needs the readers module; when wasm-lettori/ cannot be downloaded (offline, a network failure, a file
 # missing on the server) the note of the loading says that the reader of the format did not download (err.file.moduleLoad), not that the calculation engine did not load, in both
 # languages; nothing opens and no page error. Synthetic data. Needs the site: python3 tools/prepara_sito.py, then python3 tests_e2e/e2e_modulo_irraggiungibile.py
+# covers: mzlab/web/lettori-worker
 import os, sys, tempfile, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pathlib import Path
 from lib import *

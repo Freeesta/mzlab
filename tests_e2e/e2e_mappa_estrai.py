@@ -1,6 +1,7 @@
 """«How it is extracted» on the RT x m/z map (mappa-estrai.js): a box on the map gives the XIC of its m/z window and the mean spectrum of its RT window;
 the numbers under the map are the ones of /api/xic and /api/spectrum; the box moves and resizes (mouse, arrows, finger) and the plots and numbers follow;
 in low resolution nothing is labelled by the program. LR example files."""
+# covers: mzlab/web/mappa-margini.js, mzlab/web/mappa.js, mzlab/web/mappa-estrai.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

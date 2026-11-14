@@ -1,4 +1,5 @@
 """«Extract ions (XIC)» window: a contaminant name of the lists (with suggestions, keyboard) fills the ion field, and a signed shift after the name (dibutilftalato+16) is added to the m/z after the adduct; a plain formula and an m/z still work. Synthetic data only."""
+# covers: mzlab/web/xic-nomi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

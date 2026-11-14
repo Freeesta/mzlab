@@ -1,4 +1,5 @@
 """B8/B9: HR and DDA pills in the list of the files, calculator with the observed m/z (ppm), window «Metodo» with the parameters of the scans."""
+# covers: mzlab/web/hr.js, mzlab/reader/profile.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

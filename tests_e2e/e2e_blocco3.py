@@ -1,5 +1,6 @@
 """Prompt 2, block 3: the XIC window takes several ions (2 rows, + up to 10), m/z or formula in the same box, one panel with a trace per ion,
 the file chosen in the window, the calculator shows only the adducts of the polarity of the files."""
+# covers: mzlab/web/pannelli.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

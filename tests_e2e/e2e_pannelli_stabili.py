@@ -3,6 +3,7 @@ after the first frame of the toggle (no «placed, then widened» second layout p
 Per requestAnimationFrame it records the LAYOUT box (offset*, so the FLIP transforms of transizioni.js do not count) of every button/select/input
 in the panel headers and of the panels themselves, 20 toggles in a row, at three window widths, CPU x1 and x4.
 Set MZLAB_PROBE_REPORT=1 to print the per-element numbers."""
+# covers: mzlab/web/transizioni, mzlab/web/pannelli.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 

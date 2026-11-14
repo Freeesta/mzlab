@@ -1,6 +1,7 @@
 """A SIM (Q1MI) .wiff of a triple quadrupole on the built site with the Rust engine (synthetic pair of tools/wiff_sim.py, no laboratory data): the two samples
 open as two transition files (kind «mrm»: the ions are the transitions, Q1 only and no Q3), every monitored ion is its own SIM channel labelled by m/z, polarity, dwell and name (none dropped, none read as an MRM transition) and
 the engine answers every request. Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_wiff_sim.py"""
+# covers: mzlab/web/rust-bridge-info.js, tools/wiff_sim.py
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

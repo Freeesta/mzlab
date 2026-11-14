@@ -1,4 +1,5 @@
 """«Extract ions (XIC)» window: a signed number after the m/z or the formula (288.2+16, C9H10Cl2N2O+H-18) is added to the m/z after the adduct; the resulting m/z is shown as a candidate; a malformed shift keeps a clear message."""
+# covers: mzlab/web/xic-nomi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

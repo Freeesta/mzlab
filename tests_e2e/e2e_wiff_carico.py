@@ -2,6 +2,7 @@
 the bar goes forward only and ends; each sample has its row with the phase, the scans done and the time, and the page never stays still for more than 5 s; at the end each sample keeps
 «Loaded ✓ (n scans, t s)» and the totals by kind; a truncated .wiff.scan says how many scans are missing; «Cancel» stops the files still running and they do not enter the list; a damaged pair leaves an error with «Details» and «Copy diagnosis», whose text carries the
 trace of the loading and no file name. Needs the site and the .wasm (python tools/build_site.py + wasm, see e2e_wiff.py). Run from the repo root: python3 tests_e2e/e2e_wiff_carico.py"""
+# covers: mzlab/web/upload-rows.js
 import json, os, re, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright

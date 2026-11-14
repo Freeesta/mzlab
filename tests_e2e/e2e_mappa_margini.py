@@ -1,6 +1,7 @@
 """Margin plots of the 2D map (sight spectrum `sp`, XIC `xc`) with MOTION ON (the panel grows by a FLIP scale animation, transizioni.js): at pixel ratio 1, 1.25 and 2 the bitmap of each
 canvas is round(layout box x ratio) when the sight is turned on, after it moves onto a narrow peak, after a window resize and after the panel goes full screen and back; the XIC of a flat
 baseline + narrow peak file draws its baseline just above the axis. Screenshots of every state go to tests_e2e/shots/margini_*.png (ignored by git)."""
+# covers: mzlab/web/mappa-margini.js, mzlab/web/mappa.js, mzlab/web/mappa-estrai.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from sintesi_margini import margins_mzml

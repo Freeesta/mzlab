@@ -1,5 +1,6 @@
 """mzFinder (internal name TP Mine) (b)+(c): the engine in Pyodide and the mzFinder tab. Synthetic LR demo + the real B_ series if the mzML are there.
 Run from the repo root: python3 tests_e2e/e2e_tpmine2.py   (env: TPMINE_SRC, MZLAB_MZML)"""
+# covers: mzlab/web/molui.js, mzlab/web/tpmine-loader.js, TP_Mine/
 import os, shutil, subprocess, sys, time, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright

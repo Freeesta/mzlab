@@ -1,4 +1,5 @@
 """QA/QC panel: low resolution (only the standards chosen and the blanks, no Δppm), high resolution (Δppm, mass accuracy), sample/blank ratio."""
+# covers: mzlab/web/qaqc.js, mzlab/web/features.js, mzlab/web/rapporto.js, mzlab/qaqc.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth
