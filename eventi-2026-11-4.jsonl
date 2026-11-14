@@ -25332,3 +25332,4 @@
 {"v":1,"ts_utc":"2026-11-14T13:00:16Z","tipo":"cache","k":"132449251565","workflow":"desktop","job":"build (Linux)","esito_cache":"miss","ripristinate":[],"mancate":["desktop-ubuntu-22.04-b5b48d8554c2761668aad9556dd65de6adedecffedaae27060e98ee3efd95734-tauri-2.12.3, desktop-ubuntu-22.04-"],"salvata":null,"mb":null,"pr":3299,"sha":"00ef4bd644b876a4ef4d27174bc375a636cd5077","run_id":43595581694,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-14T13:01:07Z","tipo":"carico","k":"2026-11-14T13:0","job_in_coda":97,"job_in_corso":41}
 {"v":1,"ts_utc":"2026-11-14T13:03:27Z","tipo":"coda","k":"2026-11-14T13:03:27Z","aperte":8,"indietro":4,"sporche":3,"verdi_in_attesa":0,"piu_vecchia_aperta_s":52413,"piu_vecchia_verde_s":null}
+{"v":1,"ts_utc":"2026-11-14T12:59:31Z","azione":"aperta","tipo":"pr","pr":3302,"sha":"2c9755e8ca9f9c1481d8b80a4a59589b6bc84c84"}
