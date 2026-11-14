@@ -231,9 +231,16 @@ fn sentence(s: &Step) -> String {
             out.push(' ');
             out.push_str(&fill(t, s));
         }
-        if value_of(s, "area_from") == "window" {
-            out.push(' ');
-            out.push_str(templates::AREA_WINDOW);
+        match value_of(s, "area_from").as_str() {
+            "window" => {
+                out.push(' ');
+                out.push_str(templates::AREA_WINDOW);
+            }
+            "xic" => {
+                out.push(' ');
+                out.push_str(templates::AREA_XIC);
+            }
+            _ => {}
         }
         if value_of(s, "stitch") == "wide" {
             out.push(' ');

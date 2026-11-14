@@ -839,7 +839,7 @@
                   },
                   {"type":"integer","minimum":1,"default":96000000,"description":"Working memory"},
                   {
-                    "enum":["channel","window"],
+                    "enum":["channel","window","xic"],
                     "default":"channel",
                     "description":"Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area."
                   },
