@@ -20798,3 +20798,4 @@
 {"v":1,"ts_utc":"2026-11-14T06:52:44Z","azione":"aperta","tipo":"pr","pr":3260,"sha":"22b0b58fcc0685aa0559161eaf33e9354d744a6e"}
 {"v":1,"ts_utc":"2026-11-14T06:58:54Z","azione":"push","titolo":"mzlab-cli: drop a redundant field name in the features entry","merge_main":false,"aree":{"rust":1},"tipo":"pr","pr":3260,"sha":"8e3a3b9b1de285ad9111998084dcde3065630f15"}
 {"v":1,"ts_utc":"2026-11-14T07:05:46Z","azione":"push","titolo":"CI: prebuilt restore uses the tree record of the shard that saved the cache","merge_main":false,"aree":{"workflow":1,"docs":1},"tipo":"pr","pr":3259,"sha":"773c622f0fc24bcb010e415182833040252a5c21"}
+{"v":1,"ts_utc":"2026-11-14T07:16:08Z","azione":"aperta","tipo":"pr","pr":3261,"sha":"f90ea079b78a348eadada3798f0b9b9fa2472081"}
