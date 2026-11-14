@@ -1,5 +1,5 @@
 // @ts-strict
-// Warm-up of the pointed folder, engine side (docs/agenti/riscaldamento.md): `warm` copies an mzML to OPFS and builds its index exactly as an upload does, then closes
+// Warm-up of the pointed folder, engine side (docs/agenti/dati-cartella.md): `warm` copies an mzML to OPFS and builds its index exactly as an upload does, then closes
 // its slot and leaves a marker (OPFS folder "warm"); lr_boot hides the marked files. `claim` (the file is opened by the student) takes the marker away and opens the index,
 // so the normal load skips the copy and the build. Loaded by rust-worker.js on the first warm/claim, never at start-up.
 /** @typedef {{ size: number, mtime: number, bytes: number, at: number, missing: number, cause?: string }} Marker */

@@ -20,7 +20,7 @@ def axe(pg, ctx="document", exclude=None):
     if not pg.evaluate("typeof axe !== 'undefined'"): pg.add_script_tag(path=AXE)
     c = ctx if not exclude else "{include: [[%s]], exclude: [%s]}" % (ctx, ",".join("['%s']" % e for e in exclude))
     v = pg.evaluate(RUN % c); assert not v, v
-# moderate/minor (incl. best practice): no tolerance on the views listed in docs/agenti/a11y-da-sistemare.md
+# moderate/minor (incl. best practice): no tolerance on the views listed in docs/agenti/accessibilita.md
 KNOWN_MINOR = set()
 RUN_MINOR = ("axe.run(%s, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa','best-practice']}}).then(r => r.violations"
              ".filter(v => ['moderate','minor'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0,3).map(n => n.target.join(' ')).join(' | ')]))")

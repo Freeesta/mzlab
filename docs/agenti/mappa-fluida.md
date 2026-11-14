@@ -46,7 +46,7 @@ Nativo, stesso indice `hrc` (108 MB, file nella cache del sistema): mappa intera
 Colore della mappa intera HRC (600 × 901, Node): algoritmo in uso 314 ms; con `Float32Array` ordinato, scala precalcolata in `Uint32Array` e scrittura a 32 bit 52 ms (6 volte meno).
 
 ## Diagnosi (in ordine di peso)
-- **D1 Lettura dell'indice nel browser**: letta con `FileReaderSync` su `Blob.slice` costava una copia attraverso il processo del browser a ogni lettura (mappa intera HR 9 M picchi: 5,8 s contro 0,25 s nativi); il worker ora legge dal `SyncAccessHandle` in blocchi grandi (vedi «Il percorso dei dati», punto 1) e il calcolo WASM resta al più 2 volte il nativo.
+- **D1 Lettura dell'indice nel browser**: con `FileReaderSync` su `Blob.slice` ogni lettura è una copia attraverso il processo del browser (mappa intera HR 9 M picchi: 5,8 s contro 0,25 s nativi); il worker legge dal `SyncAccessHandle` in blocchi grandi (vedi «Il percorso dei dati», punto 1) e il calcolo WASM resta al più 2 volte il nativo.
 - **D2 Zoom solo in RT**: la regione legge tutta la banda m/z per tutto il tempo (1,5 s in HR); il recinto ogni 16384 picchi serve solo all'm/z.
 - **D3 Colore in JS**: 0,2-0,4 s per ogni mappa intera e rifatto a ogni cambio di file (un solo posto `p._img`): è la quasi totalità dei 441 ms del cambio di file caldo in HR.
 - **D4 Attesa del nitido**: 150 ms di silenzio + rotta + disegno ≈ 180-250 ms anche quando la rotta costa 40 ms.
@@ -85,7 +85,7 @@ Ogni pacchetto è autosufficiente e si consegna in una PR con la sua misura `ben
 
 ### P1 Lettura veloce dell'indice nel worker (fatta)
 - Il worker legge l'`.mzidx` da un `SyncAccessHandle` (`archivio.js` `lease`/`leaseRead`, `rust-worker.js` `readerFor`) in un buffer riusato; il handle è esclusivo, quindi si apre a ogni richiesta che legge quell'indice (`wake`, con i soli file che `rust-lease-plan.js` `leasePlan` indica: nessuno per le op che non leggono indici, l'indice dello slot per le op di un file, tutti se l'op è ignota) e si chiude quando il worker non ha richieste in corso (`parkAll`) e prima di scrivere, spostare o rimuovere il file (`dropLease`); se è preso o assente si legge con `FileReaderSync`.
-- `facts_from` (`iteminfo.rs`) non legge più le polarità di tutto il file se ha scansioni e nessun SRM: i file HRP da 320 MB si aprono senza `error.memoryBudget`.
+- `facts_from` (`iteminfo.rs`) non legge le polarità di tutto il file se ha scansioni e nessun SRM: i file HRP da 320 MB si aprono senza `error.memoryBudget`.
 - Prova: `tools/bench_map.py` riporta `first_read` e `read_ms` per gesto; `map_parity`, `e2e_mappa`, `e2e_hr_mappa`, `e2e_lr` verdi, `MZLAB_LR_MISS` vuota, `.wasm` entro i tetti. Safari/iPad non misurati.
 
 ### P2 Piramide di tessere della mappa in Rust
@@ -163,3 +163,19 @@ P10 → P2 (motore, liberi) · P3 + P6 → P5 (pagina) · P4 (dopo P3) · P9, P8
 
 ## Limiti dello studio
 - Misure su un container Linux headless a 4 CPU; iPad e Safari non sono misurati (P1 e P10 chiedono una prova reale).
+
+## Visore 3D della mappa (`mappa3d.js`)
+Visore della vista Dati: errori di apertura, comandi, precarico, costo del disegno. La mappa 2D è in `dati-mappa.md`.
+
+- **Se il 3D non si apre** (`failure3d` in `mappa.js`, `Fail`/`makeContext`/`diagnose` in `mappa3d.js`; prova `e2e_mappa3d_errori`): la finestra dice la causa vera — `nowebgl2` (nessun contesto, provati opzioni del visore, senza opzioni, low-power; WebGL1 solo per dirlo), `shader` (riga del compilatore), `import` (file non scaricato o vecchio in cache), `error` (errore JavaScript, mai spacciato per WebGL2),
+  `lost` (contesto perso, messaggio nel visore) — con cosa fare in Chrome e le righe tecniche copiabili (versione, renderer, GPU, attributi, `getError`); la 2D resta intatta e il contesto di prova si rilascia subito.
+- **Visore 3D** (`mappa3d.js`, modulo ES caricato al primo «3D», WebGL2 scritto a mano, nessuna libreria): finestra di dialogo modale sopra la pagina (Esc chiude, il fuoco torna al pulsante) con il file e la regione della 2D (nel telefono non c'è; senza WebGL2 un messaggio).
+  Barra laterale ritraibile: Dati (file, confronto A − B, RT e m/z numerici, «Usa lo zoom della 2D»), Rappresentazione (superficie | aste per l'HR | cascata di spettri | curve di livello sul pavimento; altezza lineare (predefinita)/radice/log, esagerazione verticale, proporzione RT:m/z, palette, luce, mappa 2D sul pavimento, piano del tempo), Fondo (soglia con istogramma, «togli il fondo», smussatura: 0 in HR, 1 in LR), Viste (dall'alto, lato RT = cromatogramma, lato m/z = spettro, isometrica, ripristina, PNG ad alta risoluzione).
+  Griglia fino a 1024×1024 (512 su telefono, iPad o `deviceMemory` ≤ 4), HR in celle di ppm uguali (`mzscale=log`), LR a masse nominali; aste dai punti di `/api/mappunti3d` (200 000, 50 000 sui dispositivi piccoli).
+  Trascina = ruota, Maiusc+trascina o due dita = sposta, rotella o pizzico = zoom, doppio clic = centra (su un punto segnato: pannello spettro); al passaggio il raggio dal pavimento alla superficie (intersezione sulla griglia delle altezze, CPU) dà RT, m/z, intensità e due riquadri (XIC a quel m/z, spettro a quell'RT, dalla griglia); clic = fissa il punto (come nella 2D lo aggiunge a `NB.mappaPunti` solo con «Segna» attivo); frecce = cursore di un bin (e piano del tempo), +/− zoom, 1-4 viste, R ripristina (anche altezza e regione), L blocca il cursore, ? gesti;
+  gesti e menu: «Navigazione della mappa» di `dati-mappa.md`; `prefers-reduced-motion`: niente ▶ né inerzia. Scelte del visore in `qqq.mappa` (`d3`); le chiavi `t3*` vecchie si ignorano. Solo misure: nessuna etichetta automatica. Test `e2e_mappa3d`, `e2e_pannelli2`.
+- **Visore 3D** (stessi comandi, stesso `menu()`, stessa barra `MAPPA.barFor` in alto a destra di `.m3d-main`; test `e2e_mappa_nav3d`): adattatore `ad3(hit)` in `mappa3d.js`; il punto è il cursore bloccato (`V.lock`: il passaggio del puntatore non lo muove, la lettura dice «locked»), altrimenti la cella sotto il puntatore al clic destro (raggio `pick`) o il cursore.
+  Clic destro senza spostarsi o pressione lunga (550 ms) o Menu/Maiusc+F10 = menu (il tasto destro trascinato sposta la vista); il `#ctx` della pagina viene spostato dentro il dialogo finché è aperto (Esc chiude prima il menu, poi il visore) e ritorna nel body alla chiusura.
+  Voci: Estrai XIC/spettro/entrambi (il visore si chiude e l'estratto compare nei pannelli XIC e spettro della pagina; il file è quello scelto nel visore), Blocca/Sblocca, Reset zoom = camera (35°, 32°), Vista dall'alto / laterale RT / laterale m/z (tasti 1-3), Copia coordinate, Gesti (foglio `mapnav.h.3d.*`). Un dito ruota, due dita spostano e pizzicano, rotella = zoom, + / − zoom. La paletta Ctrl/⌘K non si apre sopra il dialogo modale: i comandi del 3D stanno nel menu e nella barra.
+- **Precarico del 3D**: alla prima `init` di una mappa 2D (`preload3d` in `mappa.js`) `static/mappa3d.js` si scarica in sottofondo (`modulepreload` in idle, non con `saveData` né 2g/3g), così `open3d` lo trova già pronto.
+- **Costo del disegno 3D**: la cascata (`fall`) disegna tutte le righe con due `drawArraysInstanced` (la riga è `uRow + gl_InstanceID * uStep` in `ROW_VS`); la tavolozza `pal` si carica solo quando cambia (`V.palTab`); il puntamento (`pick`) col mouse libero gira al più una volta per fotogramma (`hoverPick`).

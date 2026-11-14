@@ -1,6 +1,6 @@
 """Accessibility of Disegno (WCAG 2.2 AA) outside Ketcher's own iframe: axe-core (serious/critical) in the three themes, accessible names, Tab with a visible focus
 indicator, target size >= 24 px (2.5.8), the editor iframe name, the loading announcement and the names and sizes of the controls of the drop-down bar (#tp-bar,
-inside the iframe). Known gaps live in docs/agenti/a11y-da-sistemare.md. Fails (does not skip) when axe is missing: in CI that is a failure."""
+inside the iframe). Known gaps live in docs/agenti/accessibilita.md. Fails (does not skip) when axe is missing: in CI that is a failure."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 

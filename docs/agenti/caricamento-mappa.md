@@ -1,6 +1,6 @@
 # Mappa del caricamento di un file (sito e app desktop)
 
-Fotografia del codice, non un piano: dove passa un file dal clic alla schermata, cosa costa, cosa manca. Dove la guida di area dice altro dal codice è scritto in «Dubbi». «Non trovato» = cercato e assente. Per i dettagli non si ripete ciò che è già scritto: `avvio.md` e `avvio-rapido.md` (avvio della pagina), `progresso.md` (barra), `lettura-nativa.md` (`.raw`, `.wiff`, `.D` senza mzML), `lettori-modulo.md` (moduli per famiglia), `mzidx.md` e `rust-mzidx.md` (indice e pool), `rust-desktop.md`
+Fotografia del codice, non un piano: dove passa un file dal clic alla schermata, cosa costa, cosa manca. Dove la guida di area dice altro dal codice è scritto in «Dubbi». «Non trovato» = cercato e assente. Per i dettagli non si ripete ciò che è già scritto: `avvio.md` (avvio della pagina), `progresso.md` (barra), `lettura-nativa.md` (`.raw`, `.wiff`, `.D` senza mzML), `lettori-modulo.md` (moduli per famiglia), `mzidx.md` e `rust-mzidx.md` (indice e pool), `rust-desktop.md`
 (desktop), `capacita.md`, `visore-veloce.md` (dopo l'apertura: XIC, zoom), `misure-velocita.md` e `ottimizzazioni-tentate.md` (numeri e strade già scartate: leggerle PRIMA di ottimizzare), `misure-macchine.md` (apertura su macchine lente).
 
 ## 1. Sito: il percorso comune (mzML)
