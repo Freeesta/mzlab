@@ -7,8 +7,8 @@ Grafo dei moduli di primo livello di `crates/mzlab-feat/src` (quelli di `lib.rs`
 - Lo script è usa e getta (non è un tool del repository): il suo esito si incolla nel corpo di ogni PR, prima → dopo.
 
 ## Il ciclo oggi
-- **51 moduli, 71 387 righe** (su 115 moduli e 108 944 righe di codice). Altri cicli: 4 moduli (`weakfile`, `slabs`, `spill`, `series`, 1 115 righe), 2 (`suspects`, `suspects_listings`). Fuori dal ciclo: `chem`, `steps`, `hypo`, `axis`, `aligned_meta`, `kinetic` e gli altri.
-- Membri, righe: `attributio` 27 772 · `legacy` 15 177 · `untargeted` 5 670 · `interp` 3 473 · `evid` 1 932 · `tp` 1 725 · `family` 1 503 · `groups` 1 396 · `transitions` 746 · `network` 692 · `lists` 673 · `broad` 554 · `rtwarp` 550 · `params` 493 · `quality` 487 · `store_read` 459 · `store` 457 · `filters` 447
+- **50 moduli, 43 369 righe** (su 115 moduli e 108 958 righe di codice). `attributio` (27 772 righe) ne è fuori: dipende da `aligned`, `rowident`, `untargeted` e `interp`, nessun modulo del ciclo dipende da lui. Altri cicli: 4 moduli (`weakfile`, `slabs`, `spill`, `series`, 1 115 righe), 2 (`suspects`, `suspects_listings`). Fuori dal ciclo: `chem`, `steps`, `hypo`, `axis`, `aligned_meta`, `kinetic` e gli altri.
+- Membri, righe: `legacy` 15 177 · `untargeted` 5 476 · `interp` 3 421 · `evid` 1 932 · `tp` 1 725 · `family` 1 503 · `groups` 1 396 · `transitions` 746 · `network` 692 · `lists` 673 · `broad` 554 · `rtwarp` 550 · `params` 493 · `quality` 487 · `store_read` 459 · `store` 457 · `filters` 447
 - (segue) `filters_blank` 445 · `centwave` 421 · `resolve` 412 · `ms2spec` 405 · `align` 389 · `trace` 385 · `sweep` 362 · `broad_gt` 334 · `gapfill` 320 · `famalign` 315 · `channels` 300 · `ms2` 285 · `rtmap` 249 · `isotopes` 242 · `norm` 234 · `export` 231 · `post` 208 · `recipe` 196 · `qc` 159 · `pipeline` 148
 - (segue) `table` 140 · `aligned` 132 · `rowmeta` 130 · `broad_blank` 130 · `view` 124 · `filters_nts` 81 · `rowident` 78 · `export_ms` 74 · `lrnoise` 59 · `broad_front` 58 · `params_unit` 47 · `params_height` 45 · `report` 43.
 - Mozzi: `trace` e `table` hanno 24 moduli entranti ciascuno, `aligned` 14; `legacy` 7 entranti e 9 uscenti. `table` riesporta `aligned` (`pub use crate::aligned::*`), quindi ogni arco che sale da `aligned` lega al ciclo i 24 utenti di `table`.
@@ -19,7 +19,7 @@ Grafo dei moduli di primo livello di `crates/mzlab-feat/src` (quelli di `lib.rs`
 - Chiusura dei moduli che usano `run_tab.rs` e `run_stat.rs` (`flow_drift`, `flow_export_annot`, `flow_stat`, `ionnet`, `methods`, `plausible`, `runorder`, `transitions`): 80 moduli, 86 938 righe nel grafo con tutte le feature; dopo i tagli 1-8 sotto: 68 moduli, 46 267 righe, ancora tirate da `transitions` → `legacy` e `groups` → `legacy`.
 
 ## Archi di ritorno, per quanti moduli tengono nel ciclo
-Togliendo un solo arco dal grafo di oggi, il ciclo più grande diventa di (moduli, righe):
+Togliendo un solo arco dal grafo prima del taglio 1 (51 moduli, 71 387 righe), il ciclo più grande diventa di (moduli, righe):
 
 | Arco | Elementi usati | Dopo |
 |---|---|---|
@@ -38,8 +38,7 @@ Togliendo gli archi uno dopo l'altro (il migliore a ogni passo): `recipe` → `p
 ## Piano dei tagli (una PR per taglio, ≤ ~600 righe cambiate)
 Numeri = ciclo più grande dopo il taglio, cumulato nell'ordine qui sotto (simulato sul grafo; la PR misura sul codice).
 
-1. **`attributio` fuori dal ciclo** (51 → 50 moduli, 71 387 → 43 615 righe). `git mv crates/mzlab-feat/src/untargeted/to_attributio.rs crates/mzlab-feat/src/attributio/from_untargeted.rs` (i suoi `super::ident`, `super::isotopes` diventano `crate::untargeted::…`; `#[cfg(feature = "untargeted")]`); `interp::ms2link::ms1_window_metrics` (~50 righe) va in `attributio/review/window.rs` (`#[cfg(feature = "interp")]`).
-   Cambiano: `untargeted/mod.rs` e `interp/ms2link.rs` (il `pub use` del vecchio percorso), `attributio/mod.rs`, `attributio/review/mod.rs`. Chiamanti dei vecchi percorsi: `tests/untargeted_to_attributio.rs`, `mzlab-cli/src/flow_chimeric.rs` (invariati fino alla separazione).
+1. **`attributio` fuori dal ciclo** (fatto: 51 → 50 moduli, 71 387 → 43 369 righe). La tabella di `untargeted` come ingresso della cascata sta in `attributio/from_untargeted.rs` (`#[cfg(feature = "untargeted")]`), `ms1_window_metrics` in `attributio/review/window.rs` (`#[cfg(feature = "interp")]`); i vecchi percorsi `untargeted::to_attributio` e `interp::ms2link::ms1_window_metrics` restano con un `pub use` (commento «The old path of»), usati da `tests/untargeted_to_attributio.rs` e `mzlab-cli/src/flow_chimeric.rs`.
 2. **`aligned` diventa base** (→ 46, 42 750). La struttura `TpBlock` con `TpParams`, `RoleCounts`, le costanti `NO_PARENT`, `ST_*`, `NOTE_*`, `VIA_*`, `KIN_*` (da `tp/mod.rs`) e `FitCandidate` (da `tp/candidates.rs`) vanno nel modulo nuovo `tp_block.rs`, senza dipendenze; la struttura `RowIdent` e `SRC_DETECTED` vanno in `aligned_meta.rs` (in `rowident.rs` restano `impl RowIdent { compute… }`, `adduct_names`, `code_of`). Cambiano: `tp/mod.rs`, `tp/candidates.rs`, `tp_block.rs`, `aligned.rs`, `aligned_meta.rs`, `rowident.rs`, `lib.rs`.
 3. **`pipeline::Steps` in basso** (→ 42, 42 008). `Steps` con il suo `Debug` e `Default` va in `pipeline_steps.rs` (dipende solo da `quality`, `isotopes`, `ms2`, `resolve`, `align_mzmine`); `pipeline.rs` lo riesporta. Cambiano: `pipeline.rs`, `pipeline_steps.rs`, `recipe.rs`, `lib.rs`.
 4. **`network::arcs` in basso** (→ 39, 36 228). `git mv crates/mzlab-feat/src/network/arcs.rs crates/mzlab-feat/src/netarcs.rs` (82 righe, usa solo `hypo`); `network/mod.rs` ha `pub use crate::netarcs as arcs;`. Cambiano: `network/mod.rs`, `legacy/network.rs`, `lib.rs`.
