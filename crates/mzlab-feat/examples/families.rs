@@ -13,9 +13,9 @@ use std::time::Instant;
 
 use mzlab_core::idxread::Index;
 use mzlab_feat::family::{analyse_families, FamParams, Families, Orient};
-use mzlab_feat::pipeline::{analyse, Steps};
+use mzlab_feat::pipeline::analyse;
+use mzlab_feat::recipe::Recipe;
 use mzlab_feat::table::*;
-use mzlab_feat::trace::Params;
 use serde_json::Value;
 
 /// Row within 5 ppm of `mz` and 0.1 min of `rt` (the nearest in m/z).
@@ -207,7 +207,9 @@ fn show(f: &FileFeatures, fam: &Families, mz: f64, rt: Option<f64>) {
 }
 
 fn main() {
-    let (mut p, mut files, mut truth) = (Params::default(), Vec::new(), None::<Value>);
+    let base = Recipe::default();
+    let steps = base.steps.clone();
+    let (mut p, mut files, mut truth) = (base.detect, Vec::new(), None::<Value>);
     let (mut shown, mut at_rt): (Vec<f64>, Option<f64>) = (Vec::new(), None);
     let mut json = None::<String>;
     let mut orient = true;
@@ -232,8 +234,7 @@ fn main() {
         let fh = std::fs::File::open(path).expect("open");
         let size = fh.metadata().expect("size").len();
         let mut ix = Index::open(fh, size).unwrap_or_else(|e| panic!("{path}: {e}"));
-        let (mut f, links) =
-            analyse(&mut ix, &p, &Steps::default()).unwrap_or_else(|e| panic!("{path}: {e}"));
+        let (mut f, links) = analyse(&mut ix, &p, &steps).unwrap_or_else(|e| panic!("{path}: {e}"));
         let t0 = Instant::now();
         let fam = analyse_families(
             &mut ix,

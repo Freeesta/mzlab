@@ -192,34 +192,33 @@ fn median(v: &[f64]) -> f64 {
 
 #[test]
 fn the_window_area_removes_the_bias_of_a_wandering_mass() {
-    let channel = bias(&features(&run("channel", &[])).0);
-    let window = bias(&features(&run("window", &["det.area_from=window"])).0);
+    let channel = bias(&features(&run("channel", &["det.area_from=channel"])).0);
+    let window = bias(&features(&run("window", &[])).0);
     eprintln!("|log2| channel {channel:.4?}\n|log2| window  {window:.4?}");
     assert!(median(&channel) > 0.1, "{channel:?}");
     assert!(median(&window) <= 0.025, "{window:?}");
     assert!(window.iter().all(|&b| b <= 0.03), "{window:?}");
 }
 
-/// `area_from` reaches the run: the plan as run carries it and the recipe text in the meta of the features changes; `channel` is the default.
+/// `area_from` reaches the run: the plan as run carries it and the recipe text in the meta of the features changes; `window` is the default.
 #[test]
 fn area_from_can_be_set_from_the_command_line() {
     let base = run("base", &[]);
-    let channel = run("chan", &["det.area_from=channel"]);
-    assert_eq!(features(&channel), features(&base));
     let window = run("win", &["det.area_from=window"]);
-    let plan = window.iter().find(|f| f.0 == "plan.json").unwrap();
+    assert_eq!(features(&window), features(&base));
+    let channel = run("chan", &["det.area_from=channel"]);
+    let plan = channel.iter().find(|f| f.0 == "plan.json").unwrap();
     let plan = String::from_utf8(plan.1.clone()).unwrap();
-    assert!(plan.contains("\"area_from\":\"window\""), "{plan}");
-    assert_ne!(features(&window).1, features(&base).1);
+    assert!(plan.contains("\"area_from\":\"channel\""), "{plan}");
+    assert_ne!(features(&channel).1, features(&base).1);
 }
 
 /// At ±3 ppm the pieces of an ion alternate between two channels and touch without overlapping: `strict` joins touching pieces only
 /// above 2e6 counts, `wide` joins them all and keeps the low ones, so each ion is one row with its whole area.
 #[test]
 fn the_wide_stitch_keeps_one_row_per_ion_at_three_ppm() {
-    let window = "det.area_from=window";
-    let strict = features(&run_at("strict3", &[window], 3.0)).0;
-    let wide = features(&run_at("wide3", &[window, "det.stitch=wide"], 3.0)).0;
+    let strict = features(&run_at("strict3", &["det.stitch=strict"], 3.0)).0;
+    let wide = features(&run_at("wide3", &[], 3.0)).0;
     let (n_strict, n_wide) = (rows_per_ion(&strict), rows_per_ion(&wide));
     let (b_strict, b_wide) = (bias(&strict), bias(&wide));
     eprintln!("rows strict {n_strict:?} wide {n_wide:?}\n|log2| strict {b_strict:.4?}\n|log2| wide   {b_wide:.4?}");
@@ -229,19 +228,19 @@ fn the_wide_stitch_keeps_one_row_per_ion_at_three_ppm() {
     assert!(b_wide.iter().all(|&b| b <= 0.05), "{b_wide:?}");
 }
 
-/// `stitch` reaches the run like `area_from`; `strict` is the default.
+/// `stitch` reaches the run like `area_from`; `wide` is the default.
 #[test]
 fn stitch_can_be_set_from_the_command_line() {
     let base = run("sbase", &[]);
     assert_eq!(
-        features(&run("sstrict", &["det.stitch=strict"])),
+        features(&run("swide", &["det.stitch=wide"])),
         features(&base)
     );
-    let wide = run("swide", &["det.stitch=wide"]);
-    let plan = wide.iter().find(|f| f.0 == "plan.json").unwrap();
+    let strict = run("sstrict", &["det.stitch=strict"]);
+    let plan = strict.iter().find(|f| f.0 == "plan.json").unwrap();
     let plan = String::from_utf8(plan.1.clone()).unwrap();
-    assert!(plan.contains("\"stitch\":\"wide\""), "{plan}");
-    assert_ne!(features(&wide).1, features(&base).1);
+    assert!(plan.contains("\"stitch\":\"strict\""), "{plan}");
+    assert_ne!(features(&strict).1, features(&base).1);
 }
 
 /// MS1 scans 2.5 times further apart around the apices: the median interval undercounts every peak, the trapezoid on the real times does not.
@@ -406,7 +405,7 @@ fn pinned_edges() -> Vec<Pin> {
     .into()
 }
 
-/// MEASURE (no default is changed): ions on a channel border (of either grid) with an m/z noise that grows as the point weakens (`jitter`). Pinned for
+/// MEASURE (every choice is named, so the default does not matter here): ions on a channel border (of either grid) with an m/z noise that grows as the point weakens (`jitter`). Pinned for
 /// `area_from` channel / window x `stitch` strict / wide: ions lost, median and max |log2(area / true)| of the largest row, rows per ion. Without noise the
 /// same ions give 1 row and |log2| <= 0.03 (harness control). See `docs/agenti/mzfeat-prove.md` (MISURA bordo_canale).
 #[test]
