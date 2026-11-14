@@ -57,6 +57,21 @@
     $("hint").textContent = st.labels[st.local ? "local" : "hint"] || "";
     say(st.local ? "local" : key ? "set" : "none");
   };
+  // the origins this provider's key may reach, from the registry the site serves (`fornitori-1.json`, same bytes as the crate) and the one proxy-host constant: never from the page's request
+  /** @type {Promise<any[]> | null} */
+  let registry = null;
+  const origins = async () => {
+    // a failed fetch is not kept: the next send asks again
+    registry = registry || fetch("fornitori-1.json", { credentials: "omit" }).then(r => r.json()).then(j => j.providers || []).catch(e => { registry = null; throw e; });
+    const p = (await registry).find(x => x.id === st.provider);
+    if (!p) return [];
+    const out = [new URL(p.base_url).origin];
+    if (p.session_headers) {
+      const m = /^export const PROXY_HOST = "(https:\/\/[a-z0-9.-]+(?::[0-9]{1,5})?)?";$/m.exec(await (await fetch("proxy-host.js", { credentials: "omit" })).text());
+      if (m && m[1]) out.push(new URL(m[1]).origin);
+    }
+    return out;
+  };
   const post = (/** @type {any} */ m) => { if (st.port) st.port.postMessage(m); };
 
   /** @param {{id: string, request: {url: string, headers: string[][], body: string, auth: {header: string, prefix: string}}}} m */
@@ -64,13 +79,15 @@
     const { id, request: r } = m, ctl = new AbortController();
     live.set(id, ctl);
     try {
-      if (!/^https?:\/\//.test(r.url)) throw { key: "err.llm.network", params: { reason: "url" } };
+      let ok = false;
+      try { ok = /^https?:\/\//.test(r.url) && (await origins()).includes(new URL(r.url).origin); } catch (_) { /* no registry: nothing leaves */ }
+      if (!ok) throw { key: "err.llm.network", params: { reason: "url" } };
       const headers = new Headers(/** @type {[string, string][]} */ (r.headers));
       if (r.auth.header) {
         if (!key) throw { key: "err.llm.auth", params: { reason: "nokey" } };
         headers.set(r.auth.header, r.auth.prefix + key);
       } else if (st.owner && key) headers.set(st.owner, key);
-      const res = await fetch(r.url, { method: "POST", headers, body: r.body, signal: ctl.signal, credentials: "omit", referrerPolicy: "no-referrer" });
+      const res = await fetch(r.url, { method: "POST", headers, body: r.body, signal: ctl.signal, credentials: "omit", redirect: "error", referrerPolicy: "no-referrer" });
       post({ t: "head", id, status: res.status, spend: res.headers.get("x-mzlab-spend") || "", soft: !!res.headers.get("x-mzlab-soft") });
       const rd = res.body && res.body.getReader();
       if (rd) for (;;) { const { done, value } = await rd.read(); if (done) break; const b = value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength); st.port && st.port.postMessage({ t: "chunk", id, bytes: b }, [b]); }
