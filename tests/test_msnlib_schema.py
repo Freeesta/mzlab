@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from cargo_util import cli_argv
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,7 +23,7 @@ def library(tmp_path_factory):
     d = tmp_path_factory.mktemp("msnlib")
     shutil.copy(MZML, d / "msn.mzML")
     (d / "manifest.tsv").write_text(MANIFEST)
-    r = subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-lib", "build", str(d / "manifest.tsv")], cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run(cli_argv("msn-lib", "build", str(d / "manifest.tsv")), cwd=ROOT, capture_output=True, text=True)
     assert r.returncode == 0, r.stderr[-2000:]
     return json.loads((d / "manifest.json").read_text())
 

@@ -13,8 +13,8 @@ pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm
 def test_wasm_and_native_give_the_same_fdr_bytes(tmp_path):
     def run(*a, **k):
         return subprocess.run(a, cwd=ROOT, check=True, capture_output=True, encoding="utf-8", **k)
-    run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-lib", "--example", "fdr_parity", "--", str(tmp_path))
-    run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-lib-wasm")
+    example("mzlab-lib", "fdr_parity", str(tmp_path))
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-lib-wasm")
     pkg = tmp_path / "pkg"
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm")
     got = run("node", str(ROOT / "tests" / "fdr_wasm_node.js"), str(pkg), str(tmp_path)).stdout

@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from cargo_util import installed
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -19,9 +20,10 @@ def wasm_dir(tmp_path_factory):
         pytest.skip("cargo or wasm-bindgen not available (the ledger of the proxy is Rust)")
     out = tmp_path_factory.mktemp("proxy-wasm")
     try:
-        for cmd in (["cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-llm-wasm"],
+        for cmd in (None if installed("--target", "wasm32-unknown-unknown", "-p", "mzlab-llm-wasm") else ["cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-llm-wasm"],
                     ["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(out), "target/wasm32-unknown-unknown/release/mzlab_llm_wasm.wasm"]):
-            subprocess.run(cmd, cwd=ROOT, check=True, capture_output=True)
+            if cmd:
+                subprocess.run(cmd, cwd=ROOT, check=True, capture_output=True)
     except (subprocess.CalledProcessError, OSError) as e:
         pytest.skip(f"the llm .wasm could not be built ({e})")
     return out
