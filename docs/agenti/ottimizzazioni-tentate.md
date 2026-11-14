@@ -72,3 +72,5 @@ Misure e stato del build in `wasm-potenziale.md` (§3 numeri, §4 supporto dei b
 - **Cache dei `Module` compilati in IndexedDB**: non più supportata dai browser; V8 mette in cache da sé il codice delle risposte HTTP in cache; compilazione 10-19 ms per modulo.
 - **I/O**: la copia JS → wasm (~10 GB/s) è < 1 % della lettura mzML (~80-140 MB/s); nessuna leva.
 - **`simd-json`** al posto di `serde_json`: vuole SIMD x86/NEON e non è più veloce in wasm.
+- **`preload` del catalogo `lang/<L>.js` dallo script inline della lingua** (invece di solo `document.write`): scartato. Specchio 40 ms / 30 Mbit/s, Chromium, 6 visite alternate, mediane: FCP prima visita 312 [272-337] → 341 [308-376] ms, avvio di `lang/<L>.js` 249 → 268 ms; nessun file scaricato due volte. Nessun guadagno (soglia 20 ms): la scansione anticipata trova già il file a sufficienza.
+- **`modulepreload` di `rust-bridge.js` e dei suoi 11 import statici in `wasmEarly()`**: scartato. I moduli partono prima (`rust-supervisor.js` 696 → 420 ms) ma il motore pronto resta 3450 [3206-3536] → 3460 [3426-3684] ms: il percorso è limitato dal download del `.wasm`, non dalla cascata dei moduli. A caldo 742 → 746 ms.
