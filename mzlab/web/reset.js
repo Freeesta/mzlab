@@ -37,6 +37,8 @@ const RESET = (function () {
   async function idb(mode, rep) {
     // "files" keeps what the user made in the main database (drawing and notebook, saved lists, molecules): only files, manifest, open-files list and sample roles go (qqq-db.js)
     let keepMain = false;
+    // the unconfirmed notebook flush (nb-pendiente.js) is a copy of the whole notebook: the next load would merge its file list back
+    if (mode === "files") try { const raw = localStorage.getItem("mzlab.nbpending"), q = raw ? JSON.parse(raw) : null; if (q && typeof q === "object") { ["session", "ui", "sampleCols", "sampleEx"].forEach(k => { delete q[k]; }); localStorage.setItem("mzlab.nbpending", JSON.stringify(q)); } } catch (_) { /* none */ }
     if (mode === "files") keepMain = !!(await wait(import("./qqq-db.js").then(m => m.clearFilesKeepWork()).catch(() => false), 5000));
     if (keepMain) rep.idb.push(NOMI.DB + " (files only)");
     let names = KNOWN_IDB.slice();
@@ -82,6 +84,8 @@ const RESET = (function () {
   }
   // wipe, then load the page again from the network without the ?reset parameter; ?riparti=1 makes the new engine delete saved files itself when a database was blocked; ?ripn=<nonce> tells browser.js that this page follows a reset (see isolateOnce)
   async function run(mode, opt = {}) {
+    // "files" keeps the notebook (drawing...): its last change is saved first, because from here on the page may not save any more (explore.js nbSave)
+    if (mode === "files" && typeof nbSave === "function") await wait(Promise.resolve(nbSave(true)), 3000);
     window.QQ_RESETTING = true;
     const msg = document.getElementById("ldmsg"); if (msg && window.I18N) msg.textContent = I18N.t("reset.busy");
     let rep;

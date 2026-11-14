@@ -162,6 +162,10 @@ try:
               await new Promise((ok, no) => { const t = db.transaction(['liste_utente', 'molecole'], 'readwrite'); t.objectStore('liste_utente').put({ id: 'keep-list', name: 'my list' }); t.objectStore('molecole').put({ id: 'keep-mol', name: 'my molecule' }); t.oncomplete = ok; t.onerror = () => no(t.error); }); db.close(); })()""")
             load_files(); pg.evaluate("location.hash = '#/draw'")
             wait_for_js(pg, "(async () => { try { return (JSON.parse(await (await fetch('api/notebook')).text()).session || []).length > 0; } catch (e) { return false; } })()", 15000)   # the notebook names the open files
+            # a change not saved yet when the button is pressed: the closing page must neither lose it nor write its old notebook (file list) back over the reset
+            pg.evaluate("NB.keepProbe = 'unsaved'")
+            # the dying page flushes once more right after the wipe (pagehide), as a real unload may: it must not bring the old notebook back
+            pg.evaluate("(() => { const r = Storage.prototype.removeItem; Storage.prototype.removeItem = function (k) { if (k === NOMI.KEY('sessione')) { NB.late = 1; dispatchEvent(new Event('pagehide')); } return r.call(this, k); }; })()")
             pg.click("#newrun"); pg.wait_for_selector("#resetdlg[open]"); pg.click("#resetdlg [data-reset=files]")
             pg.wait_for_function("location.search === '' && window.qqReady && typeof E !== 'undefined' && E.files.length === 0", timeout=60000)
             got = pg.evaluate("""(async () => { const db = await new Promise(ok => { const q = indexedDB.open(NOMI.DB); q.onsuccess = () => ok(q.result); });
@@ -171,6 +175,8 @@ try:
             assert got["files"] == 0 and got["manifest"] == 0, ("the loaded files are gone", got)
             wait_for_js(pg, NBKET, 30000)
             assert pg.evaluate("(async () => (JSON.parse(await (await fetch('api/notebook')).text()).session || []).length)()") == 0, "the open-files list is gone"
+            assert pg.evaluate("(async () => JSON.parse(await (await fetch('api/notebook')).text()).keepProbe)()") == "unsaved", "the last change was saved before the reset"
+            assert pg.evaluate("localStorage.getItem('mzlab.nbpending')") is None or "session" not in pg.evaluate("JSON.parse(localStorage.getItem('mzlab.nbpending') || '{}')"), "no pending copy names the files"
             pg.click("#nav [data-v=draw]"); pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
             wait_for_js(pg, f"!!({KJ} && {KJ}.editor) && {KJ}.editor.struct().atoms.size === 11", 30000)
         step("«Files» keeps the drawing, a saved list and a saved molecule, and removes the loaded files (the full reset removes all, see above)", keep_work)
