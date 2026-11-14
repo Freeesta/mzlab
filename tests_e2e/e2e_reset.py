@@ -139,7 +139,8 @@ try:
         step("«Files»: empty list, memory released, loading again works", clear_all)
         def keep_work():
             # what the user made survives «Files»: the drawing, a saved list, a saved molecule; the loaded files and the open-files list do not
-            pg.goto(base + "#/draw"); pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
+            pg.goto(base + "?reset=files"); pg.wait_for_function("!location.search.includes('reset')", timeout=30000); ready_start(pg)      # a clean start: the step before leaves a session
+            pg.evaluate("location.hash = '#/draw'"); pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
             KJ = "document.querySelector('#kframe').contentWindow.ketcher"
             wait_for_js(pg, f"!!({KJ} && {KJ}.editor)"); pg.evaluate(f"{KJ}.setMolecule('CC(=O)Nc1ccc(O)cc1')"); wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 11")
             NBKET = "(async () => { try { return !!JSON.parse(await (await fetch('api/notebook')).text()).ket; } catch (e) { return false; } })()"
