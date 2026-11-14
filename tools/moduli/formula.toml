@@ -1,0 +1,7 @@
+uscita = "wasm-feat/formula"
+pacchetto = "mzlab-feat-wasm"
+feature = "flow_formula"
+wasm_opt = "@motore"
+parte = "a"
+tetto = 512000
+nota = "formula.ms1 of the Flow, loaded only by its executor; standard cap"

@@ -1,0 +1,7 @@
+uscita = "wasm-feat/flowstat"
+pacchetto = "mzlab-feat-wasm"
+feature = "flow_stat"
+wasm_opt = "@motore"
+parte = "a"
+tetto = 512000
+nota = "table.stats, table.pca, table.kmd of the Flow; standard cap"

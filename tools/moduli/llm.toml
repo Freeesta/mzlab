@@ -1,0 +1,6 @@
+uscita = "wasm-feat/llm"
+pacchetto = "mzlab-llm-wasm"
+wasm_opt = "@motore"
+parte = "a"
+tetto = 397312
+nota = "assistant and facts without a model; measured 358897 x 1.10, multiple of 4 KiB; never fused with another module"

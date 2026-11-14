@@ -1,0 +1,7 @@
+uscita = "wasm-lettori/andi"
+pacchetto = "mzlab-lettori-wasm"
+feature = "andi"
+wasm_opt = "@estesi"
+parte = "lettori"
+tetto = 344064
+nota = "zlib-rs +30 KB, measured rounded to 256 B"

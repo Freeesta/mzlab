@@ -1,0 +1,6 @@
+uscita = "wasm-feat/rotte"
+pacchetto = "mzlab-rotte-wasm"
+wasm_opt = "@motore"
+parte = "a"
+tetto = 884736
+nota = "statistics, molecules, Data and Flow routes out of the engine, loaded on the first request of one of them"

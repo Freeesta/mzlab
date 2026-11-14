@@ -1,0 +1,7 @@
+uscita = "wasm-feat/hr"
+pacchetto = "mzlab-feat-wasm"
+feature = "detect,proofs,finder,finder_edge,finder_msn,flow_ms2"
+wasm_opt = "@motore"
+parte = "a"
+tetto = 1716224
+nota = "detect, proofs, finder, finder_edge and finder_msn in ONE .wasm; +4.4 % for the isotope finder of features.detect, decision of the Coordinator; the only cap of the group"

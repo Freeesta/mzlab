@@ -1,0 +1,7 @@
+uscita = "wasm-feat/attributio-all"
+pacchetto = "mzlab-attributio-wasm"
+feature = "all"
+wasm_opt = "@motore"
+parte = "b"
+tetto = 1536000
+nota = "table, review (Banco 2b), exports and MS2 engine in ONE .wasm; measured 1395661 (+10 %); the only cap of the group"
