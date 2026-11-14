@@ -18,6 +18,9 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+#[path = "update_serve.rs"]
+mod serve;
+
 /// Where the published site lives; the only host the program talks to.
 pub const SITE: &str = "https://freeesta.github.io/mzlab/";
 /// Manifest path, relative to the site root.
@@ -514,18 +517,9 @@ fn mime(rel: &str) -> &'static str {
     }
 }
 
-/// The file of the updated folder for a request path of the window (`/` = the page), if it is there. Anything else (and any path that
-/// tries to leave the folder) returns `None` and the embedded copy answers.
+/// The file of the updated folder for a request path of the window, if it may be served (`update_serve.rs`); otherwise the embedded copy answers.
 pub fn serve_override(web: &Path, req_path: &str) -> Option<(Vec<u8>, &'static str)> {
-    let rel = req_path.trim_start_matches('/');
-    let rel = if rel.is_empty() { "index.html" } else { rel };
-    // the native files belong to the binary and are never downloaded: the embedded copy always answers
-    if rel == CHECK || NATIVE.contains(&rel) || safe_rel(rel).is_err() {
-        return None;
-    }
-    let p: PathBuf = web.join(rel);
-    let body = fs::read(&p).ok()?;
-    Some((body, mime(rel)))
+    serve::serve_override(web, req_path)
 }
 
 #[cfg(test)]
@@ -892,20 +886,6 @@ mod tests {
         fs::write(tmp.path().join("secret.txt"), b"s").unwrap();
         assert!(serve_override(&tmp.path().join("web"), "/../secret.txt").is_none());
         assert!(serve_override(&tmp.path().join("web"), "/check.json").is_none());
-    }
-
-    #[test]
-    fn serve_override_never_serves_the_native_files() {
-        let tmp = tempfile::tempdir().unwrap();
-        let web = tmp.path().join("web");
-        fs::create_dir_all(web.join("static")).unwrap();
-        for rel in NATIVE {
-            fs::write(web.join(rel), b"planted").unwrap();
-            assert!(serve_override(&web, &format!("/{rel}")).is_none(), "{rel}");
-        }
-        // a downloaded file next to them is still served
-        fs::write(web.join("static/a.js"), b"a").unwrap();
-        assert!(serve_override(&web, "/static/a.js").is_some());
     }
 
     #[test]
