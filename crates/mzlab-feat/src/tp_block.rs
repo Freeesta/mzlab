@@ -4,6 +4,9 @@
 /// `NO_PARENT` in `TpBlock::parent_row`.
 pub const NO_PARENT: u32 = u32::MAX;
 
+/// The calibration offset is measured on a parent row within this many Da of its ion and applied up to the same limit.
+pub const OFFSET_MAX: f64 = 0.6;
+
 /// Status of a row (`TpBlock::status`).
 pub const ST_TP: u8 = 0;
 pub const ST_CONTROL: u8 = 1;

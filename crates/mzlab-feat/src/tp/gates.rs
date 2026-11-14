@@ -17,7 +17,7 @@ pub(super) fn parent_row(inp: &TpInputs) -> Option<usize> {
     let (mz, rt) = inp.parent;
     let t = inp.aligned;
     let tol = if inp.params.ppm < 0.0 {
-        crate::legacy::lr::rows::OFFSET_MAX
+        crate::tp_block::OFFSET_MAX
     } else {
         mz * 5e-6
     };
