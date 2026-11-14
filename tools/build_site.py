@@ -308,7 +308,7 @@ def main() -> None:
     assert pre in html
     html = html.replace(pre, pre + '<link rel="preload" as="script" href="static/browser.js">', 1)
     # the name in the title is written here, not by appname.js: the apps that build link previews do not run JavaScript
-    html = re.sub(r"<title>\{APP\}[^<]*</title>", lambda m: f"<title>{APP_NAME} • {TITLE_TAG}</title>", html, count=1)
+    html = re.sub(r"<title>[^<]*\{APP\}[^<]*</title>", lambda m: f"<title>{TITLE_TAG} · {APP_NAME}</title>", html, count=1)
     if lab:
         html = lab_variant(html, out, static, lab)
     else:

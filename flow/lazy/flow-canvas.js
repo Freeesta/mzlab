@@ -22,22 +22,23 @@
     return parts.length ? parts.slice(0, 2).join(", ") : "Default settings";
   };
 
-  /** the canvas: {root, draw(model), fit()} @param {any} S @param {{select: (key: string) => void, remove: (node: any) => void, next: (node: any, anchor: HTMLElement) => void, selected: () => string, simple: () => boolean}} ui */
+  /** the canvas: {root, draw(model), fit(soft = true)} @param {any} S @param {{select: (key: string) => void, remove: (node: any) => void, next: (node: any, anchor: HTMLElement) => void, selected: () => string, simple: () => boolean}} ui */
   F.canvas = (S, ui) => {
     const { el, icon } = F, ns = "http://www.w3.org/2000/svg";
     const stage = el("div", { class: "fl-stage" }), svg = document.createElementNS(ns, "svg");
+    stage.style.visibility = "hidden";      // shown by the first fit: the cards never paint at the unfitted place and then move
     svg.setAttribute("class", "fl-lines"); svg.setAttribute("aria-hidden", "true");
     stage.append(svg);
     const view = el("div", { class: "fl-view", role: "application", tabindex: 0, "aria-label": "Flow canvas. Arrow keys move the view, plus and minus zoom. Tab goes through the steps in order.", id: "fl-canvas" }, stage);
     const v = { x: 0, y: 0, k: 1 }, size = { width: 600, height: 300 };
-    const apply = (/** @type {boolean} */ soft) => { stage.classList.toggle("fl-soft", !!soft); stage.style.transform = `translate(${v.x}px,${v.y}px) scale(${v.k})`; };
+    const apply = (/** @type {boolean} */ soft) => { stage.style.visibility = ""; stage.classList.toggle("fl-soft", !!soft); stage.style.transform = `translate(${v.x}px,${v.y}px) scale(${v.k})`; };
     const zoom = (/** @type {number} */ f, /** @type {boolean} */ soft) => {
       const cx = view.clientWidth / 2, cy = view.clientHeight / 2, k = Math.min(2, Math.max(0.3, v.k * f));
       v.x = cx - (cx - v.x) * k / v.k; v.y = cy - (cy - v.y) * k / v.k; v.k = k; apply(soft);
     };
-    const fit = () => {
+    const fit = (/** @type {any} */ soft = true) => {
       const w = view.clientWidth || 800, h = view.clientHeight || 500;
-      v.k = Math.min(1, Math.max(0.3, Math.min(w / size.width, h / size.height))); v.x = Math.max(0, (w - size.width * v.k) / 2); v.y = Math.max(0, Math.min(48, (h - size.height * v.k) / 2)); apply(true);
+      v.k = Math.min(1, Math.max(0.3, Math.min(w / size.width, h / size.height))); v.x = Math.max(0, (w - size.width * v.k) / 2); v.y = Math.max(0, Math.min(48, (h - size.height * v.k) / 2)); apply(soft !== false);
     };
     const pan = (/** @type {number} */ dx, /** @type {number} */ dy) => { v.x += dx; v.y += dy; apply(false); };
     view.addEventListener("keydown", e => {
@@ -58,7 +59,7 @@
     const root = el("div", { class: "fl-cv" }, view, tools);
 
     // keys already drawn: only a card that is new plays the entrance animation
-    const seen = new Set();
+    const seen = new Set(); let drawn = false;     // the cards of the first draw do not slide in: only a step added later does
     /** a view card: not a step of the plan, off until the step that feeds it has a result of its type; then it opens the view @param {any} node */
     const viewCard = node => {
       const items = (S.results && S.results[node.of]) || [], item = items.find((/** @type {any} */ r) => r.type === node.result), on = !!item;
@@ -71,7 +72,7 @@
     /** @param {any} node */
     const card = node => {
       if (node.kind === "view") return viewCard(node);
-      const fresh = !seen.has(node.key);
+      const fresh = drawn && !seen.has(node.key);
       const probs = F.nodeProblems(S, node), cat = F.CATS[node.cat], sel = ui.selected() === node.key, st = F.nodeState(S, node), bad = !st.ok;
       const chip = el("span", { class: "fln-chip " + (bad ? "warn" : "ok") }, icon(bad ? "warn" : "ok", 12), el("span", { text: st.word }));
       // a group, not a button: the card holds buttons of its own (axe nested-interactive)
@@ -97,7 +98,7 @@
       }
       const order = [...model.nodes].sort((m, n) => m.x - n.x || m.y - n.y);
       for (const n of order) stage.append(card(n));
-      seen.clear(); for (const n of order) seen.add(n.key);
+      seen.clear(); for (const n of order) seen.add(n.key); drawn = true;
       if (F.liveCard) F.liveCard.paint();
       if (hadFocus) { const t = stage.querySelector(`[data-key="${CSS.escape(hadFocus)}"]`); if (t instanceof HTMLElement) t.focus({ preventScroll: true }); }
     };
