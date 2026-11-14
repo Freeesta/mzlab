@@ -23015,3 +23015,4 @@
 {"v":1,"ts_utc":"2026-11-14T09:47:35Z","tipo":"job","k":"132409165202","workflow":"sito-rust","job":"sito-e2e","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":3283,"sha":"702bb5eb11e356f99e785c6e580f5287a0b3f8f3","run_id":43581588894,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-14T10:10:14Z","tipo":"carico","k":"2026-11-14T10:1","job_in_coda":138,"job_in_corso":39}
 {"v":1,"ts_utc":"2026-11-14T10:11:46Z","tipo":"coda","k":"2026-11-14T10:11:46Z","aperte":15,"indietro":10,"sporche":3,"verdi_in_attesa":0,"piu_vecchia_aperta_s":42112,"piu_vecchia_verde_s":null}
+{"v":1,"ts_utc":"2026-11-14T09:49:45Z","azione":"aperta","tipo":"pr","pr":3285,"sha":"299adbc9367383b8f8337253954317d1a68a45a4"}
