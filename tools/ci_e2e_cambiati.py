@@ -1,8 +1,8 @@
 """Chooses the e2e of the job `e2e-cambiati` of test.yml: the tests that cover the files a pull request changes, minus what other jobs already run.
 `python3 tools/ci_e2e_cambiati.py <base sha>` prints what it chose and why, and appends `e2e=<names, comma-separated>` to $GITHUB_OUTPUT (empty: run nothing).
-The map from files to tests is `changed_tests` of tools/verifica.py (its AREAS); the smoke tests (job `browser`) and the tests that need the site build, the CI .wasm build (`wasm`), a .dam
+The map from files to tests is `changed_tests` of tools/verifica.py (the `# covers:` header lines of the tests); the smoke tests (job `browser`) and the tests that need the site build, the CI .wasm build (`wasm`), a .dam
 or the lab data (sito-e2e and notte.yml) are left out. A core file selects every e2e: the complete round is too long for this job (30 min) and runs in notte.yml, so the job runs a fixed safety set
-instead: tests that cover as many AREAS entries as the time budget allows (`core_set`, from the seconds in tools/ci_e2e_costi.json; `--costi` rewrites that file from .verifica/ultimo.md)."""
+instead: tests that cover as many `# covers:` prefixes as the time budget allows (`core_set`, from the seconds in tools/ci_e2e_costi.json; `--costi` rewrites that file from .verifica/ultimo.md)."""
 import json
 import os
 import re
@@ -22,11 +22,14 @@ BUDGET_S = 1200       # sum of the seconds of the safety set; CI wall time was 0
 
 
 def core_set() -> tuple[list[str], str]:
-    """Safety set for a core file: greedy cover of the AREAS entries by the cheapest tests (most entries per second), within BUDGET_S."""
+    """Safety set for a core file: greedy cover of the `# covers:` prefixes by the cheapest tests (most entries per second), within BUDGET_S."""
     cost = json.loads(COSTS.read_text(encoding="utf-8"))
     smoke = set(verifica.SMOKE) | set(verifica.SMOKE_CHROMIUM_LINUX) | KNOWN_RED
+    by_prefix: dict[str, set[str]] = {}
+    for prefix, n in verifica.covers():
+        by_prefix.setdefault(prefix, set()).add(n)
     entries = [{n for n in tests if n not in smoke and not verifica.NEEDS.get(n, set()) & ELSEWHERE and cost.get(n, TEST_CAP_S + 1) <= TEST_CAP_S and (verifica.E2E / f"{n}.py").exists()}
-               for _pre, tests in verifica.AREAS]
+               for tests in by_prefix.values()]
     entries = [e for e in entries if e]
     left, used, chosen = list(entries), 0, []
     while left:
