@@ -8,7 +8,7 @@ window.DESKUPD = (() => {
   const T = () => window.__TAURI__;
   const live = () => !!(window.MZLAB_DESKTOP && T() && T().core);
   const mb = b => I18N.fix(b / 1e6, 1);
-  let box = null, busy = false, quiet = false, lastErr = null, ver = "";     // quiet: the check in flight is the silent one
+  let box = null, busy = false, quiet = false, ver = "";     // quiet: the check in flight is the silent one
 
   function show(html, buttons, title) {
     if (!box || !box.isConnected) {
@@ -23,24 +23,8 @@ window.DESKUPD = (() => {
   }
   const close = () => { if (box) { box.remove(); box = null; } };
   const closeBtn = () => ["close", I18N.t("update.close")];
-  const errText = r => {
-    const k = String(r.error_key || "");
-    return I18N.t(k === "update.error.offline" ? "update.error.offline" : k === "update.error.http" ? "update.error.http" : k === "update.error.manifest" ? "update.error.manifest"
-      : k === "update.error.hash" ? "update.error.hash" : k === "update.error.newapp" ? "update.error.newapp" : "update.error.io");
-  };
-
-  // an error with its detail (the failed file) under the message, and a button that copies what a bug report needs
-  function fail(r) {
-    lastErr = r;
-    const d = r.detail ? `<div style="margin-top:4px;font-size:.85em;opacity:.8;word-break:break-all">${EH(String(r.detail))}</div>` : "";
-    show(EH(errText(r)) + d, [["copy", I18N.t("update.copy")], closeBtn()]);
-  }
-  const details = () => ["mzLab " + (window.MZLAB_VERSION || "?") + " (" + (window.MZLAB_COMMIT || "?") + ")", "manifest: " + (ver || "?"),
-    "key: " + String(lastErr && lastErr.error_key || ""), "detail: " + String(lastErr && lastErr.detail || "")].join("\n");
-  async function copy() {
-    const b = box && box.querySelector("[data-a=copy]");
-    try { await navigator.clipboard.writeText(details()); if (b) b.textContent = I18N.t("update.copied"); } catch (_) { /* no clipboard: the text stays on screen */ }
-  }
+  // errors: lazy (aggiorna-errore.js)
+  const fail = r => carica("aggiorna-errore.js").then(() => DESKUPDERR.fail({ show, closeBtn, box: () => box, ver: () => ver }, r), () => show(EH(I18N.t("update.error.io")), [closeBtn()]));
 
   function offer(r, silent) {
     if (r.version) ver = r.version;
@@ -48,9 +32,9 @@ window.DESKUPD = (() => {
     else if (r.status === "available") {
       show(EH(I18N.t("update.available", { files: r.files, size: mb(r.bytes) })), [["go", I18N.t("update.download")], closeBtn()], silent ? I18N.t("update.notice") : "");
     } else if (r.status === "newapp") {
-      // without a public app download (SITO_PUBBLICO.scaricaApp false) the text stays, the link goes: a manual check never hangs on «Checking…»
-      show(SITO_PUBBLICO.scaricaApp ? `${EH(I18N.t("update.newapp", { min: r.min }))}<br><a href="${REL}" target="_blank" rel="noopener noreferrer">${REL}</a>`
-        : EH(I18N.t("update.newapp.nolink", { min: r.min })), [closeBtn()]);
+      // no public download: text without the link
+      const pub = SITO_PUBBLICO.scaricaApp;
+      show(EH(I18N.t(pub ? "update.newapp" : "update.newapp.nolink", { min: r.min })) + (pub ? `<br><a href="${REL}" target="_blank" rel="noopener noreferrer">${REL}</a>` : ""), [closeBtn()]);
     } else if (!silent) fail(r);
   }
 
@@ -65,7 +49,6 @@ window.DESKUPD = (() => {
     if (!silent) show(EH(I18N.t("update.checking")), []);
     try {
       const r = JSON.parse(await T().core.invoke("update_check"));
-      // the day's check counts only after an answer that is not «offline»: an offline start is tried again
       if (r.error_key !== "update.error.offline") try { localStorage.setItem(KEY, String(Date.now())); } catch (_) { /* optional */ }
       offer(r, quiet);
     }
@@ -91,7 +74,7 @@ window.DESKUPD = (() => {
     busy = false;
   }
 
-  const ACT = { close, go, copy, restart: () => T().core.invoke("update_restart") };
+  const ACT = { close, go, copy: () => DESKUPDERR.copy(), restart: () => T().core.invoke("update_restart") };
 
   // row of the settings popup (only in the desktop app)
   const row = () => live() ? `<div class="imp-fld" title="${I18N.t("update.settings.title")}"><span><span class="ic">${window.IMPCOMP ? IMPCOMP.GICON.update : ""}</span>${I18N.t("update.settings.label")}</span><button id="uip-upd" type="button">${I18N.t("update.settings.button")}</button></div>` : "";
