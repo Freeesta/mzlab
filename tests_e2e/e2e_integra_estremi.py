@@ -56,7 +56,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         load(pg, [LRF], 4000, 1)
-        xic(pg, "364")
+        xic(pg, "194")
         integrate(pg, 14.3)
         tr = pg.evaluate(f"(()=>{{const s={PN}._a.sr[0];return {{x:Array.from(s.x),y:Array.from(s.y)}}}})()")
         csv = D / "trace.csv"; csv.write_text("".join(f"{a!r},{b!r}\n" for a, b in zip(tr["x"], tr["y"])))
