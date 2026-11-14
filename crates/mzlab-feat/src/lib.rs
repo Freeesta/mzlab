@@ -123,6 +123,7 @@ pub mod tabcheck;
 pub mod table;
 pub mod target;
 pub mod tp;
+mod tp_block;
 pub mod transitions;
 pub mod trace;
 pub mod trace_estimate;
