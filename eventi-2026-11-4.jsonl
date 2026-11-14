@@ -25008,3 +25008,4 @@
 {"v":1,"ts_utc":"2026-11-14T12:22:00Z","azione":"aperta","tipo":"pr","pr":3298,"sha":"5cabf886aa23df3f4e0e3f67436e7b382201ac72"}
 {"v":1,"ts_utc":"2026-11-14T12:35:23Z","azione":"aperta","tipo":"pr","pr":3299,"sha":"00ef4bd644b876a4ef4d27174bc375a636cd5077"}
 {"v":1,"tipo":"pr","pr":3291,"sha":"0c9db7fd9f55b68d6794aec36e6d0eccc6982755","ts_utc":"2026-11-14T12:35:57Z","azione":"unita","aperta_s":6179,"commit_n":4,"cause_commit":{"merge di main":1,"altro":2},"merge_main":1,"righe_piu":122,"righe_meno":25,"file_n":3,"file":["crates/mzlab-desktop/src/update.rs","crates/mzlab-desktop/src/update_serve.rs","crates/mzlab-desktop/src/update_serve_tests.rs"],"aree":{"rust":3},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":774}
+{"v":1,"ts_utc":"2026-11-14T12:41:13Z","azione":"aperta","tipo":"pr","pr":3300,"sha":"f2880a23d6fc19ccea0cd8c9040899b1223ee2ba"}
