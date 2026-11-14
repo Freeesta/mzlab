@@ -108,7 +108,11 @@ fn bad_hash_among_many_keeps_web_and_removes_next() {
     let src = Slow::new(served);
     let err = apply(data, &empty(), &remote, "0.1.0", &src, |_| {}).unwrap_err();
     assert_eq!(err.key, "update.error.hash");
-    assert_eq!(err.detail, "static/f17.js");
+    assert!(
+        err.detail.starts_with("static/f17.js: got 8/"),
+        "{}",
+        err.detail
+    ); // the file, then what was got and wanted
     assert_eq!(fs::read(data.join("web/static/old.js")).unwrap(), b"old");
     assert!(!data.join("web/static/f0.js").exists());
     assert!(!data.join("web.next").exists() && !data.join("web.old").exists());

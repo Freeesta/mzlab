@@ -292,7 +292,11 @@ fn fetch_one(
         }
         if !ok(&body) {
             let (h, w) = (sha256_hex(&body), &want.sha256);
-            let tries = if retry { "tries 2" } else { "tries 1, no cache-buster for this version" };
+            let tries = if retry {
+                "tries 2"
+            } else {
+                "tries 1, no cache-buster for this version"
+            };
             return Err(UpdateError::new(
                 "update.error.hash",
                 format!(
