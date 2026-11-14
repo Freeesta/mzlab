@@ -95,3 +95,13 @@ def test_misses_prints_the_most_frequent_first(tmp_path, capsys):
     f.write_text("a\nb\nb\n")
     cp.misses(f)
     assert capsys.readouterr().out.splitlines() == ["   2  b", "   1  a", "2 builds not prebuilt"]
+
+
+def test_no_test_module_redefines_what_it_imports_from_cargo_util():
+    """`def build(...)` next to `from cargo_util import build` silently replaces the helper (the call then fails at run time, in a fixture)."""
+    bad = []
+    for f in sorted((ROOT / "tests").glob("test_*.py")):
+        tree = ast.parse(f.read_text(encoding="utf-8"))
+        imported = {a.asname or a.name for n in tree.body if isinstance(n, ast.ImportFrom) and n.module == "cargo_util" for a in n.names}
+        bad += [f"{f.name}:{n.lineno} {n.name}" for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in imported]
+    assert not bad, bad
