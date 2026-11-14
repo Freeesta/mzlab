@@ -22515,3 +22515,4 @@
 {"v":1,"ts_utc":"2026-11-14T09:28:29Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/reg-gen-indice","merge_main":true,"aree":{"workflow":1,"rust":1,"docs":6,"test":1,"tools":32},"tipo":"pr","pr":3267,"sha":"5c8d83965338b0f560d345b7c9255ee7513f1d1a"}
 {"v":1,"tipo":"pr","pr":3275,"sha":"7c163091c0b0fa5d7d63526bb5d22d0cc8043181","ts_utc":"2026-11-14T09:22:06Z","azione":"chiusa","aperta_s":1817,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":37,"righe_meno":1,"file_n":3,"file":[".github/workflows/test.yml","docs/agenti/ci-veloce.md","tests/test_ci_browser_prep.py"],"aree":{"workflow":1,"docs":1,"test":1},"solo_doc":false,"prima_review_s":null,"review_n":0}
 {"v":1,"ts_utc":"2026-11-14T09:24:40Z","azione":"aperta","tipo":"pr","pr":3279,"sha":"a50151cf8501f01800abde996c720f5a0b00c0ca"}
+{"v":1,"ts_utc":"2026-11-14T09:32:21Z","azione":"aperta","tipo":"pr","pr":3280,"sha":"0a3ca44824842f753545906cffd0048361ba5296"}
