@@ -133,6 +133,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | Safari e iPadOS (WebKit): API usate × versione minima × ripiego, pavimento 16.4, ripieghi di `compat.js` (`AbortSignal.any`, `createWritable`, appunti, `accept` sull'iPad) | `docs/agenti/compat-safari.md` |
 | tooltip: regola (solo se aggiungono informazione), inventario, elenco completo dei testi (`tools/list_tooltip.py`), hover dei grafici, icone senza tooltip | `docs/inventari/TOOLTIP.md` |
 | file `mzrun/1` (`*.mzrun.json`: record e preset di un'analisi, impronta `self_sha256`, regole di applicazione, schema `docs/schemi/mzrun-1.json`) | `docs/agenti/mzrun.md` |
+| fondo chimico del TIC/BPC (ioni di fondo persistenti, linea di base per ione, finestra tranquilla, bianco, finestre m/z escluse: `ticbg.rs`, `api/tic_background`, `mzlab-cli background`) | `docs/agenti/tic-fondo.md` |
 | elenco degli esperimenti MSn di un file DDA nella finestra «Albero MSn» (schede Experiments/Tree, TIC e XIC di un precursore, `msn-elenco.js`, colonne `lev`/`z` di `/api/dda`, `ptol` di `/api/chrom`) | `docs/agenti/msn-elenco.md` |
 | file di prodotto di sole MS3 (o di un livello MSn ≠ 2): `msn_level` dell'info, livello di cromatogramma, scansioni, spettro e `/api/ms2tr`, titoli MS³ | `docs/agenti/msn-livello.md` |
 | audit delle pagine (ogni vista × campioni × pulsanti dell'header: CLS, pannelli che si spostano, memoria, errori; `tests_e2e/audit_pagine.py`, test di fumo `e2e_giro_intestazione`) | `docs/agenti/intestazione.md` |

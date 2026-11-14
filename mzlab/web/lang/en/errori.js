@@ -332,6 +332,7 @@ I18N.add("en", {
   "err.msngrafo.badSmiles": "The structure (SMILES) cannot be read ({detail}).",
   "err.msngrafo.noSmiles": "Give a structure (SMILES) to compute the bond cleavages.",
   "err.request.badNumber": "The value of {name} is not a valid number (zero or more).",
+  "err.request.badValue": "The value of {name} is not one the request accepts.",
   "err.search.request": "The search request is incomplete: “{field}” is missing.",
   "error.attributio": "The identification could not run ({detail}).",
   "error.badCampioni": "The sample table is not valid: check the file names and the columns.",
