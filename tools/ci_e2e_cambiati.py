@@ -16,13 +16,15 @@ import verifica  # noqa: E402
 ELSEWHERE = {"sito", "dam", "veri", "wasm"}
 COSTS = Path(__file__).resolve().parent / "ci_e2e_costi.json"
 TEST_CAP_S = 60       # a test slower than this is not a representative: it would eat the budget of ten others
+# Red on main when the set was first run (owner NIGHTLY-TRIAGE, docs/agenti/test.md): left out so that a red of the set is the pull request's own; they still run in the nightly complete round
+KNOWN_RED = {"e2e_disegno_verifica", "e2e_fondo_piatto", "e2e_hr_pannelli", "e2e_integra_barre", "e2e_integra_modi", "e2e_mappa_apice", "e2e_mappa_estrai", "e2e_parziali", "e2e_qaqc", "e2e_radicali", "e2e_xic_stretto"}
 BUDGET_S = 1800       # sum of the seconds of the safety set; the first CI run took 1541 s of verifica.py (site build included) for 2390 s, too close to the 30 min of the job
 
 
 def core_set() -> tuple[list[str], str]:
     """Safety set for a core file: greedy cover of the AREAS entries by the cheapest tests (most entries per second), within BUDGET_S."""
     cost = json.loads(COSTS.read_text(encoding="utf-8"))
-    smoke = set(verifica.SMOKE) | set(verifica.SMOKE_CHROMIUM_LINUX)
+    smoke = set(verifica.SMOKE) | set(verifica.SMOKE_CHROMIUM_LINUX) | KNOWN_RED
     entries = [{n for n in tests if n not in smoke and not verifica.NEEDS.get(n, set()) & ELSEWHERE and cost.get(n, TEST_CAP_S + 1) <= TEST_CAP_S and (verifica.E2E / f"{n}.py").exists()}
                for _pre, tests in verifica.AREAS]
     entries = [e for e in entries if e]

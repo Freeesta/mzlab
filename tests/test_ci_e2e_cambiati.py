@@ -23,6 +23,7 @@ def test_a_core_file_runs_a_bounded_safety_set():
     assert sum(cost[n] for n in tests) <= ci.BUDGET_S and max(cost[n] for n in tests) <= ci.TEST_CAP_S
     assert not set(tests) & (set(verifica.SMOKE) | set(verifica.SMOKE_CHROMIUM_LINUX))
     assert not any(verifica.NEEDS.get(n, set()) & ci.ELSEWHERE for n in tests)
+    assert not set(tests) & ci.KNOWN_RED and all((ROOT / "tests_e2e" / f"{n}.py").exists() for n in ci.KNOWN_RED)
 
 
 def test_the_safety_set_is_the_same_for_every_core_file():
