@@ -89,7 +89,7 @@ class Mirror(BaseHTTPRequestHandler):
     def do_GET(self):
         self.t_in = round(time.time() * 1000)
         if self.delay:
-            time.sleep(self.delay / 1000)
+            threading.Event().wait(self.delay / 1000)
         rel = self.path.split("?", 1)[0].split("#", 1)[0].lstrip("/")
         rel = rel[len("mzlab/"):] if rel.startswith("mzlab/") else rel
         p = self._file(rel)

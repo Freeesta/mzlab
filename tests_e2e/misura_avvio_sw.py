@@ -58,6 +58,11 @@ PROBE = r"""(() => {
 USABLE = "!!(window.__a && __a.m.ready && __a.m.drop && window.crossOriginIsolated)"
 
 
+def pump(pg, ms: int) -> None:
+    """Settle time measured by the page itself (a timer in the page), not by the runner."""
+    pg.evaluate(f"new Promise(r => setTimeout(r, {ms}))")
+
+
 def wall() -> float:
     return time.time() * 1000
 
@@ -77,13 +82,13 @@ def stop_sw(ctx, pg) -> None:
     st = {}
     s.on("ServiceWorker.workerVersionUpdated", lambda ev: st.update({v["versionId"]: v["runningStatus"] for v in ev["versions"]}))
     s.send("ServiceWorker.enable")
-    pg.wait_for_timeout(300)                        # wait_for_timeout pumps the events, time.sleep does not
+    pump(pg, 300)                                  # a page-side timer also delivers the CDP events (time.sleep would not)
     stopped = lambda: bool(st) and all(x == "stopped" for x in st.values())
     for _ in range(4):                              # a worker busy with a request (a last fill step) restarts: ask again
         s.send("ServiceWorker.stopAllWorkers")
         end = time.time() + 4
         while time.time() < end and not stopped():
-            pg.wait_for_timeout(100)
+            pump(pg, 100)
         if stopped():
             break
     if not stopped():
@@ -142,9 +147,9 @@ def one(b, base, scen: str, rtt: int, cpu: int, mirror: bool) -> dict:
                     "p2_srv_kb": round(sum(r[3] for r in e2) / 1024), "usable": snap["m"]["ready"]})
     else:
         poll(pg, FILL_DONE, 300)
-        time.sleep(1.5)
+        pump(pg, 1500)               # lets the last steps of the boot and the fill finish before the next step
         if scen.startswith("trace"):
-            pg.reload(); poll(pg, USABLE, 240); time.sleep(1.5)        # second load; the code cache is written after it
+            pg.reload(); poll(pg, USABLE, 240); pump(pg, 1500)        # second load; the code cache is written after it
         if scen in ("warm-restarted", "trace-restarted"):
             stop_sw(c, pg)
         sw0, l0 = len(thr.sw), len(log)
@@ -152,7 +157,7 @@ def one(b, base, scen: str, rtt: int, cpu: int, mirror: bool) -> dict:
             b.start_tracing(page=pg, categories=CATS)
         pg.reload()
         poll(pg, USABLE, 240)
-        time.sleep(1.5)
+        pump(pg, 1500)               # lets the last steps of the boot and the fill finish before the next step
         if scen.startswith("trace"):
             res["trace"] = analyse(json.loads(b.stop_tracing()))
         snap = pg.evaluate("__a.snap()")
