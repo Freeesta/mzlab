@@ -20223,3 +20223,4 @@
 {"v":1,"ts_utc":"2026-11-14T04:52:43Z","tipo":"carico","k":"2026-11-14T04:5","job_in_coda":0,"job_in_corso":18}
 {"v":1,"ts_utc":"2026-11-14T04:53:25Z","tipo":"coda","k":"2026-11-14T04:53:25Z","aperte":5,"indietro":4,"sporche":1,"verdi_in_attesa":2,"piu_vecchia_aperta_s":23011,"piu_vecchia_verde_s":11656}
 {"v":1,"ts_utc":"2026-11-14T05:07:43Z","azione":"push","titolo":"CI: the drawing e2e need the CI-built .wasm (left out of e2e-cambiati); e2e_fondo_piatto off the allow list","merge_main":false,"aree":{"docs":1,"tools":2},"tipo":"pr","pr":3235,"sha":"99a40c040f9d9770940f72f9b054495e334a0cd2"}
+{"v":1,"ts_utc":"2026-11-14T05:35:42Z","azione":"aperta","tipo":"pr","pr":3257,"sha":"3a5e8883f1fa3dbc0e14b19ce45a92aec351f3f6"}
