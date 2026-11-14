@@ -25,7 +25,8 @@ def carica(testi: dict[str, str] | None = None) -> dict[str, dict]:
 
 
 def da_base(ref: str) -> dict[str, dict]:
-    elenco = subprocess.run(["git", "ls-tree", "--name-only", ref, "tools/moduli/"], cwd=ROOT, capture_output=True, text=True, check=False).stdout.split()
+    # an unknown ref must fail, never read as "no modules" (every cap would then look new and pass)
+    elenco = subprocess.run(["git", "ls-tree", "--name-only", ref, "tools/moduli/"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split()
     testi = {Path(f).stem: subprocess.run(["git", "show", f"{ref}:{f}"], cwd=ROOT, capture_output=True, text=True, check=True).stdout for f in elenco if f.endswith(".toml")}
     return carica(testi)
 
@@ -107,7 +108,7 @@ def main() -> int:
         err = errori(mod)
         if a.base:
             c = cambi(mod, da_base(a.base))
-            print("\n".join(c) if c else "0 caps changed")
+            print("\n".join(x for x in c if not x.startswith("FAIL")) or ("" if c else "0 caps changed"))
             err += [x for x in c if x.startswith("FAIL")]
         print("\n".join(err) if err else f"{len(mod)} modules, data complete")
         return 1 if err else 0
