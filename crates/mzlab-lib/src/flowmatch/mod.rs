@@ -2,6 +2,7 @@
 //! the engine of this crate (`search::identity`, `search::analogs`, `scores`), as the Library tab does. The `candidates` file it writes is JSON. One implementation
 //! for `flow run` (`mzlab-cli`, which wraps it with files and a `Job`) and for the browser (`mzlab-lib-wasm`); behind the feature `flow` (it needs `mzlab-core`).
 
+mod delta;
 mod evidence;
 mod filter;
 mod json;
@@ -14,7 +15,7 @@ pub use self::resolution::HR_FRAG_DA;
 use crate::build::{build_in_memory, BuildOpts};
 use crate::contrib::{cosine_contributions, entropy_contributions, modified_cosine_contributions};
 use crate::decoy::{
-    best_scores_with, fdr_note, is_decoy, lib_fdr, quantize, with_decoys, Best, DecoyKind, LibFdr,
+    best_scores_with, fdr_note, is_decoy, lib_fdr, with_decoys, Best, DecoyKind, LibFdr,
     DEFAULT_SEED,
 };
 use crate::frag_tol::FragTol;
@@ -24,7 +25,7 @@ use crate::scores::modified_cosine;
 use crate::search::{analogs, identity_with, AnalogOpts, IdentityOpts, Query, Tol};
 use crate::spec::Spectrum;
 use mzlab_core::error::{Error, Result};
-use mzlab_core::json::{round, Out, Value};
+use mzlab_core::json::{Out, Value};
 use mzlab_core::score_terms::ScoreTerms;
 use mzlab_picchi::sortc::SortC;
 
@@ -143,15 +144,16 @@ pub fn num(job: &MatchJob, name: &str) -> f64 {
 /// One candidate of the `candidates` record: the hit of a library spectrum with its score.
 pub(crate) struct Cand {
     pub(crate) index: u32,
-    score: f64,
-    shared: usize,
-    mass_ppm: f64,
-    delta: f64,
-    explained: Vec<f64>,
+    pub(crate) score: f64,
+    pub(crate) shared: usize,
+    pub(crate) mass_ppm: f64,
+    pub(crate) delta: f64,
+    pub(crate) delta_formula: Option<delta::DeltaHit>,
+    pub(crate) explained: Vec<f64>,
     /// the matched peaks on both sides, when the step is asked for them (`matched_peaks`)
-    matched: Option<Vec<Pair>>,
+    pub(crate) matched: Option<Vec<Pair>>,
     /// the score as a sum of terms, when the step is asked for it (`score_terms`)
-    terms: Option<ScoreTerms>,
+    pub(crate) terms: Option<ScoreTerms>,
 }
 
 /// Pairs named one by one in the terms of a score.
@@ -242,6 +244,7 @@ fn exact(lib: &Lib, q: &Query, job: &MatchJob, alg: &str, terms: bool) -> Result
             shared,
             mass_ppm: dprec_ppm(tol, h.dprec, q.prec),
             delta: 0.0,
+            delta_formula: None,
             explained: pairs
                 .iter()
                 .filter_map(|&(i, _)| q.spec.mz.get(i).copied())
@@ -283,6 +286,7 @@ fn analogues(lib: &Lib, q: &Query, job: &MatchJob, terms: bool) -> Result<Vec<Ca
             shared: h.mc.matched,
             mass_ppm: (h.prec - q.prec) / q.prec * 1e6,
             delta: h.mc.delta,
+            delta_formula: None,
             explained: h
                 .mc
                 .pairs
@@ -296,9 +300,9 @@ fn analogues(lib: &Lib, q: &Query, job: &MatchJob, terms: bool) -> Result<Vec<Ca
 }
 
 /// The target-decoy numbers of one query: its best target and decoy and the q-value of the best target within the batch.
-struct Fdr {
-    best: Best,
-    fdr: LibFdr,
+pub(crate) struct Fdr {
+    pub(crate) best: Best,
+    pub(crate) fdr: LibFdr,
 }
 
 /// The identity search of every query of the batch against the library with decoys (the score of the algorithm, entropy as `decoy::search_fdr`), one `Fdr` per query.
@@ -343,61 +347,33 @@ fn batch_fdr(lib: &Lib, queries: &[Option<Query>], job: &MatchJob, alg: &str) ->
         .collect())
 }
 
-fn write_cand(
-    o: &mut Out,
-    lib: &Lib,
-    qid: &str,
-    alg: &str,
-    c: &Cand,
-    fdr: Option<&Fdr>,
-    rt_delta: Option<f64>,
-) -> Result<()> {
-    let m = lib
-        .meta(c.index)
-        .map_err(|_| Error::new("err.flow.match.library"))?;
-    let r = |v: f64| round(v, 6);
-    let peaks = lib
-        .peaks(c.index)
-        .map_err(|_| Error::new("err.flow.match.library"))?
-        .0
-        .len();
-    o.raw("{\"query\":").str(qid);
-    o.raw(",\"id\":").str(&m.accession);
-    o.raw(",\"name\":").str(&m.name);
-    o.raw(",\"inchikey\":").str(&m.inchikey);
-    o.raw(",\"smiles\":").str(&m.smiles);
-    o.raw(",\"formula\":").str(&m.formula);
-    o.raw(",\"score\":").num(r(c.score));
-    if let Some(t) = &c.terms {
-        o.raw(",\"score_terms\":");
-        t.write(o);
+/// Tolerance (`delta_formula_mda`) for annotating `modified_cosine` analogue shifts; defaults to 5.0 mDa and clamps to `0.0..=50.0`.
+fn delta_tol_mda(job: &MatchJob) -> f64 {
+    let raw = job
+        .params
+        .iter()
+        .find(|(k, _)| k == "delta_formula_mda")
+        .and_then(|(_, v)| v.f64())
+        .unwrap_or(5.0);
+    if raw.is_finite() {
+        raw.clamp(0.0, 50.0)
+    } else {
+        0.0
     }
-    o.raw(",\"shared\":").int(c.shared as i64);
-    o.raw(",\"library_peaks\":").int(peaks as i64);
-    o.raw(",\"explained\":").rounded(&c.explained, 4);
-    if let Some(m) = &c.matched {
-        ev::write(o, m);
+}
+
+/// Populates `delta_formula` and `delta_formula_err_mda` on surviving `modified_cosine` analogue hits.
+fn annotate_deltas(job: &MatchJob, alg: &str, cands: &mut [Cand]) {
+    let tol = delta_tol_mda(job);
+    if alg != "modified_cosine" || tol <= 0.0 {
+        return;
     }
-    o.raw(",\"mass_ppm\":").num(round(c.mass_ppm, 3));
-    o.raw(",\"precursor_delta\":").num(round(c.delta, 4));
-    if let Some(d) = rt_delta {
-        o.raw(",\"rt_delta_min\":").num(round(d, 3));
-    }
-    o.raw(",\"source\":\"library\",\"algorithm\":").str(alg);
-    // only the best target of the query carries a q-value (the score the decoys were counted on)
-    if let Some(f) = fdr {
-        if f.best.index.is_some() && quantize(c.score) == f.best.target {
-            o.raw(",\"decoy_q\":").num(r(f.fdr.q_value as f64));
-            o.raw(",\"decoy_targets_ge\":")
-                .int(f.fdr.n_target_ge as i64);
-            o.raw(",\"decoy_ge\":").int(f.fdr.n_decoy_ge as i64);
-            o.raw(",\"best_decoy\":").num(r(f.best.decoy as f64));
-        } else {
-            o.raw(",\"decoy_q\":null");
+    let min_shift = num(job, "analog_min_shift_da").max(0.0);
+    for h in cands {
+        if h.delta != 0.0 && h.delta.abs() >= min_shift {
+            h.delta_formula = delta::annotate_delta(h.delta, tol);
         }
     }
-    o.raw("}");
-    Ok(())
 }
 
 /// Whether the parameter `name` of the job has a value that `is` accepts.
@@ -461,12 +437,13 @@ pub fn match_text(job: &MatchJob, query: Named, library: Named) -> Result<String
             c.retain(|h| lib.meta(h.index).is_ok_and(|m| !is_decoy(&m.accession)));
         }
         by_score(&mut c, top);
+        annotate_deltas(job, &alg, &mut c);
         for h in &c {
             if !first {
                 o.raw(",");
             }
             first = false;
-            write_cand(
+            json::write_cand(
                 &mut o,
                 &lib,
                 &qid,

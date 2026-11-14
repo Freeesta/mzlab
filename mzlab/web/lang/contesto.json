@@ -1256,5 +1256,15 @@
   "draw.sub.query.whole": "Disegno, ricerca per sottostruttura (scheda e menu del tasto destro) con valori inseriti: {n}",
   "draw.sub.ctx.sel": "Disegno, ricerca per sottostruttura (scheda e menu del tasto destro)",
   "draw.sub.ctx.whole": "Disegno, ricerca per sottostruttura (scheda e menu del tasto destro)",
-  "draw.sub.ctx.title": "Disegno, ricerca per sottostruttura (scheda e menu del tasto destro)"
+  "draw.sub.ctx.title": "Disegno, ricerca per sottostruttura (scheda e menu del tasto destro)",
+  "bn.idn.row.ok": "Tooltip di una riga-libreria attiva; {name} = nome della libreria, {n} = numero di spettri.",
+  "bn.idn.row.pol": "Tooltip di una riga-libreria spenta per polarità diversa; {name} = nome, {n} = numero di spettri.",
+  "bn.idn.row.lvl": "Tooltip di una riga-libreria spenta perché di livello MSn mentre lo spettro è MS2; {name} = nome, {n} = numero di spettri.",
+  "bn.idn.row.noSpec": "Tooltip di una riga-libreria disattivata perché nessuno spettro MS2 è scelto; {name} = nome, {n} = numero di spettri.",
+  "bn.idn.row.userOn": "Tooltip di una riga-libreria spuntata dall'utente; {name} = nome, {n} = numero di spettri.",
+  "bn.idn.row.userOff": "Tooltip di una riga-libreria deselezionata dall'utente; {name} = nome, {n} = numero di spettri.",
+  "bn.idn.loadedN": "Primo pezzo del messaggio dopo il caricamento di file o cartella; {n} = librerie caricate.",
+  "bn.idn.ignN": "Pulsante che apre l'elenco dei file lasciati fuori; {m} = quanti file non sono stati letti.",
+  "bn.idn.ign.partD": "Motivo, per un file letto in parte; {p} = spettri senza precursore, {k} = senza picchi, {b} = danneggiati.",
+  "bn.idn.ign.more": "Ultima voce di un elenco troncato a 200 nomi; {n} = nomi non mostrati."
 }

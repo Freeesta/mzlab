@@ -15,7 +15,6 @@
 - Cache: cargo (`registry`, `git`, `target`), `wasm-bindgen`, browser Playwright (salvato solo su main) e pip, con chiave su `Cargo.lock` + `rust-toolchain.toml` (Playwright: `pyproject.toml`) e `restore-keys` sul prefisso: un `Cargo.lock` nuovo non parte da zero.
   `build_site.py` non scarica nulla (`--pyodide-dir`, `--no-pyodide`: accettati senza effetto).
   Le librerie spettrali MassBank e l'indice dei sospetti mzFinder (`genera_sospetti.py`) sono salvati in cache in `site/static/librerie` e `site/static/mzfinder/sospetti`.
-- **Proposta di accelerazione**: `docs/studi/CI_VELOCE.md`.
 - **e2e in parallelo**: `verifica.py` lancia nello stesso gruppo (`--paralleli`, predefinito CPU - 1, al massimo 6) gli e2e; quelli con `sito` in `NEEDS` girano solo con `--solo` (nel giro `sito-e2e`), non nella `completa` della notte; ogni test prende una porta libera (`free_port()`) e, se usa `Run`, la sua cartella di lavoro; i file che più test copiano in `site/static` passano da `copia()`/`scrivi()` di `tests_e2e/lib.py` (scrivono solo se cambiano, con rinomina atomica).
   I tre più lenti (`LENTI` in `verifica.py`) partono per primi. Un test nuovo non usa porte fisse né scrive in `site/` senza `copy_file()`.
   `sito-e2e` parte con i `sito-wasm-*`: installa, costruisce il sito e le build native `--release` dei due e2e lenti, poi li attende (`tools/ci_attendi_job.py`) e scarica gli artifact.
@@ -83,5 +82,5 @@ Percorso critico: `python3 tools/ci_metrics.py percorso [--da AAAA-MM-GGTHH:MM]`
 La causa di un job rosso è `aggregato` (`rust-ok`, rosso solo perché un altro job lo è), `lint`, `test`, `soglia`, `timeout` (annullato dopo ≥240 s dentro un run non annullato, es. npx fermo), `annullato` (sostituito da un push) o `altro`; la riga `pr` unita ha `commit_n`. Prova: `tests/test_ci_metrics.py`. Moduli: `tools/ci_metrics.py`, `tools/ci_metrics_data.py`.
 Unione di una PR (sola lettura, per il Coordinatore): `python3 tools/coo_merge.py PR SHA` verifica che la testa sia SHA, che `test` e `rust` siano verdi negli eventi di `stat-ci` (rust assente = saltato), fa il merge su `origin/main` in un worktree temporaneo con `controlla.py` e `indice.py --controlla`, segnala i percorsi a rischio (`Cargo.*`, workflow, `*.wasm`, CSP, desktop) e stampa `{pr, sha, verde, combine, rischi, unire}`. Prova: `tests/test_coo_unisci.py`.
 
-## Proposte di accelerazione ancora aperte (dettagli in `docs/studi/CI_FANOUT.md`)
+## Proposte di accelerazione ancora aperte
 - `changes` con `fetch-depth: 1` (−8/−15 s) e riequilibrio di `rust-misc-a/b` (−20 s). Rimasto fuori: la build unica a monte e la divisione di `rust-core`.
