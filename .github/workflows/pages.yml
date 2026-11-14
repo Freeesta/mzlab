@@ -83,10 +83,10 @@ jobs:
           mkdir -p site/static
           tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
-          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 2174976 engine @motore
+          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm "$(python3 tools/moduli.py --tetto motore)" engine @motore
           tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
-          tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries @motore
+          tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm "$(python3 tools/moduli.py --tetto librerie)" libraries @motore
           # the readers (8 families, own manifest) build here, not in part b of build_feat_wasm.sh: it evens out the three jobs
           tools/build_lettori_wasm.sh site/static
       - name: Record the tree of the cache
