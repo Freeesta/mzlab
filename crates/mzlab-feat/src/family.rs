@@ -59,7 +59,6 @@ pub struct FamParams {
     pub orient: Orient,
 }
 
-
 impl Default for FamParams {
     fn default() -> Self {
         FamParams {
