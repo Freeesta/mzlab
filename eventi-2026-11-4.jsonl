@@ -27670,3 +27670,4 @@
 {"v":1,"ts_utc":"2026-11-14T16:08:10Z","tipo":"job","k":"132504754499","workflow":"rust","job":"rust-misc-b","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"3730f148eb5baef21ff7e66b5802ccaa799e997d","run_id":43613905807,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-14T16:08:54Z","tipo":"carico","k":"2026-11-14T16:0","job_in_coda":6,"job_in_corso":40}
 {"v":1,"ts_utc":"2026-11-14T16:10:59Z","tipo":"coda","k":"2026-11-14T16:10:59Z","aperte":5,"indietro":2,"sporche":3,"verdi_in_attesa":0,"piu_vecchia_aperta_s":63665,"piu_vecchia_verde_s":null}
+{"v":1,"ts_utc":"2026-11-14T16:11:14Z","tipo":"coda","k":"2026-11-14T16:11:14Z","aperte":5,"indietro":2,"sporche":3,"verdi_in_attesa":0,"piu_vecchia_aperta_s":63680,"piu_vecchia_verde_s":null}
