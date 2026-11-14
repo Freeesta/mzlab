@@ -11,7 +11,7 @@ use mzlab_feat::nature::{estimate, of_indexes, polarity_estimate};
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::steps::recipe_map;
 
-use crate::run::preview;
+use super::run::preview;
 
 /// The members of the preview that are measurements; the histograms and the example traces are drawings for the panel.
 const KEPT: &[&str] = &[

@@ -43,6 +43,10 @@ pub mod progress_js;
 // the plain modules live in `mzlab-ops`; re-exported under their old paths
 pub use mzlab_ops::run::feat::{run, run_evid};
 #[cfg(feature = "detect")]
+pub use mzlab_ops::run::feat::run_estimate;
+#[cfg(feature = "proofs")]
+pub use mzlab_ops::run::feat::state;
+#[cfg(feature = "detect")]
 mod run_meta_js;
 pub mod spill_js; pub mod series_js;
 #[cfg(any(feature = "flow_ms2", feature = "flow_formula"))]
@@ -51,11 +55,7 @@ pub mod run_ms2;
 pub mod run_tab;
 #[cfg(feature = "flow_stat")]
 pub mod run_stat;
-#[cfg(feature = "detect")]
-pub mod run_estimate;
 pub mod run_tp; pub mod estimate;
-#[cfg(feature = "proofs")]
-pub mod state;
 #[cfg(feature = "untargeted")]
 pub mod untargeted;
 

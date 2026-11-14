@@ -7,7 +7,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_feat::hypo::{Dir, Hypothesis, Registry};
 use mzlab_feat::target::{Cell, TargetResult, TargetRow};
 
-use crate::run::HypoRun;
+use super::run::HypoRun;
 
 const MAGIC: &[u8; 8] = b"MZHYPO02";
 
@@ -189,7 +189,11 @@ pub fn load(bytes: &[u8]) -> Result<HypoRun> {
     let n = g.u32()? as usize;
     let rules_src = g.take(n)?.to_vec();
     let profile = g.str()?;
-    let parent = if g.0.is_empty() { String::new() } else { g.str()? };
+    let parent = if g.0.is_empty() {
+        String::new()
+    } else {
+        g.str()?
+    };
     Ok(HypoRun {
         rules_src,
         parent,
