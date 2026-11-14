@@ -52,6 +52,8 @@ pub mod flow_level;
 pub mod flow_ms2;
 #[cfg(feature = "attributio")]
 pub mod flow_regulatory;
+#[cfg(all(feature = "attributio", any(feature = "record", feature = "crippen")))]
+pub mod flow_rtpredict;
 #[cfg(feature = "attributio")]
 pub mod normative;
 pub mod flow_screen_suspects;
