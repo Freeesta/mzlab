@@ -24,6 +24,7 @@ mod channels;
 pub mod chem;
 pub mod classes;
 pub mod deconvolve;
+pub mod detect_route;
 pub mod dia;
 pub mod drift;
 pub mod evid;
@@ -134,6 +135,7 @@ mod trace_text;
 #[cfg(feature = "untargeted")]
 pub mod untargeted;
 pub mod uv_bands;
+pub mod uv_text;
 pub mod view;
 pub mod view_table;
 pub mod weakfile;

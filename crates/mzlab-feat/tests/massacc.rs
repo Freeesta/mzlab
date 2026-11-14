@@ -226,7 +226,7 @@ fn table_of(true_mz: &[f64], seen_ppm: f64) -> Vec<u8> {
         inputs: vec![("a.mzML".into(), String::new())],
         ..Origin::default()
     };
-    write_table(&t, &Default::default(), &o)
+    write_table(&t, &mzlab_feat::recipe::Recipe::default(), &o)
 }
 
 #[test]

@@ -1,9 +1,10 @@
 """Spectral study (docs/agenti/studio-spettri.md): runs the `studio_spettri` example of mzlab-lib in release mode for 3 seeds per scenario and
 prints one `MISURA studio_<scenario>: ...` line per arm (mean over the seeds, min-max in brackets for Recall@1 and AUPRC@FDR<=1 %). The arm
 set is `base` (the baselines), `null` (arm A: the decoy kinds and the +1-corrected q, `MISURA studio_null_<scenario>`), `idf` (arm B:
-coincidence p-value and information weights, `MISURA studio_idf_<scenario>`) or `subf` (arm C: sub-formula filter and NNLS, `studio_subf_*`).
+coincidence p-value and information weights, `MISURA studio_idf_<scenario>`), `subf` (arm C: sub-formula filter and NNLS, `studio_subf_*`) or
+`shift` (arm D: analogues with two modifications, `studio_shift_*`).
 
-    python3 tools/studio_spettri.py [--bracci base|null|idf|subf] [--scenari e0,e1,...] [--n-lib 20000] [--n-query 2000] [--semi 1,2,3] [--json OUT]
+    python3 tools/studio_spettri.py [--bracci base|null|idf|subf|shift] [--scenari e0,e1,...] [--n-lib 20000] [--n-query 2000] [--semi 1,2,3] [--json OUT]
 """
 import argparse
 import json
@@ -13,7 +14,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCENARI = ["e0", "e1", "e2", "e3", "e4", "e5", "e6"]
-METRICHE = ["recall1", "mrr", "pauprc", "ece", "fdp_q01", "recall_q01", "gate", "hit", "score", "q_true", "q_trap", "q_auc", "top_changed"]
+METRICHE = ["recall1", "mrr", "pauprc", "ece", "fdp_q01", "recall_q01", "gate", "hit", "score", "q_true", "q_trap", "q_auc", "top_changed", "hit_q01",
+            "recall1_s90", "hit_s90", "delta_wrong", "index_keys", "index_peaks"]
 
 
 def esegui(scenario, n_lib, n_query, seme, bracci):
@@ -46,15 +48,15 @@ def riga(nome, arm, righe):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    p.add_argument("--bracci", default="base", choices=["base", "null", "idf", "subf"])
-    p.add_argument("--scenari", default=None, help="default: all for base, e6,e1,e3 for null, e1,e2,e0 for idf, e3,e0 for subf")
+    p.add_argument("--bracci", default="base", choices=["base", "null", "idf", "subf", "shift"])
+    p.add_argument("--scenari", default=None, help="default: all for base, e6,e1,e3 for null, e1,e2,e0 for idf, e3,e0 for subf, e5,e0 for shift")
     p.add_argument("--n-lib", type=int, default=20000)
     p.add_argument("--n-query", type=int, default=2000)
     p.add_argument("--semi", default="1,2,3")
     p.add_argument("--json", help="also writes every JSON line of the example to this file")
     a = p.parse_args()
     tutte = []
-    scenari = a.scenari or {"base": ",".join(SCENARI), "null": "e6,e1,e3", "idf": "e1,e2,e0", "subf": "e3,e0"}[a.bracci]
+    scenari = a.scenari or {"base": ",".join(SCENARI), "null": "e6,e1,e3", "idf": "e1,e2,e0", "subf": "e3,e0", "shift": "e5,e0"}[a.bracci]
     for sc in scenari.split(","):
         per_arm = {}
         for seme in [int(s) for s in a.semi.split(",")]:
