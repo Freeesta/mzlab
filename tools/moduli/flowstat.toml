@@ -6,4 +6,5 @@ chiavi = { flowstat = 9 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 512000
+misura = 334885
 nota = "table.stats, table.pca, table.kmd of the Flow; standard cap"

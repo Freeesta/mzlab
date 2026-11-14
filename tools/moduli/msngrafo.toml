@@ -4,4 +4,5 @@ chiavi = { msngrafo = 16 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 790528
+misura = 715249
 nota = "zlib-rs +30 KB, mzlab-picchi at O3 +1.1 KB; fragmentation graph of an MSn infusion (msngrafo/1), loaded on the first request of the graph"

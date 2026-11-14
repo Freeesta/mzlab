@@ -4,4 +4,5 @@ chiavi = { normative = 21 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 512000
+misura = 224120
 nota = "import of an official regulatory file into a private .mzsus; standard cap"

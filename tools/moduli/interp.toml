@@ -6,4 +6,5 @@ chiavi = { interp = 10 }
 wasm_opt = "@motore"
 parte = "b"
 tetto = 623200
+misura = 581584
 nota = "+10 % over the 566463 measured with tp.review, rounded up to 100 B; interp/1 with the MSn tree of the infusion"
