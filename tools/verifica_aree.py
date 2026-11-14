@@ -10,7 +10,7 @@ E2E = ROOT / "tests_e2e"
 # --cambiati: which e2e cover which files. Each browser test declares its own areas in a header line `# covers: <prefix>, <prefix>` of
 # tests_e2e/e2e*.py (a prefix is a file, a folder or a name stem); a new test edits only its own file. A changed file that matches no
 # prefix (the core: explore.js, index.html, app.py, ...) means "all of them". Documents and the NO_E2E prefixes: no e2e.
-NO_E2E = ("tools/build_site.py", "tools/controlla_i18n.py", "tools/genera_", "tools/metriche", "tools/prova_hr.py", "tests/")
+NO_E2E = ("tools/build_site.py", "tools/controlla_i18n.py", "tools/genera_", "tools/metriche", "tools/prova_hr.py", "tests/", "docs/pr-img/")
 COVERS = re.compile(r"(?:^|\s)# covers: *(.+?) *$", re.M)
 
 
