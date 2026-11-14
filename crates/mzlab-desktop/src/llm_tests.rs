@@ -67,6 +67,46 @@ fn send_of_a_ready_request_needs_its_provider_and_a_well_formed_request() {
     assert!(bad(json!({"provider": "anthropic", "request": "not json"})).is_some());
 }
 
+#[test]
+fn a_ready_request_for_another_origin_never_leaves_with_the_key() {
+    let st = State::default();
+    let d = tempfile::tempdir().unwrap();
+    st.store.lock().unwrap().set_dir(d.path().to_path_buf());
+    st.op_llm(
+        "llm/key/set",
+        &json!({"provider": "anthropic", "key": "sk-test"}),
+    )
+    .unwrap();
+    let send = |url: &str| {
+        let r = json!({"url": url, "headers": [], "body": "{}", "auth": {"header": "x-api-key", "prefix": ""}});
+        st.op_llm(
+            "llm/send",
+            &json!({"provider": "anthropic", "request": r.to_string()}),
+        )
+        .err()
+        .map(|e| {
+            (
+                e.key.to_string(),
+                e.params
+                    .iter()
+                    .find(|(k, _)| *k == "reason")
+                    .map(|(_, v)| v.clone()),
+            )
+        })
+    };
+    for u in [
+        "https://evil.org/v1/messages",
+        "https://api.anthropic.com@evil.org/",
+        "https://api.anthropic.com.evil.org/",
+    ] {
+        assert_eq!(
+            send(u),
+            Some(("err.llm.network".into(), Some("url".into()))),
+            "{u}"
+        );
+    }
+}
+
 fn root(rel: &str) -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../..")

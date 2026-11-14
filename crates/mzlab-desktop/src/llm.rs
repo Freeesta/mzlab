@@ -62,6 +62,10 @@ impl State {
                         (prov, prompted, req)
                     }
                 };
+                // the key only goes where the provider lives: a request the page hands over is checked against the provider's own origin
+                if !demo::url_belongs(&prov, &req.url, s("proxy_host")) {
+                    return Err(err("err.llm.network", "reason", "url"));
+                }
                 // the demo provider: the host of `llm/proxy-host.js` and the session of the panel, as in the site (`demo_send` of the .wasm); the owner
                 // passphrase is the stored «key» of the demo, read only here (the page never holds it)
                 let key = read_keys(&self.keys_path()?).remove(&prov.id);
