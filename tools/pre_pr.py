@@ -6,7 +6,7 @@
     python3 tools/pre_pr.py --senza-e2e  # skip `verifica.py --cambiati` (the e2e of the changed files)
     python3 tools/pre_pr.py --veloce     # only the cheap checks (well under 2 minutes, never clippy or e2e): adds the CSP hash and prints which e2e would run
 
-When the diff against origin/main touches only documents (the list of tools/ci_solo_doc.py) it runs just code map, size limits and and prints «solo documenti».
+When the diff against origin/main touches only documents (the list of tools/ci_solo_doc.py) it runs just code map, size limits and prints «solo documenti».
 Steps: code map, size limits, i18n, JS syntax (only when `mzlab/web/` differs from origin/main), generated globals, tsc, Rust format, clippy and machete (only when the Rust paths of the CI differ from origin/main), e2e of the changed files.
 Every step prints its name before it starts, so a long one is never silent. Exit 0 = green; with --veloce (also the cloud default) the e2e and clippy are not run and the output says the CI will run them. With --completo, e2e skipped for lack of a browser give exit 2.
 Merge `origin/main` first (`git merge origin/main`): the checks compare with the files as the merge leaves them.
