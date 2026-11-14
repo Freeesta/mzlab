@@ -1,4 +1,8 @@
 {
+  "err.flow.quant.curveRow": "Messaggio d'errore del motore; {detail} = riga e dettaglio tecnico.",
+  "err.flow.quant.curves": "Messaggio d'errore del motore; {detail} = dettaglio tecnico.",
+  "err.flow.quant.duplicate": "Messaggio d'errore del motore; {name} = nome della curva.",
+  "err.flow.quant.kind": "Messaggio d'errore del motore; {kind} = tipo di calibrazione scritto nel file.",
   "err.flow.rtpredict.standards": "Messaggio d'errore del motore; {n} = standard leggibili, {min} = minimo richiesto.",
   "err.flow.param.axis": "Errore del motore di Flow: una tolleranza di m/z è scritta nell'unità dell'altro asse. {param} = nome del parametro, {axis} = asse del file (Da = risoluzione unitaria, ppm = alta risoluzione).",
   "err.flow.align.polarity": "Errore del motore di Flow: l'allineamento riceve file di polarità diverse. {positive}, {negative} = nomi dei file positivi e negativi, separati da virgole.",

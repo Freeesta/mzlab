@@ -1,4 +1,8 @@
 I18N.add("it", {
+  "err.flow.quant.curveRow": "Una riga del file delle curve di calibrazione non si legge ({detail}).",
+  "err.flow.quant.curves": "Il file delle curve di calibrazione non si legge ({detail}).",
+  "err.flow.quant.duplicate": "La curva di calibrazione {name} compare più volte nel file delle curve.",
+  "err.flow.quant.kind": "Il tipo di calibrazione {kind} non è tra quelli che il passo conosce.",
   "err.flow.rtpredict.candidates": "Il file dei candidati non è una lista candidates/1 valida.",
   "err.flow.rtpredict.gradient": "Il gradiente deve avere almeno due punti «minuti:%B» separati da «;», con i minuti crescenti.",
   "err.flow.rtpredict.parent": "Lo SMILES del composto di partenza non si legge.",
@@ -78,5 +82,10 @@ I18N.add("it", {
   "err.flow.worker": "Il calcolo si è fermato prima di finire: riprova.",
   "warn.flow.formula.ion": "Lo ione scritto qui ha una polarità diversa da quella dei dati.",
   "warn.flow.formula.subformulas": "Questo ione ha più sotto-formule di max_subformulas, quindi nessun frammento è stato provato: alza max_subformulas o indica meno elementi.",
-  "warn.flow.group.corrFiles": "La correlazione tra le righe richiede almeno tanti file quanti min_corr_samples (3 se non lo cambi): con meno file non è stata calcolata, quindi non ci sono archi di correlazione. Isotopi e specie ioniche restano."
+  "warn.flow.group.corrFiles": "La correlazione tra le righe richiede almeno tanti file quanti min_corr_samples (3 se non lo cambi): con meno file non è stata calcolata, quindi non ci sono archi di correlazione. Isotopi e specie ioniche restano.",
+  "warn.flow.quant.negative": "Alcune concentrazioni sono risultate negative: sono mantenute e segnalate.",
+  "warn.flow.quant.noRow": "Una curva di calibrazione non ha una riga corrispondente nella tabella: non è stata applicata.",
+  "warn.flow.quant.range": "Alcune concentrazioni cadono fuori dall'intervallo della loro curva: sono segnalate.",
+  "warn.flow.quant.sharedRow": "Due curve corrispondono alla stessa riga della tabella: sono state applicate entrambe, controlla m/z e tempo di ritenzione.",
+  "warn.flow.quant.unlisted": "Alcuni campioni non sono nella tabella dei campioni e sono stati esclusi dalla quantificazione."
 });
