@@ -11,8 +11,11 @@ fn run(a: &[&str]) -> crate::Outcome {
     execute(&a.iter().map(|s| s.to_string()).collect::<Vec<_>>())
 }
 
+/// One file per call: the tests run in parallel, and a shared file could be read while another test rewrites it.
 fn tables_file() -> ((), String) {
-    let p = std::env::temp_dir().join(format!("mzlab_match_mz_{}.json", std::process::id()));
+    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let p = std::env::temp_dir().join(format!("mzlab_match_mz_{}_{n}.json", std::process::id()));
     std::fs::write(&p, TABLES).unwrap();
     ((), p.to_str().unwrap().to_string())
 }

@@ -16,6 +16,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests_e2e"))
 from lib import MZ  # noqa: E402
 from dati_percorsi import percorso  # noqa: E402
+sys.path.insert(0, str(ROOT / "tools"))
+from md_sezione import replace_section  # noqa: E402
 
 MZS = [200, 250, 300, 364, 400]
 GETB = """async u => { const t = performance.now(); const r = await fetch(u); if (!r.ok) throw new Error(u + " " + r.status); await r.arrayBuffer(); return performance.now() - t; }"""
@@ -277,9 +279,7 @@ def main() -> None:
             md = ROOT / "docs" / "agenti" / "misure.md"
             commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
             sec = [f"## Librerie spettrali (`python3 tools/bench.py --librerie{' --gb' if a.gb else ''} --scrivi`, Chromium Linux, {time.strftime('%Y-%m-%d')}, commit {commit})"] + lines
-            txt = md.read_text(encoding="utf-8")
-            txt = txt.split("\n## Librerie spettrali")[0].rstrip("\n") + "\n\n" + "\n".join(sec) + "\n"
-            md.write_text(txt, encoding="utf-8")
+            md.write_text(replace_section(md.read_text(encoding="utf-8"), "## Librerie spettrali", sec), encoding="utf-8")
         return
     names = sorted(p for p in Path(MZ).glob("*FullMass*.mzML"))[:a.files]
     if not names:

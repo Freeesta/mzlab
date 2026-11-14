@@ -207,9 +207,10 @@ fn isotope_params() -> Vec<Param> {
 /// How the pieces of a trace are joined and where the area of a row comes from; the defaults give the bytes of the files made before them.
 fn trace_choices() -> Vec<Param> {
     vec![
-        Param::choice("area_from", "Area from", &["channel", "window"])
+        Param::choice("area_from", "Area from", &["channel", "window", "xic"])
             .default_str("channel")
             .doc("Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area.")
+            .tip("Window sums the quality trace over the row; xic integrates it by trapezoid on the real retention times.")
             .advanced(),
         Param::choice("stitch", "Stitch", &["strict", "wide"])
             .default_str("strict")
