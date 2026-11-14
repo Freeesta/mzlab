@@ -1,0 +1,6 @@
+uscita = "wasm-feat/finder-lr"
+pacchetto = "mzlab-finder-lr-wasm"
+wasm_opt = "@motore"
+parte = "b"
+tetto = 892928
+nota = "zlib-rs +30 KB, mzlab-picchi at O3 +3.6 KB; structure graph for the supposed tree and MS2 matching; measured 717874 (+3 %)"

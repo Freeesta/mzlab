@@ -1,0 +1,7 @@
+uscita = "wasm-lettori/waters"
+pacchetto = "mzlab-lettori-wasm"
+feature = "waters"
+wasm_opt = "@estesi"
+parte = "lettori"
+tetto = 380928
+nota = "zlib-rs +30 KB, measured rounded to 256 B"

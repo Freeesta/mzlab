@@ -1,0 +1,7 @@
+uscita = "wasm-lettori/bruker"
+pacchetto = "mzlab-lettori-wasm"
+feature = "bruker"
+wasm_opt = "@estesi"
+parte = "lettori"
+tetto = 532480
+nota = "zlib-rs +30 KB; picchi at O3; rounded to 256 B"

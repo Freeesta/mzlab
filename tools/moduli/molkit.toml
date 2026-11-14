@@ -1,0 +1,6 @@
+uscita = "wasm-feat/molkit"
+pacchetto = "mzlab-mol-wasm"
+wasm_opt = "@motore"
+parte = "a"
+tetto = 512000
+nota = "molecule kit of Draw (mol/1 check/1); standard cap"

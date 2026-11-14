@@ -1,0 +1,6 @@
+uscita = "wasm-feat/grafo"
+pacchetto = "mzlab-feat-grafo-wasm"
+wasm_opt = "@motore"
+parte = "a"
+tetto = 512000
+nota = "structure graph, loaded only when the user gives a SMILES; standard cap"

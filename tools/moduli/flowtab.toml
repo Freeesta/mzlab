@@ -1,0 +1,7 @@
+uscita = "wasm-feat/flowtab"
+pacchetto = "mzlab-feat-wasm"
+feature = "flow_tab"
+wasm_opt = "@motore"
+parte = "a"
+tetto = 512000
+nota = "table.drift and the table steps that no longer fit `table`; standard cap"

@@ -1,0 +1,7 @@
+uscita = "wasm-lettori/sciex"
+pacchetto = "mzlab-lettori-wasm"
+feature = "sciex"
+wasm_opt = "@estesi"
+parte = "lettori"
+tetto = 483328
+nota = "carries the .wiff device traces (+6 KB); measured plus margin, rounded to 1 KiB"

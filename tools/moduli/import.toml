@@ -1,0 +1,6 @@
+uscita = "wasm-feat/import"
+pacchetto = "mzlab-feat-import-wasm"
+wasm_opt = "@motore"
+parte = "a"
+tetto = 512000
+nota = "readers of mzMine, FBMN/GNPS2 and MS-DIAL tables; standard cap"

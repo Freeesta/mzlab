@@ -1,0 +1,6 @@
+uscita = "wasm-feat/msnregole"
+pacchetto = "mzlab-msnregole-wasm"
+wasm_opt = "@motore"
+parte = "a"
+tetto = 196608
+nota = "SMILES -> expectations of the structure rules; measured 163480 (+3 %)"
