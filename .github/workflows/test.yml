@@ -67,6 +67,8 @@ jobs:
             pytest-wasm-v3-rest-a-${{ runner.os }}-
       - name: Reuse the compiled crates of the cache
         if: steps.solo.outputs.solo != 'true'
+        env:
+          MZLAB_CACHE_JOB: pytest-shard   # the tree record is tied to the job that saved it; this job only restores
         run: python3 tools/ci_cargo_mtime.py restore
       # tools/ci_cargo/cargo: one target folder per feature family, the files hard-linked to target/ where tools/ci_prebuilt.py reads them
       - name: Build
