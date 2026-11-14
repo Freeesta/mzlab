@@ -22407,3 +22407,4 @@
 {"v":1,"ts_utc":"2026-11-14T08:39:32Z","tipo":"cache","k":"132391367624","workflow":"sito-rust","job":"sito-wasm-core","esito_cache":"primary","ripristinate":["binaryen-version_133-Linux","pages-core-Linux-1dde2ef163ee1c44fec4011019e706adede6af037e129be980bb6dafdc9105fc-8f1f04b2a970bab03c2831e12eec360c3a763faa915fc13948ca1dbf41972fef-m1"],"mancate":[],"salvata":null,"mb":202,"pr":3272,"sha":"88df77a9766bae374ef76c4c4231f31a8e64e70d","run_id":43576159339,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-14T09:00:53Z","tipo":"carico","k":"2026-11-14T09:0","job_in_coda":41,"job_in_corso":37}
 {"v":1,"ts_utc":"2026-11-14T09:02:23Z","tipo":"coda","k":"2026-11-14T09:02:23Z","aperte":9,"indietro":5,"sporche":4,"verdi_in_attesa":1,"piu_vecchia_aperta_s":37949,"piu_vecchia_verde_s":1}
+{"v":1,"ts_utc":"2026-11-14T09:01:39Z","azione":"aperta","tipo":"pr","pr":3276,"sha":"65c904c5c5bb3435634b176d591cb624592bad8c"}
