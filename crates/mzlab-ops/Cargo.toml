@@ -16,3 +16,5 @@ table = ["mzlab-feat/interp"]
 # the same names as in `mzlab-feat-wasm`, which turns them on with its own: `detect` = `run_estimate`, `proofs` = `state`
 detect = ["mzlab-feat/untargeted"]
 proofs = []
+# `untargeted` = the pipeline after mzmine 3.9.0 (`run::feat::untargeted`)
+untargeted = ["mzlab-feat/untargeted"]

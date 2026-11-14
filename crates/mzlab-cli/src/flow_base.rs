@@ -115,7 +115,7 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let (recipe, estimates) = recipe(job, run::recipe_for_estimated("", &mut index)?)?;
     let name = r.source_name(input);
     // refused with its numbers before it grows past the working memory of this job, as the page refuses it (`estimate::detect_fits`)
-    mzlab_feat_wasm::estimate::detect_fits(
+    mzlab_ops::run::feat::estimate::detect_fits(
         &mut index,
         &recipe,
         MemBudget::mb(r.budget.job_mb()).cap(),

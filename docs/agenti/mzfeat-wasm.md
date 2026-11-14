@@ -59,9 +59,9 @@ Il ponte WASM della pipeline L1-L9 di `mzlab-feat` (formati e livelli: `mzfeat.m
 - I ponti (`*-wasm`) tengono la colla JS e rieseguono i moduli spostati con i vecchi percorsi: nessun export JS cambia.
 - Layout fisso: `src/lib.rs` dichiara `run`, `op`, `vfs` (gli ultimi due li riempiono altre chat).
 - `run/table/` (`core`, `filterspec`, `pol`, `rows_mgf`; feature `table`) viene da `mzlab-feat-table-wasm`.
-- `run/feat/` (`run` con `run::meta`, `run_evid`, `run_estimate` [`detect`], `state` [`proofs`]) viene da questo crate.
-- Le feature hanno gli stessi nomi del ponte; `mzlab-feat` è senza feature di default, così un `.wasm` non riceve `chem` che non aveva.
-- CLI e desktop importano da `mzlab_ops::run::{table,feat}`; gli export JS dei moduli misti stanno in `run_meta_js.rs` e nei file `*_js.rs`.
+- `run/feat/` viene da questo crate: `run` (con `run::meta`), `run_evid`, `run_tp` (con `dig`), `estimate`, `interp` [`table`], `run_estimate` e `family` e `cache` [`detect`], `state` [`proofs`], `untargeted` [`untargeted`].
+- Le feature (`table`, `detect`, `proofs`, `untargeted`) hanno gli stessi nomi del ponte, che le accende con le sue; `mzlab-feat` è senza feature di default, così un `.wasm` non riceve `chem` che non aveva.
+- CLI e desktop dipendono solo da `mzlab-ops` (non da `mzlab-feat-wasm`) e importano da `mzlab_ops::run::{table,feat}`; gli export JS dei moduli misti stanno nei file `*_js.rs` del ponte (`run_meta_js`, `cache_js`, `family_js`, `estimate_js`, `interp_js`, `run_tp_js`, `run_dig_js`).
 
 ## Il worker (`TP_Mine/files/feat-worker.js`)
 - Un file, due ruoli.

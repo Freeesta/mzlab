@@ -9,7 +9,7 @@ use crate::flow::{read_one, write_made, Exec, FileRunner};
 
 /// `review/1` text of the `.mzfeat` `tp` (with the block `interp`) and the `tpdec/1` file `decisions`.
 pub fn review_text(tp: &[u8], decisions: &[u8]) -> Result<String> {
-    mzlab_feat_wasm::interp::review_text(tp, &String::from_utf8_lossy(decisions))
+    mzlab_ops::run::feat::interp::review_text(tp, &String::from_utf8_lossy(decisions))
 }
 
 pub(crate) const EXECUTORS: &[(&str, Exec)] = &[("tp.review", Exec::File("review", review_job))];

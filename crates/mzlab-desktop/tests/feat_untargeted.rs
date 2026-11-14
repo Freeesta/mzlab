@@ -1,4 +1,4 @@
-//! The routes `feat/untargeted/*` of the app give the same bytes as the steps of the `.wasm` `untargeted` (`mzlab_feat_wasm::untargeted`) run directly on the same
+//! The routes `feat/untargeted/*` of the app give the same bytes as the steps of the `.wasm` `untargeted` (`mzlab_ops::run::feat::untargeted`) run directly on the same
 //! `.mzidx`: the `.mzfeatf` of every file and the `.mzfeat` of the series, on the high-resolution examples.
 use std::fs::File;
 use std::path::Path;
@@ -8,7 +8,7 @@ use mzlab_core::idxread::Index;
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
 use mzlab_feat::untargeted::pipeline::UntParams;
-use mzlab_feat_wasm::untargeted;
+use mzlab_ops::run::feat::untargeted;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 

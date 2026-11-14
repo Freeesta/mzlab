@@ -13,10 +13,11 @@ use mzlab_feat::series::source_sha256;
 use mzlab_feat::slabs::Stored;
 use mzlab_feat::sortc::SortC;
 use mzlab_feat::store::{read_file, write_file_to, write_table_to, Origin};
+use mzlab_feat::untargeted::Feature;
+
 use mzlab_feat::untargeted::pipeline::{
     from_file_features, run_file, run_series, to_file_features, UntParams,
 };
-use mzlab_feat::untargeted::Feature;
 
 /// Bytes a feature costs while the lists of the series are held (the list, the rows and the cells).
 const FEATURE_BYTES: usize = 160;
@@ -49,7 +50,7 @@ pub fn file_key<R: ReadAt>(params: &str, index: &Index<R>) -> Result<String> {
         p.resolve
     );
     let h = mzlab_feat::recipe::fingerprint(&text);
-    Ok(crate::cache::key_of(
+    Ok(super::cache::key_of(
         &source_sha256(index),
         &format!("u{}", &h[..16]),
     ))

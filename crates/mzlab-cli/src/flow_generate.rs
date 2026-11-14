@@ -10,7 +10,7 @@ use mzlab_core::json::Value;
 use mzlab_core::step::DataType;
 use mzlab_feat::chem::graph::analyse_json;
 use mzlab_feat::hypo::HypoParams;
-use mzlab_feat_wasm::run_tp;
+use mzlab_ops::run::feat::run_tp;
 
 const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_2.json");
 

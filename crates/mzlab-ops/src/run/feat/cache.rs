@@ -1,15 +1,11 @@
 //! The cache of the detections: the name of the stored `.mzfeatf` of a file (`<sha256 of the .mzidx>.<fingerprint of what detection depends on>`) and the check of
 //! a stored file against it. `lib.rs` exports `file_key` and `check_stored`; `feat-run.js` keeps the files in OPFS under that name.
 
-use js_sys::Function;
+use super::run::recipe_for;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Value;
 use mzlab_feat::series::source_sha256;
-use wasm_bindgen::prelude::*;
-
-use crate::run::recipe_for;
-use crate::{js_err, open_one};
 
 pub(crate) fn key_of(sha: &str, hash: &str) -> String {
     if sha.is_empty() {
@@ -51,36 +47,4 @@ pub fn check_stored(bytes: &[u8], key: &str) -> Result<String> {
         .and_then(Value::str)
         .unwrap_or("")
         .to_string())
-}
-
-#[cfg(feature = "detect")]
-/// `"<sha256>.<fingerprint>"` of a `.mzidx` (`size` bytes read with `read`) for `recipe`, or `""` without a SHA-256 (no cache). Reads only the head of the index.
-#[wasm_bindgen(js_name = file_key)]
-pub fn file_key_of(
-    read: Function,
-    size: f64,
-    _name: &str,
-    recipe: &str,
-) -> std::result::Result<String, JsValue> {
-    let mut ix = open_one(&read, 0, size).map_err(js_err)?;
-    file_key(recipe, &mut ix).map_err(js_err)
-}
-
-#[cfg(feature = "untargeted")]
-/// `file_key_of` of the untargeted engine (`params` is its recipe).
-#[wasm_bindgen]
-pub fn file_key_untargeted(
-    read: Function,
-    size: f64,
-    _name: &str,
-    params: &str,
-) -> std::result::Result<String, JsValue> {
-    let ix = open_one(&read, 0, size).map_err(js_err)?;
-    crate::untargeted::file_key(params, &ix).map_err(js_err)
-}
-
-/// Checks the bytes of a cached `.mzfeatf` against its `key` and returns the name of the source in its meta.
-#[wasm_bindgen(js_name = check_stored)]
-pub fn check_stored_js(bytes: &[u8], key: &str) -> std::result::Result<String, JsValue> {
-    check_stored(bytes, key).map_err(js_err)
 }

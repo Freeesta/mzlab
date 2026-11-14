@@ -6,7 +6,7 @@ use mzlab_core::flow::Job;
 use mzlab_core::json::Out;
 use mzlab_core::step::{DataType, Facets, Param, Port, RunsIn, Step};
 use mzlab_feat::legacy::lr::{self, plan::Settings, summary::summary};
-use mzlab_feat_wasm::run_tp;
+use mzlab_ops::run::feat::run_tp;
 
 use crate::flow::{all_inputs, read_one, write_made, FileRunner};
 use crate::flow_base::{open, rebuild, Files};
