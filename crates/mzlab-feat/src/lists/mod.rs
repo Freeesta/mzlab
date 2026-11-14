@@ -14,7 +14,7 @@ pub use route::route;
 
 use mzlab_core::budget::sha256_hex;
 
-use crate::legacy::transf::{Delta, Row};
+use crate::transf_base::{Delta, Row};
 
 pub const SCHEMA: &str = "liste/1";
 /// Most times a transformation may repeat.
@@ -101,7 +101,7 @@ impl Liste {
 /// The transformation list in the text of mzFinder (`name;change[;comment]` per line, `#` comments): the header-less form of the CSV, with the errors of the
 /// Python as plain text.
 pub fn from_legacy_text(text: &str) -> Result<Liste, String> {
-    let rows = crate::legacy::transf::parse(text)?;
+    let rows = crate::transf_base::parse(text)?;
     Ok(Liste::Transformations(
         rows.into_iter()
             .map(|r| Transformation {
