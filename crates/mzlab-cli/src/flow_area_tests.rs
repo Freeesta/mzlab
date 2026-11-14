@@ -59,6 +59,17 @@ fn uneven() -> Vec<f64> {
 /// One centroid MS1 run at `times` (minutes); the ions are Gaussians in time. Points below 50 counts are not written, two flat traces at 1e3
 /// keep every scan non-empty.
 fn mzml(jitter_ppm: f64, times: &[f64]) -> String {
+    mzml_of(&ions(), times, |m, _, _, seed| {
+        m + (rnd(seed) * 2.0 - 1.0) * jitter_ppm * 1e-6 * m
+    })
+}
+
+/// Like `mzml` for `ions`; `place(m/z, apex height, height now, seed)` gives the m/z of the point of an ion in a scan (called for every ion in every scan).
+fn mzml_of(
+    ions: &[(f64, f64, f64)],
+    times: &[f64],
+    mut place: impl FnMut(f64, f64, f64, &mut u64) -> f64,
+) -> String {
     let mut seed = 7u64;
     let mut x = format!(
         r#"<?xml version="1.0" encoding="utf-8"?><mzML xmlns="http://psi.ms.info/ms/mzml"><run id="r"><spectrumList count="{SCANS}">"#
@@ -66,11 +77,11 @@ fn mzml(jitter_ppm: f64, times: &[f64]) -> String {
     for (i, &t) in times.iter().enumerate() {
         let k = t / DT;
         let mut pts: Vec<(f64, f64)> = vec![(120.05, 1e3), (590.05, 1e3)];
-        for (m, h, a) in ions() {
+        for &(m, h, a) in ions {
             let y = h * (-0.5 * ((k - a) / SIGMA).powi(2)).exp();
-            let e = (rnd(&mut seed) * 2.0 - 1.0) * jitter_ppm * 1e-6 * m;
+            let at = place(m, h, y, &mut seed);
             if y >= 50.0 {
-                pts.push((m + e, y));
+                pts.push((at, y));
             }
         }
         pts.sort_by(|a, b| a.0.total_cmp(&b.0));
@@ -98,10 +109,14 @@ fn run_at(tag: &str, set: &[&str], jitter_ppm: f64) -> Vec<(String, Vec<u8>)> {
 }
 
 fn run_on(tag: &str, set: &[&str], jitter_ppm: f64, times: &[f64]) -> Vec<(String, Vec<u8>)> {
+    run_text(tag, set, &mzml(jitter_ppm, times))
+}
+
+fn run_text(tag: &str, set: &[&str], mzml: &str) -> Vec<(String, Vec<u8>)> {
     let dir = std::env::temp_dir().join(format!("mzlab_cli_area_{tag}_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("data")).unwrap();
-    std::fs::write(dir.join("data/a.mzML"), mzml(jitter_ppm, times)).unwrap();
+    std::fs::write(dir.join("data/a.mzML"), mzml).unwrap();
     std::fs::write(dir.join("plan.json"), PLAN).unwrap();
     let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
     let mut args = vec![p(&plan), "--in", p(&data), "--out", p(&out)];
@@ -122,8 +137,11 @@ fn features(files: &[(String, Vec<u8>)]) -> (FileFeatures, String) {
 
 /// |log2(area / area of the Gaussian)| of each ion, from its largest row.
 fn bias(f: &FileFeatures) -> Vec<f64> {
-    ions()
-        .iter()
+    bias_of(f, &ions())
+}
+
+fn bias_of(f: &FileFeatures, ions: &[(f64, f64, f64)]) -> Vec<f64> {
+    ions.iter()
         .map(|&(m, h, _)| {
             let truth = h * SIGMA * (2.0 * std::f64::consts::PI).sqrt() * DT * 60.0;
             let area = (0..f.mz.len())
@@ -157,8 +175,11 @@ fn to_xic(f: &FileFeatures, times: &[f64]) -> Vec<f64> {
 
 /// Rows within 0.01 of the m/z of each ion.
 fn rows_per_ion(f: &FileFeatures) -> Vec<usize> {
-    ions()
-        .iter()
+    rows_of(f, &ions())
+}
+
+fn rows_of(f: &FileFeatures, ions: &[(f64, f64, f64)]) -> Vec<usize> {
+    ions.iter()
         .map(|&(m, _, _)| f.mz.iter().filter(|&&x| (x - m).abs() < 0.01).count())
         .collect()
 }
@@ -248,4 +269,162 @@ fn the_xic_area_can_be_set_from_the_command_line() {
     assert!(meta.contains("area_xic"), "{meta}");
     let b = bias(&f);
     assert!(median(&b) <= 0.025, "{b:?}");
+}
+
+/// The six ions moved onto a border of the 4 ppm channels: of the unshifted grid, or (`half`) of the grid shifted by half a channel.
+fn edge_ions(half: bool) -> Vec<(f64, f64, f64)> {
+    let den = (1.0f64 + 4e-6).ln();
+    ions()
+        .iter()
+        .map(|&(m, h, a)| {
+            let x = (m.ln() / den).floor() + if half { 0.5 } else { 0.0 };
+            ((x * den).exp(), h, a)
+        })
+        .collect()
+}
+
+/// Gaussian noise (Box-Muller) on the m/z of a point: 0.8 ppm plus 2.5 ppm times sqrt(apex height / height now), at most 3 ppm; weak points scatter more.
+fn jitter(m: f64, h: f64, y: f64, seed: &mut u64) -> f64 {
+    let sigma = (0.8 + 2.5 * (h / y).sqrt()).min(3.0);
+    let g = (-2.0 * (1.0 - rnd(seed)).ln()).sqrt() * (2.0 * std::f64::consts::PI * rnd(seed)).cos();
+    m * (1.0 + sigma * 1e-6 * g)
+}
+
+/// What a run on border ions gives: ions lost, median and max |log2(area / true area)| of the others, and the rows of each ion.
+#[derive(Debug, PartialEq)]
+struct Edge {
+    lost: usize,
+    median: f64,
+    max: f64,
+    rows: Vec<usize>,
+}
+
+/// Border ions with the noise `place`, one `area_from` and one `stitch`.
+fn edge_run(
+    half: bool,
+    place: fn(f64, f64, f64, &mut u64) -> f64,
+    area: &str,
+    stitch: &str,
+) -> Edge {
+    let ions = edge_ions(half);
+    let text = mzml_of(&ions, &regular(), place);
+    let set = [
+        format!("det.area_from={area}"),
+        format!("det.stitch={stitch}"),
+    ];
+    let set: Vec<&str> = set.iter().map(String::as_str).collect();
+    let tag = format!("edge{}{area}{stitch}", u8::from(half));
+    let f = features(&run_text(&tag, &set, &text)).0;
+    let rows = rows_of(&f, &ions);
+    let b: Vec<f64> = bias_of(&f, &ions)
+        .into_iter()
+        .zip(&rows)
+        .filter(|(_, n)| **n > 0)
+        .map(|(x, _)| x)
+        .collect();
+    let max = b.iter().fold(0.0, |a, &x| f64::max(a, x));
+    let lost = rows.iter().filter(|&&n| n == 0).count();
+    Edge {
+        lost,
+        median: median(&b),
+        max,
+        rows,
+    }
+}
+
+/// (grid with the ions on its border, area_from, stitch, median, max, rows per ion) as measured.
+type Pin = (bool, &'static str, &'static str, f64, f64, Vec<usize>);
+
+fn pinned_edges() -> Vec<Pin> {
+    let rows = |a: [usize; 6]| a.to_vec();
+    [
+        (
+            false,
+            "channel",
+            "strict",
+            0.826,
+            3.048,
+            rows([1, 1, 1, 2, 3, 2]),
+        ),
+        (
+            false,
+            "channel",
+            "wide",
+            0.723,
+            1.501,
+            rows([1, 2, 1, 2, 3, 2]),
+        ),
+        (
+            false,
+            "window",
+            "strict",
+            0.756,
+            3.048,
+            rows([1, 1, 1, 2, 3, 2]),
+        ),
+        (
+            false,
+            "window",
+            "wide",
+            0.597,
+            1.180,
+            rows([1, 2, 1, 2, 3, 2]),
+        ),
+        (
+            true,
+            "channel",
+            "strict",
+            0.826,
+            3.048,
+            rows([1, 1, 1, 1, 3, 2]),
+        ),
+        (
+            true,
+            "channel",
+            "wide",
+            0.629,
+            1.501,
+            rows([1, 2, 1, 1, 3, 2]),
+        ),
+        (
+            true,
+            "window",
+            "strict",
+            0.756,
+            3.048,
+            rows([1, 1, 1, 1, 3, 2]),
+        ),
+        (
+            true,
+            "window",
+            "wide",
+            0.505,
+            1.180,
+            rows([1, 2, 1, 1, 3, 2]),
+        ),
+    ]
+    .into()
+}
+
+/// MEASURE (no default is changed): ions on a channel border (of either grid) with an m/z noise that grows as the point weakens (`jitter`). Pinned for
+/// `area_from` channel / window x `stitch` strict / wide: ions lost, median and max |log2(area / true)| of the largest row, rows per ion. Without noise the
+/// same ions give 1 row and |log2| <= 0.03 (harness control). See `docs/agenti/mzfeat-prove.md` (MISURA bordo_canale).
+#[test]
+fn ions_on_a_channel_border_lose_area() {
+    let still: fn(f64, f64, f64, &mut u64) -> f64 = |m, _, _, _| m;
+    for half in [false, true] {
+        let c = edge_run(half, still, "window", "strict");
+        assert!(c.max <= 0.03 && c.rows == [1; 6] && c.lost == 0, "{c:?}");
+    }
+    let want = pinned_edges();
+    for (half, area, stitch, median, max, rows) in want {
+        let e = edge_run(half, jitter, area, stitch);
+        let what = format!("half={half} {area} {stitch}: {e:?}");
+        assert_eq!(e.lost, 0, "{what}");
+        assert!(
+            (e.median - median).abs() < 0.01 && (e.max - max).abs() < 0.01,
+            "{what}"
+        );
+        assert_eq!(e.rows, rows, "{what}");
+    }
 }
