@@ -4,7 +4,7 @@
     python3 tools/bench_hr.py [--extra "--merge-similar-functions"] [--reps 7] [--max-slowdown 3]
 
 Builds the `hr` module once (the cargo output is the same for both), runs wasm-bindgen (nodejs target) and tools/wasm_opt.sh twice (`@motore` alone, then
-`@motore` plus --extra), alternates the two builds ABAB in the same process, prints median and spread per path and the ratio, and checks that the SHA-256 of
+`@motore` plus --extra, or the named set when --extra starts with `@`, e.g. `@estesi`), alternates the two builds ABAB in the same process, prints median and spread per path and the ratio, and checks that the SHA-256 of
 every output is the same. Exit 1 when a median is slower than --max-slowdown percent or an output differs. No dependency beyond cargo, wasm-bindgen, node.
 """
 import argparse
@@ -28,7 +28,7 @@ def build_pkg(work, name, extra):
     """The pkg of one variant: raw cargo wasm -> wasm-bindgen (nodejs) -> wasm-opt through the site's script."""
     pkg = work / name
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm")
-    run("tools/wasm_opt.sh", str(pkg / "mzlab_feat_wasm_bg.wasm"), "99999999", "hr", "@motore", *extra.split())
+    run("tools/wasm_opt.sh", str(pkg / "mzlab_feat_wasm_bg.wasm"), "99999999", "hr", *(extra.split() if extra.startswith("@") else ["@motore", *extra.split()]))
     return pkg
 
 
