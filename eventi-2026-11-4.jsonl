@@ -23212,3 +23212,4 @@
 {"v":1,"tipo":"pr","pr":3277,"sha":"12baeeb5d710afc11cae796ccb601dab466626d2","ts_utc":"2026-11-14T09:53:59Z","azione":"unita","aperta_s":2904,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":207,"righe_meno":1,"file_n":3,"file":["crates/mzlab-feat/tests/align_drift.rs","crates/mzlab-feat/tests/tp_series_kinetics.rs","docs/agenti/mzfeat-tp.md"],"aree":{"rust":2,"docs":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":119}
 {"v":1,"ts_utc":"2026-11-14T10:00:06Z","azione":"aperta","tipo":"pr","pr":3287,"sha":"dd4576d89f8b21a82bc311dfee26d433079a2427"}
 {"v":1,"ts_utc":"2026-11-14T10:02:40Z","azione":"aperta","tipo":"pr","pr":3288,"sha":"7137734c781435e33311452101b40972c2d05979"}
+{"v":1,"ts_utc":"2026-11-14T10:35:34Z","azione":"push","titolo":"mzlab-llm test: avoid format! inside format! args (clippy)","merge_main":false,"aree":{"rust":1},"tipo":"pr","pr":3284,"sha":"eded9dba001d9d83fbb028d18f6ca7d376df8c47"}
