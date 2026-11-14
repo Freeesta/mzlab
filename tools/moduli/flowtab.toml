@@ -6,4 +6,5 @@ chiavi = { flowtab = 8 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 512000
+misura = 388686
 nota = "table.drift and the table steps that no longer fit `table`; standard cap"

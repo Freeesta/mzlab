@@ -79,7 +79,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | ruoli dei file, tempi e metadati dei campioni (`campioni/2` e `/3`, `mzlab-core/src/samples/`: proposte dai nomi, modelli di nome, CSV, colonne libere, dati dal file, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |
 | derivati (`.mzidx`, `.mzfeat`, `.mzfeatf`) di formato più nuovo del programma: `error.newerFormat`, sola lettura | `docs/agenti/formato-nuovo.md` |
 | tetti dei .wasm di mzFinder, moduli fusi (gruppo HR e Attributio) | `docs/agenti/wasm-tetti.md` |
-| misure prima/dopo dei .wasm per ogni modifica (byte dopo `wasm-opt`, tetti in vigore) | `docs/agenti/wasm-tetti-misure.md` |
+| misure dei .wasm (campo `misura` di `tools/moduli/*.toml`, riga prima → dopo in PR, cosa costa di più) | `docs/agenti/wasm-tetti-misure.md` |
 | parità sito ↔ app (funzioni e passi del Flow presenti da una parte sola, operazioni del motore assenti nell'app, test di parità mancanti, prossimi passi) | `docs/agenti/parita.md` (formati: `docs/agenti/lettura-nativa.md`) |
 | tabella funzione × faccia (sito, app, CLI) × prova, guardia delle op di `rust-worker.js` senza ramo nell'app (`tests/test_parita_operazioni.py`), determinismo (ordine delle `HashMap`) | `docs/agenti/parita.md` |
 | potenziale di WebAssembly (profili `opt-level`, SIMD128, binaryen, zlib-rs, thread, memory64, browser minimi; misure) | `docs/agenti/wasm-potenziale.md` |

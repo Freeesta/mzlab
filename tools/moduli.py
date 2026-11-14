@@ -1,10 +1,12 @@
 """Data of the site's .wasm modules: one tools/moduli/<name>.toml each (output, cargo package, features, wasm-opt set, build part, cap, note, last measure).
 The only reader of those files: `--elenco <part>` (names, for the shell scripts), `--riga <name>` (how to build one), `--tetto <name>`,
-`--manifest <wasm-feat dir>` (writes its manifest.json from a build), `--controlla [--base <git ref>]`.
+`--manifest <wasm-feat dir>` (writes its manifest.json from a build),
+`--misura <site/static dir>` (writes `misura` = bytes after wasm-opt of every module from a real build; the only writer of that field), `--controlla [--base <git ref>]`.
 Cap rule (docs/agenti/wasm-tetti.md): a cap rises by at most 10 % per new function and never in a workflow; with --base a cap above 1.10 x its base value fails."""
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import sys
 import tomllib
@@ -83,6 +85,28 @@ def manifesto(mod: dict[str, dict], o: Path) -> None:
     (o / "manifest.json").write_text(json.dumps(m, indent=1), encoding="utf-8")
 
 
+def misure(mod: dict[str, dict], static: Path) -> list[str]:
+    """Rewrites `misura = N` in every toml from the built <static>/<uscita>/<package>_bg.wasm; nothing is written if a file is missing or above its cap."""
+    nuovi, err = {}, []
+    for n, r in mod.items():
+        w = static / r["uscita"] / f"{r['pacchetto'].replace('-', '_')}_bg.wasm"
+        if not w.is_file():
+            err.append(f"{n}: {w} not built")
+            continue
+        nuovi[n] = w.stat().st_size
+        if nuovi[n] > r["tetto"]:
+            err.append(f"{n}: measured {nuovi[n]} above the cap {r['tetto']}")
+    if err:
+        return err
+    for n, b in nuovi.items():
+        f = DIR / f"{n}.toml"
+        t = f.read_text(encoding="utf-8")
+        t = re.sub(r"^misura = .*\n", "", t, flags=re.M)
+        t = re.sub(r"^(tetto = .*\n)", rf"\g<1>misura = {b}\n", t, flags=re.M)
+        f.write_text(t, encoding="utf-8")
+    return []
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     g = ap.add_mutually_exclusive_group(required=True)
@@ -90,6 +114,7 @@ def main() -> int:
     g.add_argument("--tetto", metavar="NAME")
     g.add_argument("--riga", metavar="NAME")
     g.add_argument("--manifest", metavar="DIR")
+    g.add_argument("--misura", metavar="DIR")
     g.add_argument("--controlla", action="store_true")
     ap.add_argument("--base", metavar="REF")
     a = ap.parse_args()
@@ -104,6 +129,10 @@ def main() -> int:
         print(mod[n]["tetto"] if a.tetto else riga(mod[n]))
     elif a.manifest:
         manifesto(mod, Path(a.manifest))
+    elif a.misura:
+        err = misure(mod, Path(a.misura))
+        print("\n".join(err) if err else f"{len(mod)} measures written")
+        return 1 if err else 0
     else:
         err = errori(mod)
         if a.base:
