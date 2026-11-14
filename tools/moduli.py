@@ -46,8 +46,8 @@ def errori(mod: dict[str, dict]) -> list[str]:
             err.append(f"{n}: wasm_opt must be one of {OPT}")
         if isinstance(r.get("tetto"), int) and r["tetto"] <= 0:
             err.append(f"{n}: tetto must be positive")
-        if "misura" in r and (not isinstance(r["misura"], int) or r["misura"] > r.get("tetto", 0)):
-            err.append(f"{n}: misura {r['misura']} above the cap")
+        if "misura" in r and (not isinstance(r["misura"], int) or r["misura"] >= r.get("tetto", 0)):
+            err.append(f"{n}: misura {r['misura']} not below the cap")
         if "\n" in str(r.get("nota", "")):
             err.append(f"{n}: nota is one line")
         if r.get("uscita") in uscite:
@@ -57,8 +57,12 @@ def errori(mod: dict[str, dict]) -> list[str]:
 
 
 def cambi(mod: dict[str, dict], base: dict[str, dict]) -> list[str]:
-    """Every changed cap, one line each; a line starting with FAIL is above the allowed 1.10 x base."""
+    """Every changed cap, one line each; a line starting with FAIL is above the allowed 1.10 x base. NEW / REMOVED lines show a module added or dropped (not a failure)."""
     out = []
+    for n, r in mod.items():
+        if n not in base:
+            out.append(f"NEW {n}: cap {r['tetto']} — a new .wasm module is an owner decision")
+    out += [f"REMOVED {n}" for n in base if n not in mod]
     for n, r in mod.items():
         if n in base and r["tetto"] != base[n]["tetto"]:
             b = base[n]["tetto"]
@@ -94,8 +98,8 @@ def misure(mod: dict[str, dict], static: Path) -> list[str]:
             err.append(f"{n}: {w} not built")
             continue
         nuovi[n] = w.stat().st_size
-        if nuovi[n] > r["tetto"]:
-            err.append(f"{n}: measured {nuovi[n]} above the cap {r['tetto']}")
+        if nuovi[n] >= r["tetto"]:   # same rule as tools/wasm_opt.sh: a module equal to its cap fails
+            err.append(f"{n}: measured {nuovi[n]} not below the cap {r['tetto']}")
     if err:
         return err
     for n, b in nuovi.items():
