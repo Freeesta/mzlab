@@ -34,3 +34,12 @@ fn names_are_unique_and_aliases_point_to_a_command() {
         }
     }
 }
+
+/// The block of `docs/agenti/cli.md` between the two marker lines is what `mzlab-cli help-md` prints (`python3 tools/cli_doc.py` rewrites it).
+#[test]
+fn the_command_list_of_the_docs_is_current() {
+    const DOC: &str = include_str!("../../../../docs/agenti/cli.md");
+    let (_, rest) = DOC.split_once("<!--cli-->\n").unwrap();
+    let (block, _) = rest.split_once("<!--/cli-->").unwrap();
+    assert_eq!(block, super::list_md(), "run python3 tools/cli_doc.py");
+}
