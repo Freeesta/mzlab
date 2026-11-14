@@ -21,8 +21,8 @@ flow_tab = []
 # `flow_stat` = `table.stats`, `table.pca`, `table.kmd` of the Flow (`run_stat.rs`): a .wasm of its own, `flowstat`, loaded only by their executor (`flow-web-stat.js`); NOT among the defaults.
 flow_stat = []
 # `detect` carries `mzlab-feat/untargeted` for the algorithm `adap_localmin` of `features.detect` (`untargeted::flow`); only the ADAP route is linked.
-detect = ["mzlab-feat/untargeted"]
-proofs = []
+detect = ["mzlab-feat/untargeted", "mzlab-ops/detect"]
+proofs = ["mzlab-ops/proofs"]
 finder = ["mzlab-feat/chem"]
 finder_msn = ["mzlab-feat/chem"]
 finder_edge = ["mzlab-feat/chem"]
@@ -35,6 +35,7 @@ untargeted = ["mzlab-feat/untargeted"]
 js-sys = "0.3.106"
 mzlab-core = { path = "../mzlab-core" }
 mzlab-feat = { path = "../mzlab-feat", default-features = false }
+mzlab-ops = { path = "../mzlab-ops" }
 wasm-bindgen = "0.2"
 
 [[example]]

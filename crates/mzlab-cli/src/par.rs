@@ -2,7 +2,7 @@
 
 use crate::{build_index, open};
 use mzlab_core::error::Result;
-use mzlab_feat_wasm::run;
+use mzlab_ops::run::feat::run;
 use std::path::PathBuf;
 
 /// `f(0..n)` on up to one thread per core (the order of the results is the order of the indices); in sequence on WASI, which has no threads.

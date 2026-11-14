@@ -54,9 +54,18 @@ Il ponte WASM della pipeline L1-L9 di `mzlab-feat` (formati e livelli: `mzfeat.m
   - `export_ms2(..., polarita, kind, index_read, index_sizes)` con `kind` `mgf` o `sirius`; `version()`, `crate_version()`. `spec` è il JSON `{"normalizza":..., "filtra":[...]}` (vuoto = tutta la tabella, aree come misurate); `read(0, offset, len)` legge il `.mzfeat`, `index_read(k, offset, len)` i `.mzidx`. Errori come negli altri (`{error_key, params}`).
 - I passi stanno in `src/core.rs` su qualunque `ReadAt`; l'esempio `table` li scrive nativi e `tests/test_feat_table_wasm.py` (con `tests/feat_table_node.js`) confronta i byte con il `.wasm`.
 
+## Il crate nativo `mzlab-ops` (`crates/mzlab-ops`)
+- Rust puro, senza `wasm-bindgen`/`js-sys`: ci vive ciò che orchestra i motori per un trasporto.
+- I ponti (`*-wasm`) tengono la colla JS e rieseguono i moduli spostati con i vecchi percorsi: nessun export JS cambia.
+- Layout fisso: `src/lib.rs` dichiara `run`, `op`, `vfs` (gli ultimi due li riempiono altre chat).
+- `run/table/` (`core`, `filterspec`, `pol`, `rows_mgf`; feature `table`) viene da `mzlab-feat-table-wasm`.
+- `run/feat/` (`run` con `run::meta`, `run_evid`, `run_estimate` [`detect`], `state` [`proofs`]) viene da questo crate.
+- Le feature hanno gli stessi nomi del ponte; `mzlab-feat` è senza feature di default, così un `.wasm` non riceve `chem` che non aveva.
+- CLI e desktop importano da `mzlab_ops::run::{table,feat}`; gli export JS dei moduli misti stanno in `run_meta_js.rs` e nei file `*_js.rs`.
+
 ## Il worker (`TP_Mine/files/feat-worker.js`)
 - Un file, due ruoli.
-- Lato pagina `createFeatPool({workerUrl, wasm:{feat,proofs}, size, notify, onProgress})`: `detectAll(files, recipe)`, `align(stored, paths, recipe)`, `hypotheses({...})` e `evidence({...})` (L7 e L8-L9 in due worker che si chiudono a fine lavoro; lo stato delle ipotesi passa come byte di `Hypotheses.state()` / `load_hypotheses`, `crates/mzlab-feat-wasm/src/state.rs`), `proofs({...})` (le due di seguito), `budgetMb` (memoria di lavoro di un passo, 0 = 192 MB), `fs.write/read/exists/remove` (worker d'archivio, scrive `nome.part` poi `move()`), `cancel()`, `resume()`.
+- Lato pagina `createFeatPool({workerUrl, wasm:{feat,proofs}, size, notify, onProgress})`: `detectAll(files, recipe)`, `align(stored, paths, recipe)`, `hypotheses({...})` e `evidence({...})` (L7 e L8-L9 in due worker che si chiudono a fine lavoro; lo stato delle ipotesi passa come byte di `Hypotheses.state()` / `load_hypotheses`, `crates/mzlab-ops/src/run/feat/state.rs`), `proofs({...})` (le due di seguito), `budgetMb` (memoria di lavoro di un passo, 0 = 192 MB), `fs.write/read/exists/remove` (worker d'archivio, scrive `nome.part` poi `move()`), `cancel()`, `resume()`.
 - Supervisione (come `idxpool.js`): un worker che muore (ucciso o trappola del `.wasm`) viene ricreato, il lavoro riparte una volta con `notify("tpmine.feat.restarted")`; alla seconda morte il lavoro è rifiutato con `error.featWorker`. Con `sha256` nel manifest il `.wasm` scaricato è verificato (`error.featWasmHash`).
 - I file `.mzidx` si leggono da OPFS (`mzlab/idx/<nome>.mzidx`) con handle sincroni aperti per operazione; un handle di un worker appena morto è atteso fino a 2 s.
 - Chiavi i18n dei messaggi (in `lang/en.js` e `lang/it.js`, lette da `32_pipeline.js` con `I18N.t`): `tpmine.feat.restarted`, `tpmine.feat.cancelled`, `tpmine.feat.degraded`, `error.featMemory`, `error.featState`, `error.featWorker`, `error.featWasmHash`, `error.featNoHypotheses`, `error.featFailed`, `error.badRecipe`; `tools/controlla_i18n.py` conta anche `TP_Mine/js` e `TP_Mine/files` come uso.

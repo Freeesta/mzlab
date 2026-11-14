@@ -7,7 +7,7 @@ use crate::famalign::FamAlignParams;
 use crate::family::evidence::PROOF_VERSION;
 use crate::family::{FamParams, FAMILY_VERSION};
 use crate::gapfill::FillParams;
-use crate::pipeline::Steps;
+use crate::pipeline_steps::Steps;
 use crate::rtmap::RtParams;
 use crate::trace::Params;
 use crate::FEAT_VERSION;

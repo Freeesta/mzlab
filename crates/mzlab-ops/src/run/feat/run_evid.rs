@@ -22,7 +22,7 @@ use mzlab_feat::table::{Aligned, FileFeatures, FLAG_GOOD};
 use mzlab_feat::target::join::JoinParams;
 use mzlab_feat::tp::{build as build_tp, build_by_role, TpBlock, TpInputs, TpParams, TpRoles};
 
-use crate::run::{is_unit, points_and_identity, HypoRun, IDENTITY_BYTES};
+use super::run::{is_unit, points_and_identity, HypoRun, IDENTITY_BYTES};
 use mzlab_feat::sortc::SortC;
 
 /// `evidence_to` with the roles of the files (`campioni/2`): gate 1 of the view of the products reads them (`tp::build_by_role`).

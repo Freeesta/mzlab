@@ -60,3 +60,35 @@ def test_a_second_init_never_sends_the_previous_providers_key_to_the_new_origin(
     assert a["fetched"] == [] and a["msgs"] == ['fail:err.llm.auth:{"reason":"nokey"}'], a
     # A's origin is no longer this provider's: nothing leaves either
     assert b["fetched"] == [], b
+
+
+def race(scenario):
+    out = subprocess.run(["node", str(ROOT / "tests/trasporto_race_node.js"), str(ROOT / "mzlab/web/llm"), scenario], check=True, capture_output=True, encoding="utf-8").stdout
+    return json.loads(out)
+
+
+def test_the_recall_of_an_earlier_init_never_lands_on_a_later_one():
+    """init A, init B (done), then the recall of A answers: B keeps its own key, and with no key stored B has none (A's key is not adopted)."""
+    (f,) = race("init-order")["fetched"]
+    assert f["key"] == "key-of-openai", f
+    r = race("init-then-recall")
+    assert r["fetched"] == [] and r["msgs"] == ['fail:err.llm.auth:{"reason":"nokey"}'], r
+
+
+def test_a_send_whose_provider_changed_while_it_waited_sends_nothing():
+    """a send of provider A waits for the proxy host; init B lands; B's key must not go to A's origin."""
+    r = race("send-vs-init")
+    assert r["fetched"] == [] and r["msgs"] == ['fail:err.llm.network:{"reason":"url"}'], r
+
+
+def test_a_remembered_key_is_stored_under_the_provider_of_the_click():
+    """init B lands while the key of A is being encrypted: it is stored for A, never for B."""
+    stored = race("remember-vs-init")["stored"]
+    assert stored.get("k:anthropic") == "typed-key" and "k:openai" not in stored, stored
+
+
+def test_two_concurrent_first_uses_share_one_wrap_key():
+    """no wrap key stored yet and two callers need it (a remembered key and a recall): the key encrypted by the first still decrypts afterwards."""
+    r = race("wrap-single-flight")
+    (f,) = r["fetched"]
+    assert f["key"] == "typed-key", r
