@@ -45,7 +45,7 @@ try:
             pg.evaluate("MAPPA.explain(" + M + ", true)"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000); ready(pg)
             assert pg.evaluate("!!" + M + "._mz.ex")
             assert pg.evaluate(f"!{M}.el.querySelector('.mzside').hidden && !{M}.el.querySelector('.mzbot').hidden"), "the two plots at the margins are on"
-            n = win(); assert n["win"]["mz1"] - n["win"]["mz0"] > 0.5 and n["win"]["rt1"] > n["win"]["rt0"], n
+            n = win(); assert abs(n["win"]["mz1"] - n["win"]["mz0"] - 0.5) < 1e-6 and n["win"]["rt1"] > n["win"]["rt0"], n
             assert pg.inner_text(".pnl.map .mzex").count("Σ") >= 1 and "XIC" in pg.inner_text(".pnl.map .mzex")
             assert pg.evaluate("document.querySelector('.pnl.map .mzex').getAttribute('role')") == "region"
         step("turning it on: box at the pointer, XIC, spectrum, numbers and the rule", on)
