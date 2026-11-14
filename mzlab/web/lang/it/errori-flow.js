@@ -87,5 +87,5 @@ I18N.add("it", {
   "warn.flow.quant.noRow": "Una curva di calibrazione non ha una riga corrispondente nella tabella: non è stata applicata.",
   "warn.flow.quant.range": "Alcune concentrazioni cadono fuori dall'intervallo della loro curva: sono segnalate.",
   "warn.flow.quant.sharedRow": "Due curve corrispondono alla stessa riga della tabella: sono state applicate entrambe, controlla m/z e tempo di ritenzione.",
-  "warn.flow.quant.unlisted": "Alcuni campioni non sono nella tabella dei campioni e sono stati esclusi dalla quantificazione.",
+  "warn.flow.quant.unlisted": "Alcuni campioni non sono nella tabella dei campioni e sono stati esclusi dalla quantificazione."
 });

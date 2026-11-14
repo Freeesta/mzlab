@@ -87,5 +87,5 @@ I18N.add("en", {
   "warn.flow.quant.noRow": "A calibration curve has no matching row in the table: it was not applied.",
   "warn.flow.quant.range": "Some concentrations fall outside the range of their curve: they are flagged.",
   "warn.flow.quant.sharedRow": "Two curves match the same table row: both were applied, check the m/z and retention time.",
-  "warn.flow.quant.unlisted": "Some samples are not listed in the sample table and were left out of the quantification.",
+  "warn.flow.quant.unlisted": "Some samples are not listed in the sample table and were left out of the quantification."
 });
