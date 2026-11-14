@@ -27,7 +27,7 @@ HDR = r"""() => [...document.querySelectorAll('header button')].filter(b => { co
  .map(b => b.id ? '#' + b.id : b.dataset.cmd ? `header [data-cmd="${b.dataset.cmd}"]` : b.dataset.cmdMain ? `header [data-cmd-main="${b.dataset.cmdMain}"]` : b.dataset.cmdCar ? `header [data-cmd-car="${b.dataset.cmdCar}"]` : b.dataset.help != null ? `header .hq[data-help="${b.dataset.help}"]` : null).filter(Boolean)"""
 # outside Dati these open their window: a click that does nothing there is a dead button
 FLOATING = {"#np-calc2", "#np-add", "#np-nl", "#np-addloss", "#np-liste", "#np-pt", "#tb-search", "#tb-more", "#np-set", "#newrun"}
-# outside Dati these go back to Dati with their side panel page (the Adducts & losses lists never float: docs/studi/ADDOTTI_PERDITE_PAGINA_UNICA.md §5)
+# outside Dati these go back to Dati with their side panel page (the Adducts & losses lists never float: docs/agenti/dati-3200.md)
 TO_DATA = {"#np-addloss": "addloss"}
 MOVE_PX = 2       # rounding of sub-pixel layouts; a slide or a jump is tens of pixels
 

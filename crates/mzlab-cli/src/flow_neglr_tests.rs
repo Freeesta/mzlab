@@ -1,4 +1,4 @@
-//! The steps of mzFlow in both polarities and both resolutions (`docs/studi/MATRICE_NEG_LR.md`) on the invented bentazone series of `flow_bentazone_tests.rs`:
+//! The steps of mzFlow in both polarities and both resolutions (`docs/agenti/rust-step.md`) on the invented bentazone series of `flow_bentazone_tests.rs`:
 //! what runs in HR+, HR-, LR+ and LR- and follows the files. Each ignored `gap_*` test states what an open gap should do; closing it removes the `#[ignore]`.
 
 use std::path::{Path, PathBuf};

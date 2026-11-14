@@ -1,4 +1,4 @@
-//! The table of fragmentation rules `fragrules/1` (`docs/studi/regole-frammentazione-schema.md`, schema `docs/schemi/fragrules-1.json`): the strict reader
+//! The table of fragmentation rules `fragrules/1` (`docs/agenti/msn-interpreta.md`, schema `docs/schemi/fragrules-1.json`): the strict reader
 //! and the embedded table `data/fragrules-1.json`. The evaluation on the graph is `regole_valuta`; the structure conditions (`requires`) are read here and
 //! evaluated only when a structure is given (a later step). A rule is evidence with a source, never a verdict.
 

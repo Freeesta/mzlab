@@ -1,6 +1,6 @@
 # Workflow plans `mzflow/2` and `prov/1` (`mzlab_core::flow`)
 
-Reads a workflow file, checks the whole plan against the `step/1` descriptors before anything starts, resolves every instance to its canonical parameters, runs the plan in a fixed order and writes the `prov/1` record. Pure Rust, no I/O and no clock: the caller owns the files and the time (`mzlab_cli::flow::FileRunner`). Contract `docs/studi/workflow/contract.schema.json`, study `docs/studi/WORKFLOW_MODULARI.md`. Nothing here changes a step result or shows in the UI; the `err.flow.*` keys are not in `lang/` until a screen shows them.
+Reads a workflow file, checks the whole plan against the `step/1` descriptors before anything starts, resolves every instance to its canonical parameters, runs the plan in a fixed order and writes the `prov/1` record. Pure Rust, no I/O and no clock: the caller owns the files and the time (`mzlab_cli::flow::FileRunner`). Contract `docs/studi/workflow/contract.schema.json`; external tests and polarity rules in `rust-step.md`. Nothing here changes a step result or shows in the UI; the `err.flow.*` keys are not in `lang/` until a screen shows them.
 
 ## Functions
 - `flow::parse(bytes) -> Plan` (`parse.rs`): `mzflow/2`; a file with no `format` is read as `mzflow/2`; the keys of `mzflow/1` (`formato`, `programma`, `operazioni`) are still read (`Plan::operations` is kept untouched); anything else is `err.flow.format`.
