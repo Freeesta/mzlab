@@ -20557,3 +20557,4 @@
 {"v":1,"ts_utc":"2026-11-14T06:00:31Z","tipo":"carico","k":"2026-11-14T06:0","job_in_coda":0,"job_in_corso":19}
 {"v":1,"ts_utc":"2026-11-14T06:00:58Z","tipo":"coda","k":"2026-11-14T06:00:58Z","aperte":4,"indietro":1,"sporche":3,"verdi_in_attesa":0,"piu_vecchia_aperta_s":27064,"piu_vecchia_verde_s":null}
 {"v":1,"ts_utc":"2026-11-14T06:20:19Z","azione":"aperta","tipo":"pr","pr":3258,"sha":"cf7857e55fb2ee1c3fc58658a58abfb590233bcc"}
+{"v":1,"ts_utc":"2026-11-14T06:23:35Z","azione":"aperta","tipo":"pr","pr":3259,"sha":"609a3a8344dd6bc2b9a7512e7f3fde744c396e97"}
