@@ -176,6 +176,6 @@ def steps(prev, cur, mid=()):
         "hide_to_last_page_ms": round(cur["t0"] - hide[0]) if cur and hide else None,
         "ls_written_after_reset": sorted(set(prev.get("lsAfter", []))) if prev else [],
         "lists_conn_open": (prev["conn"]["open"] - prev["conn"]["close"]) if prev else None,
-        "rep": wipe[3] if wipe else None,
+        "report": wipe[3] if wipe else None,
     }
     return out

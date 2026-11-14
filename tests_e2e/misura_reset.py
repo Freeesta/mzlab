@@ -2,7 +2,7 @@
 step by step (tests_e2e/lib_reset.py probe), and what they leave behind. Measures, never asserts. One JSON line per run, a summary table at the end.
 Variants: a = idle engine with filler files only, a2 = idle with two example files open, b = reset while the same tab builds an index,
 c = a second tab of the same context open and idle, d = a second tab building an index, e = the user lists read once in the tab (liste.js keeps a connection).
-The coiReload guard of lib.py is set: the first-visit isolation reload of browser.js isolateOnce never happens, the numbers do not include it.
+The coiReload guard of lib.py is set, so the first visit does not reload; after "all" and qqHardReset the new page still reloads once to isolate (doc_loads 2), and the numbers include it.
 Usage: python3 tools/prepara_sito.py; python3 tests_e2e/misura_reset.py [--rep 3] [--only all_a_50,files_b_50] [--out FILE]"""
 # covers: mzlab/web/reset.js, mzlab/web/browser.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
