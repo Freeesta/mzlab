@@ -19631,3 +19631,4 @@
 {"v":1,"ts_utc":"2026-11-14T04:12:31Z","azione":"aperta","tipo":"pr","pr":3254,"sha":"a45f52592f9c644a0681064f3471c6de66e302b6"}
 {"v":1,"ts_utc":"2026-11-14T04:16:35Z","azione":"aperta","tipo":"pr","pr":3255,"sha":"2bc416708e38620715269b22516a64bfd3de3c14"}
 {"v":1,"tipo":"pr","pr":3255,"sha":"2bc416708e38620715269b22516a64bfd3de3c14","ts_utc":"2026-11-14T04:21:36Z","azione":"unita","aperta_s":301,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":171,"righe_meno":303,"file_n":8,"file":["docs/agenti/INDICE.md","docs/agenti/canali-dati.md","docs/agenti/flow-ux.md","docs/agenti/inglese.md","docs/agenti/mappa-fluida.md","docs/agenti/match-spettrale.md","docs/agenti/ottimizzazioni-tentate.md","docs/agenti/wasm-potenziale.md"],"aree":{"docs":8},"solo_doc":true,"prima_review_s":null,"review_n":0,"verde_a_unione_s":134}
+{"v":1,"ts_utc":"2026-11-14T04:22:33Z","azione":"aperta","tipo":"pr","pr":3256,"sha":"0a6bb8935416cc9b3dddfd32d1684bcaeb5a744c"}
