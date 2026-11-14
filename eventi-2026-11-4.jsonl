@@ -20800,3 +20800,4 @@
 {"v":1,"ts_utc":"2026-11-14T07:05:46Z","azione":"push","titolo":"CI: prebuilt restore uses the tree record of the shard that saved the cache","merge_main":false,"aree":{"workflow":1,"docs":1},"tipo":"pr","pr":3259,"sha":"773c622f0fc24bcb010e415182833040252a5c21"}
 {"v":1,"ts_utc":"2026-11-14T07:16:08Z","azione":"aperta","tipo":"pr","pr":3261,"sha":"f90ea079b78a348eadada3798f0b9b9fa2472081"}
 {"v":1,"ts_utc":"2026-11-14T07:24:25Z","azione":"aperta","tipo":"pr","pr":3262,"sha":"5ae221b83e4f84f1c64c43cffeb3fe449091d1a1"}
+{"v":1,"tipo":"pr","pr":3259,"sha":"773c622f0fc24bcb010e415182833040252a5c21","ts_utc":"2026-11-14T07:24:52Z","azione":"unita","aperta_s":3677,"commit_n":3,"cause_commit":{"altro":2},"merge_main":0,"righe_piu":27,"righe_meno":2,"file_n":3,"file":[".github/workflows/test.yml","docs/agenti/ci-veloce.md","tests/test_ci_prebuilt.py"],"aree":{"workflow":1,"docs":1,"test":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":86}
