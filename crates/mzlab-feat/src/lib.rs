@@ -68,6 +68,7 @@ pub mod import;
 pub mod interp;
 pub mod ionnet;
 pub mod isotopes;
+mod kin_decay;
 pub mod kinetic;
 pub mod legacy;
 pub mod lists;
