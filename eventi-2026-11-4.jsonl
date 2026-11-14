@@ -28420,3 +28420,4 @@
 {"v":1,"ts_utc":"2026-11-14T17:26:05Z","tipo":"carico","k":"2026-11-14T17:2","job_in_coda":0,"job_in_corso":37}
 {"v":1,"ts_utc":"2026-11-14T17:27:40Z","tipo":"coda","k":"2026-11-14T17:27:40Z","aperte":6,"indietro":5,"sporche":1,"verdi_in_attesa":1,"piu_vecchia_aperta_s":68266,"piu_vecchia_verde_s":403}
 {"v":1,"ts_utc":"2026-11-14T17:28:25Z","azione":"push","titolo":"Merge origin/main into claude/flow-exec-uv-peaks","merge_main":true,"aree":{"workflow":6,"altro":2,"rust":201,"docs":91},"tipo":"pr","pr":3251,"sha":"84cfc3c4c2833f8b6e8afdf5b1f4b28fb8e0f1de"}
+{"v":1,"ts_utc":"2026-11-14T17:29:47Z","azione":"push","titolo":"Name the installed web app «mzLab Web» with a web badge on its icons","merge_main":false,"aree":{"docs":1,"web":4,"generati":1,"tools":2},"tipo":"pr","pr":3319,"sha":"2e7e26c10523e1688a31c40eebe30789ea2b74c2"}
