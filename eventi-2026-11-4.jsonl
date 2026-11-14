@@ -25608,3 +25608,4 @@
 {"v":1,"ts_utc":"2026-11-14T13:20:33Z","azione":"aperta","tipo":"pr","pr":3304,"sha":"4e651b636890b728a40fcbf13865f53bfcc72463"}
 {"v":1,"ts_utc":"2026-11-14T13:26:42Z","azione":"aperta","tipo":"pr","pr":3305,"sha":"1c1e7d5ae969acbe759afa9fac96569393ba0b09"}
 {"v":1,"ts_utc":"2026-11-14T13:27:17Z","azione":"aperta","tipo":"pr","pr":3306,"sha":"40b495e74738f042611d39feb783142bc13643bd"}
+{"v":1,"ts_utc":"2026-11-14T13:40:17Z","azione":"push","titolo":"ci(release): drop a stray upload-artifact step copied with the in-silico block","merge_main":false,"aree":{"workflow":1},"tipo":"pr","pr":3301,"sha":"b320625bea938178ef22f8c80b8b15884099097d"}
