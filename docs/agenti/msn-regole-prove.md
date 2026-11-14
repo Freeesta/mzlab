@@ -33,3 +33,7 @@ La prova passa in ogni strato; nello strato `fascio` (c) vale al più 0,05: dati
 | `loss_nh3_amide` | cid_trappola + 30 0.4; hcd + 133 0.361; qtof + 29 0.483 |
 
 Le coppie composte («a+b») seguono le regole che le compongono. Le altre regole hanno tasso ≤ 0,30 o meno di 20 applicazioni (non misurate): restano alla priorità della tabella, senza prova a favore.
+
+## Protocollo (regole fisse)
+- Insieme: MassBank Europe alla release fissata da `tools/librerie_pacchetti.py` (SHA-256 controllato), record CID o HCD con SMILES e licenza CC0 o CC BY; nel repository solo accessioni e conteggi, gli spettri restano nella cache `.verifica/`. Frammento entro 10 ppm (20 sotto m/z 150), perdita entro 3 mDa, picchi sopra il 2 % del picco base; generatore dei decoy in Rust con seme fisso.
+- **Retrocessione**: una regola con tasso > 0,30 in uno strato con almeno 20 applicazioni scende a priorità 3 con il suo perché. I SMARTS documentali si confrontano con RDKit solo in uno strumento locale, mai in CI: il valutatore Rust è l'unico motore.

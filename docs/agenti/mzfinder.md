@@ -53,3 +53,6 @@ Il nucleo è in CLAUDE.md.
   - **Scheda riassuntiva**: `.hero` in tre blocchi `.hero-b`: Parent (nome scritto dall'utente, «Neutral formula», «[M+H]+ m/z», RT, t½, «m/z offset» se applicato), Output (strong, possible, unexpected in `#tp-cnt`, «N weak evidence hidden» sempre presente con «show»/«hide» che accende il chip Weak della tabella, «N unexpected not listed», ioni analizzati, tempo di calcolo) e Download (Excel/CSV/JSON/Copy summary); ogni voce `.hc` ha `data-k` e il suo aiuto `ft.sum.*` o `ft.chip.*`, senza un titolo di esito.
   - **Fukui nel riepilogo**: nel blocco Parent `#tp-fuk` (`role=status`) mostra, con la reattività del genitore calcolata (solo amministratore, evento `tp-reatt` di `TPREATT`), i tre atomi pesanti con «Prev. f(−)» più alto (`C4 0.210 · …`, indice 1-based): nessun livello, nessun verdetto, nessun calcolo in JS.
 - **MS2 abbinate alle righe in bassa risoluzione** (scheda «MS2 matches», correzioni, dettaglio, esportazioni): `docs/agenti/mzfinder-ms2.md`.
+
+## patRoon: idee sì, codice no
+- patRoon (pacchetto R con un modulo TP) è GPL-3 e mzLab è MIT: se ne riprendono le idee, mai il codice. Le specifiche vengono da articoli, manuale e comportamento osservato; mai incollare né tradurre codice di patRoon; la prova di correttezza è lo stesso risultato sugli stessi dati.

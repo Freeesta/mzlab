@@ -1,7 +1,7 @@
 """Why a row of mzmine has no row of ours, and the other way round (a tool of measure, not a function of the product).
 
 `classifica` takes the two aligned tables (ours in `Mode::Ion`, mzmine's after the gap filling), the lists of features of every file before the alignment and says, for
-each row without a partner under the common floor of height, in which stage it was lost. The reasons are those of §5.8 of `docs/studi/ATTRIBUTIO.md`:
+each row without a partner under the common floor of height, in which stage it was lost. The reasons are those of `docs/agenti/attributio.md` («Concordanza con mzmine»):
 `below` (under the floor in one of the two), `family` (absorbed in a family: a member of a row of ours is the row of mzmine), `background` (a trace of mzmine longer than
 `fondo_min` minutes, which we discard), `split` (mzmine cuts at a zero or at 1 min and we do not: our feature of the file is one and wider), `align` (we have the feature
 in the file, the alignment put it elsewhere), `other`. The pairs with the areas more than twice apart are counted apart as `area`.

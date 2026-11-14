@@ -5,23 +5,23 @@ use std::collections::BTreeSet;
 
 use crate::{execute, flow::steps};
 
-/// Names that break a rule today and stay on purpose (`docs/studi/NOMI_TERMINALE.md` §4 «Kept on purpose», §5). A name leaves this list when it is
+/// Names that break a rule today and stay on purpose (`docs/agenti/cli.md`, «Tenuti per scelta»). A name leaves this list when it is
 /// renamed; nothing is added.
 const KNOWN: &[&str] = &[
-    // §4: a shorter name would need the reader to guess («missing» alone loses the meaning)
+    // a shorter name would need the reader to guess («missing» alone loses the meaning)
     "explain-missing",
-    // §2.1: the subcommand that takes the official lists the user owns; a shorter verb would hide what is imported
+    // the subcommand that takes the official lists the user owns; a shorter verb would hide what is imported
     "import-official",
-    // §2.3 and D1: persisted `spectra.match` parameter, Italian until a step version bump
+    // persisted `spectra.match` parameter, Italian until a step version bump
     "min_prove",
-    // §2.3 and D2: persisted parameters of the Attributio annotation steps, long but clear (not in the inventory)
+    // persisted parameters of the Attributio annotation steps, long but clear (not in the inventory)
     "putative_library_level3",
     "min_replicate_fraction",
     "library_conflict_margin",
     "suspect_fragments_min",
 ];
 
-/// Roots of Italian words met in the inventory (§2): no name contains a word that starts with one of them.
+/// Roots of Italian words met in the names: no name contains a word that starts with one of them.
 const ITALIAN: &[&str] = &[
     "basso", "prove", "toll", "perdita", "regole", "rotture", "legami", "vista", "figura", "canal",
     "campion", "somma", "tutti",

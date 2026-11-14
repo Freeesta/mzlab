@@ -1,6 +1,6 @@
 # Criteri di accettazione (scritti prima del codice)
 
-Ogni criterio ha un numero, una prova e un esito atteso. Le soglie si cambiano solo con una decisione del Coordinatore scritta qui, mai per far passare una PR. «Corpus HR» indica: LAB-A, LAB-B, BAF, INF-A, i file Thermo del corpus della locale (R-03) e i file pubblici di `RICHIESTE_LOCALE.md` R-e. Le regole di T-7 (A1-A4 prima di ogni velocità; due bersagli; `unsafe` isolato) valgono anche qui; ogni guadagno misurato oltre il rumore conta e una dipendenza nuova chiede ≥ 3 % (`prompt/COMUNI.md`).
+Ogni criterio ha un numero, una prova e un esito atteso. Le soglie si cambiano solo con una decisione del Coordinatore scritta qui, mai per far passare una PR. «Corpus HR» indica: LAB-A, LAB-B, BAF, INF-A, i file Thermo del corpus della locale (R-03) e i file pubblici del corpus. Le regole di T-7 (A1-A4 prima di ogni velocità; due bersagli; `unsafe` isolato) valgono anche qui; ogni guadagno misurato oltre il rumore conta e una dipendenza nuova chiede ≥ 3 % (`prompt/COMUNI.md`).
 
 ## F — Fedeltà dell'mzML
 - **F1 Lista dei centroidi**: m/z (f64) e intensità uguali al bit a RFR e a msconvert `peakPicking vendor` sul 100 % delle scansioni FT del corpus HR, con lo stesso numero di picchi. Già vero su LAB-A contro msconvert; atteso: passa.
@@ -31,7 +31,7 @@ Si applica solo a scansioni senza lista dello strumento o a `--peaks mzlab`. Mai
 - **C4 Trappola ionica** (small.RAW, IT-HCD-SPS): picchi a ±0,05 Th da quelli di msconvert `peakPicking vendor`, precisione e richiamo ≥ 0,95. **Può fallire** (l'algoritmo del produttore è ignoto): se fallisce, riportare i numeri e decidere con il Coordinatore.
 
 ## V — Velocità e memoria
-Numeri nel container a 4 core di `MISURE.md` (nativo) e sul Mac della locale (cache fredda, 5 giri, mediana). Il pavimento T_min si calcola con la formula di `RISPOSTE.md` §1.3, dai micro-banchi di RM-0 sulla stessa macchina.
+Numeri nel container a 4 core di `docs/agenti/raw-mzml.md` (nativo) e sul Mac della locale (cache fredda, 5 giri, mediana). Il pavimento T_min si calcola con la formula di `docs/agenti/raw-mzml.md` («Macchina e T_min»), dai micro-banchi di RM-0 sulla stessa macchina.
 | N | Misura | Oggi | Obiettivo |
 |---|---|---|---|
 | V1 | LAB-B, `mzlab-cli convert` indicizzato, livello predefinito, 4 core | 5,97 s | ≤ 0,6 s e ≤ 3× T_min |
@@ -53,4 +53,4 @@ Numeri nel container a 4 core di `MISURE.md` (nativo) e sul Mac della locale (ca
 - **E5 Validatori**: i cinque di F8 e gli offset.
 - **E6 Lettori con array non standard**: OpenMS, pyteomics e mzR leggono gli spettri con colonne per picco e array di lunghezze diverse senza errore. **Può fallire**: allora le colonne si spostano in un file accanto (D7).
 - **E7 Stesse feature**: mzmine (lotto di `tools/bench/corri_mzmine.py`) e SIRIUS su LAB-B, dal nostro mzML e da quello di msconvert. Feature uguali entro 1 ppm e 0,05 min, aree entro 1 %; differenze riportate per numero.
-- **E8 Tempi sul Mac** (R-c): nostro, msconvert, RFR (lettura di tutto), TRFP; cache fredda; 5 giri; script e impronte di §4 di `MISURE.md`.
+- **E8 Tempi sul Mac** (R-c): nostro, msconvert, RFR (lettura di tutto), TRFP; cache fredda; 5 giri; campi del JSON del banco (`docs/agenti/raw-mzml.md`).

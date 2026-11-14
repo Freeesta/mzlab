@@ -73,7 +73,7 @@ impl Pyramid {
             }
             let mut next: Level = HashMap::new();
             let mut keys: Vec<(u32, u32)> = prev.keys().map(|&(ty, tx)| (ty / 2, tx / 2)).collect();
-            // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
+            // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/agenti/wasm-tetti.md, «Ordinamenti std nei percorsi caldi»)
             #[allow(clippy::disallowed_methods)]
             keys.sort_unstable();
             keys.dedup();
@@ -160,7 +160,7 @@ impl Pyramid {
         b.extend_from_slice(&(self.levels.len() as u32).to_le_bytes());
         for lv in &self.levels {
             let mut keys: Vec<_> = lv.keys().copied().collect();
-            // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
+            // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/agenti/wasm-tetti.md, «Ordinamenti std nei percorsi caldi»)
             #[allow(clippy::disallowed_methods)]
             keys.sort_unstable();
             b.extend_from_slice(&(keys.len() as u32).to_le_bytes());

@@ -8,7 +8,7 @@
 //!
 //! One function, one step: [`quantile`] (threshold), [`zero_below`], [`has_lower_within`] (is this point a local minimum), [`keep_region`]
 //! (shape filter), [`regions`] (the walk along the run), [`make_feature`] (height, area, m/z, apex). Where the text of the study
-//! (`docs/studi/ATTRIBUTIO.md` §5.2) is looser than the source, the source wins. A minimum closes a region only if it lies at least `search_rt` from
+//! (`docs/agenti/attributio.md`, «Risolutore a minimo locale») is looser than the source, the source wins. A minimum closes a region only if it lies at least `search_rt` from
 //! the start of the region, no point within ± `search_rt` is lower, and the apex is at least `min_ratio` times that minimum; the closed region must then
 //! pass the shape filter on both edges, otherwise it is dropped and the walk goes on from the minimum.
 

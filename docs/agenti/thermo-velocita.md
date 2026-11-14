@@ -1,6 +1,6 @@
 # Lettore Thermo `.raw`: criteri di velocità e zero perdite, banco e numeri di partenza (T-7)
 
-Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4. Oracolo e formato del dump: `scandump.md`. Due livelli con criteri e numeri SEPARATI, mai una tabella che li mescola: **A** = lettore fedele e veloce contro RFR; **B** = ponte senza perdite verso Flow sui centroidi.
+Oracolo e formato del dump: `scandump.md`. Due livelli con criteri e numeri SEPARATI, mai una tabella che li mescola: **A** = lettore fedele e veloce contro RFR; **B** = ponte senza perdite verso Flow sui centroidi.
 
 ## Come si dichiara ogni numero
 - Ogni numero porta lo SHA di 40 caratteri del commit di `main` su cui è stato misurato, la macchina, il bersaglio (`native` o `wasm`) e il profilo di compilazione (`cli` = `opt-level = 3`; `release` = `opt-level = "z"`, quello dei `.wasm`). Un numero senza questi quattro dati non entra nelle tabelle.
@@ -126,3 +126,7 @@ Measured with the blocks no longer zero-filled and without the adaptive window o
 ## Righe da ripetere
 - Riga A sul Mac con il banco su entrambi i lettori (R-15, RFR contro `thermo_bench`): SHA nuovo, stessa tabella A-1 con le definizioni di `thermo_bench`; la ripetizione sul cloud dopo T-3 è A-2b.
 - Bersaglio `wasm`: A-3 va ripetuto con 5 ripetizioni e, per il rapporto con il nativo, con lo stesso profilo (`release`) dei due bersagli; tetto del modulo `thermo` 546 304 B (`wasm-tetti.md`).
+
+## RFR come oracolo, e dove batterlo
+- **RFR solo come oracolo**: la licenza di RawFileReader è proprietaria: DLL e pacchetto NuGet non entrano in nessun repository, binario, `.wasm` o CI; si usano solo sul Mac, in una cartella fuori dai repository, per scrivere i dump `scandump/1` con la sola API pubblica; mai copiarne né decompilarne il codice. Un campo che RFR non espone si omette, mai inventato.
+- **Dove battere RFR**: ovunque (nativo e `.wasm`, i file non lasciano il computer); velocità (nativo uguale o meglio, nel browser ≤ 1,7×); robustezza (un file troncato si apre fino all'ultima scansione intera con un avviso, nessun panico al fuzz); etichette pulite per reazione (attivazione, energia con unità, NCE a gradini, precursori SPS, CV FAIMS); errori con la causa e «Copia diagnosi».

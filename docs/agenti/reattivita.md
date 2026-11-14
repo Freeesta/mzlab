@@ -73,3 +73,6 @@ Solo in modalità amministratore (`uipAdminOn()`); testi in inglese senza chiavi
 ## Quota di HOMO e LUMO per atomo
 - **HOMO/LUMO per atomo** (`System::frontier_shares`): ogni atomo di `atoms` ha `homo` e `lumo` (quota di |ψ|² per partizione di Mulliken, ciascuna lista somma 1); la tabella di Tabui mostra le colonne «HOMO share» e «LUMO share», anche nel CSV e in `TDATI`. Con il ripiego EHT i campi mancano.
 - **Prove**: `tests/frontier.rs` (somme HOMO/LUMO = 1, quote del fenolo e dell'acetato).
+
+## Calcoli per i TP (scelte)
+- Tutto resta «Prev.», senza livello di Schymanski, e non esclude mai classi di posizione. Si fanno Fukui, conformeri e HOMO/LUMO (senza isosuperfici). BDE C–H, polarità per l'ordine di eluizione e potenziale redox si mostrano solo dopo una validazione su dati misurati (polarità: ordine giusto in ≥ 8/10 coppie di isomeri con RT); il pKa solo qualitativo (gruppi ionizzabili, carica attesa); la CCS aspetta dati IMS in uso. Non si fanno docking, proteine, fononi, IRC e stati di transizione, superfici, solubilità, ADME-Tox, NMR.
