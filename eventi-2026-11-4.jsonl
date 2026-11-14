@@ -29364,3 +29364,4 @@
 {"v":1,"ts_utc":"2026-11-14T18:28:07Z","azione":"aperta","tipo":"pr","pr":3325,"sha":"8174b83f9c81485ab24ed37653d11421ca1eb332"}
 {"v":1,"tipo":"pr","pr":3323,"sha":"4d139d1a7a21d791723f572e16b428c7fa771a2e","ts_utc":"2026-11-14T18:40:55Z","azione":"unita","aperta_s":1324,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":46,"righe_meno":22,"file_n":3,"file":["crates/mzlab-feat/src/recipe.rs","crates/mzlab-feat/src/store.rs","crates/mzlab-feat/tests/massacc.rs"],"aree":{"rust":3},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":351}
 {"v":1,"ts_utc":"2026-11-14T18:40:54Z","azione":"aperta","tipo":"pr","pr":3326,"sha":"15a9216a62da18eba2d89c10e31aaa241b863c55"}
+{"v":1,"ts_utc":"2026-11-14T18:55:25Z","azione":"aperta","tipo":"pr","pr":3327,"sha":"b57618e9a99f9e4e9d511332ba44b351104e928f"}
