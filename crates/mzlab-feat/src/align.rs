@@ -267,16 +267,26 @@ pub(crate) fn push_group(
 pub struct AreaMean {
     sum: f64,
     weight: f64,
+    // plain sum and count, the answer when no area weighs (areas of 0, e.g. a file with a zero scan interval)
+    plain: f64,
+    n: u32,
 }
 
 impl AreaMean {
     pub fn add(&mut self, value: f64, area: f64) {
         self.sum += value * area;
         self.weight += area;
+        self.plain += value;
+        self.n += 1;
     }
 
+    /// The area-weighted mean; without weight (all areas 0) the plain mean of the values, NaN only when nothing was added.
     pub fn mean(&self) -> f64 {
-        self.sum / self.weight
+        if self.weight > 0.0 || self.n == 0 {
+            self.sum / self.weight
+        } else {
+            self.plain / f64::from(self.n)
+        }
     }
 
     /// Whether any area was added.
