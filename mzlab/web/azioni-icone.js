@@ -61,7 +61,7 @@ const AZIONI_ICONE = (() => {
     "chrom.avgSel": "avg", "chrom.specAtRt": "atRt", "chrom.ms2AtRt": "ms2", "chrom.uvAtRt": "atRt", "chrom.uvAvgSel": "avg", "chrom.wl": "xic", "uv.wlAt": "xic", "uv.wlView": "xic", "chrom.xic": "xic", "xic.addIon": "plus", "chrom.annotate": "note", "chrom.disp": "gear", "chrom.ddaShow": "eye",
     "chrom.identAll": "search", "chrom.tree": "tree", "chrom.masscal": "gauge", "chrom.ibk": "baseline", "chrom.int": "area", "chrom.press": "gauge", "chrom.grad": "ramp", "chrom.etpk": "flag",
     "disp.affianca": "side", "disp.su": "up", "disp.giu": "down", "disp.intera": "wide", "disp.uguali": "equal", "disp.ripristina": "reset",
-    "int.copyArea": "copy", "int.baseline": "baseline", "mrm.estrai": "xic", "view.resetZoom": "reset", "ann.edit": "edit", "ann.delete": "trash", "metodo.xic": "xic", "metodo.ms2": "ms2",
+    "int.copyArea": "copy", "int.baseline": "baseline", "mrm.estrai": "xic", "mrm.uvAtRt": "atRt", "mrm.twc": "overlay", "mrm.pdaAlign": "equal", "view.resetZoom": "reset", "ann.edit": "edit", "ann.delete": "trash", "metodo.xic": "xic", "metodo.ms2": "ms2",
   };
   /** @param {string} k the SVG of the icon `k`, decorative; "" when it does not exist */
   const svg = k => DISEGNI[k]
