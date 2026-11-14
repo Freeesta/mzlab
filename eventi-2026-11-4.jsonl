@@ -23930,3 +23930,4 @@
 {"v":1,"tipo":"pr","pr":3286,"sha":"bb043ffe3ccb80f7df6b0cc51eaf457258541cb4","ts_utc":"2026-11-14T10:48:15Z","azione":"unita","aperta_s":3466,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":16,"righe_meno":1,"file_n":1,"file":["crates/mzlab-desktop/src/update.rs"],"aree":{"rust":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":312}
 {"v":1,"ts_utc":"2026-11-14T10:48:33Z","azione":"aperta","tipo":"pr","pr":3289,"sha":"a176e5f319a00232e9a00ecb7230346a78688892"}
 {"v":1,"ts_utc":"2026-11-14T10:50:23Z","azione":"aperta","tipo":"pr","pr":3290,"sha":"56b0d3a2089ae134729ddd3248f20e5092f0e8df"}
+{"v":1,"ts_utc":"2026-11-14T10:52:58Z","azione":"aperta","tipo":"pr","pr":3291,"sha":"268f70b3943a4b3cbc5378cf35e51e4538f9d9c9"}
