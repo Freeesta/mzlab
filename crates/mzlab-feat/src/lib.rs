@@ -107,7 +107,7 @@ pub mod regulatory;
 pub mod report;
 pub mod resolve;
 pub mod netarcs;
-#[cfg(feature = "interp")]
+#[cfg(feature = "legacy")]
 pub mod network;
 pub mod row;
 pub mod rowident;
