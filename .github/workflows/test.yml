@@ -418,7 +418,7 @@ jobs:
         if: steps.scelta.outputs.e2e != ''
         env:
           E2E: ${{ steps.scelta.outputs.e2e }}
-        run: python tools/verifica.py --browser chromium --solo "$E2E"
+        run: python tools/verifica.py --browser chromium --timeout 150 --solo "$E2E"
       - name: Print the logs of the failed tests (readable in the job log)
         if: failure()
         shell: bash

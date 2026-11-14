@@ -47,6 +47,9 @@ NEEDS: dict[str, set[str]] = {
     "e2e_tpmine_progresso": {"sito"}, "e2e_pannelli_stabili": {"sito"}, "e2e_memoria_sonda": {"sito"},
     "e2e_raw_riaggiunto": {"sito"}, "e2e_agilent_riaggiunto": {"sito"},
     "e2e_avvio_lento": {"sito"}, "e2e_flow_transitions": {"sito"}, "e2e_flow_neg_lr": {"wasm"}, "e2e_llm_consenso": {"wasm"}, "e2e6": {"wasm"}, "e2e_decimali": {"wasm"}, "e2e_disegno_chimica": {"wasm"}, "e2e_menu_info": {"wasm"}, "e2e_menu_link": {"wasm"},  # flow_transitions builds the .wasm of mzFinder (lib.py build_feat); wasm: mzFinder built with cargo (over 600 s on a cold runner), the llm module
+    # the drawing tests (Ketcher + the drawing engine .wasm): green in the nightly, which has the CI-built .wasm, red in `e2e-cambiati`, which builds the site alone
+    "e2e_disegno_analisi": {"wasm"}, "e2e_disegno_cip": {"wasm"}, "e2e_disegno_esporta": {"wasm"}, "e2e_disegno_verifica": {"wasm"}, "e2e_meccanismo": {"wasm"}, "e2e_parziali": {"wasm"}, "e2e_radicali": {"wasm"}, "e2e_radicali_ms": {"wasm"},
+    "e2e_feat_na": {"wasm"}, "e2e_feat_worker": {"wasm"}, "e2e_frammenti": {"wasm"}, "e2e_integra_base": {"wasm"}, "e2e_ruoli_tempi": {"wasm"}, "e2e_taglio": {"wasm"},   # same: the feature-finder and cut-line tests, found red in `e2e-cambiati` one run at a time
     "e2e_tpmine_mem": {"sito", "veri"},          # 13 real HR files (1 GB) in the real worker: minutes
 }
 # the slowest e2e (seconds, measured in the CI): they start first, so the pool does not end waiting for one of them
