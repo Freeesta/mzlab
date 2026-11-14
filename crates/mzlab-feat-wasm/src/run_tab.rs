@@ -100,6 +100,19 @@ pub fn flow_transitions(
         .map_err(crate::js_err)
 }
 
+/// The CSV of `chrom.uv_peaks` over the mzML files packed as `manifest` (JSON `[{"name","len"}]`) over their concatenated bytes `blob`, within `budget_mb`
+/// (0 = the default of the page). Errors are JSON `{"error_key","params"}` texts (`error.memoryBudget`, phase `read`; `err.pda.none`).
+#[wasm_bindgen]
+pub fn flow_uv_peaks(
+    params_json: &str,
+    manifest: &str,
+    blob: &[u8],
+    budget_mb: f64,
+) -> std::result::Result<String, JsValue> {
+    let cap = mzlab_core::budget::MemBudget::from_request(budget_mb).cap();
+    mzlab_feat::uv_text::uv_packed(params_json, manifest, blob, cap).map_err(crate::js_err)
+}
+
 /// The `plausible/1` text of `table` (the bytes of a `.mzfeat`); `params_json` is the step's parameters merged with its defaults (the limits of `plausible::Limits`).
 /// Errors are JSON `{"error_key","params"}` texts.
 #[wasm_bindgen]

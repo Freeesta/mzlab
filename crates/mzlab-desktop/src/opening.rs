@@ -11,6 +11,8 @@ use std::sync::Mutex;
 const FOLDER_ONLY: [&str; 1] = [".d"];
 /// Too generic to claim from the system (netCDF is also climate and model data): the dialog offers it, the associations do not.
 const NOT_ASSOCIATED: [&str; 1] = [".nc"];
+/// The SCIEX companion of a `.wiff`: opened through its `.wiff`.
+const WIFF_SCAN: &str = ".wiff.scan";
 
 /// ONE source: the extensions of the readers' registry (`mzlab_lettori::estensioni()`, the same list the site's pickers get), without the folder-only ones.
 /// Lower case with the dot; a companion such as `.wiff.scan` is kept whole.
@@ -35,12 +37,16 @@ pub fn dialog_extensions() -> Vec<String> {
     v
 }
 
-/// The extensions registered as file associations (no dot, lower case, without repeats; companions such as `.wiff.scan` and compressed `.mzml.gz` are not associated): what `tauri.conf.json` must list.
+/// The extensions registered as file associations (no dot, lower case, without repeats): what `tauri.conf.json` must list.
+/// The OS sees only the last extension, so the companion `.wiff.scan` is registered as `scan` (weakest claim, never the default: see `plan_from_args`,
+/// which refuses a `.scan` that is not `.wiff.scan`); compressed `.mzml.gz` has no association of its own.
+/// Folder formats (Waters `.raw` folder, Agilent `.D`, Bruker `.d`) cannot be associated by any OS: they stay drag and drop / «Open».
 pub fn associated_extensions() -> Vec<String> {
     let mut v: Vec<String> = file_extensions()
         .into_iter()
-        .filter(|e| !NOT_ASSOCIATED.contains(&e.as_str()) && e.matches('.').count() == 1)
-        .map(|e| e.trim_start_matches('.').to_string())
+        .filter(|e| !NOT_ASSOCIATED.contains(&e.as_str()))
+        .filter(|e| e.matches('.').count() == 1 || e == WIFF_SCAN)
+        .map(|e| e.rsplit('.').next().unwrap_or_default().to_string())
         .collect();
     v.sort();
     v.dedup();
@@ -66,6 +72,76 @@ pub fn paths_from_args(args: &[String], cwd: Option<&Path>) -> Vec<PathBuf> {
         })
         .filter(|p| is_openable(p))
         .collect()
+}
+
+/// What an opening from outside becomes: the files to queue and the problems to tell the user (English: the native side has no translations).
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct Plan {
+    pub files: Vec<PathBuf>,
+    pub problems: Vec<String>,
+}
+
+/// The file of `dir` whose name equals `name` ignoring case (the OS may hand over `X.WIFF.SCAN` while the folder holds `X.wiff`).
+fn sibling(dir: &Path, name: &str) -> Option<PathBuf> {
+    let want = name.to_lowercase();
+    std::fs::read_dir(dir).ok()?.flatten().find_map(|e| {
+        let p = e.path();
+        (e.file_name().to_string_lossy().to_lowercase() == want && p.is_file()).then_some(p)
+    })
+}
+
+/// What the system asked to open: `X.wiff.scan` is opened as the `.wiff` beside it (same folder, case-insensitive) together with itself, a `.wiff` takes its
+/// `.wiff.scan` along, a `.wiff.scan` without its `.wiff` and a `.scan` of another maker are refused with a message and nothing is opened for them.
+pub fn plan_from_paths(paths: impl IntoIterator<Item = PathBuf>) -> Plan {
+    let mut plan = Plan::default();
+    let add = |plan: &mut Plan, p: PathBuf| {
+        if !plan.files.contains(&p) {
+            plan.files.push(p);
+        }
+    };
+    for p in paths {
+        let name = p
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let low = name.to_lowercase();
+        let dir = p.parent().map(Path::to_path_buf).unwrap_or_default();
+        if low.ends_with(".scan") && p.is_file() {
+            if !low.ends_with(WIFF_SCAN) {
+                plan.problems.push(format!("«{name}» is not a SCIEX scan companion (.wiff.scan) and cannot be opened as data."));
+                continue;
+            }
+            let stem = &name[..name.len() - ".scan".len()];
+            match sibling(&dir, stem) {
+                Some(w) => {
+                    add(&mut plan, w);
+                    add(&mut plan, p);
+                }
+                None => plan.problems.push(format!("Cannot open «{name}»: the SCIEX data file «{stem}» is missing from the same folder.")),
+            }
+        } else if low.ends_with(".wiff") && p.is_file() {
+            let scan = sibling(&dir, &format!("{name}.scan"));
+            add(&mut plan, p);
+            if let Some(s) = scan {
+                add(&mut plan, s);
+            }
+        } else if is_openable(&p) {
+            add(&mut plan, p);
+        }
+    }
+    plan
+}
+
+/// `paths_from_args` followed by `plan_from_paths`: the command line and the second launch use it.
+pub fn plan_from_args(args: &[String], cwd: Option<&Path>) -> Plan {
+    let cand = args
+        .iter()
+        .filter(|a| !a.starts_with('-'))
+        .map(|a| match cwd {
+            Some(c) => c.join(a),
+            None => PathBuf::from(a),
+        });
+    plan_from_paths(cand)
 }
 
 /// Files that arrived before the page could take them (cold start, or the window still loading): the page empties it with `take_opened`.
