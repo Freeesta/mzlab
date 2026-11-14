@@ -24,6 +24,7 @@ from misura_primo_paint import poll  # noqa: E402
 SRC = (ROOT / "mzlab" / "web" / "carica.js").read_text(encoding="utf-8")
 L = [n[2:] if n.startswith("m:") else n for n in re.findall(r'"([^"]+)"', re.search(r"var L = \[(.*?)\];", SRC, re.S).group(1))]
 L_MOD = [n[2:] for n in re.findall(r'"([^"]+)"', re.search(r"var L = \[(.*?)\];", SRC, re.S).group(1)) if n.startswith("m:")]
+SETTLE_MS = 6000
 CATS = ["v8", "v8.wasm", "disabled-by-default-v8.compile", "devtools.timeline"]
 FILL_DONE = "caches.keys().then(k => Promise.all(k.filter(n => n.startsWith('mzlab-app-')).map(n => caches.open(n).then(c => c.match('.fill-done'))))).then(a => a.some(Boolean))"
 
@@ -110,13 +111,15 @@ def page_metrics(snap: dict, thr: Throttle, mlog: list, sw0: int, l0: int) -> di
     out["manifest_end"] = round(mf[0][4] - t0) if mf else None
     sv = [r for r in mlog[l0:] if r[1].endswith("static/sw-manifest.json")]
     out["manifest_srv"] = round(sv[0][0] - t0) if sv else None          # arrival at the mirror (after the emulated latency)
+    si = [r for r in mlog[l0:] if r[1] in ("", "index.html")]
+    out["index_srv"] = round(si[0][0] - t0) if si else None             # the mirror's own arrival time of the page request
     # the last boot step: which of these ends the critical path to qqReady
     steps = {k: out[k] for k in ("last_classic", "shell_js", "last_module", "worker_ready", "engine", "api_state") if out.get(k) is not None}
     out["last_step"] = max(steps, key=steps.get) if steps else None
     return out
 
 
-def one(b, base, scen: str, rtt: int, cpu: int, mirror: bool) -> dict:
+def one(b, base, scen: str, rtt: int, cpu: int, mirror: bool, loads: int = 2) -> dict:
     # latency: the mirror delays every answer (CDP latency does not apply to the SW's own fetches); the CDP profile only slows the CPU
     thr = Throttle(b, "cpu4" if cpu == 4 else "none")
     Mirror.delay = rtt if mirror else 0
@@ -147,9 +150,9 @@ def one(b, base, scen: str, rtt: int, cpu: int, mirror: bool) -> dict:
                     "p2_srv_kb": round(sum(r[3] for r in e2) / 1024), "usable": snap["m"]["ready"]})
     else:
         poll(pg, FILL_DONE, 300)
-        pump(pg, 1500)               # lets the last steps of the boot and the fill finish before the next step
-        if scen.startswith("trace"):
-            pg.reload(); poll(pg, USABLE, 240); pump(pg, 1500)        # second load; the code cache is written after it
+        pump(pg, SETTLE_MS)           # the idle work after qqReady (prefetch at +3 s, the mzFinder package) ends before the measured load
+        for _ in range(loads - 1 if scen.startswith("trace") else 0):
+            pg.reload(); poll(pg, USABLE, 240); pump(pg, 1500)        # loads 2..n-1; Chromium writes the code cache after the earlier ones
         if scen in ("warm-restarted", "trace-restarted"):
             stop_sw(c, pg)
         sw0, l0 = len(thr.sw), len(log)
@@ -157,9 +160,10 @@ def one(b, base, scen: str, rtt: int, cpu: int, mirror: bool) -> dict:
             b.start_tracing(page=pg, categories=CATS)
         pg.reload()
         poll(pg, USABLE, 240)
-        pump(pg, 1500)               # lets the last steps of the boot and the fill finish before the next step
+        pump(pg, SETTLE_MS)           # the idle work after qqReady (prefetch at +3 s, the mzFinder package) ends before the measured load
         if scen.startswith("trace"):
             res["trace"] = analyse(json.loads(b.stop_tracing()))
+            res["reloads"] = loads
         snap = pg.evaluate("__a.snap()")
         res.update(page_metrics(snap, thr, log, sw0, l0))
         res["sw_type"] = snap["nav"]["type"]
@@ -220,7 +224,7 @@ def analyse(tr: dict) -> dict:
     return out
 
 
-KEYS = ["idx_end", "sw_worker_start", "manifest_req", "manifest_end", "manifest_srv", "fcp", "last_classic", "shell_js", "last_module", "worker_ready", "engine", "api_state", "qqReady"]
+KEYS = ["idx_end", "index_srv", "sw_worker_start", "manifest_req", "manifest_end", "manifest_srv", "fcp", "last_classic", "shell_js", "last_module", "worker_ready", "engine", "api_state", "qqReady"]
 
 
 def report(results: dict) -> None:
@@ -242,7 +246,7 @@ def report(results: dict) -> None:
     rows(lambda s: s == "cold", "Isolation reload (cold)", ["p1_req", "p1_kb", "p1_res_done", "p2_files", "p2_shared", "p2_net200", "p2_net304", "p2_httpcache", "p2_new", "usable"])
     for (scen, rtt, cpu), runs in results.items():
         if scen.startswith("trace") and runs:
-            print(f"\n### Code cache, {scen} ×{cpu}, 3rd load ({len(runs)} runs)\n\n| group | compile events | hits | rejected | streamed | compile ms (main/worker thread, eager) |\n|---|---|---|---|---|---|")
+            print(f"\n### Code cache, {scen} ×{cpu}, traced load = reload {runs[0]['reloads']} after the first visit ({len(runs)} runs)\n\n| group | compile events | hits | rejected | streamed | compile ms (main/worker thread, eager) |\n|---|---|---|---|---|---|")
             for g in ("L", "other", "worker"):
                 print(f"| {g} | " + " | ".join(fmt(med([r['trace'][g][k] for r in runs])) for k in ("scripts", "hit", "rejected", "streamed")) + f" | {fmt(med([r['trace'][g]['compile_ms'] for r in runs]), 1)} |")
             print("produce_cache events", fmt(med([r["trace"]["produce_cache"] for r in runs])), "| lazy ms main", fmt(med([r["trace"]["lazy_ms"]["main"] for r in runs]), 1), "worker", fmt(med([r["trace"]["lazy_ms"]["worker"] for r in runs]), 1),
@@ -258,6 +262,7 @@ def main():
     ap.add_argument("--rtt", default="0,40,150", help="ms every answer of the mirror waits (ignored for the live site)")
     ap.add_argument("--cpu", default="1,4")
     ap.add_argument("--scenari", default="warm,warm-restarted,cold,trace-warm,trace-restarted")
+    ap.add_argument("--trace-reloads", type=int, default=2, help="reloads after the first visit in the trace scenarios; the last one is traced (the code cache may need more than 2)")
     ap.add_argument("--out")
     a = ap.parse_args()
     from playwright.sync_api import sync_playwright
@@ -275,7 +280,7 @@ def main():
             for k in combos:
                 b = p.chromium.launch(proxy=proxy, **({"executable_path": exe} if os.path.isfile(exe) else {}))
                 try:
-                    results[k].append(one(b, base, *k, mirror=bool(a.mirror)))
+                    results[k].append(one(b, base, *k, mirror=bool(a.mirror), loads=a.trace_reloads))
                     print(f"run {i + 1} {k}: ok", flush=True)
                 except Exception as e:
                     print(f"run {i + 1} {k}: {str(e)[:200]}", flush=True)
