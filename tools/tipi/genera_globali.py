@@ -5,8 +5,8 @@ globali.d.ts  = `declare var X: any` for every `window.X = ...` and for the name
 globali-nomi.d.ts = `declare var X: any` for every top-level name of the classic scripts, for the projects that do not include them (moduli, worker).
 stretto.json/stretto2.json/stretto3.json (pagina/moduli) and stretto-worker.json/stretto2-worker.json/stretto3-worker.json (worker) = the files marked `// @ts-strict` (first lines), checked with `strict` (no noImplicitAny; catch variables `unknown` in stretto2*, `any` in TP_Mine/flow): they must have 0 errors.
 stretto3*.json = the files marked `// @ts-noany` as well (first lines): `strict` plus `noImplicitAny`, catch variables `unknown`; 0 errors, a marked file that gets an implicit `any` back fails the job.
-`--controlla` writes nothing and exits 1 when: a file of mzlab/web or TP_Mine is in no project, a top-level name is defined in two classic scripts,
-or the generated files are out of date.
+The generated files are git-ignored: controlla_tsc.py runs this script before every type check, so they are never stale and never conflict between PRs.
+`--controlla` writes nothing and exits 1 when: a file of mzlab/web or TP_Mine is in no project, or a top-level name is defined in two classic scripts.
 """
 import glob, json, os, re, sys
 
@@ -106,6 +106,12 @@ def strict_all():
             "stretto3.json": strict(livello=3), "stretto3-worker.json": strict_worker(3)}
 
 
+def generati():
+    """{file name: content} of every generated file (the two .d.ts and the six stretto*.json)."""
+    g, n, _ = genera()
+    return {"globali.d.ts": g, "globali-nomi.d.ts": n, **strict_all()}
+
+
 def main():
     g, n, dove = genera()
     errors = []
@@ -119,15 +125,9 @@ def main():
             continue
         errors.append("file in no tsc project (add it to tools/tipi/pagina|moduli|worker.json): " + r)
     if "--controlla" in sys.argv:
-        for nome, expected in (("globali.d.ts", g), ("globali-nomi.d.ts", n)) + tuple(strict_all().items()):
-            try:
-                if read("tools/tipi/" + nome) != expected:
-                    errors.append(nome + " out of date: run python3 tools/tipi/genera_globali.py")
-            except OSError:
-                errors.append(nome + " missing")
         print("\n".join(errors) or "genera_globali: ok")
         return 1 if errors else 0
-    for nome, t in (("globali.d.ts", g), ("globali-nomi.d.ts", n)) + tuple(strict_all().items()):
+    for nome, t in generati().items():
         with open(os.path.join(TYPES, nome), "w", encoding="utf8") as f:
             f.write(t)
     print("\n".join(errors))

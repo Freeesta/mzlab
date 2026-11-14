@@ -44,6 +44,8 @@ def esegui(nome):
 
 
 def misura():
+    # the type files are git-ignored: rebuild them from the sources (well under 10 s) so a fresh clone and a PR never see stale ones
+    subprocess.run([sys.executable, os.path.join(ROOT, "tools", "tipi", "genera_globali.py")], cwd=ROOT, check=True)
     install()   # installs tsc once: three npx at the same time corrupt its cache
     ris = {}
     with ThreadPoolExecutor(len(PROGETTI)) as ex:
