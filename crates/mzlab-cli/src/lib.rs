@@ -298,6 +298,8 @@ mod flow_json_tests;
 #[cfg(test)]
 mod flow_kmd_tests;
 #[cfg(test)]
+mod flow_level_ms2_tests;
+#[cfg(test)]
 mod flow_level_tests;
 #[cfg(test)]
 mod flow_ms2_tests;

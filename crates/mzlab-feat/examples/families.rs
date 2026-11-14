@@ -2,7 +2,7 @@
 //!
 //!     cargo run --release -p mzlab-feat --example families -- <file.mzidx>... [--neg] [--truth verita.json] [--mz M]...
 //!
-//! `--orient evidence` lets the proof of an arc stand in for the parent factor (`family::Orient`).
+//! `--orient factor` goes back to the parent factor; the default lets the proof of an arc stand in for it (`family::Orient::Evidence`).
 //!
 //! `--json <file>` writes the `famiglia/1` records (one JSON line per input file) to `<file>`.
 //!
@@ -210,7 +210,7 @@ fn main() {
     let (mut p, mut files, mut truth) = (Params::default(), Vec::new(), None::<Value>);
     let (mut shown, mut at_rt): (Vec<f64>, Option<f64>) = (Vec::new(), None);
     let mut json = None::<String>;
-    let mut orient = false;
+    let mut orient = true;
     let mut records = String::new();
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
@@ -222,7 +222,7 @@ fn main() {
                 })
             }
             "--json" => json = args.next(),
-            "--orient" => orient = args.next().is_some_and(|v| v == "evidence"),
+            "--orient" => orient = args.next().is_none_or(|v| v != "factor"),
             "--rt" => at_rt = args.next().and_then(|v| v.parse().ok()),
             "--mz" => shown.extend(args.next().and_then(|v| v.parse::<f64>().ok())),
             _ => files.push(a),
