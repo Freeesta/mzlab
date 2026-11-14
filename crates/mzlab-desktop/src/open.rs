@@ -36,7 +36,9 @@ pub fn take_opened(
 }
 
 /// Queues files from outside and tells the page (which may not be loaded yet: then it takes them at start); the window comes to the front.
-fn hand_over(app: &AppHandle, paths: Vec<PathBuf>) {
+fn hand_over(app: &AppHandle, plan: opening::Plan) {
+    tell_problems(app, &plan.problems);
+    let paths = plan.files;
     if paths.is_empty() {
         return;
     }
@@ -45,6 +47,18 @@ fn hand_over(app: &AppHandle, paths: Vec<PathBuf>) {
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.unminimize();
         let _ = w.set_focus();
+    }
+}
+
+/// A file the system asked to open that cannot be opened (a `.wiff.scan` without its `.wiff`, a foreign `.scan`): said once, nothing is opened for it.
+fn tell_problems(app: &AppHandle, problems: &[String]) {
+    use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+    for m in problems {
+        app.dialog()
+            .message(m.clone())
+            .title("mzLab")
+            .kind(MessageDialogKind::Warning)
+            .show(|_| {});
     }
 }
 
@@ -81,7 +95,7 @@ pub fn single_instance() -> tauri::plugin::TauriPlugin<tauri::Wry> {
         let cwd = PathBuf::from(cwd);
         hand_over(
             app,
-            opening::paths_from_args(args.get(1..).unwrap_or_default(), Some(&cwd)),
+            opening::plan_from_args(args.get(1..).unwrap_or_default(), Some(&cwd)),
         );
     })
 }
@@ -89,8 +103,9 @@ pub fn single_instance() -> tauri::plugin::TauriPlugin<tauri::Wry> {
 /// A file given on the command line (Windows, Linux: double click with the app closed) waits for the page.
 pub fn queue_command_line(app: &AppHandle) {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    app.state::<Pending>()
-        .push(opening::paths_from_args(&args, None));
+    let plan = opening::plan_from_args(&args, None);
+    tell_problems(app, &plan.problems);
+    app.state::<Pending>().push(plan.files);
 }
 
 /// macOS gives the files of a double click (or «Open with») as events, also with the app already open.
@@ -100,10 +115,7 @@ pub fn run_event(app: &AppHandle, event: &tauri::RunEvent) {
     if let tauri::RunEvent::Opened { urls } = event {
         hand_over(
             app,
-            urls.iter()
-                .filter_map(|u| u.to_file_path().ok())
-                .filter(|p| opening::is_openable(p))
-                .collect(),
+            opening::plan_from_paths(urls.iter().filter_map(|u| u.to_file_path().ok())),
         );
     }
 }
