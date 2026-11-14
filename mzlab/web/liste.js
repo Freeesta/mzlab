@@ -315,19 +315,21 @@ const LISTE = (() => {
   const labRows = () => { const r = rd(KEY_ROWS, []); return Array.isArray(r) ? r.filter(x => x && x.mz > 0) : []; };
   const saveRows = (/** @type {Bag[]} */ rows) => { wr(KEY_ROWS, rows); reindex(); if (typeof redrawAll === "function") redrawAll(); };
 
+  // One connection per page, closed when another context (the reset's deleteDatabase, a version upgrade) asks for it: an idle open connection would block it.
+  /** @type {Promise<IDBDatabase | null> | null} */ let dbP = null;
   function idbOpen() {
-    return new Promise(async res => {
+    return dbP || (dbP = new Promise(async res => {
       if (typeof indexedDB === "undefined") return res(null);
       try {
         // the schema is written once (qqq-db.js)
         const { DB_NAME, DB_VER, upgrade } = await import("./qqq-db.js");
         const req = indexedDB.open(DB_NAME, DB_VER);
         req.onupgradeneeded = () => upgrade(req.result);
-        req.onsuccess = () => res(req.result);
-        req.onerror = () => res(null);
+        req.onsuccess = () => { const db = req.result; db.onversionchange = () => { db.close(); dbP = null; }; res(db); };
+        req.onerror = () => { dbP = null; res(null); };
         req.onblocked = () => window.dispatchEvent(new Event("mzlab:db-blocked"));     // browser.js shows the same message as for the engine's own open
-      } catch (_) { res(null); }
-    });
+      } catch (_) { dbP = null; res(null); }
+    }));
   }
 
   async function idbGetUserLists() {

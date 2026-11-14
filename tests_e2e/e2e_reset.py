@@ -1,7 +1,7 @@
 """A true reset: what a student loads stays in the browser after a reload (the page says so once); «Full reset» removes files, session, notebook, OPFS, IndexedDB,
 caches, service workers and preferences by NAME (also folders and databases that this test invents, as other parts of the program do); «Files and session only» keeps the
 preferences, the language and the saved libraries. The one entry is the header button «New session» (dialog with both and Cancel), also ?reset=all|1|files. Full reset also drops the program's own caches and worker (it is the guaranteed way to fetch the new version) and the page it reloads ends isolated by itself."""
-# covers: mzlab/web/reset.js, mzlab/web/settings.js
+# covers: mzlab/web/reset.js, mzlab/web/settings.js, mzlab/web/liste.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import time
@@ -28,6 +28,19 @@ STATE = """async () => ({
   ls: Object.keys(localStorage).filter(k => /^(qqq|mzlab)/i.test(k)).sort(),
   files: typeof E !== 'undefined' ? E.files.length : -1, sess: typeof S !== 'undefined' && !!S.sess, url: location.search
 })"""
+SEED_LISTS = """async () => {
+  await LISTE.ready();                                   // the lists code opens its connection to mzlab_lab here
+  const { DB_NAME, DB_VER, upgrade } = await import('./qqq-db.js');
+  const db = await new Promise((ok, no) => { const q = indexedDB.open(DB_NAME, DB_VER); q.onupgradeneeded = () => upgrade(q.result); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); });
+  await new Promise((ok, no) => { const t = db.transaction(['liste_utente', 'molecole'], 'readwrite'); t.objectStore('liste_utente').put({ id: 'usr_reset', name: 'x', items: [] }); t.objectStore('molecole').put({ id: 'mol_reset' }); t.oncomplete = ok; t.onerror = () => no(t.error); });
+  db.close();
+}"""
+COUNT_LISTS = """async () => {
+  const { DB_NAME, DB_VER, upgrade } = await import('./qqq-db.js');
+  const db = await new Promise((ok, no) => { const q = indexedDB.open(DB_NAME, DB_VER); q.onupgradeneeded = () => upgrade(q.result); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); });
+  const n = s => new Promise((ok, no) => { const q = db.transaction(s).objectStore(s).count(); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); });
+  const r = [await n('liste_utente'), await n('molecole')]; db.close(); return r;
+}"""
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); r.b = b
@@ -134,6 +147,18 @@ try:
             assert "librerie" in s["opfs"] and "mzlab.lang" in s["ls"], s                         # the same as «Files and session only»
             stage(pg, [EX / "FullScan_t0.mzML"]); pg.click("#opbtn"); ready(pg); assert pg.evaluate("E.files.length") >= 1, "loading again works"
         step("«Files and session only»: empty list, memory released, loading again works", clear_all)
+        def lists_not_blocking():
+            load_files(); pg.evaluate(SEED_LISTS)
+            rep = pg.evaluate("QQRESET.wipe('all')")
+            assert "mzlab_lab" not in rep["blocked"] and "mzlab_lab" in rep["idb"], rep           # the page holds no idle connection to its own database
+        step("Full reset in one tab: the user-lists code does not block deleting mzlab_lab", lists_not_blocking)
+        def lists_gone():
+            load_files(); pg.evaluate(SEED_LISTS)
+            assert pg.evaluate(COUNT_LISTS) == [1, 1]
+            pg.evaluate("QQRESET.run('all')"); pg.wait_for_function("location.search.includes('riparti') || location.search.includes('ripn')", timeout=30000)
+            pg.wait_for_function("window.qqReady", timeout=60000)
+            assert pg.evaluate(COUNT_LISTS) == [0, 0], "user lists and molecules do not survive a Full reset"
+        step("Full reset empties user lists and molecules", lists_gone)
         b.close()
     r.close()
 except Exception as e:
