@@ -21160,3 +21160,4 @@
 {"v":1,"ts_utc":"2026-11-14T07:43:56Z","azione":"push","titolo":"Drop the test of the committed stretto*.json: the files are no longer committed","merge_main":false,"aree":{"test":1},"tipo":"pr","pr":3262,"sha":"148612b2a120f1f82936855a335933a71c49e39a"}
 {"v":1,"ts_utc":"2026-11-14T07:46:58Z","azione":"aperta","tipo":"pr","pr":3265,"sha":"1b82efbd03fd7cac9bf15b135a14f5924d0bd05c"}
 {"v":1,"tipo":"pr","pr":3264,"sha":"c710e9ec3cc009782215d2dbfea87a857b334925","ts_utc":"2026-11-14T08:03:38Z","azione":"unita","aperta_s":1335,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":29,"righe_meno":2,"file_n":4,"file":[".github/workflows/sito-rust.yml","tests/test_moduli_dati.py","tools/moduli.py","tools/pre_pr.py"],"aree":{"workflow":1,"test":1,"tools":2},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":218}
+{"v":1,"ts_utc":"2026-11-14T08:05:52Z","azione":"aperta","tipo":"pr","pr":3266,"sha":"ce14504d7681385b43239b3ccee8d530068e8460"}
