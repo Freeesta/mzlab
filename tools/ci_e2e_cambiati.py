@@ -16,7 +16,7 @@ import verifica  # noqa: E402
 ELSEWHERE = {"sito", "dam", "veri", "wasm"}
 COSTS = Path(__file__).resolve().parent / "ci_e2e_costi.json"
 TEST_CAP_S = 60       # a test slower than this is not a representative: it would eat the budget of ten others
-BUDGET_S = 2400       # sum of the seconds of the safety set: about 13 min with the 3 parallel jobs of a 4-CPU runner, inside the 30 min of the job with the site build
+BUDGET_S = 1800       # sum of the seconds of the safety set; the first CI run took 1541 s of verifica.py (site build included) for 2390 s, too close to the 30 min of the job
 
 
 def core_set() -> tuple[list[str], str]:
