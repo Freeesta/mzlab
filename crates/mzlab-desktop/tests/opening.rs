@@ -150,3 +150,62 @@ fn mzxml_wiff_and_mzml_gz_files_are_taken_but_not_other_gz() {
         vec![d.join("a.mzXML"), d.join("b.wiff"), d.join("c.mzML.gz")]
     );
 }
+
+fn touch(d: &std::path::Path, names: &[&str]) {
+    for n in names {
+        std::fs::write(d.join(n), b"x").unwrap();
+    }
+}
+
+#[test]
+fn wiff_scan_opens_its_wiff_ignoring_case_with_spaces_and_non_ascii() {
+    let t = tempfile::tempdir().unwrap();
+    let d = t.path();
+    touch(d, &["Campióne 1.WIFF", "Campióne 1.WIFF.scan"]);
+    let plan = mzlab_desktop::opening::plan_from_paths([d.join("Campióne 1.WIFF.scan")]);
+    assert_eq!(
+        plan.files,
+        vec![d.join("Campióne 1.WIFF"), d.join("Campióne 1.WIFF.scan")]
+    );
+    assert!(plan.problems.is_empty());
+    // the .wiff scan name in another case than its .wiff
+    touch(d, &["b.wiff", "b.WIFF.SCAN"]);
+    let plan = mzlab_desktop::opening::plan_from_paths([d.join("b.WIFF.SCAN")]);
+    assert_eq!(plan.files, vec![d.join("b.wiff"), d.join("b.WIFF.SCAN")]);
+}
+
+#[test]
+fn wiff_alone_takes_its_scan_companion_along_once() {
+    let t = tempfile::tempdir().unwrap();
+    let d = t.path();
+    touch(d, &["a.wiff", "a.wiff.scan", "n.wiff"]);
+    let plan = mzlab_desktop::opening::plan_from_paths([d.join("a.wiff"), d.join("a.wiff.scan")]);
+    assert_eq!(plan.files, vec![d.join("a.wiff"), d.join("a.wiff.scan")]);
+    // no companion: the .wiff alone, no message
+    let plan = mzlab_desktop::opening::plan_from_paths([d.join("n.wiff")]);
+    assert_eq!(plan.files, vec![d.join("n.wiff")]);
+    assert!(plan.problems.is_empty());
+}
+
+#[test]
+fn scan_without_wiff_or_foreign_scan_is_refused_with_a_message() {
+    let t = tempfile::tempdir().unwrap();
+    let d = t.path();
+    touch(d, &["lost.wiff.scan", "other.scan", "ok.mzML"]);
+    let plan = mzlab_desktop::opening::plan_from_paths([
+        d.join("lost.wiff.scan"),
+        d.join("other.scan"),
+        d.join("ok.mzML"),
+    ]);
+    assert_eq!(plan.files, vec![d.join("ok.mzML")]);
+    assert_eq!(plan.problems.len(), 2);
+    assert!(plan.problems[0].contains("«lost.wiff» is missing"));
+    assert!(plan.problems[1].contains("not a SCIEX scan companion"));
+}
+
+#[test]
+fn scan_is_associated_but_other_companions_and_nc_are_not() {
+    let a = mzlab_desktop::opening::associated_extensions();
+    assert!(a.contains(&"scan".to_string()) && a.contains(&"wiff".to_string()));
+    assert!(!a.contains(&"nc".to_string()) && !a.contains(&"gz".to_string()));
+}

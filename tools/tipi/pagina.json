@@ -298,6 +298,7 @@
     "../../flow/lazy/flow-web-estimate.js",
     "../../flow/lazy/flow-web-group.js",
     "../../flow/lazy/flow-web-transitions.js",
+    "../../flow/lazy/flow-web-uv.js",
     "../../flow/lazy/flow-web-qcreport.js",
     "../../flow/lazy/flow-web-export-annot.js",
     "../../flow/lazy/flow-web-inclusion.js",

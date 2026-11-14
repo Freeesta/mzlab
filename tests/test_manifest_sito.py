@@ -84,3 +84,9 @@ def test_build_json_step_rewrites_the_manifest_last(tmp_path):
     m = check_manifest_matches_disk(out)
     assert "static/wasm/engine.wasm" in m["files"] and "static/build.json" in m["files"]
     assert m["version"] == json.loads((out / "static" / "build.json").read_text(encoding="utf-8"))["commit"]
+
+
+def test_installed_web_app_is_named_apart_from_the_desktop_app():
+    """The PWA is «<name> Web» (name and short name); the desktop app keeps the plain name."""
+    assert bs.WEB_APP_NAME == f"{bs.APP_NAME} Web"
+    assert bs.MANIFEST["name"] == bs.MANIFEST["short_name"] == bs.WEB_APP_NAME

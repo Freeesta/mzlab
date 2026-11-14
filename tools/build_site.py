@@ -45,9 +45,13 @@ def preview_tags() -> str:
     return "\n".join(f'<meta {k}="{n}" content="{a(v)}">' for k, n, v in meta) + f'\n<link rel="canonical" href="{SITE_URL}">'
 
 
+# The installed web app is «<name> Web» (its icon carries a «web» badge, tools/generate_icons.py) so it is told apart from the desktop app «<name>»;
+# the tab title stays «<Page> · <name>». An already installed PWA may keep the old name until it is reinstalled.
+WEB_APP_NAME = f"{APP_NAME} Web"
+
 # Web app manifest (PWA). Paths are relative to the manifest, which sits in the site root, so it works under /QqQ-lab/.
 MANIFEST = {
-    "name": APP_NAME, "short_name": APP_NAME, "lang": "it", "dir": "ltr",
+    "name": WEB_APP_NAME, "short_name": WEB_APP_NAME, "lang": "it", "dir": "ltr",
     "description": "Esplora i dati LC-MS/MS del triplo quadrupolo (Full Scan, Product ion, MRM) direttamente nel browser.",
     "start_url": "./", "scope": "./", "id": "./", "display": "standalone",
     "background_color": "#ffffff", "theme_color": "#ffffff", "categories": ["education", "science"],
@@ -316,7 +320,7 @@ def main() -> None:
     else:
         html = html.replace("</head>", preview_tags() + "\n</head>", 1)
     # installable app (PWA): manifest at the site root + theme colour; the local program does not use it
-    html = html.replace("</head>", '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#ffffff"></head>', 1)
+    html = html.replace("</head>", '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#ffffff"><meta name="apple-mobile-web-app-title" content="' + WEB_APP_NAME + '"></head>', 1)
     (out / "manifest.webmanifest").write_text(json.dumps(MANIFEST, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "index.html").write_text(html, encoding="utf-8")
     (static / "index.html").unlink()
