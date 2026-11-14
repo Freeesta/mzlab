@@ -3,10 +3,10 @@
 Misura, contro il motore di oggi, le quattro idee di DAG-OT-IDF e MORPHO-MS che la revisione ha giudicato da misurare (null calibrato, p-value di coincidenza e pesi informativi, validazione per sotto-formule, analoghi a più spostamenti; E opzionale: Tree-W1 sull'energia di collisione). Solo misure: nessun default, punteggio, formato, passo o pezzo del sito cambia. I bracci sperimentali vivono solo nel codice di test e di esempio; `crates/mzlab-lib/src/` resta identico byte per byte.
 
 ## Dove
-- Moduli in `crates/mzlab-lib/tests/studio_spettri/`: `gen.rs` (generatore), `scen.rs` + `analogue.rs` (scenari E0-E6 con verità), `arms.rs` (bracci), `metrics.rs`, `mod.rs` (impianto comune, numeri fissati).
-- Test `crates/mzlab-lib/tests/studio_spettri_<scenario>.rs`: libreria di 600 voci, 120 query, seme 1, numeri di oggi fissati con tolleranza 1e-3 (arrotondamento a 4 decimali); ogni test gira due volte (JSON identico byte per byte) e verifica che il braccio entropia dia lo stesso miglior bersaglio e lo stesso q di `decoy::search_fdr`. Meno di 1 s ciascuno in debug.
-- Esempio `cargo run --release -p mzlab-lib --example studio_spettri -- <scenario> <n_lib> <n_query> <seme>`: una riga JSON per braccio (metriche totali e per sottogruppo, `ms` della ricerca, `det`: scenario costruito due volte con gli stessi byte di libreria e le stesse query, braccio rieseguito con le stesse righe).
-- `python3 tools/studio_spettri.py [--scenari e0,...] [--n-lib 20000] [--n-query 2000] [--semi 1,2,3] [--json OUT]`: esegue l'esempio per 3 semi e stampa le righe `MISURA studio_<scenario>` (media; tra parentesi min-max di Recall@1 e AUPRC). Circa 1 minuto per tutti gli scenari.
+- Moduli in `crates/mzlab-lib/tests/studio_spettri/`: `gen.rs` (generatore), `scen.rs` + `analogue.rs` (scenari E0-E6 con verità), `arms.rs` (bracci di base), `null.rs` (braccio A), `metrics.rs`, `mod.rs` (impianto comune, numeri fissati).
+- Test `crates/mzlab-lib/tests/studio_spettri_<scenario>.rs` (bracci di base) e `studio_spettri_null.rs` (braccio A su E6, E1, E3): libreria di 600 voci, 120 query, seme 1, numeri di oggi fissati con tolleranza 1e-3 (arrotondamento a 4 decimali); ogni test gira due volte (JSON identico byte per byte) e verifica che il braccio entropia dia lo stesso miglior bersaglio e lo stesso q di `decoy::search_fdr`. Meno di 1 s ciascuno in debug.
+- Esempio `cargo run --release -p mzlab-lib --example studio_spettri -- <scenario> <n_lib> <n_query> <seme> [base|null]`: una riga JSON per braccio (metriche totali, per sottogruppo e per prefisso prima di `/`; `ms` dell'insieme di bracci diviso per i bracci; `det`: scenario costruito due volte con gli stessi byte di libreria e le stesse query, bracci rieseguiti con lo stesso JSON).
+- `python3 tools/studio_spettri.py [--bracci base|null] [--scenari e0,...] [--n-lib 20000] [--n-query 2000] [--semi 1,2,3] [--json OUT]`: esegue l'esempio per 3 semi e stampa le righe `MISURA studio_<scenario>` (`studio_null_<scenario>` per il braccio A; media, tra parentesi min-max di Recall@1 e AUPRC). Circa 1 minuto per i bracci di base, 2 per il braccio A.
 - Un cambio del motore o del generatore che sposta un numero aggiorna insieme il test e la riga MISURA.
 
 ## Generatore (`gen.rs`)
@@ -29,6 +29,7 @@ Misura, contro il motore di oggi, le quattro idee di DAG-OT-IDF e MORPHO-MS che 
 ## Metriche (`metrics.rs`)
 - Recall@1 e MRR sulle query con verità in libreria; `hit` quota di query con almeno un candidato; `score` mediana del punteggio del primo candidato.
 - `pauprc`: area sotto la curva precisione-richiamo dei primi candidati ordinati per punteggio (gruppi di punteggi uguali insieme) fino all'ultimo taglio con FDP vero <= 1 %; il massimo è il richiamo a FDP 1 %.
+- `recall_q01`: quota dei colpi giusti accettati a q <= 0,01 sulle query con verità in libreria (la potenza del null: un null che rifiuta tutto ha ECE 0). `q_auc`: probabilità che un primo candidato sbagliato (trappola o errore) abbia q più alto di uno giusto, pari a metà; 1 separa del tutto, 0,5 per niente.
 - Calibrazione: a 20 soglie τ log-spaziate in [0,001, 0,1] si accettano i colpi con q <= τ; `ece` è la media di |FDP vero - q massimo accettato|, `fdp_q01` l'FDP vero a q <= 0,01. q = `decoy::lib_fdr` sul miglior bersaglio e la miglior esca di ogni query, come `best_scores_with`.
 - `gate`: quota di query il cui primo candidato passa il cancello `shared` di `livelli-1.js` (>= `picchi_min` 6, o 3 quando la voce ha meno di 6 picchi).
 - `q_true` / `q_trap`: q mediano dei colpi veri e delle trappole. Per braccio: `ms` (solo esempio) e `det`.
@@ -36,6 +37,10 @@ Misura, contro il motore di oggi, le quattro idee di DAG-OT-IDF e MORPHO-MS che 
 ## Bracci di base
 - `entropy` (predefinito), `cosine`, `modified_cosine`: tutti i candidati della finestra di 10 ppm (`search::identity_with`, frammenti 0,02 Da, i valori predefiniti di `spectra.match` su una query HR), ordinati per punteggio quantizzato (`decoy::quantize`).
 - `analogs`: `search::analogs_with` con `AnalogOpts` predefiniti (Flash ibrido, coseno modificato, `min_delta` 0,5 Da); misurato su E5 e su E0, dove ogni analogo restituito è falso.
+
+## Braccio A: null calibrato (`null.rs`)
+- Ordinamento sempre dell'entropia del motore (Recall@1 e AUPRC non cambiano per costruzione); cambia solo il null. Ogni tipo di esca costruisce il suo `.mzlib` (bersagli più un'esca ciascuno, accessione `DECOY:` come `decoy::make_decoy`); q di `decoy::lib_fdr` e, per ogni tipo, `<tipo>+1` con q = (1 + #esche >= s) / max(1, #bersagli >= s), poi il minimo progressivo.
+- Tipi: `fragments` (oggi), `precursor` (l'altro tipo del motore), `swap_near` (picchi della voce più vicina per precursore, anche un isomero nella finestra), `swap_out` (la più vicina oltre 20 ppm), sui picchi del donatore sotto entrambi i precursori - 1,6 Da; `subformula` (tante sotto-formule casuali valide della radice quanti picchi, mai su un picco vero, intensità tenute); `sead` (le perdite consecutive dal precursore rimescolate e risommate, ogni rango tiene la sua intensità; resta fermo il frammento più basso).
 
 ## Misure (n_lib 20 000, 2000 query, semi 1-3, media)
 - MISURA studio_e0: entropy/cosine/modified_cosine Recall@1 1,000, AUPRC 1,000, ECE 0, `gate` 0,566, `score` 0,924 / 0,985 / 0,985; analogs (falsi analoghi) `hit` 0,162, `score` 0,393, ms 711 contro 49-64 dell'identità.
@@ -45,6 +50,10 @@ Misura, contro il motore di oggi, le quattro idee di DAG-OT-IDF e MORPHO-MS che 
 - MISURA studio_e4: entropy Recall@1 0,998, AUPRC 0,997; per CE 10/20/50/65: Recall@1 0,991 / 0,999 / 1 / 1, `score` 0,651 / 0,842 / 0,900 / 0,879, `gate` 0,165 / 0,456 / 0,519 / 0,475; cosine Recall@1 0,993.
 - MISURA studio_e5: analogs Recall@1 0,291 [0,282-0,303], MRR 0,295, AUPRC 0,206 [0,186-0,232], `hit` 0,317, ECE 0,081, `gate` 0,152; -CH2 Recall@1 0,293, -Cl+H 0,280.
 - MISURA studio_e6: entropy Recall@1 0,993, AUPRC 0,680 [0,652-0,720], ECE 0,339, `fdp_q01` 0,367, `q_true` 0, `q_trap` 0,005; per stile `q_trap` e0 1, e1 0,001, e2 0, e3 1; cosine e modified_cosine AUPRC 0,641, `fdp_q01` 0,366.
+- MISURA studio_null_e6 (`ece` / `fdp_q01` / `recall_q01` / `q_auc`): fragments 0,339 / 0,367 / 0,993 / 0,847; precursor 0,370 / 0,392 / 0,993 / 0,781; swap_near 0 / 0 / 0,002 / 0,943; swap_out 0,209 / 0,238 / 0,971 / 0,949; subformula 0,266 / 0,280 / 0,993 / 0,904; sead 0,155 / 0,214 / 0,934 / 0,960. Con +1 cambiano di <= 0,011.
+- MISURA studio_null_e6 per stile (`fdp_q01` / `recall_q01`): e0 fragments 0,191 / 1, swap_out 0,018 / 1, subformula 0,043 / 1, sead 0,011 / 0,992; e1 0,472 / 0,972, 0,179 / 0,912, 0,329 / 0,972, 0,126 / 0,835; e2 0,5 / 1 per tutti (sead 0,469); e3 0,160 / 1, 0,001 / 0,973, 0,020 / 1, 0 / 0,908.
+- MISURA studio_null_e1 (`ece` / `fdp_q01` / `recall_q01`): fragments 0,036 / 0,041 / 0,959; precursor 0,039 / 0,041 / 0,959; swap_near 0,089 / 0,026 / 0,057; swap_out 0,023 / 0,039 / 0,895; subformula 0,020 / 0,034 / 0,839; sead 0,077 / 0,034 / 0,828 (sead+1 ECE 0,017).
+- MISURA studio_null_e3 (`fdp_q01` / `recall_q01`): fragments 0,0005 / 0,999; swap_near 0 / 0,0005; swap_out 0,0005 / 0,987; subformula 0,0005 / 0,999; sead 0 / 0,898 (a η 0,6: 0,728; swap_out 0,947).
 - Determinismo: `det` vero per ogni braccio, scenario e seme.
 
 ## Findings
@@ -54,5 +63,8 @@ Misura, contro il motore di oggi, le quattro idee di DAG-OT-IDF e MORPHO-MS che 
 - Analoghi a due spostamenti (E5): la ricerca degli analoghi trova il genitore nel 29 % dei casi e nel 68 % non restituisce nessun candidato (`hit` 0,32: meno di 3 coppie ibride o meno di 4 picchi accoppiati); in E0 restituisce un analogo falso per il 16 % delle query. Obiettivo del braccio D.
 - Energia (E4): il primo candidato resta giusto (>= 0,99 a ogni CE), il punteggio scende a 0,65 a CE 10 e il cancello `shared` passa per il 16 %.
 - Isomeri posizionali (E2): con rumore 2 ppm e 8 % i due diagnostici al 3 % bastano a tutti e tre i punteggi (Recall@1 1).
+- Braccio A: nessun tipo di esca calibra le trappole. Il migliore in E6 è `sead` (FDP vero a q <= 0,01 da 0,37 a 0,21, ECE da 0,34 a 0,15, `q_auc` da 0,85 a 0,96) e paga potenza: `recall_q01` da 0,993 a 0,934, 0,90 sui chimerici (0,73 a η 0,6), 0,83 sui piccoli; `swap_out` scende a 0,24 con meno perdita (0,971). Le trappole isomeriche (stile E2, 90 % del picco base in comune) restano a FDP 0,47-0,5 con ogni esca: non sono errori casuali e nessun null per esche le vede.
+- Braccio A: `swap_near` è inutilizzabile: l'esca di un isomero nella finestra porta i picchi veri della query, q mediano dei colpi veri 0,20 in E6 e 0,33 in E3, `recall_q01` <= 0,06. La correzione +1 sposta l'FDP di <= 0,011 con 2000 query; l'ECE pure, tranne `sead` in E1 (0,077 → 0,017, perché le soglie più basse restano vuote).
+- Braccio A e regola: Recall@1 e AUPRC sono quelli dell'entropia per costruzione, quindi nessun tipo «batte» la base secondo la regola; il guadagno di calibrazione di `sead` e `swap_out` è reale (3 semi, `det` vero) ma resta lontano da FDP 1 % e costa potenza. Decide il proprietario.
 - Regola di decisione per i bracci A-D (nessuna azione dallo studio, decide il proprietario): un braccio «batte» la base solo se sul suo scenario Recall@1 sale di >= 5 punti e AUPRC@FDR<=1 % di >= 0,05, con E0 che perde <= 1 punto, su tutti e 3 i semi e identico byte per byte alla riesecuzione.
 - Per ogni vincitore si scrive: byte in più nel wasm `librerie` (tetto 614 400, misurato 502 678), cambio del formato `.mzlib` se serve, costo per rendere l'aritmetica deterministica tra nativo e wasm (niente exp/ln f64 grezzi in un punteggio; quantizzare come `decoy::quantize`), come ogni termine comparirebbe in `score_terms`.

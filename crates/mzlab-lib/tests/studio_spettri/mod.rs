@@ -6,6 +6,7 @@ pub mod analogue;
 pub mod arms;
 pub mod r#gen;
 pub mod metrics;
+pub mod null;
 pub mod scen;
 
 use mzlab_lib::search::Query;
@@ -85,11 +86,28 @@ pub fn check_engine(name: &str, n: usize) {
     }
 }
 
+/// A function that runs a set of arms on a scenario: (name, seed, n_lib, n) -> one JSON object per arm.
+pub type Runner = fn(&str, u64, usize, usize) -> Vec<Value>;
+
+/// The arm sets of the example and of `tools/studio_spettri.py`: the baselines and arm A (`null`).
+pub fn runner(set: &str) -> Runner {
+    match set {
+        "base" => run_baselines,
+        "null" => null::run_null,
+        _ => panic!("unknown arm set {set}"),
+    }
+}
+
 /// Runs the baselines of `name` twice (the JSON must be byte-identical) and compares every pin (arm, group, metric, value) within `TOL`.
 /// The measured lines go to stderr, so a deliberate change of the engine or the generator re-pins them from the test output.
 pub fn pinned(name: &str, n: usize, pins: &[(&str, &str, &str, f64)]) {
-    let a = run_baselines(name, SEED, N_LIB, n);
-    let b = run_baselines(name, SEED, N_LIB, n);
+    pinned_with(run_baselines, name, n, pins)
+}
+
+/// As `pinned` for the arms of `run`.
+pub fn pinned_with(run: Runner, name: &str, n: usize, pins: &[(&str, &str, &str, f64)]) {
+    let a = run(name, SEED, N_LIB, n);
+    let b = run(name, SEED, N_LIB, n);
     assert_eq!(
         Value::from(a.clone()).to_string(),
         Value::from(b).to_string(),
