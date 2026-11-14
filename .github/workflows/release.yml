@@ -273,7 +273,6 @@ jobs:
         with:
           path: site/static/insilico
           key: insilico-${{ steps.pin.outputs.fonti }}-${{ hashFiles('crates/mzlab-cli/src/insilico_pack.rs', 'crates/mzlab-feat/src/flow_insilico.rs', 'crates/mzlab-feat/src/attributio/ms2_engine/insilico.rs', 'tools/pubchemlite_pacchetto.py', 'Cargo.lock') }}
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       - name: Record the .wasm modules in static/build.json (they are in place now)
         run: python3 tools/build_site.py --build-json
       # The same steps as pages.yml (build job): a release ships exactly the site that would be published.
