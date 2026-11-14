@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from cargo_util import build, example
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
@@ -34,8 +35,8 @@ def run(*a):
 def test_the_wasm_read_refusal_follows_the_fixture(tmp_path):
     spec = json.loads((ROOT / "tests/dati/read_estimate.json").read_text(encoding="utf-8"))
     mzml = tmp_path / "estimate.mzML"
-    run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "read_estimate", "--", "--fixture", str(mzml))
-    run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm")
+    example("mzlab-feat-wasm", "read_estimate", "--fixture", str(mzml), runner=run)
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", runner=run)
     pkg = tmp_path / "pkg"
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm")
     got = json.loads(run("node", "-e", NODE, str(pkg), str(mzml), json.dumps(spec["cases"])))

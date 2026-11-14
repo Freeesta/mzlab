@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from cargo_util import build
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "crates/mzlab-feat/tests/data/official"
@@ -32,8 +33,8 @@ def run(*a, check=True):
 @pytest.fixture(scope="module")
 def built(tmp_path_factory):
     root = tmp_path_factory.mktemp("impwasm")
-    run("cargo", "build", "--locked", "--release", "-q", "-p", "mzlab-cli")
-    run("cargo", "build", "--locked", "--release", "-q", "--target", "wasm32-unknown-unknown", "-p", "mzlab-normative-wasm")
+    build("-p", "mzlab-cli", runner=run)
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-normative-wasm", runner=run)
     pkg = root / "pkg"
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_normative_wasm.wasm")
     (root / "run.js").write_text(NODE)

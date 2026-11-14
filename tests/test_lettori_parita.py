@@ -15,6 +15,7 @@ import zlib
 from pathlib import Path
 
 import pytest
+from cargo_util import example_argv, installed
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -36,8 +37,9 @@ def run(cmd, **kw):
 def tools(tmp_path_factory):
     need(shutil.which("node") and shutil.which("wasm-bindgen"), "node or wasm-bindgen-cli missing")
     need("wasm32-unknown-unknown" in run(["rustup", "target", "list", "--installed"]).stdout, "wasm32-unknown-unknown missing")
-    b = run(["cargo", "build", "--release", "--locked", "-p", "mzlab-cli"])
-    assert b.returncode == 0, b.stderr[-2000:]
+    if not installed("-p", "mzlab-cli"):
+        b = run(["cargo", "build", "--release", "--locked", "-p", "mzlab-cli"])
+        assert b.returncode == 0, b.stderr[-2000:]
     return {"cli": ROOT / "target/release/mzlab-cli", "tmp": tmp_path_factory.mktemp("parita")}
 
 
@@ -47,8 +49,9 @@ _packages = {}
 def package(tools, fam):
     """The module of the family, built as the site builds it (no wasm-opt: it does not change what the code computes) and packed for Node."""
     if fam not in _packages:
-        b = run(["cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", fam])
-        assert b.returncode == 0, b.stderr[-2000:]
+        if not installed("--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", fam):
+            b = run(["cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", fam])
+            assert b.returncode == 0, b.stderr[-2000:]
         out = tools["tmp"] / f"pkg_{fam}"
         w = run(["wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(out), str(ROOT / "target/wasm32-unknown-unknown/release/mzlab_lettori_wasm.wasm")])
         assert w.returncode == 0, w.stderr[-2000:]
@@ -155,7 +158,7 @@ SYNTHETIC_RUST = {"thermo": "thermo/synt.raw", "thermo_danneggiato": "thermo_dan
 def synthetic(base: Path):
     """Runs the example that writes the Thermo, Bruker and ANDI datasets (once per test run)."""
     if not (base / "synthetic").exists():
-        r = run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-lettori", "--features", "tutte", "--example", "synthetic", "--", str(base / "synthetic")])
+        r = run(example_argv("mzlab-lettori", "synthetic", str(base / "synthetic"), features="tutte"))
         assert r.returncode == 0, r.stderr[-2000:]
 
 

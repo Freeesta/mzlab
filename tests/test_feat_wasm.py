@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
+from cargo_util import build
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
@@ -27,8 +28,8 @@ def built(tmp_path_factory):
     # the series (python) is independent of the two builds (cargo takes the lock of the target folder one after the other): they run at the same time
     with ThreadPoolExecutor(2) as pool:
         made = pool.submit(run, "python3", "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(ser))
-        run("cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "native")
-        run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm")
+        build("-p", "mzlab-feat-wasm", "--example", "native", runner=run)
+        build("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", runner=run)
         made.result()
     idx = sorted(str(p) for p in ser.glob("*.mzidx"))
     assert len(idx) == 6
