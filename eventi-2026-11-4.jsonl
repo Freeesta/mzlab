@@ -23214,3 +23214,4 @@
 {"v":1,"ts_utc":"2026-11-14T10:02:40Z","azione":"aperta","tipo":"pr","pr":3288,"sha":"7137734c781435e33311452101b40972c2d05979"}
 {"v":1,"ts_utc":"2026-11-14T10:35:34Z","azione":"push","titolo":"mzlab-llm test: avoid format! inside format! args (clippy)","merge_main":false,"aree":{"rust":1},"tipo":"pr","pr":3284,"sha":"eded9dba001d9d83fbb028d18f6ca7d376df8c47"}
 {"v":1,"ts_utc":"2026-11-14T10:36:45Z","azione":"push","titolo":"Update the detect recipe goldens for the new families default","merge_main":false,"aree":{"rust":1},"tipo":"pr","pr":3280,"sha":"14c6a63b446952a71c03529d7d8ff426d323adb3"}
+{"v":1,"ts_utc":"2026-11-14T10:44:50Z","azione":"push","titolo":"ci_prebuilt: list the untargeted build of test_feat_wasm","merge_main":false,"aree":{"tools":1},"tipo":"pr","pr":3285,"sha":"cf6eb467d788356960a96562208592b19ec9dd36"}
