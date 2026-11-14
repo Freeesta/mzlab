@@ -156,7 +156,7 @@
     const root = el("div", { class: "flw flx", id: "flx-root" }, bar, live, body, issuesHost, factsHost, planView, listHost);
     function setTab(/** @type {string} */ t) {
       tab = t; tabs.forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.tab === t)); });
-      body.hidden = t !== "canvas"; issuesHost.hidden = t !== "canvas"; factsHost.hidden = t !== "canvas"; planView.hidden = t !== "plan"; listHost.hidden = t !== "list"; redraw(); if (t === "canvas") cv.fit();
+      body.hidden = t !== "canvas"; issuesHost.hidden = t !== "canvas"; factsHost.hidden = t !== "canvas"; planView.hidden = t !== "plan"; listHost.hidden = t !== "list"; redraw(); if (t === "canvas") cv.fit(false);
     }
     // Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) outside text fields
     root.addEventListener("keydown", e => {
@@ -188,7 +188,7 @@
     }
     listHost.addEventListener("flow:changed", () => { undoBtn.disabled = !S.history.length; redoBtn.disabled = !S.future.length; redraw(); });
     tplCards(); planView.hidden = true; undoBtn.disabled = true; redoBtn.disabled = true;
-    selected = tableKey(); redraw(); requestAnimationFrame(() => cv.fit());
+    selected = tableKey(); redraw(); requestAnimationFrame(() => cv.fit(false));
     // the late modules (results, review, runners) arrive after the first draw: draw again so the inspector gets its result cards
     // the live controls of the bar (Live, Pause, Run now) come with the late modules
     const mountLive = () => { if (F.liveBar && root.isConnected) F.liveBar.mount(bar, run, { say: (/** @type {string} */ m) => say(m, null), titleOf: (/** @type {string} */ id) => { const i = F.instanceOf(S.plan, id); return i ? F.nameOf(String(i.step).split("@")[0])[0] : id; } }); };
