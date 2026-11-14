@@ -49,8 +49,8 @@ window.DESKUPD = (() => {
       show(EH(I18N.t("update.available", { files: r.files, size: mb(r.bytes) })), [["go", I18N.t("update.download")], closeBtn()], silent ? I18N.t("update.notice") : "");
     } else if (r.status === "newapp") {
       // without a public app download (SITO_PUBBLICO.scaricaApp false) the text stays, the link goes: a manual check never hangs on «Checking…»
-      const link = SITO_PUBBLICO.scaricaApp ? `<br><a href="${REL}" target="_blank" rel="noopener noreferrer">${REL}</a>` : "";
-      show(EH(I18N.t("update.newapp", { min: r.min })) + link, [closeBtn()]);
+      show(SITO_PUBBLICO.scaricaApp ? `${EH(I18N.t("update.newapp", { min: r.min }))}<br><a href="${REL}" target="_blank" rel="noopener noreferrer">${REL}</a>`
+        : EH(I18N.t("update.newapp.nolink", { min: r.min })), [closeBtn()]);
     } else if (!silent) fail(r);
   }
 

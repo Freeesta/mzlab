@@ -104,6 +104,10 @@ pub trait Source: Sync {
     fn get_versioned(&self, rel: &str, _version: &str) -> Result<Vec<u8>, UpdateError> {
         self.get(rel)
     }
+    /// Does `get_versioned` ask for something other than `get` (so that a second try is worth making)?
+    fn retry_differs(&self, _version: &str) -> bool {
+        false
+    }
 }
 
 pub fn parse_manifest(bytes: &[u8]) -> Result<Manifest, UpdateError> {
@@ -282,17 +286,21 @@ fn fetch_one(
     let ok = |b: &[u8]| b.len() as u64 == want.size && sha256_hex(b) == want.sha256;
     let mut body = src.get(rel)?;
     if !ok(&body) {
-        body = src.get_versioned(rel, version)?;
+        let retry = src.retry_differs(version);
+        if retry {
+            body = src.get_versioned(rel, version)?;
+        }
         if !ok(&body) {
-            let h = sha256_hex(&body);
+            let (h, w) = (sha256_hex(&body), &want.sha256);
+            let tries = if retry { "tries 2" } else { "tries 1, no cache-buster for this version" };
             return Err(UpdateError::new(
                 "update.error.hash",
                 format!(
-                    "{rel}: got {}/{}, want {}/{}, tries 2",
+                    "{rel}: got {}/{}, want {}/{}, {tries}",
                     body.len(),
-                    &h[..8],
+                    h.get(..8).unwrap_or(&h),
                     want.size,
-                    &want.sha256[..8.min(want.sha256.len())]
+                    w.get(..8).unwrap_or(w)
                 ),
             ));
         }

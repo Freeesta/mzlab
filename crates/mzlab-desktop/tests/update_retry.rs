@@ -43,6 +43,9 @@ impl Source for Stale {
             .cloned()
             .unwrap_or_else(|| self.stale.clone()))
     }
+    fn retry_differs(&self, _version: &str) -> bool {
+        true
+    }
     fn get_versioned(&self, rel: &str, v: &str) -> Result<Vec<u8>, UpdateError> {
         self.calls.lock().unwrap().push(format!("{rel}?v={v}"));
         Ok(self.fresh.clone())
@@ -118,11 +121,50 @@ fn republished_site_restarts_the_diff_once() {
         fs::read(tmp.path().join("web/static/a.js")).unwrap(),
         b"newer"
     );
-    // the same manifest again: the hash error comes back, no second diff
+    let manifest_gets = |s: &Stale| {
+        s.calls
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|c| *c == MANIFEST)
+            .count()
+    };
+    assert_eq!(manifest_gets(&src), 1, "exactly one manifest refetch");
+    // the same manifest again: the hash error comes back, one refetch, no second diff, web/ as it was
     let mut same = stale(b"bad", b"bad");
     same.files
         .insert(MANIFEST.into(), serde_json::to_vec(&seen).unwrap());
-    let tmp2 = tempfile::tempdir().unwrap();
-    let err = apply_refetch(tmp2.path(), &local, &seen, "0.1.0", &same, |_| {}).unwrap_err();
+    let data = tempfile::tempdir().unwrap();
+    fs::create_dir_all(data.path().join("web/static")).unwrap();
+    fs::write(data.path().join("web/static/a.js"), b"old").unwrap();
+    let err = apply_refetch(data.path(), &local, &seen, "0.1.0", &same, |_| {}).unwrap_err();
     assert_eq!(err.key, "update.error.hash");
+    assert_eq!(manifest_gets(&same), 1);
+    assert_eq!(
+        fs::read(data.path().join("web/static/a.js")).unwrap(),
+        b"old"
+    );
+    assert!(!data.path().join("web.next").exists());
+}
+
+/// A source with no distinct retry (or a version it cannot send): one try, and the detail says so.
+struct Plain;
+impl Source for Plain {
+    fn get(&self, _: &str) -> Result<Vec<u8>, UpdateError> {
+        Ok(b"xx".to_vec())
+    }
+}
+
+#[test]
+fn no_cache_buster_is_not_reported_as_a_second_try() {
+    let tmp = tempfile::tempdir().unwrap();
+    let local = manifest("a", &[("static/a.js", b"old")]);
+    let remote = manifest("b", &[("static/a.js", b"new")]);
+    let err = apply(tmp.path(), &local, &remote, "0.1.0", &Plain, |_| {}).unwrap_err();
+    assert!(
+        err.detail
+            .ends_with("tries 1, no cache-buster for this version"),
+        "{}",
+        err.detail
+    );
 }

@@ -34,6 +34,22 @@ impl Default for Http {
     }
 }
 
+/// A version fit for a query string: letters, digits, `.`, `-`, `_` only (it comes from the downloaded manifest).
+fn plain_token(v: &str) -> bool {
+    !v.is_empty()
+        && v.chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_')
+}
+
+/// `base + rel`, plus `?v=<version>` when the version is a plain token; any other version gives the plain URL.
+pub(super) fn versioned_url(base: &str, rel: &str, version: &str) -> String {
+    if plain_token(version) {
+        format!("{base}{rel}?v={version}")
+    } else {
+        format!("{base}{rel}")
+    }
+}
+
 impl Source for Http {
     fn get(&self, rel: &str) -> Result<Vec<u8>, UpdateError> {
         self.fetch(rel, None)
@@ -41,21 +57,18 @@ impl Source for Http {
     fn get_versioned(&self, rel: &str, version: &str) -> Result<Vec<u8>, UpdateError> {
         self.fetch(rel, Some(version))
     }
+    fn retry_differs(&self, version: &str) -> bool {
+        plain_token(version)
+    }
 }
 
 impl Http {
     fn fetch(&self, rel: &str, version: Option<&str>) -> Result<Vec<u8>, UpdateError> {
         safe_rel(rel)?;
-        let mut url = format!("{}{}", self.base, rel);
-        // only a plain token goes into the query: the version comes from the downloaded manifest
-        if let Some(v) = version.filter(|v| {
-            !v.is_empty()
-                && v.chars()
-                    .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_')
-        }) {
-            url.push_str("?v=");
-            url.push_str(v);
-        }
+        let url = match version {
+            Some(v) => versioned_url(&self.base, rel, v),
+            None => format!("{}{}", self.base, rel),
+        };
         let resp = self.agent.get(&url).call().map_err(|e| match e {
             ureq::Error::Status(code, _) => UpdateError::new("update.error.http", code.to_string()),
             ureq::Error::Transport(t) => UpdateError::new("update.error.offline", t.to_string()),
@@ -72,5 +85,22 @@ impl Http {
             .read_to_end(&mut body)
             .map_err(|e| UpdateError::new("update.error.offline", e.to_string()))?;
         Ok(body)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::versioned_url;
+
+    #[test]
+    fn a_plain_version_is_a_query_and_anything_else_is_not() {
+        let u = |v| versioned_url("https://h/", "static/a.js", v);
+        assert_eq!(
+            u("57d8ccbb.1_x-y"),
+            "https://h/static/a.js?v=57d8ccbb.1_x-y"
+        );
+        for bad in ["", "a#b", "a&b=c", "a/b", "a\r\nb", "a b", "é"] {
+            assert_eq!(u(bad), "https://h/static/a.js", "{bad:?}");
+        }
     }
 }

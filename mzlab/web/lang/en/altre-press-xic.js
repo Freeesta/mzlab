@@ -40,6 +40,7 @@ I18N.add("en", {
   "update.copy": "Copy details",
   "update.copied": "Copied",
   "update.close": "Close",
+  "update.newapp.nolink": "This update needs a newer version of the desktop app (at least {min}).",
   "update.newapp": "This update needs a newer version of the desktop app (at least {min}). Download the latest installer from:",
   "update.error.offline": "No internet connection: try again later. Nothing was changed.",
   "update.error.http": "The website did not answer as expected. Nothing was changed.",
