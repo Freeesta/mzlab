@@ -1,5 +1,5 @@
 //! Target-decoy count of the formula annotation on a drug-sized root: decoys mixed with the real fragments in the same MS2 must mostly stay
-//! without a formula, the targets must all keep theirs (`docs/agenti/msn-grafo-formule.md`).
+//! without a formula, the targets must all keep theirs (`docs/agenti/msn-interpreta.md`).
 
 use super::tests::ion;
 use super::*;
