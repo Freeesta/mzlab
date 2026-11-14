@@ -1,20 +1,13 @@
-//! The native executor of `chrom.uv_peaks@1`: the peaks of the UV/PDA trace of mzML files at one wavelength, the narrow ones of `detect_peaks` and,
-//! when asked, the broad bands (`mzlab_feat::uv_bands`), as one CSV. Takes names and bytes. Called by `flow.rs`.
+//! The native executor of `chrom.uv_peaks@1`: the peaks of the UV/PDA trace of mzML files at one wavelength, as one CSV. The text is
+//! `mzlab_feat::uv_text::uv_text`, shared with the browser (`flowtab`); this file only reads and writes the files. Called by `flow.rs`.
 
-use mzlab_core::error::{Error, Result};
+use mzlab_core::error::Result;
 use mzlab_core::flow::{Artifact, Job};
-use mzlab_core::mzml_estimate;
-use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
-use mzlab_core::wiff::dad::DadData;
-use mzlab_feat::uv_bands::{uv_peaks, UvKind, UvParams};
+use mzlab_feat::uv_text::uv_text;
 
 use crate::flow::{io, read_all, FileRunner};
-use crate::flow_match::Named;
 use crate::flow_read::named;
-
-/// Header of the CSV, the columns of `UvPeak`.
-const HEADER: &str = "file,kind,rt_apex_min,rt_lo_min,rt_hi_min,fwhm_s,height_mau,area_mau_s,snr";
 
 /// `chrom.uv_peaks@1`: one CSV row per peak of the UV trace of each file.
 pub fn uv_step() -> Step {
@@ -51,11 +44,11 @@ pub fn uv_step() -> Step {
                 .doc("Smallest height of a band over its bridge, in noise units"),
         ],
         runs_in: RunsIn {
-            wasm: Some("wasip1 (mzlab-cli)"),
+            wasm: Some("flowtab"),
             native: true,
             ..RunsIn::default()
         },
-        errors: vec!["err.pda.none"],
+        errors: vec!["err.pda.none", "err.uv.manifest"],
         ..Step::core(
             "chrom.uv_peaks",
             "Peaks of the UV trace",
@@ -64,93 +57,10 @@ pub fn uv_step() -> Step {
     }
 }
 
-fn param(job: &Job, name: &str) -> Option<f64> {
-    let found = job.resolved.params.iter().find(|(k, _)| k == name);
-    found.and_then(|(_, v)| v.f64())
-}
-
-fn flag(job: &Job, name: &str) -> bool {
-    let found = job.resolved.params.iter().find(|(k, _)| k == name);
-    found.and_then(|(_, v)| v.bool()).unwrap_or(false)
-}
-
-/// The trace of `d` at `nm`: the mean of the columns within `band / 2`, or the nearest column when there is none.
-fn trace_at(d: &DadData, nm: f64, band: f64) -> Vec<f64> {
-    let wl = &d.wavelengths_nm;
-    let mut cols: Vec<usize> = (0..wl.len())
-        .filter(|&c| (wl[c] - nm).abs() <= band / 2.0)
-        .collect();
-    if cols.is_empty() {
-        let near = (0..wl.len()).min_by(|&a, &b| (wl[a] - nm).abs().total_cmp(&(wl[b] - nm).abs()));
-        cols.extend(near);
-    }
-    (0..d.time_min.len())
-        .map(|r| {
-            let sum: f64 = cols
-                .iter()
-                .map(|&c| f64::from(d.matrix_mau[r * wl.len() + c]))
-                .sum();
-            sum / cols.len() as f64
-        })
-        .collect()
-}
-
-/// A CSV field: quoted when it holds a comma, a quote or a line break.
-fn field(s: &str) -> String {
-    if s.contains([',', '"', '\n']) {
-        format!("\"{}\"", s.replace('"', "\"\""))
-    } else {
-        s.to_string()
-    }
-}
-
-/// The CSV of the peaks of every file under the parameters of the job. Each file is read whole only when its decoding (`mzml_estimate`, with every
-/// file and the copy the reader takes in memory) fits in `cap` bytes, else `error.memoryBudget` (phase `read`).
-pub fn uv_text(job: &Job, files: &[Named], cap: usize) -> Result<String> {
-    let (nm, band) = (
-        param(job, "wavelength_nm").unwrap_or(254.0),
-        param(job, "band_nm").unwrap_or(4.0),
-    );
-    let p = UvParams {
-        broad: flag(job, "broad"),
-        min_s: param(job, "broad_min_s").unwrap_or(30.0),
-        max_s: param(job, "broad_max_s").unwrap_or(300.0),
-        snr: param(job, "broad_snr").unwrap_or(8.0),
-    };
-    let mut out = format!("{HEADER}\n");
-    let held: usize = files.iter().map(|(_, b)| b.len()).sum();
-    for (name, bytes) in files {
-        let x = mzml_estimate::inputs(bytes);
-        mzml_estimate::check(mzml_estimate::bytes(&x, held + bytes.len()), cap)?;
-        let mut m = Mzml::new(bytes.to_vec(), bytes.len() as u64);
-        let d = m.dad()?.ok_or_else(|| Error::new("err.pda.none"))?;
-        let y = trace_at(&d, nm, band);
-        for k in uv_peaks(&d.time_min, &y, &p)? {
-            let kind = if k.kind == UvKind::Narrow {
-                "narrow"
-            } else {
-                "broad"
-            };
-            out += &format!(
-                "{},{kind},{:.4},{:.4},{:.4},{:.2},{:.4},{:.3},{:.1}\n",
-                field(name),
-                k.rt_apex,
-                k.rt_lo,
-                k.rt_hi,
-                k.fwhm_s,
-                k.height,
-                k.area,
-                k.snr
-            );
-        }
-    }
-    Ok(out)
-}
-
 /// `chrom.uv_peaks`: one CSV for all the files of `source`.
 pub(crate) fn uv_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let files = read_all(r, job, "source")?;
-    let text = uv_text(job, &named(&files), r.cap())?;
+    let text = uv_text(&job.resolved.params, &named(&files), r.cap())?;
     let out = r.work.join(format!("{}.csv", job.instance.id));
     std::fs::write(&out, text).map_err(io)?;
     r.keep(out, DataType::Peaks)

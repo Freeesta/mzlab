@@ -51,6 +51,7 @@ I18N.add("it", {
   "error.quota": "Non c'è abbastanza spazio nel browser: servono circa {serve_mb} MB e ne restano {libero_mb} MB. Libera spazio dal menu delle impostazioni.",
   "error.quotaWrite": "Il browser si è fermato dopo {scritti_mb} MB dei circa {serve_mb} MB necessari, pur dichiarando {libero_mb} MB liberi: di solito il disco del computer è quasi pieno (su Mac il Finder conta come libero anche lo spazio «eliminabile»), oppure è una finestra privata, che tiene circa 1 GB. Libera spazio sul disco, usa una finestra normale o l'app desktop, che legge il file dove si trova.",
   "err.pda.none": "Questo file non ha la matrice del DAD.",
+  "err.uv.manifest": "L'elenco dei file mzML del passo non è valido.",
   "err.subxic.many": "Formula troppo grande: {n} sottoformule. Scrivine una più piccola.",
   "err.subxic.lr": "L'XIC da formula serve un file ad alta risoluzione.",
   "err.subxic.ppm": "La tolleranza deve stare tra 0 e 100 ppm.",
