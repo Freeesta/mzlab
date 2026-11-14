@@ -157,6 +157,44 @@ fn prompted_without_a_block_stays_text() {
     );
 }
 
+fn prompted_text(text: &str) -> Vec<Event> {
+    let sse = format!(
+        "data: {{\"choices\":[{{\"delta\":{{\"content\":{}}},\"finish_reason\":\"stop\"}}]}}\n\ndata: [DONE]\n\n",
+        format!("\"{}\"", text.replace('\\', "\\\\").replace('"', "\\\"").replace('\n', "\\n"))
+    );
+    run(
+        Adapter::OpenAiCompat,
+        true,
+        std::iter::once(sse.into_bytes()),
+    )
+}
+
+fn call_of(e: &[Event]) -> Option<(String, String)> {
+    let name = e.iter().find_map(|x| match x {
+        Event::ToolCallStart { name, .. } => Some(name.clone()),
+        _ => None,
+    })?;
+    let args = e.iter().find_map(|x| match x {
+        Event::ToolCallDelta(a) => Some(a.clone()),
+        _ => None,
+    })?;
+    Some((name, args))
+}
+
+#[test]
+fn prompted_takes_the_last_tool_block() {
+    // an illustrative block (no tool) before the real call
+    let e = prompted_text("e.g.\n```json\n{\"x\":1}\n```\nnow:\n```json\n{\"tool\":\"flow_check\",\"args\":{\"a\":2}}\n```");
+    assert_eq!(call_of(&e), Some(("flow_check".into(), "{\"a\":2}".into())));
+    assert_eq!(e.last(), Some(&Event::Stop(StopReason::Tool)));
+    // two tool blocks: the last wins
+    let e = prompted_text("```json\n{\"tool\":\"one\",\"args\":{}}\n```\n```json\n{\"tool\":\"two\",\"args\":{}}\n```");
+    assert_eq!(call_of(&e), Some(("two".into(), "{}".into())));
+    // a single block as before
+    let e = prompted_text("```json\n{\"tool\":\"one\"}\n```");
+    assert_eq!(call_of(&e), Some(("one".into(), "{}".into())));
+}
+
 fn recording() -> (Provider, Conversation, String) {
     let p = provider("anthropic");
     let c = conversation(&p);

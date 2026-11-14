@@ -386,7 +386,7 @@ impl Stream {
         }
     }
 
-    /// For a `prompted` model: the first ```json block of the answer becomes a tool call, and the stop reason `tool`.
+    /// For a `prompted` model: the last ```json block of the answer that names a tool becomes a tool call, and the stop reason `tool`.
     pub fn prompted(mut self) -> Stream {
         self.prompted = Some(String::new());
         self
@@ -421,14 +421,22 @@ impl Stream {
     }
 }
 
-/// `{"tool":NAME,"args":{...}}` in the first ```json block of `text`, as (name, args JSON text).
-fn first_json_call(text: &str) -> Option<(String, String)> {
-    let start = text.find("```json")? + "```json".len();
-    let block = &text[start..start + text[start..].find("```")?];
-    let v = parse(block.trim().as_bytes()).ok()?;
-    let name = v.get("tool")?.str()?.to_string();
-    let args = v.get("args").cloned().unwrap_or(Value::Obj(Vec::new()));
-    Some((name, json_text(&args)))
+/// `{"tool":NAME,"args":{...}}` in the last ```json block of `text` that names a tool, as (name, args JSON text).
+fn last_json_call(text: &str) -> Option<(String, String)> {
+    let mut blocks = Vec::new();
+    let mut rest = text;
+    while let Some(i) = rest.find("```json") {
+        let after = &rest[i + "```json".len()..];
+        let Some(end) = after.find("```") else { break };
+        blocks.push(&after[..end]);
+        rest = &after[end + 3..];
+    }
+    blocks.iter().rev().find_map(|b| {
+        let v = parse(b.trim().as_bytes()).ok()?;
+        let name = v.get("tool")?.str()?.to_string();
+        let args = v.get("args").cloned().unwrap_or(Value::Obj(Vec::new()));
+        Some((name, json_text(&args)))
+    })
 }
 
 impl Stream {
@@ -438,7 +446,7 @@ impl Stream {
             match (&e, self.prompted.as_mut()) {
                 (Event::TextDelta(t), Some(acc)) => acc.push_str(t),
                 (Event::Stop(StopReason::End), Some(acc)) => {
-                    if let Some((name, args)) = first_json_call(acc) {
+                    if let Some((name, args)) = last_json_call(acc) {
                         out.push(Event::ToolCallStart {
                             id: "prompted-1".into(),
                             name,
