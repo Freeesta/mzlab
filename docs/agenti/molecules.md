@@ -1,5 +1,5 @@
 # Database delle molecole (`molecules/1`, `crates/mzlab-core/src/molecules/`)
-Aree vicine: `campioni.md` (il modello della struttura), `liste.md` (CSV e JSON canonico), `rust-rotte.md` (le rotte), `mzfinder.md` (il campo «Name» di Tabui). Schema `docs/schemi/molecules-1.json`; lo studio col piano a PR è `docs/studi/molecules/README.md`.
+Aree vicine: `campioni.md` (il modello della struttura), `liste.md` (CSV e JSON canonico), `rust-rotte.md` (le rotte), `mzfinder.md` (il campo «Name» di Tabui). Schema `docs/schemi/molecules-1.json`.
 
 - **Cos'è**: un record = una molecola (`id`, `nome`, `sinonimi`, `formula`, `carica`, `massa`, `smiles`, `inchikey`, `addotti`, `raccolte`, `classi`, `esterni` (`cas`, `pubchem_cid`), `proprieta`, `note`, `origine`). Campi in italiano, valori in inglese. Il motore non dà verdetti: tiene e cerca dati.
 - **`id`**: `ik:<InChIKey intero>` se c'è l'InChIKey, altrimenti `u:<12 hex dello SHA-256 del JSON canonico del record alla nascita>`; assegnato da `finalizza` quando è vuoto e mai più cambiato (rinominare una molecola non cambia l'`id`).

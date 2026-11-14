@@ -76,7 +76,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | tabella delle transizioni SIM/MRM di un triplo quadrupolo (`chrom.transitions`, `transitions/`, integrazione per campione, candidati di RT, preset di esempio) | `docs/agenti/transizioni.md` |
 | lista integrata di pesticidi e contaminanti ambientali (`mzlab/chem/pesticides.csv`, `pesticides_meta.json`, `tools/download_pesticides.py`, seconda lista di `contaminanti.json`) | `docs/agenti/pesticidi.md` |
 | liste dell'utente (trasformazioni, addotti, sospetti: CSV con errori per riga, `liste/1`, SHA-256 per `prov/1`) | `docs/agenti/liste.md` |
-| database delle molecole (`crates/mzlab-core/src/molecules/`, `molecules/1`: record, CSV e JSON canonico, ricerca, livelli catalogo/importata/utente, catalogo `mzlab/web/molecole/catalogo.csv`, rotte `api/molecules/*`) | `docs/agenti/molecules.md` (studio e piano a PR: `docs/studi/molecules/README.md`) |
+| database delle molecole (`crates/mzlab-core/src/molecules/`, `molecules/1`: record, CSV e JSON canonico, ricerca, livelli catalogo/importata/utente, catalogo `mzlab/web/molecole/catalogo.csv`, rotte `api/molecules/*`) | `docs/agenti/molecules.md` |
 | canali dei dati (file → canali: TIC, filtri/transizioni/precursori, UV, analogici; tipo di esperimento come etichetta; piano DEV-a…f) | `docs/agenti/canali-dati.md` |
 | ruoli dei file, tempi e metadati dei campioni (`campioni/2` e `/3`, `mzlab-core/src/samples/`: proposte dai nomi, modelli di nome, CSV, colonne libere, dati dal file, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |
 | derivati (`.mzidx`, `.mzfeat`, `.mzfeatf`) di formato più nuovo del programma: `error.newerFormat`, sola lettura | `docs/agenti/formato-nuovo.md` |
@@ -135,4 +135,4 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | file `mzrun/1` (`*.mzrun.json`: record e preset di un'analisi, impronta `self_sha256`, regole di applicazione, schema `docs/schemi/mzrun-1.json`) | `docs/agenti/mzrun.md` |
 | elenco degli esperimenti MSn di un file DDA nella finestra «Albero MSn» (schede Experiments/Tree, TIC e XIC di un precursore, `msn-elenco.js`, colonne `lev`/`z` di `/api/dda`, `ptol` di `/api/chrom`) | `docs/agenti/msn-elenco.md` |
 | file di prodotto di sole MS3 (o di un livello MSn ≠ 2): `msn_level` dell'info, livello di cromatogramma, scansioni, spettro e `/api/ms2tr`, titoli MS³ | `docs/agenti/msn-livello.md` |
-| audit delle pagine (ogni vista × campioni × pulsanti dell'header: CLS, pannelli che si spostano, memoria, errori; `tests_e2e/audit_pagine.py`, test di fumo `e2e_giro_intestazione`) | `docs/studi/AUDIT_PAGINE.md` |
+| audit delle pagine (ogni vista × campioni × pulsanti dell'header: CLS, pannelli che si spostano, memoria, errori; `tests_e2e/audit_pagine.py`, test di fumo `e2e_giro_intestazione`) | `docs/agenti/intestazione.md` |

@@ -1,6 +1,6 @@
 # Lettore Thermo `.raw`: criteri di velocità e zero perdite, banco e numeri di partenza (T-7)
 
-Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` §1-3. Oracolo e formato del dump: `scandump.md`. Due livelli con criteri e numeri SEPARATI, mai una tabella che li mescola: **A** = lettore fedele e veloce contro RFR; **B** = ponte senza perdite verso Flow sui centroidi.
+Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4. Oracolo e formato del dump: `scandump.md`. Due livelli con criteri e numeri SEPARATI, mai una tabella che li mescola: **A** = lettore fedele e veloce contro RFR; **B** = ponte senza perdite verso Flow sui centroidi.
 
 ## Come si dichiara ogni numero
 - Ogni numero porta lo SHA di 40 caratteri del commit di `main` su cui è stato misurato, la macchina, il bersaglio (`native` o `wasm`) e il profilo di compilazione (`cli` = `opt-level = 3`; `release` = `opt-level = "z"`, quello dei `.wasm`). Un numero senza questi quattro dati non entra nelle tabelle.
@@ -33,7 +33,7 @@ Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` 
 - `python3 tools/bench/thermo_velocita.py unisci BANCO.jsonl RFR.jsonl > UNITO.tsv` poi `tabella UNITO.tsv --sha SHA40 --maquina TESTO`: tabelle per famiglia solo sui file aperti da entrambi, conteggio dei restanti a parte, nessun nome di file. `RFR.jsonl` = righe `banco/1` con `reader: "rfr"` e le stesse fasi.
 - File sostitutivo Orbitrap v66 per i banchi di velocità (nessun dato reale): `cargo run --release -p mzlab-lettori --example thermo_synthetic -- OUT.raw [--scans 2000] [--peaks 2000] [--bins 16] [--ms2 0] [--ms2-peaks 200] [--trailer 600] [--seed 1]` (MS1 FTMS in profilo con centroidi, `--ms2 K` MS2 HCD dipendenti in centroide dopo ogni MS1, scritto a flusso; stesso seme, stessi byte).
 - Taglie del file sostitutivo: pesante ≈ 2,1 GB `--scans 82500 --peaks 3000 --ms2 10`; normale ≈ 290 MB `--scans 5400 --peaks 600`. Test `thermo_synthetic_hr.rs`: ciclo, stesso seme, e un hash fissato di tutte le scansioni decodificate (centroidi e profilo) di un file in profilo, il cancello di ogni modifica del decodificatore.
-- Fasi del percorso verso la mappa e dell'mzML (livello B, nativo): `cargo run --profile cli -p mzlab-core --features thermo --example raw_times -- FILE.raw` (`RAW_VELOCE.md` §1). Browser: `python3 tools/bench_raw.py FILE.raw` (serve `wasm-bindgen`).
+- Fasi del percorso verso la mappa e dell'mzML (livello B, nativo): `cargo run --profile cli -p mzlab-core --features thermo --example raw_times -- FILE.raw`. Browser: `python3 tools/bench_raw.py FILE.raw` (serve `wasm-bindgen`).
 - Dump di `thermo_scandump` (`scandump.md`): il suo `read_all_ms` include trailer e righe del dump per scansione, il suo `open_ms` apre due volte e copia il file; NON è lo stesso lavoro di `thermo_bench` e non va confrontato con esso.
 
 ## Rumore di misura (cloud 4 vCPU, `thermo_bench`, profilo `cli`, `main` `ab4fe7d00606e58218a7ea8570f333a4026b4fc4`)
@@ -111,7 +111,6 @@ Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` 
 | PXD077492 (32 MB, 6916 scansioni) | 0,071 / 0,041 | 0,541 | 0,156 | 0,500 | 1,290 (35,9 MB) | 234 MB |
 
 - Non esistono ancora: colonne (B2), matrice (B3), centroidatura fusa (B4), feature table da `.raw` (B5). Le righe B2-B5 si riempiono nelle fasi T-7d e T-7e; `.raw` → centroidi → feature table contro mzmine richiede mzmine sul Mac (R-08). Il tempo del Flow `.raw` → mzML → feature table e i valori di mzmine su mzML (`mzfinder-benchmark.md`) non hanno qui uno SHA e non si riportano.
-- Mappa dei costi (SHA-256 dell'impronta, SHA-1 della testata mzML, zlib) e obiettivi di RV-03/RV-04/RV-06: `RAW_VELOCE.md` §2.2 e §3 (misure precedenti con `opt-level = "z"`, senza SHA).
 
 **B-2 · Cloud 4 vCPU, `wasm`, site `.mzidx` build in Node 22** (`build_mzidx_native` of the engine with the `thermo` module as external reader, `fs.readSync` reads on demand, spill to file, 64 MB budget, fingerprints given; modules without `wasm-opt`; 10 alternating runs, median [min-max] in ms; same `.mzidx` bytes). `thermo_synthetic` files: normal 288 MB (`--scans 5400 --peaks 600`), heavy 2.14 GB (`--scans 82500 --peaks 3000 --ms2 10`).
 

@@ -1,4 +1,4 @@
-"""Times the index of a big mzML two ways (docs/studi/lettura-sul-posto.md, step 1): A = copy into OPFS (8 MiB slices, SyncAccessHandle) then the
+"""Times the index of a big mzML two ways: A = copy into OPFS (8 MiB slices, SyncAccessHandle) then the
 index read from the copy; B = the index read straight from the user's File (Blob slices, no copy). Runs interleave A and B, prints median and min-max
 of each phase and the SHA-256 of every .mzidx (they must all be equal).
 
