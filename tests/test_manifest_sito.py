@@ -60,3 +60,9 @@ def test_seal_sw_names_the_cache_after_the_site_and_stays_out_of_the_desktop_man
     assert json.loads((out / "static" / "sw-manifest.json").read_text(encoding="utf-8"))["app"] != app
     bs.write_manifest(out, "x")
     assert "static/sw-manifest.json" not in json.loads((out / "static" / "manifest.json").read_text(encoding="utf-8"))["files"]
+
+
+def test_installed_web_app_is_named_apart_from_the_desktop_app():
+    """The PWA is «<name> Web» (name and short name); the desktop app keeps the plain name."""
+    assert bs.WEB_APP_NAME == f"{bs.APP_NAME} Web"
+    assert bs.MANIFEST["name"] == bs.MANIFEST["short_name"] == bs.WEB_APP_NAME
