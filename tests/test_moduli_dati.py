@@ -35,13 +35,15 @@ def test_ogni_modulo_costruito_da_uno_script():
     assert sorted(p for r in mod.values() for p in r.get("chiavi", {}).values()) == list(range(1, 28))
 
 
-def test_tetti_come_i_workflow():
+def test_tetti_dei_workflow_dal_dato():
+    """The engine and libraries steps of the workflows (and the lab copy of pages.yml) take their cap from the data: no literal, the module name exists."""
     mod = moduli.carica()
-    for wf in WORKFLOWS:
-        testo = (ROOT / f".github/workflows/{wf}.yml").read_text(encoding="utf-8")
+    for wf in [f".github/workflows/{w}.yml" for w in WORKFLOWS] + ["tools/lab/qqq-pages.yml"]:
+        testo = (ROOT / wf).read_text(encoding="utf-8")
         for nome, etichetta in (("motore", "engine"), ("librerie", "libraries")):
-            cap = re.findall(rf"tools/wasm_opt\.sh \S+ (\d+) {etichetta} @motore", testo)
-            assert cap and all(int(c) == mod[nome]["tetto"] for c in cap), f"{wf}: {nome} {cap} != {mod[nome]['tetto']}"
+            assert nome in mod
+            assert len(re.findall(rf'tools/wasm_opt\.sh \S+ "\$\(python3 tools/moduli\.py --tetto {nome}\)" {etichetta} @motore', testo)) == 1, (wf, nome)
+        assert not re.search(r"tools/wasm_opt\.sh site/static\S+ \d+ ", testo), wf
 
 
 def _con(tetto):
