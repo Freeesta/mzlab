@@ -8,7 +8,7 @@ window.DESKUPD = (() => {
   const T = () => window.__TAURI__;
   const live = () => !!(window.MZLAB_DESKTOP && T() && T().core);
   const mb = b => I18N.fix(b / 1e6, 1);
-  let box = null, busy = false, quiet = false;     // quiet: the check in flight is the silent one
+  let box = null, busy = false, quiet = false, ver = "";     // quiet: the check in flight is the silent one
 
   function show(html, buttons, title) {
     if (!box || !box.isConnected) {
@@ -23,20 +23,19 @@ window.DESKUPD = (() => {
   }
   const close = () => { if (box) { box.remove(); box = null; } };
   const closeBtn = () => ["close", I18N.t("update.close")];
-  const errText = r => {
-    const k = String(r.error_key || "");
-    return I18N.t(k === "update.error.offline" ? "update.error.offline" : k === "update.error.http" ? "update.error.http" : k === "update.error.manifest" ? "update.error.manifest"
-      : k === "update.error.hash" ? "update.error.hash" : k === "update.error.newapp" ? "update.error.newapp" : "update.error.io");
-  };
+  // errors: lazy (aggiorna-errore.js)
+  const fail = r => carica("aggiorna-errore.js").then(() => DESKUPDERR.fail({ show, closeBtn, box: () => box, ver: () => ver }, r), () => show(EH(I18N.t("update.error.io")), [closeBtn()]));
 
   function offer(r, silent) {
+    if (r.version) ver = r.version;
     if (r.status === "uptodate") { if (silent) return; show(EH(I18N.t("update.uptodate")), [closeBtn()]); }
     else if (r.status === "available") {
       show(EH(I18N.t("update.available", { files: r.files, size: mb(r.bytes) })), [["go", I18N.t("update.download")], closeBtn()], silent ? I18N.t("update.notice") : "");
     } else if (r.status === "newapp") {
-      if (!SITO_PUBBLICO.scaricaApp) return;
-      show(`${EH(I18N.t("update.newapp", { min: r.min }))}<br><a href="${REL}" target="_blank" rel="noopener noreferrer">${REL}</a>`, [closeBtn()]);
-    } else if (!silent) show(EH(errText(r)), [closeBtn()]);
+      // no public download: text without the link
+      const pub = SITO_PUBBLICO.scaricaApp;
+      show(EH(I18N.t(pub ? "update.newapp" : "update.newapp.nolink", { min: r.min })) + (pub ? `<br><a href="${REL}" target="_blank" rel="noopener noreferrer">${REL}</a>` : ""), [closeBtn()]);
+    } else if (!silent) fail(r);
   }
 
   async function check(silent) {
@@ -47,9 +46,12 @@ window.DESKUPD = (() => {
       return;
     }
     busy = true; quiet = silent;
-    try { localStorage.setItem(KEY, String(Date.now())); } catch (_) { /* optional */ }
     if (!silent) show(EH(I18N.t("update.checking")), []);
-    try { const r = JSON.parse(await T().core.invoke("update_check")); offer(r, quiet); }
+    try {
+      const r = JSON.parse(await T().core.invoke("update_check"));
+      if (r.error_key !== "update.error.offline") try { localStorage.setItem(KEY, String(Date.now())); } catch (_) { /* optional */ }
+      offer(r, quiet);
+    }
     catch (_) { if (!quiet) show(EH(I18N.t("update.error.io")), [closeBtn()]); }
     busy = false;
   }
@@ -66,13 +68,13 @@ window.DESKUPD = (() => {
       });
       const r = JSON.parse(await T().core.invoke("update_apply"));
       if (r.status === "ready") show(EH(I18N.t("update.ready")), [["restart", I18N.t("update.restart")], closeBtn()]);
-      else show(EH(errText(r)), [closeBtn()]);
+      else fail(r);
     } catch (_) { show(EH(I18N.t("update.error.io")), [closeBtn()]); }
     if (un) un();
     busy = false;
   }
 
-  const ACT = { close, go, restart: () => T().core.invoke("update_restart") };
+  const ACT = { close, go, copy: () => DESKUPDERR.copy(), restart: () => T().core.invoke("update_restart") };
 
   // row of the settings popup (only in the desktop app)
   const row = () => live() ? `<div class="imp-fld" title="${I18N.t("update.settings.title")}"><span><span class="ic">${window.IMPCOMP ? IMPCOMP.GICON.update : ""}</span>${I18N.t("update.settings.label")}</span><button id="uip-upd" type="button">${I18N.t("update.settings.button")}</button></div>` : "";

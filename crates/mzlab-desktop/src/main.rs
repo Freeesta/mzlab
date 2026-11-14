@@ -15,12 +15,12 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use mzlab_desktop::opening::{self, Pending};
-use mzlab_desktop::libraries::{self, Config};
-use mzlab_desktop::release;
 use mzlab_desktop::download::{self, Policy};
+use mzlab_desktop::libraries::{self, Config};
+use mzlab_desktop::opening::{self, Pending};
+use mzlab_desktop::release;
 use mzlab_desktop::update::{self, Http, Source, UpdateError};
-use mzlab_desktop::{folder, dialog};
+use mzlab_desktop::{dialog, folder};
 use mzlab_desktop::{handle_body, State};
 use serde::Serialize;
 use tauri::http::{header, Response};
@@ -222,7 +222,7 @@ fn do_apply(app: &AppHandle) -> Result<String, UpdateError> {
     let local = update::local_manifest(&data, &embedded_manifest(app))?;
     let src = Http::new();
     let remote = update::parse_manifest(&src.get(update::MANIFEST)?)?;
-    let files = update::apply(&data, &local, &remote, NATIVE, &src, |p| {
+    let files = update::apply_refetch(&data, &local, &remote, NATIVE, &src, |p| {
         let _ = app.emit("update-progress", p);
     })?;
     Ok(serde_json::json!({ "status": "ready", "files": files }).to_string())

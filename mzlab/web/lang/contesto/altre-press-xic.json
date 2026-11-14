@@ -55,6 +55,7 @@
   "tree.nodeInfo": "Riga sopra la tabella dei picchi di un nodo dell'albero MSn.",
   "release.new": "Avviso dell'app desktop quando esiste una versione più recente; {version} = numero di versione già pronto (per esempio 1.2.0).",
   "update.available": "Messaggio dell'aggiornamento dell'app desktop; {files} = numero di file cambiati da scaricare, {size} = megabyte già formattati.",
+  "update.newapp.nolink": "Come update.newapp ma senza link (installatori non pubblici sul sito): frase conclusa; {min} = versione minima.",
   "update.newapp": "L'aggiornamento della parte web richiede un'app desktop più recente; {min} = versione minima (es. 0.2.0). Dopo la frase compare il link alla pagina degli installatori.",
   "update.progress": "Avanzamento dello scaricamento dell'aggiornamento; {done} = file scaricati, {total} = file da scaricare, {size} = megabyte scaricati finora.",
   "workflow.err.tooBig": "Un file letto in sicurezza (.mzflow, elenchi, tabelle dei campioni) supera il tetto di byte e non viene aperto; {mb} = tetto in MB (già formattato).",

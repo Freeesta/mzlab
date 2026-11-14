@@ -6,6 +6,7 @@ use mzlab_core::budget::MemBudget;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
+use crate::detect_route::detect;
 use crate::famalign::{align_families, align_ions};
 use crate::family::analyse_families;
 use crate::gapfill::fill_file;
@@ -18,7 +19,7 @@ use crate::recipe::{Mode, Recipe, WEAK_RATIO};
 use crate::rtmap::{build, RtMap};
 use crate::spill::{Spill, Weak};
 use crate::table::{Aligned, FileFeatures, FLAG_GOOD, FLAG_ISOTOPE};
-use crate::trace::{detect, Params};
+use crate::trace::Params;
 use crate::weakfile;
 
 /// Detection, quality, isotopes, MS2 and families of one file.

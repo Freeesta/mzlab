@@ -3,7 +3,7 @@
 //! (`name;change[;comment]`, the text of mzFinder). Every wrong row gives its own error and the list is refused if there is one.
 
 use super::{Adduct, Kind, Liste, RowError, Transformation, MAX_REPEAT};
-use crate::legacy::transf::{parse_delta, Delta};
+use crate::transf_base::{parse_delta, Delta};
 
 fn err(line: usize, key: &'static str, detail: impl Into<String>) -> RowError {
     RowError {

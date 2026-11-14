@@ -1,4 +1,8 @@
 I18N.add("en", {
+  "err.flow.quant.curveRow": "A row of the calibration curves file cannot be read ({detail}).",
+  "err.flow.quant.curves": "The calibration curves file cannot be read ({detail}).",
+  "err.flow.quant.duplicate": "The calibration curve {name} appears more than once in the curves file.",
+  "err.flow.quant.kind": "The calibration kind {kind} is not one the step knows.",
   "err.flow.rtpredict.candidates": "The candidates file is not a valid candidates/1 list.",
   "err.flow.rtpredict.gradient": "The gradient must be at least two points “minutes:%B” separated by “;”, with minutes increasing.",
   "err.flow.rtpredict.parent": "The parent SMILES could not be read.",
@@ -78,5 +82,10 @@ I18N.add("en", {
   "err.flow.worker": "The calculation stopped before it finished: try again.",
   "warn.flow.formula.ion": "The ion written here has a different polarity from the data.",
   "warn.flow.formula.subformulas": "This ion has more sub-formulas than max_subformulas, so none of its fragments was tried: raise max_subformulas or give fewer elements.",
-  "warn.flow.group.corrFiles": "Correlating rows needs at least as many files as min_corr_samples (3 unless you change it): with fewer files none was computed, so there are no correlation edges. Isotopes and ion species stay."
+  "warn.flow.group.corrFiles": "Correlating rows needs at least as many files as min_corr_samples (3 unless you change it): with fewer files none was computed, so there are no correlation edges. Isotopes and ion species stay.",
+  "warn.flow.quant.negative": "Some concentrations came out negative: they are kept and flagged.",
+  "warn.flow.quant.noRow": "A calibration curve has no matching row in the table: it was not applied.",
+  "warn.flow.quant.range": "Some concentrations fall outside the range of their curve: they are flagged.",
+  "warn.flow.quant.sharedRow": "Two curves match the same table row: both were applied, check the m/z and retention time.",
+  "warn.flow.quant.unlisted": "Some samples are not listed in the sample table and were left out of the quantification."
 });
