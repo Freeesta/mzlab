@@ -39,9 +39,12 @@ pub struct QParams {
     pub min_points: u16,
     /// The area of a row is the sum of its trace over its scans (`area_from` = `window` of `features.detect`), not the one of the detection.
     pub area_window: bool,
+    /// The area of a row is the trapezoid of its trace on the real retention times over its scans (`area_from` = `xic`), as the XIC of
+    /// the chromatogram integrates it: no median scan interval, so MS1 scans spaced unevenly by MS2 events keep their weight.
+    pub area_xic: bool,
 }
 
-// written by hand so that `area_window` appears only when on: the fingerprints of the recipes without it stay the same
+// written by hand so that `area_window` and `area_xic` appear only when on: the fingerprints of the recipes without it stay the same
 impl std::fmt::Debug for QParams {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut d = f.debug_struct("QParams");
@@ -52,6 +55,9 @@ impl std::fmt::Debug for QParams {
             .field("min_points", &self.min_points);
         if self.area_window {
             d.field("area_window", &self.area_window);
+        }
+        if self.area_xic {
+            d.field("area_xic", &self.area_xic);
         }
         d.finish()
     }
@@ -66,6 +72,7 @@ impl Default for QParams {
             min_snr: 3.0,
             min_points: 5,
             area_window: false,
+            area_xic: false,
         }
     }
 }
@@ -220,6 +227,18 @@ impl RowQ {
     }
 }
 
+/// Trapezoid of `y` on the times `rt` (minutes), in counts x seconds; one point counts one median interval `dt` (seconds).
+pub(crate) fn trapezoid(rt: &[f64], y: &[f64], dt: f64) -> f64 {
+    if y.len() < 2 {
+        return y.iter().sum::<f64>() * dt;
+    }
+    let mut a = 0.0;
+    for k in 1..y.len() {
+        a += 0.5 * (y[k] + y[k - 1]) * (rt[k] - rt[k - 1]);
+    }
+    a * 60.0
+}
+
 /// Quality of row `i` from its trace `y`, which starts at scan `w0`; `(w0, wa, wb)` with `wa..=wb` the scans of the area window.
 /// `scan_lo`, `scan_hi`, `apex` and `npts` of the row are already set.
 pub(crate) fn row_quality(
@@ -239,9 +258,12 @@ pub(crate) fn row_quality(
     );
     let area_win = y[wa - w0..=wb - w0].iter().sum::<f64>() * f.dt;
     // the formula of the pieces of `resolve::look`, so a row and its pieces are measured alike
-    let area = q
-        .area_window
-        .then(|| y[slo - w0..=shi - w0].iter().sum::<f64>() * f.dt);
+    let area = if q.area_xic {
+        Some(trapezoid(&rt[slo..=shi], &y[slo - w0..=shi - w0], f.dt))
+    } else {
+        q.area_window
+            .then(|| y[slo - w0..=shi - w0].iter().sum::<f64>() * f.dt)
+    };
     let (snr, shape, fwhm, asym, gaps) =
         measure(&rt[w0..w0 + y.len()], y, slo - w0, shi - w0, floor);
     let mut why = 0u8;

@@ -1,4 +1,4 @@
-"""Measures what moves and what is fetched while files load (study docs/studi/CARICAMENTO_STABILITA.md): serves a built site, opens it in headless Chromium and
+"""Measures what moves and what is fetched while files load: serves a built site, opens it in headless Chromium and
 records, from the first frame, the box of the main elements at every frame, the layout-shift entries with their sources, every request (time, size, who asked)
 and phase marks (open, engine ready, drag-over, drop, each side-list row, batch end, first plot, sample table and back, removal, «+» of the side list, reload with the saved session).
 

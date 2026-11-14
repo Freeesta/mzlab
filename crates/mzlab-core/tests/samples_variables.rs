@@ -1,4 +1,4 @@
-//! `variabili` and `nome_gruppo` of `samples::route` (`nomivar/1`, study `docs/studi/RAGGRUPPAMENTO_FILE.md` §3): the worked list of the study,
+//! `variabili` and `nome_gruppo` of `samples::route` (`nomivar/1`, `docs/agenti/campioni.md` «Variabili nei nomi»): a worked list,
 //! permutations, noise, spellings, manual variables, the limits and the speed.
 use mzlab_core::samples::route_all as route;
 use serde_json::Value;

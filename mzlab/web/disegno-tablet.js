@@ -65,6 +65,20 @@ function snapCharge(d) {
   };
 }
 
+/** Ketcher focuses its clipboard textarea while it mounts; in a sandboxed frame Chromium reports that as a policy violation
+ * (console.error) until the user has touched the frame. Before the first gesture the call is skipped; Ketcher focuses it again on the gesture.
+ * @param {Document} d */
+function guardFocus(d) {
+  const w = /** @type {any} */ (d.defaultView); if (!w || !w.HTMLElement || w.HTMLElement.prototype.focus.mzGuard) return;
+  const orig = w.HTMLElement.prototype.focus;
+  const guarded = /** @this {Element} */ function (/** @type {any} */ o) {
+    const ua = w.navigator.userActivation;
+    if (ua && !ua.hasBeenActive && this.matches(".cliparea,[data-cliparea]")) return;
+    return orig.call(this, o);
+  };
+  guarded.mzGuard = true; w.HTMLElement.prototype.focus = guarded;
+}
+
 /** @param {Document} d  the document of the Ketcher iframe */
 export function mountTablet(d) {
   if (!d.head || !d.body || d.getElementById("tp-tablet")) return;
@@ -75,5 +89,6 @@ export function mountTablet(d) {
   // the copy menu's triangle has no name of its own
   const name = () => { const tr = d.querySelector("[data-testid=copy-button-dropdown-triangle]"), w = /** @type {any} */ (window); if (tr && w.I18N) { const n = w.I18N.t("draw.copy.options"); if (tr.getAttribute("aria-label") !== n) { tr.setAttribute("aria-label", n); tr.setAttribute("title", n); } } };
   const all = () => { fix(); name(); };
+  guardFocus(d);
   all(); new MutationObserver(all).observe(d.body, { childList: true, subtree: true });
 }
