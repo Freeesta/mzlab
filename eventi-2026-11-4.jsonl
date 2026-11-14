@@ -25610,3 +25610,4 @@
 {"v":1,"ts_utc":"2026-11-14T13:27:17Z","azione":"aperta","tipo":"pr","pr":3306,"sha":"40b495e74738f042611d39feb783142bc13643bd"}
 {"v":1,"ts_utc":"2026-11-14T13:40:17Z","azione":"push","titolo":"ci(release): drop a stray upload-artifact step copied with the in-silico block","merge_main":false,"aree":{"workflow":1},"tipo":"pr","pr":3301,"sha":"b320625bea938178ef22f8c80b8b15884099097d"}
 {"v":1,"ts_utc":"2026-11-14T13:37:40Z","azione":"aperta","tipo":"pr","pr":3307,"sha":"9711d6a1f7a5a683c1a54dca76c1f8ab50ef849b"}
+{"v":1,"tipo":"pr","pr":3303,"sha":"77d6547e02d48c86369bdde32bf8050fd2f5a620","ts_utc":"2026-11-14T13:53:17Z","azione":"unita","aperta_s":2330,"commit_n":3,"cause_commit":{"altro":1,"fmt/clippy":1},"merge_main":0,"righe_piu":20,"righe_meno":1,"file_n":1,"file":["crates/mzlab-core/src/budget.rs"],"aree":{"rust":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":171}
