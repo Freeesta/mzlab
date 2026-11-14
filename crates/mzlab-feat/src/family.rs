@@ -40,14 +40,14 @@ pub const FAMILY_VERSION: u32 = 1;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Orient {
     /// The dependent must be at least `parent_factor` times weaker than its parent.
-    #[default]
     Factor,
     /// A definitive arc (an adduct step with co-elution and correlation, or an in-source fragment found in the MS2 of its parent) needs no factor: the
     /// proof of the arc is what says who depends on whom. An arc that two readings explain keeps the factor.
+    #[default]
     Evidence,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct FamParams {
     pub rules: Rules,
     /// Shape correlation needed to join two peaks.
@@ -59,20 +59,6 @@ pub struct FamParams {
     pub orient: Orient,
 }
 
-/// Same text as a derived `Debug` while `orient` is the default, so that the fingerprints of the recipes (which hash this text) do not move.
-impl std::fmt::Debug for FamParams {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut d = f.debug_struct("FamParams");
-        d.field("rules", &self.rules)
-            .field("r_min", &self.r_min)
-            .field("trace_ppm", &self.trace_ppm)
-            .field("parent_factor", &self.parent_factor);
-        if self.orient != Orient::Factor {
-            d.field("orient", &self.orient);
-        }
-        d.finish()
-    }
-}
 
 impl Default for FamParams {
     fn default() -> Self {
@@ -81,7 +67,7 @@ impl Default for FamParams {
             r_min: 0.9,
             trace_ppm: 6.0,
             parent_factor: 2.0,
-            orient: Orient::Factor,
+            orient: Orient::Evidence,
         }
     }
 }
