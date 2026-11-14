@@ -12,6 +12,7 @@ pub mod idf;
 pub mod metrics;
 pub mod null;
 pub mod scen;
+pub mod shift;
 pub mod subf;
 
 use mzlab_lib::search::Query;
@@ -94,13 +95,15 @@ pub fn check_engine(name: &str, n: usize) {
 /// A function that runs a set of arms on a scenario: (name, seed, n_lib, n) -> one JSON object per arm.
 pub type Runner = fn(&str, u64, usize, usize) -> Vec<Value>;
 
-/// The arm sets of the example and of `tools/studio_spettri.py`: the baselines, arm A (`null`), arm B (`idf`) and arm C (`subf`).
+/// The arm sets of the example and of `tools/studio_spettri.py`: the baselines, arm A (`null`), arm B (`idf`), arm C (`subf`) and arm D
+/// (`shift`).
 pub fn runner(set: &str) -> Runner {
     match set {
         "base" => run_baselines,
         "null" => null::run_null,
         "idf" => idf::run_idf,
         "subf" => subf::run_subf,
+        "shift" => shift::run_shift,
         _ => panic!("unknown arm set {set}"),
     }
 }
