@@ -1,5 +1,6 @@
 """Navigation of the RT x m/z map (mappa.js): the right-click menu with its commands (also with the sight locked), the bar on the map, resets of the
 axes, keyboard, wheel, touch (pinch, two-finger move, double tap, long press) and the sheet of the gestures. LR example files."""
+# covers: mzlab/web/mappa.js, mzlab/web/azioni.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

@@ -1,6 +1,7 @@
 """An Agilent method folder *.m loaded with «Load a folder» next to a .D run (cartella-carica.js, agilent-d.js, metodo-m.js, Rust engine agilent_m_metodo): it is recognised (not
 «ignored», not «no compatible file») and the Method window shows its compounds (expected RT, qualifier ions with their response, calibration levels) from the engine's metodo/1.
 Synthetic folders of tools/agilent_sintetico.py (no laboratory data). Needs the site and the .wasm like e2e_agilent."""
+# covers: mzlab/web/metodo-m.js
 import os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright

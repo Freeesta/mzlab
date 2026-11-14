@@ -1,6 +1,7 @@
 """Disegno: the «Formula analysis» card (closed by default) gives formula, exact, nominal and average mass and the mass % of the drawn molecule from the
 Rust `anal/1`; «Show isotope pattern» draws the theoretical sticks (keyboard-reachable, with their TDATI table) titled as theory for the formula; an ion
 shows its m/z; two molecules without a selection ask for one; the right-click row opens the card on the selection. Draw -> card -> pattern = 2 clicks. Needs site/static/wasm-feat/grafo; SKIP without it."""
+# covers: mzlab/web/disegno-analisi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")):

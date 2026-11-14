@@ -1,5 +1,5 @@
 # Gruppi di condizioni in Tabui: vista «Compare conditions»
-Studio e contratto `gruppi/1`: `docs/studi/TABUI_GRUPPI_ESPERIMENTI.md`. Tutto Tabui è in inglese (nessuna chiave `lang/`); il JS formatta e disegna, ogni calcolo (presenza, medie, rapporti, insiemi, forme, «Prev.») è del Rust.
+Contratto `gruppi/1`, regole e criteri: `docs/agenti/gruppi.md`. Tutto Tabui è in inglese (nessuna chiave `lang/`); il JS formatta e disegna, ogni calcolo (presenza, medie, rapporti, insiemi, forme, «Prev.») è del Rust.
 
 ## Vista (`TP_Mine/lazy/gruppi-vista.js`)
 - `window.TPGRUPPI_VIEW.mount(el, gruppi, { parentName, onOpenRow(rowId) })` disegna un `gruppi/1` e restituisce `{ destroy, setFilter, selectRow, state, csv }`; file `// @ts-check` in `tools/tipi/pagina.json`, caricato alla prima apertura (mai in `TP_Mine/js/`). L'innesto nella tabella TP non è di questo file.

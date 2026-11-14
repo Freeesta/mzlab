@@ -1,6 +1,7 @@
 """First start of the site: the language and the title are decided before anything is drawn (browser it-IT + the old key qqq.lang='en' of the
 QqQ-lab site -> Italian from the first instant), only the catalog of that language is loaded, and the first loading phrase stays on screen
 for at least 4 s. Build first: python tools/build_site.py"""
+# covers: mzlab/web/browser
 from pathlib import Path
 import subprocess, sys, time
 from playwright.sync_api import sync_playwright

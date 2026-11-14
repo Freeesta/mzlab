@@ -1,5 +1,6 @@
 """Cursor of the chromatogram: the dot on top of the line (mouse, finger on an iPad viewport, arrow keys, tap elsewhere) and the snap to the nearest scan
 of the kind shown (DDA with MS1/MS2 filters): the message «nessuno scan» never appears while the file has scans."""
+# covers: mzlab/web/barre-maniglie.js, mzlab/web/scroll.js, mzlab/web/pannelli.js, mzlab/web/picchi.js, mzlab/web/eventi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

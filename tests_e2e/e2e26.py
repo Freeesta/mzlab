@@ -1,4 +1,5 @@
 """Data tab: full screen on every panel (also added later), RT selection clamped to the chromatogram range, delayed tooltip, header buttons Isotopi / Perdite neutre, no 'QqQ lab' text in the header. Synthetic data."""
+# covers: mzlab/web/tooltip.js
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import synth

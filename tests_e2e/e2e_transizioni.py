@@ -1,6 +1,7 @@
 """Smooth transitions (transizioni.css/js): with reduced motion nothing animates and the geometry is final at once; otherwise the side panel
 (left, right, sheet) and the plots slide with transform, end on the exact final geometry, redraw ONCE per transition, keep the focus, and no
 frame is long. The token --t-med is 0 under reduced motion."""
+# covers: mzlab/web/transizioni
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

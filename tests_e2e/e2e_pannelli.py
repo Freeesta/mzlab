@@ -1,4 +1,5 @@
 """A4: the XIC from a chromatogram sits right under it; no peak-table button; short caption; the RT label has a fixed width."""
+# covers: mzlab/web/affianca.js, mzlab/web/layout.js, mzlab/web/pannelli.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

@@ -1,6 +1,8 @@
 """e2e_menu_coerenti: the same graph offers the same actions from the right click, from the keyboard (Shift+F10 / Menu key) and from its bar.
 Map: the ids of the menu (data-azione) are the actions of the registry azioni/1 for the view, the buttons of the bar are registered actions.
 Spectrum, chromatogram and MRM: Shift+F10 on the focused graph opens the menu of the right click at the same point, with the focus inside; Esc gives it back."""
+# covers: mzlab/web/affianca.js, mzlab/web/azioni-icone.js, mzlab/web/azioni.js, mzlab/web/azioni-tasti.js, mzlab/web/azioni-esc.js
+# covers: mzlab/web/mappa.js, mzlab/web/mappa3d.js, mzlab/web/eventi.js
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

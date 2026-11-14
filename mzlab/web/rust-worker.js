@@ -19,7 +19,7 @@ import { createImpronte } from "./impronta.js";
 import { rawSink } from "./rust-opfs.js";
 import { createFlowCentroid } from "./rust-flow-centroid.js";
 import { msnGrafo, msnLibAggiungi, msnLibCerca, load as loadModule } from "./rust-msngrafo.js";
-import { masscal } from "./rust-masscal.js";
+import { masscal } from "./rust-masscal.js"; import { ticFondo } from "./rust-ticfondo.js";
 import { createDerivata, conAvanzamento, fraz } from "./rust-msngrafo-nativo.js";
 
 let engine = null, wasmMem = null;
@@ -35,7 +35,7 @@ ready.then(() => ["./idx-worker.js", "./idx-spill.js", "./idx-aiuti.js", "./idx-
 
 // The pyramid of map tiles of a level of a file (`maptiles.rs`) is kept in OPFS (mzlab/tiles/<file>.L<level>.mzt) beside the index: the first
 // map of a file builds it from the index, the next visits read it. The engine refuses bytes of another index (its stamp), so a stale file is harmless.
-/** @type {Map<number, string>} */ const tileName = new Map();           // slot -> name of the file, set when its index is opened
+/** @type {Map<number, string>} */ const tileName = new Map(), tilePol = new Map();           // slot -> name of the file and its polarity, set when its index is opened
 /** @returns {Promise<any>} */ const tilesDir = async () => (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab", { create: true })).getDirectoryHandle("tiles", { create: true });
 const tilesFile = (/** @type {string} */ name, /** @type {number} */ level) => `${name}.L${level}.mzt`;
 async function tilesEnsure(/** @type {string} */ query) {                                  // before api/maptiles: load the saved pyramid; after: save the one just built
@@ -372,7 +372,7 @@ async function lrOp(m) {
 const memNow = () => { try { if (engine) engine.trim_cache(); } catch (_) { /* the answer goes out anyway */ } return wasmMem ? wasmMem.buffer.byteLength : 0; };
 let active = 0;                                                                   // requests in flight: the read handles are exclusive, so they are released when the worker is idle
 // A request the user waits for (map, route, xic) is served before the lab ops (the read-only per-item lr_* ops, background): those wait while one is in flight, at most LAB_WAIT_MS so a stream of them never starves the lab.
-const FG_OPS = new Set(["map", "route", "idxxic", "subxic", "specexact", "idxopen"]), LAB_WAIT_MS = 1500, LAB_BG = /^lr_(metodo|method|method_warnings|gradient|analog|pda\w*|delay)$/;
+const FG_OPS = new Set(["map", "route", "idxxic", "subxic", "ticbg", "specexact", "idxopen"]), LAB_WAIT_MS = 1500, LAB_BG = /^lr_(metodo|method|method_warnings|gradient|analog|pda\w*|delay)$/;
 let fgActive = 0, fgIdle = /** @type {Array<() => void>} */ ([]);
 const fgDone = () => { if (--fgActive === 0) { const w = fgIdle; fgIdle = []; w.forEach(f => f()); } };
 const labTurn = () => fgActive === 0 ? null : new Promise(r => { const go = () => r(null); fgIdle.push(go); setTimeout(go, LAB_WAIT_MS); });
@@ -461,7 +461,7 @@ async function handle(ev) {
         try { blob = await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("idx")).getFileHandle(m.name + ".mzidx").then(h => h.getFile()); }
         catch (_) { throw '{"error_key":"error.noIndex","params":{}}'; }                  // no OPFS or no index yet: not a fault of the engine, the page uses the mzML
         await ARCH.lease("idx", m.name + ".mzidx");
-        info = engine.open_index(m.slot, blob.size, readerFor(blob, ["idx", m.name + ".mzidx"])); engine.set_polarity(m.slot, m.pol | 0); tileName.set(m.slot, m.name); await nativo.attach(engine, m.name, m.slot); break;
+        info = engine.open_index(m.slot, blob.size, readerFor(blob, ["idx", m.name + ".mzidx"])); engine.set_polarity(m.slot, m.pol | 0); tileName.set(m.slot, m.name); tilePol.set(m.slot, m.pol | 0); await nativo.attach(engine, m.name, m.slot); break;
       }
       case "route": info = engine.route(m.slot, m.path, m.query || ""); break;       // "" = not answered by the index
       case "scaninfo": info = engine.scaninfo(m.slot, m.sid, m.blob.size, readerFor(m.blob)); break;     // header of one scan: the index row + a slice of the mzML
@@ -471,7 +471,7 @@ async function handle(ev) {
       case "mrmchrom": info = engine.mrm_chrom(m.slot, m.blob.size, readerFor(m.blob), m.kind); break;   // api/chrom of an MRM file: a chromatogram of the mzML
       case "fileinfo": case "canali": info = (m.op === "canali" ? engine.canali : engine.fileinfo).call(engine, m.slot, m.name, m.blob.size, readerFor(m.blob)); break;      // api/fileinfo: the head of the mzML + the index; api/canali: the channels of its scans and chromatograms
       case "origin": info = engine.origin(m.items, m.k, m.query); break;                // api/origin over the session: "" = Python's (a file without index)
-      case "subxic": info = engine.subxic(m.slot, m.k, m.query); break;                   // api/subxic of a high-resolution survey: "" = Python's
+      case "subxic": info = engine.subxic(m.slot, m.k, m.query); break;   case "ticbg": info = await ticFondo(m, { nameOf: s => tileName.get(s) ?? lrNameOf(s), polOf: s => tilePol.get(s) | 0, readerFor }); break;   // api/subxic of a high-resolution survey ("" = Python's); api/tic_background: the TIC/BPC without its chemical background
       case "map": info = await mapOp(m); break;                                          // api/map, mapsnap, mappunti, mappunti3d, maptiles over the session: "" = Python's             // api/map, mapsnap, mappunti, mappunti3d over the session: "" = Python's
       case "diff": info = engine.diff_traces(m.path, m.query || ""); break;               // api/chrom, api/xic with ref: "" = Python's, "E" + JSON = the user's error
       case "qaqc": info = engine.qaqc_ion(m.query || ""); break;                          // api/qaqc over the files at the slots of the query: "" = Python's, "E" + JSON = the user's error

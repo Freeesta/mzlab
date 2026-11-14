@@ -1,4 +1,5 @@
 # e2e_righe: panels of one row (riga) sit side by side with the shared height and the saved shares; the row is saved in the notebook; a panel dragged out leaves it
+# covers: mzlab/web/affianca.js, mzlab/web/layout.js
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

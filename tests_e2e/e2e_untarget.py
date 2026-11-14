@@ -2,6 +2,7 @@
 candidate, entropy and evidence; chips of level, sort from the headers, click → the row opens under itself with the mirror and «What is it?», the chemist's decided level (2b only from 2a or 3), the external annotations are evidence and never a level.
 Needs the built site (python3 tools/build_site.py). UNT_BENCH=1 also times 5000 features (the result goes to docs/agenti/misure.md).
 Run from the repo root: python3 tests_e2e/e2e_untarget.py"""
+# covers: mzlab/web/libreria, TP_Mine/
 import json, os, random, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright

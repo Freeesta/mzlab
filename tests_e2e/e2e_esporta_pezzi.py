@@ -1,6 +1,7 @@
 """Exports written piece by piece (export-pezzi.js, export-worker.js): the file downloaded through OPFS has the same bytes as the old Blob path.
 Steps: small CSV with provenance, small iterable (no OPFS), a string/iterable over 8 MB with UTF-8 and a surrogate pair cut between pieces,
 a synthetic 210 MB file made of pieces (never held in the test), the OPFS folder export/ emptied after the download."""
+# covers: mzlab/web/export-pezzi.js, mzlab/web/export-worker.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import hashlib

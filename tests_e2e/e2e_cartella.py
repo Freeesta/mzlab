@@ -1,6 +1,7 @@
 """Loading a whole folder (cartella-carica.js) on the start screen, synthetic mzML only (no laboratory data, no Pyodide, dev server):
 the «Load a folder» input reads the subfolders too, ignores the unknown files with a summary (N files ignored), tells two equal names apart,
 and a dropped folder (simulated entries in the real drop handler) is read recursively as well."""
+# covers: mzlab/web/cartella-carica.js, mzlab/web/agilent-d.js
 import sys, os, base64, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pathlib import Path
 from lib import *

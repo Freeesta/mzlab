@@ -1,5 +1,7 @@
 """HR spectrum (DDA trio): triangles only under the pointer when the Marker switch is off, right-click menu of a peak (open the MS2 scan first, then formula and
 display options, grouped, with aria-labels), «remove contaminants» (Keller list) undoable, palette commands. iPad viewport for the hover by touch."""
+# covers: mzlab/web/visualizza.js, mzlab/web/dda.js, mzlab/web/dda-marcatori.js, mzlab/web/liste.js, mzlab/web/xic-spettro.js, mzlab/web/barra.js
+# covers: mzlab/web/legende.js, mzlab/web/picchi.js, mzlab/web/eventi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

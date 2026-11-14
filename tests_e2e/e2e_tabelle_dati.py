@@ -1,5 +1,6 @@
 """Data tables of the charts (tdati.js): the «Dati» button and the T key on a focused chart open a real <table> (headers with scope) whose values are those
 of the API; D reads the description through the polite live region; every chart canvas has a role, a label and a description."""
+# covers: mzlab/web/mappa-tabella.js, mzlab/web/integra-estremi.js, mzlab/web/tdati.js, mzlab/web/tdati-pannelli.js, mzlab/web/mappa.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

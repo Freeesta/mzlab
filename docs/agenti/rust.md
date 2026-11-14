@@ -73,3 +73,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - Readers modules: `lettori-modulo.md`. Memory and budget: `memoria.md`. `.wasm` caps: `wasm-tetti.md`. Measures: `misure-rust.md`, `misure-velocita.md`.
 - Desktop app: `rust-desktop.md` (mzFinder native: `rust-desktop-finder.md`). Flow: `rust-flow.md` (`mzflow/2`, `prov/1`), `rust-step.md` (`step/1`), `cli.md`.
 - `mol/1`: `mol.md`. Libraries: `librerie.md`. Features: `mzfeat.md`. MSn graph: `msn-grafo.md`.
+
+## Codice scritto due volte (regole)
+- **Consolidare senza crescere**: un aiuto JS condiviso va in un file d'avvio che tutti già caricano (`numeri.js`, `html-sicuro.js`, `i18n.js`), mai in un file d'avvio nuovo. Una funzione spostata in `mzlab-core` è gratis nei moduli che già lo collegano, ma porta JSON e formattazione in quelli che non lo usavano: `tools/ci_wasm_dimensioni.py` prima e dopo, i tetti non salgono. Ogni sostituzione in Rust tiene i byte dove un dato d'oro o una prova di parità li fissano.
+- **Non sono doppioni** (controllati): i riferimenti Python (`mzlab/*.py`, `tools/*_reference.py`), la colla JS (`rust-worker.js`, `rust-bridge.js`, `flow/lazy/flow-web-*.js`), il centroide a parabola di `composizione.js` contro quello gaussiano di `crates/mzlab-core/src/centroids/emit.rs`, `deconvolve/old/` (riferimento congelato dei test), `attributio/review/isotopes.rs` (a parte di proposito); desktop e `.wasm` condividono le rotte di `mzlab_core::routes::Routes`.

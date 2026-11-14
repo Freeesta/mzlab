@@ -1,5 +1,6 @@
 """Statistica, «Difference from the reference» (high resolution only): the section is there in HR and not in LR, the reference comes from the sample table,
 sorting and filtering, the evidence of a row (XIC, MS1 at the apex, MS2, profile), the list column only with a list of the user, the export."""
+# covers: mzlab/web/riferimento.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import numpy as np

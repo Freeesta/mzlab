@@ -1,4 +1,5 @@
 """V-1 follow-up: the spectrum «XIC» button on a spectrum of the second file (as a map click opens it), with the files overlaid, and on an MS2 file (low resolution)."""
+# covers: mzlab/web/xic-spettro.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

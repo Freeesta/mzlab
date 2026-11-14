@@ -1,4 +1,5 @@
 """Block H1/H2: optional S/N (noise stretch chosen by the student) and chromatographic figures (w1/2, N, tailing) in the integration table."""
+# covers: mzlab/web/cromato.js, mzlab/web/grafici.js, mzlab/web/eventi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

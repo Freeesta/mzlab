@@ -1,4 +1,5 @@
 """Block A (charts): fixed m/z axis of the spectrum, lock = y only, zoom box / lines on the axes, no 'y x10', Excel on the TIC, XIC under its spectrum."""
+# covers: mzlab/web/spettro.js, mzlab/web/grafici.js, mzlab/web/picchi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

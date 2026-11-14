@@ -1,5 +1,6 @@
 """Stacked chromatograms of a view (TIC + XIC): same time range, same left and right edge of the plot (± 1 px) at three window widths and after a zoom;
 zoom and cursor linked by default, one panel can be unlinked; the y axes stay independent."""
+# covers: mzlab/web/scroll.js, mzlab/web/spettro.js, mzlab/web/pannelli.js, mzlab/web/grafici.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

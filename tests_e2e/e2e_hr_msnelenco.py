@@ -1,5 +1,6 @@
 """MSn tree window of a DDA file, «Experiments» view (msn-elenco.js): the list of every MSn scan grouped by precursor, sort and filters, a row opens
 its MS2 in the DDA panels, a precursor opens its TIC (MS2 tab, ppm window) and its XIC, the tree is one tab away, 50 000 scans stay virtualised, axe, no errors."""
+# covers: mzlab/web/composizione.js, mzlab/web/msn-elenco.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import lib

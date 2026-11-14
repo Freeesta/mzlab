@@ -1,6 +1,6 @@
 # Attributio: esportazioni (prove, cartella di Schymanski, tabella per la pubblicazione, quantificazione, gradiente)
 
-Il chimico porta via i risultati della campagna. Studio in `docs/studi/ATTRIBUTIO.md`; cascata in `docs/agenti/attributio.md`; Banco 2b in `docs/agenti/attributio-banco.md`. Parità sui dati d'oro di `tests/golden/attributio/esportazione/`.
+Il chimico porta via i risultati della campagna. Cascata in `docs/agenti/attributio.md`; Banco 2b in `docs/agenti/attributio-banco.md`. Parità sui dati d'oro di `tests/golden/attributio/esportazione/`.
 
 - **Modello** (`crates/mzlab-feat/src/attributio/export/cells.rs`): `Sheet{name, head, rows: Vec<Vec<Cell>>}` con `csv()` (`;`, UTF-8, `\n`), `json()` e `xlsx_rows(&[Sheet])` (`{"hojas":[{"nombre","filas"}]}`, che la pagina chiude in un XLSX). `pyfmt.rs`: `py_float` (la `repr` di un float di Python), `join_distinct`, `toml_text`; `wide.rs`: tabelle larghe per sito; `sha1.rs`: `sha1_hex`.
 - **Contesto** (`export/ctx.rs`): `Loaded::load(c, io, matrix)` (fonti, cascata, curazione, siti della matrice), `feature_rows` (`build_feature_frame`: identità curata, provenienza dell'abbinamento GNPS2, aree per sito, segnalazione RT-logP). La matrice è `[diagnostics] matrix` della campagna o la prima.

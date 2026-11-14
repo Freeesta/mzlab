@@ -1,4 +1,5 @@
 """Area label of an integration: click copies the displayed number, «Copia valore» in the menu, aria-live notice that fades, nothing in the PNG, other clicks unchanged."""
+# covers: mzlab/web/area-copia.js, mzlab/web/integra-zero.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

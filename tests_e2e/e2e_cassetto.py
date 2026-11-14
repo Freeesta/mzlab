@@ -1,5 +1,6 @@
 """The toolbar drawer (#dfiles) is really visible from a cold start: with and without #/data, at 1280, 1440 and on an iPad,
 also with saved sidebar states (side right, open) and a stale width. Visible = non-empty box inside the viewport, on top."""
+# covers: mzlab/web/transizioni, mzlab/web/barra.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

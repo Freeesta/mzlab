@@ -3,6 +3,7 @@ tools/wiff_dad_mrm.py, no laboratory data). `api/chrom?kind=pda&mz0&mz1` answers
 not the TWC; without a band it answers the TWC; the MS chromatograms of the file stay as they were.
 The detector switch: the picker of the MRM / SIM panel and of the MS2 chromatogram has a «UV/Vis» row that opens the DAD TWC in the same tab, right under the
 panel, time-linked, by mouse and by keyboard (arrows, Esc, Enter), axe clean; a file without a DAD has no such row. Run from the repo root: python3 tests_e2e/e2e_dad_mrm.py"""
+# covers: tools/wiff_dad_mrm.py, mzlab/web/canali.js, mzlab/web/canali-uv.js, mzlab/web/rust-bridge-info.js, mzlab/web/lr-method.js
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

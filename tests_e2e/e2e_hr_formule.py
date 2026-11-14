@@ -1,5 +1,6 @@
 """HR_PANNELLO 2: «Composizione elementare» as a compact panel (Xcalibur style): ready defaults, the table copies a row, «Applica» writes the formula under the m/z of the peak,
 right click on a peak → «Genera formula», the expanded form (FreeStyle style) with the periodic table; the panel texts are not clipped at 1280/1440/1680 px."""
+# covers: mzlab/web/elementare.js, mzlab/web/elementare-pannello.js, mzlab/web/composizione.js, mzlab/chem/composition.py, mzlab/chem/isoscore.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

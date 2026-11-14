@@ -1,5 +1,6 @@
 """Experiment menu of the start-screen table: a plain menu of the types with the detected one pre-selected (reason as tooltip), a picked type wins, is applied at once (table, group,
 viewer) and is remembered per file; the group select sets every file of the group."""
+# covers: mzlab/web/tipo-file.js
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth

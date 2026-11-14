@@ -1,4 +1,5 @@
 """Chromatogram header: Smoothing and Log buttons on the right, «Range» popover (m/z, RT) with a clear ×, «Correz.» menu with 4 entries and a file chooser."""
+# covers: mzlab/web/xic-bordi.js, mzlab/web/pannelli.js, mzlab/web/fondo.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import ds, load

@@ -2,6 +2,7 @@
 (also when its two files come in different loadings), a .wiff alone gets a notice, a .wiff with several samples gives one file per sample (read as they are, no mzML is made), the samples are
 listed (with the button to save their mzML on request), are recognised as Full Scan / MS2 / MRM and Pyodide is never requested. Synthetic pairs of tools/wiff_riferimento.py (no laboratory data).
 Needs the site and the .wasm: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm)."""
+# covers: mzlab/web/rust-nativo, mzlab/web/nativo, mzlab/web/rust-, tools/wiff_riferimento.py, crates/
 import shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright

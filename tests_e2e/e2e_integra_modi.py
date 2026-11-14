@@ -2,6 +2,7 @@
 (the line between the edges, from zero, a custom line), the custom line moved by mouse, by keyboard and by finger on a 1024x768 touch viewport, in the light and
 the dark theme; the part under the line is reported apart and drawn hatched; a new integration is from zero and names it (`bm`), the default of the peak dialog
 (`PK.bmode`, edges still chosen there or in the dialog, where it is written as `bm` = edges); a record without a mode (a saved session) keeps its old number and fields."""
+# covers: mzlab/web/integra-base.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import load

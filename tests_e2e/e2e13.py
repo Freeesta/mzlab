@@ -1,5 +1,6 @@
 """Browser version (the site that GitHub Pages serves): the Rust engine (WebAssembly) runs the program, no server involved.
 Build first: python tools/build_site.py"""
+# covers: mzlab/web/browser, mzlab/web/qqq-db, mzlab/web/sw.js, tools/build_site.py
 import subprocess, sys, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright

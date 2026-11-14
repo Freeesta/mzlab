@@ -1,6 +1,7 @@
 """Dialogs: every radio, checkbox and field sits next to its label (no control pushed to the far edge of a wide dialog, no radio centred away from its text),
 at 1000/1600/2000 px and on iPad (1024x768, 1366x1024, touch): the baseline of an integration, the peak detection settings, the table of the integrations and the
 sample columns."""
+# covers: mzlab/web/integra-base.js, mzlab/web/app.css, mzlab/web/picchi.js
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

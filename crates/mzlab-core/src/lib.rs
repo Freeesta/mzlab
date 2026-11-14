@@ -34,6 +34,11 @@ pub mod chromeleon;
 pub mod chrom_background;
 #[cfg(test)]
 mod chrom_background_test;
+pub mod ticbg;
+pub mod ticbg_route;
+pub mod ticbg_synth;
+#[cfg(test)]
+mod ticbg_test;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod hashio;
 pub mod hrscanbin;

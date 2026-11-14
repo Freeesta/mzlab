@@ -1,6 +1,7 @@
 """«Range» popover of a chromatogram: the m/z and RT «from / to» pairs are read when the focus leaves the pair, so Tab moves between the fields without
 losing the focus; a reversed pair or letters are refused with a calm note in the popover and the old values back; undo, redo and a reload keep them.
 Esc closes the popover and gives the focus back to its button; at 400 % zoom (320 px) the popover sits in «More», fits and still takes a pair."""
+# covers: mzlab/web/xic-bordi.js, mzlab/web/campi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

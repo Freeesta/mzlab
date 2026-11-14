@@ -1,5 +1,6 @@
 """Settings and tour: the tour invitation dismisses itself after 30 s on a fake clock (counts as «Not now», never comes back; a pointer on it holds it), the Guided tour button of the settings
 starts the tour in Dati also from Disegno, the storage section is gone (no reset: the header button is the only entry), the accessibility options sit in a submenu."""
+# covers: mzlab/web/tour.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 r = Run(port=8873, wd="/tmp/wd_impost")

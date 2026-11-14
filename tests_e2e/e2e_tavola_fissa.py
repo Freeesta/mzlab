@@ -1,5 +1,6 @@
 """Periodic table: hovering any of the 118 elements never moves or resizes the grid, the info box or the text beside it
 (constant size of the detail area). Light layout at narrow and wide widths, Italian and English."""
+# covers: mzlab/web/tavola-periodica.js, mzlab/web/tables.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

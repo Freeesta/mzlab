@@ -2,6 +2,7 @@
 unreadable SMILES) the candidates/1, and q.csv the observed RT of the query. The plan (window with defaults; window with `order` residual; forest) goes to `mzlab-cli flow run`, and the candidates/1 text the browser keeps is
 the native file byte for byte (same SHA-256); every job is `done` with `via: "browser"`, a second run takes the texts from OPFS, no request is left unserved (`MZLAB_LR_MISS`). Synthetic data only.
 Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen, python3: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_web_rtpredict.py"""
+# covers: flow/lazy/flow-web-rtpredict.js, crates/mzlab-feat/src/flow_rtpredict.rs, crates/mzlab-attributio-wasm/src/flow_rtpredict.rs
 import hashlib, json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
 from playwright.sync_api import sync_playwright

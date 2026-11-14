@@ -3,6 +3,7 @@ files are never touched; on a Mac it recommends another browser, on an iPad (all
 storage (flag in localStorage), again after the storage is cleared, also when the storage throws; never in the other browsers. Safari is told by
 WebKit's GestureEvent: with --browser webkit it is WebKit's own, elsewhere a stand-in is set before the page runs (a WebKit-like page; the WebKit
 round itself is webkit-mac.yml / notte.yml). The tour invitation stays usable beside it. No browser errors."""
+# covers: mzlab/web/compat, mzlab/web/avviso-safari
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

@@ -2,6 +2,7 @@
 and loads the first ones that fit; when the copy runs out of room anyway the queue stops and ONE message counts the files loaded and not loaded,
 instead of one red error per file. The room is set over CDP (Storage.overrideQuotaForOrigin: real writes fail beyond it) and the page's
 storage.estimate() reports the same room. Synthetic files only (mzml_grande.py)."""
+# covers: mzlab/web/shell.js, mzlab/web/quota-lotto, mzlab/web/idx-spill
 import sys, os, re, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import mzml_grande   # before lib: lib puts tools/ first on the path

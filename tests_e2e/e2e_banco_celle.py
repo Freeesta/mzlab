@@ -1,5 +1,6 @@
 """H3a: the cells of the high-resolution bench: scan filter of a cell (listed with the number of scans of each type), pin, active cell; nothing of this in the
 low-resolution world. Synthetic Orbitrap DDA file; the infusion MSn file of the private data repository (skipped without it) for the paths of fragmentation."""
+# covers: mzlab/web/banco.js
 import sys, os, glob, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from dati_percorsi import percorso  # noqa: E402  (tools/ is on sys.path through lib)

@@ -1,5 +1,6 @@
 """Header toolbar and drawer of the Data view (LR and HR): one place per tool, drawer closed/overlaid/pinned, Esc and focus,
 side by drag and by keyboard, remembered state, HR menu by keyboard, no button wrapped or cut at 1280/1440/1680 and on iPad."""
+# covers: mzlab/web/paletta.js, mzlab/web/barra.js, mzlab/web/features.js, mzlab/web/stat.js
 import sys, os, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

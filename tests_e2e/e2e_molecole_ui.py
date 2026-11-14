@@ -2,6 +2,7 @@
 with the keyboard, add / edit / delete, a catalogue molecule edited as a copy of the user, import of CSV and JSON with one error per wrong row, export CSV and JSON, the molecules
 surviving a reload (IndexedDB store «molecole»), the migration of the database 3 -> 4 without losing files / kv / liste_utente / manifest, the ARIA combobox with the keyboard, axe.
 Needs the built site (tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_molecole_ui.py"""
+# covers: mzlab/web/molecole, mzlab/web/qqq-db.js
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

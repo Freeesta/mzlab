@@ -3,6 +3,8 @@ in Italian and English, it opens the panels (MRM after an integration; chromatog
 the page and of the panel headers, the settings, the method and the peak dialogs, and checks from the boxes on screen: no horizontal page scroll, no control
 over another or covered by something that is not its own, no control cut by a box that does not scroll, labels next to their control, no text cut with an
 ellipsis and no full text at hand, targets of at least 24 px (or the WCAG 2.5.8 spacing)."""
+# covers: mzlab/web/app.css, mzlab/web/pannelli.js, mzlab/web/barra.js, mzlab/web/settings.js, mzlab/web/impostazioni, mzlab/web/canali
+# covers: mzlab/web/help.js, mzlab/web/affianca.js, mzlab/web/barre-maniglie.js, mzlab/web/explore.js
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
