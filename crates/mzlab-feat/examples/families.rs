@@ -13,9 +13,9 @@ use std::time::Instant;
 
 use mzlab_core::idxread::Index;
 use mzlab_feat::family::{analyse_families, FamParams, Families, Orient};
-use mzlab_feat::pipeline::{analyse, Steps};
+use mzlab_feat::pipeline::analyse;
+use mzlab_feat::recipe::Recipe;
 use mzlab_feat::table::*;
-use mzlab_feat::trace::Params;
 use serde_json::Value;
 
 /// Row within 5 ppm of `mz` and 0.1 min of `rt` (the nearest in m/z).
