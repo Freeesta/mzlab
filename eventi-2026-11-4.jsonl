@@ -21809,3 +21809,4 @@
 {"v":1,"ts_utc":"2026-11-14T08:26:05Z","tipo":"job","k":"132389667862","workflow":"rust","job":"rust-det","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"f90f16fa2dd37feb1107cc0934958e362477e46f","run_id":43575773456,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-14T08:28:37Z","tipo":"coda","k":"2026-11-14T08:28:37Z","aperte":7,"indietro":1,"sporche":4,"verdi_in_attesa":0,"piu_vecchia_aperta_s":35923,"piu_vecchia_verde_s":null}
 {"v":1,"ts_utc":"2026-11-14T08:28:17Z","azione":"aperta","tipo":"pr","pr":3270,"sha":"3547e71a9163f2d4c0068f635a0c8af58f203d1c"}
+{"v":1,"ts_utc":"2026-11-14T08:29:11Z","azione":"aperta","tipo":"pr","pr":3271,"sha":"d002cd7eb8c4330897be807e3078a2e343a848ba"}
