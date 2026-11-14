@@ -62,6 +62,7 @@ pub mod flow_stat;
 pub mod gapfill;
 pub mod groups;
 pub mod hypo;
+mod iimn;
 pub mod import;
 #[cfg(feature = "interp")]
 pub mod interp;
