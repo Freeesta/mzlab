@@ -35,10 +35,14 @@ const RESET = (function () {
   }
   const delDb = name => new Promise(r => { const q = indexedDB.deleteDatabase(name); q.onsuccess = q.onerror = () => r(true); q.onblocked = () => r(false); });
   async function idb(mode, rep) {
+    // "files" keeps what the user made in the main database (drawing and notebook, saved lists, molecules): only files, manifest, open-files list and sample roles go (qqq-db.js)
+    let keepMain = false;
+    if (mode === "files") keepMain = !!(await wait(import("./qqq-db.js").then(m => m.clearFilesKeepWork()).catch(() => false), 5000));
+    if (keepMain) rep.idb.push(NOMI.DB + " (files only)");
     let names = KNOWN_IDB.slice();
     try { if (indexedDB.databases) names = [...new Set([...names, ...(await indexedDB.databases()).map(d => /** @type {string} */ (d.name))])]; } catch (e) { /* the fixed names only */ }
     // all databases at once, each with its own short timeout
-    await Promise.all(names.filter(n => mode === "all" || !KEEP_IDB.includes(n)).map(async n => {
+    await Promise.all(names.filter(n => (mode === "all" || !KEEP_IDB.includes(n)) && !(keepMain && n === NOMI.DB)).map(async n => {
       const ok = await wait(delDb(n), 3000);
       // blocked: another connection is open; the deletion is queued and finishes when the page reloads
       (ok ? rep.idb : rep.blocked).push(n);
@@ -90,12 +94,12 @@ const RESET = (function () {
     return rep;
   }
 
-  // ---- «Start a new session»: the one entry to every reset (header button, reminder): a short question with two ways to clear and Cancel (Esc too)
+  // ---- «Start a new session»: the one entry to every reset (header button, reminder): a short question with two ways to clear (the milder one first) and Cancel (Esc too)
   function ask() {
-    const T = (k, o) => I18N.t(k, o), btn = (m, cls, lab, sub) => `<button type="button" class="rs-big ${cls}" data-reset="${m}"><b>${lab}</b><span>${sub}</span></button>`;
+    const T = (k, o) => I18N.t(k, o), btn = (m, cls, lab) => `<button type="button" class="rs-big ${cls}" data-reset="${m}"><b>${lab}</b></button>`;
     document.getElementById("resetdlg")?.remove();
     const d = document.createElement("dialog"); d.id = "resetdlg"; d.setAttribute("aria-labelledby", "rs-t");
-    d.innerHTML = `<h3 id="rs-t">${T("reset.title")}</h3>${btn("all", "rs-red", T("reset.all.btn"), T("reset.all.sub"))}${btn("files", "rs-blue", T("reset.files.btn"), T("reset.files.sub"))}<div class="rs-end"><button type="button" class="rs-cancel" data-reset="">${T("reset.cancel")}</button></div>`;
+    d.innerHTML = `<h3 id="rs-t">${T("reset.title")}</h3>${btn("files", "rs-blue", T("reset.files.btn"))}${btn("all", "rs-red", T("reset.all.btn"))}<div class="rs-end"><button type="button" class="rs-cancel" data-reset="">${T("reset.cancel")}</button></div>`;
     document.body.appendChild(d);
     d.addEventListener("click", e => { const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("button[data-reset]")); if (!b) return; if (b.dataset.reset) { d.querySelectorAll("button").forEach(x => { x.disabled = true; }); run(b.dataset.reset); } else d.close(); });
     d.addEventListener("close", () => d.remove());
