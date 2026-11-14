@@ -12,9 +12,9 @@ ROOT = Path(__file__).resolve().parent.parent
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 
-def run(provider, proxy, *urls, fail_registry=0):
+def run(provider, proxy, *urls, fail_registry=0, race=""):
     out = subprocess.run(["node", str(ROOT / "tests/trasporto_node.js"), str(ROOT / "mzlab/web/llm"), provider, proxy, *urls],
-                         check=True, capture_output=True, encoding="utf-8", env={**os.environ, "FAIL_REGISTRY": str(fail_registry)}).stdout
+                         check=True, capture_output=True, encoding="utf-8", env={**os.environ, "FAIL_REGISTRY": str(fail_registry), "RACE": race}).stdout
     return json.loads(out)
 
 
@@ -52,3 +52,11 @@ def test_a_redirect_is_never_followed_and_a_failed_registry_fetch_is_retried():
     a, b = run("anthropic", "", "https://api.anthropic.com/v1/messages", "https://api.anthropic.com/v1/messages", fail_registry=1)
     assert a["fetched"] == [] and a["msgs"] == ['fail:err.llm.network:{"reason":"url"}'], a
     assert len(b["fetched"]) == 1, b
+
+
+def test_a_second_init_never_sends_the_previous_providers_key_to_the_new_origin():
+    """init A, the key of A is set; init B arrives and its recall is still pending: a send to B's origin must not carry A's key."""
+    a, b = run("anthropic", "", "https://api.openai.com/v1/chat/completions", "https://api.anthropic.com/v1/messages", race="openai")
+    assert a["fetched"] == [] and a["msgs"] == ['fail:err.llm.auth:{"reason":"nokey"}'], a
+    # A's origin is no longer this provider's: nothing leaves either
+    assert b["fetched"] == [], b

@@ -11,6 +11,7 @@
   const st = { provider: "", local: false, owner: "", labels: {}, port: null };
   /** the key lives here and nowhere else; it is never posted out of this document @type {string} */
   let key = "";
+  let initGen = 0;
   /** @type {Map<string, AbortController>} */
   const live = new Map();
 
@@ -110,11 +111,15 @@
     if (ev.origin !== location.origin || ev.source !== window.parent) return;
     const m = ev.data || {};
     if (m.op === "init") {
+      // provider and key change together: the key is dropped before anything is awaited, and a recall of an earlier init never lands on a later one
+      key = ""; const gen = ++initGen;
       st.provider = String(m.provider || ""); st.local = !!m.local; st.owner = String(m.owner || ""); st.labels = m.labels || {};
       $("t-key").textContent = st.labels.key || ""; $("b-use").textContent = st.labels.use || ""; $("b-forget").textContent = st.labels.forget || ""; $("t-remember").textContent = st.labels.remember || "";
       $("key").setAttribute("aria-label", st.labels.key || "");
       if (ev.ports[0]) { st.port = ev.ports[0]; st.port.onmessage = onPort; }
-      key = st.local ? "" : await recall();
+      const k = st.local ? "" : await recall();
+      if (gen !== initGen) return;
+      key = k;
       $("remember").checked = !!key;
       paint();
       window.parent.postMessage({ op: "ready", hasKey: !!key }, location.origin);
