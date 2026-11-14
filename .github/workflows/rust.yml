@@ -32,10 +32,13 @@ jobs:
     steps:
       # the diff compares two trees, so the head commit and the base commit are enough (a full clone took 130-215 s); a base that cannot be fetched falls through to "run everything"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2   # tools/ci_base.py: a pull request diffs its merge commit with its first parent
       - id: diff
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: |
+          BASE=$(python3 tools/ci_base.py "$BASE")
           if [ -n "$BASE" ] && ! echo "$BASE" | grep -qE '^0+$'; then git fetch --no-tags --depth=1 origin "$BASE" || true; fi
           if [ -z "$BASE" ] || echo "$BASE" | grep -qE '^0+$' || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             echo "rust=true" >> "$GITHUB_OUTPUT"; echo "core=true" >> "$GITHUB_OUTPUT"; echo "deny=true" >> "$GITHUB_OUTPUT"; echo "misca=true" >> "$GITHUB_OUTPUT"; exit 0
