@@ -255,7 +255,7 @@ function nbMerge(/** @type {Bag} */ remote) {
   out._v = NB_V; out._t = Date.now(); return out;
 }
 function nbSave(now = false) {
-  clearTimeout(/** @type {number} */ (nbTimer));
+  clearTimeout(/** @type {number} */ (nbTimer)); if (window.QQ_RESETTING) return;      // a reset clears the storage: the closing page must not write its old notebook back
   const go = async (/** @type {number} */ gen) => {
     // not read yet (a save would erase the stored notebook), or nothing changed: no request (fewer aborted saves on reload)
     if (gen !== nbGen || !nbEverLoaded || JSON.stringify(NB) === nbLast) return;
@@ -265,7 +265,7 @@ function nbSave(now = false) {
     const snap = JSON.stringify(NB); nbLast = snap; nbBase = JSON.parse(snap); nbRemote = out; if (now) NBP.keep(body);
     return fetch("api/notebook", { method: "POST", body, keepalive: true }).then(r => { if (r && r.ok) NBP.done(body); }).catch(() => { nbLast = ""; });
   };
-  if (now) go(++nbGen); else nbTimer = setTimeout(() => { const gen = ++nbGen; nbQueue = nbQueue.then(() => go(gen)).catch(() => {}); }, 500);      // closing the page does not wait for the queue
+  if (now) return go(++nbGen); else nbTimer = setTimeout(() => { const gen = ++nbGen; nbQueue = nbQueue.then(() => go(gen)).catch(() => {}); }, 500);      // closing the page does not wait for the queue
 }
 let nbEverLoaded = false, nbNamed = /** @type {Set<string>} */ (new Set());      // nbNamed: the files the notebook names at load (open or removed), read by restoreRows (shell.js)
 async function nbLoad() {

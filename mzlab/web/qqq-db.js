@@ -220,3 +220,38 @@ export function lab(onblocked) {
     r.onerror = () => rej(r.error);
   }).catch(e => { dbP = null; throw e; }));
 }
+
+/**
+ * What the reset «Files» does to the main database: clears the loaded files and their manifest, the stored folder handle, and the parts of the notebook that name
+ * files (open-files list, panels, sample roles); everything the user made stays (drawing, saved lists, molecules, the rest of the notebook). Never creates the
+ * database. Resolves true when done, false when it could not be done (blocked, no such store): the caller then falls back to deleting the database.
+ * @returns {Promise<boolean>}
+ */
+export function clearFilesKeepWork() {
+  const DROP = ["session", "ui", "sampleCols", "sampleEx"];
+  return new Promise(resolve => {
+    let q;
+    try { q = indexedDB.open(DB_NAME); } catch (_) { resolve(false); return; }
+    q.onupgradeneeded = () => { q.transaction?.abort(); resolve(true); };      // no such database: nothing to clear
+    q.onerror = q.onblocked = () => resolve(false);
+    q.onsuccess = () => {
+      const db = q.result, names = ["files", "manifest", "kv"].filter(n => db.objectStoreNames.contains(n));
+      if (!names.length) { db.close(); resolve(true); return; }
+      let ok = true;
+      const tx = db.transaction(names, "readwrite");
+      if (names.includes("files")) tx.objectStore("files").clear();
+      if (names.includes("manifest")) tx.objectStore("manifest").clear();
+      if (names.includes("kv")) {
+        const kv = tx.objectStore("kv");
+        kv.delete("cartella.puntata");
+        const g = kv.get("notebook");
+        g.onsuccess = () => {
+          if (typeof g.result !== "string") return;
+          try { const j = JSON.parse(g.result); DROP.forEach(k => { delete j[k]; }); j._t = Date.now(); kv.put(JSON.stringify(j), "notebook"); } catch (_) { ok = false; }
+        };
+      }
+      tx.oncomplete = () => { db.close(); resolve(ok); };
+      tx.onerror = tx.onabort = () => { db.close(); resolve(false); };
+    };
+  });
+}
