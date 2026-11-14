@@ -21577,3 +21577,4 @@
 {"v":1,"ts_utc":"2026-11-14T08:18:35Z","azione":"aperta","tipo":"pr","pr":3267,"sha":"9abd40290f3f85e5d5c04f4e423a87e25b9e8476"}
 {"v":1,"ts_utc":"2026-11-14T08:18:53Z","azione":"aperta","tipo":"pr","pr":3268,"sha":"d27aba3fb1b3a9b1bff9e582f31e05f6afd6dfcd"}
 {"v":1,"ts_utc":"2026-11-14T08:23:38Z","azione":"aperta","tipo":"pr","pr":3269,"sha":"47ca9528e4c4d36f6f07d93131cb49190a881223"}
+{"v":1,"tipo":"pr","pr":3269,"sha":"47ca9528e4c4d36f6f07d93131cb49190a881223","ts_utc":"2026-11-14T08:25:23Z","azione":"unita","aperta_s":105,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":12,"righe_meno":6,"file_n":3,"file":["docs/agenti/INDICE.md","docs/agenti/ci-selezione.md","docs/agenti/ci-veloce.md"],"aree":{"docs":3},"solo_doc":true,"prima_review_s":null,"review_n":0,"verde_a_unione_s":43}
