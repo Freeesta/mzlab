@@ -16,3 +16,6 @@ Una riga di misura in PR dice: modulo, byte prima → dopo, crescita in %, e se 
 - `mzlab-core` a opt-level 3 sposta i tetti di `hr`, `untargeted`, `table`, `finder-lr`, `msngrafo`, `msnregole` di circa +10 % ciascuno (misura × 1,10 a 4 KiB); i lettori `aperti` e `sciex` contano la scansione danneggiata lasciata fuori (circa +2 KB ciascuno).
 - Le parti danneggiate che un lettore lascia fuori e conta (`bruker`, `agilent`, `waters`, `.wiff`) costano +0,3-0,6 % ciascuna sul lettore e +0,1-0,3 % sul motore.
 - L'indice a blocchi, la stima della lettura (`budget_mb`) e i riempimenti dei vuoti spostano `hr`, `table`, `msngrafo`, `formula` e `flowtab` di +0,2-0,5 %, mai oltre il tetto.
+
+## Misure per PR
+- `untargeted`, opzione `ident.min_corr`: grezzo (`tools/cargo_wasm.sh build --release`, prima di `wasm-bindgen` e `wasm-opt`, che non c'erano nella misura) 1 343 982 → 1 349 550 B (+0,41 %); la misura ottimizzata (470 779, tetto 585 728) resta sotto il tetto con ampio margine.
