@@ -67,7 +67,11 @@ try:
             if profile == "corso": return pg      # no administrator mode: the Flow, but no assistant
             pg.wait_for_selector(TAB, timeout=60000); pg.click(TAB); pg.wait_for_selector("#flx-root", timeout=30000)
             if profile == "ricerca" and on:
+                pos = "() => ['#flx-run', '#flx-more'].map(q => { const r = document.querySelector(q).getBoundingClientRect(); return [Math.round(r.x), Math.round(r.y)]; })"
+                before = pg.evaluate(pos)
                 pg.wait_for_selector("#flx-assistant", timeout=30000)
+                wait_for_js(pg, "!!window.MZLAB_LLM_AGENT")
+                assert pg.evaluate(pos) == before, "the bar does not jump when the assistant button arrives"
                 wait_for_js(pg, "!!window.MZLAB_LLM_AGENT")
                 if recording: pg.evaluate("t => window.MZLAB_LLM_AGENT.replay(t, false)", recording)
                 if stub: pg.evaluate(STUB)
