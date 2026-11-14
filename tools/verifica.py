@@ -298,7 +298,14 @@ def parte_di(names: list[str], k: int, n: int) -> list[str]:
     return [x for i, x in enumerate(rank) if i % n == k - 1]
 
 
-def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | None = None) -> None:
+def skip_why(need: set[str], *, dam: bool, src: str, only: bool, sito_pronto: bool) -> str:
+    """Why an e2e with these NEEDS is skipped ("" = it runs). The `sito` ones run only when named (--solo) or when the CI says the full site is in place (--sito-pronto)."""
+    return ("serve un file .dam (MZLAB_DAM / QQQ_DAM)" if "dam" in need and not dam else
+            "solo con i dati veri del laboratorio" if "veri" in need and src != "veri" else
+            "costruisce il sito con Pyodide: lancialo a parte (--solo)" if "sito" in need and not only and not sito_pronto else "")
+
+
+def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | None = None, sito_pronto: bool = False) -> None:
     names = sorted(p.stem for p in E2E.glob("e2e*.py") if p.stem not in NOT_TESTS)
     if only:
         names = [n for n in names if n in only]
@@ -319,9 +326,7 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
     todo, out_by = [], {}
     for n in names:
         need = NEEDS.get(n, set())
-        why = ("serve un file .dam (MZLAB_DAM / QQQ_DAM)" if "dam" in need and not dam else
-               "solo con i dati veri del laboratorio" if "veri" in need and src != "veri" else
-               "costruisce il sito con Pyodide: lancialo a parte (--solo)" if "sito" in need and not only else "")
+        why = skip_why(need, dam=bool(dam), src=src, only=bool(only), sito_pronto=sito_pronto)
         if why:
             out_by[n] = (n, "SKIP", 0, [why])
         else:
@@ -363,6 +368,7 @@ def main() -> None:
                     help="e2e eseguiti insieme (predefinito: CPU - 1, al massimo 6; 1 = uno alla volta)")
     ap.add_argument("--ultimi-falliti", action="store_true", help="rilancia solo gli e2e che erano FAIL nel giro precedente (.verifica/ultimo.md)")
     ap.add_argument("--parte", default="", metavar="K/N", help="only part K of N of the complete run (the CI of notte.yml): part 1 also does syntax, texts, pytest and prova_hr, every part a share of the e2e")
+    ap.add_argument("--sito-pronto", action="store_true", help="the built site with every .wasm is in place (notte.yml): the e2e that need `sito` run in --parte mode too")
     ap.add_argument("--cambiati", action="store_true", help="solo gli e2e che riguardano i file cambiati rispetto a origin/main (vedi AREE); con file del nucleo li fa tutti")
     ap.add_argument("--mostra-ok", "--tutto", dest="mostra_ok", action="store_true", help="stampa anche le righe OK (altrimenti solo FAIL/SKIP e il conteggio)")
     a = ap.parse_args()
@@ -396,7 +402,7 @@ def main() -> None:
             results.append(("e2e scelti da --cambiati", "INFO", 0, [why]))
             run, only = sel != {"-"}, (sel if sel not in (None, {"-"}) else set())
         if run and not (a.ultimi_falliti and not only):
-            e2e(results, only, a.timeout, "", a.paralleli, parte)
+            e2e(results, only, a.timeout, "", a.paralleli, parte, a.sito_pronto)
     known = known_reds()
     extra = known_greens(results, known)
     results = [(n, "NOTO", dt, ["known: " + known[n]] + notes[:1]) if st == "FAIL" and n in known else

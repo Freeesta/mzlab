@@ -274,7 +274,7 @@ jobs:
       # the step has its own ceiling, so the report steps below still run if a part hangs
       - name: Complete verification (part ${{ matrix.parte }}/5)
         timeout-minutes: 50
-        run: python tools/verifica.py --browser chromium --parte ${{ matrix.parte }}/5
+        run: python tools/verifica.py --browser chromium --sito-pronto --parte ${{ matrix.parte }}/5
       # the second round of the engine: the built site with the Rust engine (?motore=rust) against Python on the same files
       # verifica.py rewrites .verifica/ultimo.md, so the report of the part is kept apart first
       - name: Rust engine on the built site
