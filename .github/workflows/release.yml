@@ -139,7 +139,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: site/static/librerie
-          key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
+          key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'tools/librerie_catalogo.json', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
       # The pinned downloads (MassBank 240 MB, the suspect sources 330 MB; 10-25 minutes from Zenodo) are kept in a cache of their own,
       # keyed by their pinned SHA-256: a new builder or a new package format rebuilds from the cached files in about a minute.
       - name: Keys of the pinned downloads (their SHA-256 in tools/librerie_pacchetti.py and tools/genera_sospetti.py)
@@ -194,7 +194,7 @@ jobs:
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: site/static/librerie
-          key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
+          key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'tools/librerie_catalogo.json', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
       - name: Restore the suspect index from the cache (pinned CC BY sources, never committed)
         id: suscache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -224,6 +224,55 @@ jobs:
         with:
           path: site/static/mzfinder/sospetti
           key: sospetti-${{ hashFiles('tools/genera_sospetti.py') }}
+      # the regulatory lists are committed text (normative/): packed natively, no network; the package is data downloaded on a click, never code in a .wasm
+      - name: Restore the regulatory-list package from the cache
+        id: normcache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: site/static/normative
+          key: normative-${{ hashFiles('normative/lists/**', 'normative/provenance.json', 'crates/mzlab-cli/src/normative/**', 'crates/mzlab-feat/src/suspects.rs', 'Cargo.lock') }}
+      - name: Pack the regulatory lists (mzlab-cli normative pack, no network)
+        if: steps.normcache.outputs.cache-hit != 'true'
+        run: |
+          cargo build --locked --release -p mzlab-cli
+          target/release/mzlab-cli normative pack normative/ site/static/normative/
+      - name: Save the regulatory-list package in the cache
+        if: steps.normcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: site/static/normative
+          key: normative-${{ hashFiles('normative/lists/**', 'normative/provenance.json', 'crates/mzlab-cli/src/normative/**', 'crates/mzlab-feat/src/suspects.rs', 'Cargo.lock') }}
+      # the in-silico candidates are the PubChemLite structures in mass-range pieces, packed natively; downloaded by the user on a click, never code in a .wasm
+      - name: Restore the in-silico candidate package from the cache
+        id: inscache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: site/static/insilico
+          key: insilico-${{ steps.pin.outputs.fonti }}-${{ hashFiles('crates/mzlab-cli/src/insilico_pack.rs', 'crates/mzlab-feat/src/flow_insilico.rs', 'crates/mzlab-feat/src/attributio/ms2_engine/insilico.rs', 'tools/pubchemlite_pacchetto.py', 'Cargo.lock') }}
+      - name: Restore the PubChemLite CSV
+        if: steps.inscache.outputs.cache-hit != 'true'
+        id: inscsv
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .insilico-fonti
+          key: insilico-fonti-${{ steps.pin.outputs.fonti }}
+      - name: Pack the in-silico candidates (mzlab-cli insilico pack; a network failure only warns)
+        if: steps.inscache.outputs.cache-hit != 'true'
+        run: |
+          cargo build --locked --release -p mzlab-cli
+          python tools/pubchemlite_pacchetto.py --fonte .insilico-fonti --cli target/release/mzlab-cli --out site/static/insilico
+      - name: Save the PubChemLite CSV
+        if: steps.inscache.outputs.cache-hit != 'true' && steps.inscsv.outputs.cache-hit != 'true' && hashFiles('site/static/insilico/catalogo.json') != ''
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .insilico-fonti
+          key: insilico-fonti-${{ steps.pin.outputs.fonti }}
+      - name: Save the in-silico candidate package in the cache
+        if: steps.inscache.outputs.cache-hit != 'true' && hashFiles('site/static/insilico/catalogo.json') != ''
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: site/static/insilico
+          key: insilico-${{ steps.pin.outputs.fonti }}-${{ hashFiles('crates/mzlab-cli/src/insilico_pack.rs', 'crates/mzlab-feat/src/flow_insilico.rs', 'crates/mzlab-feat/src/attributio/ms2_engine/insilico.rs', 'tools/pubchemlite_pacchetto.py', 'Cargo.lock') }}
       - name: Record the .wasm modules in static/build.json (they are in place now)
         run: python3 tools/build_site.py --build-json
       # The same steps as pages.yml (build job): a release ships exactly the site that would be published.
