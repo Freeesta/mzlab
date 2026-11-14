@@ -230,9 +230,44 @@ fn the_proxy_host_is_the_binary_constant_and_the_page_value_is_ignored() {
     );
 }
 
+/// Answers one request on `l`: reads the whole request (headers and body) first, replies, then closes in order. A server that
+/// closes with the request still unread makes Windows reset the connection, and the client never sees the reply.
+fn serve_once(l: std::net::TcpListener, reply: &str) {
+    use std::io::{Read, Write};
+    let (mut c, _) = l.accept().unwrap();
+    c.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+    let mut got = Vec::new();
+    let mut buf = [0u8; 2048];
+    loop {
+        let n = c.read(&mut buf).unwrap_or(0);
+        got.extend_from_slice(&buf[..n]);
+        let text = String::from_utf8_lossy(&got).to_string();
+        let Some(end) = text.find("\r\n\r\n") else {
+            if n == 0 {
+                break;
+            }
+            continue;
+        };
+        let len = text[..end]
+            .lines()
+            .find_map(|l| {
+                l.to_ascii_lowercase()
+                    .strip_prefix("content-length:")
+                    .map(|v| v.trim().parse().unwrap_or(0))
+            })
+            .unwrap_or(0usize);
+        if got.len() >= end + 4 + len || n == 0 {
+            break;
+        }
+    }
+    let _ = c.write_all(reply.as_bytes());
+    let _ = c.flush();
+    let _ = c.shutdown(std::net::Shutdown::Write);
+    while c.read(&mut buf).unwrap_or(0) > 0 {}
+}
+
 #[test]
 fn a_redirect_of_the_provider_is_not_followed_with_the_key() {
-    use std::io::{Read, Write};
     use std::net::TcpListener;
     let other = TcpListener::bind("127.0.0.1:0").unwrap();
     other.set_nonblocking(true).unwrap();
@@ -242,10 +277,10 @@ fn a_redirect_of_the_provider_is_not_followed_with_the_key() {
         other.local_addr().unwrap().port(),
     );
     let t = std::thread::spawn(move || {
-        let (mut c, _) = first.accept().unwrap();
-        let mut buf = [0u8; 2048];
-        let _ = c.read(&mut buf);
-        let _ = write!(c, "HTTP/1.1 302 Found\r\nLocation: http://127.0.0.1:{pb}/x\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+        serve_once(
+            first,
+            &format!("HTTP/1.1 302 Found\r\nLocation: http://127.0.0.1:{pb}/x\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"),
+        )
     });
     let p = find("anthropic").unwrap();
     let req = Request {
@@ -282,15 +317,14 @@ fn a_redirect_of_the_provider_is_not_followed_with_the_key() {
 
 #[test]
 fn an_aborted_job_is_freed_and_a_late_poll_says_done() {
-    use std::io::{Read, Write};
     use std::net::TcpListener;
     let srv = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = srv.local_addr().unwrap().port();
     let t = std::thread::spawn(move || {
-        let (mut c, _) = srv.accept().unwrap();
-        let mut buf = [0u8; 2048];
-        let _ = c.read(&mut buf);
-        let _ = write!(c, "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: 2\r\nConnection: close\r\n\r\n: ");
+        serve_once(
+            srv,
+            "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: 2\r\nConnection: close\r\n\r\n: ",
+        )
     });
     let p = find("anthropic").unwrap();
     let req = Request {
