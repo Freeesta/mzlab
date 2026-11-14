@@ -25004,3 +25004,4 @@
 {"v":1,"ts_utc":"2026-11-14T12:23:58Z","tipo":"job","k":"132446388940","workflow":"sito-rust","job":"sito-wasm-core","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":3298,"sha":"5cabf886aa23df3f4e0e3f67436e7b382201ac72","run_id":43594463655,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-14T12:23:58Z","tipo":"job","k":"132446389110","workflow":"sito-rust","job":"sito-wasm-feat-a","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":3298,"sha":"5cabf886aa23df3f4e0e3f67436e7b382201ac72","run_id":43594463655,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-14T12:27:09Z","tipo":"coda","k":"2026-11-14T12:27:09Z","aperte":9,"indietro":5,"sporche":3,"verdi_in_attesa":2,"piu_vecchia_aperta_s":50235,"piu_vecchia_verde_s":345}
+{"v":1,"ts_utc":"2026-11-14T12:20:38Z","azione":"aperta","tipo":"pr","pr":3297,"sha":"d7a9a381d82d5479ab4adae7f734cf3d8bac806b"}
