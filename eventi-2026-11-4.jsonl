@@ -26400,3 +26400,4 @@
 {"v":1,"ts_utc":"2026-11-14T14:38:36Z","azione":"aperta","tipo":"pr","pr":3310,"sha":"a656214f229d99b622bce264bdb3b2f69b7cdce6"}
 {"v":1,"ts_utc":"2026-11-14T14:59:10Z","azione":"aperta","tipo":"pr","pr":3311,"sha":"77006653cb863f8e33d962c58f3cdd10f12a13a1"}
 {"v":1,"ts_utc":"2026-11-14T15:04:37Z","azione":"aperta","tipo":"pr","pr":3312,"sha":"644c1591e3677ccec3ce8b3aded41cc1e8135ff9"}
+{"v":1,"tipo":"pr","pr":3308,"sha":"0ef49dd641152a3f6f2d82732e0b8e185819d0ae","ts_utc":"2026-11-14T15:10:55Z","azione":"unita","aperta_s":3320,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":44,"righe_meno":10,"file_n":1,"file":["crates/mzlab-desktop/src/llm_tests.rs"],"aree":{"rust":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":171}
