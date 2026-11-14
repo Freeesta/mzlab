@@ -20001,3 +20001,4 @@
 {"v":1,"ts_utc":"2026-11-14T04:26:44Z","tipo":"job","k":"132331007378","workflow":"sito-rust","job":"sito-wasm-core","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"d624440578767f9aa503b73cb2a93d6eb714f175","run_id":43556665662,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-14T04:26:44Z","tipo":"job","k":"132331007505","workflow":"sito-rust","job":"sito-e2e","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"d624440578767f9aa503b73cb2a93d6eb714f175","run_id":43556665662,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-14T04:27:44Z","tipo":"coda","k":"2026-11-14T04:27:44Z","aperte":6,"indietro":5,"sporche":1,"verdi_in_attesa":2,"piu_vecchia_aperta_s":21470,"piu_vecchia_verde_s":10115}
+{"v":1,"ts_utc":"2026-11-14T04:33:27Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/reg-lang-1","merge_main":true,"aree":{"docs":9},"tipo":"pr","pr":3253,"sha":"5a879c90a024412d2289db27c59cbfea19197a23"}
