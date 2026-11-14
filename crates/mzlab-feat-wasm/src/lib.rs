@@ -27,21 +27,35 @@ use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
 #[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
 mod blocks_js;
-#[cfg(any(feature = "detect", feature = "untargeted"))]
-pub mod cache;
-#[cfg(feature = "detect")]
-pub mod family;
 #[cfg(feature = "finder")]
 pub mod finder;
 #[cfg(feature = "finder_edge")]
 pub mod finder_edge;
-#[cfg(feature = "interp")]
-pub mod interp;
 #[cfg(feature = "finder_msn")]
 pub mod msn;
 pub mod progress_js;
 // the plain modules live in `mzlab-ops`; re-exported under their old paths
-pub use mzlab_ops::run::feat::{run, run_evid};
+pub use mzlab_ops::run::feat::{estimate, run, run_evid, run_tp};
+#[cfg(any(feature = "detect", feature = "untargeted"))]
+pub use mzlab_ops::run::feat::cache;
+#[cfg(feature = "detect")]
+pub use mzlab_ops::run::feat::family;
+#[cfg(feature = "interp")]
+pub use mzlab_ops::run::feat::interp;
+#[cfg(feature = "untargeted")]
+pub use mzlab_ops::run::feat::untargeted;
+#[cfg(any(feature = "detect", feature = "untargeted"))]
+mod cache_js;
+#[cfg(feature = "detect")]
+mod family_js;
+#[cfg(feature = "interp")]
+mod interp_js;
+#[cfg(feature = "detect")]
+mod estimate_js;
+#[cfg(feature = "proofs")]
+mod run_dig_js;
+#[cfg(feature = "proofs")]
+mod run_tp_js;
 #[cfg(feature = "detect")]
 pub use mzlab_ops::run::feat::run_estimate;
 #[cfg(feature = "proofs")]
@@ -55,9 +69,7 @@ pub mod run_ms2;
 pub mod run_tab;
 #[cfg(feature = "flow_stat")]
 pub mod run_stat;
-pub mod run_tp; pub mod estimate;
-#[cfg(feature = "untargeted")]
-pub mod untargeted;
+
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-wasm/1";
