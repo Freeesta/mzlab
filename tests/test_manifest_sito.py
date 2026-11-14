@@ -62,6 +62,30 @@ def test_seal_sw_names_the_cache_after_the_site_and_stays_out_of_the_desktop_man
     assert "static/sw-manifest.json" not in json.loads((out / "static" / "manifest.json").read_text(encoding="utf-8"))["files"]
 
 
+def check_manifest_matches_disk(out):
+    """Every manifest entry is the size and SHA-256 of the file on disk (the desktop app refuses the update otherwise); returns the manifest."""
+    m = json.loads((out / "static" / "manifest.json").read_text(encoding="utf-8"))
+    for rel, e in m["files"].items():
+        data = (out / rel).read_bytes()
+        assert (len(data), hashlib.sha256(data).hexdigest()) == (e["size"], e["sha256"]), rel
+    return m
+
+
+def test_build_json_step_rewrites_the_manifest_last(tmp_path):
+    """pages.yml: build, the parts (.wasm) are copied in, then --build-json; the manifest must describe that final site, build.json included."""
+    out = tmp_path / "site"
+    import subprocess, sys
+    run = lambda *a: subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(out), *a], check=True, capture_output=True, cwd=ROOT)
+    run()
+    check_manifest_matches_disk(out)
+    (out / "static" / "wasm").mkdir(exist_ok=True)
+    (out / "static" / "wasm" / "engine.wasm").write_bytes(b"\0asm\1\0\0\0" * 50)       # a part that arrives after the build
+    run("--build-json")
+    m = check_manifest_matches_disk(out)
+    assert "static/wasm/engine.wasm" in m["files"] and "static/build.json" in m["files"]
+    assert m["version"] == json.loads((out / "static" / "build.json").read_text(encoding="utf-8"))["commit"]
+
+
 def test_installed_web_app_is_named_apart_from_the_desktop_app():
     """The PWA is «<name> Web» (name and short name); the desktop app keeps the plain name."""
     assert bs.WEB_APP_NAME == f"{bs.APP_NAME} Web"
