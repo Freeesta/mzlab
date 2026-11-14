@@ -18,6 +18,9 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+#[path = "update_serve.rs"]
+mod serve;
+
 /// Where the published site lives; the only host the program talks to.
 pub const SITE: &str = "https://freeesta.github.io/mzlab/";
 /// Manifest path, relative to the site root.
@@ -514,9 +517,10 @@ fn mime(rel: &str) -> &'static str {
     }
 }
 
-#[path = "update_serve.rs"]
-mod serve;
-pub use serve::serve_override;
+/// The file of the updated folder for a request path of the window, if it may be served (`update_serve.rs`); otherwise the embedded copy answers.
+pub fn serve_override(web: &Path, req_path: &str) -> Option<(Vec<u8>, &'static str)> {
+    serve::serve_override(web, req_path)
+}
 
 #[cfg(test)]
 mod tests {
