@@ -18,7 +18,7 @@ Engine: `crates/mzlab-core/src/ticbg.rs` (algorithm, pure), `ticbg_route.rs` (ro
 - Errors: `err.request.badValue` with `name` (mode, action, res, persist, bin, ppm, block, window, rt0, ex, keep, floor, kind, blank); `filt` or `prec` = not served.
 
 ## Interface
-- `mzlab/web/tic-fondo-ui.js` (ES module, loaded by `rawSeries` of `grafici.js` on the first TIC/BPC drawing): ONE icon button in its own group of the chromatogram header, shown only on a whole TIC/BPC (no m/z range, precursor or filter); no text on screen, title = aria-label (`ctl.ticbg.on/off`, ≤ 90 characters). Click = `mode=auto`, click again = raw trace (`p.ticbg.on`).
+- `mzlab/web/tic-fondo-ui.js` (ES module, loaded by `rawSeries` of `grafici.js` on the first TIC/BPC drawing): ONE icon button in its own group of the chromatogram header, shown only on a whole TIC/BPC (no m/z range, precursor or filter); no text on screen, title = aria-label = a plain label (`ctl.ticbg.on/off`: remove background, raw trace); the controls of the options are labelled the same way. Click = `mode=auto`, click again = raw trace (`p.ticbg.on`).
 - Right click, long press (550 ms), ↓ or the menu key open the options (`.tb-pop`, `role=dialog`): mode, action, blank file, `rt0`/`rt1` (asked only when both are written), `ex`, `keep`, `persist`, the table of the ions (`TDATI`, with the `params` of each answer). Esc closes and gives the focus back. The URL writes only what differs from the defaults (`TICBG.url`), so it matches `mzlab-cli background --set`. A refused request draws the raw trace and says why (`info`). Not saved with the session.
 
 ## Tests
