@@ -9,8 +9,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use wasm_bindgen::prelude::*;
 
 // plain-Rust modules live in `mzlab-ops`; re-exported under their old paths
-mod quant_bridge;
-pub use mzlab_ops::run::table::{core, filterspec, pol, quant, rows_mgf};
+pub use mzlab_ops::run::table::{core, filterspec, pol, rows_mgf};
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-table/1";

@@ -1,8 +1,8 @@
-"""Flow «This browser» runs quant.calibrate@1 (module `table`, `flow_quant`): a synthetic series of 8 injections with four compounds; the plan detect → align → gapfill → quant.calibrate (the signal as area, and as
+"""Flow «This browser» runs quant.calibrate@1 (module `flowcal`, `flow_quant`): a synthetic series of 8 injections with four compounds; the plan detect → align → gapfill → quant.calibrate (the signal as area, and as
 height with a range and a dilution) goes to `mzlab-cli flow run`, and the CSV the browser keeps is the native file byte for byte (same SHA-256), the curve row without a peak is reported as a warning on the card;
 every job is `done` with `via: "browser"`, a second run takes the texts from OPFS, no request is left unserved (`MZLAB_LR_MISS`). Synthetic data only.
 Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen, python3 and numpy: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_web_quant.py"""
-# covers: flow/lazy/flow-web-quant.js, crates/mzlab-feat-table-wasm/src/quant.rs
+# covers: flow/lazy/flow-web-quant.js, crates/mzlab-flowcal-wasm/src/lib.rs, crates/mzlab-ops/src/run/table/quant.rs
 import hashlib, json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
 from playwright.sync_api import sync_playwright

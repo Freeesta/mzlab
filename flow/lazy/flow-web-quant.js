@@ -1,5 +1,5 @@
 // @ts-check
-// Flow (administrator mode): quant.calibrate in this browser. Applying the imported calibration curves to the areas is `flow_quant` of the `table` .wasm (`mzlab_feat_table_wasm::quant::quant_text`,
+// Flow (administrator mode): quant.calibrate in this browser. Applying the imported calibration curves to the areas is `flow_quant` of the `flowcal` .wasm (`mzlab_ops::run::table::quant::quant_text`,
 // the function `flow run` calls), so the concentrations CSV is the same bytes. The table is the alignment (or gap filling) of the same plan kept in OPFS, or the table a `table.filter` view of it
 // stands for (`F.liveJobs.tableOf`); `curves` and `samples` are files of the plan (their text in S.samplesJson). The warnings go to the card of the step. The text is kept under the key of the job. English only.
 (() => {
@@ -32,7 +32,7 @@
     const t0 = performance.now(), params = JSON.stringify({ ...F.defaults(inst, F.stepOf(x.S.reg, inst), true), ...(inst.params || {}) });
     return J().detached(x, spec, inst, async () => {
       let made;
-      try { made = JSON.parse(await p.ident("table", "flow_quant", { params, table: await tab.read(), curves: enc(curves), samples: enc(samples) })); } catch (e) { throw asError(e); }
+      try { made = JSON.parse(await p.ident("flowcal", "flow_quant", { params, table: await tab.read(), curves: enc(curves), samples: enc(samples) })); } catch (e) { throw asError(e); }
       const r = { name: inst.id + ".csv", text: made.text }, warnings = made.warnings || [];
       await F.webMsn.keep(r.name, r.text); await J().remember(p, key, { ...r, warnings }); note(x, inst, warnings);
       x.files.set(inst.id, { id: inst.id, ...r });

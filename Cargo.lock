@@ -2469,6 +2469,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-flowcal-wasm"
+version = "1.0.0"
+dependencies = [
+ "mzlab-core",
+ "mzlab-ops",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-lettori"
 version = "1.0.0"
 dependencies = [
