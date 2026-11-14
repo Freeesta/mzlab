@@ -1,5 +1,6 @@
 """Labels of the main peaks of the chromatograms (etichette-picchi.js): RT + base peak m/z on a TIC (synthetic Full Scan), the time alone on a PDA trace (synthetic
 DAD with two maxima at different wavelengths); the control shows and hides them, they never overlap, follow the zoom, enter the table of the data and pass axe."""
+# covers: mzlab/web/etichette-picchi.js
 import sys, os, math, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from pathlib import Path

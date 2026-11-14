@@ -1,5 +1,6 @@
 """HR_PANELS 3a: «Opzioni di visualizzazione» (right click on a chart → panel of the drawer, extendable per kind of chart; palette command) and the isotope simulation
 with several adducts (concentration) and a charge distribution. The decimals field and the ▾ button of the spectrum are gone from the bars in HR."""
+# covers: mzlab/web/visualizza.js, mzlab/web/hr.js, mzlab/web/banco.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

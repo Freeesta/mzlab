@@ -1,6 +1,7 @@
 """Rust engine on the built site: TIC, XIC and single scans answered by mzlab-wasm give the same values as the Python reference (pyref.py),
 and a worker that dies is restarted by the supervisor (a second death within a minute stops the engine: the page asks to reload).
 Needs the site: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm)."""
+# covers: mzlab/web/browser, mzlab/web/qqq-db, mzlab/web/rust-, crates/
 from pathlib import Path
 import shutil, subprocess, sys, time
 from playwright.sync_api import sync_playwright

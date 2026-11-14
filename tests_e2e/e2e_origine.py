@@ -1,4 +1,5 @@
 """Window 'Da dove viene questo ione?': entry points, evidence sections, table click -> overlay, hypothesis saved, xlsx, no verdict words."""
+# covers: mzlab/web/origine.js, mzlab/ionfamily.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

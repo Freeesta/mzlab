@@ -3,6 +3,7 @@ first, then the engine's order) and «Altri siti» (ChEBI, BioTransformer); a su
 Left arrow and Esc come back to its row, rows are at least 24 px high; every row opens its URL with window.open(url, "_blank", "noopener,noreferrer") only on the click,
 PubChem carries the encoded SMILES in `#query=` (and `&tab=`) and copies it too, BioTransformer copies it (toast, role=status), ChEBI carries the percent-encoded InChI, and the page
 makes no request to any outside host."""
+# covers: mzlab/web/disegno-menu.js, mzlab/web/disegno-link.js
 import sys, os
 from urllib.parse import quote, urlparse
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

@@ -1,4 +1,5 @@
 """The buttons of Ketcher are larger than its default 32 px and every one of them is reachable (nothing pushed out of the editor)."""
+# covers: mzlab/web/disegno-barra.js, mzlab/web/draw.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

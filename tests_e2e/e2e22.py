@@ -1,5 +1,6 @@
 """Settings gear (text size, theme, chart colours): saved in localStorage, survive a reload, old saved keys (tips, num, tutorial) are ignored.
 Palettes and Nuova sessione: e2e25. Synthetic data, no real lab files."""
+# covers: mzlab/web/settings.js
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import synth

@@ -1,6 +1,6 @@
 # scandump/1: il dump per scansione, scritto uguale da RFR e dal nostro lettore
 
-Oracolo RFR (RawFileReader di Thermo, solo sul Mac, mai nel repository) e nostro lettore scrivono lo stesso formato; `tools/rosina/scandump_compare.py` li confronta campo per campo. Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §3. Uscite: `thermo_scandump` (nostro), `scandump_compare.py` (confronto e aggregato), `verita_scandump.py` (→ `verita/1` per il banco F0-F5), test `crates/mzlab-lettori/tests/scandump_thermo.rs` (dump RFR del privato in `scratchpad/rfr/<file>.scandump.jsonl.gz`, salta senza `MZLAB_DATI`).
+Oracolo RFR (RawFileReader di Thermo, solo sul Mac, mai nel repository) e nostro lettore scrivono lo stesso formato; `tools/rosina/scandump_compare.py` li confronta campo per campo. Regole dell'oracolo: `thermo-velocita.md`. Uscite: `thermo_scandump` (nostro), `scandump_compare.py` (confronto e aggregato), `verita_scandump.py` (→ `verita/1` per il banco F0-F5), test `crates/mzlab-lettori/tests/scandump_thermo.rs` (dump RFR del privato in `scratchpad/rfr/<file>.scandump.jsonl.gz`, salta senza `MZLAB_DATI`).
 
 ## Regole del formato
 - JSON Lines, UTF-8, gzip (`.scandump.jsonl.gz`); ogni riga è un oggetto con `type`. Chiavi in inglese, tempi in minuti, m/z in Th, intensità come le dà il file.

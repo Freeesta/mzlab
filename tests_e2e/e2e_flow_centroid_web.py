@@ -1,6 +1,7 @@
 """Flow «This browser» centroids low-resolution profile mzML itself (spectra.centroid -> rb.flowCentroid, the engine call of Settings; flow/lazy/flow-live-jobs.js): the «Feature table» plan on two profile P_FullMass files runs to the end,
 no job is blocked by platform.computer, MZLAB_LR_MISS stays empty and series.mzfeat is the file of `mzlab-cli flow run`, byte for byte; a second run reuses the copy. Decoys: a high-resolution profile file still needs the desktop
 app, a file of centroids is «already centroided» and makes no copy. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen, python3 and numpy: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_centroid_web.py"""
+# covers: flow/lazy/flow-live
 import json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
 from playwright.sync_api import sync_playwright

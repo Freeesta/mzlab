@@ -2,6 +2,7 @@
 engine saved in TP_Mine/tests/rete_fixture.json (5 products of the timolol formula, 6 arcs, two MS2 compared). Checks: mount (nodes, arcs, columns as in the JSON), selection from the keyboard and by
 click with `onSelect`, `selectRow` from outside, the reason of an arc under the chart, the table of the arcs (TDATI) and «Copy data», the shapes of the nodes (not only colour), targets of at least
 24 px, axe (light and dark), no console error. MZLAB_PIPE_SITE reuses a built site. Prints «MISURA clic_rete_riga»: clicks from a node to the selected row of the table. Run from the repo root: python3 tests_e2e/e2e_rete.py"""
+# covers: TP_Mine/lazy/rete-vista, TP_Mine/tests/rete_fixture
 import json, os, re, shutil, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright

@@ -2,6 +2,8 @@
 reference lists, the target screening view, the «What is it?» window (precursor, tolerances, thresholds) and the fragmentation graph of an infusion; each field
 refuses letters, 1e999, empty, out-of-bound numbers and decimals where a whole number is due with one note and the old value; Enter in a refused field runs
 nothing and a comma decimal is taken."""
+# covers: mzlab/web/msn-elenco.js, mzlab/web/mappa3d.js, mzlab/web/campi.js, mzlab/web/picchi.js, mzlab/web/libreria-corpo.js
+# covers: mzlab/web/libreria-finestra.js, mzlab/web/liste, mzlab/web/infusione-grafo
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

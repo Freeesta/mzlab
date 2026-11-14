@@ -1,6 +1,7 @@
 # e2e_avvio_lento: a first visit on a slow link (the engine .wasm arrives late) with nothing stored does not end in «reopening the saved files is not answering»
 # (browser.js lrInit): the limit runs from when the worker has its engine (rust-bridge.js api.up), and with no stored file a late boot shows «the first visit downloads about 15 MB»
 # and the page keeps waiting. Needs the site: python3 tools/prepara_sito.py, then python3 tests_e2e/e2e_avvio_lento.py
+# covers: mzlab/web/browser, mzlab/web/rust-bridge
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

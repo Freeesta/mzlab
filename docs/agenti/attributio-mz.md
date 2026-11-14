@@ -1,6 +1,6 @@
 # Binario MZ: rilevamento alla mzmine (`untargeted`)
 
-Parte di `docs/agenti/attributio.md` (binario AT: passaggio di Attributio). Studio: `docs/studi/ATTRIBUTIO.md` §5.
+Parte di `docs/agenti/attributio.md` (binario AT: passaggio di Attributio). Risolutore e motivi della concordanza con mzmine: `docs/agenti/attributio.md`, «Decisioni in vigore».
 - **Scopo**: la tabella delle feature dai grezzi quando manca quella di mzMine; è l'ingresso alternativo della cascata di Attributio (`to_attributio.rs`). Si riscrivono da zero in Rust gli stadi di mzmine 3.9.0 (ADAP, risolutore a minimo locale, join, riempimento, isotopi), ciascuno con parità sui dati d'oro; l'unico riferimento sono le uscite di mzmine, mai il suo codice.
 - **Moduli** (feature `untargeted`, `crates/mzlab-feat/src/untargeted/`): `adap.rs`, `resolve.rs`, `join.rs`, `gapfill.rs`, `table.rs` fatti; `isotopes.rs`, `ident.rs`, `pipeline.rs` (`.wasm` `untargeted`) e `to_attributio.rs` fatti; `compat = V3_9 | V4` solo dove le versioni differiscono (risolutore, organizzazione del join).
 - **Join aligner** (`untargeted/join.rs`, `align(lists, &JoinParams) -> Rows`, feature `untargeted`): come `JoinAlignerTask` di 3.9.0. A ogni giro la lista con più feature in attesa fa da base (ordinamento stabile) e le altre si abbinano per punteggio decrescente (m/z peso 3, RT peso 1, intervalli chiusi ±max(0,0015 Da; 5 ppm) e ±0,2 min, RT in `f32` come `float`): una feature per file e riga, righe finali per RT con m/z e RT medi.

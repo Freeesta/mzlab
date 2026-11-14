@@ -1,5 +1,6 @@
 """Drawing tab on a touch screen: ONE tap on an atom with the bond tool adds ONE bond (not two), and the floating bar of keys is not shown over the editor.
 Real pointer events through CDP Input.dispatchTouchEvent."""
+# covers: mzlab/web/draw.js, mzlab/web/touch.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

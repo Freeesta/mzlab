@@ -1,6 +1,7 @@
 """«Remove all files» frees every file of the list, also the ones read but not open yet: the copy in OPFS, its index and the row go, the queue of
 OPENNOW does not open them afterwards and a reload brings none back; Undo within the window opens them all again. Synthetic files only.
 The queue is held still by a slowed `post("api/explore", {append})`, as on a slow computer while a large drop is opening."""
+# covers: mzlab/web/lista-file.js, mzlab/web/open-now.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import misura_lista_molti as mlm

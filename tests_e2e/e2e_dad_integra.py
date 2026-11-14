@@ -2,6 +2,7 @@
 integrates like an XIC (no question, its area in the integration table); its area is in mAU·s (table header, tooltip); the TWC asks `int.guard.uv` (not the ion text of `int.guard`) and «yes» opens
 the XWC the engine proposes (274 ± 2 nm) under it; «no» opens nothing. The DAD names are on screen: «DAD (TWC)» in the picker, «DAD TWC» and «XWC» titles.
 Run from the repo root: python3 tests_e2e/e2e_dad_integra.py"""
+# covers: tools/wiff_dad_mrm.py, mzlab/web/xwc.js
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

@@ -1,6 +1,7 @@
 """Disegno: the canvas menu has no header line; its name (aria-label) says what it acts on («Selezione (n atomi)» or «Tutto il disegno»), its rows come from
 the TPDraw.menu registry (ordered, filtered by selection / whole drawing, one failing row never hides the others) and stay keyboard menu items. No bond rows
 («Spezza», «Taglia») and no «Ioni attesi» row."""
+# covers: mzlab/web/disegno-menu.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

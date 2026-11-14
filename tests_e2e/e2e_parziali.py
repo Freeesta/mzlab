@@ -6,6 +6,7 @@ TPDraw.smiles() has no CXSMILES «|…|» and TPDraw.partial() gives {smiles, de
 the substituent atom selected, «Attached to one of these atoms» = dashed bond to the centre and circles on the candidates, and TPDraw.partial() gives
 positionUnknown and a V3000 with a «*» atom and ENDPTS ... ATTACH=ANY.
 Needs site/static/wasm-feat/grafo (tools/build_feat_wasm.sh); SKIP without it."""
+# covers: mzlab/web/disegno-frammenti.js, mzlab/web/disegno-parziali.js, mzlab/web/disegno-molfile.js, mzlab/web/parentesi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")):

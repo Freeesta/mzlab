@@ -2,6 +2,7 @@
 checked in the browser (api/masscal, the .wasm `proofs`, the same massacc::check as `flow run`); the panel reports the offset, the trend per minute and per 100 m/z, the table and the
 two charts with their data tables, the threshold only colours the numbers, the CSV downloads, axe finds nothing serious, nothing is left in window.MZLAB_LR_MISS, the console is clean,
 and a low-resolution file has no such entry. Needs cargo and wasm-bindgen (SKIP without). Run from the repo root: python3 tests_e2e/e2e_masscal.py"""
+# covers: mzlab/web/masscal.js, mzlab/web/rust-masscal.js, tools/dati_sintetici_massa.py
 import os, re, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
 import numpy as np

@@ -3,6 +3,8 @@
 byte for byte as the engine writes it and without converting again, and nothing misses the engine (MZLAB_LR_MISS empty). Needs the site and both .wasm: python tools/build_site.py, tools/build_lettori_wasm.sh
 (MZLAB_PIPE_SITE=<built site> reuses a site). Also the «aperti» module: an mzML with MS-Numpress arrays (built here: linear m/z, slof intensity) goes to it without ?lettori=modulo and gives the TIC and a spectrum
 of its zlib twin within the codec's precision, and an mzXML (built here: 64-bit zlib peaks, with its index) that opens in the Dati view with its TIC and a spectrum. Run from the repo root: python3 tests_e2e/e2e_lettori_modulo.py"""
+# covers: mzlab/web/lettori-worker, mzlab/web/lettore-esterno, mzlab/web/carica-modulo, mzlab/web/nativo, mzlab/web/lettori, mzlab/web/shell.js
+# covers: crates/mzlab-lettori, tools/build_lettori_wasm.sh
 import os, shutil, socket, subprocess, sys, tempfile, threading
 from pathlib import Path
 from playwright.sync_api import sync_playwright

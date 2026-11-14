@@ -1,4 +1,5 @@
 """XIC panel at phone width: the header shrinks its m/z range fields (app.css hd-tight); no field runs under the «⋯», full-screen or close buttons, a focused field is in view."""
+# covers: mzlab/web/xic-bordi.js, mzlab/web/app.css
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

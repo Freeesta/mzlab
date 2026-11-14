@@ -1,5 +1,6 @@
 """Desktop files opened from outside and the notice «make mzLab the default app?» (mzlab/web/predefinito.js) with a simulated Tauri:
 the queue goes into the Data view, the dialog (Yes / Not now / Don't ask again, Esc, focus, labels), the guide for the system, the event of a second launch, the settings row."""
+# covers: mzlab/web/predefinito.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

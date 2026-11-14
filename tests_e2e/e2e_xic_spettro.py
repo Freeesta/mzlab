@@ -1,5 +1,6 @@
 """V-1: button «XIC» of the spectrum (low and high resolution): chosen peak, extraction into the panel under the spectrum (same window as api/xic, E2), ion and
 tolerance written by hand, scan line and apex, keyboard only, accessibility."""
+# covers: mzlab/web/xic-spettro.js, mzlab/web/xic-lente.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

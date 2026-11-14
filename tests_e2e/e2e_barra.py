@@ -1,4 +1,5 @@
 """A1: the toolbar above the panels. Whole file name in the file menu, no «Altro» / «Unisci gli XIC», a side-panel icon for the file list."""
+# covers: mzlab/web/barra.js, mzlab/web/eventi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

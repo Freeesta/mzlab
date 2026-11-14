@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Writes the synthetic `gruppi/1` kinetic fixture the Compare-conditions view is tried on (TP_Mine/tests/gruppi_fixture_kin.json: 3 conditions x 5 times;
 TP_Mine/tests/gruppi_fixture.json is the expected output of the Rust module, copied from crates/mzlab-feat/tests/data/gruppi_fixture.json). Test data only: every number is made up here and follows the contract of
-docs/studi/TABUI_GRUPPI_ESPERIMENTI.md section 3 (presence, ratio to the reference, sets, shape, prev), so the view has something to draw
+docs/agenti/gruppi.md (presence, ratio to the reference, sets, shape, prev), so the view has something to draw
 before the Rust module is wired in. Run: python3 tools/gruppi_fixture_vista.py"""
 import json, itertools
 from pathlib import Path

@@ -1145,6 +1145,7 @@
   "err.msngrafo.badNode": "Messaggio d'errore del motore; {node} = nodo.",
   "err.msngrafo.badSmiles": "Messaggio d'errore del motore; {detail} = dettaglio tecnico.",
   "err.request.badNumber": "Messaggio d'errore del motore; {name} = nome.",
+  "err.request.badValue": "Messaggio d'errore del motore; {name} = nome del parametro della richiesta.",
   "err.search.request": "Messaggio d'errore del motore; {field} = campo.",
   "error.attributio": "Messaggio d'errore del motore; {detail} = dettaglio tecnico.",
   "error.badCsv": "Messaggio d'errore del motore; {colonna} = colonna, {riga} = riga.",

@@ -1,5 +1,6 @@
 """Waterfall view of dense traces (4 synthetic SRM files of 60 000 points): each trace is drawn with about one vertex per pixel column, not one per point
 (a waterfall of 20 files of 10^5 points took ~2.8 s per draw), and the apex of every trace is still drawn."""
+# covers: mzlab/web/decima.js, mzlab/web/grafici.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 sys.path.insert(0, str(ROOT / "tools"))

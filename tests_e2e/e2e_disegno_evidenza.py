@@ -3,6 +3,7 @@ tests/dati/hilite_disegno.json gives the `hilite/1` of the fixture (the bytes `m
 selected atoms and with nothing selected nowhere; in the HR world every layer is painted with Ketcher's highlights in the colours of the CSS
 variables, listed in a legend with words and in a data table (TDATI); an edit of the drawing and «Remove colours» (keyboard, 24 px) take them off.
 Run from the repo root after tools/build_site.py and tools/build_feat_wasm.sh site/static (molkit); SKIP without molkit there."""
+# covers: mzlab/web/disegno-evidenza.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 HERE = os.path.dirname(os.path.abspath(__file__))
 MF = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")

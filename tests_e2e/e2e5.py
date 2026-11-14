@@ -1,3 +1,4 @@
+# covers: mzlab/web/fondo.js
 import sys; import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 OPENPAR = "(()=>{const c=document.querySelector('.pnl.xic .cpop');if(c&&c.hidden)document.querySelector('.pnl.xic [data-a=cpar]').click()})()"

@@ -1,6 +1,7 @@
 """HRMS Target Screening view: the page loads its engine (liste-target-core.js) on demand, so a synthetic one-compound run finds its peak and no request goes unserved.
 The spectra are injected in the session cache (MZLAB_SPECTRA_CACHE) around the first compound of the Keller list: no data file needed.
 Needs the built site (python3 tools/build_site.py). Run from the repo root: python3 tests_e2e/e2e_liste_target.py"""
+# covers: mzlab/web/liste-target
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

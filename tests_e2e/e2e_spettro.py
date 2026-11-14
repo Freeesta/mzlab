@@ -1,5 +1,6 @@
 """Blocco S/G (spectrum): short right-click menu, framed annotations, ruler (delta m/z), parameters (%, labels, decimals), table of the peaks (copy / xlsx),
 zoom history + Backspace, linked time axes, one-line description of the scan, MS2 in % by default."""
+# covers: mzlab/web/spettro.js, mzlab/web/xic-spettro.js, mzlab/web/picchi.js, mzlab/web/azioni-esc.js, mzlab/web/eventi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

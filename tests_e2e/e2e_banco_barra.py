@@ -1,5 +1,6 @@
 """H3b: the toolbar of the high-resolution bench (in the place of the tabs), the cells of every experiment on the page together, the file marks.
 Synthetic Orbitrap DDA file; the real infusion MSn file and the TiO2 series of the private data repository (skipped without them). Low-resolution world untouched."""
+# covers: mzlab/web/banco.js, mzlab/web/visualizza.js
 import sys, os, glob; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from dati_percorsi import percorso  # noqa: E402  (tools/ is on sys.path through lib)

@@ -1,6 +1,7 @@
 """The «Regulatory lists» section of the Library window (mzlab/web/libreria-normative.js) on an invented package served next to it: nothing installed offers the
 download; after it, one row per list with jurisdiction, status, version and coverage; proposals and drafts start unticked; ticking writes the `lists` and `include`
 parameters of the steps; «Check for updates» says the lists are current; the disclaimer is the report's; keyboard and axe-core clean. No site build, no cargo."""
+# covers: mzlab/web/normative, mzlab/web/libreria-normative.js, flow/lazy/flow-form.js, mzlab/web/lang/en/normative.js
 import sys, os, json, hashlib, zlib, tempfile, shutil, threading; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 

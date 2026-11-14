@@ -1,4 +1,5 @@
 """Adducts tab: one row per adduct (shift, m/z of the typed mass), ESI+/ESI- switch, rare ones behind More, LR rounded to the unit, HR pairs closed, no references; lists aligned with the Python ones, one rounding rule. No data files needed."""
+# covers: mzlab/web/tavola-periodica.js, mzlab/web/tables.js, mzlab/web/elements.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from lib import *

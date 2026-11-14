@@ -1,4 +1,5 @@
 """Block 4 (prompt 3): header without Isotopi, (i) Informazioni, no yellow-cells sentence, example button inside box 1."""
+# covers: mzlab/web/pannelli.js, mzlab/web/fondo.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

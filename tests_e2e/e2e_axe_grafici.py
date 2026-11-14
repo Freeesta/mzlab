@@ -1,5 +1,6 @@
 """axe-core on the charts of the Dati view (panels, table of the data): no serious or critical violation. axe comes from the python package
 axe-playwright-python (pip install axe-playwright-python) or from $AXE_JS; without either the test says SKIP and passes."""
+# covers: mzlab/web/xic-spettro.js, mzlab/web/xic-lente.js, mzlab/web/etichette-picchi.js, mzlab/web/legende.js, mzlab/web/tdati.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 

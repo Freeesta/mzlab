@@ -1,5 +1,6 @@
 """Hint under the toolbar: shown only the FIRST time the user hides the tools (mzlab.barra.hint, marked at once, so never again, also after a reload),
 closes by itself after 10 s, with ×, Esc or the first tool opened; polite live region."""
+# covers: mzlab/web/barra.js, mzlab/web/suggerimenti.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

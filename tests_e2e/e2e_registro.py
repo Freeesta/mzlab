@@ -1,5 +1,6 @@
 """Instrument log of a Thermo .raw: the «Registro dello strumento» kind in the chromatogram selector (grouped channels, search box, drawn like an analog trace with its TDATI table)
 and the error log in the Method window (times, a click moves the cursor). The answers of api/metodo and api/registro are faked on a synthetic mzML: the engine side is tested in Rust."""
+# covers: mzlab/web/registro-serie.js, mzlab/web/metodo-registro.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import numpy as np

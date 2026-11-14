@@ -332,6 +332,7 @@ I18N.add("it", {
   "err.msngrafo.badSmiles": "La struttura (SMILES) non si legge ({detail}).",
   "err.msngrafo.noSmiles": "Indica una struttura (SMILES) per calcolare le rotture dei legami.",
   "err.request.badNumber": "Il valore di {name} non è un numero valido (zero o più).",
+  "err.request.badValue": "Il valore di {name} non è tra quelli ammessi dalla richiesta.",
   "err.search.request": "La richiesta di ricerca è incompleta: manca «{field}».",
   "error.attributio": "L'identificazione non è partita ({detail}).",
   "error.badCampioni": "La tabella dei campioni non è valida: controlla i nomi dei file e le colonne.",

@@ -1,6 +1,7 @@
 """TP Mine HR: memory of the real worker (Pyodide) with the 13 real HR files of the series (80 MB each, mounted as Blobs) + the MSn file.
 The WebAssembly memory only grows, so its size at the end is the peak. Target: < 1 GB. Needs the private data repository (dati/HRMS and scratchpad/ truth files; skipped without it).
 Run from the repo root: python3 tests_e2e/e2e_tpmine_mem.py   (minutes)"""
+# covers: TP_Mine/
 import glob, json, os, re, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright

@@ -1,5 +1,6 @@
 """H3c: the information bar of the high-resolution bench: header of the scan, list of scans, file and instrument, composite spectrum, and the tabs that open the
 functions that already exist. Synthetic Orbitrap DDA file; the infusion MSn file of the private data repository (skipped without it). Nothing in the low-resolution world."""
+# covers: mzlab/web/elementare-pannello.js, mzlab/web/banco.js, mzlab/web/barra.js
 import sys, os, glob; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from dati_percorsi import percorso  # noqa: E402  (tools/ is on sys.path through lib)

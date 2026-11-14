@@ -1,6 +1,7 @@
 """metodo/1 on the built site with the Rust engine: an mzML that names a .wiff by SHA-1 (as ProteoWizard writes it) is opened, then that .wiff arrives ALONE
 (no .wiff.scan): it is not an error, the mzML gets the method of its sample (notice + /api/metodo source "wiff"); a .wiff nobody names still gets the usual notice. Synthetic files only
 (tools/wiff_riferimento.py, tools/dati_sintetici.py). Needs the site and the .wasm like e2e_wiff.py (python tools/build_site.py)."""
+# covers: mzlab/web/metodo-doc.js, mzlab/web/metodo-incl.js, mzlab/web/metodo-registro.js
 import hashlib, re, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
