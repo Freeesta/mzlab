@@ -95,3 +95,13 @@ fn every_tdc_token_moves_the_bin_and_keeps_its_count() {
     assert!(decode_tof_block(&[0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0, 0, 0x80]).is_err());
     assert!(decode_tof_block(&[0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0, 0, 0x7e, 1]).is_err());
 }
+
+#[test]
+fn fractional_wavelengths_get_distinct_ids() {
+    let d = dad(&[253.0, 255.0, 257.0], 2.0);
+    let id = |nm| dad_wl_chrom(&d, nm, Some(4.0), 0).unwrap().id;
+    assert_ne!(id(254.1), id(254.4));
+    assert_eq!(id(254.1), "DAD 254.1 nm");
+    // an integer wavelength keeps its id
+    assert_eq!(id(254.0), "DAD 254 nm");
+}

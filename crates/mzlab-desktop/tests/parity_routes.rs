@@ -153,10 +153,13 @@ fn plan() -> Vec<Value> {
     ] {
         steps.push(json!({"op": "lr_formula", "f": f, "adduct": adduct}));
     }
-    // the TIC/BPC without the chemical background (`api/tic_background`): automatic, options, the file as its own blank, a bad value
-    for q in "|&kind=bpc&action=exclude&ex=300:0.5&keep=301|&mode=quiet&rt0=0.1&rt1=0.3&res=hr&floor=0|&mode=blank&blank=0|&mode=nope".split('|') {
-        let blank = if q.contains("blank=0") { 0 } else { -1 };
-        steps.push(json!({"op": "ticbg", "slot": 0, "blank": blank, "query": format!("?k=0&level=1{q}")}));
+    let tables = r#""losses":[{"id":"H2O","f":"H2O"}],"adducts":[{"id":"[M+Na]+","k":1,"add":"Na","z":1}],"contam":[{"id":"peg1","mz":63.04406,"pol":1}]"#;
+    for head in [
+        r#"{"x":63.0441,"hr":true,"tol_mda":3,"tol_ppm":10,"pol":"+","#,
+        r#"{"x":18,"hr":false,"#,
+        r#"{"x":"bad","#,
+    ] {
+        steps.push(json!({"op": "lr_ricerca", "body": format!("{head}{tables}}}")}));
     }
     steps.extend([
         json!({"op": "tic", "slot": 8, "level": 1, "px": 0}),

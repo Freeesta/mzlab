@@ -19,5 +19,5 @@ Engine: `crates/mzlab-core/src/ticbg.rs` (algorithm, pure), `ticbg_route.rs` (ro
 
 ## Tests
 - `cargo test -p mzlab-core --lib ticbg`: on the synthetic run the cleaned TIC recovers each peak area within 5 % (+1.8 %, +4.3 %), peak-to-baseline (apex over median + 3 robust sigma off the peaks) improves 5.2x and 6.3x; a peak on two background lines keeps 99.9 % under subtraction and loses it under exclusion; windows, keep, quiet, blank; high-resolution bins merge a split line.
-- `cargo test -p mzlab-cli --lib background`; parity app = `.wasm`: `ticbg` steps of `crates/mzlab-desktop/tests/parity_routes.rs` (`tests/test_parita_rotte_app.py`); in the browser `tests_e2e/e2e_tic_fondo.py` (module fetched on the first request, JSON = `mzlab-cli background`).
+- `cargo test -p mzlab-cli --lib background`; parity app = `.wasm`: `crates/mzlab-desktop/tests/parity_ticbg.rs` on the synthetic run (`tests/test_parita_rotte_app.py`); in the browser `tests_e2e/e2e_tic_fondo.py` (module fetched on the first request, JSON = `mzlab-cli background`).
 - Generator twin for manual runs: `python3 tools/tic_fondo_sintetico.py OUT_DIR [--scans N] [--seed N] [--blank]` (mzML + `_truth.json` with the true peak areas).

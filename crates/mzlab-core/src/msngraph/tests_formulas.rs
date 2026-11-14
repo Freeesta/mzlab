@@ -2,7 +2,7 @@ use super::tests::{edge, find, graph_with, ion, shifted_graph, Strumento};
 use super::*;
 
 /// The fragments of the synthetic infusion (`tests::sintetico`) and their formulas.
-const FRAMMENTI: [&str; 7] = [
+const FRAGMENTS: [&str; 7] = [
     "C6H8N3O", "C5H8N3", "C5H6N3O", "C5H5N2O", "C4H7N2", "C3H5N2", "C2H4N",
 ];
 
@@ -57,7 +57,7 @@ fn every_fragment_gets_its_sub_formula() {
         (Some("C8H11N4O2"), Some("radice"))
     );
     assert_eq!(r.candidates[0].dbe, 5.5);
-    for x in FRAMMENTI {
+    for x in FRAGMENTS {
         let n = f(&g, find(&g, x));
         assert_eq!(
             (n.choice.as_deref(), n.provenance),
@@ -178,11 +178,11 @@ fn an_isolated_precursor_left_unexplained_is_noted() {
         .iter()
         .map(|a| (a.chiave, a.albero.as_str()))
         .collect();
-    let attesi = [
+    let expected = [
         ("warn.msngrafo.isolatedUnexplained", "195@cid30>138@cid30"),
         ("warn.msngrafo.isolatedUnexplained", "195@cid30>138@hcd45"),
     ];
-    assert!(attesi.iter().all(|x| removed.contains(x)), "{removed:?}");
+    assert!(expected.iter().all(|x| removed.contains(x)), "{removed:?}");
     assert!(node(&g, "C6H8N3O").is_none());
 }
 
@@ -196,12 +196,12 @@ fn most_intensity_unexplained_is_noted_on_the_graph_only_then() {
     let (good, _) = shifted_graph(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 0.0);
     assert!(!note(&good), "{:?}", good.avvisi);
     // fragments 15 ppm off with a 3 ppm window: none has a candidate
-    let stretta = Options {
+    let narrow = Options {
         ppm_formula: 3.0,
         ppm_low: 3.0,
         ..con("C8H11N4O2")
     };
-    let (bad, _) = shifted_graph(&stretta, &[0, 1, 2, 3], false, 15.0);
+    let (bad, _) = shifted_graph(&narrow, &[0, 1, 2, 3], false, 15.0);
     assert!(note(&bad), "{:?} {:?}", bad.avvisi, bad.scartati);
 }
 
@@ -294,7 +294,7 @@ fn a_negative_infusion_is_read_the_same_way() {
         assert_eq!((g.polarita, ione.formula.as_str()), (-1, "C8H11N4O2"));
         // the electron is added, not taken: the anions are 2 electrons above the cations
         assert!(ione.ppm.abs() < 0.01, "{t}: {}", ione.ppm);
-        for x in FRAMMENTI {
+        for x in FRAGMENTS {
             let n = f(&g, node(&g, x).unwrap_or_else(|| panic!("{t}: {x}")));
             assert!(n.candidates[0].ppm.abs() < 0.01 && n.choice.as_deref() == Some(x));
         }
@@ -308,11 +308,11 @@ fn a_negative_infusion_is_read_the_same_way() {
 #[test]
 fn behind_a_narrow_window_the_isotopes_are_no_evidence() {
     // 15 ppm off (the wide window): the 138 has only its M+1 as evidence
-    let stretta = Strumento {
+    let narrow = Strumento {
         width: Some(1.0),
         ..Strumento::default()
     };
-    let (g, j) = graph_with(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0, &stretta);
+    let (g, j) = graph_with(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0, &narrow);
     assert!(node(&g, "C6H8N3O").is_none());
     let r = root(&g);
     assert_eq!(g.nodi[r].width, Some(1.0));

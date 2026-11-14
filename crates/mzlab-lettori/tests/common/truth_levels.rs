@@ -264,11 +264,11 @@ pub fn f4_chromatograms(
                 .filter(|x| kind_name(x.tipo) == kind)
                 .nth(order)
         });
-        let Some(voce) = entry else {
+        let Some(item) = entry else {
             d4.push(format!("chromatogram {id} ({kind}): not in the reader"));
             continue;
         };
-        match l.chromatogram(c, &voce.id) {
+        match l.chromatogram(c, &item.id) {
             Ok(ch) => f4_trace(id, t, &ch, tol, &mut d4),
             Err(_) => d4.push(format!("chromatogram {id}: cannot be read")),
         }

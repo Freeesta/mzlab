@@ -90,7 +90,7 @@ Due file Orbitrap DDA sintetici (`tools/hr_reference.py`, ~15.000 picchi MS1 per
 - Memoria del modulo `thermo` (`tools/bench_raw.py`, memoria iniziale 32 MB) sul BAF DDA da 595 MB (56 061 scansioni): dopo `apri` 33,5 MB (`apri` 1,0 s), dopo `indice` 48,0 MB (186 ms, JSON da 13,7 MB), picco di tutti i passi 122 MB (`to_mzml` 21,8 s); su file più piccoli 44,4 MB per 7 952 scansioni e 85,1 MB per 16 524 (prima della memoria compatta).
 
 ## Profilo `desktop` (`Cargo.toml`, `opt-level = 3` contro `"z"`)
-- `mzlab_wasm.wasm` con `cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm`: SHA-256 `d5cca2b7…d00da` prima e dopo l'aggiunta del profilo (identico). Tempi del `.raw` nativo con `raw_times` e profilo `desktop` (studio `docs/studi/RAW_VELOCE.md`, DDA da 595 MB): tabella 8,33 → 5,30 s, `.mzidx` 7,07 → 3,59 s, mzML 13,99 → 12,15 s.
+- `mzlab_wasm.wasm` con `cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm`: SHA-256 `d5cca2b7…d00da` prima e dopo l'aggiunta del profilo (identico). Tempi del `.raw` nativo con `raw_times` e profilo `desktop` (DDA da 595 MB): tabella 8,33 → 5,30 s, `.mzidx` 7,07 → 3,59 s, mzML 13,99 → 12,15 s.
 
 ## Tabella e `.mzidx` con una decodifica (righe dirette da `Spectrum`)
 - `upload::index_reader` decodifica ogni scansione una volta sola per la tabella e la prima passata di `build`, senza testa mzML né rilettura; passate successive solo se il budget è superato. `.mzidx` identico byte per byte alla strada via mzML (`tests/mzidx_rows_direct.rs`). SHA-1 della testata non nel percorso dell'indice (`index_reader` usa lo SHA-256 già calcolato). Peso di `mzlab_wasm.wasm` prima di `wasm-opt`: 3 409 576 → 3 438 828 B.
@@ -120,3 +120,15 @@ hr, 1 libreria: identità 0.06 ms/query a caldo (0.28 a freddo); analoghi 51 ms;
 
 ## Rapporto `corsa/1` di una corsa grande (`mzlab-cli flow report RUNDIR`)
 Un file HR sintetico denso (`synthetic_data_large.py --files 1 --scans 12000 --compounds 20000`): il passo `features.group` scrive un `ionnet/1` di 631 MB (7,5 milioni di archi «MS1 correlation»: con meno di `min_corr_samples` file ogni coppia coeluita è un arco). `corsa_build` legge di ogni `.json` solo i membri che usa (`json::parse_members`, gli altri valori controllati ma non costruiti): 9,1 s e 5 581 MB di picco RSS prima, 2,0 s e 636 MB dopo; `corsa/1` identico byte per byte su tre cartelle (1, 2 e 24 file); `main` `e6bdc0e4c7dc4da88b5901a2729ee9d624d5fb42`.
+
+## Librerie spettrali: «Load folder…» (`tools/bench_librerie_cartella.py`)
+Cartella sintetica (`tools/librerie_cartella_sintetica.py`: MSP NIST da 110 000 spettri, 29 MB, 4 mix, 733 altri file), Chromium Linux, `mzlab-lib-wasm`, 6 giri alternati prima/dopo, mediana, `main` `88cf7b6a5c21bdae8a4c086e23061f8458f35ded`. Nessun long task sul thread principale (l'import gira nel worker). Il `.mzlib` prodotto è identico per `cmp`.
+
+| passo | prima | dopo | % |
+|---|---|---|---|
+| MSP grande, `LIB.add` (`Importer.finish` rilegge i record dallo scratch una volta sola: 110 509 chiamate OPFS → 0) | 2647 ms | 2319 ms | −12 % |
+| cartella intera (9 file letti, 733 ignorati) | 3182 ms | 2858 ms | −10 % |
+| `.wasm` ottimizzato | 494 207 B | 495 492 B | +0,26 % |
+
+Fasi del file grande prima: `push` (lettura e pulizia) 0,94 s, `finish` (ordinamento, indice, scrittura) 1,17 s, SHA-256 in JS 0,19 s; scansione e lista della cartella ≤ 50 ms. `opt-level 3` su `mzlab-lib`: `push` −35 %, ma `.wasm` +23,7 %, scartato.
+

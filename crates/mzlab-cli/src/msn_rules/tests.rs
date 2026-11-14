@@ -62,7 +62,7 @@ fn the_stratum_comes_from_the_instrument_and_the_mode() {
         ("LC-ESI-QTOF", "CID", "qtof"),
         ("LC-ESI-QQ", "CID", "fascio"),
     ];
-    for (k, (strumento, modo, atteso)) in cases.iter().enumerate() {
+    for (k, (strumento, modo, expected)) in cases.iter().enumerate() {
         let f = write_outputs(
             &format!("s{k}.txt"),
             &registry(
@@ -76,7 +76,7 @@ fn the_stratum_comes_from_the_instrument_and_the_mode() {
         let l = rows(&run(&["msn-rules", &f])).remove(0);
         assert_eq!(
             l.get("strato").unwrap().str(),
-            Some(*atteso),
+            Some(*expected),
             "{strumento} {modo}"
         );
         assert!(

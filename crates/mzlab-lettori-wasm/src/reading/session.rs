@@ -6,7 +6,7 @@ use super::json_text::{chromatograms_json, fields_json, header_json, samples_jso
 use mzlab_core::json::Out;
 use mzlab_core::mzml::Spectrum;
 use mzlab_core::readers::Reader;
-use mzlab_core::transport::{encode_index, encode_scansione};
+use mzlab_core::transport::{encode_index, encode_scan};
 use mzlab_core::Result;
 
 #[derive(Default)]
@@ -54,7 +54,7 @@ impl Sessions {
 
     /// Scan `k` of sample `c` as one block of bytes: a fixed head, the m/z, the intensities (`transport.rs`). The id and the filter are those of the index.
     pub fn scan(&mut self, h: u32, c: usize, k: usize) -> Result<Vec<u8>> {
-        Ok(encode_scansione(&self.reader(h)?.scan_data(c, k)?))
+        Ok(encode_scan(&self.reader(h)?.scan_data(c, k)?))
     }
 
     /// Scan `k` of sample `c` kept here until the next one: `scan_parts` hands over views of its columns instead of a block.
