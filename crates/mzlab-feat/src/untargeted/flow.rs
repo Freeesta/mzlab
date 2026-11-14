@@ -1,6 +1,6 @@
 //! `features.detect` with the algorithm `adap_localmin`: the common parameters of the step and `adap_peak::AdapPeak` as the `UntParams` of
 //! `pipeline::run_file` (mass detection, ADAP chromatograms, optional Savitzky-Golay smoothing, local-minimum resolver), the features as the table
-//! of `trace::detect`. Called by `trace::detect_with`; the rest of the per-file analysis (quality, isotopes, MS2, families) runs on top as ever.
+//! of `trace::detect`. Called by `detect_route::detect_with`; the rest of the per-file analysis (quality, isotopes, MS2, families) runs on top as ever.
 
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};

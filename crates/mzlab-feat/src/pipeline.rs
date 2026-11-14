@@ -4,13 +4,14 @@ use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
 use crate::align_mzmine::{IsoFinder, IsoGrouper};
+use crate::detect_route::detect_with;
 use crate::isotopes::group;
 use crate::ms2::{link, Ms2Links};
 use crate::prof::time;
 use crate::quality::assess;
 use crate::resolve::{assess_and_resolve, mark_mixtures};
 use crate::table::FileFeatures;
-use crate::trace::{detect_with, Params};
+use crate::trace::Params;
 
 /// The old path of `Steps`, which lives in `pipeline_steps` so that the recipe does not depend on the pipeline.
 pub use crate::pipeline_steps::Steps;
