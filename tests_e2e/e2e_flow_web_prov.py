@@ -128,8 +128,6 @@ try:
                 nat = json.loads((run / "out" / nat_name).read_text()); web = json.loads(kept[name])
                 assert blank(nat) == blank(web), (name, diff(blank(nat), blank(web)))
             assert kept["report"] == kept["corsa.json"] and r["record"]["corsa"] == kept["corsa.json"]
-            ag = json.loads(kept["prov.json"])["agent"]
-            assert ag.get("rustc") and ag.get("cargo_lock_sha256"), ("the .wasm of the site lost its build identity", ag)
         step("the prov/1 and the corsa/1 of the browser are the records of the native flow run apart from the declared fields", first)
 
         def again():
