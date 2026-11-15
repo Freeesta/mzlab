@@ -368,7 +368,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
     CONVROWS.set(f.name,f.mzlabNat?"index":"load",0);if(pn)pn.index(f.name,0);
     /** @param {{ done: number, total: number }} [det] */ const put=(/** @type {number} */ frac,/** @type {string} */ phase,/** @type {{ done: number, total: number } | null | undefined} */ sub,det)=>{PROGRESSO.set(f.name,frac,phase);const pc=rp();CONVROWS.set(f.name,rowSt(phase),pc,sub,det);if(pn)pn.index(f.name,Math.min(99,mono()))};
     // the worker tells the phase, the fraction, the scans of the sample done (done/total) or that the file waits for a free builder (wait); the last message goes to the diagnosis
-    const onIdx=(/** @type {Event} */ e)=>{const d=/** @type {CustomEvent} */ (e).detail;if(d.name!==f.name)return;CONVROWS.note(f.name,`${d.phase||"?"} ${(+d.frac||0).toFixed(3)}${d.total?` scans ${d.done}/${d.total}`:""}${d.wait?" queued":""}`);
+    const onIdx=(/** @type {Event} */ e)=>{const d=/** @type {CustomEvent} */ (e).detail;if(d.name!==f.name)return;CONVROWS.note(f.name,`${d.phase||"?"} ${(+d.frac||0).toFixed(3)}${d.total?` scans ${d.done}/${d.total}`:""}${d.wait?" queued":""}${d.wait&&d.copies?` (copies at once ${d.copies})`:""}`);
       if(d.wait){CONVROWS.set(f.name,"wait",null);return}      // queued for a free builder: no percent, the bar keeps what is done
       if(d.phase==="load"){put(d.frac,"load",null,{done:d.done,total:d.total});return}
       put(d.frac,d.phase,d.total?{done:d.done,total:d.total}:null)};
