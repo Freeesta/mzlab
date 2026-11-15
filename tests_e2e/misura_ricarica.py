@@ -58,6 +58,11 @@ class Mirror(BaseHTTPRequestHandler):
     upstream = ""
     lock = threading.Lock()
     gz: dict = {}
+    delay = 0             # ms every answer waits (set by misura_avvio_sw.py): CDP latency does not reach the service worker's own fetches
+    log: list = []        # [arrival ms, path, status, bytes sent, Sec-Fetch-Dest]: what the server really saw (HTTP-cache hits never reach it)
+
+    def note(self, rel: str, status: int, n: int) -> None:
+        self.log.append([self.t_in, rel, status, n, self.headers.get("Sec-Fetch-Dest", "")])
 
     def log_message(self, *a):
         pass
@@ -82,14 +87,19 @@ class Mirror(BaseHTTPRequestHandler):
             return None
 
     def do_GET(self):
+        self.t_in = round(time.time() * 1000)
+        if self.delay:
+            threading.Event().wait(self.delay / 1000)
         rel = self.path.split("?", 1)[0].split("#", 1)[0].lstrip("/")
         rel = rel[len("mzlab/"):] if rel.startswith("mzlab/") else rel
         p = self._file(rel)
         if p is None:
+            self.note(rel, 404, 0)
             self.send_response(404); self.send_header("Content-Length", "0"); self.end_headers(); return
         st = p.stat()
         etag = 'W/"%x-%x"' % (int(st.st_mtime), st.st_size)
         if self.headers.get("If-None-Match") == etag:
+            self.note(rel, 304, 0)
             self.send_response(304); self.send_header("ETag", etag); self.send_header("Cache-Control", "max-age=600"); self.end_headers(); return
         ctype = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
         if p.suffix in (".js", ".mjs"):
@@ -105,6 +115,7 @@ class Mirror(BaseHTTPRequestHandler):
                     self.gz[key] = gzip.compress(data, 6)
                 data = self.gz[key]
             enc = "gzip"
+        self.note(rel, 200, len(data))
         self.send_response(200)
         self.send_header("Content-Type", ctype + ("; charset=utf-8" if ctype.startswith("text/") or ctype == "application/javascript" else ""))
         self.send_header("Content-Length", str(len(data)))
@@ -115,7 +126,10 @@ class Mirror(BaseHTTPRequestHandler):
         if enc:
             self.send_header("Content-Encoding", enc); self.send_header("Vary", "Accept-Encoding")
         self.end_headers()
-        self.wfile.write(data)
+        try:
+            self.wfile.write(data)
+        except (BrokenPipeError, ConnectionResetError):
+            pass          # the page dropped the request (reload, abort)
 
 
 class Throttle:
@@ -171,11 +185,13 @@ class Throttle:
             return
         k, pr = m.get("method"), m.get("params") or {}
         if k == "Network.requestWillBeSent":
-            self._pending[pr["requestId"]] = [round(time.time() * 1000), pr["request"]["url"], 0, 0, 0]
+            # wall time and monotonic stamp from the event itself: Python only reads the message when the page poll pumps the loop
+            self._pending[pr["requestId"]] = [round(pr.get("wallTime", time.time()) * 1000), pr["request"]["url"], 0, 0, 0, pr.get("timestamp", 0)]
         elif k == "Network.responseReceived" and pr.get("requestId") in self._pending:
             self._pending[pr["requestId"]][2] = pr["response"]["status"]
         elif k == "Network.loadingFinished" and pr.get("requestId") in self._pending:
-            r = self._pending.pop(pr["requestId"]); r[3] = pr.get("encodedDataLength", 0); r[4] = round(time.time() * 1000); self.sw.append(r)
+            r = self._pending.pop(pr["requestId"]); r[3] = pr.get("encodedDataLength", 0)
+            r[4] = round(r[0] + (pr["timestamp"] - r[5]) * 1000) if r[5] and "timestamp" in pr else round(time.time() * 1000); self.sw.append(r[:5])
 
 
 CLICKS = [("nav-draw", "#nav button[data-v=draw]"), ("nav-data", "#nav button[data-v=data]"), ("settings", "#np-set"), ("settings-close", "Escape"),
