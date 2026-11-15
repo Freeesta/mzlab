@@ -88,11 +88,11 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | metodo di acquisizione (`metodo/1`, `method.rs`, `method_wiff`, `method_raw`, schema) | `docs/agenti/metodo.md` |
 | metriche di main nel tempo (`tools/metriche.py`, ramo `stat-ci`, tendenze) | `docs/agenti/metriche.md` |
 | caricamento della pagina (FCP, LCP, motore pronto, KB prima del paint per scenario; `tests_e2e/misura_primo_paint.py`); primo file contro dieci file, `rotte`, `thermo`, memoria (`misura_caricamento.py --scenarios`) | `docs/agenti/misure-caricamento.md` |
-| first package before the site is usable: bytes and requests per milestone, critical chain, 10 biggest files, landing-page comparison, trace split, 8 candidate reductions (`tests_e2e/misura_payload.py`) | `docs/agenti/misure-primo-pacchetto.md` |
 | Misure: diario (NON LEGGERE) [titolo del file] | `docs/agenti/misure-diario.md` |
 | formati di ingresso del Flow (area: misure dei motori, validazione delle esportazioni (mzTab-M), clic…) | `docs/agenti/misure-formati.md` |
 | costo del disegno dei cromatogrammi su tracce dense (`tools/bench_charts.py`: 10^6 punti, 20 file, rotella, trascinamento, ridimensionamento, linea); tabella HR di 100 000 righe nella «Statistica» (`tools/bench_table_hr.py`: KMD, clic, «Dati») | `docs/agenti/misure-grafici.md` |
 | misura su computer lenti (CPU rallentata 1×/4×/6×, 2/4 core: apertura demo, trascinamento della linea, mappe, XIC, memoria; `tests_e2e/misura_macchine.py`) | `docs/agenti/misure-macchine.md` |
+| first package before the site is usable: bytes and requests per milestone, critical chain, 10 biggest files, landing-page comparison, trace split, 8 candidate reductions (`tests_e2e/misura_payload.py`) | `docs/agenti/misure-primo-pacchetto.md` |
 | misure Rust e dei moduli (area: misure dei motori, validazione delle esportazioni (mzTab-M), clic…) | `docs/agenti/misure-rust.md` |
 | lettori dei produttori, `.raw`, `.wiff`, `.D` (area: tabella cumulativa dei guadagni di velocità (data · PR · passo ·…) | `docs/agenti/misure-velocita-raw.md` |
 | tabella cumulativa dei guadagni di velocità (data · PR · passo · prima · dopo · %) | `docs/agenti/misure-velocita.md` |
