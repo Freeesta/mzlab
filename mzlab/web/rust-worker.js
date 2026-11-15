@@ -317,7 +317,7 @@ async function lrOp(m) {
       return { info: JSON.stringify(out.map(({ file, ...r }) => r)), files: out.map(o => [o.name, o.file]) };
     }
     case "lr_gunzip": { CANCELLED.delete(m.name); await ARCH.ensureRoom(await gzRoom(m.blob), m.name); return { info: "{}", files: [[m.dest, await plain.gunzipTo(m)]] }; }      // a .mzXML.gz: its mzXML into conv/ for the readers module (gz-flusso.js)
-    case "lr_put": return copies.through(m.name, m.copies | 0, m.rank ?? -1, () => postMessage({ op: "progress", id: m.id, frac: 0, phase: m.nat ? "read" : "load", wait: true, copies: m.copies | 0 }), () => lrPut(m));      // queued behind the copies running: the row says «Queued» case "lr_warm": case "lr_warm_claim": return (await scalda())[m.op](m);
+    case "lr_put": return copies.through(m.name, m.copies | 0, m.rank ?? -1, () => postMessage({ op: "progress", id: m.id, frac: 0, phase: m.nat ? "read" : "load", wait: true, copies: m.copies | 0 }), () => lrPut(m)); case "lr_warm": case "lr_warm_claim": return (await scalda())[m.op](m);      // lr_put queued behind the copies running: the row says «Queued»
     case "lr_cancel": { for (const n of m.names || []) { CANCELLED.add(n); copies.drop(n, cancelled()); idxPool().cancel(n); ARCH.release(n); } return { info: "{}" }; }      // «Cancel» of the loading: the builders of these files end now
     case "lr_index": try { return await lrIndex(m); } finally { ARCH.release(m.name); }
     case "lr_index_cen": try {                                                // mzFinder works on centroids: the index of a profile sample with its scans as centroids, apart from the one of the Data tab
