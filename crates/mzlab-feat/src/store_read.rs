@@ -6,10 +6,9 @@ use mzlab_core::json::{parse, Value};
 use std::cell::RefCell;
 
 use crate::facts::FileFacts;
-use crate::store::Origin;
-use crate::store::{bad, ALIGN, MAGIC, PIECE};
+use crate::store_base::{bad, Origin, ALIGN, MAGIC, PIECE};
 use crate::table::{Aligned, FileFeatures, IsoBlock, RowIdent, RowMeta};
-use crate::tp::TpBlock;
+use crate::tp_block::TpBlock;
 
 /// Bytes in memory as a `ReadAt`.
 pub struct Slice<'a>(pub &'a [u8]);
@@ -49,7 +48,7 @@ fn newer_magic(m: &[u8]) -> Option<u32> {
 fn refuse_newer(meta: &Value, kind: &str) -> Result<()> {
     let num = |k: &str| meta.get(k).and_then(|v| v.f64()).map(|v| v as i64);
     let container = if kind == "table" {
-        crate::store::TABLE_FORMAT
+        crate::store_base::TABLE_FORMAT
     } else {
         1
     };
