@@ -122,6 +122,14 @@ pub fn parse_manifest(bytes: &[u8]) -> Result<Manifest, UpdateError> {
         .into_iter()
         .chain(NATIVE.iter().copied());
     let fixed: Vec<&str> = fixed.collect();
+    // `check` and `download_all` add the sizes up unchecked
+    if m.files
+        .values()
+        .try_fold(0u64, |t, e| t.checked_add(e.size))
+        .is_none()
+    {
+        return bad("total size overflows u64".into());
+    }
     let mut seen = std::collections::BTreeSet::new();
     for rel in m.files.keys() {
         safe_rel(rel)?;
@@ -785,6 +793,20 @@ mod tests {
             let err = parse_manifest(&manifest_json(min, &["static/a.js"])).unwrap_err();
             assert_eq!(err.key, "update.error.manifest", "{min}");
         }
+    }
+
+    #[test]
+    fn rejects_a_total_size_that_overflows() {
+        let big = Entry {
+            sha256: sha256_hex(b"x"),
+            size: u64::MAX,
+        };
+        let json = serde_json::json!({ "version": "v", "desktop_min": "0.1.0",
+            "files": { "static/a.js": big, "static/b.js": big } });
+        let err = parse_manifest(&serde_json::to_vec(&json).unwrap()).unwrap_err();
+        assert_eq!(err.key, "update.error.manifest");
+        let one = serde_json::json!({ "version": "v", "desktop_min": "0.1.0", "files": { "static/a.js": big } });
+        assert!(parse_manifest(&serde_json::to_vec(&one).unwrap()).is_ok());
     }
 
     #[test]
