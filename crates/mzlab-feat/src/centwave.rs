@@ -5,66 +5,13 @@
 use crate::sortc::SortC;
 use mzlab_core::error::Result;
 
-use crate::broad::{detect_broad_at, BroadParams};
+use crate::broad::{detect_broad_at, ricker, BroadParams};
 use crate::channels::Seg;
-use crate::trace::Params;
 use crate::trace_base::{filled, reserve};
+use crate::trace_params::Params;
 
-/// How the segments of a slab become peaks: the cut of the runs at their gaps (`masstrace`), the wavelet model, or the ADAP chromatograms and the
-/// local-minimum resolver of mzmine (`adap_localmin`, which builds its own traces from the index).
-#[derive(Debug, Clone, PartialEq, Default)]
-pub enum Peak {
-    #[default]
-    Minima,
-    CentWave(CentWave),
-    Adap(crate::adap_peak::AdapPeak),
-}
-
-/// Parameters of the wavelet model (descriptor `features.detect`, algorithm `centwave`).
-#[derive(Clone, PartialEq)]
-pub struct CentWave {
-    /// Half window of m/z (ppm; on the Da axis 0.5 Da) around a trace where its intensities are summed per scan.
-    pub ppm: f64,
-    /// Range of the full width at half maximum of the peaks, seconds.
-    pub width_s: (f64, f64),
-    /// Minimum height over the baseline, in units of the noise of the trace (never less than `Params::floor`).
-    pub snr: f64,
-    /// Broad bands (30-300 s) on the residue of the narrow peaks; off by default.
-    pub broad: BroadParams,
-}
-
-impl Default for CentWave {
-    fn default() -> Self {
-        CentWave {
-            ppm: 25.0,
-            width_s: (5.0, 30.0),
-            snr: 10.0,
-            broad: BroadParams::default(),
-        }
-    }
-}
-
-// The text of the recipe is built from this: the broad pass adds nothing while it is off, so the fingerprints made before it exist keep their name.
-impl std::fmt::Debug for CentWave {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut d = f.debug_struct("CentWave");
-        d.field("ppm", &self.ppm)
-            .field("width_s", &self.width_s)
-            .field("snr", &self.snr);
-        if self.broad.enabled {
-            d.field("broad", &self.broad);
-        }
-        d.finish()
-    }
-}
-
-impl CentWave {
-    /// Sets the range of the full width at half maximum of the peaks, seconds.
-    pub fn with_width_s(mut self, width_s: (f64, f64)) -> Self {
-        self.width_s = width_s;
-        self
-    }
-}
+/// The old path of the peak models, which live in `trace_params` with the parameters that name them.
+pub use crate::trace_params::{CentWave, Peak};
 
 /// Number of scales between the narrowest and the widest peak.
 const SCALES: usize = 6;
@@ -74,11 +21,6 @@ const FWHM: f64 = 2.354_820_045_030_949_3;
 const REACH: f64 = 2.5;
 /// Two neighbouring apexes are two peaks only if the valley between them is lower than this fraction of the lower apex.
 const RESOLVED: f64 = 0.9;
-
-pub(crate) fn ricker(x: f64) -> f64 {
-    let x2 = x * x;
-    (1.0 - x2) * libm::exp(-0.5 * x2)
-}
 
 /// Standard deviations (scans) of the wavelets: geometric between the narrowest and the widest peak.
 fn scales(width_s: (f64, f64), dt: f64) -> Vec<f64> {
