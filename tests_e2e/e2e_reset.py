@@ -1,7 +1,7 @@
 """A true reset: what a student loads stays in the browser after a reload (the page says so once); «Full reset» removes files, session, notebook, OPFS, IndexedDB,
 caches, service workers and preferences by NAME (also folders and databases that this test invents, as other parts of the program do); «Files» keeps the
 preferences, the language and the saved libraries. The one entry is the header button «New session» (dialog with both and Cancel), also ?reset=all|1|files. Full reset also drops the program's own caches and worker (it is the guaranteed way to fetch the new version) and the page it reloads ends isolated by itself."""
-# covers: mzlab/web/reset.js, mzlab/web/settings.js, mzlab/web/liste.js
+# covers: mzlab/web/reset.js, mzlab/web/browser.js, mzlab/web/settings.js, mzlab/web/liste.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import time
@@ -112,6 +112,16 @@ try:
                 print("   warm reload ms:", round(warm), "after reset ms:", round(after))
             finally: c2.close()
         step("after a Full reset the page is isolated with no manual reload, and the next reload is warm", isolated_after)
+        def hard_cmd():
+            # the start banner and the 10-s button call qqHardReset: the same wipe as the dialog's «Full reset», libraries included, a second call ignored
+            load_files()
+            pg.evaluate("window.qqHardReset(); window.qqHardReset()")
+            pg.wait_for_function("location.search.includes('riparti')", timeout=30000); ready_start(pg)
+            s = pg.evaluate(STATE)
+            assert s["files"] == 0 and [n for n in s["opfs"] if n != "mzlab"] == [] and s["mzlab"] == [], (s["opfs"], s["mzlab"])
+            assert "librerie" not in s["opfs"] and not {"invented-db", "mzlab-libs", "mzlab-libdir"} & set(s["idb"]), (s["opfs"], s["idb"])
+            assert "mzlab-big-x" not in s["caches"] and "mzlab-app-x" not in s["caches"] and "other-cache" not in s["caches"], s["caches"]
+        step("qqHardReset (start banner, 10-s button) is the same Full reset: no folder, database or cache left, libraries too", hard_cmd)
         def gear():
             load_files(); pg.click("#np-set"); pg.wait_for_timeout(400)
             txt = pg.inner_text("#uipset"); assert "Full reset" not in txt and "Reset completo" not in txt and "Storage in the browser" not in txt, txt
