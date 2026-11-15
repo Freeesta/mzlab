@@ -103,3 +103,26 @@ def test_failure_before_the_module_loaded_is_replayed():
     console.log(JSON.stringify({{ stato: AVVIO.stato, msg: reg['avvio-errore-msg'] && reg['avvio-errore-msg'].textContent }}));
     """)
     assert res["stato"] == "failed" and res["msg"] == "Impossibile avviare il motore"
+
+
+def test_reset_in_progress_writes_no_session_marker_or_row():
+    code = f"""
+    {DOM}
+    const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
+    const store = {{}};
+    global.window.localStorage = {{
+      getItem: k => store[k] || null,
+      setItem: (k, v) => {{ store[k] = String(v); }},
+      removeItem: k => {{ delete store[k]; }}
+    }};
+    global.window.QQ_RESETTING = true;
+    AVVIO.segnaSessione(true);
+    AVVIO.segnaRiga({{ a: [1], f: 'x', fw: 100, s: '200px' }});
+    const during = Object.keys(store);
+    global.window.QQ_RESETTING = false;
+    AVVIO.segnaSessione(true);
+    console.log(JSON.stringify({{ during, after: Object.keys(store) }}));
+    """
+    res = run_node(code)
+    assert res["during"] == [], "a reset in progress: pagehide writes nothing back"
+    assert res["after"] != [], "outside a reset the marker is written as before"
