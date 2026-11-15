@@ -24,6 +24,8 @@ from pathlib import Path
 
 import numpy as np
 
+from dati_sintetici_mzml import _chrom_type, _write  # noqa: E402
+
 OFF = 0.3                       # instrument m/z offset seen in the lab files
 TIMES = [0, 5, 10, 15, 30, 45, 60]
 STANDARDS = {"0_06": 0.06, "0_6": 0.6, "2_4": 2.4, "7_2": 7.2, "12": 12.0, "18": 18.0}
@@ -73,15 +75,6 @@ def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False, 
             + _arr("MS:1000514", "m/z array", mz) + _arr("MS:1000515", "intensity array", it) + "</binaryDataArrayList></spectrum>")
 
 
-def _chrom_type(cid: str, extra: str) -> str:
-    """The one chromatogram type term the PSI-MS rules require, from the id (TIC, BPC, TWC, SRM ...) unless `extra` already gives it."""
-    if "MS:1003019" in extra: return ""
-    acc, name = (("MS:1000235", "total ion current chromatogram") if cid == "TIC" else ("MS:1000628", "basepeak chromatogram") if cid == "BPC"
-                 else ("MS:1000812", "absorption chromatogram") if cid == "TWC" else ("MS:1001473", "selected reaction monitoring chromatogram") if cid.startswith("SRM")
-                 else ("MS:1003019", "pressure chromatogram"))
-    return f'<cvParam cvRef="MS" accession="{acc}" name="{name}" value=""/>'
-
-
 def _chrom(i, cid, t, y, extra="", yunit="") -> str:
     extra = _chrom_type(cid, extra) + extra
     return (f'<chromatogram index="{i}" id="{cid}" defaultArrayLength="{len(t)}">{extra}<binaryDataArrayList count="2">'
@@ -100,27 +93,6 @@ def _pressure_chrom(i: int, mode: str = "") -> str:
     t, y = pressure_trace(counts=bool(mode))
     cv = '<cvParam cvRef="MS" accession="MS:1003019" name="pressure chromatogram" value=""/>' + ('<userParam name="unità" value="psi"/>' if mode == "psi" else "")
     return _chrom(i, "Pump Pressure 1", t, y, cv, "number of detector counts" if mode else "pascal")
-
-
-_CVLIST = ('<cvList count="2"><cv id="MS" fullName="Proteomics Standards Initiative Mass Spectrometry Ontology" version="4.1.163" URI="x"/>'
-           '<cv id="UO" fullName="Unit Ontology" version="09:04:2014" URI="x"/></cvList>')
-
-
-_FILE_PARTS_A = ('<fileDescription><fileContent><cvParam cvRef="MS" accession="MS:1000579" name="MS1 spectrum" value=""/></fileContent></fileDescription>'
-                 '<softwareList count="1"><software id="mzlab_synthetic" version="0.0"><cvParam cvRef="MS" accession="MS:1000799" name="custom unreleased software tool" value="tools/dati_sintetici.py"/></software></softwareList>')
-_FILE_PARTS_B = ('<dataProcessingList count="1"><dataProcessing id="synthetic"><processingMethod order="0" softwareRef="mzlab_synthetic">'
-                 '<cvParam cvRef="MS" accession="MS:1000544" name="Conversion to mzML" value=""/></processingMethod></dataProcessing></dataProcessingList>')
-
-
-def _write(path: Path, specs: list[str], chroms: list[str]) -> None:
-    head = ('<?xml version="1.0" encoding="utf-8"?><mzML xmlns="http://psi.hupo.org/ms/mzml" version="1.1.0">'
-            + _CVLIST + _FILE_PARTS_A +
-            '<instrumentConfigurationList count="1"><instrumentConfiguration id="IC1">'
-            '<cvParam cvRef="MS" accession="MS:1000651" name="3200 QTRAP" value=""/></instrumentConfiguration></instrumentConfigurationList>'
-            + _FILE_PARTS_B + f'<run id="{path.stem}">')
-    body = (f'<spectrumList count="{len(specs)}">' + "".join(specs) + "</spectrumList>") if specs else ""
-    path.write_text(head + body + f'<chromatogramList count="{len(chroms)}">' + "".join(chroms) + "</chromatogramList></run></mzML>",
-                    encoding="utf-8")
 
 
 def _g(rt, c, s, tau=0.04):
