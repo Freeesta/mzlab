@@ -23,7 +23,7 @@ pub use network::{arcs, arcs_in, explain_by_arcs, explain_by_arcs_in, next_gener
 pub(crate) use table::measured;
 pub use table::{role_of, table_json, table_json_cond, Role, TABLE_SCHEMA};
 /// The old path of the block and its codes, which live in `tp_block` so that the aligned table does not depend on `tp`.
-pub use crate::tp_block::{FitCandidate, RoleCounts, TpBlock, TpParams, KIN_CERTAIN, KIN_DOUBTFUL, KIN_NONE, KIN_POSSIBLE, KIN_PROBABLE, NOTE_BLANK, NOTE_CHIMERIC_MS2, NOTE_DARK, NOTE_ISF_COELUTES, NOTE_ISF_OF_PRODUCT, NOTE_NO_T0, NOTE_T0, NOTE_T0_PRESENT, NO_PARENT, ST_CONTROL, ST_ISF, ST_PARENT, ST_TP, ST_UNEXPLAINED, VIA_CLEAVAGE, VIA_IMPORTED, VIA_MS2, VIA_NETWORK, VIA_RULE};
+pub use crate::tp_block::{FitCandidate, RoleCounts, TpBlock, TpParams, KIN_CERTAIN, KIN_DOUBTFUL, KIN_NONE, KIN_POSSIBLE, KIN_PROBABLE, NOTE_BLANK, NOTE_CHIMERIC_MS2, NOTE_DARK, NOTE_ISF_COELUTES, NOTE_ISF_OF_PRODUCT, NOTE_NO_T0, NOTE_T0, NOTE_T0_PRESENT, NO_PARENT, OFFSET_MAX, ST_CONTROL, ST_ISF, ST_PARENT, ST_TP, ST_UNEXPLAINED, VIA_CLEAVAGE, VIA_IMPORTED, VIA_MS2, VIA_NETWORK, VIA_RULE};
 
 use mzlab_core::error::Result;
 
