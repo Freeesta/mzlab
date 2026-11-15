@@ -39,6 +39,8 @@ I18N.add("it", {
   "release.get": "Scarica",
   "update.copy": "Copia dettagli",
   "update.copied": "Copiato",
+  "update.siteNew": "Nuova versione pronta",
+  "update.siteReload": "Ricarica",
   "update.close": "Chiudi",
   "update.newapp.nolink": "Questo aggiornamento richiede una versione più recente dell'app desktop (almeno la {min}).",
   "update.newapp": "Questo aggiornamento richiede una versione più recente dell'app desktop (almeno la {min}). Scarica l'ultimo installatore da:",
