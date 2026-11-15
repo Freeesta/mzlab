@@ -93,7 +93,10 @@ impl TpRoles {
 
     /// `from_json` with the files put in the order of the files of the `.mzfeat` `table`, by name (`samples::order_like`).
     pub fn for_table(samples: &str, table: &[u8]) -> Result<TpRoles> {
-        let names = crate::store::table_names(&mut crate::store::Slice(table), table.len() as u64)?;
+        let names = crate::store_read::table_names(
+            &mut crate::store_read::Slice(table),
+            table.len() as u64,
+        )?;
         TpRoles::from_json(&mzlab_core::samples::order_like(samples, &names)?)
     }
 
@@ -102,7 +105,7 @@ impl TpRoles {
         let Some(c) = samples.filter(|c| !c.is_empty()) else {
             return Ok(None);
         };
-        let names = crate::store::table_names(table, size)?;
+        let names = crate::store_read::table_names(table, size)?;
         TpRoles::from_json(&mzlab_core::samples::order_like(c, &names)?).map(Some)
     }
 

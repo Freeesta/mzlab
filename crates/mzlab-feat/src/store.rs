@@ -8,18 +8,17 @@
 //! the file of one sample and when no graph was built. The bytes depend only on the table and on the meta given: no clock, no path.
 
 use mzlab_core::budget::WriteAt;
-use mzlab_core::error::{Error, Result};
+use mzlab_core::error::Result;
 use mzlab_core::json::Out;
 
-use crate::facts::FileFacts;
 use crate::rowident::adduct_names;
 use crate::table::{Aligned, FileFeatures};
-use crate::tp::TpBlock;
+use crate::tp_block::TpBlock;
 
-pub(crate) const MAGIC: &[u8; 8] = b"MZFEAT01";
-pub(crate) const ALIGN: usize = 64;
-/// Version of the container of the aligned table (`"version"` of its meta): 2 adds the `id`, the summaries of the rows and, optional, the identity columns (`identity` = 1 in the meta); the files of version 1 are still read.
-pub const TABLE_FORMAT: i64 = 2;
+/// The old paths of the crate-internal base of the container (`interp::store`, `spill`), in `store_base` with the rest.
+pub(crate) use crate::store_base::{bad, ALIGN, MAGIC, PIECE};
+/// The old paths of the base of the container, which lives in `store_base` so that `store_read` and `evid` do not depend on `store`.
+pub use crate::store_base::{Origin, Section, TABLE_FORMAT};
 
 /// The texts of a recipe that the meta of a container carries (`recipe::Recipe` implements it), so that `store` does not depend on the recipe.
 pub trait RecipeTexts {
@@ -37,23 +36,6 @@ pub fn fingerprint(text: &str) -> String {
     format!("{a:016x}{b:016x}")
 }
 
-pub(crate) fn bad() -> Error {
-    Error::new("error.badMzfeat")
-}
-
-/// What the meta says about the origin of a table.
-#[derive(Debug, Clone, Default)]
-pub struct Origin {
-    /// `(name, SHA-256)` of every input file, in the order of the files of the table.
-    pub inputs: Vec<(String, String)>,
-    /// How each input was acquired (meta `columns`, same order as `inputs`); empty when not read.
-    pub facts: Vec<FileFacts>,
-    /// SHA-256 of the `campioni/1` document of the series (meta `samples`), when there is one.
-    pub samples: Option<String>,
-    /// `(step, seconds)`; leave empty to get the same bytes in two runs.
-    pub times: Vec<(String, f64)>,
-}
-
 /// A column of a container: a slice of one of the types of the format.
 #[derive(Clone, Copy)]
 enum Col<'a> {
@@ -64,9 +46,6 @@ enum Col<'a> {
     U8(&'a [u8]),
     I8(&'a [i8]),
 }
-
-/// Elements converted and written at a time (the buffer of a write is at most `PIECE * 8` bytes).
-pub(crate) const PIECE: usize = 8192;
 
 macro_rules! put_le {
     ($seq:expr_2021, $v:expr_2021) => {
@@ -107,25 +86,6 @@ impl Col<'_> {
             }
         }
         Ok(())
-    }
-}
-
-/// A section that is written in pieces and whose length is known beforehand (the `evid` graph: tens of MB that never exist as one buffer).
-pub trait Section {
-    fn len(&self) -> usize;
-    fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-    /// Gives the bytes, in order, to `put`; they must add up to `len()`.
-    fn emit(&mut self, put: &mut dyn FnMut(&[u8]) -> Result<()>) -> Result<()>;
-}
-
-impl Section for &[u8] {
-    fn len(&self) -> usize {
-        <[u8]>::len(self)
-    }
-    fn emit(&mut self, put: &mut dyn FnMut(&[u8]) -> Result<()>) -> Result<()> {
-        put(self)
     }
 }
 
