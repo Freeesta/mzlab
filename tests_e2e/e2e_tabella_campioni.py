@@ -1,3 +1,4 @@
+# (CI probe: does this test pass on main?)
 # e2e_tabella_campioni: the sample table of Data (synthetic data) - headers with room (Time + its unit select, Size), file names not underlined, a header with only the count,
 # ONE toolbar row (count, Columns, Groups, download, Remove all), the last column always in view (also in a narrow window), the download icon with a menu of the two formats,
 # «Remove all files» with a confirmation, and «Back to work!» right under the toolbar of the work area (no blank band, desktop and narrow)
