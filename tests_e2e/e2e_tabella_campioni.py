@@ -62,7 +62,7 @@ try:
             assert pg.evaluate("CONV.compression") == "smallest"
         step("a format of the menu saves with that compression", pick_numpress)
         def gap(w):
-            pg.set_viewport_size({"width": w, "height": 900}); pg.evaluate("S.adding = true; syncWork()"); frames(pg, 4)
+            pg.set_viewport_size({"width": w, "height": 900}); pg.evaluate("STATO.aggiunta(true, 'test'); applyView(); scrollTo(0, 0)"); frames(pg, 4)
             g = pg.evaluate("document.getElementById('backwork').getBoundingClientRect().top - document.getElementById('tools').getBoundingClientRect().bottom")
             assert 0 <= g < 40, (w, "blank band between the toolbar and «Back to work!»", g)
         step("«Back to work!» sits right under the toolbar (1400 px)", lambda: gap(1400))
