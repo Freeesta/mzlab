@@ -97,7 +97,7 @@ try:
             pg.evaluate("BARRA.show('file',{noFocus:true,instant:true}); document.getElementById('samptab').click()")
             wait_for_js(pg, "(t => !!t && t.offsetWidth > 0)(document.querySelector('#flist .ldtab'))", 20000); frames(pg, 2)
             fw = pg.evaluate("(t => [...t.rows[0].cells].find(c => /^File$/.test(c.textContent.trim())).offsetWidth)(document.querySelector('#flist .ldtab'))")
-            pg.evaluate("document.getElementById('samptab').click()")                   # back to the charts: the toggle is left as found
+            pg.evaluate("document.getElementById('backwork').click()")                   # back to the charts: «Back to work!»
             pg.evaluate("BARRA.show('calc',{noFocus:true,instant:true})"); wait_for_js(pg, "document.querySelector('#al-tabs').offsetWidth > 0", 20000); frames(pg, 2)
             tabs = pg.evaluate("(a => [a.clientWidth, a.scrollWidth])(document.querySelector('#al-tabs'))")
             pg.evaluate("BARRA.close()"); pg.set_viewport_size({"width": 1180, "height": 820}); wait_for_js(pg, "innerWidth === 1180")

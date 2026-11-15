@@ -195,7 +195,7 @@ class Throttle:
 
 
 CLICKS = [("nav-draw", "#nav button[data-v=draw]"), ("nav-data", "#nav button[data-v=data]"), ("settings", "#np-set"), ("settings-close", "Escape"),
-          ("sample-table", "#samptab"), ("sample-back", "#samptab"), ("file-row", "#flst .fl .nm >> nth=0")]
+          ("sample-table", "#samptab"), ("sample-back", "#backwork"), ("file-row", "#flst .fl .nm >> nth=0")]
 CLICK_DATA = """t => ({ ev: __v.ev.filter(e => e[0] >= t - 50), lt: __v.lt.filter(e => e[0] >= t - 50),
   res: performance.getEntriesByType('resource').filter(e => performance.timeOrigin + e.startTime >= t).map(e => [e.name.replace(location.origin, ''), Math.round(e.duration), e.decodedBodySize]) })"""
 

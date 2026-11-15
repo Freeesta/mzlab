@@ -125,7 +125,7 @@ function draw() {
 <div id="manint-b" class="manint-wrap" tabindex="0" role="region" aria-labelledby="manint-h" aria-describedby="manint-d"${raw(open ? "" : " hidden")}><table class="qq-tab">
 <thead><tr>${raw(ths)}<th scope="col"><span class="sr-only">${t("canali.manint.h.act")}</span></th></tr></thead><tbody>${raw(trs)}</tbody></table></div>`;
   const ws = document.getElementById("v-workspace");
-  el.hidden = !(ws && (ws.dataset.work === "panels" || ws.dataset.work === "table"));
+  el.hidden = !(ws && ws.dataset.work === "panels");
   const tg = /** @type {HTMLElement} */ (el.querySelector(".manint-tg")), bx = /** @type {HTMLElement} */ (el.querySelector("#manint-b"));
   tg.addEventListener("click", () => { const v = bx.hidden; bx.hidden = !v; tg.setAttribute("aria-expanded", String(v)); setOpen(v); });
   el.querySelector("[data-dl]")?.addEventListener("click", () => G.dl("manual-integrations.csv", st.csv, "text/csv", { table: "manint" }));
@@ -190,7 +190,7 @@ async function sync() {
   } else {
     st.recs = recs;
     const el = card(), ws = document.getElementById("v-workspace");
-    if (el && st.csv) el.hidden = !(ws && (ws.dataset.work === "panels" || ws.dataset.work === "table"));
+    if (el && st.csv) el.hidden = !(ws && ws.dataset.work === "panels");
   }
 }
 
