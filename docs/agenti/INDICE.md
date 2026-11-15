@@ -170,3 +170,4 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` |
 | specifica binaria (area: lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`)) | `docs/agenti/wiff_specifica_completa.md` |
 | scarto con segno dopo l'm/z o la formula nella finestra «Estrai ioni» (`288.2+16`), `split_offset`, `mzlab-cli ion-mz`, `err.formula.offset`, `err.formula.mzLow`; campi «m/z da / a» e coppie m/z / RT (`xic-bordi.js`, `ctl.range.order`); `tabNuovo`, `msg.noFiles` | `docs/agenti/xic-scarto.md` |
+| TIC provvisorio: zoom/spostamento dell'asse RT mentre l'indice si costruisce, passaggio della finestra al primo pannello | `docs/agenti/tic-provvisorio.md` |

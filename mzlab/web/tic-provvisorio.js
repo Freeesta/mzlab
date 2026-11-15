@@ -54,7 +54,7 @@ const cvEl = () => /** @type {HTMLCanvasElement | null} */ (box && box.querySele
 let frame = 0, said = 0;
 function redraw() {
   if (frame) return;
-  frame = requestAnimationFrame(() => { frame = 0; const cv = cvEl(), t = tics.get(shownKey); if (cv && t && !(box && box.hidden)) draw(cv, t); });
+  frame = FRAME.next(() => { frame = 0; const cv = cvEl(), t = tics.get(shownKey); if (cv && t && !(box && box.hidden)) draw(cv, t); });
 }
 /** the window of the same rules as the panels (grafici.js clampView): the whole trace gives null, never narrower than 0.2 % of it */
 function setView(/** @type {number} */ z0, /** @type {number} */ z1) {
