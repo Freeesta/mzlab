@@ -101,6 +101,13 @@ function tableToView() {
   h.focus({ preventScroll: true });
 }
 workQ("#samptab").onclick = tableToView;
+// a click on a file (side list or name in the table) leaves the one page for the panels: the file's own handler shows it, the state follows
+const leavePage = (/** @type {MouseEvent} */ e) => {
+  if (!S.adding || !S.sess || !/** @type {HTMLElement} */ (e.target).closest(".fl:not(.up):not(.pr), [data-open]")) return;
+  STATO.aggiunta(false, "open-file"); queueMicrotask(() => applyView());
+};
+workQ("#flst").addEventListener("click", leavePage, true);
+workQ("#flist").addEventListener("click", leavePage, true);
 
 // the provisional TIC (tic-provvisorio.js) is loaded at the first scan table with its TIC, not at start-up; the events of the wait are handed over
 { /** @type {any[] | null} */ let q = null;
