@@ -54,6 +54,39 @@ def cancel_hides():
     finally:
         r.close()
 step("«Cancel» during the index takes the provisional TIC away and opens nothing", cancel_hides)
+def zoom_handover(key_path):
+    r = Run(port=8855 + key_path, wd=f"/tmp/wd_tic_provvisorio{3 + key_path}")
+    try:
+        with sync_playwright() as p:
+            pg = r.page(p)
+            pg.wait_for_selector("#start:not([hidden])", timeout=60000)
+            pg.evaluate(WATCH, False)
+            pg.set_input_files("#pick", [f])
+            wait_for_js(pg, "window.__tp !== null", 120000)
+            full = pg.evaluate("TICPROV.window()")
+            box = pg.locator("#ticprov-cv").bounding_box()
+            if key_path:
+                pg.focus("#ticprov-cv"); pg.keyboard.press("+"); pg.keyboard.press("+"); pg.keyboard.press("ArrowRight")
+            else:
+                pg.mouse.move(box["x"] + box["width"] * 0.5, box["y"] + 60)
+                pg.keyboard.down("Control"); pg.mouse.wheel(0, -600); pg.keyboard.up("Control")
+                pg.mouse.move(box["x"] + 200, box["y"] + 60); pg.mouse.down(); pg.mouse.move(box["x"] + 240, box["y"] + 60, steps=4); pg.mouse.up()
+            wait_for_js(pg, "TICPROV.window()[1] - TICPROV.window()[0] > 0", 5000)
+            win = pg.evaluate("TICPROV.window()")
+            assert win[1] - win[0] < (full[1] - full[0]) * 0.95, ("the axis range did not change", full, win)
+            wait_for_js(pg, "document.getElementById('ticprov-w').textContent.length > 0", 5000)
+            if not key_path:
+                pg.dblclick("#ticprov-cv"); back = pg.evaluate("TICPROV.window()")
+                assert abs(back[0] - full[0]) < 1e-9 and abs(back[1] - full[1]) < 1e-9, ("double click did not reset", back)
+                pg.focus("#ticprov-cv"); pg.keyboard.press("+"); pg.keyboard.press("+"); win = pg.evaluate("TICPROV.window()")
+            open_first(pg); ready(pg)
+            z = pg.evaluate("(E.panels.find(q => q.type === 'chrom') || {}).zoom")
+            assert z and abs(z[0] - win[0]) < 1e-6 and abs(z[1] - win[1]) < 1e-6, ("the first panel did not open on the chosen window", win, z)
+            assert not [e for e in r.errs if e[0] == "pageerror"], r.errs
+    finally:
+        r.close()
+step("wheel zoom, drag and double click on the provisional TIC; the first panel opens on that window", lambda: zoom_handover(0))
+step("keyboard zoom and pan on the provisional TIC; the first panel opens on that window", lambda: zoom_handover(1))
 shutil.rmtree(d, ignore_errors=True)
 print("\nSTEPS"); [print(" ", s) for s in steps]
 if any(s[1] != "ok" for s in steps): sys.exit(1)

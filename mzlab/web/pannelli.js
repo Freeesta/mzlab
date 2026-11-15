@@ -288,6 +288,8 @@ function addPanel(type, o, after) {
     p.tl = o.tl ?? true;  // the chromatograms of a view are linked by default (one panel can be unlinked)
     const mate = p.tl && o.zoom === undefined ? E.panels.find((/** @type {Pannello} */ q) => q.tl && q.tab === p.tab && q.type !== "spec" && q.type !== "map" && q.zoom) : null;
     if (mate) p.zoom = /** @type {[number, number]} */ ([...mate.zoom]);
+    // the window zoomed on the provisional TIC (tic-provvisorio.js) goes to the first panel; the others of the view follow it (the link above)
+    else if (o.zoom === undefined && type !== "mrm") { const w = /** @type {any} */ (window).TICPROV?.handover?.(); if (w) p.zoom = w; }
   }  // linked time axis
   if (type === "chrom") p.ms2tri = !!o.ms2tri;  // triangles of the MS2 scans on the survey chromatogram
   if (type === "xic") p.adduct = o.adduct || defAdduct();
