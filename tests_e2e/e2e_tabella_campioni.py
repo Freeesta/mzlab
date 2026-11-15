@@ -45,7 +45,7 @@ try:
                 for sel in ("[data-rm]",):
                     ok = pg.evaluate("""s => { const f = document.getElementById('flist').getBoundingClientRect();
                         return [...document.querySelectorAll('#flist ' + s)].every(b => { const r = b.getBoundingClientRect(); return r.right <= f.right + 1 && r.left >= f.left && r.width >= 24 && r.height >= 24; }); }""", sel)
-                    assert ok, (w, "the remove button is clipped")
+                    assert ok, (w, "the remove button is clipped", pg.evaluate("""s => { const f = document.getElementById('flist').getBoundingClientRect(); return [f.left, f.right, [...document.querySelectorAll('#flist ' + s)].map(b => { const r = b.getBoundingClientRect(); return [r.left, r.right, r.width, r.height]; })]; }""", sel))
             pg.set_viewport_size({"width": 1400, "height": 900}); frames(pg, 3)
         step("the × of every row is always in view (1400, 900, 600 px)", last_column)
         def menu():

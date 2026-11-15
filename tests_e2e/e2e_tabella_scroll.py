@@ -30,13 +30,22 @@ try:
         pg.goto(f"http://127.0.0.1:{r.port}/?lang=en")
         pg.wait_for_selector("#drop"); wait_for_js(pg, "window.qqReady === true", 60000)
         pg.set_viewport_size({"width": 1366, "height": 800}); pg.set_input_files("#pick", FILES); open_first(pg); ready(pg)
+        def show_button():
+            """the side panel follows the window width with a delay: the button counts when it is visible on two reads ten frames apart"""
+            for _ in range(8):
+                if pg.is_visible("#samptab"):
+                    frames(pg, 10)
+                    if pg.is_visible("#samptab"): return
+                else: pg.click("#sb-toggle"); ready(pg)
+            raise AssertionError(pg.evaluate("[innerWidth, document.getElementById('v-workspace').dataset.work, document.getElementById('samptab').hidden]"))
         def cycle(w):
             pg.set_viewport_size({"width": w, "height": 800}); ready(pg)
-            if pg.is_hidden("#samptab"): pg.click("#sb-toggle"); ready(pg)      # a narrow window keeps the side panel closed
+            show_button()      # a narrow window keeps the side panel closed
             assert pg.is_visible("#samptab"), "the button is visible"
             assert pg.get_attribute("#samptab", "aria-pressed") is None
             ids = pg.evaluate("E.panels.map(p => p.id).join()")
             pg.evaluate("scrollTo(0, 30)"); ready(pg); y0 = pg.evaluate("scrollY")
+            show_button()      # the scroll may have closed the sheet of a narrow window
             pg.click("#samptab"); y1 = settle(pg)
             assert pg.evaluate("document.getElementById('v-workspace').dataset.work") == "add", "the one page"
             assert pg.is_visible("#start") and pg.is_visible("#wtable"), "drop area and table on the same page"
@@ -66,7 +75,7 @@ try:
         step("keyboard: Enter on the button, Esc back to the work", keyboard)
         def reduced():
             pg.emulate_media(reduced_motion="reduce"); pg.evaluate("scrollTo(0, 30)")
-            if pg.is_hidden("#samptab"): pg.click("#sb-toggle"); ready(pg)
+            show_button()
             pg.click("#samptab"); pg.wait_for_selector("#wtable", state="visible"); frames(pg, 3)
             assert pg.evaluate(TOP) < 400, "reduced motion: scrolled at once"
         step("reduced motion: the scroll is instant", reduced)
