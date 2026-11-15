@@ -341,13 +341,13 @@ async function fetchDemo(/** @type {string[]} */ names,/** @type {AbortSignal} *
       CONVROWS.set(n,"wait",40);CONVROWS.base(n,40);out.push(new File(parts,n))}}
   catch(e_){const e=/** @type {Lanciato} */(e_);if(signal.aborted)names.forEach(n=>CONVROWS.finish(n,"cancel"));else{names.forEach(n=>CONVROWS.drop(n));fail(I18N.t("load.demo.error",{message:e.message}))}return []}
   return out}
-// `demo`: names of example files still to download (static/esempi): their rows are in the list at once, in order, and the download is the first part of each row
-/** @param {FileCarica[]} files @param {string} into @param {string[]} [demo] */
 // the names of this drop that are in the list as «Waiting for engine» rows (waitRows); the batch drops the ones it does not keep (keep) or does not use under that name (upload)
 const PRE=/** @type {string[]} */ ([]);
 function waitRows(/** @type {string[]} */ names){const out=/** @type {string[]} */ ([]);
   for(const n of names){if(out.includes(n)||CONVROWS.find(n)||ST.files.some((/** @type {FileRiga} */ g)=>g.name===n)||INFLIGHT.has(n))continue;CONVROWS.add(n,"engine");out.push(n)}
   return out}
+// `demo`: names of example files still to download (static/esempi): their rows are in the list at once, in order, and the download is the first part of each row
+/** @param {FileCarica[]} files @param {string} into @param {string[]} [demo] */
 async function upload(files,into,demo){let pre=/** @type {string[]} */ ([]);
   // before the engine is ready the files are in the side list at once, «Waiting for engine»; the normal path takes the same rows over (no row goes and comes back)
   if(typeof AVVIO!=="undefined"&&AVVIO.stato==="pending"){pre=waitRows(demo||files.map(f=>f.name));
