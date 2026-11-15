@@ -352,9 +352,12 @@ function waitRows(/** @type {string[]} */ names){const out=/** @type {string[]} 
 async function upload(files,into,demo){let pre=/** @type {string[]} */ ([]);
   // before the engine is ready the files are in the side list at once, «Waiting for engine»; the normal path takes the same rows over (no row goes and comes back)
   if(typeof AVVIO!=="undefined"&&AVVIO.stato==="pending"){pre=waitRows(demo||files.map(f=>f.name));
-    if(!(await AVVIO.pronto())){pre.forEach(n=>AVVIO.stato==="failed"?CONVROWS.finish(n,"fail",{msg:AVVIO.errore||""}):CONVROWS.drop(n));return}
+    // a loading under way for the work area (hint of the empty list gone with the first row, no jump when the engine is ready)
+    if(pre.length){UPBUSY++;syncWork()}
+    const ok=await AVVIO.pronto(pre.length>0);if(pre.length)UPBUSY--;
+    if(!ok){syncWork();pre.forEach(n=>AVVIO.stato==="failed"?CONVROWS.finish(n,"fail",{msg:AVVIO.errore||""}):CONVROWS.drop(n));return}
     pre.forEach(n=>CONVROWS.skip.has(n)||CONVROWS.set(n,"wait",null));
-    if(CONVROWS.skip.size){const sk=CONVROWS.skip;CONVROWS.skip=new Set();if(demo)demo=demo.filter(n=>!sk.has(n));else files=files.filter(f=>!sk.has(f.name));if(!(demo||files).length)return}
+    if(CONVROWS.skip.size){const sk=CONVROWS.skip;CONVROWS.skip=new Set();if(demo)demo=demo.filter(n=>!sk.has(n));else files=files.filter(f=>!sk.has(f.name));if(!(demo||files).length){syncWork();return}}
     PRE.push(...pre)}
   else if(typeof AVVIO!=="undefined"&&!(await AVVIO.pronto()))return;
   const box=$("#up");fail();
