@@ -97,6 +97,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | warm page loads: navigation preload and the `?nav=cache` switch of the service worker measured against main (RTT, CPU, restarted SW, loads until a deploy shows; `tests_e2e/misura_avvio_sw.py --varianti`) | `docs/agenti/misure-navigazione.md` |
 | first package before the site is usable: bytes and requests per milestone, critical chain, 10 biggest files, landing-page comparison, trace split, 8 candidate reductions (`tests_e2e/misura_payload.py`) | `docs/agenti/misure-primo-pacchetto.md` |
 | misure Rust e dei moduli (area: misure dei motori, validazione delle esportazioni (mzTab-M), clic…) | `docs/agenti/misure-rust.md` |
+| caricamento di un mzML in una passata (copia in OPFS e indice dagli stessi byte): limite, spike spento `una-passata.js`, disegno (`tests_e2e/misura_una_passata.py`, `build_mzml_streamed`) | `docs/agenti/misure-una-passata.md` |
 | lettori dei produttori, `.raw`, `.wiff`, `.D` (area: tabella cumulativa dei guadagni di velocità (data · PR · passo ·…) | `docs/agenti/misure-velocita-raw.md` |
 | tabella cumulativa dei guadagni di velocità del caricamento del sito (pagina, primo paint, lotti di file, elenco laterale, «Togli tutti», primo file di un lotto) | `docs/agenti/misure-velocita-sito.md` |
 | tabella cumulativa dei guadagni di velocità (data · PR · passo · prima · dopo · %) | `docs/agenti/misure-velocita.md` |
