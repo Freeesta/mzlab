@@ -266,3 +266,54 @@ def test_browser_fail_action_button_on_engine_start_error():
     assert res["msgText"] == "load.err.engineStart"
     assert res["segnalaCalled"] is True
 
+
+
+def test_reset_opfs_parallel_deadline_and_errors():
+    code = f"""
+    global.window = global;
+    const calls = {{ ok: 0, flaky: 0, stuck: 0 }};
+    const nm = () => {{ const e = new Error('x'); e.name = 'NoModificationAllowedError'; return e; }};
+    const root = {{
+      entries: async function* () {{ yield ['ok', {{}}]; yield ['flaky', {{}}]; yield ['stuck', {{}}]; }},
+      removeEntry: async (n) => {{
+        calls[n]++;
+        if (n === 'flaky' && calls.flaky <= 2) throw nm();
+        if (n === 'stuck') {{ await new Promise(r => setTimeout(r, 300)); throw nm(); }}
+      }}
+    }};
+    Object.defineProperty(global, 'navigator', {{ value: {{ storage: {{ getDirectory: async () => root }} }}, configurable: true }});
+    global.localStorage = {{ clear() {{}}, removeItem() {{}} }};
+    global.sessionStorage = {{ clear() {{}}, setItem() {{}}, getItem() {{ return null; }}, removeItem() {{}} }};
+    global.location = {{ href: 'https://example.com/mzlab/', replace() {{}} }};
+    global.NOMI = {{ DB: 'a', DB_OLD: 'b', KEY: k => 'mzlab.' + k, OLD_KEY: k => 'qqq.' + k }};
+    global.I18N = {{ t: k => k }};
+    global.document = {{ getElementById() {{ return null; }} }};
+    eval(fs.readFileSync({json.dumps(str(WEB / "reset.js"))}, 'utf8'));
+    window.QQRESET.opfsMs = 1000;
+    const t0 = Date.now();
+    await window.QQRESET.wipe('all');
+    const rep = window.QQRESET.last;
+    console.log(JSON.stringify({{ calls, opfs: rep.opfs.sort(), errors: rep.errors, ms: Date.now() - t0 }}));
+    """
+    res = run_node(code)
+    assert res["calls"]["ok"] == 1 and res["calls"]["flaky"] == 3 and res["calls"]["stuck"] >= 2
+    assert res["opfs"] == ["flaky", "ok"]
+    assert res["errors"] == ["opfs stuck: timeout"]
+    assert res["ms"] < 1000 + 1500
+
+
+def test_reset_opfs_listing_failure_is_reported():
+    code = f"""
+    global.window = global;
+    Object.defineProperty(global, 'navigator', {{ value: {{ storage: {{ getDirectory: async () => {{ const e = new Error('x'); e.name = 'SecurityError'; throw e; }} }} }}, configurable: true }});
+    global.localStorage = {{ clear() {{}}, removeItem() {{}} }};
+    global.sessionStorage = {{ clear() {{}}, setItem() {{}}, getItem() {{ return null; }}, removeItem() {{}} }};
+    global.location = {{ href: 'https://example.com/mzlab/', replace() {{}} }};
+    global.NOMI = {{ DB: 'a', DB_OLD: 'b', KEY: k => 'mzlab.' + k, OLD_KEY: k => 'qqq.' + k }};
+    global.I18N = {{ t: k => k }};
+    global.document = {{ getElementById() {{ return null; }} }};
+    eval(fs.readFileSync({json.dumps(str(WEB / "reset.js"))}, 'utf8'));
+    await window.QQRESET.wipe('all');
+    console.log(JSON.stringify({{ errors: window.QQRESET.last.errors }}));
+    """
+    assert run_node(code)["errors"] == ["opfs: SecurityError"]
