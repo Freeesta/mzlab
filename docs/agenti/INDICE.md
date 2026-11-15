@@ -89,6 +89,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | metriche di main nel tempo (`tools/metriche.py`, ramo `stat-ci`, tendenze) | `docs/agenti/metriche.md` |
 | caricamento della pagina (FCP, LCP, motore pronto, KB prima del paint per scenario; `tests_e2e/misura_primo_paint.py`); primo file contro dieci file, `rotte`, `thermo`, memoria (`misura_caricamento.py --scenarios`) | `docs/agenti/misure-caricamento.md` |
 | V8 and wasm code cache of the site's scripts under the service worker: trace of main (0 hits), control page (which SW answers Chromium code-caches), S3 spike (headers stored with the copy) and upper bound (`tests_e2e/misura_avvio_sw.py`) | `docs/agenti/misure-code-cache.md` |
+| primo file di un lotto: cancello delle copie del sito (`createCopyGate`, `?copie=N`), K copie insieme, primo grafico e lotto intero con 10 e 50 file, memoria; verdetti del percorso critico (`rotte`, `thermo`, dieci file) | `docs/agenti/misure-copie.md` |
 | Misure: diario (NON LEGGERE) [titolo del file] | `docs/agenti/misure-diario.md` |
 | formati di ingresso del Flow (area: misure dei motori, validazione delle esportazioni (mzTab-M), clic…) | `docs/agenti/misure-formati.md` |
 | costo del disegno dei cromatogrammi su tracce dense (`tools/bench_charts.py`: 10^6 punti, 20 file, rotella, trascinamento, ridimensionamento, linea); tabella HR di 100 000 righe nella «Statistica» (`tools/bench_table_hr.py`: KMD, clic, «Dati») | `docs/agenti/misure-grafici.md` |
@@ -97,6 +98,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | misure Rust e dei moduli (area: misure dei motori, validazione delle esportazioni (mzTab-M), clic…) | `docs/agenti/misure-rust.md` |
 | caricamento di un mzML in una passata (copia in OPFS e indice dagli stessi byte): limite, spike spento `una-passata.js`, disegno (`tests_e2e/misura_una_passata.py`, `build_mzml_streamed`) | `docs/agenti/misure-una-passata.md` |
 | lettori dei produttori, `.raw`, `.wiff`, `.D` (area: tabella cumulativa dei guadagni di velocità (data · PR · passo ·…) | `docs/agenti/misure-velocita-raw.md` |
+| tabella cumulativa dei guadagni di velocità del caricamento del sito (pagina, primo paint, lotti di file, elenco laterale, «Togli tutti», primo file di un lotto) | `docs/agenti/misure-velocita-sito.md` |
 | tabella cumulativa dei guadagni di velocità (data · PR · passo · prima · dopo · %) | `docs/agenti/misure-velocita.md` |
 | misure dei motori, validazione delle esportazioni (mzTab-M), clic del flusso Tabui e della rete | `docs/agenti/misure.md` |
 | record della struttura chimica `mol/1` (`crates/mzlab-mol`: tipi, JSON, hash del nucleo; lettori SMILES/molfile; descrittori CIP R/S ed E/Z, `cip/1`, `disegno-cip.js`) | `docs/agenti/mol.md` |
