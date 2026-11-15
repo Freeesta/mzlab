@@ -3,7 +3,7 @@
 
 use super::space::candidates;
 use super::{Cand, MsnTree};
-use crate::legacy::fragtree::{fmt, vec_of};
+use crate::finder_base::fragtree::{fmt, vec_of};
 use crate::sortc::SortC;
 
 /// One formula of the library.

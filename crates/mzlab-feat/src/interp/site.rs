@@ -9,8 +9,8 @@ use mzlab_core::elements::{self, Formula};
 
 use crate::chem::graph::Mol;
 use crate::chem::positions::{self, Class, Peak, Pol, Report, Site, Tol};
-use crate::legacy::fragtree::Graph;
-use crate::legacy::msn::localize::default_groups_en;
+use crate::finder_base::fragtree::Graph;
+use crate::finder_base::msn::localize::default_groups_en;
 
 /// Tolerance of the matching of the fragments with the cleavages, ppm (HR spectra).
 pub const MATCH_PPM: f64 = 10.0;

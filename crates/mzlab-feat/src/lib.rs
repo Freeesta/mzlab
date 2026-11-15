@@ -29,7 +29,7 @@ pub mod dia;
 pub mod drift;
 pub mod evid;
 pub mod export;
-#[cfg(feature = "legacy")]
+#[cfg(any(feature = "legacy", feature = "interp"))]
 pub mod export_inclusion;
 #[cfg(feature = "interp")]
 pub mod export_inclusion_tp;
@@ -40,6 +40,8 @@ pub mod famalign;
 pub mod family;
 pub mod famrecord;
 pub mod filters;
+#[cfg(any(feature = "legacy", feature = "interp"))]
+pub mod finder_base;
 pub mod filters_blank;
 pub mod filters_nts;
 pub mod flow_drift;
@@ -94,7 +96,7 @@ pub mod params_height;
 pub mod params_unit;
 pub mod pipeline;
 mod pipeline_steps;
-#[cfg(feature = "legacy")]
+#[cfg(any(feature = "legacy", feature = "interp"))]
 pub mod polpair;
 mod post;
 pub mod prof;
@@ -107,7 +109,7 @@ pub mod regulatory;
 pub mod report;
 pub mod resolve;
 pub mod netarcs;
-#[cfg(feature = "legacy")]
+#[cfg(any(feature = "legacy", feature = "interp"))]
 pub mod network;
 pub mod row;
 pub mod rowident;

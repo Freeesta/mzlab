@@ -5,7 +5,7 @@ use mzlab_core::json::{round, Out};
 use super::super::localize::Localization;
 use super::super::{MsnTree, Node};
 use super::{opt_str, rounded};
-use crate::legacy::fragtree::{loss_mass, loss_str, vec_of, COMPARE_NONE, MIN_REL};
+use crate::finder_base::fragtree::{loss_mass, loss_str, vec_of, COMPARE_NONE, MIN_REL};
 
 /// One node of `frag_tree`.
 struct FNode {

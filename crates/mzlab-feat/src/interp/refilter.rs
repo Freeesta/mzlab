@@ -12,7 +12,7 @@ use super::filters::{
     TOL_MAX, TOL_MIN,
 };
 use super::store;
-use crate::legacy::series::Hyp;
+use crate::finder_base::series::Hyp;
 use crate::store_read::read_table_from;
 use crate::tp::{ST_PARENT, ST_TP, ST_UNEXPLAINED};
 

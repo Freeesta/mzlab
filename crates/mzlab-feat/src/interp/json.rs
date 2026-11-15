@@ -6,7 +6,7 @@ use mzlab_core::json::{round, Out};
 use super::build::{Output, RowInterp};
 use super::filters::{Registry, STAGES};
 use super::{ms2link, SCHEMA, VERSION};
-use crate::legacy::series::Parent;
+use crate::finder_base::series::Parent;
 
 fn pair(o: &mut Out, obs: f64, exp: f64) {
     o.raw("{\"obs\":")
@@ -16,7 +16,7 @@ fn pair(o: &mut Out, obs: f64, exp: f64) {
         .raw("}");
 }
 
-fn spectrum(o: &mut Out, c: &crate::legacy::ms2::Consensus) {
+fn spectrum(o: &mut Out, c: &crate::finder_base::ms2::Consensus) {
     o.raw("{\"mz\":")
         .rounded(&c.mz, 4)
         .raw(",\"rel\":")

@@ -28,12 +28,13 @@ attributio = ["dep:mzlab-lib", "chem"]
 flow_formula = ["attributio", "mzlab-lib/flow"]
 # `untargeted`: detection of the features from the raw data after the algorithms of mzmine 3.9.0 (`src/untargeted/`), rewritten from scratch. Off by default.
 untargeted = []
-# `legacy`: the engine of mzFinder (`src/legacy/`: the low-resolution Dig, the rules, the identity graph, the MSn tree) and the modules that read it
-# (`polpair`, `export_inclusion`) or are used only beside it (`network`). On by default; `interp`, the `.wasm` `finder-lr` and the finder features
-# of `mzlab-feat-wasm` turn it on, so the `.wasm` that build without the default features do not compile it.
+# `legacy`: the engine of mzFinder (`src/legacy/`: the Dig, the low-resolution Dig, the rules), on top of `finder_base` (the fragmentation and MSn
+# trees, the MS2, the identity graph), which comes with `legacy` or `interp` like `network`, `polpair` and `export_inclusion`.
+# On by default; the `.wasm` `finder-lr` and the finder features of `mzlab-feat-wasm` turn it on, so the `.wasm` that build without the default
+# features do not compile it.
 legacy = []
 # `interp`: the interpretation of each row of the feature table of the products (`interp/1`, `filtri/1`; `docs/agenti/interp.md`). Off by default; the `.wasm` `interp` carries it.
-interp = ["chem", "legacy"]
+interp = ["chem"]
 # `figura`: the static figure (SVG) and the stand-alone HTML of a fragmentation graph `msngrafo/1` (`msnfigura`; the molecule of the root read by `mzlab-mol`). Off by default; the CLI and the `.wasm` `msnfigura` carry it.
 figura = ["dep:mzlab-mol"]
 

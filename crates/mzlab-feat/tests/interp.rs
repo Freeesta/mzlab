@@ -2,14 +2,14 @@
 //! comparison with the tree, the calibration and the registry of the filters, and the block in the `.mzfeat` (written, read by row, replaced).
 
 use mzlab_core::elements::parse_formula;
+use mzlab_feat::finder_base::ms2::Consensus;
+use mzlab_feat::finder_base::series::Hyp;
 use mzlab_feat::interp::comparison::by_formula;
 use mzlab_feat::interp::edit::{candidates, diff, iso_check, label};
 use mzlab_feat::interp::filters::{calibrate, first_hidden, out_of_tolerance, RowFacts};
 use mzlab_feat::interp::ms2link::{interpolate, parse_filter, pearson, separate, Isomers, Ms2Scan};
 use mzlab_feat::interp::store::{append, read_meta, read_row};
 use mzlab_feat::interp::tree::{states, LibNode};
-use mzlab_feat::legacy::ms2::Consensus;
-use mzlab_feat::legacy::series::Hyp;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::store::{read_table, write_table, Origin};
 use mzlab_feat::table::Aligned;
