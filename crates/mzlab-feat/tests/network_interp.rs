@@ -2,13 +2,13 @@
 //! a dehydrogenation without, a row with no modification) and the arcs they give.
 
 use mzlab_core::elements::{mass, parse_formula};
+use mzlab_feat::finder_base::ms2::Consensus;
+use mzlab_feat::finder_base::series::Parent;
 use mzlab_feat::hypo::Rules;
 use mzlab_feat::interp::comparison::VsParent;
 use mzlab_feat::interp::edit::Candidate;
 use mzlab_feat::interp::ms2link::{Isomers, Pooled};
 use mzlab_feat::interp::RowInterp;
-use mzlab_feat::legacy::ms2::Consensus;
-use mzlab_feat::legacy::series::Parent;
 use mzlab_feat::network::{build, rows_from_interp, NetworkParams};
 use mzlab_feat::table::Aligned;
 use mzlab_feat::tp::{TpBlock, KIN_PROBABLE, ST_PARENT, ST_TP};
