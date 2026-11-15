@@ -187,7 +187,7 @@ impl State {
                 eng.lr_slot.clear();
                 eng.labs.clear();
                 eng.labs_sig = None;
-                self.store.lock().unwrap_or_else(|e| e.into_inner()).clear();
+                self.store.lock().unwrap_or_else(|e| e.into_inner()).clear_scope(p);
                 for (name, _) in index_list(&*self.indexer()?) {
                     self.indexer()?.remove(&name);
                 }

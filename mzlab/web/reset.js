@@ -94,17 +94,23 @@ const RESET = (function () {
     window.QQRESET.last = rep;
     return rep;
   }
-  // wipe, then load the page again from the network without the ?reset parameter; ?riparti=1 makes the new engine delete saved files itself when a database was blocked; ?ripn=<nonce> tells browser.js that this page follows a reset (see isolateOnce)
+  // what the new page's engine must finish (browser.js → lr.reset): "1" everything (all, cold), "file" what «Files» removes, keeping what it keeps (qqq-db.js RESET_FILES).
+  // «Files» needs it when this page could not: a database blocked by another connection, an OPFS folder still held (a sync handle of an index build, a conversion,
+  // another tab), or the desktop app, whose files and notebook are in the native store (store.rs), out of this page's reach
+  const backstop = (mode, rep) => mode !== "files" ? "1" : rep.blocked.length || rep.errors.some(e => /^opfs\b/.test(e)) || window.MZLAB_DESKTOP ? "file" : "";
+  // wipe, then load the page again from the network without the ?reset parameter; ?riparti (backstop) makes the new engine finish the deletion; ?ripn=<nonce> tells browser.js that this page follows a reset (see isolateOnce)
   async function run(mode, opt = {}) {
     // "files" keeps the notebook (drawing...): its last change is saved first, because from here on the page may not save any more (explore.js nbSave)
     if (mode === "files" && typeof nbSave === "function") await wait(Promise.resolve(nbSave(true)), 3000);
     window.QQ_RESETTING = true;
     const msg = document.getElementById("ldmsg"); if (msg && window.I18N) msg.textContent = I18N.t("reset.busy");
+    // «Files» in the desktop app is the same run: the wipe empties sessionStorage, and without the mark the reloaded page would be a new run (cold: notebook and lists gone)
+    let inRun = false; try { inRun = !!sessionStorage.getItem(RUN_KEY); } catch (e) { /* none */ }
     let rep;
     try { rep = await wipe(mode); } catch (e) { window.QQ_RESETTING = false; throw e; }
-    if (opt.mark) { try { sessionStorage.setItem(RUN_KEY, "1"); } catch (e) { /* none */ } }
+    if (opt.mark || (mode === "files" && inRun)) { try { sessionStorage.setItem(RUN_KEY, "1"); } catch (e) { /* none */ } }
     if (opt.reload === false) return rep;
-    const u = new URL(location.href); if (mode === "all") { u.search = "?riparti=1&ripn=" + Date.now().toString(36); u.hash = ""; } else { u.searchParams.delete("reset"); u.searchParams.delete("riparti"); if (rep.blocked.length || mode !== "files") u.searchParams.set("riparti", "1"); }
+    const u = new URL(location.href); if (mode === "all") { u.search = "?riparti=1&ripn=" + Date.now().toString(36); u.hash = ""; } else { u.searchParams.delete("reset"); u.searchParams.delete("riparti"); const back = backstop(mode, rep); if (back) u.searchParams.set("riparti", back); }
     // the same address (a "#/data" hash and no parameter to drop) would only be a same-page jump: reload for real
     if (u.href === location.href) location.reload(); else location.replace(u.href);
     return rep;

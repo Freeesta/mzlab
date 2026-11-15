@@ -194,6 +194,39 @@ impl Store {
         }
     }
 
+    /// `lr_clear`: everything (`clear`), or with scope "files" (the reset «Files» finished by the new page) what the page's RESET_FILES in `drop` names.
+    pub fn clear_scope(&mut self, p: &Value) {
+        if p["scope"].as_str() != Some("files") {
+            return self.clear();
+        }
+        let names = |k: &str| p["drop"][k].as_array().into_iter().flatten().filter_map(|v| v.as_str()).collect::<Vec<_>>();
+        self.clear_files(&names("kv"), &names("notebook"));
+    }
+
+    /// The reset «Files» (`lr_clear` with scope "files"): every file forgotten as `clear` does; in `kv.json` only the keys of `kv` go and, in the notebook, its fields
+    /// named in `notebook` (the page's RESET_FILES of qqq-db.js, sent with the message): the drawing and the rest of the notebook stay. A notebook that is not a
+    /// JSON object is left as it is.
+    pub fn clear_files(&mut self, kv: &[&str], notebook: &[&str]) {
+        self.load();
+        if let Ok(own) = self.own_dir() {
+            let _ = std::fs::remove_dir_all(own);
+        }
+        self.files.clear();
+        for k in kv {
+            self.kv.remove(*k);
+        }
+        if let Some(Ok(Value::Object(mut nb))) = self.kv.get("notebook").map(|t| serde_json::from_str::<Value>(t)) {
+            for k in notebook {
+                nb.remove(*k);
+            }
+            let t = std::time::SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0);
+            nb.insert("_t".into(), json!(t));                                    // as the page does: a pending copy older than the reset does not win (nb-pendiente.js)
+            self.kv.insert("notebook".into(), Value::Object(nb).to_string());
+        }
+        self.save_files();
+        self.save_kv();
+    }
+
     /// «New session» with fresh: every file forgotten (the ones made by the app go; the ones of the student stay where they are), the notebook empty.
     pub fn clear(&mut self) {
         self.load();
