@@ -543,8 +543,9 @@ pub fn apply_refetch(
     }
 }
 
-/// At start: finishes or undoes an interrupted swap, then sets a damaged `web/` aside so that the embedded copy is served.
-pub fn recover(data: &Path) {
+/// At start: finishes or undoes an interrupted swap, then sets `web/` aside so that the embedded copy is served when it is damaged,
+/// its manifest does not parse, or it needs a newer native binary than this one (`native`, e.g. a folder left by a newer app).
+pub fn recover(data: &Path, native: &str) {
     let (web, next, old, bad) = (
         data.join("web"),
         data.join("web.next"),
@@ -559,7 +560,14 @@ pub fn recover(data: &Path) {
     if web.is_dir() {
         let _ = fs::remove_dir_all(&old);
     }
-    if web.is_dir() && !validate_web(&web) {
+    let usable = |w: &Path| {
+        validate_web(w)
+            && fs::read(w.join(MANIFEST))
+                .ok()
+                .and_then(|b| parse_manifest(&b).ok())
+                .is_some_and(|m| native_ok(native, &m.desktop_min))
+    };
+    if web.is_dir() && !usable(&web) {
         let _ = fs::remove_dir_all(&bad);
         if fs::rename(&web, &bad).is_err() {
             let _ = fs::remove_dir_all(&web);
@@ -1111,12 +1119,49 @@ mod tests {
         .unwrap();
         fs::write(data.join("web/static/a.js"), b"corrupt").unwrap();
         assert!(!validate_web(&data.join("web")));
-        recover(data);
+        recover(data, "0.1.0");
         assert!(!data.join("web").exists());
         assert!(serve_override(&data.join("web"), "/static/a.js").is_none());
         // the manifest falls back to the embedded one, so the next check downloads the file again
         let emb = serde_json::to_vec(&local).unwrap();
         assert_eq!(local_manifest(data, &emb).unwrap(), local);
+    }
+
+    #[test]
+    fn web_part_for_a_newer_binary_is_set_aside() {
+        let tmp = tempfile::tempdir().unwrap();
+        let data = tmp.path();
+        let local = manifest("a", "0.1.0", &[("static/a.js", b"old")]);
+        let v1 = manifest("1", "0.1.0", &[("static/a.js", b"new")]);
+        apply(
+            data,
+            &local,
+            &v1,
+            "0.1.0",
+            &mem(&[("static/a.js", b"new")]),
+            |_| {},
+        )
+        .unwrap();
+        recover(data, "0.1.0");
+        assert!(validate_web(&data.join("web")));
+        recover(data, "0.0.9");
+        assert!(!data.join("web").exists());
+        assert!(serve_override(&data.join("web"), "/static/a.js").is_none());
+        // a folder whose manifest does not parse is set aside as well (check.json is rewritten so that only the manifest is wrong)
+        apply(
+            data,
+            &local,
+            &v1,
+            "0.1.0",
+            &mem(&[("static/a.js", b"new")]),
+            |_| {},
+        )
+        .unwrap();
+        fs::write(data.join("web").join(MANIFEST), b"not json").unwrap();
+        write_check(&data.join("web")).unwrap();
+        assert!(validate_web(&data.join("web")));
+        recover(data, "0.1.0");
+        assert!(!data.join("web").exists());
     }
 
     #[test]
@@ -1136,7 +1181,7 @@ mod tests {
         .unwrap();
         fs::rename(data.join("web"), data.join("web.old")).unwrap(); // the app died between the two renames
         fs::create_dir(data.join("web.next")).unwrap();
-        recover(data);
+        recover(data, "0.1.0");
         assert!(
             validate_web(&data.join("web"))
                 && !data.join("web.old").exists()
@@ -1163,7 +1208,7 @@ mod tests {
         fs::rename(data.join("web"), data.join("web.old")).unwrap();
         // a plain file named `web`: renaming the folder onto it fails (ENOTDIR)
         fs::write(data.join("web"), b"x").unwrap();
-        recover(data);
+        recover(data, "0.1.0");
         assert!(!data.join("web").is_dir());
         assert!(validate_web(&data.join("web.old")));
     }
