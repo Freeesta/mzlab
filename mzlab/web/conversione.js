@@ -192,6 +192,8 @@ const CONVROWS = {
   rows: [],
   /** @type {null | (() => void)} */
   onCancel: null,
+  // files cancelled with × while they waited for the engine: upload() leaves them out
+  skip: /** @type {Set<string>} */ (new Set()),
   timer: /** @type {any} */ (0),
   liveN: "",
   pq: false,
@@ -451,9 +453,9 @@ function wiffName(/** @type {string} */ stem, /** @type {number | string} */ sam
   return freeMzml(base, ".wiff", used);
 }
 // the short word of the state of a row (CONVROWS.short): the phase without numbers
-function convStKey(/** @type {string} */ state) { return /** @type {Record<string, string>} */ ({ open: "conv.st.open", nopen: "conv.st.open", get: "conv.st.get", load: "conv.st.load", idx: "conv.st.index", index: "conv.st.index", wait: "conv.st.wait", run: "conv.st.run", conv: "conv.st.conv", nread: "conv.st.read", nscan: "conv.st.scans", nchrom: "conv.st.chrom" })[state] || "conv.st.wait"; }
+function convStKey(/** @type {string} */ state) { return /** @type {Record<string, string>} */ ({ open: "conv.st.open", nopen: "conv.st.open", get: "conv.st.get", load: "conv.st.load", idx: "conv.st.index", index: "conv.st.index", wait: "conv.st.wait", engine: "conv.st.engine", run: "conv.st.run", conv: "conv.st.conv", nread: "conv.st.read", nscan: "conv.st.scans", nchrom: "conv.st.chrom" })[state] || "conv.st.wait"; }
 // the text key of the state of a row of the files being converted (CONVROWS)
-function convRowKey(/** @type {string} */ state) { return /** @type {Record<string, string>} */ ({ open: "conv.row.open", get: "conv.row.get", load: "conv.row.loadn", idx: "conv.row.idx", wait: "conv.row.wait", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index", nread: "conv.row.nread", nopen: "conv.row.nopen", nscan: "conv.row.nscan", nchrom: "conv.row.nchrom", cancel: "conv.row.cancel" })[state] || "conv.row.wait"; }
+function convRowKey(/** @type {string} */ state) { return /** @type {Record<string, string>} */ ({ open: "conv.row.open", get: "conv.row.get", load: "conv.row.loadn", idx: "conv.row.idx", wait: "conv.row.wait", engine: "conv.row.engine", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index", nread: "conv.row.nread", nopen: "conv.row.nopen", nscan: "conv.row.nscan", nchrom: "conv.row.nchrom", cancel: "conv.row.cancel" })[state] || "conv.row.wait"; }
 // "m:ss" or "h:mm:ss" from milliseconds
 function convElapsed(/** @type {number} */ ms) {
   const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), r = s % 60;

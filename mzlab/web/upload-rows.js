@@ -35,6 +35,8 @@ const UPROWS = /** @type {any} */ ((() => {
   async function cancel(/** @type {string} */ name) {
     const r = CONVROWS.find(name); if (!r) return;
     if (r.state === "fail") { CONVROWS.drop(name); return; }
+    // not started yet (the engine is still starting): the file leaves the queue of the drop
+    if (r.state === "engine") { CONVROWS.skip.add(name); CONVROWS.drop(name); return; }
     OPENNOW.hold([name]); FILETAB.soon();
     if (ConvUI.stop(name)) { paint(); return; }
     const rb = window.MZLAB_RUST;

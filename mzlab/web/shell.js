@@ -343,12 +343,27 @@ async function fetchDemo(/** @type {string[]} */ names,/** @type {AbortSignal} *
   return out}
 // `demo`: names of example files still to download (static/esempi): their rows are in the list at once, in order, and the download is the first part of each row
 /** @param {FileCarica[]} files @param {string} into @param {string[]} [demo] */
-async function upload(files,into,demo){if(typeof AVVIO!=="undefined"&&!(await AVVIO.pronto()))return;const box=$("#up");fail();
+// the names of this drop that are in the list as «Waiting for engine» rows (waitRows); the batch drops the ones it does not keep (keep) or does not use under that name (upload)
+const PRE=/** @type {string[]} */ ([]);
+function waitRows(/** @type {string[]} */ names){const out=/** @type {string[]} */ ([]);
+  for(const n of names){if(out.includes(n)||CONVROWS.find(n)||ST.files.some((/** @type {FileRiga} */ g)=>g.name===n)||INFLIGHT.has(n))continue;CONVROWS.add(n,"engine");out.push(n)}
+  return out}
+async function upload(files,into,demo){let pre=/** @type {string[]} */ ([]);
+  // before the engine is ready the files are in the side list at once, «Waiting for engine»; the normal path takes the same rows over (no row goes and comes back)
+  if(typeof AVVIO!=="undefined"&&AVVIO.stato==="pending"){pre=waitRows(demo||files.map(f=>f.name));
+    if(!(await AVVIO.pronto())){pre.forEach(n=>AVVIO.stato==="failed"?CONVROWS.finish(n,"fail",{msg:AVVIO.errore||""}):CONVROWS.drop(n));return}
+    pre.forEach(n=>CONVROWS.skip.has(n)||CONVROWS.set(n,"wait",null));
+    if(CONVROWS.skip.size){const sk=CONVROWS.skip;CONVROWS.skip=new Set();if(demo)demo=demo.filter(n=>!sk.has(n));else files=files.filter(f=>!sk.has(f.name));if(!(demo||files).length)return}
+    PRE.push(...pre)}
+  else if(typeof AVVIO!=="undefined"&&!(await AVVIO.pronto()))return;
+  const box=$("#up");fail();
   if(demo){demo=demo.filter(n=>!ST.files.some((/** @type {FileRiga} */ g)=>g.name===n)&&!INFLIGHT.has(n));if(!demo.length)return;files=[];demo.forEach(n=>INFLIGHT.add(n))}else{files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)))}
   if(!UPBUSY)CONVROWS.clearDone();if(typeof S!=="undefined"&&S.adding)STATO.aggiunta(false,"upload");UPBUSY++;syncWork();let mine=files;const ctl=new AbortController();LOADS.add(ctl);CONVROWS.onCancel=cancelLoads;if(demo)demo.forEach(n=>{CONVROWS.add(n,"wait");CONVROWS.base(n,0)});
   // for the diagnosis of the loading
   try{navigator.storage.estimate().then(e=>{window.MZLAB_STIMA=`${Math.round((e.usage||0)/1e6)} of ${Math.round((e.quota||0)/1e6)} MB`}).catch(()=>{})}catch(_){}
-  try{if(demo){files=await fetchDemo(demo,ctl.signal);files.forEach(f=>INFLIGHT.add(fkey(f)));mine=files}await upload0(files,into,box,ctl.signal)}finally{FILETAB.flush();LOADS.delete(ctl);mine.forEach(f=>INFLIGHT.delete(fkey(f)));(demo||[]).forEach(n=>INFLIGHT.delete(n));UPBUSY--;syncWork();if(!UPBUSY){CONVROWS.onCancel=null;CONVROWS.paint();IDLE.splice(0).forEach(ok=>ok());OPENNOW.note()}}}
+  try{if(demo){files=await fetchDemo(demo,ctl.signal);files.forEach(f=>INFLIGHT.add(fkey(f)));mine=files}await upload0(files,into,box,ctl.signal)}finally{
+    // a row of the wait whose file entered under another name (converted) or not at all goes with the batch
+    pre.forEach(n=>{const i=PRE.indexOf(n);if(i>=0)PRE.splice(i,1);const r=CONVROWS.find(n);if(r&&r.state==="wait")CONVROWS.drop(n)});FILETAB.flush();LOADS.delete(ctl);mine.forEach(f=>INFLIGHT.delete(fkey(f)));(demo||[]).forEach(n=>INFLIGHT.delete(n));UPBUSY--;syncWork();if(!UPBUSY){CONVROWS.onCancel=null;CONVROWS.paint();IDLE.splice(0).forEach(ok=>ok());OPENNOW.note()}}}
 // a file the user gives with "#" in its name enters with "_" (hashFree, conversione.js) and the notice says so, once per .wiff pair
 function hashRename(/** @type {FileCarica[]} */ files,/** @type {CaricaRep} */ rep){const taken=[...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name),...files.map(f=>f.name)];
   return files.map(f=>{const n=f instanceof File&&!f.mzlabNat&&!f.mzlabModulo?hashFree(f.name,taken):null;if(!n)return f;taken.push(n);if(!/\.scan$/i.test(n))rep.notes.push(I18N.t("load.note.hashRenamed",{from:f.name,to:n}));
@@ -388,7 +403,8 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   let panel=/** @type {{ index(name: string, pc: number): void, end(): void } | null} */ (null);
   const wr=await wiffToMzml(files,box,signal);files=await rawToMzml(wr.files,box);files=await numpressToNat(files);files=await moduliToNat(files);files=await gzToEngine(files,rep);for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);for(const n of wr.notes||[])rep.notes.push(n);
   // a file that is not for the list (a by-product, a format we do not read) is told in the notice; the others are kept
-  const keep=(/** @type {FileCarica} */ f)=>{if(CartCarica.byproduct(f.name)){if(/\.log$/i.test(f.name))(rep.logs=rep.logs||[]).push(f.name);return false}const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k.ext,label:k.label,st:k.st});return false};
+  const gone=(/** @type {string} */ n)=>{const i=PRE.indexOf(n);if(i>=0){PRE.splice(i,1);CONVROWS.drop(n)}};
+  const keep=(/** @type {FileCarica} */ f)=>{if(CartCarica.byproduct(f.name)){gone(f.name);if(/\.log$/i.test(f.name))(rep.logs=rep.logs||[]).push(f.name);return false}const k=fileKind(f.name);if(!k)return true;gone(f.name);rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k.ext,label:k.label,st:k.st});return false};
   // the same group dropped again: no second notice
   const dedupeNotice=()=>{if(rep.unopen.length){const h=groupHash(/** @type {FileCarica[]} */ (rep.unopen.map(x=>rejected.find(f=>f.name===x.name))));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}};
   // a batch of up to 50 files is pipelined: each file is read as soon as it is ready (the first sample opens while the next ones convert); a bigger batch asks first (below) and goes as a whole
