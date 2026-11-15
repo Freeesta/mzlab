@@ -113,14 +113,55 @@ pub trait Source: Sync {
 pub fn parse_manifest(bytes: &[u8]) -> Result<Manifest, UpdateError> {
     let m: Manifest = serde_json::from_slice(bytes)
         .map_err(|e| UpdateError::new("update.error.manifest", e.to_string()))?;
+    let bad = |d: String| Err(UpdateError::new("update.error.manifest", d));
+    if !plain_version(&m.desktop_min) {
+        return bad(format!("desktop_min {}", m.desktop_min));
+    }
+    // names the rest of the updater compares by exact string: no key may fold onto them by case only
+    let fixed = ["index.html", CHECK, MANIFEST]
+        .into_iter()
+        .chain(NATIVE.iter().copied());
+    let fixed: Vec<&str> = fixed.collect();
+    let mut seen = std::collections::BTreeSet::new();
     for rel in m.files.keys() {
         safe_rel(rel)?;
+        if !seen.insert(rel.to_ascii_lowercase()) {
+            return bad(format!("two keys differ only by case: {rel}"));
+        }
+        if fixed
+            .iter()
+            .any(|f| rel.eq_ignore_ascii_case(f) && rel.as_str() != *f)
+        {
+            return bad(format!("key {rel} differs from a fixed name only by case"));
+        }
     }
     Ok(m)
 }
 
-/// A relative path with plain components only (no `..`, no root, no drive, no backslash).
+/// `\d+\.\d+\.\d+` with each part fitting a `u64` (what `build_site.py` writes); anything else would compare as 0 in `native_ok`.
+fn plain_version(v: &str) -> bool {
+    let parts: Vec<&str> = v.split('.').collect();
+    parts.len() == 3
+        && parts.iter().all(|p| {
+            !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()) && p.parse::<u64>().is_ok()
+        })
+}
+
+/// A relative path with plain components only (no `..`, no root, no drive, no backslash), in the one spelling the manifest uses:
+/// no empty or `.` part (`a//b`, `a/./b`, `a/`), so that exact string comparisons (`NATIVE`, `index.html`) see the file that is written.
 pub fn safe_rel(rel: &str) -> Result<(), UpdateError> {
+    plain_rel(rel)?;
+    if rel.split('/').any(|p| p.is_empty() || p == ".") {
+        return Err(UpdateError::new(
+            "update.error.manifest",
+            format!("non-canonical path {rel}"),
+        ));
+    }
+    Ok(())
+}
+
+/// `safe_rel` without the canonical-form rule: a request path of the window (`/static//a.js`) is normalised by `override_rel` after this.
+fn plain_rel(rel: &str) -> Result<(), UpdateError> {
     let bad = rel.is_empty()
         || rel.contains('\\')
         || rel.contains(':')
@@ -692,6 +733,58 @@ mod tests {
             assert!(safe_rel(bad).is_err(), "{bad}");
         }
         assert!(safe_rel("static/pyodide/pyodide.asm.wasm").is_ok());
+    }
+
+    fn manifest_json(min: &str, keys: &[&str]) -> Vec<u8> {
+        let files: BTreeMap<&str, Entry> = keys
+            .iter()
+            .map(|k| {
+                let e = Entry {
+                    sha256: sha256_hex(b"x"),
+                    size: 1,
+                };
+                (*k, e)
+            })
+            .collect();
+        serde_json::to_vec(
+            &serde_json::json!({ "version": "v", "desktop_min": min, "files": files }),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn rejects_non_canonical_and_colliding_keys() {
+        assert!(parse_manifest(&manifest_json(
+            "0.1.0",
+            &["index.html", "static/a.js", "static/rust-worker.js"]
+        ))
+        .is_ok());
+        for keys in [
+            &["a/./b.js"][..],
+            &["a//b.js"],
+            &["a/"],
+            &["index.html/."],
+            &["static/./desktop-shim.js"],
+            &["a/B.js", "a/b.js"],
+            &["Index.html"],
+            &["CHECK.JSON"],
+            &["Static/Manifest.json"],
+            &["static/Desktop-Shim.js"],
+        ] {
+            let err = parse_manifest(&manifest_json("0.1.0", keys)).unwrap_err();
+            assert_eq!(err.key, "update.error.manifest", "{keys:?}");
+        }
+        for min in [
+            "v2.0.0",
+            "2.0",
+            "2.0.0.1",
+            "2..0",
+            "99999999999999999999.0.0",
+            "",
+        ] {
+            let err = parse_manifest(&manifest_json(min, &["static/a.js"])).unwrap_err();
+            assert_eq!(err.key, "update.error.manifest", "{min}");
+        }
     }
 
     #[test]
