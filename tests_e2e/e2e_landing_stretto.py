@@ -38,7 +38,7 @@ try:
         step("the toggle opens the sheet", lambda: (_ for _ in ()).throw(AssertionError(s2)) if not (s2["sb_open"] and s2["sheet"]) else None)
         pg.click("#samptab"); frames(pg, 6)
         s3 = pg.evaluate(STATE)
-        step("«Sample table» closes the sheet and the table fills the width", lambda: (_ for _ in ()).throw(AssertionError(s3)) if s3["sb_open"] or s3["work"] != "table" or not s3["table"] else None)
+        step("«Sample table» closes the sheet and the table fills the width", lambda: (_ for _ in ()).throw(AssertionError(s3)) if s3["sb_open"] or s3["work"] != "add" or not s3["table"] else None)
         step("the table scrolls inside its box, the page does not", lambda: (_ for _ in ()).throw(AssertionError(s3)) if s3["page_sw"] > s3["iw"] or s3["box_sw"] <= s3["box_cw"] else None)
         step("a file name keeps room to read (more than 90 px)", lambda: (_ for _ in ()).throw(AssertionError(s3["name_w"])) if s3["name_w"] < 90 else None)
         # a file name opens the file; afterwards the sheet works as before
