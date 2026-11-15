@@ -9,6 +9,7 @@ Scenarios (every combination of --rtt and --cpu, interleaved over --runs, one ne
   cold            first visit, ends on the second page (after the isolation reload); also the bytes/requests of the first, non-isolated page.
   warm            first visit, wait for `.fill-done` in the app cache, then reload with the SW still running.
   warm-restarted  the same, but the SW is stopped over CDP (ServiceWorker.stopAllWorkers) before the reload.
+  --warm-reloads N measures the Nth reload in warm / warm-restarted (default 1); every load also records its longest task before qqReady.
   trace-warm / trace-restarted (rtt 0 only)  third load under a Chromium trace (v8, v8.wasm, disabled-by-default-v8.compile, devtools.timeline).
 All times are ms from the navigation start of the measured page. Boot steps come from the page itself (init script: script `load` events, the engine
 worker's `ready` message, setters on window.qqReady / MZLAB_LR, a wrapper of window.fetch for api/state): no product file is touched.
@@ -33,6 +34,7 @@ PROBE = r"""(() => {
   const m = {}, scripts = [], v = window.__a = { m, scripts, t0: T0 };
   try { performance.setResourceTimingBufferSize(5000); } catch (_) {}
   try { new PerformanceObserver(l => l.getEntries().forEach(e => { if (e.name === "first-contentful-paint") m.fcp = Math.round(e.startTime * 10) / 10; })).observe({ type: "paint", buffered: true }); } catch (_) {}
+  try { m.longest = 0; new PerformanceObserver(l => l.getEntries().forEach(e => { if (!m.ready && e.duration > (m.longest || 0)) m.longest = Math.round(e.duration); })).observe({ type: "longtask", buffered: true }); } catch (_) {}   // longest task before qqReady
   // a script's `load` fires after it ran (classic and module): the end of each script of the list L, and of shell.js
   document.addEventListener("load", e => { const t = e.target; if (t && t.tagName === "SCRIPT" && t.src) scripts.push([t.src.replace(location.origin, "").replace(/^\/[^/]*\/static\//, "").replace(/^\/static\//, ""), now()]); }, true);
   const prop = (name, f) => { let val; Object.defineProperty(window, name, { configurable: true, get: () => val, set: x => { val = x; f(x); } }); };
@@ -104,7 +106,7 @@ def page_metrics(snap: dict, thr: Throttle, mlog: list, sw0: int, l0: int) -> di
     modules = [t for n, t in snap["scripts"] if n in L_MOD]
     out = {"idx_end": nav["responseEnd"], "sw_worker_start": nav["workerStart"], "fcp": m.get("fcp"), "last_classic": max(classic) if classic else None,
            "shell_js": sc.get("shell.js"), "last_module": max(modules) if modules else None, "worker_ready": m.get("workerReady"), "engine": m.get("engine"),
-           "api_state_req": m.get("stateReq"), "api_state": m.get("stateEnd"), "qqReady": m.get("ready"), "drop": m.get("drop")}
+           "api_state_req": m.get("stateReq"), "api_state": m.get("stateEnd"), "qqReady": m.get("ready"), "drop": m.get("drop"), "longest_task": m.get("longest")}
     mf = [r for r in thr.sw[sw0:] if r[1].endswith("static/sw-manifest.json")]
     out["manifest_req"] = round(mf[0][0] - t0) if mf else None          # as the SW sends it (CDP of the SW target)
     out["manifest_end"] = round(mf[0][4] - t0) if mf else None
@@ -118,7 +120,7 @@ def page_metrics(snap: dict, thr: Throttle, mlog: list, sw0: int, l0: int) -> di
     return out
 
 
-def one(b, base, scen: str, rtt: int, cpu: int, mirror: bool, loads: int = 2) -> dict:
+def one(b, base, scen: str, rtt: int, cpu: int, mirror: bool, loads: int = 2, warm_loads: int = 1) -> dict:
     # latency: the mirror delays every answer (CDP latency does not apply to the SW's own fetches); the CDP profile only slows the CPU
     thr = Throttle(b, "cpu4" if cpu == 4 else "none")
     Mirror.delay = rtt if mirror else 0
@@ -148,7 +150,7 @@ def one(b, base, scen: str, rtt: int, cpu: int, mirror: bool, loads: int = 2) ->
     else:
         poll(pg, FILL_DONE, 300)
         pump(pg, SETTLE_MS)           # the idle work after qqReady (prefetch at +3 s, the mzFinder package) ends before the measured load
-        for _ in range(loads - 1 if scen.startswith("trace") else 0):
+        for _ in range((loads if scen.startswith("trace") else warm_loads) - 1):
             pg.reload(); poll(pg, USABLE, 240); pump(pg, 1500)        # loads 2..n-1; Chromium writes the code cache after the earlier ones
         if scen in ("warm-restarted", "trace-restarted"):
             stop_sw(c, pg)
@@ -164,6 +166,7 @@ def one(b, base, scen: str, rtt: int, cpu: int, mirror: bool, loads: int = 2) ->
         snap = pg.evaluate("__a.snap()")
         res.update(page_metrics(snap, thr, log, sw0, l0))
         res["sw_type"] = snap["nav"]["type"]
+        res["reloads"] = loads if scen.startswith("trace") else warm_loads
     c.close()
     return res
 
@@ -232,7 +235,7 @@ def report(results: dict) -> None:
             if not pick(scen) or not runs:
                 continue
             print(f"| {scen} | {rtt} | ×{cpu} | {len(runs)} | " + " | ".join(fmt(med([r.get(k) for r in runs])) for k in cols) + " |")
-    rows(lambda s: s in ("warm", "warm-restarted"), "Warm and warm-restarted: navigation start → …", KEYS[:7] + ["worker_ready", "engine", "qqReady"])
+    rows(lambda s: s in ("warm", "warm-restarted"), "Warm and warm-restarted: navigation start → …", KEYS[:7] + ["worker_ready", "engine", "qqReady", "longest_task"])
     rows(lambda s: s in ("cold", "warm", "cpu4warm", "warm-restarted"), "Boot order", ["last_classic", "shell_js", "last_module", "worker_ready", "api_state", "engine", "qqReady"])
     for (scen, rtt, cpu), runs in results.items():
         if runs and scen in ("cold", "warm", "warm-restarted"):
@@ -260,6 +263,7 @@ def main():
     ap.add_argument("--cpu", default="1,4")
     ap.add_argument("--scenari", default="warm,warm-restarted,cold,trace-warm,trace-restarted")
     ap.add_argument("--trace-reloads", type=int, default=2, help="reloads after the first visit in the trace scenarios; the last one is traced (the code cache may need more than 2)")
+    ap.add_argument("--warm-reloads", type=int, default=1, help="reloads after the first visit in warm / warm-restarted; the last one is measured (3 = the 4th load)")
     ap.add_argument("--out")
     a = ap.parse_args()
     from playwright.sync_api import sync_playwright
@@ -277,7 +281,7 @@ def main():
             for k in combos:
                 b = p.chromium.launch(proxy=proxy, **({"executable_path": exe} if os.path.isfile(exe) else {}))
                 try:
-                    results[k].append(one(b, base, *k, mirror=bool(a.mirror), loads=a.trace_reloads))
+                    results[k].append(one(b, base, *k, mirror=bool(a.mirror), loads=a.trace_reloads, warm_loads=a.warm_reloads))
                     print(f"run {i + 1} {k}: ok", flush=True)
                 except Exception as e:
                     print(f"run {i + 1} {k}: {str(e)[:200]}", flush=True)
