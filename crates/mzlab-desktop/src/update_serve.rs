@@ -9,7 +9,7 @@ use super::*;
 pub(super) fn override_rel(req_path: &str) -> Option<String> {
     let rel = req_path.trim_start_matches('/');
     let rel = if rel.is_empty() { "index.html" } else { rel };
-    safe_rel(rel).ok()?;
+    plain_rel(rel).ok()?;
     let parts: Vec<&str> = Path::new(rel)
         .components()
         .filter_map(|c| c.as_os_str().to_str())
