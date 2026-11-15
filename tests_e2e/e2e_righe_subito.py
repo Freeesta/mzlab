@@ -2,7 +2,7 @@
 dropped, two rows with the right names and no percent are there (role=status count); released, the same rows complete; an engine that fails turns them into failed rows with the banner's reason;
 × on a waiting row leaves that file out. Synthetic data. Needs the site and the .wasm (python tools/prepara_sito.py)."""
 # covers: mzlab/web/shell.js, mzlab/web/avvio-progressivo.js, mzlab/web/upload-rows.js, mzlab/web/conversione.js
-import os, re, subprocess, sys, tempfile, time
+import os, re, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from lib import ROOT, free_port
@@ -21,8 +21,11 @@ D = Path(tempfile.mkdtemp(prefix="righe_e2e_"))
 MZ = synth.make_series(str(D), [0, 5], False, False)
 NAMES = [Path(p).name for p in MZ]
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1)
 URL = f"http://127.0.0.1:{PORT}/"
+import urllib.request
+for _ in range(50):
+    try: urllib.request.urlopen(URL, timeout=1); break
+    except Exception: __import__("threading").Event().wait(0.2)      # the server is starting
 WASM = re.compile(r"/static/wasm/.*\.wasm(\?.*)?$")
 ROWS = "() => [...document.querySelectorAll('#fl-up [data-up]')].map(e => ({ n: e.dataset.up, t: (e.querySelector('[data-uptxt]') || {}).textContent, err: e.classList.contains('err') }))"
 TWO = "document.querySelectorAll('#fl-up [data-up]').length === 2"
