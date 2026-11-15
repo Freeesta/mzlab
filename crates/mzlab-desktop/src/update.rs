@@ -375,7 +375,33 @@ fn download_all(
     first_err.map_or(Ok(()), Err)
 }
 
-/// Fills `next` with the new files, the new manifest and the hashes of the whole folder.
+/// Deletes every file of `root` that `remote` does not list (except `check.json` and the manifest), then the folders left empty:
+/// a file removed from the site must not stay reachable through `serve_override`.
+fn prune(root: &Path, remote: &Manifest) -> Result<(), UpdateError> {
+    let mut names = Vec::new();
+    walk(root, root, &mut names).map_err(UpdateError::io)?;
+    for n in names {
+        if n != CHECK && n != MANIFEST && !remote.files.contains_key(&n) {
+            fs::remove_file(root.join(&n)).map_err(UpdateError::io)?;
+        }
+    }
+    remove_empty_dirs(root).map_err(UpdateError::io)
+}
+
+fn remove_empty_dirs(dir: &Path) -> std::io::Result<()> {
+    for e in fs::read_dir(dir)? {
+        let e = e?;
+        if e.file_type()?.is_dir() {
+            remove_empty_dirs(&e.path())?;
+            if fs::read_dir(e.path())?.next().is_none() {
+                fs::remove_dir(e.path())?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Fills `next` with the new files, drops the ones `remote` no longer lists, writes the new manifest and the hashes of the whole folder.
 fn build_next(
     next: &Path,
     files: &[String],
@@ -384,6 +410,7 @@ fn build_next(
     on: &mut impl FnMut(Progress),
 ) -> Result<(), UpdateError> {
     download_all(next, files, remote, src, on)?;
+    prune(next, remote)?;
     let json = serde_json::to_vec(remote).map_err(UpdateError::io)?;
     write_file(next, MANIFEST, &json)?;
     write_check(next)
@@ -427,7 +454,12 @@ pub fn apply(
     );
     let _ = fs::remove_dir_all(&next);
     fs::create_dir_all(data).map_err(UpdateError::io)?;
-    if web.is_dir() {
+    // the current folder is the base only if it is the one `local` describes (not when `local` fell back to the embedded manifest)
+    let base = fs::read(web.join(MANIFEST))
+        .ok()
+        .and_then(|b| parse_manifest(&b).ok())
+        .is_some_and(|m| m == *local);
+    if base {
         copy_tree(&web, &next)?;
     } else {
         fs::create_dir_all(&next).map_err(UpdateError::io)?;
@@ -790,6 +822,106 @@ mod tests {
         assert_eq!(err.key, "update.error.manifest");
         assert_eq!(fs::read(data.join("web/static/a.js")).unwrap(), b"a2");
         assert!(validate_web(&data.join("web")) && !data.join("web.next").exists());
+    }
+
+    #[test]
+    fn removed_file_is_gone_after_update() {
+        let tmp = tempfile::tempdir().unwrap();
+        let data = tmp.path();
+        let emb = manifest("0", "0.1.0", &[("static/a.js", b"a0")]);
+        let v1 = manifest(
+            "1",
+            "0.1.0",
+            &[
+                ("index.html", INDEX.as_bytes()),
+                ("static/a.js", b"a1"),
+                ("static/old.js", b"o1"),
+            ],
+        );
+        let v2 = manifest(
+            "2",
+            "0.1.0",
+            &[("index.html", INDEX.as_bytes()), ("static/a.js", b"a2")],
+        );
+        let src = mem(&[
+            ("index.html", INDEX.as_bytes()),
+            ("static/a.js", b"a1"),
+            ("static/old.js", b"o1"),
+        ]);
+        apply(data, &emb, &v1, "0.1.0", &src, |_| {}).unwrap();
+        let web = data.join("web");
+        assert!(web.join("static/old.js").is_file());
+        apply(
+            data,
+            &v1,
+            &v2,
+            "0.1.0",
+            &mem(&[("static/a.js", b"a2")]),
+            |_| {},
+        )
+        .unwrap();
+        assert!(!web.join("static/old.js").exists());
+        assert!(serve_override(&web, "/static/old.js").is_none());
+        assert!(validate_web(&web));
+        let check: BTreeMap<String, Entry> =
+            serde_json::from_slice(&fs::read(web.join(CHECK)).unwrap()).unwrap();
+        assert!(!check.contains_key("static/old.js"));
+        assert_eq!(serve_override(&web, "/static/a.js").unwrap().0, b"a2");
+    }
+
+    #[test]
+    fn fallback_manifest_does_not_keep_stale_files() {
+        let tmp = tempfile::tempdir().unwrap();
+        let data = tmp.path();
+        let emb = manifest("0", "0.1.0", &[("static/a.js", b"a0")]);
+        let v1 = manifest("1", "0.1.0", &[("static/a.js", b"a1")]);
+        let v2 = manifest("2", "0.1.0", &[("static/a.js", b"a0")]);
+        apply(
+            data,
+            &emb,
+            &v1,
+            "0.1.0",
+            &mem(&[("static/a.js", b"a1")]),
+            |_| {},
+        )
+        .unwrap();
+        let web = data.join("web");
+        assert_eq!(serve_override(&web, "/static/a.js").unwrap().0, b"a1");
+        // `local` is the embedded manifest (the folder's one did not parse): the folder is not the base of the new one
+        apply(
+            data,
+            &emb,
+            &v2,
+            "0.1.0",
+            &mem(&[("static/a.js", b"a0")]),
+            |_| {},
+        )
+        .unwrap();
+        assert!(serve_override(&web, "/static/a.js").is_none_or(|(b, _)| b == b"a0"));
+        assert!(validate_web(&web));
+        // the same through `local_manifest` with a manifest of the folder that does not parse
+        apply(
+            data,
+            &v2,
+            &v1,
+            "0.1.0",
+            &mem(&[("static/a.js", b"a1")]),
+            |_| {},
+        )
+        .unwrap();
+        fs::write(web.join(MANIFEST), b"not json").unwrap();
+        let local = local_manifest(data, &serde_json::to_vec(&emb).unwrap()).unwrap();
+        assert_eq!(local, emb);
+        apply(
+            data,
+            &local,
+            &v2,
+            "0.1.0",
+            &mem(&[("static/a.js", b"a0")]),
+            |_| {},
+        )
+        .unwrap();
+        assert!(serve_override(&web, "/static/a.js").is_none_or(|(b, _)| b == b"a0"));
     }
 
     #[test]
