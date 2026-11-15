@@ -65,6 +65,15 @@ def pump(pg, ms: int) -> None:
     pg.evaluate(f"new Promise(r => setTimeout(r, {ms}))")
 
 
+def wait_fill(pg, timeout: float = 300) -> None:
+    """Until the SW's background fill has left `.fill-done`. FILL_DONE is a promise, so it is awaited here: poll() tests `!!(expr)`, true for any promise."""
+    end = time.time() + timeout
+    while not pg.evaluate(FILL_DONE):
+        if time.time() > end:
+            raise TimeoutError("fill not done")
+        pump(pg, 200)
+
+
 def wall() -> float:
     return time.time() * 1000
 
@@ -148,7 +157,7 @@ def one(b, base, scen: str, rtt: int, cpu: int, mirror: bool, loads: int = 2, wa
                     "p2_httpcache": len([x for x in both if x not in net2]), "p2_new": len(p2 - both), "p2_srv_req": len(e2),
                     "p2_srv_kb": round(sum(r[3] for r in e2) / 1024), "usable": snap["m"]["ready"]})
     else:
-        poll(pg, FILL_DONE, 300)
+        wait_fill(pg)
         pump(pg, SETTLE_MS)           # the idle work after qqReady (prefetch at +3 s, the mzFinder package) ends before the measured load
         for _ in range((loads if scen.startswith("trace") else warm_loads) - 1):
             pg.reload(); poll(pg, USABLE, 240); pump(pg, 1500)        # loads 2..n-1; Chromium writes the code cache after the earlier ones
