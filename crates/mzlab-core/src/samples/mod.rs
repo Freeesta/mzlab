@@ -222,37 +222,21 @@ fn number_replicates_pairwise(cs: &mut [Sample]) {
 }
 
 /// The bindings (a `campioni/2` or `/3` document is read by every operation that takes one; `canonico` and `digest` keep its schema, `migra` makes a `/3`;
-/// `valida` also gives the findings of `/3`; `route_all` adds `modello`, `dal_file`, `csv_leggi` and `csv_scrivi`): `op` is `proponi` or `proponi_spiegato` (`{"files":[{"name","sha256","kind"}]}`; the second adds the spans of the name), `valida`, `per_tp`, `canonico` or `digest` (a `campioni/2`), `ricollega` (`{"campioni","file":[{"percorso","sha256"}]}`) or `da_legacy`
-/// (`{"session","qaqc","campioni1","mzflow"}`, see `json::da_legacy`); JSON in, JSON out.
+/// `valida` also gives the findings of `/3`; `route_all` adds `modello`, `dal_file`, `csv_leggi` and `csv_scrivi`): `op` is `proponi` or `proponi_spiegato` (`{"files":[{"name","sha256","kind"}]}`; the second adds the spans of the name), `proponi3`, `valida`, `per_tp`, `canonico` or `digest` (a `campioni/2`), `ricollega` (`{"campioni","file":[{"percorso","sha256"}]}`), `migra` or `da_legacy`
+/// (`{"session","qaqc","campioni1","mzflow"}`, see `json::da_legacy`); JSON in, JSON out. The desktop app serves all of them; the `table` .wasm links only `route_finder`.
 pub fn route(op: &str, input: &str) -> Result<String> {
     match op {
-        "proponi" | "proponi_spiegato" | "proponi3" => {
-            let v = crate::json::parse(input.as_bytes())?;
-            let s = |f: &crate::json::Value, k: &str| {
-                f.get(k).and_then(|x| x.str()).unwrap_or("").to_string()
-            };
-            let files: Vec<(String, String, String)> = v
-                .get("files")
-                .map(|a| a.arr())
-                .unwrap_or_default()
-                .iter()
-                .map(|f| (s(f, "name"), s(f, "sha256"), s(f, "kind")))
-                .collect();
-            if op == "proponi_spiegato" {
-                return Ok(proposals_json(&propose_explained(&files)));
-            }
-            if op == "proponi3" {
-                let table = Table {
-                    campioni: proponi(&files),
-                    colonne: Vec::new(),
-                };
-                return Ok(to_json3(&table));
-            }
-            Ok(to_json(&proponi(&files)))
+        "proponi_spiegato" => {
+            let files = files_of(input)?;
+            Ok(proposals_json(&propose_explained(&files)))
         }
-        "valida" => Ok(validate_json(&valida3(&table_from_json(input.as_bytes())?))),
-        "per_tp" => Ok(per_tp_json(&per_tp(&from_json(input.as_bytes())?))),
-        "da_legacy" => Ok(to_json(&da_legacy(input.as_bytes())?)),
+        "proponi3" => {
+            let table = Table {
+                campioni: proponi(&files_of(input)?),
+                colonne: Vec::new(),
+            };
+            Ok(to_json3(&table))
+        }
         "ricollega" => {
             let v = crate::json::parse(input.as_bytes())?;
             let bad = || Error::new("error.badCampioni");
@@ -269,23 +253,52 @@ pub fn route(op: &str, input: &str) -> Result<String> {
                 .collect();
             Ok(relink_json(&relink(&cs, &cand)))
         }
-        "canonico" | "digest" | "migra" => {
-            let doc = crate::json::parse(input.as_bytes())?;
-            let t = table_from_value(&doc)?;
-            let v3 = op == "migra" || doc.get("schema").and_then(|v| v.str()) == Some(SCHEMA3);
-            Ok(match (op, v3) {
-                ("digest", true) => digest3(&t),
-                ("digest", false) => digest(&t.campioni),
-                (_, true) => to_json3(&t),
-                _ => to_json(&t.campioni),
-            })
-        }
+        "migra" => canonical(op, input),
+        _ => route_finder(op, input),
+    }
+}
+
+/// The `{"files":[{"name","sha256","kind"}]}` of `proponi` and its variants.
+fn files_of(input: &str) -> Result<Vec<(String, String, String)>> {
+    let v = crate::json::parse(input.as_bytes())?;
+    let s =
+        |f: &crate::json::Value, k: &str| f.get(k).and_then(|x| x.str()).unwrap_or("").to_string();
+    Ok(v.get("files")
+        .map(|a| a.arr())
+        .unwrap_or_default()
+        .iter()
+        .map(|f| (s(f, "name"), s(f, "sha256"), s(f, "kind")))
+        .collect())
+}
+
+/// `canonico`, `digest` and `migra`: the table read from the document, written back (or hashed) in its own schema; `migra` always gives a `/3`.
+fn canonical(op: &str, input: &str) -> Result<String> {
+    let doc = crate::json::parse(input.as_bytes())?;
+    let t = table_from_value(&doc)?;
+    let v3 = op == "migra" || doc.get("schema").and_then(|v| v.str()) == Some(SCHEMA3);
+    Ok(match (op, v3) {
+        ("digest", true) => digest3(&t),
+        ("digest", false) => digest(&t.campioni),
+        (_, true) => to_json3(&t),
+        _ => to_json(&t.campioni),
+    })
+}
+
+/// The operations mzFinder calls through the `table` .wasm (`TP_Mine/files/finder-ruoli.js`): `proponi`, `valida`, `per_tp`, `canonico`, `digest`, `da_legacy`.
+/// Its .wasm has a cap, so the rest of `route` (`proponi_spiegato`, `proponi3`, `ricollega`, `migra`) is served by `rotte` in the browser; same bytes, same code.
+pub fn route_finder(op: &str, input: &str) -> Result<String> {
+    match op {
+        "proponi" => Ok(to_json(&proponi(&files_of(input)?))),
+        "valida" => Ok(validate_json(&valida3(&table_from_json(input.as_bytes())?))),
+        "per_tp" => Ok(per_tp_json(&per_tp(&from_json(input.as_bytes())?))),
+        "da_legacy" => Ok(to_json(&da_legacy(input.as_bytes())?)),
+        "canonico" | "digest" => canonical(op, input),
         _ => Err(Error::new("error.badCampioni").with("op", op)),
     }
 }
 
 /// The operations that read the names and the files (`modello`, `dal_file`, `csv_leggi`, `csv_scrivi`) and everything `route` does: the engine of the Data view
-/// serves this one. `route` alone is what mzFinder links (its .wasm has a cap: the name models and the CSV are not its business).
+/// serves this one. `route_finder` is what mzFinder links (its .wasm has a cap: the name models, the CSV and the rarer operations are not its business).
 pub fn route_all(op: &str, input: &str) -> Result<String> {
     match op {
         "dal_file" => from_file(input),

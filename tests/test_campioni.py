@@ -121,3 +121,16 @@ def test_set_meta_without_session_is_an_error(tmp_path):
     from mzlab.i18n import UserError
     with pytest.raises(UserError):
         App(tmp_path).set_meta({"files": []})
+
+
+def test_finder_ops_are_in_route_finder():
+    """Every `campioni` op mzFinder's roles page calls is linked into the `table` .wasm (`samples::route_finder`)."""
+    from pathlib import Path
+    import re
+    root = Path(__file__).resolve().parents[1]
+    ops = set(re.findall(r'call\("([a-z_0-9]+)"', (root / "TP_Mine/files/finder-ruoli.js").read_text(encoding="utf-8")))
+    src = (root / "crates/mzlab-core/src/samples/mod.rs").read_text(encoding="utf-8")
+    body = src[src.index("pub fn route_finder"):]
+    body = body[:body.index("\n}\n")]
+    linked = set(re.findall(r'"([a-z_0-9]+)"', body.split("_ =>")[0]))
+    assert ops and ops <= linked, sorted(ops - linked)
