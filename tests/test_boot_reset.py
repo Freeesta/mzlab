@@ -333,3 +333,46 @@ def test_hard_reset_is_the_one_wipe_and_ignores_a_second_call():
     """
     res = run_node(code)
     assert res["calls"] == ["all"]
+
+
+def _files_reload(opfs_err: str = "", blocked: bool = False, mode: str = "files", desktop: bool = False) -> dict:
+    """run(mode) on a page with ?reset=<mode>: the address it reloads with and the report of its wipe."""
+    code = f"""
+    global.window = global;
+    const nm = n => {{ const e = new Error('x'); e.name = n; return e; }};
+    const root = {{ entries: async function* () {{ yield ['mzlab', {{}}]; }}, removeEntry: async () => {{ if ({json.dumps(opfs_err)}) throw nm({json.dumps(opfs_err)}); }} }};
+    Object.defineProperty(global, 'navigator', {{ value: {{ storage: {{ getDirectory: async () => root }} }}, configurable: true }});
+    global.indexedDB = {{ deleteDatabase: () => {{ const q = {{}}; setTimeout(() => {json.dumps(blocked)} ? q.onblocked() : q.onsuccess(), 0); return q; }} }};
+    global.caches = {{ keys: async () => [] }};
+    global.localStorage = {{ length: 0, clear() {{}}, removeItem() {{}}, getItem() {{ return null; }}, setItem() {{}}, key() {{ return null; }} }};
+    global.sessionStorage = {{ clear() {{}}, setItem() {{}}, getItem() {{ return null; }}, removeItem() {{}} }};
+    let to = '';
+    global.location = {{ href: 'https://example.com/mzlab/?reset={mode}', search: '', replace(u) {{ to = u; }}, reload() {{ to = this.href; }} }};
+    global.NOMI = {{ DB: 'mzlab_lab', DB_OLD: 'qqq_lab', CACHE_BIG: 'mzlab-big-', KEY: k => 'mzlab.' + k, OLD_KEY: k => 'qqq.' + k }};
+    global.I18N = {{ t: k => k }};
+    global.document = {{ getElementById() {{ return null; }} }};
+    if ({json.dumps(desktop)}) window.MZLAB_DESKTOP = true;
+    eval(fs.readFileSync({json.dumps(str(WEB / "reset.js"))}, 'utf8'));
+    window.QQRESET.opfsMs = 300;
+    const rep = await window.QQRESET.run('{mode}');
+    console.log(JSON.stringify({{ riparti: new URL(to).searchParams.get('riparti'), reset: new URL(to).searchParams.get('reset'), errors: rep.errors, blocked: rep.blocked }}));
+    process.exit(0);                                                       // the wipe's safety timers would keep Node alive for 12 s
+    """
+    return run_node(code)
+
+
+def test_reset_files_with_opfs_held_reloads_with_the_files_backstop():
+    # a sync handle still open (index build, conversion, another tab): the new engine must finish, keeping what «Files» keeps (?riparti=file, not 1)
+    res = _files_reload("NoModificationAllowedError")
+    assert res["errors"] == ["opfs mzlab: timeout"] and res["riparti"] == "file" and res["reset"] is None, res
+    res = _files_reload("InvalidStateError")
+    assert res["errors"] == ["opfs mzlab: InvalidStateError"] and res["riparti"] == "file", res
+
+
+def test_reset_files_backstop_when_blocked_or_on_the_desktop_and_none_when_done():
+    assert _files_reload(blocked=True)["riparti"] == "file"                  # a database held by another connection
+    assert _files_reload(desktop=True)["riparti"] == "file"                  # the app: files and notebook are in the native store
+    res = _files_reload()
+    assert res["errors"] == [] and res["blocked"] == [] and res["riparti"] is None, res
+    assert _files_reload(mode="cold")["riparti"] == "1"                      # the desktop cold start clears the notebook too
+    assert _files_reload("NoModificationAllowedError", mode="all")["riparti"] == "1"
