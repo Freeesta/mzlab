@@ -157,7 +157,7 @@ def panels(pg):
             rec["moved"] = {k: [g0[k], g1[k]] for k in g0 if k in g1 and g0[k] != g1[k] and k.startswith(("panel", "#sb-pane", "#tools"))}
             rec["motion"] = mo; rec["cls"] = round(pg.evaluate("__au.cls") - cls0, 4); rec["untr"] = pg.evaluate(UNTR)
             pg.screenshot(path=str(OUT / f"panel_{sel.strip('#')}_{int(time.time())}.png"))
-            if sel == "#samptab": pg.click(sel); settle(pg)
+            if sel == "#samptab": pg.click("#backwork"); settle(pg)
             elif rec["panels"][1] > n0:
                 pg.evaluate("n => { const p = E.panels[E.panels.length - 1]; const x = p.el.querySelector('.x'); if (x) x.click(); else window.__noclose = true; }", n0)
                 settle(pg)
