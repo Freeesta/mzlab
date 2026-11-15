@@ -200,6 +200,7 @@ const CartPunt = (() => {
   function stop() { clearInterval(S.timer); clearTimeout(S.deb); if (S.obs) { try { S.obs.disconnect(); } catch (e) { /* gone */ } S.obs = null; } }
 
   async function start() {
+    if (S.native === null && window.MZLAB_DESKTOP) await carica("cartella-puntata-desktop.js");   // the desktop side is not in the start-up list
     if (S.native === null) S.native = (typeof CartPuntDesk !== "undefined" && CartPuntDesk.available()) ? CartPuntDesk : false;
     if (S.native) { await S.native.start(S, render); render(); return CartPuntApri.warm(); }
     if (supported()) { S.handle = await saved(); if (S.handle) { S.name = S.handle.name; await rescan(); follow(); } }
