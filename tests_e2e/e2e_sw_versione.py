@@ -196,7 +196,9 @@ try:
             assert V0[0] in body, ("the page of the cached build got a file of the new one", body)
             note = pc.locator("#sw-nuova[role=status]")
             note.wait_for(state="visible", timeout=150000)
-            assert pc.evaluate("I18N.t('update.siteNew')") in note.inner_text(), note.inner_text()
+            # the text comes from the catalogue loaded at start-up (lang/<L>/altre-press-xic.js), not from the key
+            assert note.locator("span").inner_text().strip() in ("New version ready", "Nuova versione pronta"), note.inner_text()
+            assert note.get_by_role("button").inner_text().strip() in ("Reload", "Ricarica"), note.inner_text()
             assert verc() == V0[0], "no reload by itself"
             with pc.expect_navigation(): note.get_by_role("button").click()
             pc.wait_for_load_state("load")
