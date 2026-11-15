@@ -38,11 +38,26 @@ async function warmClaim(rpc, /** @type {string} */ n, /** @type {Blob} */ blob)
   try { const r = await rpc({ op: "lr_warm_claim", name: n, blob, mtime: /** @type {any} */ (blob).lastModified || 0 }), j = JSON.parse(r.info || "{}"); return j.hit ? { files: r.files, missing: j.missing || 0, cause: j.cause || "" } : null; } catch (_) { return null; }
 }
 
+// Copies into the browser storage at once in a drop (the engine's copy gate, rust-carica.js createCopyGate): COPIES by default, so the first file of the list gets the disk
+// and its chart comes first (two at once: the earliest first chart that keeps the whole batch within +5 %, misure-copie.md); «?copie=N» or localStorage «mzlab.dev.copie» = N
+// chooses another number, 0 = every copy at once (the behaviour before the gate). Logged once.
+const COPIES = 2;
+let copiesK = /** @type {number | null} */ (null);
+function copiesOf() {
+  if (copiesK != null) return copiesK;
+  let v = null, from = "default";
+  try { v = new URLSearchParams(location.search).get("copie"); if (v != null) from = "?copie"; } catch (_) { /* no address */ }
+  if (v == null) try { v = localStorage.getItem("mzlab.dev.copie"); if (v != null) from = "localStorage"; } catch (_) { /* storage blocked */ }
+  const n = v == null || !/^\d+$/.test(v.trim()) ? COPIES : Math.min(64, +v);
+  copiesK = n; console.info(`mzlab: copies at once ${n || "all"} (${from}; ?copie=0 = all at once)`);
+  return n;
+}
+
 /** the page shows how far the loading of `name` has got (event mzlab-index, shell.js upload); `p` = { done, total } scans of the sample, `wait` = queued for a free builder */
 const tellIndex = (/** @type {string} */ name, /** @type {number} */ frac, /** @type {string | undefined} */ phase, /** @type {any} */ p = {}) => {
   if (p && p.early_tic) earlyTics.set(name, p.early_tic);
   if (phase === "open" || frac >= 1) earlyTics.delete(name);
-  window.dispatchEvent(new CustomEvent("mzlab-index", { detail: { name, frac, phase, done: p.done || 0, total: p.total || 0, wait: !!p.wait, early_tic: p.early_tic || null } }));
+  window.dispatchEvent(new CustomEvent("mzlab-index", { detail: { name, frac, phase, done: p.done || 0, total: p.total || 0, wait: !!p.wait, copies: p.copies || 0, early_tic: p.early_tic || null } }));
 };
 /** an mzML's whole-file fraction from its stage (mzmlFrac, progresso.js: each stage weighs its measured cost); a stage it does not know (a queued notice) counts as nothing */
 const mzF = (/** @type {number} */ size, /** @type {string} */ phase, /** @type {number} */ local) => { const f = /** @type {any} */ (globalThis).mzmlFrac; return f ? f(size, phase, local) : 0; };
@@ -105,7 +120,7 @@ export function createLr({ rb }) {
     if ((nat ? nat.size : blob.size) > 4 * 1024 * 1024 * 1024) return fail("err.memory.over4gb", {}, "file over 4 GB: too big", 500);
     let fase = "copy";                                                 // where it fails, for the diagnosis (diagnosi.js): copy → index → open
     try {                                                              // lr_put and lr_index report how far they have got: the page shows it (event mzlab-index, shell.js upload)
-      const hit = nat || gz || !/\.mzml$/i.test(n) ? null : await warmClaim(rpc, n, blob), put = hit || await rpc({ op: "lr_put", name: n, blob, nat, gz }, nat ? p => tellIndex(n, W.copy * p.frac, "read", p) : p => tellIndex(n, mzF(blob.size, "load", p.frac), "load", p));
+      const hit = nat || gz || !/\.mzml$/i.test(n) ? null : await warmClaim(rpc, n, blob), put = hit || await rpc({ op: "lr_put", name: n, blob, nat, gz, copies: copiesOf(), rank: typeof CONVROWS !== "undefined" ? CONVROWS.rank(name) : -1 }, nat ? p => tellIndex(n, W.copy * p.frac, "read", p) : p => tellIndex(n, mzF(blob.size, "load", p.frac), "load", p));
       if (nat && rb.markNative) rb.markNative(n);
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked

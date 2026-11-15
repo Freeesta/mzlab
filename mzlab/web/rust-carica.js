@@ -84,6 +84,29 @@ export function createPlainPut({ ARCH, impronte, prints, cancelled, isCancelled,
   return { copyPrints, putPlain, putGz, gunzipTo };
 }
 
+/** the gate of the page's copies (lr_put): at most `k` run together, the others wait in the order of the list (`rank`, the row's place; equal or none: as they came), so
+ * the first file of a drop gets the disk and reaches its builder first; `k` 0 = no gate (every copy at once). `onWait()` tells the page the file is queued;
+ * `drop(name, err)` (lr_cancel) rejects a queued copy before it starts */
+export function createCopyGate() {
+  let run = 0;
+  /** @type {{ name: string, k: number, rank: number, go: () => void, no: (e: any) => void }[]} */ const wait = [];
+  const next = () => { while (wait.length && (wait[0].k <= 0 || run < wait[0].k)) { const w = /** @type {any} */ (wait.shift()); run++; w.go(); } };
+  return {
+    async through(/** @type {string} */ name, /** @type {number} */ k, /** @type {number} */ rank, /** @type {() => void} */ onWait, /** @type {() => Promise<any>} */ task) {
+      const r = rank >= 0 ? rank : Infinity;
+      if (k > 0 && (run >= k || wait.length)) {      // `go` counts it in `run`
+        onWait();
+        await new Promise((go, no) => { const at = wait.findIndex(w => w.rank > r); wait.splice(at < 0 ? wait.length : at, 0, { name, k, rank: r, go: () => go(undefined), no }); });
+      }
+      else run++;
+      try { return await task(); } finally { run--; next(); }
+    },
+    drop(/** @type {string} */ name, /** @type {any} */ err) { for (let i = wait.length - 1; i >= 0; i--) if (wait[i].name === name) wait.splice(i, 1)[0].no(err); },
+    get running() { return run; },
+    get queued() { return wait.length; },
+  };
+}
+
 /** which slots hold the index they are asked to open: `same(slot, ix)` is true when the index (size and lastModified) is the one `mark`ed and the slot was not dropped since */
 export function createOpenGate() {
   /** @type {Map<number, string>} */ const seen = new Map();

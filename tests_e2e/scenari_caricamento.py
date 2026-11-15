@@ -6,6 +6,7 @@ Arms (one run = one fresh persistent Chromium profile, a normal window as the st
   subito, quieto the drop at qqReady + 0 ms vs + 20 s, cold and warm
   interazione   during `dieci`, once the first chart is drawn: 20 Ctrl+wheel zooms, 20 Shift+drags (3 pointermoves each), 5 clicks on the TIC (-> spectrum); `uno+gesti` = the same with nothing else loading
   memoria       `dieci` with measureUserAgentSpecificMemory every 500 ms, and the RSS of the browser's processes (read from /proc)
+  copie, raw-copie, copie-mem, cinquanta   the copy gate (lr.js `copiesOf`): `dieci-kK` = ten files with K copies at once (0 = all at once); `cinquanta-kK` = fifty mzML of ~10 MB (480 scans)
 Metrics per run, ms from the `change` of the file input: provisional TIC (`#ticprov` drawn), first chart (a panel drawn), all indexed (nothing read or opened any more), start of the copy
 (first `mzlab-index` of the first file), main-thread long tasks and server requests between the drop and the first chart, rAF delta p95 and Event Timing p50/p98 from the first chart on,
 input -> next frame of wheel and drag, click -> last spectrum draw, memory peaks. CPU throttling is the page's main thread (workers run at full speed)."""
@@ -83,17 +84,18 @@ class Site:
     def close(s): s.srv.shutdown()
 
 
-def make_files(wd, raw):
-    """Ten synthetic files of ~53 MB: mzML (msconvert style, 2400 scans) or a Thermo `.raw` (thermo_synthetic); copies with other names after the first."""
+def make_files(wd, raw, n=10, scans=None):
+    """`n` synthetic files (ten by default) of ~53 MB: mzML (msconvert style, 2400 scans) or a Thermo `.raw` (thermo_synthetic); copies with other names after the first.
+    `scans` makes a smaller mzML (the 50-file batch: 480 scans, ~10 MB)."""
     import mzml_msconvert_synthetic as gen
     wd.mkdir(parents=True, exist_ok=True); ext = "raw" if raw else "mzML"; base = wd / f"S01.{ext}"
     if not base.exists():
         if raw:
             exe = ROOT / "target" / "release" / "examples" / "thermo_synthetic"
             subprocess.run([str(exe), str(base), "--scans", "950", "--peaks", "600"], check=True, capture_output=True)
-        else: gen.scrivi(str(base), scans=2400, peaks1=5000, peaks2=500)
+        else: gen.scrivi(str(base), scans=scans or 2400, peaks1=5000, peaks2=500)
     out = [str(base)]
-    for i in range(2, 11):
+    for i in range(2, n + 1):
         p = wd / f"S{i:02d}.{ext}"
         if not p.exists(): shutil.copyfile(base, p)
         out.append(str(p))
@@ -117,12 +119,13 @@ class RssSampler(threading.Thread):
         while s.on: s.v.append(rss_mb(s.prof)); _WAIT(0.5)
 
 
-def open_ctx(p, prof, cpu_hint=None):
+def open_ctx(p, prof, cpu_hint=None, copie=None):
     ctx = p.chromium.launch_persistent_context(prof, viewport={"width": 1500, "height": 1000}, reduced_motion="reduce", **CHROME,
                                                args=["--headless=new", "--enable-precise-memory-info"])
     ctx.set_default_timeout(900000)
     ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
     ctx.add_init_script(PROBE)
+    if copie is not None: ctx.add_init_script(f"try{{localStorage.setItem('mzlab.dev.copie','{int(copie)}')}}catch(_){{}}")      # the copy gate's switch (lr.js copiesOf)
     return ctx
 
 
@@ -181,7 +184,7 @@ def one_run(p, site, arm, cpu, files, tmpl):
     prof = tempfile.mkdtemp(prefix="mzlab-scen-"); shutil.rmtree(prof)
     if arm.get("warm"): shutil.copytree(tmpl, prof, symlinks=True); (Path(prof) / ".ok").unlink(missing_ok=True)
     site.hold, site.release = tuple(arm.get("hold", ())), None; site.log.clear()
-    ctx = open_ctx(p, prof); pg = ctx.pages[0] if ctx.pages else ctx.new_page()
+    ctx = open_ctx(p, prof, copie=arm.get("copie")); pg = ctx.pages[0] if ctx.pages else ctx.new_page()
     sampler = RssSampler(prof) if arm.get("mem") else None
     try:
         pg.goto(f"http://127.0.0.1:{site.port}/"); wait_ready(pg)
@@ -229,9 +232,15 @@ def arms_of(name):
         "uno": {"uno": dict(n=1, **warm), "dieci": dict(n=10, **warm), "raw-uno": dict(n=1, raw=1, **warm), "raw-dieci": dict(n=10, raw=1, **warm)},
         "rotte": {"base": dict(n=1, **cold), "rotte+3s": dict(n=1, hold=("rotte/mzlab_rotte_wasm_bg.wasm",), **cold)},
         "thermo": {"base": dict(n=1, raw=1, **cold), "thermo+3s": dict(n=1, raw=1, hold=("thermo/mzlab_lettori_wasm_bg.wasm",), **cold)},
+        "raw-subito": {"raw+0": dict(n=1, raw=1, wait=0, **cold)},
         "subito": {"cold+0": dict(n=1, wait=0, **cold), "cold+20s": dict(n=1, wait=20000, **cold), "warm+0": dict(n=1, wait=0, **warm), "warm+20s": dict(n=1, wait=20000, **warm)},
         "interazione": {"dieci": dict(n=10, **warm), "dieci+gesti": dict(n=10, act=1, **warm), "uno+gesti": dict(n=1, act=1, **warm)},
         "memoria": {"dieci+mem": dict(n=10, mem=1, **warm)},
+        # the copy gate (lr.js copiesOf, `copie` = copies at once, 0 = all at once as before the gate)
+        "copie": {"uno": dict(n=1, **warm), **{f"dieci-k{k}": dict(n=10, copie=k, **warm) for k in (0, 1, 2, 3)}},
+        "raw-copie": {"raw-uno": dict(n=1, raw=1, **warm), **{f"raw-dieci-k{k}": dict(n=10, raw=1, copie=k, **warm) for k in (0, 1, 2, 3)}},
+        "copie-mem": {f"dieci+mem-k{k}": dict(n=10, mem=1, copie=k, **warm) for k in (0, 1, 2)},
+        "cinquanta": {f"cinquanta-k{k}": dict(n=50, small=1, copie=k, **warm) for k in (0, 1, 2)},
     }[name]
 
 
@@ -251,7 +260,7 @@ def main(a):
         with sync_playwright() as p:
             make_warm(p, site, wd / "warm-profile")
             for name in names:
-                arms = arms_of(name); raw = {k: make_files(wd / ("raw" if v.get("raw") else "mzml"), bool(v.get("raw"))) for k, v in arms.items()}; res = {}
+                arms = arms_of(name); raw = {k: make_files(wd / ("raw" if v.get("raw") else "mzml50" if v.get("small") else "mzml"), bool(v.get("raw")), n=max(10, v["n"]), scans=480 if v.get("small") else None) for k, v in arms.items()}; res = {}
                 for i in range(a.runs):
                     for cpu in cpus:
                         for arm, cfg in arms.items():

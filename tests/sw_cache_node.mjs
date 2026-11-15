@@ -1,5 +1,5 @@
 // Loads mzlab/web/sw.js with a mocked service-worker scope: app files are cache-first by site version (hit, miss -> network -> checked against
-// the manifest -> put), navigations are network-first, a worker of an older version answers from its cache only the files the newer one did not change, the background fill (retried after a failed file), unchanged files carried over from the previous version, old caches go.
+// the manifest -> put; stored with the isolation headers, a hit answered as the cache gave it), navigations are network-first, a worker of an older version answers from its cache only the files the newer one did not change, the background fill (retried after a failed file), unchanged files carried over from the previous version, old caches go.
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -22,7 +22,7 @@ function mondo(net = { ...FILES }, man = manifest()) {
     if (!stores.has(name)) stores.set(name, new Map());
     const m = stores.get(name);
     return {
-      async match(r, o) { for (const [k, v] of m) if (key(k, o) === key(r, o)) return v.clone(); },
+      async match(r, o) { for (const [k, v] of m) if (key(k, o) === key(r, o)) { const c = v.clone(); c.dalCache = true; return c; } },   // the tag tells a cache answer from a wrapped copy
       async put(r, res) { m.set(key(r), res.clone()); },
       async keys() { return [...m.keys()].map(url => ({ url })); },
     };
@@ -222,5 +222,46 @@ function mondo(net = { ...FILES }, man = manifest()) {
   assert.ok(await cache.match(O + "static/lazy.js"), "the missing file is stored");
   assert.ok(await cache.match(O + ".fill-done"));
   assert.equal(w.netCount("static/big.wasm"), n, "files already stored are not fetched again");
+}
+{ // the copy is stored with the isolation headers and a hit is the cache's own answer, not a new Response; a copy of an older worker is still wrapped
+  const w = mondo();
+  const ISO = { "Cross-Origin-Embedder-Policy": "require-corp", "Cross-Origin-Opener-Policy": "same-origin", "Cross-Origin-Resource-Policy": "same-origin", "Cache-Control": "no-cache" };
+  const headed = r => Object.entries(ISO).every(([k, v]) => r.headers.get(k) === v);
+  const miss = await w.get("static/app.js");
+  assert.ok(headed(miss) && !miss.dalCache, "a miss: the network body, wrapped");
+  const stored = await (await w.ctx.caches.open("mzlab-app-abc")).match(O + "static/app.js");
+  assert.ok(headed(stored), "stored with the four headers");
+  const hit = await w.get("static/app.js");
+  assert.ok(hit.dalCache, "a hit is the cache's answer as it is");
+  assert.ok(headed(hit));
+  assert.equal(await hit.text(), "app()");
+  await (await w.ctx.caches.open("mzlab-app-abc")).put(new Request(O + "static/lazy.js"), new Response("lazy()", { status: 200, headers: { "Cache-Control": "max-age=600" } }));
+  const old = await w.get("static/lazy.js");
+  assert.ok(!old.dalCache && headed(old), "a copy without the headers (older worker) is wrapped");
+  assert.equal(await old.text(), "lazy()");
+  assert.equal(w.netCount("static/lazy.js"), 0);
+}
+{ // a stale worker with headed copies still answers only the ones whose bytes are the newer version's
+  const NEW = { ...FILES, "static/lazy.js": "lazy() v2" };
+  const w = mondo({ ...NEW }, manifest({ app: "zzz", files: Object.fromEntries(Object.entries(NEW).map(([k, v]) => [k, sha(v)])) }));
+  const mine = await w.ctx.caches.open("mzlab-app-abc");
+  const h = { "Cross-Origin-Embedder-Policy": "require-corp", "Cross-Origin-Opener-Policy": "same-origin", "Cross-Origin-Resource-Policy": "same-origin", "Cache-Control": "no-cache" };
+  for (const p of ["static/app.js", "static/lazy.js"]) await mine.put(new Request(O + p), new Response(FILES[p], { status: 200, headers: h }));
+  const same = await w.get("static/app.js");
+  assert.equal(await same.text(), "app()");
+  assert.ok(same.dalCache, "unchanged in the newer version: the cached copy as it is");
+  assert.equal(await (await w.get("static/lazy.js")).text(), "lazy() v2", "changed: never the cached older bytes");
+}
+{ // a copy carried over from an older worker's cache (no headers) is stored in this version's cache with them; vendor files likewise
+  const w = mondo({ ...FILES, "static/vendor/k.js": "ketcher()" });
+  await (await w.ctx.caches.open("mzlab-app-old")).put(new Request(O + "static/app.js"), new Response("app()", { status: 200 }));
+  assert.equal(await (await w.get("static/app.js")).text(), "app()");
+  assert.equal((await (await w.ctx.caches.open("mzlab-app-abc")).match(O + "static/app.js")).headers.get("Cache-Control"), "no-cache");
+  assert.ok((await w.get("static/app.js")).dalCache);
+  assert.ok(!(await w.get("static/vendor/k.js")).dalCache);
+  const v = await w.get("static/vendor/k.js");
+  assert.ok(v.dalCache, "vendor: a hit as the cache gave it");
+  assert.equal(await v.text(), "ketcher()");
+  assert.equal(w.netCount("static/vendor/k.js"), 1);
 }
 console.log("sw_cache_node ok");

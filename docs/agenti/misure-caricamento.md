@@ -81,21 +81,9 @@ Cold at RTT 40 / 150 (mirror): `qqReady` 3359 / 7585 (HTTP/1.1 queue, see above)
   `ready` 100-360 ms later (warm 118 ms, `cpu4warm` 209 ms, cold 339 ms, ×4 cold 262 ms), `MZLAB_LR` is set 17-32 ms after that and `api/state` answers ~1 ms after the engine (`shell.js` calls it at once, the answer is a worker call that is ready) and `qqReady` is set in the same task. So `qqReady`
   = worker `ready` + ~20 ms: shortening the script tail (list `L`, slices of 48) does not move `qqReady` until the worker ready arrives earlier than the tail.
 
-### 3. Code cache (Chromium trace; categories `v8,v8.wasm,disabled-by-default-v8.compile,devtools.timeline`; traced load = 2nd reload after the first visit; 5 runs, CPU ×1 | ×4)
+### 3. Code cache
 
-Event names from a control page (240 KB script and the engine `.wasm`, plain HTTP cache, no SW, 5 loads): a script that consumes its code cache has `v8.compile` / `v8.compileModule` with `args.data.consumedCacheSize` (+ `cacheKind: "normal"`, `cacheRejected: false`), seen from the 3rd
-load on; `v8.produceCache` marks the cache being written; a script with no cache has `streamed: true` (or `notStreamedReason`) and none of those fields. For `.wasm` the same control shows **no** event that tells a hit from a miss (`wasm.StartStreamingCompilation`, `wasm.FinishStreaming`,
-`wasm.GetNativeModuleFromCache`, the same in loads 2-5), so only times are reported.
-
-| scenario | group | compile events | cache hits | rejected | streamed | eager compile ms (main thread / worker) |
-|---|---|---|---|---|---|---|
-| warm and warm-restarted | scripts of `L` (main) | 152 | **0** | 0 | 152 | 4.5 [2.7-5.9] \| ×4 15.8 [12.2-22.3] (restarted 3.4 \| 12.8) |
-| warm | other scripts (main) | 136 | **0** | 0 | 127 | 3.6 [3.3-4.7] \| ×4 17.1 [15.6-24.1] |
-| warm | engine worker | 32 | **0** | 0 | 0 | 15.3 [13.7-18.2] \| ×4 13.2 [12.3-19.4] |
-
-- **No script is ever served from the code cache** (0 hits in 20 traced loads, restarted rows identical; the same on the 6th reload, `--trace-reloads 6`, 5 runs warm and restarted: 0 hits, 152 + 136 + 32 events), with the SW running or restarted. `v8.produceCache` fires 320 times per load: the cache is written (after each load) and never read back. Lazy compiles: main 0 ms, engine worker 4-14 ms; background-thread streaming compile (`BackgroundCompileTask::Run`) 360-670 ms ×1 (284-1061 range) and 380-410 ms ×4, off the main thread.
-- A plausible cause, **not tested here**: the SW answers every script with a new `Response` built by `isolata` (`sw.js:26-33`, also for cache hits, line 194), which drops the Cache Storage marker the browser needs to store a code cache for a SW-served script. A test would serve a script straight from the cache once; that changes a product file and is the owner's decision (S3/S4 wait for this).
-- `.wasm`, warm ×1 | ×4: main thread `FinishStreaming` 2.1 | 6.5 ms, `OnBytesReceived` 3.1 | 15.1 ms, `GetNativeModuleFromCache` 0.6 ms (pool thread), worker instantiate 0.9 ms; restarted the same within noise. The streaming compile runs on background threads outside these categories.
+Moved to `misure-code-cache.md` (S1 trace of main and the S3 test of serving cached copies without a new `Response`).
 
 ### 5. Isolation reload (cold; first page not isolated, second page after `isolateOnce`)
 
@@ -182,14 +170,17 @@ At 4× the gestures start after the first chart (5 s) and last about 9 s, so onl
 
 `measureUserAgentSpecificMemory` answers 5-10 s after the call (the peaks came back about 12 s after the drop, after the loading), so its 500 ms sampling is a series of overlapping calls; it covers the page's own agent cluster and not the engine's WASM memories, so it is a floor. The RSS (read from `/proc` every 500 ms, all processes started with the profile: page, builders and their helpers, engine worker, GPU, network) is a ceiling: it holds file-backed pages the copy of 530 MB touched.
 
+**(b) `thermo` asked at the drop: no gain** (cold profile, drop at `qqReady` + 0, one `.raw` of 50.6 MB, `--scenarios raw-subito`, N = 12 per arm interleaved run by run with the order alternating, median [min-max] ms, same machine and files as above). The arm that asked the engine worker for the module (`prepara`) as soon as the `.raw` was recognised, before the quota check, against the module asked at the read:
+
+| CPU | arm | first chart | copy start |
+|---|---|---|---|
+| 1× | module asked at the read | 1297 [1132-4135] | 98 [41-540] |
+| 1× | module asked at the drop | 1402 [1019-1703] | 82 [45-150] |
+| 4× | module asked at the read | 2443 [2119-3005] | 172 [90-238] |
+| 4× | module asked at the drop | 2523 [1992-2991] | 180 [117-235] |
+
+Medians: +105 ms (1×) and +80 ms (4×) for the arm asked at the drop, inside the spread of both arms. A first run of N = 5 had shown −146 / −303 ms with overlapping ranges; N = 12 does not confirm it. Not adopted (`ottimizzazioni-tentate.md`).
+
 ### Verdicts
 
-- **(a) `rotte` on the path to the first chart: no.** Held 3 s the first chart does not move (1514 → 1611 ms at 1×, 2432 → 2307 at 4×, inside the min-max); the page asks for it about 1.4 s after the drop, when the chart is nearly drawn, and does not wait for it. Gain bound: 0 ms.
-- **(b) `thermo` download serial before the `.raw` copy start: no, but on the path to the first chart: yes.** The first event of the file does not move (50 → 62 ms, 84 → 83) while the chart comes about 0.6 s (1×) / 1.1 s (4×) after the module arrives (held 3 s: 3608 and 4104 ms).
-  Cold with the module filled by the SW fill the first chart is as the warm one (985 vs 1013 ms): up to ≈ 0.4 s (1×) / 0.7 s (4×) of download hides behind the copy and the scan table, beyond that every ms adds one. Gain bound: the whole download and compilation of the 768 KB module on a first visit with a slow link (not measurable on localhost).
-- **(c) ten files delay the first one: yes.** First chart +2.2 s (+137 %) mzML and +3.1 s (+307 %) `.raw` at 1×, +2.6 s / +3.8 s at 4×; the provisional TIC +1.7 s mzML. The ten copies run at once (`shell.js` `Promise.all`). Gain bound: 2.2-3.8 s per first chart (the whole difference to the file alone, unreachable in full).
-- **(d) idle jobs slow a file dropped right after `qqReady`: only the SW fill on a first visit.** Cold +0 vs +20 s: first chart −471 ms at 1× (−22 %), −952 ms at 4× (−27 %), with 333-438 requests in the window; warm +0 vs +20 s: −17 / +135 ms (noise): the page's own idle jobs (mzFinder package, OpenChemLib, SW cache reads) are not on the path. The OPFS clean-up at 8 s is not covered (the chart is drawn before it). Gain bound: 0.5 s (1×) / 1.0 s (4×), first visit only.
-- **(e) the first chart stays responsive while files 2..10 index: yes at 1×, same as alone at 4×.** Wheel p95 38 vs 28 ms and click → spectrum 64 vs 66 ms at 1×; at 4× 83 vs 94 ms and 209 vs 198 ms, i.e. the same as with nothing else loading; the cost of 4× is the page itself (rAF delta p95 ≈ 190 ms with or without gestures). Gain bound: ≈ 10 ms (1× wheel p95), nothing at 4×.
-- **(f) peak memory of (c): page agent cluster 64-65 MB (floor), RSS of all processes 1.8-1.9 GB (ceiling), no memory error or pool lowering seen.** No cap was reached in these runs, so no S6/S8/S10 decision rests on memory at 10 × 53 MB.
-
-Method notes: `tests_e2e/lib.py` replaces `wait_for_timeout` and `set_input_files` (quiet pauses, waits for rows and writes times): the scenario module puts the real ones back, an earlier pass without that fix is discarded. The tool measures page-side events; the server (a thread of the tool) logs every request that reaches the network, so SW-internal fills show.
+The verdicts (a)-(f) of this section, with the copy gate that answers (c): `misure-copie.md`, «Critical path: verdicts».
