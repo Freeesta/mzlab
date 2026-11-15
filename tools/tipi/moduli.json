@@ -31,7 +31,6 @@
     "../../mzlab/web/draw.js",
     "../../mzlab/web/errori.js",
     "../../mzlab/web/capacita.js",
-    "../../mzlab/web/avviso-safari.js",
     "../../mzlab/web/compat.js",
     "../../mzlab/web/avviso-capacita.js",
     "../../mzlab/web/sw-avviso.js",
