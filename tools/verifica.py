@@ -73,17 +73,21 @@ BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR
           r"IndexedDB transaction that was not yet complete has been aborted due to page navigation"]   # Firefox: notices about styles and about a reload while a write was in flight (the test reloads on purpose), not errors   # aborted requests (Chromium ERR_ABORTED, Firefox NS_BINDING_ABORTED and its service-worker notice) = page reloaded or closed by the test
 
 
+NOT_RUN = "TIMEOUT budget, not run"      # the marks of a test the --budget kept from running or cut: never read as a known red (NOTO) or as a pass
+CUT = "TIMEOUT budget, cut"
+PROGRESS = False                          # one line per finished e2e on stderr: only with --budget / --parte (the CI), a normal run stays short
 DEADLINE: float | None = None      # --budget: after it nothing starts and what runs is cut, so the report is always written (a CI step killed from outside leaves none)
 
 
 def sh(cmd, log: Path, timeout: int, env=None, cwd=ROOT) -> tuple[int, str, float]:
-    t0 = time.time()
+    t0, cut = time.time(), False
     if DEADLINE is not None:
         if DEADLINE - t0 < 1:
-            out = "TIMEOUT: the time budget of this run (--budget) was spent before it started: not run"
+            out = f"{NOT_RUN}: the time budget of this run (--budget) was spent before it started"
             log.write_text(out, encoding="utf-8")
             return 124, out, 0.0
-        timeout = min(timeout, int(DEADLINE - t0))
+        if DEADLINE - t0 < timeout:
+            timeout, cut = int(DEADLINE - t0), True
     # the tests print m/z, deltas, symbols: on Windows the console is cp1252 and a print of «Δ» or «🔗» stopped the test with UnicodeEncodeError (CI job windows-chromium)
     env = {**(env if env is not None else os.environ), "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
     try:
@@ -91,7 +95,7 @@ def sh(cmd, log: Path, timeout: int, env=None, cwd=ROOT) -> tuple[int, str, floa
         out, rc = (p.stdout or "") + (p.stderr or ""), p.returncode
     except subprocess.TimeoutExpired as e:
         txt = lambda v: v.decode("utf-8", "replace") if isinstance(v, bytes) else (v or "")
-        out, rc = f"{txt(e.stdout)}\n{txt(e.stderr)}\nTIMEOUT dopo {timeout} s", 124
+        out, rc = f"{txt(e.stdout)}\n{txt(e.stderr)}\n" + (f"{CUT} after {timeout} s: the run's time (--budget) ended" if cut else f"TIMEOUT dopo {timeout} s"), 124
     except FileNotFoundError as e:
         out, rc = f"comando non trovato: {e}", 127
     log.write_text(out, encoding="utf-8")
@@ -311,9 +315,9 @@ T0 = time.time()
 
 def parte_di(names: list[str], k: int, n: int) -> list[str]:
     """Part k of n (1-based) of the e2e `names`: the slow ones first, dealt round-robin, so the parts take about the same time and are the same on every call.
-    Part 1 also runs syntax, texts, pytest and prova_hr (up to ~45 min): it gets one slot per round of the others' two."""
+    Part 1 also runs syntax, texts, pytest and prova_hr: it gets one slot per two rounds of the others, and the slowest e2e (SLOW, first in the rank) go to the other parts."""
     rank = [x for x in SLOW if x in names] + [x for x in names if x not in SLOW]
-    wheel = [*range(1, n + 1), *range(2, n + 1)] if n > 1 else [1]
+    wheel = [*range(2, n + 1), 1, *range(2, n + 1)] if n > 1 else [1]
     return [x for i, x in enumerate(rank) if wheel[i % len(wheel)] == k]
 
 
@@ -353,8 +357,10 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
     env_sint = dict(env, MZLAB_MZML=str(sintetici()), QQQ_MZML=str(sintetici())) if src == "veri" and any(con_golden(n) for n in names) else env
     def one(n):
         rc, out, dt = sh([sys.executable, str(E2E / f"{n}.py")], LOG / f"{n}.log", cap_of(n, timeout), env=env_sint if con_golden(n) else env, cwd=ROOT)
-        probs = judge(out, rc)
-        print(f"[{time.time() - T0:5.0f} s] {'FAIL' if probs else 'OK  '} {n} ({dt:.0f} s)", file=sys.stderr, flush=True)      # progress: a hang shows in the CI log
+        probs = [NOT_RUN] if out.startswith(NOT_RUN) else judge(out, rc)
+        probs = [x for x in probs if x.startswith(CUT)] + [x for x in probs if not x.startswith(CUT)]      # the mark of a cut test comes first
+        if PROGRESS:
+            print(f"[{time.time() - T0:5.0f} s] {'FAIL' if probs else 'OK  '} {n} ({dt:.0f} s)", file=sys.stderr, flush=True)      # a hang shows in the CI log
         return (n, "FAIL" if probs else "OK", dt, probs[:4])
     if todo:           # the page the tests open is the built site with the Rust engine (tests_e2e/lib.py Run)
         rc, _out, dt = sh([sys.executable, str(ROOT / "tools" / "prepara_sito.py")], LOG / "prepara_sito.log", 3600, env=env)   # cold cache: engine, libraries, 9 reader families
@@ -401,8 +407,9 @@ def main() -> None:
         setup()
     results: list = []
     t0 = time.time()
-    global DEADLINE
+    global DEADLINE, PROGRESS
     DEADLINE = t0 + a.budget if a.budget else None
+    PROGRESS = bool(a.budget or a.parte)
     parte = tuple(int(x) for x in a.parte.split("/")) if a.parte else None
     if parte and not (len(parte) == 2 and 1 <= parte[0] <= parte[1]):
         ap.error("--parte wants K/N with 1 <= K <= N")
@@ -428,7 +435,7 @@ def main() -> None:
             e2e(results, only, a.timeout, "", a.paralleli, parte, a.sito_pronto)
     known = known_reds()
     extra = known_greens(results, known)
-    results = [(n, "NOTO", dt, ["known: " + known[n]] + notes[:1]) if st == "FAIL" and n in known else
+    results = [(n, "NOTO", dt, ["known: " + known[n]] + notes[:1]) if st == "FAIL" and n in known and not (notes and notes[0].startswith("TIMEOUT budget")) else
                (n, "FAIL", dt, (["NUOVO"] if n.startswith("e2e") else []) + notes) if st == "FAIL" else (n, st, dt, notes)
                for n, st, dt, notes in results] + extra
     fails = [r for r in results if r[1] == "FAIL"]

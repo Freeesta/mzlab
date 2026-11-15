@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Prints, in the job log, the report of the run and the last 60 lines of the log of every FAIL (notte.yml): the cause is readable without downloading the artifact.
-A FAIL that is not an e2e (the site build `prepara_sito`, `precompila`, pytest, prova_hr, the syntax checks) prints the tail of the logs of those stages."""
+A FAIL that is not an e2e (the site build `prepara_sito`, `precompila`, pytest, prova_hr) prints the tail of the log of that stage only."""
 import re
 import sys
 from pathlib import Path
 
 OUT = Path(".verifica")
-STAGES = ("prepara_sito", "precompila", "pytest-cargo", "pytest", "prova_hr")
+# the report line of a failed stage (verifica.py) -> its logs: only the logs of the stages that failed are printed
+STAGES = {"sito per gli e2e": ("prepara_sito",), "cargo build": ("precompila",), "pytest": ("pytest-cargo", "pytest"), "prova_hr": ("prova_hr",)}
 
 
 def tail(name: str, n: int = 60) -> None:
@@ -32,10 +33,11 @@ def main() -> int:
             name = line.split()[0]
             if name.startswith("e2e") and name not in seen:
                 seen.add(name); tail(name)
-        if any(not l.startswith("e2e") for l in fails):
-            for st in STAGES:
-                if st not in seen and (OUT / "log" / f"{st}.log").exists():
-                    seen.add(st); tail(st)
+        for line in fails:
+            for prefix, logs in STAGES.items():
+                for st in logs if line.startswith(prefix) else ():
+                    if st not in seen and (OUT / "log" / f"{st}.log").exists():
+                        seen.add(st); tail(st)
     return 0
 
 

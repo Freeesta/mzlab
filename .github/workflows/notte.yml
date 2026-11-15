@@ -227,7 +227,7 @@ jobs:
       matrix:
         parte: [1, 2, 3, 4, 5]
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -286,10 +286,11 @@ jobs:
           sudo cp tools/fontconfig/56-prefer-inter.conf /etc/fonts/conf.d/
           sudo fc-cache -f
           fc-match system-ui
-      # --budget 2400: at 40 min no test starts and the running one is cut, so the report .verifica/ultimo.md is always written (the 50 min step ceiling kills it with none)
+      # --budget: when spent no test starts and the running one is cut, so the report .verifica/ultimo.md is always written (the step ceiling kills it with none). Counted from the start of the run:
+      # part 1 does syntax, pytest and prova_hr first, so it gets 47 min where the others get 40 (its e2e share is the smallest, tools/verifica.py parte_di)
       - name: Complete verification (part ${{ matrix.parte }}/5)
-        timeout-minutes: 50
-        run: python tools/verifica.py --browser chromium --sito-pronto --parte ${{ matrix.parte }}/5 --budget 2400
+        timeout-minutes: 55
+        run: python tools/verifica.py --browser chromium --sito-pronto --parte ${{ matrix.parte }}/5 --budget ${{ matrix.parte == 1 && 2820 || 2400 }}
       # the second round of the engine: the built site with the Rust engine (?motore=rust) against Python on the same files
       # verifica.py rewrites .verifica/ultimo.md, so the report of the part is kept apart first
       - name: Rust engine on the built site
