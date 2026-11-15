@@ -198,7 +198,8 @@ def seal_sw(out: Path) -> None:
     """Names the service worker's cache after the site as it will be published: writes `static/sw-manifest.json` ({app, files: path -> SHA-256,
     nofill: the big ones, fetched only when used} of every file the worker may cache) and puts `app`, a hash of those paths and hashes, into sw.js. Runs again after the parts (.wasm,
     packages) are in place (`--build-json`), so a change in any of them is a new cache and a cached file is always the right version."""
-    skip = ("sw.js", "static/manifest.json", "static/build.json", "static/sw-manifest.json")
+    # .nojekyll: GitHub Pages answers 404 for it, so a manifest listing it left the background fill failing for ever (no `.fill-done`, old caches kept)
+    skip = ("sw.js", ".nojekyll", "static/manifest.json", "static/build.json", "static/sw-manifest.json")
     found = {p: h for p, h in file_hashes(out).items() if p not in skip and not p.startswith(("static/vendor/", "static/librerie/"))}
     files = {p: h["sha256"] for p, h in found.items()}
     nofill = sorted(p for p, h in found.items() if p.startswith("static/esempi/") or h["size"] > 6_000_000)   # cached when used, not fetched ahead

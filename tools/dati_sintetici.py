@@ -24,6 +24,8 @@ from pathlib import Path
 
 import numpy as np
 
+from dati_sintetici_mzml import _chrom_type, _write  # noqa: E402
+
 OFF = 0.3                       # instrument m/z offset seen in the lab files
 TIMES = [0, 5, 10, 15, 30, 45, 60]
 STANDARDS = {"0_06": 0.06, "0_6": 0.6, "2_4": 2.4, "7_2": 7.2, "12": 12.0, "18": 18.0}
@@ -43,9 +45,10 @@ def _b64(a, f4=False) -> str:
 
 
 def _arr(acc, name, data, unit="") -> str:
-    return (f'<binaryDataArray encodedLength="0"><cvParam cvRef="MS" accession="MS:1000523" name="64-bit float" value=""/>'
+    b = _b64(data) if len(data) else ""
+    return (f'<binaryDataArray encodedLength="{len(b)}"><cvParam cvRef="MS" accession="MS:1000523" name="64-bit float" value=""/>'
             f'<cvParam cvRef="MS" accession="MS:1000574" name="zlib compression" value=""/>'
-            f'<cvParam cvRef="MS" accession="{acc}" name="{name}" value=""{unit}/><binary>{_b64(data) if len(data) else ""}</binary></binaryDataArray>')
+            f'<cvParam cvRef="MS" accession="{acc}" name="{name}" value=""{unit}/><binary>{b}</binary></binaryDataArray>')
 
 
 def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False, iso=None, filt=None) -> str:
@@ -62,7 +65,8 @@ def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False, 
              f'<activation><cvParam cvRef="MS" accession="MS:1000045" name="collision energy" value="{ce}"/></activation></precursor></precursorList>')
     return (f'<spectrum index="{i}" id="sample=1 period=1 cycle={i + 1} experiment=1" defaultArrayLength="{len(mz)}">'
             f'<cvParam cvRef="MS" accession="MS:1000511" name="ms level" value="{level}"/>'
-            + ('<cvParam cvRef="MS" accession="MS:1000128" name="profile spectrum" value=""/>' if profile else '')
+            + ('<cvParam cvRef="MS" accession="MS:1000579" name="MS1 spectrum" value=""/>' if level == 1 else '<cvParam cvRef="MS" accession="MS:1000580" name="MSn spectrum" value=""/>')
+            + ('<cvParam cvRef="MS" accession="MS:1000128" name="profile spectrum" value=""/>' if profile else '<cvParam cvRef="MS" accession="MS:1000127" name="centroid spectrum" value=""/>')
             + ('<cvParam cvRef="MS" accession="MS:1000129" name="negative scan" value=""/>' if neg else '<cvParam cvRef="MS" accession="MS:1000130" name="positive scan" value=""/>') +
             f'<cvParam cvRef="MS" accession="MS:1000285" name="total ion current" value="{float(np.sum(it)):.6g}"/>'
             f'<scanList count="1"><scan><cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value="{rt:.6f}" '
@@ -72,6 +76,7 @@ def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False, 
 
 
 def _chrom(i, cid, t, y, extra="", yunit="") -> str:
+    extra = _chrom_type(cid, extra) + extra
     return (f'<chromatogram index="{i}" id="{cid}" defaultArrayLength="{len(t)}">{extra}<binaryDataArrayList count="2">'
             + _arr("MS:1000595", "time array", t, ' unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"')
             + _arr("MS:1000515", "intensity array", y, f' unitName="{yunit}"' if yunit else "") + "</binaryDataArrayList></chromatogram>")
@@ -88,16 +93,6 @@ def _pressure_chrom(i: int, mode: str = "") -> str:
     t, y = pressure_trace(counts=bool(mode))
     cv = '<cvParam cvRef="MS" accession="MS:1003019" name="pressure chromatogram" value=""/>' + ('<userParam name="unità" value="psi"/>' if mode == "psi" else "")
     return _chrom(i, "Pump Pressure 1", t, y, cv, "number of detector counts" if mode else "pascal")
-
-
-def _write(path: Path, specs: list[str], chroms: list[str]) -> None:
-    head = ('<?xml version="1.0" encoding="utf-8"?><mzML xmlns="http://psi.hupo.org/ms/mzml" version="1.1.0">'
-            '<instrumentConfigurationList count="1"><instrumentConfiguration id="IC1">'
-            '<cvParam cvRef="MS" accession="MS:1000651" name="3200 QTRAP" value=""/></instrumentConfiguration></instrumentConfigurationList>'
-            f'<run id="{path.stem}">')
-    body = (f'<spectrumList count="{len(specs)}">' + "".join(specs) + "</spectrumList>") if specs else ""
-    path.write_text(head + body + f'<chromatogramList count="{len(chroms)}">' + "".join(chroms) + "</chromatogramList></run></mzML>",
-                    encoding="utf-8")
 
 
 def _g(rt, c, s, tau=0.04):
@@ -333,9 +328,9 @@ def hr_dda(path: Path, rng, kind: str = "exploris", broken: bool = False, profil
         return a * float(_g(rt, c, s))
     pre, ex = "controllerType=0 controllerNumber=1 scan=", {}
     if kind == "fusion":
-        ms2_filter = lambda p: f"ITMS + c ESI d Full ms2 {p:.4f}@cid35.00 [50.0000-{p + 10:.4f}]"; act, ce, hw = "MS:1000133", 35.0, 1.5
+        ms2_filter = lambda p: f"ITMS + c ESI d Full ms2 {p:.4f}@cid35.00 [50.0000-{p + 10:.4f}]"; act, act_name, ce, hw = "MS:1000133", "collision-induced dissociation", 35.0, 1.5
     else:
-        ms2_filter = lambda p: f"FTMS + p ESI d Full ms2 {p:.4f}@hcd30.00 [50.0000-{p + 10:.4f}]"; act, ce, hw = "MS:1000422", 30.0, 0.75
+        ms2_filter = lambda p: f"FTMS + p ESI d Full ms2 {p:.4f}@hcd30.00 [50.0000-{p + 10:.4f}]"; act, act_name, ce, hw = "MS:1000422", "beam-type collision-induced dissociation", 30.0, 0.75
     ms1_filter, res1, res2 = "FTMS + p ESI Full ms [100.0000-900.0000]", (60000 if fus else 45000), 15000
     if broken:
         ms1_filter = "FTMS {1,2} + p ESI w Full ms [100.0000-900.0000]"
@@ -391,6 +386,7 @@ def hr_dda(path: Path, rng, kind: str = "exploris", broken: bool = False, profil
             o = np.argsort(fm); fm = np.array(fm)[o]; fi = np.array(fi)[o]
             if fus:
                 fm = np.round(fm + rng.normal(0, 0.05, fm.size), 2)
+                o = np.argsort(fm, kind="stable"); fm, fi = fm[o], fi[o]                  # the noise can swap neighbours: mzML wants ascending m/z
             res2_xml = "" if (broken or fus) else _cvp("MS:1000800", "mass resolving power", res2)
             sc = (res2_xml + _cvp("MS:1000512", "filter string", ms2_filter(m)))
             cfg = ' instrumentConfigurationRef="IC2"' if fus else ""
@@ -399,7 +395,7 @@ def hr_dda(path: Path, rng, kind: str = "exploris", broken: bool = False, profil
             ref = "" if broken else f' spectrumRef="{pre}{idx1 + 1}"'
             prec = (f'<precursorList count="1"><precursor{ref}>{win}<selectedIonList count="1"><selectedIon>' + _cvp("MS:1000744", "selected ion m/z", f"{e:.6f}", _U_MZ)
                     + _cvp("MS:1000041", "charge state", 1) + _cvp("MS:1000042", "peak intensity", f"{vint:.6g}") + "</selectedIon></selectedIonList><activation>"
-                    + _cvp(act, "collision-induced dissociation") + _cvp("MS:1000045", "collision energy", ce, ' unitCvRef="UO" unitAccession="UO:0000266" unitName="electronvolt"')
+                    + _cvp(act, act_name) + _cvp("MS:1000045", "collision energy", ce, ' unitCvRef="UO" unitAccession="UO:0000266" unitName="electronvolt"')
                     + "</activation></precursor></precursorList>")
             specs.append(build(i, rt + 0.004 * (k + 1), 2, fm, fi, cfg, (sc, prec))); i += 1; n_ms2 += 1
     chroms = [_chrom(0, "TIC", np.array(rts_ms1), np.array(tic)), _chrom(1, "Pump Pressure", np.array(rts_ms1), 250.0 + 5 * rng.normal(0, 1, len(rts_ms1)))]

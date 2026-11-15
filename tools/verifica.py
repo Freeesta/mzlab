@@ -43,7 +43,7 @@ NEEDS: dict[str, set[str]] = {
     "e2e9": {"dam"}, "e2e10": {"dam"}, "e2e15": {"dam"}, "e2e_dam_incoerente": {"dam"},
     "e2e_studenti": {"veri"},          # needs the whole series B (7 times, 6 standards): the synthetic files are only a few
     "e2e13": {"sito"}, "e2e_avvio": {"sito"}, "e2e_avvio_shell": {"sito"}, "e2e_budget_avvio": {"sito"}, "e2e_avvio_lingua": {"sito"}, "e2e_mzidx": {"sito"}, "e2e_indice_parallelo": {"sito"}, "e2e_rust": {"sito"}, "e2e_lr": {"sito"}, "e2e_wiff": {"sito"}, "e2e_nat_sul_posto": {"sito"}, "e2e_compressione": {"sito"}, "e2e_numpress_modulo": {"sito"}, "e2e_agilent": {"sito"}, "e2e_metodo": {"sito"}, "e2e_picchi_qualita": {"sito"}, "e2e_hr_rust": {"sito"}, "e2e_hr_mappa": {"sito"}, "e2e_hr_albero": {"sito"}, "e2e_libreria_wasm": {"sito"}, "e2e_libreria_cartella": {"sito"}, "e2e_libreria_scarica": {"sito"},  "e2e_tpmine1": {"sito"}, "e2e_tpmine_nativo": {"sito"}, "e2e_tpmine_diretto_nativo": {"sito"}, "e2e_progresso": {"sito"}, "e2e_carico_stabile": {"sito"}, "e2e_tpmine_lr_reload": {"sito"}, "e2e_tpmine_ms2_lr": {"sito"}, "e2e_pipeline": {"sito"}, "e2e_lettori": {"sito"}, "e2e_lettori_modulo": {"sito"}, "e2e_modulo_irraggiungibile": {"sito"}, "e2e_impronta_opfs": {"sito"}, "e2e_gz_flusso": {"sito"}, "e2e_shimadzu": {"sito"}, "e2e_waters": {"sito"}, "e2e_thermo_modulo": {"sito"}, "e2e_tpmine_diretta": {"sito"}, "e2e_clic_flusso": {"sito"}, "e2e_tpmine2": {"sito"}, "e2e_tpmine_albero": {"sito"}, "e2e_tpmine_rtalign": {"sito"}, "e2e_tpmine_ms2": {"sito"}, "e2e_untarget": {"sito"}, "e2e_identita": {"sito"},
-    "e2e_flow_web": {"sito"}, "e2e_flow_web_drift": {"sito"}, "e2e_flow_web_estimate": {"sito"}, "e2e_flow_web_export": {"sito"}, "e2e_flow_web_group": {"sito"}, "e2e_flow_web_plausible": {"sito"}, "e2e_flow_web_ident": {"sito"}, "e2e_flow_web_ident2": {"sito"}, "e2e_flow_web_modelli": {"sito"}, "e2e_flow_web_prov": {"sito"}, "e2e_flow_web_stat": {"sito"}, "e2e_flow_web_struct": {"sito"}, "e2e_flow_web_moiety": {"sito"}, "e2e_flow_web_tabella": {"sito"}, "e2e_flow_centroid_web": {"sito"}, "e2e_flow_motore": {"sito"}, "e2e_lab": {"sito"}, "e2e_lab_vuoto": {"sito"}, "e2e_normative_scarica": {"sito"},      # the Flow tests of «This browser» build every mzFinder .wasm when site/static has none (lib.build_feat): they run where the CI builds it
+    "e2e_flow_web": {"sito"}, "e2e_flow_web_drift": {"sito"}, "e2e_flow_web_estimate": {"sito"}, "e2e_flow_web_export": {"sito"}, "e2e_flow_web_group": {"sito"}, "e2e_flow_web_plausible": {"sito"}, "e2e_flow_web_ident": {"sito"}, "e2e_flow_web_ident2": {"sito"}, "e2e_flow_web_quant": {"sito"}, "e2e_flow_web_lookup": {"sito"}, "e2e_flow_web_rtpredict": {"sito"}, "e2e_flow_web_modelli": {"sito"}, "e2e_flow_web_prov": {"sito"}, "e2e_flow_web_stat": {"sito"}, "e2e_flow_web_struct": {"sito"}, "e2e_flow_web_moiety": {"sito"}, "e2e_flow_web_tabella": {"sito"}, "e2e_flow_centroid_web": {"sito"}, "e2e_flow_motore": {"sito"}, "e2e_lab": {"sito"}, "e2e_lab_vuoto": {"sito"}, "e2e_normative_scarica": {"sito"},      # the Flow tests of «This browser» build every mzFinder .wasm when site/static has none (lib.build_feat): they run where the CI builds it
     "e2e_tpmine_progresso": {"sito"}, "e2e_pannelli_stabili": {"sito"}, "e2e_memoria_sonda": {"sito"},
     "e2e_raw_riaggiunto": {"sito"}, "e2e_agilent_riaggiunto": {"sito"},
     "e2e_avvio_lento": {"sito"}, "e2e_flow_transitions": {"sito"}, "e2e_flow_neg_lr": {"wasm"}, "e2e_llm": {"wasm"}, "e2e_llm_consenso": {"wasm"}, "e2e6": {"wasm"}, "e2e_decimali": {"wasm"}, "e2e_disegno_chimica": {"wasm"}, "e2e_menu_info": {"wasm"}, "e2e_menu_link": {"wasm"},  # flow_transitions builds the .wasm of mzFinder (lib.py build_feat); wasm: mzFinder built with cargo (over 600 s on a cold runner), the llm module
@@ -73,8 +73,21 @@ BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR
           r"IndexedDB transaction that was not yet complete has been aborted due to page navigation"]   # Firefox: notices about styles and about a reload while a write was in flight (the test reloads on purpose), not errors   # aborted requests (Chromium ERR_ABORTED, Firefox NS_BINDING_ABORTED and its service-worker notice) = page reloaded or closed by the test
 
 
+NOT_RUN = "TIMEOUT budget, not run"      # the marks of a test the --budget kept from running or cut: never read as a known red (NOTO) or as a pass
+CUT = "TIMEOUT budget, cut"
+PROGRESS = False                          # one line per finished e2e on stderr: only with --budget / --parte (the CI), a normal run stays short
+DEADLINE: float | None = None      # --budget: after it nothing starts and what runs is cut, so the report is always written (a CI step killed from outside leaves none)
+
+
 def sh(cmd, log: Path, timeout: int, env=None, cwd=ROOT) -> tuple[int, str, float]:
-    t0 = time.time()
+    t0, cut = time.time(), False
+    if DEADLINE is not None:
+        if DEADLINE - t0 < 1:
+            out = f"{NOT_RUN}: the time budget of this run (--budget) was spent before it started"
+            log.write_text(out, encoding="utf-8")
+            return 124, out, 0.0
+        if DEADLINE - t0 < timeout:
+            timeout, cut = int(DEADLINE - t0), True
     # the tests print m/z, deltas, symbols: on Windows the console is cp1252 and a print of «Δ» or «🔗» stopped the test with UnicodeEncodeError (CI job windows-chromium)
     env = {**(env if env is not None else os.environ), "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
     try:
@@ -82,7 +95,7 @@ def sh(cmd, log: Path, timeout: int, env=None, cwd=ROOT) -> tuple[int, str, floa
         out, rc = (p.stdout or "") + (p.stderr or ""), p.returncode
     except subprocess.TimeoutExpired as e:
         txt = lambda v: v.decode("utf-8", "replace") if isinstance(v, bytes) else (v or "")
-        out, rc = f"{txt(e.stdout)}\n{txt(e.stderr)}\nTIMEOUT dopo {timeout} s", 124
+        out, rc = f"{txt(e.stdout)}\n{txt(e.stderr)}\n" + (f"{CUT} after {timeout} s: the run's time (--budget) ended" if cut else f"TIMEOUT dopo {timeout} s"), 124
     except FileNotFoundError as e:
         out, rc = f"comando non trovato: {e}", 127
     log.write_text(out, encoding="utf-8")
@@ -297,10 +310,15 @@ def last_failed() -> set[str]:
     return {m.group(1) for m in re.finditer(r"^- FAIL +(e2e\w*)", text, re.M) if (E2E / f"{m.group(1)}.py").exists()}
 
 
+T0 = time.time()
+
+
 def parte_di(names: list[str], k: int, n: int) -> list[str]:
-    """Part k of n (1-based) of the e2e `names`: the slow ones first, dealt round-robin, so the parts take about the same time and are the same on every call."""
+    """Part k of n (1-based) of the e2e `names`: the slow ones first, dealt round-robin, so the parts take about the same time and are the same on every call.
+    Part 1 also runs syntax, texts, pytest and prova_hr: it gets one slot per two rounds of the others, and the slowest e2e (SLOW, first in the rank) go to the other parts."""
     rank = [x for x in SLOW if x in names] + [x for x in names if x not in SLOW]
-    return [x for i, x in enumerate(rank) if i % n == k - 1]
+    wheel = [*range(2, n + 1), 1, *range(2, n + 1)] if n > 1 else [1]
+    return [x for i, x in enumerate(rank) if wheel[i % len(wheel)] == k]
 
 
 def skip_why(need: set[str], *, dam: bool, src: str, only: bool, sito_pronto: bool) -> str:
@@ -339,7 +357,10 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
     env_sint = dict(env, MZLAB_MZML=str(sintetici()), QQQ_MZML=str(sintetici())) if src == "veri" and any(con_golden(n) for n in names) else env
     def one(n):
         rc, out, dt = sh([sys.executable, str(E2E / f"{n}.py")], LOG / f"{n}.log", cap_of(n, timeout), env=env_sint if con_golden(n) else env, cwd=ROOT)
-        probs = judge(out, rc)
+        probs = [NOT_RUN] if out.startswith(NOT_RUN) else judge(out, rc)
+        probs = [x for x in probs if x.startswith(CUT)] + [x for x in probs if not x.startswith(CUT)]      # the mark of a cut test comes first
+        if PROGRESS:
+            print(f"[{time.time() - T0:5.0f} s] {'FAIL' if probs else 'OK  '} {n} ({dt:.0f} s)", file=sys.stderr, flush=True)      # a hang shows in the CI log
         return (n, "FAIL" if probs else "OK", dt, probs[:4])
     if todo:           # the page the tests open is the built site with the Rust engine (tests_e2e/lib.py Run)
         rc, _out, dt = sh([sys.executable, str(ROOT / "tools" / "prepara_sito.py")], LOG / "prepara_sito.log", 3600, env=env)   # cold cache: engine, libraries, 9 reader families
@@ -373,6 +394,7 @@ def main() -> None:
                     help="e2e eseguiti insieme (predefinito: CPU - 1, al massimo 6; 1 = uno alla volta)")
     ap.add_argument("--ultimi-falliti", action="store_true", help="rilancia solo gli e2e che erano FAIL nel giro precedente (.verifica/ultimo.md)")
     ap.add_argument("--parte", default="", metavar="K/N", help="only part K of N of the complete run (the CI of notte.yml): part 1 also does syntax, texts, pytest and prova_hr, every part a share of the e2e")
+    ap.add_argument("--budget", type=int, default=0, metavar="S", help="seconds for the whole run (notte.yml): when spent, no test starts, the running one is cut and the report is written (the tests not run are FAIL)")
     ap.add_argument("--sito-pronto", action="store_true", help="the built site with every .wasm is in place (notte.yml): the e2e that need `sito` run in --parte mode too")
     ap.add_argument("--cambiati", action="store_true", help="solo gli e2e che riguardano i file cambiati rispetto a origin/main (vedi AREE); con file del nucleo li fa tutti")
     ap.add_argument("--mostra-ok", "--tutto", dest="mostra_ok", action="store_true", help="stampa anche le righe OK (altrimenti solo FAIL/SKIP e il conteggio)")
@@ -385,6 +407,9 @@ def main() -> None:
         setup()
     results: list = []
     t0 = time.time()
+    global DEADLINE, PROGRESS
+    DEADLINE = t0 + a.budget if a.budget else None
+    PROGRESS = bool(a.budget or a.parte)
     parte = tuple(int(x) for x in a.parte.split("/")) if a.parte else None
     if parte and not (len(parte) == 2 and 1 <= parte[0] <= parte[1]):
         ap.error("--parte wants K/N with 1 <= K <= N")
@@ -410,7 +435,7 @@ def main() -> None:
             e2e(results, only, a.timeout, "", a.paralleli, parte, a.sito_pronto)
     known = known_reds()
     extra = known_greens(results, known)
-    results = [(n, "NOTO", dt, ["known: " + known[n]] + notes[:1]) if st == "FAIL" and n in known else
+    results = [(n, "NOTO", dt, ["known: " + known[n]] + notes[:1]) if st == "FAIL" and n in known and not (notes and notes[0].startswith("TIMEOUT budget")) else
                (n, "FAIL", dt, (["NUOVO"] if n.startswith("e2e") else []) + notes) if st == "FAIL" else (n, st, dt, notes)
                for n, st, dt, notes in results] + extra
     fails = [r for r in results if r[1] == "FAIL"]

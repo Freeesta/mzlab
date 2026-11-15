@@ -21,7 +21,7 @@
 - **Head round trips** (local HTTP/2 mirror like GitHub Pages: gzip, 40 ms per answer, shared 30 Mbit/s; Chromium, 6 interleaved visits, medians): with `preload` of `reset.js`, `telefono.js`, `browser.js`, `sito.js` the head scripts arrive together instead of one round trip each. First visit, navigation to engine ready: 1885 → 1426 ms, FCP 597 → 345 ms; reload: 610 → 573 ms. Firefox first visit 2664 → 2510 ms (3 visits). No file downloaded twice; KB and requests before ready unchanged.
 - **Early hints tried and dropped** (same mirror, Chromium, 6 interleaved visits, medians, min-max): `preload` of `lang/<L>.js` from the inline language script: first-visit FCP 312 [272-337] → 341 [308-376] ms; `modulepreload` of the bridge's static imports: engine ready 3450 [3206-3536] → 3460 [3426-3684] ms (modules start earlier, `.wasm` still sets the pace); warm unchanged (742 → 746 ms). Gate was 20 ms; see `ottimizzazioni-tentate.md`.
 - **Not measured here**: WebKit/Safari (not installed in the cloud), a real Fast 4G link (the CDP profile does not slow the mirror: same numbers as cold).
-- **Site update**: see LOAD-FIRST-PAINT-5 (the page is ready in about 0.55 s on both reloads after a deploy; only the changed files are downloaded); behaviour in `e2e_sw_versione`.
+- **Site update**: see LOAD-FIRST-PAINT-5 (the page is ready in about 0.55 s on both reloads after a deploy; only the changed files are downloaded); behaviour in `e2e_sw_versione`. Warm page from navigation preload and the `?nav=cache` option: `misure-navigazione.md`.
 - KB before FCP counts every request started before the paint: on a warm load non-blocking scripts start earlier, so the number grows when the page is faster.
 
 ## Restarted service worker, latency, code cache, boot order
@@ -169,6 +169,17 @@ At 4× the gestures start after the first chart (5 s) and last about 9 s, so onl
 | 4× | 65 [65-108] MB | 30 [29-33] MB | 1777 [1716-1823] MB | 5189 [4821-5477] | 9596 [9154-9793] |
 
 `measureUserAgentSpecificMemory` answers 5-10 s after the call (the peaks came back about 12 s after the drop, after the loading), so its 500 ms sampling is a series of overlapping calls; it covers the page's own agent cluster and not the engine's WASM memories, so it is a floor. The RSS (read from `/proc` every 500 ms, all processes started with the profile: page, builders and their helpers, engine worker, GPU, network) is a ceiling: it holds file-backed pages the copy of 530 MB touched.
+
+**(b) `thermo` asked at the drop: no gain** (cold profile, drop at `qqReady` + 0, one `.raw` of 50.6 MB, `--scenarios raw-subito`, N = 12 per arm interleaved run by run with the order alternating, median [min-max] ms, same machine and files as above). The arm that asked the engine worker for the module (`prepara`) as soon as the `.raw` was recognised, before the quota check, against the module asked at the read:
+
+| CPU | arm | first chart | copy start |
+|---|---|---|---|
+| 1× | module asked at the read | 1297 [1132-4135] | 98 [41-540] |
+| 1× | module asked at the drop | 1402 [1019-1703] | 82 [45-150] |
+| 4× | module asked at the read | 2443 [2119-3005] | 172 [90-238] |
+| 4× | module asked at the drop | 2523 [1992-2991] | 180 [117-235] |
+
+Medians: +105 ms (1×) and +80 ms (4×) for the arm asked at the drop, inside the spread of both arms. A first run of N = 5 had shown −146 / −303 ms with overlapping ranges; N = 12 does not confirm it. Not adopted (`ottimizzazioni-tentate.md`).
 
 ### Verdicts
 

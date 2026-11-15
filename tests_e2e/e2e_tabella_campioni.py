@@ -15,8 +15,8 @@ try:
         pg.set_viewport_size({"width": 1400, "height": 900})
         pg.set_input_files("#pick", [{"name": n, "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t%d" % t), "rb").read()} for n, t in zip(NAMES, (0, 10, 15))])
         frames(pg, 3); pg.click("text=Carica dati"); ready(pg)
-        # two converted files make the download controls appear (the maker's files of the lab are converted on request)
-        pg.evaluate("n => { n.forEach(x => CONV.files.set(x, new Blob(['x']))); S.adding = true; syncWork(); renderFiles(); window.scrollTo(0, 0); }", NAMES[:2]); frames(pg, 3)      # the one page, at the top (the button would scroll to the table)
+        # two converted files (a real, valid mzML: the download checks it) make the download controls appear (the maker's files of the lab are converted on request)
+        pg.evaluate("([n, b64]) => { n.forEach(x => CONV.files.set(x, new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))]))); S.adding = true; syncWork(); renderFiles(); window.scrollTo(0, 0); }", [NAMES[:2], __import__("base64").b64encode(open(mz("B_FullMass-t0"), "rb").read()).decode()]); frames(pg, 3)      # the one page, at the top (the button would scroll to the table)
         def head_count():
             assert pg.inner_text("#flist .samphead b").strip() == "3 campioni", pg.inner_text("#flist .samphead b")
             assert "clicca" not in pg.inner_text("#flist .samptool")
