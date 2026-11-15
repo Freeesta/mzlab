@@ -25,15 +25,14 @@
 
 ## Restarted service worker, latency, code cache, boot order
 
-Tool: `tests_e2e/misura_avvio_sw.py` (measures, never asserts; reuses the mirror of `misura_ricarica.py`). Chromium 153 headless, 4 vCPU cloud runner, a new browser per run, median [min-max] of 5 interleaved runs (every combination once per round), ms from the navigation start of the measured page.
+Tool: `tests_e2e/misura_avvio_sw.py` (measures, never asserts; reuses the mirror of `misura_ricarica.py`). Chromium 153 headless, 4 vCPU runner, new browser per run, median [min-max] of 5 interleaved runs (every combination once per round), ms from the navigation start of the measured page.
 Site = the live site (build `9d2427b3ed`) copied into a local mirror with GitHub-Pages headers; the latency is a delay the mirror adds to **every** answer (HTTP/1.1, 6 connections per host, so a queue is worse than on the HTTP/2 Pages; a file the HTTP cache keeps pays nothing). CDP latency was tried
-first and rejected: it does not reach the service worker's own fetches (the manifest was answered in 34 ms at RTT 150). CPU ×4 = CDP throttling of the page, workers and service worker. Site-only by nature: the desktop app serves `mzlab://` locally and has no service worker.
+first and rejected: it does not reach the service worker's own fetches (the manifest was answered in 34 ms at RTT 150). CPU ×4 = CDP throttling of the page, workers and service worker. Site-only: the desktop app has no service worker.
 
 ```
-python3 tests_e2e/misura_avvio_sw.py --mirror DIR --runs 5 --rtt 0,40,150 --cpu 1,4 --scenari warm,warm-restarted --out warm.json        # table 1, 2 (DIR is filled from --url on the first run)
-python3 tests_e2e/misura_avvio_sw.py --mirror DIR --runs 5 --rtt 0,40,150 --cpu 1,4 --scenari cold --out cold.json                          # table 2, 5
-python3 tests_e2e/misura_avvio_sw.py --mirror DIR --runs 5 --cpu 1,4 --scenari trace-warm,trace-restarted [--trace-reloads 6]            # table 3
-python3 tests_e2e/misura_avvio_sw.py --url https://freeesta.github.io/mzlab/ --runs 5 --rtt 0 --cpu 1 --scenari warm,warm-restarted,cold    # live rows
+python3 tests_e2e/misura_avvio_sw.py --mirror DIR --runs 5 --rtt 0,40,150 --cpu 1,4 --scenari warm,warm-restarted,cold,trace-warm,trace-restarted --out run.json   # DIR is filled from --url on the first run
+python3 tests_e2e/misura_avvio_sw.py --mirror DIR --runs 5 --cpu 1 --scenari trace-warm,trace-restarted --trace-reloads 6                                                 # 6th reload
+python3 tests_e2e/misura_avvio_sw.py --url https://freeesta.github.io/mzlab/ --runs 5 --rtt 0 --cpu 1 --scenari warm,warm-restarted,cold                                  # live rows
 ```
 
 Scenarios. `warm`: first visit, wait for `.fill-done` in the app cache, 6 s for the idle work of the page (prefetch at +3 s, mzFinder package; with 1.5 s the old page was still busy and `warm` looked 200 ms slower than it is), then reload, SW running. `warm-restarted`: the same, but
@@ -61,8 +60,8 @@ mirror.
 | **live** warm-restarted | — | ×1 | 65 [60-68] | — | 14 [11-16] | 53 [49-59] | 162 [149-182] | 592 [543-618] | 609 [572-636] | 610 [572-636] |
 
 - **A restarted SW costs nothing on the critical path here; with latency it is faster.** At RTT 0 the two rows are equal (`qqReady` 524 vs 525; ×4 1035 vs 1048). The SW start is ~1-2 ms (`workerStart`), the manifest is asked 14 ms after the navigation start instead of 2 ms. With latency the restarted row wins by one round trip or more: RTT 150 `qqReady` 868 → 624 (×1), 1603 → 1208 (×4); FCP 441 → 272.
-- **Why (observed, cause not isolated):** with the SW running, `navegar` (`sw.js:214`) asks the manifest first and only then `index.html` (the server sees the page request at 160 ms at RTT 150, after the manifest answer at 157). After a restart the server sees the page request at 2 ms, before the SW has asked for the manifest (14 ms): the page request does not wait behind the manifest. Candidate: this Chromium starts the navigation request in parallel with the worker start; not verified, and an older or different Chrome may not do it (not measured: only the Chromium of the cloud runner).
-- **The manifest wait in `app()` (`visto` false, `sw.js:193`) is not seen as a cost:** the manifest answers in 18-21 ms at RTT 0 and in one RTT + ~20 ms after a restart, in parallel with the page request. The 3 s `NAV_MS` race was never reached (manifest answered in <200 ms in every run).
+- **Why (observed, cause not isolated):** with the SW running, `navegar` (`sw.js:214`) asks the manifest first and only then `index.html` (the server sees the page request at 160 ms at RTT 150, after the manifest answer at 157). After a restart the server sees the page request at 2 ms, before the SW has asked for the manifest (14 ms): the page request does not wait behind the manifest. Candidate (not verified): this Chromium starts the navigation request in parallel with the worker start; other Chrome versions were not measured.
+- **The manifest wait in `app()` (`visto` false, `sw.js:193`) is not a cost:** it answers in 18-21 ms at RTT 0, in parallel with the page request after a restart; the 3 s `NAV_MS` race was never reached.
 
 ### 4. Boot order (ms from the navigation start; last script of `L`, `shell.js`, last module, engine worker `ready`, `api/state`, `qqReady`)
 
@@ -75,52 +74,45 @@ mirror.
 | warm-restarted | 0 | ×1 | 386 [328-458] | 395 [337-471] | 404 [350-487] | 506 [425-597] | 524 [438-621] | 525 [438-622] | 525 [438-622] |
 | **live** cold | — | ×1 | 894 [686-1006] | 913 [698-1019] | 966 [751-1050] | 1290 [1036-1354] | 1300 [1050-1367] | 1302 [1052-1368] | 1302 [1052-1368] |
 
-Cold at RTT 40 / 150 (mirror, ×1): `qqReady` 3359 / 7585; ×4: 3493 / 7749 (all columns in the run file; HTTP/1.1 queue, see above).
+Cold at RTT 40 / 150 (mirror): `qqReady` 3359 / 7585 (HTTP/1.1 queue, see above).
 
 - **The last step is the engine, not the script tail, in every scenario and in every one of the 165 measured runs (the worker `ready` always comes after the last script of `L`).** `shell.js` runs 10-60 ms after the last classic script and the last module 2-100 ms after that; the engine worker posts
   `ready` 100-360 ms later (warm 118 ms, `cpu4warm` 209 ms, cold 339 ms, ×4 cold 262 ms), `MZLAB_LR` is set 17-32 ms after that and `api/state` answers ~1 ms after the engine (`shell.js` calls it at once, the answer is a worker call that is ready) and `qqReady` is set in the same task. So `qqReady`
   = worker `ready` + ~20 ms: shortening the script tail (list `L`, slices of 48) does not move `qqReady` until the worker ready arrives earlier than the tail.
-- The engine starts at `DOMContentLoaded` and runs in parallel with the script tail; its own time is mostly the module graph plus the 2 MB `.wasm` (see 3) and the OPFS reopen.
 
 ### 3. Code cache (Chromium trace; categories `v8,v8.wasm,disabled-by-default-v8.compile,devtools.timeline`; traced load = 2nd reload after the first visit; 5 runs, CPU ×1 | ×4)
 
-Event names found with a control page (a 240 KB script and the engine `.wasm` on a plain HTTP cache, no SW, 5 loads): a script that consumes its code cache has `v8.compile` / `v8.compileModule` with `args.data.consumedCacheSize` (+ `cacheKind: "normal"`, `cacheRejected: false`), seen from the 3rd
+Event names from a control page (240 KB script and the engine `.wasm`, plain HTTP cache, no SW, 5 loads): a script that consumes its code cache has `v8.compile` / `v8.compileModule` with `args.data.consumedCacheSize` (+ `cacheKind: "normal"`, `cacheRejected: false`), seen from the 3rd
 load on; `v8.produceCache` marks the cache being written; a script with no cache has `streamed: true` (or `notStreamedReason`) and none of those fields. For `.wasm` the same control shows **no** event that tells a hit from a miss (`wasm.StartStreamingCompilation`, `wasm.FinishStreaming`,
 `wasm.GetNativeModuleFromCache`, the same in loads 2-5), so only times are reported.
 
 | scenario | group | compile events | cache hits | rejected | streamed | eager compile ms (main thread / worker) |
 |---|---|---|---|---|---|---|
-| warm | scripts of `L` (main) | 152 | **0** | 0 | 152 | 4.5 [2.7-5.9] \| ×4 15.8 [12.2-22.3] |
+| warm and warm-restarted | scripts of `L` (main) | 152 | **0** | 0 | 152 | 4.5 [2.7-5.9] \| ×4 15.8 [12.2-22.3] (restarted 3.4 \| 12.8) |
 | warm | other scripts (main) | 136 | **0** | 0 | 127 | 3.6 [3.3-4.7] \| ×4 17.1 [15.6-24.1] |
 | warm | engine worker | 32 | **0** | 0 | 0 | 15.3 [13.7-18.2] \| ×4 13.2 [12.3-19.4] |
-| warm-restarted | scripts of `L` (main) | 152 | **0** | 0 | 152 | 3.4 [2.7-15.1] \| ×4 12.8 [10.6-19.0] |
-| warm-restarted | other scripts (main) | 136 | **0** | 0 | 127 | 3.6 [2.8-5.9] \| ×4 17.1 [14.6-20.2] |
-| warm-restarted | engine worker | 32 | **0** | 0 | 0 | 12.6 [10.4-17.3] \| ×4 11.6 [11.3-12.4] |
 
-- **No script is ever served from the code cache** (0 hits in 20 traced loads; the same on the 6th reload, `--trace-reloads 6`, 5 runs warm and restarted: 0 hits, 152 + 136 + 32 events), with the SW running or restarted. `v8.produceCache` fires 320 times per load: the cache is written (after each load) and never read back. Lazy function compiles on the main thread: 0.0 ms; in the engine worker 4-14 ms; background-thread streaming compile (`BackgroundCompileTask::Run`) 360-670 ms ×1 (284-1061 range) and 380-410 ms ×4, off the main thread.
+- **No script is ever served from the code cache** (0 hits in 20 traced loads, restarted rows identical; the same on the 6th reload, `--trace-reloads 6`, 5 runs warm and restarted: 0 hits, 152 + 136 + 32 events), with the SW running or restarted. `v8.produceCache` fires 320 times per load: the cache is written (after each load) and never read back. Lazy compiles: main 0 ms, engine worker 4-14 ms; background-thread streaming compile (`BackgroundCompileTask::Run`) 360-670 ms ×1 (284-1061 range) and 380-410 ms ×4, off the main thread.
 - A plausible cause, **not tested here**: the SW answers every script with a new `Response` built by `isolata` (`sw.js:26-33`, also for cache hits, line 194), which drops the Cache Storage marker the browser needs to store a code cache for a SW-served script. A test would serve a script straight from the cache once; that changes a product file and is the owner's decision (S3/S4 wait for this).
-- `.wasm` (`mzlab_wasm_bg.wasm`), warm ×1 | ×4: `FinishStreaming` 2.1 [1.3-4.1] | 6.5 [5.6-8.2] ms and `OnBytesReceived` 3.1 | 15.1 ms on the main thread, `GetNativeModuleFromCache` 0.6 ms on a pool thread, worker instantiate 0.9 ms; restarted: 1.8 | 6.4, 3.2 | 15.0, 0.7, 1.0 ms. The streaming compile itself runs on background threads outside these categories (`v8.wasm.detailed` not requested).
+- `.wasm`, warm ×1 | ×4: main thread `FinishStreaming` 2.1 | 6.5 ms, `OnBytesReceived` 3.1 | 15.1 ms, `GetNativeModuleFromCache` 0.6 ms (pool thread), worker instantiate 0.9 ms; restarted the same within noise. The streaming compile runs on background threads outside these categories.
 
 ### 5. Isolation reload (cold; first page not isolated, second page after `isolateOnce`)
 
 | RTT | CPU | requests of page 1 | KB sent (gzip) | files of page 2 | also in page 1 | of those: HTTP cache | revalidated (304) | full 200 | new files |
 |---|---|---|---|---|---|---|---|---|---|
 | 0 | ×1 | 33 [25-33] | 142 [129-142] | 243 [240-244] | 30 [22-30] | 29 [21-29] | 0 | 1 | 213 [210-221] |
-| 40 | ×1 | 33 [32-33] | 142 [140-142] | 240 | 30 [29-30] | 29 [28-29] | 0 | 1 | 210 |
 | 150 | ×1 | 31 | 137 [137-140] | 240 | 28 | 28 [27-28] | 0 | 0 [0-1] | 212 |
 | 0 | ×4 | 27 | 170 | 229 [229-243] | 23 | 23 | 0 | 0 | 206 [206-220] |
-| 40 | ×4 | 27 [27-32] | 170 [141-170] | 228 [228-240] | 23 [23-29] | 23 [23-29] | 0 | 0 | 205 [200-217] |
 | 150 | ×4 | 32 [31-33] | 141 [139-177] | 240 [228-240] | 29 [28-30] | 29 [28-29] | 0 | 0 [0-1] | 210 [199-212] |
 
-- The first page starts 27-33 requests and 137-170 KB (the reload is ~270 ms after the start, before most of the page's scripts are asked; bytes are what the mirror sent, gzip, aborted transfers included). The second page asks again for 23-30 of those files and gets 21-29 of them from the HTTP cache
-  (the SW does `fetch(req)` with the HTTP cache first, `traer`); at most one goes to the network (200), none is revalidated. So the isolation reload re-downloads almost nothing: ~210 of the ~240 files of page 2 are new. "From the HTTP cache" = the file is in page 2's resource list and the mirror
+- The first page starts 27-33 requests and 137-170 KB (the reload comes ~270 ms after the start; bytes are what the mirror sent, gzip). The second page asks again for 23-30 of those files and gets 21-29 of them from the HTTP cache
+  (the SW does `fetch(req)` with the HTTP cache first, `traer`); at most one goes to the network (200), none is revalidated. The isolation reload re-downloads almost nothing: ~210 of the ~240 files of page 2 are new. "From the HTTP cache" = the file is in page 2's resource list and the mirror
   never saw a request for it during page 2's boot (the SW cache is still empty then: the fill starts 2.5 s after the worker).
-- Live site cold: page-1 columns not available (no server log); page 2 asked 249 files, `qqReady` 1302 [1052-1368] ms.
 
 ### Answers to the open unknowns
 
-- **OPFS clean-up timer** (`rust-worker.js:168`): `setTimeout(..., 8000)` after the worker starts (`limpia`: leftovers of the saved files). It runs in the engine worker after `ready` (~0.5-1.9 s), far from the critical path.
-- **Reproducibility**: all numbers above are one runner, Chromium only (WebKit/Firefox not measured), the mirror's latency is a per-answer delay, not a real link. The 1.5 s vs 6 s settle before the measured load changed `warm` by ~200 ms: any future comparison must use the same settle (`SETTLE_MS`).
+- **OPFS clean-up timer** (`rust-worker.js:168`): `setTimeout(..., 8000)` after the worker starts. Off the critical path.
+- **Reproducibility**: all numbers above are one runner, Chromium only (WebKit/Firefox not measured), the mirror's latency is a per-answer delay, not a real link. Keep the 6 s settle (`SETTLE_MS`) when comparing: 1.5 s changed `warm` by ~200 ms.
 
 
 ## First file and many files: critical path
