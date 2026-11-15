@@ -4,7 +4,8 @@
 // ends; a TIC is the raw trace the file declares, not a result. Lazy ES module, loaded by area-lavoro.js at the first early_tic; syncWork and every mzlab-index event call TICPROV.sync.
 // The RT axis can be zoomed and panned meanwhile (Ctrl/Cmd + wheel, drag, + - arrows 0, double click: reset), drawn with the display thinning of decima.js; the window the user chose
 // is handed to the first panels (addPanel asks TICPROV.handover). Nothing else is interactive before the index: no spectrum, no XIC.
-const DC = (/** @type {any} */ (window).DECIMA ||= await import("./decima.js"));
+// static import, not a top-level await: carica() resolves when the script is loaded, before an awaiting module has run (TICPROV would still be undefined)
+import * as DC from "./decima.js";
 const W = /** @type {any} */ (window);
 const T = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p);
 /** @type {Map<string, { rt: number[], y: number[] }>} */ const tics = new Map();
