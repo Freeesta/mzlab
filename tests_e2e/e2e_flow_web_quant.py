@@ -121,22 +121,25 @@ try:
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
         pg.on("pageerror", lambda e: errs.append(str(e) + " " + str(getattr(e, "stack", ""))[:400]))
         pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "GL Driver" not in m.text else None)
-        pg.on("request", lambda r: asked.append(r.url) if "/table/" in r.url else None)
+        pg.on("request", lambda r: asked.append(r.url) if "/flowcal/" in r.url else None)
         pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_function("window.QTOOLS", timeout=120000)
         pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
         pg.wait_for_function("window.FLOW && FLOW.runners && FLOW.runners.web && document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow", timeout=120000)
         pg.evaluate(PUT, NAMES)
 
+        seen = []   # the events of the first run: it runs the whole plan, so the quant steps are done there and only reused in the next run
+
         def upstream():
             r = pg.evaluate(RUN, [plan(), SAMPLES, CURVES]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
+            seen.extend(r["ev"])
             for i in ("det", "ali", "gap"): assert any(e["passo"] == i and e["stato"] in ("done", "reused") and e["via"] == "browser" for e in r["ev"]), (i, r["ev"][-6:])   # the gap filling is made with the alignment
         step("the upstream steps of the plan (detect, align, gap filling) run in the browser", upstream)
 
         def first():
             r = pg.evaluate(RUN, [plan(), SAMPLES, CURVES]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
-            for i in IDS: assert any(e["passo"] == i and e["stato"] == "done" and e["via"] == "browser" for e in r["ev"]), (i, r["ev"][-6:])
-            assert asked, "the table module was not fetched when quant.calibrate ran"
+            for i in IDS: assert any(e["passo"] == i and e["stato"] == "done" and e["via"] == "browser" for e in seen + r["ev"]), (i, r["ev"][-6:])
+            assert asked, "the flowcal module was not fetched when quant.calibrate ran"
             kept = pg.evaluate(KEPT)
             for i in IDS:
                 web = kept.get(i + ".csv"); assert web is not None, (i, list(kept))
