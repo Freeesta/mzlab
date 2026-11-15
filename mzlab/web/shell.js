@@ -432,7 +432,7 @@ function dropZone(/** @type {boolean} */ on){$("#sb-pane").classList.toggle("dz-
 // one target for the side list (the session and the landing before it) and one for the work area, whose overlay shows while panels or the sample table are in view
 (()=>{const dz=$("#dfiles"),ws=$("#v-workspace"),ready=(/** @type {DragEvent} */ e)=>DROP.has(e)&&dropReady(),early=(/** @type {DragEvent} */ e)=>DROP.has(e)&&S.view==="data"&&!S.sess&&!S.opening;
   DROP.target(dz,{ready:(/** @type {DragEvent} */ e)=>ready(e)||early(e),over:(/** @type {boolean} */ v)=>{if(v){dropZone(true);if(S.sess)carica("gruppi-dnd.js")}else dropZone(false)}});
-  DROP.target(ws,{ready:(/** @type {DragEvent} */ e)=>DROP.has(e)&&!!S.sess&&S.view==="data"&&["panels","table"].includes(ws.dataset.work||""),over:(/** @type {boolean} */ v)=>{ws.classList.toggle("ws-drop",v);if(v)ws.dataset.dz=I18N.t("files.drop.zone")}});
+  DROP.target(ws,{ready:(/** @type {DragEvent} */ e)=>DROP.has(e)&&!!S.sess&&S.view==="data"&&["panels"].includes(ws.dataset.work||""),over:(/** @type {boolean} */ v)=>{ws.classList.toggle("ws-drop",v);if(v)ws.dataset.dz=I18N.t("files.drop.zone")}});
   $("#addf").addEventListener("click",()=>directNote(""))})();
 // with a world open the button switches to the other one (OPENNOW.toWorld); before, it picks the world to open
 $("#hrmix-lr").onclick=()=>{if(OPENNOW.world()!==null)OPENNOW.toWorld(false);else{hrMixPick(false);renderFiles()}};$("#hrmix-hr").onclick=()=>{if(OPENNOW.world()!==null)OPENNOW.toWorld(true);else{hrMixPick(true);renderFiles()}};

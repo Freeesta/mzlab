@@ -1,5 +1,6 @@
-"""«Sample table» of the side panel never moves the page: scrollY and the gap between the header and the work area are the same before the click, after it and after «Back to work!».
-Before a session the button used to scrollIntoView the table under the drop area, which jumped the page by the few pixels of the table that were cut off."""
+"""One-page Dati: the drop area and the sample table are ONE page. «Sample table» (#samptab) is always visible when there are rows and never a toggle: from the panels it opens
+the page and scrolls the table under the header with the focus on its heading; on the page it only scrolls (smooth) and focuses, with no re-render, no layout shift and the panels
+untouched. «Back to work!» gives back the panels and the scroll they had, with no jump. Checked at 1000, 1366 and 1600 px, with motion and with reduced motion."""
 import sys, os, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 sys.path.insert(0, str(ROOT / "tools"))
@@ -8,71 +9,76 @@ tmp = Path(tempfile.mkdtemp(prefix="tabscroll_"))
 FILES = []
 for i in range(11):
     p = tmp / f"P_{i:02d}.mzML"; ds.ms2(p, np.random.default_rng(i), 15); FILES.append(str(p))
-POS = """() => ({ max: Math.round(document.documentElement.scrollHeight - innerHeight), y: Math.round(scrollY), gap: Math.round(document.querySelector('#v-workspace').getBoundingClientRect().top + scrollY - document.querySelector('header').getBoundingClientRect().bottom) })"""
+POS = "() => ({ y: Math.round(scrollY), max: Math.round(document.documentElement.scrollHeight - innerHeight) })"
+TOP = "() => Math.round(document.querySelector('#wtable').getBoundingClientRect().top - document.querySelector('header').getBoundingClientRect().bottom)"
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
-    except Exception as e: steps.append((name, "FAIL: " + str(e).split("\n")[0][:240]))
+    except Exception as e: steps.append((name, "FAIL: " + " | ".join(str(e).split("\n")[:6])[:600]))
+def settle(pg):
+    """the smooth scroll ends: scrollY is the same on three reads in a row"""
+    last, n = None, 0
+    for _ in range(80):
+        y = pg.evaluate("scrollY"); n = n + 1 if y == last else 0; last = y
+        if n >= 3: return y
+        frames(pg, 2)
+    raise AssertionError("the scroll never settled")
 r = Run(port=8893, wd="/tmp/wd_tabscroll")
 try:
     with sync_playwright() as p:
-        pg = r.page(p)
+        pg = r.page(p, motion=True)
+        pg.goto(f"http://127.0.0.1:{r.port}/?lang=en")
         pg.wait_for_selector("#drop"); wait_for_js(pg, "window.qqReady === true", 60000)
-        def load(files, w=1400, h=800):
-            pg.set_viewport_size({"width": w, "height": h}); pg.set_input_files("#pick", files); open_first(pg); ready(pg)
-        def same(a, b, what, gap=True):
-            if not gap: a, b = dict(a, gap=0), dict(b, gap=0)      # a narrow window closes the side sheet: the work area moves by design, the scroll must not
-            a = dict(a, y=min(a["y"], b["max"])); a.pop("max"); b = {k: v for k, v in b.items() if k != "max"}      # a shorter page clamps the scroll: that is the browser, not a jump
-            assert a == b, f"{what}: {a} -> {b}"
-        def press(n=1):
-            for _ in range(n): pg.click("#samptab"); ready(pg)
-        def run_cycle(y=0):
-            """table on and off, twice, then the landing and «Back to work!»: the position never changes"""
-            if y: pg.evaluate(f"scrollTo(0,{y})"); ready(pg)
-            b = pg.evaluate(POS)
-            press(2); same(b, pg.evaluate(POS), "after two presses")
-            press(); press(); same(b, pg.evaluate(POS), "after table on and off again")
-            pg.click("#np-closeall"); ready(pg)
-            pg.evaluate("scrollTo(0,%d)" % y); ready(pg); b = pg.evaluate(POS)
-            press(); same(b, pg.evaluate(POS), "landing -> table"); b = pg.evaluate(POS)      # the table page is shorter and may clamp the scroll: the next step starts from where it is
-            press(); same(b, pg.evaluate(POS), "table -> landing")
-            if pg.is_visible("#backwork"): pg.click("#backwork"); ready(pg)
-            same(b, pg.evaluate(POS), "after «Back to work!»")
-        load(FILES)
-        step("11 files: no jump (page at the top)", lambda: run_cycle(0))
-        step("11 files: no jump (page already scrolled by 10 px)", lambda: run_cycle(10))
-        def nosess():
-            """before a session the table is under the drop area, cut off at the bottom of the window: the button leaves the page where it is"""
-            pg.click("#np-closeall"); ready(pg)
-            h = pg.evaluate("Math.round(document.querySelector('#wtable').getBoundingClientRect().bottom) - 10")
-            pg.set_viewport_size({"width": 1400, "height": h}); ready(pg)
-            pg.evaluate("S.sess = false; syncWork(true); scrollTo(0, 0)"); ready(pg)
-            b = pg.evaluate(POS); press(2); same(b, pg.evaluate(POS), "no session, table partly in view")
-        step("before a session: a table partly in view does not scroll", nosess)
-        def far():
-            """a table that is entirely below the window still scrolls into view"""
-            pg.set_viewport_size({"width": 1400, "height": 300}); ready(pg)
-            pg.evaluate("scrollTo(0, 0)"); press()
-            assert pg.evaluate("scrollY") > 0 or pg.evaluate("document.querySelector('#wtable').getBoundingClientRect().top < innerHeight"), "table not brought into view"
-        step("before a session: a table out of view is brought into view", far)
-        def one():
-            pg.reload(); wait_for_js(pg, "window.qqReady === true", 60000)
-            load(FILES[:1]); run_cycle(0)
-        step("1 file: no jump", one)
-        def narrow():
-            pg.reload(); wait_for_js(pg, "window.qqReady === true", 60000)
-            load(FILES, 800, 700)
-            if pg.is_hidden("#samptab"): pg.click("#sb-toggle"); ready(pg)
-            b = pg.evaluate(POS); press(); same(b, pg.evaluate(POS), "narrow window, table on", False)
-            if pg.is_hidden("#samptab"): pg.click("#sb-toggle"); ready(pg)
-            press(); same(b, pg.evaluate(POS), "narrow window, table off", False)
-        step("narrow window (< 900 px): no jump", narrow)
-        def hidden_panel():
-            pg.reload(); wait_for_js(pg, "window.qqReady === true", 60000)
-            load(FILES)
-            if pg.get_attribute("#sb-toggle", "aria-pressed") == "true": pg.click("#sb-toggle"); ready(pg)
-            b = pg.evaluate(POS); pg.evaluate("document.querySelector('#samptab').click()"); ready(pg); same(b, pg.evaluate(POS), "side panel hidden")
-        step("side panel hidden: no jump", hidden_panel)
+        pg.set_viewport_size({"width": 1366, "height": 800}); pg.set_input_files("#pick", FILES); open_first(pg); ready(pg)
+        def show_button():
+            """the side panel follows the window width with a delay: the button counts when it is visible on two reads ten frames apart"""
+            for _ in range(8):
+                if pg.is_visible("#samptab"):
+                    frames(pg, 10)
+                    if pg.is_visible("#samptab"): return
+                else: pg.click("#sb-toggle"); ready(pg)
+            raise AssertionError(pg.evaluate("[innerWidth, document.getElementById('v-workspace').dataset.work, document.getElementById('samptab').hidden]"))
+        def cycle(w):
+            pg.set_viewport_size({"width": w, "height": 800}); ready(pg)
+            show_button()      # a narrow window keeps the side panel closed
+            assert pg.is_visible("#samptab"), "the button is visible"
+            assert pg.get_attribute("#samptab", "aria-pressed") is None
+            ids = pg.evaluate("E.panels.map(p => p.id).join()")
+            pg.evaluate("scrollTo(0, 30)"); ready(pg); y0 = pg.evaluate("scrollY")
+            show_button()      # the scroll may have closed the sheet of a narrow window
+            pg.click("#samptab"); y1 = settle(pg)
+            assert pg.evaluate("document.getElementById('v-workspace').dataset.work") == "add", "the one page"
+            assert pg.is_visible("#start") and pg.is_visible("#wtable"), "drop area and table on the same page"
+            top = pg.evaluate(TOP); assert top < 400, f"the table is brought under the header: {top}"
+            assert pg.evaluate("document.activeElement.closest('#wtable') !== null"), "focus on the table heading"
+            assert pg.is_visible("#samptab"), "the button stays"
+            pg.click("#backwork"); ready(pg)
+            assert pg.evaluate("document.getElementById('v-workspace').dataset.work") == "panels" and pg.evaluate("E.panels.map(p => p.id).join()") == ids, "panels as they were"
+            y2 = pg.evaluate("scrollY"); assert abs(y2 - y0) <= 2, f"«Back to work!» restores the scroll: {y0} -> {y2}"
+        for w in (1000, 1366, 1600): step(f"{w} px: panels -> one page -> back, the scroll comes back", lambda w=w: cycle(w))
+        def inplace():
+            pg.click("#samptab"); settle(pg); pg.evaluate("scrollTo(0, 0)"); ready(pg)
+            pg.evaluate("""() => { window.__cls = []; new PerformanceObserver(l => l.getEntries().forEach(e => window.__cls.push(e.value))).observe({ type: 'layout-shift', buffered: false });
+                document.querySelector('#wtable tbody tr').__mark = 1; window.__pn = document.querySelector('#dpanels').innerHTML.length; }""")
+            pg.click("#samptab"); settle(pg); frames(pg, 6)
+            assert pg.evaluate("document.querySelector('#wtable tbody tr').__mark === 1"), "the table was not re-rendered"
+            assert pg.evaluate("document.getElementById('v-workspace').dataset.work") == "add", "no view switch"
+            assert pg.evaluate("document.querySelector('#dpanels').innerHTML.length === window.__pn"), "panels untouched"
+            assert pg.evaluate("window.__cls.filter(v => v > 0).length") == 0, pg.evaluate("window.__cls")
+            assert pg.evaluate("document.activeElement.closest('#wtable') !== null")
+        step("on the page: the button only scrolls (no re-render, no layout shift, panels unchanged)", inplace)
+        def keyboard():
+            pg.evaluate("scrollTo(0, 0)"); pg.focus("#samptab"); pg.keyboard.press("Enter"); settle(pg)
+            assert pg.evaluate("document.activeElement.closest('#wtable') !== null"), "Enter reaches the table"
+            pg.keyboard.press("Escape"); ready(pg)
+            assert pg.evaluate("document.getElementById('v-workspace').dataset.work") == "panels", "Esc leaves the page"
+        step("keyboard: Enter on the button, Esc back to the work", keyboard)
+        def reduced():
+            pg.emulate_media(reduced_motion="reduce"); pg.evaluate("scrollTo(0, 30)")
+            show_button()
+            pg.click("#samptab"); pg.wait_for_selector("#wtable", state="visible"); frames(pg, 3)
+            assert pg.evaluate(TOP) < 400, "reduced motion: scrolled at once"
+        step("reduced motion: the scroll is instant", reduced)
 finally:
     pass
 for n, s in steps: print(("PASS " if s == "ok" else "FAIL ") + n, "" if s == "ok" else s)

@@ -50,7 +50,7 @@ try:
             pg.set_viewport_size({"width": 1400, "height": 900})
             pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t10")])
             frames(pg, 3); pg.click("text=Carica dati" if lang == "it" else "text=Load data"); ready(pg)
-            pg.evaluate("S.table = true; syncWork()"); wait_for_js(pg, "!!document.querySelector('#colsbtn')", 30000)
+            pg.click("#samptab"); wait_for_js(pg, "!!document.querySelector('#colsbtn')", 30000)
             for w in (1400, 400):
                 step(f"{lang} {w}px: aligned preset grid and one-row custom form", lambda w=w, lang=lang, pg=pg: check(pg, w, (lang, w)))
 finally:
