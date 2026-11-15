@@ -73,8 +73,17 @@ BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR
           r"IndexedDB transaction that was not yet complete has been aborted due to page navigation"]   # Firefox: notices about styles and about a reload while a write was in flight (the test reloads on purpose), not errors   # aborted requests (Chromium ERR_ABORTED, Firefox NS_BINDING_ABORTED and its service-worker notice) = page reloaded or closed by the test
 
 
+DEADLINE: float | None = None      # --budget: after it nothing starts and what runs is cut, so the report is always written (a CI step killed from outside leaves none)
+
+
 def sh(cmd, log: Path, timeout: int, env=None, cwd=ROOT) -> tuple[int, str, float]:
     t0 = time.time()
+    if DEADLINE is not None:
+        if DEADLINE - t0 < 1:
+            out = "TIMEOUT: the time budget of this run (--budget) was spent before it started: not run"
+            log.write_text(out, encoding="utf-8")
+            return 124, out, 0.0
+        timeout = min(timeout, int(DEADLINE - t0))
     # the tests print m/z, deltas, symbols: on Windows the console is cp1252 and a print of «Δ» or «🔗» stopped the test with UnicodeEncodeError (CI job windows-chromium)
     env = {**(env if env is not None else os.environ), "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
     try:
@@ -297,10 +306,15 @@ def last_failed() -> set[str]:
     return {m.group(1) for m in re.finditer(r"^- FAIL +(e2e\w*)", text, re.M) if (E2E / f"{m.group(1)}.py").exists()}
 
 
+T0 = time.time()
+
+
 def parte_di(names: list[str], k: int, n: int) -> list[str]:
-    """Part k of n (1-based) of the e2e `names`: the slow ones first, dealt round-robin, so the parts take about the same time and are the same on every call."""
+    """Part k of n (1-based) of the e2e `names`: the slow ones first, dealt round-robin, so the parts take about the same time and are the same on every call.
+    Part 1 also runs syntax, texts, pytest and prova_hr (up to ~45 min): it gets one slot per round of the others' two."""
     rank = [x for x in SLOW if x in names] + [x for x in names if x not in SLOW]
-    return [x for i, x in enumerate(rank) if i % n == k - 1]
+    wheel = [*range(1, n + 1), *range(2, n + 1)] if n > 1 else [1]
+    return [x for i, x in enumerate(rank) if wheel[i % len(wheel)] == k]
 
 
 def skip_why(need: set[str], *, dam: bool, src: str, only: bool, sito_pronto: bool) -> str:
@@ -340,6 +354,7 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
     def one(n):
         rc, out, dt = sh([sys.executable, str(E2E / f"{n}.py")], LOG / f"{n}.log", cap_of(n, timeout), env=env_sint if con_golden(n) else env, cwd=ROOT)
         probs = judge(out, rc)
+        print(f"[{time.time() - T0:5.0f} s] {'FAIL' if probs else 'OK  '} {n} ({dt:.0f} s)", file=sys.stderr, flush=True)      # progress: a hang shows in the CI log
         return (n, "FAIL" if probs else "OK", dt, probs[:4])
     if todo:           # the page the tests open is the built site with the Rust engine (tests_e2e/lib.py Run)
         rc, _out, dt = sh([sys.executable, str(ROOT / "tools" / "prepara_sito.py")], LOG / "prepara_sito.log", 3600, env=env)   # cold cache: engine, libraries, 9 reader families
@@ -373,6 +388,7 @@ def main() -> None:
                     help="e2e eseguiti insieme (predefinito: CPU - 1, al massimo 6; 1 = uno alla volta)")
     ap.add_argument("--ultimi-falliti", action="store_true", help="rilancia solo gli e2e che erano FAIL nel giro precedente (.verifica/ultimo.md)")
     ap.add_argument("--parte", default="", metavar="K/N", help="only part K of N of the complete run (the CI of notte.yml): part 1 also does syntax, texts, pytest and prova_hr, every part a share of the e2e")
+    ap.add_argument("--budget", type=int, default=0, metavar="S", help="seconds for the whole run (notte.yml): when spent, no test starts, the running one is cut and the report is written (the tests not run are FAIL)")
     ap.add_argument("--sito-pronto", action="store_true", help="the built site with every .wasm is in place (notte.yml): the e2e that need `sito` run in --parte mode too")
     ap.add_argument("--cambiati", action="store_true", help="solo gli e2e che riguardano i file cambiati rispetto a origin/main (vedi AREE); con file del nucleo li fa tutti")
     ap.add_argument("--mostra-ok", "--tutto", dest="mostra_ok", action="store_true", help="stampa anche le righe OK (altrimenti solo FAIL/SKIP e il conteggio)")
@@ -385,6 +401,8 @@ def main() -> None:
         setup()
     results: list = []
     t0 = time.time()
+    global DEADLINE
+    DEADLINE = t0 + a.budget if a.budget else None
     parte = tuple(int(x) for x in a.parte.split("/")) if a.parte else None
     if parte and not (len(parte) == 2 and 1 <= parte[0] <= parte[1]):
         ap.error("--parte wants K/N with 1 <= K <= N")

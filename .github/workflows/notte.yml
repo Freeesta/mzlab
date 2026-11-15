@@ -288,10 +288,10 @@ jobs:
           sudo cp tools/fontconfig/56-prefer-inter.conf /etc/fonts/conf.d/
           sudo fc-cache -f
           fc-match system-ui
-      # the step has its own ceiling, so the report steps below still run if a part hangs
+      # --budget 2400: at 40 min no test starts and the running one is cut, so the report .verifica/ultimo.md is always written (the 50 min step ceiling kills it with none)
       - name: Complete verification (part ${{ matrix.parte }}/5)
         timeout-minutes: 50
-        run: python tools/verifica.py --browser chromium --sito-pronto --parte ${{ matrix.parte }}/5
+        run: python tools/verifica.py --browser chromium --sito-pronto --parte ${{ matrix.parte }}/5 --budget 2400
       # the second round of the engine: the built site with the Rust engine (?motore=rust) against Python on the same files
       # verifica.py rewrites .verifica/ultimo.md, so the report of the part is kept apart first
       - name: Rust engine on the built site
