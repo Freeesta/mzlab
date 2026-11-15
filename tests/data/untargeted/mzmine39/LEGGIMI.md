@@ -9,10 +9,10 @@ rewritten in Rust (`crates/mzlab-feat/src/untargeted/`); the mzML files are not 
 - **Command**: `bin/MZmine -b fasi.xml -t TMP` and `bin/MZmine -b isotopi.xml -t TMP` (no interface), parameters of `tools/bench/parametri/mzmine/predefinita.json`.
 - **Input files** (sha256 of the mzML written by `oro_mzmine.py`, with every array decoded and rounded to 6 significant digits: neither the zlib bytes nor the last bits of the floats depend on the machine):
 
-- `oro_1.mzML`: `948314014e6ad2e3bf8d2f522cd18214aee2a5122b3a54ed8dec544aa037c73a`
-- `oro_2.mzML`: `d0184e55228e681cf3b1cda0e45c0e3287fa8268c14922330c384db7a928adf8`
-- `oro_3.mzML`: `809850330d577ff5d24aaaeb86bedaca196e61747c8a14141d3879603476cb18`
-- `oro_4.mzML`: `c15f09494dd6c07e079d0f7252759cc428e33434a68ad2459060483875f14e11`
+- `oro_1.mzML`: `e104f1c60d0f596ea8ef65de923a46dbf6d80cb483d7e2f20c79ebb8dd3fb9a7`
+- `oro_2.mzML`: `52af137b3579884e82f074b1c2dd937f4a45b1b26fb522651da83ce12be96750`
+- `oro_3.mzML`: `9eb8b70877d68216c9dae19e1f859c1a83b6527d8d48ea39d0bea75c8fdef7aa`
+- `oro_4.mzML`: `095e38252f0acfcde21c13b2bef49110178fbf14e64c51fb638cbb2929caea6f`
 
 ## Content of the files
 Four files, 0.2-6 min, one scan every 0.01 min, 60 000 resolving power invented, 20 noise points under 1e4 per scan. Components (m/z, RT of the first file, height of the first file): isolated Gaussians 200.1000 at 1.00 (5e5) and 250.2000 at 1.50 (2e5); two peaks that touch at 300.1500 (RT 2.40 and 2.58, valley 40 % of the apex) and 350.1700 (RT 2.40 and 2.545, valley 70 %); 400.2000 at 3.50 with a hole of one scan (zero) at the apex; 450.3000, a trace present in the whole run (6e4 with a ripple) with a peak at 4.50 (5e5); an isotope pair of charge 1 at 500.2500 (RT 5.00; +1.003355 at 30 %, +2.00671 at 5 %) and one of charge 2 at 600.3000 (RT 5.40; +0.50168 at 60 %, +1.003355 at 20 %). `oro_2` drifts by +0.05 min and `oro_3` by -0.05 min (join); in `oro_3` the peak 250.2000 has height 2.5e4, under the minimum height of the ADAP step (3e4) and so missing (gap filling). Intensities of the files: x1.0, x0.8, x1.2, x0.9.
