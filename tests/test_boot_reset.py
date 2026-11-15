@@ -317,3 +317,19 @@ def test_reset_opfs_listing_failure_is_reported():
     console.log(JSON.stringify({{ errors: window.QQRESET.last.errors }}));
     """
     assert run_node(code)["errors"] == ["opfs: SecurityError"]
+
+
+def test_hard_reset_is_the_one_wipe_and_ignores_a_second_call():
+    code = f"""
+    let calls = [];
+    global.window = {{ QQRESET: {{ run(m) {{ calls.push(m); window.QQ_RESETTING = true; return Promise.resolve(); }} }} }};
+    global.document = {{ addEventListener() {{}} }};
+    const NOMI = {{ KEY: k => k }}; global.NOMI = NOMI;
+    const src = fs.readFileSync({json.dumps(str(WEB / "browser.js"))}, 'utf8');
+    const a = src.indexOf('window.qqHardReset = ()'), b = src.indexOf('window.mzlabHardReset');
+    eval(src.slice(a, b));
+    window.qqHardReset(); window.qqHardReset();
+    console.log(JSON.stringify({{ calls }}));
+    """
+    res = run_node(code)
+    assert res["calls"] == ["all"]
