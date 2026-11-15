@@ -39,7 +39,7 @@ const AVVIO = (function () {
     const info = document.getElementById("avvio-drop-info");
     if (!info) return;
     // a drop whose files are rows of the side list (`pronto(true)`) needs no note under #drop: the rows say it
-    const n = attesa.filter(r => !r.righe).length;
+    const n = attesa.filter(r => !/** @type {any} */ (r).righe).length;
     if (stato === "ready" || stato === "failed" || n === 0) {
       info.hidden = true;
       info.textContent = "";
