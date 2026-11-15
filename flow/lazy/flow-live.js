@@ -150,8 +150,10 @@
   };
 
   /** starts what the scheduler offers while the pool has a free worker; the instant jobs (reused, waiting for a file) do not take a place @param {any} x */
+  /** a plan names scan inputs (raw or mzML); a library-only plan does not and needs no file of Data @param {any} plan */
+  const scans = plan => plan.inputs.some((/** @type {any} */ i) => i.type === "raw" || i.type === "mzml");
   const step = async x => {
-    for (let guard = 0; guard < 64 && x.ok && x.items.length; guard++) {
+    for (let guard = 0; guard < 64 && x.ok && (x.items.length || !scans(x.plan)); guard++) {
       const p = await kit().getPool(), free = Math.max(0, p.limit - x.pooled);
       p.onJob = (/** @type {any} */ e) => progress(x, e.job, e.frac);
       p.onProgress = (/** @type {any} */ e) => { if (e.phase === "detect") x.peak = Math.max(x.peak, e.memMB || 0); };
@@ -300,7 +302,7 @@
     if (!live || !live.ok) throw Object.assign(new Error("err.flow.input.missing"), { key: "err.flow.input.missing", params: {} });
     await replan(live);
     // a plan with no scan input (a library lookup, a model) needs no file of Data: only a plan that names scan inputs waits for them
-    if (!live.items.length && S.plan.inputs.some((/** @type {any} */ i) => i.type === "raw" || i.type === "mzml")) throw Object.assign(new Error("err.flow.input.missing"), { key: "err.flow.input.missing", params: {} });
+    if (!live.items.length && scans(S.plan)) throw Object.assign(new Error("err.flow.input.missing"), { key: "err.flow.input.missing", params: {} });
     if (!await outputsKept(live)) await restart(live);
     // Run is a new request: an MSn step that failed (the engine refused, the file was not open) is tried again, the other failures wait for a change of the plan
     for (const j of await call(live, "jobs")) { const inst = instOf(live, j.instance); if (inst && F.webMsn?.STEPS.includes(base(inst)) && ["error", "refused", "cancelled"].includes(j.state)) await call(live, "retry", { job: { instance: j.instance, item: j.item ?? null } }); }
