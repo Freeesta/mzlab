@@ -26,14 +26,31 @@ function tableBytes(p) {
   return u;
 }
 
+// the ring's events: a push or a freed slot wakes the other side
+const wake = (/** @type {Int32Array} */ ctrl) => { Atomics.add(ctrl, C.SEQ, 1); Atomics.notify(ctrl, C.SEQ); };
+const waitSeq = async (/** @type {Int32Array} */ ctrl, /** @type {number} */ seq) => {
+  const w = /** @type {any} */ (Atomics).waitAsync;
+  if (w) { const r = w(ctrl, C.SEQ, seq, 1000); if (r.async) await r.value; } else await new Promise(r => setTimeout(r, 2));
+};
+
+function push(/** @type {any} */ job, /** @type {Uint8Array} */ b, /** @type {number} */ off) {
+  const ctrl = /** @type {Int32Array} */ (job.ctrl), k = Atomics.load(ctrl, C.PUSH) % SLOTS;
+  job.data.set(b, k * SLOT); job.meta[2 * k] = off; job.meta[2 * k + 1] = b.length;
+  Atomics.add(ctrl, C.PUSH, 1); wake(ctrl);
+}
+// the table (offsets after the file), as the builder frees the slots
+async function feed(/** @type {any} */ job, /** @type {Uint8Array} */ t) {
+  const ctrl = /** @type {Int32Array} */ (job.ctrl), size = job.size;
+  for (let at = 0; at < t.length && !Atomics.load(ctrl, C.STOP);) {
+    const seq = Atomics.load(ctrl, C.SEQ);
+    if (Atomics.load(ctrl, C.PUSH) - Atomics.load(ctrl, C.TAKE) >= SLOTS) { await waitSeq(ctrl, seq); continue; }
+    push(job, t.subarray(at, Math.min(at + SLOT, t.length)), size + at); at += SLOT;
+  }
+}
+
 /** @param {{ conf: () => { budget?: number, cap?: number, module?: any, aiuti?: number } }} h */
 export function createUnaPassata({ conf }) {
   /** @type {Map<string, any>} */ const jobs = new Map();
-  const wake = (/** @type {Int32Array} */ ctrl) => { Atomics.add(ctrl, C.SEQ, 1); Atomics.notify(ctrl, C.SEQ); };
-  const waitSeq = async (/** @type {Int32Array} */ ctrl, /** @type {number} */ seq) => {
-    const w = /** @type {any} */ (Atomics).waitAsync;
-    if (w) { const r = w(ctrl, C.SEQ, seq, 1000); if (r.async) await r.value; } else await new Promise(r => setTimeout(r, 2));
-  };
 
   /** a builder for `m` (a plain .mzML being copied), or null when the spike is off @param {{ blob: Blob, name: string }} m */
   async function start(m) {
@@ -78,20 +95,6 @@ export function createUnaPassata({ conf }) {
     };
   }
 
-  function push(/** @type {any} */ job, /** @type {Uint8Array} */ b, /** @type {number} */ off) {
-    const ctrl = /** @type {Int32Array} */ (job.ctrl), k = Atomics.load(ctrl, C.PUSH) % SLOTS;
-    job.data.set(b, k * SLOT); job.meta[2 * k] = off; job.meta[2 * k + 1] = b.length;
-    Atomics.add(ctrl, C.PUSH, 1); wake(ctrl);
-  }
-  // the table (offsets after the file), as the builder frees the slots
-  async function feed(/** @type {any} */ job, /** @type {Uint8Array} */ t) {
-    const ctrl = /** @type {Int32Array} */ (job.ctrl), size = job.size;
-    for (let at = 0; at < t.length && !Atomics.load(ctrl, C.STOP);) {
-      const seq = Atomics.load(ctrl, C.SEQ);
-      if (Atomics.load(ctrl, C.PUSH) - Atomics.load(ctrl, C.TAKE) >= SLOTS) { await waitSeq(ctrl, seq); continue; }
-      push(job, t.subarray(at, Math.min(at + SLOT, t.length)), size + at); at += SLOT;
-    }
-  }
   function stop(/** @type {any} */ job) { Atomics.store(job.ctrl, C.STOP, 1); wake(job.ctrl); job.w.terminate(); jobs.delete(job.name); }
 
   return {

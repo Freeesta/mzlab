@@ -66,13 +66,7 @@ pub fn build_mzml_streamed<R: Read, S: Read + Seek>(
         (parsed.is_ok() && failure.is_none()).then_some(before)
     };
     let t = table()?;
-    let agree = hr1.is_none_or(|h| h == t.hr1)
-        && t.level.len() == seen.len()
-        && t.polarity.len() == seen.len()
-        && seen
-            .iter()
-            .zip(t.level.iter().zip(&t.polarity))
-            .all(|(&(l, p), (&tl, &tp))| l == tl && p == tp);
+    let agree = agrees(&t, hr1, &seen);
     match first {
         Some(before) if agree => {
             let mut pass = |on: &mut dyn FnMut(Spectrum)| {
@@ -98,6 +92,17 @@ pub fn build_mzml_streamed<R: Read, S: Read + Seek>(
             build_mzml_corriere(&t, again, out, budget, spill, c).map(|st| (st, false))
         }
     }
+}
+
+/// Whether pass 1 saw what the scan table says: the guessed `hr1` (when an MS1 scan came) and the level and polarity of every scan, in order.
+fn agrees(t: &ScanTable, hr1: Option<bool>, seen: &[(u8, i8)]) -> bool {
+    hr1.is_none_or(|h| h == t.hr1)
+        && t.level.len() == seen.len()
+        && t.polarity.len() == seen.len()
+        && seen
+            .iter()
+            .zip(t.level.iter().zip(&t.polarity))
+            .all(|(&(l, p), (&tl, &tp))| l == tl && p == tp)
 }
 
 /// The scratch file lent to pass 1 for a shorter time than the caller's borrow.

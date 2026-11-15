@@ -23,7 +23,7 @@ Phases come from the `mzlab-index` events: copy (`load`), scan table (`scan`), b
 
 ## Spike (off by default)
 
-Arms: `due` = today's two passes, `una` = the spike. The spike is on only when OPFS holds `mzlab/una-passata.on` (`tests_e2e/misura_una_passata.py --arms due,una`). Same machine and method as the bound, 5 interleaved runs per row, 40 runs and no failures. RSS is the peak of the summed RSS of the browser's processes. `live` = 8 MiB pieces that went through the ring during the copy; `from_file` = MB the builder read from the dropped File.
+Arms: `due` = today's two passes, `una` = the spike. The spike is on only when the OPFS directory `mzlab` holds the switch file `una-passata.on` (`tests_e2e/misura_una_passata.py --arms due,una`). Same machine and method as the bound, 5 interleaved runs per row, 40 runs and no failures. RSS is the peak of the summed RSS of the browser's processes. `live` = 8 MiB pieces that went through the ring during the copy; `from_file` = MB the builder read from the dropped File.
 
 | file | CPU | arm | drop→indexed | drop→prov. TIC | copy (bar 0-40 %) | peak RSS MB | busy cores in copy | live | from_file |
 |---|---|---|---|---|---|---|---|---|---|
