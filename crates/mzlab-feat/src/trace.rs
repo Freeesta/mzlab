@@ -11,7 +11,6 @@ use std::sync::Arc;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 
-use crate::axis::MassAxis;
 use crate::broad_blank::BlankBank;
 use crate::broad_gt::{share, TraceBank};
 use crate::centwave::{self, Peak};
@@ -22,62 +21,14 @@ use crate::trace_base::{reserve, BYTES_PER_PEAK};
 
 /// The old path of the memory base, which lives in `trace_base` so that the modules that only allocate do not depend on `trace`.
 pub use crate::trace_base::{FLOOR, MIN_HEIGHT, SLAB_PEAKS, TOUCH_HEIGHT};
+/// The old path of the parameters of the detection, which live in `trace_params` so that `channels`, `quality` and `centwave` do not depend on `trace`.
+pub use crate::trace_params::{Params, LONG_TRACE, MAX_GAP, MIN_POINTS};
 
 pub const CHANNEL_PPM: f64 = 4e-6;
-pub const MIN_POINTS: u32 = 5;
-pub const LONG_TRACE: u32 = 400;
 /// Scans of a series for the common mode: the shortest trace that `TraceBank` counts as persistent.
 const PERSISTENT_SCANS: usize = 400;
-/// Scans a trace may miss between two of its points (0 = consecutive scans), as `gapfill::Params::max_gap`.
-pub const MAX_GAP: u32 = 1;
 /// A slab never ends at a smaller gap (ppm) between neighbouring peaks.
 pub const SLAB_GAP_PPM: f64 = 50.0;
-
-#[derive(Clone)]
-pub struct Params {
-    /// Polarity of the MS1 scans (1 or -1); `None` = all the MS1 scans.
-    pub polarity: Option<i8>,
-    pub floor: f64,
-    pub min_points: u32,
-    pub min_height: f64,
-    /// Missed scans allowed between two points of a trace (0 = consecutive).
-    pub max_gap: u32,
-    pub long_trace: u32,
-    /// Two rows of different grids are one ion when their scans overlap by this share of the shorter one (0 = only the apex and edges test of `merge_grids`).
-    pub merge_overlap: f64,
-    /// Pieces of neighbouring channels join when they touch whatever their height, and pieces down to a quarter of `min_height` take part (`channels::stitch`).
-    pub stitch_wide: bool,
-    /// Noise rows of the unit profile: a row narrower than this share of the typical peak width of its file is dropped (0 = off, `lrnoise`).
-    pub min_width: f64,
-    /// A row whose apex is below this many times the noise of its flanks is dropped (0 = off, `lrnoise`).
-    pub min_snr: f64,
-    /// Axis of the channels of m/z (`Da` = unit resolution).
-    pub axis: MassAxis,
-    /// Working memory of the detection, bytes: it sets the size of the slabs (at most `SLAB_PEAKS` peaks).
-    pub budget: usize,
-    /// How the traces become peaks; only the wavelet model shows in the text of the recipe.
-    pub peak: Peak,
-}
-
-impl Default for Params {
-    fn default() -> Self {
-        Params {
-            polarity: Some(1),
-            floor: FLOOR,
-            min_points: MIN_POINTS,
-            min_height: MIN_HEIGHT,
-            max_gap: MAX_GAP,
-            long_trace: LONG_TRACE,
-            merge_overlap: 0.0,
-            stitch_wide: false,
-            min_width: 0.0,
-            min_snr: 0.0,
-            axis: MassAxis::Ppm,
-            budget: SLAB_PEAKS * BYTES_PER_PEAK,
-            peak: Peak::Minima,
-        }
-    }
-}
 
 impl Params {
     fn slab_peaks(&self) -> usize {

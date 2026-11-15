@@ -140,6 +140,7 @@ mod tp_block;
 pub mod transitions;
 pub mod trace;
 mod trace_base;
+mod trace_params;
 mod transf_base;
 pub mod trace_estimate;
 mod trace_text;
