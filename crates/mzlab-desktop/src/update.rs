@@ -506,7 +506,10 @@ pub fn recover(data: &Path) {
     if !web.is_dir() && old.is_dir() {
         let _ = fs::rename(&old, &web);
     }
-    let _ = fs::remove_dir_all(&old);
+    // `web.old` is the last good folder until it is back in place (a locked folder on Windows can make the rename fail)
+    if web.is_dir() {
+        let _ = fs::remove_dir_all(&old);
+    }
     if web.is_dir() && !validate_web(&web) {
         let _ = fs::remove_dir_all(&bad);
         if fs::rename(&web, &bad).is_err() {
@@ -1024,6 +1027,30 @@ mod tests {
                 && !data.join("web.old").exists()
                 && !data.join("web.next").exists()
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn recover_keeps_old_when_restore_fails() {
+        let tmp = tempfile::tempdir().unwrap();
+        let data = tmp.path();
+        let local = manifest("a", "0.1.0", &[("static/a.js", b"old")]);
+        let remote = manifest("b", "0.1.0", &[("static/a.js", b"new")]);
+        apply(
+            data,
+            &local,
+            &remote,
+            "0.1.0",
+            &mem(&[("static/a.js", b"new")]),
+            |_| {},
+        )
+        .unwrap();
+        fs::rename(data.join("web"), data.join("web.old")).unwrap();
+        // a plain file named `web`: renaming the folder onto it fails (ENOTDIR)
+        fs::write(data.join("web"), b"x").unwrap();
+        recover(data);
+        assert!(!data.join("web").is_dir());
+        assert!(validate_web(&data.join("web.old")));
     }
 
     #[test]
