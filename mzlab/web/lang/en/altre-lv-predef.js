@@ -37,6 +37,7 @@ I18N.add("en", {
   "predef.text": "You opened a file with a double click. Do you want mzLab to be the default app for mzML, Thermo .raw and SCIEX .wiff files? Folders (Agilent .D, Bruker .d, Waters .raw) cannot be associated: drag them onto the window or open them with «Open».",
   "predef.yes": "Yes, show me how",
   "predef.later": "Not now",
+  "predef.ket.error": "Cannot open the drawing «{name}»: {detail}",
   "predef.never": "Don't ask again",
   "predef.done": "Close",
   "predef.guide.title": "How to do it",

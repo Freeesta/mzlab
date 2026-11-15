@@ -16,8 +16,10 @@ fn only_single_mzml_and_raw_files_are_taken() {
     for n in ["a.mzML", "b.mzml", "c.RAW", "d.txt", "e.dam"] {
         std::fs::write(d.join(n), b"x").unwrap();
     }
-    // a Waters/Agilent-like folder named like a file cannot be associated
+    // a Waters folder is taken from the command line (no OS associates it, but «Open with» and `mzlab <folder>` work)
     std::fs::create_dir(d.join("w.raw")).unwrap();
+    std::fs::create_dir(d.join("x.d")).unwrap();
+    std::fs::create_dir(d.join("plain")).unwrap();
     let args: Vec<String> = [
         "--flag",
         "a.mzML",
@@ -26,6 +28,8 @@ fn only_single_mzml_and_raw_files_are_taken() {
         "d.txt",
         "e.dam",
         "w.raw",
+        "x.d",
+        "plain",
         "missing.mzML",
     ]
     .iter()
@@ -34,7 +38,13 @@ fn only_single_mzml_and_raw_files_are_taken() {
     let got = paths_from_args(&args, Some(d));
     assert_eq!(
         got,
-        vec![d.join("a.mzML"), d.join("b.mzml"), d.join("c.RAW")]
+        vec![
+            d.join("a.mzML"),
+            d.join("b.mzml"),
+            d.join("c.RAW"),
+            d.join("w.raw"),
+            d.join("x.d")
+        ]
     );
     // an absolute path wins over the working directory
     let abs = vec![s(&d.join("a.mzML"))];
@@ -208,4 +218,27 @@ fn scan_is_associated_but_other_companions_and_nc_are_not() {
     let a = mzlab_desktop::opening::associated_extensions();
     assert!(a.contains(&"scan".to_string()) && a.contains(&"wiff".to_string()));
     assert!(!a.contains(&"nc".to_string()) && !a.contains(&"gz".to_string()));
+}
+
+/// `.ket` is one more row of the table: associated, routed as a drawing, never as data; folders are not associated.
+#[test]
+fn drawings_and_folder_datasets_are_routed() {
+    use mzlab_desktop::opening::{
+        associated_extensions, is_drawing, is_folder_dataset, plan_from_paths,
+    };
+    let t = tempfile::tempdir().unwrap();
+    let d = t.path();
+    std::fs::write(d.join("m.KET"), b"{}").unwrap();
+    std::fs::create_dir(d.join("A.D")).unwrap();
+    assert!(is_drawing(&d.join("m.KET")) && !is_drawing(&d.join("none.ket")));
+    assert!(is_folder_dataset(&d.join("A.D")) && !is_folder_dataset(&d.join("m.KET")));
+    let a = associated_extensions();
+    assert!(a.contains(&"ket".to_string()));
+    assert!(
+        !a.contains(&"d".to_string()),
+        "folders cannot be associated"
+    );
+    let plan = plan_from_paths([d.join("m.KET"), d.join("A.D")]);
+    assert_eq!(plan.files, vec![d.join("m.KET"), d.join("A.D")]);
+    assert!(plan.problems.is_empty());
 }
