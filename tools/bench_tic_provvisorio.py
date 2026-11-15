@@ -36,14 +36,18 @@ def one(mode, f, port, throttle):
             pg.wait_for_selector("#start:not([hidden])", timeout=60000)
             if throttle != 1:
                 c = pg.context.new_cdp_session(pg); c.send("Emulation.setCPUThrottlingRate", {"rate": throttle})
-            pg.evaluate("window.__loop = " + LOOP)
+            pg.evaluate("() => { window.__loop = " + LOOP + "; window.__res = null; }")
+            if mode == "gest": pg.evaluate("() => { window.__loop().then(r => { window.__res = r; }); }")      # waits in the page for the box; not awaited here
             t0 = time.time()
             pg.set_input_files("#pick", [f])
             out = None
+            # loading started (UPBUSY is 0 before the files are taken), then the file open and nothing busy: the index is done
+            pg.wait_for_function("UPBUSY > 0 || OPENNOW.busy() > 0 || E.files.some(f => !f.gone)", timeout=120000)
+            pg.wait_for_function("E.files.some(f => !f.gone) && UPBUSY === 0 && OPENNOW.busy() === 0", timeout=600000)
+            dt = time.time() - t0
             if mode == "gest":
-                out = pg.evaluate("window.__loop()")
-            pg.wait_for_function("UPBUSY === 0 && OPENNOW.busy() === 0", timeout=600000)
-            return time.time() - t0, out
+                pg.wait_for_function("window.__res !== null", timeout=60000); out = pg.evaluate("window.__res")
+            return dt, out
     finally:
         r.close()
 
