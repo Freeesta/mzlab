@@ -94,6 +94,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | misura su computer lenti (CPU rallentata 1×/4×/6×, 2/4 core: apertura demo, trascinamento della linea, mappe, XIC, memoria; `tests_e2e/misura_macchine.py`) | `docs/agenti/misure-macchine.md` |
 | first package before the site is usable: bytes and requests per milestone, critical chain, 10 biggest files, landing-page comparison, trace split, 8 candidate reductions (`tests_e2e/misura_payload.py`) | `docs/agenti/misure-primo-pacchetto.md` |
 | misure Rust e dei moduli (area: misure dei motori, validazione delle esportazioni (mzTab-M), clic…) | `docs/agenti/misure-rust.md` |
+| caricamento di un mzML in una passata (copia in OPFS e indice dagli stessi byte): limite, spike spento `una-passata.js`, disegno (`tests_e2e/misura_una_passata.py`, `build_mzml_streamed`) | `docs/agenti/misure-una-passata.md` |
 | lettori dei produttori, `.raw`, `.wiff`, `.D` (area: tabella cumulativa dei guadagni di velocità (data · PR · passo ·…) | `docs/agenti/misure-velocita-raw.md` |
 | tabella cumulativa dei guadagni di velocità (data · PR · passo · prima · dopo · %) | `docs/agenti/misure-velocita.md` |
 | misure dei motori, validazione delle esportazioni (mzTab-M), clic del flusso Tabui e della rete | `docs/agenti/misure.md` |

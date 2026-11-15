@@ -9,12 +9,12 @@ import { lab } from "./qqq-db.js";
 import { migra, rowOf } from "./migra.js";
 import { limpia } from "./pulizia.js";
 import { infoDi, nuovo } from "./manifesto.js";
-import { createPool, poolSize, makeGate, fitGate, builderBudget } from "./idxpool.js";
+import { createPool, poolSize, makeGate, fitGate, builderBudget, aiutiPer } from "./idxpool.js";
 import { createBufPool } from "./bufpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { createNativo } from "./rust-nativo.js";
 import { leasePlan } from "./rust-lease-plan.js";
-import { createPlainPut, createOpenGate, gzRoom, gzClean } from "./rust-carica.js"; import { createSulPosto } from "./rust-sul-posto.js";
+import { createPlainPut, createOpenGate, gzRoom, gzClean } from "./rust-carica.js"; import { createUnaPassata } from "./una-passata.js"; import { createSulPosto } from "./rust-sul-posto.js";
 import { createImpronte } from "./impronta.js";
 import { rawSink } from "./rust-opfs.js";
 import { createFlowCentroid } from "./rust-flow-centroid.js";
@@ -233,12 +233,12 @@ async function lrMigrate() {                                              // wha
 let scaldaP = null; const scalda = () => scaldaP || (scaldaP = import("./rust-scalda.js").then(M => M.createScalda({ ARCH, lrPut, lrIndex, lrOpen, lrFile, closeSlot: n => { engine.close(slotOf(n)); openGate.drop(slotOf(n)); }, builtFrom: (n, blob) => { const fr = new FileReaderSync(); return engine.index_built_from(slotOf(n), blob.size, (o, k) => new Uint8Array(fr.readAsArrayBuffer(blob.slice(o, o + k)))); } })));      // the warm-up of the pointed folder (rust-scalda.js): loaded on first use, never at start-up
 const CANCELLED = new Set();                                              // names whose loading the page cancelled (lr_cancel): the copy and the index stop, a new lr_put starts afresh
 const cancelled = () => JSON.stringify({ error_key: "err.load.cancelled", params: {} });
-const plain = createPlainPut({ ARCH, impronte, prints: lrPrints, cancelled, isCancelled: n => CANCELLED.has(n), post: m => postMessage(m), free: () => lrFree(), gunzip: cap => new Gunzip(cap) }), sul = createSulPosto({ ARCH, tilesDrop, post: m => postMessage(m), safe, lost: () => nativo.lost() });      // the copy of a plain upload (rust-carica.js); a big mzML with no room for it is read in place (rust-sul-posto.js)
+const una = createUnaPassata({ conf: () => ({ budget: idxBudget(), cap: BUDGET_MB, module: wasmModule, aiuti: aiutiPer(poolSize(SMALL, navigator.hardwareConcurrency), 1, ISOLATED) }) }), plain = createPlainPut({ ARCH, impronte, prints: lrPrints, cancelled, isCancelled: n => CANCELLED.has(n), post: m => postMessage(m), free: () => lrFree(), gunzip: cap => new Gunzip(cap), una }), sul = createSulPosto({ ARCH, tilesDrop, post: m => postMessage(m), safe, lost: () => nativo.lost() });      // the copy of a plain upload (rust-carica.js); a big mzML with no room for it is read in place (rust-sul-posto.js)
 async function lrPut(m) {                                              // an uploaded file: into OPFS, replacing the one of the same name and its index
   CANCELLED.delete(m.name);
   const size = m.gz ? await gzRoom(m.blob) : m.blob.size; let inPlace = false;      // a .mzML.gz asks the room of its mzML
   if (!m.nat) { if (!m.warm && size >= ARCH.BIG) await (await scalda()).makeRoom(size * ARCH.ROOM); inPlace = await sul.room(m, size); }      // a real load wins over the files warmed ahead; room first (error.quota with the MB needed and free), never write hoping; held for the file and its index until lr_index ends
-  idxPool().cancel(m.name);
+  idxPool().cancel(m.name); una.cancel(m.name);
   engine.close(slotOf(m.name)); openGate.drop(slotOf(m.name));
   for (const ix of [m.name + ".mzidx", m.name + ".cen.mzidx"]) {         // an index of a newer program stays where it is (lr_index then answers error.newerFormat)
     const cur = await ARCH.get("idx", ix);
@@ -281,7 +281,7 @@ async function lrIndexOwn(m) {
   if (early_tic) onProgress({ frac: 0.05, phase: "scan", done: 0, total: early_tic.rt.length, early_tic });
   // a large mzML without shared memory is indexed by the builder alone: the page says that parallel indexing is off (capacita.js)
   if (!job && !ISOLATED && f.size >= BIG_IDX) postMessage({ op: "cap-off", fn: "indiceParallelo" });
-  const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, cap: BUDGET_MB, budget: idxBudget(), onProgress }
+  const res = (!job && await una.result(m.name, onProgress)) || await idxPool().build(job ? { name: m.name, nat: job, part, partCen, cap: BUDGET_MB, budget: idxBudget(), onProgress }
     : { name: m.name, blob: f, prep: { size: f.size, prints: prints(m.name, f.size) }, part, cap: BUDGET_MB, budget: idxBudget(), onProgress, stages: true });      // frac: how far the builder has read; the pool worker makes the scan table itself (idx-worker.js), so two files prepare at once
   if (partCen) {                                                                // the centroid index of a profile sample, made in the same decoding; for a sample of centroids the builder wrote nothing
     if (res.ok && res.stats && res.stats.cen) await ARCH.promote("idx", partCen, m.name + ".cen.mzidx"); else await ARCH.remove("idx", partCen);

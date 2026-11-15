@@ -444,6 +444,7 @@ impl<R: ReadAt> Source<'_, R> {
 mod source;
 use source::{find, Source};
 mod analyzer;
+mod guess;
 mod head_read;
 mod inert;
 mod json;
@@ -451,6 +452,7 @@ mod rows;
 #[cfg(test)]
 mod tests_activations;
 
+pub use guess::HrGuess;
 pub use json::Columns;
 use rows::Head;
 pub(crate) use rows::Rows;
