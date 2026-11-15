@@ -1,7 +1,7 @@
 //! Start of the app (`setup` of the builder in `main.rs`): the folders of the engine, the files given on the command line, and the window, which
 //! answers from the updated web part (if any) before the embedded copy.
 
-use super::{data_dir, open};
+use super::{data_dir, open, NATIVE};
 use mzlab_desktop::libraries;
 use mzlab_desktop::update;
 use mzlab_desktop::State;
@@ -32,9 +32,9 @@ pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     {
         app.state::<Arc<State>>().libs.set_root(PathBuf::from(dir));
     }
-    // the updated web part (if any) answers before the embedded copy; a damaged folder is set aside first
+    // the updated web part (if any) answers before the embedded copy; a damaged folder, or one for a newer binary, is set aside first
     let web = data_dir(app.handle()).map(|d| {
-        update::recover(&d);
+        update::recover(&d, NATIVE);
         d.join("web")
     });
     let mut win = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
