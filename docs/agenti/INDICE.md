@@ -88,7 +88,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | metodo di acquisizione (`metodo/1`, `method.rs`, `method_wiff`, `method_raw`, schema) | `docs/agenti/metodo.md` |
 | metriche di main nel tempo (`tools/metriche.py`, ramo `stat-ci`, tendenze) | `docs/agenti/metriche.md` |
 | caricamento della pagina (FCP, LCP, motore pronto, KB prima del paint per scenario; `tests_e2e/misura_primo_paint.py`); primo file contro dieci file, `rotte`, `thermo`, memoria (`misura_caricamento.py --scenarios`) | `docs/agenti/misure-caricamento.md` |
-| V8 and wasm code cache of the site's scripts under the service worker: trace of main (0 hits), control page (which SW answers Chromium code-caches), S3 spike (headers stored with the copy) and upper bound (`tests_e2e/misura_avvio_sw.py`) | `docs/agenti/misure-code-cache.md` |
+| V8 and wasm code cache of the site's scripts under the service worker: trace of main (0 hits), control page (which SW answers Chromium code-caches), S3 (headers stored with the copy, adopted, remeasured) and upper bound (`tests_e2e/misura_avvio_sw.py`) | `docs/agenti/misure-code-cache.md` |
 | primo file di un lotto: cancello delle copie del sito (`createCopyGate`, `?copie=N`), K copie insieme, primo grafico e lotto intero con 10 e 50 file, memoria; verdetti del percorso critico (`rotte`, `thermo`, dieci file) | `docs/agenti/misure-copie.md` |
 | Misure: diario (NON LEGGERE) [titolo del file] | `docs/agenti/misure-diario.md` |
 | formati di ingresso del Flow (area: misure dei motori, validazione delle esportazioni (mzTab-M), clic…) | `docs/agenti/misure-formati.md` |
