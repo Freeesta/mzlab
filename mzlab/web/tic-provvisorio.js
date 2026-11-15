@@ -93,7 +93,7 @@ function wire(/** @type {HTMLCanvasElement} */ cv) {
     e.preventDefault(); zoomAt(Math.pow(1.0015, e.deltaY), rtAt(cv, e.clientX));
   }, { passive: false });
   /** @type {null | { x: number, a: number, b: number, moved: boolean }} */ let drag = null;
-  cv.addEventListener("pointerdown", e => { if (e.button) return; drag = { x: e.clientX, a: cur()[0], b: cur()[1], moved: false }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener("pointerdown", e => { if (e.button) return; drag = { x: e.clientX, a: cur()[0], b: cur()[1], moved: false }; try { cv.setPointerCapture(e.pointerId); } catch (_) { /* a pointer that is already gone */ } });
   cv.addEventListener("pointermove", e => {
     if (!drag) return;
     const dx = e.clientX - drag.x; if (Math.abs(dx) > 3) drag.moved = true;
