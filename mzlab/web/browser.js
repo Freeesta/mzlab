@@ -37,19 +37,12 @@
   const perfMark = t => { if (window.PERF) PERF.mark(t); else if (/[?&]perf\b/.test(location.search)) (window.PERF_EARLY = window.PERF_EARLY || []).push([performance.now(), t]); };
   const step = t => { window.qqStep = t; console.debug("[mzLab]", t); perfMark(t); };
   const phase = m => { window.qqPhaseCur = m ? { key: m.key, pct: m.pct, params: m.params } : null; if (m) step(m.key); if (window.ldRefresh && window.I18N) ldRefresh(); if (typeof AVVIO !== "undefined" && AVVIO.renderFase) AVVIO.renderFase(); };
-  // the ONE clean slate («New session» and «Start from scratch»): saved files, notebook, user lists, caches (app, engine, libraries) and service worker are removed, then the page reloads
-  // from the network; ?riparti=1 makes the new worker delete the saved files itself if the database could not be deleted now (another tab holds it)
-  const wait = p => Promise.race([p, new Promise(r => setTimeout(r, 4000))]).catch(() => {});
-  window.qqHardReset = async () => {
-    window.qqEngineStop();
-    // the files and indexes in OPFS
-    await wait((async () => { const d = await navigator.storage.getDirectory(); await d.removeEntry("mzlab", { recursive: true }); })());
-    await wait(new Promise((/** @type {any} */ r) => { const q = indexedDB.deleteDatabase(NOMI.DB); q.onsuccess = q.onerror = q.onblocked = () => r(); }));
-    if (NOMI.DB_OLD) await wait(new Promise((/** @type {any} */ r) => { const q = indexedDB.deleteDatabase(NOMI.DB_OLD); q.onsuccess = q.onerror = q.onblocked = () => r(); }));
-    await wait((async () => { for (const k of await caches.keys()) if (k.startsWith(NOMI.CACHE_PREFIX) || k.startsWith("qqq-") || k === "mzlab-libs") await caches.delete(k); })());
-    await wait((async () => { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); })());
-    try { localStorage.clear(); sessionStorage.clear(); } catch (_) {}
-    const u = new URL(location.href); u.search = "?riparti=1&ripn=" + Date.now().toString(36); u.hash = ""; location.replace(u.href);
+  // the ONE clean slate («New session», «Start from scratch», the start banner and the 10-second button): the same wipe as the dialog's «Full reset» (reset.js),
+  // which removes everything by name and reloads with ?riparti=1. A second call while it runs is ignored. Without reset.js the page just reloads.
+  window.qqHardReset = () => {
+    if (window.QQ_RESETTING) return Promise.resolve();
+    if (!window.QQRESET) { location.reload(); return Promise.resolve(); }
+    return window.QQRESET.run("all");
   };
   window.mzlabHardReset = window.qqHardReset;
   // the failure goes to the banner of AVVIO (avvio-progressivo.js: fixed, role=alert, «Copy details», «Full reset»); the page stays visible. If AVVIO is not loaded yet it picks window.qqFailInfo up

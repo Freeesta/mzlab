@@ -266,3 +266,19 @@ def test_browser_fail_action_button_on_engine_start_error():
     assert res["msgText"] == "load.err.engineStart"
     assert res["segnalaCalled"] is True
 
+
+
+def test_hard_reset_is_the_one_wipe_and_ignores_a_second_call():
+    code = f"""
+    let calls = [];
+    global.window = {{ QQRESET: {{ run(m) {{ calls.push(m); window.QQ_RESETTING = true; return Promise.resolve(); }} }} }};
+    global.document = {{ addEventListener() {{}} }};
+    const NOMI = {{ KEY: k => k }}; global.NOMI = NOMI;
+    const src = fs.readFileSync({json.dumps(str(WEB / "browser.js"))}, 'utf8');
+    const a = src.indexOf('window.qqHardReset = ()'), b = src.indexOf('window.mzlabHardReset');
+    eval(src.slice(a, b));
+    window.qqHardReset(); window.qqHardReset();
+    console.log(JSON.stringify({{ calls }}));
+    """
+    res = run_node(code)
+    assert res["calls"] == ["all"]
