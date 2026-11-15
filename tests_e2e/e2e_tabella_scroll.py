@@ -14,7 +14,7 @@ TOP = "() => Math.round(document.querySelector('#wtable').getBoundingClientRect(
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
-    except Exception as e: steps.append((name, "FAIL: " + str(e).split("\n")[0][:240]))
+    except Exception as e: steps.append((name, "FAIL: " + " | ".join(str(e).split("\n")[:6])[:600]))
 def settle(pg):
     """the smooth scroll ends: scrollY is the same on three reads in a row"""
     last, n = None, 0
@@ -32,7 +32,9 @@ try:
         pg.set_viewport_size({"width": 1366, "height": 800}); pg.set_input_files("#pick", FILES); open_first(pg); ready(pg)
         def cycle(w):
             pg.set_viewport_size({"width": w, "height": 800}); ready(pg)
-            assert pg.is_visible("#samptab") and pg.get_attribute("#samptab", "aria-pressed") is None
+            if pg.is_hidden("#samptab"): pg.click("#sb-toggle"); ready(pg)      # a narrow window keeps the side panel closed
+            assert pg.is_visible("#samptab"), "the button is visible"
+            assert pg.get_attribute("#samptab", "aria-pressed") is None
             ids = pg.evaluate("E.panels.map(p => p.id).join()")
             pg.evaluate("scrollTo(0, 30)"); ready(pg); y0 = pg.evaluate("scrollY")
             pg.click("#samptab"); y1 = settle(pg)
@@ -63,7 +65,8 @@ try:
             assert pg.evaluate("document.getElementById('v-workspace').dataset.work") == "panels", "Esc leaves the page"
         step("keyboard: Enter on the button, Esc back to the work", keyboard)
         def reduced():
-            pg.emulate_media(reduced_motion="reduce"); pg.click("#backwork"); ready(pg); pg.evaluate("scrollTo(0, 30)")
+            pg.emulate_media(reduced_motion="reduce"); pg.evaluate("scrollTo(0, 30)")
+            if pg.is_hidden("#samptab"): pg.click("#sb-toggle"); ready(pg)
             pg.click("#samptab"); pg.wait_for_selector("#wtable", state="visible"); frames(pg, 3)
             assert pg.evaluate(TOP) < 400, "reduced motion: scrolled at once"
         step("reduced motion: the scroll is instant", reduced)
