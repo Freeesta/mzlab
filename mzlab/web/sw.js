@@ -22,13 +22,17 @@ let nuevo = {};        // while stale: path -> SHA-256 of the newer version, so 
 let fill = null;
 // Cross-origin isolation (SharedArrayBuffer) without server headers: every same-origin response gets COOP/COEP/CORP, also from the cache.
 // Everything of the site is same-origin; cross-origin fetches of the page are CORS requests, which require-corp does not block.
+const ISO = [["Cross-Origin-Embedder-Policy", "require-corp"], ["Cross-Origin-Opener-Policy", "same-origin"], ["Cross-Origin-Resource-Policy", "same-origin"],
+  // the worker is the cache: without this the browser's memory cache (max-age=600 of the origin) would hand a file of the previous version to the next page without asking us
+  ["Cache-Control", "no-cache"]];
+// The copies are stored with these headers (`guardar`) and a copy that has them is answered as the cache gave it: a new Response per hit pipes each of
+// the ~300 bodies of a load through this worker's thread (warm `qqReady` ~100 ms later, misure-code-cache.md). Not for the code cache: Chromium keeps
+// none for a built Response, stored or not. A copy stored by an older worker (no headers) is still wrapped until a deploy carries it over (`heredado`).
 /** @param {Response} res */
 const isolata = res => {
-  if (res.status === 0 || res.type === "opaqueredirect") return res;
+  if (res.status === 0 || res.type === "opaqueredirect" || ISO.every(([k, v]) => res.headers.get(k) === v)) return res;
   const h = new Headers(res.headers);
-  h.set("Cross-Origin-Embedder-Policy", "require-corp"); h.set("Cross-Origin-Opener-Policy", "same-origin"); h.set("Cross-Origin-Resource-Policy", "same-origin");
-  // the worker is the cache: without this the browser's memory cache (max-age=600 of the origin) would hand a file of the previous version to the next page without asking us
-  h.set("Cache-Control", "no-cache");
+  for (const [k, v] of ISO) h.set(k, v);
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
 };
 /** SHA-256 (hex) of the body of a response, which stays readable. */
@@ -129,7 +133,7 @@ const traerFill = async (/** @type {Request} */ req, /** @type {string} */ want)
   }
 };
 const guardar = async (/** @type {Cache} */ cache, /** @type {Request} */ req, /** @type {Response} */ res) => {
-  try { await cache.put(req, res.clone()); } catch (_) { /* storage full: serve anyway */ }
+  try { await cache.put(req, isolata(res.clone())); } catch (_) { /* storage full: serve anyway */ }
 };
 /** Fills the app cache with every file of the manifest the page has not loaded yet (a few at a time, not blocking anything); true once no
  * further attempt is needed (marked complete, or the worker is stale). */
