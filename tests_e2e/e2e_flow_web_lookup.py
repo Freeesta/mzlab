@@ -35,6 +35,13 @@ site = tmp / "site"; env = dict(os.environ, RUNNER_TEMP=str(tmp / "rt"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site)], check=True)
 from lib_sito import add_wasm; add_wasm(site)
 from lib import build_feat; build_feat(site / "static", env)
+# the lookup runs in the `lib` .wasm: the site of the test needs it like the identification tests
+if not (site / "static" / "wasm-lib" / "mzlab_lib_wasm.js").exists():
+    ready = ROOT / "site" / "static" / "wasm-lib"
+    if (ready / "mzlab_lib_wasm.js").exists(): shutil.copytree(ready, site / "static" / "wasm-lib")
+    else:
+        subprocess.run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-lib-wasm"], cwd=ROOT, check=True, capture_output=True)
+        subprocess.run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(site / "static" / "wasm-lib"), "target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm"], cwd=ROOT, check=True)
 run = tmp / "run"; run.mkdir()
 for n, t in FILES.items(): (run / n).write_text(t)
 (run / "lookup.json").write_text(json.dumps(plan()))
