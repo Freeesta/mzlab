@@ -15,7 +15,6 @@ SITE_ONLY = {
     "lr_gunzip": "a .mzXML.gz unpacked into OPFS for the readers module; the page skips it in the app (gz-flusso.js) and the app reads .gz itself",
     "lr_cen_have": "the site Flow's centroid copy in OPFS; the app's Flow runs natively (flow/run, flow/live)",
     "lr_cen_adopt": "the site Flow's centroid copy in OPFS; the app's Flow runs natively (flow/run, flow/live)",
-    "lr_modulo": "the site downloads the thermo .wasm at the drop of a .raw; the app reads a .raw natively and has no module download",
     "lr_flow_line": "the app's page posts flow/line (flow-terminal.js)",
     "lr_flow_sched": "the app's page posts flow/live/<op> (flow-live-desktop.js)",
 }
