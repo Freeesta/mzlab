@@ -13,6 +13,11 @@ const FOLDER_ONLY: [&str; 1] = [".d"];
 const NOT_ASSOCIATED: [&str; 1] = [".nc"];
 /// The SCIEX companion of a `.wiff`: opened through its `.wiff`.
 const WIFF_SCAN: &str = ".wiff.scan";
+/// The drawing file of the editor (Ketcher JSON): not data, it goes to the drawing editor and is not in the readers' registry.
+pub const DRAWING: &str = ".ket";
+/// Folder datasets the system can hand over (macOS «Open with», drag onto the icon, command line); no OS associates a folder, so they are not in `associated_extensions`.
+/// Waters `.raw` is a folder, Thermo `.raw` a file: the same name, told apart by what is on the disk (the readers also decide by content).
+const FOLDER_DATASETS: [&str; 2] = [".d", ".raw"];
 
 /// ONE source: the extensions of the readers' registry (`mzlab_lettori::estensioni()`, the same list the site's pickers get), without the folder-only ones.
 /// Lower case with the dot; a companion such as `.wiff.scan` is kept whole.
@@ -48,18 +53,35 @@ pub fn associated_extensions() -> Vec<String> {
         .filter(|e| e.matches('.').count() == 1 || e == WIFF_SCAN)
         .map(|e| e.rsplit('.').next().unwrap_or_default().to_string())
         .collect();
+    v.push(DRAWING.trim_start_matches('.').to_string());
     v.sort();
     v.dedup();
     v
 }
 
-/// Does the path name a file (not a folder) whose name ends with an extension of the readers' registry?
-pub fn is_openable(p: &Path) -> bool {
-    let name = p
-        .file_name()
+fn lower_name(p: &Path) -> String {
+    p.file_name()
         .map(|n| n.to_string_lossy().to_ascii_lowercase())
-        .unwrap_or_default();
-    file_extensions().iter().any(|e| name.ends_with(e.as_str())) && p.is_file()
+        .unwrap_or_default()
+}
+
+/// Is it a drawing file (`.ket`) that exists?
+pub fn is_drawing(p: &Path) -> bool {
+    lower_name(p).ends_with(DRAWING) && p.is_file()
+}
+
+/// Is it a folder dataset (Waters `.raw`, Agilent `.D`, Bruker `.d`)?
+pub fn is_folder_dataset(p: &Path) -> bool {
+    let name = lower_name(p);
+    p.is_dir() && FOLDER_DATASETS.iter().any(|e| name.ends_with(e))
+}
+
+/// Does the path name something the app opens: a file whose name ends with an extension of the readers' registry, a folder dataset or a drawing?
+pub fn is_openable(p: &Path) -> bool {
+    let name = lower_name(p);
+    (file_extensions().iter().any(|e| name.ends_with(e.as_str())) && p.is_file())
+        || is_folder_dataset(p)
+        || is_drawing(p)
 }
 
 /// The files among the command line arguments (program name already removed); relative paths are taken from `cwd`. Options and anything else are ignored.

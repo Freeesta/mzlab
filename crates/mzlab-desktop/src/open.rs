@@ -14,7 +14,49 @@ use tauri::{AppHandle, Emitter, Manager};
 #[derive(Serialize)]
 pub struct Opened {
     pub files: Vec<PickedFile>,
+    /// Drawing files (`.ket`) read here: the page loads them into the drawing editor (nothing is written back by the app).
+    pub drawings: Vec<Drawing>,
     pub ask: bool,
+}
+
+/// A `.ket` handed over by the system: its name and text, or why it could not be read.
+#[derive(Serialize)]
+pub struct Drawing {
+    pub name: String,
+    pub text: Option<String>,
+    pub error: Option<String>,
+}
+
+/// Larger than any drawing: a huge file is refused, not read.
+const MAX_KET: u64 = 32 << 20;
+
+fn read_drawing(p: &std::path::Path) -> Drawing {
+    let name = p
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let r = std::fs::metadata(p)
+        .map_err(|e| e.to_string())
+        .and_then(|m| {
+            if m.len() > MAX_KET {
+                Err("the file is too large for a drawing".to_string())
+            } else {
+                Ok(())
+            }
+        })
+        .and_then(|()| std::fs::read_to_string(p).map_err(|e| e.to_string()));
+    match r {
+        Ok(text) => Drawing {
+            name,
+            text: Some(text),
+            error: None,
+        },
+        Err(e) => Drawing {
+            name,
+            text: None,
+            error: Some(e),
+        },
+    }
 }
 
 /// The page empties the queue when it is ready (`desktop-shim.js`): the files get their numbers like those of the system dialog.
@@ -24,15 +66,25 @@ pub fn take_opened(
     state: tauri::State<'_, Arc<State>>,
     pending: tauri::State<'_, Pending>,
 ) -> Opened {
-    let files = register(&state, pending.take());
-    let ask = !files.is_empty()
+    // one queue and one path for everything: data files and folders go where File > Open and drag and drop put them, drawings to the editor
+    let (draw, data): (Vec<PathBuf>, Vec<PathBuf>) = pending
+        .take()
+        .into_iter()
+        .partition(|p| opening::is_drawing(p));
+    let drawings: Vec<Drawing> = draw.iter().map(|p| read_drawing(p)).collect();
+    let files = register(&state, data);
+    let ask = !(files.is_empty() && drawings.is_empty())
         && data_dir(&app).is_ok_and(|d| {
             let mut c = libraries::read_config(&d);
             let ask = opening::record_opening(&mut c);
             let _ = libraries::write_config(&d, &c);
             ask
         });
-    Opened { files, ask }
+    Opened {
+        files,
+        drawings,
+        ask,
+    }
 }
 
 /// Queues files from outside and tells the page (which may not be loaded yet: then it takes them at start); the window comes to the front.

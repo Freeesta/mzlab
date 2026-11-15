@@ -53,7 +53,12 @@ NEEDS: dict[str, set[str]] = {
     "e2e_tpmine_mem": {"sito", "veri"},          # 13 real HR files (1 GB) in the real worker: minutes
 }
 # the slowest e2e (seconds, measured in the CI): they start first, so the pool does not end waiting for one of them
-SLOW = ["e2e_tpmine_lr_rust", "e2e_tpmine_ingresso", "e2e_tpmine_transf"]; SOLI = ["e2e_carica_grandi", "e2e_sw_versione"]      # SOLI run alone after the pool: carica_grandi fills the browser storage and memory on purpose, sw_versione checks that a deploy shows at the first reload inside the 3 s navigation budget of the worker (a loaded machine spends it); the tests beside them never starve
+SLOW = ["e2e_tpmine_lr_rust", "e2e_tpmine_ingresso", "e2e_tpmine_transf"]; SOLI = ["e2e_carica_grandi", "e2e_sw_versione", "e2e_disegno_click"]      # SOLI run alone after the pool: carica_grandi fills the browser storage and memory on purpose, sw_versione checks that a deploy shows at the first reload inside the 3 s navigation budget of the worker (a loaded machine spends it), disegno_click times the slowest event of a click at CPU x4 (96-152 ms alone, up to 208 ms beside three busy processes, 216-696 ms on the CI pool); the tests beside them never starve
+# A test that is long by construction gets a cap of its own (seconds), never lower than --timeout: e2e_impaginazione sweeps 16 page configurations
+# (13 with an MRM panel, 3 full scan) and every menu of each; 179 s on a fast machine (129 + 50), over the 150 s of `e2e-cambiati` on a CI runner.
+CAP_PROPRIO = {"e2e_impaginazione": 420}
+def cap_of(name: str, timeout: int) -> int:
+    return max(timeout, CAP_PROPRIO.get(name, 0))
 NOT_TESTS = {"lib", "synth"}          # helpers and measurements, not tests
 # e2e3 plus the e2e that were red on main without anybody seeing it (the CI used to run only e2e3): download menu, buttons, settings, axes, spectra.
 # e2e_cromato is not here yet: it fails in WebKit (the dialog of the integrations has no S/N box) and in Firefox (waterfall step), both only in those browsers.
@@ -333,7 +338,7 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
             todo.append(n)
     env_sint = dict(env, MZLAB_MZML=str(sintetici()), QQQ_MZML=str(sintetici())) if src == "veri" and any(con_golden(n) for n in names) else env
     def one(n):
-        rc, out, dt = sh([sys.executable, str(E2E / f"{n}.py")], LOG / f"{n}.log", timeout, env=env_sint if con_golden(n) else env, cwd=ROOT)
+        rc, out, dt = sh([sys.executable, str(E2E / f"{n}.py")], LOG / f"{n}.log", cap_of(n, timeout), env=env_sint if con_golden(n) else env, cwd=ROOT)
         probs = judge(out, rc)
         return (n, "FAIL" if probs else "OK", dt, probs[:4])
     if todo:           # the page the tests open is the built site with the Rust engine (tests_e2e/lib.py Run)

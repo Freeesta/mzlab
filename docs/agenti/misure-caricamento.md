@@ -19,156 +19,86 @@
 - **No flash**: theme and language are set in the head before the first paint (CLS 0, `<html lang>` right in every run); no notice or modal at load. Console at load: only Chrome's warning on the Ketcher frame (`allow-scripts` + `allow-same-origin`).
 - **First visit**: `browser.js isolateOnce` reloads once for cross-origin isolation (~270 ms after the start, before the cold FCP): the engine is ready ~260 ms later than without it, once per browser; GitHub Pages cannot send COOP/COEP, so the service worker adds them.
 - **Head round trips** (local HTTP/2 mirror like GitHub Pages: gzip, 40 ms per answer, shared 30 Mbit/s; Chromium, 6 interleaved visits, medians): with `preload` of `reset.js`, `telefono.js`, `browser.js`, `sito.js` the head scripts arrive together instead of one round trip each. First visit, navigation to engine ready: 1885 → 1426 ms, FCP 597 → 345 ms; reload: 610 → 573 ms. Firefox first visit 2664 → 2510 ms (3 visits). No file downloaded twice; KB and requests before ready unchanged.
+- **Early hints tried and dropped** (same mirror, Chromium, 6 interleaved visits, medians, min-max): `preload` of `lang/<L>.js` from the inline language script: first-visit FCP 312 [272-337] → 341 [308-376] ms; `modulepreload` of the bridge's static imports: engine ready 3450 [3206-3536] → 3460 [3426-3684] ms (modules start earlier, `.wasm` still sets the pace); warm unchanged (742 → 746 ms). Gate was 20 ms; see `ottimizzazioni-tentate.md`.
 - **Not measured here**: WebKit/Safari (not installed in the cloud), a real Fast 4G link (the CDP profile does not slow the mirror: same numbers as cold).
 - **Site update**: see LOAD-FIRST-PAINT-5 (the page is ready in about 0.55 s on both reloads after a deploy; only the changed files are downloaded); behaviour in `e2e_sw_versione`.
 - KB before FCP counts every request started before the paint: on a warm load non-blocking scripts start earlier, so the number grows when the page is faster.
 
-## First package: what the browser must download and run (2026-11-14)
 
-Question from the owner: «the main problem is the initial package; other sites show their interface much faster». Measured with `tests_e2e/misura_payload.py` (not run in CI; `--report DIR [--tables]` prints every table below from the run files). Built site (`tools/build_site.py`) plus the engine `.wasm` of the live site (`--prime`), Chromium headless, 4 vCPU cloud, Playwright.
+## First file and many files: critical path
 
-**Method.** Local Node HTTP/2 server (self-signed certificate, Chromium with `--ignore-certificate-errors`) with GitHub-Pages-like headers and **gzip -9**. The link is shaped by the server (one shared downlink plus one delay per answer: «Fast 4G» 9 Mbit/s and 170 ms, «Slow 4G» 1.6 Mbit/s and 150 ms), because CDP throttling does not reach the service worker; CPU x4 over CDP.
+Measurement only (no product change), `tests_e2e/misura_caricamento.py --scenarios uno,dieci,rotte,thermo,subito,interazione,memoria` (module `tests_e2e/scenari_caricamento.py`; never asserts, not in the CI). Site only: the desktop app serves `mzlab://` locally, has no service worker (SW) and no network, and its native path is different, so none of this applies there.
+Setup: `main` `2cf7180`, site from `tools/prepara_sito.py`, Chrome for Testing 153 headless, one persistent profile per run (a normal window; cross-origin isolated), cloud machine 4 vCPU Intel Xeon 2.10 GHz.
 
-Cold = new context (empty cache, no service worker; the worker installs during the visit and `browser.js isolateOnce` reloads once, so a first visit is **three navigations**). Warm = second visit of the same context after the worker's fill ended. Median of 3 runs (Slow 4G: 2). Times are ms from the start of the first navigation.
-- **Encoding.** GitHub Pages sends gzip, never brotli: `curl -H 'Accept-Encoding: br, gzip'` on the live site answers `content-encoding: gzip` for html, js and the engine `.wasm` (`identity` gives the raw size). The page API cannot give compressed sizes of files answered by the service worker, so every «gzip» size below is the **computed gzip -9 of the file on disk**. Against the live `content-length` it is 0.1-4 % smaller (carica.js 2288 vs 2291, app.css 29785 vs 30747, the engine 930352 vs 938885): real numbers are 1-2 % higher.
-- **Model limits.** One RTT per request (no TCP/TLS handshake, no loss); real GitHub Pages adds those. The earlier HTTP/1.1 local model (6 connections, `--http h1`) overstated Fast 4G cold: engine ready 9.9 s instead of 3.9 s; keep it only as an upper bound.
+Files: synthetic mzML 50.7 MB (2400 scans, `mzml_msconvert_synthetic.py --peaks1 5000 --peaks2 500`) and synthetic Thermo `.raw` 50.6 MB (`thermo_synthetic --scans 950 --peaks 600`); a drop of ten = the same file first plus nine copies with other names. **warm** = copy of a profile whose SW fill is done (`.fill-done`); **cold** = empty profile, the drop 3 s after `qqReady` unless the arm says otherwise.
 
-### Milestones (ms) and what is needed before each
+N = 5 per cell, arms interleaved run by run, median [min-max], ms from the `change` of the file input. CPU 1× and 4× throttle the page's main thread only (workers run at full speed). Provisional TIC = `#ticprov` drawn; first chart = a panel drawn; all indexed = nothing read or opened any more; copy start = first `mzlab-index` event (for a `.raw` the first «read» event, there is no OPFS copy).
 
-| link | CPU | visit | FCP | drop area visible | last carica.js script | engine ready |
+**(c) one file alone vs first in a drop of ten (warm)**
+
+| file | CPU | arm | provisional TIC | first chart | all indexed | long tasks to first chart |
 |---|---|---|---|---|---|---|
-| none | x1 | cold | 140 | 132 | 762 | 1023 |
-| none | x4 | cold | 268 | 275 | 1385 | 2045 |
-| Fast 4G | x1 | cold | 728 | 701 | 2850 | 3910 |
-| Fast 4G | x4 | cold | 792 | 831 | 3260 | 4377 |
-| Slow 4G | x1 | cold | 1162 | 1136 | 5100 | 20568 |
-| Slow 4G | x4 | cold | 1272 | 1246 | 7294 | 20316 |
-| none | x1 | warm | 120 | 94 | 362 | 545 |
-| none | x4 | warm | 360 | 360 | 779 | 1476 |
-| Fast 4G | x1 | warm | 510 | 496 | 838 | 1892 |
-| Fast 4G | x4 | warm | 574 | 567 | 891 | 2057 |
+| mzML | 1× | uno | 553 [503-580] | 1611 [1594-1874] | 1635 | 1 (98 ms) |
+| mzML | 1× | dieci | 2251 [2165-2349] | 3814 [3496-4081] | 7122 [6714-7341] | 1 (123 ms) |
+| mzML | 4× | uno | 651 [571-829] | 2529 [2435-2735] | 2637 | 2 (446 ms) |
+| mzML | 4× | dieci | 2615 [2466-2704] | 5168 [4216-5361] | 9425 [8987-9620] | 2 (604 ms) |
+| `.raw` | 1× | uno | 230 [214-255] | 1013 [947-1130] | 1045 | 1 (61 ms) |
+| `.raw` | 1× | dieci | 520 [486-628] | 4121 [3583-4886] | 5172 [4902-5997] | 1 (114 ms) |
+| `.raw` | 4× | uno | 424 [335-437] | 1798 [1740-1855] | 1889 | 2 (391 ms) |
+| `.raw` | 4× | dieci | 854 [690-996] | 5578 [5149-5812] | 8250 [7497-8472] | 5 (673 ms) |
 
-Slow 4G warm (engine ready 28-31 s) is **not** a page cost and is not used: the page took nothing from the network, the `.wasm` entry waited behind the worker's own transfers; not understood (open question: the worker fill seems to run again after the reload on a slow link). «Drop area visible» is the static drop area; files are accepted only after engine ready (`AVVIO.pronto`).
+**(a)(b) a module held 3 s after the drop** (cold, one file; the server answers the request for the `.wasm` 3 s after the drop whatever the moment it was asked, the SW fill's request before the drop included)
 
-Needed **before** each milestone (files finished by then; Fast 4G, CPU x1, cold):
+| module | file | CPU | base: first chart | held: first chart | base: copy start | held: copy start |
+|---|---|---|---|---|---|---|
+| `rotte` | mzML | 1× | 1514 [1369-1698] | 1611 [1531-1746] | 39 | 39 |
+| `rotte` | mzML | 4× | 2432 [2329-2582] | 2307 [2242-2457] | 93 | 94 |
+| `thermo` | `.raw` | 1× | 985 [960-1045] | 3608 [3591-3623] | 50 | 62 |
+| `thermo` | `.raw` | 4× | 1784 [1701-1865] | 4104 [4031-4154] | 84 | 83 |
 
-| milestone | requests | gzip KB | decoded KB |
-|---|---|---|---|
-| first contentful paint (712 ms) | 22 | 111 | 374 |
-| drop area visible (701 ms) | 22 | 111 | 374 |
-| last script of the carica.js list (2850 ms) | 184 | 812 | 2335 |
-| engine ready (3910 ms) | 248 | 2008 | 5323 |
+**(d) drop at `qqReady` + 0 vs + 20 s (mzML, one file)**
 
-With no throttle the same milestones need 30, 29, 184 and 250 requests and 123, 123, 910 and 2019 KB gzip.
+| profile | CPU | drop at | provisional TIC | first chart | requests drop → chart | long tasks to chart |
+|---|---|---|---|---|---|---|
+| cold | 1× | +0 | 792 [741-829] | 2118 [2022-2308] | 333 (11 MB) | 1 (138 ms) |
+| cold | 1× | +20 s | 561 [493-704] | 1647 [1527-1761] | 0 | 1 (119 ms) |
+| warm | 1× | +0 | 574 [548-660] | 1663 [1523-1765] | 0 | 1 (98 ms) |
+| warm | 1× | +20 s | 557 [458-719] | 1680 [1447-1909] | 0 | 1 (115 ms) |
+| cold | 4× | +0 | 1195 [1019-1228] | 3528 [3302-4125] | 438 (13 MB) | 3 (536 ms) |
+| cold | 4× | +20 s | 629 [552-802] | 2576 [2294-2779] | 0 | 1 (420 ms) |
+| warm | 4× | +0 | 760 [702-1049] | 2545 [2249-3011] | 0 | 2 (546 ms) |
+| warm | 4× | +20 s | 668 [640-707] | 2680 [2187-2895] | 1 | 2 (552 ms) |
 
-**(b) Whole critical chain** (until engine ready, the document of the first navigation left out): **248 requests, 2008 KB gzip, 5323 KB decoded** (2.65x); 2078 KB on Slow 4G cold. By kind: engine `.wasm` 1 file, 909 KB gzip (2107 decoded); 153 scripts inserted by `carica.js`, 684 (1926); 74 other scripts (ES modules, `rust-*.js`, worker, catalog `lang/it-resto.js`), 327 (1006); 4 render-blocking CSS, 33 (138); 12 parser scripts, 32 (86).
+The 333-438 requests of the cold +0 arm are the SW's fill (all the `.wasm` modules, the library engine, the readers, the example files excluded) and the mzFinder/OpenChemLib files; the warm arms serve them from the SW cache (0 network requests).
 
-### Request table, reference run (Fast 4G, CPU x1, cold, median run by engine-ready time)
+**(e) first chart's responsiveness while files 2..10 index** (mzML, warm; 20 Ctrl+wheel zooms, 20 Shift+drags of 3 pointermoves, 5 clicks on the TIC; input → next frame is two rAFs after the event; click → last `spec` draw; Event Timing durations ≥ 16 ms from the first chart on; «busy» = the loading still running when the event happened)
 
-Request order; flags B render-blocking, P preload, C inserted by `carica.js`, E engine (`.wasm`); sizes in bytes (gzip -9 / decoded); ms from the first navigation. Head files carry the times of the second navigation (the first one is cut by the isolation reload). Files under 10 KB beyond the first 24 are summed in the last row. The full 248-row table of this run is in the PR body (`--report DIR --tables`).
+| arm | CPU | wheel p50 / p95 | wheel in the busy window | drag p50 / p95 | drag in the busy window | Event Timing p50 / p98 | click → spectrum | rAF delta p95 (first chart → all indexed) |
+|---|---|---|---|---|---|---|---|---|
+| uno+gesti (nothing else loads) | 1× | 21 / 28 | 0 | 19 / 20 | 0 | 24 / 48 | 66 [52-70] | n/a (no window) |
+| dieci+gesti | 1× | 22 / 38 | 20 of 20 | 19 / 24 | 21 of 60 | 32 / 64 | 64 [63-68] | 36 [31-40] (without gestures 36 [33-46]) |
+| uno+gesti | 4× | 48 / 94 | 0 | 22 / 34 | 0 | 48 / 112 | 198 [188-198] | n/a |
+| dieci+gesti | 4× | 52 / 83 | 9 of 20 | 24 / 35 | 0 of 60 | 56 / 136 | 209 [181-236] | 189 [181-233] (without gestures 187 [182-253]) |
 
-| # | file | kind | gzip B | decoded B | start | end | flags |
-|---|---|---|---|---|---|---|---|
-| 1 | static/app.css | css (render-blocking) | 29785 | 128592 | 200 | 463 | B |
-| 2 | static/appname.js | script (parser) | 444 | 749 | 200 | 406 | P |
-| 3 | static/avvio-progressivo.js | script inserted by carica.js | 4485 | 14656 | 200 | 421 | PC |
-| 4 | static/avvio.js | script (parser) | 3716 | 8674 | 200 | 417 | P |
-| 5 | static/canali.css | css (render-blocking) | 1067 | 3013 | 200 | 406 | B |
-| 6 | static/first-paint.js | script (parser) | 1929 | 4064 | 200 | 423 | P |
-| 7 | static/frame.js | script (parser) | 541 | 1047 | 200 | 408 | P |
-| 8 | static/i18n.js | script (parser) | 5433 | 13801 | 200 | 407 | P |
-| 9 | static/impostazioni-comp.css | css (render-blocking) | 1814 | 6221 | 200 | 406 | B |
-| 10 | static/tour.js | script (parser) | 7546 | 27025 | 200 | 415 | P |
-| 11 | static/transizioni.css | css (render-blocking) | 1234 | 3568 | 200 | 406 | B |
-| 12 | static/version.js | script (parser) | 105 | 98 | 200 | 407 | P |
-| 13 | static/barra.js | script inserted by carica.js | 19900 | 69226 | 201 | 468 | PC |
-| 14 | static/browser.js | script (parser) | 6163 | 15557 | 201 | 451 | P |
-| 15 | static/carica.js | script (parser) | 2288 | 5497 | 201 | 441 | P |
-| 16 | static/icons-modi.js | script inserted by carica.js | 1859 | 6444 | 201 | 425 | PC |
-| 17 | static/nomi.js | script (parser, render-blocking) | 1463 | 5405 | 201 | 451 | B |
-| 18 | static/reset.js | script (parser) | 3761 | 9123 | 201 | 445 | P |
-| 19 | static/sito.js | script (parser) | 512 | 810 | 201 | 446 | P |
-| 20 | static/telefono.js | script (parser) | 760 | 1296 | 201 | 446 | P |
-| 21 | static/lr.js | script (other, ES module / worker / catalog) | 6623 | 19778 | 470 | 649 |  |
-| 22 | static/lang/it.js | script (other, ES module / worker / catalog) | 12032 | 38368 | 472 | 659 | B |
-| 23 | static/lr-map.js | script (other, ES module / worker / catalog) | 2064 | 6393 | 651 | 831 |  |
-| 24 | static/lr-method.js | script (other, ES module / worker / catalog) | 1879 | 5149 | 651 | 831 |  |
-| 32 |  (document) | navigation | 12683 | 47281 | 856 | 1258 | B |
-| 39 | static/lang/it-resto.js | script (other, ES module / worker / catalog) | 101725 | 327540 | 1965 | 2935 |  |
-| 47 | static/conversione.js | script inserted by carica.js | 13366 | 41078 | 1966 | 2289 | C |
-| 69 | static/explore.js | script inserted by carica.js | 29855 | 92424 | 1970 | 2584 | C |
-| 82 | static/grafici.js | script inserted by carica.js | 22642 | 63578 | 1975 | 2592 | C |
-| 86 | static/pannelli.js | script inserted by carica.js | 34508 | 109387 | 1975 | 2818 | C |
-| 89 | static/picchi.js | script inserted by carica.js | 21199 | 62423 | 1976 | 2598 | C |
-| 91 | static/eventi.js | script inserted by carica.js | 21026 | 64311 | 1980 | 2607 | C |
-| 96 | static/dda.js | script inserted by carica.js | 10700 | 35382 | 1981 | 2507 | C |
-| 102 | static/banco.js | script inserted by carica.js | 18708 | 58220 | 1982 | 2816 | C |
-| 112 | static/liste.js | script inserted by carica.js | 15388 | 50650 | 1982 | 2542 | C |
-| 117 | static/mappa.js | script inserted by carica.js | 31438 | 99950 | 1982 | 2804 | C |
-| 154 | static/shell.js | script inserted by carica.js | 25261 | 72113 | 1991 | 2850 | C |
-| 174 | static/wasm/mzlab_wasm_bg.wasm | engine (.wasm) | 930352 | 2157096 | 1998 | 3865 | E |
-| 181 | static/canali.js | script inserted by carica.js | 10249 | 32028 | 2009 | 2700 | C |
-| 199 | static/draw.js | script (other, ES module / worker / catalog) | 23811 | 74976 | 2966 | 3193 |  |
-| 216 | static/rust-worker.js | script (other, ES module / worker / catalog) | 15959 | 49204 | 3300 | 3296 |  |
-| 219 | static/wasm/mzlab_wasm.js | script (other, ES module / worker / catalog) | 16382 | 102415 | 3303 | 3495 |  |
-| 230 | static/rust-nativo.js | script (other, ES module / worker / catalog) | 10456 | 33428 | 3304 | 3535 |  |
-| … | 205 more files < 10 KB gzip (mostly scripts inserted by carica.js and rust-*.js) | | 572967 | 1482901 | 651 | 3840 | |
+At 4× the gestures start after the first chart (5 s) and last about 9 s, so only 9 wheels fall in the loading window and no drag; the rest ran on a quiet page.
 
+**(f) peak memory during (c) `dieci`** (mzML, warm, 530 MB of files)
 
-### (c) The 10 biggest files of the chain and whether the first paint needs them
-
-| # | file | gzip KB (decoded) | for | does the first paint need it? first function that needs it |
-|---|---|---|---|---|
-| 1 | `wasm/mzlab_wasm_bg.wasm` | 909 (2107) | Rust engine | no. `api("api/state")` in the boot of `shell.js` (line 31), through `createBridge` (`browser.js:78`); it sets `qqReady` |
-| 2 | `lang/it-resto.js` | 99 (320) | second half of the text catalog | no. First `I18N.t` of a key outside the first-view part (`i18n.js` header: such a key gives an empty text until it arrives); `carica.js` loads it first (`I18N.rest`) so every later script finds its texts |
-| 3 | `pannelli.js` | 34 (107) | floating panels | no. `place` / `plotFiles` (`pannelli.js:575`) when a file is opened |
-| 4 | `mappa.js` | 31 (98) | RT x m/z map: crosshair, lock, expand | no. `window.MAPPA`, used by `drawMap` (`grafici.js:570`) when the map is shown |
-| 5 | `explore.js` | 29 (90) | Data view base: toast, theme, file list | the boot, not the paint: `showStart` (`shell.js:420`), `mergeFiles`, `renderFileList` (`explore.js:773`) |
-| 6 | `app.css` | 29 (126) | all styles | yes (render-blocking); how much of it the first screen uses was not measured |
-| 7 | `shell.js` | 25 (70) | page shell, boot, views | the boot: `init()` (`shell.js:472`); the first paint is drawn before it (static HTML plus `first-paint.js`) |
-| 8 | `draw.js` | 23 (73) | Disegno (structure editor) | no. `applyView` with the Disegno view (`shell.js:35`); `shell.js:472` appends it at every boot |
-| 9 | `grafici.js` | 22 (62) | chromatogram drawing | no. `draw` (`grafici.js:182`), first chart of a file |
-| 10 | `picchi.js` | 21 (61) | integration, spectra | no. `drawSpec` (`picchi.js:333`), first spectrum |
-
-Only #6 is needed by the paint. The list is also loaded **in order** (`async=false`) and `shell.js` comes after every classic script, so engine ready waits for #3-#5, #9, #10 and about 140 more scripts, although none draws anything before a file is opened. `barra.js` (20 KB gzip) is part of the first paint by design (`first-paint.js`, the toolbar).
-
-### (d) Same measure on public landing pages (real network through the runner proxy, CDP throttling of the page, CPU x1, median of 3)
-
-| page | link | FCP ms | requests / gzip KB before FCP | total requests / gzip KB |
-|---|---|---|---|---|
-| htmx.org (docs) | none / Fast 4G | 504 / 776 | 11 / 286, 8 / 185 | 55 / 794 |
-| sqlite.org (docs index) | none / Fast 4G | 420 / 540 | 2 / 16 | 9 / 90 |
-| vuejs.org (guide) | none / Fast 4G | 604 / 1160 | 18 / 188, 17 / 188 | 79 / 544 |
-| mzLab, this model (cold, local h2) | none / Fast 4G | 140 / 728 | 30 / 123, 22 / 111 | 250 / 2019 until engine ready |
-
-The live mzLab site through the same script reads FCP 221 / 257 ms, but its bytes are not comparable (the final page is answered by the service worker, so encoded equals decoded, and CDP throttling does not reach the worker): use the local row. **The first paint is not what is slow**: FCP and the bytes before it are in the range of the other pages. What differs is the time to a usable page: engine ready after 2008 KB and 248 requests (Fast 4G, 3.9 s cold), against 90-800 KB for the whole of those pages.
-
-### (e) Where the cold time goes
-
-Chrome trace of the first cold run of each combination (`browser.start_tracing`, categories `devtools.timeline, v8.execute, v8, loading, toplevel`); main thread of every renderer, exclusive time per event name (script: EvaluateScript, compile, function calls, timers; parse: ParseHTML, stylesheets; render: style, layout, paint; «other»: tasks the trace does not label, e.g. GC and IPC); busy = top-level events; network wait = idle while at least one request of the page is in flight.
-
-| link | CPU | until | window ms | script | parse | render | other | busy | idle, request in flight | idle, nothing in flight |
-|---|---|---|---|---|---|---|---|---|---|---|
-| none | x1 | engine ready | 1229 | 142 | 41 | 120 | 307 | 594 | 524 | 111 |
-| none | x4 | engine ready | 2197 | 545 | 134 | 264 | 881 | 1812 | 318 | 68 |
-| Fast 4G | x1 | FCP | 728 | 12 | 12 | 23 | 34 | 81 | 640 | 8 |
-| Fast 4G | x1 | engine ready | 3882 | 114 | 29 | 71 | 228 | 430 | 2838 | 614 |
-| Fast 4G | x4 | engine ready | 4377 | 503 | 165 | 337 | 831 | 1819 | 2006 | 552 |
-| Slow 4G | x1 | engine ready | 21064 | 345 | 32 | 104 | 417 | 871 | 16636 | 3557 |
-
-On a fast computer the wait is the network: Fast 4G x1 is idle with a request in flight for 73 % of the 3.9 s, busy for 11 %, idle with nothing in flight for 16 % (a 0.6 s gap between the arrival of the last document and the start of the `carica.js` list; cause not determined). With no network limit and CPU x4 the processor is the limit (busy 1.8 of 2.2 s). The first visit also loads the document and the head three times (service worker install, isolation reload): the last document arrives at 1258 ms against 186 ms for the first (Fast 4G).
-
-### Candidate reductions of the first package (none implemented; estimates unless marked «measured»; 1 KB is about 0.9 ms on Fast 4G and 5 ms on Slow 4G, from the link rates; ranked by estimated Fast 4G saving per effort)
-
-| # | candidate | gzip KB | Fast 4G cold, engine ready | Slow 4G cold | note |
+| CPU | `measureUserAgentSpecificMemory` peak | page JS heap peak | RSS of all browser processes, peak | first chart | all indexed |
 |---|---|---|---|---|---|
-| 1 | start the engine `.wasm` fetch from `<head>` (`<link rel=preload as=fetch>` in `index.html`) instead of after DOMContentLoaded (`browser.js:76`; today it starts at 1998 ms, the document arrived at 1258 ms) | 0 | about -0.6 s (estimate) | about 0 (bandwidth-bound) | a few lines, same bytes |
-| 2 | no reload on the first visit: start the engine not isolated and isolate on the next visit (`browser.js isolateOnce`); the gap between the first and the last document is **1.07 s (measured)** | 0 | -0.5 to -1.0 s (estimate) | similar | the engine may need isolation for threads: check first |
-| 3 | split the engine into a small startup part (what `api/state` needs) and lazy parts (the site already has lazy `.wasm` families); the size breakdown was not measured | -300 to -450 | -0.3 to -0.4 s (estimate) | -1.5 to -2.2 s (estimate) | native app unaffected; parity test on both halves |
-| 4 | load the chart and tool scripts (`pannelli, mappa, grafici, picchi, eventi, banco, liste, conversione, dda` = **184.5 KB gzip, measured**) after engine ready, before the first file opens; `shell.js` stops waiting for them | -185 | -0.17 s | -0.9 s | the first file open waits for them (hidden by choosing the file); `test_peso_avvio` cap |
-| 5 | concatenate the 152 list scripts into a few files in `build_site.py` (plain concatenation, not a bundler): **659 to 584 KB gzip and -150 requests, measured on disk** | -75 | -0.07 s, plus fewer requests (not measured on h2) | -0.4 s | the worker's per-file update diff gets coarser |
-| 6 | `lang/it-resto.js` in parts loaded on first use of an area | -99 | -0.09 s | -0.5 s | catalog data, no logic; `controlla_i18n.py` |
-| 7 | `draw.js` and the 16 `disegno-*.js` modules it pulls in (**79 KB gzip, measured from the chain table**) loaded on the first pointer or focus on the «Disegno» tab (`MZLAB_WARM_KETCHER` exists) instead of at boot (`shell.js:472`) | -79 | -0.07 s | -0.4 s | |
-| 8 | split `app.css` into a blocking first-screen part and a non-blocking rest | -15 to -20 on the paint | FCP about -20 ms | FCP about -0.1 s | how much CSS the first screen uses was not measured |
+| 1× | 64 [64-66] MB | 33 [30-40] MB | 1940 [1883-2006] MB | 3529 [3485-3763] | 6951 [6686-7051] |
+| 4× | 65 [65-108] MB | 30 [29-33] MB | 1777 [1716-1823] MB | 5189 [4821-5477] | 9596 [9154-9793] |
 
-Not candidates: brotli (GitHub Pages cannot send it), a bundler, a CDN, anything that sends a user file out of the computer.
+`measureUserAgentSpecificMemory` answers 5-10 s after the call (the peaks came back about 12 s after the drop, after the loading), so its 500 ms sampling is a series of overlapping calls; it covers the page's own agent cluster and not the engine's WASM memories, so it is a floor. The RSS (read from `/proc` every 500 ms, all processes started with the profile: page, builders and their helpers, engine worker, GPU, network) is a ceiling: it holds file-backed pages the copy of 530 MB touched.
+
+### Verdicts
+
+- **(a) `rotte` on the path to the first chart: no.** Held 3 s the first chart does not move (1514 → 1611 ms at 1×, 2432 → 2307 at 4×, inside the min-max); the page asks for it about 1.4 s after the drop, when the chart is nearly drawn, and does not wait for it. Gain bound: 0 ms.
+- **(b) `thermo` download serial before the `.raw` copy start: no, but on the path to the first chart: yes.** The first event of the file does not move (50 → 62 ms, 84 → 83) while the chart comes about 0.6 s (1×) / 1.1 s (4×) after the module arrives (held 3 s: 3608 and 4104 ms).
+  Cold with the module filled by the SW fill the first chart is as the warm one (985 vs 1013 ms): up to ≈ 0.4 s (1×) / 0.7 s (4×) of download hides behind the copy and the scan table, beyond that every ms adds one. Gain bound: the whole download and compilation of the 768 KB module on a first visit with a slow link (not measurable on localhost).
+- **(c) ten files delay the first one: yes.** First chart +2.2 s (+137 %) mzML and +3.1 s (+307 %) `.raw` at 1×, +2.6 s / +3.8 s at 4×; the provisional TIC +1.7 s mzML. The ten copies run at once (`shell.js` `Promise.all`). Gain bound: 2.2-3.8 s per first chart (the whole difference to the file alone, unreachable in full).
+- **(d) idle jobs slow a file dropped right after `qqReady`: only the SW fill on a first visit.** Cold +0 vs +20 s: first chart −471 ms at 1× (−22 %), −952 ms at 4× (−27 %), with 333-438 requests in the window; warm +0 vs +20 s: −17 / +135 ms (noise): the page's own idle jobs (mzFinder package, OpenChemLib, SW cache reads) are not on the path. The OPFS clean-up at 8 s is not covered (the chart is drawn before it). Gain bound: 0.5 s (1×) / 1.0 s (4×), first visit only.
+- **(e) the first chart stays responsive while files 2..10 index: yes at 1×, same as alone at 4×.** Wheel p95 38 vs 28 ms and click → spectrum 64 vs 66 ms at 1×; at 4× 83 vs 94 ms and 209 vs 198 ms, i.e. the same as with nothing else loading; the cost of 4× is the page itself (rAF delta p95 ≈ 190 ms with or without gestures). Gain bound: ≈ 10 ms (1× wheel p95), nothing at 4×.
+- **(f) peak memory of (c): page agent cluster 64-65 MB (floor), RSS of all processes 1.8-1.9 GB (ceiling), no memory error or pool lowering seen.** No cap was reached in these runs, so no S6/S8/S10 decision rests on memory at 10 × 53 MB.
+
+Method notes: `tests_e2e/lib.py` replaces `wait_for_timeout` and `set_input_files` (quiet pauses, waits for rows and writes times): the scenario module puts the real ones back, an earlier pass without that fix is discarded. The tool measures page-side events; the server (a thread of the tool) logs every request that reaches the network, so SW-internal fills show.

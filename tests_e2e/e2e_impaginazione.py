@@ -5,13 +5,14 @@ over another or covered by something that is not its own, no control cut by a bo
 ellipsis and no full text at hand, targets of at least 24 px (or the WCAG 2.5.8 spacing)."""
 # covers: mzlab/web/app.css, mzlab/web/pannelli.js, mzlab/web/barra.js, mzlab/web/settings.js, mzlab/web/impostazioni, mzlab/web/canali
 # covers: mzlab/web/help.js, mzlab/web/affianca.js, mzlab/web/barre-maniglie.js, mzlab/web/explore.js
-import sys, os
+import sys, os, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 
 steps = []
 def step(name, fn):
-    try: fn(); steps.append((name, "ok"))
+    t0 = time.time()
+    try: fn(); steps.append((name, "ok")); print(f"  [{time.time() - t0:.0f} s] {name[:40]}", flush=True)
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_impaginazione.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:1500]))

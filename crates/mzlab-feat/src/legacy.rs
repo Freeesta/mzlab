@@ -4,7 +4,8 @@
 
 pub mod dig;
 pub mod edge;
-pub mod formula;
+/// The old path of the formula of the parent, which lives in `crate::parent_formula` so that `series_parent` does not depend on `legacy`.
+pub use crate::parent_formula as formula;
 #[cfg(feature = "chem")]
 pub mod fragtree;
 pub mod hidden;

@@ -28,6 +28,7 @@
       { "ext": ["lcd"], "name": "lcd", "description": "Shimadzu LCD data", "mimeType": "application/x-shimadzu-lcd", "role": "Editor", "rank": "Default" },
       { "ext": ["qgd"], "name": "qgd", "description": "Shimadzu QGD data", "mimeType": "application/x-shimadzu-qgd", "role": "Editor", "rank": "Default" },
       { "ext": ["cdf"], "name": "cdf", "description": "ANDI netCDF mass spectrometry data", "mimeType": "application/x-netcdf", "role": "Viewer", "rank": "Alternate" },
+      { "ext": ["ket"], "name": "ket", "description": "mzLab drawing (Ketcher JSON)", "mimeType": "application/x-ketcher-ket", "role": "Editor", "rank": "Default" },
       { "ext": ["scan"], "name": "wiff.scan", "description": "SCIEX WIFF scan companion (opens its .wiff)", "mimeType": "application/x-sciex-wiff-scan", "role": "Viewer", "rank": "Alternate" }
     ]
   }
