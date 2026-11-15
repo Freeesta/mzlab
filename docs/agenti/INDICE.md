@@ -94,6 +94,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | formati di ingresso del Flow (area: misure dei motori, validazione delle esportazioni (mzTab-M), clic…) | `docs/agenti/misure-formati.md` |
 | costo del disegno dei cromatogrammi su tracce dense (`tools/bench_charts.py`: 10^6 punti, 20 file, rotella, trascinamento, ridimensionamento, linea); tabella HR di 100 000 righe nella «Statistica» (`tools/bench_table_hr.py`: KMD, clic, «Dati») | `docs/agenti/misure-grafici.md` |
 | misura su computer lenti (CPU rallentata 1×/4×/6×, 2/4 core: apertura demo, trascinamento della linea, mappe, XIC, memoria; `tests_e2e/misura_macchine.py`) | `docs/agenti/misure-macchine.md` |
+| warm page loads: navigation preload and the `?nav=cache` switch of the service worker measured against main (RTT, CPU, restarted SW, loads until a deploy shows; `tests_e2e/misura_avvio_sw.py --varianti`) | `docs/agenti/misure-navigazione.md` |
 | first package before the site is usable: bytes and requests per milestone, critical chain, 10 biggest files, landing-page comparison, trace split, 8 candidate reductions (`tests_e2e/misura_payload.py`) | `docs/agenti/misure-primo-pacchetto.md` |
 | misure Rust e dei moduli (area: misure dei motori, validazione delle esportazioni (mzTab-M), clic…) | `docs/agenti/misure-rust.md` |
 | lettori dei produttori, `.raw`, `.wiff`, `.D` (area: tabella cumulativa dei guadagni di velocità (data · PR · passo ·…) | `docs/agenti/misure-velocita-raw.md` |

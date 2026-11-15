@@ -12,6 +12,8 @@
   const RESET_NONCE = new URLSearchParams(location.search).get("ripn") || "";
   const modern = !!(window.Worker && window.WebAssembly && window.indexedDB && window.Promise && window.Response && navigator.storage && navigator.storage.getDirectory);
   try { if ("serviceWorker" in navigator && !window.QQ_RESETTING) navigator.serviceWorker.register(new URL("../sw.js", SRC)).then(isolateOnce).catch(() => {}); } catch (_) { /* offline copy is optional */ }
+  // ?nav=cache (sw.js): a newer version is complete in its cache and comes with the next load; the line that says so is lazy (sw-avviso.js)
+  try { navigator.serviceWorker.addEventListener("message", e => { if (e.data && e.data.op === "sw-nuova") import(new URL("sw-avviso.js", SRC).href).then(m => m.mostra()); }); } catch (_) { /* no worker */ }
   // the first visit starts not isolated (everything works as before); once the service worker (which adds COOP/COEP) is active the page reloads ONCE,
   // at the first moment with no work going on (no open file). The session guard prevents loops; ?cap-off=isolamento turns it off.
   // After a reset the guard of the earlier page can come back (Chrome restores the sessionStorage of a page whose worker was unregistered, even after clear()):
