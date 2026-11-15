@@ -22,3 +22,82 @@
 - **Not measured here**: WebKit/Safari (not installed in the cloud), a real Fast 4G link (the CDP profile does not slow the mirror: same numbers as cold).
 - **Site update**: see LOAD-FIRST-PAINT-5 (the page is ready in about 0.55 s on both reloads after a deploy; only the changed files are downloaded); behaviour in `e2e_sw_versione`.
 - KB before FCP counts every request started before the paint: on a warm load non-blocking scripts start earlier, so the number grows when the page is faster.
+
+
+## First file and many files: critical path
+
+Measurement only (no product change), `tests_e2e/misura_caricamento.py --scenarios uno,dieci,rotte,thermo,subito,interazione,memoria` (module `tests_e2e/scenari_caricamento.py`; never asserts, not in the CI). Site only: the desktop app serves `mzlab://` locally, has no service worker (SW) and no network, and its native path is different, so none of this applies there.
+Setup: `main` `2cf7180`, site from `tools/prepara_sito.py`, Chrome for Testing 153 headless, one persistent profile per run (a normal window; cross-origin isolated), cloud machine 4 vCPU Intel Xeon 2.10 GHz.
+
+Files: synthetic mzML 50.7 MB (2400 scans, `mzml_msconvert_synthetic.py --peaks1 5000 --peaks2 500`) and synthetic Thermo `.raw` 50.6 MB (`thermo_synthetic --scans 950 --peaks 600`); a drop of ten = the same file first plus nine copies with other names. **warm** = copy of a profile whose SW fill is done (`.fill-done`); **cold** = empty profile, the drop 3 s after `qqReady` unless the arm says otherwise.
+
+N = 5 per cell, arms interleaved run by run, median [min-max], ms from the `change` of the file input. CPU 1× and 4× throttle the page's main thread only (workers run at full speed). Provisional TIC = `#ticprov` drawn; first chart = a panel drawn; all indexed = nothing read or opened any more; copy start = first `mzlab-index` event (for a `.raw` the first «read» event, there is no OPFS copy).
+
+**(c) one file alone vs first in a drop of ten (warm)**
+
+| file | CPU | arm | provisional TIC | first chart | all indexed | long tasks to first chart |
+|---|---|---|---|---|---|---|
+| mzML | 1× | uno | 553 [503-580] | 1611 [1594-1874] | 1635 | 1 (98 ms) |
+| mzML | 1× | dieci | 2251 [2165-2349] | 3814 [3496-4081] | 7122 [6714-7341] | 1 (123 ms) |
+| mzML | 4× | uno | 651 [571-829] | 2529 [2435-2735] | 2637 | 2 (446 ms) |
+| mzML | 4× | dieci | 2615 [2466-2704] | 5168 [4216-5361] | 9425 [8987-9620] | 2 (604 ms) |
+| `.raw` | 1× | uno | 230 [214-255] | 1013 [947-1130] | 1045 | 1 (61 ms) |
+| `.raw` | 1× | dieci | 520 [486-628] | 4121 [3583-4886] | 5172 [4902-5997] | 1 (114 ms) |
+| `.raw` | 4× | uno | 424 [335-437] | 1798 [1740-1855] | 1889 | 2 (391 ms) |
+| `.raw` | 4× | dieci | 854 [690-996] | 5578 [5149-5812] | 8250 [7497-8472] | 5 (673 ms) |
+
+**(a)(b) a module held 3 s after the drop** (cold, one file; the server answers the request for the `.wasm` 3 s after the drop whatever the moment it was asked, the SW fill's request before the drop included)
+
+| module | file | CPU | base: first chart | held: first chart | base: copy start | held: copy start |
+|---|---|---|---|---|---|---|
+| `rotte` | mzML | 1× | 1514 [1369-1698] | 1611 [1531-1746] | 39 | 39 |
+| `rotte` | mzML | 4× | 2432 [2329-2582] | 2307 [2242-2457] | 93 | 94 |
+| `thermo` | `.raw` | 1× | 985 [960-1045] | 3608 [3591-3623] | 50 | 62 |
+| `thermo` | `.raw` | 4× | 1784 [1701-1865] | 4104 [4031-4154] | 84 | 83 |
+
+**(d) drop at `qqReady` + 0 vs + 20 s (mzML, one file)**
+
+| profile | CPU | drop at | provisional TIC | first chart | requests drop → chart | long tasks to chart |
+|---|---|---|---|---|---|---|
+| cold | 1× | +0 | 792 [741-829] | 2118 [2022-2308] | 333 (11 MB) | 1 (138 ms) |
+| cold | 1× | +20 s | 561 [493-704] | 1647 [1527-1761] | 0 | 1 (119 ms) |
+| warm | 1× | +0 | 574 [548-660] | 1663 [1523-1765] | 0 | 1 (98 ms) |
+| warm | 1× | +20 s | 557 [458-719] | 1680 [1447-1909] | 0 | 1 (115 ms) |
+| cold | 4× | +0 | 1195 [1019-1228] | 3528 [3302-4125] | 438 (13 MB) | 3 (536 ms) |
+| cold | 4× | +20 s | 629 [552-802] | 2576 [2294-2779] | 0 | 1 (420 ms) |
+| warm | 4× | +0 | 760 [702-1049] | 2545 [2249-3011] | 0 | 2 (546 ms) |
+| warm | 4× | +20 s | 668 [640-707] | 2680 [2187-2895] | 1 | 2 (552 ms) |
+
+The 333-438 requests of the cold +0 arm are the SW's fill (all the `.wasm` modules, the library engine, the readers, the example files excluded) and the mzFinder/OpenChemLib files; the warm arms serve them from the SW cache (0 network requests).
+
+**(e) first chart's responsiveness while files 2..10 index** (mzML, warm; 20 Ctrl+wheel zooms, 20 Shift+drags of 3 pointermoves, 5 clicks on the TIC; input → next frame is two rAFs after the event; click → last `spec` draw; Event Timing durations ≥ 16 ms from the first chart on; «busy» = the loading still running when the event happened)
+
+| arm | CPU | wheel p50 / p95 | wheel in the busy window | drag p50 / p95 | drag in the busy window | Event Timing p50 / p98 | click → spectrum | rAF delta p95 (first chart → all indexed) |
+|---|---|---|---|---|---|---|---|---|
+| uno+gesti (nothing else loads) | 1× | 21 / 28 | 0 | 19 / 20 | 0 | 24 / 48 | 66 [52-70] | n/a (no window) |
+| dieci+gesti | 1× | 22 / 38 | 20 of 20 | 19 / 24 | 21 of 60 | 32 / 64 | 64 [63-68] | 36 [31-40] (without gestures 36 [33-46]) |
+| uno+gesti | 4× | 48 / 94 | 0 | 22 / 34 | 0 | 48 / 112 | 198 [188-198] | n/a |
+| dieci+gesti | 4× | 52 / 83 | 9 of 20 | 24 / 35 | 0 of 60 | 56 / 136 | 209 [181-236] | 189 [181-233] (without gestures 187 [182-253]) |
+
+At 4× the gestures start after the first chart (5 s) and last about 9 s, so only 9 wheels fall in the loading window and no drag; the rest ran on a quiet page.
+
+**(f) peak memory during (c) `dieci`** (mzML, warm, 530 MB of files)
+
+| CPU | `measureUserAgentSpecificMemory` peak | page JS heap peak | RSS of all browser processes, peak | first chart | all indexed |
+|---|---|---|---|---|---|
+| 1× | 64 [64-66] MB | 33 [30-40] MB | 1940 [1883-2006] MB | 3529 [3485-3763] | 6951 [6686-7051] |
+| 4× | 65 [65-108] MB | 30 [29-33] MB | 1777 [1716-1823] MB | 5189 [4821-5477] | 9596 [9154-9793] |
+
+`measureUserAgentSpecificMemory` answers 5-10 s after the call (the peaks came back about 12 s after the drop, after the loading), so its 500 ms sampling is a series of overlapping calls; it covers the page's own agent cluster and not the engine's WASM memories, so it is a floor. The RSS (read from `/proc` every 500 ms, all processes started with the profile: page, builders and their helpers, engine worker, GPU, network) is a ceiling: it holds file-backed pages the copy of 530 MB touched.
+
+### Verdicts
+
+- **(a) `rotte` on the path to the first chart: no.** Held 3 s the first chart does not move (1514 → 1611 ms at 1×, 2432 → 2307 at 4×, inside the min-max); the page asks for it about 1.4 s after the drop, when the chart is nearly drawn, and does not wait for it. Gain bound: 0 ms.
+- **(b) `thermo` download serial before the `.raw` copy start: no, but on the path to the first chart: yes.** The first event of the file does not move (50 → 62 ms, 84 → 83) while the chart comes about 0.6 s (1×) / 1.1 s (4×) after the module arrives (held 3 s: 3608 and 4104 ms).
+  Cold with the module filled by the SW fill the first chart is as the warm one (985 vs 1013 ms): up to ≈ 0.4 s (1×) / 0.7 s (4×) of download hides behind the copy and the scan table, beyond that every ms adds one. Gain bound: the whole download and compilation of the 768 KB module on a first visit with a slow link (not measurable on localhost).
+- **(c) ten files delay the first one: yes.** First chart +2.2 s (+137 %) mzML and +3.1 s (+307 %) `.raw` at 1×, +2.6 s / +3.8 s at 4×; the provisional TIC +1.7 s mzML. The ten copies run at once (`shell.js` `Promise.all`). Gain bound: 2.2-3.8 s per first chart (the whole difference to the file alone, unreachable in full).
+- **(d) idle jobs slow a file dropped right after `qqReady`: only the SW fill on a first visit.** Cold +0 vs +20 s: first chart −471 ms at 1× (−22 %), −952 ms at 4× (−27 %), with 333-438 requests in the window; warm +0 vs +20 s: −17 / +135 ms (noise): the page's own idle jobs (mzFinder package, OpenChemLib, SW cache reads) are not on the path. The OPFS clean-up at 8 s is not covered (the chart is drawn before it). Gain bound: 0.5 s (1×) / 1.0 s (4×), first visit only.
+- **(e) the first chart stays responsive while files 2..10 index: yes at 1×, same as alone at 4×.** Wheel p95 38 vs 28 ms and click → spectrum 64 vs 66 ms at 1×; at 4× 83 vs 94 ms and 209 vs 198 ms, i.e. the same as with nothing else loading; the cost of 4× is the page itself (rAF delta p95 ≈ 190 ms with or without gestures). Gain bound: ≈ 10 ms (1× wheel p95), nothing at 4×.
+- **(f) peak memory of (c): page agent cluster 64-65 MB (floor), RSS of all processes 1.8-1.9 GB (ceiling), no memory error or pool lowering seen.** No cap was reached in these runs, so no S6/S8/S10 decision rests on memory at 10 × 53 MB.
+
+Method notes: `tests_e2e/lib.py` replaces `wait_for_timeout` and `set_input_files` (quiet pauses, waits for rows and writes times): the scenario module puts the real ones back, an earlier pass without that fix is discarded. The tool measures page-side events; the server (a thread of the tool) logs every request that reaches the network, so SW-internal fills show.
