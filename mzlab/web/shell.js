@@ -345,6 +345,7 @@ async function fetchDemo(/** @type {string[]} */ names,/** @type {AbortSignal} *
 const PRE=/** @type {string[]} */ ([]);
 function waitRows(/** @type {string[]} */ names){const out=/** @type {string[]} */ ([]);
   for(const n of names){if(out.includes(n)||CONVROWS.find(n)||ST.files.some((/** @type {FileRiga} */ g)=>g.name===n)||INFLIGHT.has(n))continue;CONVROWS.add(n,"engine");out.push(n)}
+  if(out.length)CONVROWS.ready();      // the polite count region (#cvlive) is there from the first row
   return out}
 // `demo`: names of example files still to download (static/esempi): their rows are in the list at once, in order, and the download is the first part of each row
 /** @param {FileCarica[]} files @param {string} into @param {string[]} [demo] */

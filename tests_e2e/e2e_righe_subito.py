@@ -30,14 +30,14 @@ WASM = re.compile(r"/static/wasm/.*\.wasm(\?.*)?$")
 ROWS = "() => [...document.querySelectorAll('#fl-up [data-up]')].map(e => ({ n: e.dataset.up, t: (e.querySelector('[data-uptxt]') || {}).textContent, err: e.classList.contains('err') }))"
 TWO = "document.querySelectorAll('#fl-up [data-up]').length === 2"
 
-def page_with_held_engine(b):
+def page_with_held_engine(b, query=""):
     ctx = b.new_context(locale="en-US", viewport={"width": 1300, "height": 900}); held = []
     def route(r):
         if WASM.search(r.request.url): held.append(r)
         else: r.continue_()
     ctx.route(re.compile(r".*"), route)
     pg = ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e)))
-    pg.goto(URL)
+    pg.goto(URL + query)
     pg.wait_for_function("typeof upload === 'function' && typeof AVVIO !== 'undefined'", timeout=60000)
     assert pg.evaluate("AVVIO.stato") == "pending", "the engine must still be held back"
     return ctx, pg, held
@@ -80,7 +80,7 @@ try:
             ctx, pg, held = page_with_held_engine(b)
             pg.set_input_files("#pick", MZ)
             pg.wait_for_function(TWO, timeout=10000)
-            for r in held: r.fulfill(status=404, body="no")
+            pg.evaluate("AVVIO.segnaFallito('load.err.engineStart')")      # what browser.js does when the engine does not start
             pg.wait_for_selector("#avvio-errore", timeout=60000)
             reason = pg.inner_text("#avvio-errore-msg")
             pg.wait_for_function("document.querySelectorAll('#fl-up .fl.err').length === 2", timeout=10000)
