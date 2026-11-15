@@ -299,7 +299,8 @@
     if (live && live.ok && (!following || held)) { following = true; held = false; await hold(live); }
     if (!live || !live.ok) throw Object.assign(new Error("err.flow.input.missing"), { key: "err.flow.input.missing", params: {} });
     await replan(live);
-    if (!live.items.length) throw Object.assign(new Error("err.flow.input.missing"), { key: "err.flow.input.missing", params: {} });
+    // a plan with no scan input (a library lookup, a model) needs no file of Data: only a plan that names scan inputs waits for them
+    if (!live.items.length && S.plan.inputs.some((/** @type {any} */ i) => i.type === "raw" || i.type === "mzml")) throw Object.assign(new Error("err.flow.input.missing"), { key: "err.flow.input.missing", params: {} });
     if (!await outputsKept(live)) await restart(live);
     // Run is a new request: an MSn step that failed (the engine refused, the file was not open) is tried again, the other failures wait for a change of the plan
     for (const j of await call(live, "jobs")) { const inst = instOf(live, j.instance); if (inst && F.webMsn?.STEPS.includes(base(inst)) && ["error", "refused", "cancelled"].includes(j.state)) await call(live, "retry", { job: { instance: j.instance, item: j.item ?? null } }); }
