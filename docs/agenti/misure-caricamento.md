@@ -170,6 +170,17 @@ At 4× the gestures start after the first chart (5 s) and last about 9 s, so onl
 
 `measureUserAgentSpecificMemory` answers 5-10 s after the call (the peaks came back about 12 s after the drop, after the loading), so its 500 ms sampling is a series of overlapping calls; it covers the page's own agent cluster and not the engine's WASM memories, so it is a floor. The RSS (read from `/proc` every 500 ms, all processes started with the profile: page, builders and their helpers, engine worker, GPU, network) is a ceiling: it holds file-backed pages the copy of 530 MB touched.
 
+**(b) `thermo` asked at the drop: no gain** (cold profile, drop at `qqReady` + 0, one `.raw` of 50.6 MB, `--scenarios raw-subito`, N = 12 per arm interleaved run by run with the order alternating, median [min-max] ms, same machine and files as above). The arm that asked the engine worker for the module (`prepara`) as soon as the `.raw` was recognised, before the quota check, against the module asked at the read:
+
+| CPU | arm | first chart | copy start |
+|---|---|---|---|
+| 1× | module asked at the read | 1297 [1132-4135] | 98 [41-540] |
+| 1× | module asked at the drop | 1402 [1019-1703] | 82 [45-150] |
+| 4× | module asked at the read | 2443 [2119-3005] | 172 [90-238] |
+| 4× | module asked at the drop | 2523 [1992-2991] | 180 [117-235] |
+
+Medians: +105 ms (1×) and +80 ms (4×) for the arm asked at the drop, inside the spread of both arms. A first run of N = 5 had shown −146 / −303 ms with overlapping ranges; N = 12 does not confirm it. Not adopted (`ottimizzazioni-tentate.md`).
+
 ### Verdicts
 
 The verdicts (a)-(f) of this section, with the copy gate that answers (c): `misure-copie.md`, «Critical path: verdicts».
