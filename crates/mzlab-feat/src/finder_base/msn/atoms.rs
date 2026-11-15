@@ -3,7 +3,7 @@
 //! of every clean peak inside the node's own.
 
 use super::{Cand, MsnTree};
-use crate::legacy::fragtree::vec_of;
+use crate::finder_base::fragtree::vec_of;
 
 /// `(cm[:, None] & ~pm[None, :]) == 0`: rows = child candidates, columns = parent candidates.
 fn subset(c: &[u64], p: &[u64]) -> Vec<Vec<bool>> {

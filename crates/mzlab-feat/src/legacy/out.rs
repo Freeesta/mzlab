@@ -7,6 +7,9 @@ use super::dig::{Cand, Dig, INCLUSION, KINDS, MAX_ROWS};
 use super::kinetics;
 use super::series::Proof;
 
+/// The old path of the row and header of the inclusion list, which live in `crate::finder_base` so that `export_inclusion` does not depend on `legacy`.
+pub use crate::finder_base::inclusion::{inclusion_row, INCLUSION_HEADER};
+
 const LEVEL_TEXT: [&str; 2] = [
     "Level 4: formula of a hypothesis derived from the parent, within the mass tolerance.",
     "Level 5: mass of interest. Appears with the treatment and has a proof in favour; nothing more.",
@@ -427,31 +430,6 @@ pub fn detail(d: &Dig, id: i64) -> Result<String, String> {
     }
     o.raw(",\"localization\":null}");
     Ok(o.0)
-}
-
-/// `str(float)` of Python for the numbers of the list (`5.0`, `254.0597`).
-fn num(v: f64) -> String {
-    let s = format!("{v}");
-    if s.contains(['.', 'e', 'N', 'i']) {
-        s
-    } else {
-        s + ".0"
-    }
-}
-
-/// Header of the inclusion list.
-pub const INCLUSION_HEADER: &str = "m/z,charge,RT_start_min,RT_end_min,note";
-
-/// One row of the inclusion list: m/z, charge 1, RT window in minutes, formula and priority as the note.
-pub fn inclusion_row(mz: f64, rt_start: f64, rt_end: f64, formula: &str, priority: f64) -> String {
-    format!(
-        "{},1,{},{},\"{} priority {}\"",
-        num(round(mz, 4)),
-        num(round(rt_start, 2)),
-        num(round(rt_end, 2)),
-        formula,
-        num(round(priority, 1))
-    )
 }
 
 /// `inclusion_csv(n)`: m/z, charge, start and end RT, note.

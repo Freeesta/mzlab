@@ -1,7 +1,7 @@
 //! The formula space of mzFinder beyond what `fragtree::Space` needs: candidates and counts under a sub-formula (`within`), and the m/z calibration
 //! (`Calibration`, `fit_calibration`).
 
-use crate::legacy::fragtree::Space;
+use crate::finder_base::fragtree::Space;
 use crate::sortc::SortC;
 
 /// `FormulaSpace.window` of one m/z: (start, stop) of the sorted formulas within max(ppm, abs_da).
