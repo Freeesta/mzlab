@@ -43,7 +43,7 @@ try:
             assert len(seen) <= 1, f"the phrase changed within 4 s: {seen}"
             pg.wait_for_selector("#drop", timeout=120000)
             assert pg.evaluate("I18N.lang") == "it" and pg.evaluate("document.documentElement.lang") == "it"
-            titles = pg.evaluate("window.__titles"); assert titles and titles[-1] == "mzLab • Analisi MS" and len(titles) <= 2, titles      # the static title is the English one: Italian fixes it at once
+            titles = pg.evaluate("window.__titles"); assert titles and titles[-1] == "Analisi MS · mzLab" and len(titles) <= 2, titles      # the static title is the English one: Italian fixes it at once
             assert pg.evaluate("localStorage.getItem('mzlab.lang')") is None, "the old key must not become a choice"
             assert any(u.endswith("/lang/it.js") for u in reqs) and not any(u.endswith("/lang/en.js") for u in reqs), [u for u in reqs if "/lang/" in u]
             c.close()
@@ -51,7 +51,7 @@ try:
         def english_browser_is_italian():
             c = ctx("en-US", "en"); pg = c.new_page(); pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
             assert pg.evaluate("I18N.lang") == "it"; titles = pg.evaluate("window.__titles")
-            assert titles and titles[-1] == "mzLab • Analisi MS", titles      # the browser language and the old key are ignored: Italian
+            assert titles and titles[-1] == "Analisi MS · mzLab", titles      # the browser language and the old key are ignored: Italian
             c.close()
         step("browser en-US + old qqq.lang=en: Italian (the browser language and the old key are ignored)", english_browser_is_italian)
         def gear_choice():

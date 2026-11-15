@@ -29,6 +29,7 @@ pub mod dia;
 pub mod drift;
 pub mod evid;
 pub mod export;
+#[cfg(feature = "legacy")]
 pub mod export_inclusion;
 #[cfg(feature = "interp")]
 pub mod export_inclusion_tp;
@@ -62,14 +63,15 @@ pub mod flow_stat;
 pub mod gapfill;
 pub mod groups;
 pub mod hypo;
-mod iimn;
+pub mod iimn;
 pub mod import;
 #[cfg(feature = "interp")]
 pub mod interp;
 pub mod ionnet;
 pub mod isotopes;
-mod kin_decay;
+pub mod kin_decay;
 pub mod kinetic;
+#[cfg(feature = "legacy")]
 pub mod legacy;
 pub mod lists;
 mod lrnoise;
@@ -91,6 +93,7 @@ pub mod params_height;
 pub mod params_unit;
 pub mod pipeline;
 mod pipeline_steps;
+#[cfg(feature = "legacy")]
 pub mod polpair;
 mod post;
 pub mod prof;
@@ -103,6 +106,7 @@ pub mod regulatory;
 pub mod report;
 pub mod resolve;
 pub mod netarcs;
+#[cfg(feature = "legacy")]
 pub mod network;
 pub mod row;
 pub mod rowident;
@@ -132,6 +136,7 @@ mod tp_block;
 pub mod transitions;
 pub mod trace;
 mod trace_base;
+mod transf_base;
 pub mod trace_estimate;
 mod trace_text;
 #[cfg(feature = "untargeted")]

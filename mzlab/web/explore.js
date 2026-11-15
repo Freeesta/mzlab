@@ -255,7 +255,7 @@ function nbMerge(/** @type {Bag} */ remote) {
   out._v = NB_V; out._t = Date.now(); return out;
 }
 function nbSave(now = false) {
-  clearTimeout(/** @type {number} */ (nbTimer));
+  clearTimeout(/** @type {number} */ (nbTimer)); if (window.QQ_RESETTING) return;      // a reset clears the storage: the closing page must not write its old notebook back
   const go = async (/** @type {number} */ gen) => {
     // not read yet (a save would erase the stored notebook), or nothing changed: no request (fewer aborted saves on reload)
     if (gen !== nbGen || !nbEverLoaded || JSON.stringify(NB) === nbLast) return;
@@ -265,7 +265,7 @@ function nbSave(now = false) {
     const snap = JSON.stringify(NB); nbLast = snap; nbBase = JSON.parse(snap); nbRemote = out; if (now) NBP.keep(body);
     return fetch("api/notebook", { method: "POST", body, keepalive: true }).then(r => { if (r && r.ok) NBP.done(body); }).catch(() => { nbLast = ""; });
   };
-  if (now) go(++nbGen); else nbTimer = setTimeout(() => { const gen = ++nbGen; nbQueue = nbQueue.then(() => go(gen)).catch(() => {}); }, 500);      // closing the page does not wait for the queue
+  if (now) return go(++nbGen); else nbTimer = setTimeout(() => { const gen = ++nbGen; nbQueue = nbQueue.then(() => go(gen)).catch(() => {}); }, 500);      // closing the page does not wait for the queue
 }
 let nbEverLoaded = false, nbNamed = /** @type {Set<string>} */ (new Set());      // nbNamed: the files the notebook names at load (open or removed), read by restoreRows (shell.js)
 async function nbLoad() {
@@ -314,7 +314,7 @@ function uiSave(now = false) {
     NB.ui = {
       contEx: window.LISTE ? LISTE.exclExport() : undefined,
       ref: { ...S.ref, k: S.ref.k === "auto" ? "auto" : E.files[S.ref.k]?.file ?? "auto" },
-      tab: E.tab, cur: E.cur, msn: window.INF ? INF.state() : undefined, files: E.files.map((/** @type {FileAperto} */ f) => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined, ugrp: f.ugrp || undefined })), ugBy: E.ugBy, ugOrder: E.ugOrder,
+      tab: E.tab, cur: E.cur, msn: window.INF ? INF.state() : undefined, files: E.files.map((/** @type {FileAperto} */ f) => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined, ugrp: f.ugrp || undefined })), ugBy: E.ugBy, ugOrder: E.ugOrder, ugNone: E.ugNone,
       panels: E.panels.map(panelRec)
     };
     nbSave(now);
@@ -443,7 +443,7 @@ async function bootSession0() {
   const j = await J("api/session");
   S.sess = j.session;
   if (typeof AVVIO !== "undefined" && AVVIO.segnaSessione) AVVIO.segnaSessione(!!j.session);
-  if (!j.session) { E.files = []; E.ugBy = E.ugOrder = undefined; E.key = ""; E.pending = []; E._seq = false; E._mem = null; E.progTok = null; return; }
+  if (!j.session) { E.files = []; E.ugBy = E.ugOrder = E.ugNone = undefined; E.key = ""; E.pending = []; E._seq = false; E._mem = null; E.progTok = null; return; }
   const key = JSON.stringify(j.session.map((/** @type {Bag} */ s) => s.file));
   if (key === E.key) return;
   const oldNames = E.files.map((/** @type {FileAperto} */ f) => f.file), mem = E._mem || {};
@@ -525,7 +525,7 @@ function riapriPannello(sp) {
   });
 }
 function restoreUi() {
-  const u = NB.ui; if (u) { E.ugBy = u.ugBy; E.ugOrder = u.ugOrder; }
+  const u = NB.ui; if (u) { E.ugBy = u.ugBy; E.ugOrder = u.ugOrder; E.ugNone = u.ugNone; }
   // the contaminant exclusions travel with the session
   if (u && u.contEx && window.LISTE) LISTE.exclImport(u.contEx);
   // the grouping of the MSn tree travels with the session

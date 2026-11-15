@@ -23,7 +23,7 @@ try:
             if name: title(view, name)
             else:
                 def d():
-                    pg.click("#nav [data-v=data]"); wait_for_js(pg, 'document.querySelector("#v-data") && !document.querySelector("#v-data").hidden || !document.querySelector("#start").hidden', 10000); assert " · " not in pg.title(), pg.title()
+                    pg.click("#nav [data-v=data]"); wait_for_js(pg, 'document.querySelector("#v-data") && !document.querySelector("#v-data").hidden || !document.querySelector("#start").hidden', 10000); assert pg.title() == pg.evaluate("I18N.t('app.title', {app: APP_NAME})") and pg.title().endswith(f" · {app}"), pg.title()
                 step("title of data", d)
     r.close()
 except Exception as e:

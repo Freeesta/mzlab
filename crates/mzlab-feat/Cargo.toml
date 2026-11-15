@@ -10,7 +10,7 @@ crate-type = ["rlib"]
 
 [features]
 # `chem`: the structure graph (SMILES -> groups, cleavages). On by default; the engine of the proofs (`mzlab-feat-wasm`) turns it off so its .wasm does not carry it.
-default = ["chem"]
+default = ["chem", "legacy"]
 chem = []
 # `record`: the structure graph built from a `mol/1` record (`graph::Mol::from_record`, crate `mzlab-mol`) and the substructure search. Off by default and in every .wasm.
 record = ["chem", "dep:mzlab-mol", "sub"]
@@ -28,8 +28,12 @@ attributio = ["dep:mzlab-lib", "chem"]
 flow_formula = ["attributio", "mzlab-lib/flow"]
 # `untargeted`: detection of the features from the raw data after the algorithms of mzmine 3.9.0 (`src/untargeted/`), rewritten from scratch. Off by default.
 untargeted = []
+# `legacy`: the engine of mzFinder (`src/legacy/`: the low-resolution Dig, the rules, the identity graph, the MSn tree) and the modules that read it
+# (`network`, `polpair`, `export_inclusion`). On by default; `interp`, `mzlab-ops` (the parent of `run_tp`), the `.wasm` `finder-lr` and the finder features
+# of `mzlab-feat-wasm` turn it on, so the `.wasm` that build without the default features do not compile it.
+legacy = []
 # `interp`: the interpretation of each row of the feature table of the products (`interp/1`, `filtri/1`; `docs/agenti/interp.md`). Off by default; the `.wasm` `interp` carries it.
-interp = ["chem"]
+interp = ["chem", "legacy"]
 # `figura`: the static figure (SVG) and the stand-alone HTML of a fragmentation graph `msngrafo/1` (`msnfigura`; the molecule of the root read by `mzlab-mol`). Off by default; the CLI and the `.wasm` `msnfigura` carry it.
 figura = ["dep:mzlab-mol"]
 

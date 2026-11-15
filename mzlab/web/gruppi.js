@@ -72,6 +72,7 @@ window.GRUPPI = (() => {
   /** True when `label` would make a second group of the same name: the name of an experiment-type group, or another spelling of an existing user group (the exact same label just joins it). @param {string} label @param {string} [except] a label that is being renamed */
   function clash(label, except = "") {
     const k = nk(label); if (!k) return false;
+    if (E.ugNone && label !== E.ugNone && nk(E.ugNone) === k) return true;
     if ([...Object.values(KIND), ...Object.values(GRP_HR).flatMap(/** @param {any} f */ f => [f([{ lv: 2 }]), f([{ lv: 3 }])])].some(x => nk(x) === k)) return true;
     return [...flSide().map(/** @param {any} x */ x => x.ugrp), ...rowsT().map(x => x.ugrp)].some(l => l && l !== label && l !== except && nk(l) === k);
   }
@@ -119,10 +120,31 @@ window.GRUPPI = (() => {
   async function rename(old) {
     const v = clip((await ask(I18N.t("files.group.prompt"), old)) || "");
     if (!v || v === old) return;
-    if (clash(v, old)) { directNote("groups.clash", { g: v }); return; }
+    if (renameTo(old, v) === "clash") directNote("groups.clash", { g: v });
+  }
+  /** The first «Group N» that no group has. */
+  function freeName() {
+    const used = new Set([...flSide().map(/** @param {any} x */ x => x.ugrp), ...rowsT().map(x => x.ugrp)]);
+    let n = 1; while (used.has(I18N.t("files.ugrp.name", { n })) || clash(I18N.t("files.ugrp.name", { n }))) n++;
+    return I18N.t("files.ugrp.name", { n });
+  }
+  /** Renames group `old` to `raw` (the inline edit of the table header; one undo step): "" = done or nothing to do, "clash" = refused (the name exists). An empty name goes back to the default one; `old` "" is the ungrouped bucket, whose label is only a name (`E.ugNone`), no group is made. @param {string} old @param {string} raw */
+  function renameTo(old, raw) {
+    let v = clip(raw);
+    if (!old) {
+      if (v === I18N.t("groups.move.none")) v = "";
+      if (v === (E.ugNone || "")) return "";
+      if (v && clash(v)) return "clash";
+      step(() => { E.ugNone = v || undefined; }, "rename");
+      renderFileList(); if (typeof carica === "function") carica("gruppi-tab.js").then(() => renderFiles()); uiSave(); return "";
+    }
+    if (!v) v = freeName();
+    if (v === old) return "";
+    if (clash(v, old)) return "clash";
     E._grpOpen = E._grpOpen || {}; if (E._grpOpen["u:" + old] !== undefined) E._grpOpen["u:" + v] = E._grpOpen["u:" + old];
     const map = remap(l => l === old ? v : l);
     write(map, { by: "custom" }, (E.ugOrder || []).map(x => x === old ? v : x), true, "rename");
+    return "";
   }
   /** Frees every file of group `old` (side list and table); one undo step. @param {string} old */
   function ungroup(old) {
@@ -138,7 +160,9 @@ window.GRUPPI = (() => {
     vars, useful, labelsOf, names, has: hasGroups,
     set,
     newName, labelOf,
-    onto, rename, ungroup, lab,
+    onto, rename, renameTo, ungroup, lab,
+    /** The shown name of the ungrouped rows: the user's label, else «Ungrouped». */
+    noneName: () => E.ugNone || I18N.t("groups.move.none"),
     /** «Group by»: every file takes the label of its value of the key `spec` (a manual group set is replaced, undo brings it back); null = None. @param {any} spec */
     async by(spec) {
       const replaced = hasGroups();
