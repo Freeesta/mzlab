@@ -65,7 +65,7 @@ Arms: **A** `main`; **B** the spike; **C** upper bound, which breaks the contrac
 | B | restarted | ×1 \| ×4 | 0/0/0 | 9.3 \| 30.1 | 299 \| 295 | 1.0 \| 5.1 |
 | C | restarted | ×1 \| ×4 | 147/121/0 | 3.4 \| 23.1 | 25 \| 37 | 1.2 \| 4.8 |
 
-- **Gate of S3 not met: B has 0 code-cache hits** (as the control page predicts), so it is not adopted here. B is still faster than A: `qqReady` −110 ms (−21 %) warm ×1, −132 ms (−24 %) restarted ×1, −102 ms (−11 %) warm ×4, −8 ms restarted ×4 (noise). The trace shows less background
+- **Gate of S3 not met: B has 0 code-cache hits** (as the control page predicts), so it is not adopted on that gate (adopted later for speed, below). B is still faster than A: `qqReady` −110 ms (−21 %) warm ×1, −132 ms (−24 %) restarted ×1, −102 ms (−11 %) warm ×4, −8 ms restarted ×4 (noise). The trace shows less background
   (streaming) compile work, 421 → 301 ms, with the same number of compiles. Candidate cause, not isolated: a `cache.match` body goes to the page as stored, while `new Response(res.body)` pipes every body through the SW's JS thread (~300 answers per load). Adopting B is the owner's decision.
 - **C shows what the code cache is worth here**: `qqReady` −295 ms warm ×1, −301 ms warm ×4, −159 ms restarted ×4, against A. The engine worker's 32 scripts are never cache hits, not even in C (worker scripts get no code cache). C breaks the contract (`service-worker.md`): the
   scripts lose `no-cache`, and the page scripts are plain `static/<file>` URLs without a version query, so the memory cache could hand a file of the previous version to the next page. All C runs were still `crossOriginIsolated` (same-origin scripts need no CORP).
@@ -74,3 +74,20 @@ Arms: **A** `main`; **B** the spike; **C** upper bound, which breaks the contrac
 python3 tests_e2e/misura_avvio_sw.py --mirror A --runs 1 --rtt 0 --cpu 1,4 --scenari warm,warm-restarted,trace-warm,trace-restarted --warm-reloads 2 --out r_A_i.json   # once per arm and round, arms interleaved
 ```
 B and C = copies of mirror A with only `sw.js` changed, keeping its `APPV`/`BIG` constants.
+
+### S3 adopted: the final `sw.js`, with the fill really finished
+
+The owner adopted B for its speed (via the coordinator). Two faults found on the way make the table above approximate: `misura_avvio_sw.py` did not wait for the fill (`poll()` tests `!!(expr)`, true for any promise; now `wait_fill`), and the fill never finished on the live
+site: `sw-manifest.json` listed `.nojekyll`, to which GitHub Pages answers 404, so `.fill-done` was never written, the fill retried after each pause and earlier caches were never deleted (`seal_sw` now leaves it out). Remeasured with an empty `.nojekyll` in the mirrors:
+**A** `main` (build `99d7ad0418`), **B** the final `sw.js` with A's constants; 10 rounds, arm order alternated, 4th load, ms, median [min-max]; paired = B − A within a round.
+
+| scenario | CPU | A engine ready | A `qqReady` | B engine ready | B `qqReady` | paired B − A `qqReady` |
+|---|---|---|---|---|---|---|
+| warm | ×1 | 489 [370-615] | 489 [372-615] | 415 [339-556] | 415 [340-557] | −73 [−142-56] (−15 %) |
+| warm | ×4 | 1058 [883-1385] | 1066 [886-1390] | 922 [770-1204] | 933 [776-1219] | −102 [−600-243] (−13 %) |
+| warm-restarted | ×1 | 438 [367-546] | 439 [367-546] | 457 [341-567] | 457 [341-568] | +11 [−186-192] (+4 %, noise) |
+| warm-restarted | ×4 | 1117 [933-1401] | 1120 [941-1404] | 946 [864-1104] | 958 [867-1114] | −179 [−456-92] (−14 %) |
+
+No long task ≥ 50 ms before `qqReady` in either arm at ×1; at ×4 the longest is 64-84 ms in both. Migration (mirror of A, `migra.py`-style check): old worker fills 781 unheaded copies; the final `sw.js` with the same `APPV` serves them wrapped, the page is isolated, `qqReady`, no
+errors, all 777 files match the manifest with `no-cache`; a deploy changing one file gives a new cache, headed 780/781 (the `.fill-done` mark is not), every file is the new version, the changed file has the new bytes, and the old cache is deleted.
+

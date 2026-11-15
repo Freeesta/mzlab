@@ -50,11 +50,13 @@ def test_seal_sw_names_the_cache_after_the_site_and_stays_out_of_the_desktop_man
     (out / "sw.js").write_text('const APPV = "__APP__";', encoding="utf-8")
     (out / "static" / "esempi").mkdir()
     (out / "static" / "esempi" / "x.mzML").write_bytes(b"mz")
+    (out / ".nojekyll").write_text("", encoding="utf-8")
     bs.seal_sw(out)
     m = json.loads((out / "static" / "sw-manifest.json").read_text(encoding="utf-8"))
     app = re.search(r'APPV = "(\w{10})"', (out / "sw.js").read_text(encoding="utf-8")).group(1)
     assert m["app"] == app and m["nofill"] == ["static/esempi/x.mzML"]
     assert m["files"]["static/a.js"] == hashlib.sha256(b"var a;").hexdigest()
+    assert ".nojekyll" not in m["files"], "GitHub Pages never serves it: the fill would fail on it at every visit"
     (out / "static" / "a.js").write_bytes(b"var b;")       # a changed file (a .wasm added later) is a new cache name
     bs.seal_sw(out)
     assert json.loads((out / "static" / "sw-manifest.json").read_text(encoding="utf-8"))["app"] != app
