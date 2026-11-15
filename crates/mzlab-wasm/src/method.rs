@@ -1,6 +1,7 @@
 //! `metodo/1` for the page (`mzlab-core::metodo`): the method of an item from the mzML that carries it, from the `.dam` preselected for it, or from the `.wiff` it was made from
 //! (found by the SHA-1 that ProteoWizard writes in the mzML); the `.wiff` is only read, never converted here.
 use super::{error_json, Engine, JsReader};
+use crate::natives::Src;
 use js_sys::Function;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::labmethods;
@@ -54,7 +55,8 @@ impl Engine {
 
     /// The `metodo/1` document an mzML carries in its `<run>` (`""` when it has none).
     pub fn mzml_metodo(&mut self, size: f64, read: Function) -> Result<String, JsValue> {
-        let mut m = Mzml::new(JsReader { read }, size as u64);
+        // through `Src`, as the routes read an mzML: one copy of `Mzml` in the engine
+        let mut m = Mzml::new(Src::Js(JsReader { read }), size as u64);
         let head = m.run_head(DOC_MAX).map_err(|e| error_json(&e))?;
         Ok(method::from_userparam(&head).unwrap_or_default())
     }
@@ -66,7 +68,7 @@ impl Engine {
         size: f64,
         read: Function,
     ) -> Result<String, JsValue> {
-        let mut m = Mzml::new(JsReader { read }, size as u64);
+        let mut m = Mzml::new(Src::Js(JsReader { read }), size as u64);
         let doc = m.method(name, DOC_MAX).map_err(|e| error_json(&e))?;
         Ok(doc.unwrap_or_default())
     }
