@@ -107,7 +107,7 @@ try:
                     q.wait_for_function("document.querySelectorAll('#flist tbody tr').length >= 5", timeout=90000); ready(q)
                     if w < 900:
                         q.click("#sb-toggle"); wait_for_js(q, "document.querySelector('#v-data').classList.contains('sb-open')")
-                    q.click("#samptab"); q.wait_for_function("document.querySelector('#v-workspace').dataset.work === 'table'"); wait_for_js(q, "document.querySelector('#v-workspace').dataset.work === 'table'")
+                    q.click("#samptab"); q.wait_for_function("!document.querySelector('#wtable').hidden && !document.querySelector('#wdata').hidden"); wait_for_js(q, "!document.querySelector('#wtable').hidden")
                     axe(q)
                     q.locator("#flist .ldtab button[data-open]").nth(1).click(); q.wait_for_selector(".pnl", timeout=60000); ready(q)
                     axe(q)

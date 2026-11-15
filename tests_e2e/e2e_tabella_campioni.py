@@ -16,7 +16,7 @@ try:
         pg.set_input_files("#pick", [{"name": n, "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t%d" % t), "rb").read()} for n, t in zip(NAMES, (0, 10, 15))])
         frames(pg, 3); pg.click("text=Carica dati"); ready(pg)
         # two converted files make the download controls appear (the maker's files of the lab are converted on request)
-        pg.evaluate("n => { n.forEach(x => CONV.files.set(x, new Blob(['x']))); S.table = true; syncWork(); renderFiles(); }", NAMES[:2]); frames(pg, 3)
+        pg.evaluate("n => { n.forEach(x => CONV.files.set(x, new Blob(['x']))); renderFiles(); }", NAMES[:2]); pg.click("#samptab"); frames(pg, 3)
         def head_count():
             assert pg.inner_text("#flist .samphead b").strip() == "3 campioni", pg.inner_text("#flist .samphead b")
             assert "clicca" not in pg.inner_text("#flist .samptool")
@@ -62,10 +62,9 @@ try:
             assert pg.evaluate("CONV.compression") == "smallest"
         step("a format of the menu saves with that compression", pick_numpress)
         def gap(w):
-            pg.set_viewport_size({"width": w, "height": 900}); pg.evaluate("S.table = false; S.adding = true; syncWork()"); frames(pg, 4)
+            pg.set_viewport_size({"width": w, "height": 900}); pg.evaluate("S.adding = true; syncWork()"); frames(pg, 4)
             g = pg.evaluate("document.getElementById('backwork').getBoundingClientRect().top - document.getElementById('tools').getBoundingClientRect().bottom")
             assert 0 <= g < 40, (w, "blank band between the toolbar and «Back to work!»", g)
-            pg.evaluate("S.adding = false; S.table = true; syncWork()"); frames(pg, 3)
         step("«Back to work!» sits right under the toolbar (1400 px)", lambda: gap(1400))
         step("«Back to work!» sits right under the toolbar (700 px)", lambda: gap(700))
         def remove_all():

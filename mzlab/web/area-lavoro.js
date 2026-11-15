@@ -1,7 +1,7 @@
 // @ts-check
-// Work area of the Dati view, decided from the state: the panels (a file shown or a panel open), the sample table («Sample table» of the side panel pressed:
-// S.table) or the landing: the drop area, with the sample table under it once it has rows (files being read keep their progress in the side list). The landing
-// is the only empty state: first visit, all files removed, every panel closed, «+» (S.adding); «Back to work!» (shell.js) leaves it.
+// Work area of the Dati view, decided from the state: the panels (a file shown or a panel open) or ONE page, the drop area with the sample table under it
+// (files being read keep their progress in the side list). That page is the landing (first visit, all files removed, every panel closed) or «+» / «Sample table»
+// (S.adding); «Sample table» only scrolls to the table, «Back to work!» (shell.js) leaves the page and gives back the scroll.
 // Called by applyView, renderFiles and upload (shell.js) and by every refit of the panels (syncWorkEmpty, lista-file.js).
 "use strict";
 
@@ -20,12 +20,11 @@ const SHEETLBL = {
 const workQ = (/** @type {string} */ s) => /** @type {HTMLElement & { disabled: boolean }} */ (document.querySelector(s));
 // every panel was closed with the X of the toolbar: the files stay ticked but the landing shows until a panel or a file is opened again
 let closedAll = false;
-/** @returns {"opening" | "add" | "panels" | "table" | "landing"} */
+/** @returns {"opening" | "add" | "panels" | "landing"} */
 function workState() {
   if (S.opening) return "opening";
   if (S.sess && S.adding) return "add";
-  const fs = typeof E !== "undefined" ? E.files : [], left = workRows(fs);
-  if (S.sess && S.table && left) return "table";
+  const fs = typeof E !== "undefined" ? E.files : [];
   const built = E.panels.some((/** @type {Pannello} */ p) => p.el);
   if (built) closedAll = false;
   if (S.sess && (built || (!closedAll && fs.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)))) return "panels";
@@ -45,7 +44,7 @@ let _workSig = "";
 function syncWork(/** @type {boolean} */ force = false) {
   SHEETLBL.refresh();
   const w = workState(), ws = workQ("#v-workspace"), up = UPBUSY > 0 || OPENNOW.busy() > 0;
-  const none = typeof E === "undefined" || !E.files.some((/** @type {FileAperto} */ f) => !f.gone), tab = w !== "add" && (up || !none), sig = [w, none, up, !!S.sess, tab, workRows(typeof E !== "undefined" ? E.files : [])].join();
+  const none = typeof E === "undefined" || !E.files.some((/** @type {FileAperto} */ f) => !f.gone), tab = up || !none, sig = [w, none, up, !!S.sess, tab, workRows(typeof E !== "undefined" ? E.files : [])].join();
   // the card of the manual integrations follows the state written here (integrazioni-manuali.js); the provisional TIC of a first loading too (tic-provvisorio.js)
   const simtab = () => { /** @type {any} */ (window).MANINT?.sync(); /** @type {any} */ (window).TICPROV?.sync(); };
   if (sig === _workSig && !force) { simtab(); return; }
@@ -53,14 +52,13 @@ function syncWork(/** @type {boolean} */ force = false) {
   _workSig = sig; ws.dataset.work = w;
   // the landing forgets «Sample table»; once empty it waits again for the first file to be shown
   const rows = workRows(typeof E !== "undefined" ? E.files : []), land = w === "landing" && rows;
-  if (w === "landing") S.table = false;
   workQ("#wdata").hidden = w === "panels" || w === "opening";
   // «Back to work!» waits for a file to go back to, and for the reading to end (it would push the drop area down while the files load)
   workQ("#backwork").hidden = !(S.sess && !none && !up && (w === "add" || w === "landing"));
-  workQ("#start").hidden = !(w === "landing" || w === "add" || (w === "table" && !S.sess));
-  workQ("#wtable").hidden = !(w === "table" || w === "add" || land);
-  // never inert: on the landing with a session (panels closed by the X) it brings the table back; before a session it scrolls the table under the drop area into view
-  const sb = workQ("#samptab"); sb.hidden = !tab; sb.setAttribute("aria-pressed", String(w === "table")); sb.disabled = false;
+  workQ("#start").hidden = !(w === "landing" || w === "add");
+  workQ("#wtable").hidden = !(w === "add" || land);
+  // never inert, never a toggle: it shows whenever the table has rows and only brings the table into view (see below)
+  const sb = workQ("#samptab"); sb.hidden = !tab; sb.removeAttribute("aria-pressed"); sb.disabled = false;
   // the add buttons scroll sideways in a narrow window: with every button disabled the strip has no stop of its own, so the keyboard reaches it directly (axe scrollable-region-focusable)
   const ga = workQ("#g-add"); if (none) ga.tabIndex = 0; else ga.removeAttribute("tabindex");
   TOOLS_OFF.forEach(q => { const b = workQ(q); b.disabled = none; b.setAttribute("aria-disabled", String(none)); });
@@ -88,22 +86,21 @@ workQ("#flst").addEventListener("click", (/** @type {MouseEvent} */ e) => {
   closedAll = false;
   if (!t.closest("input")) queueMicrotask(() => { if (!E.panels.some((/** @type {Pannello} */ p) => p.el)) soloFile(E.files[+((/** @type {HTMLElement} */ (nm)).dataset.k || 0)]); });
 }, true);
-// «Sample table» of the side panel: the table in place of the panels and back; a click on a file of the side list goes back to the panels
-/** Before a session the table sits under the drop area: the button scrolls only when no row of it is on screen; a table that is partly in view stays where it is (no jump). */
-function tableOnScreen() {
-  const r = workQ("#wtable").getBoundingClientRect(), top = document.querySelector("header")?.getBoundingClientRect().bottom || 0;
-  return r.bottom > top && r.top < window.innerHeight - 24;
+// «Sample table» of the side panel: the drop area and the table are one page. From the panels the button opens that page (the scroll of the panels is kept for «Back to work!»);
+// on the page it only scrolls the table under the header (smooth, instant with reduced motion) and puts the focus on its heading: nothing is re-rendered or switched.
+function tableToView() {
+  const t = workQ("#wtable"), h = /** @type {HTMLElement | null} */ (t.querySelector(".samphead b")) || t;
+  if (S.sess && workState() === "panels") {
+    STATO.aggiunta(true, "sample-table");
+    if (window.innerWidth < 900 && window.BARRA) BARRA.close(false);
+    applyView(); window.scrollTo(0, 0);
+  }
+  h.tabIndex = -1;
+  const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  t.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "start" });
+  h.focus({ preventScroll: true });
 }
-workQ("#samptab").onclick = () => { if (!S.sess && workState() === "landing") { if (!tableOnScreen()) workQ("#wtable").scrollIntoView({ block: "nearest" }); return; } S.table = !S.table; if (S.table && window.innerWidth < 900 && window.BARRA) { BARRA.close(false); document.getElementById("sb-toggle")?.focus({ preventScroll: true }); } syncWork(); };
-workQ("#flst").addEventListener("click", (/** @type {MouseEvent} */ e) => {
-  const t = /** @type {HTMLElement} */ (e.target);
-  if (S.table && t.closest(".fl:not(.up)")) { S.table = false; queueMicrotask(() => syncWork()); }
-}, true);
-
-// a file name of the sample table itself opens the file: the table gives way to the panels
-workQ("#flist").addEventListener("click", (/** @type {MouseEvent} */ e) => {
-  if (S.table && /** @type {HTMLElement} */ (e.target).closest("[data-open]")) { S.table = false; queueMicrotask(() => syncWork()); }
-}, true);
+workQ("#samptab").onclick = tableToView;
 
 // the provisional TIC (tic-provvisorio.js) is loaded at the first scan table with its TIC, not at start-up; the events of the wait are handed over
 { /** @type {any[] | null} */ let q = null;
