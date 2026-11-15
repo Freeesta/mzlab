@@ -7,7 +7,7 @@ use std::collections::BTreeSet;
 
 use super::library::Library;
 use super::space::candidates;
-use crate::legacy::fragtree::{fmt, Graph, Space, Subs};
+use crate::finder_base::fragtree::{fmt, Graph, Space, Subs};
 
 /// Floor of the per-fragment probability (noise, co-isolation, co-eluting isomers).
 const EPS: f64 = 0.1;

@@ -3,27 +3,30 @@
 //! rows and the detail that `TP_Mine/js/21_tpmine_hr.js` reads.
 
 pub mod dig;
-pub mod edge;
+/// The old path of the MSn tree, in `crate::finder_base` like the rest of what the interpretation reads.
+#[cfg(feature = "chem")]
+pub use crate::finder_base::msn;
+/// The old paths of the part of the engine that the interpretation reads, which lives in `crate::finder_base` so that `interp` does not depend on `legacy`.
+pub use crate::finder_base::{edge, identity, ms2, sample, series, similarity};
+/// The old path of the fragmentation tree (`crate::finder_base::fragtree`) with `of_dig`, which reads the Dig and so stays here.
+#[cfg(feature = "chem")]
+pub mod fragtree {
+    pub use super::fragtree_dig::of_dig;
+    pub use crate::finder_base::fragtree::*;
+}
+#[cfg(feature = "chem")]
+mod fragtree_dig;
 /// The old path of the formula of the parent, which lives in `crate::parent_formula` so that `series_parent` does not depend on `legacy`.
 pub use crate::parent_formula as formula;
-#[cfg(feature = "chem")]
-pub mod fragtree;
 pub mod hidden;
 mod hidden_fam;
-pub mod identity;
 pub mod kinetics;
 pub mod lr;
 pub mod lrisf;
-pub mod ms2;
-#[cfg(feature = "chem")]
-pub mod msn;
 pub mod network;
 mod network_pred;
 pub mod out;
 pub mod progress;
-pub mod sample;
-pub mod series;
-pub mod similarity;
 pub mod transf;
 
 use mzlab_core::idxread::{Index, ReadAt};
@@ -32,8 +35,8 @@ use mzlab_core::json::Out;
 pub use formula::formula_info;
 pub use identity::{identity_graph, polarity_pairs};
 
-/// Errors of the adapter: the English text the page shows (`str(e)` of the Python).
-pub type Res<T> = std::result::Result<T, String>;
+/// The old path of `Res`, which lives in `crate::finder_base` with the modules that return it.
+pub use crate::finder_base::Res;
 
 /// `api.classify(names)`: one item per name; `open(name)` reads the index of that file (its error text becomes the error item).
 pub fn classify<R: ReadAt>(

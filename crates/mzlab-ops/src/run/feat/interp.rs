@@ -5,6 +5,7 @@ use mzlab_core::elements::parse_formula;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{Out, Value};
 use mzlab_feat::chem::positions::Pol;
+use mzlab_feat::finder_base::series;
 use mzlab_feat::interp::filters::DecoyParams;
 use mzlab_feat::interp::json::filters_json;
 use mzlab_feat::interp::ms2link::LinkParams;
@@ -12,7 +13,6 @@ use mzlab_feat::interp::refilter::{refilter, FilterParams};
 use mzlab_feat::interp::reposition::reposition;
 use mzlab_feat::interp::review;
 use mzlab_feat::interp::site::SiteParams;
-use mzlab_feat::legacy::series;
 use mzlab_feat::sortc::SortC;
 use mzlab_feat::store::{read_table_from, Slice};
 

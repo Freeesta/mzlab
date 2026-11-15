@@ -3,7 +3,7 @@
 //! skeleton, the ratio across the samples and the typical loss of an adduct. Stateless: the report comes in the payload `{report, pol}`.
 
 use super::*;
-use crate::legacy::Res;
+use crate::finder_base::Res;
 use mzlab_core::json::{self, Value};
 
 /// `_spec` of the report: `{mz, it}` or `[mz, it]`; None without peaks.

@@ -7,12 +7,12 @@ use mzlab_core::idxread::{Index, ReadAt};
 
 use super::edit::Candidate;
 use super::site::{self, Candidates, TreeVotes};
-use crate::legacy::fragtree::vec_of;
-use crate::legacy::ms2::Consensus;
-use crate::legacy::msn::library::{self, Library};
-use crate::legacy::msn::localize::localize_sites;
-use crate::legacy::msn::{self, ion_mass, MsnTree};
-use crate::legacy::series::Parent;
+use crate::finder_base::fragtree::vec_of;
+use crate::finder_base::ms2::Consensus;
+use crate::finder_base::msn::library::{self, Library};
+use crate::finder_base::msn::localize::localize_sites;
+use crate::finder_base::msn::{self, ion_mass, MsnTree};
+use crate::finder_base::series::Parent;
 
 /// Tolerance of the matching of a node, ppm.
 pub const NODE_PPM: f64 = 5.0;
