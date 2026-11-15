@@ -356,6 +356,8 @@ function hashRename(/** @type {FileCarica[]} */ files,/** @type {CaricaRep} */ r
 async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | undefined} */ into,/** @type {unknown} */ box,/** @type {AbortSignal} */ signal){
   const rep=/** @type {CaricaRep} */ ({unopen:[],other:[],errs:{},moved:{dam:[],data:[]},notes:[]}),rejected=/** @type {FileCarica[]} */ ([]);
   files=hashRename(files,rep);
+  // a .raw: its readers module starts downloading now (SHA-256 checked as always), in parallel with the quota check and the copy; a failure shows later, where the read asks for the module
+  if(window.MZLAB_BROWSER){const raws=files.filter(f=>/\.raw$/i.test(f.name));if(raws.length&&window.MZLAB_RUST_READY)window.MZLAB_RUST_READY.then((/** @type {any} */ rb)=>{if(rb&&rb.rpc&&!rb.disabled)rb.rpc({op:"lr_modulo",names:raws.map(f=>f.name)}).catch(()=>{})}).catch(()=>{})}
   // a batch bigger than the room the browser gives this site asks once, before copying (quota-lotto.js)
   if(window.MZLAB_BROWSER&&files.reduce((s,f)=>s+NATIVO.size(f),0)>=50<<20){if(files.some(f=>!/\.(mzml|dam)$/i.test(f.name)))await carica("m:formati-noti.js");await carica("m:quota-lotto.js");files=await QUOTALOTTO.prima(files,rep,into);if(!files.length)return}
   const one=async (/** @type {FileCarica} */ f)=>{const isDam=isMethodFile(f.name);
