@@ -116,3 +116,4 @@ fn the_trace_parameters_can_be_set_with_every_algorithm() {
 }
 
 mod branches;
+mod lineage;

@@ -8,6 +8,7 @@ mod command;
 mod line;
 #[cfg(test)]
 mod line_tests;
+pub mod lineage;
 pub mod migrate;
 mod order;
 mod parse;
@@ -23,6 +24,7 @@ pub use canon::{cache_key, canonical, value_text, Resolved};
 pub use check::{check, conversion_path, Platform, Problem};
 pub use command::{command, route as command_route};
 pub use line::{apply_set, apply_sets, line, route as line_route, sets_of};
+pub use lineage::{job_layers_text, job_lineage_text, lineage_from_text, written, Layer, Lineage};
 pub use migrate::{migrate, migrate_name, Migrated, MIGRATIONS};
 pub use order::{levels, plan_order};
 pub use parse::parse;

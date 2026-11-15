@@ -62,8 +62,8 @@ pub fn recipe_for_estimated<R: ReadAt>(text: &str, index: &mut Index<R>) -> Resu
     recipe_on(text, Recipe::for_index_estimated(index)?)
 }
 
-/// The parameters one feature step writes: its id and the (name, value) pairs.
-pub type Layer = (String, Vec<(String, Value)>);
+/// The parameters one feature step writes: its id and the (name, value) pairs (`mzlab_core::flow::lineage`).
+pub use mzlab_core::flow::Layer;
 
 /// The recipe of a Flow run: the one of the panel on the first index, then the parameters of each feature step in order (`steps::recipe_map`). The native
 /// `flow run` and the browser runner both build it here, so the same plan gives the same bytes.

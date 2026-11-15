@@ -19,3 +19,4 @@ Una riga di misura in PR dice: modulo, byte prima → dopo, crescita in %, e se 
 
 ## Misure per PR
 - `untargeted`, opzione `ident.min_corr`: grezzo (`tools/cargo_wasm.sh build --release`, prima di `wasm-bindgen` e `wasm-opt`, che non c'erano nella misura) 1 343 982 → 1 349 550 B (+0,41 %); la misura ottimizzata (470 779, tetto 585 728) resta sotto il tetto con ampio margine.
+- `hr` senza il pianificatore del Flow (ricetta e lineage di un lavoro in `rotte`), ottimizzato (`wasm-bindgen` 0.2.129, binaryen 133): misura `moduli.py --misura` di una build completa: `hr` 1 691 715 → 1 588 407 B (−6,1 %), `rotte` 855 782 → 867 294 B (+1,35 %); coppia A/B locale (origin/main contro ramo, stessa macchina): `hr` 1 698 307 → 1 588 127 (gzip 767 345 → 718 365), `rotte` 855 647 → 867 159 (gzip +4 584); tetti invariati.
