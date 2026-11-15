@@ -19,3 +19,4 @@ Una riga di misura in PR dice: modulo, byte prima → dopo, crescita in %, e se 
 
 ## Misure per PR
 - `untargeted`, opzione `ident.min_corr`: grezzo (`tools/cargo_wasm.sh build --release`, prima di `wasm-bindgen` e `wasm-opt`, che non c'erano nella misura) 1 343 982 → 1 349 550 B (+0,41 %); la misura ottimizzata (470 779, tetto 585 728) resta sotto il tetto con ampio margine.
+- `table`, `campioni/2` ridotto alle operazioni di mzFinder (`samples::route_finder`; `proponi_spiegato`, `proponi3`, `ricollega`, `migra` restano in `route`, servite da `rotte` e dall'app): ottimizzato 734 139 → 725 315 B (−1,2 %, gzip 330 725 → 327 030), tetto 737 280 invariato.
