@@ -170,6 +170,17 @@ At 4× the gestures start after the first chart (5 s) and last about 9 s, so onl
 
 `measureUserAgentSpecificMemory` answers 5-10 s after the call (the peaks came back about 12 s after the drop, after the loading), so its 500 ms sampling is a series of overlapping calls; it covers the page's own agent cluster and not the engine's WASM memories, so it is a floor. The RSS (read from `/proc` every 500 ms, all processes started with the profile: page, builders and their helpers, engine worker, GPU, network) is a ceiling: it holds file-backed pages the copy of 530 MB touched.
 
+**(b) `thermo` started at the drop** (cold profile, drop at `qqReady` + 0, one `.raw` of 50.6 MB, `--scenarios raw-subito`, N = 5 per arm interleaved run by run, median [min-max] ms, same machine and files as above). `lr_modulo` (shell.js `upload0` → `rust-worker.js` → `prepara`) asks the engine worker for the module as soon as a `.raw` is recognised, before the quota check; the SHA-256 check of `carica-modulo.js` is unchanged. Site only: the desktop app reads a `.raw` natively.
+
+| CPU | arm | first chart | copy start |
+|---|---|---|---|
+| 1× | module asked at the read | 1444 [1219-1775] | 67 [46-151] |
+| 1× | module asked at the drop | 1298 [1135-2118] | 90 [76-220] |
+| 4× | module asked at the read | 2493 [2197-3221] | 148 [126-236] |
+| 4× | module asked at the drop | 2190 [2110-2964] | 108 [106-251] |
+
+First chart −146 ms (−10 %) at 1×, −303 ms (−12 %) at 4×; the ranges overlap (the medians separate, N = 5).
+
 ### Verdicts
 
 The verdicts (a)-(f) of this section, with the copy gate that answers (c): `misure-copie.md`, «Critical path: verdicts».
