@@ -107,18 +107,45 @@ impl State {
     }
 }
 
-/// `path` (relative, inside the folder) written under `folder`; refuses anything that leaves it.
+/// `path` (relative, inside the folder) written under `folder`. Both come from the window, so the
+/// write is held to a plain, non-hidden `.csv` name under an existing absolute folder, checked again
+/// after symlinks are resolved: no absolute path, `..`, drive or stream (`:`), dot file or other extension.
 fn write_in(folder: &str, path: &str, text: &str) -> Result<bool> {
-    let rel = std::path::Path::new(path);
-    let inside = rel
-        .components()
-        .all(|c| matches!(c, std::path::Component::Normal(_)));
-    if folder.is_empty() || path.is_empty() || !inside {
+    use std::path::{Component, Path};
+    if folder.is_empty() || path.is_empty() {
         return Ok(false);
     }
-    let dest = std::path::Path::new(folder).join(rel);
-    if let Some(dir) = dest.parent() {
-        std::fs::create_dir_all(dir).map_err(|_| Error::new("error.io"))?;
+    let refuse = || {
+        Error::new("error.attributio").with(
+            "detail",
+            format!("path outside the campaign folder: {path}"),
+        )
+    };
+    let rel = Path::new(path);
+    let plain = rel.components().all(|c| match c {
+        Component::Normal(n) => n
+            .to_str()
+            .is_some_and(|n| !n.starts_with('.') && !n.contains(':') && !n.contains('\\')),
+        _ => false,
+    });
+    let csv = rel
+        .extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case("csv"));
+    if !plain || !csv || !Path::new(folder).is_absolute() {
+        return Err(refuse());
+    }
+    let base = std::fs::canonicalize(folder).map_err(|_| refuse())?;
+    if !base.is_dir() {
+        return Err(refuse());
+    }
+    let dest = base.join(rel);
+    let dir = dest.parent().ok_or_else(refuse)?;
+    std::fs::create_dir_all(dir).map_err(|_| Error::new("error.io"))?;
+    let real_dir = std::fs::canonicalize(dir).map_err(|_| refuse())?;
+    let is_link = std::fs::symlink_metadata(&dest).is_ok_and(|m| m.file_type().is_symlink());
+    if !real_dir.starts_with(&base) || is_link {
+        return Err(refuse());
     }
     std::fs::write(&dest, text).map_err(|_| Error::new("error.io"))?;
     Ok(true)
