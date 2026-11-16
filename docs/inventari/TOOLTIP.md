@@ -48,7 +48,7 @@ Guardia: `tests/test_tooltip_inventario.py` (nessun tooltip uguale al testo del 
 | `grafici.js:596` mappa 2D (`map.hov`) | **RT · m/z**, «intensità» o «differenza», bin di m/z | A | è il formato più completo |
 | `grafici.js:596` mappa PDA | RT min, nm, mAU scritti nel codice, non da `lang/` | C | unità fuori dai cataloghi |
 | `uv-spettro.js:101` spettro UV | nm e mAU scritti nel codice | C | come sopra |
-| `grafici.js:437` area del picco (`tip.area`) | Area, conteggi·s, «Right-click: actions» | D (riga) | solo la riga del tasto destro; CROMA-CLICK-PICCO |
+| `grafici.js` etichetta d'area (`int.copy.tip`) | solo «clic per copiare l'area» | — | la riga con area, intensità e linea di base è stata tolta |
 | `picchi.js:458` etichetta m/z (`tip.peakLabel`) | m/z e «Right-click: actions» | D | l'm/z è già sull'etichetta; CROMA-CLICK-PICCO |
 | `etichette-picchi.js:54` etichetta RT (`etpk.tip.rt`) | «Peak at RT 14.34 min» | B | ripete l'etichetta; CROMA-CLICK-PICCO |
 | `spettro.js:100` etichette Δ del righello | addotto, Δ, «Clic destro: …» | C | un solo suggerimento di gesto |
@@ -100,7 +100,7 @@ Mostrano il nome ai lettori di schermo ma non al mouse (da completare con toolti
 | `tbl.loss.exactTitle` (m/z esatto nella tabella Perdite neutre) | «Massa esatta, da elements.py» / «Exact mass, from elements.py» | «Massa esatta» / «Exact mass» |
 
 ## Lasciato come proposta
-- Tutto ciò che riguarda le etichette dei picchi, l'hover dello spettro e «Right-click: actions» (`tip.area`, `tip.peakLabel`, `etpk.tip.rt`, `tip.peak`): lo sta cambiando CROMA-CLICK-PICCO.
+- Tutto ciò che riguarda le etichette dei picchi, l'hover dello spettro e «Right-click: actions» (`tip.peakLabel`, `etpk.tip.rt`, `tip.peak`): lo sta cambiando CROMA-CLICK-PICCO.
 - Funzione unica dell'hover dei grafici (tempo, m/z, intensità con unità) e unità da `lang/` per mappa PDA e spettro UV.
 - Tooltip con i gesti ripetuti su ogni elemento («Clic: mostra o nascondi» nelle legende, «Clic: mostra solo questo file»): da spostare nell'aiuto.
 - `liste-target.js:75,145`: tooltip in inglese scritti nel codice, da portare in `lang/it` e `lang/en`.
