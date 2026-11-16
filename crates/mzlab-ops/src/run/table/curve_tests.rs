@@ -212,8 +212,8 @@ fn a_zero_standard_has_no_weight_under_one_over_x_and_is_logged() {
 
 #[test]
 fn the_ich_limits_of_the_miller_and_miller_line() {
-    // Miller & Miller 6th ed. §5.4 (fluorescein, pg/mL), unweighted: the book prints b = 1.93 and s_y/x = 0.4329, so the ICH limits written from the
-    // book are 3.3·0.4329/1.93 = 0.7402 and 10·0.4329/1.93 = 2.243; the printed b has three figures (±0.26 %), hence the tolerance of 0.3 %
+    // Miller & Miller 6th ed. §5.4 (fluorescein, pg/mL), unweighted: b = 216.2/112 = 1.930357… and s_y/x = 0.432847713… (the book prints 1.93 and
+    // 0.4329, so 3.3·0.4329/1.93 = 0.7402 and 10·0.4329/1.93 = 2.243 from its rounded numbers); exact: LOD 0.7399653784159…, LOQ 2.2423193285331…
     let x = [0, 2, 4, 6, 8, 10, 12];
     let y = ["2.1", "5.0", "9.0", "12.6", "17.3", "21.0", "24.7"];
     let mut resp = String::from("sample,name,area\n");
@@ -225,9 +225,9 @@ fn the_ich_limits_of_the_miller_and_miller_line() {
     let (doc, _, _) = run(&[("weight", "1")], &resp, &stds);
     let c = doc.get("curves").unwrap().at(0).unwrap();
     let value = |k: &str| num(c.get(k).unwrap().at(0).unwrap(), "value");
-    let book = |got: f64, want: f64| assert!((got / want - 1.0).abs() < 3e-3, "{got} != {want}");
-    book(value("lod"), 0.7402);
-    book(value("loq"), 2.243);
+    let exact = |got: f64, want: f64| assert!((got / want - 1.0).abs() < 1e-12, "{got} != {want}");
+    exact(value("lod"), 0.739_965_378_415_927_4);
+    exact(value("loq"), 2.242_319_328_533_113_3);
     // the book's own limit of detection, y_B + 3·s_B with s_B = s_y/x, is 0.67 pg/mL: the same σ and slope
     assert!((value("lod") * 3.0 / 3.3 - 0.67).abs() < 0.005);
 }
