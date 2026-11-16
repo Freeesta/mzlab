@@ -14,6 +14,13 @@ Il nucleo è in CLAUDE.md.
 - `python3 tools/controlla_i18n.py` rifiuta italiano fuori dai cataloghi, chiavi mancanti o orfane, segnaposto diversi e glossario violato.
 - Nomi e classi dei contaminanti in inglese: `chem/contaminants_en.json` (un test impone la voce per ogni id). Il riconoscimento dei nomi dei file resta italiano (`project.py`).
 - Test: `e2e_inglese_*` aprono il browser in `en-US` e leggono tutto il testo visibile.
+- **Testi con markup** (*m/z* in corsivo, MS<sup>2</sup> con l'apice vero): si scrivono UNA volta, già nella forma finale.
+  Lo scrittore è `i18n.js`: `putText`/`putHtml` non riscrivono un nodo il cui testo non è cambiato (un `textContent` uguale toglierebbe l'`<i>`)
+  e marcano ciò che scrivono con `mark`, prima della prima pittura (l'`apply(document)` inline di `index.html`); lo stesso `apply(document)` marca
+  il testo statico senza chiave e avvia l'osservatore che marca, nello stesso compito, il testo scritto da altro codice. Mai input, option, title,
+  select, script né un `<i>`/`<sup>` già presente. Prima l'osservatore stava in `shell.js`, ~0.3-0.5 s dopo la prima pittura: dopo un azzeramento
+  completo (due caricamenti) «+ Mappa RT-m/z» passava diritta → corsiva → diritta → corsiva. Test: `tests_e2e/e2e_corsivo_avvio.py` (ogni
+  fotogramma di ogni caricamento dopo `QQRESET.run("all")` e in inglese: primo fotogramma dipinto già corsivo, nessun cambio, CLS 0).
 - **Trappole**: una chiave letterale in `t("…")` o `data-i18n` deve esistere nei due cataloghi (il controllo non vede chiavi costruite a pezzi: usa `t(`prefisso.${x}`)`); `t()` non compone mai una frase da pezzi; un attributo HTML (`title`) non può contenere `"` né entità (`&Delta;` si scrive `Δ`).
 
 - **Numeri**: in tutta l'app il decimale è sempre il punto e non c'è separatore delle migliaia, in italiano e in inglese: l'unico formattatore è `NF` in `i18n.js` (`I18N.fix`, `I18N.num`, `{x, number}`, `#` del plurale; un `Intl.NumberFormat` per numero di decimali, costruito una volta: `tests/test_i18n.py`); mai `toLocaleString`, `Intl.NumberFormat` o `.replace(".", ",")` nel codice; i testi italiani in `lang/it.js` scrivono «0.5». L'input con la virgola si normalizza con `.replace(",", ".")` al punto di lettura.
