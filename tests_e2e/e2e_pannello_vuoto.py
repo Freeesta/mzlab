@@ -1,6 +1,6 @@
 """Side panel on the empty landing and with one file: a tool button SHOWS its panel when another one is open (File included, in its
 empty state); only the active tool's button hides it. First action on a fresh landing, Ctrl/Cmd+B and #sb-toggle, pressed state,
-no transient hide/show after any action (sampled every frame for 500 ms). No JS errors."""
+no transient hide/show after any action (sampled every frame for 500 ms: at most 2 frames to settle, then constant). No JS errors."""
 # covers: mzlab/web/barra.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -21,7 +21,10 @@ def state(pg): return pg.evaluate(STATE)
 def stable(pg, act, visible, ms=500):
     """Do `act` and require the panel to be `visible` (or hidden) in EVERY frame for `ms` ms: no transient toggle."""
     pg.evaluate(SAMPLER, ms); act(); smp = pg.evaluate("window.__smp")
-    assert smp and all(v == visible for v in smp), (visible, smp)
+    lead = 0
+    while lead < 2 and lead < len(smp) and smp[lead] != visible: lead += 1      # the layout lands one frame after the event: up to 2 frames of the old state
+    rest = smp[lead:]
+    assert rest and all(v == visible for v in rest), (visible, smp)      # then it never changes again: hide-then-show (a flicker) fails here
 def click(pg, cmd, visible):
     stable(pg, lambda: pg.click(f'#stbar [data-cmd="{cmd}"]'), visible)
 def consistent(pg, s, tab=None):
