@@ -28,7 +28,7 @@ try:
         step("every setting changes the result; the S/N threshold refuses the peak", each)
         def dlg():
             pg.evaluate("Object.assign(PK, PK_DEF); peakParams()"); pg.wait_for_selector("#pk-ok", timeout=5000)
-            assert pg.locator("#bigbody [data-pk]").count() == 8 and pg.locator("#bigbody fieldset.pk-sec").count() == 3   # the low, the high resolution, the baseline
+            assert pg.locator("#bigbody [data-pk]").count() == 12 and pg.locator("#bigbody fieldset.pk-sec").count() == 4   # the low, the high resolution, the baseline, every LR peak
             pg.fill("[data-pk=edgeFrac]", "7"); pg.fill("[data-pk=hrSmooth]", "6"); pg.select_option("[data-pk=bmode]", "1"); pg.click("#pk-ok"); pg.wait_for_timeout(300)
             assert pg.evaluate("PK.edgeFrac") == 7 and pg.evaluate("PK.hrSmooth") == 7 and pg.evaluate("PK.bmode") == 1          # edges chosen; the smoothing window is odd
             assert json.loads(pg.evaluate("localStorage.getItem('mzlab.picchi')")) == {**pg.evaluate("PK_DEF"), "edgeFrac": 7, "hrSmooth": 7, "bmode": 1}
