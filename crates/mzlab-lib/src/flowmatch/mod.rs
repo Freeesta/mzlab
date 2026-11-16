@@ -286,7 +286,7 @@ fn analogues(lib: &Lib, q: &Query, job: &MatchJob, terms: bool) -> Result<Vec<Ca
             index: h.index,
             score: h.mc.cosine,
             shared: h.mc.matched,
-            mass_ppm: (h.prec - q.prec) / q.prec * 1e6,
+            mass_ppm: (q.prec - h.prec) / h.prec * 1e6,
             delta: h.mc.delta,
             delta_formula: None,
             explained: h
