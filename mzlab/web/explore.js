@@ -321,9 +321,9 @@ function uiSave(now = false) {
   };
   if (now) run(); else uiTimer = setTimeout(run, 800);
 }
-// when the page closes (or the tab goes to the background) save at once: the last change is not lost
+// when the page closes (or the tab goes to the background) save at once: the last change is not lost (not during a reset: its pagehide must not write the session marker or notebook back)
 // (nbSave too: with no file open uiSave has nothing to write, but the Disegno or Flow fields of NB may still be waiting in the 500 ms timer)
-const flushAll = () => { uiSave(true); nbSave(true); };
+const flushAll = () => { if (window.QQ_RESETTING) return; uiSave(true); nbSave(true); };
 addEventListener("pagehide", flushAll);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushAll(); });
 
@@ -440,7 +440,7 @@ function remapFileIndex(o, key, none, oldNames, files) {
   o[key] = out;
 }
 async function bootSession0() {
-  const j = await J("api/session");
+  const j = await J("api/session"); if (!window.INF && j.session) await TIPOF.infusione(j.session);      // an infusion file brings its tools before any cell reads INF
   S.sess = j.session;
   if (typeof AVVIO !== "undefined" && AVVIO.segnaSessione) AVVIO.segnaSessione(!!j.session);
   if (!j.session) { E.files = []; E.ugBy = E.ugOrder = E.ugNone = undefined; E.key = ""; E.pending = []; E._seq = false; E._mem = null; E.progTok = null; return; }

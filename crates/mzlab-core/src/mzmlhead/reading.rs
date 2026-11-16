@@ -54,7 +54,7 @@ impl<R: ReadAt> Mzml<R> {
         cs: &[&Chrom],
         mut each: impl FnMut(Vec<f64>),
     ) -> Result<()> {
-        self.in_spans(cs, |c, chunk| {
+        self.in_spans(cs, &mut |c, chunk| {
             each(match times_of(chunk, c)? {
                 Some(t) => t,
                 None => pair_of(chunk, c)?.0,
@@ -69,7 +69,7 @@ impl<R: ReadAt> Mzml<R> {
         cs: &[&Chrom],
         mut each: impl FnMut(&Chrom, (Vec<f64>, Vec<f64>)),
     ) -> Result<()> {
-        self.in_spans(cs, |c, chunk| {
+        self.in_spans(cs, &mut |c, chunk| {
             each(c, pair_of(chunk, c)?);
             Ok(())
         })
@@ -78,10 +78,11 @@ impl<R: ReadAt> Mzml<R> {
     /// Calls `f` with each chromatogram of `cs` and its bytes. Neighbouring chromatograms are read together in spans of at most `SPAN` bytes:
     /// a file of thousands of SRM traces costs a few reads, not one per trace (each read is a Blob slice in the site). A chromatogram longer
     /// than `SPAN`, or out of file order, is a span of its own, so it reads (and refuses) exactly as `read(c.start, c.end)`.
+    /// `f` is a `dyn`: one copy for every caller (one call per chromatogram, not per point).
     fn in_spans(
         &mut self,
         cs: &[&Chrom],
-        mut f: impl FnMut(&Chrom, &[u8]) -> Result<()>,
+        f: &mut dyn FnMut(&Chrom, &[u8]) -> Result<()>,
     ) -> Result<()> {
         const SPAN: u64 = 16 << 20;
         let mut rest = cs;
