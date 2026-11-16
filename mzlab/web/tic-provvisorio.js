@@ -90,7 +90,7 @@ function wire(/** @type {HTMLCanvasElement} */ cv) {
   cv.tabIndex = 0; cv.setAttribute("aria-keyshortcuts", "+ - ArrowLeft ArrowRight 0");
   cv.addEventListener("wheel", e => {
     if (!(e.ctrlKey || e.metaKey)) return;                      // a plain wheel scrolls the page, as over the panels
-    e.preventDefault(); zoomAt(Math.pow(1.0015, e.deltaY), rtAt(cv, e.clientX));
+    e.preventDefault(); zoomAt(ASSE.wheelFactor(e), rtAt(cv, e.clientX));
   }, { passive: false });
   /** @type {null | { x: number, a: number, b: number, moved: boolean }} */ let drag = null;
   cv.addEventListener("pointerdown", e => { if (e.button) return; drag = { x: e.clientX, a: cur()[0], b: cur()[1], moved: false }; try { cv.setPointerCapture(e.pointerId); } catch (_) { /* a pointer that is already gone */ } });

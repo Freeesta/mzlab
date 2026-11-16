@@ -1,7 +1,5 @@
 {
   "storia.tolto": "Notice shown for 6 s after removing a file, closing a panel or clearing the marks, with the Undo button; {what} = name of the file, of the panel or \"marks\".",
-  "mrm.capNotice": "Notice in the MRM panel when there are more files than the cap shown on opening; {n} = files shown, {t} = total MRM files.",
-  "mrm.showAllAria": "Label of the \"Show all files\" button of the MRM panel; {n} = number of MRM files.",
   "storia.undone": "Announcement after Ctrl/Cmd+Z; {what} = short name of the undone action (zoom, integration, background...).",
   "storia.redone": "Announcement after Redo; {what} = short name of the redone action.",
   "spec.bgAuto": "After \"background subtracted\" in the spectrum legend; {a}, {b} = ends of the segment chosen by the program (min).",
@@ -111,6 +109,5 @@
   "uv.leg.one": "Legend of the UV spectrum of a single instant; {rt} = RT (min).",
   "tdati.etpk": "Table row for a labelled peak (the time of the peak); {v} = label text, e.g. \"14.26 min\".",
   "load.note.logs.one": "Loading note for a skipped log file (for example the .wiff.log of msconvert); {names} = file name.",
-  "load.note.logs": "Loading note for the skipped log files (for example the .wiff.log files of msconvert); {n} = how many, {names} = the first names.",
-  "mrm.capNoticeSim": "Notice below the chart: only the first {n} of {t} SIM files are shown; {n}, {t} = numbers."
+  "load.note.logs": "Loading note for the skipped log files (for example the .wiff.log files of msconvert); {n} = how many, {names} = the first names."
 }

@@ -1,5 +1,6 @@
 //! The MRM integration of the low-resolution Dig: `find_peak` against the former Python engine (values computed on this very
-//! trace) and the tables of `analyse` on three synthetic files.
+//! trace; the FWHM is the half-height width interpolated between scans, recomputed with numpy, 11.398 s against 11.392 s analytic for the
+//! smoothed Gaussian) and the tables of `analyse` on three synthetic files.
 
 use mzlab_core::json::{self, Value};
 use mzlab_feat::legacy::lr::mrm::{analyse, MrmFile, Trace};
@@ -39,14 +40,14 @@ fn find_peak_as_python() {
             5.00334,
             988.99028,
             11641.70227,
-            10.83612,
+            11.39775,
             257.51634,
             39,
             4.76254,
             5.24415,
         ),
         (
-            5.1, 300.0, 5.09365, 294.34832, 3443.76104, 10.83612, 76.99892, 38, 4.86288, 5.34448,
+            5.1, 300.0, 5.09365, 294.34832, 3443.76104, 11.31805, 76.99892, 38, 4.86288, 5.34448,
         ),
     ] {
         for center in [None, Some(5.0)] {

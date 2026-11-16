@@ -46,10 +46,14 @@ try:
         def load():
             pg.click('.cprow:has-text("a.mzML")'); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=90000)
             pg.wait_for_function("document.querySelector('.cprow.done')"); assert "loaded" in pg.inner_text(".cprow.done")
+            # the row of the loading table exists before the file is open: wait for the open itself, or the removal below meets an empty E.files and the file lands after it
+            pg.wait_for_function("E.files.some(f => f && !f.gone)", timeout=90000)
         step("a click loads the file and its row turns «loaded»", load)
         def remembered():
             # with a saved session a return visit opens the panels, not the landing (#2201): empty the session first so the reload shows the folder
+            # (gone files leave E.files only once api/remove is done and the engine session was read again: the reload then finds it empty)
             pg.evaluate("removeAllFiles()"); pg.wait_for_function("!E.files.some(f=>f)", timeout=30000)
+            pg.wait_for_function("J('api/session').then(j => !(j.session || []).length)", timeout=30000)
             pg.reload(); pg.wait_for_selector("#cartbody .cprow", timeout=60000)
             assert "prova" in pg.inner_text("#cartbody") and rows(pg)[0] == "a.mzML", rows(pg)
         step("the folder is remembered after a reload", remembered)

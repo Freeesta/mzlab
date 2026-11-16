@@ -43,6 +43,8 @@ export function createScalda({ ARCH, lrPut, lrIndex, lrOpen, lrFile, closeSlot, 
     const e = await ARCH.estimate(), used = (await all()).reduce((s, w) => s + w.m.bytes, 0), need = size * ARCH.ROOM;
     if (e.quota && (used + need > e.quota * SHARE || e.quota - e.usage - need < SPARE)) return { info: JSON.stringify({ skipped: "room" }) };
     try {
+      // the marker goes first: from the copy on, lr_boot (and a reload or a closed tab in the middle) must find the file hidden, never listed as a session file
+      await ARCH.put("warm", key(m.name), new TextEncoder().encode(JSON.stringify({ size, mtime, bytes: size, at: Date.now(), missing: 0 })));
       const put = await lrPut({ ...m, nat: null }), ixr = JSON.parse((await lrIndex({ ...m, cen: false })).info || "{}");
       const ix = await ARCH.get("idx", m.name + ".mzidx");
       closeSlot(m.name); await ARCH.dropLease("idx", m.name + ".mzidx");

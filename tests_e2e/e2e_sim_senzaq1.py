@@ -47,9 +47,6 @@ try:
         def title():
             wait_for_js(pg, "(() => { const p = %s; return p && p.el.querySelector('.ttl').textContent === 'SIM · ione 3'; })()" % PANEL, timeout=15000)
         step("the panel of one channel is titled by its name («SIM · ione 3»), never by its key", title)
-        def banner():
-            need(pg.evaluate("I18N.t('mrm.capNoticeSim', {n: 12, t: 27})").endswith("27 SIM files."), "text")
-        step("the long-list banner says SIM files", banner)
         def method():
             h = pg.evaluate("getMrm(E.files[0].k).then(t => SIMUI.methodTable(t))")
             need(h and "null" not in h and "—" in h and "Q3" not in h and "CE" not in h and h.count("<tr>") == N + 1, h)
