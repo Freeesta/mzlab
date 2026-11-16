@@ -63,7 +63,7 @@ r = Run(port=8894, wd="/tmp/wd94")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, [mz("B_FullMass-t0")]); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, [mz("B_FullMass-t0")]); pg.click("text=Load data"); ready(pg)
         pg.evaluate(SYN)
         pg.evaluate("addPanel('spec',{tab:E.tab,k:E.cur,level:1,r0:5.0,r1:5.4,h:420})"); ready(pg)
         def sorted_case():

@@ -105,7 +105,7 @@ const WORKFLOW = (() => {
         commit: window.MZLAB_COMMIT || "dev",
       },
       data_creazione: new Date().toISOString(),
-      lingua: (typeof I18N !== "undefined" && I18N.lang) || "it",
+      lingua: (typeof I18N !== "undefined" && I18N.lang) || "en",
       file: files,
       parametri: parameters,
       pannelli: panels,

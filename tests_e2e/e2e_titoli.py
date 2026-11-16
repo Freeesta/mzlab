@@ -18,16 +18,16 @@ def run(port, wd, files, body):
     r = Run(port=port, wd=wd)
     try:
         with sync_playwright() as p:
-            pg = r.page(p); stage(pg, files); pg.click("text=Carica dati"); ready(pg); body(pg)
+            pg = r.page(p); stage(pg, files); pg.click("text=Load data"); ready(pg); body(pg)
     finally: r.close()
 def ms2(pg):
     open_ms2(pg); pg.locator('#flst [data-pg="229.1"]').dblclick()
     wait_for_js(pg, "E.panels.some(p => p.tab === 'ms2' && p.type === 'spec')"); ready(pg)
     top = pg.evaluate(TTL("E.panels.find(p => p.tab === 'ms2' && p.type === 'chrom')")); spec = pg.evaluate(TTL("E.panels.find(p => p.tab === 'ms2' && p.type === 'spec')"))
-    assert top == "TIC · MS² · precursore 229.1", top        # two precursors in the files: the trace is limited to one
-    assert spec == "MS² di 229.1" and top != spec, spec
+    assert top == "TIC · MS² · precursor 229.1", top        # two precursors in the files: the trace is limited to one
+    assert spec == "MS² of 229.1" and top != spec, spec
     assert pg.evaluate("document.querySelector('.pnl.spec .rtl') !== null"), "retention time still shown"
-    pg.evaluate("E.panels.find(p => p.tab === 'ms2' && p.type === 'chrom').prec = null"); assert pg.evaluate("TITOLI.di(E.panels.find(p => p.tab === 'ms2' && p.type === 'chrom'))") == "TIC · MS² (tutti i precursori)"
+    pg.evaluate("E.panels.find(p => p.tab === 'ms2' && p.type === 'chrom').prec = null"); assert pg.evaluate("TITOLI.di(E.panels.find(p => p.tab === 'ms2' && p.type === 'chrom'))") == "TIC · MS² (all precursors)"
 def ms1(pg):
     assert pg.evaluate("TITOLI.di(E.panels.find(q => q.type === 'spec')) === 'MS¹'") if pg.evaluate("E.panels.some(q => q.type === 'spec')") else True
     assert pg.evaluate("TITOLI.di(E.panels.find(q => q.type === 'chrom'))") == "TIC"

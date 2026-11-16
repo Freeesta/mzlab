@@ -33,10 +33,10 @@ def test_without_program_says_so(tmp_path, monkeypatch):
     (tmp_path / "a.raw").write_bytes(b"x")
     rows = []
     r = converti.convert(tmp_path, tmp_path / "o", None, False, rows.append)
-    assert r["errori"] == ["trfp"] and "ThermoRawFileParser non trovato" in "\n".join(rows)
+    assert r["errori"] == ["trfp"] and "ThermoRawFileParser not found" in "\n".join(rows)
 
 
 def test_folder_without_files(tmp_path):
     rows = []
     converti.convert(tmp_path, tmp_path / "o", None, False, rows.append)
-    assert "Nessun file" in rows[0]
+    assert "No .raw, .wiff or .d file" in rows[0]

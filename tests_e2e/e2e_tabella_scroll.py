@@ -27,7 +27,7 @@ r = Run(port=8893, wd="/tmp/wd_tabscroll")
 try:
     with sync_playwright() as p:
         pg = r.page(p, motion=True)
-        pg.goto(f"http://127.0.0.1:{r.port}/?lang=en")
+        pg.goto(f"http://127.0.0.1:{r.port}/")
         pg.wait_for_selector("#drop"); wait_for_js(pg, "window.qqReady === true", 60000)
         pg.set_viewport_size({"width": 1366, "height": 800}); pg.set_input_files("#pick", FILES); open_first(pg); ready(pg)
         def show_button():

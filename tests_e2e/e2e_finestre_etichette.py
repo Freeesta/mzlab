@@ -40,7 +40,7 @@ WIDTHS = [((1000, 900), False), ((1600, 1000), False), ((2000, 1100), False), ((
 
 
 def page(size, touch):
-    k = dict(viewport={"width": size[0], "height": size[1]}, locale="it-IT", reduced_motion="reduce")
+    k = dict(viewport={"width": size[0], "height": size[1]}, reduced_motion="reduce")
     if touch: k.update(has_touch=True, is_mobile=True)
     c = r.b.new_context(**k); c.add_init_script(SKIP)
     q = c.new_page(); q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#pick", state="attached"); ready(q)
@@ -59,7 +59,7 @@ def mrm(size, touch):
         q.set_input_files("#pick", [mz("B_MRM-t0"), mz("B_MRM-t5")]); hold(q, 1000)
         q.evaluate("document.getElementById('colsbtn')?.click()")
         if q.evaluate("!!document.querySelector('dialog[open]')"): check(q, "sample columns", size, "!!document.querySelector('dialog[open]')")
-        q.click("text=Carica dati"); ready(q)
+        q.click("text=Load data"); ready(q)
         wait_for_js(q, "!!document.querySelector('.pnl.mrm canvas') && E.panels.some(p => p.type === 'mrm' && p._a)", 60000)
         q.evaluate("document.querySelector('.pnl.mrm [data-a=iauto]').click()"); frames(q, 2)
         b = q.locator(".pnl.mrm canvas").first.bounding_box()
@@ -67,7 +67,7 @@ def mrm(size, touch):
             q.mouse.click(b["x"] + b["width"] * f, b["y"] + b["height"] * 0.5); frames(q, 3)
             if q.evaluate("E.panels.some(p => p.type === 'mrm' && p.ints && p.ints.length)"): break
         assert q.evaluate("E.panels.some(p => p.type === 'mrm' && p.ints && p.ints.length)"), (size, "no integration")
-        # the baseline dialog (key B / «Linea di base…»), with a custom line so that its fields are live
+        # the baseline dialog (key B / «Baseline…»), with a custom line so that its fields are live
         q.evaluate("carica('integra-base.js').then(() => { const p = E.panels.find(p => p.type === 'mrm' && p.ints.length); INTBASE.open(p, p.ints[0]); })")
         wait_for_js(q, "!!document.querySelector('#bigdlg[open] input[name=ib-m]')", 30000)
         q.click("#bigdlg input[name=ib-m][value=line]"); frames(q, 2)

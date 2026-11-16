@@ -1,4 +1,4 @@
-"""Seeded interaction fuzzer of the site: random but reproducible keys, clicks, drags, wheel, resizes, views, dialogs, files, language, theme and reloads.
+"""Seeded interaction fuzzer of the site: random but reproducible keys, clicks, drags, wheel, resizes, views, dialogs, files, theme and reloads.
 After every step it checks the page (errors, rejections, stuck busy state, focus lost to the body after a dialog, duplicated rows, NaN shown, broken
 invariants) and logs long tasks; `--cicli N` measures DOM nodes, listeners and JS heap over N open/close cycles. A failure is minimised to a short
 replay (seed + steps, JSON) that `--replay` runs again. Needs the built site (tools/prepara_sito.py); synthetic files only (tools/dati_sintetici.py).
@@ -178,8 +178,8 @@ class Steps(Pointer):
     def gen(s, rng, step_no):
         """Draw the next step from the seed. Element picks keep the index draw and resolve to a selector at run time."""
         pg = s.pg
-        k = rng.choices(["key", "click", "click", "dbl", "drag", "wheel", "hover", "ctx", "resize", "view", "lang", "theme", "files", "remove", "reload", "tap",
-                         "type"], weights=[30, 30, 0, 4, 8, 6, 4, 3, 2, 4, 1, 1, 2, 2, 1, 5 if s.a.tablet else 0, 3])[0]
+        k = rng.choices(["key", "click", "click", "dbl", "drag", "wheel", "hover", "ctx", "resize", "view", "theme", "files", "remove", "reload", "tap",
+                         "type"], weights=[30, 30, 0, 4, 8, 6, 4, 3, 2, 4, 1, 2, 2, 1, 5 if s.a.tablet else 0, 3])[0]
         if k == "key": return {"a": "key", "k": rng.choice(KEYS)}
         if k in ("click", "dbl", "drag", "wheel", "hover", "ctx", "tap", "type"):
             t = pg.evaluate(TARGETS, s.a.tablet)
@@ -195,7 +195,6 @@ class Steps(Pointer):
             return st
         if k == "resize": return {"a": "resize", "w": rng.choice(SIZES)[0], "h": rng.choice(SIZES)[1]}
         if k == "view": return {"a": "view", "v": rng.choice(VIEWS)}
-        if k == "lang": return {"a": "lang", "v": rng.choice(["it", "en"])}
         if k == "theme": return {"a": "theme", "v": rng.choice(["light", "dark"])}
         if k == "files": return {"a": "files", "n": rng.randint(1, len(s.files))}
         if k == "remove": return {"a": "remove", "i": rng.randrange(8)}
@@ -214,8 +213,6 @@ class Steps(Pointer):
             b = pg.locator(f"#nav [data-v={st['v']}]")
             if not b.count() or not b.first.is_visible(): return False
             b.first.click(); return True
-        if a == "lang":
-            pg.evaluate("v => I18N.set(v)", st["v"]); return True
         if a == "theme":
             pg.evaluate("v => { document.documentElement.setAttribute('data-theme', v); try { localStorage.setItem('mzlab-theme', v); } catch (_) {} }", st["v"]); return True
         if a == "files":
@@ -310,7 +307,7 @@ class Fuzz(Steps):
             r.close()
 
 def leak(s, p):
-    """N cycles of open/close (settings, help, views, drawer tabs, language): DOM nodes, listeners and heap at cycle 2 and N."""
+    """N cycles of open/close (settings, help, views, drawer tabs): DOM nodes, listeners and heap at cycle 2 and N."""
     r = lib.Run(port=lib.free_port(), wd=f"/tmp/wd_fuzz_{os.getpid()}")
     try:
         s.open(p, r); s.prepare()
@@ -330,7 +327,7 @@ def leak(s, p):
                 pg.evaluate(f"E.panels.length > {n} && closePanel(E.panels[E.panels.length - 1])"); s.quiet(10)
             for t in ("addloss", "lists", "stat", "file"):
                 pg.evaluate(f"typeof BARRA !== 'undefined' && BARRA.setTab('{t}', {{noFocus: true, instant: true}})"); s.quiet(10)
-            pg.evaluate("I18N.set(I18N.lang === 'en' ? 'it' : 'en')"); s.wait_ready(); s.quiet(20)
+            s.wait_ready(); s.quiet(20)
             rows.append(s.counters())
         return rows
     finally:

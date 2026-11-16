@@ -1,5 +1,5 @@
-"""Every control of the Adducts & losses page (calculator, choices row, the three tabs) and of the floating Calculator window has a short tooltip of its own, in Italian
-and English, with no data file: the mouse shows it after the rest delay, a long touch press shows it without pressing the button, and Tab reaches the controls with a focus ring."""
+"""Every control of the Adducts & losses page (calculator, choices row, the three tabs) and of the floating Calculator window has a short tooltip of its own,
+with no data file: the mouse shows it after the rest delay, a long touch press shows it without pressing the button, and Tab reaches the controls with a focus ring."""
 # covers: mzlab/web/tooltip.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -44,8 +44,8 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         wait_for_js(pg, "window.qqReady && !document.querySelector('#start').hidden && !!window.BARRA")
-        step("Italian: every control of the Adducts & losses page has its own short tooltip", lambda: all_cases(pg, "IT"))
-        step("Italian: every control of the Calculator window has its own short tooltip", lambda: calc_window(pg, "IT"))
+        step("every control of the Adducts & losses page has its own short tooltip", lambda: all_cases(pg, "EN"))
+        step("every control of the Calculator window has its own short tooltip", lambda: calc_window(pg, "EN"))
         def mouse():
             page_tab(pg, "214", "adducts"); pg.hover("#al-t-losses")
             wait_for_js(pg, "(() => { const q = document.getElementById('qtip'); return !q.hidden && q.textContent === I18N.t('al.t.losses.tip'); })()", 8000)
@@ -70,12 +70,6 @@ try:
                 if not o["ring"]: bare.append(o["id"])
             assert {"altol", "da", "ppm", "1", "-1", "al-t-adducts", "cadd-more"} <= seen and not bare, f"reached {sorted(seen)}; no ring: {bare}"
         step("keyboard: Tab reaches the controls, each with a visible focus ring", keyboard)
-        def english():
-            pg.click("#np-set"); pg.wait_for_selector("#uipset")
-            with pg.expect_navigation(timeout=60000): pg.click("#uipset label.lg:has(input[value=en])")
-            wait_for_js(pg, "window.qqReady && !document.querySelector('#start').hidden && !!window.BARRA && I18N.lang === 'en'")
-            all_cases(pg, "EN"); calc_window(pg, "EN")
-        step("English: the page and the window again, every control with its own short tooltip", english)
 finally:
     r.close()
 for n, s in steps: print(("PASS " if s == "ok" else "FAIL ") + n, "" if s == "ok" else s)

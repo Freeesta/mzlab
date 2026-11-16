@@ -247,7 +247,7 @@ def wait_workers(pg, n0, limit_s=40):
 
 def scenario(r, p, files):
     b = p.chromium.launch()
-    ctx = b.new_context(viewport={"width": 1400, "height": 900}, reduced_motion="reduce", locale="it-IT")
+    ctx = b.new_context(viewport={"width": 1400, "height": 900}, reduced_motion="reduce", locale="en-US")
     ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
     ctx.add_init_script(INIT) if not os.environ.get("NOHOOK") else None
     pg = ctx.new_page(); cdp = ctx.new_cdp_session(pg); cdp.send("Performance.enable")

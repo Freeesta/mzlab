@@ -8,7 +8,7 @@ mzLab aims at **WCAG 2.2 level AA** for Data, Drawing, Theory and Practice. Not 
 - **Every chart has its data table**, for those who cannot read the drawing.
 - **Targets**: controls are at least 24×24 px (40 px on touch screens).
 - **Motion**: if the system asks to reduce motion, animations are reduced.
-- **Text**: size is set in the settings (gear icon); the interface is in Italian and English (Theory and Practice in Italian only).
+- **Text**: size is set in the settings (gear icon); the interface is in English.
 
 ## How it was checked
 Automated checks (axe) on the charts, the high-resolution bench, Drawing, Practice and the guided tour. There is not yet a review with people who use screen readers.
