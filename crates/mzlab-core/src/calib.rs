@@ -129,7 +129,7 @@ fn qr_solve(mut cols: Vec<Vec<f64>>, mut rhs: Vec<f64>) -> Option<Vec<f64>> {
     let norms: Vec<f64> = cols.iter().map(|c| dot(c, c).sqrt()).collect();
     for k in 0..p {
         let rest = dot(&cols[k][k..], &cols[k][k..]).sqrt();
-        if !(rest > RANK_TOL * norms[k]) {
+        if rest.is_nan() || rest <= RANK_TOL * norms[k] {
             return None;
         }
         let alpha = if cols[k][k] > 0.0 { -rest } else { rest };

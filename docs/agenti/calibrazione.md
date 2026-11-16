@@ -1,5 +1,5 @@
 # Retta di taratura sui picchi integrati (`quant.curve@1`)
-File: `crates/mzlab-core/src/calib.rs` (matematica pura: pesi, QR, R², inversa), `crates/mzlab-ops/src/run/table/curve.rs` (lettura dei CSV, scelte, testi JSON/CSV), `crates/mzlab-cli/src/flow_curve.rs` (descrittore e file del passo), `crates/mzlab-flowcal-wasm/src/lib.rs` (`flow_curve` nel browser), `flow/lazy/flow-web-quant.js` (esecutore del sito). Diverso da `quant.calibrate`, che applica curve importate e non stima nulla.
+File: `crates/mzlab-core/src/calib.rs` (matematica pura: pesi, QR, R², inversa), `crates/mzlab-ops/src/run/table/curve_read.rs` (lettura dei due CSV e dei parametri), `curve.rs` (scelte, registro, testi JSON/CSV), `crates/mzlab-cli/src/flow_curve.rs` (descrittore e file del passo), `crates/mzlab-flowcal-wasm/src/lib.rs` (`flow_curve` nel browser), `flow/lazy/flow-web-quant.js` (esecutore del sito). Diverso da `quant.calibrate`, che applica curve importate e non stima nulla.
 
 ## Ingressi
 - **responses** (CSV, `;`, tab o `,`; virgola decimale accettata se il separatore non è `,`): una riga per picco. Colonne: `sample`, nome dell'analita (`analyte` > `label` > `name` > `channel`), `area` e/o `height`; facoltative `snr` e `peak`. È la forma dell'esportazione delle integrazioni e di `chrom.transitions`; le righe `sum` sono saltate; `peak` diverso da `ok`/`edge` = nessun picco.

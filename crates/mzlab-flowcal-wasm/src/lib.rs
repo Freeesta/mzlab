@@ -15,10 +15,12 @@ fn js_err(e: Error) -> JsValue {
 }
 
 fn params_of(params_json: &str) -> std::result::Result<Vec<(String, Value)>, JsValue> {
-    Ok(match mzlab_core::json::parse(params_json.as_bytes()).map_err(js_err)? {
-        Value::Obj(o) => o,
-        _ => Vec::new(),
-    })
+    Ok(
+        match mzlab_core::json::parse(params_json.as_bytes()).map_err(js_err)? {
+            Value::Obj(o) => o,
+            _ => Vec::new(),
+        },
+    )
 }
 
 /// `"warnings":[...]}` closing an answer.
@@ -64,8 +66,7 @@ pub fn flow_curve(
     standards: &[u8],
 ) -> std::result::Result<String, JsValue> {
     let params = params_of(params_json)?;
-    let (json, csv, warnings) =
-        curve::curve_text(&params, responses, standards).map_err(js_err)?;
+    let (json, csv, warnings) = curve::curve_text(&params, responses, standards).map_err(js_err)?;
     let mut o = Out::default();
     o.raw("{\"calibration\":");
     o.str(&json);

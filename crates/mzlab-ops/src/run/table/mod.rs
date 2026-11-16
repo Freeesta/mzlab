@@ -2,6 +2,7 @@
 
 pub mod core;
 pub mod curve;
+mod curve_read;
 pub mod filterspec;
 pub mod pol;
 pub mod quant;
