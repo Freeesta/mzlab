@@ -64,29 +64,25 @@ try:
         pg = r.b.pages[0] if r.b.pages else r.b.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         URL = f"http://127.0.0.1:{r.port}/"
 
-        def settled(after=0, n=0, timeout=90):
-            """at least n page loads since `after`, the last one ready (engine up; isolated, or its one isolation reload already spent) and no new load
-            for 2.5 s. In headless Chromium a load is sometimes left without its service worker (not isolated, the reload guard already set): a race
-            of isolateOnce (browser.js) outside this test, so the number of loads after a reset is 1 or 2 and every one of them is checked."""
-            t0 = time.time(); seen, since = -1, None
-            while time.time() - t0 < timeout:
-                k = len(loads(log, after))
-                try: ok = k >= n and pg.evaluate("!!(window.qqReady && (window.crossOriginIsolated || sessionStorage.getItem('mzlab.coiReload')))")
-                except Exception: ok = False          # navigating
-                if not ok: since = None
-                elif k != seen or since is None: seen, since = k, time.time()
-                elif time.time() - since > 2.5: return
-                pg.wait_for_timeout(150)
-            try: why = pg.evaluate("[location.href, !!window.qqReady, crossOriginIsolated, !!(navigator.serviceWorker && navigator.serviceWorker.controller), sessionStorage.getItem('mzlab.coiReload')]")
-            except Exception as e: why = str(e)[:120]
-            raise AssertionError(f"the page did not settle ({len(loads(log, after))} loads): {why}")
+        # a new page (not the one marked __old before the action) ready (engine up; isolated, or its one isolation reload already spent) and still
+        # the current document 2.5 s later. In headless Chromium a load is sometimes left without its service worker (not isolated, the reload guard
+        # already set): a race of isolateOnce (browser.js) outside this test, so a reset gives 1 or 2 loads and every one of them is checked.
+        SETTLED = ("!window.__old && window.qqReady && (window.crossOriginIsolated || sessionStorage.getItem('mzlab.coiReload'))"
+                   " && performance.now() - (window.__readyAt = window.__readyAt || performance.now()) > 2500")
+        def settled():
+            wait_for_js(pg, SETTLED, timeout=90000)
+        def act(js):
+            pg.evaluate("window.__old = true"); t = time.time() * 1000
+            try: pg.evaluate(js)
+            except Exception as e: assert "context was destroyed" in str(e), e          # the page navigated away while answering
+            settled(); return t
 
         pg.goto(URL); settled()
         if not pg.evaluate("crossOriginIsolated"):          # the race above on the first visit: one more load, now under the active worker, before the reset
-            t = time.time() * 1000; pg.reload(); settled(t, 1)
+            pg.evaluate("window.__old = true"); pg.reload(); settled()
         assert pg.evaluate("crossOriginIsolated"), "the page before the reset is not isolated"
         def full_reset():
-            t = time.time() * 1000; pg.evaluate("QQRESET.run('all')"); settled(t, 1)
+            t = act("QQRESET.run('all')")
             L = loads(log, t)
             assert L, "no load after the full reset"
             texts = [check(rec, f"load {i + 1} after the reset") for i, rec in enumerate(L)]
@@ -94,7 +90,7 @@ try:
         step("full reset, every load: m/z italic in the first painted frame and never upright, MS2 superscript, no same-text write, CLS 0", full_reset)
 
         def english():
-            t = time.time() * 1000; pg.evaluate("I18N.set('en')"); settled(t, 1)
+            t = act("I18N.set('en')")
             L = loads(log, t); assert L, "no load after the language change"
             texts = [check(rec, f"English load {i + 1}") for i, rec in enumerate(L)]
             assert texts[-1] and texts[-1] != "+ Mappa RT-m/z" and "m/z" in texts[-1], texts
