@@ -440,7 +440,7 @@ function remapFileIndex(o, key, none, oldNames, files) {
   o[key] = out;
 }
 async function bootSession0() {
-  const j = await J("api/session");
+  const j = await J("api/session"); if (!window.INF && j.session) await TIPOF.infusione(j.session);      // an infusion file brings its tools before any cell reads INF
   S.sess = j.session;
   if (typeof AVVIO !== "undefined" && AVVIO.segnaSessione) AVVIO.segnaSessione(!!j.session);
   if (!j.session) { E.files = []; E.ugBy = E.ugOrder = E.ugNone = undefined; E.key = ""; E.pending = []; E._seq = false; E._mem = null; E.progTok = null; return; }

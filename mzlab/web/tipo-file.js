@@ -12,9 +12,13 @@ const TIPOF = (() => {
   const set = (name, kind) => { const m = read(); if (kind && ESP.ids.includes(kind)) m[name] = kind; else delete m[name]; NOMI.set(SKEY, JSON.stringify(m)); };
   /** The file with its effective kind; `kindAuto` keeps the engine's. @param {any} f @param {string} name */
   const apply = (f, name) => { const auto = f.kindAuto || f.kind, m = manual(name); return { ...f, kindAuto: auto, kind: m || auto, manual: !!m }; };
+  /** The MSn infusion tools (infusione*.js) are not in the start-up list: they arrive before the first scan file (not MRM) enters the session: a DDA file has a precursor tree too (infusione-albero.js probes it). */
+  const loadInf = async () => { await carica("infusione.js"); await Promise.all([carica("infusione-albero.js"), carica("infusione-menu.js")]); };
+  const infusione = async (/** @type {any[]} */ session) => { if (!window.INF && session.some(s => !ESP.mrm({ type: apply(s, s.file).kind }))) await loadInf(); };
   /** Applies the choice to the files already opened in the viewer, without reloading. @param {string[]} names */
-  const viewer = names => {
+  const viewer = async names => {
     if (typeof E === "undefined" || !E.files) return;
+    if (!window.INF && names.some(n => manual(n) === "infusion")) await loadInf();
     E.files.forEach((/** @type {any} */ e) => { if (names.includes(e.file)) { Object.assign(e, apply(e, e.file)); e.lv = e.kind === ESP.ms2 ? 2 : 1; } });
     if (typeof renderFileList === "function") renderFileList();
     if (window.XICBTN && XICBTN.sync) E.panels.forEach((/** @type {any} */ p) => XICBTN.sync(p));
@@ -26,5 +30,5 @@ const TIPOF = (() => {
     const byKind = { ms2: () => I18N.t("load.exp.why.ms2"), mrm: () => I18N.t("load.exp.why.mrm"), infusion: byMotive[m && m.motivo] || (() => I18N.t("load.exp.why.infusion")) };
     return (byKind[auto] || (() => I18N.t("load.exp.why.full")))();
   };
-  return { get KINDS() { return ESP.ids; }, manual, set, apply, viewer, why };
+  return { get KINDS() { return ESP.ids; }, manual, set, apply, viewer, why, infusione };
 })();

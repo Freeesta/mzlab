@@ -122,7 +122,7 @@ const BARRA = (() => {
     { id: "smooth", bar: false, group: "graphs", visible: () => inData(), ic: () => IC('<path d="M2 11c2.5 0 3-6 6-6s3.5 6 6 6"/>'),
       run: () => { const q = E.active; if (q && E.panels.includes(q) && ["chrom", "xic", "mrm"].includes(q.type)) { q.smooth = !q.smooth; ctl(q); draw(q); uiSave(); } else nearMsg(I18N.t("cmd.smooth.none")); } },
     // command palette (also reachable from the 🔍 button and Ctrl/⌘ K)
-    { id: "search", bar: "end", dom: "tb-search", group: "app", ic: () => ICONS.search, run: () => window.PALETTE && PALETTE.open() },
+    { id: "search", bar: "end", dom: "tb-search", group: "app", ic: () => ICONS.search, run: () => { carica("paletta.js").then(() => PALETTE.open()); } },
     // commands that live elsewhere on the page: found by the palette, never in the bar (group: where they are)
     { id: "method", bar: false, group: "graphs", ic: () => IC('<rect x="3" y="2.5" width="10" height="11.5" rx="1.6"/><path d="M6 6h4M6 9h4M6 12h2"/>'), visible: () => inData(), run: () => clickEl("#np-method") },
     { id: "subref", bar: false, group: "graphs", ic: () => IC('<path d="M2 11c2 0 2-6 4-6s2 6 4 6 2-3 4-3"/><path d="M2 13.5h12" stroke-dasharray="2 2"/>'), visible: () => inData() && window.SUBREF && tabFiles().length > 1, run: () => window.SUBREF && SUBREF.toggle() },

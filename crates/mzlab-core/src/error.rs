@@ -17,8 +17,14 @@ impl Error {
         }
     }
 
-    pub fn with(mut self, name: &'static str, value: impl ToString) -> Self {
-        self.params.push((name, value.to_string()));
+    pub fn with(self, name: &'static str, value: impl ToString) -> Self {
+        self.with_text(name, value.to_string())
+    }
+
+    // Out of line: the push has one copy, each type of `with` keeps only its `to_string` (error paths are cold).
+    #[inline(never)]
+    fn with_text(mut self, name: &'static str, value: String) -> Self {
+        self.params.push((name, value));
         self
     }
 
