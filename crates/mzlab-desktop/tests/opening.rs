@@ -177,7 +177,7 @@ fn wiff_scan_opens_its_wiff_ignoring_case_with_spaces_and_non_ascii() {
         plan.files,
         vec![d.join("Campióne 1.WIFF"), d.join("Campióne 1.WIFF.scan")]
     );
-    assert!(plan.problems.is_empty());
+    assert!(plan.refused.is_empty());
     // the .wiff scan name in another case than its .wiff
     touch(d, &["b.wiff", "b.WIFF.SCAN"]);
     let plan = mzlab_desktop::opening::plan_from_paths([d.join("b.WIFF.SCAN")]);
@@ -194,7 +194,7 @@ fn wiff_alone_takes_its_scan_companion_along_once() {
     // no companion: the .wiff alone, no message
     let plan = mzlab_desktop::opening::plan_from_paths([d.join("n.wiff")]);
     assert_eq!(plan.files, vec![d.join("n.wiff")]);
-    assert!(plan.problems.is_empty());
+    assert!(plan.refused.is_empty());
 }
 
 #[test]
@@ -208,9 +208,7 @@ fn scan_without_wiff_or_foreign_scan_is_refused_with_a_message() {
         d.join("ok.mzML"),
     ]);
     assert_eq!(plan.files, vec![d.join("ok.mzML")]);
-    assert_eq!(plan.problems.len(), 2);
-    assert!(plan.problems[0].contains("«lost.wiff» is missing"));
-    assert!(plan.problems[1].contains("not a SCIEX scan companion"));
+    assert_eq!(plan.refused, vec!["lost.wiff.scan", "other.scan"]);
 }
 
 #[test]
@@ -240,5 +238,60 @@ fn drawings_and_folder_datasets_are_routed() {
     );
     let plan = plan_from_paths([d.join("m.KET"), d.join("A.D")]);
     assert_eq!(plan.files, vec![d.join("m.KET"), d.join("A.D")]);
-    assert!(plan.problems.is_empty());
+    assert!(plan.refused.is_empty());
+}
+
+/// One `bundle.fileAssociations` list feeds the macOS plist, the Windows installer and the Linux .desktop/mime entries: `scan` is there, with the weakest claim.
+#[test]
+fn scan_row_in_tauri_conf_is_a_viewer_and_never_the_default() {
+    let conf =
+        std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/tauri.conf.json")).unwrap();
+    let v: serde_json::Value = serde_json::from_str(&conf).unwrap();
+    let rows = v["bundle"]["fileAssociations"].as_array().unwrap();
+    let r = rows
+        .iter()
+        .find(|r| r["ext"] == serde_json::json!(["scan"]))
+        .expect("scan is registered");
+    assert_eq!(r["role"], "Viewer");
+    assert_eq!(r["rank"], "Alternate");
+    assert!(r["mimeType"]
+        .as_str()
+        .unwrap()
+        .starts_with("application/x-"));
+}
+
+#[test]
+fn several_pairs_and_repeats_open_each_pair_once_and_say_one_refusal_each() {
+    let t = tempfile::tempdir().unwrap();
+    let d = t.path();
+    touch(
+        d,
+        &[
+            "a b.wiff",
+            "a b.wiff.scan",
+            "c.wiff",
+            "c.wiff.scan",
+            "x.wiff.scan",
+        ],
+    );
+    let plan = mzlab_desktop::opening::plan_from_paths([
+        d.join("a b.wiff.scan"),
+        d.join("a b.wiff"),
+        d.join("c.wiff.scan"),
+        d.join("x.wiff.scan"),
+        d.join("x.wiff.scan"),
+    ]);
+    assert_eq!(
+        plan.files,
+        vec![
+            d.join("a b.wiff"),
+            d.join("a b.wiff.scan"),
+            d.join("c.wiff"),
+            d.join("c.wiff.scan")
+        ]
+    );
+    let p = mzlab_desktop::opening::Pending::default();
+    p.push_refused(plan.refused);
+    assert_eq!(p.take_refused(), vec!["x.wiff.scan"]);
+    assert!(p.take_refused().is_empty());
 }

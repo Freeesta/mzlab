@@ -464,7 +464,7 @@ const TOUR = (() => {
     const chapterName = I18N.t(curCap === 1 ? "tour.cap1" : curCap === 3 ? "tour.cap3" : "tour.cap2");
     const headerText = I18N.t("tour.passo", { n: stepNumber, tot: totalSteps, cap: chapterName });
     const titleText = I18N.t(`tour.${step.id}.titolo`);
-    const bodyText = I18N.t(`tour.${step.id}.testo` + (step.id === "tasti" && document.documentElement.classList.contains("ptr-touch") ? ".touch" : ""));
+    const bodyText = I18N.t(`tour.${step.id}.testo` + (step.id === "tasti" && document.documentElement.classList.contains("ptr-touch") ? ".touch" : step.id === "barra" && window.MZLAB_LAB ? ".lab" : ""));
     const provaText = step.prova ? I18N.t(`tour.${step.id}.prova`) : "";
 
     const dlg = getDialogEl();
