@@ -20,15 +20,13 @@ ds._g = lambda rt, c, s, tau=0.04: _g0(rt, c, s, tau) + 0.7 * _g0(rt, c + 0.3, s
 try: ds.hr_dda(HRF, np.random.default_rng(31), "exploris")
 finally: ds._g = _g0
 PN = "E.panels.find(q=>q.type==='xic')"
-BASE = [9.14, 3e5, 9.4, 0]        # 3e5 counts at the valley falling to 0 at the end of the second peak: past 9.4 the line alone is negative
+BASE = "[S.x[nearIdx(S.x,9.14)],3e5,S.x[nearIdx(S.x,9.4)],0]"      # at sample times, as the engine writes them: 3e5 counts at the valley falling to 0 at the end of the second peak; past it the line alone is negative
 OUT = Path(os.environ.get("ESTESA_SHOTS", str(D)))
 
 def record(pg, b):
     """one `edges` record with that baseline between 9.14 and 9.40, the right edge then set to `b`; waits for the engine's number when it has to ask"""
-    pg.evaluate(f"""(()=>{{const p={PN},s=p._a.sr[0];p.ints=[];const i=intRec(p,s,9.14,9.4,null,false);Object.assign(i,{{bm:'edges',base:{json.dumps(BASE)}}});delete i.zero;p.ints.push(i);i.b={b};draw(p)}})()""")
-    pg.wait_for_timeout(300)
-    wait_for_js(pg, f"(()=>{{const i={PN}.ints[0];return Number.isFinite(i.area)&&!(i.bm==='edges'&&INTBASE.dips({PN}._a.sr[0],i)&&i.clamped===undefined)}})()")
-    pg.wait_for_timeout(500)
+    pg.evaluate(f"""(()=>{{const p={PN},s=p._a.sr[0];p.ints=[];const S=s,i=intRec(p,s,S.x[nearIdx(S.x,9.14)],S.x[nearIdx(S.x,9.4)],null,false);Object.assign(i,{{bm:'edges',base:{BASE}}});delete i.zero;p.ints.push(i);i.b={b};draw(p)}})()""")
+    wait_for_js(pg, f"(()=>{{const p={PN},i=p.ints[0],s=p._a.sr[0];if(!Number.isFinite(i.area))return false;if(!INTBASE.dips(s,i))return i.clamped===0||i.clamped===undefined;return i.clamped>0}})()")
 
 def engine(pg):
     return json.loads(pg.evaluate(f"(()=>{{const p={PN},s=p._a.sr[0],i=p.ints[0];return QUALITA.peakArea(s.x,s.y,i.a,i.b,2,i.base)}})()"))
@@ -44,7 +42,7 @@ try:
         load(pg, [HRF], 4000, 1)
         pg.evaluate("openXic(null)"); pg.wait_for_selector("#xic-mz"); pg.fill("#xic-mz", "305.0702"); pg.select_option("#xic-file", index=1); pg.click("#xic-go"); ready(pg)
         wait_for_js(pg, f"(()=>{{const p={PN};return !!(p&&p._a&&p._a.sr&&p._a.sr.length)}})()")
-        pg.evaluate(f"(()=>{{zoomTo({PN},8.4,10.2)}})()"); pg.wait_for_timeout(800)
+        pg.evaluate(f"(()=>{{zoomTo({PN},8.4,10.2)}})()"); wait_for_js(pg, f"Math.abs({PN}._a.x1-10.2)<0.05")
 
         def inside():
             record(pg, 9.4)
@@ -70,8 +68,8 @@ try:
             assert len(v) > 6, v
             assert min(y for _, y in v) >= 0, [q for q in v if q[1] < 0][:3]        # no vertex under the clamp
             a = abs(sum(v[k][0] * v[(k + 1) % len(v)][1] - v[(k + 1) % len(v)][0] * v[k][1] for k in range(len(v)))) / 2 * 60
-            i = pg.evaluate(f"{PN}.ints[0].area")
-            assert abs(a - i) <= 1e-6 * i, (a, i)                                   # the polygon drawn is the number
+            e = json.loads(pg.evaluate(f"(()=>{{const p={PN},s=p._a.sr[0],i=p.ints[0];return QUALITA.peakArea(s.x,s.ys,i.a,i.b,2,i.base)}})()"))["area"]      # the curve as drawn (ys)
+            assert abs(a - e) <= 1e-6 * e, (a, e)                                   # the polygon drawn is the engine's number for it
         step("the polygon drawn has no vertex under zero and its area is the number", polygon)
 
         def hover():
