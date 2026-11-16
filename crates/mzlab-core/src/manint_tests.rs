@@ -385,10 +385,8 @@ fn an_apex_inside_the_window_keeps_the_edges() {
 
 #[test]
 fn a_window_of_its_own_in_a_sample_overrides_the_applied_one_there_only() {
-    let w = format!(
-        "[{{\"file\":0,\"tr\":0,\"a\":2.8,\"b\":3.2,\"follow\":true}},{{\"file\":1,\"tr\":0,\"a\":3.2,\"b\":3.4,\"label\":\"mine\"}}]"
-    );
-    let r = rows(&table_text(&three(), &w, false).unwrap());
+    let w = "[{\"file\":0,\"tr\":0,\"a\":2.8,\"b\":3.2,\"follow\":true},{\"file\":1,\"tr\":0,\"a\":3.2,\"b\":3.4,\"label\":\"mine\"}]";
+    let r = rows(&table_text(&three(), w, false).unwrap());
     let c = |i: usize| {
         r.iter()
             .map(|x| (x[1].as_str(), x[12].as_str()))
@@ -417,23 +415,15 @@ fn a_name_given_to_one_sample_alone_keeps_it() {
 #[test]
 fn rows_are_ordered_by_peak_then_sample() {
     // two peaks (3.0 and 5.0 min) each applied to both samples: peak 3.0 in s1, s2, then peak 5.0 in s1, s2
-    let w = format!(
-        "[{},{}]",
-        "{\"file\":0,\"tr\":0,\"a\":4.8,\"b\":5.2,\"follow\":true}",
-        "{\"file\":0,\"tr\":0,\"a\":2.8,\"b\":3.2,\"follow\":true}"
-    );
-    let f = format!(
-        "[{},{}]",
+    let w = "[{\"file\":0,\"tr\":0,\"a\":4.8,\"b\":5.2,\"follow\":true},{\"file\":0,\"tr\":0,\"a\":2.8,\"b\":3.2,\"follow\":true}]";
+    let one = |n: &str| {
         format!(
-            "{{\"name\":\"s1.mzML\",\"transitions\":[{}]}}",
-            trace(Some(180.1), None, "", &[(3.0, 8e4), (5.0, 8e4)])
-        ),
-        format!(
-            "{{\"name\":\"s2.mzML\",\"transitions\":[{}]}}",
+            "{{\"name\":\"{n}.mzML\",\"transitions\":[{}]}}",
             trace(Some(180.1), None, "", &[(3.0, 8e4), (5.0, 8e4)])
         )
-    );
-    let r = rows(&table_text(&f, &w, false).unwrap());
+    };
+    let f = format!("[{},{}]", one("s1"), one("s2"));
+    let r = rows(&table_text(&f, w, false).unwrap());
     let key: Vec<(&str, &str)> = r.iter().map(|x| (x[4].as_str(), x[1].as_str())).collect();
     assert_eq!(
         key,
