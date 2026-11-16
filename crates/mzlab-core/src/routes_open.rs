@@ -1,4 +1,4 @@
-//! Opening one more index beside the files the engine already holds (site engine `open_index`, desktop `open_lr`: the same function).
+//! Opening one more index beside the files the engine already holds (site engine `open_index`/`share_index`, desktop `idxopen`/`open_lr`: the same functions).
 //! Every open file keeps its scan table (about 1 KB per DDA scan) outside the budget of the cache: when the memory runs out, the cache of the
 //! other files goes first (read again from their indexes, same answers), then the refusal names the files held, so the page says «close some files»
 //! and never «the file is too big» or «damaged index».
@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 
 use crate::error::{Error, Result};
-use crate::idxread::ReadAt;
+use crate::idxread::{Index, ReadAt};
 use crate::routes::{trim_cache, Routes};
 
 /// A reservation that failed (`error.memoryBudget` without a phase): the browser or the computer gave no more memory.
@@ -46,6 +46,31 @@ pub fn open_beside<R: ReadAt, T>(
             .with("aperti", held)
             .with("scansioni", scans)
     })
+}
+
+/// Puts the index of one file in `slot`: over the scan table `from` already holds for the same file (the slots of one file share it, `Index::over`),
+/// else opened with `open_beside`. `reader()` gives the `.mzidx` and its size. Answers `{"scans":n,"hr1":b}`.
+pub fn open_slot<R: ReadAt>(
+    files: &mut HashMap<u32, Routes<R>>,
+    slot: u32,
+    from: Option<u32>,
+    mut reader: impl FnMut() -> Result<(R, u64)>,
+) -> Result<String> {
+    files.remove(&slot);
+    let shared = match from.and_then(|f| files.get(&f)) {
+        Some(r) => Some(r.idx.over(reader()?.0)),
+        None => None,
+    };
+    let idx = match shared {
+        Some(idx) => idx,
+        None => open_beside(files, || {
+            let (r, size) = reader()?;
+            Index::open(r, size)
+        })?,
+    };
+    let out = format!("{{\"scans\":{},\"hr1\":{}}}", idx.scans.len(), idx.hr1());
+    files.insert(slot, Routes::new(idx));
+    Ok(out)
 }
 
 #[cfg(test)]

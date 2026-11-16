@@ -1,5 +1,5 @@
 // Drives createBridge (mzlab/web/rust-bridge.js) with a scripted fake Worker: D1 (a stale open must not touch a respawned slot), M1 (a memory refusal
-// reaches the notice with its numbers) and V8 (xic/mrm requests overlap).
+// reaches the notice with its numbers), M2 (an index refused for memory does not fall back to the whole mzML) and V8 (xic/mrm requests overlap).
 import assert from "node:assert/strict";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
@@ -77,6 +77,20 @@ const out = {};
   await until(() => withParams.some(([k]) => k === "error.memoryBudget"));
   assert.deepEqual(withParams.find(([k]) => k === "error.memoryBudget")[1], params);
   out.m1_params = true;
+}
+
+// M2: the index is refused for memory beside the files open (routes_open.rs): the notice names them, no mzML open is tried, the slot is not usable
+{
+  const { b, withParams } = make();
+  session(b, 1);
+  const w = workers[0];
+  const params = { fase: "openFiles", aperti: "8", scansioni: "1600000" };
+  await until(() => sent(w, "idxopen").length === 1);
+  w.reply({ id: sent(w, "idxopen")[0].id, error: JSON.stringify({ error_key: "error.memoryBudget", params }) });
+  assert.equal(await b.ready([0]), false, "M2: the refused slot is not usable");
+  assert.equal(sent(w, "open").length, 0, "M2: no fallback to the whole mzML");
+  assert.deepEqual(withParams.find(([k]) => k === "error.memoryBudget")?.[1], params);
+  out.m2_no_fallback = true;
 }
 
 // V8: the requests of /api/xic and /api/mrm overlap, the parts keep the order of k, the first error gives null

@@ -6,7 +6,7 @@
 #![forbid(unsafe_code)]
 mod xicbin; mod labels; mod background_cr; mod info; mod diff; mod items; mod method; mod budget_js;
 use js_sys::{Function, Uint8Array};
-use mzlab_core::idxread::{Index, ReadAt};
+use mzlab_core::idxread::ReadAt;
 use mzlab_core::routes::{Query, Routes};
 use mzlab_core::{analysis, budget::MemBudget, mzidx, mzml, peakq, peaks};
 pub(crate) use mzlab_core::coalesce::Accorpa;
@@ -181,23 +181,17 @@ impl Engine {
 
     /// Opens the `.mzidx` of a file (`size` bytes, read through `read(offset, length)`). Returns `{"scans": n, "hr1": bool}`.
     pub fn open_index(&mut self, slot: u32, size: f64, read: Function) -> Result<String, JsValue> {
-        self.idx.remove(&slot);
-        // beside the files already open: their cache goes first, then the refusal names them (routes_open.rs, the same as the desktop)
-        let idx = mzlab_core::routes_open::open_beside(&mut self.idx, || Index::open(JsReader { read: read.clone() }, size as u64)).map_err(|e| error_json(&e))?;
-        let out = format!("{{\"scans\":{},\"hr1\":{}}}", idx.scans.len(), idx.hr1());
-        self.idx.insert(slot, Routes::new(idx));
-        Ok(out)
+        // beside the files already open: their cache goes first, then the refusal names them (routes_open.rs, the same as the desktop `idxopen`)
+        mzlab_core::routes_open::open_slot(&mut self.idx, slot, None, || Ok((JsReader { read: read.clone() }, size as u64))).map_err(|e| error_json(&e))
     }
 
     /// `slot` over the index already open in `from` (the same `.mzidx`, read through `read`): the slots of one file share its scan table instead of
     /// parsing it again (`Index::over`). "" when `from` holds none: the caller opens it with `open_index`.
     pub fn share_index(&mut self, slot: u32, from: u32, read: Function) -> String {
-        let Some(idx) = self.idx.get(&from).map(|r| r.idx.over(JsReader { read })) else {
+        if slot == from || !self.idx.contains_key(&from) {
             return String::new();
-        };
-        let out = format!("{{\"scans\":{},\"hr1\":{}}}", idx.scans.len(), idx.hr1());
-        self.idx.insert(slot, Routes::new(idx));
-        out
+        }
+        mzlab_core::routes_open::open_slot(&mut self.idx, slot, Some(from), || Ok((JsReader { read: read.clone() }, 0))).unwrap_or_default()
     }
 
     /// Makes the item at `slot` the polarity part of a mixed file (`1` or `-1`; anything else = the whole file).

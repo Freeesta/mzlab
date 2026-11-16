@@ -7,7 +7,7 @@ let quota = 0, usage = 0;
 Object.defineProperty(globalThis, "navigator", { configurable: true, value: { storage: { estimate: async () => ({ quota, usage }) } } });
 globalThis.self = globalThis;
 globalThis.FileReaderSync = class {};
-const { createPlainPut, createOpenGate, createCopyGate, gzRoom, gzClean, GZ_SLICE } = await import(dir + "/rust-carica.js");
+const { createPlainPut, createOpenGate, createCopyGate, gzRoom, gzClean, GZ_SLICE, openStored } = await import(dir + "/rust-carica.js");
 const { createNativo, PREFIX, MAGIC } = await import(dir + "/rust-nativo.js");
 const ARCHIVE = await import(dir + "/archivio.js");
 const MB = 1 << 20;
@@ -270,5 +270,18 @@ const stubFile = (members) => new File([JSON.stringify({ mzlab: MAGIC, ds: "k", 
   await tick();
   assert.strictEqual(open.length, 5); assert.deepStrictEqual(w0, []); assert.strictEqual(g0.running, 5);
   open.forEach(r => r()); await Promise.all(all); assert.strictEqual(g0.running, 0);
+}
+// ---- a stored index refused for memory beside the files open (routes_open.rs) stays: the refusal passes on, the index is neither removed nor rebuilt;
+// any other failure of the open (damaged, incomplete) gives the caller's fallback (removal and error.badIndex in lrIndexOwn, a new build in lrIndex)
+{
+  const refusal = JSON.stringify({ error_key: "error.memoryBudget", params: { fase: "openFiles", aperti: "8", scansioni: "1600000" } });
+  const removed = [];
+  const failed = e => { removed.push(e); return false; };
+  assert.strictEqual(await openStored(async () => true, failed), true);
+  await assert.rejects(openStored(async () => { throw refusal; }, failed), e => e === refusal);
+  assert.deepStrictEqual(removed, [], "the memory refusal keeps the index");
+  const bad = JSON.stringify({ error_key: "error.badIndex" });
+  assert.strictEqual(await openStored(async () => { throw bad; }, failed), false);
+  assert.deepStrictEqual(removed, [bad]);
 }
 console.log("ok");

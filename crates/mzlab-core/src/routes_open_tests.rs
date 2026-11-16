@@ -4,8 +4,8 @@
 use super::*;
 use crate::idxread::Index;
 
-/// One small index held open, as the engine holds it.
-fn held() -> HashMap<u32, Routes<Vec<u8>>> {
+/// The `.mzidx` of a small mzML.
+fn mzidx() -> Vec<u8> {
     use crate::mzml::Spectrum;
     use crate::mzmlwrite::{Header, MzmlWriter};
     let mut w = MzmlWriter::new(
@@ -34,9 +34,14 @@ fn held() -> HashMap<u32, Routes<Vec<u8>>> {
     let b = w.finish().unwrap();
     let mut src = b.clone();
     let p = crate::upload::prepare(&mut src, b.len() as u64, "r.mzML").unwrap();
-    let idx = crate::mzidx::build_mzml_to_vec(&p.table, &b, 64 << 20)
+    crate::mzidx::build_mzml_to_vec(&p.table, &b, 64 << 20)
         .unwrap()
-        .0;
+        .0
+}
+
+/// One small index held open, as the engine holds it.
+fn held() -> HashMap<u32, Routes<Vec<u8>>> {
+    let idx = mzidx();
     let n = idx.len() as u64;
     HashMap::from([(1, Routes::new(Index::open(idx, n).unwrap()))])
 }
@@ -97,4 +102,48 @@ fn other_errors_and_planned_refusals_pass_unchanged() {
             .key,
         "error.badIndex"
     );
+}
+
+#[test]
+fn a_second_slot_of_the_same_file_shares_its_scan_table() {
+    let mut files = held();
+    let b = mzidx();
+    let n = b.len() as u64;
+    let own = open_slot(&mut files, 3, None, || Ok((b.clone(), n))).unwrap();
+    let shared = open_slot(&mut files, 2, Some(1), || Ok((b.clone(), n))).unwrap();
+    assert_eq!(own, shared);
+    assert!(std::sync::Arc::ptr_eq(
+        &files[&1].idx.scans,
+        &files[&2].idx.scans
+    ));
+    assert!(!std::sync::Arc::ptr_eq(
+        &files[&1].idx.scans,
+        &files[&3].idx.scans
+    ));
+    let q = crate::routes::Query::parse("");
+    let tic = |f: &mut HashMap<u32, Routes<Vec<u8>>>, s: u32| {
+        f.get_mut(&s).unwrap().handle("/api/filters", &q).unwrap()
+    };
+    assert_eq!(tic(&mut files, 2), tic(&mut files, 3));
+    // a slot named as its own source is opened again, not shared with itself
+    open_slot(&mut files, 1, Some(1), || Ok((b.clone(), n))).unwrap();
+    assert!(!std::sync::Arc::ptr_eq(
+        &files[&1].idx.scans,
+        &files[&2].idx.scans
+    ));
+}
+
+#[test]
+fn a_slot_refused_for_memory_is_left_empty_and_names_the_files() {
+    let mut files = held();
+    let scans = files[&1].idx.scans.len();
+    let e = open_slot(&mut files, 2, None, || Err(Error::memory_budget())).unwrap_err();
+    assert!(
+        e.to_json().contains(&format!(
+            "\"fase\":\"openFiles\",\"aperti\":\"1\",\"scansioni\":\"{scans}\""
+        )),
+        "{}",
+        e.to_json()
+    );
+    assert!(!files.contains_key(&2));
 }

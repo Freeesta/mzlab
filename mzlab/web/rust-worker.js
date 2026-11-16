@@ -14,7 +14,7 @@ import { createBufPool } from "./bufpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { createNativo } from "./rust-nativo.js";
 import { leasePlan } from "./rust-lease-plan.js";
-import { createPlainPut, createOpenGate, createCopyGate, gzRoom, gzClean } from "./rust-carica.js"; import { createUnaPassata } from "./una-passata.js"; import { createSulPosto } from "./rust-sul-posto.js";
+import { createPlainPut, createOpenGate, createCopyGate, gzRoom, gzClean, openStored } from "./rust-carica.js"; import { createUnaPassata } from "./una-passata.js"; import { createSulPosto } from "./rust-sul-posto.js";
 import { createImpronte } from "./impronta.js";
 import { rawSink } from "./rust-opfs.js";
 import { createFlowCentroid } from "./rust-flow-centroid.js";
@@ -141,7 +141,7 @@ const tx = async (store, mode, fn) => {
   const db = await idb();
   return new Promise((res, rej) => { const t = db.transaction(store, mode), s = t.objectStore(store), out = fn(s); t.oncomplete = () => res(out && out.result !== undefined ? out.result : undefined); t.onerror = t.onabort = () => rej(t.error); });
 };
-const safe = async f => { try { return await f(); } catch (_) { return undefined; } };  const noMemory = e => typeof e === "string" && e.includes('"error.memoryBudget"');      // a memory refusal of the engine (routes_open.rs): a good index, neither rebuilt nor removed
+const safe = async f => { try { return await f(); } catch (_) { return undefined; } };
 const kvGet = key => safe(() => tx("kv", "readonly", s => s.get(key)));
 // the molecules of the user (store "molecole"): "leggi" gives a molecules/1 document, "scrivi" replaces every record with the ones of the document
 const molecole = async (op, body) => {
@@ -270,7 +270,7 @@ function earlyTicOf(job) {
   }
   return null;
 }
-const lrIndex = m => ARCH.exclusive("idx", m.name, async () => !m.cen && await ARCH.get("idx", m.name + ".mzidx") && await lrOpen(m.name).catch(e => { if (noMemory(e)) throw e; return false; }) ? { info: JSON.stringify({ ms: 0, missing: 0 }) } : lrIndexOwn(m));      // one tab builds an index at a time; the one that waited uses the finished index
+const lrIndex = m => ARCH.exclusive("idx", m.name, async () => !m.cen && await ARCH.get("idx", m.name + ".mzidx") && await openStored(() => lrOpen(m.name), () => false) ? { info: JSON.stringify({ ms: 0, missing: 0 }) } : lrIndexOwn(m));      // one tab builds an index at a time; the one that waited uses the finished index
 async function lrIndexOwn(m) {
   const kept = await ARCH.get("idx", m.name + ".mzidx"), keptInfo = kept && await safe(() => infoDi("idx", kept));
   if (nuovo("idx", keptInfo)) jerr("error.newerFormat", { file: m.name, version: keptInfo.versione_formato });      // an index of a newer program stays as it is: no new one is built over it
@@ -294,8 +294,7 @@ async function lrIndexOwn(m) {
     throw JSON.stringify({ error_key: res.reason === "crash" ? "err.engine.indexCrash" : "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } });
   }
   await ARCH.promote("idx", part, m.name + ".mzidx");
-  let opened = false;
-  try { opened = await lrOpen(m.name); } catch (e) { if (noMemory(e)) throw e; await ARCH.remove("idx", m.name + ".mzidx"); jerr("error.badIndex"); }      // an index that does not open (incomplete, damaged) is not kept
+  const opened = await openStored(() => lrOpen(m.name), async () => { await ARCH.remove("idx", m.name + ".mzidx"); jerr("error.badIndex"); });      // an index that does not open (incomplete, damaged) is not kept; one refused for memory is (rust-carica.js)
   if (!opened) jerr("err.engine.index", { name: m.name });
   nativo.early.drop(m.name); return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (res.stats && res.stats.missing) || 0, cause: (res.stats && res.stats.cause) || "" }) };      // missing: scans the index lists beyond the end of a truncated data file, or lists without their event (`cause`)
 }

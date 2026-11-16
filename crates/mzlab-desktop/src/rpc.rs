@@ -170,11 +170,11 @@ impl State {
         let q = || Query::parse(s("query"));
         match op {
             "idxopen" => {
-                let mut r = self.open_index_file(s("name")).map_err(|_| Error::new("error.noIndex"))?;
-                r.pol = [1, -1].contains(&p["pol"].as_i64().unwrap_or(0)).then(|| p["pol"].as_i64().unwrap_or(0) as i8);      // as `set_polarity` of the wasm: 0 = every section
-                let out = format!("{{\"scans\":{},\"hr1\":{}}}", r.idx.scans.len(), r.idx.hr1());
-                eng.idx.insert(u("slot"), r);
-                self.attach_named(eng, u("slot"), s("name"));
+                // as the site's worker: over the scan table of the list slot of the same file when it is held, else beside the files open (routes_open.rs)
+                let (slot, name, path) = (u("slot"), s("name"), self.indexer().and_then(|b| b.path(s("name"))).map_err(|_| Error::new("error.noIndex"))?);
+                let out = mzlab_core::routes_open::open_slot(&mut eng.idx, slot, eng.lr_slot.get(name).copied(), || map_file(&path)).map_err(|e| if e.key == "error.memoryBudget" { e } else { Error::new("error.noIndex") })?;
+                if let Some(r) = eng.idx.get_mut(&slot) { r.pol = [1, -1].contains(&p["pol"].as_i64().unwrap_or(0)).then(|| p["pol"].as_i64().unwrap_or(0) as i8); }      // as `set_polarity` of the wasm: 0 = every section
+                self.attach_named(eng, slot, name);
                 text(out)
             }
             "route" => match eng.idx.get_mut(&u("slot")) {
