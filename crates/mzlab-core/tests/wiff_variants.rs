@@ -345,7 +345,7 @@ fn wiff_sample_names_date() {
     assert_eq!(samples[3].nome, "nomi_s4");
     assert_eq!(samples[4].nome, "Sample_A");
     for c in samples {
-        assert_eq!(c.size, None);
+        assert!(c.size.is_some(), "a sample of a pair says what it weighs");
     }
 }
 

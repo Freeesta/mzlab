@@ -39,9 +39,14 @@ pub(super) fn empty_of(l: &mut WiffReader, c: usize) -> Result<bool> {
 
 /// What sample `s` weighs in the pair: its streams of the container and the `.wiff.scan` range its blocks cover.
 pub(super) fn sample_size(ole: &Ole, w: &Wiff, s: u32, scan_len: u64) -> Option<u64> {
-    let from = w.records.iter().map(|r| r.at).min().unwrap_or(0);
-    let to = w
-        .records
+    // a refused sample weighs its streams only: whether its records were kept depends on the path that opened it, the size must not
+    let records = if w.readable().is_err() {
+        &[][..]
+    } else {
+        &w.records[..]
+    };
+    let from = records.iter().map(|r| r.at).min().unwrap_or(0);
+    let to = records
         .iter()
         .map(|r| r.data_end())
         .max()

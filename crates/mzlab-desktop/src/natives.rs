@@ -52,7 +52,7 @@ pub(crate) fn open(
 
 /// The samples of a dataset: the JSON of `readers::samples_json`, the listing the site gives too.
 pub(crate) fn samples(members: &[(String, PathBuf)]) -> Result<String> {
-    let mut l = open(members, false, 0)?;
+    let mut l = open(members, false, usize::MAX)?;
     Ok(mzlab_core::readers::samples_json(&mut *l))
 }
 

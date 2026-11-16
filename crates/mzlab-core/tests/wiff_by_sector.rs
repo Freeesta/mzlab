@@ -125,7 +125,11 @@ fn each_sample_of_a_multi_sample_pair_opened_alone_equals_the_whole_pair() {
         assert_eq!(digest(&mut whole, c), digest(&mut alone, c), "sample {c}");
         let (fs, _, _) = set(&out, "sano", None);
         let mut bare = mzlab_core::wiff::reader::open_bare(fs, &limits, c).unwrap();
-        assert_eq!(digest(&mut whole, c), digest(&mut bare, c), "bare sample {c}");
+        assert_eq!(
+            digest(&mut whole, c),
+            digest(&mut bare, c),
+            "bare sample {c}"
+        );
     }
 }
 

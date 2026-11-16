@@ -15,7 +15,7 @@ global.CONVROWS = { add: (...a) => rows.push(["add", ...a]), finish: (...a) => r
 const src = fs.readFileSync(process.argv[2], "utf8");
 global.WIFF_WAIT = new Map();
 global.ST = { files: [] };
-const run = new Function("window", "ST", "WIFF_WAIT", "NATIVO", "CartCarica", "wiffName", "I18N", "DIAG", "memDesc", "CONVROWS", src + "\nreturn wiffToMzml;");
+const run = new Function("window", "ST", "WIFF_WAIT", "NATIVO", "CartCarica", "wiffName", "I18N", "DIAG", "memDesc", "CONVROWS", "wiffPick", "WHY", src + "\nreturn wiffToMzml;");
 
 const pairFiles = () => [new File(["w"], "S.wiff"), new File(["s"], "S.wiff.scan")];
 const samples2 = [{ id: 1, name: "a", size: 1 }, { id: 2, name: "b", size: 1 }];
@@ -33,7 +33,7 @@ async function go({ files = pairFiles(), listed = [], same = [], samples = sampl
   };
   const w = { MZLAB_RUST_READY: Promise.resolve(rb), LETTORI_MOD: probe === undefined ? null : M0, LETTORI_FAM: { sciex: { sonda: fam } } };
   global.window = w; rows.length = 0;
-  const wf = run(w, { files: listed }, new Map(), NATIVO, CartCarica, global.wiffName, global.I18N, global.DIAG, global.memDesc, global.CONVROWS);
+  const wf = run(w, { files: listed }, new Map(), NATIVO, CartCarica, global.wiffName, global.I18N, global.DIAG, global.memDesc, global.CONVROWS, async () => null, new Map());
   const res = await wf(files, null, new AbortController().signal);
   return { calls, res, rows: rows.slice() };
 }

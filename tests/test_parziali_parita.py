@@ -19,8 +19,8 @@ console.log(JSON.stringify({ rows: p[0].length, declared: p[9] }));"""
 LIST = """const w = require(process.argv[2]), fs = require("fs"), names = process.argv.slice(3), bs = names.map(n => fs.readFileSync(n));
 console.log(w.native_samples(names.map(n => n.split("/").pop()), new Float64Array(bs.map(b => b.length)), (i, o, n) => bs[i].subarray(o, o + n)));"""
 # the listing of mzlab-core/tests/wiff_refused_listing.rs and mzlab-desktop natives_tests.rs, byte for byte
-LISTING = ('{"format":"SciexWiff","samples":[{"id":1,"name":"rifiutato_s1","scans":1},{"id":2,"name":"rifiutato_s2","scans":0,"why":"empty"},'
-           '{"id":3,"name":"rifiutato_s3","scans":0,"why":"refused","refused":{"error_key":"err.file.wiffScanType","params":{"code":"8","experiment":"1","type":"TOF MS"}}}]}')
+LISTING = ('{"format":"SciexWiff","samples":[{"id":1,"name":"rifiutato_s1","scans":1,"size":212},{"id":2,"name":"rifiutato_s2","scans":0,"size":0,"why":"empty"},'
+           '{"id":3,"name":"rifiutato_s3","scans":0,"size":86,"why":"refused","refused":{"error_key":"err.file.wiffScanType","params":{"code":"8","experiment":"1","type":"TOF MS"}}}]}')
 
 
 def spectrum(i):

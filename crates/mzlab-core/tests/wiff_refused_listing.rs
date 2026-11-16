@@ -31,7 +31,7 @@ fn pair() -> Option<(Vec<u8>, Vec<u8>)> {
 }
 
 /// The listing, byte for byte: the app (`mzlab-desktop` natives_tests.rs) and the site (tests/test_parziali_parita.py) assert this same text.
-const LISTING: &str = r#"{"format":"SciexWiff","samples":[{"id":1,"name":"rifiutato_s1","scans":1},{"id":2,"name":"rifiutato_s2","scans":0,"why":"empty"},{"id":3,"name":"rifiutato_s3","scans":0,"why":"refused","refused":{"error_key":"err.file.wiffScanType","params":{"code":"8","experiment":"1","type":"TOF MS"}}}]}"#;
+const LISTING: &str = r#"{"format":"SciexWiff","samples":[{"id":1,"name":"rifiutato_s1","scans":1,"size":212},{"id":2,"name":"rifiutato_s2","scans":0,"size":0,"why":"empty"},{"id":3,"name":"rifiutato_s3","scans":0,"size":86,"why":"refused","refused":{"error_key":"err.file.wiffScanType","params":{"code":"8","experiment":"1","type":"TOF MS"}}}]}"#;
 
 #[test]
 fn a_refused_sample_carries_its_reason_and_an_empty_one_stays_empty() {

@@ -5,7 +5,7 @@
 use std::path::Path;
 use std::process::Command;
 
-const LISTING: &str = r#"{"format":"SciexWiff","samples":[{"id":1,"name":"rifiutato_s1","scans":1},{"id":2,"name":"rifiutato_s2","scans":0,"why":"empty"},{"id":3,"name":"rifiutato_s3","scans":0,"why":"refused","refused":{"error_key":"err.file.wiffScanType","params":{"code":"8","experiment":"1","type":"TOF MS"}}}]}"#;
+const LISTING: &str = r#"{"format":"SciexWiff","samples":[{"id":1,"name":"rifiutato_s1","scans":1,"size":212},{"id":2,"name":"rifiutato_s2","scans":0,"size":0,"why":"empty"},{"id":3,"name":"rifiutato_s3","scans":0,"size":86,"why":"refused","refused":{"error_key":"err.file.wiffScanType","params":{"code":"8","experiment":"1","type":"TOF MS"}}}]}"#;
 
 #[test]
 fn the_app_lists_a_refused_sample_as_the_site_does() {

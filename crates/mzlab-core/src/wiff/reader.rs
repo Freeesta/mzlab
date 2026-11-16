@@ -325,7 +325,9 @@ fn base_name(path: &str) -> String {
 /// The name the DATA stream of injection `s` gives it, when it has one.
 fn data_name(ole: &Ole, s: u32) -> Option<String> {
     let data = ole.read(&format!("{SAMPLES}Sample{s}/SampleDABE/DATA"))?;
-    crate::method_wiff::counted_strings(&data).into_iter().next()
+    crate::method_wiff::counted_strings(&data)
+        .into_iter()
+        .next()
 }
 
 fn open_pair(
