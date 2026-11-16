@@ -183,7 +183,7 @@ function attach(p) {
     }
     if (!(e.ctrlKey || e.metaKey) || !p._a) return;
     e.preventDefault();
-    const a = p._a, f = Math.exp(Math.max(-60, Math.min(60, e.deltaY)) * 0.004), x = xd(rect(e));
+    const a = p._a, f = ASSE.wheelFactor(e), x = xd(rect(e));
     if (!p._wz || Date.now() - p._wz > 600) pushZh(p); p._wz = Date.now();                // a burst of wheel steps is one zoom for the history
     if (rect(e) < M.l && canYZ(a)) { const v = a.yinv(recty(e)); zoomYTo(p, v - (v - a.ymin) * f, v + (a.ymax - v) * f); uiSave(); return; }      // over the y axis: only the vertical scale changes
     if (a.map) { const y = a.mzAt(recty(e)); p.zoomY = clampView(y - (y - a.y0) * f, y + (a.y1 - y) * f, a.fullY[0], a.fullY[1]); return void zoomTo(p, x - (x - a.x0) * f, x + (a.x1 - x) * f); }
