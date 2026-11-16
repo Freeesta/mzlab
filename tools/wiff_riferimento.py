@@ -254,7 +254,7 @@ def ida_file(out: Path):
 def unindexed(out: Path):
     """Pairs whose `.wiff.scan` is newer than its `.wiff`: indexed MRM samples (two transitions per block, 1 s per cycle), then sections the index does not list.
     `nonindicizzato`: sections 3 (4 blocks) and 4 (8 blocks, more than the donor has, the last one cut by 3 bytes); `nonindicizzato_scansione`: the donor holds full scans, so the
-    section cannot be read (left out); `nonindicizzato_guasto`: a block with a negative count is not what the layout says (left out). Written to nonindicizzati.json."""
+    section cannot be read (left out); `nonindicizzato_guasto`: a block with a NaN count is not what the layout says (left out); `nonindicizzato_negativo`: negative baseline is valid (recovered); `nonindicizzato_in_coda`: queued table rows without a section do not hide the section. Written to nonindicizzati.json."""
     trs = [(300.0, 100.0, 50.0, "q1", 30.0, 9.0, 15.0, 4.0), (300.0, 80.0, 50.0, "q2", 30.0, 9.0, 25.0, 4.0)]
     method = {"Experiment0/ExperimentHeader": header(4, 0.0), "Experiment0/MassRangeEx/MassRangeEx": mrm_method(trs), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
     mine = [[float(10 * (k + 1)), float(k)] for k in range(6)]
@@ -270,10 +270,7 @@ def unindexed(out: Path):
     w.sample(1, [("scan", FULL, 1000.0, 1.0), ("scan", FULL, 2000.0, 1.0)], {"Experiment0/ExperimentHeader": header(15, 30.0)})
     w.unindexed(2, a)
     w.save(out, "nonindicizzato_scansione")
-    w = Writer()
-    w.sample(1, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(mine)], method)
-    w.unindexed(2, [[1.0, 2.0], [-3.0, 4.0]])
-    w.save(out, "nonindicizzato_guasto")
+    from wiff_riferimento_coda import unindexed_more; unindexed_more(out, Writer, method, mine, a)  # noqa: E402,E702
     t = [1000.0 * k / 60000.0 for k in range(8)]
     ref = {"sections": {"3": {"time": t[:4], "q1": [v[0] for v in a], "q2": [v[1] for v in a]}, "4": {"time": t[:7], "q1": [v[0] for v in b[:7]], "q2": [v[1] for v in b[:7]]}}}
     (out / "nonindicizzati.json").write_text(json.dumps(ref))
