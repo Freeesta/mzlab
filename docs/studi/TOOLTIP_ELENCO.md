@@ -334,7 +334,7 @@ Check: scanner sites 637 = 627 listed + 10 excluded (appendix A); nothing is ski
 | 277 | SDF | draw.export.sdf.title | mzlab/web/index.html:78 | Un record per struttura, con formula, massa esatta, m/z dello ione scelto e identificativo | One record for each structure, with formula, exact mass, m/z of the chosen ion and an identifier | 96 | >90 |
 | 278 |  | draw.export.transparent.title | mzlab/web/index.html:79 | PNG e SVG senza sfondo; il JPEG non lo supporta | PNG and SVG without background; JPEG does not support it | 56 | non |
 | 279 |  | int.split.tip | mzlab/web/integra-estremi.js:159 | Linee verticali nelle valli tra picchi sovrapposti; una spalla non si divide | Drop lines at the valleys between overlapping peaks; a shoulder is not split | 76 | non |
-| 280 |  |  | mzlab/web/integrazioni-manuali.js:116 | ${tips[head[c]]} |  | 16 | dinamico |
+| 280 |  |  | mzlab/web/integrazioni-manuali.js:117 | ${tips[head[c]]} |  | 16 | dinamico |
 | 281 |  |  | mzlab/web/libreria-corpo.js:151 | ${EHt(file)} |  | 12 | dinamico |
 | 282 |  |  | mzlab/web/libreria-corpo.js:151 | ${EHt(title)} |  | 13 | dinamico |
 | 283 | ${EHt(p.nome)} |  | mzlab/web/libreria-corpo.js:203 | ${EHt(p.licenza)} |  | 17 | dinamico |
@@ -454,11 +454,11 @@ Check: scanner sites 637 = 627 listed + 10 excluded (appendix A); nothing is ski
 | 397 |  |  | mzlab/web/integra-estremi.js:133 | v |  | 1 |  |
 | 398 |  |  | mzlab/web/integra-valli.js:124 | v |  | 1 |  |
 | 399 |  | int.split.depth.tip | mzlab/web/integra-valli.js:75 | Risalita minima del picco minore sulla valle, in % del punto più alto | Smallest rise of the lower peak over the valley, as % of the window's highest point | 83 |  |
-| 400 | × | canali.manint.del | mzlab/web/integrazioni-manuali.js:119 | Elimina integrazione | Delete integration | 20 |  |
-| 401 |  | canali.manint.note | mzlab/web/integrazioni-manuali.js:123 | Le aree sono misurate di nuovo dai file, come nel CSV. | The areas are measured again from the files, as in the CSV. | 59 |  |
-| 402 | ${t( | canali.manint.copy | mzlab/web/integrazioni-manuali.js:124 | Copia tabella | Copy table | 13 |  |
-| 403 | ${t( | canali.manint.csv | mzlab/web/integrazioni-manuali.js:124 | Scarica CSV | Download CSV | 12 |  |
-| 404 | ${t( | canali.manint.cp | mzlab/web/integrazioni-manuali.js:91 | Copia il valore | Copy the value | 15 |  |
+| 400 | × | canali.manint.del | mzlab/web/integrazioni-manuali.js:120 | Elimina integrazione | Delete integration | 20 |  |
+| 401 |  | canali.manint.note | mzlab/web/integrazioni-manuali.js:124 | Le aree sono misurate di nuovo dai file, come nel CSV. | The areas are measured again from the files, as in the CSV. | 59 |  |
+| 402 | ${t( | canali.manint.copy | mzlab/web/integrazioni-manuali.js:125 | Copia tabella | Copy table | 13 |  |
+| 403 | ${t( | canali.manint.csv | mzlab/web/integrazioni-manuali.js:125 | Scarica CSV | Download CSV | 12 |  |
+| 404 | ${t( | canali.manint.cp | mzlab/web/integrazioni-manuali.js:92 | Copia il valore | Copy the value | 15 |  |
 | 405 | × | common.close | mzlab/web/libreria-corpo.js:102 | Chiudi | Close | 6 |  |
 | 406 | × | common.close | mzlab/web/libreria-corpo.js:275 | Chiudi | Close | 6 |  |
 | 407 |  |  | mzlab/web/libreria-finestra.js:214 | c.textContent |  | 13 |  |
@@ -483,7 +483,7 @@ Check: scanner sites 637 = 627 listed + 10 excluded (appendix A); nothing is ski
 | 426 | Azzera | perf.clear.title | mzlab/web/perf.js:91 | Azzera le righe | Clear the rows | 15 |  |
 | 427 | Copia | perf.copy.title | mzlab/web/perf.js:91 | Copia tutto come testo | Copy everything as text | 23 |  |
 | 428 | – | perf.min.title | mzlab/web/perf.js:91 | Riduci o allarga | Shrink or enlarge | 17 |  |
-| 429 |  | predef.settings.title | mzlab/web/predefinito.js:62 | Riproponi mzLab come app per .mzML, .raw e .wiff | Offer mzLab again as the app for .mzML, .raw and .wiff | 54 |  |
+| 429 |  | predef.settings.title | mzlab/web/predefinito.js:63 | Riproponi mzLab come app per .mzML, .raw e .wiff | Offer mzLab again as the app for .mzML, .raw and .wiff | 54 |  |
 | 430 | ${EH(I18N.t( | reg.pick | mzlab/web/registro-serie.js:78 | Canale del registro | Log channel | 19 |  |
 | 431 |  | load.time.dark | mzlab/web/ruoli-celle.js:13 | Minuti di buio prima del tempo zero | Minutes of darkness before the time zero | 40 |  |
 | 432 |  | load.guess.title | mzlab/web/ruoli-celle.js:6 | Letto dal nome del file: controlla | Read from the file name: please check | 37 |  |
@@ -512,8 +512,8 @@ Check: scanner sites 637 = 627 listed + 10 excluded (appendix A); nothing is ski
 | 455 | ${H(I18N.t( | loss.radShort | mzlab/web/tables.js:70 | perdita di radicale, rara in ESI | radical loss, uncommon in ESI | 32 |  |
 | 456 |  | tbl.loss.searchTitle | mzlab/web/tables.js:85 | Differenza di massa osservata: evidenzia le perdite con quel valore | Observed mass difference: highlights the losses with that value | 67 |  |
 | 457 | Addotti con questa differenza | cq.link.ad.tip | mzlab/web/tables.js:86 | Apre la scheda Addotti | Opens the Adducts tab | 22 |  |
-| 458 |  |  | mzlab/web/tabs.js:274 | ptMs2(prec) |  | 11 |  |
-| 459 |  |  | mzlab/web/tabs.js:276 | ptProduct(prec) |  | 15 |  |
+| 458 |  |  | mzlab/web/tabs.js:265 | ptMs2(prec) |  | 11 |  |
+| 459 |  |  | mzlab/web/tabs.js:267 | ptProduct(prec) |  | 15 |  |
 | 460 |  |  | mzlab/web/tic-fondo-ui.js:58 | tip |  | 3 |  |
 | 461 | ${T( | ctl.ticbg.table | mzlab/web/tic-fondo-ui.js:98 | Ioni di fondo | Background ions | 15 |  |
 | 462 |  |  | mzlab/web/titoli.js:14 | == "string" ? p.title : "" |  | 26 |  |
@@ -1042,14 +1042,14 @@ Check: scanner sites 637 = 627 listed + 10 excluded (appendix A); nothing is ski
 | 960 |  | llm.key.hint | mzlab/web/lang/it/altre-feat-lst.js:473 | Resta in memoria per questa sessione; se la ricordi, è salvata cifrata in questo browser. Protegge da una copia del disco, non da uno script di questa pagina. | Kept in memory for this session; if you remember it, it is stored encrypted in this browser. That protects against a copy of the disk, not against a script of this page. | 169 | non, >90, due-frasi |
 | 961 |  | llm.owner.hint | mzlab/web/lang/it/altre-feat-lst.js:493 | Solo per il proprietario della demo. Resta in questo browser, solo dentro il riquadro del trasporto; «Dimentica» la cancella. | Only for the owner of the demo. Kept in this browser, inside the transport frame only; «Forget» deletes it. | 125 | >90, due-frasi |
 | 962 |  | phone.about.title | mzlab/web/lang/it/altre-lv-predef.js:33 | Che cos'è {app} | What is {app} | 15 | dinamico |
-| 963 |  | methwarn.title | mzlab/web/lang/it/altre-lv-predef.js:64 | Il metodo non corrisponde ai dati. | The method does not match the data. | 42 | non |
+| 963 |  | methwarn.title | mzlab/web/lang/it/altre-lv-predef.js:65 | Il metodo non corrisponde ai dati. | The method does not match the data. | 42 | non |
 | 964 |  | msnl.hint | mzlab/web/lang/it/altre-press-xic.js:163 | Un clic su una scansione (o Invio) apre il suo spettro; una riga di precursore apre e chiude le sue scansioni. TIC: le scansioni MS2 del precursore contro il RT; XIC: l'm/z del precursore nella Full Scan. | Click a scan (or Enter) to open its spectrum; a precursor row opens and closes its scans. TIC: the MS2 scans of the precursor against RT; XIC: the precursor m/z in the Full Scan. | 204 | >90, due-frasi |
 | 965 |  | spec.follow.none.title | mzlab/web/lang/it/altre-press-xic.js:67 | Spettro fisso al suo tempo. Scegli un cromatogramma da seguire | Spectrum fixed at its time. Pick a chromatogram to follow | 62 | due-frasi |
 | 966 |  | tip.raw | mzlab/web/lang/it/altre-press-xic.js:90 | grezzo {v} | raw {v} | 10 | dinamico |
 | 967 |  | tip.more | mzlab/web/lang/it/altre-press-xic.js:91 | ... e altre {n} | ... and {n} more | 16 | dinamico |
 | 968 |  | tip.peak | mzlab/web/lang/it/altre-press-xic.js:96 | m/z {mz}intensità {y}{abs} | m/z {mz}intensity {y}{abs} | 51 | dinamico |
 | 969 |  | bn.iso.hint | mzlab/web/lang/it/bn.js:116 | Risoluzione vuota = quella della scansione; 0 = tutta la struttura fine. Potere risolutivo: scende con la radice di m/z. | Empty resolution = that of the scan; 0 = the whole fine structure. Resolving power: it decreases with the square root of m/z. | 125 | >90, due-frasi |
-| 970 |  | canali.manint.h.pv.tip | mzlab/web/lang/it/canali.js:101 | Altezza della parte sulla valle accanto più alta (Ph. Eur. 2.2.46) | Height of the part over the higher valley next to it (Ph. Eur. 2.2.46) | 70 | due-frasi |
+| 970 |  | canali.manint.h.pv.tip | mzlab/web/lang/it/canali.js:100 | Altezza della parte sulla valle accanto più alta (Ph. Eur. 2.2.46) | Height of the part over the higher valley next to it (Ph. Eur. 2.2.46) | 70 | due-frasi |
 | 971 |  | canali.manint.title | mzlab/web/lang/it/canali.js:60 | Integrazioni manuali ({n}) | Manual integrations ({n}) | 26 | dinamico |
 | 972 |  | int.base.tip | mzlab/web/lang/it/canali.js:69 | Linea di base: {b} | Baseline: {b} | 18 | dinamico |
 | 973 |  | cmd.more.tip | mzlab/web/lang/it/comandi.js:51 | PubChem, BioTransformer e gli strumenti che non stanno nella barra | PubChem, BioTransformer and the tools that do not fit in the bar | 66 | non |
@@ -1107,29 +1107,29 @@ Check: scanner sites 637 = 627 listed + 10 excluded (appendix A); nothing is ski
 | 1025 |  | llm.consenso.title | mzlab/web/lang/it/altre-feat-lst.js:446 | Accendere l'assistente? | Turn the assistant on? | 23 |  |
 | 1026 |  | llm.consenso.demo.title | mzlab/web/lang/it/altre-feat-lst.js:483 | Provare l'assistente? | Try the assistant? | 21 |  |
 | 1027 |  | ibk.leg.title | mzlab/web/lang/it/altre-feat-lst.js:93 | Clic per scegliere un altro tratto del bianco | Click to choose another stretch of the blank | 45 |  |
-| 1028 |  | pk.title | mzlab/web/lang/it/altre-lv-predef.js:147 | Rilevamento dei picchi | Peak detection | 22 |  |
-| 1029 |  | perf.title | mzlab/web/lang/it/altre-lv-predef.js:174 | Misure (?perf) | Measurements (?perf) | 20 |  |
-| 1030 |  | lv.thr.title | mzlab/web/lang/it/altre-lv-predef.js:258 | Soglie dei livelli | Thresholds of the levels | 24 |  |
-| 1031 |  | meta.title | mzlab/web/lang/it/altre-lv-predef.js:292 | Metadati dei campioni | Sample metadata | 21 |  |
+| 1028 |  | pk.title | mzlab/web/lang/it/altre-lv-predef.js:148 | Rilevamento dei picchi | Peak detection | 22 |  |
+| 1029 |  | perf.title | mzlab/web/lang/it/altre-lv-predef.js:175 | Misure (?perf) | Measurements (?perf) | 20 |  |
+| 1030 |  | lv.thr.title | mzlab/web/lang/it/altre-lv-predef.js:259 | Soglie dei livelli | Thresholds of the levels | 24 |  |
+| 1031 |  | meta.title | mzlab/web/lang/it/altre-lv-predef.js:293 | Metadati dei campioni | Sample metadata | 21 |  |
 | 1032 |  | phone.title | mzlab/web/lang/it/altre-lv-predef.js:30 | Siete su uno smartphone | You are on a smartphone | 23 |  |
-| 1033 |  | pca.title | mzlab/web/lang/it/altre-lv-predef.js:310 | PCA esplorativa | Exploratory PCA | 15 |  |
-| 1034 |  | pfas.title | mzlab/web/lang/it/altre-lv-predef.js:343 | PFAS: MD/C e frammenti diagnostici | PFAS: MD/C and diagnostic fragments | 35 |  |
+| 1033 |  | pca.title | mzlab/web/lang/it/altre-lv-predef.js:311 | PCA esplorativa | Exploratory PCA | 15 |  |
+| 1034 |  | pfas.title | mzlab/web/lang/it/altre-lv-predef.js:344 | PFAS: MD/C e frammenti diagnostici | PFAS: MD/C and diagnostic fragments | 35 |  |
 | 1035 |  | predef.title | mzlab/web/lang/it/altre-lv-predef.js:36 | Rendere mzLab l'app predefinita? | Make mzLab the default app? | 32 |  |
-| 1036 |  | pfas.formulas.title | mzlab/web/lang/it/altre-lv-predef.js:364 | Formule candidate | Candidate formulas | 18 |  |
-| 1037 |  | pfas.ev.title | mzlab/web/lang/it/altre-lv-predef.js:366 | Frammenti e perdite nelle MS2 | Fragments and losses in the MS2 | 31 |  |
-| 1038 |  | mem.more.title | mzlab/web/lang/it/altre-lv-predef.js:373 | Serve più memoria | More memory is needed | 21 |  |
-| 1039 |  | mol.title | mzlab/web/lang/it/altre-lv-predef.js:385 | Molecole | Molecules | 9 |  |
+| 1036 |  | pfas.formulas.title | mzlab/web/lang/it/altre-lv-predef.js:365 | Formule candidate | Candidate formulas | 18 |  |
+| 1037 |  | pfas.ev.title | mzlab/web/lang/it/altre-lv-predef.js:367 | Frammenti e perdite nelle MS2 | Fragments and losses in the MS2 | 31 |  |
+| 1038 |  | mem.more.title | mzlab/web/lang/it/altre-lv-predef.js:374 | Serve più memoria | More memory is needed | 21 |  |
+| 1039 |  | mol.title | mzlab/web/lang/it/altre-lv-predef.js:386 | Molecole | Molecules | 9 |  |
 | 1040 |  | pal.title | mzlab/web/lang/it/altre-lv-predef.js:4 | Cerca | Search | 6 |  |
-| 1041 |  | predef.guide.title | mzlab/web/lang/it/altre-lv-predef.js:43 | Come fare | How to do it | 12 |  |
+| 1041 |  | predef.guide.title | mzlab/web/lang/it/altre-lv-predef.js:44 | Come fare | How to do it | 12 |  |
 | 1042 |  | pal.hint | mzlab/web/lang/it/altre-lv-predef.js:7 | ↑ ↓ scorrono · Invio esegue · Esc chiude | ↑ ↓ move · Enter runs · Esc closes | 40 |  |
 | 1043 |  | tbl.diff.title | mzlab/web/lang/it/altre-press-xic.js:133 | Differenze di massa tra addotti | Adduct mass differences | 31 |  |
 | 1044 |  | tree.title | mzlab/web/lang/it/altre-press-xic.js:168 | Albero MSn | MSn tree | 10 |  |
 | 1045 |  | reset.title | mzlab/web/lang/it/altre-press-xic.js:187 | Iniziare una nuova sessione? | Start a new session? | 28 |  |
 | 1046 |  | tdati.title | mzlab/web/lang/it/altre-press-xic.js:198 | Dati del grafico | Chart data | 16 |  |
-| 1047 |  | sub.pop.title | mzlab/web/lang/it/altre-press-xic.js:351 | Sottrazione del riferimento | Reference subtraction | 27 |  |
-| 1048 |  | prof.title | mzlab/web/lang/it/altre-press-xic.js:374 | Profilo nel tempo di uno ione | Time profile of an ion | 29 |  |
-| 1049 |  | prof.istd.hint | mzlab/web/lang/it/altre-press-xic.js:389 | Per normalizzare aggiungi uno standard interno nel pannello QA/QC. | To normalize, add an internal standard in the QA/QC panel. | 66 |  |
-| 1050 |  | rep.title | mzlab/web/lang/it/altre-press-xic.js:393 | Rapporto di studio | Study report | 18 |  |
+| 1047 |  | sub.pop.title | mzlab/web/lang/it/altre-press-xic.js:347 | Sottrazione del riferimento | Reference subtraction | 27 |  |
+| 1048 |  | prof.title | mzlab/web/lang/it/altre-press-xic.js:370 | Profilo nel tempo di uno ione | Time profile of an ion | 29 |  |
+| 1049 |  | prof.istd.hint | mzlab/web/lang/it/altre-press-xic.js:385 | Per normalizzare aggiungi uno standard interno nel pannello QA/QC. | To normalize, add an internal standard in the QA/QC panel. | 66 |  |
+| 1050 |  | rep.title | mzlab/web/lang/it/altre-press-xic.js:389 | Rapporto di studio | Study report | 18 |  |
 | 1051 |  | xicdlg.title | mzlab/web/lang/it/altre-xicbtn-zoom.js:20 | Estrai ioni (XIC) | Extract ions (XIC) | 18 |  |
 | 1052 |  | bn.idn.ign.title | mzlab/web/lang/it/bn.js:140 | File lasciati fuori | Files left out | 19 |  |
 | 1053 |  | bn.sub.title | mzlab/web/lang/it/bn.js:170 | XIC da formula: tutte le sottoformule | XIC from a formula: all the sub-formulas | 40 |  |
@@ -1138,7 +1138,7 @@ Check: scanner sites 637 = 627 listed + 10 excluded (appendix A); nothing is ski
 | 1056 |  | cq.g.liste.tip | mzlab/web/lang/it/calcqui.js:31 | Composti noti con questa m/z | Known compounds at this m/z | 28 |  |
 | 1057 |  | cq.g.perdite.tip | mzlab/web/lang/it/calcqui.js:32 | Perdite neutre che danno questa massa | Neutral losses that give this mass | 37 |  |
 | 1058 |  | cq.g.diff.tip | mzlab/web/lang/it/calcqui.js:33 | Coppie di addotti con questa differenza | Adduct pairs with this difference | 39 |  |
-| 1059 |  | canali.manint.h.overlap.tip | mzlab/web/lang/it/canali.js:99 | Parte di una finestra divisa in una valle | Part of a window split at a valley | 41 |  |
+| 1059 |  | canali.manint.h.overlap.tip | mzlab/web/lang/it/canali.js:98 | Parte di una finestra divisa in una valle | Part of a window split at a valley | 41 |  |
 | 1060 |  | cmd.calc.tip | mzlab/web/lang/it/comandi.js:12 | Calcolatrice: somme, differenze e formule | Calculator: sums, differences and formulas | 42 |  |
 | 1061 |  | cmd.disp.affianca.tip | mzlab/web/lang/it/comandi.js:121 | Mette il pannello in uso accanto a un altro, nella stessa riga | Puts the panel in use beside another one, in the same row | 62 |  |
 | 1062 |  | cmd.disp.su.tip | mzlab/web/lang/it/comandi.js:125 | Sposta il pannello in uso di una riga verso l'alto | Moves the panel in use one row up | 50 |  |
