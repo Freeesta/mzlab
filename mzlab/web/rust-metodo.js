@@ -17,7 +17,7 @@ export function createMetodoOps({ engine, ARCH, readerFor, open, sync }) {
       const s = JSON.parse(e.mzml_sources(g.size, readerFor(g)));
       if (!s.sources.some(q => q.sha1 === sha) || !s.sample) continue;
       sciex ??= await loadModulo("sciex");
-      wiffDocs.set(x.name, sciex.wiff_metodo(f.name, f.size, rd, s.sample, sha));
+      wiffDocs.set(x.name, sciex.wiff_metodo(f.name, f.size, (/** @type {number} */ _i, /** @type {number} */ o, /** @type {number} */ n) => rd(o, n), s.sample, sha));
       found.push({ name: x.name, sample: s.sample });
     }
     return { info: JSON.stringify({ sha1: sha, matched: found }) };
