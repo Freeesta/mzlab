@@ -76,7 +76,7 @@ try:
             pg.evaluate("document.querySelectorAll('#uipset details.imp-g').forEach(g => g.open = true)")       # the folding groups (assistant, diagnostics) open
             t = pg.inner_text("#uipset")
             for w in ("Settings", "Theme", "System", "Chart colors", "Merge the centroids of the same nominal mass"): assert w.lower() in t.lower(), (w, t)
-            assert "By file (default)" in pg.evaluate("[...document.querySelectorAll('#uip-pal option')].map(o => o.textContent)"), "palette names"
+            assert "By file" in pg.evaluate("[...document.querySelectorAll('#uip-pal option')].map(o => o.textContent)"), "palette names"
         step("gear in English", gear)
         def phrase():
             pg.evaluate("loading(true)"); pg.wait_for_timeout(300)
