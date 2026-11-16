@@ -352,8 +352,8 @@ try:
                 return ls
             ls = labels(2, "two parts")
             tot = sum(float(x[1]) for x in ls)
-            need(abs(tot - float(whole[6])) <= 2e-4 * float(whole[6]), ("the labels add up to the window", tot, whole[6]))
-            need(all(abs(a - float(b[6])) <= 1e-4 * abs(float(b[6])) for a, b in zip(sorted(float(x[1]) for x in ls), sorted(parts, key=lambda r: float(r[6])))), ("labels = table rows", ls, parts))
+            need(abs(tot - float(whole[3])) <= 2e-4 * float(whole[3]), ("the labels add up to the window", tot, whole[3]))
+            need(all(abs(a - float(b[3])) <= 1e-4 * abs(float(b[3])) for a, b in zip(sorted(float(x[1]) for x in ls), sorted(parts, key=lambda r: float(r[3])))), ("labels = table rows", ls, parts))
             # three parts (a second drop line in the trailing peak, close enough to the first apex to make the labels collide): three labels, three rows, same total
             t3b = round(p1 + 0.04, 3)
             pg.evaluate(f"(() => {{ const p = {P}; p.ints.find(i => i.id === {it}).splits = [{t3}, {t3b}]; draw(p); }})()")
@@ -361,8 +361,8 @@ try:
             ls = labels(3, "three parts")
             rows3 = [l.split(",") for l in pg.evaluate("MANINT.state().csv").strip().split("\n") if ",drop," in l]
             need(len(rows3) == 3 and pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].filter(r => r.textContent.includes(I18N.t('canali.manint.drop'))).length") == 3, rows3)
-            need(abs(sum(float(x[6]) for x in rows3) - float(whole[6])) <= 1e-4 * float(whole[6]), ("three parts add up to the window", rows3, whole))
-            need(abs(sum(float(x[1]) for x in ls) - float(whole[6])) <= 2e-4 * float(whole[6]), ("three labels add up", ls))
+            need(abs(sum(float(x[3]) for x in rows3) - float(whole[3])) <= 1e-4 * float(whole[3]), ("three parts add up to the window", rows3, whole))
+            need(abs(sum(float(x[1]) for x in ls) - float(whole[3])) <= 2e-4 * float(whole[3]), ("three labels add up", ls))
             pg.evaluate(f"(() => {{ const p = {P}; p.ints.find(i => i.id === {it}).splits = [{t3}]; draw(p); }})()")
             wait_for_js(pg, "MANINT.state().csv.split(',drop,').length === 3", timeout=60000)
             # the same three parts on a second overlaid file: six area labels, none over another, all inside the plot (stacked with a leader when they collide)
