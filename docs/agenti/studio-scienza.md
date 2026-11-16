@@ -111,7 +111,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Expected: CV = s/mean with s the sample SD, divisor n - 1 (ICH Q2(R2), repeatability; Broadhurst et al., Metabolomics 2018, 14, 72 for QC CV).
 - Observed: two groups of replicates -> 0.0909 and 0.1859; numpy with `ddof=1` gives 0.1286 and 0.2277, with `ddof=0` 0.0909 and 0.1859. With 3 replicates the CV is low by sqrt(2/3) = 0.816.
 - Fix: divide by n - 1.
-- Status: OPEN (owner decision): divisor n - 1 changes the exported `cv_mediano`.
+- Status: FIXED: the QC replicate CV and `standard_cv` divide by n - 1 (`qc::cv`); two replicates now give sqrt(2) times the old value, test `replicate_cv_uses_the_sample_sd_and_the_population_sd_stays_selectable` in `crates/mzlab-feat/tests/view.rs`. The old divisor n stays selectable with `"cv_ddof":0` in the view spec.
 
 ## SUSPECTED (seen once or only read; not confirmed by a minimal engine run)
 

@@ -27,6 +27,8 @@ pub struct View {
     pub labels: Labels,
     /// Per file, the samples that had no blank of their batch or matrix and were compared with all blanks; `None` when no rule matches blanks.
     pub fallback: Option<Vec<bool>>,
+    /// Divisor offset of the replicate SD in the QC document: 1 (sample SD, n - 1, the default) or 0 (population SD, the old behaviour).
+    pub cv_ddof: usize,
 }
 
 /// The view of `t` under a method and a list of rules.
@@ -47,7 +49,7 @@ pub fn build_with(t: &Aligned, samples: &[Sample], method: &Method, rules: &[Rul
     let is_blank: Vec<bool> = samples.iter().map(|s| s.kind == "blank").collect();
     let sub = filters_blank::subtraction(t, &factors, rules, &is_blank)?;
     let fallback = filters::blank_fallback(samples, rules, &labels);
-    Ok(View { method: method.clone(), rules: rules.to_vec(), factors, why, rows, sub, labels, fallback })
+    Ok(View { method: method.clone(), rules: rules.to_vec(), factors, why, rows, sub, labels, fallback, cv_ddof: 1 })
 }
 
 impl View {
@@ -120,5 +122,9 @@ pub fn from_spec(t: &Aligned, samples: &[Sample], spec: &[u8]) -> Result<View> {
         Some(l) => Labels::from_json(l, t.n_files)?,
         None => Labels::default(),
     };
-    build_with(t, samples, &method, &rules, labels)
+    let mut view = build_with(t, samples, &method, &rules, labels)?;
+    if let Some(d) = v.get("cv_ddof").and_then(|x| x.f64()) {
+        view.cv_ddof = usize::from(d != 0.0);
+    }
+    Ok(view)
 }
