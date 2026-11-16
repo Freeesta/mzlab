@@ -54,8 +54,24 @@ fn the_electron_has_the_right_sign() {
         (minus.abs() - 2.0 * ELECTRON / 179.06 * 1e6).abs() < 0.1,
         "{minus}"
     );
-    // and the error of the same candidate has the sign of the m/z that was typed, in both modes
-    assert!(plus < 0.0 && minus > 0.0, "{plus} {minus}");
+    // and the error is (observed - theoretical) / theoretical: positive when the typed m/z lies above the candidate (plus), negative below it (minus)
+    assert!(plus > 0.0 && minus < 0.0, "{plus} {minus}");
+}
+
+/// Study item A3: one sign everywhere. Caffeine [M+H]+ (C8H11N4O2, 195.08765) typed 1 mDa high is +5.13 ppm, as the adduct table reports it.
+#[test]
+fn the_mass_error_is_observed_minus_theoretical() {
+    let o = Opts {
+        elements: Some(parse_elements("C:0-8,H:0-12,N:0-4,O:0-2").unwrap()),
+        ion: "[M+H]+",
+        tol: 10.0,
+        max_results: 3,
+        ..Opts::default()
+    };
+    let j: Value = serde_json::from_str(&compose(195.088652, &o).unwrap()).unwrap();
+    let r = j["results"].as_array().unwrap().iter().find(|r| r["formula"] == "C8H11N4O2").expect("caffeine ion");
+    let (ppm, mda) = (r["delta_ppm"].as_f64().unwrap(), r["delta_mda"].as_f64().unwrap());
+    assert!((ppm - 5.13).abs() < 0.05 && (mda - 1.0).abs() < 0.05, "{ppm} {mda}");
 }
 
 /// The isotope pool says how many candidates it scored when it left some out, and stays silent otherwise (synthetic glucose isotopes).
