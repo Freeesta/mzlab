@@ -229,24 +229,33 @@ fn apex_and_window(
     )
 }
 
-/// Noise sigma: the region chosen by the student when set, else MAD or RMS of the sorted residual `res`.
-fn noise_of(res: &[f64], xs: &[f64], ys: &[f64], pk: &LrParams) -> f64 {
+/// Noise sigma: the region chosen by the student when set, else MAD or RMS of the sorted residual `res`; true when it is the residual one.
+fn noise_of(res: &[f64], xs: &[f64], ys: &[f64], pk: &LrParams) -> (f64, bool) {
     let manual = if pk.noise == NoiseMode::Manual && pk.nr1 > pk.nr0 {
         noise_sd(xs, ys, pk.nr0, pk.nr1)
     } else {
         None
     };
     match manual {
-        Some(v) if v > 0.0 => v,
+        Some(v) if v > 0.0 => (v, false),
         _ => {
             let v = if pk.noise == NoiseMode::Rms {
                 (res.iter().fold(0.0, |a, v| a + v * v) / (res.len() as f64).max(1.0)).sqrt()
             } else {
                 1.4826 * res[res.len() >> 1]
             };
-            v.max(1e-12)
+            (v.max(1e-12), true)
         }
     }
+}
+
+/// sqrt(1 - c0) of the quadratic Savitzky-Golay smoothing of half window `m`: the SD of the residual of white noise over its sigma
+/// (sum of the squared weights = c0, the central weight).
+fn residual_shrink(m: usize) -> f64 {
+    let mf = m as f64;
+    let c0 = 3.0 * (3.0 * mf * mf + 3.0 * mf - 1.0)
+        / ((2.0 * mf - 1.0) * (2.0 * mf + 1.0) * (2.0 * mf + 3.0));
+    (1.0 - c0).max(1e-12).sqrt()
 }
 
 /// Where the edge on one side of the apex `k` stops: under `lim`, or where the smoothed trace turns up again for `need` points, or after `maxw` points.
@@ -326,7 +335,7 @@ pub fn lr_edges(
     let span = round(pk.win / dt).max(0.0) as usize;
     let (w0, w1) = (k.saturating_sub(span), (nn - 1).min(k + span));
     let res = sorted((w0..=w1).map(|j| (y[j] - sm[j]).abs()));
-    let noise = noise_of(&res, xs, ys, pk);
+    let (noise, residual) = noise_of(&res, xs, ys, pk);
     let low = sorted(sm[w0..=w1].iter().copied());
     let base = low[(low.len() as f64 * 0.1).floor() as usize];
     let h = (sm[k] - base).max(0.0);
@@ -336,7 +345,13 @@ pub fn lr_edges(
         pk.edge_frac / 100.0
     };
     let lim = base + (frac * h).max(pk.area_noise * noise);
-    if pk.sn_min > 0.0 && h < pk.sn_min * noise {
+    // the S/N gate compares with the raw-trace sigma; the edge limits above keep the residual scale they are tuned on
+    let sn_noise = if residual {
+        noise / residual_shrink(m)
+    } else {
+        noise
+    };
+    if pk.sn_min > 0.0 && h < pk.sn_min * sn_noise {
         return None;
     }
     let need = round(m as f64 * pk.multi / 100.0).max(2.0) as i64;

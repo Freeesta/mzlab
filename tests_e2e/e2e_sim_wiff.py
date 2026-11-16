@@ -23,7 +23,7 @@ D = Path(tempfile.mkdtemp(prefix="sim_wiff_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_sim.py"), str(D)], check=True, capture_output=True)
 (D / "sim3.wiff.log").write_text("msconvert log (synthetic)\n")
 TRUE = json.loads((D / "sim3.json").read_text())
-CLI = ["cargo", "run", "-q", "-p", "mzlab-cli", "--"]
+CLI = ["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--"]      # the release binary tools/verifica.py builds once before the tests: a debug build inside the 150 s of the CI job is too slow
 cli = lambda *a: subprocess.run(CLI + [str(x) for x in a], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout
 CHANNELS = json.loads(cli("channels", D / "sim3.wiff"))
 throw = lambda m: (_ for _ in ()).throw(AssertionError(m))
@@ -73,7 +73,10 @@ try:
             pg.evaluate(INTEG, ["Sample_B", 2, pk[2][2][0] - 0.15, pk[2][2][0] + 0.15, None])
             wait_for_js(pg, SHOWN % 3, timeout=60000)
             cells = pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].map(r => [...r.children].slice(0, 3).map(c => c.textContent))")
-            need(cells == [["253.1", "ionA", "Sample_A"], ["253.1", "ionA", "Sample_C"], ["251.1", "ionC", "Sample_B"]], cells)
+            need(cells == [["253.1", "Sample_A", ""], ["253.1", "Sample_C", ""], ["251.1", "Sample_B", ""]], cells)   # channel, sample, name (no «method name» column)
+            heads = pg.evaluate("[...document.querySelectorAll('#manint thead th')].slice(0, 8).map(c => c.textContent)")
+            want = [pg.evaluate("k => I18N.t('canali.manint.h.' + k)", k) for k in ("channel", "sample", "label", "area", "start", "end", "apex", "height")]
+            need(heads == want, ("columns: channel, sample, name, area, start, end, apex, height", heads))
             need(pg.evaluate("document.querySelector('#manint h3').textContent") == pg.evaluate("I18N.t('canali.manint.title', {n: 3})"), "title")
             need(pg.evaluate("[...document.querySelectorAll('#manint tbody button')].every(b => b.getBoundingClientRect().height >= 24 && b.getAttribute('aria-label'))"), "24 px, named")
         step("windows on the ion traces fill the card, grouped by channel then sample", rows)
@@ -143,11 +146,11 @@ try:
             csv = [l.split(",") for l in pg.evaluate("MANINT.state().csv").strip().split("\n")]
             head, row = csv[0], csv[1]
             cells = pg.evaluate("[...document.querySelectorAll('#manint tbody tr')[0].querySelectorAll('[data-cp]')].map(c => { const r = c.getBoundingClientRect(); return [c.dataset.cp, c.getAttribute('role'), c.tabIndex, c.getAttribute('aria-label'), c.title, r.width, r.height, r.x + r.width / 2, r.y + r.height / 2]; })")
-            need([c[0] for c in cells] == [row[head.index(k)] for k in ("apex_rt_min", "area", "height")], (cells, row))
+            need([c[0] for c in cells] == [row[head.index(k)] for k in ("area", "apex_rt_min", "height")], (cells, row))   # the area sits right after the name, then the apex
             need(all(c[1] == "button" and c[2] == 0 and c[3] and c[4] and c[5] >= 24 and c[6] >= 24 for c in cells), cells)
             pg.evaluate("(() => { window.__show = 0; const o = window.reveal; window.__orev = o; window.reveal = p => { window.__show++; return o(p); }; })()")
             pg.evaluate("navigator.clipboard.writeText('x')")
-            area = cells[1]; pg.mouse.click(area[7], area[8])
+            area = cells[0]; pg.mouse.click(area[7], area[8])
             wait_for_js(pg, "!!document.querySelector('.areacopied.show')", timeout=5000)
             need(pg.evaluate("navigator.clipboard.readText()") == area[0], "the CSV value, full precision")
             n = pg.evaluate("(() => { const n = document.querySelector('.areacopied'), r = n.getBoundingClientRect(); return [n.textContent, n.getAttribute('aria-live'), r.x + r.width / 2, r.y]; })()")
@@ -162,10 +165,10 @@ try:
             need = lambda c, m: c or throw(m)
             P = "E.panels.find(q => q.type === 'mrm' && q._a)"
             nm = "#manint tbody tr:nth-child(1) input[data-nm]"
-            info = pg.evaluate(f"(() => {{ const n = document.querySelector('{nm}'), r = n.getBoundingClientRect(); return [n.getAttribute('aria-label'), n.maxLength, r.height >= 24, document.querySelector('#manint thead th:nth-child(4)').textContent]; }})()")
+            info = pg.evaluate(f"(() => {{ const n = document.querySelector('{nm}'), r = n.getBoundingClientRect(); return [n.getAttribute('aria-label'), n.maxLength, r.height >= 24, document.querySelector('#manint thead th:nth-child(3)').textContent]; }})()")
             need(info == [pg.evaluate("I18N.t('canali.manint.nm.aria')"), 40, True, pg.evaluate("I18N.t('canali.manint.h.label')")], info)
             pg.click(nm); pg.keyboard.type("Peak, left"); pg.keyboard.press("Enter")
-            wait_for_js(pg, "MANINT.state().csv.split('\\n')[1].endsWith(',\"Peak, left\"')", timeout=60000)
+            wait_for_js(pg, "MANINT.state().csv.split('\\n')[1].startsWith('253.1,Sample_A,\"Peak, left\",')", timeout=60000)
             need(pg.evaluate("document.activeElement && document.activeElement.matches('input[data-nm]') && document.activeElement.value === 'Peak, left'"), "Enter keeps the focus on the name")
             st = pg.evaluate("MANINT.state()"); need(st["csv"] == manual(st, [D / "sim3.wiff"]), "the name is in the CLI's bytes")
             need(pg.evaluate(f"{P}.ints.filter(i => i.nm === 'Peak, left').length") == 1, "kept on the integration")
@@ -329,9 +332,9 @@ try:
             st = pg.evaluate("MANINT.state()")
             need(st["csv"] == manual(st, [D / "sim3.wiff"]), "the table with the parts = mzlab-cli manual-table")
             parts = [l.split(",") for l in st["csv"].strip().split("\n") if ",drop," in l]
-            need(len(parts) == 2 and parts[0][4] == parts[1][3] and float(parts[0][11]) > 0 and float(parts[1][11]) > 0, parts)
-            area = sum(float(x[6]) for x in parts)
-            need(abs(area - float(whole[6])) <= 1e-4 * float(whole[6]), ("the parts add up to the window", area, whole))
+            need(len(parts) == 2 and parts[0][5] == parts[1][4] and float(parts[0][11]) > 0 and float(parts[1][11]) > 0, parts)
+            area = sum(float(x[3]) for x in parts)
+            need(abs(area - float(whole[3])) <= 1e-4 * float(whole[3]), ("the parts add up to the window", area, whole))
             cut = table(one | {"splits": [t3]})
             need(cut == peak_split(f"split={t3}"), ("api/manint of the split window = peak-split", cut))
             th = pg.evaluate("[...document.querySelectorAll('#manint thead th')].map(t => [t.textContent, t.title])")
