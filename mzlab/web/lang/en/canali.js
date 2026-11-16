@@ -95,6 +95,7 @@ I18N.add("en", {
   "canali.manint.org.applied": "Applied",
   "canali.manint.org.shifted": "Shifted",
   "canali.manint.org.nopeak": "No peak",
+  "canali.manint.nopeak.tip": "No peak found: the window stays where it was drawn",
   "canali.manint.applied": "Integration applied to {n} files",
   "canali.manint.nm.tip": "Enter: name the group; Alt+Enter: this file only",
   "canali.manint.h.base": "Baseline",

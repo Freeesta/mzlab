@@ -98,8 +98,10 @@ const fmt = (v, col) => col === "origin" ? ORIGINS()[v] || v : col === "baseline
 /** A channel as shown: the m/z, «q1 > q3», or «ione N». @param {string} c */
 const chShown = c => c.replace(/^ion (\d+)$/, (_, n) => t("canali.sim.ion", { n: +n })).replace(">", " > ");
 const COPY = ["apex_rt_min", "area", "height"];
-/** A cell: its value as shown; apex, area and height are buttons that copy the CSV value (full precision); the name is an input. @param {string} v @param {string} col @param {number} i */
-const cell = (v, col, i) => col === "label"
+/** A cell: its value as shown; apex, area and height are buttons that copy the CSV value (full precision); the name is an input. Where the engine found no peak (`np`) the area and height of the unmoved window are not a result: «–», dimmed. @param {string} v @param {string} col @param {number} i @param {boolean} [np] */
+const cell = (v, col, i, np = false) => np && (col === "area" || col === "height")
+  ? h`<span class="manint-np" title="${t("canali.manint.nopeak.tip")}">–</span>`
+  : col === "label"
   ? h`<input type="text" class="manint-nm" maxlength="${NM_MAX}" data-nm="${i}" value="${v}" aria-label="${t("canali.manint.nm.aria")}" autocomplete="off" spellcheck="false">`
   : COPY.includes(col) && v !== ""
     ? h`<span class="manint-cp" role="button" tabindex="0" data-cp="${v}" aria-label="${t("canali.manint.cp.aria", { c: HEADS()[col] || col, v: fmt(v, col) })}" title="${t("canali.manint.cp")}">${fmt(v, col)}</span>`
@@ -138,7 +140,7 @@ function draw() {
   const trs = body.map((r, i) => {
     const rec = recOf(r, head), who = { ch: chShown(r[0]), s: r[iS] };
     const act = rec && !rec.fol ? h`<button type="button" class="manint-x" data-del="${i}" aria-label="${t("canali.manint.del.aria", who)}" title="${t("canali.manint.del")}">×</button>` : "";
-    const tds = cols.slice(1).map(c => h`<td${raw(plain.includes(head[c]) ? "" : ' class="num"')}>${raw(head[c] === "label" && !rec ? h`${r[c]}` : cell(r[c], head[c], i))}</td>`).join("");
+    const tds = cols.slice(1).map(c => h`<td${raw(plain.includes(head[c]) ? "" : ' class="num"')}>${raw(head[c] === "label" && !rec ? h`${r[c]}` : cell(r[c], head[c], i, r[iO] === "no_peak"))}</td>`).join("");
     return h`<tr data-org="${r[iO]}"${raw(rec ? h` class="manint-go" data-go="${i}" tabindex="0" aria-label="${t("canali.manint.show.aria", who)}"` : "")}><th scope="row">${chShown(r[cols[0]])}</th>${raw(tds)}<td>${raw(act)}</td></tr>`;
   }).join("");
   el.innerHTML = h`<div class="manint-head"><h3><button type="button" class="manint-tg" id="manint-h" aria-expanded="${open ? "true" : "false"}" aria-controls="manint-b" aria-describedby="manint-d" title="${t("canali.manint.note")}"><svg class="manint-chev" width="12" height="12" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true" focusable="false"><path d="M1.5 3.5h7L5 7.5z"/></svg>${t("canali.manint.title", { n: body.length })}</button></h3>

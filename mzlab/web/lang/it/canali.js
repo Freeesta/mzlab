@@ -95,6 +95,7 @@ I18N.add("it", {
   "canali.manint.org.applied": "Applicata",
   "canali.manint.org.shifted": "Spostata",
   "canali.manint.org.nopeak": "Nessun picco",
+  "canali.manint.nopeak.tip": "Nessun picco: la finestra resta dove è stata tracciata",
   "canali.manint.applied": "Integrazione applicata a {n} file",
   "canali.manint.nm.tip": "Invio: nome del gruppo; Alt+Invio: solo questo file",
   "canali.manint.h.base": "Linea di base",
