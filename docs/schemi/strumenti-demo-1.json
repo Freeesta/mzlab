@@ -37,6 +37,7 @@
           "qc.mass_accuracy",
           "qc.run_order",
           "quant.calibrate",
+          "quant.curve",
           "report.methods",
           "rt.predict",
           "screen.suspects",
@@ -105,6 +106,7 @@
               "qc.mass_accuracy@1",
               "qc.run_order@1",
               "quant.calibrate@1",
+              "quant.curve@1",
               "report.methods@1",
               "rt.predict@1",
               "screen.suspects@1",
@@ -1379,6 +1381,35 @@
                   {"type":"number","minimum":0,"default":0.3,"description":"RT tolerance to match a curve to a row"},
                   {"enum":["area","height"],"default":"area","description":"Signal the curve was made with"},
                   {"type":"string","default":"sample","description":"Sample types to quantify, comma separated"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"quant.curve@1"},
+              "name":{"enum":["signal","model","weight","zero","istd","exclude"]},
+              "value":{
+                "anyOf":[
+                  {"enum":["area","height"],"default":"area","description":"Signal of the peak"},
+                  {"enum":["linear","quadratic"],"default":"linear","description":"Calibration model"},
+                  {
+                    "enum":["1","1/x","1/x2","1/y","1/y2"],
+                    "default":"1/x",
+                    "description":"1/x and 1/x2 leave out a standard at zero concentration; the log says so."
+                  },
+                  {"type":"boolean","default":false,"description":"Force the line through zero"},
+                  {
+                    "type":"string",
+                    "default":"",
+                    "description":"One name for every analyte, or analyte|IS pairs separated by semicolons; empty = none."
+                  },
+                  {
+                    "type":"string",
+                    "default":"",
+                    "description":"analyte|sample|reason separated by semicolons; * as analyte = every analyte; each one is logged."
+                  }
                 ]
               }
             },
@@ -2902,6 +2933,7 @@
                 "qc.mass_accuracy@1",
                 "qc.run_order@1",
                 "quant.calibrate@1",
+                "quant.curve@1",
                 "report.methods@1",
                 "rt.predict@1",
                 "screen.suspects@1",
