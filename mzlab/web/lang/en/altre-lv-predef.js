@@ -38,6 +38,7 @@ I18N.add("en", {
   "predef.yes": "Yes, show me how",
   "predef.later": "Not now",
   "predef.ket.error": "Cannot open the drawing «{name}»: {detail}",
+  "predef.scan.needs.wiff": "This .scan file needs its .wiff file in the same folder.",
   "predef.never": "Don't ask again",
   "predef.done": "Close",
   "predef.guide.title": "How to do it",

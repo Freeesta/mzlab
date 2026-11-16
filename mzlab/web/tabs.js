@@ -155,7 +155,6 @@ function defaultLayoutTab(/** @type {string} */ t) {
       const pn = addPanel("mrm", { tab: "mrm", tr: mem ?? (keys.length ? keys : ""), title: window.SIMUI && SIMUI.allSim() ? "@sim" : PT.mrm, x: 0, y: 0, w: w2, h: 420, full: true, imode: "man", intf: "all", intfFixed: true });
       pn._trAuto = pn.tr;   // what the layout chose is not the student's choice: it is not remembered
       relayout(); fitHost(); uiSave();
-      if (mfs.length > MRM_SHOW_MAX) mrmShowAllNotice(mfs);
     });
   }
 }
@@ -180,16 +179,8 @@ function mrmRecall(/** @type {string[]} */ keys) {
 async function mrmShownKeys(/** @type {MzFile[]} */ fs) {
   return [...new Set((await Promise.all(fs.map(f => getMrm(f.k)))).flat().map((/** @type {Bag} */ t) => trKey(t)))];
 }
+// The cap only picks which files are drawn at the first opening (readable chart); it never hides a file the user ticked, so it has no notice.
 const MRM_SHOW_MAX = 12;
-// beyond the cap only the first files are drawn: a visible, keyboard-reachable button shows them all
-function mrmShowAllNotice(/** @type {MzFile[]} */ mfs) {
-  const p = tabPanels("mrm")[0]; if (!p || !p.el || p.el.querySelector(".mrm-all")) return;
-  const d = document.createElement("div"); d.className = "mrm-all"; d.setAttribute("role", "status");
-  const b = document.createElement("button"); b.type = "button"; b.textContent = I18N.t("mrm.showAll"); b.setAttribute("aria-label", I18N.t("mrm.showAllAria", { n: mfs.length }));
-  b.addEventListener("click", () => { mfs.forEach(f => { f.vis = true; }); d.remove(); if (typeof renderFileList === "function") renderFileList(); redrawAll(); uiSave(); });
-  d.append(I18N.t(window.SIMUI && SIMUI.allSim() ? "mrm.capNoticeSim" : "mrm.capNotice", { n: MRM_SHOW_MAX, t: mfs.length }) + " ", b);
-  p.el.insertBefore(d, p.el.firstChild);
-}
 
 // one MS2 experiment = precursor chromatogram (above) + product-ion spectrum (below, linked); the sidebar opens the chromatogram alone (addMs2Chrom), the spectrum comes on a double click
 function addMs2Chrom(/** @type {Bag} */ e, /** @type {number} */ y) {
