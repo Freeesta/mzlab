@@ -163,7 +163,7 @@ try:
             pg.evaluate("LIB.open()"); pg.click("#lib-avail-load"); pg.wait_for_selector("#libdlg [data-dl='prova-pos']"); pg.check("#libdlg [data-dl='prova-pos']"); pg.click("#lib-avail-go")
             pg.wait_for_selector("#lib-avail-cancel:not([hidden])"); pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('piece 1 of')", timeout=20000)
             pg.click("#lib-avail-cancel")
-            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('annullato')", timeout=30000)
+            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('cancelled')", timeout=30000)
             names = pg.evaluate("T.names()"); assert "prova-pos.mzlib" not in names and ".mzlab/prova-pos.000.piece" in names, names
             for r in held:
                 try: r.abort()

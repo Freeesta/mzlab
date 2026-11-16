@@ -43,7 +43,7 @@ try:
             assert pg.locator("#loading").is_hidden() and pg.locator("header").is_visible(), "no veil: the page stays visible"
             pg.wait_for_selector("#avvio-errore #avvio-reset", timeout=60000)
             assert pg.get_attribute("#avvio-errore", "role") == "alert"
-            assert "non risponde" in pg.inner_text("#avvio-errore-msg") and "Full reset" in pg.inner_text("#avvio-errore"), pg.inner_text("#avvio-errore")
+            assert "is not answering" in pg.inner_text("#avvio-errore-msg") and "Full reset" in pg.inner_text("#avvio-errore"), pg.inner_text("#avvio-errore")
             pg.click("#avvio-reset")
             pg.wait_for_selector("#drop", timeout=120000)
             assert "riparti" not in pg.url, pg.url
