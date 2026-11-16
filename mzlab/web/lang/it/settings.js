@@ -2,7 +2,7 @@ I18N.add("it", {
   "settings.language.label": "Lingua / Language",
   "settings.language.title": "Lingua dell'interfaccia",
   "settings.g.look": "Aspetto",
-  "settings.g.read": "Leggibilità e accessibilità",
+  "settings.g.read": "Accessibilità",
   "settings.g.data": "Dati e calcolo",
   "settings.g.app": "Applicazione",
   "settings.g.bug": "Segnala un bug",
