@@ -37,7 +37,7 @@ const panelOf = (/** @type {EventTarget | null} */ t) => (t instanceof HTMLCanva
 document.addEventListener("mousedown", e => {
   down = null; const p = e.button === 0 && !e.shiftKey ? panelOf(e.target) : undefined; if (!p) return;
   const [px, py] = where(e, p), l = hit(p, px, py); if (!l || p.ints.some((/** @type {Bag} */ i) => Math.abs(p._a.X(i.a) - px) < 6 || Math.abs(p._a.X(i.b) - px) < 6)) return;   // a border under the label still drags (eventi.js edgeAt)
-  down = { p, l }; if (l.int) p._intCur = l.int.id; e.stopPropagation(); front(p.el); setActive(p);                  // no drag, no cursor move, no selection change; the panel still comes forward
+  down = { p, l }; if (l.int?.id !== p._intCur) p._intCur = null; e.stopPropagation(); front(p.el); setActive(p);                  // no drag, no cursor move, no selection change; the panel still comes forward
 }, true);
 document.addEventListener("mouseup", e => {
   const d = down; down = null; if (!d || e.target !== d.p.cv) return;

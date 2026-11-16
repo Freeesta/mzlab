@@ -85,11 +85,11 @@ const iLo = (/** @type {Bag} */ it) => Math.min(it.a, it.b), iHi = (/** @type {B
 const intClash = (p, key, a, b, skip) => p.ints.find((/** @type {Bag} */ i) => i !== skip && i.key === key && iLo(i) < b - INT_EPS && iHi(i) > a + INT_EPS) || null;
 function nearMsg(/** @type {string} */ t) {                                                     // short notice next to the mouse (role=status; Esc, pointer moving away or 2.5 s dismiss it)
   let d = Q("#qnote"); if (!d) { d = document.createElement("div"); d.id = "qnote"; d.setAttribute("role", "status"); d.setAttribute("aria-live", "polite"); d.style.cssText = "position:fixed;z-index:20000;max-width:300px;padding:6px 10px;border-radius:6px;background:#333;color:#fff;font:13px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.35);pointer-events:none"; document.body.appendChild(d); }
-  const m = window._mxy || { x: 200, y: 200 }; d.textContent = t; d.hidden = false; d._at = { x: m.x, y: m.y }; d.style.left = Math.max(6, Math.min(innerWidth - 310, m.x + 14)) + "px"; d.style.top = Math.max(6, Math.min(innerHeight - 60, m.y + 40)) + "px";      // 40 px down: clear of the tooltip a label shows at the pointer
+  const m = window._mxy || { x: 200, y: 200 }; d.textContent = t; d.hidden = false; d._at = { x: m.x, y: m.y }; d.style.left = Math.max(6, Math.min(innerWidth - 310, m.x + 14)) + "px"; d.style.top = Math.max(6, Math.min(innerHeight - 60, m.y - d.offsetHeight - 16)) + "px";      // above the pointer: the tooltip of a label opens below it
   clearTimeout(d._t); d._t = setTimeout(() => { d.hidden = true; }, 2500);
 }
 document.addEventListener("mousemove", e => { window._mxy = { x: e.clientX, y: e.clientY }; const d = Q("#qnote"); if (d && !d.hidden && d._at && Math.hypot(e.clientX - d._at.x, e.clientY - d._at.y) > 24) d.hidden = true; }, true);
-document.addEventListener("keydown", e => { const d = Q("#qnote"); if (e.key === "Escape" && d && !d.hidden) d.hidden = true; }, true);
+document.addEventListener("keydown", e => { if (e.key !== "Escape") return; const d = Q("#qnote"); if (d) d.hidden = true; E.panels.forEach((/** @type {Bag} */ q) => { q._intCur = null; }); }, true);
 // undo snapshot of a panel: the integrations and the noise zones (one per trace)
 const intSnap = (/** @type {Bag} */ p) => JSON.stringify({ i: p.ints, n: p.noise || {} });
 // noise stretch [t0, t1] (min) of the trace of an integration: one per trace of the panel (the same for every file), else the one stored on the integration itself
@@ -107,7 +107,7 @@ function addInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} *
   if (p.ints.some((/** @type {Bag} */ i) => i.key === s.key && Math.abs(i.a - lo) < 1e-6 && Math.abs(i.b - hi) < 1e-6)) return false;     // same peak clicked twice
   if (intClash(p, s.key, lo, hi)) { nearMsg(I18N.t("int.clash")); return false; }      // several windows per trace (MRM/SIM too), never overlapping
   pushIh(p);
-  const rec = intRec(p, s, lo, hi, null, zero); p.ints.push(rec); p._intCur = rec.id;
+  const rec = intRec(p, s, lo, hi, null, zero); p.ints.push(rec); p._intCur = rec.id; p._intT = Date.now();
   draw(p);
   // MRM: the same window goes to the other transition panels (quantifier and qualifier), where it can still be moved on its own
   if (p.type === "mrm" && mirror) tabPanels().filter((/** @type {Bag} */ q) => q !== p && q.type === "mrm" && q._a && q._a.sr).forEach((/** @type {Bag} */ q) => { const s2 = q._a.sr.find((/** @type {Bag} */ x) => x.k === s.k && x.ion !== s.ion); if (s2) addInt(q, s2, a, b, false, zero); });
@@ -150,7 +150,7 @@ async function autoInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {nu
   let [l, r] = ed;
   {
     const c = p.ints.filter((/** @type {Bag} */ i) => i.key === s.key);
-    const on = c.find((/** @type {Bag} */ i) => iLo(i) + INT_EPS < x && x < iHi(i) - INT_EPS); if (on) { if (on.id === p._intCur) { p.isel = on.id; draw(p); } else nearMsg(I18N.t("int.clash")); return; }     // the peak just made or edited is not "another one": a click on it only selects it
+    const on = c.find((/** @type {Bag} */ i) => iLo(i) + INT_EPS < x && x < iHi(i) - INT_EPS); if (on) { if (on.id === p._intCur && Date.now() - p._intT < 4000) { p.isel = on.id; draw(p); } else nearMsg(I18N.t("int.clash")); return; }     // the peak just made or edited is not "another one": a click on it only selects it
     p._intCur = null; c.forEach((/** @type {Bag} */ i) => { if (iHi(i) <= x + INT_EPS) l = Math.max(l, iHi(i)); if (iLo(i) >= x - INT_EPS) r = Math.min(r, iLo(i)); });
     if (r - l < 1e-6) return;
   }
