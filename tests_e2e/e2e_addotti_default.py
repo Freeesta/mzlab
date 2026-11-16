@@ -1,4 +1,4 @@
-"""Adducts tab of «Addotti e perdite»: the standard adduct list shows by default (for the polarity in use), with no explanatory info line; typing filters, clearing brings back the last query's table; ESI+, ESI− or both; the Contaminants tab; the calculator folds. Reference lists name polymer series by repeat units, not «n=3»."""
+"""Adducts tab of «Adducts & losses»: the standard adduct list shows by default (for the polarity in use), with no explanatory info line; typing filters, clearing brings back the last query's table; ESI+, ESI− or both; the Contaminants tab; the calculator folds. Reference lists name polymer series by repeat units, not «n=3»."""
 import sys
 from lib import *
 
@@ -16,7 +16,7 @@ if __name__ == "__main__":
                 assert pg.input_value("#calcin") == ""
                 t = pg.inner_text("#sb-panel-adducts")
                 assert "[M+H]+" in t and "[M+Na]+" in t and "[M-H]-" not in t, t[:300]
-                assert "Un numero è letto" not in t and pg.locator("#sb-panel-adducts .nlhint").count() == 0
+                assert "A number is read" not in t and pg.locator("#sb-panel-adducts .nlhint").count() == 0
             step("default table in ESI+, no info line", default_table)
             def polarity():
                 pg.click("#al-ctl [data-p='-1']"); wait_for_js(pg, "(t => t.includes('[M-H]-') && t.includes('[M+H]+'))(document.querySelector('#sb-panel-adducts .cadt').innerText)")      # both polarities
@@ -54,7 +54,7 @@ if __name__ == "__main__":
                 pg.evaluate("LISTE.open({})"); pg.wait_for_selector("#lst-tbody tr", timeout=8000)
                 t = pg.evaluate("[...document.querySelectorAll('#lst-tbody tr')].map(r => r.innerText).join('\\n')")
                 assert "n=" not in t, t[:300]
-                assert pg.evaluate("LISTE.buildIndex([{id: 'k', name: 'k', items: [{id: 'peg', name: 'PEG (polietilenglicole) n=3', mz: 150, pol: 1, series: {id: 'peg', n: 3}}]}], null).pos[0].name") == "PEG (polietilenglicole), 3 unità ripetitive"
+                assert pg.evaluate("LISTE.buildIndex([{id: 'k', name: 'k', items: [{id: 'peg', name: 'PEG (polietilenglicole) n=3', mz: 150, pol: 1, series: {id: 'peg', n: 3}}]}], null).pos[0].name") == "PEG (polietilenglicole), 3 repeat units"
             step("polymer series are not named «n=…» in the reference list", ref_list)
     finally:
         print("page errors:", r.errs); r.close()

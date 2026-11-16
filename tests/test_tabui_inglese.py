@@ -58,6 +58,5 @@ def test_compounds_has_no_bare_formula_column():
 
 
 def test_tabui_has_no_lang_keys():
-    for lang in ("it", "en"):
-        src = lang_catalog.testo(lang)
-        assert not re.search(r'"tpmine\.', src), f"lang/{lang}.js has keys of Tabui"
+    src = lang_catalog.testo("en")
+    assert not re.search(r'"tpmine\.', src), "lang/en has keys of Tabui"

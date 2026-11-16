@@ -1,4 +1,4 @@
-"""Guided tour of the Dati view (low-resolution only): invitation, 15 steps, try-it steps, keyboard, EN, HR exclusion, example file."""
+"""Guided tour of the Data view (low-resolution only): invitation, 15 steps, try-it steps, keyboard, HR exclusion, example file."""
 # covers: mzlab/web/barre-maniglie.js, mzlab/web/tour.js, mzlab/web/barra.js, mzlab/web/affianca.js, mzlab/web/suggerimenti.js, mzlab/web/pannelli.js
 # covers: mzlab/web/grafici.js, mzlab/web/picchi.js, mzlab/web/tooltip.js, mzlab/web/eventi.js, mzlab/web/qaqc.js, mzlab/web/riferimento.js
 # covers: mzlab/web/stat.js
@@ -34,12 +34,12 @@ try:
 
         # 1. First load of LR data shows invitation
         stage(pg, [TMP_LR])
-        pg.click("text=Carica dati")
+        pg.click("text=Load data")
         ready(pg)
 
         pg.wait_for_selector("#tour-invito", timeout=30000)      # shown once the data are up: on a loaded machine that takes longer than 5 s
         inv_text = pg.inner_text("#tour-invito")
-        assert "Prima volta?" in inv_text and "minut" not in inv_text, inv_text
+        assert "First time?" in inv_text and "minut" not in inv_text, inv_text
 
         # bottom-left corner of the window, compact, non-modal dialog
         bb = pg.locator("#tour-invito").bounding_box()
@@ -49,14 +49,14 @@ try:
         assert abs((bb["x"] - side["x"]) - (side["x"] + side["width"] - bb["x"] - bb["width"])) <= 2, ("centred under the side panel", bb, side)
         assert pg.get_attribute("#tour-invito", "role") == "dialog"
         assert pg.get_attribute("#tour-invito", "aria-modal") == "false"
-        assert "Inizia il tour" in inv_text, inv_text
+        assert "Start the tour" in inv_text, inv_text
 
-        # Click "Non ora" -> closes; the invitation is recorded as already shown
+        # Click "Not now" -> closes; the invitation is recorded as already shown
         pg.click("#tour-inv-no")
         wait_for_js(pg, "!document.querySelector('#tour-invito') || document.querySelector('#tour-invito').hidden || !document.querySelector('#tour-invito').offsetParent", 5000)
-        assert not pg.is_visible("#tour-invito"), "invitation closed by Non ora"
+        assert not pg.is_visible("#tour-invito"), "invitation closed by Not now"
         pg.wait_for_selector("#tour-later.on")
-        assert pg.inner_text("#tour-later") == "Il tour si rifà dalle Impostazioni." and pg.get_attribute("#tour-later", "aria-live") == "polite"
+        assert pg.inner_text("#tour-later") == "The tour can be replayed from Settings." and pg.get_attribute("#tour-later", "aria-live") == "polite"
         lb, gb = pg.locator("#tour-later").bounding_box(), pg.locator("#np-set").bounding_box()
         assert lb["y"] >= gb["y"] + gb["height"] and lb["x"] <= gb["x"] + gb["width"] and lb["x"] + lb["width"] >= gb["x"], ("bubble under the gear", lb, gb)
         pg.mouse.click(300, 300)
@@ -71,73 +71,73 @@ try:
         ready(pg)
         frames(pg, 30)
         assert not pg.is_visible("#tour-invito"), "invitation does not return on reload"
-        steps.append(("invitation shown on first LR load, closed by Non ora, not repeated on reload", "ok"))
+        steps.append(("invitation shown on first LR load, closed by Not now, not repeated on reload", "ok"))
 
         # 2. Replay tour from gear: all 15 steps tested
         wait_for_js(pg, "typeof E !== 'undefined' && E.files && E.files.length > 0")  # the label reads «Rifai» only once the reloaded file is back
         pg.click("#np-set")
         pg.wait_for_selector("#uipset", timeout=3000)
-        assert pg.is_visible("#uip-tour") and "Rifai il tour" in pg.inner_text("#uip-tour")
+        assert pg.is_visible("#uip-tour") and "Replay the tour" in pg.inner_text("#uip-tour")
         pg.click("#uip-tour")
 
         # Chapter 1, Step 1: file list
         pg.wait_for_selector("#tour-dialog", timeout=3000)
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
-        assert "Passo 1 di 7 · I tuoi dati" in hd, hd
-        assert ttl == "Qui ci sono i file caricati", ttl
+        assert "Step 1 of 7 · Your data" in hd, hd
+        assert ttl == "Your loaded files are here", ttl
         assert pg.get_attribute("#tour-btn-back", "disabled") is not None, "back disabled on step 1"
 
         # Advance to Step 2: gruppi
         pg.click("#tour-btn-next")
-        wait_hd(pg, "Passo 2 di 7 · I tuoi dati")
+        wait_hd(pg, "Step 2 of 7 · Your data")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
-        assert "Passo 2 di 7 · I tuoi dati" in hd, hd
-        assert ttl == "Un gruppo per esperimento", ttl
+        assert "Step 2 of 7 · Your data" in hd, hd
+        assert ttl == "One group per experiment", ttl
 
         # Test Back button returns to Step 1
         pg.click("#tour-btn-back")
-        wait_hd(pg, "Passo 1 di 7 · I tuoi dati")
+        wait_hd(pg, "Step 1 of 7 · Your data")
         hd = pg.inner_text("#tour-dialog .tour-hd")
-        assert "Passo 1 di 7 · I tuoi dati" in hd, hd
+        assert "Step 1 of 7 · Your data" in hd, hd
 
         # Advance again to Step 2, then Step 3: TIC
         pg.click("#tour-btn-next")
-        wait_hd(pg, "Passo 2 di 7")
+        wait_hd(pg, "Step 2 of 7")
         pg.click("#tour-btn-next")
-        wait_hd(pg, "Passo 3 di 7 · I tuoi dati")
+        wait_hd(pg, "Step 3 of 7 · Your data")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
-        assert "Passo 3 di 7 · I tuoi dati" in hd, hd
-        assert ttl == "Il TIC: tutto il segnale nel tempo", ttl
+        assert "Step 3 of 7 · Your data" in hd, hd
+        assert ttl == "The TIC: all the signal over time", ttl
         # Screenshot step 3 (light theme)
         pg.screenshot(path=str(HERE / "shots" / "tour_passo3.png"))
 
         # Advance to Step 4: istante (Try it step)
         pg.click("#tour-btn-next")
-        wait_hd(pg, "Passo 4 di 7 · I tuoi dati")
+        wait_hd(pg, "Step 4 of 7 · Your data")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
-        assert "Passo 4 di 7 · I tuoi dati" in hd, hd
-        assert ttl == "Scegli un istante", ttl
-        assert pg.is_visible("#tour-dialog .tour-try"), "prova tu row visible"
+        assert "Step 4 of 7 · Your data" in hd, hd
+        assert ttl == "Pick a moment", ttl
+        assert pg.is_visible("#tour-dialog .tour-try"), "try-it row visible"
 
         # Try it: click anywhere on TIC canvas -> should auto-advance to Step 5
         pg.click(".pnl.chrom canvas", position={"x": 150, "y": 80})
-        pg.wait_for_function("document.querySelector('#tour-dialog .tour-hd')?.textContent.includes('Passo 5')", timeout=5000)
+        pg.wait_for_function("document.querySelector('#tour-dialog .tour-hd')?.textContent.includes('Step 5')", timeout=5000)
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
-        assert "Passo 5 di 7 · I tuoi dati" in hd, hd
-        assert ttl == "Lo spettro di massa", ttl
+        assert "Step 5 of 7 · Your data" in hd, hd
+        assert ttl == "The mass spectrum", ttl
 
         # Advance to Step 6: xic (Try it step)
         pg.click("#tour-btn-next")
-        wait_hd(pg, "Passo 6 di 7 · I tuoi dati")
+        wait_hd(pg, "Step 6 of 7 · Your data")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
-        assert "Passo 6 di 7 · I tuoi dati" in hd, hd
-        assert ttl == "Estrai uno ione (XIC)", ttl
+        assert "Step 6 of 7 · Your data" in hd, hd
+        assert ttl == "Extract one ion (XIC)", ttl
         # Screenshot step 6 (light theme)
         pg.screenshot(path=str(HERE / "shots" / "tour_passo6.png"))
 
@@ -148,50 +148,50 @@ try:
         lb = pg.evaluate("(() => { const p = E.panels.find(q => q.type === 'spec'); const q = p.cv.getBoundingClientRect(); const l = p._a && p._a.lbls && p._a.lbls.filter(x => x.m != null)[0]; return l ? { x: q.left + l.x + l.w / 2, y: q.top + l.y + l.h / 2 } : { x: q.left + q.width / 2, y: q.top + q.height / 2 }; })()")
         pg.mouse.click(lb["x"], lb["y"], button="right")
         pg.wait_for_selector("#ctx", timeout=3000)
-        pg.locator("#ctx div", has_text="Estrai l'XIC").first.click()
+        pg.locator("#ctx div", has_text="Extract the XIC").first.click()
 
         # Step 6 auto-advances to Step 7 when XIC panel is created
-        pg.wait_for_function("document.querySelector('#tour-dialog .tour-hd')?.textContent.includes('Passo 7')", timeout=5000)
+        pg.wait_for_function("document.querySelector('#tour-dialog .tour-hd')?.textContent.includes('Step 7')", timeout=5000)
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
-        assert "Passo 7 di 7 · I tuoi dati" in hd, hd
-        assert ttl == "L'XIC che hai estratto", ttl
+        assert "Step 7 of 7 · Your data" in hd, hd
+        assert ttl == "The XIC you extracted", ttl
         assert pg.is_visible(".pnl.xic"), "new xic panel exists"
         assert pg.is_visible("#tour-btn-cont") and pg.is_visible("#tour-btn-fine-cap1"), "end of chapter 1 choices visible"
         steps.append(("chapter 1 steps 1-7: auto-advance on TIC click and XIC extraction, targets correct", "ok"))
 
-        # Click Continua to go to Chapter 2
+        # Click Continue to go to Chapter 2
         pg.click("#tour-btn-cont")
-        wait_hd(pg, "Passo 1 di 9 · Strumenti e movimenti")
+        wait_hd(pg, "Step 1 of 9 · Tools and moving around")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
-        assert "Passo 1 di 9 · Strumenti e movimenti" in hd, hd
-        assert ttl == "Ingrandire e tornare indietro", ttl
+        assert "Step 1 of 9 · Tools and moving around" in hd, hd
+        assert ttl == "Zoom in and back out", ttl
 
         # 3. Keyboard test in Chapter 2
-        # Check focus is on Avanti
+        # Check focus is on Next
         focused_id = pg.evaluate("document.activeElement.id")
         assert focused_id == "tour-btn-next", f"expected focus on tour-btn-next, got {focused_id}"
 
         # Enter advances to Step 2: tasti
         pg.keyboard.press("Enter")
-        wait_hd(pg, "Passo 2 di 9 · Strumenti e movimenti")
+        wait_hd(pg, "Step 2 of 9 · Tools and moving around")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
-        assert "Passo 2 di 9 · Strumenti e movimenti" in hd, hd
-        assert ttl == "Il cursore del cromatogramma", ttl
+        assert "Step 2 of 9 · Tools and moving around" in hd, hd
+        assert ttl == "The chromatogram cursor", ttl
 
         # ArrowLeft goes back to Step 1
         pg.keyboard.press("ArrowLeft")
-        wait_hd(pg, "Passo 1 di 9 · Strumenti e movimenti")
+        wait_hd(pg, "Step 1 of 9 · Tools and moving around")
         hd = pg.inner_text("#tour-dialog .tour-hd")
-        assert "Passo 1 di 9 · Strumenti e movimenti" in hd, hd
+        assert "Step 1 of 9 · Tools and moving around" in hd, hd
 
         # ArrowRight advances to Step 2
         pg.keyboard.press("ArrowRight")
-        wait_hd(pg, "Passo 2 di 9 · Strumenti e movimenti")
+        wait_hd(pg, "Step 2 of 9 · Tools and moving around")
         hd = pg.inner_text("#tour-dialog .tour-hd")
-        assert "Passo 2 di 9 · Strumenti e movimenti" in hd, hd
+        assert "Step 2 of 9 · Tools and moving around" in hd, hd
 
         # Escape exits and saves saltato
         pg.keyboard.press("Escape")
@@ -206,53 +206,53 @@ try:
 
         # 4. Finish all steps of Chapter 2
         pg.evaluate("TOUR.vai(2, 2)") # go to step 3
-        wait_hd(pg, "Passo 3 di 9")
+        wait_hd(pg, "Step 3 of 9")
 
         # Step 3: navfile
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
-        assert "Passo 3 di 9 · Strumenti e movimenti" in hd, hd
-        assert ttl == "Cambiare file", ttl
+        assert "Step 3 of 9 · Tools and moving around" in hd, hd
+        assert ttl == "Switching files", ttl
 
         # Step 4: add
         pg.click("#tour-btn-next")
-        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 4 di 9')")
+        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Step 4 of 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
-        assert "Passo 4 di 9 · Strumenti e movimenti" in hd, hd
+        assert "Step 4 of 9 · Tools and moving around" in hd, hd
 
         # Step 5: affianca (the handle of the panels)
         pg.click("#tour-btn-next")
-        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 5 di 9')")
+        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Step 5 of 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
-        assert "Passo 5 di 9 · Strumenti e movimenti" in hd, hd
-        assert pg.inner_text("#tour-dialog h3") == "Affiancare i grafici"
+        assert "Step 5 of 9 · Tools and moving around" in hd, hd
+        assert pg.inner_text("#tour-dialog h3") == "Place charts side by side"
 
         # Step 6: panel
         pg.click("#tour-btn-next")
-        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 6 di 9')")
+        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Step 6 of 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
-        assert "Passo 6 di 9 · Strumenti e movimenti" in hd, hd
+        assert "Step 6 of 9 · Tools and moving around" in hd, hd
 
         # Step 7: bar
         pg.click("#tour-btn-next")
-        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 7 di 9')")
+        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Step 7 of 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
-        assert "Passo 7 di 9 · Strumenti e movimenti" in hd, hd
+        assert "Step 7 of 9 · Tools and moving around" in hd, hd
 
         # Step 8: method
         pg.click("#tour-btn-next")
-        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 8 di 9')")
+        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Step 8 of 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
-        assert "Passo 8 di 9 · Strumenti e movimenti" in hd, hd
+        assert "Step 8 of 9 · Tools and moving around" in hd, hd
 
         # Step 9: ingranaggio
         pg.click("#tour-btn-next")
-        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Passo 9 di 9')")
+        wait_for_js(pg, "document.querySelector('#tour-dialog .tour-hd').innerText.includes('Step 9 of 9')")
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
-        assert "Passo 9 di 9 · Strumenti e movimenti" in hd, hd
-        assert ttl == "Impostazioni e questo tour", ttl
-        assert pg.is_visible("#tour-btn-fine") and "Fine" in pg.inner_text("#tour-btn-fine")
+        assert "Step 9 of 9 · Tools and moving around" in hd, hd
+        assert ttl == "Settings and this tour", ttl
+        assert pg.is_visible("#tour-btn-fine") and "Finish" in pg.inner_text("#tour-btn-fine")
 
         # Click Fine -> finishes and saves fatto
         pg.click("#tour-btn-fine")
@@ -263,16 +263,16 @@ try:
         steps.append(("chapter 2 steps completed with Fine, saves stato fatto", "ok"))
 
         # every step finds its target visible (the toolbar, the file drawer opened for its step and closed after it)
-        pg.goto(f"http://127.0.0.1:{r.port}/?lang=it"); ready(pg)
+        pg.goto(f"http://127.0.0.1:{r.port}/"); ready(pg)
         pg.evaluate("localStorage.setItem('mzlab.tour.lr', JSON.stringify({stato:'saltato'}))")
         pg.evaluate("window.BARRA && BARRA.isOpen() && BARRA.close(false)"); pg.wait_for_timeout(300)      # a drawer left open (the state is saved) would stay open after the «file» step: that is not what is measured here
         SPOT = "(()=>{const s=document.querySelector('#tour-spotlight');if(!s)return null;const r=s.getBoundingClientRect();return [Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.round(r.height)]})()"
         for cap, n in ((1, 7), (2, 9)):
             for i in range(n):
                 pg.evaluate(f"TOUR.vai({cap}, {i})")
-                wait_hd(pg, f"Passo {i + 1} di {n}")
+                wait_hd(pg, f"Step {i + 1} of {n}")
                 hd = pg.inner_text("#tour-dialog .tour-hd")
-                assert f"Passo {i + 1} di {n}" in hd, (cap, i, hd)           # a step with no target is skipped: the number would jump
+                assert f"Step {i + 1} of {n}" in hd, (cap, i, hd)           # a step with no target is skipped: the number would jump
                 sp = pg.evaluate(SPOT); assert sp and sp[2] > 10 and sp[3] > 10, (cap, i, sp)
                 assert pg.evaluate("document.querySelector('#dfiles') && getComputedStyle(document.querySelector('#dfiles')).display !== 'none'") == (cap == 1 and i in (0, 1)), (cap, i)
                 if cap == 2 and i == 6:
@@ -291,8 +291,8 @@ try:
         pg.set_viewport_size({"width": 1500, "height": 2200})
         steps.append(("every tour step finds its target visible; the «file» step opens and closes the drawer; the invitation is not covered", "ok"))
 
-        # 5. English language: text of step 1 and buttons in English
-        pg.goto(f"http://127.0.0.1:{r.port}/?lang=en")
+        # 5. Text of step 1 and buttons
+        pg.goto(f"http://127.0.0.1:{r.port}/")
         ready(pg)
         pg.evaluate("TOUR.inizia(1, 0)")
         wait_hd(pg, "Step 1 of 7 · Your data")
@@ -305,10 +305,7 @@ try:
         assert btn_txt == "Next", btn_txt
         assert skip_txt == "Skip tour", skip_txt
         pg.click("#tour-btn-skip")
-
-        pg.goto(f"http://127.0.0.1:{r.port}/?lang=it")
-        ready(pg)
-        steps.append(("english language: headers, titles and buttons in English", "ok"))
+        steps.append(("headers, titles and buttons of the tour are in English", "ok"))
 
         # 6. HR mode: no invitation, no entry in settings
         pg.evaluate("fetch('api/new', {method:'POST', body:JSON.stringify({fresh:true})})")
@@ -317,8 +314,8 @@ try:
         pg.evaluate("localStorage.removeItem('mzlab.tour.lr')")
 
         pg.set_input_files("#pick", [TMP_HR])
-        pg.wait_for_selector("text=Carica dati", timeout=30000)
-        pg.click("text=Carica dati")
+        pg.wait_for_selector("text=Load data", timeout=30000)
+        pg.click("text=Load data")
         ready(pg)
 
         assert pg.evaluate("window.BANCO && BANCO.on()"), "in HR mode"
@@ -330,7 +327,7 @@ try:
         pg.keyboard.press("Escape")
         steps.append(("HR mode: no invitation, no gear entry", "ok"))
 
-        # 7. Without data: "Fai il tour con un file di esempio" loads single file and starts at step 1
+        # 7. Without data: "Take the tour with an example file" loads single file and starts at step 1
         pg.evaluate("fetch('api/new', {method:'POST', body:JSON.stringify({fresh:true})})")
         pg.reload()
         pg.wait_for_selector("#drop", timeout=60000)
@@ -340,20 +337,20 @@ try:
         assert pg.evaluate("typeof E === 'undefined' || !E.files || !E.files.length"), "no files loaded"
         pg.click("#np-set")
         pg.wait_for_selector("#uipset", timeout=3000)
-        assert pg.is_visible("#uip-tour") and "Fai il tour con un file di esempio" in pg.inner_text("#uip-tour")
+        assert pg.is_visible("#uip-tour") and "Take the tour with an example file" in pg.inner_text("#uip-tour")
         pg.click("#uip-tour")
 
         # Wait for the file and the tour at step 1: the tour example does not open by itself (the tour opens the file at its step), so the tour starts on the sample table and the first file (PASSI_INIZIALI, 7 + 2 steps)
         pg.wait_for_selector("#tour-dialog", timeout=35000)
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
-        assert "Passo 1 di 9 · I tuoi dati" in hd, hd
-        assert ttl == "Qui scegli i campioni", ttl
+        assert "Step 1 of 9 · Your data" in hd, hd
+        assert ttl == "Pick the samples here", ttl
         assert pg.evaluate("E.files.length") == 1, f"expected 1 file, got {pg.evaluate('E.files.length')}"
         pg.click("#tour-btn-skip")
         steps.append(("without data: loads single example file and starts tour at step 1", "ok"))
 
-        late = [e for e in r.errs if "i18n: key asked before the rest" in str(e)]      # every page of the tour, Italian and English: no text asked before the whole catalog
+        late = [e for e in r.errs if "i18n: key asked before the rest" in str(e)]      # every page of the tour: no text asked before the whole catalog
         assert not late and pg.evaluate("I18N.late.size") == 0, late
         steps.append(("no browser console errors", "ok"))
 

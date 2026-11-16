@@ -38,7 +38,7 @@ def cold(p, with_file, vw=1440):
     pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "typeof E !== 'undefined' && window.qqReady === true")      # BARRA.init (key handlers) runs right after qqReady
     if with_file:
         pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 1")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
     frames(pg, 6)
     return r, ctx, pg, errs
 def scenario(p, fn, with_file=False, vw=1440):
@@ -90,7 +90,7 @@ try:
             else:
                 click(pg, "file", True); s = state(pg)      # with a file a second click goes back to the previous tool (docs: dati-barra.md)
                 assert s["open"] and s["tab"] == "lists", s
-        step("no files: File after Addotti e perdite / Liste shows the File panel; active button follows", lambda: scenario(p, lambda pg: sequence(pg, True)))
+        step("no files: File after Adducts and losses / Lists shows the File panel; active button follows", lambda: scenario(p, lambda pg: sequence(pg, True)))
         step("one file: same sequence; a second click on the active tool goes back to the previous one", lambda: scenario(p, lambda pg: sequence(pg, False), with_file=True))
 finally: pass
 bad = [s for s in steps if s[1] != "ok"]

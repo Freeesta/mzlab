@@ -109,7 +109,7 @@ const HR = (() => {
     return o;
   }
   // the theoretical pattern on a spectrum (red circles): each circle sits on the observed centroid within the tolerance of the profile (and says the
-  // error in ppm), otherwise on the calculated m/z with "non trovato". Returns the note for the legend.
+  // error in ppm), otherwise on the calculated m/z with "not found". Returns the note for the legend.
   function drawIso(p, g, X, Y, d0, ymax, W, f, pat) {
     const tol = prof(f, p.level).tol, st = p.iso.style || "centroidi";
     // no width: whole fine structure

@@ -1,9 +1,8 @@
-"""Interface language: Italian by default whatever the browser language is (it-IT, en-US, fr-FR), ?lang=, choice from the gear (remembered in
-mzlab.lang, files stay open after the reload). Synthetic data."""
-# covers: mzlab/web/settings.js, mzlab/web/lang/, mzlab/web/i18n.js
-import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+"""Interface language: English only, whatever the browser language is (it-IT, en-US, fr-FR); a language stored by an older version
+(mzlab.lang) and ?lang= are ignored without a message. Synthetic data."""
+# covers: mzlab/web/i18n.js, mzlab/web/lang/
+import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
-import synth
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -15,51 +14,26 @@ try:
     with sync_playwright() as p:
         url = f"http://127.0.0.1:{r.port}/"
         b = p.chromium.launch()
-        def page(locale, query=""):
-            c = b.new_context(lang_auto=True, locale=locale, viewport={"width": 1500, "height": 1400}); pg = c.new_page()
+        def page(locale, query="", stored=None):
+            c = b.new_context(locale=locale, viewport={"width": 1500, "height": 1400})
+            if stored: c.add_init_script("try{localStorage.setItem('mzlab.lang','%s')}catch(_){}" % stored)
+            pg = c.new_page()
             pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
             pg.goto(url + query); pg.wait_for_timeout(800); return pg
-        # the tabs Tabui and Flow follow Data and Drawing (they carry the same name in both languages)
         nav = lambda pg: pg.evaluate("[...document.querySelectorAll('#nav button')].map(b => b.textContent.trim())")
-        def italian():
-            pg = page("it-IT"); assert pg.evaluate("I18N.lang") == "it" and pg.evaluate("document.documentElement.lang") == "it"
-            assert nav(pg) == ["Dati", "Disegno", "Tabui", "Flow"], nav(pg)
-        step("it-IT browser -> Italian", italian)
-        def italian_everywhere():
-            for loc in ("en-US", "fr-FR", "de-DE"):
-                pg = page(loc); assert pg.evaluate("I18N.lang") == "it" and pg.evaluate("document.documentElement.lang") == "it", loc
-                assert nav(pg) == ["Dati", "Disegno", "Tabui", "Flow"], (loc, nav(pg))
-        step("en-US, fr-FR, de-DE browsers -> Italian too (the browser language is not consulted)", italian_everywhere)
-        def english():
-            for loc in ("en-US", "it-IT"):
-                pg = page(loc, "?lang=en"); assert pg.evaluate("I18N.lang") == "en" and pg.evaluate("document.documentElement.lang") == "en", loc
+        def english_everywhere():
+            for loc in ("en-US", "it-IT", "fr-FR", "de-DE"):
+                pg = page(loc); assert pg.evaluate("I18N.lang") == "en" and pg.evaluate("document.documentElement.lang") == "en", loc
                 assert nav(pg) == ["Data", "Drawing", "Tabui", "Flow"], (loc, nav(pg))
-        step("?lang=en -> English in any browser", english)
+        step("any browser language -> English (the browser language is not consulted)", english_everywhere)
         def query():
-            pg = page("it-IT", "?lang=en"); assert pg.evaluate("I18N.lang") == "en"
-            pg = page("en-US", "?lang=it"); assert pg.evaluate("I18N.lang") == "it"
-        step("?lang= forces the language for the tab", query)
-        def gear():
-            pg = page("it-IT"); shutil.rmtree("/tmp/s_lingua", ignore_errors=True)
-            stage(pg, synth.make_series("/tmp/s_lingua", [0, 15, 60])); pg.click("text=Carica dati"); ready(pg)
-            n = pg.evaluate("E.files.length"); assert n >= 3
-            pg.click("#np-set"); pg.wait_for_timeout(200)
-            assert pg.inner_text("#uip-lang-l").lower().startswith("lingua / language")
-            assert pg.evaluate("document.querySelector('input[name=uip-lang]:checked').value") == "it"
-            saved(pg)        # the open files come back from the saved session: wait until it is written
-            with pg.expect_navigation(): pg.click("input[name=uip-lang][value=en]", force=True)
-            wait_for_js(pg, "typeof I18N !== 'undefined' && I18N.lang === 'en'", 60000); ready(pg)
-            assert pg.evaluate("I18N.lang") == "en" and pg.evaluate("localStorage.getItem('mzlab.lang')") == "en"
-            assert nav(pg) == ["Data", "Drawing", "Tabui", "Flow"]
-            wait_for_js(pg, f"E.files.length === {n}", 60000)
-            assert pg.evaluate("E.files.length") == n, "open files must come back after the language change"
-            pg.click("#np-set"); pg.wait_for_timeout(200); assert pg.evaluate("document.querySelector('input[name=uip-lang]:checked').value") == "en"
-            assert pg.inner_text("#uip-lang-l").lower().startswith("lingua / language"), "the label stays bilingual"
-        step("gear: choice remembered (mzlab.lang), page reloads in English, open files stay", gear)
-        def remembered():
-            pg = page("it-IT"); pg.evaluate("localStorage.setItem('mzlab.lang','en')"); pg.reload(); pg.wait_for_timeout(600)
-            assert pg.evaluate("I18N.lang") == "en", "the explicit choice wins over the browser"
-        step("explicit choice wins over the browser language", remembered)
+            pg = page("it-IT", "?lang=it"); assert pg.evaluate("I18N.lang") == "en" and nav(pg) == ["Data", "Drawing", "Tabui", "Flow"], nav(pg)
+        step("?lang=it is ignored", query)
+        def stored():
+            pg = page("it-IT", stored="it"); assert pg.evaluate("I18N.lang") == "en" and nav(pg) == ["Data", "Drawing", "Tabui", "Flow"], nav(pg)
+            pg.click("#np-set"); pg.wait_for_selector("#uipset")
+            assert pg.locator("#uip-lang-l").count() == 0 and pg.locator("input[name=uip-lang]").count() == 0, "no language switch in the settings"
+        step("a stored mzlab.lang=it is ignored silently, the settings have no language switch", stored)
         b.close()
     r.close()
 except Exception as e:

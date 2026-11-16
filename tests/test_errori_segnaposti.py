@@ -1,5 +1,5 @@
 """Every engine error says what its text names: an `Error::new("key")` of the Rust code (tests aside) carries, in the `.with(...)` chain written after it,
-each `{placeholder}` of that key's text in the Italian and English catalogs, so a reader never sees a literal «{name}». Keys whose text has no placeholder,
+each `{placeholder}` of that key's text in the English catalog, so a reader never sees a literal «{name}». Keys whose text has no placeholder,
 keys built at run time and keys without a catalog text are not checked here (`tools/controlla_i18n.py` covers the catalogs)."""
 import re
 from pathlib import Path
@@ -13,7 +13,7 @@ WITH = re.compile(r'\s*\.with\(\s*"(\w+)"\s*,')
 
 def placeholders() -> dict[str, set[str]]:
     need: dict[str, set[str]] = {}
-    for lang in ("it", "en"):
+    for lang in ("en",):
         for f in sorted((LANG / lang).glob("*.js")):
             for key, text in ENTRY.findall(f.read_text(encoding="utf-8")):
                 need.setdefault(key, set()).update(re.findall(r"\{(\w+)\}", text))

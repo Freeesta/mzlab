@@ -43,7 +43,7 @@ try:
             c = b.new_context(viewport={"width": width, "height": 900}, reduced_motion="reduce", color_scheme=scheme); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
-            pg.goto(f"http://127.0.0.1:{PORT}/?lang=en"); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=60000)
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=60000)
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_function("window.TPSTRUCT && window.TPMOL && window.TPRIGA", timeout=60000)
             pg.evaluate("() => { const d = document.createElement('div'); d.className = 'tp'; d.id = 'tps-host'; d.style.cssText = 'position:fixed;left:0;top:0;width:100%;max-width:560px;background:var(--panel);color:var(--ink);z-index:99999;padding:8px;box-sizing:border-box'; d.innerHTML = '<div id=\"tps-panel\"></div>'; document.body.appendChild(d); }")
             return pg

@@ -38,7 +38,7 @@ try:
             for shown in ("sgroup", "enhanced-stereo", "create-monomer", "any-atom"): assert pg.evaluate(VIS, shown), shown
             pg.click("#tools-def"); pg.wait_for_timeout(300); pg.uncheck("input[data-t=rings]"); pg.wait_for_timeout(300)
             assert not RINGS()
-        step("tool groups: essentials by default, «Mostra tutti», single groups", tools)
+        step("tool groups: essentials by default, «Show all», single groups", tools)
         def groups():
             assert pg.evaluate(VIS, "period-table"), "the periodic table is shown"
             n = pg.evaluate("""() => { const d = document.querySelector('#kframe').contentDocument; return [...d.querySelectorAll('[class*="LeftToolbar-module_buttons"] > *')].filter(g => g.getClientRects().length && g.getBoundingClientRect().height < 20).length; }""")

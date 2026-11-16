@@ -39,7 +39,7 @@ function uipSave() {
   if (UIP.hrPpm !== 5) o.hrPpm = UIP.hrPpm; if (UIP.hrDec !== 4) o.hrDec = UIP.hrDec;         // high resolution: only what differs from the defaults
   uipWrite(UIP_KEY, JSON.stringify(o));
 }
-// the preferences (theme, colours, reading, high-resolution options) are one undoable action (comandi.js); the language reloads the page and is not undone
+// the preferences (theme, colours, reading, high-resolution options) are one undoable action (comandi.js)
 COMANDI.gestore("app.settings", {
   leggi: () => JSON.stringify([UIP.theme, UIP.pal, UIP.merge, UIP.hrPpm, UIP.hrDec, QA11Y.read(), UIP.xicLens]),
   applica: (_p, snap) => {
@@ -151,7 +151,6 @@ function uipOpen(btn) {
   const flat = (id, icon, title, items) => C.flatOrRow(id, icon, T(title), items);          // a fold or a title only for a real group of several controls
   const grp = (id, icon, title, body, dflt, tip) => body ? C.group(id, icon, T(title), body, uipGroupOpen(id, dflt), T(tip)) : "";
   d.innerHTML = `<div class="a-hd"><h2>${T("settings.title")}</h2><button type="button" class="x" id="uip-x" aria-label="${esc(T("settings.close"))}" title="${esc(T("settings.close.tip"))}"></button></div>`
-    + C.langRow(T("settings.language.label"), T("settings.language.title"), I18N.lang)
     + C.flat("uip-g-look", "look", T("settings.g.look"), look) + C.flat("uip-a11y", "read", T("settings.g.read"), read)
     + flat("uip-g-data", "data", "settings.g.data", dataItems) + flat("uip-g-app", "app", "settings.g.app", appItems)
     + tour + C.bugRow(T("settings.g.bug"), T("settings.g.bug.tip"))
@@ -174,7 +173,6 @@ function uipOpen(btn) {
     if (wasOn) go(false);
     else on("#llm-on", "change", e => { if (e.target.checked) go(true); });
   }
-  radio("uip-lang", v => I18N.set(v));                                  // remembered in qqq.lang, then the page reloads (open files come back with the session)
   radio("uip-th", v => { uipDo(() => { UIP.theme = v; }); uipSave(); TEMASOFT.run(uipApply); });
   radio("uip-font", v => { const c = QA11Y.read(); c.font = v; uipDo(() => QA11Y.write(c)); });
   on("#uip-hc", "change", e => { const c = QA11Y.read(); c.bg = e.target.checked ? "hc" : ""; uipDo(() => QA11Y.write(c)); if (typeof redrawAll === "function") redrawAll(); });

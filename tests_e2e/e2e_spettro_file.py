@@ -15,7 +15,7 @@ try:
         pg = r.page(p)
         names = ["B_FullMass-t0", "B_FullMass-t5", "B_FullMass-t10", "B_FullMass-t15", "B_FullMass-t45"]
         stage(pg, [mz(n) for n in names])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         ks = pg.evaluate("tabFiles('full').map(f=>f.k)")
         assert len(ks) == 5, ks
         pg.evaluate(f"(()=>{{E.browse=false;tabFiles('full').forEach(f=>f.vis=f.k==={ks[0]}||f.k==={ks[1]});renderFileList();redrawAll()}})()")

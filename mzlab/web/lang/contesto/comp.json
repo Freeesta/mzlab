@@ -1,9 +1,9 @@
 {
-  "comp.xlsx.prefix": "Inizio del nome del file scaricato; solo lettere minuscole senza accento.",
-  "comp.count": "Conteggio dei candidati nella finestra «Formule compatibili»; {n} = numero.",
-  "comp.sc.obs": "Numero di picchi isotopici trovati nello spettro; {n}.",
-  "comp.terms": "Termini del punteggio di un candidato (0-1): {m} massa, {i} isotopi, {f} frammenti.",
-  "comp.det.limits": "Soglie del punteggio isotopico: {r} risoluzione a m/z 200, {p} errore in ppm, {s} errore sull'intensità in %, {mn} soglia in %, {w} pesi.",
-  "comp.first": "Seguito di comp.count; {n} = quanti ne sono mostrati.",
-  "comp.scored": "Sotto «Formule compatibili»: il punteggio isotopi/frammenti è stato calcolato solo per le {n} masse più vicine su {m} candidati; numeri."
+  "comp.xlsx.prefix": "Start of the downloaded file name; only lowercase letters without accents.",
+  "comp.count": "Count of the candidates in the \"Compatible formulas\" window; {n} = number.",
+  "comp.sc.obs": "Number of isotope peaks found in the spectrum; {n}.",
+  "comp.terms": "Terms of the score of a candidate (0-1): {m} mass, {i} isotopes, {f} fragments.",
+  "comp.det.limits": "Thresholds of the isotope score: {r} resolution at m/z 200, {p} error in ppm, {s} intensity error in %, {mn} threshold in %, {w} weights.",
+  "comp.first": "Continuation of comp.count; {n} = how many are shown.",
+  "comp.scored": "Below \"Compatible formulas\": the isotope/fragment score was calculated only for the {n} closest masses out of {m} candidates; numbers."
 }

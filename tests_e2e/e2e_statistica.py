@@ -1,4 +1,4 @@
-"""Statistica panel: sample metadata (low and high resolution), time profile, blank subtraction, exploratory PCA (high resolution only)."""
+"""Statistics panel: sample metadata (low and high resolution), time profile, blank subtraction, exploratory PCA (high resolution only)."""
 # covers: mzlab/web/profilo.js, mzlab/web/tabella.js, mzlab/web/bianco.js, mzlab/web/pca.js, mzlab/statistica.py, tools/dati_sintetici.py
 # covers: mzlab/web/stat.js, mzlab/web/campioni.js, mzlab/web/campioni-doc.js, mzlab/web/campioni-tabella.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -52,14 +52,14 @@ try:
         load(pg, [D / "S_t0.mzML", D / "S_t30.mzML", D / "S_t60.mzML", D / "Blank_1.mzML"], 4)
         def lr_sections():
             assert pg.locator("#stbar [data-cmd=stat]").count() == 0 and pg.locator("#np-stat").count() == 0, "no button for it"
-            pg.click("#tb-more"); pg.wait_for_selector("#stmenu"); assert "Statistica" not in pg.inner_text("#stmenu"), "and not in «Altro»"; pg.keyboard.press("Escape")
-            for q in ("statistica", "statistics", "PCA", "bianco", "profilo nel tempo"):
+            pg.click("#tb-more"); pg.wait_for_selector("#stmenu"); assert "Statistics" not in pg.inner_text("#stmenu"), "and not in «More»"; pg.keyboard.press("Escape")
+            for q in ("statistics", "PCA", "blank", "time course"):
                 pg.evaluate("document.activeElement.blur()"); pg.keyboard.press("Control+k"); pg.wait_for_selector("#paletta:not([hidden])")
-                pg.keyboard.type(q); pg.wait_for_timeout(250); assert "Statistica della serie" in pg.inner_text("#pal-l"), q
-                if q != "profilo nel tempo": pg.keyboard.press("Escape"); pg.wait_for_selector("#paletta", state="hidden")
+                pg.keyboard.type(q); pg.wait_for_timeout(250); assert "Series statistics" in pg.inner_text("#pal-l"), q
+                if q != "time course": pg.keyboard.press("Escape"); pg.wait_for_selector("#paletta", state="hidden")
             pg.keyboard.press("Enter"); pg.wait_for_selector("#sb-panel-stat details.stat-sec")
             assert sections(pg)[0] == "meta", "metadata first"
-        step("Statistica: no button, not in «Altro», found by the search (it/en/PCA/blank/time course) and opened; metadata first", lr_sections)
+        step("Statistics: no button, not in «More», found by the search (statistics/PCA/blank/time course) and opened; metadata first", lr_sections)
         def meta_table():
             rows = pg.evaluate("[...document.querySelectorAll('#cmp-tab tbody tr')].map(tr=>[tr.querySelector('[data-m=type]').value, tr.querySelector('[data-m=time]').value])")
             d = dict(zip(pg.evaluate("E.files.map(f=>f.file)"), rows))

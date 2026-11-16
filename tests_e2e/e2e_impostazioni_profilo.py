@@ -11,13 +11,13 @@ def step(name, fn):
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.evaluate("localStorage.setItem('mzlab.profilo','ricerca'); localStorage.removeItem('mzlab.admin'); localStorage.setItem('mzlab.lang','en')")
+        pg.evaluate("localStorage.setItem('mzlab.profilo','ricerca'); localStorage.removeItem('mzlab.admin')")
         pg.reload(); ready(pg)
         def no_profile():
             assert pg.evaluate("localStorage.getItem('mzlab.profilo')") is None, "the old explicit profile is dropped"
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
             t = pg.inner_text("#uipset")
-            for bad in ("Profile", "Profilo", "Course", "Corso", "Research", "Ricerca"): assert bad not in t, bad
+            for bad in ("Profile", "Course", "Research"): assert bad not in t, bad
             assert pg.locator("input[name=uip-prof]").count() == 0 and pg.locator("#uip-g-llm").count() == 0, "no assistant without the administrator mode"
         step("no Profile/Course/Research element; the old key is dropped; no assistant", no_profile)
         def five_clicks():

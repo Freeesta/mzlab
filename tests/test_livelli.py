@@ -79,14 +79,14 @@ def test_the_program_never_proposes_2b():
 def test_evidence_has_one_line_per_gate_with_value_threshold_and_outcome():
     r = lv("return L.assess({cands: [c(.62, 8, 2)], nScans: 3})")
     assert len(r["gates"]) == 5 and len(r["lines"]) == 5
-    assert "entropia 0.62 vs 0.75 ✗" in r["lines"], r["lines"]
-    assert any(x.startswith("|Δ precursore| 2.0 vs 5.0 ppm ✓") for x in r["lines"]), r["lines"]
-    assert r["decisive"].startswith("L3a: provvisorio")
+    assert "entropy 0.62 vs 0.75 ✗" in r["lines"], r["lines"]
+    assert any(x.startswith("|Δ precursor| 2.0 vs 5.0 ppm ✓") for x in r["lines"]), r["lines"]
+    assert r["decisive"].startswith("L3a: tentative")
 
 
 def test_decisive_sentence_of_the_gates_that_pass_and_of_no_source():
-    assert lv("return L.assess({cands: [c(.9, 8, 2)], nScans: 3})")["decisive"] == "L2a: la libreria LIB passa ogni cancello (A)"
-    assert lv("return L.assess({cands: [c(.5, 8, 2)], nScans: 3})")["decisive"].startswith("Nessuna fonte sopra i cancelli; la più vicina: A: entropia 0.50 vs 0.75 ✗")
+    assert lv("return L.assess({cands: [c(.9, 8, 2)], nScans: 3})")["decisive"] == "L2a: the library LIB passes every gate (A)"
+    assert lv("return L.assess({cands: [c(.5, 8, 2)], nScans: 3})")["decisive"].startswith("No source above the gates; the closest: A: entropy 0.50 vs 0.75 ✗")
 
 
 def test_decision_of_the_chemist():
@@ -123,7 +123,7 @@ def test_attributio_profile_cascade():
     conflict = lv("return L.assess({cands: [c(.9, 5, 10, 'A', 'AAAAAAAAAAAAAA-X', {cos: .75}), c(.9, 5, 10, 'B', 'BBBBBBBBBBBBBB-X', {cos: .73})]}, 'attributio')")
     assert conflict["proposed"] == "3a" and conflict["why"] == "confirm"                                           # a name conflict: the best is ahead by less than 0.05
     near = lv("return L.assess({cands: [c(.9, 5, 10, 'A', 'AAAAAAAAAAAAAA-X', {cos: .62})]}, 'attributio')")
-    assert near["decisive"].startswith("Nessuna fonte sopra i cancelli; la più vicina: A: coseno 0.62 vs 0.70 ✗")
+    assert near["decisive"].startswith("No source above the gates; the closest: A: cosine 0.62 vs 0.70 ✗")
 
 
 def test_lr_profile_never_goes_above_4():
@@ -138,7 +138,7 @@ def test_lr_profile_never_goes_above_4():
 def test_colour_class_and_sentence_never_say_it_is():
     r = lv("return [L.cls('2a'), L.cls('0'), L.sentence('2a'), L.sentence('3a'), L.tag('3b'), L.name('5')]")
     assert r[0] == "lv-2a" and r[1] == "lv-0"
-    assert r[2] == "Candidato · L2a · Probabile (libreria)" and r[3].startswith("Candidato · L3a") and r[4] == "L3b"
+    assert r[2] == "Candidate · L2a · Probable (library)" and r[3].startswith("Candidate · L3a") and r[4] == "L3b"
 
 
 def test_points_section_does_not_change_the_levels():

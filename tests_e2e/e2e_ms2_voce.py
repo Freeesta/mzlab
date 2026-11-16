@@ -11,7 +11,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [str(ES / f"FullScan_t{t}.mzML") for t in (0, 5, 10, 15, 30)] + [str(ES / f"MS2_t{t}.mzML") for t in (15, 60)])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         P = "E.panels.filter(p => p.tab === 'ms2')"
         def tick():
             assert pg.evaluate("E.files.find(f => f.label === 'MS2_t15').vis") is False

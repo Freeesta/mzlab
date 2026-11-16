@@ -11,7 +11,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
+        pg.wait_for_timeout(1000); pg.click("text=Load data"); ready(pg)
         def addion(t, ok=True):                       # t: neutral formula (the adduct comes from the selector)
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic')||null)")
             pg.fill("#xic-mz", t); hold(pg, 1300)
@@ -23,8 +23,8 @@ try:
         addion("C14H13F4N3O2S")
         xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')")
         sel = lambda o: f'.pnl.xic [data-o="{o}"]'
-        def CORR(v):      # the "Correzione" drop-down: open it, click the choice
-            pg.click('.pnl.xic [data-o="corr"]'); pg.wait_for_timeout(150)      # «Sottrazione»: one menu, a group for the file and one for the background
+        def CORR(v):      # the "Correction" drop-down: open it, click the choice
+            pg.click('.pnl.xic [data-o="corr"]'); pg.wait_for_timeout(150)      # «Subtraction»: one menu, a group for the file and one for the background
             if v.startswith("f"):      # the file entry has a chooser of the file
                 try: pg.select_option('.pnl.xic [data-o="corrf"]', v[1:], timeout=30000)
                 except Exception as e: raise AssertionError("file chooser: " + pg.evaluate("(v) => JSON.stringify({sel: [...document.querySelectorAll('.pnl.xic [data-o=corrf]')].map(s => ({vis: s.offsetParent !== null, opts: [...s.options].map(o => o.value)})), want: v, pop: [...document.querySelectorAll('.pnl.xic .cpop')].map(c => c.hidden), files: E.files.map(f => [f.k, f.type, f.vis, f.kind])})", v[1:]) + " | " + str(e).replace("\n", " ")[:300])
@@ -36,7 +36,7 @@ try:
             addwin("163.3")                                       # nominal 163: window 162.8-163.3
             tr = pg.evaluate(f"E.panels[{xi}].traces[1]"); assert abs(tr["mz"] - 163.05) < 1e-6 and abs(tr["w"] - 0.25) < 1e-6, tr
             addion("C2H6Qq", ok=False)
-            assert "non valida" in pg.inner_text("#xic-sum"); pg.click("#xic-no")
+            assert "invalid formula" in pg.inner_text("#xic-sum"); pg.click("#xic-no")
             # one decimal only: the value is rounded half up to 0.1, commas are accepted, and the window comes from the nominal mass (100.6 -> n = 101 -> 100.8-101.3)
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))"); pg.fill("#xic-mz", "100,26"); assert "99.8 - 100.3" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
             pg.fill("#xic-mz", "100.6"); assert "100.8 - 101.3" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
@@ -46,13 +46,13 @@ try:
         step("XIC window: formula (neutral) and one m/z value (unit window around the nominal mass)", formula_in_xic)
         def xicdlg_layout():
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))")
-            t = pg.inner_text("#xicdlg") + " " + pg.get_attribute("#xicdlg", "aria-description"); assert "oppure" in t and "neutra" in t and "Extracted Ion Chromatogram" in t and "n + 0.3" in t, t
+            t = pg.inner_text("#xicdlg") + " " + pg.get_attribute("#xicdlg", "aria-description"); assert "an m/z or a neutral formula" in t and "Extracted Ion Chromatogram" in t and "n + 0.3" in t, t
             assert not pg.query_selector("#xic-lo") and not pg.query_selector("#xic-hi") and "compromesso" not in t and "0.7 Da" not in t, t
             pg.fill("#xic-mz", ""); hold(pg, 700)      # (the window opens with the last ion: clear it, then nothing is written)
-            pg.click("#xic-go"); err = pg.inner_text("#xic-err"); assert "Scrivi un valore di m/z" in err, err      # nothing written
+            pg.click("#xic-go"); err = pg.inner_text("#xic-err"); assert "Type an m/z value" in err, err      # nothing written
             pg.fill("#xic-mz", "C2H6O"); hold(pg, 1300); assert "46.8 - 47.3" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")      # one box: an m/z or a formula
             pg.click("#xic-no")
-        step("XIC window layout: new text, one m/z value, oppure, neutral formula; no from/to fields", xicdlg_layout)
+        step("XIC window layout: new text, one m/z value, or, neutral formula; no from/to fields", xicdlg_layout)
         def blank():
             pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()")
             pg.evaluate(f"(()=>{{const p=E.panels[{xi}]; p.traces=p.traces.slice(0,1); p.fk=''}})()"); pg.wait_for_timeout(100)
@@ -61,7 +61,7 @@ try:
             pg.evaluate(OPENPAR); CORR("f" + str(pg.evaluate("E.files[2].k")))   # third file = t60 marked as the 'blank'
             pg.wait_for_timeout(1500)
             after = pg.evaluate(f"seriesOf(E.panels[{xi}]).then(a=>a.map(s=>[s.name,Math.max(...s.y),s.corr]))"); print("after:", after)
-            assert len(after) == len(base) - 1 and all(a[2] == "- bianco" for a in after)
+            assert len(after) == len(base) - 1 and all(a[2] == "- blank" for a in after)
             pg.screenshot(path=SH + "50_blank.png")
             pg.evaluate(OPENPAR); CORR("snip"); pg.wait_for_timeout(1200)
             sn = pg.evaluate(f"seriesOf(E.panels[{xi}]).then(a=>a.map(s=>[s.corr,Math.max(...s.y)]))"); print("snip:", sn)
@@ -80,12 +80,12 @@ try:
             raw = sm()
             pg.evaluate(f"(()=>{{const p=E.panels[{si}]; p.bg='w'; p.bw0=13.0; p.bw1=14.2; ctl(p); draw(p)}})()"); pg.wait_for_timeout(1000)
             sub = sm(); print("sum raw/sub:", raw, sub, pg.evaluate(f"[E.browse,E.cur,E.panels[{si}].k,E.panels[{si}].bg,E.panels[{si}].p_all,E.panels[{si}]._a.data.length, E.panels[{si}]._a.data[0].f.k]"))
-            assert "fondo sottratto" in pg.inner_text(f".pnl.spec .leg") and sub < raw
+            assert "background subtracted" in pg.inner_text(f".pnl.spec .leg") and sub < raw
             pg.screenshot(path=SH + "52_specbg.png")
         step("spectrum background subtraction", spec_bg)
         def calc():
             pg.evaluate("BARRA.setTab('adducts')"); pg.wait_for_selector("#calcin", state="visible"); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(800)
-            t = pg.inner_text("#sb-panel-adducts"); print(t.replace("\n", " | ")[:300]); assert "364.1" in t and "363.1" in t and "364.07" not in t and "1 decimale" not in t
+            t = pg.inner_text("#sb-panel-adducts"); print(t.replace("\n", " | ")[:300]); assert "364.1" in t and "363.1" in t and "364.07" not in t and "1 decimal" not in t
             pg.screenshot(path=SH + "53_calc.png")
             pg.locator("#sb-panel-adducts button.cxic").first.click(); pg.wait_for_timeout(1500)          # the XIC button opens THE XIC window, formula and window already filled in
             assert pg.evaluate("document.querySelector('#xicdlg').open") and pg.input_value("#xic-mz") == "C14H13F4N3O2S" and "363.8 - 364.3" in pg.inner_text("#xic-sum"), (pg.input_value("#xic-mz"), pg.inner_text("#xic-sum"))
@@ -98,9 +98,9 @@ try:
             # the boxes that did the student's work (caption, formula/adduct table, fragment selection) no longer exist
             assert pg.evaluate("['selcard','selbody','dcard','dcomp','cap-name','cap-part','cap-ad','cap-on','cap-txt','cap-copy'].every(i=>!document.getElementById(i))")
             LB = "[...document.getElementById('kframe').contentWindow.ketcher.editor.render.paper.canvas.querySelectorAll('#mzlab-labels text')].map(t=>t.textContent)"
-            assert pg.evaluate(LB) == ["C7H7NO2", "massa nominale 137"], pg.evaluate(LB)
+            assert pg.evaluate(LB) == ["C7H7NO2", "nominal mass 137"], pg.evaluate(LB)
             pg.select_option("#lb-dec", "4"); pg.wait_for_timeout(300)
-            assert pg.evaluate(LB) == ["C7H7NO2", "massa esatta 137.0477"], pg.evaluate(LB)
+            assert pg.evaluate(LB) == ["C7H7NO2", "exact mass 137.0477"], pg.evaluate(LB)
             pg.select_option("#lb-dec", "0"); pg.wait_for_timeout(300)
             pg.fill("#ex-smi", "Oc1ccc(cc1)C(=O)[NH3+]"); pg.click("#ex-load"); pg.wait_for_timeout(2500)         # a structure drawn with its charge: formula of the ion and m/z
             pg.evaluate("(()=>{const k=document.getElementById('kframe').contentWindow.ketcher;k.setMolecule('Oc1ccc(cc1)C(=O)[NH3+]')})()"); pg.wait_for_timeout(1500)
