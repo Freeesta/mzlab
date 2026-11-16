@@ -1,0 +1,15 @@
+sample;level;concentration;unit;role
+std1;L1;0,5;ng/mL;standard
+std2;L2;1;ng/mL;standard
+std3;L3;2;ng/mL;standard
+std4;L4;5;ng/mL;standard
+std5;L5;10;ng/mL;standard
+std6;L6;20;ng/mL;standard
+std7;L7;50;ng/mL;standard
+std8;L8;100;ng/mL;standard
+blank;;;;blank
+qc1;QC;15;ng/mL;qc
+u1;;;;sample
+u2;;;;sample
+u3;;;;sample
+u4;;;;sample

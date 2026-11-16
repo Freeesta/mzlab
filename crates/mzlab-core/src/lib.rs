@@ -14,6 +14,7 @@ pub mod pairing;
 pub mod bench_stats;
 pub mod budget;
 pub mod budget_auto;
+pub mod calib;
 pub mod centroids;
 pub mod adduct_table;
 pub mod analysis;

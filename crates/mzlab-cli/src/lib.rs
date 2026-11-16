@@ -33,6 +33,7 @@ mod flow_chimeric;
 #[cfg(test)]
 mod flow_chimeric_tests;
 mod flow_compare;
+mod flow_curve;
 #[cfg(test)]
 mod flow_detect_adap_tests;
 #[cfg(test)]

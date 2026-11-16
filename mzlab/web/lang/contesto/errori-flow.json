@@ -1,4 +1,11 @@
 {
+  "err.flow.curve.duplicate": "Messaggio d'errore del motore; {analyte} = analita, {sample} = campione.",
+  "err.flow.curve.param": "Messaggio d'errore del motore; {name} = nome del parametro, {value} = valore scritto.",
+  "err.flow.curve.responses": "Messaggio d'errore del motore; {detail} = dettaglio tecnico.",
+  "err.flow.curve.role": "Messaggio d'errore del motore; {role} = ruolo scritto nel file degli standard.",
+  "err.flow.curve.row": "Messaggio d'errore del motore; {file} = responses o standards, {detail} = riga e dettaglio tecnico.",
+  "err.flow.curve.standards": "Messaggio d'errore del motore; {detail} = dettaglio tecnico.",
+  "err.flow.curve.unit": "Messaggio d'errore del motore; {analyte} = analita.",
   "err.flow.quant.curveRow": "Messaggio d'errore del motore; {detail} = riga e dettaglio tecnico.",
   "err.flow.quant.curves": "Messaggio d'errore del motore; {detail} = dettaglio tecnico.",
   "err.flow.quant.duplicate": "Messaggio d'errore del motore; {name} = nome della curva.",

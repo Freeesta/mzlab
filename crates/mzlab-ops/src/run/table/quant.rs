@@ -23,7 +23,7 @@ struct Curve {
     dilution: f64,
 }
 
-fn fields(line: &str, d: char) -> Vec<String> {
+pub(super) fn fields(line: &str, d: char) -> Vec<String> {
     let (mut out, mut cur, mut quoted) = (Vec::new(), String::new(), false);
     let mut it = line.chars().peekable();
     while let Some(c) = it.next() {
@@ -142,11 +142,11 @@ fn parse_curves(bytes: &[u8]) -> Result<Vec<Curve>> {
     Ok(out)
 }
 
-fn param<'a>(params: &'a [(String, Value)], name: &str) -> Option<&'a Value> {
+pub(super) fn param<'a>(params: &'a [(String, Value)], name: &str) -> Option<&'a Value> {
     params.iter().find(|(k, _)| k == name).map(|(_, v)| v)
 }
 
-fn quoted(s: &str) -> String {
+pub(super) fn quoted(s: &str) -> String {
     if s.contains([',', ';', '"', '\n']) {
         format!("\"{}\"", s.replace('"', "\"\""))
     } else {
