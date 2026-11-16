@@ -74,7 +74,6 @@ const WORKFLOW = (() => {
       dec: typeof UIP !== "undefined" && UIP.hrDec != null ? UIP.hrDec : 4,
       tema: typeof UIP !== "undefined" && UIP.theme ? UIP.theme : "auto",
       tavolozza: typeof UIP !== "undefined" && UIP.pal ? UIP.pal : "time",
-      fusione_isotopi: typeof UIP !== "undefined" ? UIP.merge !== false : true,
       picchi: typeof PK !== "undefined" ? { ...PK } : {},
       soglie_libreria: soglieLib,
       contaminanti_esclusi: window.LISTE ? LISTE.exclExport() : null,
@@ -226,7 +225,6 @@ const WORKFLOW = (() => {
       if (ppm != null) UIP.hrPpm = ppm; if (dec != null) UIP.hrDec = dec;
       if (["auto", "light", "dark"].includes(p.tema)) UIP.theme = p.tema;
       if (typeof PALS !== "undefined" && typeof p.tavolozza === "string" && Object.prototype.hasOwnProperty.call(PALS, p.tavolozza)) UIP.pal = p.tavolozza;
-      if (typeof p.fusione_isotopi === "boolean") UIP.merge = p.fusione_isotopi;
       if (typeof uipSave === "function") uipSave();
       if (typeof uipApply === "function") uipApply();
     }

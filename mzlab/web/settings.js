@@ -30,21 +30,21 @@ function stdColor(u) {                                       // u in 0..1
 }
 function uipLoad() {
   QA11Y.apply(QA11Y.read());
-  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.v >= 2 || o.pal !== "time" ? o.pal : "file";   /* before v2 "time" was the default, not a choice */ if (o.merge === false) UIP.merge = false; if (o.xicLens === false) UIP.xicLens = false;  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
+  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.v >= 2 || o.pal !== "time" ? o.pal : "file";   /* before v2 "time" was the default, not a choice */ if (o.xicLens === false) UIP.xicLens = false;  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
   setPal(UIP.pal);
 }
 function uipSave() {
-  const o = { v: 2, theme: UIP.theme, pal: UIP.pal, merge: UIP.merge };
+  const o = { v: 2, theme: UIP.theme, pal: UIP.pal };
   if (!UIP.xicLens) o.xicLens = false;
   if (UIP.hrPpm !== 5) o.hrPpm = UIP.hrPpm; if (UIP.hrDec !== 4) o.hrDec = UIP.hrDec;         // high resolution: only what differs from the defaults
   uipWrite(UIP_KEY, JSON.stringify(o));
 }
 // the preferences (theme, colours, reading, high-resolution options) are one undoable action (comandi.js); the language reloads the page and is not undone
 COMANDI.gestore("app.settings", {
-  leggi: () => JSON.stringify([UIP.theme, UIP.pal, UIP.merge, UIP.hrPpm, UIP.hrDec, QA11Y.read(), UIP.xicLens]),
+  leggi: () => JSON.stringify([UIP.theme, UIP.pal, UIP.hrPpm, UIP.hrDec, QA11Y.read(), UIP.xicLens]),
   applica: (_p, snap) => {
-    const [theme, pal, merge, hrPpm, hrDec, a11y, xicLens] = JSON.parse(snap);
-    Object.assign(UIP, { theme, pal, merge, hrPpm, hrDec, xicLens: xicLens !== false }); QA11Y.write(a11y); uipSave(); uipApply();
+    const [theme, pal, hrPpm, hrDec, a11y, xicLens] = JSON.parse(snap);
+    Object.assign(UIP, { theme, pal, hrPpm, hrDec, xicLens: xicLens !== false }); QA11Y.write(a11y); uipSave(); uipApply();
     CACHE.clear(); SC.m.clear(); SC.n.clear();
     const open = Q("#uipset"), btn = Q("#np-set"); if (open && btn) { open.remove(); uipOpen(btn); }
   },
@@ -122,7 +122,7 @@ function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminanti.
 const UIP_GROUP_KEY = id => NOMI.KEY(id === "uip-a11y" ? "set.a11y" : "set." + id);      // the group «Accessibility» keeps the key it always had
 function uipGroupOpen(id, dflt) { try { const v = localStorage.getItem(UIP_GROUP_KEY(id)); return v === null ? dflt : v === "1"; } catch (_) { return dflt; } }
 function uipRestore() {            // theme, colours, reading and high-resolution options go back to the factory values; files and sessions are never touched
-  uipDo(() => { Object.assign(UIP, { theme: "light", pal: "file", merge: true, hrPpm: 5, hrDec: 4, xicLens: true }); QA11Y.write({}); });
+  uipDo(() => { Object.assign(UIP, { theme: "light", pal: "file", hrPpm: 5, hrDec: 4, xicLens: true }); QA11Y.write({}); });
   uipSave(); uipApply();
 }
 function uipOpen(btn) {
@@ -140,7 +140,7 @@ function uipOpen(btn) {
     + C.sw(T("settings.hc.label"), T("settings.hc.tip"), 'id="uip-hc"', a11y.bg === "hc", "hc") + C.sw(T("settings.motion"), T("settings.motion.title"), 'id="uip-motion"', a11y.motion === "always", "motion");
   const cen = window.MZLAB_BROWSER && typeof centroidTargets === "function" && centroidTargets().length
     ? `<div class="imp-fld"><button id="uip-cen" type="button" title="${esc(T("settings.cen.title"))}">${T("settings.cen.btn")}</button><button id="uip-cen-x" type="button" title="${esc(T("settings.cen.stop.tip"))}" hidden>${T("settings.cen.stop")}</button></div><div class="hint" id="uip-cen-st" role="status" aria-live="polite"></div>` : "";
-  const dataItems = [(!files.length || files.some(f => f.spectrum_mode !== "profile" || (window.HR && HR.isHr(f)))) ? C.sw(T("settings.merge"), T("settings.merge.tip"), 'id="uip-merge"', UIP.merge, "cont") : "",
+  const dataItems = [
     ...(hr ? [fld(`<span class="ic">${C.GICON.lib}</span>${T("settings.libs.label")}`, T("settings.libs.title"), `<button id="uip-lib" type="button">${T("settings.libs.button")}</button>`),
       fld(T("settings.hrPpm"), T("settings.hrPpm.title"), `<input id="uip-ppm" data-num="1:50" value="${UIP.hrPpm}" style="width:64px" aria-label="${esc(T("settings.hrPpm"))}">`),
       fld(T("settings.hrDec"), T("settings.hrDec.title"), `<input id="uip-hdec" data-num="3:5 i" value="${UIP.hrDec}" style="width:56px" aria-label="${esc(T("settings.hrDec"))}">`)] : []), cen];
@@ -181,10 +181,6 @@ function uipOpen(btn) {
   on("#uip-motion", "change", e => { const c = QA11Y.read(); c.motion = e.target.checked ? "always" : "auto"; uipDo(() => QA11Y.write(c)); });
   const pal = /** @type {HTMLSelectElement} */ (d.querySelector("#uip-pal")); pal.value = UIP.pal;
   pal.onchange = () => { uipDo(() => setPal(pal.value)); uipSave(); uipApply(); };              // applied at once: file colours, lists, legends, every graph
-  on("#uip-merge", "change", e => {                                     // spectra are asked again to the server with / without the merge
-    uipDo(() => { UIP.merge = e.target.checked; }); uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
-    if (typeof redrawAll === "function") redrawAll();
-  });
   on("#uip-xiclens", "change", e => { uipDo(() => { UIP.xicLens = e.target.checked; }); uipSave(); if (window.XICBTN) XICBTN.setLens(UIP.xicLens); });
   on("#uip-tour", "click", () => {      // the tour of Dati lives in Dati; in Disegno the button starts the tour of Disegno
     d.remove();
