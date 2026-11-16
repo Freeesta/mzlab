@@ -24,7 +24,7 @@ def title_static():
     html = (ROOT / "mzlab/web/index.html").read_text(encoding="utf-8")
     assert "<title>MS Analysis · {APP}</title>" in html
     built = (ROOT / "site/index.html").read_text(encoding="utf-8")
-    assert re.search(r"<title>MS Analysis · mzLab</title>", built) and 'og:title" content="' in built and "Analisi MS" in re.search(r'og:title" content="([^"]*)"', built).group(1)
+    assert re.search(r"<title>MS Analysis · mzLab</title>", built) and 'og:title" content="' in built and "MS Analysis" in re.search(r'og:title" content="([^"]*)"', built).group(1)
 
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
@@ -39,7 +39,7 @@ try:
             holder.evaluate(HOLD)
             pg = ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.goto(URL + "?ripresa=4000")
-            pg.wait_for_function("document.getElementById('avvio-fase') && /altra scheda/.test(document.getElementById('avvio-fase').textContent)", timeout=90000)
+            pg.wait_for_function("document.getElementById('avvio-fase') && /another [^ ]+ tab/.test(document.getElementById('avvio-fase').textContent)", timeout=90000)
             assert pg.locator("#loading").is_hidden() and pg.locator("header").is_visible(), "no veil: the page stays visible"
             pg.wait_for_selector("#avvio-errore #avvio-reset", timeout=60000)
             assert pg.get_attribute("#avvio-errore", "role") == "alert"
