@@ -97,7 +97,7 @@ const BARRA = (() => {
   // button opens (its state is aria-pressed); items: ids of the commands in its menu; run: what it does; visible: when it exists; onBar: when its button is in the bar.
   /** @type {any[]} */
   const CMD = [
-    { id: "file", ic: () => ICONS.file, panel: "file", visible: () => inDataOrOpening() || landing(), run: () => (landing() && !inData() ? toggleDrawer() : toggle("file")) },
+    { id: "file", ic: () => ICONS.file, panel: "file", visible: () => inDataOrOpening() || landing(), run: () => (landing() && !inData() && (!_open || _tab === "file") ? toggleDrawer() : toggle("file")) },      // empty landing: File hides its own panel but always SELECTS itself when another tool is shown
     // where the side panel exists the calculator is the top of the Adducts & losses page (no button of its own); in Disegno it is the drop-down under its button (eventi.js)
     { id: "calc", dom: "np-calc2", ic: () => QI("calc"), onBar: () => !(inDataOrOpening() || landing()), run: () => window.calcToggleFloat && window.calcToggleFloat() },
     { id: "addloss", dom: "np-addloss", ic: () => QI("ad"), panel: "addloss", run: () => toggle("addloss") },
