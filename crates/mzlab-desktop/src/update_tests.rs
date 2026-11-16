@@ -226,31 +226,90 @@ fn accepts_current_site_manifest_sizes() {
     assert!(parse_manifest(&sizes_json(&[MAX_FILE])).is_ok());
 }
 
-#[test]
-fn response_larger_than_declared_is_refused() {
+/// Serves `resp` verbatim to `n` connections; the port and the thread to join.
+fn serve_raw(resp: Vec<u8>, n: usize) -> (u16, std::thread::JoinHandle<()>) {
     use std::io::{Read, Write};
     let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     let port = l.local_addr().unwrap().port();
     let h = std::thread::spawn(move || {
-        for _ in 0..2 {
+        for _ in 0..n {
             let (mut c, _) = l.accept().unwrap();
             let mut buf = [0u8; 2048];
             let _ = c.read(&mut buf);
-            let _ = c.write_all(
-                b"HTTP/1.1 200 OK\r\nContent-Length: 12\r\nConnection: close\r\n\r\nabcdefghijkl",
-            );
+            let _ = c.write_all(&resp);
         }
     });
+    (port, h)
+}
+
+/// A 200 answer with a Content-Length, or (`None`) close-delimited with no length at all.
+fn http_200(len: Option<usize>, body: &[u8]) -> Vec<u8> {
+    let head = match len {
+        Some(n) => format!("HTTP/1.1 200 OK\r\nContent-Length: {n}\r\nConnection: close\r\n\r\n"),
+        None => "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n".to_string(),
+    };
+    [head.as_bytes(), body].concat()
+}
+
+/// `apply` of one file declared as `want` against a server that answers `resp` (`n` connections).
+fn apply_served(
+    want: &[u8],
+    resp: Vec<u8>,
+    n: usize,
+) -> (Result<(), UpdateError>, tempfile::TempDir) {
+    let (port, h) = serve_raw(resp, n);
     let src = Http::with_base(&format!("http://127.0.0.1:{port}/"));
     let tmp = tempfile::tempdir().unwrap();
     let local = manifest("a", "0.1.0", &[("static/a.js", b"old")]);
-    let remote = manifest("b", "0.1.0", &[("static/a.js", b"abc")]);
-    let err = apply(tmp.path(), &local, &remote, "0.1.0", &src, |_| {}).unwrap_err();
+    let remote = manifest("b", "0.1.0", &[("static/a.js", want)]);
+    let r = apply(tmp.path(), &local, &remote, "0.1.0", &src, |_| {});
+    h.join().unwrap();
+    (r.map(|_| ()), tmp)
+}
+
+fn nothing_left(tmp: &tempfile::TempDir) -> bool {
+    !tmp.path().join("web.next").exists() && !tmp.path().join("web").exists()
+}
+
+#[test]
+fn response_larger_than_declared_is_refused() {
+    // declared 3 bytes, 12 sent with a matching Content-Length; the retry gets the same
+    let (r, tmp) = apply_served(b"abc", http_200(Some(12), b"abcdefghijkl"), 2);
+    let err = r.unwrap_err();
     assert_eq!(err.key, "update.error.hash");
     // only size + 1 bytes were read
     assert!(err.detail.contains("got 4/"), "{}", err.detail);
-    assert!(!tmp.path().join("web.next").exists() && !tmp.path().join("web").exists());
-    h.join().unwrap();
+    assert!(nothing_left(&tmp));
+}
+
+#[test]
+fn close_delimited_body_over_the_declared_size_is_refused() {
+    // no Content-Length: the reader must stop at size + 1 on its own
+    let (r, tmp) = apply_served(b"abc", http_200(None, &[b'x'; 64 * 1024]), 2);
+    let err = r.unwrap_err();
+    assert_eq!(err.key, "update.error.hash");
+    assert!(err.detail.contains("got 4/"), "{}", err.detail);
+    assert!(nothing_left(&tmp));
+}
+
+#[test]
+fn streamed_body_of_exactly_the_declared_size_passes_and_one_more_does_not() {
+    let want = vec![b'y'; 100_000];
+    for len in [Some(want.len()), None] {
+        let (r, tmp) = apply_served(&want, http_200(len, &want), 1);
+        r.unwrap();
+        assert_eq!(
+            std::fs::read(tmp.path().join("web/static/a.js")).unwrap(),
+            want
+        );
+        let mut more = want.clone();
+        more.push(b'y');
+        let (r, tmp) = apply_served(&want, http_200(len.map(|n| n + 1), &more), 2);
+        let err = r.unwrap_err();
+        assert_eq!(err.key, "update.error.hash");
+        assert!(err.detail.contains("got 100001/"), "{}", err.detail);
+        assert!(nothing_left(&tmp));
+    }
 }
 
 #[test]
