@@ -1,6 +1,6 @@
 # Scientific-correctness study of the calculations
 
-Report only: nothing in the engine is changed by this study. Each finding gives severity, place, expected value with source, observed value, reproduction and one suggested fix.
+Each finding gives severity, place, expected value with source, observed value, reproduction, one suggested fix and its status: FIXED (the engine follows the reference and a test holds it), NOT A BUG, or OPEN (owner decision: the fix changes a default, a threshold, a cap or an exported column, so the owner chooses).
 
 ## Method and coverage
 
@@ -18,6 +18,7 @@ Report only: nothing in the engine is changed by this study. Each finding gives 
 - Expected: M+2/M of Br2 = 2 x 0.4931 / 0.5069 = 1.95; Br3 2.92; Cl4 1.28; Cl6 1.92 (binomial of the IUPAC abundances, Meija et al., Pure Appl. Chem. 2016, 88, 293).
 - Observed (`isotopes::group`, synthetic features, binomial areas, same RT): Br1 areas [100, 97] -> `iso_group` [1, 1]; Br2 [100, 195, 95] -> [0, 2, 2]; Br3 [100, 292, 284, 92] -> [0, 2, 2, 2]; Cl3 -> one group; Cl4 [100, 128, 61, 13, 1] -> [0, 2, 2, 2, 2]. The monoisotopic ion of a compound with 2 or more Br, or 4 or more Cl, stays alone and M+2 becomes the head of the cluster.
 - Fix: bound the M+2/M ratio by the binomial of the halogen count that the mass allows instead of the constant 1.2.
+- Status: OPEN (owner decision): reproduced on the engine (Br1 [1, 1], Br2 [0, 2, 2], Br3 [0, 2, 2, 2]); the fix replaces the 1.2 cap of `plausible` with a bound from the mass.
 
 ### A2 - wrong result - fine pattern cut 6.5 Da above the lightest isotopologue
 - Place: `crates/mzlab-core/src/isoscore.rs:133` (`fine_pattern` = `fine_pattern_cut(.., MAX_SHIFT + 0.5)`), used by `isotope_score` (`isoscore.rs:214`).
@@ -30,6 +31,7 @@ Report only: nothing in the engine is changed by this study. Each finding gives 
 - Expected: (measured - theoretical)/theoretical x 1e6 (Brenton and Godfrey, J. Am. Soc. Mass Spectrom. 2010, 21, 1821).
 - Observed: observed 195.088652 against theory 195.08765: the formula finder gives `delta_ppm` -5.126 and `delta_mda` -1, the adduct table gives `ppm` +5.13.
 - Fix: one sign and one denominator everywhere, (observed - theoretical)/theoretical.
+- Status: OPEN (owner decision): one sign changes the exported `delta_ppm`/`delta_mda`/`ppm` columns of some routes.
 
 ### A4 - convention unclear - even-electron cations typed as `[M]+` always fail SENIOR (and LEWIS when saturated)
 - Place: `crates/mzlab-core/src/composition.rs:419-441` (`broken`), with `half_ok` for `[M]+`/`[M]-`.
@@ -42,12 +44,14 @@ Report only: nothing in the engine is changed by this study. Each finding gives 
 - Expected: nominal mass = sum of the mass numbers of the most abundant isotopes (Murray et al., Pure Appl. Chem. 2013, 85, 1515): tristearin C57H110O6 = 890.
 - Observed: `mzlab-cli ion-mz C57H110O6` -> neutral 890.8302, `nominal_neutral` 891, [M+H]+ `nominal` 892; `mzlab-cli mol-anal` on the same formula -> `nominal` 890.
 - Fix: compute it from integer isotope masses, or rename the field (rounded m/z).
+- Status: OPEN (owner decision): the fix changes or renames the exported `nominal` fields.
 
 ### A6 - precision loss (at most 0.15 ppm) - four mass tables from different evaluations
 - Place: `crates/mzlab-core/src/elements.rs` `MASS` (AME2016, correct to 1e-9 u) against `crates/mzlab-core/src/nuclides.rs` and `isotable.rs` (generated from OpenChemLib), `crates/mzlab-feat/src/attributio/review/adduct.rs` `MASS`, and the typed shifts in `crates/mzlab-feat/src/adducts.rs` and `crates/mzlab-target/src/entry.rs`.
 - Expected: AME2020 values (Wang et al., Chin. Phys. C 2021, 45, 030003).
 - Observed: `nuclides.rs` differs by 31P -4.9e-7, 32S -4.8e-7, 23Na +3.9e-7, 18O +8.1e-7, 81Br +2.9e-6, 127I -4.2e-6, 56Fe +6.6e-6, 208Pb -1.6e-5, 202Hg -1.8e-5, 195Pt -2.0e-5 u; typed shifts [M+NH4]+ 18.033823 (exact 18.033826), [M+Na]+ 22.989218 (22.989221), [M+Cl]- 34.969402 (34.969401); three proton values (1.007276452 from H - e, `PROTON` 1.00727646688, `PROTON_6DP` 1.007276). `nuclides.rs` lacks some natural isotopes outside its window of 4 (Te 120-125, Kr 78, Xe 124 and 126, Zr 96).
 - Fix: generate every table and every typed shift from one AME2020 source.
+- Status: OPEN (owner decision): the 6-decimal shifts (`PROTON_6DP`, 22.989218, 18.033823, 34.969402) are pinned by the Python reference and the goldens and are the common published adduct values; regenerated tables move exported masses by up to 0.15 ppm.
 
 ## CONFIRMED - area 2, chromatography and quantitation
 
@@ -56,42 +60,49 @@ Report only: nothing in the engine is changed by this study. Each finding gives 
 - Expected: the area is the integral over the real retention times (trapezoid); |log2(area/true)| = 0.
 - Observed: `cargo test -p mzlab-cli the_xic_area_follows_uneven_scans -- --nocapture` prints |log2| to the XIC 1.10, 1.08, 1.08, 1.07, 1.05, 1.07 with `window` and 0.0000 x 6 with `xic`; `docs/agenti/mzfeat-prove.md` records -0.48 log2 for `window` on simulated DDA. The bias follows the local scan density, so it changes with co-eluting precursors and is not a constant factor.
 - Fix: make `xic` (trapezoid on the real retention times) the default of `area_from`.
+- Status: OPEN (owner decision): reproduced (|log2| 1.10, 1.08, 1.08, 1.07, 1.05, 1.07 with `window`, 0 with `xic`); the fix is a new default of `area_from`.
 
 ### B2 - wrong result - targeted cells lose 12 % of a clean Gaussian
 - Place: `crates/mzlab-core/src/peakq.rs:197-232` (`detect_prominence`: limits where the smoothed trace exceeds 5 % of the apex, area above the straight line between the limits), consumed by `crates/mzlab-feat/src/target/extract.rs:120`.
 - Expected: area/true = 1 for a noise-free Gaussian on a zero baseline; cutting at 5 % of the height and subtracting that level leaves 0.888 analytically.
 - Observed: area/true = 0.876 for sigma from 2.5 to 20 points, while the cells of the detection route give about 1.0 on the same traces.
 - Fix: integrate from zero between the limits with `quality::trapezoid`, or widen the limits to the baseline.
+- Status: OPEN (owner decision): reproduced (`detect_prominence` area/true 0.8747, 0.8758, 0.8760, 0.8761 at sigma 2.5, 5, 10, 20 points); either fix changes the 5 % limit (`frac`) or the baseline convention of a function the resolver and `peak-auto` share.
 
 ### B3 - wrong result - CWT peak area and FWHM depend on the points per peak
 - Place: `crates/mzlab-picchi/src/peaks.rs:325-357` (`asls_baseline(y, 1e5, 0.01, 10, 160)`, lambda in points, CWT widths up to 12); consumers `chrom.uv_peaks@1` (`crates/mzlab-feat/src/uv_bands.rs:60,170`), peak labels, `tracestat`.
 - Expected: area/true = 1 and FWHM/true = 1 whatever the sampling rate (Eilers and Boelens 2005: lambda scales with the fourth power of the sampling density).
 - Observed (n = 3000, height 1e5, baseline 500, noise 100; the same without noise): area/true 0.987 (sigma 2.5 points), 0.977 (5), 0.924 (10), 0.796 (20); sigma 40 is split into 3 peaks (largest 0.485), sigma 80 into 6; FWHM/true 1.007, 0.996, 0.979, 0.937, 0.833.
 - Fix: scale lambda and the CWT widths with the points per peak, or resample to a fixed density before detection.
+- Status: OPEN (owner decision): reproduced without noise (largest piece 0.987, 0.977, 0.924, 0.795, 0.485 at sigma 2.5, 5, 10, 20, 40 points; a clean Gaussian also yields 30-40 tiny pieces under 0.2 %); the fix changes the fixed AsLS lambda and CWT widths.
 
 ### B4 - precision loss - S/N of the line-residual route is biased high
 - Place: `crates/mzlab-core/src/peakq_lr.rs:234-251,316-318` (noise = SD of the Savitzky-Golay residual).
 - Expected: the residual SD is sigma x sqrt(1 - c0), c0 the central coefficient, so the estimate must be divided by sqrt(1 - c0), as `crates/mzlab-core/src/peakq_auto.rs:206-209` does.
 - Observed: true S/N 100 -> 114 (sigma 1 point), 128 (3 points), 109 (10), 101.5 (25), read through `mzlab-cli peak-edges --set sn_min=`.
 - Fix: divide the residual SD by sqrt(1 - c0(m)).
+- Status: FIXED: the `sn_min` gate divides the residual noise by sqrt(1 - c0(m)) (`residual_shrink`); median S/N of 20 draws at true 100: 103, 98, 98 at sigma 3, 10, 25 points (before 144, 105, 101), test `crates/mzlab-core/tests/peak_width_noise.rs`. Under 3 points per sigma the smoothed apex is low (86 at 1 point): height convention. OPEN (owner decision): the edge limits (`area_noise` x noise, the 800 ratio, the valley slope) keep the residual scale they are tuned on.
 
 ### B5 - precision loss - `find_peak` FWHM is not interpolated
 - Place: `crates/mzlab-core/src/peak1d.rs:164-169` (`(rt[b] - rt[a]) * 60`).
 - Expected: FWHM = 2.3548 sigma, read at half height by linear interpolation (as `peakext::fwhm`, -1.4 %).
 - Observed (dt 0.8 s): 2.40 s against 2.83 (-15 %, sigma 1.5 points); 5.60 against 5.65 clean and 4.80 noisy (-15 %, sigma 3 points); 10.40 against 11.30 (-8 %, sigma 6 points).
 - Fix: interpolate the two half-height crossings.
+- Status: FIXED: `find_peak` interpolates both half-height crossings (`crossing`); error at 3 and 6 points per sigma at most +1.2 %, at 1.5 points at most +6.1 % (the sampled apex is low), before -43 % to -1 %; test `crates/mzlab-core/tests/peak_width_noise.rs`. `legacy/lr/peakchk.rs` (SUSPECTED below) is unchanged.
 
 ### B6 - convention unclear - several unlabelled S/N definitions
 - Place: `crates/mzlab-core/src/peak1d.rs` (`find_peak`: smoothed height over 1.4826 MAD of the smoothed trace; manual table and transitions, `manint.rs:22`), flank MAD in `crates/mzlab-feat/src/quality.rs`, `peakq_lr::noise_sd`, CWT ridge, prominence over sigma of differences.
 - Expected: one named estimator; the pharmacopoeial one is 2H/h (Ph. Eur. 2.2.46, USP <621>), which gives about 33 for height/sigma = 100.
 - Observed: for a true height/sigma_raw of 100 `find_peak` reports 100 (smoothing 1), 166-169 (smoothing 3, the default of the manual table), 184 (smoothing 5).
 - Fix: name the estimator beside every S/N and compute the noise on the raw trace (or offer 2H/h).
+- Status: OPEN (owner decision): naming the estimator or computing it on the raw trace changes exported S/N columns.
 
 ### B7 - convention unclear - areas in counts x s and counts x min
 - Place: `crates/mzlab-core/src/baseline.rs` and `peakq.rs` (minutes) against the manual and feature areas (seconds); stated in `docs/agenti/dati-integrazione.md`.
 - Expected: one unit for the same quantity (H sigma sqrt(2 pi) = 125.331 counts x min = 7519.88 counts x s for the test Gaussian).
 - Observed: `mzlab-cli peak-area g1.csv --from 0.6 --to 1.4` -> 7519.8848; `mzlab-cli peak-auto g1.csv` -> 125.291.
 - Fix: counts x s everywhere, with the unit in the field name.
+- Status: OPEN (owner decision): one unit changes exported area fields.
 
 ## CONFIRMED - area 4, statistics
 
@@ -100,6 +111,7 @@ Report only: nothing in the engine is changed by this study. Each finding gives 
 - Expected: CV = s/mean with s the sample SD, divisor n - 1 (ICH Q2(R2), repeatability; Broadhurst et al., Metabolomics 2018, 14, 72 for QC CV).
 - Observed: two groups of replicates -> 0.0909 and 0.1859; numpy with `ddof=1` gives 0.1286 and 0.2277, with `ddof=0` 0.0909 and 0.1859. With 3 replicates the CV is low by sqrt(2/3) = 0.816.
 - Fix: divide by n - 1.
+- Status: OPEN (owner decision): divisor n - 1 changes the exported `cv_mediano`.
 
 ## SUSPECTED (seen once or only read; not confirmed by a minimal engine run)
 
