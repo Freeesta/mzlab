@@ -45,7 +45,7 @@
     };
     var replay = function (/** @type {number} */ left) {
       var found = /** @type {HTMLInputElement | null} */ (document.getElementById("pal-in"));
-      if (!found) { if (left > 0) requestAnimationFrame(function () { replay(left - 1); }); else console.error("palette: box not found, " + typed.length + " keys dropped"); return; }
+      if (!found) { if (left > 0) setTimeout(function () { replay(left - 1); }, 50); else console.error("palette: box not found, " + typed.length + " keys dropped"); return; }
       var box = found;
       typed.forEach(function (k) {
         if (k === "Enter") box.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
