@@ -159,6 +159,7 @@ mod name_rule_tests;
 pub mod normative;
 mod par;
 mod peaks_auto_cmd;
+mod peaks_auto_lr_cmd;
 mod peaks_edges_cmd;
 mod plain;
 mod samples_cmd;

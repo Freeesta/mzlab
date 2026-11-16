@@ -54,10 +54,11 @@ try:
             assert not any("Compare" in l for l in labels if l != "-"), labels
             pg.evaluate("peakParams()"); pg.wait_for_selector("#bigbody [data-pk=win]")
             assert pg.locator("#bigbody [data-pk=method]").count() == 0
-            assert pg.locator("#bigbody fieldset.pk-sec").count() == 3 and pg.locator("#bigbody [data-pk]").count() == 8 and pg.locator("#bigbody details").count() == 0
+            assert pg.evaluate("[...document.querySelectorAll('#bigbody fieldset.pk-sec')].pop().querySelector('[data-pk=bmode]')!==null")    # the baseline block stays last
+            assert pg.locator("#bigbody fieldset.pk-sec").count() == 4 and pg.locator("#bigbody [data-pk]").count() == 12 and pg.locator("#bigbody details").count() == 0
             assert pg.inner_text("#pk-def") == "Reset to defaults"
             pg.evaluate("document.querySelector('#bigdlg').close()")
-        step("one method for the limits: no method selector, no comparison, eight settings in three blocks (the last the baseline)", one_method)
+        step("one method for the limits: no method selector, no comparison, twelve settings in four blocks (the last the baseline)", one_method)
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
         b.close()
 finally:
