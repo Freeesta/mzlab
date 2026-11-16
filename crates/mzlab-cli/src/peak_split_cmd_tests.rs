@@ -104,7 +104,7 @@ fn the_isomer_pair_splits_once_and_its_parts_add_up() {
         "{parts}"
     );
     let whole = table(&d, r#"[{"file":2,"tr":2,"a":6.33,"b":7.05}]"#);
-    let area = |r: &Vec<&str>| r[6].parse::<f64>().unwrap();
+    let area = |r: &Vec<&str>| r[3].parse::<f64>().unwrap();
     let total: f64 = whole
         .lines()
         .nth(1)

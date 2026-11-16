@@ -65,25 +65,25 @@ fn one_row_per_window_grouped_by_channel_at_the_peaks_written() {
     let r: Vec<Vec<&str>> = t.lines().map(|l| l.split(',').collect()).collect();
     assert_eq!(r[0].join(","), mzlab_core::manint::HEAD.trim_end());
     assert_eq!(r.len(), 5, "{t}");
-    let key: Vec<String> = r[1..].iter().map(|x| x[..3].join(",")).collect();
+    let key: Vec<String> = r[1..].iter().map(|x| x[..2].join(",")).collect();
     assert_eq!(
         key,
         [
-            "253.1,ionA,Sample_A",
-            "253.1,ionA,Sample_C",
-            "251.1,ionC,Sample_B",
-            "251.1,ionC,Sample_B"
+            "253.1,Sample_A",
+            "253.1,Sample_C",
+            "251.1,Sample_B",
+            "251.1,Sample_B"
         ],
         "channels in the order of the file, samples in order, the pair by start"
     );
-    let apex: Vec<f64> = r[1..].iter().map(|x| x[5].parse().unwrap()).collect();
+    let apex: Vec<f64> = r[1..].iter().map(|x| x[6].parse().unwrap()).collect();
     let want = [at(1, 0, 0), at(3, 0, 0), at(2, 2, 0), at(2, 2, 1)];
     for (g, w) in apex.iter().zip(want) {
         assert!((g - w).abs() <= 0.014, "{apex:?} vs {want:?}");
     }
     assert_eq!((r[1][9], r[2][9]), ("edges", "zero"));
     assert!(
-        r[1..].iter().all(|x| x[6].parse::<f64>().unwrap() > 0.0),
+        r[1..].iter().all(|x| x[3].parse::<f64>().unwrap() > 0.0),
         "{t}"
     );
     let sums = text(&table(
@@ -93,7 +93,7 @@ fn one_row_per_window_grouped_by_channel_at_the_peaks_written() {
     let s: Vec<&str> = sums.lines().collect();
     assert_eq!(s.len(), 7, "{sums}");
     assert!(
-        s[3].starts_with("253.1,ionA,sum,,,,") && s[6].starts_with("251.1,ionC,sum,,,,"),
+        s[3].starts_with("253.1,sum,,") && s[6].starts_with("251.1,sum,,"),
         "{sums}"
     );
     let _ = std::fs::remove_dir_all(&d);

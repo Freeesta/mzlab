@@ -236,7 +236,7 @@ fn finish_chromatogram(c: Chrom, inf: &mut Inflate) -> Result<Chromatogram> {
     }
     let kind = match c.id.as_str() {
         s if s == "TIC" || s.starts_with("TIC ") => ChromKind::Tic,
-        "BPC" => ChromKind::Bpc,
+        s if s == "BPC" || s.starts_with("BPC ") => ChromKind::Bpc,
         "TWC" => ChromKind::Pda,
         _ if c.pda => ChromKind::Pda,
         s if c.pressure || s.starts_with("Pump Pressure") => ChromKind::Pressure,

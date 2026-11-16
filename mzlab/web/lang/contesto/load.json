@@ -1,5 +1,8 @@
 {
   "load.err.engineStart": "Errore grave all'avvio, sulla schermata di attesa: il motore non parte (il dettaglio tecnico va nella console).",
+  "load.tprov.win": "Riga di stato sotto il TIC provvisorio dopo uno zoom: finestra di tempo mostrata; {a}, {b} = estremi in minuti.",
+  "load.tprov.hand": "Avviso quando il primo pannello si apre sulla finestra scelta sul TIC provvisorio; {a}, {b} = estremi in minuti.",
+  "load.tprov.keys": "Descrizione per i lettori di schermo del TIC provvisorio: come ingrandire e spostare l'asse dei tempi.",
   "load.tprov.note": "Nota sotto il titolo del TIC provvisorio mostrato mentre il primo file si indicizza; {pc} = percentuale del caricamento (numero già formattato).",
   "load.tprov.title": "Titolo del TIC provvisorio del primo file in caricamento (anche nome del grafico per i lettori di schermo); {file} = nome del file.",
   "load.err.noStorage": "Banner di avvio quando il browser rifiuta l'archivio del sito (finestra privata di Safari); {app} = nome del programma.",

@@ -20,6 +20,7 @@ window.DESKDEF = (() => {
       for (let i = 0; i < 300 && typeof window.upload !== "function"; i++) await new Promise(ok => setTimeout(ok, 100));
       if (typeof window.upload === "function") window.upload(files.map(window.MZLAB_TOFILE), "data");
     }
+    if ((r && r.refused || []).length) alert(I18N.t("predef.scan.needs.wiff"));     // once per batch, nothing was opened for them
     if (r.ask && (files.length || drawings.length)) ask();
   }
 
