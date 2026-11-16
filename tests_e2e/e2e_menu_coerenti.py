@@ -17,7 +17,7 @@ r = Run(port=8871, wd="/tmp/wd_menu_coerenti")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 1000})
-        stage(pg, [mz(f) for f in FILES]); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, [mz(f) for f in FILES]); pg.click("text=Load data"); ready(pg)
         def close():
             pg.keyboard.press("Escape"); wait_for_js(pg, "document.querySelector('#ctx').hidden")
         def keyboard(P):

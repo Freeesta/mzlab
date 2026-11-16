@@ -70,12 +70,12 @@ try:
         def damaged():
             r = pg.evaluate("() => { const r = CONVROWS.rows.find(r => r.name.startsWith('danno')); return r && { s: r.state, t: CONVROWS.label(r) }; }")
             assert r and r["s"] == "done", r
-            assert "1 of 30 scans damaged" in r["t"] or "1 di 30 scansioni danneggiate" in r["t"], r      # the scan left out stays in the list with no points
+            assert "1 of 30 scans damaged" in r["t"] or "1 of 30 scans danneggiate" in r["t"], r      # the scan left out stays in the list with no points
         step("the .D with one scan that does not decode loads, its row counts the scan left out", damaged)
         def badRecord():
             r = pg.evaluate("() => { const r = CONVROWS.rows.find(r => r.name.startsWith('guasto')); return r && { s: r.state, t: CONVROWS.label(r) }; }")
             assert r and r["s"] == "done", r
-            assert "29 of 30 scans, 1 damaged records left out" in r["t"] or "29 di 30 scansioni, 1 record danneggiati lasciati fuori" in r["t"], r
+            assert "29 of 30 scans, 1 damaged records left out" in r["t"], r
         step("the .D with a damaged index record loads, its row says the record left out (not a file that ends early)", badRecord)
         def tidy():
             pg.wait_for_function("document.querySelector('#cartinfo').hidden || !document.querySelector('#cartinfo').textContent", timeout=60000)       # «Folder …: n files to load» goes away when the load is done

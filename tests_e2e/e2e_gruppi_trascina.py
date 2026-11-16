@@ -53,9 +53,9 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 2200})
         pg.set_input_files("#pick", PATHS)
-        pg.click("text=Carica dati"); ready(pg, timeout=180000); drawer(pg)
+        pg.click("text=Load data"); ready(pg, timeout=180000); drawer(pg)
         pg.wait_for_selector("#flst .fl .nm", timeout=30000)
-        pg.evaluate("I18N.set('en')"); pg.wait_for_function("window.qqReady === true && I18N.lang === 'en'", timeout=60000)
+        pg.wait_for_function("window.qqReady === true", timeout=60000)
         pg.evaluate("window.__cls = 0; new PerformanceObserver(l => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__cls += e.value; }).observe({type: 'layout-shift', buffered: false});")
         if AXE: pg.add_script_tag(path=AXE)
         BOX = "['#tools', '#dpanels', '#sb-header'].map(s => { const e = document.querySelector(s); if (!e) return null; const b = e.getBoundingClientRect(); return [b.x, b.y, b.width, b.height].map(Math.round).join(); }).join('|')"

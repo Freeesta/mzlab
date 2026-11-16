@@ -16,7 +16,7 @@ try:
         twin = Path(tempfile.mkdtemp(prefix="ms2twin_"))
         for n in ("a", "b"): shutil.copy(ES / "MS2_t15.mzML", twin / f"MS2_{n}.mzML")
         stage(pg, [str(twin / f"MS2_{n}.mzML") for n in ("a", "b")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def rows():
             pg.evaluate("setTab('ms2')"); ready(pg)
             pg.evaluate("E.files.forEach(f => { f.vis = true; }); renderFileList()"); open_ms2(pg)

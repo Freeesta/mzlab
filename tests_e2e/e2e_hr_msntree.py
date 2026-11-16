@@ -1,4 +1,4 @@
-"""H4: «Albero MSn del file…» on the direct-infusion MSn file of the private data repository (skipped without it): the tree, the formulas, the peaks of a node, a wrong formula."""
+"""H4: «MSn tree of the file…» on the direct-infusion MSn file of the private data repository (skipped without it): the tree, the formulas, the peaks of a node, a wrong formula."""
 # covers: mzlab/web/composizione.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -23,15 +23,15 @@ try:
         def menu():
             k = pg.evaluate("E.files.findIndex(f=>f.kind==='infusion')"); assert k >= 0
             pg.evaluate(f"COMP.tree({k})"); pg.wait_for_selector("#mt-tbl tr[data-n]", timeout=60000)
-            assert "non identificazioni" in pg.inner_text("#bigbody") or "candidati" in pg.inner_text("#bigbody")
+            assert "not identifications" in pg.inner_text("#bigbody") or "candidates" in pg.inner_text("#bigbody")
             assert pg.locator("#mt-tbl tr[data-n]").count() >= 19, pg.locator("#mt-tbl tr[data-n]").count()
-            assert "Senza la formula" in pg.inner_text("#mt-out")
+            assert "Without the formula" in pg.inner_text("#mt-out")
         step("the tree opens with 19+ nodes and offers candidates for the first stage", menu)
         def fixed():
-            pg.fill("#mt-f", "C13H25N4O3S"); pg.click("#mt-go"); pg.wait_for_function("!document.querySelector('#mt-out').innerText.includes('Senza la formula')", timeout=60000)
+            pg.fill("#mt-f", "C13H25N4O3S"); pg.click("#mt-go"); pg.wait_for_function("!document.querySelector('#mt-out').innerText.includes('Without the formula')", timeout=60000)
             t = pg.inner_text("#mt-tbl").replace("\t", " ")
             for f in ("C9H17N4O3S", "C9H14N3O3S", "C5H9N2OS"): assert f in t.replace(" ", ""), f
-            assert "quasi vuoto" in t
+            assert "almost empty" in t
         step("with the formula the nodes are sub-formulas (261, 244, 145)", fixed)
         def xl():
             with pg.expect_download() as d: pg.click("#mt-xlsx")
@@ -42,7 +42,7 @@ try:
             t = pg.inner_text("#mt-pk"); assert "244.07" in t and "C9H14N3O3S" in t.replace(" ", ""), t[:300]
             pg.click("#mt-pk tr[data-mz]"); pg.wait_for_selector("#cmp-mz", timeout=10000)
             assert pg.input_value("#cmp-par") == "C9H17N4O3S", pg.input_value("#cmp-par")
-        step("a node shows its peaks; a peak opens «Formule compatibili» with the sub-formula of the node", node)
+        step("a node shows its peaks; a peak opens «Candidate formulas» with the sub-formula of the node", node)
         def wrong():
             pg.evaluate("document.querySelector('#bigdlg').close()")
             pg.evaluate("COMP.tree(E.files.findIndex(f=>f.kind==='infusion'), 'Xx9')"); pg.wait_for_selector("#mt-out .fail", timeout=60000)

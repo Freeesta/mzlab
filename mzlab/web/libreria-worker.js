@@ -126,6 +126,8 @@ function entropyWeighted(/** @type {Float32Array} */ it) {
   return p;
 }
 function entropySimilarity(/** @type {LibSpec} */ a, /** @type {LibSpec} */ b, /** @type {number[][]} */ pairs) {       // 1 - (2 S_AB - S_A - S_B) / ln 4
+  const sum = (/** @type {ArrayLike<number>} */ it) => { let t = 0; for (let k = 0; k < it.length; k++) t += it[k]; return t; };
+  if (!(sum(a.it) > 0 && sum(b.it) > 0)) return 0;                             // no intensity shares nothing (the formula alone gives 0.5), as the engine
   const pa = entropyWeighted(a.it), pb = entropyWeighted(b.it), H = (/** @type {number[]} */ p) => -p.reduce((x, v) => x + (v > 0 ? v * Math.log(v) : 0), 0);
   const m = [], ia = new Set(), ib = new Set();
   for (const [i, j] of pairs) { m.push((pa[i] + pb[j]) / 2); ia.add(i); ib.add(j); }

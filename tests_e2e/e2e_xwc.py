@@ -27,7 +27,7 @@ XWC = "E.panels.find(q => q.type === 'chrom' && q.kind === 'pda' && q.mz0 != nul
 SPEC = "E.panels.find(q => q.type === 'spec' && q.uv)"
 def load(pg, files):
     pg.set_input_files("#pick", [str(f) for f in files])
-    wait_for_js(pg, f"document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=90000); pg.click("text=Carica dati"); ready(pg)
+    wait_for_js(pg, f"document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=90000); pg.click("text=Load data"); ready(pg)
     wait_for_js(pg, "E.files.length >= 1", timeout=120000)
 def visible(pg, panel, a):
     return pg.evaluate(f"(() => {{ const b = {panel} && {panel}.el.querySelector('[data-a={a}]'); return !!b && !b.hidden && b.offsetParent !== null; }})()")

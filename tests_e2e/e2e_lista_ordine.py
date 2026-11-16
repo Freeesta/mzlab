@@ -13,13 +13,13 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [str(ES / "MS2_t15.mzML")] + [str(ES / f"FullScan_t{t}.mzML") for t in (0, 15)])      # the MS2 file first
-        pg.click("text=Carica dati"); ready(pg); drawer(pg)
+        pg.click("text=Load data"); ready(pg); drawer(pg)
         G = "[...document.querySelectorAll('#flst .fgh[data-gt]')].map(x => x.dataset.gt)"
         ITEMS = "[...document.querySelectorAll('.gby-menu [role=menuitemradio]')].slice(0, 2)"
         step("Full Scan group first, MS2 after", lambda: same(pg.evaluate(G)[:2], ["full", "ms2"]))
         def menu():
             pg.click("#sb-by"); pg.wait_for_selector(".gby-menu [role=menuitemradio]")
-            same(pg.evaluate(ITEMS + ".map(x => [x.textContent, x.getAttribute('aria-checked')])"), [["Tipo di esperimento", "true"], ["Nessuno", "false"]])
+            same(pg.evaluate(ITEMS + ".map(x => [x.textContent, x.getAttribute('aria-checked')])"), [["Experiment type", "true"], ["None", "false"]])
             pg.click(".gby-menu [role=menuitemradio]:nth-child(2)"); ready(pg)
             assert pg.locator("#flst .fgh").count() == 0 and pg.locator("#flst .fl:not(.pr)").count() == 3, "flat list"
             pg.click("#sb-by"); pg.wait_for_selector(".gby-menu [role=menuitemradio]")
@@ -27,12 +27,6 @@ try:
             pg.click(".gby-menu [role=menuitemradio]:nth-child(1)"); ready(pg)
             same(pg.evaluate(G)[:2], ["full", "ms2"])
         step("Groups menu: Experiment type default, None = flat list, and back", menu)
-        def english():
-            pg.evaluate("I18N.set('en')"); pg.wait_for_function("I18N.lang === 'en'"); ready(pg)
-            pg.click("#sb-by"); pg.wait_for_selector(".gby-menu [role=menuitemradio]")
-            same(pg.evaluate(ITEMS + ".map(x => x.textContent)"), ["Experiment type", "None"])
-            pg.keyboard.press("Escape")
-        step("English menu", english)
         def nox():
             assert not pg.is_visible("#sb-x") and pg.is_visible("#sb-toggle")
             close_side(pg); wait_for_js(pg, "(() => { const e = Q('#flst'); return !e || e.getBoundingClientRect().width === 0 })()")

@@ -20,7 +20,7 @@ def off(pg, sel):
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(800); pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(800); pg.click("text=Load data"); ready(pg)
         for name, sel in (("«close all»", "#np-closeall"), ("panel", ".pnl .hd .x")):
             def chk(sel=sel):
                 dx, dy = off(pg, sel); assert abs(dx) <= 0.6 and abs(dy) <= 0.6, (sel, round(dx, 2), round(dy, 2), pg.evaluate("(()=>{const e=document.querySelector(%r);const c=getComputedStyle(e),b=e.getBoundingClientRect();return [b.width,b.height,c.display,c.padding,c.fontSize,c.alignItems,c.lineHeight,c.boxSizing]})()" % sel))

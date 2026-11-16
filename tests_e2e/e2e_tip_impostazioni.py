@@ -1,4 +1,4 @@
-"""Every control of the Settings panel (and of its bug-report form) has a short tooltip of its own, in Italian and English, with no file, with a low-resolution
+"""Every control of the Settings panel (and of its bug-report form) has a short tooltip of its own, with no file, with a low-resolution
 file and with a high-resolution one: the mouse shows it after the rest delay, a long touch press shows it too, and Tab reaches every control with a visible focus ring."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -62,13 +62,10 @@ try:
             assert pg.evaluate("document.getElementById('uip-hc').checked") is False, "the lift after a long press is not a click"
         step("touch: a long press shows the tooltip and does not toggle the switch", touch)
         pg = r2.page(p)
-        def lr_it_en():
-            stage(pg, [D / "B_FullMass-t0.mzML"]); pg.click("text=Carica dati"); ready(pg)
-            open_set(pg); assert pg.is_visible("#uip-tour"); check_tips(pg, "#uipset", "LR file, IT"); bug_form(pg); check_tips(pg, "#uipset", "LR file, IT, bug form")
-            with pg.expect_navigation(timeout=60000): pg.click("#uipset label.lg:has(input[value=en])")
-            ready(pg)
-            open_set(pg); assert pg.evaluate("I18N.lang") == "en"; check_tips(pg, "#uipset", "LR file, EN"); bug_form(pg); check_tips(pg, "#uipset", "LR file, EN, bug form")
-        step("LR file, Italian then English: every control has its own short tooltip", lr_it_en)
+        def lr_file():
+            stage(pg, [D / "B_FullMass-t0.mzML"]); pg.click("text=Load data"); ready(pg)
+            open_set(pg); assert pg.is_visible("#uip-tour"); check_tips(pg, "#uipset", "LR file, EN"); bug_form(pg); check_tips(pg, "#uipset", "LR file, EN, bug form")
+        step("LR file: every control has its own short tooltip", lr_file)
         def admin():
             pg.evaluate("localStorage.setItem(NOMI.KEY('admin'), '1')"); pg.reload(); ready(pg); open_set(pg)
             pg.evaluate("document.querySelectorAll('#uipset details.imp-g').forEach(g => { g.open = true; })"); pg.wait_for_selector("#llm-on", state="attached")

@@ -19,7 +19,6 @@
     "../../mzlab/web/appname.js",
     "../../mzlab/web/version.js",
     "../../mzlab/web/i18n.js",
-    "../../mzlab/web/lang/it.js",
     "../../mzlab/web/lang/en.js",
     "../../mzlab/web/tour.js",
     "../../mzlab/web/tour-dopo.js",

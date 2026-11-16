@@ -30,5 +30,5 @@ def test_values():
 
 def test_ans_and_errors():
     assert run("console.log(JSON.stringify(c.calcEval('Ans*2', 170.2)))") == {"v": 340.4}
-    assert run("console.log(JSON.stringify(c.calcEval('1/0')))") == {"err": "divisione per zero"}
-    assert run("console.log(JSON.stringify([c.calcEval('364.4-'),c.calcEval('(1+2'),c.calcEval('1+2)')]))") == [{"err": ""}, {"err": ""}, {"err": "parentesi chiusa di troppo"}]
+    assert run("console.log(JSON.stringify(c.calcEval('1/0')))") == {"err": "division by zero"}
+    assert run("console.log(JSON.stringify([c.calcEval('364.4-'),c.calcEval('(1+2'),c.calcEval('1+2)')]))") == [{"err": ""}, {"err": ""}, {"err": "extra closing parenthesis"}]
