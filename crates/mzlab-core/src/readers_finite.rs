@@ -42,7 +42,7 @@ pub fn wiff_sample(fs: FileSet, limits: &Limits, c: usize) -> Result<Box<dyn Rea
     Ok(Box::new(Finished::new(l)))
 }
 
-fn broken(location: &str, who: impl ToString, what: &str, v: f64) -> Error {
+fn broken(location: &str, who: &str, what: &str, v: f64) -> Error {
     let (key, param) = if location == "scan" {
         ("err.file.nonFinite", "scan")
     } else {
@@ -64,16 +64,16 @@ fn spectrum(s: Result<Spectrum>, k: usize) -> Result<Spectrum> {
         }
     };
     if !s.rt.is_finite() {
-        return Err(broken("scan", who(), "rt", s.rt));
+        return Err(broken("scan", &who(), "rt", s.rt));
     }
     if let Some(v) = s.mz.iter().find(|x| !x.is_finite()) {
-        return Err(broken("scan", who(), "mz", *v));
+        return Err(broken("scan", &who(), "mz", *v));
     }
     if let Some(v) = s.intensity.iter().find(|x| !x.is_finite()) {
-        return Err(broken("scan", who(), "intensity", f64::from(*v)));
+        return Err(broken("scan", &who(), "intensity", f64::from(*v)));
     }
     if let Some(v) = s.wide.iter().flatten().find(|x| !x.is_finite()) {
-        return Err(broken("scan", who(), "intensity", *v));
+        return Err(broken("scan", &who(), "intensity", *v));
     }
     Ok(s)
 }
