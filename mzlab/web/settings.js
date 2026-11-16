@@ -134,7 +134,7 @@ function uipOpen(btn) {
   const pals = ["file", ...Object.keys(PALS).filter(k => k !== "file")].map(k => `<option value="${k}">${I18N.t(`settings.pal.${k}`)}</option>`).join("");
   const fld = (label, tip, inner) => `<div class="imp-fld" title="${esc(tip)}"><span>${label}</span>${inner}</div>`;
   const look = C.section(T("settings.theme"), C.opts("seg3", C.radios("uip-th", [["auto", T("settings.theme.auto")], ["light", T("settings.theme.light")], ["dark", T("settings.theme.dark")]], UIP.theme, "seg"), T("settings.theme.tip")))
-    + C.section(T("settings.pal.label"), `<select id="uip-pal" title="${esc(T("settings.pal.title"))}" aria-label="${esc(T("settings.pal.label"))}">${pals}</select>`)
+    + `<div class="imp-fld imp-pal" title="${esc(T("settings.pal.title"))}"><label for="uip-pal">${T("settings.pal.label")}</label><select id="uip-pal">${pals}</select></div>`
     + C.sw(T("settings.xiclens"), T("settings.xiclens.title"), 'id="uip-xiclens"', UIP.xicLens, "side");
   const read = C.section(T("settings.font.label"), C.opts("f3", C.radios("uip-font", [["", T("settings.font.default"), T("settings.font.default.tip")], ["atkinson", T("settings.font.atkinson"), T("settings.font.atkinson.tip")], ["dyslexic", T("settings.font.dyslexic"), T("settings.font.dyslexic.tip")]], a11y.font || "", "font")))
     + C.sw(T("settings.hc.label"), T("settings.hc.tip"), 'id="uip-hc"', a11y.bg === "hc", "hc") + C.sw(T("settings.motion"), T("settings.motion.title"), 'id="uip-motion"', a11y.motion === "always", "motion");
