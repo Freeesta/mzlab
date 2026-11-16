@@ -37,8 +37,8 @@ try:
         step("2.1/2.4: legend inside the graph, none with one file", legend)
         def below():
             pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); frames(pg, 2)
-            g = pg.evaluate(f"(()=>{{const p={SPEC},l=p.leg.getBoundingClientRect(),c=p.cv.getBoundingClientRect();return [l.bottom<=c.bottom+1,l.top>c.bottom-30,l.width>100,getComputedStyle(p.leg).position]}})()"); print(g)
-            assert g[0] and g[1] and g[2] and g[3] == "absolute", g          # the scan line is on the row of the x axis title
+            g = pg.evaluate(f"(()=>{{const p={SPEC},l=p.leg.getBoundingClientRect(),c=p.cv.getBoundingClientRect();return [l.bottom<=c.bottom+1,l.top>c.bottom-30,l.width>60,getComputedStyle(p.leg).position]}})()"); print(g)
+            assert g[0] and g[1] and g[2] and g[3] == "absolute", g          # width > 60 px: the English line «scan 786/1111» is 78 px; the scan line is on the row of the x axis title
         step("2.4: scan line on the row of the x axis title", below)
         def tabs():
             assert pg.evaluate("document.querySelectorAll('#flst .qi').length") == 0, "no icons in the file list"

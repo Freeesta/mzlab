@@ -111,6 +111,7 @@ try:
         # the Adducts panel
         def adducts():
             pg.click("#np-addloss"); wait_for_js(pg, "document.querySelector('#refdlg') && !document.querySelector('#refdlg').hidden || document.querySelector('#sb-panel-adducts') && !document.querySelector('#sb-panel-adducts').hidden")
+            pg.click("#al-t-adducts")          # the panel reopens on the last tab used (Neutral losses, from the step above)
             q = pg.query_selector("#calcin")
             assert q
             q.fill("21.98"); frames(pg, 25)

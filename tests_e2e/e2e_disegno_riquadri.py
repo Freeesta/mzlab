@@ -42,7 +42,7 @@ try:
         step("the explanations are header tooltips and hidden descriptions, never visible paragraphs", no_prose)
         def click():
             pg.click("#cut-card .rq-tg")
-            assert exp(pg, "cut-card") == "true" and pg.is_visible("#cut-line") and pg.get_attribute("#cut-card .rq-tg", "aria-label").startswith("Comprimi")
+            assert exp(pg, "cut-card") == "true" and pg.is_visible("#cut-line") and pg.get_attribute("#cut-card .rq-tg", "aria-label").startswith("Collapse")
             pg.click("#cut-card .rq-tg")
             assert exp(pg, "cut-card") == "false" and not pg.is_visible("#cut-line")
             pg.click("#anal-card summary"); wait_for_js(pg, "document.getElementById('anal-card').open")
@@ -58,7 +58,7 @@ try:
             pg.reload(); wait_for_js(pg, "!!document.querySelector('#v-draw aside[data-rq]')", timeout=60000)
             assert exp(pg, "quick-card") == "false" and exp(pg, "mech-card") == "true" and exp(pg, "cut-card") == "false" and exp(pg, "prop-card") == "true"
             assert pg.evaluate("document.getElementById('anal-card').open") and pg.is_visible("#mech-arrow") and not pg.is_visible("#ex-smi")
-            assert pg.get_attribute("#quick-card .rq-tg", "aria-label").startswith("Espandi")
+            assert pg.get_attribute("#quick-card .rq-tg", "aria-label").startswith("Expand")
             pg.click("#quick-card .rq-tg"); pg.click("#mech-card .rq-tg"); pg.click("#anal-card summary"); wait_for_js(pg, "!document.getElementById('anal-card').open")
         step("the choice is remembered after a reload", reload)
         def result():

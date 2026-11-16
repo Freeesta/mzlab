@@ -469,7 +469,7 @@ def xlsx_openpyxl(path):
 def dlmenu(pg, scope, kind):
     """«Scarica ▾» of a panel: open the menu, then choose the PNG image or the Excel data (kind = 'png' | 'xlsx')."""
     pg.locator(f"{scope} [data-a=dl]").first.click()
-    pg.locator("#ctx div", has_text="Immagine" if kind == "png" else "Excel").first.click()
+    pg.locator("#ctx div", has_text="Image" if kind == "png" else "Excel").first.click()
 
 
 def axe_path():

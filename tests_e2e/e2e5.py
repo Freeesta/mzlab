@@ -36,7 +36,7 @@ try:
             addwin("163.3")                                       # nominal 163: window 162.8-163.3
             tr = pg.evaluate(f"E.panels[{xi}].traces[1]"); assert abs(tr["mz"] - 163.05) < 1e-6 and abs(tr["w"] - 0.25) < 1e-6, tr
             addion("C2H6Qq", ok=False)
-            assert "non valida" in pg.inner_text("#xic-sum"); pg.click("#xic-no")
+            assert "invalid formula" in pg.inner_text("#xic-sum"); pg.click("#xic-no")
             # one decimal only: the value is rounded half up to 0.1, commas are accepted, and the window comes from the nominal mass (100.6 -> n = 101 -> 100.8-101.3)
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))"); pg.fill("#xic-mz", "100,26"); assert "99.8 - 100.3" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
             pg.fill("#xic-mz", "100.6"); assert "100.8 - 101.3" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")

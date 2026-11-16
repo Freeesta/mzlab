@@ -45,17 +45,17 @@ try:
             assert order() == [top, bot], order()
         step("Alt+arrows swap the TIC with its own spectrum too", keys)
         def left():
-            lab = drag(1, 0, 0.2, 0.5); assert lab == "A sinistra", lab
+            lab = drag(1, 0, 0.2, 0.5); assert lab == "To the left", lab
             assert [len(x) for x in rows()] == [2], rows()
         step("left of the target: side by side, dragged on the left", left)
         def right():
-            lab = drag(0, 1, 0.8, 0.5, release=False); assert lab == "A destra", lab
+            lab = drag(0, 1, 0.8, 0.5, release=False); assert lab == "To the right", lab
             pg.keyboard.press("Escape"); pg.mouse.up()
-        step("right of the target: label «A destra»", right)
+        step("right of the target: label «To the right»", right)
         def over():
             # a panel raised by many clicks must not hide the preview
             pg.evaluate("stackOrder().forEach(q => { q.el.style.zIndex = 4000; })")
-            lab = drag(0, 1, 0.8, 0.5, release=False); assert lab == "A destra", lab
+            lab = drag(0, 1, 0.8, 0.5, release=False); assert lab == "To the right", lab
             z = pg.evaluate("[+getComputedStyle(document.querySelector('.aff-prev')).zIndex, Math.max(...stackOrder().map(q => +q.el.style.zIndex))]")
             assert z[0] > z[1], z
             pg.keyboard.press("Escape"); pg.mouse.up()

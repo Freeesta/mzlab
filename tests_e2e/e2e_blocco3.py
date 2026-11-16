@@ -39,7 +39,7 @@ try:
         step("3.1: up to 10 rows, × removes one", limit)
         def mixed():
             pg.click("#np-xic"); pg.locator("#xic-rows input").nth(0).fill("c14h13f4n3o2s"); pg.locator("#xic-rows input").nth(1).fill("300"); hold(pg, 1300)
-            s = pg.locator("#xic-rows .xr-sum").all_inner_texts(); print(s); assert "363.8 - 364.3" in s[0] and "interpretata" in s[0] and "299.8 - 300.3" in s[1], s
+            s = pg.locator("#xic-rows .xr-sum").all_inner_texts(); print(s); assert "363.8 - 364.3" in s[0] and "interpreted" in s[0] and "299.8 - 300.3" in s[1], s
             assert pg.locator("#xic-rows select").nth(0).is_visible() and not pg.locator("#xic-rows select").nth(1).is_visible(), "the adduct only for a formula"
             pg.click("#xic-no")
         step("3.1: formula and m/z in the same kind of box", mixed)

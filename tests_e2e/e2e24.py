@@ -137,7 +137,7 @@ try:
             def grab(fmt):
                 with pg.expect_download() as d: pg.click("#ex-" + fmt)
                 return d.value
-            pat = re.compile(r"^disegno_\d{4}-\d\d-\d\d_\d{4}(_trasparente)?(-\d)?\.(png|jpg|svg|ket)$")
+            pat = re.compile(r"^drawing_\d{4}-\d\d-\d\d_\d{4}(_transparent)?(-\d)?\.(png|jpg|svg|ket)$")
             ds = {f: grab(f) for f in ("png", "jpg", "svg", "ket")}
             names = {f: d.suggested_filename for f, d in ds.items()}; print(names)
             assert all(pat.match(n) for n in names.values()), names
@@ -155,10 +155,10 @@ try:
             assert again == names["png"].replace(".png", "-2.png") or (pat.match(again) and again != names["png"] and "-" not in again.split("_")[-1]), again
             # transparent
             pg.check("#ex-nobg"); pg.wait_for_timeout(300)
-            assert pg.is_disabled("#ex-jpg") and "trasparenza" in (pg.get_attribute("#ex-jpg", "title") or "")
+            assert pg.is_disabled("#ex-jpg") and "transparency" in (pg.get_attribute("#ex-jpg", "title") or "")
             assert pg.evaluate("getComputedStyle(document.getElementById('ex-jpg')).opacity") < "0.6"
             assert pg.inner_text("label:has(#ex-nobg)").strip() == "Transparent background"
-            t = grab("png"); tn = t.suggested_filename; assert tn.endswith("_trasparente.png") or "_trasparente-" in tn, tn
+            t = grab("png"); tn = t.suggested_filename; assert tn.endswith("_transparent.png") or "_transparent-" in tn, tn
             from PIL import Image
             im = Image.open(t.path()).convert("RGBA"); assert im.getpixel((2, 2))[3] == 0 and im.getpixel((im.width - 3, im.height - 3))[3] == 0, "PNG corners not transparent"
             ts = grab("svg"); txt = open(ts.path(), encoding="utf-8").read()
@@ -168,14 +168,14 @@ try:
             im = Image.open(j.path()).convert("RGB"); assert im.getpixel((2, 2)) == (255, 255, 255), im.getpixel((2, 2))
             # name field: odd characters
             pg.fill("#ex-name", "Paracetamol is TP 1/2:"); pg.press("#ex-name", "Tab"); pg.wait_for_timeout(200)
-            assert pg.input_value("#ex-name") == "paracetamolo_e_tp_1_2", pg.input_value("#ex-name")
-            assert grab("png").suggested_filename == "paracetamolo_e_tp_1_2.png"
-            pg.fill("#ex-name", ""); pg.press("#ex-name", "Tab"); assert re.match(r"^disegno_\d{4}", pg.input_value("#ex-name"))
-        step("2.3 exports: names (4 formats, _trasparente, -2, odd characters), PNG metadata, transparent PNG/SVG, JPEG grey when transparent", exports)
+            assert pg.input_value("#ex-name") == "paracetamol_is_tp_1_2", pg.input_value("#ex-name")
+            assert grab("png").suggested_filename == "paracetamol_is_tp_1_2.png"
+            pg.fill("#ex-name", ""); pg.press("#ex-name", "Tab"); assert re.match(r"^drawing_\d{4}", pg.input_value("#ex-name"))
+        step("2.3 exports: names (4 formats, _transparent, -2, odd characters), PNG metadata, transparent PNG/SVG, JPEG grey when transparent", exports)
         def export_error():
             pg.evaluate("window.__g=TPDraw.image; ")                               # the error message path: force a failure
             pg.evaluate("(()=>{const k=%s;k.generateImage=async()=>{throw new Error('test')}})()" % KQ)
-            pg.click("#ex-svg"); pg.wait_for_timeout(1500); assert pg.is_visible("#ex-warn") and "Esportazione non riuscita" in pg.inner_text("#ex-warn")
+            pg.click("#ex-svg"); pg.wait_for_timeout(1500); assert pg.is_visible("#ex-warn") and "Export failed" in pg.inner_text("#ex-warn")
         step("2.3 a failing export shows a visible message", export_error)
 finally:
     if r: r.close(); r.report()

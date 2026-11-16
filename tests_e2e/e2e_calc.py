@@ -90,7 +90,7 @@ try:
             assert names[:4] == ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+"], names
             assert rows[0][1] == "+1.0073" and rows[0][2] == "239.2" and rows[0][3] == "239", rows[0]
             assert [h.split()[0] for h in pg.evaluate("[...document.querySelectorAll('.cadd-wrap thead th')].map(t=>t.textContent)")][:4], "headers"
-            assert pg.get_attribute(".cxic >> nth=0", "aria-label") == "XIC di [M+H]+ 239.2", pg.get_attribute(".cxic >> nth=0", "aria-label")
+            assert pg.get_attribute(".cxic >> nth=0", "aria-label") == "XIC of [M+H]+ 239.2", pg.get_attribute(".cxic >> nth=0", "aria-label")
             t = pg.inner_text("#sb-panel-adducts"); assert "Clicca" not in t and "Click a row" not in t and pg.locator(".adnote").count() == 0, t[:300]
         step("C13H26N4: [M+H]+ 239.2 (unit resolution: one decimal), delta +1.0073, XIC button name, no descriptive text", table_rows)
         def polarity():
