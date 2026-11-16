@@ -144,6 +144,7 @@
     "../../mzlab/web/area-copia.js",
     "../../mzlab/web/integra-estremi.js",
     "../../mzlab/web/integra-valli.js",
+    "../../mzlab/web/integra-tutti.js",
     "../../mzlab/web/elementare-pannello.js",
     "../../mzlab/web/xic-lente-disegno.js",
     "../../mzlab/web/xic-lente.js",
