@@ -14,7 +14,7 @@ def near(a, b): return all(abs(x - y) <= 3 for x, y in zip(a, b))
 def early_pixel(b, url, scheme, pref):
     """Opens url with its stylesheets and external scripts held back and returns the computed background of <html> read before any of them ran
     (headless Chromium paints no frame while they are pending, so the computed style is what the first frame will use)."""
-    ctx = b.new_context(lang_auto=True, color_scheme=scheme, viewport={"width": 800, "height": 600}, reduced_motion="reduce")
+    ctx = b.new_context(color_scheme=scheme, viewport={"width": 800, "height": 600}, reduced_motion="reduce")
     if pref: ctx.add_init_script("try{localStorage.setItem('mzlab.prefs',JSON.stringify({theme:'%s'}))}catch(e){}" % pref)
     pg = ctx.new_page(); held = []; free = []
     def hold(route):

@@ -18,7 +18,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(F)])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def trace_only():
             assert pg.evaluate("E.files[0].pda") is True
             pg.click("#np-map"); ready(pg); wait_for_js(pg, "E.files[0]._pdaMap === false")

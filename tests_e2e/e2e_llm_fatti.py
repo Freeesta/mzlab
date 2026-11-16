@@ -34,7 +34,7 @@ try:
             pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("request", lambda r: reqs.append(r.url))
             settings = json.dumps({"on": on, "provider": "anthropic", "model": "claude-sonnet-5-5", "level": "L1"})
             consent = json.dumps({"anthropic": {"classes": ["plan", "summary", "names"]}}) if on else "{}"
-            pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.lang','en');localStorage.setItem('mzlab.llm',%s);localStorage.setItem('mzlab.llm.consenso',%s);}catch(_){}"
+            pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.llm',%s);localStorage.setItem('mzlab.llm.consenso',%s);}catch(_){}"
                                % (json.dumps(settings), json.dumps(consent)))
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
             stage(pg, FILES)

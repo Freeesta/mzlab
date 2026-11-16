@@ -30,14 +30,14 @@ try:
         assert pg.locator("#demo a").count() == 0, "no download links any more"
         pg.wait_for_function("document.querySelectorAll('#demo .avanza').length===0", timeout=3000)          # a clean load leaves no «5 of 5 done» bar behind
         assert "flufenacet" not in pg.inner_text("body").lower() and "flufenacet" not in (pg.get_attribute("#demobtn", "title") or "").lower()
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         assert pg.evaluate("tabFiles('full').length") == 5 and pg.evaluate("E.panels.some(p=>p.type==='spec'&&p._a)")
         assert "flufenacet" not in pg.inner_text("body").lower(), "the compound is never named after the files are open"
         assert all("FullScan" in u for u in reqs), ("only the Full Scan set was downloaded", reqs)
         steps.append(("choice Full Scan: 5 files with times 0/5/10/15/30, only that set downloaded, no links, button in box 1, no compound name, data open", "ok"))
-        # the rows of the example files: the download is their first part; «Annulla» (one for everything) stops them and nothing is opened
+        # the rows of the example files: the download is their first part; «Cancel» (one for everything) stops them and nothing is opened
         pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_selector("#demobtn")
-        # the examples come from the service worker, out of reach of page.route: the second MRM file is held by a wrapper of fetch until «Annulla» aborts it
+        # the examples come from the service worker, out of reach of page.route: the second MRM file is held by a wrapper of fetch until «Cancel» aborts it
         pg.evaluate("""() => { const f0 = window.fetch; let n = 0; window.fetch = (u, o) => String(u).includes("esempi/MRM") && ++n === 2
             ? new Promise((_, no) => o.signal.addEventListener("abort", () => no(new DOMException("aborted", "AbortError")))) : f0(u, o); }""")
         pg.click("#demobtn"); pg.click("#demochoice [data-demo=mrm]")
@@ -45,10 +45,10 @@ try:
         assert pg.evaluate("[...document.querySelectorAll('#fl-up [data-up]')].map(x => x.dataset.up)") == [f"MRM_std_{c}ppm.mzML" for c in ("0.6", "2.4", "7.2", "18")]
         pg.wait_for_function("document.querySelector('#fl-up [data-up] [role=progressbar][aria-valuenow=\"40\"]')", timeout=20000)      # the first file is downloaded (40 % of its bar)
         assert pg.locator("#demo .avanza").count() == 0 and pg.locator(".loadbar").count() == 0
-        pg.evaluate("document.querySelector('#fl-up [data-up-all]').click()")      # «Annulla» of the side list, for the whole loading
+        pg.evaluate("document.querySelector('#fl-up [data-up-all]').click()")      # «Cancel» of the side list, for the whole loading
         pg.wait_for_function("document.querySelectorAll('#flist li[data-cvend=cancel]').length>=3", timeout=10000)
-        assert pg.locator("#flist [data-k=conc]").count() == 0, "nothing is loaded after «Annulla»"
-        steps.append(("the rows of the example files exist at once and in order, the download is part of the row, «Annulla» stops them and nothing is opened", "ok"))
+        assert pg.locator("#flist [data-k=conc]").count() == 0, "nothing is loaded after «Cancel»"
+        steps.append(("the rows of the example files exist at once and in order, the download is part of the row, «Cancel» stops them and nothing is opened", "ok"))
         # a drop of three files: three rows at once
         pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_selector("#demobtn")
         three = [str(ROOT / "site" / "static" / "esempi" / f"FullScan_t{t}.mzML") for t in (0, 5, 10)]
@@ -64,20 +64,20 @@ try:
         tm = pg.evaluate("[...document.querySelectorAll('#flist [data-k=time]')].map(x=>+x.value)"); assert sorted(tm) == [15, 60], tm
         t = pg.inner_text("#flist"); assert "MS2" in t and "MS2_t15" in t, t
         assert all("MS2" in u for u in reqs), reqs
-        pg.click("text=Carica dati"); ready(pg); assert pg.evaluate("tabFiles('ms2').length") == 2 and "flufenacet" not in pg.inner_text("body").lower()
+        pg.click("text=Load data"); ready(pg); assert pg.evaluate("tabFiles('ms2').length") == 2 and "flufenacet" not in pg.inner_text("body").lower()
         steps.append(("choice MS2: 2 files with times 15/60, MS2 tab, only that set downloaded", "ok"))
         # MRM: four standards with the concentration read from the name
         pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_timeout(1500); reqs.clear()
         pg.click("#demobtn"); pg.click("#demochoice [data-demo=mrm]"); pg.wait_for_function("document.querySelectorAll('#flist [data-k=conc]').length===4", timeout=30000); pg.wait_for_timeout(500)
         cc = pg.evaluate("[...document.querySelectorAll('#flist [data-k=conc]')].map(x=>+x.value)"); assert sorted(cc) == [0.6, 2.4, 7.2, 18], cc
         assert all("MRM" in u for u in reqs), reqs
-        pg.click("text=Carica dati"); ready(pg); assert pg.evaluate("tabFiles('mrm').length") == 4 and "flufenacet" not in pg.inner_text("body").lower()
+        pg.click("text=Load data"); ready(pg); assert pg.evaluate("tabFiles('mrm').length") == 4 and "flufenacet" not in pg.inner_text("body").lower()
         steps.append(("choice MRM: 4 standards with concentrations 0.6/2.4/7.2/18, MRM tab, only that set downloaded", "ok"))
         # HRMS: 4 Orbitrap DDA files (Full Scan + MS2), opened in the high-resolution mode like files loaded by hand
         pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_timeout(1500); reqs.clear()
         pg.click("#demobtn"); pg.click("#demochoice [data-demo=hrms]"); pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length>=4", timeout=60000); pg.wait_for_timeout(500)
         assert "HRMS_t000" in pg.inner_text("#flist") and all("HRMS_t" in u for u in reqs) and len(reqs) == 4, reqs
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         fl = pg.evaluate("E.files.map(f=>[f.file,f.lv,!!(f.prof1&&f.prof1.hr),f.prof1&&f.prof1.dec,!!f.dda])")
         assert any(f[1] == 1 and f[2] and f[3] >= 4 for f in fl) and any(f[1] == 2 and f[4] for f in fl), fl
         assert pg.evaluate("tabFiles('full').length") >= 4 and pg.evaluate("tabFiles('ms2').length") >= 4, fl

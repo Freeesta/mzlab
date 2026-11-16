@@ -29,14 +29,12 @@
     var d = document;
     d.documentElement.innerHTML =
       '<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">' +
-      "<title>Expired · Scaduta</title><style>" +
+      "<title>Expired</title><style>" +
       ":root{--bg:#f7f8fa;--fg:#1b1f24;--line:#c9ced6}@media(prefers-color-scheme:dark){:root{--bg:#14171b;--fg:#e8eaed;--line:#3a4048}}" +
       "body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}" +
       "main{max-width:34em;margin:16px;padding:20px 24px;border:1px solid var(--line);border-radius:8px}h1{font-size:20px;margin:0 0 10px}p{margin:0 0 10px}" +
       '</style></head><body><main role="alert"><h1>This lab version has expired</h1>' +
-      '<p lang="en">This copy of the program was made available for a limited period, which has ended. Please use the main site.</p>' +
-      '<h1 lang="it">Questa versione di laboratorio è scaduta</h1>' +
-      '<p lang="it">Questa copia del programma era disponibile per un periodo limitato, che è terminato. Usa il sito principale.</p></main></body>';
+      '<p lang="en">This copy of the program was made available for a limited period, which has ended. Please use the main site.</p></main></body>';
   }
 
   if (expired()) { showExpired(); return; }

@@ -72,14 +72,13 @@ try:
                 assert not pg3.evaluate("/liste|reference lists/i.test(I18N.t('tour.barra.testo.lab'))")
         step("lab: no reference-lists panel nor button, saved tab harmless; main site keeps both", nolists)
         def banner():
-            for lang in ("en", "it"):
-                pg, _ = page(LAB + "?lang=" + lang, CLOCK % "2026-10-29T12:00:00Z"); ready(pg)
-                assert pg.evaluate("document.querySelector('#lab-banner')") is None and pg.evaluate("document.body.innerText.includes('29 Dec') || document.body.innerText.includes('29 dic')") is False
+            pg, _ = page(LAB, CLOCK % "2026-10-29T12:00:00Z"); ready(pg)
+            assert pg.evaluate("document.querySelector('#lab-banner')") is None and pg.evaluate("document.body.innerText.includes('29 Dec')") is False
         step("lab: no banner and no date shown", banner)
         def expiry():
             pg, reqs = page(LAB, CLOCK % "2026-12-30T00:00:00Z")
             pg.wait_for_selector("main[role=alert]", timeout=30000)
-            t = pg.inner_text("main"); assert "expired" in t and "scaduta" in t, t
+            t = pg.inner_text("main"); assert "expired" in t, t
             assert pg.evaluate("document.querySelector('#drop')") is None and pg.evaluate("typeof E") == "undefined"
             assert not [u for u in reqs if "carica.js" in u or "/wasm/" in u], reqs
             pg, _ = page(LAB, CLOCK % "2026-12-29T23:59:59Z"); pg.wait_for_selector("#drop", timeout=120000)      # the last day is still valid
@@ -91,7 +90,7 @@ try:
             assert pg.evaluate("(() => { const e = document.querySelector('#demo'); return !e || e.offsetParent === null })()"), "example chooser visible"
             assert not pg.is_visible("#demobtn") and not pg.is_visible("#demochoice")
             pg.wait_for_function("typeof setView === 'function'", timeout=120000); pg.evaluate("setView('draw')"); pg.wait_for_selector("#v-draw:not([hidden])", timeout=120000)      # setView comes from a script loaded after #drop exists
-            assert pg.evaluate("document.body.innerText.includes('example files') || document.body.innerText.includes('file di esempio')") is False
+            assert pg.evaluate("document.body.innerText.includes('example files')") is False
             assert pg.evaluate("TOUR.caricaEsempio.toString().includes('esempi')") is False
             assert not [u for u in reqs if "/esempi/" in u or "esempio-" in u], reqs
             assert pg.evaluate("fetch('static/esempi/FullScan_t15.mzML').then(r => r.status)") == 404
@@ -112,18 +111,18 @@ try:
             pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("console", lambda m: m.type == "error" and errs.append(m.text))
             ready(pg); wait_for_js(pg, "typeof TOUR !== 'undefined' && typeof setView === 'function'", 120000)
             pg.click("#np-set"); pg.wait_for_selector("#uip-tour", timeout=30000)
-            assert pg.inner_text("#uip-tour").strip() == "Fai il tour", pg.inner_text("#uip-tour")
+            assert pg.inner_text("#uip-tour").strip() == "Take the tour", pg.inner_text("#uip-tour")
             pg.click("#uip-tour"); pg.wait_for_selector("#tour-dialog", timeout=30000)
-            assert "Carica un file per continuare" in pg.inner_text("#tour-dialog"), pg.inner_text("#tour-dialog")
-            assert "file di esempio" not in pg.inner_text("body") and "example file" not in pg.inner_text("body")
-            pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.click("text=Carica dati")      # the card waits, then the tour goes on with the data
-            wait_for_js(pg, "!document.getElementById('tour-dialog').innerText.includes('Carica un file per continuare')", 60000)
+            assert "Load a file to continue" in pg.inner_text("#tour-dialog"), pg.inner_text("#tour-dialog")
+            assert "example file" not in pg.inner_text("body")
+            pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.click("text=Load data")      # the card waits, then the tour goes on with the data
+            wait_for_js(pg, "!document.getElementById('tour-dialog').innerText.includes('Load a file to continue')", 60000)
             assert pg.is_visible("#tour-dialog")
             pg.keyboard.press("Escape"); wait_for_js(pg, "!document.getElementById('tour-dialog')")
             pg.click("#np-set"); pg.wait_for_selector("#uip-tour", timeout=30000)      # one file loaded: same label, the tour starts on the data at once
-            assert pg.inner_text("#uip-tour").strip() == "Fai il tour"
+            assert pg.inner_text("#uip-tour").strip() == "Take the tour"
             pg.click("#uip-tour"); pg.wait_for_selector("#tour-dialog", timeout=30000)
-            assert "Carica un file per continuare" not in pg.inner_text("#tour-dialog")
+            assert "Load a file to continue" not in pg.inner_text("#tour-dialog")
             assert not errs, errs
         step("lab: the tour runs with no file (waits at the first data step) and with one file, no console errors", tour)
         def gap():

@@ -11,7 +11,7 @@ WEB = Path(__file__).resolve().parent.parent / "mzlab" / "web"
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 PRELUDE = f"""const fs=require('fs');
-global.window={{}};global.I18N={{lang:'it',t:(k,p)=>k+(p?JSON.stringify(p):'')}};global.EH=s=>String(s);global.fmtFormula=s=>s;global.fmtAdduct=s=>s;global.NOMI={{KEY:k=>k}};
+global.window={{}};global.I18N={{lang:'en',t:(k,p)=>k+(p?JSON.stringify(p):'')}};global.EH=s=>String(s);global.fmtFormula=s=>s;global.fmtAdduct=s=>s;global.NOMI={{KEY:k=>k}};
 const calc=require({str(WEB / 'calcola.js')!r});global.calcIsExpr=calc.calcIsExpr;global.calcEval=calc.calcEval;
 const P=require({str(WEB / 'perdite.js')!r});const LISTE=require({str(WEB / 'liste.js')!r});const CQ=require({str(WEB / 'calc-qui.js')!r});
 const AH=new Function(fs.readFileSync({str(WEB / 'calc-addotti-html.js')!r},'utf8')+';return CALCADDHTML')();

@@ -152,7 +152,7 @@ try:
             finally: pg.evaluate(UNDO)
             assert any(e["passo"] == "flt" and e["stato"] in ("error", "refused") for e in r["ev"]), r["ev"][-6:]
             title = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('flt')).title")
-            assert ("Reading the feature table of this step whole would need about" in title or "Leggere per intero la tabella delle feature" in title) and "8 MB" in title, title
+            assert "Reading the feature table of this step whole would need about" in title and "8 MB" in title, title
             assert "flt.json" not in pg.evaluate(KEPT)
         step("past the budget and the high level, table.filter is refused before the .mzfeat is read, with the numbers of the read", read_refused)
 
@@ -162,7 +162,7 @@ try:
                 pg.evaluate("([plan, samples]) => { window.__run = (" + RUN + ")([plan, samples]); }", [PLAN, SAMPLES])
                 pg.wait_for_selector("#memmore", timeout=120000)
                 text = pg.inner_text("#memmore #mm-p")
-                assert "reading of the feature table" in text or "lettura della tabella delle feature" in text, text
+                assert "reading of the feature table" in text, text
                 pg.click("#memmore #mm-yes")
                 r = pg.evaluate("() => window.__run")
             finally: pg.evaluate(UNDO)

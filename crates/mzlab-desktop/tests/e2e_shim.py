@@ -194,7 +194,7 @@ try:
             pg.wait_for_function("fetch('api/state').then(r => r.json()).then(s => !s.files.some(f => f.name === 'FullScan_t5.mzML'))", timeout=30000)
             assert not (DATA / "files" / "FullScan_t5.mzML").exists()
         step("a File of the page (no dialog) is sent to the app as bytes, and removing it removes the copy", dragged)
-        def demo():                                              # «Prova con i file di esempio»: the page fetches the demo mzML from its own bundle and sends them to the app as bytes
+        def demo():                                              # «Try the example files»: the page fetches the demo mzML from its own bundle and sends them to the app as bytes
             c3 = b.new_context(user_agent=ctx_ua); c3.add_init_script(FAKE_TAURI); c3.route(re.compile(r"http://mzlab\.localhost/.*"), native)
             pg3 = c3.new_page(); pg3.on("pageerror", lambda e: fails.append("pageerror " + str(e)[:200]))
             pg3.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); pg3.wait_for_function("window.MZLAB_RUST !== undefined && window.MZLAB_DESKTOP === true", timeout=120000)
@@ -211,7 +211,7 @@ try:
             pg4 = c4.new_page(); pg4.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); pg4.wait_for_function("window.MZLAB_DESKTOP === true", timeout=120000)
             pg4.evaluate("fetch('api/new', { method: 'POST', body: JSON.stringify({ fresh: true }) })"); pg4.reload(); pg4.wait_for_selector("#demobtn", timeout=120000)
             pg4.click("#demobtn"); pg4.click("[data-demo=mrm]")
-            pg4.wait_for_timeout(8000); pg4.wait_for_function("document.body.innerText.includes('non ha ricevuto')", timeout=60000)
+            pg4.wait_for_timeout(8000); pg4.wait_for_function("document.body.innerText.includes('did not receive the file')", timeout=60000)
             assert "Thermo" not in pg4.inner_text("body")
             c4.close()
         step("the demo files load in the app (fetched from the bundle, sent as bytes)", demo)
@@ -417,7 +417,7 @@ try:
             q.wait_for_selector("#drop", timeout=120000); q.click("#drop")
             q.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(LR_FILES)}", timeout=120000)
             q.evaluate("""async () => { await (await navigator.storage.getDirectory()).getDirectoryHandle('invented-work', { create: true });
-                localStorage.setItem('mzlab.mappa', '{"pal":"cividis"}'); localStorage.setItem('mzlab.lang', 'en'); localStorage.setItem('mzlab.prefs', '{"theme":"dark"}'); localStorage.setItem('mzlab.barra.lato', 'l') }""")
+                localStorage.setItem('mzlab.mappa', '{"pal":"cividis"}'); localStorage.setItem('mzlab.prefs', '{"theme":"dark"}'); localStorage.setItem('mzlab.barra.lato', 'l') }""")
             q.click("#opbtn"); q.wait_for_function(f"E.files.length >= {len(LR_FILES)}", timeout=120000)
             q.evaluate("window.__before = 1"); q.reload(); q.wait_for_function(running, timeout=120000)
             s = state(); assert "invented-work" in s["opfs"] and "mzlab.mappa" in s["ls"] and "mzlab.barra.lato" in s["ls"], s            # a reload in the same run keeps the work
@@ -425,9 +425,9 @@ try:
             s = state()
             assert s["files"] == 0 and "invented-work" not in s["opfs"], s
             assert "mzlab.mappa" not in s["ls"] and q.evaluate("localStorage.getItem('mzlab.barra.lato')") != "l", s["ls"]        # the page writes its own defaults again
-            assert q.evaluate("[localStorage.getItem('mzlab.lang'), localStorage.getItem('mzlab.prefs')]") == ["en", '{"theme":"dark"}'], "language and settings stay"
+            assert q.evaluate("localStorage.getItem('mzlab.prefs')") == '{"theme":"dark"}', "settings stay"
             c3.close()
-        step("a new run of the app starts clean (files, session, working choices); a reload of the same run keeps them; language and settings stay", cold_start)
+        step("a new run of the app starts clean (files, session, working choices); a reload of the same run keeps them; settings stay", cold_start)
         def files_reset():
             # «Files» in the app: the same run (no cold start after its reload), and the native store is cleared by the new page (?riparti=file) as the dialog
             # says: the files go, the drawing in kv.json and the lists of the page stay

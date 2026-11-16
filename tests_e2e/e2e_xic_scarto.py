@@ -11,7 +11,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz("B_FullMass-t0")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("openXic(null)"); wait_for_js(pg, "document.querySelector('#xicdlg').open && document.querySelectorAll('#xic-rows .xrw').length === 2")
         sumtxt = lambda: pg.evaluate("document.querySelector('#xic-rows .xr-sum').textContent")
         def number():

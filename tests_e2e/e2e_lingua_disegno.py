@@ -1,5 +1,5 @@
-"""Disegno in English: the static texts, the shortcut table, the export file names and the context texts are English, nothing Italian is left
-in the visible text of the view; the Italian Disegno keeps the same texts. Synthetic data (nothing is loaded)."""
+"""Drawing in English: the static texts, the shortcut table, the export file names and the context texts are English, nothing Italian is left
+in the visible text of the view. Synthetic data (nothing is loaded)."""
 # covers: mzlab/web/draw.js
 import sys, os, re; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -40,12 +40,6 @@ try:
             pg = page("en-US"); pg.fill("#ex-smi", "C1CC"); pg.click("#ex-load"); pg.wait_for_timeout(1500)
             w = pg.inner_text("#smi-warn"); assert w.startswith("Invalid SMILES"), w
         step("English: invalid SMILES message", invalid)
-        def italian():
-            pg = page("it-IT"); t = visible_text(pg)
-            for w in ("Sotto ogni struttura", "Disegna veloce", "Esporta la tela", "Sfondo trasparente", "Nome file", "Scorciatoie"):
-                assert w in t, w
-            assert pg.input_value("#ex-name").startswith("disegno_")
-        step("Italian: unchanged", italian)
         b.close()
     r.close()
 except Exception as e:

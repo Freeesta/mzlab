@@ -372,3 +372,28 @@ fn pi_and_epi_are_both_ms2_and_only_their_experiment_tells_them_apart() {
         }
     }
 }
+
+/// A neutral-loss scan selects no precursor and has no isolation window; its loss (Da) is kept as a userParam. A precursor-ion scan keeps its
+/// `<precursorList>` (the m/z Q3 stays on) exactly as before.
+#[test]
+fn neutral_loss_has_no_precursor_no_window_and_keeps_its_loss() {
+    let Some((dir, _)) = generate() else {
+        return;
+    };
+    let nl = mzml(&dir, "NL", 0);
+    assert!(!nl.contains("<precursorList"), "NL: precursorList");
+    assert!(!nl.contains("isolation window"), "NL: window");
+    assert!(!nl.contains("selected ion m/z"), "NL: selected ion");
+    let loss = format!(
+        "name=\"{}\" value=\"217.3\"",
+        mzlab_core::wiff::modes::LOSS_PARAM
+    );
+    assert!(nl.contains(&loss), "NL: loss kept");
+    // the PIS is unchanged: its Q3 mass is the selected ion
+    let pis = mzml(&dir, "PREC", 0);
+    assert!(pis.contains("<precursorList count=\"1\">"), "PIS: list");
+    assert!(
+        pis.contains("name=\"selected ion m/z\" value=\"184\""),
+        "PIS: selected ion"
+    );
+}

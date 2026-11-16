@@ -1,4 +1,4 @@
-"""The interface catalog in two parts (tools/build_site.py bundle_lang, i18n.js awaitRest/done): in Italian and English, at desktop, iPad and
+"""The interface catalog in two parts (tools/build_site.py bundle_lang, i18n.js awaitRest/done): in English, at desktop, iPad and
 phone sizes, nothing asks for a key before the rest of the catalog has run (I18N.late empty, no console error), every static text ends in the
 language of the page, no bare key is shown, every tab of the header draws with the whole catalog, and the first part stays small.
 Build first: python tools/build_site.py"""
@@ -16,7 +16,7 @@ while True:      # until the server listens (refused connections return at once)
     except OSError: pass
 URL = f"http://127.0.0.1:{PORT}/"
 SKIP = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}"
-# every static element shows the catalog text of its key (none left waiting with the Italian of the page)
+# every static element shows the catalog text of its key (none left waiting with a stale text of the page)
 STATIC = """() => { const P = { app: window.APP_NAME || '' }, bad = [];
   for (const el of document.querySelectorAll('[data-i18n]')) { const k = el.getAttribute('data-i18n'); if (el.textContent !== I18N.t(k, P)) bad.push(k); }
   for (const [a, t] of [['data-i18n-title', 'title'], ['data-i18n-placeholder', 'placeholder'], ['data-i18n-aria-label', 'aria-label']])
@@ -31,15 +31,15 @@ def step(name, fn):
 try:
     with sync_playwright() as p:
         b = p.chromium.launch()
-        for lang in ("it", "en"):
+        for lang in ("en",):
             keys = [k for k in lang_catalog.catalog(lang) if re.fullmatch(r"[a-z][\w-]*(\.[\w-]+){2,}", k)]      # dotted keys long enough to never be prose
             for size, kw in SIZES.items():
                 def run(lang=lang, size=size, kw=kw, keys=keys):
-                    ctx = b.new_context(locale="it-IT", service_workers="block", **kw); pg = ctx.new_page(); pg.add_init_script(SKIP)
+                    ctx = b.new_context(locale="en-US", service_workers="block", **kw); pg = ctx.new_page(); pg.add_init_script(SKIP)
                     errs, sizes = [], {}
                     pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "i18n" in m.text else None)
                     pg.on("response", lambda r: sizes.__setitem__(r.url.rsplit("/", 1)[-1], len(r.body())) if "/static/lang/" in r.url and r.url.endswith(".js") else None)
-                    pg.goto(URL + "?lang=" + lang)
+                    pg.goto(URL)
                     wait_for_js(pg, "window.I18N && !I18N.rest && (!!document.querySelector('#drop') || !!window.MZLAB_PHONE)", 120000)
                     wait_for_js(pg, "document.readyState === 'complete'", 60000); frames(pg, 3)
                     assert pg.evaluate("I18N.lang") == lang

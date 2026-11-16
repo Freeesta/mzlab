@@ -11,7 +11,7 @@ try:
         pg = r.page(p)
         pg.set_viewport_size({"width": 1400, "height": 900})
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         st = lambda: pg.evaluate("(() => { const v = document.querySelector('#v-data'), w = document.querySelector('#v-workspace'); return {open: BARRA.open, cls: v.className, ws: w.getBoundingClientRect().width, wsShown: getComputedStyle(w).display !== 'none'}; })()")
         def at(w):
             pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(500); return st()

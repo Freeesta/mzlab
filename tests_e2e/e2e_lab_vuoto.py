@@ -144,7 +144,7 @@ try:
         def shortcuts_panel():
             back("data"); pg.evaluate("document.activeElement && document.activeElement.blur()"); pg.keyboard.press("?"); wait_for_js(pg, "!!document.querySelector('#scorc[open]')")
             heads = pg.evaluate("[...document.querySelectorAll('#scorc h3')].map(h => h.textContent)")
-            assert heads == ["Ovunque", "Sui grafici (con il fuoco sul grafico)"], heads      # no chart: the chart keys are not listed as «everywhere»
+            assert heads == ["Everywhere", "On charts (with the chart focused)"], heads      # no chart: the chart keys are not listed as «everywhere»
             rows = pg.evaluate("[...document.querySelectorAll('#scorc li')].map(li => li.innerText)")
             assert len(rows) == len(set(rows)), rows
             back("data"); check("data: shortcuts panel")

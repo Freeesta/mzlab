@@ -1,6 +1,5 @@
 """Tabui, help and field errors (TP_Mine/js/40_tabui_testi.js, 41_tabui_aiuto.js, 41_tabui_campi.js, 20_tpmine.js, 43_trasformazioni.js):
-(1) the help popover of a field and of its label (no «?» buttons) opens with the mouse, with the keyboard focus and with the touch, closes with Esc leaving the focus on the field, and is English only
-English only whatever the page language; without mzlab.admin there is no TT; (2) the fields of the form have short placeholders and labels; (3) the error «Enter a formula or SMILES.» marks the
+(1) the help popover of a field and of its label (no «?» buttons) opens with the mouse, with the keyboard focus and with the touch, closes with Esc leaving the focus on the field; without mzlab.admin there is no TT; (2) the fields of the form have short placeholders and labels; (3) the error «Enter a formula or SMILES.» marks the
 formula and the SMILES together (aria-invalid, red double border, message linked with aria-describedby) and both return to normal on a click or a key in either; the same rule on
 the fields of the list of transformations. axe: no serious or critical violation (SKIP part without axe-core).
 Run from the repo root: python3 tests_e2e/e2e_tabui_aiuto.py"""
@@ -35,11 +34,11 @@ RUN = "axe.run(%s, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a'
 try:
     with sync_playwright() as p:
         b = p.chromium.launch()
-        def fresh(admin=True, lang="en", touch=False):
+        def fresh(admin=True, touch=False):
             c = b.new_context(viewport={"width": 1400, "height": 1000}, has_touch=touch, reduced_motion="reduce"); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e)))
             if admin: pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
-            pg.goto(f"http://127.0.0.1:{PORT}/?lang={lang}"); pg.wait_for_selector("#drop", timeout=120000)
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
             if admin:
                 pg.wait_for_selector(TAB, timeout=30000); pg.wait_for_function("window.QTOOLS.list().some(t => t.id === 'tpmine')", timeout=60000)
                 pg.click(TAB); pg.wait_for_selector("#tp-go")
@@ -47,7 +46,7 @@ try:
         pg0 = fresh(False)
         step("without mzlab.admin there is no TT and no TPHELP", lambda: (lambda r: r == [False, False] or (_ for _ in ()).throw(AssertionError(r)))(pg0.evaluate("[typeof window.TT === 'function', typeof window.TPHELP === 'object']")))
         pg0.context.close()
-        pg = fresh(True, "en")
+        pg = fresh(True)
         FIELDS = [("#tp-name", None, "ft.f.name"), ("#tp-mol", None, "ft.f.formula"), ("#tp-smi", None, "ft.f.smiles"), ("#tp-add", "label[for=tp-add]", "ft.f.adduct"), ("#tp-prt", "label[for=tp-prt]", "ft.f.prt"),
                   ("#tp-tol", "label[for=tp-tol]", "ft.f.tol"), ("#tp-rtt", "label[for=tp-rtt]", "ft.f.rtt"), ("#tp-steps", "label[for=tp-steps]", "ft.f.steps"), ("#tp-minf", "label[for=tp-minf]", "ft.f.minf"),
                   ("#tp-rtmin", "label[for=tp-rtmin]", "ft.f.rtmin"), ("#tp-disc", "#tp-disc-h", "ft.f.disc")]
@@ -88,16 +87,13 @@ try:
         step("name field: the help sits beside the form and hides while typing", combo)
         pg.fill("#tp-name", "")
         pg.context.close()
-        pt = fresh(True, "en", touch=True)
+        pt = fresh(True, touch=True)
         def touch():
             pt.tap("#tp-tol"); pt.wait_for_selector(POP + ":not([hidden])", timeout=3000)
             pt.tap("#tp-name"); pt.wait_for_function("document.querySelector('#tph-pop').textContent.startsWith('Name of the parent')", timeout=3000)
         step("touch: a tap on a field opens its help", touch)
         pt.context.close()
-        pi = fresh(True, "it")
-        step("Italian page, English help", lambda: pi.evaluate("TT('ft.col.rt')").startswith("Retention time") or (_ for _ in ()).throw(AssertionError(pi.evaluate("TT('ft.col.rt')"))))
-        pi.context.close()
-        pg = fresh(True, "en")
+        pg = fresh(True)
         def short():
             ph = pg.evaluate("[...document.querySelectorAll('#v-tpmine .tp input[placeholder]')].map(i => i.placeholder)")
             assert all(len(x) <= 16 for x in ph), ph

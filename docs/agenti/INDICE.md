@@ -77,7 +77,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | Thermo `.raw`: attivazione, «unknown», tabella eventi rifiutata, scansioni e controller danneggiati (`warn.raw.damaged`), precursori (target, ione selezionato, catene MSn, SPS, MSX, SRM dall'evento) | `docs/agenti/lettori-thermo-precursori.md` |
 | lettura nativa di `.raw`, `.wiff`, `.D` nel sito (campioni, OPFS, avanzamento, mzML su richiesta) | `docs/agenti/lettura-nativa.md` |
 | formato `.mzlib`, parser delle librerie, indici e punteggi (`crates/mzlab-lib`) | `docs/agenti/librerie.md` |
-| testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
+| testi, `lang/`, `help.js`, solo inglese | `docs/agenti/lingue.md` |
 | liste dell'utente (trasformazioni, addotti, sospetti: CSV con errori per riga, `liste/1`, SHA-256 per `prov/1`) | `docs/agenti/liste.md` |
 | livelli di identificazione (scala di Schymanski 2a/2b/3a/3b, scala di previsione, etichette «L3» e «Prev. 2», Tabui, Attributio, untargeted) | `docs/agenti/livelli.md` |
 | assistente LLM e agenti esterni: principi, scelte, rischi, proposte non realizzate | `docs/agenti/llm-scelte.md` |
