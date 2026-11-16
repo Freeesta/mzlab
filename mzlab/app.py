@@ -519,7 +519,7 @@ class App:
             return {"mode": "centroid", "diff": True, "mz": [round(float(v), 4) for v in mz], "y": [round(float(v), 1) for v in y], "scans": n,
                     **item.window_scans(rt0, rt1, level, precursor, pt, filt)}
         out = {**self._spec_json(item, level, mz, y, merge, hr), "scans": n, **item.window_scans(rt0, rt1, level, precursor, pt, filt)}
-        if merge is None and out["mode"] == "centroid" and not item.hr_on(level, hr):
+        if merge is None and out.get("n") and out["mode"] == "centroid" and not item.hr_on(level, hr):      # no scan of the level at all = the engine's fixed empty answer
             out["auto_merge"] = True                  # the engine's own choice, stated (the request did not say)
         return out
 
