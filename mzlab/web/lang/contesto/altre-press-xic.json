@@ -6,8 +6,6 @@
   "xic.lowRes": "Below the row of an ion in the XIC window; {unit} = m/z window (HTML).",
   "xic.shifted": "{base} = starting m/z, {shift} = signed offset in Da (e.g. +16), {mz} = resulting m/z (HTML).",
   "xic.interpreted": "{formula} = formula with subscripts (HTML).",
-  "tip.area": "Box on the label of an integrated area; {area} = value, {y} = apex intensity.",
-  "tip.areaUv": "Like tip.area for a DAD trace (TWC/XWC): {area} = value in mAU·s, {y} = apex absorbance in mAU.",
   "tip.more": "Mouse box on the chromatogram: traces not listed.",
   "tip.peak": "Mouse box on a spectrum peak; {y} = value (with % if relative), {abs} = HTML with the absolute cps or empty.",
   "spec.follow.aria": "Accessible label of the chip of the linked spectrum; {n} = panel number.",

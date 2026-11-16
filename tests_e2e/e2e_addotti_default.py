@@ -1,4 +1,4 @@
-"""Adducts tab of «Adducts & losses»: the standard adduct list shows by default (for the polarity in use), with no explanatory info line; typing filters, clearing brings back the last query's table; ESI+, ESI− or both; the Contaminants tab; the calculator folds. Reference lists name polymer series by repeat units, not «n=3»."""
+"""Adducts tab of «Adducts & losses»: the standard adduct list shows by default (for the polarity in use), with no explanatory info line; typing filters, clearing brings back the last query's table; ESI+, ESI− or both; the two tabs only; the calculator folds. Reference lists name polymer series by repeat units, not «n=3»."""
 import sys
 from lib import *
 
@@ -31,15 +31,22 @@ if __name__ == "__main__":
                 pg.fill("#calcin", ""); frames(pg, 30)
                 assert pg.locator("#sb-panel-adducts .cadt tbody tr").count() >= 4
             step("typing computes, clearing keeps a table", typing)
-            def contaminants():
-                pg.click("#al-t-cont"); pg.fill("#calcin", "149.0233"); wait_for_js(pg, "document.querySelectorAll('#sb-panel-cont li').length > 0")
-                n = pg.locator("#sb-panel-cont li").count(); t = pg.inner_text("#sb-panel-cont")
-                assert "149.0" in t and pg.get_attribute("#al-t-cont", "aria-selected") == "true", t[:300]
-                assert pg.inner_text("#al-t-cont .cq-n").strip() == str(n) and pg.is_visible("#al-t-cont .cq-n"), "the tab counts its matches"
-                pg.click("#al-t-adducts"); assert pg.input_value("#calcin") == "149.0233", "one field for the three tabs"
-                pg.fill("#calcin", "C9H10N2O"); frames(pg, 30); assert not pg.is_visible("#al-t-cont .cq-n"), "a formula is not looked up in the contaminant lists"
+            def two_tabs():
+                assert pg.locator("#al-tabs [role=tab]").count() == 2, "Adducts and Neutral losses only"
+                assert pg.locator("#sb-panel-cont, #al-t-cont").count() == 0
+                pg.click("#al-t-losses"); pg.fill("#calcin", "149.0233"); frames(pg, 30)
+                assert pg.get_attribute("#al-t-losses", "aria-selected") == "true"
+                pg.click("#al-t-adducts"); assert pg.input_value("#calcin") == "149.0233", "one field for the two tabs"
                 pg.fill("#calcin", "")
-            step("Contaminants tab: the typed m/z in the known background lists, with its count", contaminants)
+            step("the page has exactly two tabs, one shared field", two_tabs)
+            def old_saved_tab():
+                # a state saved while a third tab existed falls back to Adducts
+                n = pg.evaluate("""(() => { let n = 0; for (const k of Object.keys(localStorage)) { try { const o = JSON.parse(localStorage.getItem(k)); if (o && typeof o === 'object' && 'sub' in o) { o.sub = 'cont'; o.tab = 'addloss'; localStorage.setItem(k, JSON.stringify(o)); n++; } } catch (_) {} } return n; })()""")
+                assert n >= 1, "the page saves its tab"
+                pg.reload(); wait_for_js(pg, "window.qqReady && document.querySelector('#fl-hint')"); frames(pg, 5)
+                pg.evaluate("BARRA.setTab('addloss')"); wait_for_js(pg, "!!document.querySelector('#calcin').offsetParent")
+                assert pg.get_attribute("#al-t-adducts", "aria-selected") == "true" and pg.evaluate("BARRA.curSub") == "adducts"
+            step("a saved «contaminants» tab falls back to Adducts", old_saved_tab)
             def ripiega():
                 assert pg.is_visible("#calcin") and pg.get_attribute("#al-calc-tg", "aria-expanded") == "true", "the calculator is shown by default"
                 pg.click("#al-calc-tg"); wait_for_js(pg, "!document.querySelector('#calcpad').offsetParent")

@@ -192,7 +192,6 @@ NOT_TOOLTIP = {"appname.js:6", "appname.js:8", "avvio.js:4", "banco.js:63", "ban
                "TP_Mine/js/20_tpmine.js:200", "rapporto.js:76", "draw.js:701", "TP_Mine/js/38_feature_export.js:27"}
 OVERRIDE = {
     "etpk.tip.rt": ("B", "repeats the RT already written on the label (CROMA-CLICK-PICCO)"),
-    "tip.area": ("D", "«Right-click: actions» line (CROMA-CLICK-PICCO)"),
     "tip.peakLabel": ("D", "only «Right-click: actions» (CROMA-CLICK-PICCO)"),
     "tip.peak": ("C", "spectrum hover: not the same layout as the chromatogram hover (CROMA-CLICK-PICCO)"),
     "liste-target.js:75": ("C", "English literal in the code, not in lang/"),
