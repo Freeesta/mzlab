@@ -35,8 +35,45 @@ try:
             assert t == '<div class="sm">' + pg.evaluate("I18N.t('int.copy.tip')") + '</div>', t      # no area, intensity or baseline line
         step("the hover text of the area label is only the copy hint", tip_is_hint)
         def fades():
-            wait_for_js(pg, "!document.querySelector('.areacopied.show')", 4000)
-        step("the notice fades after about 1.5 s", fades)
+            wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)      # about 1.2 s visible, then a 150 ms fade
+        step("the notice is gone by itself within 2 s", fades)
+        def restarts():
+            l = lab(); pg.mouse.click(l["x"], l["y"]); wait_for_js(pg, "!!document.querySelector('.areacopied.show')"); pg.evaluate("new Promise(r => setTimeout(r, 900))")
+            pg.mouse.click(l["x"], l["y"]); pg.evaluate("new Promise(r => setTimeout(r, 700))")                      # 1.6 s after the first click: still there, the second one restarted the timer
+            assert pg.evaluate("document.querySelectorAll('.areacopied').length") == 1 and pg.evaluate("document.querySelector('.areacopied').classList.contains('show')")
+            wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)
+        step("a second click restarts the timer, one notice only", restarts)
+        def tremor():
+            l = lab(); pg.evaluate("navigator.clipboard.writeText('x')")
+            pg.mouse.move(l["x"], l["y"]); pg.mouse.down(); pg.mouse.move(l["x"] + 3, l["y"] + 2); pg.mouse.up()
+            wait_for_js(pg, "!!document.querySelector('.areacopied.show')"); assert clip() == l["copy"], "a tap with a small movement copies"
+            wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)
+            pg.evaluate("navigator.clipboard.writeText('x')")
+            pg.mouse.move(l["x"], l["y"]); pg.mouse.down(); pg.mouse.move(l["x"] + 40, l["y"] + 30); pg.mouse.up(); frames(pg, 2)
+            assert clip() == "x", "a real drag copies nothing"
+        step("a tap with a tremor copies, a drag does not", tremor)
+        def redrawn():
+            l = lab(); pg.evaluate("navigator.clipboard.writeText('x')")
+            pg.mouse.move(l["x"], l["y"]); pg.mouse.down(); pg.evaluate(f"draw({XP})"); frames(pg, 2); pg.mouse.up()      # the label objects are new when the button comes up
+            wait_for_js(pg, "!!document.querySelector('.areacopied.show')"); assert clip() == l["copy"]
+            wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)
+        step("a redraw between press and release still copies and says so", redrawn)
+        def fallback():
+            l = lab(); pg.evaluate("window._ex = []; navigator.clipboard.writeText = () => Promise.reject(new Error('no focus')); document.execCommand = c => (window._ex.push(c), true)")
+            pg.mouse.click(l["x"], l["y"]); wait_for_js(pg, "!!document.querySelector('.areacopied.show')")
+            assert "copy" in pg.evaluate("window._ex") and pg.inner_text(".areacopied") == "Copiato!" and not pg.evaluate("document.querySelector('.areacopied').classList.contains('bad')")
+            wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)
+            pg.evaluate("document.execCommand = () => false"); pg.mouse.click(l["x"], l["y"]); wait_for_js(pg, "document.querySelector('.areacopied.show.bad')")
+            assert pg.inner_text(".areacopied") != "Copiato!", "a short error, not the success text"
+            wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)
+        step("async API refused: execCommand fallback says Copied; both refused: a short error", fallback)
+        def above_dialog():
+            pg.evaluate("document.execCommand = () => true; delete navigator.clipboard.writeText")
+            pg.evaluate("(()=>{const d=document.createElement('dialog');d.id='tdlg';document.body.appendChild(d);d.showModal()})()")
+            pg.evaluate("AREACOPY.say(200, 200, true)"); wait_for_js(pg, "document.querySelector('.areacopied.show')")
+            assert pg.evaluate("document.querySelector('.areacopied').parentElement.id") == "tdlg", "inside the modal dialog, so above it"
+            pg.evaluate("document.querySelector('#tdlg').close(); document.querySelector('#tdlg').remove()"); wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)
+        step("the notice moves into an open modal dialog (visible over it)", above_dialog)
         def elsewhere():
             pg.evaluate("navigator.clipboard.writeText('x')"); n0 = pg.evaluate(f"{XP}.ints.length")
             c = pg.evaluate(f"(()=>{{const p={XP},q=p.cv.getBoundingClientRect(),a=p._a;return {{x:q.left+a.X(15.5),y:q.top+a.H-M.b-6}}}})()")
