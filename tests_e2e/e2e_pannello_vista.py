@@ -1,4 +1,4 @@
-"""Side panel: leaving Dati for Disegno and coming back gives the panel as it was left (open or shut, width, scroll)."""
+"""Side panel: leaving Data for Drawing and coming back gives the panel as it was left (open or shut, width, scroll)."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

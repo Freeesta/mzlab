@@ -52,7 +52,7 @@ try:
         step("dropped folder: read recursively through the drop handler", drop)
         def empty():
             pg.evaluate("CartCarica.load([new File(['x'],'solo.pdf')],'vuota')"); pg.wait_for_timeout(300)
-            t = pg.inner_text("#cartinfo"); assert "vuota" in t and "nessun file compatibile" in t, t
+            t = pg.inner_text("#cartinfo"); assert "vuota" in t and "no compatible file" in t, t
         step("a folder without compatible files says so", empty)
         def empty_d():
             t = pg.inner_text("#cartinfo"); assert ".D" in t and "Agilent" in t, t      # the message lists the Agilent .D folders among the accepted formats
@@ -61,7 +61,7 @@ try:
             pg.evaluate("""CartCarica.load([CartCarica.setDir(new File(['x'], 'Acq.RTP.xml'), 'GC/Geosmin and MIB method for scan.m/'),
               CartCarica.setDir(new File(['x'], '7890Method.bin'), 'GC/Geosmin and MIB method for scan.m/'), CartCarica.setDir(new File(['x'], '.DS_Store'), 'GC/Geosmin and MIB method for scan.m/')], 'GC')""")
             pg.wait_for_function("document.getElementById('cartinfo').textContent.includes('riconosciuto')", timeout=30000)
-            t = pg.inner_text("#cartinfo"); assert "Geosmin and MIB method for scan.m" in t and "nessun file compatibile" not in t and "ignorat" not in t, t
+            t = pg.inner_text("#cartinfo"); assert "Geosmin and MIB method for scan.m" in t and "no compatible file" not in t and "ignored" not in t, t
             assert pg.evaluate("AgilentD.held.length") == 1 and pg.evaluate("AgilentD.held[0].files.length") == 2
         step("a .m method folder is recognised: neither «ignored» nor «no compatible file», its files are held", method_m)
         r.close()

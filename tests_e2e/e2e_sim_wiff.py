@@ -155,7 +155,7 @@ try:
             wait_for_js(pg, "!!document.querySelector('.areacopied.show')", timeout=5000)
             need(pg.evaluate("navigator.clipboard.readText()") == cells[0][0], "Enter copies the apex")
             need(pg.evaluate("(() => { const n = window.__show; window.reveal = window.__orev; return n; })()") == 0, "a copy does not show the row's integration")
-        step("apex, area and height cells copy the CSV value with a «Copiato!» by the pointer", copy_cells)
+        step("apex, area and height cells copy the CSV value with a «Copied!» by the pointer", copy_cells)
         def names():
             need = lambda c, m: c or throw(m)
             P = "E.panels.find(q => q.type === 'mrm' && q._a)"

@@ -21,7 +21,7 @@ try:
         def warn():
             assert pg.is_visible("#methwarn"), "visible notice"
             t = pg.inner_text("#methwarn"); print(t)
-            assert "non corrisponde" in t and "Lab_inq_MRM_Carba.dam" in t and "MRM" in t and "Full Scan" in t, t
+            assert "does not match" in t and "Lab_inq_MRM_Carba.dam" in t and "MRM" in t and "Full Scan" in t, t
             assert "FullMass_pos_max480" not in t, t                  # the matching method is not mentioned
         step("an MRM method with a Full Scan file: a visible notice naming both", warn)
         def dismiss():

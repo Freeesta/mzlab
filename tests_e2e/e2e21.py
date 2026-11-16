@@ -36,15 +36,15 @@ try:
         def files():
             drawer(pg); nm = pg.locator("#flst .fl .nm").first
             nm.click(button="right"); wait_for_js(pg, "document.querySelectorAll('#ctx div').length>0")
-            assert pg.locator("#ctx div", has_text="Rinomina").count() == 1 and pg.locator("#ctx div", has_text="Cambia colore").count() == 1 and pg.locator("#ctx div", has_text="Rimuovi dalla sessione").count() == 1
-            pg.locator("#ctx div", has_text="Rinomina").click(); pg.wait_for_selector("#askin")
-            pg.fill("#askin", "Campione prova"); pg.click("#askok"); wait_for_js(pg, "document.querySelector('#flst').innerText.includes('Campione prova')")
-            assert "Campione prova" in pg.inner_text("#flst") and pg.evaluate("E.files[0].file").endswith(".mzML") is True
-            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Cambia colore").click(); pg.wait_for_selector("#colpop [data-c]")
+            assert pg.locator("#ctx div", has_text="Rename").count() == 1 and pg.locator("#ctx div", has_text="Change color").count() == 1 and pg.locator("#ctx div", has_text="Remove from the session").count() == 1
+            pg.locator("#ctx div", has_text="Rename").click(); pg.wait_for_selector("#askin")
+            pg.fill("#askin", "Test sample"); pg.click("#askok"); wait_for_js(pg, "document.querySelector('#flst').innerText.includes('Test sample')")
+            assert "Test sample" in pg.inner_text("#flst") and pg.evaluate("E.files[0].file").endswith(".mzML") is True
+            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Change color").click(); pg.wait_for_selector("#colpop [data-c]")
             pg.locator("#colpop [data-c]").nth(3).click(); wait_for_js(pg, "E.files[0].color==='#D55E00'")
             assert pg.evaluate("E.files[0].color") == "#D55E00" and pg.evaluate("E.files[0].colorSet")
             n0 = pg.locator("#flst .fl").count()
-            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Rimuovi dalla sessione").click(); wait_for_js(pg, "!!E.files[0].gone")
+            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Remove from the session").click(); wait_for_js(pg, "!!E.files[0].gone")
             # no confirmation and no notice: the removal is done at once and Undo / Ctrl+Z take it back
             assert not pg.is_visible("#askok") and pg.evaluate("document.getElementById('tolto-box')") is None
             assert pg.locator("#flst .fl").count() == n0 - 1 and pg.evaluate("E.files[0].gone")
@@ -56,7 +56,7 @@ try:
               p.ints.push({key:s.key,a:s.x[m]-0.3,b:s.x[m]+0.3});draw(p);return {id:p.id}}""")
             wait_for_js(pg, "E.panels.some(q=>q.tab==='full'&&q.type==='chrom'&&q._a&&q._a.lbls.some(l=>l.tip&&l.tip.includes('Area')))")
             lab = pg.evaluate("id=>{const p=E.panels.find(q=>q.id===id);return p._a.lbls.filter(l=>l.tip.includes('Area')).map(l=>l.tip)}", info["id"]); print(lab)
-            assert lab and "conteggi" in lab[0]
+            assert lab and "counts" in lab[0]
             assert re.search(r"\d\.\d{5}E[+-]\d{2}", lab[0]), lab[0]                   # the tooltip carries the area with 5 decimals (I18N.sciE(area, 5))
             assert pg.evaluate("fmtA(2243051)") == "2.243e+6" and pg.evaluate("I18N.sciE(2243051, 5)") == "2.24305E+06"
         step("area label with 3 decimals, the area with 5 decimals in the tooltip", areas)

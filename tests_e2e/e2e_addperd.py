@@ -29,7 +29,7 @@ if __name__ == "__main__":
                 st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))"); assert st["sub"] == "losses", st
             step("last tab remembered", remembered)
             def palette():
-                pg.keyboard.press("Control+k"); wait_for_js(pg, "document.querySelector('#pal-l')"); pg.keyboard.type("addotti")
+                pg.keyboard.press("Control+k"); wait_for_js(pg, "document.querySelector('#pal-l')"); pg.keyboard.type("adducts")
                 frames(pg, 6); assert "Adducts & losses" in pg.inner_text("#pal-l"); pg.keyboard.press("Escape")
             step("palette finds the one command", palette)
     finally:

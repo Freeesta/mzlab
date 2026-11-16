@@ -1,4 +1,4 @@
-"""The «Cartella delle librerie» on the built site (WebAssembly engine): the OPFS folder `librerie/` and a folder handle (the same code as showDirectoryPicker, here an OPFS
+"""The «Libraries folder» on the built site (WebAssembly engine): the OPFS folder `librerie/` and a folder handle (the same code as showDirectoryPicker, here an OPFS
 subdirectory): inventory and the four states (ready, to index, update available is in e2e_libreria_scarica, damaged), a file that changes (touched = still ready, changed = to
 index), an index written once in `.mzlab/`, a package `.mzlib` put in the folder, an imported file, removing the index never removes the source, the window with the states.
 Needs the site: python tools/build_site.py and the engine in site/static/wasm-lib (built here when cargo and wasm-bindgen exist; the CI builds it in pages.yml)."""

@@ -24,7 +24,7 @@ try:
         step("an old saved value (font, tips/num false) is read: the removed options are ignored", legacy)
         def gear():
             pg.click("#np-set"); pg.wait_for_timeout(200); assert pg.is_visible("#uipset")
-            assert "Dimensione testo" not in pg.inner_text("#uipset"), "no text size buttons any more"
+            assert "Text size" not in pg.inner_text("#uipset"), "no text size buttons any more"
             pg.check("input[name=uip-th][value=dark]", force=True); pg.wait_for_timeout(500)
             assert pg.evaluate("document.documentElement.dataset.theme") == "dark"
             saved = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.prefs'))"); print(saved)

@@ -32,22 +32,22 @@ try:
         def open_menu():
             pg.evaluate("(async()=>{const t=" + TRIO + ";await DDA.selectMs2(t.s2," + str(info["sid"]) + ")})()"); wait_for_js(pg, "(()=>{const t=" + TRIO + ";return !!(t.s2&&t.s2._a)})()"); frames(pg, 3)
             pos = pg.evaluate("(()=>{const t=" + TRIO + ";t.s2.el.scrollIntoView({block:'center'});const r=t.s2.cv.getBoundingClientRect();return {x:r.left+r.width*0.5,y:r.top+r.height*0.3}})()")
-            pg.mouse.click(pos["x"], pos["y"], button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.includes(\"Cos'è?\")")
-            assert "Cos'è?" in pg.inner_text("#ctx"), pg.inner_text("#ctx")
-        step("the MS2 panel of the DDA trio has the voice «Cos'è? (cerca nelle librerie)»", open_menu)
+            pg.mouse.click(pos["x"], pos["y"], button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.includes(\"What is it?\")")
+            assert "What is it?" in pg.inner_text("#ctx"), pg.inner_text("#ctx")
+        step("the MS2 panel of the DDA trio has the voice «What is it? (search the libraries)»", open_menu)
         def result():
-            pg.click("#ctx >> text=Cos'è?"); pg.wait_for_selector("#libwhat[open] #lw-list table", timeout=60000); pg.set_viewport_size({"width": 1280, "height": 800}); wait_for_js(pg, "/Analoghi \\([1-9]/.test(document.querySelector('#lw-tab-an').textContent)")
+            pg.click("#ctx >> text=What is it?"); pg.wait_for_selector("#libwhat[open] #lw-list table", timeout=60000); pg.set_viewport_size({"width": 1280, "height": 800}); wait_for_js(pg, "/Analogs \\([1-9]/.test(document.querySelector('#lw-tab-an').textContent)")
             t = pg.inner_text("#libwhat")
-            assert "Candidati (" in t and "Analoghi (" in t, t[:300]
+            assert "Candidates (" in t and "Analogs (" in t, t[:300]
             names = pg.locator("#libwhat tr.row[data-k=id]:not([hidden]) td:nth-child(1)").all_inner_texts()
             assert names and (names[0].startswith("Voce di prova") or names[0].startswith("Gemella")), names
             head = pg.inner_text("#lw-list thead")
-            for col in ("Nome", "Entropia", "Picchi in comune", "Δ ppm", "Addotto", "Libreria"):
+            for col in ("Name", "Entropy", "Shared peaks", "Δ ppm", "Adduct", "Library"):
                 assert col in head, (col, head)
             pg.click("#lw-more summary"); m = pg.inner_text("#lw-more")
-            for col in ("Reverse", "Intensità spiegata", "Polarità", "Licenza", "CC BY", "InChIKey"):
+            for col in ("Reverse", "Explained intensity", "Polarity", "License", "CC BY", "InChIKey"):
                 assert col in m, (col, m)
-        step("identity and analogs as two tabs; six columns in the table, the rare fields behind «Dettagli»", result)
+        step("identity and analogs as two tabs; six columns in the table, the rare fields behind «Details»", result)
         def layout():
             g = pg.evaluate("""(() => { const d = document.querySelector('#libwhat').getBoundingClientRect(), L = document.querySelector('#lw-list'), ths = [...L.querySelectorAll('thead th')].map(h => h.getBoundingClientRect());
               const tw = c => { const r = document.createRange(); r.selectNodeContents(c); return r.getBoundingClientRect().width; }, inner = c => { const k = getComputedStyle(c); return c.getBoundingClientRect().width - parseFloat(k.paddingLeft) - parseFloat(k.paddingRight); };
@@ -62,7 +62,7 @@ try:
         step("1280 px: near full-screen window, table without horizontal overflow, the first four columns visible, numbers on one line", layout)
         def groups():
             b = pg.locator("#libwhat [data-grp]"); assert b.count() == 1, b.count()          # the twin shares the first InChIKey block
-            assert "stesso primo blocco" in b.first.get_attribute("title")
+            assert "same first InChIKey block" in b.first.get_attribute("title")
             assert pg.locator("#libwhat tr.mem[hidden]").count() == 1
             b.first.click(); wait_for_js(pg, "document.querySelectorAll('#libwhat tr.mem:not([hidden])').length === 1")
         step("entries with the same first InChIKey block are grouped (stereoisomers), expandable", groups)
@@ -73,18 +73,18 @@ try:
         step("sortable columns (aria-sort), groups kept together", sorting)
         def level():
             v = pg.inner_text("#lw-verdict")
-            assert "Miglior candidato" in v and pg.locator("#lw-verdict .lvb").count() == 1, v
-            assert "è " not in pg.inner_text("#lw-verdict .lvb"), "never «it is X»"
+            assert "Best candidate" in v and pg.locator("#lw-verdict .lvb").count() == 1, v
+            assert "is " not in pg.inner_text("#lw-verdict .lvb"), "never «it is X»"
             pg.click("#lw-verdict summary"); v = pg.inner_text("#lw-verdict")
-            assert "Prove" in v and "Livello proposto" in v and "Livello deciso" in v, v
-            assert "entropia" in v and "vs" in v and ("✓" in v or "✗" in v), v
+            assert "Evidence" in v and "Proposed level" in v and "Decided level" in v, v
+            assert "entropy" in v and "vs" in v and ("✓" in v or "✗" in v), v
             n = pg.evaluate("LIB.assess([{name:'x',ent:.9,shared:8,dprec:1}],{nScans:1}).proposed"); assert n == "3a"
-        step("one headline (badge + best candidate); evidence, proposed and decided level behind «Dettagli»", level)
+        step("one headline (badge + best candidate); evidence, proposed and decided level behind «Details»", level)
         def decision():
             lv = pg.evaluate("document.querySelector('#lw-verdict .lvb').textContent.replace('L','')")
             assert lv in ("2a", "3a"), lv
             pg.select_option("#libwhat #lv-dec", "2b"); wait_for_js(pg, "document.querySelector('#lw-verdict .lvb').textContent === 'L2b'")
-            assert "Livello proposto: L" + lv in pg.inner_text("#lw-verdict").replace("\n", " "), "the proposal stays"
+            assert "Proposed level: L" + lv in pg.inner_text("#lw-verdict").replace("\n", " "), "the proposal stays"
             pg.select_option("#libwhat #lv-dec", "1"); wait_for_js(pg, "document.querySelector('#libwhat #lv-msg').innerText.includes('standard')")
             assert pg.input_value("#libwhat #lv-dec") == "2b"
             pg.select_option("#libwhat #lv-dec", ""); frames(pg, 3)
@@ -97,7 +97,7 @@ try:
             pg.click("#lw-thr-reset"); wait_for_js(pg, "LIVELLI.thresholds().entropia_min === 0.75")
             pg.keyboard.press("Escape"); frames(pg, 2)
             assert pg.evaluate("document.querySelector('#libwhat').open && !document.querySelector('#lw-opt').open"), "Esc closes the popup, not the window"
-        step("«Opzioni…»: tolerances, thresholds (saved, exported, reset) and libraries in one popup; Esc closes it", options)
+        step("«Options…»: tolerances, thresholds (saved, exported, reset) and libraries in one popup; Esc closes it", options)
         def download():
             pg.click("#lw-dl summary")
             with pg.expect_download() as dl: pg.click("#lw-xlsx")
@@ -115,7 +115,7 @@ try:
             assert "Analogo di prova" in pg.inner_text("#libwhat tr.row[data-k=an]")
             ln = json.loads(pg.get_attribute("#lw-cv", "data-lines")); assert any(l[2] == 1 for l in ln), ln
             if not pg.evaluate("document.querySelector('#lw-more').open"): pg.click("#lw-more summary")
-            assert "Perdite neutre" in pg.inner_text("#lw-more")
+            assert "Shared neutral losses" in pg.inner_text("#lw-more")
             n = pg.locator("#lw-more table.lib-pairs tr").count() - 1   # the table lists the pairs behind the score, shifted ones flagged
             assert n >= len(ln) and pg.locator("#lw-more table.lib-pairs th[scope=col]").count() == 6, n
         step("the mirror joins the paired peaks (shifted ones too for an analog) and lists the shared neutral losses", mirror_lines)
@@ -123,7 +123,7 @@ try:
             x = pg.evaluate("""(() => { const c = document.querySelector('#lw-cv'), g = c._mg, b = c.getBoundingClientRect(), p = g.r.pairs[0];
               return {x: b.left + g.X(g.q.mz[p[0]]), y: b.top + g.mid - g.q.it[p[0]] * g.half / 2}; })()""")
             pg.mouse.move(x["x"], x["y"]); wait_for_js(pg, "!document.querySelector('.lw-tip').hidden")
-            tip = pg.inner_text(".lw-tip"); assert "m/z" in tip and "appaiato" in tip, tip
+            tip = pg.inner_text(".lw-tip"); assert "m/z" in tip and "paired" in tip, tip
         step("hover on a peak of the mirror: m/z, intensity and its partner with Δ", hovering)
         def keyboard():
             pg.click("#lw-tab-id"); pg.locator("#libwhat tr.row[data-k=id]:not([hidden])").first.focus(); pg.keyboard.press("ArrowDown")
@@ -134,7 +134,7 @@ try:
         def attribution():
             pg.locator("#libwhat tr.row[data-k=id]").first.click(); wait_for_js(pg, "document.querySelector('#lw-more').innerText.includes('ACC001')")
             assert "Autore di prova" in pg.inner_text("#lw-more"), pg.inner_text("#lw-more")
-        step("authors, accession and license behind «Dettagli»", attribution)
+        step("authors, accession and license behind «Details»", attribution)
         def axe():
             a = axe_path()
             if not a: print("   axe-core not available: skipped"); return
@@ -181,8 +181,8 @@ try:
             assert pg.evaluate(f"LIB.isHr({SPEC})") is False
             c = pg.evaluate(f"(() => {{ const p = {SPEC}; p.el.scrollIntoView({{block:'center'}}); const q = p.cv.getBoundingClientRect(); return {{x: q.left + q.width * 0.5, y: q.top + q.height * 0.3}}; }})()")
             pg.mouse.click(c["x"], c["y"], button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.trim() !== ''")
-            t = pg.inner_text("#ctx"); assert "Cos'è?" not in t, t
-        step("low resolution: the voice «Cos'è?» does not exist (the program gives no answers)", lr_none)
+            t = pg.inner_text("#ctx"); assert "What is it?" not in t, t
+        step("low resolution: the voice «What is it?» does not exist (the program gives no answers)", lr_none)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

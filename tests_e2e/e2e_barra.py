@@ -1,4 +1,4 @@
-"""A1: the toolbar above the panels. Whole file name in the file menu, no «Altro» / «Unisci gli XIC», a side-panel icon for the file list."""
+"""A1: the toolbar above the panels. Whole file name in the file menu, no «More» / «Merge the XICs», a side-panel icon for the file list."""
 # covers: mzlab/web/barra.js, mzlab/web/eventi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -37,8 +37,8 @@ try:
         def gone():
             assert pg.evaluate("['np-more','np-merge','morepop'].every(i => !document.getElementById(i))")
             assert not pg.evaluate("!!document.getElementById('np-tile')")
-            assert "Altro" not in pg.inner_text("#tools") and "Unisci" not in pg.inner_text("#tools")
-        step("no Altro / Unisci; no Ordina button", gone)
+            assert "More" not in pg.inner_text("#tools") and "Merge" not in pg.inner_text("#tools")
+        step("no More / Merge; no Ordina button", gone)
         def fold():
             b = "#stbar [data-cmd=file]"
             assert pg.evaluate(f"!!Q('{b} svg')") and pg.evaluate(f"Q('{b}').title") == "Choose, hide, rename and colour the loaded files"

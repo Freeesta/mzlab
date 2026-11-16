@@ -76,7 +76,7 @@ try:
         step("Remove all: landing, toolbar off, no empty panel; Undo brings files and panels back", remove_all)
         def row_x():
             k = pg.evaluate("E.files.filter(f => !f.gone)[0].k"); n = pg.evaluate("E.files.filter(f => !f.gone).length")
-            x = pg.locator(f'#flst .fl-x[data-rm="{k}"]'); assert re.search(r"Remove|Togli", x.get_attribute("aria-label")), x.get_attribute("aria-label")
+            x = pg.locator(f'#flst .fl-x[data-rm="{k}"]'); assert re.search(r"Remove", x.get_attribute("aria-label")), x.get_attribute("aria-label")
             pg.hover(f'#flst .fl[data-k="{k}"]'); assert float(x.evaluate("e => getComputedStyle(e).opacity")) == 1, "the × shows on hover"
             box = x.bounding_box(); assert box["width"] >= 24 and box["height"] >= 24, box
             x.click(); wait_for_js(pg, f"E.files[{k}].gone === true"); assert pg.evaluate("E.files.filter(f => !f.gone).length") == n - 1

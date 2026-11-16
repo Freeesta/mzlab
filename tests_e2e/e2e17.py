@@ -1,4 +1,4 @@
-"""Dati sub-tabs: Full Scan / MS2 / MRM never share a graph; MS2 strip + panel per precursor; MRM Quant/Qual; overview matrix."""
+"""Data sub-tabs: Full Scan / MS2 / MRM never share a graph; MS2 strip + panel per precursor; MRM Quant/Qual; overview matrix."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

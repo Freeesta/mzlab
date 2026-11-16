@@ -19,7 +19,7 @@ try:
         rows = lambda: pg.locator("#xic-rows .xrw")
         def two():
             pg.click("#np-xic"); assert rows().count() == 2
-            t = pg.inner_text("#xic-rows"); assert "Ion 1" in t and "Ione 2" in t and "facoltativo" not in t, t
+            t = pg.inner_text("#xic-rows"); assert "Ion 1" in t and "Ion 2" in t and "optional" not in t, t
             pg.locator("#xic-rows input").nth(0).fill("194.2"); pg.locator("#xic-rows input").nth(1).fill("152"); pg.wait_for_timeout(300)
             s = pg.locator("#xic-rows .xr-sum").all_inner_texts(); print(s); assert "193.8 - 194.3" in s[0] and "151.8 - 152.3" in s[1], s
             n0 = pg.evaluate(f"{XP}.length"); pg.click("#xic-go"); ready(pg)

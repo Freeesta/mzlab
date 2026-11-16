@@ -76,7 +76,7 @@ try:
             acid = logp_of("CC(=O)O"); ac = logp_of("CC(=O)[O-]")
             assert acid and ac and acid[0][1] == ac[0][1] != "–", (acid, ac)
             assert pg.is_visible("#prop-neut") and pg.is_checked("#prop-neut"), "checkbox missing or not on"
-            assert "forma neutra" in pg.inner_text("#prop-body"), pg.inner_text("#prop-body")
+            assert "neutral form" in pg.inner_text("#prop-body"), pg.inner_text("#prop-body")
             assert ac[0][0].replace(" ", "") in ("C2H4O2",) or "C" in ac[0][0], ac
             pg.uncheck("#prop-neut"); pg.wait_for_timeout(1500); r2 = pg.evaluate(PROPS); assert r2[0][1] == "–", r2
             pg.check("#prop-neut"); pg.wait_for_timeout(1500)
@@ -85,17 +85,17 @@ try:
             na = logp_of("CC(=O)[O-].[Na+]"); assert len(na) == 1 and na[0][1] == acid[0][1], ("counter-ion kept?", na)
             nh = logp_of("C[NH3+]"); mn = logp_of("CN"); assert nh[0][1] == mn[0][1] != "–", (nh, mn)
             neu = logp_of("CC(=O)Nc1ccc(O)cc1"); assert not pg.is_visible("#prop-neut"), "checkbox shown without charge"
-            assert "forma neutra" not in pg.inner_text("#prop-body")
+            assert "neutral form" not in pg.inner_text("#prop-body")
         step("2.1 charged structures: neutral form (acetate = acetic acid, ammonium, counter-ion dropped, quaternary = message)", charge)
         def helptext():
             assert pg.locator("#prop-card .hq").count() == 0
-            assert "L'errore tipico" not in pg.inner_text("#prop-body")
+            assert "The typical mistake" not in pg.inner_text("#prop-body")
         step("2.1 the explanation is in the ? of the box, not inside it", helptext)
         # ---------------------------------------------------------------- 2.2 default ion
         def ion():
-            assert pg.locator("#lb-ion").count() == 0, "the Ione menu is gone"
+            assert pg.locator("#lb-ion").count() == 0, "the Ion menu is gone"
             pg.evaluate("(()=>{NB.labIon='[M+K]+';document.dispatchEvent(new Event('nbloaded'))})()"); pg.wait_for_timeout(300)     # an old notebook with labIon opens without errors, the value is ignored
-        step("2.2 no Ione menu; an old notebook with labIon opens fine", ion)
+        step("2.2 no Ion menu; an old notebook with labIon opens fine", ion)
         def smiles_clear():
             pg.fill("#ex-smi", "CC(=O)Nc1ccc(O)cc1"); pg.click("#ex-load"); pg.wait_for_timeout(2500)
             assert pg.input_value("#ex-smi") == "", "a valid SMILES is drawn and the field is emptied"
@@ -164,17 +164,17 @@ try:
             ts = grab("svg"); txt = open(ts.path(), encoding="utf-8").read()
             assert not re.search(r'<rect[^>]*fill="(rgb\(100%, ?100%, ?100%\)|#fff(fff)?|white)"', txt), "SVG still has the white background rectangle"
             pg.uncheck("#ex-nobg"); pg.wait_for_timeout(300); assert not pg.is_disabled("#ex-jpg")
-            j = grab("jpg"); assert "trasparente" not in j.suggested_filename
+            j = grab("jpg"); assert "transparent" not in j.suggested_filename
             im = Image.open(j.path()).convert("RGB"); assert im.getpixel((2, 2)) == (255, 255, 255), im.getpixel((2, 2))
             # name field: odd characters
-            pg.fill("#ex-name", "Paracetamolo è TP 1/2:"); pg.press("#ex-name", "Tab"); pg.wait_for_timeout(200)
+            pg.fill("#ex-name", "Paracetamol is TP 1/2:"); pg.press("#ex-name", "Tab"); pg.wait_for_timeout(200)
             assert pg.input_value("#ex-name") == "paracetamolo_e_tp_1_2", pg.input_value("#ex-name")
             assert grab("png").suggested_filename == "paracetamolo_e_tp_1_2.png"
             pg.fill("#ex-name", ""); pg.press("#ex-name", "Tab"); assert re.match(r"^disegno_\d{4}", pg.input_value("#ex-name"))
         step("2.3 exports: names (4 formats, _trasparente, -2, odd characters), PNG metadata, transparent PNG/SVG, JPEG grey when transparent", exports)
         def export_error():
             pg.evaluate("window.__g=TPDraw.image; ")                               # the error message path: force a failure
-            pg.evaluate("(()=>{const k=%s;k.generateImage=async()=>{throw new Error('prova')}})()" % KQ)
+            pg.evaluate("(()=>{const k=%s;k.generateImage=async()=>{throw new Error('test')}})()" % KQ)
             pg.click("#ex-svg"); pg.wait_for_timeout(1500); assert pg.is_visible("#ex-warn") and "Esportazione non riuscita" in pg.inner_text("#ex-warn")
         step("2.3 a failing export shows a visible message", export_error)
 finally:

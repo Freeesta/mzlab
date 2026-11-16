@@ -30,11 +30,11 @@ try:
             pg.click(".pnl.chrom [data-o=kind]")
             wait_for_js(pg, "document.querySelector('.can-pop:not([hidden]) [role=treeitem]')")
             g = pg.evaluate("[...document.querySelectorAll('.can-pop:not([hidden]) [role=group]')].map(e => e.getAttribute('aria-label'))")
-            assert g[0] == "Mass spectrometry" and "Rivelatori" in g, g
+            assert g[0] == "Mass spectrometry" and "Detectors" in g, g
             h = pg.evaluate("[...document.querySelectorAll('.can-pop:not([hidden]) .can-hd span')].map(e => e.textContent)")
-            assert h[:4] == ["Canale", "Esperimento", "Punti", "Time (min)"], h
+            assert h[:4] == ["Channel", "Experiment", "Points", "Time (min)"], h
             ms1 = pg.evaluate("(document.querySelector('.can-pop:not([hidden]) [data-omo^=\"ms|1\"]') || {}).title || ''")
-            assert ms1 == "TIC of the MS¹ scans only", ms1          # lang/it/canali.js canali.tip.ms1
+            assert ms1 == "TIC of the MS¹ scans only", ms1          # lang/en/canali.js canali.tip.ms1
         step("groups, column names and the hover text of MS¹", groups)
         def label():
             pg.click(".can-pop:not([hidden]) [data-omo^='ms|1']"); ready(pg)

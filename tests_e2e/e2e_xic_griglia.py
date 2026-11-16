@@ -21,8 +21,8 @@ try:
         step("rows are aligned (left and width) in label, field and adduct", aligned)
         def labels():
             t = pg.evaluate("[...document.querySelectorAll('#xic-rows .xrw > label')].map(l => l.textContent)")
-            assert t == ["Ion 1", "Ion 2"] or t == ["Ione 1", "Ione 2"], t
-            assert "optional" not in " ".join(t).lower() and "facoltativo" not in " ".join(t).lower(), t
+            assert t == ["Ion 1", "Ion 2"], t
+            assert "optional" not in " ".join(t).lower(), t
             assert pg.locator("#xicdlg [data-i18n-html='xicdlg.intro']").count() == 0
             assert pg.evaluate("document.querySelector('#xicdlg').getAttribute('aria-description').length") > 40
         step("labels without «(optional)», no intro paragraph, description in aria-description", labels)

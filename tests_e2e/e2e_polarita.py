@@ -1,4 +1,4 @@
-"""Polarity made visible: sign next to the file names (list and loading table), default adduct from the panel's own files, sign in the legend when + and - are overlaid, polarity first in the Addotti table."""
+"""Polarity made visible: sign next to the file names (list and loading table), default adduct from the panel's own files, sign in the legend when + and - are overlaid, polarity first in the Adducts table."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import pathlib
@@ -20,7 +20,7 @@ try:
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), str(NEGF)]); pg.wait_for_timeout(1500)
         def load_signs():
             t = pg.inner_text("#flist"); assert "ESI+" in t and "ESI−" in t, t
-            assert pg.evaluate("[...document.querySelectorAll('#flist .pol')].map(x=>x.title)") == ["ESI negativo", "ESI positivo"] or set(pg.evaluate("[...document.querySelectorAll('#flist .pol')].map(x=>x.title)")) == {"ESI positivo", "ESI negativo"}
+            assert pg.evaluate("[...document.querySelectorAll('#flist .pol')].map(x=>x.title)") == ["ESI negative", "ESI positive"] or set(pg.evaluate("[...document.querySelectorAll('#flist .pol')].map(x=>x.title)")) == {"ESI positive", "ESI negative"}
         step("loading table: ESI+ / ESI− badges (mixed polarities) next to the names", load_signs)
         pg.click("text=Load data"); ready(pg)
         def list_signs():
@@ -38,7 +38,7 @@ try:
             pg.evaluate("E.files.forEach(f=>{f.gone=false})"); pg.evaluate("renderFileList()")
         def simboli():
             t = pg.inner_text("body"); bad = [c for c in "\u00b2\u00b3\u207a\u207b\u2080\u2081\u2082\u2083\u2084\u00bd" if c in t]; assert not bad, bad
-        step("7.2 No Unicode superscripts in the visible text of the Dati tab", simboli)
+        step("7.2 No Unicode superscripts in the visible text of the Data tab", simboli)
         step("one polarity only: no badge per file, no ESI in group heading, nothing out of the row", uniform)
         def adduct():
             neg = pg.evaluate("E.files.findIndex(f=>f.polarity==='negative')")

@@ -117,7 +117,7 @@ const DDA = (() => {
       s2.sid = sid; s2.avg = null; s2.r0 = D.rt[i] - 1e-4; s2.r1 = D.rt[i] + 1e-4;
       s1.ddaSel = { sid, i };
       const dec = HR.prof(E.files[/** @type {number} */ (s2.k)], 2).dec;
-      s2.title = "MS2 di " + (D.prec[i] != null ? D.prec[i].toFixed(dec) : "?"); ctl(s2);
+      s2.title = I18N.t("dda.ms2Title", { mz: D.prec[i] != null ? D.prec[i].toFixed(dec) : "?" }); ctl(s2);
       if (c && D.parent[i] != null && o.parent !== false) {            // the cursor goes to the parent Full Scan, which s1 shows exactly
         const prt = D.prt[i];
         c.cur = prt; c.sel = null;
@@ -200,7 +200,7 @@ const DDA = (() => {
     }
     if (j.act) parts.push(j.act);
     if (j.ce != null) parts.push(j.nce ? `NCE ${fmt1(j.ce)}` : `CE ${fmt1(j.ce)} eV`);
-    if (j.lo != null && j.hi != null) parts.push(`isolamento ±${fmt1((j.hi - j.lo) / 2)}`);
+    if (j.lo != null && j.hi != null) parts.push(I18N.t("dda.isolation", { w: fmt1((j.hi - j.lo) / 2) }));
     p.leg.innerHTML = `<span style="font-variant-numeric:tabular-nums">${EH(parts.join(" · "))}</span>`;
     const t = p.el.querySelector(".ttl"); if (t && j.filter) t.title = "T: " + j.filter;
   }

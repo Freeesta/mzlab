@@ -28,7 +28,7 @@ try:
             pg.locator("#flst .fl .nm").first.click(button="right")
             pg.locator("#ctx div", has_text=re.compile("^Group files$")).click()
             wait_for_js(pg, f"!!Q('{UG}')", 5000)
-            h = pg.evaluate(HEADS); assert any(re.match(r"(Group|Gruppo) 1\|3$", x) for x in h), h
+            h = pg.evaluate(HEADS); assert any(re.match(r"Group 1\|3$", x) for x in h), h
             assert pg.locator(f"{UG} .chv").get_attribute("aria-label"), "the header toggle has no aria-label"
             assert pg.locator(f"{UG} + .grp-files .fl").count() == 3 and pg.locator(f"{UG} + .grp-files").is_visible()
         step("three ticked files, right click, «Group files»: header «Group 1» with 3 files", make)

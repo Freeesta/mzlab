@@ -44,6 +44,8 @@
   "a11y.small": "Description read by screen readers; {title} title, {n} series, {xl}/{yl} axis names, {a}-{b} x, {c}-{d} y.",
   "dda.scanAvgOf": "Description of the averaged spectrum; {n} = how many scans.",
   "dda.scanNo": "Description of the spectrum; {n} = scan number.",
+  "dda.ms2Title": "Title of the MS2 panel of a DDA trio; {mz} = precursor m/z, already formatted (or ?).",
+  "dda.isolation": "Isolation window in the description of the spectrum; {w} = half width, already formatted.",
   "dda.scanParent": "Description of the MS2 spectrum; {n} = parent scan number.",
   "dda.avgTitle": "Title of the panel with the average of the MS2 spectra; {n} = how many, {mz} = m/z of the ion.",
   "chk.transition": "Row of the \"Does the method match the data?\" table; {q1} and {q3} = m/z of precursor and fragment.",

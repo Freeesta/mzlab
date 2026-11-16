@@ -84,7 +84,7 @@ try:
             assert pg.locator("#unopen details.unopen-names li").count() == 6 and "3" in pg.locator("#unopen details.unopen-names li").last.inner_text()
         step("more than 5 names: «and 3 more»", more)
         def en():
-            pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); pg.wait_for_timeout(800)
+            pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
             assert pg.locator("#convhelp summary").inner_text() == "Don't have mzML files?", pg.locator("#convhelp summary").inner_text()
             pg.evaluate("document.querySelector('#convhelp').open=true"); assert "press Add" in pg.inner_text("#convhelp ol"), pg.inner_text("#convhelp ol")
             pg.set_input_files("#pick", [blob(f"e{i}.lcdx") for i in range(5)])

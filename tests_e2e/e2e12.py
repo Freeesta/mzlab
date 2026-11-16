@@ -1,4 +1,4 @@
-# e2e12: experiment type column, sidebar, no Esporta/Integrazioni buttons, integration icons, MS2 chromatogram, PNG without cursor, Metodo layout, italic m/z
+# e2e12: experiment type column, sidebar, no Export/Integrations buttons, integration icons, MS2 chromatogram, PNG without cursor, Method layout, italic m/z
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 def flst_own(pg):
@@ -27,13 +27,13 @@ with sync_playwright() as p:
         rows = pg.evaluate("ST.files.map(f=>[f.name,f.kind])")
         d = {n: (k,) for n, k in rows}
         assert d["B_MRM-t0.mzML"][0] == "mrm" and d["B_MS2-t15.mzML"][0] == "ms2" and d["B_FullMass-t0.mzML"] == ("full",), d
-        assert "Esperimento" in pg.inner_text("#flist") and "MS2 (Product Ion)" in pg.inner_text("#flist") and "MRM" in pg.inner_text("#flist") and "Full Scan" in pg.inner_text("#flist") and "EMS" not in pg.inner_text("#flist")
+        assert "Experiment" in pg.inner_text("#flist") and "MS2 (Product Ion)" in pg.inner_text("#flist") and "MRM" in pg.inner_text("#flist") and "Full Scan" in pg.inner_text("#flist") and "EMS" not in pg.inner_text("#flist")
     step("start screen detects the experiment from the content", column)
     pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # the list is opened file by file: the view starts on the first file of the list, whatever its experiment
     pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()")
     pg.screenshot(path=SH + "121_data.png")
     def side():
-        t = flst_own(pg); assert "scan MS1" not in t and "RT 0.5" not in t and "Doppio clic" not in pg.inner_text("#dfiles"), t
+        t = flst_own(pg); assert "scan MS1" not in t and "RT 0.5" not in t and "Double-click" not in pg.inner_text("#dfiles"), t
         assert "FULL SCAN" in t.upper() and "EMS" not in t, t
         hd = pg.evaluate("[...document.querySelectorAll('#flst .fgh span:not(.chv)')].map(e=>e.innerText)"); assert [h.lower() for h in hd] == ["full scan", "ms2 (product ion)", "mrm"], hd
         assert pg.locator("#dtabs, #ovbtn, #tabempty").count() == 0, "the three tabs and the overview button are gone"
@@ -41,7 +41,7 @@ with sync_playwright() as p:
         assert pg.locator("#np-export, #np-ints, #kindinfo").count() == 0
         assert pg.locator("#credits").count() == 0 and pg.locator('.pnl.chrom [data-o=norm]').count() == 0
         fw = pg.evaluate("document.querySelector('.pnl.chrom [data-o=mz0]').offsetWidth"); assert fw < 90, fw
-    step("sidebar slim, no EMS, no Esporta/Integrazioni/Rilevato", side)
+    step("sidebar slim, no EMS, no Export/Integrations/Detected", side)
     def integ():
         c = pg.locator('.pnl.chrom').first
         c.locator('[data-a=iauto]').click(); box = c.locator("canvas").bounding_box()
@@ -70,7 +70,7 @@ with sync_playwright() as p:
         assert pg.evaluate(f"E.panels[{xi}].ints.length") == 2 and shown(pg, ".pnl.xic [data-a=itab]")
         hd_click(pg, ".pnl.xic [data-a=iman]")
         # header: only the m/z range; quick file chooser; RT readout bottom right; clear integrations
-        xp.locator('[data-a=cpar]').click()      # the m/z edges live in «Intervallo»
+        xp.locator('[data-a=cpar]').click()      # the m/z edges live in «Range»
         assert xp.locator('[data-o=xlo]').input_value() == "363.8" and xp.locator('[data-o=xhi]').input_value() == "364.3" and xp.locator('#xic-q, [data-o=tol]').count() == 0
         xp.locator('[data-o=xlo]').fill("363,9"); xp.locator('[data-o=xlo]').press("Enter"); xp.locator('[data-o=xhi]').fill("364.3"); xp.locator('[data-o=xhi]').press("Enter"); pg.wait_for_timeout(1500)
         tw = pg.evaluate(f"[E.panels[{xi}].traces[0].mz, E.panels[{xi}].traces[0].w]"); assert abs(tw[0] - 364.1) < 0.011 and abs(tw[1] - 0.2) < 0.011, tw
@@ -89,7 +89,7 @@ with sync_playwright() as p:
         ch = pg.evaluate("tabPanels('ms2').filter(p=>p.type==='chrom').map(p=>[p.prec,p._a.sr[0].x.length])")
         assert len(ch) == 1 and ch[0][1] > 0, ch      # one pair of graphs (since 7/10); the precursor is chosen in the list
         assert flst_own(pg).upper().count("MS2 (PRODUCT ION)") == 1
-        pg.evaluate("(()=>{const p=E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom');p._parOpen=true;ctl(p)})()")      # the precursor lives in the Parametri popover
+        pg.evaluate("(()=>{const p=E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom');p._parOpen=true;ctl(p)})()")      # the precursor lives in the Parameters popover
         sel = pg.locator('.pnl.chrom [data-o=prec]:visible').first; assert sel.count() == 1
         pg.screenshot(path=SH + "123_ms2.png")
     step("MS2 chromatogram: choose the precursor", ms2)
@@ -109,7 +109,7 @@ with sync_playwright() as p:
         pg.screenshot(path=SH + "124_method_mrm.png"); pg.click("#bigx")
         pg.evaluate("activeFile(E.files.findIndex(f=>f.kind==='ms2'));renderFileList();renderNav()"); pg.click("#np-method"); ready(pg); wait_for_js(pg, "document.querySelector('#bigdlg').innerText.includes('Precursors (Q1)')")
         assert "Precursors (Q1)" in pg.inner_text("#bigdlg") and "Collision energy" in pg.inner_text("#bigdlg"); pg.screenshot(path=SH + "125_method_ms2.png"); pg.click("#bigx")
-    step("Metodo: MRM transitions and MS2 precursors listed", method)
+    step("Method: MRM transitions and MS2 precursors listed", method)
     def ital():
         n = pg.evaluate("[...document.querySelectorAll('#v-data *')].filter(e=>e.children.length==0&&e.tagName!=='I'&&e.tagName!=='OPTION'&&e.tagName!=='SCRIPT'&&/m\\/z/.test(e.textContent)).map(e=>e.outerHTML.slice(0,100))")
         assert not n, n

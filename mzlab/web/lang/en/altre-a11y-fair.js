@@ -192,6 +192,8 @@ I18N.add("en", {
   "dda.avgTitle": "Average of {n} MS2 · {mz}",
   "dda.scanParent": "parent {n}",
   "dda.scanNo": "scan {n}",
+  "dda.ms2Title": "MS2 of {mz}",
+  "dda.isolation": "isolation ±{w}",
   "dda.scanAvgOf": "average of {n} scans",
   "fair.mb.title": "MassBank record",
   "fair.si.title": "File for SIRIUS 6",

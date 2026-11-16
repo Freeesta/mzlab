@@ -1,4 +1,4 @@
-"""The registry of the actions of the panels (azioni.js, format azioni/1): order of the groups, grey entries, unique ids, and the texts it/en of the map actions."""
+"""The registry of the actions of the panels (azioni.js, format azioni/1): order of the groups, grey entries, unique ids, and the texts of the map actions."""
 import json, re, shutil, subprocess
 from pathlib import Path
 import sys
@@ -55,7 +55,7 @@ def test_rows_of_one_action_and_order_inside_a_group():
 
 
 def test_spectrum_actions_have_texts():
-    """Every i18n key named by a registered action of the spectrum exists in it and en."""
+    """Every i18n key named by a registered action of the spectrum exists in the catalog."""
     src = "".join((WEB / f).read_text(encoding="utf-8") for f in ("spettro.js", "dda.js", "liste.js", "elementare.js", "visualizza.js", "libreria.js", "workflow.js", "fair-azioni.js"))
     blocks = re.findall(r'id: "spec\.\w+".*', src)
     keys = set(k for b in blocks for k in re.findall(r'"((?:ctx|cx|disp)\.[\w.]+)"', b))
@@ -67,7 +67,7 @@ def test_spectrum_actions_have_texts():
 
 
 def test_trace_actions_have_texts():
-    """Every i18n key named by a registered action of the chromatogram menu exists in it and en."""
+    """Every i18n key named by a registered action of the chromatogram menu exists in the catalog."""
     src = "".join((WEB / f).read_text(encoding="utf-8") for f in ("eventi.js", "gradiente.js", "dda.js", "libreria.js", "composizione.js", "visualizza.js", "picchi.js", "grafici.js"))
     blocks = re.findall(r'id: "(?:chrom|xic)\.\w+"[^\n]*(?:\n[^\n]*)?|over\("\w+"[^\n]*', src)
     keys = set(k for b in blocks for k in re.findall(r'"((?:ctx|disp)\.[\w.]+)"', b))
@@ -116,7 +116,7 @@ def test_every_id_of_the_icon_table_is_a_registered_action():
 
 
 def test_arrangement_actions_show_in_every_view_and_have_texts():
-    """Actions with viste ['*'] show in any view; the keys of the arrangement actions (affianca.js) exist in it and en; layout.js never names an experiment."""
+    """Actions with viste ['*'] show in any view; the keys of the arrangement actions (affianca.js) exist in the catalog; layout.js never names an experiment."""
     r = run("""AZIONI.registra({id:'t.all',gruppo:'disp',viste:['*'],nome:()=>'x',esegui:()=>0});
       console.log(JSON.stringify(['spec','chrom','mrm'].map(v=>AZIONI.per({vista:v}).some(i=>i.id==='t.all'))))""")
     assert r == [True, True, True]

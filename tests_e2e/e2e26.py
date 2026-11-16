@@ -1,4 +1,4 @@
-"""Data tab: full screen on every panel (also added later), RT selection clamped to the chromatogram range, delayed tooltip, header buttons Isotopi / Neutral losses, no 'QqQ lab' text in the header. Synthetic data."""
+"""Data tab: full screen on every panel (also added later), RT selection clamped to the chromatogram range, delayed tooltip, header buttons Isotopes / Neutral losses, no 'QqQ lab' text in the header. Synthetic data."""
 # covers: mzlab/web/tooltip.js
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -17,15 +17,15 @@ try:
         pg.set_input_files("#pick", synth.make_series("/tmp/s26", [0, 15, 60])); pg.wait_for_selector("text=Load data")
         pg.click("text=Load data"); ready(pg)
         def header():
-            assert "mzLab" not in pg.inner_text("header").replace("\n", " ").split("Dati")[0]
+            assert "mzLab" not in pg.inner_text("header").replace("\n", " ").split("Data")[0]
             assert pg.get_attribute("header .logo", "alt") == "mzLab"
             for w in (360, 768, 1500):
                 pg.set_viewport_size({"width": w, "height": 900}); frames(pg, 3)
-                if w < 600:      # very narrow: everything but File is in «Altro»
+                if w < 600:      # very narrow: everything but File is in «More»
                     assert not pg.is_visible("#np-addloss"); pg.click("#tb-more"); pg.locator("#stmenu button", has_text="Adducts & losses").click(); pg.click("#al-t-losses")
                 elif pg.is_visible("#np-addloss"):
                     pg.click("#np-addloss"); pg.click("#al-t-losses")
-                else:      # the toolbar keeps one row: at 768 px the tools that do not fit go to «Altro»
+                else:      # the toolbar keeps one row: at 768 px the tools that do not fit go to «More»
                     pg.click("#tb-more"); pg.locator("#stmenu button", has_text="Adducts & losses").click(); pg.click("#al-t-losses")
                 wait_for_js(pg, "!!document.querySelector('#sb-panel-losses') && document.querySelector('#sb-panel-losses').offsetParent !== null")
                 assert pg.is_visible("#sb-panel-losses") and pg.inner_text("#sb-title") == "Adducts & losses", w

@@ -28,7 +28,7 @@ try:
         def refused():
             assert add(14.3, 15.0) is False and n() == 1, "overlap must be refused"
             t = pg.evaluate("document.querySelector('#qnote')&&!document.querySelector('#qnote').hidden?document.querySelector('#qnote').textContent:''")
-            assert "già un picco integrato" in t, t
+            assert "already an integrated peak" in t, t
         step("overlapping integration refused with a notice", refused)
         def auto_in():
             pg.evaluate(f"(()=>{{const p={XP};autoInt(p,p._a.sr[0],14.3)}})()"); assert n() == 1
@@ -68,7 +68,7 @@ try:
         step("a grouped gesture is one undo step", gesture)
         def menu():
             labs = pg.evaluate(f"(()=>{{const p={XP};return intMenuItems(p,14.9,null,0).map(i=>i.label||i)}})()")
-            assert labs[0] == "Elimina questa integrazione" and "Elimina tutte le integrazioni di questo pannello" in labs, labs
+            assert labs[0] == "Delete this integration" and "Delete all the integrations of this panel" in labs, labs
         step("context menu: delete this one first, then all", menu)
         def table():
             pg.evaluate("showInts()"); wait_for_js(pg, "document.querySelectorAll('button[data-del]').length===3")

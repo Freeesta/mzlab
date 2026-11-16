@@ -38,7 +38,7 @@ try:
             rt = 14.3; sp2 = mk(K, rt, 0.012); wait_draw(sp2)
             pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={sp2});p.iso={{formula:'C14H13F4N3O2S',ad:'[M+H]+'}};p.zoom=[362,370];draw(p)}})()"); pg.wait_for_timeout(900)
             t = pg.evaluate(f"E.panels.find(q=>q.id=={sp2}).leg2.textContent"); print(t)
-            assert "profilo teorico" in t and "(M:" in t and "ppm" in t, t
+            assert "theoretical profile" in t and "(M:" in t and "ppm" in t, t
             import re
             e = float(re.search(r"\(M: ([+−][0-9.]+) ppm", t).group(1).replace("−", "-")); assert abs(e) < 3, e          # 0.8 ppm noise
         step("isotope profile: the circle sits on the centroid and says the error in ppm", isotopes)

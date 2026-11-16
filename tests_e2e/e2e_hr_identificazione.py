@@ -68,7 +68,7 @@ try:
             pg.evaluate(f"[...new Set(LISTE.compat({prec}, '{pol}', 5).all.map(x => x.list))].forEach(l => LISTE.exclSet('list', l, true))")          # every list this precursor is compatible with
             pg.evaluate("LIB.identifyAll(E.files.find(f=>f.kind==='ms2').k)"); pg.wait_for_selector("#li-body .cont-cnt", timeout=60000)
             t = pg.inner_text("#li-body")
-            assert "Voce di prova" not in t and "nascosti" in pg.inner_text("#li-body .cont-cnt"), t[:300]
+            assert "Voce di prova" not in t and "hidden" in pg.inner_text("#li-body .cont-cnt"), t[:300]
             pg.click("#li-chid"); pg.wait_for_function("document.querySelector('#li-body').innerText.includes('Voce di prova')", timeout=10000)
             pg.click("#li-chid"); assert "Voce di prova" not in pg.inner_text("#li-body")
             pg.evaluate("document.querySelector('#libwhat').close(); LISTE.exclReset(); LISTE.setOn(false)")

@@ -1,4 +1,4 @@
-"""Panels of the Data view (9/10): Correzione outside the popover and with any file, RT interval, ruler anchored to labels and cancelled by zoom, isotope simulation off with the zoom, no Mirino/Ridge."""
+"""Panels of the Data view (9/10): Correction outside the popover and with any file, RT interval, ruler anchored to labels and cancelled by zoom, isotope simulation off with the zoom, no Sight/Ridge."""
 # covers: mzlab/web/mappa.js, mzlab/web/affianca.js, mzlab/web/layout.js, mzlab/web/pannelli.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -17,48 +17,48 @@ try:
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")])
         pg.click("text=Load data"); ready(pg)
         def corr_out():
-            assert pg.is_visible(".pnl.chrom [data-o=corr]"), "Correzione is in the header, not hidden in the popover"
+            assert pg.is_visible(".pnl.chrom [data-o=corr]"), "Correction is in the header, not hidden in the popover"
             assert pg.evaluate(f"!{CH}.el.querySelector('.cpop').contains({CH}.el.querySelector('.corrb'))")
             pg.click(".pnl.chrom [data-o=corr]"); pg.wait_for_selector(".pnl.chrom .corrm", state="visible")
             t = pg.inner_text(".pnl.chrom .corrw >> nth=0 >> .corrm"); print(t)
-            assert "Da un file" in t and "Dal fondo" in t, t
-            assert t.count("Sottrai file:") == 1 and pg.locator(".pnl.chrom .corrm option").count() == 3, t      # one entry, any of the 3 files in its chooser, not only the blank
+            assert "From a file" in t and "From the background" in t, t
+            assert t.count("Subtract file:") == 1 and pg.locator(".pnl.chrom .corrm option").count() == 3, t      # one entry, any of the 3 files in its chooser, not only the blank
             pg.keyboard.press("Escape")
-        step("Correzione: in the header, one entry and a chooser with the 3 files", corr_out)
+        step("Correction: in the header, one entry and a chooser with the 3 files", corr_out)
         def corr_icons():
             b = pg.evaluate("[...document.querySelectorAll('.pnl.chrom .corrb')].map(b=>({svg:b.querySelector('svg').innerHTML,aria:b.getAttribute('aria-label'),on:b.classList.contains('on')}))")
-            assert len(b) == 1 and b[0]["aria"] == "Sottrazione" and "<circle" not in b[0]["svg"], b      # one button; its idle icon is not the «none» ⊘
+            assert len(b) == 1 and b[0]["aria"] == "Subtraction" and "<circle" not in b[0]["svg"], b      # one button; its idle icon is not the «none» ⊘
             aria = lambda: pg.get_attribute(".pnl.chrom [data-o=corr]", "aria-label")
-            pg.click(".pnl.chrom [data-o=corr]"); pg.locator(".pnl.chrom .corri", has_text="Sottrai file").first.click()
+            pg.click(".pnl.chrom [data-o=corr]"); pg.locator(".pnl.chrom .corri", has_text="Subtract file").first.click()
             wait_for_js(pg, "document.querySelector('.pnl.chrom [data-o=corr]').classList.contains('on')")      # active state is marked
-            assert aria().startswith("Sottrazione: −") and "Fondo" not in aria(), aria()      # says that the file is the one on
+            assert aria().startswith("Subtraction: −") and "background" not in aria().lower(), aria()      # says that the file is the one on
             pg.click(".pnl.chrom [data-o=corr]"); pg.click('.pnl.chrom .corrg[data-g="1"] .corri[data-c="snip"]')
-            wait_for_js(pg, "document.querySelector('.pnl.chrom [data-o=corr]').getAttribute('aria-label').includes('Fondo automatico')")
+            wait_for_js(pg, "document.querySelector('.pnl.chrom [data-o=corr]').getAttribute('aria-label').includes('Automatic background')")
             assert aria().count("−") == 1 and pg.evaluate(f"{CH}.bk") not in ("", None), aria()      # both kinds on, each named
-            pg.click(".pnl.chrom [data-o=corr]"); pg.locator('.pnl.chrom .corrg[data-g="0"] .corri', has_text="Nessuna").click()
+            pg.click(".pnl.chrom [data-o=corr]"); pg.locator('.pnl.chrom .corrg[data-g="0"] .corri', has_text="None").click()
             wait_for_js(pg, f"(()=>{{const b={CH}.bk;return b===''||b==null}})()")
             assert pg.evaluate(f"{CH}.fondo.mode") == "auto" and "−" not in aria(), "the background stays: two states in one menu"
-            pg.click(".pnl.chrom [data-o=corr]"); pg.locator('.pnl.chrom .corrg[data-g="1"] .corri', has_text="Nessuna").click()
+            pg.click(".pnl.chrom [data-o=corr]"); pg.locator('.pnl.chrom .corrg[data-g="1"] .corri', has_text="None").click()
             wait_for_js(pg, "!document.querySelector('.pnl.chrom [data-o=corr]').classList.contains('on')")
-        step("Sottrazione: one button, the file and the background each named in its label", corr_icons)
+        step("Subtraction: one button, the file and the background each named in its label", corr_icons)
         def corr_info():
             B, M = ".pnl.chrom [data-o=cinfo]", ".pnl.chrom .corrbar"
             assert pg.is_visible(B) and not pg.is_visible(M) and pg.evaluate(f"document.querySelector('{M}').offsetHeight") == 0, "one icon, no bar taking height"
             assert pg.is_hidden(B + " .cidot"), "no dot without a correction"
-            pg.click(".pnl.chrom [data-o=corr]"); pg.locator(".pnl.chrom .corri", has_text="Sottrai file").first.click()
+            pg.click(".pnl.chrom [data-o=corr]"); pg.locator(".pnl.chrom .corri", has_text="Subtract file").first.click()
             wait_for_js(pg, f"!document.querySelector('{B} .cidot').hidden")
             assert pg.is_visible(B + " .cidot"), "the dot says that a correction is active"
-            pg.click(B); assert pg.is_visible(M) and pg.get_attribute(B, "aria-expanded") == "true" and pg.inner_text(M).strip() not in ("", "Nessuna correzione attiva"), pg.inner_text(M)
+            pg.click(B); assert pg.is_visible(M) and pg.get_attribute(B, "aria-expanded") == "true" and pg.inner_text(M).strip() not in ("", "No active correction"), pg.inner_text(M)
             pg.keyboard.press("Escape"); assert pg.is_hidden(M), "Esc closes the summary"
             pg.click(B); assert pg.is_visible(M); pg.mouse.click(5, 5); assert pg.is_hidden(M), "a click outside closes the summary"
-            pg.click(".pnl.chrom [data-o=corr]"); pg.locator(".pnl.chrom .corri", has_text="Nessuna").first.click()
+            pg.click(".pnl.chrom [data-o=corr]"); pg.locator(".pnl.chrom .corri", has_text="None").first.click()
             wait_for_js(pg, f"document.querySelector('{B} .cidot').hidden")
-        step("Correzioni: one icon opens the summary popover (Esc / click outside close it), the dot follows the state", corr_info)
+        step("Corrections: one icon opens the summary popover (Esc / click outside close it), the dot follows the state", corr_info)
         def subtract():
             pg.click(".pnl.chrom [data-o=corr]"); pg.wait_for_selector(".pnl.chrom .corri", state="visible")
-            pg.locator(".pnl.chrom .corri", has_text="Sottrai file").first.click(); pg.wait_for_function(f"(()=>{{const b={CH}.bk;return b!=='' && b!=null}})()", timeout=10000)
+            pg.locator(".pnl.chrom .corri", has_text="Subtract file").first.click(); pg.wait_for_function(f"(()=>{{const b={CH}.bk;return b!=='' && b!=null}})()", timeout=10000)
             assert pg.evaluate(f"{CH}.bk") not in ("", None), "a file was chosen"
-            pg.click(".pnl.chrom [data-o=corr]"); pg.wait_for_selector(".pnl.chrom .corri", state="visible"); pg.locator(".pnl.chrom .corri", has_text="Nessuna").first.click(); pg.wait_for_function(f"(()=>{{const b={CH}.bk;return b==='' || b==null}})()", timeout=10000)
+            pg.click(".pnl.chrom [data-o=corr]"); pg.wait_for_selector(".pnl.chrom .corri", state="visible"); pg.locator(".pnl.chrom .corri", has_text="None").first.click(); pg.wait_for_function(f"(()=>{{const b={CH}.bk;return b==='' || b==null}})()", timeout=10000)
         step("a non-blank file is subtracted from the chromatogram", subtract)
         def rt():
             pg.click(".pnl.chrom [data-a=cpar]"); pg.wait_for_selector(".pnl.chrom [data-o=rt0]", state="visible")
@@ -92,7 +92,7 @@ try:
         def map_views():
             pg.click("#np-map"); wait_for_js(pg, "document.querySelectorAll('[data-o=view]').length > 0"); ready(pg)
             v = pg.evaluate("[...document.querySelectorAll('[data-o=view]')].map(b=>b.dataset.v)"); assert v == ["3d"], v
-        step("map: only 2D and 3D (no Mirino, no Ridge)", map_views)
+        step("map: only 2D and 3D (no Sight, no Ridge)", map_views)
         def grips():
             pg.evaluate("(()=>{BARRA.setTab('file',{noFocus:true})})()")
             pg.click("#np-spec"); wait_for_js(pg, "E.panels.filter(q=>q.full).length >= 2"); ready(pg)

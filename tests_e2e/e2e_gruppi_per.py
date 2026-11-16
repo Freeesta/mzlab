@@ -37,7 +37,7 @@ try:
         pg.set_input_files("#pick", PATHS)
         pg.click("text=Load data"); ready(pg, timeout=180000); drawer(pg)
         pg.wait_for_selector("#flst .fl .nm", timeout=30000)
-        pg.evaluate("I18N.set('en')"); pg.wait_for_function("window.qqReady === true && I18N.lang === 'en'", timeout=60000)
+        pg.wait_for_function("window.qqReady === true", timeout=60000)
         def watch():
             pg.evaluate("""() => { window.__cls = 0; new PerformanceObserver(l => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__cls += e.value; }).observe({type: 'layout-shift', buffered: false}); }""")
             if AXE: pg.add_script_tag(path=AXE)

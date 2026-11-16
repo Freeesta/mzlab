@@ -111,11 +111,11 @@ try:
         step("a corrupt piece is fetched again; an interruption keeps the verified pieces and installs nothing", interrupted)
         def resumed():
             pg.check("#libdlg [data-dl='prova-pos']"); pg.click("#lib-avail-go")
-            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('Scaricate e verificate: 1')", timeout=30000)
+            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('Downloaded and verified: 1')", timeout=30000)
             assert hits["prova-pos/000.bin"] == 1 and hits["prova-pos/001.bin"] == 2 and hits["prova-pos/002.bin"] == 2, hits   # only what was missing
             names = pg.evaluate("T.names()"); assert "prova-pos.mzlib" in names and not any(n.endswith((".piece", ".new")) for n in names), names
             s = pg.evaluate("T.states()"); assert s == [["prova-pos.mzlib", "pacchetto", "pronta", "1"]], s
-            assert "Scaricata" in pg.inner_text("#lib-avail-list")
+            assert "Downloaded" in pg.inner_text("#lib-avail-list")
             r = pg.evaluate("T.search", [[[m + 3, v] for m, v in PEAKS], 321.1]); assert "Voce3" in r, r
         step("the download resumes from the first missing piece and the package is ready and searchable", resumed)
         # a second version, published while the first one is installed
@@ -142,7 +142,7 @@ try:
             # the right total: the update replaces it
             e2["sha256"] = hashlib_sha(OUT, e2); (OUT / "catalogo.json").write_text(json.dumps({"formato": "librerie/1", "pezzo": lp.PIECE, "librerie": [e2], "esterne": []}), encoding="utf-8")
             pg.click("#lib-avail-load"); pg.wait_for_selector("#libdlg [data-dl='prova-pos']"); pg.check("#libdlg [data-dl='prova-pos']"); pg.click("#lib-avail-go")
-            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('Scaricate e verificate: 1')", timeout=30000)
+            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('Downloaded and verified: 1')", timeout=30000)
             s = pg.evaluate("T.states()"); assert s == [["prova-pos.mzlib", "pacchetto", "pronta", "2"]], s
             assert "SoloNellaV2" in pg.evaluate("T.search", [QPEAKS, 300.1])
         def hashlib_sha(out, e):
@@ -152,7 +152,7 @@ try:
         def known_next_visit():
             e3 = json.loads((OUT / "catalogo.json").read_text(encoding="utf-8"))["librerie"][0]; e3["versione"] = "3"
             (OUT / "catalogo.json").write_text(json.dumps({"formato": "librerie/1", "pezzo": lp.PIECE, "librerie": [e3], "esterne": []}), encoding="utf-8")
-            pg.click("#lib-avail-load"); pg.wait_for_function("document.querySelector('#lib-avail-list').innerText.includes('Aggiornamento disponibile')", timeout=20000)
+            pg.click("#lib-avail-load"); pg.wait_for_function("document.querySelector('#lib-avail-list').innerText.includes('Update available')", timeout=20000)
             before = len(reqs); boot()
             s = pg.evaluate("T.states()"); assert s == [["prova-pos.mzlib", "pacchetto", "aggiornamento", "2"]], s
             assert len(reqs) == before, "no network call without a click"

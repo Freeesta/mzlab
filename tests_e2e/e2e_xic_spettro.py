@@ -58,7 +58,7 @@ try:
             pg.evaluate(f"stepScan({SPEC}.link!=null?E.panels.find(q=>q.id=={SPEC}.link):E.panels[0],3)"); ready(pg); frames(pg, 8)
             rt1 = pg.evaluate(f"{XP}.cur"); assert rt1 != rt0, (rt0, rt1)
             txt = pg.inner_text(f"xpath=//*[contains(@class,'xb-info')]"); print(txt)
-            assert "RT" in txt or "picco" in txt, txt
+            assert "RT" in txt or "peak" in txt, txt
             assert pg.evaluate(f"{XP}.ints.length") == 0       # unit resolution: no area until the student integrates
         step("scan line follows the spectrum, apex text, no area in LR", lr_cursor)
         def typed():

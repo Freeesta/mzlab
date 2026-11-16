@@ -20,18 +20,18 @@ try:
         def tabs_gone():
             assert pg.is_visible("#hrbar") and pg.locator("#dtabs").count() == 0, "the toolbar of the bench is the only bar"
             ids = pg.evaluate("[...document.querySelectorAll('#hrbar button[data-hb]')].map(b => b.dataset.hb)"); assert ids == ["add", "type", "tree"], ids      # the other tools of the old bar live elsewhere now
-            assert not pg.is_visible("#g-add"), "the old «+ Chromatogram» group is replaced by the menu «Cella»"
+            assert not pg.is_visible("#g-add"), "the old «+ Chromatogram» group is replaced by the menu «Cell»"
         step("toolbar instead of the tabs, with its buttons", tabs_gone)
         def no_badges():
             assert pg.locator("#flst .hrb").count() == 0 and pg.locator("#flst .fl").count() >= 1
         step("no marks (HR, DDA, profile) in the rows of the files", no_badges)
         def add_del():
             n0 = pg.evaluate("E.panels.length")
-            pg.click("#hrbar [data-hb=add]"); pg.click("#ctx >> text=Cromatogramma"); pg.wait_for_timeout(1500)
+            pg.click("#hrbar [data-hb=add]"); pg.click("#ctx >> text=Chromatogram"); pg.wait_for_timeout(1500)
             assert pg.evaluate("E.panels.length") == n0 + 1 and pg.evaluate("E.active.type") == "chrom"
             pg.click(".pnl.act .x"); pg.wait_for_timeout(500)
             assert pg.evaluate("E.panels.length") == n0
-        step("«Cella» adds a chromatogram (active), the × of the cell removes it", add_del)
+        step("«Cell» adds a chromatogram (active), the × of the cell removes it", add_del)
         def decimals():
             assert pg.locator("#hrbar [data-hb=dec]").count() == 0, "the decimals field left the bar"
             pg.evaluate("setActive(E.panels.find(p=>p.type==='spec'))"); drawer(pg, "disp"); pg.wait_for_selector("#dsp-0", timeout=5000)
@@ -70,7 +70,7 @@ try:
                 writeText: () => Promise.reject(new DOMException('not allowed', 'NotAllowedError')),
                 write: items => { if (!live) { window.__clipNo = true; return Promise.reject(new DOMException('not allowed', 'NotAllowedError')); }
                   return items[0].getType('image/png').then(b => { window.__clipT = [items[0].types, b.size]; }); } } }); })()""")
-            pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"); pg.click("#ctx >> text=Copia l'immagine")
+            pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"); pg.click("#ctx >> text=Copy the image")
             wait_for_js(pg, "window.__clipT !== null || window.__clipNo", 15000)
             assert not pg.evaluate("window.__clipNo"), "the image reached the clipboard after the click was over (Safari refuses it and the PNG is downloaded instead)"
             types, size = pg.evaluate("window.__clipT"); assert types == ["image/png"] and size > 1000, (types, size)

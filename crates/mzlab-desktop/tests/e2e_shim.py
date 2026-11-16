@@ -194,7 +194,7 @@ try:
             pg.wait_for_function("fetch('api/state').then(r => r.json()).then(s => !s.files.some(f => f.name === 'FullScan_t5.mzML'))", timeout=30000)
             assert not (DATA / "files" / "FullScan_t5.mzML").exists()
         step("a File of the page (no dialog) is sent to the app as bytes, and removing it removes the copy", dragged)
-        def demo():                                              # «Prova con i file di esempio»: the page fetches the demo mzML from its own bundle and sends them to the app as bytes
+        def demo():                                              # «Try the example files»: the page fetches the demo mzML from its own bundle and sends them to the app as bytes
             c3 = b.new_context(user_agent=ctx_ua); c3.add_init_script(FAKE_TAURI); c3.route(re.compile(r"http://mzlab\.localhost/.*"), native)
             pg3 = c3.new_page(); pg3.on("pageerror", lambda e: fails.append("pageerror " + str(e)[:200]))
             pg3.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); pg3.wait_for_function("window.MZLAB_RUST !== undefined && window.MZLAB_DESKTOP === true", timeout=120000)

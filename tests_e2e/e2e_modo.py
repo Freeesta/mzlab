@@ -1,4 +1,4 @@
-"""Toolbar mode (Solo il selezionato / Tutti sovrapposti): file choosers only where they make sense; 2D/3D switch; loading page keeps the loaded files; empty tab links to loading page."""
+"""Toolbar mode (selected file only / all overlaid): file choosers only where they make sense; 2D/3D switch; loading page keeps the loaded files; empty tab links to loading page."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

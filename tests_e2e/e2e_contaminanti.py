@@ -33,7 +33,7 @@ try:
         def default_off():
             # Initially contaminants are off: no signs on spectrum
             assert pg.evaluate(f"{SP}._a.cmarks.length") == 0 and pg.evaluate(f"{SP}._a.cont") is None, "no signs on spectrum at startup"
-            h = hov(pg, 279.1591); assert h and "contaminante" not in h, "no contaminant line in peak hover"
+            h = hov(pg, 279.1591); assert h and "contaminant" not in h, "no contaminant line in peak hover"
             # Open Reference lists panel
             pg.evaluate("BARRA.close(false)")
             pg.click("#np-liste"); pg.wait_for_selector("#sb-panel-lists #lst-cont-signs", timeout=5000)
@@ -60,7 +60,7 @@ try:
         step("default off: unchecked in Reference lists, no diamonds; checked adds diamonds; persists on reload", default_off)
 
         def known():
-            h = hov(pg, 279.1591); assert h and "Compatible with un contaminante noto" in h and "dibutilftalato" in h and "Contaminanti noti e fondo LC-MS" in h and "Keller" not in h, h
+            h = hov(pg, 279.1591); assert h and "Compatible with a known contaminant" in h and "dibutyl phthalate" in h and "Known contaminants and LC-MS background" in h and "Keller" not in h, h
             h2 = hov(pg, 391.2843); assert h2 and "DEHP" in h2, h2
         step("279.1591 and 391.2843: the line of the contaminant in the box of the peak", known)
 
@@ -70,9 +70,9 @@ try:
             n = 0
             for m in ms:
                 h = hov(pg, m)
-                if h and "contaminante" in h: n += 1
+                if h and "contaminant" in h: n += 1
             assert n < len(ms), "not every random peak can be a contaminant"
-            assert any(hov(pg, m) and "contaminante" not in hov(pg, m) for m in ms)
+            assert any(hov(pg, m) and "contaminant" not in hov(pg, m) for m in ms)
         step("a peak that does not match has no line", other)
 
         def pixels():
@@ -80,9 +80,9 @@ try:
             n_on = pg.evaluate(f"{SP}._a.cmarks.length"); assert n_on >= 1, n_on
             pg.evaluate("LISTE.setOn(false)"); wait_for_js(pg, f"{SP}._a.cmarks.length==0&&!{SP}._a.cont")
             assert pg.evaluate(f"{SP}._a.cmarks.length") == 0 and pg.evaluate(f"{SP}._a.cont") is None, "switch off = no signs"
-            h = hov(pg, 279.1591); assert h and "contaminante" not in h, h
+            h = hov(pg, 279.1591); assert h and "contaminant" not in h, h
             pg.evaluate("LISTE.setOn(true)"); wait_for_js(pg, f"{SP}._a.cmarks.length>=1")
-            assert "contaminante" in hov(pg, 279.1591)
+            assert "contaminant" in hov(pg, 279.1591)
         step("signs only with the switch on; off = the box of before", pixels)
 
         def excl():
@@ -94,11 +94,11 @@ try:
             for k in kks: pg.evaluate(f"LISTE.exclSet('entry', {json.dumps(k)}, true)")
             wait_for_js(pg, f"{SP}._a.chid>=1")
             s1 = st(); assert s1["hid"] >= 1 and s1["marks"] < m0, (m0, s1, pg.evaluate(f"{SP}._a.cmarks.map(c=>c.m)"), pg.evaluate("JSON.stringify(localStorage.getItem(\"mzlab.contaminanti.esclusi\"))"))
-            assert "Mostra" in pg.inner_text(".cont-cnt")
+            assert "Show" in pg.inner_text(".cont-cnt")
             assert t0 == sig(), "TIC drawn the same"
-            pg.focus(".cont-show"); pg.keyboard.press("Enter"); wait_for_js(pg, "document.querySelector('.cont-cnt').innerText.includes('Nascondi')")
-            assert st()["marks"] == m0 and "Nascondi" in pg.inner_text(".cont-cnt")
-            pg.click(".cont-show"); wait_for_js(pg, "document.querySelector('.cont-cnt').innerText.includes('Mostra')")
+            pg.focus(".cont-show"); pg.keyboard.press("Enter"); wait_for_js(pg, "document.querySelector('.cont-cnt').innerText.includes('Hide')")
+            assert st()["marks"] == m0 and "Hide" in pg.inner_text(".cont-cnt")
+            pg.click(".cont-show"); wait_for_js(pg, "document.querySelector('.cont-cnt').innerText.includes('Show')")
             ls = json.loads(pg.evaluate("localStorage.getItem('mzlab.contaminanti.esclusi')")); assert kk in ls["voci"], ls
         step("exclude one entry: sign gone, counter, Show/Hide by keyboard, TIC identical, kept in mzlab.contaminanti.esclusi", excl)
 
@@ -159,7 +159,7 @@ try:
             pg.click("#np-set"); pg.wait_for_selector("#uipset", timeout=5000)
             assert pg.locator("#uip-lab").count() == 0 and "aboratorio" not in pg.inner_text("#uipset"), "the laboratory contaminants are not in the settings"
             pg.keyboard.press("Escape")   # the settings dialog covers the gear: Escape closes it
-            pg.keyboard.press("Control+k"); pg.wait_for_selector("#pal-in", timeout=5000); pg.fill("#pal-in", "contaminanti"); pg.wait_for_function("document.querySelector('#pal-l').innerText.includes('Laboratory contaminants')", timeout=5000)
+            pg.keyboard.press("Control+k"); pg.wait_for_selector("#pal-in", timeout=5000); pg.fill("#pal-in", "contaminants"); pg.wait_for_function("document.querySelector('#pal-l').innerText.includes('Laboratory contaminants')", timeout=5000)
             pg.fill("#pal-in", "lab contaminants"); pg.wait_for_function("document.querySelector('#pal-l').innerText.includes('Laboratory contaminants')", timeout=5000)
             pg.keyboard.press("Enter"); pg.wait_for_selector("#bigdlg[open] #lab-add", timeout=5000); pg.evaluate("document.querySelector('#bigdlg').close()")
         step("laboratory contaminants: not in the settings, found by the search bar (it and en words)", gear_lab)
@@ -184,10 +184,10 @@ try:
         def lab():
             pg.evaluate(f"(()=>{{const p={SP};p.zoom=[200,300];draw(p)}})()"); frames(pg, 3)
             mz0 = pg.evaluate(f"(()=>{{const p={SP};const d=p._a.data[0].d;let k=-1;d.mz.forEach((m,i)=>{{if(m>200&&m<300&&(k<0||d.y[i]>d.y[k]))k=i}});return d.mz[k]}})()")
-            pg.evaluate(f"setTimeout(()=>LISTE.askAdd({mz0}, 'positive'),0)"); pg.wait_for_selector("#askok", timeout=5000); pg.fill("#askin", "mio fondo"); pg.click("#askok"); wait_for_js(pg, "JSON.parse(localStorage.getItem('mzlab.contaminanti')||'[]').length==1")
-            h = hov(pg, mz0); assert h and "mio fondo" in h and "Laboratory contaminants" in h, h
+            pg.evaluate(f"setTimeout(()=>LISTE.askAdd({mz0}, 'positive'),0)"); pg.wait_for_selector("#askok", timeout=5000); pg.fill("#askin", "my background"); pg.click("#askok"); wait_for_js(pg, "JSON.parse(localStorage.getItem('mzlab.contaminanti')||'[]').length==1")
+            h = hov(pg, mz0); assert h and "my background" in h and "Laboratory contaminants" in h, h
             assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.contaminanti')).length") == 1
-            csv = pg.evaluate("LISTE.csvOut(LISTE.labRows())"); assert csv.startswith("mz,name,formula,polarity,note") and "mio fondo" in csv
+            csv = pg.evaluate("LISTE.csvOut(LISTE.labRows())"); assert csv.startswith("mz,name,formula,polarity,note") and "my background" in csv
         step("laboratory contaminants: added from the menu, seen in the box, saved as CSV", lab)
 
         def win_lab():
@@ -203,7 +203,7 @@ try:
             assert not pg.is_visible("#sb-help"), "no question mark on the Lists panel"
             # Close dialog
             pg.evaluate("BARRA.close(false)"); shut(pg, "#listex"); frames(pg, 2)
-        step("header button: #np-liste opens the Liste tab of the sidebar", header_btn)
+        step("header button: #np-liste opens the Lists tab of the sidebar", header_btn)
 
         def user_csv():
             # CSV with 5 compounds, semicolon and decimal comma, matching one observed peak
@@ -233,7 +233,7 @@ try:
             pg.wait_for_function("E.panels.some(p=>p.type==='spec'&&p._a)", timeout=30000)
             assert pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p._a).every(p=>p._a.cont==null)"), "unit resolution: no contaminant data at all"
             h = pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='spec'&&p._a);const a=p._a;const m=a.data[0].d.mz[0];const h=a.hov(a.X(m));return h?h.html:''})()")
-            assert "contaminante" not in h, h
+            assert "contaminant" not in h, h
         step("low resolution: NO automatic annotations or hover tips", lr_no_auto_annotations)
 
         def lr_context_menu_search():
@@ -248,8 +248,8 @@ try:
             tol_val = pg.evaluate("document.querySelector('#lst-tol').value")
             assert float(tol_val) == 0.5
             body_txt = pg.inner_text("#sb-panel-lists")
-            assert "Risoluzione unitaria" not in body_txt
-            assert "Risoluzione unitaria" in pg.evaluate("HELP.liste[1]") and "silossani" in pg.evaluate("HELP.liste[1]")
+            assert "Unit resolution" not in body_txt
+            assert "Unit resolution" in pg.evaluate("HELP.liste[1]") and "siloxanes" in pg.evaluate("HELP.liste[1]")
             # Results table is populated and sorted
             assert pg.locator("#lst-tbody tr").count() > 0
             import re

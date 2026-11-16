@@ -25,6 +25,15 @@ def test_the_language_is_always_english_and_other_catalogs_or_stored_choices_are
 
 
 @needs_node
+def test_a_language_stored_by_an_older_version_is_ignored_silently():
+    # mzlab.lang = "it" in localStorage and ?lang=it in the address: the page still starts in English, with no error
+    out = subprocess.run(["node", "-e", "globalThis.localStorage = { getItem: k => (k === 'mzlab.lang' ? 'it' : null), setItem() {} };"
+                          "globalThis.location = { search: '?lang=it' }; const I = require(" + json.dumps(str(JS)) + ");"
+                          "I.add('en', {k: 'Hello'}); console.log(JSON.stringify([I.lang, I.t('k')]))"], check=True, capture_output=True, text=True, encoding="utf-8").stdout
+    assert json.loads(out) == ["en", "Hello"]
+
+
+@needs_node
 def test_messages_placeholders_numbers_and_plurals():
     r = node("""I.add('it', {a: 'Ciao {name}', n: '{n, plural, =0 {nessun file} one {# file} other {# file}}', q: '{x, number} m/z'});
     I.add('en', {a: 'Hello {name}', n: '{n, plural, =0 {no files} one {# file} other {# files}}', q: '{x, number} m/z'});

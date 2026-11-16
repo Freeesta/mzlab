@@ -12,7 +12,7 @@ CHECK = """() => { const e = document.getElementById('dfiles'), b = e.getBoundin
   return {w: b.width, h: b.height, x: b.x, r: b.right, vw: innerWidth, vh: innerHeight, cls: document.getElementById('v-data').className, shown: !!(top && e.contains(top)), vis: getComputedStyle(e).visibility}; }"""
 def cold(p, vw, vh, hash_="", saved=None, touch=False):
     r = Run(port=8871, wd="/tmp/wd_cassetto"); r.b = p.chromium.launch()      # a server of its own: it remembers the session
-    ctx = r.b.new_context(viewport={"width": vw, "height": vh}, locale="it-IT", has_touch=touch, is_mobile=False, reduced_motion="reduce")
+    ctx = r.b.new_context(viewport={"width": vw, "height": vh}, has_touch=touch, is_mobile=False, reduced_motion="reduce")
     pg = ctx.new_page()
     errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
     init = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');"

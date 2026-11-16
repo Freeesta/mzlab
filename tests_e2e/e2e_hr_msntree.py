@@ -23,7 +23,7 @@ try:
         def menu():
             k = pg.evaluate("E.files.findIndex(f=>f.kind==='infusion')"); assert k >= 0
             pg.evaluate(f"COMP.tree({k})"); pg.wait_for_selector("#mt-tbl tr[data-n]", timeout=60000)
-            assert "non identificazioni" in pg.inner_text("#bigbody") or "candidati" in pg.inner_text("#bigbody")
+            assert "not identifications" in pg.inner_text("#bigbody") or "candidates" in pg.inner_text("#bigbody")
             assert pg.locator("#mt-tbl tr[data-n]").count() >= 19, pg.locator("#mt-tbl tr[data-n]").count()
             assert "Without the formula" in pg.inner_text("#mt-out")
         step("the tree opens with 19+ nodes and offers candidates for the first stage", menu)

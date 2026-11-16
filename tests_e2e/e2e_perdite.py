@@ -1,4 +1,4 @@
-"""Prompt 2, block 4: the «Perdite neutre» tab: simple view, Dettagli, isobaric groups, Cerca Δm (62, 72), polarity filter, entry from the ruler."""
+"""Prompt 2, block 4: the «Neutral losses» tab: simple view, details, isobaric groups, Δm search (62, 72), polarity filter, entry from the ruler."""
 # covers: mzlab/web/tables.js, mzlab/web/perdite.js, mzlab/web/barra.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -21,14 +21,14 @@ try:
             ms = [int(x) for x in pg.locator("#nl-list .nlm").all_inner_texts()]; print(ms); assert ms == sorted(ms) and ms[0] == 15, ms
             assert pg.locator("#nl-list .nldet:visible").count() == 0, "details closed by default"
             assert pg.get_attribute("#al-ctl [data-p='1']", "aria-pressed") == "true" and pg.get_attribute("#al-ctl [data-p='-1']", "aria-pressed") == "false", "positive files -> the page starts on ESI+"
-            t = pg.inner_text("#nl-list"); assert "alcoli" in t and "tioli" in t and "idrossido" not in t and "%" not in t, t
-            assert "Dettagli" not in t and "elettroni pari" not in t, "no repeated button or radical paragraph on the rows"
+            t = pg.inner_text("#nl-list"); assert "alcohols" in t and "thiols" in t and "hydroxide" not in t and "%" not in t, t
+            assert "Details" not in t and "even-electron" not in t, "no repeated button or radical paragraph on the rows"
             hs = pg.evaluate("[...document.querySelectorAll('#nl-list .nlrow')].map(b=>b.getBoundingClientRect().height)"); assert max(hs) <= 44, hs
         step("4.1/4.6: compact one-line rows, sorted by Δm, polarity of the files", simple)
         def details():
             b = pg.locator('#nl-list [data-d="H2O"]'); assert b.get_attribute("aria-expanded") == "false"
             b.click(); assert b.get_attribute("aria-expanded") == "true"
-            t = pg.inner_text('#nl-list [data-f="H2O"] .nldet'); print(t[:120]); assert "18.0106" not in t and "meccanismo" in t and "acqua" in t and "Levsen" not in t and "Fonti" not in t, t   # unit resolution: no exact mass, no references
+            t = pg.inner_text('#nl-list [data-f="H2O"] .nldet'); print(t[:120]); assert "18.0106" not in t and "mechanism" in t and "water" in t and "Levsen" not in t and "Sources" not in t, t   # unit resolution: no exact mass, no references
             b.focus(); pg.keyboard.press("Enter")
             assert b.get_attribute("aria-expanded") == "false" and pg.locator('#nl-list [data-f="H2O"] .nldet:visible').count() == 0
             pg.keyboard.press("Space"); assert b.get_attribute("aria-expanded") == "true"
@@ -36,28 +36,28 @@ try:
         step("4.2: the row is the button: click and keyboard open exact mass, mechanism, source, name", details)
         def groups():
             g = pg.locator("#nl-list .nlr[data-f^=g]"); assert g.count() == 2, g.count()      # with + : 28 and 42 (46 and 80 need a negative-only loss)
-            row = pg.locator('#nl-list [data-f="g28"] .nlrow'); t = row.inner_text().replace("₂", "2").replace("₄", "4"); assert "CO" in t and "C2H4" in t and "risoluzione unitaria" in t, t
-            row.click(); d = pg.inner_text('#nl-list [data-f="g28"] .nldet'); assert "Fonti" not in d and d.count("meccanismo") == 2, d
+            row = pg.locator('#nl-list [data-f="g28"] .nlrow'); t = row.inner_text().replace("₂", "2").replace("₄", "4"); assert "CO" in t and "C2H4" in t and "unit resolution" in t, t
+            row.click(); d = pg.inner_text('#nl-list [data-f="g28"] .nldet'); assert "Sources" not in d and d.count("mechanism") == 2, d
             row.click()
             # Click ESI- to activate both + and -
             pg.locator("#al-ctl [data-p='-1']").click(); pg.wait_for_timeout(200)
             g80 = pg.locator('#nl-list [data-f="g80"]'); assert g80.count() == 1 and "M+2" in g80.inner_text()
             assert pg.locator("#nl-list .nlr[data-f^=g]").count() == 4
-            assert "profilo isotopico nello spettro" in g80.inner_text() and "scheda" not in g80.inner_text()
+            assert "isotope pattern in the spectrum" in g80.inner_text() and "tab" not in g80.inner_text()
         step("4.3: same nominal mass on ONE line with the formulas side by side; 80 points to the isotope profile", groups)
         def radicals():
-            d = pg.locator('#nl-list [data-f="CH3"] .nlrd'); assert d.count() == 1 and "radicale" in d.get_attribute("aria-label") and d.get_attribute("title"), "dot with tooltip"
-            assert "•" in pg.inner_text('#nl-list [data-f="CH3"] .nlrow') and "elettroni pari" not in pg.inner_text('#nl-list [data-f="CH3"] .nlrow')
-            pg.locator('#nl-list [data-d="CH3"]').click(); assert "elettroni pari" in pg.inner_text('#nl-list [data-f="CH3"] .nldet'); pg.locator('#nl-list [data-d="CH3"]').click()
+            d = pg.locator('#nl-list [data-f="CH3"] .nlrd'); assert d.count() == 1 and "radical" in d.get_attribute("aria-label") and d.get_attribute("title"), "dot with tooltip"
+            assert "•" in pg.inner_text('#nl-list [data-f="CH3"] .nlrow') and "even-electron" not in pg.inner_text('#nl-list [data-f="CH3"] .nlrow')
+            pg.locator('#nl-list [data-d="CH3"]').click(); assert "even-electron" in pg.inner_text('#nl-list [data-f="CH3"] .nldet'); pg.locator('#nl-list [data-d="CH3"]').click()
             assert "•" in pg.inner_text('#nl-list [data-f="NO2"]') if pg.locator('#nl-list [data-f="NO2"]').count() else True
         step("4.4: radical loss: dot with the dot in the formula and a tooltip, full text only in the details", radicals)
         def search():
             pg.fill("#calcin", "62"); pg.wait_for_timeout(300)
-            t = pg.inner_text("#nl-res"); print(t.replace("\n", " | ")); assert "Possibili perdite (da verificare sullo spettro)" in t and "H2O + CO2" in t.replace("H₂O", "H2O").replace("CO₂", "CO2") or ("H" in t and "CO" in t and "+" in t), t
+            t = pg.inner_text("#nl-res"); print(t.replace("\n", " | ")); assert "Neutral losses" in t and "H2O + CO2" in t.replace("H₂O", "H2O").replace("CO₂", "CO2") or ("H" in t and "CO" in t and "+" in t), t
             pg.fill("#calcin", "72"); pg.wait_for_timeout(300); t = pg.inner_text("#nl-res"); assert "2 ×" in t and "HCl" in t, t
             pg.fill("#calcin", "28"); pg.wait_for_timeout(300); assert pg.locator("#nl-list .nlr.hit").count() == 1, pg.locator("#nl-list .nlr.hit").count()
             pg.fill("#calcin", "")
-        step("4.5: Cerca Δm: 62 = H2O + CO2, 72 = 2 x HCl, 28 highlights the shared line", search)
+        step("4.5: Δm search: 62 = H2O + CO2, 72 = 2 x HCl, 28 highlights the shared line", search)
         def polarity():
             # Turn off + so only - is active
             pg.click("#al-ctl [data-p='1']"); pg.wait_for_timeout(200)
@@ -75,8 +75,8 @@ try:
             # Turn on both + and -
             pg.click("#al-ctl [data-p='-1']"); pg.wait_for_timeout(200)
             row = pg.locator('#nl-list [data-f="Cl"]'); assert row.count() == 1, (row.count(), pg.evaluate("[...document.querySelectorAll('#nl-list .nlr')].map(r=>r.dataset.f)"), pg.is_visible("#sb-panel-losses"))
-            assert row.locator(".nlm").inner_text() == "35" and "•Cl" in row.inner_text() and "cloro aromatico" in row.inner_text()
-            pg.locator('#nl-list [data-d="Cl"]').click(); d = pg.inner_text('#nl-list [data-f="Cl"] .nldet'); assert "34.9689" not in d and "HCl (36)" in d and "37Cl" in d and "radicale" in d, d
+            assert row.locator(".nlm").inner_text() == "35" and "•Cl" in row.inner_text() and "aromatic chlorine" in row.inner_text()
+            pg.locator('#nl-list [data-d="Cl"]').click(); d = pg.inner_text('#nl-list [data-f="Cl"] .nldet'); assert "34.9689" not in d and "HCl (36)" in d and "37Cl" in d and "radical" in d, d
             # the «?» is replaced by one short hint line
             assert not pg.is_visible("#sb-help") and pg.locator("#nl-hint").count() == 0
             pg.fill("#calcin", "62"); pg.wait_for_timeout(300); assert "H2O" in pg.inner_text("#nl-res").replace("H₂O", "H2O"); pg.fill("#calcin", ""); shut(pg, "#refx")
@@ -124,16 +124,16 @@ try:
             a = pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),a=p._a;return [q.left+a.X(194.2),q.top+a.Y(a.ymax*0.1)]}})()")
             pg.mouse.click(a[0], a[1], button="right"); pg.wait_for_timeout(300)
             its = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>d.textContent)"); print(its)
-            assert "Cerca 170.2 nelle perdite neutre" in its, its
-            pg.locator("#ctx div", has_text="Cerca 170.2").click(); pg.wait_for_timeout(500)
+            assert "Search 170.2 in the neutral losses" in its, its
+            pg.locator("#ctx div", has_text="Search 170.2").click(); pg.wait_for_timeout(500)
             assert pg.evaluate("(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses') && !document.querySelector('#sb-panel-losses').hidden") and pg.input_value("#calcin") == "170.2"
             shut(pg, "#refx")
-        step("4.7: from the ruler: «Cerca 170.2 nelle perdite neutre»", ruler)
+        step("4.7: from the ruler: «Search 170.2 in the neutral losses»", ruler)
         def ruler_label():
             def lbl_pos(a_, b_):
                 pg.evaluate(f"(()=>{{const p={SPEC};p.meas={{ref:{a_},list:[{{a:{a_},b:{b_}}}]}};draw(p)}})()"); pg.wait_for_timeout(500)
                 return pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),l=p._a.lbls.find(b=>b.dm!=null);return l?[q.left+l.x+l.w/2,q.top+l.y+l.h/2,l.tip,!!l.ap]:null}})()")
-            l = lbl_pos(364.4, 194.2); assert l and not l[3] and "perdite" in l[2], l
+            l = lbl_pos(364.4, 194.2); assert l and not l[3] and "losses" in l[2], l
             pg.mouse.click(l[0], l[1], button="right"); pg.wait_for_timeout(500)
             assert not pg.evaluate("document.querySelector('#ctx') && !document.querySelector('#ctx').hidden"), "the general menu must not open on the label"
             assert pg.evaluate("(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')") and pg.input_value("#calcin") == "170.2", "right click on the label: losses filtered on the value"

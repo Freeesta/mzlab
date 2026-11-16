@@ -41,7 +41,7 @@ try:
         step("double click on the PDA map: the UV spectrum of that time, peak at 260 nm", map_dbl)
         def table():
             d = pg.evaluate(f"TDATI_P.data({UV})"); t = pg.evaluate(f"TDATI_P.text({UV})")
-            assert d["head"] == ["nm", "Assorbanza (mAU)"] and len(d["rows"]) > 50, d["head"]
+            assert d["head"] == ["nm", "Absorbance (mAU)"] and len(d["rows"]) > 50, d["head"]
             assert "UV" in t and "m/z" not in t, t
         step("the table of the data has nm and mAU; the description speaks of the UV spectrum", table)
         LBU = f"({UV}._a.lbls || []).filter(l => l.etpk)"
@@ -62,11 +62,11 @@ try:
             pg.evaluate(f"COMANDI.fai('spec.display', {UV}, () => {{ {UV}.etpk = true }}); drawSoon({UV})"); wait_for_js(pg, f"{LBU}.length >= 1")
         step("the wavelength labels can be hidden and shown again", uv_labels_off)
         def header_rt():
-            t = pg.evaluate(f"{UV}.el.querySelector('.rtl').textContent"); assert __import__('re').fullmatch(r"(fermo a )?\d+\.\d\d min", t.strip()), t
+            t = pg.evaluate(f"{UV}.el.querySelector('.rtl').textContent"); assert __import__('re').fullmatch(r"(held at )?\d+\.\d\d min", t.strip()), t
         step("the header of the UV spectrum says the RT it comes from", header_rt)
         def sheet():
             s = pg.evaluate(f"plotSheets({UV})")
-            assert s and s[0]["head"][0] == "nm" and s[0]["head"][1] == "Assorbanza (mAU)" and len(s[0]["rows"]) == 201, s and s[0]["head"]
+            assert s and s[0]["head"][0] == "nm" and s[0]["head"][1] == "Absorbance (mAU)" and len(s[0]["rows"]) == 201, s and s[0]["head"]
         step("the export has the nm and mAU columns", sheet)
         def zoom_keys():
             pg.evaluate(f"{UV}.cv.focus()"); pg.keyboard.press("+"); frames(pg, 3)
@@ -97,7 +97,7 @@ try:
                 tx = pg.evaluate(f"TDATI_P.text({u})"); assert ("RT %.2f" % pg.evaluate(f"{u}._a.uvd.rt")) in tx, tx
             assert pg.evaluate("window.__n") == 0, "no uvspec/map request while the line moves"
             pg.evaluate(f"spLinkFreeze({u})"); frames(pg, 2)
-            assert pg.evaluate(f"{u}.link") is None and pg.evaluate(f"{u}.el.querySelector('.rtl').textContent").startswith("fermo a ")
+            assert pg.evaluate(f"{u}.link") is None and pg.evaluate(f"{u}.el.querySelector('.rtl').textContent").startswith("held at ")
             pg.evaluate(f"(()=>{{const c={c}; c.cur=0.5; pushLinked(c,0.5,0.5,0,true)}})()"); frames(pg, 3)
             assert abs(pg.evaluate(f"{u}._a.uvd.rt") - 1.5) < 0.06, "frozen: the UV spectrum does not follow"
             pg.evaluate(f"spLinkFollow({u}, {c})"); wait_for_js(pg, f"{u}.link === {c}.id && Math.abs({u}._a.uvd.rt - 0.5) < 0.06")

@@ -34,7 +34,7 @@ try:
                 assert pg.get_attribute(f"#{cid} .rq-h", "title").startswith(txt), cid
                 d = pg.get_attribute(f"#{cid} .rq-tg", "aria-describedby").split()[0]
                 assert pg.evaluate(f"document.getElementById('{d}').textContent") == txt and pg.evaluate(f"getComputedStyle(document.getElementById('{d}')).clip") != "auto", cid
-            assert "non la risposta" in pg.get_attribute("#cut-card .rq-h", "title") and "non dice se il meccanismo" in pg.get_attribute("#mech-card .rq-h", "title")
+            assert "not the answer" in pg.get_attribute("#cut-card .rq-h", "title") and "does not say whether the mechanism" in pg.get_attribute("#mech-card .rq-h", "title")
             pg.click("#cut-card .rq-tg"); pg.click("#mech-card .rq-tg")
             vis = pg.evaluate("[...document.querySelectorAll('#cut-card-b p, #mech-card-b p')].filter(p => p.offsetHeight).length")
             assert vis == 0, vis
@@ -90,7 +90,7 @@ try:
             assert "lb-card" not in (pg.evaluate("localStorage.getItem('mzlab.disegno.schede')") or "")
         step("the tour opens the folded labels card for its step and folds it again", tour)
         def english():
-            pg.goto(f"http://127.0.0.1:{r.port}/?lang=en#/draw"); wait_for_js(pg, "!!document.querySelector('#v-draw aside[data-rq]')", timeout=60000)
+            pg.goto(f"http://127.0.0.1:{r.port}/#/draw"); wait_for_js(pg, "!!document.querySelector('#v-draw aside[data-rq]')", timeout=60000)
             assert pg.get_attribute("#cut-card .rq-tg", "aria-label") == "Expand the «Bond cuts» panel"
             assert "not the answer" in pg.get_attribute("#cut-card .rq-h", "title")
         step("English labels and tooltips", english)

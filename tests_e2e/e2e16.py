@@ -1,4 +1,4 @@
-"""Double click = new spectrum with its RT in the title; up/down arrows and sliding panels; the Metodo button stands out."""
+"""Double click = new spectrum with its RT in the title; up/down arrows and sliding panels; the Method button stands out."""
 # covers: mzlab/web/legende.js, mzlab/web/affianca.js, mzlab/web/layout.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -39,7 +39,7 @@ try:
         def method():
             b = pg.locator("#np-method"); assert "imp" in b.get_attribute("class")
             pg.screenshot(path=SH + "162_method.png", clip={"x": 0, "y": 40, "width": 1500, "height": 120})
-        step("Metodo button is distinct", method)
+        step("Method button is distinct", method)
 finally:
     r.close()
 print("\nSTEPS"); [print(" ", s) for s in steps]

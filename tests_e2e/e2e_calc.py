@@ -1,5 +1,5 @@
-"""Block C: the m/z calculator sits on top of Adducts & losses in Dati and is a drop-down under its button in Disegno (no dark backdrop, graphs stay usable);
-«Cerca» hands the value to the page; lower-case formulas; no '1 decimale' column or offset sentence."""
+"""Block C: the m/z calculator sits on top of Adducts & losses in Data and is a drop-down under its button in Drawing (no dark backdrop, graphs stay usable);
+«Search» hands the value to the page; lower-case formulas; no '1 decimal' column or offset sentence."""
 # covers: mzlab/web/calcola.js, mzlab/web/calc-addotti.js, mzlab/web/calc-addotti-html.js, mzlab/web/barra.js, mzlab/web/eventi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -18,7 +18,7 @@ try:
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
         pg.click("text=Load data"); ready(pg)
         def open_below():
-            assert not pg.is_visible("#np-calc2"), "in Dati the calculator lives in Adducts & losses"
+            assert not pg.is_visible("#np-calc2"), "in Data the calculator lives in Adducts & losses"
             pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "window.BARRA.curTab === 'addloss' && BARRA.isOpen('calc') && !!document.querySelector('#calcin').offsetParent")
             assert pg.evaluate("document.querySelector('#sb-panel-addloss').contains(document.querySelector('#calcdlg'))")
             # In Disegno view, np-calc2 opens floating dropdown right under its button, not modal, >= 520px wide
@@ -30,7 +30,7 @@ try:
             pg.click("#nav [data-v=data]"); frames(pg, 3)
             if not pg.evaluate("!!document.querySelector('#calcin').offsetParent"):    # the sidebar tab stays open across views: the button is a toggle
                 pg.evaluate("BARRA.setTab('calc')"); wait_for_js(pg, "!!document.querySelector('#calcin').offsetParent")
-        step("in Dati opens sidebar tab, in Disegno opens right under its button >= 520 px wide", open_below)
+        step("in Data opens sidebar tab, in Drawing opens right under its button >= 520 px wide", open_below)
         def usable():
             frames(pg, 3)               # docked next to the charts the calculator stays open while the student works on them
             c = pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='chrom'&&q.tab==='full'),r=p.cv.getBoundingClientRect();return {x:r.left+p._a.X(14.3),y:r.bottom-60}})()")
@@ -40,10 +40,10 @@ try:
             assert pg.evaluate("E.panels.find(q=>q.type==='chrom'&&q.tab==='full').cur") is not None
         step("the graphs stay usable with the calculator open", usable)
         def lower():
-            pg.fill("#calcin", "c14h13f4n3o2s"); until(pg, "document.querySelector('#calcsum').innerText.includes('interpretata come')")
-            assert "interpretata come" in pg.inner_text("#calcsum") and "C14H13F4N3O2S" in pg.inner_text("#calcsum").replace(" ", "")
+            pg.fill("#calcin", "c14h13f4n3o2s"); until(pg, "document.querySelector('#calcsum').innerText.includes('interpreted as')")
+            assert "interpreted as" in pg.inner_text("#calcsum") and "C14H13F4N3O2S" in pg.inner_text("#calcsum").replace(" ", "")
             pg.click("#calc-nl"); until(pg, "BARRA.curSub === 'adducts' && document.querySelector('#sb-panel-adducts').innerText.includes('364.1')")
-            t = pg.inner_text("#sb-panel-adducts"); assert "364.1" in t and "364.07" not in t and "1 decimale" not in t and "spostato di qualche decimo" not in t, t
+            t = pg.inner_text("#sb-panel-adducts"); assert "364.1" in t and "364.07" not in t and "1 decimal" not in t and "spostato di qualche decimo" not in t, t
             pg.fill("#calcin", "C9h10Cl2n2O"); until(pg, SUM + ".includes('C9H10Cl2N2O')"); assert "C9H10Cl2N2O" in pg.inner_text("#calcsum").replace(" ", "")
             pg.fill("#calcin", "co"); until(pg, SUM + ".includes('CO')"); assert "CO" in pg.inner_text("#calcsum"), pg.inner_text("#calcsum")
         step("lower-case formula: interpreted line, no extra column / sentence", lower)
@@ -56,11 +56,11 @@ try:
             pg.fill("#calcin", "(229.1-171.2)*2"); until(pg, "document.querySelector('#calcres').innerText.trim() === '115.8'"); assert pg.inner_text("#calcres").strip() == "115.8"
             pg.click("#calc-nl"); until(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses') && !document.querySelector('#sb-panel-losses').hidden")
             assert pg.evaluate("(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses') && !document.querySelector('#sb-panel-losses').hidden")
-            assert pg.input_value("#calcin") == "(229.1-171.2)*2"         # «Cerca» only picks the tab: one field, left as typed
+            assert pg.input_value("#calcin") == "(229.1-171.2)*2"         # «Search» only picks the tab: one field, left as typed
             pg.fill("#calcin", "96-66"); pg.keyboard.press("Enter"); until(pg, "document.querySelector('#calcin').value === '30'")
             pg.click("#al-t-adducts"); pg.click("#calc-nl"); until(pg, "BARRA.curSub === 'losses' && document.querySelector('#calcin').value === '30'")       # after «=» the difference still picks the losses
             pg.evaluate("CALC.tape.length = 0")
-        step("a calculation: 364.4-194.2 = 170.2 (also with comma and the minus sign), «Cerca» picks the losses tab", arithmetic)
+        step("a calculation: 364.4-194.2 = 170.2 (also with comma and the minus sign), «Search» picks the losses tab", arithmetic)
         def keypad():
             pg.fill("#calcin", ""); frames(pg, 2)
             for k in ("1", "+", "2"): pg.click(f"#calcpad [data-k='{k}']")
@@ -81,8 +81,8 @@ try:
             assert pg.evaluate("document.querySelector('#calcres').hidden") and pg.locator("#calcout .cadd-wrap").count() == 0, "docked: no table under the calculator, the page answers"
             pg.click("#calc-nl"); until(pg, "BARRA.curSub === 'adducts' && document.querySelector('#calcin').value === 'C9H10Cl2N2O' && !!document.querySelector('#sb-panel-adducts .cadd-wrap table')")
             pg.fill("#calcin", ""); until(pg, "!document.querySelector('#calcpad').hidden")
-        step("a formula: no keypad, «Cerca» shows its adducts on the page", formula_hides_pad)
-        VIS = "[...document.querySelectorAll('.cadd-wrap')].filter(w=>!!w.offsetParent)"       # the page and the Disegno drop-down each draw a table: only the visible one is read
+        step("a formula: no keypad, «Search» shows its adducts on the page", formula_hides_pad)
+        VIS = "[...document.querySelectorAll('.cadd-wrap')].filter(w=>!!w.offsetParent)"       # the page and the Drawing drop-down each draw a table: only the visible one is read
         TXT = "[...document.querySelectorAll('.cadd-wrap')].filter(w=>!!w.offsetParent).flatMap(w=>[...w.querySelectorAll('tbody tr:not(.cmore)')]).map(tr=>[...tr.children].map(c=>c.textContent.replace(/\\s+/g,' ').trim()))"
         def table_rows():
             pg.fill("#calcin", "C13H26N4"); until(pg, "document.querySelector('#sb-panel-adducts').innerText.includes('C13H26N4') && document.querySelector('#sb-panel-adducts .cadd-wrap tbody tr')")
@@ -159,11 +159,11 @@ try:
             pg.fill("#calcin", ""); pg.keyboard.press("Escape"); wait_for_js(pg, "document.querySelector('#calcdlg').hidden")
             assert pg.evaluate("document.querySelector('#calcdlg').hidden")
             pg.click("#nav [data-v=data]"); frames(pg, 3)
-            assert pg.locator("#np-iso").count() == 0, "the Isotopi button is gone from the header"
-        step("Esc closes the calculator; no Isotopi button in the header", closes)
+            assert pg.locator("#np-iso").count() == 0, "the Isotopes button is gone from the header"
+        step("Esc closes the calculator; no Isotopes button in the header", closes)
         def xic_dlg():
-            pg.evaluate("openXic(null,{})"); pg.wait_for_selector("#xic-mz", state="visible"); pg.fill("#xic-mz", "c14h13f4n3o2s"); wait_for_js(pg, "document.querySelector('#xic-sum').innerText.includes('interpretata come')")
-            assert "interpretata come" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum"); pg.click("#xic-no")
+            pg.evaluate("openXic(null,{})"); pg.wait_for_selector("#xic-mz", state="visible"); pg.fill("#xic-mz", "c14h13f4n3o2s"); wait_for_js(pg, "document.querySelector('#xic-sum').innerText.includes('interpreted as')")
+            assert "interpreted as" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum"); pg.click("#xic-no")
         step("XIC window too", xic_dlg)
     r.close()
 except Exception as e:

@@ -16,7 +16,7 @@ if __name__ == "__main__":
                 assert pg.input_value("#calcin") == ""
                 t = pg.inner_text("#sb-panel-adducts")
                 assert "[M+H]+" in t and "[M+Na]+" in t and "[M-H]-" not in t, t[:300]
-                assert "Un numero è letto" not in t and pg.locator("#sb-panel-adducts .nlhint").count() == 0
+                assert "A number is read" not in t and pg.locator("#sb-panel-adducts .nlhint").count() == 0
             step("default table in ESI+, no info line", default_table)
             def polarity():
                 pg.click("#al-ctl [data-p='-1']"); wait_for_js(pg, "(t => t.includes('[M-H]-') && t.includes('[M+H]+'))(document.querySelector('#sb-panel-adducts .cadt').innerText)")      # both polarities

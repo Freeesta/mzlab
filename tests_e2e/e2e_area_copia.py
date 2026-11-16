@@ -27,7 +27,7 @@ try:
             assert pg.evaluate(f"{XP}.cv.style.cursor") == "pointer"
             pg.mouse.click(l["x"], l["y"]); wait_for_js(pg, "!!document.querySelector('.areacopied.show')")
             assert clip() == l["copy"], (clip(), l)
-            assert pg.inner_text(".areacopied") == "Copiato!"
+            assert pg.inner_text(".areacopied") == "Copied!"
             assert pg.get_attribute(".areacopied", "aria-live") == "polite"
         step("click on the label copies the displayed number and shows the notice", click_copies)
         def fades():

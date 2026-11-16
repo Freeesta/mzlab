@@ -16,7 +16,7 @@ try:
         pg.click("text=Load data"); ready(pg)
         def invite():
             pg.wait_for_selector("#tour-invito", timeout=8000); pg.mouse.move(700, 100)
-            t = pg.inner_text("#tour-invito"); assert "Prima volta?" in t and "minut" not in t, t
+            t = pg.inner_text("#tour-invito"); assert "First time?" in t and "minut" not in t, t
             assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr')).stato") == "invitato"
             pg.reload(); ready(pg); pg.wait_for_timeout(1500); assert not pg.is_visible("#tour-invito"), "does not come back on reload"
             # fake timers (still running in real time) only now: installed earlier they stall the loading, and a reload on them breaks the page; the invitation opens again on them
@@ -40,8 +40,8 @@ try:
         def gear():
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
             t = pg.inner_text("#uipset")
-            for bad in ("Archivio nel browser", "Storage in the browser", "Rimuovi file e indici", "Libera i derivati"): assert bad not in t, bad
-            assert pg.locator("#uip-arch-all").count() == 0 and "Reset completo" not in t
+            for bad in ("Storage in the browser", "Remove files and indexes", "Free the derived files"): assert bad not in t, bad
+            assert pg.locator("#uip-arch-all").count() == 0 and "Full reset" not in t
             assert pg.locator("#uip-arch-rm").count() == 0 and pg.locator("#uip-arch-der").count() == 0
             assert pg.evaluate("document.querySelectorAll('#uipset details').length") == 0 and pg.is_visible("#uip-hc"), "readability controls are flat: no fold"
             assert pg.evaluate("[...document.querySelectorAll('#uip-a11y input[name=uip-font], #uip-a11y #uip-hc, #uip-g-look #uip-pal')].length") == 5
@@ -57,8 +57,8 @@ try:
             pg.click("#np-set"); pg.wait_for_selector("#uipset"); assert pg.is_enabled("#uip-tour")
             pg.click("#uip-tour")
             wait_for_js(pg, "!!(window.TOUR && TOUR.active)")
-            assert pg.evaluate("S.view") == "draw", "the tour of Disegno starts in Disegno"
-        step("Guided tour from Disegno starts the tour of Disegno", tour_from_draw)
+            assert pg.evaluate("S.view") == "draw", "the tour of Drawing starts in Drawing"
+        step("Guided tour from Drawing starts the tour of Drawing", tour_from_draw)
 finally:
     pass
 for n, s in steps: print(("PASS " if s == "ok" else "FAIL ") + n, "" if s == "ok" else s)

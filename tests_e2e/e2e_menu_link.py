@@ -1,5 +1,5 @@
-"""Disegno: the PubChem, ChEBI and BioTransformer rows of the canvas menu (`link/1` of the Rust graph), in two submenus: «PubChem» (the exact structure
-first, then the engine's order) and «Altri siti» (ChEBI, BioTransformer); a submenu opens on hover, click or Right arrow (aria-haspopup, aria-expanded),
+"""Drawing: the PubChem, ChEBI and BioTransformer rows of the canvas menu (`link/1` of the Rust graph), in two submenus: «PubChem» (the exact structure
+first, then the engine's order) and «Other sites» (ChEBI, BioTransformer); a submenu opens on hover, click or Right arrow (aria-haspopup, aria-expanded),
 Left arrow and Esc come back to its row, rows are at least 24 px high; every row opens its URL with window.open(url, "_blank", "noopener,noreferrer") only on the click,
 PubChem carries the encoded SMILES in `#query=` (and `&tab=`) and copies it too, BioTransformer copies it (toast, role=status), ChEBI carries the percent-encoded InChI, and the page
 makes no request to any outside host."""

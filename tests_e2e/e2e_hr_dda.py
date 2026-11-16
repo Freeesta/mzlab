@@ -42,7 +42,7 @@ try:
             v = pg.evaluate("(()=>{const t=" + TRIO + ";return {sid:t.s2.sid,scan:t.s2._scan&&t.s2._scan.sid,parent:t.s2._scan&&t.s2._scan.parent,s1sid:t.s1._a&&t.s1._a.data[0].d.sid,title:t.s2.title,cap:t.s2.leg.textContent,cur:t.c.cur}})()"); print(v)
             assert v["sid"] == t["sid"] == v["scan"], v
             assert v["s1sid"] == v["parent"], v                              # s1 shows exactly the parent Full Scan
-            assert v["title"].startswith("MS2 di ") and "HCD" in v["cap"] and "NCE 30" in v["cap"] and "isolamento ±0.75" in v["cap"] and "madre" in v["cap"], v
+            assert v["title"].startswith("MS2 of ") and "HCD" in v["cap"] and "NCE 30" in v["cap"] and "isolation ±0.75" in v["cap"] and "parent" in v["cap"], v
             assert "eV" not in v["cap"], v                                    # Thermo: never eV
         step("a triangle on the chromatogram: s2 shows that MS2, s1 its parent Full Scan", tri)
         def flags():
@@ -97,8 +97,8 @@ try:
         def fusion():
             t = pg.evaluate("(async()=>{const t=" + TRIO + ";const D=await DDA.get(t.s1.k);await DDA.selectMs2(t.s2,D.sid[3]);return D.sid[3]})()"); pg.wait_for_timeout(2000)
             v = pg.evaluate("(()=>{const t=" + TRIO + ";return {cap:t.s2.leg.textContent,mz:t.s2._a.data[0].d.mz.slice(0,6),dec:t.s2._a.dec,title:t.s2.title}})()"); print(v)
-            assert "CID" in v["cap"] and "NCE 35" in v["cap"] and "isolamento ±1.5" in v["cap"] and v["dec"] == 2, v
-            assert all(len(str(m).split(".")[1] if "." in str(m) else "") <= 3 for m in v["mz"]) and v["title"].startswith("MS2 di ") and len(v["title"].split(".")[1]) == 2, v
+            assert "CID" in v["cap"] and "NCE 35" in v["cap"] and "isolation ±1.5" in v["cap"] and v["dec"] == 2, v
+            assert all(len(str(m).split(".")[1] if "." in str(m) else "") <= 3 for m in v["mz"]) and v["title"].startswith("MS2 of ") and len(v["title"].split(".")[1]) == 2, v
         step("Fusion (ion trap MS2): 2 decimals, CID, NCE 35, isolation ±1.5", fusion)
     r.close()
     r = Run(port=8897, wd="/tmp/wdhr8")

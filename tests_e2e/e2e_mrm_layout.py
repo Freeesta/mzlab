@@ -21,7 +21,7 @@ try:
             assert pg.evaluate(f"!{q}.querySelector('select[data-o=tr]')"), "second transitions selector still there"
             assert pg.evaluate(f"!{q}.querySelector('[data-a=intf]') || {q}.querySelector('[data-a=intf]').hidden"), "extra integration target dropdown"
             assert not pg.evaluate(f"!!{q}.querySelector('select[data-o=fk]')"), "file counter dropdown"
-            assert pg.evaluate(f"{q}.querySelector('.pn-t, .ptitle, header, .hd') ? {q}.textContent.includes('Transizioni MRM') === false : true"), "old panel title"
+            assert pg.evaluate(f"{q}.querySelector('.pn-t, .ptitle, header, .hd') ? {q}.textContent.includes('MRM transitions') === false : true"), "old panel title"
             pg.evaluate(f"{q}.querySelector('.canb').click()"); frames(pg, 2)
             n = pg.evaluate(f"[...{q}.querySelectorAll('.can-row .can-n,.can-row')].length"); assert n > 1, n
             lab = pg.evaluate(f"[...{q}.querySelectorAll('.can-row')].map(x => x.getAttribute('aria-label') || '')")

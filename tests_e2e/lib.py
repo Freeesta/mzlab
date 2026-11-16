@@ -119,13 +119,13 @@ def show_table(pg):
 _real_click = _Page.click
 def _click(self, selector, *a, **k):
     # «Load data» is gone: the files are open already, the click is the first click on a file
-    if isinstance(selector, str) and (selector == "#opbtn" or "Carica dati" in selector or "Load data" in selector): return open_first(self)
+    if isinstance(selector, str) and (selector == "#opbtn" or "Load data" in selector): return open_first(self)
     return _real_click(self, selector, *a, **k)
 _Page.click = _click
 _real_wfs = _Page.wait_for_selector
 def _wfs(self, selector, *a, **k):
     # waiting for «Load data» = waiting for the end of the loading (the button is gone)
-    if isinstance(selector, str) and (selector == "#opbtn" or "Carica dati" in selector or "Load data" in selector):
+    if isinstance(selector, str) and (selector == "#opbtn" or "Load data" in selector):
         return loaded(self, k.get("timeout", 120000))
     return _real_wfs(self, selector, *a, **k)
 _Page.wait_for_selector = _wfs

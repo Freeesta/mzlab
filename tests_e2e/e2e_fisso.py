@@ -37,7 +37,7 @@ try:
             assert pg.evaluate("window.__sc") == 0 and top() == 0, pg.evaluate("window.__sc")
             pg.evaluate("setTab('ms2')"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
             assert pg.evaluate("window.__sc") == 0, "switching Full Scan / MS2 does not scroll"
-        step("Dati from Disegno and tab changes: no scrolling", noscroll)
+        step("Data from Drawing and tab changes: no scrolling", noscroll)
         def layers():
             pg.evaluate("window.scrollTo(0, 400)"); wait_for_js(pg, "scrollY > 300"); frames(pg, 3)
             hh = pg.evaluate("document.querySelector('header').offsetHeight")

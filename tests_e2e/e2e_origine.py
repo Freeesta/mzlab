@@ -1,4 +1,4 @@
-"""Window 'Da dove viene questo ione?': entry points, evidence sections, table click -> overlay, hypothesis saved, xlsx, no verdict words."""
+"""Window 'Where does this ion come from?': entry points, evidence sections, table click -> overlay, hypothesis saved, xlsx, no verdict words."""
 # covers: mzlab/web/origine.js, mzlab/ionfamily.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -25,8 +25,8 @@ try:
             pg.fill("#og-par", "364.4"); pg.click("#og-go"); pg.wait_for_selector("#og-tb", timeout=60000); wait_for_js(pg, "[...document.querySelectorAll('#og-out section')].filter(s=>s.offsetParent).length===5"); ready(pg)
             assert pg.locator("#og-out section:visible").count() == 5
             txt = pg.inner_text("#og-out")
-            for w in ["Pearson", "F contro P", "cinetica", "La tua ipotesi"]: assert w.lower() in txt.lower(), w
-            for bad in ["è un frammento in sorgente.", "verdetto:", "conclusione:"]: assert bad not in txt
+            for w in ["Pearson", "F against P", "kinetics", "Your hypothesis"]: assert w.lower() in txt.lower(), w
+            for bad in ["is an in-source fragment.", "verdict:", "conclusion:"]: assert bad not in txt
             assert pg.locator("#og-tb tr[data-m]").count() >= 1
             pg.screenshot(path=SH + "orig_a.png", full_page=True)
         step("evidence computed on real files: five sections, table, no verdict", run)
@@ -36,23 +36,23 @@ try:
             assert pg.locator("#og-chips span").count() == n0 + 1 and pg.locator("#og-tb tr.sel").count() == 1
         step("clicking a table row adds that ion to the overlaid XICs", overlay)
         def hyp():
-            pg.fill("#og-hyp", "Ipotesi di prova"); wait_for_js(pg, "JSON.stringify(NB.origin).includes('Ipotesi di prova')")
-            assert "Ipotesi di prova" in pg.evaluate("JSON.stringify(NB.origin)")
+            pg.fill("#og-hyp", "Test hypothesis"); wait_for_js(pg, "JSON.stringify(NB.origin).includes('Test hypothesis')")
+            assert "Test hypothesis" in pg.evaluate("JSON.stringify(NB.origin)")
         step("the hypothesis goes in the notebook", hyp)
         def xl():
             with pg.expect_download() as d: pg.click("#og-xlsx")
-            f = d.value.path(); sh = xlsx_sheets(f); assert "Riassunto" in sh and "F contro P" in sh and "Cinetica" in sh, sh
+            f = d.value.path(); sh = xlsx_sheets(f); assert "Summary" in sh and "F against P" in sh and "Kinetics" in sh, sh
             rows = xlsx_rows(f); flat = [c[1] for r_ in rows for c in r_ if c]
-            assert "Ipotesi di prova" in flat
+            assert "Test hypothesis" in flat
         step("xlsx export with the hypothesis", xl)
         def menus():
             pg.evaluate("document.getElementById('ogdlg').close()")
             pg.evaluate("addPanel('map',{k:E.files.find(f=>f.kind==='full').k})"); wait_for_js(pg, "E.panels.some(q=>q.type==='map')"); ready(pg)
             pos = pg.evaluate("(()=>{const q=E.panels.find(x=>x.type==='map');q.el.scrollIntoView({block:'center'});const c=q.cv.getBoundingClientRect();return [c.left+c.width*0.4,c.top+c.height*0.5]})()")
             pg.mouse.click(pos[0], pos[1], button="right"); pg.wait_for_selector("#ctx:not([hidden])")
-            assert pg.locator("#ctx div", has_text="Da dove viene").count() == 0
+            assert pg.locator("#ctx div", has_text="Where does this ion").count() == 0
             pg.keyboard.press("Escape")
-        step("no «Da dove viene» in the right-click menu of the map", menus)
+        step("no «Where does this ion come from» in the right-click menu of the map", menus)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

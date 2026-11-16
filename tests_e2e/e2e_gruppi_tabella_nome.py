@@ -44,7 +44,7 @@ try:
             pg.locator(f"{HEAD} .tg-name").first.dblclick(); pg.keyboard.press("Control+a"); pg.keyboard.type("Blur name"); pg.locator("h1, body").first.click(position={"x": 2, "y": 2})
             wait_for_js(pg, "ST.files.some(f => f.ugrp === 'Blur name')", 5000)
             pg.locator(f"{HEAD} .tg-name").first.dblclick(); pg.keyboard.press("Control+a"); pg.keyboard.press("Delete"); pg.keyboard.press("Enter")
-            wait_for_js(pg, "ST.files.some(f => /^(Group|Gruppo) \\d+$/.test(f.ugrp || ''))", 5000)
+            wait_for_js(pg, "ST.files.some(f => /^Group \\d+$/.test(f.ugrp || ''))", 5000)
         step("blur saves; an empty name goes back to the default «Group N»", blur_empty)
         def kbd():
             n = pg.locator(f"{HEAD} .tg-name").first; n.focus(); assert n.get_attribute("aria-label").startswith("Rename group"), n.get_attribute("aria-label")

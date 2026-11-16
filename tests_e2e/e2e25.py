@@ -35,11 +35,11 @@ try:
             assert pg.is_visible("#uip-pal") and pg.is_visible("#uip-hc") and pg.is_visible("input[name=uip-font][value=atkinson]"), "look and reading controls show at once"
             pg.keyboard.press("Escape"); pg.wait_for_timeout(150); pg.click("#np-set"); pg.wait_for_timeout(250)      # close and reopen
             t = pg.inner_text("#uipset"); print(repr(t))
-            assert "Dimensione testo" not in t and "tema" in t.lower() and "colori dei grafici" in t.lower()
-            for bad in ("Dimensione del testo dell", "Vale per menu", "tutorial", "Installare", "Numera", "suggerimenti"):
+            assert "Text size" not in t and "theme" in t.lower() and "chart colors" in t.lower()
+            for bad in ("Size of the text of the", "Applies to menus", "tutorial", "Install", "Number", "suggestions"):
                 assert bad.lower() not in t.lower(), bad
-            assert pg.locator("#uipset input[type=checkbox]").count() == 4 and pg.locator("#uip-merge").count() == 1 and pg.locator("#uip-tog").count() == 0      # the merge of the centroids; no «Show all gli esperimenti insieme» (it is the only view)
-            assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["By file (default)", "By time", "Accessibili", "High contrast", "Arcobaleno", "Black and white"]
+            assert pg.locator("#uipset input[type=checkbox]").count() == 4 and pg.locator("#uip-merge").count() == 1 and pg.locator("#uip-tog").count() == 0      # the merge of the centroids; no «Show all experiments together» (it is the only view)
+            assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["By file (default)", "By time", "Accessible", "High contrast", "Rainbow", "Black and white"]
             assert pg.input_value("#uip-pal") == "file"
             pg.check("input[name=uip-th][value=dark]", force=True); pg.wait_for_timeout(400)
             pg.check("input[name=uip-th][value=auto]", force=True); pg.wait_for_timeout(300)
@@ -73,7 +73,7 @@ try:
             ls = [lum(c[t]) for t in (0, 5, 30, 60)]; assert all(ls[i] < ls[i + 1] for i in range(3)), "the others keep their order"
             pg.evaluate("resetColors()"); c = {x[0]: hexof(x[1]) for x in pg.evaluate(COLORS)}; assert c[15] != "#123456"
             pg.evaluate("E.files.find(x=>x.time===5).colorSet")
-        step("a colour chosen by hand is not overwritten; 'ripristina colori' brings the scale back", manual)
+        step("a colour chosen by hand is not overwritten; 'restore colors' brings the scale back", manual)
         def menu_entry():
             drawer(pg); pg.click("#flst .fl .nm >> nth=0", button="right"); pg.wait_for_timeout(300)
             assert "Restore the automatic colors" in pg.inner_text("body")

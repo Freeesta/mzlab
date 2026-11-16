@@ -1,4 +1,4 @@
-"""Disegno: the canvas menu has no header line; its name (aria-label) says what it acts on («Selection (n atoms)» or «Whole drawing»), its rows come from
+"""Drawing: the canvas menu has no header line; its name (aria-label) says what it acts on («Selection (n atoms)» or «Whole drawing»), its rows come from
 the TPDraw.menu registry (ordered, filtered by selection / whole drawing, one failing row never hides the others) and stay keyboard menu items. No bond rows
 («Spezza», «Taglia») and no «Ioni attesi» row."""
 # covers: mzlab/web/disegno-menu.js

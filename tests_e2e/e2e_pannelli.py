@@ -36,15 +36,15 @@ try:
             xp = pg.evaluate("stackOrder().find(p => p.type === 'xic').id"); o0 = order(); k = o0.index("xic:%d" % xp)
             pg.locator('.pnl.xic [data-o="split"]').first.click(); pg.wait_for_timeout(2500)
             o1 = order(); assert o1[k] == "xic:%d" % xp and o1[k + 1].startswith("xic:"), (o0, o1)      # the split panel follows the original
-        step("A4.1: «Separa» puts the new panels right under the original", split)
+        step("A4.1: «Split» puts the new panels right under the original", split)
         def notable():
             assert pg.locator(".pnl.spec [data-a=ptab]").count() == 0
             assert pg.evaluate("typeof peakTable") == "undefined"
-        step("A4.2: no «Tabella dei picchi» in the spectra", notable)
+        step("A4.2: no «Peak table» in the spectra", notable)
         def caption():
             pg.evaluate("setActive(E.panels.find(p => p.type === 'spec'))")
             t = pg.inner_text(".pnl.spec .leg").strip()
-            import re; assert re.fullmatch(r"(scansione \d+/\d+|media di \d+ scansioni)", t), t
+            import re; assert re.fullmatch(r"(scan \d+/\d+|average of \d+ scans)", t), t
         step("A4.3: caption without TIC, base peak, RT", caption)
         def rtl():
             sp = "E.panels.find(p => p.type === 'spec')"

@@ -42,7 +42,7 @@ try:
             assert "Mean of the MS2 of this ion" in t and "Follow this ion in the MS2" in t, t
             pg.click("#ctx >> text=Mean of the MS2 of this ion"); pg.wait_for_timeout(2500)
             v = pg.evaluate("(()=>{const t=" + TRIO + ";return {n:t.s2.avg&&t.s2.avg.length,title:t.s2.title,cap:t.s2.leg.textContent,pk:t.s2._a.data[0].d.mz.length}})()"); print(v)
-            assert v["n"] and 2 <= v["n"] <= 5 and v["title"].startswith("Media di ") and "364.073" in v["title"] and "media di " in v["cap"], v
+            assert v["n"] and 2 <= v["n"] <= 5 and v["title"].startswith("Average of ") and "364.073" in v["title"] and "average of " in v["cap"], v
         step("right click: average of the MS2 of that ion (at most 5, within ±1 min)", average)
         def follow():
             show_scan(9.0)

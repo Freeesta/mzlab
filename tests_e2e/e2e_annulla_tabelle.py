@@ -1,4 +1,4 @@
-"""Undo of the tables, the lists and the settings of the Dati view (comandi.js): metadata of the samples, file list, preferences, peak settings, XIC traces,
+"""Undo of the tables, the lists and the settings of the Data view (comandi.js): metadata of the samples, file list, preferences, peak settings, XIC traces,
 series of the legend, title of a panel, marks of the map, opening of a panel, isotopes and the background of the spectrum. Each case does the action and
 takes it back with Ctrl/Cmd+Z, then does it again with the redo."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

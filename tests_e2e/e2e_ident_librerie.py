@@ -54,7 +54,7 @@ try:
         def folder():
             import tempfile; d = tempfile.mkdtemp(); open(d + "/c.msp", "w").write(msp("Entry C", "Positive")); open(d + "/nota.txt", "w").write("x"); open(d + "/vuota.msp", "w").write("")
             pg.set_input_files("#idn-din", d)
-            pg.wait_for_function("document.querySelector('#idn-msg').innerText.includes('Caricate: 1 · ignorate: 2')", timeout=20000)
+            pg.wait_for_function("document.querySelector('#idn-msg').innerText.includes('Loaded: 1 · ignored: 2')", timeout=20000)
             pg.click("#idn-ign"); assert pg.get_attribute("#idn-ign", "aria-expanded") == "true"
             t = pg.text_content("#idn-ignl"); assert "format not supported" in t and "nota.txt" in t and "vuota.msp" in t, t
             pg.click("#idn-ign"); assert pg.locator("#idn-ignl").count() == 0

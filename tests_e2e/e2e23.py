@@ -26,7 +26,7 @@ try:
             assert all(abs((b["mx"] - a["mx"]) - a["lv"]) < 1e-6 * max(1, b["mx"]) for a, b in zip(after, before)), "max drops by the level"
             assert pg.evaluate("!%s.clipDraw" % P), "negatives are not clipped: «negatives to 0» is only for the drawing"
             chip = pg.inner_text(f"#dpanels .pnl >> nth=0 >> .ibk"); print(chip)
-            assert "fondo del tratto" in chip and "0.3-2 min" in chip
+            assert "background of the stretch" in chip and "0.3-2 min" in chip
         step("mean of 0.3-2 min subtracted, not clipped, chip visible", mean)
         def noclip():
             pg.evaluate("%s.clipDraw=true;draw(%s)" % (P, P)); ready(pg)
@@ -46,16 +46,16 @@ try:
         def integ_note():
             pg.evaluate("ibkSet(%s,'mean',[0.3,2])" % P)
             pg.evaluate("""async()=>{const p=%s;await draw(p);const s=p._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});p.ints.push({key:s.key,a:s.x[m]-0.3,b:s.x[m]+0.3,ion:s.name,file:'f',time:0});await draw(p)}""" % P)
-            it = pg.evaluate("%s.ints[0].corr" % P); print(it); assert it.startswith("sì, 0.3-2 min, media")
+            it = pg.evaluate("%s.ints[0].corr" % P); print(it); assert it.startswith("yes, 0.3-2 min, mean")
             a1 = pg.evaluate("%s.ints[0].area" % P)
             pg.evaluate("%s.fondo={mode:'none',w:1,ib:null};draw(%s)" % (P, P)); ready(pg)
             a0 = pg.evaluate("%s.ints[0].area" % P); print(a0, a1); assert a0 != a1 and pg.evaluate("%s.ints[0].corr" % P) == "no"
             pg.evaluate("ibkSet(%s,'mean',[0.3,2])" % P); ready(pg)
         step("integration on the subtracted trace and declared (table)", integ_note)
         def meta():
-            sh = pg.evaluate("plotSheets(%s).map(s=>s.name)" % P); print(sh); assert "Note" in sh
-            assert "bianco interno applicato" in pg.evaluate("plotMeta(%s).map(x=>x.join(' ')).join(' ')" % P)
-        step("xlsx Note sheet and PNG metadata", meta)
+            sh = pg.evaluate("plotSheets(%s).map(s=>s.name)" % P); print(sh); assert "Notes" in sh
+            assert "internal blank applied" in pg.evaluate("plotMeta(%s).map(x=>x.join(' ')).join(' ')" % P)
+        step("xlsx Notes sheet and PNG metadata", meta)
         def menu():
             box = pg.locator("#dpanels .pnl >> nth=0 >> canvas").bounding_box()
             pg.mouse.click(box["x"] + 400, box["y"] + 100, button="right"); pg.wait_for_selector("#ctx:not([hidden])")

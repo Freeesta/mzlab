@@ -23,13 +23,13 @@ try:
                 pg.evaluate(f"setTab('{t}',true)"); pg.wait_for_timeout(1800)
                 assert pg.locator(".hq:visible").count() == 1, (t, pg.locator(".hq:visible").count())
                 u = pg.evaluate(UNLABELLED); assert not u, (t, u)
-        step("Dati (3 tabs): one ?, every button without text has a label", data)
+        step("Data (3 tabs): one ?, every button without text has a label", data)
         def tabs():
             tt = pg.evaluate("[...document.querySelectorAll('#flst .fgh[data-gt]')].map(b=>b.dataset.tiph||b.title)"); assert len(tt) == 3 and all(len(x) > 20 for x in tt) and len(set(tt)) == 3, tt      # a short phrase per experiment type, all different
         step("the tabs say what the experiment is (hover)", tabs)
         def guide():
             pg.click("button.hq[data-help=header]"); pg.wait_for_timeout(300)
-            t = pg.inner_text("#helppop"); assert "Guida" not in t and "Aprire i dati" not in t, t[:200]
+            t = pg.inner_text("#helppop"); assert "Guide" not in t and "Open the data" not in t, t[:200]
             pg.keyboard.press("Escape")
         step("the general ? is the guide, by topic", guide)
     r.close()

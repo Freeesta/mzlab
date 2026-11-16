@@ -1,4 +1,4 @@
-"""Accessibility of the Dati view in the fast path (--fumo, mandatory CI job): axe-core (serious/critical, WCAG 2.2 AA, contrast included) on nine states (start, file, MRM, map, settings, search, calculator, integration window, MSn tree; moderate/minor best practice on the Data view),
+"""Accessibility of the Data view in the fast path (--fumo, mandatory CI job): axe-core (serious/critical, WCAG 2.2 AA, contrast included) on nine states (start, file, MRM, map, settings, search, calculator, integration window, MSn tree; moderate/minor best practice on the Data view),
 keyboard only (every visible control reachable with Tab, visible focus, no focus trap in the charts, Esc closes each dialog), reflow at 320 CSS px (= 400 % zoom), forced colours
 and reduced motion. Known gaps live in docs/agenti/accessibilita.md and in KNOWN below (an id there is reported but does not fail).
 Unlike e2e_axe_grafici this test does NOT skip when axe is missing: in CI that is a failure."""
@@ -153,7 +153,7 @@ try:
             pg.evaluate("setTab('full')"); wait_for_js(pg, "E.tab === 'full'"); pg.evaluate("document.getElementById('e2e-fine').remove()")
         step("keyboard: no trap in the chart views (Tab and Shift+Tab leave each chart)", no_trap)
         def reflow():
-            ctx = r.b.new_context(viewport={"width": 320, "height": 800}, locale="it-IT"); q = ctx.new_page()
+            ctx = r.b.new_context(viewport={"width": 320, "height": 800}); q = ctx.new_page()
             q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             try:
                 q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); q.wait_for_timeout(1500)

@@ -27,7 +27,7 @@ try:
         pg.set_input_files("#pick", PATHS)
         pg.click("text=Load data"); ready(pg, timeout=180000); drawer(pg)
         pg.wait_for_selector("#flst .fl .nm", timeout=30000)
-        pg.evaluate("I18N.set('en')"); pg.wait_for_function("window.qqReady === true && I18N.lang === 'en'", timeout=60000)
+        pg.wait_for_function("window.qqReady === true", timeout=60000)
         def singles():
             # one label per file, as «Group by time point» gives with five different time points
             pg.evaluate("""async () => { await carica('gruppi.js'); const m = new Map(E.files.filter(f => !f.gone).map(f => [fileBase(f.file), 'T' + f.file.match(/_t(\\d+)/)[1]]));

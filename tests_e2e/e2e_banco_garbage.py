@@ -36,7 +36,7 @@ try:
         step("isotope pattern: charge states, points, resolution and concentration refuse garbage; «2,5» is taken", iso)
         def sub_formula():
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'))")
-            pg.click("#hrbar [data-hb=add]"); pg.click("#ctx >> text=XIC da formula"); pg.wait_for_selector("#bs-ppm")
+            pg.click("#hrbar [data-hb=add]"); pg.click("#ctx >> text=XIC from a formula"); pg.wait_for_selector("#bs-ppm")
             sweep(pg, "#bigdlg")
             typed(pg, "#bs-ppm", "2,5"); assert pg.input_value("#bs-ppm") == "2,5"
             pg.evaluate("document.querySelector('#bigdlg').close()")
@@ -55,7 +55,7 @@ try:
         pg2.evaluate("E.browse=false; E.files.forEach(f=>f.vis=true); renderNav(); renderFileList(); redrawAll()"); ready(pg2)
         pg2.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:253.3,w:0.5,label:'m/z 253'}]})"); ready(pg2)
         def subtraction():
-            pg2.keyboard.press("Control+k"); pg2.keyboard.type("sottrai"); frames(pg2, 3); pg2.keyboard.press("Enter"); ready(pg2)
+            pg2.keyboard.press("Control+k"); pg2.keyboard.type("subtract"); frames(pg2, 3); pg2.keyboard.press("Enter"); ready(pg2)
             wait_for_js(pg2, "document.querySelectorAll('.subchip').length >= 1", 15000)
             if not pg2.locator(".corrbar:not([hidden])").count(): pg2.locator("[data-o=cinfo]").first.click()
             pg2.locator(".subchip [data-s=pop]").first.click(); pg2.wait_for_selector("#subpop #sp-norm", state="visible")

@@ -39,7 +39,7 @@ try:
                 pg.fill("#calcin", ""); pg.click("#calcin"); pg.keyboard.type(first); frames(pg, 3)
                 assert pg.evaluate("window.BARRA.curTab === 'addloss' && window.BARRA.isOpen('calc')") and pg.is_visible("#calcin") and pg.is_visible("#calcpad"), "the panel closed or lost its keypad"
             check()
-        for k in KEYS: step(f"Dati panel: {k!r} first keeps the panel open", lambda k=k: stays_docked(k))
+        for k in KEYS: step(f"Data panel: {k!r} first keeps the panel open", lambda k=k: stays_docked(k))
         def err_in_place():
             pg.fill("#calcin", ""); pg.click("#calcin"); pg.keyboard.type(")"); frames(pg, 3)
             assert pg.inner_text("#calcsum").strip() != "", "the error is shown in place"

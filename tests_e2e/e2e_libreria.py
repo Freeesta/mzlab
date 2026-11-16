@@ -1,4 +1,4 @@
-"""Part D: the «Librerie» window (gear), a synthetic MSP library, search from the MS2 spectrum, results table and mirror plot, copy / Excel."""
+"""Part D: the «Libraries» window (gear), a synthetic MSP library, search from the MS2 spectrum, results table and mirror plot, copy / Excel."""
 # covers: mzlab/web/libreria, mzlab/web/livelli
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

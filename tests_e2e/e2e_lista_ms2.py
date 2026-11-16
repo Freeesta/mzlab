@@ -1,4 +1,4 @@
-"""File list: the product-ion (MS2) group starts folded and folds/unfolds with the mouse and the keyboard (header, chevron, per-file toggle); precursor rows read «Precursore …»; no «Profilo»/«Centroide» text on file rows. Demo files, light and dark, phone width."""
+"""File list: the product-ion (MS2) group starts folded and folds/unfolds with the mouse and the keyboard (header, chevron, per-file toggle); precursor rows read «Precursor …»; no «Profile»/«Centroid» text on file rows. Demo files, light and dark, phone width."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import re
 from lib import *
@@ -35,11 +35,11 @@ try:
             t = pg.inner_text("#flst .pr-container") if pg.locator("#flst .pr-container").count() else pg.inner_text("#flst")
             nums = pg.evaluate("[...document.querySelectorAll('#flst .fl.pr .pn')].map(x => x.textContent)")
             assert nums and all(re.fullmatch(r"[0-9.]+", x) for x in nums), nums      # only the precursor number
-            assert "Precursore m/z" in pg.get_attribute("#flst .fl.pr input[data-pr]", "aria-label"), "the tooltip words it"
+            assert "Precursor m/z" in pg.get_attribute("#flst .fl.pr input[data-pr]", "aria-label"), "the tooltip words it"
             tog = pg.locator("#flst .pr-tog").first
             if tog.count():
                 tog.click(); a = N(); tog.click(); b = N(); assert a != b, (a, b)
-            assert "Profilo" not in pg.inner_text("#flst") and "Centroid" not in pg.inner_text("#flst")
+            assert "Profile" not in pg.inner_text("#flst") and "Centroid" not in pg.inner_text("#flst")
         step("precursor rows are named; per-file toggle works; no mode text", perfile)
         def labels():
             ready(pg); drawer(pg); open_ms2(pg)

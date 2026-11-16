@@ -21,7 +21,7 @@ try:
             t = pg.inner_text("#cmp-out"); print(t[:300])
             assert "C13H25N4O3S" in t.replace("\n", "").replace(" ", "") or "C13H25N4O3S" in pg.inner_text("#cmp-out tr:nth-child(2)").replace("\t", ""), t
             row = pg.inner_text("#cmp-out tr:nth-child(2)").replace("\t", " "); assert "C13H25N4O3S" in row.replace(" ", ""), row
-            assert "non identificazioni" in pg.inner_text("#bigbody")
+            assert "not identifications" in pg.inner_text("#bigbody")
         step("317.1639 gives C13H25N4O3S with the elements of the infusion file", dialog)
         def xl():
             with pg.expect_download() as d: pg.click("#cmp-xlsx")
@@ -58,9 +58,9 @@ try:
             pg.evaluate("localStorage.removeItem('mzlab.comp')")
             pg.evaluate(f"COMP.open({{mz: {pat[0]['mz']}, polarity: 'positive', spec: {spec}, ms2: {ms2}}})"); pg.wait_for_timeout(400)
             pg.fill("#cmp-els", "C:0-20,H:0-40,N:0-6,O:0-6,S:0-2"); pg.click("#cmp-go"); pg.wait_for_selector("#cmp-out table", timeout=15000)
-            hd = pg.inner_text("#cmp-out tr:nth-child(1)"); hd = hd.lower(); assert "punteggio" in hd and "ms2 spiegata" in hd and "alogeni" in hd, hd
+            hd = pg.inner_text("#cmp-out tr:nth-child(1)"); hd = hd.lower(); assert "score" in hd and "ms2 explained" in hd and "halogens" in hd, hd
             row = pg.inner_text("#cmp-out tr:nth-child(2)").replace("\t", " "); assert "C13H25N4O3S" in row.replace(" ", ""), row
-            assert "massa" in row and "isotopi" in row and "%" in row, row
+            assert "mass" in row and "isotopes" in row and "%" in row, row
             det = pg.inner_text("#cmp-det"); assert "Soglie" in det and "contributo" in det.lower(), repr(det)
             pg.fill("#cmp-w0", "0"); pg.click("#cmp-go"); pg.wait_for_timeout(1500)                     # the weights are editable
             assert "weights mass, isotopes, fragments = 0,2,1" in pg.inner_text("#cmp-det"), pg.inner_text("#cmp-det")

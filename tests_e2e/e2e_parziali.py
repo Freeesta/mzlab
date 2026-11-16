@@ -1,4 +1,4 @@
-"""Disegno: partial structures. Atoms selected + right click «Brackets with Δ…» put them in brackets with a delta (a data S-group «MZLAB» of Ketcher), drawn by
+"""Drawing: partial structures. Atoms selected + right click «Brackets with Δ…» put them in brackets with a delta (a data S-group «MZLAB» of Ketcher), drawn by
 parentesi.js over the canvas; on the brackets the menu gives formula, mass and m/z with the delta (Rust `partial`, parz/1); an unreadable delta is refused;
 the label under the structure counts the delta too (formula and nominal mass of structure + Δ, the same values as the bracket's menu line); the delta shows once,
 also after a selection change; a click on the bracket line picks it, Delete removes it and undo brings it back; right click on the line offers «Remove the brackets»;
@@ -135,12 +135,12 @@ try:
         def multi_off():
             for i in range(10):
                 pg.keyboard.press("Escape"); menu_on_atom(6)
-                if pg.locator("#ctx div", has_text="Togli l'attacco").count(): break
+                if pg.locator("#ctx div", has_text="Remove the variable attachment").count(): break
                 pg.wait_for_timeout(300)
-            pg.locator("#ctx div", has_text="Togli l'attacco").first.click()
+            pg.locator("#ctx div", has_text="Remove the variable attachment").first.click()
             pg.wait_for_function("!document.querySelector('#kframe').contentDocument.querySelector('#mz-parziali .mz-multicentro')", timeout=8000)
             o = call("TPDraw.partial()"); assert o["positionUnknown"] is False and o["level"] is None and o["molfile"] == "", o
-        step("«Togli l'attacco variabile» removes it", multi_off)
+        step("«Remove the variable attachment» removes it", multi_off)
 finally:
     r.close()
 r.report()

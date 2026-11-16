@@ -72,10 +72,10 @@ try:
         def periodic():
             pg.click("#np-pt"); wait_for_js(pg, "document.querySelectorAll('.pt-c').length === 118")
             assert pg.locator(".pt-c").count() == 118
-            pg.hover('.pt-c[data-s="Cl"]'); wait_for_js(pg, "['Cloro', '34.96885', '75.76', '24.24'].every(s => document.querySelector('#pt-info').innerText.includes(s))")
-            t = pg.inner_text("#pt-info"); assert "Cloro" in t and "34.96885" in t and "75.76" in t and "24.24" in t, t
-            pg.click('.pt-c[data-s="Br"]'); pg.hover('.pt-c[data-s="C"]'); wait_for_js(pg, "document.querySelector('#pt-info').innerText.includes('Bromo')")
-            assert "Bromo" in pg.inner_text("#pt-info"), "click should pin the element"
+            pg.hover('.pt-c[data-s="Cl"]'); wait_for_js(pg, "['Chlorine', '34.96885', '75.76', '24.24'].every(s => document.querySelector('#pt-info').innerText.includes(s))")
+            t = pg.inner_text("#pt-info"); assert "Chlorine" in t and "34.96885" in t and "75.76" in t and "24.24" in t, t
+            pg.click('.pt-c[data-s="Br"]'); pg.hover('.pt-c[data-s="C"]'); wait_for_js(pg, "document.querySelector('#pt-info').innerText.includes('Bromine')")
+            assert "Bromine" in pg.inner_text("#pt-info"), "click should pin the element"
             pg.screenshot(path=SH + "65_periodic.png")
         step("periodic table: hover shows masses and isotopes, click pins", periodic)
         def adducts():
@@ -96,12 +96,12 @@ try:
                 pg.hover(f'.pt-c[data-s="{el}"]'); frames(pg, 2); hs.append(pg.evaluate("Q('.pt').getBoundingClientRect().height"))
             assert max(hs) - min(hs) < 1, hs
             pg.click("#refx")
-        step("no Isotopi tab; fixed-size periodic table", isotopes)
+        step("no Isotopes tab; fixed-size periodic table", isotopes)
         def overlay():
             sp = pg.evaluate("E.panels.findIndex(p=>p.type==='spec')")
-            pg.evaluate(f"(()=>{{const p=E.panels[{sp}];p.iso={{formula:'C14H13F4N3O2S',ad:'[M+H]+'}};p.zoom=[360,372];draw(p)}})()"); wait_for_js(pg, "(l => l.includes('profilo teorico') && l.includes('allineato al picco'))([...document.querySelectorAll('.pnl.spec .leg2')].map(e=>e.textContent).join(' '))")
+            pg.evaluate(f"(()=>{{const p=E.panels[{sp}];p.iso={{formula:'C14H13F4N3O2S',ad:'[M+H]+'}};p.zoom=[360,372];draw(p)}})()"); wait_for_js(pg, "(l => l.includes('theoretical profile') && l.includes('aligned to the peak'))([...document.querySelectorAll('.pnl.spec .leg2')].map(e=>e.textContent).join(' '))")
             leg = pg.evaluate("[...document.querySelectorAll('.pnl.spec .leg2')].map(e=>e.textContent).join(' ')"); print("ISO LEG:", leg.replace("\n", " | "))
-            assert "profilo teorico" in leg and "allineato al picco" in leg, leg
+            assert "theoretical profile" in leg and "aligned to the peak" in leg, leg
             pg.screenshot(path=SH + "70_iso_overlay.png")
             pg.evaluate(f"(()=>{{const p=E.panels[{sp}];p.iso=null;draw(p)}})()")
         step("isotope overlay on the spectrum, aligned to the observed peak", overlay)
@@ -149,11 +149,11 @@ try:
                st.bonds.forEach(b=>{const a=st.atoms.get(b.begin),c=st.atoms.get(b.end);if(b.type===2&&(a.label==='O'||c.label==='O')){acyl.add(b.begin);acyl.add(b.end)}});
                const co=[...acyl].find(i=>st.atoms.get(i).label==='C');st.bonds.forEach(b=>{if(b.begin===co&&st.atoms.get(b.end).label==='C')acyl.add(b.end);if(b.end===co&&st.atoms.get(b.begin).label==='C')acyl.add(b.begin)});
                st.atoms.forEach((a,i)=>{if(!acyl.has(i))keep.push(i)});k.editor.selection({atoms:keep})})()""" % KQ)
-            wait_for_js(pg, "document.querySelector('#sel-body').innerText.includes('1 legame tagliato') && document.querySelector('#prop-body').innerText.includes('Selezione')")
+            wait_for_js(pg, "document.querySelector('#sel-body').innerText.includes('1 bond cut') && document.querySelector('#prop-body').innerText.includes('Selection')")
             assert pg.is_visible("#sel-card"); t = pg.inner_text("#sel-body"); print("SEL:", t.replace("\n", " | "))
             assert "Nc1ccc(O)cc1" in t or "Oc1ccc(N)cc1" in t, t
             assert "1 legame tagliato" in t, t
-            assert pg.is_visible("#prop-card") and "Selezione" in pg.inner_text("#prop-body")
+            assert pg.is_visible("#prop-card") and "Selection" in pg.inner_text("#prop-body")
             pg.screenshot(path=SH + "66_sel_smiles.png")
             # whole molecule selected: its full SMILES; the copy button works on the text
             pg.evaluate("(()=>{const k=%s;k.editor.selection({atoms:[...k.editor.struct().atoms.keys()]})})()" % KQ); wait_for_js(pg, "(t => t.length > 0 && !t.includes('legam'))(document.querySelector('#sel-body').innerText)")
@@ -189,9 +189,9 @@ try:
             assert "rgb(100%, 100%, 100%)" not in svg and "<text" in svg, "SVG: no background rectangle, labels kept"
             pg.uncheck("#ex-nobg"); wait_for_js(pg, "!document.getElementById('ex-jpg').disabled")
             assert pg.is_enabled("#ex-jpg") and pg.evaluate(corner) == [255, 255, 255, 255]
-        step("\"senza sfondo\": transparent PNG and SVG, JPEG disabled; off = white", nobg)
+        step("\"without background\": transparent PNG and SVG, JPEG disabled; off = white", nobg)
         def ion_choice():
-            pg.evaluate(KQ + ".setMolecule('CC(=O)[NH2+]c1ccc(O)cc1')"); lbl(["C8H10NO2+", "m/z 152"])       # the charge drawn by the student gives the ion label (there is no Ione menu any more)
+            pg.evaluate(KQ + ".setMolecule('CC(=O)[NH2+]c1ccc(O)cc1')"); lbl(["C8H10NO2+", "m/z 152"])       # the charge drawn by the student gives the ion label (there is no Ion menu any more)
             t = pg.evaluate(LBL); assert " ".join(t) == "C8H10NO2+ m/z 152", t
             pg.screenshot(path=SH + "67_ion_choice.png")
         step("a drawn charge: C8H10NO2+ m/z 152", ion_choice)

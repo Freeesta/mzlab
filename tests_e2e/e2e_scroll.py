@@ -93,7 +93,7 @@ try:
             a1 = st(); assert a1["lock"] and a1["x0"] > a0["x0"] and a1["x1"] < a0["x1"], (a0, a1)
             for i in range(5): walk()
             frames(pg, 2); a2 = st(); assert a2["x0"] == a1["x0"] and a2["x1"] == a1["x1"], (a1, a2)
-            pg.click(".pnl.spec [data-a=fit]"); wait_for_js(pg, f"!{SPEC}.lock"); assert not st()["lock"], "Vista intera unlocks"
+            pg.click(".pnl.spec [data-a=fit]"); wait_for_js(pg, f"!{SPEC}.lock"); assert not st()["lock"], "Whole view unlocks"
             lockclick(); wait_for_js(pg, f"{SPEC}.lock"); assert st()["lock"]
             put_cursor(14.0); assert not st()["lock"], "a new click on the chromatogram unlocks"
         step("lock: only the student closes it; opens with click / double click / Whole view / new click", lock_open_close)

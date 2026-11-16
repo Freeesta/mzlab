@@ -27,15 +27,15 @@ try:
         ids = order(); assert len(ids) == 2, ids
         top, bot = ids
         def above():
-            lab = drag(1, 0, 0.5, 0.1); assert lab == "Sopra", lab
+            lab = drag(1, 0, 0.5, 0.1); assert lab == "Above", lab
             assert order() == [bot, top], order()
-        step("lower panel dropped on the top of the upper one goes above it (label «Sopra»)", above)
+        step("lower panel dropped on the top of the upper one goes above it (label «Above»)", above)
         def below():
-            lab = drag(1, 0, 0.5, 0.9); assert lab == "Sotto", lab
+            lab = drag(1, 0, 0.5, 0.9); assert lab == "Below", lab
             assert order() == [bot, top], order()
-        step("dropped on the bottom of the upper panel it goes below it (label «Sotto»)", below)
+        step("dropped on the bottom of the upper panel it goes below it (label «Below»)", below)
         def corner():
-            lab = drag(1, 0, 0.05, 0.05); assert lab == "Sopra", lab
+            lab = drag(1, 0, 0.05, 0.05); assert lab == "Above", lab
             assert order() == [top, bot], order()
         step("the top corners are also «above»; the TIC dropped above its own spectrum goes alone past it", corner)
         def keys():

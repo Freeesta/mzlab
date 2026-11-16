@@ -1,5 +1,5 @@
-"""Calculator layout on the Adducts & losses page: the input, the row «Cerca» + result well and the key grid share the same left/right edges
-(within 1 px), «Cerca» sits on the left of the well, the result is right-aligned and vertically centred in it; at desktop and phone width, light and dark."""
+"""Calculator layout on the Adducts & losses page: the input, the row «Search» + result well and the key grid share the same left/right edges
+(within 1 px), «Search» sits on the left of the well, the result is right-aligned and vertically centred in it; at desktop and phone width, light and dark."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

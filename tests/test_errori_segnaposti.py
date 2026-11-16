@@ -1,5 +1,5 @@
 """Every engine error says what its text names: an `Error::new("key")` of the Rust code (tests aside) carries, in the `.with(...)` chain written after it,
-each `{placeholder}` of that key's text in the Italian and English catalogs, so a reader never sees a literal «{name}». Keys whose text has no placeholder,
+each `{placeholder}` of that key's text in the English catalog, so a reader never sees a literal «{name}». Keys whose text has no placeholder,
 keys built at run time and keys without a catalog text are not checked here (`tools/controlla_i18n.py` covers the catalogs)."""
 import re
 from pathlib import Path

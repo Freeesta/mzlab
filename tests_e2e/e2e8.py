@@ -70,7 +70,7 @@ try:
         step("PNG name + valid tEXt metadata", png)
         def xlsn():
             with pg.expect_download() as d: dlmenu(pg, ".pnl.spec", "xlsx")
-            print("xlsx file", d.value.suggested_filename); assert d.value.suggested_filename.startswith("spettro")
+            print("xlsx file", d.value.suggested_filename); assert d.value.suggested_filename.startswith("spectrum")
         step("Excel name", xlsn)
         def ctx():
             for _ in range(60):

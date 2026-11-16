@@ -65,7 +65,7 @@ try:
                 pg.fill("#cx-max", v); pg.press("#cx-max", "Tab"); assert pg.input_value("#cx-max") == "5", pg.input_value("#cx-max")
                 assert pg.get_attribute("#cx-max", "aria-invalid") == "true"
             pg.fill("#cx-max", "5"); pg.press("#cx-max", "Tab")
-            assert pg.inner_text("label[for=cx-pre]").strip() == "Insieme di elementi"
+            assert pg.inner_text("label[for=cx-pre]").strip() == "Element set"
             labs = pg.evaluate("[...document.querySelectorAll('#cx-pre option')].map(o=>o.textContent)"); assert labs == ["CHNO (organic)", "CHNOSP", "CHNOSP + halogens"], labs
             assert "Replace the elements below" in pg.get_attribute("#cx-load", "title") and "Save the elements below" in pg.get_attribute("#cx-save", "title")
             assert pg.get_attribute("#cx-out th.num:last-child", "title"), "the Score header explains itself"

@@ -44,7 +44,7 @@ try:
         pg.click("#askok")
         pg.evaluate("() => WORKFLOW.applyWorkflow({formato: 'x'})")
         pg.wait_for_selector("#askdlg[open]")
-        assert "non valido" in pg.inner_text("#asktxt")
+        assert "Invalid" in pg.inner_text("#asktxt")
         assert not native, native
         steps.append(("workflow messages in the program dialog", "ok"))
 

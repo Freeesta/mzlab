@@ -1,4 +1,4 @@
-"""Undo of the actions of the Dati view, one step per action of the registry (comandi.js): the ruler of the spectrum (clicks, button, Esc), the keys
+"""Undo of the actions of the Data view, one step per action of the registry (comandi.js): the ruler of the spectrum (clicks, button, Esc), the keys
 with the focus on a button, a checkbox or a select, redo, the state of the buttons. Steps in TODO are known gaps of the undo not ported yet: they must
 FAIL today and the test fails as soon as one passes (then it moves out of TODO), so the list only shrinks."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
