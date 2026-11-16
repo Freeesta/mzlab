@@ -64,7 +64,7 @@ try:
             n = pg.evaluate(f"{M}.ints.length")
             pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"{M}.ints.length===0")
             pg.evaluate(f"INTTUTTI.run({M})"); wait_for_js(pg, f"{M}.ints.length==={n}")
-            pg.evaluate(f"INTTUTTI.run({M})"); pg.wait_for_timeout(500)
+            pg.evaluate(f"INTTUTTI.run({M}).then(()=>1)")                        # run() is async: evaluate waits until it has drawn
             assert pg.evaluate(f"{M}.ints.length") == n                                     # a second run adds nothing over the peaks already there
         step("one undo removes all of them; a second run adds no overlapping window", undo_again)
         def dialog():

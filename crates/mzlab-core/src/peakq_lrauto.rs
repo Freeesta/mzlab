@@ -347,10 +347,14 @@ impl Trace<'_> {
     }
 }
 
-fn peaks_of(t: &Trace, apex: &[usize], p: LrAutoParams) -> Vec<LrAutoPeak> {
+/// The two ends of a peak and why each stopped.
+type Ends = (usize, End, usize, End);
+
+/// From each apex out to the background, the valley shared with a neighbour, or 5 FWHM of the smoothed copy.
+fn edges(t: &Trace, apex: &[usize]) -> Vec<Ends> {
     let n = t.s.len();
     let vl: Vec<usize> = apex.windows(2).map(|w| lowest(t.s, w[0], w[1])).collect();
-    let mut ends: Vec<(usize, End, usize, End)> = Vec::new();
+    let mut ends: Vec<Ends> = Vec::new();
     for (q, &a) in apex.iter().enumerate() {
         let (l2, r2) = {
             let h = t.s[a] / 2.0;
@@ -378,36 +382,46 @@ fn peaks_of(t: &Trace, apex: &[usize], p: LrAutoParams) -> Vec<LrAutoPeak> {
         let (hi, eh) = walk(t.s, a, 1, rs, rv, t.thr, cap);
         ends.push((lo, el, hi, eh));
     }
+    ends
+}
+
+/// A drop line takes, at each cut, the straight line under the whole group of touching peaks (clamped as any end).
+fn drop_lines(t: &Trace, ends: &[Ends], base: &mut [(f64, f64)]) {
+    let mut g0 = 0;
+    for q in 0..ends.len() {
+        let last = q + 1 == ends.len() || ends[q].3 != End::Valley;
+        if !last {
+            continue;
+        }
+        let (i0, i1) = (ends[g0].0, ends[q].2);
+        let (y0, y1) = (base[g0].0, base[q].1);
+        let at = |i: usize| {
+            let w = t.rt[i1] - t.rt[i0];
+            let v = if w > 0.0 {
+                y0 + (y1 - y0) * (t.rt[i] - t.rt[i0]) / w
+            } else {
+                y0
+            };
+            v.min(t.y[i]).max(0.0)
+        };
+        for r in g0..q {
+            let c = at(ends[r].2);
+            base[r].1 = c;
+            base[r + 1].0 = c;
+        }
+        g0 = q + 1;
+    }
+}
+
+fn peaks_of(t: &Trace, apex: &[usize], p: LrAutoParams) -> Vec<LrAutoPeak> {
+    let ends = edges(t, apex);
     // the baseline of every end: a drop line takes, at each cut, the straight line under the whole group of touching peaks (clamped as any end)
     let mut base: Vec<(f64, f64)> = ends
         .iter()
         .map(|&(lo, el, hi, eh)| (t.end(lo, el, p.split), t.end(hi, eh, p.split)))
         .collect();
     if p.split == Split::Drop {
-        let mut g0 = 0;
-        for q in 0..ends.len() {
-            let last = q + 1 == ends.len() || ends[q].3 != End::Valley;
-            if !last {
-                continue;
-            }
-            let (i0, i1) = (ends[g0].0, ends[q].2);
-            let (y0, y1) = (base[g0].0, base[q].1);
-            let at = |i: usize| {
-                let w = t.rt[i1] - t.rt[i0];
-                let v = if w > 0.0 {
-                    y0 + (y1 - y0) * (t.rt[i] - t.rt[i0]) / w
-                } else {
-                    y0
-                };
-                v.min(t.y[i]).max(0.0)
-            };
-            for r in g0..q {
-                let c = at(ends[r].2);
-                base[r].1 = c;
-                base[r + 1].0 = c;
-            }
-            g0 = q + 1;
-        }
+        drop_lines(t, &ends, &mut base);
     }
     ends.iter()
         .zip(&base)
