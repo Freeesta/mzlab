@@ -1,7 +1,7 @@
 """A true reset: what a student loads stays in the browser after a reload (the page says so once); «Full reset» removes files, session, notebook, OPFS, IndexedDB,
 caches, service workers and preferences by NAME (also folders and databases that this test invents, as other parts of the program do); «Files» keeps the
 preferences, the language and the saved libraries. The one entry is the header button «New session» (dialog with both and Cancel), also ?reset=all|1|files. Full reset also drops the program's own caches and worker (it is the guaranteed way to fetch the new version) and the page it reloads ends isolated by itself."""
-# covers: mzlab/web/reset.js, mzlab/web/browser.js, mzlab/web/settings.js, mzlab/web/liste.js, mzlab/web/lr.js, mzlab/web/rust-worker.js, mzlab/web/qqq-db.js
+# covers: mzlab/web/reset.js, mzlab/web/browser.js, mzlab/web/settings.js, mzlab/web/liste.js, mzlab/web/lr.js, mzlab/web/rust-worker.js, mzlab/web/qqq-db.js, mzlab/web/explore.js, mzlab/web/avvio-progressivo.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import time
@@ -263,6 +263,20 @@ try:
             k = held("all", "opfs")
             assert k == {"list": False, "mol": False, "ket": None}, ("the full reset still removes all", k)
         step("Full reset with a stored file still held: unchanged, ?riparti=1 and nothing of the user stays", all_held_opfs)
+        def no_marker_after(mode):
+            # the page that follows a reset must not start in «restoring»: pagehide of the old page may not write the marker back
+            pg.add_init_script("try { window.__sessAtStart = localStorage.getItem('mzlab.sessione'); } catch (e) { window.__sessAtStart = 'err'; }")
+            load_files()
+            pg.evaluate(f"QQRESET.run('{mode}')"); pg.wait_for_function("location.search.includes('riparti') || location.search.includes('ripn') || !location.search.includes('reset')", timeout=30000)
+            # checked as soon as the new document ran its init script, before the engine is ready (afterwards the skeleton is gone anyway)
+            pg.wait_for_function("'__sessAtStart' in window", timeout=30000)
+            assert pg.evaluate("window.__sessAtStart") is None, ("session marker present at the start after a reset", mode)
+            assert pg.evaluate("!document.querySelector('#opening.restoring:not([hidden])') && !document.querySelector('#v-data.opn')"), "no «restoring» skeleton"
+            pg.wait_for_function("window.qqReady", timeout=60000)
+        def pagehide_all(): no_marker_after("all")
+        step("Full reset: the closing page does not write the session marker back", pagehide_all)
+        def pagehide_files(): no_marker_after("files")
+        step("Files reset: the session marker is gone at the next start", pagehide_files)
         b.close()
     r.close()
 except Exception as e:

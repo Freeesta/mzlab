@@ -160,8 +160,11 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | statistica come passi: Welch/ANOVA con BH, PCA e KMD in Rust (`crates/mzlab-feat/src/stat/`, `table.stats`, `table.pca`, `table.kmd`, `stat/1`) | `docs/agenti/stat.md` |
 | registro delle azioni che cambiano stato (`comandi.js`, `docs/azioni.md` generato), annulla/ripeti, voci «tolto» (togliere un file, chiudere un pannello, svuotare le marcature: nessun avviso, voci di `STORIA`) | `docs/agenti/storia-tolto.md` |
 | positioning study: mzLab against other LC-MS tools (feature matrix, 10 missing functions with value and effort, 5 strengths, interoperability gaps, risks; public sources with the date read) | `docs/agenti/studio-concorrenti.md` |
+| studio di correttezza scientifica dei calcoli (solo rapporto, in inglese): masse e formule, cromatografia e quantificazione, punteggi spettrali, statistica; scoperte CONFIRMED e SUSPECTED con gravità, `file:riga`, valore atteso e fonte, riproduzione | `docs/agenti/studio-scienza.md` |
 | studio di sicurezza: debolezze sfruttabili con un file costruito o controllando il sito pubblicato (lettori Rust, front end, app desktop, catena di fornitura), gravità, `file:riga`, come riprodurle, correzione | `docs/agenti/studio-sicurezza.md` |
 | studio spettrale su dati sintetici: generatore di alberi di frammentazione, scenari E0-E6, bracci contro il motore (null calibrato, p-value di coincidenza, sotto-formule, analoghi a più spostamenti), righe MISURA studio_* | `docs/agenti/studio-spettri.md` |
+| test-suite quality study (report only): tests that cannot fail, hand mutation of 30 functions with survivors, parity gaps, coverage holes, flakiness and cost, unread fixtures, top 15 tests to add | `docs/agenti/studio-test.md` |
+| usability study of the site as a first-time user (opening a file, XIC, integration, export, reset, errors; it/en, 390 px, keyboard): findings by severity, what works, top 10, areas not covered | `docs/agenti/studio-ux.md` |
 | tabella picchi dello spettro da copiare (TSV), asse y in % fino a 100, pulsante XIC solo su MS¹ | `docs/agenti/tabella-picchi.md` |
 | dove Tabui perde un prodotto atteso (`mzlab-cli explain-missing`) | `docs/agenti/tabui-spiega.md` |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |

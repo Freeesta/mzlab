@@ -15,24 +15,12 @@ Not done: the wider harness on `.wiff`, Thermo, Waters, Shimadzu, Bruker TDF/TSF
 
 ## CONFIRMED
 
-### C1 - high - the engine route `feat/attributio/review` writes a file anywhere the user can write
-- Where: `crates/mzlab-desktop/src/feat_attributio.rs:37` and `:111-125` (`write_in`), dispatched at `crates/mzlab-desktop/src/feat.rs:420`.
-- What: `folder` is any absolute path taken from the request; only the relative `path` is checked for plain components. `path` is the `feature_decisions` value of the `campaign.toml` the request itself carries, and the text is a `;` table whose free-text cells (`justification`, `decided_by`) keep their line breaks. A script running in the window of the app therefore chooses folder, file name and whole lines of the content: a line of its own in a shell start-up file, or a new file in a start-up folder, is code execution as the user.
+### C1 - medium - the decision write of `feat/attributio/review` lands in a window-named folder
+- Where: `crates/mzlab-desktop/src/feat_attributio.rs:37` and `write_in` (`:113-178`), dispatched at `crates/mzlab-desktop/src/feat.rs:420`.
+- What: the route writes the decisions file under `folder` taken from the request. The write is held to a plain, non-hidden `.csv` path (no absolute path, `..`, drive, `:`, backslash, dot file or other extension); Windows device names `CON`/`PRN`/`AUX`/`NUL`/`COMn`/`LPTn` are refused; every existing ancestor must canonicalize inside `folder` and a symlink at the destination is refused. A window script can no longer drop a dot file or a file of an extension of its choice, so the shell-start-up-file path to code execution is closed.
+- Residual: `folder` is still an absolute path from the request, not a native dialog, so a window script still picks which existing directory receives a `.csv` whose free-text cells (`justification`, `decided_by`) it controls, overwriting a `.csv` already there; the containment check runs before `create_dir_all`/`std::fs::write`, a check-then-write race if a parent is swapped for a link in between; the device rule omits `CONIN$`, `CONOUT$` and names with a trailing space or dot.
 - Reach: needs script in the window (an HTML injection that passes the CSP, or a hostile web part delivered by the update, see S3). No page code sends `folder` today.
-- Reproduction (engine level, no window): a test in `crates/mzlab-desktop/tests/` built like `feat_attributio.rs`, with `feature_decisions = ".profile-demo"` in the `campaign.toml` of the request, `"justification": "x\necho INJECTED-LINE\n#"` in the decision and `folder` set to an empty temporary folder; `State::new().rpc("feat/attributio/review", ...)` answers `written=true` and the folder holds `.profile-demo` with `echo INJECTED-LINE` on a line of its own.
-- Fix: drop `folder` from the route and write only under a folder chosen through a native dialog and kept on the native side.
-
-### C2 - medium - the `id` of a Flow step is used as a file name: a plan writes outside the run folder
-- Where: `crates/mzlab-core/src/flow/parse.rs:52` (no character rule on `id`, none in `check.rs`); sinks `r.work.join(format!("{}.json", job.instance.id))` at `crates/mzlab-cli/src/flow.rs:269`, `:309`, `crates/mzlab-cli/src/flow_base.rs:55-56`, `:476-480` and the other steps (`.csv`, `.mgf`, `.md`, `.mzfeat`, `.html`, `.svg`).
-- What: `Path::join` with an absolute path replaces the base, so an `id` that is an absolute path makes the step write there (the relative `../` form works when the folders on the way exist). The extension is the one of the step; part of the content comes from the inputs of the plan (names of library entries). `flow check` says the plan is valid. The same engine runs the plans of the Flow page in the app (`crates/mzlab-desktop/src/flow_run.rs`).
-- Reproduction: a folder with `lib.msp` (one record) and `q.mgf` (one spectrum) and a `plan.json` `{"format":"mzflow/2","inputs":[{"name":"q.mgf","type":"spectra"},{"name":"lib.msp","type":"library"}],"steps":[{"id":"/ABSOLUTE/victim/notes","step":"spectra.match@1","in":{"query":"file:q.mgf","library":"file:lib.msp"}}]}`; `mzlab-cli flow run plan.json --out run` ends with `done` and `/ABSOLUTE/victim/notes.json` is replaced by the answer of the step.
-- Fix: accept only `[A-Za-z0-9_.-]` (no leading dot) for an instance id in `parse.rs`, with an error key.
-
-### C3 - medium - an Agilent `.D` folder stops the program: `AcquiredTime` cut inside a character
-- Where: `crates/mzlab-core/src/agilent_ext/mod.rs:265` and the twin `crates/mzlab-core/src/agilent/mod.rs:225`: `t.split_at(19)` on the text of `Contents/AcquiredTime`.
-- What: when byte 19 of the value is inside a multi-byte character the slice panics. The profiles `release`, `desktop` and `cli` have `panic = "abort"` (`Cargo.toml`): the app and the CLI end at once, the `.wasm` module traps. Reached from the header of the converted mzML (`mzml_header`), so on opening or converting the folder.
-- Reproduction: `python3 tools/agilent_sintetico.py OUT synt.D 12`, then in `OUT/synt.D/AcqData/Contents.xml` set `<AcquiredTime>2025-05-15T16:00:4é</AcquiredTime>` (UTF-8); `mzlab-cli convert OUT/synt.D --out X` prints `end byte index 19 is not a char boundary` (debug build: the job fails; release build: abort).
-- Fix: take the head with `t.get(..19)` (or `char_indices`) and return `None` when it is not a boundary.
+- Fix: take the folder from a native dialog kept on the native side, open the destination once under it (resolve then write through the same handle), and extend the device-name rule.
 
 ### C4 - low - Python packages without a version on the path of the installers
 - Where: `.github/workflows/desktop.yml:49-50` (`pip install numpy`, `pip install playwright`), called by `release.yml:294`; the same pattern in the test workflows.
@@ -47,6 +35,18 @@ Not done: the wider harness on `.wiff`, Thermo, Waters, Shimadzu, Bruker TDF/TSF
 - Where: `.github/workflows/desktop.yml:2` states it; `release.yml` publishes `SHA256SUMS` in the same release as the files.
 - What: the sums prove integrity against a damaged download, not origin: whoever can replace a file of the release can replace the sums.
 - Fix: sign the installers (or at least `SHA256SUMS`, with a key kept in the `release` environment) and say in the release notes how to verify.
+
+## Guards in place (read in the code)
+
+These two routes carry a guard against a write outside the run folder and a panic on a crafted value; the guard is the behaviour in the code, and each was reproduced before it to confirm the path is real.
+
+### C2 - the `id` of a Flow step cannot leave the run folder
+- Where: `crates/mzlab-core/src/flow/parse.rs:38` (`instance_id_ok`), applied by the plan parser and mirrored by the JS pre-check; sinks `r.work.join(format!("{}.json", job.instance.id))` at `crates/mzlab-cli/src/flow.rs:269` and siblings.
+- State: an instance id, and a compare variant label in `<id>~<label>`, accept only `[A-Za-z0-9_.-]`, no leading dot, at most 128 bytes, so the `<id>.ext` file always stays in the run folder; every route (CLI, app Flow page, site) parses through `mzlab-core::flow`. An absolute or `../` id is refused with `err.flow.instance.id`, not run.
+
+### C3 - an Agilent `.D` with `AcquiredTime` cut inside a character does not panic
+- Where: `crates/mzlab-core/src/agilent_ext/mod.rs:284` and the twin `crates/mzlab-core/src/agilent/mod.rs`: the head of `Contents/AcquiredTime` is taken with `t.get(..19)`.
+- State: a value whose byte 19 falls inside a multi-byte character makes `get` return `None`, so the time is read as absent (as for a short value) instead of a `split_at` panic that would abort the app and the CLI (`panic = "abort"`) and trap the `.wasm`.
 
 ## SUSPECTED
 
@@ -75,7 +75,7 @@ Not done: the wider harness on `.wiff`, Thermo, Waters, Shimadzu, Bruker TDF/TSF
 
 ## How to regenerate the malformed inputs (none committed)
 
-- C3: `python3 tools/agilent_sintetico.py OUT synt.D 12`, then edit `OUT/synt.D/AcqData/Contents.xml` so `AcquiredTime` has a multi-byte character at byte 19 (e.g. `2025-05-15T16:00:4é`); `mzlab-cli convert OUT/synt.D --out X`.
-- C2: a folder with a one-record `lib.msp`, a one-spectrum `q.mgf` and the `plan.json` of C2 with an absolute-path `id`; `mzlab-cli flow run plan.json --out run`.
-- C1, S1, S2, S3: an engine-level test in `crates/mzlab-desktop/tests/` built like `feat_attributio.rs` reproduces C1 without a window; S1/S2/S3 need the window build (`--features app`) and were read in the code, not run.
+- C3 (guard check): `python3 tools/agilent_sintetico.py OUT synt.D 12`, then edit `OUT/synt.D/AcqData/Contents.xml` so `AcquiredTime` has a multi-byte character at byte 19 (e.g. `2025-05-15T16:00:4é`); `mzlab-cli convert OUT/synt.D --out X` finishes with the time read as absent, no abort.
+- C2 (guard check): a folder with a one-record `lib.msp`, a one-spectrum `q.mgf` and a `plan.json` with an absolute-path or `../` step `id`; `mzlab-cli flow run plan.json --out run` and `flow check` both refuse it with `err.flow.instance.id`.
+- C1 residual: an engine-level test in `crates/mzlab-desktop/tests/` built like `feat_attributio.rs`, `kind:"decision"` with `folder` set to an absolute existing temp folder and `path` a plain `x.csv`, writes `x.csv` there with the content-controlled cells; a dot file or non-`.csv` `path` is refused. S1/S2/S3 need the window build (`--features app`) and were read in the code, not run.
 - Readers: the mutation harness is `MZLAB_MUTAZIONI=N cargo test -p mzlab-lettori --features tutte --test reader_mutations`; the seeds come from the test builders in `crates/mzlab-lettori/tests/common*` and from `tools/*_sintetico.py` and `tools/wiff_riferimento.py`.

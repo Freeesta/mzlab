@@ -321,9 +321,9 @@ function uiSave(now = false) {
   };
   if (now) run(); else uiTimer = setTimeout(run, 800);
 }
-// when the page closes (or the tab goes to the background) save at once: the last change is not lost
+// when the page closes (or the tab goes to the background) save at once: the last change is not lost (not during a reset: its pagehide must not write the session marker or notebook back)
 // (nbSave too: with no file open uiSave has nothing to write, but the Disegno or Flow fields of NB may still be waiting in the 500 ms timer)
-const flushAll = () => { uiSave(true); nbSave(true); };
+const flushAll = () => { if (window.QQ_RESETTING) return; uiSave(true); nbSave(true); };
 addEventListener("pagehide", flushAll);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushAll(); });
 
