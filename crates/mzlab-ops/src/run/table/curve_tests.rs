@@ -1,5 +1,6 @@
 //! `curve_text` on invented responses: an exact line back-calculates its standards and flags the unknowns out of range, the internal standard
-//! cancels a varying injection, the user's exclusions and the undefined weights are logged, LOD/LOQ follow their two formulae, bad files fail.
+//! cancels a varying injection, the user's exclusions, the undefined weights, the skipped rows, edge peaks, S/N ≤ 0 and other units are logged,
+//! LOD/LOQ follow their two formulae and the ICH ones match the numbers of Miller & Miller, bad files fail.
 
 use super::*;
 use mzlab_core::json::parse;
@@ -209,6 +210,28 @@ fn a_zero_standard_has_no_weight_under_one_over_x_and_is_logged() {
     assert!(log_has(&doc, "range_lower", "lowest_nonzero_standard", "1"));
 }
 
+#[test]
+fn the_ich_limits_of_the_miller_and_miller_line() {
+    // Miller & Miller 6th ed. §5.4 (fluorescein, pg/mL), unweighted: the book prints b = 1.93 and s_y/x = 0.4329, so the ICH limits written from the
+    // book are 3.3·0.4329/1.93 = 0.7402 and 10·0.4329/1.93 = 2.243; the printed b has three figures (±0.26 %), hence the tolerance of 0.3 %
+    let x = [0, 2, 4, 6, 8, 10, 12];
+    let y = ["2.1", "5.0", "9.0", "12.6", "17.3", "21.0", "24.7"];
+    let mut resp = String::from("sample,name,area\n");
+    let mut stds = String::from("sample;concentration;unit;role\n");
+    for (x, y) in x.iter().zip(y) {
+        resp += &format!("c{x},F,{y}\n");
+        stds += &format!("c{x};{x};pg/mL;standard\n");
+    }
+    let (doc, _, _) = run(&[("weight", "1")], &resp, &stds);
+    let c = doc.get("curves").unwrap().at(0).unwrap();
+    let value = |k: &str| num(c.get(k).unwrap().at(0).unwrap(), "value");
+    let book = |got: f64, want: f64| assert!((got / want - 1.0).abs() < 3e-3, "{got} != {want}");
+    book(value("lod"), 0.7402);
+    book(value("loq"), 2.243);
+    // the book's own limit of detection, y_B + 3·s_B with s_B = s_y/x, is 0.67 pg/mL: the same σ and slope
+    assert!((value("lod") * 3.0 / 3.3 - 0.67).abs() < 0.005);
+}
+
 /// The ICH value of a limit (the first of the pair) is `null`.
 fn ich_is_null(c: &Value, key: &str) -> bool {
     let first = c.get(key).and_then(|v| v.at(0));
@@ -347,12 +370,70 @@ fn the_manual_integrations_and_the_transitions_tables_are_read_as_they_are() {
     let c = doc.get("curves").unwrap().at(0).unwrap();
     assert_eq!(c.get("analyte").and_then(Value::str), Some("A"));
     close(num(c, "b"), 100.0);
+    assert!(log_has(&doc, "skipped", "sum_row", "line 5"), "{doc:?}");
     // chrom.transitions peaks: a row without a peak has no response
     let resp = "sample,name,isomer_group,q1,q3,polarity,rt,rt_window,apex_rt,area,height,snr,fwhm_s,peak,baseline,below\n\
         s1,A,,200,100,+,1,0.5,1,150,10,8,3,ok,zero,0\ns2,A,,200,100,+,1,0.5,1,250,10,8,3,edge,zero,0\n\
         s3,A,,200,100,+,1,0.5,1,450,10,8,3,ok,zero,0\nu,A,,200,100,+,1,0.5,1,90,10,1,3,no_peak,zero,0\n";
-    let (_, csv, _) = run(&[("weight", "1")], resp, &format!("{stds}u;;sample\n"));
+    let (doc, csv, warn) = run(&[("weight", "1")], resp, &format!("{stds}u;;sample\n"));
     assert!(line(&csv, "A,u,").ends_with(",no_response"));
+    // the peak cut at the window edge stays in the fit, never unseen; the row without a peak says which status it had
+    assert!(log_has(&doc, "kept", "peak_at_window_edge", "edge"));
+    assert!(log_has(
+        &doc,
+        "treated_as_no_response",
+        "peak_status",
+        "no_peak"
+    ));
+    assert!(
+        warn.contains(&"warn.flow.curve.edge".to_string()),
+        "{warn:?}"
+    );
+    let pts = doc
+        .get("curves")
+        .unwrap()
+        .at(0)
+        .unwrap()
+        .get("points")
+        .unwrap();
+    assert_eq!(
+        pts.at(1).unwrap().get("used").and_then(Value::bool),
+        Some(true)
+    );
+    // the user leaves it out with `exclude`, as any other point
+    let (doc, _, _) = run(&[("weight", "1"), ("exclude", "A|s2|edge")], resp, stds);
+    assert!(log_has(&doc, "excluded", "excluded_by_user", "edge"));
+}
+
+#[test]
+fn rows_without_a_sample_an_snr_not_above_zero_and_a_qc_in_another_unit_are_logged() {
+    let (r, s) = exact();
+    // a row without a sample; the S/N of the lowest standard is 0, so the S/N limits come from the next level (S/N 12 at 2 ng/mL)
+    let r = r.replace("s1,A,150,10,6\n", "s1,A,150,10,0\n") + ",A,1,,\n";
+    let s = s + "q1;QC;10;ug/L;qc\n";
+    let r = r + "q1,A,600,,\n";
+    let (doc, csv, warn) = run(&[], &r, &s);
+    assert!(log_has(&doc, "skipped", "no_sample", "line 10"), "{doc:?}");
+    assert!(log_has(&doc, "snr_not_used", "snr_not_positive", "0"));
+    let c = doc.get("curves").unwrap().at(0).unwrap();
+    close(
+        num(c.get("lod").unwrap().at(1).unwrap(), "value"),
+        3.0 * 2.0 / 12.0,
+    );
+    // the QC is reported in the unit of the curve, without an accuracy that would compare two units
+    assert!(log_has(
+        &doc,
+        "reported_in_curve_unit",
+        "unit_differs",
+        "ug/L -> ng/mL"
+    ));
+    let q1: Vec<&str> = line(&csv, "A,q1,").split(',').collect();
+    close(q1[7].parse().unwrap(), 10.0);
+    assert_eq!((q1[8], q1[9]), ("ng/mL", ""));
+    assert!(
+        warn.contains(&"warn.flow.curve.unit".to_string()),
+        "{warn:?}"
+    );
 }
 
 #[test]

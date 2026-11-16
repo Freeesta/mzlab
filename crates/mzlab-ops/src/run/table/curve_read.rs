@@ -7,7 +7,8 @@ use mzlab_core::json::Value;
 
 use super::quant::{fields, param};
 
-/// The values of `peak` (`chrom.transitions`) that are a peak; any other one is no response.
+/// The values of `peak` (`chrom.transitions`) that are a peak: `edge` (cut at the edge of the window) is kept by default and logged, the user can
+/// leave it out with `exclude`; any other value is no response, logged too.
 const PEAK_OK: [&str; 2] = ["ok", "edge"];
 
 /// One CSV: its delimiter, lower-case header and rows with their line numbers.
@@ -71,10 +72,18 @@ pub(super) struct Resp {
     pub(super) sample: String,
     pub(super) signal: Option<f64>,
     pub(super) snr: Option<f64>,
+    /// the `peak` cell when it is not `ok`: `edge` keeps the signal, any other value drops it
+    pub(super) peak: Option<String>,
+    /// an S/N ≤ 0 of a peak, left out of the S/N limits
+    pub(super) bad_snr: Option<f64>,
 }
 
-/// The analyte of a row is `analyte`, else the user's `label`, else `name`, else `channel` (the manual integrations); `sum` rows are skipped.
-pub(super) fn parse_responses(bytes: &[u8], by_height: bool) -> Result<Vec<Resp>> {
+/// A row of the responses that is not a peak: (analyte or empty, line, reason).
+pub(super) type Skipped = (String, usize, &'static str);
+
+/// The analyte of a row is `analyte`, else the user's `label`, else `name`, else `channel` (the manual integrations); rows without a sample and the
+/// `sum` rows of `chrom.transitions` are skipped and returned, so that the log can say so.
+pub(super) fn parse_responses(bytes: &[u8], by_height: bool) -> Result<(Vec<Resp>, Vec<Skipped>)> {
     let bad = |d: String| Error::new("err.flow.curve.responses").with("detail", d);
     let csv = Csv::read(bytes, bad)?;
     let need = |n: &str| csv.col(n).ok_or_else(|| bad(format!("no column {n}")));
@@ -86,15 +95,16 @@ pub(super) fn parse_responses(bytes: &[u8], by_height: bool) -> Result<Vec<Resp>
     }
     let (snr, peak) = (csv.col("snr"), csv.col("peak"));
     let mut out: Vec<Resp> = Vec::new();
+    let mut skipped = Vec::new();
     for (n, f) in &csv.rows {
         let s = cell(f, Some(sample)).to_string();
+        let name = names.iter().map(|c| cell(f, *c)).find(|v| !v.is_empty());
         if s.is_empty() || s == "sum" {
+            let why = if s.is_empty() { "no_sample" } else { "sum_row" };
+            skipped.push((name.unwrap_or("").to_string(), *n, why));
             continue;
         }
-        let analyte = names
-            .iter()
-            .map(|c| cell(f, *c))
-            .find(|v| !v.is_empty())
+        let analyte = name
             .ok_or_else(|| row_err("responses", *n, "no analyte"))?
             .to_string();
         if out.iter().any(|r| r.analyte == analyte && r.sample == s) {
@@ -102,7 +112,8 @@ pub(super) fn parse_responses(bytes: &[u8], by_height: bool) -> Result<Vec<Resp>
                 .with("analyte", analyte)
                 .with("sample", s));
         }
-        let is_peak = peak.is_none() || PEAK_OK.contains(&cell(f, peak));
+        let status = cell(f, peak);
+        let is_peak = peak.is_none() || PEAK_OK.contains(&status);
         let value = csv
             .num(cell(f, Some(signal)))
             .map_err(|_| row_err("responses", *n, "signal"))?;
@@ -114,12 +125,14 @@ pub(super) fn parse_responses(bytes: &[u8], by_height: bool) -> Result<Vec<Resp>
             sample: s,
             signal: value.filter(|_| is_peak),
             snr: sn.filter(|v| *v > 0.0 && is_peak),
+            peak: (peak.is_some() && status != "ok").then(|| status.to_string()),
+            bad_snr: sn.filter(|v| *v <= 0.0 && is_peak),
         });
     }
     if out.is_empty() {
         return Err(bad("no row".into()));
     }
-    Ok(out)
+    Ok((out, skipped))
 }
 
 /// One row of the standards table; `analyte` empty = every analyte.

@@ -2,7 +2,7 @@
 // Flow (administrator mode): quant.calibrate and quant.curve in this browser. Applying the imported calibration curves to the areas is `flow_quant` of the `flowcal` .wasm (`mzlab_ops::run::table::quant::quant_text`,
 // the function `flow run` calls), so the concentrations CSV is the same bytes. The table is the alignment (or gap filling) of the same plan kept in OPFS, or the table a `table.filter` view of it
 // stands for (`F.liveJobs.tableOf`); `curves` and `samples` are files of the plan (their text in S.samplesJson). quant.curve is `flow_curve` of the same module (`curve::curve_text`): its responses are a file of the plan or the
-// text an earlier step of the plan kept (chrom.transitions), its standards a file; both outputs (`<id>.json`, `<id>.csv`) are kept. The warnings go to the card of the step. The text is kept under the key of the job. English only.
+// text an earlier step of the plan kept (chrom.transitions), its standards too; both outputs (`<id>.json`, `<id>.csv`) are kept, the CSV also under `<id>.concentrations` for a later step wired to that port. The warnings go to the card of the step. The text is kept under the key of the job. English only.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
@@ -45,7 +45,7 @@
   const portText = (x, inst, port) => {
     const ref = String(F.refs(inst, port)[0] || "");
     if (ref.startsWith("file:")) return fileText(x, inst, port);
-    const up = ref ? x.files.get(ref.split(".")[0]) : null;
+    const up = ref ? x.files.get(ref) || x.files.get(ref.split(".")[0]) : null;   // a second output port is kept under `<id>.<port>`
     return up && typeof up.text === "string" ? up.text : null;
   };
 
@@ -54,7 +54,7 @@
     const j = J().job(spec), p = await kit().getPool(), responses = portText(x, inst, "responses"), standards = portText(x, inst, "standards");
     if (responses === null || standards === null) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
     const key = await J().sha(spec.key + "\n" + await J().sha(responses) + "\n" + await J().sha(standards)), hit = await J().recall(p, key);
-    const keepBoth = async (/** @type {any} */ r) => { await F.webMsn.keep(r.name, r.text); await F.webMsn.keep(r.csvName, r.csv); x.files.set(inst.id, { id: inst.id, name: r.name, text: r.text }); };
+    const keepBoth = async (/** @type {any} */ r) => { await F.webMsn.keep(r.name, r.text); await F.webMsn.keep(r.csvName, r.csv); x.files.set(inst.id, { id: inst.id, name: r.name, text: r.text }); x.files.set(inst.id + ".concentrations", { id: inst.id, name: r.csvName, text: r.csv }); };
     if (hit) { await keepBoth(hit); note(x, inst, hit.warnings); await x.call("cached", { job: j }); return {}; }
     await x.call("started", { job: j });
     const t0 = performance.now(), params = JSON.stringify({ ...F.defaults(inst, F.stepOf(x.S.reg, inst), true), ...(inst.params || {}) });

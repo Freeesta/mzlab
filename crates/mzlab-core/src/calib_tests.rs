@@ -1,5 +1,6 @@
 //! Hand-computed cases of `calib`: exact lines, the worked examples of Miller & Miller (unweighted §5.4, weighted §5.10), the closed forms of a line
-//! forced through zero and of a 1/x fit, singular designs, and a property test: the back-calculation of the standards of an exact line returns them.
+//! forced through zero and of a 1/x fit, a 1/x² fit worked out in fractions, singular designs, and a property test: the back-calculation of the
+//! standards of an exact line returns them.
 
 use super::*;
 
@@ -55,6 +56,29 @@ fn the_weighted_example_of_miller_and_miller() {
     let g = fit(&x, &y, &w2, Model::Linear, false).unwrap();
     close(g.a, f.a, 1e-12);
     close(g.b, f.b, 1e-12);
+}
+
+#[test]
+fn a_one_over_x_squared_fit_computed_by_hand() {
+    // w = 1/x² turns y = a + b·x into the unweighted line y/x = b + a·(1/x). With x = 1, 2, 4 and y = 3, 5, 10: u = 1/x = 1, 1/2, 1/4 (mean 7/12),
+    // v = y/x = 3, 5/2, 5/2 (mean 8/3); Σ(u−ū)(v−v̄) = 5/24, Σ(u−ū)² = 7/24, so a = 5/7 and b = 8/3 − (5/7)(7/12) = 9/4.
+    // Residuals y − a − b·x = 1/28, −3/14, 2/7: Σw·r² = 1/784 + 9/784 + 4/784 = 1/56, one degree of freedom, s_w = √(1/56);
+    // Σr² = 101/784, s_y/x = √101/28. Weighted mean of y = (39/8)/(21/16) = 26/7, Σw(y − 26/7)² = 2660/784, R² = 1 − 14/2660 = 189/190.
+    let x = [1.0, 2.0, 4.0];
+    let y = [3.0, 5.0, 10.0];
+    let w: Vec<f64> = x
+        .iter()
+        .map(|v| Weight::InvX2.of(*v, 0.0).unwrap())
+        .collect();
+    assert_eq!(w, [1.0, 0.25, 0.0625]);
+    let f = fit(&x, &y, &w, Model::Linear, false).unwrap();
+    close(f.a, 5.0 / 7.0, 1e-12);
+    close(f.b, 9.0 / 4.0, 1e-12);
+    close(f.s_w.unwrap(), (1.0f64 / 56.0).sqrt(), 1e-12);
+    close(f.s_yx.unwrap(), 101f64.sqrt() / 28.0, 1e-12);
+    close(f.r2.unwrap(), 189.0 / 190.0, 1e-12);
+    // the lowest standard back-calculated: (3 − 5/7)/(9/4) = 64/63
+    close(f.inverse(3.0).unwrap(), 64.0 / 63.0, 1e-12);
 }
 
 #[test]

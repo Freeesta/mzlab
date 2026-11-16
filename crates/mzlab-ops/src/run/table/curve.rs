@@ -1,14 +1,15 @@
 //! The text of `quant.curve@1`: calibration lines fitted to the integrated peaks of the standards (`mzlab_core::calib`), the back-calculation of every
 //! standard and of the unknowns, LOD/LOQ by two named conventions, as a `taratura/1` JSON and a long CSV of concentrations. Inputs are read by
-//! `curve_read.rs`, outputs written by `curve_write.rs`. Every automatic choice (a point left out or kept with a doubtful response, the range, a
-//! limit not computed) is a line of `log`; outliers only on the user's `exclude`. Bytes in, text out: `flow run` and `flowcal`.
+//! `curve_read.rs`, outputs written by `curve_write.rs`. Every automatic choice (a row skipped, a peak cut at the window edge kept, an S/N not used, a
+//! point left out or kept with a doubtful response, a unit that differs, the range, a limit not computed) is a line of `log`; outliers only on the
+//! user's `exclude`. Bytes in, text out: `flow run` and `flowcal`.
 
 use mzlab_core::calib::{fit, Fit, Model};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{Out, Value};
 
 use super::curve_read::{
-    bad_param, parse_responses, parse_standards, settings, Resp, Settings, Std,
+    bad_param, parse_responses, parse_standards, settings, Resp, Settings, Skipped, Std,
 };
 use super::curve_write::{
     accuracy, limits, opt_csv, opt_str, sn_limit, write_log, write_points, Log, Point,
@@ -55,7 +56,12 @@ struct Run<'a> {
 }
 
 impl<'a> Run<'a> {
-    fn new(set: Settings, resp: &'a [Resp], stds: &'a [Std]) -> Result<Run<'a>> {
+    fn new(
+        set: Settings,
+        resp: &'a [Resp],
+        stds: &'a [Std],
+        skipped: &[Skipped],
+    ) -> Result<Run<'a>> {
         let mut analytes: Vec<&str> = Vec::new();
         let mut samples: Vec<&str> = Vec::new();
         for r in resp {
@@ -91,6 +97,34 @@ impl<'a> Run<'a> {
             log: Vec::new(),
             warn: [false; 3],
         };
+        for (a, line, why) in skipped {
+            let sample = if *why == "sum_row" { "sum" } else { "" };
+            run.note(a, sample, "skipped", why, &format!("line {line}"));
+        }
+        for r in resp {
+            match r.peak.as_deref() {
+                Some("edge") => {
+                    run.note(&r.analyte, &r.sample, "kept", "peak_at_window_edge", "edge")
+                }
+                Some(p) => run.note(
+                    &r.analyte,
+                    &r.sample,
+                    "treated_as_no_response",
+                    "peak_status",
+                    p,
+                ),
+                None => {}
+            }
+            if let Some(v) = r.bad_snr {
+                run.note(
+                    &r.analyte,
+                    &r.sample,
+                    "snr_not_used",
+                    "snr_not_positive",
+                    &format!("{v}"),
+                );
+            }
+        }
         for s in run.samples.clone() {
             if !stds.iter().any(|t| t.sample == s) {
                 run.note("", s, "treated_as_sample", "not_in_standards", "");
@@ -304,6 +338,12 @@ impl<'a> Run<'a> {
     ) {
         let (f, range, points) = curve;
         let t = self.info(a, s);
+        // a QC or sample written in another unit is still reported in the unit of the curve; a QC then has no accuracy
+        let other_unit = t.role != "standard" && !t.unit.is_empty() && t.unit != unit;
+        if other_unit {
+            let note = format!("{} -> {unit}", t.unit);
+            self.note(a, s, "reported_in_curve_unit", "unit_differs", &note);
+        }
         let (sig, isig, y) = self.response(a, istd, s);
         let back = match (f, y) {
             (None, _) => Err("no_curve"),
@@ -325,7 +365,10 @@ impl<'a> Run<'a> {
         self.warn[2] |= matches!(note, "no_response" | "no_istd" | "no_root");
         let conc = back.ok().map(|b| b * t.dilution);
         let acc = (back.ok())
-            .zip(t.conc.filter(|c| *c > 0.0 && t.role != "sample"))
+            .zip(
+                t.conc
+                    .filter(|c| *c > 0.0 && t.role != "sample" && !other_unit),
+            )
             .map(|(b, n)| accuracy(b, n));
         let cells = [
             quoted(a),
@@ -352,9 +395,9 @@ pub fn curve_text(
     standards: &[u8],
 ) -> Result<(String, String, Vec<String>)> {
     let set = settings(params)?;
-    let resp = parse_responses(responses, set.by_height)?;
+    let (resp, skipped) = parse_responses(responses, set.by_height)?;
     let stds = parse_standards(standards)?;
-    let mut run = Run::new(set, &resp, &stds)?;
+    let mut run = Run::new(set, &resp, &stds, &skipped)?;
     let mut o = Out::default();
     let model = if run.set.model == Model::Linear {
         "linear"
@@ -389,7 +432,9 @@ pub fn curve_text(
     o.raw("}\n");
     let excluded = run.log.iter().any(|l| l.choice == "excluded");
     let unlisted = run.log.iter().any(|l| l.choice == "treated_as_sample");
-    let not_positive = run.log.iter().any(|l| l.reason == "response_not_positive");
+    let reason = |r: &str| run.log.iter().any(|l| l.reason == r);
+    let not_positive = reason("response_not_positive");
+    let (edge, unit) = (reason("peak_at_window_edge"), reason("unit_differs"));
     let keys = [
         "warn.flow.curve.failed",
         "warn.flow.curve.excluded",
@@ -397,6 +442,8 @@ pub fn curve_text(
         "warn.flow.curve.noResponse",
         "warn.flow.curve.unlisted",
         "warn.flow.curve.notPositive",
+        "warn.flow.curve.edge",
+        "warn.flow.curve.unit",
     ];
     let on = [
         run.warn[0],
@@ -405,6 +452,8 @@ pub fn curve_text(
         run.warn[2],
         unlisted,
         not_positive,
+        edge,
+        unit,
     ];
     let warnings = (keys.iter().zip(on))
         .filter(|(_, on)| *on)

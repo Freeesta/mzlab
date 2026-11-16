@@ -72,7 +72,9 @@ def plan():
     ins = {"table": "gap.table", "curves": "file:curves.csv", "samples": "file:samples.json"}
     st += [{"id": "qa", "step": "quant.calibrate@1", "in": ins, "params": {"kinds": "sample,qc"}},
            {"id": "qh", "step": "quant.calibrate@1", "in": ins, "params": {"signal": "height", "kinds": "sample"}},
-           {"id": "cu", "step": "quant.curve@1", "in": {"responses": "file:responses.csv", "standards": "file:standards.csv"}, "params": CURVE_PARAMS}]
+           {"id": "cu", "step": "quant.curve@1", "in": {"responses": "file:responses.csv", "standards": "file:standards.csv"}, "params": CURVE_PARAMS},
+           # wired to the second port of cu: the browser must pass the concentrations CSV (read here as a standards table), as native does with Made.extra
+           {"id": "cu2", "step": "quant.curve@1", "in": {"responses": "file:responses.csv", "standards": "cu.concentrations"}, "params": CURVE_PARAMS}]
     return {"format": "mzflow/2", "inputs": inputs, "steps": st}
 
 tmp = Path(tempfile.mkdtemp(prefix="flow_quant_"))
@@ -92,7 +94,7 @@ assert nat_run.returncode == 0, nat_run.stderr[-1500:]
 data = site / "static" / "dati_flow_quant"; data.mkdir()
 for n in NAMES: shutil.copy2(next(out.glob("*-" + n + ".mzidx")), data / (n + ".mzidx"))
 NATIVE = {i: (out / (i + ".csv")).read_bytes() for i in IDS}
-NATIVE_CURVE = {n: (out / n).read_bytes() for n in ("cu.json", "cu.csv")}
+NATIVE_CURVE = {n: (out / n).read_bytes() for n in ("cu.json", "cu.csv", "cu2.json", "cu2.csv")}
 
 PUT = """async (names) => {
   let d = await navigator.storage.getDirectory();
@@ -159,19 +161,19 @@ try:
 
         def curve():
             kept = pg.evaluate(KEPT)
-            assert any(e["passo"] == "cu" and e["stato"] in ("done", "reused") and e["via"] == "browser" for e in seen), seen[-6:]
+            for i in ("cu", "cu2"): assert any(e["passo"] == i and e["stato"] in ("done", "reused") and e["via"] == "browser" for e in seen), (i, seen[-6:])
             for n, nat in NATIVE_CURVE.items():
                 web = kept.get(n); assert web is not None, (n, list(kept))
                 at = next((j for j, (x, y) in enumerate(zip(nat.decode(), web)) if x != y), 0)
                 assert web.encode() == nat, (n, "first difference at", at, nat.decode()[max(0, at - 80):at + 80], web[max(0, at - 80):at + 80])
             assert kept["cu.json"].startswith('{"format":"taratura/1"') and ",excluded_by_user\n" in kept["cu.csv"]
-        step("quant.curve gives the calibration JSON and the concentrations CSV of the native flow run, byte for byte", curve)
+        step("quant.curve gives the calibration JSON and the concentrations CSV of the native flow run, byte for byte, also to a step wired to cu.concentrations", curve)
 
         def again():
             before = len(asked)
             r = pg.evaluate(RUN, [plan(), SAMPLES, CURVES, RESP, STDS]); assert not r.get("err"), r
-            assert not [e for e in r["ev"] if e["passo"] in IDS + ("cu",) and e["stato"] == "running"], r["ev"]
-            for i in IDS + ("cu",): assert any(e["passo"] == i and e["stato"] in ("done", "reused") and e["via"] == "browser" for e in r["ev"]), (i, r["ev"][-6:])
+            assert not [e for e in r["ev"] if e["passo"] in IDS + ("cu", "cu2") and e["stato"] == "running"], r["ev"]
+            for i in IDS + ("cu", "cu2"): assert any(e["passo"] == i and e["stato"] in ("done", "reused") and e["via"] == "browser" for e in r["ev"]), (i, r["ev"][-6:])
             assert len(asked) == before, "the second run fetched the module again"
         step("a second run takes the texts from OPFS", again)
 
