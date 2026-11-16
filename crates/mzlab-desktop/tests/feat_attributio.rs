@@ -108,3 +108,84 @@ fn the_exports_answer_with_files() {
         assert!(v["files"].as_array().unwrap().len() >= n, "{kind}");
     }
 }
+
+/// A decision of the Banco sent with `feature_decisions = target` in the campaign and `out` as the folder.
+fn decide(st: &State, target: &str, out: &Path) -> mzlab_core::Result<Answer> {
+    let decision = json!({"pol": "POS", "id": 15, "level": "2b", "justification": "x", "decided_on": "2026-10-16", "decided_by": "rev",
+        "checklist": ["diagnostic_fragment"], "evidence": {"type": "fragments", "library": "library/banco.json", "entry": "", "cosine": 0.9, "matched": 1, "delta_mz": 0, "delta_formula": "", "note": "x"}});
+    let mut files = folder();
+    for f in files.as_array_mut().unwrap() {
+        if f["path"].as_str().unwrap().ends_with("campaign.toml") {
+            let t: Vec<String> = f["text"]
+                .as_str()
+                .unwrap()
+                .lines()
+                .map(|l| {
+                    if l.starts_with("feature_decisions") {
+                        format!("feature_decisions = \"{target}\"")
+                    } else {
+                        l.to_string()
+                    }
+                })
+                .collect();
+            f["text"] = Value::String(t.join("\n"));
+        }
+    }
+    let q = json!({"root": "c", "files": files, "kind": "decision", "decision": decision.to_string(), "folder": out.to_string_lossy()});
+    st.rpc("feat/attributio/review", &q, &[])
+}
+
+#[test]
+fn a_decision_is_never_written_outside_the_campaign_folder() {
+    let st = State::new();
+    let dir = std::env::temp_dir().join(format!("mzlab_banco_out_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let base = dir.join("campaign");
+    std::fs::create_dir_all(&base).unwrap();
+    let refused = |target: &str, out: &Path| {
+        let e = decide(&st, target, out)
+            .err()
+            .unwrap_or_else(|| panic!("{target} written"));
+        assert_eq!(e.key, "error.attributio", "{target}");
+        assert!(
+            format!("{e:?}").contains("path outside the campaign folder"),
+            "{target}: {e:?}"
+        );
+    };
+    for target in [
+        ".profile-demo",
+        "sub/.bashrc",
+        "notes.sh",
+        "../escape.csv",
+        "a:b.csv",
+        "CON.csv",
+        "sub/nul.csv",
+        "COM1.csv",
+        "lpt9.csv",
+    ] {
+        refused(target, &base);
+    }
+    // a relative folder is refused too
+    refused("d.csv", Path::new("relative"));
+    #[cfg(unix)]
+    {
+        // a link inside the folder that points out of it is not followed, and nothing is created through it
+        std::os::unix::fs::symlink(&dir, base.join("link")).unwrap();
+        refused("link/escape.csv", &base);
+        refused("link/new/x.csv", &base);
+    }
+    let mut left: Vec<_> = std::fs::read_dir(&dir)
+        .unwrap()
+        .map(|e| e.unwrap().file_name())
+        .collect();
+    left.sort();
+    assert_eq!(left, vec![std::ffi::OsString::from("campaign")]);
+    // a plain name inside the folder still works
+    let ok: Value = serde_json::from_str(&text(
+        decide(&st, "shared/feature_decisions.csv", &base).unwrap(),
+    ))
+    .unwrap();
+    assert_eq!(ok["written"], true);
+    assert!(base.join("shared/feature_decisions.csv").is_file());
+    std::fs::remove_dir_all(&dir).unwrap();
+}

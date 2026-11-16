@@ -24,6 +24,8 @@
   const instance = v => {
     const id = text(v, "id");
     if (id == null) throw fail("err.flow.instance", { field: "id" });
+    // same rule as `instance_id_ok` in mzlab-core: the id becomes a file name in the run folder
+    if (id.length > 128 || !/^[A-Za-z0-9_-][A-Za-z0-9_.-]*$/.test(id)) throw fail("err.flow.instance.id", { instance: id });
     const stepText = text(v, "step");
     if (stepText == null) throw fail("err.flow.instance", { instance: id, field: "step" });
     const at = stepText.lastIndexOf("@"), version = at < 0 ? NaN : /^\d+$/.test(stepText.slice(at + 1)) ? +stepText.slice(at + 1) : NaN;
