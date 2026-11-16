@@ -15,13 +15,16 @@ fn sections_the_wiff_index_lacks_are_one_calm_notice_per_dataset() {
     );
 }
 
-/// The reasons of a sample with nothing to show are catalogue texts, the ones the site shows (never the bare «no scans»).
+/// The reasons of a sample with nothing to show are catalogue texts, the ones the site shows: present, non-empty, and never the bare
+/// engine fallbacks of the progress line (a length is no proof of that, the catalogue sentences are meant to be short).
 #[test]
 fn the_reasons_of_an_empty_wiff_sample_are_catalogue_texts() {
     for key in ["warn.wiff.emptySample", "warn.wiff.inferredSample"] {
+        let text = crate::error_text::catalog_text(key).unwrap_or_default();
+        assert!(!text.trim().is_empty(), "{key}");
         assert!(
-            crate::error_text::catalog_text(key).is_some_and(|t| t.len() > 40),
-            "{key}"
+            !["no scans", "an empty injection"].contains(&text.trim()),
+            "{key}: {text}"
         );
     }
 }
