@@ -51,6 +51,6 @@ def test_the_site_document_of_a_sample_is_the_one_of_the_cli(work, sample):
 
 
 def test_the_samples_that_share_a_method_carry_the_extended_metadata(work):
-    site = json.loads(doc_of_site(work, 2))
+    site, cli = json.loads(doc_of_site(work, 2)), json.loads(doc_of_cli(work, 2))
     assert site["ms"] and len(site["campi"]) >= 7, list(site)
-    assert any(c.get("chiave") == "canali" or c.get("nome") == "canali" for c in site["campi"]) or "canali" in json.dumps(site["campi"])
+    assert site["campi"] == cli["campi"]
