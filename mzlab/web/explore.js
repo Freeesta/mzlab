@@ -397,7 +397,7 @@ const getXic = /** @type {(k: string | number, ...rest: (number | string | null 
   ? memo(`x${k}|${mz}|${tol}|${lv}|${canale}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}&canale=${encodeURIComponent(canale)}`).then(j => j.traces ? j.traces[0] : j))
   : memo(`x${k}|${mz}|${tol}|${lv}`, () => xicBin(`api/xicbin?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0])));
 // + "&hr=0" when high resolution is switched off (hr.js)
-const MERGE = () => "&merge=1" + (window.HR ? HR.q() : "");
+const MERGE = () => (window.HR ? HR.q() : "");   // no merge flag: the engine decides (unit-resolution centroids are merged, profile and HR never)
 const getSpec = (/** @type {string | number} */ k, /** @type {number | string} */ a, /** @type {number | string} */ b, /** @type {number} */ lv, /** @type {unknown} */ pr, /** @type {number[] | null | undefined} */ bg) => memo(`s${k}|${a}|${b}|${lv}|${pr}|${bg ? bg.join(",") : ""}`, () => J(`api/spectrum?k=${k}&rt0=${a}&rt1=${b}&level=${lv}&precursor=${prSplit(pr)[0]}${FT(prSplit(pr)[1])}` + (bg ? `&bgk=${bg[0]}&bgrt0=${bg[1]}&bgrt1=${bg[2]}&bgf=${bg[3] ?? 1}&bgclip=${bg[4] ?? 1}` : "") + MERGE()));
 const getFormula = (/** @type {string} */ f, /** @type {string | undefined} */ ad) => J(`api/formula?f=${encodeURIComponent(f)}&adduct=${encodeURIComponent(ad || "")}`);
 // default adduct from the polarity of the visible files

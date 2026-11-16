@@ -100,7 +100,7 @@ impl<R: ReadAt> Routes<R> {
             return Err(Error::new("err.scan.outsideN").with("n", sel.len()));
         }
         let (ar, scans) = self.idx.arrays_scans(si)?;
-        let merge = q.get("merge") == Some("1") && !hr.on;
+        let merge = q.get("merge") != Some("0") && !hr.on;
         let mut rows = Vec::new();
         for j in i0 as usize..=(i1 as usize).min(sel.len() - 1) {
             let (sid, rt) = (ar.scan_ids[sel[j]], ar.rt[sel[j]]);

@@ -450,19 +450,19 @@ class App:
         return rep
 
     @staticmethod
-    def _spec_arrays(item, level: int, mz, y, merge: bool, hr: bool = True) -> dict:
+    def _spec_arrays(item, level: int, mz, y, merge: bool | None, hr: bool = True) -> dict:
         """What _spec_json sends, as numpy arrays (not rounded, not listed): mode, mz/y (peaks) and, for profile spectra, pmz/py (the profile line)."""
         hr = item.hr_on(level, hr)
         if item.spectrum_mode(level) == "profile":
             pm, py = profile_peaks(mz, y)
             lm, ly = pad_zeros(mz, y, item._step(level))
             return {"mode": "profile", "mz": np.asarray(pm, float), "y": np.asarray(py, float), "pmz": np.asarray(lm, float), "py": np.asarray(ly, float)}
-        if merge and not hr:
+        if merge is not False and not hr:          # None = AUTO (omitted): unit-resolution centroids are merged
             mz, y = merge_unit(mz, y)
         return {"mode": item.spectrum_mode(level), "mz": np.asarray(mz, float), "y": np.asarray(y, float)}
 
     @staticmethod
-    def _spec_json(item, level: int, mz, y, merge: bool, hr: bool = True) -> dict:
+    def _spec_json(item, level: int, mz, y, merge: bool | None, hr: bool = True) -> dict:
         """A spectrum for the front end. Centroids: the peaks (merged by unit window if asked). Profile: `mz`/`y` are the PEAKS (one per
         nominal mass, `peaks.profile_peaks`) and `pmz`/`py` the profile points, drawn as a line; labels, table, ruler and clicks use the peaks."""
         hr = item.hr_on(level, hr)                                  # high-resolution centroids: decimals of the profile + 1, never merged by nominal mass
@@ -473,7 +473,7 @@ class App:
             pm, py = profile_peaks(mz, y)
             lm, ly = pad_zeros(mz, y, item._step(level))
             return {"mode": "profile", "mz": r3(pm), "y": r1(py), "pmz": r3(lm), "py": r1(ly)}
-        if merge and not hr:
+        if merge is not False and not hr:          # None = AUTO (omitted): unit-resolution centroids are merged
             mz, y = merge_unit(mz, y)
         return {"mode": item.spectrum_mode(level), "mz": r3(mz), "y": r1(y)}
 
@@ -509,7 +509,7 @@ class App:
         out.pop("mz", None)
         return out
 
-    def spectrum(self, k: int, rt0: float, rt1: float, level: int, precursor, bin_da: float, bg=None, merge: bool = False, hr: bool = True, filt: str | None = None) -> dict:
+    def spectrum(self, k: int, rt0: float, rt1: float, level: int, precursor, bin_da: float, bg=None, merge: bool | None = None, hr: bool = True, filt: str | None = None) -> dict:
         if bg is not None:
             bg = {**bg, "item": self._item(bg["k"])}
         item = self._item(k)
@@ -518,11 +518,14 @@ class App:
         if bg is not None:           # a difference is drawn as lines (up and down), never as a profile
             return {"mode": "centroid", "diff": True, "mz": [round(float(v), 4) for v in mz], "y": [round(float(v), 1) for v in y], "scans": n,
                     **item.window_scans(rt0, rt1, level, precursor, pt, filt)}
-        return {**self._spec_json(item, level, mz, y, merge, hr), "scans": n, **item.window_scans(rt0, rt1, level, precursor, pt, filt)}
+        out = {**self._spec_json(item, level, mz, y, merge, hr), "scans": n, **item.window_scans(rt0, rt1, level, precursor, pt, filt)}
+        if merge is None and out["mode"] == "centroid" and not item.hr_on(level, hr):
+            out["auto_merge"] = True                  # the engine's own choice, stated (the request did not say)
+        return out
 
     MAX_SPECTRA = 60       # scans per /api/spectra request
 
-    def spectra(self, k: int, i0: int, i1: int, level: int, precursor, bin_da: float, merge: bool = False, hr: bool = True, filt: str | None = None) -> dict:
+    def spectra(self, k: int, i0: int, i1: int, level: int, precursor, bin_da: float, merge: bool | None = None, hr: bool = True, filt: str | None = None) -> dict:
         """Single scans i0..i1 of file k (for scan-by-scan navigation); each one equals /api/spectrum on a window holding only that scan."""
         item = self._item(k)
         if item.kind() == "mrm":
@@ -538,7 +541,7 @@ class App:
         return {"n": n, "scans": [{"i": s["i"], "sid": s["sid"], "rt": round(s["rt"], 4), **self._spec_json(item, level, s["mz"], s["y"], merge, hr)}
                                   for s in item.scans(i0, i1, level, precursor, prec_tol=pt, bin_da=bin_da, hr=hr, filt=filt)]}
 
-    def scanbin(self, k: int, i0: int, i1: int, level: int = 1, precursor=None, filt: str | None = None, hr: bool = True, merge: bool = False) -> bytes:
+    def scanbin(self, k: int, i0: int, i1: int, level: int = 1, precursor=None, filt: str | None = None, hr: bool = True, merge: bool | None = None) -> bytes:
         """Single scans i0..i1 (at most 60) as one binary block, for navigation: 4 bytes (little endian) = length of the JSON header, the JSON header
         {n, scans: [{i, sid, rt, no, filter, mode, n, np, nl, tic}]}, then for every scan its peaks (m/z float64, intensity float32; n values each) and,
         for a profile scan, its profile line (pmz float64, py float32; np values each). nl = highest intensity, tic = sum of the intensities."""
