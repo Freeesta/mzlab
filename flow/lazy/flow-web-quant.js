@@ -53,16 +53,17 @@
   const curve = async (x, spec, inst) => {
     const j = J().job(spec), p = await kit().getPool(), responses = portText(x, inst, "responses"), standards = portText(x, inst, "standards");
     if (responses === null || standards === null) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
-    const key = await J().sha(spec.key + "\n" + await J().sha(responses) + "\n" + await J().sha(standards)), hit = await J().recall(p, key);
+    // the job cache holds one {name, text} per key: the CSV is a second entry, `<key>-csv`, and a hit needs both
+    const key = await J().sha(spec.key + "\n" + await J().sha(responses) + "\n" + await J().sha(standards)), hit = await J().recall(p, key), hitCsv = hit && await J().recall(p, key + "-csv");
     const keepBoth = async (/** @type {any} */ r) => { await F.webMsn.keep(r.name, r.text); await F.webMsn.keep(r.csvName, r.csv); x.files.set(inst.id, { id: inst.id, name: r.name, text: r.text }); x.files.set(inst.id + ".concentrations", { id: inst.id, name: r.csvName, text: r.csv }); };
-    if (hit) { await keepBoth(hit); note(x, inst, hit.warnings); await x.call("cached", { job: j }); return {}; }
+    if (hit && hitCsv) { await keepBoth({ ...hit, csvName: hitCsv.name, csv: hitCsv.text }); note(x, inst, hit.warnings); await x.call("cached", { job: j }); return {}; }
     await x.call("started", { job: j });
     const t0 = performance.now(), params = JSON.stringify({ ...F.defaults(inst, F.stepOf(x.S.reg, inst), true), ...(inst.params || {}) });
     return J().detached(x, spec, inst, async () => {
       let made;
       try { made = JSON.parse(await p.ident("flowcal", "flow_curve", { params, responses: enc(responses), standards: enc(standards) })); } catch (e) { throw asError(e); }
       const warnings = made.warnings || [], r = { name: inst.id + ".json", text: made.calibration, csvName: inst.id + ".csv", csv: made.concentrations, warnings };
-      await keepBoth(r); await J().remember(p, key, r); note(x, inst, warnings);
+      await keepBoth(r); await J().remember(p, key, r); await J().remember(p, key + "-csv", { name: r.csvName, text: r.csv }); note(x, inst, warnings);
       await x.call("finished", { job: j, result: warnings.length ? { ms: performance.now() - t0, warnings } : { ms: performance.now() - t0 } });
     });
   };
