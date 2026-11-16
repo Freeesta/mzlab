@@ -46,7 +46,7 @@ try:
                 i = made[0]; s, ion, k = names[i % 3], (i // 3) % 7, i // 21
                 pg.evaluate(INTEG, [s, ion, c - 0.15 + 0.6 * k, c + 0.15 + 0.6 * k]); made[0] += 1
             wait_for_js(pg, SHOWN % n, timeout=60000)
-            pg.wait_for_timeout(300)
+            ready(pg)
         def shot(tag):
             if SHOTS: Path(SHOTS).mkdir(parents=True, exist_ok=True); pg.screenshot(path=str(Path(SHOTS) / f"manint_{tag}.png"), full_page=True)
         need = lambda cond, m: cond or throw(m)
@@ -86,21 +86,21 @@ try:
             pg.click("#manint .manint-tg")
         step("closed it is one compact line, still under the chart", collapsed)
         def narrow():
-            pg.set_viewport_size({"width": 390, "height": 844}); pg.wait_for_timeout(500)
+            pg.set_viewport_size({"width": 390, "height": 844}); ready(pg)
             for n in (5, 30):
                 if made[0] > n:
                     pg.evaluate(f"(() => {{ const p = E.panels.find(q => q.type === 'mrm' && q._a); delInts(p, p.ints.slice({n})); }})()"); made[0] = n
                 else: grow(n)
-                wait_for_js(pg, SHOWN % n, timeout=60000); pg.wait_for_timeout(300)
+                wait_for_js(pg, SHOWN % n, timeout=60000); ready(pg)
                 g = pg.evaluate(GEO); shot(f"390px_{n}rows")
                 need(abs(g["ct"] - g["pb"]) <= 20, ("390 px: right under the chart", n, g))
                 need(g["sw"] <= g["cw"], ("390 px: no horizontal page scroll", g))
                 need(g["wh"] <= g["vh"] * 0.6 + 2, ("390 px: capped", g))
-            pg.set_viewport_size({"width": 1500, "height": 2200}); pg.wait_for_timeout(400)
+            pg.set_viewport_size({"width": 1500, "height": 2200}); ready(pg)
         step("at 390 px: under the chart, capped, the table scrolls inside (no page scroll sideways)", narrow)
         def fullscreen():
             try:
-                pg.evaluate("document.documentElement.requestFullscreen()"); pg.wait_for_timeout(600)
+                pg.evaluate("document.documentElement.requestFullscreen()"); ready(pg)
             except Exception:
                 return          # headless Chromium may refuse: the layout rules above are the same ones
             if not pg.evaluate("!!document.fullscreenElement"): return
