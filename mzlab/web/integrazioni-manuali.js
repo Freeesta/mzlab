@@ -6,7 +6,7 @@ const G = /** @type {any} */ (window);
 const t = (/** @type {string} */ k, /** @type {Record<string, any>} */ p = {}) => G.I18N.t(k, p);
 
 /** The columns of the engine (manint::HEAD) with their labels (literal keys: tools/controlla_i18n.py reads them). */
-const HEADS = () => /** @type {Record<string, string>} */ ({ channel: t("canali.manint.h.channel"), name: t("canali.manint.h.name"), sample: t("canali.manint.h.sample"),
+const HEADS = () => /** @type {Record<string, string>} */ ({ channel: t("canali.manint.h.channel"), sample: t("canali.manint.h.sample"),
   start_min: t("canali.manint.h.start"), end_min: t("canali.manint.h.end"), apex_rt_min: t("canali.manint.h.apex"), area: t("canali.manint.h.area"),
   height: t("canali.manint.h.height"), snr: t("canali.manint.h.snr"), baseline: t("canali.manint.h.base"), overlap: t("canali.manint.h.overlap"),
   pv: t("canali.manint.h.pv"), label: t("canali.manint.h.label") });
@@ -15,8 +15,8 @@ const TIPS = () => /** @type {Record<string, string>} */ ({ overlap: t("canali.m
 const BASES = () => /** @type {Record<string, string>} */ ({ zero: t("int.base.zero"), edges: t("int.base.edges"), line: t("int.base.line") });
 /** The longest name of an integration (manint::LABEL_MAX). */
 const NM_MAX = 40;
-/** The columns as shown: the name the user gives right after the sample. @param {string[]} head */
-const order = head => { const o = head.map((_, i) => i).filter(i => head[i] !== "label"), l = head.indexOf("label"), s = o.indexOf(head.indexOf("sample")); if (l >= 0) o.splice(s + 1, 0, l); return o; };
+/** The place of a column in the engine's header (the columns are shown in the engine's order: channel, sample, name, area, ...). @param {string[]} head @param {string} c */
+const col = (head, c) => head.indexOf(c);
 const ICON = {
   dl: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 2.5v7.5M4.8 7L8 10.2 11.2 7M3 12.5v1h10v-1"/></svg>',
   copy: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5.5" y="5.5" width="8" height="8" rx="1.3"/><path d="M10.5 5.5V3.8a1.3 1.3 0 0 0-1.3-1.3H3.8a1.3 1.3 0 0 0-1.3 1.3v5.4a1.3 1.3 0 0 0 1.3 1.3h1.7"/></svg>',
@@ -74,9 +74,10 @@ const windowOf = (it, file, tr) => ({ file, tr, a: Math.min(it.a, it.b), b: Math
 const windowsOf = (recs, ks) => JSON.stringify(recs.map(r => windowOf(r.it, ks.indexOf(r.k), r.tr)));
 
 /** The record of a row: same sample and channel, the row inside its edges (the engine writes the edges at 0.001 min; a part of a split window lies
- * between them). @param {string[]} row */
-function recOf(row) {
-  return st.recs.find(r => sampleOf(E.files[r.k].file || "") === row[2] && r.label === row[0] && +Math.min(r.it.a, r.it.b).toFixed(3) <= +row[3] && +row[4] <= +Math.max(r.it.a, r.it.b).toFixed(3)) || null;
+ * between them). @param {string[]} row @param {string[]} head */
+function recOf(row, head) {
+  const iS = col(head, "sample"), iA = col(head, "start_min"), iB = col(head, "end_min");
+  return st.recs.find(r => sampleOf(E.files[r.k].file || "") === row[iS] && r.label === row[0] && +Math.min(r.it.a, r.it.b).toFixed(3) <= +row[iA] && +row[iB] <= +Math.max(r.it.a, r.it.b).toFixed(3)) || null;
 }
 
 /** An area or height of the CSV (7.84077E+04) in the one form of the page; a baseline by its name. @param {string} v @param {string} col */
@@ -108,14 +109,14 @@ function rename(rec, v) {
 
 function draw() {
   const el = card(); if (!el) return;
-  const all = rows(st.csv), head = all[0] || [], body = all.slice(1).filter(r => r[2] !== "sum" || r[3] !== "");
+  const all = rows(st.csv), head = all[0] || [], iS = col(head, "sample"), iA = col(head, "start_min"), body = all.slice(1).filter(r => r[iS] !== "sum" || r[iA] !== "");
   const had = st.had; st.had = body.length;
   if (!body.length) { el.hidden = true; el.innerHTML = ""; return; }
   if (had === 0) setOpen(true);      // an integration after none opens the card; otherwise it stays as the user left it (a reload included)
-  const H = HEADS(), tips = TIPS(), cols = order(head).filter(c => !(head[c] in tips) || body.some(r => r[c] !== "")), open = isOpen(), plain = ["channel", "name", "sample", "baseline", "overlap", "label"];
+  const H = HEADS(), tips = TIPS(), cols = head.map((_, i) => i).filter(c => !(head[c] in tips) || body.some(r => r[c] !== "")), open = isOpen(), plain = ["channel", "sample", "baseline", "overlap", "label"];
   const ths = cols.map(c => h`<th scope="col"${raw(plain.includes(head[c]) ? "" : ' class="num"')}${raw(tips[head[c]] ? h` title="${tips[head[c]]}"` : "")}>${H[head[c]] || head[c]}</th>`).join("");
   const trs = body.map((r, i) => {
-    const rec = recOf(r), who = { ch: chShown(r[0]), s: r[2] };
+    const rec = recOf(r, head), who = { ch: chShown(r[0]), s: r[iS] };
     const act = rec ? h`<button type="button" class="manint-x" data-del="${i}" aria-label="${t("canali.manint.del.aria", who)}" title="${t("canali.manint.del")}">×</button>` : "";
     const tds = cols.slice(1).map(c => h`<td${raw(plain.includes(head[c]) ? "" : ' class="num"')}>${raw(head[c] === "label" && !rec ? h`${r[c]}` : cell(r[c], head[c], i))}</td>`).join("");
     return h`<tr${raw(rec ? h` class="manint-go" data-go="${i}" tabindex="0" aria-label="${t("canali.manint.show.aria", who)}"` : "")}><th scope="row">${chShown(r[cols[0]])}</th>${raw(tds)}<td>${raw(act)}</td></tr>`;
@@ -131,7 +132,7 @@ function draw() {
   el.querySelector("[data-dl]")?.addEventListener("click", () => G.dl("manual-integrations.csv", st.csv, "text/csv", { table: "manint" }));
   el.querySelector("[data-copy]")?.addEventListener("click", e => copy(all, /** @type {HTMLElement} */ (e.currentTarget)));
   /** A row shows its integration on the chart (click, Enter or Space); its X deletes it. @param {Element} b */
-  const show = b => { const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.go)]); if (rec) { G.reveal(rec.p); G.draw(rec.p); } };
+  const show = b => { const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.go)], head); if (rec) { G.reveal(rec.p); G.draw(rec.p); } };
   el.querySelectorAll("tr[data-go]").forEach(b => {
     b.addEventListener("click", e => { if (!/** @type {Element} */ (e.target).closest("button, input")) show(b); });
     b.addEventListener("keydown", e => { const k = /** @type {KeyboardEvent} */ (e); if (k.target === b && (k.key === "Enter" || k.key === " ")) { k.preventDefault(); show(b); } });
@@ -147,7 +148,7 @@ function draw() {
   });
   // the name of a row: kept on blur or Enter, Esc gives back the name it had
   el.querySelectorAll("input[data-nm]").forEach(n => {
-    const inp = /** @type {HTMLInputElement} */ (n), rec = recOf(body[Number(inp.dataset.nm)]), was = inp.value;
+    const inp = /** @type {HTMLInputElement} */ (n), rec = recOf(body[Number(inp.dataset.nm)], head), was = inp.value;
     if (rec && st.focus === rec.it) { st.focus = null; inp.focus(); }
     inp.addEventListener("keydown", e => {
       e.stopPropagation();
@@ -157,7 +158,7 @@ function draw() {
     inp.addEventListener("blur", () => { if (rec) rename(rec, inp.value); });
   });
   el.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
-    const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.del)]); if (rec) G.delInts(rec.p, [rec.it]);
+    const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.del)], head); if (rec) G.delInts(rec.p, [rec.it]);
   }));
 }
 
@@ -186,7 +187,7 @@ async function sync() {
   if (sig !== st.sig) {
     st.sig = sig; st.recs = recs; st.ks = ks; st.windows = windows;
     await ask();
-    if (sig === st.sig) draw();
+    if (sig === st.sig) { draw(); for (const r of recs) if (r.it.splits) G.draw(r.p); }   // a split window's labels come from the new rows
   } else {
     st.recs = recs;
     const el = card(), ws = document.getElementById("v-workspace");
@@ -203,6 +204,16 @@ async function valleys(it, depth) {
     const r = await fetch(`api/manvalley?k=${m[1]}&depth=${depth}&w=${encodeURIComponent(w)}`);
     return r.ok ? JSON.parse(await r.text()).splits : null;
   } catch (_) { return null; }
+}
+
+/** The parts of a split record as the engine measured them (the rows of the table: apex, area, height), left to right; null when the record is not split or the
+ * table does not have its parts yet. Drawn as one label each (grafici.js). @param {any} it */
+function parts(it) {
+  const rec = st.recs.find(r => r.it === it); if (!rec || !it.splits || !it.splits.length) return null;
+  const all = rows(st.csv), head = all[0] || [], c = (/** @type {string} */ n) => head.indexOf(n), f = E.files[rec.k], lo = +Math.min(it.a, it.b).toFixed(3), hi = +Math.max(it.a, it.b).toFixed(3);
+  const mine = all.slice(1).filter(r => r[c("sample")] === sampleOf(f && f.file || "") && r[0] === rec.label && +r[c("start_min")] >= lo && +r[c("end_min")] <= hi);
+  const cuts = new Set(it.splits.filter((/** @type {number} */ x) => x > lo && x < hi)).size;
+  return mine.length > 1 && mine.length === cuts + 1 ? mine.map(r => ({ rt: +r[c("apex_rt_min")], area: +r[c("area")], height: +r[c("height")], wait: false })) : null;
 }
 
 /** @type {WeakMap<any, { v: string | undefined }>} */ const SN = new WeakMap();
@@ -225,5 +236,5 @@ let timer = /** @type {ReturnType<typeof setTimeout> | undefined} */ (undefined)
 /** Every redraw of a panel calls this: one sync after the last of a burst (a dragged edge redraws at every move). */
 const soon = () => { clearTimeout(timer); timer = setTimeout(sync, 150); };
 
-G.MANINT = { sync: soon, now: sync, snr, valleys, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file) }) };
+G.MANINT = { sync: soon, now: sync, snr, valleys, parts, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file) }) };
 soon();

@@ -126,7 +126,7 @@ function attach(p) {
       if (JSON.stringify(fin) !== JSON.stringify([d.zo, d.zyo])) { p.zoom = d.zo; p.zoomY = d.zyo; pushZh(p); [p.zoom, p.zoomY] = fin; }
       uiSave(); return;
     }
-    if (d.edge) { if (intSnap(p) !== d.edge.snap) pushIh(p, d.edge.snap); uiSave(); return; }
+    if (d.edge) { p._intCur = d.edge.it.id; p._intT = Date.now(); if (intSnap(p) !== d.edge.snap) pushIh(p, d.edge.snap); uiSave(); return; }
     if (d.cursor || d.fw) { uiSave(); return; }
     const a = p._a;
     if (a && (d.ya || d.xa) && Math.abs((d.ya ? d.y - d.y0 : d.x - d.x0)) > 4) pushZh(p);

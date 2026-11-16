@@ -77,7 +77,6 @@ I18N.add("en", {
   "int.snap.man": "Manual",
   "int.snap.menu": "Point snap",
   "canali.manint.h.channel": "Channel",
-  "canali.manint.h.name": "Method name",
   "canali.manint.h.sample": "Sample",
   "canali.manint.h.start": "Start (min)",
   "canali.manint.h.end": "End (min)",
