@@ -98,7 +98,10 @@ impl Limits {
         if want <= free {
             return Ok(());
         }
-        Err(whole(self.byte.saturating_sub(free).saturating_add(want), self.byte))
+        Err(whole(
+            self.byte.saturating_sub(free).saturating_add(want),
+            self.byte,
+        ))
     }
     /// `n` entries asked by a file: an error with a key when they are more than the limit (and so never an allocation).
     pub fn ok_entries(&self, n: u64) -> Result<usize> {
