@@ -127,8 +127,8 @@ pub fn from_spec(t: &Aligned, samples: &[Sample], spec: &[u8]) -> Result<View> {
     let mut view = build_with(t, samples, &method, &rules, labels)?;
     if let Some(d) = v.get("cv_ddof") {
         view.cv_ddof = match d.f64() {
-            Some(x) if x == 0.0 => 0,
-            Some(x) if x == 1.0 => 1,
+            Some(0.0) => 0,
+            Some(1.0) => 1,
             _ => return Err(norm::bad()),
         };
     }
