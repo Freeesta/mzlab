@@ -20,6 +20,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | pannello (area: Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di…) | `docs/agenti/attributio-pannello.md` |
 | revisione, abbinamento e identità (area: Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di…) | `docs/agenti/attributio-revisione.md` |
 | Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di rilevamento alla mzmine: `crates/mzlab-feat/src/attributio/`, `untargeted/`, `.wasm` `attributio*` e `untargeted`) | `docs/agenti/attributio.md` |
+| audit dei file inutilizzati, morti o vecchi (solo rapporto: SAFE, PROBABLY-UNUSED, UNSURE, KEEP-BUT-OLD, con prova grep, byte e data) | `docs/agenti/audit-file-inutili.md` |
 | avvio progressivo (`AVVIO`), regola «interfaccia subito»; area e tabella di caricamento (area: header (schermo intero, logo, (i)), area e tabella di caricamento,…) | `docs/agenti/avvio.md` |
 | azioni dei pannelli (registro `azioni/1`, menu del tasto destro, Maiusc+F10) | `docs/agenti/azioni.md` |
 | picchi spalmati: lotto sintetico, configurazioni MZmine default/wide, tabella di confronto (`tools/bench/confronto_larghi.py`) | `docs/agenti/bench-picchi-larghi.md` |
@@ -94,8 +95,10 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | formati di ingresso del Flow (area: misure dei motori, validazione delle esportazioni (mzTab-M), clic…) | `docs/agenti/misure-formati.md` |
 | costo del disegno dei cromatogrammi su tracce dense (`tools/bench_charts.py`: 10^6 punti, 20 file, rotella, trascinamento, ridimensionamento, linea); tabella HR di 100 000 righe nella «Statistica» (`tools/bench_table_hr.py`: KMD, clic, «Dati») | `docs/agenti/misure-grafici.md` |
 | misura su computer lenti (CPU rallentata 1×/4×/6×, 2/4 core: apertura demo, trascinamento della linea, mappe, XIC, memoria; `tests_e2e/misura_macchine.py`) | `docs/agenti/misure-macchine.md` |
+| warm page loads: navigation preload and the `?nav=cache` switch of the service worker measured against main (RTT, CPU, restarted SW, loads until a deploy shows; `tests_e2e/misura_avvio_sw.py --varianti`) | `docs/agenti/misure-navigazione.md` |
 | first package before the site is usable: bytes and requests per milestone, critical chain, 10 biggest files, landing-page comparison, trace split, 8 candidate reductions (`tests_e2e/misura_payload.py`) | `docs/agenti/misure-primo-pacchetto.md` |
 | misure Rust e dei moduli (area: misure dei motori, validazione delle esportazioni (mzTab-M), clic…) | `docs/agenti/misure-rust.md` |
+| caricamento di un mzML in una passata (copia in OPFS e indice dagli stessi byte): limite, spike spento `una-passata.js`, disegno (`tests_e2e/misura_una_passata.py`, `build_mzml_streamed`) | `docs/agenti/misure-una-passata.md` |
 | lettori dei produttori, `.raw`, `.wiff`, `.D` (area: tabella cumulativa dei guadagni di velocità (data · PR · passo ·…) | `docs/agenti/misure-velocita-raw.md` |
 | tabella cumulativa dei guadagni di velocità del caricamento del sito (pagina, primo paint, lotti di file, elenco laterale, «Togli tutti», primo file di un lotto) | `docs/agenti/misure-velocita-sito.md` |
 | tabella cumulativa dei guadagni di velocità (data · PR · passo · prima · dopo · %) | `docs/agenti/misure-velocita.md` |
@@ -156,7 +159,11 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | indice sospetti (area: mzFinder (`TP_Mine/`, `tpmine-loader.js`)) | `docs/agenti/sospetti.md` |
 | statistica come passi: Welch/ANOVA con BH, PCA e KMD in Rust (`crates/mzlab-feat/src/stat/`, `table.stats`, `table.pca`, `table.kmd`, `stat/1`) | `docs/agenti/stat.md` |
 | registro delle azioni che cambiano stato (`comandi.js`, `docs/azioni.md` generato), annulla/ripeti, voci «tolto» (togliere un file, chiudere un pannello, svuotare le marcature: nessun avviso, voci di `STORIA`) | `docs/agenti/storia-tolto.md` |
+| positioning study: mzLab against other LC-MS tools (feature matrix, 10 missing functions with value and effort, 5 strengths, interoperability gaps, risks; public sources with the date read) | `docs/agenti/studio-concorrenti.md` |
+| studio di correttezza scientifica dei calcoli (solo rapporto, in inglese): masse e formule, cromatografia e quantificazione, punteggi spettrali, statistica; scoperte CONFIRMED e SUSPECTED con gravità, `file:riga`, valore atteso e fonte, riproduzione | `docs/agenti/studio-scienza.md` |
 | studio spettrale su dati sintetici: generatore di alberi di frammentazione, scenari E0-E6, bracci contro il motore (null calibrato, p-value di coincidenza, sotto-formule, analoghi a più spostamenti), righe MISURA studio_* | `docs/agenti/studio-spettri.md` |
+| test-suite quality study (report only): tests that cannot fail, hand mutation of 30 functions with survivors, parity gaps, coverage holes, flakiness and cost, unread fixtures, top 15 tests to add | `docs/agenti/studio-test.md` |
+| usability study of the site as a first-time user (opening a file, XIC, integration, export, reset, errors; it/en, 390 px, keyboard): findings by severity, what works, top 10, areas not covered | `docs/agenti/studio-ux.md` |
 | tabella picchi dello spettro da copiare (TSV), asse y in % fino a 100, pulsante XIC solo su MS¹ | `docs/agenti/tabella-picchi.md` |
 | dove Tabui perde un prodotto atteso (`mzlab-cli explain-missing`) | `docs/agenti/tabui-spiega.md` |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |

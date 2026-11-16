@@ -4,6 +4,7 @@ the V8 code cache, the order of the boot steps, and the isolation reload. Measur
     python3 tests_e2e/misura_avvio_sw.py --mirror DIR [--runs 5] [--rtt 0,40,150] [--cpu 1,4] [--scenari warm,warm-restarted,cold,trace-warm,trace-restarted]
                                          [--out run.json]            # local mirror of --url with GitHub-Pages headers (filled from --url once)
     python3 tests_e2e/misura_avvio_sw.py --url https://freeesta.github.io/mzlab/ --rtt 0 --cpu 1 --scenari warm,warm-restarted,cold   # the live site
+    python3 tests_e2e/misura_avvio_sw.py --varianti main=DIR0,A=DIR1,B=DIR1?nav=cache [--rtt ...]   # built sites side by side, one mirror each
 
 Scenarios (every combination of --rtt and --cpu, interleaved over --runs, one new Chromium per run):
   cold            first visit, ends on the second page (after the isolation reload); also the bytes/requests of the first, non-isolated page.
@@ -11,7 +12,8 @@ Scenarios (every combination of --rtt and --cpu, interleaved over --runs, one ne
   warm-restarted  the same, but the SW is stopped over CDP (ServiceWorker.stopAllWorkers) before the reload.
   --warm-reloads N measures the Nth reload in warm / warm-restarted (default 1); every load also records its longest task before qqReady.
   trace-warm / trace-restarted (rtt 0 only)  third load under a Chromium trace (v8, v8.wasm, disabled-by-default-v8.compile, devtools.timeline).
-All times are ms from the navigation start of the measured page. Boot steps come from the page itself (init script: script `load` events, the engine
+--varianti NAME=DIR[?QUERY],...: every combination for every variant, interleaved; the first visit carries ?QUERY (a switch the SW remembers, such as nav=cache),
+then one more load of the plain address before the measured reload, in every variant alike. All times are ms from the navigation start of the measured page. Boot steps come from the page itself (init script: script `load` events, the engine
 worker's `ready` message, setters on window.qqReady / MZLAB_LR, a wrapper of window.fetch for api/state): no product file is touched.
 """
 import argparse, json, os, re, statistics, sys, time
@@ -19,6 +21,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests_e2e"))
+from http.server import ThreadingHTTPServer  # noqa: E402
+import threading  # noqa: E402
 from misura_ricarica import Mirror, Throttle, serve_mirror  # noqa: E402
 from misura_primo_paint import poll  # noqa: E402
 
@@ -129,14 +133,22 @@ def page_metrics(snap: dict, thr: Throttle, mlog: list, sw0: int, l0: int) -> di
     return out
 
 
-def one(b, base, scen: str, rtt: int, cpu: int, mirror: bool, loads: int = 2, warm_loads: int = 1) -> dict:
+def serve_dir(folder: str) -> str:
+    """A mirror of one built site (no upstream); the delay and the request log are the shared ones of `Mirror`."""
+    m = type("M", (Mirror,), {"root": Path(folder), "upstream": "", "gz": {}})
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), m)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return f"http://127.0.0.1:{srv.server_address[1]}/mzlab/"
+
+
+def one(b, base, scen: str, rtt: int, cpu: int, mirror: bool, loads: int = 2, warm_loads: int = 1, query: str | None = None) -> dict:
     # latency: the mirror delays every answer (CDP latency does not apply to the SW's own fetches); the CDP profile only slows the CPU
     thr = Throttle(b, "cpu4" if cpu == 4 else "none")
     Mirror.delay = rtt if mirror else 0
     c = b.new_context(viewport={"width": 1400, "height": 900})
     c.add_init_script(PROBE)
     pg = c.new_page()
-    url = base + "#/data"
+    url = base + ("?" + query if query else "") + "#/data"
     log = Mirror.log
     l_start = len(log)
     t_goto = wall()
@@ -159,6 +171,8 @@ def one(b, base, scen: str, rtt: int, cpu: int, mirror: bool, loads: int = 2, wa
     else:
         wait_fill(pg)
         pump(pg, SETTLE_MS)           # the idle work after qqReady (prefetch at +3 s, the mzFinder package) ends before the measured load
+        if query is not None:         # --varianti: the plain address once, so the measured reload carries no switch in its URL
+            pg.goto(base + "#/data"); poll(pg, USABLE, 240); pump(pg, 1500)
         for _ in range((loads if scen.startswith("trace") else warm_loads) - 1):
             pg.reload(); poll(pg, USABLE, 240); pump(pg, 1500)        # loads 2..n-1; Chromium writes the code cache after the earlier ones
         if scen in ("warm-restarted", "trace-restarted"):
@@ -239,23 +253,23 @@ KEYS = ["idx_end", "index_srv", "sw_worker_start", "manifest_req", "manifest_end
 def report(results: dict) -> None:
     """Markdown tables of the medians [min-max]."""
     def rows(pick, title, cols):
-        print(f"\n### {title}\n\n| scenario | RTT ms | CPU | runs | " + " | ".join(cols) + " |\n|---|---|---|---|" + "---|" * len(cols))
-        for (scen, rtt, cpu), runs in results.items():
+        print(f"\n### {title}\n\n| variant | scenario | RTT ms | CPU | runs | " + " | ".join(cols) + " |\n|---|---|---|---|---|" + "---|" * len(cols))
+        for (var, scen, rtt, cpu), runs in sorted(results.items(), key=lambda kv: (kv[0][1], kv[0][3], kv[0][2], kv[0][0])):
             if not pick(scen) or not runs:
                 continue
-            print(f"| {scen} | {rtt} | ×{cpu} | {len(runs)} | " + " | ".join(fmt(med([r.get(k) for r in runs])) for k in cols) + " |")
+            print(f"| {var or '—'} | {scen} | {rtt} | ×{cpu} | {len(runs)} | " + " | ".join(fmt(med([r.get(k) for r in runs])) for k in cols) + " |")
     rows(lambda s: s in ("warm", "warm-restarted"), "Warm and warm-restarted: navigation start → …", KEYS[:7] + ["worker_ready", "engine", "qqReady", "longest_task"])
     rows(lambda s: s in ("cold", "warm", "cpu4warm", "warm-restarted"), "Boot order", ["last_classic", "shell_js", "last_module", "worker_ready", "api_state", "engine", "qqReady"])
-    for (scen, rtt, cpu), runs in results.items():
+    for (var, scen, rtt, cpu), runs in results.items():
         if runs and scen in ("cold", "warm", "warm-restarted"):
             c = {}
             for r in runs:
                 c[r.get("last_step")] = c.get(r.get("last_step"), 0) + 1
-            print(f"last step before qqReady, {scen} rtt {rtt} ×{cpu}: {c}")
+            print(f"last step before qqReady, {var or '—'} {scen} rtt {rtt} ×{cpu}: {c}")
     rows(lambda s: s == "cold", "Isolation reload (cold)", ["p1_req", "p1_kb", "p2_files", "p2_shared", "p2_net200", "p2_net304", "p2_httpcache", "p2_new", "usable"])
-    for (scen, rtt, cpu), runs in results.items():
+    for (var, scen, rtt, cpu), runs in results.items():
         if scen.startswith("trace") and runs:
-            print(f"\n### Code cache, {scen} ×{cpu}, traced load = reload {runs[0]['reloads']} after the first visit ({len(runs)} runs)\n\n| group | compile events | hits | rejected | streamed | compile ms (main/worker thread, eager) |\n|---|---|---|---|---|---|")
+            print(f"\n### Code cache, {var or '—'} {scen} ×{cpu}, traced load = reload {runs[0]['reloads']} after the first visit ({len(runs)} runs)\n\n| group | compile events | hits | rejected | streamed | compile ms (main/worker thread, eager) |\n|---|---|---|---|---|---|")
             for g in ("L", "other", "worker"):
                 print(f"| {g} | " + " | ".join(fmt(med([r['trace'][g][k] for r in runs])) for k in ("scripts", "hit", "rejected", "streamed")) + f" | {fmt(med([r['trace'][g]['compile_ms'] for r in runs]), 1)} |")
             print("produce_cache events", fmt(med([r["trace"]["produce_cache"] for r in runs])), "| lazy ms main", fmt(med([r["trace"]["lazy_ms"]["main"] for r in runs]), 1), "worker", fmt(med([r["trace"]["lazy_ms"]["worker"] for r in runs]), 1),
@@ -273,24 +287,36 @@ def main():
     ap.add_argument("--scenari", default="warm,warm-restarted,cold,trace-warm,trace-restarted")
     ap.add_argument("--trace-reloads", type=int, default=2, help="reloads after the first visit in the trace scenarios; the last one is traced (the code cache may need more than 2)")
     ap.add_argument("--warm-reloads", type=int, default=1, help="reloads after the first visit in warm / warm-restarted; the last one is measured (3 = the 4th load)")
+    ap.add_argument("--varianti", help="NAME=DIR[?QUERY],...: built sites measured side by side (one mirror each, no --url); ?QUERY goes on the first visit")
     ap.add_argument("--out")
     a = ap.parse_args()
     from playwright.sync_api import sync_playwright
-    base = serve_mirror(a.mirror, a.url) if a.mirror else a.url
+    variants: dict = {}       # name -> (base, query or None)
+    if a.varianti:
+        served: dict = {}
+        for item in a.varianti.split(","):
+            name, spec = item.split("=", 1)
+            d, _, q = spec.partition("?")
+            served.setdefault(d, serve_dir(d))
+            variants[name] = (served[d], q)
+    else:
+        variants[""] = (serve_mirror(a.mirror, a.url) if a.mirror else a.url, None)
     combos = []
     for s in a.scenari.split(","):
         for cpu in [int(x) for x in a.cpu.split(",")]:
             for rtt in ([0] if s.startswith("trace") else [int(x) for x in a.rtt.split(",")]):
-                combos.append((s, rtt, cpu))
+                for v in variants:
+                    combos.append((v, s, rtt, cpu))
     results: dict = {k: [] for k in combos}
     exe = "/opt/pw-browsers/chromium"
-    proxy = {"server": os.environ["HTTPS_PROXY"]} if os.environ.get("HTTPS_PROXY") and not a.mirror else None
+    proxy = {"server": os.environ["HTTPS_PROXY"]} if os.environ.get("HTTPS_PROXY") and not (a.mirror or a.varianti) else None
     with sync_playwright() as p:
         for i in range(a.runs):                 # interleaved: every combination once per round
             for k in combos:
                 b = p.chromium.launch(proxy=proxy, **({"executable_path": exe} if os.path.isfile(exe) else {}))
                 try:
-                    results[k].append(one(b, base, *k, mirror=bool(a.mirror), loads=a.trace_reloads, warm_loads=a.warm_reloads))
+                    base, q = variants[k[0]]
+                    results[k].append(one(b, base, *k[1:], mirror=bool(a.mirror or a.varianti), loads=a.trace_reloads, warm_loads=a.warm_reloads, query=q))
                     print(f"run {i + 1} {k}: ok", flush=True)
                 except Exception as e:
                     print(f"run {i + 1} {k}: {str(e)[:200]}", flush=True)

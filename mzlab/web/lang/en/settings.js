@@ -26,7 +26,7 @@ I18N.add("en", {
   "settings.motion": "Reduce motion",
   "settings.motion.title": "Turns animations off, regardless of the system setting",
   "settings.reset": "Reset to defaults",
-  "settings.reset.title": "Resets theme, colours and calculation options to starting values",
+  "settings.reset.title": "Resets theme, colours and calculation options to defaults",
   "settings.close": "Close the settings",
   "bug.what.tip": "What you did and what happened",
   "bug.info.tip": "Shows the diagnostics added, with no file names",

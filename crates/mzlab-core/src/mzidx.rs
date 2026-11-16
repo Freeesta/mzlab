@@ -14,7 +14,9 @@ use crate::mzidx_spill::{align, read_parts, Parts, Spill};
 use crate::mzml::Spectrum;
 mod crc;
 mod late;
+mod streamed;
 pub use late::{build_mzml_corriere, build_mzml_late};
+pub use streamed::build_mzml_streamed;
 
 pub const BLOCK: u64 = 16384;
 const ALIGN: u64 = 64;

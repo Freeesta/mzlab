@@ -89,6 +89,17 @@ fn a_bad_comparison_is_refused_before_anything_runs() {
         refused("spectra.match@1", blank),
         Err(("err.flow.compare.variants".to_string(), String::new()))
     );
+    // a label becomes part of a step id, so of a file name: no separators, `..` or leading dot
+    for label in ["../x", "/tmp/x", "a/b", "a\\\\b", "..", ".h"] {
+        let v = format!(
+            r#"[{{"algorithm":"cosine"}},{{"label":"{label}","algorithm":"spectral_entropy"}}]"#
+        );
+        assert_eq!(
+            refused("spectra.match@1", &v),
+            Err(("err.flow.compare.variants".to_string(), String::new())),
+            "{label}"
+        );
+    }
     let formulas = r#"[{"algorithm":"compose_isotopes"},{"label":"b","algorithm":"compose_isotopes","params":{"x":1}}]"#;
     assert_eq!(
         refused("formula.ms1@1", formulas),

@@ -428,6 +428,31 @@ try:
             assert q.evaluate("[localStorage.getItem('mzlab.lang'), localStorage.getItem('mzlab.prefs')]") == ["en", '{"theme":"dark"}'], "language and settings stay"
             c3.close()
         step("a new run of the app starts clean (files, session, working choices); a reload of the same run keeps them; language and settings stay", cold_start)
+        def files_reset():
+            # «Files» in the app: the same run (no cold start after its reload), and the native store is cleared by the new page (?riparti=file) as the dialog
+            # says: the files go, the drawing in kv.json and the lists of the page stay
+            c5 = b.new_context(user_agent=ctx_ua); c5.add_init_script("window.__NEWRUN = true;\n" + FAKE_TAURI); c5.route(re.compile(r"http://mzlab\.localhost/.*"), native)
+            q = c5.new_page(); q.on("pageerror", lambda e: fails.append("pageerror " + str(e)[:200]))
+            running = "window.qqReady === true && sessionStorage.getItem('mzlab.run') === '1' && !window.__before"
+            q.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); q.wait_for_function(running, timeout=120000)
+            q.wait_for_selector("#drop", timeout=120000); q.click("#drop")
+            q.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(LR_FILES)}", timeout=120000)
+            q.click("#opbtn"); q.wait_for_function(f"E.files.length >= {len(LR_FILES)}", timeout=120000)
+            q.evaluate("""async () => { NB.ket = 'CCO'; await nbSave(true);
+                const { DB_NAME, DB_VER, upgrade } = await import(new URL('static/qqq-db.js', location.href).href);      // as the lists code opens it
+                const db = await new Promise((ok, no) => { const r = indexedDB.open(DB_NAME, DB_VER); r.onupgradeneeded = () => upgrade(r.result); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+                await new Promise((ok, no) => { const t = db.transaction('liste_utente', 'readwrite'); t.objectStore('liste_utente').put({ id: 'app-list', name: 'my list' }); t.oncomplete = ok; t.onerror = () => no(t.error); }); db.close(); }""")
+            urls = []; q.on("framenavigated", lambda f: urls.append(f.url) if f == q.main_frame else None)
+            q.evaluate("window.__before = 1; void QQRESET.run('files')")
+            q.wait_for_function(running + " && E.files.length === 0 && !location.search.includes('riparti')", timeout=120000)
+            assert [u for u in urls if "riparti=" in u] and all("riparti=file" in u for u in urls if "riparti=" in u), ("the new page finishes «Files», no cold start", urls)
+            assert q.evaluate(JSON, "api/state")["j"]["files"] == [], "the native store lists no file"
+            got = q.evaluate("""async () => { const db = await new Promise(ok => { const r = indexedDB.open(NOMI.DB); r.onsuccess = () => ok(r.result); });
+                const l = await new Promise(ok => { const g = db.transaction('liste_utente').objectStore('liste_utente').get('app-list'); g.onsuccess = () => ok(!!g.result); }); db.close();
+                const nb = JSON.parse(await (await fetch('api/notebook')).text() || '{}') || {}; return { list: l, ket: nb.ket || null, session: (nb.session || []).length }; }""")
+            assert got == {"list": True, "ket": "CCO", "session": 0}, ("the drawing and the list stay, the open-files list goes", got)
+            c5.close()
+        step("«Files» in the app: the native files go, the drawing and the lists stay, and the reload is not a new run", files_reset)
         b.close()
 finally:
     eng.kill(); page.shutdown(); shutil.rmtree(RAW_DIR, ignore_errors=True); shutil.rmtree(D_DIR.parent, ignore_errors=True); shutil.rmtree(MOD_DIR, ignore_errors=True)

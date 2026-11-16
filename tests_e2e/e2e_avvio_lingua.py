@@ -62,7 +62,7 @@ try:
         def header_first_paint():
             # while the texts wait (class i18n-wait) the buttons without text are already visible, in their place; the title never changes
             c = ctx("en-US", "en"); pg = c.new_page(); pg.goto(URL + "?lang=en"); pg.wait_for_selector("#drop", timeout=120000)
-            assert pg.evaluate("window.__titles") == ["mzLab \u2022 MS Analysis"], pg.evaluate("window.__titles")
+            assert pg.evaluate("window.__titles") == ["MS Analysis \u00b7 mzLab"], pg.evaluate("window.__titles")
             pg.evaluate("document.documentElement.classList.add('i18n-wait')")
             vis = pg.evaluate("['.logo','#np-set','#fs-btn','.hq'].map(s => getComputedStyle(document.querySelector('header ' + s)).visibility)")
             assert vis == ["visible"] * 4, vis
