@@ -97,7 +97,7 @@ const BARRA = (() => {
   // button opens (its state is aria-pressed); items: ids of the commands in its menu; run: what it does; visible: when it exists; onBar: when its button is in the bar.
   /** @type {any[]} */
   const CMD = [
-    { id: "file", ic: () => ICONS.file, panel: "file", visible: () => inDataOrOpening() || landing(), run: () => (landing() && !inData() ? toggleDrawer() : toggle("file")) },
+    { id: "file", ic: () => ICONS.file, panel: "file", visible: () => inDataOrOpening() || landing(), run: () => (landing() && !inData() && (!_open || _tab === "file") ? toggleDrawer() : toggle("file")) },      // empty landing: File hides its own panel but always SELECTS itself when another tool is shown
     // where the side panel exists the calculator is the top of the Adducts & losses page (no button of its own); in Disegno it is the drop-down under its button (eventi.js)
     { id: "calc", dom: "np-calc2", ic: () => QI("calc"), onBar: () => !(inDataOrOpening() || landing()), run: () => window.calcToggleFloat && window.calcToggleFloat() },
     { id: "addloss", dom: "np-addloss", ic: () => QI("ad"), panel: "addloss", run: () => toggle("addloss") },
@@ -576,7 +576,7 @@ const BARRA = (() => {
   function updateButtons() {
     const bar = Q1("#stbar");
     if (!bar) return;
-    const open = _open && inData();
+    const open = _open && (inData() || landing());      // the empty landing shows the panel too: its button must read pressed
     bar.querySelectorAll("button[data-cmd]").forEach((/** @type {HTMLElement} */ b) => {
       const c = byId(b.dataset.cmd);
       if (!c || !c.panel) return;
@@ -895,7 +895,7 @@ const BARRA = (() => {
   function bindGlobalEvents() {
     document.addEventListener("keydown", e => {
       // show/hide the side panel from the keyboard
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.code === "KeyB") && inData()) {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.code === "KeyB") && (inData() || landing())) {      // the empty landing has the header button, so it has the key too
         e.preventDefault(); e.stopPropagation();
         toggleDrawer();
         return;

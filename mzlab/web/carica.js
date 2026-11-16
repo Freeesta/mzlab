@@ -37,7 +37,25 @@
     if (window.PALETTE || opening || !(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || (e.key !== "k" && e.key !== "K")) return;
     if (document.documentElement.classList.contains("phone")) return;
     e.preventDefault(); opening = true;
-    add("paletta.js").then(function () { window.PALETTE.open(); }).catch(function (x) { console.error(x); }).then(function () { opening = false; });
+    // keys typed while the script loads are kept and replayed into the box, so the first Ctrl/Cmd+K loses nothing; a key aimed at another field is left alone
+    var typed = [], keep = function (k) {
+      var t = /** @type {HTMLElement | null} */ (k.target); if (t && t.closest && t.closest("input, textarea, select, [contenteditable]")) return;
+      if (k.ctrlKey || k.metaKey || k.altKey) return;
+      if (k.key.length === 1 || k.key === "Backspace" || k.key === "Enter") { k.preventDefault(); k.stopPropagation(); typed.push(k.key); }
+    };
+    var replay = function (/** @type {number} */ left) {
+      var found = /** @type {HTMLInputElement | null} */ (document.getElementById("pal-in"));
+      if (!found) { if (left > 0) setTimeout(function () { replay(left - 1); }, 50); else console.error("palette: box not found, " + typed.length + " keys dropped"); return; }
+      var box = found;
+      typed.forEach(function (k) {
+        if (k === "Enter") box.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+        else { box.value = k === "Backspace" ? box.value.slice(0, -1) : box.value + k; box.dispatchEvent(new Event("input", { bubbles: true })); }
+      });
+    };
+    document.addEventListener("keydown", keep, true);
+    add("paletta.js").then(function () {
+      document.removeEventListener("keydown", keep, true); window.PALETTE.open(); replay(1);
+    }).catch(function (x) { console.error(x); }).then(function () { document.removeEventListener("keydown", keep, true); opening = false; });
   }, true);
   // a smartphone gets only the card: no Dati, Disegno or shell
   // the rest of the catalog first (i18n.js awaitRest): every script after it finds all its texts; a failed read is tried once more

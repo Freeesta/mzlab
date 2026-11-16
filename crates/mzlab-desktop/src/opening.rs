@@ -96,11 +96,11 @@ pub fn paths_from_args(args: &[String], cwd: Option<&Path>) -> Vec<PathBuf> {
         .collect()
 }
 
-/// What an opening from outside becomes: the files to queue and the problems to tell the user (English: the native side has no translations).
+/// What an opening from outside becomes: the files to queue and the names of the `.scan` files refused (the page says why, in the user's language: `predef.scan.needs.wiff`).
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Plan {
     pub files: Vec<PathBuf>,
-    pub problems: Vec<String>,
+    pub refused: Vec<String>,
 }
 
 /// The file of `dir` whose name equals `name` ignoring case (the OS may hand over `X.WIFF.SCAN` while the folder holds `X.wiff`).
@@ -130,7 +130,7 @@ pub fn plan_from_paths(paths: impl IntoIterator<Item = PathBuf>) -> Plan {
         let dir = p.parent().map(Path::to_path_buf).unwrap_or_default();
         if low.ends_with(".scan") && p.is_file() {
             if !low.ends_with(WIFF_SCAN) {
-                plan.problems.push(format!("«{name}» is not a SCIEX scan companion (.wiff.scan) and cannot be opened as data."));
+                plan.refused.push(name);
                 continue;
             }
             let stem = &name[..name.len() - ".scan".len()];
@@ -139,7 +139,7 @@ pub fn plan_from_paths(paths: impl IntoIterator<Item = PathBuf>) -> Plan {
                     add(&mut plan, w);
                     add(&mut plan, p);
                 }
-                None => plan.problems.push(format!("Cannot open «{name}»: the SCIEX data file «{stem}» is missing from the same folder.")),
+                None => plan.refused.push(name),
             }
         } else if low.ends_with(".wiff") && p.is_file() {
             let scan = sibling(&dir, &format!("{name}.scan"));
@@ -167,8 +167,9 @@ pub fn plan_from_args(args: &[String], cwd: Option<&Path>) -> Plan {
 }
 
 /// Files that arrived before the page could take them (cold start, or the window still loading): the page empties it with `take_opened`.
+/// Refused `.scan` names wait the same way, each once, so the page can say why in its language.
 #[derive(Default)]
-pub struct Pending(Mutex<Vec<PathBuf>>);
+pub struct Pending(Mutex<Vec<PathBuf>>, Mutex<Vec<String>>);
 
 impl Pending {
     pub fn push(&self, paths: impl IntoIterator<Item = PathBuf>) {
@@ -178,6 +179,19 @@ impl Pending {
                 g.push(p);
             }
         }
+    }
+
+    pub fn push_refused(&self, names: impl IntoIterator<Item = String>) {
+        let mut g = self.1.lock().unwrap_or_else(|e| e.into_inner());
+        for n in names {
+            if !g.contains(&n) {
+                g.push(n);
+            }
+        }
+    }
+
+    pub fn take_refused(&self) -> Vec<String> {
+        std::mem::take(&mut *self.1.lock().unwrap_or_else(|e| e.into_inner()))
     }
 
     pub fn take(&self) -> Vec<PathBuf> {
