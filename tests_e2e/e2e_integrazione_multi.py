@@ -21,7 +21,7 @@ if not shutil.which("cargo"):
 D = Path(tempfile.mkdtemp(prefix="multi_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_sim.py"), str(D)], check=True, capture_output=True)
 TRUE = json.loads((D / "sim3.json").read_text())
-CLI = ["cargo", "run", "-q", "-p", "mzlab-cli", "--"]
+CLI = ["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--"]      # the release binary tools/verifica.py builds once before the tests
 cli = lambda *a: subprocess.run(CLI + [str(x) for x in a], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout
 throw = lambda m: (_ for _ in ()).throw(AssertionError(m))
 need = lambda c, m: c or throw(m)
