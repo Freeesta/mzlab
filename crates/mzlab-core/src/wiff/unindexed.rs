@@ -169,7 +169,9 @@ pub(super) fn add(
             .iter()
             .position(|p| p.w.sample == s && p.w.records.is_empty())
         {
-            (parti.remove(k), campioni.remove(k), raw_names.remove(k));
+            parti.remove(k);
+            campioni.remove(k);
+            raw_names.remove(k);
         }
         let i = parti.len();
         *total += w.records.len() as u64;
