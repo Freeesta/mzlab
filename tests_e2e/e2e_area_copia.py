@@ -35,8 +35,12 @@ try:
             assert t == '<div class="sm">' + pg.evaluate("I18N.t('int.copy.tip')") + '</div>', t      # no area, intensity or baseline line
         step("the hover text of the area label is only the copy hint", tip_is_hint)
         def fades():
-            wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)      # about 1.2 s visible, then a 150 ms fade
-        step("the notice is gone by itself within 2 s", fades)
+            # the click of click_copies was just made: still visible at ~1 s (a 0.5 s timer fails here), gone by ~2 s
+            assert pg.evaluate("document.querySelector('.areacopied').getAttribute('role')") == "status" and pg.evaluate("document.querySelector('.areacopied').getAttribute('aria-live')") == "polite"
+            pg.evaluate("new Promise(r => setTimeout(r, 700))")
+            assert pg.evaluate("document.querySelector('.areacopied').classList.contains('show')"), "still visible about 1 s after the click"
+            wait_for_js(pg, "!document.querySelector('.areacopied.show')", 1300)      # 1.2 s visible, then a 150 ms fade
+        step("the notice (role=status) is visible at ~1 s and gone by itself by ~2 s", fades)
         def restarts():
             l = lab(); pg.mouse.click(l["x"], l["y"]); wait_for_js(pg, "!!document.querySelector('.areacopied.show')"); pg.evaluate("new Promise(r => setTimeout(r, 900))")
             pg.mouse.click(l["x"], l["y"]); pg.evaluate("new Promise(r => setTimeout(r, 700))")                      # 1.6 s after the first click: still there, the second one restarted the timer
@@ -59,21 +63,43 @@ try:
             wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)
         step("a redraw between press and release still copies and says so", redrawn)
         def fallback():
-            l = lab(); pg.evaluate("window._ex = []; navigator.clipboard.writeText = () => Promise.reject(new Error('no focus')); document.execCommand = c => (window._ex.push(c), true)")
+            l = lab(); pg.evaluate("window._ex = []; Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.reject(new Error('no focus')) }, configurable: true }); document.execCommand = c => (window._ex.push([c, document.activeElement.tagName]), true)")
             pg.mouse.click(l["x"], l["y"]); wait_for_js(pg, "!!document.querySelector('.areacopied.show')")
-            assert "copy" in pg.evaluate("window._ex") and pg.inner_text(".areacopied") == "Copiato!" and not pg.evaluate("document.querySelector('.areacopied').classList.contains('bad')")
+            assert ["copy", "TEXTAREA"] in pg.evaluate("window._ex") and pg.inner_text(".areacopied") == "Copiato!" and not pg.evaluate("document.querySelector('.areacopied').classList.contains('bad')")
+            assert pg.evaluate("document.querySelectorAll('textarea[aria-hidden=true][readonly]').length") == 0, "the hidden textarea is removed"
+            wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)
+            back = pg.evaluate("""(async () => { const i = document.createElement('input'); document.body.appendChild(i); i.focus(); await AREACOPY.put('t', 100, 100);
+                const r = [document.activeElement === i, document.querySelectorAll('textarea[aria-hidden=true][readonly]').length]; i.remove(); return r; })()""")
+            assert back == [True, 0], ("the focus goes back to the previous element and the textarea is gone", back)
             wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)
             pg.evaluate("document.execCommand = () => false"); pg.mouse.click(l["x"], l["y"]); wait_for_js(pg, "document.querySelector('.areacopied.show.bad')")
             assert pg.inner_text(".areacopied") != "Copiato!", "a short error, not the success text"
+            assert pg.evaluate("document.querySelectorAll('textarea[aria-hidden=true][readonly]').length") == 0
             wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)
+            pg.evaluate("delete navigator.clipboard; delete document.execCommand")      # the real clipboard and execCommand again
         step("async API refused: execCommand fallback says Copied; both refused: a short error", fallback)
         def above_dialog():
-            pg.evaluate("document.execCommand = () => true; delete navigator.clipboard.writeText")
+            pg.evaluate("Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.reject(new Error('refused')) }, configurable: true }); document.execCommand = () => true")
             pg.evaluate("(()=>{const d=document.createElement('dialog');d.id='tdlg';document.body.appendChild(d);d.showModal()})()")
             pg.evaluate("AREACOPY.say(200, 200, true)"); wait_for_js(pg, "document.querySelector('.areacopied.show')")
             assert pg.evaluate("document.querySelector('.areacopied').parentElement.id") == "tdlg", "inside the modal dialog, so above it"
-            pg.evaluate("document.querySelector('#tdlg').close(); document.querySelector('#tdlg').remove()"); wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)
+            pg.evaluate("(async () => { await AREACOPY.put('y', 200, 200); })()"); wait_for_js(pg, "document.querySelector('.areacopied.show') && !document.querySelector('.areacopied.bad')")      # refused API, fallback ok, inside the dialog too
+            assert pg.evaluate("document.querySelector('.areacopied').parentElement.id") == "tdlg"
+            pg.evaluate("document.querySelector('#tdlg').close(); document.querySelector('#tdlg').remove(); delete navigator.clipboard; delete document.execCommand"); wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)
         step("the notice moves into an open modal dialog (visible over it)", above_dialog)
+        def border():
+            # a press within 6 px of an integration border under the label: the click copies (no movement) and leaves the borders alone; a real drag moves the border and copies nothing
+            g = pg.evaluate(f"(()=>{{const p={XP},q=p.cv.getBoundingClientRect(),l=p._a.lbls.find(b=>b.copy!=null),i=l.int,bx=p._a.X(i.a);return {{inside:bx>l.x+2&&bx<l.x+l.w-2,x:q.left+bx+2,y:q.top+l.y+l.h/2,a:i.a,b:i.b,copy:l.copy}}}})()")
+            assert g["inside"], ("the integration border is under the label box", g)
+            pg.evaluate("navigator.clipboard.writeText('x')")
+            pg.mouse.click(g["x"], g["y"]); wait_for_js(pg, "!!document.querySelector('.areacopied.show')"); assert clip() == g["copy"], "a click on a border under the label copies"
+            assert pg.evaluate(f"[{XP}.ints[0].a, {XP}.ints[0].b]") == [g["a"], g["b"]], "and does not move the border"
+            wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)
+            pg.evaluate("navigator.clipboard.writeText('x')")
+            pg.mouse.move(g["x"], g["y"]); pg.mouse.down(); pg.mouse.move(g["x"] - 30, g["y"], steps=5); pg.mouse.up(); frames(pg, 2)
+            assert clip() == "x" and pg.evaluate(f"{XP}.ints[0].a") != g["a"], "a drag from the border moves it and copies nothing"
+            pg.evaluate(f"(()=>{{const p={XP};p.ints[0].a={g['a']};p.ints[0].b={g['b']};draw(p)}})()"); frames(pg, 2)
+        step("a press within 6 px of a border: click copies, drag moves the border and does not copy", border)
         def elsewhere():
             pg.evaluate("navigator.clipboard.writeText('x')"); n0 = pg.evaluate(f"{XP}.ints.length")
             c = pg.evaluate(f"(()=>{{const p={XP},q=p.cv.getBoundingClientRect(),a=p._a;return {{x:q.left+a.X(15.5),y:q.top+a.H-M.b-6}}}})()")
