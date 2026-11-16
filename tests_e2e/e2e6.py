@@ -99,9 +99,9 @@ try:
         step("no Isotopes tab; fixed-size periodic table", isotopes)
         def overlay():
             sp = pg.evaluate("E.panels.findIndex(p=>p.type==='spec')")
-            pg.evaluate(f"(()=>{{const p=E.panels[{sp}];p.iso={{formula:'C14H13F4N3O2S',ad:'[M+H]+'}};p.zoom=[360,372];draw(p)}})()"); wait_for_js(pg, "(l => l.includes('theoretical profile') && l.includes('aligned to the peak'))([...document.querySelectorAll('.pnl.spec .leg2')].map(e=>e.textContent).join(' '))")
+            pg.evaluate(f"(()=>{{const p=E.panels[{sp}];p.iso={{formula:'C14H13F4N3O2S',ad:'[M+H]+'}};p.zoom=[360,372];draw(p)}})()"); wait_for_js(pg, "(l => l.includes('theoretical pattern') && l.includes('aligned to the peak'))([...document.querySelectorAll('.pnl.spec .leg2')].map(e=>e.textContent).join(' '))")
             leg = pg.evaluate("[...document.querySelectorAll('.pnl.spec .leg2')].map(e=>e.textContent).join(' ')"); print("ISO LEG:", leg.replace("\n", " | "))
-            assert "theoretical profile" in leg and "aligned to the peak" in leg, leg
+            assert "theoretical pattern" in leg and "aligned to the peak" in leg, leg
             pg.screenshot(path=SH + "70_iso_overlay.png")
             pg.evaluate(f"(()=>{{const p=E.panels[{sp}];p.iso=null;draw(p)}})()")
         step("isotope overlay on the spectrum, aligned to the observed peak", overlay)
