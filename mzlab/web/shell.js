@@ -341,14 +341,33 @@ async function fetchDemo(/** @type {string[]} */ names,/** @type {AbortSignal} *
       CONVROWS.set(n,"wait",40);CONVROWS.base(n,40);out.push(new File(parts,n))}}
   catch(e_){const e=/** @type {Lanciato} */(e_);if(signal.aborted)names.forEach(n=>CONVROWS.finish(n,"cancel"));else{names.forEach(n=>CONVROWS.drop(n));fail(I18N.t("load.demo.error",{message:e.message}))}return []}
   return out}
+// the names of this drop that are in the list as «Waiting for engine» rows (waitRows); the batch drops the ones it does not keep (keep) or does not use under that name (upload)
+const PRE=/** @type {string[]} */ ([]);
+function waitRows(/** @type {string[]} */ names){const out=/** @type {string[]} */ ([]);
+  for(const n of names){if(out.includes(n)||CONVROWS.find(n)||ST.files.some((/** @type {FileRiga} */ g)=>g.name===n)||INFLIGHT.has(n))continue;CONVROWS.add(n,"engine");out.push(n)}
+  if(out.length)CONVROWS.ready();      // the polite count region (#cvlive) is there from the first row
+  return out}
 // `demo`: names of example files still to download (static/esempi): their rows are in the list at once, in order, and the download is the first part of each row
 /** @param {FileCarica[]} files @param {string} into @param {string[]} [demo] */
-async function upload(files,into,demo){if(typeof AVVIO!=="undefined"&&!(await AVVIO.pronto()))return;const box=$("#up");fail();
+async function upload(files,into,demo){let pre=/** @type {string[]} */ ([]);
+  // before the engine is ready the files are in the side list at once, «Waiting for engine»; the normal path takes the same rows over (no row goes and comes back)
+  if(typeof AVVIO!=="undefined"&&AVVIO.stato==="pending"){pre=waitRows(demo||files.map(f=>f.name));
+    // a loading under way for the work area (hint of the empty list gone with the first row, no jump when the engine is ready)
+    if(pre.length){UPBUSY++;syncWork()}
+    const ok=await AVVIO.pronto(pre.length>0);if(pre.length)UPBUSY--;
+    if(!ok){syncWork();pre.forEach(n=>AVVIO.stato==="failed"?CONVROWS.finish(n,"fail",{msg:AVVIO.errore||""}):CONVROWS.drop(n));return}
+    pre.forEach(n=>CONVROWS.skip.has(n)||CONVROWS.set(n,"wait",null));
+    if(CONVROWS.skip.size){const sk=CONVROWS.skip;CONVROWS.skip=new Set();if(demo)demo=demo.filter(n=>!sk.has(n));else files=files.filter(f=>!sk.has(f.name));if(!(demo||files).length){syncWork();return}}
+    PRE.push(...pre)}
+  else if(typeof AVVIO!=="undefined"&&!(await AVVIO.pronto()))return;
+  const box=$("#up");fail();
   if(demo){demo=demo.filter(n=>!ST.files.some((/** @type {FileRiga} */ g)=>g.name===n)&&!INFLIGHT.has(n));if(!demo.length)return;files=[];demo.forEach(n=>INFLIGHT.add(n))}else{files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)))}
   if(!UPBUSY)CONVROWS.clearDone();if(typeof S!=="undefined"&&S.adding)STATO.aggiunta(false,"upload");UPBUSY++;syncWork();let mine=files;const ctl=new AbortController();LOADS.add(ctl);CONVROWS.onCancel=cancelLoads;if(demo)demo.forEach(n=>{CONVROWS.add(n,"wait");CONVROWS.base(n,0)});
   // for the diagnosis of the loading
   try{navigator.storage.estimate().then(e=>{window.MZLAB_STIMA=`${Math.round((e.usage||0)/1e6)} of ${Math.round((e.quota||0)/1e6)} MB`}).catch(()=>{})}catch(_){}
-  try{if(demo){files=await fetchDemo(demo,ctl.signal);files.forEach(f=>INFLIGHT.add(fkey(f)));mine=files}await upload0(files,into,box,ctl.signal)}finally{FILETAB.flush();LOADS.delete(ctl);mine.forEach(f=>INFLIGHT.delete(fkey(f)));(demo||[]).forEach(n=>INFLIGHT.delete(n));UPBUSY--;syncWork();if(!UPBUSY){CONVROWS.onCancel=null;CONVROWS.paint();IDLE.splice(0).forEach(ok=>ok());OPENNOW.note()}}}
+  try{if(demo){files=await fetchDemo(demo,ctl.signal);files.forEach(f=>INFLIGHT.add(fkey(f)));mine=files}await upload0(files,into,box,ctl.signal)}finally{
+    // a row of the wait whose file entered under another name (converted) or not at all goes with the batch
+    pre.forEach(n=>{const i=PRE.indexOf(n);if(i>=0)PRE.splice(i,1);const r=CONVROWS.find(n);if(r&&r.state==="wait")CONVROWS.drop(n)});FILETAB.flush();LOADS.delete(ctl);mine.forEach(f=>INFLIGHT.delete(fkey(f)));(demo||[]).forEach(n=>INFLIGHT.delete(n));UPBUSY--;syncWork();if(!UPBUSY){CONVROWS.onCancel=null;CONVROWS.paint();IDLE.splice(0).forEach(ok=>ok());OPENNOW.note()}}}
 // a file the user gives with "#" in its name enters with "_" (hashFree, conversione.js) and the notice says so, once per .wiff pair
 function hashRename(/** @type {FileCarica[]} */ files,/** @type {CaricaRep} */ rep){const taken=[...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name),...files.map(f=>f.name)];
   return files.map(f=>{const n=f instanceof File&&!f.mzlabNat&&!f.mzlabModulo?hashFree(f.name,taken):null;if(!n)return f;taken.push(n);if(!/\.scan$/i.test(n))rep.notes.push(I18N.t("load.note.hashRenamed",{from:f.name,to:n}));
@@ -388,7 +407,8 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   let panel=/** @type {{ index(name: string, pc: number): void, end(): void } | null} */ (null);
   const wr=await wiffToMzml(files,box,signal);files=await rawToMzml(wr.files,box);files=await numpressToNat(files);files=await moduliToNat(files);files=await gzToEngine(files,rep);for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);for(const n of wr.notes||[])rep.notes.push(n);
   // a file that is not for the list (a by-product, a format we do not read) is told in the notice; the others are kept
-  const keep=(/** @type {FileCarica} */ f)=>{if(CartCarica.byproduct(f.name)){if(/\.log$/i.test(f.name))(rep.logs=rep.logs||[]).push(f.name);return false}const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k.ext,label:k.label,st:k.st});return false};
+  const gone=(/** @type {string} */ n)=>{const i=PRE.indexOf(n);if(i>=0){PRE.splice(i,1);CONVROWS.drop(n)}};
+  const keep=(/** @type {FileCarica} */ f)=>{if(CartCarica.byproduct(f.name)){gone(f.name);if(/\.log$/i.test(f.name))(rep.logs=rep.logs||[]).push(f.name);return false}const k=fileKind(f.name);if(!k)return true;gone(f.name);rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k.ext,label:k.label,st:k.st});return false};
   // the same group dropped again: no second notice
   const dedupeNotice=()=>{if(rep.unopen.length){const h=groupHash(/** @type {FileCarica[]} */ (rep.unopen.map(x=>rejected.find(f=>f.name===x.name))));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}};
   // a batch of up to 50 files is pipelined: each file is read as soon as it is ready (the first sample opens while the next ones convert); a bigger batch asks first (below) and goes as a whole
@@ -446,14 +466,6 @@ document.addEventListener("keydown",e=>{if(e.key!=="Escape"||e.defaultPrevented|
   if(a&&a!==document.body&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return;if(document.querySelector("dialog[open],#colpop,#fpop,#ctx:not([hidden])"))return;e.preventDefault();backToWork()});
 // New session: QQRESET.ask (reset.js) asks once, then clears everything the app keeps in this browser and reloads
 $("#newrun").onclick=()=>QQRESET.ask();
-// "m/z" is always written in italics: any text node that contains it is split and the symbol wrapped in <i> (not inside inputs, options, scripts or an existing <i>)
-(function(){const SKIP=/^(SCRIPT|STYLE|OPTION|TEXTAREA|INPUT|CANVAS|TITLE|SELECT)$/,RX=/(m\/z|MS2)/;
- // m/z always in italics and MS2 with a real superscript (never the Unicode characters); text nodes only: titles, options and file names keep the plain "MS2"
- function fix(/** @type {Node} */ root){const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>RX.test(/** @type {string} */ (n.nodeValue))&&n.parentElement&&!SKIP.test(n.parentElement.tagName)&&!(n.parentElement.tagName==="I"&&n.nodeValue==="m/z")&&!(n.parentElement.tagName==="SUP")?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT});
-  const L=[];while(w.nextNode())L.push(w.currentNode);
-  for(const n of /** @type {any[]} */ (L)){const f=document.createDocumentFragment();n.nodeValue.split(/(m\/z|MS2)/).forEach((/** @type {string} */ t)=>{if(t==="m/z"){const e=document.createElement("i");e.textContent="m/z";f.appendChild(e)}else if(t==="MS2"){f.appendChild(document.createTextNode("MS"));const e=document.createElement("sup");e.textContent="2";f.appendChild(e)}else if(t)f.appendChild(document.createTextNode(t))});n.replaceWith(f)}}
- let busy=false;new MutationObserver(ms=>{if(busy)return;busy=true;try{for(const m of ms){if(m.type==="characterData"){if(m.target.parentElement)fix(m.target.parentElement)}else m.addedNodes.forEach(a=>{if(a.nodeType===1)fix(a);else if(a.nodeType===3&&a.parentElement)fix(a.parentElement)})}}finally{busy=false}}).observe(document.body,{childList:true,subtree:true,characterData:true});
- fix(document.body)})();
 document.querySelectorAll("[data-ic]").forEach(e=>{e.innerHTML=QICON.get(e.dataset.ic,16);
   // the header icons sit next to their text label (the icon names are Italian)
   if(e.closest("header"))e.querySelectorAll("svg").forEach((/** @type {Element} */ v)=>{v.removeAttribute("aria-label");v.removeAttribute("role");v.setAttribute("aria-hidden","true")})});

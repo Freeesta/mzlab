@@ -44,10 +44,10 @@ try:
         step("↑↓ and Enter open the panel of the first result", keys)
         def cont():
             opn(); typ("63.04", "Contaminant"); pg.locator("#pal-l li[role=option]", has_text="Contaminant").first.click()
-            wait_for_js(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'cont')"); assert pg.input_value("#calcin") == "63.04", pg.input_value("#calcin")
+            wait_for_js(pg, "BARRA.curTab === 'lists'"); assert pg.input_value("#lst-q") == "63.04", pg.input_value("#lst-q")
             assert not pg.evaluate("[...document.querySelectorAll('dialog')].some(d => d.open)"), "the side panel, never a pop-up"
             pg.evaluate("BARRA.close(false)")
-        step("a contaminant hit opens the Contaminants tab of the side panel with the number", cont)
+        step("a contaminant hit opens the Lists panel of the side panel with the number", cont)
         def esc():
             opn(); typ("18", "Neutral loss"); pg.keyboard.press("Escape"); wait_for_js(pg, "document.querySelector('#paletta').hidden")
             assert not pg.is_visible("#paletta"), (pg.evaluate("document.activeElement.id||document.activeElement.tagName"), pg.evaluate("document.querySelector('#paletta').hidden"))

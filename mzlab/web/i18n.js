@@ -123,23 +123,60 @@
     if (rest) { applyKnown(r); return; }
     // {app} = the visible name of the program (appname.js)
     const P = { app: (typeof window !== "undefined" && window.APP_NAME) || "" };
-    r.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n"), P); });
+    r.querySelectorAll("[data-i18n]").forEach(el => putText(el, t(el.getAttribute("data-i18n"), P)));
     // catalog text with b/i/u/code/sub/sup/a/br (trusted)
-    r.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html"), P); });
+    r.querySelectorAll("[data-i18n-html]").forEach(el => putHtml(el, t(el.getAttribute("data-i18n-html"), P)));
     ATTRS.forEach(([a, target]) => r.querySelectorAll("[" + a + "]").forEach(el => el.setAttribute(target, t(el.getAttribute(a), P))));
+    marked(r);
   }
   // while the rest is to come: an element whose key is not here yet keeps its text (the English of the page) and waits for done()
   const ALL = "[data-i18n],[data-i18n-html]," + ATTRS.map(([a]) => "[" + a + "]").join(",");
-  function applyKnown(r) { r.querySelectorAll(ALL).forEach(el => { if (!fill(el)) held.add(el); }); }
+  function applyKnown(r) { r.querySelectorAll(ALL).forEach(el => { if (!fill(el)) held.add(el); }); marked(r); }
   // the keys of one element; false when one of them is not in the catalog yet (that one is left as it is)
   function fill(el) {
     const P = { app: (typeof window !== "undefined" && window.APP_NAME) || "" }, has = k => !rest || cat.en[k] !== undefined;
     let all = true;
     const put = (a, f) => { const k = el.getAttribute(a); if (k === null) return; if (has(k)) f(t(k, P)); else all = false; };
-    put("data-i18n", v => { el.textContent = v; });
-    put("data-i18n-html", v => { el.innerHTML = v; });
+    put("data-i18n", v => putText(el, v));
+    put("data-i18n-html", v => putHtml(el, v));
     ATTRS.forEach(([a, target]) => put(a, v => el.setAttribute(target, v)));
     return all;
+  }
+
+  // Marked-up texts are written ONCE, in their final form: "m/z" (a quantity symbol) always in italics and MS2 with a real superscript
+  // (never the Unicode characters). The writer marks what it writes before the first paint, and a node whose text did not change is not
+  // rewritten (a bare textContent write would drop the <i> and draw the label upright for a frame). Text written by other code is marked by
+  // the observer started with the first apply(document), in the same task as the write. Not in inputs, options, titles, scripts or an existing <i>/<sup>.
+  const SKIP = /^(SCRIPT|STYLE|OPTION|TEXTAREA|INPUT|CANVAS|TITLE|SELECT)$/, MARK = /(m\/z|MS2)/;
+  function mark(node) {
+    if (typeof document === "undefined" || !node || node.nodeType !== 1) return;
+    const w = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, { acceptNode: n => { const p = n.parentElement;
+      return MARK.test(n.nodeValue || "") && p && !SKIP.test(p.tagName) && !(p.tagName === "I" && n.nodeValue === "m/z") && p.tagName !== "SUP" ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT; } });
+    /** @type {Text[]} */ const L = []; while (w.nextNode()) L.push(/** @type {Text} */ (w.currentNode));
+    for (const n of L) {
+      const f = document.createDocumentFragment();
+      n.data.split(MARK).forEach(s => {
+        if (s === "m/z") { const e = document.createElement("i"); e.textContent = "m/z"; f.appendChild(e); }
+        else if (s === "MS2") { f.appendChild(document.createTextNode("MS")); const e = document.createElement("sup"); e.textContent = "2"; f.appendChild(e); }
+        else if (s) f.appendChild(document.createTextNode(s));
+      });
+      n.replaceWith(f);
+    }
+  }
+  function putText(el, v) { if (el.textContent !== v) el.textContent = v; mark(el); }
+  // the last catalog html written in an element and what it became once marked: the same text over an untouched node is not written again
+  const wrote = new WeakMap();
+  function putHtml(el, v) { const w = wrote.get(el); if (w && w[0] === v && w[1] === el.innerHTML) return; el.innerHTML = v; mark(el); wrote.set(el, [v, el.innerHTML]); }
+  let watching = false;
+  // the whole page: its static texts (with or without a key) are marked, and the observer starts
+  function marked(r) {
+    if (typeof document === "undefined" || r !== document || !document.body) return;
+    mark(document.body);
+    if (watching) return;
+    watching = true;
+    let busy = false;
+    new MutationObserver(ms => { if (busy) return; busy = true; try { for (const m of ms) { if (m.type === "characterData") { if (m.target.parentElement) mark(m.target.parentElement); } else m.addedNodes.forEach(a => { if (a.nodeType === 1) mark(a); else if (a.nodeType === 3 && a.parentElement) mark(a.parentElement); }); } } finally { busy = false; } })
+      .observe(document.body, { childList: true, subtree: true, characterData: true });
   }
   if (typeof document !== "undefined") document.documentElement.setAttribute("lang", lang);
 

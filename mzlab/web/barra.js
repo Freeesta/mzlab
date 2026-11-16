@@ -27,8 +27,8 @@ const BARRA = (() => {
 
   let _tab = "file";
   let _prev = "";                   // the tool shown before the current one while the panel stayed open: a second click on the current one goes back to it
-  let _sub = "adducts";             // the tab of the Adducts & losses page ("adducts" | "losses" | "cont"): the last one used is remembered
-  const SUBS = ["adducts", "losses", "cont"];
+  let _sub = "adducts";             // the tab of the Adducts & losses page ("adducts" | "losses"): the last one used is remembered
+  const SUBS = ["adducts", "losses"];
   let _open = false;
   let _lastView = "";          // the page of the last applyLayout: a change of page never animates the work area
   let _away = /** @type {{ open: boolean, top: number } | null} */ (null);       // state of the side panel when the student left Dati (Disegno, loading)
@@ -410,7 +410,7 @@ const BARRA = (() => {
   }
 
   function show(/** @type {string} */ id, /** @type {Bag} */ opt = {}) {
-    if (SUBS.includes(id)) { opt = { ...opt, sub: id }; id = "addloss"; }          // «adducts», «losses» and «cont» are the tabs of one page
+    if (SUBS.includes(id)) { opt = { ...opt, sub: id }; id = "addloss"; }          // «adducts» and «losses» are the tabs of one page
     if (id === "calc") { opt = { ...opt, calc: true }; id = "addloss"; }           // the calculator is the top of that page: unfolded and focused
     // the page lives only in the side panel: from another view (Disegno) it brings the student back to Dati, never a floating window
     if (id === "addloss" && !(inDataOrOpening() || landing()) && typeof setView === "function") setView("data");

@@ -11,7 +11,7 @@ id,area,label,key,file_line,text,chars,flags,source
 10,pannelli,${EH(et)},,mzlab/web/canali.js:167,${EH(t)},8,dinamico,site
 11,pannelli,${EH(T(,canali.pick.hint,mzlab/web/canali.js:192,"Click a channel: only that one. Box, Ctrl+click or Space: add or remove it.",75,due-frasi,site
 12,pannelli,,canali.miss.title,mzlab/web/canali.js:324,This file does not have the channel,35,non,site
-13,pannelli,,panel.wl.title+panel.xic.off,mzlab/web/eventi.js:261,"XWC: trace at one wavelength (λ), in nm // Not available for MS2",64,non,site
+13,pannelli,,panel.wl.title+panel.xic.off,mzlab/web/eventi.js:265,"XWC: trace at one wavelength (λ), in nm // Not available for MS2",64,non,site
 14,pannelli,,ibk.chip.title+fondo.chip.auto.title,mzlab/web/grafici.js:223,"Subtracts the mean of the stretch from the whole trace // SNIP baseline: minimum and maximum background removed, in cps",119,>90,site
 15,pannelli,${t},,mzlab/web/pannelli.js:1043,${t},4,dinamico,site
 16,pannelli,XIC,panel.xic.off+panel.xic.title,mzlab/web/pannelli.js:311,Not available for MS2 // m/z window of one ion,46,non,site
@@ -72,10 +72,10 @@ id,area,label,key,file_line,text,chars,flags,source
 71,pannelli,Points,canali.col.n.title,mzlab/web/canali.js:185,Number of points (scans) of the channel,39,,site
 72,pannelli,Time (min),canali.col.rt.title,mzlab/web/canali.js:185,"Time range of the channel, in minutes",37,,site
 73,pannelli,${EH(aria)},canali.btn.title+ctl.kind.title,mzlab/web/canali.js:191,Choose the channels to plot for each file // Type of chromatogram,65,,site
-74,pannelli,,ctl.wl.title,mzlab/web/eventi.js:262,Mean of the DAD channels in this nm range,41,,site
-75,pannelli,,,mzlab/web/eventi.js:283,s.level > 1 ? ptProduct(s.prec) : PT.spec,41,,site
-76,pannelli,=,calc.tape.title,mzlab/web/eventi.js:615,Puts the result back in the field to continue the calculation,61,,site
-77,pannelli,,calc.toLosses,mzlab/web/eventi.js:661,Search this value in Adducts & losses,37,,site
+74,pannelli,,ctl.wl.title,mzlab/web/eventi.js:266,Mean of the DAD channels in this nm range,41,,site
+75,pannelli,,,mzlab/web/eventi.js:287,s.level > 1 ? ptProduct(s.prec) : PT.spec,41,,site
+76,pannelli,=,calc.tape.title,mzlab/web/eventi.js:619,Puts the result back in the field to continue the calculation,61,,site
+77,pannelli,,calc.toLosses,mzlab/web/eventi.js:665,Search this value in Adducts & losses,37,,site
 78,pannelli,,,mzlab/web/fondo-chip.js:15,title,5,,site
 79,pannelli,◀,fondo.flat.left,mzlab/web/fondo-piatto.js:65,Move the background window to the left (Shift: five steps),58,,site
 80,pannelli,▶,fondo.flat.right,mzlab/web/fondo-piatto.js:66,Move the background window to the right (Shift: five steps),59,,site
@@ -100,166 +100,166 @@ id,area,label,key,file_line,text,chars,flags,source
 99,pannelli,%,panel.rel.title,mzlab/web/pannelli.js:307,On: intensity as % of the highest peak,38,,site
 100,pannelli,${I18N.t(,panel.rul.title,mzlab/web/pannelli.js:307,m/z difference between two peaks,32,,site
 101,pannelli,${I18N.t(,panel.tlink.title,mzlab/web/pannelli.js:308,Same zoom and cursor in the other linked chromatograms,54,,site
-102,pannelli,,panel.iauto.title,mzlab/web/pannelli.js:309,Click a peak: edges and area found automatically,48,,site
-103,pannelli,Clear integrations,panel.iclr.title,mzlab/web/pannelli.js:309,Delete all the integrations of this chart,41,,site
-104,pannelli,,panel.idel.title,mzlab/web/pannelli.js:309,Click an integrated peak to delete it,37,,site
-105,pannelli,,panel.iman.title,mzlab/web/pannelli.js:309,Drag on the chart the interval to integrate,43,,site
-106,pannelli,,panel.intf.title,mzlab/web/pannelli.js:309,"The trace you click, all visible ones or one file",49,,site
-107,pannelli,,panel.itab.title,mzlab/web/pannelli.js:309,Table of the integrated areas and kinetics,42,,site
-108,pannelli,log,ctl.log.title,mzlab/web/pannelli.js:310,Logarithmic scale,17,,site
-109,pannelli,${I18N.t(,ctl.smooth.title,mzlab/web/pannelli.js:310,Smooths the curve shown,23,,site
-110,pannelli,${I18N.t(,panel.dl.title,mzlab/web/pannelli.js:312,Download the image or the data of the chart,43,,site
-111,pannelli,\u22EF,panel.more.title,mzlab/web/pannelli.js:313,More chart tools,16,,site
-112,pannelli,×,panel.close,mzlab/web/pannelli.js:314,Close the panel,15,,site
-113,pannelli,,panel.max.title,mzlab/web/pannelli.js:314,Full screen: enlarges this panel (Esc to exit),46,,site
-114,pannelli,,panel.max.exit+panel.max.title,mzlab/web/pannelli.js:351,Exit full screen (Esc) // Full screen: enlarges this panel (Esc to exit),72,,site
-115,pannelli,,,mzlab/web/pannelli.js:400,v === ptitle(p.title) ? p.title : v,35,,site
-116,pannelli,,,mzlab/web/pannelli.js:56,tip,3,,site
-117,pannelli,,,mzlab/web/pannelli.js:567,lbl,3,,site
-118,pannelli,*/ x) => `,corr.file.pick,mzlab/web/pannelli.js:628,File to subtract,16,,site
-119,pannelli,${EH(I18N.t(,corr.fileNone.desc,mzlab/web/pannelli.js:630,At least two files are needed,29,,site
-120,pannelli,,,mzlab/web/pannelli.js:669,ttl,3,,site
-121,pannelli,${I18N.t(,ctl.mode.title,mzlab/web/pannelli.js:708,"Overlaid, one per row or cascaded",33,,site
-122,pannelli,Gradient delay (min): {input})},disp.gdelay.title,mzlab/web/pannelli.js:712,"Time the gradient takes to reach the column (dwell volume), set by you",70,,site
-123,pannelli,DAD → mass delay (min): {input})},disp.pdaDelay.title,mzlab/web/pannelli.js:713,"DAD delay to the mass spectrometer, measured from the file's peaks",66,,site
-124,pannelli,,ctl.mz.title,mzlab/web/pannelli.js:715,Only the ions in this m/z range; empty = all,44,,site
-125,pannelli,,ctl.rt.title,mzlab/web/pannelli.js:716,Two ends and Enter; empty = the whole chromatogram,50,,site
-126,pannelli,,ctl.prec.title,mzlab/web/pannelli.js:721,Sum of all precursors or the scans of one only,46,,site
-127,pannelli,&le;,corr.snipw.title,mzlab/web/pannelli.js:728,Width of the baseline window,28,,site
-128,pannelli,{n}/{tot} ▾,ctl.files.title,mzlab/web/pannelli.js:729,Files of this experiment type: shown / loaded,45,,site
-129,pannelli,×,ctl.range.clear,mzlab/web/pannelli.js:732,Clear the range,15,,site
-130,pannelli,${I18N.t(,ctl.range.title,mzlab/web/pannelli.js:732,m/z and time range shown,24,,site
-131,pannelli,,ctl.ms2tr.title,mzlab/web/pannelli.js:735,Chromatogram of the fragment in the scans of that precursor only,64,,site
-132,pannelli,"*/ t, /** @type {number} */ i) => `",ctl.xt.title,mzlab/web/pannelli.js:741,Which XIC to edit,17,,site
-133,pannelli,XIC \u2022 m/z,ctl.xlab.title,mzlab/web/pannelli.js:743,m/z and tolerance of the XIC,28,,site
-134,pannelli,,ctl.xr.title,mzlab/web/pannelli.js:744,Two m/z ends and Enter,22,,site
-135,pannelli,Split,ctl.split.title,mzlab/web/pannelli.js:745,One panel for each ion,22,,site
-136,pannelli,Options &#9662;,ctl.cpar.titleMap,mzlab/web/pannelli.js:756,"Colour scale and palette, noise threshold, normalisation and difference",71,,site
-137,pannelli,${I18N.t(,ctl.cpar.titleMap,mzlab/web/pannelli.js:756,"Colour scale and palette, noise threshold, normalisation and difference",71,,site
-138,pannelli,,ctl.kind.pda.title,mzlab/web/pannelli.js:757,DAD (PDA): UV/Vis diode-array detector,38,,site
-139,pannelli,MS,ctl.map.level.title,mzlab/web/pannelli.js:757,MS1: full scan; MS2: product ions,33,,site
-140,pannelli,"*/ x) => opt(x.k, fol ? E.cur : p.k, x.label)).join(""""",ctl.map.follow+ctl.map.file,mzlab/web/pannelli.js:758,Follows the file chosen in the bar: changing it here changes it there too // File to show,89,,site
-141,pannelli,color scale,ctl.map.scale.title,mzlab/web/pannelli.js:760,The square root brings out weak signals,39,,site
-142,pannelli,,,mzlab/web/pannelli.js:824,tip,3,,site
-143,pannelli,${I18N.t(,xic.adduct.title,mzlab/web/pannelli.js:977,Turns the neutral formula and adduct into the ion m/z,53,,site
-144,pannelli,×,xic.remove.title,mzlab/web/pannelli.js:977,Remove this ion,15,,site
-145,pannelli,,panel.pairArrow.title,mzlab/web/pannelli.js:99,The spectrum below belongs to the precursor chosen above,56,,site
-146,pannelli,,,mzlab/web/scroll.js:134,t,1,,site
-147,pannelli,&#9662;,sub.chip.title,mzlab/web/sottrazione.js:131,"Change file, factor, normalisation and tolerance",48,,site
-148,pannelli,${EH(T(,sub.next,mzlab/web/sottrazione.js:131,Next file,9,,site
-149,pannelli,×,sub.off.aria,mzlab/web/sottrazione.js:131,Remove the subtraction and go back to the raw data,50,,site
-150,pannelli,${EH(T(,sub.prev,mzlab/web/sottrazione.js:131,Previous file,13,,site
-151,pannelli,×,tdati.close,mzlab/web/tdati.js:42,Close,5,,site
-152,pannelli,,tdati.btn.title,mzlab/web/tdati.js:94,Chart data as a table (key T on the focused chart),50,,site
-153,pannelli,,touch.grip.title,mzlab/web/touch.js:183,Drag to change the height of the chart,38,,site
-154,pannelli,,,mzlab/web/xic-lente.js:110,"""""",2,,site
-155,pannelli,,xiclens.rt,mzlab/web/xic-lente.js:114,Retention time,14,,site
-156,pannelli,,,mzlab/web/xic-lente.js:94,withFile(s),11,,site
-157,pannelli,,xiclens.toggle,mzlab/web/xic-spettro.js:261,XIC preview on/off,18,,site
-158,pannelli,,,mzlab/web/xic-spettro.js:80,tip,3,,site
-159,spettri,*/ (TITLE)[g.id])},,mzlab/web/calc-qui-html.js:67,${EH(T(/** @type {Bag} */ (TIP)[g.id]))},40,dinamico,site
-160,spettri,,dda.ms2Title,mzlab/web/dda.js:120,MS2 of {mz},11,dinamico,site
-161,spettri,,,mzlab/web/dda.js:205,"""T: "" + j.filter",16,dinamico,site
-162,spettri,,dda.avgTitle,mzlab/web/dda.js:254,Average of {n} MS2 · {mz},25,dinamico,site
-163,spettri,Score,,mzlab/web/elementare-pannello.js:63,${EH(cxScoreTip(s))},20,dinamico,site
-164,spettri,×,cx.remove,mzlab/web/elementare.js:45,Remove {el},11,dinamico,site
-165,spettri,×,cx.remove,mzlab/web/elementare.js:48,Remove {el},11,dinamico,site
-166,spettri,${t(,,mzlab/web/elementare.js:62,${EH(I18N.t(`el.${e.s}`))},26,dinamico,site
-167,spettri,${I18N.t(,bn.idn.dl,mzlab/web/ident-catalogo.js:25,Download {name},15,dinamico,site
-168,spettri,${I18N.t(,bn.idn.dlNo,mzlab/web/ident-catalogo.js:26,Format not supported yet,24,non,site
-169,spettri,${I18N.t(,bn.idn.site,mzlab/web/ident-catalogo.js:27,Open the site of {name},23,dinamico,site
-170,spettri,${l.name},,mzlab/web/ident-pannello.js:56,${why},6,dinamico,site
+102,pannelli,&#9662;,panel.iall.title,mzlab/web/pannelli.js:309,"Integrate every peak shown, or its settings",43,,site
+103,pannelli,${I18N.t(,panel.iauto.title,mzlab/web/pannelli.js:309,Click a peak: edges and area found automatically,48,,site
+104,pannelli,Clear integrations,panel.iclr.title,mzlab/web/pannelli.js:309,Delete all the integrations of this chart,41,,site
+105,pannelli,${I18N.t(,panel.idel.title,mzlab/web/pannelli.js:309,Click an integrated peak to delete it,37,,site
+106,pannelli,${I18N.t(,panel.iman.title,mzlab/web/pannelli.js:309,Drag on the chart the interval to integrate,43,,site
+107,pannelli,${I18N.t(,panel.intf.title,mzlab/web/pannelli.js:309,"The trace you click, all visible ones or one file",49,,site
+108,pannelli,${I18N.t(,panel.itab.title,mzlab/web/pannelli.js:309,Table of the integrated areas and kinetics,42,,site
+109,pannelli,log,ctl.log.title,mzlab/web/pannelli.js:310,Logarithmic scale,17,,site
+110,pannelli,${I18N.t(,ctl.smooth.title,mzlab/web/pannelli.js:310,Smooths the curve shown,23,,site
+111,pannelli,${I18N.t(,panel.dl.title,mzlab/web/pannelli.js:312,Download the image or the data of the chart,43,,site
+112,pannelli,\u22EF,panel.more.title,mzlab/web/pannelli.js:313,More chart tools,16,,site
+113,pannelli,×,panel.close,mzlab/web/pannelli.js:314,Close the panel,15,,site
+114,pannelli,,panel.max.title,mzlab/web/pannelli.js:314,Full screen: enlarges this panel (Esc to exit),46,,site
+115,pannelli,,panel.max.exit+panel.max.title,mzlab/web/pannelli.js:351,Exit full screen (Esc) // Full screen: enlarges this panel (Esc to exit),72,,site
+116,pannelli,,,mzlab/web/pannelli.js:400,v === ptitle(p.title) ? p.title : v,35,,site
+117,pannelli,,,mzlab/web/pannelli.js:56,tip,3,,site
+118,pannelli,,,mzlab/web/pannelli.js:567,lbl,3,,site
+119,pannelli,*/ x) => `,corr.file.pick,mzlab/web/pannelli.js:628,File to subtract,16,,site
+120,pannelli,${EH(I18N.t(,corr.fileNone.desc,mzlab/web/pannelli.js:630,At least two files are needed,29,,site
+121,pannelli,,,mzlab/web/pannelli.js:669,ttl,3,,site
+122,pannelli,${I18N.t(,ctl.mode.title,mzlab/web/pannelli.js:708,"Overlaid, one per row or cascaded",33,,site
+123,pannelli,Gradient delay (min): {input})},disp.gdelay.title,mzlab/web/pannelli.js:712,"Time the gradient takes to reach the column (dwell volume), set by you",70,,site
+124,pannelli,DAD → mass delay (min): {input})},disp.pdaDelay.title,mzlab/web/pannelli.js:713,"DAD delay to the mass spectrometer, measured from the file's peaks",66,,site
+125,pannelli,,ctl.mz.title,mzlab/web/pannelli.js:715,Only the ions in this m/z range; empty = all,44,,site
+126,pannelli,,ctl.rt.title,mzlab/web/pannelli.js:716,Two ends and Enter; empty = the whole chromatogram,50,,site
+127,pannelli,,ctl.prec.title,mzlab/web/pannelli.js:721,Sum of all precursors or the scans of one only,46,,site
+128,pannelli,&le;,corr.snipw.title,mzlab/web/pannelli.js:728,Width of the baseline window,28,,site
+129,pannelli,{n}/{tot} ▾,ctl.files.title,mzlab/web/pannelli.js:729,Files of this experiment type: shown / loaded,45,,site
+130,pannelli,×,ctl.range.clear,mzlab/web/pannelli.js:732,Clear the range,15,,site
+131,pannelli,${I18N.t(,ctl.range.title,mzlab/web/pannelli.js:732,m/z and time range shown,24,,site
+132,pannelli,,ctl.ms2tr.title,mzlab/web/pannelli.js:735,Chromatogram of the fragment in the scans of that precursor only,64,,site
+133,pannelli,"*/ t, /** @type {number} */ i) => `",ctl.xt.title,mzlab/web/pannelli.js:741,Which XIC to edit,17,,site
+134,pannelli,XIC \u2022 m/z,ctl.xlab.title,mzlab/web/pannelli.js:743,m/z and tolerance of the XIC,28,,site
+135,pannelli,,ctl.xr.title,mzlab/web/pannelli.js:744,Two m/z ends and Enter,22,,site
+136,pannelli,Split,ctl.split.title,mzlab/web/pannelli.js:745,One panel for each ion,22,,site
+137,pannelli,Options &#9662;,ctl.cpar.titleMap,mzlab/web/pannelli.js:756,"Colour scale and palette, noise threshold, normalisation and difference",71,,site
+138,pannelli,${I18N.t(,ctl.cpar.titleMap,mzlab/web/pannelli.js:756,"Colour scale and palette, noise threshold, normalisation and difference",71,,site
+139,pannelli,,ctl.kind.pda.title,mzlab/web/pannelli.js:757,DAD (PDA): UV/Vis diode-array detector,38,,site
+140,pannelli,MS,ctl.map.level.title,mzlab/web/pannelli.js:757,MS1: full scan; MS2: product ions,33,,site
+141,pannelli,"*/ x) => opt(x.k, fol ? E.cur : p.k, x.label)).join(""""",ctl.map.follow+ctl.map.file,mzlab/web/pannelli.js:758,Follows the file chosen in the bar: changing it here changes it there too // File to show,89,,site
+142,pannelli,color scale,ctl.map.scale.title,mzlab/web/pannelli.js:760,The square root brings out weak signals,39,,site
+143,pannelli,,,mzlab/web/pannelli.js:824,tip,3,,site
+144,pannelli,${I18N.t(,xic.adduct.title,mzlab/web/pannelli.js:977,Turns the neutral formula and adduct into the ion m/z,53,,site
+145,pannelli,×,xic.remove.title,mzlab/web/pannelli.js:977,Remove this ion,15,,site
+146,pannelli,,panel.pairArrow.title,mzlab/web/pannelli.js:99,The spectrum below belongs to the precursor chosen above,56,,site
+147,pannelli,,,mzlab/web/scroll.js:134,t,1,,site
+148,pannelli,&#9662;,sub.chip.title,mzlab/web/sottrazione.js:131,"Change file, factor, normalisation and tolerance",48,,site
+149,pannelli,${EH(T(,sub.next,mzlab/web/sottrazione.js:131,Next file,9,,site
+150,pannelli,×,sub.off.aria,mzlab/web/sottrazione.js:131,Remove the subtraction and go back to the raw data,50,,site
+151,pannelli,${EH(T(,sub.prev,mzlab/web/sottrazione.js:131,Previous file,13,,site
+152,pannelli,×,tdati.close,mzlab/web/tdati.js:42,Close,5,,site
+153,pannelli,,tdati.btn.title,mzlab/web/tdati.js:94,Chart data as a table (key T on the focused chart),50,,site
+154,pannelli,,touch.grip.title,mzlab/web/touch.js:183,Drag to change the height of the chart,38,,site
+155,pannelli,,,mzlab/web/xic-lente.js:110,"""""",2,,site
+156,pannelli,,xiclens.rt,mzlab/web/xic-lente.js:114,Retention time,14,,site
+157,pannelli,,,mzlab/web/xic-lente.js:94,withFile(s),11,,site
+158,pannelli,,xiclens.toggle,mzlab/web/xic-spettro.js:261,XIC preview on/off,18,,site
+159,pannelli,,,mzlab/web/xic-spettro.js:80,tip,3,,site
+160,spettri,*/ (TITLE)[g.id])},,mzlab/web/calc-qui-html.js:67,${EH(T(/** @type {Bag} */ (TIP)[g.id]))},40,dinamico,site
+161,spettri,,dda.ms2Title,mzlab/web/dda.js:120,MS2 of {mz},11,dinamico,site
+162,spettri,,,mzlab/web/dda.js:205,"""T: "" + j.filter",16,dinamico,site
+163,spettri,,dda.avgTitle,mzlab/web/dda.js:254,Average of {n} MS2 · {mz},25,dinamico,site
+164,spettri,Score,,mzlab/web/elementare-pannello.js:63,${EH(cxScoreTip(s))},20,dinamico,site
+165,spettri,×,cx.remove,mzlab/web/elementare.js:45,Remove {el},11,dinamico,site
+166,spettri,×,cx.remove,mzlab/web/elementare.js:48,Remove {el},11,dinamico,site
+167,spettri,${t(,,mzlab/web/elementare.js:62,${EH(I18N.t(`el.${e.s}`))},26,dinamico,site
+168,spettri,${I18N.t(,bn.idn.dl,mzlab/web/ident-catalogo.js:25,Download {name},15,dinamico,site
+169,spettri,${I18N.t(,bn.idn.dlNo,mzlab/web/ident-catalogo.js:26,Format not supported yet,24,non,site
+170,spettri,${I18N.t(,bn.idn.site,mzlab/web/ident-catalogo.js:27,Open the site of {name},23,dinamico,site
 171,spettri,${l.name},,mzlab/web/ident-pannello.js:56,${why},6,dinamico,site
-172,spettri,,,mzlab/web/kmd-vista.js:26,${eh(tipOf(r))},15,dinamico,svg
-173,spettri,,,mzlab/web/kmd-vista.js:46,(built at run time),0,dinamico,svg
-174,spettri,${T(,mappa.tab.ref.pick,mzlab/web/mappa-tabella.js:103,Use point {n} as the reference for Δm (again: back to the most intense),71,dinamico,site
-175,spettri,${T(open ? ,mappa.grp.fold+mappa.grp.unfold,mzlab/web/mappa-tabella.js:139,Fold group {g} // Unfold group {g},34,dinamico,site
-176,spettri,,,mzlab/web/mappa-tabella.js:99,${T(COLK[c][1])},16,dinamico,site
-177,spettri,,mappa.lbl.tip,mzlab/web/mappa.js:53,m/z {mz} · S/N {snr},20,dinamico,site
-178,spettri,*/ (AZIONI.voce(id)).ic])},,mzlab/web/mappa.js:840,${EH(T(`cmd.${id}.tip`))},25,dinamico,site
-179,spettri,MS2,,mzlab/web/metodo-incl.js:31,${attr(noMs2())},16,dinamico,site
-180,spettri,${EH(I18N.t(,method.reg.go,mzlab/web/metodo-registro.js:17,Go to RT {t} min,16,dinamico,site
-181,spettri,,,mzlab/web/origine.js:158,${EH(lossHint(c.mz))},21,dinamico,site
-182,spettri,,,mzlab/web/pca.js:106,"m/z ${eh(fmt(ft.mz, 4))} · RT ${eh(fmt(ft.rt, 2))}",50,dinamico,svg
-183,spettri,,pca.ell,mzlab/web/pca.js:79,95 % ellipse of the replicates «{g}»,36,dinamico,svg
-184,spettri,,pca.sample.tip,mzlab/web/pca.js:87,{f} · {t},9,dinamico,svg
-185,spettri,,pfas.point.tip,mzlab/web/pfas.js:102,m/z {mz} · {f} · MD/C {mdc} · MS2 evidence {n},46,dinamico,svg
-186,spettri,`)},,mzlab/web/picchi.js:245,${I18N.t(`int.tbl.${k}.h`)},27,dinamico,site
-187,spettri,,,mzlab/web/picchi.js:251,"${I18N.sciE(r.area ?? 0, 5)}",28,dinamico due-frasi,site
-188,spettri,,prof.chart.aria,mzlab/web/profilo.js:76,Time profile of {ion},21,dinamico,svg
-189,spettri,,,mzlab/web/profilo.js:84,"${eh(p.label)} · ${eh(fmtTime(p.time))} · ${eh(fmt(p[key], 3))}",63,dinamico,svg
-190,spettri,,,mzlab/web/qaqc.js:120,${eh(lab)},10,dinamico,svg
-191,spettri,,,mzlab/web/qaqc.js:135,${eh(title)},12,dinamico,svg
-192,spettri,×,qaqc.remove,mzlab/web/qaqc.js:169,Remove {n},10,dinamico,site
-193,spettri,XIC,calc.xic.title,mzlab/web/calc-addotti-html.js:36,Extract this ion (XIC),22,,site
-194,spettri,More,tbl.add.more.tip,mzlab/web/calc-addotti-html.js:39,Shows the rare adducts too,26,,site
-195,spettri,Adduct mass differences,tbl.diff.tip,mzlab/web/calc-addotti-html.js:53,Δm between adducts of one ion,29,,site
-196,spettri,,calc.delta.title,mzlab/web/calc-addotti-html.js:55,Difference between two observed m/z,35,,site
-197,spettri,,cq.tol.tip,mzlab/web/calc-qui-html.js:19,Largest gap accepted from the value,35,,site
-198,spettri,${EH(T(,cq.unit,mzlab/web/calc-qui-html.js:20,Tolerance unit,14,,site
-199,spettri,${EH(T(,cq.pol.tip,mzlab/web/calc-qui-html.js:21,"Positive ions, negative ones or both",36,,site
-200,spettri,show fewer)},cq.all.tip,mzlab/web/calc-qui-html.js:27,Shows all matches,17,,site
-201,spettri,,cq.loss.tip,mzlab/web/calc-qui-html.js:39,Shows where this loss is observed,33,,site
-202,spettri,${T(,cq.ad.title.field,mzlab/web/calc-qui-pannello.js:19,"Number, sum or formula",22,,site
-203,spettri,Neutral losses with this number,cq.link.loss.tip,mzlab/web/calc-qui-pannello.js:21,Opens the Neutral losses tab,28,,site
-204,spettri,,,mzlab/web/dda-elenco.js:28,tip,3,,site
-205,spettri,,ctl.ms2tri.title,mzlab/web/dda-elenco.js:94,One triangle per acquired MS2: click to open it,47,,site
-206,spettri,,,mzlab/web/dda-naviga.js:40,lab,3,,site
-207,spettri,,,mzlab/web/dda.js:275,"""MS2""",5,,site
-208,spettri,,dda.avg.tip,mzlab/web/dda.js:318,Mean of the MS2 of this ion,27,,site
-209,spettri,,dda.add.tip,mzlab/web/dda.js:320,Another MS2 panel under the same Full Scan,42,,site
-210,spettri,,dda.follow.tip,mzlab/web/dda.js:321,XIC of this ion with the MS2 points; ← → steps through them,59,,site
-211,spettri,List of precursors…,dda.list.title,mzlab/web/dda.js:339,"Ions with an MS2: m/z, time, MS2 count",38,,site
-212,spettri,,dda.show.tip,mzlab/web/dda.js:396,"MS2 under the Full Scan: ▼ on the peaks, click to see it",56,,site
-213,spettri,Load,cx.load.tip,mzlab/web/elementare-pannello.js:53,Replace the elements below with this set,40,,site
-214,spettri,Save as…,cx.save.tip,mzlab/web/elementare-pannello.js:53,Save the elements below as a named set,38,,site
-215,spettri,⤢,cx.expand,mzlab/web/elementare-pannello.js:55,Expand: all the parameters,26,,site
-216,spettri,XIC,mappa.tab.xic.title,mzlab/web/mappa-tabella.js:103,XIC of this m/z in the visible files (A and B overlaid),55,,site
-217,spettri,,mappa.tab.align.title,mzlab/web/mappa-tabella.js:104,Moves a group's points to the RT of its first point,51,,site
-218,spettri,RT group ±,mappa.tab.grp.title,mzlab/web/mappa-tabella.js:104,Maximum distance between the apexes of two points in one group,62,,site
-219,spettri,Copy,mappa.tab.cp.title,mzlab/web/mappa-tabella.js:105,Copy the table with tabs (it pastes into Excel),47,,site
-220,spettri,CSV,mappa.tab.csv.title,mzlab/web/mappa-tabella.js:105,"UTF-8 comma-separated CSV, without the metadata",47,,site
-221,spettri,Excel,mappa.tab.xl.title,mzlab/web/mappa-tabella.js:105,"Download the table as Excel, with a metadata sheet (files, tolerances, date)",76,,site
-222,spettri,Ref.,mappa.tab.ref.title,mzlab/web/mappa-tabella.js:99,"With no choice, Δm starts from the most intense point of each group",67,,site
-223,spettri,,mappa.rz.title,mzlab/web/mappa.js:1042,Drag to change the height,25,,site
-224,spettri,,,mzlab/web/mappa.js:849,nm,2,,site
-225,spettri,palette: viridispalette: cividis,mappa.pal.title,mzlab/web/mappa.js:977,Colour palette: Viridis or cividis,34,,site
-226,spettri,threshold,mappa.thr.title,mzlab/web/mappa.js:978,Below this % (of the 99.5th percentile) values stay uncoloured,62,,site
-227,spettri,SmoothDetail,mappa.rend.title,mzlab/web/mappa.js:979,Smooth (continuous blobs) or Detail (one cell per value),56,,site
-228,spettri,${T(,mappa.dens.title,mzlab/web/mappa.js:980,How many m/z labels in the side spectrum,40,,site
-229,spettri,,mappa.fix.title,mzlab/web/mappa.js:981,"Same colour scale for all files, to compare them",48,,site
-230,spettri,,mappa.show.title,mzlab/web/mappa.js:981,"Off, the map shows only the increases (orange)",46,,site
-231,spettri,mark,mappa.btn.mark.title,mzlab/web/mappa.js:983,Mark (S): a numbered point on the nearby maximum; Delete removes it,67,,site
-232,spettri,sight,mappa.btn.mir.title,mzlab/web/mappa.js:983,Sight (M): spectrum and XIC under the cursor next to the map,60,,site
-233,spettri,snap,mappa.btn.snap.title,mzlab/web/mappa.js:983,A marked point slides onto the top of the nearby peak,53,,site
-234,spettri,3D,ctl.map.open3d.title,mzlab/web/mappa.js:984,Opens the full-screen 3D viewer with the file and region of this map,68,,site
-235,spettri,&#9654;,m3d.play,mzlab/web/mappa3d.js:165,Scroll through time,19,,site
-236,spettri,&#9776;,m3d.side.toggle,mzlab/web/mappa3d.js:166,Show or hide the side bar,25,,site
-237,spettri,Use the 2D zoom,m3d.sync.title,mzlab/web/mappa3d.js:174,Takes the RT and m/z range the 2D map shows now,47,,site
-238,spettri,${T(,m3d.hist.title,mzlab/web/mappa3d.js:185,Histogram of the values (log scale): click to set the noise threshold,69,,site
-239,spettri,3 m/z side,m3d.v.mz.title,mzlab/web/mappa3d.js:188,Seen from the side along RT: the outline is the spectrum,56,,site
-240,spettri,2 RT side,m3d.v.rt.title,mzlab/web/mappa3d.js:188,Seen from the side along m/z: the outline is the chromatogram,61,,site
-241,spettri,1 from above,m3d.v.top.title,mzlab/web/mappa3d.js:188,View from above: it is the 2D map,33,,site
-242,spettri,XIC,method.doc.btn.xic.tip,mzlab/web/metodo-incl.js:30,Extracts the XIC of this m/z,28,,site
-243,spettri,,,mzlab/web/metodo-incl.js:80,tip,3,,site
-244,spettri,×,common.close,mzlab/web/origine.js:38,Close,5,,site
-245,spettri,?,pca.help,mzlab/web/pca.js:128,Horseshoe effect,16,,site
-246,spettri,?,common.help,mzlab/web/picchi.js:247,Help,4,,site
-247,spettri,${I18N.t(,int.tbl.sn.title,mzlab/web/picchi.js:247,Peak height divided by the standard deviation of the noise,58,,site
-248,spettri,,int.tbl.par.title,mzlab/web/picchi.js:248,"Width at half height, theoretical plates N and USP tailing factor",65,,site
-249,spettri,,int.tbl.q.title,mzlab/web/picchi.js:249,"Gaussian similarity, asymmetry and noise",40,,site
-250,spettri,choose the noise zone,int.tbl.pickNoise.title,mzlab/web/picchi.js:252,Drag over a zone without peaks to measure the noise,51,,site
-251,spettri,×,int.tbl.del.title,mzlab/web/picchi.js:254,Delete this integration (also from the chart),45,,site
-252,spettri,⚠ overlapping,int.tbl.overlap.title,mzlab/web/picchi.js:254,Overlaps another integration of the trace: delete one,53,,site
-253,spettri,,,mzlab/web/picchi.js:494,"(p._a.hov(px) || { html: """" }).html });",39,,site
-254,spettri,,,mzlab/web/picchi.js:517,p.leg.textContent,17,,site
-255,spettri,,spec.measure.toLosses.tip,mzlab/web/spettro.js:139,Neutral losses with this difference already searched,52,,site
-256,spettri,Labels: above {input} %,spec.par.thr.title,mzlab/web/spettro.js:152,Labels only on peaks above this % of the highest,48,,site
-257,spettri,at most {input},spec.par.nlab.title,mzlab/web/spettro.js:153,Maximum number of m/z labels,28,,site
-258,spettri,Spectrum {select},spec.par.sticks.title,mzlab/web/spettro.js:155,Sticks: one top per nominal mass; labels and table use the tops,63,,site
-259,spettri,,disp.dots.title,mzlab/web/spettro.js:156,"Points only, no line or sticks",30,,site
-260,spettri,Reset to defaults,spec.par.reset.title,mzlab/web/spettro.js:157,Back to the default values,26,,site
-261,liste,,tip.areaUv+tip.area,mzlab/web/area-etichette.js:20,"<b>Area</b> {area} <span class=""sm"">mAU·s</span> · absorbance <b>{y}</b> // <b>Area</b> {area} <span class=""sm"">counts·s</span> · intensity <b>{y}</b>",150,dinamico >90,site
+172,spettri,${l.name},,mzlab/web/ident-pannello.js:56,${why},6,dinamico,site
+173,spettri,,,mzlab/web/kmd-vista.js:26,${eh(tipOf(r))},15,dinamico,svg
+174,spettri,,,mzlab/web/kmd-vista.js:46,(built at run time),0,dinamico,svg
+175,spettri,${T(,mappa.tab.ref.pick,mzlab/web/mappa-tabella.js:103,Use point {n} as the reference for Δm (again: back to the most intense),71,dinamico,site
+176,spettri,${T(open ? ,mappa.grp.fold+mappa.grp.unfold,mzlab/web/mappa-tabella.js:139,Fold group {g} // Unfold group {g},34,dinamico,site
+177,spettri,,,mzlab/web/mappa-tabella.js:99,${T(COLK[c][1])},16,dinamico,site
+178,spettri,,mappa.lbl.tip,mzlab/web/mappa.js:53,m/z {mz} · S/N {snr},20,dinamico,site
+179,spettri,*/ (AZIONI.voce(id)).ic])},,mzlab/web/mappa.js:840,${EH(T(`cmd.${id}.tip`))},25,dinamico,site
+180,spettri,MS2,,mzlab/web/metodo-incl.js:31,${attr(noMs2())},16,dinamico,site
+181,spettri,${EH(I18N.t(,method.reg.go,mzlab/web/metodo-registro.js:17,Go to RT {t} min,16,dinamico,site
+182,spettri,,,mzlab/web/origine.js:158,${EH(lossHint(c.mz))},21,dinamico,site
+183,spettri,,,mzlab/web/pca.js:106,"m/z ${eh(fmt(ft.mz, 4))} · RT ${eh(fmt(ft.rt, 2))}",50,dinamico,svg
+184,spettri,,pca.ell,mzlab/web/pca.js:79,95 % ellipse of the replicates «{g}»,36,dinamico,svg
+185,spettri,,pca.sample.tip,mzlab/web/pca.js:87,{f} · {t},9,dinamico,svg
+186,spettri,,pfas.point.tip,mzlab/web/pfas.js:102,m/z {mz} · {f} · MD/C {mdc} · MS2 evidence {n},46,dinamico,svg
+187,spettri,`)},,mzlab/web/picchi.js:245,${I18N.t(`int.tbl.${k}.h`)},27,dinamico,site
+188,spettri,,,mzlab/web/picchi.js:251,"${I18N.sciE(r.area ?? 0, 5)}",28,dinamico due-frasi,site
+189,spettri,,prof.chart.aria,mzlab/web/profilo.js:76,Time profile of {ion},21,dinamico,svg
+190,spettri,,,mzlab/web/profilo.js:84,"${eh(p.label)} · ${eh(fmtTime(p.time))} · ${eh(fmt(p[key], 3))}",63,dinamico,svg
+191,spettri,,,mzlab/web/qaqc.js:120,${eh(lab)},10,dinamico,svg
+192,spettri,,,mzlab/web/qaqc.js:135,${eh(title)},12,dinamico,svg
+193,spettri,×,qaqc.remove,mzlab/web/qaqc.js:169,Remove {n},10,dinamico,site
+194,spettri,XIC,calc.xic.title,mzlab/web/calc-addotti-html.js:36,Extract this ion (XIC),22,,site
+195,spettri,More,tbl.add.more.tip,mzlab/web/calc-addotti-html.js:39,Shows the rare adducts too,26,,site
+196,spettri,Adduct mass differences,tbl.diff.tip,mzlab/web/calc-addotti-html.js:53,Δm between adducts of one ion,29,,site
+197,spettri,,calc.delta.title,mzlab/web/calc-addotti-html.js:55,Difference between two observed m/z,35,,site
+198,spettri,,cq.tol.tip,mzlab/web/calc-qui-html.js:19,Largest gap accepted from the value,35,,site
+199,spettri,${EH(T(,cq.unit,mzlab/web/calc-qui-html.js:20,Tolerance unit,14,,site
+200,spettri,${EH(T(,cq.pol.tip,mzlab/web/calc-qui-html.js:21,"Positive ions, negative ones or both",36,,site
+201,spettri,show fewer)},cq.all.tip,mzlab/web/calc-qui-html.js:27,Shows all matches,17,,site
+202,spettri,,cq.loss.tip,mzlab/web/calc-qui-html.js:39,Shows where this loss is observed,33,,site
+203,spettri,${T(,cq.ad.title.field,mzlab/web/calc-qui-pannello.js:18,"Number, sum or formula",22,,site
+204,spettri,Neutral losses with this number,cq.link.loss.tip,mzlab/web/calc-qui-pannello.js:20,Opens the Neutral losses tab,28,,site
+205,spettri,,,mzlab/web/dda-elenco.js:28,tip,3,,site
+206,spettri,,ctl.ms2tri.title,mzlab/web/dda-elenco.js:94,One triangle per acquired MS2: click to open it,47,,site
+207,spettri,,,mzlab/web/dda-naviga.js:40,lab,3,,site
+208,spettri,,,mzlab/web/dda.js:275,"""MS2""",5,,site
+209,spettri,,dda.avg.tip,mzlab/web/dda.js:318,Mean of the MS2 of this ion,27,,site
+210,spettri,,dda.add.tip,mzlab/web/dda.js:320,Another MS2 panel under the same Full Scan,42,,site
+211,spettri,,dda.follow.tip,mzlab/web/dda.js:321,XIC of this ion with the MS2 points; ← → steps through them,59,,site
+212,spettri,List of precursors…,dda.list.title,mzlab/web/dda.js:339,"Ions with an MS2: m/z, time, MS2 count",38,,site
+213,spettri,,dda.show.tip,mzlab/web/dda.js:396,"MS2 under the Full Scan: ▼ on the peaks, click to see it",56,,site
+214,spettri,Load,cx.load.tip,mzlab/web/elementare-pannello.js:53,Replace the elements below with this set,40,,site
+215,spettri,Save as…,cx.save.tip,mzlab/web/elementare-pannello.js:53,Save the elements below as a named set,38,,site
+216,spettri,⤢,cx.expand,mzlab/web/elementare-pannello.js:55,Expand: all the parameters,26,,site
+217,spettri,XIC,mappa.tab.xic.title,mzlab/web/mappa-tabella.js:103,XIC of this m/z in the visible files (A and B overlaid),55,,site
+218,spettri,,mappa.tab.align.title,mzlab/web/mappa-tabella.js:104,Moves a group's points to the RT of its first point,51,,site
+219,spettri,RT group ±,mappa.tab.grp.title,mzlab/web/mappa-tabella.js:104,Maximum distance between the apexes of two points in one group,62,,site
+220,spettri,Copy,mappa.tab.cp.title,mzlab/web/mappa-tabella.js:105,Copy the table with tabs (it pastes into Excel),47,,site
+221,spettri,CSV,mappa.tab.csv.title,mzlab/web/mappa-tabella.js:105,"UTF-8 comma-separated CSV, without the metadata",47,,site
+222,spettri,Excel,mappa.tab.xl.title,mzlab/web/mappa-tabella.js:105,"Download the table as Excel, with a metadata sheet (files, tolerances, date)",76,,site
+223,spettri,Ref.,mappa.tab.ref.title,mzlab/web/mappa-tabella.js:99,"With no choice, Δm starts from the most intense point of each group",67,,site
+224,spettri,,mappa.rz.title,mzlab/web/mappa.js:1042,Drag to change the height,25,,site
+225,spettri,,,mzlab/web/mappa.js:849,nm,2,,site
+226,spettri,palette: viridispalette: cividis,mappa.pal.title,mzlab/web/mappa.js:977,Colour palette: Viridis or cividis,34,,site
+227,spettri,threshold,mappa.thr.title,mzlab/web/mappa.js:978,Below this % (of the 99.5th percentile) values stay uncoloured,62,,site
+228,spettri,SmoothDetail,mappa.rend.title,mzlab/web/mappa.js:979,Smooth (continuous blobs) or Detail (one cell per value),56,,site
+229,spettri,${T(,mappa.dens.title,mzlab/web/mappa.js:980,How many m/z labels in the side spectrum,40,,site
+230,spettri,,mappa.fix.title,mzlab/web/mappa.js:981,"Same colour scale for all files, to compare them",48,,site
+231,spettri,,mappa.show.title,mzlab/web/mappa.js:981,"Off, the map shows only the increases (orange)",46,,site
+232,spettri,mark,mappa.btn.mark.title,mzlab/web/mappa.js:983,Mark (S): a numbered point on the nearby maximum; Delete removes it,67,,site
+233,spettri,sight,mappa.btn.mir.title,mzlab/web/mappa.js:983,Sight (M): spectrum and XIC under the cursor next to the map,60,,site
+234,spettri,snap,mappa.btn.snap.title,mzlab/web/mappa.js:983,A marked point slides onto the top of the nearby peak,53,,site
+235,spettri,3D,ctl.map.open3d.title,mzlab/web/mappa.js:984,Opens the full-screen 3D viewer with the file and region of this map,68,,site
+236,spettri,&#9654;,m3d.play,mzlab/web/mappa3d.js:165,Scroll through time,19,,site
+237,spettri,&#9776;,m3d.side.toggle,mzlab/web/mappa3d.js:166,Show or hide the side bar,25,,site
+238,spettri,Use the 2D zoom,m3d.sync.title,mzlab/web/mappa3d.js:174,Takes the RT and m/z range the 2D map shows now,47,,site
+239,spettri,${T(,m3d.hist.title,mzlab/web/mappa3d.js:185,Histogram of the values (log scale): click to set the noise threshold,69,,site
+240,spettri,3 m/z side,m3d.v.mz.title,mzlab/web/mappa3d.js:188,Seen from the side along RT: the outline is the spectrum,56,,site
+241,spettri,2 RT side,m3d.v.rt.title,mzlab/web/mappa3d.js:188,Seen from the side along m/z: the outline is the chromatogram,61,,site
+242,spettri,1 from above,m3d.v.top.title,mzlab/web/mappa3d.js:188,View from above: it is the 2D map,33,,site
+243,spettri,XIC,method.doc.btn.xic.tip,mzlab/web/metodo-incl.js:30,Extracts the XIC of this m/z,28,,site
+244,spettri,,,mzlab/web/metodo-incl.js:80,tip,3,,site
+245,spettri,×,common.close,mzlab/web/origine.js:38,Close,5,,site
+246,spettri,?,pca.help,mzlab/web/pca.js:128,Horseshoe effect,16,,site
+247,spettri,?,common.help,mzlab/web/picchi.js:247,Help,4,,site
+248,spettri,${I18N.t(,int.tbl.sn.title,mzlab/web/picchi.js:247,Peak height divided by the standard deviation of the noise,58,,site
+249,spettri,,int.tbl.par.title,mzlab/web/picchi.js:248,"Width at half height, theoretical plates N and USP tailing factor",65,,site
+250,spettri,,int.tbl.q.title,mzlab/web/picchi.js:249,"Gaussian similarity, asymmetry and noise",40,,site
+251,spettri,choose the noise zone,int.tbl.pickNoise.title,mzlab/web/picchi.js:252,Drag over a zone without peaks to measure the noise,51,,site
+252,spettri,×,int.tbl.del.title,mzlab/web/picchi.js:254,Delete this integration (also from the chart),45,,site
+253,spettri,⚠ overlapping,int.tbl.overlap.title,mzlab/web/picchi.js:254,Overlaps another integration of the trace: delete one,53,,site
+254,spettri,,,mzlab/web/picchi.js:494,"(p._a.hov(px) || { html: """" }).html });",39,,site
+255,spettri,,,mzlab/web/picchi.js:517,p.leg.textContent,17,,site
+256,spettri,,spec.measure.toLosses.tip,mzlab/web/spettro.js:139,Neutral losses with this difference already searched,52,,site
+257,spettri,Labels: above {input} %,spec.par.thr.title,mzlab/web/spettro.js:152,Labels only on peaks above this % of the highest,48,,site
+258,spettri,at most {input},spec.par.nlab.title,mzlab/web/spettro.js:153,Maximum number of m/z labels,28,,site
+259,spettri,Spectrum {select},spec.par.sticks.title,mzlab/web/spettro.js:155,Sticks: one top per nominal mass; labels and table use the tops,63,,site
+260,spettri,,disp.dots.title,mzlab/web/spettro.js:156,"Points only, no line or sticks",30,,site
+261,spettri,Reset to defaults,spec.par.reset.title,mzlab/web/spettro.js:157,Back to the default values,26,,site
 262,liste,,,mzlab/web/explore.js:409,${I18N.t(q[1])},15,dinamico,site
 263,liste,,,mzlab/web/explore.js:790,${EH(f.label)},14,dinamico,site
 264,liste,×,files.row.remove,mzlab/web/explore.js:793,Remove {name},13,dinamico,site
@@ -320,9 +320,9 @@ id,area,label,key,file_line,text,chars,flags,source
 319,liste,+,load.cols.plus,mzlab/web/colonne-campioni.js:33,Add column,10,,site
 320,liste,,conv.cancel.title,mzlab/web/conversione-carta.js:18,Cancel the conversion of the .raw files,39,,site
 321,liste,,conv.dl.title,mzlab/web/conversione.js:22,Save the converted mzML,23,,site
-322,liste,?,common.help,mzlab/web/conversione.js:324,Help,4,,site
-323,liste,${T(,conv.dlall,mzlab/web/conversione.js:325,Download all the mzML files,27,,site
-324,liste,Save the mzML files…,conv.q.saveTitle,mzlab/web/conversione.js:325,Choose a folder: every mzML that is ready goes there,52,,site
+322,liste,?,common.help,mzlab/web/conversione.js:326,Help,4,,site
+323,liste,${T(,conv.dlall,mzlab/web/conversione.js:327,Download all the mzML files,27,,site
+324,liste,Save the mzML files…,conv.q.saveTitle,mzlab/web/conversione.js:327,Choose a folder: every mzML that is ready goes there,52,,site
 325,liste,×,methwarn.hide,mzlab/web/explore.js:423,Hide the notice,15,,site
 326,liste,blk,files.type.blk.title+files.type.std.title,mzlab/web/explore.js:769,Blank // Standard,17,,site
 327,liste,,files.showHide,mzlab/web/explore.js:791,Show or hide,12,,site
@@ -345,7 +345,7 @@ id,area,label,key,file_line,text,chars,flags,source
 344,liste,×,common.close,mzlab/web/index.html:109,Close,5,,i18n-title
 345,liste,×,common.close,mzlab/web/index.html:112,Close,5,,i18n-title
 346,liste,al.q.aria,calc.in.title,mzlab/web/index.html:113,"Numbers, operations or a molecular formula",42,,i18n-title
-347,liste,,calc.nl.title,mzlab/web/index.html:115,"Search this value in the adducts, neutral losses and contaminants",65,,i18n-title
+347,liste,,calc.nl.title,mzlab/web/index.html:115,Search this value in the adducts and neutral losses,51,,i18n-title
 348,liste,&larr;,calc.back,mzlab/web/index.html:119,Delete the last character,25,,i18n-title
 349,liste,C,calc.clear,mzlab/web/index.html:119,Clear,5,,i18n-title
 350,liste,,calc.pad.tip,mzlab/web/index.html:119,Types into the field,20,,i18n-title
@@ -359,42 +359,42 @@ id,area,label,key,file_line,text,chars,flags,source
 358,liste,header.fullscreen,header.fullscreen,mzlab/web/index.html:16,Full screen,11,,i18n-title
 359,liste,settings.title,settings.gear.title,mzlab/web/index.html:17,"Settings: text, theme, chart colors",35,,i18n-title
 360,liste,Adducts,al.t.adducts.tip,mzlab/web/index.html:29,Ions the molecule can form,26,,i18n-title
-361,liste,side.addf,al.t.cont.tip,mzlab/web/index.html:29,Frequent background ions in LC-MS,33,,i18n-title
-362,liste,Neutral losses,al.t.losses.tip,mzlab/web/index.html:29,Neutral pieces the ion can lose,31,,i18n-title
-363,liste,?,common.help,mzlab/web/index.html:29,Help,4,,i18n-title
-364,liste,side.addf,cq.calc.tip,mzlab/web/index.html:29,Shows or hides the calculator,29,,i18n-title
-365,liste,side.addf,side.addf,mzlab/web/index.html:29,Load more files,15,,i18n-title
-366,liste,side.addf,side.close,mzlab/web/index.html:29,Close the panel,15,,i18n-title
-367,liste,side.addf,side.resize,mzlab/web/index.html:29,Drag to adjust the width,24,,i18n-title
-368,liste,bar.prev,bar.next,mzlab/web/index.html:32,Next file (right arrow),23,,i18n-title
-369,liste,bar.prev,bar.prev,mzlab/web/index.html:32,Previous file (left arrow),26,,i18n-title
-370,liste,+ RT-m/z map,bar.addMap.title,mzlab/web/index.html:33,Each pixel is an m/z at a given RT,34,,i18n-title
-371,liste,+ XIC,bar.addXic.title,mzlab/web/index.html:33,Chromatogram of one ion in the m/z window you choose,52,,i18n-title
-372,liste,storia.btn.undo,bar.closeAll.title,mzlab/web/index.html:34,Close all open panels,21,,i18n-title
-373,liste,storia.btn.undo,storia.btn.redo,mzlab/web/index.html:34,Redo (Shift+Ctrl/Cmd+Z),23,,i18n-title
-374,liste,storia.btn.undo,storia.btn.undo,mzlab/web/index.html:34,Undo (Ctrl/Cmd+Z),17,,i18n-title
-375,liste,,bar.method.title,mzlab/web/index.html:35,Experiment type and method settings,35,,i18n-title
-376,liste,,cart.open,mzlab/web/index.html:54,Open folder,11,,i18n-title
-377,liste,Full Scan,load.demo.full.title,mzlab/web/index.html:54,"5 full scan files: 0, 5, 10, 15 and 30 minutes of irradiation",61,,i18n-title
-378,liste,HRMS,load.demo.hrms.title,mzlab/web/index.html:54,"4 Orbitrap DDA files: a pollutant degraded on TiO2 at 0, 5, 10 and 30 min",73,,i18n-title
-379,liste,MRM,load.demo.mrm.title,mzlab/web/index.html:54,"4 MRM standards of increasing concentration (0.6, 2.4, 7.2 and 18 ppm)",70,,i18n-title
-380,liste,MS2,load.demo.ms2.title,mzlab/web/index.html:54,2 MS2 files (product ions): 15 and 60 minutes,45,,i18n-title
-381,liste,,load.demo.title,mzlab/web/index.html:54,Load example files,18,,i18n-title
-382,liste,,draw.side.title,mzlab/web/index.html:72,More room to draw,17,,i18n-title
-383,liste,,draw.export.ion.title,mzlab/web/index.html:78,Adduct of the SDF m/z for neutral structures; a drawn ion keeps its own m/z,75,,i18n-title
-384,liste,MOL,draw.export.mol.title,mzlab/web/index.html:78,The whole canvas in one molfile (V2000; V3000 when large or with stereo groups),79,,i18n-title
-385,liste,SDF,draw.export.sdf.title,mzlab/web/index.html:78,"One record per structure, with formula, exact mass, chosen-ion m/z and an identifier",84,,i18n-title
-386,liste,,draw.export.fileName.title,mzlab/web/index.html:80,"File name, without extension",28,,i18n-title
-387,liste,,draw.labels.arrows.title,mzlab/web/index.html:86,Writes neutral loss and Δm above each arrow,43,,i18n-title
-388,liste,Cut line,draw.cut.line.title,mzlab/web/index.html:92,Drag a line on the canvas across the bonds to break; Esc to leave,65,,i18n-title
-389,liste,Arrow,draw.mech.arrow.title,mzlab/web/index.html:98,"Drag from a lone pair, a bond or a radical to the atom or bond it reaches; Esc leaves",85,,i18n-title
-390,liste,•+,draw.mech.ion.title,mzlab/web/index.html:98,A + charge and a radical on the clicked or selected atoms; again to remove them,79,,i18n-title
-391,liste,Lone pairs,draw.mech.lone.title,mzlab/web/index.html:98,"Click an atom: 1, 2, 3 lone pairs, then none; also acts on the selected atoms",77,,i18n-title
-392,liste,Start from selection,draw.mech.key.title,mzlab/web/index.html:99,"From the keyboard: select the start and press, then select the end and press again",82,,i18n-title
-393,liste,,,mzlab/web/integra-base.js:60,v,1,,site
-394,liste,,,mzlab/web/integra-estremi.js:133,v,1,,site
-395,liste,,,mzlab/web/integra-valli.js:124,v,1,,site
-396,liste,,int.split.depth.tip,mzlab/web/integra-valli.js:75,"Smallest rise of the lower peak over the valley, as % of the window's highest point",83,,site
+361,liste,Neutral losses,al.t.losses.tip,mzlab/web/index.html:29,Neutral pieces the ion can lose,31,,i18n-title
+362,liste,?,common.help,mzlab/web/index.html:29,Help,4,,i18n-title
+363,liste,side.addf,cq.calc.tip,mzlab/web/index.html:29,Shows or hides the calculator,29,,i18n-title
+364,liste,side.addf,side.addf,mzlab/web/index.html:29,Load more files,15,,i18n-title
+365,liste,side.addf,side.close,mzlab/web/index.html:29,Close the panel,15,,i18n-title
+366,liste,side.addf,side.resize,mzlab/web/index.html:29,Drag to adjust the width,24,,i18n-title
+367,liste,bar.prev,bar.next,mzlab/web/index.html:32,Next file (right arrow),23,,i18n-title
+368,liste,bar.prev,bar.prev,mzlab/web/index.html:32,Previous file (left arrow),26,,i18n-title
+369,liste,+ RT-m/z map,bar.addMap.title,mzlab/web/index.html:33,Each pixel is an m/z at a given RT,34,,i18n-title
+370,liste,+ XIC,bar.addXic.title,mzlab/web/index.html:33,Chromatogram of one ion in the m/z window you choose,52,,i18n-title
+371,liste,storia.btn.undo,bar.closeAll.title,mzlab/web/index.html:34,Close all open panels,21,,i18n-title
+372,liste,storia.btn.undo,storia.btn.redo,mzlab/web/index.html:34,Redo (Shift+Ctrl/Cmd+Z),23,,i18n-title
+373,liste,storia.btn.undo,storia.btn.undo,mzlab/web/index.html:34,Undo (Ctrl/Cmd+Z),17,,i18n-title
+374,liste,,bar.method.title,mzlab/web/index.html:35,Experiment type and method settings,35,,i18n-title
+375,liste,,cart.open,mzlab/web/index.html:54,Open folder,11,,i18n-title
+376,liste,Full Scan,load.demo.full.title,mzlab/web/index.html:54,"5 full scan files: 0, 5, 10, 15 and 30 minutes of irradiation",61,,i18n-title
+377,liste,HRMS,load.demo.hrms.title,mzlab/web/index.html:54,"4 Orbitrap DDA files: a pollutant degraded on TiO2 at 0, 5, 10 and 30 min",73,,i18n-title
+378,liste,MRM,load.demo.mrm.title,mzlab/web/index.html:54,"4 MRM standards of increasing concentration (0.6, 2.4, 7.2 and 18 ppm)",70,,i18n-title
+379,liste,MS2,load.demo.ms2.title,mzlab/web/index.html:54,2 MS2 files (product ions): 15 and 60 minutes,45,,i18n-title
+380,liste,,load.demo.title,mzlab/web/index.html:54,Load example files,18,,i18n-title
+381,liste,,draw.side.title,mzlab/web/index.html:72,More room to draw,17,,i18n-title
+382,liste,,draw.export.ion.title,mzlab/web/index.html:78,Adduct of the SDF m/z for neutral structures; a drawn ion keeps its own m/z,75,,i18n-title
+383,liste,MOL,draw.export.mol.title,mzlab/web/index.html:78,The whole canvas in one molfile (V2000; V3000 when large or with stereo groups),79,,i18n-title
+384,liste,SDF,draw.export.sdf.title,mzlab/web/index.html:78,"One record per structure, with formula, exact mass, chosen-ion m/z and an identifier",84,,i18n-title
+385,liste,,draw.export.fileName.title,mzlab/web/index.html:80,"File name, without extension",28,,i18n-title
+386,liste,,draw.labels.arrows.title,mzlab/web/index.html:86,Writes neutral loss and Δm above each arrow,43,,i18n-title
+387,liste,Cut line,draw.cut.line.title,mzlab/web/index.html:92,Drag a line on the canvas across the bonds to break; Esc to leave,65,,i18n-title
+388,liste,Arrow,draw.mech.arrow.title,mzlab/web/index.html:98,"Drag from a lone pair, a bond or a radical to the atom or bond it reaches; Esc leaves",85,,i18n-title
+389,liste,•+,draw.mech.ion.title,mzlab/web/index.html:98,A + charge and a radical on the clicked or selected atoms; again to remove them,79,,i18n-title
+390,liste,Lone pairs,draw.mech.lone.title,mzlab/web/index.html:98,"Click an atom: 1, 2, 3 lone pairs, then none; also acts on the selected atoms",77,,i18n-title
+391,liste,Start from selection,draw.mech.key.title,mzlab/web/index.html:99,"From the keyboard: select the start and press, then select the end and press again",82,,i18n-title
+392,liste,,,mzlab/web/integra-base.js:60,v,1,,site
+393,liste,,,mzlab/web/integra-estremi.js:133,v,1,,site
+394,liste,,int.split.hand.tip,mzlab/web/integra-estremi.js:162,Click where to split; drag a line to move it,44,,site
+395,liste,,int.split.depth.tip,mzlab/web/integra-valli.js:120,"Smallest rise of the lower peak over the valley, as % of the window's highest point",83,,site
+396,liste,,,mzlab/web/integra-valli.js:171,v,1,,site
 397,liste,×,canali.manint.del,mzlab/web/integrazioni-manuali.js:120,Delete integration,18,,site
 398,liste,,canali.manint.note,mzlab/web/integrazioni-manuali.js:124,"The areas are measured again from the files, as in the CSV.",59,,site
 399,liste,${t(,canali.manint.copy,mzlab/web/integrazioni-manuali.js:125,Copy table,10,,site
@@ -463,7 +463,7 @@ id,area,label,key,file_line,text,chars,flags,source
 462,liste,,,mzlab/web/tpmine-loader.js:111,t.desc || t.name,16,,site
 463,liste,,,mzlab/web/tpmine-loader.js:117,t.desc || t.name,16,,site
 464,liste,Cancel))},load.cancel.title,mzlab/web/upload-rows.js:27,Stop the loading,16,,site
-465,liste,,,mzlab/web/upload-rows.js:74,l,1,,site
+465,liste,,,mzlab/web/upload-rows.js:76,l,1,,site
 466,liste,,xwc.pop.open,mzlab/web/xwc.js:108,Wavelength and bandwidth of the XWC,35,,site
 467,liste,,panel.wl.title,mzlab/web/xwc.js:135,"XWC: trace at one wavelength (λ), in nm",39,,site
 468,disegno,,,mzlab/web/disegno-analisi.js:44,${esc(label)},13,dinamico,svg
@@ -958,18 +958,18 @@ id,area,label,key,file_line,text,chars,flags,source
 957,catalogo,,llm.owner.hint,mzlab/web/lang/en/altre-feat-lst.js:491,"Only for the owner of the demo. Kept in this browser, inside the transport frame only; «Forget» deletes it.",107,>90 due-frasi,catalog-only
 958,catalogo,,phone.about.title,mzlab/web/lang/en/altre-lv-predef.js:33,What is {app},13,dinamico,catalog-only
 959,catalogo,,methwarn.title,mzlab/web/lang/en/altre-lv-predef.js:65,<b>The method does not match the data.</b>,42,non,catalog-only
-960,catalogo,,msnl.hint,mzlab/web/lang/en/altre-press-xic.js:168,Click a scan (or Enter) to open its spectrum; a precursor row opens and closes its scans. TIC: the MS2 scans of the precursor against RT; XIC: the precursor m/z in the Full Scan.,178,>90 due-frasi,catalog-only
+960,catalogo,,msnl.hint,mzlab/web/lang/en/altre-press-xic.js:165,Click a scan (or Enter) to open its spectrum; a precursor row opens and closes its scans. TIC: the MS2 scans of the precursor against RT; XIC: the precursor m/z in the Full Scan.,178,>90 due-frasi,catalog-only
 961,catalogo,,spec.follow.none.title,mzlab/web/lang/en/altre-press-xic.js:68,Spectrum fixed at its time. Pick a chromatogram to follow,57,due-frasi,catalog-only
 962,catalogo,,tip.raw,mzlab/web/lang/en/altre-press-xic.js:91,raw {v},7,dinamico,catalog-only
-963,catalogo,,tip.more,mzlab/web/lang/en/altre-press-xic.js:94,... and {n} more,16,dinamico,catalog-only
-964,catalogo,,tip.peak,mzlab/web/lang/en/altre-press-xic.js:99,<b>m/z {mz}</b><div>intensity <b>{y}</b>{abs}</div>,51,dinamico,catalog-only
+963,catalogo,,tip.more,mzlab/web/lang/en/altre-press-xic.js:92,... and {n} more,16,dinamico,catalog-only
+964,catalogo,,tip.peak,mzlab/web/lang/en/altre-press-xic.js:97,<b>m/z {mz}</b><div>intensity <b>{y}</b>{abs}</div>,51,dinamico,catalog-only
 965,catalogo,,bn.iso.hint,mzlab/web/lang/en/bn.js:116,Empty resolution = that of the scan; 0 = the whole fine structure. Resolving power: it decreases with the square root of m/z.,125,>90 due-frasi,catalog-only
-966,catalogo,,canali.manint.h.pv.tip,mzlab/web/lang/en/canali.js:100,Height of the part over the higher valley next to it (Ph. Eur. 2.2.46),70,due-frasi,catalog-only
+966,catalogo,,canali.manint.h.pv.tip,mzlab/web/lang/en/canali.js:105,Height of the part over the higher valley next to it (Ph. Eur. 2.2.46),70,due-frasi,catalog-only
 967,catalogo,,canali.manint.title,mzlab/web/lang/en/canali.js:60,Manual integrations ({n}),25,dinamico,catalog-only
 968,catalogo,,int.base.tip,mzlab/web/lang/en/canali.js:69,Baseline: {b},13,dinamico,catalog-only
 969,catalogo,,cmd.more.tip,mzlab/web/lang/en/comandi.js:51,"PubChem, BioTransformer and the tools that do not fit in the bar",64,non,catalog-only
 970,catalogo,,comp.elements.hint,mzlab/web/lang/en/comp.js:28,"(of the formula of the ion, e.g. C:0-13,H:0-25; isotopes as elements: 13C:0-2, 15N, 34S, 37Cl, 81Br)",100,>90,catalog-only
-971,catalogo,,conv.help.hint,mzlab/web/lang/en/conv.js:90,You loaded {types} files: convert them like this.,49,dinamico,catalog-only
+971,catalogo,,conv.help.hint,mzlab/web/lang/en/conv.js:92,You loaded {types} files: convert them like this.,49,dinamico,catalog-only
 972,catalogo,,draw.link.title,mzlab/web/lang/en/disegno.js:172,Opens {host} in a new tab: the structure leaves this computer only with this click,82,dinamico,catalog-only
 973,catalogo,,draw.part.line.title,mzlab/web/lang/en/disegno.js:259,"Structure with the Δ, as the label shows; m/z of [M+H]+. A candidate; click to copy",83,due-frasi,catalog-only
 974,catalogo,,draw.part.remove.title,mzlab/web/lang/en/disegno.js:260,Removes brackets and Δ; also click the bracket and press Delete. Ctrl+Z restores,80,due-frasi,catalog-only
@@ -978,7 +978,7 @@ id,area,label,key,file_line,text,chars,flags,source
 977,catalogo,,msngrafo.file.title,mzlab/web/lang/en/grafo-msn.js:211,Fragmentation graph · {name},28,dinamico,catalog-only
 978,catalogo,,lib.droppedTitle,mzlab/web/lang/en/librerie.js:65,no precursor {prec} · no peaks {peaks} · broken blocks {broken},63,dinamico,catalog-only
 979,catalogo,,load.tprov.title,mzlab/web/lang/en/load.js:16,TIC of {file} (provisional),27,dinamico,catalog-only
-980,catalogo,,open.title,mzlab/web/lang/en/load.js:184,Opening {file}…,15,dinamico,catalog-only
+980,catalogo,,open.title,mzlab/web/lang/en/load.js:183,Opening {file}…,15,dinamico,catalog-only
 981,catalogo,,m3d.err.title,mzlab/web/lang/en/m3d.js:5,3D viewer not available,23,non,catalog-only
 982,catalogo,,mappa.tab.title,mzlab/web/lang/en/mappe.js:141,Marked points: {n},18,dinamico,catalog-only
 983,catalogo,,mapfeat.title,mzlab/web/lang/en/mappe.js:22,How it was found · feature {id},31,dinamico,catalog-only
@@ -1024,178 +1024,179 @@ id,area,label,key,file_line,text,chars,flags,source
 1023,catalogo,,llm.consenso.title,mzlab/web/lang/en/altre-feat-lst.js:444,Turn the assistant on?,22,,catalog-only
 1024,catalogo,,llm.consenso.demo.title,mzlab/web/lang/en/altre-feat-lst.js:481,Try the assistant?,18,,catalog-only
 1025,catalogo,,ibk.leg.title,mzlab/web/lang/en/altre-feat-lst.js:93,Click to choose another stretch of the blank,44,,catalog-only
-1026,catalogo,,pk.title,mzlab/web/lang/en/altre-lv-predef.js:148,Peak detection,14,,catalog-only
-1027,catalogo,,perf.title,mzlab/web/lang/en/altre-lv-predef.js:175,Measurements (?perf),20,,catalog-only
-1028,catalogo,,lv.thr.title,mzlab/web/lang/en/altre-lv-predef.js:259,Thresholds of the levels,24,,catalog-only
-1029,catalogo,,meta.title,mzlab/web/lang/en/altre-lv-predef.js:293,Sample metadata,15,,catalog-only
-1030,catalogo,,phone.title,mzlab/web/lang/en/altre-lv-predef.js:30,You are on a smartphone,23,,catalog-only
-1031,catalogo,,pca.title,mzlab/web/lang/en/altre-lv-predef.js:311,Exploratory PCA,15,,catalog-only
-1032,catalogo,,pfas.title,mzlab/web/lang/en/altre-lv-predef.js:344,PFAS: MD/C and diagnostic fragments,35,,catalog-only
-1033,catalogo,,predef.title,mzlab/web/lang/en/altre-lv-predef.js:36,Make mzLab the default app?,27,,catalog-only
-1034,catalogo,,pfas.formulas.title,mzlab/web/lang/en/altre-lv-predef.js:365,Candidate formulas,18,,catalog-only
-1035,catalogo,,pfas.ev.title,mzlab/web/lang/en/altre-lv-predef.js:367,Fragments and losses in the MS2,31,,catalog-only
-1036,catalogo,,mem.more.title,mzlab/web/lang/en/altre-lv-predef.js:374,More memory is needed,21,,catalog-only
-1037,catalogo,,mol.title,mzlab/web/lang/en/altre-lv-predef.js:386,Molecules,9,,catalog-only
-1038,catalogo,,pal.title,mzlab/web/lang/en/altre-lv-predef.js:4,Search,6,,catalog-only
+1026,catalogo,,pk.title,mzlab/web/lang/en/altre-lv-predef.js:149,Peak detection,14,,catalog-only
+1027,catalogo,,perf.title,mzlab/web/lang/en/altre-lv-predef.js:191,Measurements (?perf),20,,catalog-only
+1028,catalogo,,lv.thr.title,mzlab/web/lang/en/altre-lv-predef.js:275,Thresholds of the levels,24,,catalog-only
+1029,catalogo,,phone.title,mzlab/web/lang/en/altre-lv-predef.js:30,You are on a smartphone,23,,catalog-only
+1030,catalogo,,meta.title,mzlab/web/lang/en/altre-lv-predef.js:309,Sample metadata,15,,catalog-only
+1031,catalogo,,pca.title,mzlab/web/lang/en/altre-lv-predef.js:327,Exploratory PCA,15,,catalog-only
+1032,catalogo,,predef.title,mzlab/web/lang/en/altre-lv-predef.js:36,Make mzLab the default app?,27,,catalog-only
+1033,catalogo,,pfas.title,mzlab/web/lang/en/altre-lv-predef.js:360,PFAS: MD/C and diagnostic fragments,35,,catalog-only
+1034,catalogo,,pfas.formulas.title,mzlab/web/lang/en/altre-lv-predef.js:381,Candidate formulas,18,,catalog-only
+1035,catalogo,,pfas.ev.title,mzlab/web/lang/en/altre-lv-predef.js:383,Fragments and losses in the MS2,31,,catalog-only
+1036,catalogo,,mem.more.title,mzlab/web/lang/en/altre-lv-predef.js:390,More memory is needed,21,,catalog-only
+1037,catalogo,,pal.title,mzlab/web/lang/en/altre-lv-predef.js:4,Search,6,,catalog-only
+1038,catalogo,,mol.title,mzlab/web/lang/en/altre-lv-predef.js:402,Molecules,9,,catalog-only
 1039,catalogo,,predef.guide.title,mzlab/web/lang/en/altre-lv-predef.js:44,How to do it,12,,catalog-only
 1040,catalogo,,pal.hint,mzlab/web/lang/en/altre-lv-predef.js:7,↑ ↓ move · Enter runs · Esc closes,34,,catalog-only
-1041,catalogo,,tbl.diff.title,mzlab/web/lang/en/altre-press-xic.js:138,Adduct mass differences,23,,catalog-only
-1042,catalogo,,tree.title,mzlab/web/lang/en/altre-press-xic.js:173,MSn tree,8,,catalog-only
-1043,catalogo,,reset.title,mzlab/web/lang/en/altre-press-xic.js:192,Start a new session?,20,,catalog-only
-1044,catalogo,,tdati.title,mzlab/web/lang/en/altre-press-xic.js:203,Chart data,10,,catalog-only
-1045,catalogo,,sub.pop.title,mzlab/web/lang/en/altre-press-xic.js:352,Reference subtraction,21,,catalog-only
-1046,catalogo,,prof.title,mzlab/web/lang/en/altre-press-xic.js:375,Time profile of an ion,22,,catalog-only
-1047,catalogo,,prof.istd.hint,mzlab/web/lang/en/altre-press-xic.js:390,"To normalize, add an internal standard in the QA/QC panel.",58,,catalog-only
-1048,catalogo,,rep.title,mzlab/web/lang/en/altre-press-xic.js:394,Study report,12,,catalog-only
+1041,catalogo,,tbl.diff.title,mzlab/web/lang/en/altre-press-xic.js:135,Adduct mass differences,23,,catalog-only
+1042,catalogo,,tree.title,mzlab/web/lang/en/altre-press-xic.js:170,MSn tree,8,,catalog-only
+1043,catalogo,,reset.title,mzlab/web/lang/en/altre-press-xic.js:189,Start a new session?,20,,catalog-only
+1044,catalogo,,tdati.title,mzlab/web/lang/en/altre-press-xic.js:200,Chart data,10,,catalog-only
+1045,catalogo,,sub.pop.title,mzlab/web/lang/en/altre-press-xic.js:349,Reference subtraction,21,,catalog-only
+1046,catalogo,,prof.title,mzlab/web/lang/en/altre-press-xic.js:372,Time profile of an ion,22,,catalog-only
+1047,catalogo,,prof.istd.hint,mzlab/web/lang/en/altre-press-xic.js:387,"To normalize, add an internal standard in the QA/QC panel.",58,,catalog-only
+1048,catalogo,,rep.title,mzlab/web/lang/en/altre-press-xic.js:391,Study report,12,,catalog-only
 1049,catalogo,,xicdlg.title,mzlab/web/lang/en/altre-xicbtn-zoom.js:20,Extract ions (XIC),18,,catalog-only
 1050,catalogo,,bn.idn.ign.title,mzlab/web/lang/en/bn.js:140,Files left out,14,,catalog-only
 1051,catalogo,,bn.sub.title,mzlab/web/lang/en/bn.js:170,XIC from a formula: all the sub-formulas,40,,catalog-only
 1052,catalogo,,bn.add.title,mzlab/web/lang/en/bn.js:3,Add a stacked chart,19,,catalog-only
-1053,catalogo,,cq.ad.title,mzlab/web/lang/en/calcqui.js:11,Adducts,7,,catalog-only
-1054,catalogo,,cq.g.liste.tip,mzlab/web/lang/en/calcqui.js:31,Known compounds at this m/z,27,,catalog-only
-1055,catalogo,,cq.g.perdite.tip,mzlab/web/lang/en/calcqui.js:32,Neutral losses that give this mass,34,,catalog-only
-1056,catalogo,,cq.g.diff.tip,mzlab/web/lang/en/calcqui.js:33,Adduct pairs with this difference,33,,catalog-only
-1057,catalogo,,canali.manint.h.overlap.tip,mzlab/web/lang/en/canali.js:98,Part of a window split at a valley,34,,catalog-only
-1058,catalogo,,cmd.calc.tip,mzlab/web/lang/en/comandi.js:12,"Calculator: sums, differences and formulas",42,,catalog-only
-1059,catalogo,,cmd.disp.affianca.tip,mzlab/web/lang/en/comandi.js:121,"Puts the panel in use beside another one, in the same row",57,,catalog-only
-1060,catalogo,,cmd.disp.su.tip,mzlab/web/lang/en/comandi.js:125,Moves the panel in use one row up,33,,catalog-only
-1061,catalogo,,cmd.disp.giu.tip,mzlab/web/lang/en/comandi.js:129,Moves the panel in use one row down,35,,catalog-only
-1062,catalogo,,cmd.disp.intera.tip,mzlab/web/lang/en/comandi.js:133,The panel in use leaves its row and takes the whole width,57,,catalog-only
-1063,catalogo,,cmd.disp.uguali.tip,mzlab/web/lang/en/comandi.js:137,Same width for the side-by-side panels of this row,50,,catalog-only
-1064,catalogo,,cmd.disp.ripristina.tip,mzlab/web/lang/en/comandi.js:141,"Every panel goes back to its own row, at full width",51,,catalog-only
-1065,catalogo,,cmd.smooth.tip,mzlab/web/lang/en/comandi.js:145,Smoothing of the active chromatogram,36,,catalog-only
-1066,catalogo,,cmd.lists.tip,mzlab/web/lang/en/comandi.js:15,Reference lists and known contaminants,38,,catalog-only
-1067,catalogo,,cmd.mapfeat.tip,mzlab/web/lang/en/comandi.js:150,This file's Tabui features on the map (high resolution),55,,catalog-only
-1068,catalogo,,cmd.mapxic.tip,mzlab/web/lang/en/comandi.js:154,"XIC of the sight's m/z, in a new panel",38,,catalog-only
-1069,catalogo,,cmd.mapspec.tip,mzlab/web/lang/en/comandi.js:158,"Spectrum of the scan closest to the sight, in a new panel",57,,catalog-only
-1070,catalogo,,cmd.maplock.tip,mzlab/web/lang/en/comandi.js:162,Freezes the sight here: XIC and spectrum stay (L),49,,catalog-only
-1071,catalogo,,cmd.mapmark.tip,mzlab/web/lang/en/comandi.js:166,"Marks the point with number, RT and m/z in the table",52,,catalog-only
-1072,catalogo,,cmd.mapreset.tip,mzlab/web/lang/en/comandi.js:170,"Axes back to the data range (0, Home or double click)",53,,catalog-only
-1073,catalogo,,cmd.map3top.tip,mzlab/web/lang/en/comandi.js:174,Look straight down on the RT × m/z plane (key 1),48,,catalog-only
-1074,catalogo,,cmd.map3rt.tip,mzlab/web/lang/en/comandi.js:178,"Intensity against RT, like a chromatogram (key 2)",49,,catalog-only
-1075,catalogo,,cmd.ptable.tip,mzlab/web/lang/en/comandi.js:18,Periodic table with exact masses and isotopic abundances,56,,catalog-only
-1076,catalogo,,cmd.map3mz.tip,mzlab/web/lang/en/comandi.js:182,"Intensity against m/z, like a spectrum (key 3)",46,,catalog-only
-1077,catalogo,,cmd.mapzin.tip,mzlab/web/lang/en/comandi.js:186,Zoom in on the map (key +; wheel),33,,catalog-only
-1078,catalogo,,cmd.mapzout.tip,mzlab/web/lang/en/comandi.js:190,Zoom out of the map (key −; wheel),34,,catalog-only
-1079,catalogo,,cmd.mapcopy.tip,mzlab/web/lang/en/comandi.js:194,"Copy RT, m/z and intensity of the sight as text",47,,catalog-only
-1080,catalogo,,cmd.maphelp.tip,mzlab/web/lang/en/comandi.js:198,"Table of the mouse, trackpad, touch and keyboard gestures of the map (key ?)",76,,catalog-only
-1081,catalogo,,cmd.disp.tip,mzlab/web/lang/en/comandi.js:207,"m/z decimals, labels and scale of the active chart",50,,catalog-only
-1082,catalogo,,cmd.marker.tip,mzlab/web/lang/en/comandi.js:211,Shows or hides the MS² scan triangles on the active spectrum,60,,catalog-only
-1083,catalogo,,cmd.nocont.tip,mzlab/web/lang/en/comandi.js:215,Removes contaminant peaks from the active spectrum,50,,catalog-only
-1084,catalogo,,cmd.openms2.tip,mzlab/web/lang/en/comandi.js:219,Opens the MS² scan of the peak chosen with the right button,59,,catalog-only
-1085,catalogo,,cmd.gradient.tip,mzlab/web/lang/en/comandi.js:223,"%B gradient over the active chromatogram, axis on the right",59,,catalog-only
-1086,catalogo,,cmd.pressure.tip,mzlab/web/lang/en/comandi.js:227,"Pump pressure over the active chromatogram, axis on the right",61,,catalog-only
-1087,catalogo,,cmd.qaqc.tip,mzlab/web/lang/en/comandi.js:236,"Blanks, internal standards, drift and mass accuracy",51,,catalog-only
-1088,catalogo,,cmd.subref.tip,mzlab/web/lang/en/comandi.js:240,Subtracts the reference from every file,39,,catalog-only
-1089,catalogo,,cmd.report.tip,mzlab/web/lang/en/comandi.js:244,"Printable study report (HTML) with files, instrument, parameters",64,,catalog-only
-1090,catalogo,,cmd.stat.tip,mzlab/web/lang/en/comandi.js:248,"Metadata, time profile of an ion, blank subtraction and PCA",59,,catalog-only
-1091,catalogo,,cmd.labcont.tip,mzlab/web/lang/en/comandi.js:252,"Your laboratory's contaminant list (import, export, add)",56,,catalog-only
-1092,catalogo,,cmd.alb.tip,mzlab/web/lang/en/comandi.js:256,Precursor tree of an MSn infusion file,38,,catalog-only
-1093,catalogo,,cmd.gra.tip,mzlab/web/lang/en/comandi.js:260,Fragments of a known molecule in an MSn infusion,48,,catalog-only
-1094,catalogo,,cmd.pubchem.tip,mzlab/web/lang/en/comandi.js:37,"Look up the compound by name, formula or structure, in another tab",66,,catalog-only
-1095,catalogo,,cmd.file.tip,mzlab/web/lang/en/comandi.js:4,"Choose, hide, rename and colour the loaded files",48,,catalog-only
-1096,catalogo,,cmd.bio.tip,mzlab/web/lang/en/comandi.js:40,Opens BioTransformer in another tab,35,,catalog-only
-1097,catalogo,,cmd.scan.tip,mzlab/web/lang/en/comandi.js:43,"Header, scan list, file and instrument",38,,catalog-only
-1098,catalogo,,cmd.form.tip,mzlab/web/lang/en/comandi.js:44,Elemental composition and isotope simulation,44,,catalog-only
-1099,catalogo,,cmd.idn.tip,mzlab/web/lang/en/comandi.js:45,Library search of every MS2,27,,catalog-only
-1100,catalogo,,cmd.hdr.tip,mzlab/web/lang/en/comandi.js:46,Header of the scan under the cursor,35,,catalog-only
-1101,catalogo,,cmd.lst.tip,mzlab/web/lang/en/comandi.js:47,List of the scans of the file,29,,catalog-only
-1102,catalogo,,cmd.fil.tip,mzlab/web/lang/en/comandi.js:48,File and instrument: what the mzML file says,44,,catalog-only
-1103,catalogo,,cmd.cmp.tip,mzlab/web/lang/en/comandi.js:49,"Candidate formulas for an m/z, with error, evidence and observed isotopes",73,,catalog-only
-1104,catalogo,,cmd.iso.tip,mzlab/web/lang/en/comandi.js:50,"Simulated isotope pattern of a formula, at the resolution of the instrument",75,,catalog-only
-1105,catalogo,,cmd.search.tip,mzlab/web/lang/en/comandi.js:54,"Search a number, formula or command (Ctrl/⌘+K)",46,,catalog-only
-1106,catalogo,,cmd.method.tip,mzlab/web/lang/en/comandi.js:58,Experiment type and method settings,35,,catalog-only
-1107,catalogo,,cmd.settings.tip,mzlab/web/lang/en/comandi.js:62,"Theme, text size, guided tour",29,,catalog-only
-1108,catalogo,,cmd.chrom.tip,mzlab/web/lang/en/comandi.js:66,Opens a chromatogram panel below the others,43,,catalog-only
-1109,catalogo,,cmd.spec.tip,mzlab/web/lang/en/comandi.js:70,Opens a mass spectrum panel below the others,44,,catalog-only
-1110,catalogo,,cmd.map.tip,mzlab/web/lang/en/comandi.js:74,Each pixel is an m/z at a given RT,34,,catalog-only
-1111,catalogo,,cmd.xic.tip,mzlab/web/lang/en/comandi.js:78,Chromatogram of one ion in the m/z window you choose,52,,catalog-only
-1112,catalogo,,cmd.addloss.tip,mzlab/web/lang/en/comandi.js:8,"Adducts, neutral losses (Δm) and calculator",43,,catalog-only
-1113,catalogo,,cmd.mrm.tip,mzlab/web/lang/en/comandi.js:82,Opens a panel with the MRM transitions,38,,catalog-only
-1114,catalogo,,cmd.closeall.tip,mzlab/web/lang/en/comandi.js:86,Closes all the open chart panels,32,,catalog-only
-1115,catalogo,,cmd.sideL.tip,mzlab/web/lang/en/comandi.js:90,Moves the side panel to the left (Alt+Shift+←),46,,catalog-only
-1116,catalogo,,cmd.sideR.tip,mzlab/web/lang/en/comandi.js:94,Moves the side panel to the right (Alt+Shift+→),47,,catalog-only
-1117,catalogo,,comp.title,mzlab/web/lang/en/comp.js:16,Candidate formulas,18,,catalog-only
-1118,catalogo,,comp.filters.hint,mzlab/web/lang/en/comp.js:32,"(Seven Golden Rules, Kind and Fiehn 2007)",41,,catalog-only
-1119,catalogo,,comp.det.title,mzlab/web/lang/en/comp.js:80,isotope score terms per peak,28,,catalog-only
-1120,catalogo,,ctl.kind.bpc.title,mzlab/web/lang/en/ctl.js:43,Base peak: the most intense ion of each scan,44,,catalog-only
-1121,catalogo,,ctl.mrm.smooth.title,mzlab/web/lang/en/ctl.js:66,Smooths the curve shown,23,,catalog-only
-1122,catalogo,,ctl.kind.reg.title,mzlab/web/lang/en/ctl.js:99,"Temperatures, voltages, vacuum and per-scan fields recorded by the instrument",77,,catalog-only
-1123,catalogo,,ctx.spec.overlay.tip,mzlab/web/lang/en/ctx.js:18,"In the same chart, to see whether two ions co-elute",51,,catalog-only
-1124,catalogo,,ctx.spec.iso.tip,mzlab/web/lang/en/ctx.js:25,Formula or contaminant name,27,,catalog-only
-1125,catalogo,,draw.sub.ctx.title,mzlab/web/lang/en/disegno-sottostruttura.js:41,Opens the substructure search with this query,45,,catalog-only
-1126,catalogo,,draw.export.metaTitle,mzlab/web/lang/en/disegno.js:118,Drawing,7,,catalog-only
-1127,catalogo,,draw.ctx.info.title,mzlab/web/lang/en/disegno.js:148,"Formula, masses, rings, InChI of what the menu acts on, with copy buttons",73,,catalog-only
-1128,catalogo,,draw.info.title,mzlab/web/lang/en/disegno.js:151,Info,4,,catalog-only
-1129,catalogo,,draw.link.other.title,mzlab/web/lang/en/disegno.js:173,ChEBI and BioTransformer: a row opens a new tab only when clicked,65,,catalog-only
-1130,catalogo,,draw.link.pubchem.title,mzlab/web/lang/en/disegno.js:175,PubChem searches: a row opens a new tab only when clicked,57,,catalog-only
-1131,catalogo,,draw.ctx.analysis.title,mzlab/web/lang/en/disegno.js:183,"Formula, masses, mass % and the theoretical isotope pattern of what the menu acts on",84,,catalog-only
-1132,catalogo,,draw.frag.side.title,mzlab/web/lang/en/disegno.js:188,"One side of the bond under the pointer, closed with H: a candidate; click to copy",81,,catalog-only
-1133,catalogo,,draw.frag.all.title,mzlab/web/lang/en/disegno.js:190,Table of the two pieces of every bond outside the rings,55,,catalog-only
-1134,catalogo,,draw.frag.title,mzlab/web/lang/en/disegno.js:193,Bond cleavages,14,,catalog-only
-1135,catalogo,,draw.part.add.title,mzlab/web/lang/en/disegno.js:255,Chosen atoms in brackets with a change at an unknown position (e.g. +O),71,,catalog-only
-1136,catalogo,,draw.multi.add.title,mzlab/web/lang/en/disegno.js:265,The chosen substituent sits on any of the chosen ring atoms,59,,catalog-only
-1137,catalogo,,draw.examples.title,mzlab/web/lang/en/disegno.js:272,Drawing examples,16,,catalog-only
-1138,catalogo,,draw.ann.tip,mzlab/web/lang/en/disegno.js:277,Double-click: edit · right-click: actions,41,,catalog-only
-1139,catalogo,,msngrafo.v.hypo.title,mzlab/web/lang/en/grafo-msn.js:101,Cleavage hypothesis,19,,catalog-only
-1140,catalogo,,msngrafo.int.title,mzlab/web/lang/en/grafo-msn.js:12,Neutral loss to this ion,24,,catalog-only
-1141,catalogo,,msngrafo.draw.title,mzlab/web/lang/en/grafo-msn.js:139,Drawn fragment,14,,catalog-only
-1142,catalogo,,msngrafo.data.title,mzlab/web/lang/en/grafo-msn.js:164,Fragmentation graph data,24,,catalog-only
-1143,catalogo,,msngrafo.str.title,mzlab/web/lang/en/grafo-msn.js:171,Cleavage candidates of the structure,36,,catalog-only
-1144,catalogo,,msngrafo.brk.title,mzlab/web/lang/en/grafo-msn.js:20,Bond breaks in the structure,28,,catalog-only
-1145,catalogo,,msngrafo.rule.title,mzlab/web/lang/en/grafo-msn.js:28,Fragmentation rules,19,,catalog-only
-1146,catalogo,,msngrafo.rule.thr.title,mzlab/web/lang/en/grafo-msn.js:40,Thresholds of the rules,23,,catalog-only
-1147,catalogo,,msngrafo.ppm.tip,mzlab/web/lang/en/grafo-msn.js:52,Window in ppm for the sub-formulas of the fragments,51,,catalog-only
-1148,catalogo,,msngrafo.mzlow.tip,mzlab/web/lang/en/grafo-msn.js:54,Below this m/z the window may widen,35,,catalog-only
-1149,catalogo,,msngrafo.ppmlow.tip,mzlab/web/lang/en/grafo-msn.js:56,"Wider window for candidates with evidences, below the low m/z",61,,catalog-only
-1150,catalogo,,msngrafo.proofs.tip,mzlab/web/lang/en/grafo-msn.js:58,Evidences a candidate needs in the wide window,46,,catalog-only
-1151,catalogo,,groups.pos.title,mzlab/web/lang/en/gruppi.js:29,Group by token position,23,,catalog-only
-1152,catalogo,,groups.has.title,mzlab/web/lang/en/gruppi.js:36,Group by words contained,24,,catalog-only
-1153,catalogo,,lib.all.title,mzlab/web/lang/en/librerie.js:136,Identify all the MS2 of the file,32,,catalog-only
-1154,catalogo,,lib.what.title,mzlab/web/lang/en/librerie.js:166,What is it?,11,,catalog-only
-1155,catalogo,,lw.opt.title,mzlab/web/lang/en/librerie.js:189,"Tolerances, thresholds of the levels and libraries",50,,catalog-only
-1156,catalogo,,lib.avail.ext.hint,mzlab/web/lang/en/librerie.js:48,They come from the official sites; index them after the download.,65,,catalog-only
-1157,catalogo,,lib.title,mzlab/web/lang/en/librerie.js:7,Spectral libraries,18,,catalog-only
-1158,catalogo,,lib.pairs.title,mzlab/web/lang/en/librerie.js:79,"{n, plural, one {Matched peak (1)} other {Matched peaks (#)}}",61,,catalog-only
-1159,catalogo,,lib.search.title,mzlab/web/lang/en/librerie.js:95,Search in the libraries,23,,catalog-only
-1160,catalogo,,load.space.title,mzlab/web/lang/en/load.js:175,The site's space in the browser,31,,catalog-only
-1161,catalogo,,m3d.title,mzlab/web/lang/en/m3d.js:2,RT × m/z map in 3D,18,,catalog-only
-1162,catalogo,,mappa.side.title,mzlab/web/lang/en/mappe.js:11,spectrum of the scan,20,,catalog-only
-1163,catalogo,,mappa.col.n.title,mzlab/web/lang/en/mappe.js:117,Number of the point on the map,30,,catalog-only
-1164,catalogo,,mappa.col.rt.title,mzlab/web/lang/en/mappe.js:119,RT of the apex (the most intense scan near the click),53,,catalog-only
-1165,catalogo,,mappa.col.mz.title,mzlab/web/lang/en/mappe.js:121,"m/z of the peak at the apex, as the file writes it (exact in high resolution)",77,,catalog-only
-1166,catalogo,,mappa.col.ia.title,mzlab/web/lang/en/mappe.js:123,Intensity in the file shown (XIC at the apex),45,,catalog-only
-1167,catalogo,,mappa.col.ib.title,mzlab/web/lang/en/mappe.js:125,Intensity in the reference (maximum of the XIC within ±0.1 min),63,,catalog-only
-1168,catalogo,,mappa.col.d.title,mzlab/web/lang/en/mappe.js:127,Difference of the intensities,29,,catalog-only
-1169,catalogo,,mappa.col.ratio.title,mzlab/web/lang/en/mappe.js:129,Ratio of the intensities,24,,catalog-only
-1170,catalogo,,mappa.bot.title,mzlab/web/lang/en/mappe.js:13,XIC of the m/z under the sight,30,,catalog-only
-1171,catalogo,,mappa.col.sn.title,mzlab/web/lang/en/mappe.js:131,Signal/noise in A: (apex − median of the XIC) / MAD noise,57,,catalog-only
-1172,catalogo,,mappa.col.g.title,mzlab/web/lang/en/mappe.js:133,Points with their apexes close in time (tolerance above),56,,catalog-only
-1173,catalogo,,mappa.col.dm.title,mzlab/web/lang/en/mappe.js:138,Δm/z from the group's top point or the reference; click: neutral losses,71,,catalog-only
-1174,catalogo,,mappa.col.note.title,mzlab/web/lang/en/mappe.js:140,A note of yours,15,,catalog-only
-1175,catalogo,,mapex.xic.title,mzlab/web/lang/en/mappe.js:34,"XIC of the box (m/z window, against RT)",39,,catalog-only
-1176,catalogo,,mapex.spec.title,mzlab/web/lang/en/mappe.js:35,Spectrum of the box (RT window),31,,catalog-only
-1177,catalogo,,method.doc.title,mzlab/web/lang/en/method.js:15,Method stored in the file,25,,catalog-only
-1178,catalogo,,method.doc.btn.ms2.tip,mzlab/web/lang/en/method.js:32,Opens the MS² scan of the precursor closest to this RT,54,,catalog-only
-1179,catalogo,,method.doc.incl.title,mzlab/web/lang/en/method.js:35,Inclusion list,14,,catalog-only
-1180,catalogo,,method.lc.title,mzlab/web/lang/en/method.js:52,Chromatographic method (LC),27,,catalog-only
-1181,catalogo,,method.pda.title,mzlab/web/lang/en/method.js:53,DAD detector (UV),17,,catalog-only
-1182,catalogo,,method.check.title,mzlab/web/lang/en/method.js:81,Does the method match the data?,31,,catalog-only
-1183,catalogo,,method.source.title,mzlab/web/lang/en/method.js:90,Source and compound (.dam),26,,catalog-only
-1184,catalogo,,normative.lib.title,mzlab/web/lang/en/normative.js:14,Regulatory lists,16,,catalog-only
-1185,catalogo,,og.title,mzlab/web/lang/en/og.js:2,Where does this ion come from?,30,,catalog-only
-1186,catalogo,,ref.title,mzlab/web/lang/en/ref.js:2,Difference from the reference,29,,catalog-only
-1187,catalogo,,settings.motion.title,mzlab/web/lang/en/settings.js:25,"Turns animations off, regardless of the system setting",54,,catalog-only
-1188,catalogo,,settings.theme.tip,mzlab/web/lang/en/settings.js:35,Background and text colours of the interface,44,,catalog-only
-1189,catalogo,,settings.font.default.tip,mzlab/web/lang/en/settings.js:36,The program's usual typeface,28,,catalog-only
-1190,catalogo,,settings.font.atkinson.tip,mzlab/web/lang/en/settings.js:37,"Distinct letters, for low vision",32,,catalog-only
-1191,catalogo,,settings.font.dyslexic.tip,mzlab/web/lang/en/settings.js:38,Designed for readers with dyslexia,34,,catalog-only
-1192,catalogo,,settings.hc.tip,mzlab/web/lang/en/settings.js:39,"Pure black and white, sharper borders",37,,catalog-only
-1193,catalogo,,settings.g.diag.tip,mzlab/web/lang/en/settings.js:43,Engine memory and the choices made,34,,catalog-only
-1194,catalogo,,settings.title,mzlab/web/lang/en/settings.js:44,Settings,8,,catalog-only
-1195,catalogo,,settings.xiclens.title,mzlab/web/lang/en/settings.js:64,XIC preview on a peak; a click opens it,39,,catalog-only
-1196,catalogo,,settings.libs.title,mzlab/web/lang/en/settings.js:67,"Libraries (MSP, MGF) to compare MS2 spectra with",48,,catalog-only
-1197,catalogo,,settings.hrPpm.title,mzlab/web/lang/en/settings.js:69,XIC window and m/z matching,27,,catalog-only
-1198,catalogo,,settings.hrDec.title,mzlab/web/lang/en/settings.js:71,Decimals of the m/z values in high-resolution files,51,,catalog-only
-1199,catalogo,,settings.ext.title,mzlab/web/lang/en/settings.js:92,Allows network requests to public sources,41,,catalog-only
-1200,catalogo,,tabp.title,mzlab/web/lang/en/tabpicchi.js:3,Peak table,10,,catalog-only
+1053,catalogo,,cq.ad.title,mzlab/web/lang/en/calcqui.js:10,Adducts,7,,catalog-only
+1054,catalogo,,cq.g.liste.tip,mzlab/web/lang/en/calcqui.js:29,Known compounds at this m/z,27,,catalog-only
+1055,catalogo,,cq.g.perdite.tip,mzlab/web/lang/en/calcqui.js:30,Neutral losses that give this mass,34,,catalog-only
+1056,catalogo,,cq.g.diff.tip,mzlab/web/lang/en/calcqui.js:31,Adduct pairs with this difference,33,,catalog-only
+1057,catalogo,,canali.manint.h.overlap.tip,mzlab/web/lang/en/canali.js:103,Part of a window split at a valley,34,,catalog-only
+1058,catalogo,,int.split.hand.hint,mzlab/web/lang/en/canali.js:99,Click in the window to split,28,,catalog-only
+1059,catalogo,,cmd.calc.tip,mzlab/web/lang/en/comandi.js:12,"Calculator: sums, differences and formulas",42,,catalog-only
+1060,catalogo,,cmd.disp.affianca.tip,mzlab/web/lang/en/comandi.js:121,"Puts the panel in use beside another one, in the same row",57,,catalog-only
+1061,catalogo,,cmd.disp.su.tip,mzlab/web/lang/en/comandi.js:125,Moves the panel in use one row up,33,,catalog-only
+1062,catalogo,,cmd.disp.giu.tip,mzlab/web/lang/en/comandi.js:129,Moves the panel in use one row down,35,,catalog-only
+1063,catalogo,,cmd.disp.intera.tip,mzlab/web/lang/en/comandi.js:133,The panel in use leaves its row and takes the whole width,57,,catalog-only
+1064,catalogo,,cmd.disp.uguali.tip,mzlab/web/lang/en/comandi.js:137,Same width for the side-by-side panels of this row,50,,catalog-only
+1065,catalogo,,cmd.disp.ripristina.tip,mzlab/web/lang/en/comandi.js:141,"Every panel goes back to its own row, at full width",51,,catalog-only
+1066,catalogo,,cmd.smooth.tip,mzlab/web/lang/en/comandi.js:145,Smoothing of the active chromatogram,36,,catalog-only
+1067,catalogo,,cmd.lists.tip,mzlab/web/lang/en/comandi.js:15,Reference lists and known contaminants,38,,catalog-only
+1068,catalogo,,cmd.mapfeat.tip,mzlab/web/lang/en/comandi.js:150,This file's Tabui features on the map (high resolution),55,,catalog-only
+1069,catalogo,,cmd.mapxic.tip,mzlab/web/lang/en/comandi.js:154,"XIC of the sight's m/z, in a new panel",38,,catalog-only
+1070,catalogo,,cmd.mapspec.tip,mzlab/web/lang/en/comandi.js:158,"Spectrum of the scan closest to the sight, in a new panel",57,,catalog-only
+1071,catalogo,,cmd.maplock.tip,mzlab/web/lang/en/comandi.js:162,Freezes the sight here: XIC and spectrum stay (L),49,,catalog-only
+1072,catalogo,,cmd.mapmark.tip,mzlab/web/lang/en/comandi.js:166,"Marks the point with number, RT and m/z in the table",52,,catalog-only
+1073,catalogo,,cmd.mapreset.tip,mzlab/web/lang/en/comandi.js:170,"Axes back to the data range (0, Home or double click)",53,,catalog-only
+1074,catalogo,,cmd.map3top.tip,mzlab/web/lang/en/comandi.js:174,Look straight down on the RT × m/z plane (key 1),48,,catalog-only
+1075,catalogo,,cmd.map3rt.tip,mzlab/web/lang/en/comandi.js:178,"Intensity against RT, like a chromatogram (key 2)",49,,catalog-only
+1076,catalogo,,cmd.ptable.tip,mzlab/web/lang/en/comandi.js:18,Periodic table with exact masses and isotopic abundances,56,,catalog-only
+1077,catalogo,,cmd.map3mz.tip,mzlab/web/lang/en/comandi.js:182,"Intensity against m/z, like a spectrum (key 3)",46,,catalog-only
+1078,catalogo,,cmd.mapzin.tip,mzlab/web/lang/en/comandi.js:186,Zoom in on the map (key +; wheel),33,,catalog-only
+1079,catalogo,,cmd.mapzout.tip,mzlab/web/lang/en/comandi.js:190,Zoom out of the map (key −; wheel),34,,catalog-only
+1080,catalogo,,cmd.mapcopy.tip,mzlab/web/lang/en/comandi.js:194,"Copy RT, m/z and intensity of the sight as text",47,,catalog-only
+1081,catalogo,,cmd.maphelp.tip,mzlab/web/lang/en/comandi.js:198,"Table of the mouse, trackpad, touch and keyboard gestures of the map (key ?)",76,,catalog-only
+1082,catalogo,,cmd.disp.tip,mzlab/web/lang/en/comandi.js:207,"m/z decimals, labels and scale of the active chart",50,,catalog-only
+1083,catalogo,,cmd.marker.tip,mzlab/web/lang/en/comandi.js:211,Shows or hides the MS² scan triangles on the active spectrum,60,,catalog-only
+1084,catalogo,,cmd.nocont.tip,mzlab/web/lang/en/comandi.js:215,Removes contaminant peaks from the active spectrum,50,,catalog-only
+1085,catalogo,,cmd.openms2.tip,mzlab/web/lang/en/comandi.js:219,Opens the MS² scan of the peak chosen with the right button,59,,catalog-only
+1086,catalogo,,cmd.gradient.tip,mzlab/web/lang/en/comandi.js:223,"%B gradient over the active chromatogram, axis on the right",59,,catalog-only
+1087,catalogo,,cmd.pressure.tip,mzlab/web/lang/en/comandi.js:227,"Pump pressure over the active chromatogram, axis on the right",61,,catalog-only
+1088,catalogo,,cmd.qaqc.tip,mzlab/web/lang/en/comandi.js:236,"Blanks, internal standards, drift and mass accuracy",51,,catalog-only
+1089,catalogo,,cmd.subref.tip,mzlab/web/lang/en/comandi.js:240,Subtracts the reference from every file,39,,catalog-only
+1090,catalogo,,cmd.report.tip,mzlab/web/lang/en/comandi.js:244,"Printable study report (HTML) with files, instrument, parameters",64,,catalog-only
+1091,catalogo,,cmd.stat.tip,mzlab/web/lang/en/comandi.js:248,"Metadata, time profile of an ion, blank subtraction and PCA",59,,catalog-only
+1092,catalogo,,cmd.labcont.tip,mzlab/web/lang/en/comandi.js:252,"Your laboratory's contaminant list (import, export, add)",56,,catalog-only
+1093,catalogo,,cmd.alb.tip,mzlab/web/lang/en/comandi.js:256,Precursor tree of an MSn infusion file,38,,catalog-only
+1094,catalogo,,cmd.gra.tip,mzlab/web/lang/en/comandi.js:260,Fragments of a known molecule in an MSn infusion,48,,catalog-only
+1095,catalogo,,cmd.pubchem.tip,mzlab/web/lang/en/comandi.js:37,"Look up the compound by name, formula or structure, in another tab",66,,catalog-only
+1096,catalogo,,cmd.file.tip,mzlab/web/lang/en/comandi.js:4,"Choose, hide, rename and colour the loaded files",48,,catalog-only
+1097,catalogo,,cmd.bio.tip,mzlab/web/lang/en/comandi.js:40,Opens BioTransformer in another tab,35,,catalog-only
+1098,catalogo,,cmd.scan.tip,mzlab/web/lang/en/comandi.js:43,"Header, scan list, file and instrument",38,,catalog-only
+1099,catalogo,,cmd.form.tip,mzlab/web/lang/en/comandi.js:44,Elemental composition and isotope simulation,44,,catalog-only
+1100,catalogo,,cmd.idn.tip,mzlab/web/lang/en/comandi.js:45,Library search of every MS2,27,,catalog-only
+1101,catalogo,,cmd.hdr.tip,mzlab/web/lang/en/comandi.js:46,Header of the scan under the cursor,35,,catalog-only
+1102,catalogo,,cmd.lst.tip,mzlab/web/lang/en/comandi.js:47,List of the scans of the file,29,,catalog-only
+1103,catalogo,,cmd.fil.tip,mzlab/web/lang/en/comandi.js:48,File and instrument: what the mzML file says,44,,catalog-only
+1104,catalogo,,cmd.cmp.tip,mzlab/web/lang/en/comandi.js:49,"Candidate formulas for an m/z, with error, evidence and observed isotopes",73,,catalog-only
+1105,catalogo,,cmd.iso.tip,mzlab/web/lang/en/comandi.js:50,"Simulated isotope pattern of a formula, at the resolution of the instrument",75,,catalog-only
+1106,catalogo,,cmd.search.tip,mzlab/web/lang/en/comandi.js:54,"Search a number, formula or command (Ctrl/⌘+K)",46,,catalog-only
+1107,catalogo,,cmd.method.tip,mzlab/web/lang/en/comandi.js:58,Experiment type and method settings,35,,catalog-only
+1108,catalogo,,cmd.settings.tip,mzlab/web/lang/en/comandi.js:62,"Theme, text size, guided tour",29,,catalog-only
+1109,catalogo,,cmd.chrom.tip,mzlab/web/lang/en/comandi.js:66,Opens a chromatogram panel below the others,43,,catalog-only
+1110,catalogo,,cmd.spec.tip,mzlab/web/lang/en/comandi.js:70,Opens a mass spectrum panel below the others,44,,catalog-only
+1111,catalogo,,cmd.map.tip,mzlab/web/lang/en/comandi.js:74,Each pixel is an m/z at a given RT,34,,catalog-only
+1112,catalogo,,cmd.xic.tip,mzlab/web/lang/en/comandi.js:78,Chromatogram of one ion in the m/z window you choose,52,,catalog-only
+1113,catalogo,,cmd.addloss.tip,mzlab/web/lang/en/comandi.js:8,"Adducts, neutral losses (Δm) and calculator",43,,catalog-only
+1114,catalogo,,cmd.mrm.tip,mzlab/web/lang/en/comandi.js:82,Opens a panel with the MRM transitions,38,,catalog-only
+1115,catalogo,,cmd.closeall.tip,mzlab/web/lang/en/comandi.js:86,Closes all the open chart panels,32,,catalog-only
+1116,catalogo,,cmd.sideL.tip,mzlab/web/lang/en/comandi.js:90,Moves the side panel to the left (Alt+Shift+←),46,,catalog-only
+1117,catalogo,,cmd.sideR.tip,mzlab/web/lang/en/comandi.js:94,Moves the side panel to the right (Alt+Shift+→),47,,catalog-only
+1118,catalogo,,comp.title,mzlab/web/lang/en/comp.js:16,Candidate formulas,18,,catalog-only
+1119,catalogo,,comp.filters.hint,mzlab/web/lang/en/comp.js:32,"(Seven Golden Rules, Kind and Fiehn 2007)",41,,catalog-only
+1120,catalogo,,comp.det.title,mzlab/web/lang/en/comp.js:80,isotope score terms per peak,28,,catalog-only
+1121,catalogo,,ctl.kind.bpc.title,mzlab/web/lang/en/ctl.js:43,Base peak: the most intense ion of each scan,44,,catalog-only
+1122,catalogo,,ctl.mrm.smooth.title,mzlab/web/lang/en/ctl.js:66,Smooths the curve shown,23,,catalog-only
+1123,catalogo,,ctl.kind.reg.title,mzlab/web/lang/en/ctl.js:99,"Temperatures, voltages, vacuum and per-scan fields recorded by the instrument",77,,catalog-only
+1124,catalogo,,ctx.spec.overlay.tip,mzlab/web/lang/en/ctx.js:18,"In the same chart, to see whether two ions co-elute",51,,catalog-only
+1125,catalogo,,ctx.spec.iso.tip,mzlab/web/lang/en/ctx.js:25,Formula or contaminant name,27,,catalog-only
+1126,catalogo,,draw.sub.ctx.title,mzlab/web/lang/en/disegno-sottostruttura.js:41,Opens the substructure search with this query,45,,catalog-only
+1127,catalogo,,draw.export.metaTitle,mzlab/web/lang/en/disegno.js:118,Drawing,7,,catalog-only
+1128,catalogo,,draw.ctx.info.title,mzlab/web/lang/en/disegno.js:148,"Formula, masses, rings, InChI of what the menu acts on, with copy buttons",73,,catalog-only
+1129,catalogo,,draw.info.title,mzlab/web/lang/en/disegno.js:151,Info,4,,catalog-only
+1130,catalogo,,draw.link.other.title,mzlab/web/lang/en/disegno.js:173,ChEBI and BioTransformer: a row opens a new tab only when clicked,65,,catalog-only
+1131,catalogo,,draw.link.pubchem.title,mzlab/web/lang/en/disegno.js:175,PubChem searches: a row opens a new tab only when clicked,57,,catalog-only
+1132,catalogo,,draw.ctx.analysis.title,mzlab/web/lang/en/disegno.js:183,"Formula, masses, mass % and the theoretical isotope pattern of what the menu acts on",84,,catalog-only
+1133,catalogo,,draw.frag.side.title,mzlab/web/lang/en/disegno.js:188,"One side of the bond under the pointer, closed with H: a candidate; click to copy",81,,catalog-only
+1134,catalogo,,draw.frag.all.title,mzlab/web/lang/en/disegno.js:190,Table of the two pieces of every bond outside the rings,55,,catalog-only
+1135,catalogo,,draw.frag.title,mzlab/web/lang/en/disegno.js:193,Bond cleavages,14,,catalog-only
+1136,catalogo,,draw.part.add.title,mzlab/web/lang/en/disegno.js:255,Chosen atoms in brackets with a change at an unknown position (e.g. +O),71,,catalog-only
+1137,catalogo,,draw.multi.add.title,mzlab/web/lang/en/disegno.js:265,The chosen substituent sits on any of the chosen ring atoms,59,,catalog-only
+1138,catalogo,,draw.examples.title,mzlab/web/lang/en/disegno.js:272,Drawing examples,16,,catalog-only
+1139,catalogo,,draw.ann.tip,mzlab/web/lang/en/disegno.js:277,Double-click: edit · right-click: actions,41,,catalog-only
+1140,catalogo,,msngrafo.v.hypo.title,mzlab/web/lang/en/grafo-msn.js:101,Cleavage hypothesis,19,,catalog-only
+1141,catalogo,,msngrafo.int.title,mzlab/web/lang/en/grafo-msn.js:12,Neutral loss to this ion,24,,catalog-only
+1142,catalogo,,msngrafo.draw.title,mzlab/web/lang/en/grafo-msn.js:139,Drawn fragment,14,,catalog-only
+1143,catalogo,,msngrafo.data.title,mzlab/web/lang/en/grafo-msn.js:164,Fragmentation graph data,24,,catalog-only
+1144,catalogo,,msngrafo.str.title,mzlab/web/lang/en/grafo-msn.js:171,Cleavage candidates of the structure,36,,catalog-only
+1145,catalogo,,msngrafo.brk.title,mzlab/web/lang/en/grafo-msn.js:20,Bond breaks in the structure,28,,catalog-only
+1146,catalogo,,msngrafo.rule.title,mzlab/web/lang/en/grafo-msn.js:28,Fragmentation rules,19,,catalog-only
+1147,catalogo,,msngrafo.rule.thr.title,mzlab/web/lang/en/grafo-msn.js:40,Thresholds of the rules,23,,catalog-only
+1148,catalogo,,msngrafo.ppm.tip,mzlab/web/lang/en/grafo-msn.js:52,Window in ppm for the sub-formulas of the fragments,51,,catalog-only
+1149,catalogo,,msngrafo.mzlow.tip,mzlab/web/lang/en/grafo-msn.js:54,Below this m/z the window may widen,35,,catalog-only
+1150,catalogo,,msngrafo.ppmlow.tip,mzlab/web/lang/en/grafo-msn.js:56,"Wider window for candidates with evidences, below the low m/z",61,,catalog-only
+1151,catalogo,,msngrafo.proofs.tip,mzlab/web/lang/en/grafo-msn.js:58,Evidences a candidate needs in the wide window,46,,catalog-only
+1152,catalogo,,groups.pos.title,mzlab/web/lang/en/gruppi.js:29,Group by token position,23,,catalog-only
+1153,catalogo,,groups.has.title,mzlab/web/lang/en/gruppi.js:36,Group by words contained,24,,catalog-only
+1154,catalogo,,lib.all.title,mzlab/web/lang/en/librerie.js:136,Identify all the MS2 of the file,32,,catalog-only
+1155,catalogo,,lib.what.title,mzlab/web/lang/en/librerie.js:166,What is it?,11,,catalog-only
+1156,catalogo,,lw.opt.title,mzlab/web/lang/en/librerie.js:189,"Tolerances, thresholds of the levels and libraries",50,,catalog-only
+1157,catalogo,,lib.avail.ext.hint,mzlab/web/lang/en/librerie.js:48,They come from the official sites; index them after the download.,65,,catalog-only
+1158,catalogo,,lib.title,mzlab/web/lang/en/librerie.js:7,Spectral libraries,18,,catalog-only
+1159,catalogo,,lib.pairs.title,mzlab/web/lang/en/librerie.js:79,"{n, plural, one {Matched peak (1)} other {Matched peaks (#)}}",61,,catalog-only
+1160,catalogo,,lib.search.title,mzlab/web/lang/en/librerie.js:95,Search in the libraries,23,,catalog-only
+1161,catalogo,,load.space.title,mzlab/web/lang/en/load.js:174,The site's space in the browser,31,,catalog-only
+1162,catalogo,,m3d.title,mzlab/web/lang/en/m3d.js:2,RT × m/z map in 3D,18,,catalog-only
+1163,catalogo,,mappa.side.title,mzlab/web/lang/en/mappe.js:11,spectrum of the scan,20,,catalog-only
+1164,catalogo,,mappa.col.n.title,mzlab/web/lang/en/mappe.js:117,Number of the point on the map,30,,catalog-only
+1165,catalogo,,mappa.col.rt.title,mzlab/web/lang/en/mappe.js:119,RT of the apex (the most intense scan near the click),53,,catalog-only
+1166,catalogo,,mappa.col.mz.title,mzlab/web/lang/en/mappe.js:121,"m/z of the peak at the apex, as the file writes it (exact in high resolution)",77,,catalog-only
+1167,catalogo,,mappa.col.ia.title,mzlab/web/lang/en/mappe.js:123,Intensity in the file shown (XIC at the apex),45,,catalog-only
+1168,catalogo,,mappa.col.ib.title,mzlab/web/lang/en/mappe.js:125,Intensity in the reference (maximum of the XIC within ±0.1 min),63,,catalog-only
+1169,catalogo,,mappa.col.d.title,mzlab/web/lang/en/mappe.js:127,Difference of the intensities,29,,catalog-only
+1170,catalogo,,mappa.col.ratio.title,mzlab/web/lang/en/mappe.js:129,Ratio of the intensities,24,,catalog-only
+1171,catalogo,,mappa.bot.title,mzlab/web/lang/en/mappe.js:13,XIC of the m/z under the sight,30,,catalog-only
+1172,catalogo,,mappa.col.sn.title,mzlab/web/lang/en/mappe.js:131,Signal/noise in A: (apex − median of the XIC) / MAD noise,57,,catalog-only
+1173,catalogo,,mappa.col.g.title,mzlab/web/lang/en/mappe.js:133,Points with their apexes close in time (tolerance above),56,,catalog-only
+1174,catalogo,,mappa.col.dm.title,mzlab/web/lang/en/mappe.js:138,Δm/z from the group's top point or the reference; click: neutral losses,71,,catalog-only
+1175,catalogo,,mappa.col.note.title,mzlab/web/lang/en/mappe.js:140,A note of yours,15,,catalog-only
+1176,catalogo,,mapex.xic.title,mzlab/web/lang/en/mappe.js:34,"XIC of the box (m/z window, against RT)",39,,catalog-only
+1177,catalogo,,mapex.spec.title,mzlab/web/lang/en/mappe.js:35,Spectrum of the box (RT window),31,,catalog-only
+1178,catalogo,,method.doc.title,mzlab/web/lang/en/method.js:15,Method stored in the file,25,,catalog-only
+1179,catalogo,,method.doc.btn.ms2.tip,mzlab/web/lang/en/method.js:32,Opens the MS² scan of the precursor closest to this RT,54,,catalog-only
+1180,catalogo,,method.doc.incl.title,mzlab/web/lang/en/method.js:35,Inclusion list,14,,catalog-only
+1181,catalogo,,method.lc.title,mzlab/web/lang/en/method.js:52,Chromatographic method (LC),27,,catalog-only
+1182,catalogo,,method.pda.title,mzlab/web/lang/en/method.js:53,DAD detector (UV),17,,catalog-only
+1183,catalogo,,method.check.title,mzlab/web/lang/en/method.js:81,Does the method match the data?,31,,catalog-only
+1184,catalogo,,method.source.title,mzlab/web/lang/en/method.js:90,Source and compound (.dam),26,,catalog-only
+1185,catalogo,,normative.lib.title,mzlab/web/lang/en/normative.js:14,Regulatory lists,16,,catalog-only
+1186,catalogo,,og.title,mzlab/web/lang/en/og.js:2,Where does this ion come from?,30,,catalog-only
+1187,catalogo,,ref.title,mzlab/web/lang/en/ref.js:2,Difference from the reference,29,,catalog-only
+1188,catalogo,,settings.motion.title,mzlab/web/lang/en/settings.js:25,"Turns animations off, regardless of the system setting",54,,catalog-only
+1189,catalogo,,settings.theme.tip,mzlab/web/lang/en/settings.js:35,Background and text colours of the interface,44,,catalog-only
+1190,catalogo,,settings.font.default.tip,mzlab/web/lang/en/settings.js:36,The program's usual typeface,28,,catalog-only
+1191,catalogo,,settings.font.atkinson.tip,mzlab/web/lang/en/settings.js:37,"Distinct letters, for low vision",32,,catalog-only
+1192,catalogo,,settings.font.dyslexic.tip,mzlab/web/lang/en/settings.js:38,Designed for readers with dyslexia,34,,catalog-only
+1193,catalogo,,settings.hc.tip,mzlab/web/lang/en/settings.js:39,"Pure black and white, sharper borders",37,,catalog-only
+1194,catalogo,,settings.g.diag.tip,mzlab/web/lang/en/settings.js:43,Engine memory and the choices made,34,,catalog-only
+1195,catalogo,,settings.title,mzlab/web/lang/en/settings.js:44,Settings,8,,catalog-only
+1196,catalogo,,settings.xiclens.title,mzlab/web/lang/en/settings.js:64,XIC preview on a peak; a click opens it,39,,catalog-only
+1197,catalogo,,settings.libs.title,mzlab/web/lang/en/settings.js:67,"Libraries (MSP, MGF) to compare MS2 spectra with",48,,catalog-only
+1198,catalogo,,settings.hrPpm.title,mzlab/web/lang/en/settings.js:69,XIC window and m/z matching,27,,catalog-only
+1199,catalogo,,settings.hrDec.title,mzlab/web/lang/en/settings.js:71,Decimals of the m/z values in high-resolution files,51,,catalog-only
+1200,catalogo,,settings.ext.title,mzlab/web/lang/en/settings.js:92,Allows network requests to public sources,41,,catalog-only
+1201,catalogo,,tabp.title,mzlab/web/lang/en/tabpicchi.js:3,Peak table,10,,catalog-only

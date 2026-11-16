@@ -14,6 +14,13 @@ The core is in CLAUDE.md. mzLab (site, desktop app, CLI) and the qqq teaching si
 - `python3 tools/controlla_i18n.py` rejects keys used but missing or orphan, bad ICU braces, a static-HTML text that differs from the catalog, Italian left outside the catalog (and inside it), glossary forms to avoid, missing context descriptions and vendor/tool names.
 - Names and classes of contaminants are English: `chem/contaminants_en.json` (a test requires the entry for every id). The recognition of the names of the user's files stays Italian-aware (`project.py`): file names are data.
 - Tests: the e2e tests read the English texts of the catalog; `e2e_avvio_lingua`/`e2e_lingua` check that a stored language is ignored and the page starts in English.
+- **Marked-up texts** (*m/z* in italics, MS<sup>2</sup> with a real superscript): written ONCE, already in their final form.
+  The writer is `i18n.js`: `putText`/`putHtml` do not rewrite a node whose text did not change (an equal `textContent` would drop the `<i>`)
+  and mark what they write with `mark`, before the first paint (the inline `apply(document)` of `index.html`); the same `apply(document)` marks
+  the static text without a key and starts the observer that marks, in the same task, text written by other code. Never inputs, options, titles,
+  selects, scripts or an `<i>`/`<sup>` already there. The observer used to live in `shell.js`, ~0.3-0.5 s after the first paint: after a full
+  reset (two loads) the «m/z» of the map button went upright → italic → upright → italic. Test: `tests_e2e/e2e_corsivo_avvio.py` (every
+  frame of every load after `QQRESET.run("all")`: the first painted frame already italic, no change, CLS 0).
 - **Traps**: a literal key in `t("…")` or `data-i18n` must exist in the catalog (the check does not see keys built from pieces: use `t(`prefix.${x}`)`); `t()` never builds a sentence from pieces; an HTML attribute (`title`) cannot contain `"` or entities (`&Delta;` is written `Δ`).
 
 - **Numbers**: everywhere the decimal is the point and there is no thousands separator: the only formatter is `NF` in `i18n.js` (`I18N.fix`, `I18N.num`, `{x, number}`, `#` of the plural; one `Intl.NumberFormat` per number of decimals, built once: `tests/test_i18n.py`); never `toLocaleString`, `Intl.NumberFormat` or `.replace(".", ",")` in the code. Input with a comma is normalized with `.replace(",", ".")` where it is read. CSV exports use "," and ".".

@@ -26,7 +26,7 @@ const specColor = (/** @type {any} */ x) => (x.multi ? PAL[(x.idx + 3) % PAL.len
 /** @type {Record<string, number>} */
 // bmode = the baseline of new integrations: 0 zero (the default, as mzlab_core::baseline::DEFAULT), 1 edges, 2 line. The older key `base` (0 edges, 1 zero,
 // 2 line) was saved with every setting, so its 0 cannot tell a choice from the old default: only its line is carried over.
-const PK_DEF = { edgeFrac: 3, win: 1.2, tail: 1.5, snMin: 0, multi: 50, hrSmooth: 5, hrSn: 5, bmode: 0 };
+const PK_DEF = { edgeFrac: 3, win: 1.2, tail: 1.5, snMin: 0, multi: 50, hrSmooth: 5, hrSn: 5, bmode: 0, lrSmooth: 0, lrValley: 10, lrSn: 5, lrSplit: 0 };      // lr*: integra-tutti.js, = LrAutoParams::default
 const PK = (() => { /** @type {Record<string, unknown>} */ const o = lsObj(NOMI.KEY("picchi")); const r = { ...PK_DEF }; if (o.bmode === undefined && o.base === 2) o.bmode = 2; Object.keys(r).forEach(k => { const v = o[k]; if (typeof v === "number" && v >= 0) r[k] = v; }); return r; })();
 const BMODES = ["zero", "edges", "line"];
 function pkSave() { try { localStorage.setItem(NOMI.KEY("picchi"), JSON.stringify(PK)); } catch (e) { /* no storage */ } }
@@ -168,18 +168,18 @@ function intAt(/** @type {Bag} */ p, /** @type {number} */ px, /** @type {number
 }
 // dialog of the automatic-integration settings (applies to every panel): two blocks side by side, one row per setting (label, field, one-line hint)
 function peakParams() {
-  const B = /** @type {Record<string, string>} */ ({ edgeFrac: "0:100", win: ">0", tail: ">0", snMin: "0:", multi: "0:100", hrSmooth: "3:99 i", hrSn: "0:" });
+  const B = /** @type {Record<string, string>} */ ({ edgeFrac: "0:100", win: ">0", tail: ">0", snMin: "0:", multi: "0:100", hrSmooth: "3:99 i", hrSn: "0:", lrSmooth: "0:99 i", lrValley: "0:100", lrSn: "0:" });
   const f = (/** @type {string} */ k) => `<label class="pk-row"><span>${I18N.t(`pk.${k}`)}</span><input data-pk="${k}" data-num="${B[k]}" value="${PK[k]}" inputmode="decimal"><span class="muted sm">${I18N.t(`pk.${k}.h`)}</span></label>`;
   const sec = (/** @type {string} */ k, /** @type {string[]} */ keys) => `<fieldset class="pk-sec"><legend>${I18N.t(`pk.sec.${k}`)}</legend>${keys.map(f).join("")}</fieldset>`;
   big(I18N.t("pk.title"), `<div class="muted sm pk-intro">${I18N.t("pk.intro")}</div>
-    <div class="pk-grid">${sec("lr", ["edgeFrac", "win", "tail", "snMin", "multi"])}${sec("hr", ["hrSmooth", "hrSn"])}<fieldset class="pk-sec"><legend>${I18N.t("pk.sec.base")}</legend><label class="pk-row"><span>${I18N.t("pk.base")}</span><select data-pk="bmode">${BMODES.map((k, v) => `<option value="${v}"${PK.bmode === v ? " selected" : ""}>${I18N.t(`int.base.${k}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.base.h")}</span></label></fieldset></div>
+    <div class="pk-grid">${sec("lr", ["edgeFrac", "win", "tail", "snMin", "multi"])}${sec("hr", ["hrSmooth", "hrSn"])}${sec("lrall", ["lrSmooth", "lrValley", "lrSn"]).replace("</fieldset>", `<label class="pk-row"><span>${I18N.t("pk.lrSplit")}</span><select data-pk="lrSplit">${[0, 1].map(v => `<option value="${v}"${PK.lrSplit === v ? " selected" : ""}>${I18N.t(`pk.split.${v}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.lrSplit.h")}</span></label></fieldset>`)}<fieldset class="pk-sec"><legend>${I18N.t("pk.sec.base")}</legend><label class="pk-row"><span>${I18N.t("pk.base")}</span><select data-pk="bmode">${BMODES.map((k, v) => `<option value="${v}"${PK.bmode === v ? " selected" : ""}>${I18N.t(`int.base.${k}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.base.h")}</span></label></fieldset></div>
     <div class="pk-act"><button id="pk-def" type="button">${I18N.t("pk.default")}</button> <button id="pk-ok" type="button" class="go">${I18N.t("pk.apply")}</button></div>`, () => {
     const rdv = () => document.querySelectorAll("#bigbody [data-pk]").forEach(i => { i.value = String(PK[i.dataset.pk]); });
     Q("#pk-def").onclick = () => { COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => Object.assign(PK, PK_DEF)); pkSave(); rdv(); };
     Q("#pk-ok").onclick = () => {
       COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => {
         document.querySelectorAll("#bigbody [data-pk]").forEach(i => { const v = numIt(i.value); if (v >= 0) PK[i.dataset.pk] = v; });
-        PK.hrSmooth = Math.max(3, Math.round(PK.hrSmooth) | 1);
+        PK.hrSmooth = Math.max(3, Math.round(PK.hrSmooth) | 1); PK.lrSmooth = PK.lrSmooth ? Math.max(3, Math.round(PK.lrSmooth) | 1) : 0;
       });
       pkSave(); Q("#bigdlg").close();
     };
@@ -192,7 +192,7 @@ function intMenuItems(/** @type {Bag} */ p, /** @type {number} */ x, /** @type {
   if (p.ints.length) items.push({ label: I18N.t("int.menu.delAll"), icon: IC_DEL_INT, fn: () => delInts(p, [...p.ints]) });
   if (nearInt || p.ints.length) items.push("-");
   items.push({ label: I18N.t("int.menu.params"), icon: AZIONI_ICONE.svg("sliders"), fn: peakParams });
-  if (canInt(p)) items.push({ label: I18N.t("int.menu.auto"), icon: IC_AUTO, fn: () => { if (!guardInt(p)) return; intTargets(p, x, py).forEach((/** @type {Bag} */ s) => autoInt(p, s, x)); } });
+  if (canInt(p)) items.push({ label: I18N.t("int.menu.auto"), icon: IC_AUTO, fn: () => { if (!guardInt(p)) return; intTargets(p, x, py).forEach((/** @type {Bag} */ s) => autoInt(p, s, x)); } }, { label: I18N.t("int.menu.all"), icon: IC_AUTO, fn: () => intAll(p) });
   if (p.sel && p.sel[1] > p.sel[0]) items.push({ label: I18N.t("int.menu.zoomSel"), icon: IC_ZOOM, fn: () => { const [s0, s1] = p.sel; const w = (s1 - s0) * 0.1; zoomTo(p, s0 - w, s1 + w); } });
   return items;
 }

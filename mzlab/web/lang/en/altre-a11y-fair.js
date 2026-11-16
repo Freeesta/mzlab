@@ -332,7 +332,7 @@ I18N.add("en", {
   "bar.method": "Method",
   "calc.ph": "Number or formula",
   "calc.in.title": "Numbers, operations or a molecular formula",
-  "calc.nl.title": "Search this value in the adducts, neutral losses and contaminants",
+  "calc.nl.title": "Search this value in the adducts and neutral losses",
   "calc.nl": "Search",
   "calc.back": "Delete the last character",
   "calc.clear": "Clear",
