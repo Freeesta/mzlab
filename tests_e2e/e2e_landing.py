@@ -46,7 +46,7 @@ def synth(d):
 
 
 def new_page(r, p, width=1440, height=900, url=""):
-    pg = r.b.new_page(viewport={"width": width, "height": height}, reduced_motion="reduce", locale="it-IT")
+    pg = r.b.new_page(viewport={"width": width, "height": height}, reduced_motion="reduce")
     pg.add_init_script(INIT)
     pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
     pg.on("response", lambda x: r.errs.append(("http%d" % x.status, x.url)) if x.status >= 400 else None)

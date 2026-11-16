@@ -36,7 +36,7 @@ try:
             miss = pg.evaluate("window.MZLAB_LR_MISS || []"); assert not miss, miss
         step("no request left unserved by the engine", no_miss)
         def label():
-            # the test page runs in Italian: compare with the catalogue entry of the current language, and make sure it is not the key itself
+            # compare with the catalogue entry, and make sure it is not the key itself
             t = pg.inner_text("#lst-view-seg button[data-v=target]").strip(); want = pg.evaluate("I18N.t('lst.view.target')")
             assert t == want and t != "lst.view.target" and len(t) > 5, repr((t, want))
         step("the view label comes from the catalogue", label)

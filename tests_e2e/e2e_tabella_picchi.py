@@ -20,7 +20,7 @@ try:
         try: pg.context.grant_permissions(["clipboard-read", "clipboard-write"])
         except Exception: pass
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_MS2-t15")])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         def ms1_xic():
             assert pg.evaluate(f"{S1}.level") == 1 and not pg.evaluate(f"{S1}.el.querySelector('[data-a=xicb]').hidden"), "MS1 keeps the XIC button"
         step("MS1 spectrum: the XIC button is there", ms1_xic)
@@ -42,9 +42,9 @@ try:
         def opened():
             pg.evaluate(f"{S2}.el.querySelector('[data-a=tabp]').click()"); wait_for_js(pg, "!!document.querySelector('.tp-pop')")
             head = pg.evaluate("[...document.querySelectorAll('.tp-pop th')].map(t=>t.textContent)"); print(head)
-            assert head == ["m/z", "Intensità", "Intensità relativa (%)", "Δm/z dal precursore", "Perdita neutra"], head
+            assert head == ["m/z", "Intensity", "Relative intensity (%)", "Δm/z from precursor", "Neutral loss"], head
             facts = pg.inner_text(".tp-facts"); print(facts)
-            for w in ("Campione", "Scansione", "TR", "MS2", "Precursore", "Polarità"): assert w in facts, (w, facts)
+            for w in ("Sample", "Scan", "RT", "MS2", "Precursor", "Polarity"): assert w in facts, (w, facts)
         step("table opens on an MS2: facts and five columns", opened)
         def threshold():
             n0 = pg.evaluate("document.querySelectorAll('.tp-pop tbody tr').length")
@@ -72,35 +72,35 @@ try:
             prec = pg.evaluate(f"{S2}.prec"); assert abs(row[3] - (row[0] - prec)) < 0.011 and abs(row[4] - (prec - row[0])) < 0.011, (row, prec)
         step("Δm/z and neutral loss are measured from the precursor", values)
         def copy_btn():
-            pg.click("[data-f=copy]"); wait_for_js(pg, "document.querySelector('.tp-ok').textContent==='Copiato'")
+            pg.click("[data-f=copy]"); wait_for_js(pg, "document.querySelector('.tp-ok').textContent==='Copied'")
             t = pg.evaluate("navigator.clipboard.readText()"); L = t.split("\n"); n = pg.evaluate("document.querySelectorAll('.tp-pop tbody tr').length")
-            assert L[0].split("\t") == ["m/z", "Intensità", "Intensità relativa (%)", "Δm/z dal precursore", "Perdita neutra"] and len(L) == n + 1 and "," not in t, (L[:2], n)
+            assert L[0].split("\t") == ["m/z", "Intensity", "Relative intensity (%)", "Δm/z from precursor", "Neutral loss"] and len(L) == n + 1 and "," not in t, (L[:2], n)
             assert all(len(x.split("\t")) == 5 for x in L), L[:3]
             h = pg.evaluate("navigator.clipboard.read().then(async i=>{const b=i[0].types.includes('text/html')?await (await i[0].getType('text/html')).text():'';return b})")
             assert "<table" in h and h.count("<tr>") == n + 1, h[:120]
             wait_for_js(pg, "document.querySelector('.tp-ok').textContent===''", 4000)
-        step("Copia: TSV with a header row and N rows, html table too, «Copiato» for 2 s", copy_btn)
+        step("Copy: TSV with a header row and N rows, html table too, «Copied» for 2 s", copy_btn)
         def csv_btn():
             with pg.expect_download() as dw: pg.click("[data-f=csv]")
-            d = dw.value; assert d.suggested_filename.endswith("_picchi.csv"), d.suggested_filename
+            d = dw.value; assert d.suggested_filename.endswith("_peaks.csv"), d.suggested_filename
             raw = open(d.path(), "rb").read(); assert raw[:3] == b"\xef\xbb\xbf", "UTF-8 BOM"
             L = raw.decode("utf-8-sig").splitlines(); n = pg.evaluate("document.querySelectorAll('.tp-pop tbody tr').length")
-            assert L[0] == "m/z,Intensità,Intensità relativa (%),Δm/z dal precursore,Perdita neutra", L[0]
+            assert L[0] == "m/z,Intensity,Relative intensity (%),Δm/z from precursor,Neutral loss", L[0]
             body = [x for x in L[1:] if not x.startswith("#") and not x.startswith('"#')]
             assert len(body) == n and all(len(x.split(",")) == 5 for x in body), (len(body), n, body[:2])
             assert max(float(x.split(",")[2]) for x in body) == 100.0 and "E+" in body[0].split(",")[1], body[:2]
-        step("Scarica CSV: BOM, comma, decimal point, same rows as the table, base peak 100", csv_btn)
+        step("Download CSV: BOM, comma, decimal point, same rows as the table, base peak 100", csv_btn)
         def menu_item():
             pg.keyboard.press("Escape")
-            pg.evaluate(f"{S2}.el.querySelector('[data-a=dl]').click()"); wait_for_js(pg, "[...document.querySelectorAll('.menu *,[role=menu] *')].some(e=>e.textContent==='Elenco picchi (CSV)')")
-            with pg.expect_download() as dw: pg.click("text=Elenco picchi (CSV)")
-            assert dw.value.suggested_filename.endswith("_picchi.csv")
+            pg.evaluate(f"{S2}.el.querySelector('[data-a=dl]').click()"); wait_for_js(pg, "[...document.querySelectorAll('.menu *,[role=menu] *')].some(e=>e.textContent==='Peak list (CSV)')")
+            with pg.expect_download() as dw: pg.click("text=Peak list (CSV)")
+            assert dw.value.suggested_filename.endswith("_peaks.csv")
             pg.evaluate(f"{S2}.el.querySelector('[data-a=tabp]').click()"); wait_for_js(pg, "!!document.querySelector('.tp-pop')")
-        step("the download menu has «Elenco picchi (CSV)»", menu_item)
+        step("the download menu has «Peak list (CSV)»", menu_item)
         def zoom_range():
             n0 = pg.evaluate("document.querySelectorAll('.tp-pop tbody tr').length")
             pg.evaluate(f"(()=>{{const p={S2};const a=p._a;p.zoom=[a.x0,(a.x0+a.x1)/2];draw(p)}})()"); frames(pg, 3)
-            assert "Intervallo m/z" in pg.inner_text(".tp-facts"), pg.inner_text(".tp-facts")
+            assert "m/z range" in pg.inner_text(".tp-facts"), pg.inner_text(".tp-facts")
             rel = pg.evaluate("[...document.querySelectorAll('.tp-pop tbody tr')].map(t=>+t.children[2].textContent)")
             assert 0 < len(rel) <= n0 and max(rel) == 100, (len(rel), n0)
             pg.evaluate(f"(()=>{{const p={S2};p.zoom=null;draw(p)}})()"); frames(pg, 3)
@@ -108,7 +108,7 @@ try:
         def ctrl_c():
             pg.click(".tp-sc"); pg.keyboard.press("Control+A"); pg.keyboard.press("Control+C"); frames(pg, 3)
             t = pg.evaluate("navigator.clipboard.readText()"); n = pg.evaluate("document.querySelectorAll('.tp-pop tbody tr').length")
-            assert t.split("\n")[0].startswith("m/z\tIntensità") and len(t.split("\n")) == n + 1, t[:80]
+            assert t.split("\n")[0].startswith("m/z\tIntensity") and len(t.split("\n")) == n + 1, t[:80]
         step("select all + Ctrl+C on the table gives the same TSV", ctrl_c)
         def a11y():
             for sel in ("[data-a=tabp]", ".tp-pop [data-f=copy]", ".tp-pop [data-f=no]", ".tp-pop [data-f=thr]", ".tp-pop [data-f=lab]", ".tp-pop [data-f=sort]"):
@@ -122,14 +122,14 @@ try:
         step("Esc closes the table and gives the focus back", esc)
         def ms1_table():
             pg.evaluate(f"{S1}.el.querySelector('[data-a=tabp]').click()"); wait_for_js(pg, "!!document.querySelector('.tp-pop')")
-            head = pg.evaluate("[...document.querySelectorAll('.tp-pop th')].map(t=>t.textContent)"); assert head == ["m/z", "Intensità", "Intensità relativa (%)"], head
+            head = pg.evaluate("[...document.querySelectorAll('.tp-pop th')].map(t=>t.textContent)"); assert head == ["m/z", "Intensity", "Relative intensity (%)"], head
             pg.keyboard.press("Escape")
         step("MS1 table: three columns (no precursor)", ms1_table)
         def no_download():
             assert pg.evaluate(f"!{S1}.el.querySelector('[data-a=tabp]').closest('.tbs').querySelector('a[download]')")
         step("no download in the table", no_download)
         def english():
-            pe = r.page(p); pe.goto(f"http://127.0.0.1:{r.port}/?lang=en"); wait_for_js(pe, "!!document.querySelector('#pick')", 30000)
+            pe = r.page(p); pe.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pe, "!!document.querySelector('#pick')", 30000)
             stage(pe, [mz("B_FullMass-t0"), mz("B_MS2-t15")]); pe.click("text=Load data"); ready(pe); open_kind(pe, "ms2")
             wait_for_js(pe, f"(()=>{{const p={S2};return !!p&&!!p._a&&p._a.data[0].d.mz.length>0}})()")
             pe.evaluate(f"{S2}.el.querySelector('[data-a=tabp]').click()"); wait_for_js(pe, "!!document.querySelector('.tp-pop')")

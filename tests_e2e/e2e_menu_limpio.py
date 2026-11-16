@@ -36,7 +36,7 @@ try:
         def options():
             assert "spec.disp" in rows()
             pg.evaluate(f"menu({{preventDefault(){{}},clientX:50,clientY:50}},AZIONI.per(__c))")
-            t = pg.evaluate("document.querySelector('#ctx [data-azione=\"spec.disp\"]').textContent.trim()"); assert t == "Opzioni…", t
+            t = pg.evaluate("document.querySelector('#ctx [data-azione=\"spec.disp\"]').textContent.trim()"); assert t == "Options…", t
             assert pg.evaluate("!!document.querySelector('#ctx [data-azione=\"spec.disp\"] .ic svg circle')"), "gear icon"
             pg.evaluate("document.querySelector('#ctx').hidden=true")
         step("«Options…» with the gear", options)
@@ -60,7 +60,7 @@ try:
         step("the downloads are in the download button of the panel", dl_button)
         def lists():
             t = pg.evaluate(f"(()=>{{const b=document.createElement('div');DISP.panel(b,E.panels.find(p=>p.type==='spec'&&p.level===1&&p._a));return b.textContent}})()")
-            assert "contaminanti" in t.lower() and "marker" in t.lower() and "togli" in t.lower(), t
+            assert "contaminants" in t.lower() and "marker" in t.lower() and "remove" in t.lower(), t
         step("scan markers, contaminants and their lists are options of the spectrum", lists)
 finally:
     r.close(); r.report()

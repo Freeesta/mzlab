@@ -15,7 +15,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 2")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def rect(expr):   # canvas rectangle + margins of a panel
             return pg.evaluate(f"(()=>{{const p={expr},r=p.cv.getBoundingClientRect();p.el.scrollIntoView({{block:'center'}});const q=p.cv.getBoundingClientRect();return {{l:q.left,t:q.top,w:q.width,h:q.height,M:M}}}})()")
         def pt(expr, xs, ys):  # pixel of axis values
@@ -91,7 +91,7 @@ try:
             with pg.expect_download() as d: dlmenu(pg, ".pnl.chrom", "xlsx")
             f = d.value; assert f.suggested_filename.endswith(".xlsx"), f.suggested_filename
             rows = xlsx_rows(f.path()); head = [c[1] for c in rows[0] if c]
-            assert all(h.startswith("RT (min)") or h.startswith("Intensità (cps)") for h in head) and sum(h.startswith("Intensità") for h in head) == 2, head   # one intensity column per file
+            assert all(h.startswith("RT (min)") or h.startswith("Intensity (cps)") for h in head) and sum(h.startswith("Intensity") for h in head) == 2, head   # one intensity column per file
             assert all(c[0] == "n" for c in rows[1][:3] if c)
         step("Excel on the total chromatogram (RT + one column per file)", excel_tic)
         def xic_below():

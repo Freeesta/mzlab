@@ -14,11 +14,11 @@ try:
         pg = r.page(p)
         shutil.rmtree("/tmp/s27", ignore_errors=True)
         pg.set_input_files("#pick", synth.make_series("/tmp/s27", [0, 15, 60])); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         sm = lambda: pg.inner_text("#xic-sum")
         def dialog():
             pg.click("#np-xic"); t = pg.inner_text("#xicdlg") + " " + pg.get_attribute("#xicdlg", "aria-description")
-            assert "Extracted Ion Chromatogram" in t and "n + 0.3" in t and "oppure" in t, t
+            assert "Extracted Ion Chromatogram" in t and "n + 0.3" in t and "or a neutral formula" in t, t
             assert not pg.query_selector("#xic-lo") and "compromesso" not in t, t
             pg.fill("#xic-mz", "364.37"); assert "363.8 - 364.3" in sm(), sm()
             pg.fill("#xic-mz", "364,6"); assert "364.8 - 365.3" in sm(), sm()
@@ -35,7 +35,7 @@ try:
         step("clicked centroid: nearest integer (364.37 -> 364, 365.1 -> 365)", obs)
         def panel():
             assert pg.evaluate("document.querySelectorAll('.pnl.xic [data-o=addb]').length") == 0
-            pg.click('.pnl.xic [data-a="cpar"]')     # the m/z edges live in «Intervallo»
+            pg.click('.pnl.xic [data-a="cpar"]')     # the m/z edges live in «Range»
             assert pg.input_value('.pnl.xic [data-o="xlo"]') == "363.8" and pg.input_value('.pnl.xic [data-o="xhi"]') == "364.3"
             pg.fill('.pnl.xic [data-o="xlo"]', "363.26"); pg.press('.pnl.xic [data-o="xlo"]', "Enter"); pg.wait_for_timeout(300); pg.locator('.pnl.xic [data-o="xhi"]').focus(); pg.wait_for_timeout(500)
             assert pg.input_value('.pnl.xic [data-o="xlo"]') == "363.3", pg.input_value('.pnl.xic [data-o="xlo"]')

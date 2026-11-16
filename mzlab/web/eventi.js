@@ -140,7 +140,7 @@ function attach(p) {
     if (p._pickNoise && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {          // the noise stretch for S/N of an integration
       const it = p._pickNoise; p._pickNoise = null; p.sel = null; pushIh(p, intSnap(p)); setNoiseZone(p, it, [Math.min(x0, x1), Math.max(x0, x1)]); E.panels.filter(q => q.ints && q.ints.length).forEach(q => draw(q)); uiSave(); showInts(); return;
     }
-    if (p._pickIbk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {            // "Sottrai il fondo di un tratto": the stretch the student just dragged
+    if (p._pickIbk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {            // "Subtract the background of a stretch": the stretch the student just dragged
       p._pickIbk = false; p.sel = null; ibkSet(p, "mean", [Math.min(x0, x1), Math.max(x0, x1)]); ctl(p); return;
     }
     if (!pk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) <= 4 && p.imode !== "auto") {      // a click on a filled peak selects it; elsewhere it deselects

@@ -1,8 +1,7 @@
-"""Messages for the interface without a language: the server never speaks Italian or English.
+"""Messages for the interface: the server returns keys, never user-facing sentences.
 
-Python returns KEYS and parameters; the page translates them with ``I18N.t(key, params)`` (catalogs ``mzlab/web/lang/it.js`` and
-``en.js``). An error caused by the user is a :class:`UserError`; ``api.dispatch`` answers
-``{"error": <developer text in English>, "error_key": <key>, "params": {...}}``.
+Python returns KEYS and parameters; the page translates them with ``I18N.t(key, params)`` (catalog ``mzlab/web/lang/en/``). An error caused by
+the user is a :class:`UserError`; ``api.dispatch`` answers ``{"error": <developer text in English>, "error_key": <key>, "params": {...}}``.
 """
 from __future__ import annotations
 

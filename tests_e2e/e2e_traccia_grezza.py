@@ -30,7 +30,7 @@ r = Run(port=8981, wd="/tmp/wd_traccia_grezza")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [str(F)]); pg.wait_for_selector("text=Carica dati"); pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [str(F)]); pg.wait_for_selector("text=Load data"); pg.click("text=Load data"); ready(pg)
         def band():
             old, new = pg.evaluate(SOLID, "old"), pg.evaluate(SOLID, "raw")
             assert old["solid"] > .6, ("the control (first/lowest/highest/last per column) must be the solid band", old)

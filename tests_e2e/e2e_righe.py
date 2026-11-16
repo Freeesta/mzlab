@@ -11,7 +11,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
+        pg.wait_for_timeout(1000); pg.click("text=Load data"); ready(pg)
         pg.evaluate("addPanel('spec',{tab:E.tab,k:E.cur,level:1}); addPanel('spec',{tab:E.tab,k:E.cur,level:1})")
         pg.wait_for_timeout(300)
         ids = lambda: pg.evaluate("tabPanels().filter(q => q.full).map(q => q.id)")

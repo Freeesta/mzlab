@@ -198,7 +198,7 @@ try:
                 pg.evaluate("([plan, samples]) => { window.__run = (" + RUN + ")([plan, samples]); }", [plan(True, params=RAISE), SAMPLES])
                 pg.wait_for_selector("#memmore", timeout=120000)
                 text = pg.inner_text("#memmore #mm-p")
-                assert "ion grouping" in text or "raggruppamento degli ioni" in text, text
+                assert "ion grouping" in text, text
                 card = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('grp')).word")
                 assert card == "Allow more memory: Run now", card
                 pg.click("#memmore #mm-yes")

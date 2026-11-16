@@ -3,7 +3,7 @@
 ## In short
 - mzLab is a website: students open <https://freeesta.github.io/mzlab/> on a computer or tablet, with nothing to install and no account. A [desktop app](desktop.md) with the same look is also available.
 - The program **does not give the answers** (no list of TPs, no calibration lines or report tables): it shows the data, and students reason and calculate in Excel. At unit resolution an m/z is a candidate, not an identification.
-- Theory and Practice are in Italian only; the Data and Drawing interface is in Italian and English.
+- The interface is in English.
 - The first visit downloads the calculation engine, so a network connection is needed (in class, have students open the site before the lesson).
 
 ## Before the lesson

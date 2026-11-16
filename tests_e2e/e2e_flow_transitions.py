@@ -123,7 +123,7 @@ try:
             finally: pg.evaluate(UNDO)
             assert any(e["passo"] == "tr" and e["stato"] in ("error", "refused") for e in r["ev"]), [e for e in r["ev"] if e["passo"] == "tr"][-3:]
             title = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('tr')).title")
-            assert ("Reading this mzML file whole would need about" in title or "Leggere per intero questo file mzML" in title) and "8 MB" in title, title
+            assert "Reading this mzML file whole would need about" in title and "8 MB" in title, title
         step("past the budget and the high level, the mzML files are refused before they are read, with the numbers of the read", read_refused)
         def read_raised():
             pg.evaluate(LEVELS, 4096)

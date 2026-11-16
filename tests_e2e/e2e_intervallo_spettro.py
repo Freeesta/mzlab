@@ -17,7 +17,7 @@ NS = "E.panels.filter(p => p.type === 'spec').length"
 try:
     with sync_playwright() as p:
         r.b = p.chromium.launch()
-        ctx = r.b.new_context(viewport={"width": 1024, "height": 1366}, has_touch=True, locale="it-IT")
+        ctx = r.b.new_context(viewport={"width": 1024, "height": 1366}, has_touch=True)
         pg = ctx.new_page(); pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(e){}")
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#pick", state="attached")

@@ -1,4 +1,4 @@
-"""Double click = new spectrum with its RT in the title; up/down arrows and sliding panels; the Metodo button stands out."""
+"""Double click = new spectrum with its RT in the title; up/down arrows and sliding panels; the Method button stands out."""
 # covers: mzlab/web/legende.js, mzlab/web/affianca.js, mzlab/web/layout.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -11,14 +11,14 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES[:3]]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def dbl():
             n0 = pg.evaluate("E.panels.filter(p=>p.type==='spec').length")
             for rt in (10.0, 14.3):
                 c = pg.evaluate("""(x)=>{const p=E.panels[0],r=p.cv.getBoundingClientRect();return {px:r.left+p._a.X(x),py:r.top+r.height/2}}""", rt)
                 pg.mouse.dblclick(c["px"], c["py"]); pg.wait_for_timeout(1200)
             n1 = pg.evaluate("E.panels.filter(p=>p.type==='spec').length"); assert n1 == n0 + 2, (n0, n1)
-            t = [x.strip().replace("fermo a ", "") for x in pg.locator(".pnl.spec .rtl").all_inner_texts()]       # the frozen ones say "fermo a ..."
+            t = [x.strip().replace("held at ", "") for x in pg.locator(".pnl.spec .rtl").all_inner_texts()]       # the frozen ones say "held at ..."
             rts = [float(x.split()[0]) for x in t if x.endswith(" min")]       # the pixel under the click gives 10.0 ± 0.03 min, whatever the width of the page
             assert any(abs(v - 10.0) < 0.1 for v in rts) and any(abs(v - 14.3) < 0.1 for v in rts), t
             hd = pg.evaluate("[...document.querySelectorAll('.pnl.spec')].pop().querySelector('.hd').innerText"); assert "MS1" in hd and " min" in hd, hd                      # title «MS¹» and the time of the scan without «RT»
@@ -39,7 +39,7 @@ try:
         def method():
             b = pg.locator("#np-method"); assert "imp" in b.get_attribute("class")
             pg.screenshot(path=SH + "162_method.png", clip={"x": 0, "y": 40, "width": 1500, "height": 120})
-        step("Metodo button is distinct", method)
+        step("Method button is distinct", method)
 finally:
     r.close()
 print("\nSTEPS"); [print(" ", s) for s in steps]

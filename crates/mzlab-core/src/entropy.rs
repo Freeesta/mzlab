@@ -65,8 +65,12 @@ fn matches(
     out
 }
 
-/// 1 - (2 S_AB - S_A - S_B) / ln 4, clipped to [0, 1].
+/// 1 - (2 S_AB - S_A - S_B) / ln 4, clipped to [0, 1]; 0 when a spectrum has no intensity (the formula alone would give 0.5), as ms_entropy.
 pub fn entropy_similarity(a_mz: &[f64], a_it: &[f64], b_mz: &[f64], b_it: &[f64], tol: f64) -> f64 {
+    let has = |it: &[f64]| it.iter().sum::<f64>() > 0.0;
+    if !has(a_it) || !has(b_it) {
+        return 0.0;
+    }
     let (pa, pb) = (weighted(a_it), weighted(b_it));
     let pairs = matches(a_mz, a_it, b_mz, b_it, tol);
     let (mut ia, mut ib) = (vec![false; pa.len()], vec![false; pb.len()]);

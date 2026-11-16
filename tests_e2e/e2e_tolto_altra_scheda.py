@@ -37,7 +37,7 @@ try:
             b.evaluate(f"OPENNOW.tick(ST.files.find(f => f.name === {name!r}), true); 0")
             wait_for_js(b, "OPENNOW.busy() === 0 && document.getElementById('err').textContent !== ''", 30000)
             msg = b.evaluate("document.getElementById('err').textContent")
-            assert name in msg and "altra scheda" in msg, f"message: {msg!r}"
+            assert name in msg and "another tab" in msg, f"message: {msg!r}"
             assert b.evaluate(f"!ST.files.find(f => f.name === {name!r}).use"), "the row stays unticked"
             assert b.evaluate("E.files.filter(f => !f.gone).length") == 0
         step("ticking a row whose file another tab removed names the file and says where it went", removed_elsewhere)

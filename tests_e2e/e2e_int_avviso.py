@@ -14,8 +14,8 @@ r = Run(port=8892, wd="/tmp/wd92")
 try:
     with sync_playwright() as p:
         pg = r.page(p, motion=True)
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_selector("text=Carica dati")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_selector("text=Load data")
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); wait_for_js(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
         pg.evaluate(f"(()=>{{const p={XP};setActive(p);p.imode='auto';p.intf=p._a.sr[0].key;p.el.scrollIntoView({{block:'center'}})}})()"); frames(pg, 2)
         CLASH = pg.evaluate("I18N.t('int.clash')")          # the notice is compared through its lang key, never a literal

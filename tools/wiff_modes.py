@@ -83,8 +83,8 @@ def today(sigla, code, kind, version):
         return {"esito": "letto", "spettri": 0, "cromatogrammi": (2 if bpc else 1) + len(TRS if kind == "mrm" else IONS), "tipo": None,
                 "tracce": ["TIC", "BPC"] if bpc else ["TIC"], "bpc": bpc}
     level = 1 if sigla in ("EMS", "Q1") else 3 if sigla == "MS3" else 2
-    # the header mass is the selected ion of a precursor-ion scan and of a neutral-loss scan (its loss), as ProteoWizard writes them
-    prec = MS3_SECOND if sigla == "MS3" else PREC.get(sigla) if sigla not in ("EMS", "Q1") else None
+    # the header mass is the selected ion of a precursor-ion scan; a neutral-loss scan has no precursor (its header mass is the loss)
+    prec = MS3_SECOND if sigla == "MS3" else PREC.get(sigla) if sigla not in ("EMS", "Q1", "NL") else None
     sp = [w.spectrum(f"sample=1 period=1 cycle={k + 1} experiment=1", level, prec, 1000.0 * k, pts(k), version)
           for k in range(CYCLES)]
     tracce = ["TIC", "BPC"] if sigla in ("EMS", "Q1", "PREC", "NL") else ["TIC"] if sigla == "MS3" else []

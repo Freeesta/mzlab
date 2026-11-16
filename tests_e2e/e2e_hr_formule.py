@@ -1,5 +1,5 @@
-"""HR_PANNELLO 2: «Composizione elementare» as a compact panel (Xcalibur style): ready defaults, the table copies a row, «Applica» writes the formula under the m/z of the peak,
-right click on a peak → «Genera formula», the expanded form (FreeStyle style) with the periodic table; the panel texts are not clipped at 1280/1440/1680 px."""
+"""HR_PANNELLO 2: «Elemental composition» as a compact panel (Xcalibur style): ready defaults, the table copies a row, «Apply» writes the formula under the m/z of the peak,
+right click on a peak → «Generate formula», the expanded form (FreeStyle style) with the periodic table; the panel texts are not clipped at 1280/1440/1680 px."""
 # covers: mzlab/web/elementare.js, mzlab/web/elementare-pannello.js, mzlab/web/composizione.js, mzlab/chem/composition.py, mzlab/chem/isoscore.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -28,7 +28,7 @@ try:
             drawer(pg, "cmp"); pg.wait_for_selector("#cx-out table, #cx-out .muted", timeout=20000); print("top peak", pg.input_value("#cx-mz"), pg.inner_text("#cx-out")[:80].replace("\n", " | "))
             pg.fill("#cx-mz", "317.1639"); pg.wait_for_selector("#cx-out tr[data-i]", timeout=20000)
             head = pg.inner_text("#cx-out thead").lower(); assert "idx" in head and "formula" in head and "rdb" in head and "ppm" in head, head
-            els = pg.inner_text(".cx-els"); assert "Isotopo" in els and "Eq. DB" in els and "Massa" in els, els
+            els = pg.inner_text(".cx-els"); assert "Isotope" in els and "DB eq." in els and "Mass" in els, els
             got = pg.evaluate("[...document.querySelectorAll('.cx-els tbody tr td:first-child')].map(r=>r.innerText.replace(/\\s/g,'')).join(',')"); assert got == "12C,1H,14N,16O,32S", got
             assert pg.evaluate("document.querySelector('#cx-els').value") == "C:0-13,H:0-25,N:0-4,O:0-3,S:0-1"
             assert not pg.is_visible("#hri-ttl")
@@ -51,26 +51,26 @@ try:
             pg.click(sel + " td:nth-child(4)"); clipis(cells[3])
             pg.click(sel + " td:nth-child(5)"); clipis(cells[4])
             pg.click(sel + " td:nth-child(1)"); clipis("C13H25N4O3S")
-            pg.wait_for_function("document.querySelector('#cx-live').innerText.includes('Copiata')", timeout=5000)
+            pg.wait_for_function("document.querySelector('#cx-live').innerText.includes('Copied')", timeout=5000)
             pg.evaluate("navigator.clipboard.writeText('x')"); pg.focus(sel); pg.keyboard.press("Control+c"); clipis("C13H25N4O3S")
             pg.keyboard.press("ArrowRight"); pg.keyboard.press("ArrowRight"); pg.keyboard.press("Enter"); clipis(cells[2])
         step("a click on a cell copies only its value (formula, RDBE, Δ, score; Idx and Ctrl+C the formula); the row stays selected; the copy is announced", copy)
         def layout():
-            assert pg.inner_text("label[for=cx-mz]").strip() == "Massa (m/z)", pg.inner_text("label[for=cx-mz]")
+            assert pg.inner_text("label[for=cx-mz]").strip() == "Mass (m/z)", pg.inner_text("label[for=cx-mz]")
             assert pg.is_hidden("#cx-help") if pg.query_selector("#cx-help") else True
-            body = pg.inner_text(".cx"); assert "Un clic su una riga" not in body and "Aiuto" not in body, body[:200]
+            body = pg.inner_text(".cx"); assert "Click a row" not in body and "A click on a row" not in body and "Help" not in body, body[:200]
             assert pg.input_value("#cx-max") == "5", pg.input_value("#cx-max")
             assert pg.get_attribute("#cx-max", "data-num") == "1:10 i", pg.get_attribute("#cx-max", "data-num")
             for v in ("99", "0"):   # out of 1-10: refused, the old value back (campi.js)
                 pg.fill("#cx-max", v); pg.press("#cx-max", "Tab"); assert pg.input_value("#cx-max") == "5", pg.input_value("#cx-max")
                 assert pg.get_attribute("#cx-max", "aria-invalid") == "true"
             pg.fill("#cx-max", "5"); pg.press("#cx-max", "Tab")
-            assert pg.inner_text("label[for=cx-pre]").strip() == "Insieme di elementi"
-            labs = pg.evaluate("[...document.querySelectorAll('#cx-pre option')].map(o=>o.textContent)"); assert labs == ["CHNO (organiche)", "CHNOSP", "CHNOSP + alogeni"], labs
-            assert "Sostituisce gli elementi qui sotto" in pg.get_attribute("#cx-load", "title") and "Salva gli elementi qui sotto" in pg.get_attribute("#cx-save", "title")
+            assert pg.inner_text("label[for=cx-pre]").strip() == "Element set"
+            labs = pg.evaluate("[...document.querySelectorAll('#cx-pre option')].map(o=>o.textContent)"); assert labs == ["CHNO (organic)", "CHNOSP", "CHNOSP + halogens"], labs
+            assert "Replace the elements below" in pg.get_attribute("#cx-load", "title") and "Save the elements below" in pg.get_attribute("#cx-save", "title")
             assert pg.get_attribute("#cx-out th.num:last-child", "title"), "the Score header explains itself"
             assert pg.get_attribute("#cx-out table", "aria-describedby") == "cx-desc" and pg.inner_text("#cx-desc").strip() != ""
-        step("layout: Massa (m/z), no Help and no note, 5 results by default, outside 1-10 refused, element set with its tips, Score tooltip", layout)
+        step("layout: Mass (m/z), no Help and no note, 5 results by default, outside 1-10 refused, element set with its tips, Score tooltip", layout)
         def unit_and_scroll():
             pg.select_option("#cx-unit", "mda"); pg.fill("#cx-tol", "30"); pg.press("#cx-tol", "Tab")
             pg.wait_for_function("document.querySelector('#cx-out thead').innerText.includes('mDa')", timeout=15000)
@@ -97,17 +97,17 @@ try:
         def edit():
             pg.fill(".cx-els input[data-f=max][data-i='0']", "5"); pg.press(".cx-els input[data-f=max][data-i='0']", "Tab"); pg.wait_for_timeout(800)
             assert pg.input_value("#cx-els") if False else pg.evaluate("document.querySelector('#cx-els').value").startswith("C:0-5,"), "the table edits the text"
-            pg.wait_for_function("document.querySelector('#cx-out').innerText.includes('Nessuna formula')", timeout=15000)
+            pg.wait_for_function("document.querySelector('#cx-out').innerText.includes('No formula within the tolerance')", timeout=15000)
             pg.fill(".cx-els input[data-f=max][data-i='0']", "13"); pg.press(".cx-els input[data-f=max][data-i='0']", "Tab"); pg.wait_for_function("document.querySelector('#cx-out').innerText.replace(/\\s/g,'').includes('C13H25N4O3S')", timeout=15000)
         step("editing max in the table recalculates (no candidate, then back)", edit)
         def generate():
             pg.evaluate("BARRA.setTab('hdr',{noFocus:true,instant:true})"); pg.wait_for_timeout(300)
             xy = peak_xy(); pg.mouse.click(xy["x"], xy["y"], button="right"); pg.wait_for_timeout(400)
-            assert "Genera formula (m/z" in pg.inner_text("#ctx")
-            pg.click("#ctx >> text=Genera formula"); pg.wait_for_selector("#cx-out table, #cx-out .muted", timeout=20000)
+            assert "Generate formula (m/z" in pg.inner_text("#ctx")
+            pg.click("#ctx >> text=Generate formula"); pg.wait_for_selector("#cx-out table, #cx-out .muted", timeout=20000)
             assert abs(float(pg.input_value("#cx-mz")) - xy["m"]) < 1e-3, (pg.input_value("#cx-mz"), xy["m"])
             assert pg.evaluate("BARRA.curTab") == "cmp"
-        step("right click on a peak → «Genera formula» opens the panel with that m/z", generate)
+        step("right click on a peak → «Generate formula» opens the panel with that m/z", generate)
         def apply():
             sid = sp_id(); xy = peak_xy()
             pg.evaluate("document.querySelector('#cx-els').value='C:0-30,H:0-60,N:0-6,O:0-8,S:0-2'; document.querySelector('#cx-els').dispatchEvent(new Event('input')); document.querySelector('#cx-mz').dispatchEvent(new Event('input'))")
@@ -116,15 +116,15 @@ try:
             pg.evaluate(f"setActive(E.panels.find(q=>q.id=={sid}))"); pg.click("#cx-apply"); pg.wait_for_timeout(500)
             fm = pg.evaluate(f"E.panels.find(q=>q.id=={sid}).fm"); assert fm and abs(fm[0]["m"] - xy["m"]) < 1e-4 and fm[0]["text"], fm
             xy = peak_xy(); pg.mouse.click(xy["x"], xy["y"], button="right"); pg.wait_for_timeout(300)
-            assert "Togli le formule scritte" in pg.inner_text("#ctx"); pg.keyboard.press("Escape")
-        step("«Applica» writes the formula (candidate) on the spectrum under the peak", apply)
+            assert "Remove the formulas written" in pg.inner_text("#ctx"); pg.keyboard.press("Escape")
+        step("«Apply» writes the formula (candidate) on the spectrum under the peak", apply)
         def expand():
             pg.click("#cx-exp"); pg.wait_for_selector("#cmp-els", timeout=5000)
             t = pg.inner_text("#bigbody")
-            for w in ("Impostazioni di predizione", "Confronto del profilo isotopico", "Confronto dei frammenti", "Tavola periodica", "Soglia di intensità", "Tolleranza di intensità", "Adattamento minimo", "Algoritmo di centroide", "Normalizzazione", "elementi rappresentativi"):
+            for w in ("Prediction settings", "Isotope pattern matching", "Fragments matching", "Periodic table", "Intensity threshold", "Intensity tolerance", "Min spectral fit", "Centroid algorithm", "Normalization", "representative elements"):
                 assert w in t, w
             assert pg.input_value("#cmp-ithr") == "0.1" and pg.input_value("#cmp-sint") == "30"
-            pg.click("#bigbody summary:has-text('Tavola periodica')"); pg.click("#cmp-ptb button[data-s='P']"); pg.wait_for_timeout(200)
+            pg.click("#bigbody summary:has-text('Periodic table')"); pg.click("#cmp-ptb button[data-s='P']"); pg.wait_for_timeout(200)
             assert "P:" in pg.input_value("#cmp-els")
             pg.click("#cmp-go"); pg.wait_for_selector("#cmp-out table", timeout=20000)
             pg.evaluate("document.querySelector('#bigdlg').close()")

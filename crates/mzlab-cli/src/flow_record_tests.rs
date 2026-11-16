@@ -8,7 +8,7 @@ use mzlab_core::idxread::Index;
 use mzlab_core::json::{Out, Value};
 use mzlab_core::step::json::registry_json;
 use mzlab_feat::slabs::Stored;
-use mzlab_ops::run::feat::run::meta::{job_meta, meta_json};
+use mzlab_ops::run::feat::run::meta::{job_lineage_text, job_meta, meta_json};
 use std::path::Path;
 
 /// The stored files of a series held in memory.
@@ -85,9 +85,7 @@ fn meta_of(
     let src = stored.map(|h| h as &mut dyn Stored);
     meta_json(
         &job_meta(
-            plan.as_bytes(),
-            &reg,
-            instance,
+            &job_lineage_text(plan.as_bytes(), &reg, instance).unwrap(),
             (&mut first, &mut own),
             src,
             budget,

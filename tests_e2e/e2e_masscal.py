@@ -30,7 +30,7 @@ AXE = lib.axe_path()
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 errs = []
-URL = f"http://127.0.0.1:{PORT}/?lang=en"
+URL = f"http://127.0.0.1:{PORT}/"
 for _ in range(100):
     try: urllib.request.urlopen(URL, timeout=2); break
     except OSError: threading.Event().wait(0.2)

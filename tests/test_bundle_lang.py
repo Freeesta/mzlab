@@ -17,7 +17,7 @@ import lang_catalog  # noqa: E402
 RUN = r"""const fs = require("fs"); const out = {}, calls = []; let writes = 0, first = 0;
 global.I18N = { add: (l, o) => { for (const k in o) { if (k in out) throw new Error("twice " + k); out[k] = o[k]; } },
   awaitRest: p => calls.push("awaitRest " + p), done: () => calls.push("done") };
-global.document = { write: () => { writes++; }, currentScript: { src: "x/lang/it.js" } };
+global.document = { write: () => { writes++; }, currentScript: { src: "x/lang/en.js" } };
 eval(fs.readFileSync(process.argv[1], "utf8")); first = Object.keys(out).length;
 eval(fs.readFileSync(process.argv[2], "utf8"));
 process.stdout.write(JSON.stringify({ writes, out, calls, first }));"""
@@ -30,7 +30,7 @@ def test_bundled_catalog_equals_the_area_files(tmp_path):
     for f in [lang_catalog.LANG.parent / "index.html", *lang_catalog.LANG.parent.glob("*.js")]:      # the first part is chosen from the page and its first scripts
         shutil.copy2(f, static / f.name)
     build_site.bundle_lang(static)
-    for lang in ("it", "en"):
+    for lang in ("en",):
         r = subprocess.run(["node", "-e", RUN, str(static / "lang" / f"{lang}.js"), str(static / "lang" / f"{lang}-resto.js")], capture_output=True, text=True, check=True)
         got = json.loads(r.stdout)
         assert got["writes"] == 0, lang

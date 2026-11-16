@@ -34,7 +34,7 @@ function ricClassify(q) {
 const ricHrNow = () => (typeof window.TBL_HR === "function" ? !!window.TBL_HR() : true);
 const ricSub = (/** @type {string} */ f) => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
 const ricSg = (/** @type {number} */ x) => (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(4);
-const ricLang = () => (I18N.lang === "it" ? "it" : "en");
+const ricLang = () => "en";
 
 // ------------------------------------------------------------------ the contaminant list (api/contaminants), read once
 /** @type {Promise<any[]> | null} */

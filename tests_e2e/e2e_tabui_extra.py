@@ -44,7 +44,7 @@ try:
             c = b.new_context(viewport={"width": 1100, "height": 900}, reduced_motion="reduce"); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
-            pg.goto(f"http://127.0.0.1:{PORT}/?lang=en"); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=60000)
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=60000)
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_function("window.PIPET && window.TPRIGA", timeout=60000)
             pg.evaluate(STUB, extra); pg.wait_for_selector("#ex-host #ft-t tbody tr", timeout=20000)
             return pg
