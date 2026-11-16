@@ -95,5 +95,7 @@
   "mol.import.errors": "Titolo dell'elenco di errori di un file di molecole rifiutato; {n} = numero di errori.",
   "mol.err.row": "Inizio di una riga di errore di importazione; {riga} = numero della riga del file (o posizione del record nel JSON).",
   "mol.err.more": "Chiusura dell'elenco di errori troncato; {n} = errori non mostrati.",
-  "predef.ket.error": "Errore (alert) se un disegno .ket aperto dal sistema non si legge; {name} = nome del file, {detail} = causa (può essere vuota)."
+  "predef.ket.error": "Errore (alert) se un disegno .ket aperto dal sistema non si legge; {name} = nome del file, {detail} = causa (può essere vuota).",
+  "int.lrAll.done": "Avviso dopo «Integra tutti i picchi mostrati» (bassa risoluzione); {n} = picchi aggiunti, {w} = finestra di lisciatura in punti (dispari), {a} = testo di int.lrAll.auto o vuoto, {v} = profondità della valle in %, {sn} = S/N minimo, {noise} = rumore della traccia in conteggi (notazione scientifica).",
+  "int.lrAll.skip": "Coda dell'avviso int.lrAll.done; {n} = picchi trovati ma non aggiunti perché si sovrappongono a integrazioni già presenti."
 }

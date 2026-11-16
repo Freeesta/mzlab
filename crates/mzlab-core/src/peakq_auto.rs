@@ -60,7 +60,7 @@ impl AutoParams {
 }
 
 /// The background (AsLS, lambda 1e7, raised to the median of the points within 3 noise of it) and the trace above it.
-fn background(y: &[f64], noise: f64) -> (Vec<f64>, Vec<f64>) {
+pub(crate) fn background(y: &[f64], noise: f64) -> (Vec<f64>, Vec<f64>) {
     let mut b = asls_baseline(y, 1e7, 0.01, 10, 160);
     let mut bg: Vec<f64> = y
         .iter()
@@ -87,7 +87,7 @@ fn half_span(s: &[f64], a: usize, level: f64) -> (usize, usize) {
     (l, r)
 }
 
-fn auto_half_window(yc: &[f64]) -> usize {
+pub(crate) fn auto_half_window(yc: &[f64]) -> usize {
     let coarse = savgol(yc, 5, 2);
     let top = (0..coarse.len())
         .max_by(|&i, &j| coarse[i].total_cmp(&coarse[j]))
