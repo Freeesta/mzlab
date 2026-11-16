@@ -48,7 +48,7 @@ try:
             assert "smooth,log" in n and n.index("iauto") < n.index("smooth") and n.index("log") < n.index("dl"), n
         step("order …, integration, Smoothing, Log, …, download", order)
         def rng():
-            b = pg.locator(f'{X} [data-a=cpar]'); assert b.inner_text().strip() == "Intervallo" and "on" not in b.get_attribute("class").split()
+            b = pg.locator(f'{X} [data-a=cpar]'); assert b.inner_text().strip() == "Range" and "on" not in b.get_attribute("class").split()
             assert pg.locator(f'{X} [data-a=rngx]').count() == 0
             b.click(); pg.wait_for_selector(f'{X} .cpop [data-o=rt0]')
             pg.fill(f'{X} .cpop [data-o=rt0]', "1"); pg.fill(f'{X} .cpop [data-o=rt1]', "5"); pg.press(f'{X} .cpop [data-o=rt1]', "Enter"); wait_for_js(pg, f"{XP}.zoom != null && !!document.querySelector('.pnl.xic [data-a=rngx]')")
@@ -81,7 +81,7 @@ try:
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').bk") == int(other)
             assert pg.locator(f'{X} .subchip').count() == 1 and "on" in pg.get_attribute(f'{X} [data-o=corr]', "class").split()
             assert pg.eval_on_selector(f'{X} .subchip', "c=>c.textContent").find(pg.evaluate(f"E.files[{other}].label")) >= 0, "the legend chip names the file"
-            pg.click(f'{X} [data-o=corr]'); pg.locator(f'{X} .corrg[data-g="0"] .corri', has_text="Nessuna").click(); wait_for_js(pg, f"{XP}.bk === ''")
+            pg.click(f'{X} [data-o=corr]'); pg.locator(f'{X} .corrg[data-g="0"] .corri', has_text="None").click(); wait_for_js(pg, f"{XP}.bk === ''")
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').bk") == ""
         step("Subtract file: default = session reference, choosing updates the chip", pick)
         def tlink():
@@ -107,7 +107,7 @@ try:
             assert n == (3, 1), n
             pg.locator(f'{S} .corrm').first.locator('.corri', has_text="Background of a stretch").click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='spec').some(p=>p.bg==='w')")
             assert pg.evaluate("E.panels.filter(p=>p.type==='spec').some(p=>p.bg==='w')") and pg.locator(f'{S} [data-o=bw0]').count() == 1
-            pg.locator(f'{S} [data-o=corr]').first.click(); pg.locator(f'{S} .corrm').first.locator('.corri', has_text="Nessuna").click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='spec').every(p=>p.bg===''||p.bg==='x'||p.bg==null)")
+            pg.locator(f'{S} [data-o=corr]').first.click(); pg.locator(f'{S} .corrm').first.locator('.corri', has_text="None").click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='spec').every(p=>p.bg===''||p.bg==='x'||p.bg==null)")
             assert pg.evaluate("E.panels.filter(p=>p.type==='spec').every(p=>p.bg===''||p.bg==='x'||p.bg==null)")
         step("spectrum Correction: same menu as the chromatogram, without the baseline", spcorr)
         def single():

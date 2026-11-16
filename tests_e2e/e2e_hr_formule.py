@@ -28,7 +28,7 @@ try:
             drawer(pg, "cmp"); pg.wait_for_selector("#cx-out table, #cx-out .muted", timeout=20000); print("top peak", pg.input_value("#cx-mz"), pg.inner_text("#cx-out")[:80].replace("\n", " | "))
             pg.fill("#cx-mz", "317.1639"); pg.wait_for_selector("#cx-out tr[data-i]", timeout=20000)
             head = pg.inner_text("#cx-out thead").lower(); assert "idx" in head and "formula" in head and "rdb" in head and "ppm" in head, head
-            els = pg.inner_text(".cx-els"); assert "Isotopo" in els and "Eq. DB" in els and "Massa" in els, els
+            els = pg.inner_text(".cx-els"); assert "Isotope" in els and "DB eq." in els and "Mass" in els, els
             got = pg.evaluate("[...document.querySelectorAll('.cx-els tbody tr td:first-child')].map(r=>r.innerText.replace(/\\s/g,'')).join(',')"); assert got == "12C,1H,14N,16O,32S", got
             assert pg.evaluate("document.querySelector('#cx-els').value") == "C:0-13,H:0-25,N:0-4,O:0-3,S:0-1"
             assert not pg.is_visible("#hri-ttl")
@@ -51,7 +51,7 @@ try:
             pg.click(sel + " td:nth-child(4)"); clipis(cells[3])
             pg.click(sel + " td:nth-child(5)"); clipis(cells[4])
             pg.click(sel + " td:nth-child(1)"); clipis("C13H25N4O3S")
-            pg.wait_for_function("document.querySelector('#cx-live').innerText.includes('Copiata')", timeout=5000)
+            pg.wait_for_function("document.querySelector('#cx-live').innerText.includes('Copied')", timeout=5000)
             pg.evaluate("navigator.clipboard.writeText('x')"); pg.focus(sel); pg.keyboard.press("Control+c"); clipis("C13H25N4O3S")
             pg.keyboard.press("ArrowRight"); pg.keyboard.press("ArrowRight"); pg.keyboard.press("Enter"); clipis(cells[2])
         step("a click on a cell copies only its value (formula, RDBE, Δ, score; Idx and Ctrl+C the formula); the row stays selected; the copy is announced", copy)

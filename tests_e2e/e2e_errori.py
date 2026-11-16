@@ -40,7 +40,7 @@ try:
         # workflow messages: program dialog, not alert()
         pg.evaluate("() => WORKFLOW.export()")
         pg.wait_for_selector("#askdlg[open]")
-        assert "No file open" in pg.inner_text("#asktxt")
+        assert "No open files" in pg.inner_text("#asktxt")
         pg.click("#askok")
         pg.evaluate("() => WORKFLOW.applyWorkflow({formato: 'x'})")
         pg.wait_for_selector("#askdlg[open]")
