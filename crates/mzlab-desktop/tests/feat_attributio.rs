@@ -176,6 +176,15 @@ fn a_decision_is_never_written_outside_the_campaign_folder() {
             "error.attributio"
         );
     }
+    #[cfg(unix)]
+    {
+        // nothing is created through that link before the refusal
+        assert!(ask("link/new/x.csv", &base).is_err());
+        assert!(!dir.join("new").exists());
+    }
+    for target in ["CON.csv", "sub/nul.csv", "COM1.csv", "lpt9.csv"] {
+        assert!(ask(target, &base).is_err(), "{target}");
+    }
     let mut left: Vec<_> = std::fs::read_dir(&dir)
         .unwrap()
         .map(|e| e.unwrap().file_name())

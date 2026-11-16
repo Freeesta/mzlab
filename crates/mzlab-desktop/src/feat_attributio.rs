@@ -132,7 +132,22 @@ fn write_in(folder: &str, path: &str, text: &str) -> Result<bool> {
         .extension()
         .and_then(|e| e.to_str())
         .is_some_and(|e| e.eq_ignore_ascii_case("csv"));
-    if !plain || !csv || !Path::new(folder).is_absolute() {
+    // Windows device names (`CON`, `NUL`, `COM1`, ...) open a device whatever the extension
+    let device = rel.components().any(|c| {
+        let stem = c
+            .as_os_str()
+            .to_str()
+            .unwrap_or("")
+            .split('.')
+            .next()
+            .unwrap_or("")
+            .to_ascii_uppercase();
+        matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+            || ((stem.starts_with("COM") || stem.starts_with("LPT"))
+                && stem.len() == 4
+                && stem.as_bytes().get(3).is_some_and(u8::is_ascii_digit))
+    });
+    if !plain || !csv || device || !Path::new(folder).is_absolute() {
         return Err(refuse());
     }
     let base = std::fs::canonicalize(folder).map_err(|_| refuse())?;
@@ -140,12 +155,23 @@ fn write_in(folder: &str, path: &str, text: &str) -> Result<bool> {
         return Err(refuse());
     }
     let dest = base.join(rel);
-    let dir = dest.parent().ok_or_else(refuse)?;
-    std::fs::create_dir_all(dir).map_err(|_| Error::new("error.io"))?;
-    let real_dir = std::fs::canonicalize(dir).map_err(|_| refuse())?;
-    let is_link = std::fs::symlink_metadata(&dest).is_ok_and(|m| m.file_type().is_symlink());
-    if !real_dir.starts_with(&base) || is_link {
+    // containment is checked on what exists before anything is created: walking down, every
+    // existing ancestor must resolve inside the folder (a link out is refused, not followed)
+    let mut at = base.clone();
+    for c in rel.parent().into_iter().flat_map(Path::components) {
+        at.push(c);
+        if std::fs::symlink_metadata(&at).is_ok() {
+            let real = std::fs::canonicalize(&at).map_err(|_| refuse())?;
+            if !real.starts_with(&base) || !real.is_dir() {
+                return Err(refuse());
+            }
+        }
+    }
+    if std::fs::symlink_metadata(&dest).is_ok_and(|m| m.file_type().is_symlink()) {
         return Err(refuse());
+    }
+    if let Some(dir) = dest.parent() {
+        std::fs::create_dir_all(dir).map_err(|_| Error::new("error.io"))?;
     }
     std::fs::write(&dest, text).map_err(|_| Error::new("error.io"))?;
     Ok(true)
