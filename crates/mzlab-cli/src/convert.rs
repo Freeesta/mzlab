@@ -8,9 +8,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use mzlab_core::flow::{file_roots, parse, plan_json, Run};
-use mzlab_core::json::Out;
 
-use crate::convert_entries::{entries, Entry};
+use crate::convert_entries::{chosen, entries, plan_text, samples_arg, Entry};
 use crate::convert_report::{compression_sets, head_of, partial_lines, report, Item};
 use crate::flow::{steps, DoneFn, FileRunner};
 use crate::flow_base::convert_file;
@@ -20,12 +19,14 @@ use crate::Outcome;
 
 pub(crate) const HELP: &str = "mzlab-cli convert: vendor files to indexed mzML, the step convert.mzml of the Flow page.
 
-usage: mzlab-cli convert INPUT... --out FOLDER [--compression KIND] [--zlib N] [--numpress] [--peaks WHICH] [--workers N] [--report FILE.json] [--fresh] [--set conv.NAME=VALUE...]
+usage: mzlab-cli convert INPUT... --out FOLDER [--samples ID,ID...] [--compression KIND] [--zlib N] [--numpress] [--peaks WHICH] [--workers N] [--report FILE.json] [--fresh] [--set conv.NAME=VALUE...]
 
   INPUT...             a file, a maker's folder (.D, .d, .raw) or a folder to look through; a .wiff is taken with its .wiff.scan, and a dataset
                        with several samples gives one mzML per sample
   --out FOLDER         where the mzML files are written: NAME.mzML (NAME-ID.mzML for the sample ID of a dataset with several); the cache is in
                        FOLDER/.convert
+  --samples ID,ID...   only these samples of a dataset with several (a .wiff holds one per injection; a .wiff.scan is read only where they are); an ID the
+                       inputs do not hold is an error
   --compression KIND   standard (zlib level 2, default), smallest (zlib and MS-Numpress) or none (uncompressed): the short form of the two options below
   --zlib N, --numpress zlib level of the arrays, 0 (none) to 9 (smallest), default 2; MS-Numpress coding of m/z and intensities
   --peaks WHICH        the peaks written: file (those of the file, default; a profile file keeps its points and the run warns), profile (the
@@ -50,6 +51,8 @@ pub(crate) struct Args {
     /// `--workers`; `None` = the default of `workers_for`
     pub(crate) workers: Option<usize>,
     fresh: bool,
+    /// `--samples`: the sample ids to convert; empty = all
+    samples: Vec<u32>,
 }
 
 fn value(it: &mut impl Iterator<Item = String>, name: &str) -> Result<String, String> {
@@ -77,6 +80,7 @@ pub(crate) fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
                 a.sets.push(format!("conv.peaks={v}"));
             }
             "--set" => a.sets.push(value(&mut it, &x)?),
+            "--samples" => a.samples = samples_arg(&value(&mut it, &x)?)?,
             "--fresh" => a.fresh = true,
             "--workers" => {
                 let v = value(&mut it, &x)?;
@@ -152,27 +156,6 @@ fn gather(inputs: &[PathBuf], skip: &Path) -> Result<Vec<PathBuf>, String> {
         return Err("nothing to convert in the inputs".into());
     }
     Ok(out)
-}
-
-/// The plan of the one step: every entry an input of the port `raw`.
-fn plan_text(entries: &[Entry], version: u32) -> String {
-    let mut o = Out::default();
-    o.raw("{\"format\":\"mzflow/2\",\"inputs\":[");
-    for (i, e) in entries.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"name\":")
-            .str(&e.label)
-            .raw(",\"type\":\"raw\"}");
-    }
-    o.raw("],\"steps\":[{\"id\":\"conv\",\"step\":")
-        .str(&format!("convert.mzml@{version}"));
-    o.raw(",\"in\":{\"raw\":[");
-    for (i, e) in entries.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" })
-            .str(&format!("file:{}", e.label));
-    }
-    o.raw("]}}]}");
-    o.0
 }
 
 /// How each job ended: milliseconds, taken from the cache, the error.
@@ -417,6 +400,20 @@ fn overwrites(entries: &[Entry], out: &Path) -> Option<String> {
     })
 }
 
+/// The entries of the datasets `units` that `--samples` keeps, refused when one would be written over its own input.
+fn selected(units: &[PathBuf], samples: &[u32], out: &Path) -> Result<Vec<Entry>, Outcome> {
+    let mut list = entries(units);
+    chosen(&mut list, samples)?;
+    match overwrites(&list, out) {
+        Some(to) => Err(fail(
+            2,
+            &format!("{to} would be written over its input"),
+            "choose another --out folder",
+        )),
+        None => Ok(list),
+    }
+}
+
 /// `mzlab-cli convert ARGS...` (the arguments after `convert`).
 pub fn run(args: Vec<String>) -> Outcome {
     let a = match parse_args(args) {
@@ -452,14 +449,10 @@ pub fn run(args: Vec<String>) -> Outcome {
             )
         }
     };
-    let list = entries(&units);
-    if let Some(to) = overwrites(&list, &out) {
-        return fail(
-            2,
-            &format!("{to} would be written over its input"),
-            "choose another --out folder",
-        );
-    }
+    let list = match selected(&units, &a.samples, &out) {
+        Ok(l) => l,
+        Err(o) => return o,
+    };
     let (plan, ready, found) = match prepared(&list, &a.sets) {
         Ok(p) => p,
         Err(o) => return o,

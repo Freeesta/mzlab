@@ -65,8 +65,9 @@ try:
         step("the visible text never stays the same for more than 5 s", alive)
         def loaded():
             assert pg.locator("#flist .cvsum").count() == 0, "a loading that went well shows no summary box"
-            assert pg.locator("#fl-up [aria-busy=true]").count() == 0
-            assert pg.evaluate("CONVROWS.rows.filter(r => r.state === 'done').length") == 4
+            pg.wait_for_function("document.querySelectorAll('#fl-up [aria-busy=true]').length === 0", timeout=5000)      # the rows of the side list leave a moment after the last sample ends
+            assert pg.locator("#fl-up [aria-busy=true]").count() == 0, "a row of the side list is still busy: " + pg.evaluate("[...document.querySelectorAll('#fl-up [aria-busy=true]')].map(e => e.outerHTML.slice(0, 300)).join(' | ')")
+            assert pg.evaluate("CONVROWS.rows.filter(r => r.state === 'done').length") == 4, pg.evaluate("JSON.stringify(CONVROWS.rows.map(r => [r.name, r.state]))")
             pg.evaluate("CONVROWS.clearDone()")
         step("a loading that went well leaves no box of the loading", loaded)
         def again():                                    # the same pair again: its samples come from the browser storage, nothing is copied or indexed again and the list has no duplicates

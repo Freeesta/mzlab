@@ -126,3 +126,24 @@ fn manual_table_lists_a_sample_at_position_zero_of_the_table() {
     assert_eq!(files.matches("{\"name\":").count(), 2, "{files}");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// `--samples` writes only the samples asked for, byte for byte the files the whole pair gives (the choice of the page: the same samples, the same bytes);
+/// an id the pair does not hold is an error that writes nothing.
+#[test]
+fn samples_writes_only_the_chosen_ones_as_the_whole_pair_does() {
+    let (all, some) = (folder("sel_tutti"), folder("sel_alcuni"));
+    let (Some(a), Some(s)) = (pair(&all, "sano"), pair(&some, "sano")) else {
+        return;
+    };
+    assert_eq!(convert(&[p(&a), "--out", p(&all.join("out"))]).code, 0);
+    let o = convert(&[p(&s), "--out", p(&some.join("out")), "--samples", "3,2"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert!(!some.join("out/x-1.mzML").exists());
+    for id in [2, 3] {
+        let read = |d: &Path| std::fs::read(d.join(format!("out/x-{id}.mzML"))).unwrap();
+        assert_eq!(read(&all), read(&some), "sample {id}");
+    }
+    let o = convert(&[p(&s), "--out", p(&some.join("out2")), "--samples", "9"]);
+    assert_eq!(o.code, 4, "{}", o.stderr);
+    assert!(o.stderr.contains("sample 9"), "{}", o.stderr);
+}

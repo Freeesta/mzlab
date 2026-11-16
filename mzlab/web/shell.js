@@ -199,6 +199,10 @@ async function moduliToNat(/** @type {FileCarica[]} */ files){const rb=window.MZ
 // stem (lower case) -> {stem,wiff,scan}: a file of a SCIEX pair that came without the other, kept for a later loading
 const WIFF_WAIT=new Map();
 // SCIEX .wiff + .wiff.scan, paired by name (also when they come in different loadings): the Rust engine reads them as they are and each sample (injection) is a file of the list. Gives the files to go on with and the notices [message, name]
+/** A big pair with several samples: the user chooses which become files (the others are neither copied nor read). null = all, an empty set = none. */
+async function wiffPick(/** @type {{ wiff: File, scan: File }} */ e,/** @type {any[]} */ list){
+  if(list.length<2||e.wiff.size+e.scan.size<=(/** @type {any} */ (window).MZLAB_WIFF_PICK_BYTES??192<<20))return null;
+  await carica("wiff-scelta.js");return window.WIFFPICK.choose(e.wiff.name,list)}
 async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} */ box,/** @type {AbortSignal} */ signal){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,res=/** @type {any} */ ({files,errs:[]}),isW=(/** @type {FileCarica} */ f)=>/\.wiff(\.scan)?$/i.test(f.name);
   // the engine exists but cannot convert now (it stopped twice in a minute, or the page and its scripts are of two versions): say so, not «cannot be opened in the browser»
   if((rb?(rb.disabled||!rb.nativeSamples):window.MZLAB_RUST_ERR&&!window.MZLAB_PHONE)&&files.some(isW)){
@@ -222,16 +226,18 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
     try{const mem=[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],M0=window.LETTORI_MOD;let sp=/** @type {Promise<{ samples: any[] }> | null} */ (null);const parsed=()=>sp||(sp=rb.nativeSamples(mem));
       const hit=await NATIVO.cached(rb,mem,ST.files||[],parsed);if(hit){for(const x of hit){CONVROWS.add(x.name,"open");CONVROWS.finish(x.name,"done",{scans:x.n_spectra||x.scans||0,kind:(x.mixed||[]).length>1?"mixed":x.kind,missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(x.name))||0,note:(/** @type {any} */ (window).MZLAB_LR?.noteKey?.(x.name))||"",cached:true})}CONVROWS.drop(e.row);continue}      // the same pair again: its samples are in the list with their index, nothing is copied or read again
       const probing=M0&&window.LETTORI_FAM.sciex.sonda;if(probing)parsed().catch(()=>{});const pr=probing?await M0.probe("sciex",mem).catch(()=>null):null;      // an engine error counts only when the module does not take the pair
-      if(pr&&pr.motivi.includes("variante")){const cs=pr.campioni.length?pr.campioni:[{id:1}];cs.forEach((/** @type {{ id: number, name?: string, size?: number }} */ x,/** @type {number} */ i)=>{const nm=wiffName(e.stem,i+1,cs.length>1,taken,x.name);taken.push(nm);res.files.push(M0.stand(nm,mem,i,"sciex",x.size,pr.campioni.length?undefined:e.wiff.name))});CONVROWS.drop(e.row);continue}
+      if(pr&&pr.motivi.includes("variante")){const cs=pr.campioni.length?pr.campioni:[{id:1}],pk=await wiffPick(e,cs);if(pk&&!pk.size){CONVROWS.finish(e.row,"cancel");continue}cs.forEach((/** @type {{ id: number, name?: string, size?: number }} */ x,/** @type {number} */ i)=>{if(pk&&!pk.has(i))return;const nm=wiffName(e.stem,i+1,cs.length>1,taken,x.name);taken.push(nm);res.files.push(M0.stand(nm,mem,i,"sciex",x.size,pr.campioni.length?undefined:e.wiff.name))});CONVROWS.drop(e.row);continue}
       const pj=await parsed(),s=pj.samples,key=NATIVO.key(e.stem);
       // the .wiff.scan holds sections the .wiff index does not list (copied during the acquisition): ONE calm note for the pair, the sections are samples of the list
       if(pj.unindexed)(res.notes=res.notes||[]).push(e.wiff.name+": "+T("warn.wiff.unindexed",{n:pj.unindexed.recovered+pj.unindexed.skipped,recovered:pj.unindexed.recovered,skipped:pj.unindexed.skipped}));
       // × on the row of the pair while it was parsed: its samples are not made (they would open by themselves)
       if(OPENNOW.held(e.row)){CONVROWS.finish(e.row,"cancel");continue}
-      s.forEach((/** @type {{ id: number, name?: string, size?: number, why?: string }} */ x,/** @type {number} */ i)=>{const nm=wiffName(e.stem,i+1,s.length>1,taken,x.name),f=NATIVO.sample(nm,key,mem,i,x.id,false,x.size);taken.push(nm);if(x.why)WHY.set(nm,x.why);if(pr)f.mzlabNat.probed=pr;res.files.push(f)})}      // the module's answer for the pair holds for its samples (moduloWants)
+      // a big pair with several samples: the user chooses which become files; the others are neither copied nor read (null = all)
+      const pick=await wiffPick(e,s);if(pick&&!pick.size){CONVROWS.finish(e.row,"cancel");continue}
+      s.forEach((/** @type {{ id: number, name?: string, size?: number, why?: string }} */ x,/** @type {number} */ i)=>{if(pick&&!pick.has(i))return;const nm=wiffName(e.stem,i+1,s.length>1,taken,x.name),f=NATIVO.sample(nm,key,mem,i,x.id,false,x.size);taken.push(nm);if(x.why)WHY.set(nm,x.why);if(pr)f.mzlabNat.probed=pr;res.files.push(f)})}      // the module's answer for the pair holds for its samples (moduloWants)
     catch(x_){const x=/** @type {Lanciato} */(x_);const M=window.LETTORI_MOD,fam=M&&x.json?M.retriable(x.json.error||x.json.error_key):"";if(fam)res.files.push(M.stand(wiffName(e.stem,1,false,taken),[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],0,fam,undefined,e.wiff.name));
       // the pair cannot be read: the error stays on its row, with «Details» and the trace
-      else{const er=x.json?I18N.err(x.json):x;CONVROWS.finish(e.row,"fail",{msg:er.message,diag:DIAG.da(er,{name:e.scan.name,size:e.wiff.size+e.scan.size})});continue}}
+      else{const er=x.json?(x.json.error==="error.memoryBudget"?{message:T("error.memoryBudget.wiff")}:I18N.err(x.json)):x;CONVROWS.finish(e.row,"fail",{msg:er.message,diag:DIAG.da(er,{name:e.scan.name,size:e.wiff.size+e.scan.size})});continue}}
     CONVROWS.drop(e.row)}
   return res}
 // Rule R (docs/agenti/lettori-modulo.md): the readers module (lettori-modulo.js) writes the mzML of what the engine does not read, into OPFS, and the mzML enters upload() as any other: a file with an extension of the

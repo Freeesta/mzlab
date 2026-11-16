@@ -5,7 +5,10 @@ use std::path::{Path, PathBuf};
 
 use mzlab_core::readers::{Format, Limits};
 
+use crate::flow_run::fail;
 use crate::flow_set::file_set;
+use crate::Outcome;
+use mzlab_core::json::Out;
 
 /// One mzML to make: the dataset, the name of the plan input (`NAME` or `NAME@ID`) and the file written.
 pub(crate) struct Entry {
@@ -130,4 +133,52 @@ impl Entry {
             self.label.clone()
         }
     }
+}
+
+/// `--samples`: keeps the entries of the sample ids asked for; an id no input holds is the exit 4.
+pub(crate) fn chosen(list: &mut Vec<Entry>, ids: &[u32]) -> Result<(), Outcome> {
+    if ids.is_empty() {
+        return Ok(());
+    }
+    let held = |e: &Entry| crate::flow_set::split_sample(&e.label).1;
+    if let Some(id) = ids
+        .iter()
+        .find(|id| !list.iter().any(|e| held(e) == Some(**id)))
+    {
+        return Err(fail(
+            4,
+            &format!("--samples: no input holds the sample {id}"),
+            "the samples of a dataset are listed with mzlab-cli samples or in the .wiff list of the page",
+        ));
+    }
+    list.retain(|e| held(e).is_some_and(|id| ids.contains(&id)));
+    Ok(())
+}
+
+/// The plan of the one step: every entry an input of the port `raw`.
+pub(crate) fn plan_text(entries: &[Entry], version: u32) -> String {
+    let mut o = Out::default();
+    o.raw("{\"format\":\"mzflow/2\",\"inputs\":[");
+    for (i, e) in entries.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"name\":")
+            .str(&e.label)
+            .raw(",\"type\":\"raw\"}");
+    }
+    o.raw("],\"steps\":[{\"id\":\"conv\",\"step\":")
+        .str(&format!("convert.mzml@{version}"));
+    o.raw(",\"in\":{\"raw\":[");
+    for (i, e) in entries.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" })
+            .str(&format!("file:{}", e.label));
+    }
+    o.raw("]}}]}");
+    o.0
+}
+
+/// `--samples 3,7`: the sample ids as numbers.
+pub(crate) fn samples_arg(v: &str) -> Result<Vec<u32>, String> {
+    v.split(',')
+        .map(|id| id.trim().parse().map_err(|_| format!("--samples {v}: expected whole sample numbers separated by commas")))
+        .collect()
 }

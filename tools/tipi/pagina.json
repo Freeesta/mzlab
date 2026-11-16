@@ -72,6 +72,7 @@
     "../../mzlab/web/gruppi.js",
     "../../mzlab/web/gruppi-nome.js",
     "../../mzlab/web/gruppi-per.js",
+    "../../mzlab/web/wiff-scelta.js",
     "../../mzlab/web/gruppi-dnd.js",
     "../../mzlab/web/gruppi-tab.js",
     "../../mzlab/web/colonne-campioni.js",

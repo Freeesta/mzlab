@@ -10,6 +10,7 @@ Una riga di misura in PR dice: modulo, byte prima → dopo, crescita in %, e se 
 - `libm` al posto di `exp`/`ln`/`pow`/trig di std cambia il `.wasm` di meno dell'1 % (`mzlab-chem` tiene std per `fm.rs`).
 - Un errore con i valori del suo testo (`Error::new` con parametri) costa circa 0,01-0,1 % per modulo: nessun modulo si avvicina al tetto per questo.
 - Nel motore una funzione di lettura costa in media 0,1-0,3 %; le crescite oltre l'1 % (`.wiff` dispositivi +1,3 % in `sciex`, `isotopes = finder` +4,4 % in `hr`) hanno ognuna la propria riga nella PR.
+- Il `.wiff` letto per settore (`Ole::open_at`) e il DAD letto a richiesta: `lettori-sciex` 481 192 → 483 078 B (+0,4 %, tetto 483 328 invariato); il motore del sito non cresce oltre il suo margine (`tools/moduli.py --controlla`).
 
 ## Passaggi di spostamento (perché un percorso sta dove sta)
 - Le rotte (`stat_post`, `molecules`, `campioni`, `flow_*`, integrazioni manuali) sono fuori dal motore: il motore passò da 2 612 789 a 1 973 927 B (gz −23 %, br −23 %, V8 7,5 → 5,7 ms); `rotte` pesa 800-860 KB.
