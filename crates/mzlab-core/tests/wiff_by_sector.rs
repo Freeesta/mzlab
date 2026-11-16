@@ -133,6 +133,66 @@ fn each_sample_of_a_multi_sample_pair_opened_alone_equals_the_whole_pair() {
     }
 }
 
+/// One sample opened alone reads fewer bytes of the `.wiff.scan` than the whole pair does (the byte-count check of the choice of samples, on a synthetic pair of `tools/wiff_grande.py`:
+/// the real-data numbers cannot be repeated).
+#[test]
+fn one_sample_alone_reads_fewer_scan_bytes_than_the_whole_pair() {
+    let out = std::env::temp_dir().join(format!("mzlab_wiff_bytes_{}", std::process::id()));
+    let root: PathBuf = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let ok = Command::new("python3")
+        .arg(root.join("tools/wiff_grande.py"))
+        .arg(&out)
+        .args(["--samples", "6", "--scans", "60", "--points", "300"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success());
+    if ok.is_none() {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 not available"
+        );
+        eprintln!("SKIP wiff_by_sector: python3 not available");
+        return;
+    }
+    let limits = Limits::sito();
+    let counted = |only: Option<usize>| {
+        let read = Rc::new(Cell::new(0));
+        let members = ["grande.wiff", "grande.wiff.scan"]
+            .map(|file| {
+                let bytes = std::fs::read(out.join(file)).unwrap();
+                let dim = bytes.len() as u64;
+                let dati: Box<dyn ReadAt> = if file.ends_with(".scan") {
+                    Box::new(Counting(bytes, read.clone()))
+                } else {
+                    Box::new(bytes)
+                };
+                Member {
+                    nome: file.to_string(),
+                    dim,
+                    dati,
+                    sha1: None,
+                }
+            })
+            .into_iter()
+            .collect::<Vec<_>>();
+        let mut r = open_only(FileSet { membri: members }, &limits, only).unwrap();
+        let n = r.samples().len();
+        for c in 0..n {
+            if only.is_none_or(|k| k == c) {
+                digest(&mut r, c);
+            }
+        }
+        (n, read.get())
+    };
+    let (n, whole) = counted(None);
+    assert!(n > 1, "the fixture must hold several samples");
+    let (_, alone) = counted(Some(2));
+    assert!(
+        alone > 0 && alone * 3 < whole,
+        "one sample of {n} read {alone} scan bytes, the whole pair {whole}"
+    );
+}
+
 /// A pair opened with the `PARTIAL` mark tells its source by the ranges of the sample: the same sample gives the same identity, another sample another one,
 /// and the scans are the ones the whole pair gives.
 #[test]
