@@ -179,7 +179,7 @@ I18N.add("en", {
   "pk.split.0": "Drop line",
   "pk.split.1": "Valley to valley",
   "int.menu.all": "Integrate every peak shown",
-  "int.lrAll.done": "{n} peaks · smoothing {w} points{a} · valley {v} % · S/N ≥ {sn} · noise {noise}",
+  "int.lrAll.done": "{n} peaks · smoothing {w} points{a} · valley {v} % · S/N ≥ {sn} · noise {noise} · {split} · baseline: the engine's line, not the dialog's · ends clamped: {c} of {e} · under the line: {below}",
   "int.lrAll.auto": " (from the peaks)",
   "int.lrAll.skip": "{n} left out: they overlap an integration already there",
   "pk.default": "Reset to defaults",

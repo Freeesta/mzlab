@@ -1,8 +1,9 @@
 // @ts-strict
 // «Integrate every peak shown» (the ▾ next to the automatic tool, and the menu of a trace): every visible trace of the panel, every peak with its apex in
 // the stretch shown, in one undoable step. Low resolution: the engine's lr_auto_integrate (peakq_lrauto.rs, the bytes of `mzlab-cli peak-auto-lr`), which
-// finds the peaks on a smoothed copy, splits touching ones at the valley and integrates the raw trace above its baseline (>= 0, never above the trace);
-// high resolution keeps autoAll (peakq_auto.rs). The numbers the engine used go on each record (`auto`) and in the notice. Loaded by picchi.js (intAll).
+// finds the peaks on a smoothed copy, splits touching ones at the valley and integrates the raw trace above its baseline (ends raised to zero, never above
+// the trace); high resolution keeps autoAll (peakq_auto.rs). Every choice the engine made goes on each record (`auto`, areas in counts x s) and in the
+// notice; the baseline is always the engine's line, never the dialog's baseline setting. Loaded by picchi.js (intAll).
 /** @typedef {Record<string, any>} Bag */
 const G = /** @type {any} */ (window);
 const T = (/** @type {string} */ k, /** @type {Record<string, any>} */ v = {}) => I18N.t(k, v);
@@ -18,7 +19,8 @@ function records(p, s, r) {
     const it = intRec(p, s, k.t0, k.t1);
     if (mrm) { it.snap = { a: "man", b: "man" }; it.my = { a: k.b0, b: k.b1 }; snapBase(s, it); }
     else { delete it.zero; delete it.base; it.bm = "line"; it.bl = [k.t0, k.b0, k.t1, k.b1]; }
-    it.auto = { half: q.half, half_auto: q.half_auto, valley: q.valley, sn_min: q.sn, split: q.split, noise: q.noise, sn: k.sn, end0: k.end0, end1: k.end1 };
+    it.auto = { half: q.half, half_auto: q.half_auto, valley: q.valley, sn_min: q.sn, split: q.split, baseline: q.baseline, noise: q.noise, sn: k.sn, end0: k.end0, end1: k.end1,
+      b0: k.b0, b1: k.b1, clamp0: k.clamp0, clamp1: k.clamp1, area: k.area * 60, below: k.below * 60, area_zero: k.area_zero * 60 };       // the engine's areas, counts x min -> counts x s
     return it;
   });
 }
@@ -44,8 +46,10 @@ export async function run(p) {
   pushIh(p);
   p.ints.push(...add);
   draw(p); uiSave();
-  const n = (/** @type {number} */ v) => I18N.sciE(v);
-  nearMsg(T("int.lrAll.done", { n: add.length, w: 2 * last.half + 1, a: last.half_auto ? T("int.lrAll.auto") : "", v: Math.round(last.valley * 100), sn: last.sn, noise: n(last.noise) }) + (skip ? ". " + T("int.lrAll.skip", { n: skip }) : ""));
+  const n = (/** @type {number} */ v) => I18N.sciE(v), au = add.map(it => it.auto);
+  const clamped = au.reduce((c, q) => c + (q.clamp0 !== "none" ? 1 : 0) + (q.clamp1 !== "none" ? 1 : 0), 0), below = au.reduce((c, q) => c + q.below, 0);
+  nearMsg(T("int.lrAll.done", { n: add.length, w: 2 * last.half + 1, a: last.half_auto ? T("int.lrAll.auto") : "", v: Math.round(last.valley * 100), sn: last.sn, noise: n(last.noise),
+    split: T(last.split === "valley" ? "pk.split.1" : "pk.split.0"), c: clamped, e: 2 * add.length, below: n(below) }) + (skip ? ". " + T("int.lrAll.skip", { n: skip }) : ""));
 }
 
 G.INTTUTTI = { run, engineParams };

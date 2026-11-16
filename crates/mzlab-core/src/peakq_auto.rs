@@ -87,7 +87,7 @@ fn half_span(s: &[f64], a: usize, level: f64) -> (usize, usize) {
     (l, r)
 }
 
-pub(crate) fn auto_half_window(yc: &[f64]) -> usize {
+fn auto_half_window(yc: &[f64]) -> usize {
     let coarse = savgol(yc, 5, 2);
     let top = (0..coarse.len())
         .max_by(|&i, &j| coarse[i].total_cmp(&coarse[j]))
