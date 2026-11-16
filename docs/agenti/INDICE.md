@@ -20,6 +20,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | pannello (area: Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di…) | `docs/agenti/attributio-pannello.md` |
 | revisione, abbinamento e identità (area: Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di…) | `docs/agenti/attributio-revisione.md` |
 | Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di rilevamento alla mzmine: `crates/mzlab-feat/src/attributio/`, `untargeted/`, `.wasm` `attributio*` e `untargeted`) | `docs/agenti/attributio.md` |
+| audit dei file inutilizzati, morti o vecchi (solo rapporto: SAFE, PROBABLY-UNUSED, UNSURE, KEEP-BUT-OLD, con prova grep, byte e data) | `docs/agenti/audit-file-inutili.md` |
 | avvio progressivo (`AVVIO`), regola «interfaccia subito»; area e tabella di caricamento (area: header (schermo intero, logo, (i)), area e tabella di caricamento,…) | `docs/agenti/avvio.md` |
 | azioni dei pannelli (registro `azioni/1`, menu del tasto destro, Maiusc+F10) | `docs/agenti/azioni.md` |
 | picchi spalmati: lotto sintetico, configurazioni MZmine default/wide, tabella di confronto (`tools/bench/confronto_larghi.py`) | `docs/agenti/bench-picchi-larghi.md` |
