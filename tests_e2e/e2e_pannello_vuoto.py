@@ -6,13 +6,14 @@ from lib import *
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
-    except Exception as e: steps.append((name, "FAIL: " + str(e).split("\n")[0][:240]))
+    except Exception as e:
+        import traceback; traceback.print_exc(); steps.append((name, "FAIL: " + str(e).split("\n")[0][:240]))
 def state(pg):
     return pg.evaluate("() => ({tab: BARRA.curTab, open: !!document.querySelector('#dfiles') && getComputedStyle(document.querySelector('#dfiles')).display !== 'none' && document.querySelector('#dfiles').getBoundingClientRect().width > 0, "
                        "pressed: [...document.querySelectorAll('#stbar [data-cmd]')].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.cmd)})")
 def click(pg, cmd):
     pg.click(f'#stbar [data-cmd="{cmd}"]'); frames(pg, 3)
-def sequence(pg):
+def sequence(pg, landing):
     s = state(pg)
     if not s["open"]: click(pg, "file"); s = state(pg)
     assert s["tab"] == "file" and s["open"], s
@@ -23,7 +24,11 @@ def sequence(pg):
         assert s["open"] and s["tab"] == "file" and s["pressed"] == ["file"], ("file after " + other, s)
         assert pg.is_visible("#sb-panel-file") and not pg.is_visible("#sb-panel-addloss"), other
     click(pg, "file"); s = state(pg)
-    assert not s["open"] and s["pressed"] == [], ("File on its own panel hides it", s)
+    if landing:
+        assert not s["open"] and s["pressed"] == [], ("empty landing: File on its own panel hides it", s)
+    else:
+        assert s["open"] and s["tab"] == "lists", ("with a file, a second click goes back to the previous tool (docs: dati-barra.md)", s)
+        return
     click(pg, "addloss"); click(pg, "file"); s = state(pg)
     assert s["open"] and s["tab"] == "file", ("closed, then another tool, then File", s)
 def cold(p, with_file):
@@ -43,10 +48,12 @@ try:
             def run(with_file=with_file):
                 r, ctx, pg, errs = cold(p, with_file)
                 try:
-                    sequence(pg)
+                    sequence(pg, not with_file)
                     if not with_file:
                         pg.click('#stbar [data-cmd="addloss"]'); frames(pg, 3)
                         pg.click('#stbar [data-cmd="ptable"]'); frames(pg, 3)      # the periodic table is a window: the side column keeps its panel
+                        s = state(pg); assert s["open"] and s["tab"] == "addloss", ("Tavola leaves the side column alone", s)
+                        pg.keyboard.press("Escape"); frames(pg, 3)
                         click(pg, "file"); s = state(pg); assert s["open"] and s["tab"] == "file", s
                 finally: ctx.close(); r.close()
                 assert not errs, errs

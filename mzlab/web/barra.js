@@ -576,7 +576,7 @@ const BARRA = (() => {
   function updateButtons() {
     const bar = Q1("#stbar");
     if (!bar) return;
-    const open = _open && inData();
+    const open = _open && (inData() || landing());      // the empty landing shows the panel too: its button must read pressed
     bar.querySelectorAll("button[data-cmd]").forEach((/** @type {HTMLElement} */ b) => {
       const c = byId(b.dataset.cmd);
       if (!c || !c.panel) return;
