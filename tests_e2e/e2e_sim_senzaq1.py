@@ -45,8 +45,8 @@ try:
             wait_for_js(pg, "%s._a && new Set(%s._a.sr.map(s => s.ion)).size === 1" % (PANEL, PANEL), timeout=30000)
         step("the menu extracts one channel and the plot keeps one ion", submenu)
         def title():
-            wait_for_js(pg, "(() => { const p = %s; return p && p.el.querySelector('.ttl').textContent === 'SIM · ione 3'; })()" % PANEL, timeout=15000)
-        step("the panel of one channel is titled by its name («SIM · ione 3»), never by its key", title)
+            wait_for_js(pg, "(() => { const p = %s; return p && p.el.querySelector('.ttl').textContent === 'SIM · ion 3'; })()" % PANEL, timeout=15000)
+        step("the panel of one channel is titled by its name («SIM · ion 3»), never by its key", title)
         def method():
             h = pg.evaluate("getMrm(E.files[0].k).then(t => SIMUI.methodTable(t))")
             need(h and "null" not in h and "—" in h and "Q3" not in h and "CE" not in h and h.count("<tr>") == N + 1, h)

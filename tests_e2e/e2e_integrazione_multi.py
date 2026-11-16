@@ -54,7 +54,7 @@ r = Run(port=8878, wd="/tmp/wd_integrazione_multi")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, [D / "sim3.wiff", D / "sim3.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= 4", timeout=120000)
+        stage(pg, [D / "sim3.wiff", D / "sim3.wiff.scan"]); pg.click("text=Load data"); ready(pg); wait_for_js(pg, "E.files.length >= 4", timeout=120000)
         open_first(pg)
         pg.click("#np-mrm"); wait_for_js(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)
         all_ions(pg)
