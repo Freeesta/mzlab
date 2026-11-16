@@ -10,7 +10,7 @@ fn sections_the_wiff_index_lacks_are_one_calm_notice_per_dataset() {
         text.contains(": 3;")
             && text
                 .contains("samples, with a name and method inferred from the previous sample: 2;")
-            && text.contains("counted once): 1."),
+            && text.contains("checked: 1."),
         "{text}"
     );
 }

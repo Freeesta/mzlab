@@ -130,7 +130,7 @@ I18N.add("it", {
   "error.stats.param": "Un parametro delle statistiche non è valido (la soglia minima deve essere zero o più).",
   "error.tpNoBlock": "La tabella non ha un blocco di prodotti di trasformazione per questo composto di partenza.",
   "error.tpNoControls": "La tabella non ha file di controllo da confrontare con quelli trattati: segnali.",
-  "warn.wiff.unindexed": "L'indice del .wiff è più vecchio del suo .wiff.scan (i file sono stati copiati mentre l'acquisizione era in corso). Sezioni di dati che l'indice non elenca: {n}; recuperate come campioni, con nome e metodo dedotti dal campione precedente: {recovered}; lasciate fuori perché i loro blocchi non si possono controllare, o perché la copia finisce dentro l'ultimo blocco di una sezione (quel blocco è scartato, contato una volta): {skipped}. Copia di nuovo i file a fine acquisizione.",
+  "warn.wiff.unindexed": "L'indice del .wiff è più vecchio del suo .wiff.scan (i file sono stati copiati mentre l'acquisizione era in corso). Sezioni di dati che l'indice non elenca: {n}; recuperate come campioni, con nome e metodo dedotti dal campione precedente: {recovered}; lasciate fuori perché i loro blocchi non si possono controllare: {skipped}. Copia di nuovo i file a fine acquisizione.",
   "warn.wiff.emptySample": "Acquisizione vuota: nessuna scansione.",
   "warn.wiff.inferredSample": "Recuperato da dati che l'indice del .wiff non elenca: il nome e il metodo sono dedotti dal campione precedente, non letti dal file.",
   "warn.wiff.damaged": "Alcuni blocchi di scansione del .wiff.scan non corrispondono all'indice del .wiff (una copia danneggiata): sono lasciati fuori e contati, il resto si legge e si scrive. Controlla la copia del file.",

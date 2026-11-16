@@ -91,8 +91,12 @@ fn unlisted_sections_are_samples_with_inferred_name_and_method() {
         return;
     };
     let mut l = open(&dir, "nonindicizzato");
-    // section 4 ends inside its last block: the 3 missing bytes are counted, not dropped silently
-    assert_eq!(l.unindexed(), (2, 1));
+    assert_eq!(l.unindexed(), (2, 0));
+    // section 4 ends inside its last block: the cut block is a loss of that sample (`warn.wiff.damaged`), not dropped silently; section 3 is whole
+    let (whole, cut) = (l.losses(2).unwrap(), l.losses(3).unwrap());
+    assert_eq!((whole.declared, whole.read), (whole.read, whole.read));
+    assert_eq!((cut.declared, cut.read), (cut.read + 1, cut.read));
+    assert_eq!(cut.cause, "warn.wiff.damaged");
     let names: Vec<String> = l.samples().iter().map(|s| s.nome.clone()).collect();
     let ids: Vec<u32> = l.samples().iter().map(|s| s.id).collect();
     assert_eq!(ids, [1, 2, 3, 4]);
@@ -165,8 +169,24 @@ fn negative_baseline_noise_is_a_valid_block() {
 #[test]
 fn queued_rows_without_a_section_do_not_hide_the_unlisted_section() {
     let Some((dir, _)) = reference() else { return };
-    let l = open(&dir, "nonindicizzato_in_coda");
+    let mut l = open(&dir, "nonindicizzato_in_coda");
     assert_eq!(l.unindexed(), (1, 0));
+    // the recovered injection replaces the queued row of its number: ids are unique and it is not also listed as empty
+    let ids: Vec<u32> = l.samples().iter().map(|s| s.id).collect();
+    assert_eq!(ids, [1, 3, 2]);
+    let json = readers::samples_json(&mut *l);
+    let rows: Value = serde_json::from_str(&json).unwrap();
+    let why = |id: u64| {
+        rows["samples"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|s| s["id"] == id)
+            .map(|s| s["why"].as_str().map(str::to_string))
+            .unwrap()
+    };
+    assert_eq!(why(2).as_deref(), Some("inferred"));
+    assert_eq!(why(3).as_deref(), Some("empty"));
 }
 
 #[test]

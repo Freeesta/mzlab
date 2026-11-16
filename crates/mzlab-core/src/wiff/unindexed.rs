@@ -14,8 +14,8 @@ const MARKER: [u8; 8] = [0x11, 0x11, 0x11, 0x11, 0x82, 0x05, 0, 0];
 const LEAD: u64 = 24;
 const CHUNK: u64 = 1 << 20;
 
-/// What was found after the last indexed section: the samples rebuilt (in file order) and how many pieces were left out: sections whose blocks could not be
-/// checked, and the cut last block of a recovered section at the end of the file (each counts one).
+/// What was found after the last indexed section: the samples rebuilt (in file order) and how many sections were left out because their blocks could not be
+/// checked. The cut last block of a recovered section is not here: it is the sample's `unplaced` (`warn.wiff.damaged`, `Reader::losses`).
 pub(super) struct Found {
     pub(super) samples: Vec<Wiff>,
     pub(super) skipped: usize,
@@ -130,22 +130,16 @@ pub(super) fn recover(
             // between two markers the blocks fill the section exactly; at the end of the file the last one may be cut
             let whole = end == scan_len || (end - first).is_multiple_of(size);
             if rows > 0 && whole && plausible(scan, first, rows, size) {
-                rebuild(d, id, first, rows, u32::try_from(size).ok()?)
+                let mut w = rebuild(d, id, first, rows, u32::try_from(size).ok()?)?;
+                // the bytes of a partial last block (the copy ended inside it) are dropped, but counted as a loss of that sample
+                w.unplaced = usize::from(!(end - first).is_multiple_of(size));
+                Some(w)
             } else {
                 None
             }
         });
         match built {
-            Some(w) => {
-                // the bytes of a partial last block are dropped, but never silently
-                if !end
-                    .saturating_sub(first)
-                    .is_multiple_of(donor.map_or(1, |d| d.1))
-                {
-                    out.skipped += 1;
-                }
-                out.samples.push(w);
-            }
+            Some(w) => out.samples.push(w),
             None => out.skipped += 1,
         }
         at = end;
@@ -168,7 +162,16 @@ pub(super) fn add(
     let found = recover(scan, scan_len, &known, end, last_id);
     let counts = (found.samples.len(), found.skipped);
     for w in found.samples {
-        let (i, s) = (parti.len(), w.sample);
+        let s = w.sample;
+        // a queued row of the table with the same number (listed as an empty injection) is the sample being acquired: the recovered section replaces it
+        // (dropped here, the recovered one goes last: the listing marks the last `recovered` samples as inferred)
+        if let Some(k) = parti
+            .iter()
+            .position(|p| p.w.sample == s && p.w.records.is_empty())
+        {
+            (parti.remove(k), campioni.remove(k), raw_names.remove(k));
+        }
+        let i = parti.len();
         *total += w.records.len() as u64;
         limits.ok_entries(*total)?;
         let mut part = Part::new(w);
