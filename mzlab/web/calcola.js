@@ -28,7 +28,7 @@ function calcEval(t, ans = 0) {
   }
   function term() {
     let v = factor();
-    while (peek() === "*" || peek() === "/") { const o = s[i++], r = factor(); if (o === "/" && r === 0) fail("divisione per zero"); v = o === "*" ? v * r : v / r; }
+    while (peek() === "*" || peek() === "/") { const o = s[i++], r = factor(); if (o === "/" && r === 0) fail(I18N.t("calc.err.divZero")); v = o === "*" ? v * r : v / r; }
     return v;
   }
   function expr() {

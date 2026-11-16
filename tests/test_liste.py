@@ -116,7 +116,7 @@ console.log(JSON.stringify(out));
     o = json.loads(r.stdout)
 
     # Nominal search found siloxane
-    assert any("polisilossano" in n for n in o["nomHitNames"])
+    assert any("polysiloxane" in n for n in o["nomHitNames"])
     # HR search at 445.0 is 0 hits, but at 445.1200 is >= 1 hit
     assert o["hrMiss"] == 0
     assert o["hrHit"] >= 1

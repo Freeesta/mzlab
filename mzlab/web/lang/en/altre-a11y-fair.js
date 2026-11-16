@@ -283,6 +283,7 @@ I18N.add("en", {
   "int.bar.b": "Right integration bar: {rt} min",
   "calc.err.closeParen": "extra closing parenthesis",
   "calc.err.tooBig": "result too large",
+  "calc.err.divZero": "division by zero",
   "bug.title.empty": "describe the problem",
   "bug.what": "What happened?",
   "bug.copy": "Copy",
