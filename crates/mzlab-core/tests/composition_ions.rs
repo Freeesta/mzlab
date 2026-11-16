@@ -69,9 +69,20 @@ fn the_mass_error_is_observed_minus_theoretical() {
         ..Opts::default()
     };
     let j: Value = serde_json::from_str(&compose(195.088652, &o).unwrap()).unwrap();
-    let r = j["results"].as_array().unwrap().iter().find(|r| r["formula"] == "C8H11N4O2").expect("caffeine ion");
-    let (ppm, mda) = (r["delta_ppm"].as_f64().unwrap(), r["delta_mda"].as_f64().unwrap());
-    assert!((ppm - 5.13).abs() < 0.05 && (mda - 1.0).abs() < 0.05, "{ppm} {mda}");
+    let r = j["results"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["formula"] == "C8H11N4O2")
+        .expect("caffeine ion");
+    let (ppm, mda) = (
+        r["delta_ppm"].as_f64().unwrap(),
+        r["delta_mda"].as_f64().unwrap(),
+    );
+    assert!(
+        (ppm - 5.13).abs() < 0.05 && (mda - 1.0).abs() < 0.05,
+        "{ppm} {mda}"
+    );
 }
 
 /// The isotope pool says how many candidates it scored when it left some out, and stays silent otherwise (synthetic glucose isotopes).
