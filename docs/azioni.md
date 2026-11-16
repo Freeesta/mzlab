@@ -27,7 +27,7 @@ Generato da `python3 tools/doc_commands.py` dalla tabella `COMANDI_TAB` di `mzla
 | `files.view` | correzione (`storia.campi`) | `lista-file.js` | visibility, name, colour, group, order of a file | - | - | - | command: do / undo handler (comandi.js) |
 | `samples.meta` | correzione (`storia.campi`) | `campioni-tabella.js` | type, replicate, concentration, unit, time; TSV import | - | - | - | command: do / undo handler (comandi.js) |
 | `peaks.settings` | correzione (`storia.campi`) | `picchi.js` | peak-finding parameters, options of the integration table | - | - | - | command: do / undo handler (comandi.js) |
-| `app.settings` | correzione (`storia.campi`) | `settings.js` | theme, palette, font, contrast, motion, merge, side by side, tolerance and decimals of the high resolution (the language reloads the page and is not undone) | - | - | - | command: do / undo handler (comandi.js) |
+| `app.settings` | correzione (`storia.campi`) | `settings.js` | theme, palette, font, contrast, motion, side by side, tolerance and decimals of the high resolution (the language reloads the page and is not undone) | - | - | - | command: do / undo handler (comandi.js) |
 | `flow.plan` | correzione (`storia.campi`) | `flow-shell.js` | steps and parameters of the plan | - | Ctrl+Z, Ctrl+Y | one entry per change | own stack of the Flow (S.undo) |
 | `draw.editor` | correzione (`storia.campi`) | `draw.js` | the structure in the editor (Ketcher) | - | Ctrl+Z, Ctrl+Y | - | own stack of the editor (Ketcher) |
 | `panel.selection` | correzione (`storia.campi`) | `eventi.js` | selected interval, selected integration, cursor | sel, isel, cur | - | - | not undone: transient selection: it moves nothing the student made |
