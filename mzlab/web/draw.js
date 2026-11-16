@@ -461,7 +461,7 @@ menuAdd({ id: "analysis", order: 70, label: "draw.ctx.analysis", title: "draw.ct
   if (c.open) analysis(); else c.open = true;
   c.scrollIntoView({ block: "nearest" }); const sm = c.querySelector("summary"); if (sm) sm.focus();
 } });
-let neutOn = true;                                                             // "Escludi la carica": on by default
+let neutOn = true;                                                             // "Exclude the charge": on by default
 document.addEventListener("change", e => { const tg = /** @type {any} */ (e.target); if (tg && tg.id === "prop-neut") { neutOn = tg.checked; showInfo(); } });
 const fmtF = (/** @type {string} */ f) => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
 document.addEventListener("click", e => { const tg = /** @type {any} */ (e.target), b = tg.closest && tg.closest("[data-cp]"); if (b) copyText(b.dataset.cp, "draw.copy.smilesToast").then(ok => { b.textContent = I18N.t(ok ? "draw.copy.done" : "draw.copy.fail"); setTimeout(() => { b.textContent = I18N.t("draw.copy.button"); }, ok ? 1200 : 2500); }); });

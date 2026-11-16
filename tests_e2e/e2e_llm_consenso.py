@@ -59,7 +59,7 @@ try:
             # a context of its own without the service worker (it would serve settings.js past the route), with the switch of settings.js turned off
             c = r.b.new_context(service_workers="block", viewport={"width": 1500, "height": 1200}); q = c.new_page(); urls = []
             q.on("request", lambda x: urls.append(x.url))
-            q.add_init_script("try{localStorage.setItem('mzlab.lang','en');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+            q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
             q.route("**/static/settings.js", lambda rt: (lambda x: rt.fulfill(response=x, body=x.text().replace("const UIP_DEMO = true", "const UIP_DEMO = false")))(rt.fetch()))
             q.goto("http://127.0.0.1:%d/" % r.port); ready(q)
             assert q.evaluate("uipProfile()") == "corso", q.evaluate("uipProfile()")
@@ -69,7 +69,7 @@ try:
             c.close()
         step("corso (UIP_DEMO off): the Flow without any element of the assistant, no llm/ file", course_flow)
         def search_off():
-            pg.evaluate("localStorage.setItem('mzlab.admin','1'); localStorage.setItem('mzlab.lang','en')"); seen.clear(); pg.reload(); ready(pg)
+            pg.evaluate("localStorage.setItem('mzlab.admin','1')"); seen.clear(); pg.reload(); ready(pg)
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
             pg.evaluate("document.getElementById('uip-g-llm').open = true")
             pg.wait_for_selector("#uip-llm #llm-on")
@@ -119,7 +119,7 @@ try:
                 assert node.stdout.readline().strip() == "ready", "the fake proxy did not start"
                 c = r.b.new_context(service_workers="block", viewport={"width": 1500, "height": 1200}, reduced_motion="reduce"); q = c.new_page(); urls = []
                 q.on("request", lambda x: urls.append(x.url))
-                q.add_init_script("try{localStorage.setItem('mzlab.lang','en');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}")
+                q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}")
                 # the host in its one constant, and in the CSP of the transport as the build writes it
                 c.route("**/static/llm/proxy-host.js", lambda rt: rt.fulfill(status=200, content_type="text/javascript", body='export const PROXY_HOST = "%s";\n' % host))
                 c.route("**/static/llm/trasporto.html", lambda rt: (lambda x: rt.fulfill(response=x, body=build_site.transport_csp(x.text(), host)))(rt.fetch()))

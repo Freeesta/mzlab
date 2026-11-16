@@ -26,7 +26,7 @@ time.sleep(1)
 URL = f"http://127.0.0.1:{PORT}/"
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(); ctx = b.new_context(locale="it-IT", viewport={"width": 1400, "height": 1000}); pg = ctx.new_page()
+        b = p.chromium.launch(); ctx = b.new_context(locale="en-US", viewport={"width": 1400, "height": 1000}); pg = ctx.new_page()
         pg.on("pageerror", lambda e: errs.append("pageerror " + str(e)))
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
@@ -95,7 +95,7 @@ try:
             assert ok, "OPFS not emptied"
         step("new session empties OPFS", new_session)
         # --- an older visit: files in IndexedDB, then the normal site
-        ctx2 = b.new_context(locale="it-IT", viewport={"width": 1400, "height": 1000}); q = ctx2.new_page()
+        ctx2 = b.new_context(locale="en-US", viewport={"width": 1400, "height": 1000}); q = ctx2.new_page()
         q.on("pageerror", lambda e: errs.append("pageerror " + str(e)))
         q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         q.goto(URL); q.wait_for_selector("#drop", timeout=120000)

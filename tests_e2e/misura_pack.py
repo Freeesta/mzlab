@@ -64,7 +64,7 @@ class Rss(threading.Thread):
 
 def launch(p, rate=1):
     b = p.chromium.launch(args=["--enable-precise-memory-info"])
-    ctx = b.new_context(viewport={"width": 1500, "height": 1000}, locale="it-IT", reduced_motion="reduce")
+    ctx = b.new_context(viewport={"width": 1500, "height": 1000}, reduced_motion="reduce")
     ctx.add_init_script(PREFS); ctx.add_init_script(INIT)
     pg = ctx.new_page()
     if rate != 1: ctx.new_cdp_session(pg).send("Emulation.setCPUThrottlingRate", {"rate": rate})
@@ -239,7 +239,7 @@ def draw_map(pg, port):
 
 def draw_msn(pg, port):
     import lib_msngrafo
-    start_page(pg, port, "?lang=en")
+    start_page(pg, port)
     pg.evaluate("window.__M.lt.length = 0; window.__M.loaf.length = 0")
     fx = Path(__file__).parent / "fixtures" / "msngrafo_80.json"
     t = pg.evaluate("performance.now()")

@@ -20,18 +20,18 @@ try:
         def tabs_gone():
             assert pg.is_visible("#hrbar") and pg.locator("#dtabs").count() == 0, "the toolbar of the bench is the only bar"
             ids = pg.evaluate("[...document.querySelectorAll('#hrbar button[data-hb]')].map(b => b.dataset.hb)"); assert ids == ["add", "type", "tree"], ids      # the other tools of the old bar live elsewhere now
-            assert not pg.is_visible("#g-add"), "the old «+ Cromatogramma» group is replaced by the menu «Cella»"
+            assert not pg.is_visible("#g-add"), "the old «+ Chromatogram» group is replaced by the menu «Cell»"
         step("toolbar instead of the tabs, with its buttons", tabs_gone)
         def no_badges():
             assert pg.locator("#flst .hrb").count() == 0 and pg.locator("#flst .fl").count() >= 1
         step("no marks (HR, DDA, profile) in the rows of the files", no_badges)
         def add_del():
             n0 = pg.evaluate("E.panels.length")
-            pg.click("#hrbar [data-hb=add]"); pg.click("#ctx >> text=Cromatogramma"); pg.wait_for_timeout(1500)
+            pg.click("#hrbar [data-hb=add]"); pg.click("#ctx >> text=Chromatogram"); pg.wait_for_timeout(1500)
             assert pg.evaluate("E.panels.length") == n0 + 1 and pg.evaluate("E.active.type") == "chrom"
             pg.click(".pnl.act .x"); pg.wait_for_timeout(500)
             assert pg.evaluate("E.panels.length") == n0
-        step("«Cella» adds a chromatogram (active), the × of the cell removes it", add_del)
+        step("«Cell» adds a chromatogram (active), the × of the cell removes it", add_del)
         def decimals():
             assert pg.locator("#hrbar [data-hb=dec]").count() == 0, "the decimals field left the bar"
             pg.evaluate("setActive(E.panels.find(p=>p.type==='spec'))"); drawer(pg, "disp"); pg.wait_for_selector("#dsp-0", timeout=5000)
@@ -57,7 +57,7 @@ try:
         def copy_xls():
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='full'))")
             pg.evaluate("window.__clip=null;Object.defineProperty(navigator,'clipboard',{value:{writeText:t=>{window.__clip=t;return Promise.resolve()}},configurable:true})")
-            pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"); pg.click("#ctx >> text=Copia i dati"); pg.wait_for_timeout(800)
+            pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"); pg.click("#ctx >> text=Copy the data"); pg.wait_for_timeout(800)
             t = pg.evaluate("window.__clip"); assert t and "\t" in t and t.startswith("# mzLab ") and "RT" in t.split("\n")[1], (t or "")[:120]      # first line = provenance
             with pg.expect_download(timeout=15000) as d: (pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"), pg.click("#ctx >> text=Excel"))
             assert d.value.suggested_filename.endswith(".xlsx"), d.value.suggested_filename
@@ -70,7 +70,7 @@ try:
                 writeText: () => Promise.reject(new DOMException('not allowed', 'NotAllowedError')),
                 write: items => { if (!live) { window.__clipNo = true; return Promise.reject(new DOMException('not allowed', 'NotAllowedError')); }
                   return items[0].getType('image/png').then(b => { window.__clipT = [items[0].types, b.size]; }); } } }); })()""")
-            pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"); pg.click("#ctx >> text=Copia l'immagine")
+            pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"); pg.click("#ctx >> text=Copy the image")
             wait_for_js(pg, "window.__clipT !== null || window.__clipNo", 15000)
             assert not pg.evaluate("window.__clipNo"), "the image reached the clipboard after the click was over (Safari refuses it and the PNG is downloaded instead)"
             types, size = pg.evaluate("window.__clipT"); assert types == ["image/png"] and size > 1000, (types, size)
@@ -113,7 +113,7 @@ try:
         step("a filter of another experiment moves the cell to it: the cell stays on the page and draws the MS2 file", cross)
         def retype():
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2'))"); n = pg.evaluate("E.panels.length")
-            pg.click("#hrbar [data-hb=type]"); pg.click("#ctx >> text=Mappa RT-m/z"); pg.wait_for_timeout(2500)
+            pg.click("#hrbar [data-hb=type]"); pg.click("#ctx >> text=RT-m/z map"); pg.wait_for_timeout(2500)
             assert pg.evaluate("E.panels.length") == n and pg.evaluate("E.active.type") == "map", pg.evaluate("E.active&&E.active.type")
         step("change of type: chromatogram → map in the same place", retype)
     r.close()
@@ -126,7 +126,7 @@ r = Run(port=8979, wd="/tmp/wd_lrbarra")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [D / "B_FullMass-t0.mzML"]); pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [D / "B_FullMass-t0.mzML"]); pg.wait_for_timeout(1000); pg.click("text=Load data"); ready(pg)
         def lr():
             assert not pg.is_visible("#hrbar") and pg.is_visible("#g-add")
         step("low-resolution world: the tabs and the old buttons are there, no toolbar of the bench", lr)
@@ -160,7 +160,7 @@ if DATA_DIR:
     try:
         with sync_playwright() as p:
             pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1400})
-            pg.set_input_files("#pick", TIO); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=3", timeout=180000); pg.click("text=Carica dati")
+            pg.set_input_files("#pick", TIO); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=3", timeout=180000); pg.click("text=Load data")
             pg.wait_for_function("E.files.length>=6", timeout=420000); pg.wait_for_timeout(4000)
             def three():
                 drawer(pg, "file")                                          # high resolution: only the first file is open at the start, a click on the box opens each of the others

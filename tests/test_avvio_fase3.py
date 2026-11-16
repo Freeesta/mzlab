@@ -26,7 +26,7 @@ const body = makeEl('body'); body.insertBefore = (el) => { reg[el.id] = el; body
 global.document = { body, readyState: 'complete', addEventListener() {}, getElementById: id => reg[id] || null, createElement: () => makeEl('') };
 global.window = global;
 Object.defineProperty(global, 'navigator', { value: { userAgent: 'test-agent', clipboard: { writeText: async t => { global.copied = t; } } }, configurable: true });
-global.I18N = { t: (k) => ({ 'load.err.engineStart': 'Impossibile avviare il motore', 'load.fail.copy': 'Copia dettagli', 'reset.all.btn': 'Reset completo' })[k] || k };
+global.I18N = { t: (k) => ({ 'load.err.engineStart': 'Cannot start the engine', 'load.fail.copy': 'Copy details', 'reset.all.btn': 'Full reset' })[k] || k };
 """
 
 
@@ -52,9 +52,9 @@ def test_banner_alert_same_text_as_error_and_restoring_box_removed():
       waiting: await pA, after: await AVVIO.pronto() }}));
     """)
     assert res["role"] == "alert"
-    assert res["msg"] == res["errore"] == "Impossibile avviare il motore"
+    assert res["msg"] == res["errore"] == "Cannot start the engine"
     assert res["shown"] == 1
-    assert res["copia"] == "Copia dettagli" and res["reset"] == "Reset completo"
+    assert res["copia"] == "Copy details" and res["reset"] == "Full reset"
     assert res["openingHidden"] is True and res["wdataHidden"] is False and res["faseHidden"] is True
     assert res["waiting"] is False and res["after"] is False
 
@@ -102,7 +102,7 @@ def test_failure_before_the_module_loaded_is_replayed():
     const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     console.log(JSON.stringify({{ stato: AVVIO.stato, msg: reg['avvio-errore-msg'] && reg['avvio-errore-msg'].textContent }}));
     """)
-    assert res["stato"] == "failed" and res["msg"] == "Impossibile avviare il motore"
+    assert res["stato"] == "failed" and res["msg"] == "Cannot start the engine"
 
 
 def test_reset_in_progress_writes_no_session_marker_or_row():

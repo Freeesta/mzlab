@@ -258,7 +258,7 @@ try:
             pg = c.new_page(); pg.goto(f"http://127.0.0.1:{r.port}/")
             wait_for_js(pg, "!!window.qqFailed", 60000)
             assert pg.evaluate("window.qqFailed") == "load.err.noStorage", pg.evaluate("[window.qqFailed, window.MZLAB_LR_ERR]")
-            wait_for_js(pg, "/finestra privata|private window/.test(document.body.innerText)", 10000)     # the reader sees it, in the language of the page
+            wait_for_js(pg, "/private window/.test(document.body.innerText)", 10000)     # the reader sees it
             c.close()
         step("a private window (the browser storage refused): the loading screen says so", private_window)
         b.close()

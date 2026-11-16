@@ -1,4 +1,4 @@
-"""Interface languages: the engine mzlab/web/i18n.js (run with node), the catalogs and the rules of tools/controlla_i18n.py."""
+"""Interface texts (English only): the engine mzlab/web/i18n.js (run with node), the catalogs and the rules of tools/controlla_i18n.py."""
 import json
 import shutil
 import subprocess
@@ -18,17 +18,19 @@ def node(code: str):
 
 
 @needs_node
-def test_default_language_is_italian_whatever_the_browser():
-    r = node("console.log(JSON.stringify([I.detect('', null, 'it-IT'), I.detect('', null, 'IT'), I.detect('', null, 'en-US'), I.detect('', null, 'fr-FR'),"
-             "I.detect('', null, 'de'), I.detect('', null, undefined), I.detect('', null, 'es-ES')]))")
-    assert r == ["it"] * 7
+def test_the_language_is_always_english_and_other_catalogs_or_stored_choices_are_ignored():
+    r = node("""I.add('it', {only: 'solo italiano'});
+    console.log(JSON.stringify([I.lang, [...I.LANGS], typeof I.set, typeof I.detect, I.t('only'), [...I.missing]]))""")
+    assert r == ["en", ["en"], "undefined", "undefined", "only", ["only"]]
 
 
 @needs_node
-def test_explicit_choice_wins_over_the_browser_and_the_address_over_both():
-    r = node("console.log(JSON.stringify([I.detect('', 'it', 'en-US'), I.detect('', 'en', 'it-IT'), I.detect('?lang=en', 'it', 'it-IT'),"
-             "I.detect('?x=1&lang=it', 'en', 'en-US'), I.detect('?lang=xx', null, 'it-IT'), I.detect('', 'garbage', 'it-IT')]))")
-    assert r == ["it", "en", "en", "it", "it", "it"]
+def test_a_language_stored_by_an_older_version_is_ignored_silently():
+    # mzlab.lang = "it" in localStorage and ?lang=it in the address: the page still starts in English, with no error
+    out = subprocess.run(["node", "-e", "globalThis.localStorage = { getItem: k => (k === 'mzlab.lang' ? 'it' : null), setItem() {} };"
+                          "globalThis.location = { search: '?lang=it' }; const I = require(" + json.dumps(str(JS)) + ");"
+                          "I.add('en', {k: 'Hello'}); console.log(JSON.stringify([I.lang, I.t('k')]))"], check=True, capture_output=True, text=True, encoding="utf-8").stdout
+    assert json.loads(out) == ["en", "Hello"]
 
 
 @needs_node
@@ -38,10 +40,10 @@ def test_messages_placeholders_numbers_and_plurals():
     const f = I.format;
     console.log(JSON.stringify([f('Hello {name}', {name: 'Ada'}, 'en'), f('{n, plural, one {# file} other {# files}}', {n: 1}, 'en'),
       f('{n, plural, one {# file} other {# files}}', {n: 3}, 'en'), f('{n, plural, =0 {no files} one {# file} other {# files}}', {n: 0}, 'en'),
-      f('{x, number}', {x: 12345.5}, 'en'), f('{x, number}', {x: 12345.5}, 'it'), f('{missing}', {}, 'en'),
+      f('{x, number}', {x: 12345.5}, 'en'), f('{missing}', {}, 'en'),
       f('{n, plural, one {{n} of {name}} other {{n} of {name}}}', {n: 2, name: 'x'}, 'en'),
-      I.t('a', {name: 'Ada'}) === (I.lang === 'it' ? 'Ciao Ada' : 'Hello Ada'), I.t('no.such.key'), I.num(3.14159, 2), I.num(5), I.num(null)]))""")
-    assert r == ["Hello Ada", "1 file", "3 files", "no files", "12345.5", "12345.5", "{missing}", "2 of x", True, "no.such.key", "3.14", "5", ""]
+      I.t('a', {name: 'Ada'}) === 'Hello Ada', I.t('no.such.key'), I.num(3.14159, 2), I.num(5), I.num(null)]))""")
+    assert r == ["Hello Ada", "1 file", "3 files", "no files", "12345.5", "{missing}", "2 of x", True, "no.such.key", "3.14", "5", ""]
 
 
 @needs_node
@@ -54,23 +56,17 @@ def test_number_formats_are_built_once_per_decimals():
     assert r[0] == 3 and r[1] == ["0.0", "0", "0"] and r[2] == 1500 and r[3:5] == r[5]
 
 @needs_node
-def test_a_key_missing_in_english_falls_back_to_italian():
-    r = node("""I.add('it', {only: 'solo italiano'}); console.log(JSON.stringify([I.t('only'), [...I.missing]]))""")
-    assert r == ["solo italiano", []]
-
-
-@needs_node
 def test_until_the_rest_of_the_catalog_runs_a_key_gives_empty_text_never_the_key():
     # the site's first part names the rest (awaitRest); a key of the rest asked before it gives "" and is noted in `late`; static elements keep
     # their text and are filled by done()
-    r = node("""I.add('it', {'p.first': 'primo'}); I.awaitRest('lang/it-resto.js'); const err = console.error; const said = []; console.error = m => said.push(m);
-      const mk = k => { const a = {'data-i18n': k}; return { textContent: 'testo della pagina', isConnected: true, getAttribute: n => (n in a ? a[n] : null) }; };
+    r = node("""I.add('en', {'p.first': 'first'}); I.awaitRest('lang/en-rest.js'); const err = console.error; const said = []; console.error = m => said.push(m);
+      const mk = k => { const a = {'data-i18n': k}; return { textContent: 'page text', isConnected: true, getAttribute: n => (n in a ? a[n] : null) }; };
       const els = [mk('p.first'), mk('p.later')], root = { querySelectorAll: () => els };
       const before = [I.rest, I.t('p.first'), I.t('p.later'), I.t('p.later'), [...I.late], said.length];
       I.apply(root); const held = els.map(e => e.textContent);
-      I.add('it', {'p.later': 'dopo'}); I.done(); console.error = err;
+      I.add('en', {'p.later': 'later'}); I.done(); console.error = err;
       console.log(JSON.stringify([before, held, els.map(e => e.textContent), I.rest, I.t('p.later')]))""")
-    assert r == [["lang/it-resto.js", "primo", "", "", ["p.later"], 1], ["primo", "testo della pagina"], ["primo", "dopo"], "", "dopo"]
+    assert r == [["lang/en-rest.js", "first", "", "", ["p.later"], 1], ["first", "page text"], ["first", "later"], "", "later"]
 
 
 def test_the_checker_passes_on_the_repository():
@@ -112,8 +108,8 @@ def test_api_answers_with_keys():
 
 
 @needs_node
-def test_numbers_always_use_the_point_in_both_languages():
-    r = node("""I.add('it', {k: '{x, number} · {n, plural, other {# file}}'}); I.set && I.set('it');
+def test_numbers_always_use_the_point():
+    r = node("""I.add('en', {k: '{x, number} · {n, plural, other {# file}}'});
     console.log(JSON.stringify([I.fix(1234.5, 2), I.fix(0.5, 1), I.t('k', {x: 1234567.25, n: 12345.5})]))""")
     assert r == ["1234.50", "0.5", "1234567.25 · 12345.5 file"]
 
@@ -121,6 +117,6 @@ def test_numbers_always_use_the_point_in_both_languages():
 @needs_node
 def test_app_name_fills_in_without_parameters():
     """{app} comes from window.APP_NAME (appname.js) even when the caller passes no parameters; an explicit parameter still wins."""
-    r = node("globalThis.APP_NAME='NomeProva'; I.add('it', {'k.a': '{app} è gratis', 'k.b': '{app} e {n}'}); I.add('en', {'k.a': '{app} is free', 'k.b': '{app} and {n}'});"
-             "console.log(JSON.stringify([I.t('k.a'), I.t('k.a', {}), I.t('k.b', {n: 2}), I.t('k.a', {app: 'Altro'})]))")
-    assert r == ["NomeProva è gratis", "NomeProva è gratis", "NomeProva e 2", "Altro è gratis"]
+    r = node("globalThis.APP_NAME='NameTest'; I.add('en', {'k.a': '{app} is free', 'k.b': '{app} and {n}'});"
+             "console.log(JSON.stringify([I.t('k.a'), I.t('k.a', {}), I.t('k.b', {n: 2}), I.t('k.a', {app: 'Other'})]))")
+    assert r == ["NameTest is free", "NameTest is free", "NameTest and 2", "Other is free"]

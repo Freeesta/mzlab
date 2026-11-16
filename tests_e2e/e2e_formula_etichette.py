@@ -31,16 +31,16 @@ RUN = "axe.run(%s, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a'
 try:
     with sync_playwright() as p:
         b = p.chromium.launch()
-        def fresh(admin=True, lang="en", touch=False):
+        def fresh(admin=True, touch=False):
             c = b.new_context(viewport={"width": 1400, "height": 1000}, has_touch=touch, reduced_motion="reduce"); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e)))
             if admin: pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
-            pg.goto(f"http://127.0.0.1:{PORT}/?lang={lang}"); pg.wait_for_selector("#drop", timeout=120000)
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
             if admin:
                 pg.wait_for_selector(TAB, timeout=30000); pg.wait_for_function("window.QTOOLS.list().some(t => t.id === 'tpmine')", timeout=60000)
                 pg.click(TAB); pg.wait_for_selector("#tp-go")
             return pg
-        pg = fresh(True, "en")
+        pg = fresh(True)
         def form():
             assert pg.get_attribute("#tp-mol", "placeholder") == "Neutral formula"
             assert "formula" in (pg.get_attribute("#tp-mol", "aria-label") or "").lower()

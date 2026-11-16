@@ -1,3 +1,3 @@
 {
-  "cap.missing": "Avviso accanto a un comando disattivato perché il browser non ha la funzione; {funzione} = nome della funzione (es. Mappa 3D); segue il link all'app."
+  "cap.missing": "Notice next to a command that is disabled because the browser lacks the feature; {funzione} = name of the feature (e.g. 3D map); the link to the app follows."
 }

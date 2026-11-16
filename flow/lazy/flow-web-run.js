@@ -63,6 +63,7 @@
     const w = (/** @type {any} */ m) => ({ jsUrl: u(m.js), wasmUrl: u(m.wasm), sha256: m.sha256 });
     pool = mod.createFeatPool({ workerUrl: url, size: mod.poolSize(false, navigator.hardwareConcurrency), wasm: { feat: w(man.feat), proofs: w(man.proofs), ...(man.interp ? { interp: w(man.interp) } : {}), ...(man.table ? { table: w(man.table) } : {}), ...(man.finder_lr ? { finder_lr: w(man.finder_lr) } : {}), ...(man.attributio_ms2 ? { attributio_ms2: w(man.attributio_ms2) } : {}), ...(man.formula ? { formula: w(man.formula) } : {}), ...(man.flowtab ? { flowtab: w(man.flowtab) } : {}), ...(man.flowstat ? { flowstat: w(man.flowstat) } : {}), ...(man.flowcal ? { flowcal: w(man.flowcal) } : {}), ...(man.chem ? { chem: w(man.chem) } : {}), ...(man.msnfigura ? { msnfigura: w(man.msnfigura) } : {}), ...(man.molkit ? { molkit: w(man.molkit) } : {}) } });
     pool.featWasm = w(man.feat);
+    pool.rotteWasm = man.rotte ? w(man.rotte) : null;   // the recipe and the lineage of a job read the plan: the module of the planner (worker-flow-web.js)
     pool.limit = Math.max(1, mod.poolSize(false, navigator.hardwareConcurrency));
     return pool;
   };
@@ -81,7 +82,7 @@
       };
       w.addEventListener("message", done);
       w.addEventListener("error", () => { estimator = null; reject(Object.assign(new Error("estimator"), { key: "error.featWorker", params: {} })); }, { once: true });
-      w.postMessage({ id, wasm: p.featWasm, budgetMb: Number(G.MZLAB_RUST && G.MZLAB_RUST.budgetMb) || 0, ...m }, move);
+      w.postMessage({ id, wasm: p.featWasm, rotte: p.rotteWasm, budgetMb: Number(G.MZLAB_RUST && G.MZLAB_RUST.budgetMb) || 0, ...m }, move);
     });
   };
 
@@ -94,7 +95,7 @@
   /** what detecting the index at the OPFS `path` asks for: { mb, via } from the Rust rule (`trace_stima`), read from its header @param {string} path @param {string} recipe */
   const stimaDetect = async (path, recipe) => ask({ op: "detect", paths: [path], recipe });
 
-  /** the recipe text the pool runs the job of `inst` with (`flow_job_recipe` of the engine, the recipe `flow run` builds from the lineage of the job: its line of the plan, presets
+  /** the recipe text the pool runs the job of `inst` with (`flow_job_recipe` of the `rotte` .wasm, the recipe `flow run` builds from the lineage of the job: its line of the plan, presets
    * included); with `filled` (the default) an alignment a gap filling reads takes the recipe of that filling, since the pool aligns and fills in one call @param {any} plan @param {any} registry @param {any} inst @param {boolean} [filled] */
   const recipeOf = (plan, registry, inst, filled = true) => {
     const text = JSON.stringify(F.exportPlan(plan)), key = [inst.id, filled, text].join("\n");

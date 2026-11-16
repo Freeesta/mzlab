@@ -282,6 +282,7 @@ fn compare_spectra(label: &str, want: &Run, got: &Run, fixed: &Fixed) -> usize {
         use mzlab_core::wiff::modes::{CODE_NEUTRAL_LOSS, CODE_PRECURSOR_ION};
         let code = fixed(&e.id);
         let no_precursor = matches!(code, Some((CODE_NEUTRAL_LOSS, _)));
+        // a neutral-loss scan has no precursor and no window, whatever the reference lists
         assert_eq!(
             g.precursor.is_some(),
             e.precursor.is_some() && !no_precursor,

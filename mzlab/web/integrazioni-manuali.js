@@ -187,7 +187,7 @@ async function sync() {
   if (sig !== st.sig) {
     st.sig = sig; st.recs = recs; st.ks = ks; st.windows = windows;
     await ask();
-    if (sig === st.sig) draw();
+    if (sig === st.sig) { draw(); for (const r of recs) if (r.it.splits) G.draw(r.p); }   // a split window's labels come from the new rows
   } else {
     st.recs = recs;
     const el = card(), ws = document.getElementById("v-workspace");
@@ -204,6 +204,16 @@ async function valleys(it, depth) {
     const r = await fetch(`api/manvalley?k=${m[1]}&depth=${depth}&w=${encodeURIComponent(w)}`);
     return r.ok ? JSON.parse(await r.text()).splits : null;
   } catch (_) { return null; }
+}
+
+/** The parts of a split record as the engine measured them (the rows of the table: apex, area, height), left to right; null when the record is not split or the
+ * table does not have its parts yet. Drawn as one label each (grafici.js). @param {any} it */
+function parts(it) {
+  const rec = st.recs.find(r => r.it === it); if (!rec || !it.splits || !it.splits.length) return null;
+  const all = rows(st.csv), head = all[0] || [], c = (/** @type {string} */ n) => head.indexOf(n), f = E.files[rec.k], lo = +Math.min(it.a, it.b).toFixed(3), hi = +Math.max(it.a, it.b).toFixed(3);
+  const mine = all.slice(1).filter(r => r[c("sample")] === sampleOf(f && f.file || "") && r[0] === rec.label && +r[c("start_min")] >= lo && +r[c("end_min")] <= hi);
+  const cuts = new Set(it.splits.filter((/** @type {number} */ x) => x > lo && x < hi)).size;
+  return mine.length > 1 && mine.length === cuts + 1 ? mine.map(r => ({ rt: +r[c("apex_rt_min")], area: +r[c("area")], height: +r[c("height")], wait: false })) : null;
 }
 
 /** @type {WeakMap<any, { v: string | undefined }>} */ const SN = new WeakMap();
@@ -226,5 +236,5 @@ let timer = /** @type {ReturnType<typeof setTimeout> | undefined} */ (undefined)
 /** Every redraw of a panel calls this: one sync after the last of a burst (a dragged edge redraws at every move). */
 const soon = () => { clearTimeout(timer); timer = setTimeout(sync, 150); };
 
-G.MANINT = { sync: soon, now: sync, snr, valleys, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file) }) };
+G.MANINT = { sync: soon, now: sync, snr, valleys, parts, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file) }) };
 soon();

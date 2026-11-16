@@ -3,7 +3,7 @@
 // Minimal .xlsx writer (no library): an Excel file is a zip of a few XML files. Here the zip is "stored" (no compression)
 // with a CRC32 per file, which every reader accepts. Numbers are real numeric cells, text is written inline.
 //
-//   xlsxBuild([{ name: "Dati", head: ["RT (min)", "Intensità (cps)"], rows: [[1.2, 3400], ...], widths: [14, 18] }, ...]) -> Uint8Array
+//   xlsxBuild([{ name: "Data", head: ["RT (min)", "Intensity (cps)"], rows: [[1.2, 3400], ...], widths: [14, 18] }, ...]) -> Uint8Array
 //   dlx("nome.xlsx", sheets)       downloads it (works in the local program and in the browser version: Blob)
 //   dlc("nome.xlsx", sheets)       the first sheet as .csv (same name, same data)
 //
@@ -90,7 +90,7 @@ async function dlx(name, sheets, prov = undefined) {
   dl(/\.xlsx$/i.test(name) ? name : name + ".xlsx", xlsxBuild(sheets), XLSX_MIME);
 }
 // CSV of the FIRST sheet (the data: the extra sheets, metadata and provenance, are not repeated): UTF-8 with BOM. `o` = {sep, dec}: "," and "." by default;
-// dlc() asks for ";" and "," when the interface is Italian, which is what Italian Excel opens into columns. Numbers keep their full precision.
+// dlc() writes "," and "." (English convention). Numbers keep their full precision.
 /** @param {{ head?: any[], rows: any[][] }} sheet @param {{ sep?: string, dec?: string }} [o] */
 function csvBuild(sheet, o = {}) {
   const sep = o.sep || ",", dec = o.dec || ".";
@@ -100,7 +100,7 @@ function csvBuild(sheet, o = {}) {
 }
 /** download the first sheet as .csv (same name as the .xlsx). The header is always row 1: the provenance line (if any) closes the file as one quoted `# mzLab ...` row. @param {string} name @param {any[]} sheets @param {any} [prov] */
 async function dlc(name, sheets, prov = undefined) {
-  const it = typeof I18N !== "undefined" && I18N.lang === "it", o = it ? { sep: ";", dec: "," } : {};
+  const o = {};
   let text = csvBuild(sheets[0], o);
   if (prov !== false) {
     const withLine = await PROV.tsv(text, prov || {}), i = withLine.indexOf("\n");

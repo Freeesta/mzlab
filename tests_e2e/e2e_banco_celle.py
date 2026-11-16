@@ -92,7 +92,7 @@ r = Run(port=8976, wd="/tmp/wd_lrcelle")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [D / "B_FullMass-t0.mzML"]); pg.wait_for_selector("text=Carica dati"); pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [D / "B_FullMass-t0.mzML"]); pg.wait_for_selector("text=Load data"); pg.click("text=Load data"); ready(pg)
         def lr():
             assert not pg.evaluate("document.body.classList.contains('hrw')")
             assert pg.locator(".bfw").count() == 0

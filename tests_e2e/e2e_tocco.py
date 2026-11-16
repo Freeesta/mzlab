@@ -20,7 +20,7 @@ try:
         def pen(kind, x, y, **kw): cdp.send("Input.dispatchMouseEvent", {"type": kind, "x": x, "y": y, "button": "left" if kind != "mouseMoved" or kw.get("buttons") else "none", "buttons": kw.get("buttons", 0), "clickCount": 1 if kind != "mouseMoved" else 0, "pointerType": "pen"})
         def wait(ms=250): hold(pg, ms)        # gestures are timed (long press, double tap): real pauses
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); wait(1000)
-        pg.click("text=Carica dati"); wait(4500)
+        pg.click("text=Load data"); wait(4500)
         pg.evaluate("setTab('full',true)"); wait(800)
         CH = "E.panels.find(p => p.type === 'chrom' && p.tab === 'full')"
         pg.evaluate(f"{CH}.el.scrollIntoView({{block:'start'}})"); wait(400)

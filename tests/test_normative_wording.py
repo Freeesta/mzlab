@@ -22,7 +22,7 @@ def _page_section():
 
 def _lang_texts():
     out = []
-    for f in ("it.js", "en.js", "it/normative.js", "en/normative.js"):
+    for f in ("en.js", "en/normative.js"):
         for line in (ROOT / "mzlab/web/lang" / f).read_text(encoding="utf-8").splitlines():
             if re.search(r'["\']?(normative|regulatory)\.', line):
                 out.append(line)

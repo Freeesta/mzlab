@@ -22,7 +22,6 @@ const HELP = {
   "origine": [I18N.t("help.origine.title"), I18N.t("help.origine.body")],
   "liste": [I18N.t("help.liste.title"), I18N.t("help.liste.body")],
   "losses": [I18N.t("help.losses.title"), I18N.t("help.losses.body")],
-  "language": [I18N.t("help.language.title"), I18N.t("help.language.body")],
   "header": ["", I18N.t("help.header.body")],
 };
 
