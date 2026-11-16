@@ -50,3 +50,33 @@ fn refuses_what_is_not_a_workflow() {
     );
     assert_eq!(key(r#"{"steps":[{"step":"x@1"}]}"#), "err.flow.instance");
 }
+
+#[test]
+fn step_ids_that_are_not_plain_file_names_are_refused() {
+    let plan = |id: &str| {
+        let id = id.replace('\\', "\\\\");
+        format!(
+            r#"{{"format":"mzflow/2","inputs":[],"steps":[{{"id":"{id}","step":"graph.make@1"}}]}}"#
+        )
+    };
+    let long = "a".repeat(129);
+    for id in [
+        "",
+        "/tmp/x",
+        "a/b",
+        "a\\b",
+        "..",
+        "../x",
+        ".hidden",
+        "C:x",
+        "a b",
+        "é",
+        long.as_str(),
+    ] {
+        let e = parse(plan(id).as_bytes()).unwrap_err();
+        assert_eq!(e.key, "err.flow.instance.id", "{id:?}");
+    }
+    for id in ["graph", "step_1", "a.b-c", "A9", "a".repeat(128).as_str()] {
+        assert!(parse(plan(id).as_bytes()).is_ok(), "{id:?}");
+    }
+}

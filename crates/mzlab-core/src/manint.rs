@@ -1,5 +1,6 @@
 //! The table of the integrations the user drew by hand on transition / SIM traces: one row per integration window (sample × channel × peak), grouped
-//! by channel so a column of areas pastes into a sheet, an optional `sum` row of the areas per channel. The engine measures every window again from
+//! by channel so a column of areas pastes into a sheet, an optional `sum` row of the areas per channel. The columns are the ones on screen (the method's
+//! name of the channel is not written: the channel is its m/z); the area sits right after the name the user gave. The engine measures every window again from
 //! the traces, so the site (`mzlab-wasm` `manual_table`), the app (`rpc.rs` op `manint`) and `mzlab-cli manual-table` write the same bytes.
 //! Baselines as the Data view draws them: `zero`, `line` (`baseline::peak_area`) and `edges` (the page's line between the 3-point means of the edges).
 //! A window with `splits` gives one row per part (`valley::parts`, drop lines on the window's line, `overlap` = `drop`, `pv` = Hp/Hv).
@@ -16,7 +17,7 @@ use crate::valley;
 pub const BASELINES: [&str; 3] = ["zero", "edges", "line"];
 /// The header of the table.
 pub const HEAD: &str =
-    "channel,name,sample,start_min,end_min,apex_rt_min,area,height,snr,baseline,overlap,pv,label\n";
+    "channel,sample,label,area,start_min,end_min,apex_rt_min,height,snr,baseline,overlap,pv\n";
 /// Smoothing and points across the peak of the S/N (`peak1d::find_peak` around the window, the defaults of `chrom.transitions@2`).
 const SN_SMOOTH: usize = 3;
 const SN_POINTS: usize = 3;
@@ -343,31 +344,31 @@ pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
             .then(x.1.a.total_cmp(&y.1.a))
     });
     let mut out = String::from(HEAD);
-    for (ch, (_, label, name)) in keys.iter().enumerate() {
+    for (ch, (_, label, _)) in keys.iter().enumerate() {
         let mine: Vec<&Row> = rows.iter().filter(|r| r.0 == ch).map(|r| &r.1).collect();
         if mine.is_empty() {
             continue;
         }
-        let head = format!("{},{}", field(label), field(name));
+        let head = field(label);
         for r in &mine {
             out += &format!(
-                "{head},{},{:.3},{:.3},{:.3},{},{},{},{},{},{},{}\n",
+                "{head},{},{},{},{:.3},{:.3},{:.3},{},{},{},{},{}\n",
                 field(&samples[r.file].0),
+                field(&labels[r.w]),
+                sci(r.area, 5),
                 r.a,
                 r.b,
                 r.apex,
-                sci(r.area, 5),
                 sci(r.height, 5),
                 r.snr.map_or(String::new(), |v| format!("{v:.1}")),
                 r.base,
                 if r.drop { "drop" } else { "" },
-                r.pv.map_or(String::new(), |v| format!("{v:.1}")),
-                field(&labels[r.w])
+                r.pv.map_or(String::new(), |v| format!("{v:.1}"))
             );
         }
         if sums {
             out += &format!(
-                "{head},sum,,,,{},,,,,,\n",
+                "{head},sum,,{},,,,,,,,\n",
                 sci(mine.iter().map(|r| r.area).sum(), 5)
             );
         }

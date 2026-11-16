@@ -107,16 +107,69 @@ impl State {
     }
 }
 
-/// `path` (relative, inside the folder) written under `folder`; refuses anything that leaves it.
+/// `path` (relative, inside the folder) written under `folder`. Both come from the window, so the
+/// write is held to a plain, non-hidden `.csv` name under an existing absolute folder, checked again
+/// after symlinks are resolved: no absolute path, `..`, drive or stream (`:`), dot file or other extension.
 fn write_in(folder: &str, path: &str, text: &str) -> Result<bool> {
-    let rel = std::path::Path::new(path);
-    let inside = rel
-        .components()
-        .all(|c| matches!(c, std::path::Component::Normal(_)));
-    if folder.is_empty() || path.is_empty() || !inside {
+    use std::path::{Component, Path};
+    if folder.is_empty() || path.is_empty() {
         return Ok(false);
     }
-    let dest = std::path::Path::new(folder).join(rel);
+    let refuse = || {
+        Error::new("error.attributio").with(
+            "detail",
+            format!("path outside the campaign folder: {path}"),
+        )
+    };
+    let rel = Path::new(path);
+    let plain = rel.components().all(|c| match c {
+        Component::Normal(n) => n
+            .to_str()
+            .is_some_and(|n| !n.starts_with('.') && !n.contains(':') && !n.contains('\\')),
+        _ => false,
+    });
+    let csv = rel
+        .extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case("csv"));
+    // Windows device names (`CON`, `NUL`, `COM1`, ...) open a device whatever the extension
+    let device = rel.components().any(|c| {
+        let stem = c
+            .as_os_str()
+            .to_str()
+            .unwrap_or("")
+            .split('.')
+            .next()
+            .unwrap_or("")
+            .to_ascii_uppercase();
+        matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+            || ((stem.starts_with("COM") || stem.starts_with("LPT"))
+                && stem.len() == 4
+                && stem.as_bytes().get(3).is_some_and(u8::is_ascii_digit))
+    });
+    if !plain || !csv || device || !Path::new(folder).is_absolute() {
+        return Err(refuse());
+    }
+    let base = std::fs::canonicalize(folder).map_err(|_| refuse())?;
+    if !base.is_dir() {
+        return Err(refuse());
+    }
+    let dest = base.join(rel);
+    // containment is checked on what exists before anything is created: walking down, every
+    // existing ancestor must resolve inside the folder (a link out is refused, not followed)
+    let mut at = base.clone();
+    for c in rel.parent().into_iter().flat_map(Path::components) {
+        at.push(c);
+        if std::fs::symlink_metadata(&at).is_ok() {
+            let real = std::fs::canonicalize(&at).map_err(|_| refuse())?;
+            if !real.starts_with(&base) || !real.is_dir() {
+                return Err(refuse());
+            }
+        }
+    }
+    if std::fs::symlink_metadata(&dest).is_ok_and(|m| m.file_type().is_symlink()) {
+        return Err(refuse());
+    }
     if let Some(dir) = dest.parent() {
         std::fs::create_dir_all(dir).map_err(|_| Error::new("error.io"))?;
     }

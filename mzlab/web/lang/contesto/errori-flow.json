@@ -19,6 +19,7 @@
   "err.flow.insilico.package": "Messaggio d'errore del motore; {detail} = dettaglio tecnico.",
   "err.flow.insilico.piece": "Messaggio d'errore del motore; {file} = nome del file.",
   "err.flow.instance": "Messaggio d'errore del motore; {field} = campo.",
+  "err.flow.instance.id": "Messaggio d'errore del motore; {instance} = nome del passo rifiutato perché diventa un nome di file.",
   "err.flow.level.profile": "Messaggio d'errore del motore; {profile} = profilo.",
   "err.flow.level.standards": "Messaggio d'errore del motore; {column} = nome della colonna.",
   "err.flow.link.hypotheses": "Messaggio d'errore del motore; {parent} = precursore.",

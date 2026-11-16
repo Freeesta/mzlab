@@ -33,6 +33,17 @@ fn reference(s: &str, instance: &str, port: &str) -> Result<Ref> {
     }
 }
 
+/// An instance id becomes a file name in the run folder (`<id>.json`, `.csv`, ...), so it must stay a
+/// plain name: `[A-Za-z0-9_.-]`, no leading dot (no `..`, no hidden file), at most 128 bytes.
+pub fn instance_id_ok(id: &str) -> bool {
+    !id.is_empty()
+        && id.len() <= 128
+        && !id.starts_with('.')
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'.' || b == b'-')
+}
+
 /// `id@version` to (id, version).
 fn step_ref(s: &str, instance: &str) -> Result<(String, u32)> {
     let bad = || {
@@ -50,6 +61,9 @@ fn step_ref(s: &str, instance: &str) -> Result<(String, u32)> {
 
 fn instance(v: &Value) -> Result<Instance> {
     let id = text(v, "id").ok_or_else(|| Error::new("err.flow.instance").with("field", "id"))?;
+    if !instance_id_ok(&id) {
+        return Err(Error::new("err.flow.instance.id").with("instance", &id));
+    }
     let step = text(v, "step").ok_or_else(|| {
         Error::new("err.flow.instance")
             .with("instance", &id)
