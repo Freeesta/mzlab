@@ -154,13 +154,13 @@ fn a_member_held_whole_past_the_limit_names_the_sizes() {
     let e = l.fits(300 << 20).unwrap_err();
     assert_eq!(
         e.to_json(),
-        r#"{"error_key":"error.memoryBudget","params":{"fase":"whole","stima_mb":"300","budget_mb":"192","libero_mb":"192","eccesso_mb":"108"}}"#
+        r#"{"error_key":"error.memoryBudget","params":{"fase":"whole","stima_mb":"300","budget_mb":"192"}}"#
     );
-    // part of the limit already taken by other members (an Agilent folder): the shortfall is against what is left
+    // part of the limit already taken by other members (an Agilent folder): the estimate is all that would be held
     let e = l.fits_in(50 << 20, 40 << 20).unwrap_err();
     assert!(
         e.to_json()
-            .contains(r#""libero_mb":"40","eccesso_mb":"10""#),
+            .contains(r#""stima_mb":"202","budget_mb":"192"}"#),
         "{}",
         e.to_json()
     );
