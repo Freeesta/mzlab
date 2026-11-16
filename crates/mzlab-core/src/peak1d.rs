@@ -1,5 +1,5 @@
 //! `peaks.find_peak` of mzFinder for one trace: smoothing, the peak around a time (or the highest one), noise
-//! from the far points, edges, points across the peak, area (linear baseline removed, counts x s), FWHM (s) and S/N. Used for the MRM traces.
+//! from the far points, edges, points across the peak, area (linear baseline removed, counts x s), FWHM (s, interpolated at half height) and S/N. Used for the MRM traces.
 
 use crate::peakq_lr::near_idx;
 
@@ -131,6 +131,17 @@ pub fn area_against(
     Some((v.area * 60.0, v.below * 60.0))
 }
 
+/// Time where `ys` crosses `half` between the point `i` (at or above it) and its outer neighbour `o`, by linear interpolation; `rt[i]` when
+/// `o` is outside the trace or not below `half` (a point-wise FWHM is 15 % short at 1.5 points per sigma).
+fn crossing(rt: &[f64], ys: &[f64], i: usize, o: usize, half: f64) -> f64 {
+    match ys.get(o) {
+        Some(&yo) if yo < half && ys[i] > yo => {
+            rt[i] + (ys[i] - half) / (ys[i] - yo) * (rt[o] - rt[i])
+        }
+        _ => rt[i],
+    }
+}
+
 /// `find_peak(rt, y, rt_center, rt_tol, smooth_k, min_points)`; `None` for an empty trace or no point in the window.
 pub fn find_peak(
     rt: &[f64],
@@ -164,7 +175,10 @@ pub fn find_peak(
     let half = base + height / 2.0;
     let above: Vec<usize> = (l..=r).filter(|&i| ys[i] >= half).collect();
     let fwhm = match (above.first(), above.last()) {
-        (Some(&a), Some(&b)) if above.len() >= 2 => (rt[b] - rt[a]) * 60.0,
+        (Some(&a), Some(&b)) if above.len() >= 2 => {
+            (crossing(rt, &ys, b, b + 1, half) - crossing(rt, &ys, a, a.wrapping_sub(1), half))
+                * 60.0
+        }
         _ => 0.0,
     };
     Some(Found {
