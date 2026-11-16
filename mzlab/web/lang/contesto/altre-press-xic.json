@@ -87,6 +87,7 @@
   "unopen.known.conv.one": "Like unopen.known.conv for a single file; {label} = vendor and format.",
   "unopen.more": "Last row of the list of names in the single notice; {n} = how many names are not shown.",
   "unopen.other": "Row of the single notice: files ignored because they are not known mass spectrometry files; {n} = how many, {names} = first names.",
+  "unopen.other.one": "Same notice when exactly one file is ignored; {names} = its name.",
   "unopen.err.one": "Read error row for a single file in the single notice; {name} = file, {message} = reason.",
   "unopen.err.many": "Read error row that is the same for several files; {n} = how many, {names} = first names, {message} = reason.",
   "sub.chip": "{file} = name of the reference file (with \"(auto)\" if chosen automatically); {f} = factor; {norm} = normalization.",
