@@ -549,8 +549,6 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 .cq-tolf{flex-direction:row!important;align-items:center;gap:6px!important;flex:none!important}
 .cq-tolf input{width:6ch!important;min-width:0;text-align:right;margin:0!important;min-height:32px;box-sizing:border-box;font-variant-numeric:tabular-nums}
 #al-tabs{display:flex;flex-wrap:wrap;margin:4px 0 2px}#al-tabs button{flex:1 1 0;min-height:32px;line-height:1.15;padding:2px 4px}
-#al-tabs .cq-n[hidden]{display:none}
-#al-tabs [aria-selected="true"] .cq-n{color:inherit;border-color:currentColor}
 .al-body .cq-flat .cq-l{margin-left:0;list-style:none}.al-body .cq-flat .cq-l li{border-bottom:1px solid var(--line);padding:4px 2px;margin:0}
 .cq-sub{font-weight:600;margin:6px 0 2px;font-size:12px}
 @media (pointer:coarse){.al-calc-tg,#al-tabs button,.cq-tolf input{min-height:40px}#calcdlg.sb-docked .cpad button{min-height:40px}}

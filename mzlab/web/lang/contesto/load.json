@@ -40,7 +40,6 @@
   "load.dup.one": "Avviso breve nella schermata di caricamento quando si sceglie di nuovo un file già in elenco (stesso nome e dimensione). {name} = nome del file.",
   "load.dup.many": "Come load.dup.one, per più file insieme. {n} = numero di file ignorati.",
   "load.cell.of": "Nome accessibile di una cella della tabella di caricamento; {f} = nome del file, {col} = nome della colonna.",
-  "empty.cont": "Riga con la foglia nella scheda Contaminanti finché il campo non contiene un numero (stato vuoto tranquillo, al massimo 40 caratteri).",
   "load.cols.shown": "Checkbox label to show a column in the sample table; {name} = column name.",
   "load.cols.rename": "Name field label of a custom column; {name} = column name.",
   "load.cols.up": "Button label to move a custom column left; {name} = column name.",

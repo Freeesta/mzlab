@@ -6,8 +6,8 @@ I18N.add("it", {
   "cmd.addloss.lab": "Addotti e perdite",
   "cmd.addloss.name": "Addotti e perdite",
   "cmd.addloss.tip": "Addotti, perdite neutre (Δm) e calcolatrice",
-  "cmd.addloss.kw": "addotto addotti adducts adduct differenza massa esi sodio ammonio perdita neutra perdite neutre delta neutral loss neutral losses mass difference calcolatrice calculator contaminanti contaminants fondo background",
-  "al.tabs": "Addotti, perdite neutre o contaminanti",
+  "cmd.addloss.kw": "addotto addotti adducts adduct differenza massa esi sodio ammonio perdita neutra perdite neutre delta neutral loss neutral losses mass difference calcolatrice calculator",
+  "al.tabs": "Addotti o perdite neutre",
   "cmd.calc.name": "Calcolatrice",
   "cmd.calc.tip": "Calcolatrice: somme, differenze e formule",
   "cmd.lists.lab": "Liste",
@@ -259,6 +259,5 @@ I18N.add("it", {
   "cmd.gra.name": "Grafo di frammentazione",
   "cmd.gra.tip": "Frammenti di una molecola nota in un'infusione MSn",
   "cmd.gra.kw": "grafo frammentazione infusione msn frammenti formula fragmentation graph ion formula",
-  "al.q.aria": "Numero o formula da cercare in addotti, perdite neutre e contaminanti",
-  "al.t.cont": "Contaminanti"
+  "al.q.aria": "Numero o formula da cercare in addotti e perdite neutre"
 });

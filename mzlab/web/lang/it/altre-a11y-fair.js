@@ -329,7 +329,7 @@ I18N.add("it", {
   "bar.method": "Metodo",
   "calc.ph": "Numero o formula",
   "calc.in.title": "Numeri, operazioni o una formula bruta",
-  "calc.nl.title": "Cerca questo valore negli addotti, nelle perdite neutre e nei contaminanti",
+  "calc.nl.title": "Cerca questo valore negli addotti e nelle perdite neutre",
   "calc.nl": "Cerca",
   "calc.back": "Cancella l'ultimo carattere",
   "calc.clear": "Azzera",

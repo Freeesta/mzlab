@@ -1,7 +1,6 @@
 I18N.add("it", {
   "cq.ctl": "Opzioni della ricerca",
   "cq.none": "nessuna corrispondenza entro ±{tol}",
-  "cq.liste.err": "Non riesco a leggere le liste dei contaminanti. Riprova fra poco.",
   "cq.all": "mostra tutto ({n})",
   "cq.less": "mostra meno",
   "cq.g.liste": "Contaminanti e liste",
@@ -23,7 +22,6 @@ I18N.add("it", {
   "calc.pad.tip": "Scrive nel campo",
   "al.t.adducts.tip": "Ioni che la molecola può formare",
   "al.t.losses.tip": "Frammenti neutri che lo ione può perdere",
-  "al.t.cont.tip": "Ioni di fondo frequenti in LC-MS",
   "cq.tol.tip": "Scarto massimo accettato dal valore",
   "cq.pol.tip": "Ioni positivi, negativi o entrambi",
   "cq.all.tip": "Mostra tutte le corrispondenze",

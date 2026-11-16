@@ -14,8 +14,8 @@ CTRLS = """root => { const R = document.querySelector(root);
   return [...R.querySelectorAll('button, input, select, textarea, summary, a[href]')].filter(e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden')
     .map(e => { let t = e.closest('[title],[data-tip],[data-tiph]'); if (t && !R.contains(t)) t = null;
       return { id: e.id || e.className || e.tagName, text: e.textContent.trim(), tip: t ? (t.getAttribute('title') || t.dataset.tip || t.dataset.tiph || '').trim() : '' }; }); }"""
-# what each query brings out: the adduct table with XIC buttons, the loss rows, the contaminant list
-CASES = [("C8H9NO2", "adducts", ("cxic", "cadd-more", "al-t-losses")), ("214", "adducts", ("cadd-more", "altol")), ("44", "losses", ("nlrow", "al-calc-tg")), ("214", "cont", ("al-t-cont",))]
+# what each query brings out: the adduct table with XIC buttons, the loss rows
+CASES = [("C8H9NO2", "adducts", ("cxic", "cadd-more", "al-t-losses")), ("214", "adducts", ("cadd-more", "altol")), ("44", "losses", ("nlrow", "al-calc-tg"))]
 def check_tips(pg, root, where, need=()):
     pg.evaluate(f"document.querySelectorAll('{root} details').forEach(d => {{ d.open = true; }})"); frames(pg, 5)
     rows = pg.evaluate(CTRLS, root); bad = []
