@@ -12,8 +12,8 @@ r = Run(port=8823, wd="/tmp/wd23")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t15"]]); pg.wait_for_selector("text=Carica dati")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t15"]]); pg.wait_for_selector("text=Load data")
+        pg.click("text=Load data"); ready(pg)
         cid = pg.evaluate("E.panels.find(q=>q.tab==='full'&&q.type==='chrom').id")
         P = f"E.panels.find(q=>q.id=={cid})"
         def raw_min():

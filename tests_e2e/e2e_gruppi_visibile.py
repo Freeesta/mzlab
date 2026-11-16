@@ -21,7 +21,7 @@ try:
         pg.wait_for_selector("#flst .fl .nm", timeout=30000)
         wait_for_js(pg, "BARRA.curTab === 'file' && !document.querySelector('#sb-by').hidden", 20000)
         def full():
-            assert pg.inner_text("#sb-by").strip() == "Gruppi", pg.inner_text("#sb-by")
+            assert pg.inner_text("#sb-by").strip() == "Groups", pg.inner_text("#sb-by")
             w = pg.evaluate("(() => { const b = document.querySelector('#sb-by'), s = b.querySelector('span'); return [b.scrollWidth - b.clientWidth, s.scrollWidth - s.clientWidth]; })()")
             assert w[0] <= 0 and w[1] <= 0, f"truncated: {w}"
             assert pg.is_visible("#sb-by") and pg.evaluate("!document.querySelector('#tb-more') || !(document.querySelector('#tb-more').dataset.dropped || '').includes('by')")

@@ -28,7 +28,7 @@ try:
         step("B-3 load table: experiment groups, standards by concentration, samples by time", table)
         def conc():
             v = pg.evaluate("[...document.querySelectorAll('#flist [data-k=conc]')].map(x=>x.value)"); assert v == ["0.6", "7.2", "18"], v
-            assert pg.evaluate("[...document.querySelectorAll('#flist [data-k=conc]')].every(x=>x.classList.contains('guess')&&x.title.includes('controlla'))")
+            assert pg.evaluate("[...document.querySelectorAll('#flist [data-k=conc]')].every(x=>x.classList.contains('guess')&&x.title.includes('please check'))")
             u = pg.inner_text("#flist"); assert "mg/L" in u
             assert pg.evaluate("document.querySelector('#cunit').title").find("1 ppm = 1 mg/L") >= 0
         step("B-1/B-4/B-5 concentrations 0.6, 7.2, 18 read from the names, yellow, with the unit", conc)
@@ -79,7 +79,7 @@ try:
         def frozen():
             c = chrom(pg); pg.mouse.dblclick(c["l"] + c["w"] * 0.3, c["t"] + c["h"] / 2); pg.wait_for_timeout(1500)
             ts = pg.evaluate("E.panels.filter(p=>p.type==='spec').map(p=>p.el.querySelector('.ttl').textContent+'|'+p.el.querySelector('.rtl').textContent)"); print("   spectrum titles:", ts)
-            assert len(ts) >= 2 and all(not __import__("re").search(r"Spettro a ", t.split("|")[0]) and t.split("|")[0].strip().startswith("Spettro") and "RT" in t.split("|")[1] for t in ts), ts
+            assert len(ts) >= 2 and all(not __import__("re").search(r"Mass spectrum at ", t.split("|")[0]) and t.split("|")[0].strip().startswith("Mass spectrum") and "RT" in t.split("|")[1] for t in ts), ts
         step("B-11 frozen spectra: title once, RT once", frozen)
         def newpanel():
             pg.evaluate("scrollTo(0,0)"); n0 = pg.evaluate("E.panels.length"); pg.click("#np-spec"); pg.wait_for_timeout(250)

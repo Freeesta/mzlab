@@ -16,7 +16,7 @@ try:
         pg = r.page(p)
         pg.set_viewport_size({"width": 1280, "height": 900})
         pg.set_input_files("#pick", [blob("B_FullMass-t30 (2).mzML", "B_FullMass-t15"), blob(LONG + ".mzML", "B_FullMass-t0")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(800)
         pg.evaluate("soloFile(E.files[E.cur])"); wait_for_js(pg, "E.browse")      # the file menu works with one file shown
         sel = lambda: pg.evaluate("(() => { const s = Q('#fsel'); return {t: s.options[s.selectedIndex].textContent, w: s.offsetWidth, title: s.title, opts: [...s.options].map(o => o.textContent), bar: Q('#tools').offsetWidth}; })()")

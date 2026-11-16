@@ -10,7 +10,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("E.panels.filter(q => q.type === 'spec').slice(1).forEach(q => q.close && q.close())"); wait_for_js(pg, "stackOrder().length === 2")
         order = lambda: pg.evaluate("stackOrder().map(q => q.id)")
         rows = lambda: pg.evaluate("LAYOUT.righeDi(stackOrder()).map(r => r.map(q => q.id))")

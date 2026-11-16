@@ -43,7 +43,7 @@ try:
                 q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#drop", timeout=120000)
                 q.set_input_files("#pick", [str(F)])
                 q.wait_for_function("[...document.querySelectorAll('#flist input[data-k=use]')].some(i => (i.closest('tr,li,label,div') || i).textContent.includes('MSn_synth_t01'))", timeout=180000)
-                q.click("text=Carica dati"); q.wait_for_function("E.files.some(f => f.kind === 'infusion')", timeout=90000)
+                q.click("text=Load data"); q.wait_for_function("E.files.some(f => f.kind === 'infusion')", timeout=90000)
                 q.evaluate("COMP.tree(E.files.findIndex(f=>f.kind==='infusion'))")
                 try: q.wait_for_selector("#mt-tbl tr[data-n]", timeout=60000)
                 except Exception:   # where the window stopped: the file kinds and the text of the output
@@ -55,7 +55,7 @@ try:
                 q.close()
         step("axe: MSn tree window", msn)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_MRM-t0")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg); pg.wait_for_timeout(1200)
+        pg.click("text=Load data"); ready(pg); pg.wait_for_timeout(1200)
         pg.add_script_tag(path=AXE)
         step("axe: file loaded (Full Scan panels)", lambda: axe_ok(pg))
         def mrm():

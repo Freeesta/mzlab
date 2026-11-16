@@ -18,7 +18,7 @@ try:
         pg = r.page(p)
         tick = lambda: pg.evaluate("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(r,0))))")
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         mod = "Meta" if pg.evaluate("/Mac/.test(navigator.platform)") else "Control"
         def undo(): pg.keyboard.press(f"{mod}+z"); tick()
         def redo(): pg.keyboard.press(f"{mod}+Shift+z"); tick()

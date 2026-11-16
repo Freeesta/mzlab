@@ -75,11 +75,11 @@ try:
             assert geo[2] > geo[3] - 5, geo                                      # the Full Scan has the whole width again
             pos = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='full');c.el.scrollIntoView({block:'center'});const r=c.cv.getBoundingClientRect();return {x:r.left+300,y:r.top+150}})()")
             pg.mouse.click(pos["x"], pos["y"], button="right"); pg.wait_for_timeout(400)
-            assert "Mostra le MS2 sotto la Full Scan" in pg.inner_text("#ctx")
-            pg.click("#ctx >> text=Mostra le MS2 sotto la Full Scan"); pg.wait_for_timeout(2500)
+            assert "Show the MS2 under the Full Scan" in pg.inner_text("#ctx")
+            pg.click("#ctx >> text=Show the MS2 under the Full Scan"); pg.wait_for_timeout(2500)
             c, s1, s2 = pg.evaluate(GEO); print(c, s1, s2)
             assert s2 is not None and s2[1] >= s1[1] + s1[3] and s2[0] == 0, (s1, s2)
-        step("close the MS2 panel, then «Mostra le MS2 sotto la Full Scan» in the right-click menu brings it back", close_and_back)
+        step("close the MS2 panel, then «Show the MS2 under the Full Scan» in the right-click menu brings it back", close_and_back)
         def reload():
             pg.evaluate("(async()=>{const t=" + TRIO + ";const D=await DDA.get(t.s1.k);await DDA.selectMs2(t.s2,D.sid[7])})()"); pg.wait_for_timeout(1500)
             saved(pg); pg.reload(); wait_for_js(pg, "typeof E !== 'undefined' && E.files.length > 0 && E.panels.length > 0", 90000); ready(pg)

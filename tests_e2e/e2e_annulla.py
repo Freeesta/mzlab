@@ -14,7 +14,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); wait_for_js(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
         pg.evaluate(f"(()=>{{const p={XP};setActive(p);p.imode=null;p.el.scrollIntoView({{block:'center'}})}})()")
         zoom = lambda: pg.evaluate(f"{XP}.zoom")

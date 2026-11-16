@@ -51,7 +51,7 @@ try:
         step("no request carried NaN, Infinity or undefined", clean(pg))
         pg2 = r2.page(p)
         pg2.on("request", lambda q: urls.append(q.url))
-        stage(pg2, SUB); pg2.click("text=Carica dati"); ready(pg2)
+        stage(pg2, SUB); pg2.click("text=Load data"); ready(pg2)
         pg2.evaluate("E.browse=false; E.files.forEach(f=>f.vis=true); renderNav(); renderFileList(); redrawAll()"); ready(pg2)
         pg2.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:253.3,w:0.5,label:'m/z 253'}]})"); ready(pg2)
         def subtraction():

@@ -44,7 +44,7 @@ try:
         step("T on the chromatogram: a table whose RT and intensities are those of the API", chrom_table)
         def spec_table():
             pg.evaluate(f"{SP}.cv.focus()"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]")
-            t = tbl(); assert [c[0] for c in t["cols"]][1:3] == ["m/z", "Intensità"] and len(t["rows"]) >= 1, t["cols"]
+            t = tbl(); assert [c[0] for c in t["cols"]][1:3] == ["m/z", "Intensity"] and len(t["rows"]) >= 1, t["cols"]
             p0 = pg.evaluate(f"({{r0:{SP}.r0,r1:{SP}.r1,k:{SP}.k}})")
             api = pg.evaluate("(async(p)=>await (await fetch(`api/spectrum?k=${p.k}&rt0=${p.r0}&rt1=${p.r1}&level=1&precursor=&merge=1`)).json())(%s)" % __import__("json").dumps(p0))
             top = max(range(len(api["y"])), key=lambda j: api["y"][j])
@@ -58,7 +58,7 @@ try:
         step("no table button in the toolbar; T on the focused chart still opens the table", button)
         def live():
             pg.evaluate(f"{CH}.cv.focus()"); pg.keyboard.press("d"); pg.wait_for_timeout(300)
-            t = pg.evaluate("document.getElementById('tdati-live').textContent"); assert "Cromatogramma" in t and "tracce" in t, t
+            t = pg.evaluate("document.getElementById('tdati-live').textContent"); assert "Chromatogram" in t and "traces" in t, t
             assert pg.evaluate("document.getElementById('tdati-live').getAttribute('aria-live')") == "polite"
         step("D reads the description through the polite live region", live)
         def copy():
@@ -90,7 +90,7 @@ try:
             pg.evaluate("TDATI.maxRows(50); TDATI.table({title:'Tanti', head:['i','v'], rows:Array.from({length:120},(_, i)=>[String(i), String(i*2)])})")
             pg.wait_for_selector("#tdati[open]")
             note = pg.evaluate("document.getElementById('tdati-cut')?.textContent || ''"); assert "120" in note and "50" in note and "desktop" in note, note
-            assert pg.evaluate("document.getElementById('tdati-n').textContent") == "50 righe di 120"
+            assert pg.evaluate("document.getElementById('tdati-n').textContent") == "50 of 120 rows"
             assert pg.locator("#tdati table").count() == 1 and len(tbl()["rows"]) == 50          # the table stays, with the rows it keeps
             pg.evaluate(SAFARI_CLIP); pg.click("#tdati [data-td=c]"); wait_for_js(pg, "window.__clip !== null || window.__clipNo", 10000)
             ln = [l for l in pg.evaluate("window.__clip").split("\n") if l and not l.startswith("#")]

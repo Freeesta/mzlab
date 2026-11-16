@@ -16,7 +16,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def open_below():
             assert not pg.is_visible("#np-calc2"), "in Dati the calculator lives in Adducts & losses"
             pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "window.BARRA.curTab === 'addloss' && BARRA.isOpen('calc') && !!document.querySelector('#calcin').offsetParent")

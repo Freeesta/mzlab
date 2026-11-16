@@ -20,7 +20,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg); pg.wait_for_timeout(1500)
+        pg.click("text=Load data"); ready(pg); pg.wait_for_timeout(1500)
         pg.add_script_tag(path=AXE)
         def panels():
             v = pg.evaluate(RUN % "'#dpanels'"); assert not v, v

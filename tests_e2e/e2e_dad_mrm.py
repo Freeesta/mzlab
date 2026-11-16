@@ -22,7 +22,7 @@ MRM, MS2 = "E.panels.find(q => q.type === 'mrm')", "E.panels.find(q => q.type ==
 UV = lambda tab: f"E.panels.find(q => q.type === 'chrom' && q.tab === '{tab}' && q.kind === 'pda')"
 def load(pg, names):
     pg.set_input_files("#pick", [str(D / f"{n}{x}") for n in names for x in (".wiff", ".wiff.scan")])
-    wait_for_js(pg, f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(names)}", timeout=90000); pg.click("text=Carica dati"); ready(pg)
+    wait_for_js(pg, f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(names)}", timeout=90000); pg.click("text=Load data"); ready(pg)
     wait_for_js(pg, f"E.files.length >= {len(names)}", timeout=120000)
 def axe_ok(pg, sel):
     v = pg.evaluate("""(sel) => axe.run(document.querySelector(sel) || document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}})

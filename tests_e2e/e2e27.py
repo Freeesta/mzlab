@@ -14,7 +14,7 @@ try:
         pg = r.page(p)
         shutil.rmtree("/tmp/s27", ignore_errors=True)
         pg.set_input_files("#pick", synth.make_series("/tmp/s27", [0, 15, 60])); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         sm = lambda: pg.inner_text("#xic-sum")
         def dialog():
             pg.click("#np-xic"); t = pg.inner_text("#xicdlg") + " " + pg.get_attribute("#xicdlg", "aria-description")

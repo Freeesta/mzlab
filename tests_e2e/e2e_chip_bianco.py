@@ -16,7 +16,7 @@ r = Run(port=8978, wd="/tmp/wd_chip_bianco")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [str(F)]); pg.wait_for_selector("text=Carica dati"); pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [str(F)]); pg.wait_for_selector("text=Load data"); pg.click("text=Load data"); ready(pg)
         P = "E.panels.find(q=>q.tab==='full'&&q.type==='chrom')"
         pg.evaluate(f"ibkSet({P},'mean',[0.3,2])"); ready(pg); frames(pg, 6)
         def chip():

@@ -8,8 +8,8 @@ def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL: " + str(e).split("\n")[0][:240]))
 def load(pg):
-    pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); pg.wait_for_selector("text=Carica dati")
-    pg.click("text=Carica dati"); ready(pg)
+    pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); pg.wait_for_selector("text=Load data")
+    pg.click("text=Load data"); ready(pg)
 def fresh(p, tour_state=True, hint=None):
     r = Run(port=8872, wd="/tmp/wd_hint"); r.b = p.chromium.launch()
     ctx = r.b.new_context(viewport={"width": 1440, "height": 900}, locale="it-IT", reduced_motion="reduce"); pg = ctx.new_page()

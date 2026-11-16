@@ -24,7 +24,7 @@ def load(pg, times, name):
     pg.set_input_files("#pick", files); pg.wait_for_timeout(1000)
     # the reference server of the tests keeps the files of the previous run in the loading table: only the ones just chosen are loaded
     pg.evaluate("names => document.querySelectorAll('#flist input[data-k=use]').forEach(x => { if (!names.includes(ST.files[+x.dataset.i].name) && x.checked) x.click(); })", [f.split("/")[-1] for f in files])
-    pg.click("text=Carica dati"); ready(pg)
+    pg.click("text=Load data"); ready(pg)
 try:
     with sync_playwright() as p:
         pg = r.page(p)

@@ -1,4 +1,4 @@
-"""H5: «Formule compatibili» (elemental composition): the dialog gives the formula of the infusion progenitor, shows the checks, keeps the elements in use; the menu entry is only on high-resolution spectra."""
+"""H5: «Candidate formulas» (elemental composition): the dialog gives the formula of the infusion progenitor, shows the checks, keeps the elements in use; the menu entry is only on high-resolution spectra."""
 # covers: mzlab/web/elementare.js, mzlab/web/composizione.js, mzlab/chem/composition.py, mzlab/chem/isoscore.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -29,7 +29,7 @@ try:
         step("Excel of the candidate formulas", xl)
         def narrow():
             pg.fill("#cmp-els", "C:0-5,H:0-10"); pg.click("#cmp-go"); pg.wait_for_timeout(1500)
-            assert "Nessuna formula" in pg.inner_text("#cmp-out"), pg.inner_text("#cmp-out")
+            assert "No formula within the tolerance" in pg.inner_text("#cmp-out"), pg.inner_text("#cmp-out")
             pg.fill("#cmp-els", "C:5-2"); pg.click("#cmp-go"); pg.wait_for_timeout(1000)
             assert pg.is_visible("#cmp-out .fail")
         step("no candidate and a wrong range are said clearly", narrow)
@@ -45,8 +45,8 @@ try:
             pg.evaluate(f"E.panels.find(q=>q.id=={sp}).el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
             xy = pg.evaluate(f"(()=>{{const s=E.panels.find(q=>q.id=={sp}),a=s._a,d=a.data[0].d;let b=0;d.y.forEach((v,i)=>{{if(v>d.y[b])b=i}});const r=s.cv.getBoundingClientRect();return {{x:r.left+a.X(d.mz[b]),y:r.top+a.Y(d.y[b])+6}}}})()")
             pg.mouse.click(xy["x"], xy["y"], button="right"); pg.wait_for_timeout(400)
-            t = pg.inner_text("#ctx"); assert "Genera formula (m/z" in t, t
-        step("right click on a peak of a high-resolution spectrum: «Genera formula»", menu)
+            t = pg.inner_text("#ctx"); assert "Generate formula (m/z" in t, t
+        step("right click on a peak of a high-resolution spectrum: «Generate formula»", menu)
         def score():
             sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             from mzlab.chem.isoscore import fine_pattern, merge_res
@@ -63,7 +63,7 @@ try:
             assert "massa" in row and "isotopi" in row and "%" in row, row
             det = pg.inner_text("#cmp-det"); assert "Soglie" in det and "contributo" in det.lower(), repr(det)
             pg.fill("#cmp-w0", "0"); pg.click("#cmp-go"); pg.wait_for_timeout(1500)                     # the weights are editable
-            assert "pesi massa, isotopi, frammenti = 0,2,1" in pg.inner_text("#cmp-det"), pg.inner_text("#cmp-det")
+            assert "weights mass, isotopes, fragments = 0,2,1" in pg.inner_text("#cmp-det"), pg.inner_text("#cmp-det")
             pg.evaluate("document.querySelector('#bigdlg').close()")
         step("full isotope score and fragment constraint: columns, terms per peak, editable weights", score)
     r.close()

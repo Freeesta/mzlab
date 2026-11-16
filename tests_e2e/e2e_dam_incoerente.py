@@ -17,7 +17,7 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.wait_for_timeout(1000)
         pg.set_input_files("#pickdam", [str(DAM), str(MRM_DAM)]); pg.wait_for_timeout(1200)
-        pg.click("text=Carica dati"); ready(pg); pg.wait_for_timeout(800)
+        pg.click("text=Load data"); ready(pg); pg.wait_for_timeout(800)
         def warn():
             assert pg.is_visible("#methwarn"), "visible notice"
             t = pg.inner_text("#methwarn"); print(t)

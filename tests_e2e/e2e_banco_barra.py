@@ -126,7 +126,7 @@ r = Run(port=8979, wd="/tmp/wd_lrbarra")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [D / "B_FullMass-t0.mzML"]); pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [D / "B_FullMass-t0.mzML"]); pg.wait_for_timeout(1000); pg.click("text=Load data"); ready(pg)
         def lr():
             assert not pg.is_visible("#hrbar") and pg.is_visible("#g-add")
         step("low-resolution world: the tabs and the old buttons are there, no toolbar of the bench", lr)
@@ -160,7 +160,7 @@ if DATA_DIR:
     try:
         with sync_playwright() as p:
             pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1400})
-            pg.set_input_files("#pick", TIO); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=3", timeout=180000); pg.click("text=Carica dati")
+            pg.set_input_files("#pick", TIO); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=3", timeout=180000); pg.click("text=Load data")
             pg.wait_for_function("E.files.length>=6", timeout=420000); pg.wait_for_timeout(4000)
             def three():
                 drawer(pg, "file")                                          # high resolution: only the first file is open at the start, a click on the box opens each of the others

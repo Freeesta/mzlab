@@ -18,10 +18,10 @@ try:
         stage(pg, fs)
         pg.evaluate("carica('gruppi.js').then(() => { const n = ST.files.map(f => f.name); GRUPPI.set(n.slice(0, 2), 'Blank'); })")
         wait_for_js(pg, f"document.querySelectorAll('{HEAD}').length === 2", 10000)
-        pg.click("text=Tabella dei campioni"); wait_for_js(pg, "!!document.querySelector('.tg-name') && document.querySelector('.tg-name').offsetWidth > 0", 5000)
+        pg.click("text=Sample table"); wait_for_js(pg, "!!document.querySelector('.tg-name') && document.querySelector('.tg-name').offsetWidth > 0", 5000)
         def heads(): return pg.evaluate(NAMES)
         def dbl():
-            assert heads() == ["Blank", "Senza gruppo"] or heads() == ["Blank", "Ungrouped"], heads()
+            assert heads() == ["Blank", "Ungrouped"], heads()
             pg.locator(f"{HEAD} .tg-name").first.dblclick()
             wait_for_js(pg, "!!document.querySelector('.tg-edit')", 3000)
             assert pg.locator(".tg-head .tg-fold").first.get_attribute("aria-expanded") == "true", "the double click folded the group"
@@ -47,13 +47,13 @@ try:
             wait_for_js(pg, "ST.files.some(f => /^(Group|Gruppo) \\d+$/.test(f.ugrp || ''))", 5000)
         step("blur saves; an empty name goes back to the default «Group N»", blur_empty)
         def kbd():
-            n = pg.locator(f"{HEAD} .tg-name").first; n.focus(); assert n.get_attribute("aria-label").startswith(("Rename group", "Rinomina gruppo")), n.get_attribute("aria-label")
+            n = pg.locator(f"{HEAD} .tg-name").first; n.focus(); assert n.get_attribute("aria-label").startswith("Rename group"), n.get_attribute("aria-label")
             pg.keyboard.press("F2"); wait_for_js(pg, "!!document.querySelector('.tg-edit')", 3000); pg.keyboard.press("Escape")
             pg.locator(f"{HEAD} .tg-name").first.focus(); pg.keyboard.press("Enter"); wait_for_js(pg, "!!document.querySelector('.tg-edit')", 3000)
             pg.keyboard.press("Control+a"); pg.keyboard.type("Kbd"); pg.keyboard.press("Enter"); wait_for_js(pg, "ST.files.some(f => f.ugrp === 'Kbd')", 5000)
         step("F2 and Enter on the focused name start the rename", kbd)
         def none():
-            i = len(heads()) - 1; assert heads()[i] in ("Senza gruppo", "Ungrouped") or "Samples" in heads(), heads()
+            i = len(heads()) - 1; assert heads()[i] == "Ungrouped" or "Samples" in heads(), heads()
             pg.evaluate("GRUPPI.set([], '')")
             pg.evaluate("ST.files.forEach(f => { if (f.ugrp === 'Samples') f.ugrp = undefined; }); renderFiles()")
             wait_for_js(pg, f"document.querySelectorAll('{HEAD}').length === 2 && !document.querySelector('{HEAD}[data-ug=\"Samples\"]')", 5000)
@@ -62,7 +62,7 @@ try:
             assert pg.evaluate(NAMES)[-1] == "Loose" and not any(f.get("ugrp") == "Loose" for f in pg.evaluate("ST.files")), "a group was made"
         step("«Ungrouped» takes a label of its own, no group is made", none)
         def plus():
-            b = pg.locator("#colsplus"); assert b.get_attribute("aria-label") in ("Add column", "Aggiungi colonna")
+            b = pg.locator("#colsplus"); assert b.get_attribute("aria-label") == "Add column"
             b.focus(); pg.keyboard.press("Enter"); wait_for_js(pg, "!!document.getElementById('colsdlg')", 3000)
             pg.locator("#colsdlg [data-cc=batch]").check(); pg.locator("#colsclose").click()
             wait_for_js(pg, "!!document.querySelector('.ldtab input[data-xk=batch]')", 3000)

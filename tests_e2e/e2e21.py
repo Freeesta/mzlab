@@ -12,8 +12,8 @@ r = Run(port=8821, wd="/tmp/wd21")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t15", "B_MS2-t15"]]); pg.wait_for_selector("text=Carica dati")
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # opened file by file: the view starts on the first file of the list
+        pg.set_input_files("#pick", [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t15", "B_MS2-t15"]]); pg.wait_for_selector("text=Load data")
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # opened file by file: the view starts on the first file of the list
         def label_hover():
             wait_for_js(pg, "E.panels.some(q=>q.tab===E.tab&&q.type==='spec'&&q._a&&q._a.lbls&&q._a.lbls.length>0)")
             sp = pg.evaluate("(()=>{const p=E.panels.find(q=>q.tab===E.tab&&q.type==='spec');p.el.scrollIntoView({block:'center'});return p.id})()"); frames(pg, 2)

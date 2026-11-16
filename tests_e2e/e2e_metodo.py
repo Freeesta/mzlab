@@ -65,7 +65,7 @@ try:
         step("/api/metodo gives the metodo/1 of the .wiff sample", route)
         def window():
             pg.click("#np-method")
-            pg.wait_for_function("document.querySelector('#bigdlg').innerText.includes('Metodo registrato nel file')", timeout=60000)
+            pg.wait_for_function("document.querySelector('#bigdlg').innerText.includes('Method stored in the file')", timeout=60000)
             t = pg.inner_text("#bigdlg")
             assert "sciex-wiff" in t and "SHA-1 " + sha in t, t
             pg.keyboard.press("Escape")

@@ -64,7 +64,7 @@ try:
             assert pg.evaluate("ST.files.find(f=>f.name==='B_MRM-t15.mzML').type") == "blank"
             pg.locator('#flist tr', has_text="B_MRM-t15").locator("select[data-k=type]").select_option("sample")
         step("type is editable", standard_off)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         open_kind(pg, "mrm"); ready(pg)
         pg.screenshot(path=SH + "152_mrm.png")
         def mrm_ui():

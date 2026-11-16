@@ -20,7 +20,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "!!document.querySelector('#calcin').offsetParent")
         pg.fill("#calcin", "4+5"); wait_for_js(pg, "document.querySelector('#calcres').innerText.trim() === '9'")
         wait_for_js(pg, "!document.querySelector('#calc-nl').hidden")

@@ -15,7 +15,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz(f) for f in FILES])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         open_kind(pg, "full"); ready(pg)      # the tab opened at load can differ on a loaded machine: the chromatogram panels live in Full Scan
         dlg = lambda: pg.evaluate("document.querySelector('#xicdlg').open")
         def window_():

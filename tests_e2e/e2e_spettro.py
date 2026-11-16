@@ -36,14 +36,14 @@ try:
         step("S1/S2: the right-click menu of the spectrum is short, no origin / ghost / simulation", menu)
         def annot():
             pk = peak_x(194.2)
-            pg.evaluate(f"(()=>{{const p={SPEC};p.anns.push({{x:{pk['mz']},text:'frammento'}});draw(p)}})()"); wait_for_js(pg, f"{SPEC}._a.lbls.filter(l=>l.ann).length===1")
+            pg.evaluate(f"(()=>{{const p={SPEC};p.anns.push({{x:{pk['mz']},text:'fragment'}});draw(p)}})()"); wait_for_js(pg, f"{SPEC}._a.lbls.filter(l=>l.ann).length===1")
             lb = pg.evaluate(f"{SPEC}._a.lbls.filter(l=>l.ann).map(l=>[l.x,l.y,l.w,l.h])"); assert len(lb) == 1 and lb[0][2] > 40, lb
             a = pg.evaluate(f"(()=>{{const a={SPEC}._a;return [a.W,a.H]}})()"); assert lb[0][0] >= 66 and lb[0][0] + lb[0][2] <= a[0] - 14 and lb[0][1] >= 14, (lb, a)       # inside the plot
             q = pg.evaluate(f"(()=>{{const p={SPEC},c=p.cv.getBoundingClientRect();return {{x:c.left+{lb[0][0]}+{lb[0][2]}/2,y:c.top+{lb[0][1]}+{lb[0][3]}/2}}}})()")
             pg.mouse.dblclick(q["x"], q["y"]); wait_for_js(pg, "document.querySelector('#askdlg').open"); assert pg.evaluate("document.querySelector('#askdlg').open"), "double click on the label edits it"
-            pg.fill("#askin", "frammento A") if pg.locator("#askin").count() else None
+            pg.fill("#askin", "fragment A") if pg.locator("#askin").count() else None
             pg.keyboard.press("Enter"); wait_for_js(pg, "!document.querySelector('#askdlg').open")
-            assert pg.evaluate(f"{SPEC}.anns[0].text") in ("frammento A", "frammento")
+            assert pg.evaluate(f"{SPEC}.anns[0].text") in ("fragment A", "fragment")
             pg.screenshot(path=SH + "spettro_ann.png", clip={"x": 0, "y": max(0, q["y"] - 250), "width": 1300, "height": 330})
         step("S3: annotation is a framed label inside the plot; double click edits it", annot)
         def ruler():
@@ -103,17 +103,17 @@ try:
         def caption():
             pg.evaluate(f"{CH}.el.scrollIntoView({{block:'center'}})")
             c = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();return {{x:q.left+p._a.X(14.3),y:q.top+q.height/2}}}})()"); pg.mouse.click(c["x"], c["y"]); ready(pg)
-            pg.keyboard.press("ArrowRight"); wait_for_js(pg, "/^scansione \\d+\\/\\d+$/.test(document.querySelector('.pnl.spec .leg').textContent.trim())")
+            pg.keyboard.press("ArrowRight"); wait_for_js(pg, "/^scan \\d+\\/\\d+$/.test(document.querySelector('.pnl.spec .leg').textContent.trim())")
             t = pg.inner_text(".pnl.spec .leg"); print(t)
-            import re; assert re.fullmatch(r"scansione \d+/\d+", t.strip()), t
-            for w in ["TIC", "picco base", "RT"]: assert w not in t, (w, t)         # A4.3: the time is already next to the title
-        step("G6: caption = only scansione i/N", caption)
+            import re; assert re.fullmatch(r"scan \d+/\d+", t.strip()), t
+            for w in ["TIC", "base peak", "RT"]: assert w not in t, (w, t)         # A4.3: the time is already next to the title
+        step("G6: caption = only scan i/N", caption)
         def ms2():
             open_kind(pg, "ms2")          # at the first load only the first file is open: the MS2 file opens with a click in the list
             wait_for_js(pg, "(()=>{const p=E.panels.find(q=>q.tab==='ms2'&&q.type==='spec'&&q.cv);return !!p&&!!p._a&&p.cv.parentElement.querySelector('.leg').textContent.length>0})()")
             s = pg.evaluate("(()=>{const p=E.panels.find(q=>q.tab==='ms2'&&q.type==='spec');return {rel:specRel(p),ymax:p._a&&p._a.ymax,lock:!!p.lock,t:p.cv.parentElement.querySelector('.leg').textContent}})()"); print(s)
             assert s["rel"] is False and not s["lock"], s                      # cps by default since 8/10 (the «%» button switches)
-            assert "precursore" not in s["t"] and "CE" in s["t"] and "scansione" in s["t"], s    # the title names the precursor, the line only the scan and the energy
+            assert "precursor" not in s["t"] and "CE" in s["t"] and "scan" in s["t"], s    # the title names the precursor, the line only the scan and the energy
             assert pg.evaluate("document.querySelector('.pnl.spec:not([style*=\"display: none\"]) canvas')") is not None
         step("S6/G2: MS2 spectrum starts in cps, no lock, shows scan and CE", ms2)
         def thin_trace():

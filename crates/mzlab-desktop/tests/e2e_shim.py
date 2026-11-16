@@ -417,7 +417,7 @@ try:
             q.wait_for_selector("#drop", timeout=120000); q.click("#drop")
             q.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(LR_FILES)}", timeout=120000)
             q.evaluate("""async () => { await (await navigator.storage.getDirectory()).getDirectoryHandle('invented-work', { create: true });
-                localStorage.setItem('mzlab.mappa', '{"pal":"cividis"}'); localStorage.setItem('mzlab.lang', 'en'); localStorage.setItem('mzlab.prefs', '{"theme":"dark"}'); localStorage.setItem('mzlab.barra.lato', 'l') }""")
+                localStorage.setItem('mzlab.mappa', '{"pal":"cividis"}'); localStorage.setItem('mzlab.prefs', '{"theme":"dark"}'); localStorage.setItem('mzlab.barra.lato', 'l') }""")
             q.click("#opbtn"); q.wait_for_function(f"E.files.length >= {len(LR_FILES)}", timeout=120000)
             q.evaluate("window.__before = 1"); q.reload(); q.wait_for_function(running, timeout=120000)
             s = state(); assert "invented-work" in s["opfs"] and "mzlab.mappa" in s["ls"] and "mzlab.barra.lato" in s["ls"], s            # a reload in the same run keeps the work
@@ -425,9 +425,9 @@ try:
             s = state()
             assert s["files"] == 0 and "invented-work" not in s["opfs"], s
             assert "mzlab.mappa" not in s["ls"] and q.evaluate("localStorage.getItem('mzlab.barra.lato')") != "l", s["ls"]        # the page writes its own defaults again
-            assert q.evaluate("[localStorage.getItem('mzlab.lang'), localStorage.getItem('mzlab.prefs')]") == ["en", '{"theme":"dark"}'], "language and settings stay"
+            assert q.evaluate("localStorage.getItem('mzlab.prefs')") == '{"theme":"dark"}', "settings stay"
             c3.close()
-        step("a new run of the app starts clean (files, session, working choices); a reload of the same run keeps them; language and settings stay", cold_start)
+        step("a new run of the app starts clean (files, session, working choices); a reload of the same run keeps them; settings stay", cold_start)
         def files_reset():
             # «Files» in the app: the same run (no cold start after its reload), and the native store is cleared by the new page (?riparti=file) as the dialog
             # says: the files go, the drawing in kv.json and the lists of the page stay

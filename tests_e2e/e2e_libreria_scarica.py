@@ -92,18 +92,18 @@ try:
         def no_network():
             pg.evaluate("LIB.open()"); pg.wait_for_selector("#libdlg #lib-avail-load", timeout=20000); pg.wait_for_selector("#libdlg #lib-list p.muted", timeout=20000)
             assert reqs == [], reqs
-            assert "Nessuna libreria" in pg.inner_text("#libdlg #lib-list")
+            assert "No library loaded" in pg.inner_text("#libdlg #lib-list")
         step("opening the window asks the network for nothing", no_network)
         def show():
             pg.click("#lib-avail-load"); pg.wait_for_selector("#libdlg [data-dl='prova-pos']", timeout=20000)
-            t = pg.text_content("#lib-avail-list"); assert "Prova · ESI+ · MS2" in t and "Non scaricata" in t and "CC0" in t and "Attribuzione di prova 1" in t, t
+            t = pg.text_content("#lib-avail-list"); assert "Prova · ESI+ · MS2" in t and "Not downloaded" in t and "CC0" in t and "Attribuzione di prova 1" in t, t
             assert any(u.endswith("catalogo.json") for u in reqs) and not any(u.endswith(".bin") for u in reqs), reqs
         step("the list comes on a click: name, version, licence, size, state and the attribution", show)
         def interrupted():
             plan["prova-pos/001.bin"] = lambda n: "corrupt" if n == 1 else "ok"
             plan["prova-pos/002.bin"] = lambda n: "abort" if n == 1 else "ok"
             pg.check("#libdlg [data-dl='prova-pos']"); pg.click("#lib-avail-go")
-            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('Nessuna connessione')", timeout=30000)
+            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('No connection')", timeout=30000)
             assert hits["prova-pos/000.bin"] == 1 and hits["prova-pos/001.bin"] == 2, hits           # the corrupt piece was fetched again
             assert hits["prova-pos/002.bin"] == 1
             names = pg.evaluate("T.names()"); assert [n for n in names if n.endswith(".piece")] == [".mzlab/prova-pos.000.piece", ".mzlab/prova-pos.001.piece"], names
@@ -132,10 +132,10 @@ try:
             boot()
             s = pg.evaluate("T.states()"); assert s == [["prova-pos.mzlib", "pacchetto", "pronta", "1"]], s              # the cached catalog is the old one: nothing to update yet
             pg.evaluate("LIB.open()"); pg.click("#lib-avail-load"); pg.wait_for_selector("#libdlg [data-dl='prova-pos']", timeout=20000)
-            assert "Aggiornamento disponibile" in pg.text_content("#lib-avail-list"), pg.text_content("#lib-avail-list")
+            assert "Update available" in pg.text_content("#lib-avail-list"), pg.text_content("#lib-avail-list")
             assert pg.evaluate("T.states()")[0][2] == "aggiornamento"
             pg.check("#libdlg [data-dl='prova-pos']"); pg.click("#lib-avail-go")
-            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('non valido')", timeout=30000)
+            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('Invalid piece or file')", timeout=30000)
             s = pg.evaluate("T.states()"); assert s[0][0] == "prova-pos.mzlib" and s[0][3] == "1", s                      # the old package is untouched
             names = pg.evaluate("T.names()"); assert not any(n.endswith((".piece", ".new")) for n in names), names
             assert pg.evaluate("T.b64", "prova-pos.mzlib") == keep

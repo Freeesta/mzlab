@@ -22,11 +22,11 @@ try:
         def make():
             pg.evaluate("E.files.forEach(f => { f.vis = false; }); renderFileList()")
             pg.locator("#flst .fl .nm").first.click(button="right")
-            assert not pg.locator("#ctx div", has_text=re.compile("^(Group files|Raggruppa i file)$")).count(), "«Group files» with fewer than two ticked files"
+            assert not pg.locator("#ctx div", has_text=re.compile("^Group files$")).count(), "«Group files» with fewer than two ticked files"
             pg.keyboard.press("Escape"); pg.evaluate("Q('#ctx').hidden = true")
             pg.evaluate("tabFiles('full').forEach(f => { f.vis = true; }); renderFileList()")
             pg.locator("#flst .fl .nm").first.click(button="right")
-            pg.locator("#ctx div", has_text=re.compile("^(Group files|Raggruppa i file)$")).click()
+            pg.locator("#ctx div", has_text=re.compile("^Group files$")).click()
             wait_for_js(pg, f"!!Q('{UG}')", 5000)
             h = pg.evaluate(HEADS); assert any(re.match(r"(Group|Gruppo) 1\|3$", x) for x in h), h
             assert pg.locator(f"{UG} .chv").get_attribute("aria-label"), "the header toggle has no aria-label"
@@ -49,7 +49,7 @@ try:
             pg.keyboard.press("Escape")
         step("Shift+F10 on the header opens its menu (Rename, Ungroup, Remove group) with the focus in it", kbd)
         def ungroup():
-            pg.locator(f"{UG}").click(button="right"); pg.locator("#ctx div", has_text=re.compile("^(Ungroup|Sciogli il gruppo)$")).click()
+            pg.locator(f"{UG}").click(button="right"); pg.locator("#ctx div", has_text=re.compile("^Ungroup$")).click()
             wait_for_js(pg, f"!Q('{UG}') && !E.files.some(f => f.ugrp)", 5000)
             pg.evaluate("STORIA.annulla()")
             wait_for_js(pg, "E.files.filter(f => f.ugrp === 'Blanks').length === 3", 5000)
@@ -60,7 +60,7 @@ try:
             assert any(x.startswith("Blanks|3") for x in pg.evaluate(HEADS)), pg.evaluate(HEADS)
         step("a reload restores the group", reload)
         def remove():
-            drawer(pg); pg.locator(f"{UG}").click(button="right"); pg.locator("#ctx div", has_text=re.compile("(Remove group|Rimuovi il gruppo)")).click()
+            drawer(pg); pg.locator(f"{UG}").click(button="right"); pg.locator("#ctx div", has_text=re.compile("Remove group")).click()
             wait_for_js(pg, "E.files.every(f => f.gone)", 5000)
             pg.evaluate("STORIA.annulla()"); wait_for_js(pg, "E.files.filter(f => !f.gone).length === 3", 5000)
         step("«Remove group from the session» takes the files away with one undo", remove)

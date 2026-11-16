@@ -19,7 +19,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(F)]); pg.wait_for_selector("#pick", state="attached")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         wait_for_js(pg, f"{CH}.el.querySelector('[data-o=kind]')")
         def one_button():
             n = pg.evaluate(f"{CH}.el.querySelectorAll('[data-o=canali]').length"); assert n == 0, n

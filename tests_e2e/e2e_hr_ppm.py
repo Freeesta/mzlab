@@ -46,7 +46,7 @@ try:
             assert pg.evaluate("UIP.hr === undefined && !HR.on") and not pg.evaluate("!!document.querySelector('#uip-hr')")
             v = pg.evaluate(f"(()=>{{const p=E.panels.find(x=>x.id=={sp});return [p._a.hrp,p._a.dec]}})()"); print(v)
             assert v[0] is True and v[1] == 4, v                        # an Orbitrap file is always read as high resolution
-        step("no «Alta risoluzione» switch any more: the Exploris spectrum keeps its 4 decimals", no_switch)
+        step("no «High resolution» switch any more: the Exploris spectrum keeps its 4 decimals", no_switch)
         def qqq():
             pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_timeout(1500)
             load(pg, [D / "B_FullMass-t0.mzML"], 4000, 1)

@@ -18,7 +18,7 @@ try:
         pg.reload(); pg.wait_for_timeout(1500)
         shutil.rmtree("/tmp/s22", ignore_errors=True)
         pg.set_input_files("#pick", synth.make_series("/tmp/s22", [0, 15, 60])); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def legacy():
             assert pg.evaluate("UIP.font") is None and pg.evaluate("fz()") == 1 and not pg.evaluate("'tips' in UIP") and pg.evaluate("document.querySelectorAll('.pnum:not([hidden])').length") >= 1
         step("an old saved value (font, tips/num false) is read: the removed options are ignored", legacy)

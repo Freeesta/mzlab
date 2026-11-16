@@ -39,8 +39,8 @@ try:
             show_scan(pg.evaluate("(()=>{const t=" + TRIO + ";return t.s2._scan.rt})()") + 0.15)
             right_click("t.s1._a.lbls.find(l=>l.nb&&Math.abs(l.ion-364.0737)<0.002)")
             t = pg.inner_text("#ctx"); print(t)
-            assert "Media delle MS2 di questo ione" in t and "Segui questo ione nelle MS2" in t, t
-            pg.click("#ctx >> text=Media delle MS2 di questo ione"); pg.wait_for_timeout(2500)
+            assert "Mean of the MS2 of this ion" in t and "Follow this ion in the MS2" in t, t
+            pg.click("#ctx >> text=Mean of the MS2 of this ion"); pg.wait_for_timeout(2500)
             v = pg.evaluate("(()=>{const t=" + TRIO + ";return {n:t.s2.avg&&t.s2.avg.length,title:t.s2.title,cap:t.s2.leg.textContent,pk:t.s2._a.data[0].d.mz.length}})()"); print(v)
             assert v["n"] and 2 <= v["n"] <= 5 and v["title"].startswith("Media di ") and "364.073" in v["title"] and "media di " in v["cap"], v
         step("right click: average of the MS2 of that ion (at most 5, within ±1 min)", average)
@@ -49,8 +49,8 @@ try:
             right_click("(()=>{const a=t.s1._a;const s=a.data[0].d;let j=0;s.mz.forEach((m,i)=>{if(Math.abs(m-305.0702)<0.003)j=i});const X=a.X(s.mz[j]);return {x:X-4,y:20,w:8,h:a.H-60}})()")
             pg.wait_for_timeout(200)
             t = pg.inner_text("#ctx"); print(t.replace("\n", " | ")[:300])
-            assert "Segui questo ione nelle MS2" in t, t
-            pg.click("#ctx >> text=Segui questo ione nelle MS2"); pg.wait_for_timeout(4000)
+            assert "Follow this ion in the MS2" in t, t
+            pg.click("#ctx >> text=Follow this ion in the MS2"); pg.wait_for_timeout(4000)
             v = pg.evaluate("(()=>{const t=" + TRIO + ";const x=E.panels.find(p=>p.id===t.s1.link),c=E.panels.find(p=>p.type==='chrom'&&p.tab==='full');return {type:x.type,follow:!!x.ddaFollow,ion:t.s2.ion,sid:t.s2.sid,tri:x._a.tri.map(q=>q.prec),y:[c.y,x.y,t.s1.y],h:[c.h,x.h],ms2tri:[c.ms2tri,x.ms2tri],prec:t.s2._scan&&t.s2._scan.prec,title:x.title}})()"); print(v)
             assert v["type"] == "xic" and v["follow"] and abs(v["ion"] - 305.0702) < 0.003 and v["sid"] is not None, v
             assert v["tri"] and all(abs(q - 305.0702) < 0.003 for q in v["tri"]), v                  # only the triangles of that ion
@@ -71,12 +71,12 @@ try:
         def never():
             pg.evaluate("(async()=>{const t=" + TRIO + ";await DDA.follow(t.s1,250.1234)})()"); pg.wait_for_timeout(2500)
             w = pg.evaluate("(()=>{const t=" + TRIO + ";return [DDA.waiting(t.s2),t.s2.sid]})()"); print(w)
-            assert w[0] == "Nessuna MS2 di 250.1234: il DDA non l'ha scelto." and w[1] is None, w
-        step("an ion never fragmented: «Nessuna MS2 di 250.1234: il DDA non l'ha scelto»", never)
+            assert w[0] == "No MS2 of 250.1234: the DDA did not choose it." and w[1] is None, w
+        step("an ion never fragmented: «No MS2 of 250.1234: the DDA did not choose it»", never)
         def coiso():
             pg.evaluate("(async()=>{const t=" + TRIO + ";await DDA.follow(t.s1,229.05)})()"); pg.wait_for_timeout(2500)
             w = pg.evaluate("(()=>{const t=" + TRIO + ";return DDA.waiting(t.s2)})()"); print(w)
-            assert "Nessuna MS2 di 229.0500" in w and "finestra di isolamento di " in w and "spettri misti" in w, w
+            assert "No MS2 of 229.0500" in w and "inside the isolation window of " in w and "mixed spectra" in w, w
             pg.evaluate("(()=>{const t=" + TRIO + ";setActive(t.s2)})()"); pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(2500)
             v = pg.evaluate("(()=>{const t=" + TRIO + ";return {sid:t.s2.sid,prec:t.s2._scan&&t.s2._scan.prec,lo:t.s2._scan&&t.s2._scan.lo,hi:t.s2._scan&&t.s2._scan.hi}})()"); print(v)
             assert v["sid"] is not None and v["lo"] <= 229.05 <= v["hi"] and abs(v["prec"] - 229.60) < 0.02, v        # the strong neighbour 229.60 co-isolated 229.05

@@ -15,7 +15,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 2")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def rect(expr):   # canvas rectangle + margins of a panel
             return pg.evaluate(f"(()=>{{const p={expr},r=p.cv.getBoundingClientRect();p.el.scrollIntoView({{block:'center'}});const q=p.cv.getBoundingClientRect();return {{l:q.left,t:q.top,w:q.width,h:q.height,M:M}}}})()")
         def pt(expr, xs, ys):  # pixel of axis values

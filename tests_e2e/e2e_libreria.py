@@ -40,13 +40,13 @@ try:
             t = pg.inner_text("#lib-list"); assert "prova" in t and "5" in t, t
             assert pg.locator("#lib-list tr").count() == 2 and pg.inner_text("#lib-list td.num:nth-child(5)").strip() == "1", pg.inner_text("#lib-list")     # one discarded (no precursor)
             pg.click("#lib-x"); wait_for_js(pg, DLG_CLOSED)
-        step("gear → Librerie: a synthetic MSP is read, one spectrum discarded", load)
+        step("gear → Libraries: a synthetic MSP is read, one spectrum discarded", load)
         def search():
             c = pg.evaluate(f"(() => {{ const p = {SPEC}, q = p.cv.getBoundingClientRect(); p.el.scrollIntoView({{block:'center'}}); return {{x: q.left + q.width * 0.5, y: q.top + q.height * 0.3}}; }})()")
             c = pg.evaluate(f"(() => {{ const q = {SPEC}.cv.getBoundingClientRect(); return {{x: q.left + q.width * 0.5, y: q.top + q.height * 0.3}}; }})()")
-            pg.mouse.click(c["x"], c["y"], button="right"); pg.wait_for_selector("#ctx >> text=Cerca nelle librerie")
-            assert "Cerca nelle librerie" in pg.inner_text("#ctx"), pg.inner_text("#ctx")
-            pg.click("#ctx >> text=Cerca nelle librerie"); wait_for_js(pg, "document.querySelector('#libres') && document.querySelector('#libres').open && document.querySelectorAll('#libres tr.row').length >= 3")
+            pg.mouse.click(c["x"], c["y"], button="right"); pg.wait_for_selector("#ctx >> text=Search in the libraries")
+            assert "Search in the libraries" in pg.inner_text("#ctx"), pg.inner_text("#ctx")
+            pg.click("#ctx >> text=Search in the libraries"); wait_for_js(pg, "document.querySelector('#libres') && document.querySelector('#libres').open && document.querySelectorAll('#libres tr.row').length >= 3")
             assert pg.evaluate("document.querySelector('#libres').open")
             names = pg.locator("#libres tr.row td:nth-child(2)").all_inner_texts(); print("   ", names)
             assert names[0] == "Match" and "Negativo" not in names and "Lontano" not in names and {"Spostato", "Parziale"} <= set(names), names
@@ -65,16 +65,16 @@ try:
         step("mirror plot: common peaks in the accent colour, a click on a row redraws it", mirror)
         def export():
             with pg.expect_download() as d: pg.click("#lr-xlsx")
-            rows = xlsx_rows(d.value.path()); assert any("Entropia" in str(c) for c in rows[0]), rows[0]
-            pg.click("#lr-copy"); wait_for_js(pg, "(() => { const t = document.querySelector('#lr-msg').innerText; return t.includes('copiate') || t.includes('non permette'); })()"); assert "copiate" in pg.inner_text("#lr-msg") or "non permette" in pg.inner_text("#lr-msg")
+            rows = xlsx_rows(d.value.path()); assert any("Entropy" in str(c) for c in rows[0]), rows[0]
+            pg.click("#lr-copy"); wait_for_js(pg, "(() => { const t = document.querySelector('#lr-msg').innerText; return t.includes('copied') || t.includes('does not allow'); })()"); assert "copied" in pg.inner_text("#lr-msg") or "does not allow" in pg.inner_text("#lr-msg")
         step("copy the table / Excel", export)
         def none():
             pg.click("#lr-x"); pg.evaluate("LIB.open()"); pg.wait_for_selector("#lib-list [data-rm]")
             pg.click("#lib-list [data-rm]"); wait_for_js(pg, LIST_EMPTY); assert "No library loaded" in pg.inner_text("#lib-list"); pg.click("#lib-x")
             c = pg.evaluate(f"(() => {{ const q = {SPEC}.cv.getBoundingClientRect(); return {{x: q.left + q.width * 0.5, y: q.top + q.height * 0.3}}; }})()")
-            pg.mouse.click(c["x"], c["y"], button="right"); pg.wait_for_selector("#ctx >> text=Cerca nelle librerie"); pg.click("#ctx >> text=Cerca nelle librerie"); wait_for_js(pg, "document.querySelector('#lr-body') && document.querySelector('#lr-body').innerText.includes('Carica una libreria')")
-            assert "Carica una libreria" in pg.inner_text("#lr-body"), pg.inner_text("#libres")
-        step("no library: «Carica una libreria (ingranaggio → Librerie)»", none)
+            pg.mouse.click(c["x"], c["y"], button="right"); pg.wait_for_selector("#ctx >> text=Search in the libraries"); pg.click("#ctx >> text=Search in the libraries"); wait_for_js(pg, "document.querySelector('#lr-body') && document.querySelector('#lr-body').innerText.includes('Load a library')")
+            assert "Load a library" in pg.inner_text("#lr-body"), pg.inner_text("#libres")
+        step("no library: «Load a library (gear → Libraries)»", none)
         def unsupported():
             pg.click("#lr-x"); pg.evaluate("LIB.open()"); wait_for_js(pg, DLG_OPEN)
             pg.set_input_files("#lib-file", {"name": "x.lib", "mimeType": "application/octet-stream", "buffer": b"\x00\x01"}); wait_for_js(pg, "document.querySelector('#lib-st').innerText.includes('MSP')")
@@ -96,7 +96,7 @@ try:
             pg.click("#lib-list [data-rm]"); wait_for_js(pg, LIST_EMPTY); assert "No library loaded" in pg.inner_text("#lib-list")
             pg.reload(); wait_for_js(pg, "typeof LIB !== 'undefined' && typeof LIB.open === 'function'"); pg.evaluate("LIB.open()"); wait_for_js(pg, DLG_LIST)
             assert "No library loaded" in pg.inner_text("#lib-list")                                    # removed for good
-        step("a library of some MB survives a reload, is searched without re-importing and «Togli» removes it", persists)
+        step("a library of some MB survives a reload, is searched without re-importing and «Remove» removes it", persists)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

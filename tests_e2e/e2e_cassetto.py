@@ -20,7 +20,7 @@ def cold(p, vw, vh, hash_="", saved=None, touch=False):
     pg.add_init_script(init + "}catch(_){}")
     pg.goto(f"http://127.0.0.1:{r.port}/{hash_}"); pg.wait_for_timeout(800)
     pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); pg.wait_for_timeout(800)
-    pg.click("text=Carica dati"); ready(pg)
+    pg.click("text=Load data"); ready(pg)
     if not pg.evaluate("BARRA.open"): pg.click("#stbar [data-cmd=file]")      # a saved open state comes back open: the button would hide it
     pg.wait_for_timeout(600)
     v = pg.evaluate(CHECK); ctx.close(); r.close()

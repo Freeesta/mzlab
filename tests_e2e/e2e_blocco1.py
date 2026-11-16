@@ -15,8 +15,8 @@ r = Run(port=8877, wd="/tmp/wd77")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_selector("text=Carica dati")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_selector("text=Load data")
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); frames(pg, 2)
         def ctx_items(x, y):
             pg.mouse.click(x, y, button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelectorAll('#ctx div').length > 0")

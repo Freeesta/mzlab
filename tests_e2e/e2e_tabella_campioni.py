@@ -18,9 +18,9 @@ try:
         # two converted files (a real, valid mzML: the download checks it) make the download controls appear (the maker's files of the lab are converted on request)
         pg.evaluate("([n, b64]) => { n.forEach(x => CONV.files.set(x, new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))]))); S.adding = true; syncWork(); renderFiles(); window.scrollTo(0, 0); }", [NAMES[:2], __import__("base64").b64encode(open(mz("B_FullMass-t0"), "rb").read()).decode()]); frames(pg, 3)      # the one page, at the top (the button would scroll to the table)
         def head_count():
-            assert pg.inner_text("#flist .samphead b").strip() == "3 campioni", pg.inner_text("#flist .samphead b")
+            assert pg.inner_text("#flist .samphead b").strip() == "3 samples", pg.inner_text("#flist .samphead b")
             assert "clicca" not in pg.inner_text("#flist .samptool")
-            assert pg.evaluate("I18N.t('load.samples.head', {n: 24})") == "24 campioni"
+            assert pg.evaluate("I18N.t('load.samples.head', {n: 24})") == "24 samples"
         step("the header says only the count", head_count)
         def one_row():
             mids = pg.evaluate("""[...document.querySelectorAll('#flist .samptool button, #flist .samptool summary')].filter(e => e.getBoundingClientRect().width > 0 && getComputedStyle(e).visibility !== 'hidden')

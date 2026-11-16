@@ -12,7 +12,7 @@ try:
         pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(1000)
         pg.set_input_files("#pickdam", str(DAM)); pg.wait_for_timeout(800)
         assert DAM.name in pg.inner_text("#mlist"), "the .dam is listed on the start screen"
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
         def pda():
             pick_kind(pg, "pda"); pg.wait_for_timeout(2500)

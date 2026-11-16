@@ -40,7 +40,7 @@ try:
             assert pg.inner_text("#uip-bugbtn").strip() == "Report a bug" and pg.locator("#bugdlg").count() == 0
             pg.keyboard.press("Escape")
         step("no header button; the settings have the «Report a bug» button with the insect; form not loaded at start", icon)
-        pg.set_input_files("#pick", [str(named)]); pg.wait_for_selector("text=Carica dati"); pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [str(named)]); pg.wait_for_selector("text=Load data"); pg.click("text=Load data"); ready(pg)
         def opens():
             pg.evaluate("window.ERRORI && ERRORI.segnala(new Error('Cannot read %s.mzML and %s'), 'prova')" % (SECRET, SECRET))
             opengroup()

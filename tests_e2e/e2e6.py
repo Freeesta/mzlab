@@ -14,7 +14,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.screenshot(path=SH + "60_default.png")
         def shown(sel): pg.wait_for_selector(sel, state="visible")
         def gone(sel): pg.wait_for_selector(sel, state="hidden")

@@ -67,7 +67,7 @@ r = Run(port=8985, wd="/tmp/wd_lrinfo")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [str(D / "B_FullMass-t0.mzML")]); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=60000); pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [str(D / "B_FullMass-t0.mzML")]); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=60000); pg.click("text=Load data"); ready(pg)
         step("low-resolution world: no information bar", lambda: (_ for _ in ()).throw(AssertionError("visible")) if pg.is_visible("#hrinfo") else None)
     r.close()
 except Exception as e:

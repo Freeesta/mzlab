@@ -112,11 +112,11 @@ try:
         run_folder(None, "opfs")
         def window_():
             pg.evaluate("LIB.open()"); pg.wait_for_selector("#libdlg #lib-list table", timeout=20000)
-            t = pg.inner_text("#libdlg #lib-list"); assert "Pronta" in t and "Da indicizzare" in t and "Danneggiata" in t, t
-            assert "Archivio del browser" in pg.inner_text("#libdlg #lib-fwhere")
+            t = pg.inner_text("#libdlg #lib-list"); assert "Ready" in t and "To index" in t and "Damaged" in t, t
+            assert "Browser storage" in pg.inner_text("#libdlg #lib-fwhere")
             pg.click("#libdlg [data-idx='a.msp']"); pg.wait_for_selector("#libdlg [data-rm='f:a.msp']", timeout=30000)
             pg.click("#lib-x")
-        step("the window shows folder, states and the «Indicizza» action", window_)
+        step("the window shows folder, states and the «Index» action", window_)
         def persist():
             boot(); s = pg.evaluate("T.states()"); assert ["a.msp", "sorgente", "pronta"] in s and ["esterna.msp", "importata", "pronta"] in s, s
             assert "Esterno" in pg.evaluate("T.search", QPEAKS)

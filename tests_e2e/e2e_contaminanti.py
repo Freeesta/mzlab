@@ -227,7 +227,7 @@ try:
     with sync_playwright() as p:
         pg = r2.page(p); pg.set_viewport_size({"width": 1400, "height": 1000})
         pg.set_input_files("#pick", [mz("B_FullMass-t15")]); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=30000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
 
         def lr_no_auto_annotations():
             pg.wait_for_function("E.panels.some(p=>p.type==='spec'&&p._a)", timeout=30000)

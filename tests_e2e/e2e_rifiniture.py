@@ -30,8 +30,8 @@ try:
         step("ldIon draws the plain animation (analysers off, not loaded) without errors (still frame with reduced motion)", ions)
         def cleanup():
             body = pg.inner_text("body")
-            assert "cella attiva:" not in body.lower() and "active cell:" not in body.lower()
-        step("«cella attiva» label is gone", cleanup)
+            assert "active cell:" not in body.lower()
+        step("«active cell» label is gone", cleanup)
         def busy():
             # the engine of the site answers in a few ms: its worker is slowed down (the messages to it wait `__lag` ms) so that a call stays pending
             pg.evaluate("() => { const pm = Worker.prototype.postMessage; Worker.prototype.postMessage = function (...a) { setTimeout(() => pm.apply(this, a), window.__lag || 0); }; window.__lag = 1800; window.__slow = fetch('api/formula?f=C6H12O6').catch(() => 0); }")
@@ -50,7 +50,7 @@ try:
             assert pg.evaluate(f"{root}.getAttribute('data-a11y-font')") == "atkinson" and pg.evaluate(f"{root}.getAttribute('data-a11y-bg')") == "hc"
         step("font and high contrast are applied and remembered", gear)
         def draw():
-            tab = pg.locator("text=Disegno").first; tab.click(); pg.wait_for_timeout(800)
+            tab = pg.locator("text=Drawing").first; tab.click(); pg.wait_for_timeout(800)
             assert pg.evaluate("!!document.querySelector('#v-draw aside #side-toggle')")
             assert pg.evaluate("document.querySelector('#kframe').offsetTop") == 0 or pg.evaluate("document.querySelector('#kframe').getBoundingClientRect().top - document.querySelector('#kframe').parentElement.getBoundingClientRect().top") < 2
             pg.click("#side-toggle"); pg.wait_for_timeout(300)

@@ -66,7 +66,7 @@ try:
                 q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#pick", state="attached")
                 q.evaluate("try{localStorage.removeItem('mzlab.tour.lr')}catch(_){}")
                 stage(q, [TMP])
-                q.click("text=Carica dati"); wait_for_js(q, "typeof E !== 'undefined' && E.files.length >= 1")
+                q.click("text=Load data"); wait_for_js(q, "typeof E !== 'undefined' && E.files.length >= 1")
                 q.wait_for_selector("#tour-invito", timeout=5000); axe(q, "'#tour-invito'")
                 q.click("#tour-inv-no"); q.click("#np-set"); q.wait_for_selector("#uipset"); q.click("#uip-tour")
                 q.wait_for_selector("#tour-dialog", timeout=3000)

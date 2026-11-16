@@ -23,8 +23,8 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz(f) for f in FILES])
-        pg.wait_for_selector("text=Carica dati")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.wait_for_selector("text=Load data")
+        pg.click("text=Load data"); ready(pg)
         pg.screenshot(path=SH + "10_opened.png")
         # find the TIC apex of the first full-scan file
         info = pg.evaluate("""()=>{const p=E.panels[0];const s=p._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});return {rt:s.x[m],n:p._a.sr.length}}""")
