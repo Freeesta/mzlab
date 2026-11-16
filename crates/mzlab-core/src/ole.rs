@@ -249,7 +249,7 @@ impl Ole {
     }
 
     /// Takes the SHA-1 of the whole file (lower-case hex) from the caller, who already has it, instead of reading the file for it.
-    pub fn with_sha1(mut self, sha1: Option<String>) -> Ole {
+    pub fn with_sha1(self, sha1: Option<String>) -> Ole {
         *self.sha1.borrow_mut() = sha1;
         self
     }

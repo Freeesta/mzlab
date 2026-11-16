@@ -15,7 +15,7 @@ use mzlab_core::idxread::Index;
 use mzlab_core::json::Value;
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::mzmlwrite::{Options, ZLIB_LEVEL};
-use mzlab_core::readers::{Limits, Losses};
+use mzlab_core::readers::Losses;
 use mzlab_core::readers_mzml::{Conversion, Peaks};
 use mzlab_core::step::DataType;
 use mzlab_feat::recipe::Recipe;
@@ -418,20 +418,7 @@ pub(crate) fn write_mzml_with(
     stop: &Stop,
 ) -> Result<Written> {
     let mut pace = mzlab_core::pace::Pace::new(step);
-    // a SCIEX pair is listed with no injection built, then opened for the one sample asked for: its blocks are the only ones read
-    let listed = mzlab_lettori::apri_solo(
-        crate::flow_set::file_set(path)?,
-        &Limits::desktop(),
-        usize::MAX,
-    )?;
-    let ids: Vec<u32> = listed.samples().iter().map(|s| s.id).collect();
-    let sample = crate::flow_set::sample_index(label.unwrap_or(""), &ids)?;
-    let mut reader = if listed.format() == mzlab_core::readers::Format::SciexWiff {
-        drop(listed);
-        mzlab_lettori::apri_solo(crate::flow_set::file_set(path)?, &Limits::desktop(), sample)?
-    } else {
-        listed
-    };
+    let (mut reader, sample) = crate::flow_set::open_sample(path, label)?;
     let lost = reader.losses(sample)?;
     if let Some(t) = lost.report(path) {
         eprintln!("{t}");

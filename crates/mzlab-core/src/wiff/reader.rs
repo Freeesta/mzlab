@@ -358,7 +358,7 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
     let (mut parti, mut campioni, mut total) = (Vec::new(), Vec::new(), 0u64);
     let mut raw_names = Vec::new();
     for (i, s) in samples(&ole).into_iter().enumerate() {
-        let mut w = Wiff::open_or_refuse(&ole, &name, scan_len, s)?;
+        let w = Wiff::open_or_refuse(&ole, &name, scan_len, s)?;
         total += w.records.len() as u64;
         limits.ok_entries(total)?;
         let mut part = Part::new(w);

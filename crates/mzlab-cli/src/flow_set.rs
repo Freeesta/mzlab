@@ -271,3 +271,20 @@ pub(crate) fn sample_index(label: &str, ids: &[u32]) -> Result<usize> {
             .ok_or_else(|| Error::new("error.badIndex").with("c", id)),
     }
 }
+
+/// The reader of the dataset at `path` and the index of the sample `label` names. A SCIEX pair is listed with no injection built, then opened for that
+/// sample alone: its blocks are the only ones read.
+pub(crate) fn open_sample(
+    path: &Path,
+    label: Option<&str>,
+) -> Result<(Box<dyn mzlab_core::readers::Reader>, usize)> {
+    let limits = mzlab_core::readers::Limits::desktop();
+    let listed = mzlab_lettori::apri_solo(file_set(path)?, &limits, usize::MAX)?;
+    let ids: Vec<u32> = listed.samples().iter().map(|s| s.id).collect();
+    let sample = sample_index(label.unwrap_or(""), &ids)?;
+    if listed.format() != mzlab_core::readers::Format::SciexWiff {
+        return Ok((listed, sample));
+    }
+    drop(listed);
+    Ok((mzlab_lettori::apri_solo(file_set(path)?, &limits, sample)?, sample))
+}
