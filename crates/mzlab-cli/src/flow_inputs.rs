@@ -67,16 +67,16 @@ pub fn fill_inputs(plan: &mut Plan, locate: impl Fn(&str) -> PathBuf + Sync) -> 
         .iter()
         .map(mzlab_feat::nature::wants_facets)
         .collect();
-    let jobs: Vec<(PathBuf, bool)> = plan
+    let jobs: Vec<(PathBuf, bool, String)> = plan
         .inputs
         .iter()
         .zip(&wants)
-        .map(|(f, w)| (locate(&f.name), *w))
+        .map(|(f, w)| (locate(&f.name), *w, f.name.clone()))
         .collect();
     let sha1 = crate::flow_set::wants_sha1(plan);
-    let read = map_par(&jobs, |(p, w)| {
+    let read = map_par(&jobs, |(p, w, label)| {
         (
-            crate::flow_set::digest_for(p, sha1),
+            crate::flow_set::digest_label(p, label, sha1),
             if *w { scan_facts(p) } else { None },
         )
     });

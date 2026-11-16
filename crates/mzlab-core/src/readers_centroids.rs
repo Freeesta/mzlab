@@ -137,6 +137,12 @@ impl Reader for Centroidato {
     fn refused(&mut self, c: usize) -> Option<crate::Error> {
         self.l.refused(c)
     }
+    fn empty_sample(&mut self, c: usize) -> Result<bool> {
+        self.l.empty_sample(c)
+    }
+    fn source_identity(&mut self, c: usize) -> Result<Option<String>> {
+        self.l.source_identity(c)
+    }
     fn losses(&mut self, c: usize) -> Result<crate::readers::Losses> {
         self.l.losses(c)
     }

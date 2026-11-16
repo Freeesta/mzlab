@@ -42,6 +42,12 @@ pub fn wiff_sample(fs: FileSet, limits: &Limits, c: usize) -> Result<Box<dyn Rea
     Ok(Box::new(Finished::new(l)))
 }
 
+/// `wiff_sample` with the other injections left unread (`wiff::reader::open_bare`): for the conversion, the identity and the index of the one sample.
+pub fn wiff_sample_bare(fs: FileSet, limits: &Limits, c: usize) -> Result<Box<dyn Reader>> {
+    let l = crate::wiff::reader::open_bare(fs, limits, c)?;
+    Ok(Box::new(Finished::new(l)))
+}
+
 fn broken(location: &str, who: &str, what: &str, v: f64) -> Error {
     let (key, param) = if location == "scan" {
         ("err.file.nonFinite", "scan")
@@ -182,6 +188,8 @@ impl Reader for Finished {
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         self.inner.not_carried()
     }
+    #[rustfmt::skip]    fn empty_sample(&mut self, c: usize) -> Result<bool> { self.inner.empty_sample(c) }
+    #[rustfmt::skip]    fn source_identity(&mut self, c: usize) -> Result<Option<String>> { self.inner.source_identity(c) }
     #[rustfmt::skip]    fn unindexed(&self) -> (usize, usize) { self.inner.unindexed() }
     fn missing(&mut self, c: usize) -> usize {
         self.inner.missing(c)

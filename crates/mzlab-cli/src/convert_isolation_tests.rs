@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use super::super::convert;
-use crate::convert_fixtures::folder;
+use crate::convert_fixtures::{folder, makers};
 use crate::flow_run_tests::p;
 
 /// `x.wiff` + `x.wiff.scan` copied from pair `name` of the isolation script into `dir/in`, or none without python3.
@@ -48,6 +48,36 @@ fn without_digests(b: &[u8]) -> Vec<u8> {
         i += n.max(1);
     }
     out
+}
+
+/// The document with the source identity left out (the index that closes an indexed mzML aside): the SHA-1 checksum lines, the identity line, and every SHA-1 / partial identity inside the method document.
+fn without_identity(b: &[u8]) -> Vec<u8> {
+    let whole = String::from_utf8_lossy(b);
+    // the offsets of the index and the checksum of the file that close it move with the length of the identity: the document before them is compared
+    let text = whole.split("<indexList").next().unwrap_or_default();
+    let mut joined = text.to_string();
+    // each element that carries a SHA-1 checksum or the identity of the source is cut out whole
+    for marker in ["MS:1000569", "source-identity"] {
+        while let Some(m) = joined.find(marker) {
+            let from = joined[..m].rfind('<').unwrap_or(m);
+            let to = joined[m..].find("/>").map_or(joined.len(), |e| m + e + 2);
+            joined.replace_range(from..to, "");
+        }
+    }
+    while let Some(i) = joined.find("partial(sample=") {
+        let end = (i + "partial(sample=N):".len() + 64).min(joined.len());
+        joined.replace_range(i..end, "#");
+    }
+    joined.retain(|c| c != '\n');
+    let blanked = String::from_utf8_lossy(&without_digests(joined.as_bytes())).into_owned();
+    // a blanked digest and the blanked partial identity stand for the same field
+    let mut out = String::new();
+    for c in blanked.chars() {
+        if c != '#' || !out.ends_with('#') {
+            out.push(c);
+        }
+    }
+    out.into_bytes()
 }
 
 #[test]
@@ -139,11 +169,55 @@ fn samples_writes_only_the_chosen_ones_as_the_whole_pair_does() {
     let o = convert(&[p(&s), "--out", p(&some.join("out")), "--samples", "3,2"]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     assert!(!some.join("out/x-1.mzML").exists());
+    let mut identities = Vec::new();
     for id in [2, 3] {
         let read = |d: &Path| std::fs::read(d.join(format!("out/x-{id}.mzML"))).unwrap();
-        assert_eq!(read(&all), read(&some), "sample {id}");
+        let (whole, chosen) = (read(&all), read(&some));
+        // the same file but for the source identity: whole-file SHA-1 checksums for the whole pair, a named partial identity for the chosen samples
+        let (w, c) = (without_identity(&whole), without_identity(&chosen));
+        let at = w
+            .iter()
+            .zip(&c)
+            .position(|(a, b)| a != b)
+            .unwrap_or(w.len().min(c.len()));
+        assert!(
+            w == c,
+            "sample {id} differs at {at}: {:?} / {:?}",
+            String::from_utf8_lossy(&w[at.saturating_sub(80)..(at + 120).min(w.len())]),
+            String::from_utf8_lossy(&c[at.saturating_sub(80)..(at + 120).min(c.len())])
+        );
+        let text = String::from_utf8_lossy(&chosen).into_owned();
+        let found: Vec<&str> = text
+            .match_indices("partial(sample=")
+            .map(|(i, _)| &text[i..i + "partial(sample=N):".len() + 64])
+            .collect();
+        assert!(!found.is_empty(), "sample {id} names its partial identity");
+        assert!(found
+            .iter()
+            .all(|f| f.starts_with(&format!("partial(sample={id}):"))));
+        assert!(!String::from_utf8_lossy(&whole).contains("partial(sample="));
+        identities.push(found[0].to_string());
     }
+    assert_ne!(
+        identities[0], identities[1],
+        "another sample, another identity"
+    );
     let o = convert(&[p(&s), "--out", p(&some.join("out2")), "--samples", "9"]);
     assert_eq!(o.code, 4, "{}", o.stderr);
     assert!(o.stderr.contains("sample 9"), "{}", o.stderr);
+}
+
+/// `--samples 1` takes a dataset of one sample (it is its sample 1), another number is the exit 4, and an input the readers cannot open is not dropped for
+/// lack of a sample number: it fails with its own error.
+#[test]
+fn samples_one_takes_a_one_sample_dataset_and_a_broken_input_still_fails() {
+    let d = folder("sel_uno");
+    let inp = makers(&d, true);
+    let (a, bad) = (inp.join("a.mzXML"), inp.join("rotto.raw"));
+    let o = convert(&[p(&a), p(&bad), "--out", p(&d.join("out")), "--samples", "1"]);
+    assert!(d.join("out/a.mzML").exists(), "{}", o.stderr);
+    assert_ne!(o.code, 0, "{}", o.stderr);
+    assert!(o.stderr.contains("rotto"), "{}", o.stderr);
+    let o = convert(&[p(&a), "--out", p(&d.join("out2")), "--samples", "2"]);
+    assert_eq!(o.code, 4, "{}", o.stderr);
 }

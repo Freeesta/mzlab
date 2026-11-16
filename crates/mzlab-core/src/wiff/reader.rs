@@ -3,6 +3,7 @@
 
 use super::reader_extra::extra_of;
 use super::window::Window;
+mod partial;
 use super::{losses::isolate, samples, scan, Record, Wiff, SAMPLES};
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
@@ -14,6 +15,8 @@ use crate::readers::{
     ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Member, Position, Reader,
     ReaderEntry, Sample, ScanEntry, CONTRATTO,
 };
+pub use partial::{is_mark, MARK as PARTIAL, PREFIX as PARTIAL_PREFIX};
+use partial::{file_header, with_method};
 
 const SCAN: &str = ".wiff.scan";
 const WIFF: &str = ".wiff";
@@ -92,6 +95,8 @@ pub struct WiffReader {
     pub(super) parts: Vec<Part>,
     /// SHA-1 of the `.wiff.scan` for the header, read once (the whole member).
     scan_sha1: Option<Option<String>>,
+    /// The pair was opened for the ranges of one injection: its source is told by `partial_identity`, no whole-file hash is taken.
+    partial: Option<String>,
 }
 
 pub const ENTRY: ReaderEntry = ReaderEntry {
@@ -185,12 +190,12 @@ fn row(parts: &[Part], c: usize, k: usize) -> Result<(&Part, &Record)> {
 }
 
 /// `origine` of the document of injection `sample`.
-fn source(l: &WiffReader, sample: u32) -> Source {
+fn source(l: &WiffReader, sample: u32, ident: Option<String>) -> Source {
     let file = |name: String, sha1: Option<String>, bytes: u64| SrcFile { name, sha1, bytes };
     Source {
         format: "sciex-wiff",
         files: vec![
-            file(l.nome.clone(), Some(l.ole.sha1_hex()), 0),
+            file(l.nome.clone(), ident.or_else(|| Some(l.ole.sha1_hex())), 0),
             file(format!("{}.scan", l.nome), None, l.scan_len),
         ],
         sample: Some(sample),
@@ -221,6 +226,8 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     fn refused(&mut self, c: usize) -> Option<Error> { self.parts.get(c).and_then(|p| p.w.readable().err()) }
     fn samples(&self) -> &[Sample] { &self.campioni }
     fn unindexed(&self) -> (usize, usize) { self.unindexed }
+    fn empty_sample(&mut self, c: usize) -> Result<bool> { partial::empty_of(self, c) }
+    fn source_identity(&mut self, c: usize) -> Result<Option<String>> { if self.partial.is_some() { self.partial_identity(c).map(Some) } else { Ok(None) } }
     fn index(&mut self, c: usize) -> Result<&[ScanEntry]> { Ok(&self.ready(c)?.indice) }
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.ready(c)?;
@@ -268,9 +275,11 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> { with_method(self, c).map(Some) }
     fn table_header(&mut self, c: usize) -> Result<Option<Header>> { file_header(self, c).map(Some) }
     fn method(&mut self, c: usize) -> Result<String> {
+        // an injection opened alone names its partial identity as the source of the method document, not the SHA-1 of the whole file
+        let ident = if self.partial.is_some() { Some(self.partial_identity(c)?) } else { None };
         let w = &self.part(c)?.w;
         let sample = w.sample;
-        Ok(crate::method_wiff::from_wiff(&self.ole, w.inferred_from.unwrap_or(sample), &source(self, sample)))
+        Ok(crate::method_wiff::from_wiff(&self.ole, w.inferred_from.unwrap_or(sample), &source(self, sample, ident)))
     }
 }
 
@@ -281,47 +290,6 @@ fn field(name: &str, value: impl ToString) -> Field {
         unita: None,
         cv: None,
     }
-}
-
-/// The header of the mzML with the `metodo/1` document in the run: the method (pumps, gradient, detectors) travels in the mzML, as for `.raw` and `.D`,
-/// so the page reads it back from a converted file.
-fn with_method(l: &mut WiffReader, c: usize) -> Result<Header> {
-    let mut h = file_header(l, c)?;
-    let doc = l.method(c)?;
-    if !doc.is_empty() {
-        h.run_params
-            .push((crate::method::USERPARAM.to_string(), doc));
-    }
-    Ok(h)
-}
-
-/// The header of the mzML of injection `c`, with the SHA-1 of the `.wiff.scan`.
-fn file_header(l: &mut WiffReader, c: usize) -> Result<Header> {
-    l.ready(c)?;
-    // the SHA-1 of the whole `.wiff` is taken here, for the header of one mzML, never when the pair is opened
-    if let Some(p) = l.parts.get_mut(c) {
-        if p.w.wiff_sha1.is_none() {
-            p.w.wiff_sha1 = Some(l.ole.sha1_hex());
-        }
-    }
-    if l.scan_sha1.is_none() {
-        let win = &mut Window::new(&mut l.scan, l.scan_len);
-        l.scan_sha1 = Some(sha1_hex(win, l.scan_len).ok());
-    }
-    let sha = l.scan_sha1.clone().flatten();
-    let w = &l.part(c)?.w;
-    #[cfg(feature = "estesi")]
-    let mut h = w.header_estesi(&l.nome, sha);
-    #[cfg(not(feature = "estesi"))]
-    let mut h = w.header(&l.nome, sha, false);
-    // a section the index does not list: the run says that its name, method and times were inferred from an indexed sample
-    if let Some(d) = w.inferred_from {
-        h.run_params.push((
-            "mzlab:wiff-unindexed".into(),
-            format!("name, method and times inferred from sample {d}"),
-        ));
-    }
-    Ok(h)
 }
 
 fn member(fs: &mut FileSet, i: usize) -> Result<&mut Member> {
@@ -336,29 +304,48 @@ fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
 
 /// Opens the pair; with `solo = Some(c)` only injection `c` reads the heads of its blocks in the `.wiff.scan` (the index of one sample in its own worker: the other injections
 /// of a container with many would read the whole `.wiff.scan` each), and the others are listed with 0 scans until they are used.
-pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Result<Box<dyn Reader>> {
+pub fn open_only(fs: FileSet, limits: &Limits, only: Option<usize>) -> Result<Box<dyn Reader>> {
+    open_pair(fs, limits, only, false)
+}
+
+/// `open_only` for injection `c` with the others left as names and ids: their index and method are not read (listed as refused, `not opened`), so the cost
+/// of opening does not grow with the injections of the pair. For the conversion, the identity and the index of one sample, not for a listing.
+pub fn open_bare(fs: FileSet, limits: &Limits, c: usize) -> Result<Box<dyn Reader>> {
+    open_pair(fs, limits, Some(c), true)
+}
+
+/// The file name of a member (what follows the last separator).
+fn base_name(path: &str) -> String {
+    path.rsplit(['/', '\\']).next().unwrap_or("x.wiff").to_string()
+}
+
+fn open_pair(mut fs: FileSet, limits: &Limits, only: Option<usize>, bare: bool) -> Result<Box<dyn Reader>> {
     let wi = wiff_member(&fs).ok_or_else(|| Error::new("err.file.notWiff").with("name", "?"))?;
-    let name = member(&mut fs, wi)?
-        .nome
-        .rsplit(['/', '\\'])
-        .next()
-        .unwrap_or("x.wiff")
-        .to_string();
+    let name = base_name(&member(&mut fs, wi)?.nome);
     let si = fs
         .find(SCAN)
         .ok_or_else(|| Error::new("err.file.wiffNoScan").with("name", &name))?;
     let m = member(&mut fs, wi)?;
+    let partial = partial::asked(m.sha1.as_deref());
     let ole = super::container::open_member(m, &name, limits)?;
     let sm = member(&mut fs, si)?;
     let scan_len = sm.dim;
     // the SHA-1 of the `.wiff.scan` when the fingerprints were already taken (`upload::impronte`, `known_fingerprints`): the header does not read the whole file again
-    let scan_sha1 = sm.sha1.take().filter(|s| !s.is_empty()).map(Some);
+    let scan_sha1 = sm
+        .sha1
+        .take()
+        .filter(|s| !s.is_empty() && !partial::is_mark(s))
+        .map(Some);
     let mut scan = std::mem::replace(&mut sm.dati, Box::new(Vec::<u8>::new()));
     let membro = u16::try_from(si).unwrap_or(0);
     let (mut parti, mut campioni, mut total) = (Vec::new(), Vec::new(), 0u64);
     let mut raw_names = Vec::new();
     for (i, s) in samples(&ole).into_iter().enumerate() {
-        let w = Wiff::open_or_refuse(&ole, &name, scan_len, s)?;
+        let w = if bare && only != Some(i) {
+            partial::unopened(s, scan_len)
+        } else {
+            Wiff::open_or_refuse(&ole, &name, scan_len, s)?
+        };
         total += w.records.len() as u64;
         limits.ok_entries(total)?;
         let mut part = Part::new(w);
@@ -404,6 +391,7 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
         unindexed,
         parts: parti,
         scan_sha1,
+        partial,
     }))
 }
 

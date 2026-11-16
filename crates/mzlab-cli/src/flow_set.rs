@@ -1,7 +1,7 @@
 //! The datasets of vendor files on disk as `convert.mzml` and `mzlab-cli convert` take them: a file, a `.wiff` with its `.wiff.scan`, or the files of a
 //! `.D`/`.d`/`.raw` folder (the `FileSet` of a reader of the registry), their SHA-256, and the sample a plan input names (`NAME@ID`).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -75,11 +75,12 @@ pub(crate) fn file_set(path: &Path) -> Result<FileSet> {
     let mut list = Vec::new();
     for (name, p) in members(path)? {
         let f = File::open(&p).map_err(io)?;
+        let mark = partial_mark(path, &name);
         list.push(Member {
             nome: name,
             dim: f.metadata().map_err(io)?.len(),
             dati: Box::new(f),
-            sha1: known_sha1(&p),
+            sha1: mark.or_else(|| known_sha1(&p)),
         });
     }
     Ok(FileSet { membri: list })
@@ -96,10 +97,10 @@ fn hash_file(p: &Path, sha1: bool) -> Result<(u64, String)> {
     let _one = lock.lock().unwrap_or_else(|e| e.into_inner());
     let before = stamp(p);
     // the samples of one pair are digested one after the other: a file already hashed (same size and time) is not read again
-    if let Some(((len, _), (sha256, have))) = before.zip(known_pair(p)) {
-        if have.is_some() || !sha1 {
-            return Ok((len, sha256));
-        }
+    if let Some(((len, _), (sha256, have))) = before.zip(known_pair(p))
+        && (have.is_some() || !sha1)
+    {
+        return Ok((len, sha256));
     }
     let (bytes, sha256, sha1) =
         hash_read_with(&mut File::open(p).map_err(io)?, sha1).map_err(io)?;
@@ -272,13 +273,77 @@ pub(crate) fn sample_index(label: &str, ids: &[u32]) -> Result<usize> {
     }
 }
 
+/// The SCIEX pairs `convert --samples` reads for chosen samples only: their source is told by the ranges of the sample (`wiff::reader::PARTIAL`), no
+/// whole-file hash is taken. Ids listed for them, and the identities taken.
+static PARTIAL: Mutex<BTreeSet<PathBuf>> = Mutex::new(BTreeSet::new());
+static LISTED: Mutex<BTreeMap<PathBuf, Vec<u32>>> = Mutex::new(BTreeMap::new());
+static TAKEN: Mutex<BTreeMap<(PathBuf, u32), String>> = Mutex::new(BTreeMap::new());
+
+fn locked<T>(m: &'static Mutex<T>) -> std::sync::MutexGuard<'static, T> {
+    m.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// The pair at `path` is read for chosen samples only (`partial_digest`); `ids` are its samples, listed once.
+pub(crate) fn mark_partial(path: &Path, ids: &[u32]) {
+    locked(&PARTIAL).insert(path.to_path_buf());
+    locked(&LISTED).insert(path.to_path_buf(), ids.to_vec());
+}
+
+/// The mark a member of a partial pair carries instead of a SHA-1 (the `.wiff` and its `.wiff.scan`).
+fn partial_mark(path: &Path, name: &str) -> Option<String> {
+    let n = name.to_lowercase();
+    (locked(&PARTIAL).contains(path) && (n.ends_with(".wiff") || n.ends_with(".wiff.scan")))
+        .then(|| mzlab_core::wiff::reader::PARTIAL.to_string())
+}
+
+/// The partial identity taken for the input `label` of the pair at `path`, when it was read for chosen samples only.
+pub(crate) fn partial_of(path: &Path, label: &str) -> Option<String> {
+    let id = split_sample(label).1?;
+    locked(&TAKEN).get(&(path.to_path_buf(), id)).cloned()
+}
+
+/// Size and digest of the input `label` of the dataset at `path`: the partial identity of its sample for a partial pair, else `digest_for`.
+pub(crate) fn digest_label(path: &Path, label: &str, sha1: bool) -> Result<(u64, String)> {
+    if locked(&PARTIAL).contains(path) && split_sample(label).1.is_some() {
+        let (mut l, c) = open_sample(path, Some(label))?;
+        let id = l
+            .source_identity(c)?
+            .ok_or_else(|| Error::new("err.file.wiff").with("detail", "identity"))?;
+        let sample = split_sample(label).1.unwrap_or(0);
+        locked(&TAKEN).insert((path.to_path_buf(), sample), id.clone());
+        let bytes = members(path)?
+            .iter()
+            .map(|(_, p)| std::fs::metadata(p).map_or(0, |m| m.len()))
+            .sum();
+        return Ok((bytes, id));
+    }
+    digest_for(path, sha1)
+}
+
 /// The reader of the dataset at `path` and the index of the sample `label` names. A SCIEX pair is listed with no injection built, then opened for that
-/// sample alone: its blocks are the only ones read.
+/// sample alone: its blocks are the only ones read. The ids of a pair listed before are not listed again.
 pub(crate) fn open_sample(
     path: &Path,
     label: Option<&str>,
 ) -> Result<(Box<dyn mzlab_core::readers::Reader>, usize)> {
     let limits = mzlab_core::readers::Limits::desktop();
+    let listed = locked(&LISTED).get(path).cloned();
+    if let Some(ids) = listed {
+        let sample = sample_index(label.unwrap_or(""), &ids)?;
+        let mut fs = file_set(path)?;
+        let taken = locked(&TAKEN)
+            .get(&(path.to_path_buf(), ids[sample]))
+            .cloned();
+        if let (Some(t), Some(m)) = (
+            taken,
+            fs.membri
+                .iter_mut()
+                .find(|m| m.nome.to_lowercase().ends_with(".wiff")),
+        ) {
+            m.sha1 = Some(t);
+        }
+        return Ok((mzlab_lettori::apri_solo(fs, &limits, sample)?, sample));
+    }
     let listed = mzlab_lettori::apri_solo(file_set(path)?, &limits, usize::MAX)?;
     let ids: Vec<u32> = listed.samples().iter().map(|s| s.id).collect();
     let sample = sample_index(label.unwrap_or(""), &ids)?;
@@ -286,5 +351,8 @@ pub(crate) fn open_sample(
         return Ok((listed, sample));
     }
     drop(listed);
-    Ok((mzlab_lettori::apri_solo(file_set(path)?, &limits, sample)?, sample))
+    Ok((
+        mzlab_lettori::apri_solo(file_set(path)?, &limits, sample)?,
+        sample,
+    ))
 }

@@ -123,5 +123,45 @@ fn each_sample_of_a_multi_sample_pair_opened_alone_equals_the_whole_pair() {
         let (fs, _, _) = set(&out, "sano", None);
         let mut alone = open_only(fs, &limits, Some(c)).unwrap();
         assert_eq!(digest(&mut whole, c), digest(&mut alone, c), "sample {c}");
+        let (fs, _, _) = set(&out, "sano", None);
+        let mut bare = mzlab_core::wiff::reader::open_bare(fs, &limits, c).unwrap();
+        assert_eq!(digest(&mut whole, c), digest(&mut bare, c), "bare sample {c}");
     }
+}
+
+/// A pair opened with the `PARTIAL` mark tells its source by the ranges of the sample: the same sample gives the same identity, another sample another one,
+/// and the scans are the ones the whole pair gives.
+#[test]
+fn a_partial_identity_follows_the_sample_and_leaves_the_scans_alone() {
+    let out = std::env::temp_dir().join(format!("mzlab_wiff_partial_{}", std::process::id()));
+    let root: PathBuf = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let ok = Command::new("python3")
+        .arg(root.join("tools/wiff_isolation.py"))
+        .arg(&out)
+        .output()
+        .ok()
+        .filter(|o| o.status.success());
+    if ok.is_none() {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 not available"
+        );
+        eprintln!("SKIP wiff_by_sector: python3 not available");
+        return;
+    }
+    let limits = Limits::sito();
+    let id = |c: usize| {
+        let (fs, _, _) = set(&out, "sano", Some(mzlab_core::wiff::reader::PARTIAL.into()));
+        let mut r = open_only(fs, &limits, Some(c)).unwrap();
+        (r.source_identity(c).unwrap().unwrap(), digest(&mut r, c))
+    };
+    let (a0, d0) = id(0);
+    let (a1, _) = id(1);
+    assert!(a0.starts_with("partial(sample="), "{a0}");
+    assert_eq!(a0, id(0).0, "same file and sample, same identity");
+    assert_ne!(a0, a1, "another sample, another identity");
+    let (fs, _, _) = set(&out, "sano", None);
+    let mut whole = open_only(fs, &limits, None).unwrap();
+    assert_eq!(whole.source_identity(0).unwrap(), None);
+    assert_eq!(d0, digest(&mut whole, 0));
 }

@@ -58,6 +58,7 @@ impl Ole {
         let mut o = Ole {
             src,
             sha1: Default::default(),
+            last_big: Default::default(),
             ss,
             mss,
             cutoff,
@@ -265,12 +266,44 @@ impl Ole {
         h
     }
 
+    /// Size of the container file in bytes.
+    pub fn size(&self) -> u64 {
+        self.src.len()
+    }
+
+    /// The 512 bytes of the header sector.
+    pub fn head(&self) -> Vec<u8> {
+        self.src.read(0, 512)
+    }
+
+    /// SHA-256 (hex) of the shape of the container: the path and size of every stream, in the order of the directory. It reads nothing past the opening.
+    pub fn directory_digest(&self) -> String {
+        let mut text = String::new();
+        for (p, i) in &self.streams {
+            text += &format!("{p}\0{}\n", self.dir.get(*i).map_or(0, |e| e.size));
+        }
+        crate::budget::sha256_hex(text.as_bytes())
+    }
+
     pub fn has(&self, path: &str) -> bool {
         self.streams.iter().any(|(p, _)| p == path)
     }
 
     /// The bytes of a stream (`None` when the path is not one). A later stream of the same path wins, as in a Python dict.
     pub fn read(&self, path: &str) -> Option<Vec<u8>> {
+        if let Some((p, b)) = self.last_big.borrow().as_ref()
+            && p == path
+        {
+            return Some(b.clone());
+        }
+        let b = self.read_stream(path)?;
+        if b.len() >= 1 << 20 {
+            *self.last_big.borrow_mut() = Some((path.to_string(), b.clone()));
+        }
+        Some(b)
+    }
+
+    fn read_stream(&self, path: &str) -> Option<Vec<u8>> {
         let e = self
             .dir
             .get(self.streams.iter().rev().find(|(p, _)| p == path)?.1)?;
@@ -335,6 +368,8 @@ impl Src {
 pub struct Ole {
     src: Src,
     sha1: std::cell::RefCell<Option<String>>,
+    /// The last stream of a megabyte or more that `read` gave: the DAD is asked for by the identity, the losses and the chromatograms of one injection.
+    last_big: std::cell::RefCell<Option<(String, Vec<u8>)>>,
     ss: usize,
     mss: usize,
     cutoff: u32,

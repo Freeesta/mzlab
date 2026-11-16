@@ -23,6 +23,8 @@ pub(crate) enum Item {
         flagged: Option<(usize, usize)>,
         /// A partial read as the record of the run has it, once the scans were read (declared, read, cause).
         lost: Option<(usize, usize, String)>,
+        /// The partial identity of the source (`partial(sample=ID):HEX`) when only the ranges of the chosen sample were read, never the hash of the whole file.
+        source: Option<String>,
     },
     Failed {
         input: String,
@@ -195,11 +197,15 @@ pub(crate) fn report(items: &[Item]) -> String {
                 conv,
                 notes,
                 flagged,
+                source,
                 ..
             } => {
                 o.raw("{\"ingresso\":").str(input);
                 o.raw(",\"uscita\":").str(output);
                 o.raw(",\"sha256\":").str(sha256);
+                if let Some(s) = source {
+                    o.raw(",\"fonte_parziale\":").str(s);
+                }
                 o.raw(",\"spettri\":").int(*spectra as i64);
                 o.raw(",\"secondi\":").num((seconds * 1e3).round() / 1e3);
                 o.raw(if *skipped {

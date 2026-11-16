@@ -33,16 +33,19 @@ fn listed_only(p: &Path, only: &[u32]) -> Option<Vec<(u32, bool, bool)>> {
     if ids.len() < 2 {
         return None;
     }
+    // the chosen samples are read by their own ranges: their source is told by a partial identity (logged with the plan), not by the hash of the whole pair
+    crate::flow_set::mark_partial(p, &ids);
+    eprintln!(
+        "note: {} read for the sample(s) {}: its source identity is partial (ranges of the sample), not the hash of the whole file",
+        p.display(),
+        only.iter().map(u32::to_string).collect::<Vec<_>>().join(",")
+    );
     Some(
         ids.iter()
             .enumerate()
             .map(|(c, &id)| {
                 let empty = only.contains(&id)
-                    && open(c).is_ok_and(|mut r| {
-                        r.samples().get(c).is_some_and(|s| s.scansioni == 0)
-                            && r.chromatograms(c).is_ok_and(|v| v.is_empty())
-                            && r.losses(c).is_ok_and(|x| !x.partial())
-                    });
+                    && open(c).is_ok_and(|mut r| r.empty_sample(c).unwrap_or(false));
                 (id, empty, true)
             })
             .collect(),
@@ -182,7 +185,14 @@ pub(crate) fn chosen(list: &mut Vec<Entry>, ids: &[u32]) -> Result<(), Outcome> 
             "the samples of a dataset are listed with mzlab-cli samples or in the .wiff list of the page",
         ));
     }
-    list.retain(|e| held(e).is_some_and(|id| ids.contains(&id)));
+    // an input that cannot be opened is kept so that it fails with its own error, never dropped for lack of a sample number
+    let broken = |e: &Entry| {
+        crate::flow_set::split_sample(&e.label).1.is_none()
+            && file_set(&e.input)
+                .and_then(|fs| mzlab_lettori::apri(fs, &Limits::desktop()))
+                .is_err()
+    };
+    list.retain(|e| held(e).is_some_and(|id| ids.contains(&id)) || broken(e));
     Ok(())
 }
 

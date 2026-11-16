@@ -26,14 +26,15 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--samples ID,ID...] [--compressi
   --out FOLDER         where the mzML files are written: NAME.mzML (NAME-ID.mzML for the sample ID of a dataset with several); the cache is in
                        FOLDER/.convert
   --samples ID,ID...   only these samples of a dataset with several (a .wiff holds one per injection; a .wiff.scan is read only where they are); an ID the
-                       inputs do not hold is an error
+                       inputs do not hold is an error. A .wiff pair is then read by the ranges of those samples, not whole: the source of each mzML is told by a
+                       partial identity (the mzlab:source-identity of the run, fonte_parziale in the report), never by the SHA-1 of the whole files
   --compression KIND   standard (zlib level 2, default), smallest (zlib and MS-Numpress) or none (uncompressed): the short form of the two options below
   --zlib N, --numpress zlib level of the arrays, 0 (none) to 9 (smallest), default 2; MS-Numpress coding of m/z and intensities
   --peaks WHICH        the peaks written: file (those of the file, default; a profile file keeps its points and the run warns), profile (the
                        points of the profile) or mzlab (centroids of mzLab)
   --workers N          files converted at once (default: the cores but one, 1 to 4, fewer when the memory budget of the computer does not give
                        each its share, with a note; the bytes written do not depend on it)
-  --report FILE.json   one object per input: ingresso, uscita, sha256, spettri, secondi, saltato, conv/1, avvisi (centroidi with --peaks mzlab); or ingresso, errore, causa
+  --report FILE.json   one object per input: ingresso, uscita, sha256, fonte_parziale (only when the sample was read by its ranges), spettri, secondi, saltato, conv/1, avvisi (centroidi with --peaks mzlab); or ingresso, errore, causa
   --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
                        program is not converted again
   --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
@@ -272,6 +273,7 @@ fn item(
                 notes,
                 flagged: crate::convert_report::flagged_of(run, &e.label),
                 lost: crate::convert_report::lost_of(run, &e.label),
+                source: crate::flow_set::partial_of(&e.input, &e.label),
             }
         }
         Err(cause) => Item::Failed { input, cause },

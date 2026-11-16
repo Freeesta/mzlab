@@ -48,6 +48,8 @@ impl Counting {
 impl Reader for Counting {
     fn format(&self) -> readers::Format { self.l.format() }
     fn samples(&self) -> &[readers::Sample] { self.l.samples() }
+    fn empty_sample(&mut self, c: usize) -> mzlab_core::Result<bool> { self.l.empty_sample(c) }
+    fn source_identity(&mut self, c: usize) -> mzlab_core::Result<Option<String>> { self.l.source_identity(c) }
     fn unindexed(&self) -> (usize, usize) { self.l.unindexed() }
     fn index(&mut self, c: usize) -> mzlab_core::Result<&[readers::ScanEntry]> { self.l.index(c) }
     fn index_without_tic(&mut self, c: usize) -> mzlab_core::Result<&[readers::ScanEntry]> { self.l.index_without_tic(c) }

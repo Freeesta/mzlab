@@ -232,17 +232,11 @@ pub trait Reader {
     fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>>;
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram>;
     /// Optical DAD / PDA 2D map JSON for sample `c`, if present.
-    fn dad_map(&mut self, _c: usize) -> Result<Option<String>> {
-        Ok(None)
-    }
+    #[rustfmt::skip]    fn dad_map(&mut self, _c: usize) -> Result<Option<String>> { Ok(None) }
     /// UV spectrum JSON of the DAD / PDA of sample `c` between the times `rt0` and `rt1`, if it has the optical matrix.
-    fn dad_spectrum(&mut self, _c: usize, _rt0: f64, _rt1: f64) -> Result<Option<String>> {
-        Ok(None)
-    }
+    #[rustfmt::skip]    fn dad_spectrum(&mut self, _c: usize, _rt0: f64, _rt1: f64) -> Result<Option<String>> { Ok(None) }
     /// Trace of the DAD / PDA of sample `c` at the wavelengths `nm0`..`nm1` (JSON `{rt, y, nm0, nm1, n}`), if it has the optical matrix.
-    fn dad_wavelength(&mut self, _c: usize, _nm0: f64, _nm1: f64) -> Result<Option<String>> {
-        Ok(None)
-    }
+    #[rustfmt::skip]    fn dad_wavelength(&mut self, _c: usize, _nm0: f64, _nm1: f64) -> Result<Option<String>> { Ok(None) }
     /// The XWC band proposed from the DAD / PDA of sample `c` (JSON `{nm, bw, rt, n}`, `wiff::dad_uv::dad_propose_json`), if it has the optical matrix.
     #[rustfmt::skip]    fn dad_propose(&mut self, _c: usize, _rt0: f64, _rt1: f64) -> Result<Option<String>> { Ok(None) }
     /// The optical (DAD / PDA) matrix of sample `c` as the reader holds it, for `convert.mzml` with `dad`; `None` when the sample has none.
@@ -272,6 +266,9 @@ pub trait Reader {
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         &[]
     }
+    /// Has sample `c` no scans, no chromatograms and nothing lost (an injection that acquired nothing, not a damaged one)? A wrapper forwards it.
+    #[rustfmt::skip]    fn empty_sample(&mut self, c: usize) -> Result<bool> { Ok(self.samples().get(c).is_some_and(|s| s.scansioni == 0) && self.chromatograms(c)?.is_empty() && !self.losses(c)?.partial()) }
+    #[rustfmt::skip]    fn source_identity(&mut self, _c: usize) -> Result<Option<String>> { Ok(None) } // `partial(sample=ID):HEX` when the set was opened for the byte ranges of sample `c` alone (`wiff::partial`), else None: the whole-file hashes stand
     #[rustfmt::skip]    fn unindexed(&self) -> (usize, usize) { (0, 0) } // data sections the index lacks (an incomplete copy): (recovered, left out)
     #[rustfmt::skip]    fn missing(&mut self, _c: usize) -> usize { 0 } // scans of sample `c` the index lists beyond the end of the data file (a truncated copy): not in the index
     #[rustfmt::skip]    fn refused(&mut self, _c: usize) -> Option<Error> { None } // why sample `c` will not be read (its method, a damaged block): the listing carries it; a wrapper forwards it

@@ -192,7 +192,11 @@ pub fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
 /// them). Any other set opens as `apri`.
 pub fn apri_solo(mut fs: FileSet, limits: &Limits, c: usize) -> Result<Box<dyn Reader>> {
     if riconosci(&mut fs).is_some_and(|v| v.id == mzlab_core::wiff::reader::ENTRY.id) {
-        let l = mzlab_core::readers_finite::wiff_sample(fs, limits, c)?;
+        let l = if c == usize::MAX {
+            mzlab_core::readers_finite::wiff_sample(fs, limits, c)?
+        } else {
+            mzlab_core::readers_finite::wiff_sample_bare(fs, limits, c)?
+        };
         return Ok(Box::new(srm::SrmFromScans::new(l)));
     }
     apri(fs, limits)

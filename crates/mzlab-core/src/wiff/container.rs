@@ -56,7 +56,9 @@ pub(super) fn open_member(
     name: &str,
     limits: &crate::readers::Limits,
 ) -> Result<Ole> {
-    let known = m.sha1.take().filter(|h| !h.is_empty());
+    let known = m.sha1
+        .take()
+        .filter(|h| !h.is_empty() && !super::reader::is_mark(h));
     let (len, src) = (
         m.dim,
         std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new())),
