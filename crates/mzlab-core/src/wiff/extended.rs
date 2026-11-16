@@ -183,6 +183,7 @@ impl Wiff {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::indexing_slicing)]
     use super::super::Wiff;
     use super::instrument_cv;
     use crate::error::Error;
