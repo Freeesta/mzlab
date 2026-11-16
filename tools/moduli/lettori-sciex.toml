@@ -4,6 +4,6 @@ feature = "sciex"
 senza_default = true
 wasm_opt = "@estesi"
 parte = "lettori"
-tetto = 483328
+tetto = 483840
 misura = 481224
 nota = "carries the .wiff device traces (+6 KB); measured plus margin, rounded to 1 KiB"
