@@ -12,8 +12,8 @@ r = Run(port=8841, wd="/tmp/wd_orig")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t10", "B_FullMass-t15", "B_FullMass-t30 (2)", "B_FullMass-t60"]]); pg.wait_for_selector("text=Carica dati")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t10", "B_FullMass-t15", "B_FullMass-t30 (2)", "B_FullMass-t60"]]); pg.wait_for_selector("text=Load data")
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("setTab('full',true)"); ready(pg)
         def entry():
             pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:194.3,w:0.5,label:'m/z 194'}]})"); wait_for_js(pg, "E.panels.some(q=>q.type==='xic')"); ready(pg)

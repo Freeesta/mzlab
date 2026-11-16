@@ -1,6 +1,6 @@
 """Disegno, side cards that fold (disegno-riquadri.js): on a first visit Quick draw, Expected properties and Export canvas come first and open, every other
 card is folded to its title row; the chevron toggles a card by click, Enter and Space with aria-expanded and its aria-label; the choice survives a reload
-(also for a <details> card); the explanations are tooltips and hidden descriptions, not paragraphs; a result opens its folded card; «Nascondi i riquadri»
+(also for a <details> card); the explanations are tooltips and hidden descriptions, not paragraphs; a result opens its folded card; «Hide panels»
 and the Draw tour (the labels step opens its folded card and folds it again) still work."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -24,8 +24,8 @@ try:
             assert not any(s[1] for s in st[3:]) and {"lb-card", "cut-card", "mech-card", "chk-card", "cip-card", "anal-card"} <= set(ids[3:]), st
             assert all(s[2] < 60 for s in st[3:]), st                                     # a folded card is its title row
             assert pg.is_visible("#ex-smi") and pg.is_visible("#ex-png") and pg.is_visible("#ex-link") and not pg.is_visible("#cut-line") and not pg.is_visible("#lb-f")
-            assert pg.get_attribute("#quick-card .rq-tg", "aria-label") == "Comprimi il riquadro «Disegna veloce»"
-            assert pg.get_attribute("#cut-card .rq-tg", "aria-label") == "Espandi il riquadro «Taglio dei legami»"
+            assert pg.get_attribute("#quick-card .rq-tg", "aria-label") == "Collapse the «Quick draw» panel"
+            assert pg.get_attribute("#cut-card .rq-tg", "aria-label") == "Expand the «Bond cuts» panel"
             b = pg.locator("#cut-card .rq-tg").bounding_box(); assert b["height"] >= 24 and b["width"] >= 24, b
         step("first visit: the three cards first and open, the rest folded", defaults)
         def no_prose():
@@ -76,7 +76,7 @@ try:
             assert pg.evaluate("document.getElementById('v-draw').classList.contains('noside')") and not pg.is_visible("#quick-card")
             pg.click("#side-toggle"); wait_for_js(pg, "!document.getElementById('v-draw').classList.contains('noside')")
             assert pg.is_visible("#quick-card") and exp(pg, "quick-card") == "true" and exp(pg, "lb-card") == "false"
-        step("«Nascondi i riquadri» still hides and shows them all, the folds kept", hide_all)
+        step("«Hide panels» still hides and shows them all, the folds kept", hide_all)
         def tour():
             pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
             pg.evaluate("TOUR.disegno()"); wait_for_js(pg, "!!document.getElementById('tour-dialog')")

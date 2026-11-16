@@ -35,9 +35,9 @@ try:
         def grey():
             pg.click("#cartpick"); pg.wait_for_selector("#cartbody .cprow")
             assert rows(pg) == ["a.mzML", "sub/b.mzML"], rows(pg)
-            t = pg.inner_text("#cartbody"); assert "Dati" in t and "Altri" not in t and "non caricato" in t, t
+            t = pg.inner_text("#cartbody"); assert "Dati" in t and "Altri" not in t and "not loaded" in t, t
             assert pg.evaluate("getComputedStyle(document.querySelector('.cprow')).color") != pg.evaluate("getComputedStyle(document.body).color")
-            assert "non caricato" in pg.get_attribute(".cprow", "aria-label")
+            assert "not loaded" in pg.get_attribute(".cprow", "aria-label")
             assert count(pg) == 0
         step("rows in grey (Data only), unknown and hidden files absent, nothing loaded", grey)
         def desktop():

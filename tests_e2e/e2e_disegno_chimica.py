@@ -1,6 +1,6 @@
 """Disegno, chemistry of the selection: the SMILES of selected atoms keeps isotopes ([13CH4], [2H]), radicals and stereo (@/@@ of L-alanine, as the canvas SMILES),
 because the piece molfile carries M  ISO, M  RAD, wedge/hash bonds and atom parity. The labels under the structures and above the arrows come from the engine
-(`etich/1`): isotopes, every element (Pt), «massa nominale»/«massa esatta», «isotopologo» across an arrow, the copied formula of a dianion in brackets.
+(`etich/1`): isotopes, every element (Pt), «nominal mass»/«exact mass», «isotopologo» across an arrow, the copied formula of a dianion in brackets.
 Run from the repo root after tools/build_site.py and tools/build_feat_wasm.sh site/static."""
 # covers: mzlab/web/disegno-molfile.js, mzlab/web/disegno-etichette.js, mzlab/web/draw.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -44,11 +44,11 @@ try:
             try: pg.wait_for_function(f"JSON.stringify({LBL}) === {json.dumps(json.dumps(want, ensure_ascii=False, separators=(',', ':')))}", timeout=30000)
             except Exception: raise AssertionError(pg.evaluate(LBL))
         def methane():
-            labels("[13CH4]", ["13CH4", "massa nominale 17"])
-            labels("[13CH4]", ["13CH4", "massa esatta 17.0347"], "4")
-        step("[13CH4]: label 13CH4, massa nominale 17, massa esatta 17.0347", methane)
-        step("CD3OH: massa esatta 35.0450", lambda: labels("[2H]C([2H])([2H])O", ["CHD3O", "massa esatta 35.0450"], "4"))
-        step("cisplatin: H4Cl2N2Pt 296.9399 (an element outside the old table)", lambda: labels("N[Pt](N)(Cl)Cl", ["H4Cl2N2Pt", "massa esatta 296.9399"], "4"))
+            labels("[13CH4]", ["13CH4", "nominal mass 17"])
+            labels("[13CH4]", ["13CH4", "exact mass 17.0347"], "4")
+        step("[13CH4]: label 13CH4, nominal mass 17, exact mass 17.0347", methane)
+        step("CD3OH: exact mass 35.0450", lambda: labels("[2H]C([2H])([2H])O", ["CHD3O", "exact mass 35.0450"], "4"))
+        step("cisplatin: H4Cl2N2Pt 296.9399 (an element outside the old table)", lambda: labels("N[Pt](N)(Cl)Cl", ["H4Cl2N2Pt", "exact mass 296.9399"], "4"))
         def isotopologue():
             pg.check("#lb-a"); pg.select_option("#lb-dec", "0"); pg.evaluate(f"{KJ}.setMolecule('c1ccccc1>>[13cH]1ccccc1')")
             try: pg.wait_for_function(f"{LBL}.includes('+13C \u2212C isotopologo \u0394m +1')", timeout=30000)

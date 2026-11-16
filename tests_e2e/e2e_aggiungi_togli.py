@@ -27,7 +27,7 @@ try:
             def go():
                 n = panels(); pg.evaluate("document.querySelector('#addf').click()"); wait_for_js(pg, f"{WORK} === 'add'")
                 assert pg.is_visible("#drop") and pg.is_visible("#backwork"), "the landing with its drop area and «Back to work!»"
-                assert pg.inner_text("#backwork").strip() in ("Back to work!", "Torna al lavoro!"), pg.inner_text("#backwork")
+                assert pg.inner_text("#backwork").strip() in ("Back to work!", "Back to work!"), pg.inner_text("#backwork")
                 assert pg.locator("#loaded, #cancadd, #backdata, #clearall").count() == 0, "no second landing"
                 assert pg.locator("#start:visible").count() == 1
                 if leave == "esc": pg.keyboard.press("Escape")
@@ -84,11 +84,11 @@ try:
         step("× on a row removes the file, Ctrl+Z brings it back", row_x)
         def menu_entries():
             pg.click("#flst .fl .nm >> nth=0", button="right"); txt = pg.inner_text("#ctx")
-            assert re.search(r"Remove all files|Rimuovi tutti i file", txt), txt
+            assert re.search(r"Remove all files|Remove all files", txt), txt
             pg.evaluate("document.getElementById('ctx').hidden = true")
             n = pg.evaluate("E.files.filter(f => !f.gone).length")
             pg.evaluate("E.files.forEach(f => { if (!f.gone) f.vis = true; })")
-            pg.click("#flst .fl .nm >> nth=0", button="right"); assert re.search(r"Remove the \d+ shown files|Rimuovi i \d+ file mostrati", pg.inner_text("#ctx"))
+            pg.click("#flst .fl .nm >> nth=0", button="right"); assert re.search(r"Remove the \d+ shown files|Remove the \d+ shown files", pg.inner_text("#ctx"))
             pg.evaluate("document.getElementById('ctx').hidden = true")
             pg.evaluate("removeAllFiles(E.files.filter(f => !f.gone && f.vis))"); wait_for_js(pg, f"{WORK} === 'landing'")
             pg.keyboard.press(f"{mod}+z"); wait_for_js(pg, f"E.files.filter(f => !f.gone).length === {n}"); wait_for_js(pg, f"{WORK} === 'panels'")

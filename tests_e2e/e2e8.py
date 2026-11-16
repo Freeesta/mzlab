@@ -1,4 +1,4 @@
-"""Panel interaction: active panel + arrows = scan by scan, zoom feedback (rectangle, bar, 'Vista intera'),
+"""Panel interaction: active panel + arrows = scan by scan, zoom feedback (rectangle, bar, 'Whole view'),
 PNG/CSV names and PNG metadata, right-click menu above panels after many clicks."""
 # covers: mzlab/web/scroll.js, mzlab/web/xlsx.js
 import sys, os, struct, zlib; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -47,7 +47,7 @@ try:
             pg.screenshot(path=SH + "81_zoomed.png")
             pg.locator(f".pnl.spec [data-a=fit]").first.click(); pg.wait_for_timeout(600)
             assert pg.evaluate(f"E.panels[{i}].zoom===null")
-        step("spectrum zoom: rectangle while dragging, bar, Vista intera", zoom)
+        step("spectrum zoom: rectangle while dragging, bar, Whole view", zoom)
         def names():
             got = []
             for i in range(pg.evaluate("E.panels.length")):

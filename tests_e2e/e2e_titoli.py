@@ -18,7 +18,7 @@ def run(port, wd, files, body):
     r = Run(port=port, wd=wd)
     try:
         with sync_playwright() as p:
-            pg = r.page(p); stage(pg, files); pg.click("text=Carica dati"); ready(pg); body(pg)
+            pg = r.page(p); stage(pg, files); pg.click("text=Load data"); ready(pg); body(pg)
     finally: r.close()
 def ms2(pg):
     open_ms2(pg); pg.locator('#flst [data-pg="229.1"]').dblclick()

@@ -50,9 +50,6 @@
   const flat = (id, icon, title, body) => `<div class="imp-s" id="${id}" role="group" aria-labelledby="${id}-h"><h3 class="imp-h" id="${id}-h"><span class="gi">${GICON[icon] || ""}</span>${title}</h3>${body}</div>`;
   /** A group that folds into nothing: no controls → "", one control → a plain row (no title), several → a flat group with its title. */
   const flatOrRow = (id, icon, title, items) => { const it = items.filter(Boolean); return !it.length ? "" : it.length === 1 ? `<div class="imp-s" id="${id}">${it[0]}</div>` : flat(id, icon, title, it.join("")); };
-  /** The language row: a bilingual label and a two-state IT|EN switch (real radios named uip-lang, full names as accessible names). */
-  const langRow = (label, tip, cur) => `<div class="imp-fld imp-lang" title="${esc(tip)}"><span id="uip-lang-l">${label}</span><div class="seglang" role="radiogroup" aria-labelledby="uip-lang-l">`
-    + [["it", "Italiano", "IT"], ["en", "English", "EN"]].map(([v, name, code]) => `<label class="lg" title="${esc(name)}"><input type="radio" name="uip-lang" value="${v}" aria-label="${esc(name)}"${cur === v ? " checked" : ""}><span aria-hidden="true">${code}</span></label>`).join("") + "</div></div>";
   /** The bug-report row: a plain button that shows the form (fetched at the first click through `load`) in #uip-bug. */
   const bugRow = (label, tip) => `<div class="imp-fld imp-solo" id="uip-g-bug"><button id="uip-bugbtn" type="button" title="${esc(tip)}" aria-expanded="false" aria-controls="uip-bug"><span class="ic">${GICON.bug}</span>${label}</button></div><div id="uip-bug" hidden></div>`;
   const bugBind = (root, load) => {
@@ -62,5 +59,5 @@
       if (show && !done) { done = true; load(box).catch(() => { done = false; }); }
     });
   };
-  window.IMPCOMP = { flatOrRow, langRow, bugRow, bugBind, flat, ico, TICON, GICON, TICK, radios, section, opts, sw, group, esc };
+  window.IMPCOMP = { flatOrRow, bugRow, bugBind, flat, ico, TICON, GICON, TICK, radios, section, opts, sw, group, esc };
 })();

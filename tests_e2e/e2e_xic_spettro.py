@@ -19,7 +19,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         K = pg.evaluate("E.files[0].k")
         def peak(m):      # screen position of the labelled peak nearest to m/z m
             return pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),a=p._a,d=a.data[0].d;let b=0;d.mz.forEach((v,i)=>{{if(Math.abs(v-{m})<0.6&&(Math.abs(d.mz[b]-{m})>=0.6||d.y[i]>d.y[b]))b=i}});return {{mz:d.mz[b],x:q.left+a.X(d.mz[b]),y:q.top+a.Y(d.y[b])+6}}}})()")

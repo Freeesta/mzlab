@@ -48,7 +48,7 @@ for lang in ("it", "en"):
         with sync_playwright() as p:
             pg = r.page(p)
             pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}"); pg.wait_for_selector("#drop")
-            stage(pg, FILES); pg.click("text=Carica dati" if lang == "it" else "text=Load data"); ready(pg); wait_for_js(pg, "E.files.length >= 8", timeout=180000)
+            stage(pg, FILES); pg.click("text=Load data"); ready(pg); wait_for_js(pg, "E.files.length >= 8", timeout=180000)
             items = {}
             def scan():
                 for x in pg.evaluate(COLLECT):

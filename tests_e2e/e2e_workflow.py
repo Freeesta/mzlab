@@ -21,7 +21,7 @@ try:
         # 1. Load the LR example file
         pg.set_input_files("#pick", [F_LR])
         pg.wait_for_timeout(800)
-        pg.click("text=Carica dati")
+        pg.click("text=Load data")
         ready(pg)
 
         # 2. Check the SHA-256 computation in the worker

@@ -20,7 +20,7 @@ r = Run(port=8893, wd="/tmp/wd93")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, SYN); pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+        stage(pg, SYN); pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()"); wait_for_js(pg, "E.panels.some(p=>p.type==='chrom'&&p._a)")
         def line_ok(t):
             first = t.split("\n")[0]

@@ -45,7 +45,7 @@ try:
         step("the i is centred in its round button (box and drawn glyph, three zoom levels)", centred)
         def correction():
             pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t60")]); pg.wait_for_timeout(1000)
-            pg.click("text=Carica dati"); ready(pg)
+            pg.click("text=Load data"); ready(pg)
             pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.wait_for_timeout(2000)
             pg.evaluate("document.querySelector('.pnl.xic [data-a=cpar]').click()"); pg.wait_for_timeout(200)
             b = pg.locator('.pnl.xic [data-o="corr"]'); assert b.locator("svg").count() == 1 and "Sottrazione" in b.get_attribute("aria-label")      # icon of the choice + the arrow; no words in the header

@@ -23,7 +23,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(D / "uv.wiff"), str(D / "uv.wiff.scan")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def offered():
             assert pg.evaluate("E.files[0].pda") is True
             pg.click("#np-map"); ready(pg); wait_for_js(pg, "E.files[0]._pdaMap === true")

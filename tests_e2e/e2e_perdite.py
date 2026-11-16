@@ -14,7 +14,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1000})
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def simple():
             pg.click("#np-addloss"); pg.click("#al-t-losses"); pg.wait_for_timeout(300)
             n = pg.locator("#nl-list .nlr").count(); assert 14 <= n <= 24, n

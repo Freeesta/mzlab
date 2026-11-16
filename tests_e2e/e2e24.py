@@ -47,7 +47,7 @@ try:
             pg.fill("#ex-smi", "not a smiles((("); pg.click("#ex-load"); pg.wait_for_timeout(1200)
             assert pg.evaluate(STATS)["atoms"] == base["atoms"], "invalid SMILES changed the canvas"
             assert pg.is_visible("#smi-warn")
-        step("2.0 Disegna veloce adds next to the structures (Ctrl+Z removes only it); invalid SMILES changes nothing", quick_adds)
+        step("2.0 Quick draw adds next to the structures (Ctrl+Z removes only it); invalid SMILES changes nothing", quick_adds)
         def no_control_erases():
             n0 = pg.evaluate(STATS)["atoms"]
             def same(why): n = pg.evaluate(STATS)["atoms"]; assert n == n0, (why, n0, n)
@@ -81,7 +81,7 @@ try:
             pg.uncheck("#prop-neut"); pg.wait_for_timeout(1500); r2 = pg.evaluate(PROPS); assert r2[0][1] == "–", r2
             pg.check("#prop-neut"); pg.wait_for_timeout(1500)
             q = logp_of("C[N+](C)(C)C"); assert q and q[0][1] == "–", q
-            assert "carica permanente: non neutralizzabile" in pg.inner_text("#prop-body")
+            assert "permanent charge: cannot be neutralised" in pg.inner_text("#prop-body")
             na = logp_of("CC(=O)[O-].[Na+]"); assert len(na) == 1 and na[0][1] == acid[0][1], ("counter-ion kept?", na)
             nh = logp_of("C[NH3+]"); mn = logp_of("CN"); assert nh[0][1] == mn[0][1] != "–", (nh, mn)
             neu = logp_of("CC(=O)Nc1ccc(O)cc1"); assert not pg.is_visible("#prop-neut"), "checkbox shown without charge"
@@ -130,7 +130,7 @@ try:
         step("2.3 SMILES of the selection (rectangle, select all, partial, single click) and logP rows", selection)
         def logp_without_selection():
             pg.evaluate(KQ + ".editor.selection(null)"); pg.wait_for_timeout(1000)
-            assert pg.evaluate(PROPS) == [] and "Seleziona una molecola" in pg.inner_text("#prop-body")
+            assert pg.evaluate(PROPS) == [] and "Select a molecule" in pg.inner_text("#prop-body")
         step("2.3 logP box without selection: only the hint", logp_without_selection)
         def exports():
             setmol(pg, "CC(=O)Nc1ccc(O)cc1")
@@ -157,7 +157,7 @@ try:
             pg.check("#ex-nobg"); pg.wait_for_timeout(300)
             assert pg.is_disabled("#ex-jpg") and "trasparenza" in (pg.get_attribute("#ex-jpg", "title") or "")
             assert pg.evaluate("getComputedStyle(document.getElementById('ex-jpg')).opacity") < "0.6"
-            assert pg.inner_text("label:has(#ex-nobg)").strip() == "Sfondo trasparente"
+            assert pg.inner_text("label:has(#ex-nobg)").strip() == "Transparent background"
             t = grab("png"); tn = t.suggested_filename; assert tn.endswith("_trasparente.png") or "_trasparente-" in tn, tn
             from PIL import Image
             im = Image.open(t.path()).convert("RGBA"); assert im.getpixel((2, 2))[3] == 0 and im.getpixel((im.width - 3, im.height - 3))[3] == 0, "PNG corners not transparent"

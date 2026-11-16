@@ -21,7 +21,7 @@ PANEL = "E.panels.find(p => p.type === 'mrm')"
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, [D / "sim_senzaq1.wiff", D / "sim_senzaq1.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= 2 && E.files.every(f => f.sim > 0)", timeout=120000)
+        stage(pg, [D / "sim_senzaq1.wiff", D / "sim_senzaq1.wiff.scan"]); pg.click("text=Load data"); ready(pg); wait_for_js(pg, "E.files.length >= 2 && E.files.every(f => f.sim > 0)", timeout=120000)
         step("every file counts its seven channels", lambda: need(pg.evaluate("E.files.every(f => f.sim === %d)" % N), pg.evaluate("E.files.map(f => f.sim)")))
         open_first(pg)
         pg.click("#np-mrm"); wait_for_js(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)

@@ -14,7 +14,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def lockclick():             # the click on the lock makes the spectrum the active panel: give the chromatogram the focus back
             pg.click(".pnl.spec [data-a=lock]"); pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='full'))")
         st = lambda: pg.evaluate(f"(()=>{{const s={SPEC};return {{si:s.si,x0:s._a&&s._a.x0,x1:s._a&&s._a.x1,ymax:s._a&&s._a.ymax,lock:!!s.lock,r0:s.r0,r1:s.r1,cur:E.active&&E.active.cur,leg:s.leg.textContent}}}})()")
@@ -88,7 +88,7 @@ try:
             pg.mouse.dblclick(c["x"], c["y"]); wait_for_js(pg, f"!{SPEC}.lock"); assert not st()["lock"], "double click on the spectrum unlocks"
             walk(); assert not st()["lock"], "and the arrows do not lock it again"
             lockclick(); wait_for_js(pg, f"{SPEC}.lock"); assert st()["lock"]
-            # a zoom made by the student redefines the locked axes; "Vista intera" unlocks
+            # a zoom made by the student redefines the locked axes; "Whole view" unlocks
             a0 = st(); pg.evaluate(f"()=>{{const s={SPEC};s.zoom=[s._a.x0+(s._a.x1-s._a.x0)*0.3,s._a.x0+(s._a.x1-s._a.x0)*0.6];draw(s)}}"); wait_for_js(pg, f"{SPEC}._a.x0 > {a0['x0']}")
             a1 = st(); assert a1["lock"] and a1["x0"] > a0["x0"] and a1["x1"] < a0["x1"], (a0, a1)
             for i in range(5): walk()
@@ -96,7 +96,7 @@ try:
             pg.click(".pnl.spec [data-a=fit]"); wait_for_js(pg, f"!{SPEC}.lock"); assert not st()["lock"], "Vista intera unlocks"
             lockclick(); wait_for_js(pg, f"{SPEC}.lock"); assert st()["lock"]
             put_cursor(14.0); assert not st()["lock"], "a new click on the chromatogram unlocks"
-        step("lock: only the student closes it; opens with click / double click / Vista intera / new click", lock_open_close)
+        step("lock: only the student closes it; opens with click / double click / Whole view / new click", lock_open_close)
         def blanks():
             pg.evaluate("""()=>{window.BL={blank:0,frames:0};const s=E.panels.find(p=>p.type==='spec'&&p.link!=null);
               const pr=document.createElement('canvas');pr.width=60;pr.height=12;const pc=pr.getContext('2d',{willReadFrequently:true});

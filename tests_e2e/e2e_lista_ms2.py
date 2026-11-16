@@ -12,7 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [str(ES / f"FullScan_t{t}.mzML") for t in (0, 15)] + [str(ES / "MS2_t15.mzML")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("setTab('ms2')"); ready(pg); drawer(pg)
         N = lambda: pg.locator("#flst input[data-pr]:visible").count()
         H = "#flst .fgh[data-gt=ms2]"
@@ -41,11 +41,10 @@ try:
                 tog.click(); a = N(); tog.click(); b = N(); assert a != b, (a, b)
             assert "Profilo" not in pg.inner_text("#flst") and "Centroid" not in pg.inner_text("#flst")
         step("precursor rows are named; per-file toggle works; no mode text", perfile)
-        def langs():
-            for lang, want in (("en", "Precursor m/z"), ("it", "Precursore m/z")):
-                pg.evaluate(f"I18N.set('{lang}')"); pg.wait_for_function(f"I18N.lang === '{lang}'"); ready(pg); drawer(pg); open_ms2(pg)
-                assert want in pg.get_attribute("#flst .fl.pr input[data-pr]", "aria-label"), lang
-        step("English and Italian labels", langs)
+        def labels():
+            ready(pg); drawer(pg); open_ms2(pg)
+            assert "Precursor m/z" in pg.get_attribute("#flst .fl.pr input[data-pr]", "aria-label")
+        step("English labels", labels)
         def themes():
             for th in ("light", "dark"):
                 pg.evaluate(f"document.documentElement.dataset.theme='{th}'")

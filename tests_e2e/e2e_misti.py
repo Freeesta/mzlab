@@ -23,7 +23,7 @@ try:
             assert pg.evaluate("[...document.querySelectorAll('#flist td')].some(td=>td.textContent.trim()==='Full Scan')"), t
             assert "il nome fa pensare" not in t
         step("loading table: mixed files say what they hold", table)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def parts():
             fl = pg.evaluate("E.files.map(f=>[f.file,f.kind,f.label,f.polarity])"); print(fl)
             names = [x[0] for x in fl]

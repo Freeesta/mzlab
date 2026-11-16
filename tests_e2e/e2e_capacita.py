@@ -1,5 +1,5 @@
 """Capacities of the browser (capacita.js, avviso-capacita.js): with ?cap-off=<name> the function bound to that capacity is off, with the common notice
-(«non disponibile in questo browser. Usa l'app») and the link to the app; without it no notice at all; Dati with an example file works for every capacity that is not
+(«not available in questo browser. Usa l'app») and the link to the app; without it no notice at all; Dati with an example file works for every capacity that is not
 the engine's; the probes of the page cost less than 5 ms (median of 5)."""
 # covers: mzlab/web/compat, mzlab/web/capacita
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -62,7 +62,7 @@ try:
                 else:
                     pg.evaluate("(() => { const b = document.createElement('button'); b.id = 'probe'; document.body.appendChild(b); CAPACITA.serve('indiceParallelo', b); })()")
                     assert pg.get_attribute("#probe", "aria-disabled") == "true"
-                wait_for_js(pg, "document.getElementById('cap-live')"); t = pg.inner_text("#cap-live"); assert "non disponibile in questo browser" in t, t
+                wait_for_js(pg, "document.getElementById('cap-live')"); t = pg.inner_text("#cap-live"); assert "not available in questo browser" in t, t
                 assert any("github.com/Freeesta/mzlab/releases" in h for h in pg.evaluate("[...document.querySelectorAll('#cap-live a')].map(a => a.href)")), "no link to the app"
             step(f"cap-off={cap}: «{fn}» off with the notice and the link", off)
         b.close()

@@ -61,7 +61,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.context.grant_permissions(["clipboard-read", "clipboard-write"])
-        stage(pg, [D / "sim3.wiff", D / "sim3.wiff.scan", D / "sim3.wiff.log"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= 4", timeout=120000)
+        stage(pg, [D / "sim3.wiff", D / "sim3.wiff.scan", D / "sim3.wiff.log"]); pg.click("text=Load data"); ready(pg); wait_for_js(pg, "E.files.length >= 4", timeout=120000)
         open_first(pg)
         pg.click("#np-mrm"); wait_for_js(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)
         all_ions(pg)
@@ -373,7 +373,7 @@ r2 = Run(port=8877, wd="/tmp/wd_sim_wiff_cut")
 try:
     with sync_playwright() as p:
         pg = r2.page(p)
-        stage(pg, [D / "sim3_cut.wiff", D / "sim3_cut.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= 3", timeout=120000)
+        stage(pg, [D / "sim3_cut.wiff", D / "sim3_cut.wiff.scan"]); pg.click("text=Load data"); ready(pg); wait_for_js(pg, "E.files.length >= 3", timeout=120000)
         open_first(pg)
         pg.click("#np-mrm"); wait_for_js(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)
         all_ions(pg)

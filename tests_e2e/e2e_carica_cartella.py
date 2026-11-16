@@ -1,4 +1,4 @@
-"""Loading screen: with a folder pointed at every file of the list has its own «Carica» button and «Carica tutti» is right under the folder; the same file
+"""Loading screen: with a folder pointed at every file of the list has its own «Carica» button and «Load all» is right under the folder; the same file
 (name and size) chosen again, by click on the folder row, by the file picker or by drop, is not loaded twice: a short notice and its row lights up."""
 import sys, os, base64, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pathlib import Path
@@ -25,7 +25,7 @@ try:
         def button():
             pg.click("#cartpick"); pg.wait_for_selector("#cartbody .cprow")
             assert pg.locator("#cartbody .cpone").count() == 2 and pg.inner_text("#cartbody .cpone >> nth=0") == "Carica"
-            assert pg.is_visible("#cartgo") and pg.inner_text("#cartgo") == "Carica tutti"
+            assert pg.is_visible("#cartgo") and pg.inner_text("#cartgo") == "Load all"
             b, l = pg.locator("#cartgo").bounding_box(), pg.locator("#cartbody .cprow").first.bounding_box()
             assert b["y"] < l["y"], (b, l)                                  # above the list, right under the folder line
             assert pg.get_attribute("#cartbody .cpone >> nth=0", "aria-label") == "Carica a.mzML"
@@ -35,7 +35,7 @@ try:
             pg.click("#cartgo"); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length===2", timeout=90000)
             pg.wait_for_function("!document.querySelector('#cartgo') && !document.querySelector('#cartbody .cpone')")
             assert count(pg) == 2, count(pg)
-        step("each file has its own «Carica», «Carica tutti» is under the folder, nothing is loaded twice", button)
+        step("each file has its own «Carica», «Load all» is under the folder, nothing is loaded twice", button)
         br2 = p.chromium.launch(); pg2 = br2.new_page(viewport={"width": 1280, "height": 1400}, locale="it-IT"); pg2.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg2.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg2.goto(f"http://127.0.0.1:{r.port}/"); pg2.wait_for_selector("#drop", timeout=60000); pg2.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)

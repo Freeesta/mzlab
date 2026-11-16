@@ -47,7 +47,7 @@ try:
         pg = r.page(p)
         pg.evaluate(FAKE)
         pg.set_input_files("#pick", [str(F)]); wait_for_js(pg, "!!document.querySelector('#pick') && E.files !== undefined")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         TIC = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full')"       # the first chromatogram of the tab, whatever its kind becomes
         def option():
             pg.wait_for_function(f"!!{TIC}.el.querySelector('.can-row[data-kind=reg]')")

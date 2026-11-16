@@ -20,7 +20,7 @@ try:
         try: pg.context.grant_permissions(["clipboard-read", "clipboard-write"])
         except Exception: pass
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_MS2-t15")])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         def ms1_xic():
             assert pg.evaluate(f"{S1}.level") == 1 and not pg.evaluate(f"{S1}.el.querySelector('[data-a=xicb]').hidden"), "MS1 keeps the XIC button"
         step("MS1 spectrum: the XIC button is there", ms1_xic)
@@ -129,7 +129,7 @@ try:
             assert pg.evaluate(f"!{S1}.el.querySelector('[data-a=tabp]').closest('.tbs').querySelector('a[download]')")
         step("no download in the table", no_download)
         def english():
-            pe = r.page(p); pe.goto(f"http://127.0.0.1:{r.port}/?lang=en"); wait_for_js(pe, "!!document.querySelector('#pick')", 30000)
+            pe = r.page(p); pe.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pe, "!!document.querySelector('#pick')", 30000)
             stage(pe, [mz("B_FullMass-t0"), mz("B_MS2-t15")]); pe.click("text=Load data"); ready(pe); open_kind(pe, "ms2")
             wait_for_js(pe, f"(()=>{{const p={S2};return !!p&&!!p._a&&p._a.data[0].d.mz.length>0}})()")
             pe.evaluate(f"{S2}.el.querySelector('[data-a=tabp]').click()"); wait_for_js(pe, "!!document.querySelector('.tp-pop')")

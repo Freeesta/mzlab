@@ -29,7 +29,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(D / "uv.wiff"), str(D / "uv.wiff.scan")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def map_dbl():
             pg.click("#np-map"); ready(pg); wait_for_js(pg, "E.files[0]._pdaMap === true")
             pg.select_option("body select[data-o=mapKind]", "pda"); ready(pg)
@@ -198,7 +198,7 @@ try:
         step("axe-core: no serious or critical violation with the UV spectrum open", axe)
         pg.close()
         pg = r.page(p)
-        stage(pg, [T0]); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, [T0]); pg.click("text=Load data"); ready(pg)
         def no_matrix():
             assert pg.evaluate("E.files[0].pda") is True
             pick_kind(pg, "pda"); ready(pg)
@@ -212,7 +212,7 @@ try:
         step("a file with only the PDA trace: a clear message and no panel", no_matrix)
         pg.close()
         pg = r.page(p)
-        stage(pg, [ROOT / "mzlab" / "web" / "esempi" / "FullScan_t10.mzML"]); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, [ROOT / "mzlab" / "web" / "esempi" / "FullScan_t10.mzML"]); pg.click("text=Load data"); ready(pg)
         CH = "E.panels.find(q=>q.type==='chrom')"
         UVS = "E.panels.filter(q=>q.uv&&q._a)"
         def demo_uv_at(rt, nm):

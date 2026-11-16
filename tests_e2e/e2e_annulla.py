@@ -49,7 +49,7 @@ try:
         step("Ctrl+Z in a text field stays the browser's", field)
         def empty():
             pg.evaluate("STORIA.svuota()"); pg.evaluate("document.activeElement&&document.activeElement.blur()")
-            key(f"{mod}+z"); until("/Niente|Nothing/.test(document.getElementById('sb-live').textContent)"); t = pg.inner_text("#sb-live"); assert "Niente da annullare" in t or "Nothing to undo" in t, t
+            key(f"{mod}+z"); until("/Niente|Nothing/.test(document.getElementById('sb-live').textContent)"); t = pg.inner_text("#sb-live"); assert "Nothing to undo" in t or "Nothing to undo" in t, t
             assert pg.evaluate("document.getElementById('np-undo').disabled") is True
         step("empty stack: short notice, button disabled", empty)
         def nokey():

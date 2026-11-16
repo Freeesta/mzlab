@@ -41,7 +41,7 @@ try:
         step("no Altro / Unisci; no Ordina button", gone)
         def fold():
             b = "#stbar [data-cmd=file]"
-            assert pg.evaluate(f"!!Q('{b} svg')") and pg.evaluate(f"Q('{b}').title") == "Scegli, nascondi, rinomina e colora i file caricati"
+            assert pg.evaluate(f"!!Q('{b} svg')") and pg.evaluate(f"Q('{b}').title") == "Choose, hide, rename and colour the loaded files"
             ready(pg)
             if pg.is_visible("#flst"):          # the drawer remembers its state: start from the closed one, so the click below opens it
                 pg.click(b); wait_for_js(pg, "(() => { const e = Q('#flst'); return !e || e.getBoundingClientRect().width === 0 })()")

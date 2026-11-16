@@ -66,11 +66,11 @@ try:
             opn(); typ("18", "Perdita"); v = pg.evaluate(RUN, "#paletta"); assert not v, v; pg.keyboard.press("Escape")
         step("axe clean with results", axe_ok)
         def narrow():
-            ctx = r.b.new_context(viewport={"width": 400, "height": 800}, locale="it-IT", reduced_motion="reduce")
+            ctx = r.b.new_context(viewport={"width": 400, "height": 800}, locale="en-US", reduced_motion="reduce")
             q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); ready(q)
             try:
-                stage(q, [EX / "FullScan_t0.mzML"]); q.click("text=Carica dati"); ready(q)
+                stage(q, [EX / "FullScan_t0.mzML"]); q.click("text=Load data"); ready(q)
                 q.click("#tb-search"); q.wait_for_selector("#paletta:not([hidden])"); q.fill("#pal-in", "18")
                 wait_for_js(q, "document.querySelector('#pal-l').innerText.includes('Addotto')")
                 assert q.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1, "no sideways scroll"

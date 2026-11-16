@@ -156,23 +156,22 @@ _CARDS_OPEN = ("try{if(!localStorage.getItem('mzlab.disegno.schede'))localStorag
 def _extra(c, cards=False):
     if not cards: c.add_init_script(_CARDS_OPEN)
 def _start_prefs(k):
-    """The site starts in Italian with the light theme whatever the browser says. A test that asks for an English locale or a dark system scheme
-    wants that UI, so the stored choice it would have made is set for it (only if the page has none yet). `lang_auto=True` leaves the real defaults."""
+    """The site starts in English with the light theme whatever the browser says. A test that asks for a dark system scheme wants that UI,
+    so the stored choice it would have made is set for it (only if the page has none yet). `lang_auto=True` (kept for old callers) leaves the real defaults."""
     if k.pop("lang_auto", False): return None
     js = ""
-    if str(k.get("locale", "")).lower().startswith("en"): js += "if(!localStorage.getItem('mzlab.lang'))localStorage.setItem('mzlab.lang','en');"
     if k.get("color_scheme") == "dark": js += "if(!localStorage.getItem('mzlab.prefs'))localStorage.setItem('mzlab.prefs',JSON.stringify({v:2,theme:'auto'}));"
     # once per tab: a test that resets the site's data must see the default afterwards, not the seeded choice again
     return ("try{if(window.name.indexOf('|mzseed')<0){window.name+='|mzseed';" + js + "}}catch(e){}") if js else None
 def _new_page(self, *a, **k):
-    k.setdefault("locale", "it-IT")        # Playwright starts in en-US, which would now give English to every test written in Italian (e2e_inglese uses en-US on purpose)
+    k.setdefault("locale", "en-US")
     sp, dc = _start_prefs(k), k.pop("draw_cards", False)
     pg = _np(self, *a, **k); pg.add_init_script(_TRACK); _extra(pg, dc)
     if sp: pg.add_init_script(sp)
     if _site(): pg.add_init_script(_site())
     return pg
 def _new_context(self, *a, **k):
-    k.setdefault("locale", "it-IT")
+    k.setdefault("locale", "en-US")
     sp, dc = _start_prefs(k), k.pop("draw_cards", False)
     c = _nc(self, *a, **k); c.add_init_script(_TRACK); _extra(c, dc)
     if sp: c.add_init_script(sp)
@@ -188,7 +187,7 @@ class _PersistentWebKit:
         self._bt, self._kw, self._open = bt, kw, []
     def new_context(self, **k):
         import tempfile
-        k.setdefault("locale", "it-IT")
+        k.setdefault("locale", "en-US")
         sp, dc = _start_prefs(k), k.pop("draw_cards", False)
         d = tempfile.mkdtemp(prefix="mzlab-wkprofile-")
         c = self._bt.launch_persistent_context(d, **self._kw, **k)

@@ -15,7 +15,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [str(ES / f"MS2_t{t}.mzML") for t in (15, 60)])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         open_ms2(pg); pg.locator('#flst [data-pg="229.1"]').dblclick(); wait_for_js(pg, f"{specs(pg)}.length >= 1"); ready(pg)
         def menu():
             q = pg.evaluate(f"({RULES})({specs(pg)}[0])")

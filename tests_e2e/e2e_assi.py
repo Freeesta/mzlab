@@ -91,7 +91,7 @@ try:
             with pg.expect_download() as d: dlmenu(pg, ".pnl.chrom", "xlsx")
             f = d.value; assert f.suggested_filename.endswith(".xlsx"), f.suggested_filename
             rows = xlsx_rows(f.path()); head = [c[1] for c in rows[0] if c]
-            assert all(h.startswith("RT (min)") or h.startswith("Intensità (cps)") for h in head) and sum(h.startswith("Intensità") for h in head) == 2, head   # one intensity column per file
+            assert all(h.startswith("RT (min)") or h.startswith("Intensity (cps)") for h in head) and sum(h.startswith("Intensità") for h in head) == 2, head   # one intensity column per file
             assert all(c[0] == "n" for c in rows[1][:3] if c)
         step("Excel on the total chromatogram (RT + one column per file)", excel_tic)
         def xic_below():

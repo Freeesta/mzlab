@@ -20,7 +20,7 @@ try:
         try: pg.context.grant_permissions(["clipboard-read", "clipboard-write"])
         except Exception: pass
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_MS2-t15")])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # opened file by file: the view starts on the first file of the list
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # opened file by file: the view starts on the first file of the list
         pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); frames(pg, 3)
         def px(expr_m, frac_y=0.0):   # pixel of a peak of the spectrum (m/z -> screen)
             return pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),a=p._a;return {{x:q.left+a.X({expr_m}),y:q.top+a.Y(a.ymax*{frac_y})}}}})()")
@@ -30,8 +30,8 @@ try:
             pk = peak_x(364.4); pg.mouse.click(pk["x"], pk["y"] + 3, button="right"); wait_for_js(pg, CTX_OPEN)
             items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>d.textContent)"); print(items)
             txt = " | ".join(items)
-            for want in ["m/z", "Estrai l'XIC di m/z", "Misura da questo picco", "Annota questo picco…", "Profilo isotopico di una formula…", "Congela lo spettro"]: assert want in txt, (want, items)
-            for bad in ["Da dove viene", "sagoma", "Simula", "Confronta con"]: assert bad not in txt, (bad, items)
+            for want in ["m/z", "Extract the XIC of m/z", "Measure from this peak", "Annotate this peak…", "Isotope pattern of a formula…", "Freeze the spectrum"]: assert want in txt, (want, items)
+            for bad in ["Where does this ion come from", "shape", "Simulate", "Compare with"]: assert bad not in txt, (bad, items)
             pg.keyboard.press("Escape")
         step("S1/S2: the right-click menu of the spectrum is short, no origin / ghost / simulation", menu)
         def annot():
@@ -49,7 +49,7 @@ try:
         def ruler():
             pg.evaluate(f"(()=>{{const p={SPEC};p.anns=[];p.zoom=null;p.zoomY=null;draw(p)}})()"); frames(pg, 3)
             a = peak_x(364.4); pg.mouse.click(a["x"], a["y"] + 3, button="right"); wait_for_js(pg, CTX_OPEN)
-            pg.locator("#ctx div", has_text="Misura da questo picco").click(); wait_for_js(pg, f"{SPEC}.meas&&{SPEC}.meas.ref!=null")
+            pg.locator("#ctx div", has_text="Measure from this peak").click(); wait_for_js(pg, f"{SPEC}.meas&&{SPEC}.meas.ref!=null")
             assert pg.evaluate(f"{SPEC}.meas.ref") is not None
             b = peak_x(194.2); pg.mouse.move(b["x"], b["y"] + 3); wait_for_js(pg, "(()=>{const t=document.querySelector('.pnl.spec .tip');return !!t&&t.textContent.includes('Δ')})()")
             tip = pg.inner_text(".pnl.spec .tip"); assert "Δ" in tip, tip

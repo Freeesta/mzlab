@@ -34,7 +34,7 @@ try:
 
         # 1. First load of LR data shows invitation
         stage(pg, [TMP_LR])
-        pg.click("text=Carica dati")
+        pg.click("text=Load data")
         ready(pg)
 
         pg.wait_for_selector("#tour-invito", timeout=30000)      # shown once the data are up: on a loaded machine that takes longer than 5 s
@@ -292,7 +292,7 @@ try:
         steps.append(("every tour step finds its target visible; the «file» step opens and closes the drawer; the invitation is not covered", "ok"))
 
         # 5. English language: text of step 1 and buttons in English
-        pg.goto(f"http://127.0.0.1:{r.port}/?lang=en")
+        pg.goto(f"http://127.0.0.1:{r.port}/")
         ready(pg)
         pg.evaluate("TOUR.inizia(1, 0)")
         wait_hd(pg, "Step 1 of 7 · Your data")
@@ -317,8 +317,8 @@ try:
         pg.evaluate("localStorage.removeItem('mzlab.tour.lr')")
 
         pg.set_input_files("#pick", [TMP_HR])
-        pg.wait_for_selector("text=Carica dati", timeout=30000)
-        pg.click("text=Carica dati")
+        pg.wait_for_selector("text=Load data", timeout=30000)
+        pg.click("text=Load data")
         ready(pg)
 
         assert pg.evaluate("window.BANCO && BANCO.on()"), "in HR mode"

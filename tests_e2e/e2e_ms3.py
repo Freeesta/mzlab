@@ -59,7 +59,7 @@ try:
                 assert typ, "the metadata sheet does not say MS³"
             step(f"{lang}: the MS3 spectrum fits its peaks, gives its CE and is exported as MS3", like_ms2)
             pg.close()
-        pg = r.page(p); pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); wait_for_js(pg, "!!document.querySelector('#pick')", 30000)
+        pg = r.page(p); pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "!!document.querySelector('#pick')", 30000)
         pg.set_input_files("#pick", [str(F), str(G)])
         wait_for_js(pg, "E.files.filter(f => f.kind === 'ms2' && !f.gone && f.lv === 3).length === 2", 60000)
         wait_for_js(pg, f"(() => {{ const s = {SPEC}; return s && s._a && s._a.data && s._a.data.length; }})()", 60000)

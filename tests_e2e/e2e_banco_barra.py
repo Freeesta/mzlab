@@ -20,7 +20,7 @@ try:
         def tabs_gone():
             assert pg.is_visible("#hrbar") and pg.locator("#dtabs").count() == 0, "the toolbar of the bench is the only bar"
             ids = pg.evaluate("[...document.querySelectorAll('#hrbar button[data-hb]')].map(b => b.dataset.hb)"); assert ids == ["add", "type", "tree"], ids      # the other tools of the old bar live elsewhere now
-            assert not pg.is_visible("#g-add"), "the old «+ Cromatogramma» group is replaced by the menu «Cella»"
+            assert not pg.is_visible("#g-add"), "the old «+ Chromatogram» group is replaced by the menu «Cella»"
         step("toolbar instead of the tabs, with its buttons", tabs_gone)
         def no_badges():
             assert pg.locator("#flst .hrb").count() == 0 and pg.locator("#flst .fl").count() >= 1
@@ -57,7 +57,7 @@ try:
         def copy_xls():
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='full'))")
             pg.evaluate("window.__clip=null;Object.defineProperty(navigator,'clipboard',{value:{writeText:t=>{window.__clip=t;return Promise.resolve()}},configurable:true})")
-            pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"); pg.click("#ctx >> text=Copia i dati"); pg.wait_for_timeout(800)
+            pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"); pg.click("#ctx >> text=Copy data"); pg.wait_for_timeout(800)
             t = pg.evaluate("window.__clip"); assert t and "\t" in t and t.startswith("# mzLab ") and "RT" in t.split("\n")[1], (t or "")[:120]      # first line = provenance
             with pg.expect_download(timeout=15000) as d: (pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"), pg.click("#ctx >> text=Excel"))
             assert d.value.suggested_filename.endswith(".xlsx"), d.value.suggested_filename
@@ -113,7 +113,7 @@ try:
         step("a filter of another experiment moves the cell to it: the cell stays on the page and draws the MS2 file", cross)
         def retype():
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2'))"); n = pg.evaluate("E.panels.length")
-            pg.click("#hrbar [data-hb=type]"); pg.click("#ctx >> text=Mappa RT-m/z"); pg.wait_for_timeout(2500)
+            pg.click("#hrbar [data-hb=type]"); pg.click("#ctx >> text=RT-m/z map"); pg.wait_for_timeout(2500)
             assert pg.evaluate("E.panels.length") == n and pg.evaluate("E.active.type") == "map", pg.evaluate("E.active&&E.active.type")
         step("change of type: chromatogram → map in the same place", retype)
     r.close()

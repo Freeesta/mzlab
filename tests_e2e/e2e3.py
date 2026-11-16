@@ -61,7 +61,7 @@ try:
             rt2 = pg.evaluate(f"""()=>{{const s=E.panels[{xi}]._a.sr[0];let m=0;s.ys.forEach((v,i)=>{{if(v>s.ys[m])m=i}});return s.x[m]}}""")
             c = pt(pg, xi, rt2)
             pg.mouse.click(c["px"], c["py"], button="right"); wait_for_js(pg, "document.querySelectorAll('#ctx div').length>0")
-            click_menu(pg, "Integra il picco"); wait_for_js(pg, f"E.panels[{xi}].ints.length>=1")
+            click_menu(pg, "Integrate the peak"); wait_for_js(pg, f"E.panels[{xi}].ints.length>=1")
             n = pg.evaluate(f"E.panels[{xi}].ints.length"); assert n >= 1, n
             # drag a bar edge
             it = pg.evaluate(f"E.panels[{xi}].ints[0]")

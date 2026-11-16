@@ -22,7 +22,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg); pg.wait_for_timeout(1500)
+        pg.click("text=Load data"); ready(pg); pg.wait_for_timeout(1500)
         def tbl():
             return pg.evaluate("(()=>{const t=document.querySelector('#tdati table');return t?{cols:[...t.querySelectorAll('thead th')].map(h=>[h.textContent,h.getAttribute('scope')]),rows:[...t.querySelectorAll('tbody tr')].map(r=>[...r.children].map(c=>c.textContent)),cap:t.querySelector('caption')?.textContent}:null})()")
         def close(): pg.keyboard.press("Escape"); pg.wait_for_timeout(200); assert pg.locator("#tdati").count() == 0

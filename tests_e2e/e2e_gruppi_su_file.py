@@ -74,7 +74,7 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 2200})
         pg.evaluate("I18N.set('en')"); pg.wait_for_function("window.qqReady === true && I18N.lang === 'en'", timeout=60000)
         pg.set_input_files("#pick", PATHS)
-        pg.click("text=Load data" if pg.locator("text=Load data").count() else "text=Carica dati"); ready(pg, timeout=180000); drawer(pg)
+        pg.click("text=Load data" if pg.locator("text=Load data").count() else "text=Load data"); ready(pg, timeout=180000); drawer(pg)
         pg.wait_for_selector("#flst .fl .nm", timeout=30000)
         try: wait_for_js(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && document.querySelectorAll('#flist tbody tr').length === 30", 120000)
         except Exception: raise AssertionError(pg.evaluate("[UPBUSY, OPENNOW.busy(), ST.files.length, document.querySelectorAll('#flist tbody tr').length]"))

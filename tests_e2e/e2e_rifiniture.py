@@ -20,7 +20,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         shutil.rmtree("/tmp/s26", ignore_errors=True)
-        pg.set_input_files("#pick", synth.make_series("/tmp/s26", [0, 15, 30])); pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", synth.make_series("/tmp/s26", [0, 15, 30])); pg.wait_for_timeout(1000); pg.click("text=Load data"); ready(pg)
         def ions():
             assert pg.evaluate("window.LDAN === undefined"), "the analyser screens must not be loaded"
             for mode in ["base", "no-such-analyser"]:

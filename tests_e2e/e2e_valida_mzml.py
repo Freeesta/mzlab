@@ -13,7 +13,7 @@ try:
         pg = r.page(p)
         asked = []
         pg.on("request", lambda q: asked.append(q.url) if "wasm-lettori/" in q.url else None)
-        stage(pg, [EXAMPLE]); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, [EXAMPLE]); pg.click("text=Load data"); ready(pg)
         def menu_entry():
             if not pg.is_visible("#flst"): pg.click("#stbar [data-cmd=file]")
             pg.wait_for_selector("#flst .fl", state="visible"); pg.click("#flst .fl .nm", button="right")

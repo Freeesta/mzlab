@@ -40,7 +40,7 @@ try:
             assert pg.evaluate("document.activeElement && document.activeElement.dataset && document.activeElement.dataset.k") == "conc", "focus kept after the table is sorted again"
             pg.fill("#flist [data-k=conc] >> nth=0", "0.6"); pg.press("#flist [data-k=conc] >> nth=0", "Enter"); pg.wait_for_timeout(200)
         step("B-4 yellow cells go back to normal when edited; focus stays in the field", guess)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def fit720():
             c = pg.evaluate("(()=>{const f=[...document.querySelectorAll('#dpanels .pnl')].filter(e=>e.style.display!=='none').map(e=>e.getBoundingClientRect());return f.map(r=>[Math.round(r.top),Math.round(r.bottom)])})()")
             print("   panel rects at 1280x720:", c, "scrollY", pg.evaluate("scrollY"), "innerHeight", pg.evaluate("innerHeight"))
@@ -72,7 +72,7 @@ try:
             d = pg.evaluate(f"(()=>{{const s={SPEC},a=s._a,r=s.cv.getBoundingClientRect(),d=a.data[0].d;let best=null;for(let px=a.X(a.x0)+40;px<a.W-M.r-40;px+=5){{const m=d.mz.some((v,j)=>d.y[j]>0&&Math.abs(a.X(v)-px)<30);if(!m){{best=px;break}}}}return best&&{{x:r.left+best,y:r.top+a.H/2}}}})()")
             assert d, "an empty spot in the spectrum"
             pg.mouse.click(d["x"], d["y"], button="right"); pg.wait_for_timeout(300)
-            t = pg.inner_text("#ctx"); assert "nessun picco qui" in t, t
+            t = pg.inner_text("#ctx"); assert "no peak here" in t, t
             assert pg.evaluate("[...document.querySelectorAll('#ctx div')].filter(d=>/XIC/.test(d.textContent)).length===0")
             pg.keyboard.press("Escape"); pg.mouse.click(5, 5); pg.wait_for_timeout(200)
         step("B-10 right click on empty space of the spectrum: m/z entries not shown", emptyclick)
@@ -88,7 +88,7 @@ try:
             r_ = pg.evaluate("(()=>{const r=E.panels[E.panels.length-1].el.getBoundingClientRect();return [r.top,r.bottom,innerHeight]})()"); assert r_[0] >= -2 and r_[1] <= r_[2] + 2, r_
         step("B-8 a new panel scrolls into view and flashes", newpanel)
         def note12():
-            assert "uno spettro alla volta" in pg.inner_text("#dpanels .pnl.spec .ctl") or True
+            assert "one spectrum at a time" in pg.inner_text("#dpanels .pnl.spec .ctl") or True
             pg.evaluate("E.browse=false;redrawAll()"); 
         step("B-12 note on the spectrum row (checked in the unit below)", note12)
         def xicleg():
@@ -102,7 +102,7 @@ try:
         step("B-13 single XIC trace in the title, legend = files only; the window remembers the last ion", xicleg)
         def oneunit():
             pg.evaluate("E.browse=false"); pg.evaluate("ctl(E.panels.find(p=>p.type==='spec'))")
-            t = pg.evaluate("E.panels.find(p=>p.type==='spec').el.querySelector('.ctl').textContent"); assert "uno spettro alla volta" not in t, t      # hint removed 7/10 (block B)
+            t = pg.evaluate("E.panels.find(p=>p.type==='spec').el.querySelector('.ctl').textContent"); assert "one spectrum at a time" not in t, t      # hint removed 7/10 (block B)
         step("B-12 spectrum row: no explanatory hint", oneunit)
         def keepzoom():
             pg.evaluate("(()=>{const s=" + SPEC + ";s.zoom=[300,420];draw(s);E.browse=true;renderNav();redrawAll()})()"); pg.wait_for_timeout(400)
@@ -150,7 +150,7 @@ def sizes():
         try:
             with sync_playwright() as p:
                 pg = rr.page(p); pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(400)
-                pg.set_input_files("#pick", [mz(f) for f in FILES[:3]]); pg.click("text=Carica dati"); ready(pg)
+                pg.set_input_files("#pick", [mz(f) for f in FILES[:3]]); pg.click("text=Load data"); ready(pg)
                 c = pg.evaluate("[...document.querySelectorAll('#dpanels .pnl')].filter(e=>e.style.display!=='none').slice(0,2).map(e=>{const r=e.getBoundingClientRect();return [Math.round(r.top),Math.round(r.bottom)]})")
                 assert len(c) == 2 and c[1][1] <= h + 2 and pg.evaluate("scrollY") == 0, (w, h, c)
                 print(f"   {w}x{h}: panels", c)

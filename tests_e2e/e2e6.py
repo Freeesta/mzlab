@@ -45,7 +45,7 @@ try:
             f = d.value; assert f.suggested_filename.endswith(".xlsx"), f.suggested_filename
             rows = xlsx_rows(f.path()); head = [c[1] for c in rows[0] if c]
             print("XLSX:", f.suggested_filename, head[:2], rows[1][:2])
-            assert any("RT (min)" in h for h in head) and any("Intensità (cps)" in h for h in head), head
+            assert any("RT (min)" in h for h in head) and any("Intensity (cps)" in h for h in head), head
             assert all(c[0] == "n" for c in rows[1][:2] if c), rows[1][:2]                    # real numbers, not text
             assert 0 <= rows[1][0][1] < 40 and rows[5][0][1] > rows[1][0][1], (rows[1][0], rows[5][0])
             wb = xlsx_openpyxl(f.path())
@@ -88,8 +88,8 @@ try:
         step("adducts and neutral losses tables", adducts); print(steps[-2:])
         if pg.evaluate("Q(\"#refdlg\").open"): pg.evaluate("Q(\"#refdlg\").close()")
         def isotopes():
-            pg.click("#np-pt"); wait_for_js(pg, "document.querySelector('#reftitle') && document.querySelector('#reftitle').innerText.trim() === 'Tavola periodica'")
-            assert pg.locator("#reftabs").count() == 0 and pg.inner_text("#reftitle").strip() == "Tavola periodica", "no tab bar: only the title"
+            pg.click("#np-pt"); wait_for_js(pg, "document.querySelector('#reftitle') && document.querySelector('#reftitle').innerText.trim() === 'Periodic table'")
+            assert pg.locator("#reftabs").count() == 0 and pg.inner_text("#reftitle").strip() == "Periodic table", "no tab bar: only the title"
             # periodic table keeps the same size whatever element is shown
             hs = []
             for el in ["F", "Sn", "C", "Hg"]:
@@ -107,11 +107,11 @@ try:
         step("isotope overlay on the spectrum, aligned to the observed peak", overlay)
         pg.click("#nav button[data-v=draw]"); pg.wait_for_function("window.TPDraw && TPDraw.ready()", timeout=60000)
         def labels():
-            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "massa nominale 151"])
-            t = pg.evaluate(LBL); assert t == ["C8H9NO2", "massa nominale 151"], t            # one text per line: formula, then mass
-            pg.select_option("#lb-dec", "4"); lbl(["C8H9NO2", "massa esatta 151.0633"])
-            assert pg.evaluate(LBL) == ["C8H9NO2", "massa esatta 151.0633"], pg.evaluate(LBL)
-            pg.select_option("#lb-dec", "0"); lbl(["C8H9NO2", "massa nominale 151"])
+            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "nominal mass 151"])
+            t = pg.evaluate(LBL); assert t == ["C8H9NO2", "nominal mass 151"], t            # one text per line: formula, then mass
+            pg.select_option("#lb-dec", "4"); lbl(["C8H9NO2", "exact mass 151.0633"])
+            assert pg.evaluate(LBL) == ["C8H9NO2", "exact mass 151.0633"], pg.evaluate(LBL)
+            pg.select_option("#lb-dec", "0"); lbl(["C8H9NO2", "nominal mass 151"])
         step("label under the molecule (formula, nominal mass)", labels)
         def ion():
             pg.evaluate(KQ + ".setMolecule('CC(=O)[NH2+]c1ccc(O)cc1')"); lbl(["C8H10NO2+", "m/z 152"])
@@ -119,7 +119,7 @@ try:
             pg.screenshot(path=SH + "62_ion.png")
         step("charged structure shows m/z", ion)
         def breakbond():
-            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "massa nominale 151"])
+            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "nominal mass 151"])
             # erase the amide C-N bond with Ketcher's own eraser tool (as a student would)
             pg.frame_locator("#kframe").locator("[data-testid=erase]:visible").first.click(); frames(pg, 5)      # first the tool: the layout may move, the position is read after it
             pos = pg.evaluate("""(()=>{const k=%s, st=k.editor.struct();let bid=null;st.bonds.forEach((b,id)=>{const a=st.atoms.get(b.begin).label,c=st.atoms.get(b.end).label;
@@ -127,20 +127,20 @@ try:
                const b=st.bonds.get(bid),p1=st.atoms.get(b.begin).pp,p2=st.atoms.get(b.end).pp;
                const c=k.editor.render.paper.canvas, r=c.getBoundingClientRect(), vb=c.viewBox.baseVal, f=document.getElementById('kframe').getBoundingClientRect();
                const ux=(p1.x+p2.x)/2*40, uy=(p1.y+p2.y)/2*40; return {x:f.left+r.left+(ux-vb.x)*r.width/vb.width, y:f.top+r.top+(uy-vb.y)*r.height/vb.height}})()""" % KQ)
-            pg.mouse.click(pos["x"], pos["y"]); lbl(["C2H4O", "massa nominale 44", "C6H7NO", "massa nominale 109"], sort=True)
-            t = sorted(pg.evaluate(LBL)); assert t == sorted(["C2H4O", "massa nominale 44", "C6H7NO", "massa nominale 109"]), t
+            pg.mouse.click(pos["x"], pos["y"]); lbl(["C2H4O", "nominal mass 44", "C6H7NO", "nominal mass 109"], sort=True)
+            t = sorted(pg.evaluate(LBL)); assert t == sorted(["C2H4O", "nominal mass 44", "C6H7NO", "nominal mass 109"]), t
             pg.screenshot(path=SH + "63_broken.png")
-            pg.evaluate(KQ + ".editor.undo()"); lbl(["C8H9NO2", "massa nominale 151"]); assert pg.evaluate(LBL) == ["C8H9NO2", "massa nominale 151"]
+            pg.evaluate(KQ + ".editor.undo()"); lbl(["C8H9NO2", "nominal mass 151"]); assert pg.evaluate(LBL) == ["C8H9NO2", "nominal mass 151"]
         step("erasing a bond gives two labels; undo restores", breakbond)
         def no_boxes():
             # the boxes that did the student's work are gone for good; the cream background option too
             assert pg.evaluate("['selcard','selbody','dcard','dcomp','cap-name','cap-on','ex-bg'].every(i=>!document.getElementById(i))")
         step("caption / adduct table / fragment-calculation boxes and cream option removed", no_boxes)
         def sel_smiles():
-            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "massa nominale 151"])
+            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "nominal mass 151"])
             assert not pg.is_visible("#sel-card")
             # no selection: only the hint; the table appears once the molecule is selected
-            assert pg.is_visible("#prop-card") and "Seleziona una molecola" in pg.inner_text("#prop-body") and pg.locator("#prop-body table").count() == 0
+            assert pg.is_visible("#prop-card") and "Select a molecule" in pg.inner_text("#prop-body") and pg.locator("#prop-body table").count() == 0
             pg.evaluate(SELALL); wait_for_js(pg, "(c => !!c && !isNaN(parseFloat(c.textContent)))(document.querySelector('#prop-body tr:nth-child(2) td:nth-child(2)'))")
             assert pg.is_visible("#prop-card"); t = pg.inner_text("#prop-body"); print("PROP:", t.replace("\n", " | ")[:200])
             lp = float(pg.inner_text("#prop-body tr:nth-child(2) td:nth-child(2)")); assert 0.3 < lp < 1.8, lp
@@ -167,7 +167,7 @@ try:
             rows = pg.evaluate("[...document.querySelectorAll('#prop-body tr')].slice(1).map(r=>[...r.cells].map(c=>c.textContent))"); print("PROPS:", rows)
             # default: charge excluded -> the ion is computed on its neutral form (4-aminophenol, C6H7NO)
             assert len(rows) == 2 and rows[1][0] == "C6H7NO" and rows[1][1] != "\u2013" and rows[0][1] != "\u2013", rows
-            # untick "Escludi la carica": the charged species has no logP
+            # untick "Exclude the charge": the charged species has no logP
             pg.evaluate("(()=>{const c=document.querySelector('#prop-neut');c.checked=false;c.dispatchEvent(new Event('change',{bubbles:true}))})()"); pg.wait_for_function("(()=>{const r=document.querySelectorAll('#prop-body tr');return r.length===3&&r[2].cells[1].textContent==='\\u2013'})()", timeout=20000)
             rows = pg.evaluate("[...document.querySelectorAll('#prop-body tr')].slice(1).map(r=>[...r.cells].map(c=>c.textContent))"); print("PROPS (charge kept):", rows)
             assert len(rows) == 2 and rows[1][1] == "\u2013" and rows[0][1] != "\u2013", rows
@@ -205,7 +205,7 @@ try:
             xy = pg.evaluate("(()=>{const fr=document.getElementById('kframe'),r=fr.getBoundingClientRect(),t=fr.contentWindow.document.querySelector('#mzlab-labels text').getBoundingClientRect();return [r.left+t.x+t.width/2,r.top+t.y+t.height/2]})()")
             pg.mouse.click(xy[0], xy[1], button="right"); hole()
             t = pg.inner_text("#ctx"); print(t)
-            assert "Copia la formula (C8H10NO2+)" in t and "Copia la massa (m/z 152)" in t, t
+            assert "Copy the formula (C8H10NO2+)" in t and "Copy the mass (m/z 152)" in t, t
             pg.keyboard.press("Escape")
         step("right click on the label under a molecule: copy formula and mass", labelmenu)
         def side():

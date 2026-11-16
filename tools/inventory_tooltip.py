@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Inventory of every tooltip site (title attributes, .title=, data-tip, hover tips) in the pages.
 
-Scans mzlab/web, TP_Mine/js and flow/lazy; resolves I18N keys against lang/ (it, en) and prints
-one TSV row per site: file:line, kind, key, it, en, visible text next to it.
+Scans mzlab/web, TP_Mine/js and flow/lazy; resolves I18N keys against lang/en and prints
+one TSV row per site: file:line, kind, key, text, visible text next to it.
 Used by docs/inventari/TOOLTIP*.md (see docs/inventari/TOOLTIP.md); read-only, no dependency.
 """
 import json, re, sys
@@ -15,9 +15,9 @@ KV = re.compile(r'^\s*"([^"]+)":\s*("(?:[^"\\]|\\.)*")\s*,?\s*$')
 
 
 def catalogs():
-    cat = {"it": {}, "en": {}}
+    cat = {"en": {}}
     for lang in cat:
-        files = [ROOT / f"mzlab/web/lang/{lang}.js"] + sorted((ROOT / f"mzlab/web/lang/{lang}").glob("*.js"))
+        files = sorted((ROOT / f"mzlab/web/lang/{lang}").glob("*.js"))
         for f in files:
             for ln in f.read_text(encoding="utf-8").splitlines():
                 m = KV.match(ln)
@@ -88,15 +88,14 @@ def scan():
                     val = m.group({"prop": "pv", "sa": "sv", "dt": "dv", "tf": "tv"}[kind]).strip()
                 if kind == "tf" and "I18N" not in val and '"' not in val:
                     continue
-                keys = [k for k in re.findall(r'["`\']([A-Za-z0-9_.\-]+)["`\']', val) if k in cat["it"]]
+                keys = [k for k in re.findall(r'["`\']([A-Za-z0-9_.\-]+)["`\']', val) if k in cat["en"]]
                 key = "+".join(keys[:2])
                 lit = "" if key else val[:90]
                 near = ARIA.search(line)
                 inner = INNER.findall(line)
                 tag, handle, vis = element(line, m.start(), cat) if kind in ("attr", "dt") else ("", "", "")
                 rows.append(dict(file=rel, line=n, kind=kind, key=key, lit=lit, tag=tag, handle=handle, vis=vis,
-                                 it=" // ".join(cat["it"][k] for k in keys[:2]),
-                                 en=" // ".join(cat["en"].get(k, "") for k in keys[:2]),
+                                 en=" // ".join(cat["en"][k] for k in keys[:2]),
                                  aria=(near.group(1) or near.group(2) or "") if near else "",
                                  inner=" | ".join(i.strip() for i in inner if i.strip())[:60],
                                  src=line.strip()[:200]))
@@ -105,8 +104,8 @@ def scan():
                 keys = [key]
                 near = ARIA.search(line)
                 tag, handle, vis = element(line, m.start(), cat)
-                rows.append(dict(file=rel, line=n, kind="i18n", key=key, lit="", tag=tag, handle=handle, vis=vis, it=" // ".join(cat["it"][k] for k in keys[:2]),
-                                 en=" // ".join(cat["en"].get(k, "") for k in keys[:2]), aria=(near.group(1) or near.group(2) or "") if near else "",
+                rows.append(dict(file=rel, line=n, kind="i18n", key=key, lit="", tag=tag, handle=handle, vis=vis,
+                                 en=" // ".join(cat["en"][k] for k in keys[:2]), aria=(near.group(1) or near.group(2) or "") if near else "",
                                  inner=" | ".join(INNER.findall(line))[:60], src=line.strip()[:200]))
     for f in files:
         rel = f.relative_to(ROOT).as_posix()
@@ -114,10 +113,10 @@ def scan():
             continue
         for n, line in enumerate(f.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
             for m in SVGT.finditer(line):
-                keys = [k for k in re.findall(r'["`\']([A-Za-z0-9_.\-]+)["`\']', m.group(1)) if k in cat["it"]]
+                keys = [k for k in re.findall(r'["`\']([A-Za-z0-9_.\-]+)["`\']', m.group(1)) if k in cat["en"]]
                 rows.append(dict(file=rel, line=n, kind="svg", key="+".join(keys[:2]), lit="" if keys else m.group(1)[:90],
-                                 tag="svg", handle="", vis="", it=" // ".join(cat["it"][k] for k in keys[:2]),
-                                 en=" // ".join(cat["en"].get(k, "") for k in keys[:2]), aria="", inner="", src=line.strip()[:200]))
+                                 tag="svg", handle="", vis="",
+                                 en=" // ".join(cat["en"][k] for k in keys[:2]), aria="", inner="", src=line.strip()[:200]))
     i18n_lines = {(r["file"], r["line"]) for r in rows if r["kind"] == "i18n"}
     rows = [r for r in rows if r["kind"] == "i18n" or (r["file"], r["line"]) not in i18n_lines]
     return rows
@@ -143,8 +142,8 @@ def element(line, pos, cat):
     txt = []
     for frag in re.split(r"(\$\{[^}]*\})", inner):
         if frag.startswith("${"):
-            ks = [k for k in re.findall(r'["`\']([A-Za-z0-9_.\-]+)["`\']', frag) if k in cat["it"]]
-            txt.append(cat["it"][ks[0]] if ks else ("[icon]" if re.search(r"\bIC_|ICONS|svg|CIC|chevron|raw\(", frag) else "[dyn]"))
+            ks = [k for k in re.findall(r'["`\']([A-Za-z0-9_.\-]+)["`\']', frag) if k in cat["en"]]
+            txt.append(cat["en"][ks[0]] if ks else ("[icon]" if re.search(r"\bIC_|ICONS|svg|CIC|chevron|raw\(", frag) else "[dyn]"))
         else:
             txt.append(frag)
     t = re.sub(r"&times;", "×", "".join(txt)).strip()
@@ -179,7 +178,7 @@ def visible(r, cat):
     parts = []
     for frag in INNER_FULL.findall(r["src"]):
         km = re.findall(r'["`\']([A-Za-z0-9_.\-]+)["`\']', frag)
-        txt = " ".join(cat["it"][k] for k in km if k in cat["it"]) if "${" in frag else frag
+        txt = " ".join(cat["en"][k] for k in km if k in cat["en"]) if "${" in frag else frag
         if txt.strip():
             parts.append(txt.strip())
     return " | ".join(parts)[:80]
@@ -227,7 +226,7 @@ def classify(r):
     for k in (r["key"], *r["key"].split("+"), site):
         if k in OVERRIDE:
             return OVERRIDE[k]
-    text = r["it"] or r["lit"]
+    text = r["en"] or r["lit"]
     vis = re.sub(r"\[(?:icon|dyn)\]", "", r["vis"]).strip()
     if r["kind"] == "svg":
         return "A", "hover on a point of an SVG chart"
@@ -265,7 +264,7 @@ def write_md(outdir):
         parts, cur, size = [], [], 0
         for r in sorted(rs, key=lambda r: (r["file"], r["line"])):
             row = (f"| {r['file'].replace('mzlab/web/', '').replace('TP_Mine/', 'TP/')}:{r['line']} | {esc_md(r['handle'] or r['tag'] or r['kind'], 14)} "
-                   f"| {esc_md(r['it'] or r['lit'], 90)} | {esc_md(r['en'], 60)} | {esc_md(r['vis'], 24)} | {r['cl']} | {esc_md(r['note'], 60)} |")
+                   f"| {esc_md(r['en'] or r['lit'], 90)} | {esc_md(r['vis'], 24)} | {r['cl']} | {esc_md(r['note'], 60)} |")
             if size + len(row) > 21000:
                 parts.append(cur)
                 cur, size = [], 0
@@ -276,7 +275,7 @@ def write_md(outdir):
             name = f"TOOLTIP-{zkey}{'' if len(parts) == 1 else '-' + str(i)}.md"
             head = (f"# Tooltip inventory: {ztitle}" + ("" if len(parts) == 1 else f" ({i}/{len(parts)})") +
                     "\n\nGenerated by `python3 tools/inventory_tooltip.py --md docs/inventari`; do not edit by hand. "
-                    "Classes and rules: `TOOLTIP.md`.\n\n| file:line | element | IT | EN | visible next to it | class | note |\n|---|---|---|---|---|---|---|\n")
+                    "Classes and rules: `TOOLTIP.md`.\n\n| file:line | element | text | visible next to it | class | note |\n|---|---|---|---|---|---|\n")
             (outdir / name).write_text(head + "\n".join(part) + "\n", encoding="utf-8")
             files.append((name, len(part)))
     return tot, files
@@ -296,5 +295,5 @@ if __name__ == "__main__":
         print(json.dumps(rows, ensure_ascii=False, indent=1))
     else:
         for r in rows:
-            print("\t".join(str(r[k]) for k in ("file", "line", "kind", "key", "it", "en", "lit", "aria", "inner")))
+            print("\t".join(str(r[k]) for k in ("file", "line", "kind", "key", "en", "lit", "aria", "inner")))
         print(len(rows), "sites", file=sys.stderr)

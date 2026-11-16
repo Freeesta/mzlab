@@ -1,7 +1,7 @@
 """WP-H11 + Binario B: reference lists and contaminants engine.
 - High resolution: known contaminants only in the box that opens on a peak (same pixels with switch on and off), series of a polymer, laboratory contaminants, user suspect lists (CSV with semicolon and decimal comma).
 - Header button: #np-liste opens the lists dialog.
-- Low resolution (unit resolution): NO automatic annotations on spectra or on hover; right-click context menu has «Cerca nelle liste dei contaminanti…» which opens filtered on nominal m/z (±0.5 Da) ordered by proximity; educational introductory text.
+- Low resolution (unit resolution): NO automatic annotations on spectra or on hover; right-click context menu has «Search the contaminant lists…» which opens filtered on nominal m/z (±0.5 Da) ordered by proximity; educational introductory text.
 """
 # covers: mzlab/web/liste.js, mzlab/web/barra.js, mzlab/web/picchi.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -60,7 +60,7 @@ try:
         step("default off: unchecked in Reference lists, no diamonds; checked adds diamonds; persists on reload", default_off)
 
         def known():
-            h = hov(pg, 279.1591); assert h and "Compatibile con un contaminante noto" in h and "dibutilftalato" in h and "Contaminanti noti e fondo LC-MS" in h and "Keller" not in h, h
+            h = hov(pg, 279.1591); assert h and "Compatible with un contaminante noto" in h and "dibutilftalato" in h and "Contaminanti noti e fondo LC-MS" in h and "Keller" not in h, h
             h2 = hov(pg, 391.2843); assert h2 and "DEHP" in h2, h2
         step("279.1591 and 391.2843: the line of the contaminant in the box of the peak", known)
 
@@ -159,8 +159,8 @@ try:
             pg.click("#np-set"); pg.wait_for_selector("#uipset", timeout=5000)
             assert pg.locator("#uip-lab").count() == 0 and "aboratorio" not in pg.inner_text("#uipset"), "the laboratory contaminants are not in the settings"
             pg.keyboard.press("Escape")   # the settings dialog covers the gear: Escape closes it
-            pg.keyboard.press("Control+k"); pg.wait_for_selector("#pal-in", timeout=5000); pg.fill("#pal-in", "contaminanti"); pg.wait_for_function("document.querySelector('#pal-l').innerText.includes('Contaminanti del laboratorio')", timeout=5000)
-            pg.fill("#pal-in", "lab contaminants"); pg.wait_for_function("document.querySelector('#pal-l').innerText.includes('Contaminanti del laboratorio')", timeout=5000)
+            pg.keyboard.press("Control+k"); pg.wait_for_selector("#pal-in", timeout=5000); pg.fill("#pal-in", "contaminanti"); pg.wait_for_function("document.querySelector('#pal-l').innerText.includes('Laboratory contaminants')", timeout=5000)
+            pg.fill("#pal-in", "lab contaminants"); pg.wait_for_function("document.querySelector('#pal-l').innerText.includes('Laboratory contaminants')", timeout=5000)
             pg.keyboard.press("Enter"); pg.wait_for_selector("#bigdlg[open] #lab-add", timeout=5000); pg.evaluate("document.querySelector('#bigdlg').close()")
         step("laboratory contaminants: not in the settings, found by the search bar (it and en words)", gear_lab)
         def gear_fresh():
@@ -185,7 +185,7 @@ try:
             pg.evaluate(f"(()=>{{const p={SP};p.zoom=[200,300];draw(p)}})()"); frames(pg, 3)
             mz0 = pg.evaluate(f"(()=>{{const p={SP};const d=p._a.data[0].d;let k=-1;d.mz.forEach((m,i)=>{{if(m>200&&m<300&&(k<0||d.y[i]>d.y[k]))k=i}});return d.mz[k]}})()")
             pg.evaluate(f"setTimeout(()=>LISTE.askAdd({mz0}, 'positive'),0)"); pg.wait_for_selector("#askok", timeout=5000); pg.fill("#askin", "mio fondo"); pg.click("#askok"); wait_for_js(pg, "JSON.parse(localStorage.getItem('mzlab.contaminanti')||'[]').length==1")
-            h = hov(pg, mz0); assert h and "mio fondo" in h and "Contaminanti del laboratorio" in h, h
+            h = hov(pg, mz0); assert h and "mio fondo" in h and "Laboratory contaminants" in h, h
             assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.contaminanti')).length") == 1
             csv = pg.evaluate("LISTE.csvOut(LISTE.labRows())"); assert csv.startswith("mz,name,formula,polarity,note") and "mio fondo" in csv
         step("laboratory contaminants: added from the menu, seen in the box, saved as CSV", lab)
@@ -237,7 +237,7 @@ try:
         step("low resolution: NO automatic annotations or hover tips", lr_no_auto_annotations)
 
         def lr_context_menu_search():
-            # Right click on a peak in LR spectrum opens context menu with "Cerca nelle liste dei contaminanti…"
+            # Right click on a peak in LR spectrum opens context menu with "Search the contaminant lists…"
             m0 = pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='spec'&&p._a);return p._a.data[0].d.mz[0]})()")
             # Open the search via LISTE.open directly or menu click
             pg.evaluate(f"LISTE.open({{ mz: {m0}, polarity: 'positive', hr: false }})")

@@ -22,7 +22,7 @@ try:
             t = pg.inner_text("#flist"); assert "ESI+" in t and "ESI−" in t, t
             assert pg.evaluate("[...document.querySelectorAll('#flist .pol')].map(x=>x.title)") == ["ESI negativo", "ESI positivo"] or set(pg.evaluate("[...document.querySelectorAll('#flist .pol')].map(x=>x.title)")) == {"ESI positivo", "ESI negativo"}
         step("loading table: ESI+ / ESI− badges (mixed polarities) next to the names", load_signs)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def list_signs():
             drawer(pg); assert pg.evaluate("[...document.querySelectorAll('#flst .fl .pol')].map(x=>x.textContent).sort().join('')") == "ESI+ESI−"
         step("file list: signs", list_signs)

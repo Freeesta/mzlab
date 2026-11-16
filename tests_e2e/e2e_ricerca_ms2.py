@@ -173,8 +173,8 @@ try:
     r.close()
     with sync_playwright() as p:
         r = Run(port=8982, wd="/tmp/wd_ricms2lr"); pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1000})
-        pg.set_input_files("#pick", [mz("B_MS2-t15")]); pg.wait_for_selector("text=Carica dati")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [mz("B_MS2-t15")]); pg.wait_for_selector("text=Load data")
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("setTab('ms2',true)"); wait_for_js(pg, "(() => { const p = E.panels.find(p => p.type === 'spec' && p.level === 2); return !!(p && p._a && p._a.data && p._a.data[0]); })()")
         def lr_none():
             SPEC = "E.panels.find(p => p.type === 'spec' && p.level === 2)"

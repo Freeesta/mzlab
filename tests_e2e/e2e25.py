@@ -1,4 +1,4 @@
-# e2e25: settings gear (3 controls), chart colours (4 palettes, colours by time on the Full Scan tab), "Nuova sessione" with warning and cleanup.
+# e2e25: settings gear (3 controls), chart colours (4 palettes, colours by time on the Full Scan tab), "New session" with warning and cleanup.
 # Synthetic data (tests_e2e/synth.py): no real lab files needed.
 # covers: mzlab/web/settings.js
 import os, sys, re, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -38,8 +38,8 @@ try:
             assert "Dimensione testo" not in t and "tema" in t.lower() and "colori dei grafici" in t.lower()
             for bad in ("Dimensione del testo dell", "Vale per menu", "tutorial", "Installare", "Numera", "suggerimenti"):
                 assert bad.lower() not in t.lower(), bad
-            assert pg.locator("#uipset input[type=checkbox]").count() == 4 and pg.locator("#uip-merge").count() == 1 and pg.locator("#uip-tog").count() == 0      # the merge of the centroids; no «Mostra tutti gli esperimenti insieme» (it is the only view)
-            assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["Per file (predefinito)", "Per tempo", "Accessibili", "Alto contrasto", "Arcobaleno", "Bianco e nero"]
+            assert pg.locator("#uipset input[type=checkbox]").count() == 4 and pg.locator("#uip-merge").count() == 1 and pg.locator("#uip-tog").count() == 0      # the merge of the centroids; no «Show all gli esperimenti insieme» (it is the only view)
+            assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["By file (default)", "By time", "Accessibili", "High contrast", "Arcobaleno", "Black and white"]
             assert pg.input_value("#uip-pal") == "file"
             pg.check("input[name=uip-th][value=dark]", force=True); pg.wait_for_timeout(400)
             pg.check("input[name=uip-th][value=auto]", force=True); pg.wait_for_timeout(300)
@@ -48,7 +48,7 @@ try:
             assert pg.evaluate("document.querySelectorAll('[title]').length") > 40, "tooltips stay on"
         step("gear: exactly 3 controls; tips and numbers are fixed on; no tutorial", gear)
         def time_scale():
-            pg.evaluate("setPal('time'); paintFiles(); renderFileList()")             # the time scale is the «Per tempo» palette, no longer the default
+            pg.evaluate("setPal('time'); paintFiles(); renderFileList()")             # the time scale is the «By time» palette, no longer the default
             c = pg.evaluate(COLORS); print(c)
             assert [x[0] for x in c] == [0, 5, 15, 30, 60], c
             hs = [hexof(x[1]) for x in c]; assert len(set(hs)) == 5, hs
@@ -76,9 +76,9 @@ try:
         step("a colour chosen by hand is not overwritten; 'ripristina colori' brings the scale back", manual)
         def menu_entry():
             drawer(pg); pg.click("#flst .fl .nm >> nth=0", button="right"); pg.wait_for_timeout(300)
-            assert "Ripristina i colori automatici" in pg.inner_text("body")
+            assert "Restore the automatic colors" in pg.inner_text("body")
             pg.keyboard.press("Escape"); pg.mouse.click(5, 5)
-        step("the file menu has 'Ripristina i colori automatici'", menu_entry)
+        step("the file menu has 'Restore the automatic colors'", menu_entry)
         def palettes():
             seen = {}
             for k in ("time", "cb", "hc", "rainbow"):
@@ -120,7 +120,7 @@ try:
                 pg.keyboard.press("Escape"); pg.click("#newrun")
                 with pg.expect_navigation(timeout=30000): pg.click("#resetdlg [data-reset=files]")      # the wipe takes as long as it takes, then the page reloads
                 pg.wait_for_selector("#pick", state="attached"); pg.wait_for_timeout(1500)
-                load(pg, times, str(n)); pg.evaluate("setPal('time'); paintFiles()")      # the scale belongs to «Per tempo»
+                load(pg, times, str(n)); pg.evaluate("setPal('time'); paintFiles()")      # the scale belongs to «By time»
                 c = pg.evaluate(COLORS); hs = [hexof(x[1]) for x in c]; ls = [lum(h) for h in hs]
                 assert len(c) == n and len(set(hs)) == n and all(ls[i] < ls[i + 1] for i in range(n - 1)), (n, hs)
                 pg.screenshot(path=SH + f"250_scale_{n}.png", clip={"x": 0, "y": 60, "width": 400, "height": 500})
@@ -139,7 +139,7 @@ try:
             assert pg.evaluate("UIP.pal") == "file" and pg.evaluate("document.documentElement.dataset.pal") == "file" and pg.evaluate("UIP.font") is None
             assert pg.evaluate("(NB.session||null)") is None and pg.evaluate("Object.keys(NB).filter(k=>k!=='ui'&&k!=='session').length") == 0
             st = pg.evaluate("fetch('api/notebook').then(r=>r.json())"); assert not st.get("session"), st
-        step("Nuova sessione: warning text, cancel changes nothing, confirm clears files, notebook, preferences", new_session)
+        step("New session: warning text, cancel changes nothing, confirm clears files, notebook, preferences", new_session)
 finally:
     r.close(); r.report()
 print("\nSTEPS"); [print(" ", s) for s in steps]

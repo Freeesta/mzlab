@@ -19,7 +19,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(D / "B_FullMass-t0.mzML"), str(D / "B_FullMass-t60.mzML")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); ready(pg)
         X, C = ".pnl.xic", ".pnl.chrom"
         XP = "E.panels.find(p=>p.type==='xic')"

@@ -1,4 +1,4 @@
-"""Area label of an integration: click copies the displayed number, «Copia valore» in the menu, aria-live notice that fades, nothing in the PNG, other clicks unchanged."""
+"""Area label of an integration: click copies the displayed number, «Copy value» in the menu, aria-live notice that fades, nothing in the PNG, other clicks unchanged."""
 # covers: mzlab/web/area-copia.js, mzlab/web/integra-zero.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -42,11 +42,11 @@ try:
         def menu_copies():
             l = lab(); pg.evaluate("navigator.clipboard.writeText('x')")
             names = pg.evaluate(f"(()=>{{const p={XP};return AZIONI.per({{vista:p.type,p,x:14.2,k:0,near:null,px:{l['x']}-p.cv.getBoundingClientRect().left,py:{l['y']}-p.cv.getBoundingClientRect().top}}).map(i=>i.label||i.nome)}})()")
-            assert "Copia valore" in [str(x) for x in names], names
-            pg.mouse.click(l["x"], l["y"], button="right"); wait_for_js(pg, "[...document.querySelectorAll('#ctx *')].some(e=>e.textContent==='Copia valore')")
-            pg.get_by_text("Copia valore", exact=True).click(); wait_for_js(pg, "!!document.querySelector('.areacopied.show')")
+            assert "Copy value" in [str(x) for x in names], names
+            pg.mouse.click(l["x"], l["y"], button="right"); wait_for_js(pg, "[...document.querySelectorAll('#ctx *')].some(e=>e.textContent==='Copy value')")
+            pg.get_by_text("Copy value", exact=True).click(); wait_for_js(pg, "!!document.querySelector('.areacopied.show')")
             assert clip() == l["copy"]
-        step("context menu: «Copia valore» does the same", menu_copies)
+        step("context menu: «Copy value» does the same", menu_copies)
         def not_in_png():
             url = pg.evaluate(f"{XP}.cv.toDataURL()"); assert url.startswith("data:image/png")
             assert pg.evaluate("document.querySelector('.areacopied')!==null"), "notice is a DOM element, never canvas text"

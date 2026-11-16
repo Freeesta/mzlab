@@ -61,7 +61,7 @@ try:
         step("an ion shows its m/z and the sticks are m/z", ion)
         def two():
             pg.evaluate(f"{KJ}.setMolecule('CCO.CN')"); wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 5")
-            pg.wait_for_function("/Seleziona una molecola/.test(document.querySelector('#anal-body').textContent)", timeout=15000)
+            pg.wait_for_function("/Select a molecule/.test(document.querySelector('#anal-body').textContent)", timeout=15000)
         step("two molecules without a selection ask for one", two)
         def menu():
             pg.evaluate("document.querySelector('#anal-card').open = false")

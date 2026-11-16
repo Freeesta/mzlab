@@ -16,7 +16,7 @@ MINS = "(()=>{const p=E.panels.find(q=>q.type==='%s'); return p&&p._a&&p._a.sr?O
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, files); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, files); pg.click("text=Load data"); ready(pg)
         pg.evaluate("E.browse=false; E.files.forEach(f=>f.vis=true); renderNav(); renderFileList(); redrawAll()"); ready(pg)
         assert pg.evaluate("E.files.length") == 3 and pg.evaluate("shown().length") == 3, pg.evaluate("[E.files.length, shown().length, E.browse]")
         pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:253.3,w:0.5,label:'m/z 253'}]})"); ready(pg)

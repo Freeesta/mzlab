@@ -15,7 +15,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1280, "height": 1000})
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def corr_out():
             assert pg.is_visible(".pnl.chrom [data-o=corr]"), "Correzione is in the header, not hidden in the popover"
             assert pg.evaluate(f"!{CH}.el.querySelector('.cpop').contains({CH}.el.querySelector('.corrb'))")

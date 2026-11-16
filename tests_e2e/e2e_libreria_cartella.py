@@ -56,7 +56,7 @@ time.sleep(1)
 URL = f"http://127.0.0.1:{PORT}/"
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None); ctx = b.new_context(viewport={"width": 1400, "height": 1000}, locale="it-IT"); pg = ctx.new_page()
+        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None); ctx = b.new_context(viewport={"width": 1400, "height": 1000}, locale="en-US"); pg = ctx.new_page()
         pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
         pg.on("response", lambda r: errs.append(("http%d" % r.status, r.url)) if r.status >= 400 and not r.url.endswith("favicon.ico") else None)
         def boot():

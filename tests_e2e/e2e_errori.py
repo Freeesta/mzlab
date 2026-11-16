@@ -20,7 +20,7 @@ try:
         pg.evaluate("() => { setTimeout(() => { throw new Error('prova-errore-uno'); }, 0); }")
         pg.wait_for_selector("#errbox[role=alert]")
         txt = pg.inner_text("#errbox")
-        assert "Qualcosa non ha funzionato" in txt and "Copia i dettagli" in txt, txt
+        assert "Something went wrong" in txt and "Copy details" in txt, txt
         assert "prova-errore-uno" not in txt, "the message stays short: details only in the copy"
         steps.append(("error -> short alert box", "ok"))
 
@@ -40,7 +40,7 @@ try:
         # workflow messages: program dialog, not alert()
         pg.evaluate("() => WORKFLOW.export()")
         pg.wait_for_selector("#askdlg[open]")
-        assert "Nessun file aperto" in pg.inner_text("#asktxt")
+        assert "No file open" in pg.inner_text("#asktxt")
         pg.click("#askok")
         pg.evaluate("() => WORKFLOW.applyWorkflow({formato: 'x'})")
         pg.wait_for_selector("#askdlg[open]")
@@ -48,7 +48,7 @@ try:
         assert not native, native
         steps.append(("workflow messages in the program dialog", "ok"))
 
-        print("OK: tutti i controlli superati")
+        print("OK: all checks passed")
         for desc, res in steps:
             print(f"  ✓ {desc}: {res}")
 finally:

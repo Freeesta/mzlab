@@ -1,16 +1,12 @@
 {
   "fonti": {
     "IUPAC2013": "Murray K.K. et al., Definitions of terms relating to mass spectrometry (IUPAC Recommendations 2013), Pure Appl. Chem. 85 (2013) 1515-1609",
-    "Thermo": "Thermo Scientific Xcalibur / FreeStyle (terminologia del banco HR)",
+    "Thermo": "Thermo Scientific Xcalibur / FreeStyle (HR bench terminology)",
     "Schymanski2014": "Schymanski E.L. et al., Environ. Sci. Technol. 48 (2014) 2097"
   },
   "voci": [
     {
       "id": "precursor",
-      "it": [
-        "ione precursore",
-        "precursore"
-      ],
       "en": [
         "precursor ion",
         "precursor"
@@ -23,11 +19,6 @@
     },
     {
       "id": "product",
-      "it": [
-        "ione prodotto",
-        "ioni prodotto",
-        "frammento"
-      ],
       "en": [
         "product ion",
         "fragment ion",
@@ -41,10 +32,6 @@
     },
     {
       "id": "neutralLoss",
-      "it": [
-        "perdita neutra",
-        "perdite neutre"
-      ],
       "en": [
         "neutral loss"
       ],
@@ -54,22 +41,16 @@
     },
     {
       "id": "cid",
-      "it": [
-        "dissociazione indotta da collisione"
-      ],
       "en": [
         "collision-induced dissociation",
         "CID"
       ],
       "evita_en": [],
-      "nota": "collision-activated dissociation solo in citazioni",
+      "nota": "collision-activated dissociation only in quotations",
       "fonte": "IUPAC2013"
     },
     {
       "id": "hcd",
-      "it": [
-        "HCD"
-      ],
       "en": [
         "higher-energy collisional dissociation",
         "HCD"
@@ -80,9 +61,6 @@
     },
     {
       "id": "ce",
-      "it": [
-        "energia di collisione"
-      ],
       "en": [
         "collision energy"
       ],
@@ -92,9 +70,6 @@
     },
     {
       "id": "isoWin",
-      "it": [
-        "finestra di isolamento"
-      ],
       "en": [
         "isolation window"
       ],
@@ -104,23 +79,16 @@
     },
     {
       "id": "xic",
-      "it": [
-        "XIC",
-        "cromatogramma dello ione estratto"
-      ],
       "en": [
         "XIC",
         "extracted ion chromatogram"
       ],
       "evita_en": [],
-      "nota": "EIC solo come sinonimo nella guida",
+      "nota": "EIC only as a synonym in the guide",
       "fonte": "IUPAC2013"
     },
     {
       "id": "tic",
-      "it": [
-        "TIC"
-      ],
       "en": [
         "TIC",
         "total ion current"
@@ -133,9 +101,6 @@
     },
     {
       "id": "bpc",
-      "it": [
-        "BPC"
-      ],
       "en": [
         "BPC",
         "base peak chromatogram"
@@ -146,22 +111,16 @@
     },
     {
       "id": "mrm",
-      "it": [
-        "MRM"
-      ],
       "en": [
         "MRM",
         "multiple reaction monitoring"
       ],
       "evita_en": [],
-      "nota": "IUPAC preferisce SRM: nella guida «MRM (SRM)» una volta",
+      "nota": "IUPAC prefers SRM: the guide writes «MRM (SRM)» once",
       "fonte": "IUPAC2013"
     },
     {
       "id": "productScan",
-      "it": [
-        "Product Ion (MS2)"
-      ],
       "en": [
         "product ion scan",
         "Product Ion (MS2)"
@@ -172,9 +131,6 @@
     },
     {
       "id": "fullScan",
-      "it": [
-        "Full Scan"
-      ],
       "en": [
         "full scan",
         "Full Scan"
@@ -185,9 +141,6 @@
     },
     {
       "id": "dda",
-      "it": [
-        "DDA"
-      ],
       "en": [
         "DDA",
         "data-dependent acquisition"
@@ -198,33 +151,24 @@
     },
     {
       "id": "exactMass",
-      "it": [
-        "massa esatta"
-      ],
       "en": [
         "exact mass"
       ],
       "evita_en": [],
-      "nota": "calcolata",
+      "nota": "calculated",
       "fonte": "IUPAC2013"
     },
     {
       "id": "accurateMass",
-      "it": [
-        "massa accurata"
-      ],
       "en": [
         "accurate mass"
       ],
       "evita_en": [],
-      "nota": "misurata: non confondere con exact mass",
+      "nota": "measured: do not confuse with exact mass",
       "fonte": "IUPAC2013"
     },
     {
       "id": "monoiso",
-      "it": [
-        "massa monoisotopica"
-      ],
       "en": [
         "monoisotopic mass"
       ],
@@ -234,46 +178,34 @@
     },
     {
       "id": "massError",
-      "it": [
-        "errore di massa"
-      ],
       "en": [
         "mass error"
       ],
       "evita_en": [],
-      "nota": "mass accuracy solo per la proprietà dello strumento",
+      "nota": "mass accuracy only for the property of the instrument",
       "fonte": "IUPAC2013"
     },
     {
       "id": "resolution",
-      "it": [
-        "risoluzione"
-      ],
       "en": [
         "resolution",
         "resolving power"
       ],
       "evita_en": [],
-      "nota": "R = m/Δm; nel banco HR si usa il termine del vendor",
+      "nota": "R = m/Δm; the HR bench uses the vendor term",
       "fonte": "IUPAC2013"
     },
     {
       "id": "unitRes",
-      "it": [
-        "risoluzione unitaria"
-      ],
       "en": [
         "unit resolution"
       ],
       "evita_en": [],
-      "nota": "low resolution solo in «HR/LR»",
+      "nota": "low resolution only in «HR/LR»",
       "fonte": "IUPAC2013"
     },
     {
       "id": "isotopePattern",
-      "it": [
-        "profilo isotopico"
-      ],
       "en": [
         "isotope pattern"
       ],
@@ -285,36 +217,25 @@
     },
     {
       "id": "isotopologue",
-      "it": [
-        "isotopologo",
-        "isotopologhi"
-      ],
       "en": [
         "isotopologue"
       ],
       "evita_en": [],
-      "nota": "isotope peak solo per il picco",
+      "nota": "isotope peak only for the peak",
       "fonte": "IUPAC2013"
     },
     {
       "id": "rdbe",
-      "it": [
-        "RDB"
-      ],
       "en": [
         "RDBE",
         "rings plus double bonds"
       ],
       "evita_en": [],
-      "nota": "DBE accettato",
+      "nota": "DBE accepted",
       "fonte": "IUPAC2013"
     },
     {
       "id": "adduct",
-      "it": [
-        "addotto",
-        "addotti"
-      ],
       "en": [
         "adduct"
       ],
@@ -324,9 +245,6 @@
     },
     {
       "id": "isf",
-      "it": [
-        "frammentazione nella sorgente"
-      ],
       "en": [
         "in-source fragmentation"
       ],
@@ -336,13 +254,6 @@
     },
     {
       "id": "blank",
-      "it": [
-        "il bianco",
-        "un bianco",
-        "file bianco",
-        "campione bianco",
-        "bianchi"
-      ],
       "en": [
         "blank"
       ],
@@ -352,24 +263,15 @@
     },
     {
       "id": "background",
-      "it": [
-        "fondo"
-      ],
       "en": [
         "background"
       ],
       "evita_en": [],
       "nota": "",
-      "fonte": "IUPAC2013",
-      "escludi_it": [
-        "in fondo"
-      ]
+      "fonte": "IUPAC2013"
     },
     {
       "id": "baseline",
-      "it": [
-        "linea di base"
-      ],
       "en": [
         "baseline"
       ],
@@ -379,9 +281,6 @@
     },
     {
       "id": "calib",
-      "it": [
-        "retta di taratura"
-      ],
       "en": [
         "calibration curve"
       ],
@@ -391,11 +290,6 @@
     },
     {
       "id": "candidate",
-      "it": [
-        "formule compatibili",
-        "candidato",
-        "candidati"
-      ],
       "en": [
         "candidate"
       ],
@@ -408,10 +302,6 @@
     },
     {
       "id": "libMatch",
-      "it": [
-        "corrispondenza forte",
-        "corrispondenza possibile"
-      ],
       "en": [
         "strong match",
         "possible match"
@@ -420,15 +310,15 @@
         "confirmed",
         "identified"
       ],
-      "nota": "",
-      "fonte": "Schymanski2014"
+      "nota": "\"Confirmed\" is the name of Schymanski level 1 and \"not identified\" is a plain statement: both are allowed in the listed keys",
+      "fonte": "Schymanski2014",
+      "chiavi_ok": [
+        "lv.name.1",
+        "comp.confidence"
+      ]
     },
     {
       "id": "analog",
-      "it": [
-        "analogo",
-        "analoghi"
-      ],
       "en": [
         "analog"
       ],
@@ -438,9 +328,6 @@
     },
     {
       "id": "confidence",
-      "it": [
-        "livello di confidenza"
-      ],
       "en": [
         "confidence level"
       ],
@@ -450,10 +337,6 @@
     },
     {
       "id": "contaminant",
-      "it": [
-        "contaminante noto",
-        "contaminanti noti"
-      ],
       "en": [
         "known contaminant"
       ],

@@ -16,7 +16,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 900})
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")])
-        pg.click("text=Carica dati"); ready(pg); drawer(pg)
+        pg.click("text=Load data"); ready(pg); drawer(pg)
         pg.wait_for_selector("#flst .fl .nm", timeout=10000)
         pg.evaluate("window.ask = async (_t, d) => window.__ans ?? d")
         def make():

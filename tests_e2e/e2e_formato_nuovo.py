@@ -22,7 +22,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(F)])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         def again():
             pg.goto(pg.url); wait_for_js(pg, "document.querySelector('#pick')")
             pg.set_input_files("#pick", [str(F)]); wait_for_js(pg, "(UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone)) || /formato 3/.test(document.body.innerText)", timeout=60000)

@@ -1,5 +1,5 @@
 """Prompt 2, block 1: right click takes the SAME peak as the label, one live spectrum per chromatogram, XIC straight from the spectrum, overlay entries,
-'Ripristina zoom' first, grey dashed annotations that disappear out of the zoom, RT with 2 decimals."""
+'Reset the zoom' first, grey dashed annotations that disappear out of the zoom, RT with 2 decimals."""
 # covers: mzlab/web/pannelli.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -25,8 +25,8 @@ try:
             return pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),l=p._a.lbls.filter(l=>l.m!=null)[{i}];return l&&{{x:q.left+l.x+l.w/2,y:q.top+l.y+l.h/2,m:l.m}}}})()")
         def pick_label():
             lb = label_box(0); assert lb, "no peak labels"
-            its = [i for i in ctx_items(lb["x"], lb["y"]) if i != "Ripristina zoom"]; print(lb["m"], its[:3])          # the zoom reset is always there (grey without a zoom)
-            assert its[0] == f"m/z {lb['m']:.1f}" and its[1] == "Copia valore" and its[2] == f"Estrai l'XIC di m/z {lb['m']:.1f}", (lb, its)
+            its = [i for i in ctx_items(lb["x"], lb["y"]) if i != "Reset the zoom"]; print(lb["m"], its[:3])          # the zoom reset is always there (grey without a zoom)
+            assert its[0] == f"m/z {lb['m']:.1f}" and its[1] == "Copy value" and its[2] == f"Extract the XIC of m/z {lb['m']:.1f}", (lb, its)
             pg.keyboard.press("Escape")
             # the bar of the same peak gives the same value
             bar = pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),a=p._a;return {{x:q.left+a.X({lb['m']}),y:q.top+a.Y(a.ymax*0.02)}}}})()")
@@ -47,7 +47,7 @@ try:
             tip = pg.evaluate("[...document.querySelectorAll('#ctx div')].find(d=>d.textContent.startsWith('Sovrapponi'))?.title"); assert "stesso grafico" in tip, tip
             pg.locator("#ctx div", has_text="Sovrapponi all'XIC").first.click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='xic').pop().traces.length===2")
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().traces.length") == 2
-        step("1.4: 'Sovrapponi all'XIC di m/z … (pannello n)' adds a trace", overlay)
+        step("1.4: 'Overlay on the XIC of m/z … (panel n)' adds a trace", overlay)
         def live():
             c = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();p.el.scrollIntoView({{block:'center'}});return q}})()")
             for fr in (0.4, 0.6):
@@ -63,13 +63,13 @@ try:
         step("1.1: one live spectrum per chromatogram, the others 'fermo a RT'", live)
         def zoom_first():
             pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); frames(pg, 2)
-            its = ctx_items(*pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect();return [q.left+q.width/2,q.top+q.height*0.5]}})()")); assert "Ripristina zoom" not in its, its      # no zoom: not shown
+            its = ctx_items(*pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect();return [q.left+q.width/2,q.top+q.height*0.5]}})()")); assert "Reset the zoom" not in its, its      # no zoom: not shown
             pg.keyboard.press("Escape")
             pg.evaluate(f"(()=>{{const p={SPEC},a=p._a;p.zoom=[a.x0+(a.x1-a.x0)*0.4,a.x0+(a.x1-a.x0)*0.6];draw(p)}})()"); frames(pg, 2)
             its = ctx_items(*pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect();return [q.left+q.width/2,q.top+q.height*0.5]}})()")); assert pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]').getAttribute('aria-disabled')") != "true", its
-            pg.locator("#ctx div", has_text="Ripristina zoom").first.click(); wait_for_js(pg, f"{SPEC}.zoom==null")
+            pg.locator("#ctx div", has_text="Reset the zoom").first.click(); wait_for_js(pg, f"{SPEC}.zoom==null")
             assert pg.evaluate(f"{SPEC}.zoom") is None
-        step("1.5: 'Ripristina zoom' is shown only with a zoom", zoom_first)
+        step("1.5: 'Reset the zoom' is shown only with a zoom", zoom_first)
         def annot():
             pg.evaluate("""(()=>{const o=CanvasRenderingContext2D.prototype.stroke;window.__st=[];CanvasRenderingContext2D.prototype.stroke=function(){window.__st.push([String(this.strokeStyle),this.getLineDash().join()]);return o.apply(this,arguments)}})()""")
             lb = label_box(0); m = lb["m"]

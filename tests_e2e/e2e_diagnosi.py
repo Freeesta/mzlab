@@ -27,7 +27,7 @@ for _ in range(50):
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None)
-        for lang, det, copy in (("it-IT", "Dettagli", "Copia diagnosi"), ("en-US", "Details", "Copy diagnosis")):
+        for lang, det, copy in (("it-IT", "Dettagli", "Copy diagnosis"), ("en-US", "Details", "Copy diagnosis")):
             c = b.new_context(locale=lang, viewport={"width": 1400, "height": 1200}, permissions=["clipboard-read", "clipboard-write"]); c.set_default_timeout(120000)
             pg = c.new_page(); pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")

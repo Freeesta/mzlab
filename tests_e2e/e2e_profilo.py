@@ -26,7 +26,7 @@ try:
             assert not pg.evaluate("document.querySelector('#modenote').hidden"), "profile + centroid: the note appears"
             assert "non sono confrontabili" in pg.inner_text("#modenote")
         step("mixed formats: the note on the loading screen", note)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()"); ready(pg)      # a low-resolution list opens only its first file
         pk = pg.evaluate("E.files.findIndex(f=>f.file.startsWith('P_'))"); ck = pg.evaluate("E.files.findIndex(f=>f.file.startsWith('C_'))")
         def show(k, a=14.6, b=14.8):

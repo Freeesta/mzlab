@@ -9,7 +9,7 @@ function calcIsExpr(t) {
   const s = String(t || "").replace(/ans/gi, "").replace(/\s+/g, "");
   return String(t || "").trim() !== "" && /^[0-9.,+\-−–—*xX×/÷()]*$/.test(s);
 }
-// evaluates; ans = last result (for "Ans"). Returns { v } or { err } (err = short Italian message, "" while the expression is only unfinished)
+// evaluates; ans = last result (for "Ans"). Returns { v } or { err } (err = short message, "" while the expression is only unfinished)
 function calcEval(t, ans = 0) {
   let s = String(t || "").replace(/ans/gi, `(${ans})`).replace(/\s+/g, "").replace(/,/g, ".").replace(/[−–—]/g, "-").replace(/[xX×]/g, "*").replace(/÷/g, "/");
   if (!s) return { err: "" };
@@ -48,6 +48,6 @@ function calcFmt(v) {
   if (t === "-0") t = "0";
   return t;
 }
-// the expression as shown in the tape: Italian signs, spaces around the operators
+// the expression as shown in the tape: × and ÷ signs, spaces around the operators
 function calcPretty(t) { return String(t || "").replace(/\s+/g, "").replace(/\*|x|X|×/g, " × ").replace(/\//g, " ÷ ").replace(/(?<=[0-9.,)])\+/g, " + ").replace(/(?<=[0-9.,)])[-−]/g, " − ").trim(); }
 if (typeof module !== "undefined") module.exports = { calcIsExpr, calcEval, calcFmt, calcPretty };

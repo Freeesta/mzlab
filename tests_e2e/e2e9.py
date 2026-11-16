@@ -53,7 +53,7 @@ try:
         def method():
             pg.click("#np-method"); ready(pg)
             t = pg.inner_text("body")
-            assert "Metodo cromatografico (LC)" in t and "<sub>" not in t and "H2O + 0.1% FA" in t and "% A" in t and "Flusso iniziale" not in t and "PDA: canali" not in t
+            assert "Chromatographic method (LC)" in t and "<sub>" not in t and "H2O + 0.1% FA" in t and "% A" in t and "Flusso iniziale" not in t and "PDA: canali" not in t
             assert pg.locator("svg polyline").count() >= 1
             pg.screenshot(path=SH + "93_metodo.png")
         step("Metodo window shows gradient, flow, PDA", method)

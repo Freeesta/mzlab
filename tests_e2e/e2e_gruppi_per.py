@@ -35,7 +35,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 900})
         pg.set_input_files("#pick", PATHS)
-        pg.click("text=Carica dati"); ready(pg, timeout=180000); drawer(pg)
+        pg.click("text=Load data"); ready(pg, timeout=180000); drawer(pg)
         pg.wait_for_selector("#flst .fl .nm", timeout=30000)
         pg.evaluate("I18N.set('en')"); pg.wait_for_function("window.qqReady === true && I18N.lang === 'en'", timeout=60000)
         def watch():

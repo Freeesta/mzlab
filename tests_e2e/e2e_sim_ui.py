@@ -22,7 +22,7 @@ def need(c, m): c or (_ for _ in ()).throw(AssertionError(m))
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, [D / "sim.wiff", D / "sim.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= 2 && E.files.every(f => f.sim > 0)", timeout=120000)
+        stage(pg, [D / "sim.wiff", D / "sim.wiff.scan"]); pg.click("text=Load data"); ready(pg); wait_for_js(pg, "E.files.length >= 2 && E.files.every(f => f.sim > 0)", timeout=120000)
         step("every file counts its SIM ions", lambda: need(pg.evaluate("E.files.every(f => f.sim === %d)" % N), pg.evaluate("E.files.map(f => f.sim)")))
         step("every file is typed SIM by the engine (a SIM file is neither «empty» nor «UV only»)", lambda: need(pg.evaluate("Promise.all(E.files.map(f => CANALI.canali(f.k).then(j => j.tipo.proposto)))") == ["lc-sim"] * pg.evaluate("E.files.length"), pg.evaluate("Promise.all(E.files.map(f => CANALI.canali(f.k).then(j => j.tipo.proposto)))")))
         def cell():

@@ -13,7 +13,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(600)
         order = lambda: pg.evaluate("stackOrder().map(p => p.type + ':' + p.id)")
         def xic_under():

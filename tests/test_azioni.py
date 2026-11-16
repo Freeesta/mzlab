@@ -35,10 +35,10 @@ def test_duplicate_id_or_unknown_group_is_refused(bad):
     assert r and r.startswith("AZIONI:")
 
 
-def test_map_actions_have_texts_in_both_languages():
+def test_map_actions_have_texts():
     ids = re.findall(r'cmd\("(\w+)"', (WEB / "mappa.js").read_text(encoding="utf-8"))
     assert len(ids) == len(set(ids)) >= 13
-    for lang in ("it", "en"):
+    for lang in ("en",):
         cat = lang_catalog.testo(lang)
         for i in ids:
             for k in ("name", "tip"):
@@ -54,25 +54,25 @@ def test_rows_of_one_action_and_order_inside_a_group():
     assert r == [["n", "n1", False], ["n", "n2", True], ["a", "a", False], ["b", "b", False], "-", ["h", "h", False]]
 
 
-def test_spectrum_actions_have_texts_in_both_languages():
+def test_spectrum_actions_have_texts():
     """Every i18n key named by a registered action of the spectrum exists in it and en."""
     src = "".join((WEB / f).read_text(encoding="utf-8") for f in ("spettro.js", "dda.js", "liste.js", "elementare.js", "visualizza.js", "libreria.js", "workflow.js", "fair-azioni.js"))
     blocks = re.findall(r'id: "spec\.\w+".*', src)
     keys = set(k for b in blocks for k in re.findall(r'"((?:ctx|cx|disp)\.[\w.]+)"', b))
     assert len(blocks) >= 24 and len(keys) >= 20, (len(blocks), len(keys))
-    for lang in ("it", "en"):
+    for lang in ("en",):
         cat = lang_catalog.testo(lang)
         for k in keys:
             assert f'"{k}"' in cat, (lang, k)
 
 
-def test_trace_actions_have_texts_in_both_languages():
+def test_trace_actions_have_texts():
     """Every i18n key named by a registered action of the chromatogram menu exists in it and en."""
     src = "".join((WEB / f).read_text(encoding="utf-8") for f in ("eventi.js", "gradiente.js", "dda.js", "libreria.js", "composizione.js", "visualizza.js", "picchi.js", "grafici.js"))
     blocks = re.findall(r'id: "(?:chrom|xic)\.\w+"[^\n]*(?:\n[^\n]*)?|over\("\w+"[^\n]*', src)
     keys = set(k for b in blocks for k in re.findall(r'"((?:ctx|disp)\.[\w.]+)"', b))
     assert len(blocks) >= 11 and len(keys) >= 9, (len(blocks), len(keys))
-    for lang in ("it", "en"):
+    for lang in ("en",):
         cat = lang_catalog.testo(lang)
         for k in keys:
             assert f'"{k}"' in cat, (lang, k)
@@ -115,7 +115,7 @@ def test_every_id_of_the_icon_table_is_a_registered_action():
         assert f'"{i}"' in src or f'over("{i.split(".")[-1]}"' in src, f"{i}: no action with this id in mzlab/web"
 
 
-def test_arrangement_actions_show_in_every_view_and_have_texts_in_both_languages():
+def test_arrangement_actions_show_in_every_view_and_have_texts():
     """Actions with viste ['*'] show in any view; the keys of the arrangement actions (affianca.js) exist in it and en; layout.js never names an experiment."""
     r = run("""AZIONI.registra({id:'t.all',gruppo:'disp',viste:['*'],nome:()=>'x',esegui:()=>0});
       console.log(JSON.stringify(['spec','chrom','mrm'].map(v=>AZIONI.per({vista:v}).some(i=>i.id==='t.all'))))""")
@@ -123,7 +123,7 @@ def test_arrangement_actions_show_in_every_view_and_have_texts_in_both_languages
     src = (WEB / "affianca.js").read_text(encoding="utf-8")
     keys = set(re.findall(r'"(aff\.menu\.[\w.]+)"', src))
     assert len(keys) >= 6, keys
-    for lang in ("it", "en"):
+    for lang in ("en",):
         cat = lang_catalog.testo(lang)
         for k in keys | {f"cmd.disp.{i}.{f}" for i in ("affianca", "su", "giu", "intera", "uguali", "ripristina") for f in ("lab", "name", "tip", "kw")}:
             assert f'"{k}"' in cat, (lang, k)

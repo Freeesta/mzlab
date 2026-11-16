@@ -20,7 +20,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES[:2]]); ready(pg)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.click("#np-chrom"); ready(pg)
         pg.add_init_script(TRACE)
         pg.context.new_cdp_session(pg).send("Emulation.setCPUThrottlingRate", {"rate": 4})

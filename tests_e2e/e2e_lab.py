@@ -102,7 +102,7 @@ try:
             pg.click("#uip-tour"); pg.wait_for_selector("#tour-dialog", timeout=30000)
             assert "Carica un file per continuare" in pg.inner_text("#tour-dialog"), pg.inner_text("#tour-dialog")
             assert "file di esempio" not in pg.inner_text("body") and "example file" not in pg.inner_text("body")
-            pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.click("text=Carica dati")      # the card waits, then the tour goes on with the data
+            pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.click("text=Load data")      # the card waits, then the tour goes on with the data
             wait_for_js(pg, "!document.getElementById('tour-dialog').innerText.includes('Carica un file per continuare')", 60000)
             assert pg.is_visible("#tour-dialog")
             pg.keyboard.press("Escape"); wait_for_js(pg, "!document.getElementById('tour-dialog')")

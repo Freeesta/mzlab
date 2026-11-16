@@ -28,7 +28,7 @@ try:
             step(f"checkboxes of the Drawing panels: target >= 24 px, painted box 16-20 px at {w} px", sizes)
         def link():
             c, v = pg.evaluate(LINK); assert c == v, f"link colour {c} is not var(--accent) {v}"
-        step("«Vedi un esempio di disegno» takes its colour from a CSS variable", link)
+        step("«See an example drawing» takes its colour from a CSS variable", link)
 finally:
     r.close()
 r.report()

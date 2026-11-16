@@ -17,7 +17,7 @@ try:
             assert pg.locator(".hq:visible").count() == 1, pg.locator(".hq:visible").count()
             u = pg.evaluate(UNLABELLED); assert not u, u
         step("loading screen: one ?, no unlabelled button", start)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def data():
             for t in ("full", "ms2", "mrm"):
                 pg.evaluate(f"setTab('{t}',true)"); pg.wait_for_timeout(1800)

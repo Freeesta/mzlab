@@ -67,7 +67,7 @@ try:
             pg.evaluate(f"{MRM}.el.querySelector('[data-o=canali]').click()")
             wait_for_js(pg, f"!!{MRM}.el.querySelector('.can-pop:not([hidden]) [data-kind=pda]')")
             got = pg.evaluate(f"[...{MRM}.el.querySelectorAll('.can-pop [role=group]')].map(g => [g.getAttribute('aria-label'), g.querySelectorAll('.can-row').length])")
-            assert [g[0] for g in got] == ["Spettrometria di massa", "UV/Vis"] and got[0][1] >= 2 and got[1][1] == 1, got
+            assert [g[0] for g in got] == ["Mass spectrometry", "UV/Vis"] and got[0][1] >= 2 and got[1][1] == 1, got
             assert pg.evaluate(f"{MRM}.el.querySelector('.can-pop [data-kind=pda]').getAttribute('title')") == pg.evaluate("I18N.t('ctl.kind.pda.title')")
         step("MRM tab: the transition picker has a «UV/Vis» group with the DAD row", mrm_row)
         if AXE:

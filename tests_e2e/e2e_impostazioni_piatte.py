@@ -17,7 +17,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1000})
         shutil.rmtree("/tmp/s_imp_piatte", ignore_errors=True)
-        stage(pg, synth.make_series("/tmp/s_imp_piatte", [0, 15, 60])); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, synth.make_series("/tmp/s_imp_piatte", [0, 15, 60])); pg.click("text=Load data"); ready(pg)
         def opened():
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
             assert pg.locator("#uipset details.imp-g").count() == 0, "no fold in the plain panel"

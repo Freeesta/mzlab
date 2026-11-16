@@ -13,7 +13,7 @@ try:
         pg = r.page(p, tour=True)
         pg.evaluate("try { localStorage.removeItem('mzlab.tour.lr'); localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1'); } catch (_) {}")
         pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); pg.wait_for_timeout(800)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def invite():
             pg.wait_for_selector("#tour-invito", timeout=8000); pg.mouse.move(700, 100)
             t = pg.inner_text("#tour-invito"); assert "Prima volta?" in t and "minut" not in t, t

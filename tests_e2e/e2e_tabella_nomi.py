@@ -7,7 +7,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [str(ES / "FullScan_t0.mzML"), str(ES / "MS2_t15.mzML")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("carica('colonne-campioni.js').then(() => renderFiles())"); pg.wait_for_function("!!window.COLS")
         pg.evaluate("renderFiles()")
         got = pg.evaluate("[...document.querySelectorAll('#flist .ldname')].map(x => [x.textContent.trim(), x.title])")

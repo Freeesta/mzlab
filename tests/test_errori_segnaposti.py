@@ -13,7 +13,7 @@ WITH = re.compile(r'\s*\.with\(\s*"(\w+)"\s*,')
 
 def placeholders() -> dict[str, set[str]]:
     need: dict[str, set[str]] = {}
-    for lang in ("it", "en"):
+    for lang in ("en",):
         for f in sorted((LANG / lang).glob("*.js")):
             for key, text in ENTRY.findall(f.read_text(encoding="utf-8")):
                 need.setdefault(key, set()).update(re.findall(r"\{(\w+)\}", text))

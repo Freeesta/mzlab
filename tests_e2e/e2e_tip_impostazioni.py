@@ -63,7 +63,7 @@ try:
         step("touch: a long press shows the tooltip and does not toggle the switch", touch)
         pg = r2.page(p)
         def lr_it_en():
-            stage(pg, [D / "B_FullMass-t0.mzML"]); pg.click("text=Carica dati"); ready(pg)
+            stage(pg, [D / "B_FullMass-t0.mzML"]); pg.click("text=Load data"); ready(pg)
             open_set(pg); assert pg.is_visible("#uip-tour"); check_tips(pg, "#uipset", "LR file, IT"); bug_form(pg); check_tips(pg, "#uipset", "LR file, IT, bug form")
             with pg.expect_navigation(timeout=60000): pg.click("#uipset label.lg:has(input[value=en])")
             ready(pg)

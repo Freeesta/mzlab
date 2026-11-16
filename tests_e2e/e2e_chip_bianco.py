@@ -1,4 +1,4 @@
-"""Internal blank: its text is a chip in the bar above the plot above the plot («Bianco 0.3–2 min · 1.23e5 cps»), never drawn over the trace; × removes it, a click re-picks the stretch."""
+"""Internal blank: its text is a chip in the bar above the plot above the plot («Blank 0.3–2 min · 1.23e5 cps»), never drawn over the trace; × removes it, a click re-picks the stretch."""
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -21,8 +21,8 @@ try:
         pg.evaluate(f"ibkSet({P},'mean',[0.3,2])"); ready(pg); frames(pg, 6)
         def chip():
             t = pg.evaluate(f"({P}.el.querySelector('.ibkc')||{{}}).textContent||''")
-            import re; assert re.match(r"^Bianco 0\.3–2 min · [\d.]+(e\d+)? cps×$", t), t
-        step("chip «Bianco 0.3–2 min · level cps» in the bar above the plot", chip)
+            import re; assert re.match(r"^Blank 0\.3–2 min · [\d.]+(e\d+)? cps×$", t), t
+        step("chip «Blank 0.3–2 min · level cps» in the bar above the plot", chip)
         def outside():
             v = pg.evaluate(f"(()=>{{const p={P}, c=p.el.querySelector('.ibkc').getBoundingClientRect(), v=p.el.querySelector('canvas').getBoundingClientRect(), k=v.height/p._a.H; return [c.bottom, v.top+M.t*k, c.width>0, c.top, v.top, v.bottom]}})()")
             assert v[2] and v[0] <= v[4] + 1, v  # the chip ends above the canvas: it cannot touch the trace

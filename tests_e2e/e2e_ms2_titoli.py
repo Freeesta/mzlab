@@ -16,7 +16,7 @@ try:
             pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}"); wait_for_js(pg, "!!document.querySelector('#pick')", 30000)
             pg.set_input_files("#pick", [mz(f) for f in FILES]); frames(pg, 3)
             pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=4", timeout=30000)
-            pg.click("text=Carica dati" if lang == "it" else "text=Load data"); ready(pg)
+            pg.click("text=Load data" if lang == "it" else "text=Load data"); ready(pg)
             open_kind(pg, "ms2"); wait_for_js(pg, "E.panels.filter(p => p.tab === 'ms2').length >= 2", 30000); frames(pg, 6)
             def titles(lang=lang, pg=pg):
                 t = pg.evaluate("E.panels.filter(p => p.tab === 'ms2').map(p => p.el.querySelector('.ttl').textContent)")

@@ -79,7 +79,7 @@ def publish(msp, version, wrong_total=False):
 
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None); ctx = b.new_context(viewport={"width": 1400, "height": 1000}, locale="it-IT"); pg = ctx.new_page()
+        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None); ctx = b.new_context(viewport={"width": 1400, "height": 1000}, locale="en-US"); pg = ctx.new_page()
         pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
         reqs = []
         pg.on("request", lambda r: reqs.append(r.url) if "/static/librerie/" in r.url else None)

@@ -17,7 +17,7 @@ r = Run(port=8963, wd="/tmp/wd_gruppi_vis")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 900})
-        pg.set_input_files("#pick", PATHS); pg.click("text=Carica dati"); ready(pg, timeout=180000); drawer(pg)
+        pg.set_input_files("#pick", PATHS); pg.click("text=Load data"); ready(pg, timeout=180000); drawer(pg)
         pg.wait_for_selector("#flst .fl .nm", timeout=30000)
         wait_for_js(pg, "BARRA.curTab === 'file' && !document.querySelector('#sb-by').hidden", 20000)
         def full():
