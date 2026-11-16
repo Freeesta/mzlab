@@ -4,5 +4,9 @@
 mod reading;
 #[cfg(feature = "lettura")]
 pub use reading::*;
+#[cfg(feature = "sciex")]
+mod wiff_method;
+#[cfg(feature = "sciex")]
+pub use wiff_method::wiff_metodo;
 #[cfg(feature = "valida")]
 mod validate;
