@@ -126,3 +126,26 @@ def test_reset_in_progress_writes_no_session_marker_or_row():
     res = run_node(code)
     assert res["during"] == [], "a reset in progress: pagehide writes nothing back"
     assert res["after"] != [], "outside a reset the marker is written as before"
+
+
+def test_pagehide_row_memory_is_skipped_during_a_reset():
+    code = f"""
+    {DOM}
+    const handlers = {{}};
+    global.addEventListener = (t, f) => {{ handlers[t] = f; }};
+    const store = {{ 'mzlab.sessione': '1', 'mzlab.sessione.riga': 'old' }};
+    global.localStorage = {{ getItem: k => (k in store ? store[k] : null), setItem: (k, v) => {{ store[k] = String(v); }}, removeItem: k => {{ delete store[k]; }} }};
+    reg['v-data'].hidden = false;
+    const sel = makeEl('fsel'); sel.style = {{ cssText: '', width: '' }}; sel.selectedOptions = []; sel.getBoundingClientRect = () => ({{ width: 100 }}); reg['fsel'] = sel;
+    document.documentElement = {{ style: {{ setProperty() {{}}, getPropertyValue: () => '240px' }} }};
+    const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
+    global.QQ_RESETTING = true;
+    handlers.pagehide();
+    const during = store['mzlab.sessione.riga'];
+    global.QQ_RESETTING = false;
+    handlers.pagehide();
+    console.log(JSON.stringify({{ during, after: store['mzlab.sessione.riga'] || null }}));
+    """
+    res = run_node(code)
+    assert res["during"] == "old", "pagehide of a reset leaves the stored row alone"
+    assert res["after"] != "old", "outside a reset the row is updated or forgotten as before"

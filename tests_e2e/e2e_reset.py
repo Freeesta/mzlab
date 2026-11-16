@@ -1,7 +1,7 @@
 """A true reset: what a student loads stays in the browser after a reload (the page says so once); «Full reset» removes files, session, notebook, OPFS, IndexedDB,
 caches, service workers and preferences by NAME (also folders and databases that this test invents, as other parts of the program do); «Files» keeps the
 preferences, the language and the saved libraries. The one entry is the header button «New session» (dialog with both and Cancel), also ?reset=all|1|files. Full reset also drops the program's own caches and worker (it is the guaranteed way to fetch the new version) and the page it reloads ends isolated by itself."""
-# covers: mzlab/web/reset.js, mzlab/web/browser.js, mzlab/web/settings.js, mzlab/web/liste.js, mzlab/web/explore.js, mzlab/web/avvio-progressivo.js
+# covers: mzlab/web/reset.js, mzlab/web/browser.js, mzlab/web/settings.js, mzlab/web/liste.js, mzlab/web/lr.js, mzlab/web/rust-worker.js, mzlab/web/qqq-db.js, mzlab/web/explore.js, mzlab/web/avvio-progressivo.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import time
@@ -204,14 +204,75 @@ try:
             pg.wait_for_function("window.qqReady", timeout=60000)
             assert pg.evaluate(COUNT_LISTS) == [0, 0], "user lists and molecules do not survive a Full reset"
         step("Full reset empties user lists and molecules", lists_gone)
+        # «Files» that the old page could not finish (an OPFS file still held, a database held by another connection): the new page's engine finishes it
+        # (?riparti=file) and keeps what the dialog keeps; before, a held file came back, and a blocked database sent ?riparti=1, which also cleared the notebook
+        HOLD = """async () => {                                   // a sync handle on a stored file, held by a worker of the page as an index build or a conversion does
+          const src = `onmessage = async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('files');
+            for (let k = 0; k < 100; k++) { for await (const [n, h] of d.entries()) { if (h.kind !== 'file') continue; try { self.h = await h.createSyncAccessHandle(); postMessage(n); return; } catch (e) { /* the engine holds it a moment */ } }
+              await new Promise(r => setTimeout(r, 100)); } postMessage(''); };`;
+          const w = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+          const name = await new Promise(r => { w.onmessage = e => r(e.data); w.postMessage(0); });
+          // released right after the wipe gave up, before the reload: the wipe stores its report in QQRESET.last last of all
+          Object.defineProperty(QQRESET, 'last', { configurable: true, get() { return this._last; }, set(v) { w.terminate(); this._last = v; } });
+          QQRESET.opfsMs = 1500;
+          return name;
+        }"""
+        WORK = """async (ket) => {                                  // the drawing as draw.js saves it, a saved list and a saved molecule in their stores
+          NB.ket = ket; await nbSave(true);
+          const db = await new Promise((ok, no) => { const q = indexedDB.open(NOMI.DB); q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); });
+          await new Promise((ok, no) => { const t = db.transaction(['liste_utente', 'molecole'], 'readwrite'); t.objectStore('liste_utente').put({ id: 'held-list', name: 'my list' }); t.objectStore('molecole').put({ id: 'held-mol', name: 'my molecule' }); t.oncomplete = ok; t.onerror = () => no(t.error); }); db.close();
+        }"""
+        KEPT = """async () => { const db = await new Promise(ok => { const q = indexedDB.open(NOMI.DB); q.onsuccess = () => ok(q.result); });
+          const one = (st, k) => new Promise(ok => { const g = db.transaction(st).objectStore(st).get(k); g.onsuccess = () => ok(g.result || null); });
+          const r = { list: !!(await one('liste_utente', 'held-list')), mol: !!(await one('molecole', 'held-mol')), ket: (JSON.parse(await (await fetch('api/notebook')).text() || '{}') || {}).ket || null }; db.close(); return r; }"""
+        def held(mode, hold):
+            pg.goto(base + "?reset=files"); pg.wait_for_function("!location.search.includes('reset')", timeout=30000); ready_start(pg)      # a clean start
+            load_files(); ket = "CC(=O)Nc1ccc(O)cc1"; pg.evaluate(WORK, ket)
+            q = None
+            if hold == "opfs":
+                assert pg.evaluate(HOLD), "a stored file is held"
+            else:
+                # a second page of the same browser keeps connections open and never closes them on versionchange: to the main database (which «Files» keeps
+                # and so does not delete) and to one «Files» deletes, whose deletion therefore stays blocked
+                q = ctx.new_page(); q.goto(base + "static/qqq-db.js")
+                q.evaluate("""async () => { window.held = [];
+                  for (const n of ['mzlab_lab', 'held-by-another-page']) window.held.push(await new Promise((ok, no) => { const r = indexedDB.open(n); r.onupgradeneeded = () => r.result.createObjectStore('s'); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); })); }""")
+            urls = []; on = lambda f: urls.append(f.url) if f == pg.main_frame else None; pg.on("framenavigated", on)
+            try:
+                pg.evaluate(f"void QQRESET.run('{mode}')")
+                pg.wait_for_function("window.qqReady && typeof E !== 'undefined' && E.files.length === 0 && !location.search.includes('riparti')", timeout=90000)
+                wait_for_js(pg, "(async () => { try { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('files'); for await (const _ of d.keys()) return false; } catch (e) {} return !S.sess; })()", 30000)      # settled
+                s = pg.evaluate(STATE); k = pg.evaluate(KEPT)
+            finally:
+                pg.remove_listener("framenavigated", on)
+                if q: q.close()
+            back = [u for u in urls if "riparti=" in u]
+            assert back and all(("riparti=file" if mode == "files" else "riparti=1") in u for u in back), ("the new page finishes the reset", urls)
+            assert s["files"] == 0 and not s["sess"], s
+            assert not [n for n in s["mzlab"] if n.startswith(("files/", "idx/"))], ("no stored file nor index comes back", s["mzlab"])
+            return k
+        def files_held_opfs():
+            k = held("files", "opfs")
+            assert k == {"list": True, "mol": True, "ket": "CC(=O)Nc1ccc(O)cc1"}, ("the drawing, the list and the molecule stay", k)
+        step("«Files» with a stored file still held: the reload finishes it (?riparti=file), the drawing, a saved list and a molecule stay", files_held_opfs)
+        def files_held_db():
+            k = held("files", "db")
+            assert k == {"list": True, "mol": True, "ket": "CC(=O)Nc1ccc(O)cc1"}, ("the drawing, the list and the molecule stay", k)
+        step("«Files» with a database held by another page: the same, the notebook is not cleared", files_held_db)
+        def all_held_opfs():
+            k = held("all", "opfs")
+            assert k == {"list": False, "mol": False, "ket": None}, ("the full reset still removes all", k)
+        step("Full reset with a stored file still held: unchanged, ?riparti=1 and nothing of the user stays", all_held_opfs)
         def no_marker_after(mode):
             # the page that follows a reset must not start in «restoring»: pagehide of the old page may not write the marker back
             pg.add_init_script("try { window.__sessAtStart = localStorage.getItem('mzlab.sessione'); } catch (e) { window.__sessAtStart = 'err'; }")
             load_files()
             pg.evaluate(f"QQRESET.run('{mode}')"); pg.wait_for_function("location.search.includes('riparti') || location.search.includes('ripn') || !location.search.includes('reset')", timeout=30000)
-            pg.wait_for_function("window.qqReady", timeout=60000)
+            # checked as soon as the new document ran its init script, before the engine is ready (afterwards the skeleton is gone anyway)
+            pg.wait_for_function("'__sessAtStart' in window", timeout=30000)
             assert pg.evaluate("window.__sessAtStart") is None, ("session marker present at the start after a reset", mode)
-            assert pg.evaluate("!document.querySelector('#opening') || document.querySelector('#opening').hidden || !document.querySelector('#v-data.opn')"), "no «restoring» skeleton"
+            assert pg.evaluate("!document.querySelector('#opening.restoring:not([hidden])') && !document.querySelector('#v-data.opn')"), "no «restoring» skeleton"
+            pg.wait_for_function("window.qqReady", timeout=60000)
         def pagehide_all(): no_marker_after("all")
         step("Full reset: the closing page does not write the session marker back", pagehide_all)
         def pagehide_files(): no_marker_after("files")

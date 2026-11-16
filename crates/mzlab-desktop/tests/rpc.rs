@@ -238,3 +238,31 @@ fn a_file_replaced_with_the_same_size_and_date_loses_its_index() {
     let boot = text(st2.rpc("lr_boot", &json!({}), &[]).unwrap());
     assert!(boot.contains("\"indexed\":false"), "the index of the old bytes is dropped: {boot}");
 }
+
+#[test]
+fn the_reset_files_backstop_forgets_the_files_and_keeps_the_drawing() {
+    // ?riparti=file → lr.reset("files"): the page sends its RESET_FILES (qqq-db.js); the full lr_clear of the cold start stays as it is (above)
+    let ex = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../mzlab/web/esempi/FullScan_t10.mzML");
+    let data = tempfile::tempdir().unwrap();
+    let st = State::new();
+    st.set_data_folder(data.path().join("app"));
+    st.set_index_folder(data.path().join("idx")).unwrap();
+    let (id, _) = st.pick(ex.clone()).unwrap();
+    let r = |op: &str, p: serde_json::Value| text(st.rpc(op, &p, &[]).unwrap());
+    r("lr_put", json!({"name": "FullScan_t10.mzML", "fid": id}));
+    r("lr_index", json!({"name": "FullScan_t10.mzML"}));
+    r("lr_kv_set", json!({"key": "notebook", "value": "{\"ket\":\"K\",\"session\":[\"FullScan_t10.mzML\"],\"sampleCols\":{}}"}));
+    r("lr_kv_set", json!({"key": "cartella.puntata", "value": "x"}));
+    let doc = r#"{"schema":"molecules/1","molecole":[{"nome":"Esempina","formula":"C10H15NO"}]}"#;
+    r("lr_molecole_archivio", json!({"mop": "scrivi", "body": doc}));
+    let drop = json!({"stores": ["files", "manifest"], "kv": ["cartella.puntata"], "notebook": ["session", "ui", "sampleCols", "sampleEx"]});
+    r("lr_clear", json!({"scope": "files", "drop": drop}));
+    assert_eq!(r("lr_boot", json!({})), "[]", "no file comes back");
+    let kv: serde_json::Value = serde_json::from_str(&r("lr_kv_get", json!({"key": "notebook"}))).unwrap();
+    let nb: serde_json::Value = serde_json::from_str(kv["value"].as_str().unwrap()).unwrap();
+    assert_eq!(nb["ket"], "K", "the drawing stays: {nb}");
+    assert!(nb.get("session").is_none() && nb.get("sampleCols").is_none(), "{nb}");
+    assert_eq!(r("lr_kv_get", json!({"key": "cartella.puntata"})), "{\"value\":null}");
+    assert!(r("lr_molecole_archivio", json!({"mop": "leggi", "body": ""})).contains("Esempina"), "the molecules stay");
+    assert!(ex.exists(), "the file of the student is never touched");
+}
