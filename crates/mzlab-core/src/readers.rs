@@ -78,6 +78,23 @@ impl Limits {
             ..Limits::sito()
         }
     }
+    /// `want` bytes held at once: `error.memoryBudget` phase `whole` when they pass `byte` (a fixed limit of this target, not the memory left).
+    pub fn fits(&self, want: u64) -> Result<()> {
+        self.fits_in(want, self.byte)
+    }
+    /// The same when only `free` of `byte` are left; the params are those of `budget::refusal_free`, so the page says the sizes and the way out.
+    pub fn fits_in(&self, want: u64, free: u64) -> Result<()> {
+        if want <= free {
+            return Ok(());
+        }
+        let mb = 1u64 << 20;
+        Err(Error::memory_budget()
+            .with("fase", "whole")
+            .with("stima_mb", want.div_ceil(mb))
+            .with("budget_mb", self.byte / mb)
+            .with("libero_mb", free / mb)
+            .with("eccesso_mb", (want - free).div_ceil(mb).max(1)))
+    }
     /// `n` entries asked by a file: an error with a key when they are more than the limit (and so never an allocation).
     pub fn ok_entries(&self, n: u64) -> Result<usize> {
         usize::try_from(n)

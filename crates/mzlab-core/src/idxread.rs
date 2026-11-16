@@ -220,7 +220,8 @@ pub struct ScanArrays {
 
 pub struct Index<R: ReadAt> {
     pub(crate) r: R,
-    pub scans: Vec<Scan>,
+    /// Shared by every `over` of this index: the slots of one file hold one table (~1 KB per DDA scan), not one each.
+    pub scans: std::sync::Arc<Vec<Scan>>,
     pub keys: Vec<(String, usize)>,
     pub sections: Vec<Section>,
     pub source: Value,
@@ -380,7 +381,7 @@ impl<R: ReadAt> Index<R> {
         let n = sections.len();
         Ok(Index {
             r,
-            scans,
+            scans: std::sync::Arc::new(scans),
             keys,
             sections,
             source: meta.get("source").cloned().unwrap_or(Value::Null),

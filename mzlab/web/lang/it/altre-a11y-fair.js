@@ -52,7 +52,7 @@ I18N.add("it", {
   "diag.phase.write": "scrittura",
   "diag.cause.quota": "Il browser non ha spazio per tenere una copia del file: libera spazio sul disco o chiudi altre schede.",
   "diag.cause.read": "Il browser non riesce più a leggere il file dal disco: è stato spostato, modificato o è bloccato da un altro programma.",
-  "diag.cause.memory": "Il file è troppo grande per la memoria disponibile al browser: chiudi le altre schede e riprova.",
+  "diag.cause.memory": "Il browser non ha concesso al motore la memoria che serviva: chiudi le altre schede o alcuni file aperti e riprova.",
   "diag.cause.format": "Il contenuto del file non ha la forma attesa (XML o indice danneggiato o troncato).",
   "diag.cause.decode": "Gli array di dati di uno spettro non si decodificano (compressione o codifica non riconosciuta).",
   "diag.cause.engine": "Il motore di calcolo si è fermato in modo imprevisto mentre leggeva il file: non dipende dalla memoria libera del computer. Apri «Dettagli», copia la diagnosi e segnalala.",

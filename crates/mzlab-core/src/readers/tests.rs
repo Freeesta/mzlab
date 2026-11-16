@@ -148,6 +148,32 @@ fn the_limits_refuse_what_a_file_asks_beyond_them() {
 }
 
 #[test]
+fn a_member_held_whole_past_the_limit_names_the_sizes() {
+    let l = Limits::sito();
+    assert!(l.fits(l.byte).is_ok());
+    let e = l.fits(300 << 20).unwrap_err();
+    assert_eq!(
+        e.to_json(),
+        r#"{"error_key":"error.memoryBudget","params":{"fase":"whole","stima_mb":"300","budget_mb":"192","libero_mb":"192","eccesso_mb":"108"}}"#
+    );
+    // part of the limit already taken by other members (an Agilent folder): the shortfall is against what is left
+    let e = l.fits_in(50 << 20, 40 << 20).unwrap_err();
+    assert!(
+        e.to_json()
+            .contains(r#""libero_mb":"40","eccesso_mb":"10""#),
+        "{}",
+        e.to_json()
+    );
+    // past u32 on wasm32: counted in u64, never wrapped
+    assert!(l
+        .fits(5 << 30)
+        .unwrap_err()
+        .to_json()
+        .contains(r#""stima_mb":"5120""#));
+    assert!(Limits::held().fits(u64::MAX).is_ok());
+}
+
+#[test]
 fn a_reader_serves_the_trait() {
     let mut l = open_empty(FileSet::default(), &Limits::default()).unwrap();
     assert_eq!(l.format().id(), "prova");

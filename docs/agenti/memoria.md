@@ -73,3 +73,5 @@ Le righe valgono per ogni crate che gira in WASM: tetto di costruzione 4 GiB per
 - Effetto delle riduzioni (MB, una esecuzione, rumore ~±25 MB sul renderer): canvas nascosti 1,4 (senza 5,9); GPU da Pipeline a pannelli chiusi 44,9 e 39,0 (senza 53,8 e 53,4); renderer a pannelli chiusi 305,9 (senza 269,3; calo dalla Pipeline −35 contro −44: nel rumore); worker vivi dopo 40 s 4 (senza 5).
 - Blocco di lettura del motore `.wasm` (`BLOCK` in `mzlab-wasm/src/blocks.rs`): 4 MiB, una costante sola; i buffer JS (`readerFor`, `openSource`) crescono alla lunghezza chiesta. Il blocco tenuto da `BlockReader` conta 4 MiB nel picco per file aperto; la coda di scrittura di `BlockWriter` è anch'essa 4 MiB.
 - Buffer restituiti da `recycle` (`bufpool.js`, usato da `rust-worker.js`): la prossima risposta prende il più piccolo che basta (best fit); se ne tengono al più 8 e 64 MB, i più vecchi escono per primi, uno più grande di 64 MB non entra. Un solo `FileReaderSync` serve tutti i lettori dei file del worker.
+
+- Quando compare «file troppo grande», misure per formato e numero di file, file aperti insieme: `docs/agenti/memoria-limiti.md`.

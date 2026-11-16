@@ -111,7 +111,7 @@ impl State {
         }
     }
 
-    /// Opens the index of `name` in the slot of the page's list. `err.engine.index` when there is none.
+    /// Opens the index of `name` in the slot of the page's list. `err.engine.index` when there is none; `error.memoryBudget` (`openFiles`) when memory ran out.
     pub(crate) fn open_lr(&self, eng: &mut Eng, name: &str) -> Result<u32> {
         let slot = match eng.lr_slot.get(name) {
             Some(s) => *s,
@@ -122,7 +122,8 @@ impl State {
             }
         };
         if !eng.idx.contains_key(&slot) {
-            eng.idx.insert(slot, self.open_index_file(name).map_err(|_| Error::new("err.engine.index").with("name", name))?);
+            let r = mzlab_core::routes_open::open_beside(&mut eng.idx, || self.open_index_file(name)).map_err(|e| if e.key == "error.memoryBudget" { e } else { Error::new("err.engine.index").with("name", name) })?;      // the site's opening; a memory refusal keeps its key
+            eng.idx.insert(slot, r);
         }
         self.attach_named(eng, slot, name);
         Ok(slot)

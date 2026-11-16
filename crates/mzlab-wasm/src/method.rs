@@ -82,9 +82,11 @@ impl Engine {
         sample: u32,
         sha1: &str,
     ) -> Result<String, JsValue> {
-        if size as u64 > WIFF_MAX {
-            return Err(error_json(&mzlab_core::Error::memory_budget()));
-        }
+        let whole = mzlab_core::readers::Limits {
+            byte: WIFF_MAX,
+            ..mzlab_core::readers::Limits::sito()
+        };
+        whole.fits(size as u64).map_err(|e| error_json(&e))?;
         let mut data = vec![0u8; size as usize];
         JsReader { read }
             .read_at(0, &mut data)

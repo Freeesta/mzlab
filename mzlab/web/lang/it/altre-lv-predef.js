@@ -57,6 +57,8 @@ I18N.add("it", {
   "memory.phase.readTable": "lettura della tabella delle feature",
   "memory.phase.mzmlInMemory": "conversione in mzML tenuta in memoria",
   "memory.phase.msnGraph": "grafo MSn",
+  "memory.phase.openFiles": "file aperti insieme",
+  "memory.phase.whole": "lettura del file per intero",
   "pol.positive": "ESI positivo",
   "pol.negative": "ESI negativo",
   "pol.mixed": "ESI positivo e negativo nello stesso file",

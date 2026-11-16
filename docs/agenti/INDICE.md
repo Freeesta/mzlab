@@ -86,6 +86,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | motore di confronto spettrale con più librerie per mzFlow (nodo «Attribution», `table.attribute`) e pannello laterale MSⁿ: `libset`, `libmatch/1`, preset, analoghi con ΔFormula, catalogo `librerie/2` | `docs/agenti/match-spettrale.md` |
 | memoria: regole di scelta del budget, esperienza d'uso dell'avviso, proposte aperte (`memoria-avviso.js`) | `docs/agenti/memoria-scelte.md` |
 | contratto di memoria dei moduli WASM (`mzlab-core::budget`, uscite a offset, lastre, flusso delle prove) | `docs/agenti/memoria.md` |
+| «file troppo grande» nel browser: quando compare (file aperti insieme, formati letti per intero), misure per dimensione e numero di file, `openFiles`, `whole`, scansioni condivise fra slot | `docs/agenti/memoria-limiti.md` |
 | metodo di acquisizione (`metodo/1`, `method.rs`, `method_wiff`, `method_raw`, schema) | `docs/agenti/metodo.md` |
 | metriche di main nel tempo (`tools/metriche.py`, ramo `stat-ci`, tendenze) | `docs/agenti/metriche.md` |
 | caricamento della pagina (FCP, LCP, motore pronto, KB prima del paint per scenario; `tests_e2e/misura_primo_paint.py`); primo file contro dieci file, `rotte`, `thermo`, memoria (`misura_caricamento.py --scenarios`) | `docs/agenti/misure-caricamento.md` |

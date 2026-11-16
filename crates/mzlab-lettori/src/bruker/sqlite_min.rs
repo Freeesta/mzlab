@@ -251,9 +251,7 @@ impl Sqlite {
         } else {
             u - 35
         };
-        if tot > self.limits.byte {
-            return Err(Error::memory_budget());
-        }
+        self.limits.fits(tot)?;
         let local = if tot <= x as u64 {
             tot as usize
         } else {
