@@ -23,10 +23,11 @@ on:
 permissions:
   contents: read
 
-# a push to main has a group of its own (run_id): a run waiting in a shared group would be replaced by the next one, and the gate of its commit would never open
+# a new push cancels the run of the same ref, main included: the deploy gate of pages.yml closes for the superseded commit, the newer one deploys the same changes
+# the group of a push is its own, apart from the nightly run and workflow_dispatch of main (they save the caches and are never cancelled by a push)
 concurrency:
-  group: sito-rust-${{ github.event_name == 'push' && github.run_id || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
+  group: sito-rust-${{ github.event_name == 'push' && format('push-{0}', github.ref) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}   # the newest commit of main runs every check, a superseded one is cancelled
 
 # production builds: tools/wasm_opt.sh fails closed here, so no .wasm is tested or published without wasm-opt and its size gate
 env:

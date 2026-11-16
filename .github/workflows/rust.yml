@@ -12,10 +12,10 @@ permissions:
   contents: read
   actions: read   # tools/ci_cache_fresca.py lists the caches of main
 
-# a push to main has a group of its own (run_id): a run waiting in a shared group would be replaced by the next one, and the deploy gate of its commit would never open
+# a new push cancels the run of the same ref, main included: the deploy gate of pages.yml closes for the superseded commit, the newer one deploys the same changes
 concurrency:
-  group: rust-${{ github.event_name == 'push' && github.run_id || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
+  group: rust-${{ github.ref }}
+  cancel-in-progress: true   # pull request and main: the newest commit runs every check, a superseded one is cancelled
 
 jobs:
   # Decides from the changed paths whether the Rust jobs run (the workflow itself has no path filter, so `rust-ok` always reports).
