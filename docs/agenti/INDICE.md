@@ -25,6 +25,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | azioni dei pannelli (registro `azioni/1`, menu del tasto destro, Maiusc+F10) | `docs/agenti/azioni.md` |
 | picchi spalmati: lotto sintetico, configurazioni MZmine default/wide, tabella di confronto (`tools/bench/confronto_larghi.py`) | `docs/agenti/bench-picchi-larghi.md` |
 | lettore Bruker timsTOF `.d` (`crates/mzlab-lettori/src/bruker/`: SQLite minimo, zstd, `tdf_bin`/`tsf_bin`, calibrazione m/z, `BrukerD` in `agilent-d.js`) | `docs/agenti/bruker.md` |
+| retta di taratura sui picchi integrati (`quant.curve`: pesi 1/x…1/y², QR, standard interno, LOD/LOQ ICH e S/N, esclusioni registrate, `taratura/1`, `calib.rs`, `curve.rs`) | `docs/agenti/calibrazione.md` |
 | campi numerici scritti a mano (`campi.js`, `CAMPI.num`, `data-num`, calcolatori, nota di rifiuto `campo.*`, `numIt` senza Infinity, `lib_campi.sweep`) | `docs/agenti/campi-numerici.md` |
 | ruoli dei file, tempi e metadati dei campioni (`campioni/2` e `/3`, `mzlab-core/src/samples/`: proposte dai nomi, modelli di nome, CSV, colonne libere, dati dal file, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |
 | canali dei dati (file → canali: TIC, filtri/transizioni/precursori, UV, analogici; tipo di esperimento come etichetta; lavori aperti) | `docs/agenti/canali-dati.md` |
