@@ -1,5 +1,6 @@
 {
   "int.split.mark": "aria-label di un marcatore della divisione nelle valli; {rt} = tempo della linea verticale in minuti, 3 decimali.",
+  "int.base.clamped": "Riga del riquadro sull'etichetta «A = …» quando la linea di base di un'integrazione, prolungata oltre i suoi due punti, sarebbe scesa sotto zero ed è tenuta a 0; {v} = area che sotto zero non è stata contata (conteggi per secondo, notazione scientifica).",
   "int.base.tip": "Riga del riquadro sull'etichetta «A = …» di un'integrazione: la linea di base usata; {b} = nome della modalità (int.base.tag.*).",
   "int.follow.sn": "Riquadro sull'etichetta di una finestra che segue il campione (SIM/MRM): rapporto segnale/rumore misurato dal motore; {sn} = numero, «…» in attesa, «—» senza picco.",
   "canali.manint.cp.aria": "Nome accessibile di una cella copiabile (apice, area, altezza) della tabella «Integrazioni manuali»; {c} = intestazione della colonna, {v} = valore mostrato.",

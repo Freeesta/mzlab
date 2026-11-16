@@ -67,6 +67,7 @@ I18N.add("it", {
   "canali.manint.cp": "Copia il valore",
   "canali.manint.cp.aria": "Copia {c}: {v}",
   "int.base.tip": "Linea di base: {b}",
+  "int.base.clamped": "La linea di base scendeva sotto zero oltre il suo estremo: tenuta a 0 lì ({v} conteggi·s non contati)",
   "int.follow.sn": "S/N <b>{sn}</b>",
   "int.follow.none": "Nessun punto di questo campione nella finestra",
   "int.follow.note": "Stessa finestra di {f}, non in tabella: tracciala su questo campione per aggiungere una riga",

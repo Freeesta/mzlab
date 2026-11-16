@@ -67,6 +67,7 @@ I18N.add("en", {
   "canali.manint.cp": "Copy the value",
   "canali.manint.cp.aria": "Copy {c}: {v}",
   "int.base.tip": "Baseline: {b}",
+  "int.base.clamped": "The baseline went below zero past its end: held at 0 there ({v} counts·s not counted)",
   "int.follow.sn": "S/N <b>{sn}</b>",
   "int.follow.none": "No points of this sample in the window",
   "int.follow.note": "Same window as {f}, not in the table: draw it on this sample to add a row",
