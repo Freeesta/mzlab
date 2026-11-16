@@ -234,12 +234,12 @@ pub(super) fn settings(params: &[(String, Value)]) -> Result<Settings> {
     };
     let w = text("weight", "1/x");
     let weight = Weight::parse(&w).ok_or_else(|| bad_param("weight", &w))?;
-    let zero = match param(params, "zero") {
-        Some(v) => v
-            .bool()
-            .or_else(|| v.str().map(|s| s == "true"))
-            .unwrap_or(false),
+    let zero = match param(params, "zero").map(|v| (v.bool(), v.str().map(str::trim))) {
         None => false,
+        Some((Some(b), _)) => b,
+        Some((_, Some("true"))) => true,
+        Some((_, Some("false"))) => false,
+        Some((_, s)) => return Err(bad_param("zero", s.unwrap_or("not a boolean"))),
     };
     let is = text("istd", "");
     let istd = if is.is_empty() {

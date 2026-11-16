@@ -1,7 +1,7 @@
 //! The text of `quant.curve@1`: calibration lines fitted to the integrated peaks of the standards (`mzlab_core::calib`), the back-calculation of every
-//! standard and of the unknowns, LOD/LOQ by two named conventions, as a `taratura/1` JSON and a long CSV of concentrations. The inputs are read by
-//! `curve_read.rs`. No point is ever left out without a line of `log` that says why; outliers only on the user's `exclude`. Bytes in, text out:
-//! `flow run` and `flowcal`.
+//! standard and of the unknowns, LOD/LOQ by two named conventions, as a `taratura/1` JSON and a long CSV of concentrations. Inputs are read by
+//! `curve_read.rs`, outputs written by `curve_write.rs`. Every automatic choice (a point left out or kept with a doubtful response, the range, a
+//! limit not computed) is a line of `log`; outliers only on the user's `exclude`. Bytes in, text out: `flow run` and `flowcal`.
 
 use mzlab_core::calib::{fit, Fit, Model};
 use mzlab_core::error::{Error, Result};
@@ -9,6 +9,9 @@ use mzlab_core::json::{Out, Value};
 
 use super::curve_read::{
     bad_param, parse_responses, parse_standards, settings, Resp, Settings, Std,
+};
+use super::curve_write::{
+    accuracy, limits, opt_csv, opt_str, sn_limit, write_log, write_points, Log, Point,
 };
 use super::quant::quoted;
 
@@ -32,68 +35,12 @@ static UNLISTED: Std = Std {
     dilution: 1.0,
 };
 
-/// One line of `log`: a choice made on a point or an analyte, with its reason.
-struct Log {
-    analyte: String,
-    sample: String,
-    choice: &'static str,
-    reason: &'static str,
-    note: String,
-}
-
-/// One standard of a curve with everything the output shows about it.
-struct Point<'a> {
-    std: &'a Std,
-    x: f64,
-    y: Option<f64>,
-    w: Option<f64>,
-    /// `None` = in the fit, else why not.
-    out: Option<&'static str>,
-}
-
 /// The response of a sample: signal, IS signal, ratio (or the signal), or the reason there is none.
 type Response = (
     Option<f64>,
     Option<f64>,
     std::result::Result<f64, &'static str>,
 );
-
-fn opt_csv(v: Option<f64>) -> String {
-    v.filter(|v| v.is_finite())
-        .map(|v| format!("{v}"))
-        .unwrap_or_default()
-}
-
-fn opt_str(o: &mut Out, v: Option<&str>) {
-    match v {
-        Some(s) => o.str(s),
-        None => o.raw("null"),
-    };
-}
-
-/// LOD or LOQ by S/N: k·x / (S/N) averaged over the lowest standard level of the fit that has an S/N.
-fn sn_limit(points: &[(f64, f64)], k: f64) -> Option<f64> {
-    let lo = points.iter().map(|p| p.0).fold(f64::INFINITY, f64::min);
-    let at: Vec<f64> = points
-        .iter()
-        .filter(|p| p.0 == lo)
-        .map(|p| k * p.0 / p.1)
-        .collect();
-    (!at.is_empty()).then(|| at.iter().sum::<f64>() / at.len() as f64)
-}
-
-/// The two values of a limit, each with the name of its method (`ich_<k>_s_yx_over_slope`, `sn_<k>_lowest_standard`).
-fn limits(o: &mut Out, key: &str, ich: Option<f64>, sn: Option<f64>, k: [&str; 2]) {
-    o.raw(",\"").raw(key).raw("\":[{\"method\":");
-    o.str(&format!("ich_{}_s_yx_over_slope", k[0]))
-        .raw(",\"value\":")
-        .opt(ich);
-    o.raw("},{\"method\":");
-    o.str(&format!("sn_{}_lowest_standard", k[1]))
-        .raw(",\"value\":")
-        .opt(sn);
-    o.raw("}]");
-}
 
 /// One run: the inputs, the analytes and samples in the order met, the log and the conditions that become warnings.
 struct Run<'a> {
@@ -255,6 +202,9 @@ impl<'a> Run<'a> {
                 if p.out.is_none() && p.w.is_none() {
                     p.out = Some("weight_undefined");
                     self.note(a, s, "excluded", "weight_undefined", "");
+                } else if p.out.is_none() && yv <= 0.0 {
+                    // a blank-subtracted area or a ratio can be ≤ 0: it stays in the fit, but never unseen
+                    self.note(a, s, "kept", "response_not_positive", &format!("{yv}"));
                 }
             }
             points.push(p);
@@ -272,12 +222,9 @@ impl<'a> Run<'a> {
         let ys: Vec<f64> = used.iter().filter_map(|p| p.y).collect();
         let ws: Vec<f64> = used.iter().filter_map(|p| p.w).collect();
         let fitted = fit(&xs, &ys, &ws, self.set.model, self.set.zero).map_err(|e| e.key());
-        let range = (
-            xs.iter().copied().fold(f64::INFINITY, f64::min),
-            xs.iter().copied().fold(f64::NEG_INFINITY, f64::max),
-        );
         self.warn[0] |= fitted.is_err();
         let f = fitted.as_ref().ok();
+        let range = self.range(a, &xs, f.is_some());
         o.raw("{\"analyte\":").str(a).raw(",\"istd\":");
         opt_str(o, istd);
         o.raw(",\"unit\":").str(&unit).raw(",\"error\":");
@@ -298,21 +245,51 @@ impl<'a> Run<'a> {
             Some(_) => o.floats(&[range.0, range.1]),
             None => o.raw("null"),
         };
-        let slope = f.map(|f| f.b).filter(|b| *b > 0.0);
-        let ich = |k: f64| f.and_then(|f| f.s_yx).zip(slope).map(|(s, b)| k * s / b);
         let sn_pts: Vec<(f64, f64)> = (used.iter())
             .filter_map(|p| Some((p.x, self.peak(a, &p.std.sample)?.snr?)))
             .filter(|p| p.0 > 0.0)
             .collect();
-        let sn = |k: f64| f.and(sn_limit(&sn_pts, k));
-        limits(o, "lod", ich(LOD_K), sn(LOD_SN), ["3.3", "3"]);
-        limits(o, "loq", ich(LOQ_K), sn(LOQ_SN), ["10", "10"]);
+        self.limits(o, a, f, &sn_pts);
         write_points(o, &points, f);
         o.raw("}");
         for s in self.samples.clone() {
             self.row(csv, a, istd, s, (f, range, &points), &unit);
         }
         Ok(())
+    }
+
+    /// The calibrated range: from the lowest standard above zero (the LLOQ; a zero standard helps the fit but quantifies nothing) to the highest.
+    fn range(&mut self, a: &str, xs: &[f64], fitted: bool) -> (f64, f64) {
+        let min = |v: &mut dyn Iterator<Item = f64>| v.fold(f64::INFINITY, f64::min);
+        let lo = min(&mut xs.iter().copied().filter(|x| *x > 0.0));
+        let all = min(&mut xs.iter().copied());
+        let hi = xs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        if !lo.is_finite() {
+            return (all, hi);
+        }
+        if fitted && all < lo {
+            let note = format!("{lo}");
+            self.note(a, "", "range_lower", "lowest_nonzero_standard", &note);
+        }
+        (lo, hi)
+    }
+
+    /// LOD and LOQ by both conventions; an ICH value that cannot be computed says why in the log.
+    fn limits(&mut self, o: &mut Out, a: &str, f: Option<&Fit>, sn_pts: &[(f64, f64)]) {
+        let slope = f.map(|f| f.b).filter(|b| *b > 0.0);
+        if let Some(f) = f {
+            if f.s_yx.is_none() {
+                self.note(a, "", "limit_not_computed", "no_degrees_of_freedom", "ich");
+            }
+            if slope.is_none() {
+                let note = format!("{}", f.b);
+                self.note(a, "", "limit_not_computed", "slope_not_positive", &note);
+            }
+        }
+        let ich = |k: f64| f.and_then(|f| f.s_yx).zip(slope).map(|(s, b)| k * s / b);
+        let sn = |k: f64| f.and(sn_limit(sn_pts, k));
+        limits(o, "lod", ich(LOD_K), sn(LOD_SN), ["3.3", "3"]);
+        limits(o, "loq", ich(LOQ_K), sn(LOQ_SN), ["10", "10"]);
     }
 
     /// The row of one analyte in one sample: a standard says why it is out of the fit (its accuracy, not the range, is what it shows).
@@ -347,9 +324,9 @@ impl<'a> Run<'a> {
         self.warn[1] |= note.ends_with("_range") && t.role != "standard";
         self.warn[2] |= matches!(note, "no_response" | "no_istd" | "no_root");
         let conc = back.ok().map(|b| b * t.dilution);
-        let acc = conc
+        let acc = (back.ok())
             .zip(t.conc.filter(|c| *c > 0.0 && t.role != "sample"))
-            .map(|(c, n)| 100.0 * c / n);
+            .map(|(b, n)| accuracy(b, n));
         let cells = [
             quoted(a),
             quoted(s),
@@ -366,34 +343,6 @@ impl<'a> Run<'a> {
         csv.push_str(note);
         csv.push('\n');
     }
-}
-
-/// The `points` of a curve: every standard with its fit, residual, back-calculated value and accuracy.
-fn write_points(o: &mut Out, points: &[Point], f: Option<&Fit>) {
-    o.raw(",\"points\":[");
-    for (k, p) in points.iter().enumerate() {
-        if k > 0 {
-            o.raw(",");
-        }
-        let back = f.zip(p.y).and_then(|(f, y)| f.inverse(y));
-        o.raw("{\"sample\":").str(&p.std.sample);
-        o.raw(",\"level\":").str(&p.std.level);
-        o.raw(",\"x\":").num(p.x);
-        o.raw(",\"y\":").opt(p.y);
-        o.raw(",\"weight\":").opt(p.w.filter(|_| p.out.is_none()));
-        o.raw(",\"used\":")
-            .raw(if p.out.is_none() { "true" } else { "false" });
-        o.raw(",\"reason\":");
-        opt_str(o, p.out);
-        o.raw(",\"fit\":").opt(f.map(|f| f.predict(p.x)));
-        o.raw(",\"residual\":")
-            .opt(f.zip(p.y).map(|(f, y)| y - f.predict(p.x)));
-        o.raw(",\"back\":").opt(back);
-        o.raw(",\"accuracy_pct\":")
-            .opt(back.filter(|_| p.x > 0.0).map(|b| 100.0 * b / p.x));
-        o.raw("}");
-    }
-    o.raw("]");
 }
 
 /// The `taratura/1` JSON, the concentrations CSV and the `warn.flow.curve.*` keys of the conditions met.
@@ -435,35 +384,28 @@ pub fn curve_text(
         first = false;
         run.curve(&mut o, &mut csv, a)?;
     }
-    o.raw("],\"log\":[");
-    for (k, l) in run.log.iter().enumerate() {
-        o.raw(if k > 0 {
-            ",{\"analyte\":"
-        } else {
-            "{\"analyte\":"
-        })
-        .str(&l.analyte);
-        o.raw(",\"sample\":")
-            .str(&l.sample)
-            .raw(",\"choice\":")
-            .str(l.choice);
-        o.raw(",\"reason\":")
-            .str(l.reason)
-            .raw(",\"note\":")
-            .str(&l.note)
-            .raw("}");
-    }
-    o.raw("]}\n");
+    o.raw("],\"log\":");
+    write_log(&mut o, &run.log);
+    o.raw("}\n");
     let excluded = run.log.iter().any(|l| l.choice == "excluded");
     let unlisted = run.log.iter().any(|l| l.choice == "treated_as_sample");
+    let not_positive = run.log.iter().any(|l| l.reason == "response_not_positive");
     let keys = [
         "warn.flow.curve.failed",
         "warn.flow.curve.excluded",
         "warn.flow.curve.range",
         "warn.flow.curve.noResponse",
         "warn.flow.curve.unlisted",
+        "warn.flow.curve.notPositive",
     ];
-    let on = [run.warn[0], excluded, run.warn[1], run.warn[2], unlisted];
+    let on = [
+        run.warn[0],
+        excluded,
+        run.warn[1],
+        run.warn[2],
+        unlisted,
+        not_positive,
+    ];
     let warnings = (keys.iter().zip(on))
         .filter(|(_, on)| *on)
         .map(|(k, _)| k.to_string())

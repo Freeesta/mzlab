@@ -1393,13 +1393,17 @@
               "value":{
                 "anyOf":[
                   {"enum":["area","height"],"default":"area","description":"Signal of the peak"},
-                  {"enum":["linear","quadratic"],"default":"linear","description":"Calibration model"},
+                  {
+                    "enum":["linear","quadratic"],
+                    "default":"linear",
+                    "description":"quadratic: the ICH LOD/LOQ (3.3σ/b, 10σ/b) use b, the slope at zero concentration."
+                  },
                   {
                     "enum":["1","1/x","1/x2","1/y","1/y2"],
                     "default":"1/x",
                     "description":"1/x and 1/x2 leave out a standard at zero concentration; the log says so."
                   },
-                  {"type":"boolean","default":false,"description":"Force the line through zero"},
+                  {"type":"boolean","default":false,"description":"true or false; any other value fails the step."},
                   {
                     "type":"string",
                     "default":"",

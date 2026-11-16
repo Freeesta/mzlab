@@ -94,6 +94,7 @@ I18N.add("it", {
   "warn.flow.curve.excluded": "Alcuni standard sono stati esclusi dalla retta: il registro della taratura dice quali e perché.",
   "warn.flow.curve.failed": "Una retta di taratura non si è potuta costruire: i suoi campioni non hanno concentrazione, la taratura dice perché.",
   "warn.flow.curve.noResponse": "Alcuni campioni non hanno il picco di un analita (o del suo standard interno): non hanno concentrazione.",
+  "warn.flow.curve.notPositive": "Alcuni standard hanno una risposta nulla o negativa (per esempio dopo la sottrazione del bianco): restano nella retta, il registro della taratura dice quali.",
   "warn.flow.curve.range": "Alcune concentrazioni cadono fuori dall'intervallo degli standard: sono segnalate.",
   "warn.flow.curve.unlisted": "Alcuni campioni non sono nel file degli standard: sono stati trattati come campioni incogniti.",
   "warn.flow.formula.ion": "Lo ione scritto qui ha una polarità diversa da quella dei dati.",

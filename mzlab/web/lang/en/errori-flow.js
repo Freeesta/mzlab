@@ -94,6 +94,7 @@ I18N.add("en", {
   "warn.flow.curve.excluded": "Some standards were left out of the fit: the log of the calibration says which and why.",
   "warn.flow.curve.failed": "A calibration curve could not be fitted: its samples have no concentration, the calibration says why.",
   "warn.flow.curve.noResponse": "Some samples have no peak for an analyte (or for its internal standard): they have no concentration.",
+  "warn.flow.curve.notPositive": "Some standards have a response of zero or below (e.g. after blank subtraction): they stay in the fit, the log of the calibration says which.",
   "warn.flow.curve.range": "Some concentrations fall outside the range of the standards: they are flagged.",
   "warn.flow.curve.unlisted": "Some samples are not in the standards file: they were treated as unknown samples.",
   "warn.flow.formula.ion": "The ion written here has a different polarity from the data.",

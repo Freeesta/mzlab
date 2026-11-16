@@ -23,11 +23,15 @@ pub fn curve_step() -> Step {
         ],
         params: vec![
             Param::choice("signal", "Signal of the peak", &["area", "height"]).default_str("area"),
-            Param::choice("model", "Calibration model", &["linear", "quadratic"]).default_str("linear"),
+            Param::choice("model", "Calibration model", &["linear", "quadratic"])
+                .default_str("linear")
+                .doc("quadratic: the ICH LOD/LOQ (3.3σ/b, 10σ/b) use b, the slope at zero concentration."),
             Param::choice("weight", "Weighting of the standards", &Weight::NAMES)
                 .default_str("1/x")
                 .doc("1/x and 1/x2 leave out a standard at zero concentration; the log says so."),
-            Param::boolean("zero", "Force the line through zero").default_bool(false),
+            Param::boolean("zero", "Force the line through zero")
+                .default_bool(false)
+                .doc("true or false; any other value fails the step."),
             Param::text("istd", "Internal standard")
                 .default_str("")
                 .doc("One name for every analyte, or analyte|IS pairs separated by semicolons; empty = none."),

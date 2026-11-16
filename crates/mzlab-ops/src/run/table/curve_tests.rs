@@ -195,14 +195,110 @@ fn a_zero_standard_has_no_weight_under_one_over_x_and_is_logged() {
             && l.get("sample").and_then(Value::str) == Some("s0")
     ));
     assert!(warn.contains(&"warn.flow.curve.excluded".to_string()));
-    // unweighted, the zero standard is a point of the line
-    let (doc, _, _) = run(&[("weight", "1")], &r, &s);
+    // unweighted, the zero standard is a point of the line but the range starts at the lowest standard above zero (the LLOQ), as the log says
+    let r = format!("{r}u3,A,125,,\n");
+    let s = format!("{s}u3;;;;sample\n");
+    let (doc, csv, _) = run(&[("weight", "1")], &r, &s);
     let c = doc.get("curves").unwrap().at(0).unwrap();
     assert_eq!(num(c, "n"), 6.0);
     assert_eq!(
         c.get("range").unwrap().at(0).and_then(Value::f64),
-        Some(0.0)
+        Some(1.0)
     );
+    assert!(line(&csv, "A,u3,").ends_with(",below_range"));
+    assert!(log_has(&doc, "range_lower", "lowest_nonzero_standard", "1"));
+}
+
+/// The ICH value of a limit (the first of the pair) is `null`.
+fn ich_is_null(c: &Value, key: &str) -> bool {
+    let first = c.get(key).and_then(|v| v.at(0));
+    first
+        .and_then(|v| v.get("value"))
+        .is_some_and(Value::is_null)
+}
+
+fn log_has(doc: &Value, choice: &str, reason: &str, note: &str) -> bool {
+    doc.get("log").unwrap().arr().iter().any(|l| {
+        l.get("choice").and_then(Value::str) == Some(choice)
+            && l.get("reason").and_then(Value::str) == Some(reason)
+            && l.get("note").and_then(Value::str) == Some(note)
+    })
+}
+
+#[test]
+fn a_response_not_above_zero_stays_in_the_fit_but_is_logged_and_warned() {
+    // blank-subtracted areas: 50·x − 60 is −10 at the lowest level
+    let mut resp = String::from("sample,name,area\n");
+    let mut stds = String::from("sample,concentration,role\n");
+    for (i, (x, _)) in LEVELS.iter().enumerate() {
+        resp += &format!("s{i},A,{}\n", 50.0 * x - 60.0);
+        stds += &format!("s{i},{x},standard\n");
+    }
+    for w in ["1", "1/x", "1/x2"] {
+        let (doc, _, warn) = run(&[("weight", w)], &resp, &stds);
+        let c = doc.get("curves").unwrap().at(0).unwrap();
+        assert_eq!(num(c, "n"), 5.0, "{w}");
+        assert!(log_has(&doc, "kept", "response_not_positive", "-10"), "{w}");
+        assert!(warn.contains(&"warn.flow.curve.notPositive".to_string()));
+    }
+    // under 1/y the weight is undefined: left out, and said once
+    let (doc, _, warn) = run(&[("weight", "1/y")], &resp, &stds);
+    assert_eq!(num(doc.get("curves").unwrap().at(0).unwrap(), "n"), 4.0);
+    assert!(log_has(&doc, "excluded", "weight_undefined", ""));
+    assert!(!warn.contains(&"warn.flow.curve.notPositive".to_string()));
+}
+
+#[test]
+fn an_ich_limit_that_cannot_be_computed_says_why() {
+    // two levels, two parameters: no residual degree of freedom
+    let resp = "sample,name,area\ns1,A,150\ns2,A,200\n";
+    let stds = "sample,concentration,role\ns1,1,standard\ns2,2,standard\n";
+    let (doc, _, _) = run(&[("weight", "1")], resp, stds);
+    let c = doc.get("curves").unwrap().at(0).unwrap();
+    assert!(c.get("s_yx").unwrap().is_null());
+    assert!(ich_is_null(c, "lod"));
+    assert!(log_has(
+        &doc,
+        "limit_not_computed",
+        "no_degrees_of_freedom",
+        "ich"
+    ));
+    // a response that falls with the concentration
+    let resp = "sample,name,area\ns1,A,300\ns2,A,200\ns3,A,90\n";
+    let stds = format!("{stds}s3,3,standard\n");
+    let (doc, _, _) = run(&[("weight", "1")], resp, &stds);
+    let c = doc.get("curves").unwrap().at(0).unwrap();
+    assert!(num(c, "b") < 0.0);
+    assert!(ich_is_null(c, "loq"));
+    assert!(doc
+        .get("log")
+        .unwrap()
+        .arr()
+        .iter()
+        .any(|l| l.get("reason").and_then(Value::str) == Some("slope_not_positive")));
+}
+
+#[test]
+fn the_accuracy_is_the_same_in_the_points_and_in_the_csv_whatever_the_dilution() {
+    // s3 and the QC are diluted twice: the concentration doubles, the accuracy compares the injected solution with its nominal value
+    let (r, s) = exact();
+    let s = s.replace(
+        "concentration;unit;role\n",
+        "concentration;unit;role;dilution\n",
+    );
+    let s = s.replace("s3;L3;5;ng/mL;standard", "s3;L3;5;ng/mL;standard;2");
+    let r = format!("{r}q,A,450,,\n");
+    let s = format!("{s}q;QC;7;ng/mL;qc;2\n");
+    let (doc, csv, _) = run(&[], &r, &s);
+    let c = doc.get("curves").unwrap().at(0).unwrap();
+    let s3 = c.get("points").unwrap().at(2).unwrap();
+    let row: Vec<&str> = line(&csv, "A,s3,").split(',').collect();
+    close(row[7].parse().unwrap(), 10.0);
+    close(row[9].parse().unwrap(), 100.0);
+    assert_eq!(row[9].parse::<f64>().unwrap(), num(s3, "accuracy_pct"));
+    let qc: Vec<&str> = line(&csv, "A,q,").split(',').collect();
+    close(qc[7].parse().unwrap(), 14.0);
+    close(qc[9].parse().unwrap(), 100.0);
 }
 
 #[test]
@@ -272,6 +368,16 @@ fn files_and_parameters_that_cannot_be_read_fail() {
         "err.flow.curve.param"
     );
     assert_eq!(fails(&[("model", "cubic")], &r, &s), "err.flow.curve.param");
+    assert_eq!(fails(&[("zero", "yes")], &r, &s), "err.flow.curve.param");
+    let num_zero = vec![("zero".to_string(), Value::Num(1.0))];
+    assert_eq!(
+        curve_text(&num_zero, r.as_bytes(), s.as_bytes())
+            .unwrap_err()
+            .key,
+        "err.flow.curve.param"
+    );
+    let bool_zero = vec![("zero".to_string(), Value::Bool(true))];
+    assert!(curve_text(&bool_zero, r.as_bytes(), s.as_bytes()).is_ok());
     assert_eq!(
         fails(&[], &r, &s.replace("u1;;;;sample", "u1;;;;spike")),
         "err.flow.curve.role"
