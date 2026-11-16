@@ -33,6 +33,14 @@ try:
             pg.mouse.down(); pg.mouse.up(); frames(pg, 3); assert note() == "", "the mouseup that follows the creating click: " + note()     # a second press/release on the peak just made
             pg.evaluate(f"{XP}.cv.dispatchEvent(new MouseEvent('click',{{bubbles:true,clientX:{A['x']},clientY:{A['y']}}}))"); frames(pg, 2); assert note() == "" and nints() == 1
         step("no notice after creating a peak, nor on a second press/release or click on it", create_then_second_press)
+        def creating_drag():
+            reset(); pg.evaluate(f"{XP}.imode='man'"); frames(pg, 2); a, b = xy(13.9), xy(14.6)
+            pg.mouse.move(a["x"], a["y"]); pg.mouse.down(); pg.mouse.move(b["x"], b["y"], steps=8); pg.mouse.up(); frames(pg, 3)
+            assert nints() == 1 and note() == "", "the mouseup of the creating drag: " + note()
+            c = xy(14.2, -60); pg.mouse.move(c["x"], c["y"]); pg.mouse.down(); pg.mouse.move(c["x"] + 30, c["y"], steps=4); pg.mouse.up(); frames(pg, 3)
+            assert clash() and nints() == 1, "a new drag inside the peak must warn: " + note()
+            pg.evaluate(f"{XP}.imode='auto'"); frames(pg, 2)
+        step("the mouseup of a creating drag does not warn; a new drag inside that peak does", creating_drag)
         def label_then_inside():
             reset(); click(A); l = lab(0)
             pg.mouse.move(l["x"], l["y"]); frames(pg, 3); pg.mouse.click(l["x"], l["y"]); frames(pg, 3); assert note() == "", note()
@@ -40,11 +48,12 @@ try:
             click(A); assert note() == "" and nints() == 1, note()
         step("no notice on the label of the peak just made, the area under it, or the peak itself", label_then_inside)
         def real_edge_drag():
-            reset(); click(A); e = xy(pg.evaluate(f"{XP}.ints[0].b")); b0 = pg.evaluate(f"{XP}.ints[0].b")
-            pg.mouse.move(e["x"], e["y"]); pg.mouse.down(); pg.mouse.move(e["x"] + 25, e["y"], steps=6); pg.mouse.up(); frames(pg, 3)
-            assert pg.evaluate(f"{XP}.ints[0].b") != b0, "the border did not move"
-            clear(); pg.evaluate(f"{XP}._intT=Date.now()")
-            click(A); assert note() == "" and nints() == 1, "click inside after an edge drag: " + note()
+            reset(); click(A); click(B); assert nints() == 2        # B is the current peak: A is older, so only the edge drag of A can make A current
+            a0, b0 = pg.evaluate(f"{XP}.ints[0].a"), pg.evaluate(f"{XP}.ints[0].b")
+            e = xy(b0); pg.mouse.move(e["x"], e["y"]); pg.mouse.down(); pg.mouse.move(e["x"] + 25, e["y"], steps=6); pg.mouse.up(); frames(pg, 3)
+            assert pg.evaluate(f"{XP}.ints[0].b") != b0 and pg.evaluate(f"{XP}.ints[0].a") == a0, "the border did not move"
+            assert pg.evaluate(f"{XP}._intCur") == pg.evaluate(f"{XP}.ints[0].id"), "the dragged peak is not current"
+            click(A); assert note() == "" and nints() == 2, "click inside after an edge drag: " + note()
         step("no notice on a click inside the peak just edge-dragged", real_edge_drag)
         def older_peak():
             reset(); click(A); click(B); assert nints() == 2
@@ -58,18 +67,21 @@ try:
         step("the peak just made is no longer current after Esc or 4 s", esc_and_age)
         def dismiss():
             reset(); click(A); pg.keyboard.press("Escape"); click(A); assert clash()
-            pg.evaluate("window._t0=performance.now();window._tH=0"); assert clash()
+            assert clash(); pg.evaluate("window._tH=0")
             wait_for_js(pg, "(()=>{const d=document.querySelector('#qnote');if(d.hidden&&!window._tH)window._tH=performance.now();return d.hidden})()", 4000)
-            dt = pg.evaluate("window._tH-window._t0"); assert 2200 < dt < 3300, f"auto-dismiss after {dt:.0f} ms (expected about 2500)"
+            dt = pg.evaluate("window._tH-document.querySelector('#qnote')._at.t"); assert 2300 < dt < 3100, f"auto-dismiss {dt:.0f} ms after the notice appeared (expected about 2500)"
             click(A); assert clash(); pg.keyboard.press("Escape"); frames(pg, 2); assert note() == ""
             click(A); assert clash(); pg.mouse.move(A["x"] + 80, A["y"] + 80, steps=4); frames(pg, 2); assert note() == ""
         step("the notice ends by itself (2.5 s), with Esc and when the pointer moves away", dismiss)
         def no_cover():
-            reset(); click(A); l = lab(0); pg.mouse.move(l["x"] - 20, l["y"]); pg.mouse.move(l["x"], l["y"], steps=3)
-            wait_for_js(pg, f"!{XP}.tip.hidden", 4000)
-            pg.evaluate("nearMsg(I18N.t('int.clash'))"); frames(pg, 2)
-            bx = pg.evaluate(f"(()=>{{const r=e=>{{const b=e.getBoundingClientRect();return [b.left,b.top,b.right,b.bottom]}};return [r({XP}.tip),r(document.querySelector('#qnote'))]}})()")
-            t, n = bx; assert t[2] <= n[0] or n[2] <= t[0] or t[3] <= n[1] or n[3] <= t[1], f"notice {n} covers the tooltip {t}"
+            reset(); click(A); click(B)                          # A is older: a click inside it shows the notice
+            for x, dy in ((14.27, -30), (14.32, -30), (14.30, -110)):      # near the middle: a press within 6 px of a border grabs it
+                c = xy(x, dy); clear(); pg.mouse.move(c["x"] - 12, c["y"] - 12); pg.mouse.move(c["x"], c["y"], steps=3); frames(pg, 3)
+                wait_for_js(pg, f"!{XP}.tip.hidden", 4000)         # the readout tooltip opens by the pointer, as the label's does
+                pg.mouse.click(c["x"], c["y"]); frames(pg, 3); assert clash(), note()
+                t, n = pg.evaluate(f"(()=>{{const r=e=>{{const b=e.getBoundingClientRect();return [b.left,b.top,b.right,b.bottom]}};return [r({XP}.tip),r(document.querySelector('#qnote'))]}})()")
+                assert pg.evaluate(f"!{XP}.tip.hidden"), "tooltip gone: the check would mean nothing"
+                assert t[2] <= n[0] or n[2] <= t[0] or t[3] <= n[1] or n[3] <= t[1], f"at {x}: notice {n} covers the tooltip {t}"
         step("the notice does not cover the label's tooltip", no_cover)
         pg.screenshot(path="tests_e2e/shots/int_avviso.png")
     r.close()
