@@ -142,7 +142,7 @@ html.i18n-wait body>:not(header){visibility:hidden}html.i18n-wait header{visibil
 /* header buttons: one focus ring, only from the keyboard, drawn INSIDE the button (#stbar clips what falls outside) and never the browser's double ring */
 header button:focus:not(:focus-visible),header a:focus:not(:focus-visible){outline:none}
 header button:focus-visible,header a:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-header .hq:focus-visible{outline-offset:1px}
+header .hq:focus-visible{outline-offset:1px}header .hq[data-help=header]{border-color:transparent;background:none;cursor:pointer}header .hq[data-help=header]:hover{background:var(--accent)}
 #stbar .tb-split{display:inline-flex;flex:none}
 #stbar .tb-split .tb-main{border-top-right-radius:0;border-bottom-right-radius:0}
 #stbar .tb-split .tb-car{border-top-left-radius:0;border-bottom-left-radius:0;padding:4px 3px;margin-left:-1px}

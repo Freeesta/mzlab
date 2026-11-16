@@ -9,7 +9,7 @@ import inventory_tooltip as T  # noqa: E402
 
 # keys still waiting for the chromatogram-peak rework (CROMA-CLICK-PICCO)
 REPEATS_ALLOWED = {"etpk.tip.rt"}
-HINT_ONLY_ALLOWED = {"tip.area", "tip.peakLabel"}
+HINT_ONLY_ALLOWED = {"tip.peakLabel"}
 HINT = re.compile(r"right-click: actions|tasto destro: azioni", re.I)
 
 

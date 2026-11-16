@@ -203,7 +203,7 @@ try:
             la = [l for l in pg.evaluate(LB) if not l["fol"]]
             need(len(la) == 1 and la[0]["key"].startswith(f"m|{ka}|"), la)
             need(la[0]["text"].startswith("A = ") and "(" not in la[0]["text"], la[0]["text"])
-            need(pg.evaluate("I18N.t('int.base.tag.edges')") in la[0]["tip"], "the baseline mode is in the hover text")
+            need(pg.evaluate("I18N.t('int.copy.tip')") in la[0]["tip"] and pg.evaluate("I18N.t('int.base.tag.edges')") not in la[0]["tip"], "the hover text is the copy hint only")
             only(kb)
             fb = [l for l in pg.evaluate(LB) if l["fol"]]
             need(len(fb) == 1 and fb[0]["ion"] == la[0]["ion"] and fb[0]["key"].startswith(f"m|{kb}|"), fb)

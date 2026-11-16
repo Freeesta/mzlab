@@ -8,8 +8,6 @@
   "xic.lowRes": "Sotto la riga di uno ione nella finestra XIC; {unit} = finestra di m/z (HTML).",
   "xic.shifted": "{base} = m/z di partenza, {shift} = scarto con segno in Da (es. +16), {mz} = m/z risultante (HTML).",
   "xic.interpreted": "{formula} = formula con pedici (HTML).",
-  "tip.area": "Riquadro sull'etichetta di un'area integrata; {area} = valore, {y} = intensità dell'apice.",
-  "tip.areaUv": "Come tip.area per una traccia DAD (TWC/XWC): {area} = valore in mAU·s, {y} = assorbanza dell'apice in mAU.",
   "tip.more": "Riquadro del mouse sul cromatogramma: tracce non elencate.",
   "tip.peak": "Riquadro del mouse su un picco dello spettro; {y} = valore (con % se relativo), {abs} = HTML con i cps assoluti o vuoto.",
   "spec.follow.aria": "Etichetta accessibile del chip dello spettro agganciato; {n} = numero del pannello.",

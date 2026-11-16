@@ -30,6 +30,10 @@ try:
             assert pg.inner_text(".areacopied") == "Copiato!"
             assert pg.get_attribute(".areacopied", "aria-live") == "polite"
         step("click on the label copies the displayed number and shows the notice", click_copies)
+        def tip_is_hint():
+            t = pg.evaluate(f"{XP}._a.lbls.find(b=>b.copy!=null).tip")
+            assert t == '<div class="sm">' + pg.evaluate("I18N.t('int.copy.tip')") + '</div>', t      # no area, intensity or baseline line
+        step("the hover text of the area label is only the copy hint", tip_is_hint)
         def fades():
             wait_for_js(pg, "!document.querySelector('.areacopied.show')", 4000)
         step("the notice fades after about 1.5 s", fades)

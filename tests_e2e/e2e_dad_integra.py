@@ -63,8 +63,8 @@ try:
             assert pg.evaluate("I18N.t('int.tbl.areaUv')") in hs and pg.evaluate("I18N.t('int.tbl.area')") not in hs, hs
             pg.evaluate("document.querySelector('#bigdlg').close()")
             tip = pg.evaluate(f"(() => {{ const l = ({XWCS}[0]._a.lbls || []).find(l => l.int); return l ? l.tip : ''; }})()")
-            assert "mAU·s" in tip, tip
-        step("an XWC integrates like an XIC: no question, the peak of compound A has its area in mAU·s in the integration table and its tooltip", integrate)
+            assert pg.evaluate("I18N.t('int.copy.tip')") in tip and "mAU" not in tip, tip      # only the copy hint: the area is on the label itself
+        step("an XWC integrates like an XIC: no question, the peak of compound A has its area in mAU·s in the integration table and the copy hint as its tooltip", integrate)
         def unit():
             t = pg.evaluate(f"JSON.stringify(plotSheets({XWCS}[0]))")
             assert pg.evaluate("I18N.t('export.col.pdaSignal')") in t and "mAU" in t and "PDA" not in t, t[max(0, t.find("PDA") - 300):t.find("PDA") + 100]

@@ -54,12 +54,12 @@ try:
             pg.evaluate("setTab('full',true)"); wait_for_js(pg, "E.panels.some(q=>q.tab==='full'&&q.type==='chrom'&&q._a&&q._a.sr&&q._a.sr.length>0)")
             info = pg.evaluate("""()=>{const p=E.panels.find(q=>q.tab==='full'&&q.type==='chrom');p.el.scrollIntoView({block:'center'});const s=p._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});
               p.ints.push({key:s.key,a:s.x[m]-0.3,b:s.x[m]+0.3});draw(p);return {id:p.id}}""")
-            wait_for_js(pg, "E.panels.some(q=>q.tab==='full'&&q.type==='chrom'&&q._a&&q._a.lbls.some(l=>l.tip&&l.tip.includes('Area')))")
-            lab = pg.evaluate("id=>{const p=E.panels.find(q=>q.id===id);return p._a.lbls.filter(l=>l.tip.includes('Area')).map(l=>l.tip)}", info["id"]); print(lab)
-            assert lab and "conteggi" in lab[0]
-            assert re.search(r"\d\.\d{5}E[+-]\d{2}", lab[0]), lab[0]                   # the tooltip carries the area with 5 decimals (I18N.sciE(area, 5))
+            wait_for_js(pg, "E.panels.some(q=>q.tab==='full'&&q.type==='chrom'&&q._a&&q._a.lbls.some(l=>l.tip&&l.tip.includes(I18N.t('int.copy.tip'))))")
+            lab = pg.evaluate("id=>{const p=E.panels.find(q=>q.id===id);return p._a.lbls.filter(l=>l.tip.includes(I18N.t('int.copy.tip'))).map(l=>[l.tip,l.copy])}", info["id"]); print(lab)
+            assert lab and "conteggi" not in lab[0][0], lab[0]                         # the hover text is only the copy hint
+            assert re.search(r"\d\.\d{5}E[+-]\d{2}", lab[0][1]), lab[0]               # the copied area has 5 decimals (I18N.sciE(area, 5))
             assert pg.evaluate("fmtA(2243051)") == "2.243e+6" and pg.evaluate("I18N.sciE(2243051, 5)") == "2.24305E+06"
-        step("area label with 3 decimals, the area with 5 decimals in the tooltip", areas)
+        step("area label with 3 decimals, the area with 5 decimals on the clipboard, a copy-hint tooltip", areas)
         pg.screenshot(path=SH + "210_labels.png", full_page=True)
     r.close()
 except Exception as e:
