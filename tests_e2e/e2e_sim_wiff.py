@@ -1,7 +1,7 @@
 """The manual integrations of SIM traces on the built site with the Rust engine (synthetic SIM .wiff of tools/wiff_sim.py, `sim3`: a blank and three named
 samples, seven ions at a 0.8 s cycle, an isomer pair in one channel; no laboratory data): dragging the pair with an msconvert log opens four files (the
 log is skipped with a note); windows integrated on the ion traces fill the card «Manual integrations» under the chart (collapsible and remembered,
-fixed-height scroll with a sticky header, no layout shift), one row per window grouped by channel, each with a name the user types; the card, its CSV
+height of its rows up to a cap, then a scroll with a sticky header, nothing above it moves), one row per window grouped by channel, each with a name the user types; the card, its CSV
 export, the engine's sum rows and «Copy table» (tab-separated) are the bytes of `mzlab-cli manual-table` on the same .wiff and windows (after the provenance line);
 a row's Delete removes the integration; «Split at the valleys» (V) proposes the engine's drop line (`mzlab-cli peak-split`), moved by mouse, keys and finger and
 confirmed into one row per part; a window drawn on one sample is applied to the other samples chosen in the left panel, measured on each by the engine, with a row of the table; the channels of a sample equal `mzlab-cli channels`. The copy whose .wiff.scan is cut at 60 % measures the
@@ -100,9 +100,11 @@ try:
             c = pk[3][0][0]
             for i in range(6): pg.evaluate(INTEG, ["Sample_C", 1, c - 0.15 + 0.4 * i, c + 0.15 + 0.4 * i, None])      # apart: an overlapping window replaces the one under it
             wait_for_js(pg, SHOWN % 9, timeout=60000)
-            need(pg.evaluate(PNL) == p0 and pg.evaluate(WRAP) == w0, ("no layout shift", p0, w0, pg.evaluate(PNL), pg.evaluate(WRAP)))
-            sc = pg.evaluate("(() => { const w = document.getElementById('manint-b'); w.scrollTop = w.scrollHeight; const r = w.querySelector('thead th').getBoundingClientRect(); return [w.scrollHeight > w.clientHeight, Math.abs(r.top - w.getBoundingClientRect().top) < 3, Math.round(w.clientHeight / w.querySelector('tbody tr').getBoundingClientRect().height)]; })()")
-            need(sc[0] and sc[1] and 5 <= sc[2] <= 7, ("scrolls under a sticky header, about 6 rows", sc))
+            need(pg.evaluate(PNL) == p0 and pg.evaluate(WRAP)[3] > w0[3], ("the chart does not move, the table grows with its rows", p0, w0, pg.evaluate(PNL), pg.evaluate(WRAP)))   # height = rows (e2e_manint_layout.py has the numbers)
+            pg.set_viewport_size({"width": 1500, "height": 360})      # a short window: 9 rows (about 280 px) exceed 60 % of it, so the table scrolls inside
+            sc = pg.evaluate("(() => { const w = document.getElementById('manint-b'); w.scrollTop = w.scrollHeight; const r = w.querySelector('thead th').getBoundingClientRect(); return [w.scrollHeight > w.clientHeight, Math.abs(r.top - w.getBoundingClientRect().top) < 3]; })()")
+            need(sc[0] and sc[1], ("scrolls under a sticky header once capped", sc))
+            pg.set_viewport_size({"width": 1500, "height": 2200})
             pg.click("#manint .manint-tg")
             need(pg.evaluate("[document.getElementById('manint-b').hidden, document.querySelector('#manint .manint-tg').getAttribute('aria-expanded'), localStorage.getItem(NOMI.KEY('manint.open'))]") == [True, "false", "0"], "closed and remembered")
             need(pg.evaluate(PNL) == p0, "closing moves nothing above")
@@ -115,7 +117,7 @@ try:
             need(not pg.evaluate("document.getElementById('manint-b').hidden"), "integrations after none open the card")
             pg.focus("#manint .manint-tg"); pg.keyboard.press("Enter"); need(pg.evaluate("document.getElementById('manint-b').hidden"), "Enter closes")
             pg.keyboard.press(" "); need(not pg.evaluate("document.getElementById('manint-b').hidden"), "Space opens")
-        step("the card sits under the chart: collapsible, remembered, icon buttons, fixed-height scroll with a sticky header, no layout shift", card_layout)
+        step("the card sits under the chart: collapsible, remembered, icon buttons, height of its rows up to a cap, then a scroll with a sticky header, nothing above it moves", card_layout)
         def parity():
             st = pg.evaluate("MANINT.state()")
             files = [D / "sim3.wiff"]
