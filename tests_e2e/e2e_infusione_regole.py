@@ -1,6 +1,6 @@
 """INFG rules: the arcs of the «Fragmentation graph» carry the id of the rule that explains the loss (weak ones tagged), the panel of an ion lists the rules of the losses
 that reach it with their reason and their sources as DOI links, the filter «only losses with a rule» works with the keyboard, the data table has the columns rule, source and
-priority, the thresholds say «to be calibrated», axe, Italian and English. The engine answer is the one of tests_e2e/fixtures/msngrafo_esempio.json plus the key `regole` of
+priority, the thresholds say «to be calibrated», axe. The engine answer is the one of tests_e2e/fixtures/msngrafo_esempio.json plus the key `regole` of
 fixtures/msngrafo_regole.json (synthetic: no real data, no real compounds)."""
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -34,7 +34,7 @@ r = Run(port=8979, wd="/tmp/wd_infregole")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1900})
-        pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); wait_for_js(pg, "window.qqReady === true")
+        pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "window.qqReady === true")
         pg.set_input_files("#pick", [str(F)]); wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=1", 180000)
         pg.click("text=Load data"); wait_for_js(pg, "E.files.length>=1", 90000)
         wait_for_js(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
@@ -90,13 +90,6 @@ try:
             v = pg.evaluate("axe.run('#hrinfo', {runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r=>r.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>[v.id,v.nodes.length]))")
             assert not v, v
         if AXE: step("axe: no serious or critical violation with the rules shown", axe)
-        pg3 = r.b.new_page(viewport={"width": 1500, "height": 1600}); pg3.goto(f"http://127.0.0.1:{r.port}/?lang=it"); wait_for_js(pg3, "window.qqReady === true")
-        load(pg3, [F], 6000, 1); pg3.evaluate(STAND_IN, [FX, RX]); drawer(pg3, "gra"); pg3.wait_for_selector(".ig-node", timeout=30000)
-        def it():
-            assert "Solo perdite con una regola" in pg3.inner_text(".ig-flt")
-            pg3.click(".ig-node[data-id=n2]"); pg3.wait_for_selector(".ig-weak", timeout=5000)
-            txt = pg3.inner_text(".ig-rl"); assert "Regole di frammentazione" in txt and "debole" in pg3.inner_text(".ig-weak") and "Fonti:" in txt, txt
-        step("Italian: texts from the catalogue", it)
         errs = [e for e in r.errs if e[0] in ("pageerror",)]
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
     r.close()

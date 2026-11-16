@@ -52,14 +52,14 @@ try:
               const t=+Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0], i=d.tgt.indexOf(t), s=await J('api/scan?k='+k+'&sid='+d.sid[i]);
               return {t, sid:d.sid[i], mz:s.mz, y:s.y}})()""")
             pk = [(m, y) for m, y in zip(info["mz"], info["y"]) if m < info["t"] - 1.5 and y > 0]
-            text = (f"Name: Voce di prova\nPrecursorMZ: {info['t']}\nPrecursor_type: [M+H]+\nIon_mode: Positive\nFormula: C10H10\nInChIKey: AAAAAAAAAAAAAA-AAAAAAAAAA-N\nNum Peaks: {len(pk)}\n"
+            text = (f"Name: Test entry\nPrecursorMZ: {info['t']}\nPrecursor_type: [M+H]+\nIon_mode: Positive\nFormula: C10H10\nInChIKey: AAAAAAAAAAAAAA-AAAAAAAAAA-N\nNum Peaks: {len(pk)}\n"
                     + "\n".join(f"{m:.5f} {y:.1f}" for m, y in pk) + "\n\n")
             pg.evaluate("(async t=>{await LIB.call('add',{file:new File([t],'prova.msp')})})(%s)" % json.dumps(text))
             pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close()); BARRA.close(false)")
             pg.evaluate("(async()=>{const t=" + TRIO + ";await DDA.selectMs2(t.s2," + str(info["sid"]) + ")})()"); wait_for_js(pg, "(()=>{const t=" + TRIO + ";return !!(t.s2&&t.s2._a)})()"); frames(pg, 3)
             pos = pg.evaluate("(()=>{const t=" + TRIO + ";t.s2.el.scrollIntoView({block:'center'});const r=t.s2.cv.getBoundingClientRect();return {x:r.left+r.width*0.5,y:r.top+r.height*0.3}})()")
-            pg.mouse.click(pos["x"], pos["y"], button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.includes(\"Cos'è?\")")
-            pg.click("#ctx >> text=Cos'è?"); pg.wait_for_selector("#libwhat[open] #lw-list table", timeout=60000)
+            pg.mouse.click(pos["x"], pos["y"], button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.includes(\"What is it?\")")
+            pg.click("#ctx >> text=What is it?"); pg.wait_for_selector("#libwhat[open] #lw-list table", timeout=60000)
             pg.click("#lw-opt summary"); pg.wait_for_selector("#lw-tol", state="visible")
             assert sweep(pg, "#libwhat", "localStorage.getItem('mzlab.lib.soglie')") >= 10
         step("«What is it?»: precursor, tolerances and thresholds refuse garbage", what_is)

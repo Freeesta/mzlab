@@ -15,7 +15,7 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1000})
         pg.set_input_files("#pick", [mz("B_FullMass-t15"), mz("B_MS2-t15"), mz("B_MRM-t0")])
         pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=3", timeout=30000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def first_only():
             pg.wait_for_function("E.panels.length>0", timeout=30000)
             assert set(pg.evaluate("E.panels.map(p=>p.tab)")) == {"full"} and pg.evaluate("E.files.filter(f=>f.vis).length") == 1

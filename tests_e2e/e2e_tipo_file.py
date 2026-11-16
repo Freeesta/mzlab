@@ -52,7 +52,7 @@ try:
         def remembered():
             all_to(pg, "full")
             pg.locator(SEL).first.select_option("infusion"); frames(pg, 3)
-            pg.click("text=Carica dati"); ready(pg)
+            pg.click("text=Load data"); ready(pg)
             info = pg.evaluate("[E.files.map(f => [f.file, f.kind, f.kindAuto, f.manual]), TIPOF.manual(ST.files[0].name), ST.files.map(f=>f.name), localStorage.getItem('mzlab.filekind')]")
             assert pg.evaluate("E.files.some(f => f.kind === 'infusion' && f.kindAuto === 'full')"), info
             pg.evaluate("E.files.forEach(f => TIPOF.set(f.file, null)); TIPOF.viewer(E.files.map(f => f.file))"); frames(pg, 3)

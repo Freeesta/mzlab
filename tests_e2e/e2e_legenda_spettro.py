@@ -18,7 +18,7 @@ try:
         pg = r.page(p)
         pg.set_viewport_size({"width": 1400, "height": 900})
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t10")])
-        frames(pg, 3); pg.click("text=Carica dati"); ready(pg)
+        frames(pg, 3); pg.click("text=Load data"); ready(pg)
         pg.evaluate("setVisOf(E.files.filter(f => !f.gone), true); addPanel('spec', {tab: E.tab, k: E.cur, level: 1, all: true, r0: 14, r1: 15})")
         wait_for_js(pg, "(() => { const p = E.panels.filter(q => q.type === 'spec' && q.all)[0]; return p && p.leg2 && p.leg2.children.length >= 2; })()", 30000)
         def entries():

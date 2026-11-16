@@ -1,4 +1,4 @@
-"""The errors that stop the assistant have a plain text in both catalogs and on the Flow panel (never the raw key)."""
+"""The errors that stop the assistant have a plain text in the catalog and on the Flow panel (never the raw key)."""
 import re
 import sys
 from pathlib import Path
@@ -13,13 +13,11 @@ TERMINAL = ["auth", "rate", "context", "network", "bad_response", "aborted", "pr
 
 
 def test_catalogs_and_flow_panel_have_every_terminal_error():
-    it = lang_catalog.testo("it")
     en = lang_catalog.testo("en")
     flow = (ROOT / "flow/lazy/flow-llm-errors.js").read_text(encoding="utf-8")
     for k in TERMINAL:
         key = f'"err.llm.{k}"'
-        assert key in it, f"lang/it.js misses {key}"
-        assert key in en, f"lang/en.js misses {key}"
+        assert key in en, f"lang/en misses {key}"
         assert key in flow, f"flow-llm-errors.js misses {key}"
 
 
@@ -32,8 +30,7 @@ def test_errors_module_is_loaded_with_the_assistant():
 
 
 def test_the_spend_limit_names_its_limit():
-    # the proxy and the page give `limit` (session, ip, rate, tokens): both catalogs show it
-    for lang in ("it", "en"):
-        m = re.search(r'"err\.llm\.limit\.spend":\s*"([^"]*)"', lang_catalog.testo(lang))
-        assert m and "{limit}" in m.group(1), lang
+    # the proxy and the page give `limit` (session, ip, rate, tokens): the catalog shows it
+    m = re.search(r'"err\.llm\.limit\.spend":\s*"([^"]*)"', lang_catalog.testo("en"))
+    assert m and "{limit}" in m.group(1)
     assert "q.limit" in (ROOT / "flow/lazy/flow-llm-errors.js").read_text(encoding="utf-8")

@@ -4,7 +4,7 @@ Measures layout shift (CLS), bounding box differences and element text changes a
 (2) after translations are applied (i18n ready)
 (3) window.qqReady === true
 (4) quiet / settled after qqReady
-Runs across matrix: 1300x900 and 1000x700, it-IT and en-US, cold and warm cache.
+Runs across matrix: 1300x900 and 1000x700, cold and warm cache.
 """
 from io import BytesIO
 import json, os, sys
@@ -138,12 +138,8 @@ def diff_pixels(bA, bB):
 
 def run_measurement(port):
     matrix = [
-        (1300, 900, "it-IT", False),
-        (1300, 900, "it-IT", True),
         (1300, 900, "en-US", False),
         (1300, 900, "en-US", True),
-        (1000, 700, "it-IT", False),
-        (1000, 700, "it-IT", True),
         (1000, 700, "en-US", False),
         (1000, 700, "en-US", True),
     ]
@@ -230,7 +226,7 @@ def main():
             print("Changed nodes 1->2:", first["d12_sample"], "2->3:", first["d23_sample"])
             print(f"DCL -> i18n node changes: {first['d12_count']}")
             print(f"i18n -> qqReady node changes: {first['d23_count']}")
-            raise AssertionError(f"FAIL: Primo disegno non e finale: {len(defects)} configurazioni hanno salti di layout o cambi DOM")
+            raise AssertionError(f"FAIL: first drawing is not final: {len(defects)} configurations have layout jumps or DOM changes")
     finally:
         r.close()
 

@@ -10,7 +10,7 @@ def scenario(seq):
     try:
         with sync_playwright() as p:
             pg = r.page(p)
-            stage(pg, [mz(f) for f in FILES]); pg.click("text=Carica dati"); ready(pg)
+            stage(pg, [mz(f) for f in FILES]); pg.click("text=Load data"); ready(pg)
             assert pg.evaluate("E.tab") == "full"
             # as if only the first three files had been read so far: the next step of the load adds the MS2 and MRM ones
             pg.evaluate("E.files = E.files.slice(0, 3); E.key = ''; E._seq = %s" % ("true" if seq else "false"))

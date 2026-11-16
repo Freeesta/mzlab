@@ -1,4 +1,4 @@
-"""Toolbar mode (Solo il selezionato / Tutti sovrapposti): file choosers only where they make sense; 2D/3D switch; loading page keeps the loaded files; empty tab links to loading page."""
+"""Toolbar mode (selected file only / all overlaid): file choosers only where they make sense; 2D/3D switch; loading page keeps the loaded files; empty tab links to loading page."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -12,7 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(500)
         for sel in ["#np-chrom", "#np-spec", "#np-map"]: pg.click(sel); ready(pg)
         dis = lambda s: pg.evaluate("s=>[...document.querySelectorAll(s)].map(x=>x.disabled)", s)

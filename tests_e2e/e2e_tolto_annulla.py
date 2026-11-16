@@ -41,12 +41,12 @@ try:
         def panel_close():
             pg.evaluate("reveal(addPanel('chrom', { k: E.files.find(f => f.kind === 'full' && !f.gone).k }))"); ready(pg)
             pid = pg.evaluate("E.panels.filter(q => q.type === 'chrom').slice(-1)[0].id")
-            pg.evaluate(f"(()=>{{const q=E.panels.find(x=>x.id=={pid});q.zoom=[2,6];q.title='Prova tolto'}})()")
+            pg.evaluate(f"(()=>{{const q=E.panels.find(x=>x.id=={pid});q.zoom=[2,6];q.title='Removal test'}})()")
             n0 = pg.evaluate("E.panels.length"); y0 = pg.evaluate(f"E.panels.find(x=>x.id=={pid}).y")
             pg.evaluate(f"E.panels.find(x=>x.id=={pid}).el.querySelector('.x').click()"); wait_for_js(pg, f"E.panels.length === {n0 - 1}")
             assert dialogs() == 0
-            pg.keyboard.press(f"{mod}+z"); wait_for_js(pg, f"E.panels.length === {n0} && E.panels.some(x => x.title === 'Prova tolto')"); ready(pg)
-            q = pg.evaluate("(()=>{const q=E.panels.find(x=>x.title==='Prova tolto');return {zoom:q.zoom,tab:q.tab,y:q.y,in:q.el.isConnected}})()")
+            pg.keyboard.press(f"{mod}+z"); wait_for_js(pg, f"E.panels.length === {n0} && E.panels.some(x => x.title === 'Removal test')"); ready(pg)
+            q = pg.evaluate("(()=>{const q=E.panels.find(x=>x.title==='Removal test');return {zoom:q.zoom,tab:q.tab,y:q.y,in:q.el.isConnected}})()")
             assert q["zoom"] == [2, 6] and q["in"], q
             assert abs(q["y"] - y0) < 2, (q, y0)
             pg.keyboard.press(f"{mod}+Shift+z"); wait_for_js(pg, f"E.panels.length === {n0 - 1}")

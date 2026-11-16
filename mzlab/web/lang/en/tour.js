@@ -60,7 +60,7 @@ I18N.add("en", {
   "tour.metodo.titolo": "The instrument method",
   "tour.metodo.testo": "What the instrument measured: scan type, polarity, mass range and method settings.",
   "tour.ingranaggio.titolo": "Settings and this tour",
-  "tour.ingranaggio.testo": "The gear opens theme, language and preferences, and restarts this tour.",
+  "tour.ingranaggio.testo": "The gear opens theme, text size and preferences, and restarts this tour.",
   "tour.cap3": "Drawing",
   "tour.d_tela.titolo": "The canvas",
   "tour.d_tela.testo": "Draw here with the tools of the top bar. A right click on a structure opens the extra actions: break a bond, fragments, copy the formula.",
