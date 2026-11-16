@@ -61,7 +61,7 @@ try:
             hd = pg.inner_text("#cmp-out tr:nth-child(1)"); hd = hd.lower(); assert "score" in hd and "ms2 explained" in hd and "halogens" in hd, hd
             row = pg.inner_text("#cmp-out tr:nth-child(2)").replace("\t", " "); assert "C13H25N4O3S" in row.replace(" ", ""), row
             assert "mass" in row and "isotopes" in row and "%" in row, row
-            det = pg.inner_text("#cmp-det"); assert "Soglie" in det and "contributo" in det.lower(), repr(det)
+            det = pg.inner_text("#cmp-det"); assert "Limits" in det and "contribution" in det.lower(), repr(det)
             pg.fill("#cmp-w0", "0"); pg.click("#cmp-go"); pg.wait_for_timeout(1500)                     # the weights are editable
             assert "weights mass, isotopes, fragments = 0,2,1" in pg.inner_text("#cmp-det"), pg.inner_text("#cmp-det")
             pg.evaluate("document.querySelector('#bigdlg').close()")

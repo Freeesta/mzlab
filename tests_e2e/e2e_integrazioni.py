@@ -77,8 +77,8 @@ try:
             assert pg.locator("button[data-del]").count() == 2 and n() == 2
         step("table: × deletes the row and the peak from the graph", table)
         def legacy():
-            pg.evaluate(f"(()=>{{const p={XP},i=p.ints[0];p.ints.push({{...i,id:E.seq++,a:i.a+0.1,b:i.b+0.1}});showInts()}})()"); wait_for_js(pg, "document.querySelector('#bigbody').innerText.includes('sovrapposto')")
-            assert "sovrapposto" in pg.inner_text("#bigbody")
+            pg.evaluate(f"(()=>{{const p={XP},i=p.ints[0];p.ints.push({{...i,id:E.seq++,a:i.a+0.1,b:i.b+0.1}});showInts()}})()"); wait_for_js(pg, "document.querySelector('#bigbody').innerText.includes('overlapping')")
+            assert "overlapping" in pg.inner_text("#bigbody")
         step("old overlapping integrations load and are marked", legacy)
         pg.evaluate("document.querySelector('#bigdlg')&&document.querySelector('#bigdlg').open&&document.querySelector('#bigdlg').close()")
         pg.screenshot(path="tests_e2e/shots/integrazioni.png")
