@@ -40,5 +40,11 @@ const ASSE = (() => {
     if (k === "Escape" && fix) { set(null); return true; }
     return false;
   }
-  return { gest, clip, tag, key, set, get fix() { return fix; }, held, THR };
+  // Wheel / pinch zoom step shared by every chart. A trackpad pinch (ctrlKey) sends many small deltas (~1-10 px), a mouse notch one big delta (~100, or a line / page
+  // delta in Firefox): the sensitivity is per small delta, while the per-event clamp (in log units) is what a notch always hit, so notches feel as before and a flick stays bounded.
+  const WHEEL_K = 0.0054;                                          // log-zoom per px of delta (was 0.004: +35% for trackpads)
+  const WHEEL_MAX = 0.24;                                          // largest log-zoom of ONE event (= the old 60 px · 0.004), so a notch is unchanged
+  /** factor (< 1 closer) for one wheel event @param {{ deltaY: number, deltaMode?: number }} e @param {number} [k] @param {number} [dy] delta to use instead of e.deltaY */
+  const wheelFactor = (e, k = WHEEL_K, dy = e.deltaY) => Math.exp(Math.max(-WHEEL_MAX, Math.min(WHEEL_MAX, dy * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1) * k)));
+  return { gest, clip, tag, key, set, get fix() { return fix; }, held, THR, wheelFactor, WHEEL_K, WHEEL_MAX };
 })();

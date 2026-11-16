@@ -551,7 +551,7 @@ window.MAPPA = (() => {
     e.preventDefault();
     const a = p._a;
     if (!p._wz || Date.now() - p._wz > 600) pushZh(p); p._wz = Date.now();
-    const dy = e.deltaY || e.deltaX, f = Math.exp(Math.max(-60, Math.min(60, dy)) * 0.004);
+    const f = ASSE.wheelFactor(e, ASSE.WHEEL_K, e.deltaY || e.deltaX);
     // Maiusc = RT only, Alt = m/z only
     scaleView(p, f, { rt: xOf(p, px), mz: a.mzAt(py) }, e.shiftKey ? "x" : e.altKey ? "y" : "xy");
     draw(p); return true;
