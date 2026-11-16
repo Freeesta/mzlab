@@ -166,12 +166,12 @@ impl Entry {
     }
 }
 
-/// `--samples`: keeps the entries of the sample ids asked for; an id no input holds is the exit 4.
+/// `--samples`: keeps the entries of the sample ids asked for; an id no input holds is the exit 4. A dataset of one sample (its entry names no id) is the sample 1.
 pub(crate) fn chosen(list: &mut Vec<Entry>, ids: &[u32]) -> Result<(), Outcome> {
     if ids.is_empty() {
         return Ok(());
     }
-    let held = |e: &Entry| crate::flow_set::split_sample(&e.label).1;
+    let held = |e: &Entry| crate::flow_set::split_sample(&e.label).1.or(Some(1));
     if let Some(id) = ids
         .iter()
         .find(|id| !list.iter().any(|e| held(e) == Some(**id)))

@@ -152,6 +152,10 @@ pub(super) fn add(
     (ole, limits, only): (&Ole, &Limits, Option<usize>),
     total: &mut u64,
 ) -> Result<(usize, usize)> {
+    // an indexed sample opened alone does not look beyond the index: the sections after it are the listing's business, and checking their blocks reads them
+    if only.is_some_and(|c| c < parti.len()) {
+        return Ok((0, 0));
+    }
     let known: Vec<&Wiff> = parti.iter().map(|p| &p.w).collect();
     let (end, last_id) = index_end(ole, &known);
     let found = recover(scan, scan_len, &known, end, last_id);

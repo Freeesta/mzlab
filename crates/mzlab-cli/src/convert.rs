@@ -80,7 +80,7 @@ pub(crate) fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
                 a.sets.push(format!("conv.peaks={v}"));
             }
             "--set" => a.sets.push(value(&mut it, &x)?),
-            "--samples" => a.samples = samples_arg(&value(&mut it, &x)?)?,
+            "--samples" => a.samples.extend(samples_arg(&value(&mut it, &x)?)?),
             "--fresh" => a.fresh = true,
             "--workers" => {
                 let v = value(&mut it, &x)?;
