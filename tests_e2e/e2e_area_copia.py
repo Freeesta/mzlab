@@ -65,7 +65,7 @@ try:
         def fallback():
             l = lab(); pg.evaluate("window._ex = []; Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.reject(new Error('no focus')) }, configurable: true }); document.execCommand = c => (window._ex.push([c, document.activeElement.tagName]), true)")
             pg.mouse.click(l["x"], l["y"]); wait_for_js(pg, "!!document.querySelector('.areacopied.show')")
-            assert ["copy", "TEXTAREA"] in pg.evaluate("window._ex") and pg.inner_text(".areacopied") == "Copiato!" and not pg.evaluate("document.querySelector('.areacopied').classList.contains('bad')")
+            assert ["copy", "TEXTAREA"] in pg.evaluate("window._ex") and pg.inner_text(".areacopied") == pg.evaluate("I18N.t('int.copy.done')") and not pg.evaluate("document.querySelector('.areacopied').classList.contains('bad')")
             assert pg.evaluate("document.querySelectorAll('textarea[aria-hidden=true][readonly]').length") == 0, "the hidden textarea is removed"
             wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)
             back = pg.evaluate("""(async () => { const i = document.createElement('input'); document.body.appendChild(i); i.focus(); await AREACOPY.put('t', 100, 100);
@@ -73,7 +73,7 @@ try:
             assert back == [True, 0], ("the focus goes back to the previous element and the textarea is gone", back)
             wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)
             pg.evaluate("document.execCommand = () => false"); pg.mouse.click(l["x"], l["y"]); wait_for_js(pg, "document.querySelector('.areacopied.show.bad')")
-            assert pg.inner_text(".areacopied") != "Copiato!", "a short error, not the success text"
+            assert pg.inner_text(".areacopied") != pg.evaluate("I18N.t('int.copy.done')"), "a short error, not the success text"
             assert pg.evaluate("document.querySelectorAll('textarea[aria-hidden=true][readonly]').length") == 0
             wait_for_js(pg, "!document.querySelector('.areacopied.show')", 2000)
             pg.evaluate("delete navigator.clipboard; delete document.execCommand")      # the real clipboard and execCommand again
