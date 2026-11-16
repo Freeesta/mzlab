@@ -446,14 +446,6 @@ document.addEventListener("keydown",e=>{if(e.key!=="Escape"||e.defaultPrevented|
   if(a&&a!==document.body&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return;if(document.querySelector("dialog[open],#colpop,#fpop,#ctx:not([hidden])"))return;e.preventDefault();backToWork()});
 // New session: QQRESET.ask (reset.js) asks once, then clears everything the app keeps in this browser and reloads
 $("#newrun").onclick=()=>QQRESET.ask();
-// "m/z" is always written in italics: any text node that contains it is split and the symbol wrapped in <i> (not inside inputs, options, scripts or an existing <i>)
-(function(){const SKIP=/^(SCRIPT|STYLE|OPTION|TEXTAREA|INPUT|CANVAS|TITLE|SELECT)$/,RX=/(m\/z|MS2)/;
- // m/z always in italics and MS2 with a real superscript (never the Unicode characters); text nodes only: titles, options and file names keep the plain "MS2"
- function fix(/** @type {Node} */ root){const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>RX.test(/** @type {string} */ (n.nodeValue))&&n.parentElement&&!SKIP.test(n.parentElement.tagName)&&!(n.parentElement.tagName==="I"&&n.nodeValue==="m/z")&&!(n.parentElement.tagName==="SUP")?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT});
-  const L=[];while(w.nextNode())L.push(w.currentNode);
-  for(const n of /** @type {any[]} */ (L)){const f=document.createDocumentFragment();n.nodeValue.split(/(m\/z|MS2)/).forEach((/** @type {string} */ t)=>{if(t==="m/z"){const e=document.createElement("i");e.textContent="m/z";f.appendChild(e)}else if(t==="MS2"){f.appendChild(document.createTextNode("MS"));const e=document.createElement("sup");e.textContent="2";f.appendChild(e)}else if(t)f.appendChild(document.createTextNode(t))});n.replaceWith(f)}}
- let busy=false;new MutationObserver(ms=>{if(busy)return;busy=true;try{for(const m of ms){if(m.type==="characterData"){if(m.target.parentElement)fix(m.target.parentElement)}else m.addedNodes.forEach(a=>{if(a.nodeType===1)fix(a);else if(a.nodeType===3&&a.parentElement)fix(a.parentElement)})}}finally{busy=false}}).observe(document.body,{childList:true,subtree:true,characterData:true});
- fix(document.body)})();
 document.querySelectorAll("[data-ic]").forEach(e=>{e.innerHTML=QICON.get(e.dataset.ic,16);
   // the header icons sit next to their text label (the icon names are Italian)
   if(e.closest("header"))e.querySelectorAll("svg").forEach((/** @type {Element} */ v)=>{v.removeAttribute("aria-label");v.removeAttribute("role");v.setAttribute("aria-hidden","true")})});
