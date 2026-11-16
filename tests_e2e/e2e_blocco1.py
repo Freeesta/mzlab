@@ -53,14 +53,14 @@ try:
             for fr in (0.4, 0.6):
                 b = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();return [q.left+p._a.X(p._a.full[0]+(p._a.full[1]-p._a.full[0])*{fr}),q.top+q.height*0.4]}})()")
                 pg.mouse.dblclick(b[0], b[1]); frames(pg, 2)
-            wait_for_js(pg, "(()=>{const s=E.panels.filter(p=>p.type==='spec'&&p.tab==='full');return s.length>=2&&s.every(p=>((p.el.querySelector('.ppair.fol')?.textContent||'').includes('←'))||p.el.querySelector('.rtl').textContent.startsWith('fermo a '))})()")
+            wait_for_js(pg, "(()=>{const s=E.panels.filter(p=>p.type==='spec'&&p.tab==='full');return s.length>=2&&s.every(p=>((p.el.querySelector('.ppair.fol')?.textContent||'').includes('←'))||p.el.querySelector('.rtl').textContent.startsWith('held at '))})()")
             info = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab==='full').map(p=>[!!p.link,((p.el.querySelector('.ppair.fol')?.textContent||'').includes('←')),p.el.querySelector('.rtl').textContent])"); print(info)
             assert sum(1 for i in info if i[1]) == 1 and sum(1 for i in info if i[0]) == 1, info
-            assert all(i[2].startswith("fermo a ") for i in info if not i[1]), info
+            assert all(i[2].startswith("held at ") for i in info if not i[1]), info
             # a spectrum linked by hand to the same chromatogram (an old notebook): only the newest stays live
             pg.evaluate(f"(()=>{{const c={CH},s=E.panels.filter(p=>p.type==='spec'&&p.tab==='full');s.forEach(x=>x.link=c.id);s.forEach(ctl)}})()")
             info = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab==='full').map(p=>((p.el.querySelector('.ppair.fol')?.textContent||'').includes('←')))"); assert sum(info) == 1, info
-        step("1.1: one live spectrum per chromatogram, the others 'fermo a RT'", live)
+        step("1.1: one live spectrum per chromatogram, the others 'held at RT'", live)
         def zoom_first():
             pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); frames(pg, 2)
             its = ctx_items(*pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect();return [q.left+q.width/2,q.top+q.height*0.5]}})()")); assert "Reset the zoom" not in its, its      # no zoom: not shown
@@ -86,7 +86,7 @@ try:
         step("1.6: grey dashed line, hidden out of the zoom, back in view", annot)
         def rt2():
             c = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();p.el.scrollIntoView({{block:'center'}});return {{x:q.left+p._a.X(14.3),y:q.top+q.height/2}}}})()")
-            pg.mouse.click(c["x"], c["y"]); frames(pg, 3); pg.keyboard.press("ArrowRight"); LIVE = "[...document.querySelectorAll('.pnl.spec .rtl')].map(e => e.textContent).filter(t => !t.startsWith('fermo a'))[0]"      # the pinned spectra read «fermo a RT», the order of the panels is not fixed
+            pg.mouse.click(c["x"], c["y"]); frames(pg, 3); pg.keyboard.press("ArrowRight"); LIVE = "[...document.querySelectorAll('.pnl.spec .rtl')].map(e => e.textContent).filter(t => !t.startsWith('held at'))[0]"      # the pinned spectra read «held at RT», the order of the panels is not fixed
             wait_for_js(pg, r"/^\d+\.\d{2} min/.test(" + LIVE + ")")
             t = pg.evaluate(LIVE); import re; assert re.search(r"^\d+\.\d{2} min", t) and not re.search(r"^\d+\.\d{3}", t), t
         step("1.7: RT with 2 decimals", rt2)
