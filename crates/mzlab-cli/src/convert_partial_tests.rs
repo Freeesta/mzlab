@@ -136,3 +136,6 @@ mod centroid_counts;
 
 #[path = "convert_isolation_tests.rs"]
 mod isolation;
+
+#[path = "convert_wiff_cut_tests.rs"]
+mod wiff_cut;

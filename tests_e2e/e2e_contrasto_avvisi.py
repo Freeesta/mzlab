@@ -27,8 +27,8 @@ r = Run(port=8868, wd="/tmp/wd_avvisi")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.wait_for_selector("text=Carica dati")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.wait_for_selector("text=Load data")
+        pg.click("text=Load data"); ready(pg)
         if AXE: pg.add_script_tag(path=AXE)
         for theme in ("light", "dark"):
             pg.evaluate(f"document.documentElement.setAttribute('data-theme','{theme}')")

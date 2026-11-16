@@ -1,11 +1,11 @@
 {
-  "og.failed": "{message} = testo dell'errore.",
-  "og.xlsx.prefix": "Nome del file scaricato: origine_<mz>_da_<mz>; solo lettere minuscole senza accento.",
-  "og.heavier": "Cella «Δm dal candidato»; {dm} = differenza di massa.",
-  "og.lighter": "Cella «Δm dal candidato»; {dm} = differenza di massa.",
-  "og.leg.co": "Legenda del grafico dell'origine; {mz} = m/z di un ione co-eluente scelto.",
-  "og.leg.ion": "Legenda del grafico dell'origine; {mz} = m/z dello ione studiato.",
-  "og.leg.par": "Legenda del grafico dell'origine; {mz} = m/z del progenitore.",
-  "og.lossHint": "Suggerimento su una riga della tabella; {dm} = differenza di massa dal candidato, {lost} = stessa differenza arrotondata.",
-  "og.waitN": "Contatore di secondi durante il calcolo; {s} = secondi trascorsi."
+  "og.failed": "{message} = error text.",
+  "og.xlsx.prefix": "Name of the downloaded file: origine_<mz>_da_<mz>; lowercase letters only, no accents.",
+  "og.heavier": "«Δm from the candidate» cell; {dm} = mass difference.",
+  "og.lighter": "«Δm from the candidate» cell; {dm} = mass difference.",
+  "og.leg.co": "Legend of the origin plot; {mz} = m/z of a chosen co-eluting ion.",
+  "og.leg.ion": "Legend of the origin plot; {mz} = m/z of the ion studied.",
+  "og.leg.par": "Legend of the origin plot; {mz} = m/z of the parent.",
+  "og.lossHint": "Tooltip on a table row; {dm} = mass difference from the candidate, {lost} = same difference rounded.",
+  "og.waitN": "Seconds counter during the computation; {s} = seconds elapsed."
 }

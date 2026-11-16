@@ -10,7 +10,7 @@ OUT = "(s=>{const e=document.querySelector(s), c=getComputedStyle(e);return {st:
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(800); pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(800); pg.click("text=Load data"); ready(pg)
         def mouse():
             for s in ("header .hq", "#fs-btn", "#tb-search"):
                 if not pg.locator(s).count() or not pg.is_visible(s): continue

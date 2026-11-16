@@ -48,10 +48,10 @@ SOURCES = [
      "doi": "10.5281/zenodo.15741861", "url": "https://doi.org/10.5281/zenodo.15741861", "istituzione": "NORMAN Network",
      "files": [("susdat_2025-06-03-092022.csv", "8b8c4b43e900b752c2e7ba0aa7adb3454617205034f9da5baffdf41250decda9", _zen("15741861", "susdat_2025-06-03-092022.csv"))]},
     {"id": "pubchemlite", "nome": "PubChemLite for Exposomics", "versione": "3.3.0 (25/09/2026)", "licenza": "CC-BY-4.0",
-     "doi": "10.5281/zenodo.22953038", "url": "https://doi.org/10.5281/zenodo.22953038", "istituzione": "Università del Lussemburgo (LCSB)",
+     "doi": "10.5281/zenodo.22953038", "url": "https://doi.org/10.5281/zenodo.22953038", "istituzione": "University of Luxembourg (LCSB)",
      "files": [("PubChemLite_exposomics_20260925.csv", "6a258459e1ccf29a5d08e82fcf5240a2fc8afbabe5ba9c678e39aa0801dd89cd", _zen("22953038", "PubChemLite_exposomics_20260925.csv"))]},
     {"id": "transpubchem", "nome": "Transformations in PubChem", "versione": "PubChemTrans-0.2.3 (21/03/2026)", "licenza": "CC-BY-4.0",
-     "doi": "10.5281/zenodo.19150892", "url": "https://doi.org/10.5281/zenodo.19150892", "istituzione": "Università del Lussemburgo (LCSB), NCBI/NLM/NIH",
+     "doi": "10.5281/zenodo.19150892", "url": "https://doi.org/10.5281/zenodo.19150892", "istituzione": "University of Luxembourg (LCSB), NCBI/NLM/NIH",
      "files": [("PubChem_all_transformations.csv", "42817e82e095890ba39287c2548b63a2d11c98e4947efc51f97b8b4928b99f3d", _zen("19150892", "PubChem_all_transformations.csv")),
                ("Transformations_CID_Info_all.csv", "9b49ee33eb01bf59317faf3c7182ff1aa68aaa03b12baee15d3683194d721431", _zen("19150892", "Transformations_CID_Info_all.csv"))]},
 ]
@@ -251,8 +251,8 @@ def genera(fonti: list[dict], folder: Path, scarica: bool = True) -> bytes:
         streams.append((s["id"], it))
     rows, stats = merge(streams)
     man = {"formato": FORMAT, "righe": len(rows),
-           "attribuzione": "Indice dei sospetti costruito da NORMAN SusDat (NORMAN Network), PubChemLite for Exposomics e Transformations in PubChem "
-                           "(Università del Lussemburgo e NCBI/NLM/NIH), tutti CC BY 4.0; i DOI sono nelle fonti.",
+           "attribuzione": "Suspect index built from NORMAN SusDat (NORMAN Network), PubChemLite for Exposomics and Transformations in PubChem "
+                           "(University of Luxembourg and NCBI/NLM/NIH), all CC BY 4.0; the DOIs are in the sources.",
            "fonti": [{"id": s["id"], "nome": s["nome"], "versione": s["versione"], "licenza": s["licenza"], "doi": s["doi"], "url": s["url"],
                       "istituzione": s["istituzione"], "bit": SOURCE_BITS[s["id"]], "sha256": {n: h for n, h, _ in s["files"]}, **stats[s["id"]]} for s in fonti]}
     return write_mzsus(rows, man)

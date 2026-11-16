@@ -292,7 +292,7 @@ function reportLoad(/** @type {CaricaRep} */ rep){
     rep.unopen.forEach(x=>{(by[x.label+x.st]=by[x.label+x.st]||{x,n:0}).n++;conv.push(x.ext)});
     for(const {x,n} of Object.values(by))L.push(`<p><b>${T(x.st==="read"?(n===1?"unopen.known.conv.one":"unopen.known.conv"):(n===1?"unopen.known.no.one":"unopen.known.no"),{n,label:esc(x.label)})}</b></p>`);
     L.push(`<details class="unopen-names"><summary>${T("unopen.names")}</summary><ul>${names.slice(0,5).map(x=>`<li>${esc(x)}</li>`).join("")}${names.length>5?`<li class="muted">${T("unopen.more",{n:names.length-5})}</li>`:""}</ul></details>`)}
-  if(rep.other.length)L.push(`<p>${T("unopen.other",{n:rep.other.length,names:namesCut(rep.other,3)})}</p>`);
+  if(rep.other.length)L.push(`<p>${T(rep.other.length===1?"unopen.other.one":"unopen.other",{n:rep.other.length,names:namesCut(rep.other,3)})}</p>`);
   const DG=/** @type {unknown[]} */ ([]);
   if(rep.quota&&rep.quota.left.length)L.push(QUOTALOTTO.nota(rep,esc));
   for(const [msg,names] of Object.entries(rep.errs)){const d=(rep.diag||{})[msg],why=d&&d.causa!=="unknown"?` ${I18N.t(`diag.cause.${d.causa}`)}`:"";if(d)DG.push(d);

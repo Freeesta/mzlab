@@ -1,5 +1,5 @@
 """Periodic table: hovering any of the 118 elements never moves or resizes the grid, the info box or the text beside it
-(constant size of the detail area). Light layout at narrow and wide widths, Italian and English."""
+(constant size of the detail area). Light layout at narrow and wide widths."""
 # covers: mzlab/web/tavola-periodica.js, mzlab/web/tables.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -14,11 +14,9 @@ r = Run(port=8981, wd="/tmp/wd_tavola_fissa")
 try:
     with sync_playwright() as p:
         pg = r.page(p); ready(pg)
-        def run(lang, w, h):
+        def run(w, h):
             pg.set_viewport_size({"width": w, "height": h})
             pg.evaluate(f"document.querySelector('#refdlg') && document.querySelector('#refdlg').close()")
-            if pg.evaluate("I18N.lang") != lang: pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}"); ready(pg)
-            assert pg.evaluate("I18N.lang") == lang, lang
             pg.evaluate("document.querySelector('#np-pt').click()"); wait_for_js(pg, "document.querySelectorAll('#refbody .pt-c').length >= 118")
             syms = pg.evaluate("[...document.querySelectorAll('#refbody .pt-c')].map(c=>c.dataset.s)")
             assert len(syms) >= 118, len(syms)
@@ -28,10 +26,9 @@ try:
             for s in syms:
                 pg.locator(f'#refbody .pt-c[data-s="{s}"]').hover(); b = pg.evaluate(BOXES)
                 if b != base: bad.append((s, {k: (base[k], b[k]) for k in b if b[k] != base[k]}))
-            assert not bad, (lang, w, bad[:3], len(bad))
-        for lang in ("it", "en"):
-            for w, h in ((700, 800), (1024, 768), (1440, 900)):
-                step(f"{lang} {w}px: 118 elements keep the layout", lambda lang=lang, w=w, h=h: run(lang, w, h))
+            assert not bad, (w, bad[:3], len(bad))
+        for w, h in ((700, 800), (1024, 768), (1440, 900)):
+            step(f"{w}px: 118 elements keep the layout", lambda w=w, h=h: run(w, h))
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

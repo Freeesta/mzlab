@@ -105,7 +105,7 @@ try:
             finally: pg.evaluate(UNDO)
             assert any(e["passo"] == "uv" and e["stato"] in ("error", "refused") for e in r["ev"]), [e for e in r["ev"] if e["passo"] == "uv"][-3:]
             title = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('uv')).title")
-            assert ("Reading this mzML file whole would need about" in title or "Leggere per intero questo file mzML" in title) and "8 MB" in title, title
+            assert "Reading this mzML file whole would need about" in title and "8 MB" in title, title
         step("past the budget and the high level, the mzML file is refused before it is read, with the numbers of the read", read_refused)
         step("no request was left unserved by the engine", lambda: (lambda m: m == [] or (_ for _ in ()).throw(AssertionError(m)))(pg.evaluate("window.MZLAB_LR_MISS || []")))
         b.close()

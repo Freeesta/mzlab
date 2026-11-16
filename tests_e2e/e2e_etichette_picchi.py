@@ -31,7 +31,7 @@ r = Run(port=8877, wd="/tmp/wd_etichette_picchi")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [str(MS)]); pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [str(MS)]); pg.click("text=Load data"); ready(pg)
         def tic():
             txt = [l[0] for l in labels(pg, 1)]
             big = [t for t in txt if t.startswith("14.3")]
@@ -79,7 +79,7 @@ try:
         def spec_label_tip():
             wait_for_js(pg, "(E.panels.find(q => q.type === 'spec')?._a?.lbls || []).some(l => l.m != null)")
             tips = pg.evaluate("E.panels.find(q => q.type === 'spec')._a.lbls.filter(l => l.m != null).map(l => l.tip)")
-            assert tips and all("m/z" in t and "intensit" in t and "Right-click" not in t and "Tasto destro" not in t for t in tips), tips[:2]
+            assert tips and all("m/z" in t and "intensit" in t and "Right-click" not in t for t in tips), tips[:2]
         step("the label of a spectrum peak shows m/z and intensity, no right-click hint", spec_label_tip)
         def click_peak_strip():
             o = at(0); pg.evaluate(f"{CH}.cur = null"); pg.mouse.click(o["x"] + 6, (o["y"] + o["ay"]) / 2 if o["ay"] > o["y"] + 20 else o["y"]); frames(pg, 3)
@@ -95,7 +95,7 @@ try:
         step("a right click a little beside the label opens the menu of the RT of the peak", ctx_label)
         def hover_label():
             o = at(0); pg.mouse.move(o["x"] + 3, o["y"]); frames(pg, 3)
-            t = pg.evaluate(f"{CH}.tip.innerText"); assert "intensit" in t and "Right-click" not in t and "Tasto destro" not in t and "Peak at" not in t and "Picco a" not in t, t
+            t = pg.evaluate(f"{CH}.tip.innerText"); assert "intensit" in t and "Right-click" not in t and "Peak at" not in t, t
             assert pg.evaluate(f"{CH}.cv.style.cursor") == "pointer"
         step("hovering the label shows the pointer and the intensity, no right-click hint", hover_label)
         def axe():
@@ -107,7 +107,7 @@ try:
     try:
         with sync_playwright() as p:
             pg = r2.page(p)
-            pg.set_input_files("#pick", [str(D / "pda.wiff"), str(D / "pda.wiff.scan")]); pg.click("text=Carica dati"); ready(pg)
+            pg.set_input_files("#pick", [str(D / "pda.wiff"), str(D / "pda.wiff.scan")]); pg.click("text=Load data"); ready(pg)
             def pda():
                 pick_kind(pg, "pda", CH)
                 wait_for_js(pg, f"{CH}.kind==='pda' && {CH}._a")
@@ -124,7 +124,7 @@ try:
         with sync_playwright() as p:
             pg = r3.page(p)
             M = D / "mrm.mzML"; ds.mrm(M, 1.0, np.random.default_rng(3), 1)
-            pg.set_input_files("#pick", [str(M)]); pg.click("text=Carica dati"); ready(pg)
+            pg.set_input_files("#pick", [str(M)]); pg.click("text=Load data"); ready(pg)
             MP = "E.panels.find(q=>q.type==='mrm')"; ML = f"({MP}._a.lbls || []).filter(l => l.etpk)"
             def mrm_off():
                 wait_for_js(pg, f"{MP} && {MP}._a && {MP}._a.sr.length > 0"); frames(pg, 3)

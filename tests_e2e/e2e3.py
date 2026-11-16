@@ -23,8 +23,8 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz(f) for f in FILES])
-        pg.wait_for_selector("text=Carica dati")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.wait_for_selector("text=Load data")
+        pg.click("text=Load data"); ready(pg)
         pg.screenshot(path=SH + "10_opened.png")
         # find the TIC apex of the first full-scan file
         info = pg.evaluate("""()=>{const p=E.panels[0];const s=p._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});return {rt:s.x[m],n:p._a.sr.length}}""")
@@ -42,7 +42,7 @@ try:
             print("spec top m/z", top)
             c = pt(pg, 1, top["mz"])
             pg.mouse.click(c["px"], c["py"], button="right"); wait_for_js(pg, "document.querySelectorAll('#ctx div').length>0")
-            click_menu(pg, "Estrai l'XIC"); wait_for_js(pg, "E.panels.some(p=>p.type==='xic' && p._a)")      # the XIC appears at once, no window
+            click_menu(pg, "Extract the XIC"); wait_for_js(pg, "E.panels.some(p=>p.type==='xic' && p._a)")      # the XIC appears at once, no window
             assert pg.evaluate("E.panels.some(p=>p.type==='xic')")
         step("spectrum right-click -> XIC panel", xic_from_spec)
         pg.screenshot(path=SH + "12_xic.png")
@@ -61,7 +61,7 @@ try:
             rt2 = pg.evaluate(f"""()=>{{const s=E.panels[{xi}]._a.sr[0];let m=0;s.ys.forEach((v,i)=>{{if(v>s.ys[m])m=i}});return s.x[m]}}""")
             c = pt(pg, xi, rt2)
             pg.mouse.click(c["px"], c["py"], button="right"); wait_for_js(pg, "document.querySelectorAll('#ctx div').length>0")
-            click_menu(pg, "Integra il picco"); wait_for_js(pg, f"E.panels[{xi}].ints.length>=1")
+            click_menu(pg, "Integrate the peak"); wait_for_js(pg, f"E.panels[{xi}].ints.length>=1")
             n = pg.evaluate(f"E.panels[{xi}].ints.length"); assert n >= 1, n
             # drag a bar edge
             it = pg.evaluate(f"E.panels[{xi}].ints[0]")
@@ -77,7 +77,7 @@ try:
         step("integration table", ints_tbl)
         def method():
             pg.click("#np-method"); ready(pg)
-            txt = pg.inner_text("#bigdlg"); assert "Metodo" in txt or len(txt) > 50
+            txt = pg.inner_text("#bigdlg"); assert "Method" in txt or len(txt) > 50
             pg.screenshot(path=SH + "15_method_full.png"); pg.click("#bigx")
             pg.evaluate("E.cur=1;E.browse=true;renderFileList();renderNav()")   # MRM file
             pg.click("#np-method"); ready(pg)
@@ -85,7 +85,7 @@ try:
             pg.evaluate("E.browse=false;E.cur=0;renderFileList();renderNav();redrawAll()")
         step("method popup (full + mrm)", method)
         def nav():
-            pg.evaluate("E.browse=true;renderNav();redrawAll()"); wait_for_js(pg, "!document.querySelector('#fnext').disabled")      # the file arrows work with "Solo il file selezionato" (with "Tutti sovrapposti" they are disabled)
+            pg.evaluate("E.browse=true;renderNav();redrawAll()"); wait_for_js(pg, "!document.querySelector('#fnext').disabled")      # the file arrows work with "Selected file only" (with "All overlaid" they are disabled)
             pg.click("#fnext"); ready(pg); c1 = pg.evaluate("E.cur"); pg.click("#fnext"); ready(pg)
             pg.keyboard.press("ArrowLeft"); ready(pg); frames(pg, 2)
             assert pg.evaluate("E.panels.some(p=>p.type==='xic'&&p.traces.length>=1)")
@@ -97,8 +97,8 @@ try:
         pg.screenshot(path=SH + "20_restored.png")
         print("after reload", pg.evaluate("({f:E.files.length,p:E.panels.map(p=>p.type+':'+(p.traces||[]).length+':'+p.ints.length)})"))
         wait_for_js(pg, "document.querySelectorAll('#nav button[data-v=tpmine], #nav button[data-v=flow]').length === 2", 60000)
-        step("tabs Dati, Disegno, Tabui and Flow at first load", lambda: (lambda n: None if sorted(n) == sorted(["data", "draw", "tpmine", "flow"]) else (_ for _ in ()).throw(AssertionError(n)))(pg.evaluate("[...document.querySelectorAll('#nav button')].map(b=>b.dataset.v)")))
-        pg.click("text=Disegno"); wait_for_js(pg, "!document.querySelector('#v-draw').hidden"); pg.screenshot(path=SH + "22_draw.png")
+        step("tabs Data, Drawing, Tabui and Flow at first load", lambda: (lambda n: None if sorted(n) == sorted(["data", "draw", "tpmine", "flow"]) else (_ for _ in ()).throw(AssertionError(n)))(pg.evaluate("[...document.querySelectorAll('#nav button')].map(b=>b.dataset.v)")))
+        pg.click("text=Drawing"); wait_for_js(pg, "!document.querySelector('#v-draw').hidden"); pg.screenshot(path=SH + "22_draw.png")
         b = None
 finally:
     r.close(); r.report()

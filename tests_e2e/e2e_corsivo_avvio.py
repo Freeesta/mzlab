@@ -1,9 +1,9 @@
 """Marked-up labels are drawn once in their final form after a FULL reset (QQRESET.run("all")): the reset reloads the page twice (?riparti=1 without
 the service worker, then the one cross-origin-isolation reload) and every frame of every load is recorded from the first one: the «m/z» of
-«+ Mappa RT-m/z» must be italic in the first painted frame and never change (it was upright until shell.js marked it, ~0.3-0.5 s later, on
+«+ RT-m/z map» must be italic in the first painted frame and never change (it was upright until shell.js marked it, ~0.3-0.5 s later, on
 each load: upright, italic, upright, italic), the «MS2» of the demo button keeps its superscript from the first apply on, no node is
-rewritten with the same text, and nothing shifts (CLS 0). The same in English (the catalog text replaces the Italian of the page).
-Persistent Chromium profile (the service worker and the isolation reload are real). Rule: docs/agenti/lingue.md «Testi con markup»."""
+rewritten with the same text, and nothing shifts (CLS 0).
+Persistent Chromium profile (the service worker and the isolation reload are real). Rule: docs/agenti/lingue.md «Marked-up texts»."""
 # covers: mzlab/web/i18n.js, mzlab/web/reset.js
 import sys, os, json, tempfile, time; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pathlib import Path
@@ -53,7 +53,7 @@ def check(recs, label):
 r = Run(port=8830 + 213, wd="/tmp/wd_corsivo"); log = []
 try:
     with sync_playwright() as p:
-        kw = dict(viewport={"width": 1400, "height": 900}, locale="it-IT", reduced_motion="reduce")
+        kw = dict(viewport={"width": 1400, "height": 900}, locale="en-US", reduced_motion="reduce")
         prof = tempfile.mkdtemp(prefix="corsivo_prof_")
         try: r.b = p.chromium.launch_persistent_context(prof, **kw)
         except Exception:          # a Playwright without its own headless shell (the cloud image): the Chromium that is installed
@@ -86,15 +86,9 @@ try:
             L = loads(log, t)
             assert L, "no load after the full reset"
             texts = [check(rec, f"load {i + 1} after the reset") for i, rec in enumerate(L)]
-            assert texts[-1] and all(x in (None, "+ Mappa RT-m/z") for x in texts), texts
+            assert texts[-1] and all(x in (None, "+ RT-m/z map") for x in texts), texts
         step("full reset, every load: m/z italic in the first painted frame and never upright, MS2 superscript, no same-text write, CLS 0", full_reset)
 
-        def english():
-            t = act("I18N.set('en')")
-            L = loads(log, t); assert L, "no load after the language change"
-            texts = [check(rec, f"English load {i + 1}") for i, rec in enumerate(L)]
-            assert texts[-1] and texts[-1] != "+ Mappa RT-m/z" and "m/z" in texts[-1], texts
-        step("English: the catalog text replaces the Italian with m/z italic from the first painted frame, CLS 0", english)
         r.b.close()
 finally:
     r.close()
