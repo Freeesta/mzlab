@@ -34,7 +34,7 @@ jobs:
           fetch-depth: 2   # tools/ci_base.py: a pull request diffs its merge commit with its first parent
       - id: diff
         env:
-          BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}   # a push to main runs everything: the run of the previous commit may have been cancelled, so its diff cannot vouch for it
         run: |
           BASE=$(python3 tools/ci_base.py "$BASE")
           if [ -n "$BASE" ] && ! echo "$BASE" | grep -qE '^0+$'; then git fetch --no-tags --depth=1 origin "$BASE" || true; fi

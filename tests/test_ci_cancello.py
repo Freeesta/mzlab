@@ -81,3 +81,56 @@ def test_every_required_workflow_runs_on_push_to_main():
         text = (ROOT / ".github" / "workflows" / wf).read_text(encoding="utf-8")
         on = text[text.index("\non:"):text.index("\npermissions:")]
         assert "  push:\n    branches: [main]\n" in on and "paths" not in on.split("  push:")[1].split("\n  pull_request")[0], wf
+
+
+def test_a_run_cancelled_by_a_newer_push_follows_the_checks_of_the_head_of_main():
+    """A (site change) cancelled by B (docs only, no pages run of its own): A's gate opens when B's checks are green, so A is still published."""
+    a, b = "a" * 40, "b" * 40
+    cancelled = [{"id": i, "path": f".github/workflows/{w}", "conclusion": "cancelled"} for w, i in IDS.items()]
+    new = [{"id": 10 + i, "path": f".github/workflows/{w}", "conclusion": "success"} for w, i in IDS.items()]
+    def jobs_f(run_id):
+        ok = run_id >= 10
+        wf = next(w for w, i in IDS.items() if i == run_id % 10 or i == run_id)
+        return [{"name": n, "status": "completed", "conclusion": "success" if ok else "cancelled"} for n in g.REQUIRED[wf]]
+    code = g.wait(a, runs=lambda s: cancelled if s == a else new, jobs=jobs_f, sleep=lambda _: None, head=lambda: b)
+    assert code == 0
+
+
+def test_a_cancelled_run_with_a_red_or_pending_head():
+    a, b = "a" * 40, "b" * 40
+    cancelled = [{"id": i, "path": f".github/workflows/{w}", "conclusion": "cancelled"} for w, i in IDS.items()]
+    new = [{"id": 10 + i, "path": f".github/workflows/{w}", "conclusion": None} for w, i in IDS.items()]
+    def make(state):
+        def jobs_f(run_id):
+            wf = next(w for w, i in IDS.items() if i == run_id % 10)
+            if run_id < 10:
+                return [{"name": n, "status": "completed", "conclusion": "cancelled"} for n in g.REQUIRED[wf]]
+            return [{"name": n, "status": state(n)[0], "conclusion": state(n)[1]} for n in g.REQUIRED[wf]]
+        return jobs_f
+    red = make(lambda n: ("completed", "failure" if n == "rust-ok" else "success"))
+    assert g.wait(a, runs=lambda s: cancelled if s == a else new, jobs=red, sleep=lambda _: None, head=lambda: b) == 1
+    pending = make(lambda n: ("in_progress", None))
+    assert g.wait(a, runs=lambda s: cancelled if s == a else new, jobs=pending, sleep=lambda _: None, timeout=-1, head=lambda: b) == 1   # still running at the timeout
+
+
+def test_a_run_cancelled_with_no_newer_commit_closes_the_gate():
+    a = "a" * 40
+    cancelled = [{"id": i, "path": f".github/workflows/{w}", "conclusion": "cancelled"} for w, i in IDS.items()]
+    jobs_f = lambda run_id: [{"name": n, "status": "completed", "conclusion": "cancelled"} for n in g.REQUIRED[next(w for w, i in IDS.items() if i == run_id)]]
+    assert g.wait(a, runs=lambda s: cancelled, jobs=jobs_f, sleep=lambda _: None, head=lambda: a) == 1
+
+
+def test_a_push_to_main_never_diffs_against_the_previous_commit():
+    """The previous commit's run may have been cancelled by this push, so its diff cannot vouch for it: rust.yml and sito-rust.yml run everything on a push to main."""
+    for wf in ("rust.yml", "sito-rust.yml"):
+        text = (ROOT / ".github" / "workflows" / wf).read_text(encoding="utf-8")
+        assert "github.event.before" not in text, wf
+
+
+def test_a_job_cancelled_while_its_run_is_still_open_waits_for_the_run_conclusion():
+    """Jobs are cancelled a moment before the run is: that window is pending, not a failed gate; a completed run with the same job is a failure (timeout)."""
+    run_open = [{"id": 1, "path": ".github/workflows/test.yml", "status": "in_progress", "conclusion": None}]
+    run_done = [{**run_open[0], "status": "completed", "conclusion": "failure"}]
+    over = {"javascript": ("completed", "cancelled")}
+    assert g.check("x", lambda _s: run_open, jobs(over=over))[0] is None
+    assert g.check("x", lambda _s: run_done, jobs(over=over))[0].startswith("test.yml fail")
