@@ -783,7 +783,7 @@ function renderFileList() {
   if (E.ugBy && E.ugBy.by !== "custom" && E.ugBy.by !== "flat") carica("gruppi.js").then(() => GRUPPI.follow());
   if (window.GRUPPI) GRUPPI.order(groups); ugArrange(groups);
   if (window.BANCO && BANCO.on() && E.tab === "mrm") groups.sort((a, b) => ["standard", "sample", "blank"].indexOf(a.g) - ["standard", "sample", "blank"].indexOf(b.g));
-  const sub = (/** @type {FileAperto} */ f) => f.type === "sample" ? ((ESP.voce(f.kind) || {}).tempo ? fmtTime(f.time) : "") : (f.type === "blank" ? typeTag(true) : typeTag(false) + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
+  const sub = (/** @type {FileAperto} */ f) => f.type === "sample" ? ((ESP.voce(f.kind) || {}).tempo ? fmtTime(f.time) : timeBadge(f.time)) : (f.type === "blank" ? typeTag(true) : typeTag(false) + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
   const row = (/** @type {FileAperto} */ f) => {
     const hasPr = lrTog() && f.kind === "ms2" && f.precursors && f.precursors.length;
     const prOpen = f._prOpen !== false;

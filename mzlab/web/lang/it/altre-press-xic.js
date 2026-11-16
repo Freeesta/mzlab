@@ -12,6 +12,8 @@ I18N.add("it", {
   "unit.t.h": "h",
   "unit.t.d": "gg",
   "unit.t.s": "s",
+  "files.time.zero": "t0",
+  "files.time.title": "Tempo: {t}",
   "unopen.known.no": "{n} file {label}: formato riconosciuto, non ancora supportato",
   "unopen.known.no.one": "File {label}: formato riconosciuto, non ancora supportato",
   "unopen.known.conv": "{n} file {label}: formato riconosciuto, non si apre nel browser: convertilo in mzML",

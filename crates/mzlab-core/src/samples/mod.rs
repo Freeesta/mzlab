@@ -23,6 +23,7 @@ mod positions;
 mod regex;
 mod relink;
 mod sample_id;
+mod time_token;
 mod validate;
 mod validate3;
 mod variable_classes;

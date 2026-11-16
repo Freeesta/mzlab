@@ -1,4 +1,5 @@
 {
+  "files.time.title": "Tooltip and aria-label of the small time tag («3h») beside a file name in the file list; {t} = the time point with its unit, e.g. «3 h».",
   "storia.tolto": "Avviso 6 s dopo aver tolto un file, chiuso un pannello o svuotato le marcature, con il pulsante Annulla; {what} = nome del file, del pannello o «marcature».",
   "mrm.capNotice": "Avviso nel pannello MRM quando i file sono più del tetto mostrato all'apertura; {n} = file mostrati, {t} = file MRM totali.",
   "mrm.showAllAria": "Etichetta del pulsante «Mostra tutti i file» del pannello MRM; {n} = numero di file MRM.",
