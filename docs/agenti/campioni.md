@@ -36,6 +36,7 @@ Un solo modello Rust dei ruoli e dei tempi dei file di una serie, per la vista D
 
 ## Binding
 - Una funzione per motore: `campioni(op, json)` in `mzlab-rotte-wasm/src/lib.rs` (vista Dati) e in `mzlab-feat-table-wasm` (mzFinder), con `op` ∈ `proponi` e `proponi3` (`{"files":[{"name","sha256","kind"}]}`, la seconda dà un `campioni/3` con matrice e gruppo), `valida`, `per_tp`, `canonico` e `digest` (un `campioni/2`: JSON canonico e SHA-256), `da_legacy`. Errori JSON `{error_key, params}` (`error.badCampioni`).
+- mzFinder collega solo `route_finder`: `proponi`, `valida`, `per_tp`, `canonico`, `digest`, `da_legacy`; `proponi_spiegato`, `proponi3`, `ricollega`, `migra` il sito li serve da `rotte` e l'app da `finder/campioni` con `route` (stessi byte: `route_finder_same_bytes_as_route`; guardia `test_finder_ops_are_in_route_finder`).
 - `mzlab-core/src/project.rs` resta per la parità col Python del programma principale.
 
 ## Pannello Pipeline di mzFinder (`TP_Mine/files/finder-ruoli.js`, `TP_Mine/js/34_pipeline_run.js`)

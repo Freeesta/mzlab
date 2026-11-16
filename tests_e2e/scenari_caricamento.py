@@ -232,6 +232,7 @@ def arms_of(name):
         "uno": {"uno": dict(n=1, **warm), "dieci": dict(n=10, **warm), "raw-uno": dict(n=1, raw=1, **warm), "raw-dieci": dict(n=10, raw=1, **warm)},
         "rotte": {"base": dict(n=1, **cold), "rotte+3s": dict(n=1, hold=("rotte/mzlab_rotte_wasm_bg.wasm",), **cold)},
         "thermo": {"base": dict(n=1, raw=1, **cold), "thermo+3s": dict(n=1, raw=1, hold=("thermo/mzlab_lettori_wasm_bg.wasm",), **cold)},
+        "raw-subito": {"raw+0": dict(n=1, raw=1, wait=0, **cold)},
         "subito": {"cold+0": dict(n=1, wait=0, **cold), "cold+20s": dict(n=1, wait=20000, **cold), "warm+0": dict(n=1, wait=0, **warm), "warm+20s": dict(n=1, wait=20000, **warm)},
         "interazione": {"dieci": dict(n=10, **warm), "dieci+gesti": dict(n=10, act=1, **warm), "uno+gesti": dict(n=1, act=1, **warm)},
         "memoria": {"dieci+mem": dict(n=10, mem=1, **warm)},

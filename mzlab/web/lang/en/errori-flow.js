@@ -34,6 +34,7 @@ I18N.add("en", {
   "err.flow.insilico.suspects": "The suspect list is empty: load a list with at least one entry.",
   "err.flow.instance": "A step of the flow is not valid: “{field}” is missing.",
   "err.flow.instance.duplicate": "Two steps have the same name: rename one.",
+  "err.flow.instance.id": "The step name “{instance}” is not valid: use only letters, digits, “_”, “.” and “-”, not starting with “.” (at most 128).",
   "err.flow.json": "The flow file is not valid JSON.",
   "err.flow.level.profile": "Unknown level profile: {profile}.",
   "err.flow.level.standards": "The standards table has no column “{column}”.",

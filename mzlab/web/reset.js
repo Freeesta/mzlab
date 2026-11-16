@@ -9,7 +9,7 @@ const RESET = (function () {
   const wait = (p, ms = 4000) => Promise.race([p, new Promise(r => setTimeout(r, ms))]).catch(() => {});
   // what the variant "files" leaves in OPFS: the spectral libraries the user saved
   const KEEP_OPFS = ["librerie"];
-  const OPFS_RETRY_MS = 10000;
+  const OPFS_MS = 10000;
   const KEEP_IDB = ["mzlab-libs", "mzlab-libdir"];                    // ... and their databases
   const KNOWN_IDB = [NOMI.DB, NOMI.DB_OLD, "mzlab-libs", "mzlab-libdir"];
   // "cold" (the desktop app, first page of a new run): the files and the session like "files", plus the working state kept in localStorage (map, peak and list
@@ -20,18 +20,25 @@ const RESET = (function () {
   const MODES = { 1: "all", all: "all", files: "files", cold: "cold" };
   const modeOf = q => MODES[q] || null;
 
+  // one deadline for the whole OPFS step; the folders go in parallel and each one ends in rep.opfs or rep.errors
   async function opfs(mode, rep) {
-    const root = await navigator.storage.getDirectory(), names = [];
-    for await (const [n] of /** @type {any} */ (root).entries()) names.push(n);
-    for (const n of names) {
-      if (mode !== "all" && KEEP_OPFS.includes(n)) continue;
-      // the engine worker of the page we came from may still hold a sync handle for a moment (NoModificationAllowedError): retry, then report as before
-      let e = /** @type {Lanciato | null} */ (null);
-      for (let t = 0; t <= OPFS_RETRY_MS; t += 250) {
-        try { await root.removeEntry(n, { recursive: true }); rep.opfs.push(n); e = null; break; } catch (e_) { e = /** @type {Lanciato} */ (e_); if (!e || e.name !== "NoModificationAllowedError") break; await new Promise(r => setTimeout(r, 250)); }
+    const t0 = performance.now(), limit = /** @type {any} */ (window.QQRESET).opfsMs || OPFS_MS;
+    let root, names = /** @type {string[]} */ ([]);
+    try {
+      root = await navigator.storage.getDirectory();
+      for await (const [n] of /** @type {any} */ (root).entries()) names.push(n);
+    } catch (e_) { rep.errors.push("opfs: " + ((e_ && /** @type {Lanciato} */ (e_).name) || "error")); return; }
+    await Promise.all(names.filter(n => mode === "all" || !KEEP_OPFS.includes(n)).map(async n => {
+      // the engine worker of the page we came from may still hold a sync handle for a moment (NoModificationAllowedError): retry until the deadline
+      for (;;) {
+        try { await root.removeEntry(n, { recursive: true }); rep.opfs.push(n); return; } catch (e_) {
+          const nm = (e_ && /** @type {Lanciato} */ (e_).name) || "error";
+          if (nm !== "NoModificationAllowedError") { rep.errors.push("opfs " + n + ": " + nm); return; }
+        }
+        if (performance.now() - t0 >= limit) { rep.errors.push("opfs " + n + ": timeout"); return; }
+        await new Promise(r => setTimeout(r, 250));
       }
-      if (e) rep.errors.push("opfs " + n + ": " + e.name);
-    }
+    }));
   }
   const delDb = name => new Promise(r => { const q = indexedDB.deleteDatabase(name); q.onsuccess = q.onerror = () => r(true); q.onblocked = () => r(false); });
   async function idb(mode, rep) {
@@ -53,13 +60,18 @@ const RESET = (function () {
   async function caches_(mode, rep) {
     await Promise.all((await caches.keys()).filter(k => mode === "all" || k.startsWith(NOMI.CACHE_BIG) || k.startsWith("qqq-big-")).map(async k => { if (await caches.delete(k)) rep.caches.push(k); }));
   }
+  // safety net a little above the deadline: if opfs() itself hangs (a stuck call), say so
+  async function opfsGuard(mode, rep) {
+    const ms = /** @type {any} */ (window.QQRESET).opfsMs || OPFS_MS;
+    if ((await wait(opfs(mode, rep).then(() => true), ms + 4000)) !== true) rep.errors.push("opfs: timeout");
+  }
   async function wipe(mode = "all") {
     const rep = { mode, opfs: [], idb: [], blocked: [], caches: [], sw: 0, keys: 0, errors: /** @type {string[]} */ ([]) };
     // the engine worker holds sync handles on the files: it must go first
     try { if (window.qqEngineStop) window.qqEngineStop(); } catch (e) { /* no engine */ }
     // OPFS, IndexedDB, caches and the worker registration are independent: they go at the same time, each with its own timeout
     await Promise.all([
-      navigator.storage && /** @type {any} */ (navigator.storage).getDirectory ? wait(opfs(mode, rep), OPFS_RETRY_MS + 4000) : null,
+      navigator.storage && /** @type {any} */ (navigator.storage).getDirectory ? opfsGuard(mode, rep) : null,
       window.indexedDB ? wait(idb(mode, rep), 12000) : null,
       window.caches ? wait(caches_(mode, rep)) : null,
       mode === "all" && navigator.serviceWorker ? wait((async () => { await Promise.all((await navigator.serviceWorker.getRegistrations()).map(async r => { await r.unregister(); rep.sw++; })); })(), 2500) : null,
@@ -82,17 +94,23 @@ const RESET = (function () {
     window.QQRESET.last = rep;
     return rep;
   }
-  // wipe, then load the page again from the network without the ?reset parameter; ?riparti=1 makes the new engine delete saved files itself when a database was blocked; ?ripn=<nonce> tells browser.js that this page follows a reset (see isolateOnce)
+  // what the new page's engine must finish (browser.js → lr.reset): "1" everything (all, cold), "file" what «Files» removes, keeping what it keeps (qqq-db.js RESET_FILES).
+  // «Files» needs it when this page could not: a database blocked by another connection, an OPFS folder still held (a sync handle of an index build, a conversion,
+  // another tab), or the desktop app, whose files and notebook are in the native store (store.rs), out of this page's reach
+  const backstop = (mode, rep) => mode !== "files" ? "1" : rep.blocked.length || rep.errors.some(e => /^opfs\b/.test(e)) || window.MZLAB_DESKTOP ? "file" : "";
+  // wipe, then load the page again from the network without the ?reset parameter; ?riparti (backstop) makes the new engine finish the deletion; ?ripn=<nonce> tells browser.js that this page follows a reset (see isolateOnce)
   async function run(mode, opt = {}) {
     // "files" keeps the notebook (drawing...): its last change is saved first, because from here on the page may not save any more (explore.js nbSave)
     if (mode === "files" && typeof nbSave === "function") await wait(Promise.resolve(nbSave(true)), 3000);
     window.QQ_RESETTING = true;
     const msg = document.getElementById("ldmsg"); if (msg && window.I18N) msg.textContent = I18N.t("reset.busy");
+    // «Files» in the desktop app is the same run: the wipe empties sessionStorage, and without the mark the reloaded page would be a new run (cold: notebook and lists gone)
+    let inRun = false; try { inRun = !!sessionStorage.getItem(RUN_KEY); } catch (e) { /* none */ }
     let rep;
     try { rep = await wipe(mode); } catch (e) { window.QQ_RESETTING = false; throw e; }
-    if (opt.mark) { try { sessionStorage.setItem(RUN_KEY, "1"); } catch (e) { /* none */ } }
+    if (opt.mark || (mode === "files" && inRun)) { try { sessionStorage.setItem(RUN_KEY, "1"); } catch (e) { /* none */ } }
     if (opt.reload === false) return rep;
-    const u = new URL(location.href); if (mode === "all") { u.search = "?riparti=1&ripn=" + Date.now().toString(36); u.hash = ""; } else { u.searchParams.delete("reset"); u.searchParams.delete("riparti"); if (rep.blocked.length || mode !== "files") u.searchParams.set("riparti", "1"); }
+    const u = new URL(location.href); if (mode === "all") { u.search = "?riparti=1&ripn=" + Date.now().toString(36); u.hash = ""; } else { u.searchParams.delete("reset"); u.searchParams.delete("riparti"); const back = backstop(mode, rep); if (back) u.searchParams.set("riparti", back); }
     // the same address (a "#/data" hash and no parameter to drop) would only be a same-page jump: reload for real
     if (u.href === location.href) location.reload(); else location.replace(u.href);
     return rep;
@@ -123,7 +141,7 @@ const RESET = (function () {
     run("cold", { mark: true });
     return true;
   }
-  window.QQRESET = { wipe, run, ask, remind, modeOf, cold, last: null };
+  window.QQRESET = { wipe, run, ask, remind, modeOf, cold, last: null, opfsMs: OPFS_MS };
   window.MZRESET = window.QQRESET;
 
   // ?reset=1 | all | files: acts at once (the engine of browser.js does not start while this runs)

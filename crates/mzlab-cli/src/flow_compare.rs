@@ -168,7 +168,8 @@ fn variant(v: &Value) -> Result<Variant> {
     };
     slice_by(&mut params, |a, b| a.0.cmp(&b.0));
     let label = text("label").unwrap_or_else(|| algorithm.clone());
-    if label.is_empty() || label.contains(',') {
+    // the label becomes part of a step id (`<id>~<label>`), hence a file name in the run folder
+    if label.contains(',') || !mzlab_core::flow::instance_id_ok(&label) {
         return Err(Error::new("err.flow.compare.variants"));
     }
     Ok(Variant {

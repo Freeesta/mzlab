@@ -149,20 +149,26 @@ impl<R: ReadAt> Routes<R> {
     /// `/api/spectra`: single scans `i0..=i1` of a profile file (points merged on the grid, as `Item.scans`). A level of single-precision peaks is
     /// the mzML's (`spectra_profile_exact`: the scans are read from the file, as Python does).
     pub(crate) fn spectra_profile(&mut self, q: &Query) -> Result<Option<String>> {
-        self.spectra_profile_in::<std::fs::File>(q, None)
+        let Some(p) = self.profile_picks(q, false)? else { return Ok(None) };
+        let pts = self.scan_points(p.si, &p.positions)?;
+        Ok(Some(p.json(&pts)))
     }
 
-    /// `spectra_profile` of a level of single-precision peaks: the points of each scan come from the mzML.
+    /// `spectra_profile` of a level of single-precision peaks: the points of each scan come from the mzML. Only the reading of the scans is
+    /// generic over the source: the checks and the JSON have one copy whatever `M`.
     pub(crate) fn spectra_profile_exact<M: Scansioni + ?Sized>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
-        self.spectra_profile_in(q, Some(mzml))
+        let Some(p) = self.profile_picks(q, true)? else { return Ok(None) };
+        let pts = p.picks.iter().map(|&(sid, _)| mzml.spettro(&self.idx.scans[sid as usize])).collect::<Result<Vec<_>>>()?;
+        Ok(Some(p.json(&pts)))
     }
 
-    fn spectra_profile_in<M: Scansioni + ?Sized>(&mut self, q: &Query, mut mzml: Option<&mut M>) -> Result<Option<String>> {
+    /// The scans `i0..=i1` a `/api/spectra` request picks on a profile level, `None` for a request Python answers (`exact`: single-precision peaks).
+    fn profile_picks(&mut self, q: &Query, exact: bool) -> Result<Option<Picks>> {
         let (Some(i0), Some(i1)) = (index(q, "i0"), index(q, "i1")) else { return Ok(None) };
         let level = q.level();
         let bin = q.num("bin")?.unwrap_or(0.1);
         let Some((si, step)) = self.profile_level(level)? else { return Ok(None) };
-        if self.idx.sections[si].f4 != mzml.is_some() {
+        if self.idx.sections[si].f4 != exact {
             return Ok(None);
         }
         let precursor = q.num("prec")?.or(q.num("precursor")?);
@@ -177,21 +183,34 @@ impl<R: ReadAt> Routes<R> {
             let ar = self.idx.arrays(si)?;
             positions.iter().map(|&p| (ar.scan_ids[p], ar.rt[p])).collect()
         };
-        let pts = match mzml.as_mut() {
-            Some(m) => picks.iter().map(|&(sid, _)| m.spettro(&self.idx.scans[sid as usize])).collect::<Result<Vec<_>>>()?,
-            None => self.scan_points(si, &positions)?,
-        };
+        Ok(Some(Picks { si, step, i0, n: sel.len(), positions, picks }))
+    }
+}
+
+/// The scans of a `/api/spectra` request on a profile level: section, grid step, first asked index, selected scans, and the picked ones.
+struct Picks {
+    si: usize,
+    step: f64,
+    i0: i64,
+    n: usize,
+    positions: Vec<usize>,
+    picks: Vec<(i64, f64)>,
+}
+
+impl Picks {
+    /// The answer of `/api/spectra`: the points of each picked scan merged on the grid.
+    fn json(&self, pts: &[(Vec<f64>, Vec<f64>)]) -> String {
         let mut o = Out::default();
-        o.raw("{\"n\":").int(sel.len() as i64).raw(",\"scans\":[");
+        o.raw("{\"n\":").int(self.n as i64).raw(",\"scans\":[");
         for (k, (mz, y)) in pts.iter().enumerate() {
-            let (mz, y) = merge_cells(mz, y, step);
-            o.raw(if k > 0 { "," } else { "" }).raw("{\"i\":").int(i0 + k as i64).raw(",\"sid\":").int(picks[k].0);
-            o.raw(",\"rt\":").num(round(picks[k].1, 4)).raw(",");
-            spec_json(&mut o, &mz, &y, step);
+            let (mz, y) = merge_cells(mz, y, self.step);
+            o.raw(if k > 0 { "," } else { "" }).raw("{\"i\":").int(self.i0 + k as i64).raw(",\"sid\":").int(self.picks[k].0);
+            o.raw(",\"rt\":").num(round(self.picks[k].1, 4)).raw(",");
+            spec_json(&mut o, &mz, &y, self.step);
             o.raw("}");
         }
         o.raw("]}");
-        Ok(Some(o.0))
+        o.0
     }
 }
 

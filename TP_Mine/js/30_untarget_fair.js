@@ -50,8 +50,9 @@
   const buttons = () => ` <button type="button" id="unt-x-gnps" title="Quantification table + MGF (+ IIN edges) in a .zip for GNPS2 FBMN/IIMN">GNPS2 (FBMN)</button><button type="button" id="unt-x-sirius" title="SIRIUS 6 .ms file: MS2 (and MS1) of the features">SIRIUS (.ms)</button>`;
   function bind(dlg, pick) {
     const stem = s => G.UNTX.base(s.table).replace(/^untargeted_/, "");
-    dlg.querySelector("#unt-x-gnps").onclick = () => {
+    dlg.querySelector("#unt-x-gnps").onclick = async () => {
       const { s, feats } = pick(), enc = new TextEncoder();
+      if (G.carica) await G.carica("xlsx.js");
       G.dl("gnps2_" + stem(s) + ".zip", G.zipStore(gnps(s.table, feats).map(([n, t]) => [n, enc.encode(t)])), "application/zip");
     };
     dlg.querySelector("#unt-x-sirius").onclick = async () => { const { s, feats } = pick(); if (!G.FAIR && G.carica) await G.carica("m:fair.js"); G.dl("sirius_" + stem(s) + ".ms", sirius(s.table, feats), "text/plain;charset=utf-8"); };

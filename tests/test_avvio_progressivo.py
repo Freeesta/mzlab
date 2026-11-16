@@ -476,3 +476,4 @@ def test_render_phase_dom_and_session_restore():
     assert res["wdataHidden2"] is False and res["openHidden2"] is True and res["opn2"] is False
     assert res["haSess2"] is False
 
+

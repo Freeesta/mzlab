@@ -258,13 +258,7 @@ impl AgilentD {
 
     /// Acquisition time as the instrument wrote it, with its UTC offset and without fractions of a second (`2025-05-15T16:00:45+01:00`).
     pub fn acquired(&self) -> Option<String> {
-        let t = self.contents.as_ref()?.acquired.trim();
-        if t.len() < 19 {
-            return None;
-        }
-        let (head, tail) = t.split_at(19);
-        let zone = tail.trim_start_matches(|c: char| c == '.' || c.is_ascii_digit());
-        Some(format!("{head}{zone}"))
+        acquired_text(&self.contents.as_ref()?.acquired)
     }
 
     /// `Blank`, `Sample`, ... from `sequence.xml`.
@@ -280,5 +274,39 @@ impl AgilentD {
             "AcqData/sequence.xml",
             "SequenceTableDataSet/Sequence/SampleName",
         )
+    }
+}
+
+/// Seconds-resolution head of a file-derived `AcquiredTime` plus its zone; checked slicing because
+/// the text comes from the folder and byte 19 may fall inside a multi-byte character (no panic).
+fn acquired_text(raw: &str) -> Option<String> {
+    let t = raw.trim();
+    let head = t.get(..19)?;
+    let tail = t.get(19..)?;
+    let zone = tail.trim_start_matches(|c: char| c == '.' || c.is_ascii_digit());
+    Some(format!("{head}{zone}"))
+}
+
+#[cfg(test)]
+mod acquired_tests {
+    use super::acquired_text;
+
+    #[test]
+    fn acquired_text_is_checked_on_short_empty_and_multibyte_input() {
+        assert_eq!(acquired_text(""), None);
+        assert_eq!(acquired_text("2025-05-15"), None);
+        assert_eq!(acquired_text("2025-05-15T16:00:4\u{e9}"), None);
+        assert_eq!(
+            acquired_text("\u{e9}\u{e9}\u{e9}\u{e9}\u{e9}\u{e9}\u{e9}\u{e9}\u{e9}\u{e9}"),
+            None
+        );
+        assert_eq!(
+            acquired_text(" 2025-05-15T16:00:45.123+01:00 ").as_deref(),
+            Some("2025-05-15T16:00:45+01:00")
+        );
+        assert_eq!(
+            acquired_text("2025-05-15T16:00:45").as_deref(),
+            Some("2025-05-15T16:00:45")
+        );
     }
 }

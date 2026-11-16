@@ -34,6 +34,7 @@ I18N.add("it", {
   "err.flow.insilico.suspects": "L'elenco dei sospetti è vuoto: carica un elenco con almeno una voce.",
   "err.flow.instance": "Un passo del flusso non è valido: manca «{field}».",
   "err.flow.instance.duplicate": "Due passi hanno lo stesso nome: rinominane uno.",
+  "err.flow.instance.id": "Il nome del passo «{instance}» non è valido: usa solo lettere, cifre, «_», «.» e «-», senza «.» iniziale (al massimo 128).",
   "err.flow.json": "Il file del flusso non è un JSON valido.",
   "err.flow.level.profile": "Profilo dei livelli sconosciuto: {profile}.",
   "err.flow.level.standards": "La tabella degli standard non ha la colonna «{column}».",

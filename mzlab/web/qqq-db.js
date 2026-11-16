@@ -222,36 +222,50 @@ export function lab(onblocked) {
 }
 
 /**
- * What the reset «Files» does to the main database: clears the loaded files and their manifest, the stored folder handle, and the parts of the notebook that name
- * files (open-files list, panels, sample roles); everything the user made stays (drawing, saved lists, molecules, the rest of the notebook). Never creates the
- * database. Resolves true when done, false when it could not be done (blocked, no such store): the caller then falls back to deleting the database.
+ * What the reset «Files» removes from the main database, written once: the page's wipe (reset.js), the engine's backstop after the reload (`lr_clear` with this
+ * spec, rust-worker.js) and the desktop app's native store (`lr_clear`, store.rs) all apply it. Gone: the loaded files and their manifest (stores), the stored
+ * folder handle (kv), the parts of the notebook that name files (open-files list, panels, sample roles). Everything else stays: drawing, saved lists
+ * (liste_utente), molecules (molecole), the rest of the notebook.
+ */
+export const RESET_FILES = Object.freeze({ stores: ["files", "manifest"], kv: ["cartella.puntata"], notebook: ["session", "ui", "sampleCols", "sampleEx"] });
+
+/**
+ * Applies RESET_FILES to an open database. Resolves true when done, false when it could not be done (a broken notebook, a failed transaction).
+ * @param {IDBDatabase} db
+ * @returns {Promise<boolean>}
+ */
+export function clearFilesIn(db) {
+  return new Promise(resolve => {
+    const names = [...RESET_FILES.stores, "kv"].filter(n => db.objectStoreNames.contains(n));
+    if (!names.length) { resolve(true); return; }
+    let ok = true;
+    const tx = db.transaction(names, "readwrite");
+    for (const n of RESET_FILES.stores) if (names.includes(n)) tx.objectStore(n).clear();
+    if (names.includes("kv")) {
+      const kv = tx.objectStore("kv");
+      RESET_FILES.kv.forEach(k => kv.delete(k));
+      const g = kv.get("notebook");
+      g.onsuccess = () => {
+        if (typeof g.result !== "string") return;
+        try { const j = JSON.parse(g.result); RESET_FILES.notebook.forEach(k => { delete j[k]; }); j._t = Date.now(); kv.put(JSON.stringify(j), "notebook"); } catch (_) { ok = false; }
+      };
+    }
+    tx.oncomplete = () => resolve(ok);
+    tx.onerror = tx.onabort = () => resolve(false);
+  });
+}
+
+/**
+ * The reset «Files» on the main database (RESET_FILES). Never creates the database. Resolves true when done, false when it could not be done (blocked, no such
+ * store): the caller then falls back to deleting the database.
  * @returns {Promise<boolean>}
  */
 export function clearFilesKeepWork() {
-  const DROP = ["session", "ui", "sampleCols", "sampleEx"];
   return new Promise(resolve => {
     let q;
     try { q = indexedDB.open(DB_NAME); } catch (_) { resolve(false); return; }
     q.onupgradeneeded = () => { q.transaction?.abort(); resolve(true); };      // no such database: nothing to clear
     q.onerror = q.onblocked = () => resolve(false);
-    q.onsuccess = () => {
-      const db = q.result, names = ["files", "manifest", "kv"].filter(n => db.objectStoreNames.contains(n));
-      if (!names.length) { db.close(); resolve(true); return; }
-      let ok = true;
-      const tx = db.transaction(names, "readwrite");
-      if (names.includes("files")) tx.objectStore("files").clear();
-      if (names.includes("manifest")) tx.objectStore("manifest").clear();
-      if (names.includes("kv")) {
-        const kv = tx.objectStore("kv");
-        kv.delete("cartella.puntata");
-        const g = kv.get("notebook");
-        g.onsuccess = () => {
-          if (typeof g.result !== "string") return;
-          try { const j = JSON.parse(g.result); DROP.forEach(k => { delete j[k]; }); j._t = Date.now(); kv.put(JSON.stringify(j), "notebook"); } catch (_) { ok = false; }
-        };
-      }
-      tx.oncomplete = () => { db.close(); resolve(ok); };
-      tx.onerror = tx.onabort = () => { db.close(); resolve(false); };
-    };
+    q.onsuccess = () => { const db = q.result; clearFilesIn(db).then(ok => { db.close(); resolve(ok); }); };
   });
 }

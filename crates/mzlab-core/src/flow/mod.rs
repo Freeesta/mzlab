@@ -25,7 +25,7 @@ pub use command::{command, route as command_route};
 pub use line::{apply_set, apply_sets, line, route as line_route, sets_of};
 pub use migrate::{migrate, migrate_name, Migrated, MIGRATIONS};
 pub use order::{levels, plan_order};
-pub use parse::parse;
+pub use parse::{instance_id_ok, parse};
 pub use prov::{
     build_agent, prov_json, prov_json_llm, prov_with_llm, Activity, Agent, ErrorRecord, LlmRef, Mem,
 };

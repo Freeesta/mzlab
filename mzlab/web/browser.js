@@ -12,6 +12,8 @@
   const RESET_NONCE = new URLSearchParams(location.search).get("ripn") || "";
   const modern = !!(window.Worker && window.WebAssembly && window.indexedDB && window.Promise && window.Response && navigator.storage && navigator.storage.getDirectory);
   try { if ("serviceWorker" in navigator && !window.QQ_RESETTING) navigator.serviceWorker.register(new URL("../sw.js", SRC)).then(isolateOnce).catch(() => {}); } catch (_) { /* offline copy is optional */ }
+  // ?nav=cache (sw.js): a newer version is complete in its cache and comes with the next load; the line that says so is lazy (sw-avviso.js)
+  try { navigator.serviceWorker.addEventListener("message", e => { if (e.data && e.data.op === "sw-nuova") import(new URL("sw-avviso.js", SRC).href).then(m => m.mostra()); }); } catch (_) { /* no worker */ }
   // the first visit starts not isolated (everything works as before); once the service worker (which adds COOP/COEP) is active the page reloads ONCE,
   // at the first moment with no work going on (no open file). The session guard prevents loops; ?cap-off=isolamento turns it off.
   // After a reset the guard of the earlier page can come back (Chrome restores the sessionStorage of a page whose worker was unregistered, even after clear()):
@@ -37,19 +39,12 @@
   const perfMark = t => { if (window.PERF) PERF.mark(t); else if (/[?&]perf\b/.test(location.search)) (window.PERF_EARLY = window.PERF_EARLY || []).push([performance.now(), t]); };
   const step = t => { window.qqStep = t; console.debug("[mzLab]", t); perfMark(t); };
   const phase = m => { window.qqPhaseCur = m ? { key: m.key, pct: m.pct, params: m.params } : null; if (m) step(m.key); if (window.ldRefresh && window.I18N) ldRefresh(); if (typeof AVVIO !== "undefined" && AVVIO.renderFase) AVVIO.renderFase(); };
-  // the ONE clean slate («New session» and «Start from scratch»): saved files, notebook, user lists, caches (app, engine, libraries) and service worker are removed, then the page reloads
-  // from the network; ?riparti=1 makes the new worker delete the saved files itself if the database could not be deleted now (another tab holds it)
-  const wait = p => Promise.race([p, new Promise(r => setTimeout(r, 4000))]).catch(() => {});
-  window.qqHardReset = async () => {
-    window.qqEngineStop();
-    // the files and indexes in OPFS
-    await wait((async () => { const d = await navigator.storage.getDirectory(); await d.removeEntry("mzlab", { recursive: true }); })());
-    await wait(new Promise((/** @type {any} */ r) => { const q = indexedDB.deleteDatabase(NOMI.DB); q.onsuccess = q.onerror = q.onblocked = () => r(); }));
-    if (NOMI.DB_OLD) await wait(new Promise((/** @type {any} */ r) => { const q = indexedDB.deleteDatabase(NOMI.DB_OLD); q.onsuccess = q.onerror = q.onblocked = () => r(); }));
-    await wait((async () => { for (const k of await caches.keys()) if (k.startsWith(NOMI.CACHE_PREFIX) || k.startsWith("qqq-") || k === "mzlab-libs") await caches.delete(k); })());
-    await wait((async () => { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); })());
-    try { localStorage.clear(); sessionStorage.clear(); } catch (_) {}
-    const u = new URL(location.href); u.search = "?riparti=1&ripn=" + Date.now().toString(36); u.hash = ""; location.replace(u.href);
+  // the ONE clean slate («New session», «Start from scratch», the start banner and the 10-second button): the same wipe as the dialog's «Full reset» (reset.js),
+  // which removes everything by name and reloads with ?riparti=1. A second call while it runs is ignored. Without reset.js the page just reloads.
+  window.qqHardReset = () => {
+    if (window.QQ_RESETTING) return Promise.resolve();
+    if (!window.QQRESET) { location.reload(); return Promise.resolve(); }
+    return window.QQRESET.run("all");
   };
   window.mzlabHardReset = window.qqHardReset;
   // the failure goes to the banner of AVVIO (avvio-progressivo.js: fixed, role=alert, «Copy details», «Full reset»); the page stays visible. If AVVIO is not loaded yet it picks window.qqFailInfo up
@@ -106,8 +101,9 @@
       const within = p => { let done = false; p.then(() => { done = true; }, () => { done = true; });
         const late = (s, rej) => { if (done) return; if (s.n || s.up === false || (window.qqPhaseCur && window.qqPhaseCur.key === "load.blocked")) { rej(Object.assign(new Error("reopening the saved files timed out"), { key: "load.err.resumeTimeout" })); return; } phase({ key: "load.slow", pct: null }); setTimeout(() => late(s, rej), s.ms); };
         return Promise.race([p, Promise.all([stall, Promise.race([b.up, new Promise(r => setTimeout(r, 300000))])]).then(([s, up]) => new Promise((_, rej) => setTimeout(() => late({ ...s, up }, rej), s.ms)))]); };
-      const fresh = u.searchParams.get("riparti") === "1";
-      if (fresh) { await within(lr.reset()); u.searchParams.delete("riparti"); u.searchParams.delete("ripn"); history.replaceState(null, "", u.pathname + u.search + u.hash); }
+      // ?riparti=1 (full reset, desktop cold start): files, indexes and notebook; ?riparti=file (reset «Files» that the old page could not finish): what «Files» removes
+      const scope = ({ 1: "all", file: "files" })[u.searchParams.get("riparti") || ""] || null, fresh = !!scope;
+      if (fresh) { await within(lr.reset(scope)); u.searchParams.delete("riparti"); u.searchParams.delete("ripn"); history.replaceState(null, "", u.pathname + u.search + u.hash); }
       await within(lr.boot(fresh)); window.MZLAB_LR = lr;
       window.qqStep = ""; phase(null); perfMark("motore pronto");
     }
