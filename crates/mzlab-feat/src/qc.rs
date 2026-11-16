@@ -139,7 +139,8 @@ pub fn to_json(t: &Aligned, samples: &[Sample], view: Option<&View>) -> String {
         j.raw(",\"file\":").int(g.files.len() as i64).raw(",\"righe\":").int(g.rows as i64);
         j.raw(",\"cv_mediano\":").opt(Some(g.cv_median).filter(|x| x.is_finite())).raw("}");
     }
-    j.raw("],\"standard_cv\":");
+    // which divisor the CVs used (1 = n - 1, the default since the sample SD; 0 = n, the earlier population SD)
+    j.raw("],\"cv_ddof\":").int(view.map_or(1, |v| v.cv_ddof) as i64).raw(",\"standard_cv\":");
     let method = view.map(|v| v.method.clone());
     j.opt(method.and_then(|m| standard_cv(t, samples, &m, view.map_or(1, |v| v.cv_ddof))));
     let (nb, n, hit) = blank_share(t, samples, view);

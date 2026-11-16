@@ -182,3 +182,23 @@ fn replicate_cv_uses_the_sample_sd_and_the_population_sd_stays_selectable() {
     // the ratio of the two is sqrt(n / (n - 1)) = sqrt(2) for two replicates
     assert!((gn[0].cv_median / go[0].cv_median - 2f64.sqrt()).abs() < 1e-12);
 }
+
+#[test]
+fn cv_ddof_round_trips_changes_the_digest_is_written_in_qc_and_rejects_other_values() {
+    use mzlab_feat::qc;
+    let (t, s) = (table(), samples());
+    let new = view::from_spec(&t, &s, b"{\"filtra\":[]}").unwrap();
+    let old = view::from_spec(&t, &s, b"{\"filtra\":[],\"cv_ddof\":0}").unwrap();
+    assert!(!new.spec_json().contains("cv_ddof"), "default keeps the spec and the digest of existing views");
+    assert!(old.spec_json().contains("\"cv_ddof\":0"));
+    let back = view::from_spec(&t, &s, old.spec_json().as_bytes()).unwrap();
+    assert_eq!(back.cv_ddof, 0);
+    assert_ne!(new.digest(&t), old.digest(&t));
+    assert_eq!(old.digest(&t), back.digest(&t));
+    let q = |v: Option<&view::View>| parse(qc::to_json(&t, &s, v).as_bytes()).unwrap().get("cv_ddof").and_then(|x| x.f64());
+    assert_eq!((q(None), q(Some(&new)), q(Some(&old))), (Some(1.0), Some(1.0), Some(0.0)));
+    for bad in ["2", "-1", "0.5", "true", "\"0\""] {
+        let spec = format!("{{\"filtra\":[],\"cv_ddof\":{bad}}}");
+        assert!(view::from_spec(&t, &s, spec.as_bytes()).is_err(), "{bad}");
+    }
+}

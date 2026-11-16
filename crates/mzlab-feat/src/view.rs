@@ -77,7 +77,9 @@ impl View {
     /// The parameters of both operations: `{"normalizza": ..., "filtra": [...]}` (what the `.mzflow` records).
     pub fn spec_json(&self) -> String {
         let labels = if self.labels.is_empty() { String::new() } else { format!(",\"etichette\":{}", self.labels.to_json()) };
-        format!("{{\"normalizza\":{},\"filtra\":{}{labels}}}", self.method.to_json(), filters::to_json(&self.rules))
+        // written only when it is not the default, so the digest of every existing view stays the same
+        let ddof = if self.cv_ddof == 1 { String::new() } else { format!(",\"cv_ddof\":{}", self.cv_ddof) };
+        format!("{{\"normalizza\":{},\"filtra\":{}{labels}{ddof}}}", self.method.to_json(), filters::to_json(&self.rules))
     }
 
     /// SHA-256 of the parameters and of the ids of the rows kept: two equal views have the same digest.
@@ -123,8 +125,12 @@ pub fn from_spec(t: &Aligned, samples: &[Sample], spec: &[u8]) -> Result<View> {
         None => Labels::default(),
     };
     let mut view = build_with(t, samples, &method, &rules, labels)?;
-    if let Some(d) = v.get("cv_ddof").and_then(|x| x.f64()) {
-        view.cv_ddof = usize::from(d != 0.0);
+    if let Some(d) = v.get("cv_ddof") {
+        view.cv_ddof = match d.f64() {
+            Some(x) if x == 0.0 => 0,
+            Some(x) if x == 1.0 => 1,
+            _ => return Err(norm::bad()),
+        };
     }
     Ok(view)
 }
