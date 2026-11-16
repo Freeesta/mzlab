@@ -7,8 +7,6 @@ use wasm_bindgen::prelude::*;
 
 /// A `.wiff` is read whole to open its container; more than this is refused with the memory budget error (as the engine did).
 const WIFF_MAX: u64 = 192 << 20;
-/// Bytes asked of the page at once.
-const BLOCK: usize = 4 << 20;
 
 fn fail(e: &mzlab_core::Error) -> JsValue {
     JsValue::from_str(&e.to_json())
@@ -26,12 +24,9 @@ pub fn wiff_metodo(
     if size as u64 > WIFF_MAX {
         return Err(fail(&mzlab_core::Error::memory_budget()));
     }
-    let mut data = vec![0u8; size as usize];
-    for (k, piece) in data.chunks_mut(BLOCK).enumerate() {
-        crate::reading::from_js(&read, 0, (k * BLOCK) as u64, piece.len())
-            .map_err(|e| fail(&e))?
-            .copy_to(piece);
-    }
+    let data = crate::reading::from_js(&read, 0, 0, size as usize)
+        .map_err(|e| fail(&e))?
+        .to_vec();
     let ole = Ole::open(data, name, &mzlab_core::readers::Limits::held()).map_err(|e| fail(&e))?;
     let src = Source {
         format: "sciex-wiff",
