@@ -158,4 +158,7 @@ const splittable = (/** @type {Bag} */ c) => { const l = AREACOPY.target(c.p, c.
 AZIONI.registra({ id: "int.split", gruppo: "tools", ordine: 0, viste: ["mrm"], scorciatoia: { tasto: "v", dove: "chart", et: "int.split.menu" },
   visibile: (/** @type {Bag} */ c) => !!splittable(c), nome: () => I18N.t("int.split.menu"), tip: () => I18N.t("int.split.tip"),
   esegui: (/** @type {Bag} */ c) => { const it = splittable(c); if (it) carica("m:integra-valli.js").then(() => /** @type {any} */ (window).INTVALLI.start(c.p, it)); } });
+AZIONI.registra({ id: "int.split.hand", gruppo: "tools", ordine: 1, viste: ["mrm"], scorciatoia: { tasto: "m", dove: "chart", et: "int.split.hand.menu" },
+  visibile: (/** @type {Bag} */ c) => !!splittable(c), nome: () => I18N.t("int.split.hand.menu"), tip: () => I18N.t("int.split.hand.tip"),
+  esegui: (/** @type {Bag} */ c) => { const it = splittable(c); if (it) carica("m:integra-valli.js").then(() => /** @type {any} */ (window).INTVALLI.startManual(c.p, it)); } });
 window.INTEND = { sync, baseY, shown };

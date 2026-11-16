@@ -1,5 +1,6 @@
 {
   "int.split.mark": "aria-label di un marcatore della divisione nelle valli; {rt} = tempo della linea verticale in minuti, 3 decimali.",
+  "int.split.hand.mark": "aria-label di un marcatore della divisione a mano; {rt} = tempo della linea verticale in minuti, 3 decimali.",
   "int.base.tip": "Riga del riquadro sull'etichetta «A = …» di un'integrazione: la linea di base usata; {b} = nome della modalità (int.base.tag.*).",
   "int.follow.sn": "Riquadro sull'etichetta di una finestra che segue il campione (SIM/MRM): rapporto segnale/rumore misurato dal motore; {sn} = numero, «…» in attesa, «—» senza picco.",
   "canali.manint.cp.aria": "Nome accessibile di una cella copiabile (apice, area, altezza) della tabella «Integrazioni manuali»; {c} = intestazione della colonna, {v} = valore mostrato.",
