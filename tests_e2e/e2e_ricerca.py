@@ -1,4 +1,4 @@
-"""Search box (palette, Ctrl/⌘K): a number is matched in Rust against the neutral losses and the adducts (the chip says
+"""Search box (palette, Ctrl/⌘K): a number is matched in Rust against the neutral losses, the adducts and the lab contaminants (the chip says
 «compatible», never a verdict); a formula gives its mass and ions; a word gives commands. Keyboard, it/en, axe, 400 px, no engine miss."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -42,10 +42,12 @@ try:
             pg.keyboard.press("ArrowUp"); pg.keyboard.press("Enter"); wait_for_js(pg, "document.querySelector('#paletta').hidden")
             wait_for_js(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')"); assert pg.input_value("#calcin") == "18", "the loss panel opens with the number"; wait_for_js(pg, "document.activeElement.id === 'calcin'"); pg.evaluate("BARRA.close(false)")
         step("↑↓ and Enter open the panel of the first result", keys)
-        def no_cont():
-            opn(); typ("63.04"); frames(pg, 25); assert "Contaminante" not in txt(), txt()
-            pg.keyboard.press("Escape")
-        step("a number is never offered as a contaminant", no_cont)
+        def cont():
+            opn(); typ("63.04", "Contaminante"); pg.locator("#pal-l li[role=option]", has_text="Contaminante").first.click()
+            wait_for_js(pg, "BARRA.curTab === 'lists'"); assert pg.input_value("#lst-q") == "63.04", pg.input_value("#lst-q")
+            assert not pg.evaluate("[...document.querySelectorAll('dialog')].some(d => d.open)"), "the side panel, never a pop-up"
+            pg.evaluate("BARRA.close(false)")
+        step("a contaminant hit opens the Lists panel of the side panel with the number", cont)
         def esc():
             opn(); typ("18", "Perdita"); pg.keyboard.press("Escape"); wait_for_js(pg, "document.querySelector('#paletta').hidden")
             assert not pg.is_visible("#paletta"), (pg.evaluate("document.activeElement.id||document.activeElement.tagName"), pg.evaluate("document.querySelector('#paletta').hidden"))

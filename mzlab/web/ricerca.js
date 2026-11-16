@@ -13,6 +13,7 @@ const RIC_IC = (/** @type {string} */ d) => `<svg width="16" height="16" viewBox
 const RIC_ICON = {
   loss: RIC_IC('<path d="M3 5h10M3 8h6M3 11h3"/>'),
   adduct: RIC_IC('<path d="M8 3v10M3 8h10"/>'),
+  cont: RIC_IC('<path d="M6 2.5h4M7 2.5v4L3.5 12.5a1 1 0 0 0 .9 1.5h7.2a1 1 0 0 0 .9-1.5L9 6.5v-4"/>'),
   formula: RIC_IC('<circle cx="8" cy="8" r="2"/><path d="M8 2v3M8 11v3M2.5 5l2.6 1.5M10.9 9.5l2.6 1.5M2.5 11l2.6-1.5M10.9 6.5l2.6-1.5"/>')
 };
 const RIC_MAX_ADDUCTS = 4;
@@ -33,21 +34,36 @@ function ricClassify(q) {
 const ricHrNow = () => (typeof window.TBL_HR === "function" ? !!window.TBL_HR() : true);
 const ricSub = (/** @type {string} */ f) => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
 const ricSg = (/** @type {number} */ x) => (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(4);
+const ricLang = () => (I18N.lang === "it" ? "it" : "en");
+
+// ------------------------------------------------------------------ the contaminant list (api/contaminants), read once
+/** @type {Promise<any[]> | null} */
+let ricContP = null;
+function ricContaminants() {
+  if (!ricContP) {
+    ricContP = fetch("api/contaminants").then(r => r.json())
+      .then(j => (j.lists || []).flatMap((/** @type {any} */ l) => l.items || []).filter((/** @type {any} */ i) => Number.isFinite(i.mz)))
+      .catch(() => []);
+  }
+  return ricContP;
+}
 
 // ------------------------------------------------------------------ number
 const RIC_GO = {
   loss: (/** @type {number} */ x) => { if (window.BARRA) BARRA.setTab("losses", { q: String(x) }); },
-  adduct: (x = /** @type {number | null} */ (null)) => { if (window.BARRA) BARRA.setTab("adducts", x != null ? { q: String(x) } : {}); }
+  adduct: (x = /** @type {number | null} */ (null)) => { if (window.BARRA) BARRA.setTab("adducts", x != null ? { q: String(x) } : {}); },
+  cont: (/** @type {number} */ x) => { if (window.LISTE) LISTE.open({ mz: x, hr: ricHrNow() }); }
 };
 
 /** @param {number} x  @param {string} q  @returns {Promise<RicGroup[]>} */
 async function ricForNumber(x, q) {
   const hr = typeof CALCQUI !== "undefined" ? CALCQUI.isHr(CALCQUI.arg(q, 0)) : ricHrNow();      // as the calculator: 18 unit, 18.011 HR
+  const items = await ricContaminants();
   const body = {
     x, hr, tol_mda: 3, tol_ppm: 5,
     losses: (typeof LOSSES !== "undefined" ? LOSSES : []).map((/** @type {any} */ l) => ({ id: l.f, f: l.f })),
     adducts: (window.QADD || []).map((/** @type {any} */ a) => ({ id: a.n, k: a.k, add: a.add || "", sub: a.sub || "", z: a.z })),
-    contam: []
+    contam: items.map((i, n) => ({ id: String(n), mz: i.mz, pol: i.pol || 0 }))
   };
   const r = await (await fetch("api/ricerca", { method: "POST", body: JSON.stringify(body) })).json();
   if (!r || r.error || !Array.isArray(r.hits)) return [];
@@ -55,18 +71,23 @@ async function ricForNumber(x, q) {
   const lossName = (/** @type {string} */ f) => { const l = (typeof LOSSES !== "undefined" ? LOSSES : []).find((/** @type {any} */ z) => z.f === f); return l ? ricT(l.name) : ""; };
   const detail = (/** @type {any} */ h) => (hr ? ricT("pal.d.hr", { d: ricSg(h.delta_da), ppm: (h.ppm >= 0 ? "+" : "−") + Math.abs(h.ppm).toFixed(1) }) : ricT("pal.d.lr"));
   /** @type {RicRow[]} */
-  const rows = r.hits.filter((/** @type {any} */ h) => h.kind === "loss" || h.kind === "adduct").map((/** @type {any} */ h) => {
+  const rows = r.hits.map((/** @type {any} */ h) => {
     const d = detail(h);
     if (h.kind === "loss") {
       const nm = lossName(h.id);
       return { ic: RIC_ICON.loss, chip: ricT("pal.k.loss"), html: ricSub(h.id) + (nm ? ` <span class="pal-d">${EH(nm)}</span>` : ""), detail: d, aria: `${ricT("pal.k.loss")}: ${h.id} ${nm}, ${d}`, run: () => RIC_GO.loss(x) };
     }
-    {
+    if (h.kind === "adduct") {
       const v = cat.find(a => a.n === h.id);
       const sh = v ? ` <span class="pal-d">${CALCADD.shiftText(v)}</span>` : "";
       return { ic: RIC_ICON.adduct, chip: ricT("pal.k.adduct"), html: EH(h.id) + sh, detail: d, aria: `${ricT("pal.k.adduct")}: ${h.id}, ${d}`, run: () => RIC_GO.adduct() };
     }
+    const it = items[+h.id] || {};
+    const nm = (ricLang() === "en" && it.name_en) || it.name || "";
+    const mz = hr ? Number(it.mz).toFixed(4) : String(Math.round(it.mz));
+    return { ic: RIC_ICON.cont, chip: ricT("pal.k.cont"), html: EH(nm) + ` <span class="pal-d">${EH(it.adduct || "")} m/z ${mz}</span>`, detail: d, aria: `${ricT("pal.k.cont")}: ${nm} ${it.adduct || ""}, ${d}`, run: () => RIC_GO.cont(x) };
   });
+  if (r.more > 0) rows.push({ ic: RIC_ICON.cont, chip: ricT("pal.k.cont"), html: EH(ricT("pal.more", { n: r.more })), detail: "", aria: ricT("pal.more", { n: r.more }), run: () => RIC_GO.cont(x) });
   return rows.length ? [{ id: "compat", title: ricT("pal.res.compat"), rows }] : [];
 }
 

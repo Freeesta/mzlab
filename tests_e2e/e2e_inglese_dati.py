@@ -38,8 +38,7 @@ try:
                 pg.click(f"#stbar [data-cmd={t}]"); wait_for_js(pg, f"BARRA.curTab === '{t}'"); frames(pg, 2)
                 it = italian(pg); assert not it, (t, it)
                 if t == "addloss":
-                    for sub in ("losses",):
-                        pg.click(f"#al-t-{sub}"); frames(pg, 2); it = italian(pg); assert not it, (sub, it)
+                    pg.click("#al-t-losses"); frames(pg, 2); it = italian(pg); assert not it, ("losses", it)
             pg.click("#stbar [data-cmd=file]"); wait_for_js(pg, "BARRA.curTab === 'file'"); it = italian(pg); assert not it, ("file", it)
             close_side(pg); frames(pg, 3)
         step("sidebar tabs: calculator, losses, lists", sidebar)

@@ -43,6 +43,7 @@
   "pal.d.hr": "Riga di un risultato della ricerca in alta risoluzione; {d} = differenza in Da con segno, {ppm} = differenza in ppm con segno.",
   "pal.formula.mass": "Risultato della ricerca per una formula; {m} = massa neutra.",
   "pal.formula.ion": "Risultato della ricerca per una formula con addotto; {adduct} = nome dell'addotto, per esempio [M+Na]+.",
+  "pal.more": "Ultima riga dei contaminanti nella ricerca; {n} = quanti altri ce ne sono.",
   "pal.count": "Annuncio per gli screen reader sotto il campo della paletta dei comandi; {n} = numero di comandi trovati.",
   "lv.sentence": "Frase del livello di confidenza ({lv} = etichetta della scala di Schymanski: L1, L2a, L2b, L3a, L3b, L4, L5 o L0; {name} = nome del livello).",
   "lv.dec.1": "Frase decisiva del livello 1; {name} = nome dello standard.",

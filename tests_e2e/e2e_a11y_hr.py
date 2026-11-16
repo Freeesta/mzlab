@@ -47,8 +47,7 @@ try:
         step("axe moderate/minor (best practice): the information bar of the HR bench, light and dark", info_minor)
         def calc():
             pg.click("#stbar [data-cmd=addloss]"); pg.wait_for_selector("#sb-panel-addloss:not([hidden]) #calcin"); axe_ok(pg, "#sb-panel-addloss")
-            for t in ("losses",):
-                pg.click(f"#al-t-{t}"); pg.wait_for_selector(f"#sb-panel-{t}:not([hidden])"); pg.fill("#calcin", "149.0233"); frames(pg, 25); axe_ok(pg, "#sb-panel-addloss")
+            pg.click("#al-t-losses"); pg.wait_for_selector("#sb-panel-losses:not([hidden])"); pg.fill("#calcin", "149.0233"); frames(pg, 25); axe_ok(pg, "#sb-panel-addloss")
             pg.fill("#calcin", ""); pg.click("#al-t-adducts")
         step("axe: Adducts & losses with the calculator, on its two tabs", calc)
         step("every visible control of the HR bench has an accessible name", lambda: (lambda bad: (_ for _ in ()).throw(AssertionError(bad[:15])) if bad else None)(pg.evaluate(NAME)))

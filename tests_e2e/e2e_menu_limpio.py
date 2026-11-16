@@ -25,9 +25,14 @@ try:
             for bad in ("spec.exportMgf", "spec.exportMsp", "spec.exportMassbank", "spec.exportSirius", "spec.addLab", "spec.marker", "spec.noCont", "spec.contLists"):
                 assert bad not in ids, (bad, ids)
         step("no download, no «Add to the laboratory contaminants», no view toggles in the menu", no_downloads)
-        def no_known_cont():
-            assert "spec.cont" not in rows(), "no «Is it a known contaminant?» entry: the Contaminants tab is gone"
-        step("the peak menu has no entry for the removed Contaminants tab", no_known_cont)
+        def known_cont():
+            assert "spec.cont" in rows(), "«Is it a known contaminant?» in the peak menu"
+            pg.evaluate("__c.lab = __c.m.toFixed(4); AZIONI.esegui('spec.cont', __c)")
+            wait_for_js(pg, "BARRA.curTab === 'lists'")
+            assert abs(float(pg.input_value("#lst-q")) - pg.evaluate("__c.m")) < 1e-9, pg.input_value("#lst-q")
+            assert not pg.evaluate("[...document.querySelectorAll('dialog')].some(d => d.open)"), "the side panel, never a pop-up"
+            pg.evaluate("BARRA.close(false)")
+        step("«Is it a known contaminant?» opens the Lists panel on the peak m/z", known_cont)
         def options():
             assert "spec.disp" in rows()
             pg.evaluate(f"menu({{preventDefault(){{}},clientX:50,clientY:50}},AZIONI.per(__c))")
