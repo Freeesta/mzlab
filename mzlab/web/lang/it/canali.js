@@ -77,7 +77,6 @@ I18N.add("it", {
   "int.snap.man": "Manuale",
   "int.snap.menu": "Aggancio del punto",
   "canali.manint.h.channel": "Canale",
-  "canali.manint.h.name": "Nome nel metodo",
   "canali.manint.h.sample": "Campione",
   "canali.manint.h.start": "Inizio (min)",
   "canali.manint.h.end": "Fine (min)",
