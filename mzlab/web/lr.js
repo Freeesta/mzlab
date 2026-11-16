@@ -23,6 +23,7 @@ import { originRoute } from "./lr-origin.js";
 import { engineRoute, statRoute } from "./lr-map.js";
 import { createMethodRoutes } from "./lr-method.js";
 import { mixesResolutions, sessionFiles } from "./lr-sessione.js";
+import { RESET_FILES } from "./qqq-db.js";
 import { W } from "./nativo-fasi.js";
 import { validaMzml } from "./valida-mzml.js";
 
@@ -89,7 +90,7 @@ export function createLr({ rb }) {
   };
   const num = v => (v === null || v === undefined || v === "" ? null : Number(v));
 
-  api.reset = async () => { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); items = null; hr = lr = false; if (rb.clearNative) rb.clearNative(); };
+  api.reset = async (scope = "all") => { await rpc(scope === "files" ? { op: "lr_clear", scope, drop: RESET_FILES } : { op: "lr_clear" }); files.clear(); mr.clear(); items = null; hr = lr = false; if (rb.clearNative) rb.clearNative(); };      // "files": the reset «Files» finished by the new page (?riparti=file); RESET_FILES travels along for the desktop app's native store
 
   api.boot = async (fresh) => {                                          // fresh: «start from scratch» (the database may be held by another tab: it is not read)
     const r = await rpc({ op: "lr_boot", fresh });

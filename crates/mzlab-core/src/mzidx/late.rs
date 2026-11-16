@@ -72,9 +72,9 @@ fn with_parse<R: Read + Seek>(
 }
 
 /// The mzML of a pass, which stops being read once pass 1 has failed (`build_with_spill`): the parser ends with an error that is not the answer.
-struct Fermabile<'a, R> {
-    inner: &'a mut R,
-    stop: &'a Cell<bool>,
+pub(super) struct Fermabile<'a, R> {
+    pub(super) inner: &'a mut R,
+    pub(super) stop: &'a Cell<bool>,
 }
 
 impl<R: Read> Read for Fermabile<'_, R> {

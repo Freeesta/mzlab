@@ -101,8 +101,9 @@
       const within = p => { let done = false; p.then(() => { done = true; }, () => { done = true; });
         const late = (s, rej) => { if (done) return; if (s.n || s.up === false || (window.qqPhaseCur && window.qqPhaseCur.key === "load.blocked")) { rej(Object.assign(new Error("reopening the saved files timed out"), { key: "load.err.resumeTimeout" })); return; } phase({ key: "load.slow", pct: null }); setTimeout(() => late(s, rej), s.ms); };
         return Promise.race([p, Promise.all([stall, Promise.race([b.up, new Promise(r => setTimeout(r, 300000))])]).then(([s, up]) => new Promise((_, rej) => setTimeout(() => late({ ...s, up }, rej), s.ms)))]); };
-      const fresh = u.searchParams.get("riparti") === "1";
-      if (fresh) { await within(lr.reset()); u.searchParams.delete("riparti"); u.searchParams.delete("ripn"); history.replaceState(null, "", u.pathname + u.search + u.hash); }
+      // ?riparti=1 (full reset, desktop cold start): files, indexes and notebook; ?riparti=file (reset «Files» that the old page could not finish): what «Files» removes
+      const scope = ({ 1: "all", file: "files" })[u.searchParams.get("riparti") || ""] || null, fresh = !!scope;
+      if (fresh) { await within(lr.reset(scope)); u.searchParams.delete("riparti"); u.searchParams.delete("ripn"); history.replaceState(null, "", u.pathname + u.search + u.hash); }
       await within(lr.boot(fresh)); window.MZLAB_LR = lr;
       window.qqStep = ""; phase(null); perfMark("motore pronto");
     }

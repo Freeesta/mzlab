@@ -18,6 +18,7 @@ tmp = Path(tempfile.mkdtemp())
 cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(tmp / "site")]
 subprocess.run(cmd, check=True)
 from lib_sito import add_wasm; add_wasm(tmp / "site")          # the engine of the page is Rust: the .wasm goes in the copy of the site
+from lib import build_feat; build_feat(tmp / "site" / "static", dict(os.environ, RUNNER_TEMP=str(tmp / "rt")))          # mzFinder has no other engine: it needs wasm-feat/
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(tmp / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1); errs = []
 try:
@@ -46,7 +47,7 @@ try:
             assert "C10H12N2O3S" in pg.inner_text("#tp-prev")
             assert "hydroxylation" in pg.input_value("#tp-tr")
             pg.click("#tp-go"); pg.wait_for_selector("#tp-t", timeout=300000)
-            pg.wait_for_timeout(1300)
+            pg.wait_for_function("(document.querySelector('.hero [data-k=\"strong\"] b') || {}).textContent === '3'", timeout=60000)      # the ranking settles after the table appears
             assert pg.inner_text('.hero [data-k="strong"] b').strip() == "3" and "Vein found" not in pg.inner_text(".hero") and "Neutral formula" in pg.inner_text(".hero")
             assert pg.evaluate("document.querySelector('#tp-struct svg') !== null")          # parent structure drawn from the SMILES (needs vendor/openchemlib.js)
             pg.click('.vt[data-v="tab"]'); pg.wait_for_selector("#tp-t tr.clk")
@@ -86,6 +87,7 @@ try:
             neg = pg.evaluate("[...document.querySelectorAll('#hr-t tr.clk')].map(t => +t.dataset.id).filter(i => i < 0).length")
             assert neg == 1, neg                                                  # the row hidden under an in-source fragment
             pg.click("#hr-t tr.clk[data-id^='-']"); pg.wait_for_function("document.querySelector('#tp-det').innerText.includes('C6H7N3O')", timeout=60000)
+            pg.wait_for_function("document.getElementById('hr-t').innerText.includes('co-eluting')", timeout=60000)      # the table redraws after the detail: wait for the text, not for the other panel
             assert "co-eluting" in pg.inner_text("#hr-t")
             pg.click('#hr-tbl [data-sh="level"]'); pg.wait_for_selector("#hr-t tr.clk")
             with pg.expect_download(timeout=60000) as dlc: pg.click("#hr-x-csv")

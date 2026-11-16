@@ -116,7 +116,7 @@ impl Head {
         })
     }
 
-    fn analyzer(&self, filt: &str, icref: Option<&str>) -> &'static str {
+    pub(super) fn analyzer(&self, filt: &str, icref: Option<&str>) -> &'static str {
         let tok = filt.split(' ').next().unwrap_or("").to_uppercase();
         if let Some(a) = ANALYZERS.iter().find(|a| **a == tok) {
             return a;
