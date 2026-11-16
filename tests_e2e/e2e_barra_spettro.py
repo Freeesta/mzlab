@@ -16,7 +16,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         pg.evaluate("(()=>{E.browse=false;tabFiles('full').forEach(f=>f.vis=true);renderFileList();redrawAll()})()"); ready(pg); frames(pg, 6)
         OV = f"{SPEC}.el.querySelector('input[data-o=all]')"
         def title():

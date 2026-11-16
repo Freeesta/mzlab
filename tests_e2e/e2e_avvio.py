@@ -24,7 +24,7 @@ def title_static():
     html = (ROOT / "mzlab/web/index.html").read_text(encoding="utf-8")
     assert "<title>MS Analysis · {APP}</title>" in html
     built = (ROOT / "site/index.html").read_text(encoding="utf-8")
-    assert re.search(r"<title>MS Analysis · mzLab</title>", built) and 'og:title" content="' in built and "Analisi MS" in re.search(r'og:title" content="([^"]*)"', built).group(1)
+    assert re.search(r"<title>MS Analysis · mzLab</title>", built) and 'og:title" content="' in built and "MS Analysis" in re.search(r'og:title" content="([^"]*)"', built).group(1)
 
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
@@ -32,18 +32,18 @@ URL = f"http://127.0.0.1:{PORT}/"
 try:
     step("static title and Open Graph", title_static)
     with sync_playwright() as p:
-        b = p.chromium.launch(); ctx = b.new_context(locale="it-IT", viewport={"width": 1300, "height": 900})
+        b = p.chromium.launch(); ctx = b.new_context(viewport={"width": 1300, "height": 900})
         holder = ctx.new_page(); holder.goto(URL + "static/appname.js")       # a same-origin page without engine
         holder.evaluate(GONE)
         def blocked():
             holder.evaluate(HOLD)
             pg = ctx.new_page(); pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.goto(URL + "?ripresa=4000")
-            pg.wait_for_function("document.getElementById('avvio-fase') && /altra scheda/.test(document.getElementById('avvio-fase').textContent)", timeout=90000)
+            pg.wait_for_function("document.getElementById('avvio-fase') && /another [^ ]+ tab/.test(document.getElementById('avvio-fase').textContent)", timeout=90000)
             assert pg.locator("#loading").is_hidden() and pg.locator("header").is_visible(), "no veil: the page stays visible"
             pg.wait_for_selector("#avvio-errore #avvio-reset", timeout=60000)
             assert pg.get_attribute("#avvio-errore", "role") == "alert"
-            assert "non risponde" in pg.inner_text("#avvio-errore-msg") and "Reset completo" in pg.inner_text("#avvio-errore"), pg.inner_text("#avvio-errore")
+            assert "is not answering" in pg.inner_text("#avvio-errore-msg") and "Full reset" in pg.inner_text("#avvio-errore"), pg.inner_text("#avvio-errore")
             pg.click("#avvio-reset")
             pg.wait_for_selector("#drop", timeout=120000)
             assert "riparti" not in pg.url, pg.url
@@ -80,7 +80,7 @@ try:
         step("app shell immediate, drop visible, and discrete status line role=status", status_while_loading)
         def session_skeleton_when_clue_present():
             holder.evaluate(GONE)
-            c = b.new_context(locale="it-IT", viewport={"width": 1300, "height": 900})
+            c = b.new_context(viewport={"width": 1300, "height": 900})
             c.add_init_script("try { localStorage.setItem('mzlab.sessione', '1'); } catch (e) {}")
             pg = c.new_page(); pg.goto(URL, wait_until="domcontentloaded")
             assert pg.evaluate("!document.getElementById('opening').hidden && document.getElementById('opening').classList.contains('restoring')"), "restoring box visible with session clue"
@@ -91,7 +91,7 @@ try:
         step("session clue shows the restoring box on boot and clears when ready", session_skeleton_when_clue_present)
         def wasm_fails():
             holder.evaluate(GONE)
-            c = b.new_context(locale="it-IT", viewport={"width": 1300, "height": 900}, service_workers="block")
+            c = b.new_context(viewport={"width": 1300, "height": 900}, service_workers="block")
             c.grant_permissions(["clipboard-read", "clipboard-write"], origin=URL.rstrip("/"))
             c.route("**/*.wasm", lambda r: r.abort())
             pg = c.new_page(); perr = []; pg.on("pageerror", lambda e: perr.append(str(e)))
@@ -110,7 +110,7 @@ try:
         step("WASM aborted: banner role=alert, page visible, details copied without file names, «Full reset» brings the site back", wasm_fails)
         def wasm_fails_with_session():
             holder.evaluate(GONE)
-            c = b.new_context(locale="it-IT", viewport={"width": 1300, "height": 900}, service_workers="block")
+            c = b.new_context(viewport={"width": 1300, "height": 900}, service_workers="block")
             c.add_init_script("try { localStorage.setItem('mzlab.sessione', '1'); } catch (e) {}")
             c.route("**/*.wasm", lambda r: r.abort())
             pg = c.new_page(); perr = []; pg.on("pageerror", lambda e: perr.append(str(e)))

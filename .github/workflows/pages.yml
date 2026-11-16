@@ -401,6 +401,7 @@ jobs:
   # the native release builds of sito-rust.yml's `sito-e2e` (its two slow e2e), with its very commands: only to keep their cache fresh, the site does not use them.
   # A cache saved once a night is evicted by the next morning (the repository saves far more than its 10 GB a day); one saved here on every Rust change is not.
   native-e2e:
+    if: github.repository == 'Freeesta/mzlab'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -485,7 +486,7 @@ jobs:
           PY
       # the built modules, for .github/workflows/metriche.yml (sizes per commit, measured off this critical path; small, kept 1 day)
       - name: .wasm modules for the metrics
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && github.repository == 'Freeesta/mzlab'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: metriche-wasm

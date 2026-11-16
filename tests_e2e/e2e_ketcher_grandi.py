@@ -20,7 +20,7 @@ try:
             ctx = r.b.new_context(viewport={"width": w, "height": h}, has_touch=touch, is_mobile=touch); pg = ctx.new_page(); pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
             pg.wait_for_timeout(2500)
             if pg.is_visible("#start"):
-                pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.wait_for_timeout(800); pg.click("text=Carica dati"); ready(pg)
+                pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.wait_for_timeout(800); pg.click("text=Load data"); ready(pg)
             pg.click("#nav [data-v=draw]"); pg.wait_for_timeout(7000)
             def check():
                 o = pg.evaluate(JS)

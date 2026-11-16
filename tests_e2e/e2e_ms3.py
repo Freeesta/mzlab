@@ -19,47 +19,46 @@ SPEC = "E.panels.find(p => p.tab === 'ms2' && p.type === 'spec')"
 r = Run(port=8983, wd="/tmp/wd_ms3")
 try:
     with sync_playwright() as p:
-        for lang in ("it", "en"):
-            pg = r.page(p); pg.set_viewport_size({"width": 1280, "height": 1000})
-            pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}"); wait_for_js(pg, "!!document.querySelector('#pick')", 30000)
-            pg.set_input_files("#pick", [str(F)])
-            wait_for_js(pg, "E.files.some(f => f.kind === 'ms2' && !f.gone)", 60000)
-            wait_for_js(pg, "E.panels.some(p => p.tab === 'ms2' && p.type === 'chrom' && p._a && p._a.sr)", 60000); frames(pg, 6)
-            def level(pg=pg):
-                f = pg.evaluate("(() => { const f = E.files.find(f => f.kind === 'ms2'); return [f.msn_level, f.lv]; })()"); assert f == [3, 3], f
-            step(f"{lang}: the file is MSn of level 3", level)
-            def chrom(pg=pg):
-                n = pg.evaluate("(() => { const c = E.panels.find(p => p.tab === 'ms2' && p.type === 'chrom'); return c._a.sr.map(s => (s.y || []).filter(v => v > 0).length); })()")
-                assert n and n[0] > 100, ("empty MS3 chromatogram", n)
-            step(f"{lang}: the precursor chromatogram is drawn from the MS3 scans", chrom)
-            def titles(lang=lang, pg=pg):
-                wait_for_js(pg, "E.panels.some(p => p.tab === 'ms2' && p.type === 'spec' && p.el)", 30000); frames(pg, 4)
-                t = pg.evaluate("E.panels.filter(p => p.tab === 'ms2').map(p => p.el.querySelector('.ttl').textContent)")
-                want = {"it": ["TIC · MS³", "MS³ di 194.1"], "en": ["TIC · MS³", "MS³ of 194.1"]}[lang]
-                assert t == want, t
-            step(f"{lang}: titles name MS³", titles)
-            def spectrum(pg=pg):
-                wait_for_js(pg, "(() => { const s = E.panels.find(p => p.tab === 'ms2' && p.type === 'spec'); return s && s.level === 3 && s._a && s._a.data && s._a.data.length; })()", 30000)
-                mz = pg.evaluate("(() => { const s = E.panels.find(p => p.tab === 'ms2' && p.type === 'spec'); return [...s._a.data[0].d.mz].map(Number); })()")
-                assert any(abs(m - 150.1) < 0.3 for m in mz), ("no MS3 product ion in the spectrum", mz[:10])
-                o = pg.evaluate("[...document.querySelectorAll('.pnl select[data-o=level] option')].map(o => [o.value, o.textContent])")
-                assert ["3", "MS3"] in o and ["2", "MS2"] not in o, o
-            step(f"{lang}: the spectrum is the MS3 one and the level menu offers MS3", spectrum)
-            def routes(pg=pg):
-                k = pg.evaluate("E.files.find(f => f.kind === 'ms2').k")
-                sl = pg.evaluate(f"J('api/scanlist?k={k}&level=3').then(d => (d.sid || []).length)"); assert sl == 400, sl
-                tr = pg.evaluate(f"getMs2Tr({k}, 3).then(t => t.map(x => x.q1))"); assert tr and all(abs(q - 194.1) < 0.06 for q in tr), tr
-            step(f"{lang}: scan list and precursor table at level 3", routes)
-            def like_ms2(lang=lang, pg=pg):
-                ax = pg.evaluate(f"(() => {{ const s = {SPEC}; return [s._a.x0, s._a.x1]; }})()")
-                assert 110 < ax[0] < 122 and 199 <= ax[1] < 215, ("the axis does not fit the MS3 peaks and the precursor", ax)
-                leg = pg.evaluate(f"{SPEC}.leg.textContent"); assert "CE 35" in leg, leg
-                name = pg.evaluate(f"plotName({SPEC})"); assert name.startswith({"it": "spettroMS3", "en": "spectrumMS3"}[lang]) and "prec194.1" in name, name
-                typ = pg.evaluate(f"plotSheets({SPEC}).find(x => x.rows && x.rows.some(r => String(r[1]).includes('MS³')))")
-                assert typ, "the metadata sheet does not say MS³"
-            step(f"{lang}: the MS3 spectrum fits its peaks, gives its CE and is exported as MS3", like_ms2)
-            pg.close()
-        pg = r.page(p); pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); wait_for_js(pg, "!!document.querySelector('#pick')", 30000)
+        pg = r.page(p); pg.set_viewport_size({"width": 1280, "height": 1000})
+        pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "!!document.querySelector('#pick')", 30000)
+        pg.set_input_files("#pick", [str(F)])
+        wait_for_js(pg, "E.files.some(f => f.kind === 'ms2' && !f.gone)", 60000)
+        wait_for_js(pg, "E.panels.some(p => p.tab === 'ms2' && p.type === 'chrom' && p._a && p._a.sr)", 60000); frames(pg, 6)
+        def level(pg=pg):
+            f = pg.evaluate("(() => { const f = E.files.find(f => f.kind === 'ms2'); return [f.msn_level, f.lv]; })()"); assert f == [3, 3], f
+        step(f"the file is MSn of level 3", level)
+        def chrom(pg=pg):
+            n = pg.evaluate("(() => { const c = E.panels.find(p => p.tab === 'ms2' && p.type === 'chrom'); return c._a.sr.map(s => (s.y || []).filter(v => v > 0).length); })()")
+            assert n and n[0] > 100, ("empty MS3 chromatogram", n)
+        step(f"the precursor chromatogram is drawn from the MS3 scans", chrom)
+        def titles(pg=pg):
+            wait_for_js(pg, "E.panels.some(p => p.tab === 'ms2' && p.type === 'spec' && p.el)", 30000); frames(pg, 4)
+            t = pg.evaluate("E.panels.filter(p => p.tab === 'ms2').map(p => p.el.querySelector('.ttl').textContent)")
+            want = ["TIC · MS³", "MS³ of 194.1"]
+            assert t == want, t
+        step(f"titles name MS³", titles)
+        def spectrum(pg=pg):
+            wait_for_js(pg, "(() => { const s = E.panels.find(p => p.tab === 'ms2' && p.type === 'spec'); return s && s.level === 3 && s._a && s._a.data && s._a.data.length; })()", 30000)
+            mz = pg.evaluate("(() => { const s = E.panels.find(p => p.tab === 'ms2' && p.type === 'spec'); return [...s._a.data[0].d.mz].map(Number); })()")
+            assert any(abs(m - 150.1) < 0.3 for m in mz), ("no MS3 product ion in the spectrum", mz[:10])
+            o = pg.evaluate("[...document.querySelectorAll('.pnl select[data-o=level] option')].map(o => [o.value, o.textContent])")
+            assert ["3", "MS3"] in o and ["2", "MS2"] not in o, o
+        step(f"the spectrum is the MS3 one and the level menu offers MS3", spectrum)
+        def routes(pg=pg):
+            k = pg.evaluate("E.files.find(f => f.kind === 'ms2').k")
+            sl = pg.evaluate(f"J('api/scanlist?k={k}&level=3').then(d => (d.sid || []).length)"); assert sl == 400, sl
+            tr = pg.evaluate(f"getMs2Tr({k}, 3).then(t => t.map(x => x.q1))"); assert tr and all(abs(q - 194.1) < 0.06 for q in tr), tr
+        step(f"scan list and precursor table at level 3", routes)
+        def like_ms2(pg=pg):
+            ax = pg.evaluate(f"(() => {{ const s = {SPEC}; return [s._a.x0, s._a.x1]; }})()")
+            assert 110 < ax[0] < 122 and 199 <= ax[1] < 215, ("the axis does not fit the MS3 peaks and the precursor", ax)
+            leg = pg.evaluate(f"{SPEC}.leg.textContent"); assert "CE 35" in leg, leg
+            name = pg.evaluate(f"plotName({SPEC})"); assert name.startswith("spectrumMS3") and "prec194.1" in name, name
+            typ = pg.evaluate(f"plotSheets({SPEC}).find(x => x.rows && x.rows.some(r => String(r[1]).includes('MS³')))")
+            assert typ, "the metadata sheet does not say MS³"
+        step(f"the MS3 spectrum fits its peaks, gives its CE and is exported as MS3", like_ms2)
+        pg.close()
+        pg = r.page(p); pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "!!document.querySelector('#pick')", 30000)
         pg.set_input_files("#pick", [str(F), str(G)])
         wait_for_js(pg, "E.files.filter(f => f.kind === 'ms2' && !f.gone && f.lv === 3).length === 2", 60000)
         wait_for_js(pg, f"(() => {{ const s = {SPEC}; return s && s._a && s._a.data && s._a.data.length; }})()", 60000)

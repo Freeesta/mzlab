@@ -12,14 +12,14 @@ KJ = "document.querySelector('#kframe').contentWindow.ketcher"
 LAB = "(()=>{const g=document.querySelector('#kframe').contentDocument.querySelector('#mzlab-labels');return g?g.childNodes.length:-1})()"
 KEYS = ["mzlab.a11y", "mzlab.banco.info", "mzlab.barra.hr", "mzlab.barra.lato", "mzlab.barra.lr", "mzlab.bianco", "mzlab.comp", "mzlab.contaminanti",
         "mzlab.contaminanti.esclusi", "mzlab.contaminanti.on", "mzlab.convopen", "mzlab.disegno.riquadri", "mzlab.disegno.strumenti", "mzlab.fair", "mzlab.flgrp",
-        "mzlab.lang", "mzlab.lib.cartella", "mzlab.lib.soglie", "mzlab.liste.attive", "mzlab.lr", "mzlab.mappa", "mzlab.pca",
+        "mzlab.lib.cartella", "mzlab.lib.soglie", "mzlab.liste.attive", "mzlab.lr", "mzlab.mappa", "mzlab.pca",
         "mzlab.picchi", "mzlab.pool", "mzlab.prefs", "mzlab.profilo", "mzlab.qaqc", "mzlab.riferimento", "mzlab.tunit", "mzlab.unopen", "mzlab.upd.last", "mzlab-labels", "mzlab-theme"]
 BAD = ["{", "null", "[]", "123", '"x"', '{"a":1}', "[1,2,3]", "undefined", "x" * 5000]
 r = Run(port=8997, wd="/tmp/wd_memoria")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
-        stage(pg, [mz(f) for f in FILES[:2]]); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, [mz(f) for f in FILES[:2]]); pg.click("text=Load data"); ready(pg)
         def drawing_back():
             pg.click("#nav [data-v=draw]"); pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
             pg.evaluate(f"{KJ}.addFragment('CCO')"); pg.wait_for_function(f"{KJ}.editor.struct().atoms.size===3")

@@ -111,7 +111,7 @@ try:
             pg2.evaluate("DESKDEF.take()"); pg2.wait_for_function("window.__calls.includes('take_opened')")
         step("«Open with»: the files appear in the side list, the drop area stays usable and a second file is queued", opened_files_reach_the_side_list)
         def lang_en():
-            pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); pg.wait_for_function("window.DESKDEF", timeout=20000)
+            pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_function("window.DESKDEF", timeout=20000)
             pg.evaluate("DESKDEF.ask()"); pg.wait_for_selector("#predefdlg[open]")
             assert "default app" in pg.inner_text("#predefdlg") and "Don't ask again" in pg.inner_text("#predefdlg")
         step("the texts come from the English catalog too", lang_en)

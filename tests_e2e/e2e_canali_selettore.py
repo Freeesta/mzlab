@@ -19,7 +19,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(F)]); pg.wait_for_selector("#pick", state="attached")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         wait_for_js(pg, f"{CH}.el.querySelector('[data-o=kind]')")
         def one_button():
             n = pg.evaluate(f"{CH}.el.querySelectorAll('[data-o=canali]').length"); assert n == 0, n
@@ -30,11 +30,11 @@ try:
             pg.click(".pnl.chrom [data-o=kind]")
             wait_for_js(pg, "document.querySelector('.can-pop:not([hidden]) [role=treeitem]')")
             g = pg.evaluate("[...document.querySelectorAll('.can-pop:not([hidden]) [role=group]')].map(e => e.getAttribute('aria-label'))")
-            assert g[0] == "Spettrometria di massa" and "Rivelatori" in g, g
+            assert g[0] == "Mass spectrometry" and "Detectors" in g, g
             h = pg.evaluate("[...document.querySelectorAll('.can-pop:not([hidden]) .can-hd span')].map(e => e.textContent)")
-            assert h[:4] == ["Canale", "Esperimento", "Punti", "Tempo (min)"], h
+            assert h[:4] == ["Channel", "Experiment", "Points", "Time (min)"], h
             ms1 = pg.evaluate("(document.querySelector('.can-pop:not([hidden]) [data-omo^=\"ms|1\"]') || {}).title || ''")
-            assert ms1 == "TIC delle sole scansioni MS¹", ms1          # lang/it/canali.js canali.tip.ms1
+            assert ms1 == "TIC of the MS¹ scans only", ms1          # lang/en/canali.js canali.tip.ms1
         step("groups, column names and the hover text of MS¹", groups)
         def label():
             pg.click(".can-pop:not([hidden]) [data-omo^='ms|1']"); ready(pg)
@@ -45,7 +45,7 @@ try:
             pg.click(".can-pop:not([hidden]) [data-kind=press]"); ready(pg); frames(pg, 8)
             k = pg.evaluate(f"{CH}.kind"); assert k == "press", k
             v = pg.evaluate(f"(()=>{{const a={CH}._a;return [a.sr.length, a.sr[0].y.length]}})()"); assert v[0] == 1 and v[1] > 10, v
-            assert pg.evaluate(f"{CH}.el.querySelector('[data-o=kind] .can-bt').textContent") == "Pressione della pompa"
+            assert pg.evaluate(f"{CH}.el.querySelector('[data-o=kind] .can-bt').textContent") == "Pump pressure"
         step("the pump pressure is drawn when picked", pressure)
         def back():
             pg.click(".pnl.chrom [data-o=kind]"); wait_for_js(pg, "document.querySelector('.can-pop:not([hidden])')")

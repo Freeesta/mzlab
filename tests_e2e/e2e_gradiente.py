@@ -18,7 +18,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(F)]); pg.wait_for_selector("#pick", state="attached")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def listed():
             a = pg.evaluate("E.files[0].analog"); assert len(a) == 1 and a[0]["kind"] == "pressure" and a[0]["unit"] == "pascal" and a[0]["n"] == 6000, a
             j = pg.evaluate("(async () => await (await fetch('api/analog?k=0&i=%d&n=300')).json())()" % a[0]["i"])
@@ -39,15 +39,15 @@ try:
             pg.keyboard.press("Escape"); return labs
         def no_entry():
             pg.evaluate("{const d=Q('#bigdlg'); if (d.open) d.close()}"); frames(pg, 2)
-            assert not any("gradiente" in l.lower() for l in ctx_items())
+            assert not any("gradient" in l.lower() for l in ctx_items())
         step("right click on a chromatogram: no gradient entry without a gradient", no_entry)
         def entry():
             # the engine route is still there: a gradient it holds for the file (as a .dam would give) is drawn
             pg.evaluate("(async () => { await post('api/gradient', {k: 0, model: {source: 'dam', points: [{t:0,b:10},{t:2,b:10},{t:12,b:60},{t:15,b:70},{t:20,b:100},{t:25,b:100},{t:25.1,b:10},{t:30,b:10}]}}); GRADIENTE.forget(); })()")
             pg.evaluate("redrawAll()"); ready(pg)
-            labs = ctx_items(); assert any("Mostra il gradiente" in l for l in labs), labs
+            labs = ctx_items(); assert any("Show the gradient" in l for l in labs), labs
             pg.evaluate(f"(()=>{{const p={TIC};p.cv.dispatchEvent(new MouseEvent('contextmenu',{{bubbles:true,clientX:300,clientY:300}}))}})()")
-            pg.click("#ctx [role=menuitemcheckbox]:has-text('gradiente')"); ready(pg)
+            pg.click("#ctx [role=menuitemcheckbox]:has-text('gradient')"); ready(pg)
             assert pg.evaluate(f"{TIC}.overlay") == "grad"
             assert pg.evaluate("palette = BARRA.commands.find(c=>c.id==='gradient'); !!palette && palette.visible()")
         step("the entry appears with a gradient and turns the overlay on (and the palette has it)", entry)
@@ -88,9 +88,9 @@ try:
             pg.evaluate("{const d=Q('#bigdlg'); if (d.open) d.close()}")
             pg.evaluate("addPanel('chrom',{tab:'full',kind:'press'})"); ready(pg)
             P = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full'&&p.kind==='press')"
-            opts = pg.evaluate(f"[...{P}.el.querySelectorAll('.can-row[data-kind]')].map(o=>o.getAttribute('aria-label'))"); assert "Pressione della pompa" in opts, opts
+            opts = pg.evaluate(f"[...{P}.el.querySelectorAll('.can-row[data-kind]')].map(o=>o.getAttribute('aria-label'))"); assert "Pump pressure" in opts, opts
             v = pg.evaluate(f"(()=>{{const a={P}._a;return {{n:a.sr.length,unit:a.sr[0].unit,y1:a.sr[0].y[a.sr[0].x.findIndex(t=>t>=1)],lab:{P}.leg.textContent+{P}.corrbar.textContent}}}})()")
-            assert v["n"] == 1 and v["unit"] == "bar" and abs(v["y1"] - 278) < 12 and "10 volte" not in v["lab"], v
+            assert v["n"] == 1 and v["unit"] == "bar" and abs(v["y1"] - 278) < 12 and "10 times" not in v["lab"], v
             e = pg.evaluate(f"(()=>{{const q={P}, o=E.panels.find(p=>p.type==='chrom'&&p.tab==='full'&&p.kind==='tic'), r=q.cv.getBoundingClientRect(), s=o.cv.getBoundingClientRect();return [r.left+q._a.X(q._a.x0)-(s.left+o._a.X(o._a.x0)), r.left+q._a.X(q._a.x1)-(s.left+o._a.X(o._a.x1)), q._a.x0-o._a.x0, q._a.x1-o._a.x1]}})()")
             assert abs(e[0]) <= 1 and abs(e[1]) <= 1, e
         step("the pressure is in the chromatogram selector, in bar (no unit note: the file holds bar) and the shared axis", kind_press)

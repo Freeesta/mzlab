@@ -37,7 +37,7 @@ def item(pg, label):
     pg.click(f"#ctx [role^=menuitem]:has-text('{label}')"); ready(pg)
 def load(pg, name):
     pg.set_input_files("#pick", [str(D / name), str(D / (name + ".scan"))])
-    wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=90000); pg.click("text=Carica dati"); ready(pg)
+    wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=90000); pg.click("text=Load data"); ready(pg)
     wait_for_js(pg, "E.files.length >= 1", timeout=120000); open_kind(pg, "mrm")
     wait_for_js(pg, f"!!{MRM} && !!{MRM}._a", timeout=60000)
 

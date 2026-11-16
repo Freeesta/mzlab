@@ -1,4 +1,4 @@
-"""Block 4 (prompt 3): header without Isotopi, (i) Informazioni, no yellow-cells sentence, example button inside box 1."""
+"""Block 4 (prompt 3): header without Isotopi, (i) About, no yellow-cells sentence, example button inside box 1."""
 # covers: mzlab/web/pannelli.js, mzlab/web/fondo.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -13,17 +13,17 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         def start():
-            assert pg.locator("#np-iso").count() == 0 and "Isotopi" not in pg.inner_text("header")
+            assert pg.locator("#np-iso").count() == 0 and "Isotopes" not in pg.inner_text("header")
             assert pg.locator("#guessnote").count() == 0
-        step("no Isotopi in the header, no yellow-cells sentence", start)
+        step("no Isotopes in the header, no yellow-cells sentence", start)
         def info():
-            b = pg.locator("button.hq[data-help=header]"); assert b.count() == 1 and b.get_attribute("title") == "Informazioni su mzLab" and b.locator("svg").count() == 1 and b.inner_text().strip() == ""
+            b = pg.locator("button.hq[data-help=header]"); assert b.count() == 1 and b.get_attribute("title") == "About mzLab" and b.locator("svg").count() == 1 and b.inner_text().strip() == ""
             b.click(); pg.wait_for_timeout(300)
             assert pg.is_visible("#helppop") and pg.locator("#helppop .hp-t b").inner_text().strip() == "", "no title"
             ps = pg.locator("#helppop p"); assert ps.count() == 3, ps.count()
-            assert "{" not in pg.inner_text("#helppop") and ps.first.inner_text() == pg.evaluate("APP_NAME") + " è uno strumento gratuito e open source. Non carica mai i tuoi dati o file personali.", "the name of the program fills {app}"
-            assert ps.nth(1).inner_text() == "Questa versione è ancora in lavorazione."
-            assert ps.nth(2).inner_text() == "Suggerimenti e correzioni: fedecrista@gmail.com."
+            assert "{" not in pg.inner_text("#helppop") and ps.first.inner_text() == pg.evaluate("APP_NAME") + " is a free, open-source tool. It never uploads your personal data or files.", "the name of the program fills {app}"
+            assert ps.nth(1).inner_text() == "This version is still a work in progress."
+            assert ps.nth(2).inner_text() == "Suggestions and corrections: fedecrista@gmail.com."
             assert pg.locator("#helppop a").count() == 1 and pg.get_attribute("#helppop a", "href") == "mailto:fedecrista@gmail.com"
             pg.keyboard.press("Escape")
         step("the header info button opens the box with the mailto link", info)
@@ -45,20 +45,20 @@ try:
         step("the info glyph is centred in its button (box and drawn glyph, three zoom levels)", centred)
         def correction():
             pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t60")]); pg.wait_for_timeout(1000)
-            pg.click("text=Carica dati"); ready(pg)
+            pg.click("text=Load data"); ready(pg)
             pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.wait_for_timeout(2000)
             pg.evaluate("document.querySelector('.pnl.xic [data-a=cpar]').click()"); pg.wait_for_timeout(200)
-            b = pg.locator('.pnl.xic [data-o="corr"]'); assert b.locator("svg").count() == 1 and "Sottrazione" in b.get_attribute("aria-label")      # icon of the choice + the arrow; no words in the header
-            assert pg.locator('.pnl.xic [data-o="bkg"]').count() == 0, "one «Sottrazione» button, not two"
+            b = pg.locator('.pnl.xic [data-o="corr"]'); assert b.locator("svg").count() == 1 and "Subtraction" in b.get_attribute("aria-label")      # icon of the choice + the arrow; no words in the header
+            assert pg.locator('.pnl.xic [data-o="bkg"]').count() == 0, "one «Subtraction» button, not two"
             assert pg.locator(".pnl.xic select[data-o=corr]").count() == 0, "no longer a plain select"
             b.click(); pg.wait_for_timeout(150)
-            assert pg.locator(".pnl.xic .corrm legend").all_inner_texts() == ["Da un file", "Dal fondo"], "one menu, two labelled groups"
+            assert pg.locator(".pnl.xic .corrm legend").all_inner_texts() == ["From a file", "From the background"], "one menu, two labelled groups"
             items = pg.locator('.pnl.xic .corrg[data-g="1"] .corri'); assert items.count() == 4 and all(items.nth(i).locator("svg").count() == 1 for i in range(items.count()))
-            t = pg.inner_text('.pnl.xic .corrg[data-g="1"]'); assert "Nessuna" in t and "Fondo di un tratto" in t and "Fondo: finestra piatta" in t and "Fondo automatico" in t, t
+            t = pg.inner_text('.pnl.xic .corrg[data-g="1"]'); assert "None" in t and "Background of a stretch" in t and "Background: flat window" in t and "Automatic background" in t, t
             pg.click('.pnl.xic .corri[data-c="snip"]'); pg.wait_for_timeout(800)
-            assert pg.evaluate("E.panels.find(p=>p.type==='xic').fondo.mode") == "auto" and "Fondo automatico" in pg.get_attribute('.pnl.xic [data-o="corr"]', "aria-label")
+            assert pg.evaluate("E.panels.find(p=>p.type==='xic').fondo.mode") == "auto" and "Automatic background" in pg.get_attribute('.pnl.xic [data-o="corr"]', "aria-label")
             pg.screenshot(path=SH + "correzione.png")
-        step("Correzione: a drop-down with an icon and a short label for every choice", correction)
+        step("Correction: a drop-down with an icon and a short label for every choice", correction)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

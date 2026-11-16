@@ -19,7 +19,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(F)])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate(STUB)
         def none():
             assert pg.evaluate("(async () => await GRADIENTE.get(E.files[0]))()") is None

@@ -423,7 +423,7 @@ async function drawLines(p) {
     s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const v = U(s, s.ys[i]); if (v > ymax) { if (!seg || v > seg.v) seg = { v, x: r }; } else if (seg) { tri(/** @type {any} */ (seg).x); seg = null; } }); if (seg) tri(/** @type {any} */ (seg).x);
   }
   // a handle sits on the sample the area ends at; the dashed baseline is the one subtracted (integ, picchi.js); «Manual integrations» follows the transition panels' windows (integrazioni-manuali.js)
-  if (typeof INTZERO === "undefined" && p.ints.some(i => i.zero)) await carica("integra-zero.js"); if (typeof INTBASE === "undefined" && p.ints.some(i => i.bm)) await carica("integra-base.js"); if (typeof SEGUE === "undefined" && ESP.mrm(p) && p.ints.length) await carica("integra-segue.js"); const mi = /** @type {any} */ (window).MANINT; if (mi) mi.sync(); else if (ESP.mrm(p) && p.ints.length) carica("m:integrazioni-manuali.js");
+  if (typeof INTZERO === "undefined" && p.ints.some(i => i.zero)) await carica("integra-zero.js"); if (typeof INTBASE === "undefined" && p.ints.some(i => i.bm)) await carica("integra-base.js"); if (typeof AREALBL === "undefined" && p.ints.length) await carica("area-etichette.js"); if (typeof SEGUE === "undefined" && ESP.mrm(p) && p.ints.length) await carica("integra-segue.js"); const mi = /** @type {any} */ (window).MANINT; if (mi) mi.sync(); else if (ESP.mrm(p) && p.ints.length) carica("m:integrazioni-manuali.js");
   for (const it of cas ? [] : window.SEGUE ? SEGUE.all(p, sr) : p.ints) {          // integrations: filled area + draggable bars, or two anchors on SIM/MRM (not in the waterfall view); a SIM/MRM window also follows the sample shown (integra-segue.js)
     const s = sr.find(q => q.key === it.key); if (!s) continue;
     const nz = noiseZone(p, it); if (nz && !p._exp) { g.fillStyle = "rgba(120,120,120,.18)"; const xa = Math.max(X(nz[0]), M.l), xb = Math.min(X(nz[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }       // noise stretch (for S/N)
@@ -439,9 +439,7 @@ async function drawLines(p) {
     }
     g.strokeStyle = s.color; g.lineWidth = 2.2;
     if (ESP.mrm(p)) { if (it.fol && window.SEGUE) SEGUE.dots(g, X, Y, U, s, it); if (it.splits && window.INTVALLI && !it.fol) INTVALLI.paint(p, g, X, Y, U, s, it); } else for (const e of ["a", "b"]) { const px = X(it.zero ? INTZERO.clamp(s, it[e]) : s.x[nearIdx(s.x, it[e])]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }      // SIM/MRM: no bars, the two anchors are buttons (integra-estremi.js); a follower gets two dashed rings
-    const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + (it.none ? "—" : r.wait && !Number.isFinite(r.area) ? "…" : I18N.sciE(r.area)) + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak; the baseline mode is in the hover text
-    g.font = fpx(13, "bold "); g.textAlign = "center"; g.lineWidth = 4; g.lineJoin = "round"; g.strokeStyle = ecss("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = ecss("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
-    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), int: it, text: lab, copy: it.none ? null : I18N.sciE(r.area, 5), tip: (it.nm ? `<div><b>${EH(it.nm)}</b></div>` : "") + (it.fol ? SEGUE.tip(p, it) : "") + (it.none ? "" : `<div class="sm">${I18N.t("int.copy.tip")}</div>`) }); g.font = fpx(12);
+    AREALBL.draw(p, g, X, Y, U, s, it, r, sr);
   }
   // the cursor line is not part of the canvas: it is a thin overlay (cursorLine), so the arrows move it without redrawing the chromatogram (and it never enters a PNG)
   for (const a of p.anns) {

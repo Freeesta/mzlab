@@ -15,7 +15,7 @@ try:
         ctx = r.b.new_context(viewport={"width": 1280, "height": 900}, device_scale_factor=2)
         pg = ctx.new_page(); pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(800)
         ok = lambda d: pg.evaluate("d => [...document.querySelectorAll('.pnl canvas')].filter(c => c.clientWidth > 50).every(c => c.width === Math.round(c.clientWidth * d))", d)
         def dpr2(): assert ok(2) and pg.evaluate("document.querySelectorAll('.pnl canvas').length") >= 2

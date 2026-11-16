@@ -26,11 +26,11 @@ def rows():
 def test_table_well_formed():
     ids = [r["id"] for r in rows()]
     assert len(ids) == len(set(ids)), "duplicate id"
-    it, en = doc_commands.etichette("it"), doc_commands.etichette("en")
+    en = doc_commands.etichette("en")
     for r in rows():
         assert re.fullmatch(r"[a-z]+(\.[a-zA-Z]+)+", r["id"]), r["id"]
         assert r["annulla"] in UNDO, r["id"]
-        assert r["nome"] in it and r["nome"] in en, f"{r['id']}: label {r['nome']} missing in lang/"
+        assert r["nome"] in en, f"{r['id']}: label {r['nome']} missing in lang/"
         assert (WEB / r["modulo"]).exists() or (ROOT / "flow" / "lazy" / r["modulo"]).exists(), f"{r['id']}: module {r['modulo']}"
         assert r["modulo"] in r["dove"], f"{r['id']}: modulo not in dove"
         if r["annulla"] == "nessuna":

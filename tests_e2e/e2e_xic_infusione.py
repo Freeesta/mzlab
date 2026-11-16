@@ -15,7 +15,7 @@ shutil.copy(D / "HR_DDA-Exploris-t30.mzML", D / "Infusion_syringe_t0.mzML")     
 SPEC = "E.panels.find(p=>p.type==='spec'&&p.level===1)"
 def open_file(pg, name):
     stage(pg, [D / name])
-    pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+    pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
 def hover_peak(pg):
     pg.evaluate(f"{SPEC}.el.scrollIntoView({{block: 'center'}})"); frames(pg)
     pos = pg.evaluate(f"""(() => {{ const p = {SPEC}, q = p.cv.getBoundingClientRect(); return {{ q: [q.left, q.top, q.width, q.height], id: p.id }}; }})()""")

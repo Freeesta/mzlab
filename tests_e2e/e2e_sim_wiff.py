@@ -1,7 +1,7 @@
 """The manual integrations of SIM traces on the built site with the Rust engine (synthetic SIM .wiff of tools/wiff_sim.py, `sim3`: a blank and three named
 samples, seven ions at a 0.8 s cycle, an isomer pair in one channel; no laboratory data): dragging the pair with an msconvert log opens four files (the
 log is skipped with a note); windows integrated on the ion traces fill the card «Manual integrations» under the chart (collapsible and remembered,
-fixed-height scroll with a sticky header, no layout shift), one row per window grouped by channel, each with a name the user types; the card, its CSV
+height of its rows up to a cap, then a scroll with a sticky header, nothing above it moves), one row per window grouped by channel, each with a name the user types; the card, its CSV
 export, the engine's sum rows and «Copy table» (tab-separated) are the bytes of `mzlab-cli manual-table` on the same .wiff and windows (after the provenance line);
 a row's Delete removes the integration; «Split at the valleys» (V) proposes the engine's drop line (`mzlab-cli peak-split`), moved by mouse, keys and finger and
 confirmed into one row per part; a window drawn on one sample stays drawn when another sample is chosen in the left panel, measured on that sample with no row added; the channels of a sample equal `mzlab-cli channels`. The copy whose .wiff.scan is cut at 60 % measures the
@@ -61,7 +61,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.context.grant_permissions(["clipboard-read", "clipboard-write"])
-        stage(pg, [D / "sim3.wiff", D / "sim3.wiff.scan", D / "sim3.wiff.log"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= 4", timeout=120000)
+        stage(pg, [D / "sim3.wiff", D / "sim3.wiff.scan", D / "sim3.wiff.log"]); pg.click("text=Load data"); ready(pg); wait_for_js(pg, "E.files.length >= 4", timeout=120000)
         open_first(pg)
         pg.click("#np-mrm"); wait_for_js(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)
         all_ions(pg)
@@ -96,9 +96,11 @@ try:
             c = pk[3][0][0]
             for i in range(6): pg.evaluate(INTEG, ["Sample_C", 1, c - 0.15 + 0.4 * i, c + 0.15 + 0.4 * i, None])      # apart: an overlapping window replaces the one under it
             wait_for_js(pg, SHOWN % 9, timeout=60000)
-            need(pg.evaluate(PNL) == p0 and pg.evaluate(WRAP) == w0, ("no layout shift", p0, w0, pg.evaluate(PNL), pg.evaluate(WRAP)))
-            sc = pg.evaluate("(() => { const w = document.getElementById('manint-b'); w.scrollTop = w.scrollHeight; const r = w.querySelector('thead th').getBoundingClientRect(); return [w.scrollHeight > w.clientHeight, Math.abs(r.top - w.getBoundingClientRect().top) < 3, Math.round(w.clientHeight / w.querySelector('tbody tr').getBoundingClientRect().height)]; })()")
-            need(sc[0] and sc[1] and 5 <= sc[2] <= 7, ("scrolls under a sticky header, about 6 rows", sc))
+            need(pg.evaluate(PNL) == p0 and pg.evaluate(WRAP)[3] > w0[3], ("the chart does not move, the table grows with its rows", p0, w0, pg.evaluate(PNL), pg.evaluate(WRAP)))   # height = rows (e2e_manint_layout.py has the numbers)
+            pg.set_viewport_size({"width": 1500, "height": 360})      # a short window: 9 rows (about 280 px) exceed 60 % of it, so the table scrolls inside
+            sc = pg.evaluate("(() => { const w = document.getElementById('manint-b'); w.scrollTop = w.scrollHeight; const r = w.querySelector('thead th').getBoundingClientRect(); return [w.scrollHeight > w.clientHeight, Math.abs(r.top - w.getBoundingClientRect().top) < 3]; })()")
+            need(sc[0] and sc[1], ("scrolls under a sticky header once capped", sc))
+            pg.set_viewport_size({"width": 1500, "height": 2200})
             pg.click("#manint .manint-tg")
             need(pg.evaluate("[document.getElementById('manint-b').hidden, document.querySelector('#manint .manint-tg').getAttribute('aria-expanded'), localStorage.getItem(NOMI.KEY('manint.open'))]") == [True, "false", "0"], "closed and remembered")
             need(pg.evaluate(PNL) == p0, "closing moves nothing above")
@@ -111,7 +113,7 @@ try:
             need(not pg.evaluate("document.getElementById('manint-b').hidden"), "integrations after none open the card")
             pg.focus("#manint .manint-tg"); pg.keyboard.press("Enter"); need(pg.evaluate("document.getElementById('manint-b').hidden"), "Enter closes")
             pg.keyboard.press(" "); need(not pg.evaluate("document.getElementById('manint-b').hidden"), "Space opens")
-        step("the card sits under the chart: collapsible, remembered, icon buttons, fixed-height scroll with a sticky header, no layout shift", card_layout)
+        step("the card sits under the chart: collapsible, remembered, icon buttons, height of its rows up to a cap, then a scroll with a sticky header, nothing above it moves", card_layout)
         def parity():
             st = pg.evaluate("MANINT.state()")
             files = [D / "sim3.wiff"]
@@ -158,7 +160,7 @@ try:
             wait_for_js(pg, "!!document.querySelector('.areacopied.show')", timeout=5000)
             need(pg.evaluate("navigator.clipboard.readText()") == cells[0][0], "Enter copies the apex")
             need(pg.evaluate("(() => { const n = window.__show; window.reveal = window.__orev; return n; })()") == 0, "a copy does not show the row's integration")
-        step("apex, area and height cells copy the CSV value with a «Copiato!» by the pointer", copy_cells)
+        step("apex, area and height cells copy the CSV value with a «Copied!» by the pointer", copy_cells)
         def names():
             need = lambda c, m: c or throw(m)
             P = "E.panels.find(q => q.type === 'mrm' && q._a)"
@@ -338,6 +340,39 @@ try:
             th = pg.evaluate("[...document.querySelectorAll('#manint thead th')].map(t => [t.textContent, t.title])")
             need([pg.evaluate("I18N.t('canali.manint.h.overlap')"), pg.evaluate("I18N.t('canali.manint.h.overlap.tip')")] in th and any(x[0] == "p/v" and x[1] for x in th), th)
             need(pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].filter(r => r.textContent.includes(I18N.t('canali.manint.drop'))).length") == 2, "two rows say «yes»")
+            # every part has its own «A = …» label at its apex (not one label for the window), click-to-copy like a normal one
+            LBL = f"{P}._a.lbls.filter(l => l.int && l.int.id === {it}).sort((u, v) => u.x - v.x).map(l => [l.text, l.copy, l.x, l.w, l.copy != null, l.y, l.h])"
+            def labels(n, tag):
+                wait_for_js(pg, f"{P}._a.lbls.filter(l => l.int && l.int.id === {it}).length === {n}", timeout=30000)
+                ls = pg.evaluate(LBL)
+                need(all(x[4] for x in ls) and all(x[0].startswith("A = ") for x in ls), (tag, ls))
+                need(not any(a[2] < b[2] + b[3] and b[2] < a[2] + a[3] and a[5] < b[5] + b[6] and b[5] < a[5] + a[6] for i, a in enumerate(ls) for b in ls[i + 1:]), (tag, "labels overlap", ls))
+                return ls
+            ls = labels(2, "two parts")
+            tot = sum(float(x[1]) for x in ls)
+            need(abs(tot - float(whole[6])) <= 2e-4 * float(whole[6]), ("the labels add up to the window", tot, whole[6]))
+            need(all(abs(a - float(b[6])) <= 1e-4 * abs(float(b[6])) for a, b in zip(sorted(float(x[1]) for x in ls), sorted(parts, key=lambda r: float(r[6])))), ("labels = table rows", ls, parts))
+            # three parts (a second drop line in the trailing peak, close enough to the first apex to make the labels collide): three labels, three rows, same total
+            t3b = round(p1 + 0.04, 3)
+            pg.evaluate(f"(() => {{ const p = {P}; p.ints.find(i => i.id === {it}).splits = [{t3}, {t3b}]; draw(p); }})()")
+            wait_for_js(pg, "MANINT.state().csv.split(',drop,').length === 4", timeout=60000)
+            ls = labels(3, "three parts")
+            rows3 = [l.split(",") for l in pg.evaluate("MANINT.state().csv").strip().split("\n") if ",drop," in l]
+            need(len(rows3) == 3 and pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].filter(r => r.textContent.includes(I18N.t('canali.manint.drop'))).length") == 3, rows3)
+            need(abs(sum(float(x[6]) for x in rows3) - float(whole[6])) <= 1e-4 * float(whole[6]), ("three parts add up to the window", rows3, whole))
+            need(abs(sum(float(x[1]) for x in ls) - float(whole[6])) <= 2e-4 * float(whole[6]), ("three labels add up", ls))
+            pg.evaluate(f"(() => {{ const p = {P}; p.ints.find(i => i.id === {it}).splits = [{t3}]; draw(p); }})()")
+            wait_for_js(pg, "MANINT.state().csv.split(',drop,').length === 3", timeout=60000)
+            # the same three parts on a second overlaid file: six area labels, none over another, all inside the plot (stacked with a leader when they collide)
+            pg.evaluate(INTEG, ["Sample_A", 2, p0 - 0.15, p1 + 0.15, None]); ia = pg.evaluate(f"{P}.ints[{P}.ints.length - 1].id")
+            pg.evaluate(f"(() => {{ const p = {P}; p.ints.find(i => i.id === {ia}).splits = [{t3}, {t3b}]; p.ints.find(i => i.id === {it}).splits = [{t3}, {t3b}]; draw(p); }})()")
+            wait_for_js(pg, "MANINT.state().csv.split(',drop,').length === 7", timeout=60000)
+            wait_for_js(pg, f"{P}._a.lbls.filter(l => l.int && (l.int.id === {it} || l.int.id === {ia})).length === 6", timeout=30000)
+            box = pg.evaluate(f"(() => {{ const a = {P}._a, L = a.lbls.filter(l => l.int && (l.int.id === {it} || l.int.id === {ia})); return {{ L: L.map(l => [l.x, l.y, l.w, l.h]), plot: [M.l, M.t, a.W - M.r, a.H - M.b] }}; }})()")
+            need(all(x >= box["plot"][0] - 0.5 and x + w <= box["plot"][2] + 0.5 and y >= box["plot"][1] - 0.5 and y + h <= box["plot"][3] + 0.5 for x, y, w, h in box["L"]), ("a label leaves the plot", box))
+            need(not any(a[0] < b[0] + b[2] and b[0] < a[0] + a[2] and a[1] < b[1] + b[3] and b[1] < a[1] + a[3] for i, a in enumerate(box["L"]) for b in box["L"][i + 1:]), ("overlaid labels intersect", box))
+            pg.evaluate(f"(() => {{ const p = {P}; p.ints.find(i => i.id === {it}).splits = [{t3}]; draw(p); }})()")
+            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"!{P}.ints.some(i => i.id === {ia})", timeout=10000)
             pg.evaluate("STORIA.annulla()"); wait_for_js(pg, "!MANINT.state().csv.includes(',drop,')", timeout=60000)
             need(pg.evaluate(f"{P}.ints.find(i => i.id === {it}).splits") is None, "undo makes it whole")
             pg.evaluate("STORIA.ripeti()"); wait_for_js(pg, "MANINT.state().csv.includes(',drop,')", timeout=60000)
@@ -376,7 +411,7 @@ r2 = Run(port=8877, wd="/tmp/wd_sim_wiff_cut")
 try:
     with sync_playwright() as p:
         pg = r2.page(p)
-        stage(pg, [D / "sim3_cut.wiff", D / "sim3_cut.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= 3", timeout=120000)
+        stage(pg, [D / "sim3_cut.wiff", D / "sim3_cut.wiff.scan"]); pg.click("text=Load data"); ready(pg); wait_for_js(pg, "E.files.length >= 3", timeout=120000)
         open_first(pg)
         pg.click("#np-mrm"); wait_for_js(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)
         all_ions(pg)

@@ -226,3 +226,133 @@ fn a_mini_fat_that_loops_reads_no_more_than_the_stream_size() {
         b.capacity()
     );
 }
+
+/// A synthetic large container: `n_fat` FAT sectors (more than the 109 of the header means DIFAT sectors), laid out as DIFAT sectors, the one directory
+/// sector, then the FAT sectors, so that the FAT sectors the DIFAT lists are the last ones in the file.
+fn large(n_fat: usize) -> Vec<u8> {
+    let ss = 512;
+    let n_dif = n_fat.saturating_sub(109).div_ceil(127);
+    let (dir, fat0) = (n_dif, n_dif + 1);
+    let mut h = vec![0u8; 512];
+    h[..8].copy_from_slice(&[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]);
+    h[0x1E..0x20].copy_from_slice(&9u16.to_le_bytes());
+    h[0x20..0x22].copy_from_slice(&6u16.to_le_bytes());
+    h[0x2C..0x30].copy_from_slice(&(n_fat as u32).to_le_bytes());
+    h[0x30..0x34].copy_from_slice(&(dir as u32).to_le_bytes());
+    h[0x38..0x3C].copy_from_slice(&4096u32.to_le_bytes());
+    h[0x3C..0x40].copy_from_slice(&END.to_le_bytes());
+    let dif0 = if n_dif > 0 { 0 } else { END };
+    h[0x44..0x48].copy_from_slice(&dif0.to_le_bytes());
+    h[0x48..0x4C].copy_from_slice(&(n_dif as u32).to_le_bytes());
+    let fat_sid = |j: usize| (fat0 + j) as u32;
+    for i in 0..109 {
+        let sid = if i < n_fat { fat_sid(i) } else { NONE };
+        h[0x4C + 4 * i..0x50 + 4 * i].copy_from_slice(&sid.to_le_bytes());
+    }
+    let mut out = h;
+    for d in 0..n_dif {
+        for k in 0..127 {
+            let j = 109 + 127 * d + k;
+            let sid = if j < n_fat { fat_sid(j) } else { NONE };
+            out.extend(sid.to_le_bytes());
+        }
+        let next = if d + 1 < n_dif { (d + 1) as u32 } else { END };
+        out.extend(next.to_le_bytes());
+    }
+    let mut root = entry("Root Entry", 5, NONE, NONE, NONE);
+    root[0x74..0x78].copy_from_slice(&END.to_le_bytes());
+    let mut d: Vec<u8> = root.to_vec();
+    d.resize(ss, 0);
+    out.extend(d);
+    let used = fat0 + n_fat;
+    let mut fat = vec![NONE; n_fat * ss / 4];
+    fat[..n_dif].fill(0xFFFF_FFFC);
+    fat[dir] = END;
+    fat[fat0..used].fill(0xFFFF_FFFD);
+    out.extend(fat.iter().flat_map(|v| v.to_le_bytes()));
+    out
+}
+
+fn wiff_key(f: &[u8]) -> &'static str {
+    match crate::wiff::container(f.to_vec(), "x.wiff") {
+        Ok(_) => "ok",
+        Err(e) => e.key,
+    }
+}
+
+#[test]
+fn a_large_file_opens_whole_and_is_told_cut_at_every_length() {
+    let f = large(130); // 21 FAT sectors listed by one DIFAT sector
+    assert_eq!(wiff_key(&f), "ok");
+    // no length may panic; the magic is checked first, the rest is a cut file
+    // every 7th length, and the bytes around each sector boundary, where a cut changes what is missing
+    for cut in
+        (0..f.len()).filter(|c| c % 7 == 0 || matches!(c % 512, 0 | 1 | 4 | 508 | 511) || *c < 600)
+    {
+        let key = wiff_key(&f[..cut]);
+        let want = if cut < 8 {
+            "err.file.notWiff"
+        } else {
+            "err.file.wiffTruncated"
+        };
+        assert_eq!(key, want, "cut at {cut} of {}", f.len());
+    }
+}
+
+#[test]
+fn the_named_cut_points_of_a_large_file_are_told_cut() {
+    let f = large(130);
+    let at = |s: usize| 512 * (s + 1); // start of sector s
+    for (what, cut) in [
+        ("inside the header", 300),
+        ("inside the first DIFAT sector", at(0) + 100),
+        ("inside the directory", at(1) + 10),
+        (
+            "inside the FAT sectors listed by the header",
+            at(2 + 50) + 7,
+        ),
+        (
+            "inside the FAT sectors listed by the DIFAT",
+            at(2 + 120) + 7,
+        ),
+        ("inside the last FAT sector", f.len() - 1),
+    ] {
+        assert_eq!(wiff_key(&f[..cut]), "err.file.wiffTruncated", "{what}");
+    }
+    // a wrong magic is the only way to «not a .wiff»
+    let mut g = f;
+    g[0] = 0;
+    assert_eq!(wiff_key(&g), "err.file.notWiff");
+}
+
+#[test]
+fn a_file_of_less_than_a_header_with_the_magic_is_cut_not_foreign() {
+    let f = large(3);
+    for n in 8..76 {
+        assert_eq!(wiff_key(&f[..n]), "err.file.wiffTruncated", "{n} bytes");
+    }
+    assert_eq!(wiff_key(&f[..7]), "err.file.notWiff");
+}
+
+#[test]
+fn a_hostile_difat_gives_a_clean_error_without_spinning_or_growing() {
+    let mut f = large(130);
+    let n = f.len();
+    // the DIFAT sector (sector 0) points to itself, and the header claims four billion of them
+    f[0x44..0x48].copy_from_slice(&0u32.to_le_bytes());
+    f[0x48..0x4C].copy_from_slice(&u32::MAX.to_le_bytes());
+    f[512 + 508..512 + 512].copy_from_slice(&0u32.to_le_bytes());
+    let k = wiff_key(&f);
+    assert!(
+        k == "ok" || k == "err.file.wiffTruncated" || k == "err.file.notWiff",
+        "{k}"
+    );
+    // a FAT count and a DIFAT start that point far past the file
+    f[0x2C..0x30].copy_from_slice(&u32::MAX.to_le_bytes());
+    f[0x44..0x48].copy_from_slice(&0x7FFF_0000u32.to_le_bytes());
+    assert_eq!(wiff_key(&f), "err.file.wiffTruncated");
+    // every prefix of the hostile file is also free of panics
+    for cut in (0..n).step_by(7) {
+        let _ = wiff_key(&f[..cut]);
+    }
+}
