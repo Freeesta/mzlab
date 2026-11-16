@@ -211,7 +211,7 @@ try:
             pg4 = c4.new_page(); pg4.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); pg4.wait_for_function("window.MZLAB_DESKTOP === true", timeout=120000)
             pg4.evaluate("fetch('api/new', { method: 'POST', body: JSON.stringify({ fresh: true }) })"); pg4.reload(); pg4.wait_for_selector("#demobtn", timeout=120000)
             pg4.click("#demobtn"); pg4.click("[data-demo=mrm]")
-            pg4.wait_for_timeout(8000); pg4.wait_for_function("document.body.innerText.includes('non ha ricevuto')", timeout=60000)
+            pg4.wait_for_timeout(8000); pg4.wait_for_function("document.body.innerText.includes('did not receive the file')", timeout=60000)
             assert "Thermo" not in pg4.inner_text("body")
             c4.close()
         step("the demo files load in the app (fetched from the bundle, sent as bytes)", demo)

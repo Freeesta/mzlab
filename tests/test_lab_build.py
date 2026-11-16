@@ -152,7 +152,7 @@ def test_guard_expiry_with_a_fake_clock(now, expired):
     assert (r["calls"] != []) == expired
     if expired:
         page = r["calls"][1][1]
-        assert r["calls"][0] == ["stop"] and "expired" in page and "scaduta" in page and not r["lab"] and r.get("banner") is None
+        assert r["calls"][0] == ["stop"] and "expired" in page and "scaduta" not in page and not r["lab"] and r.get("banner") is None
 
 
 @needs_node
