@@ -895,7 +895,7 @@ const BARRA = (() => {
   function bindGlobalEvents() {
     document.addEventListener("keydown", e => {
       // show/hide the side panel from the keyboard
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.code === "KeyB") && inData()) {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.code === "KeyB") && (inData() || landing())) {      // the empty landing has the header button, so it has the key too
         e.preventDefault(); e.stopPropagation();
         toggleDrawer();
         return;
