@@ -1,5 +1,6 @@
 //! The binary fast path of the desktop (`State::spectra`, twin of the wasm `engine.spectra`) merges unit-resolution centroids per nominal mass: the AUTO rule of
 //! `/api/spectra`. Compared with Python's answer (`tools/spectra_reference.py`); the wasm twin is held byte-equal to it by parity_routes.rs.
+use mzlab_desktop::State;
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 use std::process::Command;
