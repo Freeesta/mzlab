@@ -28,9 +28,9 @@ APP_NAME = re.search(r'APP_NAME\s*=\s*"([^"]+)"', (ROOT / "mzlab" / "web" / "app
 
 # Address of the published site (GitHub Pages): link previews (WhatsApp, Telegram, Slack...) need ABSOLUTE addresses for the page and the picture
 SITE_URL = "https://freeesta.github.io/mzlab/"
-TAGLINE = "Analisi MS"         # Italian tagline of the link previews (the previews are Italian)
-TITLE_TAG = "MS Analysis"      # tagline of the static <title>: the English one, the default language; same as index.html and as the catalog key app.title in English
-DESCRIPTION = "Esplora cromatogrammi, spettri, XIC e MRM dei tuoi file LC-MS/MS nel browser. Nessuna installazione: i dati restano sul tuo computer."
+TAGLINE = "MS Analysis"        # tagline of the link previews
+TITLE_TAG = "MS Analysis"      # tagline of the static <title>; same as index.html and as the catalog key app.title in English
+DESCRIPTION = "Explore chromatograms, spectra, XIC and MRM of your LC-MS/MS files in the browser. Nothing to install: your data stay on your computer."
 
 
 def preview_tags() -> str:
@@ -38,9 +38,9 @@ def preview_tags() -> str:
     a = lambda t: t.replace("&", "&amp;").replace('"', "&quot;")
     title = f"{APP_NAME} · {TAGLINE}"
     img = SITE_URL + "static/anteprima.png?v=3"          # ?v=N: change N with a new picture, the chat apps keep the old one by its address
-    meta = [("name", "description", DESCRIPTION), ("property", "og:type", "website"), ("property", "og:site_name", APP_NAME), ("property", "og:locale", "it_IT"), ("property", "og:url", SITE_URL),
+    meta = [("name", "description", DESCRIPTION), ("property", "og:type", "website"), ("property", "og:site_name", APP_NAME), ("property", "og:locale", "en_US"), ("property", "og:url", SITE_URL),
             ("property", "og:title", title), ("property", "og:description", DESCRIPTION), ("property", "og:image", img), ("property", "og:image:type", "image/png"),
-            ("property", "og:image:width", "1200"), ("property", "og:image:height", "630"), ("property", "og:image:alt", f"Logo e nome di {APP_NAME}"),
+            ("property", "og:image:width", "1200"), ("property", "og:image:height", "630"), ("property", "og:image:alt", f"Logo and name of {APP_NAME}"),
             ("name", "twitter:card", "summary_large_image"), ("name", "twitter:title", title), ("name", "twitter:description", DESCRIPTION), ("name", "twitter:image", img)]
     return "\n".join(f'<meta {k}="{n}" content="{a(v)}">' for k, n, v in meta) + f'\n<link rel="canonical" href="{SITE_URL}">'
 
@@ -51,7 +51,7 @@ WEB_APP_NAME = f"{APP_NAME} Web"
 
 # Web app manifest (PWA). Paths are relative to the manifest, which sits in the site root, so it works under /QqQ-lab/.
 MANIFEST = {
-    "name": WEB_APP_NAME, "short_name": WEB_APP_NAME, "lang": "it", "dir": "ltr",
+    "name": WEB_APP_NAME, "short_name": WEB_APP_NAME, "lang": "en", "dir": "ltr",
     "description": "Esplora i dati LC-MS/MS del triplo quadrupolo (Full Scan, Product ion, MRM) direttamente nel browser.",
     "start_url": "./", "scope": "./", "id": "./", "display": "standalone",
     "background_color": "#ffffff", "theme_color": "#ffffff", "categories": ["education", "science"],
@@ -157,7 +157,7 @@ def bundle_lang(static: Path) -> None:
     """lang/<lang>.js of the site is the catalog in two files instead of the loader that writes one <script> per area: lang/<lang>.js holds
     the keys of the first view (render-blocking, before the first paint), lang/<lang>-resto.js the rest, loaded by carica.js before any other
     script (I18N.awaitRest / I18N.done in i18n.js). The area folders stay (tools and tests read them)."""
-    for lang in ("it", "en"):
+    for lang in ("en",):
         loader = (static / "lang" / f"{lang}.js").read_text(encoding="utf-8")
         names = re.findall(r'"([^"]+)"', re.search(r"document\.write\(\[([^\]]*)\]", loader).group(1))
         cat: dict = {}

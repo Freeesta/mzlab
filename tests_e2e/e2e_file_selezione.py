@@ -13,7 +13,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz(f) for f in FILES])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         wait_for_js(pg, "E.files.filter(f=>f&&f.kind==='mrm').length>=1&&E.panels.some(p=>p.type==='chrom'&&p.el)")
         def marked():
             assert pg.evaluate("document.querySelectorAll('#flst .fl[aria-current=true]').length") == 1

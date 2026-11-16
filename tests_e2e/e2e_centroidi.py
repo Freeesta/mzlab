@@ -1,5 +1,5 @@
-"""«Riduci ogni picco a un solo punto» (Impostazioni): a low-resolution profile mzML gets a copy `<name>.centroidi.mzML` loaded next to it, the original stays as it is; the card says
-«Profilo» / «Un punto per picco»; the status shows «N di M». On the built site with the Rust engine and WITHOUT Pyodide; a synthetic file (no laboratory data).
+"""«Reduce every peak to a single point» (Settings): a low-resolution profile mzML gets a copy `<name>.centroidi.mzML` loaded next to it, the original stays as it is; the card says
+«Profile» / «One point per peak»; the status shows «N of M». On the built site with the Rust engine and WITHOUT Pyodide; a synthetic file (no laboratory data).
 Needs the site and the .wasm: python tools/build_site.py (the .wasm is built as in e2e_wiff.py)."""
 import shutil, subprocess, sys, tempfile, time
 from pathlib import Path
@@ -45,8 +45,8 @@ try:
         def card_profile():
             pg.wait_for_function("typeof ST !== 'undefined' && ST.files.length === 1 && ST.files[0].spectrum_mode === 'profile'", timeout=60000)
             pg.wait_for_selector("#flst .fl[data-k]")      # the file's card, not the upload row that stands before it
-            assert "Profilo" not in pg.inner_text("#flst") and "Profilo" not in pg.get_attribute("#flst .fl[data-k]", "data-tip"), "no mode word on the row or in its tooltip"
-        step("the card of a profile file carries no Profilo word", card_profile)
+            assert "Profile" not in pg.inner_text("#flst") and "Profile" not in pg.get_attribute("#flst .fl[data-k]", "data-tip"), "no mode word on the row or in its tooltip"
+        step("the card of a profile file carries no Profile word", card_profile)
         def convert():
             pg.click("#np-set"); pg.wait_for_selector("#uipset"); pg.wait_for_selector("#uip-cen")
             want = pg.evaluate("I18N.t('settings.cen.title')")
@@ -59,7 +59,7 @@ try:
         def modes():
             m = pg.evaluate("Object.fromEntries(ST.files.map(f => [f.name, f.spectrum_mode]))")
             assert m == {"prof.mzML": "profile", "prof.centroidi.mzML": "centroid"}, m
-            assert "Un punto per picco" not in pg.inner_text("#flst")      # the usual centroid file carries no label
+            assert "One point per peak" not in pg.inner_text("#flst")      # the usual centroid file carries no label
         step("the copy is a centroid file (no label), the original is still a profile file", modes)
         def copy_text():
             t = pg.evaluate("""async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('files'); const f = await (await d.getFileHandle('prof.centroidi.mzML')).getFile(); return [f.size, await f.text()]; }""")

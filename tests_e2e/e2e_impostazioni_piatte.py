@@ -1,4 +1,4 @@
-"""Flat settings panel: the IT|EN switch (click and keyboard, full names as accessible names, no globe icon), «Dati e calcolo» and the tour button visible
+"""Flat settings panel: no language switch, «Data and calculation» and the tour button visible
 without expanding anything, no fold around a single control, no overflow at 360 px, axe clean (light, dark, high contrast). Synthetic data."""
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -17,18 +17,15 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1000})
         shutil.rmtree("/tmp/s_imp_piatte", ignore_errors=True)
-        stage(pg, synth.make_series("/tmp/s_imp_piatte", [0, 15, 60])); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, synth.make_series("/tmp/s_imp_piatte", [0, 15, 60])); pg.click("text=Load data"); ready(pg)
         def opened():
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
             assert pg.locator("#uipset details.imp-g").count() == 0, "no fold in the plain panel"
             assert pg.locator("#uip-merge").count() == 0 and pg.is_visible("#uip-tour"), "no merge switch (the engine decides); the tour button shows without expanding"
             assert pg.locator("#uip-g-data > h3, #uip-g-data h3").count() == 0, "a single control has no group title"
             assert pg.is_visible("#uip-bugbtn") and pg.get_attribute("#uip-bugbtn", "aria-expanded") == "false"
-            assert pg.locator("#uipset .seglang svg").count() == 0 and pg.locator("#uipset .seglang").count() == 1, "compact switch, no globe or other icon"
-            names = pg.evaluate("[...document.querySelectorAll('input[name=uip-lang]')].map(i => i.getAttribute('aria-label'))")
-            assert names == ["Italiano", "English"], names
-            assert [t.strip() for t in pg.locator(".seglang .lg").all_inner_texts()] == ["IT", "EN"]
-        step("flat panel: nothing folded, switch IT|EN with full names", opened)
+            assert pg.locator("#uipset .seglang, input[name=uip-lang]").count() == 0, "no language switch: the program is English only"
+        step("flat panel: nothing folded, no language switch", opened)
         def bug_toggle():
             pg.click("#uip-bugbtn"); pg.wait_for_selector("#bug-what", timeout=10000); assert pg.get_attribute("#uip-bugbtn", "aria-expanded") == "true"
             pg.click("#uip-bugbtn"); assert pg.is_hidden("#uip-bug") and pg.get_attribute("#uip-bugbtn", "aria-expanded") == "false"
@@ -36,23 +33,9 @@ try:
         def narrow():
             for w in (360, 1400):
                 pg.set_viewport_size({"width": w, "height": 800}); wait_for_js(pg, f"innerWidth === {w}")
-                m = pg.evaluate("""(() => { const d = document.querySelector('#uipset'), l = document.querySelector('.imp-lang'), s = l.querySelector('span').getBoundingClientRect(), g = l.querySelector('.seglang').getBoundingClientRect();
-                  return [d.scrollWidth - d.clientWidth, Math.abs(s.top + s.height / 2 - g.top - g.height / 2), g.width, g.height]; })()""")
-                assert m[0] <= 0 and m[1] < 20 and m[3] >= 24, (w, m)
-        step("language row: one line, no horizontal overflow at 360 and 1400 px", narrow)
-        def keyboard():
-            pg.focus("input[name=uip-lang][value=it]")
-            with pg.expect_navigation(): pg.keyboard.press("ArrowRight")
-            wait_for_js(pg, "typeof I18N !== 'undefined' && I18N.lang === 'en'", 60000); ready(pg)
-            assert pg.evaluate("localStorage.getItem('mzlab.lang')") == "en"
-            pg.click("#np-set"); pg.wait_for_selector("#uipset")
-            assert pg.evaluate("document.querySelector('input[name=uip-lang]:checked').value") == "en"
-            assert pg.evaluate("document.querySelector('input[name=uip-lang]:checked').closest('.lg').textContent.trim()") == "EN"
-        step("language by keyboard (arrow) switches to English and is remembered", keyboard)
-        def click_back():
-            with pg.expect_navigation(): pg.click("input[name=uip-lang][value=it]", force=True)
-            wait_for_js(pg, "typeof I18N !== 'undefined' && I18N.lang === 'it'", 60000); ready(pg)
-        step("language by click switches back to Italian", click_back)
+                m = pg.evaluate("(() => { const d = document.querySelector('#uipset'); return d.scrollWidth - d.clientWidth; })()")
+                assert m <= 0, (w, m)
+        step("no horizontal overflow at 360 and 1400 px", narrow)
         if AXE:
             def axe_themes():
                 pg.click("#np-set"); pg.wait_for_selector("#uipset")

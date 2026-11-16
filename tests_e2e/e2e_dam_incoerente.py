@@ -17,11 +17,11 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.wait_for_timeout(1000)
         pg.set_input_files("#pickdam", [str(DAM), str(MRM_DAM)]); pg.wait_for_timeout(1200)
-        pg.click("text=Carica dati"); ready(pg); pg.wait_for_timeout(800)
+        pg.click("text=Load data"); ready(pg); pg.wait_for_timeout(800)
         def warn():
             assert pg.is_visible("#methwarn"), "visible notice"
             t = pg.inner_text("#methwarn"); print(t)
-            assert "non corrisponde" in t and "Lab_inq_MRM_Carba.dam" in t and "MRM" in t and "Full Scan" in t, t
+            assert "does not match" in t and "Lab_inq_MRM_Carba.dam" in t and "MRM" in t and "Full Scan" in t, t
             assert "FullMass_pos_max480" not in t, t                  # the matching method is not mentioned
         step("an MRM method with a Full Scan file: a visible notice naming both", warn)
         def dismiss():

@@ -1,7 +1,7 @@
 {
-  "draw.ev.count": "Disegno, riquadro «Colori delle evidenze»: quanto è colorato per un'evidenza; {atoms} = numero di atomi, {bonds} = numero di legami.",
-  "draw.ev.fail": "Disegno, riquadro «Colori delle evidenze»: i colori non sono stati applicati; {message} = errore già tradotto del motore.",
-  "draw.ev.painted": "Disegno, riquadro «Colori delle evidenze», riga di stato: {n} = strati colorati, {total} = strati richiesti.",
-  "draw.ev.row": "Disegno, riga della legenda dei colori: {kind} = tipo di evidenza col suo colore scritto (draw.ev.kind.*), {label} = etichetta data dalla pagina che chiede, {what} = conteggio (draw.ev.count) o motivo per cui non c'è colore (draw.ev.skip.*).",
-  "error.hilite.query": "Errore dei colori delle evidenze: la struttura (SMILES o sottostruttura) non si legge o non si confronta col disegno; {detail} = dettaglio tecnico del lettore (es. «empty»)."
+  "draw.ev.count": "Drawing, \"Evidence colors\" box: how much is colored for a piece of evidence; {atoms} = number of atoms, {bonds} = number of bonds.",
+  "draw.ev.fail": "Drawing, \"Evidence colors\" box: the colors were not applied; {message} = engine error, already translated.",
+  "draw.ev.painted": "Drawing, \"Evidence colors\" box, status row: {n} = colored layers, {total} = layers requested.",
+  "draw.ev.row": "Drawing, row of the color legend: {kind} = type of evidence with its color written out (draw.ev.kind.*), {label} = label given by the page that asks, {what} = count (draw.ev.count) or the reason why there is no color (draw.ev.skip.*).",
+  "error.hilite.query": "Evidence colors error: the structure (SMILES or substructure) cannot be read or compared with the drawing; {detail} = technical detail from the reader (e.g. \"empty\")."
 }

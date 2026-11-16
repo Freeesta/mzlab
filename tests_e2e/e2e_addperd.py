@@ -17,7 +17,7 @@ if __name__ == "__main__":
             step("one toolbar button", one_button)
             def tabs():
                 pg.click("#stbar [data-cmd=addloss]"); frames(pg, 6)
-                assert pg.inner_text("#sb-title") == "Addotti e perdite"
+                assert pg.inner_text("#sb-title") == "Adducts & losses"
                 assert pg.get_attribute("#al-t-adducts", "aria-selected") == "true" and pg.is_visible("#sb-panel-adducts")
                 pg.click("#al-t-losses"); frames(pg, 6)
                 assert pg.is_visible("#sb-panel-losses") and not pg.is_visible("#sb-panel-adducts")
@@ -29,8 +29,8 @@ if __name__ == "__main__":
                 st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))"); assert st["sub"] == "losses", st
             step("last tab remembered", remembered)
             def palette():
-                pg.keyboard.press("Control+k"); wait_for_js(pg, "document.querySelector('#pal-l')"); pg.keyboard.type("addotti")
-                frames(pg, 6); assert "Addotti e perdite" in pg.inner_text("#pal-l"); pg.keyboard.press("Escape")
+                pg.keyboard.press("Control+k"); wait_for_js(pg, "document.querySelector('#pal-l')"); pg.keyboard.type("adducts")
+                frames(pg, 6); assert "Adducts & losses" in pg.inner_text("#pal-l"); pg.keyboard.press("Escape")
             step("palette finds the one command", palette)
     finally:
         print("page errors:", r.errs); r.close()

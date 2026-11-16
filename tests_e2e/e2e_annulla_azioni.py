@@ -1,4 +1,4 @@
-"""Undo of the actions of the Dati view, one step per action of the registry (comandi.js): the ruler of the spectrum (clicks, button, Esc), the keys
+"""Undo of the actions of the Data view, one step per action of the registry (comandi.js): the ruler of the spectrum (clicks, button, Esc), the keys
 with the focus on a button, a checkbox or a select, redo, the state of the buttons. Steps in TODO are known gaps of the undo not ported yet: they must
 FAIL today and the test fails as soon as one passes (then it moves out of TODO), so the list only shrinks."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -21,7 +21,7 @@ try:
         pg = r.page(p)
         tick = lambda: pg.evaluate("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(r,0))))")
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); tick()
         mod = "Meta" if pg.evaluate("/Mac/.test(navigator.platform)") else "Control"
         def peak_x(m):

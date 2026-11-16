@@ -1,6 +1,4 @@
 I18N.add("en", {
-  "settings.language.label": "Lingua / Language",
-  "settings.language.title": "Interface language",
   "settings.g.look": "Appearance",
   "settings.g.read": "Readability and accessibility",
   "settings.g.data": "Data and calculation",

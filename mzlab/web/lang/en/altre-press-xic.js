@@ -20,6 +20,7 @@ I18N.add("en", {
   "unopen.more": "and {n} more",
   "unopen.how": "How to convert",
   "unopen.other": "{n} files ignored, not a mass-spectrometry file we know: {names}",
+  "unopen.other.one": "1 file ignored, not a mass-spectrometry file we know: {names}",
   "load.note.logs.one": "One log file skipped (it holds no data): {names}",
   "load.note.logs": "{n} log files skipped (they hold no data): {names}",
   "unopen.err.one": "{name}: {message}",

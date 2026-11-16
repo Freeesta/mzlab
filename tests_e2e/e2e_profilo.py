@@ -24,9 +24,9 @@ try:
         pg.set_input_files("#pick", [str(D / "P_FullMass-t15.mzML"), str(D / "C_FullMass-t15.mzML")]); pg.wait_for_timeout(1200)
         def note():
             assert not pg.evaluate("document.querySelector('#modenote').hidden"), "profile + centroid: the note appears"
-            assert "non sono confrontabili" in pg.inner_text("#modenote")
+            assert "are not comparable" in pg.inner_text("#modenote")
         step("mixed formats: the note on the loading screen", note)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()"); ready(pg)      # a low-resolution list opens only its first file
         pk = pg.evaluate("E.files.findIndex(f=>f.file.startsWith('P_'))"); ck = pg.evaluate("E.files.findIndex(f=>f.file.startsWith('C_'))")
         def show(k, a=14.6, b=14.8):
@@ -65,7 +65,7 @@ try:
             off = pg.evaluate("async u => (await (await fetch(u + '&merge=0')).json()).mz.length", u)
             print("centroids merged (auto) / opted out (merge=0)", on, off); assert on <= off
             nom = pg.evaluate(f"{SPEC}._a.data[0].d.mz.map(m=>Math.floor(m+0.2))"); assert len(nom) == len(set(nom)), "merged: one per nominal mass"
-            assert "unione per massa nominale: automatica" in pg.evaluate(f"{SPEC}.leg.textContent"), "the page states the automatic merge"
+            assert "merge by nominal mass: auto" in pg.evaluate(f"{SPEC}.leg.textContent"), "the page states the automatic merge"
             assert pg.evaluate("async u => (await (await fetch(u)).json()).auto_merge", u) is True, "the route states it too"
         step("centroid file: merged by the engine (auto), stated, merge=0 opts out", centroid)
         pg.screenshot(path=SH + "profilo.png")

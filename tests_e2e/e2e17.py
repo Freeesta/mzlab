@@ -1,4 +1,4 @@
-"""Dati sub-tabs: Full Scan / MS2 / MRM never share a graph; MS2 strip + panel per precursor; MRM Quant/Qual; overview matrix."""
+"""Data sub-tabs: Full Scan / MS2 / MRM never share a graph; MS2 strip + panel per precursor; MRM Quant/Qual; overview matrix."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -10,7 +10,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(1500)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         tabs = lambda: pg.evaluate("[...document.querySelectorAll('#flst .fgh')].map(g=>g.dataset.gt+':'+g.querySelector('em').innerText)")
         def t1(): assert tabs() == ["full:3", "ms2:1", "mrm:1"], tabs()
         step("file list groups with per-type counts", t1)

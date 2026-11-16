@@ -1,5 +1,5 @@
 """Instrument files (.lcd, .wiff2, .d: the ones the engine cannot convert; .raw and .wiff are converted by it, lettura nativa) dropped in the start page: ONE notice for the whole loading (count + collapsible names, max 5 + «and N more»),
-the openable mzML still loads, no repeated notice for the same group, and the guide «Non hai file mzML?» opens from the button and from the keyboard."""
+the openable mzML still loads, no repeated notice for the same group, and the guide «Don't have mzML files?» opens from the button and from the keyboard."""
 # covers: mzlab/web/shell.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -61,7 +61,7 @@ try:
             pg.set_input_files("#pick", [blob("b.wiff2"), blob("e.wiff2"), blob("c.d"), blob("x.lcdx"), blob("y.lcdx"), blob("z.xyz"), blob("q.txt")])      # a .wiff with its .scan is converted by the engine
             pg.wait_for_function("!document.querySelector('#unopen').hidden", timeout=10000)
             t = pg.inner_text("#unopen")
-            assert "2 file SCIEX .wiff2" in t and "2 file Shimadzu .lcdx" in t and ".wiff" in t and "ignorati" in t and "z.xyz" in t and "q.txt" not in t, repr(t)
+            assert "2 SCIEX .wiff2 files" in t and "2 Shimadzu .lcdx files" in t and ".wiff" in t and "ignored" in t and "z.xyz" in t and "q.txt" not in t, repr(t)
             pg.locator("#unopen details.unopen-names summary").click()
             assert pg.locator("#unopen details.unopen-names li").count() == 5, "5 names, no «and N more»"
             pg.focus("#unopen [data-a=close]")
@@ -71,10 +71,10 @@ try:
             pg.set_input_files("#pick", [blob("k1.wiff2"), blob("k2.lcdx"), blob("k3.baf"), blob("u1.xyz"), blob("u2.docx"), blob("s_t0.mzML", mzbuf)])
             pg.wait_for_function("!document.querySelector('#unopen').hidden", timeout=10000)
             ps = pg.locator("#unopen p").all_inner_texts()
-            known = [x for x in ps if "riconosciuto" in x]
+            known = [x for x in ps if "recognised" in x]
             assert len(known) == 3 and any("SCIEX .wiff2" in x for x in known) and any("Shimadzu .lcdx" in x for x in known) and any("Bruker .baf" in x for x in known), ps
-            unk = [x for x in ps if "ignorati" in x]
-            assert len(unk) == 1 and "2 file" in unk[0] and "u1.xyz" in unk[0] and "k1.wiff2" not in unk[0] and "riconosciuto" not in unk[0], ps
+            unk = [x for x in ps if "ignored" in x]
+            assert len(unk) == 1 and "2 files" in unk[0] and "u1.xyz" in unk[0] and "k1.wiff2" not in unk[0] and "recognised" not in unk[0], ps
             assert pg.locator("#unopen[aria-live=polite]").count() == 1 and pg.locator("#unopen [data-a=help]").count() == 1
         step("mixed drop: wiff2 + lcdx + baf named by vendor and format, unknown files in their own line, one notice", known_vs_unknown)
         def more():
@@ -84,7 +84,7 @@ try:
             assert pg.locator("#unopen details.unopen-names li").count() == 6 and "3" in pg.locator("#unopen details.unopen-names li").last.inner_text()
         step("more than 5 names: «and 3 more»", more)
         def en():
-            pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); pg.wait_for_timeout(800)
+            pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
             assert pg.locator("#convhelp summary").inner_text() == "Don't have mzML files?", pg.locator("#convhelp summary").inner_text()
             pg.evaluate("document.querySelector('#convhelp').open=true"); assert "press Add" in pg.inner_text("#convhelp ol"), pg.inner_text("#convhelp ol")
             pg.set_input_files("#pick", [blob(f"e{i}.lcdx") for i in range(5)])

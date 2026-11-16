@@ -7,8 +7,8 @@ Each finding gives severity, place, expected value with source, observed value, 
 - The implementation and its tests are read, the quantity is recomputed independently (numpy, scipy, `molmass`, `matchms`, `ms_entropy`) on small synthetic cases, and a discrepancy is listed as CONFIRMED only after the native engine (`mzlab-cli` or a throw-away `cargo test`) shows it. Only synthetic inputs are used.
 - Area 1 (mass and formula): complete.
 - Area 2 (chromatography and quantitation): complete; findings B1 and B7 are re-run a second time, B2-B6 are measured once on the engine and their code path is read.
-- Area 3 (spectral matching): UNFINISHED. The engine outputs are compared with the references, but no difference is analysed down to its cause: every difference is under SUSPECTED.
-- Area 4 (statistics on feature tables): UNFINISHED. The numerical comparison is done; k-means, imputation and PQN are not examined.
+- Area 3 (spectral matching): the three differences found earlier are analysed to their cause (C1-C3); the edge cases listed under Not checked remain.
+- Area 4 (statistics on feature tables): Welch, ANOVA and BH are compared end to end; k-means and PQN do not exist in the engine.
 - Severity words: wrong result, precision loss, convention unclear, doc mismatch.
 
 ## CONFIRMED - area 1, mass and formula
@@ -104,6 +104,26 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Fix: counts x s everywhere, with the unit in the field name.
 - Status: OPEN (owner decision): one unit changes exported area fields.
 
+## CONFIRMED - area 3, spectral matching
+
+### C1 - wrong result - entropy similarity with a spectrum without intensity is 0.5
+- Place: `crates/mzlab-core/src/entropy.rs` (`entropy_similarity`), `crates/mzlab-lib/src/prep.rs` (`entropy_with_query`, behind `pair_scores`, `entropy_from_pairs` and the library scan), the JS fallback `mzlab/web/libreria-worker.js` (`entropySimilarity`), the Python reference `tools/golden.py`.
+- Expected: 0, as `ms_entropy` and as the sum of the pair contributions (`contrib::entropy_contributions`) say: an empty spectrum shares nothing.
+- Observed: with no peaks, or every peak at 0, S_AB = (S_B + ln 2)/2 and the formula gives 1 - ln 2/ln 4 = 0.5 (0.4999999999999999 on the engine); the JS fallback followed the same formula, the Python reference divided by zero.
+- Status: FIXED: every route returns 0 when either spectrum has no positive intensity; tests `crates/mzlab-core/src/entropy_tests.rs`, `crates/mzlab-lib/tests/empty_spectrum.rs`, `tests/test_libreria.py`. No golden contains such a spectrum, so no expected value moves.
+
+### C2 - precision loss - the library cleaning cuts the noise before merging, in one pass
+- Place: `crates/mzlab-lib/src/clean.rs` (`clean`, `centroid`), used to build every `.mzlib` and to clean every query.
+- Expected: `ms_entropy` 1.5.3 `clean_spectrum` (Li and Fiehn, Nat. Methods 2023, 20, 1475), the order the module header claims: peaks above precursor - 1.6 removed, then peaks within 0.05 Da merged, repeated until none is closer, then the peaks under 1 % of the highest removed.
+- Observed: the engine removes the noise first and merges once (a re-implementation in that order matches it on 200 of 200 synthetic spectra with close peaks, the reference order on 25). The cleaned spectra differ on 176 of 200; the entropy similarity of the two cleanings of the same spectrum is at least 0.957 (median 1.000, 4 of 200 under 0.99). Likely cause of the earlier identity scores up to 0.09 under `ms_entropy` (0.911423 against 1.000000; not re-run). The parity goldens avoid it (peaks at least 0.15 Da apart, none under 1 %).
+- Fix: merge (repeated) before the noise cut.
+- Status: OPEN (owner decision): the fix changes the bytes of every library built from now on (the pinned hash of `crates/mzlab-lib/tests/build_sha.rs`), and libraries already built keep the old cleaning until rebuilt.
+
+### C3 - NOT A BUG - the hybrid search differs from `ms_entropy`
+- Observed: 0.673981 against 0.539823 (and two similar cases) on one library entry with shifted fragments; identity, open and neutral-loss agree to 1e-6.
+- Cause: in `ms_entropy` 1.5.3 (`flash_entropy_search_core.py`, `search_hybrid`) `np.searchsorted(product_peak_match_idx_max - 1, ...)` runs on uint64 and wraps when a query peak has no library ion below it, so valid neutral-loss pairs are dropped. Minimal case: `ms_entropy` gives 0.515850 alone and 0.810011 once another library spectrum with a 10 Da ion is added; the definition gives 0.810011, the engine 0.810011 without quantisation and 0.810009 through the `.mzlib`.
+- Status: NOT A BUG: the engine follows the definition; `tools/parity_libraries.py` gives every synthetic spectrum a first peak of its own to step around the reference bug.
+
 ## CONFIRMED - area 4, statistics
 
 ### D1 - convention unclear - replicate CV uses the population SD
@@ -113,6 +133,13 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Fix: divide by n - 1.
 - Status: OPEN (owner decision): divisor n - 1 changes the exported `cv_mediano`.
 
+### D2 - convention unclear - the 95 % ellipses of the PCA use the chi-square quantile 5.991
+- Place: `crates/mzlab-core/src/pca.rs` (`ellipse`), reference `mzlab/statistica.py` (`ellipse`, same constant).
+- Expected: 5.991465 is the exact chi-square(2) 0.95 quantile, which describes the spread of a population with known covariance. For n replicates with an estimated covariance the 95 % prediction ellipse uses 2(n-1)(n+1)/(n(n-2)) F(0.95; 2, n-2) (Hotelling T2): 13.3, 3.45, 2.26, 1.84, 1.36 times wider semi-axes at n = 3, 4, 5, 6, 10.
+- Observed: semi-axes sqrt(5.991 x eigenvalue): the 3.9e-5 relative difference from the reference ellipses is the rounded constant (sqrt(5.991/5.991465) - 1 = -3.9e-5).
+- Fix: name the ellipse (covariance of the replicates) or switch to the Hotelling prediction ellipse.
+- Status: OPEN (owner decision): the other choice changes the size of every drawn ellipse.
+
 ## SUSPECTED (seen once or only read; not confirmed by a minimal engine run)
 
 - Area 2: arPLS weights (`crates/mzlab-feat/src/untargeted/arpls.rs:76-92,116`: population SD, logistic weight also below the baseline) follow mzmine and not exactly Baek et al., Analyst 2015, 140, 250; largest baseline difference 0.0075 counts under a 4000-count peak.
@@ -120,9 +147,6 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Area 2 and 4: `cv_after` of the drift correction (`crates/mzlab-feat/src/drift.rs`) is computed on the QC injections that fit the curve; with span 0.5 and 0.3 on the synthetic set the median QC CV after correction is 0.00 (before 6.15 %), an optimistic figure. A leave-one-out CV would be the fair one.
 - Area 2: `auto_integrate` area/true 0.964 at sigma 40 points and 0.885 at sigma 80 points (AsLS lambda fixed in points).
 - Area 2: `crates/mzlab-core/src/legacy/lr/peakchk.rs:58` has the same non-interpolated FWHM as B5.
-- Area 3: the hybrid search of the library differs from `ms_entropy` (Flash entropy, Li and Fiehn, Nat. Methods 2023, 20, 1475): 0.673981 against 0.539823, 0.894662 against 0.744709, 0.677160 against 0.552967 on one library entry with shifted fragments, while identity, open and neutral-loss agree to 1e-6. The engine value equals the larger of the open and neutral-loss scores; the reference lets a peak match either way once. Cause not analysed.
-- Area 3: the pair entropy similarity with one empty spectrum returns 0.5 (the reference returns 0).
-- Area 3: on 42 random pairs the `.mzlib` identity score differs from `ms_entropy` by more than 0.01 in 5 cases (largest: 0.911423 against 1.000000); the cleaning before the score (noise cut, merge within the tolerance, storage in 16 bits) is the likely cause, not analysed.
 - Area 4: after the log transform a constant feature stays in the PCA matrix (it adds nothing to the scores, which match the reference); with unit-variance scaling a zero SD needs an explicit rule.
 
 ## Checked and found correct
@@ -136,6 +160,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - By reading: XIC window inclusive, sum, half-width = tolerance; TIC = sum, BPC = maximum; `quant.calibrate@1` = (signal - intercept)/slope x dilution; `below_loq`; LOESS and RANSAC of `rtwarp.rs`; feature table in counts x s.
 - Spectral scores on hand pairs (identical, disjoint, two peaks, scaled, shifted, two peaks in one window): cosine and modified cosine equal `matchms` greedy (score and matched peaks; Watrous et al., PNAS 2012, 109, E1743); the weighted dot product equals `matchms` with m/z power 1.3 and intensity power 0.53 and with 3 and 0.6 (Stein and Scott, J. Am. Soc. Mass Spectrom. 1994, 5, 859); the pair entropy similarity equals the definition of Li et al., Nat. Methods 2021, 18, 1524 on unmerged pairs.
 - Library search: identity, open and neutral-loss scores equal `ms_entropy` to 1e-6. Convention to know: the assignment is greedy, as in `matchms`; on a built case greedy gives 0.526 where the optimal assignment gives 0.999.
+- Statistics end to end: on a synthetic 6 x 12 table with three conditions and a missing cell, `stat::compare` Welch t, p and q, ANOVA F, p and q and log2 fold change equal scipy `ttest_ind(equal_var=False)`, `f_oneway` and `false_discovery_control` to 2.2e-14; PCA imputation (1/5 of the smallest positive value of the feature) is the MetaboAnalyst convention.
 - Statistics: two-sided t p-value against scipy (largest relative error 1.2e-7, only at 1e7 degrees of freedom), F upper tail 5.8e-10, chi-square 2.9e-12; Benjamini-Hochberg to 2e-16, with missing values; PCA of `api/stat/pca` (none/log, none/pareto/auto) against numpy SVD: explained variance, scores and loadings to 3e-14; blank filter; reference-difference columns; normalisation factors (sum, median, internal standard); the drift curve against an independent LOWESS to 3e-10.
 
 ## Not checked
@@ -143,5 +168,5 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Calibration fit, weighting, R2, LOD and LOQ: the engine imports curves and never fits a line; Simpson integration, plate count, USP tailing and resolution are not implemented.
 - `mzlab-target`, `ticbg.rs`, `chrom_background.rs`, `intwin.rs`, `broad.rs`, `centwave.rs` numerics; `rtmap::build`; the S/N and integration of the JS page; the m/z quantisation of the index at the XIC bounds.
 - Formula annotation of `msngraph`, exhaustiveness of the sub-formula enumeration, `attributio/review/isotopes.rs`.
-- Area 3: binning and tolerance edge cases, precursor removal, reverse and forward scores, decoys and FDR, the cause of every difference under SUSPECTED.
-- Area 4: k-means, imputation, PQN (Dieterle et al., Anal. Chem. 2006, 78, 4281), Holm, Welch and ANOVA end to end, confidence ellipses (difference 3.9e-5 from the reference, not analysed).
+- Area 3: binning and tolerance edge cases, reverse and forward scores, decoys and FDR.
+- Area 4: k-means, PQN (Dieterle et al., Anal. Chem. 2006, 78, 4281) and Holm are not implemented in the engine, so there is nothing to check.

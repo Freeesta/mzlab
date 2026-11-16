@@ -23,7 +23,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz("B_FullMass-t0")])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg); frames(pg, 8)
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg); frames(pg, 8)
         def check(sel):
             tip, rd, lbl, cur = probe(pg, sel); print(sel, tip, rd, lbl, cur)
             assert tip and TIME.match(tip), tip

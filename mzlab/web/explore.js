@@ -1009,7 +1009,7 @@ async function dl(/** @type {string} */ name, /** @type {string | Blob | Uint8Ar
   if (big) { try { await EP.save(name, text, type); } catch (e) { console.error(e); if (window.toast) toast(I18N.t("export.stream.fail")); } return; }
   saveBlob(new Blob([/** @type {BlobPart} */ (text)], { type }), name);
 }
-const LOCALE = I18N.lang === "it" ? "it-IT" : "en-GB";           // dates in the exported files
+const LOCALE = "en-GB";           // dates in the exported files
 // data of a plot as columns side by side (each trace has its own x), one sheet with the units in the headers: for graphs and tables made in Excel
 function plotSheets(/** @type {Pannello} */ p) {
   const a = p._a; if (!a) return null;
