@@ -42,7 +42,7 @@ try:
                 assert g["h"] >= 31, (w, "row height not reserved", g["h"])
         step("upload view: one reserved row at 5 widths", upload_view)
         pg.set_input_files("#pick", [{"name": LONG + "%d.mzML" % i, "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t%d" % t), "rb").read()} for i, t in enumerate((0, 10, 15))])
-        frames(pg, 3); pg.click("text=Carica dati"); ready(pg)
+        frames(pg, 3); pg.click("text=Load data"); ready(pg)
         def loaded():
             for z in (1, 1.5):
                 pg.evaluate("z => document.documentElement.style.setProperty('--z', z)", z)

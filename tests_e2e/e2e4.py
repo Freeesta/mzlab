@@ -12,7 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # opened file by file: the view starts on the first file of the list
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # opened file by file: the view starts on the first file of the list
         pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()")
         pg.screenshot(path=SH + "40_start.png")
         # --- hover tooltip on the chromatogram
@@ -35,9 +35,9 @@ try:
             # right click in the 2nd band -> integrate -> should integrate that series
             a = pg.evaluate("(()=>{const p=E.panels[0],a=p._a;return {n:a.sr.length}})()")
             c = pt(pg, 0, 14.33, ymz=1.45); pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_timeout(300)
-            assert pg.locator("#ctx div", has_text="Integra il picco").count() == 0, "the TIC menu does not offer the integration"
+            assert pg.locator("#ctx div", has_text="Integrate the peak").count() == 0, "the TIC menu does not offer the integration"
             pg.keyboard.press("Escape"); pg.mouse.move(c["px"], c["py"]); pg.keyboard.press("i"); pg.wait_for_timeout(500)   # the key «I» integrates at the cursor
-            assert pg.is_visible("#askdlg") and "non sul TIC" in pg.inner_text("#asktxt"), "TIC must refuse the integration"
+            assert pg.is_visible("#askdlg") and "not the TIC" in pg.inner_text("#asktxt"), "TIC must refuse the integration"
             pg.click("#askno"); assert pg.evaluate("E.panels[0].ints.length") == 0
         step("TIC refuses integration (only XIC)", stack_int)
         def logv():
@@ -87,7 +87,7 @@ try:
             pg.mouse.move(a["px"], a["py"]); pg.keyboard.down("Alt"); pg.mouse.down(); pg.mouse.move(b["px"], b["py"], steps=6); pg.mouse.up(); pg.keyboard.up("Alt"); pg.wait_for_timeout(300)   # Alt + drag = range (plain drag = zoom)
             assert pg.evaluate(f"E.panels[{i}].sel"), "Alt + drag selects an interval"
             pg.mouse.click(b["px"], b["py"], button="right"); pg.wait_for_timeout(300)                      # the right-click menu: with a stretch selected the Spectrum entry is the average
-            pg.locator("#ctx div", has_text="Spettro medio").first.click(); pg.wait_for_timeout(2000)
+            pg.locator("#ctx div", has_text="Average spectrum").first.click(); pg.wait_for_timeout(2000)
             assert pg.evaluate("E.panels.filter(p=>p.type==='spec').length") >= 2
         step("map Alt + drag, right-click menu -> averaged spectrum", mapdrag)
         def mapdiff():

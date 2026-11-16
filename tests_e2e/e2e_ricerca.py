@@ -1,5 +1,5 @@
 """Search box (palette, Ctrl/⌘K): a number is matched in Rust against the neutral losses, the adducts and the lab contaminants (the chip says
-«compatible», never a verdict); a formula gives its mass and ions; a word gives commands. Keyboard, it/en, axe, 400 px, no engine miss."""
+«compatible», never a verdict); a formula gives its mass and ions; a word gives commands. Keyboard, axe, 400 px, no engine miss."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"
@@ -26,13 +26,13 @@ try:
             pg.fill("#pal-in", q)
             if want: wait_for_js(pg, f"document.querySelector('#pal-l').innerText.includes({want!r})")
         def empty():
-            opn(); t = txt(); assert "Prova: 18, C6H12O6+Na, smoothing" in t, t
+            opn(); t = txt(); assert "Try: 18, C6H12O6+Na, smoothing" in t, t
             assert pg.locator("#pal-l li[role=option]").count() <= 12, "no endless command list"
             pg.keyboard.press("Escape")
-        step("empty field: a short list and the line «Prova»", empty)
+        step("empty field: a short list and the line «Try»", empty)
         def number():
             opn(); typ("18", "H2O"); t = txt()
-            assert "Perdita" in t and "Addotto" in t, t
+            assert "Neutral loss" in t and "Adduct" in t, t
             assert "Δ" not in t, "low resolution: compatibility only, no decimals"
             assert pg.evaluate("window.MZLAB_LR_MISS || []") == [], pg.evaluate("window.MZLAB_LR_MISS")
         step("18: a neutral loss and an adduct are compatible (LR, no deltas)", number)
@@ -43,13 +43,13 @@ try:
             wait_for_js(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')"); assert pg.input_value("#calcin") == "18", "the loss panel opens with the number"; wait_for_js(pg, "document.activeElement.id === 'calcin'"); pg.evaluate("BARRA.close(false)")
         step("↑↓ and Enter open the panel of the first result", keys)
         def cont():
-            opn(); typ("63.04", "Contaminante"); pg.locator("#pal-l li[role=option]", has_text="Contaminante").first.click()
+            opn(); typ("63.04", "Contaminant"); pg.locator("#pal-l li[role=option]", has_text="Contaminant").first.click()
             wait_for_js(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'cont')"); assert pg.input_value("#calcin") == "63.04", pg.input_value("#calcin")
             assert not pg.evaluate("[...document.querySelectorAll('dialog')].some(d => d.open)"), "the side panel, never a pop-up"
             pg.evaluate("BARRA.close(false)")
         step("a contaminant hit opens the Contaminants tab of the side panel with the number", cont)
         def esc():
-            opn(); typ("18", "Perdita"); pg.keyboard.press("Escape"); wait_for_js(pg, "document.querySelector('#paletta').hidden")
+            opn(); typ("18", "Neutral loss"); pg.keyboard.press("Escape"); wait_for_js(pg, "document.querySelector('#paletta').hidden")
             assert not pg.is_visible("#paletta"), (pg.evaluate("document.activeElement.id||document.activeElement.tagName"), pg.evaluate("document.querySelector('#paletta').hidden"))
         step("Esc closes", esc)
         def formula():
@@ -59,31 +59,25 @@ try:
         step("formula: mass and ions, also with the adduct typed", formula)
         def word():
             opn(); typ("smoothing", "Smoothing"); assert pg.locator("#pal-l li[role=option]").count() >= 1
-            typ("calcol", "Calcolatrice"); pg.keyboard.press("Escape")
+            typ("calc", "Calculator"); pg.keyboard.press("Escape")
         step("word: the commands", word)
         def axe_ok():
             if not AXE: return
-            opn(); typ("18", "Perdita"); v = pg.evaluate(RUN, "#paletta"); assert not v, v; pg.keyboard.press("Escape")
+            opn(); typ("18", "Neutral loss"); v = pg.evaluate(RUN, "#paletta"); assert not v, v; pg.keyboard.press("Escape")
         step("axe clean with results", axe_ok)
         def narrow():
-            ctx = r.b.new_context(viewport={"width": 400, "height": 800}, locale="it-IT", reduced_motion="reduce")
+            ctx = r.b.new_context(viewport={"width": 400, "height": 800}, locale="en-US", reduced_motion="reduce")
             q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); ready(q)
             try:
-                stage(q, [EX / "FullScan_t0.mzML"]); q.click("text=Carica dati"); ready(q)
+                stage(q, [EX / "FullScan_t0.mzML"]); q.click("text=Load data"); ready(q)
                 q.click("#tb-search"); q.wait_for_selector("#paletta:not([hidden])"); q.fill("#pal-in", "18")
-                wait_for_js(q, "document.querySelector('#pal-l').innerText.includes('Addotto')")
+                wait_for_js(q, "document.querySelector('#pal-l').innerText.includes('Adduct')")
                 assert q.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1, "no sideways scroll"
                 assert q.evaluate("(()=>{const b=document.querySelector('#paletta .pal-b').getBoundingClientRect();return b.left>=0&&b.right<=innerWidth})()")
             finally:
                 ctx.close()
         step("400 px: the box fits", narrow)
-        def english():
-            pg.evaluate("I18N.set('en')"); wait_for_js(pg, "I18N.lang === 'en'"); ready(pg); opn(); typ("18", "loss")
-            t = txt(); assert "loss" in t and "Adduct" in t, t
-            pg.fill("#pal-in", ""); wait_for_js(pg, "document.querySelector('#paletta').innerText.includes('Try: 18')")
-            pg.keyboard.press("Escape")
-        step("English labels", english)
         step("no engine miss and no console error", lambda: (lambda m: m == [] or (_ for _ in ()).throw(AssertionError(m)))(pg.evaluate("window.MZLAB_LR_MISS || []")))
 finally:
     r.close()

@@ -92,7 +92,7 @@ try:
         step("a graph that arrives late does not repaint the tree tab", late_graph)
         def labels():
             t = pg.evaluate("""[...document.querySelectorAll('.inf-f')].map(l => [l.querySelector('span').textContent, l.title, l.querySelector('select').offsetHeight])""")
-            assert [x[0] for x in t] == ["Level", "Mass tolerance", "Collision energies", "Spectrum"] or pg.evaluate("I18N.lang") != "en", t
+            assert [x[0] for x in t] == ["Level", "Mass tolerance", "Collision energies", "Spectrum"], t
             assert all(len(x[1]) > 20 for x in t) and len({x[2] for x in t}) == 1, t
         step("four labelled controls of the same height, each with its tooltip", labels)
         for w, theme in ((900, "light"), (900, "dark"), (480, "light"), (480, "dark")):

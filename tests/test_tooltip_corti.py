@@ -1,4 +1,4 @@
-"""Guard over every tooltip key of the catalogs (IT and EN): one short sentence that says only what
+"""Guard over every tooltip key of the catalog: one short sentence that says only what
 the control does. No privacy or policy promises, marketing, «not an identification» disclaimers,
 or «instead of» comparisons (docs/inventari/TOOLTIP.md, Regola)."""
 import glob, json, re
@@ -11,32 +11,31 @@ KEY = re.compile(r"(\.tip|\.title|Title|\.title\.[A-Za-z]+)$|^tip\.")
 # Not tooltips although the key ends in .title/Title: headings, dialog and export titles, mark-up.
 NOT_TOOLTIP = re.compile(r"^(help\.|tour\.|draw\.export\.|og\.s\d\.|.*\.dialog\.title$)")
 BANNED = re.compile("|".join([
-    r"non (carichiamo|inviamo|salviamo|viene inviat|vengono inviat|lascia|esce)",
-    r"nessun dato|nulla (viene|lascia|esce|è inviato)|nothing (is |was |gets )?(sent|uploaded|leaves)",
-    r"never leaves?|mai (lascia|esce)|non invia|invia nulla|sends? nothing|nessuna richiesta|no request",
+    r"nothing (is |was |gets )?(sent|uploaded|leaves)",
+    r"never leaves?|sends? nothing|no request",
     r"we (do not|don.t|never)\b",
-    r"privacy|gratis|gratuit|\bfree\b|open.source",
-    r"invece di|instead of",
-    r"non (è|sono) (un.|delle? )?(identificazion)|not (an? )?identifications?",
-    r"non (verdett|giudizi)|not (verdicts?|judg)",
-    r"solo sullo schermo|(on )?screen only|mai le aree|never the areas",
+    r"privacy|\bfree\b|open.source",
+    r"instead of",
+    r"not (an? )?identifications?",
+    r"not (verdicts?|judg)",
+    r"(on )?screen only|never the areas",
 ]), re.I)
 # Cushion sentences: reassurance or generic advice that says nothing about what the thing is or does.
 CUSHION = re.compile("|".join([
-    r"\b(puoi|potrai|potresti)\b|\byou (can|may|could|will be able)\b",
-    r"lascia(re)? (i )?valori predefiniti|keep (the )?default|leave (the )?default|vanno bene così|settings are fine",
-    r"se non (sai|sei sicur|conosci)|if (you are |you.re )?(not sure|unsure|in doubt)",
-    r"non preoccuparti|don.t worry|do not worry",
-    r"consigliamo|si consiglia|consigliat[ao]|we recommend|(is |are )?recommended",
-    r"migliori risultati|risultati migliori|(best|better) results",
-    r"tieni presente|tenere presente|keep in mind|bear in mind|feel free",
+    r"\byou (can|may|could|will be able)\b",
+    r"keep (the )?default|leave (the )?default|settings are fine",
+    r"if (you are |you.re )?(not sure|unsure|in doubt)",
+    r"don.t worry|do not worry",
+    r"we recommend|(is |are )?recommended",
+    r"(best|better) results",
+    r"keep in mind|bear in mind|feel free",
 ]), re.I)
 ENTRY = re.compile(r'^\s*"([^"]+)":\s*("(?:[^"\\]|\\.)*")\s*,?\s*$')
 
 
 def catalog(lang):
     out = {}
-    for f in [ROOT / f"mzlab/web/lang/{lang}.js"] + sorted((ROOT / f"mzlab/web/lang/{lang}").glob("*.js")):
+    for f in sorted((ROOT / f"mzlab/web/lang/{lang}").glob("*.js")):
         for ln in f.read_text(encoding="utf8").splitlines():
             m = ENTRY.match(ln)
             if m:
@@ -58,12 +57,12 @@ def tooltips(lang):
 
 
 def test_guard_covers_many_keys():
-    assert len(tooltips("it")) > 400 and set(tooltips("it")) == set(tooltips("en"))
+    assert len(tooltips("en")) > 400
 
 
 def test_short_and_plain():
     ok, bad = allowed(), []
-    for lang in ("it", "en"):
+    for lang in ("en",):
         for k, v in tooltips(lang).items():
             if k in ok:
                 continue
@@ -76,7 +75,7 @@ def test_short_and_plain():
 
 
 def test_allow_list_has_no_stale_keys():
-    assert allowed() <= set(catalog("it"))
+    assert allowed() <= set(catalog("en"))
 
 
 # Literal tooltips written in the code (Tabui and Flow are English-only, no lang/ keys).
@@ -99,7 +98,7 @@ def test_literal_tooltips():
 
 def test_no_cushion_sentences():
     ok, bad = allowed(), []
-    for lang in ("it", "en"):
+    for lang in ("en",):
         for k, v in catalog(lang).items():
             m = CUSHION.search(v)
             if m and k not in ok:

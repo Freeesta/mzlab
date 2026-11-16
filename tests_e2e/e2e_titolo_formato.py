@@ -1,4 +1,4 @@
-"""The tab title of the browser has one format on every page: «<Page> · mzLab» (page name first, separator «·»): the landing and Dati («MS Analysis» / «Analisi MS»),
+"""The tab title of the browser has one format on every page: «<Page> · mzLab» (page name first, separator «·»): the landing and Dati («MS Analysis»),
 Draw, Flow and the Tabui tabs. Run from the repo root: python3 tests_e2e/e2e_titolo_scheda.py"""  # covers: mzlab/web/shell.js, mzlab/web/avvio.js, mzlab/web/lang/
 import subprocess, sys, tempfile, re
 from pathlib import Path
@@ -22,7 +22,7 @@ errs = []
 try:
     with sync_playwright() as p:
         b = p.chromium.launch()
-        for loc, tag in (("it-IT", "Analisi MS"), ("en-US", "MS Analysis")):
+        for loc, tag in (("en-US", "MS Analysis"),):
             c = b.new_context(viewport={"width": 1400, "height": 900}, locale=loc); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")

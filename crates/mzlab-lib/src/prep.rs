@@ -15,7 +15,7 @@ struct EntropyScratch {
     m: Vec<f64>,
 }
 
-/// Entropy similarity for given pairs: `1 - (2 S_AB - S_A - S_B) / ln 4`, clipped to [0, 1].
+/// Entropy similarity for given pairs: `1 - (2 S_AB - S_A - S_B) / ln 4`, clipped to [0, 1]; 0 when a spectrum has no intensity.
 pub fn entropy_from_pairs(a_it: &[f64], b_it: &[f64], pairs: &[(usize, usize)]) -> f64 {
     let pa = weighted(a_it);
     let ha = entropy_of(&pa);
@@ -31,6 +31,10 @@ fn entropy_with_query(
 ) -> f64 {
     weighted_into(b_it, &mut s.pb);
     let pb = &s.pb;
+    // a spectrum with no intensity is all zeros here: it shares nothing (the formula alone would give 0.5), as ms_entropy
+    if pa.iter().all(|&v| v == 0.0) || pb.iter().all(|&v| v == 0.0) {
+        return 0.0;
+    }
     s.ia.clear();
     s.ia.resize(pa.len(), false);
     s.ib.clear();

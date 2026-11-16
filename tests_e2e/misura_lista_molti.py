@@ -46,7 +46,7 @@ def pct(v, q):
 
 def one_run(p, port, rate, files, patch):
     b = p.chromium.launch(args=["--enable-precise-memory-info"])
-    ctx = b.new_context(viewport={"width": 1500, "height": 1000}, locale="it-IT", reduced_motion="reduce"); pg = ctx.new_page()
+    ctx = b.new_context(viewport={"width": 1500, "height": 1000}, reduced_motion="reduce"); pg = ctx.new_page()
     pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
     pg.add_init_script(INIT)
     if patch: pg.add_init_script(Path(patch).read_text())

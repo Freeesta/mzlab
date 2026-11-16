@@ -17,7 +17,7 @@ ds.make(D / "s")
 S = D / "s"
 ds.full_scan(D / "DAD-t0.mzML", 0, np.random.default_rng(3), dad=True)
 def load(pg, files):
-    stage(pg, files); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, f"E.files.length >= {len(files)}")
+    stage(pg, files); pg.click("text=Load data"); ready(pg); wait_for_js(pg, f"E.files.length >= {len(files)}")
 def chans(pg, k): return pg.evaluate(f"CANALI.canali({k}).then(j => j.canali.map(c => c.fam + ':' + c.omo))")
 def kind(pg, k): return pg.evaluate(f"CANALI.canali({k}).then(j => j.tipo.proposto)")
 def idx(pg, label): return pg.evaluate(f"E.files.find(f => (f.label || f.name || '').includes({label!r})).k")

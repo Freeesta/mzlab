@@ -18,7 +18,7 @@ SEED = """async () => {
   for (const n of ['mzlab', 'invented-by-another-part', 'librerie']) { const d = await root.getDirectoryHandle(n, { create: true }); const f = await d.getFileHandle('x.bin', { create: true }); const w = await f.createWritable(); await w.write(new Uint8Array([1, 2, 3])); await w.close(); }
   for (const n of ['mzlab-libs', 'mzlab-libdir', 'invented-db']) await new Promise(res => { const q = indexedDB.open(n, 1); q.onupgradeneeded = () => q.result.createObjectStore('s'); q.onsuccess = () => { q.result.close(); res(); }; q.onerror = res; });
   for (const n of ['mzlab-big-x', 'mzlab-app-x', 'other-cache']) await (await caches.open(n)).put('/a', new Response('1'));
-  localStorage.setItem('mzlab.lang', 'en'); localStorage.setItem('mzlab.mappa', '{"pal":"cividis"}'); localStorage.setItem('mzlab.invented', '1');
+  localStorage.setItem('mzlab.mappa', '{"pal":"cividis"}'); localStorage.setItem('mzlab.invented', '1');
 }"""
 STATE = """async () => ({
   opfs: await (async () => { const out = []; for await (const [n] of (await navigator.storage.getDirectory()).entries()) out.push(n); return out.sort(); })(),
@@ -44,7 +44,7 @@ COUNT_LISTS = """async () => {
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); r.b = b
-        ctx = b.new_context(lang_auto=True, locale="en-US", viewport={"width": 1280, "height": 900})
+        ctx = b.new_context(locale="en-US", viewport={"width": 1280, "height": 900})
         pg = ctx.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         base = f"http://127.0.0.1:{r.port}/"
         def load_files():
@@ -70,7 +70,7 @@ try:
             assert s["mzlab"] == [] and "invented-by-another-part" not in s["opfs"] and "librerie" in s["opfs"], s["opfs"]
             assert "invented-db" not in s["idb"] and "mzlab-libs" in s["idb"] and "mzlab-libdir" in s["idb"], s["idb"]
             assert "mzlab-big-x" not in s["caches"] and "other-cache" in s["caches"], s["caches"]
-            assert "mzlab.lang" in s["ls"] and "mzlab.mappa" in s["ls"] and "mzlab.invented" in s["ls"], s["ls"]
+            assert "mzlab.mappa" in s["ls"] and "mzlab.invented" in s["ls"], s["ls"]
         def ready_start(q):
             q.wait_for_function("typeof S !== 'undefined' && window.qqReady", timeout=60000); q.wait_for_timeout(500)
         step("?reset=files: no files or session, folders and databases removed by name, libraries and preferences stay", partial)
@@ -89,11 +89,11 @@ try:
             assert set(s["idb"]) <= {"mzlab_lab", "qqq_lab"}, s["idb"]
             # the fresh page may fill its own caches again (the app, and the idle prefetch of OpenChemLib in the big cache): the seeded ones are gone
             assert all(c.startswith("mzlab-app") or c.startswith("mzlab-big-") and c != "mzlab-big-x" for c in s["caches"]), s["caches"]
-            assert "mzlab.lang" not in s["ls"] and "mzlab.invented" not in s["ls"] and "mzlab.mappa" not in s["ls"], s["ls"]
+            assert "mzlab.invented" not in s["ls"] and "mzlab.mappa" not in s["ls"], s["ls"]
         step("Header «New session» → Full reset: dialog, then nothing left (OPFS, IndexedDB, caches, preferences)", full_cmd)
         def isolated_after():
             # a visitor's tab (no guard preset by the harness): first visit isolates itself, a Full reset must end isolated again with no manual reload
-            c2 = b.new_context(lang_auto=True, locale="en-US", viewport={"width": 1280, "height": 900}); q = c2.new_page()
+            c2 = b.new_context(locale="en-US", viewport={"width": 1280, "height": 900}); q = c2.new_page()
             q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
             loads = []; q.on("framenavigated", lambda f: loads.append(f.url) if f == q.main_frame else None)
             try:
@@ -124,14 +124,14 @@ try:
         step("qqHardReset (start banner, 10-s button) is the same Full reset: no folder, database or cache left, libraries too", hard_cmd)
         def gear():
             load_files(); pg.click("#np-set"); pg.wait_for_timeout(400)
-            txt = pg.inner_text("#uipset"); assert "Full reset" not in txt and "Reset completo" not in txt and "Storage in the browser" not in txt, txt
+            txt = pg.inner_text("#uipset"); assert "Full reset" not in txt and "Storage in the browser" not in txt, txt
             assert pg.locator("#uip-arch-all").count() == 0, "no reset in the gear"
             pg.keyboard.press("Escape"); pg.keyboard.press("Control+k"); pg.keyboard.type("reset"); pg.wait_for_timeout(300)
             assert "Full reset" not in pg.inner_text("#pal-l"), "no reset in the palette"; pg.keyboard.press("Escape")
         step("gear and palette have no reset (the header button is the only entry)", gear)
         def url_all():
             load_files(); pg.goto(base + "?reset=1"); pg.wait_for_function("!location.search.includes('reset')", timeout=30000); ready_start(pg)
-            s = pg.evaluate(STATE); assert s["files"] == 0 and [n for n in s["opfs"] if n != "mzlab"] == [] and s["mzlab"] == [] and "mzlab.lang" not in s["ls"], s
+            s = pg.evaluate(STATE); assert s["files"] == 0 and [n for n in s["opfs"] if n != "mzlab"] == [] and s["mzlab"] == [], s
         step("?reset=1 is the full reset at start", url_all)
         def cancel():
             load_files(); pg.click("#newrun"); pg.wait_for_selector("#resetdlg[open]"); pg.click("#resetdlg .rs-cancel"); pg.wait_for_timeout(300)
@@ -157,7 +157,7 @@ try:
             wait_for_js(pg, "(async () => { const n = []; for await (const [k] of (await navigator.storage.getDirectory()).entries()) n.push(k); return n.includes('librerie') && !S.sess; })()", 30000)   # settled: the reset finished writing
             s = pg.evaluate(STATE)
             assert s["files"] == 0 and not s["sess"] and s["mzlab"] == [], s                     # memory released: the files and their indexes are gone
-            assert "librerie" in s["opfs"] and "mzlab.lang" in s["ls"], s                         # the same as «Files»
+            assert "librerie" in s["opfs"] and "mzlab.mappa" in s["ls"], s                         # the same as «Files»
             stage(pg, [EX / "FullScan_t0.mzML"]); pg.click("#opbtn"); ready(pg); assert pg.evaluate("E.files.length") >= 1, "loading again works"
         step("«Files»: empty list, memory released, loading again works", clear_all)
         def keep_work():

@@ -12,7 +12,7 @@ import glob, json, os, re, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TYPES = os.path.join(ROOT, "tools", "tipi")
-NON_CONTROLLATI = ("mzlab/web/vendor/", "mzlab/web/esempi/", "mzlab/web/wasm/", "mzlab/web/lang/it/", "mzlab/web/lang/en/")
+NON_CONTROLLATI = ("mzlab/web/vendor/", "mzlab/web/esempi/", "mzlab/web/wasm/", "mzlab/web/lang/en/")
 
 
 def read_list(nome):

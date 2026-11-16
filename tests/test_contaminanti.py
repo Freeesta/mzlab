@@ -97,7 +97,7 @@ const mzs = peg.filter(x => x.series.n >= 7 && x.series.n <= 11).map(x => x.mz).
 const runs = L.seriesRuns(idx, "positive", mzs, 5);
 out.runs = [...new Set(runs.values())];
 out.two = L.seriesRuns(idx, "positive", peg.filter(x => x.series.n === 7 || x.series.n === 9).map(x => x.mz), 5).size;
-out.tip = L.tipHtml(L.find(idx, "positive", 445.1200, 5), runs).includes("Compatibile con un contaminante noto");
+out.tip = L.tipHtml(L.find(idx, "positive", 445.1200, 5), runs).includes("Compatible with a known contaminant");
 out.none = L.tipHtml([], runs);
 const csv = L.csvOut([{ mz: 100.1, name: 'a, "b"', formula: "C2H6", polarity: -1, note: "x" }]);
 out.csv = L.csvParse(csv);
@@ -109,7 +109,7 @@ console.log(JSON.stringify(out));
     r = subprocess.run([NODE, "-e", code, str(ROOT / "mzlab/web/liste.js"), str(f)], capture_output=True, text=True, encoding="utf-8")
     assert r.returncode == 0, r.stderr
     o = json.loads(r.stdout)
-    assert any("polisilossano" in n for n in o["hit"]) and o["miss"] == 0 and o["neg"] == 0
+    assert any("polysiloxane" in n for n in o["hit"]) and o["miss"] == 0 and o["neg"] == 0
     assert o["lab"] == ["laboratorio"] and o["tolLow"] == 0.001
     assert o["runs"] == ["serie PEG (n = 7-11)"] and o["two"] == 0          # three consecutive members are needed
     assert o["tip"] and o["none"] == ""
