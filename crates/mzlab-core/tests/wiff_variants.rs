@@ -104,6 +104,11 @@ fn detail(e: &mzlab_core::error::Error) -> String {
     }
 }
 
+/// The selected ion the reader gives a reference spectrum: a neutral-loss scan (the reference lists its loss) selects none, and has no window.
+fn selected_ion(e: &Value) -> Option<f64> {
+    e["precursor"].as_f64().filter(|_| e["loss"].is_null())
+}
+
 #[test]
 fn a_qtrap_5500_reads_its_scan_types() {
     let Some((dir, want)) = reference() else {
@@ -119,7 +124,7 @@ fn a_qtrap_5500_reads_its_scan_types() {
         assert_eq!(g.id, e["id"].as_str().unwrap());
         assert_eq!(
             (g.level as i64, g.precursor),
-            (e["level"].as_i64().unwrap(), e["precursor"].as_f64()),
+            (e["level"].as_i64().unwrap(), selected_ion(e)),
             "{}",
             g.id
         );
@@ -198,8 +203,7 @@ fn the_mzml_of_the_module_names_the_instrument_and_the_spectrum_types() {
             loss.is_some(),
             "{head}"
         );
-        let selected = s["precursor"]
-            .as_f64()
+        let selected = selected_ion(s)
             .map(|m| format!("accession=\"MS:1000744\" name=\"selected ion m/z\" value=\"{m}\""));
         assert_eq!(
             head.contains("<precursorList"),

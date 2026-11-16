@@ -99,7 +99,7 @@ try:
             assert e["bm"] == "edges" and e["area"] == res["edges"], (e, res)   # chosen in the dialog: written, the number of integ()
             mode(pg, "line")
             tab = pg.evaluate("(async()=>{await showInts();return document.querySelector('#bigbody table').innerText})()")
-            assert "Linea personalizzata" in tab or "Custom line" in tab, tab
+            assert "Custom line" in tab, tab
             pg.evaluate("Q('#bigdlg').close()")
         step("the three modes on the same peak: edges, zero (more area), a line on the edges (the same area)", three)
         def mouse():
@@ -125,7 +125,7 @@ try:
         step("keyboard: arrows move point 2 (time and intensity), the part under the line is reported, undo", keys)
         def note():
             tab = pg.evaluate("(async()=>{await showInts();return document.querySelector('#bigbody').innerText})()")
-            assert "Sotto la linea" in tab or "Below the line" in tab, tab
+            assert "Below the line" in tab, tab
             pg.evaluate("Q('#bigdlg').close()")
         step("the table carries the baseline, the part below and the note", note)
         def themes():

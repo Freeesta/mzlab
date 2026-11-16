@@ -9,7 +9,7 @@ r = Run(port=8895, wd="/tmp/wd95")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.click("text=Load data"); ready(pg)
         pg.evaluate("window.scrollTo(0,0)"); frames(pg, 10)
         def gaps():
             g = pg.evaluate("""(() => { const R = e => e.getBoundingClientRect(), ps = [...document.querySelectorAll('#dpanels > .pnl')].filter(e => e.offsetParent).sort((a, b) => R(a).top - R(b).top);

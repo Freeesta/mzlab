@@ -9,7 +9,7 @@ r = Run(port=8845, wd="/tmp/wd_apri_uno")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, [mz(f) for f in FILES]); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, [mz(f) for f in FILES]); pg.click("text=Load data"); ready(pg)
         def only_first():
             v = pg.evaluate("E.files.map(f=>[f.file,f.kind,f.vis])")
             assert len(v) == 5 and len({x[1] for x in v}) == 3, v

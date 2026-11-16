@@ -89,7 +89,7 @@ document.addEventListener("keydown", e => {
   const q = tabPanels().filter((/** @type {Pannello} */ x) => x.el).sort(LAYOUT.ordine)[Number(e.key) - 1]; if (!q) return;
   setActive(q); front(q.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + q.y - hdrH() - 12, behavior: "smooth" });
 });
-function fitHost() { syncWorkEmpty(); if (window.DDA) DDA.sync(); numberPanels(); if (window.AFFIANCA) AFFIANCA.sync(); Q("#dpanels").style.height = maxOf(tabPanels().map((/** @type {Pannello} */ p) => p.y + p.h + 16), 520) + "px"; pairArrows(); }
+function fitHost() { syncWorkEmpty(); if (window.DDA) DDA.sync(); numberPanels(); if (window.AFFIANCA) AFFIANCA.sync(); Q("#dpanels").style.height = maxOf(tabPanels().map((/** @type {Pannello} */ p) => p.y + p.h + 16), tabPanels().length ? 0 : 520) + "px"; pairArrows(); }
 // MS2 tab: a short arrow between the precursor chromatogram (above) and the product-ion spectrum it feeds (below)
 function pairArrows() {
   const host = Q("#dpanels"); host.querySelectorAll(".parr").forEach((/** @type {Element} */ e) => e.remove());
@@ -287,7 +287,7 @@ function addPanel(type, o, after) {
     p.etpk = typeof o.etpk === "boolean" ? o.etpk : undefined;  // peak labels (etichette-picchi.js): undefined = the default for the number of traces
     p.tl = o.tl ?? true;  // the chromatograms of a view are linked by default (one panel can be unlinked)
     const mate = p.tl && o.zoom === undefined ? E.panels.find((/** @type {Pannello} */ q) => q.tl && q.tab === p.tab && q.type !== "spec" && q.type !== "map" && q.zoom) : null;
-    if (mate) p.zoom = /** @type {[number, number]} */ ([...mate.zoom]);
+    if (mate) p.zoom = /** @type {[number, number]} */ ([...mate.zoom]); else if (o.zoom === undefined) p.zoom = /** @type {any} */ (window).TICPROV?.handover?.() ?? p.zoom;  // else: the window chosen on the provisional TIC (tic-provvisorio.js), once
   }  // linked time axis
   if (type === "chrom") p.ms2tri = !!o.ms2tri;  // triangles of the MS2 scans on the survey chromatogram
   if (type === "xic") p.adduct = o.adduct || defAdduct();
@@ -537,7 +537,7 @@ function rtLabel(/** @type {Pannello} */ p) {
   const rl = p.el.querySelector(".rtl");
   if (rl) { if (p.r0 == null) rl.textContent = ""; else { const m = (p.r0 + p.r1) / 2, wide = p.r1 - p.r0 > 1.6 * scanStep(); const rt = wide ? `${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min` : `${m.toFixed(2)} min`; rl.textContent = p.src != null && !p.link && p.type === "spec" ? I18N.t("panel.rt.held", { rt }) : rt; } }
 }
-// "zoom bar" in the top margin: where the visible window sits in the whole axis (its range in words in an overlay with role=img); "Vista intera" button
+// "zoom bar" in the top margin: where the visible window sits in the whole axis (its range in words in an overlay with role=img); "Whole view" button
 /** the overlay of the zoom bar: carries the visible range for hover and assistive tech @param {Pannello} p @returns {HTMLElement} */
 function zoomBar(p) {
   let z = /** @type {HTMLElement | null} */ (p.el.querySelector(":scope > .zbar"));

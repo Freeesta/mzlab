@@ -1,4 +1,4 @@
-"""File list: the product-ion (MS2) group starts folded and folds/unfolds with the mouse and the keyboard (header, chevron, per-file toggle); precursor rows read «Precursore …»; no «Profilo»/«Centroide» text on file rows. Demo files, light and dark, phone width."""
+"""File list: the product-ion (MS2) group starts folded and folds/unfolds with the mouse and the keyboard (header, chevron, per-file toggle); precursor rows read «Precursor …»; no «Profile»/«Centroid» text on file rows. Demo files, light and dark, phone width."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import re
 from lib import *
@@ -12,7 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [str(ES / f"FullScan_t{t}.mzML") for t in (0, 15)] + [str(ES / "MS2_t15.mzML")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("setTab('ms2')"); ready(pg); drawer(pg)
         N = lambda: pg.locator("#flst input[data-pr]:visible").count()
         H = "#flst .fgh[data-gt=ms2]"
@@ -35,17 +35,16 @@ try:
             t = pg.inner_text("#flst .pr-container") if pg.locator("#flst .pr-container").count() else pg.inner_text("#flst")
             nums = pg.evaluate("[...document.querySelectorAll('#flst .fl.pr .pn')].map(x => x.textContent)")
             assert nums and all(re.fullmatch(r"[0-9.]+", x) for x in nums), nums      # only the precursor number
-            assert "Precursore m/z" in pg.get_attribute("#flst .fl.pr input[data-pr]", "aria-label"), "the tooltip words it"
+            assert "Precursor m/z" in pg.get_attribute("#flst .fl.pr input[data-pr]", "aria-label"), "the tooltip words it"
             tog = pg.locator("#flst .pr-tog").first
             if tog.count():
                 tog.click(); a = N(); tog.click(); b = N(); assert a != b, (a, b)
-            assert "Profilo" not in pg.inner_text("#flst") and "Centroid" not in pg.inner_text("#flst")
+            assert "Profile" not in pg.inner_text("#flst") and "Centroid" not in pg.inner_text("#flst")
         step("precursor rows are named; per-file toggle works; no mode text", perfile)
-        def langs():
-            for lang, want in (("en", "Precursor m/z"), ("it", "Precursore m/z")):
-                pg.evaluate(f"I18N.set('{lang}')"); pg.wait_for_function(f"I18N.lang === '{lang}'"); ready(pg); drawer(pg); open_ms2(pg)
-                assert want in pg.get_attribute("#flst .fl.pr input[data-pr]", "aria-label"), lang
-        step("English and Italian labels", langs)
+        def labels():
+            ready(pg); drawer(pg); open_ms2(pg)
+            assert "Precursor m/z" in pg.get_attribute("#flst .fl.pr input[data-pr]", "aria-label")
+        step("English labels", labels)
         def themes():
             for th in ("light", "dark"):
                 pg.evaluate(f"document.documentElement.dataset.theme='{th}'")

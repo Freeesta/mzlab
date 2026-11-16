@@ -97,12 +97,28 @@ pub struct Progress {
     pub total_bytes: u64,
 }
 
+/// Manifest size caps (bytes), ~4x the largest and ~3x the total of the site measured at 11.8 MB / 98.5 MB (largest: a vendored wasm).
+const MAX_FILE: u64 = 48 << 20;
+const MAX_TOTAL: u64 = 300 << 20;
+
 /// Where the files come from (the site, or a map in the tests). `Sync`: the worker threads of `apply` share it.
 pub trait Source: Sync {
     fn get(&self, rel: &str) -> Result<Vec<u8>, UpdateError>;
     /// The same file asked again with the manifest version as cache buster (a stale CDN/proxy copy); sources with no cache ignore it.
     fn get_versioned(&self, rel: &str, _version: &str) -> Result<Vec<u8>, UpdateError> {
         self.get(rel)
+    }
+    /// `get`/`get_versioned` (`version` is `Some`) reading at most `max` bytes of the response; the default ignores `max` (sources already in memory).
+    fn get_capped(
+        &self,
+        rel: &str,
+        version: Option<&str>,
+        _max: u64,
+    ) -> Result<Vec<u8>, UpdateError> {
+        match version {
+            Some(v) => self.get_versioned(rel, v),
+            None => self.get(rel),
+        }
     }
     /// Does `get_versioned` ask for something other than `get` (so that a second try is worth making)?
     fn retry_differs(&self, _version: &str) -> bool {
@@ -123,12 +139,17 @@ pub fn parse_manifest(bytes: &[u8]) -> Result<Manifest, UpdateError> {
         .chain(NATIVE.iter().copied());
     let fixed: Vec<&str> = fixed.collect();
     // `check` and `download_all` add the sizes up unchecked
-    if m.files
+    match m
+        .files
         .values()
         .try_fold(0u64, |t, e| t.checked_add(e.size))
-        .is_none()
     {
-        return bad("total size overflows u64".into());
+        None => return bad("total size overflows u64".into()),
+        Some(t) if t > MAX_TOTAL => return bad(format!("total size {t} over {MAX_TOTAL}")),
+        _ => {}
+    }
+    if let Some((rel, e)) = m.files.iter().find(|(_, e)| e.size > MAX_FILE) {
+        return bad(format!("{rel}: size {} over {MAX_FILE}", e.size));
     }
     let mut seen = std::collections::BTreeSet::new();
     for rel in m.files.keys() {
@@ -333,11 +354,13 @@ fn fetch_one(
     src: &dyn Source,
 ) -> Result<u64, UpdateError> {
     let ok = |b: &[u8]| b.len() as u64 == want.size && sha256_hex(b) == want.sha256;
-    let mut body = src.get(rel)?;
+    // one byte past the declared size is enough to see an oversized response
+    let max = want.size.saturating_add(1);
+    let mut body = src.get_capped(rel, None, max)?;
     if !ok(&body) {
         let retry = src.retry_differs(version);
         if retry {
-            body = src.get_versioned(rel, version)?;
+            body = src.get_capped(rel, Some(version), max)?;
         }
         if !ok(&body) {
             let (h, w) = (sha256_hex(&body), &want.sha256);

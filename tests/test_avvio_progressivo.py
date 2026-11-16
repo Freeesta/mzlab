@@ -203,7 +203,7 @@ def test_mark_failed_translates_catalog_key_before_fail():
     global.window = {{
       fail: (arg) => {{ failedArg = arg; }},
       I18N: {{
-        t: (k, p) => k === 'load.err.engineStart' ? 'Il motore non risponde' : k
+        t: (k, p) => k === 'load.err.engineStart' ? 'The engine is not answering' : k
       }}
     }};
     global.I18N = global.window.I18N;
@@ -217,7 +217,7 @@ def test_mark_failed_translates_catalog_key_before_fail():
     """
     res = run_node(code)
     assert res["failedArg"] is None   # the text goes to the banner, not to #err (phase 3)
-    assert res["errore"] == "Il motore non risponde"
+    assert res["errore"] == "The engine is not answering"
 
 
 DOM_HELPERS = """

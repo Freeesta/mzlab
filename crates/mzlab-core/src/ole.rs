@@ -218,27 +218,67 @@ impl Ole {
         self.streams.iter().map(|(p, _)| p.as_str())
     }
 
-    /// The bytes the header of an OLE2 file `data` points into (its directory, mini FAT, DIFAT and first FAT sectors), when they lie past its end: a
-    /// copy cut before `open` can follow its directory. `None` for a file that is not OLE2 or whose header sectors are all there.
+    /// The bytes the header of an OLE2 file `data` points into (its directory, mini FAT, DIFAT chain and every FAT sector the header and the DIFAT list),
+    /// when they lie past its end: a copy cut before `open` can follow its directory. `None` for a file without the OLE2 magic or whose header sectors are
+    /// all there. A file with the magic but shorter than its header is cut too. The DIFAT walk is bounded as in `open`: by the DIFAT count, by the sectors
+    /// the file holds and by never visiting a sector twice, so a hostile header costs one linear pass.
     pub fn header_cut(data: &[u8]) -> Option<u64> {
         if data.get(..8) != Some(&[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1][..]) {
             return None;
         }
-        let ss = match u16_at(data, 0x1E).ok()? {
-            9 => 512u64,
+        const HEADER: u64 = 512;
+        let Ok(shift) = u16_at(data, 0x1E) else {
+            return Some(HEADER);
+        };
+        let ss: usize = match shift {
+            9 => 512,
             12 => 4096,
             _ => return None,
         };
-        let n_fat = u32_at(data, 0x2C).ok()? as usize;
-        let fat = (0..n_fat.min(109)).filter_map(|i| u32_at(data, 0x4C + 4 * i).ok());
-        let sid = [0x30, 0x3C, 0x44]
+        let len = data.len();
+        // the header sector itself: its 109 FAT slots end at 0x200, so a shorter file lacks part of what it points to
+        if (len as u64) < HEADER {
+            return Some(HEADER);
+        }
+        let word = |o: usize| u32_at(data, o).ok();
+        let (n_fat, n_dif) = (word(0x2C)? as usize, word(0x48)? as usize);
+        let mut top = [0x30, 0x3C, 0x44]
             .into_iter()
-            .filter_map(|o| u32_at(data, o).ok())
-            .chain(fat)
+            .filter_map(word)
             .filter(|&s| s < END)
-            .max()?;
-        let need = (sid as u64 + 2).saturating_mul(ss);
-        (need > data.len() as u64).then_some(need)
+            .max();
+        let mut note = |sid: u32| {
+            if sid < END {
+                top = top.max(Some(sid));
+            }
+        };
+        let mut left = n_fat; // FAT sectors still to list; `open` takes the first `n_fat` of the DIFAT in the same way
+        for i in 0..left.min(109) {
+            if let Some(sid) = word(0x4C + 4 * i) {
+                note(sid);
+            }
+        }
+        left = left.saturating_sub(109);
+        let (mut s, mut visited) = (word(0x44)?, std::collections::HashSet::new());
+        for _ in 0..n_dif.min(len / ss) {
+            if s >= END || left == 0 || !visited.insert(s) {
+                break;
+            }
+            note(s);
+            let off = (s as usize).saturating_add(1).saturating_mul(ss);
+            let Some(sec) = data.get(off..off.saturating_add(ss)) else {
+                break; // the DIFAT sector is not all there: its own end is what is needed, and the entries after it are unknown
+            };
+            for i in 0..(ss / 4 - 1).min(left) {
+                if let Ok(sid) = u32_at(sec, 4 * i) {
+                    note(sid);
+                }
+            }
+            left = left.saturating_sub(ss / 4 - 1);
+            s = u32_at(sec, ss - 4).unwrap_or(END);
+        }
+        let need = (u64::from(top?) + 2).saturating_mul(ss as u64);
+        (need > len as u64).then_some(need)
     }
 
     /// The bytes the file needs to hold every sector its FAT marks as used, when it is shorter (a copy cut short): the streams of the missing

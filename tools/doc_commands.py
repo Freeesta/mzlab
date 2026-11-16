@@ -35,7 +35,7 @@ def etichette(lang: str) -> dict[str, str]:
 
 
 def pagina() -> str:
-    rows, it = tabella(), etichette("it")
+    rows, it = tabella(), etichette("en")
     o = ["# Azioni che cambiano stato (generato)", "",
          "Generato da `python3 tools/doc_commands.py` dalla tabella `COMANDI_TAB` di `mzlab/web/comandi.js`: non si modifica a mano. "
          "Ogni azione che cambia stato nella vista Dati sta nella tabella; `tests/test_comandi.py` lo controlla.", "",

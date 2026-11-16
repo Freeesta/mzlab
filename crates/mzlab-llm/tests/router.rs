@@ -12,7 +12,7 @@ use mzlab_llm::router;
 
 const ROLES: &str = include_str!("../data/assist/assist-ruoli-1.json");
 const PROMPT: &str = include_str!("../data/assist/02_router.md");
-const GOOD: &str = r#"{"route":"chart","need_data":["views"],"language":"it","suspicious":false}"#;
+const GOOD: &str = r#"{"route":"chart","need_data":["views"],"language":"en","suspicious":false}"#;
 
 fn machine() -> State {
     let p = builtin().into_iter().find(|p| p.id == "anthropic").unwrap();
@@ -60,7 +60,7 @@ fn the_router_request_is_the_role_of_the_data_with_the_message_as_data() {
     let mut s = machine();
     let r = sub(step(
         &mut s,
-        Input::User("mostrami i TIC di tutti i file sovrapposti".into()),
+        Input::User("show me the TICs of all the overlaid files".into()),
     ));
     common::expect_file("req_router.json", &r.body);
     let v = parse(r.body.as_bytes()).unwrap();
@@ -73,7 +73,7 @@ fn the_router_request_is_the_role_of_the_data_with_the_message_as_data() {
     assert!(!r.body.contains("temperature"));
     // the user's words travel inside a JSON string, never as part of the prompt
     let sys = v.get("system").map(|x| format!("{x:?}")).unwrap();
-    assert!(!sys.contains("mostrami"));
+    assert!(!sys.contains("show me the TICs"));
 }
 
 #[test]
@@ -110,7 +110,7 @@ fn the_route_is_logged_and_the_turn_goes_to_the_orchestrator() {
 fn a_wrong_or_failed_router_answer_costs_the_route_but_not_the_turn() {
     for body in [
         Ok(r#"{"route":"chart"}"#.to_string()),
-        Ok(r#"{"route":"hack","need_data":[],"language":"it","suspicious":false}"#.to_string()),
+        Ok(r#"{"route":"hack","need_data":[],"language":"en","suspicious":false}"#.to_string()),
         Ok("not json".to_string()),
         Err("err.llm.network".to_string()),
     ] {
@@ -158,11 +158,11 @@ fn a_stop_ends_the_turn_and_a_late_answer_or_a_stranger_is_ignored() {
 fn the_answer_schema_is_closed() {
     assert!(router::parse(GOOD).is_ok());
     let bad = [
-        r#"{"route":"chart","need_data":["views"],"language":"it","suspicious":false,"x":1}"#,
-        r#"{"route":"chart","need_data":["files"],"language":"it","suspicious":false}"#,
-        r#"{"route":"chart","need_data":[],"language":"ita","suspicious":false}"#,
-        r#"{"route":"chart","need_data":[],"language":"IT","suspicious":false}"#,
-        r#"{"route":"chart","need_data":[],"language":"it","suspicious":"no"}"#,
+        r#"{"route":"chart","need_data":["views"],"language":"en","suspicious":false,"x":1}"#,
+        r#"{"route":"chart","need_data":["files"],"language":"en","suspicious":false}"#,
+        r#"{"route":"chart","need_data":[],"language":"eng","suspicious":false}"#,
+        r#"{"route":"chart","need_data":[],"language":"EN","suspicious":false}"#,
+        r#"{"route":"chart","need_data":[],"language":"en","suspicious":"no"}"#,
         "[]",
     ];
     for b in bad {

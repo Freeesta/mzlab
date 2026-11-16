@@ -35,7 +35,7 @@ def test_lexers_keep_comments_strings_and_lines_apart():
 
 
 def test_lang_files_read_keys_only():
-    _, _, keys = ci.lex_lang('I18N.add("it", {\n  "storia.fondo": "Fondo tolto",\n  "app.title": "Analisi"\n});\n')
+    _, _, keys = ci.lex_lang('I18N.add("en", {\n  "storia.fondo": "Background removed",\n  "app.title": "Analysis"\n});\n')
     assert [k for _, k in keys] == ["storia.fondo", "app.title"]
 
 

@@ -59,7 +59,7 @@ console.log(JSON.stringify(out));
 
 def test_lists_series_hasmatch_csv_equal_to_the_old_code():
     r = run(r"""
-globalThis.I18N = { lang: 'it', t: (k, p) => (p && p.name !== undefined ? p.name + ' n=' + p.n : k) };
+globalThis.I18N = { lang: 'en', t: (k, p) => (p && p.name !== undefined ? p.name + ' n=' + p.n : k) };
 const L = require(web + '/liste.js');
 const items = [];
 for (let i = 0; i < 4000; i++) {

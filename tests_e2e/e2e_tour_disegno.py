@@ -28,7 +28,7 @@ try:
                 g = pg.evaluate(GEO)
                 assert g, "no dialog"
                 seen.append(g["ttl"])
-                assert g["hd"].endswith("Disegno") and g["w"] > 20 and g["h"] > 20, g
+                assert g["hd"].endswith("Drawing") and g["w"] > 20 and g["h"] > 20, g
                 if not g["hidden"]:
                     horiz = g["side"] in ("bottom", "top"); c, lo, hi = (g["ax"], g["l"], g["r"]) if horiz else (g["ay"], g["t"], g["b"])
                     if not (lo - 3 <= c <= hi + 3): bad.append((g["hd"], g["side"], round(c), round(lo), round(hi)))
@@ -42,7 +42,7 @@ try:
             pg.click("#tour-btn-fine"); pg.wait_for_timeout(300)
             assert not pg.evaluate("TOUR.active") and pg.locator("#tour-dialog").count() == 0
             assert pg.evaluate("localStorage.getItem('mzlab.tour.lr')") is not None and "saltato" in pg.evaluate("localStorage.getItem('mzlab.tour.lr')")   # untouched
-        step("«Fine» closes it and leaves the Dati invitation state alone", close)
+        step("«Finish» closes it and leaves the Data invitation state alone", close)
         def hidden_panels():
             pg.click("#side-toggle"); pg.wait_for_timeout(300)
             assert pg.evaluate("document.getElementById('v-draw').classList.contains('noside')")
@@ -55,7 +55,7 @@ try:
             pg.click("#side-toggle"); pg.wait_for_timeout(300)
         step("hidden panels are shown for their steps and hidden again; Escape closes", hidden_panels)
         def english():
-            pg.goto(f"http://127.0.0.1:{r.port}/?lang=en#/draw"); pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000); pg.wait_for_timeout(1500)
+            pg.goto(f"http://127.0.0.1:{r.port}/#/draw"); pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000); pg.wait_for_timeout(1500)
             pg.evaluate("TOUR.disegno()"); pg.wait_for_timeout(400)
             g = pg.evaluate(GEO); assert g["hd"].endswith("Drawing") and g["ttl"] == "The canvas", g
             pg.keyboard.press("Escape")

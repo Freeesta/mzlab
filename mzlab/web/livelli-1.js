@@ -3,7 +3,7 @@
 "use strict";
 // Data file «livelli/1»: the confidence levels (Schymanski et al. 2014; MSI 2007) and the profiles of thresholds. Pure data (JSON inside the assignment): the module
 // livelli.js reads it, tests/test_livelli.py reads it, nothing here is code. A new version of the format is a new file (livelli-2.js), never an edit of the meaning of a key.
-// A profile is a set of thresholds ("soglie") plus the gates of the cascade; the gate labels and the sentences are i18n keys (lang/it.js, lang/en.js).
+// A profile is a set of thresholds ("soglie") plus the gates of the cascade; the gate labels and the sentences are i18n keys (lang/en/).
 // Profile "mzlab": the default. Profile "attributio": rules, thresholds and wording of Attributio 1.12.0 (annotate.py), hidden in the interface.
 window.LIVELLI_DATI = {
  "formato": "livelli/1",

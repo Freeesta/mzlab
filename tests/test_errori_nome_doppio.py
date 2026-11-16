@@ -26,5 +26,5 @@ def test_the_push_sites_are_found():
 
 
 def test_no_listed_message_starts_with_the_name():
-    bad = [(lang, k, text(lang, k)) for k in keys() for lang in ("it", "en") if text(lang, k).lstrip().startswith("{name}")]
+    bad = [(lang, k, text(lang, k)) for k in keys() for lang in ("en",) if text(lang, k).lstrip().startswith("{name}")]
     assert not bad, bad

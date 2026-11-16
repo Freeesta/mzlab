@@ -50,12 +50,23 @@ pub(super) fn versioned_url(base: &str, rel: &str, version: &str) -> String {
     }
 }
 
+/// Limit of a response with no declared size (manifest, catalogs).
+const MAX_BODY: u64 = 600 << 20;
+
 impl Source for Http {
     fn get(&self, rel: &str) -> Result<Vec<u8>, UpdateError> {
-        self.fetch(rel, None)
+        self.fetch(rel, None, MAX_BODY)
     }
     fn get_versioned(&self, rel: &str, version: &str) -> Result<Vec<u8>, UpdateError> {
-        self.fetch(rel, Some(version))
+        self.fetch(rel, Some(version), MAX_BODY)
+    }
+    fn get_capped(
+        &self,
+        rel: &str,
+        version: Option<&str>,
+        max: u64,
+    ) -> Result<Vec<u8>, UpdateError> {
+        self.fetch(rel, version, max.min(MAX_BODY))
     }
     fn retry_differs(&self, version: &str) -> bool {
         plain_token(version)
@@ -63,7 +74,7 @@ impl Source for Http {
 }
 
 impl Http {
-    fn fetch(&self, rel: &str, version: Option<&str>) -> Result<Vec<u8>, UpdateError> {
+    fn fetch(&self, rel: &str, version: Option<&str>, max: u64) -> Result<Vec<u8>, UpdateError> {
         safe_rel(rel)?;
         let url = match version {
             Some(v) => versioned_url(&self.base, rel, v),
@@ -81,7 +92,7 @@ impl Http {
         }
         let mut body = Vec::new();
         resp.into_reader()
-            .take(600 << 20)
+            .take(max)
             .read_to_end(&mut body)
             .map_err(|e| UpdateError::new("update.error.offline", e.to_string()))?;
         Ok(body)

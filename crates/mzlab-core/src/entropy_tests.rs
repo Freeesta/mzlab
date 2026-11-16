@@ -82,3 +82,14 @@ fn entropy_gives_the_bits_of_libm_on_every_face() {
         );
     }
 }
+
+/// A spectrum with no intensity shares nothing: similarity 0 (the formula alone gives 1 - ln 2 / ln 4 = 0.5), as in ms_entropy.
+#[test]
+fn an_empty_spectrum_has_similarity_zero() {
+    let (mz, it) = (vec![100.0, 150.0, 200.0], vec![10.0, 50.0, 100.0]);
+    for (emz, eit) in [(vec![], vec![]), (vec![120.0, 180.0], vec![0.0, 0.0])] {
+        assert_eq!(super::entropy_similarity(&mz, &it, &emz, &eit, 0.02), 0.0);
+        assert_eq!(super::entropy_similarity(&emz, &eit, &mz, &it, 0.02), 0.0);
+    }
+    assert_eq!(super::entropy_similarity(&[], &[], &[], &[], 0.02), 0.0);
+}
