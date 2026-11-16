@@ -110,19 +110,8 @@ mod tests {
             super::peak_area(&rt, &y, 0.0, 1.5, 2, &[0.0, 2.0, 1.5, 4.0]),
             peak_area_json(&rt, &y, 0.0, 1.5, line).unwrap()
         );
-        // dragged past its second point the line is held at 0: the page gets the text with `clamped`, the same as the CLI (`peak-area`)
-        let (rt, y) = (
-            (0..40).map(|i| f64::from(i) * 0.1).collect::<Vec<_>>(),
-            vec![5.0; 40],
-        );
-        let ext = Baseline::Line {
-            t0: 1.0,
-            y0: 4.0,
-            t1: 2.0,
-            y1: 1.0,
-        };
-        let held = super::peak_area(&rt, &y, 1.0, 3.5, 2, &[1.0, 4.0, 2.0, 1.0]);
-        assert_eq!(held, peak_area_json(&rt, &y, 1.0, 3.5, ext).unwrap());
+        // dragged past its second point the line is held at 0: the text carries `clamped` (the bytes are the core's, `baseline_test.rs`)
+        let held = super::peak_area(&rt, &y, 0.0, 1.5, 2, &[0.0, 2.0, 0.5, 0.0]);
         assert!(held.contains("\"clamped\""), "{held}");
         assert_eq!(super::peak_area(&rt, &y, 0.0, 1.5, 0, &[]), "");
         assert_eq!(super::peak_area(&rt, &y, 0.0, 1.5, 2, &[1.0]), "");
