@@ -103,7 +103,7 @@ impl State {
         let ready =
             std::fs::metadata(&tmp).is_ok_and(|m| m.len() > 0) && indexer.size(&key).is_some();
         if !ready {
-            let mut l = natives::open(&nat.members, nat.centroid)?;
+            let mut l = natives::open(&nat.members, nat.centroid, nat.c)?;
             let mut out =
                 std::io::BufWriter::new(std::fs::File::create(&tmp).map_err(|e| io_error(&e))?);
             readers_mzml::write_with(&mut *l, nat.c, &mut out, &mut |_, _| {}, Default::default())?;
@@ -134,7 +134,7 @@ impl State {
     /// `natsrm {name}`: the SRM traces of a sample of a maker's file as `srm::impacchetta` writes them.
     pub(crate) fn nat_srm(&self, p: &Value) -> Result<Answer> {
         let nat = self.nat_of(p["name"].as_str().unwrap_or(""))?;
-        let mut l = natives::open(&nat.members, nat.centroid)?;
+        let mut l = natives::open(&nat.members, nat.centroid, nat.c)?;
         let mut t = ReaderSource {
             l: &mut *l,
             c: nat.c,

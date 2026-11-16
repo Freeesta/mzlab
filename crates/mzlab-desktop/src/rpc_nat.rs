@@ -76,7 +76,7 @@ impl State {
             .ok_or_else(|| Error::new("err.session.fileNotFound").with("name", name))?;
         let progress = Arc::new(Progress::default());
         self.lock_inner().progress.insert(pid, progress.clone());
-        let mut l = natives::open(&nat.members, nat.centroid)?;
+        let mut l = natives::open(&nat.members, nat.centroid, nat.c)?;
         let tmp = std::env::temp_dir().join(format!("mzlab-{}-n{}.mzML", std::process::id(), pid));
         let mut out = CountWrite {
             inner: std::io::BufWriter::new(std::fs::File::create(&tmp).map_err(|e| io_error(&e))?),
@@ -133,7 +133,7 @@ impl State {
             .get(name)
             .and_then(|e| e.nat)
             .ok_or_else(|| Error::new("err.session.fileNotFound").with("name", name))?;
-        let mut l = natives::open(&nat.members, false)?;
+        let mut l = natives::open(&nat.members, false, nat.c)?;
         let c = l.chromatogram(nat.c, p["serie"].as_str().unwrap_or(""))?;
         text(mzlab_lettori::json::chromatogram_json(&c))
     }

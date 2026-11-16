@@ -22,7 +22,7 @@ impl ReadAt for Counting {
     }
 }
 
-fn set(dir: &Path, name: &str) -> (FileSet, Rc<Cell<u64>>, u64) {
+fn set(dir: &Path, name: &str, sha1: Option<String>) -> (FileSet, Rc<Cell<u64>>, u64) {
     let read = Rc::new(Cell::new(0));
     let (mut size, mut members) = (0, vec![]);
     for (k, file) in [format!("{name}.wiff"), format!("{name}.wiff.scan")]
@@ -42,7 +42,7 @@ fn set(dir: &Path, name: &str) -> (FileSet, Rc<Cell<u64>>, u64) {
             nome: file,
             dim: bytes.len() as u64,
             dati,
-            sha1: Some("0".repeat(40)),
+            sha1: sha1.clone(),
         });
     }
     (FileSet { membri: members }, read, size)
@@ -81,7 +81,7 @@ fn the_dad_stream_is_read_when_asked_for_and_a_sample_alone_equals_the_pair() {
         return;
     }
     let limits = Limits::sito();
-    let (fs, read, size) = set(&out, "dadscan");
+    let (fs, read, size) = set(&out, "dadscan", Some("0".repeat(40)));
     let mut whole = open_only(fs, &limits, None).unwrap();
     let opened = read.get();
     assert!(
@@ -90,7 +90,38 @@ fn the_dad_stream_is_read_when_asked_for_and_a_sample_alone_equals_the_pair() {
     );
     let first = digest(&mut whole, 0);
     assert!(read.get() > opened, "the DAD stream was never read");
-    let (fs, _, _) = set(&out, "dadscan");
+    let (fs, _, _) = set(&out, "dadscan", Some("0".repeat(40)));
     let mut alone = open_only(fs, &limits, Some(0)).unwrap();
     assert_eq!(first, digest(&mut alone, 0));
+}
+
+/// Every sample of a pair of several injections (`tools/wiff_isolation.py`) opened alone gives what the whole pair gives for it, with no SHA-1 given.
+#[test]
+fn each_sample_of_a_multi_sample_pair_opened_alone_equals_the_whole_pair() {
+    let out = std::env::temp_dir().join(format!("mzlab_wiff_multi_{}", std::process::id()));
+    let root: PathBuf = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let ok = Command::new("python3")
+        .arg(root.join("tools/wiff_isolation.py"))
+        .arg(&out)
+        .output()
+        .ok()
+        .filter(|o| o.status.success());
+    if ok.is_none() {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 not available"
+        );
+        eprintln!("SKIP wiff_by_sector: python3 not available");
+        return;
+    }
+    let limits = Limits::sito();
+    let (fs, _, _) = set(&out, "sano", None);
+    let mut whole = open_only(fs, &limits, None).unwrap();
+    let n = whole.samples().len();
+    assert!(n > 1, "the fixture must hold several samples");
+    for c in 0..n {
+        let (fs, _, _) = set(&out, "sano", None);
+        let mut alone = open_only(fs, &limits, Some(c)).unwrap();
+        assert_eq!(digest(&mut whole, c), digest(&mut alone, c), "sample {c}");
+    }
 }

@@ -36,9 +36,13 @@ pub(crate) fn fileset(members: &[(String, PathBuf)]) -> Result<FileSet> {
     Ok(FileSet { membri: out })
 }
 
-/// The reader of a dataset; with `centroid` its profile scans become centroids.
-pub(crate) fn open(members: &[(String, PathBuf)], centroid: bool) -> Result<Box<dyn Reader>> {
-    let l = mzlab_lettori::apri(fileset(members)?, &Limits::desktop())?;
+/// The reader of a dataset for sample `c` (a SCIEX pair builds that injection only, `apri_solo`); with `centroid` its profile scans become centroids.
+pub(crate) fn open(
+    members: &[(String, PathBuf)],
+    centroid: bool,
+    c: usize,
+) -> Result<Box<dyn Reader>> {
+    let l = mzlab_lettori::apri_solo(fileset(members)?, &Limits::desktop(), c)?;
     Ok(if centroid {
         readers_centroids::centroidato(l)
     } else {
@@ -48,7 +52,7 @@ pub(crate) fn open(members: &[(String, PathBuf)], centroid: bool) -> Result<Box<
 
 /// The samples of a dataset: the JSON of `readers::samples_json`, the listing the site gives too.
 pub(crate) fn samples(members: &[(String, PathBuf)]) -> Result<String> {
-    let mut l = open(members, false)?;
+    let mut l = open(members, false, 0)?;
     Ok(mzlab_core::readers::samples_json(&mut *l))
 }
 
@@ -56,6 +60,8 @@ pub(super) struct Dataset {
     pub(super) members: Vec<(String, PathBuf)>,
     pub(super) centroid: bool,
     pub(super) l: Option<Held>,
+    /// The sample `l` was opened for: a SCIEX pair holds that injection only.
+    pub(super) held_c: usize,
     pub(super) used: u64,
 }
 

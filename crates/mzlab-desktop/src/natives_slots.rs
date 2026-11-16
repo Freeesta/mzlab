@@ -22,6 +22,7 @@ impl Nativi {
             members: nat.members.clone(),
             centroid: nat.centroid,
             l: None,
+            held_c: 0,
             used: 0,
         });
         self.slots.insert(slot, (nat.ds.clone(), nat.c));
@@ -55,7 +56,7 @@ impl Nativi {
     }
 
     /// The open reader of dataset `ds` (opened again when it was closed; the least used ones are closed beyond `OPEN`).
-    fn reader(&mut self, ds: &str) -> Result<&mut dyn Reader> {
+    fn reader(&mut self, ds: &str, c: usize) -> Result<&mut dyn Reader> {
         self.clock += 1;
         let open_now = self.sets.values().filter(|d| d.l.is_some()).count();
         if open_now >= OPEN
@@ -73,8 +74,16 @@ impl Nativi {
             .get_mut(ds)
             .ok_or_else(|| Error::new("error.badIndex"))?;
         d.used = self.clock;
+        let other = d.held_c != c
+            && d.l
+                .as_ref()
+                .is_some_and(|h| h.0.format() == mzlab_core::readers::Format::SciexWiff);
+        if other {
+            d.l = None;
+        }
         if d.l.is_none() {
-            d.l = Some(Held(open(&d.members, d.centroid)?));
+            d.l = Some(Held(open(&d.members, d.centroid, c)?));
+            d.held_c = c;
         }
         match d.l.as_mut() {
             Some(h) => Ok(&mut *h.0),
@@ -91,7 +100,7 @@ impl Nativi {
         let g = match self.shells.get(&key) {
             Some(g) => g.clone(),
             None => {
-                let g = Arc::new(readers_mzml::guscio(self.reader(&ds)?, c)?);
+                let g = Arc::new(readers_mzml::guscio(self.reader(&ds, c)?, c)?);
                 let mut held: usize = self.shells.values().map(|g| g.len()).sum();
                 while held + g.len() > SHELLS {
                     let Some(old) = self.order.pop_front() else {
@@ -105,7 +114,7 @@ impl Nativi {
             }
         };
         let len = g.len() as u64;
-        let l = self.reader(&ds)?;
+        let l = self.reader(&ds, c)?;
         Ok(Some((Src::Nat { g, l, c }, len)))
     }
 }
