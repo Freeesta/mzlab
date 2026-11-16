@@ -135,7 +135,7 @@ I18N.add("en", {
   "error.tpNoBlock": "The table has no block of transformation products for this parent compound.",
   "error.tpNoControls": "The table has no control files to compare with the treated ones: mark them.",
   "warn.wiff.unindexed": "The .wiff index is older than its .wiff.scan (the files were copied while the acquisition was running). Sections of data the index does not list: {n}; recovered as samples, with a name and method inferred from the previous sample: {recovered}; left out because their blocks cannot be checked: {skipped}. Copy the files again after the acquisition ends.",
-  "warn.wiff.emptySample": "Empty acquisition: the .wiff index lists this sample with no scans (acquisition aborted or failed, or the copy is incomplete).",
+  "warn.wiff.emptySample": "Empty acquisition: no scans.",
   "warn.wiff.inferredSample": "Recovered from data the .wiff index does not list: the name and the method are inferred from the previous sample, not read from the file.",
   "warn.wiff.damaged": "Some scan blocks of the .wiff.scan do not match the index of the .wiff (a damaged copy): they are left out and counted, the rest is read and written. Check the copy of the file.",
   "warn.waters.damaged": "Some parts of the .raw folder are damaged (a scan with records no acquisition writes, an index that does not match its data, functions the function list or the calibration lines of _HEADER.TXT lost): they are left out and counted, never read with other m/z; the rest is read and written. Check the copy of the folder.",

@@ -287,7 +287,7 @@ function addPanel(type, o, after) {
     p.etpk = typeof o.etpk === "boolean" ? o.etpk : undefined;  // peak labels (etichette-picchi.js): undefined = the default for the number of traces
     p.tl = o.tl ?? true;  // the chromatograms of a view are linked by default (one panel can be unlinked)
     const mate = p.tl && o.zoom === undefined ? E.panels.find((/** @type {Pannello} */ q) => q.tl && q.tab === p.tab && q.type !== "spec" && q.type !== "map" && q.zoom) : null;
-    if (mate) p.zoom = /** @type {[number, number]} */ ([...mate.zoom]);
+    if (mate) p.zoom = /** @type {[number, number]} */ ([...mate.zoom]); else if (o.zoom === undefined) p.zoom = /** @type {any} */ (window).TICPROV?.handover?.() ?? p.zoom;  // else: the window chosen on the provisional TIC (tic-provvisorio.js), once
   }  // linked time axis
   if (type === "chrom") p.ms2tri = !!o.ms2tri;  // triangles of the MS2 scans on the survey chromatogram
   if (type === "xic") p.adduct = o.adduct || defAdduct();
