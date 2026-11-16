@@ -576,12 +576,14 @@ mzlab-cli samples: how the names of a set of files split them (nomivar/1), as JS
 
 usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
        mzlab-cli samples group NAME...
+       mzlab-cli samples table [--names FILE|-]
 
   --names FILE|-  one file name per line (default: the standard input)
   --pos N         also the manual variable of the N-th token (1 = first, -1 = last), cut at --sep (default "_-. ")
   --has a,b       also the manual variable of terms: a file goes to the first term equal to one of its tokens
   --substring     with --has: the term may be inside a token (O2 then catches H2O2)
   group           the name of a group made of NAMEs: their common tokens in order, empty when none
+  table           the sample table the names propose (campioni/2): role, time point (`tempo`, `unita_tempo`, `tempo_min`), series, replicate, concentration
 
 old names still accepted: campioni, variabili, nome-gruppo
 --- stderr
@@ -593,12 +595,14 @@ mzlab-cli samples: how the names of a set of files split them (nomivar/1), as JS
 
 usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
        mzlab-cli samples group NAME...
+       mzlab-cli samples table [--names FILE|-]
 
   --names FILE|-  one file name per line (default: the standard input)
   --pos N         also the manual variable of the N-th token (1 = first, -1 = last), cut at --sep (default "_-. ")
   --has a,b       also the manual variable of terms: a file goes to the first term equal to one of its tokens
   --substring     with --has: the term may be inside a token (O2 then catches H2O2)
   group           the name of a group made of NAMEs: their common tokens in order, empty when none
+  table           the sample table the names propose (campioni/2): role, time point (`tempo`, `unita_tempo`, `tempo_min`), series, replicate, concentration
 
 old names still accepted: campioni, variabili, nome-gruppo
 --- stderr
