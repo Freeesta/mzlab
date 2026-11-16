@@ -27,6 +27,7 @@
   /** save the files of an answer of the engine; returns the names saved @param {string} kind @param {string} root @param {{ files: any[] }} answer */
   async function deliver(kind, root, answer) {
     const W = /** @type {any} */ (window), enc = new TextEncoder(), files = answer.files;
+    if (W.carica) await W.carica("xlsx.js");   // xlsxBuild/zipStore load on first use
     const bytes = /** @type {[string, Uint8Array][]} */ (files.map(f => [f.name, f.rows ? W.xlsxBuild(sheets(f.rows)) : enc.encode(f.text)]));
     const single = files.length === 1 || (kind !== "evidence" && kind !== "publication" && kind !== "sirius");
     if (single) {
