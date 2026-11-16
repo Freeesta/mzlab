@@ -14,7 +14,8 @@ const MARKER: [u8; 8] = [0x11, 0x11, 0x11, 0x11, 0x82, 0x05, 0, 0];
 const LEAD: u64 = 24;
 const CHUNK: u64 = 1 << 20;
 
-/// What was found after the last indexed section: the samples rebuilt (in file order) and how many sections were left out because their blocks could not be checked.
+/// What was found after the last indexed section: the samples rebuilt (in file order) and how many pieces were left out: sections whose blocks could not be
+/// checked, and the cut last block of a recovered section at the end of the file (each counts one).
 pub(super) struct Found {
     pub(super) samples: Vec<Wiff>,
     pub(super) skipped: usize,
@@ -70,7 +71,8 @@ fn block_size(w: &Wiff) -> Option<u64> {
     .then_some(size)
 }
 
-/// Every f32 of the `rows` blocks of `size` bytes from `first` is a finite number of counts (not below zero): the blocks are really the ones of that layout.
+/// Every f32 of the `rows` blocks of `size` bytes from `first` is a finite number: the blocks are really the ones of that layout. Negatives pass (dense MRM
+/// blocks hold baseline noise below zero); NaN, infinities and the like are what a misplaced read looks like.
 fn plausible(scan: &mut dyn ReadAt, first: u64, rows: u64, size: u64) -> bool {
     let per = (CHUNK / size).max(1);
     let mut row = 0;
@@ -81,7 +83,7 @@ fn plausible(scan: &mut dyn ReadAt, first: u64, rows: u64, size: u64) -> bool {
         };
         if !b.chunks_exact(4).all(|c| {
             let v = c.try_into().map_or(f32::NAN, f32::from_le_bytes);
-            v.is_finite() && v >= 0.0
+            v.is_finite()
         }) {
             return false;
         }
@@ -134,7 +136,16 @@ pub(super) fn recover(
             }
         });
         match built {
-            Some(w) => out.samples.push(w),
+            Some(w) => {
+                // the bytes of a partial last block are dropped, but never silently
+                if !end
+                    .saturating_sub(first)
+                    .is_multiple_of(donor.map_or(1, |d| d.1))
+                {
+                    out.skipped += 1;
+                }
+                out.samples.push(w);
+            }
             None => out.skipped += 1,
         }
         at = end;
@@ -215,7 +226,8 @@ fn rebuild(donor: &Wiff, id: u32, first: u64, rows: u64, size: u32) -> Option<Wi
 }
 
 /// Where the data the index knows end in the `.wiff.scan`: after the last block of a sample, or after the head of the last section of the sample table (an empty
-/// injection has no blocks); and the highest sample number of the table.
+/// injection has no blocks); and the highest sample number of the table that has a section (a queued row of a batch has none and
+/// must not hide the sections that follow).
 pub(super) fn index_end(ole: &Ole, indexed: &[&Wiff]) -> (u64, u32) {
     let table = ole
         .read(&format!("{}SampleIdxTable", super::SAMPLES))
@@ -234,7 +246,12 @@ pub(super) fn index_end(ole: &Ole, indexed: &[&Wiff]) -> (u64, u32) {
         .unwrap_or(0);
     (
         heads.max(blocks),
-        table.iter().map(|s| s.0).max().unwrap_or(0),
+        table
+            .iter()
+            .filter(|s| s.1.is_some())
+            .map(|s| s.0)
+            .max()
+            .unwrap_or(0),
     )
 }
 
