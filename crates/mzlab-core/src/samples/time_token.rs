@@ -111,15 +111,15 @@ fn time_tail(s: &[char], e: usize, after_t: bool) -> Option<Tail> {
         }
         if starts(s, k, w) {
             let j = k + w.len();
-            if unit == "h" {
-                if let Some((m, end)) = minutes_after_hours(s, j, &term) {
-                    return Some(Tail {
-                        unit,
-                        end,
-                        written: true,
-                        plus_min: m,
-                    });
-                }
+            if unit == "h"
+                && let Some((m, end)) = minutes_after_hours(s, j, &term)
+            {
+                return Some(Tail {
+                    unit,
+                    end,
+                    written: true,
+                    plus_min: m,
+                });
             }
             if term(j) {
                 return Some(Tail {
