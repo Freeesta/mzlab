@@ -1,0 +1,12 @@
+# TIC provvisorio interattivo (zoom e spostamento dell'asse RT)
+
+Il TIC provvisorio (`tic-provvisorio.js`, `caricamento-mappa.md` passo 6) si disegna mentre l'indice si costruisce. Decisione del proprietario richiesta sulla PR: prima era un'anteprima ferma per scelta.
+
+- **Comandi** su `#ticprov-cv` (solo asse RT; l'altezza segue la finestra): Ctrl/Cmd + rotella (una rotella semplice scorre la pagina, come sui pannelli), trascinamento, `+` `-`, frecce, `0` e doppio clic = tutta la traccia. Un disegno per fotogramma (`FRAME.next`); disegno a 4 vertici per colonna (`decima.js` `polyline`). Una riga `role=status` dice la finestra a gesto fermo. Un clic ripete la nota di avanzamento (nessuno spettro né XIC prima dell'indice). `touch-action: pan-y pinch-zoom` solo sul canvas; nessuna animazione, quindi `prefers-reduced-motion` è rispettato.
+- **Passaggio al pannello**: `TICPROV.handover()` (una volta) è chiamato da `addPanel` (`pannelli.js`) per il primo cromatogramma senza `zoom`: il pannello si apre su quella finestra e un avviso lo dice (scelta automatica registrata); gli altri pannelli della vista la seguono col collegamento dei tempi.
+- **Prova**: `tests_e2e/e2e_tic_provvisorio.py` (rotella, trascinamento, doppio clic, tastiera, finestra del primo pannello); servono il sito e il `.wasm`.
+- **Desktop**: l'app non ha un TIC provvisorio (lettura nativa diretta, pannello subito): nessuna parte gemella.
+- **Misura** (`python3 tools/bench_tic_provvisorio.py`, Chromium headless, motore `.wasm`, mzML sintetico 242 MB = 20 000 scansioni x 3 000 picchi, a freddo: nuovo browser e OPFS a ogni corsa, corse `idle`/`gest` alternate; 489 MB non entra nello spazio del browser del container, che si ferma a ~330 MB). Un gesto (Ctrl+rotella, frecce) per fotogramma finché il riquadro è visibile.
+  - 1x, 5 corse, 2860 gesti: evento p50 0,2 / p98 0,8 ms; evento→fine fotogramma p50 16,7 / p98 19,5 ms; intervallo rAF p50 16,7 / p95 18,1 ms (bersaglio 16,7: p95 18,1 è appena sopra); rilascio→indicizzato 13,52 [13,03-14,41] s senza gesti, 14,08 [13,87-14,90] s con i gesti.
+  - CPU x4, 3 corse, 1169 gesti: evento p50 0,5 / p98 2,8 ms; fotogramma p50 17,2 / p98 77,5 ms; rAF p95 66,2 ms; rilascio→indicizzato 15,61 [15,20-16,58] s senza, 15,93 [15,15-16,34] s con.
+  - Il confronto col codice di `main` (senza TIC interattivo) non è stato fatto: senza gesti il modulo non aggiunge lavoro oltre la `sync` già presente.
