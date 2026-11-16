@@ -1,4 +1,4 @@
-"""Instrument log of a Thermo .raw: the «Registro dello strumento» kind in the chromatogram selector (grouped channels, search box, drawn like an analog trace with its TDATI table)
+"""Instrument log of a Thermo .raw: the «Instrument log» kind in the chromatogram selector (grouped channels, search box, drawn like an analog trace with its TDATI table)
 and the error log in the Method window (times, a click moves the cursor). The answers of api/metodo and api/registro are faked on a synthetic mzML: the engine side is tested in Rust."""
 # covers: mzlab/web/registro-serie.js, mzlab/web/metodo-registro.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -47,19 +47,19 @@ try:
         pg = r.page(p)
         pg.evaluate(FAKE)
         pg.set_input_files("#pick", [str(F)]); wait_for_js(pg, "!!document.querySelector('#pick') && E.files !== undefined")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         TIC = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full')"       # the first chromatogram of the tab, whatever its kind becomes
         def option():
             pg.wait_for_function(f"!!{TIC}.el.querySelector('.can-row[data-kind=reg]')")
-            t = pg.evaluate(f"{TIC}.el.querySelector('.can-row[data-kind=reg]').getAttribute('aria-label')"); assert t == "Registro dello strumento", t
-        step("the selector offers «Registro dello strumento» when a file has series", option)
+            t = pg.evaluate(f"{TIC}.el.querySelector('.can-row[data-kind=reg]').getAttribute('aria-label')"); assert t == "Instrument log", t
+        step("the selector offers «Instrument log» when a file has series", option)
         def pick():
             pick_kind(pg, "reg", TIC)
             pg.wait_for_function(f"!!{TIC}.el.querySelector('select[data-o=reg]')")
             g = pg.evaluate(f"[...{TIC}.el.querySelectorAll('select[data-o=reg] optgroup')].map(o=>[o.label,o.children.length])")
-            assert g == [["Ion Source", 2], ["Vacuum", 1], ["Per scansione", 1]], g
-            assert pg.evaluate(f"{TIC}.el.querySelector('select[data-o=reg]').getAttribute('aria-label')") == "Canale del registro"
-        step("channels are grouped by section, «Per scansione» for the trailer", pick)
+            assert g == [["Ion Source", 2], ["Vacuum", 1], ["Per scan", 1]], g
+            assert pg.evaluate(f"{TIC}.el.querySelector('select[data-o=reg]').getAttribute('aria-label')") == "Log channel"
+        step("channels are grouped by section, «Per scan» for the trailer", pick)
         def search():
             pg.evaluate(f"(() => {{const i={TIC}.el.querySelector('input[data-regq]'); i.value='fore'; i.dispatchEvent(new Event('input',{{bubbles:true}}))}})()")
             n = pg.evaluate(f"{TIC}.el.querySelectorAll('select[data-o=reg] option').length"); assert n == 1, n
@@ -81,7 +81,7 @@ try:
         def method():
             pg.click("#np-method"); pg.wait_for_selector("#bigdlg[open] button[data-mreg-rt]", state="attached"); pg.evaluate("document.querySelectorAll('#bigdlg details').forEach(d => d.open = true)")
             rows = pg.evaluate("[...document.querySelectorAll('#bigdlg button[data-mreg-rt]')].map(b=>[b.dataset.mregRt,b.getAttribute('aria-label')])")
-            assert rows == [["1.5", "Vai a RT 1.5 min"], ["4", "Vai a RT 4 min"], ["7.25", "Vai a RT 7.25 min"]], rows
+            assert rows == [["1.5", "Go to RT 1.5 min"], ["4", "Go to RT 4 min"], ["7.25", "Go to RT 7.25 min"]], rows
         step("the Method window lists the error log with its times", method)
         def go():
             pg.click("#bigdlg button[data-mreg-rt='4']"); wait_for_js(pg, "!Q('#bigdlg').open")

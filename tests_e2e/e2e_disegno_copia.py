@@ -1,4 +1,4 @@
-"""Disegno: when the browser refuses the clipboard, the copy actions say «Copia non riuscita» (never «Copiato») and raise no error box; when it accepts, they say «Copiato»."""
+"""Disegno: when the browser refuses the clipboard, the copy actions say «Copy failed» (never «Copied») and raise no error box; when it accepts, they say «Copied»."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -26,12 +26,12 @@ try:
             wait_for_js(pg, "window.__t.length > 0")
             return pg.evaluate("window.__t.join('|')")
         def refused():
-            t = copy_first("refuse"); assert "Copia non riuscita" in t and "Copiato" not in t, t
+            t = copy_first("refuse"); assert "Copy failed" in t and "Copied" not in t, t
             assert pg.locator("#errbox").count() == 0, "error box shown"
-        step("a refused clipboard says «Copia non riuscita», no «Copiato», no error box", refused)
+        step("a refused clipboard says «Copy failed», no «Copied», no error box", refused)
         def accepted():
-            t = copy_first("accept"); assert "Copiato" in t and "non riuscita" not in t, t
-        step("an accepted clipboard says «Copiato»", accepted)
+            t = copy_first("accept"); assert "Copied" in t and "failed" not in t, t
+        step("an accepted clipboard says «Copied»", accepted)
 finally:
     r.close()
 r.report()

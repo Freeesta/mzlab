@@ -10,7 +10,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("E.panels.filter(q => q.type === 'spec').slice(1).forEach(q => q.close && q.close())"); wait_for_js(pg, "stackOrder().length === 2")
         order = lambda: pg.evaluate("stackOrder().map(q => q.id)")
         rows = lambda: pg.evaluate("LAYOUT.righeDi(stackOrder()).map(r => r.map(q => q.id))")
@@ -27,15 +27,15 @@ try:
         ids = order(); assert len(ids) == 2, ids
         top, bot = ids
         def above():
-            lab = drag(1, 0, 0.5, 0.1); assert lab == "Sopra", lab
+            lab = drag(1, 0, 0.5, 0.1); assert lab == "Above", lab
             assert order() == [bot, top], order()
-        step("lower panel dropped on the top of the upper one goes above it (label «Sopra»)", above)
+        step("lower panel dropped on the top of the upper one goes above it (label «Above»)", above)
         def below():
-            lab = drag(1, 0, 0.5, 0.9); assert lab == "Sotto", lab
+            lab = drag(1, 0, 0.5, 0.9); assert lab == "Below", lab
             assert order() == [bot, top], order()
-        step("dropped on the bottom of the upper panel it goes below it (label «Sotto»)", below)
+        step("dropped on the bottom of the upper panel it goes below it (label «Below»)", below)
         def corner():
-            lab = drag(1, 0, 0.05, 0.05); assert lab == "Sopra", lab
+            lab = drag(1, 0, 0.05, 0.05); assert lab == "Above", lab
             assert order() == [top, bot], order()
         step("the top corners are also «above»; the TIC dropped above its own spectrum goes alone past it", corner)
         def keys():
@@ -45,17 +45,17 @@ try:
             assert order() == [top, bot], order()
         step("Alt+arrows swap the TIC with its own spectrum too", keys)
         def left():
-            lab = drag(1, 0, 0.2, 0.5); assert lab == "A sinistra", lab
+            lab = drag(1, 0, 0.2, 0.5); assert lab == "To the left", lab
             assert [len(x) for x in rows()] == [2], rows()
         step("left of the target: side by side, dragged on the left", left)
         def right():
-            lab = drag(0, 1, 0.8, 0.5, release=False); assert lab == "A destra", lab
+            lab = drag(0, 1, 0.8, 0.5, release=False); assert lab == "To the right", lab
             pg.keyboard.press("Escape"); pg.mouse.up()
-        step("right of the target: label «A destra»", right)
+        step("right of the target: label «To the right»", right)
         def over():
             # a panel raised by many clicks must not hide the preview
             pg.evaluate("stackOrder().forEach(q => { q.el.style.zIndex = 4000; })")
-            lab = drag(0, 1, 0.8, 0.5, release=False); assert lab == "A destra", lab
+            lab = drag(0, 1, 0.8, 0.5, release=False); assert lab == "To the right", lab
             z = pg.evaluate("[+getComputedStyle(document.querySelector('.aff-prev')).zIndex, Math.max(...stackOrder().map(q => +q.el.style.zIndex))]")
             assert z[0] > z[1], z
             pg.keyboard.press("Escape"); pg.mouse.up()

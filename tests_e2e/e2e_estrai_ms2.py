@@ -1,4 +1,4 @@
-"""Right click on a peak label of a low-resolution Full Scan spectrum whose m/z is the precursor of MS2 scans: «Estrai la scansione MS2» opens that MS2 spectrum."""
+"""Right click on a peak label of a low-resolution Full Scan spectrum whose m/z is the precursor of MS2 scans: «Extract MS2 scan» opens that MS2 spectrum."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -11,7 +11,7 @@ try:
         pg = r.page(p)
         pg.set_viewport_size({"width": 1400, "height": 1000})
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_MS2-t15")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("setTab('full', true)"); pg.wait_for_timeout(600)
         S = "E.panels.find(q => q.type === 'spec' && q.tab === 'full')"
         def lab_at(mzv, rt=7.07):
@@ -22,8 +22,8 @@ try:
             return pg.evaluate("[...document.querySelectorAll('#ctx [role^=menuitem]')].map(e => e.textContent.trim())")
         def with_ms2():
             pt = lab_at(229.4); assert pt, "no label near 229.4"
-            it = menu_items(pt); assert "Estrai la scansione MS2" in it, it
-            pg.click("#ctx [role^=menuitem]:has-text('Estrai la scansione MS2')"); ready(pg); pg.wait_for_timeout(800)
+            it = menu_items(pt); assert "Extract MS2 scan" in it, it
+            pg.click("#ctx [role^=menuitem]:has-text('Extract MS2 scan')"); ready(pg); pg.wait_for_timeout(800)
             ms2 = pg.evaluate("(() => { const s = E.panels.find(q => q.type === 'spec' && q.tab === 'ms2'); return s && [s.level, s.r0, s.r1, String(s.prec)]; })()")
             assert ms2 and ms2[0] == 2 and ms2[3].startswith("229"), ms2
         step("a precursor peak offers the MS2 scan and opens its spectrum", with_ms2)
@@ -31,7 +31,7 @@ try:
             pg.keyboard.press("Escape")
             pt = lab_at(364.4, 14.3); assert pt, "no label near 364.4"
             menu_items(pt)
-            assert pg.evaluate("(() => { const e = [...document.querySelectorAll('#ctx [role^=menuitem]')].find(x => x.textContent.trim() === 'Estrai la scansione MS2'); return !e || e.getAttribute('aria-disabled') === 'true' || e.disabled; })()"), "offered for a peak that is not a precursor"      # the action stays in the menu, grey
+            assert pg.evaluate("(() => { const e = [...document.querySelectorAll('#ctx [role^=menuitem]')].find(x => x.textContent.trim() === 'Extract MS2 scan'); return !e || e.getAttribute('aria-disabled') === 'true' || e.disabled; })()"), "offered for a peak that is not a precursor"      # the action stays in the menu, grey
             pg.keyboard.press("Escape")
         step("a peak that is not a precursor does not (grey)", without)
 finally:

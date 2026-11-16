@@ -1,13 +1,13 @@
 {
-  "draw.check.ctx": "Riga del menu del tasto destro su un atomo con un'osservazione del controllo; apre le tre parti. {what} = il problema in una frase.",
-  "draw.check.found": "Stato del controllo del disegno; {n} = numero di osservazioni trovate.",
-  "draw.check.fail": "Stato quando il controllo del disegno non parte; {message} = messaggio dell'errore.",
-  "draw.check.atoms": "Atomi a cui si riferisce un'osservazione; {list} = simbolo e numero degli atomi, es. «C1, N7».",
-  "draw.check.valence.what": "Problema di valenza; {el} = simbolo dell'elemento, {valence} = legami contati (H compresi), {allowed} = valenze ammesse separate da /.",
-  "draw.check.valenceCharge.what": "Valenza che non torna con la carica; {el} = simbolo dell'elemento, {valence} = legami contati.",
-  "draw.check.valenceCharge.next": "Prossimo passo; {fix} = la carica (es. +1) che renderebbe giusta la valenza.",
-  "draw.check.charge.what": "Carica insolita; {q} = carica con segno (es. +2), {el} = simbolo dell'elemento.",
-  "draw.check.isotope.what": "Isotopo sconosciuto; {iso} = numero di massa scritto, {el} = simbolo dell'elemento.",
-  "draw.check.pieces.what": "Nota sui pezzi separati; {n} = numero di strutture non legate fra loro.",
-  "error.check.tooBig": "Errore del controllo del disegno; {max} = numero massimo di atomi."
+  "draw.check.ctx": "Right-click menu row on an atom with a check observation; it opens the three parts. {what} = the problem in one sentence.",
+  "draw.check.found": "Status of the drawing check; {n} = number of observations found.",
+  "draw.check.fail": "Status when the drawing check does not start; {message} = error message.",
+  "draw.check.atoms": "Atoms an observation refers to; {list} = symbol and number of the atoms, e.g. \"C1, N7\".",
+  "draw.check.valence.what": "Valence problem; {el} = element symbol, {valence} = bonds counted (H included), {allowed} = allowed valences separated by /.",
+  "draw.check.valenceCharge.what": "Valence that does not match the charge; {el} = element symbol, {valence} = bonds counted.",
+  "draw.check.valenceCharge.next": "Next step; {fix} = the charge (e.g. +1) that would make the valence right.",
+  "draw.check.charge.what": "Unusual charge; {q} = signed charge (e.g. +2), {el} = element symbol.",
+  "draw.check.isotope.what": "Unknown isotope; {iso} = mass number written, {el} = element symbol.",
+  "draw.check.pieces.what": "Note about separate pieces; {n} = number of structures not bonded to each other.",
+  "error.check.tooBig": "Drawing check error; {max} = maximum number of atoms."
 }

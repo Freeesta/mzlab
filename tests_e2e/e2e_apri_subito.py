@@ -60,7 +60,7 @@ try:
             assert not pg.is_visible("#drop") and not pg.is_visible("#wtable"), "the landing is gone"
             assert pg.locator(".convprog, .cp-spin, #fl-up .fl").count() == 0, "nothing of the loading is left"
             txt = pg.inner_text("body")
-            assert "Loading finished" not in txt and "Caricamento finito" not in txt and "Loading the files" not in txt, "no end-of-loading text"
+            assert "Loading finished" not in txt and "Loading the files" not in txt, "no end-of-loading text"
         step("the first file opens by itself, the others wait in the list", landing_then_click)
         def late_proposal():
             wait_for_js(pg, "RUOLI.busy() === 0 && ST.files.every(f => f.prop)", 30000)

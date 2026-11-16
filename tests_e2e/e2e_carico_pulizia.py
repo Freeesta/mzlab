@@ -18,7 +18,7 @@ try:
         pg.set_viewport_size({"width": 1440, "height": 900})
         pg.click("#demobtn"); pg.click("#demochoice [data-demo=full]")
         pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length===5", timeout=30000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         for w in (1440, 400):
             for scheme in ("light", "dark"):
                 pg.emulate_media(color_scheme=scheme); pg.set_viewport_size({"width": w, "height": 900})

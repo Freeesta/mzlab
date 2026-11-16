@@ -537,7 +537,7 @@ function rtLabel(/** @type {Pannello} */ p) {
   const rl = p.el.querySelector(".rtl");
   if (rl) { if (p.r0 == null) rl.textContent = ""; else { const m = (p.r0 + p.r1) / 2, wide = p.r1 - p.r0 > 1.6 * scanStep(); const rt = wide ? `${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min` : `${m.toFixed(2)} min`; rl.textContent = p.src != null && !p.link && p.type === "spec" ? I18N.t("panel.rt.held", { rt }) : rt; } }
 }
-// "zoom bar" in the top margin: where the visible window sits in the whole axis (its range in words in an overlay with role=img); "Vista intera" button
+// "zoom bar" in the top margin: where the visible window sits in the whole axis (its range in words in an overlay with role=img); "Whole view" button
 /** the overlay of the zoom bar: carries the visible range for hover and assistive tech @param {Pannello} p @returns {HTMLElement} */
 function zoomBar(p) {
   let z = /** @type {HTMLElement | null} */ (p.el.querySelector(":scope > .zbar"));

@@ -5,7 +5,7 @@ mzLab lets you look at the LC-MS data of experiment 3 and search for transformat
 ## Opening the program
 1. Open <https://freeesta.github.io/mzlab/> in a recent browser (Chrome, Edge, Firefox or Safari) on a **computer or tablet**. Nothing to install.
 2. The first time, the browser downloads the calculation engine (a few tens of seconds, a network connection is needed); afterwards it is kept and later visits are faster.
-3. On a **smartphone** only the Theory section opens: use a computer or tablet for Data, Drawing and Practice. (The Theory and Practice sections are in Italian only.)
+3. On a **smartphone** only the Theory section opens: use a computer or tablet for Data, Drawing and Practice.
 
 ## Loading data
 - Drag the `.mzML` files (and the `.dam` method file, if you have it) into the loading screen, check times and types, press **Load data**.

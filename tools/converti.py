@@ -58,48 +58,48 @@ def convert(folder: Path, output: Path, trfp_path: str | None = None, test: bool
     wiffs = sorted(p for p in folder.rglob("*") if p.is_file() and p.suffix.lower() in (".wiff", ".wiff2"))
     ds = sorted(p for p in folder.rglob("*.d") if p.is_dir())
     if not (raws or wiffs or ds):
-        out(f"Nessun file .raw, .wiff o .d in {folder}.")
+        out(f"No .raw, .wiff or .d file in {folder}.")
         return res
     if raws:
         trfp = find_trfp(trfp_path)
         if trfp is None and not test:
-            out("ThermoRawFileParser non trovato. Scaricalo da https://github.com/CompOmics/ThermoRawFileParser/releases e indicane il percorso con --trfp "
-                "(o nella variabile THERMORAWFILEPARSER). Fuori da Windows serve anche mono, oppure la versione per Linux/Mac.")
+            out("ThermoRawFileParser not found. Download it from https://github.com/CompOmics/ThermoRawFileParser/releases and give its path with --trfp "
+                "(or in the THERMORAWFILEPARSER variable). Outside Windows it also needs mono, or the Linux/Mac version.")
             res["errori"].append("trfp")
         else:
             output.mkdir(parents=True, exist_ok=True) if not test else None
             for r in raws:
                 dest = output / (r.stem + ".mzML")
                 if dest.exists():
-                    out(f"già convertito: {r.name}"); res["saltati"].append(r.name); continue
+                    out(f"already converted: {r.name}"); res["saltati"].append(r.name); continue
                 cmd = command_trfp(trfp or ["ThermoRawFileParser"], r, output)
                 if test:
                     out(" ".join(f'"{c}"' if " " in c else c for c in cmd)); res["da_fare"].append(cmd); continue
-                out(f"converto {r.name} …")
+                out(f"converting {r.name} …")
                 p = subprocess.run(cmd, capture_output=True, text=True)
                 if p.returncode == 0 and dest.exists():
                     res["fatti"].append(r.name)
                 else:
-                    res["errori"].append(r.name); out(f"  non riuscito: {(p.stderr or p.stdout).strip().splitlines()[-1:] or ''}")
+                    res["errori"].append(r.name); out(f"  failed: {(p.stderr or p.stdout).strip().splitlines()[-1:] or ''}")
     for w in wiffs:
         c = command_docker(w.parent, w.name); out(c); res["da_fare"].append(c)
     for d in ds:
         c = command_docker(d.parent, d.name); out(c); res["da_fare"].append(c)
     if wiffs or ds:
-        out("\nI file .wiff / .d si convertono con MSConvert (ProteoWizard): il comando qui sopra usa Docker. Sul .wiff deve stare accanto il suo .wiff.scan. "
-            "In alternativa: MSConvert per Windows, Output format mzML, 64-bit, zlib, Numpress spento, filtro «peakPicking vendor msLevel=1-».")
+        out("\n.wiff / .d files are converted with MSConvert (ProteoWizard): the command above uses Docker. A .wiff needs its .wiff.scan next to it. "
+            "Alternatively: MSConvert for Windows, Output format mzML, 64-bit, zlib, Numpress off, filter «peakPicking vendor msLevel=1-».")
     return res
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("cartella", type=Path, help="cartella con i file dello strumento")
-    ap.add_argument("-o", "--uscita", type=Path, help="cartella degli mzML (predefinita: CARTELLA/mzML)")
-    ap.add_argument("--trfp", help="percorso di ThermoRawFileParser (o della sua cartella)")
-    ap.add_argument("--prova", action="store_true", help="mostra i comandi senza eseguirli")
+    ap.add_argument("cartella", type=Path, help="folder with the instrument files")
+    ap.add_argument("-o", "--uscita", type=Path, help="folder of the mzML files (default: CARTELLA/mzML)")
+    ap.add_argument("--trfp", help="path of ThermoRawFileParser (or of its folder)")
+    ap.add_argument("--prova", action="store_true", help="show the commands without running them")
     a = ap.parse_args(argv)
     if not a.cartella.is_dir():
-        print(f"{a.cartella} non è una cartella."); return 2
+        print(f"{a.cartella} is not a folder."); return 2
     r = convert(a.cartella, a.uscita or a.cartella / "mzML", a.trfp, a.prova)
     return 1 if r["errori"] else 0
 

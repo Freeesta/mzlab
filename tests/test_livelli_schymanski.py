@@ -16,15 +16,15 @@ globalThis.NOMI = require({str(WEB / 'nomi.js')!r}); require({str(WEB / 'livelli
 const lib = {{ ent: .9, cos: .85, shared: 8, dprec: 2, name: 'A', ik: 'AAAAAAAAAAAAAA-X', lib: 'LIB', nlib: 30 }};
 """
 
-# evidence of the 2014 paper -> (input, profile, level, why, words the decisive sentence must contain (interface language))
+# evidence of the 2014 paper -> (input, profile, level, why, words the decisive sentence must contain (English))
 CASES = {
     "reference standard": ("{cands: [lib], nScans: 3, std: {name: 'S', drt: .05, ent: .85, dprec: 2}}", "mzlab", "1", "standard", "standard S"),
-    "library spectrum": ("{cands: [lib], nScans: 3}", "mzlab", "2a", "2a", "libreria LIB"),
-    "weak library match": ("{cands: [lib], nScans: 1}", "mzlab", "3a", "confirm", "conferma"),
-    "analogue only": ("{cands: [], analogs: [{name: 'An', mcos: .8, matched: 6, delta: 15.9949}]}", "mzlab", "3b", "analogo", "solo un analogo"),
-    "unique formula": ("{cands: [], formulaUnique: true}", "mzlab", "4", "formula", "una sola formula"),
-    "exact mass only": ("{cands: []}", "mzlab", "5", "empty", "solo la massa esatta"),
-    "unit resolution": ("{cands: [lib], nScans: 3}", "lr", "4", "tetto", "risoluzione unitaria"),
+    "library spectrum": ("{cands: [lib], nScans: 3}", "mzlab", "2a", "2a", "library LIB"),
+    "weak library match": ("{cands: [lib], nScans: 1}", "mzlab", "3a", "confirm", "confirmation"),
+    "analogue only": ("{cands: [], analogs: [{name: 'An', mcos: .8, matched: 6, delta: 15.9949}]}", "mzlab", "3b", "analogo", "an analog only"),
+    "unique formula": ("{cands: [], formulaUnique: true}", "mzlab", "4", "formula", "a single formula"),
+    "exact mass only": ("{cands: []}", "mzlab", "5", "empty", "exact mass only"),
+    "unit resolution": ("{cands: [lib], nScans: 3}", "lr", "4", "tetto", "unit resolution"),
 }
 
 

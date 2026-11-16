@@ -11,7 +11,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_MRM-STD_0_6ppm"), mz("B_MRM-t0")])
-        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg); pg.wait_for_timeout(1500)
+        pg.wait_for_timeout(1000); pg.click("text=Load data"); ready(pg); pg.wait_for_timeout(1500)
         def only_mrm():
             v = pg.evaluate(VIS); assert v == ["mrm"], v
             assert pg.evaluate("E.panels.every(q => q.tab === 'mrm')"), "panels of another type"
@@ -21,7 +21,7 @@ try:
             assert pg.evaluate(f"!{q}.querySelector('select[data-o=tr]')"), "second transitions selector still there"
             assert pg.evaluate(f"!{q}.querySelector('[data-a=intf]') || {q}.querySelector('[data-a=intf]').hidden"), "extra integration target dropdown"
             assert not pg.evaluate(f"!!{q}.querySelector('select[data-o=fk]')"), "file counter dropdown"
-            assert pg.evaluate(f"{q}.querySelector('.pn-t, .ptitle, header, .hd') ? {q}.textContent.includes('Transizioni MRM') === false : true"), "old panel title"
+            assert pg.evaluate(f"{q}.querySelector('.pn-t, .ptitle, header, .hd') ? {q}.textContent.includes('MRM transitions') === false : true"), "old panel title"
             pg.evaluate(f"{q}.querySelector('.canb').click()"); frames(pg, 2)
             n = pg.evaluate(f"[...{q}.querySelectorAll('.can-row .can-n,.can-row')].length"); assert n > 1, n
             lab = pg.evaluate(f"[...{q}.querySelectorAll('.can-row')].map(x => x.getAttribute('aria-label') || '')")
@@ -49,7 +49,7 @@ try:
         def mixed():
             pg2 = r.page(p)
             pg2.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_MRM-t0")])
-            pg2.wait_for_timeout(1000); pg2.click("text=Carica dati"); ready(pg2); pg2.wait_for_timeout(1500)
+            pg2.wait_for_timeout(1000); pg2.click("text=Load data"); ready(pg2); pg2.wait_for_timeout(1500)
             v = pg2.evaluate(VIS); assert "mrm" not in v and "chrom" in v and "spec" in v, v         # first load: only the first file of the list is open
             pg2.evaluate("setVisOf(E.files.filter(f => f.kind === 'mrm'), true)"); ready(pg2)         # ticking the MRM file adds its block
             v = pg2.evaluate(VIS); assert "mrm" in v and "chrom" in v and "spec" in v, v

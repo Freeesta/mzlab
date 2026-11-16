@@ -17,7 +17,7 @@ const LISTE = (() => {
       if (!L) return;
       if (active && active[L.id] === false) return;
       // the built-in list carries English names and classes (name_en, cls_en); the lists of the user are shown as written
-      const en = I18N.lang === "en";
+      const en = true;                                  // English only
       (L.items || []).forEach((/** @type {Bag} */ it) => {
         const /** @type {Bag} */ x = { ...it, clsKey: it.cls, list: L.id, listName: (en && L.name_en) || L.name || L.id, listBuiltin: !!L.builtin };
         if (en && it.name_en) x.name = it.name_en;
@@ -120,7 +120,7 @@ const LISTE = (() => {
     return `<div class="cont"><div class="sm cont-h">${I18N.t("lst.compatible")}</div>${shown.map(row).join("")}${more > 0 ? `<div class="sm">${I18N.t("lst.more", { n: more })}</div>` : ""}</div>`;
   }
 
-  // CSV parsing: supports comma or semicolon, double quotes, Italian decimal comma (e.g. 150,5), NORMAN suspect lists
+  // CSV parsing: supports comma or semicolon, double quotes, decimal comma (e.g. 150,5), NORMAN suspect lists
   function csvSplit(/** @type {string} */ line, /** @type {string} */ sep) {
     const out = []; let cur = "", q = false;
     for (let i = 0; i < line.length; i++) {
@@ -670,14 +670,14 @@ const LISTE = (() => {
       const allLists = [...ST.lists, ...ST.userLists];
       if (allLists.length < 2) {                              // one list only: a fixed title with its source, no switch
         const L = allLists[0];
-        elChecks.innerHTML = L ? `<b>${EH(noRef((I18N.lang === "en" && L.name_en) || L.name))}</b>` : "";
+        elChecks.innerHTML = L ? `<b>${EH(noRef(L.name_en || L.name))}</b>` : "";
         elChecksLbl.hidden = true;
       } else {
       elChecksLbl.hidden = false;
       elChecks.innerHTML = allLists.map(L => {
         const on = act[L.id] !== false;
         return `<label style="display:inline-flex;align-items:center;gap:3px;cursor:pointer">
-          <input type="checkbox" data-lid="${EH(L.id)}" ${on ? "checked" : ""}> <span>${EH(noRef((I18N.lang === "en" && L.name_en) || L.name))}</span>
+          <input type="checkbox" data-lid="${EH(L.id)}" ${on ? "checked" : ""}> <span>${EH(noRef(L.name_en || L.name))}</span>
         </label>`;
       }).join("");
       elChecks.querySelectorAll("input[data-lid]").forEach((/** @type {HTMLInputElement} */ chk) => {

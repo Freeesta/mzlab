@@ -1,26 +1,26 @@
-# Checklist di rilascio vX.Y.Z
+# Release checklist vX.Y.Z
 
-Copia in `CHECKLIST-vX.Y.Z.md` (stessa cartella), spunta ogni casella con `[x]`: `tools/gate_release.py` rifiuta il tag finché ne resta una aperta.
+Copy to `CHECKLIST-vX.Y.Z.md` (same folder), tick every box with `[x]`: `tools/gate_release.py` refuses the tag while one is still open.
 
-## Mappe
-- [ ] `python3 tools/indice.py --controlla` è verde; `graphify-out` aggiornato se presente
-- [ ] ogni file d'area di `docs/agenti/` è citato nel §5 di `CLAUDE.md`
+## Maps
+- [ ] `python3 tools/indice.py --controlla` is green; `graphify-out` updated if present
+- [ ] every area file of `docs/agenti/` is cited in §5 of `CLAUDE.md`
 
-## Guide per agenti
-- [ ] ogni passo di `mzlab-cli steps` ha la sua riga in `docs/agenti/cli.md`
-- [ ] `docs/agenti/per-agenti.md` e `llms.txt` (se esiste) citano solo comandi esistenti
+## Guides for agents
+- [ ] every step of `mzlab-cli steps` has its row in `docs/agenti/cli.md`
+- [ ] `docs/agenti/per-agenti.md` and `llms.txt` (if it exists) cite only existing commands
 
-## Guide per noi
-- [ ] `CLAUDE.md` e `docs/agenti/` descrivono lo stato attuale (niente «ora…», «prima era…»)
-- [ ] `docs/agenti/rilascio.md` rispecchia `release.yml`
+## Guides for us
+- [ ] `CLAUDE.md` and `docs/agenti/` describe the current state (no «now…», «it used to be…»)
+- [ ] `docs/agenti/rilascio.md` mirrors `release.yml`
 
-## Leggimi di tutto
-- [ ] ogni crate ha un `README.md` non vuoto
-- [ ] `README.md` della radice e `CITATION.cff` sono aggiornati
+## Readmes of everything
+- [ ] every crate has a non-empty `README.md`
+- [ ] the root `README.md` and `CITATION.cff` are up to date
 
-## Versioni
-- [ ] `python3 tools/versione.py` è verde (Cargo.toml, tauri.conf.json, CITATION.cff, `.zenodo.json`)
+## Versions
+- [ ] `python3 tools/versione.py` is green (Cargo.toml, tauri.conf.json, CITATION.cff, `.zenodo.json`)
 
-## Note di rilascio
-- [ ] `CHANGELOG.md` ha la sezione `## [X.Y.Z]` in inglese, senza «Unreleased» residuo
-- [ ] `python3 tools/versione.py --nota vX.Y.Z` stampa le note
+## Release notes
+- [ ] `CHANGELOG.md` has the section `## [X.Y.Z]` in English, with no leftover «Unreleased»
+- [ ] `python3 tools/versione.py --nota vX.Y.Z` prints the notes

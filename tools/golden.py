@@ -84,6 +84,8 @@ def _match(a_mz, a_it, b_mz, b_it, tol) -> list[tuple[int, int]]:
 
 
 def entropy_similarity(a_mz, a_it, b_mz, b_it, tol=FRAG_TOL) -> float:
+    if not (sum(a_it) > 0 and sum(b_it) > 0):
+        return 0.0  # a spectrum with no intensity shares nothing (the formula alone gives 0.5), as ms_entropy
     pa, pb = _weighted(a_it), _weighted(b_it)
     pairs = _match(a_mz, a_it, b_mz, b_it, tol)
     ia, ib = {i for i, _ in pairs}, {j for _, j in pairs}
