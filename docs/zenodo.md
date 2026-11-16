@@ -1,13 +1,13 @@
-# Attivare il DOI su Zenodo (una volta sola, a cura di Federico)
+# Enabling the DOI on Zenodo (once, by Federico)
 
-`CITATION.cff` e `.zenodo.json` sono già nel repository. Per ottenere un DOI a ogni release:
+`CITATION.cff` and `.zenodo.json` are already in the repository. To get a DOI for every release:
 
-1. Entra su https://zenodo.org e scegli **Log in → Log in with GitHub**; autorizza l'accesso a Zenodo.
-2. Apri https://zenodo.org/account/settings/github/ (menu del profilo → *GitHub*) e premi **Sync now**.
-3. Nell'elenco dei repository trova **Freeesta/mzlab** e porta l'interruttore su **ON**. (Se il repository appartiene a un'organizzazione, serve il permesso di amministratore e va concesso l'accesso dell'app Zenodo all'organizzazione da GitHub → Settings → Applications.)
-4. Su GitHub crea una **release** (Releases → *Draft a new release*, tag per esempio `v0.1.0`, titolo e note, *Publish release*). Zenodo la archivia da solo in pochi minuti e assegna un DOI alla versione e un DOI «concept» che punta sempre all'ultima.
-5. Su Zenodo, nella pagina del deposito, controlla titolo, autore e licenza (letti da `.zenodo.json`). Copia il **concept DOI**.
-6. Compila in `CITATION.cff` i campi `doi`, `date-released` e `orcid` (togli il `#`) e aggiungi lo stesso `orcid` al creatore di `.zenodo.json` (Zenodo legge SOLO `.zenodo.json`, GitHub solo `CITATION.cff`: `tests/test_citazione.py` verifica che titolo, autore, ORCID, licenza e parole chiave coincidano), nella sezione «Come citare» del README il DOI, e aggiungi il badge DOI in cima al README (Zenodo lo propone nella pagina del deposito).
-7. Ogni release successiva crea una nuova versione con DOI proprio; il concept DOI resta lo stesso.
+1. Go to https://zenodo.org and choose **Log in → Log in with GitHub**; authorise Zenodo's access.
+2. Open https://zenodo.org/account/settings/github/ (profile menu → *GitHub*) and press **Sync now**.
+3. In the list of repositories find **Freeesta/mzlab** and turn the switch **ON**. (If the repository belongs to an organisation, administrator permission is needed and the Zenodo app must be granted access to the organisation from GitHub → Settings → Applications.)
+4. On GitHub create a **release** (Releases → *Draft a new release*, tag for example `v0.1.0`, title and notes, *Publish release*). Zenodo archives it by itself within a few minutes and assigns a DOI to the version and a «concept» DOI that always points to the latest.
+5. On Zenodo, on the deposit page, check title, author and licence (read from `.zenodo.json`). Copy the **concept DOI**.
+6. Fill in `CITATION.cff` the fields `doi`, `date-released` and `orcid` (remove the `#`) and add the same `orcid` to the creator of `.zenodo.json` (Zenodo reads ONLY `.zenodo.json`, GitHub only `CITATION.cff`: `tests/test_citazione.py` checks that title, author, ORCID, licence and keywords match), the DOI in the «How to cite» section of the README, and add the DOI badge at the top of the README (Zenodo proposes it on the deposit page).
+7. Every later release creates a new version with its own DOI; the concept DOI stays the same.
 
-Nota: il contenuto di una release non si può cambiare dopo la pubblicazione; controlla `CITATION.cff` prima di ogni release.
+Note: the content of a release cannot be changed after publication; check `CITATION.cff` before every release.

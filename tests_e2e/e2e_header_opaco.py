@@ -10,7 +10,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_MRM-t0")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def opaque():
             for b in ("#np-chrom", "#np-map"):
                 if pg.locator(b).count(): pg.click(b); ready(pg)

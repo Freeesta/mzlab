@@ -1,4 +1,4 @@
-"""Disegno, radicals in the mass spectrometry reading: a radical cation drawn on an amine N is labelled CH5N+• with the m/z of the ion (M+•, mass − e);
+"""Drawing, radicals in the mass spectrometry reading: a radical cation drawn on an amine N is labelled CH5N+• with the m/z of the ion (M+•, mass − e);
 a cut of a bond next to a radical mark leaves a methyl radical CH3• and a carbene CH2•• (triplet mark), or, heterolytic, the odd-electron ion CH2+•;
 the «Fragments» rows of a bond mark with • the side that keeps a drawn radical (its [F+H]+ is an odd-electron ion) and the table note says why."""
 # covers: mzlab/web/disegno-frammenti.js, mzlab/web/disegno-taglio.js, mzlab/web/disegno-etichette.js
@@ -47,7 +47,7 @@ try:
         def cut_heterolytic():
             load(ETHYL, 2); pg.check("input[name=cut-mode][value=heterolytic]")
             pg.click("#cut-line"); slash()
-            row = pg.locator("#ctx div", has_text="Catione CH2"); row.first.wait_for(timeout=10000); row.first.click()
+            row = pg.locator("#ctx div", has_text="Cation CH2"); row.first.wait_for(timeout=10000); row.first.click()
             wait_for_js(pg, f"/CH2\\+•.*m\\/z 14\\.0151/.test({LABELS})", timeout=10000)
             pg.keyboard.press("Escape"); pg.check("input[name=cut-mode][value=homolytic]")
         step("a heterolytic cut that gives the + to the radical side gives the odd-electron ion CH2+• (m/z 14.0151)", cut_heterolytic)
@@ -61,8 +61,8 @@ try:
             t = pg.locator("#ctx:not([hidden]) div", has_text="m/z").all_inner_texts()
             assert any(s.startswith("CH4 ") and "m/z 17.0386" in s for s in t), t
             assert any(s.startswith("CH3O• ") and "m/z 32.0257" in s for s in t), t
-            pg.locator("#ctx:not([hidden]) div", has_text="Tutte le rotture").first.click(); pg.wait_for_selector("#tdati table tbody tr", timeout=5000)
-            body = pg.inner_text("#tdati"); assert "CH3O•" in body and "elettroni dispari" in body, body[:400]
+            pg.locator("#ctx:not([hidden]) div", has_text="All cuts").first.click(); pg.wait_for_selector("#tdati table tbody tr", timeout=5000)
+            body = pg.inner_text("#tdati"); assert "CH3O•" in body and "odd electron" in body, body[:400]
             pg.keyboard.press("Escape")
         step("the Fragments rows and table mark with • the side that keeps the radical (CH3O•, m/z 32.0257)", fragments)
 finally:

@@ -134,6 +134,15 @@ def test_spectra_without_common_peaks_score_zero():
     assert r["cos"] == 0 and abs(r["ent"]) < 1e-9 and r["shared"] == 0
 
 
+def test_a_spectrum_without_intensity_scores_zero():
+    # the bare formula gives 1 - ln 2 / ln 4 = 0.5 (or NaN for all-zero peaks); the engine and ms_entropy give 0
+    full = spec([100, 150, 200], [10, 50, 100])
+    for empty in (spec([], []), spec([120, 180], [0, 0])):
+        for a, b in ((full, empty), (empty, full), (empty, empty)):
+            r = scores(a, b)
+            assert r["ent"] == 0 and r["cos"] == 0, r
+
+
 def test_tolerance_decides_the_pairs_and_partial_overlap_is_between():
     a, b = spec([100, 150, 200], [10, 8, 6]), spec([100.004, 150.5, 200.008], [10, 8, 6])
     tight, loose = scores(a, b, 0.01), scores(a, b, 1.0)

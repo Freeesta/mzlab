@@ -1,21 +1,20 @@
-"""Checks the two interface languages (Italian and English) of mzLab. Part of `python3 tools/verifica.py --rapida`.
+"""Checks the interface texts of mzLab (English only: mzlab/web/lang/en/<area>.js). Part of `python3 tools/verifica.py --rapida`.
 
     python3 tools/controlla_i18n.py            # checks; exit code 1 if something is wrong
-    python3 tools/controlla_i18n.py --elenco   # also lists, file by file, Italian words still outside the catalogs
+    python3 tools/controlla_i18n.py --elenco   # also lists, file by file, Italian words still found outside the catalog
 
-What is checked (specification: PROMPT_INGLESE.md of the data repository, section 4):
- 1. every key used (`t("..")`, `data-i18n*="..")`, keys of Python messages) exists in lang/it.js and lang/en.js; no orphan key;
- 2. placeholders and ICU structure are the same in the two languages; ICU braces are balanced;
- 3. the Italian text written in the static HTML (elements with data-i18n*) equals lang/it.js;
- 4. no Italian outside the catalogs: in the string literals of the files already migrated (MIGRATED) no frequent Italian word;
-    the other files are only listed with --elenco (they become mandatory one by one as parts B-E migrate them);
-    motivated exceptions are in tools/i18n_eccezioni.txt;
- 5. the glossary (lang/glossario.json): if the Italian text contains an Italian form of an entry, the English text must contain an
-    English form and none of the forms to avoid;
- 6. lang/contesto/<area>.json (same stem as lang/it/<area>.js) describes every key that has parameters, each in the file of its key's area;
- 7. every `err.*` / `error.*` / `warn.*` key a web crate can send (literals in crates/, see CRATE_*) has a text in both languages
-    (the allow list CRATE_SENZA_TESTO says why a key never reaches a student).
-The catalogs are plain JSON inside `I18N.add("xx", { ... });`: the first and the last line are cut off and the rest is parsed as JSON.
+What is checked:
+ 1. every key used (`t("..")`, `data-i18n*="..")`, keys of Python messages) exists in the catalog; no orphan key;
+ 2. ICU braces and placeholders are well formed; a `t("key")` without parameters never asks for a placeholder;
+ 3. the text written in the static HTML (elements with data-i18n*) equals the catalog;
+ 4. no Italian left: no frequent Italian word in the string literals of the browser code, nor in the catalog itself
+    (motivated exceptions are in tools/i18n_eccezioni.txt);
+ 5. the glossary (lang/glossario.json): no text uses a form the glossary says to avoid (`evita_en`, e.g. "parent ion");
+ 6. lang/contesto/<area>.json (same stem as lang/en/<area>.js) describes every key that has parameters, each in the file of its key's area;
+ 7. every `err.*` / `error.*` / `warn.*` key a web crate can send (literals in crates/, see CRATE_*) has a text
+    (the allow list CRATES_WITHOUT_TEXT says why a key never reaches a student);
+ 8. names of other programs, vendors and people stay out of the texts.
+The catalog is plain JSON inside `I18N.add("en", { ... });`: the first and the last line are cut off and the rest is parsed as JSON.
 """
 from __future__ import annotations
 
@@ -63,6 +62,11 @@ sovrapporre disegna disegnare disegnato disegni struttura strutture molecola mol
 vuol dire significa significato esempio esempi spiegazione guida aiuto domanda domande risposta risposte
 scansione scansioni madre sconosciuto sconosciuta vicina vicino
 """.split())
+
+# Italian function words that are never English words: two of them in one catalog text mean untranslated Italian
+STRONG_ITALIAN = set("""il lo gli dei del della delle degli dello nel nella nelle nei negli sul sulla sulle sui una uno che non sono più può puoi hai hanno
+ogni tutti tutto tutte questo questa questi queste quello quella perché quando dove come anche già poi senza dopo prima dalla dallo dalle dagli
+carica caricare scegli apri chiudi annulla salva scarica elimina mostra nascondi seleziona trascina""".split())
 
 # crates that never serve the page, and the keys a student never sees (one reason per key)
 EXCLUDED_CRATES = ("mzlab-cli", "mzlab-desktop", "mzlab-llm")
@@ -182,19 +186,19 @@ def used_keys(catalog_keys: set[str] = frozenset()) -> tuple[dict[str, set[str]]
 T_NOPARAM = re.compile(r"""(?<![\w$.])(?:I18N\.)?t\(\s*(["'`])([A-Za-z][\w]*(?:\.[\w]+)+)\1\s*\)""")
 
 
-def check_paramless_calls(it: dict, errs: list) -> None:
+def check_paramless_calls(cat: dict, errs: list) -> None:
     """`t("key")` with no parameters on a message that has {placeholders} other than {app} would show the braces to the user ({app} is filled in by i18n.js)."""
     for p in source_files((".js", ".html")):
         rel = p.relative_to(ROOT).as_posix()
         for m in T_NOPARAM.finditer(p.read_text(encoding="utf-8", errors="replace")):
             key = m.group(2)
-            if key in it:
-                names = {a for a, _ in icu_signature(it[key])[0]} - {"app"}
+            if key in cat:
+                names = {a for a, _ in icu_signature(cat[key])[0]} - {"app"}
                 if names:
                     errs.append(f"{rel}: t(\"{key}\") without parameters but the message needs {sorted(names)}")
 
 
-# ---------------------------------------------------------------- static HTML = it.js
+# ---------------------------------------------------------------- static HTML = the catalog
 class _Static(HTMLParser):
     """Collects (key, attribute or None, text) for each element with data-i18n*."""
 
@@ -228,19 +232,19 @@ class _Static(HTMLParser):
                 return
 
 
-def check_static_html(it: dict, errs: list) -> None:
+def check_static_html(cat: dict, errs: list) -> None:
     for p in source_files((".html",)):
         ps = _Static()
         ps.feed(p.read_text(encoding="utf-8"))
         for key, attr, text in ps.found:
-            if key not in it:
+            if key not in cat:
                 continue
-            want = it[key]
+            want = cat[key]
             if attr == "html":                       # data-i18n-html: compare the visible text (tags and entities removed)
                 want = html.unescape(re.sub(r"<[^>]+>", "", want))
             norm = lambda x: re.sub(r"\s+", " ", x.replace("{APP}", "{app}")).strip()      # {APP} in the page is {app} in the catalog
             if norm(text) != norm(want):
-                errs.append(f"HTML {p.name}: «{key}»{' (' + attr + ')' if attr else ''} shows «{text.strip()[:50]}» but it.js has «{it[key][:50]}»")
+                errs.append(f"HTML {p.name}: «{key}»{' (' + attr + ')' if attr else ''} shows «{text.strip()[:50]}» but the catalog has «{cat[key][:50]}»")
 
 
 # ---------------------------------------------------------------- Italian outside the catalogs
@@ -401,22 +405,25 @@ def has_form(text: str, forms: list[str]) -> bool:
     return False
 
 
-def check_glossary(it: dict, en: dict, errs: list) -> None:
+def check_glossary(en: dict, errs: list) -> None:
     g = json.loads((LANG / "glossario.json").read_text(encoding="utf-8"))
     sources = g.get("fonti", {})
     for v in g["voci"]:
         if v.get("fonte") not in sources:
             errs.append(f"glossary: entry «{v['id']}» without a known source")
-        for k, itxt in it.items():
-            for ex in v.get("escludi_it", []):               # Italian phrases where the word has another meaning ("in fondo" = at the bottom)
-                itxt = itxt.replace(ex, "")
-            if k not in en or not has_form(itxt, v["it"]):
-                continue
-            etxt = en[k]
-            if not has_form(etxt, v["en"]):
-                errs.append(f"glossary «{v['id']}»: {k}: Italian has «{v['it'][0]}», English must use one of {v['en']}  (en: «{etxt[:60]}»)")
-            if has_form(etxt, v.get("evita_en", [])):
-                errs.append(f"glossary «{v['id']}»: {k}: English uses a form to avoid {v['evita_en']}  (en: «{etxt[:60]}»)")
+        for k, etxt in en.items():
+            if k not in v.get("chiavi_ok", []) and has_form(etxt, v.get("evita_en", [])):
+                errs.append(f"glossary «{v['id']}»: {k}: uses a form to avoid {v['evita_en']}; use one of {v['en']}  («{etxt[:60]}»)")
+
+
+def check_catalog_italian(cat: dict, errs: list) -> None:
+    """The catalog must not hold Italian text (a leftover of the old language). Only strong cues: an Italian-only word list, 2+ words in one text."""
+    exc = load_exceptions()
+    for k, v in sorted(cat.items()):
+        plain = re.sub(r"\{[^{}]*\}|<[^>]+>", " ", v)
+        w = [x for x in italian_in(plain) if x.lower() in STRONG_ITALIAN]
+        if len(w) >= 2 and not any(f.startswith("mzlab/web/lang/") and sn in v for f, sn in exc):
+            errs.append(f"Italian text in the catalog: {k}: «{v[:60]}» ({', '.join(w[:3])})")
 
 
 # ---------------------------------------------------------------- main
@@ -447,38 +454,32 @@ def check_names(cats: dict[str, dict[str, str]], errs: list) -> None:
 def run(listing: bool = False) -> list[str]:
     errs: list[str] = []
     try:
-        it, en = load_catalog("it"), load_catalog("en")
+        cat = load_catalog("en")
     except Exception as e:  # noqa: BLE001
-        return [f"catalogs: {e}"]
-    for k in sorted(set(it) - set(en)):
-        errs.append(f"missing in en.js: {k}")
-    for k in sorted(set(en) - set(it)):
-        errs.append(f"missing in it.js: {k}")
-    for k in sorted(set(it) & set(en)):
+        return [f"catalog: {e}"]
+    for k in sorted(cat):
         try:
-            si, se = icu_signature(it[k]), icu_signature(en[k])
+            icu_signature(cat[k])
         except ValueError as e:
             errs.append(f"{k}: {e}")
-            continue
-        if si[0] != se[0]:
-            errs.append(f"{k}: different placeholders (it {si[0]} / en {se[0]})")
-    used, prefixes = used_keys(set(it) | set(en))
+    used, prefixes = used_keys(set(cat))
     for k, files in sorted(used.items()):
-        if k not in it or k not in en:
-            errs.append(f"key used but not in the catalogs: {k}  ({', '.join(sorted(files))})")
+        if k not in cat:
+            errs.append(f"key used but not in the catalog: {k}  ({', '.join(sorted(files))})")
     sent = set(crate_keys(cli=True))
-    for k in sorted(set(it) | set(en)):
+    for k in sorted(cat):
         if k not in used and k not in sent and not any(k.startswith(p) for p in prefixes):
             errs.append(f"orphan key (nobody uses it): {k}")
     for k, rel in sorted(crate_keys().items()):
-        if k not in CRATES_WITHOUT_TEXT and (k not in it or k not in en):
-            errs.append(f"engine message without a text in both languages: {k}  ({rel})")
-    check_paramless_calls(it, errs)
-    check_static_html(it, errs)
+        if k not in CRATES_WITHOUT_TEXT and k not in cat:
+            errs.append(f"engine message without a text: {k}  ({rel})")
+    check_paramless_calls(cat, errs)
+    check_static_html(cat, errs)
     check_italian(errs, listing)
-    check_glossary(it, en, errs)
-    check_names({"it": it, "en": en}, errs)
-    errs += lang_catalog.contesto_problems(it)
+    check_catalog_italian(cat, errs)
+    check_glossary(cat, errs)
+    check_names({"en": cat}, errs)
+    errs += lang_catalog.contesto_problems(cat)
     return errs
 
 
@@ -489,7 +490,7 @@ def main() -> None:
         for e in errs[:60]:
             print("  -", e)
         sys.exit(1)
-    print("i18n: OK (catalogs, keys, HTML, glossary)")
+    print("i18n: OK (catalog, keys, HTML, glossary)")
 
 
 if __name__ == "__main__":

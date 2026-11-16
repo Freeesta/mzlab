@@ -14,7 +14,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate(f"{CH}.el.scrollIntoView({{block:'start'}})"); pg.wait_for_timeout(400)
         snap = lambda: pg.evaluate(f"(()=>{{const s={SPEC},c={CH};return JSON.stringify({{sz:s.zoom,sr:[s.r0,s.r1],sk:s.k,si:s.si,cc:c.cur,cz:c.zoom,cur:E.cur,n:E.panels.length,files:E.files.map(f=>f.vis)}})}})()")
         # zoom the chromatogram a little, put the cursor, then go full screen on the SPECTRUM

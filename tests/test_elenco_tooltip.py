@@ -13,4 +13,4 @@ def test_list_is_complete_and_consistent():
     for src in ("site", "svg", "i18n-title", "catalog-only", "flow-step", "flow-param"):
         assert st["sources"].get(src, 0) > 0, src
     assert f"{st['total']} tooltips, {st['flagged']} flagged" in md
-    assert st["skipped"] > 0 and all(r["it"] for r in rows)
+    assert st["skipped"] > 0 and all(r["text"] for r in rows)

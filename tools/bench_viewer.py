@@ -422,7 +422,7 @@ def main():
         with sync_playwright() as p:
             if a.g7_site:
                 prof = wd / "profile_g7"; shutil.rmtree(prof, ignore_errors=True)
-                ctx = p.chromium.launch_persistent_context(str(prof), executable_path=chromium_path(), viewport={"width": 1440, "height": 950}, args=["--enable-precise-memory-info"], locale="it-IT")
+                ctx = p.chromium.launch_persistent_context(str(prof), executable_path=chromium_path(), viewport={"width": 1440, "height": 950}, args=["--enable-precise-memory-info"], locale="en-US")
                 ctx.set_default_timeout(OPEN_MS); ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}" + INIT)
                 try:
                     pg = ctx.pages[0] if ctx.pages else ctx.new_page()
@@ -437,7 +437,7 @@ def main():
                 files = files_of(wd, kind, ns, npk, nf)
                 prof = wd / f"profile_{nm}"; shutil.rmtree(prof, ignore_errors=True)         # a profile on disk: the quota of a real browser (an incognito context refuses ~1 GB)
                 ctx = p.chromium.launch_persistent_context(str(prof), executable_path=chromium_path(), viewport={"width": 1440, "height": 950},
-                                                           args=["--enable-precise-memory-info", "--js-flags=--expose-gc"], locale="it-IT")
+                                                           args=["--enable-precise-memory-info", "--js-flags=--expose-gc"], locale="en-US")
                 ctx.set_default_timeout(OPEN_MS)
                 ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}" + INIT)
                 pg = ctx.pages[0] if ctx.pages else ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))

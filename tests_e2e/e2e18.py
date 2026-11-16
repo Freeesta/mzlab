@@ -1,4 +1,4 @@
-"""One XIC window (da/a with automatic "a", "oppure", neutral formula), right-click menu with "Ripristina zoom", header button groups, xlsx exports."""
+"""One XIC window (from/to with automatic "to", "or", neutral formula), right-click menu with "Reset the zoom", header button groups, xlsx exports."""
 # covers: mzlab/web/xlsx.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -15,13 +15,13 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz(f) for f in FILES])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         open_kind(pg, "full"); ready(pg)      # the tab opened at load can differ on a loaded machine: the chromatogram panels live in Full Scan
         dlg = lambda: pg.evaluate("document.querySelector('#xicdlg').open")
         def window_():
             pg.locator("#dpanels .pnl.chrom [data-a=xic]").first.click(); assert dlg()
             assert pg.locator("#xic-rows .xrw").count() == 2 and pg.locator("#xic-add").is_enabled(), "two rows to start with"
-            t = pg.inner_text("#xicdlg") + " " + pg.get_attribute("#xicdlg", "aria-description"); assert "oppure" in t and "neutra" in t  and "cifra decimale" not in t and "m/z o formula" not in t, t
+            t = pg.inner_text("#xicdlg") + " " + pg.get_attribute("#xicdlg", "aria-description"); assert "an m/z or a neutral formula" in t and "decimal digit" not in t and "m/z or formula" not in t, t
             pg.fill("#xic-mz", "194.04"); assert "193.8 - 194.3" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "194.04", pg.inner_text("#xic-sum")
             pg.fill("#xic-mz", "C14H13F4N3O2S"); hold(pg, 1300)
             assert "363.8 - 364.3" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "C14H13F4N3O2S", pg.inner_text("#xic-sum")
@@ -30,13 +30,13 @@ try:
             pg.fill("#xic-mz", "364"); pg.click("#xic-go"); ready(pg)
             assert not dlg() and pg.evaluate("E.panels.some(p=>p.type==='xic' && p.traces[0].w===0.25 && p._a && p._a.sr.length>0)")
             assert "cifra" not in pg.evaluate("document.querySelector('.pnl.chrom [data-o=mz0]').closest('label').title")
-        step("XIC window: one m/z value, oppure, neutral formula, unit window around the nominal mass", window_)
+        step("XIC window: one m/z value, or, neutral formula, unit window around the nominal mass", window_)
         def noadduct_():
             pg.locator("#dpanels .pnl.chrom [data-a=xic]").first.click(); assert dlg()
             opts = pg.evaluate("[...document.querySelectorAll('#xic-ad option')].map(o => [o.value || o.textContent, o.textContent])")
-            assert opts[-1] == ["none", "Nessun addotto"] and len(opts) == 8, opts
+            assert opts[-1] == ["none", "No adduct"] and len(opts) == 8, opts
             pg.fill("#xic-mz", ""); pg.select_option("#xic-ad", "none")
-            assert "ione" in pg.get_attribute("#xic-mz", "placeholder"), pg.get_attribute("#xic-mz", "placeholder")
+            assert "ion formula" in pg.get_attribute("#xic-mz", "placeholder"), pg.get_attribute("#xic-mz", "placeholder")
             pg.fill("#xic-mz", "C14H13F4N3O2S+H"); hold(pg, 1300)
             assert "363.8 - 364.3" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")      # the +H written in the text is the adduct: the same window as [M+H]+
             pg.fill("#xic-mz", "C14H13F4N3O2S"); hold(pg, 1300)
@@ -57,19 +57,19 @@ try:
             ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom')"); c = pt(pg, ci, 12.0)
             pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_function("document.querySelectorAll('#ctx div').length>0", timeout=5000)
             items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>[d.textContent,d.className])"); print([i[0] for i in items])
-            assert any(i[0] == "Estrai uno ione (XIC)…" for i in items), items
+            assert any(i[0] == "Extract an ion (XIC)…" for i in items), items
             assert pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]')") is None, "no zoom yet: the entry is not shown"
-            pg.locator("#ctx div", has_text="Estrai uno ione").first.click(); wait_for_js(pg, "!!document.querySelector('#xicdlg').open")
+            pg.locator("#ctx div", has_text="Extract an ion").first.click(); wait_for_js(pg, "!!document.querySelector('#xicdlg').open")
             assert dlg() and not pg.evaluate("document.querySelector('#askdlg').open"); pg.click("#xic-no")      # the same window, not a separate question
             pg.locator("#dpanels .pnl.chrom [data-a=izoom]").first.click(); box = pg.locator("#dpanels .pnl.chrom canvas").first.bounding_box()
             pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(13)"), box["y"] + 100); pg.mouse.down(); pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(16)"), box["y"] + 100, steps=5); pg.mouse.up(); wait_for_js(pg, f"!!E.panels[{ci}].zoom")
             assert pg.evaluate(f"E.panels[{ci}].zoom") and pg.locator("#dpanels .pnl.chrom [data-a=fit]").first.is_enabled()
             c = pt(pg, ci, 14.3); pg.mouse.click(c["px"], c["py"], button="right"); wait_for_js(pg, "document.querySelectorAll('#ctx div').length>0")
             items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>[d.textContent,d.className])"); assert items[0][0].startswith("RT") and pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]').getAttribute('aria-disabled')") != "true", items          # with a zoom it works
-            pg.locator("#ctx div", has_text="Ripristina zoom").first.click(); wait_for_js(pg, f"E.panels[{ci}].zoom==null")
+            pg.locator("#ctx div", has_text="Reset the zoom").first.click(); wait_for_js(pg, f"E.panels[{ci}].zoom==null")
             assert pg.evaluate(f"E.panels[{ci}].zoom") is None and pg.locator("#dpanels .pnl.chrom [data-a=fit]").first.is_disabled()
             pg.locator("#dpanels .pnl.chrom [data-a=izoom]").first.click()
-        step("right click on the chromatogram: Estrai uno ione (same window), Ripristina zoom", chrom_menu)
+        step("right click on the chromatogram: Extract an ion (same window), Reset the zoom", chrom_menu)
         def guard():
             c = pg.locator("#dpanels .pnl.chrom [data-a=iauto]").first; c.click()
             ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom')"); pt_ = pt(pg, ci, 14.3); pg.mouse.click(pt_["px"], pt_["py"]); wait_for_js(pg, "!!document.querySelector('#askdlg').open")
@@ -80,7 +80,7 @@ try:
             si = pg.evaluate("E.panels.findIndex(p=>p.type==='spec')"); a = pg.evaluate(f"""()=>{{const p=E.panels[{si}],r=p.cv.getBoundingClientRect(),d=p._a.data[0].d;let j=0;d.y.forEach((v,i)=>{{if(v>d.y[j])j=i}});return {{px:r.left+p._a.X(d.mz[j]),py:r.top+p._a.Y(d.y[j])+6}}}}""")
             n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic').length")
             pg.mouse.click(a["px"], a["py"], button="right"); wait_for_js(pg, "document.querySelectorAll('#ctx div').length>0")
-            pg.locator("#ctx div", has_text="Estrai l'XIC").first.click(); wait_for_js(pg, f"E.panels.filter(p=>p.type==='xic').length==={n0+1}")
+            pg.locator("#ctx div", has_text="Extract the XIC").first.click(); wait_for_js(pg, f"E.panels.filter(p=>p.type==='xic').length==={n0+1}")
             assert not dlg(), "no dialog: the XIC appears at once"
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').length") == n0 + 1
             t = pg.evaluate("(()=>{const x=E.panels.filter(p=>p.type==='xic').pop().traces[0];return [x.mz,x.w,x.label]})()"); print(t)
@@ -110,13 +110,13 @@ try:
             pg.mouse.click(xbox["x"] + xx, xbox["y"] + 120); wait_for_js(pg, "(()=>{const b=document.querySelector('.pnl.xic [data-a=itab]');return !!b&&!b.hidden})()")
             xp.locator("[data-a=itab]").click(); pg.wait_for_selector("#ig-xlsx")
             with pg.expect_download() as d2: pg.click("#ig-xlsx")
-            g = d2.value.path(); assert d2.value.suggested_filename == "integrazioni.xlsx"; rr = xlsx_rows(g)
-            heads = [c[1] for c in rr[0]]; assert "Area (conteggi*s)" in heads and "RT inizio (min)" in heads, heads
-            assert "Tipo di file" in heads and heads.index("Tipo di file") > heads.index("Correzione"), heads
-            assert rr[1][heads.index("Tipo di file")][1] and not any(c and c[1] for c in rr[1][heads.index("Q1 (m/z)"):heads.index("Q1 (m/z)") + 3]), rr[1]      # an XIC has no transition: Q1, Q3 and the name are empty
-            area = rr[1][heads.index("Area (conteggi*s)")]; assert area[0] == "n" and area[1] > 0, area
+            g = d2.value.path(); assert d2.value.suggested_filename == "integrations.xlsx"; rr = xlsx_rows(g)
+            heads = [c[1] for c in rr[0]]; assert "Area (counts*s)" in heads and "RT start (min)" in heads, heads
+            assert "Type of file" in heads and heads.index("Type of file") > heads.index("Correction"), heads
+            assert rr[1][heads.index("Type of file")][1] and not any(c and c[1] for c in rr[1][heads.index("Q1 (m/z)"):heads.index("Q1 (m/z)") + 3]), rr[1]      # an XIC has no transition: Q1, Q3 and the name are empty
+            area = rr[1][heads.index("Area (counts*s)")]; assert area[0] == "n" and area[1] > 0, area
             wb = xlsx_openpyxl(g)
-            if wb: assert wb.active.cell(2, heads.index("Area (conteggi*s)") + 1).value > 0
+            if wb: assert wb.active.cell(2, heads.index("Area (counts*s)") + 1).value > 0
             pg.click("#bigx")
         step("xlsx of an XIC and of the integrations table", xlsx)
 finally:

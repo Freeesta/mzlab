@@ -1,12 +1,13 @@
 // @ts-check
 // Flow web runner, worker side: loads the `feat` .wasm of mzFinder and answers `stima`, the memory that aligning a stored series asks for (Rust `estimate_series`, the
-// rule of `slabs::stima`), `detect`, the memory that detecting one index asks for (`estimate_detect`, from its header), and the facts the record of a run (prov/1) asks of the files in OPFS: `meta` (estimates and memory of a job, `flow_job_meta`), `sha` (SHA-256 and size of a file, read
-// in pieces), `source` (the file an index was made from). Only these live here; the steps run in the pool of feat-worker.js. Used by flow-web-run.js and flow-web-prov.js.
+// rule of `slabs::stima`), `detect`, the memory that detecting one index asks for (`estimate_detect`, from its header), and the facts the record of a run (prov/1) asks of the files in OPFS: `meta` (estimates and memory of a job, `flow_job_meta`, on the lineage `flow_job_lineage` of the `rotte` .wasm writes), `sha` (SHA-256 and size of a file, read
+// in pieces), `source` (the file an index was made from); `recipe` is `flow_job_recipe` of `rotte`, which holds the planner. Only these live here; the steps run in the pool of feat-worker.js. Used by flow-web-run.js and flow-web-prov.js.
 /** @type {any} */ let mod = null;
+/** @type {any} */ let rotte = null;
 
-/** @param {any} m the `wasm` entry of the pool: { jsUrl, wasmUrl, sha256? } */
-async function load(m) {
-  if (mod) return;
+/** the module of the entry `m` of the pool: { jsUrl, wasmUrl, sha256? } @param {any} m */
+async function fetchModule(m) {
+  if (!m) throw Object.assign(new Error("err.route.unavailable"), { key: "err.route.unavailable" });
   const bytes = await (await fetch(m.wasmUrl)).arrayBuffer();
   if (m.sha256) {
     const h = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))].map(b => b.toString(16).padStart(2, "0")).join("");
@@ -14,7 +15,17 @@ async function load(m) {
   }
   const g = await import(m.jsUrl);
   await g.default({ module_or_path: bytes });
-  mod = g;
+  return g;
+}
+
+/** the `feat` .wasm @param {any} m */
+async function load(m) {
+  if (!mod) mod = await fetchModule(m);
+}
+
+/** the `rotte` .wasm, which holds the planner: the recipe and the lineage of a job read the plan @param {any} m */
+async function loadRotte(m) {
+  if (!rotte) rotte = await fetchModule(m);
 }
 
 /** an error of the .wasm is JSON { error_key, params } @param {any} e */
@@ -44,7 +55,11 @@ async function open(paths) {
 /** the answer of the facts above @param {any} m */
 async function facts(m) {
   // the recipe text of a job reads no file: a JSON string, so the page gets the text the engine wrote
-  if (m.op === "recipe") return JSON.stringify(mod.flow_job_recipe(m.plan, m.registry, m.instance, m.filled !== false));
+  if (m.op === "recipe") { await loadRotte(m.rotte); return JSON.stringify(rotte.flow_job_recipe(m.plan, m.registry, m.instance, m.filled !== false)); }
+  await load(m.wasm);
+  // the lineage of the job (its step, what the plan writes, the layers of its line) before any file is opened
+  if (m.op === "meta") await loadRotte(m.rotte);
+  const lineage = m.op === "meta" ? rotte.flow_job_lineage(m.plan, m.registry, m.instance) : "";
   const f = await open(m.paths);
   try {
     if (m.op === "sha") return mod.flow_file_sha(f.read, f.sizes[0]);
@@ -55,15 +70,15 @@ async function facts(m) {
       let d = await navigator.storage.getDirectory(); for (const p of parts) d = await d.getDirectoryHandle(p);
       return new Uint8Array(await (await (await d.getFileHandle(name)).getFile()).arrayBuffer());
     }));
-    return mod.flow_job_meta(m.plan, m.registry, m.instance, f.read, f.sizes, stored, m.budgetMb || 0);
+    return mod.flow_job_meta(lineage, f.read, f.sizes, stored, m.budgetMb || 0);
   } finally { f.close(); }
 }
 
 self.onmessage = async (/** @type {MessageEvent} */ ev) => {
   const m = ev.data;
   try {
-    await load(m.wasm);
     if (m.op) { self.postMessage({ id: m.id, ok: true, json: await facts(m) }); return; }
+    await load(m.wasm);
     const files = m.files.map((/** @type {ArrayBuffer} */ b) => new Uint8Array(b));
     self.postMessage({ id: m.id, ok: true, json: mod.estimate_series(files, m.recipe || "", m.budgetMb || 0) });
   } catch (e) { self.postMessage({ id: m.id, error: describe(e) }); }

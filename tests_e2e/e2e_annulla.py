@@ -14,7 +14,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); wait_for_js(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
         pg.evaluate(f"(()=>{{const p={XP};setActive(p);p.imode=null;p.el.scrollIntoView({{block:'center'}})}})()")
         zoom = lambda: pg.evaluate(f"{XP}.zoom")
@@ -49,7 +49,7 @@ try:
         step("Ctrl+Z in a text field stays the browser's", field)
         def empty():
             pg.evaluate("STORIA.svuota()"); pg.evaluate("document.activeElement&&document.activeElement.blur()")
-            key(f"{mod}+z"); until("/Niente|Nothing/.test(document.getElementById('sb-live').textContent)"); t = pg.inner_text("#sb-live"); assert "Niente da annullare" in t or "Nothing to undo" in t, t
+            key(f"{mod}+z"); until("/Niente|Nothing/.test(document.getElementById('sb-live').textContent)"); t = pg.inner_text("#sb-live"); assert "Nothing to undo" in t or "Nothing to undo" in t, t
             assert pg.evaluate("document.getElementById('np-undo').disabled") is True
         step("empty stack: short notice, button disabled", empty)
         def nokey():

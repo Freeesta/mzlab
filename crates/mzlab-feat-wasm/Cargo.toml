@@ -14,13 +14,14 @@ crate-type = ["cdylib", "rlib"]
 default = ["detect", "proofs", "finder", "finder_msn", "finder_edge", "flow_ms2"]
 # `flow_ms2` = the text of `spectra.ms2` for the browser (`run_ms2.rs`); in the `hr` .wasm, not in the separate builds.
 flow_ms2 = []
-# `flow_formula` = the text of `formula.ms1` (`run_formula.rs`). In no site module: it adds 145 166 B to `hr` (1 682 122, cap 1 605 632) and 134 405 B to `untargeted` (677 316, cap 585 728); parity exception requested.
+# `flow_formula` = the text of `formula.ms1` (`run_formula.rs`): a .wasm of its own, `formula` (`tools/moduli/formula.toml`), loaded only by its executor; NOT among the defaults.
 flow_formula = ["mzlab-feat/untargeted"]
 # `flow_tab` = the Flow table steps that do not fit `table` (`run_tab.rs`: `table.drift`): a .wasm of its own, `flowtab`, loaded only by their executors; NOT among the defaults.
 flow_tab = []
 # `flow_stat` = `table.stats`, `table.pca`, `table.kmd` of the Flow (`run_stat.rs`): a .wasm of its own, `flowstat`, loaded only by their executor (`flow-web-stat.js`); NOT among the defaults.
 flow_stat = []
-# `detect` carries `mzlab-feat/untargeted` for the algorithm `adap_localmin` of `features.detect` (`untargeted::flow`); only the ADAP route is linked.
+# `detect` carries `mzlab-feat/untargeted` for what `features.detect` and `features.align` reach of it: the isotope finder (`flow_isofinder`, `isofinder`), the algorithm
+# `adap_localmin` (`flow`, `adap`, `resolve`, `arpls`, `smooth`, `pipeline_stream`) and the table algorithm `align_mzmine` (`flow_align`, `join`, `gapfill`); about 136 KB of `hr` before wasm-opt.
 detect = ["mzlab-feat/untargeted", "mzlab-ops/detect"]
 proofs = ["mzlab-ops/proofs"]
 finder = ["mzlab-feat/chem", "mzlab-feat/legacy"]

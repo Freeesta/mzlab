@@ -1,5 +1,5 @@
 """Cursor of the chromatogram: the dot on top of the line (mouse, finger on an iPad viewport, arrow keys, tap elsewhere) and the snap to the nearest scan
-of the kind shown (DDA with MS1/MS2 filters): the message «nessuno scan» never appears while the file has scans."""
+of the kind shown (DDA with MS1/MS2 filters): the message «no scan» never appears while the file has scans."""
 # covers: mzlab/web/barre-maniglie.js, mzlab/web/scroll.js, mzlab/web/pannelli.js, mzlab/web/picchi.js, mzlab/web/eventi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -16,7 +16,7 @@ CH = "E.panels.find(p => p.type === 'chrom' && p.tab === 'full')"
 try:
     with sync_playwright() as p:
         r.b = p.chromium.launch()
-        ctx = r.b.new_context(viewport={"width": 1024, "height": 1366}, has_touch=True, locale="it-IT")
+        ctx = r.b.new_context(viewport={"width": 1024, "height": 1366}, has_touch=True)
         pg = ctx.new_page(); pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#pick", state="attached")
@@ -79,7 +79,7 @@ try:
             i = len(rts) // 3; mid = (rts[i] + rts[i + 1]) / 2
             pg.evaluate(f"(() => {{ const p = {CH}, s = {s1}; p.cur = {mid}; s.r0 = {mid} - 1e-6; s.r1 = {mid} + 1e-6; drawSpec(s); }})()"); ready(pg)
             cur = pg.evaluate(f"{CH}.cur"); a = pg.evaluate(f"!!({s1}._a)")
-            assert a, "the spectrum is drawn (no «nessuno scan»)"
+            assert a, "the spectrum is drawn (no «no scan»)"
             ms1 = pg.evaluate("(async () => (await (await fetch('api/nearest_scan?k=0&rt=%s&level=1')).json()).rt)()" % mid)
             assert abs(cur - ms1) < 1e-6 and cur != mid, (cur, ms1, mid)
         step("a cursor between two scans snaps to the nearest scan of the shown kind", snap)
