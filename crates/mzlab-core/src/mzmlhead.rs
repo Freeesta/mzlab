@@ -39,7 +39,7 @@ fn chrom_of(h: &str, index: usize, start: u64, end: u64) -> Chrom {
     let acc = |x: &str| has_accession(h, x);
     if cid == "TIC" || cid.starts_with("TIC ") {
         d.kind = "tic".into();
-    } else if cid == "BPC" {
+    } else if cid == "BPC" || cid.starts_with("BPC ") {
         d.kind = "bpc".into();
     } else if cid == "TWC" || acc("MS:1000812") || acc("MS:1000813") {
         d.kind = "pda".into();

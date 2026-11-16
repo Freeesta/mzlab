@@ -15,16 +15,19 @@ def abilita() -> None:
     from playwright.sync_api import BrowserType
     if getattr(BrowserType.launch, "_cloud", False):
         return
-    orig = BrowserType.launch
 
-    def launch(self, *a, **k):
-        if self.name == "chromium" and "executable_path" not in k:
-            try:
-                if not Path(self.executable_path).exists():
+    def wrap(orig):
+        def launch(self, *a, **k):
+            if self.name == "chromium" and "executable_path" not in k:
+                try:
+                    if not Path(self.executable_path).exists():
+                        k["executable_path"] = str(CLOUD)
+                except Exception:
                     k["executable_path"] = str(CLOUD)
-            except Exception:
-                k["executable_path"] = str(CLOUD)
-        return orig(self, *a, **k)
+            return orig(self, *a, **k)
+        launch._cloud = True
+        return launch
 
-    launch._cloud = True
-    BrowserType.launch = launch
+    # launch_persistent_context needs the same fallback (e2e_cartella_puntata uses it)
+    BrowserType.launch = wrap(BrowserType.launch)
+    BrowserType.launch_persistent_context = wrap(BrowserType.launch_persistent_context)
