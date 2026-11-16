@@ -50,7 +50,7 @@ document.addEventListener("mousedown", e => {
   const [px, py] = where(e, p), l = hit(p, px, py); if (!l) return;
   down = { p, l, x: e.clientX, y: e.clientY };
   if (p.ints.some((/** @type {Bag} */ i) => Math.abs(p._a.X(i.a) - px) < 6 || Math.abs(p._a.X(i.b) - px) < 6)) return;   // a border under the label still drags (eventi.js edgeAt); a click without movement copies too
-  e.stopPropagation(); front(p.el); setActive(p);                  // no drag, no cursor move, no selection change; the panel still comes forward
+  if (l.int?.id !== p._intCur) p._intCur = null; e.stopPropagation(); front(p.el); setActive(p);                  // no drag, no cursor move, no selection change; the panel still comes forward
 }, true);
 document.addEventListener("mouseup", e => {
   const d = down; down = null; if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > TAP) return;
