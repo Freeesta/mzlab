@@ -131,7 +131,11 @@ fn instrument_cv(m: &str) -> Option<(&'static str, &'static str)> {
         ("api3200", "MS:1000653", "API 3200"),
         ("triplequad3500", "MS:1002591", "Triple Quad 3500"),
         ("triplequad4500", "MS:1002592", "Triple Quad 4500"),
-        ("triplequad5500+qtrapready", "MS:1003458", "Triple Quad 5500+ QTRAP Ready"),
+        (
+            "triplequad5500+qtrapready",
+            "MS:1003458",
+            "Triple Quad 5500+ QTRAP Ready",
+        ),
         ("triplequad5500+", "MS:1003457", "Triple Quad 5500+"),
         ("triplequad5500", "MS:1002593", "Triple Quad 5500"),
         ("triplequad6500+", "MS:1002595", "Triple Quad 6500+"),
