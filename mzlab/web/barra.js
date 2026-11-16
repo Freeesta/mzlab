@@ -68,7 +68,7 @@ const BARRA = (() => {
   const byNames = () => typeof namesWidth === "function" && seen();                 // the landing width stays unless the names need more room (the panel never narrows by itself)
   const maxW = () => Math.max(MIN_W, Math.min(MAX_W, Math.floor(window.innerWidth / 2)));
   const effW = () => Math.max(MIN_W, Math.min(maxW(), _wUser ? _w : byNames() ? Math.max(defaultW(), namesWidth(defaultW())) : defaultW()));
-  const validTab = (/** @type {string} */ id) => ["file", "addloss", "lists", "stat"].includes(id) || (id === "qaqc" && FEATURES.qaqc) || (HR_PANELS.includes(id) && isHrMode());
+  const validTab = (/** @type {string} */ id) => (["file", "addloss", "stat"].includes(id) || id === "lists" && FEATURES.lists) || (id === "qaqc" && FEATURES.qaqc) || (HR_PANELS.includes(id) && isHrMode());
 
   // ---------------------------------------------------------------- icons
   const IC = (/** @type {string} */ d) => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${d}</svg>`;
@@ -101,7 +101,7 @@ const BARRA = (() => {
     // where the side panel exists the calculator is the top of the Adducts & losses page (no button of its own); in Disegno it is the drop-down under its button (eventi.js)
     { id: "calc", dom: "np-calc2", ic: () => QI("calc"), onBar: () => !(inDataOrOpening() || landing()), run: () => window.calcToggleFloat && window.calcToggleFloat() },
     { id: "addloss", dom: "np-addloss", ic: () => QI("ad"), panel: "addloss", run: () => toggle("addloss") },
-    { id: "lists", dom: "np-liste", ic: () => QI("liste"), panel: "lists", run: () => toggle("lists") },
+    { id: "lists", feature: "lists", dom: "np-liste", ic: () => QI("liste"), panel: "lists", run: () => toggle("lists") },
     { id: "qaqc", feature: "qaqc", dom: "np-qaqc", ic: () => ICONS.qaqc, panel: "qaqc", visible: () => inData(), run: () => toggle("qaqc") },
     
     { id: "ptable", dom: "np-pt", ic: () => QI("pt"), run: () => window.QQQRef && QQQRef.open("pt") },
@@ -144,7 +144,7 @@ const BARRA = (() => {
     { id: "panel", bar: false, group: "panel", ic: () => ICONS.panel, visible: () => inData(), run: () => toggleDrawer() },
     // search: true = found only by the search (palette, Ctrl/⌘ K): never a button of the bar, never in "Altro"; external links, rare: in "Altro"
     { id: "stat", search: true, group: "tools", ic: () => ICONS.stat, panel: "stat", visible: () => inData(), run: () => toggle("stat") },
-    { id: "labcont", search: true, group: "tools", ic: () => QI("liste"), visible: () => inData(), run: () => window.LISTE && LISTE.openLab() },
+    { id: "labcont", feature: "lists", search: true, group: "tools", ic: () => QI("liste"), visible: () => inData(), run: () => window.LISTE && LISTE.openLab() },
     { id: "pubchem", dom: "np-pc", more: true, ic: () => ICONS.ext, run: () => window.open("https://pubchem.ncbi.nlm.nih.gov/", "_blank", "noopener") },
     { id: "bio", dom: "np-bt", more: true, ic: () => ICONS.ext, run: () => window.openBT && window.openBT() }
   ];
@@ -441,7 +441,7 @@ const BARRA = (() => {
   }
 
   function toggle(/** @type {string} */ id) {
-    const away = !(inData() || landing()) && /** @type {Record<string, () => void>} */ ({ calc: () => window.calcToggleFloat && window.calcToggleFloat(), adducts: () => window.QQQRef && QQQRef.open("ad"), losses: () => window.QQQRef && QQQRef.open("ls"), addloss: () => window.QQQRef && QQQRef.open(_sub === "losses" ? "ls" : "ad"), lists: () => window.LISTE && LISTE.open() })[id];      // outside Dati (Disegno, Tabui, Flow) the drawer is hidden: the calculator and the lists open their windows; Adducts & losses lives only in the side panel, so it goes back to Dati (show())
+    const away = !(inData() || landing()) && /** @type {Record<string, () => void>} */ ({ calc: () => window.calcToggleFloat && window.calcToggleFloat(), adducts: () => window.QQQRef && QQQRef.open("ad"), losses: () => window.QQQRef && QQQRef.open("ls"), addloss: () => window.QQQRef && QQQRef.open(_sub === "losses" ? "ls" : "ad"), lists: () => FEATURES.lists && window.LISTE && LISTE.open() })[id];      // outside Dati (Disegno, Tabui, Flow) the drawer is hidden: the calculator and the lists open their windows; Adducts & losses lives only in the side panel, so it goes back to Dati (show())
     if (away) away(); else if (_open && _tab === id) { const back = _prev && _prev !== id && validTab(_prev) ? _prev : (id !== "file" && landing() && !inData() ? "file" : ""); _prev = ""; if (back) { show(back); _prev = ""; } else close(true); } else show(id);      // a second click goes back to the previous tool (the file list on the empty landing); with none to go back to, it hides the panel
   }
 
