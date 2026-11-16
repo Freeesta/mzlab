@@ -99,6 +99,44 @@ fn one_row_per_window_grouped_by_channel_at_the_peaks_written() {
     let _ = std::fs::remove_dir_all(&d);
 }
 
+/// A window with `follow` on ionA of sample A reaches the same channel of every other sample, with its name (sample C has its own, by `names`) and an
+/// origin; the blank has no peak there; `shifts=true` prints the same edges as JSON.
+#[test]
+fn a_window_applied_to_the_other_samples_is_the_same_bytes_as_its_shifts() {
+    let Some(d) = fixture("follow") else { return };
+    let w = d.join("sim3.wiff");
+    let set = windows(
+        &d,
+        r#"[{"file":1,"tr":0,"a":1.89,"b":2.19,"follow":true,"label":"ionA peak","names":{"3":"C only"}}]"#,
+    );
+    let t = text(&table(&[&w], &["--set", &set]));
+    let r: Vec<Vec<&str>> = t.lines().skip(1).map(|l| l.split(',').collect()).collect();
+    assert!(r.len() >= 2, "{t}");
+    let by = |n: &str| r.iter().find(|x| x[1] == n).expect(n).clone();
+    assert_eq!(
+        (by("Sample_A")[2], by("Sample_A")[12]),
+        ("ionA peak", "manual"),
+        "{t}"
+    );
+    assert_eq!(
+        by("Blank")[12],
+        "no_peak",
+        "a sample with no peak is integrated and marked, not hidden"
+    );
+    assert_eq!(by("Sample_B")[12], "applied");
+    assert!(
+        r.iter().all(|x| x[12] != "manual" || x[1] == "Sample_A"),
+        "{t}"
+    );
+    let c = r.iter().find(|x| x[1] == "Sample_C").expect("sample C");
+    assert_eq!(c[2], "C only", "a name for one sample alone");
+    let again = text(&table(&[&w], &["--set", &set]));
+    assert_eq!(t, again, "deterministic");
+    let j = text(&table(&[&w], &["--set", &set, "--set", "shifts=true"]));
+    assert!(j.starts_with("[{\"file\":"), "{j}");
+    let _ = std::fs::remove_dir_all(&d);
+}
+
 #[test]
 fn settings_and_windows_that_name_nothing_fail() {
     let Some(d) = fixture("bad") else { return };

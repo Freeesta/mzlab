@@ -17,10 +17,12 @@ use crate::valley;
 pub const BASELINES: [&str; 3] = ["zero", "edges", "line"];
 /// The header of the table.
 pub const HEAD: &str =
-    "channel,sample,label,area,start_min,end_min,apex_rt_min,height,snr,baseline,overlap,pv\n";
+    "channel,sample,label,area,start_min,end_min,apex_rt_min,height,snr,baseline,overlap,pv,origin\n";
 /// Smoothing and points across the peak of the S/N (`peak1d::find_peak` around the window, the defaults of `chrom.transitions@2`).
 const SN_SMOOTH: usize = 3;
 const SN_POINTS: usize = 3;
+/// The S/N under which a window applied to another sample finds no peak there: the `snr_min` of `chrom.transitions@2`.
+pub const FOLLOW_SN: f64 = 3.0;
 /// The longest name the user gives a window (characters), as the page's input allows.
 pub const LABEL_MAX: usize = 40;
 
@@ -50,8 +52,13 @@ struct Row {
     /// A part of a window split at its valleys, with its Hp/Hv.
     drop: bool,
     pv: Option<f64>,
-    /// The place of the window in the request, for its name (`label_of_window`).
-    w: usize,
+    /// The name of the row (the window's, or the one given for this sample alone), a place in the names of the table.
+    label: usize,
+    /// How the row came to be: `manual` (drawn there), `applied` (the window of another sample, same edges), `shifted` (the same window moved so the apex
+    /// found there falls in it), `no_peak` (applied, but no peak at the apex search: hidden nothing, blocked nothing).
+    origin: &'static str,
+    /// The start of the window all the rows of a peak come from: rows are ordered by channel, this, then sample.
+    gkey: f64,
 }
 
 /// The group of a channel across files: Q1 and Q3 at 0.01 (or the place in the list without Q1), the name the method gives it and `Trace::dup`.
@@ -151,7 +158,7 @@ fn edges_area(t: &[f64], y: &[f64], a: f64, b: f64) -> [f64; 3] {
 }
 
 /// The baseline of a window: `baseline` (absent = `zero`) and, for `line`, `line` = `[t0, y0, t1, y1]`.
-fn baseline_of(w: &Value) -> Result<Baseline> {
+fn baseline_of(w: &Value, shift: f64) -> Result<Baseline> {
     let name = w.get("baseline").and_then(Value::str).unwrap_or("zero");
     let bad = || Error::new("err.manint.baseline").with("baseline", name);
     match name {
@@ -159,7 +166,12 @@ fn baseline_of(w: &Value) -> Result<Baseline> {
         "edges" => Ok(Baseline::Edges),
         "line" => match nums(w.get("line"))[..] {
             [t0, y0, t1, y1] if [t0, y0, t1, y1].iter().all(|v| v.is_finite()) => {
-                Ok(Baseline::Line { t0, y0, t1, y1 })
+                Ok(Baseline::Line {
+                    t0: t0 + shift,
+                    y0,
+                    t1: t1 + shift,
+                    y1,
+                })
             }
             _ => Err(bad()),
         },
@@ -195,7 +207,11 @@ fn samples_and_keys(files: &str) -> Result<(Vec<Sample>, Vec<Channel>)> {
 
 /// The name the user gave a window: no control characters, trimmed, at most `LABEL_MAX` characters.
 fn label_of_window(w: &Value) -> String {
-    let s = w.get("label").and_then(Value::str).unwrap_or("");
+    clean_label(w.get("label").and_then(Value::str).unwrap_or(""))
+}
+
+/// The name of a window cleaned as `label_of_window` does.
+fn clean_label(s: &str) -> String {
     let s: String = s.chars().filter(|c| !c.is_control()).collect();
     s.trim()
         .chars()
@@ -247,10 +263,31 @@ fn snr_of(tr: &Trace, a: f64, b: f64) -> Option<f64> {
     .filter(|v| v.is_finite())
 }
 
-/// One window measured on its channel: (the place of the channel in `keys`, a row, or a row per part when `splits` cuts it).
-fn measure(i: usize, w: &Value, samples: &[Sample], keys: &[Channel]) -> Result<Vec<(usize, Row)>> {
-    let (file, tr, a, b) = channel_of(w, samples)?;
-    let base = baseline_of(w)?;
+/// Where one row's window sits: the sample, the channel's place in its list, and the edges in order, with how it came to be and the start of the
+/// window its peak group comes from.
+#[derive(Clone, Copy)]
+struct Item {
+    w: usize,
+    file: usize,
+    tr: usize,
+    a: f64,
+    b: f64,
+    shift: f64,
+    origin: &'static str,
+    gkey: f64,
+}
+
+/// One window measured on its channel: (the place of the channel in `keys`, a row, or a row per part when `splits` cuts it). `w` is the window
+/// the item comes from (the source's, for a window applied to another sample: its baseline and name, never its drop lines).
+fn measure(
+    it: &Item,
+    w: &Value,
+    label: usize,
+    samples: &[Sample],
+    keys: &[Channel],
+) -> Result<Vec<(usize, Row)>> {
+    let (file, tr, a, b) = (it.file, &samples[it.file].1[it.tr], it.a, it.b);
+    let base = baseline_of(w, it.shift)?;
     let ch = keys
         .iter()
         .position(|(k, _, _)| *k == key_of(tr))
@@ -267,15 +304,21 @@ fn measure(i: usize, w: &Value, samples: &[Sample], keys: &[Channel]) -> Result<
             base: base.name(),
             drop,
             pv,
-            w: i,
+            label,
+            origin: it.origin,
+            gkey: it.gkey,
         };
     let (lo, hi) = (near_idx(&tr.t, a), near_idx(&tr.t, b));
-    let cuts: Vec<usize> = nums(w.get("splits"))
-        .iter()
-        .filter(|s| s.is_finite())
-        .map(|&s| near_idx(&tr.t, s))
-        .filter(|&k| k > lo && k < hi)
-        .collect();
+    let cuts: Vec<usize> = if it.origin == "manual" {
+        nums(w.get("splits"))
+            .iter()
+            .filter(|s| s.is_finite())
+            .map(|&s| near_idx(&tr.t, s))
+            .filter(|&k| k > lo && k < hi)
+            .collect()
+    } else {
+        Vec::new()
+    };
     if cuts.is_empty() {
         let [area, height, apex] = match peak_area(&tr.t, &tr.y, a, b, base) {
             Some([area, _, height, apex]) => [area, height, apex],
@@ -309,7 +352,7 @@ pub fn valleys_text(files: &str, window: &str, depth: f64) -> Result<String> {
     let w = parse(window.as_bytes())?;
     let (_, tr, a, b) = channel_of(&w, &samples)?;
     let (lo, hi) = (near_idx(&tr.t, a), near_idx(&tr.t, b));
-    let line = drop_line(baseline_of(&w)?, tr, lo, hi);
+    let line = drop_line(baseline_of(&w, 0.0)?, tr, lo, hi);
     let d: Vec<f64> =
         tr.t.iter()
             .zip(&tr.y)
@@ -330,19 +373,37 @@ pub fn valleys_text(files: &str, window: &str, depth: f64) -> Result<String> {
 pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
     let (samples, keys) = samples_and_keys(files)?;
     let list = parse(windows.as_bytes())?;
-    let mut rows = list
-        .arr()
-        .iter()
-        .enumerate()
-        .map(|(i, w)| measure(i, w, &samples, &keys))
-        .collect::<Result<Vec<_>>>()?
-        .concat();
-    let labels: Vec<String> = list.arr().iter().map(label_of_window).collect();
+    let items = follow::items_of(&list, &samples)?;
+    let mut rows: Vec<(usize, Row)> = Vec::new();
+    let mut labels: Vec<String> = Vec::new();
+    for it in &items {
+        let w = &list.arr()[it.w];
+        // the name of the window, or the one given for this sample alone (`names`: {"<sample>": name})
+        let own_name = w
+            .get("names")
+            .and_then(|n| n.get(&it.file.to_string()))
+            .and_then(Value::str);
+        let label = own_name.map_or_else(|| label_of_window(w), clean_label);
+        labels.push(label);
+        rows.extend(measure(it, w, labels.len() - 1, &samples, &keys)?);
+    }
     crate::sortc::by(&mut rows, |x, y| {
-        (x.0, x.1.file)
-            .cmp(&(y.0, y.1.file))
+        x.0.cmp(&y.0)
+            .then(x.1.gkey.total_cmp(&y.1.gkey))
+            .then(x.1.file.cmp(&y.1.file))
             .then(x.1.a.total_cmp(&y.1.a))
     });
+    Ok(csv_text(&rows, &labels, &keys, &samples, sums))
+}
+
+/// The CSV: the header, then for each channel (in the order of `keys`) its rows, and the `sum` row after them when `sums`.
+fn csv_text(
+    rows: &[(usize, Row)],
+    labels: &[String],
+    keys: &[Channel],
+    samples: &[Sample],
+    sums: bool,
+) -> String {
     let mut out = String::from(HEAD);
     for (ch, (_, label, _)) in keys.iter().enumerate() {
         let mine: Vec<&Row> = rows.iter().filter(|r| r.0 == ch).map(|r| &r.1).collect();
@@ -352,9 +413,9 @@ pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
         let head = field(label);
         for r in &mine {
             out += &format!(
-                "{head},{},{},{},{:.3},{:.3},{:.3},{},{},{},{},{}\n",
+                "{head},{},{},{},{:.3},{:.3},{:.3},{},{},{},{},{},{}\n",
                 field(&samples[r.file].0),
-                field(&labels[r.w]),
+                field(&labels[r.label]),
                 sci(r.area, 5),
                 r.a,
                 r.b,
@@ -363,18 +424,23 @@ pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
                 r.snr.map_or(String::new(), |v| format!("{v:.1}")),
                 r.base,
                 if r.drop { "drop" } else { "" },
-                r.pv.map_or(String::new(), |v| format!("{v:.1}"))
+                r.pv.map_or(String::new(), |v| format!("{v:.1}")),
+                r.origin
             );
         }
         if sums {
             out += &format!(
-                "{head},sum,,{},,,,,,,,\n",
+                "{head},sum,,{},,,,,,,,,\n",
                 sci(mine.iter().map(|r| r.area).sum(), 5)
             );
         }
     }
-    Ok(out)
+    out
 }
+
+#[path = "manint_follow.rs"]
+mod follow;
+pub use follow::follow_text;
 
 #[cfg(test)]
 #[path = "manint_tests.rs"]
