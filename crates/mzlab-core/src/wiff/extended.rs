@@ -117,15 +117,26 @@ impl Wiff {
 }
 
 /// The instrument of the mzML for the models the Log names, as `(accession, name)`; `m` is the `Component ID` without spaces and in lower case.
+/// Every accession and name is a term of the PSI-MS CV v4.2.6 kept in `data/psims-cv.json`. Longer keys come first (`contains` takes the first hit).
+/// A model with no term there (e.g. «QTRAP 7500») is not listed: its name goes out as a userParam (`instrument_terms`), never as a made-up accession.
 fn instrument_cv(m: &str) -> Option<(&'static str, &'static str)> {
-    const MODELS: [(&str, &str, &str); 10] = [
+    const MODELS: [(&str, &str, &str); 19] = [
         ("qtrap6500+", "MS:1002582", "QTRAP 6500+"),
         ("qtrap6500", "MS:1002581", "QTRAP 6500"),
         ("qtrap5500", "MS:1000931", "QTRAP 5500"),
         ("qtrap4500", "MS:1002580", "QTRAP 4500"),
         ("4000qtrap", "MS:1000139", "4000 QTRAP"),
         ("api4000", "MS:1000147", "API 4000"),
+        ("api5000", "MS:1000654", "API 5000"),
+        ("api3200", "MS:1000653", "API 3200"),
+        ("triplequad3500", "MS:1002591", "Triple Quad 3500"),
         ("triplequad4500", "MS:1002592", "Triple Quad 4500"),
+        ("triplequad5500+qtrapready", "MS:1003458", "Triple Quad 5500+ QTRAP Ready"),
+        ("triplequad5500+", "MS:1003457", "Triple Quad 5500+"),
+        ("triplequad5500", "MS:1002593", "Triple Quad 5500"),
+        ("triplequad6500+", "MS:1002595", "Triple Quad 6500+"),
+        ("triplequad6500", "MS:1002594", "Triple Quad 6500"),
+        ("triplequad7500", "MS:1003144", "Triple Quad 7500"),
         ("qstarpulsar", "MS:1000656", "QSTAR Pulsar"),
         ("tripletof5600", "MS:1000932", "TripleTOF 5600"),
         ("tripletof6600", "MS:1002533", "TripleTOF 6600"),
@@ -163,5 +174,86 @@ impl Wiff {
             }
         }
         h
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::Wiff;
+    use super::instrument_cv;
+    use crate::error::Error;
+
+    fn header_of(model: &str) -> crate::mzmlwrite::Header {
+        let mut w = Wiff::refused(1, 0, Error::new("x"));
+        w.model = Some(model.to_string());
+        w.wiff_sha1 = Some("aa".into());
+        w.header_estesi("a.wiff", None)
+    }
+
+    /// The header of a synthetic file of each model names the model: the CV term when the vocabulary has one, otherwise the generic term and the
+    /// real name as a userParam (never the bare generic literal alone).
+    #[test]
+    fn the_header_names_the_real_model() {
+        for (log, acc, name) in [
+            ("Triple Quad 5500", "MS:1002593", "Triple Quad 5500"),
+            ("Triple Quad 6500+", "MS:1002595", "Triple Quad 6500+"),
+            ("API 5000", "MS:1000654", "API 5000"),
+            ("API 3200", "MS:1000653", "API 3200"),
+        ] {
+            let h = header_of(log);
+            assert_eq!(h.instrument, Some((acc.into(), name.into())), "{log}");
+            assert!(h.run_params.is_empty(), "{log}");
+        }
+        let h = header_of("QTRAP 7500");
+        assert_eq!(h.instrument.map(|i| i.0), Some("MS:1000031".to_string()));
+        assert_eq!(
+            h.run_params,
+            [("instrument model".to_string(), "QTRAP 7500".to_string())]
+        );
+        // the 3200 QTRAP keeps its own term (the probe and the engine reader treat it apart)
+        assert_eq!(
+            header_of("3200 QTRAP").instrument.map(|i| i.0),
+            Some("MS:1000651".to_string())
+        );
+    }
+
+    /// Each model the Log can name gives the term of the PSI-MS CV (checked against the table kept in the repository, never a typed accession).
+    #[test]
+    fn every_model_maps_to_its_own_term_of_the_psi_ms_cv() {
+        let cv: serde_json::Value =
+            serde_json::from_str(include_str!("../../data/psims-cv.json")).unwrap();
+        let name_of = |acc: &str| {
+            cv["terms"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|t| t[0] == acc && t[2] == 0)
+                .map(|t| t[1].as_str().unwrap().to_string())
+        };
+        for (log, acc) in [
+            ("Triple Quad 5500", "MS:1002593"),
+            ("Triple Quad 5500+", "MS:1003457"),
+            ("Triple Quad 5500+ QTRAP Ready", "MS:1003458"),
+            ("Triple Quad 6500", "MS:1002594"),
+            ("Triple Quad 6500+", "MS:1002595"),
+            ("Triple Quad 7500", "MS:1003144"),
+            ("Triple Quad 3500", "MS:1002591"),
+            ("API 5000", "MS:1000654"),
+            ("API 3200", "MS:1000653"),
+            ("QTRAP 6500+", "MS:1002582"),
+            ("QTRAP 5500", "MS:1000931"),
+        ] {
+            let key = log.replace(' ', "").to_lowercase();
+            let (a, n) = instrument_cv(&key).unwrap_or_else(|| panic!("{log}: no term"));
+            assert_eq!(a, acc, "{log}");
+            assert_eq!(name_of(a).as_deref(), Some(n), "{log}: name of {a}");
+        }
+    }
+
+    /// A model with no term in the CV (the QTRAP 7500) gets none: its name is written as a userParam, no accession is invented.
+    #[test]
+    fn a_model_without_a_term_is_not_given_one() {
+        assert_eq!(instrument_cv("qtrap7500"), None);
+        assert_eq!(instrument_cv("sciex7500+"), None);
     }
 }
