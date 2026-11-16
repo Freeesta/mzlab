@@ -122,7 +122,7 @@ fn prec_tol(job: &MatchJob, ppm_name: &str) -> Tol {
     }
 }
 
-/// The precursor error in ppm, whichever unit the window had (`Hit.dprec` is in the unit of the window).
+/// The precursor error in ppm, whichever unit the window had (`Hit.dprec` is in the unit of the window); `prec` is the library (theoretical) value.
 fn dprec_ppm(tol: Tol, d: f64, prec: f64) -> f64 {
     match tol {
         Tol::Ppm(_) => d,
@@ -244,7 +244,7 @@ fn exact(lib: &Lib, q: &Query, job: &MatchJob, alg: &str, terms: bool) -> Result
             index: h.index,
             score,
             shared,
-            mass_ppm: dprec_ppm(tol, h.dprec, q.prec),
+            mass_ppm: dprec_ppm(tol, h.dprec, h.prec),
             delta: 0.0,
             delta_formula: None,
             explained: pairs

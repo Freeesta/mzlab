@@ -31,7 +31,7 @@ fn precursor_da_matches_a_unit_resolution_query() {
         assert_eq!(best.get("name").unwrap().str(), Some("Alpha"), "{alg}");
         let ppm = best.get("mass_ppm").unwrap().f64().unwrap();
         assert!(
-            (ppm - (300.1234 - 300.4) / 300.4 * 1e6).abs() < 1.0,
+            (ppm - (300.4 - 300.1234) / 300.1234 * 1e6).abs() < 1.0,
             "{alg} {ppm}"
         );
     }
