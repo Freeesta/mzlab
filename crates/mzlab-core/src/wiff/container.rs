@@ -51,8 +51,15 @@ fn truncated(name: &str, size: u64, needed: u64) -> Error {
 
 /// The container of member `m` of a pair, read by sector: whatever its size, only the streams asked for are read. A SHA-1 the member already carries (taken
 /// during the copy) saves reading the whole file for it.
-pub(super) fn open_member(m: &mut crate::readers::Member, name: &str, limits: &crate::readers::Limits) -> Result<Ole> {
+pub(super) fn open_member(
+    m: &mut crate::readers::Member,
+    name: &str,
+    limits: &crate::readers::Limits,
+) -> Result<Ole> {
     let known = m.sha1.take().filter(|h| !h.is_empty());
-    let (len, src) = (m.dim, std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new())));
+    let (len, src) = (
+        m.dim,
+        std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new())),
+    );
     Ok(container_at(src, len, name, limits)?.with_sha1(known))
 }

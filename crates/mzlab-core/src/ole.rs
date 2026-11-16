@@ -18,7 +18,11 @@ impl Ole {
             return Err(Error::fixed_limit("OLE file", limits.byte));
         }
         let len = data.len() as u64;
-        Self::build(Src(std::cell::RefCell::new(Box::new(data)), len), name, limits)
+        Self::build(
+            Src(std::cell::RefCell::new(Box::new(data)), len),
+            name,
+            limits,
+        )
     }
 
     /// `open` over `len` bytes read at offsets: only the FAT, the directory, the mini FAT and the mini stream are held (bounded by `limits.byte`), a stream is

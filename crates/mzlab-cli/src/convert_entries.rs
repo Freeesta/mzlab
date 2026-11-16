@@ -179,6 +179,10 @@ pub(crate) fn plan_text(entries: &[Entry], version: u32) -> String {
 /// `--samples 3,7`: the sample ids as numbers.
 pub(crate) fn samples_arg(v: &str) -> Result<Vec<u32>, String> {
     v.split(',')
-        .map(|id| id.trim().parse().map_err(|_| format!("--samples {v}: expected whole sample numbers separated by commas")))
+        .map(|id| {
+            id.trim().parse().map_err(|_| {
+                format!("--samples {v}: expected whole sample numbers separated by commas")
+            })
+        })
         .collect()
 }
