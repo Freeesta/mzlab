@@ -1,7 +1,8 @@
-"""`mzlab-cli peak-auto-lr` (mzlab_core::peakq_lrauto, «Integrate every peak shown» on low-resolution traces) on the jagged synthetic SIM/MRM traces of
-tools/synthetic_data_jagged.py: every true peak found once, touching peaks split at the valley of the noise-free trace, baseline >= 0 and never above the
-trace, and each area equal to an independent trapezoid of the raw trace above the reported line (written here, not taken from the engine): only
-the part above the line counts, the part under it is `below`, so no area is negative, also on a trace below zero.
+"""`mzlab-cli peak-auto-lr` (mzlab_core::peakq_lrauto, «Integrate every peak shown» on low-resolution traces) on the jagged synthetic
+SIM/MRM traces of tools/synthetic_data_jagged.py: every true peak found once, touching peaks split at the valley of the noise-free trace, the
+baseline drawn between the two ends only (never extrapolated, so never raised to zero) and never above the trace, and each area equal to an
+independent trapezoid of the raw trace above the reported line (written here, not taken from the engine): only the part above the line counts,
+the part under it is `below`, so no area is negative, also on a trace below zero.
 """
 import json
 import sys
@@ -77,7 +78,8 @@ def test_baseline_and_area_on_the_raw_trace(answers):
         for p in r["peaks"]:
             lo, hi = p["lo"], p["hi"]
             assert t[lo] == p["t0"] and t[hi] == p["t1"]
-            assert 0 <= p["b0"] <= y[lo] and 0 <= p["b1"] <= y[hi], (name, seed, p)
+            for b, i, c in ((p["b0"], lo, p["clamp0"]), (p["b1"], hi, p["clamp1"])):
+                assert b <= y[i] and c in ("none", "trace") and (c == "none" or b == y[i]), (name, seed, p)   # as found, or lowered onto the trace
             up, down = _trapezoid(t, y, lo, hi, [p["t0"], p["b0"], p["t1"], p["b1"]])
             assert up == pytest.approx(p["area"], rel=1e-9, abs=1e-9) and down == pytest.approx(p["below"], rel=1e-9, abs=1e-9), (name, seed, p)
             assert _trapezoid(t, y, lo, hi, [p["t0"], 0, p["t1"], 0])[0] == pytest.approx(p["area_zero"], rel=1e-9)
@@ -103,8 +105,9 @@ def test_parameters_are_reported(answers):
 
 
 def test_a_trace_below_zero_is_never_a_negative_area(tmp_path):
-    """A blank subtracted too much (the whole trace 600 counts lower) and one over-subtracted point in a flank: the baseline ends stay at or above
-    zero unless the trace is below zero there (then on the trace), the dip under the line is `below`, every area >= 0."""
+    """A blank subtracted too much (the whole trace 600 counts lower) and one over-subtracted point in a flank: the baseline ends stay on the
+    background below zero (never raised to zero: the line is not extrapolated) and never above the trace, the dip under the line is
+    `below`, every area >= 0."""
     cut = 0
     for seed in SEEDS:
         t, y, truth = trace("singles", seed)
@@ -117,7 +120,7 @@ def test_a_trace_below_zero_is_never_a_negative_area(tmp_path):
         for p in r["peaks"]:
             lo, hi = p["lo"], p["hi"]
             for b, i, c in ((p["b0"], lo, p["clamp0"]), (p["b1"], hi, p["clamp1"])):
-                assert b <= y[i] and (b >= 0 or b == y[i]) and c in ("none", "zero", "trace"), (seed, p)
+                assert b < 0 and b <= y[i] and c in ("none", "trace") and (c == "none" or b == y[i]), (seed, p)
             up, down = _trapezoid(t, y, lo, hi, [p["t0"], p["b0"], p["t1"], p["b1"]])
             assert p["area"] >= 0 and p["below"] >= 0 and p["area_zero"] >= 0, (seed, p)
             assert up == pytest.approx(p["area"], rel=1e-9, abs=1e-9) and down == pytest.approx(p["below"], rel=1e-9, abs=1e-9), (seed, p)

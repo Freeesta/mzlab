@@ -1,7 +1,7 @@
 // @ts-strict
 // «Integrate every peak shown» (the ▾ next to the automatic tool, and the menu of a trace): every visible trace of the panel, every peak with its apex in
 // the stretch shown, in one undoable step. Low resolution: the engine's lr_auto_integrate (peakq_lrauto.rs, the bytes of `mzlab-cli peak-auto-lr`), which
-// finds the peaks on a smoothed copy, splits touching ones at the valley and integrates the raw trace above its baseline (ends raised to zero, never above
+// finds the peaks on a smoothed copy, splits touching ones at the valley and integrates the raw trace above its baseline (ends never raised to zero, never above
 // the trace); high resolution keeps autoAll (peakq_auto.rs). Every choice the engine made goes on each record (`auto`, areas in counts x s) and in the
 // notice; the baseline is always the engine's line, never the dialog's baseline setting. Loaded by picchi.js (intAll).
 /** @typedef {Record<string, any>} Bag */

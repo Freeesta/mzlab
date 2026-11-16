@@ -179,7 +179,7 @@ I18N.add("it", {
   "pk.split.0": "Perpendicolare",
   "pk.split.1": "Da valle a valle",
   "int.menu.all": "Integra tutti i picchi mostrati",
-  "int.lrAll.done": "{n} picchi · lisciatura {w} punti{a} · valle {v} % · S/N ≥ {sn} · rumore {noise} · {split} · linea di base: quella del motore, non quella del dialogo · estremi corretti: {c} su {e} · sotto la linea: {below}",
+  "int.lrAll.done": "{n} picchi · lisciatura {w} punti{a} · valle {v} % · S/N ≥ {sn} · rumore {noise} · {split} · linea di base: quella del motore, non quella del dialogo · estremi abbassati sulla traccia: {c} su {e} · sotto la linea: {below}",
   "int.lrAll.auto": " (dai picchi)",
   "int.lrAll.skip": "{n} lasciati fuori: si sovrappongono a un'integrazione già presente",
   "pk.default": "Ripristina predefiniti",

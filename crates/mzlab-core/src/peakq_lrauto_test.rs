@@ -214,7 +214,7 @@ fn parameters_from_the_page_and_a_fixed_half_window() {
 
 #[test]
 fn a_trace_below_zero_never_gives_a_negative_area_and_reports_the_part_cut_off() {
-    // a blank subtracted too much: the background sits at -400 counts, the peak still rises 2e4 above it
+    // a blank subtracted too much: the background sits at -600 counts, the peak still rises 2e4 above it
     for seed in 1..=10 {
         let (rt, y0, _) = trace(&[(3.0, 0.06, 2.0e4)], seed);
         let mut y: Vec<f64> = y0.iter().map(|v| v - 600.0).collect();
@@ -223,16 +223,12 @@ fn a_trace_below_zero_never_gives_a_negative_area_and_reports_the_part_cut_off()
         let r = run(&rt, &y);
         assert_eq!(r.peaks.len(), 1, "seed {seed}: {:?}", r.peaks);
         let k = &r.peaks[0];
-        // the background is below zero, so each end was clamped (raised toward zero, or lowered onto the trace) and none is above the trace
+        // the line is never extrapolated, so an end is never raised to zero: both stay on the background below zero, none above the trace
         assert!(k.base_lo <= y[k.lo] && k.base_hi <= y[k.hi], "{k:?}");
-        // at or above zero, unless the trace itself is below zero there: then on the trace
-        for (b, i) in [(k.base_lo, k.lo), (k.base_hi, k.hi)] {
-            assert!(b >= 0.0 || b == y[i], "{k:?}");
+        assert!(k.base_lo < -300.0 && k.base_hi < -300.0, "{k:?}");
+        for (b, i, c) in [(k.base_lo, k.lo, k.clamp_lo), (k.base_hi, k.hi, k.clamp_hi)] {
+            assert!(c == Clamp::None || b == y[i], "{k:?}");
         }
-        assert!(
-            k.clamp_lo != Clamp::None && k.clamp_hi != Clamp::None,
-            "{k:?}"
-        );
         // the trace dips under the line between the ends: that part is cut off (`below`), not subtracted from the area
         assert!(
             k.lo < 116 && 116 < k.hi && k.area > 0.0 && k.below > 0.0,
@@ -248,7 +244,7 @@ fn a_trace_below_zero_never_gives_a_negative_area_and_reports_the_part_cut_off()
         assert!(k.area_zero >= 0.0);
         let j = lr_auto_json(&rt, &r);
         assert!(
-            j.contains("\"baseline\":\"engine\"") && !j.contains("\"clamp0\":\"none\""),
+            j.contains("\"baseline\":\"engine\"") && !j.contains("zero\","),
             "{j}"
         );
     }

@@ -1,8 +1,8 @@
 //! Every peak of a jagged low-resolution SIM/MRM trace in one step (`lr_auto_integrate` of mzlab-wasm, `lrAll` of picchi.js, `mzlab-cli peak-auto-lr`).
 //! Detection runs on a smoothed copy (median of 3 against single-point spikes, then the quadratic Savitzky-Golay of `peaks::savgol`); neighbouring
-//! maxima merge unless the valley between them is deep enough; the area is the trapezoid of the RAW trace above a straight baseline whose ends are
-//! raised to zero where they fall below it but never set above the signal; the part of the trace under that line is cut off and reported as
-//! `below`, so no area is ever negative (docs/agenti/dati-integrazione.md). Measured with tools/lr_auto_misura.py.
+//! maxima merge unless the valley between them is deep enough; the area is the trapezoid of the RAW trace above a straight baseline drawn between
+//! the two ends only (never extrapolated, so never raised to zero) and never set above the signal; the part of the trace under that line is cut
+//! off and reported as `below`, so no area is ever negative (docs/agenti/dati-integrazione.md). Measured with tools/lr_auto_misura.py.
 
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
@@ -10,6 +10,11 @@ use std::collections::BinaryHeap;
 use crate::baseline::integrate;
 use crate::peakq_auto::background;
 use crate::peaks::{noise_level, savgol};
+
+#[path = "peakq_lrauto_json.rs"]
+mod json;
+use json::clamp;
+pub use json::{lr_auto_json, Clamp};
 
 /// How two touching peaks share their valley.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -78,17 +83,6 @@ pub enum End {
     Valley,
     /// The walk stopped at 5 FWHM from the apex, still above the background.
     Cap,
-}
-
-/// What the clamp of a baseline end changed.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Clamp {
-    /// The end is the engine's level as found.
-    None,
-    /// The level was below zero and was raised (to zero, or to the trace when the trace itself is below zero).
-    Zero,
-    /// The level was above the raw trace and was lowered onto it.
-    Trace,
 }
 
 /// One peak: indices into the trace, the baseline at each end (counts) and what its clamp did, areas (counts x min, raw trace: `area` the part
@@ -362,20 +356,6 @@ impl Trace<'_> {
     }
 }
 
-/// A baseline level `v` at a point of raw value `y`: raised to zero when below it, then never above `y` (the trace wins over zero: on a trace
-/// below zero the end sits on the trace, never above it).
-fn clamp(v: f64, y: f64) -> (f64, Clamp) {
-    let c = v.max(0.0).min(y);
-    let how = if c < v {
-        Clamp::Trace
-    } else if c > v {
-        Clamp::Zero
-    } else {
-        Clamp::None
-    };
-    (c, how)
-}
-
 /// The two ends of a peak and why each stopped.
 type Ends = (usize, End, usize, End);
 /// The baseline level at the two ends of a peak and what each clamp did.
@@ -490,45 +470,6 @@ fn peaks_of(t: &Trace, apex: &[usize], p: LrAutoParams) -> Vec<LrAutoPeak> {
             }
         })
         .collect()
-}
-
-fn clamp_name(c: Clamp) -> &'static str {
-    match c {
-        Clamp::None => "none",
-        Clamp::Zero => "zero",
-        Clamp::Trace => "trace",
-    }
-}
-
-fn end_name(e: End) -> &'static str {
-    match e {
-        End::Background => "background",
-        End::Valley => "valley",
-        End::Cap => "cap",
-    }
-}
-
-/// The result as the JSON the page (`lr_auto_integrate` of mzlab-wasm) and `mzlab-cli peak-auto-lr` both print, the same bytes: the parameters used
-/// (`half_auto` true when the half window was chosen here, `baseline` always "engine": this route never reads the page's baseline setting) and every
-/// peak (times in min, baseline in counts with what its clamp did, areas in counts x min, never negative, `below` the part cut off under the line).
-pub fn lr_auto_json(rt: &[f64], r: &LrAuto) -> String {
-    let p = &r.params;
-    let head = format!(
-        "{{\"params\":{{\"half\":{},\"half_auto\":{},\"valley\":{},\"sn\":{},\"min_pts\":{},\"despike\":{},\"split\":\"{}\",\"baseline\":\"engine\",\"noise\":{}}}",
-        r.half, r.half_auto, p.valley, p.snr, p.min_pts, p.despike, if p.split == Split::Drop { "drop" } else { "valley" }, r.noise
-    );
-    let rows: Vec<String> = r
-        .peaks
-        .iter()
-        .map(|k| {
-            format!(
-                "{{\"lo\":{},\"hi\":{},\"t0\":{},\"t1\":{},\"rt\":{},\"b0\":{},\"b1\":{},\"area\":{},\"below\":{},\"area_zero\":{},\"height\":{},\"sn\":{},\"end0\":\"{}\",\"end1\":\"{}\",\"clamp0\":\"{}\",\"clamp1\":\"{}\"}}",
-                k.lo, k.hi, rt[k.lo], rt[k.hi], rt[k.apex], k.base_lo, k.base_hi, k.area, k.below, k.area_zero, k.height, k.sn, end_name(k.end_lo), end_name(k.end_hi),
-                clamp_name(k.clamp_lo), clamp_name(k.clamp_hi)
-            )
-        })
-        .collect();
-    format!("{head},\"peaks\":[{}]}}", rows.join(","))
 }
 
 #[cfg(test)]

@@ -51,7 +51,7 @@ try:
                 assert abs(page - net) <= 1e-6 * abs(net) and abs(pb - eb) <= 1e-6 * max(abs(eb), 1), (page, net, pb, eb)
                 # the record keeps every choice: the engine's areas (counts x s), its baseline, why each end stopped and what its clamp did
                 assert au["baseline"] == "engine" and abs(au["area"] - q["area"] * 60) <= 1e-9 * q["area"] * 60 and au["area"] >= 0 and au["below"] >= 0, au
-                assert au["split"] == "drop" and {au["clamp0"], au["clamp1"]} <= {"none", "zero", "trace"} and au["end0"] and au["end1"], au
+                assert au["split"] == "drop" and {au["clamp0"], au["clamp1"]} <= {"none", "trace"} and au["end0"] and au["end1"], au
             note = pg.evaluate("document.querySelector('#qnote').textContent")
             assert pg.evaluate("I18N.t('pk.split.0')") in note and pg.evaluate("I18N.t('int.lrAll.done',{n:0,w:0,a:'',v:0,sn:0,noise:0,split:'',c:0,e:0,below:0})").split(" · ")[6] in note, note
         step("each record is the engine's peak: same baseline, same area", same_area)
