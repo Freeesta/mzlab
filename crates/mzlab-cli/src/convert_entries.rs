@@ -21,8 +21,39 @@ pub(crate) struct Entry {
     pub(crate) wiff: bool,
 }
 
+/// With `--samples`, the samples of a SCIEX pair listed without building any (a `.wiff` of many injections would read each one's blocks), and whether the chosen ones are empty;
+/// `None` for another dataset or with no choice.
+fn listed_only(p: &Path, only: &[u32]) -> Option<Vec<(u32, bool, bool)>> {
+    let open =
+        |c: usize| file_set(p).and_then(|fs| mzlab_lettori::apri_solo(fs, &Limits::desktop(), c));
+    let l = open(usize::MAX)
+        .ok()
+        .filter(|l| !only.is_empty() && l.format() == Format::SciexWiff)?;
+    let ids: Vec<u32> = l.samples().iter().map(|s| s.id).collect();
+    if ids.len() < 2 {
+        return None;
+    }
+    Some(
+        ids.iter()
+            .enumerate()
+            .map(|(c, &id)| {
+                let empty = only.contains(&id)
+                    && open(c).is_ok_and(|mut r| {
+                        r.samples().get(c).is_some_and(|s| s.scansioni == 0)
+                            && r.chromatograms(c).is_ok_and(|v| v.is_empty())
+                            && r.losses(c).is_ok_and(|x| !x.partial())
+                    });
+                (id, empty, true)
+            })
+            .collect(),
+    )
+}
+
 /// The ids of the samples of a dataset with more than one (each with whether it has no scans), else none (a dataset the reader cannot open is converted as one and fails there).
-fn sample_ids(p: &Path) -> Vec<(u32, bool, bool)> {
+fn sample_ids(p: &Path, only: &[u32]) -> Vec<(u32, bool, bool)> {
+    if let Some(v) = listed_only(p, only) {
+        return v;
+    }
     let opened = file_set(p).and_then(|fs| mzlab_lettori::apri(fs, &Limits::desktop()));
     let ids: Vec<(u32, bool, bool)> = opened.map_or(Vec::new(), |mut l| {
         // one calm line per dataset, never per sample
@@ -67,7 +98,7 @@ fn out_name(name: &str, id: Option<u32>, long: bool) -> String {
 }
 
 /// The mzML files of the datasets: one per sample of a dataset with several; two that would get the same name keep the extension of their input.
-pub(crate) fn entries(units: &[PathBuf]) -> Vec<Entry> {
+pub(crate) fn entries(units: &[PathBuf], only: &[u32]) -> Vec<Entry> {
     let mut all: Vec<(PathBuf, String, Option<u32>)> = Vec::new();
     let mut empty = Vec::new();
     let mut wiff = Vec::new();
@@ -77,7 +108,7 @@ pub(crate) fn entries(units: &[PathBuf]) -> Vec<Entry> {
             .unwrap_or_default()
             .to_string_lossy()
             .into_owned();
-        let ids = sample_ids(p);
+        let ids = sample_ids(p, only);
         if ids.is_empty() {
             all.push((p.clone(), name.clone(), None));
             empty.push(false);

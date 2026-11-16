@@ -57,7 +57,7 @@ impl Ole {
         );
         let mut o = Ole {
             src,
-            sha1: None,
+            sha1: Default::default(),
             ss,
             mss,
             cutoff,
@@ -250,16 +250,19 @@ impl Ole {
 
     /// Takes the SHA-1 of the whole file (lower-case hex) from the caller, who already has it, instead of reading the file for it.
     pub fn with_sha1(mut self, sha1: Option<String>) -> Ole {
-        self.sha1 = sha1;
+        *self.sha1.borrow_mut() = sha1;
         self
     }
 
     /// SHA-1 (lower-case hex) of the whole container file.
     pub fn sha1_hex(&self) -> String {
-        if let Some(h) = &self.sha1 {
+        if let Some(h) = self.sha1.borrow().as_ref() {
             return h.clone();
         }
-        crate::method::sha1_dyn(&mut **self.src.0.borrow_mut(), self.src.1).unwrap_or_default()
+        let h =
+            crate::method::sha1_dyn(&mut **self.src.0.borrow_mut(), self.src.1).unwrap_or_default();
+        *self.sha1.borrow_mut() = Some(h.clone());
+        h
     }
 
     pub fn has(&self, path: &str) -> bool {
@@ -331,7 +334,7 @@ impl Src {
 
 pub struct Ole {
     src: Src,
-    sha1: Option<String>,
+    sha1: std::cell::RefCell<Option<String>>,
     ss: usize,
     mss: usize,
     cutoff: u32,

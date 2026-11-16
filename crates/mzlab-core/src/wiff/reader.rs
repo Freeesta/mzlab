@@ -156,7 +156,8 @@ impl WiffReader {
         if p.chroms.is_none() {
             p.w.load_dad(&self.ole);
             p.w.readable()?;
-            let mut win = Window::new(&mut self.scan, self.scan_len);
+            let stop = p.w.records.iter().map(|r| r.data_end()).max().unwrap_or(0);
+            let mut win = Window::until(&mut self.scan, self.scan_len, stop);
             let counts = Some(&p.counts[..]).filter(|c| p.ready && c.len() == p.w.records.len());
             let (chroms, cycles) = p.w.chromatograms(&mut win, counts)?;
             (p.chroms, p.cycles) = (Some(chroms), cycles);
@@ -297,6 +298,12 @@ fn with_method(l: &mut WiffReader, c: usize) -> Result<Header> {
 /// The header of the mzML of injection `c`, with the SHA-1 of the `.wiff.scan`.
 fn file_header(l: &mut WiffReader, c: usize) -> Result<Header> {
     l.ready(c)?;
+    // the SHA-1 of the whole `.wiff` is taken here, for the header of one mzML, never when the pair is opened
+    if let Some(p) = l.parts.get_mut(c) {
+        if p.w.wiff_sha1.is_none() {
+            p.w.wiff_sha1 = Some(l.ole.sha1_hex());
+        }
+    }
     if l.scan_sha1.is_none() {
         let win = &mut Window::new(&mut l.scan, l.scan_len);
         l.scan_sha1 = Some(sha1_hex(win, l.scan_len).ok());
@@ -350,10 +357,8 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
     let membro = u16::try_from(si).unwrap_or(0);
     let (mut parti, mut campioni, mut total) = (Vec::new(), Vec::new(), 0u64);
     let mut raw_names = Vec::new();
-    let sha1 = ole.sha1_hex();
     for (i, s) in samples(&ole).into_iter().enumerate() {
         let mut w = Wiff::open_or_refuse(&ole, &name, scan_len, s)?;
-        w.wiff_sha1 = Some(sha1.clone());
         total += w.records.len() as u64;
         limits.ok_entries(total)?;
         let mut part = Part::new(w);

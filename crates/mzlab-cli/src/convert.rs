@@ -402,7 +402,7 @@ fn overwrites(entries: &[Entry], out: &Path) -> Option<String> {
 
 /// The entries of the datasets `units` that `--samples` keeps, refused when one would be written over its own input.
 fn selected(units: &[PathBuf], samples: &[u32], out: &Path) -> Result<Vec<Entry>, Outcome> {
-    let mut list = entries(units);
+    let mut list = entries(units, samples);
     chosen(&mut list, samples)?;
     match overwrites(&list, out) {
         Some(to) => Err(fail(

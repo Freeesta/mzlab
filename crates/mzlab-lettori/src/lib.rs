@@ -188,6 +188,16 @@ pub fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     Ok(Box::new(srm::SrmFromScans::new(open_bare(fs, limits)?)))
 }
 
+/// `apri` for sample `c` of a SCIEX pair: only its injection reads the heads of its blocks (the other samples are listed with 0 scans; `usize::MAX` builds none, to list
+/// them). Any other set opens as `apri`.
+pub fn apri_solo(mut fs: FileSet, limits: &Limits, c: usize) -> Result<Box<dyn Reader>> {
+    if riconosci(&mut fs).is_some_and(|v| v.id == mzlab_core::wiff::reader::ENTRY.id) {
+        let l = mzlab_core::readers_finite::wiff_sample(fs, limits, c)?;
+        return Ok(Box::new(srm::SrmFromScans::new(l)));
+    }
+    apri(fs, limits)
+}
+
 /// Every extension of the registry of this build, without repeats.
 pub fn estensioni() -> Vec<&'static str> {
     let mut out: Vec<&'static str> = Vec::new();

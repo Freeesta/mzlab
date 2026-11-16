@@ -1,9 +1,10 @@
 //! The datasets of vendor files on disk as `convert.mzml` and `mzlab-cli convert` take them: a file, a `.wiff` with its `.wiff.scan`, or the files of a
 //! `.D`/`.d`/`.raw` folder (the `FileSet` of a reader of the registry), their SHA-256, and the sample a plan input names (`NAME@ID`).
 
+use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
 use mzlab_core::budget::sha256_hex;
@@ -87,7 +88,19 @@ pub(crate) fn file_set(path: &Path) -> Result<FileSet> {
 /// Size and SHA-256 of the file `p`; with `sha1` its SHA-1 comes with them in the same read. Both are kept for `file_set` and `known_prints`, so
 /// neither the reader that writes the header of an mzML nor the index of the dataset reads the file again for them.
 fn hash_file(p: &Path, sha1: bool) -> Result<(u64, String)> {
+    // one reader per file at a time: the threads digesting the samples of one pair wait for the first read instead of each reading the file
+    let lock = {
+        let mut all = READING.lock().unwrap_or_else(|e| e.into_inner());
+        all.entry(p.to_path_buf()).or_default().clone()
+    };
+    let _one = lock.lock().unwrap_or_else(|e| e.into_inner());
     let before = stamp(p);
+    // the samples of one pair are digested one after the other: a file already hashed (same size and time) is not read again
+    if let Some(((len, _), (sha256, have))) = before.zip(known_pair(p)) {
+        if have.is_some() || !sha1 {
+            return Ok((len, sha256));
+        }
+    }
     let (bytes, sha256, sha1) =
         hash_read_with(&mut File::open(p).map_err(io)?, sha1).map_err(io)?;
     if let (Some((len, time)), Ok(mut seen)) = (before.filter(|s| s.0 == bytes), BOTH.lock()) {
@@ -132,6 +145,9 @@ pub(crate) fn known_prints(path: &Path) -> Result<Option<Vec<Fingerprint>>> {
 
 /// SHA-256 of the lone files `digest` has hashed, by path, size and modification time: the `.mzidx` build takes its source's hash from here instead of reading the file again.
 static HASHED: Mutex<Vec<Hashed>> = Mutex::new(Vec::new());
+
+/// One lock per file being hashed (`hash_file`).
+static READING: Mutex<BTreeMap<PathBuf, Arc<Mutex<()>>>> = Mutex::new(BTreeMap::new());
 
 /// SHA-256 and SHA-1 (when it was taken) of the files `hash_file` has read, in the same way.
 static BOTH: Mutex<Vec<Hashed<Pair>>> = Mutex::new(Vec::new());
