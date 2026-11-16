@@ -120,6 +120,7 @@ I18N.add("it", {
   "spec.scanLine.one": "scansione {i}{of}",
   "spec.scanLine.avg": "media di {n} scansioni",
   "spec.scanLine.ce": "CE {ce} eV",
+  "spec.scanLine.merge": "unione per massa nominale: automatica",
   "touch.grip.title": "Trascina per cambiare l'altezza del grafico",
   "tbl.pt.avgWeight": "peso atomico medio <b>{w}</b> <span class=\"muted\">(media pesata sugli isotopi naturali)</span>",
   "tbl.na": "n.d.",

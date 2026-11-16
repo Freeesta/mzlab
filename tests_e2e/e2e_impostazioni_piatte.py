@@ -21,7 +21,7 @@ try:
         def opened():
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
             assert pg.locator("#uipset details.imp-g").count() == 0, "no fold in the plain panel"
-            assert pg.is_visible("#uip-merge") and pg.is_visible("#uip-tour"), "«Dati e calcolo» switch and the tour button show without expanding"
+            assert pg.locator("#uip-merge").count() == 0 and pg.is_visible("#uip-tour"), "no merge switch (the engine decides); the tour button shows without expanding"
             assert pg.locator("#uip-g-data > h3, #uip-g-data h3").count() == 0, "a single control has no group title"
             assert pg.is_visible("#uip-bugbtn") and pg.get_attribute("#uip-bugbtn", "aria-expanded") == "false"
             assert pg.locator("#uipset .seglang svg").count() == 0 and pg.locator("#uipset .seglang").count() == 1, "compact switch, no globe or other icon"

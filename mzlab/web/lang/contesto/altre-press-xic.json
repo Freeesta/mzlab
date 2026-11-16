@@ -41,6 +41,7 @@
   "spec.scanLine.one": "{of} = «/N» (numero totale) oppure vuoto.",
   "spec.scanLine.avg": "Riga sopra lo spettro quando si mostra la media di più scansioni; {n} = numero di scansioni.",
   "spec.scanLine.ce": "Riga sopra lo spettro: energia di collisione; {ce} = valore in eV.",
+  "spec.scanLine.merge": "Riga sopra lo spettro: dice che i centroidi della stessa massa nominale sono uniti dal motore (file a bassa risoluzione).",
   "tbl.pt.avgWeight": "Riga nella casella della tavola periodica; {w} = peso atomico (numero).",
   "tbl.pt.mono": "{m} = massa, {a} = numero di massa dell'isotopo, {s} = simbolo dell'elemento.",
   "tbl.pt.peak": "{s} = simbolo, {off} = scarto in unità di massa (es. +1), {pct} = percentuale.",

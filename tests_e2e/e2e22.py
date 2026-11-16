@@ -28,8 +28,8 @@ try:
             pg.check("input[name=uip-th][value=dark]", force=True); pg.wait_for_timeout(500)
             assert pg.evaluate("document.documentElement.dataset.theme") == "dark"
             saved = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.prefs'))"); print(saved)
-            assert saved == {"theme": "dark", "v": 2, "pal": "file", "merge": True}, saved
-        step("gear: theme, saved in localStorage (theme, pal, merge)", gear)
+            assert saved == {"theme": "dark", "v": 2, "pal": "file"}, saved
+        step("gear: theme, saved in localStorage (theme, pal)", gear)
         def reload():
             pg.reload(); pg.wait_for_timeout(2500)
             assert pg.evaluate("document.documentElement.dataset.theme") == "dark" and pg.evaluate("UIP.font") is None
