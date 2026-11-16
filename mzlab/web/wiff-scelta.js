@@ -5,7 +5,7 @@ window.WIFFPICK = (() => {
   const t = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p);
   /**
    * The dialog: one checkbox per sample (none ticked), «Open selected», «Open all», «Cancel».
-   * @param {string} file name of the .wiff @param {{ name?: string, id: number, scans?: number, size?: number }[]} rows
+   * @param {string} file name of the .wiff @param {{ name?: string, id: number, scans?: number, size?: number, why?: string }[]} rows
    * @returns {Promise<Set<number> | null>} the chosen positions, `null` for all, an empty set for cancel
    */
   function choose(file, rows) {
@@ -18,7 +18,7 @@ window.WIFFPICK = (() => {
       const boxes = rows.map((r, i) => {
         const l = document.createElement("label"), c = document.createElement("input"), s = document.createElement("span");
         c.type = "checkbox"; c.value = String(i);
-        s.textContent = t(r.scans ? "load.pick.row" : "load.pick.row0", { name: r.name || "#" + r.id, scans: r.scans ?? 0, mb: r.size ? (r.size / 1048576).toFixed(1) : "—" });
+        s.textContent = t(r.scans ? "load.pick.row" : "load.pick.row0", { name: r.name || "#" + r.id, scans: r.scans ?? 0, mb: r.size ? (r.size / 1048576).toFixed(1) : "—" }) + (r.why === "empty" ? " · " + t("warn.wiff.emptySample") : r.why === "inferred" ? " · " + t("warn.wiff.inferredSample") : "");
         l.append(c, s); list.append(l); return c;
       });
       const status = document.createElement("p"); status.className = "muted sm"; status.setAttribute("role", "status");

@@ -37,6 +37,19 @@ pub(super) fn empty_of(l: &mut WiffReader, c: usize) -> Result<bool> {
     Ok(none && Reader::chromatograms(l, c)?.is_empty() && !l.losses_of(c)?.partial())
 }
 
+/// What sample `s` weighs in the pair: its streams of the container and the `.wiff.scan` range its blocks cover.
+pub(super) fn sample_size(ole: &Ole, w: &Wiff, s: u32, scan_len: u64) -> Option<u64> {
+    let from = w.records.iter().map(|r| r.at).min().unwrap_or(0);
+    let to = w
+        .records
+        .iter()
+        .map(|r| r.data_end())
+        .max()
+        .unwrap_or(0)
+        .min(scan_len);
+    Some(ole.prefix_size(&format!("{SAMPLES}Sample{s}/")) + to.saturating_sub(from))
+}
+
 /// The listing entry of an injection `open_bare` leaves unread.
 pub(super) fn unopened(sample: u32, scan_len: u64) -> Wiff {
     Wiff::refused(

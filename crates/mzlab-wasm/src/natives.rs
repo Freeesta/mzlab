@@ -41,6 +41,8 @@ pub(crate) struct Members {
     names: Vec<String>,
     sizes: Vec<f64>,
     read: Function,
+    /// the identity a partly copied member asks for (empty: a whole member)
+    marks: Vec<Option<String>>,
 }
 
 impl Members {
@@ -56,10 +58,21 @@ impl Members {
                     .with("name", names.first().cloned().unwrap_or_default()),
             ));
         }
+        // a member copied only in part (a sample of a big `.wiff`) says so by `read.partial[i]`: the reader then takes its identity from the ranges, never from the whole file
+        let given = js_sys::Reflect::get(&read, &"partial".into()).unwrap_or(JsValue::NULL);
+        let marks = (0..names.len())
+            .map(|i| {
+                let v = given
+                    .dyn_ref::<js_sys::Array>()
+                    .and_then(|a| a.get(i as u32).as_string());
+                v.filter(|t| !t.is_empty())
+            })
+            .collect();
         Ok(Members {
             names,
             sizes: sizes.to_vec(),
             read,
+            marks,
         })
     }
 
@@ -73,7 +86,7 @@ impl Members {
                 nome: n.clone(),
                 dim: s as u64,
                 dati: member::member(&self.read, i as u32, s as u64),
-                sha1: None,
+                sha1: self.marks[i].clone(),
             })
             .collect();
         FileSet { membri }

@@ -285,6 +285,13 @@ impl Ole {
         crate::budget::sha256_hex(text.as_bytes())
     }
 
+    /// The bytes of the streams whose path starts with `prefix` (a sample's subtree), by their directory entries.
+    pub fn prefix_size(&self, prefix: &str) -> u64 {
+        let own = self.streams.iter().filter(|(p, _)| p.starts_with(prefix));
+        own.map(|(_, i)| self.dir.get(*i).map_or(0, |e| u64::from(e.size)))
+            .sum()
+    }
+
     pub fn has(&self, path: &str) -> bool {
         self.streams.iter().any(|(p, _)| p == path)
     }

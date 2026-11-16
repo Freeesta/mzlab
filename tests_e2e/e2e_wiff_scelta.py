@@ -47,11 +47,26 @@ try:
         pg.locator(".wpick-dlg button", has_text="Open selected").click()
         pg.wait_for_function("UPBUSY === 0 && ST.files.length === 2", timeout=120000)
         step("only the two ticked samples enter the list", lambda: (pg.evaluate(files) == "lotto_s2.mzML|lotto_s4.mzML") or (_ for _ in ()).throw(AssertionError(pg.evaluate(files))))
+        # the copy of a chosen sample holds only its ranges: its stub tells the source by a partial identity (never the hash of the whole pair), one per sample, and the two samples' copies are apart
+        STUBS = """async () => { const root = await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab'), out = [];
+          for await (const [n, c] of (await root.getDirectoryHandle('files')).entries()) { if (c.kind !== 'file' || !/\\.mzML$/.test(n)) continue; const f = await c.getFile(); if (f.size > 65536) continue; try { const j = JSON.parse(await f.text()); if (j.mzlab) out.push([n, j.ds, j.members.map(m => m.sha1 || '')]); } catch (_) { /* an ordinary mzML */ } }
+          return out; }"""
+        def partial_stubs():
+            st = pg.evaluate(f"({STUBS})()")
+            assert len(st) == 2, st
+            toks = [m for _, _, ms in st for m in ms]
+            assert all(t.startswith("partial(sample=") for t in toks), toks
+            assert st[0][1] != st[1][1] and len({t for t in toks}) == 2, "one copy and one identity per sample"
+        step("a chosen sample is copied by its ranges, with a partial identity of its own", partial_stubs)
+        scans = pg.evaluate("Object.fromEntries(ST.files.map(f => [f.name, f.n_spectra || f.scans || 0]))")
         pg.close()
 
         pg = page(1000); pg.set_input_files("#pick", PAIR); pg.wait_for_selector("dialog.wpick-dlg[open]")
         pg.locator(".wpick-dlg button", has_text="Open all").click(); pg.wait_for_function("UPBUSY === 0 && ST.files.length === 4", timeout=120000)
-        step("«Open all» loads the 4 samples", lambda: None); pg.close()
+        step("«Open all» loads the 4 samples", lambda: None)
+        whole = pg.evaluate("Object.fromEntries(ST.files.map(f => [f.name, f.n_spectra || f.scans || 0]))")
+        step("a sample copied by its ranges has the scans the whole pair gives", lambda: all(whole[k] == v for k, v in scans.items()) or (_ for _ in ()).throw(AssertionError((scans, whole))))
+        pg.close()
 
         pg = page(1000); pg.set_input_files("#pick", PAIR); pg.wait_for_selector("dialog.wpick-dlg[open]")
         pg.keyboard.press("Escape"); pg.wait_for_selector("dialog.wpick-dlg", state="detached")

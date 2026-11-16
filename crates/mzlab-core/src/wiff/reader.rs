@@ -15,8 +15,8 @@ use crate::readers::{
     ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Member, Position, Reader,
     ReaderEntry, Sample, ScanEntry, CONTRATTO,
 };
-pub use partial::{is_mark, MARK as PARTIAL, PREFIX as PARTIAL_PREFIX};
 use partial::{file_header, with_method};
+pub use partial::{is_mark, MARK as PARTIAL, PREFIX as PARTIAL_PREFIX};
 
 const SCAN: &str = ".wiff.scan";
 const WIFF: &str = ".wiff";
@@ -316,10 +316,24 @@ pub fn open_bare(fs: FileSet, limits: &Limits, c: usize) -> Result<Box<dyn Reade
 
 /// The file name of a member (what follows the last separator).
 fn base_name(path: &str) -> String {
-    path.rsplit(['/', '\\']).next().unwrap_or("x.wiff").to_string()
+    path.rsplit(['/', '\\'])
+        .next()
+        .unwrap_or("x.wiff")
+        .to_string()
 }
 
-fn open_pair(mut fs: FileSet, limits: &Limits, only: Option<usize>, bare: bool) -> Result<Box<dyn Reader>> {
+/// The name the DATA stream of injection `s` gives it, when it has one.
+fn data_name(ole: &Ole, s: u32) -> Option<String> {
+    let data = ole.read(&format!("{SAMPLES}Sample{s}/SampleDABE/DATA"))?;
+    crate::method_wiff::counted_strings(&data).into_iter().next()
+}
+
+fn open_pair(
+    mut fs: FileSet,
+    limits: &Limits,
+    only: Option<usize>,
+    bare: bool,
+) -> Result<Box<dyn Reader>> {
     let wi = wiff_member(&fs).ok_or_else(|| Error::new("err.file.notWiff").with("name", "?"))?;
     let name = base_name(&member(&mut fs, wi)?.nome);
     let si = fs
@@ -348,21 +362,18 @@ fn open_pair(mut fs: FileSet, limits: &Limits, only: Option<usize>, bare: bool) 
         };
         total += w.records.len() as u64;
         limits.ok_entries(total)?;
+        let size = partial::sample_size(&ole, &w, s, scan_len);
         let mut part = Part::new(w);
         // a sample the engine cannot read is left unbuilt: `pronta` refuses it when it is asked for, the others open
         if only.is_none_or(|c| c == i) && part.w.readable().is_ok() {
             build(&mut part, &mut scan, scan_len, membro)?;
         }
-        raw_names.push((
-            s,
-            ole.read(&format!("{SAMPLES}Sample{s}/SampleDABE/DATA"))
-                .and_then(|b| crate::method_wiff::counted_strings(&b).into_iter().next()),
-        ));
+        raw_names.push((s, data_name(&ole, s)));
         campioni.push(Sample {
             id: s,
             nome: String::new(),
             scansioni: part.scans.len(),
-            size: None,
+            size,
         });
         parti.push(part);
     }
