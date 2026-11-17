@@ -5,7 +5,7 @@ use mzlab_core::method::{Source, SrcFile};
 use mzlab_core::ole::Ole;
 use wasm_bindgen::prelude::*;
 
-/// A `.wiff` is read whole to open its container; more than this is refused with the memory budget error (as the engine did).
+/// A `.wiff` is read whole to open its container; more than this is refused with phase `whole` and the sizes, as every reader does.
 const WIFF_MAX: u64 = 192 << 20;
 
 fn fail(e: &mzlab_core::Error) -> JsValue {
@@ -21,9 +21,11 @@ pub fn wiff_metodo(
     sample: u32,
     sha1: &str,
 ) -> Result<String, JsValue> {
-    if size as u64 > WIFF_MAX {
-        return Err(fail(&mzlab_core::Error::memory_budget()));
-    }
+    let whole = mzlab_core::readers::Limits {
+        byte: WIFF_MAX,
+        ..mzlab_core::readers::Limits::sito()
+    };
+    whole.fits(size as u64).map_err(|e| fail(&e))?;
     let data = crate::reading::from_js(&read, 0, 0, size as usize)
         .map_err(|e| fail(&e))?
         .to_vec();

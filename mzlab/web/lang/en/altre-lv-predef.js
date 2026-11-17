@@ -58,6 +58,8 @@ I18N.add("en", {
   "memory.phase.readTable": "reading of the feature table",
   "memory.phase.mzmlInMemory": "mzML conversion held in memory",
   "memory.phase.msnGraph": "MSn graph",
+  "memory.phase.openFiles": "files open together",
+  "memory.phase.whole": "reading of the whole file",
   "pol.positive": "ESI positive",
   "pol.negative": "ESI negative",
   "pol.mixed": "ESI positive and negative in the same file",

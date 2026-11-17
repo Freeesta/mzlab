@@ -41,6 +41,8 @@ pub mod protocol;
 mod ram;
 pub mod release;
 pub mod rpc;
+#[cfg(test)]
+mod rpc_idx_tests;
 mod rpc_lr;
 mod rpc_masscal;
 mod rpc_msn;

@@ -65,7 +65,7 @@ impl<R: ReadAt> Routes<R> {
         let level = q.level();
         // one pass: the scans of the level and whether any of them (or, with none, any scan of the file) is profile
         let (mut nscans, mut level_profile, mut any_profile) = (0usize, false, false);
-        for s in &self.idx.scans {
+        for s in self.idx.scans.iter() {
             any_profile |= s.profile;
             if s.level == level {
                 nscans += 1;

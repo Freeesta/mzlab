@@ -35,6 +35,12 @@ def test_cause_per_phase(phase, raw, cause):
     assert set(d) == {"codice", "fase", "causa", "dettagli"}
 
 
+def test_memory_phase_keeps_the_stage_of_the_loading():
+    """lr.js puts the engine's memory phase in `fase` (for the text) and its own stage in `tappa`: the diagnosis says the stage."""
+    d = node("D.da({key:'error.memoryBudget',params:{fase:'openFiles',aperti:'7',tappa:'index',raw:'{\"error_key\":\"error.memoryBudget\"}'}},{name:'a.mzML',size:5})")
+    assert d["fase"] == "index" and d["causa"] == "memory"
+
+
 def test_no_personal_data():
     t = node(r"D.pulisci('read /Users/mario.rossi/Desktop/a.raw and C:\\Users\\Mario\\x.mzML and /home/luca/x and file:///Users/a/b')")
     assert "mario" not in t.lower() and "luca" not in t and "Users" not in t and t.count("<path>") == 4
