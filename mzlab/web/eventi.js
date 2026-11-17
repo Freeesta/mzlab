@@ -4,7 +4,8 @@
 // every peak of the traces shown, low resolution too (integra-tutti.js, read on first use): the ▾ of the toolbar and the menu of a trace
 const intAll = (/** @type {Bag} */ p) => carica("m:integra-tutti.js").then(() => /** @type {any} */ (window).INTTUTTI.run(p), () => nearMsg(I18N.t("int.autoOff")));
 // the ▾ next to the automatic tool: every peak shown, or the settings (stopPropagation: else the click reaches the document and closes the menu at once)
-const intMenu = (/** @type {Bag} */ p, /** @type {MouseEvent} */ e) => { e.stopPropagation(); menu(e, [{ label: I18N.t("int.menu.all"), icon: IC_AUTO, fn: () => intAll(p) }, { label: I18N.t("int.menu.params"), icon: AZIONI_ICONE.svg("sliders"), fn: peakParams }]); };
+const intFiles = (/** @type {Bag} */ p) => carica("m:integra-tutti.js").then(() => /** @type {any} */ (window).INTTUTTI.runFiles(p), () => nearMsg(I18N.t("int.autoOff")));
+const intMenu = (/** @type {Bag} */ p, /** @type {MouseEvent} */ e) => { e.stopPropagation(); menu(e, [{ label: I18N.t("int.menu.all"), icon: IC_AUTO, fn: () => intAll(p) }, ...(ESP.mrm(p) ? [{ label: I18N.t("int.menu.files"), icon: IC_AUTO, fn: () => intFiles(p) }] : []), { label: I18N.t("int.menu.params"), icon: AZIONI_ICONE.svg("sliders"), fn: peakParams }]); };
 // ------------------------------------------------------------------ mouse
 function attach(p) {
   const cv = p.cv;

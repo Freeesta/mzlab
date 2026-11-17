@@ -13,7 +13,7 @@ const HEADS = () => /** @type {Record<string, string>} */ ({ channel: t("canali.
 /** The tooltips of the columns of a split window. */
 const TIPS = () => /** @type {Record<string, string>} */ ({ overlap: t("canali.manint.h.overlap.tip"), pv: t("canali.manint.h.pv.tip"), label: t("canali.manint.nm.tip") });
 /** How a row came to be (manint.rs, column `origin`), as shown. */
-const ORIGINS = () => /** @type {Record<string, string>} */ ({ manual: t("canali.manint.org.manual"), applied: t("canali.manint.org.applied"), shifted: t("canali.manint.org.shifted"), no_peak: t("canali.manint.org.nopeak") });
+const ORIGINS = () => /** @type {Record<string, string>} */ ({ manual: t("canali.manint.org.manual"), applied: t("canali.manint.org.applied"), shifted: t("canali.manint.org.shifted"), no_peak: t("canali.manint.org.nopeak"), auto: t("canali.manint.org.auto"), unmatched: t("canali.manint.org.unmatched") });
 const BASES = () => /** @type {Record<string, string>} */ ({ zero: t("int.base.zero"), edges: t("int.base.edges"), line: t("int.base.line") });
 /** The longest name of an integration (manint::LABEL_MAX). */
 const NM_MAX = 40;
@@ -25,9 +25,10 @@ const ICON = {
 };
 
 /** @typedef {{ p: any, it: any, k: number, tr: number, label: string, fol?: boolean, src?: boolean }} Rec */
+/** `say`: the text for the live status at the next draw; `log`: the per-file lines of the last automatic integration (this session only). */
 /** `had`: rows at the last draw (null before the first), so an integration after none opens the card. */
 /** @type {{ sig: string, recs: Rec[], ks: number[], windows: string, csv: string, busy: number, focus: any, had: number | null, reach: number }} */
-const st = { sig: "", recs: [], ks: [], windows: "[]", csv: "", busy: 0, focus: null, had: null, reach: 0 };
+const st = { sig: "", recs: [], ks: [], windows: "[]", csv: "", busy: 0, focus: null, had: null, reach: 0, say: "", log: /** @type {string[]} */ ([]) };
 
 /** The rows of a CSV with quoted fields. @param {string} text */
 function rows(text) {
@@ -80,7 +81,7 @@ async function records() {
 
 /** The window of a record as `api/manint` reads it: a name only when the user gave one, the drop lines of a split one. @param {any} it @param {number} file @param {number} tr */
 const windowOf = (it, file, tr, ks, follow) => ({ file, tr, a: Math.min(it.a, it.b), b: Math.max(it.a, it.b), ...baseOf(it), ...(it.nm ? { label: it.nm } : {}), ...(it.splits && it.splits.length ? { splits: it.splits } : {}),
-  ...(follow ? { follow: true } : {}), ...(follow && it.fn ? { names: Object.fromEntries(Object.entries(it.fn).map(([key, n]) => [ks.indexOf(+String(key).split("|")[1]), n]).filter(([i]) => i >= 0)) } : {}) });
+  ...(it.org ? { origin: it.org, grp: it.grp } : {}), ...(follow ? { follow: true } : {}), ...(follow && it.fn ? { names: Object.fromEntries(Object.entries(it.fn).map(([key, n]) => [ks.indexOf(+String(key).split("|")[1]), n]).filter(([i]) => i >= 0)) } : {}) });
 /** The windows JSON of the records (the followers are the engine's: only the windows drawn), files numbered in the order of `ks`. @param {Rec[]} recs @param {number[]} ks */
 const windowsOf = (recs, ks) => JSON.stringify(recs.filter(r => !r.fol).map(r => windowOf(r.it, ks.indexOf(r.k), r.tr, ks, !!r.src)));
 
@@ -140,19 +141,20 @@ function draw() {
   const trs = body.map((r, i) => {
     const rec = recOf(r, head), who = { ch: chShown(r[0]), s: r[iS] };
     const act = rec && !rec.fol ? h`<button type="button" class="manint-x" data-del="${i}" aria-label="${t("canali.manint.del.aria", who)}" title="${t("canali.manint.del")}">×</button>` : "";
-    const tds = cols.slice(1).map(c => h`<td${raw(plain.includes(head[c]) ? "" : ' class="num"')}>${raw(head[c] === "label" && !rec ? h`${r[c]}` : cell(r[c], head[c], i, r[iO] === "no_peak"))}</td>`).join("");
+    const tds = cols.slice(1).map(c => h`<td${raw(plain.includes(head[c]) ? "" : ' class="num"')}${raw(head[c] === "origin" && r[c] === "unmatched" ? h` title="${t("canali.manint.unmatched.tip")}"` : "")}>${raw(head[c] === "label" && !rec ? h`${r[c]}` : cell(r[c], head[c], i, r[iO] === "no_peak"))}</td>`).join("");
     return h`<tr data-org="${r[iO]}"${raw(rec ? h` class="manint-go" data-go="${i}" tabindex="0" aria-label="${t("canali.manint.show.aria", who)}"` : "")}><th scope="row">${chShown(r[cols[0]])}</th>${raw(tds)}<td>${raw(act)}</td></tr>`;
   }).join("");
   el.innerHTML = h`<div class="manint-head"><h3><button type="button" class="manint-tg" id="manint-h" aria-expanded="${open ? "true" : "false"}" aria-controls="manint-b" aria-describedby="manint-d" title="${t("canali.manint.note")}"><svg class="manint-chev" width="12" height="12" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true" focusable="false"><path d="M1.5 3.5h7L5 7.5z"/></svg>${t("canali.manint.title", { n: body.length })}</button></h3>
 <button type="button" class="manint-ic" data-dl aria-label="${t("canali.manint.csv")}" title="${t("canali.manint.csv")}">${raw(ICON.dl)}</button><button type="button" class="manint-ic" data-copy aria-label="${t("canali.manint.copy")}" title="${t("canali.manint.copy")}">${raw(ICON.copy)}</button><span id="manint-d" class="sr-only">${t("canali.manint.note")}</span><span id="manint-live" class="sr-only" role="status" aria-live="polite"></span></div>
 <div id="manint-b" class="manint-wrap" tabindex="0" role="region" aria-labelledby="manint-h" aria-describedby="manint-d"${raw(open ? "" : " hidden")}><table class="qq-tab">
-<thead><tr>${raw(ths)}<th scope="col"><span class="sr-only">${t("canali.manint.h.act")}</span></th></tr></thead><tbody>${raw(trs)}</tbody></table></div>`;
+<thead><tr>${raw(ths)}<th scope="col"><span class="sr-only">${t("canali.manint.h.act")}</span></th></tr></thead><tbody>${raw(trs)}</tbody></table></div>${raw(st.log.length && body.some(r => r[iO] === "auto" || r[iO] === "unmatched") ? h`<details class="manint-log"><summary>${t("canali.manint.log.h")}</summary><ul>${raw(st.log.map(l => h`<li>${l}</li>`).join(""))}</ul></details>` : "")}`;
   const ws = document.getElementById("v-workspace");
   el.hidden = !(ws && ws.dataset.work === "panels");
   // told when integrations reach more samples than before (the rows of another sample that the engine applied)
   const reach = new Set(body.filter(r => r[col(head, "origin")] !== "manual").map(r => r[iS])).size, lv = el.querySelector("#manint-live");
   if (lv && reach > st.reach) lv.textContent = t("canali.manint.applied", { n: reach });
   st.reach = reach;
+  if (lv && st.say) { lv.textContent = st.say; st.say = ""; }
   const tg = /** @type {HTMLElement} */ (el.querySelector(".manint-tg")), bx = /** @type {HTMLElement} */ (el.querySelector("#manint-b"));
   tg.addEventListener("click", () => { const v = bx.hidden; bx.hidden = !v; tg.setAttribute("aria-expanded", String(v)); setOpen(v); });
   el.querySelector("[data-dl]")?.addEventListener("click", () => G.dl("manual-integrations.csv", st.csv, "text/csv", { table: "manint" }));
@@ -286,5 +288,8 @@ let timer = /** @type {ReturnType<typeof setTimeout> | undefined} */ (undefined)
 /** Every redraw of a panel calls this: one sync after the last of a burst (a dragged edge redraws at every move). */
 const soon = () => { clearTimeout(timer); timer = setTimeout(sync, 150); };
 
-G.MANINT = { sync: soon, now: sync, snr, valleys, parts, follow, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file) }) };
+/** The notice and the per-file log of an automatic integration, shown at the next draw of the card. @param {string} say @param {string[]} log */
+const report = (say, log) => { st.say = say; st.log = log; st.sig = ""; };
+
+G.MANINT = { report, sync: soon, now: sync, snr, valleys, parts, follow, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file) }) };
 soon();

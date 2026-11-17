@@ -192,7 +192,7 @@ function intMenuItems(/** @type {Bag} */ p, /** @type {number} */ x, /** @type {
   if (p.ints.length) items.push({ label: I18N.t("int.menu.delAll"), icon: IC_DEL_INT, fn: () => delInts(p, [...p.ints]) });
   if (nearInt || p.ints.length) items.push("-");
   items.push({ label: I18N.t("int.menu.params"), icon: AZIONI_ICONE.svg("sliders"), fn: peakParams });
-  if (canInt(p)) items.push({ label: I18N.t("int.menu.auto"), icon: IC_AUTO, fn: () => { if (!guardInt(p)) return; intTargets(p, x, py).forEach((/** @type {Bag} */ s) => autoInt(p, s, x)); } }, { label: I18N.t("int.menu.all"), icon: IC_AUTO, fn: () => intAll(p) });
+  if (canInt(p)) items.push({ label: I18N.t("int.menu.auto"), icon: IC_AUTO, fn: () => { if (!guardInt(p)) return; intTargets(p, x, py).forEach((/** @type {Bag} */ s) => autoInt(p, s, x)); } }, { label: I18N.t("int.menu.all"), icon: IC_AUTO, fn: () => intAll(p) }, ...(ESP.mrm(p) ? [{ label: I18N.t("int.menu.files"), icon: IC_AUTO, fn: () => intFiles(p) }] : []));
   if (p.sel && p.sel[1] > p.sel[0]) items.push({ label: I18N.t("int.menu.zoomSel"), icon: IC_ZOOM, fn: () => { const [s0, s1] = p.sel; const w = (s1 - s0) * 0.1; zoomTo(p, s0 - w, s1 + w); } });
   return items;
 }
