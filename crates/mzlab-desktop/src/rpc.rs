@@ -355,10 +355,7 @@ impl State {
                 }
                 text(pl.finish(&rows))
             }
-            "manint" => text(match mzlab_core::manint::table_text(s("files"), s("windows"), p["sums"].as_bool() == Some(true) || s("sums") == "true") {
-                Ok(csv) => csv,
-                Err(e) => format!("E{}", e.to_json()),
-            }),
+            "manint" => text(match mzlab_core::manint::table_text(s("files"), s("windows"), p["sums"].as_bool() == Some(true) || s("sums") == "true").unwrap_or_else(|e| format!("E{}", e.to_json()))),
             "follow" => text(mzlab_core::manint::follow_text(s("files"), s("window")).unwrap_or_else(|e| format!("E{}", e.to_json()))),
             "valleys" => text(mzlab_core::manint::valleys_text(s("files"), s("window"), p["depth"].as_f64().unwrap_or(f64::NAN)).unwrap_or_else(|e| format!("E{}", e.to_json()))),
             "mrmdiff" => match mzlab_core::diffroute::mrm_diff(s("files"), s("ref"), &q()) {
