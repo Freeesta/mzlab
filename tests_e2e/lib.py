@@ -121,7 +121,9 @@ def open_tabui(pg):
     """Tabui has no nav button (TABUI_VISIBLE = false in first-paint.js): it opens on its exact address, as a person with the link would."""
     # the address only counts once the shell listens to it (the hidden button is in the static HTML long before shell.js has run)
     pg.wait_for_function("typeof setView === 'function' && typeof S !== 'undefined' && !!window.QTOOLS", timeout=120000)
+    pg.evaluate("history.replaceState(null, '', location.pathname + location.search)")         # a hash left by an earlier visit would make the next one a no-op
     pg.evaluate("location.hash = '#/tpmine'")
+    pg.wait_for_function("S.view === 'tpmine'", timeout=15000)
 _real_click = _Page.click
 def _click(self, selector, *a, **k):
     # the Tabui nav button is hidden: a click on it is the exact address #/tpmine
