@@ -47,7 +47,9 @@ try:
             # the view changes after the removal («Back to work!», the side panel) are steps of the same stack: Undo walks back to the removal
             for _ in range(6):
                 if pg.evaluate(f"{live}.length") == 3: break
-                pg.click("#np-undo"); pg.wait_for_timeout(300)
+                pg.click("#np-undo")
+                try: wait_for_js(pg, f"{live}.length === 3", 800)
+                except Exception: pass          # an earlier view step was undone: the next click goes one step further back
             wait_for_js(pg, f"{live}.length === 3", 10000)
             assert pg.locator("#flst .fl:not(.pr)").count() == 3, "the side panel lists the file again"
         step("Undo brings the file back", undo)
