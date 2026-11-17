@@ -100,3 +100,11 @@ def test_pr_number_and_incomplete_run():
     assert mc.pr_number("Title (#12)") == 12 and mc.pr_number("no number") is None
     out = mc.runs_of_commit("s", lambda p: {"workflow_runs": [{"id": 1, "name": "test", "status": "in_progress", "conclusion": None}]} if "head_sha" in p else {"jobs": []})
     assert out["complete"] is False and out["workflows"]["test"]["wall_s"] is None
+
+
+def test_cancelled_run_is_not_a_failure_nor_a_wall_time():
+    """A run of main cancelled by a newer push (concurrency) must not count as failed or set the wall time of the commit."""
+    runs = [{"id": 1, "name": "test", "status": "completed", "conclusion": "cancelled", "run_started_at": "2026-10-30T10:00:00Z", "updated_at": "2026-10-30T10:30:00Z"},
+            {"id": 2, "name": "rust", "status": "completed", "conclusion": "success", "run_started_at": "2026-10-30T10:00:00Z", "updated_at": "2026-10-30T10:10:00Z"}]
+    out = mc.runs_of_commit("s", lambda p: {"workflow_runs": runs} if "head_sha" in p else {"jobs": []})
+    assert out["failed_runs"] == 0 and out["wall_s"] == 600 and out["workflows"]["test"]["conclusion"] == "cancelled"

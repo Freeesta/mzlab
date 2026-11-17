@@ -134,8 +134,7 @@ function uipOpen(btn) {
   const pals = ["file", ...Object.keys(PALS).filter(k => k !== "file")].map(k => `<option value="${k}">${I18N.t(`settings.pal.${k}`)}</option>`).join("");
   const fld = (label, tip, inner) => `<div class="imp-fld" title="${esc(tip)}"><span>${label}</span>${inner}</div>`;
   const look = C.section(T("settings.theme"), C.opts("seg3", C.radios("uip-th", [["auto", T("settings.theme.auto")], ["light", T("settings.theme.light")], ["dark", T("settings.theme.dark")]], UIP.theme, "seg"), T("settings.theme.tip")))
-    + C.section(T("settings.pal.label"), `<select id="uip-pal" title="${esc(T("settings.pal.title"))}" aria-label="${esc(T("settings.pal.label"))}">${pals}</select>`)
-    + C.sw(T("settings.xiclens"), T("settings.xiclens.title"), 'id="uip-xiclens"', UIP.xicLens, "side");
+    + `<div class="imp-fld imp-pal" title="${esc(T("settings.pal.title"))}"><label for="uip-pal">${T("settings.pal.label")}</label><select id="uip-pal">${pals}</select></div>`;
   const read = C.section(T("settings.font.label"), C.opts("f3", C.radios("uip-font", [["", T("settings.font.default"), T("settings.font.default.tip")], ["atkinson", T("settings.font.atkinson"), T("settings.font.atkinson.tip")], ["dyslexic", T("settings.font.dyslexic"), T("settings.font.dyslexic.tip")]], a11y.font || "", "font")))
     + C.sw(T("settings.hc.label"), T("settings.hc.tip"), 'id="uip-hc"', a11y.bg === "hc", "hc") + C.sw(T("settings.motion"), T("settings.motion.title"), 'id="uip-motion"', a11y.motion === "always", "motion");
   const cen = window.MZLAB_BROWSER && typeof centroidTargets === "function" && centroidTargets().length
@@ -151,8 +150,9 @@ function uipOpen(btn) {
   const flat = (id, icon, title, items) => C.flatOrRow(id, icon, T(title), items);          // a fold or a title only for a real group of several controls
   const grp = (id, icon, title, body, dflt, tip) => body ? C.group(id, icon, T(title), body, uipGroupOpen(id, dflt), T(tip)) : "";
   d.innerHTML = `<div class="a-hd"><h2>${T("settings.title")}</h2><button type="button" class="x" id="uip-x" aria-label="${esc(T("settings.close"))}" title="${esc(T("settings.close.tip"))}"></button></div>`
-    + C.flat("uip-g-look", "look", T("settings.g.look"), look) + C.flat("uip-a11y", "read", T("settings.g.read"), read)
+    + C.flat("uip-a11y", "read", T("settings.g.read"), read) + C.flat("uip-g-look", "look", T("settings.g.look"), look)
     + flat("uip-g-data", "data", "settings.g.data", dataItems) + flat("uip-g-app", "app", "settings.g.app", appItems)
+    + C.flatOrRow("uip-g-xic", "look", T("settings.g.look"), [C.sw(T("settings.xiclens"), T("settings.xiclens.title"), 'id="uip-xiclens"', UIP.xicLens, "side")])      // a chart-interaction switch, kept among the last items
     + tour + C.bugRow(T("settings.g.bug"), T("settings.g.bug.tip"))
     + (prof === "ricerca" ? grp("uip-g-llm", "app", "llm.g", '<div id="uip-llm"></div>', false, "llm.g.tip") : "") + grp("uip-g-diag", "cont", "settings.g.diag", mem ? mem.html : "", false, "settings.g.diag.tip")
     + `<div class="row"><button type="button" id="uip-reset" title="${esc(T("settings.reset.title"))}">${T("settings.reset")}</button></div>`;

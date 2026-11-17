@@ -97,5 +97,6 @@
   "mol.err.more": "End of the truncated error list; {n} = errors not shown.",
   "predef.ket.error": "Error (alert) if a .ket drawing opened by the system cannot be read; {name} = file name, {detail} = cause (may be empty).",
   "int.lrAll.done": "Notice after «Integrate every peak shown» (low resolution); {n} = peaks added, {w} = smoothing window in points (odd), {a} = text of int.lrAll.auto or empty, {v} = valley depth in %, {sn} = minimum S/N, {noise} = trace noise in counts (scientific notation), {split} = how touching peaks are split (pk.split.0 or pk.split.1), {c} = baseline ends lowered onto the trace, {e} = all ends, {below} = total area under the line.",
-  "int.lrAll.skip": "Tail of the int.lrAll.done notice; {n} = peaks found but not added because they overlap integrations already there."
+  "int.lrAll.skip": "Tail of the int.lrAll.done notice; {n} = peaks found but not added because they overlap integrations already there.",
+  "int.menu.files": "Menu entry (next to «Integrate every peak shown»): finds the peaks of the ions of every file shown, groups the ones at the same time and adds them as integrations."
 }

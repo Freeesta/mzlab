@@ -75,8 +75,8 @@ try:
             pg.click("#np-set"); pg.wait_for_selector("#uip-a11y")
             pg.evaluate("document.querySelectorAll('#uipset details.imp-g').forEach(g => g.open = true)")       # the folding groups (assistant, diagnostics) open
             t = pg.inner_text("#uipset")
-            for w in ("Settings", "Theme", "Like the system", "Chart colors", "Reduce motion"): assert w.lower() in t.lower(), (w, t)
-            assert "By file (default)" in pg.evaluate("[...document.querySelectorAll('#uip-pal option')].map(o => o.textContent)"), "palette names"
+            for w in ("Settings", "Theme", "System", "Chart colors", "Reduce motion"): assert w.lower() in t.lower(), (w, t)
+            assert "By file" in pg.evaluate("[...document.querySelectorAll('#uip-pal option')].map(o => o.textContent)"), "palette names"
         step("gear in English", gear)
         def phrase():
             pg.evaluate("loading(true)"); pg.wait_for_timeout(300)

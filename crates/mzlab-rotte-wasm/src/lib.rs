@@ -108,6 +108,16 @@ pub fn manual_table(files: &str, windows: &str, sums: bool) -> String {
     }
 }
 
+/// `api/manfollow`: where one window of `manual_table` lands in the other samples (`manint::follow_text`): `[{"file","tr","a","b","shift","origin"}]`;
+/// "E" + JSON = the user's error.
+#[wasm_bindgen]
+pub fn manual_follow(files: &str, window: &str) -> String {
+    match mzlab_core::manint::follow_text(files, window) {
+        Ok(json) => json,
+        Err(e) => format!("E{}", e.to_json()),
+    }
+}
+
 /// `api/manvalley`: where one window of `manual_table` splits at `depth` (`manint::valleys_text`): `{"splits":[MIN,...]}`; "E" + JSON = the user's
 /// error.
 #[wasm_bindgen]

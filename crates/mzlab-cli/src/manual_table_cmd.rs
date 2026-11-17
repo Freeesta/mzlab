@@ -19,10 +19,19 @@ pub const HELP: &str = "mzlab-cli manual-table: the integrations drawn by hand o
 usage: mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--out PATH]
 
   FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in the order of the page
-  --set windows=PATH  a JSON list of windows [{\"file\": I, \"tr\": J, \"a\": MIN, \"b\": MIN, \"baseline\": \"zero\"|\"edges\"|\"line\", \"line\": [t0, y0, t1, y1], \"label\": NAME}]:
+  --set windows=PATH  a JSON list of windows [{\"file\": I, \"tr\": J, \"a\": MIN, \"b\": MIN, \"baseline\": \"zero\"|\"edges\"|\"line\", \"line\": [t0, y0, t1, y1], \"label\": NAME,
+                      \"follow\": true, \"names\": {\"I\": NAME}}]:
                       I = the sample (from 0, in the order above), J = its transition in the list of the file, a and b the edges in min,
-                      NAME the name given to the window (at most 40 characters, optional)
+                      NAME the name given to the window (at most 40 characters, optional). follow: apply the window to the same channel of every
+                      other sample that has no window of its own on it (the apex is searched within the window's width on each side; an apex
+                      outside the window moves it, no peak leaves it: column origin = manual|applied|shifted|no_peak); names: a name for one
+                      sample alone, by its place I
   --set sums=true     after the windows of each channel a row sum with the sum of their areas
+  --set shifts=true   instead of the table, where the FIRST window lands in the other samples, as JSON
+                      [{\"file\", \"tr\", \"a\", \"b\", \"shift\", \"origin\"}] (the bytes of the page's api/manfollow)
+  --set auto=true     instead of the table, every peak of every channel of every sample found by the engine and grouped by time, as JSON
+                      {\"windows\", \"log\", \"groups\", \"unmatched\"} (the bytes of the page's api/manauto); no windows file is needed
+  --set params=PATH   with auto=true: a JSON file {\"rt_tol\", \"half\", \"valley\", \"sn\", \"min_pts\", \"despike\", \"split\"}; a missing key keeps its default
   --out PATH  write there instead of the standard output
 
 Columns: channel (m/z of a SIM ion, q1>q3 of a transition, ion N without Q1), sample, label (the name of the window), area (counts x s), start_min,
@@ -33,11 +42,15 @@ struct Request {
     files: Vec<PathBuf>,
     windows: PathBuf,
     sums: bool,
+    shifts: bool,
+    auto: Option<PathBuf>,
     out: Option<PathBuf>,
 }
 
 fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
-    let (mut files, mut windows, mut sums, mut out) = (Vec::new(), None, false, None);
+    let (mut files, mut windows, mut sums, mut shifts, mut out) =
+        (Vec::new(), None, false, false, None);
+    let (mut auto, mut params) = (false, None);
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -49,6 +62,11 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
                     Some(("windows", w)) if !w.is_empty() => windows = Some(PathBuf::from(w)),
                     Some(("sums", b @ ("true" | "false"))) => sums = b == "true",
                     Some(("sums", b)) => return Err(format!("sums is true or false, not {b}")),
+                    Some(("shifts", b @ ("true" | "false"))) => shifts = b == "true",
+                    Some(("shifts", b)) => return Err(format!("shifts is true or false, not {b}")),
+                    Some(("auto", b @ ("true" | "false"))) => auto = b == "true",
+                    Some(("auto", b)) => return Err(format!("auto is true or false, not {b}")),
+                    Some(("params", p)) if !p.is_empty() => params = Some(PathBuf::from(p)),
                     _ => return Err(format!("unknown setting {v}")),
                 }
             }
@@ -59,11 +77,20 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
     if files.is_empty() {
         return Err("manual-table needs at least one file".into());
     }
-    let windows = windows.ok_or("manual-table needs --set windows=PATH")?;
+    if params.is_some() && !auto {
+        return Err("--set params=PATH goes with --set auto=true".into());
+    }
+    let windows = match (windows, auto) {
+        (Some(w), _) => w,
+        (None, true) => PathBuf::new(),
+        (None, false) => return Err("manual-table needs --set windows=PATH".into()),
+    };
     Ok(Some(Request {
         files,
         windows,
         sums,
+        shifts,
+        auto: auto.then(|| params.unwrap_or_default()),
         out,
     }))
 }
@@ -188,7 +215,25 @@ pub(crate) fn files_json(files: &[PathBuf], warn: &mut String) -> Result<String>
 
 fn table(c: &Request, warn: &mut String) -> Result<String> {
     let files = files_json(&c.files, warn)?;
+    if let Some(p) = &c.auto {
+        let params = if p.as_os_str().is_empty() {
+            String::new()
+        } else {
+            std::fs::read_to_string(p).map_err(io)?
+        };
+        return mzlab_core::manint::auto_text(&files, &params);
+    }
     let windows = std::fs::read_to_string(&c.windows).map_err(io)?;
+    if c.shifts {
+        let list = mzlab_core::json::parse(windows.as_bytes())?;
+        let first = list
+            .arr()
+            .first()
+            .ok_or_else(|| Error::new("err.manint.channel"))?;
+        let mut w = Out::default();
+        mzlab_core::json::write_value(&mut w, first);
+        return mzlab_core::manint::follow_text(&files, &w.0);
+    }
     mzlab_core::manint::table_text(&files, &windows, c.sums)
 }
 
