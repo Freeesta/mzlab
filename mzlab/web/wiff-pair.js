@@ -5,7 +5,7 @@
 // (names are listed, no other file is read). Lazy (carica("wiff-pair.js")), called by upload() once a batch holds a .wiff or .wiff.scan that is still alone.
 // The rule «which file is the companion of which» is the engine's (crates/mzlab-lettori/src/pair.rs); `half`, `companionName` and `pick` are its twin, tests/test_wiff_pair.py proves them equal.
 
-const WIFFPAIR = (() => {
+const WIFFRULE = (() => {
   const lc = (/** @type {string} */ s) => s.replace(/[A-Z]/g, c => c.toLowerCase());
   /** "wiff", "scan" or "" (any other name, also a .scan of another maker) */
   const half = (/** @type {string} */ n) => { const l = lc(n); return l.endsWith(".wiff.scan") ? "scan" : l.endsWith(".wiff") ? "wiff" : ""; };
@@ -19,19 +19,12 @@ const WIFFPAIR = (() => {
     for (const n of names) { if (n === want) return n; if (n.toLowerCase() === low && (loose === null || cmp(n, loose) < 0)) loose = n; }
     return loose;
   }
-  const stemOf = (/** @type {string} */ n) => n.replace(/\.wiff(\.scan)?$/i, "");
-  const mb = (/** @type {number} */ n) => (n >= 1 << 20 ? (n / 1048576).toFixed(n >= 10 << 20 ? 0 : 1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB");
-  const t = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p);
-  const g = /** @type {any} */ (typeof window !== "undefined" ? window : {});
+  return { half, companionName, pick };
+})();
 
-  // file handles of the picker and of the drop (DROP.handles, shell.js): their only use is `startIn` of the folder dialog
-  const handleOf = (/** @type {string} */ name) => (typeof DROP !== "undefined" && DROP.handles.get(lc(name))) || null;
-  // the folder granted in this page session: the next lone file looks there first
-  /** @type {{ h: any, name: string } | null} */
-  let session = null;
-  /** @type {{ el: HTMLElement | null, wanted: { file: File, want: string }[], busy: boolean }} */
-  const S = { el: null, wanted: [], busy: false };
-
+// reading the folder: names are listed, a file is read only when it is the companion
+const WIFFLOOK = (() => {
+  const { pick } = WIFFRULE;
   /** top-level files of a folder handle whose names are the wanted ones: [{want, name, file}] (a name is listed, a file is read only when it is the companion) */
   async function look(/** @type {any} */ dir, /** @type {{ file: File, want: string }[]} */ wanted) {
     const names = new Map();
@@ -50,8 +43,16 @@ const WIFFPAIR = (() => {
     for (const w of wanted) { const n = pick(w.file.name, by.keys()); if (n) found.push({ want: w.want, file: /** @type {File} */ (by.get(n)) }); else missing.push(w.want); }
     return { found, missing, folder: top.length ? (top[0].webkitRelativePath || "").split("/")[0] : "" };
   }
+  return { look, lookInput };
+})();
 
-  // ---- the notice: a status region with the sentence and the buttons
+// the notice: a status region with the sentence and the buttons
+const WIFFCARD = (() => {
+  const t = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p);
+  /** @type {{ el: HTMLElement | null, wanted: { file: File, want: string }[], busy: boolean }} */
+  const S = { el: null, wanted: [], busy: false };
+  /** @type {(key: string) => void} */
+  let onAct = () => {};
   function card() {
     if (S.el && S.el.isConnected) return S.el;
     const el = document.createElement("div"); el.id = "wiffpair"; el.className = "wiffpair"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite");
@@ -63,7 +64,7 @@ const WIFFPAIR = (() => {
     const row = document.createElement("div"); row.className = "wp-act";
     for (const b of buttons) {
       const x = document.createElement("button"); x.type = "button"; x.dataset.wp = b.key; x.textContent = b.label; x.title = b.title; if (b.go) x.className = "go"; row.appendChild(x);
-      x.onclick = () => act(b.key);
+      x.onclick = () => onAct(b.key);
     }
     el.appendChild(row); el.hidden = false;
     const first = row.querySelector("button"); if (first && buttons.length && S.busy === false && !el.contains(document.activeElement)) /** @type {HTMLElement} */ (first).focus({ preventScroll: true });
@@ -73,6 +74,21 @@ const WIFFPAIR = (() => {
   const skipBtn = () => ({ key: "skip", label: t("wiffpair.skip"), title: t("wiffpair.skip.tip") });
   const names = () => S.wanted.map(w => w.want).join(", ");
   const needText = () => t(S.wanted.length > 1 ? "wiffpair.needMany" : "wiffpair.need", { name: names() });
+  return { S, card, say, close, folderBtn, skipBtn, names, needText, bind: (/** @type {(key: string) => void} */ f) => { onAct = f; } };
+})();
+
+const WIFFPAIR = (() => {
+  const { half, companionName, pick } = WIFFRULE, { look, lookInput } = WIFFLOOK, { S, say, close, folderBtn, skipBtn, names, needText } = WIFFCARD;
+  const lc = (/** @type {string} */ s) => s.replace(/[A-Z]/g, c => c.toLowerCase());
+  const stemOf = (/** @type {string} */ n) => n.replace(/\.wiff(\.scan)?$/i, "");
+  const mb = (/** @type {number} */ n) => (n >= 1 << 20 ? (n / 1048576).toFixed(n >= 10 << 20 ? 0 : 1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB");
+  const t = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p);
+  const g = /** @type {any} */ (typeof window !== "undefined" ? window : {});
+  // file handles of the picker and of the drop (DROP.handles, shell.js): their only use is `startIn` of the folder dialog
+  const handleOf = (/** @type {string} */ name) => (typeof DROP !== "undefined" && DROP.handles.get(lc(name))) || null;
+  // the folder granted in this page session: the next lone file looks there first
+  /** @type {{ h: any, name: string } | null} */
+  let session = null;
 
   /** the files found are loaded: the lone halves wait in the loader (WIFF_WAIT) and the pair opens as soon as its second file arrives */
   function open(/** @type {{ want: string, file: File }[]} */ found, /** @type {string} */ folder) {
@@ -132,6 +148,7 @@ const WIFFPAIR = (() => {
     say(needText(), [folderBtn(), skipBtn()]);
   }
 
+  WIFFCARD.bind(act);
   return { half, companionName, pick, offer, handleOf, state: S };
 })();
 if (typeof module !== "undefined") module.exports = WIFFPAIR;
