@@ -1,4 +1,4 @@
-"""axe-core on the charts of the Dati view (panels, table of the data): no serious or critical violation. axe comes from the python package
+"""axe-core on the charts of the Data view (panels, table of the data): no serious or critical violation. axe comes from the python package
 axe-playwright-python (pip install axe-playwright-python) or from $AXE_JS; without either the test says SKIP and passes."""
 # covers: mzlab/web/xic-spettro.js, mzlab/web/xic-lente.js, mzlab/web/etichette-picchi.js, mzlab/web/legende.js, mzlab/web/tdati.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -20,7 +20,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg); pg.wait_for_timeout(1500)
+        pg.click("text=Load data"); ready(pg); pg.wait_for_timeout(1500)
         pg.add_script_tag(path=AXE)
         def panels():
             v = pg.evaluate(RUN % "'#dpanels'"); assert not v, v
@@ -46,7 +46,7 @@ try:
             pg.keyboard.press("0"); pg.wait_for_timeout(500); assert pg.evaluate(f"{CH}.zoom") is None
         step("WCAG 2.5.7: zoom and pan without dragging (+ - [ ] 0 on the focused chart)", keys)
         def touch():
-            ctx = r.b.new_context(viewport={"width": 1024, "height": 1366}, has_touch=True, is_mobile=True, locale="it-IT")
+            ctx = r.b.new_context(viewport={"width": 1024, "height": 1366}, has_touch=True, is_mobile=True)
             q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
             q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_timeout(1500)
             try:

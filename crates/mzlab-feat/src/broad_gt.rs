@@ -1,6 +1,7 @@
 //! Common gradient mode G(t) of a file for the broad-band pass: the gradient drift shared by many ion traces reads as a wide band on each of them.
 //! `TraceBank` keeps a uniform sample of the persistent traces, `CommonMode` is their pointwise median per block, and `fit_background` removes
-//! [1, t, t^2, G(t)] from one trace by asymmetric least squares. Used by `broad::detect_broad` and by the collectors of `trace` and `untargeted`.
+//! [1, t, t^2, G(t)] from one trace by asymmetric least squares; `decimate` gives the blocks of points it and the broad pass read. Used by `broad::detect_broad` and
+//! by the collectors of `trace` and `untargeted`.
 //! Sums run in a fixed order and no transcendental is used: native and WASM give the same bits.
 
 use crate::sortc::SortC;
@@ -9,7 +10,6 @@ use std::sync::Arc;
 
 use mzlab_core::error::Result;
 
-use crate::broad::decimate;
 use crate::trace_base::{filled, reserve};
 
 /// A trace is persistent when it has at least this many scans or covers this fraction of the run.
@@ -219,6 +219,38 @@ pub(crate) fn median(v: &mut [f64]) -> f64 {
     } else {
         (v[m - 1] + v[m]) / 2.0
     }
+}
+
+/// Blocks of `k` consecutive points: mean RT, mean intensity and m/z weighted by intensity (plain mean of the block when all weights are 0).
+/// The last block may be shorter. Returns `(rt, y, mz)`.
+pub fn decimate(
+    rt: &[f64],
+    mz: &[f64],
+    y: &[f64],
+    k: usize,
+) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>)> {
+    let k = k.max(1);
+    let n = rt.len().min(mz.len()).min(y.len());
+    let m = n.div_ceil(k);
+    let (mut r, mut v, mut z) = (Vec::new(), Vec::new(), Vec::new());
+    reserve(&mut r, m)?;
+    reserve(&mut v, m)?;
+    reserve(&mut z, m)?;
+    for b in 0..m {
+        let (a, e) = (b * k, ((b + 1) * k).min(n));
+        let c = (e - a) as f64;
+        let (mut sr, mut sy, mut sw, mut sm) = (0.0, 0.0, 0.0, 0.0);
+        for ((&t, &v), &m) in rt[a..e].iter().zip(&y[a..e]).zip(&mz[a..e]) {
+            sr += t;
+            sy += v;
+            sw += v * m;
+            sm += m;
+        }
+        r.push(sr / c);
+        v.push(sy / c);
+        z.push(if sy > 0.0 { sw / sy } else { sm / c });
+    }
+    Ok((r, v, z))
 }
 
 /// Basis row [1, t, t^2, g] of a sample, `t` in [-1, 1] over the trace and `g` scaled to unit mean.

@@ -56,7 +56,7 @@ const TOUCH = (() => {
       mouse("mousemove", tgt(S, e.clientX, e.clientY), e.clientX, e.clientY, { buttons: 0 });                    // the hover information under the finger
       G = { S, id: e.pointerId, mode: "wait", x0: e.clientX, y0: e.clientY };
       if ((e.buttons & 2) === 2) { G.mode = "done"; mouse("contextmenu", tgt(S, e.clientX, e.clientY), e.clientX, e.clientY, { button: 2, buttons: 2 }); return; }      // the barrel button of a pen
-      if (!pen) G.timer = setTimeout(() => { if (G && G.mode === "wait") { G.mode = "long"; navigator.vibrate && navigator.vibrate(15); mouse("contextmenu", tgt(S, G.x0, G.y0), G.x0, G.y0, { button: 2, buttons: 2 }); } }, LONG);   // long press = right click
+      if (!pen) G.timer = setTimeout(() => { if (G && G.mode === "wait") { G.mode = "long"; win(S.el).__tpLong = Date.now(); mouse("contextmenu", tgt(S, G.x0, G.y0), G.x0, G.y0, { button: 2, buttons: 2 }); } }, LONG);   // long press = right click
     }
     function move(e) {
       const q = pts.get(e.pointerId); if (!q) return;

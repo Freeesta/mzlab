@@ -1,4 +1,4 @@
-"""Panel interaction: active panel + arrows = scan by scan, zoom feedback (rectangle, bar, 'Vista intera'),
+"""Panel interaction: active panel + arrows = scan by scan, zoom feedback (rectangle, bar, 'Whole view'),
 PNG/CSV names and PNG metadata, right-click menu above panels after many clicks."""
 # covers: mzlab/web/scroll.js, mzlab/web/xlsx.js
 import sys, os, struct, zlib; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -15,7 +15,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz(f) for f in FILES])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         rt = pg.evaluate("()=>{const s=E.panels[0]._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});return s.x[m]}")
         def arrows():
             c = pt(pg, 0, rt); pg.mouse.click(c["px"], c["py"]); pg.wait_for_timeout(1500)
@@ -47,7 +47,7 @@ try:
             pg.screenshot(path=SH + "81_zoomed.png")
             pg.locator(f".pnl.spec [data-a=fit]").first.click(); pg.wait_for_timeout(600)
             assert pg.evaluate(f"E.panels[{i}].zoom===null")
-        step("spectrum zoom: rectangle while dragging, bar, Vista intera", zoom)
+        step("spectrum zoom: rectangle while dragging, bar, Whole view", zoom)
         def names():
             got = []
             for i in range(pg.evaluate("E.panels.length")):
@@ -70,7 +70,7 @@ try:
         step("PNG name + valid tEXt metadata", png)
         def xlsn():
             with pg.expect_download() as d: dlmenu(pg, ".pnl.spec", "xlsx")
-            print("xlsx file", d.value.suggested_filename); assert d.value.suggested_filename.startswith("spettro")
+            print("xlsx file", d.value.suggested_filename); assert d.value.suggested_filename.startswith("spectrum")
         step("Excel name", xlsn)
         def ctx():
             for _ in range(60):

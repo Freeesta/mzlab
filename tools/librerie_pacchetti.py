@@ -49,10 +49,10 @@ KINDS = ("experimental", "in_silico")
 TECHS = ("lc_msms", "gc_ei", "msn")
 MERGED_DIR = ROOT / "tests" / "golden" / "librerie" / "massbank_unito"
 
-ATTRIBUTION = ("Spettri di MassBank Europe (https://massbank.eu), release " + VERSION + " (doi:" + DOI + "): ogni record conserva autori, accessione e licenza "
-               "(CC0, CC BY o CC BY-SA). Il pacchetto nel suo insieme si usa secondo CC BY-SA 4.0.")
-MERGED_ATTRIBUTION = ("Spettri degli standard misurati da Cristaudo F, Fabbri D, Calza P, Università di Torino (formato MassBank), licenza CC BY 4.0: "
-                     "citare gli autori e l'accessione del record.")
+ATTRIBUTION = ("Spectra from MassBank Europe (https://massbank.eu), release " + VERSION + " (doi:" + DOI + "): each record keeps its authors, accession and licence "
+               "(CC0, CC BY or CC BY-SA). The package as a whole is used under CC BY-SA 4.0.")
+MERGED_ATTRIBUTION = ("Spectra of the standards measured by Cristaudo F, Fabbri D, Calza P, University of Turin (MassBank format), licence CC BY 4.0: "
+                     "cite the authors and the accession of the record.")
 
 
 def sha256_file(p: Path) -> str:
@@ -266,13 +266,13 @@ def run(out_dir: Path, zip_path: Path | None, builder: list[str] | None, version
             mz = work / f"massbank-{pol}.mzlib"
             build_mzlib(builder, work / f"{pol}.txt", mz)
             libs.append(entry(f"massbank-{pol}", f"MassBank Europe · {label} · MS2", sign, version, "MassBank Europe", "https://massbank.eu",
-                              "Per record: CC0, CC BY o CC BY-SA 4.0; il pacchetto nel suo insieme: CC BY-SA 4.0", s["licenze"], s["contributori"], mz, out_dir, ATTRIBUTION))
+                              "Per record: CC0, CC BY or CC BY-SA 4.0; the package as a whole: CC BY-SA 4.0", s["licenze"], s["contributori"], mz, out_dir, ATTRIBUTION))
         n_merged, lic_merged = merged_records(work / "unito.txt")
         if n_merged:
             print(f"UniTO standards: {n_merged} records")
             mz = work / "unito.mzlib"
             build_mzlib(builder, work / "unito.txt", mz)
-            libs.append(entry("unito-standard", "Standard dell'Università di Torino (esempio HR)", 0, "1", "Università di Torino", "https://github.com/Freeesta/mzlab",
+            libs.append(entry("unito-standard", "University of Turin standards (HR example)", 0, "1", "University of Turin", "https://github.com/Freeesta/mzlab",
                               "CC BY 4.0", lic_merged, {"UniTO": n_merged}, mz, out_dir, MERGED_ATTRIBUTION))
         sources = load_sources()
         bad = check_sources(sources)
@@ -294,7 +294,7 @@ def main() -> None:
     a = ap.parse_args()
     if a.check_catalog:
         bad = check_sources(load_sources())
-        print("\n".join(bad) if bad else "catalogo ok")
+        print("\n".join(bad) if bad else "catalog ok")
         sys.exit(1 if bad else 0)
     if not a.out:
         ap.error("--out is required")

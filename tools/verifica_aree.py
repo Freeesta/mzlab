@@ -10,7 +10,7 @@ E2E = ROOT / "tests_e2e"
 # --cambiati: which e2e cover which files. Each browser test declares its own areas in a header line `# covers: <prefix>, <prefix>` of
 # tests_e2e/e2e*.py (a prefix is a file, a folder or a name stem); a new test edits only its own file. A changed file that matches no
 # prefix (the core: explore.js, index.html, app.py, ...) means "all of them". Documents and the NO_E2E prefixes: no e2e.
-NO_E2E = ("tools/build_site.py", "tools/controlla_i18n.py", "tools/genera_", "tools/metriche", "tools/prova_hr.py", "tests/")
+NO_E2E = ("tools/build_site.py", "tools/controlla_i18n.py", "tools/genera_", "tools/metriche", "tools/prova_hr.py", "tests/", "docs/pr-img/")
 COVERS = re.compile(r"(?:^|\s)# covers: *(.+?) *$", re.M)
 
 
@@ -33,7 +33,7 @@ def changed_tests(files: set[str] | None = None) -> tuple[set[str] | None, str]:
     if files is None:
         files = {f for f in git("diff", "--name-only", "origin/main...HEAD") + [l[3:] for l in git("status", "--porcelain")] if f.strip()}
     if not files:
-        return {"-"}, "nessun file cambiato rispetto a origin/main: nessun e2e"
+        return {"-"}, "no file changed against origin/main: no e2e"
     tests: set[str] = set()
     table = covers()
     for f in sorted(files):
@@ -42,14 +42,14 @@ def changed_tests(files: set[str] | None = None) -> tuple[set[str] | None, str]:
         if f.startswith("tests_e2e/"):
             n = Path(f).stem
             if n in ("lib", "lib_hr", "synth"):
-                return None, f"{f} è un aiuto comune: tutti gli e2e"
+                return None, f"{f} is a shared helper: all e2e"
             if n.startswith("e2e"):
                 tests.add(n)
             continue
         hit = {n for pre, n in table if f.startswith(pre)}
         if not hit and not f.startswith(NO_E2E):
-            return None, f"{f} è del nucleo: tutti gli e2e"
+            return None, f"{f} is core: all e2e"
         tests |= hit
     if not tests:
-        return {"-"}, "solo documenti o file senza e2e: nessun e2e"
+        return {"-"}, "only docs or files without e2e: no e2e"
     return tests | ({"e2e3"} if any(f.startswith("mzlab/") for f in files) else set()), "e2e: " + ", ".join(sorted(tests))

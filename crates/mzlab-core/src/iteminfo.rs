@@ -432,7 +432,7 @@ fn count_keys(ms2: &[&Scan]) -> Vec<KeyCount> {
     cnt
 }
 
-fn ms2_exps(ms2: &[&Scan]) -> Vec<(Option<f64>, Option<f64>, usize)> {
+pub(crate) fn ms2_exps(ms2: &[&Scan]) -> Vec<(Option<f64>, Option<f64>, usize)> {
     let mut cnt = count_keys(ms2);
     let key = |k: &(Option<f64>, Option<f64>)| (k.0.unwrap_or(0.0), k.1.unwrap_or(0.0));
     crate::sortc::slice_by(&mut cnt, |a, b| {
@@ -638,16 +638,7 @@ pub fn item_info<R: ReadAt>(
         .raw(",\"spectrum_mode\":")
         .str(mode)
         .raw(",\"ms2_exps\":[");
-    for (i, (p, ce, n)) in ms2_exps(&ms2).iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"prec\":")
-            .opt(*p)
-            .raw(",\"ce\":")
-            .opt(*ce)
-            .raw(",\"n\":")
-            .int(*n as i64)
-            .raw("}");
-    }
+    crate::cespread::write_ms2_exps(&mut o, &ms2);
     o.raw("],\"chromatograms\":")
         .int(facts.n_chromatograms)
         .raw(",\"kind\":")

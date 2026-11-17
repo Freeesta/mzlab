@@ -1,4 +1,4 @@
-//! `cargo run --release -p mzlab-lib --example studio_spettri -- <scenario> <n_lib> <n_query> <seed> [base|null|idf|subf]`: one JSON line per arm of
+//! `cargo run --release -p mzlab-lib --example studio_spettri -- <scenario> <n_lib> <n_query> <seed> [base|null|idf|subf|shift]`: one JSON line per arm of
 //! the spectral study (`docs/agenti/studio-spettri.md`) with its metrics, the time of the arm set divided by its arms (`ms`) and `det` (the
 //! scenario and the arms run twice give the same library bytes, queries and JSON). `tools/studio_spettri.py` runs it over 3 seeds.
 

@@ -25,7 +25,7 @@ fn scans_of(mzml: Vec<u8>, name: &str) -> Vec<Scan> {
     let p = prepare(&mut src, mzml.len() as u64, name).unwrap();
     let (idx, _) = build_mzml_to_vec(&p.table, &mzml, 256 << 20).unwrap();
     let len = idx.len() as u64;
-    Index::open(idx, len).unwrap().scans
+    Index::open(idx, len).unwrap().scans.to_vec()
 }
 
 #[test]

@@ -53,9 +53,9 @@ const CALCQUIHTML = (() => {
   const TIP = { liste: "cq.g.liste.tip", perdite: "cq.g.perdite.tip", addotti: "al.t.adducts.tip", diff: "cq.g.diff.tip" };
   /** The groups, each a `details` (open while it has a close match, or the adduct table of a formula).
    * flat (a tab of the Adducts & losses page, which already names the group): the body of each group without its fold, the catalogue of differences still folded.
-   * @param {CqGroup[]} gs @param {Bag} o @param {{ open: Set<string>, all: Set<string>, more?: boolean }} view @param {{ formula: boolean, flat?: boolean, none?: boolean }} ctx */
+   * @param {CqGroup[]} gs @param {Bag} o @param {{ open: Set<string>, all: Set<string>, more?: boolean }} view @param {{ formula: boolean, flat?: boolean }} ctx */
   function groupsHtml(gs, o, view, ctx) {
-    if (ctx.flat && !gs.length && !ctx.none) return "";
+    if (ctx.flat && !gs.length) return "";
     if (!gs.length) return `<p class="muted cq-none">${T("cq.none", { tol: o.tol + " " + (o.unit === "ppm" ? "ppm" : "Da") })}</p>`;
     return gs.map(g => {
       if (g.id === "diff" && /** @type {Bag} */ (g).catalogue) return AH.diffsHtml(g.tab, { diffs: view.open.has("catdiff"), delta: "" });

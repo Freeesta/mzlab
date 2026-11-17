@@ -28,9 +28,9 @@ APP_NAME = re.search(r'APP_NAME\s*=\s*"([^"]+)"', (ROOT / "mzlab" / "web" / "app
 
 # Address of the published site (GitHub Pages): link previews (WhatsApp, Telegram, Slack...) need ABSOLUTE addresses for the page and the picture
 SITE_URL = "https://freeesta.github.io/mzlab/"
-TAGLINE = "Analisi MS"         # Italian tagline of the link previews (the previews are Italian)
-TITLE_TAG = "MS Analysis"      # tagline of the static <title>: the English one, the default language; same as index.html and as the catalog key app.title in English
-DESCRIPTION = "Esplora cromatogrammi, spettri, XIC e MRM dei tuoi file LC-MS/MS nel browser. Nessuna installazione: i dati restano sul tuo computer."
+TAGLINE = "MS Analysis"        # tagline of the link previews
+TITLE_TAG = "MS Analysis"      # tagline of the static <title>; same as index.html and as the catalog key app.title in English
+DESCRIPTION = "Explore chromatograms, spectra, XIC and MRM of your LC-MS/MS files in the browser. Nothing to install: your data stay on your computer."
 
 
 def preview_tags() -> str:
@@ -38,16 +38,20 @@ def preview_tags() -> str:
     a = lambda t: t.replace("&", "&amp;").replace('"', "&quot;")
     title = f"{APP_NAME} · {TAGLINE}"
     img = SITE_URL + "static/anteprima.png?v=3"          # ?v=N: change N with a new picture, the chat apps keep the old one by its address
-    meta = [("name", "description", DESCRIPTION), ("property", "og:type", "website"), ("property", "og:site_name", APP_NAME), ("property", "og:locale", "it_IT"), ("property", "og:url", SITE_URL),
+    meta = [("name", "description", DESCRIPTION), ("property", "og:type", "website"), ("property", "og:site_name", APP_NAME), ("property", "og:locale", "en_US"), ("property", "og:url", SITE_URL),
             ("property", "og:title", title), ("property", "og:description", DESCRIPTION), ("property", "og:image", img), ("property", "og:image:type", "image/png"),
-            ("property", "og:image:width", "1200"), ("property", "og:image:height", "630"), ("property", "og:image:alt", f"Logo e nome di {APP_NAME}"),
+            ("property", "og:image:width", "1200"), ("property", "og:image:height", "630"), ("property", "og:image:alt", f"Logo and name of {APP_NAME}"),
             ("name", "twitter:card", "summary_large_image"), ("name", "twitter:title", title), ("name", "twitter:description", DESCRIPTION), ("name", "twitter:image", img)]
     return "\n".join(f'<meta {k}="{n}" content="{a(v)}">' for k, n, v in meta) + f'\n<link rel="canonical" href="{SITE_URL}">'
 
 
+# The installed web app is «<name> Web» (its icon carries a «web» badge, tools/generate_icons.py) so it is told apart from the desktop app «<name>»;
+# the tab title stays «<Page> · <name>». An already installed PWA may keep the old name until it is reinstalled.
+WEB_APP_NAME = f"{APP_NAME} Web"
+
 # Web app manifest (PWA). Paths are relative to the manifest, which sits in the site root, so it works under /QqQ-lab/.
 MANIFEST = {
-    "name": APP_NAME, "short_name": APP_NAME, "lang": "it", "dir": "ltr",
+    "name": WEB_APP_NAME, "short_name": WEB_APP_NAME, "lang": "en", "dir": "ltr",
     "description": "Esplora i dati LC-MS/MS del triplo quadrupolo (Full Scan, Product ion, MRM) direttamente nel browser.",
     "start_url": "./", "scope": "./", "id": "./", "display": "standalone",
     "background_color": "#ffffff", "theme_color": "#ffffff", "categories": ["education", "science"],
@@ -153,7 +157,7 @@ def bundle_lang(static: Path) -> None:
     """lang/<lang>.js of the site is the catalog in two files instead of the loader that writes one <script> per area: lang/<lang>.js holds
     the keys of the first view (render-blocking, before the first paint), lang/<lang>-resto.js the rest, loaded by carica.js before any other
     script (I18N.awaitRest / I18N.done in i18n.js). The area folders stay (tools and tests read them)."""
-    for lang in ("it", "en"):
+    for lang in ("en",):
         loader = (static / "lang" / f"{lang}.js").read_text(encoding="utf-8")
         names = re.findall(r'"([^"]+)"', re.search(r"document\.write\(\[([^\]]*)\]", loader).group(1))
         cat: dict = {}
@@ -194,7 +198,8 @@ def seal_sw(out: Path) -> None:
     """Names the service worker's cache after the site as it will be published: writes `static/sw-manifest.json` ({app, files: path -> SHA-256,
     nofill: the big ones, fetched only when used} of every file the worker may cache) and puts `app`, a hash of those paths and hashes, into sw.js. Runs again after the parts (.wasm,
     packages) are in place (`--build-json`), so a change in any of them is a new cache and a cached file is always the right version."""
-    skip = ("sw.js", "static/manifest.json", "static/build.json", "static/sw-manifest.json")
+    # .nojekyll: GitHub Pages answers 404 for it, so a manifest listing it left the background fill failing for ever (no `.fill-done`, old caches kept)
+    skip = ("sw.js", ".nojekyll", "static/manifest.json", "static/build.json", "static/sw-manifest.json")
     found = {p: h for p, h in file_hashes(out).items() if p not in skip and not p.startswith(("static/vendor/", "static/librerie/"))}
     files = {p: h["sha256"] for p, h in found.items()}
     nofill = sorted(p for p, h in found.items() if p.startswith("static/esempi/") or h["size"] > 6_000_000)   # cached when used, not fetched ahead
@@ -280,13 +285,15 @@ def main() -> None:
     ap.add_argument("--pyodide-dir", type=Path, help="accepted, no effect (the site carries no Python)")
     ap.add_argument("--no-pyodide", action="store_true", help="accepted, no effect (the site carries no Python)")
     ap.add_argument("--out", type=Path, default=ROOT / "site")
-    ap.add_argument("--build-json", action="store_true", help="only write static/build.json and seal the service worker again, once the .wasm files are in the site")
+    ap.add_argument("--build-json", action="store_true", help="only write static/build.json, seal the service worker and write the manifest again, once the .wasm files are in the site")
     a = ap.parse_args()
     out = a.out
     if a.build_json:
         ver = json.loads((out / "static" / "build.json").read_text(encoding="utf-8"))["version"]
         write_build_json(out, ver)
         seal_sw(out)
+        # LAST: the manifest hashes build.json and the .wasm files that were not there when the first one was written
+        write_manifest(out, json.loads((out / "static" / "build.json").read_text(encoding="utf-8"))["commit"])
         return
     lab = lab_expiry()
     if out.exists():
@@ -308,13 +315,13 @@ def main() -> None:
     assert pre in html
     html = html.replace(pre, pre + '<link rel="preload" as="script" href="static/browser.js">', 1)
     # the name in the title is written here, not by appname.js: the apps that build link previews do not run JavaScript
-    html = re.sub(r"<title>\{APP\}[^<]*</title>", lambda m: f"<title>{APP_NAME} • {TITLE_TAG}</title>", html, count=1)
+    html = re.sub(r"<title>[^<]*\{APP\}[^<]*</title>", lambda m: f"<title>{TITLE_TAG} · {APP_NAME}</title>", html, count=1)
     if lab:
         html = lab_variant(html, out, static, lab)
     else:
         html = html.replace("</head>", preview_tags() + "\n</head>", 1)
     # installable app (PWA): manifest at the site root + theme colour; the local program does not use it
-    html = html.replace("</head>", '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#ffffff"></head>', 1)
+    html = html.replace("</head>", '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#ffffff"><meta name="apple-mobile-web-app-title" content="' + WEB_APP_NAME + '"></head>', 1)
     (out / "manifest.webmanifest").write_text(json.dumps(MANIFEST, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "index.html").write_text(html, encoding="utf-8")
     (static / "index.html").unlink()

@@ -451,7 +451,7 @@ pub fn table_row_traces(
     .map_err(js_err)
 }
 
-/// `campioni/2`: `op` is `proponi`, `valida`, `da_legacy` or `per_tp`; JSON in, JSON out.
+/// `campioni/2`: `op` is `proponi`, `valida`, `da_legacy`, `per_tp`, `canonico` or `digest` (the ones mzFinder calls); JSON in, JSON out.
 #[wasm_bindgen]
 pub fn samples(op: &str, input: &str) -> std::result::Result<String, JsValue> {
     core::samples_route(op, input).map_err(js_err)

@@ -1,5 +1,5 @@
 //! wasm-bindgen bridge of the routes that the engine `.wasm` (`mzlab-wasm`) does not carry: the statistics of the series (`stat_post`), `molecules/1`,
-//! `campioni/2` and `/3` (the Data view), the manual integrations (`api/manint`, `api/manvalley`) and the Flow's command, line and scheduler. A `.wasm` of its own, fetched by the worker of the engine on the
+//! `campioni/2` and `/3` (the Data view), the manual integrations (`api/manint`, `api/manvalley`) and the Flow's command, line, scheduler and the recipe and lineage of a job. A `.wasm` of its own, fetched by the worker of the engine on the
 //! first request of one of them (`load("rotte")` of `mzlab/web/rust-msngrafo.js`, called by `rust-worker.js`). Errors are JSON `{"error_key", "params"}` strings, as in the engine.
 #![forbid(unsafe_code)]
 use wasm_bindgen::prelude::*;
@@ -68,12 +68,52 @@ pub fn flow_sched(op: &str, body: &str) -> Result<String, JsValue> {
     mzlab_core::flow::sched_route(op, body).map_err(|e| error_json(&e))
 }
 
+/// The `step/1` array of the page as the registry of the planner.
+fn registry(text: &str) -> Result<Vec<mzlab_core::step::Step>, JsValue> {
+    mzlab_core::json::parse(text.as_bytes())
+        .and_then(|v| mzlab_core::step::registry_from_value(&v))
+        .map_err(|e| error_json(&e))
+}
+
+/// The recipe text the browser pool runs `instance` with (`mzlab_core::flow::job_layers_text`): `plan` is the `mzflow/2` text, `registry` the `step/1` array.
+#[wasm_bindgen]
+pub fn flow_job_recipe(
+    plan: &str,
+    registry_text: &str,
+    instance: &str,
+    filled: bool,
+) -> Result<String, JsValue> {
+    mzlab_core::flow::job_layers_text(plan.as_bytes(), &registry(registry_text)?, instance, filled)
+        .map_err(|e| error_json(&e))
+}
+
+/// The lineage of `instance` the meta of its job reads (`mzlab_core::flow::job_lineage_text`), handed to `flow_job_meta` of the feature `.wasm`.
+#[wasm_bindgen]
+pub fn flow_job_lineage(
+    plan: &str,
+    registry_text: &str,
+    instance: &str,
+) -> Result<String, JsValue> {
+    mzlab_core::flow::job_lineage_text(plan.as_bytes(), &registry(registry_text)?, instance)
+        .map_err(|e| error_json(&e))
+}
+
 /// `api/manint`: the table of the integrations drawn by hand (`manint::table_text`): `files` = `[{"name", "transitions"}]` (the transitions as
 /// `api/mrm` gives them), `windows` = `[{"file", "tr", "a", "b", "baseline"?, "line"?}]`, `sums` = a sum row per channel. "E" + JSON = the user's error.
 #[wasm_bindgen]
 pub fn manual_table(files: &str, windows: &str, sums: bool) -> String {
     match mzlab_core::manint::table_text(files, windows, sums) {
         Ok(csv) => csv,
+        Err(e) => format!("E{}", e.to_json()),
+    }
+}
+
+/// `api/manfollow`: where one window of `manual_table` lands in the other samples (`manint::follow_text`): `[{"file","tr","a","b","shift","origin"}]`;
+/// "E" + JSON = the user's error.
+#[wasm_bindgen]
+pub fn manual_follow(files: &str, window: &str) -> String {
+    match mzlab_core::manint::follow_text(files, window) {
+        Ok(json) => json,
         Err(e) => format!("E{}", e.to_json()),
     }
 }

@@ -1,25 +1,17 @@
 // @ts-strict
 // Draw: Ketcher's «New» (`clear-canvas`) and its keys (Ctrl/⌘+Delete, Ctrl/⌘+Backspace) ask before a non-empty drawing is cleared; an empty one is cleared at once.
-// The question is `confirmBox` of memoria-avviso.js (alertdialog, Tab inside, Esc and a click outside cancel); the clear itself stays Ketcher's, so undo is unchanged.
-import { confirmBox } from "./memoria-avviso.js";
+// The question is `confirmDiscard` of disegno-pulito.js (alertdialog, Tab inside, Esc and a click outside cancel; «not saved» when the drawing has unsaved changes, else «Clear the drawing?»); the clear itself stays Ketcher's, so undo is unchanged.
+import { confirmDiscard } from "./disegno-pulito.js";
 
 const W = /** @type {any} */ (window);
 const t = (/** @type {string} */ k) => (W.I18N ? W.I18N.t(k) : k);
 const BTN = '[data-testid="clear-canvas"]';
-/** @type {Promise<boolean> | null} */ let pending = null;
 
 /** @param {any} K @returns {boolean} true when nothing is drawn (structures, text, arrows, shapes, images) */
 function blank(K) { try { return K.editor.struct().isBlank(); } catch (_) { return true; } }
 
-/** @param {any} K @returns {Promise<boolean>} true = clear (also when the drawing is empty) */
-function askNew(K) {
-  if (blank(K)) return Promise.resolve(true);
-  if (pending) return pending.then(() => false);
-  const fr = /** @type {HTMLIFrameElement | null} */ (document.getElementById("kframe")), d = fr && fr.contentDocument;
-  if (d && d.fullscreenElement) d.exitFullscreen().catch(() => {});        // the question lives on the page, outside Ketcher's full screen
-  pending = confirmBox({ id: "draw-new", title: t("draw.new.ask"), yes: t("draw.new.yes"), no: t("draw.new.no") });
-  return pending.finally(() => { pending = null; });
-}
+/** @param {any} K @returns {Promise<boolean>} true = clear (also when the drawing is empty); the question is `confirmDiscard` of disegno-pulito.js */
+function askNew(K) { return blank(K) ? Promise.resolve(true) : confirmDiscard("new"); }
 
 /** @param {Document} d the document of Ketcher's iframe @param {any} K */
 export function mountNew(d, K) {

@@ -81,5 +81,16 @@ function tunitSet(u) {
 // "30 min", "0.5 h", "2 d" for a time in minutes
 const tunitLabel = u => typeof I18N !== "undefined" ? { s: I18N.t("unit.t.s"), min: I18N.t("unit.t.min"), h: I18N.t("unit.t.h"), d: I18N.t("unit.t.d") }[u] : u;
 const fmtTime = min => min == null ? "" : timeShown(min, tunitGet()) + " " + tunitLabel(tunitGet());
+// the time point of a file as a compact tag («t0», «30s», «90min», «3h», «2d»): the largest unit that gives a whole number, independent of the unit chosen for the table
+function timeTag(min) {
+  if (min == null || !(min >= 0)) return "";
+  if (min === 0) return I18N.t("files.time.zero");
+  const num = v => String(+v.toFixed(2));
+  for (const u of ["d", "h", "min"]) if (min >= TIME_UNITS[u] && Number.isInteger(+(min / TIME_UNITS[u]).toFixed(6))) return num(min / TIME_UNITS[u]) + tunitLabel(u);
+  return min < 1 && Number.isInteger(+(min * 60).toFixed(6)) ? num(min * 60) + tunitLabel("s") : num(min) + tunitLabel("min");
+}
 
-if (typeof module !== "undefined") module.exports = { TIME_UNITS, naturalCmp, concMgL, fileComparator, orderFiles, hrGroup, fileBase, timeShown, timeStored, parseDecimal, tunitGet, tunitSet, tunitLabel, fmtTime };
+// the tag beside the name of a file in the list, for a file whose type has no time text of its own (SIM, MRM, MS2...): only when the name or the table gave a time
+const timeBadge = min => { const tag = timeTag(min), ttl = EH(I18N.t("files.time.title", { t: tag })); return tag ? `<abbr class="ftag" title="${ttl}" aria-label="${ttl}">${EH(tag)}</abbr>` : ""; };
+
+if (typeof module !== "undefined") module.exports = { TIME_UNITS, naturalCmp, concMgL, fileComparator, orderFiles, hrGroup, fileBase, timeShown, timeStored, parseDecimal, tunitGet, tunitSet, tunitLabel, fmtTime, timeTag, timeBadge };

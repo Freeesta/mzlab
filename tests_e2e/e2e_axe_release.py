@@ -1,4 +1,4 @@
-"""axe-core on the areas not covered by e2e_axe_grafici / e2e_a11y_dati: the HR bench, Disegno (Ketcher's own iframe excluded) and the guided tour.
+"""axe-core on the areas not covered by e2e_axe_grafici / e2e_a11y_dati: the HR bench, Drawing (Ketcher's own iframe excluded) and the guided tour.
 Same rule as e2e_axe_grafici: no serious or critical violation (wcag2a/2aa/21a/21aa/22aa). axe comes from axe-playwright-python or $AXE_JS; without either: SKIP."""
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
@@ -52,11 +52,11 @@ try:
             pg.click("#nav [data-v=draw]")
             wait_for_js(pg, "!!(window.TPDraw && TPDraw.ready())", 60000)
             wait_for_js(pg, "!!document.querySelector('#kframe')?.contentDocument?.querySelector('#tp-bar')", 60000); axe(pg, "'body'", ["#kframe"])
-        step("axe: Disegno, outside the Ketcher iframe", draw)
+        step("axe: Drawing, outside the Ketcher iframe", draw)
         def flow():
             pg.click("#nav [data-v=flow]"); wait_for_js(pg, "!!document.querySelector('#flx-root .flx-bar')", 60000); axe_minor(pg, "flow")
         step("axe moderate/minor: Flow, light and dark", flow)
-        step("axe moderate/minor: Disegno outside the Ketcher iframe, light and dark", lambda: axe_minor(pg, "draw", ["#kframe"]))
+        step("axe moderate/minor: Drawing outside the Ketcher iframe, light and dark", lambda: axe_minor(pg, "draw", ["#kframe"]))
         def tabui():
             pg.click("#nav [data-v=tpmine]"); wait_for_js(pg, "!!document.querySelector('#tp-name')", 60000); axe_minor(pg, "tpmine")
         step("axe moderate/minor: Tabui, light and dark", tabui)
@@ -66,7 +66,7 @@ try:
                 q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#pick", state="attached")
                 q.evaluate("try{localStorage.removeItem('mzlab.tour.lr')}catch(_){}")
                 stage(q, [TMP])
-                q.click("text=Carica dati"); wait_for_js(q, "typeof E !== 'undefined' && E.files.length >= 1")
+                q.click("text=Load data"); wait_for_js(q, "typeof E !== 'undefined' && E.files.length >= 1")
                 q.wait_for_selector("#tour-invito", timeout=5000); axe(q, "'#tour-invito'")
                 q.click("#tour-inv-no"); q.click("#np-set"); q.wait_for_selector("#uipset"); q.click("#uip-tour")
                 q.wait_for_selector("#tour-dialog", timeout=3000)
@@ -89,7 +89,7 @@ try:
             drop = """(sel) => { const i = document.querySelector('#__tmpdrop'), t = document.querySelector(sel), dt = new DataTransfer(); for (const f of i.files) dt.items.add(f);
               for (const ty of ['dragenter', 'dragover', 'drop']) t.dispatchEvent(new DragEvent(ty, {bubbles: true, cancelable: true, dataTransfer: dt})); i.remove(); }"""
             for w in (1440, 820):
-                q = r.b.new_page(viewport={"width": w, "height": 900}, reduced_motion="reduce", locale="it-IT")
+                q = r.b.new_page(viewport={"width": w, "height": 900}, reduced_motion="reduce")
                 q.add_init_script(init)
                 try:
                     q.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); q.wait_for_selector("#drop", state="attached"); wait_for_js(q, "!document.querySelector('#v-data').hidden && document.querySelector('#sb-toggle').innerText.trim().length > 0 && !!document.querySelector('#v-workspace').dataset.work")   # the work area has taken its state
@@ -107,7 +107,7 @@ try:
                     q.wait_for_function("document.querySelectorAll('#flist tbody tr').length >= 5", timeout=90000); ready(q)
                     if w < 900:
                         q.click("#sb-toggle"); wait_for_js(q, "document.querySelector('#v-data').classList.contains('sb-open')")
-                    q.click("#samptab"); q.wait_for_function("document.querySelector('#v-workspace').dataset.work === 'table'"); wait_for_js(q, "document.querySelector('#v-workspace').dataset.work === 'table'")
+                    q.click("#samptab"); q.wait_for_function("!document.querySelector('#wtable').hidden && !document.querySelector('#wdata').hidden"); wait_for_js(q, "!document.querySelector('#wtable').hidden")
                     axe(q)
                     q.locator("#flist .ldtab button[data-open]").nth(1).click(); q.wait_for_selector(".pnl", timeout=60000); ready(q)
                     axe(q)

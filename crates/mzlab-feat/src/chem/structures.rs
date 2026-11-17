@@ -1,6 +1,6 @@
 //! The cleavages of the structure of the user that explain the m/z of one node of an `msngrafo/1`: the fragmenter of mzLab (`fragmenter`) run on the
 //! node's m/z and on the peaks of its own spectrum, the cuts whose piece gives the m/z of the node grouped by that m/z. Used by `mzlab-cli msn-graph
-//! --strutture` and the `.wasm` `msngrafo` (`strutture_testo`, the same bytes); the types of the answer are in `mzlab_core::msngraph`. Candidates, never identifications.
+//! --structures` and the `.wasm` `msngrafo` (`strutture_testo`, the same bytes); the types of the answer are in `mzlab_core::msngraph`. Candidates, never identifications.
 
 use super::fragmenter::{fragment_molecule, FragMatch, FragmentSide};
 use super::graph::Mol;

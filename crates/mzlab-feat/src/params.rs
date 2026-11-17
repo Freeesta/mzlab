@@ -13,7 +13,7 @@ pub use crate::params_unit::{
 };
 use crate::sortc;
 use crate::table::FileFeatures;
-use crate::trace::{self, Params};
+use crate::trace::Params;
 use crate::trace_base::filled;
 
 /// Width of a bin of the histograms, in decades.
@@ -484,7 +484,7 @@ pub fn preview<R: ReadAt>(index: &mut Index<R>, p: &Params) -> Result<String> {
         p.axis = MassAxis::Da { defect };
     }
     let p = &p;
-    let f = trace::detect(index, p)?;
+    let f = crate::detect_route::detect(index, p)?;
     let est = estimate(index, p, &f)?;
     let mut ex = Vec::new();
     for i in example_picks(&f) {

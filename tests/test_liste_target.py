@@ -25,7 +25,7 @@ TARGET_JS = ROOT / "mzlab" / "web" / "liste-target.js"
 LISTS_JS = ROOT / "mzlab" / "web" / "liste.js"
 
 
-@pytest.mark.skipif(not NODE, reason="node non disponibile")
+@pytest.mark.skipif(not NODE, reason="node not available")
 def test_target_mz_uses_the_engine_values():
     code = r"""
 const LT = require(process.argv[1]);
@@ -66,7 +66,7 @@ console.log(JSON.stringify(matches));
     return json.loads(res.stdout)
 
 
-@pytest.mark.skipif(not NODE, reason="node non disponibile")
+@pytest.mark.skipif(not NODE, reason="node not available")
 def test_screening_engine_prev1_prev2():
     matches = _run_screening_js()
     assert len(matches) == 3
@@ -86,7 +86,7 @@ def test_screening_engine_prev1_prev2():
     assert "isotope pattern confirmed" in matches[1]["motif"]
 
 
-@pytest.mark.skipif(not NODE, reason="node non disponibile")
+@pytest.mark.skipif(not NODE, reason="node not available")
 def test_screening_engine_prev3_and_sort():
     matches = _run_screening_js()
     assert matches[2]["proposal"] == "Prev. 3"
@@ -95,7 +95,7 @@ def test_screening_engine_prev3_and_sort():
     assert "isotope pattern unconfirmed" in matches[2]["motif"]
 
 
-@pytest.mark.skipif(not NODE, reason="node non disponibile")
+@pytest.mark.skipif(not NODE, reason="node not available")
 def test_decoy_verification_zero_false_positives():
     code = r"""
 const LT = require(process.argv[1]);
@@ -132,7 +132,7 @@ console.log(JSON.stringify(matches));
     assert len(matches) == 0
 
 
-@pytest.mark.skipif(not NODE, reason="node non disponibile")
+@pytest.mark.skipif(not NODE, reason="node not available")
 def test_csv_export_format():
     code = r"""
 const LT = require(process.argv[1]);
@@ -179,7 +179,7 @@ console.log(csv);
     assert "C7H17N" in row
 
 
-@pytest.mark.skipif(not NODE, reason="node non disponibile")
+@pytest.mark.skipif(not NODE, reason="node not available")
 def test_lists_target_integration():
     code = r"""
 globalThis.NOMI = require(process.argv[1].replace(/[^\/\\]*$/, "nomi.js"));

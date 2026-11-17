@@ -14,13 +14,13 @@ try:
         pg = r.page(p)
         pg.set_viewport_size({"width": 1400, "height": 900})
         pg.set_input_files("#pick", [{"name": n, "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t%d" % t), "rb").read()} for n, t in zip(NAMES, (0, 10, 15))])
-        frames(pg, 3); pg.click("text=Carica dati"); ready(pg)
-        # two converted files make the download controls appear (the maker's files of the lab are converted on request)
-        pg.evaluate("n => { n.forEach(x => CONV.files.set(x, new Blob(['x']))); S.table = true; syncWork(); renderFiles(); }", NAMES[:2]); frames(pg, 3)
+        frames(pg, 3); pg.click("text=Load data"); ready(pg)
+        # two converted files (a real, valid mzML: the download checks it) make the download controls appear (the maker's files of the lab are converted on request)
+        pg.evaluate("([n, b64]) => { n.forEach(x => CONV.files.set(x, new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))]))); S.adding = true; syncWork(); renderFiles(); window.scrollTo(0, 0); }", [NAMES[:2], __import__("base64").b64encode(open(mz("B_FullMass-t0"), "rb").read()).decode()]); frames(pg, 3)      # the one page, at the top (the button would scroll to the table)
         def head_count():
-            assert pg.inner_text("#flist .samphead b").strip() == "3 campioni", pg.inner_text("#flist .samphead b")
+            assert pg.inner_text("#flist .samphead b").strip() == "3 samples", pg.inner_text("#flist .samphead b")
             assert "clicca" not in pg.inner_text("#flist .samptool")
-            assert pg.evaluate("I18N.t('load.samples.head', {n: 24})") == "24 campioni"
+            assert pg.evaluate("I18N.t('load.samples.head', {n: 24})") == "24 samples"
         step("the header says only the count", head_count)
         def one_row():
             mids = pg.evaluate("""[...document.querySelectorAll('#flist .samptool button, #flist .samptool summary')].filter(e => e.getBoundingClientRect().width > 0 && getComputedStyle(e).visibility !== 'hidden')
@@ -45,7 +45,7 @@ try:
                 for sel in ("[data-rm]",):
                     ok = pg.evaluate("""s => { const f = document.getElementById('flist').getBoundingClientRect();
                         return [...document.querySelectorAll('#flist ' + s)].every(b => { const r = b.getBoundingClientRect(); return r.right <= f.right + 1 && r.left >= f.left && r.width >= 24 && r.height >= 24; }); }""", sel)
-                    assert ok, (w, "the remove button is clipped")
+                    assert ok, (w, "the remove button is clipped", pg.evaluate("""s => { const f = document.getElementById('flist').getBoundingClientRect(); return [f.left, f.right, [...document.querySelectorAll('#flist ' + s)].map(b => { const r = b.getBoundingClientRect(); return [r.left, r.right, r.width, r.height]; })]; }""", sel))
             pg.set_viewport_size({"width": 1400, "height": 900}); frames(pg, 3)
         step("the × of every row is always in view (1400, 900, 600 px)", last_column)
         def menu():
@@ -62,10 +62,9 @@ try:
             assert pg.evaluate("CONV.compression") == "smallest"
         step("a format of the menu saves with that compression", pick_numpress)
         def gap(w):
-            pg.set_viewport_size({"width": w, "height": 900}); pg.evaluate("S.table = false; S.adding = true; syncWork()"); frames(pg, 4)
+            pg.set_viewport_size({"width": w, "height": 900}); pg.evaluate("STATO.aggiunta(true, 'test'); applyView(); scrollTo(0, 0)"); frames(pg, 4)
             g = pg.evaluate("document.getElementById('backwork').getBoundingClientRect().top - document.getElementById('tools').getBoundingClientRect().bottom")
             assert 0 <= g < 40, (w, "blank band between the toolbar and «Back to work!»", g)
-            pg.evaluate("S.adding = false; S.table = true; syncWork()"); frames(pg, 3)
         step("«Back to work!» sits right under the toolbar (1400 px)", lambda: gap(1400))
         step("«Back to work!» sits right under the toolbar (700 px)", lambda: gap(700))
         def remove_all():

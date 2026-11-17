@@ -35,7 +35,7 @@ window.GDND = (() => {
     return n;
   };
   const say = (/** @type {string} */ s) => { live().textContent = s; };
-  const where = (/** @type {{ kind: string, key: string }} */ t) => t.key || I18N.t("groups.move.none");
+  const where = (/** @type {{ kind: string, key: string }} */ t) => t.key || GRUPPI.noneName();
 
   const boxes = (/** @type {Cfg} */ c = /** @type {Cfg} */ (cfg)) => {
     return [...c.list.querySelectorAll(c.headSel + "," + c.rowSel)].map(el => {
@@ -257,7 +257,7 @@ window.GDND = (() => {
       menu(ev, [...groups.map(g => ({ label: g, fn: () => { GRUPPI.set([name], g); say(I18N.t("groups.dnd.done", { g })); } })), ...(groups.length ? ["-"] : []),
         { label: I18N.t("groups.with.menu"), fn: () => groupWith([name], ST.files.map(/** @param {any} x */ x => x.name)) },
         { label: I18N.t("groups.move.new"), fn: async () => { const v = ((await ask(I18N.t("groups.move.prompt"), await GRUPPI.newName([name]))) || "").trim(); if (v && GRUPPI.set([name], v)) say(I18N.t("groups.dnd.done", { g: v })); } },
-        ...(some ? [{ label: I18N.t("groups.move.none"), fn: () => { GRUPPI.set([name], ""); say(I18N.t("groups.dnd.doneNone")); } }] : [])]);
+        ...(some ? [{ label: GRUPPI.noneName(), fn: () => { GRUPPI.set([name], ""); say(I18N.t("groups.dnd.doneNone")); } }] : [])]);
     },
     /** The «Move to group ▸» entries of a row menu, as a second menu at the same place (the menu has no sub-menus). @param {any} ev @param {any} f */
     async moveMenu(ev, f) {
@@ -266,7 +266,7 @@ window.GDND = (() => {
       menu(ev, [...groups.map(g => ({ label: g, fn: () => { GRUPPI.set(bases, g); say(I18N.t("groups.dnd.done", { g })); } })), ...(groups.length ? ["-"] : []),
         { label: I18N.t("groups.with.menu"), fn: () => groupWith(bases, flSide().map(/** @param {any} x */ x => fileBase(x.file))) },
         { label: I18N.t("groups.move.new"), fn: async () => { const v = ((await ask(I18N.t("groups.move.prompt"), await GRUPPI.newName(bases))) || "").trim(); if (v && GRUPPI.set(bases, v)) say(I18N.t("groups.dnd.done", { g: v })); } },
-        ...(some ? [{ label: I18N.t("groups.move.none"), fn: () => { GRUPPI.set(bases, ""); say(I18N.t("groups.dnd.doneNone")); } }] : [])]);
+        ...(some ? [{ label: GRUPPI.noneName(), fn: () => { GRUPPI.set(bases, ""); say(I18N.t("groups.dnd.doneNone")); } }] : [])]);
     },
   };
 })();

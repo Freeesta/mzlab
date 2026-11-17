@@ -1,4 +1,4 @@
-//! `mzlab-cli llm tools [--out FILE]`: the catalog `strumenti/1` of the assistant tools, generated from the step registry `flow::steps()` and the
+//! `mzlab-cli llm tools [--out FILE]`: the catalog `tools/1` of the assistant tools, generated from the step registry `flow::steps()` and the
 //! table of native executors. `mzlab-cli llm replay REG.jsonl --conv CONV.json`: the events a recording `llmreg/1` gives for a conversation. The
 //! catalog and the providers live in `mzlab-llm`. `llm inspect|params DIR`: the facts without a model (`llm_facts.rs`).
 
@@ -16,7 +16,7 @@ use crate::{emit, Outcome};
 #[path = "llm_facts.rs"]
 pub(crate) mod facts;
 
-const HELP: &str = "mzlab-cli llm tools [--demo] [--out FILE]   the catalog strumenti/1 of the assistant tools (stdout, or FILE); --demo: the subset of the public demo
+const HELP: &str = "mzlab-cli llm tools [--demo] [--out FILE]   the catalog tools/1 of the assistant tools (stdout, or FILE); --demo: the subset of the public demo
 mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the normalized events of a recording, one JSON line per event (stdout);
   the turn defaults to the number of assistant messages of the conversation; --strict also compares the SHA-256 of the request
 mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 the assistant gets from a run folder (stdout)
@@ -58,12 +58,14 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
             x => return Outcome::fail(&format!("unknown option {x}")),
         }
     }
+    // the citation is a CLI-only key: the files of docs/schemi and the catalog of the site stay as they are
+    let text = if demo {
+        demo_tools_json()
+    } else {
+        tools_json()
+    };
     emit(
-        if demo {
-            demo_tools_json()
-        } else {
-            tools_json()
-        },
+        crate::citation::after(&text, "\"schema\":\"tools/1\",", "\n  "),
         &out,
     )
 }

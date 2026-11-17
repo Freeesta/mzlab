@@ -14,8 +14,8 @@ r = Run(port=8886, wd="/tmp/wd86")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_selector("text=Carica dati")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_selector("text=Load data")
+        pg.click("text=Load data"); ready(pg)
         def synthetic():                                               # a small peak on the tail of a big neighbour (8.13 and 8.5, 0.05 min sampling)
             xs = [round(7.5 + 0.01 * i, 4) for i in range(201)]
             ys = [1e6 * math.exp(-0.5 * ((x - 8.13) / 0.12) ** 2) + 2e5 * math.exp(-0.5 * ((x - 8.5) / 0.05) ** 2) for x in xs]

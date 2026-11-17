@@ -73,7 +73,7 @@ class Bench:
         pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length===5", timeout=600000)       # the five files downloaded and listed
         pg.evaluate("window.__t0 = performance.now()")
         pg.evaluate("""() => { window.__first = null; const f = () => { if (!window.__first && (typeof E !== 'undefined' && E.panels || []).some(p => p._a)) window.__first = performance.now(); if (!window.__first) requestAnimationFrame(f); }; f(); }""")
-        pg.click("text=Carica dati"); print("  loading", flush=True)
+        pg.click("text=Load data"); print("  loading", flush=True)
         pg.wait_for_function("window.__first", timeout=600000); first = pg.evaluate("__first - __t0")
         ready(pg, timeout=600000); done = pg.evaluate("performance.now() - __t0") - 400            # `ready` waits 400 ms of quiet
         s.out["open_first_chart"] = {"n": 1, "p50": round(first), "p95": round(first)}; s.out["open_ready"] = {"n": 1, "p50": round(done), "p95": round(done)}
@@ -168,7 +168,7 @@ def open_only(p, port, rate, cores, n):
 
 def one_config(p, port, rate, cores, reps, only=None, patch=None):
     b = p.chromium.launch(args=["--enable-precise-memory-info", "--js-flags=--expose-gc"])
-    ctx = b.new_context(viewport={"width": 1500, "height": 1000}, locale="it-IT", reduced_motion="reduce"); pg = ctx.new_page()
+    ctx = b.new_context(viewport={"width": 1500, "height": 1000}, reduced_motion="reduce"); pg = ctx.new_page()
     pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
     pg.add_init_script(f"Object.defineProperty(navigator, 'hardwareConcurrency', {{get: () => {cores}}});")
     pg.add_init_script(INIT)

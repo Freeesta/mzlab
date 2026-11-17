@@ -15,8 +15,8 @@ use mzlab_core::peakq;
 use crate::chunked::chunked;
 use crate::sweep::{ppm_ranges, windows_by_slab, Slab};
 use crate::table::{FileFeatures, FLAG_EDGE, FLAG_GOOD};
-use crate::trace::Params;
 use crate::trace_base::filled;
+use crate::trace_params::Params;
 
 /// Reason bits of `FileFeatures::qreason`.
 pub const Q_SHAPE: u8 = 1;

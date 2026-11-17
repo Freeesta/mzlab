@@ -1,5 +1,5 @@
 //! The view of the transformation products (`tp/1`): which rows of the table are formed in the treatment, are not the parent in disguise and are
-//! explained, and how sure their kinship with the parent is. It decides nothing about identity (that stays the cascade of `livelli/1`) and deletes no row:
+//! explained, and how sure their kinship with the parent is. It decides nothing about identity (that stays the cascade of `levels/1`) and deletes no row:
 //! every row keeps a status and the numbers behind it.
 //!
 //! Gates in order (`cancelli`): 1. formed (the treated samples beat the blanks, the dark and the t0 by `ratio`; with the roles, each reference in turn and
@@ -23,7 +23,7 @@ pub use network::{arcs, arcs_in, explain_by_arcs, explain_by_arcs_in, next_gener
 pub(crate) use table::measured;
 pub use table::{role_of, table_json, table_json_cond, Role, TABLE_SCHEMA};
 /// The old path of the block and its codes, which live in `tp_block` so that the aligned table does not depend on `tp`.
-pub use crate::tp_block::{FitCandidate, RoleCounts, TpBlock, TpParams, KIN_CERTAIN, KIN_DOUBTFUL, KIN_NONE, KIN_POSSIBLE, KIN_PROBABLE, NOTE_BLANK, NOTE_CHIMERIC_MS2, NOTE_DARK, NOTE_ISF_COELUTES, NOTE_ISF_OF_PRODUCT, NOTE_NO_T0, NOTE_T0, NOTE_T0_PRESENT, NO_PARENT, ST_CONTROL, ST_ISF, ST_PARENT, ST_TP, ST_UNEXPLAINED, VIA_CLEAVAGE, VIA_IMPORTED, VIA_MS2, VIA_NETWORK, VIA_RULE};
+pub use crate::tp_block::{FitCandidate, RoleCounts, TpBlock, TpParams, KIN_CERTAIN, KIN_DOUBTFUL, KIN_NONE, KIN_POSSIBLE, KIN_PROBABLE, NOTE_BLANK, NOTE_CHIMERIC_MS2, NOTE_DARK, NOTE_ISF_COELUTES, NOTE_ISF_OF_PRODUCT, NOTE_NO_T0, NOTE_T0, NOTE_T0_PRESENT, NO_PARENT, OFFSET_MAX, ST_CONTROL, ST_ISF, ST_PARENT, ST_TP, ST_UNEXPLAINED, VIA_CLEAVAGE, VIA_IMPORTED, VIA_MS2, VIA_NETWORK, VIA_RULE};
 
 use mzlab_core::error::Result;
 
@@ -93,7 +93,10 @@ impl TpRoles {
 
     /// `from_json` with the files put in the order of the files of the `.mzfeat` `table`, by name (`samples::order_like`).
     pub fn for_table(samples: &str, table: &[u8]) -> Result<TpRoles> {
-        let names = crate::store::table_names(&mut crate::store::Slice(table), table.len() as u64)?;
+        let names = crate::store_read::table_names(
+            &mut crate::store_read::Slice(table),
+            table.len() as u64,
+        )?;
         TpRoles::from_json(&mzlab_core::samples::order_like(samples, &names)?)
     }
 
@@ -102,7 +105,7 @@ impl TpRoles {
         let Some(c) = samples.filter(|c| !c.is_empty()) else {
             return Ok(None);
         };
-        let names = crate::store::table_names(table, size)?;
+        let names = crate::store_read::table_names(table, size)?;
         TpRoles::from_json(&mzlab_core::samples::order_like(c, &names)?).map(Some)
     }
 

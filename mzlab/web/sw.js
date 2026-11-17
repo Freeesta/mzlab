@@ -2,7 +2,8 @@
 // Service worker of the browser version (added to the site root by tools/build_site.py; the local program does not use it).
 // App files are cache-first: the cache name carries the hash of the whole site, so a file in it is the right version by construction and
 // needs no revalidation. A miss is fetched, checked against the SHA-256 of static/sw-manifest.json and stored; the cache is also filled in the
-// background from that manifest. Navigations are network-first (short timeout), so a new deploy is seen at the next page load.
+// background from that manifest. Navigations are network-first (short timeout, navigation preload), so a new deploy is seen at the next page load;
+// `?nav=cache` (remembered, `?nav=rete` undoes it) answers them from a complete cache and shows a newer version one load later (service-worker.md).
 // The big, rarely changing files (Ketcher; the Python of mzFinder) live in their own cache. Offline, everything comes from the caches.
 try { importScripts("static/nomi.js"); } catch (_) { /* local testing */ }
 const APPV = "__APP__";
@@ -20,15 +21,43 @@ let stale = false;     // the site on the network is a newer version than this w
 let nuevo = {};        // while stale: path -> SHA-256 of the newer version, so a cached file whose bytes did not change still answers from the cache
 /** @type {Promise<void> | null} */
 let fill = null;
+// The page-load switch, kept in a cache of its own (activate keeps it; «Full reset» removes it). Network first is the default.
+const OPZ = (typeof NOMI !== "undefined" ? NOMI.CACHE_PREFIX : "mzlab-") + "opz", NAVK = new URL(".nav-cache", BASE).href;
+/** @type {Promise<boolean> | null} */
+let navP = null;
+const navCache = () => navP || (navP = caches.match(NAVK, { cacheName: OPZ }).then(r => {      // a lookup, not an open: no empty cache for everyone
+  if (r) console.info("[mzLab] sw: page loads cache first (?nav=cache; ?nav=rete for network first)");
+  return !!r;
+}).catch(() => false));
+/** `?nav=cache` / `?nav=rete` of a page load sets the switch; navigation preload only serves the network-first mode. */
+const impostaNav = async (/** @type {boolean} */ on) => {
+  if (await navCache() === on) return;                               // an address that keeps the query: nothing to write at every load
+  navP = Promise.resolve(on);
+  console.info("[mzLab] sw: page loads", on ? "cache first (?nav=cache)" : "network first (?nav=rete)");
+  try { if (on) await (await caches.open(OPZ)).put(NAVK, new Response("1")); else await caches.delete(OPZ); } catch (_) { /* storage full: this run only */ }
+  await preload(!on);
+};
+const preload = async (/** @type {boolean} */ on) => {
+  try { const np = sw.registration.navigationPreload; if (np) await (on ? np.enable() : np.disable()); } catch (_) { /* not supported */ }
+};
+// nav=cache: this worker answered (or, restarted, may have answered) its pages from its complete cache, so they are of ITS version: a newer manifest
+// on the network does not make it stale (the pages would get files of two versions); it only starts the update. undefined: not known in this run.
+/** @type {boolean | undefined} */
+let fijo;
+const fijoDe = async () => fijo ?? (fijo = await navCache() && !!(await (await abrirApp()).match(MARK)));
 // Cross-origin isolation (SharedArrayBuffer) without server headers: every same-origin response gets COOP/COEP/CORP, also from the cache.
 // Everything of the site is same-origin; cross-origin fetches of the page are CORS requests, which require-corp does not block.
+const ISO = [["Cross-Origin-Embedder-Policy", "require-corp"], ["Cross-Origin-Opener-Policy", "same-origin"], ["Cross-Origin-Resource-Policy", "same-origin"],
+  // the worker is the cache: without this the browser's memory cache (max-age=600 of the origin) would hand a file of the previous version to the next page without asking us
+  ["Cache-Control", "no-cache"]];
+// The copies are stored with these headers (`guardar`) and a copy that has them is answered as the cache gave it: a new Response per hit pipes each of
+// the ~300 bodies of a load through this worker's thread (warm `qqReady` ~100 ms later, misure-code-cache.md). Not for the code cache: Chromium keeps
+// none for a built Response, stored or not. A copy stored by an older worker (no headers) is still wrapped until a deploy carries it over (`heredado`).
 /** @param {Response} res */
 const isolata = res => {
-  if (res.status === 0 || res.type === "opaqueredirect") return res;
+  if (res.status === 0 || res.type === "opaqueredirect" || ISO.every(([k, v]) => res.headers.get(k) === v)) return res;
   const h = new Headers(res.headers);
-  h.set("Cross-Origin-Embedder-Policy", "require-corp"); h.set("Cross-Origin-Opener-Policy", "same-origin"); h.set("Cross-Origin-Resource-Policy", "same-origin");
-  // the worker is the cache: without this the browser's memory cache (max-age=600 of the origin) would hand a file of the previous version to the next page without asking us
-  h.set("Cache-Control", "no-cache");
+  for (const [k, v] of ISO) h.set(k, v);
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
 };
 /** SHA-256 (hex) of the body of a response, which stays readable. */
@@ -51,6 +80,7 @@ const manifestoSw = () => manP || (manP = (async () => {
     if (!r.ok) throw new Error("manifest");
     const j = await r.json();
     visto = true;
+    if (j.app !== APPV && await fijoDe()) { sw.registration.update().catch(() => {}); return null; }
     if (j.app !== APPV) { stale = true; nuevo = j.files || {}; sw.registration.update().catch(() => {}); return null; }
     stale = false;
     /** @type {Record<string, string>} */
@@ -99,7 +129,7 @@ const heredado = async (/** @type {Request} */ req, /** @type {string | undefine
 /** Deletes the earlier versions' caches once this version's cache is complete. Only the worker of the version on the network does it (manifest
  * asked again): an older worker still running would otherwise drop the cache of the newer one. */
 const olvidar = async () => {
-  if (!(await previas()).length) return;
+  if (sw.registration.installing || sw.registration.waiting || !(await previas()).length) return;     // a worker not active yet: the active one still serves those caches
   manP = null;
   if (!await manifestoSw() || stale) return;
   for (const n of await previas()) await caches.delete(n);
@@ -129,7 +159,7 @@ const traerFill = async (/** @type {Request} */ req, /** @type {string} */ want)
   }
 };
 const guardar = async (/** @type {Cache} */ cache, /** @type {Request} */ req, /** @type {Response} */ res) => {
-  try { await cache.put(req, res.clone()); } catch (_) { /* storage full: serve anyway */ }
+  try { await cache.put(req, isolata(res.clone())); } catch (_) { /* storage full: serve anyway */ }
 };
 /** Fills the app cache with every file of the manifest the page has not loaded yet (a few at a time, not blocking anything); true once no
  * further attempt is needed (marked complete, or the worker is stale). */
@@ -170,18 +200,30 @@ const arrancar = () => fill || (Date.now() < notBefore ? Promise.resolve() : (fi
   if (done) { filled = true; return; }
   notBefore = Date.now() + retry; retry = Math.min(retry * 2, FILL_RETRY_MAX_MS); fill = null;
 })));
-sw.addEventListener("install", () => {
+sw.addEventListener("install", (/** @type {ExtendableEvent} */ e) => e.waitUntil((async () => {
+  // nav=cache and an older version active: this one fills its whole cache now and waits; the pages of the older one keep their files, and the
+  // next page load takes this one over (`navegar`). An incomplete fill fails the install: the next check starts it again (what is stored stays)
+  if (sw.registration.active && await navCache()) {
+    await new Promise(r => setTimeout(r, FILL_AFTER_MS));            // the boot of the page that found the update goes first
+    if (!await llenar()) throw new Error("cache incomplete");
+    filled = true;
+    for (const c of await sw.clients.matchAll({ type: "window", includeUncontrolled: true })) c.postMessage({ op: "sw-nuova" });
+    return;
+  }
   sw.skipWaiting();
-  arrancar();                                                          // not in waitUntil: the first page must not wait for it
-});
+  arrancar();                                                          // not awaited: the first page must not wait for it
+})()));
+sw.addEventListener("message", (/** @type {ExtendableMessageEvent} */ e) => { if (e.data && e.data.op === "sw-attiva") sw.skipWaiting(); });
 sw.addEventListener("activate", (/** @type {ExtendableEvent} */ e) => e.waitUntil((async () => {
   const pfx = typeof NOMI !== "undefined" ? NOMI.CACHE_PREFIX : "mzlab-";
   for (const k of await caches.keys()) {
-    if (k.startsWith("qqq-") || (k.startsWith(pfx) && !k.startsWith(APPFX) && k !== BIG)) {     // earlier app caches stay until the fill (previas)
+    if (k.startsWith("qqq-") || (k.startsWith(pfx) && !k.startsWith(APPFX) && k !== BIG && k !== OPZ)) {     // earlier app caches stay until the fill (previas)
       await caches.delete(k);
     }
   }
+  await preload(!await navCache());
   await sw.clients.claim();
+  if (filled) await olvidar();                                         // nav=cache: filled while waiting, the earlier caches go now
 })()));
 /** An app file: from the cache of this version; a miss goes to the network and is stored once it matches the manifest. The page gets the
  * checked body at once and the store runs after, kept alive by `later` (a cold load is ~70 misses before the first paint: awaiting each put first
@@ -190,7 +232,8 @@ const app = async (/** @type {Request} */ req, /** @type {(p: Promise<unknown>) 
   const cache = await abrirApp();
   // a restarted worker of an older version must not serve its old files to a newer page before it knows (one request, shared); on a hung network
   // the cache answers after NAV_MS, as for a page, and the manifest still sets `stale` for the requests after it
-  if (!visto) await Promise.race([manifestoSw(), new Promise(r => setTimeout(r, NAV_MS))]);
+  // (not in nav=cache with a complete cache: the page and its files are then of this version by construction)
+  if (!visto && !await fijoDe()) await Promise.race([manifestoSw(), new Promise(r => setTimeout(r, NAV_MS))]);
   if (!stale) { const hit = await buscar(cache, req); if (hit) return isolata(hit); }
   else {
     // a deploy changes few files: the cached copy still answers when its bytes are the ones of the newer version (no mixed JS/wasm pair)
@@ -210,12 +253,33 @@ const app = async (/** @type {Request} */ req, /** @type {(p: Promise<unknown>) 
     throw err;
   }
 };
-/** A page load: the network first (a new deploy shows at once), the cached copy when it is slow or offline. */
-const navegar = async (/** @type {Request} */ req) => {
-  const cache = await abrirApp();
+/** A page load: the network first (a new deploy shows at once), the cached copy when it is slow or offline. The page comes from the navigation
+ * preload, asked by the browser with the manifest instead of after it, and is checked against the manifest as `traer` checks (else `traer`).
+ * nav=cache: from this version's complete cache at once, the manifest checked in the background (a newer version is installed, filled and announced;
+ * the next page load is that version: this worker hands over and the page comes from the network). */
+const navegar = async (/** @type {Request} */ req, /** @type {FetchEvent} */ e) => {
+  const cache = await abrirApp(), u = new URL(req.url), q = u.searchParams.get("nav");
+  if (q === "cache" || q === "rete") await impostaNav(q === "cache");
+  const pre = Promise.resolve(e.preloadResponse).catch(() => undefined);
+  if (await navCache()) {
+    const next = sw.registration.waiting, hit = !next && await cache.match(MARK) && await buscar(cache, req);
+    if (hit) {
+      fijo = true;
+      manP = null;
+      e.waitUntil(Promise.all([pre, manifestoSw()]));                  // the preload, if the switch was just set, is not left dangling
+      return isolata(hit);
+    }
+    if (next) next.postMessage({ op: "sw-attiva" });
+  }
+  fijo = false;
   manP = null;                    // the manifest too is asked again: it tells whether the site changed since this worker started
   const net = (async () => {
-    const { res, ok } = await primero(async () => traer(req, await expected(new URL(req.url)), true));
+    const { res, ok } = await primero(async () => {
+      const [want, first] = await Promise.all([expected(u), pre]);
+      const check = want || (stale ? nuevo[rel(u)] : undefined);       // a stale worker checks the page against the newer version (never stored)
+      if (first && check && first.status === 200 && await shaDe(first) === String(check)) return { res: first, ok: !!want };
+      return traer(req, want, true);
+    });
     if (ok && !stale) await guardar(cache, req, res);
     return res;
   })();
@@ -251,5 +315,5 @@ sw.addEventListener("fetch", (/** @type {FetchEvent} */ e) => {
   if (url.pathname.includes("/api/")) return;                       // answers of the engine and files of the user are never cached
   const big = /\/static\/vendor\//.test(url.pathname);
   if (!big && !filled && !stale) e.waitUntil(arrancar());           // keeps the worker alive while it fills; a stale one holds no event open (the newer worker activates only when the older has none)
-  e.respondWith(big ? grande(req) : req.mode === "navigate" ? navegar(req) : app(req, p => e.waitUntil(p)));
+  e.respondWith(big ? grande(req) : req.mode === "navigate" ? navegar(req, e) : app(req, p => e.waitUntil(p)));
 });

@@ -2,7 +2,7 @@
 //! Every list of files is sorted by (injection order, file name), so the sums do not depend on the order of the columns.
 
 use super::{Ctx, GroupOpts, GroupTable, ParentOut};
-use crate::legacy::lr::kin::{decay, Point};
+use crate::kin_decay::{decay, Point};
 use crate::table::{CELL_DETECTED, CELL_TARGETED};
 use mzlab_core::json::round;
 use mzlab_core::samples::Sample;

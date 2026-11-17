@@ -10,7 +10,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 #[cfg(feature = "attributio")]
 pub use crate::attributio::review::window::ms1_window_metrics;
 use crate::axis::half;
-use crate::legacy::ms2::{consensus, read_scans, Consensus, Ms2Sorted};
+use crate::finder_base::ms2::{consensus, read_scans, Consensus, Ms2Sorted};
 use crate::sweep::windows;
 
 /// Isolation centre within this many ppm of the m/z of the row (as mzFinder pools the MS2).

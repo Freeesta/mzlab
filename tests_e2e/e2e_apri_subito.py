@@ -60,7 +60,7 @@ try:
             assert not pg.is_visible("#drop") and not pg.is_visible("#wtable"), "the landing is gone"
             assert pg.locator(".convprog, .cp-spin, #fl-up .fl").count() == 0, "nothing of the loading is left"
             txt = pg.inner_text("body")
-            assert "Loading finished" not in txt and "Caricamento finito" not in txt and "Loading the files" not in txt, "no end-of-loading text"
+            assert "Loading finished" not in txt and "Loading the files" not in txt, "no end-of-loading text"
         step("the first file opens by itself, the others wait in the list", landing_then_click)
         def late_proposal():
             wait_for_js(pg, "RUOLI.busy() === 0 && ST.files.every(f => f.prop)", 30000)
@@ -68,14 +68,14 @@ try:
             assert pg.locator("#flist input[data-k=time].guess").count() >= 2, "the proposed times carry the guess class"
         step("a proposal that lands after the files opened reaches the open files", late_proposal)
         def table_button():
-            assert pg.is_visible("#samptab") and pg.get_attribute("#samptab", "aria-pressed") == "false"
+            assert pg.is_visible("#samptab") and pg.get_attribute("#samptab", "aria-pressed") is None, "a plain button, not a toggle"
             pg.click("#samptab")
             pg.wait_for_selector("#wtable .samphead", state="visible", timeout=10000)
-            assert pg.get_attribute("#samptab", "aria-pressed") == "true" and not pg.is_visible("#dpanels .pnl"), "the table in place of the panels"
+            assert pg.is_visible("#samptab") and not pg.is_visible("#dpanels .pnl"), "the one page (drop area + table) in place of the panels"
+            assert pg.evaluate("document.activeElement.closest('#wtable') !== null"), "the focus is on the table"
             pg.click("#flst .fl .nm >> nth=1")
             wait_for_js(pg, "document.getElementById('v-workspace').dataset.work === 'panels'", 10000)
-            assert pg.get_attribute("#samptab", "aria-pressed") == "false"
-        step("«Sample table» shows the table; a click on a file goes back to the panels", table_button)
+        step("«Sample table» opens the one page and scrolls to the table; a click on a file goes back to the panels", table_button)
         def table_button_after_close():
             # below the last file of the list, enabled also after the X of the toolbar (landing with a session), and it brings the table back
             b = pg.evaluate("(() => { const s = document.querySelector('#samptab').getBoundingClientRect(), l = [...document.querySelectorAll('#flst .fl')].pop().getBoundingClientRect(); return [s.top, l.bottom]; })()")
@@ -85,9 +85,9 @@ try:
             assert pg.is_enabled("#samptab"), "the button is not inert on the landing"
             pg.click("#samptab")
             pg.wait_for_selector("#wtable .samphead", state="visible", timeout=10000)
-            assert pg.get_attribute("#samptab", "aria-pressed") == "true", "the table is back"
             pg.focus("#samptab"); pg.keyboard.press("Enter")
-            wait_for_js(pg, "document.getElementById('v-workspace').dataset.work !== 'table'", 10000)
+            assert pg.evaluate("document.activeElement.closest('#wtable') !== null"), "Enter on the button puts the focus on the table"
+            assert pg.evaluate("document.getElementById('v-workspace').dataset.work") == "landing"
         step("«Sample table» sits below the list and works after the X", table_button_after_close)
         def hr_aside():
             pg.set_input_files("#pick", [str(HR)])

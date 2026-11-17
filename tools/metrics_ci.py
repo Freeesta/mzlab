@@ -32,10 +32,11 @@ def runs_of_commit(sha: str, api) -> dict:
             if j["name"] in REQUIRED:
                 out["required"][j["name"]] = dur
     wf = out["workflows"].values()
-    out["failed_runs"] = sum(w["conclusion"] not in (None, "success", "skipped", "neutral") for w in wf)
+    # a run cancelled by a newer push of main (concurrency) is neither a failure nor a measure of the wall time
+    out["failed_runs"] = sum(w["conclusion"] not in (None, "success", "skipped", "neutral", "cancelled") for w in wf)
     # flaky: green only after a re-run (attempt > 1)
     out["flaky_runs"] = sum(w["conclusion"] == "success" and w["attempts"] > 1 for w in wf)
-    out["wall_s"] = max((w["wall_s"] or 0 for w in wf), default=0) or None
+    out["wall_s"] = max((w["wall_s"] or 0 for w in wf if w["conclusion"] != "cancelled"), default=0) or None
     return out
 
 

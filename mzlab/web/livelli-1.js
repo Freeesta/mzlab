@@ -1,20 +1,20 @@
 // @ts-check
 // @ts-strict
 "use strict";
-// Data file «livelli/1»: the confidence levels (Schymanski et al. 2014; MSI 2007) and the profiles of thresholds. Pure data (JSON inside the assignment): the module
+// Data file «levels/1»: the confidence levels (Schymanski et al. 2014; MSI 2007) and the profiles of thresholds. Pure data (JSON inside the assignment): the module
 // livelli.js reads it, tests/test_livelli.py reads it, nothing here is code. A new version of the format is a new file (livelli-2.js), never an edit of the meaning of a key.
-// A profile is a set of thresholds ("soglie") plus the gates of the cascade; the gate labels and the sentences are i18n keys (lang/it.js, lang/en.js).
+// A profile is a set of thresholds plus the gates of the cascade; the gate labels and the sentences are i18n keys (lang/en/).
 // Profile "mzlab": the default. Profile "attributio": rules, thresholds and wording of Attributio 1.12.0 (annotate.py), hidden in the interface.
 window.LIVELLI_DATI = {
- "formato": "livelli/1",
- "predefinito": "mzlab",
- "riferimento": "Schymanski et al., Environ. Sci. Technol. 2014, 48, 2097",
- "scala": "Schymanski scale, label «L» + level (L2a, L3b); the prediction scale of Löffler et al. (ES&T 59:19095, 2025) is another one, label «Prev. N»",
- "livelli": ["1", "2a", "2b", "3a", "3b", "4", "5", "0"],
- "profili": {
+ "format": "levels/1",
+ "default": "mzlab",
+ "reference": "Schymanski et al., Environ. Sci. Technol. 2014, 48, 2097",
+ "scale": "Schymanski scale, label «L» + level (L2a, L3b); the prediction scale of Löffler et al. (ES&T 59:19095, 2025) is another one, label «Prev. N»",
+ "levels": ["1", "2a", "2b", "3a", "3b", "4", "5", "0"],
+ "profiles": {
   "mzlab": {
-   "visibile": true,
-   "soglie": {
+   "visible": true,
+   "thresholds": {
     "entropia_min": 0.75,
     "picchi_min": 6,
     "picchi_min_pochi": 3,
@@ -27,42 +27,42 @@ window.LIVELLI_DATI = {
     "std_entropia_min": 0.8,
     "std_ppm_max": 5
    },
-   "cancelli": [
-    {"id": "prec", "campo": "ppm", "op": "<=", "soglia": "precursore_ppm_max", "assoluto": true, "unita": "ppm", "ruolo": "source"},
-    {"id": "score", "campo": "ent", "op": ">=", "soglia": "entropia_min", "ruolo": "source"},
-    {"id": "shared", "campo": "shared", "op": ">=", "soglia": "picchi_min", "ridotta": {"se_campo": "nlib", "minore_di": 6, "soglia": "picchi_min_pochi"}, "ruolo": "source"},
-    {"id": "scans", "campo": "nScans", "op": ">=", "soglia": "scansioni_min", "ruolo": "confirm"},
-    {"id": "distinct", "campo": "margin", "op": ">=", "soglia": "margine_min", "ruolo": "confirm"}
+   "gates": [
+    {"id": "prec", "field": "ppm", "op": "<=", "threshold": "precursore_ppm_max", "absolute": true, "unit": "ppm", "role": "source"},
+    {"id": "score", "field": "ent", "op": ">=", "threshold": "entropia_min", "role": "source"},
+    {"id": "shared", "field": "shared", "op": ">=", "threshold": "picchi_min", "reduced": {"if_field": "nlib", "less_than": 6, "threshold": "picchi_min_pochi"}, "role": "source"},
+    {"id": "scans", "field": "nScans", "op": ">=", "threshold": "scansioni_min", "role": "confirm"},
+    {"id": "distinct", "field": "margin", "op": ">=", "threshold": "margine_min", "role": "confirm"}
    ],
    "standard": [
-    {"id": "stdrt", "campo": "drt", "op": "<=", "soglia": "std_rt_max", "assoluto": true, "unita": "min"},
-    {"id": "stdscore", "campo": "ent", "op": ">=", "soglia": "std_entropia_min"},
-    {"id": "stdppm", "campo": "ppm", "op": "<=", "soglia": "std_ppm_max", "assoluto": true, "unita": "ppm"}
+    {"id": "stdrt", "field": "drt", "op": "<=", "threshold": "std_rt_max", "absolute": true, "unit": "min"},
+    {"id": "stdscore", "field": "ent", "op": ">=", "threshold": "std_entropia_min"},
+    {"id": "stdppm", "field": "ppm", "op": "<=", "threshold": "std_ppm_max", "absolute": true, "unit": "ppm"}
    ],
-   "provvisorio": {"campo": "ent", "soglia": "entropia_provvisorio"},
-   "senza_prove": "5",
-   "punti": {
-    "versione": 1,
-    "riferimento": "stepped points per proof after Alygizakis et al., TrAC 2023, as an explanation and never as a learned model: the total orders the candidates, the level stays the cascade above (2b and 1 only by the chemist). A proof 'against' earns no points and is never offset. Steps are listed best first; a string is the key of a threshold of 'soglie'.",
-    "tolleranze": {"massa_ppm": "precursore_ppm_max", "margine_ms2": "margine_min"},
-    "prove": {
-     "massa": {"op": "<=", "assoluto": true, "unita": "ppm", "gradini": [{"soglia": 2, "punti": 2}, {"soglia": 5, "punti": 1}]},
-     "isotopi": {"op": ">=", "provvisorio": true, "gradini": [{"soglia": 0.9, "punti": 2}, {"soglia": 0.7, "punti": 1}]},
-     "MS2": {"op": ">=", "richiede": {"op": ">=", "soglia": "picchi_min"}, "gradini": [{"soglia": "entropia_min", "punti": 3}, {"soglia": "entropia_provvisorio", "punti": 1}]},
-     "frammenti": {"op": ">=", "provvisorio": true, "gradini": [{"soglia": 0.8, "punti": 2}, {"soglia": 0.5, "punti": 1}]},
-     "rete": {"op": ">=", "provvisorio": true, "gradini": [{"soglia": 0.5, "punti": 1}]},
-     "cinetica": {"op": "<=", "massimo": 0, "massimo_se_pesata": 1, "gradini": [{"soglia": 0.693, "punti": 1}]},
-     "controlli": {"op": ">=", "gradini": [{"soglia": 3, "punti": 2}, {"soglia": 1, "punti": 1}]},
-     "RT": {"op": ">=", "gradini": []},
-     "frequenza": {"op": ">=", "provvisorio": true, "gradini": [{"soglia": 0.75, "punti": 1}]},
-     "esterne": {"op": ">=", "gradini": [{"soglia": 0.64, "punti": 2}]}
+   "provisional": {"field": "ent", "threshold": "entropia_provvisorio"},
+   "without_proofs": "5",
+   "points": {
+    "version": 1,
+    "reference": "stepped points per proof after Alygizakis et al., TrAC 2023, as an explanation and never as a learned model: the total orders the candidates, the level stays the cascade above (2b and 1 only by the chemist). A proof 'against' earns no points and is never offset. Steps are listed best first; a string is the key of a threshold of 'soglie'.",
+    "tolerances": {"mass_ppm": "precursore_ppm_max", "ms2_margin": "margine_min"},
+    "proofs": {
+     "mass": {"op": "<=", "absolute": true, "unit": "ppm", "steps": [{"threshold": 2, "points": 2}, {"threshold": 5, "points": 1}]},
+     "isotopes": {"op": ">=", "provisional": true, "steps": [{"threshold": 0.9, "points": 2}, {"threshold": 0.7, "points": 1}]},
+     "MS2": {"op": ">=", "requires": {"op": ">=", "threshold": "picchi_min"}, "steps": [{"threshold": "entropia_min", "points": 3}, {"threshold": "entropia_provvisorio", "points": 1}]},
+     "fragments": {"op": ">=", "provisional": true, "steps": [{"threshold": 0.8, "points": 2}, {"threshold": 0.5, "points": 1}]},
+     "network": {"op": ">=", "provisional": true, "steps": [{"threshold": 0.5, "points": 1}]},
+     "kinetics": {"op": "<=", "maximum": 0, "maximum_if_weighted": 1, "steps": [{"threshold": 0.693, "points": 1}]},
+     "controls": {"op": ">=", "steps": [{"threshold": 3, "points": 2}, {"threshold": 1, "points": 1}]},
+     "RT": {"op": ">=", "steps": []},
+     "frequency": {"op": ">=", "provisional": true, "steps": [{"threshold": 0.75, "points": 1}]},
+     "external": {"op": ">=", "steps": [{"threshold": 0.64, "points": 2}]}
     }
    }
   },
   "attributio": {
-   "visibile": false,
-   "fonte": "attributio 1.12.0 (commit 2bde634), annotate.py: AnnotationSettings, LEVEL_BASIS_LABEL, level_reasons; only thresholds, rules and wording",
-   "soglie": {
+   "visible": false,
+   "source": "attributio 1.12.0 (commit 2bde634), annotate.py: AnnotationSettings, LEVEL_BASIS_LABEL, level_reasons; only thresholds, rules and wording",
+   "thresholds": {
     "coseno_min": 0.70,
     "ioni_comuni_min": 4,
     "precursore_ppm_max": 15.0,
@@ -71,41 +71,41 @@ window.LIVELLI_DATI = {
     "struttura_libreria_ppm_max": 20.0,
     "rt_gruppo_tol_min": 0.20
    },
-   "cancelli": [
-    {"id": "score", "campo": "cos", "op": ">=", "soglia": "coseno_min", "ruolo": "source"},
-    {"id": "shared", "campo": "shared", "op": ">=", "soglia": "ioni_comuni_min", "ruolo": "source"},
-    {"id": "prec", "campo": "ppm", "op": "<=", "soglia": "precursore_ppm_max", "assoluto": true, "unita": "ppm", "ruolo": "source"},
-    {"id": "distinct", "campo": "marginCos", "op": ">=", "soglia": "margine_conflitto_coseno", "ruolo": "confirm"}
+   "gates": [
+    {"id": "score", "field": "cos", "op": ">=", "threshold": "coseno_min", "role": "source"},
+    {"id": "shared", "field": "shared", "op": ">=", "threshold": "ioni_comuni_min", "role": "source"},
+    {"id": "prec", "field": "ppm", "op": "<=", "threshold": "precursore_ppm_max", "absolute": true, "unit": "ppm", "role": "source"},
+    {"id": "distinct", "field": "marginCos", "op": ">=", "threshold": "margine_conflitto_coseno", "role": "confirm"}
    ],
    "standard": [],
-   "provvisorio": null,
-   "senza_prove": "0",
-   "cascata": [
-    {"livello": "1", "base": "reference standard", "regola": "user standard: mass + RT + MS/MS (cosine with the spectrum of the standard of the SAME ion)"},
-    {"livello": "2a", "base": "spectral library", "regola": "at least one valid EXPERIMENTAL library source (mzCloud, MassBank, MoNA): cosine >= coseno_min AND shared ions >= ioni_comuni_min AND precursor within precursore_ppm_max (beyond = analogue, never 2a)"},
-    {"livello": "2b", "base": "diagnostic evidence", "regola": "ONLY by decision of the chemist, never automatic (the programme may propose, not assign): probable structure from diagnostic fragments and in-silico spectra (MetFrag, CFM-ID, SIRIUS/CSI:FingerID) or an unambiguous chemical context without a standard in the library; from 2a, 3a, 3b or 4, refused on 5 and 0 with a warning; the RT rule wins over 2b"},
-    {"livello": "3a", "base": "name conflict", "regola": "valid sources that name different structures (first InChIKey block) and the best ahead by less than margine_conflitto_coseno"},
-    {"livello": "3a", "base": "isomers not discriminated", "regola": "the same library compound at two or more RT (beyond rt_gruppo_tol_min)"},
-    {"livello": "3a", "base": "RT isomer", "regola": "the user standard elutes at another RT: another isomer"},
-    {"livello": "3a", "base": "expert review", "regola": "the chemist judges a 2a match insufficient"},
-    {"livello": "3a", "base": "putative library", "regola": "OFF by default (putative_library_level3): a library entry named 'Spectral Match to ...' or propagated, that passes the gates of a source"},
-    {"livello": "3a", "base": "CSI:FingerID", "regola": "CSI:FingerID structure with COSMIC (ConfidenceScoreApproximate) >= cosmic_min (0.64 is roughly 10% FDR for the paper's confidence score, a guide with no guarantee; applied here to the Approximate score, Hoffmann et al. 2022); never downgrades a library match"},
-    {"livello": "0", "base": "suspect-RT", "regola": "standard found by mass + RT but MS/MS not confirmed: outside the counts"},
-    {"livello": "0", "base": "none", "regola": "detected, no annotation"}
+   "provisional": null,
+   "without_proofs": "0",
+   "cascade": [
+    {"level": "1", "basis": "reference standard", "rule": "user standard: mass + RT + MS/MS (cosine with the spectrum of the standard of the SAME ion)"},
+    {"level": "2a", "basis": "spectral library", "rule": "at least one valid EXPERIMENTAL library source (mzCloud, MassBank, MoNA): cosine >= coseno_min AND shared ions >= ioni_comuni_min AND precursor within precursore_ppm_max (beyond = analogue, never 2a)"},
+    {"level": "2b", "basis": "diagnostic evidence", "rule": "ONLY by decision of the chemist, never automatic (the programme may propose, not assign): probable structure from diagnostic fragments and in-silico spectra (MetFrag, CFM-ID, SIRIUS/CSI:FingerID) or an unambiguous chemical context without a standard in the library; from 2a, 3a, 3b or 4, refused on 5 and 0 with a warning; the RT rule wins over 2b"},
+    {"level": "3a", "basis": "name conflict", "rule": "valid sources that name different structures (first InChIKey block) and the best ahead by less than margine_conflitto_coseno"},
+    {"level": "3a", "basis": "isomers not discriminated", "rule": "the same library compound at two or more RT (beyond rt_gruppo_tol_min)"},
+    {"level": "3a", "basis": "RT isomer", "rule": "the user standard elutes at another RT: another isomer"},
+    {"level": "3a", "basis": "expert review", "rule": "the chemist judges a 2a match insufficient"},
+    {"level": "3a", "basis": "putative library", "rule": "OFF by default (putative_library_level3): a library entry named 'Spectral Match to ...' or propagated, that passes the gates of a source"},
+    {"level": "3a", "basis": "CSI:FingerID", "rule": "CSI:FingerID structure with COSMIC (ConfidenceScoreApproximate) >= cosmic_min (0.64 is roughly 10% FDR for the paper's confidence score, a guide with no guarantee; applied here to the Approximate score, Hoffmann et al. 2022); never downgrades a library match"},
+    {"level": "0", "basis": "suspect-RT", "rule": "standard found by mass + RT but MS/MS not confirmed: outside the counts"},
+    {"level": "0", "basis": "none", "rule": "detected, no annotation"}
    ],
-   "fonti_escluse": [
+   "excluded_sources": [
     "propagated GNPS2 annotations (name starting with 'Candidate', or containing '(known structural isomers' or '(delta mass:'): never a source",
     "mzMine lipids with method = 'matchedlipid': not spectral matches",
     "structure (SMILES/InChI/InChIKey/formula) of the mzMine library: used only if the formula explains the precursor of the entry within struttura_libreria_ppm_max with the declared adduct or a common one (known bug of mzMine exports: reused keys)"
    ],
-   "pulizia_nomi": {
-    "prefissi": ["Massbank:", "MassbankEU:", "MoNA:", "ReSpect:", "Spectral Match to "],
-    "taglio": "only the part before '|'",
-    "suffissi": [" from NIST14", " - 30.0 eV", " - 40.0 eV", " - 20.0 eV"],
-    "accessione_iniziale_regex": "^(?:[A-Z]{2,3}\\d{5,}|\\d{5,})\\s+",
-    "energia_finale_regex": "_CE\\d+(?:\\.\\d+)?$"
+   "name_cleaning": {
+    "prefixes": ["Massbank:", "MassbankEU:", "MoNA:", "ReSpect:", "Spectral Match to "],
+    "cut": "only the part before '|'",
+    "suffixes": [" from NIST14", " - 30.0 eV", " - 40.0 eV", " - 20.0 eV"],
+    "leading_accession_regex": "^(?:[A-Z]{2,3}\\d{5,}|\\d{5,})\\s+",
+    "trailing_energy_regex": "_CE\\d+(?:\\.\\d+)?$"
    },
-   "testi_basi_en": {
+   "basis_texts_en": {
     "reference standard": "Confirmed by reference standard: mass + RT + MS/MS (L1)",
     "spectral library": "Spectral library match (L2a)",
     "diagnostic evidence": "Structure supported by diagnostic fragments, in-silico spectra or an unambiguous chemical context, judged by the chemist (L2b)",
@@ -120,10 +120,10 @@ window.LIVELLI_DATI = {
    }
   },
   "lr": {
-   "visibile": false,
-   "fonte": "unit resolution (triple quadrupole, nominal masses): never above 4 (an MS2 does not raise a level, decision D6 of Tabui), a nominal mass is a candidate and not an identification; 4 when the nominal formula alone explains the ion; 5 otherwise",
-   "tetto": "4",
-   "soglie": {
+   "visible": false,
+   "source": "unit resolution (triple quadrupole, nominal masses): never above 4 (an MS2 does not raise a level, decision D6 of Tabui), a nominal mass is a candidate and not an identification; 4 when the nominal formula alone explains the ion; 5 otherwise",
+   "cap": "4",
+   "thresholds": {
     "entropia_min": 0.75,
     "picchi_min": 6,
     "picchi_min_pochi": 3,
@@ -133,16 +133,16 @@ window.LIVELLI_DATI = {
     "entropia_provvisorio": 0.60,
     "analogo_mcos_min": 0.60
    },
-   "cancelli": [
-    {"id": "prec", "campo": "ppm", "op": "<=", "soglia": "precursore_ppm_max", "assoluto": true, "unita": "mDa", "ruolo": "source"},
-    {"id": "score", "campo": "ent", "op": ">=", "soglia": "entropia_min", "ruolo": "source"},
-    {"id": "shared", "campo": "shared", "op": ">=", "soglia": "picchi_min", "ridotta": {"se_campo": "nlib", "minore_di": 6, "soglia": "picchi_min_pochi"}, "ruolo": "source"},
-    {"id": "scans", "campo": "nScans", "op": ">=", "soglia": "scansioni_min", "ruolo": "confirm"},
-    {"id": "distinct", "campo": "margin", "op": ">=", "soglia": "margine_min", "ruolo": "confirm"}
+   "gates": [
+    {"id": "prec", "field": "ppm", "op": "<=", "threshold": "precursore_ppm_max", "absolute": true, "unit": "mDa", "role": "source"},
+    {"id": "score", "field": "ent", "op": ">=", "threshold": "entropia_min", "role": "source"},
+    {"id": "shared", "field": "shared", "op": ">=", "threshold": "picchi_min", "reduced": {"if_field": "nlib", "less_than": 6, "threshold": "picchi_min_pochi"}, "role": "source"},
+    {"id": "scans", "field": "nScans", "op": ">=", "threshold": "scansioni_min", "role": "confirm"},
+    {"id": "distinct", "field": "margin", "op": ">=", "threshold": "margine_min", "role": "confirm"}
    ],
    "standard": [],
-   "provvisorio": {"campo": "ent", "soglia": "entropia_provvisorio"},
-   "senza_prove": "5"
+   "provisional": {"field": "ent", "threshold": "entropia_provvisorio"},
+   "without_proofs": "5"
   }
  }
 };

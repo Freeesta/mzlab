@@ -50,7 +50,7 @@
   - `mgf` (FBMN, `FEATURE_ID` = id della riga) e `sirius` (`.ms`, `feature_<id>`, senza formula): una voce per riga con spettro, righe `#` in testa dal rapporto. Lo spettro di riga è uno solo nel programma (`ms2spec::spectra_with`, usato anche dalle prove `evidence_sources_to`): nel `.mzidx` del file `ms2_file`, tra gli MS2 con finestra che contiene l'm/z e tempo dentro i bordi del picco, quello col TIC più alto (`MERGED_ACROSS_N_SAMPLES=1`); un solo passaggio sui picchi MS2 di ogni file.
   - Opzioni dello spettro di riga, spente per difetto (`Recipe.ms2`, fuori da `file_text`: l'impronta dei `.mzfeatf` non cambia; chiavi lette da `run.rs::apply_params`, in `export_ms2` dalla spec di vista): `ms2_spectrum` (`best` | `consensus`: tutte le scansioni adatte della riga, poi i file dove ha un picco, `msntree_build::consenso` a 8 ppm, 40 %, 0,5 %, intensità 100 = picco più forte).
   - `ms2_background`: toglie i picchi che ricorrono nei bianchi (10 % delle MS2 con picco base ≥5000 di ogni bianco, 80 % dei bianchi, al più 25; 0,01 Da, 0,5 Da in `unit`), mai il precursore ±1. Senza bianchi nessuna sottrazione e `SpecInfo.bg = "no_blank"`; il file porta `# MS2 background: <stato>, <n> peaks removed`.
-- **Formato `.mzfeat` versione 2** (`store.rs::TABLE_FORMAT`).
+- **Formato `.mzfeat` versione 2** (`store_base.rs::TABLE_FORMAT`, anche `store::TABLE_FORMAT`).
   - Contiene `id` e i riassunti come array, e nel meta `summaries` (0/1); le colonne di identità sono opzionali, con `identity` (0/1) nel meta.
   - Un file di versione 1 si legge con i riassunti vuoti; un file troncato è rifiutato anche se mancano array che il lettore non chiede.
   - `sort_rows` gira anche in `evidence_to` dopo l'aggiunta delle righe mirate, così gli id scritti sono quelli finali.

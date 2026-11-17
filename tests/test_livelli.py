@@ -27,15 +27,15 @@ def lv(code):
 
 
 def test_data_file_is_versioned_and_has_two_profiles():
-    d = run("console.log(JSON.stringify({f: L.data.formato, p: Object.keys(L.data.profili), vis: L.names(), def: L.profileName(), order: L.ORDER}))")
-    assert d["f"] == "livelli/1" and d["p"] == ["mzlab", "attributio", "lr"] and d["vis"] == ["mzlab"] and d["def"] == "mzlab"
+    d = run("console.log(JSON.stringify({f: L.data.format, p: Object.keys(L.data.profiles), vis: L.names(), def: L.profileName(), order: L.ORDER}))")
+    assert d["f"] == "levels/1" and d["p"] == ["mzlab", "attributio", "lr"] and d["vis"] == ["mzlab"] and d["def"] == "mzlab"
     assert d["order"] == ["1", "2a", "2b", "3a", "3b", "4", "5", "0"]
 
 
 def test_attributio_profile_carries_the_draft_values():
     t = run("console.log(JSON.stringify(L.thresholds('attributio')))")
     assert t["coseno_min"] == 0.70 and t["ioni_comuni_min"] == 4 and t["precursore_ppm_max"] == 15.0 and t["margine_conflitto_coseno"] == 0.05
-    assert run("console.log(JSON.stringify(L.data.profili.attributio.cascata.map(x => x.base)))")[:3] == ["reference standard", "spectral library", "diagnostic evidence"]
+    assert run("console.log(JSON.stringify(L.data.profiles.attributio.cascade.map(x => x.basis)))")[:3] == ["reference standard", "spectral library", "diagnostic evidence"]
 
 
 @pytest.mark.parametrize("code,level,why", [
@@ -79,14 +79,14 @@ def test_the_program_never_proposes_2b():
 def test_evidence_has_one_line_per_gate_with_value_threshold_and_outcome():
     r = lv("return L.assess({cands: [c(.62, 8, 2)], nScans: 3})")
     assert len(r["gates"]) == 5 and len(r["lines"]) == 5
-    assert "entropia 0.62 vs 0.75 ✗" in r["lines"], r["lines"]
-    assert any(x.startswith("|Δ precursore| 2.0 vs 5.0 ppm ✓") for x in r["lines"]), r["lines"]
-    assert r["decisive"].startswith("L3a: provvisorio")
+    assert "entropy 0.62 vs 0.75 ✗" in r["lines"], r["lines"]
+    assert any(x.startswith("|Δ precursor| 2.0 vs 5.0 ppm ✓") for x in r["lines"]), r["lines"]
+    assert r["decisive"].startswith("L3a: tentative")
 
 
 def test_decisive_sentence_of_the_gates_that_pass_and_of_no_source():
-    assert lv("return L.assess({cands: [c(.9, 8, 2)], nScans: 3})")["decisive"] == "L2a: la libreria LIB passa ogni cancello (A)"
-    assert lv("return L.assess({cands: [c(.5, 8, 2)], nScans: 3})")["decisive"].startswith("Nessuna fonte sopra i cancelli; la più vicina: A: entropia 0.50 vs 0.75 ✗")
+    assert lv("return L.assess({cands: [c(.9, 8, 2)], nScans: 3})")["decisive"] == "L2a: the library LIB passes every gate (A)"
+    assert lv("return L.assess({cands: [c(.5, 8, 2)], nScans: 3})")["decisive"].startswith("No source above the gates; the closest: A: entropy 0.50 vs 0.75 ✗")
 
 
 def test_decision_of_the_chemist():
@@ -111,7 +111,7 @@ def test_thresholds_are_editable_stored_and_exported():
       const ex = L.exportState(); out.push(ex.formato, ex.profilo, ex.soglie.entropia_min);
       L.reset(); out.push(L.thresholds().entropia_min); L.importState(ex); out.push(L.thresholds().entropia_min);
       return out""")
-    assert r == [0.75, 0.9, "3a", False, False, "livelli/1", "mzlab", 0.9, 0.75, 0.9]
+    assert r == [0.75, 0.9, "3a", False, False, "levels/1", "mzlab", 0.9, 0.75, 0.9]
 
 
 def test_attributio_profile_cascade():
@@ -123,7 +123,7 @@ def test_attributio_profile_cascade():
     conflict = lv("return L.assess({cands: [c(.9, 5, 10, 'A', 'AAAAAAAAAAAAAA-X', {cos: .75}), c(.9, 5, 10, 'B', 'BBBBBBBBBBBBBB-X', {cos: .73})]}, 'attributio')")
     assert conflict["proposed"] == "3a" and conflict["why"] == "confirm"                                           # a name conflict: the best is ahead by less than 0.05
     near = lv("return L.assess({cands: [c(.9, 5, 10, 'A', 'AAAAAAAAAAAAAA-X', {cos: .62})]}, 'attributio')")
-    assert near["decisive"].startswith("Nessuna fonte sopra i cancelli; la più vicina: A: coseno 0.62 vs 0.70 ✗")
+    assert near["decisive"].startswith("No source above the gates; the closest: A: cosine 0.62 vs 0.70 ✗")
 
 
 def test_lr_profile_never_goes_above_4():
@@ -138,33 +138,33 @@ def test_lr_profile_never_goes_above_4():
 def test_colour_class_and_sentence_never_say_it_is():
     r = lv("return [L.cls('2a'), L.cls('0'), L.sentence('2a'), L.sentence('3a'), L.tag('3b'), L.name('5')]")
     assert r[0] == "lv-2a" and r[1] == "lv-0"
-    assert r[2] == "Candidato · L2a · Probabile (libreria)" and r[3].startswith("Candidato · L3a") and r[4] == "L3b"
+    assert r[2] == "Candidate · L2a · Probable (library)" and r[3].startswith("Candidate · L3a") and r[4] == "L3b"
 
 
 def test_points_section_does_not_change_the_levels():
-    """The points of the proofs (section `punti`, read by crates/mzlab-feat) explain the order and never assign a level: the same cases give the same
+    """The points of the proofs (section `points`, read by crates/mzlab-feat) explain the order and never assign a level: the same cases give the same
     proposal, reason and gates with the section and without it."""
     r = run("""const cases = [];
       for (const ent of [.5, .62, .7, .8, .95]) for (const shared of [2, 4, 6, 9]) for (const dprec of [1, 4.9, 7]) for (const nScans of [1, 3]) for (const profile of ['mzlab', 'attributio'])
         cases.push([{ cands: [c(ent, shared, dprec), c(ent - .02, shared, dprec, 'B', 'BBBBBBBBBBBBBB-X')], nScans, formulaUnique: shared > 5 }, profile]);
       cases.push([{ cands: [] }, 'mzlab'], [{ cands: [], formulaUnique: true }, 'mzlab'], [{ cands: [c(.9, 8, 2)], std: { drt: .05, ent: .9, dprec: 1, name: 'S' }, nScans: 3 }, 'mzlab']);
       const run = () => cases.map(([i, p]) => { const x = L.assess(i, p); return [x.proposed, x.why, x.gates.map(g => g.txt), x.decisive]; });
-      const withPoints = run(), had = !!L.data.profili.mzlab.punti; delete L.data.profili.mzlab.punti;
+      const withPoints = run(), had = !!L.data.profiles.mzlab.points; delete L.data.profiles.mzlab.points;
       console.log(JSON.stringify({ had, n: cases.length, same: JSON.stringify(withPoints) === JSON.stringify(run()) }))""")
     assert r["had"] is True and r["n"] > 200 and r["same"] is True
 
 
 def test_points_section_shape():
-    p = run("console.log(JSON.stringify(L.data.profili.mzlab.punti))")
-    assert p["versione"] == 1 and set(p["prove"]) == {"massa", "isotopi", "MS2", "frammenti", "rete", "cinetica", "controlli", "RT", "frequenza", "esterne"}
-    assert [g["punti"] for g in p["prove"]["massa"]["gradini"]] == [2, 1] and p["prove"]["MS2"]["gradini"][0] == {"soglia": "entropia_min", "punti": 3}
-    assert p["prove"]["cinetica"]["massimo"] == 0 and p["prove"]["cinetica"]["massimo_se_pesata"] == 1           # K1: informative only
-    thresholds = run("console.log(JSON.stringify(L.data.profili.mzlab.soglie))")
-    keys = [g["soglia"] for r in p["prove"].values() for g in r["gradini"] if isinstance(g["soglia"], str)] + [r["richiede"]["soglia"] for r in p["prove"].values() if "richiede" in r]
-    keys += list(p["tolleranze"].values())
-    assert keys and all(k in thresholds for k in keys)                                                               # every named threshold exists in `soglie`
-    for r in p["prove"].values():
-        pts = [g["punti"] for g in r["gradini"]]
+    p = run("console.log(JSON.stringify(L.data.profiles.mzlab.points))")
+    assert p["version"] == 1 and set(p["proofs"]) == {"mass", "isotopes", "MS2", "fragments", "network", "kinetics", "controls", "RT", "frequency", "external"}
+    assert [g["points"] for g in p["proofs"]["mass"]["steps"]] == [2, 1] and p["proofs"]["MS2"]["steps"][0] == {"threshold": "entropia_min", "points": 3}
+    assert p["proofs"]["kinetics"]["maximum"] == 0 and p["proofs"]["kinetics"]["maximum_if_weighted"] == 1           # K1: informative only
+    thresholds = run("console.log(JSON.stringify(L.data.profiles.mzlab.thresholds))")
+    keys = [g["threshold"] for r in p["proofs"].values() for g in r["steps"] if isinstance(g["threshold"], str)] + [r["requires"]["threshold"] for r in p["proofs"].values() if "requires" in r]
+    keys += list(p["tolerances"].values())
+    assert keys and all(k in thresholds for k in keys)                                                               # every named threshold exists in `thresholds`
+    for r in p["proofs"].values():
+        pts = [g["points"] for g in r["steps"]]
         assert pts == sorted(pts, reverse=True) and all(x >= 0 for x in pts)                                    # best step first, never negative points
 
 

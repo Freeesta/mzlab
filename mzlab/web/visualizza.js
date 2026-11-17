@@ -17,7 +17,7 @@ const DISP = (() => {
   const redraw = p => { draw(p); if (typeof uiSave === "function") uiSave(); };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   // the display options of a graph are one undoable action (comandi.js)
-  const DISPLAY = ["thr", "nlab", "dec", "sticks", "dots", "mk", "noCont", "rel", "gdelay", "pdaDelay", "pdaAlign", "overlay", "etpk"];
+  const DISPLAY = ["thr", "nlab", "dec", "sticks", "dots", "mk", "noCont", "rel", "gdelay", "pdaDelay", "pdaAlign", "overlay", "etpk", "lblOn", "lblOff"];
   COMANDI.gestore("spec.display", {
     leggi: p => JSON.stringify(DISPLAY.filter(k => p[k] !== undefined).map(k => [k, p[k]])),
     applica: (p, snap) => { const o = new Map(JSON.parse(snap)); DISPLAY.forEach(k => { if (o.has(k)) p[k] = o.get(k); else delete p[k]; }); if (typeof syncTb === "function") syncTb(p); },
@@ -33,7 +33,7 @@ const DISP = (() => {
   register("spec", { id: "dots", label: "disp.dots", title: "disp.dots.title", kind: "check", get: p => !!p.dots, set: (p, v) => { p.dots = !!v; redraw(p); } });
   register("spec", { id: "marker", label: "disp.marker", title: "disp.marker.title", kind: "check", when: p => !!(p._a && p._a.markN != null), get: p => markOn(p), set: (p, v) => { p.mk = !!v; redraw(p); } });
   register("spec", { id: "nocont", label: "disp.noCont", title: "disp.noCont.title", kind: "check", when: p => !!p._a && !!p._a.hrp, get: p => !!p.noCont, set: (p, v) => { p.noCont = !!v; redraw(p); } });
-  register("spec", { id: "contlists", label: "ctx.spec.contLists", kind: "button", get: () => null, when: p => !!p._a && !!p._a.hrp && !!window.LISTE, set: p => LISTE.open({ hr: true }) });
+  register("spec", { id: "contlists", label: "ctx.spec.contLists", kind: "button", get: () => null, when: p => !!p._a && !!p._a.hrp && !!window.LISTE && FEATURES.lists, set: p => LISTE.open({ hr: true }) });
   register("spec", { id: "rel", label: "disp.rel", kind: "check", get: p => !!specRel(p), set: (p, v) => { p.rel = !!v; redraw(p); } });
   // ---- chromatogram and XIC
   register("chrom", { id: "norm100", label: "disp.norm100", kind: "check", get: p => !!p.norm100, set: (p, v) => { p.norm100 = !!v; redraw(p); } });

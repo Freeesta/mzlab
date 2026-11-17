@@ -110,13 +110,13 @@ def misura(folder_dda: str | None, series: str | None, csv: str | None, work: Pa
     base = find_hr(folder_dda)
     misure, dr = robustness(base, work / "robustezza")
     cz, dz = d5(series, csv, work / "d5")
-    det = {"robustezza": dr, "mzmine": dz, "dati_dda": "letti" if misure else "saltato: nessun file (MZLAB_DATI o --robustezza)",
-           "csv": "dato" if csv and series else "saltato: serve --serie e --mzmine"}
+    det = {"robustezza": dr, "mzmine": dz, "dati_dda": "read" if misure else "skipped: no file (MZLAB_DATI or --robustezza)",
+           "csv": "given" if csv and series else "skipped: needs --serie and --mzmine"}
     return document(criteria_robustness(misure) + cz, data, cancello.crate_version()), det
 
 
 def markdown(c: dict, det: dict) -> str:
-    row = lambda k: f"| `{k['id']}` | {'saltato' if k['ok'] is None else ('passato' if k['ok'] else 'NON PASSATO')} | {k['valore']} | {k['soglia']} |"      # noqa: E731
+    row = lambda k: f"| `{k['id']}` | {'skipped' if k['ok'] is None else ('passed' if k['ok'] else 'NOT PASSED')} | {k['valore']} | {k['soglia']} |"      # noqa: E731
     out = [f"# High-resolution table view ({c['data']}, crate {c['crate_version']})", "",
            f"`vista_tabella_hr`: **{'open' if c['vista_tabella_hr'] else 'closed'}**; DDA files: {det['dati_dda']}; mzmine: {det['csv']}", "",
            "| criterion | result | value | threshold |", "|---|---|---|---|"] + [row(k) for k in c["criteri"]] + ["", "## Details", "```json",

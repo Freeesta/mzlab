@@ -199,6 +199,9 @@ def _r_scan_axis(app, q):  # RT and index of every scan of a level (the sight of
     return _json(app.scan_axis(int(q["k"]), int(q.get("level", 1))))
 
 
+_MERGE = {"0": False, "1": True}      # merge=0 opts out, merge=1 forces, omitted (None) is AUTO
+
+
 @_get("/api/spectrum")
 def _r_spectrum(app, q):
     pr = q.get("precursor")
@@ -207,21 +210,21 @@ def _r_spectrum(app, q):
         bg = {"k": int(q["bgk"]), "rt0": float(q["bgrt0"]), "rt1": float(q["bgrt1"]), "factor": float(q.get("bgf", 1.0)),
               "tol": float(q.get("bgtol", 5.0)), "clip": q.get("bgclip", "1") == "1"}
     return _json(app.spectrum(int(q["k"]), float(q["rt0"]), float(q["rt1"]), int(q.get("level", 1)),
-                              float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), bg, q.get("merge") == "1", q.get("hr") != "0", q.get("filt") or None))
+                              float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), bg, _MERGE.get(q.get("merge")), q.get("hr") != "0", q.get("filt") or None))
 
 
 @_get("/api/spectra", fail=(ValueError, KeyError))
 def _r_spectra(app, q):    # single scans i0..i1 (at most 60), for scan-by-scan navigation
     pr = q.get("prec", q.get("precursor"))
     return _json(app.spectra(int(q["k"]), int(q["i0"]), int(q["i1"]), int(q.get("level", 1)),
-                             float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), q.get("merge") == "1", q.get("hr") != "0", q.get("filt") or None))
+                             float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), _MERGE.get(q.get("merge")), q.get("hr") != "0", q.get("filt") or None))
 
 
 @_get("/api/scanbin", fail=(ValueError, KeyError))
 def _r_scanbin(app, q):    # the same scans as /api/spectra, as a binary block (no JSON, no decimals): see App.scanbin
     pr = q.get("prec", q.get("precursor"))
     body = app.scanbin(int(q["k"]), int(q["i0"]), int(q["i1"]), int(q.get("level", 1)), float(pr) if pr not in (None, "") else None,
-                       q.get("filt") or q.get("filter") or None, q.get("hr") != "0", q.get("merge") == "1")
+                       q.get("filt") or q.get("filter") or None, q.get("hr") != "0", _MERGE.get(q.get("merge")))
     return 200, "application/octet-stream", body, {}
 
 

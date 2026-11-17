@@ -40,7 +40,7 @@ fn report(path: &str) {
     let scans = &idx.scans;
 
     let mut levels: BTreeMap<u8, usize> = BTreeMap::new();
-    for s in scans {
+    for s in scans.iter() {
         *levels.entry(s.level).or_default() += 1;
     }
     let (lo, hi) = scans

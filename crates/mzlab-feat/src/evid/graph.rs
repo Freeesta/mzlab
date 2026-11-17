@@ -95,14 +95,14 @@ pub enum EdgeKind {
 impl EdgeKind {
     pub fn name(self) -> &'static str {
         match self {
-            EdgeKind::Adduct => "addotto",
+            EdgeKind::Adduct => "adduct",
             EdgeKind::Isf => "isf",
-            EdgeKind::Isotope => "isotopo",
-            EdgeKind::Undetermined => "non distinguibile",
-            EdgeKind::Other => "altro",
-            EdgeKind::ParentProduct => "progenitore-prodotto",
-            EdgeKind::Library => "libreria",
-            EdgeKind::External => "esterno",
+            EdgeKind::Isotope => "isotope",
+            EdgeKind::Undetermined => "undetermined",
+            EdgeKind::Other => "other",
+            EdgeKind::ParentProduct => "parent-product",
+            EdgeKind::Library => "library",
+            EdgeKind::External => "external",
         }
     }
 }

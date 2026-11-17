@@ -1,5 +1,5 @@
 """Loading in the worker of the engine (mzlab/web/rust-carica.js, rust-nativo.js), run by node on copies of the modules: the room asked for a .wiff sample counts only the members still to write,
-fingerprints are found for a shared member already in OPFS, a stale native stub is forgotten, the plain copy is cancellable and releases its room, and an unchanged index is not opened twice."""
+fingerprints are found for a shared member already in OPFS, a stale native stub is forgotten, the plain copy is cancellable and releases its room, an unchanged index is not opened twice, the copy gate keeps k copies at once in the order of the list, and a stored index refused for memory is kept."""
 import re
 import shutil
 import subprocess

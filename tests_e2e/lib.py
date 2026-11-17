@@ -119,13 +119,13 @@ def show_table(pg):
 _real_click = _Page.click
 def _click(self, selector, *a, **k):
     # «Load data» is gone: the files are open already, the click is the first click on a file
-    if isinstance(selector, str) and (selector == "#opbtn" or "Carica dati" in selector or "Load data" in selector): return open_first(self)
+    if isinstance(selector, str) and (selector == "#opbtn" or "Load data" in selector): return open_first(self)
     return _real_click(self, selector, *a, **k)
 _Page.click = _click
 _real_wfs = _Page.wait_for_selector
 def _wfs(self, selector, *a, **k):
     # waiting for «Load data» = waiting for the end of the loading (the button is gone)
-    if isinstance(selector, str) and (selector == "#opbtn" or "Carica dati" in selector or "Load data" in selector):
+    if isinstance(selector, str) and (selector == "#opbtn" or "Load data" in selector):
         return loaded(self, k.get("timeout", 120000))
     return _real_wfs(self, selector, *a, **k)
 _Page.wait_for_selector = _wfs
@@ -149,36 +149,31 @@ _np, _nc = _Br.new_page, _Br.new_context
 _SITE = "window.SITO_PUBBLICO=Object.freeze({scaricaApp:true})"
 def _site():
     return None if os.environ.get("MZLAB_SITO_PRODUZIONE") else _SITE
-# The Safari first-visit notice (avviso-safari.js) would sit over the page in every WebKit round and in the tests that stub GestureEvent: it is marked
-# as seen, unless a test asks for it (safari_notice=True, e2e_safari_avviso).
-_SAFARI_SEEN = "try{localStorage.setItem('mzlab.safari.seen','1')}catch(e){}"
 # Draw's side cards start folded but for three (disegno-riquadri.js): the tests that work inside them find them open, as a student who opened them
 # would; e2e_disegno_riquadri asks for the real first visit (draw_cards=True).
 _CARDS_OPEN = ("try{if(!localStorage.getItem('mzlab.disegno.schede'))localStorage.setItem('mzlab.disegno.schede',JSON.stringify(Object.fromEntries("
                "['sel-card','lb-card','cut-card','mech-card','chk-card','cip-card','sub-card'].map(k=>[k,1]))))}catch(e){}")
-def _extra(c, k, cards=False):
-    if not k: c.add_init_script(_SAFARI_SEEN)
+def _extra(c, cards=False):
     if not cards: c.add_init_script(_CARDS_OPEN)
 def _start_prefs(k):
-    """The site starts in Italian with the light theme whatever the browser says. A test that asks for an English locale or a dark system scheme
-    wants that UI, so the stored choice it would have made is set for it (only if the page has none yet). `lang_auto=True` leaves the real defaults."""
+    """The site starts in English with the light theme whatever the browser says. A test that asks for a dark system scheme wants that UI,
+    so the stored choice it would have made is set for it (only if the page has none yet). `lang_auto=True` (kept for old callers) leaves the real defaults."""
     if k.pop("lang_auto", False): return None
     js = ""
-    if str(k.get("locale", "")).lower().startswith("en"): js += "if(!localStorage.getItem('mzlab.lang'))localStorage.setItem('mzlab.lang','en');"
     if k.get("color_scheme") == "dark": js += "if(!localStorage.getItem('mzlab.prefs'))localStorage.setItem('mzlab.prefs',JSON.stringify({v:2,theme:'auto'}));"
     # once per tab: a test that resets the site's data must see the default afterwards, not the seeded choice again
     return ("try{if(window.name.indexOf('|mzseed')<0){window.name+='|mzseed';" + js + "}}catch(e){}") if js else None
 def _new_page(self, *a, **k):
-    k.setdefault("locale", "it-IT")        # Playwright starts in en-US, which would now give English to every test written in Italian (e2e_inglese uses en-US on purpose)
-    sp, sn, dc = _start_prefs(k), k.pop("safari_notice", False), k.pop("draw_cards", False)
-    pg = _np(self, *a, **k); pg.add_init_script(_TRACK); _extra(pg, sn, dc)
+    k.setdefault("locale", "en-US")
+    sp, dc = _start_prefs(k), k.pop("draw_cards", False)
+    pg = _np(self, *a, **k); pg.add_init_script(_TRACK); _extra(pg, dc)
     if sp: pg.add_init_script(sp)
     if _site(): pg.add_init_script(_site())
     return pg
 def _new_context(self, *a, **k):
-    k.setdefault("locale", "it-IT")
-    sp, sn, dc = _start_prefs(k), k.pop("safari_notice", False), k.pop("draw_cards", False)
-    c = _nc(self, *a, **k); c.add_init_script(_TRACK); _extra(c, sn, dc)
+    k.setdefault("locale", "en-US")
+    sp, dc = _start_prefs(k), k.pop("draw_cards", False)
+    c = _nc(self, *a, **k); c.add_init_script(_TRACK); _extra(c, dc)
     if sp: c.add_init_script(sp)
     if _site(): c.add_init_script(_site())
     return c
@@ -192,11 +187,11 @@ class _PersistentWebKit:
         self._bt, self._kw, self._open = bt, kw, []
     def new_context(self, **k):
         import tempfile
-        k.setdefault("locale", "it-IT")
-        sp, sn, dc = _start_prefs(k), k.pop("safari_notice", False), k.pop("draw_cards", False)
+        k.setdefault("locale", "en-US")
+        sp, dc = _start_prefs(k), k.pop("draw_cards", False)
         d = tempfile.mkdtemp(prefix="mzlab-wkprofile-")
         c = self._bt.launch_persistent_context(d, **self._kw, **k)
-        self._open.append((c, d)); c.add_init_script(_TRACK); _extra(c, sn, dc)
+        self._open.append((c, d)); c.add_init_script(_TRACK); _extra(c, dc)
         if sp: c.add_init_script(sp)
         if _site(): c.add_init_script(_site())
         return c
@@ -296,7 +291,7 @@ def shut(pg, sel):
     if pg.is_visible(sel): pg.click(sel)
 def a11y_open(pg):
     """The readability controls of the settings are flat (never folded): nothing to open before touching font, contrast or palette."""
-    pg.wait_for_selector("#uip-a11y")
+    pg.wait_for_selector("#uip-list")
 def set_pal(pg, v):
     a11y_open(pg); pg.select_option("#uip-pal", v)
 def get_env(suffix: str, default=None):
@@ -414,9 +409,9 @@ class Run:
                 urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=1).read(); break
             except Exception:
                 time.sleep(0.1)
-    def page(s, p, tour=False, qaqc=False, motion=False, draw_cards=False):
+    def page(s, p, tour=False, qaqc=False, motion=False, draw_cards=False, touch=False, **ctx):
         s.b = p.chromium.launch()
-        pg = s.b.new_page(viewport={"width": 1500, "height": 2200}, reduced_motion="no-preference" if motion else "reduce", draw_cards=draw_cards)
+        pg = s.b.new_page(**{"viewport": {"width": 1500, "height": 2200}, "reduced_motion": "no-preference" if motion else "reduce", "draw_cards": draw_cards, **({"has_touch": True} if touch else {}), **ctx})
         pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload',new URLSearchParams(location.search).get('ripn')||'1');}catch(_){}")          # the one reload of the first visit (browser.js isolateOnce) would cut a test short: e2e_isolamento is the one that wants it
         if not tour:
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
@@ -474,7 +469,7 @@ def xlsx_openpyxl(path):
 def dlmenu(pg, scope, kind):
     """«Scarica ▾» of a panel: open the menu, then choose the PNG image or the Excel data (kind = 'png' | 'xlsx')."""
     pg.locator(f"{scope} [data-a=dl]").first.click()
-    pg.locator("#ctx div", has_text="Immagine" if kind == "png" else "Excel").first.click()
+    pg.locator("#ctx div", has_text="Image" if kind == "png" else "Excel").first.click()
 
 
 def axe_path():

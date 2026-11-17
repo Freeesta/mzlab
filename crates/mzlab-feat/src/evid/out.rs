@@ -3,7 +3,7 @@
 
 use super::graph::{Edge, Identity, Inputs, Node};
 use super::prepared::{order as graph_order, Key, Prepared};
-use crate::store::Section;
+use crate::store_base::Section;
 use mzlab_core::error::Result;
 use super::{breakdown_fields, evidence_json, PointsTable};
 use crate::table::*;
@@ -14,11 +14,11 @@ pub const EVID_GRAPH_FORMAT: &str = super::FORMAT;
 fn role_name(role: u8) -> &'static str {
     match role {
         ROLE_M => "M",
-        ROLE_ISOTOPE => "isotopo",
-        ROLE_ADDUCT => "addotto",
+        ROLE_ISOTOPE => "isotope",
+        ROLE_ADDUCT => "adduct",
         ROLE_ISF => "isf",
-        ROLE_DIMER => "dimero",
-        ROLE_UNDETERMINED => "non determinato",
+        ROLE_DIMER => "dimer",
+        ROLE_UNDETERMINED => "undetermined",
         _ => "",
     }
 }
@@ -26,17 +26,17 @@ fn role_name(role: u8) -> &'static str {
 fn node_json(o: &mut Out, n: &Node) {
     match n {
         Node::Identity(i) => o
-            .raw("{\"tipo\":\"identita\",\"id\":")
+            .raw("{\"tipo\":\"identity\",\"id\":")
             .int(i64::from(*i))
             .raw("}"),
         Node::Member(i, k) => o
-            .raw("{\"tipo\":\"membro\",\"id\":")
+            .raw("{\"tipo\":\"member\",\"id\":")
             .int(i64::from(*i))
             .raw(",\"indice\":")
             .int(i64::from(*k))
             .raw("}"),
-        Node::Library(s) => o.raw("{\"tipo\":\"libreria\",\"nome\":").str(s).raw("}"),
-        Node::External(s) => o.raw("{\"tipo\":\"esterno\",\"nome\":").str(s).raw("}"),
+        Node::Library(s) => o.raw("{\"tipo\":\"library\",\"nome\":").str(s).raw("}"),
+        Node::External(s) => o.raw("{\"tipo\":\"external\",\"nome\":").str(s).raw("}"),
     };
 }
 

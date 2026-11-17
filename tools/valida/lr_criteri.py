@@ -168,7 +168,7 @@ def coverage(rif: list[dict], rows_mz, rows_rt) -> tuple[int, int, list[dict]]:
 def candidate_tests(i: dict) -> bool:
     """A candidate has its proofs when it has at least one contribution in favour and every contribution says what it is (`tipo`, `segno`, `fonte`)."""
     c = i.get("contributi") or []
-    return bool(c) and all(x.get("tipo") and x.get("segno") and x.get("fonte") for x in c) and any(x["segno"] == "a favore" for x in c)
+    return bool(c) and all(x.get("tipo") and x.get("segno") and x.get("fonte") for x in c) and any(x["segno"] == "for" for x in c)
 
 
 def lr_candidates(identita: list[dict]) -> list[dict]:

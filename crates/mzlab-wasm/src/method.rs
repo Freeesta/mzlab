@@ -1,16 +1,14 @@
 //! `metodo/1` for the page (`mzlab-core::metodo`): the method of an item from the mzML that carries it, from the `.dam` preselected for it, or from the `.wiff` it was made from
 //! (found by the SHA-1 that ProteoWizard writes in the mzML); the `.wiff` is only read, never converted here.
 use super::{error_json, Engine, JsReader};
+use crate::natives::Src;
 use js_sys::Function;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::labmethods;
 use mzlab_core::method::{self, Source, SrcFile};
 use mzlab_core::mzmlhead::Mzml;
-use mzlab_core::ole::Ole;
 use wasm_bindgen::prelude::*;
 
-/// A `.wiff` is read whole to open its container: more than this is refused with the memory budget error (the files of the 3200 are tens of MB).
-const WIFF_MAX: u64 = 192 << 20;
 /// How much of the mzML after `<run ` is read for the `metodo/1` document it carries (the texts of a `.raw` method and its `campi` take ~100 kB).
 const DOC_MAX: u64 = 1 << 20;
 /// How much of the start of an mzML is searched for the source files and the first `sample=N`.
@@ -54,7 +52,8 @@ impl Engine {
 
     /// The `metodo/1` document an mzML carries in its `<run>` (`""` when it has none).
     pub fn mzml_metodo(&mut self, size: f64, read: Function) -> Result<String, JsValue> {
-        let mut m = Mzml::new(JsReader { read }, size as u64);
+        // through `Src`, as the routes read an mzML: one copy of `Mzml` in the engine
+        let mut m = Mzml::new(Src::Js(JsReader { read }), size as u64);
         let head = m.run_head(DOC_MAX).map_err(|e| error_json(&e))?;
         Ok(method::from_userparam(&head).unwrap_or_default())
     }
@@ -66,40 +65,9 @@ impl Engine {
         size: f64,
         read: Function,
     ) -> Result<String, JsValue> {
-        let mut m = Mzml::new(JsReader { read }, size as u64);
+        let mut m = Mzml::new(Src::Js(JsReader { read }), size as u64);
         let doc = m.method(name, DOC_MAX).map_err(|e| error_json(&e))?;
         Ok(doc.unwrap_or_default())
-    }
-
-    /// `metodo/1` of one sample of a `.wiff` (`size` bytes read through `read`); `sha1` is its SHA-1 when known.
-    pub fn wiff_metodo(
-        &mut self,
-        name: &str,
-        size: f64,
-        read: Function,
-        sample: u32,
-        sha1: &str,
-    ) -> Result<String, JsValue> {
-        if size as u64 > WIFF_MAX {
-            return Err(error_json(&mzlab_core::Error::memory_budget()));
-        }
-        let mut data = vec![0u8; size as usize];
-        JsReader { read }
-            .read_at(0, &mut data)
-            .map_err(|e| error_json(&e))?;
-        let ole = Ole::open(data, name, &mzlab_core::readers::Limits::held())
-            .map_err(|e| error_json(&e))?;
-        let file = SrcFile {
-            name: name.to_string(),
-            sha1: (!sha1.is_empty()).then(|| sha1.to_string()),
-            bytes: size as u64,
-        };
-        let src = Source {
-            format: "sciex-wiff",
-            files: vec![file],
-            sample: Some(sample),
-        };
-        Ok(mzlab_core::method_wiff::from_wiff(&ole, sample, &src))
     }
 
     /// `metodo/1` of an Agilent method folder `*.m` outside any run (`mzlab-core::agilent::quant`): `names` = the paths inside the folder, one per line,

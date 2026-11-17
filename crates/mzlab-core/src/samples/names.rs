@@ -1,9 +1,16 @@
 //! The one parser of the file names: role, time as written, replicate, series and concentration proposed from a name (`tempo_confermato` false).
 //! The role and the minutes follow `project::guess_sample` (the same names give the same minutes), plus seconds (`90 s`), the replicate `(2)`,
 //! the infusion (`infusion`, `infusione`, `direct-infusion`, `FIA` or an MSn file), the dark control (`dark`, `buio`, `adsorption`) and the series.
+//!
+//! The time point, as a whole token (start, end, space, `_`, `-` or a parenthesis around it; never inside a word, so `H20`, `80-20`, `blk 90-10` have none):
+//! `t0` `T0` `t=0` `t 0` `t30` (minutes), a number with a unit `0h` `3h` `3 h` `3hr` `8hrs` `3 hours` `30min` `30 min` `15 mins` `90s` `1d` `2 days` `1,5h`
+//! (units `s sec secs second(s)`, `min mins minute(s)`, `h hr hrs hour(s) ore`, `d day(s) gg giorno giorni`; `m` only after a `t`), `t=3h`, a day written
+//! before its number `d1` (only when the name has no other time) and hours with minutes `1 h 30`, `1h30`, `1h 30min`. The LAST one wins (`Smp_01_30h_2` is 30 h).
+//! A bare number (`Run_5`, `80-20`) is never a time; what is not one of these is no time (never a guess). The user edits every proposed time.
 
 use super::blank_words::is_blank_name;
 use super::positions::{self, Proposal};
+use super::time_token::{is_sep, time_of};
 use super::{minutes_per, number_replicates, Sample};
 use crate::project::{guess_conc, guess_sample as guess_stem, guess_type};
 
@@ -35,118 +42,6 @@ const CAL_WORDS: [&str; 6] = [
 ];
 const DARK_WORDS: [&str; 5] = ["dark", "buio", "adsorption", "control", "ctrl"];
 const INFUSION_WORDS: [&str; 3] = ["infusion", "infusione", "fia"];
-/// Units after the number of a time: the text in the name and the unit it stands for (`s`, `min`, `h`, `d`).
-const TIME_WORDS: [(&str, &str); 11] = [
-    ("min", "min"),
-    ("m", "min"),
-    ("h", "h"),
-    ("ore", "h"),
-    ("d", "d"),
-    ("day", "d"),
-    ("gg", "d"),
-    ("giorni", "d"),
-    ("giorno", "d"),
-    ("sec", "s"),
-    ("s", "s"),
-];
-
-fn is_sep(c: char) -> bool {
-    c == '_' || c == '-' || c.is_whitespace()
-}
-fn digits(s: &[char], mut i: usize) -> usize {
-    while i < s.len() && s[i].is_ascii_digit() {
-        i += 1;
-    }
-    i
-}
-fn skip_ws(s: &[char], mut i: usize) -> usize {
-    while i < s.len() && s[i].is_whitespace() {
-        i += 1;
-    }
-    i
-}
-fn starts(s: &[char], i: usize, w: &str) -> bool {
-    // `w` is ASCII: compare in place, no allocation
-    let w = w.as_bytes();
-    s.len() >= i + w.len()
-        && s[i..i + w.len()]
-            .iter()
-            .zip(w)
-            .all(|(c, b)| *c == char::from(*b))
-}
-
-/// `\d+(?:[.,]\d+)?` (also `\d+p\d+` after a `t`, as `T2p5`): the end positions, the one with the fraction first.
-fn number_ends(s: &[char], i: usize, p_point: bool) -> impl Iterator<Item = usize> + use<> {
-    let d = digits(s, i);
-    let with_fraction = (d < s.len() && (s[d] == '.' || s[d] == ',' || (p_point && s[d] == 'p')))
-        .then(|| digits(s, d + 1))
-        .filter(|f| *f > d + 1);
-    [with_fraction, (d > i).then_some(d)].into_iter().flatten()
-}
-
-/// The start of the name and every position after a separator.
-fn after_prefix(s: &[char]) -> impl Iterator<Item = usize> + '_ {
-    std::iter::once(0).chain((0..s.len()).filter(|&i| is_sep(s[i])).map(|i| i + 1))
-}
-
-/// The unit of the time that ends at `e` (`min` when none is written), where the time ends and whether a unit is written, or None when what follows is not a time.
-fn time_tail(s: &[char], e: usize, after_t: bool) -> Option<(&'static str, usize, bool)> {
-    // `(` ends a time too: `t30min(2)` is the second replicate of 30 min
-    let term = |j: usize| j >= s.len() || is_sep(s[j]) || s[j] == '(';
-    let k = skip_ws(s, e);
-    for (w, unit) in TIME_WORDS {
-        if w == "m" && !after_t {
-            continue;
-        }
-        if starts(s, k, w) {
-            let j = k + w.len();
-            if term(j) {
-                return Some((unit, j, true));
-            }
-            if w == "day" && j < s.len() && s[j] == 's' && term(j + 1) {
-                return Some((unit, j + 1, true));
-            }
-        }
-    }
-    term(e).then_some(("min", e, false))
-}
-
-/// A time read from a name: the value as written, its unit and where the match starts and ends.
-struct Time {
-    value: f64,
-    unit: &'static str,
-    start: usize,
-    end: usize,
-}
-
-/// `t?\d+([.,]\d+)?\s*unit` after a separator: the LAST one with a written unit or a `t` prefix (`Smp_01_30h_2` is 30 h, its `01` and `_2`
-/// are an index and a replicate); a bare number (`Run_5`) is never a time. A bare `tN` is minutes.
-fn time_of(s: &[char]) -> Option<Time> {
-    let mut last = None;
-    for p in after_prefix(s) {
-        let after_t = p < s.len() && s[p] == 't';
-        let i = if after_t { p + 1 } else { p };
-        for e in number_ends(s, i, after_t) {
-            if let Some((unit, end, written)) = time_tail(s, e, after_t) {
-                if !written && !after_t {
-                    break;
-                }
-                let text: String = s[i..e]
-                    .iter()
-                    .map(|c| if *c == ',' || *c == 'p' { '.' } else { *c })
-                    .collect();
-                last = Some(Time {
-                    value: text.parse().unwrap_or(0.0),
-                    unit,
-                    start: p,
-                    end,
-                });
-                break;
-            }
-        }
-    }
-    last
-}
 
 /// A word of the name with its folders (letters and digits) equal to one of `words`, or one followed by digits only (one pass over the name).
 fn has_any(low: &str, words: &[&str]) -> bool {
@@ -219,7 +114,7 @@ fn prefix_of(stem: &str, low: &[char], start: usize) -> String {
         &low[..start]
     };
     let mut p: String = s.iter().collect();
-    while p.ends_with(is_sep) {
+    while p.ends_with(is_sep) || p.ends_with('(') {
         p.pop();
     }
     p

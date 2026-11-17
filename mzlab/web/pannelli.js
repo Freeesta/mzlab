@@ -89,7 +89,7 @@ document.addEventListener("keydown", e => {
   const q = tabPanels().filter((/** @type {Pannello} */ x) => x.el).sort(LAYOUT.ordine)[Number(e.key) - 1]; if (!q) return;
   setActive(q); front(q.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + q.y - hdrH() - 12, behavior: "smooth" });
 });
-function fitHost() { syncWorkEmpty(); if (window.DDA) DDA.sync(); numberPanels(); if (window.AFFIANCA) AFFIANCA.sync(); Q("#dpanels").style.height = maxOf(tabPanels().map((/** @type {Pannello} */ p) => p.y + p.h + 16), 520) + "px"; pairArrows(); }
+function fitHost() { syncWorkEmpty(); if (window.DDA) DDA.sync(); numberPanels(); if (window.AFFIANCA) AFFIANCA.sync(); Q("#dpanels").style.height = maxOf(tabPanels().map((/** @type {Pannello} */ p) => p.y + p.h + 16), tabPanels().length ? 0 : 520) + "px"; pairArrows(); }
 // MS2 tab: a short arrow between the precursor chromatogram (above) and the product-ion spectrum it feeds (below)
 function pairArrows() {
   const host = Q("#dpanels"); host.querySelectorAll(".parr").forEach((/** @type {Element} */ e) => e.remove());
@@ -287,12 +287,12 @@ function addPanel(type, o, after) {
     p.etpk = typeof o.etpk === "boolean" ? o.etpk : undefined;  // peak labels (etichette-picchi.js): undefined = the default for the number of traces
     p.tl = o.tl ?? true;  // the chromatograms of a view are linked by default (one panel can be unlinked)
     const mate = p.tl && o.zoom === undefined ? E.panels.find((/** @type {Pannello} */ q) => q.tl && q.tab === p.tab && q.type !== "spec" && q.type !== "map" && q.zoom) : null;
-    if (mate) p.zoom = /** @type {[number, number]} */ ([...mate.zoom]);
+    if (mate) p.zoom = /** @type {[number, number]} */ ([...mate.zoom]); else if (o.zoom === undefined) p.zoom = /** @type {any} */ (window).TICPROV?.handover?.() ?? p.zoom;  // else: the window chosen on the provisional TIC (tic-provvisorio.js), once
   }  // linked time axis
   if (type === "chrom") p.ms2tri = !!o.ms2tri;  // triangles of the MS2 scans on the survey chromatogram
   if (type === "xic") p.adduct = o.adduct || defAdduct();
   if (type === "spec") Object.assign(p, { bg: o.bg ?? "", bw0: o.bw0 ?? null, bw1: o.bw1 ?? null, bwi: o.bwi ?? 0, lock: o.lock ? { pending: true } : null, si: null,
-    rel: typeof o.rel === "boolean" ? o.rel : null, sticks: !!o.sticks, dots: !!o.dots, mk: typeof o.mk === "boolean" ? o.mk : null, noCont: !!o.noCont, thr: o.thr ?? 5, nlab: o.nlab ?? 10, dec: o.dec ?? null, meas: o.meas && Array.isArray(o.meas.list) ? o.meas : null, rul: false });   // lock: only open/closed is saved, the values are measured again
+    rel: typeof o.rel === "boolean" ? o.rel : null, sticks: !!o.sticks, dots: !!o.dots, mk: typeof o.mk === "boolean" ? o.mk : null, noCont: !!o.noCont, thr: o.thr ?? 5, nlab: o.nlab ?? 10, lblOn: Array.isArray(o.lblOn) ? o.lblOn : undefined, lblOff: Array.isArray(o.lblOff) ? o.lblOff : undefined, dec: o.dec ?? null, meas: o.meas && Array.isArray(o.meas.list) ? o.meas : null, rul: false });   // lock: only open/closed is saved, the values are measured again
   if (type !== "xic") p.traces = p.traces || [];
   const g = (p.w && p.h) ? { x: p.x ?? 0, y: p.y ?? 0, w: p.w, h: p.h } : place(undefined, type === "map" ? 360 : undefined);
   Object.assign(p, g);
@@ -306,7 +306,7 @@ function addPanel(type, o, after) {
     const gxb = type === "spec" ? `<span class="tbg"><button class="bt xbb" data-a="xicb" aria-pressed="false" title="${I18N.t("xicbtn.title")}" aria-label="${I18N.t("xicbtn.aria")}">XIC</button><button class="bt xbl" data-a="xicl" hidden aria-haspopup="dialog" aria-expanded="false" title="${I18N.t("xicbtn.ion.title")}"></button></span>` : "";
     const gs = type === "spec" ? `<span class="tbg"><button class="bt" data-a="rul" title="${I18N.t("panel.rul.title")}">${IC_RULER}</button><button class="bt" data-a="par" title="${I18N.t("panel.par.title")}" aria-label="${I18N.t("panel.par.aria")}">&#9662;</button><button class="bt${p.rel ? " on" : ""}" data-a="rel" title="${I18N.t("panel.rel.title")}">%</button><button class="bt" data-a="lock" aria-pressed="false" title="${I18N.t("lock.off.title")}" aria-label="${I18N.t("lock.off.title")}">${IC_UNLOCK}</button></span>` : "";
     const gl = lens ? `<span class="tbg"><button class="bt${p.tl ? " on" : ""}" data-a="tlink" aria-pressed="${!!p.tl}" aria-label="${I18N.t("panel.tlink.aria")}" title="${I18N.t("panel.tlink.title")}">${IC_SYNC}</button></span>` : "";
-    const gi = lens ? `<span class="tbg"><button class="bt" data-a="iauto" title="${I18N.t("panel.iauto.title")}">${IC_AUTO}</button><button class="bt" data-a="iman" title="${I18N.t("panel.iman.title")}">${IC_MAN}</button><button class="bt" data-a="idel" title="${I18N.t("panel.idel.title")}">${IC_DEL_INT}</button><select class="bt" data-a="intf" hidden title="${I18N.t("panel.intf.title")}"></select><button class="bt" data-a="iclr" hidden title="${I18N.t("panel.iclr.title")}">${I18N.t("panel.iclr")}</button><button class="bt" data-a="itab" hidden title="${I18N.t("panel.itab.title")}">${IC_TAB}</button></span>` : "";
+    const gi = lens ? `<span class="tbg"><button class="bt" data-a="iauto" title="${I18N.t("panel.iauto.title")}">${IC_AUTO}</button><button class="bt iall" type="button" data-a="iall" aria-haspopup="true" title="${I18N.t("panel.iall.title")}" aria-label="${I18N.t("panel.iall.title")}">&#9662;</button><button class="bt" data-a="iman" title="${I18N.t("panel.iman.title")}">${IC_MAN}</button><button class="bt" data-a="idel" title="${I18N.t("panel.idel.title")}">${IC_DEL_INT}</button><select class="bt" data-a="intf" hidden title="${I18N.t("panel.intf.title")}"></select><button class="bt" data-a="iclr" hidden title="${I18N.t("panel.iclr.title")}">${I18N.t("panel.iclr")}</button><button class="bt" data-a="itab" hidden title="${I18N.t("panel.itab.title")}">${IC_TAB}</button></span>` : "";
     const gt = lens ? `<span class="tbg"><button type="button" class="bt tgs" data-a="smooth" aria-pressed="false" aria-label="${I18N.t("ctl.smooth")}" title="${I18N.t("ctl.smooth.title")}">${IC_SMOOTH}</button><button type="button" class="bt tgl" data-a="log" aria-pressed="false" aria-label="${I18N.t("ctl.log.title")}" title="${I18N.t("ctl.log.title")}">${I18N.t("ctl.log")}</button>${window.SIMUI ? SIMUI.areaBtn(type) : ""}</span>` : "";
     const gx = type === "chrom" ? `<span class="tbg"><button class="bt" data-a="xic" ${ms2Chrom(p) ? "disabled " : ""}title="${I18N.t(ms2Chrom(p) ? "panel.xic.off" : "panel.xic.title")}">XIC</button></span>` : "";
     const go = `<span class="tbg"><button class="bt" data-a="dl" title="${I18N.t("panel.dl.title")}" aria-label="${I18N.t("panel.dl.title")}">${IC_DL.replace(";margin-right:4px", "")}</button></span>`;
@@ -392,7 +392,7 @@ function addPanel(type, o, after) {
     const setMode = (/** @type {string} */ m) => { p.imode = p.imode === m ? null : m; if (p.imode && p.imode !== "zoom") toOverlaid(p); Object.entries(btns).forEach(([k, b]) => { if (b) b.classList.toggle("on", p.imode === k); }); p.cv.style.cursor = p.imode === "zoom" ? "zoom-in" : p.imode === "idel" ? "pointer" : p.imode ? "cell" : "crosshair"; refreshIntf(p); cursorLine(p); };
     if (p.imode && btns[p.imode]) { /** @type {Element} */ (btns[p.imode]).classList.add("on"); p.cv.style.cursor = p.imode === "idel" ? "pointer" : "cell"; }  // MRM panels open with the manual integration tool ready
     bZ.onclick = () => setMode("zoom"); bA.onclick = () => setMode("auto"); bM.onclick = () => setMode("man"); if (bD) bD.onclick = () => setMode("idel"); bT.onclick = showInts;
-    el.querySelector('[data-a="iclr"]').onclick = () => { if (p.ints.length) delInts(p, [...p.ints]); };
+    el.querySelector('[data-a="iclr"]').onclick = () => { if (p.ints.length) delInts(p, [...p.ints]); }; el.querySelector('[data-a="iall"]').onclick = (/** @type {MouseEvent} */ e) => intMenu(p, e);
     el.querySelector('[data-a="intf"]').onchange = (/** @type {Event} */ e) => { p.intf = /** @type {HTMLSelectElement} */ (e.target).value; };
   }
   if (bX) bX.onclick = () => p.kind === "pda" ? wlOpen(p) : openXic(null, { after: p });  // under this chromatogram (xwc.js on a DAD)
@@ -537,7 +537,7 @@ function rtLabel(/** @type {Pannello} */ p) {
   const rl = p.el.querySelector(".rtl");
   if (rl) { if (p.r0 == null) rl.textContent = ""; else { const m = (p.r0 + p.r1) / 2, wide = p.r1 - p.r0 > 1.6 * scanStep(); const rt = wide ? `${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min` : `${m.toFixed(2)} min`; rl.textContent = p.src != null && !p.link && p.type === "spec" ? I18N.t("panel.rt.held", { rt }) : rt; } }
 }
-// "zoom bar" in the top margin: where the visible window sits in the whole axis (its range in words in an overlay with role=img); "Vista intera" button
+// "zoom bar" in the top margin: where the visible window sits in the whole axis (its range in words in an overlay with role=img); "Whole view" button
 /** the overlay of the zoom bar: carries the visible range for hover and assistive tech @param {Pannello} p @returns {HTMLElement} */
 function zoomBar(p) {
   let z = /** @type {HTMLElement | null} */ (p.el.querySelector(":scope > .zbar"));
@@ -546,6 +546,7 @@ function zoomBar(p) {
 }
 function afterDraw(/** @type {Pannello} */ p) {
   rtLabel(p);
+  window.SPECROWS?.update(p);
   if (window.BANCO) BANCO.header(p);
   const btn = p.el.querySelector('[data-a="fit"]'), z = !!(p._a && (p.zoom || p.zoomY));
   if (p.type !== "spec" && p.type !== "map" && p._rngOn != null && p._rngOn !== rngIsOn(p)) ctl(p);  // the «Range» button follows zooming too

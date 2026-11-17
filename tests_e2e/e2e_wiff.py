@@ -178,7 +178,7 @@ try:
             pg.evaluate("""async () => { const { makeNativo } = await import('./static/rust-nativo-pagina.js'), rb = window.MZLAB_RUST;
               rb.nativeSamples = makeNativo({ rpc: async () => ({ dead: true }), base: n => n, current: () => null, abort: () => {} }).nativeSamples; }""")
             pg.set_input_files("#pick", [str(D / "one.wiff"), str(D / "one.wiff.scan")])
-            told = r"Array.from(document.querySelectorAll('.fi, #unopen')).map(e => e.innerText).filter(t => /one\.wiff/.test(t) && /(engine stopped|motore si è fermato)/.test(t))"
+            told = r"Array.from(document.querySelectorAll('.fi, #unopen')).map(e => e.innerText).filter(t => /one\.wiff/.test(t) && /engine stopped/.test(t))"
             got = "Array.from(document.querySelectorAll('.fi, #unopen')).map(e => e.innerText.slice(0, 300))"
             try: pg.wait_for_function(told + ".length > 0 && UPBUSY === 0", timeout=60000)
             except Exception: raise AssertionError(pg.evaluate(got))

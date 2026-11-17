@@ -16,7 +16,7 @@ def run(port, W, H):
         with sync_playwright() as p:
             pg = r.page(p, tour=True)
             try:
-                pg.set_input_files("#pick", [TMP]); pg.wait_for_timeout(800); pg.click("text=Carica dati"); ready(pg)
+                pg.set_input_files("#pick", [TMP]); pg.wait_for_timeout(800); pg.click("text=Load data"); ready(pg)
                 pg.set_viewport_size({"width": W, "height": H}); pg.wait_for_timeout(500)
                 pg.evaluate("TOUR.inizia(1, 0)"); pg.wait_for_timeout(500)
                 bad, seen = [], 0

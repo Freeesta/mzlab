@@ -1,10 +1,10 @@
-# Dati d'oro di Attributio sulla campagna sintetica
+# Attributio golden data on the synthetic campaign
 
-Scritti da `tools/attributio_reference.py` con Attributio 1.12.0:
+Written by `tools/attributio_reference.py` with Attributio 1.12.0:
 
-    ATTRIBUTIO_SRC=<percorso di attributio/src> python3 tools/attributio_reference.py [--controlla]
+    ATTRIBUTIO_SRC=<path of attributio/src> python3 tools/attributio_reference.py [--controlla]
 
-Un JSON per stadio in `sintetica/` (campagna, letture, rilevazione, livelli, identita, proposte, decisioni, sirius, standard, abbinamenti) e un JSON per la campagna dei sorbenti in `sorbenti/` (ingresso `tests/data/attributio/campagna_sorbenti/`). Ingresso: `tests/data/attributio/campagna_sintetica/` (sha256 in `tests/data/attributio/LEGGIMI.md`). Un caso che non torna non si risolve cambiando questi file.
+One JSON per stage in `sintetica/` (campagna, letture, rilevazione, livelli, identita, proposte, decisioni, sirius, standard, abbinamenti) and one JSON for the sorbent campaign in `sorbenti/` (input `tests/data/attributio/campagna_sorbenti/`). Input: `tests/data/attributio/campagna_sintetica/` (sha256 in `tests/data/attributio/LEGGIMI.md`). A case that does not match is not fixed by changing these files.
 
 | File | sha256 |
 |---|---|

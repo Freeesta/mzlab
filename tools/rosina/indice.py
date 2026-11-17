@@ -56,9 +56,9 @@ def check(righe: list, columns: list) -> list:
 
 
 def markdown(righe: list) -> str:
-    out = ["# Indice dei formati (generato da INDICE.tsv: non modificare a mano)", ""]
+    out = ["# Index of the formats (generated from INDICE.tsv: do not edit by hand)", ""]
     for prod in sorted({r["produttore"] for r in righe}):
-        out += [f"## {prod}", "", "| percorso | modello nel file | esperimenti | accession | licenza | ridistribuibile | riferimento | verità |", "|---|---|---|---|---|---|---|---|"]
+        out += [f"## {prod}", "", "| path | model in the file | experiments | accession | licence | redistributable | reference | truth |", "|---|---|---|---|---|---|---|---|"]
         for r in sorted((r for r in righe if r["produttore"] == prod), key=lambda r: r["percorso"]):
             cel = [r.get(k, "").replace("|", "/") for k in ("percorso", "modello_nel_file", "esperimenti", "accession", "licenza", "ridistribuibile", "riferimento", "verita")]
             out.append("| " + " | ".join(cel) + " |")

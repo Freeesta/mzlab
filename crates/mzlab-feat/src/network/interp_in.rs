@@ -3,7 +3,7 @@
 
 use super::NetworkRow;
 use crate::interp::RowInterp;
-use crate::legacy::series::Parent;
+use crate::series_parent::Parent;
 use crate::table::Aligned;
 use crate::tp::TpBlock;
 use mzlab_core::elements::fmt;

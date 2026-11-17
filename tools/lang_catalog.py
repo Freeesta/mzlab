@@ -1,6 +1,7 @@
 """Reads the interface catalogs: mzlab/web/lang/<lang>/<area>.js, each one `I18N.add("<lang>", {...});` with one key per line.
 
-Used by the checks and tests that look at the texts (lang/it.js and en.js are only the loaders of the browser)."""
+Used by the checks and tests that look at the texts (lang/en.js is only the loader of the browser).
+English is the only language today; the folder-per-language layout stays so that a translation could be added again."""
 import json
 import re
 from pathlib import Path
@@ -45,10 +46,10 @@ def testo(lang: str) -> str:
     return "\n".join(p.read_text(encoding="utf-8") for p in parti(lang))
 
 
-def contesto_problems(it: dict[str, str], param_re: str = r"\{[A-Za-z_]") -> list[str]:
+def contesto_problems(cat: dict[str, str], param_re: str = r"\{[A-Za-z_]") -> list[str]:
     """Descriptions live in lang/contesto/<area>.json (same stem as the area file of the key); the description of a key no catalog has
     stays in orfane.json. Reports a description in the wrong file or twice, and a key with parameters (`{name`) that has none."""
-    area = {k: p.stem for p in parti("it") for k in parte(p)}
+    area = {k: p.stem for p in parti("en") for k in parte(p)}
     errs: list[str] = []
     seen: dict[str, str] = {}
     for f in sorted((LANG / "contesto").glob("*.json")):
@@ -58,4 +59,4 @@ def contesto_problems(it: dict[str, str], param_re: str = r"\{[A-Za-z_]") -> lis
             seen[k] = f.name
             if f.stem != area.get(k, "orfane"):
                 errs.append(f"contesto/{f.name}: description of {k} belongs in contesto/{area.get(k, 'orfane')}.json")
-    return errs + [f"contesto/: missing description for the key with parameters: {k}" for k in sorted(it) if re.search(param_re, it[k]) and k not in seen]
+    return errs + [f"contesto/: missing description for the key with parameters: {k}" for k in sorted(cat) if re.search(param_re, cat[k]) and k not in seen]

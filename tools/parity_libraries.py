@@ -134,10 +134,10 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     import ms_entropy
     import matchms
-    meta = {"fonte": "ms_entropy %s, matchms %s; spettri sintetici (nessun composto)" % (getattr(ms_entropy, "__version__", "1.5.3"), matchms.__version__)}
+    meta = {"source": "ms_entropy %s, matchms %s; synthetic spectra (no compound)" % (getattr(ms_entropy, "__version__", "1.5.3"), matchms.__version__)}
     rng = np.random.default_rng(20261010)
-    pares = {"formato": "pares/1", **meta, "casi": pair_cases(rng)}
-    flash = {"formato": "flash/1", **meta, **flash_case(rng)}
+    pares = {"format": "pares/1", **meta, "cases": pair_cases(rng)}
+    flash = {"format": "flash/1", **meta, **flash_case(rng)}
     for name, d in (("pares.json", pares), ("flash.json", flash)):
         (out / name).write_text(json.dumps(d, separators=(",", ":")), encoding="utf-8")
         print(name, (out / name).stat().st_size, "byte")

@@ -87,7 +87,7 @@ try:
             pg.evaluate("LIB.open()"); pg.wait_for_selector("#libdlg #lib-list table", timeout=20000)
             t = pg.inner_text("#libdlg #lib-list"); assert "prova" in t and "5" in t, t
             pg.click("#lib-x")
-        step("the Librerie window lists it", listing)
+        step("the Libraries window lists it", listing)
         def analogs():
             info = pg.evaluate(ADD, ["analoghi.msp", ANA]); assert info["n"] == 2, info
             r = pg.evaluate("""async (q) => { const r = await LIB.call("analogs", { peaks: q, prec: 316.1, pol: 1, frag: 0.01, maxDelta: 200, max: 10 }); return r.results.map(x => ({ name: x.name, mcos: x.mcos, delta: x.delta, shifted: x.shifted, matched: x.matched })); }""", APEAKS)

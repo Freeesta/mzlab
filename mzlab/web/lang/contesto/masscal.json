@@ -1,10 +1,10 @@
 {
-  "masscal.title": "Titolo del pannello del controllo di calibrazione; {file} = nome del file.",
-  "masscal.sum": "Riga di sintesi; {n} = ioni contaminanti trovati, {off} = scarto robusto in ppm con segno, {spread} = dispersione in ppm.",
-  "masscal.sum.few": "Sintesi quando gli ioni sono pochi; {n} = ioni trovati, {min} = minimo per stimare l'errore.",
-  "masscal.trend": "Andamento dell'errore; {mz} = ppm ogni 100 m/z, {rt} = ppm al minuto (con segno), {model} = nome del modello adattato.",
-  "masscal.trend.mz": "Andamento dell'errore con m/z; {mz} = ppm ogni 100 m/z (con segno), {model} = nome del modello adattato.",
-  "masscal.thr": "Etichetta del campo soglia; {input} = campo numerico in ppm.",
-  "masscal.minint": "Etichetta del campo intensità minima; {input} = campo numerico.",
-  "masscal.plot.desc": "Descrizione breve di un grafico; {title} = titolo, {n} = numero di ioni, {a} e {b} = errore minimo e massimo in ppm."
+  "masscal.title": "Title of the calibration check panel; {file} = file name.",
+  "masscal.sum": "Summary line; {n} = contaminant ions found, {off} = robust offset in ppm with sign, {spread} = spread in ppm.",
+  "masscal.sum.few": "Summary when there are few ions; {n} = ions found, {min} = minimum to estimate the error.",
+  "masscal.trend": "Error trend; {mz} = ppm per 100 m/z, {rt} = ppm per minute (signed), {model} = name of the fitted model.",
+  "masscal.trend.mz": "Error trend with m/z; {mz} = ppm per 100 m/z (signed), {model} = name of the fitted model.",
+  "masscal.thr": "Label of the threshold field; {input} = numeric field in ppm.",
+  "masscal.minint": "Label of the minimum intensity field; {input} = numeric field.",
+  "masscal.plot.desc": "Short description of a plot; {title} = title, {n} = number of ions, {a} and {b} = minimum and maximum error in ppm."
 }

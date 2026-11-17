@@ -24,7 +24,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1600})
         stage(pg, [str(ES / "MS2_t15.mzML")] + [str(ES / f"FullScan_t{t}.mzML") for t in (0, 5, 15, 30)])
-        pg.click("text=Carica dati"); ready(pg); drawer(pg)
+        pg.click("text=Load data"); ready(pg); drawer(pg)
         def sets():
             assert setg(pg, "FullScan_t0", "Blanks") is True and lab(pg, "FullScan_t0") == "Blanks"
             for bad in ("blanks", "BLANKS ", "Full_scan", "full scan", "ms2(production)"):

@@ -117,7 +117,7 @@ const DDA = (() => {
       s2.sid = sid; s2.avg = null; s2.r0 = D.rt[i] - 1e-4; s2.r1 = D.rt[i] + 1e-4;
       s1.ddaSel = { sid, i };
       const dec = HR.prof(E.files[/** @type {number} */ (s2.k)], 2).dec;
-      s2.title = "MS2 di " + (D.prec[i] != null ? D.prec[i].toFixed(dec) : "?"); ctl(s2);
+      s2.title = I18N.t("dda.ms2Title", { mz: D.prec[i] != null ? D.prec[i].toFixed(dec) : "?" }); ctl(s2);
       if (c && D.parent[i] != null && o.parent !== false) {            // the cursor goes to the parent Full Scan, which s1 shows exactly
         const prt = D.prt[i];
         c.cur = prt; c.sel = null;
@@ -200,7 +200,7 @@ const DDA = (() => {
     }
     if (j.act) parts.push(j.act);
     if (j.ce != null) parts.push(j.nce ? `NCE ${fmt1(j.ce)}` : `CE ${fmt1(j.ce)} eV`);
-    if (j.lo != null && j.hi != null) parts.push(`isolamento ±${fmt1((j.hi - j.lo) / 2)}`);
+    if (j.lo != null && j.hi != null) parts.push(I18N.t("dda.isolation", { w: fmt1((j.hi - j.lo) / 2) }));
     p.leg.innerHTML = `<span style="font-variant-numeric:tabular-nums">${EH(parts.join(" · "))}</span>`;
     const t = p.el.querySelector(".ttl"); if (t && j.filter) t.title = "T: " + j.filter;
   }
@@ -267,7 +267,7 @@ const DDA = (() => {
     return (/** @type {number} */ i) => D.pint[i] ?? m.get(D.sid[i]) ?? 0;
   }
   const top = (/** @type {number[]} */ idx, /** @type {(i: number) => number} */ v) => idx.reduce((b, i) => (v(i) > v(b) ? i : b), idx[0]);
-  // "Segui questo ione nelle MS2": its XIC appears right under the chromatogram, the Full Scan and the MS2 follow the XIC, only its MS2 are shown
+  // "Follow this ion in the MS2": its XIC appears right under the chromatogram, the Full Scan and the MS2 follow the XIC, only its MS2 are shown
   async function follow(/** @type {Bag} */ s1, /** @type {number} */ mz) {
     try {
       const s2 = byId(s1.duo), c = s1.link != null ? byId(s1.link) : null, f = E.files[s1.k]; if (!s2 || !c) return false;
@@ -387,7 +387,7 @@ const DDA = (() => {
   async function fromList(/** @type {FileAperto} */ f, /** @type {Bag} */ g) {
     try { const D = await get(f.k); await showMs2(D, g.mz, top(g.idx, await pints(f.k, D, g.idx, g.mz, tolOf(f, g.mz)))); } catch (e) { fail("fromList", e); }
   }
-  // "Mostra le MS2 accanto alla Full Scan": the entry of the right-click menu when the MS2 panel is not there (closed, or an old notebook)
+  // "Show the MS2 next to the Full Scan": the entry of the right-click menu when the MS2 panel is not there (closed, or an old notebook)
   function menuShow(/** @type {Bag} */ p) {
     try {
       const s1 = p.type === "chrom" ? E.panels.find((/** @type {Bag} */ q) => q.type === "spec" && q.link === p.id && q.el) : p.type === "spec" && p.link != null && p.dda == null ? p : null;

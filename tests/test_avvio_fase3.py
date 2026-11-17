@@ -26,7 +26,7 @@ const body = makeEl('body'); body.insertBefore = (el) => { reg[el.id] = el; body
 global.document = { body, readyState: 'complete', addEventListener() {}, getElementById: id => reg[id] || null, createElement: () => makeEl('') };
 global.window = global;
 Object.defineProperty(global, 'navigator', { value: { userAgent: 'test-agent', clipboard: { writeText: async t => { global.copied = t; } } }, configurable: true });
-global.I18N = { t: (k) => ({ 'load.err.engineStart': 'Impossibile avviare il motore', 'load.fail.copy': 'Copia dettagli', 'reset.all.btn': 'Reset completo' })[k] || k };
+global.I18N = { t: (k) => ({ 'load.err.engineStart': 'Cannot start the engine', 'load.fail.copy': 'Copy details', 'reset.all.btn': 'Full reset' })[k] || k };
 """
 
 
@@ -52,9 +52,9 @@ def test_banner_alert_same_text_as_error_and_restoring_box_removed():
       waiting: await pA, after: await AVVIO.pronto() }}));
     """)
     assert res["role"] == "alert"
-    assert res["msg"] == res["errore"] == "Impossibile avviare il motore"
+    assert res["msg"] == res["errore"] == "Cannot start the engine"
     assert res["shown"] == 1
-    assert res["copia"] == "Copia dettagli" and res["reset"] == "Reset completo"
+    assert res["copia"] == "Copy details" and res["reset"] == "Full reset"
     assert res["openingHidden"] is True and res["wdataHidden"] is False and res["faseHidden"] is True
     assert res["waiting"] is False and res["after"] is False
 
@@ -102,4 +102,50 @@ def test_failure_before_the_module_loaded_is_replayed():
     const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     console.log(JSON.stringify({{ stato: AVVIO.stato, msg: reg['avvio-errore-msg'] && reg['avvio-errore-msg'].textContent }}));
     """)
-    assert res["stato"] == "failed" and res["msg"] == "Impossibile avviare il motore"
+    assert res["stato"] == "failed" and res["msg"] == "Cannot start the engine"
+
+
+def test_reset_in_progress_writes_no_session_marker_or_row():
+    code = f"""
+    {DOM}
+    const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
+    const store = {{}};
+    global.window.localStorage = {{
+      getItem: k => store[k] || null,
+      setItem: (k, v) => {{ store[k] = String(v); }},
+      removeItem: k => {{ delete store[k]; }}
+    }};
+    global.window.QQ_RESETTING = true;
+    AVVIO.segnaSessione(true);
+    AVVIO.segnaRiga({{ a: [1], f: 'x', fw: 100, s: '200px' }});
+    const during = Object.keys(store);
+    global.window.QQ_RESETTING = false;
+    AVVIO.segnaSessione(true);
+    console.log(JSON.stringify({{ during, after: Object.keys(store) }}));
+    """
+    res = run_node(code)
+    assert res["during"] == [], "a reset in progress: pagehide writes nothing back"
+    assert res["after"] != [], "outside a reset the marker is written as before"
+
+
+def test_pagehide_row_memory_is_skipped_during_a_reset():
+    code = f"""
+    {DOM}
+    const handlers = {{}};
+    global.addEventListener = (t, f) => {{ handlers[t] = f; }};
+    const store = {{ 'mzlab.sessione': '1', 'mzlab.sessione.riga': 'old' }};
+    global.localStorage = {{ getItem: k => (k in store ? store[k] : null), setItem: (k, v) => {{ store[k] = String(v); }}, removeItem: k => {{ delete store[k]; }} }};
+    reg['v-data'].hidden = false;
+    const sel = makeEl('fsel'); sel.style = {{ cssText: '', width: '' }}; sel.selectedOptions = []; sel.getBoundingClientRect = () => ({{ width: 100 }}); reg['fsel'] = sel;
+    document.documentElement = {{ style: {{ setProperty() {{}}, getPropertyValue: () => '240px' }} }};
+    const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
+    global.QQ_RESETTING = true;
+    handlers.pagehide();
+    const during = store['mzlab.sessione.riga'];
+    global.QQ_RESETTING = false;
+    handlers.pagehide();
+    console.log(JSON.stringify({{ during, after: store['mzlab.sessione.riga'] || null }}));
+    """
+    res = run_node(code)
+    assert res["during"] == "old", "pagehide of a reset leaves the stored row alone"
+    assert res["after"] != "old", "outside a reset the row is updated or forgotten as before"

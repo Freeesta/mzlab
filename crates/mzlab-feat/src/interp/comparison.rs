@@ -2,7 +2,7 @@
 //! parent (equal, shifted and common-loss peaks, modified cosine and entropy) and the fragments of the row that are, by formula, a fragment of the
 //! parent (equal) or one of its fragments plus the modification (shifted). Intensities are never compared with the infusion (CID against stepped HCD).
 
-use crate::legacy::similarity::{pair_components, prepare, Components};
+use crate::finder_base::similarity::{pair_components, prepare, Components};
 
 use super::tree::LibNode;
 

@@ -1,4 +1,4 @@
-"""The frozen-spectrum RT label of pannelli.js comes from the lang/ catalogs (no hard-coded Italian)."""
+"""The frozen-spectrum RT label of pannelli.js comes from the lang/ catalog (no hard-coded text)."""
 import re
 from pathlib import Path
 
@@ -15,7 +15,6 @@ def test_label_is_keyed_not_hardcoded():
     assert 'I18N.t("panel.rt.held", { rt })' in src
 
 
-def test_catalogs_keep_italian_text_and_translate():
-    assert '"panel.rt.held": "fermo a {rt}"' in _catalog("it")
+def test_catalog_has_the_english_text():
     en = re.search(r'"panel\.rt\.held": "([^"]+)"', _catalog("en"))
     assert en and "{rt}" in en.group(1) and "fermo" not in en.group(1)

@@ -38,7 +38,7 @@ try:
             assert pg.evaluate(f"{XP}.ints.length") == 1
             pg.evaluate("INTOPT.q = true; showInts()"); pg.wait_for_selector("#ig-q", timeout=10000); pg.wait_for_timeout(500)
             heads = pg.locator("#bigbody th[title]").all_inner_texts()
-            assert any("gaussiana" in h for h in heads) and any("Asimmetria" in h for h in heads) and any("rumore" in h for h in heads), heads
+            assert any("Gaussian" in h for h in heads) and any("Asymmetry" in h for h in heads) and any("Noise" in h for h in heads), heads
             cells = pg.evaluate("[...document.querySelectorAll('#bigbody tr:nth-child(2) td.num')].slice(-3).map(c=>c.textContent)")
             g, n = float(cells[0]), float(cells[2])
             assert -1 <= g <= 1 and g > 0.8, cells         # a real chromatographic peak is bell shaped
@@ -51,13 +51,14 @@ try:
             pg.evaluate("document.querySelector('#bigdlg').close()")
             assert pg.evaluate("typeof compareMethods") == "undefined" and pg.evaluate("PK.method") is None           # one method only, no comparison window
             labels = pg.evaluate("(() => { const p = " + XP + "; return intMenuItems(p, " + str(apex()) + ", null, 0).map(i => i === '-' ? '-' : i.label); })()")
-            assert not any("Confronta" in l for l in labels if l != "-"), labels
+            assert not any("Compare" in l for l in labels if l != "-"), labels
             pg.evaluate("peakParams()"); pg.wait_for_selector("#bigbody [data-pk=win]")
             assert pg.locator("#bigbody [data-pk=method]").count() == 0
-            assert pg.locator("#bigbody fieldset.pk-sec").count() == 3 and pg.locator("#bigbody [data-pk]").count() == 8 and pg.locator("#bigbody details").count() == 0
-            assert pg.inner_text("#pk-def") == "Ripristina predefiniti"
+            assert pg.evaluate("[...document.querySelectorAll('#bigbody fieldset.pk-sec')].pop().querySelector('[data-pk=bmode]')!==null")    # the baseline block stays last
+            assert pg.locator("#bigbody fieldset.pk-sec").count() == 4 and pg.locator("#bigbody [data-pk]").count() == 12 and pg.locator("#bigbody details").count() == 0
+            assert pg.inner_text("#pk-def") == "Reset to defaults"
             pg.evaluate("document.querySelector('#bigdlg').close()")
-        step("one method for the limits: no method selector, no comparison, eight settings in three blocks (the last the baseline)", one_method)
+        step("one method for the limits: no method selector, no comparison, twelve settings in four blocks (the last the baseline)", one_method)
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
         b.close()
 finally:

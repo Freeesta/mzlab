@@ -7,7 +7,7 @@ license.workspace = true
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }
-# no default features: each bridge picks its own set through the features below, so a .wasm never gets `chem` it did not have
+# no default features: each bridge picks its own set through the features below, so a .wasm never gets `chem` or `legacy` it did not have
 mzlab-feat = { path = "../mzlab-feat", default-features = false }
 
 [features]

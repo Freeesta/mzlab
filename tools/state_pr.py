@@ -58,18 +58,18 @@ def check_state(sha, required):
     bad = sum(r["status"] == "completed" and r["conclusion"] not in ("success", "skipped", "neutral") for r in sel)
     miss = len(required) - len(sel)
     if bad:
-        verdict = "ROSSO"
+        verdict = "RED"
     elif ok == len(required):
-        verdict = "verde"
+        verdict = "green"
     else:
-        verdict = "in corso"
-    return f"{ok}/{len(required)} {verdict}" + (f" ({miss} non partiti)" if miss and not bad else "")
+        verdict = "running"
+    return f"{ok}/{len(required)} {verdict}" + (f" ({miss} not started)" if miss and not bad else "")
 
 
 def row(pr, required, chats):
     d, _ = get(f"{API}/pulls/{pr['number']}")
     sha = d["head"]["sha"]
-    am = "auto-merge sì" if d.get("auto_merge") else "auto-merge no"
+    am = "auto-merge yes" if d.get("auto_merge") else "auto-merge no"
     chat = chats.get(pr["number"], {}).get("chat", "-")
     return (pr["number"], f"#{pr['number']:<5} {sha} {check_state(sha, required):<22} "
             f"{d['mergeable_state']:<9} {am:<13} {minutes_since(d['updated_at']):>4} min  {chat}  {pr['title'][:50]}")
@@ -83,8 +83,8 @@ def main_test():
     if tests and tests[0] is not done:
         out.append(f"{tests[0]['status']} {tests[0]['head_sha'][:8]};")
     if done:
-        out.append(f"ultimo concluso {done['conclusion']} {done['head_sha'][:8]} ({minutes_since(done['created_at'])} min fa)")
-    return " ".join(out) if tests else "main test: nessun run recente"
+        out.append(f"last finished {done['conclusion']} {done['head_sha'][:8]} ({minutes_since(done['created_at'])} min ago)")
+    return " ".join(out) if tests else "main test: no recent run"
 
 
 def load_chats(path):
@@ -106,7 +106,7 @@ def main():
     prs = list(pages(f"{API}/pulls?state=open&per_page=100"))
     with ThreadPoolExecutor(8) as ex:
         rows = sorted(ex.map(lambda p: row(p, required, chats), prs))
-    print(f"{len(prs)} PR aperte; check richiesti: {len(required)}")
+    print(f"{len(prs)} open PRs; required checks: {len(required)}")
     for _, line in rows:
         print(line)
     print(main_test())
