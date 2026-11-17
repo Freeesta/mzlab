@@ -25,10 +25,10 @@ const ICON = {
 };
 
 /** @typedef {{ p: any, it: any, k: number, tr: number, label: string, fol?: boolean, src?: boolean }} Rec */
-/** `say`: the text for the live status at the next draw; `log`: the per-file lines of the last automatic integration (this session only). */
-/** `had`: rows at the last draw (null before the first), so an integration after none opens the card. */
-/** @type {{ sig: string, recs: Rec[], ks: number[], windows: string, csv: string, busy: number, focus: any, had: number | null, reach: number }} */
-const st = { sig: "", recs: [], ks: [], windows: "[]", csv: "", busy: 0, focus: null, had: null, reach: 0, say: "", log: /** @type {string[]} */ ([]) };
+/** `had`: rows at the last draw (null before the first), so an integration after none opens the card; `say`: the text for the live status at the next draw; `log`: the
+ * per-file lines of the last automatic integration (this session only). */
+/** @type {{ sig: string, recs: Rec[], ks: number[], windows: string, csv: string, busy: number, focus: any, had: number | null, reach: number, say: string, log: string[] }} */
+const st = { sig: "", recs: [], ks: [], windows: "[]", csv: "", busy: 0, focus: null, had: null, reach: 0, say: "", log: [] };
 
 /** The rows of a CSV with quoted fields. @param {string} text */
 function rows(text) {

@@ -216,7 +216,11 @@ pub(crate) fn files_json(files: &[PathBuf], warn: &mut String) -> Result<String>
 fn table(c: &Request, warn: &mut String) -> Result<String> {
     let files = files_json(&c.files, warn)?;
     if let Some(p) = &c.auto {
-        let params = if p.as_os_str().is_empty() { String::new() } else { std::fs::read_to_string(p).map_err(io)? };
+        let params = if p.as_os_str().is_empty() {
+            String::new()
+        } else {
+            std::fs::read_to_string(p).map_err(io)?
+        };
         return mzlab_core::manint::auto_text(&files, &params);
     }
     let windows = std::fs::read_to_string(&c.windows).map_err(io)?;

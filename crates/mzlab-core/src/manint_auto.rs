@@ -30,7 +30,10 @@ fn params_of(p: &Value) -> (LrAutoParams, f64) {
         _ => 0.0,
     };
     let tol = num("rt_tol");
-    let despike = p.get("despike").and_then(Value::bool).map_or(-1.0, f64::from);
+    let despike = p
+        .get("despike")
+        .and_then(Value::bool)
+        .map_or(-1.0, f64::from);
     let lr = LrAutoParams::from_slice(&[
         num("half"),
         num("valley"),
@@ -74,15 +77,30 @@ fn group(found: &mut [Found], tol: f64) -> Vec<f64> {
 /// `grp` is the mean apex of the group (min): the table orders the rows of a channel by it.
 pub fn auto_text(files: &str, params: &str) -> Result<String> {
     let (samples, keys) = samples_and_keys(files)?;
-    let (lr, tol) = params_of(&parse(if params.trim().is_empty() { "{}" } else { params }.as_bytes())?);
+    let (lr, tol) = params_of(&parse(
+        if params.trim().is_empty() {
+            "{}"
+        } else {
+            params
+        }
+        .as_bytes(),
+    )?);
     let mut found: Vec<Found> = Vec::new();
     let mut log: Vec<String> = Vec::new();
     for (file, (_, trs)) in samples.iter().enumerate() {
         for tr in trs.iter().filter(|t| t.t.len() >= 2) {
             let last = tr.t[tr.t.len() - 1];
             let r = lr_auto_integrate(&tr.t, &tr.y, tr.t[0], last, lr);
-            let apexes: Vec<String> = r.peaks.iter().map(|p| format!("{}", tr.t[p.apex])).collect();
-            log.push(format!("{{\"file\":{file},\"tr\":{},\"peaks\":[{}]}}", tr.pos, apexes.join(",")));
+            let apexes: Vec<String> = r
+                .peaks
+                .iter()
+                .map(|p| format!("{}", tr.t[p.apex]))
+                .collect();
+            log.push(format!(
+                "{{\"file\":{file},\"tr\":{},\"peaks\":[{}]}}",
+                tr.pos,
+                apexes.join(",")
+            ));
             for p in &r.peaks {
                 found.push(Found {
                     file,
@@ -102,7 +120,10 @@ pub fn auto_text(files: &str, params: &str) -> Result<String> {
     let (mut n_groups, mut n_alone) = (0, 0);
     for (k, _, _) in &keys {
         let mut mine: Vec<Found> = found.iter().filter(|f| f.key == *k).map(copy).collect();
-        let held = samples.iter().filter(|s| s.1.iter().any(|t| key_of(t) == *k)).count();
+        let held = samples
+            .iter()
+            .filter(|s| s.1.iter().any(|t| key_of(t) == *k))
+            .count();
         let means = group(&mut mine, tol);
         n_groups += means.len();
         for f in &mine {
@@ -123,5 +144,8 @@ pub fn auto_text(files: &str, params: &str) -> Result<String> {
 }
 
 fn copy(f: &Found) -> Found {
-    Found { key: f.key.clone(), ..*f }
+    Found {
+        key: f.key.clone(),
+        ..*f
+    }
 }

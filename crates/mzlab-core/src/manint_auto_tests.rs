@@ -1,12 +1,15 @@
 //! `manint_auto::auto_text` on synthetic SIM traces (a flat background of 50, Gaussian peaks): the peaks of three files grouped by apex, the one with no
 //! counterpart marked, the drift tolerance, the log of each file and the windows read back by `table_text`.
 
-use super::{auto_text, table_text};
 use super::tests::trace;
+use super::{auto_text, table_text};
 
 fn files(peaks: &[&[(f64, f64)]]) -> String {
     let f = |i: usize, p: &[(f64, f64)]| {
-        format!("{{\"name\":\"s{i}.mzML\",\"transitions\":[{}]}}", trace(Some(180.1), None, "", p))
+        format!(
+            "{{\"name\":\"s{i}.mzML\",\"transitions\":[{}]}}",
+            trace(Some(180.1), None, "", p)
+        )
     };
     let l: Vec<String> = peaks.iter().enumerate().map(|(i, p)| f(i, p)).collect();
     format!("[{}]", l.join(","))
@@ -38,7 +41,10 @@ fn peaks_at_the_same_time_are_one_group_and_one_alone_has_no_counterpart() {
 fn the_tolerance_decides_whether_a_drifted_peak_is_the_same() {
     let f = files(&[&[(3.0, 8e4)], &[(3.5, 6e4)]]);
     let tight = auto_text(&f, "{\"rt_tol\":0.1}").unwrap();
-    assert_eq!((num(&tight, "groups"), num(&tight, "unmatched")), (2.0, 2.0));
+    assert_eq!(
+        (num(&tight, "groups"), num(&tight, "unmatched")),
+        (2.0, 2.0)
+    );
     let wide = auto_text(&f, "{\"rt_tol\":0.6}").unwrap();
     assert_eq!((num(&wide, "groups"), num(&wide, "unmatched")), (1.0, 0.0));
 }
@@ -54,7 +60,11 @@ fn the_windows_are_the_table_rows_grouped_by_peak_then_file() {
     let t = auto_text(&three(), "{}").unwrap();
     let w = &t[t.find("\"windows\":").unwrap() + 10..t.find(",\"log\"").unwrap()];
     let csv = table_text(&three(), w, false).unwrap();
-    let rows: Vec<Vec<&str>> = csv.lines().skip(1).map(|l| l.split(',').collect()).collect();
+    let rows: Vec<Vec<&str>> = csv
+        .lines()
+        .skip(1)
+        .map(|l| l.split(',').collect())
+        .collect();
     assert_eq!(rows.len(), 3, "{csv}");
     // sample, origin: the first peak of s0 then s1, then the peak of s0 alone
     let who: Vec<(&str, &str)> = rows.iter().map(|r| (r[1], r[12])).collect();
@@ -64,5 +74,8 @@ fn the_windows_are_the_table_rows_grouped_by_peak_then_file() {
 
 #[test]
 fn the_same_request_gives_the_same_bytes() {
-    assert_eq!(auto_text(&three(), "{}").unwrap(), auto_text(&three(), "").unwrap());
+    assert_eq!(
+        auto_text(&three(), "{}").unwrap(),
+        auto_text(&three(), "").unwrap()
+    );
 }
