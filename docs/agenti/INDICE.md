@@ -167,6 +167,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | studio spettrale su dati sintetici: generatore di alberi di frammentazione, scenari E0-E6, bracci contro il motore (null calibrato, p-value di coincidenza, sotto-formule, analoghi a più spostamenti), righe MISURA studio_* | `docs/agenti/studio-spettri.md` |
 | test-suite quality study (report only): tests that cannot fail, hand mutation of 30 functions with survivors, parity gaps, coverage holes, flakiness and cost, unread fixtures, top 15 tests to add | `docs/agenti/studio-test.md` |
 | usability study of the site as a first-time user (opening a file, XIC, integration, export, reset, errors; it/en, 390 px, keyboard): findings by severity, what works, top 10, areas not covered | `docs/agenti/studio-ux.md` |
+| righe della scheda spettro MS² (note, tempi di ritenzione, CE ± spread, campione), `mzlab-cli items` | `docs/agenti/spettro-righe.md` |
 | tabella picchi dello spettro da copiare (TSV), asse y in % fino a 100, pulsante XIC solo su MS¹ | `docs/agenti/tabella-picchi.md` |
 | dove Tabui perde un prodotto atteso (`mzlab-cli explain-missing`) | `docs/agenti/tabui-spiega.md` |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |

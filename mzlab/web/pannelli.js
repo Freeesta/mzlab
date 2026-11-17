@@ -546,6 +546,7 @@ function zoomBar(p) {
 }
 function afterDraw(/** @type {Pannello} */ p) {
   rtLabel(p);
+  window.SPECROWS?.update(p);
   if (window.BANCO) BANCO.header(p);
   const btn = p.el.querySelector('[data-a="fit"]'), z = !!(p._a && (p.zoom || p.zoomY));
   if (p.type !== "spec" && p.type !== "map" && p._rngOn != null && p._rngOn !== rngIsOn(p)) ctl(p);  // the «Range» button follows zooming too
