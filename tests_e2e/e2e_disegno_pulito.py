@@ -26,8 +26,8 @@ try:
         unload = lambda: pg.evaluate("!window.dispatchEvent(new Event('beforeunload', { cancelable: true }))")      # true = a handler asks the browser to prompt
         def add(smi="CCO"): pg.evaluate(f"{K}.addFragment('{smi}')"); poll(lambda: not blank())
         def load(smi):
-            pg.evaluate(f"window.__p = TPDraw.load({smi!r})")
-        def done(): return pg.evaluate("window.__p")
+            pg.evaluate(f"(() => {{ window.__p = TPDraw.load({smi!r}); }})()")
+        def done(): return pg.evaluate("window.__p")      # awaits the load
 
         def clean():
             assert blank() and not unload(), "empty canvas: nothing to warn, no beforeunload handler"
@@ -68,7 +68,7 @@ try:
             text = open(d.value.path(), encoding="utf-8").read()
             assert done() is True, "the canvas was replaced after the download"
             assert pg.evaluate("TPDraw.smiles()") == "CCC"
-            pg.evaluate(f"window.__p = TPDraw.load({text!r})"); frames(pg, 20)      # the saved file reopens to the same canvas
+            pg.evaluate(f"(() => {{ window.__p = TPDraw.load({text!r}); }})()"); frames(pg, 20)      # the saved file reopens to the same canvas
             assert done() is True and not dlg(), "a load over a clean canvas asks nothing"
             poll(lambda: pg.evaluate(f"{K}.getKet()") == ket_before)
         step("«Save and replace» downloads a .ket that reopens to the same canvas", save_and_replace)
