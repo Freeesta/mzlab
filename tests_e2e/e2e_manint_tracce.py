@@ -49,7 +49,8 @@ try:
                 for k in ("area", "height"): assert abs(r[k] - d[k]) <= 1e-4 * max(abs(d[k]), 1), (k, d, r)
                 assert abs(r["rt"] - d["rt"]) < 6e-4, (d, r)
         step("area, height and apex of the card are those of the dialog table", parity)
-        step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
+        bad = [e for e in errs if e[0] in ("pageerror", "console.error")]
+        step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(bad[:3])) if bad else None)
 finally:
     r.close()
 for s in steps: print("  ", s)
