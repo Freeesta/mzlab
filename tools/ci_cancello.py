@@ -1,6 +1,5 @@
 """Deploy gate of pages.yml: waits until the required checks of a pull request have finished on the pushed commit of main; exit 0 when all of them succeeded,
-1 as soon as one did not (the deploy then does not start and the previous site stays published). A required run CANCELLED by a newer push of main (concurrency) does not
-close the gate: the newest commit of main contains this one and runs every check, so the gate follows the checks of main's head instead. Without «Require branches to be up to date» two pull requests
+1 as soon as one did not (the deploy then does not start and the previous site stays published). Without «Require branches to be up to date» two pull requests
 green alone can break main together: this is the barrier between such a commit and the public site.
 Usage: ci_cancello.py [SHA]; reads GITHUB_TOKEN, GITHUB_REPOSITORY, GITHUB_SHA, GITHUB_API_URL (job needs `actions: read`)."""
 import json
@@ -41,10 +40,6 @@ def jobs_of(run_id: int) -> list[dict]:
     return api(f"actions/runs/{run_id}/jobs?filter=latest&per_page=100")["jobs"]
 
 
-def main_head() -> str:
-    return api("git/ref/heads/main")["object"]["sha"]
-
-
 def newest(runs: list[dict]) -> dict[str, dict]:
     """The newest run of each required workflow (a re-run keeps its id and shows its latest attempt)."""
     out: dict[str, dict] = {}
@@ -63,28 +58,13 @@ def check(sha: str, runs: Callable[[str], list[dict]], jobs: Callable[[int], lis
     for wf, run in found.items():
         v = verdict(jobs(run["id"]), REQUIRED[wf])
         if v and v.startswith("fail"):
-            if run.get("conclusion") == "cancelled":   # replaced by a newer push of main: see wait()
-                return f"superseded: {wf} ({run.get('html_url', run['id'])})", missing
-            if run.get("status", "completed") != "completed" and "=cancelled" in v:
-                pending = True   # jobs are cancelled before the run is: its final conclusion decides (a timed-out job in a run that goes on stays a failure)
-                continue
             return f"{wf} {v} ({run.get('html_url', run['id'])})", missing
         pending = pending or v is None
     return (None if pending or missing else "ok"), missing
 
 
-def follow_head(sha: str, v: str, runs, jobs, head: Callable[[], str]) -> str | None:
-    """Verdict of a commit whose required run was cancelled by a newer push: the checks of the head of main decide ('ok', a failure text, None while pending or itself superseded).
-    The head is read again at every poll, so a still newer push is followed; with no newer commit the cancellation was by hand and the gate closes."""
-    h = head()
-    if h == sha:
-        return "fail: " + v
-    hv, _ = check(h, runs, jobs)
-    return None if hv is None or hv.startswith("superseded") else hv   # ok, a failure text, or still pending / itself replaced by a newer push
-
-
 def wait(sha: str, runs: Callable[[str], list[dict]] = runs_of, jobs: Callable[[int], list[dict]] = jobs_of,
-         sleep: Callable[[float], None] = time.sleep, timeout: float = TIMEOUT, head: Callable[[], str] = main_head) -> int:
+         sleep: Callable[[float], None] = time.sleep, timeout: float = TIMEOUT) -> int:
     start = time.monotonic()
     absent = 0
     while True:
@@ -93,8 +73,6 @@ def wait(sha: str, runs: Callable[[str], list[dict]] = runs_of, jobs: Callable[[
             absent = absent + 1 if missing else 0
             if absent >= MISSING_POLLS:
                 v = "fail: no push run on this commit: " + ", ".join(missing)
-            elif v and v.startswith("superseded"):
-                v = follow_head(sha, v, runs, jobs, head)
         except OSError as e:  # a transient API error must not close the gate: try again at the next poll
             print(f"API error, retrying: {e}", flush=True)
             v = None
