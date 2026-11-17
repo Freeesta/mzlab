@@ -323,6 +323,19 @@ def test_one_damaged_agilent_index_record_is_left_out_on_both_faces(tools):
         assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
+def test_a_gc_run_with_data_ms_on_top_and_only_contents_in_acqdata_reads_on_both_faces(tools):
+    """The shape of a GC/MS .D copied without its converted index (data.ms at the top, AcqData with only Contents.xml, side files beside it): the CLI and the module give the same mzML,
+    the same scans as the older run with the data.ms alone, and the run is read as GC (EI) from Contents.xml."""
+    import agilent_sintetico
+    d = agilent_sintetico.write_old(tools["tmp"] / "in_agilent_gc", "gcsynth.D", 60, gc=True)
+    cli = da_cli(tools, "agilent", d)
+    assert cli.count(b"<spectrum ") == 60
+    wasm = da_wasm(tools, "agilent", d)
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+    bare = da_cli(tools, "agilent", agilent_sintetico.write_old(tools["tmp"] / "in_agilent_gc_bare", "gcsynth.D", 60))
+    assert bare.count(b"<spectrum ") == 60
+
+
 def test_wiff_with_dad_and_method_equals_cli_with_dad(tools):
     """A 3200 QTRAP variant (version-1 blocks) with an optical detector and an LC method: the module writes the matrix (`MS:1000804` spectra) and the method
     (`mzLab metodo/1`), byte for byte what `mzlab-cli convert --set conv.dad=true` writes."""
