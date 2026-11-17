@@ -1,4 +1,4 @@
-"""Disegno: partial structures. Atoms selected + right click «Brackets with Δ…» put them in brackets with a delta (a data S-group «MZLAB» of Ketcher), drawn by
+"""Drawing: partial structures. Atoms selected + right click «Brackets with Δ…» put them in brackets with a delta (a data S-group «MZLAB» of Ketcher), drawn by
 parentesi.js over the canvas; on the brackets the menu gives formula, mass and m/z with the delta (Rust `partial`, parz/1); an unreadable delta is refused;
 the label under the structure counts the delta too (formula and nominal mass of structure + Δ, the same values as the bracket's menu line); the delta shows once,
 also after a selection change; a click on the bracket line picks it, Delete removes it and undo brings it back; right click on the line offers «Remove the brackets»;
@@ -6,6 +6,7 @@ TPDraw.smiles() has no CXSMILES «|…|» and TPDraw.partial() gives {smiles, de
 the substituent atom selected, «Attached to one of these atoms» = dashed bond to the centre and circles on the candidates, and TPDraw.partial() gives
 positionUnknown and a V3000 with a «*» atom and ENDPTS ... ATTACH=ANY.
 Needs site/static/wasm-feat/grafo (tools/build_feat_wasm.sh); SKIP without it."""
+# covers: mzlab/web/disegno-frammenti.js, mzlab/web/disegno-parziali.js, mzlab/web/disegno-molfile.js, mzlab/web/parentesi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")):
@@ -30,7 +31,7 @@ try:
             pg.evaluate("""([x,y])=>{const d=document.querySelector('#kframe').contentDocument;const e=d.elementFromPoint(x,y)||d.body;e.dispatchEvent(new d.defaultView.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:x,clientY:y}))}""", pt)
         def bracket(delta):
             pg.evaluate(f"{KJ}.editor.selection({{atoms:[0,1,2,3,4,5]}})")
-            menu_on_atom(0); pg.locator("#ctx div", has_text="Parentesi con").first.click()
+            menu_on_atom(0); pg.locator("#ctx div", has_text="Brackets with").first.click()
             pg.wait_for_selector("#askdlg[open]", timeout=5000); pg.fill("#askin", delta); pg.click("#askok")
             pg.evaluate(f"{KJ}.editor.selection(null)")
         def add():
@@ -38,24 +39,24 @@ try:
             pg.wait_for_function(f"(()=>{{let n=0;{KJ}.editor.struct().sgroups.forEach(s=>{{if(s.type==='DAT'&&s.data.fieldName==='MZLAB')n++}});return n===1}})()", timeout=8000)
             pg.wait_for_function("!!document.querySelector('#kframe').contentDocument.querySelector('#mz-parziali .mz-parentesi path')", timeout=5000)
             t = pg.evaluate("document.querySelector('#kframe').contentDocument.querySelector('#mz-parziali text').textContent"); assert t == "+O", t
-        step("selected atoms + «Parentesi con Δ…» put them in brackets with the delta", add)
+        step("selected atoms + «Brackets with Δ…» put them in brackets with the delta", add)
         def line():
             for i in range(20):
                 pg.keyboard.press("Escape"); menu_on_atom(2)
-                if pg.locator("#ctx div", has_text="Con +O").count(): break
+                if pg.locator("#ctx div", has_text="With +O").count(): break
                 pg.wait_for_timeout(300)
-            t = pg.locator("#ctx div", has_text="Con +O").first.inner_text()
-            assert t.startswith("Con +O: C8H10O2 ") and "m/z 139" in t, t                        # C8H10O + O; [M+H]+ 139 at unit decimals
-            assert pg.locator("#ctx div", has_text="Parentesi con").count() == 0                    # atoms already in brackets
+            t = pg.locator("#ctx div", has_text="With +O").first.inner_text()
+            assert t.startswith("With +O: C8H10O2 ") and "m/z 139" in t, t                        # C8H10O + O; [M+H]+ 139 at unit decimals
+            assert pg.locator("#ctx div", has_text="Brackets with").count() == 0                    # atoms already in brackets
         step("on the brackets: formula, mass and m/z with the delta", line)
         def label():
             pg.keyboard.press("Escape")
             wait_for_js(pg, f"/C8H10O2/.test({LABELS}) && /138/.test({LABELS})", timeout=8000)   # C8H10O + O, nominal 122 + 16
             for i in range(20):
                 menu_on_atom(2)
-                try: pg.locator("#ctx div", has_text="Con +O").first.wait_for(state="visible", timeout=1500); break
+                try: pg.locator("#ctx div", has_text="With +O").first.wait_for(state="visible", timeout=1500); break
                 except Exception: pg.keyboard.press("Escape")
-            row = pg.locator("#ctx div", has_text="Con +O").first.inner_text(); assert "C8H10O2" in row and " 138" in row, row   # the menu line agrees with the label
+            row = pg.locator("#ctx div", has_text="With +O").first.inner_text(); assert "C8H10O2" in row and " 138" in row, row   # the menu line agrees with the label
             pg.keyboard.press("Escape")
         step("the label under the structure has the formula and nominal mass with the delta, like the menu line", label)
         VIS = f"[...{FD}.querySelectorAll('svg text')].filter(t => t.textContent.trim() === '+O' && t.getBoundingClientRect().width > 0 && getComputedStyle(t).visibility !== 'hidden' && getComputedStyle(t).display !== 'none').length"
@@ -73,12 +74,12 @@ try:
             x, y, fx, fy = on_line()
             for i in range(20):
                 pg.evaluate("""([x,y])=>{const d=document.querySelector('#kframe').contentDocument;(d.elementFromPoint(x,y)||d.body).dispatchEvent(new d.defaultView.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:x,clientY:y}))}""", [x, y])
-                try: pg.locator("#ctx div", has_text="Togli la parentesi").first.wait_for(state="visible", timeout=1500); break
+                try: pg.locator("#ctx div", has_text="Remove the brackets").first.wait_for(state="visible", timeout=1500); break
                 except Exception: pg.keyboard.press("Escape")
-            pg.locator("#ctx div", has_text="Togli la parentesi").first.wait_for(state="visible", timeout=5000)
-            assert "Con +O: C8H10O2 · 138" in pg.inner_text("#ctx")                        # the same line as on an atom
+            pg.locator("#ctx div", has_text="Remove the brackets").first.wait_for(state="visible", timeout=5000)
+            assert "With +O: C8H10O2 · 138" in pg.inner_text("#ctx")                        # the same line as on an atom
             pg.keyboard.press("Escape")
-        step("right click on the bracket line offers «Togli la parentesi»", ctx_line)
+        step("right click on the bracket line offers «Remove the brackets»", ctx_line)
         NS = f"(()=>{{let n=0;{KJ}.editor.struct().sgroups.forEach(()=>n++);return n}})()"
         def pick_delete():
             x, y, fx, fy = on_line(); pg.mouse.click(fx + x, fy + y)
@@ -107,18 +108,18 @@ try:
             assert t.count("MZLAB") == 0, "DAT text of Ketcher left in the image"
         step("exported SVG has the brackets and the delta", export_svg)
         def remove():
-            menu_on_atom(2); pg.locator("#ctx div", has_text="Togli la parentesi").first.click()
+            menu_on_atom(2); pg.locator("#ctx div", has_text="Remove the brackets").first.click()
             pg.wait_for_function(f"(()=>{{let n=0;{KJ}.editor.struct().sgroups.forEach(()=>n++);return n===0}})()", timeout=8000)
             pg.wait_for_function("!document.querySelector('#kframe').contentDocument.querySelector('#mz-parziali .mz-parentesi')", timeout=5000)
             o = call("TPDraw.partial()"); assert o["delta"] == "" and o["level"] is None, o
-        step("«Togli la parentesi» removes them", remove)
+        step("«Remove the brackets» removes them", remove)
         def bad():
             bracket("+Qq"); pg.wait_for_timeout(800)
             n = pg.evaluate(f"(()=>{{let n=0;{KJ}.editor.struct().sgroups.forEach(()=>n++);return n}})()"); assert n == 0, n
         step("an unreadable delta is refused", bad)
         def multi():
             pg.evaluate(f"{KJ}.editor.selection({{atoms:[6,3,4,5]}})")                # CH2 of the chain + three ring atoms, one of them the drawn attachment
-            menu_on_atom(6); pg.locator("#ctx div", has_text="Attacco su uno di questi").first.click()
+            menu_on_atom(6); pg.locator("#ctx div", has_text="Attached to one of these atoms").first.click()
             pg.evaluate(f"{KJ}.editor.selection(null)")
             pg.wait_for_function("document.querySelector('#kframe').contentDocument.querySelectorAll('#mz-parziali .mz-multicentro circle').length === 3", timeout=8000)
             assert pg.evaluate("!!document.querySelector('#kframe').contentDocument.querySelector('#mz-parziali .mz-multicentro line[stroke-dasharray]')"), "no dashed bond"
@@ -134,12 +135,12 @@ try:
         def multi_off():
             for i in range(10):
                 pg.keyboard.press("Escape"); menu_on_atom(6)
-                if pg.locator("#ctx div", has_text="Togli l'attacco").count(): break
+                if pg.locator("#ctx div", has_text="Remove the variable attachment").count(): break
                 pg.wait_for_timeout(300)
-            pg.locator("#ctx div", has_text="Togli l'attacco").first.click()
+            pg.locator("#ctx div", has_text="Remove the variable attachment").first.click()
             pg.wait_for_function("!document.querySelector('#kframe').contentDocument.querySelector('#mz-parziali .mz-multicentro')", timeout=8000)
             o = call("TPDraw.partial()"); assert o["positionUnknown"] is False and o["level"] is None and o["molfile"] == "", o
-        step("«Togli l'attacco variabile» removes it", multi_off)
+        step("«Remove the variable attachment» removes it", multi_off)
 finally:
     r.close()
 r.report()

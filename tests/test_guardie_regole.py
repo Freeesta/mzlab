@@ -123,10 +123,9 @@ def test_guard_tabui_no_lang_key():
 
 
 def test_guard_tabui_no_internal_key_in_lang_catalog():
-    """Main application lang catalogs (lang/it.js, lang/en.js) must not contain internal Tabui keys."""
-    for lang in ("it", "en"):
-        src = lang_catalog.testo(lang)
-        assert not re.search(r'"tpmine\.', src), f"mzlab/web/lang/{lang}.js has tpmine.* keys"
+    """The main application lang catalog (lang/en/) must not contain internal Tabui keys."""
+    src = lang_catalog.testo("en")
+    assert not re.search(r'"tpmine\.', src), "mzlab/web/lang/en has tpmine.* keys"
 
 
 def test_guard_tabui_ui_texts_in_english():
@@ -256,7 +255,7 @@ def test_guard_cv_pairs_of_readers_and_writer_match_psi_ms():
     assert not found, f"(accession, name) pairs that the PSI-MS CV does not have: {found}"
 
 
-def test_guardia_costanti_di_massa_solo_in_elements():
+def test_guard_mass_constants_only_in_elements():
     """Proton, electron and 13C step are written once (mzlab-core elements.rs); crates import them by name."""
     pat = re.compile(r"1\.00727|1\.007_276|0\.00054858|1\.00335|1\.003_35")
     found = []

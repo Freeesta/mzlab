@@ -1,5 +1,6 @@
-"""Prompt 2, block 2: header of the chromatogram in one row with the Parametri popover and chips, legend inside the graph (none with one file),
+"""Prompt 2, block 2: header of the chromatogram in one row with the Parameters popover and chips, legend inside the graph (none with one file),
 no icons in the tabs (the tooltip of a tab shows Q1 -> q2 -> Q3), TIP_DELAY, whole file row clickable, gentle zoom line on the axes."""
+# covers: mzlab/web/affianca.js, mzlab/web/layout.js, mzlab/web/pannelli.js, mzlab/web/tooltip.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -14,8 +15,8 @@ r = Run(port=8878, wd="/tmp/wd78")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1000})
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")]); pg.wait_for_selector("text=Carica dati")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")]); pg.wait_for_selector("text=Load data")
+        pg.click("text=Load data"); ready(pg)
         def header():
             h = pg.evaluate(f"(()=>{{const p={CH},hd=p.el.querySelector('.hd').getBoundingClientRect();return [hd.height,p.el.querySelector('.cpop').hidden,!!p.el.querySelector('[data-o=kind]'),p.el.querySelector('.ttl').offsetParent===null]}})()"); print(h)
             assert h[0] < 46 and h[1] and h[2] and h[3], h          # one row, popover closed, the kind menu is the title
@@ -36,8 +37,8 @@ try:
         step("2.1/2.4: legend inside the graph, none with one file", legend)
         def below():
             pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); frames(pg, 2)
-            g = pg.evaluate(f"(()=>{{const p={SPEC},l=p.leg.getBoundingClientRect(),c=p.cv.getBoundingClientRect();return [l.bottom<=c.bottom+1,l.top>c.bottom-30,l.width>100,getComputedStyle(p.leg).position]}})()"); print(g)
-            assert g[0] and g[1] and g[2] and g[3] == "absolute", g          # the scan line is on the row of the x axis title
+            g = pg.evaluate(f"(()=>{{const p={SPEC},l=p.leg.getBoundingClientRect(),c=p.cv.getBoundingClientRect();return [l.bottom<=c.bottom+1,l.top>c.bottom-30,l.width>60,getComputedStyle(p.leg).position]}})()"); print(g)
+            assert g[0] and g[1] and g[2] and g[3] == "absolute", g          # width > 60 px: the English line «scan 786/1111» is 78 px; the scan line is on the row of the x axis title
         step("2.4: scan line on the row of the x axis title", below)
         def tabs():
             assert pg.evaluate("document.querySelectorAll('#flst .qi').length") == 0, "no icons in the file list"

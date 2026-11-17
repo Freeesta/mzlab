@@ -1,7 +1,8 @@
-"""The «Cartella delle librerie» on the built site (WebAssembly engine): the OPFS folder `librerie/` and a folder handle (the same code as showDirectoryPicker, here an OPFS
+"""The «Libraries folder» on the built site (WebAssembly engine): the OPFS folder `librerie/` and a folder handle (the same code as showDirectoryPicker, here an OPFS
 subdirectory): inventory and the four states (ready, to index, update available is in e2e_libreria_scarica, damaged), a file that changes (touched = still ready, changed = to
 index), an index written once in `.mzlab/`, a package `.mzlib` put in the folder, an imported file, removing the index never removes the source, the window with the states.
 Needs the site: python tools/build_site.py and the engine in site/static/wasm-lib (built here when cargo and wasm-bindgen exist; the CI builds it in pages.yml)."""
+# covers: mzlab/web/libreria
 from pathlib import Path
 import json, os, shutil, subprocess, sys, time
 from playwright.sync_api import sync_playwright
@@ -55,7 +56,7 @@ time.sleep(1)
 URL = f"http://127.0.0.1:{PORT}/"
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None); ctx = b.new_context(viewport={"width": 1400, "height": 1000}, locale="it-IT"); pg = ctx.new_page()
+        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None); ctx = b.new_context(viewport={"width": 1400, "height": 1000}, locale="en-US"); pg = ctx.new_page()
         pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
         pg.on("response", lambda r: errs.append(("http%d" % r.status, r.url)) if r.status >= 400 and not r.url.endswith("favicon.ico") else None)
         def boot():
@@ -111,11 +112,11 @@ try:
         run_folder(None, "opfs")
         def window_():
             pg.evaluate("LIB.open()"); pg.wait_for_selector("#libdlg #lib-list table", timeout=20000)
-            t = pg.inner_text("#libdlg #lib-list"); assert "Pronta" in t and "Da indicizzare" in t and "Danneggiata" in t, t
-            assert "Archivio del browser" in pg.inner_text("#libdlg #lib-fwhere")
+            t = pg.inner_text("#libdlg #lib-list"); assert "Ready" in t and "To index" in t and "Damaged" in t, t
+            assert "Browser storage" in pg.inner_text("#libdlg #lib-fwhere")
             pg.click("#libdlg [data-idx='a.msp']"); pg.wait_for_selector("#libdlg [data-rm='f:a.msp']", timeout=30000)
             pg.click("#lib-x")
-        step("the window shows folder, states and the «Indicizza» action", window_)
+        step("the window shows folder, states and the «Index» action", window_)
         def persist():
             boot(); s = pg.evaluate("T.states()"); assert ["a.msp", "sorgente", "pronta"] in s and ["esterna.msp", "importata", "pronta"] in s, s
             assert "Esterno" in pg.evaluate("T.search", QPEAKS)

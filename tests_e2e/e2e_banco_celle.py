@@ -1,5 +1,6 @@
 """H3a: the cells of the high-resolution bench: scan filter of a cell (listed with the number of scans of each type), pin, active cell; nothing of this in the
 low-resolution world. Synthetic Orbitrap DDA file; the infusion MSn file of the private data repository (skipped without it) for the paths of fragmentation."""
+# covers: mzlab/web/banco.js
 import sys, os, glob, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from dati_percorsi import percorso  # noqa: E402  (tools/ is on sys.path through lib)
@@ -91,7 +92,7 @@ r = Run(port=8976, wd="/tmp/wd_lrcelle")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [D / "B_FullMass-t0.mzML"]); pg.wait_for_selector("text=Carica dati"); pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [D / "B_FullMass-t0.mzML"]); pg.wait_for_selector("text=Load data"); pg.click("text=Load data"); ready(pg)
         def lr():
             assert not pg.evaluate("document.body.classList.contains('hrw')")
             assert pg.locator(".bfw").count() == 0

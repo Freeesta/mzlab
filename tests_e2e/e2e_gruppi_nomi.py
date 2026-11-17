@@ -24,7 +24,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1600})
         stage(pg, [str(ES / "MS2_t15.mzML")] + [str(ES / f"FullScan_t{t}.mzML") for t in (0, 5, 15, 30)])
-        pg.click("text=Carica dati"); ready(pg); drawer(pg)
+        pg.click("text=Load data"); ready(pg); drawer(pg)
         def sets():
             assert setg(pg, "FullScan_t0", "Blanks") is True and lab(pg, "FullScan_t0") == "Blanks"
             for bad in ("blanks", "BLANKS ", "Full_scan", "full scan", "ms2(production)"):
@@ -32,6 +32,13 @@ try:
             assert note(pg), "no note"
             assert setg(pg, "FullScan_t15", "Blanks") is True and lab(pg, "FullScan_t15") == "Blanks"      # the same name joins the group
         step("set: another spelling or an experiment-type name is refused, the same name joins", sets)
+        def hr_names():
+            # the clash check reads every high-resolution label without files: it must not throw and must refuse both MS levels
+            for lv in (2, 3):
+                lbl = pg.evaluate("(lv) => GRP_HR['hr.ms2']([{ lv }])", lv)
+                assert lbl.startswith(f"MS{lv}"), lbl
+                assert setg(pg, "FullScan_t30", lbl) is False and lab(pg, "FullScan_t30") is None, lbl
+        step("set: the MS2 and MS3 spectra labels are reserved, the clash check does not throw", hr_names)
         def renames():
             assert setg(pg, "FullScan_t15", "Other") and lab(pg, "FullScan_t15") == "Other"
             def ren(old, new):

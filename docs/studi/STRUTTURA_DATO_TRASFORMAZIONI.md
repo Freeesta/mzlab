@@ -1,6 +1,6 @@
 # Struttura come dato: le trasformazioni genitore → prodotto
 
-Seguito di `STRUTTURA_DATO.md` §3. Come si scrive una trasformazione con la mappatura atomica, così che il sito di modifica si segua lungo una catena di reazioni e si leghi all'MS/MS. Tutto **[ipotesi]** di formato salvo dove è scritto **[verificato]**. Il tipo `transform` del Flow (`docs/studi/WORKFLOW_MODULARI.md`, ramo `claude/workflow-modulari`, `contratto.schema.json` → `transform1`) è un sottoinsieme di questo record: stessi nomi dei campi.
+Seguito del record `mol/1` (`docs/agenti/mol.md`). Come si scrive una trasformazione con la mappatura atomica, così che il sito di modifica si segua lungo una catena di reazioni e si leghi all'MS/MS. Tutto **[ipotesi]** di formato salvo dove è scritto **[verificato]**. Il tipo `transform` del Flow (`docs/agenti/rust-step.md`, ramo `claude/workflow-modulari`, `contratto.schema.json` → `transform1`) è un sottoinsieme di questo record: stessi nomi dei campi.
 
 ## 1. Oggi [verificato, letto nel codice]
 - **Regole** (`TP_Mine/data/regole_tp_2.json`, `regole_tp/2`, `hypo/rules.rs`): tre profili (`fotocatalisi`, `ozono_cloro`, `metabolismo_I_II`), 49 regole nella fotocatalisi; ognuna è un **cambio di formula** (`delta_formula`), una classe, precondizioni sui gruppi funzionali del genitore (`richiede`), `passi_max`, `livello_previsione`, `direzione_rt`, `fonte`. Nessun modello di reazione, nessun atomo.
@@ -41,7 +41,7 @@ Tabui (genitore, mol/1) ──► regole (regole_tp/2 oggi; modelli di reazione 
                      frag/1 → evidence (sottostruttura del prodotto) ──► map ──► atomi del genitore ──► TPMOL
 ```
 - **Regole di biotrasformazione** (alla BioTransformer, CTS, PubChem Transformations): domani una regola porta anche un **modello di reazione con atomi mappati** (centro, atomi aggiunti, legami cambiati), scritto da noi in un formato nostro a partire dalle fonti originali (articoli, tabelle pubblicate, manuali). Una regola senza modello resta un Δ con precondizioni, come oggi. Licenze: patRoon GPL-3 (`patRoon_TP.md`, verificato lì); BioTransformer, CTS e PubChem: licenze **da verificare** prima di prendere anche solo i dati delle regole.
-- **Fukui e proprietà per atomo**: `props` del genitore, agganciati al `can` del genitore; diventano `sites[].p` a priori solo dove `FUKUI_COSA_DICONO.md` lo ammette (eteroatomi S, N), mai per ordinare le posizioni C–H.
+- **Fukui e proprietà per atomo**: `props` del genitore, agganciati al `can` del genitore; diventano `sites[].p` a priori solo dove la validazione di Fukui lo ammette (`docs/agenti/reattivita-studi.md`) (eteroatomi S, N), mai per ordinare le posizioni C–H.
 - **interp**: `interp/1` legge `trasf/1` invece di ricostruire il Δ; il suo `drawing` diventa una vista di `sites`/`region` sugli indici canonici (stesse forme di `TPMOL`).
 - **MS/MS**: un frammento spiegato (`frag/1`, attribuzione dei frammenti del motore MS2) è una sottostruttura del **prodotto**; la `map` la riporta sul genitore. Se tutti i frammenti che contengono l'atomo aggiunto contengono anche l'atomo 9 e mai l'11, il supporto di 9 sale: è la stessa logica delle zone di `interp/1`, ma sugli atomi e lungo le catene.
 - **Disegno**: «Use this structure» produce un `mol/1` (con `regions` se c'è una parentesi o un multicentro) e, accanto al genitore, un `trasf/1` con `delta` e `region`.

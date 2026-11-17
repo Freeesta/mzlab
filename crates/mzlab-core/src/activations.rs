@@ -2,7 +2,7 @@
 //! the scan table reader (`scantable::precursor_element`) share this one table, so that what the writer can write the reader names back.
 
 /// In the order the reader looks them up: the first whose accession is in the activation wins.
-pub const ATTIVAZIONI: [(&str, &str, &str); 9] = [
+pub const ACTIVATIONS: [(&str, &str, &str); 9] = [
     (
         "HCD",
         "MS:1000422",
@@ -21,7 +21,7 @@ pub const ATTIVAZIONI: [(&str, &str, &str); 9] = [
 /// The (accession, term) of the method named `nome` (any case, spaces around ignored).
 pub fn from_name(name: &str) -> Option<(&'static str, &'static str)> {
     let n = name.trim();
-    ATTIVAZIONI
+    ACTIVATIONS
         .iter()
         .find(|a| a.0.eq_ignore_ascii_case(n))
         .map(|a| (a.1, a.2))
@@ -29,7 +29,7 @@ pub fn from_name(name: &str) -> Option<(&'static str, &'static str)> {
 
 /// The name of the first method of the table that the element (the text of a `<precursor>`) has as `accession="..."`.
 pub fn name_in(e: &str) -> Option<&'static str> {
-    ATTIVAZIONI
+    ACTIVATIONS
         .iter()
         .find(|a| ha_accession(e, a.1))
         .map(|a| a.0)

@@ -1,4 +1,5 @@
 # e2e_legende: the legend of a graph never covers the data (a peak at the far right pushes it to another corner; no free corner = headroom)
+# covers: mzlab/web/etichette-picchi.js, mzlab/web/legende.js
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -16,7 +17,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
+        pg.wait_for_timeout(1000); pg.click("text=Load data"); ready(pg)
         pg.evaluate("addPanel('spec',{tab:E.tab,k:E.cur,level:1})")
         pg.wait_for_timeout(1200)
         def real():

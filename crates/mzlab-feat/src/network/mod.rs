@@ -2,7 +2,8 @@
 //! change of formula takes the ion formula of one to that of another, with the MS2 evidence of the arc and the reason in words. A network is not an
 //! identification: it raises no level. Used by the Flow step `tp.network` and the view `TP_Mine/lazy/rete-vista.js`; the layout is computed here.
 
-pub mod arcs;
+/// The old path of `netarcs`, which lives at the top so that the Dig of `legacy` does not depend on the products network.
+pub use crate::netarcs as arcs;
 #[cfg(feature = "interp")]
 mod interp_in;
 mod json;
@@ -17,9 +18,9 @@ pub use json::SCHEMA;
 pub use run::network_text;
 
 use crate::hypo::Rules;
+use crate::netarcs::{best_pairs, counts, neutral_mass};
 use crate::sortc::SortC;
 use crate::tp::{TpBlock, ST_TP};
-use arcs::{best_pairs, counts, neutral_mass};
 
 /// Largest error of the observed difference of m/z against the mass of the change, ppm of the product.
 pub const PPM: f64 = 10.0;

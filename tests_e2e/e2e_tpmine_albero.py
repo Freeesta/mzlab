@@ -1,5 +1,6 @@
 """mzFinder: fragmentation tree of the parent (SVG). LR demo (supposed tree: N nodes, N-1 edges, a click opens the structure, keyboard, comparison
 with a product, SVG export) and HR (synthetic series + MSn). Run from the repo root: python3 tests_e2e/e2e_tpmine_albero.py  """
+# covers: TP_Mine/
 import os, shutil, subprocess, sys, time, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright

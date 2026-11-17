@@ -9,6 +9,6 @@ cd "$root"
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-llm-wasm
 rm -rf "$here/wasm"
 wasm-bindgen --target web --no-typescript --out-dir "$here/wasm" target/wasm32-unknown-unknown/release/mzlab_llm_wasm.wasm
-limit=$(sed -n 's/^limit_llm=\([0-9]*\).*/\1/p' tools/build_feat_wasm.sh)
+limit=$(python3 tools/moduli.py --tetto llm)
 RUNNER_TEMP=${RUNNER_TEMP:-$(mktemp -d)} tools/wasm_opt.sh "$here/wasm/mzlab_llm_wasm_bg.wasm" "$limit" "assistant (proxy)" @motore
 node "$here/build-allowlist.mjs" "$here/wasm" > "$here/allowlist.json"

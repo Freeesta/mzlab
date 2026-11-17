@@ -10,8 +10,8 @@ use mzlab_core::mzml_estimate;
 
 use super::table::{parse, Row};
 use super::traces::{channels, Channel};
-use crate::legacy::lr::peak1d::{find_peak, Found};
 use crate::sortc::SortC;
+use mzlab_core::peak1d::{find_peak, Found};
 
 /// What the step writes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

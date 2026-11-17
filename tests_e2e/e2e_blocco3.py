@@ -1,5 +1,6 @@
 """Prompt 2, block 3: the XIC window takes several ions (2 rows, + up to 10), m/z or formula in the same box, one panel with a trace per ion,
 the file chosen in the window, the calculator shows only the adducts of the polarity of the files."""
+# covers: mzlab/web/pannelli.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -13,12 +14,12 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1000})
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         XP = "E.panels.filter(p=>p.type==='xic')"
         rows = lambda: pg.locator("#xic-rows .xrw")
         def two():
             pg.click("#np-xic"); assert rows().count() == 2
-            t = pg.inner_text("#xic-rows"); assert "Ione 1" in t and "Ione 2" in t and "facoltativo" not in t, t
+            t = pg.inner_text("#xic-rows"); assert "Ion 1" in t and "Ion 2" in t and "optional" not in t, t
             pg.locator("#xic-rows input").nth(0).fill("194.2"); pg.locator("#xic-rows input").nth(1).fill("152"); pg.wait_for_timeout(300)
             s = pg.locator("#xic-rows .xr-sum").all_inner_texts(); print(s); assert "193.8 - 194.3" in s[0] and "151.8 - 152.3" in s[1], s
             n0 = pg.evaluate(f"{XP}.length"); pg.click("#xic-go"); ready(pg)
@@ -38,7 +39,7 @@ try:
         step("3.1: up to 10 rows, × removes one", limit)
         def mixed():
             pg.click("#np-xic"); pg.locator("#xic-rows input").nth(0).fill("c14h13f4n3o2s"); pg.locator("#xic-rows input").nth(1).fill("300"); hold(pg, 1300)
-            s = pg.locator("#xic-rows .xr-sum").all_inner_texts(); print(s); assert "363.8 - 364.3" in s[0] and "interpretata" in s[0] and "299.8 - 300.3" in s[1], s
+            s = pg.locator("#xic-rows .xr-sum").all_inner_texts(); print(s); assert "363.8 - 364.3" in s[0] and "interpreted" in s[0] and "299.8 - 300.3" in s[1], s
             assert pg.locator("#xic-rows select").nth(0).is_visible() and not pg.locator("#xic-rows select").nth(1).is_visible(), "the adduct only for a formula"
             pg.click("#xic-no")
         step("3.1: formula and m/z in the same kind of box", mixed)

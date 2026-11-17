@@ -8,7 +8,7 @@ use mzlab_feat::recipe::Recipe;
 use mzlab_feat::samples::{self, propose};
 use mzlab_feat::store::{write_table, Origin, Slice};
 use mzlab_feat::table::{Aligned, CELL_ABSENT, CELL_DETECTED, CELL_FILLED};
-use mzlab_feat_table_wasm::core::view_json_origin;
+use mzlab_ops::run::table::core::view_json_origin;
 
 const NAMES: [&str; 4] = ["blank.mzML", "s_t0.mzML", "s_t10.mzML", "s_t20.mzML"];
 
@@ -178,7 +178,7 @@ fn the_nts_rules_read_the_batches_of_campioni_3_and_match_the_page() {
     assert!(got.contains("\"bianco_ripiego\":["), "{got}");
     // the same through the entry the page calls
     let via =
-        mzlab_feat_table_wasm::filterspec::spec_from_json_with_samples(params, samples.as_bytes())
+        mzlab_ops::run::table::filterspec::spec_from_json_with_samples(params, samples.as_bytes())
             .unwrap();
     assert_eq!(page(&t, &samples_text_v1(&samples), &via), got);
     // defaults: the new parameters off give the bytes of the old plan
@@ -194,7 +194,7 @@ fn the_nts_rules_read_the_batches_of_campioni_3_and_match_the_page() {
 }
 
 fn samples_text_v1(doc: &str) -> String {
-    mzlab_feat_table_wasm::pol::samples_v1(doc.as_bytes()).unwrap()
+    mzlab_ops::run::table::pol::samples_v1(doc.as_bytes()).unwrap()
 }
 
 /// Two rows with the same blank area (1e6) and a sample area of 2e6: the blank cell of the first was filled by the gap filling, the one of the second was detected.

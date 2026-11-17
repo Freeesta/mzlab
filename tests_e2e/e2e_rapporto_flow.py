@@ -1,5 +1,6 @@
 """Report page of a Flow run (mzlab/web/rapporto-flow.js): the sections, the tables under the figure, the same HTML from the same JSON, the XSS escape, the toggles,
 the JSON download, printing to PDF, axe-core and the time with 5000 features. The module is served alone (no engine needed) with a copy of the colours of the app."""
+# covers: mzlab/web/rapporto-flow.js
 import sys, os, json, tempfile, shutil, threading; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 

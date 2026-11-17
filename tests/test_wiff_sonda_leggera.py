@@ -9,13 +9,13 @@ import sys
 from pathlib import Path
 
 import pytest
-from cargo_util import run
+from cargo_util import build, run
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
 WASM = ROOT / "target/wasm32-unknown-unknown/release"
 sys.path.insert(0, str(ROOT / "tools"))
-from wiff_riferimento import Writer, header, ion_spray  # noqa: E402
+from wiff_riferimento import Writer, header, ion_spray
 
 # probe(names, sizes, read) with a read that counts the bytes asked of each member; prints {"info": ..., "reads": [bytes per member]}
 PROBE = ("const fs=require('fs'),path=require('path'),w=require(process.argv[1]+'/mzlab_lettori_wasm.js'),m=process.argv.slice(2),n=m.map(()=>0);"
@@ -39,7 +39,7 @@ def full_scan(out, stem, samples):
 @pytest.fixture(scope="module")
 def work(tmp_path_factory):
     d = tmp_path_factory.mktemp("sonda")
-    run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", "sciex")
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", "sciex")
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "mod"), str(WASM / "mzlab_lettori_wasm.wasm"))
     full_scan(d, "uno", 1)
     full_scan(d, "sei", 6)

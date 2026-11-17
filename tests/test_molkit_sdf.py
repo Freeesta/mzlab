@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from cargo_util import build, cli_argv
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
@@ -20,13 +21,13 @@ def run(*a):
 @pytest.fixture(scope="module")
 def pkg(tmp_path_factory):
     out = tmp_path_factory.mktemp("molkit")
-    run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-mol-wasm")
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-mol-wasm", runner=run)
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(out), "target/wasm32-unknown-unknown/release/mzlab_mol_wasm.wasm")
     return out
 
 
 def cli(mol, *sets):
-    a = ["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-export", str(mol)]
+    a = cli_argv("mol-export", str(mol))
     for s in sets:
         a += ["--set", s]
     return run(*a)

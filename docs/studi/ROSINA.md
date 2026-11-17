@@ -1,6 +1,6 @@
 # Studio «Rosina»: leggere i file di tutti gli spettrometri di massa (lettori nativi e convertitore mzML)
 
-Obiettivo (Federico, 19/10): mzLab legge, su qualunque computer, i file di ogni produttore, sia in formato nativo sia come convertitore in mzML (profilo e centroidi), e ne legge PERFETTAMENTE i metadati. Questo studio parte dall'inventario e dalla matrice di `docs/studi/FORMATI_NATIVI_MS.md` (non rifatti) e dal corpus già raccolto nel repository privato (`dati/formati/`, 191 file, 1,3 GB). Base: `main` a `959c6db`; privato a `d41a808`.
+Obiettivo (Federico, 19/10): mzLab legge, su qualunque computer, i file di ogni produttore, sia in formato nativo sia come convertitore in mzML (profilo e centroidi), e ne legge PERFETTAMENTE i metadati. Questo studio parte dall'inventario e dalla matrice di `docs/agenti/lettura-nativa.md` (non rifatti) e dal corpus già raccolto nel repository privato (`dati/formati/`, 191 file, 1,3 GB). Base: `main` a `959c6db`; privato a `d41a808`.
 
 Documenti dello studio:
 - questo file: i quattro punti di metodo, A (censimento), D (politica dei dati), E (piano di chat), F (protocollo di prova), decisioni;
@@ -189,7 +189,7 @@ JSON per file nativo (uno per campione nei contenitori a più campioni): `schema
 | F6 convertitore | XSD, `FileInfo -v`, offset e SHA-1 dell'`indexedmzML`, rilettura = lettore, profilo/centroidi e `dataProcessing` giusti | nessun errore |
 | F7 robustezza | fuzz ≥ 300 s per famiglia, troncamento a 1/4, 1/2, 3/4, memoria entro `Limiti` | nessun panico né memoria fuori tetto |
 | F8 scala (solo locale) | file più grande della famiglia: tempo d'apertura, picco di memoria | scritti in `misure.md` |
-Esito per file: `L` (F0-F5 contro V1 o V2), `P` (manca un livello, scritto), `NV` (solo V7). La riga del formato in `FORMATI_NATIVI_MS.md` si aggiorna da questo esito, non da un'impressione.
+Esito per file: `L` (F0-F5 contro V1 o V2), `P` (manca un livello, scritto), `NV` (solo V7). La riga del formato in `docs/agenti/lettura-nativa.md` si aggiorna da questo esito, non da un'impressione.
 
 ### F.3 Dove gira
 - **CI pubblica** (`test.yml`): F0-F4 e F6 sui sintetici e sui piccoli pubblici; F5 sui documenti `metodo/1` dei sintetici.

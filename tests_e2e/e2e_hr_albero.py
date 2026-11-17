@@ -1,6 +1,7 @@
 """MSn tree (api/msntree) of a synthetic direct-infusion MSn file with the browser version on the built site: the spectra are read from
 the mzML by offset in the Rust engine, Pyodide is not downloaded, nothing is left in window.MZLAB_LR_MISS, and the JSON equals the Python reference's (pyref.py).
 Needs the site and the .wasm (python tools/build_site.py)."""
+# covers: mzlab/web/rust-, crates/
 import subprocess, sys, tempfile, time
 from pathlib import Path
 import numpy as np
@@ -49,7 +50,7 @@ try:
         pg, reqs = context(); pg.goto(f"http://127.0.0.1:{PORT}/"); open_file(pg)
         pg2 = PyRef([str(FILE)])
         def tree():
-            k = pg.evaluate("E.files.findIndex(f => f.kind === 'ms2')"); assert k >= 0, k
+            k = pg.evaluate("E.files.findIndex(f => f.kind === 'ms2' || f.kind === 'infusion')"); assert k >= 0, k
             for q in (f"api/msntree?k={k}", f"api/msntree?k={k}&formula=C16H17N2O4&ppm=3"):
                 ra, rb = pg.evaluate(JSON, q), pg2.evaluate(JSON, q)
                 assert ra["status"] == rb["status"] == 200 and ra["eng"] == "rust", (q, ra["status"], rb["status"], ra["eng"])

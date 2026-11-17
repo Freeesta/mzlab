@@ -1,5 +1,6 @@
 """UV spectrum of the DAD: a double click on the PDA map or on the PDA trace of a SCIEX .wiff opens the UV spectrum (nm, mAU) of that time under the graph, with its
 table of the data; a file with only the PDA trace (no optical matrix) answers with a clear message and opens nothing. Synthetic pair (tools/wiff_riferimento.py); the demo FullScan_t10.mzML carries its matrix in the TWC chromatogram."""
+# covers: mzlab/web/uv-spettro.js, mzlab/web/uv-azioni.js, mzlab/web/lr-method.js
 import sys, os, math, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from pathlib import Path
@@ -28,7 +29,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(D / "uv.wiff"), str(D / "uv.wiff.scan")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def map_dbl():
             pg.click("#np-map"); ready(pg); wait_for_js(pg, "E.files[0]._pdaMap === true")
             pg.select_option("body select[data-o=mapKind]", "pda"); ready(pg)
@@ -40,7 +41,7 @@ try:
         step("double click on the PDA map: the UV spectrum of that time, peak at 260 nm", map_dbl)
         def table():
             d = pg.evaluate(f"TDATI_P.data({UV})"); t = pg.evaluate(f"TDATI_P.text({UV})")
-            assert d["head"] == ["nm", "Assorbanza (mAU)"] and len(d["rows"]) > 50, d["head"]
+            assert d["head"] == ["nm", "Absorbance (mAU)"] and len(d["rows"]) > 50, d["head"]
             assert "UV" in t and "m/z" not in t, t
         step("the table of the data has nm and mAU; the description speaks of the UV spectrum", table)
         LBU = f"({UV}._a.lbls || []).filter(l => l.etpk)"
@@ -61,11 +62,11 @@ try:
             pg.evaluate(f"COMANDI.fai('spec.display', {UV}, () => {{ {UV}.etpk = true }}); drawSoon({UV})"); wait_for_js(pg, f"{LBU}.length >= 1")
         step("the wavelength labels can be hidden and shown again", uv_labels_off)
         def header_rt():
-            t = pg.evaluate(f"{UV}.el.querySelector('.rtl').textContent"); assert __import__('re').fullmatch(r"(fermo a )?\d+\.\d\d min", t.strip()), t
+            t = pg.evaluate(f"{UV}.el.querySelector('.rtl').textContent"); assert __import__('re').fullmatch(r"(held at )?\d+\.\d\d min", t.strip()), t
         step("the header of the UV spectrum says the RT it comes from", header_rt)
         def sheet():
             s = pg.evaluate(f"plotSheets({UV})")
-            assert s and s[0]["head"][0] == "nm" and s[0]["head"][1] == "Assorbanza (mAU)" and len(s[0]["rows"]) == 201, s and s[0]["head"]
+            assert s and s[0]["head"][0] == "nm" and s[0]["head"][1] == "Absorbance (mAU)" and len(s[0]["rows"]) == 201, s and s[0]["head"]
         step("the export has the nm and mAU columns", sheet)
         def zoom_keys():
             pg.evaluate(f"{UV}.cv.focus()"); pg.keyboard.press("+"); frames(pg, 3)
@@ -96,7 +97,7 @@ try:
                 tx = pg.evaluate(f"TDATI_P.text({u})"); assert ("RT %.2f" % pg.evaluate(f"{u}._a.uvd.rt")) in tx, tx
             assert pg.evaluate("window.__n") == 0, "no uvspec/map request while the line moves"
             pg.evaluate(f"spLinkFreeze({u})"); frames(pg, 2)
-            assert pg.evaluate(f"{u}.link") is None and pg.evaluate(f"{u}.el.querySelector('.rtl').textContent").startswith("fermo a ")
+            assert pg.evaluate(f"{u}.link") is None and pg.evaluate(f"{u}.el.querySelector('.rtl').textContent").startswith("held at ")
             pg.evaluate(f"(()=>{{const c={c}; c.cur=0.5; pushLinked(c,0.5,0.5,0,true)}})()"); frames(pg, 3)
             assert abs(pg.evaluate(f"{u}._a.uvd.rt") - 1.5) < 0.06, "frozen: the UV spectrum does not follow"
             pg.evaluate(f"spLinkFollow({u}, {c})"); wait_for_js(pg, f"{u}.link === {c}.id && Math.abs({u}._a.uvd.rt - 0.5) < 0.06")
@@ -197,7 +198,7 @@ try:
         step("axe-core: no serious or critical violation with the UV spectrum open", axe)
         pg.close()
         pg = r.page(p)
-        stage(pg, [T0]); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, [T0]); pg.click("text=Load data"); ready(pg)
         def no_matrix():
             assert pg.evaluate("E.files[0].pda") is True
             pick_kind(pg, "pda"); ready(pg)
@@ -211,7 +212,7 @@ try:
         step("a file with only the PDA trace: a clear message and no panel", no_matrix)
         pg.close()
         pg = r.page(p)
-        stage(pg, [ROOT / "mzlab" / "web" / "esempi" / "FullScan_t10.mzML"]); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, [ROOT / "mzlab" / "web" / "esempi" / "FullScan_t10.mzML"]); pg.click("text=Load data"); ready(pg)
         CH = "E.panels.find(q=>q.type==='chrom')"
         UVS = "E.panels.filter(q=>q.uv&&q._a)"
         def demo_uv_at(rt, nm):

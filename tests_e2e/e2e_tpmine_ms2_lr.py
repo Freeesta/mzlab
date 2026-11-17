@@ -4,6 +4,7 @@ Tabui: every experiment is in the card with its state or its reason; a menu move
 correction survives a reload and a new Dig, «none» and «Reset matches» work, the Excel export has the sheet «MS2 matches», the card works from the keyboard and has no axe
 violation, no pyodide* request, `MZLAB_LR_MISS` empty. Builds the site and static/wasm-feat (SKIP without cargo, wasm-bindgen or numpy); MZLAB_PIPE_SITE=<built site with
 static/wasm-feat> reuses one; AXE_JS=<axe.min.js> turns on the axe step. Shots: MZLAB_PIPE_SHOTS=<folder> (light and dark, 1280 and 390 px). Run from the repo root."""
+# covers: TP_Mine/
 import json, os, re, shutil, subprocess, sys, tempfile, time, zipfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright

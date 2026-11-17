@@ -3,6 +3,7 @@ analogues are searched, the library survives a reload, an old MZL1 archive (made
 replaced (and a second death within a minute sends the page to the JavaScript path), the .wasm stays under 600 KB, and an iPad with the Mac user agent gets the
 block cache of tablets (the page names the device to the worker).
 Needs the site: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm-lib)."""
+# covers: mzlab/web/libreria, crates/
 from pathlib import Path
 import json, os, shutil, subprocess, sys, time
 from playwright.sync_api import sync_playwright
@@ -86,7 +87,7 @@ try:
             pg.evaluate("LIB.open()"); pg.wait_for_selector("#libdlg #lib-list table", timeout=20000)
             t = pg.inner_text("#libdlg #lib-list"); assert "prova" in t and "5" in t, t
             pg.click("#lib-x")
-        step("the Librerie window lists it", listing)
+        step("the Libraries window lists it", listing)
         def analogs():
             info = pg.evaluate(ADD, ["analoghi.msp", ANA]); assert info["n"] == 2, info
             r = pg.evaluate("""async (q) => { const r = await LIB.call("analogs", { peaks: q, prec: 316.1, pol: 1, frag: 0.01, maxDelta: 200, max: 10 }); return r.results.map(x => ({ name: x.name, mcos: x.mcos, delta: x.delta, shifted: x.shifted, matched: x.matched })); }""", APEAKS)

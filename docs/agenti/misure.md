@@ -39,6 +39,25 @@ Reopening, seconds spent between worker messages:
 | 20 Full Scan LR | 0.1 | 4.2 | 0.84 | 0.03 | 4.5 |
 | 9 HR DDA | 0.1 | 3.88 | 0.93 | 0.01 | 2.95 |
 
+## Esportazioni validate e clic (regola 26: pochi clic)
+
+### Validazione delle esportazioni
+- **mzTab-M** (`export_mztab.rs`): `jmztabm-cli` 1.0.6 (Maven Central, Java 21), eseguito a mano sul Mac dal file sintetico di `tests/export_mztab.rs` (`MZLAB_MZTAB_OUT=<file> cargo test -p mzlab-feat --test export_mztab`: 3 file, 2 righe).
+  - Validazione strutturale (sintassi e coerenza, `-l Info`): 0 errori, 0 avvisi; resta solo l'Info-2038 «should contain a small molecule evidence section» (la sezione SME non si scrive: manca il riferimento allo spettro sorgente).
+  - Validazione semantica (mappa `cv-mapping/mzTab-M-mapping.xml`): 17 Info-3010 su campi facoltativi vuoti, 2 Warn-3005, 4 Error-3010 (obbligatori nella mappa, vuoti).
+  - Warn-3005: l'unità `MS:1001844` «MS1 feature area» non è fra quelle ammesse dalla mappa (figli di «intensity unit», «concentration unit», «substance unit»); resta perché descrive l'area, mentre «number of detector counts» no.
+  - Error-3010 su `id_confidence_measure`, `best_id_confidence_measure`, `ms_level` e `identification_method`: la mappa vuole un figlio di `MS:1002888` («small molecule confidence measure», solo punteggi di altri programmi) e le righe della SME. Non si dichiarano misure che il programma non calcola.
+  - Sintesi: validazione strutturale jmzTab-m 1.0.6 = 0 errori e 0 avvisi; semantica = 6 rilievi, tutti dovuti a (a) nessuna riga SME perché non c'è lo spettro sorgente e (b) nessun punteggio d'identità di altri programmi (figli di `MS:1002888`); mzLab non li inventa. Il file apre con la riga `COM` «This file carries quantification only; identification columns are not scored.».
+
+### Clic del flusso Tabui dai file alla tabella TP (`python3 tests_e2e/e2e_clic_flusso.py`, riga «MISURA», Chromium headless, serie HR sintetica `lc_synth` + `msn_synth`)
+- Conteggio con ascoltatori in cattura nella pagina (clic fidati, tasti senza i soli modificatori). Il dialogo di sistema dei file (clic su «Choose files...», Ctrl+A, Invio) e l'incolla dello SMILES (clic sul campo, Ctrl+V) non si pilotano con Playwright: sono costanti dichiarate nel test.
+- **Risultato: 4 clic + 3 tasti = 7 azioni**: scheda Tabui (1 clic), file (1 clic + 2 tasti), SMILES del genitore (1 clic + 1 tasto), «Dig» (1 clic).
+- Il test fallisce oltre 10 azioni (senza il logo): un passo in più fra i file e la tabella è una regressione. Nessuna conferma, nessun pulsante «Compute» in mezzo; la Pipeline non serve per questo percorso.
+- Termine di confronto (`rust-step.md`, «External tests of the chain»: mzLab ≤ metà dei clic di mzmine 4.10, stesso risultato): si misura sul Mac con la registrazione dello schermo di mzmine, batch caricato e batch costruito; il numero va aggiunto in questa sezione. I 13 `.raw` veri non sono nel repository: la misura è sulla serie sintetica, che ha gli stessi passi dell'utente.
+
+### Clic della rete dei prodotti: dal nodo alla riga (`python3 tests_e2e/e2e_rete.py`, riga «MISURA clic_rete_riga»)
+- Un clic su un nodo della rete sceglie la riga della tabella (`onSelect(rowId)`); con la tastiera Invio o Spazio sul nodo. Il test fallisce oltre 1 clic. `selectRow(rowId)` sceglie il nodo dalla tabella senza richiamare `onSelect`.
+
 ## Librerie spettrali (`python3 tools/bench.py --librerie --gb --scrivi`, Chromium Linux con profilo persistente)
 «js» = percorso JavaScript (`?libjs=1`, fino a 10^5 spettri), «wasm» = motore Rust/WASM. Tempi misurati dalla pagina (comprendono il passaggio dei messaggi al worker); identità e analoghi = mediana di 30 e 10 richieste a caldo, «cold» = la prima; «identify_all» = 5000 MS2 (400 per MassBank, che ne ha meno). Memoria = picco RSS di tutto il browser meno la base prima dell'importazione. Spettri sintetici (8-40 picchi uniformi: comprimono poco: caso sfavorevole per il peso).
 Bersagli: identità < 5 ms a caldo, analoghi < 100 ms su 10^6, MGF da 1 GB < 90 s con ≤ 200 MB. Browser: identità 8-12 ms (giro messaggi e JSON; <1 ms nativo), analoghi 136 ms su 10^6, MGF da 1 GB 130 s e 331 MB (74 s nativo con 110 MB). MassBank su disco: 8,0 MB contro 15,7 MB MSP. Gestione librerie `.mzlib` v1: indici Flash (frammenti e perdite neutre), ricerca a caldo 8-12 ms, analoghi ~136 ms su 10^6 spettri, supporto decoy e stima FDR.

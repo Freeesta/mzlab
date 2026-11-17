@@ -20,6 +20,15 @@ async function subxicRoute(q, { rb, rpc }) {
   return r.info ? { status: 200, text: r.info } : null;
 }
 
+/** `api/tic_background` (TIC/BPC without the chemical background) from the index of file `k`; `blank=K` names the blank sample. null = not served.
+ * @param {URLSearchParams} q  @param {{rb: any, rpc: (m: any) => Promise<any>}} env */
+async function ticBackgroundRoute(q, { rb, rpc }) {
+  const k = Number(q.get("k")), b = q.get("blank") ? Number(q.get("blank")) : -1;
+  if (!Number.isInteger(k) || !Number.isInteger(b) || !(await rb.ready(b >= 0 ? [k, b] : [k]))) return null;
+  const r = await rpc({ op: "ticbg", slot: k, blank: b, query: q.toString() });
+  return r.info ? { status: 200, text: r.info } : null;
+}
+
 /** `api/qaqc` (QA/QC measures of one ion over the series) from the indexes of the files. null = not served. @param {URLSearchParams} q  @param {{rb: any, rpc: (m: any) => Promise<any>}} env */
 async function qaqcRoute(q, { rb, rpc }) {
   const ks = (q.get("k") || "").split(",").filter(Boolean).map(Number);
@@ -36,6 +45,7 @@ export async function engineRoute(path, q, env) {
     const r = (await env.rpc({ op: "lr_composition", query: "?" + q.toString() })).info;
     return r ? { status: 200, text: r } : null;
   }
+  if (path === "/api/elements") return { status: 200, text: (await env.rpc({ op: "lr_elements" })).info };          // the periodic table for MS (elements/1)
   // the ?perf meter lists how Python read each file: Python reads none here
   if (path === "/api/perf") return { status: 200, text: '{"files":[]}' };
   // a built-in list: data, not a calculation
@@ -44,6 +54,7 @@ export async function engineRoute(path, q, env) {
   if (path === "/api/provenance") return { status: 200, text: (await env.rpc({ op: "lr_provenance", ctx: [...q].map(([k, v]) => [k, String(v).replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/·/g, "-").trim()]).filter(kv => kv[1]).map(kv => " · " + kv[0] + "=" + kv[1]).join("") })).info };
   if (path === "/api/subxic") return await subxicRoute(q, env);
   if (path === "/api/qaqc") return await qaqcRoute(q, env);
+  if (path === "/api/tic_background") return await ticBackgroundRoute(q, env);
   if (/^\/api\/map(snap|punti|punti3d|tiles)?$/.test(path)) return await mapRoute(path, q, env);
   return undefined;
 }

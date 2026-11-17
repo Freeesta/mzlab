@@ -2,6 +2,7 @@
 The bytes are the native ones (SHA-256) and a table of times per phase is printed. By default the synthetic series `piccolo`; with MZLAB_FEAT_MZIDX=<folder of .mzidx files>
 (and MZLAB_FEAT_PARENT=FORMULA:MZ:RT for the proofs) the files of that folder, and then the limits of the delivery apply: whole run under 60 s, about 3 s per file of ~80 MB
 for detect (a guard at 8 s), at most 128 MB of .wasm memory per worker. Needs cargo, the wasm32 target, wasm-bindgen and numpy."""
+# covers: TP_Mine/files/feat-
 import json, os, shutil, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright

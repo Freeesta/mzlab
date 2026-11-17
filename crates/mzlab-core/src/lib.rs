@@ -14,6 +14,7 @@ pub mod pairing;
 pub mod bench_stats;
 pub mod budget;
 pub mod budget_auto;
+pub mod calib;
 pub mod centroids;
 pub mod adduct_table;
 pub mod analysis;
@@ -25,6 +26,7 @@ pub mod ddafinestra;
 pub mod difference;
 pub mod diffroute;
 pub mod elements;
+pub mod periodic;
 pub mod entropy;
 pub mod score_terms;
 pub mod fileroutes;
@@ -34,6 +36,11 @@ pub mod chromeleon;
 pub mod chrom_background;
 #[cfg(test)]
 mod chrom_background_test;
+pub mod ticbg;
+pub mod ticbg_route;
+pub mod ticbg_synth;
+#[cfg(test)]
+mod ticbg_test;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod hashio;
 pub mod hrscanbin;
@@ -61,6 +68,7 @@ pub mod nuclides;
 pub mod itemroutes;
 pub mod infusion;
 pub mod iteminfo;
+mod cespread;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod json;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
@@ -137,6 +145,7 @@ pub mod valley;
 pub mod peakq;
 pub mod peakq_auto;
 pub mod peakq_lr;
+pub mod peakq_lrauto;
 #[cfg(test)]
 mod peakq_reach_test;
 #[cfg(test)]
@@ -172,6 +181,7 @@ pub mod jsonround;
 pub mod channels;
 pub mod channels_uv;
 pub mod routes;
+pub mod routes_open;
 pub mod routes_xicbin;
 pub mod scaninfo;
 pub mod scanstats;

@@ -3,6 +3,7 @@ after the first frame of the toggle (no «placed, then widened» second layout p
 Per requestAnimationFrame it records the LAYOUT box (offset*, so the FLIP transforms of transizioni.js do not count) of every button/select/input
 in the panel headers and of the panels themselves, 20 toggles in a row, at three window widths, CPU x1 and x4.
 Set MZLAB_PROBE_REPORT=1 to print the per-element numbers."""
+# covers: mzlab/web/transizioni, mzlab/web/pannelli.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 
@@ -48,12 +49,12 @@ def analyse(frames):
 
 def cold(p, vw):
     r = Run(port=8874, wd="/tmp/wd_pannelli_stabili"); r.b = p.chromium.launch()
-    ctx = r.b.new_context(viewport={"width": vw, "height": 900}, locale="it-IT", reduced_motion="no-preference")
+    ctx = r.b.new_context(viewport={"width": vw, "height": 900}, locale="en-US", reduced_motion="no-preference")
     pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.barra.lr','{\"open\":true}');}catch(_){}")
     pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "typeof E !== 'undefined' && !!document.querySelector('#pick')")
     pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); wait_for_js(pg, "E.files.length > 0")
-    pg.click("text=Carica dati"); ready(pg)
+    pg.click("text=Load data"); ready(pg)
     pg.evaluate("addPanel('spec',{tab:E.tab,k:E.cur,level:1})"); pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.evaluate("addPanel('map',{tab:'full'})")
     ready(pg); wait_for_js(pg, "E.panels.length >= 5 && E.panels.every(q => q.cv)"); hold(pg, 1500)      # the maps and plots finish drawing: only time brings that
     return r, ctx, pg, errs

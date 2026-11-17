@@ -1,6 +1,7 @@
 """Marked points land on the apex of the peak: a click a few pixels from the most intense point of the example file puts the marker on that point (RT and m/z
 of the true data), with the option «snap» off the marker stays where it was clicked, and the 3D viewer draws it on the top cell of the peak.
 Points of one group of RT share a shape in low resolution too."""
+# covers: mzlab/web/mappa-tabella.js
 import base64, struct, sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

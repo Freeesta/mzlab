@@ -1,15 +1,18 @@
-"""Layout sweep of the Dati view: with synthetic data, at 1000/1280/1600/2000 px and on iPad (portrait and landscape, touch), in light, dark and high contrast,
-in Italian and English, it opens the panels (MRM after an integration; chromatogram, spectrum, XIC and map of a full-scan file), every menu and pop-up of
+"""Layout sweep of the Data view: with synthetic data, at 1000/1280/1600/2000 px and on iPad (portrait and landscape, touch), in light, dark and high contrast,
+it opens the panels (MRM after an integration; chromatogram, spectrum, XIC and map of a full-scan file), every menu and pop-up of
 the page and of the panel headers, the settings, the method and the peak dialogs, and checks from the boxes on screen: no horizontal page scroll, no control
 over another or covered by something that is not its own, no control cut by a box that does not scroll, labels next to their control, no text cut with an
 ellipsis and no full text at hand, targets of at least 24 px (or the WCAG 2.5.8 spacing)."""
-import sys, os
+# covers: mzlab/web/app.css, mzlab/web/pannelli.js, mzlab/web/barra.js, mzlab/web/settings.js, mzlab/web/impostazioni, mzlab/web/canali
+# covers: mzlab/web/help.js, mzlab/web/affianca.js, mzlab/web/barre-maniglie.js, mzlab/web/explore.js
+import sys, os, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 
 steps = []
 def step(name, fn):
-    try: fn(); steps.append((name, "ok"))
+    t0 = time.time()
+    try: fn(); steps.append((name, "ok")); print(f"  [{time.time() - t0:.0f} s] {name[:40]}", flush=True)
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_impaginazione.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:1500]))
@@ -94,20 +97,19 @@ NEW = """() => { document.querySelectorAll('[data-sweep]').forEach(e => e.remove
 OPENERS = "[aria-haspopup]:not(:disabled),#np-set,#np-method,.hq,#tb-search,#np-addloss,#np-liste,#np-pt,#samptab"
 LO = (1000, 900), (1280, 800), (1600, 1000), (2000, 1100)
 IPAD = (768, 1024), (1024, 768)
-# every size in Italian and light; English, dark and high contrast where they change the most (long words, narrow widths, borders)
-CONFIGS = [(s, False, "it", "light") for s in LO] + [(s, True, "it", "light") for s in IPAD] + [
-    ((1000, 900), False, "en", "light"), ((768, 1024), True, "en", "light"), ((1280, 800), False, "it", "dark"), ((1280, 800), False, "en", "hc"), ((1024, 768), True, "it", "hc")]
-FULL = [((1000, 900), False, "it", "light"), ((2000, 1100), False, "en", "light"), ((768, 1024), True, "it", "dark")]
+# every size in light; dark and high contrast where they change the most (narrow widths, borders)
+CONFIGS = [(s, False, "light") for s in LO] + [(s, True, "light") for s in IPAD] + [
+    ((1280, 800), False, "dark"), ((1280, 800), False, "hc"), ((1024, 768), True, "hc")]
+FULL = [((1000, 900), False, "light"), ((2000, 1100), False, "light"), ((768, 1024), True, "dark")]
 found = []
 
 
-def page(size, touch, lang, theme):
-    k = dict(viewport={"width": size[0], "height": size[1]}, locale="it-IT" if lang == "it" else "en-US", reduced_motion="reduce")
+def page(size, touch, theme):
+    k = dict(viewport={"width": size[0], "height": size[1]}, reduced_motion="reduce")
     if touch: k.update(has_touch=True, is_mobile=True)
-    c = r.b.new_context(**k); c.add_init_script(SKIP + f"try{{localStorage.setItem('mzlab.lang','{lang}')}}catch(_){{}}")
+    c = r.b.new_context(**k); c.add_init_script(SKIP)
     q = c.new_page(); q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#pick", state="attached"); ready(q)
     q.evaluate("t => { UIP.theme = t === 'light' ? 'light' : 'dark'; uipApply(); QA11Y.write(t === 'hc' ? { bg: 'hc' } : {}); }", theme)
-    assert q.evaluate("I18N.lang") == lang, ("language", lang)
     return q
 
 
@@ -136,16 +138,16 @@ def sweep(q, tag):
         close_layer(q, sel)
 
 
-def mrm(size, touch, lang, theme):
-    tag = f"{size[0]}x{size[1]}{' touch' if touch else ''} {lang} {theme} MRM"
-    q = page(size, touch, lang, theme)
+def mrm(size, touch, theme):
+    tag = f"{size[0]}x{size[1]}{' touch' if touch else ''} {theme} MRM"
+    q = page(size, touch, theme)
     try:
         look(q, tag + " empty page")
         q.set_input_files("#pick", [mz("B_MRM-t0"), mz("B_MRM-t5")]); hold(q, 1000)
         q.evaluate("document.getElementById('colsbtn')?.click()")
         if q.evaluate("!!document.querySelector('dialog[open]')"): look(q, tag + " sample columns"); q.keyboard.press("Escape"); frames(q, 2)
         look(q, tag + " files picked")
-        q.click("text=" + ("Carica dati" if lang == "it" else "Load data")); ready(q)
+        q.click("text=Load data"); ready(q)
         wait_for_js(q, "!!document.querySelector('.pnl.mrm canvas') && E.panels.some(p => p.type === 'mrm' && p._a)", 60000)
         q.evaluate("document.querySelector('.pnl.mrm [data-a=iauto]').click()"); frames(q, 2)
         b = q.locator(".pnl.mrm canvas").first.bounding_box()
@@ -163,12 +165,12 @@ def mrm(size, touch, lang, theme):
         q.context.close()
 
 
-def full(size, touch, lang, theme):
-    tag = f"{size[0]}x{size[1]}{' touch' if touch else ''} {lang} {theme} full scan"
-    q = page(size, touch, lang, theme)
+def full(size, touch, theme):
+    tag = f"{size[0]}x{size[1]}{' touch' if touch else ''} {theme} full scan"
+    q = page(size, touch, theme)
     try:
         q.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t5")]); hold(q, 1000)
-        q.click("text=" + ("Carica dati" if lang == "it" else "Load data")); ready(q)
+        q.click("text=Load data"); ready(q)
         wait_for_js(q, "E.panels.some(p => p.type === 'chrom' && p._a) && E.panels.some(p => p.type === 'spec')", 60000)
         q.evaluate("(()=>{const f=E.files.find(x=>x.kind==='full');addPanel('xic',{tab:E.tab,traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}],x:0,y:700,w:hostWidth(),h:300,full:true});addPanel('map',{tab:'full',k:f.k,x:0,y:1020,w:hostWidth(),h:380,full:true});relayout();fitHost()})()")
         wait_for_js(q, "E.panels.some(p => p.type === 'xic') && E.panels.some(p => p.type === 'map')", 30000); ready(q); hold(q, 400)
@@ -189,8 +191,8 @@ try:
     with sync_playwright() as p:
         r.page(p).context.close()      # the browser of the run (Chromium, or WebKit with --browser)
         step("MRM after an integration, every menu, pop-up and dialog: no sideways scroll, overlap, cut or covered control, detached label, bare ellipsis or small target "
-             "(1000/1280/1600/2000 px, iPad portrait and landscape; English, dark and high contrast)", lambda: ([mrm(*c) for c in CONFIGS], verdict("MRM")))
-        step("full scan: chromatogram, spectrum, XIC and map with every menu of their headers (same checks; 1000 px, 2000 px in English, iPad portrait in dark)",
+             "(1000/1280/1600/2000 px, iPad portrait and landscape; dark and high contrast)", lambda: ([mrm(*c) for c in CONFIGS], verdict("MRM")))
+        step("full scan: chromatogram, spectrum, XIC and map with every menu of their headers (same checks; 1000 px, 2000 px, iPad portrait in dark)",
              lambda: ([full(*c) for c in FULL], verdict("full scan")))
     bad = [s for s in steps if s[1] != "ok"]
     for n, s in steps: print(("OK " if s == "ok" else "FAIL ") + n + (" " + s if s != "ok" else ""))

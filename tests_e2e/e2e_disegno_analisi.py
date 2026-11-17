@@ -1,6 +1,7 @@
 """Disegno: the «Formula analysis» card (closed by default) gives formula, exact, nominal and average mass and the mass % of the drawn molecule from the
 Rust `anal/1`; «Show isotope pattern» draws the theoretical sticks (keyboard-reachable, with their TDATI table) titled as theory for the formula; an ion
 shows its m/z; two molecules without a selection ask for one; the right-click row opens the card on the selection. Draw -> card -> pattern = 2 clicks. Needs site/static/wasm-feat/grafo; SKIP without it."""
+# covers: mzlab/web/disegno-analisi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")):
@@ -35,7 +36,7 @@ try:
             pg.click("#anal-show")                                                                # click 2
             pg.wait_for_selector("#anal-chart .an-st", timeout=5000)
             assert pg.get_attribute("#anal-show", "aria-expanded") == "true"
-            assert "teorico" in pg.inner_text("#anal-title") and "C8H9NO2" in pg.inner_text("#anal-title"), pg.inner_text("#anal-title")
+            assert "Theoretical" in pg.inner_text("#anal-title") and "C8H9NO2" in pg.inner_text("#anal-title"), pg.inner_text("#anal-title")
             labels = [pg.get_attribute(f"#anal-chart .an-st >> nth={i}", "aria-label") for i in range(pg.locator("#anal-chart .an-st").count())]
             assert len(labels) >= 3 and labels[0].startswith("M:") and "151.06333" in labels[0] and labels[1].startswith("M+1:"), labels
             box = pg.locator("#anal-chart .an-st rect").first.bounding_box(); assert box["width"] >= 24, box
@@ -60,7 +61,7 @@ try:
         step("an ion shows its m/z and the sticks are m/z", ion)
         def two():
             pg.evaluate(f"{KJ}.setMolecule('CCO.CN')"); wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 5")
-            pg.wait_for_function("/Seleziona una molecola/.test(document.querySelector('#anal-body').textContent)", timeout=15000)
+            pg.wait_for_function("/Select a molecule/.test(document.querySelector('#anal-body').textContent)", timeout=15000)
         step("two molecules without a selection ask for one", two)
         def menu():
             pg.evaluate("document.querySelector('#anal-card').open = false")

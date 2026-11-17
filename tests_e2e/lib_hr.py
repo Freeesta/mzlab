@@ -27,10 +27,10 @@ def real_cuttings():
 
 
 def load(pg, files, wait=6000, n=None, settle=1500):
-    """Open files in the start screen of the page and press «Carica dati»; n = number of entries E.files must reach (a DDA file gives two: MS1 and MS2)."""
+    """Open files in the start screen of the page and press «Load data»; n = number of entries E.files must reach (a DDA file gives two: MS1 and MS2)."""
     pg.set_input_files("#pick", [str(f) for f in files])
     pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={len(files)}", timeout=180000); pg.wait_for_timeout(300)
-    pg.click("text=Carica dati"); pg.wait_for_timeout(wait)
+    pg.click("text=Load data"); pg.wait_for_timeout(wait)
     if n:
         pg.wait_for_function(f"E.files.length>={n}", timeout=90000); pg.wait_for_timeout(1500)
 

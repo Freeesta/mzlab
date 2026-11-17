@@ -1,6 +1,7 @@
 """Draw canvas with a pen and a finger together: palm rejection for the whole stroke, a palm that rests before the pen, a pen that pauses (no long-press menu),
 and the menu of a finger long press that stays open after the lift. Real pointer events through CDP: the pen is Input.dispatchMouseEvent with pointerType "pen",
 the finger is Input.dispatchTouchEvent."""
+# covers: mzlab/web/touch.js, mzlab/web/disegno-menu.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

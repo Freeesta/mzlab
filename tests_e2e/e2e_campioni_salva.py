@@ -1,6 +1,7 @@
 """One writer and one saving of roles and times (campioni/2): an edit in the Data view survives a reload (role, subtype, time, confirmation), a notebook v1
 with QC and dark roles of mzlab.qaqc is migrated without loss, and a .mzflow saved and opened again keeps the SHA-256 of its `campioni` operation.
 Synthetic files with invented names."""
+# covers: mzlab/web/shell.js, mzlab/web/campioni.js, mzlab/web/campioni-doc.js, mzlab/web/campioni-tabella.js, mzlab/web/ruoli-carica.js
 import sys, os, json, shutil, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
 from lib import *

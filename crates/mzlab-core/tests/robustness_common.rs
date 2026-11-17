@@ -149,8 +149,8 @@ fn with_magic(name: &str, magic: &[u8], corpo: usize) -> Members {
 }
 
 fn trial(name: &str, seme: &Members, text: &[bool], execute: Execute) {
-    let (casi, guasti) = corri(seme, text, execute);
-    verify(name, casi, &guasti);
+    let (cases, guasti) = corri(seme, text, execute);
+    verify(name, cases, &guasti);
 }
 
 #[test]

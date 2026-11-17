@@ -1,5 +1,6 @@
 """Panel headers (HR): one low row, never wrapped or cut at 1280/1440/1680 px, at 700/900/1200 px, with the drawer open or pinned and on iPad
 (1024×1366 and 1366×1024, also rotating); below the usable width the groups go into the «⋯» menu (and come back with the space); the chart stays at least 100 px tall."""
+# covers: mzlab/web/banco.js, mzlab/web/pannelli.js
 import sys, os, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -101,7 +102,7 @@ try:
 
         def ipad():
             for w, h in ((1024, 1366), (1366, 1024), (768, 1024), (834, 1194), (1100, 900), (600, 900)):
-                ctx = r.b.new_context(viewport={"width": w, "height": h}, has_touch=True, is_mobile=True, locale="it-IT", reduced_motion="reduce")
+                ctx = r.b.new_context(viewport={"width": w, "height": h}, has_touch=True, is_mobile=True, reduced_motion="reduce")
                 q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
                 q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#pick", state="attached")
                 try:

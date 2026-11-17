@@ -722,7 +722,7 @@
   "strutture": {
    "type": "object",
    "additionalProperties": false,
-   "description": "Present only when asked (mzlab-cli msn-graph --strutture NODO): the cleavages of the structure (opzioni.smiles) of ONE node whose piece gives its m/z. Candidates with their evidence, never identifications: the broken bond is a hypothesis. The rest of the document keeps its bytes without it.",
+   "description": "Present only when asked (mzlab-cli msn-graph --structures NODE): the cleavages of the structure (opzioni.smiles) of ONE node whose piece gives its m/z. Candidates with their evidence, never identifications: the broken bond is a hypothesis. The rest of the document keeps its bytes without it.",
    "required": [
     "nodo",
     "smiles",
@@ -928,7 +928,7 @@
   "interpretazione": {
    "type": "object",
    "additionalProperties": false,
-   "description": "Present only when asked (mzlab-cli msn-graph --interpreta): for each arc the neutral loss as evidence (name, formula, exact mass, ppm, source, confidence) and the activations that observed it. Never a verdict. The rest of the document keeps its bytes without it.",
+   "description": "Present only when asked (mzlab-cli msn-graph --interpret): for each arc the neutral loss as evidence (name, formula, exact mass, ppm, source, confidence) and the activations that observed it. Never a verdict. The rest of the document keeps its bytes without it.",
    "required": [
     "versione",
     "ppm",
@@ -1316,7 +1316,7 @@
      }
     }
    },
-   "description": "Present only when asked (mzlab-cli msn-graph --regole): the rules of fragrules/1 that the formulas alone decide and, when the options give a SMILES, those its structure allows (groups, sites, cleavages), as evidence with their references. Never a verdict. The rest of the document keeps its bytes without it."
+   "description": "Present only when asked (mzlab-cli msn-graph --rules): the rules of fragrules/1 that the formulas alone decide and, when the options give a SMILES, those its structure allows (groups, sites, cleavages), as evidence with their references. Never a verdict. The rest of the document keeps its bytes without it."
   },
   "strutture_tutti": {
    "type": "array",

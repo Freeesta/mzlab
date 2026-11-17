@@ -104,7 +104,7 @@ fn total(r: &mut Case, k: usize) -> f64 {
 fn reader(n: usize, seed: u64, finished: bool, to_text: bool) -> One {
     let fin = |v: f64| if finished && !v.is_finite() { 0.5 } else { v };
     let mut r = Case(seed | 1);
-    let mut schede = Vec::new();
+    let mut tabs = Vec::new();
     for k in 0..n {
         let level = if k.is_multiple_of(3) { 1 } else { 2 };
         let np = if k % 5 == 4 {
@@ -144,9 +144,9 @@ fn reader(n: usize, seed: u64, finished: bool, to_text: bool) -> One {
             extra.base_peak =
                 (k % 4 != 3).then(|| (fin(total(&mut r, k + 3)), fin(total(&mut r, k + 5))));
         }
-        schede.push((sp, extra));
+        tabs.push((sp, extra));
     }
-    let indice = schede
+    let indice = tabs
         .iter()
         .map(|(s, _)| ScanEntry {
             id: s.id.clone(),
@@ -164,11 +164,11 @@ fn reader(n: usize, seed: u64, finished: bool, to_text: bool) -> One {
         campioni: vec![Sample {
             id: 1,
             nome: "uno".into(),
-            scansioni: schede.len(),
+            scansioni: tabs.len(),
             size: None,
         }],
         indice,
-        cards: schede,
+        cards: tabs,
     }
 }
 

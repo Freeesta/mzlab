@@ -14,12 +14,12 @@ pub(super) fn prefer_even(g: &Graph, st: &mut State, o: &Options) -> bool {
         if st.user[j] || !st.cand[j].iter().any(|x| x.strict && even(x)) {
             continue;
         }
-        let tieni: Vec<bool> = st.cand[j]
+        let keep: Vec<bool> = st.cand[j]
             .iter()
             .map(|x| even(x) || !evidence(g, st, o, j, &x.c).is_empty())
             .collect();
         let n = st.cand[j].len();
-        retain_mask(&mut st.cand[j], &tieni);
+        retain_mask(&mut st.cand[j], &keep);
         changed |= st.cand[j].len() < n;
     }
     changed

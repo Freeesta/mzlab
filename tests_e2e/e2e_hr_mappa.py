@@ -2,6 +2,7 @@
 with cells of equal ppm, minus a reference; api/mapsnap, api/mappunti, api/mappunti3d) and the evidence of origin (api/origin) come from the Rust engine,
 no request of those routes is left to Python (window.MZLAB_LR_MISS) and Pyodide is not downloaded; the JSON equals the Python reference's (pyref.py).
 Needs the site and the .wasm (python tools/build_site.py)."""
+# covers: mzlab/web/lr, mzlab/web/rust-, crates/
 from pathlib import Path
 import subprocess, sys, time
 from playwright.sync_api import sync_playwright

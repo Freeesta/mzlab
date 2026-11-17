@@ -1,6 +1,7 @@
 """molecules/1 in the page: the routes api/molecules/* answer from the Rust engine. The catalogue (static/molecole/catalogo.csv) is loaded with `carica`; the search finds a
 name, a formula and a mass; an invented molecule of the user (a_json -> carica) is found and replaces nothing; da_csv/a_csv give the same CSV back; a wrong row gives its error;
 MZLAB_LR_MISS stays empty. Needs the built site (tools/prepara_sito.py). Run from the repo root."""
+# covers: mzlab/web/molecole
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

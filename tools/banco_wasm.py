@@ -55,7 +55,13 @@ VARIANTS = {
     "d_b64": ("d_base64", "", "zlibrs", "-O3"),
     "d_zrs": ("d_zrs", "", "zlibrs", "-O3"),
     "d_miniz": ("d_miniz", "", "zlibrs", "-O3"),
+    # the site as shipped (site_z) linked with REAL link-time optimisation: cargo drops `lto` for a crate-type list
+    # with an rlib, so these two build only the cdylib (`cargo rustc --crate-type cdylib`), with 1 or 16 codegen units
+    "lto1": ("sol_core", "", "zlibrs", "-O3"),
+    "lto16": ("sol_core", "", "zlibrs", "-O3"),
 }
+# variants linked with `cargo rustc --crate-type cdylib` -> codegen units
+CDYLIB_UNITS = {"lto1": 1, "lto16": 16}
 HR_SCANS, HR_PEAKS = 1200, 400   # the 87 MB profile mzML of the study
 # jobs in the order of the table; the label is the row of §3 of the study
 LAVORI = [
@@ -119,7 +125,11 @@ def build(nome: str, lav: Path, thermo: bool) -> dict:
     profile, rf, feat, level = VARIANTS[nome]
     feat = ",".join(f for f in (feat, "thermo" if thermo else "") if f)
     env = {**os.environ, "CARGO_TARGET_DIR": str(lav / "tgt" / nome), "RUSTFLAGS": f"{MEM} {rf}".strip()}
-    cmd = ["cargo", "build", "-q", "--profile", profile, "--target", "wasm32-unknown-unknown"] + (["--features", feat] if feat else [])
+    if nome in CDYLIB_UNITS:
+        cmd = ["cargo", "rustc", "-q", "--profile", profile, "--target", "wasm32-unknown-unknown", "--crate-type", "cdylib",
+               "--config", f"profile.{profile}.codegen-units={CDYLIB_UNITS[nome]}"] + (["--features", feat] if feat else [])
+    else:
+        cmd = ["cargo", "build", "-q", "--profile", profile, "--target", "wasm32-unknown-unknown"] + (["--features", feat] if feat else [])
     run(cmd, cwd=BENCH, env=env)
     out = lav / "v" / nome
     shutil.rmtree(out, ignore_errors=True)

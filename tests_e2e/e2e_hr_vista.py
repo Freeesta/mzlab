@@ -1,5 +1,6 @@
 """HR view: MS1 at full width with its «MS1» mark, the MS2 panel under it, no marks in the rows of the files, formula -> combined XIC with its table.
 Synthetic Orbitrap DDA file; in low resolution the entry of the menu and the endpoint do not exist."""
+# covers: mzlab/web/dda.js, mzlab/web/banco.js, mzlab/chem/subformulas.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -35,16 +36,16 @@ try:
         step("two more MS2 panels sit side by side under the full-width MS1", extra)
         def no_rows():
             assert pg.locator("#flst .hrb").count() == 0
-            t = pg.inner_text("#flst"); assert "centroidi" not in t and "profilo" not in t, repr(t)
+            t = pg.inner_text("#flst"); assert "centroids" not in t and "profile" not in t, repr(t)
         step("no marks in the rows of the files", no_rows)
         def go():          # the sub-formulas are measured in the browser: a call takes a while, so wait for the answer (the count line or the message), not for a pause
             pg.click("#bs-go"); pg.wait_for_function("document.querySelector('#bs-out .muted') || document.querySelector('#bs-err').textContent", timeout=240000)
         def sub():
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'))")
-            pg.click("#hrbar [data-hb=add]"); pg.click("#ctx >> text=XIC da formula"); pg.wait_for_selector("#bs-f")
+            pg.click("#hrbar [data-hb=add]"); pg.click("#ctx >> text=XIC from a formula"); pg.wait_for_selector("#bs-f")
             pg.fill("#bs-f", ION); go()
             heads = pg.inner_text("#bs-out thead"); print(heads)
-            for h in ("Sottoformula", "m/z teorica", "Δppm", "Intensità", "RT apice", "r con la formula intera"): assert h in heads, heads
+            for h in ("Sub-formula", "Theoretical m/z", "Δppm", "Intensity", "Apex RT", "r with the whole formula"): assert h in heads, heads
             txt = pg.inner_text("#bs-out").lower(); assert "framment" not in txt and "propost" not in txt, txt[:200]
             assert pg.locator("#bs-out tbody tr", has_text=ION).count() == 1
             pg.fill("#bs-ppm", "2"); go()
@@ -59,7 +60,7 @@ try:
         step("formula -> XIC: table of measures only, ppm and lower limit change it, the XIC enters the cell", sub)
         def bad():
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'))")
-            pg.click("#hrbar [data-hb=add]"); pg.click("#ctx >> text=XIC da formula"); pg.wait_for_selector("#bs-f")
+            pg.click("#hrbar [data-hb=add]"); pg.click("#ctx >> text=XIC from a formula"); pg.wait_for_selector("#bs-f")
             pg.fill("#bs-f", "Zz9"); go()
             assert pg.inner_text("#bs-err").strip() != ""
             pg.click("#bigx")

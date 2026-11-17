@@ -1,5 +1,6 @@
 """mzFinder, low resolution: files opened in the Data tab with the Rust engine live in OPFS (not IndexedDB); «Reload from Data» must find them.
 Synthetic Full Scan series (TP_Mine/tests/lr_synth.py). Run from the repo root: python3 tests_e2e/e2e_tpmine_lr_reload.py"""
+# covers: TP_Mine/
 import os, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -18,6 +19,7 @@ paths = [str(f["path"]) for f in files]
 cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(tmp / "site")]
 subprocess.run(cmd, check=True)
 from lib_sito import add_wasm; add_wasm(tmp / "site")          # the engine of the page is Rust: the .wasm goes in the copy of the site
+from lib import build_feat; build_feat(tmp / "site" / "static", dict(os.environ, RUNNER_TEMP=str(tmp / "rt")))          # mzFinder (Tabui) has no other engine: «Reload from Data» says "engine not built" without wasm-feat/
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(tmp / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1); errs = []
 try:

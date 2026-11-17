@@ -17,8 +17,10 @@
   }
   const sub = (/** @type {string} */ f) => H(f).replace(/(\d+)/g, "<sub>$1</sub>");
 
-  // periodic table: markup, layout and behaviour live in tavola-periodica.js 
-  const { periodic, bindPeriodic } = TAVOLA.create({ elements: ELEMENTS, t: (/** @type {string} */ k, /** @type {Bag | undefined} */ p) => I18N.t(k, p), nome: (/** @type {Bag} */ e) => I18N.t(`el.${e.s}`) });
+  // periodic table: markup, layout and behaviour live in tavola-periodica.js, loaded when the dialog first opens (not in the start-up list)
+  /** @type {any} */ let PT = null;
+  const ptLoad = async () => { if (!PT) { await carica("tavola-periodica.js"); const data = await (await fetch("api/elements")).json(); PT = TAVOLA.create({ data, t: (/** @type {string} */ k, /** @type {Bag | undefined} */ p) => I18N.t(k, p) }); } return PT; };
+  const periodic = () => PT.periodic(), bindPeriodic = (/** @type {HTMLElement} */ root) => PT.bindPeriodic(root);
 
 
   // ---------------------------------------------------------------- adducts
@@ -131,15 +133,17 @@
   // ---------------------------------------------------------------- dialog #refdlg: one content at a time (Tavola periodica; Perdite neutre outside the Dati view), titled with its name, no tab bar
   const TABS = [["pt", I18N.t("icon.pt"), periodic, bindPeriodic], ["ls", I18N.t("icon.nl"), lossTab, bindLoss]];
   /** @param {string} which @param {{ q?: string | number | null }} [opt] */
-  function open(which, opt = {}) {
+  async function open(which, opt = {}) {
     // the adducts are the calculator's: the old request opens it
     // in Dati the calculator lives in the sidebar tab, elsewhere it floats
     if (which === "ad") { if (window.BARRA) BARRA.setTab("adducts", opt); return; }
     // the Neutral losses live in the side panel page (from another view it goes back to Dati); the window stays only for a page without the drawer
     if (which === "ls" && window.BARRA) { BARRA.setTab("losses", opt.q != null ? { q: String(opt.q) } : {}); return; }
+    if (which === "pt") await ptLoad();
     const d = Qs("#refdlg"), body = Qs("#refbody");
     if (which === "ls" && opt.q != null) NL.q = String(opt.q);
     const show = (/** @type {string} */ id) => {
+      if (id === "pt" && !PT) { ptLoad().then(() => show(id)); return; }
       const t = TABS.find(x => x[0] === id); if (!t) return; body.innerHTML = t[2](); if (t[3]) t[3](body, show);
       Qs("#reftitle").textContent = t[1];
     };
@@ -156,6 +160,6 @@
   window.QQQRef = {
     open, massOf, mono, unitIon, ionCounts, ADD,
     lossName: (/** @type {Bag} */ l) => `<b>${fl(l.f)}</b>`, lossDet,
-    mountLosses, periodic, bindPeriodic, lossTab, bindLoss
+    mountLosses, lossTab, bindLoss
   };
 })();

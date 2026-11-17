@@ -27,6 +27,8 @@ pub struct View {
     pub labels: Labels,
     /// Per file, the samples that had no blank of their batch or matrix and were compared with all blanks; `None` when no rule matches blanks.
     pub fallback: Option<Vec<bool>>,
+    /// Divisor offset of the replicate SD in the QC document: 1 (sample SD, n - 1, the default) or 0 (population SD, the old behaviour).
+    pub cv_ddof: usize,
 }
 
 /// The view of `t` under a method and a list of rules.
@@ -47,7 +49,7 @@ pub fn build_with(t: &Aligned, samples: &[Sample], method: &Method, rules: &[Rul
     let is_blank: Vec<bool> = samples.iter().map(|s| s.kind == "blank").collect();
     let sub = filters_blank::subtraction(t, &factors, rules, &is_blank)?;
     let fallback = filters::blank_fallback(samples, rules, &labels);
-    Ok(View { method: method.clone(), rules: rules.to_vec(), factors, why, rows, sub, labels, fallback })
+    Ok(View { method: method.clone(), rules: rules.to_vec(), factors, why, rows, sub, labels, fallback, cv_ddof: 1 })
 }
 
 impl View {
@@ -75,7 +77,9 @@ impl View {
     /// The parameters of both operations: `{"normalizza": ..., "filtra": [...]}` (what the `.mzflow` records).
     pub fn spec_json(&self) -> String {
         let labels = if self.labels.is_empty() { String::new() } else { format!(",\"etichette\":{}", self.labels.to_json()) };
-        format!("{{\"normalizza\":{},\"filtra\":{}{labels}}}", self.method.to_json(), filters::to_json(&self.rules))
+        // written only when it is not the default, so the digest of every existing view stays the same
+        let ddof = if self.cv_ddof == 1 { String::new() } else { format!(",\"cv_ddof\":{}", self.cv_ddof) };
+        format!("{{\"normalizza\":{},\"filtra\":{}{labels}{ddof}}}", self.method.to_json(), filters::to_json(&self.rules))
     }
 
     /// SHA-256 of the parameters and of the ids of the rows kept: two equal views have the same digest.
@@ -120,5 +124,13 @@ pub fn from_spec(t: &Aligned, samples: &[Sample], spec: &[u8]) -> Result<View> {
         Some(l) => Labels::from_json(l, t.n_files)?,
         None => Labels::default(),
     };
-    build_with(t, samples, &method, &rules, labels)
+    let mut view = build_with(t, samples, &method, &rules, labels)?;
+    if let Some(d) = v.get("cv_ddof") {
+        view.cv_ddof = match d.f64() {
+            Some(0.0) => 0,
+            Some(1.0) => 1,
+            _ => return Err(norm::bad()),
+        };
+    }
+    Ok(view)
 }

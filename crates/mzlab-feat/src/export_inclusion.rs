@@ -1,12 +1,12 @@
 //! The inclusion list written from the expected products of a plan (`tp/1` rows or hypotheses) and the adducts chosen: one row per product and adduct,
-//! with an RT window around the expected RT, in the columns of the list of mzFinder (`legacy::out::inclusion_row`), sorted by RT. Used by the
+//! with an RT window around the expected RT, in the columns of the list of mzFinder (`finder_base::inclusion::inclusion_row`), sorted by RT. Used by the
 //! `export.inclusion` step; it never raises a level and adds no verdict.
 
 use crate::sortc::SortC;
 use mzlab_core::elements;
 use mzlab_core::error::Result;
 
-use crate::legacy::out::{inclusion_row, INCLUSION_HEADER};
+use crate::finder_base::inclusion::{inclusion_row, INCLUSION_HEADER};
 
 /// A product expected in the samples: neutral formula, expected RT in minutes and the priority written in the note.
 #[derive(Debug, Clone, PartialEq)]

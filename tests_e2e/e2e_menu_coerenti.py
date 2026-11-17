@@ -1,6 +1,8 @@
 """e2e_menu_coerenti: the same graph offers the same actions from the right click, from the keyboard (Shift+F10 / Menu key) and from its bar.
 Map: the ids of the menu (data-azione) are the actions of the registry azioni/1 for the view, the buttons of the bar are registered actions.
 Spectrum, chromatogram and MRM: Shift+F10 on the focused graph opens the menu of the right click at the same point, with the focus inside; Esc gives it back."""
+# covers: mzlab/web/affianca.js, mzlab/web/azioni-icone.js, mzlab/web/azioni.js, mzlab/web/azioni-tasti.js, mzlab/web/azioni-esc.js
+# covers: mzlab/web/mappa.js, mzlab/web/mappa3d.js, mzlab/web/eventi.js
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -15,7 +17,7 @@ r = Run(port=8871, wd="/tmp/wd_menu_coerenti")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 1000})
-        stage(pg, [mz(f) for f in FILES]); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, [mz(f) for f in FILES]); pg.click("text=Load data"); ready(pg)
         def close():
             pg.keyboard.press("Escape"); wait_for_js(pg, "document.querySelector('#ctx').hidden")
         def keyboard(P):

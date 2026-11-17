@@ -184,10 +184,10 @@ fn the_command_and_figure_write_the_same_bytes() {
         mol.to_str().unwrap(),
         "--out",
         g.to_str().unwrap(),
-        "--figura",
+        "--figure",
         "svg,html",
-        "--vista",
-        "radiale",
+        "--view",
+        "radial",
     ]);
     assert_eq!(made, format!("{0}/g.svg\n{0}/g.html\n", d.display()));
     // `figure` on the graph the command wrote
@@ -196,8 +196,8 @@ fn the_command_and_figure_write_the_same_bytes() {
         "msn-graph",
         "figure",
         g.to_str().unwrap(),
-        "--vista",
-        "radiale",
+        "--view",
+        "radial",
         "--out",
         other.to_str().unwrap(),
     ]);
@@ -222,7 +222,7 @@ fn the_png_needs_its_feature() {
         "msn-graph".to_string(),
         "figure".to_string(),
         fixtures().join("g.json").display().to_string(),
-        "--figura".to_string(),
+        "--figure".to_string(),
         "png".to_string(),
         "--out".to_string(),
         d.join("x").display().to_string(),
@@ -246,9 +246,9 @@ fn the_png_needs_its_feature() {
 #[test]
 fn the_arguments_are_checked() {
     for a in [
-        &["msn-graph", "f.mzML", "--figura", "svg"][..],
-        &["msn-graph", "f.mzML", "--figura", "gif", "--out", "x"],
-        &["msn-graph", "f.mzML", "--vista", "cubo"],
+        &["msn-graph", "f.mzML", "--figure", "svg"][..],
+        &["msn-graph", "f.mzML", "--figure", "gif", "--out", "x"],
+        &["msn-graph", "f.mzML", "--view", "cubo"],
     ] {
         let o = crate::execute(&a.iter().map(|s| s.to_string()).collect::<Vec<_>>());
         assert_eq!(o.code, 2, "{a:?}");
@@ -299,44 +299,31 @@ fn the_step_writes_the_bytes_of_the_command() {
     let _ = std::fs::remove_dir_all(&d);
 }
 
-/// Every old name of the figure flags gives the same bytes (stdout and files) as the new one, and the value `radiale` the same as `radial`.
+/// The former Italian figure flags and view values (`--figura`, `--vista`, `albero`, `radiale`) are refused.
 #[test]
-fn old_figure_flags_and_values_are_aliases() {
+fn the_italian_figure_flags_and_values_are_refused() {
     let d = dir("alias");
     let g = fixtures().join("g.json");
-    let pairs: [(&[&str], &[&str]); 2] = [
-        (
-            &["--figura", "svg,html", "--vista", "radiale"],
-            &["--figure", "svg,html", "--view", "radial"],
-        ),
-        (
-            &["--figura", "svg", "--vista", "albero"],
-            &["--figure", "svg", "--view", "tree"],
-        ),
+    let stem = d.join("o");
+    let refused: [&[&str]; 4] = [
+        &["--figura", "svg"],
+        &["--vista", "radial"],
+        &["--view", "radiale"],
+        &["--view", "albero"],
     ];
-    for (old, new) in pairs {
-        let mut got = Vec::new();
-        for flags in [old, new] {
-            let stem = d.join("o");
-            let mut a = vec![
-                "msn-graph",
-                "figure",
-                g.to_str().unwrap(),
-                "--out",
-                stem.to_str().unwrap(),
-            ];
-            a.extend(flags);
-            let _ = std::fs::remove_file(d.join("o.html"));
-            let text = cli(&a);
-            let files: Vec<Vec<u8>> = ["svg", "html"]
-                .iter()
-                .map(|e| std::fs::read(d.join(format!("o.{e}"))).unwrap_or_default())
-                .collect();
-            got.push((text, files));
-        }
-        assert_eq!(got[0], got[1], "{old:?} vs {new:?}");
+    for flags in refused {
+        let mut a = vec![
+            "msn-graph",
+            "figure",
+            g.to_str().unwrap(),
+            "--out",
+            stem.to_str().unwrap(),
+        ];
+        a.extend(flags);
+        let o = crate::execute(&a.iter().map(|s| s.to_string()).collect::<Vec<_>>());
+        assert_eq!(o.code, 2, "{flags:?}");
     }
-    // the refusals name the new flags
+    // the refusal names the English values
     let o = crate::execute(&[
         "msn-graph".into(),
         "figure".into(),

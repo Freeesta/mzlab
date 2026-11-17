@@ -27,7 +27,7 @@ for _ in range(50):
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None)
-        for lang, det, copy in (("it-IT", "Dettagli", "Copia diagnosi"), ("en-US", "Details", "Copy diagnosis")):
+        for lang, det, copy in (("en-US", "Details", "Copy diagnosis"),):
             c = b.new_context(locale=lang, viewport={"width": 1400, "height": 1200}, permissions=["clipboard-read", "clipboard-write"]); c.set_default_timeout(120000)
             pg = c.new_page(); pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
@@ -39,9 +39,9 @@ try:
                 assert btns.count() >= 1 and det in btns.first.inner_text(), t
                 assert btns.first.get_attribute("aria-expanded") == "false" and not pg.locator("#unopen .diagbox").first.is_visible()
                 assert "troncato" in t or "nonxml" in t
-                # the failure reads in words in the language of the page, never as a catalogue key
+                # the failure reads in words in words, never as a catalogue key
                 assert not re.search(r"\b(?:err|error|warn)\.[A-Za-z]+\.", t), t
-                words = ("non è un mzML completo", "danneggiato", "non sembra un file mzML") if lang == "it-IT" else ("not a complete mzML", "damaged", "does not look like an mzML file")
+                words = ("not a complete mzML", "damaged", "does not look like an mzML file")
                 assert any(w in t for w in words), t
             step(f"{lang}: the notice has a closed «{det}» button", shown)
             def open_it():

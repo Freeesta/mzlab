@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from cargo_util import example_argv
 
 ROOT = Path(__file__).resolve().parents[1]
 _spec = importlib.util.spec_from_file_location("hr_ident", ROOT / "tests" / "test_hr_identificazione.py")
@@ -27,7 +28,7 @@ def result(tmp_path_factory):
     tmp = tmp_path_factory.mktemp("rust_ident")
     qf = tmp / "q.json"
     qf.write_text(json.dumps({"queries": q, "all": allq}))
-    p = subprocess.run(["cargo", "run", "--release", "--quiet", "-p", "mzlab-lib", "--example", "validate", "--", str(d["lib"]), str(qf)],
+    p = subprocess.run(example_argv("mzlab-lib", "validate", str(d["lib"]), str(qf)),
                        capture_output=True, encoding="utf-8", check=True, cwd=ROOT)
     return json.loads(p.stdout)
 

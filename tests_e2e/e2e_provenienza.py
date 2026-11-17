@@ -1,5 +1,6 @@
 """Provenance of the exported tables (provenienza/1): the line «# mzLab x.y.z · ...» in CSV/TSV and the clipboard, the last sheet of the .xlsx.
 One step per family: xlsx of a graph, TSV (metadata) and its re-import, CSV (dl), clipboard text."""
+# covers: mzlab/web/xlsx.js, mzlab/web/provenienza.js, mzlab/web/export-pezzi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -19,7 +20,7 @@ r = Run(port=8893, wd="/tmp/wd93")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, SYN); pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+        stage(pg, SYN); pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()"); wait_for_js(pg, "E.panels.some(p=>p.type==='chrom'&&p._a)")
         def line_ok(t):
             first = t.split("\n")[0]
@@ -28,7 +29,7 @@ try:
         def xlsx():
             with pg.expect_download() as d: dlmenu(pg, ".pnl.chrom", "xlsx")
             path = "/tmp/prov_chrom.xlsx"; d.value.save_as(path)
-            names = xlsx_sheets(path); assert names[-1] in ("Provenienza", "Provenance") and len(names) >= 2, names
+            names = xlsx_sheets(path); assert names[-1] == "Provenance" and len(names) >= 2, names
             rows = xlsx_rows(path, len(names)); flat = [c[1] for rw in rows for c in rw if c]
             assert "mzLab" in flat and VER in flat and "provenienza/1" in flat, flat[:12]
             first = xlsx_rows(path, 1)[0]; assert first and first[0][0] == "s" and "RT" in first[0][1], "the data sheet is untouched: header on row 1"

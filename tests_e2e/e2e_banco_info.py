@@ -1,5 +1,6 @@
 """H3c: the information bar of the high-resolution bench: header of the scan, list of scans, file and instrument, composite spectrum, and the tabs that open the
 functions that already exist. Synthetic Orbitrap DDA file; the infusion MSn file of the private data repository (skipped without it). Nothing in the low-resolution world."""
+# covers: mzlab/web/elementare-pannello.js, mzlab/web/banco.js, mzlab/web/barra.js
 import sys, os, glob; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from dati_percorsi import percorso  # noqa: E402  (tools/ is on sys.path through lib)
@@ -28,7 +29,7 @@ try:
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='full'))")
             box = pg.locator(".pnl.chrom canvas").first.bounding_box(); pg.mouse.click(box["x"] + box["width"] * 0.45, box["y"] + box["height"] * 0.5); pg.wait_for_timeout(1500)
             tab("hdr"); pg.wait_for_function("document.querySelector('#hri-body').innerText.includes('ms level')", timeout=15000)
-            t = body(); assert "Filtro" in t and "FTMS" in t and "Tutti i parametri" in t, t[:300]
+            t = body(); assert "Filter" in t and "FTMS" in t and "All the parameters" in t, t[:300]
             rt0 = pg.evaluate("[...document.querySelectorAll('#hri-body tr')].find(r=>r.innerText.startsWith('RT'))?.innerText")
             pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(1500)
             rt1 = pg.evaluate("[...document.querySelectorAll('#hri-body tr')].find(r=>r.innerText.startsWith('RT'))?.innerText")
@@ -45,13 +46,13 @@ try:
             a = pg.evaluate("[...document.querySelectorAll('#hri-list .r')].slice(0,4).map(r=>+r.children[3].innerText)"); assert a == sorted(a), a
         step("tab 2: the list of the scans (all of them, scrolling), a row moves the cell, a column sorts", lst)
         def fil():
-            tab("fil"); t = body(); assert "Orbitrap Exploris 120" in t and "Scansioni per tipo" in t, t[:300]
+            tab("fil"); t = body(); assert "Orbitrap Exploris 120" in t and "Scans by type" in t, t[:300]
         step("tab 3: file and instrument as the mzML says them", fil)
         def launchers():
             tab("cmp"); pg.wait_for_selector("#cx-mz", timeout=10000); pg.click("#cx-exp"); pg.wait_for_selector("#cmp-mz", timeout=10000); pg.evaluate("document.querySelector('#bigdlg').close()")
             tab("iso"); pg.fill("#hri-f", "C13H24N4O3S"); pg.fill("#hri-r", "35000"); pg.click("#hri-go"); pg.wait_for_timeout(1500)
             assert pg.evaluate("E.panels.some(p=>p.type==='spec'&&p.iso&&p.iso.formula==='C13H24N4O3S'&&p.iso.R===35000)")
-            tab("idn"); assert "Carica cartella" in body() and "Identifica tutte" not in body(), body()
+            tab("idn"); assert "Load folder" in body() and "Identify all" not in body(), body()
         step("composition, isotopes and libraries open the functions that already exist", launchers)
         def persist():
             assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.banco.info')).tab") == "idn"
@@ -66,7 +67,7 @@ r = Run(port=8985, wd="/tmp/wd_lrinfo")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [str(D / "B_FullMass-t0.mzML")]); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=60000); pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [str(D / "B_FullMass-t0.mzML")]); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=60000); pg.click("text=Load data"); ready(pg)
         step("low-resolution world: no information bar", lambda: (_ for _ in ()).throw(AssertionError("visible")) if pg.is_visible("#hrinfo") else None)
     r.close()
 except Exception as e:

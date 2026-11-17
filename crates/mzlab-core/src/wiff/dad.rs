@@ -187,7 +187,7 @@ fn dad_wl_chrom(
         .collect();
     Some(Chromatogram {
         index,
-        id: format!("DAD {nm:.0} nm"),
+        id: format!("DAD {nm} nm"),
         kind: ChromKind::Pda,
         q1: None,
         q3: None,

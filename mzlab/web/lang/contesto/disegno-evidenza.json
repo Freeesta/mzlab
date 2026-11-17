@@ -1,0 +1,7 @@
+{
+  "draw.ev.count": "Drawing, \"Evidence colors\" box: how much is colored for a piece of evidence; {atoms} = number of atoms, {bonds} = number of bonds.",
+  "draw.ev.fail": "Drawing, \"Evidence colors\" box: the colors were not applied; {message} = engine error, already translated.",
+  "draw.ev.painted": "Drawing, \"Evidence colors\" box, status row: {n} = colored layers, {total} = layers requested.",
+  "draw.ev.row": "Drawing, row of the color legend: {kind} = type of evidence with its color written out (draw.ev.kind.*), {label} = label given by the page that asks, {what} = count (draw.ev.count) or the reason why there is no color (draw.ev.skip.*).",
+  "error.hilite.query": "Evidence colors error: the structure (SMILES or substructure) cannot be read or compared with the drawing; {detail} = technical detail from the reader (e.g. \"empty\")."
+}

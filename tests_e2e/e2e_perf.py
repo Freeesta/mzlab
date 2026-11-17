@@ -1,4 +1,5 @@
-"""C1: the ?perf meter. Absent without ?perf; with it: a box with api calls (with no Python timing: the engine of the site is Rust), panel draws and a «Copia» button."""
+"""C1: the ?perf meter. Absent without ?perf; with it: a box with api calls (with no Python timing: the engine of the site is Rust), panel draws and a «Copy» button."""
+# covers: mzlab/web/perf.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -20,7 +21,7 @@ try:
             assert pg.is_visible("#perf-copy") and pg.is_visible("#perf-clear")
         step("the box is there with ?perf", box)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.wait_for_timeout(2500)
         def rows():
             kinds = pg.evaluate("[...new Set(PERF.rows.map(r => r.kind))]")
@@ -34,14 +35,14 @@ try:
         step("api/perf: the Rust engine reports no Python timings", nopython)
         def text():
             pg.wait_for_timeout(600)
-            t = pg.inner_text("#perf-out"); assert "api" in t and "riassunto" in t and "disegno" in t, t[:400]
+            t = pg.inner_text("#perf-out"); assert "api" in t and "summary" in t and "disegno" in t, t[:400]
         step("the box shows rows and a summary", text)
         def copy():
             pg.click("#perf-copy"); pg.wait_for_timeout(300)
-            assert pg.inner_text("#perf-copy") == "Copiato"
+            assert pg.inner_text("#perf-copy") == "Copied"
             pg.click("#perf-clear"); pg.wait_for_timeout(500)
             assert pg.evaluate("PERF.rows.length") <= 3
-        step("«Copia» works and «Azzera» empties the rows", copy)
+        step("«Copy» works and «Clear» empties the rows", copy)
         def shortcut():
             pg.keyboard.press("Control+Alt+KeyP"); pg.wait_for_timeout(200)
             assert not pg.is_visible("#perfbox"); pg.keyboard.press("Control+Alt+KeyP"); pg.wait_for_timeout(200); assert pg.is_visible("#perfbox")

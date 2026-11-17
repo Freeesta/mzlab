@@ -120,9 +120,9 @@ impl Stage {
     pub fn energy(&self) -> Option<f64> {
         self.activation.float("MS:1000045")
     }
-    /// The short name of the dissociation method (`activations::ATTIVAZIONI` order).
+    /// The short name of the dissociation method (`activations::ACTIVATIONS` order).
     pub fn method(&self) -> Option<&'static str> {
-        crate::activations::ATTIVAZIONI
+        crate::activations::ACTIVATIONS
             .iter()
             .find(|a| self.activation.has(a.1))
             .map(|a| a.0)

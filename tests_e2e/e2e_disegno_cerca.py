@@ -1,6 +1,7 @@
 """Disegno, Quick draw: the SMILES field is also a compound search (disegno-cerca.js over the molecules database). A name prefix lists suggestions, Enter or a click draws the
 structure of the chosen one; a pasted SMILES is drawn without a search and an invalid one shows the message; the field is a labelled combobox (keyboard, 24 px).
 Needs the built site (tools/build_site.py). Run from the repo root: python3 tests_e2e/e2e_disegno_cerca.py"""
+# covers: mzlab/web/disegno-cerca.js
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

@@ -1,4 +1,5 @@
 """Load table and file list: order of the files (time, mixed units), time field without arrows and with validation, unit of the time (min, h, d) saved in mzlab.tunit."""
+# covers: mzlab/web/ordine.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from synth import write_full
@@ -51,7 +52,7 @@ try:
             assert pg.get_attribute("#flist input[aria-invalid=true]", "data-k") == "time"
         step("0,5 h is accepted (30 min), text is refused with aria-invalid", typed)
         def list_unit():
-            pg.click("text=Carica dati"); ready(pg)
+            pg.click("text=Load data"); ready(pg)
             t = pg.evaluate("E.files.map(f=>f.time)"); assert sorted(t)[:2] == [30, 30] or 30 in t, t
             sub = pg.evaluate("Array.from(document.querySelectorAll('#filelist .fl small, .fl small')).map(s=>s.textContent)")
             assert any(x.endswith(" h") for x in sub), sub

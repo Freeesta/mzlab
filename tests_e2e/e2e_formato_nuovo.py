@@ -1,5 +1,6 @@
 """An index written by a newer program (header version above the known one) in OPFS: the file is uploaded again, the page warns (error.newerFormat), the index is not
 touched and not rebuilt. An index of the known version is replaced as before. Synthetic file."""
+# covers: mzlab/web/manifesto.js, mzlab/web/archivio.js, mzlab/web/rust-worker.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -21,21 +22,21 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(F)])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         def again():
             pg.goto(pg.url); wait_for_js(pg, "document.querySelector('#pick')")
-            pg.set_input_files("#pick", [str(F)]); wait_for_js(pg, "(UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone)) || /formato 3/.test(document.body.innerText)", timeout=60000)
+            pg.set_input_files("#pick", [str(F)]); wait_for_js(pg, "(UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone)) || /format 3/.test(document.body.innerText)", timeout=60000)
         def newer():
             before = pg.evaluate(HASH); pg.evaluate(VERSION, 3); patched = pg.evaluate(HASH); assert patched != before
             again()
-            wait_for_js(pg, "/formato 3/.test(document.body.innerText)", timeout=60000)
+            wait_for_js(pg, "/format 3/.test(document.body.innerText)", timeout=60000)
             assert pg.evaluate(HASH) == patched, "the index of the newer program was not touched"
             assert pg.evaluate("window.MZLAB_LR_MISS || []") == [], "no route unavailable"
         step("a newer index: warning, index untouched", newer)
         def known():
             pg.evaluate(VERSION, 1); again()
             wait_for_js(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone)", timeout=60000)
-            assert "formato 3" not in pg.evaluate("document.body.innerText"), "no warning for a known version"
+            assert "format 3" not in pg.evaluate("document.body.innerText"), "no warning for a known version"
         step("a known version: no warning", known)
     r.close()
 except Exception as e:

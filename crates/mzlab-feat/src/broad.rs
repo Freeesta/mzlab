@@ -11,13 +11,21 @@ use mzlab_core::error::Result;
 use crate::broad_blank::{subtract, BlankBank};
 use crate::broad_front::{area_over_line, base_of, hwhm_left, noise_of};
 use crate::broad_gt::{detrend, median, CommonMode};
-use crate::trace::{filled, reserve};
+use crate::trace_base::{filled, reserve};
+
+/// The old path of `decimate`, which lives in `broad_gt` so that the common mode and the blank do not depend on `broad`.
+pub use crate::broad_gt::decimate;
 
 mod scale;
 use scale::{candidates, Kernel};
 
 /// Standard deviation of a Gaussian over its full width at half maximum.
 const FWHM: f64 = 2.354_820_045_030_949_3;
+
+pub(crate) fn ricker(x: f64) -> f64 {
+    let x2 = x * x;
+    (1.0 - x2) * libm::exp(-0.5 * x2)
+}
 /// Number of scales of the multiscale pass.
 const SCALES: usize = 6;
 /// Narrow scales of the ridge test, FWHM in seconds.
@@ -186,38 +194,6 @@ pub fn inpaint_linear(y: &mut [f64], regions: &[(usize, usize)]) {
             (None, None) => {}
         }
     }
-}
-
-/// Blocks of `k` consecutive points: mean RT, mean intensity and m/z weighted by intensity (plain mean of the block when all weights are 0).
-/// The last block may be shorter. Returns `(rt, y, mz)`.
-pub fn decimate(
-    rt: &[f64],
-    mz: &[f64],
-    y: &[f64],
-    k: usize,
-) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>)> {
-    let k = k.max(1);
-    let n = rt.len().min(mz.len()).min(y.len());
-    let m = n.div_ceil(k);
-    let (mut r, mut v, mut z) = (Vec::new(), Vec::new(), Vec::new());
-    reserve(&mut r, m)?;
-    reserve(&mut v, m)?;
-    reserve(&mut z, m)?;
-    for b in 0..m {
-        let (a, e) = (b * k, ((b + 1) * k).min(n));
-        let c = (e - a) as f64;
-        let (mut sr, mut sy, mut sw, mut sm) = (0.0, 0.0, 0.0, 0.0);
-        for ((&t, &v), &m) in rt[a..e].iter().zip(&y[a..e]).zip(&mz[a..e]) {
-            sr += t;
-            sy += v;
-            sw += v * m;
-            sm += m;
-        }
-        r.push(sr / c);
-        v.push(sy / c);
-        z.push(if sy > 0.0 { sw / sy } else { sm / c });
-    }
-    Ok((r, v, z))
 }
 
 /// Walks from `t` towards `limit` (included) and stops where the smoothed signal falls to `thr`, or rises again by more than `rise` over its running minimum.

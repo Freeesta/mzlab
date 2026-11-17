@@ -1,6 +1,7 @@
 """«How it is extracted» on the RT x m/z map (mappa-estrai.js): a box on the map gives the XIC of its m/z window and the mean spectrum of its RT window;
 the numbers under the map are the ones of /api/xic and /api/spectrum; the box moves and resizes (mouse, arrows, finger) and the plots and numbers follow;
 in low resolution nothing is labelled by the program. LR example files."""
+# covers: mzlab/web/mappa-margini.js, mzlab/web/mappa.js, mzlab/web/mappa-estrai.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"
@@ -44,7 +45,7 @@ try:
             pg.evaluate("MAPPA.explain(" + M + ", true)"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000); ready(pg)
             assert pg.evaluate("!!" + M + "._mz.ex")
             assert pg.evaluate(f"!{M}.el.querySelector('.mzside').hidden && !{M}.el.querySelector('.mzbot').hidden"), "the two plots at the margins are on"
-            n = win(); assert n["win"]["mz1"] - n["win"]["mz0"] > 0.5 and n["win"]["rt1"] > n["win"]["rt0"], n
+            n = win(); assert abs(n["win"]["mz1"] - n["win"]["mz0"] - 0.5) < 1e-6 and n["win"]["rt1"] > n["win"]["rt0"], n
             assert pg.inner_text(".pnl.map .mzex").count("Σ") >= 1 and "XIC" in pg.inner_text(".pnl.map .mzex")
             assert pg.evaluate("document.querySelector('.pnl.map .mzex').getAttribute('role')") == "region"
         step("turning it on: box at the pointer, XIC, spectrum, numbers and the rule", on)

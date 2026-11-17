@@ -1,4 +1,5 @@
 # e2e_affianca: grip of the panels: drag to a side zone, menu (no dragging), Alt+arrows, Esc, divider, undo (Ctrl+Z), narrow window
+# covers: mzlab/web/affianca.js
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -10,7 +11,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
+        pg.wait_for_timeout(1000); pg.click("text=Load data"); ready(pg)
         pg.evaluate("addPanel('spec',{tab:E.tab,k:E.cur,level:1}); addPanel('spec',{tab:E.tab,k:E.cur,level:1})")
         pg.wait_for_timeout(400)
         rows = lambda: pg.evaluate("(() => { const l = stackOrder().slice(-3).map(q => q.id); return LAYOUT.righeDi(stackOrder()).map(r => r.map(q => q.id).filter(i => l.includes(i))).filter(r => r.length) })()")
@@ -39,7 +40,7 @@ try:
             rr = rows(); assert [len(x) for x in rr] == [1, 2], rr
             g = rects(); assert g[1][2] == g[2][2] and g[1][1] < g[2][1], g
             assert pg.evaluate("document.getElementById('aff-bar')") is None, "no pop-up with an Undo button"
-            assert pg.inner_text("#aff-live").startswith(("Side by side", "Affiancati")), pg.inner_text("#aff-live")
+            assert pg.inner_text("#aff-live").startswith("Side by side"), pg.inner_text("#aff-live")
         step("drag the grip to the right zone of another panel: two side by side", drag)
         step("state is coherent", lambda: pg.evaluate("STATO.verifica()") == [] or (_ for _ in ()).throw(AssertionError("stato")))
         def undo():

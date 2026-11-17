@@ -1,4 +1,5 @@
-"""B8/B9: HR and DDA pills in the list of the files, calculator with the observed m/z (ppm), window «Metodo» with the parameters of the scans."""
+"""B8/B9: HR and DDA pills in the list of the files, calculator with the observed m/z (ppm), window «Method» with the parameters of the scans."""
+# covers: mzlab/web/hr.js, mzlab/reader/profile.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -18,7 +19,7 @@ try:
             pg.click("#stbar [data-cmd=addloss]"); pg.wait_for_selector("#calcin", state="visible")
             pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(1500)
             t = pg.inner_text("#sb-panel-adducts"); assert "364.1" in t and "364.0737" not in t, t       # QqQ (low resolution): one decimal, the observed m/z is an optional field of the zone below
-            assert "errore (ppm)" not in t
+            assert "error (ppm)" not in t
             assert pg.get_attribute("#al-ctl .cq-ctl", "data-mode") == "lr"
             pg.evaluate("BARRA.close(false)"); pg.wait_for_timeout(200)
         step("adducts page with a QqQ file only: unit resolution", calc_qqq)
@@ -28,9 +29,9 @@ try:
         step("no pill «HR» or «DDA» on the QqQ file", pills_qqq)
         def method_qqq():
             pg.evaluate("(()=>{const f=E.files.find(f=>f.file.startsWith('B_Full'));E.cur=f.k;showMethod()})()"); pg.wait_for_timeout(1500)
-            t = pg.inner_text("#bigdlg"); assert "Manca il metodo" not in t and "Parametri delle scansioni" not in t and pg.locator("#bigdlg #m-load").count() == 1, t
+            t = pg.inner_text("#bigdlg"); assert "The method is missing" not in t and "Scan parameters" not in t and pg.locator("#bigdlg #m-load").count() == 1, t
             pg.evaluate("document.querySelector('#bigdlg').close()")
-        step("window «Metodo» of a QqQ file: as before", method_qqq)
+        step("window «Method» of a QqQ file: as before", method_qqq)
         def losses_qqq():
             pg.evaluate("QQQRef.open('ls',{q:'27.995'})"); pg.wait_for_timeout(800)
             hit = pg.evaluate("[...document.querySelectorAll('#sb-panel-losses .nlr.hit')].map(r=>r.dataset.f)"); ex = pg.evaluate("document.querySelector('#sb-panel-losses .nlr[data-f=g28] .nlm small')")
@@ -47,26 +48,26 @@ try:
             pg.click("#stbar [data-cmd=addloss]"); pg.wait_for_selector("#calcin", state="visible")
             pg.fill("#calcin", ""); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(1500)
             assert pg.locator("#calcobs").count() == 0 and pg.locator("#al-ctl [data-r]").count() == 0, "no observed field, no High/Low switch"
-            t = pg.inner_text("#sb-panel-adducts"); assert "364.0737" in t and "errore (ppm)" not in t, t
+            t = pg.inner_text("#sb-panel-adducts"); assert "364.0737" in t and "error (ppm)" not in t, t
             m = pg.get_attribute("#al-ctl .cq-ctl", "data-mode"); n = pg.get_attribute("#al-ctl .cq-ctl", "data-name"); assert m == "hr" and "Exploris" in n, (m, n)          # the Orbitrap file decides: high resolution, named in the chip
             assert pg.input_value("#altol") == "5"
             pg.evaluate("BARRA.close(false)"); pg.wait_for_timeout(200)
         step("adducts page with an Orbitrap file: 4 decimals, high resolution detected from the file", calc_hr)
         def method():
-            pg.evaluate("(()=>{const f=E.files.find(f=>f.file.includes('Exploris')&&f.kind==='full');E.cur=f.k;showMethod()})()"); pg.wait_for_function("document.querySelector('#bigdlg') && document.querySelector('#bigdlg').innerText.includes('Parametri delle scansioni')", timeout=30000)
+            pg.evaluate("(()=>{const f=E.files.find(f=>f.file.includes('Exploris')&&f.kind==='full');E.cur=f.k;showMethod()})()"); pg.wait_for_function("document.querySelector('#bigdlg') && document.querySelector('#bigdlg').innerText.includes('Scan parameters')", timeout=30000)
             t = pg.inner_text("#bigdlg"); print(t[:600].replace("\n", " | "))
-            assert "Il metodo completo non è nel file mzML" not in t and "Parametri delle scansioni" in t and "NCE" in t and "HCD" in t and "45000" in t and "±0.75" in t, t
-            assert "Manca il metodo di acquisizione" not in t
+            assert "The full method is not in the mzML file" not in t and "Scan parameters" in t and "NCE" in t and "HCD" in t and "45000" in t and "±0.75" in t, t
+            assert "The acquisition method is missing" not in t
             pg.evaluate("document.querySelector('#bigdlg').close()")
-        step("window «Metodo» of an Orbitrap file without .dam: the parameters of the scans", method)
+        step("window «Method» of an Orbitrap file without .dam: the parameters of the scans", method)
         def losses():
             pg.evaluate("QQQRef.open('ls',{q:'27.995'})"); pg.wait_for_timeout(800)
             hit = pg.evaluate("[...document.querySelectorAll('#sb-panel-losses .nlr.hit')].map(r=>r.dataset.f)"); ex = pg.evaluate("document.querySelector('#sb-panel-losses .nlr[data-f=g28] .nlm small')?.textContent")
             print(hit, ex)
             assert hit == ["g28"] and ex == "27.9949", (hit, ex)                                 # the shared row of mass 28 is hit by CO (3 mDa); C2H4 (28.0313) is not what matches
-            assert "stesso Δm, risoluzione unitaria" in pg.inner_text("#sb-panel-losses")      # the shared row of equal nominal mass says so
+            assert "same Δm, unit resolution" in pg.inner_text("#sb-panel-losses")      # the shared row of equal nominal mass says so
             pg.evaluate("BARRA.close(false)")
-        step("neutral losses with an Orbitrap file: exact masses and «Cerca Δm» within 3 mDa", losses)
+        step("neutral losses with an Orbitrap file: exact masses and «Search Δm» within 3 mDa", losses)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

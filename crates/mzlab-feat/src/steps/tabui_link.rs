@@ -242,7 +242,7 @@ fn rule_arcs() -> Algorithm {
     algorithm(
         "rule_arcs",
         "Arcs by the rules of the table",
-        "One arc per pair of ions, from the one that peaks first, for the rule whose change of formula joins them (crates/mzlab-feat/src/network/arcs.rs, shared with the network of mzFinder).",
+        "One arc per pair of ions, from the one that peaks first, for the rule whose change of formula joins them (crates/mzlab-feat/src/netarcs.rs, shared with the network of mzFinder).",
         Status::Available,
     )
 }

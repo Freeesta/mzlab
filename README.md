@@ -1,56 +1,51 @@
 # mzLab
 
-Programma didattico per esplorare dati LC-MS e cercare i **prodotti di trasformazione (TP)** di un inquinante degradato nel tempo (esperienza al triplo quadrupolo del laboratorio di analisi degli inquinanti, UniTO). Lo studente sceglie cosa estrarre, integra, annota e disegna: il programma mostra i dati, **non dà le risposte**.
+A teaching program to explore LC-MS data and look for the **transformation products (TP)** of a pollutant degraded over time (triple-quadrupole experiment of the pollutant analysis laboratory, UniTO). The student chooses what to extract, integrates, annotates and draws: the program shows the data, **it does not give the answers**.
 
-*(English: a light teaching tool that runs in the browser to explore LC-MS data and look for transformation products. It shows the data; the student does the reasoning.)*
+## Use
 
-## Uso
+Open **https://freeesta.github.io/mzlab/** in a recent browser (Chrome, Edge, Firefox, Safari) on a computer or tablet. Nothing to install: the calculation runs **inside the browser**. The first time about 10-15 MB are downloaded; after that it also works without internet and it can be installed as an app (Chrome/Edge: «Install» in the address bar; Safari: Add to Dock or to the Home screen).
 
-Apri **https://freeesta.github.io/mzlab/** in un browser recente (Chrome, Edge, Firefox, Safari) su computer o tablet. Non si installa nulla: il calcolo gira **dentro il browser**. La prima volta si scaricano circa 10-15 MB; dopo funziona anche senza internet e si può installare come app (Chrome/Edge: «Installa» nella barra degli indirizzi; Safari: Aggiungi al Dock o alla schermata Home).
+- **Your files never leave your computer**: the page sends them to no server and collects no visitor data. Session, drawings and progress stay in the browser's storage and are restored when you reopen the page (same computer, same browser).
+- Drag the `.mzML` files (and, if you like, the method `.dam`), check times and types, press **Load data**. With no files: **«Try the example files»**.
+- Thermo `.raw`, SCIEX `.wiff` (with its `.wiff.scan`) and Agilent `.D` folders also open directly, in the site and in the desktop app. Waters (`.raw` folders), Shimadzu (`.qgd`/`.lcd`) and Bruker (`.d` timsTOF/TSF folders) files are supported through dedicated native Rust reader modules (`crates/mzlab-lettori/`), fetched on demand in the browser or built into the desktop app.
+- **On a smartphone** Data and Draw should be used from a computer or tablet.
 
-- **I tuoi file non lasciano il computer**: la pagina non li invia a nessun server e non raccoglie dati sui visitatori. Sessione, disegni e progressi restano nello spazio del browser e si ripristinano alla riapertura (stesso computer, stesso browser).
-- Trascina i file `.mzML` (e, se vuoi, il `.dam` del metodo), controlla tempi e tipi, premi **Carica dati**. Senza file: **«Prova con i file di esempio»**.
-- Si aprono direttamente anche i `.raw` Thermo, i `.wiff` SCIEX (con il loro `.wiff.scan`) e le cartelle `.D` Agilent, sia nel sito sia nell'app desktop. I file Waters (cartelle `.raw`), Shimadzu (`.qgd`/`.lcd`) e Bruker (cartelle `.d` timsTOF/TSF) sono supportati tramite i moduli lettori nativi Rust dedicati (`crates/mzlab-lettori/`, scaricati on-demand nel browser o integrati nell'app desktop).
-  *(English: Thermo `.raw`, SCIEX `.wiff` + `.wiff.scan` and Agilent `.D` folders open directly, in the site and in the desktop app. Waters `.raw` folders, Shimadzu `.qgd`/`.lcd` and Bruker `.d` timsTOF/TSF folders are supported via dedicated native Rust reader modules (`crates/mzlab-lettori/`), fetched on demand in the browser or built into the desktop app.)*
-- **Da smartphone** Dati e Disegno vanno usati da computer o tablet.
+## The tabs
 
-## Le schede
+- **Data**: chromatograms (TIC, BPC, XIC, MRM), spectra, RT×m/z map, separate Full Scan / MS2 / MRM tabs, high-resolution files (Orbitrap, Q-TOF) and DDA; peak integration with a table exportable to Excel (.xlsx), background correction, m/z calculator, periodic table, adducts, neutral losses, comparison of MS2 with spectral libraries. The tables and charts of the report are built in Excel.
+- **Draw**: Ketcher chemical editor for molecules, fragments and transformation pathways, with formula and mass under each structure and Δm above each arrow; the visible tools are chosen in «Editor tools»; export to PNG, JPEG, SVG and .ket.
+- The **«i»** at the top opens the information.
 
-- **Dati**: cromatogrammi (TIC, BPC, XIC, MRM), spettri, mappa RT×m/z, schede separate Full Scan / MS2 / MRM, file ad alta risoluzione (Orbitrap, Q-TOF) e DDA; integrazione dei picchi con tabella esportabile in Excel (.xlsx), correzione del fondo, calcolatrice m/z, tavola periodica, addotti, perdite neutre, confronto delle MS2 con librerie di spettri. Le tabelle e i grafici della relazione si costruiscono in Excel.
-- **Disegno**: editor chimico Ketcher per molecole, frammenti e vie di trasformazione, con formula e massa sotto ogni struttura e Δm sopra ogni freccia; gli strumenti visibili si scelgono in «Strumenti dell'editor»; esportazione PNG, JPEG, SVG e .ket.
-- La **«i»** in alto apre le informazioni.
+With unit resolution **an m/z is a candidate, not an identification**.
 
-Con risoluzione unitaria **un m/z è un candidato, non un'identificazione**.
+## Development
 
-## Sviluppo
+Everything needed by whoever modifies the program (rules, architecture, tests, decisions taken) is in [`CLAUDE.md`](CLAUDE.md) (core) and in [`docs/agenti/`](docs/agenti/) (one file per area). In short: for ordinary use of the static site or of the tests no compilation is needed (classic JavaScript and ES modules, Python for the test suite); for development of the Rust engine (`crates/`) it is compiled to WebAssembly for the web or to a native binary for the desktop version and the parity tests. `python3 tools/verifica.py` runs all the checks (JS syntax, pytest, browser tests with Playwright); the site is built with `python3 tools/build_site.py` and is published automatically on every push to `main`.
 
-Tutto ciò che serve a chi modifica il programma (regole, architettura, test, decisioni prese) è in [`CLAUDE.md`](CLAUDE.md) (nucleo) e in [`docs/agenti/`](docs/agenti/) (un file per area). In breve: per l'uso ordinario del sito statico o dei test non serve compilazione (JavaScript classico e moduli ES, Python per la suite di test); per lo sviluppo del motore Rust (`crates/`) si compila in WebAssembly per il web o in binario nativo per la versione desktop e i test di parità. `python3 tools/verifica.py` esegue tutti i controlli (sintassi JS, pytest, prove nel browser con Playwright); il sito si costruisce con `python3 tools/build_site.py` e si pubblica da solo a ogni push su `main`.
+## Use of artificial intelligence
 
-## Uso dell'intelligenza artificiale
+The code, the tests and the technical documentation are developed with the assistance of generative AI tools (Claude Code, Anthropic), directed by the author; commits written with that assistance list it as co-author. What enters `main` is decided by the maintainer, and only after the mandatory automated tests. The program itself, when you use it, **contains and calls no AI model**: all the calculation happens in the browser (or in the desktop app) with the rules written in the code.
 
-Il codice, i test e la documentazione tecnica sono sviluppati con l'assistenza di strumenti di IA generativa (Claude Code, Anthropic), diretti dall'autore; i commit scritti con quell'assistenza lo riportano come coautore. Cosa entra in `main` lo decide il manutentore, e solo dopo i test automatici obbligatori. Il programma, quando lo si usa, **non contiene e non chiama modelli di IA**: tutto il calcolo avviene nel browser (o nell'app desktop) con le regole scritte nel codice.
+## Licences and credits
 
-*English: the code, tests and technical documentation are developed with the assistance of generative AI tools (Claude Code, by Anthropic) directed by the author; such commits list it as co-author. What enters `main` is decided by the maintainer after the required automated tests. The program itself contains and calls no AI model.*
-
-## Licenze e crediti
-
-Il codice è sotto licenza **MIT** (`LICENSE`, Federico Cristaudo). Materiale di terzi, ciascuno con la sua licenza (testi in [`LICENZE-TERZI.md`](LICENZE-TERZI.md), copiato anche nel sito):
+The code is under the **MIT** licence (`LICENSE`, Federico Cristaudo). Third-party material, each with its own licence (texts in [`LICENZE-TERZI.md`](LICENZE-TERZI.md), also copied into the site):
 
 - **Ketcher** 3.18.0 (EPAM Systems), Apache-2.0: `mzlab/web/vendor/ketcher/`, https://github.com/epam/ketcher
 - **OpenChemLib JS** 9.25.1 (Zakodium / Actelion), BSD-3-Clause: `mzlab/web/vendor/openchemlib.js`, https://github.com/cheminfo/openchemlib-js
-- **File d'esempio** (`mzlab/web/esempi/`): dati sintetici, CC0 1.0.
-- **Masse e abbondanze degli elementi** (`elements.js`): masse da OpenChemLib, pesi atomici da Ketcher, abbondanze IUPAC.
+- **Example files** (`mzlab/web/esempi/`): synthetic data, CC0 1.0.
+- **Element masses and abundances** (`elements.js`): masses from OpenChemLib, atomic weights from Ketcher, IUPAC abundances.
 
-## Come citare
+## How to cite
 
-Se usi mzLab nel corso o in una pubblicazione, cita il software con i dati di [`CITATION.cff`](CITATION.cff) (il pulsante «Cite this repository» di GitHub li formatta):
+Tool and AI-agent users: `mzlab-cli --version` and `--help` print the same citation reminder (no DOI yet; it will be added here and in `CITATION.cff`).
 
-> Cristaudo, F. *mzLab: a browser-based teaching tool for LC-MS data analysis and the search for transformation products*. Università degli Studi di Torino. https://freeesta.github.io/mzlab/ (codice: https://github.com/Freeesta/mzlab, licenza MIT). DOI Zenodo: da assegnare alla prima release.
+If you use mzLab in the course or in a publication, cite the software with the data of [`CITATION.cff`](CITATION.cff) (GitHub's «Cite this repository» button formats it):
 
-*How to cite (English): cite the software with the data of [`CITATION.cff`](CITATION.cff) (GitHub's “Cite this repository” button formats it). Cristaudo, F. mzLab: a browser-based teaching tool for LC-MS data analysis and the search for transformation products. University of Turin. https://freeesta.github.io/mzlab/ (code: https://github.com/Freeesta/mzlab, MIT licence). Zenodo DOI: to be assigned at the first release; cite the concept DOI for the software in general and the version DOI for a given version.*
+> Cristaudo, F. *mzLab: a browser-based teaching tool for LC-MS data analysis and the search for transformation products*. University of Turin. https://freeesta.github.io/mzlab/ (code: https://github.com/Freeesta/mzlab, MIT licence). Zenodo DOI: to be assigned at the first release; cite the concept DOI for the software in general and the version DOI for a given version.
 
-## Limiti noti
+## Known limits
 
-- Non ancora validato contro il software dello strumento su più composti.
-- La compressione MS-Numpress negli mzML è supportata tramite il modulo formati aperti (`crates/mzlab-lettori/`).
-- Provato a fondo con Chromium; Firefox e Safari solo con le prove automatiche essenziali.
+- Not yet validated against the instrument software on several compounds.
+- MS-Numpress compression in mzML is supported through the open-formats module (`crates/mzlab-lettori/`).
+- Tested thoroughly with Chromium; Firefox and Safari only with the essential automated tests.

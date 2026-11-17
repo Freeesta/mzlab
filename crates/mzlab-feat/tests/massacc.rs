@@ -226,7 +226,7 @@ fn table_of(true_mz: &[f64], seen_ppm: f64) -> Vec<u8> {
         inputs: vec![("a.mzML".into(), String::new())],
         ..Origin::default()
     };
-    write_table(&t, &Default::default(), &o)
+    write_table(&t, &mzlab_feat::recipe::Recipe::default(), &o)
 }
 
 #[test]
@@ -264,8 +264,8 @@ fn the_offset_model_corrects_the_table_and_keeps_the_rows() {
 
 #[test]
 fn a_list_marked_not_background_gives_no_reference_ions() {
-    let doc = br#"{"lists":[{"id":"bg","items":[{"name_en":"A","adduct":"[M+H]+","formula":"C2H6O","z":1,"mz":47.04914,"pol":1}]},
-        {"id":"targets","background":false,"items":[{"name_en":"B","adduct":"[M+H]+","formula":"C8H14ClN5","z":1,"mz":216.10105,"pol":1}]}]}"#;
+    let doc = br#"{"lists":[{"id":"bg","items":[{"name":"A","adduct":"[M+H]+","formula":"C2H6O","z":1,"mz":47.04914,"pol":1}]},
+        {"id":"targets","background":false,"items":[{"name":"B","adduct":"[M+H]+","formula":"C8H14ClN5","z":1,"mz":216.10105,"pol":1}]}]}"#;
     let ions = massacc::refs::background(doc).unwrap();
     assert_eq!(
         ions.iter().map(|i| i.name.as_str()).collect::<Vec<_>>(),
@@ -300,7 +300,7 @@ fn a_list_marked_not_background_gives_no_reference_ions() {
         assert!(
             (mz - listed).abs() < 1e-5,
             "{} {}: {mz} vs {listed}",
-            text("name_en"),
+            text("name"),
             text("adduct")
         );
     }

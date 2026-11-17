@@ -1,6 +1,7 @@
 """Focus after a dialog closes: a window opened from the «⋯» menu of a chart header (the menu hides itself, so its item cannot take the focus back)
 gives the focus to the menu's button, never to the body; with Escape and with the window's own close button. The floating calculator of the Draw view
 gives it back to its toolbar button. Found by tools/fuzz_ui.py. Synthetic data."""
+# covers: mzlab/web/azioni-esc.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -19,13 +20,13 @@ try:
         def xic_esc():
             more.click(); pg.locator("#dpanels .hmore [data-a=xic]:visible").first.click(); wait_for_js(pg, "document.querySelector('#xicdlg').open")
             pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#xicdlg').open")
-            try: wait_for_js(pg, f"{FOCUS} === 'Altri strumenti del grafico'")
+            try: wait_for_js(pg, f"{FOCUS} === 'More chart tools'")
             except Exception: raise AssertionError(pg.evaluate("document.activeElement.outerHTML.slice(0, 160)"))
         step("XIC from the ⋯ menu, Esc: the focus goes back to the ⋯ button", xic_esc)
         def xic_cancel():
             more.click(); pg.locator("#dpanels .hmore [data-a=xic]:visible").first.click(); wait_for_js(pg, "document.querySelector('#xicdlg').open")
             pg.click("#xic-no"); wait_for_js(pg, "!document.querySelector('#xicdlg').open")
-            try: wait_for_js(pg, f"{FOCUS} === 'Altri strumenti del grafico'")
+            try: wait_for_js(pg, f"{FOCUS} === 'More chart tools'")
             except Exception: raise AssertionError(pg.evaluate("document.activeElement.outerHTML.slice(0, 160)"))
         step("XIC from the ⋯ menu, Cancel: the same", xic_cancel)
         def shortcuts():

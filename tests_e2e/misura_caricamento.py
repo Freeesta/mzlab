@@ -1,11 +1,16 @@
-"""Measures what moves and what is fetched while files load (study docs/studi/CARICAMENTO_STABILITA.md): serves a built site, opens it in headless Chromium and
+"""Measures what moves and what is fetched while files load: serves a built site, opens it in headless Chromium and
 records, from the first frame, the box of the main elements at every frame, the layout-shift entries with their sources, every request (time, size, who asked)
 and phase marks (open, engine ready, drag-over, drop, each side-list row, batch end, first plot, sample table and back, removal, «+» of the side list, reload with the saved session).
 
     python3 tests_e2e/misura_caricamento.py --site site --files a.mzML b.mzML [--width 1400] [--dark] [--cold] [--out run.json]
 
 `--cold` keeps the first-visit reload of the cross-origin isolation (browser.js isolateOnce); without it the page is measured as on the second visit.
-Prints a summary (shifts per element and phase, requests per phase); the JSON keeps everything. Works on origin/main (clicks «Load data» when it is there) and on D3."""
+Prints a summary (shifts per element and phase, requests per phase); the JSON keeps everything. Works on origin/main (clicks «Load data» when it is there) and on D3.
+
+`--scenarios NAME,...` (no `--files`) runs the critical-path scenarios of the first file and of many files instead; a report, nothing is asserted, no product change:
+    python3 tests_e2e/misura_caricamento.py --scenarios uno,dieci,rotte,thermo,subito,interazione,memoria [--runs 5] [--cpu 1,4] [--out run.json]
+Synthetic files only (tools/mzml_msconvert_synthetic.py, thermo_synthetic of mzlab-lettori), a persistent Chromium profile per run (warm = a copy of a profile whose service-worker
+fill is done), the arms of a scenario interleaved run by run. Metrics in `scenari_caricamento.py`'s docstring. Needs the site with the readers modules (tools/prepara_sito.py)."""
 import argparse, json, subprocess, sys, time, urllib.request
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -148,10 +153,13 @@ def summary(d):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--site", default=str(ROOT / "site")); ap.add_argument("--files", nargs="+", required=True)
+    ap.add_argument("--site", default=str(ROOT / "site")); ap.add_argument("--files", nargs="+"); ap.add_argument("--scenarios"); ap.add_argument("--runs", type=int, default=5); ap.add_argument("--cpu", default="1,4"); ap.add_argument("--wd", default="/tmp/wd_scenari")
     ap.add_argument("--width", type=int, default=1400); ap.add_argument("--height", type=int, default=900); ap.add_argument("--dark", action="store_true")
     ap.add_argument("--cold", action="store_true"); ap.add_argument("--settle", type=int, default=1500); ap.add_argument("--out")
     a = ap.parse_args()
+    if a.scenarios:
+        import scenari_caricamento as sc; sc.main(a); sys.exit(0)
+    if not a.files: ap.error("--files or --scenarios")
     d = run(a)
     if a.out: Path(a.out).write_text(json.dumps(d), encoding="utf-8")
     print(summary(d))

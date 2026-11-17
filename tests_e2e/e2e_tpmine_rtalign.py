@@ -1,5 +1,6 @@
 """mzFinder, HR: the RT alignment card (shift against RT, one line per file) and the filled cells of a weak product (marked, never a found peak).
 Synthetic series with a known RT drift. Run from the repo root: python3 tests_e2e/e2e_tpmine_rtalign.py  """
+# covers: TP_Mine/
 import os, shutil, subprocess, sys, time, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright

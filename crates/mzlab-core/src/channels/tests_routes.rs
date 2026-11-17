@@ -10,7 +10,7 @@ use crate::routes::{Query, Routes};
 use crate::upload::prepare;
 
 /// An mzML (Thermo-style filter strings) of the cycles `(level, filter, precursor)`, one cycle every 0.1 min.
-fn index(cicli: usize, scansioni: &[(u8, &str, Option<f64>)]) -> Routes<Vec<u8>> {
+fn index(cycles: usize, scansioni: &[(u8, &str, Option<f64>)]) -> Routes<Vec<u8>> {
     let mut w = MzmlWriter::new(
         Vec::new(),
         &Header {
@@ -19,9 +19,9 @@ fn index(cicli: usize, scansioni: &[(u8, &str, Option<f64>)]) -> Routes<Vec<u8>>
         },
     )
     .unwrap();
-    w.open_spectra(cicli * scansioni.len()).unwrap();
+    w.open_spectra(cycles * scansioni.len()).unwrap();
     let mut i = 0;
-    for c in 0..cicli {
+    for c in 0..cycles {
         for (level, filter, prec) in scansioni {
             let rt = c as f64 * 0.1 + i as f64 * 1e-4;
             let mz = vec![100.0, 150.0, 222.0];

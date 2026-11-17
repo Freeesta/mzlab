@@ -7,7 +7,6 @@ use mzlab_desktop::State;
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-
 const NAME: &str = "FullScan_t10.mzML";
 
 fn example() -> PathBuf {
@@ -153,6 +152,15 @@ fn plan() -> Vec<Value> {
     ] {
         steps.push(json!({"op": "lr_formula", "f": f, "adduct": adduct}));
     }
+    steps.push(json!({"op": "lr_elements"}));
+    let tables = r#""losses":[{"id":"H2O","f":"H2O"}],"adducts":[{"id":"[M+Na]+","k":1,"add":"Na","z":1}],"contam":[{"id":"peg1","mz":63.04406,"pol":1}]"#;
+    for head in [
+        r#"{"x":63.0441,"hr":true,"tol_mda":3,"tol_ppm":10,"pol":"+","#,
+        r#"{"x":18,"hr":false,"#,
+        r#"{"x":"bad","#,
+    ] {
+        steps.push(json!({"op": "lr_ricerca", "body": format!("{head}{tables}}}")}));
+    }
     steps.extend([
         json!({"op": "tic", "slot": 8, "level": 1, "px": 0}),
         json!({"op": "xic", "slot": 8, "level": 1, "mz": 300.0, "tol": 0.5, "px": 0}),
@@ -163,7 +171,7 @@ fn plan() -> Vec<Value> {
 
 /// The name operations of `campioni` (`variabili`, `nome_gruppo`): the worked list of the study, the manual variables, a long name and a bad operation.
 fn name_steps() -> Vec<Value> {
-    let mut names = vec![
+    let mut names: Vec<String> = [
         "MQ_blk",
         "MQ_Wash_1",
         "MQ_Wash_2",
@@ -171,15 +179,14 @@ fn name_steps() -> Vec<Value> {
         "MQ_std_BTZ_1ppm",
         "QC_Std_5ppm_mid",
     ]
-    .into_iter()
     .map(String::from)
-    .collect::<Vec<_>>();
+    .to_vec();
     for (m, conds) in [
         ("MQ", ["H2O2", "N2", "O2", "PMS"]),
         ("TW", ["AIR", "H2O2", "", ""]),
     ] {
         for c in conds.iter().filter(|c| !c.is_empty()) {
-            for t in ["T00", "T01", "T02", "T05"] {
+            for t in ["T00", "T01", "T02", "T05", "3h", "1 h 30"] {
                 names.push(format!("{m}_{c}_{t}"));
             }
         }
@@ -188,6 +195,7 @@ fn name_steps() -> Vec<Value> {
     let step =
         |cop: &str, body: Value| json!({"op": "lr_campioni", "cop": cop, "body": body.to_string()});
     vec![
+        step("proponi", json!({"files": files})), // the time points of the names, `3h` and `1 h 30` included
         step("variabili", json!({"files": files})),
         step(
             "variabili",

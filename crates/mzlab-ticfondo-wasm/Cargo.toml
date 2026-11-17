@@ -1,0 +1,15 @@
+[package]
+name = "mzlab-ticfondo-wasm"
+description = "wasm-bindgen bridge of api/tic_background (mzlab_core::ticbg_route: the TIC/BPC without the chemical background); a .wasm of its own, loaded by the worker of the engine on the first request"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+js-sys = "0.3.106"
+# the engine's features, so a build of both in one cargo run unifies nothing new
+mzlab-core = { path = "../mzlab-core", default-features = false, features = ["mappa-dad", "isotopi-tutti"] }
+wasm-bindgen = "0.2"

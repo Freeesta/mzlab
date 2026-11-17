@@ -140,3 +140,47 @@ def test_the_night_stays_lenient_and_caches_binaryen():
     wasm = {n: j for n, j in jobs.items() if "tools/wasm_opt.sh" in j or "tools/build_feat_wasm.sh site/static \"" in j}
     assert set(wasm) == {"sito"}, sorted(wasm)
     assert len(CACHE_STEP.findall(wasm["sito"])) == 1
+
+
+def _gate(tmp_path, limit, wasm_size=100, stat_body=None, wc_body=None):
+    """Run the size gate with a fake already-installed wasm-opt (a no-op) and, optionally, a `stat` stand-in (a PATH shim, like macOS where `stat -c` fails)."""
+    rt = tmp_path / "rt"
+    (rt / "binaryen-133" / "bin").mkdir(parents=True)
+    wo = rt / "binaryen-133" / "bin" / "wasm-opt"
+    wo.write_text("#!/usr/bin/env bash\nexit 0\n")   # in-place no-op: the file is left as it is
+    wo.chmod(0o755)
+    (rt / "binaryen-133" / "installato").write_text("")
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    if wc_body is not None:
+        (fake / "wc").write_text("#!/usr/bin/env bash\n" + wc_body)
+        (fake / "wc").chmod(0o755)
+    if stat_body is not None:
+        (fake / "stat").write_text("#!/usr/bin/env bash\n" + stat_body)
+        (fake / "stat").chmod(0o755)
+    wasm = tmp_path / "m.wasm"
+    wasm.write_bytes(b"\0" * wasm_size)
+    env = {"PATH": f"{fake}:/usr/bin:/bin", "RUNNER_TEMP": str(rt), "MZLAB_WASM_OPT_STRICT": "1"}
+    return subprocess.run(["bash", str(SCRIPT), str(wasm), str(limit), "t"], env=env, capture_output=True, text=True, cwd=ROOT)
+
+
+@pytest.mark.skipif(WINDOWS or platform.system() != "Linux", reason="uses the Linux binaryen install marker")
+def test_size_gate_does_not_depend_on_gnu_stat(tmp_path):
+    r = _gate(tmp_path, 1000, stat_body="echo 'stat: illegal option -- c' >&2\nexit 1\n")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "t .wasm (optimised): 100 bytes" in r.stdout
+
+
+@pytest.mark.skipif(WINDOWS or platform.system() != "Linux", reason="uses the Linux binaryen install marker")
+def test_size_gate_fails_closed_on_unreadable_size(tmp_path):
+    # a size that is not a number (a broken `wc`) must not pass the gate
+    r = _gate(tmp_path, 1000, wc_body="echo oops\n")
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "::error::" in r.stdout
+
+
+@pytest.mark.skipif(WINDOWS or platform.system() != "Linux", reason="uses the Linux binaryen install marker")
+@pytest.mark.parametrize("limit,rc", [(101, 0), (100, 1), (99, 1)])
+def test_size_gate_cap_is_exclusive(tmp_path, limit, rc):
+    r = _gate(tmp_path, limit)
+    assert r.returncode == rc, r.stdout + r.stderr

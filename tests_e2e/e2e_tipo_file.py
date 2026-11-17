@@ -1,5 +1,6 @@
 """Experiment menu of the start-screen table: a plain menu of the types with the detected one pre-selected (reason as tooltip), a picked type wins, is applied at once (table, group,
 viewer) and is remembered per file; the group select sets every file of the group."""
+# covers: mzlab/web/tipo-file.js
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth
@@ -51,7 +52,7 @@ try:
         def remembered():
             all_to(pg, "full")
             pg.locator(SEL).first.select_option("infusion"); frames(pg, 3)
-            pg.click("text=Carica dati"); ready(pg)
+            pg.click("text=Load data"); ready(pg)
             info = pg.evaluate("[E.files.map(f => [f.file, f.kind, f.kindAuto, f.manual]), TIPOF.manual(ST.files[0].name), ST.files.map(f=>f.name), localStorage.getItem('mzlab.filekind')]")
             assert pg.evaluate("E.files.some(f => f.kind === 'infusion' && f.kindAuto === 'full')"), info
             pg.evaluate("E.files.forEach(f => TIPOF.set(f.file, null)); TIPOF.viewer(E.files.map(f => f.file))"); frames(pg, 3)

@@ -1,7 +1,7 @@
 //! The static figure (SVG) of a fragmentation graph `msngrafo/1`: tree or radial view, drawn from the key `vista` (feature `figura`; the CLI and the `.wasm`
 //! `msnfigura` call it). It repeats the LABEL RULE at the top of `mzlab/web/msngrafo-vista.js` (the interactive drawer of the page, the Flow and the
 //! stand-alone HTML), so a test compares the texts of both. Colours are written in the file (Okabe-Ito, dark ink on white): the SVG lives alone. Used by
-//! `html`, `msn_graph` of the CLI (`--figura`, `figure`) and the step `msn.figure@1`.
+//! `html`, `msn_graph` of the CLI (`--figure`, `figure`) and the step `msn.figure@1`.
 
 use std::collections::{HashMap, HashSet};
 
@@ -27,11 +27,11 @@ pub enum View {
 }
 
 impl View {
-    /// `albero`/`tree` and `radiale`/`radial`.
+    /// `tree` and `radial`.
     pub fn da_nome(n: &str) -> Option<View> {
         match n {
-            "albero" | "tree" => Some(View::Albero),
-            "radiale" | "radial" => Some(View::Radial),
+            "tree" => Some(View::Albero),
+            "radial" => Some(View::Radial),
             _ => None,
         }
     }
@@ -243,7 +243,7 @@ fn lay_out_radial(sc: &Scena, vis: &[usize], size: &HashMap<&str, (f64, f64)>) -
 }
 
 fn dispone(sc: &Scena, vis: &[usize], view: View, extra: &dyn Fn(&Ion, &Pos) -> f64) -> Layout {
-    let compatta = view == View::Radial;
+    let compact = view == View::Radial;
     let size: HashMap<&str, (f64, f64)> = vis
         .iter()
         .map(|&k| {
@@ -251,27 +251,27 @@ fn dispone(sc: &Scena, vis: &[usize], view: View, extra: &dyn Fn(&Ion, &Pos) -> 
             (
                 i.id.as_str(),
                 (
-                    if compatta { WR } else { W },
-                    height(&scatola(sc, i, p, compatta), extra(i, p)),
+                    if compact { WR } else { W },
+                    height(&scatola(sc, i, p, compact), extra(i, p)),
                 ),
             )
         })
         .collect();
-    let (caselle, centro, anelli) = if view == View::Albero {
+    let (boxes, center, anelli) = if view == View::Albero {
         (lay_out_tree(sc, vis, &size), (0.0, 0.0), Vec::new())
     } else {
         lay_out_radial(sc, vis, &size)
     };
     let (mut w, mut h) = (0.0f64, 0.0f64);
-    for b in caselle.values() {
+    for b in boxes.values() {
         w = w.max(b.x + b.w + 30.0);
         h = h.max(b.y + b.h + 30.0);
     }
     Layout {
-        cells: caselle,
+        cells: boxes,
         w: w.max(60.0),
         h: h.max(60.0),
-        centre: centro,
+        centre: center,
         rings: anelli,
     }
 }

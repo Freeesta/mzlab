@@ -1,4 +1,5 @@
 """Toolbar split buttons of the HR group (Scan, Formulas): the active state covers the main part AND the caret (one control), the group is named, the caret announces its menu. Synthetic Orbitrap DDA file."""
+# covers: mzlab/web/barra.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

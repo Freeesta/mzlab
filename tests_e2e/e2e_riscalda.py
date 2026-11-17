@@ -1,4 +1,4 @@
-"""Warm-up of the pointed folder (riscalda.js, rust-scalda.js, docs/agenti/riscaldamento.md), synthetic files, dev server. The folder is a REAL FileSystemDirectoryHandle
+"""Warm-up of the pointed folder (riscalda.js, rust-scalda.js, docs/agenti/dati-cartella.md), synthetic files, dev server. The folder is a REAL FileSystemDirectoryHandle
 (a folder of the browser's private file system, as in e2e_cartella_puntata). Steps: the mzML are copied and indexed in the background in list order and nothing shows (no row,
 no session, still hidden after a reload); a click on a warm file loads it without copying or indexing (no «load» phase, the index bytes are the ones of the warm-up); the same
 file loaded cold in another browser gives the same index bytes and the same TIC; a click on a file still waiting takes it out of the queue."""
@@ -28,7 +28,7 @@ def shown(pg): return pg.evaluate("[ST.files.length, document.querySelectorAll('
 r = Run(port=8830 + 160, wd="/tmp/wd_riscalda"); hot = {}
 try:
     with sync_playwright() as p:
-        kw = dict(viewport={"width": 1500, "height": 2200}, locale="it-IT", reduced_motion="reduce")
+        kw = dict(viewport={"width": 1500, "height": 2200}, reduced_motion="reduce")
         try: r.b = p.chromium.launch_persistent_context(tempfile.mkdtemp(prefix="riscalda_prof_"), **kw)
         except Exception:          # a Playwright without its own headless shell (the cloud image): the Chromium that is installed
             exe = next(Path("/opt/pw-browsers").glob("chromium-*/chrome-linux64/chrome"), None); assert exe, "no Chromium"

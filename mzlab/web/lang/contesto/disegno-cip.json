@@ -1,0 +1,7 @@
+{
+  "draw.cip.found": "Status of the CIP descriptors tab of the Drawing; {n} = number of R/S and E/Z labels found.",
+  "draw.cip.fail": "Status of the CIP descriptors tab when the calculation fails; {message} = the error.",
+  "draw.cip.atom": "Row of a stereogenic center; {atom} = symbol and number of the atom (C2), {label} = R or S.",
+  "draw.cip.atomLow": "Row of a pseudoasymmetric center; {atom} = symbol and number of the atom, {label} = lowercase r or s.",
+  "draw.cip.bond": "Row of a double bond; {a} and {b} = the two atoms (C4, C5), {label} = E or Z."
+}

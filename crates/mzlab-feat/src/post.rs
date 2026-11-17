@@ -7,7 +7,7 @@ use mzlab_core::error::Result;
 
 use crate::axis::{MassAxis, LR_TOUCH};
 use crate::table::{FileFeatures, FLAG_BACKGROUND, FLAG_FT_LOBE};
-use crate::trace::reserve;
+use crate::trace_base::reserve;
 
 /// A feature before the grids are merged (the columns of `F`).
 #[derive(Clone, Copy)]

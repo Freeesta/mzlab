@@ -1,5 +1,6 @@
 """Flat-window background of a chromatogram (fondo-piatto.js, Rust chrom_background.rs through qualita.js) on the built site: the program picks the window, the student moves it
 (arrows, handle) and goes back to the automatic one. Needs the site and the .wasm (python tools/build_site.py; the CI builds the .wasm in site/static/wasm)."""
+# covers: mzlab/web/fondo-piatto.js
 import subprocess, sys, time, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -34,16 +35,16 @@ try:
         def auto():
             pg.evaluate(f"setFondo({CP}, 'flat')"); pg.wait_for_function(f"(()=>{{const ib={CP}.fondo.ib; return ib && ib.flat && ib.a[1] > ib.a[0]}})()", timeout=30000); ready(pg)
             s = state(); assert s["flat"] and not s["mod"], s
-            t = pg.evaluate(f"{CP}.el.querySelector('.ibk').textContent"); assert "finestra piatta" in t and "automatica" in t, t
-            assert "automatica" in pg.evaluate(f"{CP}.el.querySelector('.ibk').getAttribute('aria-label')")
+            t = pg.evaluate(f"{CP}.el.querySelector('.ibk').textContent"); assert "flat window" in t and "automatic" in t, t
+            assert "automatic" in pg.evaluate(f"{CP}.el.querySelector('.ibk').getAttribute('aria-label')")
             globals()["A0"] = s["a"]
-        step("the flat window is found by the program and the chip says «automatica»", auto)
+        step("the flat window is found by the program and the chip says «automatic»", auto)
         def keyboard():
             pg.locator(f"{PANEL} [data-o=cinfo]").click(); pg.wait_for_selector(f"{PANEL} .corrbar [data-ib='fl+']", state="visible")      # the chip lives in the «Correzioni» popover
             pg.locator(f"[data-ib='fl+']").first.focus(); pg.keyboard.press("ArrowRight"); ready(pg)
             pg.wait_for_function(f"{CP}.fondo.ib.mod === true", timeout=10000); ready(pg)
             s = state(); assert s["a"][0] > A0[0] and s["mod"], (s, A0)
-            t = pg.evaluate(f"{CP}.el.querySelector('.ibk').textContent"); assert "modificata da te" in t and "ripristina automatico" in t, t
+            t = pg.evaluate(f"{CP}.el.querySelector('.ibk').textContent"); assert "modified by you" in t and "restore automatic" in t, t
             ae = pg.evaluate("document.activeElement && (document.activeElement.dataset.ib || document.activeElement.outerHTML.slice(0, 80))"); assert ae == "fl+", ("the focus must stay on the arrow", ae)
         step("one arrow key moves the window: «modificata da te» and the restore button appear, the focus stays", keyboard)
         def drag():
@@ -56,8 +57,8 @@ try:
             pg.locator(f"{PANEL} [data-o=cinfo]").click(); pg.wait_for_selector(f"{PANEL} .corrbar [data-ib='fl0']", state="visible")
             pg.locator("[data-ib='fl0']").first.click(); ready(pg); pg.wait_for_function(f"{CP}.fondo.ib.mod !== true", timeout=10000); ready(pg)
             pg.wait_for_function(f"Math.abs({CP}.fondo.ib.a[0] - {A0[0]!r}) < 1e-9", timeout=30000)
-            assert "automatica" in pg.evaluate(f"{CP}.el.querySelector('.ibk').textContent")
-        step("«ripristina automatico» gives back the automatic window", restore)
+            assert "automatic" in pg.evaluate(f"{CP}.el.querySelector('.ibk').textContent")
+        step("«restore automatic» gives back the automatic window", restore)
         def clean(): assert not errs, errs[:3]
         step("no page error", clean)
         b.close()

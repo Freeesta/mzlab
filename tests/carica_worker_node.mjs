@@ -7,7 +7,7 @@ let quota = 0, usage = 0;
 Object.defineProperty(globalThis, "navigator", { configurable: true, value: { storage: { estimate: async () => ({ quota, usage }) } } });
 globalThis.self = globalThis;
 globalThis.FileReaderSync = class {};
-const { createPlainPut, createOpenGate, gzRoom, gzClean, GZ_SLICE } = await import(dir + "/rust-carica.js");
+const { createPlainPut, createOpenGate, createCopyGate, gzRoom, gzClean, GZ_SLICE, openStored } = await import(dir + "/rust-carica.js");
 const { createNativo, PREFIX, MAGIC } = await import(dir + "/rust-nativo.js");
 const ARCHIVE = await import(dir + "/archivio.js");
 const MB = 1 << 20;
@@ -239,5 +239,49 @@ const stubFile = (members) => new File([JSON.stringify({ mzlab: MAGIC, ds: "k", 
   store.set(PREFIX + "f.wiff-k5~f.wiff", fakeFile(5));
   assert.deepStrictEqual(await mk().orphans(), []);
   assert.ok(store.has(PREFIX + "f.wiff-k5~f.wiff"));
+}
+// ---- the copy gate (lr_put): at most k at once, the queued ones start in the order of the list (rank), a cancelled one never starts, k 0 = all at once
+{
+  const tick = () => new Promise(r => setTimeout(r, 0));
+  const g = createCopyGate(), log = [], waits = [], hold = new Map();
+  const job = (name, k, rank) => g.through(name, k, rank, () => waits.push(name), () => { log.push("start " + name); return new Promise(r => hold.set(name, () => { log.push("end " + name); r(name); })); });
+  const a = job("a", 2, 0), b = job("b", 2, 1), d = job("d", 2, 3), c = job("c", 2, 2), e = job("e", 2, -1), x = job("x", 2, 4);
+  await tick();
+  assert.deepStrictEqual(log, ["start a", "start b"]);
+  assert.deepStrictEqual(waits, ["d", "c", "e", "x"]);
+  assert.strictEqual(g.running, 2); assert.strictEqual(g.queued, 4);
+  g.drop("x", "cancelled");
+  await assert.rejects(x, e2 => e2 === "cancelled");
+  hold.get("b")(); await b; await tick();
+  assert.deepStrictEqual(log.slice(2), ["end b", "start c"]);      // c (rank 2) before d (rank 3), though d came first
+  hold.get("a")(); await a; await tick();
+  assert.deepStrictEqual(log.slice(4), ["end a", "start d"]);
+  hold.get("c")(); hold.get("d")(); await c; await d; await tick();
+  assert.ok(log.includes("start e"));                              // no rank: after the ranked ones
+  hold.get("e")(); assert.strictEqual(await e, "e");
+  assert.strictEqual(g.running, 0); assert.strictEqual(g.queued, 0);
+  assert.ok(!log.includes("start x"));
+  // a task that fails frees its place
+  const f = g.through("f", 1, 0, () => {}, async () => { throw new Error("boom"); });
+  await assert.rejects(f, /boom/); assert.strictEqual(g.running, 0);
+  // k 0: no gate, every copy at once and never told to wait
+  const g0 = createCopyGate(), w0 = [], open = [];
+  const all = [0, 1, 2, 3, 4].map(i => g0.through("n" + i, 0, i, () => w0.push(i), () => new Promise(r => open.push(r))));
+  await tick();
+  assert.strictEqual(open.length, 5); assert.deepStrictEqual(w0, []); assert.strictEqual(g0.running, 5);
+  open.forEach(r => r()); await Promise.all(all); assert.strictEqual(g0.running, 0);
+}
+// ---- a stored index refused for memory beside the files open (routes_open.rs) stays: the refusal passes on, the index is neither removed nor rebuilt;
+// any other failure of the open (damaged, incomplete) gives the caller's fallback (removal and error.badIndex in lrIndexOwn, a new build in lrIndex)
+{
+  const refusal = JSON.stringify({ error_key: "error.memoryBudget", params: { fase: "openFiles", aperti: "8", scansioni: "1600000" } });
+  const removed = [];
+  const failed = e => { removed.push(e); return false; };
+  assert.strictEqual(await openStored(async () => true, failed), true);
+  await assert.rejects(openStored(async () => { throw refusal; }, failed), e => e === refusal);
+  assert.deepStrictEqual(removed, [], "the memory refusal keeps the index");
+  const bad = JSON.stringify({ error_key: "error.badIndex" });
+  assert.strictEqual(await openStored(async () => { throw bad; }, failed), false);
+  assert.deepStrictEqual(removed, [bad]);
 }
 console.log("ok");

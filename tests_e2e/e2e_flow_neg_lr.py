@@ -1,4 +1,4 @@
-"""Flow «This browser» against `mzlab-cli flow run` in both polarities and both resolutions (docs/studi/MATRICE_NEG_LR.md): a small invented bentazone series (the fixture of
+"""Flow «This browser» against `mzlab-cli flow run` in both polarities and both resolutions (docs/agenti/rust-step.md): a small invented bentazone series (the fixture of
 crates/mzlab-cli/src/flow_bentazone_tests.rs, ported here: a parent that fades, two products that grow) in HR+, HR-, LR+ and LR-, through the base chain, tp.generate, tp.link, tp.filter,
 tp.network, table.filter, export.table_csv, export.mztab, tp.position at high resolution and tp.dig_lr at unit resolution. Every text the browser keeps equals the file of the native
 run, byte for byte; the check of the page and of `flow run` take the facets from the files and refuse the same steps (formula.ms1 and tp.position at unit resolution, tp.dig_lr at high).

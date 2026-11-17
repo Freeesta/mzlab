@@ -1,6 +1,7 @@
 """Capacities of the browser (capacita.js, avviso-capacita.js): with ?cap-off=<name> the function bound to that capacity is off, with the common notice
-(«non disponibile in questo browser. Usa l'app») and the link to the app; without it no notice at all; Dati with an example file works for every capacity that is not
+(«not available in this browser. Use the app») and the link to the app; without it no notice at all; Data with an example file works for every capacity that is not
 the engine's; the probes of the page cost less than 5 ms (median of 5)."""
+# covers: mzlab/web/compat, mzlab/web/capacita
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"
@@ -17,14 +18,14 @@ LINK = "[...document.querySelectorAll('.cap-note a')].map(a => a.href)"
 FN = {"simd128": "motore", "opfs": "motore", "opfsSync": "motore", "cartellaLocale": "cartella", "webgl2": "mappa3d", "isolamento": "indiceParallelo"}
 
 def load(b, q=""):
-    pg = b.new_context(locale="it-IT", viewport={"width": 1440, "height": 950}).new_page()
+    pg = b.new_context(viewport={"width": 1440, "height": 950}).new_page()
     pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
     pg.goto(f"http://127.0.0.1:{r.port}/{q}"); ready(pg); return pg
 
 def open_example(pg):
     pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")]); wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=1")
     pg.click("#opbtn"); ready(pg)
-    assert pg.evaluate("E.panels.length") > 0, "Dati opened no panel"
+    assert pg.evaluate("E.panels.length") > 0, "Data opened no panel"
 
 try:
     from playwright.sync_api import sync_playwright
@@ -37,7 +38,7 @@ try:
             open_example(pg); assert pg.evaluate(NOTE) == 0, "notice after opening a file"
             wait_for_js(pg, "CAPACITA.statoCap('opfsSync') !== 'verifica'")            # the engine worker told it in its ready message
             assert pg.evaluate("CAPACITA.statoCap('opfsSync')") == "si"
-        step("no cap-off: no notice, Dati works", clean)
+        step("no cap-off: no notice, Data works", clean)
         def cost():
             pg = load(b); xs = sorted(pg.evaluate("[0,1,2,3,4].map(() => { const t = performance.now(); CAPACITA.rileva(true); return performance.now() - t; })"))
             print(f"  rileva() cost, median of 5: {xs[2]:.2f} ms")
@@ -47,7 +48,7 @@ try:
             def off(cap=cap, fn=fn):
                 pg = load(b, f"?cap-off={cap}")
                 assert pg.evaluate(f"CAPACITA.stato('{fn}')") == "no" and not pg.evaluate(f"CAPACITA.ha('{cap}')")
-                if fn != "motore": open_example(pg)                               # everything that is not the engine's: Dati works
+                if fn != "motore": open_example(pg)                               # everything that is not the engine's: Data works
                 if fn == "motore":
                     wait_for_js(pg, "window.MZLAB_RUST && window.MZLAB_RUST.disabled === true"); wait_for_js(pg, "document.getElementById('cap-live')")
                 elif fn == "cartella":
@@ -61,7 +62,7 @@ try:
                 else:
                     pg.evaluate("(() => { const b = document.createElement('button'); b.id = 'probe'; document.body.appendChild(b); CAPACITA.serve('indiceParallelo', b); })()")
                     assert pg.get_attribute("#probe", "aria-disabled") == "true"
-                wait_for_js(pg, "document.getElementById('cap-live')"); t = pg.inner_text("#cap-live"); assert "non disponibile in questo browser" in t, t
+                wait_for_js(pg, "document.getElementById('cap-live')"); t = pg.inner_text("#cap-live"); assert "not available in this browser" in t, t
                 assert any("github.com/Freeesta/mzlab/releases" in h for h in pg.evaluate("[...document.querySelectorAll('#cap-live a')].map(a => a.href)")), "no link to the app"
             step(f"cap-off={cap}: «{fn}» off with the notice and the link", off)
         b.close()

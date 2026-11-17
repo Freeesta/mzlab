@@ -7,14 +7,15 @@
 // OpenChemLib (1.1 MB) is fetched only when the first properties are computed (Disegno open, something drawn), not at page load
 import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js"; import { mountRadical } from "./disegno-radicale.js";
-import { mountTablet } from "./disegno-tablet.js"; import { mountNew } from "./disegno-nuovo.js"; import "./disegno-storage.js";
+import { mountTablet } from "./disegno-tablet.js"; import { mountNew } from "./disegno-nuovo.js"; import * as Pulito from "./disegno-pulito.js"; import "./disegno-storage.js";
 import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js"; import { mountMech, ketWithoutMech, addExportMech } from "./disegno-meccanismo.js";
-import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partials, partialItems, pickBracket, deletePicked, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js"; import { stamp, freshName, exportName } from "./disegno-nomi.js";
+import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partials, partialItems, pickBracket, deletePicked, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js"; import { stamp, freshName, exportName } from "./disegno-nomi.js"; import { initAppunti } from "./disegno-appunti.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
 const Q = (/** @type {string} */ s) => document.querySelector(s);
+let AP = /** @type {any} */ (null);                       // clipboard and molecule selection for a finger (disegno-appunti.js), set when the editor is mounted
 let K = /** @type {DrawKet} */ (null), starting = /** @type {Promise<DrawKet> | null} */ (null), restored = false, timer = /** @type {number | undefined} */ (undefined), startTimeout = /** @type {number | undefined} */ (undefined);
 
 let kldTimer = /** @type {number | undefined} */ (undefined), kldN = 0;
@@ -45,7 +46,7 @@ function start() {
   // the editor stays invisible (.kwait) until hideMacro and the first fit are done: Ketcher's native bars would otherwise show and then jump
   fr.classList.add("kwait");
   starting.finally(() => { clearInterval(kldTimer); }).catch(() => {});
-  starting = starting.then(async k => { mountTablet(/** @type {Document} */ (fr.contentDocument)); await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); FRAME.next(drawLabels); exwarn(""); });      // a change makes «Nothing to export» stale
+  starting = starting.then(async k => { mountTablet(/** @type {Document} */ (fr.contentDocument)); await window.nbEnsure(); Pulito.mount({ K: () => K, save: doExport }); await restore(); await Pulito.markSaved(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); FRAME.next(drawLabels); exwarn(""); });      // a change makes «Nothing to export» stale
     k.editor.subscribe("selectionChange", () => FRAME.next(showInfo));
     hideMacro(fr); applyFont(k); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr); mountCut(fr); mountNew(/** @type {Document} */ (fr.contentDocument), k); dnote("");
     [150, 700].forEach(ms => setTimeout(drawLabels, ms));                 // Ketcher redraws its canvas after the first fit: the labels (formula, mass) of the saved options are put back on
@@ -170,23 +171,28 @@ function hideMacro(/** @type {HTMLIFrameElement} */ fr) {
 
     // Context menu on canvas / molecule (right click, ContextMenu key or Shift+F10; closes on a click or Esc inside the Ketcher document too)
     let ctxGen = 0;
+    AP = initAppunti(d, K, fr, { molfile: ids => /** @type {any} */ (pieceMolfile(ids)) });
     const openCtx = async (/** @type {any} */ ev, /** @type {boolean} */ kbd) => {
       const st = K && K.editor && K.editor.struct();
-      if (!st || st.isBlank()) return;
-      const hl = labelHit(ev); if (hl) { ev.preventDefault(); ev.stopPropagation(); labelMenu(ev, hl, fr, kbd); return; }      // right click on the label under a molecule
+      const blank = !st || st.isBlank();
+      if (!st || (blank && !AP.has())) return;                           // an empty canvas has a menu only to paste what was copied
+      const hl = blank ? null : labelHit(ev); if (hl) { ev.preventDefault(); ev.stopPropagation(); labelMenu(ev, hl, fr, kbd); return; }      // right click on the label under a molecule
       ev.preventDefault();
       ev.stopPropagation();
       const gen = ++ctxGen;                                              // the newest right click wins: an older one still waiting for Indigo neither fills nor shows the menu
+      // a long press with a finger on a molecule that is not selected selects the whole molecule first (the menu then acts on it)
+      const fromTouch = Date.now() - ((/** @type {any} */ (d.defaultView)).__tpLong || 0) < 400;
+      if (fromTouch && !blank && !(K.editor.selection() || {}).atoms) { const mol = AP.moleculeAt(ev); if (mol) AP.selectMolecule(mol); }
       const sel = K.editor.selection() || {};
       const set = new Set(sel.atoms || []);
       (sel.bonds || []).forEach((/** @type {number} */ id) => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
       /** @type {any} */ let smi = "";
       if (set.size) { try { smi = await pieceSmiles([...set]); } catch (_) {} }
-      if (!smi) { try { smi = plainSmiles(await indigo(() => K.getSmiles())); } catch (_) {} }
+      if (!smi && !blank) { try { smi = plainSmiles(await indigo(() => K.getSmiles())); } catch (_) {} }
       const frRect = fr.getBoundingClientRect();
       const mx = frRect.left + ev.clientX, my = frRect.top + ev.clientY;
       const m = Q("#ctx"); if (!m || gen !== ctxGen) return;
-      if (await menuFill(m, { K, ev, sel, atoms: set, bonds: [...(sel.bonds || [])], whole: !set.size, smiles: smi, x: mx, y: my, kbd }) && gen === ctxGen) ctxShow(m, mx, my, 240, kbd);
+      if (await menuFill(m, { K, ev, sel, atoms: set, bonds: [...(sel.bonds || [])], whole: !set.size, blank, touch: fromTouch, smiles: smi, x: mx, y: my, kbd }) && gen === ctxGen) ctxShow(m, mx, my, 240, kbd);
     };
     let kbdCtxAt = 0;                                                    // the ContextMenu key also raises a native contextmenu event: only the first one opens
     d.addEventListener("contextmenu", (/** @type {MouseEvent} */ ev) => { if (Date.now() - kbdCtxAt < 300) { ev.preventDefault(); ev.stopPropagation(); return; } openCtx(ev, false); }, true);
@@ -305,6 +311,7 @@ async function changed() {
   drawLabels();                                                          // the labels drawn right at a change can miss the structure Ketcher is still adding (Quick draw, paste): this one runs when it has settled
   try { if (!NB.ket && K.editor.struct().isBlank()) return; } catch (_) { /* no isBlank: save as before */ }       // nothing drawn and nothing saved: no empty notebook entry
   NB.ket = ket; nbSave();
+  Pulito.check();
   showInfo();
 }
 // small warning line under the SMILES field (invalid SMILES, Ketcher not started); empty = hidden
@@ -356,6 +363,13 @@ function mountCut(/** @type {HTMLIFrameElement} */ fr) { if (!cutLine) cutLine =
 const fragHelpers = { pieces: () => pieces(), pieceMolfile: (/** @type {number[]} */ ids) => pieceMolfile(ids), t: /** @type {(k: string, p?: Record<string, unknown>) => string} */ ((k, p) => I18N.t(k, p)), copy: (/** @type {string} */ s) => { copyText(s); },
   label: async (/** @type {number[]} */ ids, /** @type {string} */ delta) => { const st = K.editor.struct(), r = await labelsNow({ structures: [ids.map(i => atomOf(st.atoms.get(i)))], arrows: [], deltas: [delta] }), d = r && r.structures[0]; return d && !d.error ? { formula: d.text, mass: massOf({ ...d, q: d.charge }, +Q("#lb-dec").value) } : null; },   // what the label under the structure says
   num: (/** @type {number} */ v) => { const dec = +Q("#lb-dec").value; return dec ? rh(v, dec).toFixed(dec) : String(rh(v, 0)); }, table: (/** @type {Record<string, unknown>} */ o) => window.TDATI.table(o), ask: /** @type {(q: string, d?: string) => Promise<string | null>} */ ((q, d) => ask(EH(q), d)), note: (/** @type {string} */ s) => (window.toast ? toast(s) : dnote(s)) };
+// rows for a finger: select the molecule, copy, cut, paste, delete (disegno-appunti.js; they come first, the chemistry rows follow)
+menuAdd({ id: "select-molecule", order: 1, label: "draw.ctx.selectMolecule", title: "draw.ctx.selectMolecule.title", show: (/** @type {any} */ c) => { const m = AP.moleculeAt(c.ev); return !!m && !AP.covers(m); }, run: (/** @type {any} */ c) => AP.selectMolecule(AP.moleculeAt(c.ev)) });
+menuAdd({ id: "copy", when: "selection", order: 2, label: "draw.ctx.copy", title: "draw.ctx.copy.title", run: (/** @type {any} */ c) => { AP.copy().then((/** @type {boolean} */ ok) => { if (ok && c.touch) AP.arm(); else if (!ok) toast(I18N.t("draw.copy.fail")); }); } });
+menuAdd({ id: "cut", when: "selection", order: 3, label: "draw.ctx.cut", title: "draw.ctx.cut.title", run: (/** @type {any} */ c) => { AP.cut().then((/** @type {boolean} */ ok) => { if (ok && c.touch) AP.arm(); else if (!ok) toast(I18N.t("draw.copy.fail")); }); } });
+menuAdd({ id: "paste", order: 4, blank: true, label: (/** @type {any} */ c) => I18N.t(c.whole ? "draw.ctx.pasteHere" : "draw.ctx.paste"), title: (/** @type {any} */ c) => I18N.t(c.whole ? "draw.ctx.pasteHere.title" : "draw.ctx.paste.title"), show: () => AP.has(),
+  run: (/** @type {any} */ c) => { if (c.whole) AP.pasteHere(c.ev.clientX, c.ev.clientY); else if (c.touch) AP.arm(); else AP.pasteAttached(c.ev.clientX, c.ev.clientY); } });
+menuAdd({ id: "delete", when: "selection", order: 5, label: "draw.ctx.delete", title: "draw.ctx.delete.title", run: () => AP.del() });
 // built-in rows of the canvas menu (disegno-menu.js registry; other modules add theirs with TPDraw.menu.add, between these orders)
 const shortSmi = (/** @type {string} */ s) => s.length > 24 ? s.slice(0, 21) + "…" : s;
 menuAdd({ id: "copy-smiles", order: 10, label: (/** @type {any} */ c) => c.smiles ? I18N.t("draw.ctx.copySmilesOf", { smiles: shortSmi(c.smiles) }) : I18N.t("draw.ctx.copySmiles"), run: (/** @type {any} */ c) => { if (c.smiles) copyText(c.smiles); } });
@@ -461,7 +475,7 @@ menuAdd({ id: "analysis", order: 70, label: "draw.ctx.analysis", title: "draw.ct
   if (c.open) analysis(); else c.open = true;
   c.scrollIntoView({ block: "nearest" }); const sm = c.querySelector("summary"); if (sm) sm.focus();
 } });
-let neutOn = true;                                                             // "Escludi la carica": on by default
+let neutOn = true;                                                             // "Exclude the charge": on by default
 document.addEventListener("change", e => { const tg = /** @type {any} */ (e.target); if (tg && tg.id === "prop-neut") { neutOn = tg.checked; showInfo(); } });
 const fmtF = (/** @type {string} */ f) => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
 document.addEventListener("click", e => { const tg = /** @type {any} */ (e.target), b = tg.closest && tg.closest("[data-cp]"); if (b) copyText(b.dataset.cp, "draw.copy.smilesToast").then(ok => { b.textContent = I18N.t(ok ? "draw.copy.done" : "draw.copy.fail"); setTimeout(() => { b.textContent = I18N.t("draw.copy.button"); }, ok ? 1200 : 2500); }); });
@@ -705,20 +719,21 @@ async function image(/** @type {string} */ format) {
   return out;
 }
 const exwarn = (/** @type {string} */ msg) => { const w = Q("#ex-warn"); w.textContent = msg || ""; w.hidden = !msg; };
-// every export goes through here: a failure is written in the page instead of being silent
+// every export goes through here: a failure is written in the page instead of being silent; true = the download was triggered (also what the «not saved» question calls)
 async function doExport(/** @type {string} */ kind) {
   exwarn("");
   try {
     await start();
-    if (K.editor.struct().isBlank()) { exwarn(I18N.t("draw.export.empty")); return; }
-    if (kind === "ket") { saveBlob(new Blob([await K.getKet()], { type: "application/json" }), exportName("ket")); if (window.toast) toast(I18N.t("draw.export.saved")); return; }
-    if (kind === "mol" || kind === "sdf") return await (await import("./disegno-esporta.js")).save(K, kind, Q("#ex-ion").value, exportName(kind), saveBlob);   // written by the Rust engine
-    if (kind === "jpg" && Q("#ex-nobg").checked) return;
+    if (K.editor.struct().isBlank()) { exwarn(I18N.t("draw.export.empty")); return false; }
+    if (kind === "ket") { saveBlob(new Blob([await K.getKet()], { type: "application/json" }), exportName("ket")); if (window.toast) toast(I18N.t("draw.export.saved")); await Pulito.markSaved(); return true; }
+    if (kind === "mol" || kind === "sdf") { await (await import("./disegno-esporta.js")).save(K, kind, Q("#ex-ion").value, exportName(kind), saveBlob); await Pulito.markSaved(); return true; }   // written by the Rust engine
+    if (kind === "jpg" && Q("#ex-nobg").checked) return false;
     const clear = Q("#ex-nobg").checked && kind !== "jpg", blob = await image(kind);
     if (!blob || !blob.size) throw new Error(I18N.t("draw.export.emptyImage"));
     saveBlob(blob, exportName(kind, clear));
     if (window.toast) toast(I18N.t("draw.export.saved"));
-  } catch (e_) { const e = /** @type {Lanciato} */ (e_); exwarn(I18N.t("draw.export.failed", { message: e && e.message ? e.message : e })); }
+    await Pulito.markSaved(); return true;
+  } catch (e_) { const e = /** @type {Lanciato} */ (e_); exwarn(I18N.t("draw.export.failed", { message: e && e.message ? e.message : e })); return false; }
 }
 for (const k of ["png", "jpg", "svg", "ket", "mol", "sdf"]) Q("#ex-" + k).onclick = () => doExport(k);
 function syncBg() {                                    // JPEG cannot be transparent: its button is off (grey) while "Sfondo trasparente" is on
@@ -731,7 +746,7 @@ Q("#ex-load").onclick = async () => { let v = Q("#ex-smi").value.trim(); if (!v)
   catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
 // Tabui's «Draw»: `when()` resolves when the editor is ready; `load(smiles)` shows a structure in it (undo restores the previous drawing)
-window.TPDraw = { menu: { add: menuAdd, ids: menuIds }, when: async () => { await start(); return true; }, load: async (/** @type {string} */ smi) => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, highlight: async (/** @type {any[]} */ layers) => { await start(); return (await import("./disegno-evidenza.js")).highlight(layers); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (!ed || typeof ed.undo !== "function" || typeof ed.redo !== "function") return; try { redo ? ed.redo() : ed.undo(); } catch (_) { /* nothing left to undo or redo */ } } };
+window.TPDraw = { menu: { add: menuAdd, ids: menuIds }, when: async () => { await start(); return true; }, load: async (/** @type {string} */ smi) => { await start(); if (!(await Pulito.confirmDiscard("load"))) return false; await K.setMolecule(smi); await Pulito.markSaved(); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } return true; }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, highlight: async (/** @type {any[]} */ layers) => { await start(); return (await import("./disegno-evidenza.js")).highlight(layers); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (!ed || typeof ed.undo !== "function" || typeof ed.redo !== "function") return; try { redo ? ed.redo() : ed.undo(); } catch (_) { /* nothing left to undo or redo */ } } };
 document.addEventListener("tpview", e => { if (/** @type {any} */ (e).detail.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } });
 try { if (S.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/draw, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });

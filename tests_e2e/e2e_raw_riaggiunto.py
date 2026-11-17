@@ -1,6 +1,7 @@
 # e2e_raw_riaggiunto: a Thermo .raw given again (the same file: name, size, date) keeps its one sample (shell.js rawToMzml, nativo.js cached): no second row, no second copy or index in
 # OPFS, both in the same page and after a reload of the page (the session restored). Synthetic .raw (crates/mzlab-lettori examples/synthetic, invented numbers).
 # Needs the site and cargo: python3 tools/prepara_sito.py, then python3 tests_e2e/e2e_raw_riaggiunto.py
+# covers: mzlab/web/shell.js, mzlab/web/nativo
 import os, sys, tempfile, shutil, subprocess; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pathlib import Path
 from lib import *

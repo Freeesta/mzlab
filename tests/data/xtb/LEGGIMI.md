@@ -1,89 +1,89 @@
-# Dati di Riferimento Quantomeccanici xTB (GFN2-xTB)
+# xTB (GFN2-xTB) Quantum-Mechanical Reference Data
 
-Questo archivio contiene i calcoli di riferimento quantomeccanici semiempirici **GFN2-xTB** eseguiti sulle 20 molecole di prova descritte in `docs/studi/CC_MOTORE_NEL_BROWSER.md` (§6), comprendenti i 10 composti modello della bozza iniziale e 10 inquinanti organici persistenti / micropollutanti tipici dei prodotti di trasformazione (TP).
+This archive holds the **GFN2-xTB** semi-empirical quantum-mechanical reference calculations run on the 20 test molecules listed in `MOLS` of `tools/cc_reference.py`: the 10 model compounds of the initial draft and 10 persistent organic pollutants / micropollutants typical of transformation products (TPs).
 
-I dati servono come banco di prova e controllo di parità numerica per l'implementazione Rust/WASM in `crates/mzlab-chem`.
+The data serve as a test bench and numerical parity check for the Rust/WASM implementation in `crates/mzlab-chem`.
 
 ---
 
-## 1. Ambiente di Calcolo e Versioni
+## 1. Compute environment and versions
 
-- **xTB**: versione `6.7.1` (commit `edcfbbe`, macOS arm64)
+- **xTB**: version `6.7.1` (commit `edcfbbe`, macOS arm64)
 - **RDKit**: `2026.09.1`
 - **Python**: `3.11.17`
-- **Ambiente di calcolo**: Conda Forge (`/Users/federicocristaudo/Desktop/gemini_cc/conda_env`)
-- **Script generatore**: `/Users/federicocristaudo/Desktop/gemini_cc/script/calcola_xtb.py` (collocato all'esterno del repository per rispettare la regola di assenza di script Python nel repo).
+- **Compute environment**: Conda Forge (`~/Desktop/gemini_cc/conda_env`)
+- **Generator script**: `~/Desktop/gemini_cc/script/calcola_xtb.py` (kept outside the repository to respect the rule of no Python scripts in the repo).
 
 ---
 
-## 2. Protocollo di Generazione e Comandi
+## 2. Generation protocol and commands
 
-Per ciascuna molecola:
+For each molecule:
 
-1. **Geometria 3D iniziale**:
-   - Generazione conformero con RDKit `ETKDGv3` con parametro deterministico `randomSeed = 42`.
-   - Minimizzazione energetica con campo di forze `MMFF94` (`maxIters = 500`).
-2. **File coordinate `.xyz`**:
-   - Riga 1: numero totale di atomi ($N_{\text{tot}} = N_{\text{heavy}} + N_{\text{H}}$).
-   - Riga 2: SMILES canonico RDKit.
-   - Righe successive: **rigorosamente prima tutti gli atomi pesanti** nell'ordine esatto dello SMILES (indici $0 \dots N_{\text{heavy}}-1$), seguiti dagli atomi di idrogeno.
-3. **Calcolo in acqua implicita (ALPB water)**:
+1. **Initial 3D geometry**:
+   - Conformer generation with RDKit `ETKDGv3` with the deterministic parameter `randomSeed = 42`.
+   - Energy minimisation with the `MMFF94` force field (`maxIters = 500`).
+2. **Coordinate `.xyz` file**:
+   - Line 1: total number of atoms ($N_{\text{tot}} = N_{\text{heavy}} + N_{\text{H}}$).
+   - Line 2: RDKit canonical SMILES.
+   - Following lines: **strictly all heavy atoms first**, in the exact SMILES order (indices $0 \dots N_{\text{heavy}}-1$), followed by the hydrogen atoms.
+3. **Implicit-water calculation (ALPB water)**:
    ```bash
-   xtb <nome>.xyz --gfn 2 --alpb water --vfukui --chrg 0
+   xtb <name>.xyz --gfn 2 --alpb water --vfukui --chrg 0
    ```
-   Produce:
-   - `<nome>_xtb.out`: log completo di xTB.
-   - `<nome>_fukui.csv`: indici di Fukui condensati per gli atomi pesanti ($0 \dots N_{\text{heavy}}-1$).
-4. **Calcolo in fase gassosa**:
+   Produces:
+   - `<name>_xtb.out`: full xTB log.
+   - `<name>_fukui.csv`: condensed Fukui indices for the heavy atoms ($0 \dots N_{\text{heavy}}-1$).
+4. **Gas-phase calculation**:
    ```bash
-   xtb <nome>.xyz --gfn 2 --vfukui --chrg 0
+   xtb <name>.xyz --gfn 2 --vfukui --chrg 0
    ```
-   Produce:
-   - `<nome>_gas_xtb.out`: log completo di xTB.
-   - `<nome>_gas_fukui.csv`: indici di Fukui condensati per gli atomi pesanti in fase gassosa.
+   Produces:
+   - `<name>_gas_xtb.out`: full xTB log.
+   - `<name>_gas_fukui.csv`: condensed Fukui indices for the heavy atoms in the gas phase.
 
 ---
 
-## 3. Struttura dei File
+## 3. File structure
 
-Per ciascuna delle 20 molecole sono presenti 5 file:
-- `<nome>.xyz`: coordinate cartesiane (Å).
-- `<nome>_xtb.out`: output di calcolo xTB ALPB water.
-- `<nome>_fukui.csv`: valori di $f(+)$, $f(-)$, $f(0)$ in acqua.
-- `<nome>_gas_xtb.out`: output di calcolo xTB fase gassosa.
-- `<nome>_gas_fukui.csv`: valori di $f(+)$, $f(-)$, $f(0)$ in fase gassosa.
+For each of the 20 molecules there are 5 files:
+- `<name>.xyz`: Cartesian coordinates (Å).
+- `<name>_xtb.out`: xTB ALPB water calculation output.
+- `<name>_fukui.csv`: $f(+)$, $f(-)$, $f(0)$ values in water.
+- `<name>_gas_xtb.out`: gas-phase xTB calculation output.
+- `<name>_gas_fukui.csv`: $f(+)$, $f(-)$, $f(0)$ values in the gas phase.
 
-Inoltre:
-- `riepilogo.csv`: tabella sintetica con tempi di calcolo, convergenza SCF e primo sito $f(-)$ tra i carboni insaturi legati ad H, mediato sulle classi di simmetria topologica `CanonicalRankAtoms`.
-- `LEGGIMI.md`: questa documentazione tecnica.
+Also:
+- `riepilogo.csv`: summary table with calculation times, SCF convergence and the top $f(-)$ site among unsaturated carbons bonded to H, averaged over the topological symmetry classes of `CanonicalRankAtoms`.
+- `LEGGIMI.md`: this technical documentation.
 
-### Formato dei file CSV Fukui (`<nome>_fukui.csv` e `<nome>_gas_fukui.csv`)
-Colonne:
-- `smiles`: SMILES molecolare canonico.
-- `atom`: indice numerico 0-based dell'atomo pesante nell'ordine dello SMILES.
-- `quantity`: descrittore di Fukui condensato (`f_plus`, `f_minus`, `f_zero`).
-- `value`: valore numerico (3 decimali).
-- `method`: metodo impiegato (`GFN2-xTB, ALPB water` oppure `GFN2-xTB, gas`).
-- `source`: file di log di origine.
+### Format of the Fukui CSV files (`<name>_fukui.csv` and `<name>_gas_fukui.csv`)
+Columns:
+- `smiles`: canonical molecular SMILES.
+- `atom`: 0-based numeric index of the heavy atom in SMILES order.
+- `quantity`: condensed Fukui descriptor (`f_plus`, `f_minus`, `f_zero`).
+- `value`: numeric value (3 decimals).
+- `method`: method used (`GFN2-xTB, ALPB water` or `GFN2-xTB, gas`).
+- `source`: originating log file.
 
-### Formato di `riepilogo.csv`
-Colonne:
-- `molecola`: nome identificativo del composto.
+### Format of `riepilogo.csv`
+Columns:
+- `molecola`: identifying name of the compound.
 - `cid`: PubChem Compound ID.
-- `n_atomi_pesanti`: numero di atomi pesanti.
-- `tempo_xtb_water_s`: tempo CPU/wall in secondi (misurato con `perf_counter`).
-- `tempo_xtb_gas_s`: tempo CPU/wall in secondi in fase gassosa.
-- `convergente_water`: convergenza SCF in acqua (`true`/`false`).
-- `convergente_gas`: convergenza SCF in gas (`true`/`false`).
-- `sito_f_minus_water`: indice/i dell'atomo pesante del sito a maggior $f(-)$ (C insaturo con H, mediato su classi di simmetria).
-- `sito_f_minus_gas`: corrispondente sito in fase gassosa.
-- `note`: annotazioni chimiche e metodologiche.
+- `n_atomi_pesanti`: number of heavy atoms.
+- `tempo_xtb_water_s`: CPU/wall time in seconds (measured with `perf_counter`).
+- `tempo_xtb_gas_s`: CPU/wall time in seconds in the gas phase.
+- `convergente_water`: SCF convergence in water (`true`/`false`).
+- `convergente_gas`: SCF convergence in gas (`true`/`false`).
+- `sito_f_minus_water`: index(es) of the heavy atom of the site with the highest $f(-)$ (unsaturated C with H, averaged over symmetry classes).
+- `sito_f_minus_gas`: corresponding site in the gas phase.
+- `note`: chemical and methodological notes.
 
 ---
 
-## 4. Elenco delle 20 Molecole
+## 4. List of the 20 molecules
 
-| # | Molecola | PubChem CID | SMILES PubChem ufficiale | SMILES RDKit utilizzato | Atomi pesanti |
+| # | Molecule | PubChem CID | Official PubChem SMILES | RDKit SMILES used | Heavy atoms |
 |---|---|---|---|---|:---:|
 | 1 | fenolo | 996 | `C1=CC=C(C=C1)O` | `Oc1ccccc1` | 7 |
 | 2 | anisolo | 7519 | `COC1=CC=CC=C1` | `COc1ccccc1` | 8 |
@@ -106,19 +106,19 @@ Colonne:
 | 19 | benzofenone-3 | 4632 | `COC1=CC(=C(C=C1)C(=O)C2=CC=CC=C2)O` | `COc1ccc(C(=O)c2ccccc2)c(O)c1` | 17 |
 | 20 | imidacloprid | 86287518 | `C1CN(C(=N[N+](=O)[O-])N1)CC2=CN=C(C=C2)Cl` | `O=[N+]([O-])N=C1NCCN1Cc1ccc(Cl)nc1` | 17 |
 
-*Nota su imidacloprid*: Il PubChem CID ufficiale per l'imidacloprid neutro è `86287518`. Il numero `86343` citato talvolta corrisponde all'identificativo ChemSpider (CSID 86343).
+*Note on imidacloprid*: The official PubChem CID for neutral imidacloprid is `86287518`. The number `86343` sometimes quoted is the ChemSpider identifier (CSID 86343).
 
 ---
 
-## 5. Osservazioni Chimiche e Metodologiche
+## 5. Chemical and methodological observations
 
-1. **Convergenza**: Il 100% dei calcoli (20/20 in acqua ALPB, 20/20 in fase gassosa) ha soddisfatto i criteri SCF (`convergence criteria satisfied`) e si è concluso con codice di uscita 0 (`normal termination of xtb`).
-2. **Ruolo critico della solvatazione ALPB water**:
-   - Nella **carbamazepina**, il calcolo in acqua individua correttamente il doppio legame olefinico centrale come sito preferenziale ($f(-)_{\text{water}} = 0.030$ su C10, C11). In fase gassosa, al contrario, due carboni aromatici dell'anello ($6, 15$) scavalcano il doppio legame ($f(-)_{\text{gas}} = 0.028$ su $6, 15$ contro $0.026$ su $10, 11$). Ciò conferma sperimentalmente la necessità del modello implicito ALPB per la predizione regiochimica.
-   - Nel **diclofenac**, la presenza dell'acqua sposta il primo sito di attacco elettrofilo su $f(-)$ dall'anello fenilacetico (sito 6 in gas) alla posizione 15 dell'anello 2,6-dicloroanilina in acqua ($0.033$).
-3. **Composti privi di C insaturi legati ad H**:
-   - L'**atrazina** ha un anello 1,3,5-triazinico completamente sostituito (C-Cl, C-NHEt, C-NHiPr). Non possiede alcun atomo di carbonio insaturo o aromatico legato ad idrogeno. In `riepilogo.csv` il sito è opportunamente riportato come `N/A`. Nei processi di degradazione ossidativa (AOP), la reazione procede prevalentemente per dealchilazione delle catene etil/isopropilamminiche o declorazione, piuttosto che addizione elettrofila su C-H insaturo.
-4. **Siti degeneri o quasi-degeneri**:
-   - Nel **paracetamolo**, le due posizioni aromatiche orto al gruppo $-\text{OH}$ (atomi 6, 9, media $f(-) = 0.0335$) e orto al gruppo acetammidico (atomi 5, 10, media $f(-) = 0.0318$) presentano uno scarto minimo ($\Delta f(-) \approx 0.0017 < 0.005$), confermando che il solo descrittore $f(-)$ dello stato fondamentale le colloca a pari merito operativo («reattività simile»).
-   - Nel **bisfenolo A**, i quattro carboni orto ai gruppi fenolici (atomi 5, 8, 12, 15) hanno simmetria equivalente e massimizzano $f(-)$ ($0.022$).
-   - Nella **caffeina**, la posizione C8 dell'anello imidazolico (atomo 7, unico C-H insaturo) ha $f(-) = 0.017$ in acqua, coerente con l'idrossilazione che porta a acido 1,3,7-trimetilurico.
+1. **Convergence**: 100% of the calculations (20/20 in ALPB water, 20/20 in the gas phase) met the SCF criteria (`convergence criteria satisfied`) and ended with exit code 0 (`normal termination of xtb`).
+2. **Critical role of ALPB water solvation**:
+   - In **carbamazepine**, the water calculation correctly identifies the central olefinic double bond as the preferred site ($f(-)_{\text{water}} = 0.030$ on C10, C11). In the gas phase, on the contrary, two aromatic ring carbons ($6, 15$) overtake the double bond ($f(-)_{\text{gas}} = 0.028$ on $6, 15$ against $0.026$ on $10, 11$). This confirms experimentally the need for the implicit ALPB model to predict regiochemistry.
+   - In **diclofenac**, the presence of water moves the first site of electrophilic attack on $f(-)$ from the phenylacetic ring (site 6 in gas) to position 15 of the 2,6-dichloroaniline ring in water ($0.033$).
+3. **Compounds without unsaturated C bonded to H**:
+   - **Atrazine** has a fully substituted 1,3,5-triazine ring (C-Cl, C-NHEt, C-NHiPr). It has no unsaturated or aromatic carbon atom bonded to hydrogen. In `riepilogo.csv` the site is therefore reported as `N/A`. In oxidative degradation processes (AOP), the reaction proceeds mainly by dealkylation of the ethyl/isopropylamine chains or dechlorination, rather than by electrophilic addition on an unsaturated C-H.
+4. **Degenerate or nearly degenerate sites**:
+   - In **paracetamol**, the two aromatic positions ortho to the $-\text{OH}$ group (atoms 6, 9, mean $f(-) = 0.0335$) and ortho to the acetamide group (atoms 5, 10, mean $f(-) = 0.0318$) show a minimal gap ($\Delta f(-) \approx 0.0017 < 0.005$), confirming that the ground-state $f(-)$ descriptor alone ranks them as operationally tied («similar reactivity»).
+   - In **bisphenol A**, the four carbons ortho to the phenolic groups (atoms 5, 8, 12, 15) have equivalent symmetry and maximise $f(-)$ ($0.022$).
+   - In **caffeine**, position C8 of the imidazole ring (atom 7, the only unsaturated C-H) has $f(-) = 0.017$ in water, consistent with the hydroxylation leading to 1,3,7-trimethyluric acid.

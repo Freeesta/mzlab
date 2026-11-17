@@ -14,7 +14,9 @@ use crate::mzidx_spill::{align, read_parts, Parts, Spill};
 use crate::mzml::Spectrum;
 mod crc;
 mod late;
+mod streamed;
 pub use late::{build_mzml_corriere, build_mzml_late};
+pub use streamed::build_mzml_streamed;
 
 pub const BLOCK: u64 = 16384;
 const ALIGN: u64 = 64;
@@ -748,7 +750,7 @@ pub(crate) fn build_after(
     let mut passes = 1usize;
     // -- the groups of scans (level x polarity), those with the same members share a section
     let mut levels: Vec<u8> = table.level.clone();
-    // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
+    // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/agenti/wasm-tetti.md, «Ordinamenti std nei percorsi caldi»)
     #[allow(clippy::disallowed_methods)]
     levels.sort_unstable();
     levels.dedup();

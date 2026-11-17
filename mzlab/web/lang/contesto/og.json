@@ -1,0 +1,11 @@
+{
+  "og.failed": "{message} = error text.",
+  "og.xlsx.prefix": "Name of the downloaded file: origine_<mz>_da_<mz>; lowercase letters only, no accents.",
+  "og.heavier": "«Δm from the candidate» cell; {dm} = mass difference.",
+  "og.lighter": "«Δm from the candidate» cell; {dm} = mass difference.",
+  "og.leg.co": "Legend of the origin plot; {mz} = m/z of a chosen co-eluting ion.",
+  "og.leg.ion": "Legend of the origin plot; {mz} = m/z of the ion studied.",
+  "og.leg.par": "Legend of the origin plot; {mz} = m/z of the parent.",
+  "og.lossHint": "Tooltip on a table row; {dm} = mass difference from the candidate, {lost} = same difference rounded.",
+  "og.waitN": "Seconds counter during the computation; {s} = seconds elapsed."
+}

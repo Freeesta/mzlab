@@ -1,5 +1,5 @@
 # The anonymous public proxy of the mzLab assistant (docs/agenti/assistente-proxy.md). No secret here: ANTHROPIC_KEY and OWNER_SHA256 are set with
-# `npx wrangler secret put` (docs/studi/assistente-dati/09-worker.md §9). Logs are off: nothing of a request is ever written anywhere.
+# `npx wrangler secret put` (docs/agenti/assistente-proxy.md, «Passi del proprietario»). Logs are off: nothing of a request is ever written anywhere.
 name = "mzlab-assist-proxy"
 main = "adapters/cloudflare.js"
 compatibility_date = "2026-06-01"

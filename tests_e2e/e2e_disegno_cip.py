@@ -2,6 +2,8 @@
 stereoisomers apart; on, (R,E)-pent-3-en-2-ol drawn with its wedge lists «C2: R» and «C4=C5: E» as text rows (role=status) that select their
 atoms; the mirror image reads S; a molecule without defined stereo says so; off again clears the list. Run from the repo root after
 tools/build_site.py and tools/build_feat_wasm.sh site/static (molkit); SKIP without site/static/wasm-feat."""
+# covers: mzlab/web/disegno-verifica.js, mzlab/web/disegno-cip.js, mzlab/web/lang/en/disegno-cip.js
+# covers: mzlab/web/draw.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 HERE = os.path.dirname(os.path.abspath(__file__))
 if not os.path.exists(os.path.join(HERE, "..", "site", "static", "wasm-feat", "manifest.json")):
@@ -33,7 +35,7 @@ try:
         def off_and_note():
             assert not pg.is_checked("#cip-show")
             assert pg.inner_text("#cip-note") == pg.evaluate("I18N.t('draw.cip.note')")
-            assert "spettrometria di massa" in pg.inner_text("#cip-note")
+            assert "Mass spectrometry" in pg.inner_text("#cip-note")
             assert pg.get_attribute("#cip-status", "role") == "status"
         step("off by default; the note says mass spectrometry cannot tell stereoisomers apart", off_and_note)
 

@@ -1,7 +1,8 @@
 """Disegno, structure check (`check/1` of the molkit .wasm): a pentavalent carbon is a valence mistake, a neutral four-bonded nitrogen asks for a + charge
 and the same nitrogen drawn as N+ is fine, and common groups (sulfone, nitro, phosphate, DMSO, pyridine, carboxylic acid, azide) raise no alarm.
-A remark selects its atoms on the canvas and «Perché?» opens its three parts; draw -> Check -> remark -> Why? is three clicks; auto-run is off by default.
+A remark selects its atoms on the canvas and «Why?» opens its three parts; draw -> Check -> remark -> Why? is three clicks; auto-run is off by default.
 Run from the repo root after tools/build_site.py and tools/build_feat_wasm.sh site/static (molkit); SKIP without site/static/wasm-feat."""
+# covers: mzlab/web/disegno-verifica.js, mzlab/web/lang/en/disegno-verifica.js, mzlab/web/draw.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")):
     print("SKIP site/static/wasm-feat is missing (tools/build_feat_wasm.sh site/static)"); sys.exit(0)
@@ -46,7 +47,7 @@ try:
             assert codes == ["valence"], (codes, pg.inner_text("#chk-card"))
             assert pg.get_attribute("#chk-status", "role") == "status"
             li = pg.locator("#chk-list li").first
-            assert "Errore" in li.inner_text() and "C1" in li.inner_text(), li.inner_text()       # the level and the atom in words, not only a colour
+            assert "Mistake" in li.inner_text() and "C1" in li.inner_text(), li.inner_text()       # the level and the atom in words, not only a colour
             li.locator(".chk-sel").click()                                                       # click 2 (after Check): the remark selects its atom
             pg.wait_for_function(f"(({KJ}.editor.selection() || {{}}).atoms || []).length === 1", timeout=10000)
             why = li.locator(".chk-why")
@@ -92,7 +93,7 @@ try:
 
         def pieces_and_empty():
             assert check("CC(=O)[O-].[Na+]") == ["pieces"], pg.inner_text("#chk-card")
-            assert "Nota" in pg.inner_text("#chk-list li")
+            assert "Note" in pg.inner_text("#chk-list li")
             pg.evaluate(f"{KJ}.setMolecule('')"); frames(pg, 4)
             pg.click("#chk-run")
             pg.wait_for_function("document.querySelector('#chk-status').textContent === I18N.t('draw.check.empty')", timeout=10000)

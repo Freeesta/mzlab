@@ -1,4 +1,5 @@
-"""Data tab: full screen on every panel (also added later), RT selection clamped to the chromatogram range, delayed tooltip, header buttons Isotopi / Perdite neutre, no 'QqQ lab' text in the header. Synthetic data."""
+"""Data tab: full screen on every panel (also added later), RT selection clamped to the chromatogram range, delayed tooltip, header buttons Isotopes / Neutral losses, no 'QqQ lab' text in the header. Synthetic data."""
+# covers: mzlab/web/tooltip.js
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import synth
@@ -13,24 +14,24 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         shutil.rmtree("/tmp/s26", ignore_errors=True)
-        pg.set_input_files("#pick", synth.make_series("/tmp/s26", [0, 15, 60])); pg.wait_for_selector("text=Carica dati")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", synth.make_series("/tmp/s26", [0, 15, 60])); pg.wait_for_selector("text=Load data")
+        pg.click("text=Load data"); ready(pg)
         def header():
-            assert "mzLab" not in pg.inner_text("header").replace("\n", " ").split("Dati")[0]
+            assert "mzLab" not in pg.inner_text("header").replace("\n", " ").split("Data")[0]
             assert pg.get_attribute("header .logo", "alt") == "mzLab"
             for w in (360, 768, 1500):
                 pg.set_viewport_size({"width": w, "height": 900}); frames(pg, 3)
-                if w < 600:      # very narrow: everything but File is in «Altro»
-                    assert not pg.is_visible("#np-addloss"); pg.click("#tb-more"); pg.locator("#stmenu button", has_text="Addotti e perdite").click(); pg.click("#al-t-losses")
+                if w < 600:      # very narrow: everything but File is in «More»
+                    assert not pg.is_visible("#np-addloss"); pg.click("#tb-more"); pg.locator("#stmenu button", has_text="Adducts & losses").click(); pg.click("#al-t-losses")
                 elif pg.is_visible("#np-addloss"):
                     pg.click("#np-addloss"); pg.click("#al-t-losses")
-                else:      # the toolbar keeps one row: at 768 px the tools that do not fit go to «Altro»
-                    pg.click("#tb-more"); pg.locator("#stmenu button", has_text="Addotti e perdite").click(); pg.click("#al-t-losses")
+                else:      # the toolbar keeps one row: at 768 px the tools that do not fit go to «More»
+                    pg.click("#tb-more"); pg.locator("#stmenu button", has_text="Adducts & losses").click(); pg.click("#al-t-losses")
                 wait_for_js(pg, "!!document.querySelector('#sb-panel-losses') && document.querySelector('#sb-panel-losses').offsetParent !== null")
-                assert pg.is_visible("#sb-panel-losses") and pg.inner_text("#sb-title") == "Addotti e perdite", w
+                assert pg.is_visible("#sb-panel-losses") and pg.inner_text("#sb-title") == "Adducts & losses", w
                 close_side(pg); frames(pg, 3); assert not pg.is_visible("#dfiles"), w
             pg.set_viewport_size({"width": 1400, "height": 900})
-        step("header: Perdite neutre opens its tab at 360/768/1500 px, no title text", header)
+        step("header: Neutral losses opens its tab at 360/768/1500 px, no title text", header)
         pg.click("#np-chrom"); wait_for_js(pg, "E.panels.some(p=>p.type==='chrom')"); pg.click("#np-spec"); wait_for_js(pg, "E.panels.some(p=>p.type==='spec')")
         def fs():
             n = pg.evaluate("document.querySelectorAll('.pnl').length"); assert n >= 2, n
@@ -51,7 +52,7 @@ try:
             btn = pg.locator(".pnl .fsb").first; still(btn); pg.mouse.move(5, 5); hold(pg, 100); btn.hover(); hold(pg, 1000)      # a pointer that is already on the button (left there by the step before) makes no mouseover, so no tooltip
             assert pg.evaluate("document.querySelector('#qtip').hidden"), "too early"
             wait_for_js(pg, "!document.querySelector('#qtip').hidden", 10000)      # the delay is a timer of the page: on a loaded machine it fires late, so wait for the state (the «too early» check above still holds the lower bound)
-            assert "Schermo intero" in pg.inner_text("#qtip")
+            assert "Full screen" in pg.inner_text("#qtip")
             pg.mouse.move(5, 5); wait_for_js(pg, "document.querySelector('#qtip').hidden"); assert pg.evaluate("document.querySelector('#qtip').hidden")
         step("tooltip after ~1.7 s, not before, gone when the pointer leaves", tip)
         def tipbox():
@@ -76,7 +77,7 @@ try:
             assert pg.evaluate("document.querySelector('#qtip').hidden"), "a short touch must not show the tooltip"
             pg.evaluate(fire, ["pointerdown"])
             wait_for_js(pg, "!document.querySelector('#qtip').hidden", 5000)
-            assert "Schermo intero" in pg.inner_text("#qtip")
+            assert "Full screen" in pg.inner_text("#qtip")
             pg.evaluate(fire, ["pointerup"])
             wait_for_js(pg, "document.querySelector('#qtip').hidden", 8000)
         step("long press on a button shows its tooltip on touch", longpress)

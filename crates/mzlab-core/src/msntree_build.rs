@@ -272,12 +272,12 @@ pub fn albero_di<'a>(scans: impl IntoIterator<Item = ScanPath<'a>>, r: &Grouping
     let usable = |&(level, path): &ScanPath<'a>| {
         path.filter(|p| level > 1 && !p.is_empty() && p.len() + 1 == level as usize)
     };
-    let codici = Codici::new(r.tol, scans.iter().filter_map(usable));
+    let codes = Codici::new(r.tol, scans.iter().filter_map(usable));
     for (i, sc) in scans.iter().enumerate() {
         match usable(sc) {
             _ if sc.0 == 1 => out.ms1.push(i),
             Some(p) => groups
-                .entry(key_of(p, &codici, r.energies))
+                .entry(key_of(p, &codes, r.energies))
                 .or_default()
                 .push(i),
             None => out.scartate += 1,
@@ -298,7 +298,7 @@ pub fn albero_di<'a>(scans: impl IntoIterator<Item = ScanPath<'a>>, r: &Grouping
         let chiave: Vec<(f64, String, f64)> = k
             .iter()
             .enumerate()
-            .map(|(s, (m, a, ce))| (codici.mz(s, *m), a.clone(), f64::from_bits(*ce)))
+            .map(|(s, (m, a, ce))| (codes.mz(s, *m), a.clone(), f64::from_bits(*ce)))
             .collect();
         out.nodi.push(Node {
             id: node_id(&chiave),

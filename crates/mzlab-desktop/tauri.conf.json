@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'sha256-spQrn9ohjX7jp6WDlcwfD18/xRCAYD1bXvzVunqrK8U=' 'sha256-dWTkrofi1LNw3dq1hFGCxv3nN9wcTQvp22tpAaIfBkA=' 'sha256-5JeJ3/9J7jBHOIVl2SmSW0T+yTRwvphEy2J8KQNDS0Q=' 'sha256-CsV279Ev5RLUhUa8Q1yFNbZMK7ovSotHvKWptdF3384=' 'sha256-L4htDGTl5TVw6HUl5b+hTNuqUavio+vFgvw0He+m2N4=' 'sha256-/nlaInjKC+/2cE+bWE69k/QRQgwzPDduugp55iEU/Vg=' 'sha256-Y2oGefysEipuwd3/N+m8TUk/SZIPBPXPr33oGguXNTg=' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' mzlab: http://mzlab.localhost ipc: http://ipc.localhost blob:; object-src 'none'; base-uri 'none'; form-action 'self'",
+      "csp": "default-src 'self'; script-src 'self' 'sha256-spQrn9ohjX7jp6WDlcwfD18/xRCAYD1bXvzVunqrK8U=' 'sha256-dWTkrofi1LNw3dq1hFGCxv3nN9wcTQvp22tpAaIfBkA=' 'sha256-2qwyHvmTuIHuR3ApJM6bWwwQVbpCvJhzwGvidbp2i38=' 'sha256-NG594tfmcezjaZqC1ta211KVokflrEYkEebX6pgv2V4=' 'sha256-L4htDGTl5TVw6HUl5b+hTNuqUavio+vFgvw0He+m2N4=' 'sha256-/nlaInjKC+/2cE+bWE69k/QRQgwzPDduugp55iEU/Vg=' 'sha256-Y2oGefysEipuwd3/N+m8TUk/SZIPBPXPr33oGguXNTg=' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' mzlab: http://mzlab.localhost ipc: http://ipc.localhost blob:; object-src 'none'; base-uri 'none'; form-action 'self'",
       "dangerousDisableAssetCspModification": true
     }
   },
@@ -21,13 +21,15 @@
     "category": "Education",
     "shortDescription": "mzLab desktop",
     "fileAssociations": [
-      { "ext": ["mzML"], "name": "mzML", "description": "mzML mass spectrometry data", "mimeType": "application/x-mzml", "role": "Viewer" },
-      { "ext": ["mzXML"], "name": "mzXML", "description": "mzXML mass spectrometry data", "mimeType": "application/x-mzxml", "role": "Viewer" },
-      { "ext": ["raw"], "name": "raw", "description": "Thermo / Waters RAW mass spectrometry data", "mimeType": "application/x-thermo-raw", "role": "Viewer" },
-      { "ext": ["wiff"], "name": "wiff", "description": "SCIEX WIFF mass spectrometry data", "mimeType": "application/x-sciex-wiff", "role": "Viewer" },
-      { "ext": ["lcd"], "name": "lcd", "description": "Shimadzu LCD data", "mimeType": "application/x-shimadzu-lcd", "role": "Viewer" },
-      { "ext": ["qgd"], "name": "qgd", "description": "Shimadzu QGD data", "mimeType": "application/x-shimadzu-qgd", "role": "Viewer" },
-      { "ext": ["cdf"], "name": "cdf", "description": "ANDI netCDF mass spectrometry data", "mimeType": "application/x-netcdf", "role": "Viewer" }
+      { "ext": ["mzML"], "name": "mzML", "description": "mzML mass spectrometry data", "mimeType": "application/x-mzml", "role": "Viewer", "rank": "Default" },
+      { "ext": ["mzXML"], "name": "mzXML", "description": "mzXML mass spectrometry data", "mimeType": "application/x-mzxml", "role": "Viewer", "rank": "Default" },
+      { "ext": ["raw"], "name": "raw", "description": "Thermo / Waters RAW mass spectrometry data", "mimeType": "application/x-thermo-raw", "role": "Editor", "rank": "Default" },
+      { "ext": ["wiff"], "name": "wiff", "description": "SCIEX WIFF mass spectrometry data", "mimeType": "application/x-sciex-wiff", "role": "Editor", "rank": "Default" },
+      { "ext": ["lcd"], "name": "lcd", "description": "Shimadzu LCD data", "mimeType": "application/x-shimadzu-lcd", "role": "Editor", "rank": "Default" },
+      { "ext": ["qgd"], "name": "qgd", "description": "Shimadzu QGD data", "mimeType": "application/x-shimadzu-qgd", "role": "Editor", "rank": "Default" },
+      { "ext": ["cdf"], "name": "cdf", "description": "ANDI netCDF mass spectrometry data", "mimeType": "application/x-netcdf", "role": "Viewer", "rank": "Alternate" },
+      { "ext": ["ket"], "name": "ket", "description": "mzLab drawing (Ketcher JSON)", "mimeType": "application/x-ketcher-ket", "role": "Editor", "rank": "Default" },
+      { "ext": ["scan"], "name": "wiff.scan", "description": "SCIEX WIFF scan companion (opens its .wiff)", "mimeType": "application/x-sciex-wiff-scan", "role": "Viewer", "rank": "Alternate" }
     ]
   }
 }

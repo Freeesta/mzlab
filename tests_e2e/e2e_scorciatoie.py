@@ -1,5 +1,6 @@
 """Shortcuts of the registry azioni/1: one keydown runs the field `scorciatoia` of the actions. Letters only with the focus on a chart and never in a text field;
 Ctrl/⌘ and Alt+1-2 anywhere; the panel «Shortcuts» (key ?) lists the registry (axe clean); the keys of the registry in the palette."""
+# covers: mzlab/web/azioni.js, mzlab/web/azioni-tasti.js, mzlab/web/azioni-esc.js, mzlab/web/paletta.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"
@@ -136,7 +137,7 @@ try:
         step("Ctrl+O opens the file chooser", open_files)
         def palette_key():
             pg.keyboard.press("Control+k"); wait_for_js(pg, "PALETTE.isOpen")
-            pg.fill("#pal-in", "rapporto" if pg.evaluate("I18N.lang === 'it'") else "report")
+            pg.fill("#pal-in", "report")
             dbg = pg.evaluate("[PALETTE.search('report').map(c => c.id), [BARRA.commands.find(c => c.id === 'report').azione, !!AZIONI.voce('app.esporta'), document.querySelector('#pal-l li .pal-t').parentElement.innerHTML.replace(/<svg.*<\/svg>/s, '')]]")
             assert pg.locator("#pal-l .pal-k").count() >= 1, ("the palette shows the key of the report", dbg)
             pg.keyboard.press("Escape")

@@ -14,7 +14,7 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1000})
         pg.set_input_files("#pick", [mz("B_MS2-t15")])
         pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=30000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         open_kind(pg, "ms2"); pg.wait_for_timeout(1500)
         def listed():
             pg.wait_for_selector("select[data-o=tr]", timeout=15000)

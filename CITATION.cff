@@ -11,7 +11,7 @@ url: "https://freeesta.github.io/mzlab/"
 license: MIT
 version: "1.0.0"
 date-released: "2026-10-14"
-# doi: "10.5281/zenodo.XXXXXXX"  # DA COMPILARE dopo la prima release su Zenodo (vedi docs/zenodo.md)
+# doi: "10.5281/zenodo.XXXXXXX"  # TO ADD after the first Zenodo release (docs/zenodo.md); also set DOI in crates/mzlab-cli/src/citation.rs
 keywords:
   - mass spectrometry
   - LC-MS

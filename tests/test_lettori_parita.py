@@ -15,6 +15,7 @@ import zlib
 from pathlib import Path
 
 import pytest
+from cargo_util import example_argv, installed
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -36,8 +37,9 @@ def run(cmd, **kw):
 def tools(tmp_path_factory):
     need(shutil.which("node") and shutil.which("wasm-bindgen"), "node or wasm-bindgen-cli missing")
     need("wasm32-unknown-unknown" in run(["rustup", "target", "list", "--installed"]).stdout, "wasm32-unknown-unknown missing")
-    b = run(["cargo", "build", "--release", "--locked", "-p", "mzlab-cli"])
-    assert b.returncode == 0, b.stderr[-2000:]
+    if not installed("-p", "mzlab-cli"):
+        b = run(["cargo", "build", "--release", "--locked", "-p", "mzlab-cli"])
+        assert b.returncode == 0, b.stderr[-2000:]
     return {"cli": ROOT / "target/release/mzlab-cli", "tmp": tmp_path_factory.mktemp("parita")}
 
 
@@ -47,8 +49,9 @@ _packages = {}
 def package(tools, fam):
     """The module of the family, built as the site builds it (no wasm-opt: it does not change what the code computes) and packed for Node."""
     if fam not in _packages:
-        b = run(["cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", fam])
-        assert b.returncode == 0, b.stderr[-2000:]
+        if not installed("--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", fam):
+            b = run(["cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", fam])
+            assert b.returncode == 0, b.stderr[-2000:]
         out = tools["tmp"] / f"pkg_{fam}"
         w = run(["wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(out), str(ROOT / "target/wasm32-unknown-unknown/release/mzlab_lettori_wasm.wasm")])
         assert w.returncode == 0, w.stderr[-2000:]
@@ -155,7 +158,7 @@ SYNTHETIC_RUST = {"thermo": "thermo/synt.raw", "thermo_danneggiato": "thermo_dan
 def synthetic(base: Path):
     """Runs the example that writes the Thermo, Bruker and ANDI datasets (once per test run)."""
     if not (base / "synthetic").exists():
-        r = run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-lettori", "--features", "tutte", "--example", "synthetic", "--", str(base / "synthetic")])
+        r = run(example_argv("mzlab-lettori", "synthetic", str(base / "synthetic"), features="tutte"))
         assert r.returncode == 0, r.stderr[-2000:]
 
 
@@ -223,7 +226,7 @@ def test_waters_damaged_part_equals_the_cli(tools, part):
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
-def test_bruker_con_un_frame_senza_calibrazione_uguale_al_cli(tools):
+def test_bruker_with_one_frame_without_calibration_equals_cli(tools):
     """A `.d` of three frames whose middle one names an absent m/z calibration: both faces write the two whole frames, byte for byte, and the conv/1 of both
     names `warn.bruker.noCalibration` as the cause of the partial read."""
     ds = create("bruker_danneggiato", tools["tmp"] / "in_bruker_danneggiato")
@@ -234,7 +237,7 @@ def test_bruker_con_un_frame_senza_calibrazione_uguale_al_cli(tools):
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
-def test_bruker_con_tdf_bin_tagliato_uguale_al_cli(tools):
+def test_bruker_with_truncated_tdf_bin_equals_cli(tools):
     """A `.d` whose `analysis.tdf_bin` ends inside the fourth of five frames: both faces write the three whole frames, byte for byte, and the conv/1 of both
     names the cut `_bin` as the cause of the partial read."""
     ds = create("bruker_tagliato", tools["tmp"] / "in_bruker_tagliato")
@@ -318,6 +321,19 @@ def test_one_damaged_agilent_index_record_is_left_out_on_both_faces(tools):
         assert cli.count(b"<spectrum ") == read
         wasm = da_wasm(tools, "agilent", d)
         assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+
+
+def test_a_gc_run_with_data_ms_on_top_and_only_contents_in_acqdata_reads_on_both_faces(tools):
+    """The shape of a GC/MS .D copied without its converted index (data.ms at the top, AcqData with only Contents.xml, side files beside it): the CLI and the module give the same mzML,
+    the same scans as the older run with the data.ms alone, and the run is read as GC (EI) from Contents.xml."""
+    import agilent_sintetico
+    d = agilent_sintetico.write_old(tools["tmp"] / "in_agilent_gc", "gcsynth.D", 60, gc=True)
+    cli = da_cli(tools, "agilent_gc", d)      # its own output folder: the other Agilent tests leave theirs in the shared tmp
+    assert cli.count(b"<spectrum ") == 60
+    wasm = da_wasm(tools, "agilent", d)
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+    bare = da_cli(tools, "agilent_gcbare", agilent_sintetico.write_old(tools["tmp"] / "in_agilent_gc_bare", "gcsynth.D", 60))
+    assert bare.count(b"<spectrum ") == 60
 
 
 def test_wiff_with_dad_and_method_equals_cli_with_dad(tools):

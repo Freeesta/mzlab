@@ -23,40 +23,50 @@ try:
         body = lambda: pg.inner_text("#hri-body")
         def texts():
             pg.evaluate("BARRA.setTab('idn')"); pg.wait_for_selector("#idn-go", timeout=15000); t = body()
-            for gone in ("Confronto con", "Identifica tutte", "mai una certezza", "Lo spettro deve essere"): assert gone not in t, t
-            assert pg.locator("#hri-a").count() == 0 and "Carica file" in t and "Carica cartella" in t
+            for gone in ("Comparing with", "Identify all", "never a certainty", "The spectrum must be"): assert gone not in t, t
+            assert pg.locator("#hri-a").count() == 0 and "Load file" in t and "Load folder" in t
         step("no introductory texts, no «identify all» button", texts)
         def autoselect():
             for n, m in (("Pos", "Positive"), ("Neg", "Negative")):
                 pg.evaluate("(async t => { await LIB.call('add', {file: new File([t[0]], t[1])}) })(%s)" % __import__("json").dumps([msp("Entry " + n, m), n.lower() + ".msp"]))
             pg.evaluate("LIB.queryOf = () => ({peaks: %s, prec: 300.1, pol: 1, f: {k: 0, label: 'f'}, rt: 5.25})" % __import__("json").dumps(PEAKS))
             pg.evaluate("IDP.render(document.querySelector('#hri-body'), {level: 2}, () => false)"); pg.wait_for_selector("#hri-body input[data-id]", timeout=15000)
-            assert "Spettro: RT 5.25 min · MS2 · precursore m/z 300.1000 · polarità +" in " ".join(body().split()), body()
+            assert "Spectrum: RT 5.25 min · MS2 · precursor m/z 300.1000 · polarity +" in " ".join(body().split()), body()
             ck = pg.evaluate("[...document.querySelectorAll('#hri-body input[data-id]')].map(c => [c.getAttribute('aria-label'), c.checked, c.closest('tr').title])")
             d = {n: (c, t) for n, c, t in ck}; assert d["pos"][0] and not d["neg"][0], ck
-            assert d["neg"][1] == "Altra polarità" and d["pos"][1] == "Compatibile con lo spettro", ck
+            assert d["neg"][1] == "neg: 1 spectra · off, other polarity than the spectrum" and d["pos"][1] == "pos: 1 spectra · searched for this spectrum", ck
+            st = pg.evaluate("[...document.querySelectorAll('#hri-body tbody tr')].map(t => t.lastElementChild.innerText)"); assert st == ["On", "Off"] or st == ["Off", "On"], st
         step("two libraries (positive, negative): the compatible one is ticked by itself, with the reason as tooltip", autoselect)
+        def nospectrum():
+            pg.evaluate("IDP.render(document.querySelector('#hri-body'), null, () => false)"); pg.wait_for_selector("#hri-body input[data-id]", timeout=15000)
+            ck = pg.evaluate("[...document.querySelectorAll('#hri-body input[data-id]')].map(c => [c.checked, c.disabled, c.title])")
+            assert ck and all(not c and d and "off until an MS² spectrum is chosen" in t for c, d, t in ck), ck
+            pg.evaluate("IDP.render(document.querySelector('#hri-body'), {level: 2}, () => false)"); pg.wait_for_selector("#hri-body input[data-id]:not([disabled])", timeout=15000)
+        step("no MS2 spectrum: the rows are off and disabled, the tooltip says why", nospectrum)
         def search():
             pg.click("#idn-go"); pg.wait_for_selector("#idn-res tbody tr", timeout=20000)
             names = pg.locator("#idn-res tbody tr th").all_inner_texts(); assert names == ["Entry Pos"], names
             assert float(pg.inner_text("#idn-res tbody tr td.num")) > 0.99
             pg.evaluate("document.querySelector('#hri-body input[data-id]:checked').click()"); pg.wait_for_function("!document.querySelector('#hri-body input[data-id]:checked')")
             assert pg.locator("#idn-res tbody tr").count() == 1, "the table stays while the ticks change"
-            pg.click("#idn-go"); pg.wait_for_function("document.querySelector('#idn-msg').innerText.includes('Seleziona una libreria')", timeout=10000)
+            pg.click("#idn-go"); pg.wait_for_function("document.querySelector('#idn-msg').innerText.includes('Select a library')", timeout=10000)
         step("search: the table shows the ticked libraries only; an unticked box leaves it out of the search", search)
         def folder():
-            import tempfile; d = tempfile.mkdtemp(); open(d + "/c.msp", "w").write(msp("Entry C", "Positive")); open(d + "/nota.txt", "w").write("x")
+            import tempfile; d = tempfile.mkdtemp(); open(d + "/c.msp", "w").write(msp("Entry C", "Positive")); open(d + "/nota.txt", "w").write("x"); open(d + "/vuota.msp", "w").write("")
             pg.set_input_files("#idn-din", d)
-            pg.wait_for_function("document.querySelector('#idn-msg').innerText.includes('Caricate: 1 · ignorate: 1')", timeout=20000)
+            pg.wait_for_function("document.querySelector('#idn-msg').innerText.includes('Loaded: 1 · ignored: 2')", timeout=20000)
+            pg.click("#idn-ign"); assert pg.get_attribute("#idn-ign", "aria-expanded") == "true"
+            t = pg.text_content("#idn-ignl"); assert "format not supported" in t and "nota.txt" in t and "vuota.msp" in t, t
+            pg.click("#idn-ign"); assert pg.locator("#idn-ignl").count() == 0
         step("load folder: what is recognised is loaded, the rest is counted", folder)
         def catalog():
             pg.evaluate("IDP.render(document.querySelector('#hri-body'), {level: 2}, () => false)"); pg.click("#cat-b"); pg.wait_for_selector("#cat-box .cat-it", timeout=10000)
             assert pg.locator("#cat-box .cat-it").count() >= 20 and "GNPS (All-no propagated)" in pg.inner_text("#cat-box") and "Zenodo" in pg.inner_text("#cat-box")
             assert pg.evaluate("document.querySelector('#cat-b').getAttribute('aria-expanded')") == "true"
             sites = pg.evaluate("[...document.querySelectorAll('#cat-box a[target=_blank]')].map(a => [a.rel, a.href.startsWith('https://'), a.getAttribute('aria-label')])")
-            assert sites and all(x[0] == "noopener noreferrer" and x[1] and x[2].startswith("Apri il sito") for x in sites), sites[:2]
+            assert sites and all(x[0] == "noopener noreferrer" and x[1] and x[2].startswith("Open the site") for x in sites), sites[:2]
             dls = pg.evaluate("[...document.querySelectorAll('#cat-box a[download]')].map(a => [a.rel, a.href.startsWith('https://'), a.getAttribute('aria-label')])")
-            assert len(dls) == len(sites) and all(x[0] == "noopener noreferrer" and x[2].startswith("Scarica") for x in dls)
+            assert len(dls) == len(sites) and all(x[0] == "noopener noreferrer" and x[2].startswith("Download") for x in dls)
             assert pg.evaluate("import('/static/ident-catalogo.js').then(m => [m.isSupported('mgf'), m.isSupported('parquet')])") == [True, False]
             pg.keyboard.press("Escape"); assert pg.evaluate("document.querySelector('#cat-box').hidden") is True
         step("«Get libraries»: entries with download and site links (noopener noreferrer), Escape closes", catalog)

@@ -1,0 +1,6 @@
+{
+  "calc.add.hitDa": "Line above the low-resolution adducts table when the observed m/z matches; {adduct} with superscripts (HTML), {ppm} signed error in Da with two decimals.",
+  "calc.add.noneDa": "Line above the low-resolution table when no adduct matches; {tol} = tolerance in Da.",
+  "cq.all": "Button that opens all rows of a group of candidates; {n} = total number of rows.",
+  "cq.none": "Line below the calculator when nothing matches the number; {tol} = tolerance with unit (e.g. \"5 ppm\" or \"0.5 Da\")."
+}

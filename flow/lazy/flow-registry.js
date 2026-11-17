@@ -8,7 +8,7 @@
   /** @type {any} */
   const F = g.FLOW = g.FLOW || {};
 
-  // the 19 data types of the contract; family decides the shape of the port mark, the letter is the second cue after colour (Okabe-Ito, FLOW_GRAFICA.md 3.1)
+  // the 19 data types of the contract; family decides the shape of the port mark, the letter is the second cue after colour (Okabe-Ito, docs/agenti/flow-ux.md)
   /** @type {Record<string, {family: string, letter: string}>} */
   F.TYPES = {
     raw: { family: "file", letter: "R" }, mzml: { family: "file", letter: "M" },

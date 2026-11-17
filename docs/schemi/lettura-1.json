@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "lettura/1",
  "title": "lettura/1: what a subagent of the data assistant read in the data",
- "description": "Format «lettura/1» (crates/mzlab-llm/src/reading.rs, docs/studi/assistente-dati/01-architettura.md §8): at most 8 findings, each with the keys of the program's data it rests on (`evidence`, all present in the input), a confidence and an action, at most 5 closed questions and the numbers used. `reading::validate` also checks that every number of every sentence is in the input and that `set_param` names a real parameter inside its limits. A finding is a candidate, never an identification.",
+ "description": "Format «lettura/1» (crates/mzlab-llm/src/reading.rs, docs/agenti/llm-subagenti.md): at most 8 findings, each with the keys of the program's data it rests on (`evidence`, all present in the input), a confidence and an action, at most 5 closed questions and the numbers used. `reading::validate` also checks that every number of every sentence is in the input and that `set_param` names a real parameter inside its limits. A finding is a candidate, never an identification.",
  "type": "object",
  "additionalProperties": false,
  "required": ["schema", "kind", "findings"],

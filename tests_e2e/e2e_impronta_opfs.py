@@ -1,6 +1,7 @@
 # e2e_impronta_opfs: a sample the readers module converts at the loading (a Q-TOF profile .D, tools/agilent_sintetico.py write_lcms) keeps ONE mzML in OPFS: the copy of the
 # engine (files/), not also the module's output in conv/ (conversione.js CONV.settle); the page still reads that mzML and «Download .mzML» still saves it. Synthetic data, no laboratory
 # files. Needs the site, the engine .wasm and the readers modules: python3 tools/prepara_sito.py, tools/build_lettori_wasm.sh site/static, then python3 tests_e2e/e2e_impronta_opfs.py
+# covers: mzlab/web/conversione.js
 import os, sys, tempfile, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pathlib import Path
 from lib import *

@@ -1,6 +1,7 @@
 """Tabui (internal name TP Mine, also mzFinder) step (a): the tab is in the header at first load, with no flag and no click (tpmine-loader.js), survives a reload.
 Five quick clicks on the logo do not change it.
 Run from the repo root: python3 tests_e2e/e2e_tpmine1.py   (needs Playwright and a built Pyodide dir or internet)"""
+# covers: mzlab/web/tpmine-loader.js, mzlab/web/logo-piccone.js, TP_Mine/
 import os, shutil, subprocess, sys, time, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright

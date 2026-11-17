@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from cargo_util import installed
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -25,8 +26,9 @@ FAMILIES = ["aperti", "agilent", "waters", "shimadzu", "sciex", "thermo", "bruke
 @pytest.fixture(scope="module")
 def cli(tmp_path_factory):
     need(shutil.which("cargo"), "cargo missing")
-    b = run(["cargo", "build", "--release", "--locked", "-p", "mzlab-cli"])
-    assert b.returncode == 0, b.stderr[-2000:]
+    if not installed("-p", "mzlab-cli"):
+        b = run(["cargo", "build", "--release", "--locked", "-p", "mzlab-cli"])
+        assert b.returncode == 0, b.stderr[-2000:]
     return {"cli": ROOT / "target/release/mzlab-cli", "tmp": tmp_path_factory.mktemp("secondo")}
 
 

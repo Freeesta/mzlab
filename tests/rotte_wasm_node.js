@@ -7,6 +7,8 @@ const wasm = require(path.join(process.argv[2], "mzlab_wasm.js"));
 const { Engine } = wasm;
 // the statistics, campioni and Flow command routes live in the lazy module `rotte` (crates/mzlab-rotte-wasm), built into the same folder; loaded on first use
 let rotteMod; const rotte = () => rotteMod || (rotteMod = require(path.join(process.argv[2], "mzlab_rotte_wasm.js")));
+// api/tic_background lives in the lazy module `ticfondo` (crates/mzlab-ticfondo-wasm), which opens the index itself
+let ticMod; const tic = () => ticMod || (ticMod = require(path.join(process.argv[2], "mzlab_ticfondo_wasm.js")));
 const idx = fs.readFileSync(process.argv[3]), mzml = fs.readFileSync(process.argv[4]);
 const plan = JSON.parse(fs.readFileSync(process.argv[5], "utf8"));
 const reader = buf => (off, len) => new Uint8Array(buf.subarray(off, off + len));
@@ -27,10 +29,13 @@ const run = s => {
     case "mzmlroute": return { s: e.mzml_route(s.slot, s.path, s.query || "", rdMzml) };
     case "scanbin": return { b: Buffer.from(e.scanbin(s.slot, s.query || "", rdMzml)).toString("hex") };
     case "specexact": return { s: e.spectrum_exact(s.slot, s.query || "", rdMzml) };
+    case "ticbg": return { s: tic().tic_background(idx.length, rdIdx, 0, idx.length, s.blank >= 0 ? rdIdx : null, 0, s.query || "") };   // every slot holds the same index
     case "map": return { s: e.map_route(s.path, s.items, s.query || "") };
     case "origin": return { s: e.origin(s.items, s.k, s.query || "") };
     case "diff": return { s: e.diff_traces(s.path, s.query || "") };
     case "flow_command": return { s: rotte().flow_command(s.body) };
+    case "lr_ricerca": return { s: wasm.search_number(s.body) };
+    case "lr_elements": return { s: wasm.elements() };
     case "lr_formula": return { s: wasm.formula_mz(s.f, s.adduct) };
     case "lr_stat": return { s: rotte().stat_post(s.path, s.body) };
     case "lr_campioni": return { s: rotte().samples(s.cop, s.body) };

@@ -1,4 +1,4 @@
-//! The table of fragmentation rules `fragrules/1` (`docs/studi/regole-frammentazione-schema.md`, schema `docs/schemi/fragrules-1.json`): the strict reader
+//! The table of fragmentation rules `fragrules/1` (`docs/agenti/msn-interpreta.md`, schema `docs/schemi/fragrules-1.json`): the strict reader
 //! and the embedded table `data/fragrules-1.json`. The evaluation on the graph is `regole_valuta`; the structure conditions (`requires`) are read here and
 //! evaluated only when a structure is given (a later step). A rule is evidence with a source, never a verdict.
 
@@ -113,9 +113,9 @@ fn error(key: &'static str, detail: impl ToString) -> Error {
     Error::new(key).with("detail", detail)
 }
 
-fn only(v: &Value, ammesse: &[&str], at: &str) -> Result<()> {
+fn only(v: &Value, allowed: &[&str], at: &str) -> Result<()> {
     if let Value::Obj(o) = v {
-        if let Some((k, _)) = o.iter().find(|(k, _)| !ammesse.contains(&k.as_str())) {
+        if let Some((k, _)) = o.iter().find(|(k, _)| !allowed.contains(&k.as_str())) {
             return Err(error("err.fragrules.badKey", format!("{at}.{k}")));
         }
         return Ok(());

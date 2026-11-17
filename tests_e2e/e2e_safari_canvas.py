@@ -2,6 +2,7 @@
 (compat.js canvasScale, the global canvasScale of the classic scripts) and a notice gives the final size. The cap is stubbed on HTMLCanvasElement.toBlob, as
 WebKit behaves: a wide drawing and a large MSn graph SVG export a PNG of at most 16 777 216 pixels; the size rule of the 3D map export on a 2x screen
 (mappa3d.js pngScale) is checked without WebGL. No browser errors."""
+# covers: mzlab/web/compat
 import sys, os, struct; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

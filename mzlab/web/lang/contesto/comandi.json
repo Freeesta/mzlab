@@ -1,0 +1,3 @@
+{
+  "cmd.panel.files": "Label of the side-panel toggle in a window narrower than 900 px; {n} = number of files in the sample table."
+}

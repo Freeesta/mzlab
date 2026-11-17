@@ -12,7 +12,7 @@
 use mzlab_core::elements::{mass_of, parse_formula};
 use mzlab_core::json::{round, Out, Value};
 
-use super::{TpBlock, ST_UNEXPLAINED};
+use super::{FitCandidate, TpBlock, ST_UNEXPLAINED};
 use crate::evid::producers::neutral_of;
 
 /// Mass window (ppm) of the formulas of a row, most formulas searched per row, most kept per row.
@@ -24,18 +24,6 @@ const EXTRA_O: i64 = 6;
 const EXTRA_H: i64 = 8;
 /// Tolerance (Da) between a peak of the MS2 and a sub-formula.
 const FRAG_TOL: f64 = 0.01;
-
-/// A formula candidate of a row.
-#[derive(Debug, Clone, PartialEq)]
-pub struct FitCandidate {
-    pub neutral_formula: String,
-    pub ion_formula: String,
-    pub ppm: f64,
-    pub element_fit: f64,
-    pub ms2_explained: Option<f64>,
-    pub isotope_fit: Option<f64>,
-    pub total: f64,
-}
 
 /// Share of the elements two formulas have in common (see the module header); 0 when one of them is empty.
 pub fn element_fit(parent: &[(String, u64)], cand: &[(String, u64)]) -> f64 {

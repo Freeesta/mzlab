@@ -2,17 +2,22 @@
 // The operations of rust-worker.js on `metodo/1` (the method of an item, docs/agenti/metodo.md): the document the mzML carries, the one of the .wiff it was made from, or the .dam preselected for it.
 // A .wiff dropped without its .scan is only read for its method: its SHA-1 is looked for among the source files the open mzML files name (ProteoWizard writes it), and the document of the matching
 // sample is kept for those files until the page is closed.
+import { loadModulo } from "./carica-modulo.js";
+
 export function createMetodoOps({ engine, ARCH, readerFor, open, sync }) {
   const wiffDocs = new Map();               // mzML name -> metodo/1 JSON of the sample it was made from
   const base = n => String(n).split("#")[0];
   async function register(m) {
+    // the document of a sample comes from the `sciex` readers module (the extended metadata, as the CLI writes it); the engine .wasm has no room for it
+    let sciex = null;                       // loaded when a sample matches, not before
     const e = engine(), f = m.blob, rd = readerFor(f), sha = e.sha1_file(f.size, rd), found = [];
     for (const x of (await ARCH.list("files")).filter(x => /\.mzml$/i.test(x.name) && !/\.part$/.test(x.name))) {
       const g = await ARCH.get("files", x.name);
       if (!g) continue;
       const s = JSON.parse(e.mzml_sources(g.size, readerFor(g)));
       if (!s.sources.some(q => q.sha1 === sha) || !s.sample) continue;
-      wiffDocs.set(x.name, e.wiff_metodo(f.name, f.size, rd, s.sample, sha));
+      sciex ??= await loadModulo("sciex");
+      wiffDocs.set(x.name, sciex.wiff_metodo(f.name, f.size, (/** @type {number} */ _i, /** @type {number} */ o, /** @type {number} */ n) => rd(o, n), s.sample, sha));
       found.push({ name: x.name, sample: s.sample });
     }
     return { info: JSON.stringify({ sha1: sha, matched: found }) };

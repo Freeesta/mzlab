@@ -22,7 +22,7 @@ predefinito predefinita precalcolata ritagliata puntata centrata condiviso dinam
 # head nouns that Italian puts before their complement: `regole-frammentazione` -> `fragmentation-rules`
 HEADS = set("""calibrazione correzione diagnosi regole regola guardie guardia cursore tabella tabelle elenco barra finestra
 nomi nome numero numeri struttura strutture indice indici""".split())
-# never the complement of a head noun: quantifiers, and words that name the kind of file (`msn-regole-prove` = rule tests)
+# never the complement of a head noun: quantifiers, and words that name the kind of file (`regole-prove` = rules tests)
 NOT_COMPLEMENT = set("molti molte tutti tutte due uno nessun prove prova vista viste tour".split())
 ADJ_EN = {"variabili": "variable"}          # adjectives whose dictionary form is the noun
 OF = {"di", "del", "della", "dei", "delle", "degli", "dello"}

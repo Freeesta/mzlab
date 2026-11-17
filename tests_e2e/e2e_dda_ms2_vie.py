@@ -4,6 +4,7 @@ an empty MS2 panel says why it is empty (precursors outside the m/z zoom, averag
 the «N MS²» button of the Full Scan (one scan and an average: the count of the engine, the list with the keyboard) and the flags of an averaged Full Scan,
 ‹ › on the MS2 panel (the MS2 of the same precursor, Shift = in time) and ← → from an empty panel starting at the chromatogram cursor,
 a click on a peak (its MS2, or the closest in time) and the «▲ MS²» switch of the chromatogram."""
+# covers: mzlab/web/dda.js, crates/mzlab-core/src/ddafinestra.rs, mzlab/web/dda-marcatori.js, mzlab/web/dda-elenco.js, mzlab/web/dda-naviga.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

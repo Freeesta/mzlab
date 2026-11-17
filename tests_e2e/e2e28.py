@@ -1,4 +1,5 @@
 """Adducts tab: one row per adduct (shift, m/z of the typed mass), ESI+/ESI- switch, rare ones behind More, LR rounded to the unit, HR pairs closed, no references; lists aligned with the Python ones, one rounding rule. No data files needed."""
+# covers: mzlab/web/tavola-periodica.js, mzlab/web/tables.js, mzlab/web/elements.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from lib import *
@@ -19,7 +20,7 @@ try:
             pg.evaluate("LISTE.open({})"); pg.wait_for_timeout(1500)
             # two built-in lists (known contaminants, pesticides): one switch each, titles without the reference
             n = pg.evaluate("document.querySelectorAll('#lst-src-checks input[type=checkbox]').length"); assert n == 2, n
-            t = pg.inner_text("#lst-src-checks"); assert "Keller" not in t and "Anal. Chim" not in t and "contaminanti" in t.lower() and "pesticidi" in t.lower(), t
+            t = pg.inner_text("#lst-src-checks"); assert "Keller" not in t and "Anal. Chim" not in t and "contaminants" in t.lower() and "pesticides" in t.lower(), t
             assert pg.locator("#lst-mode-seg").count() == 0 and pg.is_visible("#lst-view-seg"), "no files: HR version, no mode switch"
             assert pg.locator("#lst-tbody tr").first.locator("td").count() == 9 and "." in pg.inner_text("#lst-tbody tr >> nth=0")
             # a simulated user list adds its own switch
@@ -51,7 +52,7 @@ try:
         def ptable():
             pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())")
             pg.click("#np-pt"); pg.wait_for_timeout(500)
-            assert pg.locator("#reftabs").count() == 0 and pg.inner_text("#reftitle").strip() == "Tavola periodica"
+            assert pg.locator("#reftabs").count() == 0 and pg.inner_text("#reftitle").strip() == "Periodic table"
             js = """th=>{document.documentElement.setAttribute('data-theme',th);
               const cv=document.createElement('canvas').getContext('2d',{willReadFrequently:true}), px=c=>{cv.clearRect(0,0,1,1);cv.fillStyle='#000';cv.fillStyle=c;cv.fillRect(0,0,1,1);return [...cv.getImageData(0,0,1,1).data]};
               const lum=([r,g,b])=>{const f=v=>{v/=255;return v<=.03928?v/12.92:((v+.055)/1.055)**2.4};return .2126*f(r)+.7152*f(g)+.0722*f(b)};
@@ -59,14 +60,14 @@ try:
               document.querySelectorAll('.pt-c').forEach(c=>{const bg=px(getComputedStyle(c).backgroundColor);
                 c.querySelectorAll('b,span,small').forEach(e=>{if(!e.textContent.trim())return;const fg=px(getComputedStyle(e).color),a=lum(fg),b=lum(bg),r=(Math.max(a,b)+.05)/(Math.min(a,b)+.05);if(r<min){min=r;worst.push(c.dataset.s)}})});
               const org=document.querySelector('.pt-c.org'), pl=document.querySelector('.pt-c:not(.org)');
-              return {min,worst:worst.slice(-1)[0],bw:getComputedStyle(org).borderTopWidth,bw2:getComputedStyle(pl).borderTopWidth,n:document.querySelectorAll('.pt-c').length}}"""
+              return {min,worst:worst.slice(-1)[0],bw:getComputedStyle(org).boxShadow,bw2:getComputedStyle(pl).boxShadow,n:document.querySelectorAll('.pt-c').length}}"""
             for th in ("light", "dark"):
                 g = pg.evaluate(js, th)
                 assert g["n"] >= 100 and g["min"] >= 4.5, (th, g)                 # symbol, atomic number and mass readable on every cell
-                assert float(g["bw"][:-2]) > float(g["bw2"][:-2]), g              # highlighted elements: thicker border, not only colour
+                assert g["bw"] != "none" and g["bw2"] == "none", g              # highlighted elements: an inset frame, not only colour
             pg.evaluate("document.documentElement.removeAttribute('data-theme')")
             pg.click("#refx")
-        step("periodic table: no tab bar, contrast >= 4.5 on every cell in light and dark, thicker border for key elements", ptable)
+        step("periodic table: no tab bar, contrast >= 4.5 on every cell in light and dark, framed key elements", ptable)
         def aligned():
             qa = pg.evaluate("fetch('api/adduct_table').then(r=>r.json()).then(t=>t.rows.map(a=>[a.n,a.shift,a.k,a.z]))")
             for n, shift, k, z in qa:

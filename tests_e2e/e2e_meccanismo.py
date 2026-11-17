@@ -1,7 +1,8 @@
-"""Disegno, mechanism notation (disegno-meccanismo.js): on the radical cation of acetone a half-head arrow dragged from the O radical to a C–C bond is
+"""Drawing, mechanism notation (disegno-meccanismo.js): on the radical cation of acetone a half-head arrow dragged from the O radical to a C–C bond is
 well formed and drawn over the canvas; a full-head arrow from a methyl (no lone pair) is named as malformed and dashed; the keyboard path (start and
 end from the selection) adds a row; lone pairs drawn beyond what the atom holds are named; «•+» puts charge and radical on the selected atom; the
 arrows survive a .ket round trip and go out in the SVG export; the row button removes an arrow. The check says whether an arrow is well formed only."""
+# covers: mzlab/web/disegno-meccanismo.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -39,33 +40,33 @@ try:
             pg.check("input[name=mech-kind][value=single]"); pg.click("#mech-arrow")
             assert pg.get_attribute("#mech-arrow", "aria-pressed") == "true"
             drag(px([2]), px([0, 1]))
-            wait_for_js(pg, f"/1\\. un elettrone \\(mezza punta\\): da il radicale di O3 a il legame C1–C2 — ben formata/.test({ROWS})", timeout=15000)
+            wait_for_js(pg, f"/1\\. one electron \\(half head\\): from the radical of O3 to the bond C1–C2 — well formed/.test({ROWS})", timeout=15000)
             wait_for_js(pg, f"{OVER} && {OVER}.querySelectorAll('path[data-mech=single]').length === 1")
             assert pg.evaluate(f"{OVER}.querySelector('path[data-mech]').getAttribute('stroke-dasharray')") is None
-            assert "ben formata" in pg.inner_text("#mech-note") or "Ogni freccia" in pg.inner_text("#mech-note"), pg.inner_text("#mech-note")
+            assert "well formed" in pg.inner_text("#mech-note"), pg.inner_text("#mech-note")
         step("a half-head arrow from the O radical to the C1–C2 bond is well formed and drawn over the canvas", half_head)
         def malformed():
             pg.check("input[name=mech-kind][value=pair]")
             drag(px([0]), px([1]))                                         # from the methyl C1 (no lone pair) to C2
-            wait_for_js(pg, f"/2\\. coppia.*non ha doppietti liberi/.test({ROWS})", timeout=15000)
+            wait_for_js(pg, f"/2\\. pair.*the start atom has no lone pair/.test({ROWS})", timeout=15000)
             wait_for_js(pg, f"{OVER}.querySelectorAll('path[data-mech=pair][stroke-dasharray]').length === 1")
-            assert "1 freccia da rivedere" in pg.inner_text("#mech-note").lower() or "Una freccia da rivedere" in pg.inner_text("#mech-note"), pg.inner_text("#mech-note")
+            assert "One arrow to look at again" in pg.inner_text("#mech-note"), pg.inner_text("#mech-note")
             pg.keyboard.press("Escape"); assert pg.get_attribute("#mech-arrow", "aria-pressed") == "false"
         step("a full-head arrow from a methyl is named (no lone pair) and dashed", malformed)
         def keyboard():
             a = ids()
             pg.evaluate(f"id => {KJ}.editor.selection({{atoms: [id]}})", a[2]); pg.click("#mech-key")
-            assert "Fine dalla selezione" in pg.inner_text("#mech-key"), pg.inner_text("#mech-key")
+            assert "End from selection" in pg.inner_text("#mech-key"), pg.inner_text("#mech-key")
             bond = pg.evaluate(f"[...{KJ}.editor.struct().bonds.entries()].find(([k,b])=>b.type===2)[0]")
             pg.evaluate(f"b => {KJ}.editor.selection({{bonds: [b]}})", bond); pg.focus("#mech-key"); pg.keyboard.press("Enter")
-            wait_for_js(pg, f"/3\\. coppia \\(punta piena\\): da un doppietto di O3 a il legame C2–O3 — ben formata/.test({ROWS})", timeout=15000)
+            wait_for_js(pg, f"/3\\. pair \\(full head\\): from a lone pair of O3 to the bond C2–O3 — well formed/.test({ROWS})", timeout=15000)
         step("from the keyboard: start = the selected O, end = the selected C=O bond, a well-formed row", keyboard)
         def lone_pairs():
             a = ids(); pg.evaluate(f"id => {KJ}.editor.selection({{atoms: [id]}})", a[2])
             pg.click("#mech-lone"); wait_for_js(pg, f"{OVER}.querySelectorAll('circle').length === 2")
             pg.evaluate(f"id => {KJ}.editor.selection({{atoms: [id]}})", a[2]); pg.click("#mech-lone")
             wait_for_js(pg, f"{OVER}.querySelectorAll('circle').length === 4")
-            wait_for_js(pg, "/O3: 2 doppietti disegnati, ma l'atomo ne può avere 1/.test(document.querySelector('#mech-note').textContent)", timeout=15000)
+            wait_for_js(pg, "/O3: 2 lone pairs drawn, but the atom can hold 1/.test(document.querySelector('#mech-note').textContent)", timeout=15000)
         step("two lone pairs on the O of M+• are more than the one it holds: the status says so", lone_pairs)
         def ion():
             pg.evaluate(f"{KJ}.setMolecule('CCN')"); wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 3")
@@ -79,7 +80,7 @@ try:
             ket = pg.evaluate(f"{KJ}.getKet()"); assert "MZLAB_MECH" in ket and "single R" in ket, ket[:300]
             pg.evaluate(f"{KJ}.setMolecule('C')"); wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 1")
             pg.evaluate(f"k => {KJ}.setMolecule(k)", ket); wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 4")
-            wait_for_js(pg, f"/1\\. un elettrone.*radicale di O3/.test({ROWS})", timeout=15000)
+            wait_for_js(pg, f"/1\\. one electron.*radical of O3/.test({ROWS})", timeout=15000)
             wait_for_js(pg, "(t => t.length > 0 && t.every(x => x.style.visibility === 'hidden'))([...document.querySelector('#kframe').contentDocument.querySelectorAll('svg text')].filter(t => /^single /.test(t.textContent.trim())))", timeout=10000)
         step("the arrow survives a .ket round trip and Ketcher's S-group text stays hidden", round_trip)
         def export():
@@ -89,7 +90,7 @@ try:
             png = pg.evaluate("async () => (await TPDraw.image('png')).size"); assert png > 1000, png
         step("the SVG export draws the arrow (no S-group text) and the PNG export works", export)
         def remove():
-            pg.click("#mech-list li button[aria-label='Togli la freccia 1']")
+            pg.click("#mech-list li button[aria-label='Remove arrow 1']")
             wait_for_js(pg, f"document.querySelectorAll('#mech-list li').length === 0 && {OVER}.querySelectorAll('path').length === 0", timeout=15000)
             assert "MZLAB_MECH" not in pg.evaluate(f"{KJ}.getKet()")
         step("the row button removes the arrow", remove)

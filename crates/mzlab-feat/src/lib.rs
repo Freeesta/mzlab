@@ -24,10 +24,12 @@ mod channels;
 pub mod chem;
 pub mod classes;
 pub mod deconvolve;
+pub mod detect_route;
 pub mod dia;
 pub mod drift;
 pub mod evid;
 pub mod export;
+#[cfg(any(feature = "legacy", feature = "interp"))]
 pub mod export_inclusion;
 #[cfg(feature = "interp")]
 pub mod export_inclusion_tp;
@@ -38,6 +40,8 @@ pub mod famalign;
 pub mod family;
 pub mod famrecord;
 pub mod filters;
+#[cfg(any(feature = "legacy", feature = "interp"))]
+pub mod finder_base;
 pub mod filters_blank;
 pub mod filters_nts;
 pub mod flow_drift;
@@ -52,6 +56,8 @@ pub mod flow_level;
 pub mod flow_ms2;
 #[cfg(feature = "attributio")]
 pub mod flow_regulatory;
+#[cfg(all(feature = "attributio", any(feature = "record", feature = "crippen")))]
+pub mod flow_rtpredict;
 #[cfg(feature = "attributio")]
 pub mod normative;
 pub mod flow_screen_suspects;
@@ -59,12 +65,15 @@ pub mod flow_stat;
 pub mod gapfill;
 pub mod groups;
 pub mod hypo;
+pub mod iimn;
 pub mod import;
 #[cfg(feature = "interp")]
 pub mod interp;
 pub mod ionnet;
 pub mod isotopes;
+pub mod kin_decay;
 pub mod kinetic;
+#[cfg(feature = "legacy")]
 pub mod legacy;
 pub mod lists;
 mod lrnoise;
@@ -80,11 +89,14 @@ pub mod norm;
 mod histbin;
 #[cfg(feature = "chem")]
 pub mod parent;
+pub mod parent_formula;
 pub mod params;
 pub mod params_drift;
 pub mod params_height;
 pub mod params_unit;
 pub mod pipeline;
+mod pipeline_steps;
+#[cfg(any(feature = "legacy", feature = "interp"))]
 pub mod polpair;
 mod post;
 pub mod prof;
@@ -96,6 +108,8 @@ mod recipe_lr;
 pub mod regulatory;
 pub mod report;
 pub mod resolve;
+pub mod netarcs;
+#[cfg(any(feature = "legacy", feature = "interp"))]
 pub mod network;
 pub mod row;
 pub mod rowident;
@@ -105,6 +119,7 @@ pub mod rtwarp;
 pub mod runorder;
 pub mod samples;
 pub mod series;
+pub mod series_parent;
 pub mod slabs;
 pub mod spill;
 pub use mzlab_core::sortc;
@@ -113,6 +128,7 @@ pub mod plausible;
 pub mod stat;
 pub mod steps;
 pub mod store;
+mod store_base;
 mod store_read;
 pub mod suspects;
 pub mod suspects_listings;
@@ -121,13 +137,18 @@ pub mod tabcheck;
 pub mod table;
 pub mod target;
 pub mod tp;
+mod tp_block;
 pub mod transitions;
 pub mod trace;
+mod trace_base;
+mod trace_params;
+mod transf_base;
 pub mod trace_estimate;
 mod trace_text;
 #[cfg(feature = "untargeted")]
 pub mod untargeted;
 pub mod uv_bands;
+pub mod uv_text;
 pub mod view;
 pub mod view_table;
 pub mod weakfile;

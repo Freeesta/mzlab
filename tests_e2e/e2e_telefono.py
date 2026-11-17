@@ -1,5 +1,6 @@
 """Smartphone (telefono.js): in portrait and landscape the site shows only the header (logo, info) and the card with the
 "open anyway" button; nothing heavy is downloaded (no drawing module, OpenChemLib, Ketcher, example files). On a computer nothing changes."""
+# covers: mzlab/web/telefono.js, mzlab/web/telefono-scheda.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

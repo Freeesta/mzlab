@@ -1,6 +1,7 @@
 """Regulatory screening in the run report: a native plan runs both paths (`screen.suspects`, `annot.regulatory`) on the invented 6-row package, `mzlab-cli flow report`
 makes the `corsa/1`, and `rapporto-flow.js` lays out its «Regulatory lists» section: header with versions and SHA-256, coverage, the «Listed in» column, the
 membership lines, the study disclaimer, no verdict word, axe-core clean; a run without lists has no such section. Needs cargo."""
+# covers: mzlab/web/rapporto-flow.js
 import sys, os, json, re, tempfile, shutil, threading; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 

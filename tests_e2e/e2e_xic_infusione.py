@@ -1,5 +1,6 @@
 """An infusion has no real chromatogram: the XIC button of its spectrum is disabled (tooltip from the catalogue) and the lens (XIC preview over a peak)
 never opens. The same data under an ordinary name keeps both (control)."""
+# covers: mzlab/web/xic-spettro.js
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth
@@ -14,7 +15,7 @@ shutil.copy(D / "HR_DDA-Exploris-t30.mzML", D / "Infusion_syringe_t0.mzML")     
 SPEC = "E.panels.find(p=>p.type==='spec'&&p.level===1)"
 def open_file(pg, name):
     stage(pg, [D / name])
-    pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+    pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
 def hover_peak(pg):
     pg.evaluate(f"{SPEC}.el.scrollIntoView({{block: 'center'}})"); frames(pg)
     pos = pg.evaluate(f"""(() => {{ const p = {SPEC}, q = p.cv.getBoundingClientRect(); return {{ q: [q.left, q.top, q.width, q.height], id: p.id }}; }})()""")

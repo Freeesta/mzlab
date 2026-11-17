@@ -1,4 +1,5 @@
 """Molecule drawings follow the theme: dark theme gives light bonds/atoms (not black), contrast >= 3:1, runtime theme switch; the names lose no data."""
+# covers: mzlab/web/molui.js
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

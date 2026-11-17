@@ -93,31 +93,31 @@ pub fn holm(p: &[f64], alfa: f64) -> (Vec<f64>, Vec<bool>) {
             *slot = current;
         }
     }
-    let rifiutata: Vec<bool> = adj.iter().map(|&x| x < alfa).collect();
-    (adj, rifiutata)
+    let refused: Vec<bool> = adj.iter().map(|&x| x < alfa).collect();
+    (adj, refused)
 }
 
 /// Non-inferiority of `a - b`:
-/// - `direzione_alto` (higher is better): `ic_basso > margine`
-/// - otherwise (lower is better): `ic_alto < margine`
-pub fn non_inferiore(ci_low: f64, ci_high: f64, direction_up: bool, margine: f64) -> bool {
+/// - `direzione_alto` (higher is better): `ic_basso > margin`
+/// - otherwise (lower is better): `ic_alto < margin`
+pub fn non_inferiore(ci_low: f64, ci_high: f64, direction_up: bool, margin: f64) -> bool {
     if direction_up {
-        ci_low > margine
+        ci_low > margin
     } else {
-        ci_high < margine
+        ci_high < margin
     }
 }
 
 /// Superiority of `a` over `b`:
-/// - `direzione_alto`: `ic_basso > 0.0 && rifiutata`
-/// - otherwise: `ic_alto < 0.0 && rifiutata`
-pub fn superiore(ci_low: f64, ci_high: f64, direction_up: bool, rifiutata: bool) -> bool {
+/// - `direzione_alto`: `ic_basso > 0.0 && refused`
+/// - otherwise: `ic_alto < 0.0 && refused`
+pub fn superiore(ci_low: f64, ci_high: f64, direction_up: bool, refused: bool) -> bool {
     let lato = if direction_up {
         ci_low > 0.0
     } else {
         ci_high < 0.0
     };
-    lato && rifiutata
+    lato && refused
 }
 
 /// Deterministic 64-bit PRNG (SplitMix64) for reproducible bootstrap draws.

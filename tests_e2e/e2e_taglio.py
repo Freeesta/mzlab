@@ -2,6 +2,7 @@
 puts a radical mark on each cut atom and labels each piece with formula (radical dot) and exact mass, like the fragmentation tool of a drawing program;
 a charge put on a piece afterwards changes its label and gives an m/z; heterolytic asks which piece takes the +; one line across two bonds of a ring gives two pieces; undo brings the molecule back.
 Needs site/static/wasm-feat/grafo (tools/build_feat_wasm.sh); SKIP without it."""
+# covers: mzlab/web/disegno-taglio.js, mzlab/web/draw.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")):

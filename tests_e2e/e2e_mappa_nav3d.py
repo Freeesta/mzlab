@@ -1,5 +1,6 @@
 """Navigation of the 3D viewer (mappa3d.js): the right-click menu shared with the 2D map (extract XIC / spectrum / both from the point under the pointer,
 lock, reset, preset views, copy), the bar, the sheet of the gestures, keyboard and long press. LR example files."""
+# covers: mzlab/web/mappa.js, mzlab/web/mappa3d.js, mzlab/web/azioni.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

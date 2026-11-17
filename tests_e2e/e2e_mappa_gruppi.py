@@ -1,6 +1,7 @@
 """Marked points in high resolution (synthetic Orbitrap file): the points of one group of RT (apexes within the window, default ±0.02 min) share a shape
 (circle, square, triangle, diamond, by turns), the table puts the members of a group together under a row that can be folded, the option «snap» slides a point
 onto the apex of the peak (api/mapsnap) and, switched off, keeps it where it was put."""
+# covers: mzlab/web/mappa-tabella.js, mzlab/web/mappa.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tools"))
 from lib import *

@@ -164,18 +164,22 @@ impl State {
             return text("null".to_string());
         };
         let mut ix = self.open_idx(first)?;
-        let r = mzlab_feat_wasm::run::recipe_for("", &mut ix)?;
-        let pv: Value = serde_json::from_str(&mzlab_feat_wasm::run::preview(&mut ix, &r, false)?)
-            .map_err(|_| Error::new("error.badRecipe"))?;
+        let r = mzlab_ops::run::feat::run::recipe_for("", &mut ix)?;
+        let pv: Value =
+            serde_json::from_str(&mzlab_ops::run::feat::run::preview(&mut ix, &r, false)?)
+                .map_err(|_| Error::new("error.badRecipe"))?;
         let mut out = serde_json::json!({ "da": pv["da"], "rt_tol": pv["rt_tol"], "dead": pv["dead"], "fwhm": pv["fwhm"] });
         let mz = p["mz"].as_f64().unwrap_or(0.0);
         if ns.len() > 1 && mz > 0.0 {
             let mut all = Vec::new();
             for n in &ns {
                 let mut ix = self.open_idx(n)?;
-                let r = mzlab_feat_wasm::run::recipe_for("", &mut ix)?;
+                let r = mzlab_ops::run::feat::run::recipe_for("", &mut ix)?;
                 all.push(
-                    mzlab_feat::store::read_file(&mzlab_feat_wasm::run::detect(&mut ix, n, &r)?)?.0,
+                    mzlab_feat::store::read_file(&mzlab_ops::run::feat::run::detect(
+                        &mut ix, n, &r,
+                    )?)?
+                    .0,
                 );
             }
             let refs: Vec<&mzlab_feat::table::FileFeatures> = all.iter().collect();
@@ -280,7 +284,7 @@ impl State {
         let s = |k: &str| p[k].as_str().unwrap_or("");
         // with `campioni` (the `campioni/2` of the files) the answer carries `gruppi` for two or more conditions; `infos` = the rows' best hypothesis
         if !s("campioni").is_empty() {
-            return text(mzlab_feat_table_wasm::core::tp_table_cond_json(
+            return text(mzlab_ops::run::table::core::tp_table_cond_json(
                 &mut Slice(table),
                 table.len() as u64,
                 s("samples"),
@@ -289,7 +293,7 @@ impl State {
                 s("infos"),
             )?);
         }
-        text(mzlab_feat_table_wasm::core::tp_table_json(
+        text(mzlab_ops::run::table::core::tp_table_json(
             &mut Slice(table),
             table.len() as u64,
             s("samples"),

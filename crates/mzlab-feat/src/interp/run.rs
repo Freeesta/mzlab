@@ -8,7 +8,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 
 use super::ms2link::LinkParams;
 use super::{build, json, store, Inputs};
-use crate::legacy::series;
+use crate::finder_base::series;
 use crate::store_read::read_table_from;
 
 fn user(e: String) -> Error {

@@ -38,14 +38,15 @@ const AVVIO = (function () {
     if (typeof document === "undefined") return;
     const info = document.getElementById("avvio-drop-info");
     if (!info) return;
-    if (stato === "ready" || stato === "failed" || attesa.length === 0) {
+    // a drop whose files are rows of the side list (`pronto(true)`) needs no note under #drop: the rows say it
+    const n = attesa.filter(r => !/** @type {any} */ (r).righe).length;
+    if (stato === "ready" || stato === "failed" || n === 0) {
       info.hidden = true;
       info.textContent = "";
       return;
     }
     // pending with files waiting
     info.hidden = false;
-    const n = attesa.length;
     const txt = n === 1 ? T("load.engine.waitingOne", { n: 1 }) : T("load.engine.waiting", { n });
     info.textContent = "";
     const s = document.createElement("span");
@@ -118,7 +119,7 @@ const AVVIO = (function () {
    * @param {{a?: number[], f?: string, fw?: number, s?: string} | null} riga a: which "+ panel" buttons, f: file selector label, fw: its width, s: side panel width
    */
   function segnaRiga(riga) {
-    if (typeof window === "undefined" || !window.localStorage) return;
+    if (typeof window === "undefined" || !window.localStorage || window.QQ_RESETTING) return;    // a reset just cleared it: the closing page must not write it back
     try {
       if (riga) window.localStorage.setItem(chiaveRiga(), JSON.stringify({ ...JSON.parse(window.localStorage.getItem(chiaveRiga()) || "{}"), ...riga }));
       else window.localStorage.removeItem(chiaveRiga());
@@ -146,6 +147,7 @@ const AVVIO = (function () {
 
   // On leaving the page, the row as the last session left it: the next restore draws it in the first paint
   function ricordaRiga() {
+    if (window.QQ_RESETTING) return;
     const g = (/** @type {string} */ id) => document.getElementById(id), v = g("v-data"), sel = /** @type {HTMLSelectElement | null} */ (g("fsel"));
     if (!v || v.hidden || v.classList.contains("riga") || !sel || !haSessione()) return;
     const a = BOTTONI_RIGA.map(id => { const b = g(id); return b && !b.hidden ? 1 : 0; });
@@ -167,7 +169,7 @@ const AVVIO = (function () {
     if (typeof window === "undefined" || !window.localStorage) return;
     try {
       const k = typeof window.NOMI !== "undefined" ? window.NOMI.KEY("sessione") : "mzlab.sessione";
-      if (attiva) window.localStorage.setItem(k, "1");
+      if (attiva) { if (!window.QQ_RESETTING) window.localStorage.setItem(k, "1"); }    // pagehide of a reset must not re-create the marker: the next start would show «restoring» for nothing
       else { window.localStorage.removeItem(k); segnaRiga(null); }
     } catch (_) {}
   }
@@ -206,12 +208,14 @@ const AVVIO = (function () {
 
   /**
    * Waits until the engine is ready before the upload goes on.
+   * @param {boolean} [righe] the caller shows the waiting files as rows of the side list: no note under #drop
    * @returns {Promise<boolean>}
    */
-  function pronto() {
+  function pronto(righe) {
     if (stato === "ready") return Promise.resolve(true);
     if (stato === "failed") return Promise.resolve(false);
     return new Promise(resolve => {
+      if (righe) /** @type {any} */ (resolve).righe = true;
       attesa.push(resolve);
       renderDropStato();
       renderFase();

@@ -1,5 +1,6 @@
 """The toolbar drawer (#dfiles) is really visible from a cold start: with and without #/data, at 1280, 1440 and on an iPad,
 also with saved sidebar states (side right, open) and a stale width. Visible = non-empty box inside the viewport, on top."""
+# covers: mzlab/web/transizioni, mzlab/web/barra.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -11,7 +12,7 @@ CHECK = """() => { const e = document.getElementById('dfiles'), b = e.getBoundin
   return {w: b.width, h: b.height, x: b.x, r: b.right, vw: innerWidth, vh: innerHeight, cls: document.getElementById('v-data').className, shown: !!(top && e.contains(top)), vis: getComputedStyle(e).visibility}; }"""
 def cold(p, vw, vh, hash_="", saved=None, touch=False):
     r = Run(port=8871, wd="/tmp/wd_cassetto"); r.b = p.chromium.launch()      # a server of its own: it remembers the session
-    ctx = r.b.new_context(viewport={"width": vw, "height": vh}, locale="it-IT", has_touch=touch, is_mobile=False, reduced_motion="reduce")
+    ctx = r.b.new_context(viewport={"width": vw, "height": vh}, has_touch=touch, is_mobile=False, reduced_motion="reduce")
     pg = ctx.new_page()
     errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
     init = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');"
@@ -19,7 +20,7 @@ def cold(p, vw, vh, hash_="", saved=None, touch=False):
     pg.add_init_script(init + "}catch(_){}")
     pg.goto(f"http://127.0.0.1:{r.port}/{hash_}"); pg.wait_for_timeout(800)
     pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); pg.wait_for_timeout(800)
-    pg.click("text=Carica dati"); ready(pg)
+    pg.click("text=Load data"); ready(pg)
     if not pg.evaluate("BARRA.open"): pg.click("#stbar [data-cmd=file]")      # a saved open state comes back open: the button would hide it
     pg.wait_for_timeout(600)
     v = pg.evaluate(CHECK); ctx.close(); r.close()

@@ -1,5 +1,5 @@
 //! «Fragment ions found»: the fragments of the representative MS2 scan of a feature with their neutral loss in m/z and, when it can be said, in
-//! formula (`docs/agenti/mzfinder-ms2-regola.md`). Pure functions: the spectrum and the formulas come in, the list and its text go out.
+//! formula (`docs/agenti/mzfinder-ms2.md`). Pure functions: the spectrum and the formulas come in, the list and its text go out.
 
 use crate::sortc::SortC;
 use mzlab_core::elements::{fmt, mass, parse_formula, Formula};

@@ -60,9 +60,9 @@ try:
             t = pg.inner_text("#unopen"); assert "not a mass-spectrometry file we know" in t and "x_ingl_b.xyz" in t, t
             open("/tmp/y_ingl_b.raw", "w").write("x")
             pg.set_input_files("#pick", "/tmp/y_ingl_b.raw")
-            ok_raw = "(t => t.includes('File type not accepted: y_ingl_b.raw') || t.includes('The reader of this format did not download (thermo)'))(document.body.innerText)"
+            ok_raw = "(t => t.includes('File type not accepted: y_ingl_b.raw') || t.includes('The reader of this format did not download (thermo)') || t.includes('The start of y_ingl_b.raw (1 bytes) is not that of a .raw file'))(document.body.innerText)"
             pg.wait_for_function(f"() => {ok_raw}", timeout=60000)       # a .raw is read in the browser by the thermo module: one the reader does not recognise says so, in English (the site of the tests has no readers module: then the note says the reader did not download, err.file.moduleLoad, also in English)
-            t = pg.inner_text("body"); assert "File type not accepted: y_ingl_b.raw" in t or "The reader of this format did not download (thermo)" in t, [l for l in t.split("\n") if "raw" in l]
+            t = pg.inner_text("body"); assert "File type not accepted: y_ingl_b.raw" in t or "The reader of this format did not download (thermo)" in t or "is not that of a .raw file" in t, [l for l in t.split("\n") if "raw" in l]
             open("/tmp/z_ingl_b.mzML", "w").write("not xml")
             pg.set_input_files("#pick", "/tmp/z_ingl_b.mzML"); pg.wait_for_timeout(800)
             assert not italian_on_screen(pg), italian_on_screen(pg)
@@ -72,11 +72,11 @@ try:
             assert pg.evaluate("E.files.length") >= 3
         step("open the files", load)
         def gear():
-            pg.click("#np-set"); pg.wait_for_selector("#uip-a11y")
+            pg.click("#np-set"); pg.wait_for_selector("#uip-list")
             pg.evaluate("document.querySelectorAll('#uipset details.imp-g').forEach(g => g.open = true)")       # the folding groups (assistant, diagnostics) open
             t = pg.inner_text("#uipset")
-            for w in ("Settings", "Theme", "Like the system", "Chart colors", "Merge the centroids of the same nominal mass"): assert w.lower() in t.lower(), (w, t)
-            assert "By file (default)" in pg.evaluate("[...document.querySelectorAll('#uip-pal option')].map(o => o.textContent)"), "palette names"
+            for w in ("Settings", "Theme", "System", "Chart colors", "Reduce motion"): assert w.lower() in t.lower(), (w, t)
+            assert "By file" in pg.evaluate("[...document.querySelectorAll('#uip-pal option')].map(o => o.textContent)"), "palette names"
         step("gear in English", gear)
         def phrase():
             pg.evaluate("loading(true)"); pg.wait_for_timeout(300)

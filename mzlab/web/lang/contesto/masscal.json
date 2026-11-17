@@ -1,0 +1,10 @@
+{
+  "masscal.title": "Title of the calibration check panel; {file} = file name.",
+  "masscal.sum": "Summary line; {n} = contaminant ions found, {off} = robust offset in ppm with sign, {spread} = spread in ppm.",
+  "masscal.sum.few": "Summary when there are few ions; {n} = ions found, {min} = minimum to estimate the error.",
+  "masscal.trend": "Error trend; {mz} = ppm per 100 m/z, {rt} = ppm per minute (signed), {model} = name of the fitted model.",
+  "masscal.trend.mz": "Error trend with m/z; {mz} = ppm per 100 m/z (signed), {model} = name of the fitted model.",
+  "masscal.thr": "Label of the threshold field; {input} = numeric field in ppm.",
+  "masscal.minint": "Label of the minimum intensity field; {input} = numeric field.",
+  "masscal.plot.desc": "Short description of a plot; {title} = title, {n} = number of ions, {a} and {b} = minimum and maximum error in ppm."
+}

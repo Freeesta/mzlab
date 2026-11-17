@@ -1,5 +1,6 @@
 # e2e_toolbar_wrap: the second toolbar of Data (#tools) is ONE row at every width (900-3000 px, side panel open or closed, upload view and loaded file, long file names, UI zoom 1 and 1.5),
 # its height is reserved (the work area below never moves, not after first paint, not when the panel toggles), the groups keep the order file | add | undo-redo-close ... Method, and no divider sits at a row edge
+# covers: mzlab/web/app.css
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -41,7 +42,7 @@ try:
                 assert g["h"] >= 31, (w, "row height not reserved", g["h"])
         step("upload view: one reserved row at 5 widths", upload_view)
         pg.set_input_files("#pick", [{"name": LONG + "%d.mzML" % i, "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t%d" % t), "rb").read()} for i, t in enumerate((0, 10, 15))])
-        frames(pg, 3); pg.click("text=Carica dati"); ready(pg)
+        frames(pg, 3); pg.click("text=Load data"); ready(pg)
         def loaded():
             for z in (1, 1.5):
                 pg.evaluate("z => document.documentElement.style.setProperty('--z', z)", z)

@@ -1,6 +1,7 @@
 """The Dati page draws its shell before the engine: with the .wasm held back, the drop area is visible and usable-looking while the engine is still
 pending, the .wasm is asked for only once the page is parsed (not from the head, where it competes with the first paint) and once, from the
 start of the engine's module graph (preload of browser.js); once released, the engine comes up on its own. Build first: python tools/build_site.py"""
+# covers: mzlab/web/browser
 from pathlib import Path
 import subprocess, sys, time
 from playwright.sync_api import sync_playwright

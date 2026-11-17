@@ -1,5 +1,6 @@
 """Browser version (the site that GitHub Pages serves): the Rust engine (WebAssembly) runs the program, no server involved.
 Build first: python tools/build_site.py"""
+# covers: mzlab/web/browser, mzlab/web/qqq-db, mzlab/web/sw.js, tools/build_site.py
 import subprocess, sys, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -55,7 +56,7 @@ try:
         def tabs():
             pg.click("#nav button[data-v=draw]"); pg.wait_for_function("window.TPDraw !== undefined || document.querySelector('#kframe')", timeout=60000); pg.wait_for_timeout(1500)
             pg.click("#nav button[data-v=data]")
-        step("Disegno tab works from the static site", tabs)
+        step("Drawing tab works from the static site", tabs)
         def mrm_spec():
             pg.wait_for_function("E.panels.some(p=>p.type==='spec' && p._a)", timeout=60000)      # the spectrum is made after the chromatogram, also after a reload
             open_kind(pg, "mrm")      # as a student does: at the first load only the first file is open, a click on the MRM file in the list opens it

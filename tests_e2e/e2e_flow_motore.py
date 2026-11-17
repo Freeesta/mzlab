@@ -2,6 +2,7 @@
 «Confidence level» node of Flow and the .wasm `attributio-all`: 15 features with the levels of livelli_attesi.csv, the settings digest, an engine export, the Review screen on a real feature
 and the MS2 panel; MZLAB_LR_MISS stays empty. Needs the built site (site/static/wasm and wasm-feat, as the CI step «e2e on the built site»); SKIP without them.
 Run from the repo root: python3 tests_e2e/e2e_flow_motore.py"""
+# covers: flow/
 import csv, json, subprocess, sys
 from pathlib import Path
 from playwright.sync_api import sync_playwright

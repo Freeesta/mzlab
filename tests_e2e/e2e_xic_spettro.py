@@ -1,5 +1,6 @@
 """V-1: button «XIC» of the spectrum (low and high resolution): chosen peak, extraction into the panel under the spectrum (same window as api/xic, E2), ion and
 tolerance written by hand, scan line and apex, keyboard only, accessibility."""
+# covers: mzlab/web/xic-spettro.js, mzlab/web/xic-lente.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -18,7 +19,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         K = pg.evaluate("E.files[0].k")
         def peak(m):      # screen position of the labelled peak nearest to m/z m
             return pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),a=p._a,d=a.data[0].d;let b=0;d.mz.forEach((v,i)=>{{if(Math.abs(v-{m})<0.6&&(Math.abs(d.mz[b]-{m})>=0.6||d.y[i]>d.y[b]))b=i}});return {{mz:d.mz[b],x:q.left+a.X(d.mz[b]),y:q.top+a.Y(d.y[b])+6}}}})()")
@@ -57,7 +58,7 @@ try:
             pg.evaluate(f"stepScan({SPEC}.link!=null?E.panels.find(q=>q.id=={SPEC}.link):E.panels[0],3)"); ready(pg); frames(pg, 8)
             rt1 = pg.evaluate(f"{XP}.cur"); assert rt1 != rt0, (rt0, rt1)
             txt = pg.inner_text(f"xpath=//*[contains(@class,'xb-info')]"); print(txt)
-            assert "RT" in txt or "picco" in txt, txt
+            assert "RT" in txt or "peak" in txt, txt
             assert pg.evaluate(f"{XP}.ints.length") == 0       # unit resolution: no area until the student integrates
         step("scan line follows the spectrum, apex text, no area in LR", lr_cursor)
         def typed():

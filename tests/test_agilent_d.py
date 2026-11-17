@@ -34,6 +34,21 @@ def test_runs_are_grouped_and_the_other_files_pass():
     assert runs[2] == ["c.D", ["datams"], []]
 
 
+def test_a_gc_run_with_data_ms_on_top_and_only_contents_in_acqdata_is_a_run():
+    # synthetic shape of a GC/MS .D copied without MSScan.bin: data.ms at the top, AcqData holds Contents.xml only
+    code = """(()=>{const fs=[F('data.ms','x/s1.D/'),F('Contents.xml','x/s1.D/AcqData/'),F('acqmeth.txt','x/s1.D/'),F('checksum.xml','x/s1.D/'),F('GC.ini','x/s1.D/')];
+      const g=a.group(fs);return g.runs.map(r=>[r.name,Object.keys(r.files).sort(),r.missing])})()"""
+    assert run(code) == [["s1.D", ["acqmeth", "contents", "datams"], []]]
+
+
+def test_a_folder_that_is_not_whole_lists_what_was_received_with_sizes():
+    code = """(()=>{const mk=(n,p,k)=>{const f=new File([new Uint8Array(k)],n);Object.defineProperty(f,'webkitRelativePath',{value:p+n});return f};
+      const g=a.group([mk('Contents.xml','x/s2.D/AcqData/',1200),mk('GC.ini','x/s2.D/',10)]);return [g.runs[0].missing,g.runs[0].found]})()"""
+    missing, found = run(code)
+    assert missing == ["AcqData/MSScan.bin", "AcqData/MSPeak.bin"]
+    assert found == ["AcqData/Contents.xml (1.2 kB)", "GC.ini (10 B)"]
+
+
 def test_the_name_of_the_mzml():
     r = run("[a.mzmlName({name:'x.D',root:'t/x.D/'},[]), a.mzmlName({name:'x.D',root:'t/s2/x.D/'},['x.mzML']), a.mzmlName({name:'x.D',root:'x.D/'},['X.mzML'])]")
     assert r == ["x.mzML", "x (s2).mzML", "x (1).mzML"]

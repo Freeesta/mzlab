@@ -48,7 +48,7 @@ impl Module for Fake {
         ]))
     }
     fn scan(&mut self, _: usize, _: usize) -> Result<Vec<u8>> {
-        Ok(mzlab_core::transport::encode_scansione(&Spectrum {
+        Ok(mzlab_core::transport::encode_scan(&Spectrum {
             level: 1,
             rt: 0.5,
             polarity: 1,

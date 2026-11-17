@@ -1,6 +1,7 @@
 """Warning «this phase needs more memory» (memoria-avviso.js, asked by feat-run.js through window.mzlabAskMore): two buttons, the safe one («Cancel») is the default (Enter, Esc),
 «Use more memory» resolves true; the text carries the numbers and the phase in the language of the page.
 Needs the site: python tools/build_site.py and the .wasm (tools/prepara_sito.py)."""
+# covers: mzlab/web/memoria-avviso.js
 from pathlib import Path
 import socket, subprocess, sys, threading
 from playwright.sync_api import sync_playwright
@@ -24,7 +25,7 @@ try:
         ctx = b.new_context(viewport={"width": 1300, "height": 900}, locale="en-US")
         pg = ctx.new_page(); errs = []
         pg.on("pageerror", lambda e: errs.append(str(e)))
-        pg.goto(f"http://127.0.0.1:{PORT}/?lang=en")
+        pg.goto(f"http://127.0.0.1:{PORT}/")
         pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_function("typeof window.mzlabAskMore === 'function'", timeout=60000)
         def ask(): pg.evaluate(f"(() => {{ window.__r = undefined; window.mzlabAskMore({INFO}).then(v => {{ window.__r = v; }}); }})()"); pg.wait_for_selector("#memmore")

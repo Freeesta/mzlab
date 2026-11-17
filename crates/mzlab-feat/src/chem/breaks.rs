@@ -1,6 +1,6 @@
 //! The bond breaks of the structure of the user that explain the ions of an `msngrafo/1`: every set of one or two single bonds is cut, each
 //! piece takes a hydrogen per cut and may gain or lose a few more (hydrogen transfer), and the pieces whose m/z is a node's become its hypotheses;
-//! an arc is explained when a hypothesis of the child lies inside one of the parent. Used by `mzlab-cli msn-graph --rotture` and the `.wasm`
+//! an arc is explained when a hypothesis of the child lies inside one of the parent. Used by `mzlab-cli msn-graph --breaks` and the `.wasm`
 //! `msngrafo` (`breaks_text`, the same bytes); the types of the answer are in `mzlab_core::msngraph`. Hypotheses, never identifications.
 
 use super::graph::Mol;
@@ -210,7 +210,7 @@ impl Ctx<'_> {
 fn nodes_at(
     cx: &Ctx,
     mz: f64,
-    (tagli, pezzo, keep, nh): (&[usize], &[usize], &[bool], i64),
+    (tagli, chunk, keep, nh): (&[usize], &[usize], &[bool], i64),
     k: i8,
     hypotheses: &mut [Vec<Hypothesis>],
 ) {
@@ -221,7 +221,7 @@ fn nodes_at(
         .take_while(|&&n| g.nodi[n].mz <= mz + tol)
     {
         // the fewest cuts come first, so a repeated piece keeps the simplest way to get it
-        if hypotheses[n].iter().any(|x| x.piece == pezzo && x.h == k) {
+        if hypotheses[n].iter().any(|x| x.piece == chunk && x.h == k) {
             continue;
         }
         let mut f: Formula = cx.m.formula_of(keep);
@@ -233,7 +233,7 @@ fn nodes_at(
         }
         hypotheses[n].push(Hypothesis {
             bonds: tagli.to_vec(),
-            piece: pezzo.to_vec(),
+            piece: chunk.to_vec(),
             formula: elements::fmt(&f),
             h: k,
             theoretical_mz: mz,

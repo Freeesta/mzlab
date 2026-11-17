@@ -2,7 +2,8 @@
 // «Split at the valleys» of an integration on a SIM/MRM panel: the engine proposes the drop lines (`api/manvalley`, mzlab_core::valley, the bytes of
 // `mzlab-cli peak-split`) at the depth shown in the bar over the window; the user drags them (mouse, finger, pen; ← → one point, Shift five, Delete
 // removes one), then Split keeps them on the record (`it.splits`, undoable, saved) or Esc / Cancel drops them. A split record shows its drop lines
-// from the baseline to the trace (`paint`, on the canvas); the table gives one row per part (integrazioni-manuali.js). Loaded by area-copia.js and integra-estremi.js.
+// from the baseline to the trace (`paint`, on the canvas); the table gives one row per part (integrazioni-manuali.js). «Split by hand» (`startManual`) is the same
+// drop lines placed by a click at the time under the pointer (a thin guide follows it), kept at once (one undo step per click, drag, key) until Esc. Loaded by integra-estremi.js.
 /** @typedef {Record<string, any>} Bag */
 const G = /** @type {any} */ (window);
 const T = (/** @type {string} */ k, /** @type {Record<string, any>} */ v = {}) => I18N.t(k, v);
@@ -29,6 +30,42 @@ async function start(p, it) {
   p.isel = it.id; setActive(p);
   if (!it.splits) await ask(p); else draw(p);
 }
+/** «Split by hand»: the record's own drop lines are its markers; a click in the window adds one, a drag moves it, Delete removes it, Esc leaves the mode. @param {Bag} p @param {Bag} it */
+async function startManual(p, it) {
+  if (!G.MANINT) await carica("m:integrazioni-manuali.js");
+  p._split = { it, ts: it.splits ? [...it.splits] : [], depth: 0, tok: 0, none: false, focus: false, manual: true };
+  p.isel = it.id; setActive(p); draw(p);
+}
+/** Keeps the markers of the manual mode on the record (sorted, inside the window) and draws the panel again: labels and table follow. @param {Bag} p */
+function live(p) {
+  const sp = p._split; if (!sp) return;
+  const ts = [...new Set(sp.ts)].filter(t => t > lo(sp.it) && t < hi(sp.it)).sort((x, y) => x - y);
+  if (ts.length) sp.it.splits = ts; else delete sp.it.splits;
+  draw(p); uiSave();
+}
+/** The trace time a pointer at client x means in the manual mode: the point of the trace nearest to it, null outside the window. @param {Bag} p @param {number} cx */
+function pick(p, cx) {
+  const sp = p._split, s = sp && traceOf(p, sp.it); if (!s || !p._a) return null;
+  const t = xOf(p, cx - p.cv.getBoundingClientRect().left); if (t <= lo(sp.it) || t >= hi(sp.it)) return null;
+  const [i0, i1] = inner(s, sp.it); if (i1 < i0) return null;
+  return s.x[Math.min(i1, Math.max(i0, nearIdx(s.x, t)))];
+}
+const manualPanel = (/** @type {EventTarget | null} */ t) => E.panels.find((/** @type {Bag} */ q) => q._split && q._split.manual && q.cv === t);
+/** The thin guide that follows the pointer in the manual mode (never in a PNG: a DOM element). @param {Bag} p @param {number | null} t */
+function guide(p, t) {
+  let n = /** @type {HTMLElement | null} */ (p.el.querySelector(".ivl-guide"));
+  if (t == null || !p._a) { if (n) n.hidden = true; return; }
+  if (!n) { n = document.createElement("div"); n.className = "ivl-guide"; n.setAttribute("aria-hidden", "true"); p.el.appendChild(n); }
+  n.hidden = false; n.style.left = p.cv.offsetLeft + p._a.X(t) + "px"; n.style.top = p.cv.offsetTop + M.t + "px"; n.style.height = p._a.H - M.t - M.b + "px";
+}
+document.addEventListener("mousemove", e => { for (const p of E.panels) if (p._split && p._split.manual) guide(p, e.target === p.cv ? pick(p, e.clientX) : null); }, true);
+document.addEventListener("mousedown", e => {
+  const p = e.button === 0 && !e.shiftKey ? manualPanel(e.target) : undefined, t = p && pick(p, e.clientX); if (!p || t == null) return;
+  e.stopPropagation(); e.preventDefault();                                   // a click here places a line: no drag, no cursor move
+  pushIh(p); p._split.ts.push(t); p._split.focus = p._split.ts.length - 1; live(p);
+}, true);
+document.addEventListener("keydown", e => { if (e.key !== "Escape") return; const p = E.panels.find((/** @type {Bag} */ q) => q._split && q._split.manual); if (p) { e.preventDefault(); e.stopPropagation(); cancel(p); } }, true);
+
 /** The engine's drop lines at the depth of the bar; the last answer wins. @param {Bag} p */
 async function ask(p) {
   const sp = p._split; if (!sp) return;
@@ -51,18 +88,18 @@ const focusPanel = (/** @type {Bag} */ p) => { try { p.cv.focus({ preventScroll:
 /** One marker: a slider over the plot, its line from top to bottom. @param {Bag} p */
 function marker(p) {
   const n = /** @type {HTMLButtonElement & Bag} */ (document.createElement("button")); n.type = "button"; n.className = "ivl-mk"; n.setAttribute("role", "slider");
-  const set = (/** @type {number} */ t) => { const sp = p._split; if (!sp) return; sp.ts[n._i] = t; sync(p); };
+  const set = (/** @type {number} */ t) => { const sp = p._split; if (!sp) return; if (sp.manual && !n._pushed) { pushIh(p); n._pushed = true; } sp.ts[n._i] = t; if (sp.manual) live(p); else sync(p); };   // by hand: one undo step per drag or key
   const at = (/** @type {PointerEvent} */ ev) => { const s = p._split && traceOf(p, p._split.it); if (!s) return null; const [i0, i1] = inner(s, p._split.it), i = Math.min(i1, Math.max(i0, nearIdx(s.x, xOf(p, ev.clientX - p.cv.getBoundingClientRect().left)))); return s.x[i]; };
-  n.addEventListener("pointerdown", ev => { if (ev.button > 0) return; ev.preventDefault(); ev.stopPropagation(); try { n.setPointerCapture(ev.pointerId); } catch (_) { /* events still arrive */ } n.classList.add("on"); n.focus(); });
+  n.addEventListener("pointerdown", ev => { if (ev.button > 0) return; ev.preventDefault(); n._pushed = false; ev.stopPropagation(); try { n.setPointerCapture(ev.pointerId); } catch (_) { /* events still arrive */ } n.classList.add("on"); n.focus(); });
   n.addEventListener("pointermove", ev => { if (!n.classList.contains("on")) return; const t = at(ev); if (t != null) set(t); });
   const end = () => n.classList.remove("on");
   n.addEventListener("pointerup", end); n.addEventListener("pointercancel", end);
   n.addEventListener("keydown", ev => {
     const sp = p._split; if (!sp || ev.ctrlKey || ev.metaKey || ev.altKey) return;
-    const k = ev.key, s = traceOf(p, sp.it);
+    const k = ev.key, s = traceOf(p, sp.it); n._pushed = false;
     if (k === "Escape") { ev.preventDefault(); ev.stopPropagation(); cancel(p); return; }
-    if (k === "Enter") { ev.preventDefault(); ev.stopPropagation(); confirm(p); return; }
-    if (k === "Delete" || k === "Backspace") { ev.preventDefault(); ev.stopPropagation(); sp.ts.splice(n._i, 1); sp.focus = Math.max(0, n._i - 1); sync(p); return; }
+    if (k === "Enter") { ev.preventDefault(); ev.stopPropagation(); if (sp.manual) cancel(p); else confirm(p); return; }
+    if (k === "Delete" || k === "Backspace") { ev.preventDefault(); ev.stopPropagation(); if (sp.manual) pushIh(p); sp.ts.splice(n._i, 1); sp.focus = Math.max(0, n._i - 1); if (sp.manual) live(p); else sync(p); return; }
     const d = k === "ArrowLeft" || k === "ArrowDown" ? -1 : k === "ArrowRight" || k === "ArrowUp" ? 1 : 0; if (!d || !s) return;
     ev.preventDefault(); ev.stopPropagation();
     const [i0, i1] = inner(s, sp.it), i = Math.min(i1, Math.max(i0, nearIdx(s.x, sp.ts[n._i]) + d * (ev.shiftKey ? 5 : 1))); set(s.x[i]);
@@ -71,7 +108,15 @@ function marker(p) {
 }
 /** The bar over the window: depth (%), Split, Cancel and the engine's answer when it found no valley. @param {Bag} p */
 function bar(p) {
-  const b = document.createElement("div"); b.className = "ivl-bar"; b.setAttribute("role", "group"); b.setAttribute("aria-label", T("int.split.menu"));
+  const b = document.createElement("div"), by = p._split && p._split.manual;
+  if (by) {                                                                  // by hand: a hint and Done
+    b.className = "ivl-bar"; b.dataset.m = "1"; b.setAttribute("role", "group"); b.setAttribute("aria-label", T("int.split.hand.menu"));
+    b.innerHTML = h`<span>${T("int.split.hand.hint")}</span><button type="button" data-no>${T("int.split.hand.done")}</button>`;
+    b.addEventListener("keydown", ev => { ev.stopPropagation(); if (ev.key === "Escape" || ev.key === "Enter") { ev.preventDefault(); cancel(p); } });
+    b.querySelector("[data-no]")?.addEventListener("click", () => cancel(p));
+    return b;
+  }
+ b.className = "ivl-bar"; b.setAttribute("role", "group"); b.setAttribute("aria-label", T("int.split.menu"));
   b.innerHTML = h`<label>${T("int.split.depth")} <input type="number" min="0" max="100" step="1" inputmode="numeric" data-depth title="${T("int.split.depth.tip")}" aria-describedby="ivl-d"></label><span id="ivl-d" class="sr-only">${T("int.split.depth.tip")}</span><span class="ivl-none" role="status" aria-live="polite"></span><button type="button" data-ok>${T("int.split.ok")}</button><button type="button" data-no>${T("common.cancel")}</button>`;
   const inp = /** @type {HTMLInputElement} */ (b.querySelector("[data-depth]"));
   inp.addEventListener("change", () => {
@@ -110,15 +155,17 @@ function sync(p) {
   /** @type {any[]} */ const mks = [...p.el.querySelectorAll(".ivl-mk")];
   const br = /** @type {HTMLElement | null} */ (p.el.querySelector(".ivl-bar"));
   const s = sp && traceOf(p, sp.it);
-  if (!sp || !s) { mks.forEach(m => m.remove()); if (br) br.remove(); return; }
-  const bx = br || p.el.appendChild(bar(p));
-  const inp = /** @type {HTMLInputElement} */ (bx.querySelector("[data-depth]")); if (document.activeElement !== inp) inp.value = String(sp.depth);
-  const none = /** @type {HTMLElement} */ (bx.querySelector(".ivl-none")), say = sp.none && !sp.ts.length ? T("int.split.none") : ""; if (none.textContent !== say) none.textContent = say;
+  if (!sp || !s) { mks.forEach(m => m.remove()); if (br) br.remove(); p.el.querySelector(".ivl-guide")?.remove(); if (a) p.cv.style.cursor = ""; return; }
+  if (br && (br.dataset.m === "1") !== !!sp.manual) br.remove();
+  const bx = /** @type {HTMLElement} */ (p.el.querySelector(".ivl-bar") || p.el.appendChild(bar(p))), inp = /** @type {HTMLInputElement | null} */ (bx.querySelector("[data-depth]"));
+  if (inp && document.activeElement !== inp) inp.value = String(sp.depth);
+  const none = /** @type {HTMLElement | null} */ (bx.querySelector(".ivl-none")), say = sp.none && !sp.ts.length ? T("int.split.none") : ""; if (none && none.textContent !== say) none.textContent = say;
+  p.cv.style.cursor = sp.manual ? "crosshair" : "";
   const cx = Math.max(M.l, Math.min(a.W - M.r, a.X((lo(sp.it) + hi(sp.it)) / 2)));
   bx.style.left = p.cv.offsetLeft + cx + "px"; bx.style.top = p.cv.offsetTop + M.t + 2 + "px";
   sp.ts.forEach((/** @type {number} */ t, /** @type {number} */ i) => {
     const m = mks.shift() || p.el.appendChild(marker(p)); m._i = i;
-    const x = a.X(t), v = T("int.split.mark", { rt: t.toFixed(3) });
+    const x = a.X(t), v = T(sp.manual ? "int.split.hand.mark" : "int.split.mark", { rt: t.toFixed(3) });
     m.hidden = x < M.l || x > a.W - M.r;
     m.style.left = p.cv.offsetLeft + x + "px"; m.style.top = p.cv.offsetTop + M.t + "px"; m.style.height = a.H - M.t - M.b + "px"; m.style.color = s.color;
     m.setAttribute("aria-label", v); m.title = v; m.setAttribute("aria-valuenow", t.toFixed(3)); m.setAttribute("aria-valuetext", T("cursor.handle.value", { rt: t.toFixed(3) }));
@@ -126,7 +173,7 @@ function sync(p) {
   });
   mks.forEach(m => m.remove());
   if (sp.focus !== false) {
-    const f = /** @type {HTMLElement[]} */ ([...p.el.querySelectorAll(".ivl-mk")])[sp.focus === true ? 0 : sp.focus] || inp; sp.focus = false;
+    const f = /** @type {HTMLElement[]} */ ([...p.el.querySelectorAll(".ivl-mk")])[sp.focus === true ? 0 : sp.focus] || inp || p.cv; sp.focus = false;
     try { f.focus({ preventScroll: true }); } catch (_) { /* gone */ }
   }
 }
@@ -136,8 +183,8 @@ function sync(p) {
     ".ivl-mk::after{content:\"\";position:absolute;left:11px;top:0;bottom:0;border-left:2px dashed currentColor}" +
     ".ivl-mk:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}.ivl-mk.on{background:color-mix(in srgb,var(--accent) 20%,transparent)}" +
     ".ivl-bar{position:absolute;z-index:6;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:2px 6px;background:var(--panel);border:1px solid var(--line);border-radius:4px;font-size:12px;color:var(--ink);white-space:nowrap}" +
-    ".ivl-bar input{width:4em;min-height:24px}.ivl-bar button{min-height:24px;min-width:24px}.ivl-none:empty{display:none}" +
+    ".ivl-guide{position:absolute;z-index:3;width:0;border-left:1px solid var(--accent);pointer-events:none}.ivl-bar input{width:4em;min-height:24px}.ivl-bar button{min-height:24px;min-width:24px}.ivl-none:empty{display:none}" +
     "@media (forced-colors:active){.ivl-mk::after{border-color:CanvasText}.ivl-mk:focus-visible{outline-color:Highlight}}";
   document.head.appendChild(st);
 }
-window.INTVALLI = { start, sync, paint, confirm, cancel };
+window.INTVALLI = { start, startManual, sync, paint, confirm, cancel };

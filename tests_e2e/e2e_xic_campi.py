@@ -2,6 +2,7 @@
 written first; bad input is refused with a calm note and the old edges back, Esc drops a half-written pair; undo, redo and a reload keep the edges;
 a clicked peak gets the default window [n-0.2, n+0.3] around its nearest integer n, and the popover fits an iPad-wide window. A range typed in «Extract ions»
 («250.8-251.5») is that window, never an m/z shifted below zero."""
+# covers: mzlab/web/xic-bordi.js, mzlab/web/campi.js, mzlab/web/xic-nomi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

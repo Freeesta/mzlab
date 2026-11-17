@@ -1,4 +1,4 @@
-//! Warm-up of the pointed folder (docs/agenti/riscaldamento.md): `lr_warm` builds the index of a file the student has not opened yet, with the same builder as
+//! Warm-up of the pointed folder (docs/agenti/dati-cartella.md): `lr_warm` builds the index of a file the student has not opened yet, with the same builder as
 //! `lr_index`; the file is not in the store, so the list of the page never shows it. `lr_warm_claim` (the page, when the file is opened) puts it in the store
 //! and keeps that index if the file is still the same; the page then skips `lr_index`.
 

@@ -1,5 +1,5 @@
 //! `mzlab-cli msn-rules RECORD...`: the rules of `fragrules/1` judged on public library spectra (MassBank records, MSP) with a known SMILES. One line of
-//! numbers per record (`msn_rules_prova`); `msn-rules sum` adds the lines up (`msn_rules_somma`). The protocol is `docs/studi/regole-frammentazione-piano.md` §3.
+//! numbers per record (`msn_rules_prova`); `msn-rules sum` adds the lines up (`msn_rules_somma`). The protocol is in `docs/agenti/msn-manuale.md`.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -8,21 +8,12 @@ use mzlab_core::json::Out;
 use mzlab_lib::parse::{detect, parse_all};
 
 use self::trial::{decoy, measure, registry_expectations, Registry};
-use crate::msn_outputs::canonical;
 use crate::Outcome;
 
 mod sum;
 #[cfg(test)]
 mod tests;
 mod trial;
-
-/// Old flag and subcommand names of `msn-rules` (old, new); resolved before the match.
-const ALIASES: &[(&str, &str)] = &[
-    ("--lista", "--list"),
-    ("--attivazione", "--activation"),
-    ("--regole", "--rules"),
-    ("somma", "sum"),
-];
 
 pub const HELP: &str = "mzlab-cli msn-rules: the fragmentation rules judged on library spectra with a known structure.
 
@@ -38,9 +29,7 @@ usage: mzlab-cli msn-rules RECORD... [--list FILE] [--smiles S] [--activation A]
   sum               the lines of the records added up per stratum (trap CID, HCD, Q-TOF, other beam) and polarity: coverage of (c) against the decoys,
                     peaks per rule, decoy rate per rule and the thresholds of the protocol (a rule with fewer than 20 applications is not measured)
 
-Peaks above 2 % of the base peak, 10 ppm (20 below m/z 150) for a fragment, 3 mDa for a loss. Output: a JSON line per record, numbers only.
-
-old names still accepted: --lista --attivazione --regole somma";
+Peaks above 2 % of the base peak, 10 ppm (20 below m/z 150) for a fragment, 3 mDa for a loss. Output: a JSON line per record, numbers only.";
 
 /// Adducts the graph reads for the ion of the precursor.
 const ADDOTTI: [&str; 8] = [
@@ -75,7 +64,6 @@ fn parse_args(mut a: impl Iterator<Item = String>) -> Result<Option<Args>, Strin
         out: None,
     };
     while let Some(x) = a.next() {
-        let x = canonical(ALIASES, x);
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
             "--list" => r.list = a.next().map(PathBuf::from),
@@ -200,7 +188,7 @@ fn other_spectrum<'a>(r: &Registry, all: &'a [Registry]) -> Option<&'a [(f64, f6
 
 fn row(r: &Registry, all: &[Registry], a: &Args) -> String {
     let Some(expected) = registry_expectations(r) else {
-        return format!("{{\"id\":{:?},\"saltato\":\"smiles\"}}", r.id);
+        return format!("{{\"id\":{:?},\"skipped\":\"smiles\"}}", r.id);
     };
     let mut o = Out::default();
     o.raw("{\"id\":")
@@ -254,7 +242,7 @@ fn rows(a: &Args) -> Result<String, String> {
     out.extend(
         skipped
             .iter()
-            .map(|(f, s)| format!("{{\"id\":{f:?},\"saltato\":\"{s}\"}}")),
+            .map(|(f, s)| format!("{{\"id\":{f:?},\"skipped\":\"{s}\"}}")),
     );
     Ok(out.join("\n") + "\n")
 }
@@ -265,12 +253,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         stdout: vec![],
         stderr: format!("error: {m}\n(mzlab-cli msn-rules --help)\n"),
     };
-    if args
-        .first()
-        .map(|x| canonical(ALIASES, x.clone()))
-        .as_deref()
-        == Some("sum")
-    {
+    if args.first().map(String::as_str) == Some("sum") {
         return sum::run(args[1..].to_vec());
     }
     let a = match parse_args(args.into_iter()) {

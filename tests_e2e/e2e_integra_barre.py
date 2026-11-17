@@ -1,5 +1,6 @@
 """Manual integration window: the area is the trace between the two bars cut vertically down to zero (no sloped baseline), the label and the area table show
 the same number; the bar handles are 44 px targets that a finger/pen drags (and the arrows move); the cursor dot is hidden while the tool is on."""
+# covers: mzlab/web/integra-zero.js, mzlab/web/integra-estremi.js, mzlab/web/barre-maniglie.js
 import sys, os, math; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -13,8 +14,8 @@ r = Run(port=8886, wd="/tmp/wd86")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_selector("text=Carica dati")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_selector("text=Load data")
+        pg.click("text=Load data"); ready(pg)
         def synthetic():                                               # a small peak on the tail of a big neighbour (8.13 and 8.5, 0.05 min sampling)
             xs = [round(7.5 + 0.01 * i, 4) for i in range(201)]
             ys = [1e6 * math.exp(-0.5 * ((x - 8.13) / 0.12) ** 2) + 2e5 * math.exp(-0.5 * ((x - 8.5) / 0.05) ** 2) for x in xs]
@@ -36,11 +37,11 @@ try:
         step("the manual drag places the window with the zero baseline", bars)
         def number():
             it = pg.evaluate(f"(()=>{{const p={XP},i=p.ints[0],s=p._a.sr[0],xs=s.x,ys=s.y;const at=t=>{{let j=0;while(xs[j+1]<=t)j++;return ys[j]+(ys[j+1]-ys[j])*(t-xs[j])/(xs[j+1]-xs[j])}};const lo=Math.min(i.a,i.b),hi=Math.max(i.a,i.b),P=[[lo,at(lo)]];xs.forEach((x,j)=>{{if(x>lo&&x<hi)P.push([x,ys[j]])}});P.push([hi,at(hi)]);let ref=0;for(let j=1;j<P.length;j++)ref+=(P[j][1]+P[j-1][1])/2*(P[j][0]-P[j-1][0])*60;return {{area:i.area,ref,lab:p._a.lbls.find(l=>l.copy!=null).copy,txt:I18N.sciE(i.area)}}}})()")
-            assert abs(it["area"] - it["ref"]) <= 1e-9 * max(1, it["ref"]) and it["lab"] == it["txt"], it
+            assert abs(it["area"] - it["ref"]) <= 1e-9 * max(1, it["ref"]) and abs(float(it["lab"]) - it["area"]) <= 1e-5 * it["area"] and it["txt"] in pg.evaluate(f"{XP}._a.lbls.find(l=>l.copy!=null).text"), it     # the label shows the page form and copies the CSV value (#3153)
             pg.evaluate("showInts()"); wait_for_js(pg, "document.querySelector('#bigbody table')&&document.querySelector('#bigbody table').textContent.length>0")
             assert it["txt"] in pg.evaluate("document.querySelector('#bigbody table').textContent") or it["txt"].replace(".", ",") in pg.evaluate("document.querySelector('#bigbody table').textContent"), it
             pg.keyboard.press("Escape")
-        step("label = trapezoid sum = number in the area table", number)
+        step("label (shown and copied) = trapezoid sum = number in the area table", number)
         def dot_hidden():
             assert pg.evaluate(f"{XP}.ch.hidden") is True, "the cursor dot must be hidden while the integration tool is on"
         step("cursor dot hidden in integration mode", dot_hidden)

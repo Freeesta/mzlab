@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from cargo_util import build, cli
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
@@ -20,7 +21,7 @@ def run(*a):
 @pytest.fixture(scope="module")
 def pkg(tmp_path_factory):
     out = tmp_path_factory.mktemp("grafo")
-    run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-grafo-wasm")
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-grafo-wasm", runner=run)
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(out), "target/wasm32-unknown-unknown/release/mzlab_feat_grafo_wasm.wasm")
     return out
 
@@ -74,7 +75,7 @@ def test_mechanism_check_through_wasm_equals_the_app_fixture_and_the_cli(pkg, tm
     req.write_text(json.dumps(fx["request"]), encoding="utf-8")
     site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "mech")
     assert site.strip() == fx["mecc"]   # crates/mzlab-desktop/tests/labels.rs reads the same bytes
-    assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-mech", str(req))
+    assert site == cli("mol-mech", str(req), runner=run)
     r = json.loads(site)
     assert [a["ok"] for a in r["arrows"]] == [True] * 5 + [False] and r["arrows"][5]["problem"] == "pairFromRadical"
 
@@ -87,7 +88,7 @@ def test_labels_through_wasm_equal_the_cli_byte_for_byte(pkg, tmp_path):
     req = tmp_path / "req.json"
     req.write_text(json.dumps(LABELS), encoding="utf-8")
     site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "labels")
-    app = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-label", str(req))
+    app = cli("mol-label", str(req), runner=run)
     assert site == app
     r = json.loads(site)
     assert [s.get("text") for s in r["structures"]] == ["[13C]H4", "CH4O", "H4Cl2N2Pt", "[C2H2O4]2-", None] and r["arrows"][1] is None
@@ -111,7 +112,7 @@ def test_cut_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path, sets):
         k, v = kv.split("=")
         req[k] = [int(v)] if k == "cation" else float(v) if k == "gap" else v
     site = run("node", "tests/feat_grafo_node.js", str(pkg), json.dumps(req), "cut")
-    app = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-cut", str(mf), "--set", "bonds=3-4", *[a for kv in sets for a in ("--set", kv)])
+    app = cli("mol-cut", str(mf), "--set", "bonds=3-4", *[a for kv in sets for a in ("--set", kv)], runner=run)
     assert site == app
     labels = {tuple(p["atoms"]): p["label"] for p in json.loads(site)["pieces"]}
     aryl, amide = labels[(4, 5, 6, 7, 8, 9, 10)], labels[(0, 1, 2, 3)]
@@ -126,7 +127,7 @@ def test_labels_with_a_radical_mark_equal_the_cli(pkg, tmp_path):
     req = tmp_path / "req.json"
     req.write_text(json.dumps({"structures": [[{"el": "C", "h": 3, "r": 2}], [{"el": "N", "h": 3, "q": 1, "r": 2}]], "arrows": []}), encoding="utf-8")
     site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "labels")
-    assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-label", str(req))
+    assert site == cli("mol-label", str(req), runner=run)
     methyl, aminium = json.loads(site)["structures"]
     assert (methyl["unpaired"], methyl["odd"], methyl["kind"]) == (1, True, "radical")
     assert (aminium["kind"], aminium["electrons"]) == ("radicalCation", 9) and aminium["odd"]
@@ -136,7 +137,7 @@ def test_labels_with_a_bracket_delta_equal_the_cli(pkg, tmp_path):
     req = tmp_path / "req.json"   # the Draw label of a structure in brackets with «+O»: formula and masses of structure plus delta
     req.write_text(json.dumps({"structures": [[{"el": "C", "h": 3}, {"el": "C", "h": 3}], [{"el": "C", "h": 4}]], "deltas": ["+O", "-O"], "arrows": []}), encoding="utf-8")
     site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "labels")
-    assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-label", str(req))
+    assert site == cli("mol-label", str(req), runner=run)
     ethanol, bad = json.loads(site)["structures"]
     assert (ethanol["formula"], ethanol["nominal"], ethanol["delta"]) == ("C2H6O", 46, "+O") and bad["error"] == "error.grafo.delta.neg"
 
@@ -146,7 +147,7 @@ def test_sel_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path, part):
     req = tmp_path / "req.json"
     req.write_text(json.dumps({"molfile": ANILIDE, "part": part}), encoding="utf-8")
     site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "sel")
-    assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-sel", str(req))
+    assert site == cli("mol-sel", str(req), runner=run)
     r = json.loads(site)
     assert (r["format"], r["part"], r["label"]["formula"], r["heavy"], r["rings"], r["aromaticRings"], r["aromaticAtoms"]) == ("sel/1", part, "C8H8FNO", 11, 1, 1, 6)
     assert round(r["label"]["mass"], 4) == 153.0590
@@ -160,7 +161,7 @@ def test_analysis_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path):
         req = tmp_path / f"anal{i}.json"
         req.write_text(json.dumps(c), encoding="utf-8")
         site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "analysis")
-        assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-anal", str(req)), c
+        assert site == cli("mol-anal", str(req), runner=run), c
     assert [c["el"] for c in json.loads(site)["composition"]] == ["H", "Cl", "Cu", "N"]
 
 
@@ -170,4 +171,4 @@ def test_link_through_wasm_equals_the_cli_and_the_reference(pkg, tmp_path):
         req = tmp_path / f"link{i}.json"
         req.write_text(json.dumps(c["request"]), encoding="utf-8")
         site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "link")
-        assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-link", str(req)) == c["link"] + "\n", c
+        assert site == cli("mol-link", str(req), runner=run) == c["link"] + "\n", c

@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from cargo_util import cli_argv
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,7 +15,7 @@ SCHEMA = json.loads((ROOT / "docs/schemi/msnlib-1.json").read_text())
 GRAPH = json.loads((ROOT / "docs/schemi/msngrafo-2.json").read_text())
 pytestmark = pytest.mark.skipif(not shutil.which("cargo"), reason="cargo not available")
 
-MANIFEST = "id\tformula_neutra\taddotto_atteso\tfile\nSTD-2\tC14H14N3O5\t[M+H]+\tmsn.mzML\nSTD-1\tC14H14N3O5\t[M+H]+\tmsn.mzML\n"
+MANIFEST = "id\tneutral_formula\texpected_adduct\tfile\nSTD-2\tC14H14N3O5\t[M+H]+\tmsn.mzML\nSTD-1\tC14H14N3O5\t[M+H]+\tmsn.mzML\n"
 
 
 @pytest.fixture(scope="module")
@@ -22,7 +23,7 @@ def library(tmp_path_factory):
     d = tmp_path_factory.mktemp("msnlib")
     shutil.copy(MZML, d / "msn.mzML")
     (d / "manifest.tsv").write_text(MANIFEST)
-    r = subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-lib", "build", str(d / "manifest.tsv")], cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run(cli_argv("msn-lib", "build", str(d / "manifest.tsv")), cwd=ROOT, capture_output=True, text=True)
     assert r.returncode == 0, r.stderr[-2000:]
     return json.loads((d / "manifest.json").read_text())
 

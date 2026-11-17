@@ -1,8 +1,9 @@
-"""Disegno: the PubChem, ChEBI and BioTransformer rows of the canvas menu (`link/1` of the Rust graph), in two submenus: «PubChem» (the exact structure
-first, then the engine's order) and «Altri siti» (ChEBI, BioTransformer); a submenu opens on hover, click or Right arrow (aria-haspopup, aria-expanded),
+"""Drawing: the PubChem, ChEBI and BioTransformer rows of the canvas menu (`link/1` of the Rust graph), in two submenus: «PubChem» (the exact structure
+first, then the engine's order) and «Other sites» (ChEBI, BioTransformer); a submenu opens on hover, click or Right arrow (aria-haspopup, aria-expanded),
 Left arrow and Esc come back to its row, rows are at least 24 px high; every row opens its URL with window.open(url, "_blank", "noopener,noreferrer") only on the click,
 PubChem carries the encoded SMILES in `#query=` (and `&tab=`) and copies it too, BioTransformer copies it (toast, role=status), ChEBI carries the percent-encoded InChI, and the page
 makes no request to any outside host."""
+# covers: mzlab/web/disegno-menu.js, mzlab/web/disegno-link.js
 import sys, os
 from urllib.parse import quote, urlparse
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -42,13 +43,13 @@ try:
         def whole():
             rows = menu(None)
             assert [x[0] for x in rows] == ["link-pubchem", "link-pubchem-exact", "link-pubchem-similar", "link-pubchem-sub", "link-other", "link-chebi", "link-biotransformer"], rows
-            assert rows[0][1] == "PubChem" and rows[1][1] == "Questa struttura (esatta)" and "pubchem.ncbi.nlm.nih.gov" in rows[1][2], rows[:2]
+            assert rows[0][1] == "PubChem" and rows[1][1] == "This structure (exact)" and "pubchem.ncbi.nlm.nih.gov" in rows[1][2], rows[:2]
             assert not pg.evaluate("window._open.length"), "nothing opens before a click"
             (url, tgt, feat), cp = click("link-pubchem-exact")
             assert (tgt, feat) == ("_blank", "noopener,noreferrer") and url.startswith("https://pubchem.ncbi.nlm.nih.gov/#query=") and "tab=" not in url, url
             assert cp and url.split("#query=")[1] == quote(cp[0], safe=""), (url, cp)
             assert cp == ["CC(=O)Nc1ccc(F)cc1"] or (len(cp) == 1 and "F" in cp[0] and "N" in cp[0]), cp
-            wait_for_js(pg, "[...document.querySelectorAll('#toast-container .toast-msg')].some(t => t.textContent.includes('ricerca per identità'))")
+            wait_for_js(pg, "[...document.querySelectorAll('#toast-container .toast-msg')].some(t => t.textContent.includes('identity search'))")
             assert pg.get_attribute("#toast-container", "role") == "status"
         step("whole drawing: exact PubChem first, the click copies the SMILES and opens a new tab without opener", whole)
         def chebi():
@@ -61,11 +62,11 @@ try:
             menu(None)
             (url, tgt, feat), cp = click("link-biotransformer")
             assert (url, feat) == ("https://biotransformer.ca/new", "noopener,noreferrer") and len(cp) == 1, (url, cp)
-            wait_for_js(pg, "[...document.querySelectorAll('#toast-container .toast-msg')].some(t => t.textContent === 'SMILES copiato: incollalo nel riquadro della struttura')")
+            wait_for_js(pg, "[...document.querySelectorAll('#toast-container .toast-msg')].some(t => t.textContent === 'SMILES copied: paste it into the structure box')")
         step("BioTransformer: SMILES copied, its prediction page opened, the toast says where to paste", bio)
         def part():
             rows = menu(0)                                                # the first bond: methyl and carbonyl carbon
-            assert [x[0] for x in rows[:4]] == ["link-pubchem", "link-pubchem-exact", "link-pubchem-sub", "link-pubchem-similar"] and rows[2][1] == "Sottostruttura", rows   # exact first here too
+            assert [x[0] for x in rows[:4]] == ["link-pubchem", "link-pubchem-exact", "link-pubchem-sub", "link-pubchem-similar"] and rows[2][1] == "Substructure", rows   # exact first here too
             (url, tgt, feat), cp = click("link-pubchem-sub")
             assert len(cp) == 1 and cp[0] != "CC(=O)Nc1ccc(F)cc1", cp
             assert url == "https://pubchem.ncbi.nlm.nih.gov/#query=" + quote(cp[0], safe="") + "&tab=substructure", url

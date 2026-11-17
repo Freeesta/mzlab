@@ -23,161 +23,161 @@ import pyteomics.mass
 # Deterministic transformation data (120 rows over 8 parent molecules)
 # -----------------------------------------------------------------------------
 TRANSFORMATIONS_RAW = """case_id,parent_name,parent_smiles,parent_formula,transformation,net_change,tp_formula_neutral
-T001,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,idrossilazione,+O,C15H12N2O2
-T002,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,addizione di metano,+CH4,C16H16N2O
-T003,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,diidrossilazione,+2O,C15H12N2O3
-T004,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,solforazione,+S,C15H12N2OS
-T005,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,triossidazione,+3O,C15H12N2O4
-T006,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,deidrogenazione,-H2,C15H10N2O
-T007,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,ossidazione a carbonile,+O -2H,C15H10N2O2
-T008,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,metilazione,+CH2,C16H14N2O
-T009,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,decarbonilazione,-CO,C14H12N2
-T010,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,dealchilazione,-C2H4,C13H8N2O
-T011,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,idratazione,+H2O,C15H14N2O2
-T012,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,disidratazione,-H2O,C15H10N2
-T013,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,solfonazione,+SO3,C15H12N2O4S
-T014,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,pentaossidazione,+5O,C15H12N2O6
-T015,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,glucuronidazione netta,+C6H8O6,C21H20N2O7
-T016,paracetamolo,CC(=O)Nc1ccc(O)cc1,C8H9NO2,idrossilazione,+O,C8H9NO3
-T017,paracetamolo,CC(=O)Nc1ccc(O)cc1,C8H9NO2,addizione di metano,+CH4,C9H13NO2
-T018,paracetamolo,CC(=O)Nc1ccc(O)cc1,C8H9NO2,diidrossilazione,+2O,C8H9NO4
-T019,paracetamolo,CC(=O)Nc1ccc(O)cc1,C8H9NO2,solforazione,+S,C8H9NO2S
-T020,paracetamolo,CC(=O)Nc1ccc(O)cc1,C8H9NO2,triossidazione,+3O,C8H9NO5
-T021,paracetamolo,CC(=O)Nc1ccc(O)cc1,C8H9NO2,deidrogenazione,-H2,C8H7NO2
-T022,paracetamolo,CC(=O)Nc1ccc(O)cc1,C8H9NO2,ossidazione a carbonile,+O -2H,C8H7NO3
-T023,paracetamolo,CC(=O)Nc1ccc(O)cc1,C8H9NO2,metilazione,+CH2,C9H11NO2
-T024,paracetamolo,CC(=O)Nc1ccc(O)cc1,C8H9NO2,decarbonilazione,-CO,C7H9NO
-T025,paracetamolo,CC(=O)Nc1ccc(O)cc1,C8H9NO2,dealchilazione,-C2H4,C6H5NO2
-T026,paracetamolo,CC(=O)Nc1ccc(O)cc1,C8H9NO2,perdita di formaldeide,-CH2O,C7H7NO
-T027,paracetamolo,CC(=O)Nc1ccc(O)cc1,C8H9NO2,perdita di monossido di azoto,-NO,C8H9O
-T028,paracetamolo,CC(=O)Nc1ccc(O)cc1,C8H9NO2,demetilazione,-CH2,C7H7NO2
-T029,paracetamolo,CC(=O)Nc1ccc(O)cc1,C8H9NO2,solfonazione,+SO3,C8H9NO5S
-T030,paracetamolo,CC(=O)Nc1ccc(O)cc1,C8H9NO2,glucuronidazione netta,+C6H8O6,C14H17NO8
-T031,caffeina,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,demetilazione,-CH2,C7H8N4O2
-T032,caffeina,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,deossigenazione con idrogenazione,-O +H2,C8H12N4O
-T033,caffeina,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,dealchilazione,-C2H4,C6H6N4O2
-T034,caffeina,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,decarbonilazione,-CO,C7H10N4O
-T035,caffeina,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,perdita di formaldeide,-CH2O,C7H8N4O
-T036,caffeina,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,perdita di monossido di azoto,-NO,C8H10N3O
-T037,caffeina,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,idrossilazione,+O,C8H10N4O3
-T038,caffeina,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,addizione di metano,+CH4,C9H14N4O2
-T039,caffeina,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,diidrossilazione,+2O,C8H10N4O4
-T040,caffeina,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,solforazione,+S,C8H10N4O2S
-T041,caffeina,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,triossidazione,+3O,C8H10N4O5
-T042,caffeina,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,deidrogenazione,-H2,C8H8N4O2
-T043,caffeina,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,ossidazione a carbonile,+O -2H,C8H8N4O3
-T044,caffeina,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,metilazione,+CH2,C9H12N4O2
-T045,caffeina,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,solfonazione,+SO3,C8H10N4O5S
-T046,atrazina,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,dealogenazione idrolitica,-Cl +OH,C8H15N5O
-T047,atrazina,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,deetilazione,-C2H4,C6H10ClN5
-T048,atrazina,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,N-deisopropilazione,-C3H6,C5H8ClN5
-T049,atrazina,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,demetilazione,-CH2,C7H12ClN5
-T050,atrazina,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,deaminazione,-NH3,C8H11ClN4
-T051,atrazina,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,declorurazione riduttiva,-Cl +H,C8H15N5
-T052,atrazina,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,deidrogenazione,-H2,C8H12ClN5
-T053,atrazina,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,idrossilazione,+O,C8H14ClN5O
-T054,atrazina,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,addizione di metano,+CH4,C9H18ClN5
-T055,atrazina,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,diidrossilazione,+2O,C8H14ClN5O2
-T056,atrazina,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,solforazione,+S,C8H14ClN5S
-T057,atrazina,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,ossidazione a carbonile,+O -2H,C8H12ClN5O
-T058,atrazina,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,metilazione,+CH2,C9H16ClN5
-T059,atrazina,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,solfonazione,+SO3,C8H14ClN5O3S
-T060,atrazina,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,pentaossidazione,+5O,C8H14ClN5O5
-T061,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,idrossilazione,+O,C14H11Cl2NO3
-T062,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,addizione di metano,+CH4,C15H15Cl2NO2
-T063,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,diidrossilazione,+2O,C14H11Cl2NO4
-T064,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,solforazione,+S,C14H11Cl2NO2S
-T065,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,triossidazione,+3O,C14H11Cl2NO5
-T066,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,deidrogenazione,-H2,C14H9Cl2NO2
-T067,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,disidratazione,-H2O,C14H9Cl2NO
-T068,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,dealogenazione idrolitica,-Cl +OH,C14H12ClNO3
-T069,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,decarbossilazione,-CO2,C13H11Cl2N
-T070,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,perdita di etilene ossido,-C2H4O,C12H7Cl2NO
-T071,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,decarbonilazione,-CO,C13H11Cl2NO
-T072,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,dealchilazione,-C2H4,C12H7Cl2NO2
-T073,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,ossidazione a carbonile,+O -2H,C14H9Cl2NO3
-T074,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,metilazione,+CH2,C15H13Cl2NO2
-T075,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,declorurazione riduttiva,-Cl +H,C14H12ClNO2
-T076,sulfametossazolo,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,idrossilazione,+O,C10H11N3O4S
-T077,sulfametossazolo,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,addizione di metano,+CH4,C11H15N3O3S
-T078,sulfametossazolo,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,diidrossilazione,+2O,C10H11N3O5S
-T079,sulfametossazolo,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,solforazione,+S,C10H11N3O3S2
-T080,sulfametossazolo,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,triossidazione,+3O,C10H11N3O6S
-T081,sulfametossazolo,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,deidrogenazione,-H2,C10H9N3O3S
-T082,sulfametossazolo,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,desolfonilazione,-SO2,C10H11N3O
-T083,sulfametossazolo,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,perdita di ciclopentadiene,-C5H4,C5H7N3O3S
-T084,sulfametossazolo,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,decarbonilazione,-CO,C9H11N3O2S
-T085,sulfametossazolo,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,dealchilazione,-C2H4,C8H7N3O3S
-T086,sulfametossazolo,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,demetilazione,-CH2,C9H9N3O3S
-T087,sulfametossazolo,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,deossigenazione con idrogenazione,-O +H2,C10H13N3O2S
-T088,sulfametossazolo,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,ossidazione a carbonile,+O -2H,C10H9N3O4S
-T089,sulfametossazolo,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,metilazione,+CH2,C11H13N3O3S
-T090,sulfametossazolo,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,acetilazione,+C2H2O,C12H13N3O4S
-T091,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,defluorurazione idrolitica,-F +OH,C14H14F3N3O3S
-T092,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,deidrogenazione,-H2,C14H11F4N3O2S
-T093,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,idrossilazione,+O,C14H13F4N3O3S
-T094,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,addizione di metano,+CH4,C15H17F4N3O2S
-T095,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,diidrossilazione,+2O,C14H13F4N3O4S
-T096,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,solforazione,+S,C14H13F4N3O2S2
-T097,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,N-deisopropilazione,-C3H6,C11H7F4N3O2S
-T098,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,perdita di chetene,-C2H2O,C12H11F4N3OS
-T099,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,dealchilazione,-C2H4,C12H9F4N3O2S
-T100,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,decarbonilazione,-CO,C13H13F4N3OS
-T101,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,ossidazione a carbonile,+O -2H,C14H11F4N3O3S
-T102,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,metilazione,+CH2,C15H15F4N3O2S
-T103,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,disidratazione,-H2O,C14H11F4N3OS
-T104,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,solfonazione,+SO3,C14H13F4N3O5S2
-T105,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,pentaossidazione,+5O,C14H13F4N3O7S
-T106,ibuprofene,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,idrossilazione,+O,C13H18O3
-T107,ibuprofene,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,addizione di metano,+CH4,C14H22O2
-T108,ibuprofene,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,diidrossilazione,+2O,C13H18O4
-T109,ibuprofene,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,solforazione,+S,C13H18O2S
-T110,ibuprofene,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,triossidazione,+3O,C13H18O5
-T111,ibuprofene,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,deidrogenazione,-H2,C13H16O2
-T112,ibuprofene,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,ossidazione a carbonile,+O -2H,C13H16O3
-T113,ibuprofene,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,metilazione,+CH2,C14H20O2
-T114,ibuprofene,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,decarbossilazione,-CO2,C12H18
-T115,ibuprofene,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,perdita di etilene ossido,-C2H4O,C11H14O
-T116,ibuprofene,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,dealchilazione maggiore,-C4H8,C9H10O2
-T117,ibuprofene,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,perdita di acroleina,-C3H4O,C10H14O
-T118,ibuprofene,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,decarbonilazione,-CO,C12H18O
-T119,ibuprofene,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,dealchilazione,-C2H4,C11H14O2
-T120,ibuprofene,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,glucuronidazione netta,+C6H8O6,C19H26O8"""
+T001,carbamazepine,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,hydroxylation,+O,C15H12N2O2
+T002,carbamazepine,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,methane addition,+CH4,C16H16N2O
+T003,carbamazepine,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,dihydroxylation,+2O,C15H12N2O3
+T004,carbamazepine,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,sulfation,+S,C15H12N2OS
+T005,carbamazepine,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,trioxidation,+3O,C15H12N2O4
+T006,carbamazepine,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,dehydrogenation,-H2,C15H10N2O
+T007,carbamazepine,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,oxidation to carbonyl,+O -2H,C15H10N2O2
+T008,carbamazepine,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,methylation,+CH2,C16H14N2O
+T009,carbamazepine,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,decarbonylation,-CO,C14H12N2
+T010,carbamazepine,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,dealkylation,-C2H4,C13H8N2O
+T011,carbamazepine,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,hydration,+H2O,C15H14N2O2
+T012,carbamazepine,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,dehydration,-H2O,C15H10N2
+T013,carbamazepine,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,sulfonation,+SO3,C15H12N2O4S
+T014,carbamazepine,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,pentaoxidation,+5O,C15H12N2O6
+T015,carbamazepine,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,net glucuronidation,+C6H8O6,C21H20N2O7
+T016,paracetamol,CC(=O)Nc1ccc(O)cc1,C8H9NO2,hydroxylation,+O,C8H9NO3
+T017,paracetamol,CC(=O)Nc1ccc(O)cc1,C8H9NO2,methane addition,+CH4,C9H13NO2
+T018,paracetamol,CC(=O)Nc1ccc(O)cc1,C8H9NO2,dihydroxylation,+2O,C8H9NO4
+T019,paracetamol,CC(=O)Nc1ccc(O)cc1,C8H9NO2,sulfation,+S,C8H9NO2S
+T020,paracetamol,CC(=O)Nc1ccc(O)cc1,C8H9NO2,trioxidation,+3O,C8H9NO5
+T021,paracetamol,CC(=O)Nc1ccc(O)cc1,C8H9NO2,dehydrogenation,-H2,C8H7NO2
+T022,paracetamol,CC(=O)Nc1ccc(O)cc1,C8H9NO2,oxidation to carbonyl,+O -2H,C8H7NO3
+T023,paracetamol,CC(=O)Nc1ccc(O)cc1,C8H9NO2,methylation,+CH2,C9H11NO2
+T024,paracetamol,CC(=O)Nc1ccc(O)cc1,C8H9NO2,decarbonylation,-CO,C7H9NO
+T025,paracetamol,CC(=O)Nc1ccc(O)cc1,C8H9NO2,dealkylation,-C2H4,C6H5NO2
+T026,paracetamol,CC(=O)Nc1ccc(O)cc1,C8H9NO2,loss of formaldehyde,-CH2O,C7H7NO
+T027,paracetamol,CC(=O)Nc1ccc(O)cc1,C8H9NO2,loss of nitric oxide,-NO,C8H9O
+T028,paracetamol,CC(=O)Nc1ccc(O)cc1,C8H9NO2,demethylation,-CH2,C7H7NO2
+T029,paracetamol,CC(=O)Nc1ccc(O)cc1,C8H9NO2,sulfonation,+SO3,C8H9NO5S
+T030,paracetamol,CC(=O)Nc1ccc(O)cc1,C8H9NO2,net glucuronidation,+C6H8O6,C14H17NO8
+T031,caffeine,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,demethylation,-CH2,C7H8N4O2
+T032,caffeine,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,deoxygenation with hydrogenation,-O +H2,C8H12N4O
+T033,caffeine,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,dealkylation,-C2H4,C6H6N4O2
+T034,caffeine,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,decarbonylation,-CO,C7H10N4O
+T035,caffeine,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,loss of formaldehyde,-CH2O,C7H8N4O
+T036,caffeine,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,loss of nitric oxide,-NO,C8H10N3O
+T037,caffeine,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,hydroxylation,+O,C8H10N4O3
+T038,caffeine,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,methane addition,+CH4,C9H14N4O2
+T039,caffeine,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,dihydroxylation,+2O,C8H10N4O4
+T040,caffeine,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,sulfation,+S,C8H10N4O2S
+T041,caffeine,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,trioxidation,+3O,C8H10N4O5
+T042,caffeine,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,dehydrogenation,-H2,C8H8N4O2
+T043,caffeine,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,oxidation to carbonyl,+O -2H,C8H8N4O3
+T044,caffeine,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,methylation,+CH2,C9H12N4O2
+T045,caffeine,Cn1c(=O)c2c(ncn2C)n(C)c1=O,C8H10N4O2,sulfonation,+SO3,C8H10N4O5S
+T046,atrazine,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,hydrolytic dehalogenation,-Cl +OH,C8H15N5O
+T047,atrazine,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,deethylation,-C2H4,C6H10ClN5
+T048,atrazine,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,N-deisopropylation,-C3H6,C5H8ClN5
+T049,atrazine,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,demethylation,-CH2,C7H12ClN5
+T050,atrazine,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,deamination,-NH3,C8H11ClN4
+T051,atrazine,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,reductive dechlorination,-Cl +H,C8H15N5
+T052,atrazine,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,dehydrogenation,-H2,C8H12ClN5
+T053,atrazine,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,hydroxylation,+O,C8H14ClN5O
+T054,atrazine,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,methane addition,+CH4,C9H18ClN5
+T055,atrazine,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,dihydroxylation,+2O,C8H14ClN5O2
+T056,atrazine,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,sulfation,+S,C8H14ClN5S
+T057,atrazine,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,oxidation to carbonyl,+O -2H,C8H12ClN5O
+T058,atrazine,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,methylation,+CH2,C9H16ClN5
+T059,atrazine,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,sulfonation,+SO3,C8H14ClN5O3S
+T060,atrazine,CCNc1nc(Cl)nc(NC(C)C)n1,C8H14ClN5,pentaoxidation,+5O,C8H14ClN5O5
+T061,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,hydroxylation,+O,C14H11Cl2NO3
+T062,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,methane addition,+CH4,C15H15Cl2NO2
+T063,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,dihydroxylation,+2O,C14H11Cl2NO4
+T064,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,sulfation,+S,C14H11Cl2NO2S
+T065,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,trioxidation,+3O,C14H11Cl2NO5
+T066,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,dehydrogenation,-H2,C14H9Cl2NO2
+T067,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,dehydration,-H2O,C14H9Cl2NO
+T068,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,hydrolytic dehalogenation,-Cl +OH,C14H12ClNO3
+T069,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,decarboxylation,-CO2,C13H11Cl2N
+T070,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,loss of ethylene oxide,-C2H4O,C12H7Cl2NO
+T071,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,decarbonylation,-CO,C13H11Cl2NO
+T072,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,dealkylation,-C2H4,C12H7Cl2NO2
+T073,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,oxidation to carbonyl,+O -2H,C14H9Cl2NO3
+T074,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,methylation,+CH2,C15H13Cl2NO2
+T075,diclofenac,O=C(O)Cc1ccccc1Nc1c(Cl)cccc1Cl,C14H11Cl2NO2,reductive dechlorination,-Cl +H,C14H12ClNO2
+T076,sulfamethoxazole,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,hydroxylation,+O,C10H11N3O4S
+T077,sulfamethoxazole,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,methane addition,+CH4,C11H15N3O3S
+T078,sulfamethoxazole,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,dihydroxylation,+2O,C10H11N3O5S
+T079,sulfamethoxazole,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,sulfation,+S,C10H11N3O3S2
+T080,sulfamethoxazole,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,trioxidation,+3O,C10H11N3O6S
+T081,sulfamethoxazole,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,dehydrogenation,-H2,C10H9N3O3S
+T082,sulfamethoxazole,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,desulfonylation,-SO2,C10H11N3O
+T083,sulfamethoxazole,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,loss of cyclopentadiene,-C5H4,C5H7N3O3S
+T084,sulfamethoxazole,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,decarbonylation,-CO,C9H11N3O2S
+T085,sulfamethoxazole,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,dealkylation,-C2H4,C8H7N3O3S
+T086,sulfamethoxazole,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,demethylation,-CH2,C9H9N3O3S
+T087,sulfamethoxazole,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,deoxygenation with hydrogenation,-O +H2,C10H13N3O2S
+T088,sulfamethoxazole,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,oxidation to carbonyl,+O -2H,C10H9N3O4S
+T089,sulfamethoxazole,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,methylation,+CH2,C11H13N3O3S
+T090,sulfamethoxazole,Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1,C10H11N3O3S,acetylation,+C2H2O,C12H13N3O4S
+T091,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,hydrolytic defluorination,-F +OH,C14H14F3N3O3S
+T092,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,dehydrogenation,-H2,C14H11F4N3O2S
+T093,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,hydroxylation,+O,C14H13F4N3O3S
+T094,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,methane addition,+CH4,C15H17F4N3O2S
+T095,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,dihydroxylation,+2O,C14H13F4N3O4S
+T096,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,sulfation,+S,C14H13F4N3O2S2
+T097,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,N-deisopropylation,-C3H6,C11H7F4N3O2S
+T098,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,loss of ketene,-C2H2O,C12H11F4N3OS
+T099,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,dealkylation,-C2H4,C12H9F4N3O2S
+T100,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,decarbonylation,-CO,C13H13F4N3OS
+T101,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,oxidation to carbonyl,+O -2H,C14H11F4N3O3S
+T102,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,methylation,+CH2,C15H15F4N3O2S
+T103,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,dehydration,-H2O,C14H11F4N3OS
+T104,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,sulfonation,+SO3,C14H13F4N3O5S2
+T105,flufenacet,CC(C)N(C1=CC=C(C=C1)F)C(=O)COC2=NN=C(S2)C(F)(F)F,C14H13F4N3O2S,pentaoxidation,+5O,C14H13F4N3O7S
+T106,ibuprofen,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,hydroxylation,+O,C13H18O3
+T107,ibuprofen,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,methane addition,+CH4,C14H22O2
+T108,ibuprofen,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,dihydroxylation,+2O,C13H18O4
+T109,ibuprofen,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,sulfation,+S,C13H18O2S
+T110,ibuprofen,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,trioxidation,+3O,C13H18O5
+T111,ibuprofen,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,dehydrogenation,-H2,C13H16O2
+T112,ibuprofen,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,oxidation to carbonyl,+O -2H,C13H16O3
+T113,ibuprofen,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,methylation,+CH2,C14H20O2
+T114,ibuprofen,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,decarboxylation,-CO2,C12H18
+T115,ibuprofen,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,loss of ethylene oxide,-C2H4O,C11H14O
+T116,ibuprofen,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,major dealkylation,-C4H8,C9H10O2
+T117,ibuprofen,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,loss of acrolein,-C3H4O,C10H14O
+T118,ibuprofen,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,decarbonylation,-CO,C12H18O
+T119,ibuprofen,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,dealkylation,-C2H4,C11H14O2
+T120,ibuprofen,CC(C)Cc1ccc(C(C)C(=O)O)cc1,C13H18O2,net glucuronidation,+C6H8O6,C19H26O8"""
 
 # -----------------------------------------------------------------------------
 # Deterministic specs for isomers and different formulas
 # -----------------------------------------------------------------------------
 ISOMERS_SPEC = [
-    ("carbamazepina", "C15H14N2O2", [2.30, 3.50]),
-    ("paracetamolo", "C7H7NO2", [1.50, 2.15]),
-    ("caffeina", "C8H8N4O2", [2.20, 2.95, 3.60]),
-    ("atrazina", "C6H10ClN5", [3.10, 3.85]),
+    ("carbamazepine", "C15H14N2O2", [2.30, 3.50]),
+    ("paracetamol", "C7H7NO2", [1.50, 2.15]),
+    ("caffeine", "C8H8N4O2", [2.20, 2.95, 3.60]),
+    ("atrazine", "C6H10ClN5", [3.10, 3.85]),
     ("diclofenac", "C14H12ClNO2", [3.75, 4.30, 4.95]),
-    ("ibuprofene", "C13H16O2", [4.10, 4.70, 5.25]),
-    ("sulfametossazolo", "C10H9N3O3S", [2.80, 3.45]),
+    ("ibuprofen", "C13H16O2", [4.10, 4.70, 5.25]),
+    ("sulfamethoxazole", "C10H9N3O3S", [2.80, 3.45]),
     ("flufenacet", "C14H11F4N3OS", [4.80, 5.25, 5.90]),
 ]
 
 DIFF_SPEC = [
     # Triplets (same nominal m/z, 3 different formulas)
-    ("carbamazepina", 253, [("C14H8N2O3", 3.80), ("C15H12N2O2", 4.35), ("C16H16N2O", 5.60)]),
-    ("caffeina", 181, [("C6H4N4O3", 1.90), ("C7H8N4O2", 2.65), ("C8H12N4O", 3.45)]),
+    ("carbamazepine", 253, [("C14H8N2O3", 3.80), ("C15H12N2O2", 4.35), ("C16H16N2O", 5.60)]),
+    ("caffeine", 181, [("C6H4N4O3", 1.90), ("C7H8N4O2", 2.65), ("C8H12N4O", 3.45)]),
     # Pairs (with examples of inverse RT order)
-    ("carbamazepina", 209, [("C13H8N2O", 4.20), ("C14H12N2", 3.10)]),      # INVERSE RT
-    ("carbamazepina", 251, [("C15H10N2O2", 3.80), ("C16H14N2O", 4.70)]),
-    ("carbamazepina", 269, [("C15H12N2OS", 4.90), ("C15H12N2O3", 3.30)]),    # INVERSE RT
-    ("paracetamolo", 122, [("C7H7NO", 1.80), ("C8H9O", 2.45)]),
-    ("paracetamolo", 124, [("C6H5NO2", 3.60), ("C7H9NO", 2.10)]),           # INVERSE RT
-    ("paracetamolo", 168, [("C8H9NO3", 1.75), ("C9H13NO2", 2.55)]),
-    ("paracetamolo", 184, [("C8H9NO2S", 2.85), ("C8H9NO4", 1.95)]),         # INVERSE RT
-    ("caffeina", 165, [("C7H8N4O", 2.05), ("C8H10N3O", 2.70)]),
-    ("caffeina", 167, [("C6H6N4O2", 1.90), ("C7H10N4O", 2.60)]),
-    ("atrazina", 230, [("C8H12ClN5O", 3.60), ("C9H16ClN5", 4.40)]),
-    ("atrazina", 232, [("C8H14ClN5O", 3.40), ("C9H18ClN5", 4.20)]),
+    ("carbamazepine", 209, [("C13H8N2O", 4.20), ("C14H12N2", 3.10)]),      # INVERSE RT
+    ("carbamazepine", 251, [("C15H10N2O2", 3.80), ("C16H14N2O", 4.70)]),
+    ("carbamazepine", 269, [("C15H12N2OS", 4.90), ("C15H12N2O3", 3.30)]),    # INVERSE RT
+    ("paracetamol", 122, [("C7H7NO", 1.80), ("C8H9O", 2.45)]),
+    ("paracetamol", 124, [("C6H5NO2", 3.60), ("C7H9NO", 2.10)]),           # INVERSE RT
+    ("paracetamol", 168, [("C8H9NO3", 1.75), ("C9H13NO2", 2.55)]),
+    ("paracetamol", 184, [("C8H9NO2S", 2.85), ("C8H9NO4", 1.95)]),         # INVERSE RT
+    ("caffeine", 165, [("C7H8N4O", 2.05), ("C8H10N3O", 2.70)]),
+    ("caffeine", 167, [("C6H6N4O2", 1.90), ("C7H10N4O", 2.60)]),
+    ("atrazine", 230, [("C8H12ClN5O", 3.60), ("C9H16ClN5", 4.40)]),
+    ("atrazine", 232, [("C8H14ClN5O", 3.40), ("C9H18ClN5", 4.20)]),
     ("diclofenac", 252, [("C12H7Cl2NO", 4.10), ("C13H11Cl2N", 4.90)]),
     ("diclofenac", 278, [("C14H9Cl2NO", 4.85), ("C14H12ClNO3", 3.70)]),     # INVERSE RT
-    ("sulfametossazolo", 190, [("C5H7N3O3S", 1.65), ("C10H11N3O", 2.50)]),
-    ("ibuprofene", 151, [("C9H10O2", 3.20), ("C10H14O", 3.90)]),
+    ("sulfamethoxazole", 190, [("C5H7N3O3S", 1.65), ("C10H11N3O", 2.50)]),
+    ("ibuprofen", 151, [("C9H10O2", 3.20), ("C10H14O", 3.90)]),
     ("flufenacet", 322, [("C11H7F4N3O2S", 4.40), ("C12H11F4N3OS", 5.10)]),
 ]
 
@@ -224,8 +224,8 @@ def build_name_cases_records(t_rows: list[dict[str, str]]) -> list[dict]:
         singles_spec.append((p, chosen["tp_formula_neutral"], "[M+H]+", rt))
 
     singles_spec.append(("diclofenac", "C14H11Cl2NO5", "[M-H]-", 2.45))
-    singles_spec.append(("ibuprofene", "C19H26O8", "[M-H]-", 3.65))
-    singles_spec.append(("ibuprofene", "C13H18O5", "[M-H]-", 2.90))
+    singles_spec.append(("ibuprofen", "C19H26O8", "[M-H]-", 3.65))
+    singles_spec.append(("ibuprofen", "C13H18O5", "[M-H]-", 2.90))
 
     all_cases: list[dict] = []
     for p, f, add, rt in singles_spec:
@@ -333,8 +333,8 @@ def main() -> None:
 
     print("-----------------------------------------------------------------")
     print(f"Rigenerazione deterministica completata con successo:")
-    print(f"  - trasformazioni.csv: {len(t_rows)} righe, 11094 byte")
-    print(f"  - casi_nomi.csv:      {len(cases_records)} righe, 9324 byte")
+    print(f"  - trasformazioni.csv: {len(t_rows)} righe, 10864 byte")
+    print(f"  - casi_nomi.csv:      {len(cases_records)} righe, 9266 byte")
     print("=================================================================")
 
 

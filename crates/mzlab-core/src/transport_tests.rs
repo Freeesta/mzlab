@@ -71,9 +71,9 @@ fn a_truncated_or_other_version_index_is_refused() {
     v1[0] = 1;
     assert!(decode_index(&v1).is_err());
     // a count that no block could hold is refused before allocating
-    let mut enorme = b.clone();
-    enorme[4..8].copy_from_slice(&u32::MAX.to_le_bytes());
-    assert!(decode_index(&enorme).is_err());
+    let mut huge = b.clone();
+    huge[4..8].copy_from_slice(&u32::MAX.to_le_bytes());
+    assert!(decode_index(&huge).is_err());
 }
 
 fn scan(wide: Option<Vec<f64>>) -> Spectrum {
@@ -95,7 +95,7 @@ fn scan(wide: Option<Vec<f64>>) -> Spectrum {
 #[test]
 fn the_scan_comes_back_equal_without_id_and_filter() {
     let s = scan(None);
-    let b = encode_scansione(&s);
+    let b = encode_scan(&s);
     assert_eq!(b.len(), SCAN_HEAD + 3 * 12);
     let d = decode_scansione(7, &b).unwrap();
     assert_eq!((d.id.as_str(), d.filter.as_str()), ("", ""));
@@ -112,7 +112,7 @@ fn the_scan_comes_back_equal_without_id_and_filter() {
         profile: false,
         ..s
     };
-    let d = decode_scansione(0, &encode_scansione(&without)).unwrap();
+    let d = decode_scansione(0, &encode_scan(&without)).unwrap();
     assert_eq!((d.precursor, d.profile), (None, false));
 }
 
@@ -123,7 +123,7 @@ fn wide_intensities_stay_wide_only_when_needed() {
         intensity: w.iter().map(|&x| x as f32).collect(),
         ..scan(Some(w.clone()))
     };
-    let b = encode_scansione(&s);
+    let b = encode_scan(&s);
     assert_eq!(b.len(), SCAN_HEAD + 3 * 16);
     assert_eq!(decode_scansione(0, &b).unwrap().wide, Some(w));
     // 64-bit values that a 32-bit one holds exactly are not kept wide
@@ -132,7 +132,7 @@ fn wide_intensities_stay_wide_only_when_needed() {
         intensity: exact.iter().map(|&x| x as f32).collect(),
         ..scan(Some(exact))
     };
-    assert!(decode_scansione(0, &encode_scansione(&s))
+    assert!(decode_scansione(0, &encode_scan(&s))
         .unwrap()
         .wide
         .is_none());
@@ -140,25 +140,22 @@ fn wide_intensities_stay_wide_only_when_needed() {
 
 #[test]
 fn a_scan_of_wrong_size_is_refused() {
-    let b = encode_scansione(&scan(None));
+    let b = encode_scan(&scan(None));
     assert!(decode_scansione(0, &b[..b.len() - 1]).is_err());
     assert!(decode_scansione(0, &b[..10]).is_err());
     let mut long = b.clone();
     long.push(0);
     assert!(decode_scansione(0, &long).is_err());
-    let mut enorme = b;
-    enorme[4..8].copy_from_slice(&u32::MAX.to_le_bytes());
-    assert!(decode_scansione(0, &enorme).is_err());
+    let mut huge = b;
+    huge[4..8].copy_from_slice(&u32::MAX.to_le_bytes());
+    assert!(decode_scansione(0, &huge).is_err());
     let empty = Spectrum {
         mz: vec![],
         intensity: vec![],
         ..scan(None)
     };
     assert_eq!(
-        decode_scansione(0, &encode_scansione(&empty))
-            .unwrap()
-            .mz
-            .len(),
+        decode_scansione(0, &encode_scan(&empty)).unwrap().mz.len(),
         0
     );
 }
@@ -200,7 +197,7 @@ fn the_scan_from_its_parts_is_the_one_from_the_block() {
             None => Intensity::Strette(s.intensity.clone()),
         };
         let p = scan_from_parts(4, &testa_scansione(&s), s.mz.clone(), y).unwrap();
-        let b = decode_scansione(4, &encode_scansione(&s)).unwrap();
+        let b = decode_scansione(4, &encode_scan(&s)).unwrap();
         assert_eq!(format!("{p:?}"), format!("{b:?}"));
     }
     let s = scan(None);

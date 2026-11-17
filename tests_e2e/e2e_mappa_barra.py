@@ -1,5 +1,6 @@
 """Controls of the RT x m/z map: they sit in the toolbar of the panel head (same .bt size as the others), nothing floats over the plot, there is no
 «How it is extracted» button, and zoom, reset, lock (L) and full screen still work."""
+# covers: mzlab/web/azioni.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

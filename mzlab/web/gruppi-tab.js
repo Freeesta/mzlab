@@ -28,8 +28,8 @@ window.GRUTAB = (() => {
       ents.forEach(x => { const g = x.f.ugrp || ""; (by.get(g) || by.set(g, []).get(g))?.push(x); });
       const named = order([...by.keys()].filter(Boolean)), keys = by.has("") ? [...named, ""] : named, out = /** @type {string[]} */ ([]);
       keys.forEach(g => {
-        const rs = by.get(g) || [], shut = folded.has(g), name = g || t("groups.move.none");
-        out.push(`<tr class="tg-head" data-ug="${EH(g)}"><th scope="colgroup" colspan="${ncol}"><button type="button" class="tg-fold" data-fold="${EH(g)}" aria-expanded="${!shut}" aria-label="${EH(t(shut ? "groups.tab.open" : "groups.tab.fold", { g: name }))}">${shut ? "▸" : "▾"}</button> <b>${EH(name)}</b> <span class="muted sm">${t("groups.tab.count", { n: rs.length })}</span></th></tr>`);
+        const rs = by.get(g) || [], shut = folded.has(g), name = g || (window.GRUPPI ? GRUPPI.noneName() : t("groups.move.none"));
+        out.push(`<tr class="tg-head" data-ug="${EH(g)}"><th scope="colgroup" colspan="${ncol}"><button type="button" class="tg-fold" data-fold="${EH(g)}" aria-expanded="${!shut}" aria-label="${EH(t(shut ? "groups.tab.open" : "groups.tab.fold", { g: name }))}">${shut ? "▸" : "▾"}</button> <b class="tg-name" data-gn="${EH(g)}" tabindex="0" role="button" aria-label="${EH(t("groups.tab.rename", { g: name }))}" title="${EH(t("groups.tab.rename.tip"))}">${EH(name)}</b> <span class="muted sm">${t("groups.tab.count", { n: rs.length })}</span></th></tr>`);
         rs.forEach(x => out.push(deco(x, lab(x), shut)));
       });
       return out;
@@ -49,9 +49,19 @@ window.GRUTAB = (() => {
       el.addEventListener("click", e => {
         const b = /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest("[data-fold],[data-mv]"));
         if (!b) return;
-        if (b.dataset.fold != null) { const g = b.dataset.fold; if (folded.has(g)) folded.delete(g); else folded.add(g); renderFiles(); /** @type {HTMLElement | null} */ (el.querySelector(`[data-fold="${CSS.escape(g)}"]`))?.focus(); return; }
+        // the second click of a double click (the rename) must not fold the group again
+        if (b.dataset.fold != null) { if (e.detail > 1) return; const g = b.dataset.fold; if (folded.has(g)) folded.delete(g); else folded.add(g); renderFiles(); /** @type {HTMLElement | null} */ (el.querySelector(`[data-fold="${CSS.escape(g)}"]`))?.focus(); return; }
         // the menu opens after the click has reached the document (its handler would close it at once)
         const name = /** @type {string} */ (b.dataset.mv); setTimeout(() => carica("gruppi-dnd.js").then(() => GDND.moveMenuT(e, name)), 0);
+      });
+      // rename in place: double click on the header (not the fold button), F2 or Enter on the focused name
+      el.addEventListener("dblclick", e => {
+        const th = /** @type {Element} */ (e.target).closest(".tg-head th");
+        if (th && !/** @type {Element} */ (e.target).closest("button.tg-fold")) { e.preventDefault(); carica("gruppi-nome.js").then(() => GRUNOME.edit(/** @type {HTMLElement} */ (th))); }
+      });
+      el.addEventListener("keydown", e => {
+        const n = /** @type {Element} */ (e.target).closest?.(".tg-name");
+        if (n && (e.key === "F2" || e.key === "Enter")) { e.preventDefault(); carica("gruppi-nome.js").then(() => GRUNOME.edit(/** @type {HTMLElement} */ (n.closest("th")))); }
       });
       el.addEventListener("pointerover", e => { if (/** @type {Element} */ (e.target).closest(".tg-grip")) carica("gruppi-dnd.js"); });
       el.addEventListener("dragstart", e => {

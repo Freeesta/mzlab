@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validation of the condensed Fukui indices of mzlab-chem (reatt/1) on simple textbook cases, against the committed xtb 6.7.1
 reference outputs, and on timolol. Reference/tooling only: runs the Rust runner `tools/fukui_valida` (built on demand) and prints
-markdown tables. Usage: python3 tools/fukui_valida/valida.py [--seeds 4]. Study: docs/studi/FUKUI_COSA_DICONO.md."""
+markdown tables. Usage: python3 tools/fukui_valida/valida.py [--seeds 4]. Conclusions: docs/agenti/reattivita-studi.md."""
 import argparse, csv, json, subprocess, sys
 from pathlib import Path
 

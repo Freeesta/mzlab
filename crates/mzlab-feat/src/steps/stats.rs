@@ -146,7 +146,7 @@ pub(super) fn plausible() -> Step {
         outs: vec![Port::new("report", DataType::Report, "Plausibility of the values (plausible/1)")],
         params,
         runs_in: RunsIn {
-            wasm: Some("table"),
+            wasm: Some("flowtab"),
             wasm_ceiling_bytes: Some(super::FEAT_CEILING),
             native: true,
         },

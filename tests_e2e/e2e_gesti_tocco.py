@@ -1,4 +1,5 @@
 """Gestures of the RT x m/z map on a touch screen (SC-4): one finger draws the zoom box, two fingers move and pinch, a double tap = whole view, a long press = the menu."""
+# covers: mzlab/web/touch.js, mzlab/web/mappa.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

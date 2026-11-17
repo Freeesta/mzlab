@@ -1,6 +1,7 @@
 """Touch outside the graphs (tocco-controlli.js, mappa.js): a finger double tap on a panel title or a legend trace opens the rename dialog once, as a mouse double
 click does; a slow pair or a moved finger does nothing; the page has no double-tap zoom; a long press on a file group header opens its menu, which stays open
 after the lift; a tap on a label of the map's side spectrum shows its S/N. Real touches (CDP Input.dispatchTouchEvent), anonymous example files."""
+# covers: mzlab/web/touch.js, mzlab/web/tocco-controlli.js, mzlab/web/mappa.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

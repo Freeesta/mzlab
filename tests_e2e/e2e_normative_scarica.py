@@ -2,6 +2,7 @@
 them. First use downloads the pieces into the Cache Storage `mzlab-libs` and hands the raw `.mzsus` over; a reload with the network cut is served from the cache;
 a corrupted piece is refused (SHA-256) and installs nothing; «check for updates» only compares catalogues. Nothing leaves the machine.
 Needs the site: python tools/build_site.py (and cargo, to build mzlab-cli once); delete site/ afterwards."""
+# covers: mzlab/web/normative
 import socket, hashlib, json, os, shutil, subprocess, sys, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright

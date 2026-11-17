@@ -1,0 +1,4 @@
+{
+  "xiclens.say": "Short announcement of the XIC lens on hovering the peak; {ion} = ion and window, {rt} = RT of the maximum (min), {y} = intensity of the maximum.",
+  "xiclens.table": "Title of the XIC lens data table; {ion} = ion and window."
+}

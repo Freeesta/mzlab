@@ -15,7 +15,7 @@ use mzlab_feat::interp::run::run_to_with;
 use mzlab_feat::interp::store;
 use mzlab_feat::store::{read_table_from, Slice};
 use mzlab_feat::tp::TpRoles;
-use mzlab_feat_wasm::run::{self, RowSources};
+use mzlab_ops::run::feat::run::{self, RowSources};
 
 use crate::flow_base::Files;
 

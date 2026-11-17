@@ -1,6 +1,7 @@
 """mzFinder HR: parent-TP pairs. Synthetic series whose products carry fragments shifted by the mass difference: the Prev. and Sim. columns, the three
 components of the similarity and the mirror, the prediction level, the network of mass differences (SVG, table, keyboard). Run from the repo root:
 python3 tests_e2e/e2e_tpmine_ms2.py  """
+# covers: TP_Mine/
 import os, shutil, subprocess, sys, time, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright

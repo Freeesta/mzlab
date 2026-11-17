@@ -1,5 +1,6 @@
 """RT x m/z map (mappa.js) on the example files t0 and t30, English and dark theme: true zoom (wheel, Shift/Alt, box, Backspace, whole view),
 full screen with the sight and the two margin plots, arrow keys, lock with the right button and with L, Shift + right click = XIC."""
+# covers: mzlab/web/mappa-tabella.js, mzlab/web/mappa.js, mzlab/web/mirino.js, mzlab/web/grafici.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

@@ -3,8 +3,8 @@
 
 use mzlab_core::pca::PcaOpts;
 use mzlab_feat::stat::{
-    analyse, benjamini_hochberg, compare, kmd_json, pca_json, stats_json, Ion, KmdOpts, Layout,
-    StatsOpts,
+    analyse, benjamini_hochberg, compare, kmd_json, pca_json, stats_json, write_stats, Ion,
+    KmdOpts, Layout, StatsOpts,
 };
 use serde_json::Value;
 use std::path::PathBuf;
@@ -243,6 +243,8 @@ fn a_real_difference_is_found_and_the_anova_agrees() {
     let an = &out.anova.rows;
     assert!(an[..20].iter().all(|r| r.q < 0.05));
     assert_eq!(out.heat_groups, vec![0, 1, 2]);
+    assert_eq!(out.heat_row_order.len(), 200);
+    assert_eq!(out.heat_col_order.len(), 3);
 }
 
 #[test]
@@ -276,6 +278,7 @@ fn fewer_than_three_replicates_refuse_with_a_reason_and_no_number() {
         .all(|c| c.refused == Some("fewReplicates") && c.rows.is_empty()));
     assert_eq!(out.anova.refused, Some("fewReplicates"));
     assert!(out.anova.rows.is_empty() && out.heat.is_empty());
+    assert!(out.heat_row_order.is_empty() && out.heat_col_order.is_empty());
     assert_eq!(out.warnings.len(), 2);
     let json = stats_json(
         br#"{"matrix":[[1,2,3,4,5]],"groups":["a","a","a","b","b"],"comparisons":[["a","b"]]}"#,
@@ -285,6 +288,8 @@ fn fewer_than_three_replicates_refuse_with_a_reason_and_no_number() {
     assert_eq!(v["comparisons"][0]["refused"], "fewReplicates");
     assert_eq!(v["comparisons"][0]["rows"].as_array().unwrap().len(), 0);
     assert_eq!(v["warnings"][0]["code"], "fewReplicates");
+    assert_eq!(v["heat"]["rowOrder"], serde_json::json!([]));
+    assert_eq!(v["heat"]["colOrder"], serde_json::json!([]));
 }
 
 #[test]
@@ -389,4 +394,97 @@ fn the_descriptors_carry_the_defaults_of_the_engine() {
             "{id} runs in the .wasm flowstat, not in table"
         );
     }
+}
+
+fn is_perm(ord: &[usize], n: usize) -> bool {
+    ord.len() == n && (0..n).all(|i| ord.contains(&i))
+}
+
+#[test]
+fn heat_cluster_order_groups_matching_profiles_and_emits_orders() {
+    let groups: Vec<Option<usize>> = (0..9).map(|c| Some(c / 3)).collect();
+    let lay = layout(&groups, &["a", "b", "c"]);
+    let m = vec![
+        vec![1e4, 1e4, 1e4, 1e5, 1e5, 1e5, 1e6, 1e6, 1e6],
+        vec![1e6, 1e6, 1e6, 1e5, 1e5, 1e5, 1e4, 1e4, 1e4],
+        vec![1.1e4, 0.9e4, 1e4, 1.1e5, 0.9e5, 1e5, 1.1e6, 0.9e6, 1e6],
+        vec![1.1e6, 0.9e6, 1e6, 1.1e5, 0.9e5, 1e5, 1.1e4, 0.9e4, 1e4],
+    ];
+    let out = compare(&m, &lay, &[(0, 1), (0, 2)], &StatsOpts::default()).unwrap();
+    assert!(is_perm(&out.heat_row_order, 4), "{:?}", out.heat_row_order);
+    assert!(is_perm(&out.heat_col_order, 3), "{:?}", out.heat_col_order);
+    let pos = |i: usize| out.heat_row_order.iter().position(|&x| x == i).unwrap();
+    assert_eq!(pos(0).abs_diff(pos(2)), 1, "{:?}", out.heat_row_order);
+    assert_eq!(pos(1).abs_diff(pos(3)), 1, "{:?}", out.heat_row_order);
+    let v: Value = serde_json::from_str(&write_stats(&out, &lay)).unwrap();
+    let json_rows: Vec<usize> = v["heat"]["rowOrder"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|x| x.as_u64().unwrap() as usize)
+        .collect();
+    let json_cols: Vec<usize> = v["heat"]["colOrder"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|x| x.as_u64().unwrap() as usize)
+        .collect();
+    assert_eq!(json_rows, out.heat_row_order);
+    assert_eq!(json_cols, out.heat_col_order);
+    // Boundary-leaf orientation flip orders a shuffled gradient monotonically without cross-cluster jumps.
+    let grad = vec![
+        vec![1e4, 1e4, 1e4, 1.5e4, 1.5e4, 1.5e4, 1e6, 1e6, 1e6],
+        vec![1e4, 1e4, 1e4, 1.05e4, 1.05e4, 1.05e4, 1e6, 1e6, 1e6],
+        vec![1e4, 1e4, 1e4, 9e5, 9e5, 9e5, 1e6, 1e6, 1e6],
+        vec![1e4, 1e4, 1e4, 5e5, 5e5, 5e5, 1e6, 1e6, 1e6],
+    ];
+    let gout = compare(&grad, &lay, &[(0, 1)], &StatsOpts::default()).unwrap();
+    assert!(
+        gout.heat_row_order == vec![1, 0, 3, 2] || gout.heat_row_order == vec![2, 3, 0, 1],
+        "{:?}",
+        gout.heat_row_order
+    );
+}
+
+#[test]
+fn heat_cluster_order_handles_empty_and_large_matrices() {
+    let empty_lay = layout(&[Some(0), Some(0), Some(1), Some(1)], &["a", "b"]);
+    let empty = compare(
+        &[vec![1e4; 4], vec![2e4; 4]],
+        &empty_lay,
+        &[(0, 1)],
+        &StatsOpts::default(),
+    )
+    .unwrap();
+    assert!(
+        empty.heat.is_empty() && empty.heat_row_order.is_empty() && empty.heat_col_order.is_empty()
+    );
+    let ev: Value = serde_json::from_str(&write_stats(&empty, &empty_lay)).unwrap();
+    assert_eq!(ev["heat"]["rowOrder"], serde_json::json!([]));
+    assert_eq!(ev["heat"]["colOrder"], serde_json::json!([]));
+
+    let big_lay = layout(
+        &[Some(0), Some(0), Some(0), Some(1), Some(1), Some(1)],
+        &["a", "b"],
+    );
+    let big: Vec<Vec<f64>> = (0..300)
+        .map(|r| {
+            let (lo, hi) = (1e4 + r as f64, 1e6 + r as f64);
+            if r % 2 == 0 {
+                vec![lo, lo, lo, hi, hi, hi]
+            } else {
+                vec![hi, hi, hi, lo, lo, lo]
+            }
+        })
+        .collect();
+    let bout = compare(&big, &big_lay, &[(0, 1)], &StatsOpts::default()).unwrap();
+    assert!(is_perm(&bout.heat_row_order, 300));
+    assert!(is_perm(&bout.heat_col_order, 2));
+    let first_parity = bout.heat_row_order[0] % 2;
+    assert!(bout.heat_row_order[..150]
+        .iter()
+        .all(|&i| i % 2 == first_parity));
+    assert!(bout.heat_row_order[150..]
+        .iter()
+        .all(|&i| i % 2 != first_parity));
 }

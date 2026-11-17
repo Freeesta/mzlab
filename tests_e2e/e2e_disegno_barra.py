@@ -1,4 +1,5 @@
 """Drop-down toolbar of Disegno (disegno-barra.js): one button for the rings and one for the charge (and the radical mark), menus with the keyboard, mirror of the selected tool, return to Ketcher's own bar."""
+# covers: mzlab/web/disegno-barra.js, mzlab/web/disegno-radicale.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

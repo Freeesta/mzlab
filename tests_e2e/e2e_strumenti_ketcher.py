@@ -1,5 +1,6 @@
 """Disegno: the quick rings are a column on the left of Ketcher's tools (no bottom row), the editor fits the window, the first zoom is
 above 100 %, no tooltip on the canvas, and the «Strumenti dell'editor» card shows/hides groups of buttons (kept after a reload)."""
+# covers: mzlab/web/disegno-font.js, mzlab/web/disegno-barra.js, mzlab/web/draw.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -37,7 +38,7 @@ try:
             for shown in ("sgroup", "enhanced-stereo", "create-monomer", "any-atom"): assert pg.evaluate(VIS, shown), shown
             pg.click("#tools-def"); pg.wait_for_timeout(300); pg.uncheck("input[data-t=rings]"); pg.wait_for_timeout(300)
             assert not RINGS()
-        step("tool groups: essentials by default, «Mostra tutti», single groups", tools)
+        step("tool groups: essentials by default, «Show all», single groups", tools)
         def groups():
             assert pg.evaluate(VIS, "period-table"), "the periodic table is shown"
             n = pg.evaluate("""() => { const d = document.querySelector('#kframe').contentDocument; return [...d.querySelectorAll('[class*="LeftToolbar-module_buttons"] > *')].filter(g => g.getClientRects().length && g.getBoundingClientRect().height < 20).length; }""")

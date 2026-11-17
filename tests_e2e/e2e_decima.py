@@ -1,5 +1,6 @@
 """Chromatograms and XICs drawn from the zoom window (decima.js) are pixel-identical to the point-by-point loop kept for unsorted time axes:
 LR and HR files, full view and three partial zooms, TIC and XIC."""
+# covers: mzlab/web/decima.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

@@ -190,3 +190,33 @@ fn a_design_with_a_condition_that_is_not_there_fails() {
     assert!(prov.contains("error.stats.condition"), "{prov}");
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn browser_stats_text_matches_cli_flow_run_with_heat_orders() {
+    let d = dir("parity_order");
+    let cli = run(&d, "{}");
+    let samples = core_samples::to_json(&campioni_2());
+    let design = drawing::to_json(&design());
+    let browser =
+        mzlab_feat::flow_stat::stats_text(&[], &table(), samples.as_bytes(), design.as_bytes())
+            .unwrap();
+    assert_eq!(browser, cli);
+    let v: serde_json::Value = serde_json::from_str(&cli).unwrap();
+    let row_ord: Vec<u64> = v["heat"]["rowOrder"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|x| x.as_u64().unwrap())
+        .collect();
+    let col_ord: Vec<u64> = v["heat"]["colOrder"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|x| x.as_u64().unwrap())
+        .collect();
+    assert_eq!(row_ord.len(), rows().len());
+    assert!((0..rows().len() as u64).all(|i| row_ord.contains(&i)));
+    assert_eq!(col_ord.len(), 2);
+    assert!((0..2u64).all(|i| col_ord.contains(&i)));
+    let _ = std::fs::remove_dir_all(&d);
+}

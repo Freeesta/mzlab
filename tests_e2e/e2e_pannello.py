@@ -1,5 +1,6 @@
 """The side panel is docked: hidden, or at full height on the left or right edge; the workspace narrows to the space left (never under it).
 Always-visible header button, tool buttons, Ctrl/Cmd+B, side, sheet on narrow screens, themes, old saved states. No JS errors."""
+# covers: mzlab/web/transizioni, mzlab/web/barra.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -14,14 +15,14 @@ def overlap(b):
     return s and c and s["w"] > 0 and not (c["r"] <= s["x"] + 1 or c["x"] >= s["r"] - 1)
 def cold(p, vw, vh, saved=None, scheme="light", touch=False):
     r = Run(port=8872, wd="/tmp/wd_pannello"); r.b = p.chromium.launch()
-    ctx = r.b.new_context(viewport={"width": vw, "height": vh}, locale="it-IT", has_touch=touch, color_scheme=scheme, reduced_motion="reduce")
+    ctx = r.b.new_context(viewport={"width": vw, "height": vh}, locale="en-US", has_touch=touch, color_scheme=scheme, reduced_motion="reduce")
     pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
     init = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');"
     for k, v in (saved or {}).items(): init += f"localStorage.setItem('{k}',{v!r});"
     pg.add_init_script(init + "}catch(_){}")
     pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "typeof E !== 'undefined'")
     pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 1")
-    pg.click("text=Carica dati"); ready(pg); frames(pg, 4)
+    pg.click("text=Load data"); ready(pg); frames(pg, 4)
     return r, ctx, pg, errs
 try:
     with sync_playwright() as p:
@@ -29,7 +30,7 @@ try:
             r, ctx, pg, errs = cold(p, 1440, 900)
             try:
                 assert pg.is_visible("#sb-toggle") and pg.is_visible("#dfiles"), "first start on a wide screen: File panel open"
-                assert pg.get_attribute("#sb-toggle", "aria-pressed") == "true" and pg.get_attribute("#sb-toggle", "aria-label") == "Pannello laterale" and pg.get_attribute("#sb-toggle", "title")
+                assert pg.get_attribute("#sb-toggle", "aria-pressed") == "true" and pg.get_attribute("#sb-toggle", "aria-label") == "Side panel" and pg.get_attribute("#sb-toggle", "title")
                 b1 = pg.evaluate(BOX)
                 assert pg.evaluate("BARRA.curTab") == "file" and not overlap(b1), b1
                 assert b1["side"]["x"] < 20 and b1["side"]["h"] > 400, b1["side"]

@@ -13,7 +13,7 @@ LIST = Path(__file__).resolve().parent.parent / "mzlab" / "web" / "contaminanti.
 def ions(n: int = 12, pol: int = 1) -> list[tuple[str, float]]:
     """`n` singly charged [M+H]+ / [M+Na]+ (or [M-H]- for pol -1) ions of the list between m/z 150 and 900, spread over the range and at least 2 Da apart: (name, listed m/z)."""
     adducts = ("[M+H]+", "[M+Na]+") if pol > 0 else ("[M-H]-",)
-    items = sorted({round(i["mz"], 4): i["name_en"] + " " + i["adduct"] for l in json.loads(LIST.read_text(encoding="utf-8"))["lists"] if l.get("background", True) for i in l["items"]
+    items = sorted({round(i["mz"], 4): i["name"] + " " + i["adduct"] for l in json.loads(LIST.read_text(encoding="utf-8"))["lists"] if l.get("background", True) for i in l["items"]
                    if i.get("z") == 1 and i.get("pol") == pol and i["adduct"] in adducts and 150 <= i["mz"] <= 900}.items())
     lontani = [items[0]]
     for m, name in items[1:]:

@@ -63,4 +63,4 @@ Nota: i numeri derivati (punti per picco) arrivano da `proof` di Rust (A3 aggiun
 ## Criterio di accettazione
 
 - G15–G22: ogni valore nell'intervallo accettato del caso; `source` corretto; nessun `blank_ratio` senza bianchi (G23 → domanda).
-- T5: si sceglie l'effort più basso che non peggiora errori e piani di più di 2 punti percentuali; scelta scritta in `01-architettura.md` §7.
+- T5: si sceglie l'effort più basso che non peggiora errori e piani di più di 2 punti percentuali; scelta scritta in `assist-ruoli-1.json` e in `docs/agenti/llm-subagenti.md`.

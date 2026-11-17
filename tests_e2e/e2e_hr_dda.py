@@ -1,4 +1,5 @@
 """B5: DDA trio: chromatogram, Full Scan (MS1) and MS2 one under the other, flags on the precursors, triangles, arrows in the MS2 panel."""
+# covers: mzlab/web/dda.js, mzlab/web/dda-marcatori.js, mzlab/web/dda-elenco.js, mzlab/web/dda-naviga.js, mzlab/reader/profile.py, mzlab/web/layout.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -41,7 +42,7 @@ try:
             v = pg.evaluate("(()=>{const t=" + TRIO + ";return {sid:t.s2.sid,scan:t.s2._scan&&t.s2._scan.sid,parent:t.s2._scan&&t.s2._scan.parent,s1sid:t.s1._a&&t.s1._a.data[0].d.sid,title:t.s2.title,cap:t.s2.leg.textContent,cur:t.c.cur}})()"); print(v)
             assert v["sid"] == t["sid"] == v["scan"], v
             assert v["s1sid"] == v["parent"], v                              # s1 shows exactly the parent Full Scan
-            assert v["title"].startswith("MS2 di ") and "HCD" in v["cap"] and "NCE 30" in v["cap"] and "isolamento ±0.75" in v["cap"] and "madre" in v["cap"], v
+            assert v["title"].startswith("MS2 of ") and "HCD" in v["cap"] and "NCE 30" in v["cap"] and "isolation ±0.75" in v["cap"] and "parent" in v["cap"], v
             assert "eV" not in v["cap"], v                                    # Thermo: never eV
         step("a triangle on the chromatogram: s2 shows that MS2, s1 its parent Full Scan", tri)
         def flags():
@@ -74,11 +75,11 @@ try:
             assert geo[2] > geo[3] - 5, geo                                      # the Full Scan has the whole width again
             pos = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='full');c.el.scrollIntoView({block:'center'});const r=c.cv.getBoundingClientRect();return {x:r.left+300,y:r.top+150}})()")
             pg.mouse.click(pos["x"], pos["y"], button="right"); pg.wait_for_timeout(400)
-            assert "Mostra le MS2 sotto la Full Scan" in pg.inner_text("#ctx")
-            pg.click("#ctx >> text=Mostra le MS2 sotto la Full Scan"); pg.wait_for_timeout(2500)
+            assert "Show the MS2 under the Full Scan" in pg.inner_text("#ctx")
+            pg.click("#ctx >> text=Show the MS2 under the Full Scan"); pg.wait_for_timeout(2500)
             c, s1, s2 = pg.evaluate(GEO); print(c, s1, s2)
             assert s2 is not None and s2[1] >= s1[1] + s1[3] and s2[0] == 0, (s1, s2)
-        step("close the MS2 panel, then «Mostra le MS2 sotto la Full Scan» in the right-click menu brings it back", close_and_back)
+        step("close the MS2 panel, then «Show the MS2 under the Full Scan» in the right-click menu brings it back", close_and_back)
         def reload():
             pg.evaluate("(async()=>{const t=" + TRIO + ";const D=await DDA.get(t.s1.k);await DDA.selectMs2(t.s2,D.sid[7])})()"); pg.wait_for_timeout(1500)
             saved(pg); pg.reload(); wait_for_js(pg, "typeof E !== 'undefined' && E.files.length > 0 && E.panels.length > 0", 90000); ready(pg)
@@ -96,8 +97,8 @@ try:
         def fusion():
             t = pg.evaluate("(async()=>{const t=" + TRIO + ";const D=await DDA.get(t.s1.k);await DDA.selectMs2(t.s2,D.sid[3]);return D.sid[3]})()"); pg.wait_for_timeout(2000)
             v = pg.evaluate("(()=>{const t=" + TRIO + ";return {cap:t.s2.leg.textContent,mz:t.s2._a.data[0].d.mz.slice(0,6),dec:t.s2._a.dec,title:t.s2.title}})()"); print(v)
-            assert "CID" in v["cap"] and "NCE 35" in v["cap"] and "isolamento ±1.5" in v["cap"] and v["dec"] == 2, v
-            assert all(len(str(m).split(".")[1] if "." in str(m) else "") <= 3 for m in v["mz"]) and v["title"].startswith("MS2 di ") and len(v["title"].split(".")[1]) == 2, v
+            assert "CID" in v["cap"] and "NCE 35" in v["cap"] and "isolation ±1.5" in v["cap"] and v["dec"] == 2, v
+            assert all(len(str(m).split(".")[1] if "." in str(m) else "") <= 3 for m in v["mz"]) and v["title"].startswith("MS2 of ") and len(v["title"].split(".")[1]) == 2, v
         step("Fusion (ion trap MS2): 2 decimals, CID, NCE 35, isolation ±1.5", fusion)
     r.close()
     r = Run(port=8897, wd="/tmp/wdhr8")

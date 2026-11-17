@@ -1,6 +1,7 @@
 """High-resolution DDA file in the browser version on the built site: opening the file, the DDA table (api/dda) and the mean
 spectrum of a window (api/spectrum, api/spectra, api/scan, api/scanavg: survey, product ions, one scan read from the mzML) come from the Rust engine and no request of those routes is left to
 Python (window.MZLAB_LR_MISS stays empty). Needs the site and the .wasm (python tools/build_site.py)."""
+# covers: mzlab/web/rust-, crates/
 import subprocess, sys, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright

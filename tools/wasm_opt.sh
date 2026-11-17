@@ -60,11 +60,14 @@ if [ ! -e "$ok" ]; then
 fi
 if [ -e "$ok" ]; then
   "$wo" "$livello" --enable-bulk-memory --enable-sign-ext --enable-mutable-globals --enable-nontrapping-float-to-int --enable-reference-types --enable-multivalue --enable-simd "$@" -o "$bg" "$bg" || exit 1
-  size=$(stat -c %s "$bg"); echo "$label .wasm (optimised): $size bytes"
+  size=$(wc -c < "$bg" | tr -d ' ')   # POSIX: `stat -c` is GNU only and fails on macOS
+  # fail closed: an empty or non-numeric size must never pass the gate
+  case "$size" in ''|*[!0-9]*) echo "::error::the $label .wasm size could not be read (got '$size')"; exit 1 ;; esac
+  echo "$label .wasm (optimised): $size bytes"
   if [ "$size" -ge "$limit" ]; then echo "::error::the $label .wasm is $size bytes (limit $limit)"; exit 1; fi
 elif [ "${MZLAB_WASM_OPT_STRICT:-}" = 1 ]; then
   # production builds (pages.yml, sito-rust.yml, release.yml) fail closed: an unoptimised .wasm would skip the size gate
   echo "::error::wasm-opt could not be installed: the $label .wasm is not optimised and the size gate cannot run"; exit 1
 else
-  echo "::warning::wasm-opt could not be installed: the $label .wasm is not optimised ($(stat -c %s "$bg") bytes)"
+  echo "::warning::wasm-opt could not be installed: the $label .wasm is not optimised ($(wc -c < "$bg" | tr -d ' ') bytes)"
 fi

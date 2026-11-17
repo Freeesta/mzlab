@@ -1,6 +1,11 @@
 # Flow «live»: lo scheduler a stati (`mzlab_core::flow::sched`)
 
-Studio e piano a PR: `docs/studi/flow-live/README.md`. Questo file descrive il codice che c'è. Lo usa `flow::execute` (`run_sched.rs`); gli esecutori live (CLI, `.wasm`, pagina) arrivano dopo.
+Lo usano `flow::execute` (`run_sched.rs`), la corsa viva della CLI e dell'app e il sito (`flow-live.js`).
+
+## Requisiti che valgono
+- Si lavora mentre il grafo cresce: un lavoro parte appena ingressi e parametri sono pronti, per file (il file 1 avanza mentre il 5 si converte), e il piano resta modificabile durante la corsa; una modifica tocca solo i lavori a valle, riusa la cache per `plan_key` e annulla solo i lavori obsoleti.
+- Stessi byte per stessi ingressi in qualunque ordine finiscano i lavori; stesso modello sul sito e su app e CLI; memoria limitata (ammissione per `mb` stimato, mai una finestra «Use more memory» a metà modifica); l'interfaccia compare prima dello scheduler.
+- Nessun `.wasm` e nessun tetto nuovi per lo scheduler; i test contano eventi e stati, mai pause fisse.
 
 ## Cosa fa
 Uno scheduler puro (niente thread, file, orologio, rete) che dato un piano `mzflow/2` e il registro dei passi sa quali lavori esistono, in che stato sono e quali sono pronti, e reagisce a un piano che cambia. L'esecutore (thread o Worker) chiede lavoro con `next`, riporta `started`, `progress`, `finished`, `cached`, legge gli eventi con `events_since`. File:

@@ -1,4 +1,5 @@
 """Start screen (button, types, standards with concentration, method routing) and the MRM calibration flow."""
+# covers: mzlab/web/xlsx.js
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -15,13 +16,13 @@ try:
         pg = r.page(p)
         def empty():
             assert pg.locator("#opbtn").count() == 0, "no «Load data»: the files open as soon as they are read"
-            assert "Carica almeno" not in pg.inner_text("#start")
+            assert "Load at least" not in pg.inner_text("#start")
         step("no load button with no file, no message", empty)
         pg.set_input_files("#pick", [str(MDAM)] + [str(tmp / f) for f in sorted(os.listdir(tmp))]); pg.wait_for_timeout(1800)
         pg.screenshot(path=SH + "151_start.png")
         def layout():
             t = pg.inner_text("#flist")
-            assert "Tipo" in t and "Ruolo" not in t and "controllo" not in t and "EMS" not in t and "Q1" not in t, t
+            assert "Type" in t and "Role" not in t and "control" not in t and "EMS" not in t and "Q1" not in t, t
             assert "Full Scan" in t and "MRM" in t
             ty = pg.evaluate("ST.files.map(f=>[f.name,f.type,f.conc,f.time])"); d = {n: (a, b, c) for n, a, b, c in ty}
             assert d["Std_1ppm.mzML"][:2] == ("standard", 0.001) or d["Std_1ppm.mzML"][:2] == ("standard", 1), d   # ppm -> mg/L (default unit)
@@ -63,13 +64,13 @@ try:
             assert pg.evaluate("ST.files.find(f=>f.name==='B_MRM-t15.mzML').type") == "blank"
             pg.locator('#flist tr', has_text="B_MRM-t15").locator("select[data-k=type]").select_option("sample")
         step("type is editable", standard_off)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         open_kind(pg, "mrm"); ready(pg)
         pg.screenshot(path=SH + "152_mrm.png")
         def mrm_ui():
             assert pg.locator("#calbar").count() == 0 and pg.locator("#np-cal").count() == 0 and pg.locator("[data-o=cal]").count() == 0, "the calibration line is made in Excel: no strip, no button"
             assert pg.evaluate("E.panels.some(p=>p.type==='mrm'&&p.imode==='man'&&p.intf==='all')")
-            assert pg.locator("#flst abbr.ftag[title=Standard]").count() >= 1 and pg.locator("#flst abbr.ftag").first.inner_text() == "std" and pg.locator("#flst .fgh", has_text="MRM").count() == 1, pg.inner_text("#flst")[:200]      # header = the experiment (MRM), standard / campioni as small sub-groups
+            assert pg.locator("#flst abbr.ftag[title=Standard]").count() >= 1 and pg.locator("#flst abbr.ftag").first.inner_text() == "std" and pg.locator("#flst .fgh", has_text="MRM").count() == 1, pg.inner_text("#flst")[:200]      # header = the experiment (MRM), standard / samples as small sub-groups
         step("MRM session: no calibration strip, integration tool ready", mrm_ui)
         def integrate():
             pg.evaluate("E.files.filter(f=>f.kind==='mrm').forEach(f=>f.vis=true); redrawAll()")
@@ -97,17 +98,17 @@ try:
             rows = pg.evaluate("[...document.querySelectorAll('#bigbody table tr')].map(r=>[...r.children].map(c=>c.textContent))")
             assert any("Std_5" in " ".join(r) and any("mg" in c or "ppm" in c or "ug" in c.lower() for c in r) for r in rows), rows[:4]      # the concentration of the standards is in the table
             with pg.expect_download() as d: pg.click("#ig-xlsx")
-            xr = xlsx_rows(d.value.path()); head = [c[1] for c in xr[0] if c]; assert "Concentrazione (standard / QC)" in head and "Unità" in head, head
-            for h in ("Tipo di file", "Q1 (m/z)", "Q3 (m/z)", "Nome della transizione"): assert h in head, (h, head)      # appended after the existing columns
-            assert head.index("Tipo di file") > head.index("Correzione"), head
+            xr = xlsx_rows(d.value.path()); head = [c[1] for c in xr[0] if c]; assert "Concentration (standard / QC)" in head and "Unit" in head, head
+            for h in ("Type of file", "Q1 (m/z)", "Q3 (m/z)", "Transition name"): assert h in head, (h, head)      # appended after the existing columns
+            assert head.index("Type of file") > head.index("Correction"), head
             body = [[c[1] if c else None for c in r_] for r_ in xr[1:]]
-            std = [r_ for r_ in body if r_[head.index("Concentrazione (standard / QC)")] not in (None, "")]
-            assert std and all(r_[head.index("Tipo di file")] == "standard" for r_ in std), std[:2]
+            std = [r_ for r_ in body if r_[head.index("Concentration (standard / QC)")] not in (None, "")]
+            assert std and all(r_[head.index("Type of file")] == "standard" for r_ in std), std[:2]
             assert all(isinstance(r_[head.index("Q1 (m/z)")], (int, float)) and r_[head.index("Q3 (m/z)")] > 0 for r_ in body), body[:2]      # MRM rows carry Q1 and Q3 as numbers
             with pg.expect_download() as dc: pg.click("#ig-csv")
             raw = open(dc.value.path(), "rb").read(); assert raw[:3] == b"\xef\xbb\xbf"
             ln = raw[3:].decode("utf-8").rstrip("\n").split("\n")
-            assert ";" in ln[0] and "," not in ln[0] and ln[0].startswith("Pannello"), ln[0][:80]      # Italian UI: header on line 1, ';' separated
+            assert ";" in ln[0] and "," not in ln[0] and ln[0].startswith("Panel"), ln[0][:80]      # header on line 1, ';' separated
             assert any(l.count(",") >= 1 and l.count(";") == ln[0].count(";") for l in ln[1:-1]), ln[1:3]      # decimal comma in the numbers
             assert ln[-1].startswith('"# mzLab ') or ln[-1].startswith("# mzLab "), ln[-1][:30]
             pg.click("#bigx")

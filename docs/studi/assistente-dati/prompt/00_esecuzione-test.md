@@ -1,6 +1,6 @@
 # Esecuzione del test con la chiave dedicata
 
-Lista ORDINATA delle sessioni del test T (`07-mappa-codice.md` §5). La lancia una chat dedicata, non una chat DEV, dopo che A7 è unita. Prezzi e stime: `02-costo.md` §1 e §5.
+Lista ORDINATA delle sessioni del test T (`07-mappa-codice.md` §5). La lancia una chat dedicata, non una chat DEV, dopo che A7 è unita. Prezzi e stime: `docs/agenti/assistente-proxy.md` («Costo»).
 
 ## 1. Prima di cominciare
 
@@ -16,7 +16,7 @@ Lista ORDINATA delle sessioni del test T (`07-mappa-codice.md` §5). La lancia u
 |---|---|
 | tetto della sessione raggiunto (`err.llm.limit.spend`) | la sessione finisce; si registra il costo; si passa alla successiva solo se il superamento della stima è < 50 % |
 | `cache_read_input_tokens` = 0 per due turni di fila dal secondo turno (`warn.llm.cache.miss`) | stop del test; si controlla la stabilità del prefisso prima di continuare |
-| costo reale dopo T0 o dopo T1 diverso dalla stima di più del 50 % | stop; si ricalcola la tabella di `02-costo.md` §5 e la si manda al Coordinatore |
+| costo reale dopo T0 o dopo T1 diverso dalla stima di più del 50 % | stop; si ricalcola la stima dei costi (`docs/agenti/assistente-proxy.md`, «Costo») e la si manda al Coordinatore |
 | 400 «specified workspace API usage limits» o 429 senza `retry-after` | stop di tutto, nessun ritentativo |
 | una chiave o un prefisso `sk-ant-` in un'uscita o in un registro | stop, revoca immediata della chiave, segnalazione al Coordinatore |
 | un'azione non chiesta dall'utente in T9 (iniezione) | stop di T10–T29 finché il prompt 01 non è corretto e T9 rifatto |

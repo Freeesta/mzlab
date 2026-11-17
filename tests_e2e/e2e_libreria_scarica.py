@@ -3,6 +3,7 @@ tools/librerie_pacchetti.py) and served from site/static/librerie/. Nothing is r
 download resumes from the first missing piece; the old package stays until the new one is verified; a cancel keeps the verified pieces; «update available» is known
 at the next visit without asking the network.
 Needs the site: python tools/build_site.py and the engine in site/static/wasm-lib (built here when cargo and wasm-bindgen exist; the CI builds it in pages.yml)."""
+# covers: mzlab/web/libreria
 import base64, json, os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -78,7 +79,7 @@ def publish(msp, version, wrong_total=False):
 
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None); ctx = b.new_context(viewport={"width": 1400, "height": 1000}, locale="it-IT"); pg = ctx.new_page()
+        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None); ctx = b.new_context(viewport={"width": 1400, "height": 1000}, locale="en-US"); pg = ctx.new_page()
         pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
         reqs = []
         pg.on("request", lambda r: reqs.append(r.url) if "/static/librerie/" in r.url else None)
@@ -91,18 +92,18 @@ try:
         def no_network():
             pg.evaluate("LIB.open()"); pg.wait_for_selector("#libdlg #lib-avail-load", timeout=20000); pg.wait_for_selector("#libdlg #lib-list p.muted", timeout=20000)
             assert reqs == [], reqs
-            assert "Nessuna libreria" in pg.inner_text("#libdlg #lib-list")
+            assert "No library loaded" in pg.inner_text("#libdlg #lib-list")
         step("opening the window asks the network for nothing", no_network)
         def show():
             pg.click("#lib-avail-load"); pg.wait_for_selector("#libdlg [data-dl='prova-pos']", timeout=20000)
-            t = pg.text_content("#lib-avail-list"); assert "Prova · ESI+ · MS2" in t and "Non scaricata" in t and "CC0" in t and "Attribuzione di prova 1" in t, t
+            t = pg.text_content("#lib-avail-list"); assert "Prova · ESI+ · MS2" in t and "Not downloaded" in t and "CC0" in t and "Attribuzione di prova 1" in t, t
             assert any(u.endswith("catalogo.json") for u in reqs) and not any(u.endswith(".bin") for u in reqs), reqs
         step("the list comes on a click: name, version, licence, size, state and the attribution", show)
         def interrupted():
             plan["prova-pos/001.bin"] = lambda n: "corrupt" if n == 1 else "ok"
             plan["prova-pos/002.bin"] = lambda n: "abort" if n == 1 else "ok"
             pg.check("#libdlg [data-dl='prova-pos']"); pg.click("#lib-avail-go")
-            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('Nessuna connessione')", timeout=30000)
+            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('No connection')", timeout=30000)
             assert hits["prova-pos/000.bin"] == 1 and hits["prova-pos/001.bin"] == 2, hits           # the corrupt piece was fetched again
             assert hits["prova-pos/002.bin"] == 1
             names = pg.evaluate("T.names()"); assert [n for n in names if n.endswith(".piece")] == [".mzlab/prova-pos.000.piece", ".mzlab/prova-pos.001.piece"], names
@@ -110,11 +111,11 @@ try:
         step("a corrupt piece is fetched again; an interruption keeps the verified pieces and installs nothing", interrupted)
         def resumed():
             pg.check("#libdlg [data-dl='prova-pos']"); pg.click("#lib-avail-go")
-            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('Scaricate e verificate: 1')", timeout=30000)
+            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('Downloaded and verified: 1')", timeout=30000)
             assert hits["prova-pos/000.bin"] == 1 and hits["prova-pos/001.bin"] == 2 and hits["prova-pos/002.bin"] == 2, hits   # only what was missing
             names = pg.evaluate("T.names()"); assert "prova-pos.mzlib" in names and not any(n.endswith((".piece", ".new")) for n in names), names
             s = pg.evaluate("T.states()"); assert s == [["prova-pos.mzlib", "pacchetto", "pronta", "1"]], s
-            assert "Scaricata" in pg.inner_text("#lib-avail-list")
+            assert "Downloaded" in pg.inner_text("#lib-avail-list")
             r = pg.evaluate("T.search", [[[m + 3, v] for m, v in PEAKS], 321.1]); assert "Voce3" in r, r
         step("the download resumes from the first missing piece and the package is ready and searchable", resumed)
         # a second version, published while the first one is installed
@@ -131,17 +132,17 @@ try:
             boot()
             s = pg.evaluate("T.states()"); assert s == [["prova-pos.mzlib", "pacchetto", "pronta", "1"]], s              # the cached catalog is the old one: nothing to update yet
             pg.evaluate("LIB.open()"); pg.click("#lib-avail-load"); pg.wait_for_selector("#libdlg [data-dl='prova-pos']", timeout=20000)
-            assert "Aggiornamento disponibile" in pg.text_content("#lib-avail-list"), pg.text_content("#lib-avail-list")
+            assert "Update available" in pg.text_content("#lib-avail-list"), pg.text_content("#lib-avail-list")
             assert pg.evaluate("T.states()")[0][2] == "aggiornamento"
             pg.check("#libdlg [data-dl='prova-pos']"); pg.click("#lib-avail-go")
-            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('non valido')", timeout=30000)
+            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('Invalid piece or file')", timeout=30000)
             s = pg.evaluate("T.states()"); assert s[0][0] == "prova-pos.mzlib" and s[0][3] == "1", s                      # the old package is untouched
             names = pg.evaluate("T.names()"); assert not any(n.endswith((".piece", ".new")) for n in names), names
             assert pg.evaluate("T.b64", "prova-pos.mzlib") == keep
             # the right total: the update replaces it
             e2["sha256"] = hashlib_sha(OUT, e2); (OUT / "catalogo.json").write_text(json.dumps({"formato": "librerie/1", "pezzo": lp.PIECE, "librerie": [e2], "esterne": []}), encoding="utf-8")
             pg.click("#lib-avail-load"); pg.wait_for_selector("#libdlg [data-dl='prova-pos']"); pg.check("#libdlg [data-dl='prova-pos']"); pg.click("#lib-avail-go")
-            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('Scaricate e verificate: 1')", timeout=30000)
+            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('Downloaded and verified: 1')", timeout=30000)
             s = pg.evaluate("T.states()"); assert s == [["prova-pos.mzlib", "pacchetto", "pronta", "2"]], s
             assert "SoloNellaV2" in pg.evaluate("T.search", [QPEAKS, 300.1])
         def hashlib_sha(out, e):
@@ -151,7 +152,7 @@ try:
         def known_next_visit():
             e3 = json.loads((OUT / "catalogo.json").read_text(encoding="utf-8"))["librerie"][0]; e3["versione"] = "3"
             (OUT / "catalogo.json").write_text(json.dumps({"formato": "librerie/1", "pezzo": lp.PIECE, "librerie": [e3], "esterne": []}), encoding="utf-8")
-            pg.click("#lib-avail-load"); pg.wait_for_function("document.querySelector('#lib-avail-list').innerText.includes('Aggiornamento disponibile')", timeout=20000)
+            pg.click("#lib-avail-load"); pg.wait_for_function("document.querySelector('#lib-avail-list').innerText.includes('Update available')", timeout=20000)
             before = len(reqs); boot()
             s = pg.evaluate("T.states()"); assert s == [["prova-pos.mzlib", "pacchetto", "aggiornamento", "2"]], s
             assert len(reqs) == before, "no network call without a click"
@@ -160,9 +161,9 @@ try:
             pg.evaluate("T.wipe()"); boot(); plan.clear(); hits.clear()
             plan["prova-pos/001.bin"] = lambda n: "hold"
             pg.evaluate("LIB.open()"); pg.click("#lib-avail-load"); pg.wait_for_selector("#libdlg [data-dl='prova-pos']"); pg.check("#libdlg [data-dl='prova-pos']"); pg.click("#lib-avail-go")
-            pg.wait_for_selector("#lib-avail-cancel:not([hidden])"); pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('pezzo 1 di')", timeout=20000)
+            pg.wait_for_selector("#lib-avail-cancel:not([hidden])"); pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('piece 1 of')", timeout=20000)
             pg.click("#lib-avail-cancel")
-            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('annullato')", timeout=30000)
+            pg.wait_for_function("document.querySelector('#lib-avail-st').innerText.includes('cancelled')", timeout=30000)
             names = pg.evaluate("T.names()"); assert "prova-pos.mzlib" not in names and ".mzlab/prova-pos.000.piece" in names, names
             for r in held:
                 try: r.abort()

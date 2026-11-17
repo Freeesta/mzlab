@@ -1,4 +1,4 @@
-//! The rule that ties an MS2 scan to a feature (`docs/agenti/mzfinder-ms2-regola.md`): the centre of the precursor lies within the m/z tolerance of the
+//! The rule that ties an MS2 scan to a feature (`docs/agenti/mzfinder-ms2.md`): the centre of the precursor lies within the m/z tolerance of the
 //! feature AND the time of the scan lies inside the chromatographic peak of the feature (from its start to its end, not only near the apex). Pure
 //! functions, no index: the Dig uses `tolerance` and `overlap` for the matches of the traces, and `associate` for the scans of one match.
 

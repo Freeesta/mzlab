@@ -2,6 +2,7 @@
 dropped in the start page go to the module without any parameter, are listed as mzML, and give the TIC the container states (the sum of each scan's counts); a Q-TOF .lcd is refused with a notice and is not listed; a .lcdx is
 still «cannot be opened»; MZLAB_LR_MISS stays empty; only the shimadzu module is downloaded. Needs the site and the modules: python tools/build_site.py, tools/build_lettori_wasm.sh (MZLAB_PIPE_SITE=<built site> reuses a site).
 Run from the repo root: python3 tests_e2e/e2e_shimadzu.py"""
+# covers: mzlab/web/lettori, mzlab/web/shell.js, crates/mzlab-lettori, tools/build_lettori_wasm.sh, tools/shimadzu_sintetico.py
 import os, shutil, socket, subprocess, sys, tempfile, threading
 from pathlib import Path
 from playwright.sync_api import sync_playwright

@@ -1,6 +1,7 @@
 """An Agilent method folder *.m loaded with «Load a folder» next to a .D run (cartella-carica.js, agilent-d.js, metodo-m.js, Rust engine agilent_m_metodo): it is recognised (not
 «ignored», not «no compatible file») and the Method window shows its compounds (expected RT, qualifier ions with their response, calibration levels) from the engine's metodo/1.
 Synthetic folders of tools/agilent_sintetico.py (no laboratory data). Needs the site and the .wasm like e2e_agilent."""
+# covers: mzlab/web/metodo-m.js
 import os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -37,14 +38,14 @@ try:
             pg.set_input_files("#pickdir", str(top))
             pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)
             t = pg.inner_text("#cartinfo")
-            assert "Metodo Agilent «Metodo prova per SIM.m» (.m) riconosciuto" in t and "ignorat" not in t and "nessun file" not in t, t
+            assert "Agilent method «Metodo prova per SIM.m» (.m) recognised" in t and "ignored" not in t and "no compatible file" not in t, t
         step("the .m folder next to a .D run is recognised, not ignored", folder)
         def window():
             pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
             pg.click("#np-method"); ready(pg)
             pg.wait_for_function("document.querySelector('#bigdlg').innerText.includes('composto-a')", timeout=60000)
             t = pg.inner_text("#bigdlg")
-            assert "Metodo Agilent «Metodo prova per SIM.m» (.m)" in t and "composto-b" in t and "10.25" in t and "7.5" in t, t
+            assert "Agilent method «Metodo prova per SIM.m» (.m)" in t and "composto-b" in t and "10.25" in t and "7.5" in t, t
             assert "108.1 (25 %, 20–30)" in t and "135.1 (15 %" in t and "0.1, 1, 10 ng/ml" in t, t
             assert "80 %" in t and "fitLinear" in t, t
         step("the Method window shows the compounds, ions and levels of the .m folder", window)

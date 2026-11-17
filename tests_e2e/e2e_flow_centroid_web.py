@@ -1,6 +1,7 @@
 """Flow «This browser» centroids low-resolution profile mzML itself (spectra.centroid -> rb.flowCentroid, the engine call of Settings; flow/lazy/flow-live-jobs.js): the «Feature table» plan on two profile P_FullMass files runs to the end,
 no job is blocked by platform.computer, MZLAB_LR_MISS stays empty and series.mzfeat is the file of `mzlab-cli flow run`, byte for byte; a second run reuses the copy. Decoys: a high-resolution profile file still needs the desktop
 app, a file of centroids is «already centroided» and makes no copy. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen, python3 and numpy: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_centroid_web.py"""
+# covers: flow/lazy/flow-live
 import json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -48,8 +49,11 @@ RUN = """async (plan) => {
 }"""
 READ = """async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'); return Array.from(new Uint8Array(await (await (await d.getFileHandle('series.mzfeat')).getFile()).arrayBuffer())); }"""
 CENS = """async () => { let d = await navigator.storage.getDirectory(); d = await (await d.getDirectoryHandle('mzlab')).getDirectoryHandle('idx'); const out = []; for await (const [n] of d.entries()) if (/\\.cen\\.(mzidx|key)$/.test(n)) out.push(n); return out.sort(); }"""
+# the jobs route gives the state only: the reason a job is blocked is in its last event
 JOBS = """async () => { const S = document.querySelector('.flx-list').__flow, c = S.plan.steps.find(s => String(s.step).split('@')[0] === 'spectra.centroid');
-  return c ? (await (await fetch('api/flow/sched/jobs', { method: 'POST', body: '{}' })).json()).filter(j => j.instance === c.id).map(j => [j.item, j.state, j.blocked_by || '']) : null; }"""
+  if (!c) return null;
+  const ask = async op => (await (await fetch('api/flow/sched/' + op, { method: 'POST', body: '{"since":0}' })).json()), ev = await ask('events');
+  return (await ask('jobs')).filter(j => j.instance === c.id).map(j => { const e = ev.filter(e => e.kind === 'job' && e.instance === j.instance && e.item === j.item).pop(); return [j.item, j.state, (e && e.blocked_by) || '']; }); }"""
 def open_flow(pg):
     pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
     pg.wait_for_function("window.FLOW && FLOW.runners && FLOW.runners.web && document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow", timeout=120000)
@@ -82,9 +86,9 @@ try:
             assert not [e for e in r["ev"] if "platform.computer" in json.dumps(e)], r["ev"]
             jobs = pg.evaluate(JOBS); assert jobs and all(j[1] in ("done", "cached", "reused") and not j[2] for j in jobs), jobs
             assert len(pg.evaluate(CENS)) == 4, pg.evaluate(CENS)      # a .cen.mzidx and a .cen.key for each of the two files
-            web = bytes(pg.evaluate(READ)); table = sorted(out.glob("*.mzfeat"))
-            assert len(table) == 1, list(out.iterdir())
-            assert table[0].read_bytes() == web and len(web) > 100, (len(web), table[0].stat().st_size)
+            web = bytes(pg.evaluate(READ)); tables = {t.name: t.read_bytes() for t in sorted(out.glob("*.mzfeat"))}
+            # the plan aligns and then fills the gaps: flow run writes both tables, the page keeps the filled one in series.mzfeat
+            assert len(web) > 100 and tables.get("gapfill.mzfeat") == web, (len(web), {n: len(b) for n, b in tables.items()})
         step("two low-resolution profile files: the browser centroids them, no job waits for the desktop app, series.mzfeat is the file of flow run", first)
 
         def again():

@@ -215,7 +215,7 @@ pub struct GNode {
     pub m1: Option<f64>,
     /// Its own isolation window (Da), when it is isolated and the file says.
     pub width: Option<f64>,
-    /// The narrowest window on the path to the spectrum of its most intense observation: below `STRETTA` its M+1 is not expected there.
+    /// The narrowest window on the path to the spectrum of its most intense observation: below `NARROW` its M+1 is not expected there.
     pub upstream: Option<f64>,
     /// With a formula: the peaks of its spectra that no sub-formula explains (their nodes left the graph).
     pub unexplained: Option<Unexplained>,
@@ -248,7 +248,7 @@ pub struct SpettroG {
 }
 
 /// A window narrower than this does not take the M+1 of a singly charged ion (±1.00336 Da around its centre).
-pub const STRETTA: f64 = 2.0 * crate::elements::C13_STEP;
+pub const NARROW: f64 = 2.0 * crate::elements::C13_STEP;
 
 /// A sub-formula of the ion of the root that explains a node.
 #[derive(Debug, Clone, PartialEq)]

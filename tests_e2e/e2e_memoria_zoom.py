@@ -1,5 +1,6 @@
 """Zooming a chromatogram in and out many times keeps memory flat: every header rebuild must let the old header controls go
 (an abort() DOMException in corrInfoWire kept them, about 490 DOM nodes per zoom-unzoom cycle). A synthetic LR file; nodes and listeners after GC."""
+# covers: mzlab/web/pannelli.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

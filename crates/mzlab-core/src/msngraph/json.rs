@@ -1,7 +1,7 @@
 //! The JSON `msngrafo/2` of a graph (`docs/schemi/msngrafo-2.json`; `/1` had the Italian `opzioni` keys): keys in a fixed order, rounded numbers, the same bytes for the same
 //! input. `ione` and the formulas are `null` without the formula of the ion of the root.
 
-use super::{Candidate, Edge, GNode, Graph, NodeFormula, Options, SpettroG, STRETTA};
+use super::{Candidate, Edge, GNode, Graph, NodeFormula, Options, SpettroG, NARROW};
 use crate::json::{round, Out};
 
 fn bool_(o: &mut Out, b: bool) {
@@ -181,7 +181,7 @@ fn node(o: &mut Out, i: usize, n: &GNode) {
     o.raw(",\"a_monte\":");
     opt_num(o, n.upstream, 3);
     o.raw(",\"stretto\":");
-    bool_(o, n.upstream.is_some_and(|w| w < STRETTA));
+    bool_(o, n.upstream.is_some_and(|w| w < NARROW));
     o.raw("},\"non_spiegati\":");
     match &n.unexplained {
         Some(x) => {

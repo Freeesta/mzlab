@@ -1,7 +1,7 @@
 // @ts-strict
 // TPMINE-PRIVATE  Untargeted tables: ONE model of the features of a LC-HRMS table (id, m/z, RT, areas per sample, MS2, external annotations with their source).
 // The readers (mzMine full table, annotations, FBMN quant + MGF + IIN edges, MS-DIAL, GNPS2 library and network) are Rust: crates/mzlab-feat/src/import, the .wasm «import» of wasm-feat/manifest.json
-// (crates/mzlab-feat-import-wasm, docs/agenti/mzfinder-import.md). Here: loading it, the calls (the arguments in, the table as JSON out; no number is calculated here) and the rest of the model
+// (crates/mzlab-feat-import-wasm, docs/agenti/mzfinder-untargeted.md). Here: loading it, the calls (the arguments in, the table as JSON out; no number is calculated here) and the rest of the model
 // that does not read files (mzFinder rows) and the external evidence read with LIVELLI. The match with the libraries and the levels are in 26_untarget_match.js, the window in 27_untarget_ui.js.
 // The external annotations are an open structure {source, type, score, shared, ppm, name, ik, smiles, ...}: another program (SIRIUS) enters later without changing the model.
 // The key of a feature is (polarity, id) plus the SHA-256 of the file of the table it comes from. The rules of the readers are those of Attributio 1.12.0 (readers/mzmine.py, gnps.py, ms2.py), by Federico Cristaudo.
@@ -121,7 +121,7 @@
     return raw && typeof raw.then === "function" ? raw.then(done, (/** @type {any} */ e) => { throw asError(e); }) : done(raw);      // the app answers with a promise
   }
 
-  // ------------------------------------------------------------ external evidence read with a profile of livelli/1 (profile «attributio»: a library source of mzMine or GNPS2 that passes the gates is level 2a)
+  // ------------------------------------------------------------ external evidence read with a profile of levels/1 (profile «attributio»: a library source of mzMine or GNPS2 that passes the gates is level 2a)
   const bestKey = c => (LV() ? LV().ikKey(c) : lc(c.name));
   function assessExternal(f, profile = "attributio") {
     const L = LV(), cands = (f.ann || []).filter(a => !a.propagated && (a.type === "cosine" || a.type === "MQScore")).map(a => ({ name: a.cleanName || a.name, ik: a.ik, ent: a.score, cos: a.score, shared: a.shared, dprec: a.ppm, lib: a.source, nlib: 30, _a: a }));

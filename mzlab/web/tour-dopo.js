@@ -103,3 +103,54 @@ const TOURINVITO = (() => {
   }
   return { apri };
 })();
+// The question at the end of a tour that loaded the example file itself: keep playing with it, or close it and start fresh.
+const TOURSCELTA = (() => {
+  /** Opens the modal question. `keep` and `remove` run after the dialog is gone; Esc (or a click outside) is «Keep exploring», the choice that destroys nothing.
+   * @param {{ keep: () => void, remove: () => Promise<void> | void }} o @returns {() => void} closes it without choosing */
+  function apri(o) {
+    const back = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const wrap = document.createElement("div");
+    wrap.id = "tour-scelta";
+    wrap.style.cssText = "position:fixed;inset:0;z-index:7100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);padding:12px;box-sizing:border-box";
+    const bs = "border-radius:5px;padding:6px 12px;cursor:pointer;font:inherit;border:1px solid var(--line,#e2e5ea);background:var(--panel,#fff);color:var(--ink,#25282c)";
+    const T = (/** @type {string} */ k) => I18N.t(k);
+    const esc = (/** @type {string} */ s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+    wrap.innerHTML = `<div id="tour-scelta-dlg" role="dialog" aria-modal="true" aria-labelledby="tour-scelta-ttl" aria-describedby="tour-scelta-txt" style="width:340px;max-width:100%;background:var(--panel,#fff);color:var(--ink,#25282c);border:1px solid var(--line,#e2e5ea);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,0.3);padding:16px 18px;box-sizing:border-box;font:13px/1.45 system-ui,-apple-system,sans-serif">
+      <h3 id="tour-scelta-ttl" style="margin:0 0 6px;font-size:15px">${T("tour.scelta.titolo")}</h3>
+      <p id="tour-scelta-txt" style="margin:0 0 14px">${T("tour.scelta.testo")}</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+        <button type="button" id="tour-sc-via" style="${bs}" title="${esc(T("tour.scelta.via.tip"))}">${T("tour.scelta.via")}</button>
+        <button type="button" id="tour-sc-resta" style="${bs};background:var(--accent,#2b5c8a);color:#fff;border-color:var(--accent,#2b5c8a);font-weight:500" title="${esc(T("tour.scelta.resta.tip"))}">${T("tour.scelta.resta")}</button>
+      </div></div>`;
+    document.body.appendChild(wrap);
+    const dlg = /** @type {HTMLElement} */ (wrap.querySelector("#tour-scelta-dlg"));
+    const resta = /** @type {HTMLButtonElement} */ (wrap.querySelector("#tour-sc-resta")), via = /** @type {HTMLButtonElement} */ (wrap.querySelector("#tour-sc-via"));
+    let done = false;
+    const close = () => {
+      if (done) return;
+      done = true;
+      document.removeEventListener("keydown", onKey, true);
+      wrap.remove();
+      try { if (back && back.isConnected) back.focus({ preventScroll: true }); } catch (_) { /* focus is only a help */ }
+    };
+    /** @param {KeyboardEvent} e */
+    const onKey = e => {
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); o.keep(); return; }
+      if (e.key !== "Tab") return;
+      // the dialog is modal: Tab stays between its two buttons
+      const els = [resta, via], i = els.indexOf(/** @type {any} */ (document.activeElement));
+      e.preventDefault();
+      els[(i + (e.shiftKey ? -1 : 1) + els.length) % els.length].focus();
+    };
+    document.addEventListener("keydown", onKey, true);
+    wrap.addEventListener("pointerdown", e => { if (e.target === wrap) { close(); o.keep(); } });
+    resta.onclick = () => { close(); o.keep(); };
+    via.onclick = async () => {
+      resta.disabled = via.disabled = true; dlg.setAttribute("aria-busy", "true");
+      try { await o.remove(); } finally { close(); }
+    };
+    resta.focus();
+    return close;
+  }
+  return { apri };
+})();

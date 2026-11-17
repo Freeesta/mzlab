@@ -1,6 +1,7 @@
-"""Disegno: the canvas menu has no header line; its name (aria-label) says what it acts on («Selezione (n atomi)» or «Tutto il disegno»), its rows come from
+"""Drawing: the canvas menu has no header line; its name (aria-label) says what it acts on («Selection (n atoms)» or «Whole drawing»), its rows come from
 the TPDraw.menu registry (ordered, filtered by selection / whole drawing, one failing row never hides the others) and stay keyboard menu items. No bond rows
 («Spezza», «Taglia») and no «Ioni attesi» row."""
+# covers: mzlab/web/disegno-menu.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -32,32 +33,32 @@ try:
             assert not ln or (rr[ln[0] - 1] == "info" and rr[ln[-1] + 1] == "center" and ln == list(range(ln[0], ln[-1] + 1))), rr
             return [x for x in rr if not x.startswith("link-")]
         def whole():
-            opened("Tutto il disegno", None)
-            assert pg.evaluate("document.querySelector('#ctx').getAttribute('aria-label')") == "Tutto il disegno"
+            opened("Whole drawing", None)
+            assert pg.evaluate("document.querySelector('#ctx').getAttribute('aria-label')") == "Whole drawing"
             assert not pg.evaluate("document.querySelector('#ctx .ctx-head')") and pg.evaluate("document.querySelector('#ctx').firstElementChild.getAttribute('role')") == "menuitem"
             rr = rows(); assert rr[:3] == ["copy-smiles", "info", "center"] and "expected-ions" not in rr, rr
-        step("no selection: no header line, the menu is named «Tutto il disegno»", whole)
+        step("no selection: no header line, the menu is named «Whole drawing»", whole)
         def part():
-            opened("Selezione (2 atomi)", 0)
-            rr = rows(); assert rr[:3] == ["copy-smiles", "info", "center"] and not {"break-bonds", "cut-bonds", "expected-ions"} & set(rr), rr
+            opened("Selection (2 atoms)", 0)
+            rr = rows(); assert rr[:6] == ["copy", "cut", "delete", "copy-smiles", "info", "center"] and not {"break-bonds", "cut-bonds", "expected-ions"} & set(rr), rr
             t = pg.locator("#ctx div[data-row=copy-smiles]").inner_text(); assert "CC" in t and "O" not in t, t     # the piece, not the whole drawing
-        step("a selected bond: menu named «Selezione (2 atomi)», SMILES of the piece, no bond rows", part)
+        step("a selected bond: menu named «Selection (2 atoms)», SMILES of the piece, no bond rows", part)
         def added():
             pg.evaluate("""(() => { window._got = null;
               TPDraw.menu.add({ id: 'test-sel', when: 'selection', order: 12, label: c => 'Prova ' + c.atoms.size, run: c => { window._got = [c.atoms.size, c.whole, c.bonds.length]; } });
               TPDraw.menu.add({ id: 'test-whole', when: 'whole', order: 25, label: 'draw.ctx.center', run: () => {} });
               TPDraw.menu.add({ id: 'test-bad', order: 16, show: () => { throw new Error('boom'); }, label: 'x', run: () => {} }); })()""")
             ids = pg.evaluate("TPDraw.menu.ids()"); assert ids.index("test-sel") == ids.index("copy-smiles") + 1, ids
-            opened("Selezione (2 atomi)", 0)
-            rr = rows(); assert rr[:4] == ["copy-smiles", "test-sel", "info", "center"] and "test-whole" not in rr and "test-bad" not in rr, rr
+            opened("Selection (2 atoms)", 0)
+            rr = rows(); assert rr[:7] == ["copy", "cut", "delete", "copy-smiles", "test-sel", "info", "center"] and "test-whole" not in rr and "test-bad" not in rr, rr
             pg.locator("#ctx div[data-row=test-sel]").click()                # select, right click, row: two clicks
             assert pg.evaluate("window._got") == [2, False, 1], pg.evaluate("window._got")
             assert pg.locator("#ctx").is_hidden()
-            opened("Tutto il disegno", None)
+            opened("Whole drawing", None)
             rr = rows(); assert "test-whole" in rr and "test-sel" not in rr, rr
         step("rows added through TPDraw.menu.add: ordered, filtered, a failing row left out", added)
         def keys():
-            opened("Tutto il disegno", None); pg.evaluate("document.querySelector('#ctx').hidden = true")
+            opened("Whole drawing", None); pg.evaluate("document.querySelector('#ctx').hidden = true")
             pg.locator("#kframe").focus()
             pg.evaluate("(()=>{const d=document.querySelector('#kframe').contentDocument;d.body.dispatchEvent(new d.defaultView.KeyboardEvent('keydown',{key:'F10',shiftKey:true,bubbles:true}))})()")
             wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.activeElement && document.activeElement.dataset.row === 'copy-smiles'")
@@ -66,7 +67,7 @@ try:
             pg.keyboard.press("Escape"); assert pg.locator("#ctx").is_hidden()
         def axe_menu():
             if not axe_path(): raise AssertionError("axe-core not available (pip install axe-playwright-python)")
-            opened("Selezione (2 atomi)", 0)
+            opened("Selection (2 atoms)", 0)
             if not pg.evaluate("typeof axe !== 'undefined'"): pg.add_script_tag(path=axe_path())
             v = pg.evaluate("""() => axe.run({include: [['#ctx']]}, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21aa','wcag22aa']}})
               .then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.nodes.length]))"""); assert not v, v

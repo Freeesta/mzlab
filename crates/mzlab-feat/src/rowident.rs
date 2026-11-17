@@ -8,18 +8,8 @@ use crate::aligned::Aligned;
 use crate::evid::match_hypotheses_in;
 use crate::hypo::Hypothesis;
 
-/// Bit 0 of `RowIdent::src`: the detection found the row in at least one file (else it was added by the targeted pass).
-pub const SRC_DETECTED: u8 = 1;
-
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct RowIdent {
-    /// Neutral mass of the matched hypothesis; else the one of the protonated (deprotonated) reference ion.
-    pub neutral: Vec<f64>,
-    /// Adduct of that mass: 1 + the position in `adduct_names()`; 0 = none matched and no adduct assumed.
-    pub ion: Vec<u8>,
-    /// `Hypothesis::sources << 1 | SRC_DETECTED`; no hypothesis = 0 in the high bits.
-    pub src: Vec<u8>,
-}
+/// The old path of the identity columns, which live in `aligned_meta` so that the aligned table does not depend on `rowident`.
+pub use crate::aligned_meta::{RowIdent, SRC_DETECTED};
 
 /// The adducts that `ion` can name, in the order of the codes (code = position + 1). Written in the meta `adducts` of the `.mzfeat`.
 pub fn adduct_names() -> [&'static str; 7] {
@@ -38,18 +28,6 @@ fn code_of(shift: f64) -> u8 {
 const SHIFT_TOL: f64 = 1e-3;
 
 impl RowIdent {
-    pub fn len(&self) -> usize {
-        self.neutral.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.neutral.is_empty()
-    }
-
-    pub fn heap_bytes(&self) -> usize {
-        self.neutral.capacity() * 8 + self.ion.capacity() + self.src.capacity()
-    }
-
     /// The columns of an aligned table in its final order: each row takes the hypothesis `match_hypotheses` gives it; the others are read as the
     /// ion of the polarity of the registry.
     pub fn compute(table: &Aligned, hyps: &[Hypothesis], polarity: i8) -> RowIdent {

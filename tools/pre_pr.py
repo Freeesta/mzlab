@@ -6,7 +6,7 @@
     python3 tools/pre_pr.py --senza-e2e  # skip `verifica.py --cambiati` (the e2e of the changed files)
     python3 tools/pre_pr.py --veloce     # only the cheap checks (well under 2 minutes, never clippy or e2e): adds the CSP hash and prints which e2e would run
 
-When the diff against origin/main touches only documents (the list of tools/ci_solo_doc.py) it runs just code map, size limits and and prints «solo documenti».
+When the diff against origin/main touches only documents (the list of tools/ci_solo_doc.py) it runs just code map, size limits and prints «solo documenti».
 Steps: code map, size limits, i18n, JS syntax (only when `mzlab/web/` differs from origin/main), generated globals, tsc, Rust format, clippy and machete (only when the Rust paths of the CI differ from origin/main), e2e of the changed files.
 Every step prints its name before it starts, so a long one is never silent. Exit 0 = green; with --veloce (also the cloud default) the e2e and clippy are not run and the output says the CI will run them. With --completo, e2e skipped for lack of a browser give exit 2.
 Merge `origin/main` first (`git merge origin/main`): the checks compare with the files as the merge leaves them.
@@ -53,8 +53,8 @@ def files_cambiati() -> list[str]:
 
 def doc_only_steps() -> list[tuple[str, list[str]]]:
     """The checks a documents-only diff needs."""
-    p = [("mappa del codice", [PY, "tools/indice.py", "--controlla"]), ("soglie di dimensione", [PY, "tools/controlla.py"]),
-         ("percorsi nei documenti", [PY, "tools/check_link_docs.py"])]
+    p = [("code map", [PY, "tools/indice.py", "--controlla"]), ("size limits", [PY, "tools/controlla.py"]),
+         ("paths in the docs", [PY, "tools/check_link_docs.py"])]
     return p
 
 
@@ -64,33 +64,34 @@ SELECTION_E2E = [PY, "-c", "import sys; sys.path.insert(0, 'tools'); import veri
 
 def steps(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
     p = [
-        ("mappa del codice", [PY, "tools/indice.py", "--controlla"]),
-        ("soglie di dimensione", [PY, "tools/controlla.py"]),
-        ("percorsi nei documenti", [PY, "tools/check_link_docs.py"]),
-        ("lingue (i18n)", [PY, "tools/controlla_i18n.py"]),
+        ("code map", [PY, "tools/indice.py", "--controlla"]),
+        ("size limits", [PY, "tools/controlla.py"]),
+        ("paths in the docs", [PY, "tools/check_link_docs.py"]),
+        ("languages (i18n)", [PY, "tools/controlla_i18n.py"]),
+        ("caps of the .wasm modules against the base", [PY, "tools/moduli.py", "--controlla", "--base", "origin/main"]),
     ]
     if shutil.which("node") and changed("mzlab/web/"):
-        p.append(("sintassi JS (job javascript)", JS_SYNTAX))
+        p.append(("JS syntax (javascript job)", JS_SYNTAX))
     p += [
-        ("globali dei tipi", [PY, "tools/tipi/genera_globali.py", "--controlla"]),
+        ("type globals", [PY, "tools/tipi/genera_globali.py", "--controlla"]),
         ("tsc", [PY, "tools/tipi/controlla_tsc.py"]),
     ]
     if (ROOT / "tools" / "check_import.py").exists():
-        p.append(("import degli e2e", [PY, "tools/check_import.py"]))
+        p.append(("e2e imports", [PY, "tools/check_import.py"]))
     if shutil.which("cargo") and changed("vendor/opentfraw/"):  # the crate is out of the workspace: no CI job runs its own tests
-        p.append(("test lib di opentfraw", ["cargo", "test", "-q", "--manifest-path", "vendor/opentfraw/Cargo.toml", "--lib"]))
+        p.append(("opentfraw lib tests", ["cargo", "test", "-q", "--manifest-path", "vendor/opentfraw/Cargo.toml", "--lib"]))
     if veloce:
         p.append(("hash CSP", [PY, "tools/csp_hash.py", "--check"]))
         if changed(*RUST):
-            p.append(("cargo fmt contro la base", [PY, "tools/controlla_rust.py", "--solo-fmt"]))
-        p.append(("e2e che verrebbero eseguiti", SELECTION_E2E))
+            p.append(("cargo fmt against the base", [PY, "tools/controlla_rust.py", "--solo-fmt"]))
+        p.append(("e2e that would run", SELECTION_E2E))
         return p
     if changed(*RUST):
-        p += [("fmt e clippy contro la base", [PY, "tools/controlla_rust.py"])]
+        p += [("fmt and clippy against the base", [PY, "tools/controlla_rust.py"])]
         if shutil.which("cargo-machete"):
-            p.append(("dipendenze non usate (cargo machete)", ["cargo", "machete"]))
+            p.append(("unused dependencies (cargo machete)", ["cargo", "machete"]))
     if con_e2e:
-        p.append(("e2e dei file cambiati", [PY, "tools/verifica.py", "--cambiati"]))
+        p.append(("e2e of the changed files", [PY, "tools/verifica.py", "--cambiati"]))
     return p
 
 
@@ -116,11 +117,11 @@ def main() -> int:
         else:
             print(f"ok   {name} ({dt:.0f} s)" + (f": {r.stdout.strip()[:300]}" if veloce and "e2e" in name else ""), flush=True)
     if skipped:
-        print("E2E SALTATI: Chromium non trovato, la CI li eseguirà (gli altri passi sono verdi, ma questo NON è «tutto verde»).")
+        print("E2E SKIPPED: Chromium not found, the CI will run them (the other steps are green, but this is NOT \"all green\").")
         return 2
     if veloce and not solo_doc:
-        print("Tutto verde (giro veloce): clippy ed e2e non girati, li esegue la CI.")
-    print("Tutto verde: ora git merge origin/main (se non l'hai appena fatto) e apri la PR.")
+        print("All green (fast round): clippy and e2e were not run, the CI runs them.")
+    print("All green: now git merge origin/main (if you have not just done it) and open the PR.")
     return 0
 
 

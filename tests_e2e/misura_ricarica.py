@@ -1,5 +1,5 @@
 """Probe of page-load and click latency of the published site: first visit (cold), repeat visit (warm), first example file, typical clicks,
-«New session → Full reset» and the reloads that follow. Measures, never asserts: used by docs/studi/VELOCITA_RICARICA.md.
+«New session → Full reset» and the reloads that follow. Measures, never asserts.
 Targets: the live GitHub Pages site (--url) or a local mirror of it with GitHub-Pages-like headers (--mirror DIR: files missing from DIR are fetched
 from --url once and kept). Profiles: none, fast4g (9 Mbps down, --rtt ms added), cpu4 (CPU x4), slow (both); throttling is applied over CDP to the page,
 its workers and the service worker. Output: one JSON per run (--out) with per-navigation marks, resources, long tasks and event timings.
@@ -58,6 +58,11 @@ class Mirror(BaseHTTPRequestHandler):
     upstream = ""
     lock = threading.Lock()
     gz: dict = {}
+    delay = 0             # ms every answer waits (set by misura_avvio_sw.py): CDP latency does not reach the service worker's own fetches
+    log: list = []        # [arrival ms, path, status, bytes sent, Sec-Fetch-Dest]: what the server really saw (HTTP-cache hits never reach it)
+
+    def note(self, rel: str, status: int, n: int) -> None:
+        self.log.append([self.t_in, rel, status, n, self.headers.get("Sec-Fetch-Dest", "")])
 
     def log_message(self, *a):
         pass
@@ -82,14 +87,19 @@ class Mirror(BaseHTTPRequestHandler):
             return None
 
     def do_GET(self):
+        self.t_in = round(time.time() * 1000)
+        if self.delay:
+            threading.Event().wait(self.delay / 1000)
         rel = self.path.split("?", 1)[0].split("#", 1)[0].lstrip("/")
         rel = rel[len("mzlab/"):] if rel.startswith("mzlab/") else rel
         p = self._file(rel)
         if p is None:
+            self.note(rel, 404, 0)
             self.send_response(404); self.send_header("Content-Length", "0"); self.end_headers(); return
         st = p.stat()
         etag = 'W/"%x-%x"' % (int(st.st_mtime), st.st_size)
         if self.headers.get("If-None-Match") == etag:
+            self.note(rel, 304, 0)
             self.send_response(304); self.send_header("ETag", etag); self.send_header("Cache-Control", "max-age=600"); self.end_headers(); return
         ctype = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
         if p.suffix in (".js", ".mjs"):
@@ -105,6 +115,7 @@ class Mirror(BaseHTTPRequestHandler):
                     self.gz[key] = gzip.compress(data, 6)
                 data = self.gz[key]
             enc = "gzip"
+        self.note(rel, 200, len(data))
         self.send_response(200)
         self.send_header("Content-Type", ctype + ("; charset=utf-8" if ctype.startswith("text/") or ctype == "application/javascript" else ""))
         self.send_header("Content-Length", str(len(data)))
@@ -115,7 +126,10 @@ class Mirror(BaseHTTPRequestHandler):
         if enc:
             self.send_header("Content-Encoding", enc); self.send_header("Vary", "Accept-Encoding")
         self.end_headers()
-        self.wfile.write(data)
+        try:
+            self.wfile.write(data)
+        except (BrokenPipeError, ConnectionResetError):
+            pass          # the page dropped the request (reload, abort)
 
 
 class Throttle:
@@ -171,15 +185,17 @@ class Throttle:
             return
         k, pr = m.get("method"), m.get("params") or {}
         if k == "Network.requestWillBeSent":
-            self._pending[pr["requestId"]] = [round(time.time() * 1000), pr["request"]["url"], 0, 0, 0]
+            # wall time and monotonic stamp from the event itself: Python only reads the message when the page poll pumps the loop
+            self._pending[pr["requestId"]] = [round(pr.get("wallTime", time.time()) * 1000), pr["request"]["url"], 0, 0, 0, pr.get("timestamp", 0)]
         elif k == "Network.responseReceived" and pr.get("requestId") in self._pending:
             self._pending[pr["requestId"]][2] = pr["response"]["status"]
         elif k == "Network.loadingFinished" and pr.get("requestId") in self._pending:
-            r = self._pending.pop(pr["requestId"]); r[3] = pr.get("encodedDataLength", 0); r[4] = round(time.time() * 1000); self.sw.append(r)
+            r = self._pending.pop(pr["requestId"]); r[3] = pr.get("encodedDataLength", 0)
+            r[4] = round(r[0] + (pr["timestamp"] - r[5]) * 1000) if r[5] and "timestamp" in pr else round(time.time() * 1000); self.sw.append(r[:5])
 
 
 CLICKS = [("nav-draw", "#nav button[data-v=draw]"), ("nav-data", "#nav button[data-v=data]"), ("settings", "#np-set"), ("settings-close", "Escape"),
-          ("sample-table", "#samptab"), ("sample-back", "#samptab"), ("file-row", "#flst .fl .nm >> nth=0")]
+          ("sample-table", "#samptab"), ("sample-back", "#backwork"), ("file-row", "#flst .fl .nm >> nth=0")]
 CLICK_DATA = """t => ({ ev: __v.ev.filter(e => e[0] >= t - 50), lt: __v.lt.filter(e => e[0] >= t - 50),
   res: performance.getEntriesByType('resource').filter(e => performance.timeOrigin + e.startTime >= t).map(e => [e.name.replace(location.origin, ''), Math.round(e.duration), e.decodedBodySize]) })"""
 

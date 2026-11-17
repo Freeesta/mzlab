@@ -2,6 +2,7 @@
 `mistopi` (tools/wiff_mixed_pi.py: a product-ion scan only the `sciex` module reads) is saved as mzML and as mzML + Numpress, and each file is byte for byte the one
 of `mzlab-cli convert --compression C` (conv.dad false: the optical matrix of the file of the loading is for the UV panel only). Needs cargo, the site, the engine .wasm and the `sciex`
 module: python3 tools/prepara_sito.py, tools/build_lettori_wasm.sh site/static."""
+# covers: mzlab/web/conversione.js, mzlab/web/lettori-worker
 import os, socket, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright

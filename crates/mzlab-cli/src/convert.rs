@@ -32,7 +32,7 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--compression KIND] [--zlib N] [
                        points of the profile) or mzlab (centroids of mzLab)
   --workers N          files converted at once (default: the cores but one, 1 to 4, fewer when the memory budget of the computer does not give
                        each its share, with a note; the bytes written do not depend on it)
-  --report FILE.json   one object per input: ingresso, uscita, sha256, spettri, secondi, saltato, conv/1, avvisi (centroidi with --peaks mzlab); or ingresso, errore, causa
+  --report FILE.json   one object per input: input, output, sha256, spectra, seconds, skipped, conv/1, warnings (centroids with --peaks mzlab); or input, error, cause
   --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
                        program is not converted again
   --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
@@ -194,7 +194,7 @@ fn progress(names: Vec<String>, ended: Arc<Mutex<Vec<Option<Ended>>>>) -> DoneFn
     })
 }
 
-/// A calm notice: its catalogue key and parameters (`lang/*/errori.js`).
+/// A calm notice: its catalogue key and parameters (`lang/*/errori-*.js`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Notice {
     pub key: &'static str,

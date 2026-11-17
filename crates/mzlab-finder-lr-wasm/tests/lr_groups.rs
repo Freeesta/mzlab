@@ -1,7 +1,7 @@
 //! The Dig on a series that compares conditions (`docs/agenti/gruppi.md`): the 38 synthetic mzML of `tests/data/gruppi/` (6 conditions × 3 times × 2
 //! replicates, a blank and a standard of the parent; the truth is `attesi.json` and its `LEGGIMI.md`), the roles and conditions from
 //! `samples::proponi`. The pipeline runs natively as the pool of `feat-worker.js` runs it, then the Dig and the block `gruppi`.
-//! Criteria 8.1-8.4 of `docs/studi/TABUI_GRUPPI_ESPERIMENTI.md`.
+//! Criteria 1-4 of `docs/agenti/gruppi.md`.
 
 use mzlab_core::samples;
 use mzlab_feat::legacy::lr::{self, summary::summary};

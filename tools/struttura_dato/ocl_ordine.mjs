@@ -1,4 +1,4 @@
-// Study tool for docs/studi/STRUTTURA_DATO.md: does OpenChemLib (the copy in mzlab/web/vendor) keep the heavy atoms of a SMILES in the order written,
+// Study tool for the `mol/1` record (docs/agenti/mol.md): does OpenChemLib (the copy in mzlab/web/vendor) keep the heavy atoms of a SMILES in the order written,
 // as TPMOL (TP_Mine/js/46_tp_mol.js) assumes, and what its own canonical forms (idcode, SMILES) give for the same molecule written two ways.
 // Usage: node tools/struttura_dato/ocl_ordine.mjs [--json]   (--json prints the atom labels in OpenChemLib order: the golden data of crates/mzlab-mol)
 import { pathToFileURL } from "node:url";

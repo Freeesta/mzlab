@@ -1,14 +1,14 @@
-//! The recipe text of the browser pool (`job_recipe_text`) over a plan with two branches, a preset on one detection and a gap filling on one alignment only:
+//! The recipe text of the browser pool (`job_layers_text`) over a plan with two branches, a preset on one detection and a gap filling on one alignment only:
 //! the chain the page runs with it (each detection on its own index, each table on the first) gives the tables `flow run` writes, byte for byte.
 
 use crate::flow_run_tests::{fixture, flow_run, p};
 use mzlab_core::idxread::Index;
 use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::upload::prepare;
-use mzlab_feat_wasm::run;
-use mzlab_feat_wasm::run::meta::job_recipe_text;
+use mzlab_ops::run::feat::run;
+use mzlab_ops::run::feat::run::meta::job_layers_text;
 
-const PLAN: &str = r#"{"format":"mzflow/2","inputs":[{"name":"s_t000.mzML","type":"raw"},{"name":"s_t010.mzML","type":"raw"},{"name":"s_t030.mzML","type":"raw"}],"steps":[
+pub(super) const PLAN: &str = r#"{"format":"mzflow/2","inputs":[{"name":"s_t000.mzML","type":"raw"},{"name":"s_t010.mzML","type":"raw"},{"name":"s_t030.mzML","type":"raw"}],"steps":[
 {"id":"idx","step":"index.mzidx@1","in":{"source":["file:s_t000.mzML","file:s_t010.mzML","file:s_t030.mzML"]}},
 {"id":"detb","step":"features.detect@1","in":{"index":["idx.index"]},"params":{"min_points":3,"min_height":5000}},
 {"id":"deta","step":"features.detect@1","preset":"hr","in":{"index":["idx.index"]}},
@@ -29,7 +29,7 @@ fn page(files: &[(String, Vec<u8>)], det: &str, ali: &str) -> Vec<u8> {
         })
         .collect();
     let open = |k: usize| Index::open(idxs[k].clone(), idxs[k].len() as u64);
-    let dt = job_recipe_text(PLAN.as_bytes(), &reg, det, true).unwrap();
+    let dt = job_layers_text(PLAN.as_bytes(), &reg, det, true).unwrap();
     let peaks: Vec<Vec<u8>> = files
         .iter()
         .enumerate()
@@ -38,7 +38,7 @@ fn page(files: &[(String, Vec<u8>)], det: &str, ali: &str) -> Vec<u8> {
             run::detect(&mut open(k).unwrap(), n, &r).unwrap()
         })
         .collect();
-    let at = job_recipe_text(PLAN.as_bytes(), &reg, ali, true).unwrap();
+    let at = job_layers_text(PLAN.as_bytes(), &reg, ali, true).unwrap();
     let r = run::recipe_for(&at, &mut open(0).unwrap()).unwrap();
     let (tables, origin) = run::read_files(&peaks).unwrap();
     run::align(&tables, &origin, &r, open).unwrap()
@@ -74,7 +74,7 @@ fn each_branch_of_the_plan_gets_its_own_recipe_on_the_page_as_in_flow_run() {
 #[test]
 fn the_recipe_text_holds_only_the_line_of_the_job() {
     let reg = crate::flow::steps();
-    let text = |i: &str| job_recipe_text(PLAN.as_bytes(), &reg, i, true).unwrap();
+    let text = |i: &str| job_layers_text(PLAN.as_bytes(), &reg, i, true).unwrap();
     assert_eq!(
         text("detb"),
         r#"{"fill":false,"layers":[{"step":"features.detect","params":{"min_height":5000,"min_points":3}}]}"#
@@ -89,7 +89,7 @@ fn the_recipe_text_holds_only_the_line_of_the_job() {
     assert_eq!(text("alia"), text("gapa"));
     assert!(text("gapa").starts_with(r#"{"fill":true"#) && !text("gapa").contains("min_points"));
     // the alignment alone (the record of a run makes it again without the filling)
-    let alone = job_recipe_text(PLAN.as_bytes(), &reg, "alia", false).unwrap();
+    let alone = job_layers_text(PLAN.as_bytes(), &reg, "alia", false).unwrap();
     assert!(
         alone.starts_with(r#"{"fill":false"#) && !alone.contains("gapfill"),
         "{alone}"

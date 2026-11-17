@@ -1,6 +1,7 @@
 """3D viewer of the RT x m/z map (mappa3d.js, WebGL2): opened from the «Apri in 3D» button of the 2D panel on a low resolution file and on a high
 resolution one: it draws, turns, changes representation, points and reads RT / m/z / intensity coherent with the 2D map, fixes a point that shows up in
 the table of the 2D map, Esc closes and the focus goes back to the button."""
+# covers: mzlab/web/mappa.js, mzlab/web/mappa3d.js, mzlab/web/grafici.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

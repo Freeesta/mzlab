@@ -1,8 +1,9 @@
 """Dynamic tooltip guard (docs/inventari/TOOLTIP.md, rule 20): on the built site, with synthetic files of every kind loaded (Full Scan, MS2, MRM, mixed IDA,
 high-resolution DDA, .wiff Q1 / PI / EPI and SIM), every element that carries a tooltip (title, data-tip, data-tiph: the three things the program's own tooltip reads) is
-collected in Italian and in English, and the real hover is measured for the group headers, every HTML tooltip and the longest texts. Fails on a tooltip longer than 60
+collected, and the real hover is measured for the group headers, every HTML tooltip and the longest texts. Fails on a tooltip longer than 60
 characters, with more than one sentence, wider than 28ch or taller than 3 lines when it is drawn. The static twin over the catalogs is tests/test_tooltip_corti.py.
 Needs the site (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_tooltip_dinamici.py"""
+# covers: mzlab/web/tooltip.js
 import json, os, re, subprocess, sys, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -41,13 +42,13 @@ def files(D):
 
 bad, seen, steps = [], {}, []
 D = Path(tempfile.mkdtemp(prefix="tip_dyn_")); FILES = files(D)
-for lang in ("it", "en"):
+for lang in ("en",):
     r = Run(port=8890, wd="/tmp/wd_tip_dyn")
     try:
         with sync_playwright() as p:
             pg = r.page(p)
-            pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}"); pg.wait_for_selector("#drop")
-            stage(pg, FILES); pg.click("text=Carica dati" if lang == "it" else "text=Load data"); ready(pg); wait_for_js(pg, "E.files.length >= 8", timeout=180000)
+            pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#drop")
+            stage(pg, FILES); pg.click("text=Load data"); ready(pg); wait_for_js(pg, "E.files.length >= 8", timeout=180000)
             items = {}
             def scan():
                 for x in pg.evaluate(COLLECT):

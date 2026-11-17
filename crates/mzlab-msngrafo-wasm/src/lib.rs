@@ -104,7 +104,7 @@ fn compute_with(
 
 /// The optional keys of the query on the graph text `j`: `interpreta=1` and `rotture=1`, shared by the graph and its exports.
 fn with_query_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> mzlab_core::Result<String> {
-    // `interpreta=1` (and `ppm_perdita`) adds the key `interpretazione`, as `mzlab-cli msn-graph --interpreta` does
+    // `interpreta=1` (and `ppm_perdita`) adds the key `interpretazione`, as `mzlab-cli msn-graph --interpret` does
     if q.get("interpreta").is_some_and(|v| v == "1") {
         let ppm = match q.get("ppm_perdita").filter(|v| !v.is_empty()) {
             None => PPM_PERDITA,
@@ -116,7 +116,7 @@ fn with_query_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> mzlab_co
         };
         j = with_interpretation(&j, g, ppm);
     }
-    // `rotture=1` (with `h_max`, `max_legami` and the window `ppm_struttura`) adds the key `rotture`, as `mzlab-cli msn-graph --rotture` does
+    // `rotture=1` (with `h_max`, `max_legami` and the window `ppm_struttura`) adds the key `rotture`, as `mzlab-cli msn-graph --breaks` does
     if q.get("rotture").is_some_and(|v| v == "1") {
         let num = |k: &str, d: f64| -> mzlab_core::Result<f64> {
             match q.get(k).filter(|v| !v.is_empty()) {
@@ -138,7 +138,7 @@ fn with_query_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> mzlab_co
     Ok(j)
 }
 
-/// Default window of the cleavages (`ppm_struttura`), ppm; the same as `mzlab-cli msn-graph --strutture`.
+/// Default window of the cleavages (`ppm_struttura`), ppm; the same as `mzlab-cli msn-graph --structures`.
 const PPM_STRUCTURE: f64 = 10.0;
 
 /// The `msngrafo/1` of the file `nome` for the query string `query` (`formula`, `tol`, `ce`, `ppm_formula`, ..., `scelte`; `api/msn_grafo`).
@@ -227,12 +227,12 @@ pub fn msnlib_add(
     read_file: Function,
     nome: &str,
     query: &str,
-    libreria: &str,
-    molecola_id: &str,
+    library: &str,
+    molecule_id: &str,
 ) -> Result<String, JsValue> {
     let q = Query::parse(query);
     let (g, j) = compute(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
-    let (l, duplicate) = aggiungi(libreria, molecola_id, &g, &j).map_err(js_err)?;
+    let (l, duplicate) = aggiungi(library, molecule_id, &g, &j).map_err(js_err)?;
     let mut o = Out::default();
     o.raw("{\"libreria\":").str(&l).raw(",\"doppione\":");
     o.raw(if duplicate { "true}" } else { "false}" });
@@ -248,10 +248,10 @@ pub fn msnlib_search(
     read_file: Function,
     nome: &str,
     query: &str,
-    libreria: &str,
+    library: &str,
 ) -> Result<String, JsValue> {
     let q = Query::parse(query);
     let o = opzioni_cerca(&|k| q.get(k).map(String::from)).map_err(js_err)?;
     let (_, j) = compute(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
-    cerca(libreria, &j, &o).map_err(js_err)
+    cerca(library, &j, &o).map_err(js_err)
 }

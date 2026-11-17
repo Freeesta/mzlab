@@ -26,3 +26,5 @@ pub mod sources;
 pub mod structures;
 pub mod tsv;
 pub mod view;
+#[cfg(feature = "interp")]
+pub mod window;

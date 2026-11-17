@@ -96,7 +96,7 @@ fn finish_runs<P: Copy>(s: &mut [P], key: &impl Fn(&P) -> u64, tie: Tie<P>) {
 
 /// Orders the peaks of a bucket by m/z (and by scan when `per_scansione`; equal ones keep their order): the radix sort on the 32-bit order bits
 /// of an `f32` m/z (and the scan below them), or on the high 48 order bits of an `f64` (about 1e-8 Th at m/z 500, so HR ions repeated across scans rarely tie) and then the runs of equal keys by comparison.
-#[allow(clippy::disallowed_methods)] // hot path: per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
+#[allow(clippy::disallowed_methods)] // hot path: per-peak sort, std is ~2x faster than sortc (docs/agenti/wasm-tetti.md, «Ordinamenti std nei percorsi caldi»)
 pub(crate) fn sort<T: Num>(
     s: &mut [Peak<T>],
     tmp: &mut Vec<Peak<T>>,

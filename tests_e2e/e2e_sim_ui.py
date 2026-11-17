@@ -2,6 +2,7 @@
 experiment cell says «SIM · N ions» (not «no data»), the side list group, the panel title, the toolbar button and the channel picker speak of SIM ions, overlaid traces take
 the colour of their sample and a dash per ion, the chromatogram menu holds the «Extract ion ›» submenu (check mark, «All», click / Ctrl / Shift rules) in place
 of XIC, the «Area» toggle fills the traces (on by default), the Range popover has «Reset zoom» and no how-to sentence is on screen. Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_sim_ui.py"""
+# covers: mzlab/web/sim-ui.js, tools/wiff_sim.py
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -21,12 +22,12 @@ def need(c, m): c or (_ for _ in ()).throw(AssertionError(m))
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, [D / "sim.wiff", D / "sim.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= 2 && E.files.every(f => f.sim > 0)", timeout=120000)
+        stage(pg, [D / "sim.wiff", D / "sim.wiff.scan"]); pg.click("text=Load data"); ready(pg); wait_for_js(pg, "E.files.length >= 2 && E.files.every(f => f.sim > 0)", timeout=120000)
         step("every file counts its SIM ions", lambda: need(pg.evaluate("E.files.every(f => f.sim === %d)" % N), pg.evaluate("E.files.map(f => f.sim)")))
         step("every file is typed SIM by the engine (a SIM file is neither «empty» nor «UV only»)", lambda: need(pg.evaluate("Promise.all(E.files.map(f => CANALI.canali(f.k).then(j => j.tipo.proposto)))") == ["lc-sim"] * pg.evaluate("E.files.length"), pg.evaluate("Promise.all(E.files.map(f => CANALI.canali(f.k).then(j => j.tipo.proposto)))")))
         def cell():
             t = pg.evaluate("ST.files.map(f => expCell(f)).join('|')")
-            need("no data" not in t and "nessun dato" not in t and ("SIM" in t) and (" %d " % N in t), t)
+            need("no data" not in t and ("SIM" in t) and (" %d " % N in t), t)
         step("the experiment cell says SIM and the number of ions", cell)
         open_first(pg)
         step("the side list group is «SIM», not «MRM»", lambda: need(pg.evaluate("[...document.querySelectorAll('#flst .fgh')].map(e => e.textContent).join('|')").find("SIM") >= 0 and "MRM" not in pg.evaluate("[...document.querySelectorAll('#flst .fgh')].map(e => e.textContent).join('|')"), "group"))
@@ -148,7 +149,7 @@ try:
             box = pg.locator("canvas").first.bounding_box()
             pg.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2, button="right")
             pg.wait_for_selector("#ctx:not([hidden])")
-            need(pg.evaluate("[...document.querySelectorAll('#ctx div[role=menuitem]')].some(e => /Extract ion|Estrai ione/.test(e.textContent))"), "entry")
+            need(pg.evaluate("[...document.querySelectorAll('#ctx div[role=menuitem]')].some(e => /Extract ion/.test(e.textContent))"), "entry")
             need(not pg.evaluate("[...document.querySelectorAll('#ctx div')].some(e => e.dataset.azione === 'chrom.xic')"), "XIC still there")
             pg.hover("#ctx .hsub"); need(pg.evaluate("document.querySelectorAll('#ctx .ctxsub:not([hidden]) [role=menuitemcheckbox]').length") == N + 1, "rows")
             need(pg.evaluate("document.querySelectorAll('#ctx .ctxsub .sw').length") == 0, "an ion swatch: colour belongs to the sample")
@@ -170,7 +171,7 @@ try:
             pg.click("#np-closeall"); wait_for_js(pg, "!E.panels.some(p => p.el)", timeout=20000); frames(pg, 2)
             need(pg.evaluate("!document.querySelector('#simhelp')"), "the SIM how-to card is still there")
             body = pg.inner_text("#v-data") if pg.query_selector("#v-data") else pg.inner_text("body")
-            need("Integrazioni manuali»." not in body and "«+ Ioni SIM»" not in body and "«+ SIM ions»" not in body, "how-to text on screen")
+            need("Manual integrations»." not in body and "«+ SIM ions»" not in body, "how-to text on screen")
         step("with no graph no how-to sentence is on screen", no_howto)
         step("no page error", lambda: (lambda e: e and (_ for _ in ()).throw(AssertionError(e)))([x for x in r.errs if x[0] == "pageerror"]))
     r.close()

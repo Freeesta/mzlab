@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from cargo_util import run
+from cargo_util import build, run
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
@@ -34,9 +34,9 @@ def spectrum(i):
 @pytest.fixture(scope="module")
 def work(tmp_path_factory):
     d = tmp_path_factory.mktemp("finestra")
-    run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm")
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm")
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), "target/wasm32-unknown-unknown/release/mzlab_wasm.wasm")
-    run("cargo", "build", "--release", "--locked", "-p", "mzlab-cli")
+    build("-p", "mzlab-cli")
     head = ('<?xml version="1.0" encoding="utf-8"?>\n<mzML xmlns="http://psi.hupo.org/ms/mzml" version="1.1.0"><run id="r">\n'
             f'<userParam name="mzLab metodo/1" value="{"m" * 6000}"/>\n<spectrumList count="6">\n')
     (d / "cut.mzML").write_text(head + "".join(spectrum(i) for i in range(3)), encoding="utf-8")

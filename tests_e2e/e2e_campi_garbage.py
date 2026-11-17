@@ -1,6 +1,7 @@
 """Garbage in the typed numeric fields (campi.js): letters, 1e999, empty, a number outside the bounds go into every visible field of the panel headers,
 the spectrum parameters, the peak table and Settings; each is refused with one calm note (role=status), the old value comes back and nothing changes in the
 state or in a request; a comma decimal («12,5») is taken. The parser itself is checked on the same cases."""
+# covers: mzlab/web/xic-bordi.js, mzlab/web/campi.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

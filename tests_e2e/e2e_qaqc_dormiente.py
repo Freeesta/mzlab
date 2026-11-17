@@ -1,5 +1,6 @@
 """QA/QC dormant: with the switch off (default) nothing of it is in the DOM, the bar, «Altro», the palette, the tour or the notebook and the
 console is quiet; with it on (?qaqc=1 / mzlab.dev.qaqc) the button, the panel and the palette command are there."""
+# covers: mzlab/web/qaqc.js, mzlab/web/features.js
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -24,7 +25,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_viewport_size({"width": 1500, "height": 1000})
-        stage(pg, [EX]); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, [EX]); pg.click("text=Load data"); ready(pg)
 
         def spento():
             assert not pg.evaluate("window.FEATURES.qaqc") and not pg.evaluate(HAS), "no QA/QC element in the DOM"
@@ -33,10 +34,10 @@ try:
         step("off (default): not in the DOM, the bar or «Altro»", spento)
 
         def palette_off():
-            for q in ("qaqc", "QA/QC", "controllo qualità", "rapporto"):
+            for q in ("qaqc", "QA/QC", "quality control", "report"):
                 assert "QA/QC" not in palette(pg, q), q
-            assert "Nessun risultato" in palette(pg, "qaqc")
-            assert "Rapporto di studio" in palette(pg, "rapporto"), "the study report stays"
+            assert "Nothing found" in palette(pg, "qaqc")
+            assert "Study report" in palette(pg, "report"), "the study report stays"
         step("off: the palette neither finds nor shows it; the study report stays", palette_off)
 
         def tour_notebook():
@@ -55,7 +56,7 @@ try:
 
         r = Run(port=8959, wd="/tmp/wd_qaqc_dorm2"); pg = r.page(p, qaqc=True)
         pg.set_viewport_size({"width": 1500, "height": 1000})
-        stage(pg, [EX]); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, [EX]); pg.click("text=Load data"); ready(pg)
 
         def acceso():
             assert pg.evaluate("window.FEATURES.qaqc") and pg.locator("#stbar [data-cmd=qaqc]").count() == 1

@@ -1,6 +1,6 @@
 """Accessibility of the HR bench (WCAG 2.2 AA): axe-core (serious/critical) on the bench, the formula calculator and the information bar, accessible names on
 every control, Tab reaching the visible controls with a visible focus indicator, no keyboard trap, target size >= 24 px (2.5.8) and live regions for dynamic
-updates. Known gaps live in docs/agenti/a11y-da-sistemare.md. Fails (does not skip) when axe is missing: in CI that is a failure."""
+updates. Known gaps live in docs/agenti/accessibilita.md. Fails (does not skip) when axe is missing: in CI that is a failure."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -47,10 +47,9 @@ try:
         step("axe moderate/minor (best practice): the information bar of the HR bench, light and dark", info_minor)
         def calc():
             pg.click("#stbar [data-cmd=addloss]"); pg.wait_for_selector("#sb-panel-addloss:not([hidden]) #calcin"); axe_ok(pg, "#sb-panel-addloss")
-            for t in ("losses", "cont"):
-                pg.click(f"#al-t-{t}"); pg.wait_for_selector(f"#sb-panel-{t}:not([hidden])"); pg.fill("#calcin", "149.0233"); frames(pg, 25); axe_ok(pg, "#sb-panel-addloss")
+            pg.click("#al-t-losses"); pg.wait_for_selector("#sb-panel-losses:not([hidden])"); pg.fill("#calcin", "149.0233"); frames(pg, 25); axe_ok(pg, "#sb-panel-addloss")
             pg.fill("#calcin", ""); pg.click("#al-t-adducts")
-        step("axe: Adducts & losses with the calculator, on its three tabs", calc)
+        step("axe: Adducts & losses with the calculator, on its two tabs", calc)
         step("every visible control of the HR bench has an accessible name", lambda: (lambda bad: (_ for _ in ()).throw(AssertionError(bad[:15])) if bad else None)(pg.evaluate(NAME)))
         def tab_reach():
             pg.evaluate("document.activeElement && document.activeElement.blur(); window.scrollTo(0,0)")

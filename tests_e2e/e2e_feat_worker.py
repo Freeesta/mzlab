@@ -2,6 +2,7 @@
 the graph of the proofs, and the bytes are the ones of the native engine (SHA-256). A worker that dies (killed from outside, or a trap of the .wasm) is replaced, the job
 runs again and the page stays alive; the files written in OPFS have no `.part` left; each .wasm is under 450 KB when wasm-opt is there (the CI builds and checks it).
 No site is needed: a folder with the worker, the two .wasm and the synthetic series is served by itself. Needs cargo, the wasm32 target, wasm-bindgen and numpy."""
+# covers: crates/, TP_Mine/files/feat-
 import os, shutil, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright

@@ -1,5 +1,5 @@
 //! The "Regulatory lists" section of `corsa/1`: the lists a run screened against (header, coverage line, disclaimer) and one row per candidate that a list
-//! names, from the `screen/1` (mass path) and `annot/1` (structure path) files of the run folder. The words are the study's (`docs/studi/LISTE_NORMATIVE.md` §7),
+//! names, from the `screen/1` (mass path) and `annot/1` (structure path) files of the run folder. The words are those of `docs/agenti/normative.md` («Parole»),
 //! made here once so the CLI and the page give the same text. A match is a candidate with its evidence: no word here says a sample contains or breaks anything.
 
 use crate::json::{write_value, Out, Value};

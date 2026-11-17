@@ -173,3 +173,105 @@ fn no_mode_named_measures_from_zero_with_the_sloped_background_inside() {
         Ok(Baseline::Edges)
     );
 }
+
+/// A peak at 9.3 min on a little background, sampled every 0.005 min, and the line of a window 9.14-9.40 whose right edge was dragged out to 9.75.
+fn dragged() -> (Vec<f64>, Vec<f64>) {
+    let (mut rt, mut y) = gauss(9.3, 0.05, 1.0e6, 0.4, 0.005);
+    y.iter_mut().for_each(|v| *v += 1.0e3);
+    rt.iter_mut().for_each(|t| *t = (*t * 1e6).round() / 1e6);
+    (rt, y)
+}
+
+#[test]
+fn a_line_extended_past_its_points_is_held_at_zero_and_the_area_never_goes_below_the_trace() {
+    let (rt, y) = dragged();
+    // 3e5 at 9.14 falling to 0 at 9.40: unheld, it would reach -4.04e5 at 9.75 and the area would count the triangle under the axis
+    let line = Baseline::Line {
+        t0: 9.14,
+        y0: 3.0e5,
+        t1: 9.40,
+        y1: 0.0,
+    };
+    assert!(line.line_at(9.75).unwrap() < -4.0e5);
+    assert!(rt.iter().all(|&t| line.at(t).unwrap() >= 0.0 || t < 9.14));
+    assert_eq!(line.at(9.75), Some(0.0));
+    let held = peak_area(&rt, &y, 9.14, 9.75, line).unwrap();
+    let held_ref = integrate(&rt, &y, near(&rt, 9.14), near(&rt, 9.75), |t| {
+        line.line_at(t).unwrap().max(0.0)
+    });
+    assert!(held[0] >= 0.0 && held[0] == held_ref.area * 60.0);
+    // the same window against the unheld line (a level far below would do the same): the held area is smaller by what the triangle counted
+    let raw = integrate(&rt, &y, near(&rt, 9.14), near(&rt, 9.75), |t| {
+        line.line_at(t).unwrap()
+    });
+    let cut = super::clamped_removed(&rt, 9.14, 9.75, line);
+    assert!(cut > 0.0);
+    assert!(
+        (raw.area * 60.0 - held[0] - cut).abs() < 1e-9 * raw.area,
+        "{} {} {cut}",
+        raw.area * 60.0,
+        held[0]
+    );
+    // the user is told: the JSON has the number only when it applies
+    let json = super::peak_area_json(&rt, &y, 9.14, 9.75, line).unwrap();
+    assert!(json.contains(&format!("\"clamped\":{cut}")), "{json}");
+}
+
+fn near(rt: &[f64], t: f64) -> usize {
+    crate::peakq_lr::near_idx(rt, t)
+}
+
+#[test]
+fn inside_its_two_points_a_line_gives_the_same_bytes_as_before() {
+    let (rt, y) = dragged();
+    for line in [
+        Baseline::Line {
+            t0: 9.14,
+            y0: 3.0e5,
+            t1: 9.40,
+            y1: 0.0,
+        },
+        Baseline::Line {
+            t0: 9.40,
+            y0: 0.0,
+            t1: 9.14,
+            y1: 3.0e5,
+        },
+        Baseline::Line {
+            t0: 9.14,
+            y0: -2.0e4,
+            t1: 9.40,
+            y1: 5.0e3,
+        },
+        Baseline::Line {
+            t0: 0.0,
+            y0: 1.0e3,
+            t1: 0.0,
+            y1: 0.0,
+        },
+    ] {
+        let (lo, hi) = (9.14, 9.40);
+        let before = integrate(&rt, &y, near(&rt, lo), near(&rt, hi), |t| {
+            line.line_at(t).unwrap()
+        });
+        let v = peak_area(&rt, &y, lo, hi, line).unwrap();
+        assert_eq!(v[0], before.area * 60.0, "{line:?}");
+        assert_eq!(v[1], before.below * 60.0, "{line:?}");
+        let json = super::peak_area_json(&rt, &y, lo, hi, line).unwrap();
+        assert!(
+            !json.contains("clamped") && json.ends_with(&format!("\"rt\":{}}}", v[3])),
+            "{json}"
+        );
+    }
+    // a point the user put below zero is theirs: the line past it is not held
+    let neg = Baseline::Line {
+        t0: 9.14,
+        y0: 3.0e5,
+        t1: 9.40,
+        y1: -1.0e3,
+    };
+    assert!(neg.at(9.75).unwrap() < -1.0e3);
+    assert_eq!(neg.at(9.75), neg.line_at(9.75));
+    // and past the other end, whose point is above zero, it is held
+    assert_eq!(neg.at(9.0), Some(neg.line_at(9.0).unwrap().max(0.0)));
+}

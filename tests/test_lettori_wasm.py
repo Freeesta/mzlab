@@ -1,23 +1,23 @@
 """The readers modules (crates/mzlab-lettori-wasm, one .wasm per family) stay modules of their own: their size limits do not go up, the engine (mzlab-wasm) does not name them,
 every family has its feature, and a module that is built stays under its limit."""
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CAPS = {"aperti": 563200, "andi": 344064, "thermo": 774144, "agilent": 606208, "sciex": 483328, "waters": 380928, "shimadzu": 380928, "bruker": 532480, "valida": 479744}
+sys.path.insert(0, str(ROOT / "tools"))
+import moduli  # noqa: E402
+
+FAMIGLIE = ("aperti", "andi", "thermo", "agilent", "sciex", "waters", "shimadzu", "bruker", "valida")
 
 
 def tabella():
-    s = (ROOT / "tools/build_lettori_wasm.sh").read_text(encoding="utf-8")
-    block = re.search(r'^tetti="(.*?)"', s, re.M | re.S).group(1)
-    return {f: int(n) for f, n in (r.split() for r in block.strip().splitlines())}
+    return {n.removeprefix("lettori-"): r["tetto"] for n, r in moduli.carica().items() if r["parte"] == "lettori"}
 
 
-def test_caps_in_the_script():
-    t = tabella()
-    assert set(t) == set(CAPS)
-    for f, n in t.items():
-        assert n <= CAPS[f], (f, n)
+def test_the_families_have_their_data():
+    # the caps live in tools/moduli/lettori-*.toml (`moduli.py --controlla --base` stops a rise of more than 10 %)
+    assert set(tabella()) == set(FAMIGLIE)
 
 
 def test_the_engine_does_not_name_the_modules():
@@ -28,14 +28,14 @@ def test_the_engine_does_not_name_the_modules():
 def test_every_family_has_its_feature():
     for crate in ("mzlab-lettori", "mzlab-lettori-wasm"):
         c = (ROOT / "crates" / crate / "Cargo.toml").read_text(encoding="utf-8")
-        for f in CAPS:
+        for f in FAMIGLIE:
             if f == "valida" and crate == "mzlab-lettori":    # the validator reads no maker's format
                 continue
             assert re.search(rf"^{f} = ", c, re.M), (crate, f)
 
 
 def test_built_within_the_cap():
-    for f, n in CAPS.items():
+    for f, n in tabella().items():
         w = ROOT / "site/static/wasm-lettori" / f / "mzlab_lettori_wasm_bg.wasm"
         if w.exists():
             assert w.stat().st_size < n, (f, w.stat().st_size)
@@ -49,7 +49,7 @@ def test_extended_steps_one_list():
     """The extra wasm-opt passes live in tools/wasm_opt.sh only; the readers and the engine/libraries steps of the four workflows name them as `@motore` (the readers use `@estesi`)."""
     sh = (ROOT / "tools/wasm_opt.sh").read_text(encoding="utf-8")
     assert re.search(r'^estesi="--converge .*--low-memory-unused', sh, re.M)
-    assert "@estesi" in (ROOT / "tools/build_lettori_wasm.sh").read_text(encoding="utf-8")
+    assert all(r["wasm_opt"] == "@estesi" for n, r in moduli.carica().items() if r["parte"] == "lettori")
     assert "--converge" not in (ROOT / "tools/build_lettori_wasm.sh").read_text(encoding="utf-8")
     for wf in ("pages", "sito-rust", "release", "notte"):
         rows = [r for r in (ROOT / f".github/workflows/{wf}.yml").read_text(encoding="utf-8").splitlines() if "tools/wasm_opt.sh site/static" in r]

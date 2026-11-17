@@ -1,6 +1,6 @@
-"""Runs the validation of the fragmentation rules (`docs/studi/regole-frammentazione-piano.md` §3) on public MassBank spectra: the records of the pinned
+"""Runs the validation of the fragmentation rules (protocol in `docs/agenti/msn-manuale.md`) on public MassBank spectra: the records of the pinned
 release of `tools/librerie_pacchetti.py` (SHA-256 checked) with a SMILES and the licence CC0 or CC BY are written to a cache in `.verifica/` (never committed),
-`mzlab-cli msn-rules` judges them (decoys included) and `mzlab-cli msn-rules somma` adds the lines up. This script only moves files and starts the
+`mzlab-cli msn-rules` judges them (decoys included) and `mzlab-cli msn-rules sum` adds the lines up. This script only moves files and starts the
 commands: every number is computed in Rust.
 
     python3 tools/validate_rules.py                          # downloads the release into .verifica/massbank_regole/, runs, prints the summary
@@ -79,10 +79,10 @@ def main() -> int:
         entries.write_text("".join(f"{p}\n" for p in sorted(folder.glob("*.txt"))))
         base = cli(args)
         for command in (
-            [*base, "msn-rules", "--lista", str(entries), "--regole", "--decoy", args.seme, "--out", str(righe)],
+            [*base, "msn-rules", "--list", str(entries), "--rules", "--decoy", args.seme, "--out", str(righe)],
         ):
             subprocess.run(command, cwd=ROOT, check=True)
-        total = subprocess.run([*base, "msn-rules", "somma", str(righe)], cwd=ROOT, check=True, capture_output=True, text=True).stdout
+        total = subprocess.run([*base, "msn-rules", "sum", str(righe)], cwd=ROOT, check=True, capture_output=True, text=True).stdout
     if args.out:
         Path(args.out).write_text(total, encoding="utf-8")
     else:

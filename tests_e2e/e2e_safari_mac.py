@@ -2,6 +2,7 @@
 the other browsers. compat.js turns it into that wheel: a pinch on a chart zooms the chart (the page does not zoom), a pinch outside a chart is left
 to the browser. With --browser webkit (the nightly round on macOS) the gesture events are WebKit's own; in Chromium GestureEvent is stubbed before
 the page runs and the gesture events are dispatched by hand (a real trackpad cannot be driven by Playwright). No browser errors."""
+# covers: mzlab/web/compat
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

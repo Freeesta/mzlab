@@ -1,6 +1,6 @@
-"""Clicks and keys of the flagship flow of Tabui (study WORKFLOW_MODULARI, test 4): from the files to the TP table, on the synthetic HR series of tests/ (lc_synth, msn_synth), counted by
+"""Clicks and keys of the flagship flow of Tabui (docs/agenti/rust-step.md, external tests): from the files to the TP table, on the synthetic HR series of tests/ (lc_synth, msn_synth), counted by
 capture listeners in the page (trusted click, key chord, no modifier alone). The OS file dialog (click on «Choose files...», Ctrl+A, Enter) and the paste of the SMILES (click on the field, Ctrl+V)
-cannot be driven by Playwright, so they are added as declared constants; opening Tabui (5 clicks on the logo, once per browser) is reported apart. The line «MISURA» goes in docs/agenti/misure-clic.md.
+cannot be driven by Playwright, so they are added as declared constants; opening Tabui (5 clicks on the logo, once per browser) is reported apart. The line «MISURA» goes in docs/agenti/misure.md.
 Run from the repo root: python3 tests_e2e/e2e_clic_flusso.py"""
 import subprocess, sys, tempfile
 from pathlib import Path

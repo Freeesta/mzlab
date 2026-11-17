@@ -2,6 +2,7 @@
 # The .mzML.gz opens with the TIC of its plain mzML, the side list shows a percentage, «Cancel» leaves no part file, `?gz=memoria` takes the in-memory path of the readers module with the same TIC,
 # a .mzXML.gz opens with the TIC of its .mzXML, and the files a closed tab left go at the next start. Synthetic files only (mzml_grande.py and the mzXML written here).
 # Needs the built site and the readers modules: python3 tools/prepara_sito.py, tools/build_lettori_wasm.sh site/static
+# covers: mzlab/web/gz-flusso, mzlab/web/shell.js, mzlab/web/archivio, mzlab/web/rust-carica, crates/mzlab-core/src/gunzip
 import base64, gzip, math, os, struct, sys, tempfile, time, zlib; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import mzml_grande   # before lib: lib puts tools/ first on the path, where a script of the same name lives
 from lib import *

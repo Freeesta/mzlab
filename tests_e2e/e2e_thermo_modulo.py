@@ -2,6 +2,7 @@
 only when a .raw arrives, and what the page shows is what the engine gave while the Thermo reader was linked in it: the TIC, a scan and «Download .mzML» (byte for byte) against `raw_reference`
 (crates/mzlab-core/examples, the reader of the core). Needs the private data repository (the data repository found by tools/dati_percorsi.py, or MZLAB_DATI: the smallest .raw of dati/HRMS; skipped without it), cargo, the site and both .wasm:
 python tools/build_site.py, tools/build_lettori_wasm.sh site/static (MZLAB_PIPE_SITE=<built site> reuses a site). Run from the repo root: python3 tests_e2e/e2e_thermo_modulo.py"""
+# covers: mzlab/web/rust-nativo, mzlab/web/lettore-esterno, mzlab/web/carica-modulo, mzlab/web/idx-worker, crates/
 import hashlib, json, os, shutil, socket, subprocess, sys, tempfile, threading
 from pathlib import Path
 from playwright.sync_api import sync_playwright

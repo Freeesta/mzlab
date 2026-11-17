@@ -2,6 +2,7 @@
 (also when its two files come in different loadings), a .wiff alone gets a notice, a .wiff with several samples gives one file per sample (read as they are, no mzML is made), the samples are
 listed (with the button to save their mzML on request), are recognised as Full Scan / MS2 / MRM and Pyodide is never requested. Synthetic pairs of tools/wiff_riferimento.py (no laboratory data).
 Needs the site and the .wasm: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm)."""
+# covers: mzlab/web/rust-nativo, mzlab/web/nativo, mzlab/web/rust-, tools/wiff_riferimento.py, crates/
 import shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -177,7 +178,7 @@ try:
             pg.evaluate("""async () => { const { makeNativo } = await import('./static/rust-nativo-pagina.js'), rb = window.MZLAB_RUST;
               rb.nativeSamples = makeNativo({ rpc: async () => ({ dead: true }), base: n => n, current: () => null, abort: () => {} }).nativeSamples; }""")
             pg.set_input_files("#pick", [str(D / "one.wiff"), str(D / "one.wiff.scan")])
-            told = r"Array.from(document.querySelectorAll('.fi, #unopen')).map(e => e.innerText).filter(t => /one\.wiff/.test(t) && /(engine stopped|motore si è fermato)/.test(t))"
+            told = r"Array.from(document.querySelectorAll('.fi, #unopen')).map(e => e.innerText).filter(t => /one\.wiff/.test(t) && /engine stopped/.test(t))"
             got = "Array.from(document.querySelectorAll('.fi, #unopen')).map(e => e.innerText.slice(0, 300))"
             try: pg.wait_for_function(told + ".length > 0 && UPBUSY === 0", timeout=60000)
             except Exception: raise AssertionError(pg.evaluate(got))

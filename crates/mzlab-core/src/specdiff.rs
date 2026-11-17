@@ -137,7 +137,7 @@ fn subtract(mz: &[f64], y: &[f64], (rmz, ry): (&[f64], &[f64]), (factor, unit, p
     let ry: Vec<f64> = ry.iter().map(|v| v * factor).collect();
     let (om, oy) = if unit { subtract_unit(mz, y, rmz, &ry) } else { subtract_hr(mz, y, rmz, &ry, ppm) };
     let mut rows: Vec<(f64, f64)> = om.into_iter().zip(oy).filter(|(_, v)| *v != 0.0 && (!clip || *v > 0.0)).collect();
-    // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
+    // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/agenti/wasm-tetti.md, «Ordinamenti std nei percorsi caldi»)
     #[allow(clippy::disallowed_methods)]
     rows.sort_by(|a, b| a.0.total_cmp(&b.0));
     rows.into_iter().unzip()

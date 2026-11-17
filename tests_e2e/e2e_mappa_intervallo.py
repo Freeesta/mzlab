@@ -1,6 +1,7 @@
 """Whole view of the RT x m/z map = where the files have data: a Full Scan acquired from 0.5 to 20 min (declared run 0-22) starts at ~0.5 and ends at ~20,
 the m/z axis at the first and last peak; zoom and pan stay within the data (plus the margin); «whole view» comes back to it; the sight, the plots at the margins
 and the 3D viewer use the same limits. A file with data from 0 keeps today's view. High resolution too."""
+# covers: mzlab/web/grafici.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, hr_variants

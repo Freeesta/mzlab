@@ -116,7 +116,7 @@ impl Head {
         })
     }
 
-    fn analyzer(&self, filt: &str, icref: Option<&str>) -> &'static str {
+    pub(super) fn analyzer(&self, filt: &str, icref: Option<&str>) -> &'static str {
         let tok = filt.split(' ').next().unwrap_or("").to_uppercase();
         if let Some(a) = ANALYZERS.iter().find(|a| **a == tok) {
             return a;
@@ -138,12 +138,15 @@ pub(crate) struct Rows {
     /// The texts that many rows repeat (filter strings, activation names): one allocation each.
     pool: HashSet<Arc<str>>,
     window: super::DeclaredWindow,
+    /// Optical (DAD/PDA, `MS:1000804`) spectra of the list: counted by `<spectrumList count>` but not scans.
+    optical: usize,
 }
 
 impl Rows {
     pub(super) fn with(head: Head) -> Rows {
         Rows {
             window: Default::default(),
+            optical: 0,
             head,
             rows: Vec::new(),
             refs: HashMap::new(),
@@ -207,6 +210,7 @@ impl Rows {
             level_of,
             pool,
             window,
+            optical,
         } = self;
         // only reading needed them; the tables below are what the peak of this step is made of
         drop((level_of, pool));
@@ -252,12 +256,18 @@ impl Rows {
             hr1,
             n_chromatograms,
             window: window.span,
-            declared: head.declared,
+            // the list counts the optical spectra too: they are not scans, so a file that holds them all is not cut
+            declared: head.declared.saturating_sub(optical),
         }
     }
 }
 
 impl Rows {
+    /// An optical spectrum of the list: not a scan, but part of its `count`.
+    pub(crate) fn optical_spectrum(&mut self) {
+        self.optical += 1;
+    }
+
     /// One spectrum: `a`, `b` are its bytes in the mzML, `h` its header text (read by `spechead`, the reader every mzML path shares).
     pub(crate) fn spectrum(&mut self, a: u64, b: u64, h: &str) {
         let sh = spechead::parse(h, &self.head.groups).unwrap_or_default();
@@ -475,7 +485,7 @@ fn plain_msn(sp: &Spectrum, extra: &SpectrumExtra, filt: &str) -> Msn {
     }
     m.path = filter_path(filt);
     if let Some(p) = sp.precursor {
-        let half = extra.iso_half;
+        let half = extra.iso_half.filter(|_| !extra.no_window);
         m.precs.push(Prec {
             target: Some(p),
             selected: Some(p),
@@ -486,7 +496,8 @@ fn plain_msn(sp: &Spectrum, extra: &SpectrumExtra, filt: &str) -> Msn {
             ..Prec::default()
         });
         m.prec = Some(p);
-        m.iso = Some((p - half.unwrap_or(0.5), p + half.unwrap_or(0.5)));
+        // no window (neutral loss) is no isolation range, not a fabricated ±0.5
+        m.iso = (!extra.no_window).then(|| (p - half.unwrap_or(0.5), p + half.unwrap_or(0.5)));
         m.act = Some("CID".into());
         m.ce = extra.ce;
     }

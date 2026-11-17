@@ -90,9 +90,9 @@ fn a_cut_folder_keeps_its_whole_scans_and_counts_the_rest() {
     assert_eq!(l.missing(0), 0);
     let intere = scansioni(&mut l);
     assert_eq!(intere.len(), 3);
-    let mut aperte = 0;
+    let mut opened = 0;
     for n in 0..idx.len() {
-        aperte += usize::from(check(
+        opened += usize::from(check(
             &idx[..n],
             &peak,
             &intere,
@@ -100,14 +100,14 @@ fn a_cut_folder_keeps_its_whole_scans_and_counts_the_rest() {
         ));
     }
     for n in 0..peak.len() {
-        aperte += usize::from(check(
+        opened += usize::from(check(
             &idx,
             &peak[..n],
             &intere,
             &format!("MSPeak.bin cut at {n}"),
         ));
     }
-    assert!(aperte > idx.len() / 2, "only {aperte} cuts opened");
+    assert!(opened > idx.len() / 2, "only {opened} cuts opened");
     // A record cut in half: three whole records, one announced scan left out.
     let mut l = apri(&idx[..idx.len() - 7], &peak, true).expect("opens");
     assert_eq!((scansioni(&mut l).len(), l.missing(0)), (2, 1));

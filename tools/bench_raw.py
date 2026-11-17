@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Times and measures the memory of the `thermo` module (or another family) of the readers, in Node, step by step: open, samples, index, scan (all the scans), file_header, method, to_mzml.
 One JSON line per step: {"step", "ms", "mem" (bytes of the WASM memory after the step), "bytes", "sha256" of the text/bytes the step produced}. Python is only the tool: the module is built by
-tools/build_lettori_wasm.sh's own cargo line (without wasm-opt, like the measures of docs/studi/RAW_VELOCE.md §2.3) and wrapped by `wasm-bindgen --target nodejs`.
+tools/build_lettori_wasm.sh's own cargo line (without wasm-opt) and wrapped by `wasm-bindgen --target nodejs`.
 Use: python3 tools/bench_raw.py FILE.raw [--family thermo] [--steps open,index,...] [--no-build] [--keep DIR]
 Needs: cargo with the wasm32-unknown-unknown target, wasm-bindgen (same version as Cargo.lock), node."""
 import argparse, os, shutil, subprocess, sys, tempfile

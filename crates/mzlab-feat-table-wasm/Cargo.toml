@@ -11,6 +11,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 js-sys = "0.3.106"
 mzlab-core = { path = "../mzlab-core" }
-# `interp`: only to read the rows of the block `interp/1` for the network of the products (`rete`)
-mzlab-feat = { path = "../mzlab-feat", features = ["interp"] }
+# `interp`: only to read the rows of the block `interp/1` for the network of the products (`rete`); no default features, so not `legacy`
+mzlab-feat = { path = "../mzlab-feat", default-features = false, features = ["interp"] }
+mzlab-ops = { path = "../mzlab-ops", features = ["table"] }
 wasm-bindgen = "0.2"

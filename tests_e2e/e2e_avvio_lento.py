@@ -1,6 +1,7 @@
 # e2e_avvio_lento: a first visit on a slow link (the engine .wasm arrives late) with nothing stored does not end in «reopening the saved files is not answering»
 # (browser.js lrInit): the limit runs from when the worker has its engine (rust-bridge.js api.up), and with no stored file a late boot shows «the first visit downloads about 15 MB»
 # and the page keeps waiting. Needs the site: python3 tools/prepara_sito.py, then python3 tests_e2e/e2e_avvio_lento.py
+# covers: mzlab/web/browser, mzlab/web/rust-bridge
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -17,7 +18,7 @@ def visit(port, query, hold_ms):
     r = Run(port=port, wd=f"/tmp/wd_avvio_lento_{port}")
     try:
         with sync_playwright() as p:
-            b = p.chromium.launch(); ctx = b.new_context(locale="it-IT", viewport={"width": 1300, "height": 900})
+            b = p.chromium.launch(); ctx = b.new_context(viewport={"width": 1300, "height": 900})
             ctx.add_init_script(SLOW % hold_ms)
             pg = ctx.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
             pg.goto(f"http://127.0.0.1:{r.port}/{query}")
@@ -34,8 +35,8 @@ def late_wasm():
 def slow_note():
     o = visit(8869, "?ripresa=1", 3000)          # a limit shorter than any boot: nothing stored, so a note and the page goes on
     assert o["ready"] and not o["err"] and not o["lrErr"], o
-    assert any("può volerci un minuto" in t for t in o["fasi"]), o["fasi"]
-    assert not any("non risponde" in t for t in o["fasi"]), o["fasi"]
+    assert any("it may take a minute" in t for t in o["fasi"]), o["fasi"]
+    assert not any("is not answering" in t for t in o["fasi"]), o["fasi"]
 step("engine .wasm late on a first visit: no «not answering», the page gets ready", late_wasm)
 step("nothing stored and a late boot: «the first visit downloads about 15 MB», then ready", slow_note)
 print("\nSTEPS"); [print(" ", s) for s in steps]

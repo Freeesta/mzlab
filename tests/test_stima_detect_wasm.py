@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from cargo_util import build, example
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
@@ -36,8 +37,8 @@ def run(*a):
 def test_the_wasm_estimate_and_refusal_follow_the_fixture(tmp_path):
     spec = json.loads((ROOT / "tests/dati/stima_detect.json").read_text(encoding="utf-8"))
     idx = tmp_path / "stima.mzidx"
-    run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "estimate_detect", "--", "--fixture", str(idx))
-    run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm")
+    example("mzlab-feat-wasm", "estimate_detect", "--fixture", str(idx), runner=run)
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", runner=run)
     pkg = tmp_path / "pkg"
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm")
     got = json.loads(run("node", "-e", NODE, str(pkg), str(idx), json.dumps(spec["cases"])))

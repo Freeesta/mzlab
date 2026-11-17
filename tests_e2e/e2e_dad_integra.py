@@ -2,6 +2,7 @@
 integrates like an XIC (no question, its area in the integration table); its area is in mAU·s (table header, tooltip); the TWC asks `int.guard.uv` (not the ion text of `int.guard`) and «yes» opens
 the XWC the engine proposes (274 ± 2 nm) under it; «no» opens nothing. The DAD names are on screen: «DAD (TWC)» in the picker, «DAD TWC» and «XWC» titles.
 Run from the repo root: python3 tests_e2e/e2e_dad_integra.py"""
+# covers: tools/wiff_dad_mrm.py, mzlab/web/xwc.js
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -24,7 +25,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(D / "dadmrm.wiff"), str(D / "dadmrm.wiff.scan")])
-        wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=90000); pg.click("text=Carica dati"); ready(pg)
+        wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=90000); pg.click("text=Load data"); ready(pg)
         wait_for_js(pg, "E.files.length >= 1", timeout=120000)
         def twc():
             open_kind(pg, "mrm"); wait_for_js(pg, f"!!{MRM} && !!{MRM}.el.querySelector('[data-o=canali]')", timeout=30000)
@@ -62,8 +63,8 @@ try:
             assert pg.evaluate("I18N.t('int.tbl.areaUv')") in hs and pg.evaluate("I18N.t('int.tbl.area')") not in hs, hs
             pg.evaluate("document.querySelector('#bigdlg').close()")
             tip = pg.evaluate(f"(() => {{ const l = ({XWCS}[0]._a.lbls || []).find(l => l.int); return l ? l.tip : ''; }})()")
-            assert "mAU·s" in tip, tip
-        step("an XWC integrates like an XIC: no question, the peak of compound A has its area in mAU·s in the integration table and its tooltip", integrate)
+            assert pg.evaluate("I18N.t('int.copy.tip')") in tip and "mAU" not in tip, tip      # only the copy hint: the area is on the label itself
+        step("an XWC integrates like an XIC: no question, the peak of compound A has its area in mAU·s in the integration table and the copy hint as its tooltip", integrate)
         def unit():
             t = pg.evaluate(f"JSON.stringify(plotSheets({XWCS}[0]))")
             assert pg.evaluate("I18N.t('export.col.pdaSignal')") in t and "mAU" in t and "PDA" not in t, t[max(0, t.find("PDA") - 300):t.find("PDA") + 100]

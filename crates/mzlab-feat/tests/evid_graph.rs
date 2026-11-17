@@ -405,27 +405,24 @@ fn the_document_follows_the_schema_and_is_the_same_twice() {
         strings(defs.get("identita").unwrap().get("required")),
         strings(defs.get("arco").unwrap().get("required")),
     );
-    let (levels, edge_kinds) = (
-        strings(
-            defs.get("identita")
-                .unwrap()
-                .get("properties")
-                .unwrap()
-                .get("livello_max")
-                .unwrap()
-                .get("enum"),
-        ),
-        strings(
-            defs.get("arco")
-                .unwrap()
-                .get("properties")
-                .unwrap()
-                .get("tipo")
-                .unwrap()
-                .get("enum"),
-        ),
+    let enum_of = |def: &str, path: &[&str]| {
+        let v = path
+            .iter()
+            .fold(defs.get(def), |v, k| v.and_then(|x| x.get(k)));
+        strings(v.and_then(|x| x.get("enum")))
+    };
+    let levels = enum_of("identita", &["properties", "livello_max"]);
+    let edge_kinds = enum_of("arco", &["properties", "tipo"]);
+    let roles = enum_of(
+        "identita",
+        &["properties", "membri", "items", "properties", "ruolo"],
     );
+    let nodes = enum_of("nodo", &["properties", "tipo"]);
+    let kind = |x: &Value| x.get("tipo").unwrap().str().unwrap().to_string();
     for i in doc.get("identita").unwrap().arr() {
+        for m in i.get("membri").unwrap().arr() {
+            assert!(roles.contains(&m.get("ruolo").unwrap().str().unwrap().to_string()));
+        }
         for k in &need {
             assert!(i.get(k).is_some(), "identity without `{k}`");
         }
@@ -434,7 +431,9 @@ fn the_document_follows_the_schema_and_is_the_same_twice() {
             for k in &need_edge {
                 assert!(e.get(k).is_some(), "arc without `{k}`");
             }
-            assert!(edge_kinds.contains(&e.get("tipo").unwrap().str().unwrap().to_string()));
+            assert!(edge_kinds.contains(&kind(e)));
+            assert!(nodes.contains(&kind(e.get("da").unwrap())));
+            assert!(nodes.contains(&kind(e.get("a").unwrap())));
         }
     }
 }

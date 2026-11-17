@@ -3,6 +3,7 @@ pair and stand-in members; no laboratory data): at the next start the engine rem
 interrupted, load it again»; members another tab is still copying (it holds the Web Lock "mzlab-nat:<dataset>") stay; with no such members nothing is
 said; the samples already loaded keep their members and stay readable.
 Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_nativi_orfani.py"""
+# covers: mzlab/web/rust-nativo
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

@@ -1,5 +1,6 @@
 """Disegno: right click on a bond shows the two pieces it would leave (formula, mass, m/z of [F+H]+) from the Rust graph, a ring bond says it does not split alone,
 and «All cuts…» opens the table of every cut. Needs site/static/wasm-feat/grafo (tools/build_feat_wasm.sh); SKIP without it."""
+# covers: mzlab/web/disegno-frammenti.js, mzlab/web/disegno-molfile.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")):
@@ -29,7 +30,7 @@ try:
             assert any(x.startswith("CH4 ") and "m/z 17" in x for x in t) and any(x.startswith("CH4O ") and "m/z 33" in x for x in t), t       # C-C of ethanol; nominal values, as the label decimals say
         step("a right click on a bond gives its two pieces with formula, mass and m/z", two)
         def table():
-            pg.locator("#ctx div", has_text="Tutte le rotture").first.click(); pg.wait_for_selector("#tdati table tbody tr", timeout=5000)
+            pg.locator("#ctx div", has_text="All cuts…").first.click(); pg.wait_for_selector("#tdati table tbody tr", timeout=5000)
             assert pg.locator("#tdati tbody tr").count() == 2, pg.locator("#tdati tbody tr").count()
             pg.keyboard.press("Escape")
         step("«All cuts…» opens the table with one row per bond", table)

@@ -21,7 +21,7 @@ impl<R: ReadAt> Routes<R> {
         }
         Ok(match self.hr_window(level, win, precursor, filt, hr)? {
             None => Some(EMPTY.into()),
-            Some(m) => Some(binned_json(m, hr.dec + 1, false)),
+            Some(m) => Some(binned_json(m, hr.dec + 1, false, false)),
         })
     }
 
@@ -53,7 +53,7 @@ impl<R: ReadAt> Routes<R> {
         // case (peaks in the index, none read) answers the same empty arrays. The index pass is not needed to decide.
         let (mz, y) = mzml.spettro(sc)?;
         let m = Binned { mz, y, n: sl.n, sel: sl.sel, in_win: sl.in_win, scan_ids: sl.scan_ids };
-        Ok(Some(binned_json(m, hr.dec + 1, false)))
+        Ok(Some(binned_json(m, hr.dec + 1, false, false)))
     }
 
     /// The mean spectrum of a window of a high-resolution file: cells of 3 ppm, the precursor within the tolerance of the profile (ppm of the

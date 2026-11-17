@@ -1,0 +1,10 @@
+{
+  "err.llm.network": "Network error towards the model; {reason} = short reason in English (e.g. truncated, fetch).",
+  "err.llm.proxy.body": "The demo proxy rejects the request; {field} = rejected part in English (e.g. size, json, session).",
+  "err.llm.proxy.budget": "Global budget of the demo exhausted; {limit} = period in English (day or month).",
+  "err.llm.limit.spend": "Spending cap reached; {limit} = which cap in English (session, ip, rate, tokens).",
+  "err.llm.replay.mismatch": "The request does not match the recording; {turn} = turn number.",
+  "err.llm.conversation": "Invalid conversation; {field} = field that is missing or wrong.",
+  "err.llm.tools": "Invalid tool catalog; {field} = field that is missing or wrong.",
+  "err.llm.assist.call": "Engine error message; {field} = field."
+}

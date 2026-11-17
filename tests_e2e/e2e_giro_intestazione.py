@@ -1,6 +1,7 @@
-"""Header walk: on every view (Dati, Disegno, Flow, Tabui), without samples and with one, every header button opens its window, menu or panel and
+"""Header walk: on every view (Data, Drawing, Flow, Tabui), without samples and with one, every header button opens its window, menu or panel and
 Esc (or the same button) closes it; the page comes back to the state it had and no main block (header, side panel, toolbar, work area, panels)
-has moved. Leaving Dati for another view and coming back moves nothing (and slides nothing, with motion on); the page is never taller than the window; the first file keeps the width of the side panel; the Flow bar does not jump when its late part arrives; no console error, no failed request. Audit: docs/studi/AUDIT_PAGINE.md."""
+has moved. Leaving Data for another view and coming back moves nothing (and slides nothing, with motion on); the page is never taller than the window; the first file keeps the width of the side panel; the Flow bar does not jump when its late part arrives; no console error, no failed request. Audit: tests_e2e/audit_pagine.py."""
+# covers: mzlab/web/barra.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -25,9 +26,9 @@ GEOM = r"""() => { window.scrollTo(0, 0); const o = {}, put = (k, e) => { if (!e
 # the header buttons a user sees, by a selector that finds them again (the tabs of the views are walked apart)
 HDR = r"""() => [...document.querySelectorAll('header button')].filter(b => { const r = b.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !b.disabled && !b.closest('#nav'); })
  .map(b => b.id ? '#' + b.id : b.dataset.cmd ? `header [data-cmd="${b.dataset.cmd}"]` : b.dataset.cmdMain ? `header [data-cmd-main="${b.dataset.cmdMain}"]` : b.dataset.cmdCar ? `header [data-cmd-car="${b.dataset.cmdCar}"]` : b.dataset.help != null ? `header .hq[data-help="${b.dataset.help}"]` : null).filter(Boolean)"""
-# outside Dati these open their window: a click that does nothing there is a dead button
+# outside Data these open their window: a click that does nothing there is a dead button
 FLOATING = {"#np-calc2", "#np-add", "#np-nl", "#np-addloss", "#np-liste", "#np-pt", "#tb-search", "#tb-more", "#np-set", "#newrun"}
-# outside Dati these go back to Dati with their side panel page (the Adducts & losses lists never float: docs/studi/ADDOTTI_PERDITE_PAGINA_UNICA.md §5)
+# outside Data these go back to Data with their side panel page (the Adducts & losses lists never float: docs/agenti/dati-3200.md)
 TO_DATA = {"#np-addloss": "addloss"}
 MOVE_PX = 2       # rounding of sub-pixel layouts; a slide or a jump is tens of pixels
 
@@ -47,7 +48,7 @@ def back_to(pg, base):
 
 
 def to_data(pg, sel, base):
-    """A TO_DATA button outside Dati: Dati with its page open; then Dati's side panel as it was and back to the view it came from."""
+    """A TO_DATA button outside Data: Data with its page open; then Data's side panel as it was and back to the view it came from."""
     tab0 = pg.evaluate("BARRA.curTab")
     pg.click(sel); wait_for_js(pg, f"S.view === 'data' && BARRA.isDataView() && BARRA.curTab === '{TO_DATA[sel]}'"); frames(pg, 3); ready(pg, settle=200)
     pg.evaluate("t => BARRA.show(t, {noFocus: true, instant: true})", tab0); frames(pg, 3)
@@ -89,7 +90,7 @@ def view(pg, v):
 
 
 def round_trip(pg, views):
-    """Dati → each view → Dati: the Dati blocks end where they were, the side panel as it was."""
+    """Data → each view → Data: the Data blocks end where they were, the side panel as it was."""
     g0, s0, bad = pg.evaluate(GEOM), pg.evaluate(OPEN), []
     for v in views:
         view(pg, v); view(pg, "data")
@@ -100,7 +101,7 @@ def round_trip(pg, views):
 
 
 def floating_outside_data(pg, v):
-    """In Disegno, Flow and Tabui the tool buttons open their window (the side panel is Dati's)."""
+    """In Drawing, Flow and Tabui the tool buttons open their window (the side panel is Data's)."""
     view(pg, v)
     dead = []
     for sel in FLOATING:
@@ -120,26 +121,26 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
         wait_for_js(pg, "typeof AVVIO !== 'undefined' && AVVIO.stato === 'ready'", 120000); ready(pg)
         wait_for_js(pg, "!!document.querySelector('#nav [data-v=flow]') && !!document.querySelector('#nav [data-v=tpmine]')")
-        step("no samples, Dati: every header button opens and closes, nothing moves", lambda: walk(pg, "data, empty"))
+        step("no samples, Data: every header button opens and closes, nothing moves", lambda: walk(pg, "data, empty"))
         for v in VIEWS:
             step(f"no samples, {v}: every header button opens and closes, nothing moves", lambda v=v: (view(pg, v), walk(pg, f"{v}, empty"), view(pg, "data")))
         for v in VIEWS:
             step(f"no samples, {v}: the tool buttons open their window", lambda v=v: (floating_outside_data(pg, v), view(pg, "data")))
-        step("no samples: Dati → each view → Dati moves nothing", lambda: round_trip(pg, VIEWS))
+        step("no samples: Data → each view → Data moves nothing", lambda: round_trip(pg, VIEWS))
 
         def with_sample():
             stage(pg, [mz("B_FullMass-t15")]); open_first(pg); ready(pg)
             pg.evaluate("window.scrollTo(0, 0)"); frames(pg, 2)
         step("one sample loaded", with_sample)
-        step("one sample, Dati: every header button opens and closes, nothing moves", lambda: walk(pg, "data, sample"))
+        step("one sample, Data: every header button opens and closes, nothing moves", lambda: walk(pg, "data, sample"))
         step("one sample, draw: every header button opens and closes, nothing moves", lambda: (view(pg, "draw"), walk(pg, "draw, sample"), view(pg, "data")))
-        step("one sample: Dati → each view → Dati moves nothing", lambda: round_trip(pg, VIEWS))
+        step("one sample: Data → each view → Data moves nothing", lambda: round_trip(pg, VIEWS))
 
         def side_shut():
             pg.evaluate("BARRA.close()"); frames(pg, 3); ready(pg, settle=200)
             round_trip(pg, ["draw"])
             pg.evaluate("BARRA.show('file', {noFocus: true, instant: true})"); frames(pg, 3)
-        step("one sample, side panel shut: Dati → Disegno → Dati moves nothing", side_shut)
+        step("one sample, side panel shut: Data → Drawing → Data moves nothing", side_shut)
 
         def add_close_panels():
             bad = []
@@ -171,7 +172,7 @@ try:
                 q.click('#nav [data-v="data"]'); wait_for_js(q, "S.view === 'data'"); hold(q, 1200)          # only time shows a slide
                 for k in ("pane", "work"):
                     d, xs = spread(q, k); assert d <= MOVE_PX, f"back from {v}: {k} moved {d} px over time {xs}"
-        step("one sample, motion on: coming back to Dati the side panel and the work area do not slide", no_slide_back)
+        step("one sample, motion on: coming back to Data the side panel and the work area do not slide", no_slide_back)
 
         def not_taller():
             q = fresh(); bad = []
@@ -183,7 +184,7 @@ try:
             over = q.evaluate("document.documentElement.scrollHeight - innerHeight")
             if over > 0: bad.append(f"data with a sample: {over} px taller")
             assert not bad, " | ".join(bad)
-        step("Dati and Disegno are never taller than the window (no page scroll bar)", not_taller)
+        step("Data and Drawing are never taller than the window (no page scroll bar)", not_taller)
 
         def keeps_width():
             q = fresh(); D = synth("giro_larg"); load(q, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)

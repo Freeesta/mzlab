@@ -79,8 +79,8 @@ pub(super) fn ione(text: &str, pol: i8) -> Result<Formula, &'static str> {
         return Err("warn.msngrafo.polarity");
     }
     let mut f = parse_formula(&base).map_err(|_| "warn.msngrafo.badFormula")?;
-    if let Some((_, atomi, verso, _)) = add {
-        for (el, n) in parse_formula(atomi).expect("adduct formulas are valid") {
+    if let Some((_, atoms, verso, _)) = add {
+        for (el, n) in parse_formula(atoms).expect("adduct formulas are valid") {
             match (f.iter_mut().find(|(e, _)| *e == el), *verso) {
                 (Some(x), 1) => x.1 += n,
                 (None, 1) => f.push((el, n)),

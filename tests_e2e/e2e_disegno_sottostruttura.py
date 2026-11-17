@@ -2,6 +2,7 @@
 the catalogue gives candidates (never identifications), «Show» draws one with its matched atoms selected and «Back» restores the drawing; a file the user
 picks (a synthetic SMILES list) is searched in memory, an unreadable entry is counted; the data table (TDATI) lists every candidate.
 Run from the repo root after tools/build_site.py and tools/build_feat_wasm.sh site/static (molkit); SKIP without molkit there."""
+# covers: mzlab/web/disegno-evidenza.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 MF = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")
 if not os.path.exists(MF) or "molkit" not in json.load(open(MF, encoding="utf-8")):

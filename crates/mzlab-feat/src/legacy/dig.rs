@@ -87,7 +87,7 @@ impl Cand {
             .ident
             .proofs
             .iter()
-            .any(|p| p.kind == "massa" && p.points > 0.0 && p.sign == "a favore");
+            .any(|p| p.kind == "mass" && p.points > 0.0 && p.sign == "for");
         if self.formula.is_some() && mass {
             4
         } else {

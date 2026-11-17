@@ -1,4 +1,5 @@
-"""B1: mass profile of each file (decimals, tolerance), the switch «Alta risoluzione» and the fallback to low resolution."""
+"""B1: mass profile of each file (decimals, tolerance), the switch «High resolution» and the fallback to low resolution."""
+# covers: mzlab/web/hr.js, mzlab/reader/profile.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, real_cuttings, load
@@ -30,16 +31,16 @@ try:
         step("HR.prof / tolDa / dec / label", hrjs)
         def gear():
             pg.click("#np-set"); pg.wait_for_timeout(300)
-            assert "ppm" in pg.inner_text("#uipset")           # the group «Dati e calcolo» is flat: its controls show without a click
+            assert "ppm" in pg.inner_text("#uipset")           # the group «Data and calculation» is flat: its controls show without a click
             pg.fill("#uip-ppm", "8"); pg.dispatch_event("#uip-ppm", "change"); pg.fill("#uip-hdec", "5"); pg.dispatch_event("#uip-hdec", "change"); pg.wait_for_timeout(300)
             v = pg.evaluate("(()=>{const ex=E.files.find(f=>f.file.includes('Exploris')&&f.lv===1);return [HR.prof(ex,1),JSON.parse(localStorage.getItem('mzlab.prefs'))]})()"); print(v)
             assert v[0]["tol"] == 8 and v[0]["dec"] == 5 and v[1]["hrPpm"] == 8 and v[1]["hrDec"] == 5 and "hr" not in v[1]
             pg.keyboard.press("Escape")   # the settings dialog covers the gear: Escape closes it; pg.wait_for_timeout(300)
-        step("gear: «Masse» row (ppm, decimals) changes the profile and is saved", gear)
+        step("gear: «Masses» row (ppm, decimals) changes the profile and is saved", gear)
         def notice():
             pg.evaluate("HR.notice([{file:'prova.mzML',label:'prova',hr_err:'ValueError: prova'}])"); pg.wait_for_timeout(200)
             t = pg.inner_text("#qnote"); print(t)
-            assert "Alta risoluzione non disponibile per prova: aperto come bassa risoluzione" in t
+            assert "High resolution not available for prova: opened as low resolution" in t
         step("fallback notice (once per file)", notice)
         def reload():
             saved(pg); pg.reload(); wait_for_js(pg, "typeof E !== 'undefined' && E.files.length >= 5", 90000); ready(pg)

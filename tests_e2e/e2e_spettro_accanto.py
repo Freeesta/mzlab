@@ -1,5 +1,6 @@
 # e2e_spettro_accanto: the spectrum of the double click always goes below the chromatogram, in its own row; an old stored «beside» preference is ignored;
 # the settings panel has no switch for it; a narrow window keeps it below
+# covers: mzlab/web/settings.js, mzlab/web/affianca.js
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -11,7 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        wait_for_js(pg, "performance.now() > 1000"); pg.click("text=Carica dati"); ready(pg)
+        wait_for_js(pg, "performance.now() > 1000"); pg.click("text=Load data"); ready(pg)
         CH = "E.panels.find(p=>p.type==='chrom'&&p.full)"
         # the chromatogram alone in its row, then a double click far from the cursor
         alone = lambda: pg.evaluate(f"(()=>{{const c={CH};return LAYOUT.righeDi(stackOrder()).find(r=>r.includes(c)).length}})()")

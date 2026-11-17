@@ -10,7 +10,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
+        pg.wait_for_timeout(1000); pg.click("text=Load data"); ready(pg)
         pg.evaluate("window.__ev = []; document.addEventListener('stato:cambiato', e => window.__ev.push(e.detail.motivo))")
         def inv():
             assert pg.evaluate("STATO.verifica()") == [], pg.evaluate("STATO.verifica()")

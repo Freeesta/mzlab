@@ -14,7 +14,7 @@ pub(crate) fn order_by_f64(key: &[f64], desc: bool) -> Vec<usize> {
         key
     };
     let mut o: Vec<usize> = (0..k.len()).collect();
-    // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
+    // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/agenti/wasm-tetti.md, «Ordinamenti std nei percorsi caldi»)
     #[allow(clippy::disallowed_methods)]
     o.sort_by(|&a, &b| k[a].total_cmp(&k[b]));
     o

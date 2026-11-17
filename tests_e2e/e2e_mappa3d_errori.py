@@ -1,5 +1,6 @@
 """The 3D viewer says why it did not open (never «WebGL2 not supported» for something else): no WebGL2 at all, a shader that does not compile, a JavaScript error, a lost context.
 Each case is simulated; the dialog names the cause and shows the technical lines; the 2D map stays whole; a context that refuses the viewer's options but gives one without them opens the viewer."""
+# covers: mzlab/web/mappa3d.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

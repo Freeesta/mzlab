@@ -1,5 +1,6 @@
 """Labels of the spectrum drawn at the side of the RT x m/z map (mappa.js, drawSide): no label touches the bar of its own peak, none sits on another,
 none leaves the panel; the labels that do not fit beyond the tip go to the left of it (above the bar)."""
+# covers: mzlab/web/mappa-render.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

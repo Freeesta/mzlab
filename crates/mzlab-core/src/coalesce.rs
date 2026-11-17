@@ -10,7 +10,7 @@ use crate::mzidx_spill::Spill;
 /// Bytes joined before a block is sent (OPFS: 1 MiB writes cost about half of 256 KiB ones, a quarter of 64 KiB ones, per byte).
 pub const BLOCK: usize = 1 << 20;
 /// Pending blocks of an output: a `.mzidx` interleaves the writes of up to about 20 columns, and 8 streams join them into blocks of about 1 MiB (557 writes become 178 on 422 MB of a `.raw`).
-pub const FLUSSI: usize = 8;
+pub const FLOWS: usize = 8;
 /// Every put of the scratch area (`mzidx_spill`) starts a slot of `CHUNK` bytes, is shorter than one and is the only put of its slot: a put that starts
 /// at most a slot after the end of the pending block can only start the next slot, so the gap is the unwritten tail of the pending one, filled with zeros.
 pub const BUCO: u64 = crate::mzidx_spill::CHUNK as u64;
@@ -40,9 +40,9 @@ impl<O> Accorpa<O> {
     pub fn new(dest: O) -> Self {
         Self::with_block(dest, BLOCK)
     }
-    /// `FLUSSI` pending blocks (the `.mzidx`).
+    /// `FLOWS` pending blocks (the `.mzidx`).
     pub fn flussi(dest: O) -> Self {
-        Self::with_streams(dest, BLOCK, FLUSSI)
+        Self::with_streams(dest, BLOCK, FLOWS)
     }
     pub fn with_block(dest: O, cap: usize) -> Self {
         Self::with_streams(dest, cap, 1)

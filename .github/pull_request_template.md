@@ -1,11 +1,11 @@
-## Cosa cambia
-<!-- una o due righe: l'area toccata e perché -->
+## What changes
+<!-- one or two lines: the area touched and why -->
 
-## Prima del push
-- [ ] Area: ho letto il file d'area (docs/agenti/INDICE.md) e ho toccato solo ciò che dice il mio prompt
-- [ ] `git merge origin/main` fatto e `python3 tools/pre_pr.py` verde
-- [ ] File generati rigenerati con il loro strumento (mai a mano)
-- [ ] Rischi: questa PR NON tocca Cargo.toml/Cargo.lock, `.github/workflows/` (salvo `test.yml` e `stat-ci.yml`), file `.wasm`, il CSP, `crates/mzlab-desktop/` — oppure li ho elencati qui sotto
+## Before the push
+- [ ] Area: I read the area file (docs/agenti/INDICE.md) and touched only what my prompt says
+- [ ] `git merge origin/main` done and `python3 tools/pre_pr.py` green
+- [ ] Generated files regenerated with their tool (never by hand)
+- [ ] Risks: this PR does NOT touch Cargo.toml/Cargo.lock, `.github/workflows/` (except `test.yml` and `stat-ci.yml`), `.wasm` files, the CSP, `crates/mzlab-desktop/` — or I listed them below
 
-## Rischi
-<!-- vuoto se nessuno -->
+## Risks
+<!-- empty if none -->

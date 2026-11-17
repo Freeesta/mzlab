@@ -2,6 +2,7 @@
 system (a REAL FileSystemDirectoryHandle: it is stored in IndexedDB and found again after a reload). Steps: grey rows (data / others), unknown files absent, a click loads one
 (the row turns «loaded»), the handle is remembered across a reload, a file added to the folder shows up when the tab is shown again, the permission asked again with a click,
 «Forget», and the message of a browser without the API. What a real folder of the disk adds (the picker window, FileSystemObserver on it) cannot be run in the cloud."""
+# covers: mzlab/web/cartella-puntata.js
 import sys, os, base64, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pathlib import Path
 from lib import *
@@ -26,7 +27,7 @@ r = Run(port=8830 + 150, wd="/tmp/wd_cartp")
 try:
     with sync_playwright() as p:
         # a persistent context: in a throw-away profile the cloud Chromium dies when a stored FileSystemDirectoryHandle is read back
-        r.b = p.chromium.launch_persistent_context(tempfile.mkdtemp(prefix="cartp_prof_"), viewport={"width": 1500, "height": 2200}, locale="it-IT", reduced_motion="reduce")
+        r.b = p.chromium.launch_persistent_context(tempfile.mkdtemp(prefix="cartp_prof_"), viewport={"width": 1500, "height": 2200}, reduced_motion="reduce")
         pg = r.b.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"); pg.add_init_script(INIT)
         pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#cartpick", timeout=60000)
@@ -34,9 +35,9 @@ try:
         def grey():
             pg.click("#cartpick"); pg.wait_for_selector("#cartbody .cprow")
             assert rows(pg) == ["a.mzML", "sub/b.mzML"], rows(pg)
-            t = pg.inner_text("#cartbody"); assert "Dati" in t and "Altri" not in t and "non caricato" in t, t
+            t = pg.inner_text("#cartbody"); assert "Data" in t and "Other" not in t and "not loaded" in t, t
             assert pg.evaluate("getComputedStyle(document.querySelector('.cprow')).color") != pg.evaluate("getComputedStyle(document.body).color")
-            assert "non caricato" in pg.get_attribute(".cprow", "aria-label")
+            assert "not loaded" in pg.get_attribute(".cprow", "aria-label")
             assert count(pg) == 0
         step("rows in grey (Data only), unknown and hidden files absent, nothing loaded", grey)
         def desktop():
@@ -44,11 +45,15 @@ try:
         step("the folder picker opens on the Desktop with a fixed id", desktop)
         def load():
             pg.click('.cprow:has-text("a.mzML")'); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=90000)
-            pg.wait_for_function("document.querySelector('.cprow.done')"); assert "caricato" in pg.inner_text(".cprow.done")
-        step("a click loads the file and its row turns «caricato»", load)
+            pg.wait_for_function("document.querySelector('.cprow.done')"); assert "loaded" in pg.inner_text(".cprow.done")
+            # the row of the loading table exists before the file is open: wait for the open itself, or the removal below meets an empty E.files and the file lands after it
+            pg.wait_for_function("E.files.some(f => f && !f.gone)", timeout=90000)
+        step("a click loads the file and its row turns «loaded»", load)
         def remembered():
             # with a saved session a return visit opens the panels, not the landing (#2201): empty the session first so the reload shows the folder
+            # (gone files leave E.files only once api/remove is done and the engine session was read again: the reload then finds it empty)
             pg.evaluate("removeAllFiles()"); pg.wait_for_function("!E.files.some(f=>f)", timeout=30000)
+            pg.wait_for_function("J('api/session').then(j => !(j.session || []).length)", timeout=30000)
             pg.reload(); pg.wait_for_selector("#cartbody .cprow", timeout=60000)
             assert "prova" in pg.inner_text("#cartbody") and rows(pg)[0] == "a.mzML", rows(pg)
         step("the folder is remembered after a reload", remembered)

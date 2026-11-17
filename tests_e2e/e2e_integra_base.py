@@ -1,6 +1,7 @@
 """The baseline modes of a peak integration (mzlab_core::baseline): the page's QUALITA.peakArea (peak_area of the engine .wasm, peaks-worker.js) and
 `mzlab-cli peak-area` give the same bytes for the same trace, from zero and from a line that cuts through the peak (a level and a sloped line);
 from zero the area is the trapezoid of the trace. The trace is an XIC of the synthetic low-resolution file, written to a CSV with every digit."""
+# covers: mzlab/web/integra-base.js
 import sys, os, subprocess, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import load

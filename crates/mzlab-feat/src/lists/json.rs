@@ -5,7 +5,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out, Value};
 
 use super::{Adduct, Kind, Liste, RowError, Transformation, SCHEMA};
-use crate::legacy::transf::Delta;
+use crate::transf_base::Delta;
 
 fn bad() -> Error {
     Error::new("error.badListe")

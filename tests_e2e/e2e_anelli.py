@@ -1,5 +1,6 @@
 """Focus / hover rings of the cells in the reference lists (Tavola periodica, Addotti, Perdite) are never clipped by the scrolling container:
 for the first and last element of every row, the ring (outline width + offset) stays inside the nearest clipping ancestor. Light and dark, 1280 / 1440 / tablet."""
+# covers: mzlab/web/tavola-periodica.js, mzlab/web/tables.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

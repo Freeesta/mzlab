@@ -2,6 +2,7 @@
 PDA trace of several overlaid samples opens one UV spectrum panel with one trace per sample (x = the wavelength range); a second double click asks the engine
 nothing (the matrix is held); from a single-wavelength trace the spectrum marks that wavelength; a double click on the UV spectrum gives the trace at that
 wavelength. Synthetic files (tools/dati_sintetici_uv.py)."""
+# covers: mzlab/web/uv-spettro.js, mzlab/web/uv-azioni.js, tools/dati_sintetici_uv.py
 import sys, os, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from pathlib import Path
@@ -38,12 +39,12 @@ try:
             assert a["n"] == 2 and sorted(a["ks"]) == [0, 1], a
             assert abs(a["rt"] - 6.4) < 0.1, a
             leg = pg.evaluate(f"{u}.leg.textContent"); assert "DAD_s1" in leg and "DAD_s2" in leg, leg
-            assert pg.evaluate(f"{u}.el.querySelector('.ttl').textContent") == "Spettro UV"
+            assert pg.evaluate(f"{u}.el.querySelector('.ttl').textContent") == "UV spectrum"
             assert pg.evaluate(f"{u}.el.querySelector('.rtl').textContent") == "%.2f min" % a["rt"]
         step("double click on the PDA trace of two samples: one UV spectrum panel, one trace per sample, x = 190-310 nm, title «Spettro UV» + RT", overlay)
         def table():
             d = pg.evaluate(f"TDATI_P.data({UVS}[0])")
-            assert d["head"][0] == "nm" and len(d["head"]) == 3 and all("Assorbanza (mAU)" in h for h in d["head"][1:]), d["head"]
+            assert d["head"][0] == "nm" and len(d["head"]) == 3 and all("Absorbance (mAU)" in h for h in d["head"][1:]), d["head"]
             s = pg.evaluate(f"plotSheets({UVS}[0])"); assert len(s[0]["head"]) == 4, s[0]["head"]
         step("the table of the data and the export have one absorbance column per sample", table)
         def warm():

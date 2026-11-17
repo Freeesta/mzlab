@@ -17,7 +17,7 @@ try:
             assert OLD not in pg.inner_text("body"), "start screen"
         step("title contains APP_NAME, start screen without the old name", start)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_MS2-t15")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def interface():
             name = pg.evaluate("APP_NAME")
             assert pg.get_attribute("header .logo", "alt") == name

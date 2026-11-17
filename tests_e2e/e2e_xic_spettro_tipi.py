@@ -1,4 +1,5 @@
 """V-1 follow-up: the spectrum «XIC» button on a spectrum of the second file (as a map click opens it), with the files overlaid, and on an MS2 file (low resolution)."""
+# covers: mzlab/web/xic-spettro.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -12,7 +13,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_MS2-t15")])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         ks = pg.evaluate("tabFiles('full').map(f=>f.k)"); assert len(ks) == 2, ks
         pg.evaluate(f"(()=>{{E.browse=false;tabFiles('full').forEach(f=>f.vis=true);renderFileList();redrawAll()}})()")
         def spec_of(k): return f"E.panels.find(p=>p.type==='spec'&&p.tab==='full'&&p.k=={k})"

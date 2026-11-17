@@ -1,6 +1,7 @@
 """«How it is extracted» in high resolution (synthetic Orbitrap file): the box is a few ppm wide; the features that a search tool (mzFinder) already holds can be
 shown on the map as markers (switch OFF at the start, only in HR); a click on a marker puts the box on that feature (XIC, spectrum, numbers equal to the API)
 and opens «How it was found» (window in ppm, peak with its edges, the filters with their thresholds), read-only. The provider here is a fake window.MAPFEAT."""
+# covers: mzlab/web/mappa.js, mzlab/web/mappa-estrai.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

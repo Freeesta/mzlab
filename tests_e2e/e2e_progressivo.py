@@ -1,6 +1,7 @@
 """Files open one by one as soon as they are read: the first file starts the session, the others are appended in order; while one is still being opened its grey row
 (.fl.pend.up, aria-busy) waits at the bottom of the side list; the first file opens by itself as soon as it is read, the others open when read and are shown by a click; × on a waiting row leaves that file unticked and unread;
 a file with no data stays in the table unopened and the others go on. The appends are held back by a wrapper of fetch, so there is time to look."""
+# covers: mzlab/web/open-now.js, mzlab/web/upload-rows.js
 import sys, os, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

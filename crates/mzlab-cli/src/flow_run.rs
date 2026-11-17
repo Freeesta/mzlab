@@ -233,7 +233,9 @@ pub(crate) fn run_checked(
 
 /// The `prov/1` text of `run`, for the plan read from `text`.
 pub fn prov_text(text: &[u8], run: &Run) -> String {
-    prov_json(&agent(), Some(&sha256_hex(text)), run)
+    // the citation is the first member of the CLI's record; the page (wasm) writes the record without it
+    let prov = prov_json(&agent(), Some(&sha256_hex(text)), run);
+    crate::citation::after(&prov, "{\"schema\":\"prov/1\",", "")
 }
 
 /// The progress line of one job: `[3/9] features.table (feat) ... done in 12.4 s` (`item 2` for a per-file step), `... reused` when it came from
@@ -291,8 +293,8 @@ pub(crate) fn memory_advice(
         return String::new();
     }
     let p = |k: &str| get(k).and_then(|v| v.parse::<usize>().ok());
-    let fase = get("fase");
-    match (fase.as_deref(), p("stima_mb"), p("budget_mb")) {
+    let phase = get("fase");
+    match (phase.as_deref(), p("stima_mb"), p("budget_mb")) {
         (Some("indexPeaks"), Some(est), Some(cap)) => format!(
             "\n    the densest 1-Da m/z range of this file holds at least {est} MB of peaks and the index builder holds {} of one range \
              (twice its budget): try --set {instance}.budget={} (bytes; the index is the same at any budget)",

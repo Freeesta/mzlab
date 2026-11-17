@@ -1,6 +1,6 @@
 // @ts-check
 // Loading helpers of the engine's worker (rust-worker.js), apart so that node can test them: the copy of a plain upload to OPFS (cancellable, its room released on any failure),
-// the streaming gunzip of a .mzML.gz into OPFS (`putGz`) and the gate that lets lrOpen skip re-parsing an index that did not change.
+// the streaming gunzip of a .mzML.gz into OPFS (`putGz`) and the gate that lets lrOpen skip re-parsing an index that did not change, and the open of a stored index that keeps it on a memory refusal.
 
 // a .mzML.gz is read in pieces of GZ_STEP and inflated GZ_SLICE at a time (repetitive XML inflates up to ~1000 times: one push makes at most ~64 MB); the mzML is never whole
 // in memory. GZ_CAP: the 4 GB of a plain upload (lr.js)
@@ -25,22 +25,23 @@ export async function gzClean(ARCH) {
 }
 
 /** the copy of a plain uploaded file: `copyPrints` (SHA-256 and probe taken in the same pass), `putPlain` (one retry after `free`, room released when it fails); `putGz` and
- * `gunzipTo` inflate a gzip upload with `gunzip(cap)` (the engine's `Gunzip`)
- * @param {{ ARCH: any, impronte: { start: (size: number, noSha1?: boolean) => any }, prints: Map<string, any>, cancelled: () => string, isCancelled: (name: string) => boolean, post: (m: any) => void, free: () => Promise<unknown>, now?: () => number, gunzip?: (cap: number) => any }} h */
-export function createPlainPut({ ARCH, impronte, prints, cancelled, isCancelled, post, free, now = () => performance.now(), gunzip }) {
+ * `gunzipTo` inflate a gzip upload with `gunzip(cap)` (the engine's `Gunzip`); `una` (spike, una-passata.js) hands the pieces of an mzML to a builder that runs with the copy
+ * @param {{ ARCH: any, impronte: { start: (size: number, noSha1?: boolean) => any }, prints: Map<string, any>, cancelled: () => string, isCancelled: (name: string) => boolean, post: (m: any) => void, free: () => Promise<unknown>, now?: () => number, gunzip?: (cap: number) => any, una?: { start: (m: any) => Promise<any> } }} h */
+export function createPlainPut({ ARCH, impronte, prints, cancelled, isCancelled, post, free, now = () => performance.now(), gunzip, una }) {
   async function copyPrints(/** @type {{ blob: Blob, name: string, id: any }} */ m) {
-    const blob = m.blob, pass = /\.mzml$/i.test(m.name) ? impronte.start(blob.size, true) : null;
+    const blob = m.blob, pass = /\.mzml$/i.test(m.name) ? impronte.start(blob.size, true) : null, one = una ? await una.start(m) : null;
     let tp = 0;      // the page shows the copy (bytes done / total, at most 10 times a second)
     const put = ARCH.putChunks("files", m.name, blob.size, async (/** @type {number} */ o, /** @type {number} */ n) => {
       if (isCancelled(m.name)) throw cancelled();      // «Cancel» of the page: the copy stops at the next piece
       const t = now();
       if (t - tp > 100) { tp = t; post({ op: "progress", id: m.id, frac: blob.size ? Math.min(1, o / blob.size) : 0, phase: "load", done: o, total: blob.size }); }
       return new Uint8Array(await blob.slice(o, o + n).arrayBuffer());
-    }, pass ? (/** @type {Uint8Array} */ b) => pass.add(b) : undefined);
+    }, pass ? (/** @type {Uint8Array} */ b, /** @type {number} */ off) => { if (one) one.add(b, off); return pass.add(b); } : undefined);      // the ring copies the piece before the hash worker takes it
     let f;
-    try { f = await put; } catch (e) { if (pass) pass.end().catch(() => null); throw e; }
+    try { f = await put; } catch (e) { if (pass) pass.end().catch(() => null); if (one) one.abort(); throw e; }
     const o = pass && await pass.end().catch(() => null);
     if (o) prints.set(m.name, { size: blob.size, sha256: o[0], probe: o[2] });
+    if (one) await one.end(o).catch(() => one.abort());      // the scan table of the copy, then the builder gets the rest
     return f;
   }
   async function putPlain(/** @type {{ blob: Blob, name: string, id: any }} */ m) {
@@ -84,6 +85,29 @@ export function createPlainPut({ ARCH, impronte, prints, cancelled, isCancelled,
   return { copyPrints, putPlain, putGz, gunzipTo };
 }
 
+/** the gate of the page's copies (lr_put): at most `k` run together, the others wait in the order of the list (`rank`, the row's place; equal or none: as they came), so
+ * the first file of a drop gets the disk and reaches its builder first; `k` 0 = no gate (every copy at once). `onWait()` tells the page the file is queued;
+ * `drop(name, err)` (lr_cancel) rejects a queued copy before it starts */
+export function createCopyGate() {
+  let run = 0;
+  /** @type {{ name: string, k: number, rank: number, go: () => void, no: (e: any) => void }[]} */ const wait = [];
+  const next = () => { while (wait.length && (wait[0].k <= 0 || run < wait[0].k)) { const w = /** @type {any} */ (wait.shift()); run++; w.go(); } };
+  return {
+    async through(/** @type {string} */ name, /** @type {number} */ k, /** @type {number} */ rank, /** @type {() => void} */ onWait, /** @type {() => Promise<any>} */ task) {
+      const r = rank >= 0 ? rank : Infinity;
+      if (k > 0 && (run >= k || wait.length)) {      // `go` counts it in `run`
+        onWait();
+        await new Promise((go, no) => { const at = wait.findIndex(w => w.rank > r); wait.splice(at < 0 ? wait.length : at, 0, { name, k, rank: r, go: () => go(undefined), no }); });
+      }
+      else run++;
+      try { return await task(); } finally { run--; next(); }
+    },
+    drop(/** @type {string} */ name, /** @type {any} */ err) { for (let i = wait.length - 1; i >= 0; i--) if (wait[i].name === name) wait.splice(i, 1)[0].no(err); },
+    get running() { return run; },
+    get queued() { return wait.length; },
+  };
+}
+
 /** which slots hold the index they are asked to open: `same(slot, ix)` is true when the index (size and lastModified) is the one `mark`ed and the slot was not dropped since */
 export function createOpenGate() {
   /** @type {Map<number, string>} */ const seen = new Map();
@@ -94,4 +118,12 @@ export function createOpenGate() {
     drop: (/** @type {number} */ slot) => { seen.delete(slot); },
     clear: () => { seen.clear(); },
   };
+}
+
+/** a memory refusal of the engine (routes_open.rs): the index is good, there is no room for it beside the files open */
+export const noMemory = (/** @type {unknown} */ e) => typeof e === "string" && e.includes('"error.memoryBudget"');
+
+/** opens a stored index with `open()`: a memory refusal passes on and the index stays (neither rebuilt nor removed), any other failure gives `failed(e)` */
+export async function openStored(/** @type {() => Promise<any>} */ open, /** @type {(e: unknown) => any} */ failed) {
+  try { return await open(); } catch (e) { if (noMemory(e)) throw e; return failed(e); }
 }

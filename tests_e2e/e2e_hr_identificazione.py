@@ -1,4 +1,5 @@
 """H8/H9: identify all the MS2 of a high-resolution file against a library (grouping, verdict, the 1-scan rule), the analogue search, the verdict thresholds."""
+# covers: mzlab/web/libreria, mzlab/web/livelli
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -39,7 +40,7 @@ try:
             t = pg.inner_text("#li-body"); print(t[:300])
             assert "Voce di prova" in t and pg.locator("#li-body .lvb").count() >= 1, t
             assert "scansion" in pg.inner_text("#li-st") or "confrontate" in pg.inner_text("#li-st")
-            assert pg.is_visible("#libwhat") and "Livello" in pg.inner_text("#li-list thead")
+            assert pg.is_visible("#libwhat") and "Level" in pg.inner_text("#li-list thead")
             assert pg.evaluate("(() => { const L = document.querySelector('#li-list'); return L.scrollWidth - L.clientWidth; })()") <= 1, "no horizontal overflow"
             xs = pg.evaluate("[...document.querySelectorAll('#li-list tr')].map(tr=>[...tr.children].map(c=>Math.round(c.getBoundingClientRect().x)))")
             assert len(xs) > 10 and all(len(x) == len(xs[0]) for x in xs), "header and rows have the same columns"
@@ -58,7 +59,7 @@ try:
             assert "Voce di prova" in pg.inner_text("#lw-list") and pg.is_visible("#lw-cv") and pg.is_visible("#lw-goto")
             pg.click("#lw-back"); pg.wait_for_selector("#li-list tr.row", timeout=10000)
             pg.evaluate("document.querySelector('#libwhat').close()")
-        step("identify all the MS2 of the file: one row per precursor with the level; a row opens «Cos'è?» of its scan in the same window, «Tutte le MS2» comes back", identify)
+        step("identify all the MS2 of the file: one row per precursor with the level; a row opens «What is it?» of its scan in the same window, «All MS2» comes back", identify)
         def excluded():
             pol = pg.evaluate("E.files.find(f=>f.kind==='ms2').polarity")
             pg.evaluate("LISTE.setOn(true)"); pg.evaluate("LISTE.ready()"); assert pg.evaluate("LISTE.isOn()"), "the contaminant lists are on"      # off by default
@@ -67,11 +68,11 @@ try:
             pg.evaluate(f"[...new Set(LISTE.compat({prec}, '{pol}', 5).all.map(x => x.list))].forEach(l => LISTE.exclSet('list', l, true))")          # every list this precursor is compatible with
             pg.evaluate("LIB.identifyAll(E.files.find(f=>f.kind==='ms2').k)"); pg.wait_for_selector("#li-body .cont-cnt", timeout=60000)
             t = pg.inner_text("#li-body")
-            assert "Voce di prova" not in t and "nascosti" in pg.inner_text("#li-body .cont-cnt"), t[:300]
+            assert "Voce di prova" not in t and "hidden" in pg.inner_text("#li-body .cont-cnt"), t[:300]
             pg.click("#li-chid"); pg.wait_for_function("document.querySelector('#li-body').innerText.includes('Voce di prova')", timeout=10000)
             pg.click("#li-chid"); assert "Voce di prova" not in pg.inner_text("#li-body")
             pg.evaluate("document.querySelector('#libwhat').close(); LISTE.exclReset(); LISTE.setOn(false)")
-        step("a candidate whose precursor is an excluded contaminant stays out of the list, counted, until «Mostra»", excluded)
+        step("a candidate whose precursor is an excluded contaminant stays out of the list, counted, until «Show»", excluded)
         def analogs():
             r = pg.evaluate("""(async()=>{const q=%s;const j=await LIB.call('analogs',{peaks:q.mz.map((m,i)=>[m,q.y[i]]),prec:q.t,pol:1,frag:0.01,maxDelta:200,max:10});return j.results.map(x=>({name:x.name,delta:x.delta,matched:x.matched,mcos:x.mcos}))})()""" % __import__("json").dumps(info))
             assert r and r[0]["name"] == "Analogo di prova" and abs(r[0]["delta"] - 15.9949) < 1e-3 and r[0]["matched"] >= 4 and r[0]["mcos"] > 0.9, r
@@ -87,9 +88,9 @@ try:
             pg.evaluate("LIB.identifyAll(E.files.find(f=>f.kind==='ms2').k)"); pg.wait_for_selector("#li-list tr.row", timeout=60000)
             pg.evaluate("document.querySelector('#li-list').style.maxHeight='190px'")
             heads = pg.inner_text("#li-list thead")
-            for w in ("Struttura", "Nome", "Addotto", "Libreria", "InChIKey", "Entropia migliore", "Picchi in comune", "Δ ppm"): assert w in heads, (w, heads)
+            for w in ("Structure", "Name", "Adduct", "Library", "InChIKey", "Best entropy", "Shared peaks", "Δ ppm"): assert w in heads, (w, heads)
             geo = pg.evaluate("""(()=>{const L=document.querySelector('#li-list'),r=L.getBoundingClientRect(); const th=[...L.querySelectorAll('th')]; const by=t=>th.find(x=>x.innerText.includes(t)).getBoundingClientRect();
-              return {over:L.scrollWidth-L.clientWidth, name:by('Nome').width, right:Math.max(...['Entropia','Picchi','Δ ppm'].map(t=>by(t).right))-r.right, left:Math.min(...['Entropia','Picchi','Δ ppm'].map(t=>by(t).left))}})()""")
+              return {over:L.scrollWidth-L.clientWidth, name:by('Name').width, right:Math.max(...['Entropy','Peaks','Δ ppm'].map(t=>by(t).right))-r.right, left:Math.min(...['Entropy','Peaks','Δ ppm'].map(t=>by(t).left))}})()""")
             assert geo["over"] <= 1 and geo["name"] >= 100 and geo["right"] <= 1, ("columns fit at 1280 px", geo)
             tot = pg.locator("#li-list .lw-th").count(); assert tot >= 8, tot
             wait_for_js(pg, "document.querySelectorAll('#li-list .lw-th svg').length > 0"); frames(pg, 3)

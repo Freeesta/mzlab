@@ -34,7 +34,7 @@ Per tipo: 330 `title="…"`, 39 `data-i18n-title`, 85 `.title =` (26 righe tra q
 4. Ogni grafico mostra tempo, m/z e intensità nello stesso formato, prodotto da una sola funzione.
 5. I suggerimenti sui gesti («Tasto destro: azioni») stanno nell'aiuto e nella Teoria, non nel tooltip.
 Elenco completo di tutti i testi dei tooltip (IT, EN, lunghezza, segnalazioni automatiche per le regole 20 e 21; fonti: siti, chiavi di catalogo, aiuto dei passi e parametri del Flow): `docs/studi/TOOLTIP_ELENCO.md` e `.csv`, generati da `python3 tools/list_tooltip.py` (`--check` dice se sono da rigenerare).
-Censimento chiave per chiave (verdetto e testo nuovo IT/EN, eccezioni, seguiti per impostazioni e addotti): `docs/studi/TOOLTIP_CENSUS.md`.
+Regola dei testi (guardia `tests/test_tooltip_corti.py`, IT ed EN, ogni chiave `.tip`, `.title` o `Title` e ogni `title="..."` letterale): una frase breve, al massimo 90 caratteri, che dice solo che cosa fa il controllo (scorciatoia tra parentesi); mai promesse di privacy o di metodo («non si invia nulla», «X invece di Y»), pubblicità, tutorial, la scritta ripetuta, l'avvertenza «candidato, non identificazione» o un valore dinamico incollato. Un avviso solo se il controllo distrugge (cancella, sovrascrive); i fatti vanno nell'aiuto o nelle note visibili. Eccezioni in `tests/tooltip_ammessi.txt`, ognuna col motivo.
 Guardia dinamica: `tests_e2e/e2e_tooltip_dinamici.py` (sito costruito, file sintetici di ogni tipo: Full Scan, MS2, MRM, IDA, DDA ad alta risoluzione, .wiff Q1/PI/EPI e SIM; IT ed EN). Raccoglie ogni elemento con `title`, `data-tip` o `data-tiph` (le sole fonti del tooltip del programma) in ogni scheda di esperimento, poi passa il mouse sulle intestazioni dei gruppi, su ogni tooltip HTML e sui 25 testi più lunghi. Fallisce se un testo supera 60 caratteri o ha più di una frase, o se il riquadro disegnato è più largo di 28ch o più alto di 3 righe (`#qtip` ha `max-width:28ch`).
 Pannello Impostazioni: ogni controllo visibile (anche il modulo «Segnala un bug», i gruppi Assistente e Diagnostica della modalità amministratore) ha un tooltip suo, al massimo 60 caratteri, diverso dalla scritta, in IT ed EN, con un file LR e con uno HR; le opzioni di tema stanno sotto un tooltip unico (`IMPCOMP.opts`), quelle del carattere ne hanno uno ciascuna. Guardia: `tests_e2e/e2e_tip_impostazioni.py` (anche mouse, pressione lunga al tocco senza cambiare l'interruttore, anello di focus con Tab).
 Le intestazioni dei gruppi dell'elenco laterale (`files.grp.tip.*`) dicono solo il tipo di scansione; lo schema Q1 → q2 → Q3 è nell'aiuto del tipo (`QMODI.html`), non nel tooltip.
@@ -48,7 +48,7 @@ Guardia: `tests/test_tooltip_inventario.py` (nessun tooltip uguale al testo del 
 | `grafici.js:596` mappa 2D (`map.hov`) | **RT · m/z**, «intensità» o «differenza», bin di m/z | A | è il formato più completo |
 | `grafici.js:596` mappa PDA | RT min, nm, mAU scritti nel codice, non da `lang/` | C | unità fuori dai cataloghi |
 | `uv-spettro.js:101` spettro UV | nm e mAU scritti nel codice | C | come sopra |
-| `grafici.js:437` area del picco (`tip.area`) | Area, conteggi·s, «Right-click: actions» | D (riga) | solo la riga del tasto destro; CROMA-CLICK-PICCO |
+| `grafici.js` etichetta d'area (`int.copy.tip`) | solo «clic per copiare l'area» | — | la riga con area, intensità e linea di base è stata tolta |
 | `picchi.js:458` etichetta m/z (`tip.peakLabel`) | m/z e «Right-click: actions» | D | l'm/z è già sull'etichetta; CROMA-CLICK-PICCO |
 | `etichette-picchi.js:54` etichetta RT (`etpk.tip.rt`) | «Peak at RT 14.34 min» | B | ripete l'etichetta; CROMA-CLICK-PICCO |
 | `spettro.js:100` etichette Δ del righello | addotto, Δ, «Clic destro: …» | C | un solo suggerimento di gesto |
@@ -100,7 +100,7 @@ Mostrano il nome ai lettori di schermo ma non al mouse (da completare con toolti
 | `tbl.loss.exactTitle` (m/z esatto nella tabella Perdite neutre) | «Massa esatta, da elements.py» / «Exact mass, from elements.py» | «Massa esatta» / «Exact mass» |
 
 ## Lasciato come proposta
-- Tutto ciò che riguarda le etichette dei picchi, l'hover dello spettro e «Right-click: actions» (`tip.area`, `tip.peakLabel`, `etpk.tip.rt`, `tip.peak`): lo sta cambiando CROMA-CLICK-PICCO.
+- Tutto ciò che riguarda le etichette dei picchi, l'hover dello spettro e «Right-click: actions» (`tip.peakLabel`, `etpk.tip.rt`, `tip.peak`): lo sta cambiando CROMA-CLICK-PICCO.
 - Funzione unica dell'hover dei grafici (tempo, m/z, intensità con unità) e unità da `lang/` per mappa PDA e spettro UV.
 - Tooltip con i gesti ripetuti su ogni elemento («Clic: mostra o nascondi» nelle legende, «Clic: mostra solo questo file»): da spostare nell'aiuto.
 - `liste-target.js:75,145`: tooltip in inglese scritti nel codice, da portare in `lang/it` e `lang/en`.

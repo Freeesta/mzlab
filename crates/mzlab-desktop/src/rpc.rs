@@ -111,7 +111,7 @@ impl State {
         }
     }
 
-    /// Opens the index of `name` in the slot of the page's list. `err.engine.index` when there is none.
+    /// Opens the index of `name` in the slot of the page's list. `err.engine.index` when there is none; `error.memoryBudget` (`openFiles`) when memory ran out.
     pub(crate) fn open_lr(&self, eng: &mut Eng, name: &str) -> Result<u32> {
         let slot = match eng.lr_slot.get(name) {
             Some(s) => *s,
@@ -122,7 +122,8 @@ impl State {
             }
         };
         if !eng.idx.contains_key(&slot) {
-            eng.idx.insert(slot, self.open_index_file(name).map_err(|_| Error::new("err.engine.index").with("name", name))?);
+            let r = mzlab_core::routes_open::open_beside(&mut eng.idx, || self.open_index_file(name)).map_err(|e| if e.key == "error.memoryBudget" { e } else { Error::new("err.engine.index").with("name", name) })?;      // the site's opening; a memory refusal keeps its key
+            eng.idx.insert(slot, r);
         }
         self.attach_named(eng, slot, name);
         Ok(slot)
@@ -169,11 +170,11 @@ impl State {
         let q = || Query::parse(s("query"));
         match op {
             "idxopen" => {
-                let mut r = self.open_index_file(s("name")).map_err(|_| Error::new("error.noIndex"))?;
-                r.pol = [1, -1].contains(&p["pol"].as_i64().unwrap_or(0)).then(|| p["pol"].as_i64().unwrap_or(0) as i8);      // as `set_polarity` of the wasm: 0 = every section
-                let out = format!("{{\"scans\":{},\"hr1\":{}}}", r.idx.scans.len(), r.idx.hr1());
-                eng.idx.insert(u("slot"), r);
-                self.attach_named(eng, u("slot"), s("name"));
+                // as the site's worker: over the scan table of the list slot of the same file when it is held, else beside the files open (routes_open.rs)
+                let (slot, name, path) = (u("slot"), s("name"), self.indexer().and_then(|b| b.path(s("name"))).map_err(|_| Error::new("error.noIndex"))?);
+                let out = mzlab_core::routes_open::open_slot(&mut eng.idx, slot, eng.lr_slot.get(name).copied(), || map_file(&path)).map_err(|e| if e.key == "error.memoryBudget" { e } else { Error::new("error.noIndex") })?;
+                if let Some(r) = eng.idx.get_mut(&slot) { r.pol = [1, -1].contains(&p["pol"].as_i64().unwrap_or(0)).then(|| p["pol"].as_i64().unwrap_or(0) as i8); }      // as `set_polarity` of the wasm: 0 = every section
+                self.attach_named(eng, slot, name);
                 text(out)
             }
             "route" => match eng.idx.get_mut(&u("slot")) {
@@ -276,6 +277,7 @@ impl State {
                 Some(r) => opt(mzlab_core::subxic::subxic(r, p["k"].as_i64().unwrap_or(-1), &q())?),
                 None => text(""),
             },
+            "ticbg" => opt(mzlab_core::ticbg_route::route_files(&mut eng.idx, u("slot"), p["blank"].as_i64().unwrap_or(-1), &q())?),
             "map" => {
                 let metas = session_items(s("items"))?;
                 opt(mzlab_core::maproute::map_route(s("path"), &metas, &mut eng.idx, &q())?)
@@ -353,10 +355,9 @@ impl State {
                 }
                 text(pl.finish(&rows))
             }
-            "manint" => text(match mzlab_core::manint::table_text(s("files"), s("windows"), p["sums"].as_bool() == Some(true) || s("sums") == "true") {
-                Ok(csv) => csv,
-                Err(e) => format!("E{}", e.to_json()),
-            }),
+            "manint" => text(mzlab_core::manint::table_text(s("files"), s("windows"), p["sums"].as_bool() == Some(true) || s("sums") == "true").unwrap_or_else(|e| format!("E{}", e.to_json()))),
+            "follow" => text(mzlab_core::manint::follow_text(s("files"), s("window")).unwrap_or_else(|e| format!("E{}", e.to_json()))),
+            "auto" => text(mzlab_core::manint::auto_text(s("files"), s("params")).unwrap_or_else(|e| format!("E{}", e.to_json()))),
             "valleys" => text(mzlab_core::manint::valleys_text(s("files"), s("window"), p["depth"].as_f64().unwrap_or(f64::NAN)).unwrap_or_else(|e| format!("E{}", e.to_json()))),
             "mrmdiff" => match mzlab_core::diffroute::mrm_diff(s("files"), s("ref"), &q()) {
                 None => text(""),

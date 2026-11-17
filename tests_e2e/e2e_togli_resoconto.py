@@ -1,6 +1,7 @@
 """The summary of a loading (CONVROWS.summary: partial reads, failures) goes with the files it describes: «Remove all files» leaves no box and raises
 none, removing one file drops only its line (the box with its last line), «Close» still clears it and a new loading shows a fresh one.
 Synthetic files only: one whole mzML and two cut short (a partial read each)."""
+# covers: mzlab/web/conversione.js, mzlab/web/lista-file.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import misura_lista_molti as mlm

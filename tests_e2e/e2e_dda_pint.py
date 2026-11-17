@@ -1,6 +1,7 @@
 """DDA file whose index gives no precursor intensity (a Thermo .raw; here a synthetic mzML with its `peak intensity` hidden, same bytes long):
-«Segui questo ione» and a row of the precursor list open the most intense MS2 of that precursor, the intensity read by the engine from the parent
+«Follow this ion in the MS2» and a row of the precursor list open the most intense MS2 of that precursor, the intensity read by the engine from the parent
 Full Scans (`/api/dda_window` with `mz`), the same MS2 a reading of each parent scan around the precursor gives, not just the first one."""
+# covers: mzlab/web/dda.js, crates/mzlab-core/src/ddafinestra.rs
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -41,7 +42,7 @@ try:
             wait_for_js(pg, "(()=>{const s2=E.panels.find(p=>p.type==='spec'&&p.ion!=null&&p.sid!=null);return s2&&s2._scan})()", 30000); ready(pg)
             got = pg.evaluate("(()=>{const s2=E.panels.find(p=>p.type==='spec'&&p.ion!=null&&p.sid!=null);return s2.sid})()")
             assert got == want["sid"], (got, want)
-        step("«Segui questo ione» opens the most intense MS2 of the precursor", follow)
+        step("«Follow this ion in the MS2» opens the most intense MS2 of the precursor", follow)
         def from_list():
             pg.evaluate("(()=>{const s2=E.panels.find(p=>p.type==='spec'&&p.ion!=null);s2.sid=null})()")
             pg.evaluate("E.tab='ms2'"); pg.evaluate("DDA.openList()"); pg.wait_for_selector("#ddatb tr[data-r]", timeout=20000)

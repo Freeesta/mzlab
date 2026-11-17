@@ -1,4 +1,5 @@
 """XIC panel at phone width: the header shrinks its m/z range fields (app.css hd-tight); no field runs under the «⋯», full-screen or close buttons, a focused field is in view."""
+# covers: mzlab/web/xic-bordi.js, mzlab/web/app.css
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -35,7 +36,8 @@ try:
             step(f"{w} px: no m/z field under the header buttons, each focused field in view", narrow)
         def wide():
             pg.set_viewport_size({"width": 1400, "height": 900}); frames(pg, 6)
-            assert pg.evaluate(f"{X}.el.querySelector('.hd input.mzf').offsetWidth") == 78, "the m/z field keeps its width when there is room"
+            pg.evaluate(f"{X}.el.querySelector('.hd .rngb').click()"); wait_for_js(pg, f"!!{X}.el.querySelector('.cpop [data-o=xlo]')?.offsetWidth")     # the edges live in the «Range» popover (#3181)
+            assert pg.evaluate(f"{X}.el.querySelector('.cpop [data-o=xlo]').offsetWidth") == 78, "the m/z field keeps its width when there is room"
         step("wide window: the m/z fields keep 78 px", wide)
     r.close()
 except Exception as e:

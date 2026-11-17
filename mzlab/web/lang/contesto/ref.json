@@ -1,0 +1,8 @@
+{
+  "ref.cap": "Notice when the table is truncated. {n} = maximum number of rows shown.",
+  "ref.count": "Count above the difference-from-reference table. {n} = rows shown, {tot} = rows that pass the filters, {all} = features in the table.",
+  "ref.ident.adduct": "Note in a cell: the row may be an adduct of the same molecule as another row. {as} = adduct of this row, {other} = ID of the other row, {oas} = adduct of the other row.",
+  "ref.ident.isf": "Note in a cell: the row may be an in-source fragment of another row. {loss} = formula of the neutral loss, {other} = ID of the other row.",
+  "ref.row.aria": "Screen-reader label of a table row. {id} = feature ID, {mz} = m/z, {rt} = retention time in minutes.",
+  "ref.sum": "Summary of the difference from the reference. {k} = kept, {d} = discarded, {thr} = threshold factor, {min} = minimum treated files above the threshold."
+}

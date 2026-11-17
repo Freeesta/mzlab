@@ -1,6 +1,7 @@
 """An Agilent MassHunter .D folder loaded with «Load a folder» (cartella-carica.js + agilent-d.js), on the built site with the Rust engine and WITHOUT Pyodide: the folder becomes one mzML (named like the folder), listed and indexed like any file, with its TIC; a .D without MSPeak.bin gives a notice;
 two .D folders give two files. Synthetic folders of tools/agilent_sintetico.py (no laboratory data).
 Needs the site and the .wasm: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm)."""
+# covers: mzlab/web/agilent-d.js, tools/agilent_sintetico.py, mzlab/web/rust-nativo, mzlab/web/nativo
 import os, shutil, struct, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -69,12 +70,12 @@ try:
         def damaged():
             r = pg.evaluate("() => { const r = CONVROWS.rows.find(r => r.name.startsWith('danno')); return r && { s: r.state, t: CONVROWS.label(r) }; }")
             assert r and r["s"] == "done", r
-            assert "1 of 30 scans damaged" in r["t"] or "1 di 30 scansioni danneggiate" in r["t"], r      # the scan left out stays in the list with no points
+            assert "1 of 30 scans damaged" in r["t"] or "1 of 30 scans danneggiate" in r["t"], r      # the scan left out stays in the list with no points
         step("the .D with one scan that does not decode loads, its row counts the scan left out", damaged)
         def badRecord():
             r = pg.evaluate("() => { const r = CONVROWS.rows.find(r => r.name.startsWith('guasto')); return r && { s: r.state, t: CONVROWS.label(r) }; }")
             assert r and r["s"] == "done", r
-            assert "29 of 30 scans, 1 damaged records left out" in r["t"] or "29 di 30 scansioni, 1 record danneggiati lasciati fuori" in r["t"], r
+            assert "29 of 30 scans, 1 damaged records left out" in r["t"], r
         step("the .D with a damaged index record loads, its row says the record left out (not a file that ends early)", badRecord)
         def tidy():
             pg.wait_for_function("document.querySelector('#cartinfo').hidden || !document.querySelector('#cartinfo').textContent", timeout=60000)       # «Folder …: n files to load» goes away when the load is done

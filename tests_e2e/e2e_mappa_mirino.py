@@ -1,6 +1,7 @@
 """Sight of the RT x m/z map (mirino.js + mappa.js), low and high resolution: the pointer moves fast and the page asks the engine little and only for
 what the point needs (one request at a time, the newest point wins), a preview is drawn at once and the exact spectrum / XIC replace it, no exact
 data of another point is ever drawn, a scan already visited is not asked again, and the final answer is the same as /api/nearest_scan + /api/spectrum + /api/xic."""
+# covers: mzlab/web/mappa-render.js, mzlab/web/mappa-margini.js, mzlab/web/mappa.js, mzlab/web/mirino.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, hr_variants

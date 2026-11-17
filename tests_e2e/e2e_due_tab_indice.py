@@ -2,6 +2,7 @@
 "mzlab-job:idx/<name>") instead of opening the same OPFS handle, which used to fail with NoModificationAllowedError, restart the engine and leave samples
 unread (LR_MISS, 501). The test stands in for the first tab by holding the locks itself, so it does not depend on timing.
 Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_due_tab_indice.py"""
+# covers: mzlab/web/archivio.js, mzlab/web/rust-worker.js, mzlab/web/idx-worker.js
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

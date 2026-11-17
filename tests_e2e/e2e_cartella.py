@@ -1,6 +1,7 @@
 """Loading a whole folder (cartella-carica.js) on the start screen, synthetic mzML only (no laboratory data, no Pyodide, dev server):
 the «Load a folder» input reads the subfolders too, ignores the unknown files with a summary (N files ignored), tells two equal names apart,
 and a dropped folder (simulated entries in the real drop handler) is read recursively as well."""
+# covers: mzlab/web/cartella-carica.js, mzlab/web/agilent-d.js
 import sys, os, base64, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pathlib import Path
 from lib import *
@@ -28,7 +29,7 @@ try:
             pg.set_input_files("#pickdir", str(top))
             pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=4", timeout=90000)
             n = sorted(names(pg)); assert n in (["a (altra).mzML", "a.mzML", "b.mzML", "c.mzML"], ["a (serie).mzML", "a.mzML", "b.mzML", "c.mzML"]), n
-            t = pg.inner_text("#cartinfo"); assert "serie" in t and "4" in t and "2 file ignorati" in t, t
+            t = pg.inner_text("#cartinfo"); assert "serie" in t and "4" in t and "2 files ignored" in t, t
             assert pg.is_visible("#cartinfo") and pg.get_attribute("#cartinfo", "role") == "status"
         step("folder input: subfolders read, 2 unknown files ignored with a summary, .log/.txt by-products not counted", folder)
         def dup():
@@ -47,11 +48,11 @@ try:
               document.getElementById('drop').dispatchEvent(ev); }""", b64)
             pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={before + 2}", timeout=90000)
             n = names(pg); assert "drop-A.mzML" in n and "drop-B.mzML" in n, n
-            t = pg.inner_text("#cartinfo"); assert "caduta" in t and "1 file ignorato" in t, t
+            t = pg.inner_text("#cartinfo"); assert "caduta" in t and "1 file ignored" in t, t
         step("dropped folder: read recursively through the drop handler", drop)
         def empty():
             pg.evaluate("CartCarica.load([new File(['x'],'solo.pdf')],'vuota')"); pg.wait_for_timeout(300)
-            t = pg.inner_text("#cartinfo"); assert "vuota" in t and "nessun file compatibile" in t, t
+            t = pg.inner_text("#cartinfo"); assert "vuota" in t and "no compatible file" in t, t
         step("a folder without compatible files says so", empty)
         def empty_d():
             t = pg.inner_text("#cartinfo"); assert ".D" in t and "Agilent" in t, t      # the message lists the Agilent .D folders among the accepted formats
@@ -59,8 +60,8 @@ try:
         def method_m():
             pg.evaluate("""CartCarica.load([CartCarica.setDir(new File(['x'], 'Acq.RTP.xml'), 'GC/Geosmin and MIB method for scan.m/'),
               CartCarica.setDir(new File(['x'], '7890Method.bin'), 'GC/Geosmin and MIB method for scan.m/'), CartCarica.setDir(new File(['x'], '.DS_Store'), 'GC/Geosmin and MIB method for scan.m/')], 'GC')""")
-            pg.wait_for_function("document.getElementById('cartinfo').textContent.includes('riconosciuto')", timeout=30000)
-            t = pg.inner_text("#cartinfo"); assert "Geosmin and MIB method for scan.m" in t and "nessun file compatibile" not in t and "ignorat" not in t, t
+            pg.wait_for_function("document.getElementById('cartinfo').textContent.includes('recognised')", timeout=30000)
+            t = pg.inner_text("#cartinfo"); assert "Geosmin and MIB method for scan.m" in t and "no compatible file" not in t and "ignored" not in t, t
             assert pg.evaluate("AgilentD.held.length") == 1 and pg.evaluate("AgilentD.held[0].files.length") == 2
         step("a .m method folder is recognised: neither «ignored» nor «no compatible file», its files are held", method_m)
         r.close()

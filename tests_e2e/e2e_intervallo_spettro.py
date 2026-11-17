@@ -1,5 +1,6 @@
 """Double click (mouse), double tap (touch) and Enter INSIDE the dragged range of a chromatogram open the averaged spectrum of that range in a new spectrum panel;
 outside the range or without one the old behaviour stays; selection beats zoom. Synthetic data only."""
+# covers: mzlab/web/eventi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -16,7 +17,7 @@ NS = "E.panels.filter(p => p.type === 'spec').length"
 try:
     with sync_playwright() as p:
         r.b = p.chromium.launch()
-        ctx = r.b.new_context(viewport={"width": 1024, "height": 1366}, has_touch=True, locale="it-IT")
+        ctx = r.b.new_context(viewport={"width": 1024, "height": 1366}, has_touch=True)
         pg = ctx.new_page(); pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(e){}")
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#pick", state="attached")

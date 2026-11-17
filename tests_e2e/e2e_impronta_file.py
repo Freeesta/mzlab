@@ -2,6 +2,7 @@
 here without the quota override of CDP so that it runs in every browser (WebKit = Safari). Two synthetic members (one of several 8 MiB pieces, one of
 less than a piece), with two workers (four cores) and with one: [sha256, sha1, probe] must be the engine's own `Passata` over the same bytes, SHA-256 and
 SHA-1 those of crypto.subtle, and the bytes told with `onRead` the size of the member. Needs the site with the engine .wasm (tools/prepara_sito.py)."""
+# covers: mzlab/web/impronta
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

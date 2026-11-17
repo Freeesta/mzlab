@@ -1,0 +1,4 @@
+{
+  "tour.passo": "Heading of the tour label; {n} = step number, {tot} = total steps of the chapter, {cap} = chapter title.",
+  "tour.annuncio": "Accessible announcement for screen readers when the step changes; {n} = step number, {tot} = total steps, {titolo} = step title."
+}

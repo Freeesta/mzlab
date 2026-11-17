@@ -55,6 +55,18 @@ pub fn flow_match(
     .map_err(|e| JsValue::from_str(&e))
 }
 
+/// The MGF of `spectra.lookup` (`mzlab_lib::flowmatch::lookup_json`, the function `flow run` calls): the entries of the library file that carry the value in the field `by`.
+/// The error is the JSON `{"error_key", "params"}` text.
+#[wasm_bindgen]
+pub fn flow_lookup(
+    params_json: &str,
+    library_name: &str,
+    library: &[u8],
+) -> std::result::Result<String, JsValue> {
+    mzlab_lib::flowmatch::lookup_json(params_json, (library_name, library))
+        .map_err(|e| JsValue::from_str(&e))
+}
+
 /// Total bytes of block cache for all the open libraries: 64 MB, 32 MB on iPad and phones (the one place is `mzlab_lib::read`).
 #[wasm_bindgen]
 pub fn total_cache_budget(small_device: bool) -> f64 {

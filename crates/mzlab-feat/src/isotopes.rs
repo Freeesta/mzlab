@@ -13,7 +13,7 @@ use mzlab_core::isoscore::fine_pattern;
 
 use crate::axis::half;
 use crate::table::{FileFeatures, FLAG_ISOTOPE};
-use crate::trace::filled;
+use crate::trace_base::filled;
 use mzlab_core::error::Result;
 
 const ELECTRON_PROTON: f64 = mzlab_core::elements::PROTON_6DP;

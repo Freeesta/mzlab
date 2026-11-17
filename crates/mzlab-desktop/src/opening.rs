@@ -11,6 +11,13 @@ use std::sync::Mutex;
 const FOLDER_ONLY: [&str; 1] = [".d"];
 /// Too generic to claim from the system (netCDF is also climate and model data): the dialog offers it, the associations do not.
 const NOT_ASSOCIATED: [&str; 1] = [".nc"];
+/// The SCIEX companion of a `.wiff`: opened through its `.wiff`.
+const WIFF_SCAN: &str = ".wiff.scan";
+/// The drawing file of the editor (Ketcher JSON): not data, it goes to the drawing editor and is not in the readers' registry.
+pub const DRAWING: &str = ".ket";
+/// Folder datasets the system can hand over (macOS «Open with», drag onto the icon, command line); no OS associates a folder, so they are not in `associated_extensions`.
+/// Waters `.raw` is a folder, Thermo `.raw` a file: the same name, told apart by what is on the disk (the readers also decide by content).
+const FOLDER_DATASETS: [&str; 2] = [".d", ".raw"];
 
 /// ONE source: the extensions of the readers' registry (`mzlab_lettori::estensioni()`, the same list the site's pickers get), without the folder-only ones.
 /// Lower case with the dot; a companion such as `.wiff.scan` is kept whole.
@@ -35,25 +42,46 @@ pub fn dialog_extensions() -> Vec<String> {
     v
 }
 
-/// The extensions registered as file associations (no dot, lower case, without repeats; companions such as `.wiff.scan` and compressed `.mzml.gz` are not associated): what `tauri.conf.json` must list.
+/// The extensions registered as file associations (no dot, lower case, without repeats): what `tauri.conf.json` must list.
+/// The OS sees only the last extension, so the companion `.wiff.scan` is registered as `scan` (weakest claim, never the default: see `plan_from_args`,
+/// which refuses a `.scan` that is not `.wiff.scan`); compressed `.mzml.gz` has no association of its own.
+/// Folder formats (Waters `.raw` folder, Agilent `.D`, Bruker `.d`) cannot be associated by any OS: they stay drag and drop / «Open».
 pub fn associated_extensions() -> Vec<String> {
     let mut v: Vec<String> = file_extensions()
         .into_iter()
-        .filter(|e| !NOT_ASSOCIATED.contains(&e.as_str()) && e.matches('.').count() == 1)
-        .map(|e| e.trim_start_matches('.').to_string())
+        .filter(|e| !NOT_ASSOCIATED.contains(&e.as_str()))
+        .filter(|e| e.matches('.').count() == 1 || e == WIFF_SCAN)
+        .map(|e| e.rsplit('.').next().unwrap_or_default().to_string())
         .collect();
+    v.push(DRAWING.trim_start_matches('.').to_string());
     v.sort();
     v.dedup();
     v
 }
 
-/// Does the path name a file (not a folder) whose name ends with an extension of the readers' registry?
-pub fn is_openable(p: &Path) -> bool {
-    let name = p
-        .file_name()
+fn lower_name(p: &Path) -> String {
+    p.file_name()
         .map(|n| n.to_string_lossy().to_ascii_lowercase())
-        .unwrap_or_default();
-    file_extensions().iter().any(|e| name.ends_with(e.as_str())) && p.is_file()
+        .unwrap_or_default()
+}
+
+/// Is it a drawing file (`.ket`) that exists?
+pub fn is_drawing(p: &Path) -> bool {
+    lower_name(p).ends_with(DRAWING) && p.is_file()
+}
+
+/// Is it a folder dataset (Waters `.raw`, Agilent `.D`, Bruker `.d`)?
+pub fn is_folder_dataset(p: &Path) -> bool {
+    let name = lower_name(p);
+    p.is_dir() && FOLDER_DATASETS.iter().any(|e| name.ends_with(e))
+}
+
+/// Does the path name something the app opens: a file whose name ends with an extension of the readers' registry, a folder dataset or a drawing?
+pub fn is_openable(p: &Path) -> bool {
+    let name = lower_name(p);
+    (file_extensions().iter().any(|e| name.ends_with(e.as_str())) && p.is_file())
+        || is_folder_dataset(p)
+        || is_drawing(p)
 }
 
 /// The files among the command line arguments (program name already removed); relative paths are taken from `cwd`. Options and anything else are ignored.
@@ -68,9 +96,80 @@ pub fn paths_from_args(args: &[String], cwd: Option<&Path>) -> Vec<PathBuf> {
         .collect()
 }
 
+/// What an opening from outside becomes: the files to queue and the names of the `.scan` files refused (the page says why, in the user's language: `predef.scan.needs.wiff`).
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct Plan {
+    pub files: Vec<PathBuf>,
+    pub refused: Vec<String>,
+}
+
+/// The file of `dir` whose name equals `name` ignoring case (the OS may hand over `X.WIFF.SCAN` while the folder holds `X.wiff`).
+fn sibling(dir: &Path, name: &str) -> Option<PathBuf> {
+    let want = name.to_lowercase();
+    std::fs::read_dir(dir).ok()?.flatten().find_map(|e| {
+        let p = e.path();
+        (e.file_name().to_string_lossy().to_lowercase() == want && p.is_file()).then_some(p)
+    })
+}
+
+/// What the system asked to open: `X.wiff.scan` is opened as the `.wiff` beside it (same folder, case-insensitive) together with itself, a `.wiff` takes its
+/// `.wiff.scan` along, a `.wiff.scan` without its `.wiff` and a `.scan` of another maker are refused with a message and nothing is opened for them.
+pub fn plan_from_paths(paths: impl IntoIterator<Item = PathBuf>) -> Plan {
+    let mut plan = Plan::default();
+    let add = |plan: &mut Plan, p: PathBuf| {
+        if !plan.files.contains(&p) {
+            plan.files.push(p);
+        }
+    };
+    for p in paths {
+        let name = p
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let low = name.to_lowercase();
+        let dir = p.parent().map(Path::to_path_buf).unwrap_or_default();
+        if low.ends_with(".scan") && p.is_file() {
+            if !low.ends_with(WIFF_SCAN) {
+                plan.refused.push(name);
+                continue;
+            }
+            let stem = &name[..name.len() - ".scan".len()];
+            match sibling(&dir, stem) {
+                Some(w) => {
+                    add(&mut plan, w);
+                    add(&mut plan, p);
+                }
+                None => plan.refused.push(name),
+            }
+        } else if low.ends_with(".wiff") && p.is_file() {
+            let scan = sibling(&dir, &format!("{name}.scan"));
+            add(&mut plan, p);
+            if let Some(s) = scan {
+                add(&mut plan, s);
+            }
+        } else if is_openable(&p) {
+            add(&mut plan, p);
+        }
+    }
+    plan
+}
+
+/// `paths_from_args` followed by `plan_from_paths`: the command line and the second launch use it.
+pub fn plan_from_args(args: &[String], cwd: Option<&Path>) -> Plan {
+    let cand = args
+        .iter()
+        .filter(|a| !a.starts_with('-'))
+        .map(|a| match cwd {
+            Some(c) => c.join(a),
+            None => PathBuf::from(a),
+        });
+    plan_from_paths(cand)
+}
+
 /// Files that arrived before the page could take them (cold start, or the window still loading): the page empties it with `take_opened`.
+/// Refused `.scan` names wait the same way, each once, so the page can say why in its language.
 #[derive(Default)]
-pub struct Pending(Mutex<Vec<PathBuf>>);
+pub struct Pending(Mutex<Vec<PathBuf>>, Mutex<Vec<String>>);
 
 impl Pending {
     pub fn push(&self, paths: impl IntoIterator<Item = PathBuf>) {
@@ -80,6 +179,19 @@ impl Pending {
                 g.push(p);
             }
         }
+    }
+
+    pub fn push_refused(&self, names: impl IntoIterator<Item = String>) {
+        let mut g = self.1.lock().unwrap_or_else(|e| e.into_inner());
+        for n in names {
+            if !g.contains(&n) {
+                g.push(n);
+            }
+        }
+    }
+
+    pub fn take_refused(&self) -> Vec<String> {
+        std::mem::take(&mut *self.1.lock().unwrap_or_else(|e| e.into_inner()))
     }
 
     pub fn take(&self) -> Vec<PathBuf> {

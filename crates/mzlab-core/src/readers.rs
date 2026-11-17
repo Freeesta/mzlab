@@ -54,6 +54,16 @@ pub struct Limits {
     pub byte: u64,
 }
 
+/// The refusal of `Limits::fits`: two params, out of line and cold, as it sits in every reader .wasm, each under its cap.
+#[cold]
+fn whole(held: u64, byte: u64) -> Error {
+    let mb = 1u64 << 20;
+    Error::memory_budget()
+        .with("fase", "whole")
+        .with("stima_mb", held.div_ceil(mb))
+        .with("budget_mb", byte / mb)
+}
+
 impl Limits {
     /// The browser: the floor of its budgets, 192 MB (`budget::WASM_BUDGET_MB`); a bigger budget changes the way (memory or slabs), not these limits.
     pub const fn sito() -> Limits {
@@ -77,6 +87,21 @@ impl Limits {
             byte: u64::MAX,
             ..Limits::sito()
         }
+    }
+    /// `want` bytes held at once: `error.memoryBudget` phase `whole` when they pass `byte` (a fixed limit of this target, not the memory left).
+    pub fn fits(&self, want: u64) -> Result<()> {
+        self.fits_in(want, self.byte)
+    }
+    /// The same when only `free` of `byte` are left (other members already held): `stima_mb` is then all that would be held.
+    #[inline(never)]
+    pub fn fits_in(&self, want: u64, free: u64) -> Result<()> {
+        if want <= free {
+            return Ok(());
+        }
+        Err(whole(
+            self.byte.saturating_sub(free).saturating_add(want),
+            self.byte,
+        ))
     }
     /// `n` entries asked by a file: an error with a key when they are more than the limit (and so never an allocation).
     pub fn ok_entries(&self, n: u64) -> Result<usize> {
@@ -246,7 +271,7 @@ pub trait Reader {
     /// The XWC band proposed from the DAD / PDA of sample `c` (JSON `{nm, bw, rt, n}`, `wiff::dad_uv::dad_propose_json`), if it has the optical matrix.
     #[rustfmt::skip]    fn dad_propose(&mut self, _c: usize, _rt0: f64, _rt1: f64) -> Result<Option<String>> { Ok(None) }
     /// The optical (DAD / PDA) matrix of sample `c` as the reader holds it, for `convert.mzml` with `dad`; `None` when the sample has none.
-    #[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
+    #[cfg(any(not(target_family = "wasm"), feature = "sciex", feature = "mappa-dad"))]
     fn dad_data(&mut self, _c: usize) -> Result<Option<crate::wiff::dad::DadData>> {
         Ok(None)
     }

@@ -1,6 +1,7 @@
 # e2e24: scheda Disegno without data files. The student's drawing is never erased (2.0), properties with the charge excluded (2.1),
 # default ion (2.2), SMILES of a selection, logP, the four exports (name, transparent background, JPEG state) (2.3).
 # Runs against the local server; with SITE=<built site dir> (tools/build_site.py) it runs on the browser version instead.
+# covers: mzlab/web/draw.js
 import os, sys, subprocess, time, re, io, zipfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -46,7 +47,7 @@ try:
             pg.fill("#ex-smi", "not a smiles((("); pg.click("#ex-load"); pg.wait_for_timeout(1200)
             assert pg.evaluate(STATS)["atoms"] == base["atoms"], "invalid SMILES changed the canvas"
             assert pg.is_visible("#smi-warn")
-        step("2.0 Disegna veloce adds next to the structures (Ctrl+Z removes only it); invalid SMILES changes nothing", quick_adds)
+        step("2.0 Quick draw adds next to the structures (Ctrl+Z removes only it); invalid SMILES changes nothing", quick_adds)
         def no_control_erases():
             n0 = pg.evaluate(STATS)["atoms"]
             def same(why): n = pg.evaluate(STATS)["atoms"]; assert n == n0, (why, n0, n)
@@ -75,26 +76,26 @@ try:
             acid = logp_of("CC(=O)O"); ac = logp_of("CC(=O)[O-]")
             assert acid and ac and acid[0][1] == ac[0][1] != "–", (acid, ac)
             assert pg.is_visible("#prop-neut") and pg.is_checked("#prop-neut"), "checkbox missing or not on"
-            assert "forma neutra" in pg.inner_text("#prop-body"), pg.inner_text("#prop-body")
+            assert "neutral form" in pg.inner_text("#prop-body"), pg.inner_text("#prop-body")
             assert ac[0][0].replace(" ", "") in ("C2H4O2",) or "C" in ac[0][0], ac
             pg.uncheck("#prop-neut"); pg.wait_for_timeout(1500); r2 = pg.evaluate(PROPS); assert r2[0][1] == "–", r2
             pg.check("#prop-neut"); pg.wait_for_timeout(1500)
             q = logp_of("C[N+](C)(C)C"); assert q and q[0][1] == "–", q
-            assert "carica permanente: non neutralizzabile" in pg.inner_text("#prop-body")
+            assert "permanent charge: cannot be neutralised" in pg.inner_text("#prop-body")
             na = logp_of("CC(=O)[O-].[Na+]"); assert len(na) == 1 and na[0][1] == acid[0][1], ("counter-ion kept?", na)
             nh = logp_of("C[NH3+]"); mn = logp_of("CN"); assert nh[0][1] == mn[0][1] != "–", (nh, mn)
             neu = logp_of("CC(=O)Nc1ccc(O)cc1"); assert not pg.is_visible("#prop-neut"), "checkbox shown without charge"
-            assert "forma neutra" not in pg.inner_text("#prop-body")
+            assert "neutral form" not in pg.inner_text("#prop-body")
         step("2.1 charged structures: neutral form (acetate = acetic acid, ammonium, counter-ion dropped, quaternary = message)", charge)
         def helptext():
             assert pg.locator("#prop-card .hq").count() == 0
-            assert "L'errore tipico" not in pg.inner_text("#prop-body")
+            assert "The typical mistake" not in pg.inner_text("#prop-body")
         step("2.1 the explanation is in the ? of the box, not inside it", helptext)
         # ---------------------------------------------------------------- 2.2 default ion
         def ion():
-            assert pg.locator("#lb-ion").count() == 0, "the Ione menu is gone"
+            assert pg.locator("#lb-ion").count() == 0, "the Ion menu is gone"
             pg.evaluate("(()=>{NB.labIon='[M+K]+';document.dispatchEvent(new Event('nbloaded'))})()"); pg.wait_for_timeout(300)     # an old notebook with labIon opens without errors, the value is ignored
-        step("2.2 no Ione menu; an old notebook with labIon opens fine", ion)
+        step("2.2 no Ion menu; an old notebook with labIon opens fine", ion)
         def smiles_clear():
             pg.fill("#ex-smi", "CC(=O)Nc1ccc(O)cc1"); pg.click("#ex-load"); pg.wait_for_timeout(2500)
             assert pg.input_value("#ex-smi") == "", "a valid SMILES is drawn and the field is emptied"
@@ -129,14 +130,14 @@ try:
         step("2.3 SMILES of the selection (rectangle, select all, partial, single click) and logP rows", selection)
         def logp_without_selection():
             pg.evaluate(KQ + ".editor.selection(null)"); pg.wait_for_timeout(1000)
-            assert pg.evaluate(PROPS) == [] and "Seleziona una molecola" in pg.inner_text("#prop-body")
+            assert pg.evaluate(PROPS) == [] and "Select a molecule" in pg.inner_text("#prop-body")
         step("2.3 logP box without selection: only the hint", logp_without_selection)
         def exports():
             setmol(pg, "CC(=O)Nc1ccc(O)cc1")
             def grab(fmt):
                 with pg.expect_download() as d: pg.click("#ex-" + fmt)
                 return d.value
-            pat = re.compile(r"^disegno_\d{4}-\d\d-\d\d_\d{4}(_trasparente)?(-\d)?\.(png|jpg|svg|ket)$")
+            pat = re.compile(r"^drawing_\d{4}-\d\d-\d\d_\d{4}(_transparent)?(-\d)?\.(png|jpg|svg|ket)$")
             ds = {f: grab(f) for f in ("png", "jpg", "svg", "ket")}
             names = {f: d.suggested_filename for f, d in ds.items()}; print(names)
             assert all(pat.match(n) for n in names.values()), names
@@ -154,27 +155,27 @@ try:
             assert again == names["png"].replace(".png", "-2.png") or (pat.match(again) and again != names["png"] and "-" not in again.split("_")[-1]), again
             # transparent
             pg.check("#ex-nobg"); pg.wait_for_timeout(300)
-            assert pg.is_disabled("#ex-jpg") and "trasparenza" in (pg.get_attribute("#ex-jpg", "title") or "")
+            assert pg.is_disabled("#ex-jpg") and "transparency" in (pg.get_attribute("#ex-jpg", "title") or "")
             assert pg.evaluate("getComputedStyle(document.getElementById('ex-jpg')).opacity") < "0.6"
-            assert pg.inner_text("label:has(#ex-nobg)").strip() == "Sfondo trasparente"
-            t = grab("png"); tn = t.suggested_filename; assert tn.endswith("_trasparente.png") or "_trasparente-" in tn, tn
+            assert pg.inner_text("label:has(#ex-nobg)").strip() == "Transparent background"
+            t = grab("png"); tn = t.suggested_filename; assert tn.endswith("_transparent.png") or "_transparent-" in tn, tn
             from PIL import Image
             im = Image.open(t.path()).convert("RGBA"); assert im.getpixel((2, 2))[3] == 0 and im.getpixel((im.width - 3, im.height - 3))[3] == 0, "PNG corners not transparent"
             ts = grab("svg"); txt = open(ts.path(), encoding="utf-8").read()
             assert not re.search(r'<rect[^>]*fill="(rgb\(100%, ?100%, ?100%\)|#fff(fff)?|white)"', txt), "SVG still has the white background rectangle"
             pg.uncheck("#ex-nobg"); pg.wait_for_timeout(300); assert not pg.is_disabled("#ex-jpg")
-            j = grab("jpg"); assert "trasparente" not in j.suggested_filename
+            j = grab("jpg"); assert "transparent" not in j.suggested_filename
             im = Image.open(j.path()).convert("RGB"); assert im.getpixel((2, 2)) == (255, 255, 255), im.getpixel((2, 2))
             # name field: odd characters
-            pg.fill("#ex-name", "Paracetamolo è TP 1/2:"); pg.press("#ex-name", "Tab"); pg.wait_for_timeout(200)
-            assert pg.input_value("#ex-name") == "paracetamolo_e_tp_1_2", pg.input_value("#ex-name")
-            assert grab("png").suggested_filename == "paracetamolo_e_tp_1_2.png"
-            pg.fill("#ex-name", ""); pg.press("#ex-name", "Tab"); assert re.match(r"^disegno_\d{4}", pg.input_value("#ex-name"))
-        step("2.3 exports: names (4 formats, _trasparente, -2, odd characters), PNG metadata, transparent PNG/SVG, JPEG grey when transparent", exports)
+            pg.fill("#ex-name", "Paracetamol is TP 1/2:"); pg.press("#ex-name", "Tab"); pg.wait_for_timeout(200)
+            assert pg.input_value("#ex-name") == "paracetamol_is_tp_1_2", pg.input_value("#ex-name")
+            assert grab("png").suggested_filename == "paracetamol_is_tp_1_2.png"
+            pg.fill("#ex-name", ""); pg.press("#ex-name", "Tab"); assert re.match(r"^drawing_\d{4}", pg.input_value("#ex-name"))
+        step("2.3 exports: names (4 formats, _transparent, -2, odd characters), PNG metadata, transparent PNG/SVG, JPEG grey when transparent", exports)
         def export_error():
             pg.evaluate("window.__g=TPDraw.image; ")                               # the error message path: force a failure
-            pg.evaluate("(()=>{const k=%s;k.generateImage=async()=>{throw new Error('prova')}})()" % KQ)
-            pg.click("#ex-svg"); pg.wait_for_timeout(1500); assert pg.is_visible("#ex-warn") and "Esportazione non riuscita" in pg.inner_text("#ex-warn")
+            pg.evaluate("(()=>{const k=%s;k.generateImage=async()=>{throw new Error('test')}})()" % KQ)
+            pg.click("#ex-svg"); pg.wait_for_timeout(1500); assert pg.is_visible("#ex-warn") and "Export failed" in pg.inner_text("#ex-warn")
         step("2.3 a failing export shows a visible message", export_error)
 finally:
     if r: r.close(); r.report()

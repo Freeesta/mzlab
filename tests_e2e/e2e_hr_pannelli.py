@@ -1,5 +1,6 @@
 """HR_PANNELLO 1: the panels of the drawer in the high-resolution world are compact: no clipped text at 1280, 1440 and 1680 px, one title (the one of the drawer),
 m/z, ppm and search in compact rows, the view switch of the reference lists as a small segmented control."""
+# covers: mzlab/web/banco.js, mzlab/web/liste.js, mzlab/web/elementare.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

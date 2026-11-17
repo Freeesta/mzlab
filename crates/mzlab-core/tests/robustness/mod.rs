@@ -328,7 +328,7 @@ pub fn cap(total: usize) -> usize {
 
 /// Runs every mutation of every member of `seme` (the other members unchanged) and returns the failures, one line each.
 pub fn corri(seme: &[(String, Vec<u8>)], text: &[bool], execute: Execute) -> (usize, Vec<String>) {
-    let (mut casi, mut guasti) = (0, Vec::new());
+    let (mut cases, mut guasti) = (0, Vec::new());
     let tracciato = std::env::var_os("ROBUSTEZZA_TRACCIA").is_some();
     for (i, (nome, base)) in seme.iter().enumerate() {
         for m in mutazioni(base, text[i]) {
@@ -339,11 +339,11 @@ pub fn corri(seme: &[(String, Vec<u8>)], text: &[bool], execute: Execute) -> (us
             if tracciato {
                 eprintln!("caso {label}");
             }
-            casi += 1;
+            cases += 1;
             guasti.extend(one(&label, total, Box::new(move || execute(&members))));
         }
     }
-    (casi, guasti)
+    (cases, guasti)
 }
 
 /// One case in a thread of its own: panic, hang (20 s), keys, memory and reads are judged against `totale`, the bytes of the input.
@@ -398,11 +398,11 @@ fn judge(label: &str, e: &Outcome, total: usize) -> Vec<String> {
 }
 
 /// The test passes when no case failed; the failures are listed (the first 25).
-pub fn verify(name: &str, casi: usize, guasti: &[String]) {
-    eprintln!("{name}: {casi} cases, {} failures", guasti.len());
+pub fn verify(name: &str, cases: usize, guasti: &[String]) {
+    eprintln!("{name}: {cases} cases, {} failures", guasti.len());
     assert!(
         guasti.is_empty(),
-        "{name}: {} failures in {casi} cases\n{}",
+        "{name}: {} failures in {cases} cases\n{}",
         guasti.len(),
         guasti
             .iter()

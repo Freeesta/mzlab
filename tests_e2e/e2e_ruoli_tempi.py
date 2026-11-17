@@ -1,5 +1,6 @@
 """Roles and times in the loading table (campioni/2): the role select (no t0 role: a sample at time 0 is the t0; one Blank only), the times read from the names (plain editable values,
 no strip, no warning, nothing to confirm: the files open as soon as they are read; a proposed cell carries the guess class until edited) and the negative time of the dark. Synthetic files with invented names."""
+# covers: mzlab/web/ruoli-carica.js, mzlab/web/ruoli-celle.js
 import sys, os, shutil, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
 lib.AUTO_TIMES = False

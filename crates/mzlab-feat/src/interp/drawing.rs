@@ -4,7 +4,7 @@
 
 use super::site::SiteReport;
 use crate::chem::graph::Mol;
-use crate::legacy::fragtree::Graph;
+use crate::finder_base::fragtree::Graph;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Zone {

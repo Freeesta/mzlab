@@ -25,15 +25,15 @@ pub(super) fn radiale(parent: &[Option<usize>], steps: &[usize], mz: &[f64]) -> 
     crate::sortc::any_by(&mut by_steps, |a, b| {
         steps[*b].cmp(&steps[*a]).then(a.cmp(b))
     });
-    let mut foglie = vec![0usize; n];
+    let mut leaves = vec![0usize; n];
     for &i in &by_steps {
-        foglie[i] = if figli[i].is_empty() {
+        leaves[i] = if figli[i].is_empty() {
             1
         } else {
-            figli[i].iter().map(|&f| foglie[f]).sum()
+            figli[i].iter().map(|&f| leaves[f]).sum()
         };
     }
-    let total: usize = radici.iter().map(|&r| foglie[r]).sum();
+    let total: usize = radici.iter().map(|&r| leaves[r]).sum();
     let mut out = vec![(0, 0.0); n];
     let mut pila: Vec<usize> = vec![];
     let mut start = 0;
@@ -44,10 +44,10 @@ pub(super) fn radiale(parent: &[Option<usize>], steps: &[usize], mz: &[f64]) -> 
     let mut cum = vec![0usize; n];
     for &r in &radici {
         cum[r] = start;
-        start += foglie[r];
+        start += leaves[r];
     }
     while let Some(i) = pila.pop() {
-        let mid = cum[i] as f64 + foglie[i] as f64 / 2.0;
+        let mid = cum[i] as f64 + leaves[i] as f64 / 2.0;
         let angolo = if radici.len() == 1 && parent[i].is_none() {
             0.0
         } else {
@@ -57,7 +57,7 @@ pub(super) fn radiale(parent: &[Option<usize>], steps: &[usize], mz: &[f64]) -> 
         let mut c = cum[i];
         for &f in &figli[i] {
             cum[f] = c;
-            c += foglie[f];
+            c += leaves[f];
             pila.push(f);
         }
     }

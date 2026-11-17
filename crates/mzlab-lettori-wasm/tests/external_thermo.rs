@@ -107,8 +107,8 @@ fn mzml(l: &mut dyn Reader) -> (u64, u64) {
 }
 
 /// Scan `k` and its header, from the external reader and from the linked one.
-fn same_scan(ext: &mut dyn Reader, diretto: &mut dyn Reader, k: usize, name: &str) {
-    let (a, b) = (ext.scan(0, k).unwrap(), diretto.scan(0, k).unwrap());
+fn same_scan(ext: &mut dyn Reader, direct: &mut dyn Reader, k: usize, name: &str) {
+    let (a, b) = (ext.scan(0, k).unwrap(), direct.scan(0, k).unwrap());
     assert_eq!(
         (
             a.index,
@@ -141,7 +141,7 @@ fn same_scan(ext: &mut dyn Reader, diretto: &mut dyn Reader, k: usize, name: &st
     );
     assert_eq!(
         ext.scan_header(0, k).unwrap(),
-        diretto.scan_header(0, k).unwrap(),
+        direct.scan_header(0, k).unwrap(),
         "{name}: header {k}"
     );
 }
@@ -154,40 +154,40 @@ fn the_external_reader_gives_what_the_linked_one_gives() {
         return;
     }
     for f in &files {
-        let mut diretto = (rawreader::ENTRY.apri)(set(f), &Limits::sito()).unwrap();
+        let mut direct = (rawreader::ENTRY.apri)(set(f), &Limits::sito()).unwrap();
         let mut s = Sessions::default();
         let h = s.insert(mzlab_lettori::open_bare(set(f), &Limits::sito()).unwrap());
         let mut ext = ExternalReader::new(ViaSession { s, h }).unwrap();
         let name = f.display();
-        assert_eq!(ext.format(), diretto.format(), "{name}");
-        assert_eq!(ext.samples(), diretto.samples(), "{name}");
-        let index = diretto.index(0).unwrap().to_vec();
+        assert_eq!(ext.format(), direct.format(), "{name}");
+        assert_eq!(ext.samples(), direct.samples(), "{name}");
+        let index = direct.index(0).unwrap().to_vec();
         assert_eq!(ext.index(0).unwrap(), &index[..], "{name}: index");
         let step = (index.len() / 20).max(1);
         for k in (0..index.len()).step_by(step) {
-            same_scan(&mut ext, &mut *diretto, k, &name.to_string());
+            same_scan(&mut ext, &mut *direct, k, &name.to_string());
         }
         assert_eq!(
             ext.chromatograms(0).unwrap(),
-            diretto.chromatograms(0).unwrap(),
+            direct.chromatograms(0).unwrap(),
             "{name}"
         );
         assert_eq!(
             ext.chromatogram(0, "TIC").unwrap(),
-            diretto.chromatogram(0, "TIC").unwrap(),
+            direct.chromatogram(0, "TIC").unwrap(),
             "{name}: TIC"
         );
         assert_eq!(
             ext.method(0).unwrap(),
-            diretto.method(0).unwrap(),
+            direct.method(0).unwrap(),
             "{name}: metodo/1"
         );
         assert_eq!(
             format!("{:?}", ext.mzml_header(0).unwrap()),
-            format!("{:?}", diretto.mzml_header(0).unwrap()),
+            format!("{:?}", direct.mzml_header(0).unwrap()),
             "{name}: header of the mzML"
         );
-        let (a, b) = (mzml(&mut ext), mzml(&mut *diretto));
+        let (a, b) = (mzml(&mut ext), mzml(&mut *direct));
         assert_eq!(a, b, "{name}: the mzML");
         eprintln!(
             "{name}: {} scans, mzML of {} bytes identical",

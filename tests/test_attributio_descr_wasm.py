@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from cargo_util import build
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
@@ -28,7 +29,7 @@ def run(*a, env=None):
 
 def test_native_and_wasm_descriptors_agree(tmp_path):
     out = tmp_path / "pkg"
-    run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-attributio-wasm", "--features", "rev")
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-attributio-wasm", "--features", "rev", runner=run)
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(out), "target/wasm32-unknown-unknown/release/mzlab_attributio_wasm.wasm")
     wasm = json.loads(run("node", "tests/attributio_descr_node.js", str(out), *SMILES))
     native_file = tmp_path / "native.json"

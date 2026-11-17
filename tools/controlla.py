@@ -25,9 +25,10 @@ BASE = indice.ROOT / "tools" / "soglie_base.json"
 MAX_FILE, MAX_FUNC = 500, 80
 MAX_DOC_LINE, MAX_DOC_BYTES = 600, 25 * 1024
 DOC_SKIP = {"mappa.md", "misure-diario.md"}
+SIZE_EXEMPT = {"INDICE.md"}   # a table with one row per area file (checked by gate_release.py): no 25 KB cap, the 600-character line cap stays
 NEAR_FILE, NEAR_DOC_BYTES = 475, int(23.5 * 1024)       # strong warning (never an error) before the limits: two parallel PRs may cross them together
 KINDS = ("file", "funzioni", "doc_righe", "doc_kb")
-LABEL = {"file": "file", "funzioni": "funzione", "doc_righe": "documento (righe lunghe)", "doc_kb": "documento (byte)"}
+LABEL = {"file": "file", "funzioni": "function", "doc_righe": "document (long lines)", "doc_kb": "document (bytes)"}
 SLACK = 0.10          # growth tolerated on an entry that is already over the limit
 SLACK_MIN = 10        # ... but at least this many lines
 HOT_MERGES, HOT_TOUCHES, HOT_FRACTION = 50, 5, 0.90      # a file touched by more than 5 of the last 50 merges is "hot": warn from 90% of its cap
@@ -57,7 +58,7 @@ def misura() -> dict[str, dict[str, int]]:
         n = sum(1 for line in raw.decode("utf-8", errors="replace").split("\n") if len(line) > MAX_DOC_LINE)
         if n:
             long_lines[rel] = n
-        if len(raw) > MAX_DOC_BYTES:
+        if len(raw) > MAX_DOC_BYTES and d.name not in SIZE_EXEMPT:
             big[rel] = len(raw)
     return {"file": files, "funzioni": funcs, "doc_righe": long_lines, "doc_kb": big}
 
@@ -89,7 +90,7 @@ def neighbors() -> list[str]:
             out.append(f"{f} has {n} lines (limit {MAX_FILE})")
     docs = [indice.ROOT / "CLAUDE.md"] + sorted((indice.ROOT / "docs" / "agenti").glob("*.md"))
     for d in docs:
-        if d.name in DOC_SKIP or not d.exists():
+        if d.name in DOC_SKIP or d.name in SIZE_EXEMPT or not d.exists():
             continue
         size = len(d.read_bytes())
         if NEAR_DOC_BYTES <= size <= MAX_DOC_BYTES:
@@ -114,7 +115,7 @@ def hot_neighbors(tocchi: dict[str, int]) -> list[str]:
     out = []
     for f, t in sorted(tocchi.items(), key=lambda x: -x[1]):
         p = indice.ROOT / f
-        if t <= HOT_TOUCHES or not p.is_file() or Path(f).name in DOC_SKIP:
+        if t <= HOT_TOUCHES or not p.is_file() or Path(f).name in DOC_SKIP | SIZE_EXEMPT:
             continue
         if f == "CLAUDE.md" or f.startswith("docs/agenti/") and f.endswith(".md"):
             if len(p.read_bytes()) >= HOT_FRACTION * MAX_DOC_BYTES:

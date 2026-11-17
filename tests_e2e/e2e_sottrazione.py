@@ -1,5 +1,6 @@
 """Subtraction of the reference (blank or t0): one command, the same difference on traces, spectrum and map; factor, clip, keyboard, × back to the raw data.
 Synthetic series SUB_t0/t10/t20: the parent (m/z 253.3, RT 5.2) falls, the product (301.3, RT 6.4) appears, a line at 150.2 is in every file, drift of 0.05 min, gain 1.3 at t20."""
+# covers: mzlab/web/sottrazione.js, mzlab/differenza.py, mzlab/web/pannelli.js, mzlab/web/fondo-piatto.js, mzlab/web/fondo.js, mzlab/web/grafici.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from synth import make_subtraction
@@ -15,7 +16,7 @@ MINS = "(()=>{const p=E.panels.find(q=>q.type==='%s'); return p&&p._a&&p._a.sr?O
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, files); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, files); pg.click("text=Load data"); ready(pg)
         pg.evaluate("E.browse=false; E.files.forEach(f=>f.vis=true); renderNav(); renderFileList(); redrawAll()"); ready(pg)
         assert pg.evaluate("E.files.length") == 3 and pg.evaluate("shown().length") == 3, pg.evaluate("[E.files.length, shown().length, E.browse]")
         pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:253.3,w:0.5,label:'m/z 253'}]})"); ready(pg)
@@ -28,10 +29,10 @@ try:
             m = pg.evaluate(MINS % "xic"); assert len(m) == 3 and all(v >= 0 for v in m.values()), m
         step("before: raw traces, no chip", raw)
         def cmd():
-            pg.keyboard.press("Control+k"); pg.keyboard.type("sottrai"); frames(pg, 3); pg.keyboard.press("Enter"); ready(pg); wait_for_js(pg, "document.querySelectorAll('.subchip').length >= 2")
+            pg.keyboard.press("Control+k"); pg.keyboard.type("subtract the reference"); frames(pg, 3); pg.keyboard.press("Enter"); ready(pg); wait_for_js(pg, "document.querySelectorAll('.subchip').length >= 2")
             assert pg.locator(".subchip").count() >= 2, pg.locator(".subchip").count()
             t = pg.locator(".subchip [data-s=pop]").first.inner_text()
-            assert "SUB_t0" in t and "(auto)" in t and "×" in t and "senza normalizzazione" in t, t
+            assert "SUB_t0" in t and "(auto)" in t and "×" in t and "not normalized" in t, t
         step("the palette command turns it on in every graph of the tab; the chip writes file, auto, factor, normalization", cmd)
         def auto():
             assert pg.evaluate("S.ref.k") == "auto" and pg.evaluate("SUBREF.eff(E.panels.find(q=>q.type==='xic')).file.file") == "SUB_t0.mzML"
@@ -83,10 +84,10 @@ try:
         def map_words():
             M = "E.panels.find(q=>q.type==='map')"
             leg = pg.evaluate(f"{M}.leg.textContent")
-            assert "▲" in leg and "▼" in leg and "campione" in leg and "riferimento" in leg and "rosso" not in leg, leg           # words and shapes, not only colours
+            assert "▲" in leg and "▼" in leg and "sample" in leg and "reference" in leg and "red" not in leg, leg           # words and shapes, not only colours
             assert pg.evaluate(f"!!{M}._a.ref") and "SUB_t0" in pg.evaluate(f"{M}.leg.textContent"), "the map starts as a difference from the reference of the session"
-            assert "arancio" in pg.evaluate("I18N.t('corr.file.mapdesc')")         # the colours are explained in the tooltip, not in the legend
-            for k in ("ctl.map.diff.title", "help.pnlMap.body"): assert "rosso" not in pg.evaluate(f"I18N.t('{k}')"), k
+            assert "orange" in pg.evaluate("I18N.t('corr.file.mapdesc')")         # the colours are explained in the tooltip, not in the legend
+            for k in ("ctl.map.diff.title", "help.pnlMap.body"): assert "red" not in pg.evaluate(f"I18N.t('{k}')"), k
         step("map difference: legend in words (▲ sample, ▼ reference), orange not red", map_words)
         def map_menu_and_explain():
             M = "E.panels.find(q=>q.type==='map')"; pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); frames(pg, 3)
@@ -105,7 +106,7 @@ try:
             assert d[0] is True and d[1] < 0 and d[3] < 0, d              # the parent has fallen: a bar down, the axis goes below zero
             assert pg.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--diff-pos').trim()") == "#D55E00"
             hov = pg.evaluate(f"(()=>{{const p={q}, a=p._a; const j=a.data[0].d.y.indexOf(Math.min(...a.data[0].d.y)); const h=a.hov(a.X(a.data[0].d.mz[j])); return h&&h.html}})()")
-            assert hov and "cala" in hov and "−" in hov, hov                 # the sign and the word in the tooltip, not only the colour
+            assert hov and "falls" in hov and "−" in hov, hov                 # the sign and the word in the tooltip, not only the colour
             sel = pg.evaluate(f"{q}.el.querySelector('[data-o=corr]').getAttribute('aria-label')")
             assert "SUB_t0" in sel, sel                                      # the «Correzione» menu starts from the reference of the session
         step("the spectrum is a mirror: up higher in the sample, down higher in the reference, sign in words, menu starts from the session", mirror)
@@ -133,7 +134,7 @@ try:
             m = pg.evaluate(MINS % "xic"); assert len(m) == 3 and all(v >= 0 for v in m.values()), m
         step("× goes back to the raw data", off)
         def saved():
-            pg.keyboard.press("Control+k"); pg.keyboard.type("sottrai"); frames(pg, 3); pg.keyboard.press("Enter"); ready(pg)
+            pg.keyboard.press("Control+k"); pg.keyboard.type("subtract the reference"); frames(pg, 3); pg.keyboard.press("Enter"); ready(pg)
             pg.evaluate("uiSave(true)"); wait_for_js(pg, "NB.ui.ref.on[E.tab] === true")
             assert pg.evaluate("NB.ui.ref.on[E.tab]") is True and pg.evaluate("NB.ui.ref.k") == "auto"
         step("the reference is saved with the session", saved)

@@ -1,4 +1,5 @@
 """Chromatogram header: Smoothing and Log buttons on the right, «Range» popover (m/z, RT) with a clear ×, «Correz.» menu with 4 entries and a file chooser."""
+# covers: mzlab/web/xic-bordi.js, mzlab/web/pannelli.js, mzlab/web/fondo.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import ds, load
@@ -18,7 +19,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(D / "B_FullMass-t0.mzML"), str(D / "B_FullMass-t60.mzML")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); ready(pg)
         X, C = ".pnl.xic", ".pnl.chrom"
         XP = "E.panels.find(p=>p.type==='xic')"
@@ -34,7 +35,7 @@ try:
             b.click(); wait_for_js(pg, f"{XP}.smooth === true")
         step("Smoothing: right-hand button, aria-pressed, effect on the trace, per panel", smooth)
         def log():
-            b = pg.locator(f'{X} .tbs [data-a=log]'); assert b.count() == 1 and b.get_attribute("aria-label") == "Scala logaritmica" and b.get_attribute("aria-pressed") == "false"
+            b = pg.locator(f'{X} .tbs [data-a=log]'); assert b.count() == 1 and b.get_attribute("aria-label") == "Logarithmic scale" and b.get_attribute("aria-pressed") == "false"
             assert pg.locator(f'{X} [data-o=log]').count() == 0, "no checkbox any more"
             b.click(); wait_for_js(pg, f"{XP}.log === true")
             assert b.get_attribute("aria-pressed") == "true" and pg.evaluate("E.panels.find(p=>p.type==='xic').log") is True
@@ -47,7 +48,7 @@ try:
             assert "smooth,log" in n and n.index("iauto") < n.index("smooth") and n.index("log") < n.index("dl"), n
         step("order …, integration, Smoothing, Log, …, download", order)
         def rng():
-            b = pg.locator(f'{X} [data-a=cpar]'); assert b.inner_text().strip() == "Intervallo" and "on" not in b.get_attribute("class").split()
+            b = pg.locator(f'{X} [data-a=cpar]'); assert b.inner_text().strip() == "Range" and "on" not in b.get_attribute("class").split()
             assert pg.locator(f'{X} [data-a=rngx]').count() == 0
             b.click(); pg.wait_for_selector(f'{X} .cpop [data-o=rt0]')
             pg.fill(f'{X} .cpop [data-o=rt0]', "1"); pg.fill(f'{X} .cpop [data-o=rt1]', "5"); pg.press(f'{X} .cpop [data-o=rt1]', "Enter"); wait_for_js(pg, f"{XP}.zoom != null && !!document.querySelector('.pnl.xic [data-a=rngx]')")
@@ -64,56 +65,56 @@ try:
         def corr():
             pg.click(f'{X} [data-o=corr]'); wait_for_js(pg, "!document.querySelector('.pnl.xic .corrm').hidden")
             it = pg.locator(f'{X} .corrg[data-g="0"] .corri'); assert it.count() == 2, it.count()          # «Da un file»: none + the file
-            assert pg.locator(f'{X} .corrg[data-g="1"] .corri').count() >= 3, "«Dal fondo» in the same menu"
+            assert pg.locator(f'{X} .corrg[data-g="1"] .corri').count() >= 3, "«From the background» in the same menu"
             assert pg.locator(f'{X} .corrm select').count() == 1, "one file chooser"
-            assert pg.locator(f'{X} .corri', has_text="Sottrai file").count() == 1
+            assert pg.locator(f'{X} .corri', has_text="Subtract file").count() == 1
             assert all(len(t) < 60 for t in pg.locator(f'{X} .corri .sm').all_inner_texts()), "one-line hints"
             pg.keyboard.press("Escape"); wait_for_js(pg, "document.querySelector('.pnl.xic .corrm').hidden"); assert pg.evaluate("document.querySelector('.pnl.xic .corrm').hidden")
-        step("Sottrazione menu: from a file (2 entries, one file chooser) and from the background, Esc closes", corr)
+        step("Subtraction menu: from a file (2 entries, one file chooser) and from the background, Esc closes", corr)
         def pick():
             exp = pg.evaluate("(()=>{const r=SUBREF.autoFile('full');return r.label})()")
             pg.click(f'{X} [data-o=corr]'); wait_for_js(pg, "!document.querySelector('.pnl.xic .corrm').hidden")
-            assert exp in pg.locator(f'{X} .corri', has_text="Sottrai file").get_attribute("aria-label"), "default = reference of the session (t0)"
+            assert exp in pg.locator(f'{X} .corri', has_text="Subtract file").get_attribute("aria-label"), "default = reference of the session (t0)"
             assert pg.eval_on_selector(f'{X} .corrsel', "s=>s.selectedOptions[0].textContent") == exp
             other = pg.eval_on_selector(f'{X} .corrsel', "s=>[...s.options].find(o=>!o.selected).value")
             pg.select_option(f'{X} .corrsel', other); wait_for_js(pg, f"{XP}.bk === {int(other)}"); ready(pg)
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').bk") == int(other)
             assert pg.locator(f'{X} .subchip').count() == 1 and "on" in pg.get_attribute(f'{X} [data-o=corr]', "class").split()
             assert pg.eval_on_selector(f'{X} .subchip', "c=>c.textContent").find(pg.evaluate(f"E.files[{other}].label")) >= 0, "the legend chip names the file"
-            pg.click(f'{X} [data-o=corr]'); pg.locator(f'{X} .corrg[data-g="0"] .corri', has_text="Nessuna").click(); wait_for_js(pg, f"{XP}.bk === ''")
+            pg.click(f'{X} [data-o=corr]'); pg.locator(f'{X} .corrg[data-g="0"] .corri', has_text="None").click(); wait_for_js(pg, f"{XP}.bk === ''")
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').bk") == ""
         step("Subtract file: default = session reference, choosing updates the chip", pick)
         def tlink():
-            b = pg.locator(f'{C} [data-a=tlink]'); assert b.get_attribute("aria-pressed") == "true" and "Collega zoom e cursore" in b.get_attribute("aria-label")
+            b = pg.locator(f'{C} [data-a=tlink]'); assert b.get_attribute("aria-pressed") == "true" and "Link zoom and cursor" in b.get_attribute("aria-label")
             b.click(); assert b.get_attribute("aria-pressed") == "false" and "on" not in b.get_attribute("class").split(); b.click()
         step("chromatogram link button: own icon, label and aria-pressed", tlink)
         def follow():
             pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom');newSpec(c,5,5.2,E.cur)})()"); ready(pg); pg.wait_for_selector(".pnl.spec .ppair.fol:has-text('\u2190')")
             S = ".pnl.spec"; fol = pg.locator(f'{S} .pnum + .ppair.fol', has_text="\u2190").first
-            assert fol.inner_text().strip().startswith("\u2190") and fol.get_attribute("aria-haspopup") == "menu" and "segue il pannello" in fol.get_attribute("aria-label")
+            assert fol.inner_text().strip().startswith("\u2190") and fol.get_attribute("aria-haspopup") == "menu" and "follows panel" in fol.get_attribute("aria-label")
             bb = fol.bounding_box(); assert bb["width"] >= 24 and bb["height"] >= 24 and len(fol.get_attribute("title")) <= 90, bb
             assert pg.locator(f'{S} .ctl .fol').count() == 0, "one follow control: the tag, not a toolbar button"
             fol.focus(); pg.keyboard.press("Enter"); wait_for_js(pg, "!document.getElementById('ctx').hidden")
-            t = pg.inner_text("#ctx"); assert "Nessuno (spettro fisso)" in t and "Pannello" in t, t
-            pg.locator("#ctx div", has_text="Nessuno").click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='spec').every(p=>!p.link)")
-            assert pg.evaluate("E.panels.filter(p=>p.type==='spec').every(p=>!p.link)") and pg.locator(f'{S} .ctl .fol').count() == 0 and "fisso" in pg.locator(f'{S} .ppair.fol', has_text="\u2298").first.get_attribute("aria-label")
-            pg.locator(f'{S} .fol').first.click(); pg.locator("#ctx div", has_text="Pannello").first.click(); wait_for_js(pg, "E.panels.some(p=>p.type==='spec'&&p.link)")
+            t = pg.inner_text("#ctx"); assert "None (fixed spectrum)" in t and "Panel" in t, t
+            pg.locator("#ctx div", has_text="None").click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='spec').every(p=>!p.link)")
+            assert pg.evaluate("E.panels.filter(p=>p.type==='spec').every(p=>!p.link)") and pg.locator(f'{S} .ctl .fol').count() == 0 and "fixed" in pg.locator(f'{S} .ppair.fol', has_text="\u2298").first.get_attribute("aria-label")
+            pg.locator(f'{S} .fol').first.click(); pg.locator("#ctx div", has_text="Panel").first.click(); wait_for_js(pg, "E.panels.some(p=>p.type==='spec'&&p.link)")
             assert pg.evaluate("E.panels.some(p=>p.type==='spec'&&p.link)")
         step("spectrum pair tag is the follow button: follows panel N, menu picks the chromatogram or «none» (fixed)", follow)
         def spcorr():
             S = ".pnl.spec"; pg.locator(f'{S} [data-o=corr]').first.click(); wait_for_js(pg, "!document.querySelector('.pnl.spec .corrm').hidden")
             n = (pg.locator(f'{S} .corrm').first.locator('.corri').count(), pg.locator(f'{S} .corrm').first.locator('select').count())
             assert n == (3, 1), n
-            pg.locator(f'{S} .corrm').first.locator('.corri', has_text="Fondo di un tratto").click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='spec').some(p=>p.bg==='w')")
+            pg.locator(f'{S} .corrm').first.locator('.corri', has_text="Background of a stretch").click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='spec').some(p=>p.bg==='w')")
             assert pg.evaluate("E.panels.filter(p=>p.type==='spec').some(p=>p.bg==='w')") and pg.locator(f'{S} [data-o=bw0]').count() == 1
-            pg.locator(f'{S} [data-o=corr]').first.click(); pg.locator(f'{S} .corrm').first.locator('.corri', has_text="Nessuna").click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='spec').every(p=>p.bg===''||p.bg==='x'||p.bg==null)")
+            pg.locator(f'{S} [data-o=corr]').first.click(); pg.locator(f'{S} .corrm').first.locator('.corri', has_text="None").click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='spec').every(p=>p.bg===''||p.bg==='x'||p.bg==null)")
             assert pg.evaluate("E.panels.filter(p=>p.type==='spec').every(p=>p.bg===''||p.bg==='x'||p.bg==null)")
-        step("spectrum Correzione: same menu as the chromatogram, without the baseline", spcorr)
+        step("spectrum Correction: same menu as the chromatogram, without the baseline", spcorr)
         def single():
             pg.evaluate("document.querySelector('.pnl.xic [data-o=corr]').click()")
             pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='xic');const keep=E.files;E.files=[keep[0]];window.__k=keep;ctl(p)})()"); frames(pg, 2)
             try:
-                b = pg.locator('.pnl.xic .corri', has_text="Sottrai file"); assert b.is_disabled() and b.get_attribute("title"), "disabled with a reason"
+                b = pg.locator('.pnl.xic .corri', has_text="Subtract file"); assert b.is_disabled() and b.get_attribute("title"), "disabled with a reason"
             finally:
                 pg.evaluate("(()=>{E.files=window.__k;ctl(E.panels.find(p=>p.type==='xic'))})()")
         step("with one file the Subtract entry is disabled with a reason", single)

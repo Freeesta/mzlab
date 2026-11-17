@@ -16,13 +16,9 @@ const LISTE = (() => {
     (lists || []).forEach((/** @type {Bag} */ L) => {
       if (!L) return;
       if (active && active[L.id] === false) return;
-      // the built-in list carries English names and classes (name_en, cls_en); the lists of the user are shown as written
-      const en = I18N.lang === "en";
       (L.items || []).forEach((/** @type {Bag} */ it) => {
-        const /** @type {Bag} */ x = { ...it, clsKey: it.cls, list: L.id, listName: (en && L.name_en) || L.name || L.id, listBuiltin: !!L.builtin };
-        if (en && it.name_en) x.name = it.name_en;
+        const /** @type {Bag} */ x = { ...it, clsKey: it.cls, list: L.id, listName: L.name || L.id, listBuiltin: !!L.builtin };
         if (it.series && it.series.n != null && typeof I18N !== "undefined") { x.baseName = String(x.name).replace(/ n=\d+$/, ""); x.name = I18N.t(it.series.n === 1 ? "lst.unitName.one" : "lst.unitName.many", { name: x.baseName, n: it.series.n }); }    // a polymer series is named by its repeat units, not by the bare «n=3» of the data
-        if (en && it.cls_en) x.cls = it.cls_en;
         if (it.pol !== -1) pos.push(x);
         if (it.pol !== 1) neg.push(x);
       });
@@ -120,7 +116,7 @@ const LISTE = (() => {
     return `<div class="cont"><div class="sm cont-h">${I18N.t("lst.compatible")}</div>${shown.map(row).join("")}${more > 0 ? `<div class="sm">${I18N.t("lst.more", { n: more })}</div>` : ""}</div>`;
   }
 
-  // CSV parsing: supports comma or semicolon, double quotes, Italian decimal comma (e.g. 150,5), NORMAN suspect lists
+  // CSV parsing: supports comma or semicolon, double quotes, decimal comma (e.g. 150,5), NORMAN suspect lists
   function csvSplit(/** @type {string} */ line, /** @type {string} */ sep) {
     const out = []; let cur = "", q = false;
     for (let i = 0; i < line.length; i++) {
@@ -315,6 +311,7 @@ const LISTE = (() => {
   const labRows = () => { const r = rd(KEY_ROWS, []); return Array.isArray(r) ? r.filter(x => x && x.mz > 0) : []; };
   const saveRows = (/** @type {Bag[]} */ rows) => { wr(KEY_ROWS, rows); reindex(); if (typeof redrawAll === "function") redrawAll(); };
 
+  // One short connection per operation, closed when its transaction ends: an idle one would block the reset's deleteDatabase.
   function idbOpen() {
     return new Promise(async res => {
       if (typeof indexedDB === "undefined") return res(null);
@@ -323,51 +320,29 @@ const LISTE = (() => {
         const { DB_NAME, DB_VER, upgrade } = await import("./qqq-db.js");
         const req = indexedDB.open(DB_NAME, DB_VER);
         req.onupgradeneeded = () => upgrade(req.result);
-        req.onsuccess = () => res(req.result);
+        req.onsuccess = () => { const db = req.result; db.onversionchange = () => db.close(); res(db); };
         req.onerror = () => res(null);
         req.onblocked = () => window.dispatchEvent(new Event("mzlab:db-blocked"));     // browser.js shows the same message as for the engine's own open
       } catch (_) { res(null); }
     });
   }
 
-  async function idbGetUserLists() {
+  async function idbRun(/** @type {IDBTransactionMode} */ mode, /** @type {(s: IDBObjectStore) => IDBRequest} */ fn) {
     const db = await idbOpen();
-    if (!db) return [];
-    return new Promise(res => {
-      try {
-        const t = db.transaction(IDB_STORE, "readonly");
-        const req = t.objectStore(IDB_STORE).getAll();
-        req.onsuccess = () => res(req.result || []);
-        req.onerror = () => res([]);
-      } catch (_) { res([]); }
-    });
+    if (!db) return undefined;
+    try {
+      return await new Promise(res => {
+        try {
+          const t = db.transaction(IDB_STORE, mode), r = fn(t.objectStore(IDB_STORE));
+          t.oncomplete = () => res(r.result);
+          t.onerror = t.onabort = () => res(undefined);
+        } catch (_) { res(undefined); }
+      });
+    } finally { db.close(); }
   }
-
-  async function idbSaveUserList(/** @type {Bag} */ list) {
-    const db = await idbOpen();
-    if (!db) return;
-    return new Promise(/** @param {(v?: any) => void} res */ res => {
-      try {
-        const t = db.transaction(IDB_STORE, "readwrite");
-        t.objectStore(IDB_STORE).put(list);
-        t.oncomplete = () => res();
-        t.onerror = () => res();
-      } catch (_) { res(); }
-    });
-  }
-
-  async function idbDeleteUserList(/** @type {string} */ id) {
-    const db = await idbOpen();
-    if (!db) return;
-    return new Promise(/** @param {(v?: any) => void} res */ res => {
-      try {
-        const t = db.transaction(IDB_STORE, "readwrite");
-        t.objectStore(IDB_STORE).delete(id);
-        t.oncomplete = () => res();
-        t.onerror = () => res();
-      } catch (_) { res(); }
-    });
-  }
+  const idbGetUserLists = async () => (await idbRun("readonly", s => s.getAll())) || [];
+  const idbSaveUserList = (/** @type {Bag} */ list) => idbRun("readwrite", s => s.put(list));
+  const idbDeleteUserList = (/** @type {string} */ id) => idbRun("readwrite", s => s.delete(id));
 
   // Per-list switches exist only when there are two or more lists (the built-in ones are Keller and the pesticides); a single list is always on, whatever an old stored choice says
   const activeMap = () => (ST.lists.length + ST.userLists.length < 2 ? {} : rd(KEY_LISTS, {}));
@@ -691,14 +666,14 @@ const LISTE = (() => {
       const allLists = [...ST.lists, ...ST.userLists];
       if (allLists.length < 2) {                              // one list only: a fixed title with its source, no switch
         const L = allLists[0];
-        elChecks.innerHTML = L ? `<b>${EH(noRef((I18N.lang === "en" && L.name_en) || L.name))}</b>` : "";
+        elChecks.innerHTML = L ? `<b>${EH(noRef(L.name))}</b>` : "";
         elChecksLbl.hidden = true;
       } else {
       elChecksLbl.hidden = false;
       elChecks.innerHTML = allLists.map(L => {
         const on = act[L.id] !== false;
         return `<label style="display:inline-flex;align-items:center;gap:3px;cursor:pointer">
-          <input type="checkbox" data-lid="${EH(L.id)}" ${on ? "checked" : ""}> <span>${EH(noRef((I18N.lang === "en" && L.name_en) || L.name))}</span>
+          <input type="checkbox" data-lid="${EH(L.id)}" ${on ? "checked" : ""}> <span>${EH(noRef(L.name))}</span>
         </label>`;
       }).join("");
       elChecks.querySelectorAll("input[data-lid]").forEach((/** @type {HTMLInputElement} */ chk) => {

@@ -20,7 +20,7 @@ build() { # <variant> <toolchain> <extra rustflags> <extra cargo flags>
     RUSTFLAGS="$BASE $rf" cargo +"$tc" build --locked --release --target wasm32-unknown-unknown $cf -p "$crate" "$@"
     wasm-bindgen --target web --no-typescript --out-dir "$work/$v/$name" "$R/$art.wasm"
     tools/wasm_opt.sh "$work/$v/$name/${art}_bg.wasm" 999999999 "$name/$v" @motore
-    rows="$rows$name $v $(stat -c %s "$work/$v/$name/${art}_bg.wasm")"$'\n'
+    rows="$rows$name $v $(wc -c < "$work/$v/$name/${art}_bg.wasm" | tr -d ' ')"$'\n'
   }
   one engine mzlab-wasm mzlab_wasm
   one hr mzlab-feat-wasm mzlab_feat_wasm --no-default-features --features "$HR"

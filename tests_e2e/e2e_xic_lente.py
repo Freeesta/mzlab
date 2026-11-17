@@ -1,5 +1,6 @@
 """V-5: lens of the spectrum (low and high resolution): hovering a peak shows the XIC of that ion (one file) with the same numbers as api/xic (E1), one request in
 flight and the last peak wins on a fast sweep, Esc closes, click or Enter makes it the XIC panel of the button, keyboard only, data table, axe, preference off."""
+# covers: mzlab/web/xic-spettro.js, mzlab/web/xic-lente.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -26,7 +27,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         K = pg.evaluate("E.files[0].k")
         pg.evaluate("window.__ok = XICBTN.lens.ok; XICBTN.lens.ok = () => true; 0")          # the lens belongs to HR MS1 spectra only: these steps check the lens itself on the low-resolution synthetic file, which has many peaks; the gate is checked apart
         pg.evaluate(TRACK)

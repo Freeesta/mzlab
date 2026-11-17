@@ -201,7 +201,46 @@ impl<T: Scratch> ExtentStore<T> {
         Ok(())
     }
 
+    /// The whole flushed stream in memory when it is at most `max` bytes (call `flush` first); `None` when it is larger or does not fit.
+    /// Random reads of many small records then cost no scratch call each (one per record in the browser, where every call crosses into JavaScript).
+    pub fn load_stream(&self, s: usize, max: u64) -> Result<Option<Vec<u8>>> {
+        let st = &self.streams[s];
+        if st.len > max {
+            return Ok(None);
+        }
+        let mut all: Vec<u8> = Vec::new();
+        if all.try_reserve_exact(st.len as usize).is_err() {
+            return Ok(None);
+        }
+        all.resize(st.len as usize, 0);
+        for &(ls, ps, l) in &st.extents {
+            let at = ls as usize;
+            self.t.read_at(ps, &mut all[at..at + l as usize])?;
+        }
+        Ok(Some(all))
+    }
+
     pub fn into_inner(self) -> T {
         self.t
+    }
+}
+
+#[cfg(test)]
+mod load_stream_tests {
+    use super::*;
+
+    #[test]
+    fn whole_stream_in_memory_equals_extent_reads() {
+        let mut st = ExtentStore::new(Vec::<u8>::new(), 2);
+        let a: Vec<u8> = (0..200_000u32).map(|v| (v % 251) as u8).collect();
+        st.append(0, &a[..70_000]).unwrap();
+        st.append(1, b"other stream").unwrap();
+        st.append(0, &a[70_000..]).unwrap();
+        st.flush_all().unwrap();
+        assert_eq!(st.load_stream(0, 1 << 20).unwrap().unwrap(), a);
+        assert!(st.load_stream(0, 1000).unwrap().is_none());
+        let mut buf = vec![0u8; 5000];
+        st.read_at(0, 69_000, &mut buf).unwrap();
+        assert_eq!(buf, a[69_000..74_000]);
     }
 }

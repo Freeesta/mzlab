@@ -1,5 +1,6 @@
 """Panel headers: no control paints over another at 1000/1280/1600/2000 px and on iPad (1024x768, 1366x1024, touch), for the MRM panel after an integration
 (its integration controls appear later and the «⋯» menu must take them into account) and for the chromatogram, spectrum, XIC and map of a full-scan file."""
+# covers: mzlab/web/mappa.js, mzlab/web/app.css, mzlab/web/pannelli.js
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -27,7 +28,7 @@ OVERLAP = r"""(() => { const bad = [];
 WIDTHS = [((1000, 900), False), ((1280, 900), False), ((1600, 1000), False), ((2000, 1100), False), ((1024, 768), True), ((1366, 1024), True)]
 
 def page(size, touch):
-    k = dict(viewport={"width": size[0], "height": size[1]}, locale="it-IT", reduced_motion="reduce")
+    k = dict(viewport={"width": size[0], "height": size[1]}, reduced_motion="reduce")
     if touch: k.update(has_touch=True, is_mobile=True)
     c = r.b.new_context(**k); c.add_init_script(SKIP)
     q = c.new_page(); q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#pick", state="attached"); ready(q)
@@ -41,7 +42,7 @@ def settled(q):
 def mrm(size, touch):
     q = page(size, touch)
     try:
-        q.set_input_files("#pick", [mz("B_MRM-t0"), mz("B_MRM-t5")]); hold(q, 1000); q.click("text=Carica dati"); ready(q)
+        q.set_input_files("#pick", [mz("B_MRM-t0"), mz("B_MRM-t5")]); hold(q, 1000); q.click("text=Load data"); ready(q)
         wait_for_js(q, "!!document.querySelector('.pnl.mrm canvas') && E.panels.some(p => p.type === 'mrm' && p._a)", 60000)
         q.evaluate("E.files.forEach(f => f.vis = true); syncBrowse(); redrawAll()"); ready(q)
         bad = settled(q); assert not bad, (size, "before integrating", bad)
@@ -59,7 +60,7 @@ def mrm(size, touch):
 def full(size, touch):
     q = page(size, touch)
     try:
-        q.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t5")]); hold(q, 1000); q.click("text=Carica dati"); ready(q)
+        q.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t5")]); hold(q, 1000); q.click("text=Load data"); ready(q)
         wait_for_js(q, "E.panels.some(p => p.type === 'chrom' && p._a) && E.panels.some(p => p.type === 'spec')", 60000)
         q.evaluate("(()=>{const f=E.files.find(x=>x.kind==='full');addPanel('xic',{tab:E.tab,traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}],x:0,y:700,w:hostWidth(),h:300,full:true});addPanel('map',{tab:'full',k:f.k,x:0,y:1020,w:hostWidth(),h:380,full:true});relayout();fitHost()})()")
         wait_for_js(q, "E.panels.some(p => p.type === 'xic') && E.panels.some(p => p.type === 'map')", 30000); ready(q)

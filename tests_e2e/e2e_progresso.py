@@ -1,5 +1,6 @@
 """One bar for every loading: loading a .mzML series and a SCIEX .wiff pair together, the bar of the loading card (role=progressbar in #up) only goes forward, is not 100 before the end, and the
 shares of the phases are printed (the weights of progresso.js); five small mzML: no row keeps the same percent for more than 400 ms unless it is queued. Synthetic data. Needs the site and the .wasm (python tools/build_site.py + the CI build). Run: python3 tests_e2e/e2e_progresso.py"""
+# covers: mzlab/web/idx-worker.js, mzlab/web/conversione.js, mzlab/web/progresso.js
 import os, shutil, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -74,9 +75,9 @@ try:
         def texts():
             tx = pg.evaluate("[...window.__tx]"); head = pg.evaluate("[...window.__head]"); print("   texts:", tx, "heads:", head[:3])
             import re
-            assert any(t.startswith(("Loading", "Carico")) for t in tx), tx
-            assert any(re.fullmatch(r"(Reading [\d.,\u00a0\u202f ]+ of [\d.,\u00a0\u202f ]+ scans|Leggo [\d.,\u00a0\u202f ]+ / [\d.,\u00a0\u202f ]+ scansioni)", t) for t in tx), tx      # the scans read of the sample, from the engine
-            assert any(re.fullmatch(r"(\d+ of \d+ ready|\d+ di \d+ pronti) · \d+:\d\d", h) for h in head), head
+            assert any(t.startswith(("Loading",)) for t in tx), tx
+            assert any(re.fullmatch(r"Reading [\d.,\u00a0\u202f ]+ of [\d.,\u00a0\u202f ]+ scans", t) for t in tx), tx      # the scans read of the sample, from the engine
+            assert any(re.fullmatch(r"\d+ of \d+ ready · \d+:\d\d", h) for h in head), head
         step("each row says what it does (Loading, Reading n of m scans) and the head says «k of n ready · m:ss»", texts)
         def live():
             assert pg.evaluate("window.__live") == 0, "no aria-live inside the list: only the summary region speaks"
@@ -109,7 +110,7 @@ try:
             for name, v in seen.items():
                 print("   ", name, [(t, pc, tx) for t, pc, tx in v])
                 for (t, pc, tx), (t2, pc2, tx2) in zip(v, v[1:]):
-                    queued = tx.startswith(("In coda", "Queued"))
+                    queued = tx.startswith(("Queued",))
                     if queued: assert "%" not in tx, (name, tx)                      # queued: no percent
                     assert queued or pc == 100 or pc2 != pc or t2 - t <= 400, (name, t, pc, tx, t2 - t)      # 100: read, waiting to open
         step("five mzML: no row stays at the same percent for more than 400 ms unless queued", no_stall)

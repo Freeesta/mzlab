@@ -1,0 +1,9 @@
+{
+  "xicbtn.n": "Tooltip of the XIC button with several overlaid files; {n} = number of files.",
+  "zoom.mz": "Text on the zoomed chart; {lo} and {hi} = ends in m/z.",
+  "zoom.rt": "Text on the zoomed chart; {lo} and {hi} = ends in minutes.",
+  "xicbtn.apex": "Line below the XIC created from the spectrum button; {rt} = apex RT (min), {y} = apex intensity.",
+  "xicbtn.ion.aria": "Accessible name of the ion label next to the XIC button; {ion} = ion and window (e.g. m/z 301.1410 ± 5 ppm).",
+  "xicbtn.picked": "Announcement after a peak is chosen in the spectrum; {ion} = ion and window.",
+  "xicbtn.pop.tol": "Label of the tolerance field; {unit} = ppm (high resolution) or Da (unit resolution)."
+}

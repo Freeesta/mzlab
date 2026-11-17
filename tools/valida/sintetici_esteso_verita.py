@@ -120,8 +120,8 @@ def document(c, seme: int, profilo: str, budget_mb: float) -> dict:
                        "formula_neutra": E.fmt(c.formule[0]), "alogeni": [], "regioni": []},
             "progenitori_alogenati": alog, "tps": tps, "righe_isomeri": rows_iso, "ereditati": inherited(c), "esche": decoys, "regole_ref": "regole_tp/2@fotocatalisi",
             "metriche_attese": contatori(c), "meta": {"seme": seme, "profilo": profilo, "budget_mb": budget_mb, "parametri": c.vx.P},
-            "note": "Sintetico: molecole e numeri inventati. `tps` ha un'entry per prodotto e una per gruppo di isomeri (id = numero nominale); `isf_di` = il prodotto coeluisce con l'ISF di quel composto; "
-                    "`raggiungibile_2_passi` = la variazione totale dal progenitore e' una o due regole della tabella (falso: serve la rete osservata); nessuna misura di velocita'."}
+            "note": "Synthetic: invented molecules and numbers. `tps` has one entry per product and one per isomer group (id = nominal number); `isf_di` = the product coelutes with the ISF of that compound; "
+                    "`raggiungibile_2_passi` = the total change from the parent is one or two rules of the table (false: the observed network is needed); no rate measurement."}
 
 
 def dividi(d: dict) -> tuple[dict, dict]:

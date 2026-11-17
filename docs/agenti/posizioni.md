@@ -1,6 +1,6 @@
 # Posizione della sostituzione (classi compatibili con la MS2)
 
-Codice: `crates/mzlab-feat/src/chem/positions.rs` e `posizioni/` (feature `chem`, sopra `grafo::Mol`); prove: `crates/mzlab-feat/tests/positions.rs` e `positions_prior.rs`. Il pannello «Substitution position» di Tabui (amministratore) sta in `TP_Mine/js/44_posizioni.js`; prova: `tests_e2e/e2e_posizioni.py`. Studio: `docs/studi/CHIMICA_COMPUTAZIONALE.md`.
+Codice: `crates/mzlab-feat/src/chem/positions.rs` e `posizioni/` (feature `chem`, sopra `grafo::Mol`); prove: `crates/mzlab-feat/tests/positions.rs` e `positions_prior.rs`. Il pannello «Substitution position» di Tabui (amministratore) sta in `TP_Mine/js/44_posizioni.js`; prova: `tests_e2e/e2e_posizioni.py`.
 
 ## Scopo
 - Dato un genitore (SMILES), una trasformazione e la MS2 osservata del TP, elenca gli atomi dove la modifica può stare, li raggruppa e dice quali gruppi lo spettro sostiene, esclude o non distingue. Non sceglie mai una posizione e non assegna livelli: `proposal.sublevel` è una proposta 3a/3b per il chimico (nessun campo si chiama `level`).
@@ -46,3 +46,7 @@ Codice: `crates/mzlab-feat/src/chem/positions.rs` e `posizioni/` (feature `chem`
 ## Limiti
 - Nessuna apertura d'anello, nessuna stereochimica; con risoluzione unitaria un m/z coincide per caso più spesso (tolleranza 0,5 Da). Convenzione dei frammenti = quella di `Mol::cleavages()` (ogni lato prende un H), non una previsione del meccanismo.
 - La stima di reattività (`prior`) si chiama «Prev.»: non riordina, non toglie classi e non entra in `proposal`.
+
+## Regole
+- **Prova e livelli**: la prova della posizione è la MS2 (un frammento che porta lo spostamento localizza il gruppo in quel pezzo). Il programma mostra le classi di posizioni che lo spettro non distingue (3a, o 3b se lo spettro non esclude nulla) come proposta e non ne sceglie una; nulla di computazionale sale a 2a o 2b (il 2b è del chimico). Posizioni equivalenti per simmetria sono un solo candidato; un frammento che nessuna rottura spiega è «non spiegato», né contro né a favore. La reattività è solo «Prev.» accanto alle classi: non le riordina e non toglie candidati.
+- **Confini**: solo Tabui e Attributio dietro `uipAdminOn()`, niente nel mondo LR degli studenti (Dati, Disegno, relazione). Nessun xtb, DFT o CREST nel browser, nessun RT o CCS previsto per scegliere l'isomero, nessun ML dei siti, nessuna stima dei siti del P450. Nessuna prova di laboratorio in programma: `hdx` e `ms3` di `posiz/1` restano controlli suggeriti dalla letteratura.

@@ -1,5 +1,5 @@
 //! The Flow table steps that do not fit the `table` module, in the browser (`.wasm` `flowtab`): `table.drift` (`mzlab_feat::flow_drift::drift_text`), `qc.run_order` (`mzlab_feat::runorder::runorder_text`),
-//! `report.methods` (`mzlab_feat::methods::methods_text`), `export.annotations` (`mzlab_feat::flow_export_annot`), `chrom.transitions` (`mzlab_feat::transitions`) and `features.group` (`mzlab_feat::ionnet`), the functions `flow run` calls.
+//! `report.methods` (`mzlab_feat::methods::methods_text`), `export.annotations` (`mzlab_feat::flow_export_annot`), `chrom.transitions` (`mzlab_feat::transitions`) and `features.group` (`mzlab_feat::ionnet`) and `table.plausible` (`mzlab_feat::plausible::plausible_text`), the functions `flow run` calls.
 //! Loaded by the page only when one of these steps runs.
 
 use mzlab_feat::flow_ms2::json_params;
@@ -98,4 +98,25 @@ pub fn flow_transitions(
     let cap = mzlab_core::budget::MemBudget::from_request(budget_mb).cap();
     mzlab_feat::transitions::transitions_packed(params_json, table, manifest, blob, cap)
         .map_err(crate::js_err)
+}
+
+/// The CSV of `chrom.uv_peaks` over the mzML files packed as `manifest` (JSON `[{"name","len"}]`) over their concatenated bytes `blob`, within `budget_mb`
+/// (0 = the default of the page). Errors are JSON `{"error_key","params"}` texts (`error.memoryBudget`, phase `read`; `err.pda.none`).
+#[wasm_bindgen]
+pub fn flow_uv_peaks(
+    params_json: &str,
+    manifest: &str,
+    blob: &[u8],
+    budget_mb: f64,
+) -> std::result::Result<String, JsValue> {
+    let cap = mzlab_core::budget::MemBudget::from_request(budget_mb).cap();
+    mzlab_feat::uv_text::uv_packed(params_json, manifest, blob, cap).map_err(crate::js_err)
+}
+
+/// The `plausible/1` text of `table` (the bytes of a `.mzfeat`); `params_json` is the step's parameters merged with its defaults (the limits of `plausible::Limits`).
+/// Errors are JSON `{"error_key","params"}` texts.
+#[wasm_bindgen]
+pub fn flow_plausible(params_json: &str, table: &[u8]) -> std::result::Result<String, JsValue> {
+    let params = json_params(params_json).map_err(crate::js_err)?;
+    mzlab_feat::plausible::plausible_text(&params, table).map_err(crate::js_err)
 }

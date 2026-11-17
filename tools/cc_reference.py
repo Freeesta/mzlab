@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Reference data for crates/mzlab-chem (tool only, never in the site).
 
-For the 20 public molecules of docs/studi/CC_MOTORE_NEL_BROWSER.md section 6: RDKit ETKDGv3 + MMFF94 geometry (seed 42) and tblite GFN2-xTB
+For the 20 public molecules of MOLS: RDKit ETKDGv3 + MMFF94 geometry (seed 42) and tblite GFN2-xTB
 charges of N, N+1 and N-1 electrons, in ALPB water and in the gas phase, with f(+) = q(N) - q(N+1) and f(-) = q(N-1) - q(N).
 Atoms are in the order of `mzlab_feat::chem::graph::Mol` (heavy atoms in SMILES order) followed by the hydrogens of each heavy atom in turn.
 

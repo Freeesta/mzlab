@@ -95,7 +95,7 @@ fn points(
     profilo: &mut Vec<u8>,
     rng: &mut Rng,
     (bin, len, amp, fudge): (u32, u32, f64, f32),
-    mut verita: Option<&mut Verita>,
+    mut truth: Option<&mut Verita>,
 ) {
     let w = len as f64 * 0.25;
     let c = (len - 1) as f64 * 0.5;
@@ -105,7 +105,7 @@ fn points(
         let noise = (rng.next() % 1000) as f64 * 0.5;
         let s = (amp / (q * q) + noise) as f32;
         profilo.extend_from_slice(&s.to_le_bytes());
-        if let Some(v) = verita.as_deref_mut() {
+        if let Some(v) = truth.as_deref_mut() {
             v.profilo.push((bin + j, s, fudge));
         }
     }
@@ -148,8 +148,8 @@ fn scan_header(
     out.extend_from_slice(&(ultimo_mz as f32).to_le_bytes());
 }
 
-/// Appends packet `k` of the case to `out`; `verita` collects the values written when a test wants them.
-pub fn packet(out: &mut Vec<u8>, p: &Parameters, k: usize, mut verita: Option<&mut Verita>) {
+/// Appends packet `k` of the case to `out`; `truth` collects the values written when a test wants them.
+pub fn packet(out: &mut Vec<u8>, p: &Parameters, k: usize, mut truth: Option<&mut Verita>) {
     let mut rng = Rng(p.seme ^ (k as u64).wrapping_mul(0xd6e8_feb8_6659_fd93));
     let n = p.peaks;
     let mut profilo = Vec::with_capacity(if p.with_profile { n * 44 + 24 } else { 0 });
@@ -176,7 +176,7 @@ pub fn packet(out: &mut Vec<u8>, p: &Parameters, k: usize, mut verita: Option<&m
                 &mut profilo,
                 &mut rng,
                 (bin, len, amp, fudge),
-                verita.as_deref_mut(),
+                truth.as_deref_mut(),
             );
         }
         let centre = bin as f64 + c;
@@ -197,7 +197,7 @@ pub fn packet(out: &mut Vec<u8>, p: &Parameters, k: usize, mut verita: Option<&m
         );
         let r = 60_000.0 + (rng.next() % 40_000) as f32;
         risol.extend_from_slice(&r.to_le_bytes());
-        if let Some(v) = verita.as_deref_mut() {
+        if let Some(v) = truth.as_deref_mut() {
             v.picchi.push((mz, abb));
             v.risoluzioni.push(r);
         }

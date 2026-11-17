@@ -1,6 +1,7 @@
 """«Liscia» / «Dettaglio» of the RT x m/z map (mappa.js, mappa-render.js): zoomed in, Liscia keeps the blob of a peak continuous (fewer horizontal stripes of one bin
 per m/z / scan than Dettaglio) at three zoom levels, snapshots in shots/; the choice is remembered; the values the sight reads do not depend on it;
 the cost of a splat and of a draw is printed and bounded."""
+# covers: mzlab/web/mappa-render.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

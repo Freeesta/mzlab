@@ -1,4 +1,5 @@
 """Disegno: extra Ctrl+Z with the focus outside the canvas raises no error box; the canvas menu is a keyboard menu and closes on a click or Esc inside the Ketcher frame."""
+# covers: mzlab/web/disegno-menu.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

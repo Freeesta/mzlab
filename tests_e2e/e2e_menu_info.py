@@ -1,6 +1,7 @@
-"""Disegno: «Informazioni…» of the canvas menu opens a dialog with the `sel/1` numbers of the Rust graph (formula, monoisotopic mass, average weight,
+"""Drawing: «Info…» of the canvas menu opens a dialog with the `sel/1` numbers of the Rust graph (formula, monoisotopic mass, average weight,
 rings with the aromatic ones, heavy atoms) and InChI/InChIKey from Indigo, for the whole drawing or the selected piece (with the note that open valences
 are filled with H); every copy button copies its own value, and the dialog has no serious axe violation."""
+# covers: mzlab/web/disegno-menu.js, mzlab/web/disegno-selezione.js
 import sys, os, re; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -30,23 +31,23 @@ try:
             wait_for_js(pg, f"document.querySelector('#bigdlg').open && document.querySelector('#bigtt').textContent === {title!r}", timeout=60000)
         cells = lambda: dict(pg.evaluate("[...document.querySelectorAll('#bigbody tr')].map(t => [t.querySelector('th').textContent, t.querySelector('td').textContent])"))
         def whole():
-            info(None, "Informazioni: tutto il disegno")
+            info(None, "Info: whole drawing")
             c = cells()
-            assert (c["Formula"], c["Massa monoisotopica"], c["Anelli"], c["Atomi pesanti"], c["Carica"]) == ("C8H8FNO", "153.05899", "1 (aromatici: 1)", "11", "0"), c
-            assert c["Peso molecolare medio"] == "153.16", c
-            assert "m/z (con la carica disegnata)" not in c and not pg.locator("#info-part").count()
+            assert (c["Formula"], c["Monoisotopic mass"], c["Rings"], c["Heavy atoms"], c["Charge"]) == ("C8H8FNO", "153.05899", "1 (aromatic: 1)", "11", "0"), c
+            assert c["Average molecular weight"] == "153.16", c
+            assert "m/z (charged as drawn)" not in c and not pg.locator("#info-part").count()
             wait_for_js(pg, "/^[A-Z]{14}-[A-Z]{10}-[A-Z]$/.test(document.querySelector('#info-inchikey').textContent)", timeout=60000)
             assert pg.inner_text("#info-inchi").startswith("InChI=1S/C8H8FNO/")
         step("whole drawing: formula, masses, rings and InChIKey of 4'-fluoroacetanilide", whole)
         def copies():
             pg.evaluate("window._cp = []")
             pg.locator("#bigbody tr:has(th:text-is('Formula')) button").click()
-            pg.locator("#bigbody tr:has(th:text-is('Massa monoisotopica')) button").click()
+            pg.locator("#bigbody tr:has(th:text-is('Monoisotopic mass')) button").click()
             pg.locator("#bigbody tr:has(th:text-is('InChIKey')) button").click()
             pg.locator("#bigbody tr:has(th:text-is('Molfile')) button").click()
             cp = pg.evaluate("window._cp")
             assert cp[:2] == ["C8H8FNO", "153.05899"] and re.match(r"^[A-Z]{14}-[A-Z]{10}-[A-Z]$", cp[2]) and "V2000" in cp[3], cp
-            assert pg.locator("#bigbody tr:has(th:text-is('Formula')) button").get_attribute("aria-label") == "Copia: Formula"
+            assert pg.locator("#bigbody tr:has(th:text-is('Formula')) button").get_attribute("aria-label") == "Copy: Formula"
         step("copy buttons copy formula, mass, InChIKey and molfile", copies)
         def axe_dlg():
             if not axe_path(): raise AssertionError("axe-core not available (pip install axe-playwright-python)")
@@ -56,10 +57,10 @@ try:
             pg.keyboard.press("Escape"); assert not pg.evaluate("document.querySelector('#bigdlg').open")
         step("axe: the dialog has no serious violation; Esc closes it", axe_dlg)
         def part():
-            info(0, "Informazioni: selezione")                            # the first bond: the methyl and the carbonyl carbon, open valences filled with H
+            info(0, "Info: selection")                            # the first bond: the methyl and the carbonyl carbon, open valences filled with H
             c = cells()
-            assert (c["Formula"], c["Anelli"], c["Atomi pesanti"]) == ("C2H6", "0 (aromatici: 0)", "2"), c
-            assert "valenze aperte" in pg.inner_text("#info-part")
+            assert (c["Formula"], c["Rings"], c["Heavy atoms"]) == ("C2H6", "0 (aromatic: 0)", "2"), c
+            assert "open valences" in pg.inner_text("#info-part")
         step("a selected bond: the numbers of the piece, with the note on the open valences", part)
 finally:
     r.close()

@@ -1,4 +1,4 @@
-"""Panel titles (mzlab/web/titoli.js): one naming scheme, every panel type x signal, IT and EN."""
+"""Panel titles (mzlab/web/titoli.js): one naming scheme, every panel type x signal, English."""
 import json
 import os
 import shutil
@@ -51,14 +51,11 @@ EXPECT = {
     "en": ["TIC · MS²", "TIC · MS² (all precursors)", "TIC · MS² · precursor 414.1", "MS² of 414.1", "TIC", "MS¹", "MRM", "MRM · 414.1>195.0",
            "DAD TWC", "XWC 254 nm", "XWC 250–260 nm", "UV spectrum", "My trace", "SIM · ion 1", "SIM · 305.1",
            "TIC · MS³", "TIC · MS³ (all precursors)", "TIC · MS³ · precursor 194.1", "MS³ of 194.1"],
-    "it": ["TIC · MS²", "TIC · MS² (tutti i precursori)", "TIC · MS² · precursore 414.1", "MS² di 414.1", "TIC", "MS¹", "MRM", "MRM · 414.1>195.0",
-           "DAD TWC", "XWC 254 nm", "XWC 250–260 nm", "Spettro UV", "My trace", "SIM · ione 1", "SIM · 305.1",
-           "TIC · MS³", "TIC · MS³ (tutti i precursori)", "TIC · MS³ · precursore 194.1", "MS³ di 194.1"],
 }
 
 
-@pytest.mark.parametrize("lang", ["it", "en"])
-def test_titles(lang):
+def test_titles():
+    lang = "en"
     code = JS % {"web": str(WEB), "titoli": str(WEB / "titoli.js")}
     out = subprocess.run(["node", "-e", code, lang, json.dumps(list(CASES.values()))], check=True, capture_output=True, encoding="utf-8", env=ENV).stdout
     assert json.loads(out) == EXPECT[lang]

@@ -1,4 +1,5 @@
 """MS2/Full scan: live spectrum under the chromatogram (double click), frozen older ones, group move, arrows (MS2: nearest scan with data), reload."""
+# covers: mzlab/web/legende.js, mzlab/web/affianca.js, mzlab/web/layout.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -12,7 +13,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t15", "B_MS2-t15", "B_MS2-t45"]])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # opened file by file: the view starts on the first file of the list
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # opened file by file: the view starts on the first file of the list
         def cx(x):   # screen point of RT x on the first chromatogram of the current tab
             return pg.evaluate("""x=>{const p=E.panels.find(q=>q.tab===E.tab&&q.type==='chrom');p.el.scrollIntoView({block:'start'});const r=p.cv.getBoundingClientRect();return {px:r.left+p._a.X(x),py:r.top+r.height*0.4}}""", x)
         order = lambda: pg.evaluate("E.panels.filter(p=>p.tab===E.tab).sort((a,b)=>a.y-b.y).map(p=>p.type+(p.link?'*':'')+(p.type==='spec'?'@'+(+((p.r0+p.r1)/2).toFixed(1)):''))")

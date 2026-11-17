@@ -1,4 +1,4 @@
-"""Study tool for docs/studi/STRUTTURA_DATO.md: what SMILES, molfile and InChI keep or lose on a small real set, and a round trip through the
+"""Study tool for the `mol/1` record (docs/agenti/mol.md): what SMILES, molfile and InChI keep or lose on a small real set, and a round trip through the
 proposed `mol/1` record (atoms, Kekulé bonds, explicit stereo with status). RDKit and Open Babel are references only (pip install rdkit
 openbabel-wheel); nothing here runs in the site. Usage: python3 tools/struttura_dato/confronto.py [--json OUT] [--molfiles DIR] [--composti CSV] [--golden OUT]"""
 

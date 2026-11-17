@@ -1,6 +1,7 @@
 """Tabui takes the files of an instrument directly: «Choose files...» accepts .wiff + .wiff.scan (and .raw) besides mzML. The Data tab prepares them (one copy in OPFS, the .mzidx v2, the bar of
 the phases), they appear in its list too, and Tabui receives the stubs as «Reload from Data» does: no mzML is written, no second archive, and «Reload from Data» afterwards does not rebuild any index.
 Synthetic pairs of tools/wiff_riferimento.py. Needs the site and the .wasm (python tools/build_site.py + the CI build). Run from the repo root: python3 tests_e2e/e2e_tpmine_diretto_nativo.py"""
+# covers: mzlab/web/progresso.js
 import shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright

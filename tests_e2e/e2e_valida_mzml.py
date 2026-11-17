@@ -13,18 +13,18 @@ try:
         pg = r.page(p)
         asked = []
         pg.on("request", lambda q: asked.append(q.url) if "wasm-lettori/" in q.url else None)
-        stage(pg, [EXAMPLE]); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, [EXAMPLE]); pg.click("text=Load data"); ready(pg)
         def menu_entry():
             if not pg.is_visible("#flst"): pg.click("#stbar [data-cmd=file]")
             pg.wait_for_selector("#flst .fl", state="visible"); pg.click("#flst .fl .nm", button="right")
-            pg.wait_for_selector("#ctx div:text-matches('Valida mzML|Validate mzML')", state="visible")
+            pg.wait_for_selector("#ctx div:text-matches('Validate mzML')", state="visible")
         step("the menu of the mzML file has «Validate mzML»", menu_entry)
         def report():
-            pg.click("#ctx div:text-matches('Valida mzML|Validate mzML')")
-            pg.wait_for_selector("#bigdlg[open] #bigbody table, #bigdlg[open] #bigbody p:text-matches('Nessun problema|No problem')", timeout=60000)
+            pg.click("#ctx div:text-matches('Validate mzML')")
+            pg.wait_for_selector("#bigdlg[open] #bigbody table, #bigdlg[open] #bigbody p:text-matches('No problem')", timeout=60000)
             t = pg.inner_text("#bigbody")
-            assert re.search(r"(Spettri|Spectra) 1110", t), t[:300]
-            assert re.search(r"(Errore|Error)", t) and pg.locator("#bigbody th[scope=col]").count() == 3, t[:300]
+            assert re.search(r"Spectra 1110", t), t[:300]
+            assert re.search(r"Error", t) and pg.locator("#bigbody th[scope=col]").count() == 3, t[:300]
             rows = pg.locator("#bigbody tbody tr").count()
             n = pg.evaluate("fetch('api/mzml_valida?name=FullScan_t10.mzML').then(r=>r.json()).then(j=>j[0].problems.length)")
             assert rows == n and rows > 0, (rows, n)

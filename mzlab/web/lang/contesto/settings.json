@@ -1,0 +1,15 @@
+{
+  "settings.libs.title": "Libraries loaded here; the search starts from the right-click on an MS2 spectrum (HR part).",
+  "settings.cen.ask": "Confirmation before creating the one-point-per-peak copies; {n} = number of files, {size} = maximum space, already formatted (e.g. 120 MB).",
+  "settings.cen.run": "Progress of the reduction: {n} = file in progress, {m} = total files, {name} = file name.",
+  "export.done": "Outcome of the data export: {name} = name of the downloaded file, {n} = number of files in the archive (manifest included).",
+  "import.ls": "Restore preview: {n} = settings entries in the file, {m} = how many differ from the current value.",
+  "import.idb": "Restore preview: {store} = name of the store (notebook, lists, molecules...), {n} = number of records in the file.",
+  "import.lib": "Restore preview: {n} = number of library files in the file.",
+  "import.partial": "Outcome of the restore: {n} = library files not written because they are in use.",
+  "settings.cen.done": "End of the reduction; {n} = copies created.",
+  "settings.cen.stopped": "Reduction cancelled by the user; {n} = copies already created.",
+  "settings.cen.fail": "Error on a file of the reduction; {name} = file name.",
+  "settings.mem.status": "Status line of the memory budget in the settings; {mb} = budget in MB, {scans} = approximate maximum scans, {reason} = reason for the choice, {conf} = reliability.",
+  "settings.mem.inputs": "Machine data used to choose the budget; {gb} = device memory in GB, {cores} = logical cores, {hard} = hard limit in MB."
+}

@@ -1,6 +1,6 @@
 //! The 2D optical (DAD / PDA) matrix of an mzML, read into the `DadData` the `.wiff` reader fills, so `/api/map?kind=pda`, `/api/uvspec` and
 //! `/api/uvxic` answer the same JSON for both. Two layouts: a `dad_matrix` array in the PDA `<chromatogram>`, or `<spectrum>` elements with
-//! `MS:1000804` (electromagnetic radiation spectrum). Used by `itemroutes`, through `dad_memo`: the matrix is read once per file, then every route slices it in memory.
+//! `MS:1000804` (electromagnetic radiation spectrum); the standard 1D `<chromatogram id="TWC">` (`MS:1000813`) fills the total-wavelength trace. Used by `itemroutes`, through `dad_memo`: the matrix is read once per file, then every route slices it in memory.
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
@@ -26,10 +26,26 @@ static HELD: Mutex<Held> = Mutex::new(Vec::new());
 impl<R: ReadAt> Mzml<R> {
     /// The optical matrix of the file, or `None` when it has no more than the 1D PDA trace.
     pub fn dad(&mut self) -> Result<Option<DadData>> {
-        if let Some(d) = self.dad_array()? {
-            return Ok(Some(d));
+        let tail = self.chrom_tail()?;
+        let from_tail = tail.as_deref().and_then(|t| {
+            arrays(t)
+                .into_iter()
+                .find(|(head, _)| head.contains("value=\"dad_matrix\""))
+                .and_then(|(head, data)| from_array(&head, data))
+        });
+        let Some(mut d) = (match from_tail {
+            Some(d) => Some(d),
+            None => self.dad_spectra()?,
+        }) else {
+            return Ok(None);
+        };
+        // the trace is kept only when it has one point per matrix row
+        if let Some(twc) = tail.as_deref().and_then(twc_trace)
+            && twc.len() == d.time_min.len()
+        {
+            d.twc_mau = twc;
         }
-        self.dad_spectra()
+        Ok(Some(d))
     }
 
     /// `dad()` read once per file: a click on the PDA trace or a new wavelength only slices the matrix in memory (the `MS:1000804` layout walks the whole file).
@@ -67,19 +83,14 @@ impl<R: ReadAt> Mzml<R> {
         Ok(h.finish())
     }
 
-    /// The `dad_matrix` array of a `<chromatogram>`; the chromatograms close the file, so only its tail is read.
-    fn dad_array(&mut self) -> Result<Option<DadData>> {
+    /// The file from `<chromatogramList` to the end (the chromatograms close the file, so only its tail is read), or `None` without one.
+    fn chrom_tail(&mut self) -> Result<Option<Vec<u8>>> {
         let mut n: u64 = 1 << 20;
         loop {
             let from = self.size.saturating_sub(n);
             let tail = self.read(from, self.size)?;
             if let Some(p) = find(&tail, b"<chromatogramList", 0) {
-                for (head, data) in arrays(&tail[p..]) {
-                    if head.contains("value=\"dad_matrix\"") {
-                        return Ok(from_array(&head, data));
-                    }
-                }
-                return Ok(None);
+                return Ok(Some(tail[p..].to_vec()));
             }
             if from == 0 {
                 return Ok(None);
@@ -135,6 +146,28 @@ fn user(head: &str, key: &str) -> Option<f64> {
     let k = format!("<userParam name=\"{key}\" value=\"");
     let s = head.find(&k)? + k.len();
     head[s..].split('"').next()?.trim().parse().ok()
+}
+
+/// The absorbance of the standard `<chromatogram id="TWC">` (`MS:1000813` / `MS:1000812`) in `list`.
+fn twc_trace(list: &[u8]) -> Option<Vec<f64>> {
+    let mut at = 0;
+    while let Some(a) = find(list, b"<chromatogram ", at) {
+        let b = find(list, b"</chromatogram>", a)?;
+        let block = &list[a..b];
+        at = b;
+        let h = text(&block[..find(block, b"<binaryDataArrayList", 0).unwrap_or(block.len())]);
+        if !(h.contains("id=\"TWC\"") || h.contains("MS:1000813") || h.contains("MS:1000812")) {
+            continue;
+        }
+        let mut y = None;
+        for (head, data) in arrays(block) {
+            if head.contains("MS:1000515") {
+                y = decode(&head, data, 0).ok();
+            }
+        }
+        return y.filter(|v| !v.is_empty());
+    }
+    None
 }
 
 /// A matrix of `nt` rows by `nl` columns on a uniform grid, or `None` when the shape does not fit the values.

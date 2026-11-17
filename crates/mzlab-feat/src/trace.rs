@@ -11,75 +11,24 @@ use std::sync::Arc;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 
-use crate::axis::MassAxis;
 use crate::broad_blank::BlankBank;
 use crate::broad_gt::{share, TraceBank};
 use crate::centwave::{self, Peak};
 use crate::channels::{segments, stitch};
 use crate::post::{finish, median_interval, Row};
 use crate::table::FileFeatures;
+use crate::trace_base::{reserve, BYTES_PER_PEAK};
+
+/// The old path of the memory base, which lives in `trace_base` so that the modules that only allocate do not depend on `trace`.
+pub use crate::trace_base::{FLOOR, MIN_HEIGHT, SLAB_PEAKS, TOUCH_HEIGHT};
+/// The old path of the parameters of the detection, which live in `trace_params` so that `channels`, `quality` and `centwave` do not depend on `trace`.
+pub use crate::trace_params::{Params, LONG_TRACE, MAX_GAP, MIN_POINTS};
 
 pub const CHANNEL_PPM: f64 = 4e-6;
-pub const FLOOR: f64 = 2e4;
-pub const MIN_HEIGHT: f64 = 2e5;
-pub const MIN_POINTS: u32 = 5;
-pub const LONG_TRACE: u32 = 400;
 /// Scans of a series for the common mode: the shortest trace that `TraceBank` counts as persistent.
 const PERSISTENT_SCANS: usize = 400;
-/// Scans a trace may miss between two of its points (0 = consecutive scans), as `gapfill::Params::max_gap`.
-pub const MAX_GAP: u32 = 1;
-pub const SLAB_PEAKS: usize = 1_500_000;
-pub const TOUCH_HEIGHT: f64 = 2e6;
 /// A slab never ends at a smaller gap (ppm) between neighbouring peaks.
 pub const SLAB_GAP_PPM: f64 = 50.0;
-/// Bytes of working memory per peak of a slab (m/z, intensity, scan, log m/z, channel, ...).
-pub(crate) const BYTES_PER_PEAK: usize = 64;
-
-#[derive(Clone)]
-pub struct Params {
-    /// Polarity of the MS1 scans (1 or -1); `None` = all the MS1 scans.
-    pub polarity: Option<i8>,
-    pub floor: f64,
-    pub min_points: u32,
-    pub min_height: f64,
-    /// Missed scans allowed between two points of a trace (0 = consecutive).
-    pub max_gap: u32,
-    pub long_trace: u32,
-    /// Two rows of different grids are one ion when their scans overlap by this share of the shorter one (0 = only the apex and edges test of `merge_grids`).
-    pub merge_overlap: f64,
-    /// Pieces of neighbouring channels join when they touch whatever their height, and pieces down to a quarter of `min_height` take part (`channels::stitch`).
-    pub stitch_wide: bool,
-    /// Noise rows of the unit profile: a row narrower than this share of the typical peak width of its file is dropped (0 = off, `lrnoise`).
-    pub min_width: f64,
-    /// A row whose apex is below this many times the noise of its flanks is dropped (0 = off, `lrnoise`).
-    pub min_snr: f64,
-    /// Axis of the channels of m/z (`Da` = unit resolution).
-    pub axis: MassAxis,
-    /// Working memory of the detection, bytes: it sets the size of the slabs (at most `SLAB_PEAKS` peaks).
-    pub budget: usize,
-    /// How the traces become peaks; only the wavelet model shows in the text of the recipe.
-    pub peak: Peak,
-}
-
-impl Default for Params {
-    fn default() -> Self {
-        Params {
-            polarity: Some(1),
-            floor: FLOOR,
-            min_points: MIN_POINTS,
-            min_height: MIN_HEIGHT,
-            max_gap: MAX_GAP,
-            long_trace: LONG_TRACE,
-            merge_overlap: 0.0,
-            stitch_wide: false,
-            min_width: 0.0,
-            min_snr: 0.0,
-            axis: MassAxis::Ppm,
-            budget: SLAB_PEAKS * BYTES_PER_PEAK,
-            peak: Peak::Minima,
-        }
-    }
-}
 
 impl Params {
     fn slab_peaks(&self) -> usize {
@@ -89,18 +38,6 @@ impl Params {
 /// True when the broad-band pass is on: a band longer than `long_trace` scans is then a peak, not background.
 fn broad_on(p: &Params) -> bool {
     matches!(&p.peak, Peak::CentWave(cw) if cw.broad.enabled)
-}
-
-pub(crate) fn reserve<T>(v: &mut Vec<T>, extra: usize) -> Result<()> {
-    v.try_reserve(extra).map_err(|_| Error::memory_budget())
-}
-
-/// `vec![value; n]` that refuses with `error.memoryBudget` instead of aborting when the allocation fails.
-pub(crate) fn filled<T: Clone>(n: usize, value: T) -> Result<Vec<T>> {
-    let mut v = Vec::new();
-    reserve(&mut v, n)?;
-    v.resize(n, value);
-    Ok(v)
 }
 
 /// One slab of peaks (m/z ascending, above the floor) through both grids.
@@ -176,8 +113,9 @@ pub fn detect_with<R: ReadAt>(
     p: &Params,
     progress: &mut dyn FnMut(usize, usize),
 ) -> Result<FileFeatures> {
-    if let Peak::Adap(a) = &p.peak {
-        return adap(index, p, a);
+    // the traces have no ADAP model: `detect_route` sends that recipe to `untargeted::flow`
+    if let Peak::Adap(_) = &p.peak {
+        return Err(Error::new("error.badRecipe"));
     }
     let Some(si) = index.section_of(1, p.polarity) else {
         return Ok(FileFeatures::default());
@@ -191,25 +129,6 @@ pub fn detect_with<R: ReadAt>(
         run_slab(slab, &rt, dt, p, &mut rows)
     })?;
     finish(rows, dt, p.axis, p.merge_overlap)
-}
-
-/// The ADAP route of `adap_localmin` (`untargeted::flow`); a build without the feature `untargeted` refuses the recipe.
-#[cfg(feature = "untargeted")]
-fn adap<R: ReadAt>(
-    index: &mut Index<R>,
-    p: &Params,
-    a: &crate::adap_peak::AdapPeak,
-) -> Result<FileFeatures> {
-    crate::untargeted::flow::detect(index, p, a)
-}
-
-#[cfg(not(feature = "untargeted"))]
-fn adap<R: ReadAt>(
-    _: &mut Index<R>,
-    _: &Params,
-    _: &crate::adap_peak::AdapPeak,
-) -> Result<FileFeatures> {
-    Err(Error::new("error.badRecipe"))
 }
 
 /// `detect_with` for a sample whose blank run `blank` is open in the same batch: with the pointwise blank option of the broad pass on, the traces of
@@ -369,17 +288,4 @@ fn common_mode_params<R: ReadAt>(
         c.broad.common = share(Some(cm));
     }
     Ok(Some(q))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::filled;
-
-    #[test]
-    fn filled_gives_the_vec_or_refuses_with_the_key() {
-        assert_eq!(filled(3, 7u8).unwrap(), vec![7, 7, 7]);
-        assert!(filled::<f64>(0, 0.0).unwrap().is_empty());
-        let e = filled::<u64>(usize::MAX / 16, 0).unwrap_err();
-        assert_eq!(e.key, "error.memoryBudget");
-    }
 }

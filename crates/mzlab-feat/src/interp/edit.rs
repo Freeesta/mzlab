@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 use mzlab_core::composition::isotope_ratios;
 use mzlab_core::elements::{parse_formula, Formula};
 
-use crate::legacy::series::Hyp;
+use crate::finder_base::series::Hyp;
 
 /// Relative deviation of the observed M+2/M from the expected one that still counts as consistent with the sulfur count.
 pub const M2_TOLERANCE: f64 = 0.30;

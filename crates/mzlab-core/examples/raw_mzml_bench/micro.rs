@@ -1,5 +1,5 @@
 //! The micro-benchmarks that give the ceilings of the roofline: each stage of the conversion alone, on arrays and packets of the three shapes
-//! (centroid list only, Fusion profile, dense profile), with nothing else running. `tmin` puts them in the formula of `RISPOSTE.md` §1.3.
+//! (centroid list only, Fusion profile, dense profile), with nothing else running. `tmin` puts them in the lower bound `T_min` of `main.rs`.
 use std::hint::black_box;
 use std::time::Instant;
 
@@ -209,13 +209,13 @@ fn compression() -> Value {
         "miniz_oxide"
     };
     let mut rows = Vec::new();
-    let casi = [
+    let cases = [
         ("lab-a-centroidi", "lab-a", true),
         ("lab-b-centroidi", "lab-b", true),
         ("lab-b-profilo", "lab-b", false),
         ("denso-profilo", "denso", false),
     ];
-    for (name, f, list) in casi {
+    for (name, f, list) in cases {
         let mut pk = Vec::new();
         packet(&mut pk, &shape(f), 0, None);
         let (mz, int) = array_f64_f32(&pk, list);

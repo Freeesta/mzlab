@@ -3,6 +3,7 @@ menu of the MRM panel has «UV spectrum at this RT», «TWC» and «Allinea»; a
 274 nm at compound A), moved back by the DAD → MS delay when «Allinea» is on; the «TWC» check draws the TWC on a right axis, with the hover and cursor
 readings and its column in the data table, survives a reload, and a file with no DAD offers none of it. axe on the menu and the table. WebKit-safe
 (mouse and keyboard only). Run from the repo root: python3 tests_e2e/e2e_dad_mrm_overlay.py"""
+# covers: tools/wiff_dad_mrm.py, mzlab/web/dad-mrm.js
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -36,7 +37,7 @@ def item(pg, label):
     pg.click(f"#ctx [role^=menuitem]:has-text('{label}')"); ready(pg)
 def load(pg, name):
     pg.set_input_files("#pick", [str(D / name), str(D / (name + ".scan"))])
-    wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=90000); pg.click("text=Carica dati"); ready(pg)
+    wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=90000); pg.click("text=Load data"); ready(pg)
     wait_for_js(pg, "E.files.length >= 1", timeout=120000); open_kind(pg, "mrm")
     wait_for_js(pg, f"!!{MRM} && !!{MRM}._a", timeout=60000)
 

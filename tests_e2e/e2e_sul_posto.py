@@ -2,6 +2,7 @@
 (the only thing written) is byte-identical to the one built from a copy, the page says so calmly, and after a reload a calm notice says to load it
 again while its index is removed. The page's storage.estimate() shows room for the index alone and the browser (CDP Storage.overrideQuotaForOrigin)
 refuses the copy halfway, as on a nearly full disk; the worker's own estimate does not see the override. Synthetic file (mzml_grande.py)."""
+# covers: mzlab/web/rust-sul-posto, mzlab/web/quota-lotto, mzlab/web/lettura-sync
 import sys, os, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import mzml_grande   # before lib: lib puts tools/ first on the path

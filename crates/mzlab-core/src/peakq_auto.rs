@@ -1,6 +1,6 @@
 //! One-click integration of every peak of a high-resolution XIC (`auto_integrate` of mzlab-wasm, `autoAll` of picchi.js): AsLS background,
 //! Savitzky-Golay smoothing scaled to the peak width, apexes from the prominence picking, edges walked out to the noise of the smoothed trace.
-//! The method won the benchmark of docs/studi/INTEGRAZIONE_PICCHI.md (tests/integration_bench.rs).
+//! The method won the benchmark of tests/integration_bench.rs (docs/agenti/dati-integrazione.md).
 
 use crate::peakq::{detect_prominence, ProminenceParams};
 use crate::peaks::{noise_level, savgol};
@@ -60,7 +60,7 @@ impl AutoParams {
 }
 
 /// The background (AsLS, lambda 1e7, raised to the median of the points within 3 noise of it) and the trace above it.
-fn background(y: &[f64], noise: f64) -> (Vec<f64>, Vec<f64>) {
+pub(crate) fn background(y: &[f64], noise: f64) -> (Vec<f64>, Vec<f64>) {
     let mut b = asls_baseline(y, 1e7, 0.01, 10, 160);
     let mut bg: Vec<f64> = y
         .iter()

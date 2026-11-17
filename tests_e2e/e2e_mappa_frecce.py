@@ -1,5 +1,6 @@
 """Arrows ◀ ▶ next to the file menu of the 2D map: the previous / next file of the list, the same reference (difference) and the same window; disabled (not hidden)
 when there is no file before / after; the reference is jumped. Three files (the third is a copy of the first under another name)."""
+# covers: mzlab/web/mappa-vicino.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

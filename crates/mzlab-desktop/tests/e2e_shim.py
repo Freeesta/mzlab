@@ -194,7 +194,7 @@ try:
             pg.wait_for_function("fetch('api/state').then(r => r.json()).then(s => !s.files.some(f => f.name === 'FullScan_t5.mzML'))", timeout=30000)
             assert not (DATA / "files" / "FullScan_t5.mzML").exists()
         step("a File of the page (no dialog) is sent to the app as bytes, and removing it removes the copy", dragged)
-        def demo():                                              # «Prova con i file di esempio»: the page fetches the demo mzML from its own bundle and sends them to the app as bytes
+        def demo():                                              # «Try the example files»: the page fetches the demo mzML from its own bundle and sends them to the app as bytes
             c3 = b.new_context(user_agent=ctx_ua); c3.add_init_script(FAKE_TAURI); c3.route(re.compile(r"http://mzlab\.localhost/.*"), native)
             pg3 = c3.new_page(); pg3.on("pageerror", lambda e: fails.append("pageerror " + str(e)[:200]))
             pg3.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); pg3.wait_for_function("window.MZLAB_RUST !== undefined && window.MZLAB_DESKTOP === true", timeout=120000)
@@ -211,7 +211,7 @@ try:
             pg4 = c4.new_page(); pg4.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); pg4.wait_for_function("window.MZLAB_DESKTOP === true", timeout=120000)
             pg4.evaluate("fetch('api/new', { method: 'POST', body: JSON.stringify({ fresh: true }) })"); pg4.reload(); pg4.wait_for_selector("#demobtn", timeout=120000)
             pg4.click("#demobtn"); pg4.click("[data-demo=mrm]")
-            pg4.wait_for_timeout(8000); pg4.wait_for_function("document.body.innerText.includes('non ha ricevuto')", timeout=60000)
+            pg4.wait_for_timeout(8000); pg4.wait_for_function("document.body.innerText.includes('did not receive the file')", timeout=60000)
             assert "Thermo" not in pg4.inner_text("body")
             c4.close()
         step("the demo files load in the app (fetched from the bundle, sent as bytes)", demo)
@@ -417,7 +417,7 @@ try:
             q.wait_for_selector("#drop", timeout=120000); q.click("#drop")
             q.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(LR_FILES)}", timeout=120000)
             q.evaluate("""async () => { await (await navigator.storage.getDirectory()).getDirectoryHandle('invented-work', { create: true });
-                localStorage.setItem('mzlab.mappa', '{"pal":"cividis"}'); localStorage.setItem('mzlab.lang', 'en'); localStorage.setItem('mzlab.prefs', '{"theme":"dark"}'); localStorage.setItem('mzlab.barra.lato', 'l') }""")
+                localStorage.setItem('mzlab.mappa', '{"pal":"cividis"}'); localStorage.setItem('mzlab.prefs', '{"theme":"dark"}'); localStorage.setItem('mzlab.barra.lato', 'l') }""")
             q.click("#opbtn"); q.wait_for_function(f"E.files.length >= {len(LR_FILES)}", timeout=120000)
             q.evaluate("window.__before = 1"); q.reload(); q.wait_for_function(running, timeout=120000)
             s = state(); assert "invented-work" in s["opfs"] and "mzlab.mappa" in s["ls"] and "mzlab.barra.lato" in s["ls"], s            # a reload in the same run keeps the work
@@ -425,9 +425,34 @@ try:
             s = state()
             assert s["files"] == 0 and "invented-work" not in s["opfs"], s
             assert "mzlab.mappa" not in s["ls"] and q.evaluate("localStorage.getItem('mzlab.barra.lato')") != "l", s["ls"]        # the page writes its own defaults again
-            assert q.evaluate("[localStorage.getItem('mzlab.lang'), localStorage.getItem('mzlab.prefs')]") == ["en", '{"theme":"dark"}'], "language and settings stay"
+            assert q.evaluate("localStorage.getItem('mzlab.prefs')") == '{"theme":"dark"}', "settings stay"
             c3.close()
-        step("a new run of the app starts clean (files, session, working choices); a reload of the same run keeps them; language and settings stay", cold_start)
+        step("a new run of the app starts clean (files, session, working choices); a reload of the same run keeps them; settings stay", cold_start)
+        def files_reset():
+            # «Files» in the app: the same run (no cold start after its reload), and the native store is cleared by the new page (?riparti=file) as the dialog
+            # says: the files go, the drawing in kv.json and the lists of the page stay
+            c5 = b.new_context(user_agent=ctx_ua); c5.add_init_script("window.__NEWRUN = true;\n" + FAKE_TAURI); c5.route(re.compile(r"http://mzlab\.localhost/.*"), native)
+            q = c5.new_page(); q.on("pageerror", lambda e: fails.append("pageerror " + str(e)[:200]))
+            running = "window.qqReady === true && sessionStorage.getItem('mzlab.run') === '1' && !window.__before"
+            q.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); q.wait_for_function(running, timeout=120000)
+            q.wait_for_selector("#drop", timeout=120000); q.click("#drop")
+            q.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(LR_FILES)}", timeout=120000)
+            q.click("#opbtn"); q.wait_for_function(f"E.files.length >= {len(LR_FILES)}", timeout=120000)
+            q.evaluate("""async () => { NB.ket = 'CCO'; await nbSave(true);
+                const { DB_NAME, DB_VER, upgrade } = await import(new URL('static/qqq-db.js', location.href).href);      // as the lists code opens it
+                const db = await new Promise((ok, no) => { const r = indexedDB.open(DB_NAME, DB_VER); r.onupgradeneeded = () => upgrade(r.result); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+                await new Promise((ok, no) => { const t = db.transaction('liste_utente', 'readwrite'); t.objectStore('liste_utente').put({ id: 'app-list', name: 'my list' }); t.oncomplete = ok; t.onerror = () => no(t.error); }); db.close(); }""")
+            urls = []; q.on("framenavigated", lambda f: urls.append(f.url) if f == q.main_frame else None)
+            q.evaluate("window.__before = 1; void QQRESET.run('files')")
+            q.wait_for_function(running + " && E.files.length === 0 && !location.search.includes('riparti')", timeout=120000)
+            assert [u for u in urls if "riparti=" in u] and all("riparti=file" in u for u in urls if "riparti=" in u), ("the new page finishes «Files», no cold start", urls)
+            assert q.evaluate(JSON, "api/state")["j"]["files"] == [], "the native store lists no file"
+            got = q.evaluate("""async () => { const db = await new Promise(ok => { const r = indexedDB.open(NOMI.DB); r.onsuccess = () => ok(r.result); });
+                const l = await new Promise(ok => { const g = db.transaction('liste_utente').objectStore('liste_utente').get('app-list'); g.onsuccess = () => ok(!!g.result); }); db.close();
+                const nb = JSON.parse(await (await fetch('api/notebook')).text() || '{}') || {}; return { list: l, ket: nb.ket || null, session: (nb.session || []).length }; }""")
+            assert got == {"list": True, "ket": "CCO", "session": 0}, ("the drawing and the list stay, the open-files list goes", got)
+            c5.close()
+        step("«Files» in the app: the native files go, the drawing and the lists stay, and the reload is not a new run", files_reset)
         b.close()
 finally:
     eng.kill(); page.shutdown(); shutil.rmtree(RAW_DIR, ignore_errors=True); shutil.rmtree(D_DIR.parent, ignore_errors=True); shutil.rmtree(MOD_DIR, ignore_errors=True)

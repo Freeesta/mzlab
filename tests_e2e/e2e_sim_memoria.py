@@ -2,6 +2,7 @@
 unticked and ticked again opens on ion B; with two samples ticked ion B applies to both; a sample removed and another one with ion B ticked opens on ion B; a sample
 of another list (no ion B) opens on the default, with no error. Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root:
 python3 tests_e2e/e2e_sim_memoria.py"""
+# covers: mzlab/web/tabs.js
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -20,7 +21,7 @@ def need(c, m): c or (_ for _ in ()).throw(AssertionError(m))
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, [D / "sim.wiff", D / "sim.wiff.scan", D / "sim_listab.wiff", D / "sim_listab.wiff.scan"]); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, [D / "sim.wiff", D / "sim.wiff.scan", D / "sim_listab.wiff", D / "sim_listab.wiff.scan"]); pg.click("text=Load data"); ready(pg)
         wait_for_js(pg, "E.files.length >= 6 && E.files.every(f => f.sim > 0)", timeout=120000)
         K = pg.evaluate("Object.fromEntries(E.files.map(f => [f.file, f.k]))")
         S1, S2, OTHER = K["sim_s1.mzML"], K["sim_s2.mzML"], K["B_T10.mzML"]

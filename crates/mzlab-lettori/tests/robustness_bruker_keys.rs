@@ -65,12 +65,28 @@ fn read_all(m: &[(String, Vec<u8>)]) -> Vec<String> {
 fn catalogue_text(key: &str) -> Option<String> {
     static CAT: OnceLock<String> = OnceLock::new();
     let cat = CAT.get_or_init(|| {
-        let p = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../mzlab/web/lang/en/errori.js");
-        std::fs::read_to_string(p).unwrap_or_default()
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join("mzlab/web/lang/en");
+        let mut names: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| {
+                p.file_name()
+                    .is_some_and(|n| n.to_string_lossy().starts_with("errori-"))
+            })
+            .collect();
+        names.sort();
+        names
+            .iter()
+            .map(|p| std::fs::read_to_string(p).unwrap_or_default())
+            .collect::<Vec<_>>()
+            .join("\n")
     });
     let at = cat.find(&format!("\"{key}\":"))? + key.len() + 3;
     let rest = cat[at..].trim_start().strip_prefix('"')?;
-    Some(rest[..rest.find("\",\n")?].to_string())
+    Some(rest[..rest.find("\",\n").or_else(|| rest.find("\"\n"))?].to_string())
 }
 
 fn hunt(name: &str, seed: &Members) {

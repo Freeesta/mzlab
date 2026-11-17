@@ -26,6 +26,11 @@ const BrukerD = {
   },
 };
 
+// «1.5 MB»: the size of a file seen, in the notice of a folder that is not whole
+const agSizeText = /** @type {(n: number) => string} */ n => n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " kB" : (n / 1048576).toFixed(1) + " MB";
+// what the browser gave for a folder, as the notice lists it (the first 30 entries), so «incomplete copy» can be told from a bug
+const agFoundText = /** @type {(r: { found: string[] }) => string} */ r => r.found.length ? r.found.slice(0, 30).join(", ") + (r.found.length > 30 ? ", ..." : "") : "-";
+
 const AgilentD = (() => {
   // the files of a run that the engine takes, by the name of its argument; scan and peak are required unless there is a data.ms (an older run)
   const NEED = { scan: "AcqData/MSScan.bin", peak: "AcqData/MSPeak.bin", xsd: "AcqData/MSScan.xsd", ts: "AcqData/MSTS.xml", devices: "AcqData/Devices.xml", contents: "AcqData/Contents.xml", tree: "AcqData/MSTree2.bin", acqmeth: "acqmeth.txt", datams: "data.ms", profile: "AcqData/MSProfile.bin", masscal: "AcqData/MSMassCal.bin", defcal: "AcqData/DefaultMassCal.xml", acqxml: "AcqData/AcqMethod.xml", sampleinfo: "AcqData/sample_info.xml", sequence: "AcqData/sequence.xml" };
@@ -45,12 +50,12 @@ const AgilentD = (() => {
     for (const f of files) {
       const loc = locate(f);
       if (!loc) { rest.push(f); continue; }
-      const r = runs.get(loc.root) || { name: loc.name, root: loc.root, files: {}, seen: new Set() };
+      const r = runs.get(loc.root) || { name: loc.name, root: loc.root, files: {}, seen: new Set(), found: [] };
       runs.set(loc.root, r);
-      r.seen.add(loc.rel.toLowerCase());
+      r.seen.add(loc.rel.toLowerCase()); r.found.push(loc.rel + " (" + agSizeText(f.size) + ")");
       const hit = Object.entries({ ...NEED, ...BrukerD.BRUKER }).find(([, rel]) => rel.toLowerCase() === loc.rel.toLowerCase()); if (hit) r.files[hit[0]] = f; else if (OTHER.test(loc.rel) && f.name[0] !== ".") r.files["x:" + loc.rel] = f;
     }
-    const list = [...runs.values()].map(r => ({ name: r.name, root: r.root, files: r.files, bruker: BrukerD.is(r), missing: BrukerD.is(r) ? BrukerD.missing(r) : r.files.datams ? [] : ["scan", "peak"].filter(k => !r.files[k] && !(k === "peak" && r.files.profile)).map(k => NEED[k]) }));
+    const list = [...runs.values()].map(r => ({ name: r.name, root: r.root, files: r.files, found: r.found, bruker: BrukerD.is(r), missing: BrukerD.is(r) ? BrukerD.missing(r) : r.files.datams ? [] : ["scan", "peak"].filter(k => !r.files[k] && !(k === "peak" && r.files.profile)).map(k => NEED[k]) }));
     return { runs: list, rest };
   }
 
@@ -87,7 +92,7 @@ const AgilentD = (() => {
     const taken = (ST.files || []).map(x => x.name);
     for (const r of runs) {
       if (r.bruker) BrukerD.toModulo(r, out, T, mzmlName(r, [...taken, ...out.files.map(f => f.name)]));
-      else if (r.missing.length) out.errs.push([T("err.file.notAgilentD", { name: r.name }), r.name]);
+      else if (r.missing.length) out.errs.push([T("err.file.notAgilentDList", { name: r.name, count: r.found.length, found: agFoundText(r) }), r.name]);
       else if (!rb || rb.disabled || !rb.nativeSamples) out.errs.push([T("err.file.agilentNoEngine", { name: r.name }), r.name]);
       else {
         // the folder is read as it is: its files are the members, a run is one sample

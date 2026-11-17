@@ -4,7 +4,7 @@
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
-  // v1 decision (FLOW_GRAFICA.md 13, easy to change): the goal of a chain is the step that grades an identification
+  // v1 decision (docs/agenti/flow-ux.md, easy to change): the goal of a chain is the step that grades an identification
   F.GOAL_STEPS = ["annot.level"];
 
   F.newPlan = () => ({ format: "mzflow/2", program: { name: "mzLab", version: String(/** @type {any} */ (globalThis).MZLAB_VERSION || "") }, inputs: [], steps: [] });

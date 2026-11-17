@@ -1,70 +1,71 @@
-# Accessibilità di mzLab (WCAG 2.1 AA)
+# mzLab accessibility (WCAG 2.1 AA)
 
-Questo documento riassume lo stato di conformità all'accessibilità (WCAG 2.1 livello AA, con estensioni mirate a WCAG 2.2 AA) dell'intera applicazione mzLab, i controlli automatici con axe-core, i test end-to-end con Playwright e i comandi di verifica per ciascuna area.
+This document summarizes the accessibility conformance status (WCAG 2.1 level AA, with targeted extensions to WCAG 2.2 AA) of the whole mzLab application, the automated checks with axe-core, the end-to-end tests with Playwright and the verification commands for each area.
 
 ---
 
-## 1. Sintesi dello stato di conformità
+## 1. Conformance summary
 
-- **Violazioni axe-core**: **zero violazioni critiche o gravi** (`impact: critical`, `impact: serious`) in tutte le viste coperte.
-- **Standard di riferimento**: WCAG 2.1 AA (e requisiti WCAG 2.2 AA selezionati: 2.5.7 Dragging Movements, 2.5.8 Target Size).
-- **Screen Reader di riferimento**: Apple VoiceOver (macOS, iPadOS, iOS); secondo controllo con NVDA (Windows).
-- **Tastiera e navigazione**:
-  - Tutti i comandi interattivi visibili sono raggiungibili tramite sequenza sequenziale `Tab` / `Shift+Tab`.
-  - Ogni elemento interattivo a fuoco mostra un indicatore visibile (outline o box-shadow ben contrastato tramite `:focus-visible`).
-  - Assenza di trappole da tastiera (`keyboard traps`).
-  - Il fuoco non cade mai sul `body`: un comando che toglie se stesso (× di una riga di «Estrai ioni», `e2e_xic_fuoco`) passa il fuoco alla riga vicina, anche dentro un dialogo modale. I dialoghi `#xicdlg` e `#bigdlg` hanno nome (`aria-labelledby`); i loro messaggi (`#xic-err`, `#ib-msg`) sono role=status nel dialogo, mai un toast dietro il modale.
-  - Tasto `Escape` chiude in modo consistente dialoghi, finestre modali, drawer, paletta comandi (`Ctrl+K`) e menu a comparsa.
-  - Etichette nei dialoghi (`app.css`; prova `e2e_finestre_etichette`, 1000-2000 px e iPad): solo i campi di testo occupano tutta la larghezza (`dialog input:where(:not([type=radio],[type=checkbox],…))`); radio e checkbox stanno prima del loro testo, in un'etichetta alta almeno 24 px; nelle sezioni `.pk-sec` la colonna delle etichette è larga quanto la più lunga (subgrid, al massimo 18rem) e il campo le sta accanto. Il dialogo della linea di base è largo al massimo 38rem.
-  - Impaginazione (`e2e_impaginazione`, dati sintetici, 1000/1280/1600/2000 px e iPad verticale e orizzontale, chiaro/scuro/alto contrasto, IT/EN): apre pannelli MRM e full scan (cromatogramma, spettro, XIC, mappa), ogni menu, pop-up e dialogo, e controlla dai riquadri: niente scorrimento laterale della pagina, controlli sovrapposti, tagliati o coperti, etichette staccate, testo con «…» senza testo intero, bersagli < 24 px, controllo col fuoco sotto l'intestazione. Maniglie di barre vicine condividono il posto; un interruttore in fondo alla riga è attaccato ad essa.
-  - Scorciatoie dedicate per navigazione senza trascinamento nei grafici (`+`, `-`, `[`, `]`, `0`).
-- **Contrasto cromatico (WCAG 1.4.3 & 1.4.11)**:
-  - Testo ordinario contro sfondo: rapporto di contrasto $\ge 4.5:1$ in modalità chiara, scura e sfondi facilitati (crema, azzurro).
-  - Modalità ad alto contrasto (`Alto contrasto` / `data-a11y-bg="hc"`): rapporto $\ge 7:1$ per testo e assi cartesiani.
-  - Elementi grafici e componenti dell'interfaccia: rapporto $\ge 3:1$.
-  - Palette per daltonismo: adozione della tavolozza universale Okabe-Ito (2008) per serie e livelli di identificazione (Level 1 `#0072B2`, Level 2a `#009E73`, Level 2b `#56B4E9`, Level 3/3a `#E69F00`, Level 3b `#D55E00`, Level 4 `#CC79A7`, Level 5 `#999999`, Level 0 `#BBBBBB`).
-  - Ridondanza dell'informazione: le serie nei grafici sono distinte anche da tratteggi (`stroke-dasharray`), e le zone di stabilità Mathieu del quadrupolo sono campite con tratteggi diagonali oltre al colore.
-- **Adattamento del layout e Reflow (WCAG 1.4.10)**:
-  - Supporto al reflow fino a 320 px CSS (equivalente a zoom 400% su viewport desktop standard) senza scorrimento orizzontale della pagina principale.
-- **Movimento ridotto (WCAG 2.3.3)**:
-  - Rispetto della media query `prefers-reduced-motion: reduce` e dell'impostazione manuale «Riduci animazioni»: animazioni e transizioni CSS disattivate o azzerate, spinner fermi, simulazioni fisiche avviate in pausa.
+- **axe-core violations**: **zero critical or serious violations** (`impact: critical`, `impact: serious`) in all the covered views.
+- **Reference standard**: WCAG 2.1 AA (and selected WCAG 2.2 AA requirements: 2.5.7 Dragging Movements, 2.5.8 Target Size).
+- **Reference screen reader**: Apple VoiceOver (macOS, iPadOS, iOS); second check with NVDA (Windows).
+- **Keyboard and navigation**:
+  - All visible interactive controls are reachable with the sequential `Tab` / `Shift+Tab` order.
+  - Every focused interactive element shows a visible indicator (outline or well-contrasted box-shadow via `:focus-visible`).
+  - No keyboard traps.
+  - Focus never lands on `body`: a control that removes itself (× of a row of "Extract ions", `e2e_xic_fuoco`) passes focus to the neighboring row, even inside a modal dialog. The dialogs `#xicdlg` and `#bigdlg` have a name (`aria-labelledby`); their messages (`#xic-err`, `#ib-msg`) are role=status in the dialog, never a toast behind the modal.
+  - The `Escape` key consistently closes dialogs, modal windows, drawers, the command palette (`Ctrl+K`) and pop-up menus.
+  - Labels in dialogs (`app.css`; proof `e2e_finestre_etichette`, 1000-2000 px and iPad): only text fields take the full width (`dialog input:where(:not([type=radio],[type=checkbox],…))`); radios and checkboxes come before their text, in a label at least 24 px tall; in the `.pk-sec` sections the label column is as wide as the longest one (subgrid, at most 18rem) and the field sits beside it. The baseline dialog is at most 38rem wide.
+  - Layout (`e2e_impaginazione`, synthetic data, 1000/1280/1600/2000 px and iPad portrait and landscape, light/dark/high contrast, IT/EN): opens MRM and full scan panels (chromatogram, spectrum, XIC, map), every menu, pop-up and dialog, and checks from the bounding boxes: no sideways page scrolling, overlapping, clipped or covered controls, detached labels, text with "…" without full text, targets < 24 px, a control with focus under the header. Handles of nearby bars share the space; a switch at the end of the row is attached to it.
+    - Duration: ~180 s locally (MRM 129 s, full scan 50 s); own limit of 420 s in `CAP_PROPRIO` of `tools/verifica.py` (the round of changed files gives it 150).
+  - Dedicated shortcuts for navigation without dragging in the charts (`+`, `-`, `[`, `]`, `0`).
+- **Color contrast (WCAG 1.4.3 & 1.4.11)**:
+  - Ordinary text against background: contrast ratio $\ge 4.5:1$ in light mode, dark mode and eased backgrounds (cream, light blue).
+  - High-contrast mode (`High contrast` / `data-a11y-bg="hc"`): ratio $\ge 7:1$ for text and Cartesian axes.
+  - Graphical elements and interface components: ratio $\ge 3:1$.
+  - Palette for color blindness: adoption of the universal Okabe-Ito palette (2008) for series and identification levels (Level 1 `#0072B2`, Level 2a `#009E73`, Level 2b `#56B4E9`, Level 3/3a `#E69F00`, Level 3b `#D55E00`, Level 4 `#CC79A7`, Level 5 `#999999`, Level 0 `#BBBBBB`).
+  - Information redundancy: series in the charts are also distinguished by dashes (`stroke-dasharray`), and the quadrupole Mathieu stability zones are filled with diagonal hatching in addition to color.
+- **Layout adaptation and Reflow (WCAG 1.4.10)**:
+  - Reflow support down to 320 CSS px (equivalent to 400% zoom on a standard desktop viewport) without horizontal scrolling of the main page.
+- **Reduced motion (WCAG 2.3.3)**:
+  - Respect for the `prefers-reduced-motion: reduce` media query and for the manual "Reduce animations" setting: CSS animations and transitions disabled or zeroed, spinners stopped, physics simulations started paused.
 - **Touch target (WCAG 2.5.8)**:
-  - Bersagli di tocco e controlli pannello di dimensione minima pari ad almeno 24×24 px (con espansione a 40–44 px su dispositivi touch/coarse pointer).
+  - Touch targets and panel controls of a minimum size of at least 24×24 px (expanding to 40–44 px on touch/coarse pointer devices).
 
 ---
 
-## 2. Tabella di copertura per vista
+## 2. Coverage table by view
 
-| Vista / Area | Controlli eseguiti | Standard verificati | Suite di test E2E | Stato |
+| View / Area | Checks performed | Standards verified | E2E test suite | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Dati LR (Bassa Risoluzione)** | Controllo axe-core a vuoto e con file (Full Scan, MRM, spettri, cromatogrammi);<br>raggiungibilità da tastiera con Tab (≥90% dei comandi visibili con focus ring);<br>chiusura dialoghi con Esc; tabella testuale `t` (`TDATI`); reflow a 320 px;<br>`forced-colors`; `prefers-reduced-motion`. | WCAG 2.1 AA<br>WCAG 1.4.10<br>WCAG 2.5.7<br>WCAG 2.5.8 | `tests_e2e/e2e_a11y_dati.py`<br>`tests_e2e/e2e_axe_grafici.py` | Conforme (0 violazioni) |
-| **HR (Banco Alta Risoluzione)** | Controllo axe-core sul Banco HR completo (pannelli, toolbar, barra di stato,<br>pannello informativo intestazione `#hrinfo`); dimensione impugnature pannelli<br>`.aff-grip` $\ge 24\times 24$ px. | WCAG 2.1 AA<br>WCAG 2.5.8 | `tests_e2e/e2e_axe_release.py` | Conforme (0 violazioni) |
-| **Mappa 2D / 3D** | Controllo axe-core sul pannello mappa RT $\times$ m/z; zoom e pan da tastiera<br>senza drag (`+`, `-`, `[`, `]`, `0`); indicatori di fuoco visibili; contrasto assi/picchi. | WCAG 2.1 AA<br>WCAG 2.5.7 | `tests_e2e/e2e_a11y_dati.py`<br>`tests_e2e/e2e_axe_grafici.py` | Conforme (0 violazioni) |
-| **Tabui / mzFinder** | Interfaccia in sola lingua inglese; etichette accessibili e ruoli ARIA per tabelle,<br>filtri e dialoghi; colori dei livelli basati su Okabe-Ito; esportazione accessibile. | WCAG 2.1 AA<br>WCAG 1.4.1 | `tests_e2e/e2e_axe_release.py`<br>`tests/test_tabui_inglese.py` | Conforme (0 violazioni) |
-| **Disegno molecolare** | Controllo axe-core sull'area Disegno (escluso l'iframe isolato di Ketcher);<br>barra strumenti frammenti e formule; tastiera e contrasto dei pulsanti operativi. | WCAG 2.1 AA | `tests_e2e/e2e_axe_release.py` | Conforme (0 violazioni) |
-| **Impostazioni e Palette** | Pannello `#uipset` accessibile con axe-core, apertura e chiusura via tasto Esc;<br>palette comandi `paletta` (`Ctrl+K`) apribile e chiudibile via tastiera;<br>persistenza configurazione (chiavi `mzlab.a11y` con retrocompatibilità `qqq.a11y`). | WCAG 2.1 AA<br>WCAG 2.1.2 | `tests_e2e/e2e_a11y_dati.py` | Conforme (0 violazioni) |
-| **Mobile e Touch** | Dimensione controlli e grip su schermi touch ($1024\times 1366$ e $400\times 800$, coarse pointer);<br>adattamento delle Impostazioni e dei pannelli laterali; reflow senza scroll a 320 px CSS. | WCAG 2.1 AA<br>WCAG 1.4.10<br>WCAG 2.5.8 | `tests_e2e/e2e_axe_grafici.py`<br>`tests_e2e/e2e_a11y_dati.py` | Conforme (0 violazioni) |
+| **LR data (Low Resolution)** | axe-core check empty and with files (Full Scan, MRM, spectra, chromatograms);<br>keyboard reachability with Tab (≥90% of visible controls with focus ring);<br>closing dialogs with Esc; text table `t` (`TDATI`); reflow at 320 px;<br>`forced-colors`; `prefers-reduced-motion`. | WCAG 2.1 AA<br>WCAG 1.4.10<br>WCAG 2.5.7<br>WCAG 2.5.8 | `tests_e2e/e2e_a11y_dati.py`<br>`tests_e2e/e2e_axe_grafici.py` | Conformant (0 violations) |
+| **HR (High Resolution Bench)** | axe-core check on the full HR Bench (panels, toolbar, status bar,<br>header information panel `#hrinfo`); panel handle size<br>`.aff-grip` $\ge 24\times 24$ px. | WCAG 2.1 AA<br>WCAG 2.5.8 | `tests_e2e/e2e_axe_release.py` | Conformant (0 violations) |
+| **2D / 3D map** | axe-core check on the RT $\times$ m/z map panel; zoom and pan from keyboard<br>without drag (`+`, `-`, `[`, `]`, `0`); visible focus indicators; axes/peaks contrast. | WCAG 2.1 AA<br>WCAG 2.5.7 | `tests_e2e/e2e_a11y_dati.py`<br>`tests_e2e/e2e_axe_grafici.py` | Conformant (0 violations) |
+| **Tabui / mzFinder** | English-only interface; accessible labels and ARIA roles for tables,<br>filters and dialogs; level colors based on Okabe-Ito; accessible export. | WCAG 2.1 AA<br>WCAG 1.4.1 | `tests_e2e/e2e_axe_release.py`<br>`tests/test_tabui_inglese.py` | Conformant (0 violations) |
+| **Molecular drawing** | axe-core check on the Drawing area (excluding the isolated Ketcher iframe);<br>fragments and formulas toolbar; keyboard and contrast of the action buttons. | WCAG 2.1 AA | `tests_e2e/e2e_axe_release.py` | Conformant (0 violations) |
+| **Settings and Palette** | `#uipset` panel accessible with axe-core, opening and closing via Esc key;<br>command palette `paletta` (`Ctrl+K`) openable and closable via keyboard;<br>configuration persistence (keys `mzlab.a11y` with backward compatibility `qqq.a11y`). | WCAG 2.1 AA<br>WCAG 2.1.2 | `tests_e2e/e2e_a11y_dati.py` | Conformant (0 violations) |
+| **Mobile and Touch** | Size of controls and grips on touch screens ($1024\times 1366$ and $400\times 800$, coarse pointer);<br>adaptation of Settings and side panels; reflow without scroll at 320 CSS px. | WCAG 2.1 AA<br>WCAG 1.4.10<br>WCAG 2.5.8 | `tests_e2e/e2e_axe_grafici.py`<br>`tests_e2e/e2e_a11y_dati.py` | Conformant (0 violations) |
 
 ---
 
-## 3. Comandi per la verifica dell'accessibilità
+## 3. Commands for accessibility verification
 
-Tutti i test possono essere eseguiti localmente dopo aver preparato il sito con `python3 tools/prepara_sito.py`.
+All tests can be run locally after preparing the site with `python3 tools/prepara_sito.py`.
 
-### 1. Test veloce Dati (fast path CI / fumo)
-Esegue axe-core su 9 stati (compresi calcolatrice, finestra di integrazione e albero MSn) della vista Dati, controlla focus visibile da tastiera su tutti i controlli, chiusura con Esc, reflow a 320 px e modalità a contrasto forzato:
+### 1. Fast Data test (CI fast path / smoke)
+Runs axe-core on 9 states (including calculator, integration window and MSn tree) of the Data view, checks visible keyboard focus on all controls, closing with Esc, reflow at 320 px and forced-contrast mode:
 ```bash
 python3 tests_e2e/e2e_a11y_dati.py
 ```
 
-### 2. Audit axe-core grafici e controlli pannello
-Verifica che i grafici e la tabella dei dati non presentino violazioni axe, controlla la dimensione minima dei bersagli (24×24 px) e lo zoom da tastiera senza drag (`+`, `-`, `[`, `]`, `0`):
+### 2. axe-core audit of charts and panel controls
+Verifies that the charts and the data table have no axe violations, checks the minimum target size (24×24 px) and zoom from keyboard without drag (`+`, `-`, `[`, `]`, `0`):
 ```bash
 python3 tests_e2e/e2e_axe_grafici.py
 ```
 
-### 3. Audit axe-core viste complementari (HR, Disegno, Tour)
-Verifica l'assenza di violazioni su Banco HR, visualizzatore molecolare Disegno e passaggi del tour guidato (le pagine di Pratica non hanno ancora un test a11y proprio):
+### 3. axe-core audit of complementary views (HR, Drawing, Tour)
+Verifies the absence of violations on the HR Bench, the Drawing molecular viewer and the steps of the guided tour (the Practice pages do not yet have an a11y test of their own):
 ```bash
 python3 tests_e2e/e2e_axe_release.py
 python3 tests_e2e/e2e_a11y_disegno.py
@@ -72,14 +73,26 @@ python3 tests_e2e/e2e_a11y_hr.py
 ```
 
 
-### 5. Verifica globale dell'applicazione (senza e2e lunghi)
-Esegue la mappatura del codice, il controllo dei limiti di dimensione, verifica i18n, tipi TypeScript e import:
+### 5. Global application check (without long e2e)
+Runs the code mapping, the size limit check, the i18n check, TypeScript types and imports:
 ```bash
 python3 tools/pre_pr.py --senza-e2e
 ```
 
-### 6. Suite dei test unitari Python
-Verifica tutte le suite unitarie del progetto:
+### 6. Python unit test suite
+Verifies all the project's unit suites:
 ```bash
 PYTHONPATH=. pytest tests/
 ```
+
+---
+
+## 4. Known gaps of the Data view
+
+WCAG 2.2 AA target. The `e2e_a11y_dati` test (`--fumo` round) fails on every `serious`/`critical` axe violation in the states it covers; a tolerated rule id goes in `KNOWN` inside the test and is listed here.
+- **Tolerated rules**: none.
+- **States not covered by axe in e2e_a11y_dati**: guided tour (covered instead by `e2e_axe_release.py`) and desktop app. Covered: startup, loaded file, MRM, map, settings, search, calculator, integration window and MSn tree (synthetic file).
+- **Covered by their own tests**: the HR Bench, the formula panel and the information bar by `e2e_a11y_hr.py` (axe, names, Tab with visible focus, targets ≥24 px, live areas); Drawing outside the Ketcher iframe by `e2e_a11y_disegno.py` (axe in light and dark themes, names, Tab without trap, targets, load announcement). The Practice pages do not yet have an a11y test of their own.
+- **Levels not checked**: axe violations in Practice (no test) and `moderate`/`minor` in Library and Theory and inside the Ketcher iframe; Data, the HR Bench information panel, Flow, Drawing (outside the iframe) and Tabui tolerate none in light and dark scheme (`e2e_a11y_dati.py`, `e2e_a11y_hr.py`, `e2e_axe_release.py`); the reading order and the chart labels (`TDATI` gives the text alternative but nobody has tried a screen reader).
+- **Keyboard**: the test verifies that Tab reaches at least 90 % of the visible controls and that each shows a focus indicator; Tab and Shift+Tab leave every canvas chart of the Full Scan tab (chromatogram, spectrum, XIC, map) and of the MRM tab, even after Esc. The Tab order and the 3D viewer remain out.
+- **Contrast**: legends with a switched-off entry (`.leg .tg.off`, opacity .38) are not covered by the test as long as nobody switches them off; they must be checked if the test switches them off.

@@ -1,0 +1,7 @@
+{
+  "valida.title": "Title of the «Validate mzML» window; {name} = file name (already protected).",
+  "valida.caption": "Caption and accessible name of the table of problems found; {name} = file name.",
+  "valida.counts": "Validation summary line; {spectra}, {chroms} = number of spectra and chromatograms in the file; {errors}, {warnings} = number of errors and warnings.",
+  "valida.more": "Note under the table when there are more problems than rows shown; {n} = rows shown, {total} = problems found.",
+  "valida.fail": "Message when the validation did not succeed; {detail} = technical cause (error text)."
+}

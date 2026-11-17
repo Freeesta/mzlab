@@ -1,6 +1,7 @@
 """Growth probe and device facts of the memory budget (rust-sonda.js, rust-budget.js): the probe runs once, its result reaches the register of the
 choices (inputs.probe_mb), and Rust's table gives safe/high levels that fit the declared device memory (deviceMemory forced to 2, 4 and 8).
 Needs the site: python tools/build_site.py and the .wasm (tools/prepara_sito.py)."""
+# covers: mzlab/web/rust-
 from pathlib import Path
 import socket, subprocess, sys, threading
 from playwright.sync_api import sync_playwright

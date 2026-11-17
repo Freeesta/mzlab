@@ -9,7 +9,7 @@ use mzlab_core::Result;
 use mzlab_feat::legacy::progress;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::Stored;
-use mzlab_feat_wasm::run;
+use mzlab_ops::run::feat::run;
 
 use crate::engine::State;
 use crate::rpc::{text, Answer};

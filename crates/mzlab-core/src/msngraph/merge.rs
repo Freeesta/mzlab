@@ -66,16 +66,16 @@ fn peaks(
     c: &mut Counts,
 ) -> Vec<(f64, f64, Option<usize>, Option<f64>)> {
     let all = relativi(s);
-    let mut forti: Vec<(f64, f64)> = all.iter().copied().filter(|p| p.1 >= o.min_rel).collect();
-    crate::sortc::by(&mut forti, |a, b| {
+    let mut strong: Vec<(f64, f64)> = all.iter().copied().filter(|p| p.1 >= o.min_rel).collect();
+    crate::sortc::by(&mut strong, |a, b| {
         b.1.total_cmp(&a.1).then(a.0.total_cmp(&b.0))
     });
-    forti.truncate(o.max_picchi);
-    c.deboli += all.len() - forti.len();
-    crate::sortc::by(&mut forti, |a, b| a.0.total_cmp(&b.0));
+    strong.truncate(o.max_picchi);
+    c.deboli += all.len() - strong.len();
+    crate::sortc::by(&mut strong, |a, b| a.0.total_cmp(&b.0));
     let tp = o.tol(prec);
     let mut out: Vec<(f64, f64, Option<usize>, Option<f64>)> = vec![];
-    for (m, r) in forti {
+    for (m, r) in strong {
         if m > prec + tp {
             c.pesanti += 1;
             continue;

@@ -1,5 +1,6 @@
 """H6: the isotope simulation of a high-resolution spectrum takes the resolving power into account: the fine structure of M+2 is ONE peak at R 27 000 (m/z 319) and separates at high R;
 the M+1/M ratio of the formula; the menu entry sets R."""
+# covers: mzlab/web/hr.js, mzlab/web/banco.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -33,7 +34,7 @@ try:
             sp = pg.evaluate("(()=>{const s=E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp);return s?s.id:null})()"); assert sp is not None
             pg.evaluate(f"(()=>{{const s=E.panels.find(q=>q.id=={sp});s.iso={{formula:'C13H24N4O3S',ad:'[M+H]+'}};s.zoom=[314,325];s._isoKey=JSON.stringify(s.zoom);draw(s)}})()"); pg.wait_for_timeout(500)
             pg.evaluate(f"E.panels.find(q=>q.id=={sp}).el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
-            leg = pg.evaluate(f"E.panels.find(q=>q.id=={sp}).el.innerText"); assert "profilo teorico" in leg and "R " in leg, leg[-300:]
+            leg = pg.evaluate(f"E.panels.find(q=>q.id=={sp}).el.innerText"); assert ("theoretical pattern" in leg or "theoretical profile" in leg) and "R " in leg, leg[-300:]
         step("the legend of the simulation says the resolving power used", menu)
         def curve():
             v = pg.evaluate("(async()=>{const i=QQQRef.ionCounts('C13H24N4O3S','[M+H]+');const pat=HR.mergeBy(await HR.isoFine(i.n,i.z),m=>0.01);const c=HR.isoCurve(pat,m=>0.01,10);const mx=Math.max(...c.y);const k=c.y.indexOf(mx);return {mx,mz:c.x[k],n:c.x.length,top:pat.reduce((a,b)=>b.rel>a.rel?b:a).mz,w10:HR.WDEF['10']}})()")
@@ -51,7 +52,7 @@ try:
             q = pg.evaluate("(()=>{const s=E.panels.find(q=>q.type==='spec'&&q.iso&&q.iso.only);return s?s.id:null})()"); assert q is not None
             pg.select_option("#hri-rm", "ppm"); pg.fill("#hri-r", "5"); pg.click("#hri-go"); pg.wait_for_timeout(800)
             fw = pg.evaluate("(()=>{const s=E.panels.find(q=>q.type==='spec'&&q.iso&&!q.iso.only&&q.iso.fw);return s&&s.iso.fw})()"); assert fw == {"mode": "ppm", "v": 5}, fw
-        step("tab Isotopi: Nuova cella, Sostituisci, width in ppm", ui)
+        step("tab Isotopes: New cell, Replace, width in ppm", ui)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

@@ -1,0 +1,9 @@
+{
+  "comp.xlsx.prefix": "Start of the downloaded file name; only lowercase letters without accents.",
+  "comp.count": "Count of the candidates in the \"Compatible formulas\" window; {n} = number.",
+  "comp.sc.obs": "Number of isotope peaks found in the spectrum; {n}.",
+  "comp.terms": "Terms of the score of a candidate (0-1): {m} mass, {i} isotopes, {f} fragments.",
+  "comp.det.limits": "Thresholds of the isotope score: {r} resolution at m/z 200, {p} error in ppm, {s} intensity error in %, {mn} threshold in %, {w} weights.",
+  "comp.first": "Continuation of comp.count; {n} = how many are shown.",
+  "comp.scored": "Below \"Compatible formulas\": the isotope/fragment score was calculated only for the {n} closest masses out of {m} candidates; numbers."
+}

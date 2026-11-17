@@ -8,7 +8,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 
 use crate::params::{intensity_hist, Hist};
 use crate::recipe::Recipe;
-use crate::trace::{BYTES_PER_PEAK, SLAB_PEAKS};
+use crate::trace_base::{BYTES_PER_PEAK, SLAB_PEAKS};
 
 /// Bytes of a detection whatever the file, with the slab of the default `budget`: the module, the recipe, the histograms and the sinks.
 pub const FLOOR_BYTES: f64 = 68.0 * 1048576.0;

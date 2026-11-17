@@ -1,4 +1,5 @@
 """HR file list: only the first file (in list order) is open, groups DDA / Full Scan / MS2 / Infusion, a click opens another file, compact list folds groups."""
+# covers: mzlab/web/ordine.js, mzlab/web/qqq-db
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import re
@@ -25,8 +26,8 @@ try:
         step("only the first file (in list order) is open", first_only)
         def groups():
             g = pg.evaluate(GROUPS)
-            assert sorted(g) == sorted(["Full Scan|2", "MS2 (Product Ion)|1", "Infusione|1"]), g
-        step("no DDA group: the DDA file is one row among the Full Scan; MS2, Infusione", groups)
+            assert sorted(g) == sorted(["Full Scan|2", "MS2 (Product Ion)|1", "Infusion|1"]), g
+        step("no DDA group: the DDA file is one row among the Full Scan; MS2, Infusion", groups)
         def dda_name():
             assert pg.evaluate("E.files.filter(f=>f.dda).every(f=>!/Full Scan/.test(f.label))"), "a DDA file is named after the file only"
             assert "Full Scan" not in pg.inner_text("#flst .fl:has-text('HR_DDA') .nm")

@@ -1,4 +1,4 @@
-"""Every key a reader writes in `metodo/1.avvisi` has a text in both languages (lang/*/errori.js, the catalogue the CLI reads too) and is in the
+"""Every key a reader writes in `metodo/1.avvisi` has a text (lang/en/errori-*.js, the catalogue the CLI reads too) and is in the
 list the Method window translates (`NOTE_KEYS` of metodo-doc.js): a warning nobody can read is a silent loss."""
 import re
 from pathlib import Path
@@ -17,15 +17,14 @@ def emitted():
     return keys - NOT_WARNINGS
 
 
-def test_every_method_warning_has_a_text_in_both_languages_and_a_place():
+def test_every_method_warning_has_a_text_and_a_place():
     keys = emitted()
     assert {"meta.nonDecodificato", "meta.mancante", "meta.troncato"} <= keys, keys
     page = (ROOT / "mzlab/web/metodo-doc.js").read_text(encoding="utf-8")
-    for lang in ("en", "it"):
-        cat = (ROOT / f"mzlab/web/lang/{lang}/errori.js").read_text(encoding="utf-8")
-        for k in sorted(keys):
-            m = re.search(rf'\n  "{re.escape(k)}": "([^"\n]*)"', cat)
-            assert m, f"{k}: no text in lang/{lang}/errori.js"
-            assert "{dove}" in m[1], f"{k} ({lang}): the text does not name the place"
+    cat = "\n".join(p.read_text(encoding="utf-8") for p in sorted((ROOT / "mzlab/web/lang/en").glob("errori-*.js")))
+    for k in sorted(keys):
+        m = re.search(rf'\n  "{re.escape(k)}": "([^"\n]*)"', cat)
+        assert m, f"{k}: no text in lang/en/errori-*.js"
+        assert "{dove}" in m[1], f"{k}: the text does not name the place"
     for k in sorted(keys):
         assert f'"{k}"' in page, f"{k}: not in NOTE_KEYS of metodo-doc.js"

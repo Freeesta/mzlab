@@ -3,6 +3,7 @@ tools/wiff_dad_mrm.py, no laboratory data). `api/chrom?kind=pda&mz0&mz1` answers
 not the TWC; without a band it answers the TWC; the MS chromatograms of the file stay as they were.
 The detector switch: the picker of the MRM / SIM panel and of the MS2 chromatogram has a «UV/Vis» row that opens the DAD TWC in the same tab, right under the
 panel, time-linked, by mouse and by keyboard (arrows, Esc, Enter), axe clean; a file without a DAD has no such row. Run from the repo root: python3 tests_e2e/e2e_dad_mrm.py"""
+# covers: tools/wiff_dad_mrm.py, mzlab/web/canali.js, mzlab/web/canali-uv.js, mzlab/web/rust-bridge-info.js, mzlab/web/lr-method.js
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -21,7 +22,7 @@ MRM, MS2 = "E.panels.find(q => q.type === 'mrm')", "E.panels.find(q => q.type ==
 UV = lambda tab: f"E.panels.find(q => q.type === 'chrom' && q.tab === '{tab}' && q.kind === 'pda')"
 def load(pg, names):
     pg.set_input_files("#pick", [str(D / f"{n}{x}") for n in names for x in (".wiff", ".wiff.scan")])
-    wait_for_js(pg, f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(names)}", timeout=90000); pg.click("text=Carica dati"); ready(pg)
+    wait_for_js(pg, f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(names)}", timeout=90000); pg.click("text=Load data"); ready(pg)
     wait_for_js(pg, f"E.files.length >= {len(names)}", timeout=120000)
 def axe_ok(pg, sel):
     v = pg.evaluate("""(sel) => axe.run(document.querySelector(sel) || document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}})
@@ -66,7 +67,7 @@ try:
             pg.evaluate(f"{MRM}.el.querySelector('[data-o=canali]').click()")
             wait_for_js(pg, f"!!{MRM}.el.querySelector('.can-pop:not([hidden]) [data-kind=pda]')")
             got = pg.evaluate(f"[...{MRM}.el.querySelectorAll('.can-pop [role=group]')].map(g => [g.getAttribute('aria-label'), g.querySelectorAll('.can-row').length])")
-            assert [g[0] for g in got] == ["Spettrometria di massa", "UV/Vis"] and got[0][1] >= 2 and got[1][1] == 1, got
+            assert [g[0] for g in got] == ["Mass spectrometry", "UV/Vis"] and got[0][1] >= 2 and got[1][1] == 1, got
             assert pg.evaluate(f"{MRM}.el.querySelector('.can-pop [data-kind=pda]').getAttribute('title')") == pg.evaluate("I18N.t('ctl.kind.pda.title')")
         step("MRM tab: the transition picker has a «UV/Vis» group with the DAD row", mrm_row)
         if AXE:

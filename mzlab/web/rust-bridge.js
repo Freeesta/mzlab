@@ -21,6 +21,13 @@ import * as BUD from "./rust-budget.js";
 
 // plain Array from doubles (the answer is stringified next): the loop beats Array.from on a typed array
 const arr = a => { const o = new Array(a.length); for (let i = 0; i < o.length; i++) o[i] = a[i]; return o; };
+// A memory refusal of the engine is told with its numbers (the phase says the way out); true when `error` (the worker's answer) is one.
+function refusedMemory(/** @type {unknown} */ error, /** @type {(key: string, params?: any) => void} */ notify) {
+  /** @type {any} */ let e = {}; try { e = JSON.parse(String(error)) || {}; } catch (_) { /* not an engine error */ }
+  if (e.error_key !== "error.memoryBudget") return false;
+  notify(e.error_key, e.params); return true;
+}
+
 export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
   let slots = [];                          // k -> { name, blob, info, bad, opening }
@@ -94,7 +101,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     return rpc({ op: "idxopen", slot: k, name: s.name, pol: s.pol }).then(r => {
       if (s.gen !== gen) return;                                              // the worker died and respawn() started a new open: this stale answer must not touch the slot
       s.idx = r.dead || r.error ? null : JSON.parse(r.info);                 // { scans, hr1 }
-      if (!s.idx) { s.mzml = openMzml(k, s); return s.mzml; }
+      if (!s.idx) { s.mzml = refusedMemory(r.error, notify) ? (s.bad = true, Promise.resolve()) : openMzml(k, s); return s.mzml; }      // no memory beside the open files (routes_open.rs): the whole mzML would need more, so it is not tried
     });
   }
   api.start = () => { if (!worker && !api.disabled) { if (stato("motore") !== "no") spawn(); else { serve("motore"); off(api, slots, notify, ha("simd128") ? "cap.engine" : "error.noSimd"); } } }; BUD.wire(api, () => worker);
@@ -185,7 +192,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       stats.rust++;
       return { status: 200, text: `{"files":[${parts.join(",")}]}`, ms: performance.now() - t0 };
     }
-    if (/^\/api\/(manint|manvalley|ms2tr|fileinfo|masscal|msn_grafo|msn_grafo\/export|msnlib\/aggiungi|msnlib\/cerca)$/.test(path)) return infoRoute(path, u, { slots, rpc, base, stats, t0, init });
+    if (/^\/api\/(manint|manvalley|manfollow|manauto|ms2tr|fileinfo|masscal|msn_grafo|msn_grafo\/export|msnlib\/aggiungi|msnlib\/cerca)$/.test(path)) return infoRoute(path, u, { slots, rpc, base, stats, t0, init });
     if (path === "/api/scaninfo") {
       const s = slots[k0], sid = num(q, "sid", NaN);
       if (!s) return null;
@@ -217,7 +224,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       ks = [k0];
     } else if (path === "/api/xic") ks = (q.get("k") || "").split(",").filter(Boolean).map(Number);
     else if (path === "/api/spectra") {
-      if (!empty(q, "prec", "precursor", "filt") || q.get("merge") === "1") return null;
+      if (!empty(q, "prec", "precursor", "filt") || q.get("merge") === "0") return null;      // merge=0 (no merge) is Python's; omitted or 1 = the merge by nominal mass
       ks = [k0];
     } else return null;
     if (!ks.length || ks.some(k => !Number.isInteger(k) || !slots[k])) return null;

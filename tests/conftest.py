@@ -6,7 +6,7 @@ from pathlib import Path
 # the .mzidx files the tests build go to a folder of their own, not to ~/.cache/mzlab
 os.environ.setdefault("MZLAB_CACHE", tempfile.mkdtemp(prefix="mzlab-cache-"))
 
-# the node processes started by the tests get I18N (Italian catalog) before the page scripts
+# the node processes started by the tests get I18N (English catalog) before the page scripts
 os.environ["NODE_OPTIONS"] = (os.environ.get("NODE_OPTIONS", "") + f" --require={Path(__file__).with_name('node_i18n.js')}").strip()
 
 
@@ -28,9 +28,11 @@ def _import_pkg(tmp_path_factory):
         return None
     out = tmp_path_factory.mktemp("import-wasm")
     try:
-        for cmd in (["cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-import-wasm"],
+        from cargo_util import installed
+        for cmd in (None if installed("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-import-wasm") else ["cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-import-wasm"],
                     ["wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(out), "target/wasm32-unknown-unknown/release/mzlab_feat_import_wasm.wasm"]):
-            subprocess.run(cmd, cwd=_ROOT, check=True, capture_output=True)
+            if cmd:
+                subprocess.run(cmd, cwd=_ROOT, check=True, capture_output=True)
     except (subprocess.CalledProcessError, OSError):
         return None
     return out

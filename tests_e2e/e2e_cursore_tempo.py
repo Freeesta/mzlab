@@ -23,7 +23,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz("B_FullMass-t0")])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg); frames(pg, 8)
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg); frames(pg, 8)
         def check(sel):
             tip, rd, lbl, cur = probe(pg, sel); print(sel, tip, rd, lbl, cur)
             assert tip and TIME.match(tip), tip
@@ -32,7 +32,7 @@ try:
             assert TIME.match(cur), cur
         step("TIC: the time with «min» in the mouse box, the line and the handle, the number alone in the peak labels, no m/z", lambda: check("chrom"))
         def xic():
-            pg.evaluate("xicDirect(364.3)"); ready(pg); frames(pg, 10)
+            pg.evaluate("xicDirect(194.2)"); ready(pg); frames(pg, 10)
             pg.wait_for_function("(()=>{const p=E.panels.find(p=>p.type==='xic');return p&&p._a&&p._a.sr&&p._a.sr.length})()", timeout=15000); frames(pg, 6)
             check("xic")
         step("XIC: the same, no m/z next to the time", xic)

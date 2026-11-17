@@ -135,11 +135,11 @@ pub(crate) fn choice_of(i: &Ion) -> Option<String> {
     })
 }
 
-pub(crate) fn scatola(sc: &Scena, i: &Ion, p: &Pos, compatta: bool) -> Scatola {
+pub(crate) fn scatola(sc: &Scena, i: &Ion, p: &Pos, compact: bool) -> Scatola {
     let chosen = choice_of(i);
     let mut cs: Vec<&Cand> = i.cands.iter().collect();
     cs.sortc_by_key(|c| u8::from(Some(&c.formula) != chosen.as_ref()));
-    let keep = if compatta { 1 } else { MAXC };
+    let keep = if compact { 1 } else { MAXC };
     let rows = cs
         .iter()
         .take(keep)

@@ -6,64 +6,18 @@ use std::path::PathBuf;
 pub(crate) fn fixture(tag: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("mzlab_cli_ident_{tag}_{}", std::process::id()));
     std::fs::create_dir_all(dir.join("work")).unwrap();
-    let rec = |name: &str, prec: f64, peaks: &[(f64, f64)]| {
-        let mut s = format!("Name: {name}\nPrecursorMZ: {prec}\nPrecursor_type: [M+H]+\nIon_mode: Positive\nFormula: C10H10O\nNum Peaks: {}\n", peaks.len());
-        for (m, i) in peaks {
-            s += &format!("{m} {i}\n");
-        }
-        s + "\n"
-    };
-    let a = [
-        (100.05, 400.0),
-        (120.08, 1000.0),
-        (150.10, 700.0),
-        (180.12, 300.0),
-        (210.15, 500.0),
-    ];
-    let b = [
-        (90.03, 800.0),
-        (130.06, 1000.0),
-        (160.09, 300.0),
-        (190.11, 600.0),
-        (230.14, 200.0),
-    ];
-    let c: Vec<(f64, f64)> = [
-        (100.05, 300.0),
-        (120.08, 600.0),
-        (200.12, 1000.0),
-        (230.15, 900.0),
-        (260.18, 400.0),
-    ]
-    .to_vec();
-    let lib = rec("Alpha", 300.1234, &a) + &rec("Beta", 300.1240, &b) + &rec("Gamma", 400.1234, &c);
+    let lib = concat!(
+        "Name: Alpha\nPrecursorMZ: 300.1234\nPrecursor_type: [M+H]+\nIon_mode: Positive\nFormula: C10H10O\nNum Peaks: 5\n100.05 400\n120.08 1000\n150.1 700\n180.12 300\n210.15 500\n\n",
+        "Name: Beta\nPrecursorMZ: 300.124\nPrecursor_type: [M+H]+\nIon_mode: Positive\nFormula: C10H10O\nNum Peaks: 5\n90.03 800\n130.06 1000\n160.09 300\n190.11 600\n230.14 200\n\n",
+        "Name: Gamma\nPrecursorMZ: 400.1234\nPrecursor_type: [M+H]+\nIon_mode: Positive\nFormula: C10H10O\nNum Peaks: 5\n100.05 300\n120.08 600\n200.12 1000\n230.15 900\n260.18 400\n\n",
+    );
+    // q0: Alpha with noise; q1: Alpha fragments shifted by +100 Da on the last three
+    let q = concat!(
+        "BEGIN IONS\nTITLE=q0\nPEPMASS=300.1235\nCHARGE=1+\nIONMODE=Positive\n100.051 380\n120.079 950\n150.102 720\n180.121 310\n210.149 480\nEND IONS\n",
+        "BEGIN IONS\nTITLE=q1\nPEPMASS=400.1234\nCHARGE=1+\nIONMODE=Positive\n100.051 380\n120.079 950\n250.102 720\n280.121 310\n310.149 480\nEND IONS\n",
+    );
     std::fs::write(dir.join("lib.msp"), lib).unwrap();
-    // q0: Alpha with noise in m/z and intensity; q1: Alpha's fragments, shifted by +100 Da (the precursor difference) for the last three
-    let q0 = [
-        (100.051, 380.0),
-        (120.079, 950.0),
-        (150.102, 720.0),
-        (180.121, 310.0),
-        (210.149, 480.0),
-    ];
-    let q1 = [
-        (100.051, 380.0),
-        (120.079, 950.0),
-        (250.102, 720.0),
-        (280.121, 310.0),
-        (310.149, 480.0),
-    ];
-    let mgf = |t: &str, prec: f64, p: &[(f64, f64)]| {
-        let mut s = format!("BEGIN IONS\nTITLE={t}\nPEPMASS={prec}\nCHARGE=1+\nIONMODE=Positive\n");
-        for (m, i) in p {
-            s += &format!("{m} {i}\n");
-        }
-        s + "END IONS\n"
-    };
-    std::fs::write(
-        dir.join("q.mgf"),
-        mgf("q0", 300.1235, &q0) + &mgf("q1", 400.1234, &q1),
-    )
-    .unwrap();
+    std::fs::write(dir.join("q.mgf"), q).unwrap();
     dir
 }
 
@@ -121,32 +75,16 @@ fn match_finds_the_library_spectrum_with_each_algorithm() {
 #[test]
 fn modified_cosine_finds_the_analogue_and_cosine_does_not() {
     let dir = fixture("analog");
-    run(
-        &dir,
-        "modified_cosine",
-        r#"{"analog_window_da":150,"analog_min_shift_da":1}"#,
-    );
-    let h = hits(&dir);
-    let a = h
-        .get("hits")
-        .unwrap()
-        .arr()
-        .iter()
-        .find(|x| {
-            x.get("query").and_then(|q| q.str()) == Some("q1")
-                && x.get("name").and_then(|n| n.str()) == Some("Alpha")
-        })
-        .expect("analogue");
+    let p = r#"{"analog_window_da":150,"analog_min_shift_da":1}"#;
+    run(&dir, "modified_cosine", p);
+    let a = alpha_hit(&dir, "q1");
     assert!((a.get("precursor_delta").unwrap().f64().unwrap().abs() - 100.0).abs() < 0.01);
     run(&dir, "cosine", "{}");
     let h = hits(&dir);
-    assert!(h
-        .get("hits")
-        .unwrap()
-        .arr()
-        .iter()
-        .all(|x| x.get("name").and_then(|n| n.str()) != Some("Alpha")
-            || x.get("query").and_then(|q| q.str()) != Some("q1")));
+    assert!(h.get("hits").unwrap().arr().iter().all(|x| {
+        x.get("name").and_then(|n| n.str()) != Some("Alpha")
+            || x.get("query").and_then(|q| q.str()) != Some("q1")
+    }));
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -488,5 +426,67 @@ fn score_terms_open_every_score_and_leave_it_unchanged() {
             assert_eq!(score(&on), score(&off));
         }
     }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+fn ox_fixture(tag: &str) -> PathBuf {
+    let dir = fixture(tag);
+    let q = concat!(
+        "BEGIN IONS\nTITLE=q0\nPEPMASS=300.1235\nCHARGE=1+\nIONMODE=Positive\n100.051 380\n120.079 950\n150.102 720\n180.121 310\n210.149 480\nEND IONS\n",
+        "BEGIN IONS\nTITLE=q1\nPEPMASS=316.118315\nCHARGE=1+\nIONMODE=Positive\n100.05 400\n120.08 1000\n166.0949 700\n196.1149 300\n226.1449 500\nEND IONS\n",
+    );
+    std::fs::write(dir.join("q.mgf"), q).unwrap();
+    dir
+}
+
+fn alpha_hit(dir: &std::path::Path, q: &str) -> mzlab_core::json::Value {
+    let list = hits(dir).get("hits").unwrap().arr().to_vec();
+    let f = |x: &mzlab_core::json::Value| {
+        x.get("query").unwrap().str() == Some(q) && x.get("name").unwrap().str() == Some("Alpha")
+    };
+    list.into_iter().find(f).expect("Alpha hit")
+}
+
+fn assert_delta_null(v: &mzlab_core::json::Value) {
+    assert!(v.get("delta_formula").is_some() && is_null(v, "delta_formula"));
+    assert!(v.get("delta_formula_err_mda").is_some() && is_null(v, "delta_formula_err_mda"));
+}
+
+/// Analogue `modified_cosine` hits annotate `delta_formula` and `delta_formula_err_mda`; `delta_formula_mda=0` and exact matches keep them `null`.
+#[test]
+fn modified_cosine_annotates_analogue_delta_formula() {
+    let dir = ox_fixture("delta_on");
+    let p_on = r#"{"analog_window_da":150,"analog_min_shift_da":0.5}"#;
+    let p_off = r#"{"analog_window_da":150,"analog_min_shift_da":0.5,"delta_formula_mda":0}"#;
+    run(&dir, "modified_cosine", p_on);
+    let q1 = alpha_hit(&dir, "q1");
+    assert!((q1.get("precursor_delta").unwrap().f64().unwrap() - 15.9949).abs() < 0.01);
+    assert_eq!(q1.get("delta_formula").unwrap().str(), Some("+O"));
+    assert!(q1.get("delta_formula_err_mda").unwrap().f64().unwrap() <= 5.0);
+    assert_delta_null(&alpha_hit(&dir, "q0"));
+    run(&dir, "modified_cosine", p_off);
+    assert_delta_null(&alpha_hit(&dir, "q1"));
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// `mzlab_lib::flowmatch::match_json` matches `mzlab-cli` byte-for-byte on analogue `delta_formula` hits.
+#[test]
+fn modified_cosine_delta_formula_matches_browser_wasm_engine() {
+    let dir = ox_fixture("delta_web");
+    let p = r#"{"analog_window_da":150,"analog_min_shift_da":0.5}"#;
+    run(&dir, "modified_cosine", p);
+    let made = std::fs::read_to_string(dir.join("work/m.json")).unwrap();
+    let q = std::fs::read(dir.join("q.mgf")).unwrap();
+    let l = std::fs::read(dir.join("lib.msp")).unwrap();
+    let r = crate::flow_match_web_tests::resolved(&plan("modified_cosine", p), "m");
+    let web = mzlab_lib::flowmatch::match_json(
+        "spectra.match",
+        "modified_cosine",
+        &r,
+        ("q.mgf", &q),
+        ("lib.msp", &l),
+    )
+    .unwrap();
+    assert_eq!(web, made);
     let _ = std::fs::remove_dir_all(&dir);
 }

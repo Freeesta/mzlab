@@ -1,5 +1,6 @@
 """Prompt 2, block 1: right click takes the SAME peak as the label, one live spectrum per chromatogram, XIC straight from the spectrum, overlay entries,
-'Ripristina zoom' first, grey dashed annotations that disappear out of the zoom, RT with 2 decimals."""
+'Reset the zoom' first, grey dashed annotations that disappear out of the zoom, RT with 2 decimals."""
+# covers: mzlab/web/pannelli.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -14,8 +15,8 @@ r = Run(port=8877, wd="/tmp/wd77")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_selector("text=Carica dati")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_selector("text=Load data")
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); frames(pg, 2)
         def ctx_items(x, y):
             pg.mouse.click(x, y, button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelectorAll('#ctx div').length > 0")
@@ -24,8 +25,8 @@ try:
             return pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),l=p._a.lbls.filter(l=>l.m!=null)[{i}];return l&&{{x:q.left+l.x+l.w/2,y:q.top+l.y+l.h/2,m:l.m}}}})()")
         def pick_label():
             lb = label_box(0); assert lb, "no peak labels"
-            its = [i for i in ctx_items(lb["x"], lb["y"]) if i != "Ripristina zoom"]; print(lb["m"], its[:3])          # the zoom reset is always there (grey without a zoom)
-            assert its[0] == f"m/z {lb['m']:.1f}" and its[1] == "Copia valore" and its[2] == f"Estrai l'XIC di m/z {lb['m']:.1f}", (lb, its)
+            its = [i for i in ctx_items(lb["x"], lb["y"]) if i != "Reset the zoom"]; print(lb["m"], its[:3])          # the zoom reset is always there (grey without a zoom)
+            assert its[0] == f"m/z {lb['m']:.1f}" and its[1] == "Copy value" and its[2] == f"Extract the XIC of m/z {lb['m']:.1f}", (lb, its)
             pg.keyboard.press("Escape")
             # the bar of the same peak gives the same value
             bar = pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),a=p._a;return {{x:q.left+a.X({lb['m']}),y:q.top+a.Y(a.ymax*0.02)}}}})()")
@@ -33,42 +34,42 @@ try:
         step("1.0: right click on the label / on the bar gives the label's peak", pick_label)
         def xic_direct():
             lb = label_box(0); n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic').length")
-            ctx_items(lb["x"], lb["y"]); pg.locator("#ctx div", has_text="Estrai l'XIC").first.click(); wait_for_js(pg, f"E.panels.filter(p=>p.type==='xic').length==={n0+1}")
+            ctx_items(lb["x"], lb["y"]); pg.locator("#ctx div", has_text="Extract the XIC").first.click(); wait_for_js(pg, f"E.panels.filter(p=>p.type==='xic').length==={n0+1}")
             assert not pg.evaluate("document.querySelector('#xicdlg').open"), "no dialog"
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').length") == n0 + 1
             tr = pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().traces[0]"); n = round(lb["m"] - 0.25)
-            assert abs(tr["mz"] - (n + 0.3)) < 0.06 and abs(tr["w"] - 0.5) < 1e-9, (tr, lb)
+            assert abs(tr["mz"] - (n + 0.05)) < 0.06 and abs(tr["w"] - 0.25) < 1e-9, (tr, lb)
         step("1.3: the XIC from the spectrum appears at once", xic_direct)
         def overlay():
             pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); frames(pg, 2)
             lb = label_box(1); its = ctx_items(lb["x"], lb["y"]); print(its)
-            assert any(i.startswith("Sovrapponi all'XIC di m/z ") and "(pannello " in i for i in its) and not any("Aggiungi a" in i for i in its), its
-            tip = pg.evaluate("[...document.querySelectorAll('#ctx div')].find(d=>d.textContent.startsWith('Sovrapponi'))?.title"); assert "stesso grafico" in tip, tip
-            pg.locator("#ctx div", has_text="Sovrapponi all'XIC").first.click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='xic').pop().traces.length===2")
+            assert any(i.startswith("Overlay on the XIC of m/z ") and "(panel " in i for i in its) and not any("Add to" in i for i in its), its
+            tip = pg.evaluate("[...document.querySelectorAll('#ctx div')].find(d=>d.textContent.startsWith('Overlay'))?.title"); assert "same chart" in tip, tip
+            pg.locator("#ctx div", has_text="Overlay on the XIC").first.click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='xic').pop().traces.length===2")
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().traces.length") == 2
-        step("1.4: 'Sovrapponi all'XIC di m/z … (pannello n)' adds a trace", overlay)
+        step("1.4: 'Overlay on the XIC of m/z … (panel n)' adds a trace", overlay)
         def live():
             c = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();p.el.scrollIntoView({{block:'center'}});return q}})()")
             for fr in (0.4, 0.6):
                 b = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();return [q.left+p._a.X(p._a.full[0]+(p._a.full[1]-p._a.full[0])*{fr}),q.top+q.height*0.4]}})()")
                 pg.mouse.dblclick(b[0], b[1]); frames(pg, 2)
-            wait_for_js(pg, "(()=>{const s=E.panels.filter(p=>p.type==='spec'&&p.tab==='full');return s.length>=2&&s.every(p=>p.el.querySelector('.lk')||p.el.querySelector('.rtl').textContent.startsWith('fermo a '))})()")
-            info = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab==='full').map(p=>[!!p.link,!!p.el.querySelector('.lk'),p.el.querySelector('.rtl').textContent])"); print(info)
+            wait_for_js(pg, "(()=>{const s=E.panels.filter(p=>p.type==='spec'&&p.tab==='full');return s.length>=2&&s.every(p=>((p.el.querySelector('.ppair.fol')?.textContent||'').includes('←'))||p.el.querySelector('.rtl').textContent.startsWith('held at '))})()")
+            info = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab==='full').map(p=>[!!p.link,((p.el.querySelector('.ppair.fol')?.textContent||'').includes('←')),p.el.querySelector('.rtl').textContent])"); print(info)
             assert sum(1 for i in info if i[1]) == 1 and sum(1 for i in info if i[0]) == 1, info
-            assert all(i[2].startswith("fermo a ") for i in info if not i[1]), info
+            assert all(i[2].startswith("held at ") for i in info if not i[1]), info
             # a spectrum linked by hand to the same chromatogram (an old notebook): only the newest stays live
             pg.evaluate(f"(()=>{{const c={CH},s=E.panels.filter(p=>p.type==='spec'&&p.tab==='full');s.forEach(x=>x.link=c.id);s.forEach(ctl)}})()")
-            info = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab==='full').map(p=>!!p.el.querySelector('.lk'))"); assert sum(info) == 1, info
-        step("1.1: one live spectrum per chromatogram, the others 'fermo a RT'", live)
+            info = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab==='full').map(p=>((p.el.querySelector('.ppair.fol')?.textContent||'').includes('←')))"); assert sum(info) == 1, info
+        step("1.1: one live spectrum per chromatogram, the others 'held at RT'", live)
         def zoom_first():
             pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); frames(pg, 2)
-            its = ctx_items(*pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect();return [q.left+q.width/2,q.top+q.height*0.5]}})()")); assert "Ripristina zoom" not in its, its      # no zoom: not shown
+            its = ctx_items(*pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect();return [q.left+q.width/2,q.top+q.height*0.5]}})()")); assert "Reset the zoom" not in its, its      # no zoom: not shown
             pg.keyboard.press("Escape")
             pg.evaluate(f"(()=>{{const p={SPEC},a=p._a;p.zoom=[a.x0+(a.x1-a.x0)*0.4,a.x0+(a.x1-a.x0)*0.6];draw(p)}})()"); frames(pg, 2)
             its = ctx_items(*pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect();return [q.left+q.width/2,q.top+q.height*0.5]}})()")); assert pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]').getAttribute('aria-disabled')") != "true", its
-            pg.locator("#ctx div", has_text="Ripristina zoom").first.click(); wait_for_js(pg, f"{SPEC}.zoom==null")
+            pg.locator("#ctx div", has_text="Reset the zoom").first.click(); wait_for_js(pg, f"{SPEC}.zoom==null")
             assert pg.evaluate(f"{SPEC}.zoom") is None
-        step("1.5: 'Ripristina zoom' is shown only with a zoom", zoom_first)
+        step("1.5: 'Reset the zoom' is shown only with a zoom", zoom_first)
         def annot():
             pg.evaluate("""(()=>{const o=CanvasRenderingContext2D.prototype.stroke;window.__st=[];CanvasRenderingContext2D.prototype.stroke=function(){window.__st.push([String(this.strokeStyle),this.getLineDash().join()]);return o.apply(this,arguments)}})()""")
             lb = label_box(0); m = lb["m"]
@@ -85,7 +86,7 @@ try:
         step("1.6: grey dashed line, hidden out of the zoom, back in view", annot)
         def rt2():
             c = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();p.el.scrollIntoView({{block:'center'}});return {{x:q.left+p._a.X(14.3),y:q.top+q.height/2}}}})()")
-            pg.mouse.click(c["x"], c["y"]); frames(pg, 3); pg.keyboard.press("ArrowRight"); LIVE = "[...document.querySelectorAll('.pnl.spec .rtl')].map(e => e.textContent).filter(t => !t.startsWith('fermo a'))[0]"      # the pinned spectra read «fermo a RT», the order of the panels is not fixed
+            pg.mouse.click(c["x"], c["y"]); frames(pg, 3); pg.keyboard.press("ArrowRight"); LIVE = "[...document.querySelectorAll('.pnl.spec .rtl')].map(e => e.textContent).filter(t => !t.startsWith('held at'))[0]"      # the pinned spectra read «held at RT», the order of the panels is not fixed
             wait_for_js(pg, r"/^\d+\.\d{2} min/.test(" + LIVE + ")")
             t = pg.evaluate(LIVE); import re; assert re.search(r"^\d+\.\d{2} min", t) and not re.search(r"^\d+\.\d{3}", t), t
         step("1.7: RT with 2 decimals", rt2)

@@ -2,6 +2,7 @@
 and reloads (Data on a desktop window, every view on a 1024x768 touch tablet) and a leak run of open/close cycles. Any page error, rejection, stuck busy
 state, focus lost to the body, duplicated row, NaN shown or growth of DOM nodes/listeners fails; the replay of a failure is printed (seed + steps).
 Needs the built site (tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_fuzz_ui.py"""
+# covers: tools/fuzz_ui.py
 import argparse, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

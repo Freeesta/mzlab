@@ -8,7 +8,7 @@ use mzlab_feat::recipe::Recipe;
 use mzlab_feat::samples::{self, propose};
 use mzlab_feat::store::{write_table, Origin, Slice};
 use mzlab_feat::table::{Aligned, CELL_ABSENT, CELL_DETECTED};
-use mzlab_feat_table_wasm::core::table_file;
+use mzlab_ops::run::table::core::table_file;
 
 const NAMES: [&str; 3] = ["blank.mzML", "s_t0.mzML", "s_t10.mzML"];
 
@@ -167,7 +167,7 @@ fn a_filter_then_an_export_writes_the_rows_of_the_view() {
         );
         let got = std::fs::read_to_string(d.join("work").join(format!("e.{ext}"))).unwrap();
         let view = std::fs::read_to_string(d.join("work/f.json")).unwrap();
-        let (_, spec) = mzlab_feat_table_wasm::core::view_origin(&view).unwrap();
+        let (_, spec) = mzlab_ops::run::table::core::view_origin(&view).unwrap();
         let t = table();
         let want = table_file(
             &mut Slice(&t),

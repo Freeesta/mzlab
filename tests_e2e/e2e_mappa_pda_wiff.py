@@ -1,5 +1,6 @@
 """RT x nm map of the PDA of a SCIEX .wiff in the browser: the engine reads the optical detector of the pair, the map offers the PDA choice, draws the matrix with
 the wavelength axis in nm and the table of the data (RT, nm, mAU) is there. Synthetic pair (tools/wiff_riferimento.py), no laboratory data."""
+# covers: mzlab/web/uv-spettro.js
 import sys, os, math, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from pathlib import Path
@@ -22,7 +23,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(D / "uv.wiff"), str(D / "uv.wiff.scan")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def offered():
             assert pg.evaluate("E.files[0].pda") is True
             pg.click("#np-map"); ready(pg); wait_for_js(pg, "E.files[0]._pdaMap === true")
@@ -36,7 +37,7 @@ try:
         step("choosing PDA draws the matrix: 40 times x 201 nm, with the peak in it", drawn)
         def table():
             d = pg.evaluate(f"TDATI_P.data({M})"); t = pg.evaluate(f"TDATI_P.text({M})")
-            assert d["head"][1:] == ["nm", "Assorbanza (mAU)"] and len(d["rows"]) > 0, d["head"]
+            assert d["head"][1:] == ["nm", "Absorbance (mAU)"] and len(d["rows"]) > 0, d["head"]
             assert any(abs(float(r[1]) - 260) <= 2 for r in d["rows"][:5]), d["rows"][:5]       # the strongest cells sit at the peak (200 + 60 nm)
             assert "nm" in t and "m/z" not in t, t
         step("the table of the data has RT, nm and mAU; the description speaks of wavelengths", table)

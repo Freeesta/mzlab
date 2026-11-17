@@ -1,5 +1,6 @@
 """Y zoom on the noisy baseline of dense traces (4 synthetic SRM files of 60 000 points, zoom 0-300 while the peaks reach 10^5): the trace strokes stay within a few
 pixels of the plot (their peaks used to end thousands of plot heights above the canvas, 0.3 s per draw for 20 traces) and the picture is the one of the unclipped lines."""
+# covers: mzlab/web/decima.js, mzlab/web/grafici.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 sys.path.insert(0, str(ROOT / "tools"))

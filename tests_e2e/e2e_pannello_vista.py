@@ -1,4 +1,4 @@
-"""Side panel: leaving Dati for Disegno and coming back gives the panel as it was left (open or shut, width, scroll)."""
+"""Side panel: leaving Data for Drawing and coming back gives the panel as it was left (open or shut, width, scroll)."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -16,7 +16,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 900})
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         # the note that follows an opening fades away and would change the height of the list under the measure
         wait_for_js(pg, "document.getElementById('fl-note').hidden")
         def open_view():
