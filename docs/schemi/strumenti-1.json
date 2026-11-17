@@ -1,5 +1,5 @@
 {
-  "schema":"strumenti/1",
+  "schema":"tools/1",
   "tools":[
     {
       "name":"flow_list_steps",

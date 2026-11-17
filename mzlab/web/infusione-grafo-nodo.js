@@ -126,7 +126,7 @@ async function fillCuts(/** @type {HTMLElement} */ host, /** @type {any} */ n) {
 async function showCut(/** @type {number[]} */ atoms, /** @type {string} */ bond) {
   if (typeof setView === "function") setView("draw");
   try {
-    await TPDraw.load(G.smiles);
+    if (!(await TPDraw.load(G.smiles))) return;                 // the user kept the drawing on the canvas: nothing to mark
     if (!(await TPDraw.mark([atoms]))) { nearMsg(I18N.t("msngrafo.str.nomark")); return; }
     await TPDraw.highlight([{ kind: "cuts", smiles: G.smiles, bonds: [atoms], label: I18N.t("msngrafo.str.ev.label", { bond }) }]);
   } catch (e) { console.info("INFG cut", e); nearMsg(I18N.t("msngrafo.draw.notReady")); }

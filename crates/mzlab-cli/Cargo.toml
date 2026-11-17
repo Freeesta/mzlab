@@ -36,4 +36,5 @@ webpki-roots = "1.0"
 png = ["dep:resvg"]
 
 [dev-dependencies]
+tempfile = "3"
 serde_json = { version = "1", features = ["float_roundtrip"] }

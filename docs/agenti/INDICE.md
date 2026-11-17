@@ -25,7 +25,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | panel actions (`azioni/1` registry, right-click menu, Shift+F10) | `docs/agenti/azioni.md` |
 | smeared peaks: synthetic batch, MZmine default/wide configurations, comparison table (`tools/bench/confronto_larghi.py`) | `docs/agenti/bench-picchi-larghi.md` |
 | Bruker timsTOF `.d` reader (`crates/mzlab-lettori/src/bruker/`: minimal SQLite, zstd, `tdf_bin`/`tsf_bin`, m/z calibration, `BrukerD` in `agilent-d.js`) | `docs/agenti/bruker.md` |
-| calibration curve on integrated peaks (`quant.curve`: 1/x..1/y² weights, QR, internal standard, ICH LOD/LOQ and S/N, logged exclusions, `taratura/1`, `calib.rs`, `curve.rs`) | `docs/agenti/calibrazione.md` |
+| calibration curve on integrated peaks (`quant.curve`: 1/x..1/y² weights, QR, internal standard, ICH LOD/LOQ and S/N, logged exclusions, `calibration/1`, `calib.rs`, `curve.rs`) | `docs/agenti/calibrazione.md` |
 | hand-typed numeric fields (`campi.js`, `CAMPI.num`, `data-num`, calculators, `campo.*` rejection note, `numIt` without Infinity, `lib_campi.sweep`) | `docs/agenti/campi-numerici.md` |
 | sample file roles, times and metadata (`campioni/2` and `/3`, `mzlab-core/src/samples/`: proposals from names, name patterns, CSV, free columns, data from file, warnings, migration, indexes for the TP path) | `docs/agenti/campioni.md` |
 | data channels (file → channels: TIC, filters/transitions/precursors, UV, analog; experiment type as a label; open work) | `docs/agenti/canali-dati.md` |
@@ -52,6 +52,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | MS2 pseudo-spectra from DIA (`dia.rs`, `spectra.ms2` with `dia_pseudo`) | `docs/agenti/dia.md` |
 | file read errors: short cause, "Details", "Copy diagnosis" (`diagnosi.js`), synthetic msconvert-style mzML | `docs/agenti/diagnosi.md` |
 | Drawing right-click menu (`#ctx`, `disegno-menu.js`, `menuAdd` registry, touch copy/cut/paste and long press `disegno-appunti.js`, "Information…", PubChem/ChEBI/BioTransformer searches, `sel/1`, `link/1`) | `docs/agenti/disegno-menu.md` |
+| Disegno: unsaved changes (`disegno-pulito.js`, `confirmDiscard`, `beforeunload`, the «not saved» dialog, Tauri window close) | `docs/agenti/disegno-pulito.md` |
 | Drawing (Ketcher) | `docs/agenti/disegno.md` |
 | export of all user data: browser storage inventory, ZIP writer (`zip.rs`); chunked exports in OPFS (`dl()`, `export-pezzi.js`, `export-worker.js`, provenance, `export/` cleanup) | `docs/agenti/esporta-dati.md` |
 | contract of the vendor readers (`readers.rs`, `Lettore` trait, registry, `Limiti`), adding a format | `docs/agenti/estendere.md` |
@@ -140,6 +141,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | discarded attempts, CI cuts already measured and Rust job times (area: cumulative speed-gain table (date · PR · step ·…) | `docs/agenti/ottimizzazioni-tentate.md` |
 | docking and moving panels (handle, drop zones, dividers, undo) | `docs/agenti/pannelli-affianca.md` |
 | site ↔ app parity (functions and Flow steps on one side only, engine operations missing in the app, missing parity tests, next steps); function × face × test, guard for `rust-worker.js` ops without a branch (`test_parita_operazioni.py`) | `docs/agenti/parita.md` |
+| peak box on a spectrum (hover, keys, live region), highlighted stick, pinned/removed labels (`peak-info.js`, `p.lblOn`/`lblOff`) | `docs/agenti/peak-info.md` |
 | external agents (Claude Code, Cowork) using `mzlab-cli` from the shell: sequence, codes, plan examples | `docs/agenti/per-agenti.md` |
 | built-in list of pesticides and environmental contaminants (`mzlab/chem/pesticides.csv`, `pesticides_meta.json`, `tools/download_pesticides.py`, second list of `contaminanti.json`) | `docs/agenti/pesticidi.md` |
 | substitution position in TP isomers (MS2-compatible classes, `chem/positions.rs`, `posiz/1`) | `docs/agenti/posizioni.md` |
@@ -161,6 +163,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | service worker, per-version site cache, `sw-manifest.json`, updates | `docs/agenti/service-worker.md` |
 | Shimadzu `.qgd` and `.lcd` reader (`crates/mzlab-lettori/src/shimadzu/`, `shimadzu` module) | `docs/agenti/shimadzu.md` |
 | suspect index (area: mzFinder (`TP_Mine/`, `tpmine-loader.js`)) | `docs/agenti/sospetti.md` |
+| rows of the MS² spectrum card (notes, retention times, CE ± spread, sample), `mzlab-cli items` | `docs/agenti/spettro-righe.md` |
 | statistics as steps: Welch/ANOVA with BH, PCA and KMD in Rust (`crates/mzlab-feat/src/stat/`, `table.stats`, `table.pca`, `table.kmd`, `stat/1`) | `docs/agenti/stat.md` |
 | registry of state-changing actions (`comandi.js`, generated `docs/azioni.md`), undo/redo, "removed" entries (remove a file, close a panel, clear marks: no warning, `STORIA` entries) | `docs/agenti/storia-tolto.md` |
 | positioning study: mzLab against other LC-MS tools (feature matrix, 10 missing functions with value and effort, 5 strengths, interoperability gaps, risks; public sources with the date read) | `docs/agenti/studio-concorrenti.md` |
@@ -183,6 +186,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | .wasm measurements (`misura` field of `tools/moduli/*.toml`, before → after line in PR, what costs most) | `docs/agenti/wasm-tetti-misure.md` |
 | mzFinder .wasm ceilings, merged modules (HR group and Attributio) | `docs/agenti/wasm-tetti.md` |
 | Waters MassLynx `.raw` folder reader (`crates/mzlab-lettori/src/waters/`, `waters` module, grouping in `waters-raw.js`) | `docs/agenti/waters.md` |
+| choosing which samples of a `.wiff` (or other multi-sample file) to open: how Analyst does it, cost of listing (measured), #3398 reuse, dialog mockup, `samples list` CLI, cap estimate, PR split, questions (study, no feature code) | `docs/agenti/wiff-scelta-campioni.md` |
 | other SCIEX instruments, sMRM, PIS/NL, feature `estesi` (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-varianti.md` |
 | writing a `.wiff` + `.wiff.scan`: create, add or remove samples (feasibility and design study, no writer code yet: streams per sample, lossless copy, verification, CLI `wiff`, wasm cap) | `docs/agenti/wiff-writer.md` |
 | `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` |
