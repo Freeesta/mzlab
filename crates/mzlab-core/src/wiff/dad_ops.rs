@@ -131,16 +131,64 @@ fn sample(b: &DadData, (ri, rw): (usize, f64), (ci, cw): (usize, f64)) -> f64 {
     }
 }
 
+type Axis = Vec<(usize, (usize, f64))>;
+
+/// The positions of `a_ax` (shifted by `shift`) on `b_ax`: the kept indices of A with their place in B, and whether any needed interpolation.
+fn align(a_ax: &[f64], b_ax: &[f64], shift: f64) -> (Axis, bool) {
+    let half = median_step(b_ax) / 2.0;
+    let kept: Axis = a_ax
+        .iter()
+        .enumerate()
+        .filter_map(|(i, &t)| Some((i, locate(b_ax, t - shift, half)?)))
+        .collect();
+    let interp = kept
+        .iter()
+        .any(|(i, (k, w))| *w != 0.0 || (a_ax[*i] - shift - b_ax[*k]).abs() > 1e-9);
+    (kept, interp)
+}
+
+/// The factor of B: 1, the number given, or the ratio of the maxima, of the sums or of the least squares fit, on the overlap.
+fn scale_factor(s: Scale, av: &[f64], bv: &[f64]) -> f64 {
+    let ratio = |n: f64, d: f64| if d.abs() > 0.0 { n / d } else { 1.0 };
+    let top = |v: &[f64]| v.iter().fold(0.0f64, |m, x| m.max(x.abs()));
+    match s {
+        Scale::None => 1.0,
+        Scale::Factor(f) => f,
+        Scale::Max => ratio(top(av), top(bv)),
+        Scale::Tic => ratio(av.iter().sum(), bv.iter().sum()),
+        Scale::Fit => ratio(
+            av.iter().zip(bv).map(|(x, y)| x * y).sum(),
+            bv.iter().map(|y| y * y).sum(),
+        ),
+    }
+}
+
+impl SubReport {
+    /// The warning codes the numbers of the report call for.
+    fn derive_warnings(&self) -> Vec<&'static str> {
+        let differs = |x: f64, y: f64| x > 0.0 && y > 0.0 && (x / y > 1.05 || y / x > 1.05);
+        [
+            (self.rows.0 < self.rows.1, "rt_range_partial"),
+            (self.cols.0 < self.cols.1, "nm_range_partial"),
+            (self.interp_rt, "rt_interpolated"),
+            (self.interp_nm, "nm_interpolated"),
+            (differs(self.rt_step_a, self.rt_step_b), "rt_step_differs"),
+            (differs(self.nm_step_a, self.nm_step_b), "nm_step_differs"),
+            (self.shift_min != 0.0, "shift_applied"),
+            (self.factor != 1.0, "scale_applied"),
+        ]
+        .into_iter()
+        .filter_map(|(on, w)| on.then_some(w))
+        .collect()
+    }
+}
+
 /// `A - scale * B` on the grid of A restricted to the rows and channels that B covers. `Err("err.pda.nooverlap")` when nothing overlaps, `err.pda.none` for an empty matrix.
 pub fn dad_subtract(a: &DadData, b: &DadData, o: &SubOpts) -> Result<(DadData, SubReport)> {
-    let (na, nb) = (a.points(), b.points());
-    if na == 0
-        || nb == 0
-        || a.channels() == 0
-        || b.channels() == 0
-        || a.matrix_mau.len() < na * a.channels()
-        || b.matrix_mau.len() < nb * b.channels()
-    {
+    let ok = |d: &DadData| {
+        d.points() > 0 && d.channels() > 0 && d.matrix_mau.len() >= d.points() * d.channels()
+    };
+    if !ok(a) || !ok(b) {
         return Err(Error::new("err.pda.none"));
     }
     let shift = if o.shift_min.is_finite() {
@@ -148,76 +196,38 @@ pub fn dad_subtract(a: &DadData, b: &DadData, o: &SubOpts) -> Result<(DadData, S
     } else {
         0.0
     };
-    let (rt_step_a, rt_step_b) = (median_step(&a.time_min), median_step(&b.time_min));
-    let (nm_step_a, nm_step_b) = (
-        median_step(&a.wavelengths_nm),
-        median_step(&b.wavelengths_nm),
+    let ((rows, interp_rt), (cols, interp_nm)) = (
+        align(&a.time_min, &b.time_min, shift),
+        align(&a.wavelengths_nm, &b.wavelengths_nm, 0.0),
     );
-    let rows: Vec<(usize, (usize, f64))> = a
-        .time_min
-        .iter()
-        .enumerate()
-        .filter_map(|(i, &t)| Some((i, locate(&b.time_min, t - shift, rt_step_b / 2.0)?)))
-        .collect();
-    let cols: Vec<(usize, (usize, f64))> = a
-        .wavelengths_nm
-        .iter()
-        .enumerate()
-        .filter_map(|(j, &w)| Some((j, locate(&b.wavelengths_nm, w, nm_step_b / 2.0)?)))
-        .collect();
     if rows.is_empty() || cols.is_empty() {
         return Err(Error::new("err.pda.nooverlap"));
     }
-    let interp_rt = rows.iter().any(|(_, (_, w))| *w != 0.0)
-        || rows
-            .iter()
-            .any(|(i, (k, _))| (a.time_min[*i] - shift - b.time_min[*k]).abs() > 1e-9);
-    let interp_nm = cols.iter().any(|(_, (_, w))| *w != 0.0)
-        || cols
-            .iter()
-            .any(|(j, (k, _))| (a.wavelengths_nm[*j] - b.wavelengths_nm[*k]).abs() > 1e-9);
     // B on the grid of A, then the scale on that overlap
     let bv: Vec<f64> = rows
         .iter()
-        .flat_map(|(_, r)| cols.iter().map(move |(_, c)| (*r, *c)))
-        .map(|(r, c)| sample(b, r, c))
+        .flat_map(|(_, r)| cols.iter().map(move |(_, c)| sample(b, *r, *c)))
         .collect();
     let av: Vec<f64> = rows
         .iter()
         .flat_map(|(i, _)| cols.iter().map(move |(j, _)| at(a, *i, *j)))
         .collect();
-    let ratio = |n: f64, d: f64| if d.abs() > 0.0 { n / d } else { 1.0 };
-    let factor = match o.scale {
-        Scale::None => 1.0,
-        Scale::Factor(f) => f,
-        Scale::Max => ratio(
-            av.iter().fold(0.0f64, |m, v| m.max(v.abs())),
-            bv.iter().fold(0.0f64, |m, v| m.max(v.abs())),
-        ),
-        Scale::Tic => ratio(av.iter().sum(), bv.iter().sum()),
-        Scale::Fit => ratio(
-            av.iter().zip(&bv).map(|(x, y)| x * y).sum(),
-            bv.iter().map(|y| y * y).sum(),
-        ),
-    };
-    let nc = cols.len();
-    let mut matrix = Vec::with_capacity(av.len());
-    let mut twc = Vec::with_capacity(rows.len());
-    for (r, _) in rows.iter().enumerate() {
-        let mut sum = 0.0;
-        for c in 0..nc {
-            let v = (av[r * nc + c] - factor * bv[r * nc + c]) as f32;
-            sum += f64::from(v);
-            matrix.push(v);
-        }
-        twc.push(sum);
-    }
+    let factor = scale_factor(o.scale, &av, &bv);
+    let matrix: Vec<f32> = av
+        .iter()
+        .zip(&bv)
+        .map(|(x, y)| (x - factor * y) as f32)
+        .collect();
+    let twc = matrix
+        .chunks(cols.len())
+        .map(|r| r.iter().map(|&v| f64::from(v)).sum())
+        .collect();
     let time_min: Vec<f64> = rows.iter().map(|(i, _)| a.time_min[*i]).collect();
     let wavelengths_nm: Vec<f64> = cols.iter().map(|(j, _)| a.wavelengths_nm[*j]).collect();
     let (wl_start_nm, wl_stop_nm) = range(&wavelengths_nm);
+    let nm_step_a = median_step(&a.wavelengths_nm);
     let out = DadData {
-        duration_min: time_min.last().copied().unwrap_or(0.0)
-            - time_min.first().copied().unwrap_or(0.0),
+        duration_min: range(&time_min).1 - range(&time_min).0,
         wl_step_nm: nm_step_a,
         time_min,
         twc_mau: twc,
@@ -226,50 +236,25 @@ pub fn dad_subtract(a: &DadData, b: &DadData, o: &SubOpts) -> Result<(DadData, S
         wl_stop_nm,
         matrix_mau: matrix,
     };
-    let mut w = Vec::new();
-    if rows.len() < na {
-        w.push("rt_range_partial");
-    }
-    if cols.len() < a.channels() {
-        w.push("nm_range_partial");
-    }
-    if interp_rt {
-        w.push("rt_interpolated");
-    }
-    if interp_nm {
-        w.push("nm_interpolated");
-    }
-    let differs = |x: f64, y: f64| x > 0.0 && y > 0.0 && (x / y > 1.05 || y / x > 1.05);
-    if differs(rt_step_a, rt_step_b) {
-        w.push("rt_step_differs");
-    }
-    if differs(nm_step_a, nm_step_b) {
-        w.push("nm_step_differs");
-    }
-    if shift != 0.0 {
-        w.push("shift_applied");
-    }
-    if factor != 1.0 {
-        w.push("scale_applied");
-    }
-    let rep = SubReport {
+    let mut rep = SubReport {
         a_rt: range(&a.time_min),
         b_rt: range(&b.time_min),
         a_nm: range(&a.wavelengths_nm),
         b_nm: range(&b.wavelengths_nm),
-        rt_step_a,
-        rt_step_b,
+        rt_step_a: median_step(&a.time_min),
+        rt_step_b: median_step(&b.time_min),
         nm_step_a,
-        nm_step_b,
-        rows: (rows.len(), na),
+        nm_step_b: median_step(&b.wavelengths_nm),
+        rows: (rows.len(), a.points()),
         cols: (cols.len(), a.channels()),
         shift_min: shift,
         scale: o.scale.name(),
         factor,
         interp_rt,
         interp_nm,
-        warnings: w,
+        warnings: vec![],
     };
+    rep.warnings = rep.derive_warnings();
     Ok((out, rep))
 }
 

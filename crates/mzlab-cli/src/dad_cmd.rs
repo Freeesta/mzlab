@@ -60,6 +60,76 @@ fn pair(v: &str, what: &str) -> std::result::Result<(f64, f64), String> {
     ))
 }
 
+/// A number of minutes (or any finite float) given to `--shift` and `--offset`.
+fn minutes(v: String, what: &str) -> std::result::Result<f64, String> {
+    v.parse()
+        .ok()
+        .filter(|x: &f64| x.is_finite())
+        .ok_or(format!("{what} needs minutes"))
+}
+
+fn sample_id(v: String, what: &str) -> std::result::Result<u32, String> {
+    v.parse().map_err(|_| format!("{what} needs a sample id"))
+}
+
+/// One option and its value into `r`; `Ok(false)` for `--help`.
+fn option(
+    r: &mut Req,
+    a: &str,
+    it: &mut impl Iterator<Item = String>,
+) -> std::result::Result<bool, String> {
+    let mut val = |what: &str| it.next().ok_or(format!("{what} needs a value"));
+    match a {
+        "--help" | "-h" => return Ok(false),
+        "--json" => r.json = true,
+        "--out" => r.out = Some(PathBuf::from(val("--out")?)),
+        "--minus" => r.minus = Some(PathBuf::from(val("--minus")?)),
+        "--view" => r.view = val("--view")?,
+        "--scale" => r.scale = val("--scale")?,
+        "--shift" => r.shift = minutes(val("--shift")?, "--shift")?,
+        "--offset" => r.offset = minutes(val("--offset")?, "--offset")?,
+        "--level" => {
+            r.level = val("--level")?
+                .parse()
+                .map_err(|_| "--level needs a number")?
+        }
+        "--rt" => r.rt = Some(pair(&val("--rt")?, "--rt")?),
+        "--nm" => r.nm = Some(pair(&val("--nm")?, "--nm")?),
+        "--sample" => r.sample = Some(sample_id(val("--sample")?, "--sample")?),
+        "--minus-sample" => {
+            r.minus_sample = Some(sample_id(val("--minus-sample")?, "--minus-sample")?)
+        }
+        o if o.starts_with("--") => return Err(format!("unknown option {o}")),
+        _ => r.files.push(PathBuf::from(a)),
+    }
+    Ok(true)
+}
+
+/// The checks that need the whole command line: the verb, the number of files, and the options that belong to one verb only.
+fn check(r: &mut Req) -> std::result::Result<(), String> {
+    if !["subtract", "spectrum", "trace", "ms-at", "delay"].contains(&r.verb.as_str()) {
+        return Err(format!("unknown dad verb {}", r.verb));
+    }
+    let want = if r.verb == "subtract" { 2 } else { 1 };
+    if r.files.len() != want {
+        return Err(format!(
+            "dad {} takes {want} file{}",
+            r.verb,
+            if want == 1 { "" } else { "s" }
+        ));
+    }
+    if r.verb == "subtract" {
+        r.minus = r.files.pop();
+    }
+    if r.verb != "subtract" && r.view != "report" {
+        return Err("--view is for dad subtract".into());
+    }
+    if r.minus.is_some() && !["subtract", "spectrum", "trace"].contains(&r.verb.as_str()) {
+        return Err("--minus is for spectrum and trace".into());
+    }
+    Ok(())
+}
+
 fn parse(args: Vec<String>) -> std::result::Result<Option<Req>, String> {
     let mut it = args.into_iter();
     let verb = it
@@ -85,74 +155,11 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Req>, String> {
         out: None,
     };
     while let Some(a) = it.next() {
-        let mut val = |what: &str| it.next().ok_or(format!("{what} needs a value"));
-        match a.as_str() {
-            "--help" | "-h" => return Ok(None),
-            "--json" => r.json = true,
-            "--out" => r.out = Some(PathBuf::from(val("--out")?)),
-            "--minus" => r.minus = Some(PathBuf::from(val("--minus")?)),
-            "--view" => r.view = val("--view")?,
-            "--scale" => r.scale = val("--scale")?,
-            "--shift" => {
-                r.shift = val("--shift")?
-                    .parse()
-                    .ok()
-                    .filter(|x: &f64| x.is_finite())
-                    .ok_or("--shift needs minutes")?
-            }
-            "--offset" => {
-                r.offset = val("--offset")?
-                    .parse()
-                    .ok()
-                    .filter(|x: &f64| x.is_finite())
-                    .ok_or("--offset needs minutes")?
-            }
-            "--level" => {
-                r.level = val("--level")?
-                    .parse()
-                    .map_err(|_| "--level needs a number")?
-            }
-            "--rt" => r.rt = Some(pair(&val("--rt")?, "--rt")?),
-            "--nm" => r.nm = Some(pair(&val("--nm")?, "--nm")?),
-            "--sample" => {
-                r.sample = Some(
-                    val("--sample")?
-                        .parse()
-                        .map_err(|_| "--sample needs a sample id")?,
-                )
-            }
-            "--minus-sample" => {
-                r.minus_sample = Some(
-                    val("--minus-sample")?
-                        .parse()
-                        .map_err(|_| "--minus-sample needs a sample id")?,
-                )
-            }
-            o if o.starts_with("--") => return Err(format!("unknown option {o}")),
-            _ => r.files.push(PathBuf::from(a)),
+        if !option(&mut r, &a, &mut it)? {
+            return Ok(None);
         }
     }
-    let want = if r.verb == "subtract" { 2 } else { 1 };
-    if !["subtract", "spectrum", "trace", "ms-at", "delay"].contains(&r.verb.as_str()) {
-        return Err(format!("unknown dad verb {}", r.verb));
-    }
-    if r.files.len() != want {
-        return Err(format!(
-            "dad {} takes {want} file{}",
-            r.verb,
-            if want == 1 { "" } else { "s" }
-        ));
-    }
-    if r.verb == "subtract" {
-        r.minus = r.files.pop();
-        r.minus_sample = r.minus_sample.or(None);
-    }
-    if r.verb != "subtract" && r.view != "report" {
-        return Err("--view is for dad subtract".into());
-    }
-    if r.minus.is_some() && !["subtract", "spectrum", "trace"].contains(&r.verb.as_str()) {
-        return Err("--minus is for spectrum and trace".into());
-    }
+    check(&mut r)?;
     Ok(Some(r))
 }
 
