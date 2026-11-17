@@ -24,5 +24,6 @@ def test_the_list_names_every_command_and_old_name():
     block = cli_doc.listing()
     for name in ("features", "flow run", "mol-label", "validate", "channels"):
         assert f"`{name}`" in block
-    assert "`channels` (old: `canali`)" in block
+    assert "`peak-edges` (old: `peaks-edges`)" in block
+    assert "canali" not in block
     assert "help-md" not in block

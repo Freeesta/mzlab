@@ -16,7 +16,7 @@ try:
             pg.evaluate("document.getElementById('ex-png').scrollIntoView()")
             downloads = []; pg.on("download", lambda d: downloads.append(d))
             pg.click("#ex-png"); wait_for_js(pg, "!document.getElementById('ex-warn').hidden")
-            t = pg.inner_text("#ex-warn"); assert "Niente da esportare" in t, t
+            t = pg.inner_text("#ex-warn"); assert "Nothing to export" in t, t
             assert not downloads, "a file was downloaded"
         step("PNG of an empty canvas warns and downloads nothing", empty_export)
         def quick():

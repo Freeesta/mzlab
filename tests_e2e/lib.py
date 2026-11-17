@@ -291,7 +291,7 @@ def shut(pg, sel):
     if pg.is_visible(sel): pg.click(sel)
 def a11y_open(pg):
     """The readability controls of the settings are flat (never folded): nothing to open before touching font, contrast or palette."""
-    pg.wait_for_selector("#uip-a11y")
+    pg.wait_for_selector("#uip-list")
 def set_pal(pg, v):
     a11y_open(pg); pg.select_option("#uip-pal", v)
 def get_env(suffix: str, default=None):
@@ -409,9 +409,9 @@ class Run:
                 urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=1).read(); break
             except Exception:
                 time.sleep(0.1)
-    def page(s, p, tour=False, qaqc=False, motion=False, draw_cards=False):
+    def page(s, p, tour=False, qaqc=False, motion=False, draw_cards=False, touch=False, **ctx):
         s.b = p.chromium.launch()
-        pg = s.b.new_page(viewport={"width": 1500, "height": 2200}, reduced_motion="no-preference" if motion else "reduce", draw_cards=draw_cards)
+        pg = s.b.new_page(**{"viewport": {"width": 1500, "height": 2200}, "reduced_motion": "no-preference" if motion else "reduce", "draw_cards": draw_cards, **({"has_touch": True} if touch else {}), **ctx})
         pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload',new URLSearchParams(location.search).get('ripn')||'1');}catch(_){}")          # the one reload of the first visit (browser.js isolateOnce) would cut a test short: e2e_isolamento is the one that wants it
         if not tour:
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")

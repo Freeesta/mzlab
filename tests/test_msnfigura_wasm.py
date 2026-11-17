@@ -30,10 +30,10 @@ def graph(tmp_path_factory):
     return d
 
 
-@pytest.mark.parametrize("vista,mode", [("albero", "tree"), ("radiale", "radial")])
-def test_the_native_figure_and_the_page_drawer_show_the_same_texts(graph, vista, mode):
-    cli("msn-graph", "figure", str(graph / "g.json"), "--vista", vista, "--out", str(graph / vista))
-    svg = (graph / (vista + ".svg")).read_text(encoding="utf-8")
+@pytest.mark.parametrize("mode", ["tree", "radial"])
+def test_the_native_figure_and_the_page_drawer_show_the_same_texts(graph, mode):
+    cli("msn-graph", "figure", str(graph / "g.json"), "--view", mode, "--out", str(graph / mode))
+    svg = (graph / (mode + ".svg")).read_text(encoding="utf-8")
     rust = collections.Counter(html.unescape(re.sub(r"<[^>]+>", "", t)) for t in re.findall(r"<text[^>]*>(.*?)</text>", svg))  # the subscripts are tspans
     page = collections.Counter(json.loads(run("node", str(ROOT / "tests" / "msn_figura_wasm_node.js"), str(graph / "g.json"), mode).stdout))
     assert sum(page.values()) >= 4

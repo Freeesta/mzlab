@@ -1,4 +1,4 @@
-//! `mzlab-cli canali`: the channels of synthetic files. The files of `tools/dati_sintetici.py` (skipped without python3 and numpy, `MZLAB_GOLDEN_STRICT=1`
+//! `mzlab-cli channels`: the channels of synthetic files. The files of `tools/dati_sintetici.py` (skipped without python3 and numpy, `MZLAB_GOLDEN_STRICT=1`
 //! fails instead) give the lists written below by hand; an mzML made here gives the same JSON as the engine of the page (`Routes::canali`).
 
 use std::path::{Path, PathBuf};
@@ -9,7 +9,7 @@ use mzlab_core::json::{parse, Value};
 use crate::execute;
 
 fn channels_of(file: &Path) -> Value {
-    let o = execute(&["canali".to_string(), file.to_string_lossy().into_owned()]);
+    let o = execute(&["channels".to_string(), file.to_string_lossy().into_owned()]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     parse(&o.stdout).unwrap()
 }
@@ -53,7 +53,7 @@ fn cli_gives_the_json_of_the_engine() {
     std::fs::create_dir_all(&dir).unwrap();
     let f = dir.join("a.mzML");
     std::fs::write(&f, crate::tests::mzml(10.0)).unwrap();
-    let o = execute(&["canali".into(), f.to_string_lossy().into_owned()]);
+    let o = execute(&["channels".into(), f.to_string_lossy().into_owned()]);
     let b = std::fs::read(&f).unwrap();
     let mut src = b.clone();
     let p = mzlab_core::upload::prepare(&mut src, b.len() as u64, "a.mzML").unwrap();
@@ -74,12 +74,12 @@ fn cli_gives_the_json_of_the_engine() {
 #[test]
 fn usage_errors_exit_with_2() {
     for a in [
-        vec!["canali"],
-        vec!["canali", "a", "b"],
-        vec!["canali", "--nope"],
-        vec!["canali", "/nonexistent/x.mzML"],
-        vec!["canali", "a.mzML", "--sample", "1"],
-        vec!["canali", "a.wiff", "--sample", "x"],
+        vec!["channels"],
+        vec!["channels", "a", "b"],
+        vec!["channels", "--nope"],
+        vec!["channels", "/nonexistent/x.mzML"],
+        vec!["channels", "a.mzML", "--sample", "1"],
+        vec!["channels", "a.wiff", "--sample", "x"],
     ] {
         assert_eq!(
             execute(&a.iter().map(|s| s.to_string()).collect::<Vec<_>>()).code,
@@ -87,7 +87,7 @@ fn usage_errors_exit_with_2() {
             "{a:?}"
         );
     }
-    assert_eq!(execute(&["canali".into(), "--help".into()]).code, 0);
+    assert_eq!(execute(&["channels".into(), "--help".into()]).code, 0);
 }
 
 /// `--channel uv:auto` prints the XWC band of `itemroutes::pda_propose` (what `api/uvpropose` answers in the site and the app), with and without `--rt`.
@@ -251,9 +251,9 @@ fn an_unknown_sim_id_is_named_whole() {
     .unwrap();
     let id = "sim:SIM SIC Q1=237.1 sample=1 polarity=positive name=ionA";
     let o = execute(&[
-        "canali".into(),
+        "channels".into(),
         f.to_string_lossy().into_owned(),
-        "--canale".into(),
+        "--channel".into(),
         id.into(),
     ]);
     assert_eq!(o.code, 2);
@@ -390,7 +390,7 @@ fn the_device_traces_of_a_wiff_are_the_analog_channels_of_its_mzml() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// An mzML with a TWC (a 2 × 2 `dad_matrix` is not needed for the trace) and a pump pressure trace: `--canale` reads them as the old routes do.
+/// An mzML with a TWC (a 2 × 2 `dad_matrix` is not needed for the trace) and a pump pressure trace: `--channel` reads them as the old routes do.
 #[test]
 fn canale_reads_a_uv_and_an_analog_trace() {
     let dir = std::env::temp_dir().join(format!("mzlab_cli_canale_uv_{}", std::process::id()));
@@ -428,7 +428,7 @@ fn canale_reads_a_uv_and_an_analog_trace() {
     std::fs::write(&f, xml).unwrap();
     let p = f.to_string_lossy().into_owned();
     let run = |extra: &[&str]| {
-        let mut a = vec!["canali".to_string(), p.clone()];
+        let mut a = vec!["channels".to_string(), p.clone()];
         a.extend(extra.iter().map(|s| s.to_string()));
         execute(&a)
     };
@@ -438,36 +438,21 @@ fn canale_reads_a_uv_and_an_analog_trace() {
         "{ids:?}"
     );
     assert_eq!(proposed(&channels_of(&f)), "solo-uv");
-    // The new and the old spellings answer with the same bytes and exit code.
-    let old = |extra: &[&str]| {
-        let mut a = vec!["canali".to_string(), p.clone()];
-        a.extend(extra.iter().map(|s| s.to_string()));
-        execute(&a)
-    };
-    for (new, old_args) in [
-        (vec!["--channel", "uv:twc"], vec!["--canale", "uv:twc"]),
-        (
-            vec!["--channel", "an:1", "--n", "50"],
-            vec!["--canale", "an:1", "--n", "50"],
-        ),
-        (vec!["--channel", "tic"], vec!["--canale", "tic"]),
-        (vec![], vec![]),
-    ] {
-        let (a, b) = (run_new(&p, &new), old(&old_args));
-        assert_eq!((a.code, a.stdout), (b.code, b.stdout), "{new:?}");
-    }
-    let twc = run(&["--canale", "uv:twc"]);
+    // The Italian command and flag are gone: refused as usage errors.
+    assert_eq!(execute(&["canali".into(), p.clone()]).code, 2);
+    assert_eq!(run(&["--canale", "uv:twc"]).code, 2);
+    let twc = run(&["--channel", "uv:twc"]);
     assert_eq!(twc.code, 0, "{}", twc.stderr);
     assert_eq!(
         String::from_utf8(twc.stdout).unwrap(),
         "{\"rt\":[0,0.03],\"y\":[1,2]}\n"
     );
-    let an = run(&["--canale", "an:1", "--n", "50"]);
+    let an = run(&["--channel", "an:1", "--n", "50"]);
     assert_eq!(an.code, 0, "{}", an.stderr);
     assert!(String::from_utf8(an.stdout)
         .unwrap()
         .contains("\"unit\":\"bar\""));
-    assert_eq!(run(&["--canale", "tic"]).code, 2);
+    assert_eq!(run(&["--channel", "tic"]).code, 2);
     assert_eq!(run(&["--rt", "1"]).code, 2);
     let _ = std::fs::remove_dir_all(&dir);
 }

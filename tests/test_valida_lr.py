@@ -140,7 +140,7 @@ def test_native_run_on_the_synthetic_series(tmp_path):
         assert v["lr_sint_" + i]["ok"] is True, v["lr_sint_" + i]
     assert v["lr_sint_candidati_con_prove"]["ok"] in (True, False) and det["fullscan"]["ioni_riferimento"] == 5 and det["mrm"]["standard"]["livelli"] == 6
     c, det2 = lr.misura(str(tmp_path / "nessuna"), None, tmp_path / "lavoro", "2026-10-13")
-    assert c["vista_tabella_lr"] is False and "saltato" in det2["dati_reali"]
+    assert c["vista_tabella_lr"] is False and "skipped" in det2["dati_reali"]
     assert all(k["ok"] is None for k in c["criteri"] if not k["id"].startswith("lr_sint_"))          # no data: skipped, never passed
     assert lr.a_json(c) == lr.a_json(lr.misura(str(tmp_path / "nessuna"), None, tmp_path / "lavoro2", "2026-10-13")[0])
 

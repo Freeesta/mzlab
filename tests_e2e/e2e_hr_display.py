@@ -1,4 +1,4 @@
-"""HR_PANELS 3a: «Opzioni di visualizzazione» (right click on a chart → panel of the drawer, extendable per kind of chart; palette command) and the isotope simulation
+"""HR_PANELS 3a: «Display options» (right click on a chart → panel of the drawer, extendable per kind of chart; palette command) and the isotope simulation
 with several adducts (concentration) and a charge distribution. The decimals field and the ▾ button of the spectrum are gone from the bars in HR."""
 # covers: mzlab/web/visualizza.js, mzlab/web/hr.js, mzlab/web/banco.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -25,11 +25,11 @@ try:
         def menu_spec():
             assert pg.evaluate("getComputedStyle(document.querySelector('.pnl.spec [data-a=par]')).display") == "none", "the ▾ button is gone in HR"
             xy = at("spec"); pg.mouse.click(xy["x"], xy["y"], button="right"); pg.wait_for_timeout(300)
-            assert "Opzioni…" in pg.inner_text("#ctx")
-            pg.click("#ctx >> text=Opzioni…"); pg.wait_for_selector(".dsp", timeout=5000)
-            t = pg.inner_text(".dsp"); assert "Decimali" in t and "Etichette" in t and "al massimo" in t, t
-            assert pg.evaluate("BARRA.curTab") == "disp" and pg.evaluate("document.querySelector('#sb-title').textContent") == "Opzioni di visualizzazione"
-        step("right click on a spectrum → Opzioni di visualizzazione: decimals, labels (threshold, maximum)", menu_spec)
+            assert "Options…" in pg.inner_text("#ctx")
+            pg.click("#ctx >> text=Options…"); pg.wait_for_selector(".dsp", timeout=5000)
+            t = pg.inner_text(".dsp"); assert "Decimals" in t and "Labels" in t and "at most" in t, t
+            assert pg.evaluate("BARRA.curTab") == "disp" and pg.evaluate("document.querySelector('#sb-title').textContent") == "Display options"
+        step("right click on a spectrum → Display options: decimals, labels (threshold, maximum)", menu_spec)
         def change():
             pg.fill("#dsp-2", "3"); pg.press("#dsp-2", "Tab"); pg.wait_for_timeout(500)
             assert pg.evaluate("E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp).nlab") == 3
@@ -37,8 +37,8 @@ try:
         step("changing an option redraws the chart", change)
         def menu_chrom():
             xy = at("chrom"); pg.mouse.click(xy["x"], xy["y"], button="right"); pg.wait_for_timeout(300)
-            pg.click("#ctx >> text=Opzioni…"); pg.wait_for_selector(".dsp", timeout=5000)
-            assert "cromatogramma" in pg.inner_text(".dsp") and "Normalizza" in pg.inner_text(".dsp")
+            pg.click("#ctx >> text=Options…"); pg.wait_for_selector(".dsp", timeout=5000)
+            assert "chromatogram" in pg.inner_text(".dsp") and "Normalize" in pg.inner_text(".dsp")
         step("right click on a chromatogram → its own list", menu_chrom)
         def extend():
             n0 = pg.evaluate("document.querySelectorAll('.dsp input[type=checkbox]').length")       # the options the list already has (normalise, peak time labels)
@@ -48,13 +48,13 @@ try:
         def palette():
             drawer(pg, "file")      # leave the tab the previous step opened: the wait for 'disp' below must prove the command ran (the palette runs it after a timeout)
             pg.keyboard.press("Control+k"); pg.wait_for_selector("#paletta", timeout=5000); wait_for_js(pg, "document.activeElement && document.activeElement.id === 'pal-in'"); pg.keyboard.type("opzioni di vis")
-            wait_for_js(pg, "document.querySelector('#pal-l') && document.querySelector('#pal-l').innerText.includes('Opzioni di visualizzazione')")
+            wait_for_js(pg, "document.querySelector('#pal-l') && document.querySelector('#pal-l').innerText.includes('Display options')")
             pg.keyboard.press("Enter"); wait_for_js(pg, "BARRA.curTab === 'disp'")
         step("«Display options» is a command of the palette", palette)
         def iso():
             pg.evaluate("setActive(E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp))")
             drawer(pg, "iso"); pg.wait_for_selector("#hri-f", timeout=5000); ready(pg)
-            t = pg.inner_text("#hri-body"); assert "Distribuzione di carica" in t and "Conc. (%)" in t
+            t = pg.inner_text("#hri-body"); assert "Charge distribution" in t and "Conc. (%)" in t
             pg.fill("#hri-f", "C13H24N4O3S"); pg.evaluate("document.querySelector('#hri-addad').click()"); pg.wait_for_timeout(200)
             assert pg.locator(".hri-ad").count() == 2
             pg.evaluate("document.querySelector('#hri-go').click()"); pg.wait_for_timeout(1500)

@@ -20,9 +20,7 @@ usage: mzlab-cli channels FILE [--sample ID] [--channel ID [--rt T0[,T1]] [--n N
   --channel ID the trace of a UV or analog channel (uv:twc, uv:<nm>±<bw>, an:<i>) instead of the list; with --rt (minutes) the UV spectrum of uv:twc;
               uv:auto prints the XWC band proposed from the DAD matrix ({nm, bw, rt, n}), in the --rt window when given
   --n N       points at most per extreme of an analog trace (default 2000)
-  --out PATH  write there instead of the standard output
-
-old names still accepted: canali, --canale";
+  --out PATH  write there instead of the standard output";
 
 /// What was asked: the file, its sample, the channel to read (`--channel`, `--rt`, `--n`) and where to write.
 struct Request {
@@ -42,9 +40,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
         match a.as_str() {
             "--help" | "-h" => return Ok(None),
             "--out" => out = Some(PathBuf::from(it.next().ok_or("--out needs a path")?)),
-            "--channel" | "--canale" => {
-                channel = Some(it.next().ok_or("--channel needs a channel id")?)
-            }
+            "--channel" => channel = Some(it.next().ok_or("--channel needs a channel id")?),
             "--rt" => {
                 let v = it.next().ok_or("--rt needs minutes")?;
                 let num = |x: &str| x.parse::<f64>().ok().filter(|x| x.is_finite());

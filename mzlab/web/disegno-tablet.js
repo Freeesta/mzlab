@@ -14,8 +14,26 @@ const TOUCH_CSS =
   // the drag-a-file text and the image-recognition tile (never available here) say nothing a touch user can use
   '[data-testid=open-from-image-button],[data-testid=open-from-file-button] button>div{display:none!important}}' +
   '#tp-tip{position:fixed;z-index:2147483647;max-width:80vw;padding:6px 10px;border-radius:6px;border:1px solid var(--line,#888);background:var(--panel,#fff);color:var(--ink,#222);font:14px/1.3 system-ui,sans-serif;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .15s,visibility .15s}' +
-  '#tp-tip[data-on]{opacity:1;visibility:visible}@media (prefers-reduced-motion:reduce){#tp-tip{transition:none}}';
+  '#tp-tip[data-on]{opacity:1;visibility:visible}@media (prefers-reduced-motion:reduce){#tp-tip{transition:none}}' +
+  // press feedback of a long press on the drawing: a ring that closes in on the finger in LONG ms (a still ring with reduced motion)
+  '.tp-ring{position:fixed;z-index:2147483646;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;box-sizing:border-box;border:3px solid var(--accent,#1f5a7a);background:color-mix(in srgb,var(--accent,#1f5a7a) 14%,transparent);pointer-events:none;animation:tp-ring .5s ease-out forwards}' +
+  '@keyframes tp-ring{from{transform:scale(1.6);opacity:.2}to{transform:scale(1);opacity:1}}@media (prefers-reduced-motion:reduce){.tp-ring{animation:none}}';
 const LONG = 500, MOVE = 10;       // ms and px: a press that stays put this long names the tool instead of activating it
+
+/** Press feedback on the drawing: a ring under a finger that stays put, gone when it moves, lifts or the long press has opened the menu (touch.js sets `__tpLong`).
+ * @param {Document} d */
+function pressRing(d) {
+  /** @type {HTMLElement | null} */ let ring = null, t = 0, x0 = 0, y0 = 0;
+  const off = () => { clearTimeout(t); if (ring) { ring.remove(); ring = null; } };
+  d.addEventListener("pointerdown", e => {
+    off(); const el = /** @type {Element | null} */ (e.target);
+    if (e.pointerType !== "touch" || !el || !el.closest || !el.closest('[class*="StructEditor-module_canvas"]')) return;
+    x0 = e.clientX; y0 = e.clientY; ring = d.createElement("div"); ring.className = "tp-ring"; ring.style.left = x0 + "px"; ring.style.top = y0 + "px"; d.body.appendChild(ring);
+    t = window.setTimeout(off, 700);
+  }, true);
+  d.addEventListener("pointermove", e => { if (ring && Math.hypot(e.clientX - x0, e.clientY - y0) > MOVE) off(); }, true);
+  for (const k of ["pointerup", "pointercancel"]) d.addEventListener(k, off, true);
+}
 
 /** Long press on a toolbar button (Ketcher's or the drop-down bar's proxy) shows its name; the tap that follows is swallowed.
  * @param {Document} d */
@@ -82,8 +100,9 @@ function guardFocus(d) {
 /** @param {Document} d  the document of the Ketcher iframe */
 export function mountTablet(d) {
   if (!d.head || !d.body || d.getElementById("tp-tablet")) return;
+  try { const ac = getComputedStyle(document.documentElement).getPropertyValue("--accent"); if (ac) d.documentElement.style.setProperty("--accent", ac); } catch (_) { /* the ring keeps its fallback colour */ }
   const st = d.createElement("style"); st.id = "tp-tablet"; st.textContent = CSS; d.head.appendChild(st);
-  const tc = d.createElement("style"); tc.id = "tp-touch"; tc.textContent = TOUCH_CSS; d.head.appendChild(tc); longPress(d); snapCharge(d);
+  const tc = d.createElement("style"); tc.id = "tp-touch"; tc.textContent = TOUCH_CSS; d.head.appendChild(tc); longPress(d); snapCharge(d); pressRing(d);
   // not a Tab stop, and no on-screen keyboard after a tap; again whenever Ketcher re-creates the element
   const fix = () => { for (const c of d.querySelectorAll(".cliparea,[data-cliparea]")) { if (c.getAttribute("tabindex") !== "-1") c.setAttribute("tabindex", "-1"); if (c.getAttribute("inputmode") !== "none") c.setAttribute("inputmode", "none"); } };
   // the copy menu's triangle has no name of its own

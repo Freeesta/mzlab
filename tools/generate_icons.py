@@ -89,7 +89,7 @@ def main():
         if s in (192, 512):
             (WEB / f"app-icon-{s}.png").write_bytes(png(web_badge(app_icon(core, s))))
     (WEB / "app-icon-maskable-512.png").write_bytes(png(web_badge(app_icon(core, 512, rounded=False), False).convert("RGB")))
-    print("icone scritte in", WEB)
+    print("icons written in", WEB)
 
 
 if __name__ == "__main__":

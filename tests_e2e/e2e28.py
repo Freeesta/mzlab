@@ -81,14 +81,14 @@ try:
               document.querySelectorAll('.pt-c').forEach(c=>{const bg=px(getComputedStyle(c).backgroundColor);
                 c.querySelectorAll('b,span,small').forEach(e=>{if(!e.textContent.trim())return;const fg=px(getComputedStyle(e).color),a=lum(fg),b=lum(bg),r=(Math.max(a,b)+.05)/(Math.min(a,b)+.05);if(r<min){min=r;worst.push(c.dataset.s)}})});
               const org=document.querySelector('.pt-c.org'), pl=document.querySelector('.pt-c:not(.org)');
-              return {min,worst:worst.slice(-1)[0],bw:getComputedStyle(org).borderTopWidth,bw2:getComputedStyle(pl).borderTopWidth,n:document.querySelectorAll('.pt-c').length}}"""
+              return {min,worst:worst.slice(-1)[0],bw:getComputedStyle(org).boxShadow,bw2:getComputedStyle(pl).boxShadow,n:document.querySelectorAll('.pt-c').length}}"""
             for th in ("light", "dark"):
                 g = pg.evaluate(js, th)
                 assert g["n"] >= 100 and g["min"] >= 4.5, (th, g)                 # symbol, atomic number and mass readable on every cell
-                assert float(g["bw"][:-2]) > float(g["bw2"][:-2]), g              # highlighted elements: thicker border, not only colour
+                assert g["bw"] != "none" and g["bw2"] == "none", g              # highlighted elements: an inset frame, not only colour
             pg.evaluate("document.documentElement.removeAttribute('data-theme')")
             pg.click("#refx")
-        step("periodic table: no tab bar, contrast >= 4.5 on every cell in light and dark, thicker border for key elements", ptable)
+        step("periodic table: no tab bar, contrast >= 4.5 on every cell in light and dark, framed key elements", ptable)
         def aligned():
             qa = pg.evaluate("fetch('api/adduct_table').then(r=>r.json()).then(t=>t.rows.map(a=>[a.n,a.shift,a.k,a.z]))")
             for n, shift, k, z in qa:

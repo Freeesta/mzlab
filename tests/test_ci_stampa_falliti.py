@@ -15,7 +15,7 @@ def run(tmp_path, report, logs):
 
 
 def test_failed_e2e_and_site_build_tails_are_printed(tmp_path):
-    out = run(tmp_path, "# Verifica: 2 FAIL\n\n- FAIL e2e_a (3 s): x\n- OK   e2e_b\n- FAIL sito per gli e2e (tools/prepara_sito.py) (362 s): vedi log\n",
+    out = run(tmp_path, "# Verifica: 2 FAIL\n\n- FAIL e2e_a (3 s): x\n- OK   e2e_b\n- FAIL site for the e2e (tools/prepara_sito.py) (362 s): see log\n",
               {"e2e_a": "line-a\n", "e2e_b": "NOT-PRINTED\n", "prepara_sito": "cargo exploded\n", "prova_hr": "NOT-PRINTED-HR\n"})
     assert "===== e2e_a" in out and "line-a" in out and "cargo exploded" in out and "NOT-PRINTED" not in out
 
