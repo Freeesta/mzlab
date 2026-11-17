@@ -296,7 +296,7 @@ const pieno = async (w, files = FILES) => {
   await c.put(new Request(O + ".fill-done"), new Response("ok"));
 };
 const NAVON = async w => (await w.ctx.caches.open("mzlab-opz")).put(new Request(O + ".nav-cache"), new Response("1"));
-{ // ?nav=cache: remembered, preload off; the page from the complete cache with no network wait, the manifest checked in the background; ?nav=rete undoes it
+{ // ?nav=cache: remembered, preload off; the page from the complete cache with no network wait, the manifest checked in the background; ?nav=network undoes it
   const w = mondo();
   await pieno(w);
   w.st.hang = true;                                    // a hung manifest: the cached page must not wait for it
@@ -312,8 +312,8 @@ const NAVON = async w => (await w.ctx.caches.open("mzlab-opz")).put(new Request(
   assert.ok((await Promise.race([w.get("", { mode: "navigate" }), new Promise(r => setTimeout(r, 200, null))])).dalCache, "without the query: still cache first");
   assert.equal(w.netCount(""), 0);
   w.st.hang = false;
-  await w.get("?nav=rete", { mode: "navigate" });
-  assert.equal(w.netCount(""), 1, "?nav=rete: network first again");
+  await w.get("?nav=network", { mode: "navigate" });
+  assert.equal(w.netCount(""), 1, "?nav=network: network first again");
   assert.ok(!(await w.ctx.caches.keys()).includes("mzlab-opz"), "the switch is forgotten");
   assert.deepEqual(w.st.preload, ["off", "on"]);
 }
