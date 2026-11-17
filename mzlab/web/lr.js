@@ -208,7 +208,6 @@ export function createLr({ rb }) {
         if (path === "/api/state") return json(state());
         if (path === "/api/session") return json(session());
         { const r = await mr.get(path, u.searchParams); if (r !== undefined) return r; }          // method, analog traces, delay, PDA, gradient
-        if (path === "/api/elements") return { status: 200, text: (await rpc({ op: "lr_elements" })).info };
         if (path === "/api/formula") {
           try { return { status: 200, text: (await rpc({ op: "lr_formula", f: u.searchParams.get("f") || "", adduct: u.searchParams.get("adduct") || "" })).info }; }
           catch (e_) { const e = /** @type {Lanciato} */ (e_); let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ } if (j && j.error_key) return json({ error: formulaText(j), error_key: j.error_key, params: j.params || {} }, 400); throw e; }

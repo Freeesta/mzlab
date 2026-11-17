@@ -7,7 +7,6 @@ use mzlab_desktop::State;
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-
 const NAME: &str = "FullScan_t10.mzML";
 
 fn example() -> PathBuf {

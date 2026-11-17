@@ -36,7 +36,7 @@ window.TAVOLA = (() => {
 .pt-c{font:inherit;color:var(--ink);text-align:inherit;border:1px solid var(--line);border-radius:4px;padding:2px 3px;background:var(--panel);cursor:pointer;line-height:1.1;height:46px;min-width:24px;overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:center}
 .pt-t{display:flex;justify-content:space-between;width:100%;font-size:8px;color:var(--ink)}.pt-c b{font-size:15px;line-height:1.05}.pt-c small{font-size:9px;color:var(--ink)}
 .pt-m{position:absolute;right:3px;top:12px;font-size:8px;font-weight:600;color:var(--ink)}
-.pt-c.org{box-shadow:inset 0 0 0 2px var(--accent)}.pt-c.org b{font-weight:800}.pt-c.nd b{color:var(--muted)}
+.pt-c.org{box-shadow:inset 0 0 0 2px var(--accent)}.pt-c.org b{font-weight:800}
 .pt-c:hover,.pt-c.pin{outline:2px solid var(--accent);outline-offset:-2px;z-index:1}.pt-c:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;z-index:1}
 ${classCss}
 .pt-info{grid-row:1/4;grid-column:3/13;height:144px;padding:2px 10px;font-size:11px;line-height:1.3;overflow:auto;scrollbar-gutter:stable}.pt-info table th,.pt-info table td{padding:0 6px}
@@ -44,7 +44,7 @@ ${classCss}
 .pt-bar{display:inline-block;height:8px;background:var(--accent);border-radius:2px}
 .pt-leg{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;margin:2px 0 6px;font-size:10px;color:var(--ink)}
 .pt-key{font:inherit;font-size:10px;color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:2px 6px;min-height:24px;cursor:pointer}.pt-key[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:-2px;font-weight:700}
-.pt-key:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}.pt-leg .pt-sep{color:var(--muted)}
+.pt-key:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
 @media (forced-colors:active){.pt-c,.pt-key{border-color:CanvasText}.pt-c.pin,.pt-c:focus-visible,.pt-key[aria-pressed="true"]{outline-color:Highlight}.pt-bar{background:CanvasText}.pt-c.org{box-shadow:inset 0 0 0 2px Highlight}}`;
   let styled = false;
   /** Grid cell of an element: the 18 columns of the main table, the f-block (La-Yb, Ac-No) on rows 9 and 10, Lu and Lr under Y. @param {number} z */
@@ -73,7 +73,8 @@ ${classCss}
     function info(/** @type {TavEl} */ e) {
       const main = e.isotopes.length ? e.isotopes.reduce((a, b) => (b.abund > a.abund ? b : a)) : null;
       let h = `<div class="pt-big"><span>${e.z}</span><b>${EH(e.symbol)}</b></div><div><b style="font-size:15px">${EH(e.name)}</b></div>`;
-      if (!main || e.avg == null || e.mono == null) return h + `<div>${t("tbl.na")}</div>`;
+      if (e.mono == null) return h + `<div>${t("tbl.na")}</div>`;
+      if (!main || e.avg == null) return h + `<div>${t("tbl.pt.monoOnly", { m: e.mono.toFixed(5) })}</div>`;
       h += `<div>${t("tbl.pt.card", { w: e.avg.toFixed(4), m: e.mono.toFixed(5) })}</div>
         <table class="sm" style="margin-top:6px"><tr><th>${t("tbl.pt.col.iso")}</th><th class="num">${t("tbl.pt.col.mass")}</th><th class="num" title="${EH(t("tbl.pt.tip.abund"))}">${t("tbl.pt.col.abund")}</th><th class="num" title="${EH(t("tbl.pt.tip.delta"))}">${t("tbl.pt.col.delta")}</th><th></th></tr>` +
         e.isotopes.map(i => `<tr><td><sup>${i.a}</sup>${EH(e.symbol)}</td><td class="num">${i.mass.toFixed(5)}</td><td class="num">${pct(i.abund)}</td>` +
@@ -84,13 +85,13 @@ ${classCss}
     function periodic() {
       const cells = elements.map(e => {
         const [r, c] = cell(e.z), cls = CL[e.class];
-        const label = e.mono == null ? t("tbl.pt.ariaNone", { name: e.name, s: e.symbol, z: e.z, cls: cls.name }) : t("tbl.pt.aria", { name: e.name, s: e.symbol, z: e.z, cls: cls.name, m: e.mono.toFixed(5), w: /** @type {number} */ (e.avg).toFixed(4) });
+        const label = e.mono == null ? t("tbl.pt.ariaNone", { name: e.name, s: e.symbol, z: e.z, cls: cls.name }) : e.avg == null ? t("tbl.pt.ariaMono", { name: e.name, s: e.symbol, z: e.z, cls: cls.name, m: e.mono.toFixed(5) }) : t("tbl.pt.aria", { name: e.name, s: e.symbol, z: e.z, cls: cls.name, m: e.mono.toFixed(5), w: e.avg.toFixed(4) });
         const mark = e.m2_rel != null ? `<sup class="pt-m" title="${EH(t("tbl.pt.tip.m2"))}">+2</sup>` : e.mono_only ? `<sup class="pt-m" title="${EH(t("tbl.pt.tip.one"))}">1</sup>` : "";
         return `<button type="button" class="pt-c${ORGANIC.has(e.symbol) ? " org" : ""}${e.mono == null ? " nd" : ""}" data-s="${e.symbol}" data-k="${e.class}" data-r="${r}" data-c="${c}" tabindex="${e.z === 1 ? 0 : -1}" aria-label="${EH(label)}" style="grid-row:${r};grid-column:${c}">` +
           `<span class="pt-t"><span>${e.z}</span><span>${cls.code}</span></span><b>${e.symbol}</b>${mark}<small>${mono(e)}</small></button>`;
       }).join("");
       const keys = classes.map(c => `<button type="button" class="pt-key" data-k="${c.key}" aria-pressed="false" title="${EH(t("tbl.pt.tip.class"))}">${c.code} ${EH(c.name)}</button>`).join("");
-      const legend = `<div class="pt-leg" role="group" aria-label="${EH(t("tbl.pt.legend"))}">${keys}<span class="pt-sep">|</span><span>${t("tbl.pt.key.use")}</span><span title="${EH(t("tbl.pt.tip.one"))}">1 ${t("tbl.pt.key.one")}</span><span title="${EH(t("tbl.pt.tip.m2"))}">+2 ${t("tbl.pt.key.m2")}</span></div>`;
+      const legend = `<div class="pt-leg" role="group" aria-label="${EH(t("tbl.pt.legend"))}">${keys}<span>${t("tbl.pt.key.use")}</span><span title="${EH(t("tbl.pt.tip.one"))}">1 ${t("tbl.pt.key.one")}</span><span title="${EH(t("tbl.pt.tip.m2"))}">+2 ${t("tbl.pt.key.m2")}</span></div>`;
       // Data sources (kept here, not shown in the page): see crates/mzlab-core/src/periodic.rs. Hovering or focusing an element shows its card
       // (click or Enter pins it); the elements of the formulas are boxed with the accent colour.
       return `${legend}<div class="pt" role="group" aria-label="${EH(t("icon.pt"))}">${cells}<div class="pt-info" id="pt-info" tabindex="0" role="region" aria-label="${EH(t("tbl.pt.info"))}" aria-live="polite">${info(EL.C)}</div></div>`;

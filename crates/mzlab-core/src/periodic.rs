@@ -170,9 +170,9 @@ pub fn class_of(z: u8) -> usize {
 const M2_NOTABLE: f64 = 0.04;
 
 /// `elements/1`: `{"schema","classes":[{key,code,name}],"elements":[{z,symbol,name,class,mono,avg,mono_only,m2_rel,isotopes:[{a,mass,abund}]}]}`.
-/// `mono` is the exact mass of the most abundant natural isotope, `avg` the abundance-weighted mean of the listed isotopes, `abund` is
-/// in percent, `m2_rel` the M+2 / main intensity ratio; all four are `null` (and `isotopes` empty) for an element without natural isotopes
-/// in the tables.
+/// `mono` is the exact mass of the most abundant natural isotope (the nuclide table where the abundances are missing), `avg` the abundance-weighted mean of the listed isotopes, `abund` is
+/// in percent, `m2_rel` the M+2 / main intensity ratio; `avg` and `m2_rel` are `null` and `isotopes` empty for an element outside the
+/// abundance tables, `mono` too when the nuclide table lacks it (Z above 108).
 pub fn elements_json() -> String {
     let mut o = Out(String::new());
     o.raw("{\"schema\":\"elements/1\",\"classes\":[");
@@ -186,60 +186,74 @@ pub fn elements_json() -> String {
             .raw("}");
     }
     o.raw("],\"elements\":[");
-    for (i, name) in NAMES.iter().enumerate() {
-        let z = (i + 1) as u8;
-        let symbol = SYMBOLS[i];
-        let iso = crate::isoscore::isotopes_of(symbol).unwrap_or(&[]);
-        let main = iso
-            .iter()
-            .copied()
-            .fold(None, |a: Option<(f64, f64)>, b| match a {
-                Some(x) if x.1 >= b.1 => Some(x),
-                _ => Some(b),
-            });
-        let tot: f64 = iso.iter().map(|x| x.1).sum();
-        let avg = if tot > 0.0 {
-            Some(iso.iter().map(|x| x.0 * x.1).sum::<f64>() / tot)
-        } else {
-            None
-        };
-        let m2 = main.and_then(|m| {
-            iso.iter()
-                .find(|x| (x.0 - m.0 - 2.0).abs() < 0.1)
-                .map(|x| x.1 / m.1)
-        });
-        o.raw(if i > 0 { ",{\"z\":" } else { "{\"z\":" })
-            .int(i64::from(z))
-            .raw(",\"symbol\":")
-            .str(symbol)
-            .raw(",\"name\":")
-            .str(name);
-        o.raw(",\"class\":")
-            .str(CLASSES[class_of(z)].0)
-            .raw(",\"mono\":")
-            .opt(main.map(|m| m.0))
-            .raw(",\"avg\":")
-            .opt(avg);
-        o.raw(",\"mono_only\":")
-            .raw(if iso.len() == 1 { "true" } else { "false" });
-        o.raw(",\"m2_rel\":")
-            .opt(m2.filter(|r| *r >= M2_NOTABLE))
-            .raw(",\"isotopes\":[");
-        for (j, (m, a)) in iso.iter().enumerate() {
-            o.raw(if j > 0 { ",{\"a\":" } else { "{\"a\":" })
-                .int(m.round() as i64)
-                .raw(",\"mass\":")
-                .num(*m)
-                .raw(",\"abund\":")
-                .num(a * 100.0)
-                .raw("}");
-        }
-        o.raw("]}");
+    for i in 0..NAMES.len() {
+        element_json(&mut o, i);
     }
     o.raw("]}");
     o.0
 }
 
+/// `(mono, avg, m2_rel)` of an element from its isotopes (see `elements_json`).
+fn masses(symbol: &str, iso: &[(f64, f64)]) -> (Option<f64>, Option<f64>, Option<f64>) {
+    let main = iso
+        .iter()
+        .copied()
+        .fold(None, |a: Option<(f64, f64)>, b| match a {
+            Some(x) if x.1 >= b.1 => Some(x),
+            _ => Some(b),
+        });
+    // an element outside the abundance tables keeps the monoisotopic mass of the nuclide table, with no isotopes and no average
+    let mono = main
+        .map(|m| m.0)
+        .or_else(|| crate::elements::nuclide(symbol, None).map(|n| n.1));
+    let tot: f64 = iso.iter().map(|x| x.1).sum();
+    let avg = if tot > 0.0 {
+        Some(iso.iter().map(|x| x.0 * x.1).sum::<f64>() / tot)
+    } else {
+        None
+    };
+    let m2 = main.and_then(|m| {
+        iso.iter()
+            .find(|x| (x.0 - m.0 - 2.0).abs() < 0.1)
+            .map(|x| x.1 / m.1)
+    });
+    (mono, avg, m2)
+}
+
+/// One element of `elements/1`, by index (atomic number - 1).
+fn element_json(o: &mut Out, i: usize) {
+    let (name, z) = (NAMES[i], (i + 1) as u8);
+    let symbol = SYMBOLS[i];
+    let iso = crate::isoscore::isotopes_of(symbol).unwrap_or(&[]);
+    let (mono, avg, m2) = masses(symbol, iso);
+    o.raw(if i > 0 { ",{\"z\":" } else { "{\"z\":" })
+        .int(i64::from(z))
+        .raw(",\"symbol\":")
+        .str(symbol)
+        .raw(",\"name\":")
+        .str(name);
+    o.raw(",\"class\":")
+        .str(CLASSES[class_of(z)].0)
+        .raw(",\"mono\":")
+        .opt(mono)
+        .raw(",\"avg\":")
+        .opt(avg);
+    o.raw(",\"mono_only\":")
+        .raw(if iso.len() == 1 { "true" } else { "false" });
+    o.raw(",\"m2_rel\":")
+        .opt(m2.filter(|r| *r >= M2_NOTABLE))
+        .raw(",\"isotopes\":[");
+    for (j, (m, a)) in iso.iter().enumerate() {
+        o.raw(if j > 0 { ",{\"a\":" } else { "{\"a\":" })
+            .int(m.round() as i64)
+            .raw(",\"mass\":")
+            .num(*m)
+            .raw(",\"abund\":")
+            .num(a * 100.0)
+            .raw("}");
+    }
+    o.raw("]}");
+}
 #[cfg(test)]
 mod tests {
     use super::*;
