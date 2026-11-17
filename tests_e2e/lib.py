@@ -1,4 +1,4 @@
-import os, subprocess, time, sys, shutil, tempfile
+import os, re, subprocess, time, sys, shutil, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 # The page has a CSP without unsafe-eval: Playwright's wait_for_function evaluates strings with eval, so it is replaced by a polling version that
@@ -116,14 +116,22 @@ def show_table(pg):
     open_first(pg)
     if pg.is_hidden("#wtable"): _real_click(pg, "#samptab")
     pg.wait_for_selector("#wtable", state="visible", timeout=10000)
+TABUI_BTN = re.compile(r'#nav (?:button)?\[data-v=["\']?tpmine["\']?\]')
+def open_tabui(pg):
+    """Tabui has no nav button (TABUI_VISIBLE = false in first-paint.js): it opens on its exact address, as a person with the link would."""
+    pg.evaluate("location.hash = '#/tpmine'")
 _real_click = _Page.click
 def _click(self, selector, *a, **k):
+    # the Tabui nav button is hidden: a click on it is the exact address #/tpmine
+    if isinstance(selector, str) and TABUI_BTN.search(selector): return open_tabui(self)
     # «Load data» is gone: the files are open already, the click is the first click on a file
     if isinstance(selector, str) and (selector == "#opbtn" or "Load data" in selector): return open_first(self)
     return _real_click(self, selector, *a, **k)
 _Page.click = _click
 _real_wfs = _Page.wait_for_selector
 def _wfs(self, selector, *a, **k):
+    # the hidden Tabui button is still in the page: waiting for it means waiting for it to exist
+    if isinstance(selector, str) and TABUI_BTN.search(selector) and "state" not in k: k["state"] = "attached"
     # waiting for «Load data» = waiting for the end of the loading (the button is gone)
     if isinstance(selector, str) and (selector == "#opbtn" or "Load data" in selector):
         return loaded(self, k.get("timeout", 120000))

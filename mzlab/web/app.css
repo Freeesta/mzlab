@@ -696,3 +696,5 @@ header>:not(#stbar){flex-shrink:0}header .hq{width:24px;height:24px}
 /* touch paste: the chip over the drawing that says the next tap drops the copied structure (Cancel = a 44 px target) */
 #tp-paste-chip{position:fixed;z-index:9000;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:6px 8px 6px 14px;background:var(--panel);color:var(--ink);border:1px solid var(--accent);border-radius:8px;box-shadow:0 4px 14px rgba(60,45,10,.18)}
 #tp-paste-chip[hidden]{display:none}#tp-paste-chip button{min-height:44px;min-width:44px;padding:0 14px}
+/* Tabui is hidden from the navigation (TABUI_VISIBLE in first-paint.js); the tool stays and opens on #/tpmine */
+#nav[data-hide-tabui] button[data-v="tpmine"]{display:none!important}

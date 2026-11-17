@@ -171,7 +171,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | test-suite quality study (report only): tests that cannot fail, hand mutation of 30 functions with survivors, parity gaps, coverage holes, flakiness and cost, unread fixtures, top 15 tests to add | `docs/agenti/studio-test.md` |
 | usability study of the site as a first-time user (opening a file, XIC, integration, export, reset, errors; it/en, 390 px, keyboard): findings by severity, what works, top 10, areas not covered | `docs/agenti/studio-ux.md` |
 | tabella picchi dello spettro da copiare (TSV), asse y in % fino a 100, pulsante XIC solo su MS¹ | `docs/agenti/tabella-picchi.md` |
-| dove Tabui perde un prodotto atteso (`mzlab-cli explain-missing`) | `docs/agenti/tabui-spiega.md` |
+| dove Tabui perde un prodotto atteso (`mzlab-cli explain-missing`); Tabui is hidden and to be DELETED entirely (owner decision): read its «Planned removal» section first | `docs/agenti/tabui-spiega.md` |
 | periodic table dialog and `elements/1` (`crates/mzlab-core/src/periodic.rs`, `tavola-periodica.js`, `mzlab-cli elements`) | `docs/agenti/tavola-periodica.md` |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |
 | velocità del lettore Thermo `.raw`: criteri A1-A7 e B1-B5, banco `thermo_bench`, `tools/bench/thermo_velocita.py`, numeri di partenza contro RFR (T-7) | `docs/agenti/thermo-velocita.md` |
