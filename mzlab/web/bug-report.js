@@ -65,12 +65,15 @@ export async function mount(host, kind = "bug") {
   if (!document.getElementById(STYLE_ID)) { const st = document.createElement("style"); st.id = STYLE_ID; st.textContent = CSS; document.head.appendChild(st); }
   const sg = kind === "suggestion", p = sg ? "sug" : "bug", K = KEYS[/** @type {keyof typeof KEYS} */ (kind)], f = (forms[kind] = { host, p, fields: [], off: new Set(), corpo: "" });
   host.innerHTML = `<div class="bg-box">
-<label for="${p}-what" class="sr-only" data-i18n="${K.what}"></label>
-<textarea id="${p}-what" rows="4" data-i18n-placeholder="${K.what}" data-i18n-title="${K.tip}"></textarea>
+<label for="${p}-what" class="sr-only"></label>
+<textarea id="${p}-what" rows="4"></textarea>
 ${sg ? `<label for="sug-doing" class="bg-l" data-i18n="sug.doing"></label><textarea id="sug-doing" rows="2" data-i18n-title="sug.doing.tip"></textarea>` : ""}
 <details><summary data-i18n="bug.info.btn" data-i18n-title="bug.info.tip"></summary><div id="${p}-diagtxt"></div></details>
 <div class="bg-act"><a id="${p}-go" class="bg-go" target="_blank" rel="noopener noreferrer" href="#" data-i18n-title="bug.open.tip">${ICO.gh}<span data-i18n="bug.open"></span></a><button type="button" id="${p}-copy" data-i18n-title="bug.copy.tip">${ICO.copy}<span data-i18n="bug.copy"></span></button><button type="button" id="${p}-mail" data-i18n-title="bug.mail.tip">${ICO.mail}<span data-i18n="bug.mail"></span></button><button type="button" id="${p}-dl" data-i18n-title="bug.dl.tip">${ICO.dl}<span data-i18n="bug.dl"></span></button></div>
 <div class="bg-st" id="${p}-st" role="status" aria-live="polite"></div></div>`;
+  // the keys of the kind are set here (written whole in KEYS), not in the template: the tooltip inventory reads literal keys only
+  q(f, `label[for=${p}-what]`).dataset.i18n = K.what;
+  Object.assign(q(f, `#${p}-what`).dataset, { i18nPlaceholder: K.what, i18nTitle: K.tip });
   if (W.I18N) W.I18N.apply(host);
   for (const id of ["what", "doing"]) { const el = q(f, `#${p}-${id}`); if (el) el.addEventListener("input", () => aggiorna(kind)); }
   q(f, `#${p}-copy`).onclick = async () => {
