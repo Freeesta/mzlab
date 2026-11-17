@@ -133,6 +133,9 @@ fn the_base_chain_of_the_canvas_gives_the_table_of_the_page() {
         untimed(&prov),
         untimed(&std::fs::read_to_string(out.join("prov.json")).unwrap())
     );
+    // the record carries the citation of the CLI, as a top-level key
+    let prov_value: serde_json::Value = serde_json::from_str(&prov).unwrap();
+    assert_eq!(prov_value["citation"], crate::citation::text());
     assert_eq!(
         std::fs::read(desk.join("gap.mzfeat")).unwrap(),
         std::fs::read(out.join("gap.mzfeat")).unwrap()

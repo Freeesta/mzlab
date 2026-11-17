@@ -44,7 +44,7 @@ try:
             assert pg.locator("#uip-arch-all").count() == 0 and "Full reset" not in t
             assert pg.locator("#uip-arch-rm").count() == 0 and pg.locator("#uip-arch-der").count() == 0
             assert pg.evaluate("document.querySelectorAll('#uipset details').length") == 0 and pg.is_visible("#uip-hc"), "readability controls are flat: no fold"
-            assert pg.evaluate("[...document.querySelectorAll('#uip-a11y input[name=uip-font], #uip-a11y #uip-hc, #uip-g-look #uip-pal')].length") == 5
+            assert pg.evaluate("[...document.querySelectorAll('#uip-list input[name=uip-font], #uip-list #uip-hc, #uip-list #uip-pal')].length") == 5
             assert pg.locator("#uip-lib").count() == 0, "spectral libraries only with HRMS files"
             assert pg.evaluate("getComputedStyle(document.getElementById('uip-pal')).appearance") == "none", "select without native arrow"
             x = pg.evaluate("(() => { const b = document.querySelector('#uip-x'); return [b.textContent, getComputedStyle(b).fontSize, getComputedStyle(b, '::before').content]; })()")

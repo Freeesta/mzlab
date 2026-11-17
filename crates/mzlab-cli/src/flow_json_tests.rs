@@ -61,15 +61,14 @@ fn steps_json_has_the_ids_of_the_exports_and_the_native_flags() {
         );
         assert_eq!(str_of(s, "schema"), "step/1");
     }
-    // the new key is the last of each step
+    // the new keys are the last of each step: executable_native, then the citation
     let text = String::from_utf8(all.stdout.clone()).unwrap();
     assert!(
         text.lines()
             .filter(|l| l.starts_with('{'))
-            .all(
-                |l| l.contains(",\"executable_native\":") && l.ends_with("e}")
-                    || l.ends_with("e},")
-            ),
+            .all(|l| l.contains(",\"executable_native\":")
+                && (l.ends_with(&format!("{}}}", crate::citation::member()))
+                    || l.ends_with(&format!("{}}},", crate::citation::member())))),
         "{text}"
     );
 

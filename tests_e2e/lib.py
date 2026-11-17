@@ -291,7 +291,7 @@ def shut(pg, sel):
     if pg.is_visible(sel): pg.click(sel)
 def a11y_open(pg):
     """The readability controls of the settings are flat (never folded): nothing to open before touching font, contrast or palette."""
-    pg.wait_for_selector("#uip-a11y")
+    pg.wait_for_selector("#uip-list")
 def set_pal(pg, v):
     a11y_open(pg); pg.select_option("#uip-pal", v)
 def get_env(suffix: str, default=None):

@@ -4,6 +4,8 @@
 pub(crate) mod background_cmd;
 #[path = "dda_window_cmd.rs"]
 pub(crate) mod dda_window_cmd;
+#[path = "elements_cmd.rs"]
+pub(crate) mod elements_cmd;
 #[path = "ion_mz_cmd.rs"]
 pub(crate) mod ion_mz_cmd;
 #[path = "match_mz_cmd.rs"]

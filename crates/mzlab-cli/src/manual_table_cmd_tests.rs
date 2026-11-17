@@ -76,14 +76,14 @@ fn one_row_per_window_grouped_by_channel_at_the_peaks_written() {
         ],
         "channels in the order of the file, samples in order, the pair by start"
     );
-    let apex: Vec<f64> = r[1..].iter().map(|x| x[6].parse().unwrap()).collect();
+    let apex: Vec<f64> = r[1..].iter().map(|x| x[7].parse().unwrap()).collect();
     let want = [at(1, 0, 0), at(3, 0, 0), at(2, 2, 0), at(2, 2, 1)];
     for (g, w) in apex.iter().zip(want) {
         assert!((g - w).abs() <= 0.014, "{apex:?} vs {want:?}");
     }
-    assert_eq!((r[1][9], r[2][9]), ("edges", "zero"));
+    assert_eq!((r[1][10], r[2][10]), ("edges", "zero"));
     assert!(
-        r[1..].iter().all(|x| x[3].parse::<f64>().unwrap() > 0.0),
+        r[1..].iter().all(|x| x[4].parse::<f64>().unwrap() > 0.0),
         "{t}"
     );
     let sums = text(&table(
@@ -95,6 +95,88 @@ fn one_row_per_window_grouped_by_channel_at_the_peaks_written() {
     assert!(
         s[3].starts_with("253.1,sum,,") && s[6].starts_with("251.1,sum,,"),
         "{sums}"
+    );
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// A window with `follow` on ionA of sample A reaches the same channel of every other sample, with its name (sample C has its own, by `names`) and an
+/// origin; the blank has no peak there; `shifts=true` prints the same edges as JSON.
+#[test]
+fn a_window_applied_to_the_other_samples_is_the_same_bytes_as_its_shifts() {
+    let Some(d) = fixture("follow") else { return };
+    let w = d.join("sim3.wiff");
+    let set = windows(
+        &d,
+        r#"[{"file":1,"tr":0,"a":1.89,"b":2.19,"follow":true,"label":"ionA peak","names":{"3":"C only"}}]"#,
+    );
+    let t = text(&table(&[&w], &["--set", &set]));
+    let r: Vec<Vec<&str>> = t.lines().skip(1).map(|l| l.split(',').collect()).collect();
+    assert!(r.len() >= 2, "{t}");
+    let by = |n: &str| r.iter().find(|x| x[1] == n).expect(n).clone();
+    assert_eq!(
+        (by("Sample_A")[3], by("Sample_A")[13]),
+        ("ionA peak", "manual"),
+        "{t}"
+    );
+    assert_eq!(
+        by("Blank")[13],
+        "no_peak",
+        "a sample with no peak is integrated and marked, not hidden"
+    );
+    assert_eq!(by("Sample_B")[13], "applied");
+    assert!(
+        r.iter().all(|x| x[13] != "manual" || x[1] == "Sample_A"),
+        "{t}"
+    );
+    let c = r.iter().find(|x| x[1] == "Sample_C").expect("sample C");
+    assert_eq!(c[3], "C only", "a name for one sample alone");
+    let again = text(&table(&[&w], &["--set", &set]));
+    assert_eq!(t, again, "deterministic");
+    let j = text(&table(&[&w], &["--set", &set, "--set", "shifts=true"]));
+    assert!(j.starts_with("[{\"file\":"), "{j}");
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// `auto=true` finds the peaks of every sample without a windows file: the same bytes twice, every window of the answer is a row of the table, and a
+/// `params` file moves the answer (a signal-to-noise nobody reaches finds no peak).
+#[test]
+fn auto_finds_the_peaks_of_every_sample_and_its_windows_are_the_table_rows() {
+    let Some(d) = fixture("auto") else { return };
+    let w = d.join("sim3.wiff");
+    let j = text(&table(&[&w], &["--set", "auto=true"]));
+    assert!(j.starts_with("{\"tol\":"), "{j}");
+    assert_eq!(
+        j,
+        text(&table(&[&w], &["--set", "auto=true"])),
+        "deterministic"
+    );
+    let v = parse(j.as_bytes()).unwrap();
+    let n = v.get("windows").unwrap().arr().len();
+    assert!(n >= 4, "{j}");
+    assert!(v.get("log").unwrap().arr().len() >= 4, "{j}");
+    let set = windows(
+        &d,
+        &j[j.find("\"windows\":").unwrap() + 10..j.find(",\"log\"").unwrap()],
+    );
+    let t = text(&table(&[&w], &["--set", &set]));
+    assert_eq!(t.lines().count() - 1, n, "{t}");
+    assert!(t.contains(",auto") || t.contains(",unmatched"), "{t}");
+    let p = d.join("params.json");
+    std::fs::write(&p, r#"{"sn":1000000}"#).unwrap();
+    let none = text(&table(
+        &[&w],
+        &[
+            "--set",
+            "auto=true",
+            "--set",
+            &format!("params={}", p.display()),
+        ],
+    ));
+    assert!(none.contains("\"windows\":[]"), "{none}");
+    assert_ne!(
+        table(&[&w], &["--set", "params=x.json"]).code,
+        0,
+        "params without auto"
     );
     let _ = std::fs::remove_dir_all(&d);
 }
@@ -123,6 +205,49 @@ fn settings_and_windows_that_name_nothing_fail() {
         text(&table(&[&w], &["--set", &empty])),
         mzlab_core::manint::HEAD
     );
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// The `time_min` column: the time point each sample name carries (`sim_tempo.wiff`: a blank with a ratio, t0, 3 h, 8 h, a repeated 3 h and a name with
+/// H20 that is no time), and `--set times=PATH` replacing or clearing it for the samples it names.
+#[test]
+fn the_time_point_of_each_sample_is_in_the_table_and_can_be_replaced() {
+    let Some(d) = fixture("time") else { return };
+    let w = d.join("sim_tempo.wiff");
+    let list: Vec<String> = (0..6)
+        .map(|i| format!(r#"{{"file":{i},"tr":0,"a":1.0,"b":2.5}}"#))
+        .collect();
+    let set = windows(&d, &format!("[{}]", list.join(",")));
+    let pairs = |t: &str| -> Vec<(String, String)> {
+        t.lines()
+            .skip(1)
+            .map(|l| {
+                let c: Vec<&str> = l.split(',').collect();
+                (c[1].to_string(), c[2].to_string())
+            })
+            .collect()
+    };
+    let want = |t: [&str; 6]| -> Vec<(String, String)> {
+        [
+            "blk 90-10",
+            "RET t0 (2)",
+            "RET 3h_2",
+            "RET 8h (2)",
+            "PERM 3h",
+            "H20 demi",
+        ]
+        .iter()
+        .zip(t)
+        .map(|(n, t)| (n.to_string(), t.to_string()))
+        .collect()
+    };
+    let t = text(&table(&[&w], &["--set", &set]));
+    assert_eq!(pairs(&t), want(["", "0", "180", "480", "180", ""]), "{t}");
+    let tp = d.join("times.json");
+    std::fs::write(&tp, r#"{"RET 3h_2":45,"PERM 3h":null,"H20 demi":10}"#).unwrap();
+    let set_t = format!("times={}", tp.display());
+    let t = text(&table(&[&w], &["--set", &set, "--set", &set_t]));
+    assert_eq!(pairs(&t), want(["", "0", "45", "480", "", "10"]), "{t}");
     let _ = std::fs::remove_dir_all(&d);
 }
 

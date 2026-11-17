@@ -4,7 +4,7 @@ log is skipped with a note); windows integrated on the ion traces fill the card 
 height of its rows up to a cap, then a scroll with a sticky header, nothing above it moves), one row per window grouped by channel, each with a name the user types; the card, its CSV
 export, the engine's sum rows and «Copy table» (tab-separated) are the bytes of `mzlab-cli manual-table` on the same .wiff and windows (after the provenance line);
 a row's Delete removes the integration; «Split at the valleys» (V) proposes the engine's drop line (`mzlab-cli peak-split`), moved by mouse, keys and finger and
-confirmed into one row per part; a window drawn on one sample stays drawn when another sample is chosen in the left panel, measured on that sample with no row added; the channels of a sample equal `mzlab-cli channels`. The copy whose .wiff.scan is cut at 60 % measures the
+confirmed into one row per part; a window drawn on one sample is applied to the other samples chosen in the left panel, measured on each by the engine, with a row of the table; the channels of a sample equal `mzlab-cli channels`. The copy whose .wiff.scan is cut at 60 % measures the
 points before the cut. Needs the site and the .wasm (python3 tools/prepara_sito.py) and cargo for the CLI. Run from the repo root: python3 tests_e2e/e2e_sim_wiff.py"""
 # covers: mzlab/web/integrazioni-manuali.js, mzlab/web/integra-segue.js, mzlab/web/integra-valli.js, mzlab/web/sim-ui.js, tools/wiff_sim.py
 import json, shutil, subprocess, sys, os, tempfile
@@ -27,7 +27,11 @@ CLI = ["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--"]      # the re
 cli = lambda *a: subprocess.run(CLI + [str(x) for x in a], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout
 CHANNELS = json.loads(cli("channels", D / "sim3.wiff"))
 throw = lambda m: (_ for _ in ()).throw(AssertionError(m))
-SHOWN = "(() => { const c = document.querySelector('#manint'); return !!c && !c.hidden && c.querySelectorAll('tbody tr').length === %d; })()"
+OWN = '#manint tbody tr[data-org="manual"]'          # the rows of the windows drawn by hand; the others are what the engine applied from them to the samples shown
+SHOWN = "(() => { const c = document.querySelector('#manint'); return !!c && !c.hidden && c.querySelectorAll('tbody tr[data-org=manual]').length === %d; })()"
+OWN_ROW0 = "document.querySelector('" + OWN + "')"
+own = lambda n, rest="": f'{OWN} >> nth={n - 1}' + (f" >> {rest}" if rest else "")          # the n-th (from 1) own row, then what is inside it (Playwright selector)
+ownjs = lambda n, rest: f"[...document.querySelectorAll('{OWN} {rest}')][{n - 1}]"          # the same as a JS expression
 
 # integrates the window [a, b] (min) of ion `ion` (place in the list of ions) of sample `name` on the SIM panel, as a drag of the user ends (addInt, no copy to other panels)
 INTEG = """([name, ion, a, b, bm]) => { const p = E.panels.find(q => q.type === 'mrm' && q._a);
@@ -72,12 +76,12 @@ try:
             pg.evaluate(INTEG, ["Sample_A", 0, pk[1][0][0] - 0.15, pk[1][0][0] + 0.15, "edges"])
             pg.evaluate(INTEG, ["Sample_B", 2, pk[2][2][0] - 0.15, pk[2][2][0] + 0.15, None])
             wait_for_js(pg, SHOWN % 3, timeout=60000)
-            cells = pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].map(r => [...r.children].slice(0, 3).map(c => c.textContent))")
-            need(cells == [["253.1", "Sample_A", ""], ["253.1", "Sample_C", ""], ["251.1", "Sample_B", ""]], cells)   # channel, sample, name (no «method name» column)
-            heads = pg.evaluate("[...document.querySelectorAll('#manint thead th')].slice(0, 8).map(c => c.textContent)")
-            want = [pg.evaluate("k => I18N.t('canali.manint.h.' + k)", k) for k in ("channel", "sample", "label", "area", "start", "end", "apex", "height")]
-            need(heads == want, ("columns: channel, sample, name, area, start, end, apex, height", heads))
-            need(pg.evaluate("document.querySelector('#manint h3').textContent") == pg.evaluate("I18N.t('canali.manint.title', {n: 3})"), "title")
+            cells = pg.evaluate("[...document.querySelectorAll('" + OWN + "')].map(r => [...r.children].slice(0, 4).map(c => c.textContent))")
+            need(cells == [["253.1", "Sample_A", "", ""], ["253.1", "Sample_C", "", ""], ["251.1", "Sample_B", "", ""]], cells)   # channel, sample, time (none in these names), name
+            heads = pg.evaluate("[...document.querySelectorAll('#manint thead th')].slice(0, 9).map(c => c.textContent)")
+            want = [pg.evaluate("k => I18N.t('canali.manint.h.' + k)", k) for k in ("channel", "sample", "time", "label", "area", "start", "end", "apex", "height")]
+            need(heads == want, ("columns: channel, sample, time, name, area, start, end, apex, height", heads))
+            need(pg.evaluate("document.querySelector('#manint h3').textContent") == pg.evaluate("I18N.t('canali.manint.title', {n: 8})"), "title counts every row: 3 drawn, 5 applied (4 samples, 2 channels)")
             need(pg.evaluate("[...document.querySelectorAll('#manint tbody button')].every(b => b.getBoundingClientRect().height >= 24 && b.getAttribute('aria-label'))"), "24 px, named")
         step("windows on the ion traces fill the card, grouped by channel then sample", rows)
         PNL = "(() => { const r = E.panels.find(q => q.type === 'mrm' && q._a).el.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; })()"
@@ -105,7 +109,7 @@ try:
             need(pg.evaluate("[document.getElementById('manint-b').hidden, document.querySelector('#manint .manint-tg').getAttribute('aria-expanded'), localStorage.getItem(NOMI.KEY('manint.open'))]") == [True, "false", "0"], "closed and remembered")
             need(pg.evaluate(PNL) == p0, "closing moves nothing above")
             pg.evaluate("(() => { const p = E.panels.find(q => q.type === 'mrm' && q._a); delInts(p, p.ints.slice(3)); })()")
-            wait_for_js(pg, "(() => { const c = document.querySelector('#manint'); return !c.hidden && c.querySelectorAll('tbody tr').length === 3; })()", timeout=60000)
+            wait_for_js(pg, SHOWN % 3, timeout=60000)
             need(pg.evaluate("document.getElementById('manint-b').hidden"), "a redraw keeps it closed")
             pg.evaluate("(() => { const p = E.panels.find(q => q.type === 'mrm' && q._a); delInts(p, p.ints.slice()); })()")
             wait_for_js(pg, "document.querySelector('#manint').hidden", timeout=60000)
@@ -130,12 +134,12 @@ try:
         step("the table, its CSV and the engine's sums are the bytes of mzlab-cli manual-table", parity)
         def row_actions():
             need = lambda c, m: c or throw(m)
-            need(pg.evaluate("[...document.querySelectorAll('#manint tbody tr[data-go]')].every(r => r.tabIndex === 0 && r.getAttribute('aria-label') && r.querySelectorAll('button').length === 1)"), "a row is one focusable control with one X")
+            need(pg.evaluate("[...document.querySelectorAll('#manint tbody tr[data-go]')].every(r => r.tabIndex === 0 && r.getAttribute('aria-label') && r.querySelectorAll('button').length === (r.dataset.org === 'manual' ? 1 : 0))"), "a row is one focusable control; an own row has one X, an applied one none")
             x = pg.evaluate("(() => { const b = document.querySelector('#manint tbody [data-del]'), r = b.getBoundingClientRect(); return [r.width, r.height, b.title, b.textContent.trim(), !!document.querySelector('#manint [data-go] button:not([data-del])')]; })()")
             need(x[0] >= 24 and x[1] >= 24 and x[2] == pg.evaluate("I18N.t('canali.manint.del')") and x[3] == "×" and not x[4], x)
             pg.evaluate("(() => { window.__show = []; const o = window.reveal; window.reveal = p => { window.__show.push(p.id); return o(p); }; window.__orev = o; })()")
-            pg.click("#manint tbody tr[data-go] td:nth-child(5)")
-            pg.focus("#manint tbody tr[data-go]"); pg.keyboard.press("Enter"); pg.keyboard.press(" ")
+            pg.click(own(1, "td:nth-child(5)"))
+            pg.focus(own(1)); pg.keyboard.press("Enter"); pg.keyboard.press(" ")
             n = pg.evaluate("(() => { const n = window.__show.length; window.reveal = window.__orev; return n; })()")
             need(n == 3, n)
             wait_for_js(pg, SHOWN % 3, timeout=10000)
@@ -144,8 +148,8 @@ try:
             need = lambda c, m: c or throw(m)
             wait_for_js(pg, "!document.querySelector('.areacopied.show')", timeout=4000)      # the notice of «Copy table» has gone
             csv = [l.split(",") for l in pg.evaluate("MANINT.state().csv").strip().split("\n")]
-            head, row = csv[0], csv[1]
-            cells = pg.evaluate("[...document.querySelectorAll('#manint tbody tr')[0].querySelectorAll('[data-cp]')].map(c => { const r = c.getBoundingClientRect(); return [c.dataset.cp, c.getAttribute('role'), c.tabIndex, c.getAttribute('aria-label'), c.title, r.width, r.height, r.x + r.width / 2, r.y + r.height / 2]; })")
+            head = csv[0]; row = [x for x in csv[1:] if x[-1] == "manual"][0]
+            cells = pg.evaluate("[..." + OWN_ROW0 + ".querySelectorAll('[data-cp]')].map(c => { const r = c.getBoundingClientRect(); return [c.dataset.cp, c.getAttribute('role'), c.tabIndex, c.getAttribute('aria-label'), c.title, r.width, r.height, r.x + r.width / 2, r.y + r.height / 2]; })")
             need([c[0] for c in cells] == [row[head.index(k)] for k in ("area", "apex_rt_min", "height")], (cells, row))   # the area sits right after the name, then the apex
             need(all(c[1] == "button" and c[2] == 0 and c[3] and c[4] and c[5] >= 24 and c[6] >= 24 for c in cells), cells)
             pg.evaluate("(() => { window.__show = 0; const o = window.reveal; window.__orev = o; window.reveal = p => { window.__show++; return o(p); }; })()")
@@ -156,7 +160,7 @@ try:
             n = pg.evaluate("(() => { const n = document.querySelector('.areacopied'), r = n.getBoundingClientRect(); return [n.textContent, n.getAttribute('aria-live'), r.x + r.width / 2, r.y]; })()")
             need(n[0] == pg.evaluate("I18N.t('int.copy.done')") and n[1] == "polite" and abs(n[2] - area[7]) < 60 and 0 < n[3] - area[8] < 60, ("by the pointer", n, area))
             wait_for_js(pg, "!document.querySelector('.areacopied.show')", timeout=4000)
-            pg.focus("#manint tbody tr:first-child [data-cp]"); pg.keyboard.press("Enter")
+            pg.focus(own(1, "[data-cp]")); pg.keyboard.press("Enter")
             wait_for_js(pg, "!!document.querySelector('.areacopied.show')", timeout=5000)
             need(pg.evaluate("navigator.clipboard.readText()") == cells[0][0], "Enter copies the apex")
             need(pg.evaluate("(() => { const n = window.__show; window.reveal = window.__orev; return n; })()") == 0, "a copy does not show the row's integration")
@@ -164,29 +168,29 @@ try:
         def names():
             need = lambda c, m: c or throw(m)
             P = "E.panels.find(q => q.type === 'mrm' && q._a)"
-            nm = "#manint tbody tr:nth-child(1) input[data-nm]"
-            info = pg.evaluate(f"(() => {{ const n = document.querySelector('{nm}'), r = n.getBoundingClientRect(); return [n.getAttribute('aria-label'), n.maxLength, r.height >= 24, document.querySelector('#manint thead th:nth-child(3)').textContent]; }})()")
+            nm = own(1, "input[data-nm]"); nmj = ownjs(1, "input[data-nm]")
+            info = pg.evaluate(f"(() => {{ const n = {nmj}, r = n.getBoundingClientRect(); return [n.getAttribute('aria-label'), n.maxLength, r.height >= 24, document.querySelector('#manint thead th:nth-child(3)').textContent]; }})()")
             need(info == [pg.evaluate("I18N.t('canali.manint.nm.aria')"), 40, True, pg.evaluate("I18N.t('canali.manint.h.label')")], info)
             pg.click(nm); pg.keyboard.type("Peak, left"); pg.keyboard.press("Enter")
-            wait_for_js(pg, "MANINT.state().csv.split('\\n')[1].startsWith('253.1,Sample_A,\"Peak, left\",')", timeout=60000)
+            wait_for_js(pg, "MANINT.state().csv.includes('253.1,Sample_A,\"Peak, left\",')", timeout=60000)
             need(pg.evaluate("document.activeElement && document.activeElement.matches('input[data-nm]') && document.activeElement.value === 'Peak, left'"), "Enter keeps the focus on the name")
             st = pg.evaluate("MANINT.state()"); need(st["csv"] == manual(st, [D / "sim3.wiff"]), "the name is in the CLI's bytes")
             need(pg.evaluate(f"{P}.ints.filter(i => i.nm === 'Peak, left').length") == 1, "kept on the integration")
             need("Peak, left" in pg.evaluate(f"{P}._a.lbls.find(l => l.int.nm === 'Peak, left').tip"), "in the hover text")
             pg.click("#manint [data-copy]"); wait_for_js(pg, "navigator.clipboard.readText().then(t => t.includes('\\tPeak, left'))", timeout=10000)
             pg.fill(nm, "zzz"); pg.keyboard.press("Escape")
-            need(pg.evaluate(f"document.querySelector('{nm}').value") == "Peak, left" and pg.evaluate(f"{P}.ints.some(i => i.nm === 'zzz')") is False, "Esc gives the name back")
-            n2 = "#manint tbody tr:nth-child(3) input[data-nm]"
-            pg.click(n2); pg.keyboard.type("Second Sample"); pg.evaluate(f"document.querySelector('{n2}').blur()")
+            need(pg.evaluate(f"{nmj}.value") == "Peak, left" and pg.evaluate(f"{P}.ints.some(i => i.nm === 'zzz')") is False, "Esc gives the name back")
+            n2 = own(3, "input[data-nm]"); n2j = ownjs(3, "input[data-nm]")
+            pg.click(n2); pg.keyboard.type("Second Sample"); pg.evaluate(f"{n2j}.blur()")
             wait_for_js(pg, "MANINT.state().csv.includes(',Second Sample')", timeout=60000)
-            need(pg.evaluate("E.panels.find(q => q.type === 'mrm' && q._a).ints.length") == 3 and pg.evaluate("document.querySelectorAll('#manint tbody tr').length") == 3, "typing S or I adds nothing")
-            pg.fill(n2, "x" * 50); need(len(pg.evaluate(f"document.querySelector('{n2}').value")) == 40, "at most 40 characters")
+            need(pg.evaluate("E.panels.find(q => q.type === 'mrm' && q._a).ints.length") == 3 and pg.evaluate("document.querySelectorAll('" + OWN + "').length") == 3, "typing S or I adds nothing")
+            pg.fill(n2, "x" * 50); need(len(pg.evaluate(f"{n2j}.value")) == 40, "at most 40 characters")
             pg.keyboard.press("Escape")
             pg.evaluate("STORIA.annulla()"); wait_for_js(pg, "!MANINT.state().csv.includes('Second Sample')", timeout=60000)
             need("Peak, left" in pg.evaluate("MANINT.state().csv"), "undo takes back one name")
         step("each row has a name: Enter or blur keeps it, Esc gives it back, in the CSV, the copy and the hover text, undoable", names)
         def delete():
-            pg.click("#manint tbody tr:nth-child(2) [data-del]")
+            pg.click(own(2, "[data-del]"))
             wait_for_js(pg, SHOWN % 2, timeout=60000)
             assert pg.evaluate("E.panels.find(q => q.type === 'mrm').ints.length") == 2
         step("Delete removes the integration and its row", delete)
@@ -202,8 +206,6 @@ try:
                     if pg.evaluate(f"E.files.every(f => f.gone || f.vis === (f.k === {k}))"): break
                 wait_for_js(pg, f"(() => {{ const p = E.panels.find(q => q.type === 'mrm' && q._a); return !!p && p._a.sr.length > 0 && p._a.sr.every(s => s.k === {k}) && (p._a.lbls || []).some(l => l.int); }})()", timeout=60000)
             LB = "E.panels.find(q => q.type === 'mrm' && q._a)._a.lbls.filter(l => l.int).map(l => ({ text: l.text, tip: l.tip, fol: !!l.int.fol, ion: l.int.ion, a: l.int.a, b: l.int.b, area: l.int.area, key: l.int.key }))"
-            table = lambda: pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].map(r => r.textContent)")
-            before = table()
             only(ka)
             la = [l for l in pg.evaluate(LB) if not l["fol"]]
             need(len(la) == 1 and la[0]["key"].startswith(f"m|{ka}|"), la)
@@ -216,13 +218,15 @@ try:
             need(fb[0]["text"] not in ("A = —", la[0]["text"]) and fb[0]["area"] > 0 and fb[0]["area"] != la[0]["area"], (fb, la))
             need(not any(l["fol"] and l["ion"] == x["ion"] for l in pg.evaluate(LB) for x in pg.evaluate(LB) if not x["fol"]), "a committed window is shown as it is")
             wait_for_js(pg, LB + ".some(l => l.fol && !l.tip.includes('…') && l.tip.includes('S/N'))", timeout=60000)
-            frames(pg, 3); need(table() == before, "a follower adds no row")
+            # the engine applies the window to Sample_B too: a row of B on the channel of A's window, not drawn by hand, without a Delete
+            wait_for_js(pg, "[...document.querySelectorAll('#manint tbody tr')].some(r => r.dataset.org !== 'manual' && r.textContent.includes('Sample_B') && r.textContent.startsWith('253.1'))", timeout=60000)
+            need(pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].filter(r => r.dataset.org !== 'manual').every(r => !r.querySelector('[data-del]'))"), "an applied row has no Delete")
             none = pg.evaluate("SEGUE.all({ type: 'mrm', ints: [{ id: 1, ion: 'x', key: 'm|0|x', a: 50, b: 51, bm: 'edges' }] }, [{ key: 'm|1|x', ion: 'x', k: 1, name: 'n', x: [1, 2, 3] }]).filter(i => i.fol).map(i => i.none)")
             need(none == [True], none)
             only(ka)
-            need([l for l in pg.evaluate(LB) if not l["fol"]] == la and table() == before, "the committed row of A is unchanged")
+            need([l for l in pg.evaluate(LB) if not l["fol"]] == la and pg.evaluate("E.panels.find(q => q.type === 'mrm').ints.length") == 2, "the windows drawn are unchanged")
             all_ions(pg)
-        step("a manual window follows the sample chosen in the left panel, measured on that sample, with no row added", follow)
+        step("a manual window is applied to the sample chosen in the left panel: drawn, measured by the engine and a row of the table", follow)
         def anchors():
             need = lambda c, m: c or throw(m)
             P = "E.panels.find(q => q.type === 'mrm' && q._a)"

@@ -38,6 +38,8 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
   --help             this text
 
 old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl
+
+If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
 
 === mzlab-cli --help
@@ -80,6 +82,8 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
   --help             this text
 
 old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl
+
+If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
 
 === mzlab-cli -h
@@ -122,6 +126,8 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
   --help             this text
 
 old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl
+
+If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
 
 === mzlab-cli nosuchcommand
@@ -192,6 +198,8 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
   --help             this text
 
 old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl
+
+If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
 
 === mzlab-cli steps --help
@@ -202,7 +210,7 @@ mzlab-cli steps: the steps a Flow plan can use, from the registry of this progra
 usage: mzlab-cli steps [--json] [--id ID[@VERSION]]
 
   (no option)       one line per step: id@version, `native` when `flow run` executes it (else `page`: only the Flow page does), title
-  --json            the step/1 descriptors as a JSON array, each with "executable_native" at the end
+  --json            the step/1 descriptors as a JSON array, each with "executable_native" and "citation" at the end
   --id ID[@V]       one step only (with --json one step/1 object); without @V the highest version
   --help            this text
 
@@ -580,12 +588,14 @@ mzlab-cli samples: how the names of a set of files split them (nomivar/1), as JS
 
 usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
        mzlab-cli samples group NAME...
+       mzlab-cli samples table [--names FILE|-]
 
   --names FILE|-  one file name per line (default: the standard input)
   --pos N         also the manual variable of the N-th token (1 = first, -1 = last), cut at --sep (default "_-. ")
   --has a,b       also the manual variable of terms: a file goes to the first term equal to one of its tokens
   --substring     with --has: the term may be inside a token (O2 then catches H2O2)
   group           the name of a group made of NAMEs: their common tokens in order, empty when none
+  table           the sample table the names propose (campioni/2): role, time point (`tempo`, `unita_tempo`, `tempo_min`), series, replicate, concentration
 
 old names still accepted: campioni, variabili, nome-gruppo
 --- stderr
@@ -597,12 +607,14 @@ mzlab-cli samples: how the names of a set of files split them (nomivar/1), as JS
 
 usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
        mzlab-cli samples group NAME...
+       mzlab-cli samples table [--names FILE|-]
 
   --names FILE|-  one file name per line (default: the standard input)
   --pos N         also the manual variable of the N-th token (1 = first, -1 = last), cut at --sep (default "_-. ")
   --has a,b       also the manual variable of terms: a file goes to the first term equal to one of its tokens
   --substring     with --has: the term may be inside a token (O2 then catches H2O2)
   group           the name of a group made of NAMEs: their common tokens in order, empty when none
+  table           the sample table the names propose (campioni/2): role, time point (`tempo`, `unita_tempo`, `tempo_min`), series, replicate, concentration
 
 old names still accepted: campioni, variabili, nome-gruppo
 --- stderr
@@ -646,16 +658,27 @@ exit 0
 --- stdout
 mzlab-cli manual-table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
 
-usage: mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--out PATH]
+usage: mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--set times=PATH] [--out PATH]
 
   FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in the order of the page
-  --set windows=PATH  a JSON list of windows [{"file": I, "tr": J, "a": MIN, "b": MIN, "baseline": "zero"|"edges"|"line", "line": [t0, y0, t1, y1], "label": NAME}]:
+  --set windows=PATH  a JSON list of windows [{"file": I, "tr": J, "a": MIN, "b": MIN, "baseline": "zero"|"edges"|"line", "line": [t0, y0, t1, y1], "label": NAME,
+                      "follow": true, "names": {"I": NAME}}]:
                       I = the sample (from 0, in the order above), J = its transition in the list of the file, a and b the edges in min,
-                      NAME the name given to the window (at most 40 characters, optional)
+                      NAME the name given to the window (at most 40 characters, optional). follow: apply the window to the same channel of every
+                      other sample that has no window of its own on it (the apex is searched within the window's width on each side; an apex
+                      outside the window moves it, no peak leaves it: column origin = manual|applied|shifted|no_peak); names: a name for one
+                      sample alone, by its place I
   --set sums=true     after the windows of each channel a row sum with the sum of their areas
+  --set times=PATH    a JSON object {"<sample>": MINUTES or null} that replaces the time point a sample's name carries (null = none); the others keep theirs
+  --set shifts=true   instead of the table, where the FIRST window lands in the other samples, as JSON
+                      [{"file", "tr", "a", "b", "shift", "origin"}] (the bytes of the page's api/manfollow)
+  --set auto=true     instead of the table, every peak of every channel of every sample found by the engine and grouped by time, as JSON
+                      {"windows", "log", "groups", "unmatched"} (the bytes of the page's api/manauto); no windows file is needed
+  --set params=PATH   with auto=true: a JSON file {"rt_tol", "half", "valley", "sn", "min_pts", "despike", "split"}; a missing key keeps its default
   --out PATH  write there instead of the standard output
 
-Columns: channel (m/z of a SIM ion, q1>q3 of a transition, ion N without Q1), sample, label (the name of the window), area (counts x s), start_min,
+Columns: channel (m/z of a SIM ion, q1>q3 of a transition, ion N without Q1), sample, time_min (the time point of the sample in minutes, read from its name
+(t0, 3h, 1 h 30, 90 s; none for a blank or when ambiguous), empty when unknown), label (the name of the window), area (counts x s), start_min,
 end_min, apex_rt_min, height, snr (peak1d around the window), baseline, overlap, pv. Rows grouped by channel, then by sample. Areas and heights in scientific notation with a decimal
 point (7.84077E+04), read as numbers by a spreadsheet in any locale.
 --- stderr

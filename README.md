@@ -38,6 +38,8 @@ The code is under the **MIT** licence (`LICENSE`, Federico Cristaudo). Third-par
 
 ## How to cite
 
+Tool and AI-agent users: `mzlab-cli --version` and `--help` print the same citation reminder (no DOI yet; it will be added here and in `CITATION.cff`).
+
 If you use mzLab in the course or in a publication, cite the software with the data of [`CITATION.cff`](CITATION.cff) (GitHub's «Cite this repository» button formats it):
 
 > Cristaudo, F. *mzLab: a browser-based teaching tool for LC-MS data analysis and the search for transformation products*. University of Turin. https://freeesta.github.io/mzlab/ (code: https://github.com/Freeesta/mzlab, MIT licence). Zenodo DOI: to be assigned at the first release; cite the concept DOI for the software in general and the version DOI for a given version.
