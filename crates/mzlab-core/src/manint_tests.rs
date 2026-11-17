@@ -84,7 +84,7 @@ fn zero_and_line_are_the_measure_of_the_data_view() {
     let w = format!("[{}]", win(0, 0, 2.8, 3.2, "zero"));
     let r = rows(&table_text(&files(), &w, false).unwrap());
     let l = parse(files().as_bytes()).unwrap();
-    let tr = &traces(l.arr()[0].get("transitions").unwrap())[0];
+    let tr = &traces(l.arr()[0].get("transitions").unwrap(), None, "")[0];
     let [area, _, height, apex] = peak_area(&tr.t, &tr.y, 2.8, 3.2, Baseline::Zero).unwrap();
     assert_eq!(r[0][3], sci(area, 5));
     assert_eq!(r[0][7], sci(height, 5));
