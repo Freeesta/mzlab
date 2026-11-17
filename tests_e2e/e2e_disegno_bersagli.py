@@ -1,4 +1,4 @@
-"""Draw tab, touch targets and names (WCAG 2.5.8): side cards and Ketcher controls >= 24 px, 40 px context-menu rows, named copy triangle,
+"""Draw tab, touch targets and names (WCAG 2.5.8): side cards and Ketcher controls >= 24 px, 44 px context-menu rows, named copy triangle,
 long-press tooltip with the tool name, skip link to Quick draw, and no change of the desktop layout."""
 # covers: mzlab/web/disegno-tablet.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -80,9 +80,9 @@ try:
               e.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, cancelable: true, clientX: c[0] - document.getElementById('kframe').getBoundingClientRect().left, clientY: c[1] - document.getElementById('kframe').getBoundingClientRect().top, view: d.defaultView})); }""", c); hold(pg, 400)
             hs = pg.evaluate("[...document.querySelectorAll('#ctx [role=menuitem]')].filter(e => e.getBoundingClientRect().height > 0).map(e => e.getBoundingClientRect().height)")
             assert hs, "no menu rows"
-            assert min(hs) >= 39.5, f"rows {min(hs)} px"
+            assert min(hs) >= 43.5, f"rows {min(hs)} px"
             pg.keyboard.press("Escape"); hold(pg, 200)
-        step("2 context menu rows >= 40 px", menu)
+        step("2 context menu rows >= 44 px", menu)
         def triangle():
             n = pg.evaluate("""(() => { const t = document.getElementById('kframe').contentDocument.querySelector('[data-testid=copy-button-dropdown-triangle]'); return t ? (t.getAttribute('aria-label') || '').trim() : null; })()""")
             assert n, f"copy triangle aria-label {n!r}"
