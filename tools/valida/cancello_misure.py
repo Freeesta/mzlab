@@ -197,7 +197,7 @@ def _parameter(identita: dict | None, name: str):
     if identita is None:
         return None
     for p in identita["contributi"]:
-        if p["tipo"] == "cinetica":
+        if p["tipo"] == "kinetics":
             return p["parametri"].get(name)
     return None
 

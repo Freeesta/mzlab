@@ -4,7 +4,7 @@ Parte del motore Rust (`rust.md`). Binario nativo `mzlab-cli` (mai nel sito; `mz
 ## Comandi
 Elenco generato (`python3 tools/cli_doc.py`):
 <!--cli-->
-`features`, `flow run`, `flow check`, `steps`, `flow report`, `flow record`, `flow verify`, `flow command`, `llm`, `msn-graph`, `channels`, `dda-window`, `ion-pattern`, `elements`, `ion-mz`, `match-mz`, `background`, `mol-label`, `mol-anal`, `mol-check`, `mol-cip`, `mol-hilite`, `mol-sel`, `mol-link`, `mol-export`, `mol-cut`, `mol-mech`, `mol-search`, `samples`, `peak-edges` (old: `peaks-edges`), `manual-table`, `peak-split`, `peak-auto`, `peak-auto-lr`, `peak-area`
+`features`, `flow run`, `flow check`, `steps`, `flow report`, `flow record`, `flow verify`, `flow command`, `llm`, `msn-graph`, `channels`, `dad`, `dda-window`, `ion-pattern`, `elements`, `ion-mz`, `match-mz`, `background`, `mol-label`, `mol-anal`, `mol-check`, `mol-cip`, `mol-hilite`, `mol-sel`, `mol-link`, `mol-export`, `mol-cut`, `mol-mech`, `mol-search`, `samples`, `peak-edges` (old: `peaks-edges`), `manual-table`, `peak-split`, `peak-auto`, `peak-auto-lr`, `peak-area`
 `peak-window`, `explain-missing`, `msn-lib`, `msn-rules`, `convert`, `validate`, `normative`, `insilico`
 <!--/cli-->
 - `mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params FILE.json] [--help]`: esegue lo stesso motore della pagina sui file (più file = una serie, nell'ordine dato; indice, picchi e candidati deboli per file su un pool di thread: `par.rs`, `MZLAB_PHASES=1`: secondi per fase) e scrive la tabella delle feature allineata in CSV. Ogni comando è una voce (nome, alias, riga di `--help`, funzione) in `src/cmd/<famiglia>.rs`: `execute` di `src/lib.rs` la cerca e `--help` si stampa dalla tabella.

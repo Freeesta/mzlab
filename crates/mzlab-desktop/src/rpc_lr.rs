@@ -41,6 +41,19 @@ impl State {
         Ok((m, chroms, slot))
     }
 
+    /// `lr_pda_sub`: file `name` minus the DAD of file `ref`: the map, a UV spectrum or a trace, with the report `sub`.
+    fn pda_sub(&self, eng: &mut Eng, p: &Value) -> Result<Answer> {
+        let s = |k: &str| p[k].as_str().unwrap_or("");
+        let f = |k: &str| p[k].as_f64().unwrap_or(0.0);
+        let (o, v) = mzlab_core::itemroutes::pda_sub_args(s("view"), f("a"), f("b"), s("scale"), f("shift"))?;
+        let db = {
+            let (mut mb, _, _) = self.chroms(eng, s("ref").split('#').next().unwrap_or(""))?;
+            mzlab_core::itemroutes::pda_dad(&mut mb)?
+        };
+        let (mut m, _, _) = self.chroms(eng, s("name").split('#').next().unwrap_or(""))?;
+        Ok(Answer::Text(mzlab_core::itemroutes::pda_subtract(&mut m, &db, &o, v)?))
+    }
+
     #[allow(unused_variables)]
     pub(crate) fn op_files(&self, eng: &mut Eng, op: &str, p: &Value) -> Result<Answer> {
         let s = |k: &str| p[k].as_str().unwrap_or("");
@@ -286,6 +299,7 @@ impl State {
                 let (a, b) = (p["rt0"].as_f64().unwrap_or(f64::NAN), p["rt1"].as_f64().unwrap_or(f64::NAN));
                 text(if op == "lr_pda_propose" { mzlab_core::itemroutes::pda_propose(&mut m, a, b) } else { mzlab_core::itemroutes::pda_spectrum(&mut m, a, b) }?)
             }
+            "lr_pda_sub" => self.pda_sub(eng, p),
             "lr_delay" => {
                 let name = s("name").split('#').next().unwrap_or("");
                 let slot = self.open_lr(eng, name)?;

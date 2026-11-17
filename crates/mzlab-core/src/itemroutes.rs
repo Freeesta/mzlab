@@ -172,6 +172,60 @@ pub fn pda_map<M: ReadAt>(m: &mut Mzml<M>) -> Result<String> {
     Err(Error::new("err.pda.none"))
 }
 
+/// The optical matrix of a file as the engine holds it (native reader, else the mzML matrix); `err.pda.none` when it has none.
+#[cfg(feature = "mappa-dad")]
+pub fn pda_dad<M: ReadAt>(m: &mut Mzml<M>) -> Result<std::sync::Arc<crate::wiff::dad::DadData>> {
+    if let Some((l, c)) = m.r.reader()
+        && let Some(d) = l.dad_data(c)? {
+            return Ok(std::sync::Arc::new(d));
+        }
+    m.dad_memo()?.ok_or_else(|| Error::new("err.pda.none"))
+}
+
+/// The arguments of `/api/pdasub` as every seam (site, app, CLI) gets them: `view` is `map`, `spectrum` (`a`, `b` = rt0, rt1) or `trace` (`a`, `b` = nm0, nm1); `scale` is `none`, `max`, `tic`, `fit` or a factor; `shift` in minutes.
+#[cfg(feature = "mappa-dad")]
+pub fn pda_sub_args(view: &str, a: f64, b: f64, scale: &str, shift: f64) -> Result<(crate::wiff::dad_ops::SubOpts, PdaView)> {
+    let scale = crate::wiff::dad_ops::Scale::parse(scale).ok_or_else(|| Error::new("err.pda.scale").with("scale", scale))?;
+    let view = match view {
+        "map" => PdaView::Map,
+        "spectrum" => PdaView::Spectrum(a, b),
+        "trace" => PdaView::Wavelength(a, b),
+        v => return Err(Error::new("err.pda.view").with("view", v)),
+    };
+    Ok((crate::wiff::dad_ops::SubOpts { scale, shift_min: shift }, view))
+}
+
+/// What a subtracted DAD map is asked for: the map, the UV spectrum in a window of time, or the trace in a band of wavelengths.
+#[cfg(feature = "mappa-dad")]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PdaView {
+    Map,
+    Spectrum(f64, f64),
+    Wavelength(f64, f64),
+}
+
+/// `/api/pdasub`: file A minus the DAD matrix `b` of another file (`wiff::dad_ops::dad_subtract`), as the same JSON the plain routes give plus `"sub"`, the report of
+/// what was aligned, interpolated, dropped and scaled. The matrix of A comes from the engine; `b` from [`pda_dad`] of the other file.
+#[cfg(feature = "mappa-dad")]
+pub fn pda_subtract<M: ReadAt>(a: &mut Mzml<M>, b: &crate::wiff::dad::DadData, o: &crate::wiff::dad_ops::SubOpts, view: PdaView) -> Result<String> {
+    let da = pda_dad(a)?;
+    pda_subtract_data(&da, b, o, view)
+}
+
+/// [`pda_subtract`] on two matrices already in hand (the CLI, the tests).
+#[cfg(feature = "mappa-dad")]
+pub fn pda_subtract_data(a: &crate::wiff::dad::DadData, b: &crate::wiff::dad::DadData, o: &crate::wiff::dad_ops::SubOpts, view: PdaView) -> Result<String> {
+    let (d, rep) = crate::wiff::dad_ops::dad_subtract(a, b, o)?;
+    let body = match view {
+        PdaView::Map => Some(dad_to_map_json(&d)),
+        PdaView::Spectrum(t0, t1) => dad_spectrum_json(&d, t0, t1),
+        PdaView::Wavelength(w0, w1) => dad_wavelength_json(&d, w0, w1),
+    }
+    .ok_or_else(|| Error::new("err.pda.none"))?;
+    let end = body.rfind('}').ok_or_else(|| Error::new("err.pda.none"))?;
+    Ok(format!("{},\"sub\":{}}}", &body[..end], rep.to_json()))
+}
+
 /// `/api/uvxic`: the trace of the DAD at the wavelengths `nm0`..`nm1`; `err.pda.none` when the file has no optical matrix.
 pub fn pda_wavelength<M: ReadAt>(m: &mut Mzml<M>, nm0: f64, nm1: f64) -> Result<String> {
     if let Some((l, c)) = m.r.reader()

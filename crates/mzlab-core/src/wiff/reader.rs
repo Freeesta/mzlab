@@ -237,7 +237,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
         }
         dad_chrom(self.part(c)?.w.dad.as_ref(), id).ok_or_else(|| Error::new("error.badIndex").with("id", id))
     }
-    #[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
+    #[cfg(any(not(target_family = "wasm"), feature = "sciex", feature = "mappa-dad"))]
     fn dad_data(&mut self, c: usize) -> Result<Option<super::dad::DadData>> {
         Ok(self.part(c)?.w.dad.clone())
     }

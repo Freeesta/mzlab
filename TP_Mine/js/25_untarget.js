@@ -121,7 +121,7 @@
     return raw && typeof raw.then === "function" ? raw.then(done, (/** @type {any} */ e) => { throw asError(e); }) : done(raw);      // the app answers with a promise
   }
 
-  // ------------------------------------------------------------ external evidence read with a profile of livelli/1 (profile «attributio»: a library source of mzMine or GNPS2 that passes the gates is level 2a)
+  // ------------------------------------------------------------ external evidence read with a profile of levels/1 (profile «attributio»: a library source of mzMine or GNPS2 that passes the gates is level 2a)
   const bestKey = c => (LV() ? LV().ikKey(c) : lc(c.name));
   function assessExternal(f, profile = "attributio") {
     const L = LV(), cands = (f.ann || []).filter(a => !a.propagated && (a.type === "cosine" || a.type === "MQScore")).map(a => ({ name: a.cleanName || a.name, ik: a.ik, ent: a.score, cos: a.score, shared: a.shared, dprec: a.ppm, lib: a.source, nlib: 30, _a: a }));

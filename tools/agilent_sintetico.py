@@ -40,10 +40,18 @@ def write(root: Path, name: str = "synt.D", n: int = 120) -> Path:
     return d
 
 
-def write_old(root: Path, name: str = "vecchia.D", n: int = 60) -> Path:
-    """An older run: only the ChemStation data.ms (big-endian records, m/z in twentieths), same peak as `write`."""
+def write_old(root: Path, name: str = "vecchia.D", n: int = 60, gc: bool = False) -> Path:
+    """An older run: only the ChemStation data.ms (big-endian records, m/z in twentieths), same peak as `write`.
+    `gc`: the shape of a GC/MS folder copied whole but for the converted index: data.ms on top, AcqData holding only Contents.xml, and the side files (acqmeth.txt, checksum.xml, GC.ini, runstart.txt)."""
     d = root / name
     d.mkdir(parents=True, exist_ok=True)
+    if gc:
+        (d / "AcqData").mkdir(exist_ok=True)
+        (d / "AcqData/Contents.xml").write_text("<Contents><AcquiredTime>2025-01-02T10:11:12.5+01:00</AcquiredTime><SeparationTechnique>2</SeparationTechnique><AcqSoftwareVersion>MassHunter GC/MS Acquisition  10.0.1.1</AcqSoftwareVersion></Contents>", encoding="utf-8")
+        (d / "acqmeth.txt").write_bytes("synthetic method\r\n".encode("utf-16"))
+        (d / "checksum.xml").write_text("<checksum/>", encoding="utf-8")
+        (d / "GC.ini").write_text("[GC]\n", encoding="utf-8")
+        (d / "runstart.txt").write_text("2025-01-02 10:11:12\n", encoding="utf-8")
     b = bytearray(0x140)
     b[0:2] = b"\x01\x32"
     for o, t in ((0x04, "GC / MS Data File"), (0x18, "vecchia")):

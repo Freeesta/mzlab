@@ -1,6 +1,6 @@
-# Campagna sintetica di Attributio
+# Attributio synthetic campaign
 
-Campagna INVENTATA (nessun dato vero): uguale alla fixture `tests/fixtures/synthetic_campaign/` di Attributio 1.12.0 più `livelli_attesi.csv` (15 feature: POS 1-6 e 8-14, NEG 1-2). Serve ai dati d'oro di `tests/golden/attributio/sintetica/` e alle prove di parità del passaggio a Rust (`docs/agenti/attributio.md`).
+INVENTED campaign (no real data): same as the `tests/fixtures/synthetic_campaign/` fixture of Attributio 1.12.0 plus `livelli_attesi.csv` (15 features: POS 1-6 and 8-14, NEG 1-2). It feeds the golden data in `tests/golden/attributio/sintetica/` and the parity tests of the move to Rust (`docs/agenti/attributio.md`).
 
 | File (in `campagna_sintetica/`) | sha256 |
 |---|---|
@@ -21,9 +21,9 @@ Campagna INVENTATA (nessun dato vero): uguale alla fixture `tests/fixtures/synth
 | `library/standards.csv` | `89072ddab2272840b11d7511bbc9c9f3b014dd3119f494352a35084c1bc3b2b2` |
 | `livelli_attesi.csv` | `6712b2f1e5ca1ddb489a1c1948fff85a5ea8b439fb0aa6eb439c94e375f4887c` |
 
-## Campagna dei sorbenti
+## Sorbent campaign
 
-Campagna INVENTATA (nessun dato vero) con due sorbenti (OA, EC), una lista per sorbente e due feature gemelle (id 3 → 2); serve ai dati d'oro di `tests/golden/attributio/sorbenti/`.
+INVENTED campaign (no real data) with two sorbents (OA, EC), one list per sorbent and two twin features (id 3 → 2); it feeds the golden data in `tests/golden/attributio/sorbenti/`.
 
 | File (in `campagna_sorbenti/`) | sha256 |
 |---|---|
@@ -32,9 +32,9 @@ Campagna INVENTATA (nessun dato vero) con due sorbenti (OA, EC), una lista per s
 | `data/mz/DDA_POS/OA/list_OA.csv` | `4369a8e1642c6ff935a5b80b92157745b18e88a5fb7c57b405a8e592e1d884f9` |
 | `data/mz/DDA_POS/merged/merged_pos.csv` | `f77cd19ab5a5c71c46fc5dcc078118367d234aebef972928d48714c21215d9ca` |
 
-Inoltre `librerie_sintetiche/` (MGF, MSP, JSON a righe, MassBank) e `fonti_sintetiche/` (tabelle di SIRIUS e GNPS2 per POS e NEG): dati inventati per lo stadio `abbinamenti`.
+Also `librerie_sintetiche/` (MGF, MSP, line-delimited JSON, MassBank) and `fonti_sintetiche/` (SIRIUS and GNPS2 tables for POS and NEG): invented data for the `abbinamenti` stage.
 
-Inoltre `campagna_banco/` (sovrapposizione sulla campagna sintetica per il Banco 2b: aggiunge MS2, tabelle SIRIUS/GNPS2 e una libreria inventate; dati inventati):
+Also `campagna_banco/` (overlay on the synthetic campaign for Banco 2b: adds invented MS2, SIRIUS/GNPS2 tables and a library; invented data):
 
 | File (in `campagna_banco/`) | sha256 |
 |---|---|
@@ -45,7 +45,7 @@ Inoltre `campagna_banco/` (sovrapposizione sulla campagna sintetica per il Banco
 | `02 Data/Data Synth/2 - SIRIUS/output POS/structure_identifications_top-5.tsv` | `417e455997f7168c7c83d06932e1841e997e54cdef36a1f159a5a9f7292b6d37` |
 | `library/banco.json` | `b1e2329a84db082e0b7df377e70ea15eeb320dbeb9cf84d22e757effcbd5dda2` |
 
-Inoltre `campagna_esportazione/` (sovrapposizione sulla campagna sintetica per le esportazioni: decisioni 2b e curva di taratura inventate) e `campagna_gradiente/` (due siti a monte e a valle, per il gradiente); dati inventati:
+Also `campagna_esportazione/` (overlay on the synthetic campaign for the exports: invented 2b decisions and calibration curve) and `campagna_gradiente/` (two sites, upstream and downstream, for the gradient); invented data:
 
 | File | sha256 |
 |---|---|
