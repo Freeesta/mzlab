@@ -1,4 +1,5 @@
 {
+  "files.time.title": "Tooltip and aria-label of the small time tag (\"3h\") beside a file name in the file list; {t} = the time point with its unit, e.g. \"3 h\".",
   "storia.tolto": "Notice shown for 6 s after removing a file, closing a panel or clearing the marks, with the Undo button; {what} = name of the file, of the panel or \"marks\".",
   "storia.undone": "Announcement after Ctrl/Cmd+Z; {what} = short name of the undone action (zoom, integration, background...).",
   "storia.redone": "Announcement after Redo; {what} = short name of the redone action.",
