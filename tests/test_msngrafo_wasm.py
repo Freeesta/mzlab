@@ -27,9 +27,9 @@ def pkg(tmp_path_factory):
 @pytest.mark.parametrize("query,args", [
     ("", []),
     ("formula=C14H15N3O5%2B&ppm_formula=10", ["--formula", "C14H15N3O5+"]),
-    ("formula=C14H15N3O5%2B&scelte=%5B%7B%22mz%22%3A177.0546%2C%22formula%22%3A%22C9H8NO2%2B%22%7D%5D", ["--formula", "C14H15N3O5+", "--scelta", "177.0546=C9H8NO2+"]),
-    ("formula=C14H15N3O5%2B&smiles=CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12&strutture=n3", ["--formula", "C14H15N3O5+", "--smiles", "CCOC(=O)c1c[nH]c2ccccc12", "--strutture", "n3"]),
-    ("formula=C14H15N3O5%2B&smiles=CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12&strutture=3&ppm_struttura=5", ["--formula", "C14H15N3O5+", "--smiles", "CCOC(=O)c1c[nH]c2ccccc12", "--strutture", "3", "--ppm-struttura", "5"]),
+    ("formula=C14H15N3O5%2B&scelte=%5B%7B%22mz%22%3A177.0546%2C%22formula%22%3A%22C9H8NO2%2B%22%7D%5D", ["--formula", "C14H15N3O5+", "--pick", "177.0546=C9H8NO2+"]),
+    ("formula=C14H15N3O5%2B&smiles=CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12&strutture=n3", ["--formula", "C14H15N3O5+", "--smiles", "CCOC(=O)c1c[nH]c2ccccc12", "--structures", "n3"]),
+    ("formula=C14H15N3O5%2B&smiles=CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12&strutture=3&ppm_struttura=5", ["--formula", "C14H15N3O5+", "--smiles", "CCOC(=O)c1c[nH]c2ccccc12", "--structures", "3", "--struct-ppm", "5"]),
 ])
 def test_wasm_and_cli_give_the_same_graph(pkg, query, args):
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), query).stdout
@@ -45,7 +45,7 @@ def test_the_whole_structure_and_the_molfile_are_the_same_in_cli_and_wasm(pkg, t
     smiles = "CCOC(=O)c1c[nH]c2ccccc12"
     q = "formula=C14H15N3O5%2B&smiles=" + "CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12" + "&strutture=tutti&molfile=" + urllib.parse.quote(mol.read_text(encoding="utf-8"))
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), q).stdout
-    want = cli("msn-graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", smiles, "--strutture", "tutti", "--molfile", str(mol)).stdout
+    want = cli("msn-graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", smiles, "--structures", "all", "--molfile", str(mol)).stdout
     assert got + "\n" == want
     doc = json.loads(got)
     assert doc["opzioni"]["molfile"].startswith("\n  mzlab")
@@ -76,7 +76,7 @@ def test_a_bad_number_is_a_keyed_error(pkg):
 def test_wasm_and_cli_give_the_same_export(pkg, fmt, clean):
     q = f"formato={fmt}" + ("&pulito=1" if clean else "")
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), q, "export").stdout
-    want = cli("msn-graph", str(MZML), "--export", fmt, *(["--pulito"] if clean else [])).stdout
+    want = cli("msn-graph", str(MZML), "--export", fmt, *(["--clean"] if clean else [])).stdout
     assert got == want and got.strip()
 
 

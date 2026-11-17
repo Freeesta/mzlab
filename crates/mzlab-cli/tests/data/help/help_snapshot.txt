@@ -37,7 +37,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
   --params FILE.json the numbers of the panel Pipeline: {"polarity", "mode", "floor", "min_height", "min_points", "ppm", "rt_tol", "fill"}
   --help             this text
 
-old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl
+old names still accepted: peaks-edges, --jsonl
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
@@ -81,7 +81,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
   --params FILE.json the numbers of the panel Pipeline: {"polarity", "mode", "floor", "min_height", "min_points", "ppm", "rt_tol", "fill"}
   --help             this text
 
-old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl
+old names still accepted: peaks-edges, --jsonl
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
@@ -125,7 +125,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
   --params FILE.json the numbers of the panel Pipeline: {"polarity", "mode", "floor", "min_height", "min_points", "ppm", "rt_tol", "fill"}
   --help             this text
 
-old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl
+old names still accepted: peaks-edges, --jsonl
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
@@ -197,7 +197,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
   --params FILE.json the numbers of the panel Pipeline: {"polarity", "mode", "floor", "min_height", "min_points", "ppm", "rt_tol", "fill"}
   --help             this text
 
-old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl
+old names still accepted: peaks-edges, --jsonl
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
@@ -281,8 +281,6 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
   complete             adds the key `vista` (levels, best path, tree and radial layout) to an msngrafo/1 that has not got it, with the bytes the engine writes
   compare              validates a tree measured twice: two msngrafo/1 files in, a JSON (msnconfronto/1) out with the numbers of the five criteria
                        (isolated nodes, arcs of rel >= 10 %, formulas, MS2 entropy >= 0.8 per energy, m/z shift <= 3 ppm) and `convalidata`
-
-old names still accepted: --mz-basso --ppm-basso --prove-min --attivazione --isotopi --scelta --verita --riassunto --pulito --nodo --strutture --interpreta --ppm-perdita --regole --toll-perdita-mda --figura --vista --rotture --max-legami --ppm-struttura (values albero|radiale, tutti)
 --- stderr
 
 === mzlab-cli channels --help
@@ -298,25 +296,6 @@ usage: mzlab-cli channels FILE [--sample ID] [--channel ID [--rt T0[,T1]] [--n N
               uv:auto prints the XWC band proposed from the DAD matrix ({nm, bw, rt, n}), in the --rt window when given
   --n N       points at most per extreme of an analog trace (default 2000)
   --out PATH  write there instead of the standard output
-
-old names still accepted: canali, --canale
---- stderr
-
-=== mzlab-cli canali --help
-exit 0
---- stdout
-mzlab-cli channels: the channels of a file (TIC, BPC, one per scan type or precursor, one per SRM transition) as JSON (canali/1).
-
-usage: mzlab-cli channels FILE [--sample ID] [--channel ID [--rt T0[,T1]] [--n N]] [--out PATH]
-
-  FILE        an mzML, or any single file the app reads (.raw, mzXML, ...); SRM, SIC, UV and analog channels only for an mzML
-  --sample ID the sample of a file with several (.wiff), by its id (default: the first; the others are named on the standard error)
-  --channel ID the trace of a UV or analog channel (uv:twc, uv:<nm>±<bw>, an:<i>) instead of the list; with --rt (minutes) the UV spectrum of uv:twc;
-              uv:auto prints the XWC band proposed from the DAD matrix ({nm, bw, rt, n}), in the --rt window when given
-  --n N       points at most per extreme of an analog trace (default 2000)
-  --out PATH  write there instead of the standard output
-
-old names still accepted: canali, --canale
 --- stderr
 
 === mzlab-cli dda-window --help
@@ -596,27 +575,6 @@ usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,
   --substring     with --has: the term may be inside a token (O2 then catches H2O2)
   group           the name of a group made of NAMEs: their common tokens in order, empty when none
   table           the sample table the names propose (campioni/2): role, time point (`tempo`, `unita_tempo`, `tempo_min`), series, replicate, concentration
-
-old names still accepted: campioni, variabili, nome-gruppo
---- stderr
-
-=== mzlab-cli campioni --help
-exit 0
---- stdout
-mzlab-cli samples: how the names of a set of files split them (nomivar/1), as JSON.
-
-usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
-       mzlab-cli samples group NAME...
-       mzlab-cli samples table [--names FILE|-]
-
-  --names FILE|-  one file name per line (default: the standard input)
-  --pos N         also the manual variable of the N-th token (1 = first, -1 = last), cut at --sep (default "_-. ")
-  --has a,b       also the manual variable of terms: a file goes to the first term equal to one of its tokens
-  --substring     with --has: the term may be inside a token (O2 then catches H2O2)
-  group           the name of a group made of NAMEs: their common tokens in order, empty when none
-  table           the sample table the names propose (campioni/2): role, time point (`tempo`, `unita_tempo`, `tempo_min`), series, replicate, concentration
-
-old names still accepted: campioni, variabili, nome-gruppo
 --- stderr
 
 === mzlab-cli peak-edges --help
@@ -791,8 +749,8 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
           The options are those of `msn-graph` (--help of that command)
-  build   one entry per row of the manifest (tab separated, header): id, formula_neutra, addotto_atteso, file (relative to DIR, by default the folder
-          of the manifest); optional smiles, attivazione. The ion is "<formula_neutra> <addotto_atteso>". Writes LIB.json next to the manifest unless --out
+  build   one entry per row of the manifest (tab separated, header): id, neutral_formula, expected_adduct, file (relative to DIR, by default the folder
+          of the manifest); optional smiles, activation. The ion is "<neutral_formula> <expected_adduct>". Writes LIB.json next to the manifest unless --out
   export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
@@ -800,8 +758,6 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
           msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
           --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
-
-old names still accepted: --pulito --tutti --annota --formato --min-prove
 --- stderr
 
 === mzlab-cli msn-rules --help
@@ -822,8 +778,6 @@ usage: mzlab-cli msn-rules RECORD... [--list FILE] [--smiles S] [--activation A]
                     peaks per rule, decoy rate per rule and the thresholds of the protocol (a rule with fewer than 20 applications is not measured)
 
 Peaks above 2 % of the base peak, 10 ppm (20 below m/z 150) for a fragment, 3 mDa for a loss. Output: a JSON line per record, numbers only.
-
-old names still accepted: --lista --attivazione --regole somma
 --- stderr
 
 === mzlab-cli convert --help
@@ -843,7 +797,7 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--compression KIND] [--zlib N] [
                        points of the profile) or mzlab (centroids of mzLab)
   --workers N          files converted at once (default: the cores but one, 1 to 4, fewer when the memory budget of the computer does not give
                        each its share, with a note; the bytes written do not depend on it)
-  --report FILE.json   one object per input: ingresso, uscita, sha256, spettri, secondi, saltato, conv/1, avvisi (centroidi with --peaks mzlab); or ingresso, errore, causa
+  --report FILE.json   one object per input: input, output, sha256, spectra, seconds, skipped, conv/1, warnings (centroids with --peaks mzlab); or input, error, cause
   --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
                        program is not converted again
   --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
@@ -1035,8 +989,8 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
           The options are those of `msn-graph` (--help of that command)
-  build   one entry per row of the manifest (tab separated, header): id, formula_neutra, addotto_atteso, file (relative to DIR, by default the folder
-          of the manifest); optional smiles, attivazione. The ion is "<formula_neutra> <addotto_atteso>". Writes LIB.json next to the manifest unless --out
+  build   one entry per row of the manifest (tab separated, header): id, neutral_formula, expected_adduct, file (relative to DIR, by default the folder
+          of the manifest); optional smiles, activation. The ion is "<neutral_formula> <expected_adduct>". Writes LIB.json next to the manifest unless --out
   export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
@@ -1044,8 +998,6 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
           msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
           --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
-
-old names still accepted: --pulito --tutti --annota --formato --min-prove
 --- stderr
 
 === mzlab-cli msn-lib build --help
@@ -1060,8 +1012,8 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
           The options are those of `msn-graph` (--help of that command)
-  build   one entry per row of the manifest (tab separated, header): id, formula_neutra, addotto_atteso, file (relative to DIR, by default the folder
-          of the manifest); optional smiles, attivazione. The ion is "<formula_neutra> <addotto_atteso>". Writes LIB.json next to the manifest unless --out
+  build   one entry per row of the manifest (tab separated, header): id, neutral_formula, expected_adduct, file (relative to DIR, by default the folder
+          of the manifest); optional smiles, activation. The ion is "<neutral_formula> <expected_adduct>". Writes LIB.json next to the manifest unless --out
   export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
@@ -1069,8 +1021,6 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
           msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
           --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
-
-old names still accepted: --pulito --tutti --annota --formato --min-prove
 --- stderr
 
 === mzlab-cli msn-lib export --help
@@ -1085,8 +1035,8 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
           The options are those of `msn-graph` (--help of that command)
-  build   one entry per row of the manifest (tab separated, header): id, formula_neutra, addotto_atteso, file (relative to DIR, by default the folder
-          of the manifest); optional smiles, attivazione. The ion is "<formula_neutra> <addotto_atteso>". Writes LIB.json next to the manifest unless --out
+  build   one entry per row of the manifest (tab separated, header): id, neutral_formula, expected_adduct, file (relative to DIR, by default the folder
+          of the manifest); optional smiles, activation. The ion is "<neutral_formula> <expected_adduct>". Writes LIB.json next to the manifest unless --out
   export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
@@ -1094,8 +1044,6 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
           msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
           --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
-
-old names still accepted: --pulito --tutti --annota --formato --min-prove
 --- stderr
 
 === mzlab-cli msn-lib search --help
@@ -1110,8 +1058,8 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
           The options are those of `msn-graph` (--help of that command)
-  build   one entry per row of the manifest (tab separated, header): id, formula_neutra, addotto_atteso, file (relative to DIR, by default the folder
-          of the manifest); optional smiles, attivazione. The ion is "<formula_neutra> <addotto_atteso>". Writes LIB.json next to the manifest unless --out
+  build   one entry per row of the manifest (tab separated, header): id, neutral_formula, expected_adduct, file (relative to DIR, by default the folder
+          of the manifest); optional smiles, activation. The ion is "<neutral_formula> <expected_adduct>". Writes LIB.json next to the manifest unless --out
   export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
@@ -1119,8 +1067,6 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
           msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
           --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
-
-old names still accepted: --pulito --tutti --annota --formato --min-prove
 --- stderr
 
 === mzlab-cli normative build --help

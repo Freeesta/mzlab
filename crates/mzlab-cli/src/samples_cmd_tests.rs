@@ -1,4 +1,4 @@
-//! `mzlab-cli campioni`: the answers are the ones of `samples::route` on the same names.
+//! `mzlab-cli samples`: the answers are the ones of `samples::route` on the same names.
 
 use mzlab_core::samples::route_all as route;
 
@@ -24,7 +24,7 @@ const BODY: &str = r#"{"files":[{"name":"MQ_H2O2_T00"},{"name":"MQ_H2O2_T05"},{"
 #[test]
 fn variabili_is_the_route_answer() {
     let f = names_file("a");
-    let (code, out, err) = run(&["campioni", "variabili", "--names", f.to_str().unwrap()]);
+    let (code, out, err) = run(&["samples", "vars", "--names", f.to_str().unwrap()]);
     assert_eq!(code, 0, "{err}");
     assert_eq!(
         out,
@@ -32,8 +32,8 @@ fn variabili_is_the_route_answer() {
     );
     assert!(out.contains("\"id\":\"matrix\""));
     let (_, out, _) = run(&[
-        "campioni",
-        "variabili",
+        "samples",
+        "vars",
         "--names",
         f.to_str().unwrap(),
         "--pos",
@@ -48,8 +48,8 @@ fn variabili_is_the_route_answer() {
     .unwrap();
     assert_eq!(out, want + "\n");
     let (_, out, _) = run(&[
-        "campioni",
-        "variabili",
+        "samples",
+        "vars",
         "--names",
         f.to_str().unwrap(),
         "--has",
@@ -82,7 +82,7 @@ const TIME_NAMES: [&str; 9] = [
 fn table_is_the_route_answer_with_the_time_points() {
     let p = std::env::temp_dir().join(format!("mzlab-cli-{}-nomi-tempo.txt", std::process::id()));
     std::fs::write(&p, TIME_NAMES.join("\n")).unwrap();
-    let (code, out, err) = run(&["campioni", "table", "--names", p.to_str().unwrap()]);
+    let (code, out, err) = run(&["samples", "table", "--names", p.to_str().unwrap()]);
     assert_eq!(code, 0, "{err}");
     let files: Vec<String> = TIME_NAMES
         .iter()
@@ -105,59 +105,46 @@ fn table_is_the_route_answer_with_the_time_points() {
 
 #[test]
 fn nome_gruppo_is_the_route_answer() {
-    let (code, out, _) = run(&["campioni", "nome-gruppo", "MQ_H2O2_T00", "MQ_H2O2_T01"]);
+    let (code, out, _) = run(&["samples", "group", "MQ_H2O2_T00", "MQ_H2O2_T01"]);
     assert_eq!((code, out.as_str()), (0, "{\"nome\":\"MQ_H2O2\"}\n"));
-    let (_, out, _) = run(&["campioni", "nome-gruppo"]);
+    let (_, out, _) = run(&["samples", "group"]);
     assert_eq!(out, "{\"nome\":\"\"}\n");
 }
 
 #[test]
 fn bad_use_is_an_error_of_use() {
     for a in [
-        vec!["campioni", "nope"],
-        vec!["campioni", "variabili", "--names", "/nonexistent/x.txt"],
+        vec!["samples", "nope"],
+        vec!["samples", "vars", "--names", "/nonexistent/x.txt"],
         vec![
-            "campioni",
-            "variabili",
+            "samples",
+            "vars",
             "--names",
             "/nonexistent/x.txt",
             "--substring",
         ],
-        vec!["campioni", "variabili", "--pos", "x"],
+        vec!["samples", "vars", "--pos", "x"],
     ] {
         assert_eq!(run(&a).0, 2, "{a:?}");
     }
-    assert_eq!(run(&["campioni", "--help"]).0, 0);
+    assert_eq!(run(&["samples", "--help"]).0, 0);
 }
 
+/// The Italian command and subcommand names are gone: usage errors (exit 2); the help has no old-names line.
 #[test]
-fn old_and_new_names_give_the_same_bytes() {
+fn the_italian_names_are_refused() {
     let f = names_file("alias");
     let n = f.to_str().unwrap();
-    for (old, new) in [
-        (
-            vec!["campioni", "variabili", "--names", n],
-            vec!["samples", "vars", "--names", n],
-        ),
-        (
-            vec!["campioni", "variabili", "--names", n, "--pos", "2"],
-            vec!["samples", "vars", "--names", n, "--pos", "2"],
-        ),
-        (
-            vec!["campioni", "nome-gruppo", "MQ_H2O2_T00", "MQ_H2O2_T01"],
-            vec!["samples", "group", "MQ_H2O2_T00", "MQ_H2O2_T01"],
-        ),
-        (vec!["campioni", "nope"], vec!["samples", "nope"]),
-        (vec!["campioni", "--help"], vec!["samples", "--help"]),
-        (vec!["campioni"], vec!["samples"]),
+    assert_eq!(run(&["samples", "vars", "--names", n]).0, 0);
+    assert_eq!(run(&["samples", "group", "A_B", "A_C"]).0, 0);
+    for bad in [
+        vec!["campioni", "vars", "--names", n],
+        vec!["samples", "variabili", "--names", n],
+        vec!["samples", "nome-gruppo", "A_B", "A_C"],
     ] {
-        let (a, b) = (run(&old), run(&new));
-        assert_eq!((a.0, &a.1), (b.0, &b.1), "{old:?}");
+        assert_eq!(run(&bad).0, 2, "{bad:?}");
     }
-    // The mixed spellings are accepted too.
-    assert_eq!(run(&["samples", "variabili", "--names", n]).0, 0);
-    assert_eq!(run(&["campioni", "group", "A_B", "A_C"]).0, 0);
-    assert!(run(&["samples", "--help"])
+    assert!(!run(&["samples", "--help"])
         .1
-        .ends_with("old names still accepted: campioni, variabili, nome-gruppo\n"));
+        .contains("old names still accepted"));
 }

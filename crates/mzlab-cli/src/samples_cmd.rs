@@ -18,9 +18,7 @@ usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,
   --has a,b       also the manual variable of terms: a file goes to the first term equal to one of its tokens
   --substring     with --has: the term may be inside a token (O2 then catches H2O2)
   group           the name of a group made of NAMEs: their common tokens in order, empty when none
-  table           the sample table the names propose (campioni/2): role, time point (`tempo`, `unita_tempo`, `tempo_min`), series, replicate, concentration
-
-old names still accepted: campioni, variabili, nome-gruppo";
+  table           the sample table the names propose (campioni/2): role, time point (`tempo`, `unita_tempo`, `tempo_min`), series, replicate, concentration";
 
 fn names(src: &str) -> Result<Vec<String>, String> {
     let mut text = String::new();
@@ -48,9 +46,6 @@ fn list(names: &[String]) -> String {
     o.raw("]");
     o.0
 }
-
-/// Old subcommand names still accepted on input, as `(old, new)`.
-const ALIASES: [(&str, &str); 2] = [("variabili", "vars"), ("nome-gruppo", "group")];
 
 /// The body of `vars`: the names and, when asked, the manual variable.
 fn variabili(args: Vec<String>) -> Result<String, String> {
@@ -127,12 +122,7 @@ fn table(args: Vec<String>) -> Result<String, String> {
 pub fn run(args: Vec<String>) -> Outcome {
     let mut it = args.into_iter();
     let first = it.next();
-    let sub = first.as_deref().map(|c| {
-        ALIASES
-            .iter()
-            .find(|(old, _)| *old == c)
-            .map_or(c, |(_, new)| new)
-    });
+    let sub = first.as_deref();
     let (op, body) = match sub {
         Some("vars") => ("variabili", variabili(it.collect())),
         Some("table") => ("proponi", table(it.collect())),
