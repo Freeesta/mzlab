@@ -292,6 +292,6 @@ const soon = () => { clearTimeout(timer); timer = setTimeout(sync, 150); };
 /** The notice and the per-file log of an automatic integration, shown at the next draw of the card. @param {string} say @param {string[]} log */
 const report = (say, log) => { st.say = say; st.log = log; st.sig = ""; };
 
-G.MANINT = { report, sync: soon, now: sync, snr, valleys, parts, follow, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file) }) };
+G.MANINT = { report, sync: soon, now: sync, snr, valleys, parts, follow, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file), times: Object.fromEntries(st.ks.map(k => [E.files[k].label, E.files[k].time ?? null])) }) };
 document.addEventListener("campioni", soon);      // a time point typed in the sample table changes the column
 soon();
