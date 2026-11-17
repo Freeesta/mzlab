@@ -82,7 +82,7 @@ def test_the_list_sits_next_to_keller():
 NODE = __import__("shutil").which("node")
 
 
-@pytest.mark.skipif(not NODE, reason="node non disponibile")
+@pytest.mark.skipif(not NODE, reason="node not available")
 def test_the_formula_dialog_finds_neonicotinoids_by_name():
     """liste-nomi.js (formula dialog, XIC ion field) over the shipped lists: «imidacloprid» is one entry with its neutral formula and [M+H]+."""
     code = r"""
@@ -107,7 +107,7 @@ console.log(JSON.stringify({ hit: LISTENOMI.byName('imidacloprid'), plus: LISTEN
     assert o["sug"] == ["imidacloprid"] and all(o["all"])
 
 
-@pytest.mark.skipif(not NODE, reason="node non disponibile")
+@pytest.mark.skipif(not NODE, reason="node not available")
 def test_a_name_with_its_bracket_is_found_by_either_part():
     """«dibutyl phthalate (DBP)» of Keller: the name before the bracket and the short name inside it are the same entry; a bracket word shared by
     many entries («dimer») finds none; the full name still works."""

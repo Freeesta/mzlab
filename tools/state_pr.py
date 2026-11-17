@@ -106,7 +106,7 @@ def main():
     prs = list(pages(f"{API}/pulls?state=open&per_page=100"))
     with ThreadPoolExecutor(8) as ex:
         rows = sorted(ex.map(lambda p: row(p, required, chats), prs))
-    print(f"{len(prs)} PR aperte; check richiesti: {len(required)}")
+    print(f"{len(prs)} open PRs; required checks: {len(required)}")
     for _, line in rows:
         print(line)
     print(main_test())

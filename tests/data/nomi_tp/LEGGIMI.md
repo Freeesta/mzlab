@@ -1,19 +1,19 @@
-# Casi di Test Nomi TP (Transformation Products)
+# TP Name Test Cases (Transformation Products)
 
-Questa cartella contiene i dataset di test e gli script per la nomenclatura dei TP.
+This folder holds the test datasets and the scripts for TP nomenclature.
 
-## Contenuto dei file
-- `trasformazioni.csv`: 120 reazioni plausibili su 8 molecole madri (SMILES, formule neutrali e variazioni nette).
-- `casi_nomi.csv`: 110 casi con formule TP, addotti ([M+H]+, [M-H]-), masse esatte/nominali, RT sintetici (`rt_min`), gruppi e categorie (`single`, `isomers`, `different_formula`).
-- `genera_casi.py`: script deterministico che riproduce byte-per-byte entrambi i CSV e ne verifica la corrispondenza esatta.
-- `controlla_casi.py`: script di validazione che verifica vincoli chimici, coerenza masse, assenza di collisioni errate e integrità dei gruppi.
+## Contents
+- `trasformazioni.csv`: 120 plausible reactions on 8 parent molecules (SMILES, neutral formulas and net changes).
+- `casi_nomi.csv`: 110 cases with TP formulas, adducts ([M+H]+, [M-H]-), exact/nominal masses, synthetic RTs (`rt_min`), groups and categories (`single`, `isomers`, `different_formula`).
+- `genera_casi.py`: deterministic script that reproduces both CSVs byte for byte and checks that they match exactly.
+- `controlla_casi.py`: validation script that checks chemical constraints, mass consistency, absence of wrong collisions and group integrity.
 
-## Metodologia e Dati Sintetici
-- **Masse esatte**: calcolate con `pyteomics.mass` (massa monoisotopica esatta dell'addotto specificato, carica +1 o -1, arrotondata a 5 decimali).
-- **Masse nominali**: `mz_nominal = round(mz_exact)`.
-- **Tempi di ritenzione (`rt_min`)**: valori sintetici deterministici in intervallo plausibile (inclusi casi con RT inverso rispetto a m/z).
+## Method and synthetic data
+- **Exact masses**: computed with `pyteomics.mass` (exact monoisotopic mass of the given adduct, charge +1 or -1, rounded to 5 decimals).
+- **Nominal masses**: `mz_nominal = round(mz_exact)`.
+- **Retention times (`rt_min`)**: deterministic synthetic values in a plausible range (including cases with RT inverse to m/z).
 
-## Esecuzione e Verifica
+## Run and check
 ```bash
 KMP_DUPLICATE_LIB_OK=TRUE python3 tests/data/nomi_tp/genera_casi.py
 KMP_DUPLICATE_LIB_OK=TRUE python3 tests/data/nomi_tp/controlla_casi.py

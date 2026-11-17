@@ -79,7 +79,7 @@ def test_every_entry_has_source_and_ions():
 NODE = shutil.which("node")
 
 
-@pytest.mark.skipif(not NODE, reason="node non disponibile")
+@pytest.mark.skipif(not NODE, reason="node not available")
 def test_list_engine_with_node(tmp_path):
     code = r"""
 globalThis.NOMI = require(process.argv[1].replace(/[^\/\\]*$/, 'nomi.js'));

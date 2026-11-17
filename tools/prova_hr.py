@@ -69,7 +69,7 @@ def main(args: list[str]) -> int:
         try:
             r = summarize(f)
         except Exception as e:                                       # noqa: BLE001
-            print(f"{f.name}: ERRORE {e}"); continue
+            print(f"{f.name}: ERROR {e}"); continue
         print(f"{r['file']}: {r['MB']} MB · {r['MS1']} MS1 + {r['MS2']} MS2 ({r['MS2_per_MS1']} per ciclo) · risoluzione {r['res_MS1']:g}/{r['res_MS2']:g} · "
               f"isolamento {r['isolation']} · attivazione {r['activation']} · MS1 {r['mode_MS1']} · {r['MS1_peaks']} picchi MS1, tabella {r['table_MB']} MB in {r['table_s']} s · "
               f"MS2 con spectrumRef: {r['parent_refs']}")

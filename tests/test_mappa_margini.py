@@ -5,6 +5,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_mappa_margini():
+def test_map_margins():
     r = subprocess.run(["node", str(ROOT / "tests/mappa_margini_node.js"), str(ROOT / "mzlab/web/mappa-margini.js")], capture_output=True, encoding="utf-8")
     assert r.returncode == 0 and r.stdout.strip() == "ok", r.stderr[-1500:]
