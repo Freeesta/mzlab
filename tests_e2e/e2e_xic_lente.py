@@ -27,7 +27,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         K = pg.evaluate("E.files[0].k")
         pg.evaluate("window.__ok = XICBTN.lens.ok; XICBTN.lens.ok = () => true; 0")          # the lens belongs to HR MS1 spectra only: these steps check the lens itself on the low-resolution synthetic file, which has many peaks; the gate is checked apart
         pg.evaluate(TRACK)

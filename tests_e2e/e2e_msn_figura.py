@@ -15,7 +15,7 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:600]))
 
 tmp = Path(tempfile.mkdtemp(prefix="msnfig"))
-subprocess.run([CLI, "msn-graph", "figure", str(ROOT / "tests_e2e" / "fixtures" / "msngrafo_grande.json"), "--figura", "svg,html", "--out", str(tmp / "g")], check=True, capture_output=True)
+subprocess.run([CLI, "msn-graph", "figure", str(ROOT / "tests_e2e" / "fixtures" / "msngrafo_grande.json"), "--figure", "svg,html", "--out", str(tmp / "g")], check=True, capture_output=True)
 html = tmp / "g.html"
 step("one file of at most 2 MB", lambda: (html.stat().st_size <= 2_000_000) or (_ for _ in ()).throw(AssertionError(html.stat().st_size)))
 try:

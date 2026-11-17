@@ -16,13 +16,9 @@ const LISTE = (() => {
     (lists || []).forEach((/** @type {Bag} */ L) => {
       if (!L) return;
       if (active && active[L.id] === false) return;
-      // the built-in list carries English names and classes (name_en, cls_en); the lists of the user are shown as written
-      const en = I18N.lang === "en";
       (L.items || []).forEach((/** @type {Bag} */ it) => {
-        const /** @type {Bag} */ x = { ...it, clsKey: it.cls, list: L.id, listName: (en && L.name_en) || L.name || L.id, listBuiltin: !!L.builtin };
-        if (en && it.name_en) x.name = it.name_en;
+        const /** @type {Bag} */ x = { ...it, clsKey: it.cls, list: L.id, listName: L.name || L.id, listBuiltin: !!L.builtin };
         if (it.series && it.series.n != null && typeof I18N !== "undefined") { x.baseName = String(x.name).replace(/ n=\d+$/, ""); x.name = I18N.t(it.series.n === 1 ? "lst.unitName.one" : "lst.unitName.many", { name: x.baseName, n: it.series.n }); }    // a polymer series is named by its repeat units, not by the bare «n=3» of the data
-        if (en && it.cls_en) x.cls = it.cls_en;
         if (it.pol !== -1) pos.push(x);
         if (it.pol !== 1) neg.push(x);
       });
@@ -120,7 +116,7 @@ const LISTE = (() => {
     return `<div class="cont"><div class="sm cont-h">${I18N.t("lst.compatible")}</div>${shown.map(row).join("")}${more > 0 ? `<div class="sm">${I18N.t("lst.more", { n: more })}</div>` : ""}</div>`;
   }
 
-  // CSV parsing: supports comma or semicolon, double quotes, Italian decimal comma (e.g. 150,5), NORMAN suspect lists
+  // CSV parsing: supports comma or semicolon, double quotes, decimal comma (e.g. 150,5), NORMAN suspect lists
   function csvSplit(/** @type {string} */ line, /** @type {string} */ sep) {
     const out = []; let cur = "", q = false;
     for (let i = 0; i < line.length; i++) {
@@ -670,14 +666,14 @@ const LISTE = (() => {
       const allLists = [...ST.lists, ...ST.userLists];
       if (allLists.length < 2) {                              // one list only: a fixed title with its source, no switch
         const L = allLists[0];
-        elChecks.innerHTML = L ? `<b>${EH(noRef((I18N.lang === "en" && L.name_en) || L.name))}</b>` : "";
+        elChecks.innerHTML = L ? `<b>${EH(noRef(L.name))}</b>` : "";
         elChecksLbl.hidden = true;
       } else {
       elChecksLbl.hidden = false;
       elChecks.innerHTML = allLists.map(L => {
         const on = act[L.id] !== false;
         return `<label style="display:inline-flex;align-items:center;gap:3px;cursor:pointer">
-          <input type="checkbox" data-lid="${EH(L.id)}" ${on ? "checked" : ""}> <span>${EH(noRef((I18N.lang === "en" && L.name_en) || L.name))}</span>
+          <input type="checkbox" data-lid="${EH(L.id)}" ${on ? "checked" : ""}> <span>${EH(noRef(L.name))}</span>
         </label>`;
       }).join("");
       elChecks.querySelectorAll("input[data-lid]").forEach((/** @type {HTMLInputElement} */ chk) => {

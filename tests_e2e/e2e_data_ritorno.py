@@ -1,4 +1,4 @@
-"""Coming back to Dati from another page shows the panels at their final place on the first frame: no slide of the panels or of the side list
+"""Coming back to Data from another page shows the panels at their final place on the first frame: no slide of the panels or of the side list
 (the sidebar layout of the page that was hidden is restored at once, TRANS.jump). Real motion on (the other tests run with reduced motion). Synthetic files."""
 import sys, os, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -32,6 +32,6 @@ try:
             assert not pg.evaluate("document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest('#dpanels, #dfiles')).length"), "an animation still runs on the Data panels"
         r.errs = [e for e in r.errs if e[0] != "console.warning"]
         assert not r.errs, r.errs[:3]
-    print("ok: the panels do not move when coming back to Dati")
+    print("ok: the panels do not move when coming back to Data")
 finally:
     r.close()

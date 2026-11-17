@@ -21,10 +21,10 @@ try:
         def used(): return pg.evaluate(f"(()=>{{const s=E.panels.find(q=>q.id=={sp});return s.iso&&s.iso.formula+' '+s.iso.ad}})()")
         def reset(): pg.evaluate(f"(()=>{{E.panels.find(q=>q.id=={sp}).iso=null}})()")
         def by_name():
-            opened(); pg.fill("#askin", "FTALATO"); pg.fill("#askin", "DIBUTILFTALÁTO")
+            opened(); pg.fill("#askin", "PHTHALATE"); pg.fill("#askin", "DIBUTYL PHTHALÁTE")
             pg.wait_for_selector("#asksug li"); assert pg.get_attribute("#askin", "role") == "combobox" and pg.get_attribute("#asksug", "role") == "listbox"
             opts = pg.eval_on_selector_all("#asksug li", "e=>e.map(x=>x.textContent)")
-            assert any("dibutilftalato" in o and "C16H22O4" in o for o in opts), opts
+            assert any("dibutyl phthalate" in o and "C16H22O4" in o for o in opts), opts
             hs = pg.evaluate("[...document.querySelectorAll('#asksug li')].every(e=>e.getBoundingClientRect().height>=24)"); assert hs
             pg.press("#askin", "ArrowDown"); assert pg.get_attribute("#asksug li", "aria-selected") == "true"
             pg.press("#askin", "Enter")                                   # picks, does not confirm the dialog
@@ -34,13 +34,13 @@ try:
             assert used().startswith("C16H22O4 [M+H]+") or used().startswith("C16H22O4 [M"), used()
         step("a contaminant name, picked with the keyboard, fills the formula and OK uses it", by_name)
         def adduct_after_pick():
-            reset(); opened(); pg.fill("#askin", "dibutilftalato"); pg.wait_for_selector("#asksug li"); pg.press("#askin", "ArrowDown"); pg.press("#askin", "Enter")
+            reset(); opened(); pg.fill("#askin", "dibutyl phthalate"); pg.wait_for_selector("#asksug li"); pg.press("#askin", "ArrowDown"); pg.press("#askin", "Enter")
             pg.fill("#askin", pg.input_value("#askin").split(" ")[0] + " [M+Na]+"); pg.click("#askok")
             pg.wait_for_function(f"(()=>{{const s=E.panels.find(q=>q.id=={sp});return !!s.iso}})()", timeout=15000)
             assert used() == "C16H22O4 [M+Na]+", used()
         step("the adduct after a space still works after a picked name", adduct_after_pick)
         def full_name():
-            reset(); opened(); pg.fill("#askin", "dimetilftalato (DMP)"); pg.click("#askok")
+            reset(); opened(); pg.fill("#askin", "dimethyl phthalate (DMP)"); pg.click("#askok")
             pg.wait_for_function(f"(()=>{{const s=E.panels.find(q=>q.id=={sp});return !!s.iso}})()", timeout=15000)
             assert used().startswith("C10H10O4 "), used()
         step("a full name typed and confirmed (no pick) is read like the pick", full_name)
@@ -56,7 +56,7 @@ try:
             pg.click("#askok")
         step("text that is neither a name nor a formula shows the usual error", nothing)
         def esc():
-            opened(); pg.fill("#askin", "ftalato"); pg.wait_for_selector("#asksug li"); pg.press("#askin", "Escape")
+            opened(); pg.fill("#askin", "phthalate"); pg.wait_for_selector("#asksug li"); pg.press("#askin", "Escape")
             assert pg.locator("#asksug li").count() == 0 and pg.evaluate("document.querySelector('#askdlg').open")
             pg.click("#askno")
         step("Esc closes the list first, the dialog stays", esc)

@@ -215,7 +215,7 @@
   const f4 = x => (x == null ? "" : Number(x).toPrecision(4));
   function proofsTable(r) {
     return `<table><caption class="mut">Contributions: one row per proof; a proof against is worth 0 points and no other proof offsets it</caption><tr><th>Proof</th><th>Value</th><th>Threshold</th><th>Points</th><th>Sign</th><th>Source</th></tr>`
-      + r.proofs.map(p => `<tr${p.segno === "contro" ? ' class="against"' : ""}><td>${esc(p.tipo)}</td><td>${f4(p.valore)}</td><td>${f4(p.soglia)}</td><td>${p.punti}</td><td>${p.segno === "contro" ? "&#10005; against" : esc(p.segno)}</td><td>${esc(p.fonte)}</td></tr>`).join("") + `</table>`;
+      + r.proofs.map(p => `<tr${p.segno === "against" ? ' class="against"' : ""}><td>${esc(p.tipo)}</td><td>${f4(p.valore)}</td><td>${f4(p.soglia)}</td><td>${p.punti}</td><td>${p.segno === "against" ? "&#10005; against" : esc(p.segno)}</td><td>${esc(p.fonte)}</td></tr>`).join("") + `</table>`;
   }
   function cellsTable(r) {
     return `<table><caption class="mut">States of the cells per file</caption><tr><th>File</th><th>State</th><th>Area</th></tr>`

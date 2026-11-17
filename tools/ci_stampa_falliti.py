@@ -7,7 +7,7 @@ from pathlib import Path
 
 OUT = Path(".verifica")
 # the report line of a failed stage (verifica.py) -> its logs: only the logs of the stages that failed are printed
-STAGES = {"sito per gli e2e": ("prepara_sito",), "cargo build": ("precompila",), "pytest": ("pytest-cargo", "pytest"), "prova_hr": ("prova_hr",)}
+STAGES = {"site for the e2e": ("prepara_sito",), "cargo build": ("precompila",), "pytest": ("pytest-cargo", "pytest"), "prova_hr": ("prova_hr",)}
 
 
 def tail(name: str, n: int = 60) -> None:

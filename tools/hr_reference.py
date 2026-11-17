@@ -45,12 +45,12 @@ QUERIES = [
 ]
 
 SPECTRA = [("/api/spectra", q) for q in (
-    "level=1&i0=0&i1=3", "level=1&i0=5&i1=70", "level=2&i0=0&i1=2", "level=2&i0=2&i1=1", "level=1&i0=0&i1=2&hr=0", "level=1&i0=0&i1=2&hr=0&merge=1",
+    "level=1&i0=0&i1=3", "level=1&i0=5&i1=70", "level=2&i0=0&i1=2", "level=2&i0=2&i1=1", "level=1&i0=0&i1=2&hr=0", "level=1&i0=0&i1=2&hr=0&merge=0", "level=1&i0=0&i1=2&hr=0&merge=1",
     "level=1&i0=1&i1=3&hr=0&bin=0.5", "level=2&i0=0&i1=4&prec=PREC", "level=2&i0=0&i1=2&prec=PREC&hr=0", "level=1&i0=0&i1=2&filt=FILT",
     "level=2&i0=1&i1=3&precursor=PREC", "level=1&i0=100000&i1=100001", "level=1&i0=-1&i1=2", "level=1&i0=0&i1=59")]
 
 SCANBIN = [("/api/scanbin", q) for q in (
-    "level=1&i0=0&i1=3", "level=2&i0=0&i1=9", "level=2&i0=2&i1=1", "level=1&i0=0&i1=2&hr=0", "level=1&i0=0&i1=2&hr=0&merge=1", "level=2&i0=0&i1=4&prec=PREC",
+    "level=1&i0=0&i1=3", "level=2&i0=0&i1=9", "level=2&i0=2&i1=1", "level=1&i0=0&i1=2&hr=0", "level=1&i0=0&i1=2&hr=0&merge=0", "level=1&i0=0&i1=2&hr=0&merge=1", "level=2&i0=0&i1=4&prec=PREC",
     "level=2&i0=0&i1=2&prec=PREC&hr=0", "level=1&i0=0&i1=2&filt=FILT", "level=1&i0=0&i1=2&filt=FILT&hr=0", "level=1&i0=100000&i1=100001", "level=1&i0=0&i1=59")]
 
 

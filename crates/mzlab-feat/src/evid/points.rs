@@ -1,14 +1,14 @@
-//! The table of points of the proofs: the section `punti` of the profile of `livelli/1` (`data/livelli-1.json`, written from `mzlab/web/livelli-1.js`
+//! The table of points of the proofs: the section `points` of the profile of `levels/1` (`data/livelli-1.json`, written from `mzlab/web/livelli-1.js`
 //! by `tools/export_levels.py`). Stepped points after Alygizakis et al. 2023, listed best step first; a step threshold given as a string is the key
-//! of a threshold of `soglie` of the same profile, so the points sit beside the thresholds and cannot drift from them.
+//! of a threshold of `thresholds` of the same profile, so the points sit beside the thresholds and cannot drift from them.
 
 use super::Kind;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, Value};
 
-pub const FORMAT: &str = "livelli/1";
+pub const FORMAT: &str = "levels/1";
 /// The profile the points belong to: the default one.
-const PROFILE_KEY: &str = "predefinito";
+const PROFILE_KEY: &str = "default";
 /// The table committed in the crate; `tests/evid.rs` checks that it is what the data file of the web page gives.
 pub const BUNDLED: &str = include_str!("../../data/livelli-1.json");
 
@@ -67,8 +67,8 @@ fn threshold(v: &Value, thresholds: &Value) -> Result<f64> {
 }
 
 fn step_of(s: &Value, thresholds: &Value) -> Result<Step> {
-    let thr = s.get("soglia").ok_or_else(|| bad("step"))?;
-    let points = s.get("punti").and_then(Value::f64);
+    let thr = s.get("threshold").ok_or_else(|| bad("step"))?;
+    let points = s.get("points").and_then(Value::f64);
     Ok(Step {
         threshold: threshold(thr, thresholds)?,
         points: points.ok_or_else(|| bad("points"))?,
@@ -76,10 +76,10 @@ fn step_of(s: &Value, thresholds: &Value) -> Result<Step> {
 }
 
 fn require_of(v: &Value, thresholds: &Value) -> Result<Option<(bool, f64)>> {
-    let Some(r) = v.get("richiede") else {
+    let Some(r) = v.get("requires") else {
         return Ok(None);
     };
-    let thr = r.get("soglia").ok_or_else(|| bad("require"))?;
+    let thr = r.get("threshold").ok_or_else(|| bad("require"))?;
     let le = r.get("op").and_then(Value::str) == Some("<=");
     Ok(Some((le, threshold(thr, thresholds)?)))
 }
@@ -90,24 +90,24 @@ fn rule_of(v: &Value, thresholds: &Value) -> Result<Rule> {
         Some(">=") => false,
         _ => return Err(bad("op")),
     };
-    let steps = v.get("gradini").map(Value::arr).unwrap_or(&[]);
+    let steps = v.get("steps").map(Value::arr).unwrap_or(&[]);
     Ok(Rule {
         le,
-        abs: v.get("assoluto").and_then(Value::bool).unwrap_or(false),
+        abs: v.get("absolute").and_then(Value::bool).unwrap_or(false),
         steps: steps
             .iter()
             .map(|s| step_of(s, thresholds))
             .collect::<Result<_>>()?,
         require: require_of(v, thresholds)?,
-        cap: v.get("massimo").and_then(Value::f64),
-        cap_if_weighed: v.get("massimo_se_pesata").and_then(Value::f64),
+        cap: v.get("maximum").and_then(Value::f64),
+        cap_if_weighed: v.get("maximum_if_weighted").and_then(Value::f64),
     })
 }
 impl PointsTable {
-    /// Reads `livelli/1` (the whole data file or the JSON of the crate); a file without the section `punti` is refused.
+    /// Reads `levels/1` (the whole data file or the JSON of the crate); a file without the section `points` is refused.
     pub fn parse(bytes: &[u8]) -> Result<PointsTable> {
         let v = json::parse(bytes).map_err(|_| bad("json"))?;
-        if v.get("formato").and_then(Value::str) != Some(FORMAT) {
+        if v.get("format").and_then(Value::str) != Some(FORMAT) {
             return Err(bad("format"));
         }
         let name = v
@@ -115,27 +115,27 @@ impl PointsTable {
             .and_then(Value::str)
             .ok_or_else(|| bad("profile"))?;
         let profile = v
-            .get("profili")
+            .get("profiles")
             .and_then(|p| p.get(name))
             .ok_or_else(|| bad("profile"))?;
-        let thresholds = profile.get("soglie").ok_or_else(|| bad("soglie"))?;
-        let points = profile.get("punti").ok_or_else(|| bad("punti"))?;
-        let tol = points.get("tolleranze").ok_or_else(|| bad("tolleranze"))?;
+        let thresholds = profile.get("thresholds").ok_or_else(|| bad("thresholds"))?;
+        let points = profile.get("points").ok_or_else(|| bad("points"))?;
+        let tol = points.get("tolerances").ok_or_else(|| bad("tolerances"))?;
         let mut rules = Vec::new();
         for kind in Kind::ALL {
-            if let Some(r) = points.get("prove").and_then(|p| p.get(kind.name())) {
+            if let Some(r) = points.get("proofs").and_then(|p| p.get(kind.name())) {
                 rules.push((kind, rule_of(r, thresholds)?));
             }
         }
         Ok(PointsTable {
-            version: points.get("versione").and_then(Value::f64).unwrap_or(0.0) as u32,
+            version: points.get("version").and_then(Value::f64).unwrap_or(0.0) as u32,
             rules,
             mass_ppm: threshold(
-                tol.get("massa_ppm").ok_or_else(|| bad("massa_ppm"))?,
+                tol.get("mass_ppm").ok_or_else(|| bad("mass_ppm"))?,
                 thresholds,
             )?,
             ms2_margin: threshold(
-                tol.get("margine_ms2").ok_or_else(|| bad("margine_ms2"))?,
+                tol.get("ms2_margin").ok_or_else(|| bad("ms2_margin"))?,
                 thresholds,
             )?,
             weighed: false,

@@ -1,14 +1,14 @@
 {
- "_nota": "Elenco dei contaminanti noti, solo da Keller et al., Anal. Chim. Acta 627 (2008) 71-81, doi:10.1016/j.aca.2008.04.043. Le m/z NON sono scritte qui: si calcolano dalle formule con mzlab/chem/elements.py (mzlab/chem/contaminants.py). Confronto voce per voce con la tabella supplementare di Keller fatto il 2026-10-09 (tolleranza 0,002 Da, stesso tipo di ione): delle 82 voci precedenti 36 coerenti, 5 corrette (nomi; 3 voci con la sola m/z sostituite da voci con formula), 41 non presenti in Keller e quindi tolte. Aggiunte le voci di Keller mancanti (ESI, positive e negative), con formula ricostruita e m/z calcolata entro 0,002 Da dalla tabella. Non incluse: ammassi di matrice MALDI, complessi con Fe e Cu, composti con deuterio, Cs, Sn, ione 37Cl, peptidi modificati o con ponti S-S, righe la cui m/z non coincide.",
+ "_nota": "List of the known contaminants, only from Keller et al., Anal. Chim. Acta 627 (2008) 71-81, doi:10.1016/j.aca.2008.04.043. The m/z values are NOT written here: they are computed from the formulas with mzlab/chem/elements.py (mzlab/chem/contaminants.py). Entry-by-entry comparison with the supplementary table of Keller made on 2026-10-09 (tolerance 0.002 Da, same ion type): of the 82 previous entries 36 consistent, 5 corrected (names; 3 entries with only an m/z replaced by entries with a formula), 41 not present in Keller and therefore removed. Added the missing Keller entries (ESI, positive and negative), with the formula reconstructed and the m/z computed within 0.002 Da of the table. Not included: MALDI matrix clusters, complexes with Fe and Cu, compounds with deuterium, Cs, Sn, the 37Cl ion, modified peptides or peptides with S-S bridges, rows whose m/z does not match.",
  "id": "keller",
- "name": "Contaminanti noti e fondo LC-MS (Keller 2008)",
+ "name": "Known contaminants and LC-MS background (Keller 2008)",
  "source": "Keller et al., Anal. Chim. Acta 627 (2008) 71-81",
- "license": "dati chimici (formule): nessuna restrizione; elenco compilato per questo programma",
+ "license": "chemical data (formulas): no restriction; list compiled for this program",
  "entries": [
   {
    "id": "peg",
-   "name": "PEG (polietilenglicole)",
-   "class": "polietilenglicoli",
+   "name": "PEG (polyethylene glycol)",
+   "class": "polyethylene glycols",
    "formula": "C2H4O",
    "ions": [
     "[M+H]+",
@@ -33,8 +33,8 @@
   },
   {
    "id": "ppg",
-   "name": "PPG (polipropilenglicole)",
-   "class": "polipropilenglicoli",
+   "name": "PPG (polypropylene glycol)",
+   "class": "polypropylene glycols",
    "formula": "C3H6O",
    "ions": [
     "[M+H]+",
@@ -57,8 +57,8 @@
   },
   {
    "id": "siloxano_ciclico",
-   "name": "polisilossano ciclico (D)",
-   "class": "polisilossani",
+   "name": "cyclic polysiloxane (D)",
+   "class": "polysiloxanes",
    "formula": "C2H6OSi",
    "ions": [
     "[M+H]+",
@@ -79,8 +79,8 @@
   },
   {
    "id": "dmp",
-   "name": "dimetilftalato (DMP)",
-   "class": "ftalati",
+   "name": "dimethyl phthalate (DMP)",
+   "class": "phthalates",
    "formula": "C10H10O4",
    "ions": [
     "[M+H]+",
@@ -93,8 +93,8 @@
   },
   {
    "id": "dbp",
-   "name": "dibutilftalato (DBP)",
-   "class": "ftalati",
+   "name": "dibutyl phthalate (DBP)",
+   "class": "phthalates",
    "formula": "C16H22O4",
    "ions": [
     "[M+H]+",
@@ -107,8 +107,8 @@
   },
   {
    "id": "dehp",
-   "name": "DEHP / diisoottilftalato (isomeri)",
-   "class": "ftalati",
+   "name": "DEHP / diisooctyl phthalate (isomers)",
+   "class": "phthalates",
    "formula": "C24H38O4",
    "ions": [
     "[M+H]+",
@@ -122,8 +122,8 @@
   },
   {
    "id": "ftalato_149",
-   "name": "anidride ftalica (frammento comune degli ftalati)",
-   "class": "ftalati",
+   "name": "phthalic anhydride (common fragment of the phthalates)",
+   "class": "phthalates",
    "formula": "C8H4O3",
    "ions": [
     "[M+H]+",
@@ -134,8 +134,8 @@
   },
   {
    "id": "dehp_adipato",
-   "name": "bis(2-etilesil) adipato (DEHA / DOA)",
-   "class": "plastificanti",
+   "name": "bis(2-ethylhexyl) adipate (DEHA / DOA)",
+   "class": "plasticizers",
    "formula": "C22H42O4",
    "ions": [
     "[M+H]+",
@@ -149,7 +149,7 @@
   {
    "id": "oleamide",
    "name": "oleamide",
-   "class": "ammidi degli acidi grassi",
+   "class": "fatty acid amides",
    "formula": "C18H35NO",
    "ions": [
     "[M+H]+",
@@ -162,7 +162,7 @@
   {
    "id": "erucamide",
    "name": "erucamide",
-   "class": "ammidi degli acidi grassi",
+   "class": "fatty acid amides",
    "formula": "C22H43NO",
    "ions": [
     "[M+H]+",
@@ -175,7 +175,7 @@
   {
    "id": "stearamide",
    "name": "stearamide",
-   "class": "ammidi degli acidi grassi",
+   "class": "fatty acid amides",
    "formula": "C18H37NO",
    "ions": [
     "[M+H]+",
@@ -187,8 +187,8 @@
   },
   {
    "id": "palmitico",
-   "name": "acido palmitico",
-   "class": "acidi grassi",
+   "name": "palmitic acid",
+   "class": "fatty acids",
    "formula": "C16H32O2",
    "ions": [
     "[M-H]-",
@@ -199,8 +199,8 @@
   },
   {
    "id": "stearico",
-   "name": "acido stearico",
-   "class": "acidi grassi",
+   "name": "stearic acid",
+   "class": "fatty acids",
    "formula": "C18H36O2",
    "ions": [
     "[M-H]-",
@@ -211,8 +211,8 @@
   },
   {
    "id": "oleico",
-   "name": "acido oleico",
-   "class": "acidi grassi",
+   "name": "oleic acid",
+   "class": "fatty acids",
    "formula": "C18H34O2",
    "ions": [
     "[M-H]-",
@@ -223,8 +223,8 @@
   },
   {
    "id": "triton",
-   "name": "Triton X-100 (ottilfenolo etossilato)",
-   "class": "tensioattivi",
+   "name": "Triton X-100 (octylphenol ethoxylate)",
+   "class": "surfactants",
    "formula": "C2H4O",
    "ions": [
     "[M+H]+",
@@ -245,8 +245,8 @@
   },
   {
    "id": "tba",
-   "name": "tetrabutilammonio",
-   "class": "ammoni quaternari",
+   "name": "tetrabutylammonium",
+   "class": "quaternary ammoniums",
    "formula": "C16H36N",
    "ions": [
     "[M]+"
@@ -257,7 +257,7 @@
   {
    "id": "irganox1076",
    "name": "Irganox 1076",
-   "class": "antiossidanti dei polimeri",
+   "class": "polymer antioxidants",
    "formula": "C35H62O3",
    "ions": [
     "[M+H]+",
@@ -270,8 +270,8 @@
   },
   {
    "id": "bht",
-   "name": "butilidrossitoluene (BHT)",
-   "class": "antiossidanti dei polimeri",
+   "name": "butylated hydroxytoluene (BHT)",
+   "class": "polymer antioxidants",
    "formula": "C15H24O",
    "ions": [
     "[M-H]-",
@@ -283,8 +283,8 @@
   },
   {
    "id": "tea",
-   "name": "trietilammina",
-   "class": "ammine degli eluenti",
+   "name": "triethylamine",
+   "class": "eluent amines",
    "formula": "C6H15N",
    "ions": [
     "[M+H]+"
@@ -294,8 +294,8 @@
   },
   {
    "id": "tpa",
-   "name": "tripropilammina",
-   "class": "ammine degli eluenti",
+   "name": "tripropylamine",
+   "class": "eluent amines",
    "formula": "C9H21N",
    "ions": [
     "[M+H]+"
@@ -305,8 +305,8 @@
   },
   {
    "id": "tba3",
-   "name": "tributilammina",
-   "class": "ammine degli eluenti",
+   "name": "tributylamine",
+   "class": "eluent amines",
    "formula": "C12H27N",
    "ions": [
     "[M+H]+"
@@ -316,8 +316,8 @@
   },
   {
    "id": "dipea",
-   "name": "diisopropiletilammina / dibutilammina (isomeri)",
-   "class": "ammine degli eluenti",
+   "name": "diisopropylethylamine / dibutylamine (isomers)",
+   "class": "eluent amines",
    "formula": "C8H19N",
    "ions": [
     "[M+H]+"
@@ -327,8 +327,8 @@
   },
   {
    "id": "bbsa",
-   "name": "N-butilbenzensolfonammide",
-   "class": "plastificanti",
+   "name": "N-butylbenzenesulfonamide",
+   "class": "plasticizers",
    "formula": "C10H15NO2S",
    "ions": [
     "[M+H]+",
@@ -341,8 +341,8 @@
   },
   {
    "id": "tbp",
-   "name": "tributilfosfato",
-   "class": "fosfati",
+   "name": "tributyl phosphate",
+   "class": "phosphates",
    "formula": "C12H27O4P",
    "ions": [
     "[M+H]+",
@@ -353,8 +353,8 @@
   },
   {
    "id": "tphp",
-   "name": "trifenilfosfato",
-   "class": "fosfati",
+   "name": "triphenyl phosphate",
+   "class": "phosphates",
    "formula": "C18H15O4P",
    "ions": [
     "[M+H]+",
@@ -365,8 +365,8 @@
   },
   {
    "id": "tppo",
-   "name": "trifenilfosfinossido",
-   "class": "fosfati",
+   "name": "triphenylphosphine oxide",
+   "class": "phosphates",
    "formula": "C18H15OP",
    "ions": [
     "[M+H]+",
@@ -377,8 +377,8 @@
   },
   {
    "id": "formiato_na_neg",
-   "name": "formiato di sodio (cluster, negativo)",
-   "class": "cluster dei sali degli eluenti",
+   "name": "sodium formate (cluster, negative)",
+   "class": "eluent salt clusters",
    "formula": "CHNaO2",
    "ions": [
     "[M+HCOO]-"
@@ -396,8 +396,8 @@
   },
   {
    "id": "acido_formico",
-   "name": "acido formico (cluster)",
-   "class": "cluster dei sali degli eluenti",
+   "name": "formic acid (cluster)",
+   "class": "eluent salt clusters",
    "formula": "CH2O2",
    "ions": [
     "[M+H]+",
@@ -416,8 +416,8 @@
   },
   {
    "id": "acido_acetico",
-   "name": "acido acetico (cluster)",
-   "class": "cluster dei sali degli eluenti",
+   "name": "acetic acid (cluster)",
+   "class": "eluent salt clusters",
    "formula": "C2H4O2",
    "ions": [
     "[M+H]+",
@@ -437,7 +437,7 @@
   {
    "id": "acetonitrile",
    "name": "acetonitrile (cluster)",
-   "class": "solventi",
+   "class": "solvents",
    "formula": "C2H3N",
    "ions": [
     "[M+H]+",
@@ -457,8 +457,8 @@
   },
   {
    "id": "metanolo",
-   "name": "metanolo (cluster)",
-   "class": "solventi",
+   "name": "methanol (cluster)",
+   "class": "solvents",
    "formula": "CH4O",
    "ions": [
     "[M+H]+",
@@ -477,8 +477,8 @@
   },
   {
    "id": "dmso",
-   "name": "dimetilsolfossido (DMSO)",
-   "class": "solventi",
+   "name": "dimethyl sulfoxide (DMSO)",
+   "class": "solvents",
    "formula": "C2H6OS",
    "ions": [
     "[M+H]+",
@@ -500,8 +500,8 @@
   },
   {
    "id": "dmf",
-   "name": "dimetilformammide (DMF)",
-   "class": "solventi",
+   "name": "dimethylformamide (DMF)",
+   "class": "solvents",
    "formula": "C3H7NO",
    "ions": [
     "[M+H]+",
@@ -520,8 +520,8 @@
   },
   {
    "id": "nmp",
-   "name": "N-metilpirrolidone (NMP)",
-   "class": "solventi",
+   "name": "N-methylpyrrolidone (NMP)",
+   "class": "solvents",
    "formula": "C5H9NO",
    "ions": [
     "[M+H]+",
@@ -532,8 +532,8 @@
   },
   {
    "id": "tfa",
-   "name": "acido trifluoroacetico (TFA)",
-   "class": "modificatori degli eluenti",
+   "name": "trifluoroacetic acid (TFA)",
+   "class": "eluent modifiers",
    "formula": "C2HF3O2",
    "ions": [
     "[M-H]-"
@@ -543,8 +543,8 @@
   },
   {
    "id": "tfa_cluster_neg",
-   "name": "acido trifluoroacetico (cluster, negativo)",
-   "class": "modificatori degli eluenti",
+   "name": "trifluoroacetic acid (cluster, negative)",
+   "class": "eluent modifiers",
    "formula": "C2HF3O2",
    "ions": [
     "[M-H]-",
@@ -564,7 +564,7 @@
   {
    "id": "tris",
    "name": "Tris",
-   "class": "tamponi",
+   "class": "buffers",
    "formula": "C4H11NO3",
    "ions": [
     "[M+H]+"
@@ -574,8 +574,8 @@
   },
   {
    "id": "acetato_na",
-   "name": "acetato di sodio (cluster)",
-   "class": "cluster dei sali degli eluenti",
+   "name": "sodium acetate (cluster)",
+   "class": "eluent salt clusters",
    "formula": "C2H3NaO2",
    "ions": [
     "[M+Na]+"
@@ -593,8 +593,8 @@
   },
   {
    "id": "cluster_acetonitrile_formic_acid_1_1",
-   "name": "acetonitrile/acido formico (cluster 1:1)",
-   "class": "solventi",
+   "name": "acetonitrile/formic acid (cluster 1:1)",
+   "class": "solvents",
    "formula": "C3H5NO2",
    "ions": [
     "[M+H]+"
@@ -604,8 +604,8 @@
   },
   {
    "id": "cluster_methanol_water_2_2",
-   "name": "metanolo/acqua (cluster 2:2)",
-   "class": "solventi",
+   "name": "methanol/water (cluster 2:2)",
+   "class": "solvents",
    "formula": "C2H12O4",
    "ions": [
     "[M+H]+",
@@ -616,8 +616,8 @@
   },
   {
    "id": "cluster_acetonitrile_acetic_acid_1_1",
-   "name": "acetonitrile/acido acetico (cluster 1:1)",
-   "class": "solventi",
+   "name": "acetonitrile/acetic acid (cluster 1:1)",
+   "class": "solvents",
    "formula": "C4H7NO2",
    "ions": [
     "[M+H]+",
@@ -628,8 +628,8 @@
   },
   {
    "id": "cluster_acetonitrile_dimethylformamide_1_1",
-   "name": "acetonitrile/dimetilformammide (cluster 1:1)",
-   "class": "solventi",
+   "name": "acetonitrile/dimethylformamide (cluster 1:1)",
+   "class": "solvents",
    "formula": "C5H10N2O",
    "ions": [
     "[M+H]+"
@@ -639,8 +639,8 @@
   },
   {
    "id": "dimetilamminopiridina_dmap_c7h10n2",
-   "name": "dimetilamminopiridina (DMAP)",
-   "class": "varie",
+   "name": "dimethylaminopyridine (DMAP)",
+   "class": "miscellaneous",
    "formula": "C7H10N2",
    "ions": [
     "[M+H]+"
@@ -650,8 +650,8 @@
   },
   {
    "id": "cluster_methanol_water_3_2",
-   "name": "metanolo/acqua (cluster 3:2)",
-   "class": "solventi",
+   "name": "methanol/water (cluster 3:2)",
+   "class": "solvents",
    "formula": "C3H16O5",
    "ions": [
     "[M+H]+",
@@ -662,8 +662,8 @@
   },
   {
    "id": "fenildietilammina_c10h15n",
-   "name": "fenildietilammina",
-   "class": "varie",
+   "name": "phenyldiethylamine",
+   "class": "miscellaneous",
    "formula": "C10H15N",
    "ions": [
     "[M+H]+"
@@ -673,8 +673,8 @@
   },
   {
    "id": "1_8_diazabiciclo_5_4_0_undec_7_ene_dbu_c9h16n2",
-   "name": "1,8-diazabiciclo[5.4.0]undec-7-ene (DBU)",
-   "class": "varie",
+   "name": "1,8-diazabicyclo[5.4.0]undec-7-ene (DBU)",
+   "class": "miscellaneous",
    "formula": "C9H16N2",
    "ions": [
     "[M+H]+"
@@ -684,8 +684,8 @@
   },
   {
    "id": "natfa_c2f3o2na",
-   "name": "trifluoroacetato di sodio (NaTFA)",
-   "class": "varie",
+   "name": "sodium trifluoroacetate (NaTFA)",
+   "class": "miscellaneous",
    "formula": "C2F3O2Na",
    "ions": [
     "[M+Na]+"
@@ -695,8 +695,8 @@
   },
   {
    "id": "dimetilftalato_frammento",
-   "name": "dimetilftalato, frammento (perdita di CH3OH)",
-   "class": "plastificanti",
+   "name": "dimethyl phthalate, fragment (loss of CH3OH)",
+   "class": "plasticizers",
    "formula": "C9H6O3",
    "ions": [
     "[M+H]+"
@@ -706,8 +706,8 @@
   },
   {
    "id": "dietilenglicole_monobutiletere_dgbe_c8h18o3",
-   "name": "dietilenglicole monobutiletere (DGBE)",
-   "class": "varie",
+   "name": "diethylene glycol monobutyl ether (DGBE)",
+   "class": "miscellaneous",
    "formula": "C8H18O3",
    "ions": [
     "[M+H]+"
@@ -717,8 +717,8 @@
   },
   {
    "id": "butilidrossianisolo_bha_c11h16o2",
-   "name": "butilidrossianisolo (BHA)",
-   "class": "varie",
+   "name": "butylated hydroxyanisole (BHA)",
+   "class": "miscellaneous",
    "formula": "C11H16O2",
    "ions": [
     "[M+H]+",
@@ -729,8 +729,8 @@
   },
   {
    "id": "difenilchetone_c13h10o",
-   "name": "difenilchetone",
-   "class": "varie",
+   "name": "diphenyl ketone (benzophenone)",
+   "class": "miscellaneous",
    "formula": "C13H10O",
    "ions": [
     "[M+H]+"
@@ -740,8 +740,8 @@
   },
   {
    "id": "cluster_methanol_water_4_3",
-   "name": "metanolo/acqua (cluster 4:3)",
-   "class": "solventi",
+   "name": "methanol/water (cluster 4:3)",
+   "class": "solvents",
    "formula": "C4H22O7",
    "ions": [
     "[M+H]+",
@@ -752,8 +752,8 @@
   },
   {
    "id": "glicole_etere_c8h18o3",
-   "name": "glicole etere",
-   "class": "varie",
+   "name": "glycol ether",
+   "class": "miscellaneous",
    "formula": "C8H18O3",
    "ions": [
     "[M+Na]+"
@@ -763,8 +763,8 @@
   },
   {
    "id": "n_n_dicicloesilurea_dcu_c13h24n2o",
-   "name": "N,N'-dicicloesilurea (DCU)",
-   "class": "varie",
+   "name": "N,N'-dicyclohexylurea (DCU)",
+   "class": "miscellaneous",
    "formula": "C13H24N2O",
    "ions": [
     "[M+H]+"
@@ -774,8 +774,8 @@
   },
   {
    "id": "trietilammina_cloridrato_dimero",
-   "name": "trietilammina cloridrato, dimero (−Cl)",
-   "class": "tamponi",
+   "name": "triethylamine hydrochloride, dimer (−Cl)",
+   "class": "buffers",
    "formula": "C12H32N2Cl",
    "ions": [
     "[M]+"
@@ -785,8 +785,8 @@
   },
   {
    "id": "catione_tritile_c19h15",
-   "name": "catione tritile",
-   "class": "varie",
+   "name": "trityl cation",
+   "class": "miscellaneous",
    "formula": "C19H15",
    "ions": [
     "[M]+"
@@ -796,8 +796,8 @@
   },
   {
    "id": "trit_c15h24o",
-   "name": "Triton 101 (alchilfenolo etossilato)",
-   "class": "tensioattivi",
+   "name": "Triton 101 (alkylphenol ethoxylate)",
+   "class": "surfactants",
    "formula": "C2H4O",
    "ions": [
     "[M+H]+",
@@ -816,8 +816,8 @@
   },
   {
    "id": "catione_monometossitritile_c20h17o",
-   "name": "catione monometossitritile",
-   "class": "varie",
+   "name": "monomethoxytrityl cation",
+   "class": "miscellaneous",
    "formula": "C20H17O",
    "ions": [
     "[M]+"
@@ -827,8 +827,8 @@
   },
   {
    "id": "n_n_bis_2_idrossietil_dodecanammide_c16h33no3",
-   "name": "N,N-bis(2-idrossietil)dodecanammide",
-   "class": "varie",
+   "name": "N,N-bis(2-hydroxyethyl)dodecanamide",
+   "class": "miscellaneous",
    "formula": "C16H33NO3",
    "ions": [
     "[M+H]+"
@@ -838,8 +838,8 @@
   },
   {
    "id": "trit_c15h30o",
-   "name": "Triton 101R (alcol etossilato, ridotto)",
-   "class": "tensioattivi",
+   "name": "Triton 101R (alcohol ethoxylate, reduced)",
+   "class": "surfactants",
    "formula": "C2H4O",
    "ions": [
     "[M+Na]+"
@@ -857,8 +857,8 @@
   },
   {
    "id": "trit_c14h28o",
-   "name": "Triton X-100R / X-114R / X-405R / X-45R (ridotto)",
-   "class": "tensioattivi",
+   "name": "Triton X-100R / X-114R / X-405R / X-45R (reduced)",
+   "class": "surfactants",
    "formula": "C2H4O",
    "ions": [
     "[M+Na]+"
@@ -876,8 +876,8 @@
   },
   {
    "id": "dietilenglicole_monobutiletere_dgbe_dimero",
-   "name": "dietilenglicole monobutiletere (DGBE) (dimero)",
-   "class": "dimeri",
+   "name": "diethylene glycol monobutyl ether (DGBE) (dimer)",
+   "class": "dimers",
    "formula": "C16H36O6",
    "ions": [
     "[M+H]+"
@@ -887,8 +887,8 @@
   },
   {
    "id": "behentrimonio_cloruro_btac_228_c25h54n",
-   "name": "behentrimonio cloruro (BTAC-228)",
-   "class": "varie",
+   "name": "behentrimonium chloride (BTAC-228)",
+   "class": "miscellaneous",
    "formula": "C25H54N",
    "ions": [
     "[M]+"
@@ -898,8 +898,8 @@
   },
   {
    "id": "n_n_dicicloesilurea_dcu_dimero",
-   "name": "N,N'-dicicloesilurea (DCU) (dimero)",
-   "class": "dimeri",
+   "name": "N,N'-dicyclohexylurea (DCU) (dimer)",
+   "class": "dimers",
    "formula": "C26H48N4O2",
    "ions": [
     "[M+H]+"
@@ -909,8 +909,8 @@
   },
   {
    "id": "oligomero_ciclico_del_nylon_66_c24h44n4o4",
-   "name": "oligomero ciclico del nylon 66",
-   "class": "varie",
+   "name": "cyclic oligomer of nylon 66",
+   "class": "miscellaneous",
    "formula": "C24H44N4O4",
    "ions": [
     "[M+H]+"
@@ -920,8 +920,8 @@
   },
   {
    "id": "pep_slpr",
-   "name": "peptide SLPR (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide SLPR (porcine trypsin)",
+   "class": "peptides",
    "formula": "C20H37N7O6",
    "ions": [
     "[M+H]+"
@@ -931,8 +931,8 @@
   },
   {
    "id": "dipalmitildimetilammonio_c34h72n",
-   "name": "dipalmitildimetilammonio",
-   "class": "varie",
+   "name": "dipalmityldimethylammonium",
+   "class": "miscellaneous",
    "formula": "C34H72N",
    "ions": [
     "[M]+"
@@ -942,8 +942,8 @@
   },
   {
    "id": "pep_iqvr",
-   "name": "peptide IQVR (artefatto simile alla tripsina)",
-   "class": "peptidi",
+   "name": "peptide IQVR (trypsin-like artifact)",
+   "class": "peptides",
    "formula": "C22H42N8O6",
    "ions": [
     "[M+H]+"
@@ -953,8 +953,8 @@
   },
   {
    "id": "didodecil_3_3_tiodipropionato_ddtdp_c30h58o4s",
-   "name": "didodecil 3,3′-tiodipropionato (DDTDP)",
-   "class": "varie",
+   "name": "didodecyl 3,3′-thiodipropionate (DDTDP)",
+   "class": "miscellaneous",
    "formula": "C30H58O4S",
    "ions": [
     "[M+H]+"
@@ -964,8 +964,8 @@
   },
   {
    "id": "stearilpalmitildimetilammonio_c36h76n",
-   "name": "stearilpalmitildimetilammonio",
-   "class": "varie",
+   "name": "stearylpalmityldimethylammonium",
+   "class": "miscellaneous",
    "formula": "C36H76N",
    "ions": [
     "[M]+"
@@ -975,8 +975,8 @@
   },
   {
    "id": "didodecil_3_3_tiodipropionato_ddtdp_c30h58o5s",
-   "name": "DDTDP ossidato a sulfossido",
-   "class": "varie",
+   "name": "DDTDP oxidized to sulfoxide",
+   "class": "miscellaneous",
    "formula": "C30H58O5S",
    "ions": [
     "[M+H]+",
@@ -987,8 +987,8 @@
   },
   {
    "id": "didodecil_3_3_tiodipropionato_ddtdp_c30h58o6s",
-   "name": "DDTDP ossidato a solfone",
-   "class": "varie",
+   "name": "DDTDP oxidized to sulfone",
+   "class": "miscellaneous",
    "formula": "C30H58O6S",
    "ions": [
     "[M+H]+"
@@ -998,8 +998,8 @@
   },
   {
    "id": "distearildimetilammonio_c38h80n",
-   "name": "distearildimetilammonio",
-   "class": "varie",
+   "name": "distearyldimethylammonium",
+   "class": "miscellaneous",
    "formula": "C38H80N",
    "ions": [
     "[M]+"
@@ -1009,8 +1009,8 @@
   },
   {
    "id": "pep_vslpr",
-   "name": "peptide VSLPR (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide VSLPR (porcine trypsin)",
+   "class": "peptides",
    "formula": "C25H46N8O7",
    "ions": [
     "[M+H]+"
@@ -1021,7 +1021,7 @@
   {
    "id": "chaps_c32h58n2o7s",
    "name": "CHAPS",
-   "class": "varie",
+   "class": "miscellaneous",
    "formula": "C32H58N2O7S",
    "ions": [
     "[M+H]+"
@@ -1031,8 +1031,8 @@
   },
   {
    "id": "pep_qtiasn",
-   "name": "peptide QTIASN (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide QTIASN (bovine trypsin)",
+   "class": "peptides",
    "formula": "C25H44N8O11",
    "ions": [
     "[M+H]+"
@@ -1042,8 +1042,8 @@
   },
   {
    "id": "pep_gltaer",
-   "name": "peptide GLTAER (cheratina umana, frammento di sorgente)",
-   "class": "peptidi",
+   "name": "peptide GLTAER (human keratin, in-source fragment)",
+   "class": "peptides",
    "formula": "C26H47N9O10",
    "ions": [
     "[M+H]+"
@@ -1053,8 +1053,8 @@
   },
   {
    "id": "pep_sgiqvr",
-   "name": "peptide SGIQVR (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide SGIQVR (bovine trypsin)",
+   "class": "peptides",
    "formula": "C27H50N10O9",
    "ions": [
     "[M+H]+"
@@ -1064,8 +1064,8 @@
   },
   {
    "id": "pep_tvslpr",
-   "name": "peptide TVSLPR (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide TVSLPR (porcine trypsin)",
+   "class": "peptides",
    "formula": "C29H53N9O9",
    "ions": [
     "[M+H]+"
@@ -1075,8 +1075,8 @@
   },
   {
    "id": "oligomero_ciclico_del_nylon_66_c36h66n6o6",
-   "name": "oligomero ciclico del nylon 66",
-   "class": "varie",
+   "name": "cyclic oligomer of nylon 66",
+   "class": "miscellaneous",
    "formula": "C36H66N6O6",
    "ions": [
     "[M+H]+"
@@ -1086,8 +1086,8 @@
   },
   {
    "id": "pep_ldselk",
-   "name": "peptide LDSELK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide LDSELK (keratin)",
+   "class": "peptides",
    "formula": "C30H53N7O12",
    "ions": [
     "[M+H]+"
@@ -1097,8 +1097,8 @@
   },
   {
    "id": "pep_glvliaf",
-   "name": "peptide GLVLIAF (albumina sierica bovina (BSA))",
-   "class": "peptidi",
+   "name": "peptide GLVLIAF (bovine serum albumin (BSA))",
+   "class": "peptides",
    "formula": "C37H61N7O8",
    "ions": [
     "[M+H]+"
@@ -1108,8 +1108,8 @@
   },
   {
    "id": "pep_gpfpilv",
-   "name": "peptide GPFPILV (caseina alfa-S1 bovina)",
-   "class": "peptidi",
+   "name": "peptide GPFPILV (bovine alpha-S1 casein)",
+   "class": "peptides",
    "formula": "C38H59N7O8",
    "ions": [
     "[M+H]+"
@@ -1119,8 +1119,8 @@
   },
   {
    "id": "pep_atvslpr",
-   "name": "peptide ATVSLPR (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide ATVSLPR (porcine trypsin)",
+   "class": "peptides",
    "formula": "C32H58N10O10",
    "ions": [
     "[M+H]+"
@@ -1130,8 +1130,8 @@
   },
   {
    "id": "pep_patlnsr",
-   "name": "peptide PATLNSR (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide PATLNSR (porcine trypsin)",
+   "class": "peptides",
    "formula": "C31H55N11O11",
    "ions": [
     "[M+H]+"
@@ -1141,8 +1141,8 @@
   },
   {
    "id": "diisoottilftalato_dimero",
-   "name": "diisoottilftalato (dimero)",
-   "class": "dimeri",
+   "name": "diisooctyl phthalate (dimer)",
+   "class": "dimers",
    "formula": "C48H76O8",
    "ions": [
     "[M+K]+",
@@ -1154,8 +1154,8 @@
   },
   {
    "id": "pep_lsspatln",
-   "name": "peptide LSSPATLN (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide LSSPATLN (porcine trypsin)",
+   "class": "peptides",
    "formula": "C34H59N9O13",
    "ions": [
     "[M+H]+"
@@ -1165,8 +1165,8 @@
   },
   {
    "id": "pep_seidnvk",
-   "name": "peptide SEIDNVK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SEIDNVK (human keratin)",
+   "class": "peptides",
    "formula": "C33H57N9O14",
    "ions": [
     "[M+H]+"
@@ -1176,8 +1176,8 @@
   },
   {
    "id": "pep_saaslnsr",
-   "name": "peptide SAASLNSR (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide SAASLNSR (bovine trypsin)",
+   "class": "peptides",
    "formula": "C31H56N12O13",
    "ions": [
     "[M+H]+"
@@ -1187,8 +1187,8 @@
   },
   {
    "id": "pep_laaddfr",
-   "name": "peptide LAADDFR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide LAADDFR (human keratin)",
+   "class": "peptides",
    "formula": "C35H54N10O12",
    "ions": [
     "[M+H]+"
@@ -1198,8 +1198,8 @@
   },
   {
    "id": "pep_lasyldk",
-   "name": "peptide LASYLDK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide LASYLDK (keratin)",
+   "class": "peptides",
    "formula": "C37H60N8O12",
    "ions": [
     "[M+H]+"
@@ -1209,8 +1209,8 @@
   },
   {
    "id": "tween_c18h34o6",
-   "name": "Tween 20 (polisorbato)",
-   "class": "tensioattivi",
+   "name": "Tween 20 (polysorbate)",
+   "class": "surfactants",
    "formula": "C2H4O",
    "ions": [
     "[M+Na]+"
@@ -1228,8 +1228,8 @@
   },
   {
    "id": "pep_pgvvslpr",
-   "name": "peptide PGVVSLPR (artefatto simile alla tripsina)",
-   "class": "peptidi",
+   "name": "peptide PGVVSLPR (trypsin-like artifact)",
+   "class": "peptides",
    "formula": "C37H65N11O10",
    "ions": [
     "[M+H]+"
@@ -1239,8 +1239,8 @@
   },
   {
    "id": "pep_fasfidk",
-   "name": "peptide FASFIDK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide FASFIDK (human keratin)",
+   "class": "peptides",
    "formula": "C40H58N8O11",
    "ions": [
     "[M+H]+"
@@ -1250,8 +1250,8 @@
   },
   {
    "id": "pep_peiqnvk",
-   "name": "peptide PEIQNVK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide PEIQNVK (human keratin)",
+   "class": "peptides",
    "formula": "C36H62N10O12",
    "ions": [
     "[M+H]+"
@@ -1261,8 +1261,8 @@
   },
   {
    "id": "pep_sisisvar",
-   "name": "peptide SISISVAR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SISISVAR (human keratin)",
+   "class": "peptides",
    "formula": "C35H65N11O12",
    "ions": [
     "[M+H]+"
@@ -1272,8 +1272,8 @@
   },
   {
    "id": "pep_vatvslpr",
-   "name": "peptide VATVSLPR (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide VATVSLPR (porcine trypsin)",
+   "class": "peptides",
    "formula": "C37H67N11O11",
    "ions": [
     "[M+H]+"
@@ -1283,8 +1283,8 @@
   },
   {
    "id": "pep_afidkvr",
-   "name": "peptide AFIDKVR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide AFIDKVR (human keratin)",
+   "class": "peptides",
    "formula": "C39H65N11O10",
    "ions": [
     "[M+H]+"
@@ -1294,8 +1294,8 @@
   },
   {
    "id": "pep_sflinnr",
-   "name": "peptide SFLINNR (cheratina umana, frammento di sorgente)",
-   "class": "peptidi",
+   "name": "peptide SFLINNR (human keratin, in-source fragment)",
+   "class": "peptides",
    "formula": "C38H62N12O11",
    "ions": [
     "[M+H]+"
@@ -1305,8 +1305,8 @@
   },
   {
    "id": "pep_ieiatyr",
-   "name": "peptide IEIATYR (cheratina umana, frammento di sorgente)",
-   "class": "peptidi",
+   "name": "peptide IEIATYR (human keratin, in-source fragment)",
+   "class": "peptides",
    "formula": "C39H64N10O12",
    "ions": [
     "[M+H]+"
@@ -1316,8 +1316,8 @@
   },
   {
    "id": "tween_c22h42o6",
-   "name": "Tween 40 (polisorbato)",
-   "class": "tensioattivi",
+   "name": "Tween 40 (polysorbate)",
+   "class": "surfactants",
    "formula": "C2H4O",
    "ions": [
     "[M+Na]+"
@@ -1335,8 +1335,8 @@
   },
   {
    "id": "pep_qatvslpr",
-   "name": "peptide QATVSLPR (artefatto simile alla tripsina)",
-   "class": "peptidi",
+   "name": "peptide QATVSLPR (trypsin-like artifact)",
+   "class": "peptides",
    "formula": "C37H66N12O12",
    "ions": [
     "[M+H]+"
@@ -1346,8 +1346,8 @@
   },
   {
    "id": "pep_slvnlggsk",
-   "name": "peptide SLVNLGGSK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SLVNLGGSK (human keratin)",
+   "class": "peptides",
    "formula": "C37H67N11O13",
    "ions": [
     "[M+H]+"
@@ -1357,8 +1357,8 @@
   },
   {
    "id": "pep_slyglggsk",
-   "name": "peptide SLYGLGGSK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SLYGLGGSK (human keratin)",
+   "class": "peptides",
    "formula": "C39H64N10O13",
    "ions": [
     "[M+H]+"
@@ -1368,8 +1368,8 @@
   },
   {
    "id": "pep_rvyvhpi",
-   "name": "peptide RVYVHPI (standard di angiotensina)",
-   "class": "peptidi",
+   "name": "peptide RVYVHPI (angiotensin standard)",
+   "class": "peptides",
    "formula": "C42H66N12O9",
    "ions": [
     "[M+H]+"
@@ -1379,8 +1379,8 @@
   },
   {
    "id": "tween_c24h44o6",
-   "name": "Tween 80 (polisorbato)",
-   "class": "tensioattivi",
+   "name": "Tween 80 (polysorbate)",
+   "class": "surfactants",
    "formula": "C2H4O",
    "ions": [
     "[M+Na]+"
@@ -1398,8 +1398,8 @@
   },
   {
    "id": "tween_c24h46o6",
-   "name": "Tween 60 (polisorbato)",
-   "class": "tensioattivi",
+   "name": "Tween 60 (polysorbate)",
+   "class": "surfactants",
    "formula": "C2H4O",
    "ions": [
     "[M+Na]+"
@@ -1417,8 +1417,8 @@
   },
   {
    "id": "pep_vqtvslpr",
-   "name": "peptide VQTVSLPR (artefatto simile alla tripsina)",
-   "class": "peptidi",
+   "name": "peptide VQTVSLPR (trypsin-like artifact)",
+   "class": "peptides",
    "formula": "C39H70N12O12",
    "ions": [
     "[M+H]+"
@@ -1428,8 +1428,8 @@
   },
   {
    "id": "oligomero_ciclico_del_nylon_66_c48h88n8o8",
-   "name": "oligomero ciclico del nylon 66",
-   "class": "varie",
+   "name": "cyclic oligomer of nylon 66",
+   "class": "miscellaneous",
    "formula": "C48H88N8O8",
    "ions": [
     "[M+H]+"
@@ -1439,8 +1439,8 @@
   },
   {
    "id": "pep_nkpgvytk",
-   "name": "peptide NKPGVYTK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide NKPGVYTK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C41H67N11O12",
    "ions": [
     "[M+H]+"
@@ -1450,8 +1450,8 @@
   },
   {
    "id": "pep_rvyvhpf",
-   "name": "peptide RVYVHPF (standard di angiotensina, bovina)",
-   "class": "peptidi",
+   "name": "peptide RVYVHPF (angiotensin standard, bovine)",
+   "class": "peptides",
    "formula": "C45H64N12O9",
    "ions": [
     "[M+H]+"
@@ -1461,8 +1461,8 @@
   },
   {
    "id": "pep_rvyihpf",
-   "name": "peptide RVYIHPF (standard di angiotensina, umana)",
-   "class": "peptidi",
+   "name": "peptide RVYIHPF (angiotensin standard, human)",
+   "class": "peptides",
    "formula": "C46H66N12O9",
    "ions": [
     "[M+H]+"
@@ -1472,8 +1472,8 @@
   },
   {
    "id": "pep_yvnwiqq",
-   "name": "peptide YVNWIQQ (artefatto simile alla tripsina)",
-   "class": "peptidi",
+   "name": "peptide YVNWIQQ (trypsin-like artifact)",
+   "class": "peptides",
    "formula": "C45H63N11O12",
    "ions": [
     "[M+H]+"
@@ -1483,8 +1483,8 @@
   },
   {
    "id": "pep_ieiselnr",
-   "name": "peptide IEISELNR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide IEISELNR (human keratin)",
+   "class": "peptides",
    "formula": "C41H72N12O15",
    "ions": [
     "[M+H]+"
@@ -1494,8 +1494,8 @@
   },
   {
    "id": "pep_gtsypdvlk",
-   "name": "peptide GTSYPDVLK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide GTSYPDVLK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C44H70N10O15",
    "ions": [
     "[M+H]+"
@@ -1505,8 +1505,8 @@
   },
   {
    "id": "pep_ikewyek",
-   "name": "peptide IKEWYEK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide IKEWYEK (keratin)",
+   "class": "peptides",
    "formula": "C48H70N10O13",
    "ions": [
     "[M+H]+"
@@ -1516,8 +1516,8 @@
   },
   {
    "id": "pep_lqaeieglk",
-   "name": "peptide LQAEIEGLK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide LQAEIEGLK (keratin)",
+   "class": "peptides",
    "formula": "C44H77N11O15",
    "ions": [
     "[M+H]+"
@@ -1527,8 +1527,8 @@
   },
   {
    "id": "pep_seitelrr",
-   "name": "peptide SEITELRR (cheratina)",
-   "class": "peptidi",
+   "name": "peptide SEITELRR (keratin)",
+   "class": "peptides",
    "formula": "C41H74N14O15",
    "ions": [
     "[M+H]+"
@@ -1538,8 +1538,8 @@
   },
   {
    "id": "pep_apilsdssck",
-   "name": "peptide APILSDSSCK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide APILSDSSCK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C42H73N11O16S",
    "ions": [
     "[M+H]+"
@@ -1549,8 +1549,8 @@
   },
   {
    "id": "pep_sipyqvsln",
-   "name": "peptide SIPYQVSLN (artefatto simile alla tripsina)",
-   "class": "peptidi",
+   "name": "peptide SIPYQVSLN (trypsin-like artifact)",
+   "class": "peptides",
    "formula": "C46H73N11O15",
    "ions": [
     "[M+H]+"
@@ -1560,8 +1560,8 @@
   },
   {
    "id": "pep_ssypgqitgn",
-   "name": "peptide SSYPGQITGN (artefatto simile alla tripsina)",
-   "class": "peptidi",
+   "name": "peptide SSYPGQITGN (trypsin-like artifact)",
+   "class": "peptides",
    "formula": "C43H66N12O17",
    "ions": [
     "[M+H]+"
@@ -1571,8 +1571,8 @@
   },
   {
    "id": "pep_neqfisask",
-   "name": "peptide NEQFISASK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide NEQFISASK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C44H70N12O16",
    "ions": [
     "[M+H]+"
@@ -1582,8 +1582,8 @@
   },
   {
    "id": "pep_vldeltltk",
-   "name": "peptide VLDELTLTK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide VLDELTLTK (human keratin)",
+   "class": "peptides",
    "formula": "C46H82N10O16",
    "ions": [
     "[M+H]+"
@@ -1593,8 +1593,8 @@
   },
   {
    "id": "pep_tllegeesr",
-   "name": "peptide TLLEGEESR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide TLLEGEESR (human keratin)",
+   "class": "peptides",
    "formula": "C42H72N12O18",
    "ions": [
     "[M+H]+"
@@ -1604,8 +1604,8 @@
   },
   {
    "id": "pep_irdwyqr",
-   "name": "peptide IRDWYQR (cheratina)",
-   "class": "peptidi",
+   "name": "peptide IRDWYQR (keratin)",
+   "class": "peptides",
    "formula": "C47H69N15O12",
    "ions": [
     "[M+H]+"
@@ -1615,8 +1615,8 @@
   },
   {
    "id": "pep_yldgltaer",
-   "name": "peptide YLDGLTAER (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide YLDGLTAER (human keratin)",
+   "class": "peptides",
    "formula": "C45H72N12O16",
    "ions": [
     "[M+H]+"
@@ -1626,8 +1626,8 @@
   },
   {
    "id": "pep_lsspatlnsr",
-   "name": "peptide LSSPATLNSR (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide LSSPATLNSR (porcine trypsin)",
+   "class": "peptides",
    "formula": "C43H76N14O16",
    "ions": [
     "[M+H]+"
@@ -1637,8 +1637,8 @@
   },
   {
    "id": "pep_lksaaslnsr",
-   "name": "peptide LKSAASLNSR (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide LKSAASLNSR (bovine trypsin)",
+   "class": "peptides",
    "formula": "C43H79N15O15",
    "ions": [
     "[M+H]+"
@@ -1648,8 +1648,8 @@
   },
   {
    "id": "pep_tlldidntr",
-   "name": "peptide TLLDIDNTR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide TLLDIDNTR (human keratin)",
+   "class": "peptides",
    "formula": "C44H77N13O17",
    "ions": [
     "[M+H]+"
@@ -1660,7 +1660,7 @@
   {
    "id": "pep_diiravgays",
    "name": "peptide DIIRAVGAYS (lysyl endopeptidase (Lys-C))",
-   "class": "peptidi",
+   "class": "peptides",
    "formula": "C47H77N13O15",
    "ions": [
     "[M+H]+"
@@ -1670,8 +1670,8 @@
   },
   {
    "id": "pep_lasyldkvr",
-   "name": "peptide LASYLDKVR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide LASYLDKVR (human keratin)",
+   "class": "peptides",
    "formula": "C48H81N13O14",
    "ions": [
     "[M+H]+"
@@ -1681,8 +1681,8 @@
   },
   {
    "id": "pep_stmqelnsr",
-   "name": "peptide STMQELNSR (cheratina)",
-   "class": "peptidi",
+   "name": "peptide STMQELNSR (keratin)",
+   "class": "peptides",
    "formula": "C41H72N14O17S",
    "ions": [
     "[M+H]+"
@@ -1692,8 +1692,8 @@
   },
   {
    "id": "pep_faafidkvr",
-   "name": "peptide FAAFIDKVR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide FAAFIDKVR (human keratin)",
+   "class": "peptides",
    "formula": "C51H79N13O12",
    "ions": [
     "[M+H]+"
@@ -1703,8 +1703,8 @@
   },
   {
    "id": "pep_lagleealqk",
-   "name": "peptide LAGLEEALQK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide LAGLEEALQK (human keratin)",
+   "class": "peptides",
    "formula": "C47H82N12O16",
    "ions": [
     "[M+H]+"
@@ -1714,8 +1714,8 @@
   },
   {
    "id": "pep_gneqfisask",
-   "name": "peptide GNEQFISASK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide GNEQFISASK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C46H73N13O17",
    "ions": [
     "[M+H]+"
@@ -1725,8 +1725,8 @@
   },
   {
    "id": "pep_fasfidkvr",
-   "name": "peptide FASFIDKVR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide FASFIDKVR (human keratin)",
+   "class": "peptides",
    "formula": "C51H79N13O13",
    "ions": [
     "[M+H]+"
@@ -1736,8 +1736,8 @@
   },
   {
    "id": "pep_vtmqnlndr",
-   "name": "peptide VTMQNLNDR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide VTMQNLNDR (human keratin)",
+   "class": "peptides",
    "formula": "C43H75N15O16S",
    "ions": [
     "[M+H]+"
@@ -1747,8 +1747,8 @@
   },
   {
    "id": "pep_gneqfinaak",
-   "name": "peptide GNEQFINAAK (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide GNEQFINAAK (porcine trypsin)",
+   "class": "peptides",
    "formula": "C47H74N14O16",
    "ions": [
     "[M+H]+"
@@ -1758,8 +1758,8 @@
   },
   {
    "id": "pep_daeawfnek",
-   "name": "peptide DAEAWFNEK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide DAEAWFNEK (human keratin)",
+   "class": "peptides",
    "formula": "C50H68N12O17",
    "ions": [
     "[M+H]+"
@@ -1769,8 +1769,8 @@
   },
   {
    "id": "pep_hgnshqgepr",
-   "name": "peptide HGNSHQGEPR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide HGNSHQGEPR (human keratin)",
+   "class": "peptides",
    "formula": "C44H67N19O16",
    "ions": [
     "[M+H]+"
@@ -1780,8 +1780,8 @@
   },
   {
    "id": "pep_qeyeqliak",
-   "name": "peptide QEYEQLIAK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide QEYEQLIAK (human keratin)",
+   "class": "peptides",
    "formula": "C50H80N12O17",
    "ions": [
     "[M+H]+"
@@ -1791,8 +1791,8 @@
   },
   {
    "id": "pep_iithpnfngn",
-   "name": "peptide IITHPNFNGN (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide IITHPNFNGN (porcine trypsin)",
+   "class": "peptides",
    "formula": "C50H75N15O15",
    "ions": [
     "[M+H]+"
@@ -1802,8 +1802,8 @@
   },
   {
    "id": "pep_lseleaalqr",
-   "name": "peptide LSELEAALQR (cheratina)",
-   "class": "peptidi",
+   "name": "peptide LSELEAALQR (keratin)",
+   "class": "peptides",
    "formula": "C48H84N14O17",
    "ions": [
     "[M+H]+"
@@ -1813,8 +1813,8 @@
   },
   {
    "id": "pep_dyqelmntk",
-   "name": "peptide DYQELMNTK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide DYQELMNTK (keratin)",
+   "class": "peptides",
    "formula": "C48H76N12O18S",
    "ions": [
     "[M+H]+"
@@ -1824,8 +1824,8 @@
   },
   {
    "id": "pep_ssgtsypdvlk",
-   "name": "peptide SSGTSYPDVLK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide SSGTSYPDVLK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C50H80N12O19",
    "ions": [
     "[M+H]+"
@@ -1835,8 +1835,8 @@
   },
   {
    "id": "pep_qgvdadinglr",
-   "name": "peptide QGVDADINGLR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide QGVDADINGLR (human keratin)",
+   "class": "peptides",
    "formula": "C47H80N16O18",
    "ions": [
     "[M+H]+"
@@ -1846,8 +1846,8 @@
   },
   {
    "id": "pep_leneiqtyr",
-   "name": "peptide LENEIQTYR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide LENEIQTYR (human keratin)",
+   "class": "peptides",
    "formula": "C50H80N14O18",
    "ions": [
     "[M+H]+"
@@ -1857,8 +1857,8 @@
   },
   {
    "id": "pep_mfcagyleggk",
-   "name": "peptide MFCAGYLEGGK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide MFCAGYLEGGK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C52H78N12O15S2",
    "ions": [
     "[M+H]+"
@@ -1868,8 +1868,8 @@
   },
   {
    "id": "pep_tldndimlik",
-   "name": "peptide TLDNDIMLIK (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide TLDNDIMLIK (porcine trypsin)",
+   "class": "peptides",
    "formula": "C51H90N12O17S",
    "ions": [
     "[M+H]+"
@@ -1879,8 +1879,8 @@
   },
   {
    "id": "pep_yeelqitagr",
-   "name": "peptide YEELQITAGR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide YEELQITAGR (human keratin)",
+   "class": "peptides",
    "formula": "C51H82N14O18",
    "ions": [
     "[M+H]+"
@@ -1890,8 +1890,8 @@
   },
   {
    "id": "pep_qvldnltmek",
-   "name": "peptide QVLDNLTMEK (kereatin)",
-   "class": "peptidi",
+   "name": "peptide QVLDNLTMEK (keratin)",
+   "class": "peptides",
    "formula": "C50H87N13O18S",
    "ions": [
     "[M+H]+"
@@ -1901,8 +1901,8 @@
   },
   {
    "id": "pep_yeelqvtvgr",
-   "name": "peptide YEELQVTVGR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide YEELQVTVGR (human keratin)",
+   "class": "peptides",
    "formula": "C52H84N14O18",
    "ions": [
     "[M+H]+"
@@ -1912,8 +1912,8 @@
   },
   {
    "id": "pep_tldndimlir",
-   "name": "peptide TLDNDIMLIR (artefatto simile alla tripsina)",
-   "class": "peptidi",
+   "name": "peptide TLDNDIMLIR (trypsin-like artifact)",
+   "class": "peptides",
    "formula": "C51H90N14O17S",
    "ions": [
     "[M+H]+"
@@ -1923,8 +1923,8 @@
   },
   {
    "id": "pep_taaendfvtlk",
-   "name": "peptide TAAENDFVTLK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide TAAENDFVTLK (human keratin)",
+   "class": "peptides",
    "formula": "C53H85N13O19",
    "ions": [
     "[M+H]+"
@@ -1934,8 +1934,8 @@
   },
   {
    "id": "pep_ssggtsypdvlk",
-   "name": "peptide SSGGTSYPDVLK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SSGGTSYPDVLK (human keratin)",
+   "class": "peptides",
    "formula": "C52H83N13O20",
    "ions": [
     "[M+H]+"
@@ -1945,8 +1945,8 @@
   },
   {
    "id": "pep_egneqfinaak",
-   "name": "peptide EGNEQFINAAK (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide EGNEQFINAAK (porcine trypsin)",
+   "class": "peptides",
    "formula": "C52H81N15O19",
    "ions": [
     "[M+H]+"
@@ -1956,8 +1956,8 @@
   },
   {
    "id": "chaps_dimero",
-   "name": "CHAPS (dimero)",
-   "class": "dimeri",
+   "name": "CHAPS (dimer)",
+   "class": "dimers",
    "formula": "C64H116N4O14S2",
    "ions": [
     "[M+H]+"
@@ -1967,8 +1967,8 @@
   },
   {
    "id": "pep_sggggggglgsggsir",
-   "name": "peptide SGGGGGGGLGSGGSIR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SGGGGGGGLGSGGSIR (human keratin)",
+   "class": "peptides",
    "formula": "C47H81N19O20",
    "ions": [
     "[M+H]+"
@@ -1978,8 +1978,8 @@
   },
   {
    "id": "pep_fssssgygggssr",
-   "name": "peptide FSSSSGYGGGSSR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide FSSSSGYGGGSSR (human keratin)",
+   "class": "peptides",
    "formula": "C50H74N16O21",
    "ions": [
     "[M+H]+"
@@ -1989,8 +1989,8 @@
   },
   {
    "id": "pep_yipiqyvlsr",
-   "name": "peptide YIPIQYVLSR (caseina alfa-S1 bovina)",
-   "class": "peptidi",
+   "name": "peptide YIPIQYVLSR (bovine alpha-S1 casein)",
+   "class": "peptides",
    "formula": "C60H94N14O15",
    "ions": [
     "[M+H]+"
@@ -2000,8 +2000,8 @@
   },
   {
    "id": "pep_gfssgsavvsggsr",
-   "name": "peptide GFSSGSAVVSGGSR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide GFSSGSAVVSGGSR (human keratin)",
+   "class": "peptides",
    "formula": "C51H83N17O20",
    "ions": [
     "[M+H]+"
@@ -2011,8 +2011,8 @@
   },
   {
    "id": "pep_sllegegssggggr",
-   "name": "peptide SLLEGEGSSGGGGR (cheratina)",
-   "class": "peptidi",
+   "name": "peptide SLLEGEGSSGGGGR (keratin)",
+   "class": "peptides",
    "formula": "C49H83N17O22",
    "ions": [
     "[M+H]+"
@@ -2022,8 +2022,8 @@
   },
   {
    "id": "pep_llhgvatvslpr",
-   "name": "peptide LLHGVATVSLPR (artefatto simile alla tripsina)",
-   "class": "peptidi",
+   "name": "peptide LLHGVATVSLPR (trypsin-like artifact)",
+   "class": "peptides",
    "formula": "C57H99N17O15",
    "ions": [
     "[M+H]+"
@@ -2033,8 +2033,8 @@
   },
   {
    "id": "pep_tnaenefvtik",
-   "name": "peptide TNAENEFVTIK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide TNAENEFVTIK (human keratin)",
+   "class": "peptides",
    "formula": "C55H88N14O20",
    "ions": [
     "[M+H]+"
@@ -2044,8 +2044,8 @@
   },
   {
    "id": "pep_ylgyleqllr",
-   "name": "peptide YLGYLEQLLR (caseina alfa-S1 bovina)",
-   "class": "peptidi",
+   "name": "peptide YLGYLEQLLR (bovine alpha-S1 casein)",
+   "class": "peptides",
    "formula": "C60H94N14O16",
    "ions": [
     "[M+H]+"
@@ -2055,8 +2055,8 @@
   },
   {
    "id": "pep_sdqsrldselk",
-   "name": "peptide SDQSRLDSELK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SDQSRLDSELK (human keratin)",
+   "class": "peptides",
    "formula": "C51H88N16O22",
    "ions": [
     "[M+H]+"
@@ -2066,8 +2066,8 @@
   },
   {
    "id": "pep_laldieiatyr",
-   "name": "peptide LALDIEIATYR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide LALDIEIATYR (human keratin)",
+   "class": "peptides",
    "formula": "C58H96N14O18",
    "ions": [
     "[M+H]+"
@@ -2077,8 +2077,8 @@
   },
   {
    "id": "pep_yeqlaeqnrk",
-   "name": "peptide YEQLAEQNRK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide YEQLAEQNRK (human keratin)",
+   "class": "peptides",
    "formula": "C54H87N17O19",
    "ions": [
     "[M+H]+"
@@ -2088,8 +2088,8 @@
   },
   {
    "id": "pep_drvyvhpfhl",
-   "name": "peptide DRVYVHPFHL (standard di angiotensina, bovina)",
-   "class": "peptidi",
+   "name": "peptide DRVYVHPFHL (angiotensin standard, bovine)",
+   "class": "peptides",
    "formula": "C61H87N17O14",
    "ions": [
     "[M+H]+"
@@ -2099,8 +2099,8 @@
   },
   {
    "id": "pep_drvyihpfhl",
-   "name": "peptide DRVYIHPFHL (standard di angiotensina, umana)",
-   "class": "peptidi",
+   "name": "peptide DRVYIHPFHL (angiotensin standard, human)",
+   "class": "peptides",
    "formula": "C62H89N17O14",
    "ions": [
     "[M+H]+"
@@ -2110,8 +2110,8 @@
   },
   {
    "id": "pep_aleeanadlevk",
-   "name": "peptide ALEEANADLEVK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide ALEEANADLEVK (keratin)",
+   "class": "peptides",
    "formula": "C55H92N14O22",
    "ions": [
     "[M+H]+"
@@ -2121,8 +2121,8 @@
   },
   {
    "id": "pep_nskieiselnr",
-   "name": "peptide NSKIEISELNR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide NSKIEISELNR (human keratin)",
+   "class": "peptides",
    "formula": "C54H95N17O20",
    "ions": [
     "[M+H]+"
@@ -2132,8 +2132,8 @@
   },
   {
    "id": "pep_sldldsiiaevk",
-   "name": "peptide SLDLDSIIAEVK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SLDLDSIIAEVK (human keratin)",
+   "class": "peptides",
    "formula": "C57H99N13O21",
    "ions": [
     "[M+H]+"
@@ -2143,8 +2143,8 @@
   },
   {
    "id": "pep_hlvdepqnlik",
-   "name": "peptide HLVDEPQNLIK (albumina sierica bovina (BSA))",
-   "class": "peptidi",
+   "name": "peptide HLVDEPQNLIK (bovine serum albumin (BSA))",
+   "class": "peptides",
    "formula": "C58H96N16O18",
    "ions": [
     "[M+H]+"
@@ -2154,8 +2154,8 @@
   },
   {
    "id": "pep_ikfemeqnlr",
-   "name": "peptide IKFEMEQNLR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide IKFEMEQNLR (human keratin)",
+   "class": "peptides",
    "formula": "C57H94N16O17S",
    "ions": [
     "[M+H]+"
@@ -2165,8 +2165,8 @@
   },
   {
    "id": "pep_vegneqfisask",
-   "name": "peptide VEGNEQFISASK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide VEGNEQFISASK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C56H89N15O21",
    "ions": [
     "[M+H]+"
@@ -2176,8 +2176,8 @@
   },
   {
    "id": "pep_nkyedeinkr",
-   "name": "peptide NKYEDEINKR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide NKYEDEINKR (human keratin)",
+   "class": "peptides",
    "formula": "C55H89N17O20",
    "ions": [
     "[M+H]+"
@@ -2187,8 +2187,8 @@
   },
   {
    "id": "pep_dqivdltvgnnk",
-   "name": "peptide DQIVDLTVGNNK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide DQIVDLTVGNNK (keratin)",
+   "class": "peptides",
    "formula": "C55H94N16O21",
    "ions": [
     "[M+H]+"
@@ -2198,8 +2198,8 @@
   },
   {
    "id": "pep_tldndimlirl",
-   "name": "peptide TLDNDIMLIRL (artefatto simile alla tripsina)",
-   "class": "peptidi",
+   "name": "peptide TLDNDIMLIRL (trypsin-like artifact)",
+   "class": "peptides",
    "formula": "C57H101N15O18S",
    "ions": [
     "[M+H]+"
@@ -2209,8 +2209,8 @@
   },
   {
    "id": "pep_hggggggfggggfgsr",
-   "name": "peptide HGGGGGGFGGGGFGSR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide HGGGGGGFGGGGFGSR (human keratin)",
+   "class": "peptides",
    "formula": "C55H77N21O18",
    "ions": [
     "[M+H]+"
@@ -2220,8 +2220,8 @@
   },
   {
    "id": "pep_nvqdaiadaeqr",
-   "name": "peptide NVQDAIADAEQR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide NVQDAIADAEQR (human keratin)",
+   "class": "peptides",
    "formula": "C53H88N18O22",
    "ions": [
     "[M+H]+"
@@ -2231,8 +2231,8 @@
   },
   {
    "id": "pep_taaendfvtlkk",
-   "name": "peptide TAAENDFVTLKK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide TAAENDFVTLKK (human keratin)",
+   "class": "peptides",
    "formula": "C59H97N15O20",
    "ions": [
     "[M+H]+"
@@ -2242,8 +2242,8 @@
   },
   {
    "id": "pep_skaeaeslyqsk",
-   "name": "peptide SKAEAESLYQSK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide SKAEAESLYQSK (keratin)",
+   "class": "peptides",
    "formula": "C57H93N15O22",
    "ions": [
     "[M+H]+"
@@ -2253,8 +2253,8 @@
   },
   {
    "id": "pep_asleaaiadaeqr",
-   "name": "peptide ASLEAAIADAEQR (cheratina)",
-   "class": "peptidi",
+   "name": "peptide ASLEAAIADAEQR (keratin)",
+   "class": "peptides",
    "formula": "C55H93N17O22",
    "ions": [
     "[M+H]+"
@@ -2264,8 +2264,8 @@
   },
   {
    "id": "pep_iglggrggsggsygr",
-   "name": "peptide IGLGGRGGSGGSYGR (cheratina)",
-   "class": "peptidi",
+   "name": "peptide IGLGGRGGSGGSYGR (keratin)",
+   "class": "peptides",
    "formula": "C55H91N21O19",
    "ions": [
     "[M+H]+"
@@ -2275,8 +2275,8 @@
   },
   {
    "id": "pep_lndledalqqak",
-   "name": "peptide LNDLEDALQQAK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide LNDLEDALQQAK (human keratin)",
+   "class": "peptides",
    "formula": "C57H96N16O22",
    "ions": [
     "[M+H]+"
@@ -2286,8 +2286,8 @@
   },
   {
    "id": "pep_qsveadinglrr",
-   "name": "peptide QSVEADINGLRR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide QSVEADINGLRR (human keratin)",
+   "class": "peptides",
    "formula": "C55H96N20O20",
    "ions": [
     "[M+H]+"
@@ -2297,8 +2297,8 @@
   },
   {
    "id": "pep_sqyeqlaeqnr",
-   "name": "peptide SQYEQLAEQNR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SQYEQLAEQNR (human keratin)",
+   "class": "peptides",
    "formula": "C56H88N18O22",
    "ions": [
     "[M+H]+"
@@ -2309,7 +2309,7 @@
   {
    "id": "pep_risnstsptsfva",
    "name": "peptide RISNSTSPTSFVA (lysyl endopeptidase (Lys-C))",
-   "class": "peptidi",
+   "class": "peptides",
    "formula": "C58H95N17O21",
    "ions": [
     "[M+H]+"
@@ -2320,7 +2320,7 @@
   {
    "id": "pep_vftswtgggaaasr",
    "name": "peptide VFTSWTGGGAAASR (lysyl endopeptidase (Lys-C))",
-   "class": "peptidi",
+   "class": "peptides",
    "formula": "C60H90N18O19",
    "ions": [
     "[M+H]+"
@@ -2330,8 +2330,8 @@
   },
   {
    "id": "pep_lndleealqqak",
-   "name": "peptide LNDLEEALQQAK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide LNDLEEALQQAK (human keratin)",
+   "class": "peptides",
    "formula": "C58H98N16O22",
    "ions": [
     "[M+H]+"
@@ -2341,8 +2341,8 @@
   },
   {
    "id": "pep_dlnmdnivaeik",
-   "name": "peptide DLNMDNIVAEIK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide DLNMDNIVAEIK (human keratin)",
+   "class": "peptides",
    "formula": "C58H99N15O21S",
    "ions": [
     "[M+H]+"
@@ -2352,8 +2352,8 @@
   },
   {
    "id": "pep_aleesnyelegk",
-   "name": "peptide ALEESNYELEGK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide ALEESNYELEGK (human keratin)",
+   "class": "peptides",
    "formula": "C59H92N14O24",
    "ions": [
     "[M+H]+"
@@ -2363,8 +2363,8 @@
   },
   {
    "id": "pep_slnnqfasfidk",
-   "name": "peptide SLNNQFASFIDK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SLNNQFASFIDK (human keratin)",
+   "class": "peptides",
    "formula": "C62H94N16O20",
    "ions": [
     "[M+H]+"
@@ -2374,8 +2374,8 @@
   },
   {
    "id": "pep_ffvapfpevfgk",
-   "name": "peptide FFVAPFPEVFGK (caseina alfa-S1 bovina)",
-   "class": "peptidi",
+   "name": "peptide FFVAPFPEVFGK (bovine alpha-S1 casein)",
+   "class": "peptides",
    "formula": "C72H97N13O15",
    "ions": [
     "[M+H]+"
@@ -2385,8 +2385,8 @@
   },
   {
    "id": "pep_qsleaslaetegr",
-   "name": "peptide QSLEASLAETEGR (cheratina)",
-   "class": "peptidi",
+   "name": "peptide QSLEASLAETEGR (keratin)",
+   "class": "peptides",
    "formula": "C56H95N17O24",
    "ions": [
     "[M+H]+"
@@ -2396,8 +2396,8 @@
   },
   {
    "id": "pep_tnaenefvtikk",
-   "name": "peptide TNAENEFVTIKK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide TNAENEFVTIKK (human keratin)",
+   "class": "peptides",
    "formula": "C61H100N16O21",
    "ions": [
     "[M+H]+"
@@ -2407,8 +2407,8 @@
   },
   {
    "id": "pep_tvmenfvafvdk",
-   "name": "peptide TVMENFVAFVDK (albumina sierica bovina (BSA))",
-   "class": "peptidi",
+   "name": "peptide TVMENFVAFVDK (bovine serum albumin (BSA))",
+   "class": "peptides",
    "formula": "C64H98N14O19S",
    "ions": [
     "[M+H]+"
@@ -2418,8 +2418,8 @@
   },
   {
    "id": "pep_pyfesfinnlr",
-   "name": "peptide PYFESFINNLR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide PYFESFINNLR (human keratin)",
+   "class": "peptides",
    "formula": "C66H94N16O18",
    "ions": [
     "[M+H]+"
@@ -2429,8 +2429,8 @@
   },
   {
    "id": "pep_vdalndeinflr",
-   "name": "peptide VDALNDEINFLR (cheratina)",
-   "class": "peptidi",
+   "name": "peptide VDALNDEINFLR (keratin)",
+   "class": "peptides",
    "formula": "C62H99N17O21",
    "ions": [
     "[M+H]+"
@@ -2440,8 +2440,8 @@
   },
   {
    "id": "pep_legltdeinflr",
-   "name": "peptide LEGLTDEINFLR (cheratina)",
-   "class": "peptidi",
+   "name": "peptide LEGLTDEINFLR (keratin)",
+   "class": "peptides",
    "formula": "C63H102N16O21",
    "ions": [
     "[M+H]+"
@@ -2451,8 +2451,8 @@
   },
   {
    "id": "pep_lgldieiatyrr",
-   "name": "peptide LGLDIEIATYRR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide LGLDIEIATYRR (human keratin)",
+   "class": "peptides",
    "formula": "C63H106N18O19",
    "ions": [
     "[M+H]+"
@@ -2462,8 +2462,8 @@
   },
   {
    "id": "pep_lqgivswgsgcaqk",
-   "name": "peptide LQGIVSWGSGCAQK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide LQGIVSWGSGCAQK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C62H100N18O19S",
    "ions": [
     "[M+H]+"
@@ -2473,8 +2473,8 @@
   },
   {
    "id": "pep_irleneiqtyr",
-   "name": "peptide IRLENEIQTYR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide IRLENEIQTYR (human keratin)",
+   "class": "peptides",
    "formula": "C62H103N19O20",
    "ions": [
     "[M+H]+"
@@ -2484,8 +2484,8 @@
   },
   {
    "id": "pep_nnqfasfidkvr",
-   "name": "peptide NNQFASFIDKVR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide NNQFASFIDKVR (human keratin)",
+   "class": "peptides",
    "formula": "C64H99N19O19",
    "ions": [
     "[M+H]+"
@@ -2495,8 +2495,8 @@
   },
   {
    "id": "pep_rhpeyavsvllr",
-   "name": "peptide RHPEYAVSVLLR (albumina sierica bovina (BSA))",
-   "class": "peptidi",
+   "name": "peptide RHPEYAVSVLLR (bovine serum albumin (BSA))",
+   "class": "peptides",
    "formula": "C65H106N20O17",
    "ions": [
     "[M+H]+"
@@ -2506,8 +2506,8 @@
   },
   {
    "id": "pep_lpdifeaqiaglr",
-   "name": "peptide LPDIFEAQIAGLR (cheratina)",
-   "class": "peptidi",
+   "name": "peptide LPDIFEAQIAGLR (keratin)",
+   "class": "peptides",
    "formula": "C66H107N17O19",
    "ions": [
     "[M+H]+"
@@ -2517,8 +2517,8 @@
   },
   {
    "id": "pep_aiggglssvgggsstik",
-   "name": "peptide AIGGGLSSVGGGSSTIK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide AIGGGLSSVGGGSSTIK (human keratin)",
+   "class": "peptides",
    "formula": "C60H106N18O23",
    "ions": [
     "[M+H]+"
@@ -2528,8 +2528,8 @@
   },
   {
    "id": "pep_evtinqsllaplr",
-   "name": "peptide EVTINQSLLAPLR (cheratina)",
-   "class": "peptidi",
+   "name": "peptide EVTINQSLLAPLR (keratin)",
+   "class": "peptides",
    "formula": "C64H112N18O20",
    "ions": [
     "[M+H]+"
@@ -2539,8 +2539,8 @@
   },
   {
    "id": "pep_wellqqvdtstr",
-   "name": "peptide WELLQQVDTSTR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide WELLQQVDTSTR (human keratin)",
+   "class": "peptides",
    "formula": "C64H102N18O22",
    "ions": [
     "[M+H]+"
@@ -2550,8 +2550,8 @@
   },
   {
    "id": "pep_fleqqnqvlqtk",
-   "name": "peptide FLEQQNQVLQTK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide FLEQQNQVLQTK (human keratin)",
+   "class": "peptides",
    "formula": "C65H106N18O21",
    "ions": [
     "[M+H]+"
@@ -2561,8 +2561,8 @@
   },
   {
    "id": "pep_fleqqnkvletk",
-   "name": "peptide FLEQQNKVLETK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide FLEQQNKVLETK (keratin)",
+   "class": "peptides",
    "formula": "C66H109N17O21",
    "ions": [
     "[M+H]+"
@@ -2572,8 +2572,8 @@
   },
   {
    "id": "pep_lgeygfqnalivr",
-   "name": "peptide LGEYGFQNALIVR (albumina sierica bovina (BSA))",
-   "class": "peptidi",
+   "name": "peptide LGEYGFQNALIVR (bovine serum albumin (BSA))",
+   "class": "peptides",
    "formula": "C68H106N18O19",
    "ions": [
     "[M+H]+"
@@ -2583,8 +2583,8 @@
   },
   {
    "id": "pep_fyapellyyank",
-   "name": "peptide FYAPELLYYANK (albumina sierica bovina (BSA))",
-   "class": "peptidi",
+   "name": "peptide FYAPELLYYANK (bovine serum albumin (BSA))",
+   "class": "peptides",
    "formula": "C74H102N14O19",
    "ions": [
     "[M+H]+"
@@ -2594,8 +2594,8 @@
   },
   {
    "id": "pep_sqyeqlaeqnrk",
-   "name": "peptide SQYEQLAEQNRK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SQYEQLAEQNRK (human keratin)",
+   "class": "peptides",
    "formula": "C62H100N20O23",
    "ions": [
     "[M+H]+"
@@ -2605,8 +2605,8 @@
   },
   {
    "id": "pep_dscqgdsggpvvcsgk",
-   "name": "peptide DSCQGDSGGPVVCSGK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide DSCQGDSGGPVVCSGK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C57H94N18O25S2",
    "ions": [
     "[M+H]+"
@@ -2616,8 +2616,8 @@
   },
   {
    "id": "pep_nvvegneqfisask",
-   "name": "peptide NVVEGNEQFISASK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide NVVEGNEQFISASK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C65H104N18O24",
    "ions": [
     "[M+H]+"
@@ -2627,8 +2627,8 @@
   },
   {
    "id": "pep_lgehnidvlegneq",
-   "name": "peptide LGEHNIDVLEGNEQ (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide LGEHNIDVLEGNEQ (porcine trypsin)",
+   "class": "peptides",
    "formula": "C65H103N19O26",
    "ions": [
     "[M+H]+"
@@ -2638,8 +2638,8 @@
   },
   {
    "id": "pep_daflgsflyeysr",
-   "name": "peptide DAFLGSFLYEYSR (albumina sierica bovina (BSA))",
-   "class": "peptidi",
+   "name": "peptide DAFLGSFLYEYSR (bovine serum albumin (BSA))",
+   "class": "peptides",
    "formula": "C74H102N16O22",
    "ions": [
     "[M+H]+"
@@ -2649,8 +2649,8 @@
   },
   {
    "id": "pep_nklndledalqqak",
-   "name": "peptide NKLNDLEDALQQAK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide NKLNDLEDALQQAK (keratin)",
+   "class": "peptides",
    "formula": "C67H114N20O25",
    "ions": [
     "[M+H]+"
@@ -2660,8 +2660,8 @@
   },
   {
    "id": "pep_kvpqvstptlvevsr",
-   "name": "peptide KVPQVSTPTLVEVSR (albumina sierica bovina (BSA))",
-   "class": "peptidi",
+   "name": "peptide KVPQVSTPTLVEVSR (bovine serum albumin (BSA))",
+   "class": "peptides",
    "formula": "C72H126N20O23",
    "ions": [
     "[M+H]+"
@@ -2671,8 +2671,8 @@
   },
   {
    "id": "pep_sgggfssgsagiinyqr",
-   "name": "peptide SGGGFSSGSAGIINYQR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SGGGFSSGSAGIINYQR (human keratin)",
+   "class": "peptides",
    "formula": "C70H108N22O25",
    "ions": [
     "[M+H]+"
@@ -2682,8 +2682,8 @@
   },
   {
    "id": "pep_tkpsqargfhpragr",
-   "name": "peptide TKPSQARGFHPRAGR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide TKPSQARGFHPRAGR (human keratin)",
+   "class": "peptides",
    "formula": "C71H116N28O19",
    "ions": [
     "[M+H]+"
@@ -2693,8 +2693,8 @@
   },
   {
    "id": "pep_lgedninvvegneqf",
-   "name": "peptide LGEDNINVVEGNEQF (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide LGEDNINVVEGNEQF (bovine trypsin)",
+   "class": "peptides",
    "formula": "C71H109N19O28",
    "ions": [
     "[M+H]+"
@@ -2704,8 +2704,8 @@
   },
   {
    "id": "pep_slvnlggsksisisvar",
-   "name": "peptide SLVNLGGSKSISISVAR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SLVNLGGSKSISISVAR (human keratin)",
+   "class": "peptides",
    "formula": "C72H130N22O24",
    "ions": [
     "[M+H]+"
@@ -2715,8 +2715,8 @@
   },
   {
    "id": "pep_gslgggfssggfsggsfsr",
-   "name": "peptide GSLGGGFSSGGFSGGSFSR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide GSLGGGFSSGGFSGGSFSR (human keratin)",
+   "class": "peptides",
    "formula": "C73H106N22O26",
    "ions": [
     "[M+H]+"
@@ -2726,8 +2726,8 @@
   },
   {
    "id": "pep_fsscgggggsfgagggfgsr",
-   "name": "peptide FSSCGGGGGSFGAGGGFGSR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide FSSCGGGGGSFGAGGGFGSR (human keratin)",
+   "class": "peptides",
    "formula": "C71H101N23O25S",
    "ions": [
     "[M+H]+"
@@ -2737,8 +2737,8 @@
   },
   {
    "id": "pep_lgehnidvlegneqf",
-   "name": "peptide LGEHNIDVLEGNEQF (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide LGEHNIDVLEGNEQF (porcine trypsin)",
+   "class": "peptides",
    "formula": "C74H112N20O27",
    "ions": [
     "[M+H]+"
@@ -2748,8 +2748,8 @@
   },
   {
    "id": "pep_qisnlqqsisdaeqr",
-   "name": "peptide QISNLQQSISDAEQR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide QISNLQQSISDAEQR (human keratin)",
+   "class": "peptides",
    "formula": "C69H117N23O28",
    "ions": [
     "[M+H]+"
@@ -2759,8 +2759,8 @@
   },
   {
    "id": "pep_vcnyvswikqtiasn",
-   "name": "peptide VCNYVSWIKQTIASN (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide VCNYVSWIKQTIASN (bovine trypsin)",
+   "class": "peptides",
    "formula": "C77H120N20O23S",
    "ions": [
     "[M+H]+"
@@ -2770,8 +2770,8 @@
   },
   {
    "id": "pep_nnlepilegyisnlr",
-   "name": "peptide NNLEPILEGYISNLR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide NNLEPILEGYISNLR (human keratin)",
+   "class": "peptides",
    "formula": "C77H125N21O25",
    "ions": [
     "[M+H]+"
@@ -2781,8 +2781,8 @@
   },
   {
    "id": "pep_nidvlegneqfinaak",
-   "name": "peptide NIDVLEGNEQFINAAK (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide NIDVLEGNEQFINAAK (porcine trypsin)",
+   "class": "peptides",
    "formula": "C77H123N21O27",
    "ions": [
     "[M+H]+"
@@ -2792,8 +2792,8 @@
   },
   {
    "id": "pep_ggsggsyggggsgggygggsgsr",
-   "name": "peptide GGSGGSYGGGGSGGGYGGGSGSR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide GGSGGSYGGGGSGGGYGGGSGSR (human keratin)",
+   "class": "peptides",
    "formula": "C69H102N26O31",
    "ions": [
     "[M+H]+"
@@ -2803,8 +2803,8 @@
   },
   {
    "id": "pep_leaelgnmqglvedfk",
-   "name": "peptide LEAELGNMQGLVEDFK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide LEAELGNMQGLVEDFK (keratin)",
+   "class": "peptides",
    "formula": "C78H125N19O27S",
    "ions": [
     "[M+H]+"
@@ -2814,8 +2814,8 @@
   },
   {
    "id": "pep_nvqaleielqsqlalk",
-   "name": "peptide NVQALEIELQSQLALK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide NVQALEIELQSQLALK (keratin)",
+   "class": "peptides",
    "formula": "C79H137N21O26",
    "ions": [
     "[M+H]+"
@@ -2826,7 +2826,7 @@
   {
    "id": "pep_sdqygrvftswtgggaaa",
    "name": "peptide SDQYGRVFTSWTGGGAAA (lysyl endopeptidase (Lys-C))",
-   "class": "peptidi",
+   "class": "peptides",
    "formula": "C80H115N23O27",
    "ions": [
     "[M+H]+"
@@ -2836,8 +2836,8 @@
   },
   {
    "id": "pep_hgvqeleielqsqlsk",
-   "name": "peptide HGVQELEIELQSQLSK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide HGVQELEIELQSQLSK (keratin)",
+   "class": "peptides",
    "formula": "C79H132N22O28",
    "ions": [
     "[M+H]+"
@@ -2847,8 +2847,8 @@
   },
   {
    "id": "pep_sisisvagggggfgaaggfggr",
-   "name": "peptide SISISVAGGGGGFGAAGGFGGR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SISISVAGGGGGFGAAGGFGGR (human keratin)",
+   "class": "peptides",
    "formula": "C79H123N25O26",
    "ions": [
     "[M+H]+"
@@ -2858,8 +2858,8 @@
   },
   {
    "id": "pep_snmdnmfesyinnlr",
-   "name": "peptide SNMDNMFESYINNLR (cheratina)",
-   "class": "peptidi",
+   "name": "peptide SNMDNMFESYINNLR (keratin)",
+   "class": "peptides",
    "formula": "C77H118N22O27S2",
    "ions": [
     "[M+H]+"
@@ -2869,8 +2869,8 @@
   },
   {
    "id": "pep_tlndmrqeyeqliak",
-   "name": "peptide TLNDMRQEYEQLIAK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide TLNDMRQEYEQLIAK (keratin)",
+   "class": "peptides",
    "formula": "C79H130N22O27S",
    "ions": [
     "[M+H]+"
@@ -2880,8 +2880,8 @@
   },
   {
    "id": "pep_lgehnidvlegneqfin",
-   "name": "peptide LGEHNIDVLEGNEQFIN (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide LGEHNIDVLEGNEQFIN (porcine trypsin)",
+   "class": "peptides",
    "formula": "C84H129N23O30",
    "ions": [
     "[M+H]+"
@@ -2891,8 +2891,8 @@
   },
   {
    "id": "pep_thnlepyfesfinnlr",
-   "name": "peptide THNLEPYFESFINNLR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide THNLEPYFESFINNLR (human keratin)",
+   "class": "peptides",
    "formula": "C91H132N24O27",
    "ions": [
     "[M+H]+"
@@ -2902,8 +2902,8 @@
   },
   {
    "id": "pep_ssggsssvkfvsttysgvtr",
-   "name": "peptide SSGGSSSVKFVSTTYSGVTR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SSGGSSSVKFVSTTYSGVTR (human keratin)",
+   "class": "peptides",
    "formula": "C84H136N24O32",
    "ions": [
     "[M+H]+"
@@ -2913,8 +2913,8 @@
   },
   {
    "id": "pep_ssggsssvrfvsttysgvtr",
-   "name": "peptide SSGGSSSVRFVSTTYSGVTR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SSGGSSSVRFVSTTYSGVTR (human keratin)",
+   "class": "peptides",
    "formula": "C84H136N26O32",
    "ions": [
     "[M+H]+"
@@ -2924,8 +2924,8 @@
   },
   {
    "id": "pep_lgehnidvlegneqfinaa",
-   "name": "peptide LGEHNIDVLEGNEQFINAA (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide LGEHNIDVLEGNEQFINAA (porcine trypsin)",
+   "class": "peptides",
    "formula": "C90H139N25O32",
    "ions": [
     "[M+H]+"
@@ -2935,8 +2935,8 @@
   },
   {
    "id": "pep_elqsqisdtsvvlsmdnsr",
-   "name": "peptide ELQSQISDTSVVLSMDNSR (cheratina)",
-   "class": "peptidi",
+   "name": "peptide ELQSQISDTSVVLSMDNSR (keratin)",
+   "class": "peptides",
    "formula": "C85H145N25O35S",
    "ions": [
     "[M+H]+"
@@ -2946,8 +2946,8 @@
   },
   {
    "id": "pep_thnlepyfesfinnlrr",
-   "name": "peptide THNLEPYFESFINNLRR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide THNLEPYFESFINNLRR (human keratin)",
+   "class": "peptides",
    "formula": "C97H144N28O28",
    "ions": [
     "[M+H]+"
@@ -2957,8 +2957,8 @@
   },
   {
    "id": "pep_iithpnfngntldndimli",
-   "name": "peptide IITHPNFNGNTLDNDIMLI (artefatto simile alla tripsina)",
-   "class": "peptidi",
+   "name": "peptide IITHPNFNGNTLDNDIMLI (trypsin-like artifact)",
+   "class": "peptides",
    "formula": "C95H151N25O30S",
    "ions": [
     "[M+H]+"
@@ -2968,8 +2968,8 @@
   },
   {
    "id": "pep_lgedninvvegneqfisask",
-   "name": "peptide LGEDNINVVEGNEQFISASK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide LGEDNINVVEGNEQFISASK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C92H147N25O35",
    "ions": [
     "[M+H]+",
@@ -2981,8 +2981,8 @@
   },
   {
    "id": "pep_sdlemqyetlqeelmalk",
-   "name": "peptide SDLEMQYETLQEELMALK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide SDLEMQYETLQEELMALK (keratin)",
+   "class": "peptides",
    "formula": "C93H151N21O34S2",
    "ions": [
     "[M+H]+"
@@ -2992,8 +2992,8 @@
   },
   {
    "id": "pep_nklndledalqqakedlar",
-   "name": "peptide NKLNDLEDALQQAKEDLAR (cheratina)",
-   "class": "peptidi",
+   "name": "peptide NKLNDLEDALQQAKEDLAR (keratin)",
+   "class": "peptides",
    "formula": "C91H154N28O34",
    "ions": [
     "[M+H]+"
@@ -3003,8 +3003,8 @@
   },
   {
    "id": "pep_lgehnidvlegneqfinaak",
-   "name": "peptide LGEHNIDVLEGNEQFINAAK (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide LGEHNIDVLEGNEQFINAAK (porcine trypsin)",
+   "class": "peptides",
    "formula": "C96H151N27O33",
    "ions": [
     "[M+H]+"
@@ -3014,8 +3014,8 @@
   },
   {
    "id": "pep_adlefqieslteelaylkk",
-   "name": "peptide ADLEFQIESLTEELAYLKK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide ADLEFQIESLTEELAYLKK (keratin)",
+   "class": "peptides",
    "formula": "C102H162N22O34",
    "ions": [
     "[M+H]+"
@@ -3025,8 +3025,8 @@
   },
   {
    "id": "pep_sivhpsynsntlnndimlik",
-   "name": "peptide SIVHPSYNSNTLNNDIMLIK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide SIVHPSYNSNTLNNDIMLIK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C99H161N27O32S",
    "ions": [
     "[M+H]+",
@@ -3037,8 +3037,8 @@
   },
   {
    "id": "pep_iithpnfngntldndimlik",
-   "name": "peptide IITHPNFNGNTLDNDIMLIK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide IITHPNFNGNTLDNDIMLIK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C101H163N27O31S",
    "ions": [
     "[M+H]+"
@@ -3048,8 +3048,8 @@
   },
   {
    "id": "pep_aeaeslyqskyeelqitagr",
-   "name": "peptide AEAESLYQSKYEELQITAGR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide AEAESLYQSKYEELQITAGR (human keratin)",
+   "class": "peptides",
    "formula": "C99H156N26O36",
    "ions": [
     "[M+H]+"
@@ -3059,8 +3059,8 @@
   },
   {
    "id": "pep_lqgivswgsgcaqknkpgvytk",
-   "name": "peptide LQGIVSWGSGCAQKNKPGVYTK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide LQGIVSWGSGCAQKNKPGVYTK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C103H165N29O30S",
    "ions": [
     "[M+H]+",
@@ -3071,8 +3071,8 @@
   },
   {
    "id": "pep_qisnlqqsisdaeqrgenalk",
-   "name": "peptide QISNLQQSISDAEQRGENALK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide QISNLQQSISDAEQRGENALK (keratin)",
+   "class": "peptides",
    "formula": "C95H161N31O37",
    "ions": [
     "[M+H]+"
@@ -3082,8 +3082,8 @@
   },
   {
    "id": "pep_nqilnlttdnanillqidnar",
-   "name": "peptide NQILNLTTDNANILLQIDNAR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide NQILNLTTDNANILLQIDNAR (human keratin)",
+   "class": "peptides",
    "formula": "C100H171N31O35",
    "ions": [
     "[M+H]+"
@@ -3093,8 +3093,8 @@
   },
   {
    "id": "pep_ggggggygsggssygsgggsygsgggggggr",
-   "name": "peptide GGGGGGYGSGGSSYGSGGGSYGSGGGGGGGR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide GGGGGGYGSGGSSYGSGGGSYGSGGGGGGGR (human keratin)",
+   "class": "peptides",
    "formula": "C93H134N34O41",
    "ions": [
     "[M+H]+"
@@ -3104,8 +3104,8 @@
   },
   {
    "id": "pep_iikhpnysswtlnndimlik",
-   "name": "peptide IIKHPNYSSWTLNNDIMLIK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide IIKHPNYSSWTLNNDIMLIK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C110H174N28O30S",
    "ions": [
     "[M+H]+"
@@ -3115,8 +3115,8 @@
   },
   {
    "id": "pep_aafggsggrgsssgggyssgsssygsggr",
-   "name": "peptide AAFGGSGGRGSSSGGGYSSGSSSYGSGGR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide AAFGGSGGRGSSSGGGYSSGSSSYGSGGR (human keratin)",
+   "class": "peptides",
    "formula": "C99H149N35O42",
    "ions": [
     "[M+H]+"
@@ -3126,8 +3126,8 @@
   },
   {
    "id": "pep_skaeaeslyqskyeelqitagr",
-   "name": "peptide SKAEAESLYQSKYEELQITAGR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SKAEAESLYQSKYEELQITAGR (human keratin)",
+   "class": "peptides",
    "formula": "C108H173N29O39",
    "ions": [
     "[M+H]+"
@@ -3137,8 +3137,8 @@
   },
   {
    "id": "pep_eietyhnlleggqedfessgagk",
-   "name": "peptide EIETYHNLLEGGQEDFESSGAGK (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide EIETYHNLLEGGQEDFESSGAGK (human keratin)",
+   "class": "peptides",
    "formula": "C107H160N28O42",
    "ions": [
     "[M+H]+"
@@ -3148,8 +3148,8 @@
   },
   {
    "id": "pep_sivhpsynsntlnndimliklk",
-   "name": "peptide SIVHPSYNSNTLNNDIMLIKLK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide SIVHPSYNSNTLNNDIMLIKLK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C111H184N30O34S",
    "ions": [
     "[M+H]+"
@@ -3159,8 +3159,8 @@
   },
   {
    "id": "pep_vasislptscasagtqclisgwgntk",
-   "name": "peptide VASISLPTSCASAGTQCLISGWGNTK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide VASISLPTSCASAGTQCLISGWGNTK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C108H178N30O37S2",
    "ions": [
     "[M+H]+"
@@ -3170,8 +3170,8 @@
   },
   {
    "id": "pep_evtqlrhgvqeleielqsqlsk",
-   "name": "peptide EVTQLRHGVQELEIELQSQLSK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide EVTQLRHGVQELEIELQSQLSK (keratin)",
+   "class": "peptides",
    "formula": "C110H186N32O38",
    "ions": [
     "[M+H]+"
@@ -3181,8 +3181,8 @@
   },
   {
    "id": "pep_skeeaealyhskyeelqvtvgr",
-   "name": "peptide SKEEAEALYHSKYEELQVTVGR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide SKEEAEALYHSKYEELQVTVGR (human keratin)",
+   "class": "peptides",
    "formula": "C112H176N30O39",
    "ions": [
     "[M+H]+"
@@ -3192,8 +3192,8 @@
   },
   {
    "id": "pep_nkpgvytkvcnyvswikqtiasn",
-   "name": "peptide NKPGVYTKVCNYVSWIKQTIASN (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide NKPGVYTKVCNYVSWIKQTIASN (bovine trypsin)",
+   "class": "peptides",
    "formula": "C118H185N31O34S",
    "ions": [
     "[M+H]+"
@@ -3203,8 +3203,8 @@
   },
   {
    "id": "pep_sgyhfcggslinsqwvvsaahcyk",
-   "name": "peptide SGYHFCGGSLINSQWVVSAAHCYK (tripsina bovina)",
-   "class": "peptidi",
+   "name": "peptide SGYHFCGGSLINSQWVVSAAHCYK (bovine trypsin)",
+   "class": "peptides",
    "formula": "C117H168N32O33S2",
    "ions": [
     "[M+H]+"
@@ -3214,8 +3214,8 @@
   },
   {
    "id": "pep_ggggsfgysygggsgggfsasslgggfgggsr",
-   "name": "peptide GGGGSFGYSYGGGSGGGFSASSLGGGFGGGSR (cheratina)",
-   "class": "peptidi",
+   "name": "peptide GGGGSFGYSYGGGSGGGFSASSLGGGFGGGSR (keratin)",
+   "class": "peptides",
    "formula": "C115H161N35O42",
    "ions": [
     "[M+H]+"
@@ -3225,8 +3225,8 @@
   },
   {
    "id": "pep_iqvrlgehnidvlegneqfinaak",
-   "name": "peptide IQVRLGEHNIDVLEGNEQFINAAK (tripsina suina)",
-   "class": "peptidi",
+   "name": "peptide IQVRLGEHNIDVLEGNEQFINAAK (porcine trypsin)",
+   "class": "peptides",
    "formula": "C118H191N35O38",
    "ions": [
     "[M+H]+"
@@ -3236,8 +3236,8 @@
   },
   {
    "id": "pep_nvstgdvnvemnaapgvdltqllnnmr",
-   "name": "peptide NVSTGDVNVEMNAAPGVDLTQLLNNMR (cheratina)",
-   "class": "peptidi",
+   "name": "peptide NVSTGDVNVEMNAAPGVDLTQLLNNMR (keratin)",
+   "class": "peptides",
    "formula": "C118H198N36O43S2",
    "ions": [
     "[M+H]+"
@@ -3247,8 +3247,8 @@
   },
   {
    "id": "pep_nyspyyntiddlkdqivdltvgnnk",
-   "name": "peptide NYSPYYNTIDDLKDQIVDLTVGNNK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide NYSPYYNTIDDLKDQIVDLTVGNNK (keratin)",
+   "class": "peptides",
    "formula": "C128H196N32O45",
    "ions": [
     "[M+H]+"
@@ -3258,8 +3258,8 @@
   },
   {
    "id": "pep_fleqqnqvlqtkwellqqvdtstr",
-   "name": "peptide FLEQQNQVLQTKWELLQQVDTSTR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide FLEQQNQVLQTKWELLQQVDTSTR (human keratin)",
+   "class": "peptides",
    "formula": "C129H206N36O42",
    "ions": [
     "[M+H]+"
@@ -3269,8 +3269,8 @@
   },
   {
    "id": "pep_ggsggshgggsgfggesggsygggeeasgsgggygggsgk",
-   "name": "peptide GGSGGSHGGGSGFGGESGGSYGGGEEASGSGGGYGGGSGK (cheratina)",
-   "class": "peptidi",
+   "name": "peptide GGSGGSHGGGSGFGGESGGSYGGGEEASGSGGGYGGGSGK (keratin)",
+   "class": "peptides",
    "formula": "C127H183N43O57",
    "ions": [
     "[M+H]+"
@@ -3280,8 +3280,8 @@
   },
   {
    "id": "pep_gsygsggssygsgggsygsgggggghgsygsgsssggyr",
-   "name": "peptide GSYGSGGSSYGSGGGSYGSGGGGGGHGSYGSGSSSGGYR (cheratina umana)",
-   "class": "peptidi",
+   "name": "peptide GSYGSGGSSYGSGGGSYGSGGGGGGHGSYGSGSSSGGYR (human keratin)",
+   "class": "peptides",
    "formula": "C133H186N44O57",
    "ions": [
     "[M+H]+"
@@ -3291,8 +3291,8 @@
   },
   {
    "id": "pep_iithpnfngntldndimlirlsspatlnsr",
-   "name": "peptide IITHPNFNGNTLDNDIMLIRLSSPATLNSR (artefatto simile alla tripsina)",
-   "class": "peptidi",
+   "name": "peptide IITHPNFNGNTLDNDIMLIRLSSPATLNSR (trypsin-like artifact)",
+   "class": "peptides",
    "formula": "C144H237N43O46S",
    "ions": [
     "[M+H]+"
@@ -3302,8 +3302,8 @@
   },
   {
    "id": "anione_cn",
-   "name": "ione cianuro (frammento di acetonitrile)",
-   "class": "ioni",
+   "name": "cyanide ion (fragment of acetonitrile)",
+   "class": "ions",
    "formula": "CN",
    "ions": [
     "[M]-"
@@ -3313,8 +3313,8 @@
   },
   {
    "id": "anione_po3",
-   "name": "metafosfato (da acido fosforico)",
-   "class": "ioni",
+   "name": "metaphosphate (from phosphoric acid)",
+   "class": "ions",
    "formula": "PO3",
    "ions": [
     "[M]-"
@@ -3324,8 +3324,8 @@
   },
   {
    "id": "anione_so3",
-   "name": "ione SO3 (da acido solforico)",
-   "class": "ioni",
+   "name": "SO3 ion (from sulfuric acid)",
+   "class": "ions",
    "formula": "SO3",
    "ions": [
     "[M]-"
@@ -3335,8 +3335,8 @@
   },
   {
    "id": "methanesulfuric_acid",
-   "name": "acido metansolfonico",
-   "class": "acidi e anioni",
+   "name": "methanesulfonic acid",
+   "class": "acids and anions",
    "formula": "CH4O3S",
    "ions": [
     "[M-H]-"
@@ -3346,8 +3346,8 @@
   },
   {
    "id": "sulfuric_acid",
-   "name": "acido solforico",
-   "class": "acidi e anioni",
+   "name": "sulfuric acid",
+   "class": "acids and anions",
    "formula": "H2SO4",
    "ions": [
     "[M-H]-"
@@ -3357,8 +3357,8 @@
   },
   {
    "id": "phosphoric_acid",
-   "name": "acido fosforico",
-   "class": "acidi e anioni",
+   "name": "phosphoric acid",
+   "class": "acids and anions",
    "formula": "H3PO4",
    "ions": [
     "[M-H]-"
@@ -3368,8 +3368,8 @@
   },
   {
    "id": "anione_i",
-   "name": "ioduro",
-   "class": "ioni",
+   "name": "iodide",
+   "class": "ions",
    "formula": "I",
    "ions": [
     "[M]-"
@@ -3379,8 +3379,8 @@
   },
   {
    "id": "pentafluoropropionic_acid_perf",
-   "name": "acido pentafluoropropionico",
-   "class": "acidi e anioni",
+   "name": "pentafluoropropionic acid",
+   "class": "acids and anions",
    "formula": "C3HF5O2",
    "ions": [
     "[M-H]-"

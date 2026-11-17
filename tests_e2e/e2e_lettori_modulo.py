@@ -2,7 +2,7 @@
 (tools/agilent_sintetico.py, no laboratory data) goes to the module, which writes its mzML in OPFS; the file enters the list as any mzML, gives the same TIC as the engine's own path, «Download .mzML» gives it
 byte for byte as the engine writes it and without converting again, and nothing misses the engine (MZLAB_LR_MISS empty). Needs the site and both .wasm: python tools/build_site.py, tools/build_lettori_wasm.sh
 (MZLAB_PIPE_SITE=<built site> reuses a site). Also the «aperti» module: an mzML with MS-Numpress arrays (built here: linear m/z, slof intensity) goes to it without ?lettori=modulo and gives the TIC and a spectrum
-of its zlib twin within the codec's precision, and an mzXML (built here: 64-bit zlib peaks, with its index) that opens in the Dati view with its TIC and a spectrum. Run from the repo root: python3 tests_e2e/e2e_lettori_modulo.py"""
+of its zlib twin within the codec's precision, and an mzXML (built here: 64-bit zlib peaks, with its index) that opens in the Data view with its TIC and a spectrum. Run from the repo root: python3 tests_e2e/e2e_lettori_modulo.py"""
 # covers: mzlab/web/lettori-worker, mzlab/web/lettore-esterno, mzlab/web/carica-modulo, mzlab/web/nativo, mzlab/web/lettori, mzlab/web/shell.js
 # covers: crates/mzlab-lettori, tools/build_lettori_wasm.sh
 import os, shutil, socket, subprocess, sys, tempfile, threading
@@ -130,7 +130,7 @@ try:
         step("a QqQ MRM run and a Q-TOF profile run open through the module (SRM chromatograms, profile spectra)", lc_runs)
         # the numpress mzML: the engine refuses it, so the page sends it to the «aperti» module with no parameter
         NP = """async () => { const rb = await window.MZLAB_RUST_READY; await new Promise(r => setTimeout(r, 300));
-          const tic = await (await fetch("api/chrom?k=0&level=1")).json(), sp = await (await fetch("api/spectrum?k=0&rt0=0.9&rt1=1.1&level=1")).json();
+          const tic = await (await fetch("api/chrom?k=0&level=1")).json(), sp = await (await fetch("api/spectrum?k=0&rt0=0.9&rt1=1.1&level=1&merge=0")).json();
           return { files: ST.files.map(x => x.name), tic, sp, miss: (window.MZLAB_LR_MISS || []).length }; }"""
         def one(folder):
             pg = page(b, ""); pg.set_input_files("#pickdir", str(tmp / folder))
@@ -178,7 +178,7 @@ try:
             y = r["tic"].get("y"); assert y and len(y) == 40 and all(abs(a - b) <= 1e-4 * b for a, b in zip(y, XTIC)), (y and y[:3], XTIC[:3])
             assert r["miss"] == 0, r["miss"]
             ks = [k for k in r["sp"] if isinstance(r["sp"][k], list) and len(r["sp"][k]) > 5]; assert ks and all(len(r["sp"][k]) == 30 for k in ks), list(r["sp"])
-        step("an mzXML opens in the Dati view (through the «aperti» module) with its TIC and a spectrum", mzxml_opens)
+        step("an mzXML opens in the Data view (through the «aperti» module) with its TIC and a spectrum", mzxml_opens)
         def mzxml_truncated():
             pg = page(b, ""); pg.set_input_files("#pickdir", str(tmp / "xmlt"))
             pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)
@@ -193,7 +193,7 @@ try:
             y = r["tic"].get("y"); assert y and len(y) == 40 and all(abs(a - b) <= 1e-4 * b for a, b in zip(y, CTIC)), (y and y[:3], CTIC[:3])
             assert r["miss"] == 0, r["miss"]
             ks = [k for k in r["sp"] if isinstance(r["sp"][k], list) and len(r["sp"][k]) > 5]; assert ks and all(len(r["sp"][k]) == 30 for k in ks), list(r["sp"])
-        step("an ANDI-MS .cdf opens in the Dati view (through the «andi» module) with its TIC and a spectrum", cdf_opens)
+        step("an ANDI-MS .cdf opens in the Data view (through the «andi» module) with its TIC and a spectrum", cdf_opens)
         def andi_module():
             fams = {u.split("wasm-lettori/")[1].split("/")[0] for u in asked}
             assert "andi" in fams, asked

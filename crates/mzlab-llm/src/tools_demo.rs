@@ -29,7 +29,7 @@ pub fn demo_catalog(steps: &[Step], ui: &[UiTool], executable: &dyn Fn(&str) -> 
     all
 }
 
-/// `demo_catalog` as the file `strumenti/1` (`docs/schemi/strumenti-demo-1.json`).
+/// `demo_catalog` as the file `tools/1` (`docs/schemi/strumenti-demo-1.json`).
 pub fn demo_catalog_json(
     steps: &[Step],
     ui: &[UiTool],

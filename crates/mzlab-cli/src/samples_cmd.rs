@@ -1,4 +1,4 @@
-//! `mzlab-cli samples vars|group`: the two name operations of `samples::route` (`variabili`, `nome_gruppo`), printing the JSON the page gets
+//! `mzlab-cli samples vars|group|table`: the name operations of `samples::route` (`variabili`, `nome_gruppo`, `proponi`), printing the JSON the page gets
 //! from `api/campioni/<op>`. The names come one per line from a file or the standard input.
 
 use std::io::Read;
@@ -11,14 +11,14 @@ pub const HELP: &str = "mzlab-cli samples: how the names of a set of files split
 
 usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
        mzlab-cli samples group NAME...
+       mzlab-cli samples table [--names FILE|-]
 
   --names FILE|-  one file name per line (default: the standard input)
   --pos N         also the manual variable of the N-th token (1 = first, -1 = last), cut at --sep (default \"_-. \")
   --has a,b       also the manual variable of terms: a file goes to the first term equal to one of its tokens
   --substring     with --has: the term may be inside a token (O2 then catches H2O2)
   group           the name of a group made of NAMEs: their common tokens in order, empty when none
-
-old names still accepted: campioni, variabili, nome-gruppo";
+  table           the sample table the names propose (campioni/2): role, time point (`tempo`, `unita_tempo`, `tempo_min`), series, replicate, concentration";
 
 fn names(src: &str) -> Result<Vec<String>, String> {
     let mut text = String::new();
@@ -46,9 +46,6 @@ fn list(names: &[String]) -> String {
     o.raw("]");
     o.0
 }
-
-/// Old subcommand names still accepted on input, as `(old, new)`.
-const ALIASES: [(&str, &str); 2] = [("variabili", "vars"), ("nome-gruppo", "group")];
 
 /// The body of `vars`: the names and, when asked, the manual variable.
 fn variabili(args: Vec<String>) -> Result<String, String> {
@@ -99,17 +96,36 @@ fn variabili(args: Vec<String>) -> Result<String, String> {
     Ok(body)
 }
 
+/// The body of `table`: the names, in the order given, as the files of `proponi` (no SHA-256, no file kind).
+fn table(args: Vec<String>) -> Result<String, String> {
+    let mut src = "-".to_string();
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--names" => src = it.next().ok_or("--names needs a file")?,
+            o => return Err(format!("unknown option {o}")),
+        }
+    }
+    let files: Vec<String> = names(&src)?
+        .iter()
+        .map(|n| {
+            let mut o = Out::default();
+            o.raw("{\"name\":")
+                .str(n)
+                .raw(",\"sha256\":\"\",\"kind\":\"\"}");
+            o.0
+        })
+        .collect();
+    Ok(format!("{{\"files\":[{}]}}", files.join(",")))
+}
+
 pub fn run(args: Vec<String>) -> Outcome {
     let mut it = args.into_iter();
     let first = it.next();
-    let sub = first.as_deref().map(|c| {
-        ALIASES
-            .iter()
-            .find(|(old, _)| *old == c)
-            .map_or(c, |(_, new)| new)
-    });
+    let sub = first.as_deref();
     let (op, body) = match sub {
         Some("vars") => ("variabili", variabili(it.collect())),
+        Some("table") => ("proponi", table(it.collect())),
         Some("group") => {
             let n: Vec<String> = it.collect();
             ("nome_gruppo", Ok(format!("{{\"names\":{}}}", list(&n))))

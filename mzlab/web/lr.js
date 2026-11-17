@@ -130,7 +130,7 @@ export function createLr({ rb }) {
       let key = "err.engine.index", params = {}; try { const j = JSON.parse(e.raw); key = j.error_key || key; params = j.params || {}; } catch (__) { const _ = /** @type {Lanciato} */ (__); /* not an engine error */ }
       const raw = String(e && (e.raw || e.message || e) || "").slice(0, 600);      // the original text for the diagnosis (the page cuts paths out)
       if (key === "err.load.cancelled") { try { await rpc({ op: "lr_remove", name: n }); } catch (_) { /* nothing was kept */ } files.delete(n); }      // «Cancel»: no half file stays to be indexed at the next start
-      return fail(key, { name: n, ...params, fase, raw }, `cannot read the file: ${n}`);
+      return fail(key, { name: n, ...(key === "error.memoryBudget" ? {} : { fase }), ...params, tappa: fase, raw }, `cannot read the file: ${n}`);      // a memory refusal keeps its own phase (or none: I18N.err picks the text by it); `tappa` is where the loading stopped, for the diagnosis
     } finally { earlyTics.delete(n); }      // the index ends below 100%: the early TIC is not needed once the real one is served
     return json({ files: sorted(), methods: mr.list() });
   }

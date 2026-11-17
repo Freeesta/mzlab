@@ -79,6 +79,7 @@ export async function menuFill(/** @type {any} */ m, /** @type {any} */ c) {
   const gen = m._gen = (m._gen || 0) + 1;                                // a newer fill (a second right click) wins: the older one stops instead of adding its rows twice
   const done = () => { m.hidden = true; };
   for (const r of REG) {
+    if (c.blank && !r.blank) continue;                                   // an empty canvas: only the rows that say so (paste)
     if (r.when === "selection" ? c.whole : r.when === "whole" ? !c.whole : false) continue;
     try {
       if (r.rows) {

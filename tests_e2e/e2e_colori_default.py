@@ -13,7 +13,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 900})
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
-        pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length === 2")
+        pg.click("text=Load data"); ready(pg); wait_for_js(pg, "E.files.length === 2")
         def default():
             assert pg.evaluate("UIP.pal") == "file"
         step("the default palette is «file»", default)

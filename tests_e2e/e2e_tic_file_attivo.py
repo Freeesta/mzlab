@@ -14,7 +14,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz(f) for f in FILES[:2]])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         wait_for_js(pg, "E.files.filter(f=>f&&f.kind==='full').length>=2")
         k0 = pg.evaluate("(()=>{const f=E.files.filter(f=>f&&f.kind==='full');f.forEach(x=>{x.vis=true});STATO.file(f[0].k,'file');E.browse=false;renderNav();redrawAll();return f[0].k})()")
         wait_for_js(pg, "E.panels.some(p=>p.type==='chrom'&&p.tab==='full'&&p._a&&p._a.sr&&p._a.sr.length>=2)")

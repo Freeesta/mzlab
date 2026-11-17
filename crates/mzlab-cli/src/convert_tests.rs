@@ -83,19 +83,19 @@ fn a_folder_gives_valid_mzml_and_the_broken_file_is_named_with_its_cause() {
     let report = parse(&std::fs::read(&rep).unwrap()).unwrap();
     let list = report.arr();
     assert_eq!(list.len(), 4);
-    let failed: Vec<&Value> = list.iter().filter(|r| r.get("errore").is_some()).collect();
+    let failed: Vec<&Value> = list.iter().filter(|r| r.get("error").is_some()).collect();
     assert_eq!(failed.len(), 1);
     assert!(failed[0]
-        .get("ingresso")
+        .get("input")
         .and_then(Value::str)
         .unwrap()
         .ends_with("rotto.raw"));
     assert!(failed[0]
-        .get("causa")
+        .get("cause")
         .and_then(Value::str)
         .is_some_and(|c| !c.is_empty()));
-    for r in list.iter().filter(|r| r.get("errore").is_none()) {
-        assert!(r.get("spettri").and_then(Value::f64).unwrap() > 0.0);
+    for r in list.iter().filter(|r| r.get("error").is_none()) {
+        assert!(r.get("spectra").and_then(Value::f64).unwrap() > 0.0);
         assert_eq!(r.get("sha256").and_then(Value::str).unwrap().len(), 64);
         assert_eq!(
             r.get("conv/1")
@@ -103,7 +103,7 @@ fn a_folder_gives_valid_mzml_and_the_broken_file_is_named_with_its_cause() {
                 .and_then(Value::str),
             Some("conv/1")
         );
-        assert_eq!(r.get("saltato").and_then(Value::bool), Some(false));
+        assert_eq!(r.get("skipped").and_then(Value::bool), Some(false));
     }
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -155,7 +155,7 @@ fn a_second_run_skips_every_file_and_puts_back_a_removed_one() {
     );
     assert_eq!(mzmls(&out), first);
     let report = std::fs::read_to_string(&rep).unwrap();
-    assert_eq!(report.matches("\"saltato\":true").count(), 2);
+    assert_eq!(report.matches("\"skipped\":true").count(), 2);
 
     let o = convert(&[p(&src), "--out", p(&out), "--fresh"]);
     assert!(

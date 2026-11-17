@@ -8,8 +8,8 @@
 (() => {
   const Q1 = (/** @type {string} */ s) => /** @type {HTMLElement | null} */ (document.querySelector(s));
   const H = CALCQUIHTML, DEBOUNCE = 90;
-  // ctl: the choices row (null: the view follows a row drawn by another view of the same page); flat: no fold around the groups (a tab already names them); none: a flat view says «no match» instead of nothing; combos: only the pairs and repetitions of losses (the single ones light up in the list); pick: the view keeps only these groups/items
-  /** @typedef {{ ctl: HTMLElement | null, out: HTMLElement, idp: string, quiet?: boolean, catalogue?: boolean, numOnly?: boolean, flat?: boolean, none?: boolean, combos?: boolean, arg: () => { text: string, ans: number }, groups?: string[], pick?: (gs: CqGroup[]) => CqGroup[], after?: (a: any, gs: CqGroup[]) => void }} CqCfg */
+  // ctl: the choices row (null: the view follows a row drawn by another view of the same page); flat: no fold around the groups (a tab already names them); combos: only the pairs and repetitions of losses (the single ones light up in the list); pick: the view keeps only these groups/items
+  /** @typedef {{ ctl: HTMLElement | null, out: HTMLElement, idp: string, quiet?: boolean, catalogue?: boolean, numOnly?: boolean, flat?: boolean, combos?: boolean, arg: () => { text: string, ans: number }, groups?: string[], pick?: (gs: CqGroup[]) => CqGroup[], after?: (a: any, gs: CqGroup[]) => void }} CqCfg */
   /** @typedef {{ cfg: CqCfg, open: Set<string>, all: Set<string>, more: boolean, diffs: boolean, delta: string, seq: number, timer: number, tab: any, formula: string }} CqView */
   const views = /** @type {CqView[]} */ ([]);
   const prune = () => { for (let i = views.length - 1; i >= 0; i--) if (!views[i].cfg.out.isConnected) views.splice(i, 1); };      // a panel redrawn leaves its old view behind
@@ -31,7 +31,7 @@
   async function deps(lists) {
     const L = lists && window.LISTE;
     if (L) await LISTE.ready();                                                               // each numeric render asks again: a failed read is retried (liste.js)
-    return { idx: L ? LISTE.ensure() : null, listsFailed: !!L && LISTE.failed(), find: LISTE.find, findNominal: LISTE.findNominal, table: CALCADD.table, mass, losses: LOSSES, lossCombos };
+    return { idx: L ? LISTE.ensure() : null, find: LISTE.find, findNominal: LISTE.findNominal, table: CALCADD.table, mass, losses: LOSSES, lossCombos };
   }
   /** @param {CqView} v */
   function options(v) {
@@ -48,26 +48,21 @@
       return;
     }
     sync(v);                                                                                  // the detected resolution (text and tolerance) follows what is typed
-    if (v.cfg.numOnly && a.kind !== "num" || v.cfg.quiet && !v.cfg.catalogue && a.kind === "none") {      // a panel with its own field and no default table says one quiet line until something is typed
-      v.cfg.out.innerHTML = v.cfg.none ? /** @type {any} */ (window).EMPTYLEAF("empty.cont") : "";
+    if (v.cfg.numOnly && a.kind !== "num" || v.cfg.quiet && !v.cfg.catalogue && a.kind === "none") {      // a panel with its own field and no default table stays empty until something is typed
+      v.cfg.out.innerHTML = "";
       if (v.cfg.after) v.cfg.after(a, []);
       return;
     }
     const dp = await deps(a.kind === "num");
     let gs = await CALCQUI.gruppi(a, o, dp);
     if (my !== v.seq) return;
-    if (dp.listsFailed && v.cfg.groups && v.cfg.groups.includes("liste")) {                    // the lists could not be read: say so, never a blank that looks like «no match»
-      v.cfg.out.innerHTML = h`<p class="muted cq-none cq-err" role="status">${I18N.t("cq.liste.err")}</p>`;
-      if (v.cfg.after) v.cfg.after(a, []);
-      return;
-    }
     if (v.cfg.groups) gs = gs.filter(g => /** @type {string[]} */ (v.cfg.groups).includes(g.id));
     if (v.cfg.pick) gs = v.cfg.pick(gs);
     if (v.cfg.combos) gs = gs.filter(g => g.id === "perdite").map(g => { const items = g.items.filter((/** @type {Bag} */ x) => x.kind !== "single"); return { ...g, items, n: items.length }; }).filter(g => g.n > 0);
     const ad = gs.find(g => g.id === "addotti");
     v.tab = ad ? ad.tab : null; v.formula = ad && /** @type {Bag} */ (ad).formula ? ad.tab.formula || "" : "";
     v.diffs = v.open.has("diff");
-    v.cfg.out.innerHTML = H.groupsHtml(gs, o, v, { formula: a.kind === "formula", flat: !!v.cfg.flat, none: !!v.cfg.none });
+    v.cfg.out.innerHTML = H.groupsHtml(gs, o, v, { formula: a.kind === "formula", flat: !!v.cfg.flat });
     if (v.cfg.catalogue && v.cfg.quiet && !v.cfg.out.innerHTML.trim()) v.cfg.out.innerHTML = /** @type {any} */ (window).EMPTYLEAF("empty.adducts");     // a panel with nothing to list shows the quiet leaf
     if (v.cfg.after) v.cfg.after(a, gs);
   }

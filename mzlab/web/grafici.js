@@ -423,11 +423,11 @@ async function drawLines(p) {
     s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const v = U(s, s.ys[i]); if (v > ymax) { if (!seg || v > seg.v) seg = { v, x: r }; } else if (seg) { tri(/** @type {any} */ (seg).x); seg = null; } }); if (seg) tri(/** @type {any} */ (seg).x);
   }
   // a handle sits on the sample the area ends at; the dashed baseline is the one subtracted (integ, picchi.js); «Manual integrations» follows the transition panels' windows (integrazioni-manuali.js)
-  if (typeof INTZERO === "undefined" && p.ints.some(i => i.zero)) await carica("integra-zero.js"); if (typeof INTBASE === "undefined" && p.ints.some(i => i.bm)) await carica("integra-base.js"); if (typeof AREALBL === "undefined" && p.ints.length) await carica("area-etichette.js"); if (typeof SEGUE === "undefined" && ESP.mrm(p) && p.ints.length) await carica("integra-segue.js"); const mi = /** @type {any} */ (window).MANINT; if (mi) mi.sync(); else if (ESP.mrm(p) && p.ints.length) carica("m:integrazioni-manuali.js");
+  if (typeof INTZERO === "undefined" && p.ints.some(i => i.zero)) await carica("integra-zero.js"); if (typeof INTBASE === "undefined" && p.ints.some(i => i.bm || i.base)) await carica("integra-base.js"); if (typeof AREALBL === "undefined" && p.ints.length) await carica("area-etichette.js"); if (typeof SEGUE === "undefined" && ESP.mrm(p) && p.ints.length) await carica("integra-segue.js"); const mi = /** @type {any} */ (window).MANINT; if (mi) mi.sync(); else if (ESP.mrm(p) && p.ints.length) carica("m:integrazioni-manuali.js");
   for (const it of cas ? [] : window.SEGUE ? SEGUE.all(p, sr) : p.ints) {          // integrations: filled area + draggable bars, or two anchors on SIM/MRM (not in the waterfall view); a SIM/MRM window also follows the sample shown (integra-segue.js)
     const s = sr.find(q => q.key === it.key); if (!s) continue;
     const nz = noiseZone(p, it); if (nz && !p._exp) { g.fillStyle = "rgba(120,120,120,.18)"; const xa = Math.max(X(nz[0]), M.l), xb = Math.min(X(nz[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }       // noise stretch (for S/N)
-    if (it.snap) snapBase(s, it); const own = it.bm && it.bm !== "edges", r = it.none ? SEGUE.none(it) : own ? INTBASE.area(p, s, it) : integ(s, it.a, it.b, it.base, !!it.zero); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, below: r.below, corr: corrText(p) }); const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
+    if (it.snap) snapBase(s, it); const own = (it.bm && it.bm !== "edges") || (typeof INTBASE !== "undefined" && INTBASE.dips(s, it)), r = it.none ? SEGUE.none(it) : own ? INTBASE.area(p, s, it) : integ(s, it.a, it.b, it.base, !!it.zero); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, below: r.below, clamped: own ? r.clamped || 0 : 0, corr: corrText(p) }); const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
     if (it.none) { /* a follower with no points of this sample: only its bars and «A = —» */ } else if (own) INTBASE.paint(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (it.zero) INTZERO.draw(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (i1 > i0) {          // manual window: trace between the bars down to zero
       const chosen = it.id === p.isel && !p._exp;                      // the selected peak: stronger fill and outline
       g.globalAlpha = chosen ? 0.5 : 0.28; g.fillStyle = s.color; g.beginPath(); g.moveTo(X(s.x[i0]), Y(U(s, s.ys[i0])));
@@ -458,13 +458,16 @@ async function drawLines(p) {
 // ---- mouse over the chart: vertical line + box with the values; the line also shows in the other panels with an RT axis
 const xOf = (p, px) => { const a = p._a; return a.x0 + (px - M.l) / (a.W - M.l - M.r) * (a.x1 - a.x0); };
 function hideHover(p) {
-  if (p.tip) p.tip.hidden = true; if (p.vl) p.vl.hidden = true;
+  if (p.tip) p.tip.hidden = true; if (p.vl) p.vl.hidden = true; if (window.PEAKINFO) PEAKINFO.stick(p, null);
   E.panels.forEach(q => { if (q.vl && q !== p) q.vl.hidden = true; });
 }
 function showHover(p, px, py) {
   const a = p._a; if (!a || !a.hov || a.cas || px < M.l || px > a.W - M.r || py < M.t || py > a.H - M.b) return hideHover(p);
-  const h = a.hov(px, py); if (!h) return hideHover(p);
-  const cv = p.cv, el = p.el;
+  const h = a.hov(px, py); if (!h) return hideHover(p); putHover(p, h, px, py);
+}
+function putHover(p, h, px, py) {
+  const a = p._a, cv = p.cv, el = p.el;
+  if (window.PEAKINFO) PEAKINFO.stick(p, h.stick ? { px: h.px, ...h.stick } : null);
   p.vl.hidden = !!h.novl; p.vl.style.left = cv.offsetLeft + h.px + "px"; p.vl.style.top = cv.offsetTop + M.t + "px"; p.vl.style.height = a.H - M.t - M.b + "px";
   p.tip.hidden = false; p.tip.innerHTML = h.html;
   const tw = p.tip.offsetWidth, th = p.tip.offsetHeight;

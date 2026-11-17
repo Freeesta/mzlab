@@ -139,3 +139,41 @@ fn edges_and_bad_numbers_are_refused() {
     assert_ne!(run(args(&[&p, "--set", "baseline=zero"])).code, 0);
     assert_eq!(run(args(&["--help"])).code, 0);
 }
+
+#[test]
+fn a_line_dragged_past_its_points_is_held_at_zero_in_the_same_bytes_as_the_page() {
+    let (rt, y, p) = trace_file("mzlab_peak_area_trace4.tsv");
+    // 3e4 at 1.9 min falling to 0 at 2.0: past 2.0 the line alone would be negative and the window runs to 3.0
+    let line = Baseline::Line {
+        t0: 1.9,
+        y0: 3.0e4,
+        t1: 2.0,
+        y1: 0.0,
+    };
+    let sets = [
+        "--set",
+        "baseline=line",
+        "--set",
+        "base_t0=1.9",
+        "--set",
+        "base_y0=30000",
+        "--set",
+        "base_t1=2.0",
+        "--set",
+        "base_y1=0",
+    ];
+    let o = run(args(
+        &[&[p.as_str(), "--from", "1.9", "--to", "3.0"][..], &sets[..]].concat(),
+    ));
+    let want = peak_area_json(&rt, &y, 1.9, 3.0, line).unwrap();
+    assert_eq!(String::from_utf8(o.stdout).unwrap(), format!("{want}\n"));
+    let v: serde_json::Value = serde_json::from_str(&want).unwrap();
+    assert!(v["clamped"].as_f64().unwrap() > 0.0 && v["area"].as_f64().unwrap() >= 0.0);
+    // inside the two points the text is the one of before: no `clamped`
+    let inside = run(args(
+        &[&[p.as_str(), "--from", "1.9", "--to", "2.0"][..], &sets[..]].concat(),
+    ));
+    assert!(!String::from_utf8(inside.stdout)
+        .unwrap()
+        .contains("clamped"));
+}

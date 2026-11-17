@@ -57,9 +57,9 @@ fn a_truth_file_gives_one_line_of_numbers() {
         f.to_str().unwrap(),
         "--formula",
         "C14H15N3O5 [M]+",
-        "--verita",
+        "--truth",
         truth.to_str().unwrap(),
-        "--riassunto",
+        "--summary",
     ]);
     let _ = std::fs::remove_dir_all(&dir);
     assert_eq!(o.code, 0, "{}", o.stderr);
@@ -84,7 +84,7 @@ fn a_truth_file_gives_one_line_of_numbers() {
 #[test]
 fn bad_arguments_are_refused() {
     assert_eq!(run(&["msn-graph"]).code, 2);
-    assert_eq!(run(&["msn-graph", "x.mzML", "--riassunto"]).code, 2);
+    assert_eq!(run(&["msn-graph", "x.mzML", "--summary"]).code, 2);
     assert_eq!(
         run(&["msn-graph", "x.mzML", "--ppm-formula", "dieci"]).code,
         2
@@ -92,7 +92,7 @@ fn bad_arguments_are_refused() {
     assert_eq!(run(&["msn-graph", "--help"]).code, 0);
 }
 
-/// (old flags, new flags) of every renamed flag of `msn-graph`; `t` is a truth file.
+/// (old flags, new flags) of every flag of `msn-graph` that had an Italian name; `t` is a truth file.
 const SMILES: &str = "CCOC(=O)c1c[nH]c2ccccc12";
 
 fn alias_cases(t: &str) -> Vec<(Vec<&str>, Vec<&str>)> {
@@ -153,9 +153,9 @@ fn alias_cases(t: &str) -> Vec<(Vec<&str>, Vec<&str>)> {
     ]
 }
 
-/// Every old flag of `msn-graph` gives the same stdout bytes and exit code as its English name; `tutti` = `all`.
+/// The English flags work; the former Italian names (and `tutti`) are refused: no alias is kept.
 #[test]
-fn old_flags_are_aliases_of_the_english_ones() {
+fn only_the_english_flags_are_accepted() {
     let dir = std::env::temp_dir().join(format!("mzlab_cli_msn_alias_{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let truth = dir.join("t.json");
@@ -175,11 +175,7 @@ fn old_flags_are_aliases_of_the_english_ones() {
         };
         let (o, n) = (go(&old), go(&new));
         assert_eq!(n.code, 0, "{new:?}: {}", n.stderr);
-        assert_eq!(
-            (o.code, &o.stdout),
-            (n.code, &n.stdout),
-            "{old:?} vs {new:?}"
-        );
+        assert_eq!(o.code, 2, "{old:?} must be refused");
     }
     // the refusals name the new flags
     let r = run(&["msn-graph", "x.mzML", "--summary"]);
@@ -188,20 +184,10 @@ fn old_flags_are_aliases_of_the_english_ones() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// The help shows the English flags, the step parameter next to them, and ends with the line of the old names.
+/// The help shows the English flags and the step parameter next to them, and no former name.
 #[test]
-fn help_shows_new_flags_and_ends_with_the_old_names() {
+fn help_shows_the_english_flags_only() {
     let h = String::from_utf8(run(&["msn-graph", "--help"]).stdout).unwrap();
     assert!(h.contains("--low-mz N") && h.contains("(param low_mz)"));
-    let last = h.trim_end().lines().last().unwrap();
-    assert!(
-        last.starts_with("old names still accepted: --mz-basso"),
-        "{last}"
-    );
-    assert!(!h
-        .trim_end()
-        .lines()
-        .rev()
-        .skip(1)
-        .any(|l| l.contains("--mz-basso")));
+    assert!(!h.contains("old names still accepted") && !h.contains("--mz-basso"));
 }

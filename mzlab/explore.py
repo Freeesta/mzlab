@@ -355,7 +355,7 @@ class Item:
             cnt[k] = cnt.get(k, 0) + 1
         rows = sorted(cnt.items(), key=lambda kv: (kv[0][0] or 0, kv[0][1] or 0))
         if len({k[0] for k in cnt}) <= 8:
-            return [{"prec": k[0], "ce": k[1], "n": n} for k, n in rows]
+            return Item._with_spread([{"prec": k[0], "ce": k[1], "n": n} for k, n in rows])
         groups: list[dict] = []
         for (pr, ce), n in rows:
             g = groups[-1] if groups else None
@@ -363,7 +363,18 @@ class Item:
                 g["n"] += n; g["votes"][pr] = g["votes"].get(pr, 0) + n
             else:
                 groups.append({"lo": pr, "ce": ce, "n": n, "votes": {pr: n}})
-        return [{"prec": max(g["votes"], key=g["votes"].get), "ce": g["ce"], "n": g["n"]} for g in groups]
+        return Item._with_spread([{"prec": max(g["votes"], key=g["votes"].get), "ce": g["ce"], "n": g["n"]} for g in groups])
+
+    @staticmethod
+    def _with_spread(rows: list[dict]) -> list[dict]:
+        """Adds `ce_mid` and `ce_spread` (35 ± 15 for a stepped 20/35/50): centre and half width of the distinct CEs of the same precursor, else None."""
+        out = []
+        for r in rows:
+            ces = [x["ce"] for x in rows if x["prec"] == r["prec"] and x["ce"] is not None]
+            lo, hi = (min(ces), max(ces)) if ces else (0, 0)
+            mid, spread = ((lo + hi) / 2, (hi - lo) / 2) if hi > lo else (None, None)
+            out.append({"prec": r["prec"], "ce": r["ce"], "ce_mid": mid, "ce_spread": spread, "n": r["n"]})   # same key order as the engine
+        return out
 
     def kind(self) -> str:
         """Experiment type: 'full' (Q1 scan), 'ms2' (product ion scans) or 'mrm' (SRM chromatograms only)."""

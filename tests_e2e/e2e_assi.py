@@ -15,7 +15,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 2")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def rect(expr):   # canvas rectangle + margins of a panel
             return pg.evaluate(f"(()=>{{const p={expr},r=p.cv.getBoundingClientRect();p.el.scrollIntoView({{block:'center'}});const q=p.cv.getBoundingClientRect();return {{l:q.left,t:q.top,w:q.width,h:q.height,M:M}}}})()")
         def pt(expr, xs, ys):  # pixel of axis values
@@ -74,9 +74,10 @@ try:
         step("drag on the numbers under the x axis: line, only x", line_x)
         def spec_zoom():
             s0 = pg.evaluate(f"(()=>{{const s={SPEC};return {{ym:s._a.ymax,x0:s._a.x0,x1:s._a.x1}}}})()")
-            YM = "Math.min(p._a.ymax,p._a.yfull[1])"      # the intensity lock can keep a top higher than the automatic one: the box must be inside the automatic range to zoom y
-            u = pt(SPEC, "p._a.x0+(p._a.x1-p._a.x0)*0.3", YM + "*0.6"); v = pt(SPEC, "p._a.x0+(p._a.x1-p._a.x0)*0.5", YM + "*0.05")
-            pg.mouse.move(u["x"], u["y"]); pg.mouse.down(); pg.mouse.move(v["x"], v["y"], steps=5); pg.mouse.up(); wait_for_js(pg, SPEC + ".zoom && " + SPEC + ".zoomY"); ready(pg)
+            YM = "Math.min(p._a.ymax,p._a.yfull[1])"      # the intensity lock can keep a top higher than the automatic one: the box must be inside the automatic range to zoom y, and taller than the 4 px of a click (a short canvas with a locked top makes a small box)
+            u = pt(SPEC, "p._a.x0+(p._a.x1-p._a.x0)*0.3", YM + "*0.98"); v = pt(SPEC, "p._a.x0+(p._a.x1-p._a.x0)*0.5", YM + "*0.01")
+            pg.mouse.move(u["x"], u["y"]); pg.mouse.down(); pg.mouse.move(v["x"], v["y"], steps=5); pg.mouse.up()
+            wait_for_js(pg, SPEC + ".zoom && " + SPEC + ".zoomY"); ready(pg)
             a = pg.evaluate(f"(()=>{{const s={SPEC};return {{z:s.zoom,zy:s.zoomY,x0:s._a.x0,x1:s._a.x1}}}})()")
             assert a["z"] and a["zy"] and a["x0"] > s0["x0"] and a["x1"] < s0["x1"], a
             pg.click(".pnl.spec [data-a=fit]"); wait_for_js(pg, SPEC + ".zoom == null && " + SPEC + ".zoomY == null")
@@ -91,7 +92,7 @@ try:
             with pg.expect_download() as d: dlmenu(pg, ".pnl.chrom", "xlsx")
             f = d.value; assert f.suggested_filename.endswith(".xlsx"), f.suggested_filename
             rows = xlsx_rows(f.path()); head = [c[1] for c in rows[0] if c]
-            assert all(h.startswith("RT (min)") or h.startswith("Intensità (cps)") for h in head) and sum(h.startswith("Intensità") for h in head) == 2, head   # one intensity column per file
+            assert all(h.startswith("RT (min)") or h.startswith("Intensity (cps)") for h in head) and sum(h.startswith("Intensity") for h in head) == 2, head   # one intensity column per file
             assert all(c[0] == "n" for c in rows[1][:3] if c)
         step("Excel on the total chromatogram (RT + one column per file)", excel_tic)
         def xic_below():

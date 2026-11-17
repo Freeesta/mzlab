@@ -35,6 +35,7 @@ const run = s => {
     case "diff": return { s: e.diff_traces(s.path, s.query || "") };
     case "flow_command": return { s: rotte().flow_command(s.body) };
     case "lr_ricerca": return { s: wasm.search_number(s.body) };
+    case "lr_elements": return { s: wasm.elements() };
     case "lr_formula": return { s: wasm.formula_mz(s.f, s.adduct) };
     case "lr_stat": return { s: rotte().stat_post(s.path, s.body) };
     case "lr_campioni": return { s: rotte().samples(s.cop, s.body) };

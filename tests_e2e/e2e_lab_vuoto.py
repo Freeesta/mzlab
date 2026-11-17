@@ -32,7 +32,7 @@ CONTROLS = """(root) => [...document.querySelectorAll(root + ' :is(button, [role
   .map(e => { if (!e.dataset.vuoto) e.dataset.vuoto = String(window.__nv = (window.__nv || 0) + 1);
     return { k: e.dataset.vuoto, id: e.id, tag: e.tagName, type: e.type || '', name: (e.getAttribute('aria-label') || e.title || e.textContent || e.value || '').trim().slice(0, 40), grp: e.closest('dialog, [role=dialog], [role=region], details, section, aside')?.id || '' }; })"""
 # outside the empty state or outside the page: «add files» (the drop area, like #pick), new session (reload), language (reload), external sites, the bug report, the tours (e2e_lab walks them)
-SKIP = {"addf", "newrun", "np-pc", "np-bt", "uip-bugbtn", "uip-reset", "uip-tour", "pick", "side-toggle"}
+SKIP = {"addf", "newrun", "np-pc", "np-bt", "uip-bugbtn", "uip-sugbtn", "uip-reset", "uip-tour", "pick", "side-toggle"}
 GONE = "(() => { const e = document.getElementById('errbox'); if (!e) return ''; const t = e.innerText; e.remove(); return t; })()"
 try:
     with sync_playwright() as p:
@@ -144,7 +144,7 @@ try:
         def shortcuts_panel():
             back("data"); pg.evaluate("document.activeElement && document.activeElement.blur()"); pg.keyboard.press("?"); wait_for_js(pg, "!!document.querySelector('#scorc[open]')")
             heads = pg.evaluate("[...document.querySelectorAll('#scorc h3')].map(h => h.textContent)")
-            assert heads == ["Ovunque", "Sui grafici (con il fuoco sul grafico)"], heads      # no chart: the chart keys are not listed as «everywhere»
+            assert heads == ["Everywhere", "On charts (with the chart focused)"], heads      # no chart: the chart keys are not listed as «everywhere»
             rows = pg.evaluate("[...document.querySelectorAll('#scorc li')].map(li => li.innerText)")
             assert len(rows) == len(set(rows)), rows
             back("data"); check("data: shortcuts panel")

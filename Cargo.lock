@@ -2356,6 +2356,7 @@ dependencies = [
  "rustls",
  "serde_json",
  "sha2 0.11.1",
+ "tempfile",
  "ureq",
  "webpki-roots 1.0.11",
 ]

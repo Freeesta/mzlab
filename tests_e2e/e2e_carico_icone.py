@@ -11,7 +11,7 @@ r = Run(port=8972, wd="/tmp/wd_ci")
 def opened(b, motion):
     c = b.new_context(viewport={"width": 1280, "height": 800}, reduced_motion=motion)
     c.add_init_script(HINTS)
-    pg = c.new_page(); pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); pg.wait_for_selector("#drop", timeout=120000)
+    pg = c.new_page(); pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#drop", timeout=120000)
     return c, pg
 ANIM = "sel => getComputedStyle(document.querySelector(sel)).animationName"
 PANEL = """async () => { const m = await import('./static/avanzamento.js'); const a = m.avanza(document.querySelector('#start'), {title: 'Job', n: 1});

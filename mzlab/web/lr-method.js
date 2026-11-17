@@ -25,8 +25,16 @@ export function createMethodRoutes({ rpc, json, items }) {
       if (!its) return json({ warnings: [] });
       return raw(await rpc({ op: "lr_method_warnings", have: [...new Set(its.map(x => x.kind))].sort() }));
     }
-    if (!["/api/method", "/api/metodo", "/api/analog", "/api/registro", "/api/delay", "/api/gradient"].includes(path) && !(path === "/api/chrom" && q.get("kind") === "pda") && !(path === "/api/map" && q.get("kind") === "pda") && path !== "/api/uvspec" && path !== "/api/uvpropose") return undefined;
+    if (!["/api/method", "/api/metodo", "/api/analog", "/api/registro", "/api/delay", "/api/gradient", "/api/pdasub"].includes(path) && !(path === "/api/chrom" && q.get("kind") === "pda") && !(path === "/api/map" && q.get("kind") === "pda") && path !== "/api/uvspec" && path !== "/api/uvpropose") return undefined;
     const it = item(q), name = it && it.file;
+    if (path === "/api/pdasub") {
+      // file k minus the DAD of file `ref` (k of the other item); view = map | spectrum | trace, a/b = rt0/rt1 or nm0/nm1
+      const rf = item(new URLSearchParams({ k: q.get("ref") || "" }));
+      if (!it || !rf) return null;
+      try {
+        return raw(await rpc({ op: "lr_pda_sub", name, ref: rf.file, view: q.get("view") || "map", a: num(q, "a", NaN), b: num(q, "b", NaN), scale: q.get("scale") || "none", shift: num(q, "shift", 0) }));
+      } catch (e) { return fail(e, 500); }
+    }
     if (!it || q.get("ref")) return null;
     try {
       if (path === "/api/gradient") {

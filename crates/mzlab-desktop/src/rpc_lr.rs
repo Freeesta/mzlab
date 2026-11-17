@@ -41,6 +41,19 @@ impl State {
         Ok((m, chroms, slot))
     }
 
+    /// `lr_pda_sub`: file `name` minus the DAD of file `ref`: the map, a UV spectrum or a trace, with the report `sub`.
+    fn pda_sub(&self, eng: &mut Eng, p: &Value) -> Result<Answer> {
+        let s = |k: &str| p[k].as_str().unwrap_or("");
+        let f = |k: &str| p[k].as_f64().unwrap_or(0.0);
+        let (o, v) = mzlab_core::itemroutes::pda_sub_args(s("view"), f("a"), f("b"), s("scale"), f("shift"))?;
+        let db = {
+            let (mut mb, _, _) = self.chroms(eng, s("ref").split('#').next().unwrap_or(""))?;
+            mzlab_core::itemroutes::pda_dad(&mut mb)?
+        };
+        let (mut m, _, _) = self.chroms(eng, s("name").split('#').next().unwrap_or(""))?;
+        Ok(Answer::Text(mzlab_core::itemroutes::pda_subtract(&mut m, &db, &o, v)?))
+    }
+
     #[allow(unused_variables)]
     pub(crate) fn op_files(&self, eng: &mut Eng, op: &str, p: &Value) -> Result<Answer> {
         let s = |k: &str| p[k].as_str().unwrap_or("");
@@ -167,10 +180,8 @@ impl State {
             "lr_campioni" => text(mzlab_core::samples::route_all(s("cop"), s("body"))?),
             "lr_molecole_archivio" => text(self.store.lock().unwrap_or_else(|e| e.into_inner()).molecules(s("mop"), s("body"))?),
             "lr_molecules" => text(mzlab_core::molecules::route(s("mop"), s("body"))?),
-            "lr_formula" => {
-                let ad = s("adduct");
-                text(mzlab_core::elements::formula_mz(s("f"), if ad.is_empty() { None } else { Some(ad) })?)
-            }
+            "lr_elements" => text(mzlab_core::periodic::elements_json()),
+            "lr_formula" => text(mzlab_core::elements::formula_mz(s("f"), Some(s("adduct")).filter(|a| !a.is_empty()))?),
             "lr_ion_pattern" => text(mzlab_core::ionpattern::route(s("f"), s("adduct"))?),
             "lr_adduct_table" => text(mzlab_core::adduct_table::table(s("f"), s("obs"), s("tol"), s("delta"))?),
             "lr_flow_command" => text(mzlab_core::flow::command_route(s("body"))?),   // the copyable shell command of a mzflow/2 plan, as the `.wasm` of the site and `mzlab-cli flow command`
@@ -288,6 +299,7 @@ impl State {
                 let (a, b) = (p["rt0"].as_f64().unwrap_or(f64::NAN), p["rt1"].as_f64().unwrap_or(f64::NAN));
                 text(if op == "lr_pda_propose" { mzlab_core::itemroutes::pda_propose(&mut m, a, b) } else { mzlab_core::itemroutes::pda_spectrum(&mut m, a, b) }?)
             }
+            "lr_pda_sub" => self.pda_sub(eng, p),
             "lr_delay" => {
                 let name = s("name").split('#').next().unwrap_or("");
                 let slot = self.open_lr(eng, name)?;

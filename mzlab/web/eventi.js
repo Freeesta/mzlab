@@ -1,6 +1,11 @@
 // @ts-strict
 // @ts-check
 // Mouse and keyboard on the charts, acquisition method, toolbar, formula calculator (tooltips: tooltip.js). Split from explore.js: classic script, loaded after picchi.js.
+// every peak of the traces shown, low resolution too (integra-tutti.js, read on first use): the ▾ of the toolbar and the menu of a trace
+const intAll = (/** @type {Bag} */ p) => carica("m:integra-tutti.js").then(() => /** @type {any} */ (window).INTTUTTI.run(p), () => nearMsg(I18N.t("int.autoOff")));
+// the ▾ next to the automatic tool: every peak shown, or the settings (stopPropagation: else the click reaches the document and closes the menu at once)
+const intFiles = (/** @type {Bag} */ p) => carica("m:integra-tutti.js").then(() => /** @type {any} */ (window).INTTUTTI.runFiles(p), () => nearMsg(I18N.t("int.autoOff")));
+const intMenu = (/** @type {Bag} */ p, /** @type {MouseEvent} */ e) => { e.stopPropagation(); menu(e, [{ label: I18N.t("int.menu.all"), icon: IC_AUTO, fn: () => intAll(p) }, ...(ESP.mrm(p) ? [{ label: I18N.t("int.menu.files"), icon: IC_AUTO, fn: () => intFiles(p) }] : []), { label: I18N.t("int.menu.params"), icon: AZIONI_ICONE.svg("sliders"), fn: peakParams }]); };
 // ------------------------------------------------------------------ mouse
 function attach(p) {
   const cv = p.cv;
@@ -82,7 +87,8 @@ function attach(p) {
     const lh = !drag && ((a.lbls || []).find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) || (window.ETPK && ETPK.hit(p, px, py)));
     if (lh) { cv.style.cursor = "pointer"; lb.hidden = false; lb.style.left = cv.offsetLeft + lh.x + "px"; lb.style.top = cv.offsetTop + lh.y + "px"; lb.style.width = lh.w + "px"; lb.style.height = lh.h + "px"; } else lb.hidden = true;
     if (p.rd) p.rd.textContent = p.type === "spec" ? "m/z " + x.toFixed(a.hrp ? a.dec : 1) : (a.map ? "RT " : "") + x.toFixed(2) + " min" + (a.map ? " · m/z " + a.mzAt(py).toFixed(mzd(a, a.level)) + ASSE.tag(drag) : "");   // pass-over text: it goes away when the mouse leaves (see onmouseleave)
-    showHover(p, px, py); if (drag) p.tip.hidden = true; if (p.type === "spec" && window.XICLENS) XICLENS.move(p, px, py, !!drag);
+    if (p.type === "spec" && window.PEAKINFO) PEAKINFO.hover(p, px, py, () => !!drag); else showHover(p, px, py);
+    if (drag) p.tip.hidden = true; if (p.type === "spec" && window.XICLENS) XICLENS.move(p, px, py, !!drag);
     if (p.type === "map" && window.MAPPA) MAPPA.move(p, px, py, e);
     if (lh) { p.tip.hidden = false; p.tip.innerHTML = lh.tip; p.vl.hidden = true; const tw = p.tip.offsetWidth; let l = cv.offsetLeft + px + 14; if (l + tw > p.el.clientWidth - 4) l = cv.offsetLeft + px - tw - 14; p.tip.style.left = Math.max(2, l) + "px"; p.tip.style.top = cv.offsetTop + py + 14 + "px"; }
   };
@@ -105,6 +111,7 @@ function attach(p) {
     hintT = setTimeout(() => { if (!q) return; q.textContent = I18N.t("axis.zoomHint"); q.hidden = false; q._ax = true; q.style.left = Math.max(6, Math.min(innerWidth - q.offsetWidth - 6, cx + 12)) + "px"; q.style.top = Math.min(innerHeight - q.offsetHeight - 6, cy + 16) + "px"; }, TIP_DELAY);
   };   // line being dragged on an axis (zooms that axis only)
   cv.addEventListener("mousemove", e => pendHint(p, e));
+  if (p.type === "spec" && window.PEAKINFO) PEAKINFO.attach(p);
   cv.addEventListener("pointerdown", () => { cv.dataset.ptr = "1"; });                       // a click gives the canvas focus: no keyboard ring until a key is used
   cv.addEventListener("keydown", () => { delete cv.dataset.ptr; });
   cv.addEventListener("blur", () => { delete cv.dataset.ptr; });
@@ -140,7 +147,7 @@ function attach(p) {
     if (p._pickNoise && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {          // the noise stretch for S/N of an integration
       const it = p._pickNoise; p._pickNoise = null; p.sel = null; pushIh(p, intSnap(p)); setNoiseZone(p, it, [Math.min(x0, x1), Math.max(x0, x1)]); E.panels.filter(q => q.ints && q.ints.length).forEach(q => draw(q)); uiSave(); showInts(); return;
     }
-    if (p._pickIbk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {            // "Sottrai il fondo di un tratto": the stretch the student just dragged
+    if (p._pickIbk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {            // "Subtract the background of a stretch": the stretch the student just dragged
       p._pickIbk = false; p.sel = null; ibkSet(p, "mean", [Math.min(x0, x1), Math.max(x0, x1)]); ctl(p); return;
     }
     if (!pk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) <= 4 && p.imode !== "auto") {      // a click on a filled peak selects it; elsewhere it deselects

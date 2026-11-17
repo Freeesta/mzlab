@@ -1,8 +1,7 @@
 // @ts-check
 // @ts-strict
 "use strict";
-// The Adducts & losses page of the drawer: the calculator (its keypad folds with the toggle, its field #calcin stays), ONE choices row, then the tabs Adducts | Neutral losses |
-// Contaminants, all fed by calc-qui*.js. Outside the drawer the Adducts window keeps its own field (mountAdducts). Classic script, after tables.js.
+// The Adducts & losses page of the drawer: the calculator (its keypad folds with the toggle, its field #calcin stays), ONE choices row, then the tabs Adducts | Neutral losses, both fed by calc-qui*.js. Outside the drawer the Adducts window keeps its own field (mountAdducts). Classic script, after tables.js.
 
 (() => {
   const Q1 = (/** @type {string} */ s) => /** @type {HTMLElement | null} */ (document.querySelector(s));
@@ -34,20 +33,19 @@
   }
 
   // ---------------------------------------------------------------- the page in the drawer
-  const SUBS = ["adducts", "losses", "cont"];
+  const SUBS = ["adducts", "losses"];
   const CALC_KEY = () => (NOMI.KEY("addloss.calc"));
   /** @type {{ q: HTMLInputElement, views: any[], losses: { setQ: (q: string) => void } | null } | null} */
   let page = null;
   const field = () => /** @type {HTMLInputElement | null} */ (Q1("#calcin"));
-  /** Builds the page once: the field (the calculator's), the choices row (drawn by the Adducts view), the three tab bodies. */
+  /** Builds the page once: the field (the calculator's), the choices row (drawn by the Adducts view), the two tab bodies. */
   function ensurePage() {
     if (page) return page;
-    const q = field(), ad = Q1("#sb-panel-adducts"), ls = Q1("#sb-panel-losses"), ct = Q1("#sb-panel-cont"), ctl = Q1("#al-ctl");
-    if (!q || !ad || !ls || !ct || !ctl) return null;
+    const q = field(), ad = Q1("#sb-panel-adducts"), ls = Q1("#sb-panel-losses"), ctl = Q1("#al-ctl");
+    if (!q || !ad || !ls || !ctl) return null;
     const arg = () => ({ text: q.value, ans: typeof CALC !== "undefined" ? CALC.ans : 0 });
     const views = [
       CALCQUI.mount({ ctl, out: ad, idp: "al", quiet: true, flat: true, groups: ["addotti", "diff"], catalogue: true, arg }),
-      CALCQUI.mount({ ctl: null, out: ct, idp: "alc", quiet: true, flat: true, none: true, numOnly: true, groups: ["liste"], arg, after: (a, gs) => count("cont", a.kind === "num" ? (gs[0] ? gs[0].n : 0) : null) }),
     ];
     const losses = window.QQQRef ? QQQRef.mountLosses(ls) : null;
     page = { q, views, losses };
@@ -63,11 +61,6 @@
   function lossQ(q) {
     const a = CALCQUI.arg(q.value, typeof CALC !== "undefined" ? CALC.ans : 0);
     return a.kind === "num" ? String(+a.v.toFixed(4)) : q.value;
-  }
-  /** The number of matches next to a tab's name (null: nothing typed). @param {string} sub @param {number | null} n */
-  function count(sub, n) {
-    const b = Q1(`#al-t-${sub} .cq-n`);
-    if (b) { b.hidden = n == null; b.textContent = n == null ? "" : String(n); }
   }
   const calcStored = () => { try { return localStorage.getItem(CALC_KEY()) !== "0"; } catch (_) { return true; } };
   /** Unfolds or folds the calculator of the page (remembered). @param {boolean} on @param {boolean} [focus] */

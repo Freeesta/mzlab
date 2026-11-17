@@ -113,12 +113,50 @@ fn register_wiff(st: &State, wiff: &Path) -> String {
 
 type Pair = (&'static str, Result<String, String>, Result<String, String>);
 
+/// The file minus itself shifted by 0.1 min and scaled by a fit, through `lr_pda_sub` and through the core route: the report is part of the answer.
+fn sub_answers<R: ReadAt>(st: &State, name: &str, m: &mut Mzml<R>) -> Vec<Pair> {
+    let e = |r: mzlab_core::Result<String>| r.map_err(|e| e.key.to_string());
+    let me = itemroutes::pda_dad(m);
+    let mut core = |view: &str, a: f64, b: f64| {
+        let (o, v) = itemroutes::pda_sub_args(view, a, b, "fit", 0.1).unwrap();
+        match &me {
+            Ok(d) => e(itemroutes::pda_subtract(m, d, &o, v)),
+            Err(x) => Err(x.key.to_string()),
+        }
+    };
+    let app = |view: &str, a: f64, b: f64| {
+        let p = json!({"name": name, "ref": name, "view": view, "a": a, "b": b, "scale": "fit", "shift": 0.1});
+        st.rpc("lr_pda_sub", &p, &[])
+            .map(text)
+            .map_err(|e| e.key.to_string())
+    };
+    let (lo, hi) = (PEAK_NM - 2.0, PEAK_NM + 2.0);
+    vec![
+        (
+            "subtracted map",
+            app("map", 0.0, 0.0),
+            core("map", 0.0, 0.0),
+        ),
+        (
+            "subtracted spectrum",
+            app("spectrum", 0.9, 1.1),
+            core("spectrum", 0.9, 1.1),
+        ),
+        (
+            "subtracted trace",
+            app("trace", lo, hi),
+            core("trace", lo, hi),
+        ),
+    ]
+}
+
 /// The four routes of the detector through `State::rpc`, each as `(desktop, core)`; the spectrum twice (one time, an interval).
 fn answers<R: ReadAt>(st: &State, name: &str, m: &mut Mzml<R>) -> Vec<Pair> {
     let nat = |op: &str, p: Value| st.rpc(op, &p, &[]).map(text).map_err(|e| e.key.to_string());
     let chroms = m.chromatograms(0).unwrap();
     let e = |r: mzlab_core::Result<String>| r.map_err(|e| e.key.to_string());
-    vec![
+    let mut v = sub_answers(st, name, m);
+    v.extend(vec![
         (
             "map",
             nat("lr_pda_map", json!({"name": name})),
@@ -166,7 +204,8 @@ fn answers<R: ReadAt>(st: &State, name: &str, m: &mut Mzml<R>) -> Vec<Pair> {
             ),
             e(itemroutes::pda_propose(m, 0.9, 1.1)),
         ),
-    ]
+    ]);
+    v
 }
 
 #[test]

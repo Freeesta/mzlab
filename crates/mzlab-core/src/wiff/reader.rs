@@ -237,7 +237,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
         }
         dad_chrom(self.part(c)?.w.dad.as_ref(), id).ok_or_else(|| Error::new("error.badIndex").with("id", id))
     }
-    #[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
+    #[cfg(any(not(target_family = "wasm"), feature = "sciex", feature = "mappa-dad"))]
     fn dad_data(&mut self, c: usize) -> Result<Option<super::dad::DadData>> {
         Ok(self.part(c)?.w.dad.clone())
     }
@@ -330,9 +330,7 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
         .find(SCAN)
         .ok_or_else(|| Error::new("err.file.wiffNoScan").with("name", &name))?;
     let m = member(&mut fs, wi)?;
-    if m.dim > limits.byte {
-        return Err(Error::memory_budget());
-    }
+    limits.fits(m.dim)?;
     let mut bytes = vec![0u8; usize::try_from(m.dim).map_err(|_| Error::memory_budget())?];
     m.dati.read_at(0, &mut bytes)?;
     let ole = container_within(bytes, &name, limits)?;

@@ -1,4 +1,4 @@
-"""A1: the toolbar above the panels. Whole file name in the file menu, no «Altro» / «Unisci gli XIC», a side-panel icon for the file list."""
+"""A1: the toolbar above the panels. Whole file name in the file menu, no «More» / «Merge the XICs», a side-panel icon for the file list."""
 # covers: mzlab/web/barra.js, mzlab/web/eventi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -16,7 +16,7 @@ try:
         pg = r.page(p)
         pg.set_viewport_size({"width": 1280, "height": 900})
         pg.set_input_files("#pick", [blob("B_FullMass-t30 (2).mzML", "B_FullMass-t15"), blob(LONG + ".mzML", "B_FullMass-t0")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(800)
         pg.evaluate("soloFile(E.files[E.cur])"); wait_for_js(pg, "E.browse")      # the file menu works with one file shown
         sel = lambda: pg.evaluate("(() => { const s = Q('#fsel'); return {t: s.options[s.selectedIndex].textContent, w: s.offsetWidth, title: s.title, opts: [...s.options].map(o => o.textContent), bar: Q('#tools').offsetWidth}; })()")
@@ -37,11 +37,11 @@ try:
         def gone():
             assert pg.evaluate("['np-more','np-merge','morepop'].every(i => !document.getElementById(i))")
             assert not pg.evaluate("!!document.getElementById('np-tile')")
-            assert "Altro" not in pg.inner_text("#tools") and "Unisci" not in pg.inner_text("#tools")
-        step("no Altro / Unisci; no Ordina button", gone)
+            assert "More" not in pg.inner_text("#tools") and "Merge" not in pg.inner_text("#tools")
+        step("no More / Merge; no Ordina button", gone)
         def fold():
             b = "#stbar [data-cmd=file]"
-            assert pg.evaluate(f"!!Q('{b} svg')") and pg.evaluate(f"Q('{b}').title") == "Scegli, nascondi, rinomina e colora i file caricati"
+            assert pg.evaluate(f"!!Q('{b} svg')") and pg.evaluate(f"Q('{b}').title") == "Choose, hide, rename and colour the loaded files"
             ready(pg)
             if pg.is_visible("#flst"):          # the drawer remembers its state: start from the closed one, so the click below opens it
                 pg.click(b); wait_for_js(pg, "(() => { const e = Q('#flst'); return !e || e.getBoundingClientRect().width === 0 })()")
@@ -52,7 +52,7 @@ try:
             wait_for_js(pg, "(() => { const e = Q('#flst'); return !e || e.getBoundingClientRect().width === 0 })()")
             assert not pg.is_visible("#flst")
             # the only previous/next arrows left in the toolbar are the file arrows (SVG icons, named by their aria-label)
-            assert pg.evaluate("[...document.querySelectorAll('#tools button')].filter(b => /precedente|successivo/i.test(b.getAttribute('aria-label') || '')).map(b => b.id)") == ["fprev", "fnext"]
+            assert pg.evaluate("[...document.querySelectorAll('#tools button')].filter(b => /previous|next/i.test(b.getAttribute('aria-label') || '')).map(b => b.id)") == ["fprev", "fnext"]
         step("side-panel icon for the file list", fold)
         def narrow():
             pg.set_viewport_size({"width": 700, "height": 900}); pg.wait_for_timeout(600)

@@ -1,6 +1,6 @@
 """INFG: the «Fragmentation graph» tab of an MSn infusion. The tab shows only with ONE file loaded that is an infusion; an ion formula (or a name) gives the graph with the
 candidates and their ppm, «Use» chooses one, the isolation window and the unexplained peaks are written, a drawing box keeps the user's fragment, the cleaned spectra
-export as CSV, MGF and MSP, «Add to library» warns about a duplicate, «Copy data», the keys, axe, Italian and English. The engine routes (/api/msn_grafo, the export,
+export as CSV, MGF and MSP, «Add to library» warns about a duplicate, «Copy data», the keys, axe. The engine routes (/api/msn_grafo, the export,
 /api/msnlib/aggiungi, /api/molecules/*) are answered here by a stand-in with the JSON of tests_e2e/fixtures/msngrafo_esempio.json until the Rust ones are in main; the
 file is the synthetic one of TP_Mine/tests/msn_synth.py (no real data, no real compounds)."""
 # covers: mzlab/web/mol-svg.js, mzlab/web/infusione-grafo
@@ -72,7 +72,7 @@ try:
         def masses():
             assert pg.locator(".ig-node").count() == len(fx["nodi"]), pg.locator(".ig-node").count()
             assert pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msn_grafo')[0][1]").find("&formula=") < 0
-            assert "Ion formula" in pg.inner_text("#ig-field") or pg.evaluate("I18N.lang") != "en"
+            assert "Ion formula" in pg.inner_text("#ig-field")
         step("without an ion formula: masses only", masses)
         def formula():
             pg.fill("#ig-ion", "C14H15N3O5+"); pg.click("#ig-go"); pg.wait_for_function("document.querySelector('.ig-cand')", timeout=15000)
@@ -86,7 +86,7 @@ try:
         def most_unexplained():
             pg.fill("#ig-ion", "C99H99+"); pg.click("#ig-go"); pg.wait_for_function("document.querySelectorAll('#ig-msg .ig-warn').length === 2", timeout=15000)
             txt = pg.inner_text("#ig-msg")
-            assert ("Most of the fragment intensity" in txt) or ("Gran parte dell" in txt), txt
+            assert "Most of the fragment intensity" in txt, txt
             pg.fill("#ig-ion", "C14H15N3O5+"); pg.click("#ig-go"); pg.wait_for_function("document.querySelectorAll('#ig-msg .ig-warn').length === 1", timeout=15000)
         step("a graph-level note appears when most of the fragment intensity has no candidate formula", most_unexplained)
         def use():
@@ -101,7 +101,7 @@ try:
             pg.click(".ig-node[data-id=n0]"); pg.wait_for_selector(".ig-unexp", timeout=10000)
             assert "2" in pg.inner_text(".ig-unexp") and "261.2000" in pg.inner_text(".ig-unexp")
             pg.click(".ig-node[data-id=n2]"); pg.wait_for_selector(".ig-cands", timeout=10000)
-            assert "Isotopes are not expected" in pg.inner_text("#ig-node") or pg.evaluate("I18N.lang") != "en"
+            assert "Isotopes are not expected" in pg.inner_text("#ig-node")
         step("isolation window and unexplained peaks are written", notes)
         def draw():
             pg.click(".ig-node[data-id=n2]"); pg.fill("#ig-smi", "CCOC(=O)c1ccccc1N"); pg.dispatch_event("#ig-smi", "change"); wait_for_js(pg, "INFG.G.smiles")
@@ -128,7 +128,7 @@ try:
             assert any("strutture=tutti" in r and "smiles=" in r and "molfile=" in r for r in reqs), reqs[-3:]
             assert not any("strutture=n2" in r for r in reqs), "the cuts of every ion come in the one graph request"
             txt = pg.inner_text(".ig-str")
-            assert "C2-O3" in txt and "-0.35 ppm" in txt.replace("−", "-") and "226.0499" in txt and "hypothesis" in txt or pg.evaluate("I18N.lang") != "en", txt
+            assert "C2-O3" in txt and "-0.35 ppm" in txt.replace("−", "-") and "226.0499" in txt and "hypothesis" in txt, txt
             assert pg.locator(".ig-cuts caption").count() == 1 and pg.locator(".ig-cuts th[scope=col]").count() == 6
             assert pg.get_attribute(".ig-cut", "aria-label")
             sizes = pg.evaluate("[...document.querySelectorAll('.ig-cut')].map(b=>{const r=b.getBoundingClientRect();return Math.min(r.width,r.height)})")
@@ -186,7 +186,7 @@ try:
             pg.select_option("#ig-lvl", "2"); assert ids() == ["n0", "n1", "n2", "n3"], ids(); pg.select_option("#ig-lvl", "0")
             pg.click(".ig-node[data-id=n2]"); pg.click("#ig-collapse")
             assert "n5" not in ids() and "n6" in ids() and pg.get_attribute("#ig-collapse", "aria-pressed") == "true", ids()
-            assert "closed" in (pg.text_content(".ig-node[data-id=n2]") or "") or pg.evaluate("I18N.lang") != "en"
+            assert "closed" in (pg.text_content(".ig-node[data-id=n2]") or "")
             pg.click("#ig-collapse"); assert len(ids()) == n
         step("filters: best path only, min %, highest MS level, close and open a subtree", filters)
         def structures():
@@ -227,7 +227,7 @@ try:
             pg.click("#ig-lib"); wait_for_js(pg, "window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').length >= 2")
             body = json.loads(pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').slice(-1)[0][2]"))
             assert body["libreria"] and body["formula"].startswith("C14H15N3O5"), body
-            assert pg.evaluate("document.body.textContent").count("already in the library") > 0 or pg.evaluate("I18N.lang") != "en"
+            assert pg.evaluate("document.body.textContent").count("already in the library") > 0
         step("Add to library: the second time says the entry is already there", library)
         def find():
             pg.fill("#ig-delta", "20"); pg.click("#ig-find-go"); pg.wait_for_selector(".ig-find-t tbody tr", timeout=5000)
@@ -360,10 +360,6 @@ try:
         pg2 = r.b.new_page(viewport={"width": 1500, "height": 1600}); pg2.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg2, "window.qqReady === true")
         load(pg2, [F, F2], 6000, 2)
         step("two files loaded: the tab is not there", lambda: (_ for _ in ()).throw(AssertionError("single")) if pg2.evaluate("INF.single()") else None)
-        # Italian
-        pg3 = r.b.new_page(viewport={"width": 1500, "height": 1600}); pg3.goto(f"http://127.0.0.1:{r.port}/?lang=it"); wait_for_js(pg3, "window.qqReady === true")
-        load(pg3, [F], 6000, 1); pg3.evaluate(STAND_IN, fx); drawer(pg3, "gra"); pg3.wait_for_selector(".ig-node", timeout=30000)
-        step("Italian: texts from the catalogue", lambda: None if "Formula dello ione" in pg3.inner_text("#ig-field") else (_ for _ in ()).throw(AssertionError(pg3.inner_text("#ig-field"))))
         step("no request left unanswered by the engine", lambda: (_ for _ in ()).throw(AssertionError(pg.evaluate("window.MZLAB_LR_MISS"))) if pg.evaluate("(window.MZLAB_LR_MISS||[]).length") else None)
     r.close()
 except Exception as e:

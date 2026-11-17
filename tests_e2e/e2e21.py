@@ -12,8 +12,8 @@ r = Run(port=8821, wd="/tmp/wd21")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t15", "B_MS2-t15"]]); pg.wait_for_selector("text=Carica dati")
-        pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # opened file by file: the view starts on the first file of the list
+        pg.set_input_files("#pick", [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t15", "B_MS2-t15"]]); pg.wait_for_selector("text=Load data")
+        pg.click("text=Load data"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)      # opened file by file: the view starts on the first file of the list
         def label_hover():
             wait_for_js(pg, "E.panels.some(q=>q.tab===E.tab&&q.type==='spec'&&q._a&&q._a.lbls&&q._a.lbls.length>0)")
             sp = pg.evaluate("(()=>{const p=E.panels.find(q=>q.tab===E.tab&&q.type==='spec');p.el.scrollIntoView({block:'center'});return p.id})()"); frames(pg, 2)
@@ -21,7 +21,7 @@ try:
             assert pos["n"] > 0, pos
             pg.mouse.move(pos["px"], pos["py"]); wait_for_js(pg, f"!E.panels.find(q=>q.id==={sp}).el.querySelector('.lbbox').hidden")
             assert pg.evaluate("id=>!E.panels.find(q=>q.id===id).el.querySelector('.lbbox').hidden", sp)
-            tt = pg.evaluate("id=>E.panels.find(q=>q.id===id).tip.textContent", sp); assert "m/z" in tt and "intensit" in tt and "Tasto destro" not in tt, tt      # the label tooltip is the peak's values; no mouse-hint wording in tooltips
+            tt = pg.evaluate("id=>E.panels.find(q=>q.id===id).tip.textContent", sp); assert "m/z" in tt and "intensit" in tt and "Right-click" not in tt, tt      # the label tooltip is the peak's values; no mouse-hint wording in tooltips
             assert pg.evaluate("id=>E.panels.find(q=>q.id===id).cv.style.cursor", sp) == "pointer"
             pg.mouse.move(pos["px"], pos["py"] + 120); wait_for_js(pg, f"E.panels.find(q=>q.id==={sp}).el.querySelector('.lbbox').hidden")
             assert pg.evaluate("id=>E.panels.find(q=>q.id===id).el.querySelector('.lbbox').hidden", sp)
@@ -36,15 +36,15 @@ try:
         def files():
             drawer(pg); nm = pg.locator("#flst .fl .nm").first
             nm.click(button="right"); wait_for_js(pg, "document.querySelectorAll('#ctx div').length>0")
-            assert pg.locator("#ctx div", has_text="Rinomina").count() == 1 and pg.locator("#ctx div", has_text="Cambia colore").count() == 1 and pg.locator("#ctx div", has_text="Rimuovi dalla sessione").count() == 1
-            pg.locator("#ctx div", has_text="Rinomina").click(); pg.wait_for_selector("#askin")
-            pg.fill("#askin", "Campione prova"); pg.click("#askok"); wait_for_js(pg, "document.querySelector('#flst').innerText.includes('Campione prova')")
-            assert "Campione prova" in pg.inner_text("#flst") and pg.evaluate("E.files[0].file").endswith(".mzML") is True
-            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Cambia colore").click(); pg.wait_for_selector("#colpop [data-c]")
+            assert pg.locator("#ctx div", has_text="Rename").count() == 1 and pg.locator("#ctx div", has_text="Change color").count() == 1 and pg.locator("#ctx div", has_text="Remove from the session").count() == 1
+            pg.locator("#ctx div", has_text="Rename").click(); pg.wait_for_selector("#askin")
+            pg.fill("#askin", "Test sample"); pg.click("#askok"); wait_for_js(pg, "document.querySelector('#flst').innerText.includes('Test sample')")
+            assert "Test sample" in pg.inner_text("#flst") and pg.evaluate("E.files[0].file").endswith(".mzML") is True
+            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Change color").click(); pg.wait_for_selector("#colpop [data-c]")
             pg.locator("#colpop [data-c]").nth(3).click(); wait_for_js(pg, "E.files[0].color==='#D55E00'")
             assert pg.evaluate("E.files[0].color") == "#D55E00" and pg.evaluate("E.files[0].colorSet")
             n0 = pg.locator("#flst .fl").count()
-            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Rimuovi dalla sessione").click(); wait_for_js(pg, "!!E.files[0].gone")
+            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text="Remove from the session").click(); wait_for_js(pg, "!!E.files[0].gone")
             # no confirmation and no notice: the removal is done at once and Undo / Ctrl+Z take it back
             assert not pg.is_visible("#askok") and pg.evaluate("document.getElementById('tolto-box')") is None
             assert pg.locator("#flst .fl").count() == n0 - 1 and pg.evaluate("E.files[0].gone")
@@ -54,12 +54,12 @@ try:
             pg.evaluate("setTab('full',true)"); wait_for_js(pg, "E.panels.some(q=>q.tab==='full'&&q.type==='chrom'&&q._a&&q._a.sr&&q._a.sr.length>0)")
             info = pg.evaluate("""()=>{const p=E.panels.find(q=>q.tab==='full'&&q.type==='chrom');p.el.scrollIntoView({block:'center'});const s=p._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});
               p.ints.push({key:s.key,a:s.x[m]-0.3,b:s.x[m]+0.3});draw(p);return {id:p.id}}""")
-            wait_for_js(pg, "E.panels.some(q=>q.tab==='full'&&q.type==='chrom'&&q._a&&q._a.lbls.some(l=>l.tip&&l.tip.includes('Area')))")
-            lab = pg.evaluate("id=>{const p=E.panels.find(q=>q.id===id);return p._a.lbls.filter(l=>l.tip.includes('Area')).map(l=>l.tip)}", info["id"]); print(lab)
-            assert lab and "conteggi" in lab[0]
-            assert re.search(r"\d\.\d{5}E[+-]\d{2}", lab[0]), lab[0]                   # the tooltip carries the area with 5 decimals (I18N.sciE(area, 5))
+            wait_for_js(pg, "E.panels.some(q=>q.tab==='full'&&q.type==='chrom'&&q._a&&q._a.lbls.some(l=>l.tip&&l.tip.includes(I18N.t('int.copy.tip'))))")
+            lab = pg.evaluate("id=>{const p=E.panels.find(q=>q.id===id);return p._a.lbls.filter(l=>l.tip.includes(I18N.t('int.copy.tip'))).map(l=>[l.tip,l.copy])}", info["id"]); print(lab)
+            assert lab and "counts" not in lab[0][0], lab[0]                         # the hover text is only the copy hint
+            assert re.search(r"\d\.\d{5}E[+-]\d{2}", lab[0][1]), lab[0]               # the copied area has 5 decimals (I18N.sciE(area, 5))
             assert pg.evaluate("fmtA(2243051)") == "2.243e+6" and pg.evaluate("I18N.sciE(2243051, 5)") == "2.24305E+06"
-        step("area label with 3 decimals, the area with 5 decimals in the tooltip", areas)
+        step("area label with 3 decimals, the area with 5 decimals on the clipboard, a copy-hint tooltip", areas)
         pg.screenshot(path=SH + "210_labels.png", full_page=True)
     r.close()
 except Exception as e:

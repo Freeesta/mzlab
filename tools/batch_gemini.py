@@ -8,7 +8,7 @@
 The list has one path per line (relative to the repository root); empty lines and lines starting with `#` are ignored.
 A line `@lotto N` starts the batch N: with `--lotto N` only the paths after it (up to the next `@lotto`) are joined, so a Markdown file
 that holds the lists (docs/agenti/caricamento-mappa.md) can be passed as it is: only lines that are paths of existing files, or `@lotto`, count.
-Each file is written between `=== FILE: path (n of N) — ... ===` and `=== FINE FILE ===`. A warning on stderr (exit code 0, or 1 with `--strict`)
+Each file is written between `=== FILE: path (n of N) — ... ===` and `=== END OF FILE ===`. A warning on stderr (exit code 0, or 1 with `--strict`)
 says when the document is over the limit (`--max-kb`, 200 by default); a listed path that does not exist is an error. Standard library only.
 """
 from __future__ import annotations
@@ -19,8 +19,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MAX_KB = 200
-HEADER = "=== FILE: {path} ({n} di {tot}) — file separati nel progetto, qui uniti in un unico documento ==="
-FINE = "=== FINE FILE ==="
+HEADER = "=== FILE: {path} ({n} of {tot}) — separate files in the project, merged here into one document ==="
+FINE = "=== END OF FILE ==="
 
 
 def read_list(testo: str, lotto: int | None = None, radice: Path = ROOT) -> list[str]:

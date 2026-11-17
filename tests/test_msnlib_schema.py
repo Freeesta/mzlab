@@ -15,7 +15,7 @@ SCHEMA = json.loads((ROOT / "docs/schemi/msnlib-1.json").read_text())
 GRAPH = json.loads((ROOT / "docs/schemi/msngrafo-2.json").read_text())
 pytestmark = pytest.mark.skipif(not shutil.which("cargo"), reason="cargo not available")
 
-MANIFEST = "id\tformula_neutra\taddotto_atteso\tfile\nSTD-2\tC14H14N3O5\t[M+H]+\tmsn.mzML\nSTD-1\tC14H14N3O5\t[M+H]+\tmsn.mzML\n"
+MANIFEST = "id\tneutral_formula\texpected_adduct\tfile\nSTD-2\tC14H14N3O5\t[M+H]+\tmsn.mzML\nSTD-1\tC14H14N3O5\t[M+H]+\tmsn.mzML\n"
 
 
 @pytest.fixture(scope="module")

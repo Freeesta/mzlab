@@ -70,15 +70,15 @@ fn the_graph_and_its_exports_are_those_of_the_command_line() {
     let with = |extra: &[&str]| cli(&[&args[..], extra].concat());
     assert_eq!(
         ask(&format!("{f}&{smi}&strutture=n3"), json!({})) + "\n",
-        with(&["--strutture", "n3"])
+        with(&["--structures", "n3"])
     );
     assert_eq!(
         ask(&format!("{f}&{smi}&interpreta=1"), json!({})) + "\n",
-        with(&["--interpreta"])
+        with(&["--interpret"])
     );
     assert_eq!(
         ask(&format!("{f}&{smi}&rotture=1"), json!({})) + "\n",
-        with(&["--rotture"])
+        with(&["--breaks"])
     );
     assert_eq!(
         ask("formato=csv", json!({"esporta": true})),
@@ -86,7 +86,7 @@ fn the_graph_and_its_exports_are_those_of_the_command_line() {
     );
     assert_eq!(
         ask("formato=msp&pulito=1", json!({"esporta": true})),
-        cli(&["--export", "msp", "--pulito"])
+        cli(&["--export", "msp", "--clean"])
     );
     // the library entry and the search over it
     let add: Value = serde_json::from_str(&ask(

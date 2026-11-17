@@ -32,19 +32,21 @@ r = Run(port=8877, wd="/tmp/wd_manint_layout")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, [D / "sim3.wiff", D / "sim3.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= 3", timeout=120000)
+        stage(pg, [D / "sim3.wiff", D / "sim3.wiff.scan"]); pg.click("text=Load data"); ready(pg); wait_for_js(pg, "E.files.length >= 3", timeout=120000)
         open_first(pg)
         pg.click("#np-mrm"); wait_for_js(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)
         pg.evaluate("(() => { E.browse = false; E.files.forEach(f => { f.vis = true; }); const p = E.panels.find(q => q.type === 'mrm'); p.tr = ''; draw(p); })()")
         wait_for_js(pg, "(() => { const p = E.panels.find(q => q.type === 'mrm' && q._a); return !!p && new Set(p._a.sr.map(s => s.k)).size === E.files.length; })()", timeout=60000)
         c = TRUE["picchi"][3][0][0]
-        names = ["Sample_A", "Sample_B", "Sample_C"]
+        # one sample shown: a window drawn on a sample is applied to the others shown (a row each), so N rows need N windows on one sample
+        pg.evaluate("(() => { E.files.forEach(f => { f.vis = f.label === 'Sample_A' || f.file.startsWith('Sample_A.'); }); draw(E.panels.find(q => q.type === 'mrm')); })()")
+        wait_for_js(pg, "(() => { const p = E.panels.find(q => q.type === 'mrm' && q._a); return !!p && new Set(p._a.sr.map(s => s.k)).size === 1; })()", timeout=60000)
         made = [0]
         def grow(n):
-            # windows apart on different traces: an overlapping window replaces the one under it
+            # windows apart on the traces of one sample: an overlapping window replaces the one under it
             while made[0] < n:
-                i = made[0]; s, ion, k = names[i % 3], (i // 3) % 7, i // 21
-                pg.evaluate(INTEG, [s, ion, c - 0.15 + 0.6 * k, c + 0.15 + 0.6 * k]); made[0] += 1
+                i = made[0]; ion, k = i % 7, i // 7
+                pg.evaluate(INTEG, ["Sample_A", ion, c - 0.15 + 0.4 * k, c + 0.15 + 0.4 * k]); made[0] += 1
             wait_for_js(pg, SHOWN % n, timeout=60000)
             ready(pg)
         def shot(tag):

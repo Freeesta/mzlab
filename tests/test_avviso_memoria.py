@@ -15,7 +15,7 @@ pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is no
 JS = """
 const fs = require("fs"), path = require("path"), web = process.argv[1], desktop = process.argv[2] === "1";
 for (const f of fs.readdirSync(path.join(web, "lang", "en")).sort()) new Function("I18N", fs.readFileSync(path.join(web, "lang", "en", f), "utf8"))(I18N);
-I18N.set("en"); globalThis.window = desktop ? { MZLAB_DESKTOP: true } : {};
+globalThis.window = desktop ? { MZLAB_DESKTOP: true } : {};
 const casi = JSON.parse(process.argv[3]);
 console.log(JSON.stringify(casi.map(c => I18N.err({ error_key: "error.memoryBudget", params: Object.fromEntries(c.params) }).message)));
 """

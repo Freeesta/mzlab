@@ -42,11 +42,11 @@ E2E = ROOT / "tests_e2e"
 NEEDS: dict[str, set[str]] = {
     "e2e9": {"dam"}, "e2e10": {"dam"}, "e2e15": {"dam"}, "e2e_dam_incoerente": {"dam"},
     "e2e_studenti": {"veri"},          # needs the whole series B (7 times, 6 standards): the synthetic files are only a few
-    "e2e13": {"sito"}, "e2e_avvio": {"sito"}, "e2e_avvio_shell": {"sito"}, "e2e_budget_avvio": {"sito"}, "e2e_avvio_lingua": {"sito"}, "e2e_mzidx": {"sito"}, "e2e_indice_parallelo": {"sito"}, "e2e_rust": {"sito"}, "e2e_lr": {"sito"}, "e2e_wiff": {"sito"}, "e2e_nat_sul_posto": {"sito"}, "e2e_compressione": {"sito"}, "e2e_numpress_modulo": {"sito"}, "e2e_agilent": {"sito"}, "e2e_metodo": {"sito"}, "e2e_picchi_qualita": {"sito"}, "e2e_hr_rust": {"sito"}, "e2e_hr_mappa": {"sito"}, "e2e_hr_albero": {"sito"}, "e2e_libreria_wasm": {"sito"}, "e2e_libreria_cartella": {"sito"}, "e2e_libreria_scarica": {"sito"},  "e2e_tpmine1": {"sito"}, "e2e_tpmine_nativo": {"sito"}, "e2e_tpmine_diretto_nativo": {"sito"}, "e2e_progresso": {"sito"}, "e2e_carico_stabile": {"sito"}, "e2e_tpmine_lr_reload": {"sito"}, "e2e_tpmine_ms2_lr": {"sito"}, "e2e_pipeline": {"sito"}, "e2e_lettori": {"sito"}, "e2e_lettori_modulo": {"sito"}, "e2e_modulo_irraggiungibile": {"sito"}, "e2e_impronta_opfs": {"sito"}, "e2e_gz_flusso": {"sito"}, "e2e_shimadzu": {"sito"}, "e2e_waters": {"sito"}, "e2e_thermo_modulo": {"sito"}, "e2e_tpmine_diretta": {"sito"}, "e2e_clic_flusso": {"sito"}, "e2e_tpmine2": {"sito"}, "e2e_tpmine_albero": {"sito"}, "e2e_tpmine_rtalign": {"sito"}, "e2e_tpmine_ms2": {"sito"}, "e2e_untarget": {"sito"}, "e2e_identita": {"sito"},
+    "e2e13": {"sito"}, "e2e_avvio": {"sito"}, "e2e_avvio_shell": {"sito"}, "e2e_budget_avvio": {"sito"}, "e2e_avvio_lingua": {"sito"}, "e2e_corsivo_avvio": {"sito"}, "e2e_mzidx": {"sito"}, "e2e_indice_parallelo": {"sito"}, "e2e_rust": {"sito"}, "e2e_lr": {"sito"}, "e2e_wiff": {"sito"}, "e2e_nat_sul_posto": {"sito"}, "e2e_compressione": {"sito"}, "e2e_numpress_modulo": {"sito"}, "e2e_agilent": {"sito"}, "e2e_metodo": {"sito"}, "e2e_picchi_qualita": {"sito"}, "e2e_hr_rust": {"sito"}, "e2e_hr_mappa": {"sito"}, "e2e_hr_albero": {"sito"}, "e2e_libreria_wasm": {"sito"}, "e2e_libreria_cartella": {"sito"}, "e2e_libreria_scarica": {"sito"},  "e2e_tpmine1": {"sito"}, "e2e_tpmine_nativo": {"sito"}, "e2e_tpmine_diretto_nativo": {"sito"}, "e2e_progresso": {"sito"}, "e2e_carico_stabile": {"sito"}, "e2e_tpmine_lr_reload": {"sito"}, "e2e_tpmine_ms2_lr": {"sito"}, "e2e_pipeline": {"sito"}, "e2e_lettori": {"sito"}, "e2e_lettori_modulo": {"sito"}, "e2e_modulo_irraggiungibile": {"sito"}, "e2e_impronta_opfs": {"sito"}, "e2e_gz_flusso": {"sito"}, "e2e_shimadzu": {"sito"}, "e2e_waters": {"sito"}, "e2e_thermo_modulo": {"sito"}, "e2e_tpmine_diretta": {"sito"}, "e2e_clic_flusso": {"sito"}, "e2e_tpmine2": {"sito"}, "e2e_tpmine_albero": {"sito"}, "e2e_tpmine_rtalign": {"sito"}, "e2e_tpmine_ms2": {"sito"}, "e2e_untarget": {"sito"}, "e2e_identita": {"sito"},
     "e2e_flow_web": {"sito"}, "e2e_flow_web_drift": {"sito"}, "e2e_flow_web_estimate": {"sito"}, "e2e_flow_web_export": {"sito"}, "e2e_flow_web_group": {"sito"}, "e2e_flow_web_plausible": {"sito"}, "e2e_flow_web_ident": {"sito"}, "e2e_flow_web_ident2": {"sito"}, "e2e_flow_web_quant": {"sito"}, "e2e_flow_web_lookup": {"sito"}, "e2e_flow_web_rtpredict": {"sito"}, "e2e_flow_web_modelli": {"sito"}, "e2e_flow_web_prov": {"sito"}, "e2e_flow_web_stat": {"sito"}, "e2e_flow_web_struct": {"sito"}, "e2e_flow_web_moiety": {"sito"}, "e2e_flow_web_tabella": {"sito"}, "e2e_flow_centroid_web": {"sito"}, "e2e_flow_motore": {"sito"}, "e2e_lab": {"sito"}, "e2e_lab_vuoto": {"sito"}, "e2e_normative_scarica": {"sito"},      # the Flow tests of «This browser» build every mzFinder .wasm when site/static has none (lib.build_feat): they run where the CI builds it
     "e2e_tpmine_progresso": {"sito"}, "e2e_pannelli_stabili": {"sito"}, "e2e_memoria_sonda": {"sito"},
     "e2e_raw_riaggiunto": {"sito"}, "e2e_agilent_riaggiunto": {"sito"},
-    "e2e_avvio_lento": {"sito"}, "e2e_flow_transitions": {"sito"}, "e2e_flow_neg_lr": {"wasm"}, "e2e_llm": {"wasm"}, "e2e_llm_consenso": {"wasm"}, "e2e6": {"wasm"}, "e2e_decimali": {"wasm"}, "e2e_disegno_chimica": {"wasm"}, "e2e_menu_info": {"wasm"}, "e2e_menu_link": {"wasm"},  # flow_transitions builds the .wasm of mzFinder (lib.py build_feat); wasm: mzFinder built with cargo (over 600 s on a cold runner), the llm module
+    "e2e_avvio_lento": {"sito"}, "e2e_righe_subito": {"sito"}, "e2e_flow_transitions": {"sito"}, "e2e_flow_neg_lr": {"wasm"}, "e2e_llm": {"wasm"}, "e2e_llm_consenso": {"wasm"}, "e2e6": {"wasm"}, "e2e_decimali": {"wasm"}, "e2e_disegno_chimica": {"wasm"}, "e2e_menu_info": {"wasm"}, "e2e_menu_link": {"wasm"},  # flow_transitions builds the .wasm of mzFinder (lib.py build_feat); wasm: mzFinder built with cargo (over 600 s on a cold runner), the llm module
     # the drawing tests (Ketcher + the drawing engine .wasm): green in the nightly, which has the CI-built .wasm, red in `e2e-cambiati`, which builds the site alone
     "e2e_disegno_analisi": {"wasm"}, "e2e_disegno_cip": {"wasm"}, "e2e_disegno_esporta": {"wasm"}, "e2e_disegno_verifica": {"wasm"}, "e2e_meccanismo": {"wasm"}, "e2e_parziali": {"wasm"}, "e2e_radicali": {"wasm"}, "e2e_radicali_ms": {"wasm"},
     "e2e_feat_na": {"wasm"}, "e2e_feat_worker": {"wasm"}, "e2e_frammenti": {"wasm"}, "e2e_integra_base": {"wasm"}, "e2e_ruoli_tempi": {"wasm"}, "e2e_taglio": {"wasm"},   # same: the feature-finder and cut-line tests, found red in `e2e-cambiati` one run at a time
@@ -95,9 +95,9 @@ def sh(cmd, log: Path, timeout: int, env=None, cwd=ROOT) -> tuple[int, str, floa
         out, rc = (p.stdout or "") + (p.stderr or ""), p.returncode
     except subprocess.TimeoutExpired as e:
         txt = lambda v: v.decode("utf-8", "replace") if isinstance(v, bytes) else (v or "")
-        out, rc = f"{txt(e.stdout)}\n{txt(e.stderr)}\n" + (f"{CUT} after {timeout} s: the run's time (--budget) ended" if cut else f"TIMEOUT dopo {timeout} s"), 124
+        out, rc = f"{txt(e.stdout)}\n{txt(e.stderr)}\n" + (f"{CUT} after {timeout} s: the run's time (--budget) ended" if cut else f"TIMEOUT after {timeout} s"), 124
     except FileNotFoundError as e:
-        out, rc = f"comando non trovato: {e}", 127
+        out, rc = f"command not found: {e}", 127
     log.write_text(out, encoding="utf-8")
     return rc, out, time.time() - t0
 
@@ -139,13 +139,13 @@ def i18n(results) -> None:
     p = subprocess.run([sys.executable, str(ROOT / "tools" / "controlla_i18n.py")], capture_output=True, text=True, encoding="utf-8", errors="replace")
     out = (p.stdout or "") + (p.stderr or "")
     (LOG / "i18n.log").write_text(out, encoding="utf-8")
-    results.append(("lingue (i18n)", "FAIL" if p.returncode else "OK", time.time() - t0, out.strip().splitlines()[:6] if p.returncode else []))
+    results.append(("languages (i18n)", "FAIL" if p.returncode else "OK", time.time() - t0, out.strip().splitlines()[:6] if p.returncode else []))
 
 
 def codice(results) -> None:
     """The index of the code can be generated and covers every source file (tools/indice.py); the size limits do not get worse (tools/controlla.py)."""
     subprocess.run([sys.executable, str(ROOT / "tools" / "indice.py")], capture_output=True)          # refresh the generated docs/agenti/mappa.md
-    for name, script, args in (("mappa del codice", "indice.py", ["--controlla"]), ("soglie di dimensione", "controlla.py", [])):
+    for name, script, args in (("code map", "indice.py", ["--controlla"]), ("size limits", "controlla.py", [])):
         t0 = time.time()
         p = subprocess.run([sys.executable, str(ROOT / "tools" / script)] + args, capture_output=True, text=True, encoding="utf-8", errors="replace")
         out = (p.stdout or "") + (p.stderr or "")
@@ -193,7 +193,7 @@ def js_syntax(results) -> None:
     web = ROOT / "mzlab" / "web"
     tmp = OUT / "js"; tmp.mkdir(parents=True, exist_ok=True)
     if not shutil.which("node"):
-        results.append(("sintassi JS", "SKIP", 0, ["node non installato"])); return
+        results.append(("JS syntax", "SKIP", 0, ["node not installed"])); return
     t0, errs = time.time(), []
     files = [f for f in web.glob("*.js") if f.name not in ("elements.js",)]
     for f in files:
@@ -210,12 +210,12 @@ def js_syntax(results) -> None:
     if p.returncode:
         errs.append("explore.js e compagni + script inline di index.html: " + (p.stderr.strip().splitlines() or ["?"])[-1])
     (LOG / "sintassi_js.log").write_text("\n".join(errs) or "ok", encoding="utf-8")
-    results.append(("sintassi JS", "FAIL" if errs else "OK", time.time() - t0, errs[:5]))
+    results.append(("JS syntax", "FAIL" if errs else "OK", time.time() - t0, errs[:5]))
 
 
 def pytest(results, timeout) -> None:
     if not has("pytest"):
-        results.append(("pytest", "SKIP", 0, ["pytest non installato: python3 tools/verifica.py --setup"])); return
+        results.append(("pytest", "SKIP", 0, ["pytest not installed: python3 tools/verifica.py --setup"])); return
     # serial pytest needs 20+ min on 4 CPUs (1800 s with xdist); one serial cargo build up front: under xdist the tests that call cargo built together and one worker sat 1800 s on `--example native` (test_valida_hr.py); the cargo shim first in PATH as in test.yml, so no `cargo run` holds the lock for minutes (night 43)
     env = None if os.name == "nt" else {**os.environ, "PATH": str(ROOT / "tools" / "ci_cargo") + os.pathsep + os.environ.get("PATH", "")}; par = ["-n", "auto", "--dist", "loadfile"] if has("xdist") else []
     for pkg in (["-p", "mzlab-feat-wasm", "--example", "native"], ["-p", "mzlab-cli"]) if shutil.which("cargo") else []:
@@ -263,10 +263,10 @@ def hr_round(results) -> None:
     """Technical numbers of the real Orbitrap files (tools/prova_hr.py); nothing to check, only information."""
     dirs = hrms_dirs()
     if not dirs:
-        results.append(("prova_hr", "SKIP", 0, ["nessuna cartella HRMS (mzlab-dati/HRMS o ../Data/HRMS)"])); return
+        results.append(("prova_hr", "SKIP", 0, ["no HRMS folder (mzlab-dati/HRMS or ../Data/HRMS)"])); return
     for d in dirs:
         rc, out, dt = sh([sys.executable, str(ROOT / "tools" / "prova_hr.py"), str(d)], LOG / "prova_hr.log", 900)
-        results.append((f"prova_hr {d.parent.name}/{d.name}", "OK" if rc == 0 and "ERRORE" not in out else "FAIL", dt,
+        results.append((f"prova_hr {d.parent.name}/{d.name}", "OK" if rc == 0 and "ERROR" not in out else "FAIL", dt,
                         [l[:200] for l in out.strip().splitlines()]))
 
 
@@ -289,9 +289,9 @@ def judge(out: str, rc: int) -> list[str]:
     m = re.search(r"BROWSER ERRORS (\d+)\n(.*?)(?:\n\S|\Z)", out, re.S)
     if m and int(m.group(1)):
         errs = [e for e in out[m.end(1):].splitlines()[1:int(m.group(1)) + 1] if e.strip() and not any(re.search(b, e) for b in BENIGN)]
-        probs += ["errore del browser: " + e.strip()[:200] for e in errs]
+        probs += ["browser error: " + e.strip()[:200] for e in errs]
     if rc and not probs:
-        probs.append(f"uscita con codice {rc}: " + (out.strip().splitlines() or [""])[-1][:200])
+        probs.append(f"exit with code {rc}: " + (out.strip().splitlines() or [""])[-1][:200])
     return probs
 
 
@@ -323,9 +323,9 @@ def parte_di(names: list[str], k: int, n: int) -> list[str]:
 
 def skip_why(need: set[str], *, dam: bool, src: str, only: bool, sito_pronto: bool) -> str:
     """Why an e2e with these NEEDS is skipped ("" = it runs). The `sito` ones run only when named (--solo) or when the CI says the full site is in place (--sito-pronto)."""
-    return ("serve un file .dam (MZLAB_DAM / QQQ_DAM)" if "dam" in need and not dam else
-            "solo con i dati veri del laboratorio" if "veri" in need and src != "veri" else
-            "costruisce il sito con Pyodide: lancialo a parte (--solo)" if "sito" in need and not only and not sito_pronto else "")
+    return ("needs a .dam file (MZLAB_DAM / QQQ_DAM)" if "dam" in need and not dam else
+            "only with the real lab data" if "veri" in need and src != "veri" else
+            "builds the site with Pyodide: run it apart (--solo)" if "sito" in need and not only and not sito_pronto else "")
 
 
 def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | None = None, sito_pronto: bool = False) -> None:
@@ -336,7 +336,7 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
         keep = set(parte_di(names, *parte))
         names = [n for n in names if n in keep]
     if not browser_ok():
-        results.append(("e2e", "SKIP", 0, ["Playwright/Chromium non disponibili: python3 tools/verifica.py --setup"])); return
+        results.append(("e2e", "SKIP", 0, ["Playwright/Chromium not available: python3 tools/verifica.py --setup"])); return
     mz, src = data_dir()
     dam = dam_file()
     env = dict(os.environ, MZLAB_MZML=str(mz), QQQ_MZML=str(mz), PYTHONUNBUFFERED="1", RUSTUP_AUTO_INSTALL="0")  # tools/prepara_sito.py installs the toolchain once; a test may not
@@ -365,12 +365,12 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
     if todo:           # the page the tests open is the built site with the Rust engine (tests_e2e/lib.py Run)
         rc, _out, dt = sh([sys.executable, str(ROOT / "tools" / "prepara_sito.py")], LOG / "prepara_sito.log", 3600, env=env)   # cold cache: engine, libraries, 9 reader families
         if rc:
-            results.append(("sito per gli e2e (tools/prepara_sito.py)", "FAIL", dt, ["vedi .verifica/log/prepara_sito.log"])); return
+            results.append(("site for the e2e (tools/prepara_sito.py)", "FAIL", dt, ["see .verifica/log/prepara_sito.log"])); return
     if shutil.which("cargo") and any("cargo" in (E2E / f"{n}.py").read_text(encoding="utf-8") for n in todo):      # the tests that call `cargo run` would each wait on cargo's build-folder lock, or rebuild a stale tree, inside the timeout of their own: build the two binaries once
         for pkg in (["-p", "mzlab-cli"], ["-p", "mzlab-feat-wasm", "--example", "native"]):
             rc, _out, dt = sh(["cargo", "build", "--release", "-q", *pkg], LOG / "precompila.log", 3000, env=env)
             if rc:
-                results.append((f"cargo build {' '.join(pkg)} (prima degli e2e)", "FAIL", dt, ["vedi .verifica/log/precompila.log"])); return
+                results.append((f"cargo build {' '.join(pkg)} (before the e2e)", "FAIL", dt, ["see .verifica/log/precompila.log"])); return
     # every test takes a free port and its own work folder (tests_e2e/lib.py), the site tests too: they all run in the same pool, the slowest first
     from concurrent.futures import ThreadPoolExecutor
     slow = [n for n in SLOW if n in todo]
@@ -378,26 +378,26 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
         for r in ex.map(one, slow + [n for n in todo if n not in slow and n not in SOLI]):
             out_by[r[0]] = r
     out_by.update({n: one(n) for n in SOLI if n in todo}); results.extend(out_by[n] for n in names)
-    results.append(("dati usati per gli e2e", "INFO", 0, [f"{src}: {mz}" + (f" · .dam: {dam.name}" if dam else " · nessun .dam")]))
+    results.append(("data used by the e2e", "INFO", 0, [f"{src}: {mz}" + (f" · .dam: {dam.name}" if dam else " · no .dam")]))
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--rapida", action="store_true", help="sintassi + pytest + e2e3")
-    ap.add_argument("--solo", default="", help="solo questi e2e, separati da virgola (es. e2e6,e2e18)")
+    ap.add_argument("--rapida", action="store_true", help="syntax + pytest + e2e3")
+    ap.add_argument("--solo", default="", help="only these e2e, comma-separated (e.g. e2e6,e2e18)")
     ap.add_argument("--senza-e2e", action="store_true")
-    ap.add_argument("--browser", choices=("chromium", "firefox", "webkit"), help="browser dei test e2e (predefinito chromium; webkit = il motore di Safari)")
-    ap.add_argument("--fumo", action="store_true", help="solo gli e2e di fumo (SMOKE), senza sintassi JS e pytest: è il giro del job «browser» della CI")
-    ap.add_argument("--setup", action="store_true", help="installa pytest, playwright e chromium se mancano")
-    ap.add_argument("--timeout", type=int, default=600, help="secondi per ogni e2e (predefinito 600)")
+    ap.add_argument("--browser", choices=("chromium", "firefox", "webkit"), help="browser of the e2e tests (default chromium; webkit = the Safari engine)")
+    ap.add_argument("--fumo", action="store_true", help="only the smoke e2e (SMOKE), without JS syntax and pytest: it is the round of the CI «browser» job")
+    ap.add_argument("--setup", action="store_true", help="install pytest, playwright and chromium if missing")
+    ap.add_argument("--timeout", type=int, default=600, help="seconds per e2e (default 600)")
     ap.add_argument("--paralleli", type=int, default=max(1, min(6, (os.cpu_count() or 2) - 1)),
-                    help="e2e eseguiti insieme (predefinito: CPU - 1, al massimo 6; 1 = uno alla volta)")
-    ap.add_argument("--ultimi-falliti", action="store_true", help="rilancia solo gli e2e che erano FAIL nel giro precedente (.verifica/ultimo.md)")
+                    help="e2e run together (default: CPU - 1, at most 6; 1 = one at a time)")
+    ap.add_argument("--ultimi-falliti", action="store_true", help="rerun only the e2e that were FAIL in the previous round (.verifica/ultimo.md)")
     ap.add_argument("--parte", default="", metavar="K/N", help="only part K of N of the complete run (the CI of notte.yml): part 1 also does syntax, texts, pytest and prova_hr, every part a share of the e2e")
     ap.add_argument("--budget", type=int, default=0, metavar="S", help="seconds for the whole run (notte.yml): when spent, no test starts, the running one is cut and the report is written (the tests not run are FAIL)")
     ap.add_argument("--sito-pronto", action="store_true", help="the built site with every .wasm is in place (notte.yml): the e2e that need `sito` run in --parte mode too")
-    ap.add_argument("--cambiati", action="store_true", help="solo gli e2e che riguardano i file cambiati rispetto a origin/main (vedi AREE); con file del nucleo li fa tutti")
-    ap.add_argument("--mostra-ok", "--tutto", dest="mostra_ok", action="store_true", help="stampa anche le righe OK (altrimenti solo FAIL/SKIP e il conteggio)")
+    ap.add_argument("--cambiati", action="store_true", help="only the e2e that concern the files changed against origin/main (see AREE); with core files it runs them all")
+    ap.add_argument("--mostra-ok", "--tutto", dest="mostra_ok", action="store_true", help="also print the OK lines (otherwise only FAIL/SKIP and the count)")
     a = ap.parse_args()
     if a.browser:
         os.environ["MZLAB_BROWSER"] = a.browser
@@ -425,7 +425,7 @@ def main() -> None:
         if a.ultimi_falliti and not only:
             only = last_failed()
             if not only:
-                results.append(("e2e", "INFO", 0, ["nessun e2e FAIL nel giro precedente (.verifica/ultimo.md)"]))
+                results.append(("e2e", "INFO", 0, ["no e2e FAIL in the previous round (.verifica/ultimo.md)"]))
         run = True
         if a.cambiati and not only:
             sel, why = changed_tests()
@@ -445,8 +445,8 @@ def main() -> None:
         lines.append(f"- {st:4} {name}" + (f" ({dt:.0f} s)" if dt else "") + (": " + " | ".join(notes) if notes and (st != "OK" or name.startswith("prova_hr")) else ""))
     timed = sorted((r for r in results if r[0].startswith("e2e") and r[1] in ("OK", "FAIL") and r[2]), key=lambda r: -r[2])[:5]
     if timed:
-        lines += ["", "I 5 e2e più lenti: " + ", ".join(f"{r[0]} {r[2]:.0f} s" for r in timed)]
-    lines += ["", "Log completi: .verifica/log/<nome>.log (leggili solo per i FAIL)."]
+        lines += ["", "The 5 slowest e2e: " + ", ".join(f"{r[0]} {r[2]:.0f} s" for r in timed)]
+    lines += ["", "Full logs: .verifica/log/<name>.log (read them only for the FAIL ones)."]
     text = "\n".join(lines)
     (OUT / "ultimo.md").write_text(text + "\n", encoding="utf-8")
     if a.mostra_ok:
@@ -454,7 +454,7 @@ def main() -> None:
     else:          # fewer tokens for whoever reads it: only what is not OK, plus how many are OK (the full list is in .verifica/ultimo.md)
         ok = [r for r in results if r[1] == "OK"]
         print("\n".join([lines[0], ""] + [l for l in lines[2:] if not l.startswith("- OK")] +
-                         [f"OK: {len(ok)} controlli (elenco in .verifica/ultimo.md)"]))
+                         [f"OK: {len(ok)} checks (list in .verifica/ultimo.md)"]))
     sys.exit(1 if fails else 0)
 
 
