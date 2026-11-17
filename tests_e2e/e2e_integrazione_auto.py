@@ -57,7 +57,7 @@ try:
         def groups():
             rows = pg.evaluate(ROWS)
             heads = pg.evaluate("[...document.querySelectorAll('#manint thead th')].map(c => c.textContent)")
-            want = [pg.evaluate("k => I18N.t('canali.manint.h.' + k)", k) for k in ("channel", "sample", "time", "label", "area", "start", "end", "apex", "height", "snr", "base", "origin")]
+            want = [pg.evaluate("k => I18N.t('canali.manint.h.' + k)", k) for k in ("channel", "sample", "time", "label", "apex", "area", "start", "end", "height", "snr", "base", "origin")]
             need(heads[:12] == want, ("columns in the order of the owner", heads))
             T = lambda k: pg.evaluate("k => I18N.t('canali.manint.org.' + k)", k)
             ion = lambda x: x[0]

@@ -79,7 +79,7 @@ try:
             cells = pg.evaluate("[...document.querySelectorAll('" + OWN + "')].map(r => [...r.children].slice(0, 4).map(c => c.textContent))")
             need(cells == [["253.1", "Sample_A", "", ""], ["253.1", "Sample_C", "", ""], ["251.1", "Sample_B", "", ""]], cells)   # channel, sample, time (none in these names), name
             heads = pg.evaluate("[...document.querySelectorAll('#manint thead th')].slice(0, 9).map(c => c.textContent)")
-            want = [pg.evaluate("k => I18N.t('canali.manint.h.' + k)", k) for k in ("channel", "sample", "time", "label", "area", "start", "end", "apex", "height")]
+            want = [pg.evaluate("k => I18N.t('canali.manint.h.' + k)", k) for k in ("channel", "sample", "time", "label", "apex", "area", "start", "end", "height")]
             need(heads == want, ("columns: channel, sample, time, name, area, start, end, apex, height", heads))
             need(pg.evaluate("document.querySelector('#manint h3').textContent") == pg.evaluate("I18N.t('canali.manint.title', {n: 8})"), "title counts every row: 3 drawn, 5 applied (4 samples, 2 channels)")
             need(pg.evaluate("[...document.querySelectorAll('#manint tbody button')].every(b => b.getBoundingClientRect().height >= 24 && b.getAttribute('aria-label'))"), "24 px, named")
