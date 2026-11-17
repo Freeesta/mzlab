@@ -60,19 +60,17 @@ try:
             need(heads[:11] == want, ("columns in the order of the owner", heads))
             T = lambda k: pg.evaluate("k => I18N.t('canali.manint.org.' + k)", k)
             ion = lambda x: x[0]
-            # every peak the writer put in a sample has a row at its apex; its origin says whether another sample has the same peak
-            ions = sorted({x[0] for x in rows})
-            need(len(ions) >= 3, ions)
-            for j, ch in enumerate(ions):
-                mine = [x for x in rows if x[0] == ch]
-                apex = [(x[1], float(x[6])) for x in mine]
-                for s, name in enumerate(SAMPLES):
-                    for t in PK[s][j]:
-                        hit = [x for x in mine if x[1] == name and abs(float(x[6]) - t) < 0.06]
-                        need(len(hit) == 1, ("a row at the peak the writer put", ch, name, t, apex))
-                        others = [x for x in mine if x[1] != name and abs(float(x[6]) - t) < 0.10]
-                        need(hit[0][-3] == (T("auto") if others else T("unmatched")), ("origin", ch, name, t, hit[0][-3], len(others)))
-            need(any(x[-3] == T("auto") for x in rows), "some peaks are matched")
+            # every peak the writer put in a sample has one row at its apex; its origin says whether another sample has the same peak (the same channel)
+            need(len(rows) == sum(len(v) for s in PK for v in s), ("one row per peak", len(rows)))
+            for s, name in enumerate(SAMPLES):
+                for j, pk in enumerate(PK[s]):
+                    for t in pk:
+                        hit = [x for x in rows if x[1] == name and abs(float(x[6]) - t) < 0.06]
+                        need(len(hit) == 1, ("a row at the peak the writer put", name, j, t))
+                        twins = [x for s2 in range(len(SAMPLES)) if s2 != s for t2 in PK[s2][j] if abs(t2 - t) < 0.10
+                                 for x in rows if x[1] == SAMPLES[s2] and abs(float(x[6]) - t2) < 0.06]
+                        need(hit[0][-2] == (T("auto") if twins else T("unmatched")), ("origin", name, j, t, hit[0][-2], len(twins)))
+                        need(all(x[0] == hit[0][0] for x in twins), ("the same peak is in the same channel", name, j, t))
         step("one row per peak, matched across the files, with its origin", groups)
         def status():
             live = pg.evaluate("document.getElementById('manint-live').textContent")
@@ -109,7 +107,7 @@ try:
             pg.evaluate("carica('m:integra-tutti.js').then(() => INTTUTTI.runFiles(E.panels.find(q => q.type === 'mrm' && q._a), { rt_tol: 0.01 }))")
             wait_for_js(pg, "document.querySelectorAll('#manint tbody tr').length >= 4", timeout=90000)
             rows = pg.evaluate(ROWS); T = pg.evaluate("I18N.t('canali.manint.org.unmatched')")
-            need(len(rows) >= 12 and all(x[-3] == T for x in rows), ("a tolerance of 0.01 min leaves every drifted peak alone", [x[-3] for x in rows][:4]))
+            need(len(rows) >= 12 and all(x[-2] == T for x in rows), ("a tolerance of 0.01 min leaves every drifted peak alone", [x[-2] for x in rows][:4]))
             need(pg.evaluate("document.querySelectorAll('#manint tbody tr[data-org=unmatched] td[title]').length") == len(rows), "each is marked")
             tip = pg.evaluate("I18N.t('canali.manint.unmatched.tip')"); need(0 < len(tip) <= 60, ("tooltip up to 60 characters", tip))
             need("0.01 min" in pg.evaluate("document.getElementById('manint-live').textContent"), "the tolerance used is said")

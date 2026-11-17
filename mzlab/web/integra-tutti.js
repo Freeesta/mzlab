@@ -84,7 +84,8 @@ export async function runFiles(p, extra = {}) {
   const msg = T("canali.manint.auto.done", { n: add.length, f: ks.length, g: grp, u: un, tol: I18N.num(r.tol, 2), v: pk.lrValley, sn: pk.lrSn,
     sm: pk.lrHalf ? T("canali.manint.auto.sm", { w: 2 * pk.lrHalf + 1 }) : T("int.lrAll.auto").replace(/^ \(|\)$/g, ""), split: T(pk.lrSplit ? "pk.split.1" : "pk.split.0") }) + (skip ? ". " + T("canali.manint.auto.skip", { n: skip }) : "");
   draw(p); uiSave();
-  if (G.MANINT) { G.MANINT.report(msg, log); await G.MANINT.now(); }
+  if (!G.MANINT) await carica("m:integrazioni-manuali.js");
+  G.MANINT.report(msg, log); await G.MANINT.now();
   nearMsg(msg);
 }
 
