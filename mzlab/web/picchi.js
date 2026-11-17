@@ -361,7 +361,7 @@ async function drawSpec(p, snapped) {
   // scan-by-scan walk (arrows): one file, no background subtraction -> the scan comes from the cache of neighbouring scans, not from a window request
   const one = !isDda && files.length === 1 && p.si != null && !bgOf(files[0]) && !p._exp;
   if (one && p.lock && p.lock.fresh) await scFetch(files[0].k, p.level, prk(p.prec, p.filt), p.si - SC_AHEAD, p.si + SC_AHEAD).catch(() => {});   // the axes of the walk look at +-20 scans
-  const rel = specRel(p);                                // y axis in % of the highest peak of each scan (default for MS2) or in cps
+  const rel = specRel(p); p.el.querySelector('[data-a="rel"]')?.classList.toggle("on", rel);   // y axis in % of the highest peak of each scan (default for MSn, level >= 2) or in cps (MS1); the button follows
   const hrp = !!window.HR && HR.anyHr(files, p.level), DECP = p.dec ?? (window.HR ? HR.dec(files, p.level) : 1);       // high resolution: the m/z are the centroids of the file, written with the decimals of the profile
   const relScale = (/** @type {Bag} */ d) => { let mx = 1e-9; for (const v of d.y) if (v > mx) mx = v; const k = 100 / mx; return { ...d, y0: d.y, y: d.y.map((/** @type {number} */ v) => v * k), py: d.py ? d.py.map((/** @type {number} */ v) => v * k) : d.py }; };
   /** @type {Bag[]} */ const reqs = [];

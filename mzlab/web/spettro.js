@@ -10,8 +10,9 @@
 const IC_RULER = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="5" width="13" height="6" rx="1"/><path d="M4.5 5v2.4M7.5 5v3.2M10.5 5v2.4M13 5v1.6"/></svg>';
 const IC_SYNC = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 5.5c1.5 0 1.5-3 3-3s1.5 3 3 3 1.5-1.5 2.5-1.5M1.5 13c1.5 0 1.5-3 3-3s1.5 3 3 3 1.5-1.5 2.5-1.5"/><path d="M11.5 1.5v13" stroke-dasharray="1.6 1.6"/><path d="M13 7.5 11.5 9 10 7.5" /></svg>';
 
-// y axis in % of the highest peak: the default is % for the MS2 spectra (the relative intensities of the fragments are what is compared), cps for Full Scan
-const specRel = p => p.rel ?? false;
+// y axis in % of the highest peak: p.rel unset (null) follows the level: % for MSn (level >= 2: the relative intensities of the fragments are what is compared),
+// absolute for MS1; once the user toggles it, p.rel is a boolean and stays whatever the level, zoom or scan
+const specRel = p => p.rel ?? (!p.uv && p.level >= 2);
 const SPEC_DEF = { thr: 5, nlab: 10, dec: 1 };
 
 // ---------------------------------------------------------------- ruler: p.meas = { ref: m/z | null, list: [{a, b}] }
