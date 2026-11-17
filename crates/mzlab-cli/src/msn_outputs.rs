@@ -1,5 +1,5 @@
 //! The files of a figure of the graph `msngrafo/1`: SVG, stand-alone HTML and PNG, by name (`svg,html,png`), written next to a stem; the command line
-//! (`msn-graph --figura`, `msn-graph figure`) and the step `msn.figure@1` both go through here, so they write the same bytes.
+//! (`msn-graph --figure`, `msn-graph figure`) and the step `msn.figure@1` both go through here, so they write the same bytes.
 
 use std::path::{Path, PathBuf};
 
@@ -69,24 +69,12 @@ pub fn write_outputs(graph: &str, fs: &[Format], view: View, stem: &Path) -> Res
     Ok(out)
 }
 
-/// Old flag names of `msn-graph figure` (old, new).
-const ALIASES: &[(&str, &str)] = &[("--figura", "--figure"), ("--vista", "--view")];
-
-/// The current name of the flag `x`: `aliases` pairs (old, new); any other text is returned as it is.
-pub fn canonical(aliases: &[(&str, &str)], x: String) -> String {
-    match aliases.iter().find(|(old, _)| *old == x) {
-        Some((_, new)) => (*new).to_string(),
-        None => x,
-    }
-}
-
 /// `msn-graph figure IN.json [--figure svg,html,png] [--view tree|radial] [--out STEM]`: the figures of a graph already made; the stem defaults to the file
 /// without its extension. Returns the message for the standard output.
 pub fn figure_cmd(mut a: impl Iterator<Item = String>) -> std::result::Result<String, String> {
     let (mut file, mut out, mut fs, mut view) =
         (None, None, vec![Format::Svg, Format::Html], View::Albero);
     while let Some(x) = a.next() {
-        let x = canonical(ALIASES, x);
         match x.as_str() {
             "--out" => out = a.next().map(PathBuf::from),
             "--figure" => fs = formats(&a.next().unwrap_or_default())?,

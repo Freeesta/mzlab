@@ -1,4 +1,4 @@
-//! `mzlab-cli msn-graph --rotture`: the bond breaks of a structure that give the ions of the graph, on the synthetic infusion of `/api/msntree` and
+//! `mzlab-cli msn-graph --breaks`: the bond breaks of a structure that give the ions of the graph, on the synthetic infusion of `/api/msntree` and
 //! ethyl indole-3-carboxylate (the ester bond gives the acid of 162.05495, the node n3).
 
 use std::path::PathBuf;
@@ -27,7 +27,7 @@ fn run(extra: &[&str]) -> String {
 #[test]
 fn the_ester_bond_is_a_hypothesis_of_the_node_and_the_key_keeps_the_view_last() {
     let base = run(&[]);
-    let t = run(&["--rotture"]);
+    let t = run(&["--breaks"]);
     let (prefix, view) = base.trim_end().split_once(",\"vista\":").unwrap();
     assert!(t.starts_with(prefix));
     assert!(t.trim_end().ends_with(&format!(",\"vista\":{view}")));
@@ -54,9 +54,9 @@ fn the_ester_bond_is_a_hypothesis_of_the_node_and_the_key_keeps_the_view_last() 
 
 #[test]
 fn the_calculation_is_deterministic_and_needs_the_structure() {
-    assert_eq!(run(&["--rotture"]), run(&["--rotture"]));
+    assert_eq!(run(&["--breaks"]), run(&["--breaks"]));
     // one bond only finds no more than two
-    let one = run(&["--rotture", "--max-legami", "1"]);
+    let one = run(&["--breaks", "--max-bonds", "1"]);
     assert!(one.contains("\"max_legami\":1"));
     let f = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/golden/ref/msntree_rotta/msn.mzML");
@@ -65,7 +65,7 @@ fn the_calculation_is_deterministic_and_needs_the_structure() {
         f.to_str().unwrap().to_string(),
         "--formula".into(),
         "C14H15N3O5+".into(),
-        "--rotture".into(),
+        "--breaks".into(),
     ]);
     assert_ne!(o.code, 0);
     assert!(o.stderr.contains("err.msngrafo.noSmiles"), "{}", o.stderr);

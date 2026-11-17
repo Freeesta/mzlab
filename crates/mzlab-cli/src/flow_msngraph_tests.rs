@@ -60,16 +60,16 @@ fn every_option_of_the_command_is_a_parameter() {
         "CC",
         "--ppm-formula",
         "5",
-        "--mz-basso",
+        "--low-mz",
         "100",
-        "--ppm-basso",
+        "--wide-ppm",
         "15",
-        "--prove-min",
+        "--min-evidence",
         "2",
-        "--attivazione",
+        "--activation",
         "cid",
-        "--isotopi",
-        "--scelta",
+        "--isotopes",
+        "--pick",
         "305.1=C14H15N3O5",
     ]);
     assert_eq!(got, want);
@@ -89,9 +89,9 @@ fn the_cleavages_of_a_node_are_a_parameter_of_the_step() {
         "C14H15N3O5+",
         "--smiles",
         "CCOC(=O)c1c[nH]c2ccccc12",
-        "--strutture",
+        "--structures",
         "n3",
-        "--ppm-struttura",
+        "--struct-ppm",
         "5",
     ]);
     assert_eq!(got, want);
@@ -107,13 +107,7 @@ fn the_interpretation_of_the_losses_is_a_parameter_of_the_step() {
         r#"{"formula":"C14H15N3O5+","interpreta":true,"ppm_perdita":5}"#,
     )
     .unwrap();
-    let want = cli(&[
-        "--formula",
-        "C14H15N3O5+",
-        "--interpreta",
-        "--ppm-perdita",
-        "5",
-    ]);
+    let want = cli(&["--formula", "C14H15N3O5+", "--interpret", "--loss-ppm", "5"]);
     assert_eq!(got, want);
     assert!(got.contains("\"interpretazione\":{\"versione\":1,\"ppm\":5,"));
     let _ = std::fs::remove_dir_all(&d);
@@ -130,10 +124,10 @@ fn the_rules_are_a_parameter_of_the_step_and_without_them_the_bytes_do_not_chang
     let want = cli(&[
         "--formula",
         "C14H15N3O5+",
-        "--regole",
+        "--rules",
         "--cutoff-q",
         "0.3",
-        "--toll-perdita-mda",
+        "--loss-tol-mda",
         "2",
     ]);
     assert_eq!(got, want);
@@ -159,7 +153,7 @@ fn the_structure_rules_give_the_same_bytes_in_the_step_and_in_the_command() {
         "C14H15N3O5+",
         "--smiles",
         "NCCCC(=O)O",
-        "--regole",
+        "--rules",
     ]);
     assert_eq!(got, want);
     // a SMILES that does not parse leaves the rules of the formula alone: the structure is reported where it is used

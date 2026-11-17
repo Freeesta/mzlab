@@ -22,7 +22,7 @@ Professional free LC-MS analysis program: in the browser only (https://freeesta.
 - **Cite mzLab** when it is used (`CITATION.cff`, text in `crates/mzlab-cli/src/citation.rs`; DOI to be added).
 - **All logic in Rust.** Python only for tests, `tools/`, reference; JS is interface only; the site never runs Python.
 - **No real data in this public repo.** Lab data live in private `Freeesta/mzlab-dati` (`tools/dati_percorsi.py`; else `tools/dati_sintetici.py`). Only the anonymous `mzlab/web/esempi/` files are allowed. Surnames in the private `nomi_vietati.txt` never appear here.
-- **English only** for code, comments, commits, PRs. mzLab is English only (site, desktop app, CLI): user-facing text goes through `lang/` keys (`mzlab/web/lang/en/`), never as a bare literal.
+- **English only, no Italian anywhere in the repo**: code, comments, docstrings, docs, test names, log/print/error messages, argparse help, commits, PRs and saved formats are all English, developer-only text included. mzLab is English only (site, desktop app, CLI): user-facing text goes through `lang/` keys (`mzlab/web/lang/en/`), never as a bare literal.
 - **Git**: never push to `main`; work on `claude/<topic>` from `origin/main`, open the PR ready for review, never merge it yourself; merge `main` in only on a real conflict (`tools/fondi_main.py`); never rebase or force-push.
 - **Never skip, disable or quarantine a test.** Fix the cause.
 - **The user decides**: show the evidence (scores, errors, parameters) and log every automatic choice; no disclaimers, no blocked results.

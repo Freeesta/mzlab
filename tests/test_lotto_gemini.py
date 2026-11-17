@@ -12,8 +12,8 @@ def test_merge_headers_and_order(tmp_path):
     (tmp_path / "a.txt").write_text("alpha\n")
     (tmp_path / "b.txt").write_text("beta")
     doc, n = L.unisci(["a.txt", "b.txt"], tmp_path)
-    assert doc.startswith("=== FILE: a.txt (1 di 2) — file separati nel progetto, qui uniti in un unico documento ===\nalpha\n=== FINE FILE ===")
-    assert "=== FILE: b.txt (2 di 2)" in doc and doc.index("a.txt") < doc.index("b.txt")
+    assert doc.startswith("=== FILE: a.txt (1 of 2) — separate files in the project, merged here into one document ===\nalpha\n=== END OF FILE ===")
+    assert "=== FILE: b.txt (2 of 2)" in doc and doc.index("a.txt") < doc.index("b.txt")
     assert n == len(doc.encode())
 
 
