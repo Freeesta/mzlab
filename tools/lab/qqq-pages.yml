@@ -14,6 +14,8 @@ permissions:
 env:
   MZLAB_LAB: "1"
   MZLAB_LAB_EXPIRES: "2026-12-29"
+  # production builds: tools/wasm_opt.sh fails closed here, so no .wasm is tested or published without wasm-opt and its size gate
+  MZLAB_WASM_OPT_STRICT: "1"
 
 # No run is ever cancelled: a running build/deploy finishes (the site always gets a new version), and of the runs waiting
 # GitHub keeps only the newest, so quick merges in a row end in one more deploy of the last commit, never in none.
@@ -21,10 +23,6 @@ env:
 concurrency:
   group: ${{ github.ref == 'refs/heads/main' && 'pages-build' || format('pages-build-{0}', github.ref) }}
   cancel-in-progress: false
-
-# production builds: tools/wasm_opt.sh fails closed here, so no .wasm is tested or published without wasm-opt and its size gate
-env:
-  MZLAB_WASM_OPT_STRICT: "1"
 
 # The site is built in parallel jobs and put together by `assemble`: `wasm-core` (engine, libraries, readers), `wasm-feat-a` and `wasm-feat-b` (mzFinder, the two halves of tools/build_feat_wasm.sh), `packages` (spectral libraries and suspect index); each hands its static/ subtree over as an artifact.
 jobs:
@@ -77,10 +75,10 @@ jobs:
           mkdir -p site/static
           tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
-          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 2174976 engine @motore
+          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm "$(python3 tools/moduli.py --tetto motore)" engine @motore
           tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
-          tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries @motore
+          tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm "$(python3 tools/moduli.py --tetto librerie)" libraries @motore
           # the readers (8 families, own manifest) build here, not in part b of build_feat_wasm.sh: it evens out the three jobs
           tools/build_lettori_wasm.sh site/static
       - name: Record the tree of the cache
@@ -404,6 +402,7 @@ jobs:
   # the native release builds of sito-rust.yml's `sito-e2e` (its two slow e2e), with its very commands: only to keep their cache fresh, the site does not use them.
   # A cache saved once a night is evicted by the next morning (the repository saves far more than its 10 GB a day); one saved here on every Rust change is not.
   native-e2e:
+    if: github.repository == 'Freeesta/mzlab'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -476,9 +475,25 @@ jobs:
           tools/build_feat_wasm.sh site/static manifest
       - name: Record the .wasm modules in static/build.json (they are in place now)
         run: python3 tools/build_site.py --build-json
+      # the desktop app refuses an update whose file differs from its manifest entry: check the published bytes, build.json included
+      - name: The manifest matches the site, byte for byte
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib
+          out = pathlib.Path("site")
+          m = json.loads((out / "static" / "manifest.json").read_text(encoding="utf-8"))
+          bad = []
+          for rel, e in m["files"].items():
+              d = (out / rel).read_bytes()
+              if (len(d), hashlib.sha256(d).hexdigest()) != (e["size"], e["sha256"]):
+                  bad.append(rel)
+          assert "static/build.json" in m["files"], "build.json missing from the manifest"
+          assert not bad, f"manifest differs from the site: {bad[:5]}"
+          print(f"manifest ok: {len(m['files'])} files")
+          PY
       # the built modules, for .github/workflows/metriche.yml (sizes per commit, measured off this critical path; small, kept 1 day)
       - name: .wasm modules for the metrics
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && github.repository == 'Freeesta/mzlab'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: metriche-wasm

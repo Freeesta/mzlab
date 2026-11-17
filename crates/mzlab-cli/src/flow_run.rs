@@ -233,7 +233,9 @@ pub(crate) fn run_checked(
 
 /// The `prov/1` text of `run`, for the plan read from `text`.
 pub fn prov_text(text: &[u8], run: &Run) -> String {
-    prov_json(&agent(), Some(&sha256_hex(text)), run)
+    // the citation is the first member of the CLI's record; the page (wasm) writes the record without it
+    let prov = prov_json(&agent(), Some(&sha256_hex(text)), run);
+    crate::citation::after(&prov, "{\"schema\":\"prov/1\",", "")
 }
 
 /// The progress line of one job: `[3/9] features.table (feat) ... done in 12.4 s` (`item 2` for a per-file step), `... reused` when it came from

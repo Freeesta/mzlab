@@ -116,7 +116,7 @@ impl Head {
         })
     }
 
-    fn analyzer(&self, filt: &str, icref: Option<&str>) -> &'static str {
+    pub(super) fn analyzer(&self, filt: &str, icref: Option<&str>) -> &'static str {
         let tok = filt.split(' ').next().unwrap_or("").to_uppercase();
         if let Some(a) = ANALYZERS.iter().find(|a| **a == tok) {
             return a;
@@ -475,7 +475,7 @@ fn plain_msn(sp: &Spectrum, extra: &SpectrumExtra, filt: &str) -> Msn {
     }
     m.path = filter_path(filt);
     if let Some(p) = sp.precursor {
-        let half = extra.iso_half;
+        let half = extra.iso_half.filter(|_| !extra.no_window);
         m.precs.push(Prec {
             target: Some(p),
             selected: Some(p),
@@ -486,7 +486,8 @@ fn plain_msn(sp: &Spectrum, extra: &SpectrumExtra, filt: &str) -> Msn {
             ..Prec::default()
         });
         m.prec = Some(p);
-        m.iso = Some((p - half.unwrap_or(0.5), p + half.unwrap_or(0.5)));
+        // no window (neutral loss) is no isolation range, not a fabricated ±0.5
+        m.iso = (!extra.no_window).then(|| (p - half.unwrap_or(0.5), p + half.unwrap_or(0.5)));
         m.act = Some("CID".into());
         m.ce = extra.ce;
     }

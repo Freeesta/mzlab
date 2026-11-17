@@ -8,10 +8,8 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use wasm_bindgen::prelude::*;
 
-pub mod core;
-pub mod filterspec;
-pub mod pol;
-pub mod rows_mgf;
+// plain-Rust modules live in `mzlab-ops`; re-exported under their old paths
+pub use mzlab_ops::run::table::{core, filterspec, pol, rows_mgf};
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-table/1";
@@ -453,7 +451,7 @@ pub fn table_row_traces(
     .map_err(js_err)
 }
 
-/// `campioni/2`: `op` is `proponi`, `valida`, `da_legacy` or `per_tp`; JSON in, JSON out.
+/// `campioni/2`: `op` is `proponi`, `valida`, `da_legacy`, `per_tp`, `canonico` or `digest` (the ones mzFinder calls); JSON in, JSON out.
 #[wasm_bindgen]
 pub fn samples(op: &str, input: &str) -> std::result::Result<String, JsValue> {
     core::samples_route(op, input).map_err(js_err)

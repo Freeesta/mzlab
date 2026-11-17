@@ -6,7 +6,7 @@ mod common;
 use mzlab_core::idxread::Index;
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
-use mzlab_feat_wasm::run;
+use mzlab_ops::run::feat::run;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 

@@ -274,7 +274,7 @@ impl From<&super::resolve::Feature> for Feature {
 }
 
 /// The `"iso"` object (`tol_da`, `tol_ppm`, `rt_tol`, `max_charge`, `monotonic`, `representative`: `"most_intense"` or `"lowest_mz"`) and the `"ident"`
-/// object (`rt_tol`, `win`: ppm if positive, Da if negative).
+/// object (`rt_tol`, `win`: ppm if positive, Da if negative, `min_corr`: 0 = off, up to 1).
 fn read_iso(v: &Value, p: &mut UntParams) -> Result<()> {
     if matches!(v.get("iso"), Some(x) if x.is_null() || x.bool() == Some(false)) {
         p.iso = None;
@@ -309,7 +309,8 @@ fn read_iso(v: &Value, p: &mut UntParams) -> Result<()> {
             .filter(|x| x.is_finite() && *x != 0.0)
             .ok_or_else(bad)?;
     }
-    Ok(())
+    num(d, "min_corr", &mut dp.min_corr)?;
+    (dp.min_corr <= 1.0).then_some(()).ok_or_else(bad)
 }
 
 /// The chromatogram with its intensities smoothed by Savitzky-Golay over its own points (the padded zeros included, as mzmine smooths a feature).

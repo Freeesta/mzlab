@@ -3,4 +3,5 @@ pacchetto = "mzlab-lib-wasm"
 wasm_opt = "@motore"
 parte = "core"
 tetto = 614400
+misura = 502678
 nota = "libraries, loaded only when the libraries open; includes spectra.lookup of the Flow"

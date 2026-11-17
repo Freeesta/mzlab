@@ -130,17 +130,18 @@ fn families(mzidx: &Path, orient: Orient) -> (FileFeatures, mzlab_feat::family::
 }
 
 #[test]
-fn the_default_leaves_the_text_of_the_fingerprints_alone() {
+fn evidence_is_the_default_and_the_fingerprint_text_names_it() {
+    assert_eq!(FamParams::default().orient, Orient::Evidence);
     let text = format!("{:?}", FamParams::default());
-    assert!(!text.contains("orient"), "{text}");
-    let on = format!(
+    assert!(text.contains("orient: Evidence"), "{text}");
+    let off = format!(
         "{:?}",
         FamParams {
-            orient: Orient::Evidence,
+            orient: Orient::Factor,
             ..FamParams::default()
         }
     );
-    assert!(on.contains("orient: Evidence"), "{on}");
+    assert!(off.contains("orient: Factor"), "{off}");
 }
 
 #[test]

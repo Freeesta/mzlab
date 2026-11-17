@@ -65,6 +65,36 @@ pub fn for_send(
     Ok(req)
 }
 
+/// The origin (`scheme://host[:port]`, default port dropped, lower case) of an http(s) URL, or `None` for anything else, a user part or a backslash included
+/// (`https://api.x.com@evil.org` is `evil.org`, so it is refused rather than parsed).
+fn origin(url: &str) -> Option<String> {
+    let (scheme, rest) = url.split_once("://")?;
+    let scheme = scheme.to_ascii_lowercase();
+    let default = match scheme.as_str() {
+        "https" => "443",
+        "http" => "80",
+        _ => return None,
+    };
+    let auth = rest.split(['/', '?', '#']).next()?;
+    if auth.is_empty() || auth.contains(['@', '\\']) {
+        return None;
+    }
+    let auth = auth.to_ascii_lowercase();
+    let (host, port) = auth.rsplit_once(':').unwrap_or((&auth, default));
+    (!host.is_empty() && port.bytes().all(|b| b.is_ascii_digit()))
+        .then(|| format!("{scheme}://{host}:{port}"))
+}
+
+/// Whether `url` may carry the key of `p`: its origin is the one of the provider's `base_url`; for the demo provider also the checked proxy host
+/// (`proxy_host`, empty before one is known), whose placeholder is the base URL until `for_send`. The page never decides the origin.
+pub fn url_belongs(p: &Provider, url: &str, proxy_host: &str) -> bool {
+    let Some(o) = origin(url) else { return false };
+    if origin(&p.base_url) == Some(o.clone()) {
+        return true;
+    }
+    p.session_headers.is_some() && host_ok(proxy_host) && origin(proxy_host) == Some(o)
+}
+
 /// The spend of the session the proxy reports on a 2xx answer (`x-mzlab-spend: <spent>/<cap>` in micro-dollars, `x-mzlab-soft` once past 80 % of
 /// the cap) as `{"spent":<µ$>,"cap":<µ$>,"soft":<bool>}`, or `None` for a header that is not two whole numbers with a cap above zero.
 pub fn spend_json(header: &str, soft: bool) -> Option<String> {

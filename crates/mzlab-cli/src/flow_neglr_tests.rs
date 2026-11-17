@@ -318,7 +318,7 @@ fn a_negative_table_is_searched_as_negative_by_table_match() {
         Some(p) => crate::flow_base::open(p),
         None => Err(mzlab_core::error::Error::new("err.flow.tablematch.files")),
     };
-    let mgf = mzlab_feat_table_wasm::rows_mgf::rows_mgf(
+    let mgf = mzlab_ops::run::table::rows_mgf::rows_mgf(
         &mut mzlab_feat::store::Slice(&table),
         table.len() as u64,
         &samples,

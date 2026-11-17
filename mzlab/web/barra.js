@@ -27,8 +27,8 @@ const BARRA = (() => {
 
   let _tab = "file";
   let _prev = "";                   // the tool shown before the current one while the panel stayed open: a second click on the current one goes back to it
-  let _sub = "adducts";             // the tab of the Adducts & losses page ("adducts" | "losses" | "cont"): the last one used is remembered
-  const SUBS = ["adducts", "losses", "cont"];
+  let _sub = "adducts";             // the tab of the Adducts & losses page ("adducts" | "losses"): the last one used is remembered
+  const SUBS = ["adducts", "losses"];
   let _open = false;
   let _lastView = "";          // the page of the last applyLayout: a change of page never animates the work area
   let _away = /** @type {{ open: boolean, top: number } | null} */ (null);       // state of the side panel when the student left Dati (Disegno, loading)
@@ -68,7 +68,7 @@ const BARRA = (() => {
   const byNames = () => typeof namesWidth === "function" && seen();                 // the landing width stays unless the names need more room (the panel never narrows by itself)
   const maxW = () => Math.max(MIN_W, Math.min(MAX_W, Math.floor(window.innerWidth / 2)));
   const effW = () => Math.max(MIN_W, Math.min(maxW(), _wUser ? _w : byNames() ? Math.max(defaultW(), namesWidth(defaultW())) : defaultW()));
-  const validTab = (/** @type {string} */ id) => ["file", "addloss", "lists", "stat"].includes(id) || (id === "qaqc" && FEATURES.qaqc) || (HR_PANELS.includes(id) && isHrMode());
+  const validTab = (/** @type {string} */ id) => (["file", "addloss", "stat"].includes(id) || id === "lists" && FEATURES.lists) || (id === "qaqc" && FEATURES.qaqc) || (HR_PANELS.includes(id) && isHrMode());
 
   // ---------------------------------------------------------------- icons
   const IC = (/** @type {string} */ d) => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${d}</svg>`;
@@ -97,11 +97,11 @@ const BARRA = (() => {
   // button opens (its state is aria-pressed); items: ids of the commands in its menu; run: what it does; visible: when it exists; onBar: when its button is in the bar.
   /** @type {any[]} */
   const CMD = [
-    { id: "file", ic: () => ICONS.file, panel: "file", visible: () => inDataOrOpening() || landing(), run: () => (landing() && !inData() ? toggleDrawer() : toggle("file")) },
+    { id: "file", ic: () => ICONS.file, panel: "file", visible: () => inDataOrOpening() || landing(), run: () => (landing() && !inData() && (!_open || _tab === "file") ? toggleDrawer() : toggle("file")) },      // empty landing: File hides its own panel but always SELECTS itself when another tool is shown
     // where the side panel exists the calculator is the top of the Adducts & losses page (no button of its own); in Disegno it is the drop-down under its button (eventi.js)
     { id: "calc", dom: "np-calc2", ic: () => QI("calc"), onBar: () => !(inDataOrOpening() || landing()), run: () => window.calcToggleFloat && window.calcToggleFloat() },
     { id: "addloss", dom: "np-addloss", ic: () => QI("ad"), panel: "addloss", run: () => toggle("addloss") },
-    { id: "lists", dom: "np-liste", ic: () => QI("liste"), panel: "lists", run: () => toggle("lists") },
+    { id: "lists", feature: "lists", dom: "np-liste", ic: () => QI("liste"), panel: "lists", run: () => toggle("lists") },
     { id: "qaqc", feature: "qaqc", dom: "np-qaqc", ic: () => ICONS.qaqc, panel: "qaqc", visible: () => inData(), run: () => toggle("qaqc") },
     
     { id: "ptable", dom: "np-pt", ic: () => QI("pt"), run: () => window.QQQRef && QQQRef.open("pt") },
@@ -122,7 +122,7 @@ const BARRA = (() => {
     { id: "smooth", bar: false, group: "graphs", visible: () => inData(), ic: () => IC('<path d="M2 11c2.5 0 3-6 6-6s3.5 6 6 6"/>'),
       run: () => { const q = E.active; if (q && E.panels.includes(q) && ["chrom", "xic", "mrm"].includes(q.type)) { q.smooth = !q.smooth; ctl(q); draw(q); uiSave(); } else nearMsg(I18N.t("cmd.smooth.none")); } },
     // command palette (also reachable from the 🔍 button and Ctrl/⌘ K)
-    { id: "search", bar: "end", dom: "tb-search", group: "app", ic: () => ICONS.search, run: () => window.PALETTE && PALETTE.open() },
+    { id: "search", bar: "end", dom: "tb-search", group: "app", ic: () => ICONS.search, run: () => { carica("paletta.js").then(() => PALETTE.open()); } },
     // commands that live elsewhere on the page: found by the palette, never in the bar (group: where they are)
     { id: "method", bar: false, group: "graphs", ic: () => IC('<rect x="3" y="2.5" width="10" height="11.5" rx="1.6"/><path d="M6 6h4M6 9h4M6 12h2"/>'), visible: () => inData(), run: () => clickEl("#np-method") },
     { id: "subref", bar: false, group: "graphs", ic: () => IC('<path d="M2 11c2 0 2-6 4-6s2 6 4 6 2-3 4-3"/><path d="M2 13.5h12" stroke-dasharray="2 2"/>'), visible: () => inData() && window.SUBREF && tabFiles().length > 1, run: () => window.SUBREF && SUBREF.toggle() },
@@ -144,7 +144,7 @@ const BARRA = (() => {
     { id: "panel", bar: false, group: "panel", ic: () => ICONS.panel, visible: () => inData(), run: () => toggleDrawer() },
     // search: true = found only by the search (palette, Ctrl/⌘ K): never a button of the bar, never in "Altro"; external links, rare: in "Altro"
     { id: "stat", search: true, group: "tools", ic: () => ICONS.stat, panel: "stat", visible: () => inData(), run: () => toggle("stat") },
-    { id: "labcont", search: true, group: "tools", ic: () => QI("liste"), visible: () => inData(), run: () => window.LISTE && LISTE.openLab() },
+    { id: "labcont", feature: "lists", search: true, group: "tools", ic: () => QI("liste"), visible: () => inData(), run: () => window.LISTE && LISTE.openLab() },
     { id: "pubchem", dom: "np-pc", more: true, ic: () => ICONS.ext, run: () => window.open("https://pubchem.ncbi.nlm.nih.gov/", "_blank", "noopener") },
     { id: "bio", dom: "np-bt", more: true, ic: () => ICONS.ext, run: () => window.openBT && window.openBT() }
   ];
@@ -410,7 +410,7 @@ const BARRA = (() => {
   }
 
   function show(/** @type {string} */ id, /** @type {Bag} */ opt = {}) {
-    if (SUBS.includes(id)) { opt = { ...opt, sub: id }; id = "addloss"; }          // «adducts», «losses» and «cont» are the tabs of one page
+    if (SUBS.includes(id)) { opt = { ...opt, sub: id }; id = "addloss"; }          // «adducts» and «losses» are the tabs of one page
     if (id === "calc") { opt = { ...opt, calc: true }; id = "addloss"; }           // the calculator is the top of that page: unfolded and focused
     // the page lives only in the side panel: from another view (Disegno) it brings the student back to Dati, never a floating window
     if (id === "addloss" && !(inDataOrOpening() || landing()) && typeof setView === "function") setView("data");
@@ -441,7 +441,7 @@ const BARRA = (() => {
   }
 
   function toggle(/** @type {string} */ id) {
-    const away = !(inData() || landing()) && /** @type {Record<string, () => void>} */ ({ calc: () => window.calcToggleFloat && window.calcToggleFloat(), adducts: () => window.QQQRef && QQQRef.open("ad"), losses: () => window.QQQRef && QQQRef.open("ls"), addloss: () => window.QQQRef && QQQRef.open(_sub === "losses" ? "ls" : "ad"), lists: () => window.LISTE && LISTE.open() })[id];      // outside Dati (Disegno, Tabui, Flow) the drawer is hidden: the calculator and the lists open their windows; Adducts & losses lives only in the side panel, so it goes back to Dati (show())
+    const away = !(inData() || landing()) && /** @type {Record<string, () => void>} */ ({ calc: () => window.calcToggleFloat && window.calcToggleFloat(), adducts: () => window.QQQRef && QQQRef.open("ad"), losses: () => window.QQQRef && QQQRef.open("ls"), addloss: () => window.QQQRef && QQQRef.open(_sub === "losses" ? "ls" : "ad"), lists: () => FEATURES.lists && window.LISTE && LISTE.open() })[id];      // outside Dati (Disegno, Tabui, Flow) the drawer is hidden: the calculator and the lists open their windows; Adducts & losses lives only in the side panel, so it goes back to Dati (show())
     if (away) away(); else if (_open && _tab === id) { const back = _prev && _prev !== id && validTab(_prev) ? _prev : (id !== "file" && landing() && !inData() ? "file" : ""); _prev = ""; if (back) { show(back); _prev = ""; } else close(true); } else show(id);      // a second click goes back to the previous tool (the file list on the empty landing); with none to go back to, it hides the panel
   }
 
@@ -576,7 +576,7 @@ const BARRA = (() => {
   function updateButtons() {
     const bar = Q1("#stbar");
     if (!bar) return;
-    const open = _open && inData();
+    const open = _open && (inData() || landing());      // the empty landing shows the panel too: its button must read pressed
     bar.querySelectorAll("button[data-cmd]").forEach((/** @type {HTMLElement} */ b) => {
       const c = byId(b.dataset.cmd);
       if (!c || !c.panel) return;
@@ -895,7 +895,7 @@ const BARRA = (() => {
   function bindGlobalEvents() {
     document.addEventListener("keydown", e => {
       // show/hide the side panel from the keyboard
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.code === "KeyB") && inData()) {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.code === "KeyB") && (inData() || landing())) {      // the empty landing has the header button, so it has the key too
         e.preventDefault(); e.stopPropagation();
         toggleDrawer();
         return;

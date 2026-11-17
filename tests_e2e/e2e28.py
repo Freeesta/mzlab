@@ -20,7 +20,7 @@ try:
             pg.evaluate("LISTE.open({})"); pg.wait_for_timeout(1500)
             # two built-in lists (known contaminants, pesticides): one switch each, titles without the reference
             n = pg.evaluate("document.querySelectorAll('#lst-src-checks input[type=checkbox]').length"); assert n == 2, n
-            t = pg.inner_text("#lst-src-checks"); assert "Keller" not in t and "Anal. Chim" not in t and "contaminanti" in t.lower() and "pesticidi" in t.lower(), t
+            t = pg.inner_text("#lst-src-checks"); assert "Keller" not in t and "Anal. Chim" not in t and "contaminants" in t.lower() and "pesticides" in t.lower(), t
             assert pg.locator("#lst-mode-seg").count() == 0 and pg.is_visible("#lst-view-seg"), "no files: HR version, no mode switch"
             assert pg.locator("#lst-tbody tr").first.locator("td").count() == 9 and "." in pg.inner_text("#lst-tbody tr >> nth=0")
             # a simulated user list adds its own switch
@@ -52,7 +52,7 @@ try:
         def ptable():
             pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())")
             pg.click("#np-pt"); pg.wait_for_timeout(500)
-            assert pg.locator("#reftabs").count() == 0 and pg.inner_text("#reftitle").strip() == "Tavola periodica"
+            assert pg.locator("#reftabs").count() == 0 and pg.inner_text("#reftitle").strip() == "Periodic table"
             js = """th=>{document.documentElement.setAttribute('data-theme',th);
               const cv=document.createElement('canvas').getContext('2d',{willReadFrequently:true}), px=c=>{cv.clearRect(0,0,1,1);cv.fillStyle='#000';cv.fillStyle=c;cv.fillRect(0,0,1,1);return [...cv.getImageData(0,0,1,1).data]};
               const lum=([r,g,b])=>{const f=v=>{v/=255;return v<=.03928?v/12.92:((v+.055)/1.055)**2.4};return .2126*f(r)+.7152*f(g)+.0722*f(b)};

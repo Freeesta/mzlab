@@ -14,8 +14,9 @@ use super::plan::{ParentLr, Settings};
 use super::{Entry, Offset};
 use crate::aligned::{no_peak, Aligned, CELL_DETECTED};
 
-/// The calibration offset is measured on a parent row within this many Da of its ion and applied up to the same limit.
-pub const OFFSET_MAX: f64 = 0.6;
+/// The old path of `OFFSET_MAX`, which lives in `crate::tp_block` so that `tp` does not depend on `legacy`.
+pub use crate::tp_block::OFFSET_MAX;
+
 /// Isomers of one hypothesis: a peak with at least this share of the strongest area, at most this many peaks.
 const ISOMER_FRAC: f64 = 0.10;
 const ISOMER_MAX: usize = 4;

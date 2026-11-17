@@ -1,0 +1,32 @@
+# mzlab-cli for AI agents
+
+How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a shell. Recipes and a plan example: `per-agenti.md`; every command: `cli.md`; plans and `prov/1`: `rust-flow.md`. This page is the contract an agent can rely on.
+
+## Cite mzLab (rule)
+- mzLab must be cited when it is used. The text is written ONCE, in `crates/mzlab-cli/src/citation.rs` (name, version of the build, `https://github.com/Freeesta/mzlab`, `DOI: to be added`). There is no DOI yet and none is invented: when it exists, set `DOI` in that file and in `CITATION.cff` (the comment there says where); nothing else changes.
+- Where the agent sees it: the footer of `mzlab-cli --help` and the output of `mzlab-cli --version`; a `"citation"` field in `mzlab-cli steps --json` (every step object) and in `mzlab-cli llm tools` (top level of the catalog); a top-level `"citation"` key in the `prov.json` that `flow run` writes (so a run folder carries it; `corsa.json` and the `mzrun/1` of `flow record` do not, they are shared with the page and fixed by their schemas).
+- Data commands print NO banner: stdout stays pipe- and CSV-safe, stderr stays free for progress and errors, and `--json` output is never altered. The agent should add the citation to its own report or answer (`CITATION.cff` has the formatted reference).
+- The page and the `.wasm` write their records and catalogs without the key: the citation is a CLI-side field (a `prov.json` from the desktop app has it, because the app calls the same function).
+
+## Streams and exit codes
+- stdout is the data (CSV, JSON, a file list); stderr is progress (one line per job; `--progress jsonl` makes it one JSON line each), warnings and errors. Read stdout for results, stderr for diagnosis.
+- With `--json`, errors are an `errore/1` object on stdout (`error_key`, `params`, `hint`) as well as a line on stderr; the keys are stable.
+- Exit codes: 0 done; 1 data errors (a step or file failed, the other outputs are written); 2 usage (unknown option, unknown step, bad value); 3 plan problems (invalid plan, or a file written with a problem such as `convert` partial); 4 unreadable plan or missing/different input. `flow run --help` and each command's `--help` list their own.
+
+## Sequence
+1. `mzlab-cli steps --json [--id ID[@V]]`: the `step/1` descriptors of this very binary (`params` is a JSON Schema; `executable_native` says whether `flow run` runs it). Plain `steps` gives one line per step.
+2. Write an `mzflow/2` plan with the differences from the defaults only.
+3. `mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE] --json`: validates without the input files (`flowcheck/1`; exit 3 with the problems listed).
+4. `mzlab-cli flow run PLAN.json --in DIR --dry-run [--json]`: checks plan, `--set` and inputs and prints what would run (`flowdry/1`), writes nothing.
+5. `mzlab-cli flow run PLAN.json --in DIR --out RUN [--json]`: the run; `--json` ends with `flowrun/1`. The same `RUN` can be reused: only changed steps rerun.
+6. Read `RUN/prov.json`, `RUN/corsa.json` (`mzlab-cli flow report RUN`) and the output files. `mzlab-cli flow record RUN --roles ROLES.json` writes the `mzrun/1`; `flow verify` checks it.
+
+## Commands with and without `--json`
+- With a `--json` flag: `flow run`, `flow check`, `steps`, `validate`.
+- Without it yet (not added in this change): `features` (CSV), `convert`, `flow report`, `flow record`, `flow verify`, `flow command`, `normative`, `insilico pack`, `msn-lib`, `msn-rules`, `msn-graph`, `explain-missing`, `background`, `manual-table`, `peak-auto`, `peak-auto-lr`, `peak-area`, `peak-edges`, `peak-split`, `peak-window`, `channels`, `dda-window`, `samples`, `ion-pattern`, `ion-mz`, `match-mz`, the `mol-*` commands and the `llm` subcommands. Several of these already print JSON (or CSV) by default and have a stable schema; read the command's `--help` before parsing.
+
+## Rules for the agent
+- The CLI uses no network (except `normative build` and `insilico pack`, which say so) and reads/writes only the paths it is given; never delete user files.
+- At unit resolution an m/z is a candidate, not an identification.
+- Keep the evidence (scores, parameters, versions) in the answer; the `prov.json` has them.
+- Policy for new functions (`CLAUDE.md`): every function is also reachable from the CLI and made for agents: `--json` with stable keys, distinct exit codes, data on stdout and progress/errors on stderr, a check or `--dry-run` mode where it makes sense, and a row in the agent catalogs (`steps --json`, `llm tools`). A function with no CLI route is incomplete, like a parity gap.

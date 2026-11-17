@@ -26,7 +26,7 @@ const specColor = (/** @type {any} */ x) => (x.multi ? PAL[(x.idx + 3) % PAL.len
 /** @type {Record<string, number>} */
 // bmode = the baseline of new integrations: 0 zero (the default, as mzlab_core::baseline::DEFAULT), 1 edges, 2 line. The older key `base` (0 edges, 1 zero,
 // 2 line) was saved with every setting, so its 0 cannot tell a choice from the old default: only its line is carried over.
-const PK_DEF = { edgeFrac: 3, win: 1.2, tail: 1.5, snMin: 0, multi: 50, hrSmooth: 5, hrSn: 5, bmode: 0 };
+const PK_DEF = { edgeFrac: 3, win: 1.2, tail: 1.5, snMin: 0, multi: 50, hrSmooth: 5, hrSn: 5, bmode: 0, lrSmooth: 0, lrValley: 10, lrSn: 5, lrSplit: 0 };      // lr*: integra-tutti.js, = LrAutoParams::default
 const PK = (() => { /** @type {Record<string, unknown>} */ const o = lsObj(NOMI.KEY("picchi")); const r = { ...PK_DEF }; if (o.bmode === undefined && o.base === 2) o.bmode = 2; Object.keys(r).forEach(k => { const v = o[k]; if (typeof v === "number" && v >= 0) r[k] = v; }); return r; })();
 const BMODES = ["zero", "edges", "line"];
 function pkSave() { try { localStorage.setItem(NOMI.KEY("picchi"), JSON.stringify(PK)); } catch (e) { /* no storage */ } }
@@ -83,13 +83,13 @@ const INT_EPS = 1e-6;
 const iLo = (/** @type {Bag} */ it) => Math.min(it.a, it.b), iHi = (/** @type {Bag} */ it) => Math.max(it.a, it.b);
 /** @param {Bag} p @param {string} key @param {number} a @param {number} b @param {Bag} [skip] */
 const intClash = (p, key, a, b, skip) => p.ints.find((/** @type {Bag} */ i) => i !== skip && i.key === key && iLo(i) < b - INT_EPS && iHi(i) > a + INT_EPS) || null;
-function nearMsg(/** @type {string} */ t) {                                                     // short notice next to the mouse
-  let d = Q("#qnote"); if (!d) { d = document.createElement("div"); d.id = "qnote"; d.style.cssText = "position:fixed;z-index:20000;max-width:300px;padding:6px 10px;border-radius:6px;background:#333;color:#fff;font:13px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.35);pointer-events:none"; document.body.appendChild(d); }
-  const m = window._mxy || { x: 200, y: 200 }; d.textContent = t; d.hidden = false;
-  d.style.left = Math.max(6, Math.min(innerWidth - 310, m.x + 14)) + "px"; d.style.top = Math.max(6, Math.min(innerHeight - 60, m.y + 18)) + "px";
-  clearTimeout(d._t); d._t = setTimeout(() => { d.hidden = true; }, 3200);
+function nearMsg(/** @type {string} */ t) {                                                     // short notice next to the mouse (role=status; Esc, pointer moving away or 2.5 s dismiss it)
+  let d = Q("#qnote"); if (!d) { d = document.createElement("div"); d.id = "qnote"; d.setAttribute("role", "status"); d.setAttribute("aria-live", "polite"); d.style.cssText = "position:fixed;z-index:20000;max-width:300px;padding:6px 10px;border-radius:6px;background:#333;color:#fff;font:13px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.35);pointer-events:none"; document.body.appendChild(d); }
+  const m = window._mxy || { x: 200, y: 200 }; d.textContent = t; d.hidden = false; d._at = { x: m.x, y: m.y, t: performance.now() }; d.style.left = Math.max(6, Math.min(innerWidth - 310, m.x + 14)) + "px"; d.style.top = Math.max(6, Math.min(innerHeight - 60, m.y - d.offsetHeight - 16)) + "px";      // above the pointer: the tooltip of a label opens below it
+  clearTimeout(d._t); d._t = setTimeout(() => { d.hidden = true; }, 2500);
 }
-document.addEventListener("mousemove", e => { window._mxy = { x: e.clientX, y: e.clientY }; }, true);
+document.addEventListener("mousemove", e => { window._mxy = { x: e.clientX, y: e.clientY }; const d = Q("#qnote"); if (d && !d.hidden && d._at && Math.hypot(e.clientX - d._at.x, e.clientY - d._at.y) > 24) d.hidden = true; }, true);
+document.addEventListener("keydown", e => { if (e.key !== "Escape") return; const d = Q("#qnote"); if (d) d.hidden = true; E.panels.forEach((/** @type {Bag} */ q) => { q._intCur = null; }); }, true);
 // undo snapshot of a panel: the integrations and the noise zones (one per trace)
 const intSnap = (/** @type {Bag} */ p) => JSON.stringify({ i: p.ints, n: p.noise || {} });
 // noise stretch [t0, t1] (min) of the trace of an integration: one per trace of the panel (the same for every file), else the one stored on the integration itself
@@ -107,7 +107,7 @@ function addInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} *
   if (p.ints.some((/** @type {Bag} */ i) => i.key === s.key && Math.abs(i.a - lo) < 1e-6 && Math.abs(i.b - hi) < 1e-6)) return false;     // same peak clicked twice
   if (intClash(p, s.key, lo, hi)) { nearMsg(I18N.t("int.clash")); return false; }      // several windows per trace (MRM/SIM too), never overlapping
   pushIh(p);
-  p.ints.push(intRec(p, s, lo, hi, null, zero));
+  const rec = intRec(p, s, lo, hi, null, zero); p.ints.push(rec); p._intCur = rec.id; p._intT = Date.now();
   draw(p);
   // MRM: the same window goes to the other transition panels (quantifier and qualifier), where it can still be moved on its own
   if (p.type === "mrm" && mirror) tabPanels().filter((/** @type {Bag} */ q) => q !== p && q.type === "mrm" && q._a && q._a.sr).forEach((/** @type {Bag} */ q) => { const s2 = q._a.sr.find((/** @type {Bag} */ x) => x.k === s.k && x.ion !== s.ion); if (s2) addInt(q, s2, a, b, false, zero); });
@@ -150,8 +150,8 @@ async function autoInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {nu
   let [l, r] = ed;
   {
     const c = p.ints.filter((/** @type {Bag} */ i) => i.key === s.key);
-    if (c.some((/** @type {Bag} */ i) => iLo(i) + INT_EPS < x && x < iHi(i) - INT_EPS)) { nearMsg(I18N.t("int.clash")); return; }
-    c.forEach((/** @type {Bag} */ i) => { if (iHi(i) <= x + INT_EPS) l = Math.max(l, iHi(i)); if (iLo(i) >= x - INT_EPS) r = Math.min(r, iLo(i)); });
+    const on = c.find((/** @type {Bag} */ i) => iLo(i) + INT_EPS < x && x < iHi(i) - INT_EPS); if (on) { if (on.id === p._intCur && Date.now() - p._intT < 4000) { p.isel = on.id; draw(p); } else nearMsg(I18N.t("int.clash")); return; }     // the peak just made or edited is not "another one": a click on it only selects it
+    p._intCur = null; c.forEach((/** @type {Bag} */ i) => { if (iHi(i) <= x + INT_EPS) l = Math.max(l, iHi(i)); if (iLo(i) >= x - INT_EPS) r = Math.min(r, iLo(i)); });
     if (r - l < 1e-6) return;
   }
   addInt(p, s, l, r);
@@ -168,18 +168,18 @@ function intAt(/** @type {Bag} */ p, /** @type {number} */ px, /** @type {number
 }
 // dialog of the automatic-integration settings (applies to every panel): two blocks side by side, one row per setting (label, field, one-line hint)
 function peakParams() {
-  const B = /** @type {Record<string, string>} */ ({ edgeFrac: "0:100", win: ">0", tail: ">0", snMin: "0:", multi: "0:100", hrSmooth: "3:99 i", hrSn: "0:" });
+  const B = /** @type {Record<string, string>} */ ({ edgeFrac: "0:100", win: ">0", tail: ">0", snMin: "0:", multi: "0:100", hrSmooth: "3:99 i", hrSn: "0:", lrSmooth: "0:99 i", lrValley: "0:100", lrSn: "0:" });
   const f = (/** @type {string} */ k) => `<label class="pk-row"><span>${I18N.t(`pk.${k}`)}</span><input data-pk="${k}" data-num="${B[k]}" value="${PK[k]}" inputmode="decimal"><span class="muted sm">${I18N.t(`pk.${k}.h`)}</span></label>`;
   const sec = (/** @type {string} */ k, /** @type {string[]} */ keys) => `<fieldset class="pk-sec"><legend>${I18N.t(`pk.sec.${k}`)}</legend>${keys.map(f).join("")}</fieldset>`;
   big(I18N.t("pk.title"), `<div class="muted sm pk-intro">${I18N.t("pk.intro")}</div>
-    <div class="pk-grid">${sec("lr", ["edgeFrac", "win", "tail", "snMin", "multi"])}${sec("hr", ["hrSmooth", "hrSn"])}<fieldset class="pk-sec"><legend>${I18N.t("pk.sec.base")}</legend><label class="pk-row"><span>${I18N.t("pk.base")}</span><select data-pk="bmode">${BMODES.map((k, v) => `<option value="${v}"${PK.bmode === v ? " selected" : ""}>${I18N.t(`int.base.${k}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.base.h")}</span></label></fieldset></div>
+    <div class="pk-grid">${sec("lr", ["edgeFrac", "win", "tail", "snMin", "multi"])}${sec("hr", ["hrSmooth", "hrSn"])}${sec("lrall", ["lrSmooth", "lrValley", "lrSn"]).replace("</fieldset>", `<label class="pk-row"><span>${I18N.t("pk.lrSplit")}</span><select data-pk="lrSplit">${[0, 1].map(v => `<option value="${v}"${PK.lrSplit === v ? " selected" : ""}>${I18N.t(`pk.split.${v}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.lrSplit.h")}</span></label></fieldset>`)}<fieldset class="pk-sec"><legend>${I18N.t("pk.sec.base")}</legend><label class="pk-row"><span>${I18N.t("pk.base")}</span><select data-pk="bmode">${BMODES.map((k, v) => `<option value="${v}"${PK.bmode === v ? " selected" : ""}>${I18N.t(`int.base.${k}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.base.h")}</span></label></fieldset></div>
     <div class="pk-act"><button id="pk-def" type="button">${I18N.t("pk.default")}</button> <button id="pk-ok" type="button" class="go">${I18N.t("pk.apply")}</button></div>`, () => {
     const rdv = () => document.querySelectorAll("#bigbody [data-pk]").forEach(i => { i.value = String(PK[i.dataset.pk]); });
     Q("#pk-def").onclick = () => { COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => Object.assign(PK, PK_DEF)); pkSave(); rdv(); };
     Q("#pk-ok").onclick = () => {
       COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => {
         document.querySelectorAll("#bigbody [data-pk]").forEach(i => { const v = numIt(i.value); if (v >= 0) PK[i.dataset.pk] = v; });
-        PK.hrSmooth = Math.max(3, Math.round(PK.hrSmooth) | 1);
+        PK.hrSmooth = Math.max(3, Math.round(PK.hrSmooth) | 1); PK.lrSmooth = PK.lrSmooth ? Math.max(3, Math.round(PK.lrSmooth) | 1) : 0;
       });
       pkSave(); Q("#bigdlg").close();
     };
@@ -192,7 +192,7 @@ function intMenuItems(/** @type {Bag} */ p, /** @type {number} */ x, /** @type {
   if (p.ints.length) items.push({ label: I18N.t("int.menu.delAll"), icon: IC_DEL_INT, fn: () => delInts(p, [...p.ints]) });
   if (nearInt || p.ints.length) items.push("-");
   items.push({ label: I18N.t("int.menu.params"), icon: AZIONI_ICONE.svg("sliders"), fn: peakParams });
-  if (canInt(p)) items.push({ label: I18N.t("int.menu.auto"), icon: IC_AUTO, fn: () => { if (!guardInt(p)) return; intTargets(p, x, py).forEach((/** @type {Bag} */ s) => autoInt(p, s, x)); } });
+  if (canInt(p)) items.push({ label: I18N.t("int.menu.auto"), icon: IC_AUTO, fn: () => { if (!guardInt(p)) return; intTargets(p, x, py).forEach((/** @type {Bag} */ s) => autoInt(p, s, x)); } }, { label: I18N.t("int.menu.all"), icon: IC_AUTO, fn: () => intAll(p) }, ...(ESP.mrm(p) ? [{ label: I18N.t("int.menu.files"), icon: IC_AUTO, fn: () => intFiles(p) }] : []));
   if (p.sel && p.sel[1] > p.sel[0]) items.push({ label: I18N.t("int.menu.zoomSel"), icon: IC_ZOOM, fn: () => { const [s0, s1] = p.sel; const w = (s1 - s0) * 0.1; zoomTo(p, s0 - w, s1 + w); } });
   return items;
 }

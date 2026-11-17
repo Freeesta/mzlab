@@ -9,7 +9,8 @@ use mzlab_core::idxread::{Index, ReadAt};
 
 use crate::sweep::{ppm_ranges, windows};
 use crate::table::FileFeatures;
-use crate::trace::{filled, Params};
+use crate::trace::Params;
+use crate::trace_base::filled;
 
 const NONE: u32 = u32::MAX;
 /// Fewest scans a correlation is computed on.
@@ -124,7 +125,7 @@ pub fn gather<R: ReadAt>(
             .push(t.start[k] + (wins[k].1 - wins[k].0 + 1) as u32);
     }
     t.y = filled(*t.start.last().unwrap_or(&0) as usize, 0.0)?;
-    let max_peaks = (p.budget / 24).clamp(1024, crate::trace::SLAB_PEAKS);
+    let max_peaks = (p.budget / 24).clamp(1024, crate::trace_base::SLAB_PEAKS);
     let ranges = ppm_ranges(&centres, ppm);
     windows(index, si, &ranges, max_peaks, |k, a, b, slab| {
         let (w0, w1) = wins[k];

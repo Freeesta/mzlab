@@ -58,12 +58,14 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
             x => return Outcome::fail(&format!("unknown option {x}")),
         }
     }
+    // the citation is a CLI-only key: the files of docs/schemi and the catalog of the site stay as they are
+    let text = if demo {
+        demo_tools_json()
+    } else {
+        tools_json()
+    };
     emit(
-        if demo {
-            demo_tools_json()
-        } else {
-            tools_json()
-        },
+        crate::citation::after(&text, "\"schema\":\"strumenti/1\",", "\n  "),
         &out,
     )
 }

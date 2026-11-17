@@ -221,7 +221,7 @@ impl<R: ReadAt> Routes<R> {
         }
         let mut g: Vec<G> = Vec::new();
         let mut by: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
-        for s in &self.idx.scans {
+        for s in self.idx.scans.iter() {
             let k = s.key();
             match by.get(&k) {
                 Some(&i) => {

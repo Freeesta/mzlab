@@ -15,7 +15,7 @@ r = Run(port=8968, wd="/tmp/wd_fondosp")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, files); pg.click("text=Carica dati"); ready(pg)
+        stage(pg, files); pg.click("text=Load data"); ready(pg)
         pg.evaluate("addPanel('spec',{tab:E.tab,k:E.cur,level:1,r0:5.0,r1:5.4}); "); ready(pg)
         P = "E.panels.find(q=>q.type==='spec')"
         def auto():

@@ -18,6 +18,12 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+#[path = "update_http.rs"]
+mod http;
+#[path = "update_serve.rs"]
+mod serve;
+pub use http::Http;
+
 /// Where the published site lives; the only host the program talks to.
 pub const SITE: &str = "https://freeesta.github.io/mzlab/";
 /// Manifest path, relative to the site root.
@@ -91,75 +97,100 @@ pub struct Progress {
     pub total_bytes: u64,
 }
 
+/// Manifest size caps (bytes), ~4x the largest and ~3x the total of the site measured at 11.8 MB / 98.5 MB (largest: a vendored wasm).
+const MAX_FILE: u64 = 48 << 20;
+const MAX_TOTAL: u64 = 300 << 20;
+
 /// Where the files come from (the site, or a map in the tests). `Sync`: the worker threads of `apply` share it.
 pub trait Source: Sync {
     fn get(&self, rel: &str) -> Result<Vec<u8>, UpdateError>;
-}
-
-/// The published site over HTTPS: no redirects (the host cannot change), time limits, size limit.
-pub struct Http {
-    agent: ureq::Agent,
-    base: String,
-}
-
-impl Http {
-    pub fn new() -> Self {
-        Self::with_base(SITE)
+    /// The same file asked again with the manifest version as cache buster (a stale CDN/proxy copy); sources with no cache ignore it.
+    fn get_versioned(&self, rel: &str, _version: &str) -> Result<Vec<u8>, UpdateError> {
+        self.get(rel)
     }
-    pub fn with_base(base: &str) -> Self {
-        let agent = ureq::AgentBuilder::new()
-            .redirects(0)
-            .timeout_connect(Duration::from_secs(10))
-            .timeout_read(Duration::from_secs(60))
-            .user_agent("mzlab-desktop")
-            .build();
-        Http {
-            agent,
-            base: base.to_string(),
+    /// `get`/`get_versioned` (`version` is `Some`) reading at most `max` bytes of the response; the default ignores `max` (sources already in memory).
+    fn get_capped(
+        &self,
+        rel: &str,
+        version: Option<&str>,
+        _max: u64,
+    ) -> Result<Vec<u8>, UpdateError> {
+        match version {
+            Some(v) => self.get_versioned(rel, v),
+            None => self.get(rel),
         }
     }
-}
-
-impl Default for Http {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Source for Http {
-    fn get(&self, rel: &str) -> Result<Vec<u8>, UpdateError> {
-        safe_rel(rel)?;
-        let url = format!("{}{}", self.base, rel);
-        let resp = self.agent.get(&url).call().map_err(|e| match e {
-            ureq::Error::Status(code, _) => UpdateError::new("update.error.http", code.to_string()),
-            ureq::Error::Transport(t) => UpdateError::new("update.error.offline", t.to_string()),
-        })?;
-        if resp.status() != 200 {
-            return Err(UpdateError::new(
-                "update.error.http",
-                resp.status().to_string(),
-            )); // with no redirects a 3xx comes back as a response
-        }
-        let mut body = Vec::new();
-        resp.into_reader()
-            .take(600 << 20)
-            .read_to_end(&mut body)
-            .map_err(|e| UpdateError::new("update.error.offline", e.to_string()))?;
-        Ok(body)
+    /// Does `get_versioned` ask for something other than `get` (so that a second try is worth making)?
+    fn retry_differs(&self, _version: &str) -> bool {
+        false
     }
 }
 
 pub fn parse_manifest(bytes: &[u8]) -> Result<Manifest, UpdateError> {
     let m: Manifest = serde_json::from_slice(bytes)
         .map_err(|e| UpdateError::new("update.error.manifest", e.to_string()))?;
+    let bad = |d: String| Err(UpdateError::new("update.error.manifest", d));
+    if !plain_version(&m.desktop_min) {
+        return bad(format!("desktop_min {}", m.desktop_min));
+    }
+    // names the rest of the updater compares by exact string: no key may fold onto them by case only
+    let fixed = ["index.html", CHECK, MANIFEST]
+        .into_iter()
+        .chain(NATIVE.iter().copied());
+    let fixed: Vec<&str> = fixed.collect();
+    // `check` and `download_all` add the sizes up unchecked
+    match m
+        .files
+        .values()
+        .try_fold(0u64, |t, e| t.checked_add(e.size))
+    {
+        None => return bad("total size overflows u64".into()),
+        Some(t) if t > MAX_TOTAL => return bad(format!("total size {t} over {MAX_TOTAL}")),
+        _ => {}
+    }
+    if let Some((rel, e)) = m.files.iter().find(|(_, e)| e.size > MAX_FILE) {
+        return bad(format!("{rel}: size {} over {MAX_FILE}", e.size));
+    }
+    let mut seen = std::collections::BTreeSet::new();
     for rel in m.files.keys() {
         safe_rel(rel)?;
+        if !seen.insert(rel.to_ascii_lowercase()) {
+            return bad(format!("two keys differ only by case: {rel}"));
+        }
+        if fixed
+            .iter()
+            .any(|f| rel.eq_ignore_ascii_case(f) && rel.as_str() != *f)
+        {
+            return bad(format!("key {rel} differs from a fixed name only by case"));
+        }
     }
     Ok(m)
 }
 
-/// A relative path with plain components only (no `..`, no root, no drive, no backslash).
+/// `\d+\.\d+\.\d+` with each part fitting a `u64` (what `build_site.py` writes); anything else would compare as 0 in `native_ok`.
+fn plain_version(v: &str) -> bool {
+    let parts: Vec<&str> = v.split('.').collect();
+    parts.len() == 3
+        && parts.iter().all(|p| {
+            !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()) && p.parse::<u64>().is_ok()
+        })
+}
+
+/// A relative path with plain components only (no `..`, no root, no drive, no backslash), in the one spelling the manifest uses:
+/// no empty or `.` part (`a//b`, `a/./b`, `a/`), so that exact string comparisons (`NATIVE`, `index.html`) see the file that is written.
 pub fn safe_rel(rel: &str) -> Result<(), UpdateError> {
+    plain_rel(rel)?;
+    if rel.split('/').any(|p| p.is_empty() || p == ".") {
+        return Err(UpdateError::new(
+            "update.error.manifest",
+            format!("non-canonical path {rel}"),
+        ));
+    }
+    Ok(())
+}
+
+/// `safe_rel` without the canonical-form rule: a request path of the window (`/static//a.js`) is normalised by `override_rel` after this.
+fn plain_rel(rel: &str) -> Result<(), UpdateError> {
     let bad = rel.is_empty()
         || rel.contains('\\')
         || rel.contains(':')
@@ -314,10 +345,41 @@ fn write_check(root: &Path) -> Result<(), UpdateError> {
 const THREADS: usize = 8;
 
 /// Fetches one changed file, checks size and SHA-256 and writes it into `next` (`index.html` is patched first).
-fn fetch_one(next: &Path, rel: &str, want: &Entry, src: &dyn Source) -> Result<u64, UpdateError> {
-    let mut body = src.get(rel)?;
-    if body.len() as u64 != want.size || sha256_hex(&body) != want.sha256 {
-        return Err(UpdateError::new("update.error.hash", rel));
+/// A size or hash mismatch is retried once with `?v=<manifest version>` (a stale cached copy); a second one is `update.error.hash` with what was got and wanted.
+fn fetch_one(
+    next: &Path,
+    rel: &str,
+    want: &Entry,
+    version: &str,
+    src: &dyn Source,
+) -> Result<u64, UpdateError> {
+    let ok = |b: &[u8]| b.len() as u64 == want.size && sha256_hex(b) == want.sha256;
+    // one byte past the declared size is enough to see an oversized response
+    let max = want.size.saturating_add(1);
+    let mut body = src.get_capped(rel, None, max)?;
+    if !ok(&body) {
+        let retry = src.retry_differs(version);
+        if retry {
+            body = src.get_capped(rel, Some(version), max)?;
+        }
+        if !ok(&body) {
+            let (h, w) = (sha256_hex(&body), &want.sha256);
+            let tries = if retry {
+                "tries 2"
+            } else {
+                "tries 1, no cache-buster for this version"
+            };
+            return Err(UpdateError::new(
+                "update.error.hash",
+                format!(
+                    "{rel}: got {}/{}, want {}/{}, {tries}",
+                    body.len(),
+                    h.get(..8).unwrap_or(&h),
+                    want.size,
+                    w.get(..8).unwrap_or(w)
+                ),
+            ));
+        }
     }
     if rel == "index.html" {
         body = patch_index(&String::from_utf8_lossy(&body))?.into_bytes();
@@ -348,7 +410,13 @@ fn download_all(
                 if i >= files.len() || abort.load(Ordering::Relaxed) {
                     break;
                 }
-                let r = fetch_one(next, &files[i], &remote.files[&files[i]], src);
+                let r = fetch_one(
+                    next,
+                    &files[i],
+                    &remote.files[&files[i]],
+                    &remote.version,
+                    src,
+                );
                 if r.is_err() {
                     abort.store(true, Ordering::Relaxed);
                 }
@@ -379,7 +447,33 @@ fn download_all(
     first_err.map_or(Ok(()), Err)
 }
 
-/// Fills `next` with the new files, the new manifest and the hashes of the whole folder.
+/// Deletes every file of `root` that `remote` does not list (except `check.json` and the manifest), then the folders left empty:
+/// a file removed from the site must not stay reachable through `serve_override`.
+fn prune(root: &Path, remote: &Manifest) -> Result<(), UpdateError> {
+    let mut names = Vec::new();
+    walk(root, root, &mut names).map_err(UpdateError::io)?;
+    for n in names {
+        if n != CHECK && n != MANIFEST && !remote.files.contains_key(&n) {
+            fs::remove_file(root.join(&n)).map_err(UpdateError::io)?;
+        }
+    }
+    remove_empty_dirs(root).map_err(UpdateError::io)
+}
+
+fn remove_empty_dirs(dir: &Path) -> std::io::Result<()> {
+    for e in fs::read_dir(dir)? {
+        let e = e?;
+        if e.file_type()?.is_dir() {
+            remove_empty_dirs(&e.path())?;
+            if fs::read_dir(e.path())?.next().is_none() {
+                fs::remove_dir(e.path())?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Fills `next` with the new files, drops the ones `remote` no longer lists, writes the new manifest and the hashes of the whole folder.
 fn build_next(
     next: &Path,
     files: &[String],
@@ -388,6 +482,7 @@ fn build_next(
     on: &mut impl FnMut(Progress),
 ) -> Result<(), UpdateError> {
     download_all(next, files, remote, src, on)?;
+    prune(next, remote)?;
     let json = serde_json::to_vec(remote).map_err(UpdateError::io)?;
     write_file(next, MANIFEST, &json)?;
     write_check(next)
@@ -431,7 +526,12 @@ pub fn apply(
     );
     let _ = fs::remove_dir_all(&next);
     fs::create_dir_all(data).map_err(UpdateError::io)?;
-    if web.is_dir() {
+    // the current folder is the base only if it is the one `local` describes (not when `local` fell back to the embedded manifest)
+    let base = fs::read(web.join(MANIFEST))
+        .ok()
+        .and_then(|b| parse_manifest(&b).ok())
+        .is_some_and(|m| m == *local);
+    if base {
         copy_tree(&web, &next)?;
     } else {
         fs::create_dir_all(&next).map_err(UpdateError::io)?;
@@ -444,8 +544,31 @@ pub fn apply(
     Ok(files.len())
 }
 
-/// At start: finishes or undoes an interrupted swap, then sets a damaged `web/` aside so that the embedded copy is served.
-pub fn recover(data: &Path) {
+/// `apply`, and on `update.error.hash` the manifest is fetched once more: if the site was republished meanwhile, the diff is redone once against the new one.
+pub fn apply_refetch(
+    data: &Path,
+    local: &Manifest,
+    remote: &Manifest,
+    native: &str,
+    src: &dyn Source,
+    mut on: impl FnMut(Progress),
+) -> Result<usize, UpdateError> {
+    match apply(data, local, remote, native, src, &mut on) {
+        Err(e) if e.key == "update.error.hash" => {
+            let fresh = parse_manifest(&src.get(MANIFEST)?)?;
+            if fresh == *remote {
+                Err(e)
+            } else {
+                apply(data, local, &fresh, native, src, on)
+            }
+        }
+        r => r,
+    }
+}
+
+/// At start: finishes or undoes an interrupted swap, then sets `web/` aside so that the embedded copy is served when it is damaged,
+/// its manifest does not parse, or it needs a newer native binary than this one (`native`, e.g. a folder left by a newer app).
+pub fn recover(data: &Path, native: &str) {
     let (web, next, old, bad) = (
         data.join("web"),
         data.join("web.next"),
@@ -456,8 +579,18 @@ pub fn recover(data: &Path) {
     if !web.is_dir() && old.is_dir() {
         let _ = fs::rename(&old, &web);
     }
-    let _ = fs::remove_dir_all(&old);
-    if web.is_dir() && !validate_web(&web) {
+    // `web.old` is the last good folder until it is back in place (a locked folder on Windows can make the rename fail)
+    if web.is_dir() {
+        let _ = fs::remove_dir_all(&old);
+    }
+    let usable = |w: &Path| {
+        validate_web(w)
+            && fs::read(w.join(MANIFEST))
+                .ok()
+                .and_then(|b| parse_manifest(&b).ok())
+                .is_some_and(|m| native_ok(native, &m.desktop_min))
+    };
+    if web.is_dir() && !usable(&web) {
         let _ = fs::remove_dir_all(&bad);
         if fs::rename(&web, &bad).is_err() {
             let _ = fs::remove_dir_all(&web);
@@ -514,421 +647,11 @@ fn mime(rel: &str) -> &'static str {
     }
 }
 
-/// The file of the updated folder for a request path of the window (`/` = the page), if it is there. Anything else (and any path that
-/// tries to leave the folder) returns `None` and the embedded copy answers.
+/// The file of the updated folder for a request path of the window, if it may be served (`update_serve.rs`); otherwise the embedded copy answers.
 pub fn serve_override(web: &Path, req_path: &str) -> Option<(Vec<u8>, &'static str)> {
-    let rel = req_path.trim_start_matches('/');
-    let rel = if rel.is_empty() { "index.html" } else { rel };
-    if rel == CHECK || safe_rel(rel).is_err() {
-        return None;
-    }
-    let p: PathBuf = web.join(rel);
-    let body = fs::read(&p).ok()?;
-    Some((body, mime(rel)))
+    serve::serve_override(web, req_path)
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::Mutex;
-
-    struct Mem(BTreeMap<String, Vec<u8>>, Mutex<Vec<String>>);
-    impl Source for Mem {
-        fn get(&self, rel: &str) -> Result<Vec<u8>, UpdateError> {
-            self.1.lock().unwrap().push(rel.to_string());
-            self.0
-                .get(rel)
-                .cloned()
-                .ok_or_else(|| UpdateError::new("update.error.http", "404"))
-        }
-    }
-
-    fn manifest(version: &str, min: &str, files: &[(&str, &[u8])]) -> Manifest {
-        Manifest {
-            version: version.into(),
-            desktop_min: min.into(),
-            files: files
-                .iter()
-                .map(|(n, b)| {
-                    (
-                        n.to_string(),
-                        Entry {
-                            sha256: sha256_hex(b),
-                            size: b.len() as u64,
-                        },
-                    )
-                })
-                .collect(),
-        }
-    }
-    fn mem(files: &[(&str, &[u8])]) -> Mem {
-        Mem(
-            files
-                .iter()
-                .map(|(n, b)| (n.to_string(), b.to_vec()))
-                .collect(),
-            Mutex::new(vec![]),
-        )
-    }
-
-    const INDEX: &str = "<meta content=\"default-src 'self'; connect-src 'self'; img-src data:\"><script src=\"static/browser.js\"></script>";
-
-    #[test]
-    fn sha256_known_value() {
-        assert_eq!(
-            sha256_hex(b"abc"),
-            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-        );
-    }
-
-    #[test]
-    fn native_version_compare() {
-        assert!(native_ok("0.1.0", "0.1.0"));
-        assert!(native_ok("0.2.0", "0.1.9"));
-        assert!(native_ok("1.0.0", "0.9.9"));
-        assert!(!native_ok("0.1.0", "0.1.1"));
-        assert!(!native_ok("0.9.0", "0.10.0"));
-    }
-
-    #[test]
-    fn diff_lists_only_changed_new_and_not_native() {
-        let local = manifest(
-            "a",
-            "0.1.0",
-            &[
-                ("index.html", b"1"),
-                ("static/a.js", b"a"),
-                ("static/pyodide/p.wasm", b"big"),
-            ],
-        );
-        let remote = manifest(
-            "b",
-            "0.1.0",
-            &[
-                ("index.html", b"2"),
-                ("static/a.js", b"a"),
-                ("static/pyodide/p.wasm", b"big"),
-                ("static/n.js", b"n"),
-                ("static/rust-worker.js", b"x"),
-                ("sw.js", b"s"),
-            ],
-        );
-        assert_eq!(
-            diff(&local, &remote),
-            vec!["index.html".to_string(), "static/n.js".to_string()]
-        );
-    }
-
-    #[test]
-    fn check_cases() {
-        let a = manifest("a", "0.1.0", &[("static/a.js", b"a")]);
-        assert_eq!(
-            check(&a, &a, "0.1.0"),
-            Check::Uptodate {
-                version: "a".into()
-            }
-        );
-        let b = manifest("b", "0.1.0", &[("static/a.js", b"aa")]);
-        assert_eq!(
-            check(&a, &b, "0.1.0"),
-            Check::Available {
-                version: "b".into(),
-                files: 1,
-                bytes: 2
-            }
-        );
-        let c = manifest("c", "0.2.0", &[("static/a.js", b"aa")]);
-        assert!(matches!(check(&a, &c, "0.1.0"), Check::Newapp { .. }));
-    }
-
-    #[test]
-    fn rejects_unsafe_paths() {
-        for bad in ["../x", "/etc/passwd", "a/../../b", "a\\b", "C:/x", ""] {
-            assert!(safe_rel(bad).is_err(), "{bad}");
-        }
-        assert!(safe_rel("static/pyodide/pyodide.asm.wasm").is_ok());
-    }
-
-    #[test]
-    fn patch_index_matches_prepare_py() {
-        let p = patch_index(INDEX).unwrap();
-        assert!(p.contains(
-            "connect-src 'self' mzlab: http://mzlab.localhost ipc: http://ipc.localhost;"
-        ));
-        assert!(p.contains("<script src=\"static/desktop-shim.js\"></script>\n<script src=\"static/browser.js\"></script>"));
-        assert!(patch_index("<html></html>").is_err());
-    }
-
-    #[test]
-    fn apply_downloads_only_changed_files_and_swaps() {
-        let tmp = tempfile::tempdir().unwrap();
-        let data = tmp.path();
-        let local = manifest(
-            "a",
-            "0.1.0",
-            &[
-                ("index.html", INDEX.as_bytes()),
-                ("static/big.wasm", b"BIG"),
-                ("static/a.js", b"old"),
-            ],
-        );
-        let remote = manifest(
-            "b",
-            "0.1.0",
-            &[
-                ("index.html", INDEX.as_bytes()),
-                ("static/big.wasm", b"BIG"),
-                ("static/a.js", b"new"),
-                ("static/n.js", b"n"),
-            ],
-        );
-        let src = mem(&[
-            ("static/a.js", b"new"),
-            ("static/n.js", b"n"),
-            ("static/big.wasm", b"BIG"),
-        ]);
-        let mut seen = vec![];
-        let n = apply(data, &local, &remote, "0.1.0", &src, |p| {
-            seen.push((p.done, p.total))
-        })
-        .unwrap();
-        assert_eq!(n, 2);
-        let mut asked = src.1.lock().unwrap().clone();
-        asked.sort();
-        assert_eq!(
-            asked,
-            vec!["static/a.js".to_string(), "static/n.js".to_string()]
-        ); // the big file is not asked for
-        assert_eq!(seen, vec![(1, 2), (2, 2)]);
-        let web = data.join("web");
-        assert_eq!(fs::read(web.join("static/a.js")).unwrap(), b"new");
-        assert!(validate_web(&web));
-        assert!(!data.join("web.next").exists() && !data.join("web.old").exists());
-        // the manifest of the folder is the new one: a second check finds nothing to do
-        let now = local_manifest(data, b"{}").unwrap();
-        assert_eq!(
-            check(&now, &remote, "0.1.0"),
-            Check::Uptodate {
-                version: "b".into()
-            }
-        );
-        assert_eq!(serve_override(&web, "/static/a.js").unwrap().0, b"new");
-        assert!(serve_override(&web, "/static/big.wasm").is_none());
-    }
-
-    #[test]
-    fn index_is_patched_and_files_of_an_earlier_update_are_kept() {
-        let tmp = tempfile::tempdir().unwrap();
-        let data = tmp.path();
-        let v1 = manifest(
-            "1",
-            "0.1.0",
-            &[("index.html", INDEX.as_bytes()), ("static/a.js", b"a1")],
-        );
-        let v2 = manifest(
-            "2",
-            "0.1.0",
-            &[("index.html", INDEX.as_bytes()), ("static/a.js", b"a2")],
-        );
-        let v3 = manifest(
-            "3",
-            "0.1.0",
-            &[
-                ("index.html", b"<x>"),
-                ("static/a.js", b"a2"),
-                ("static/b.js", b"b3"),
-            ],
-        );
-        let emb = manifest(
-            "0",
-            "0.1.0",
-            &[("index.html", b"<0>"), ("static/a.js", b"a0")],
-        );
-        apply(
-            data,
-            &emb,
-            &v1,
-            "0.1.0",
-            &mem(&[("index.html", INDEX.as_bytes()), ("static/a.js", b"a1")]),
-            |_| {},
-        )
-        .unwrap();
-        let idx = String::from_utf8(serve_override(&data.join("web"), "/").unwrap().0).unwrap();
-        assert!(idx.contains("desktop-shim.js"));
-        apply(
-            data,
-            &v1,
-            &v2,
-            "0.1.0",
-            &mem(&[("static/a.js", b"a2")]),
-            |_| {},
-        )
-        .unwrap();
-        assert!(
-            idx.contains("mzlab:") && serve_override(&data.join("web"), "/index.html").is_some()
-        );
-        // v3 has an index.html without the markers: the update fails and nothing changes
-        let err = apply(
-            data,
-            &v2,
-            &v3,
-            "0.1.0",
-            &mem(&[("index.html", b"<x>"), ("static/b.js", b"b3")]),
-            |_| {},
-        )
-        .unwrap_err();
-        assert_eq!(err.key, "update.error.manifest");
-        assert_eq!(fs::read(data.join("web/static/a.js")).unwrap(), b"a2");
-        assert!(validate_web(&data.join("web")) && !data.join("web.next").exists());
-    }
-
-    #[test]
-    fn corrupt_download_changes_nothing() {
-        let tmp = tempfile::tempdir().unwrap();
-        let data = tmp.path();
-        let local = manifest("a", "0.1.0", &[("static/a.js", b"old")]);
-        let remote = manifest("b", "0.1.0", &[("static/a.js", b"new")]);
-        let err = apply(
-            data,
-            &local,
-            &remote,
-            "0.1.0",
-            &mem(&[("static/a.js", b"nex")]),
-            |_| {},
-        )
-        .unwrap_err();
-        assert_eq!(err.key, "update.error.hash");
-        assert!(!data.join("web").exists() && !data.join("web.next").exists());
-    }
-
-    #[test]
-    fn offline_changes_nothing() {
-        let tmp = tempfile::tempdir().unwrap();
-        let local = manifest("a", "0.1.0", &[("static/a.js", b"old")]);
-        let remote = manifest("b", "0.1.0", &[("static/a.js", b"new")]);
-        struct Down;
-        impl Source for Down {
-            fn get(&self, _: &str) -> Result<Vec<u8>, UpdateError> {
-                Err(UpdateError::new("update.error.offline", "no route"))
-            }
-        }
-        let err = apply(tmp.path(), &local, &remote, "0.1.0", &Down, |_| {}).unwrap_err();
-        assert_eq!(err.key, "update.error.offline");
-        assert!(!tmp.path().join("web").exists());
-    }
-
-    #[test]
-    fn newer_web_part_than_the_binary_is_refused() {
-        let tmp = tempfile::tempdir().unwrap();
-        let local = manifest("a", "0.1.0", &[("static/a.js", b"old")]);
-        let remote = manifest("b", "0.3.0", &[("static/a.js", b"new")]);
-        let err = apply(
-            tmp.path(),
-            &local,
-            &remote,
-            "0.1.0",
-            &mem(&[("static/a.js", b"new")]),
-            |_| {},
-        )
-        .unwrap_err();
-        assert_eq!(err.key, "update.error.newapp");
-    }
-
-    #[test]
-    fn damaged_folder_is_set_aside_and_embedded_copy_takes_over() {
-        let tmp = tempfile::tempdir().unwrap();
-        let data = tmp.path();
-        let local = manifest("a", "0.1.0", &[("static/a.js", b"old")]);
-        let remote = manifest("b", "0.1.0", &[("static/a.js", b"new")]);
-        apply(
-            data,
-            &local,
-            &remote,
-            "0.1.0",
-            &mem(&[("static/a.js", b"new")]),
-            |_| {},
-        )
-        .unwrap();
-        fs::write(data.join("web/static/a.js"), b"corrupt").unwrap();
-        assert!(!validate_web(&data.join("web")));
-        recover(data);
-        assert!(!data.join("web").exists());
-        assert!(serve_override(&data.join("web"), "/static/a.js").is_none());
-        // the manifest falls back to the embedded one, so the next check downloads the file again
-        let emb = serde_json::to_vec(&local).unwrap();
-        assert_eq!(local_manifest(data, &emb).unwrap(), local);
-    }
-
-    #[test]
-    fn interrupted_swap_is_finished_or_undone() {
-        let tmp = tempfile::tempdir().unwrap();
-        let data = tmp.path();
-        let local = manifest("a", "0.1.0", &[("static/a.js", b"old")]);
-        let remote = manifest("b", "0.1.0", &[("static/a.js", b"new")]);
-        apply(
-            data,
-            &local,
-            &remote,
-            "0.1.0",
-            &mem(&[("static/a.js", b"new")]),
-            |_| {},
-        )
-        .unwrap();
-        fs::rename(data.join("web"), data.join("web.old")).unwrap(); // the app died between the two renames
-        fs::create_dir(data.join("web.next")).unwrap();
-        recover(data);
-        assert!(
-            validate_web(&data.join("web"))
-                && !data.join("web.old").exists()
-                && !data.join("web.next").exists()
-        );
-    }
-
-    #[test]
-    fn serve_override_never_leaves_the_folder() {
-        let tmp = tempfile::tempdir().unwrap();
-        fs::create_dir(tmp.path().join("web")).unwrap();
-        fs::write(tmp.path().join("secret.txt"), b"s").unwrap();
-        assert!(serve_override(&tmp.path().join("web"), "/../secret.txt").is_none());
-        assert!(serve_override(&tmp.path().join("web"), "/check.json").is_none());
-    }
-
-    #[test]
-    fn http_source_reads_a_file_and_reports_offline() {
-        use std::io::{Read, Write};
-        let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        let port = l.local_addr().unwrap().port();
-        let h = std::thread::spawn(move || {
-            for _ in 0..2 {
-                let (mut c, _) = l.accept().unwrap();
-                let mut buf = [0u8; 2048];
-                let n = c.read(&mut buf).unwrap();
-                let first = String::from_utf8_lossy(&buf[..n])
-                    .lines()
-                    .next()
-                    .unwrap_or("")
-                    .to_string();
-                let resp = if first.contains("static/a.js") {
-                    "HTTP/1.1 200 OK\r\nContent-Length: 3\r\nConnection: close\r\n\r\nabc"
-                } else {
-                    "HTTP/1.1 302 Found\r\nLocation: http://elsewhere/\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
-                };
-                c.write_all(resp.as_bytes()).unwrap();
-            }
-        });
-        let src = Http::with_base(&format!("http://127.0.0.1:{port}/"));
-        assert_eq!(src.get("static/a.js").unwrap(), b"abc");
-        // a redirect is not followed: the host cannot change
-        assert_eq!(
-            src.get("static/other.js").unwrap_err().key,
-            "update.error.http"
-        );
-        h.join().unwrap();
-        let down = Http::with_base(&format!("http://127.0.0.1:{port}/"));
-        assert_eq!(
-            down.get("static/a.js").unwrap_err().key,
-            "update.error.offline"
-        );
-        assert!(down.get("../x").is_err());
-    }
-}
+#[path = "update_tests.rs"]
+mod tests;

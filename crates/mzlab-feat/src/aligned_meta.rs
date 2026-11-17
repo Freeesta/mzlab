@@ -1,5 +1,6 @@
 //! Per-row summaries of an aligned table: the edges of the peak, the charge, the quality and the best MS2 of the reference ion, taken over the files that
-//! detected it (`rowmeta::compute`). Either empty (not computed: tables made by hand, files of format 1) or one value per row.
+//! detected it (`rowmeta::compute`), and the identity columns of the rows (`RowIdent`, computed by `rowident`). Either empty (not computed: tables made by
+//! hand, files of format 1) or one value per row.
 
 /// Marks "no MS2" in `RowMeta::ms2_file`.
 pub const NO_FILE: u32 = u32::MAX;
@@ -105,5 +106,32 @@ impl RowMeta {
 
     pub fn heap_bytes(&self) -> usize {
         (self.rt_lo.capacity() * 4) * 6 + self.charge.capacity() + self.qreason.capacity() + self.ms2_file.capacity() * 4 + self.iso_m1.capacity() * 4
+    }
+}
+
+/// Bit 0 of `RowIdent::src`: the detection found the row in at least one file (else it was added by the targeted pass).
+pub const SRC_DETECTED: u8 = 1;
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct RowIdent {
+    /// Neutral mass of the matched hypothesis; else the one of the protonated (deprotonated) reference ion.
+    pub neutral: Vec<f64>,
+    /// Adduct of that mass: 1 + the position in `adduct_names()`; 0 = none matched and no adduct assumed.
+    pub ion: Vec<u8>,
+    /// `Hypothesis::sources << 1 | SRC_DETECTED`; no hypothesis = 0 in the high bits.
+    pub src: Vec<u8>,
+}
+
+impl RowIdent {
+    pub fn len(&self) -> usize {
+        self.neutral.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.neutral.is_empty()
+    }
+
+    pub fn heap_bytes(&self) -> usize {
+        self.neutral.capacity() * 8 + self.ion.capacity() + self.src.capacity()
     }
 }

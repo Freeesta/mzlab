@@ -67,7 +67,7 @@ impl Default for TargetParams {
             min_snr: 3.0,
             min_shape: 0.5,
             min_points: 5,
-            floor: crate::trace::FLOOR,
+            floor: crate::trace_base::FLOOR,
             pad: 15,
             parent_rt: None,
             rt_slack: 0.3,

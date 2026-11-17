@@ -54,12 +54,11 @@ window.avvisoAuto = function(el, o = {}) {
 
 "use strict";
 // user preferences (settings gear): text size, theme, chart colours, high resolution (hr: automatic | off, tolerance in ppm, decimals; see hr.js). Filled from localStorage by uipLoad() (settings.js).
-// merge = join the centroids of the same nominal mass (centroid files only)
-const UIP = { theme: "light", pal: "file", merge: true, hrPpm: 5, hrDec: 4, xicLens: true };
+const UIP = { theme: "light", pal: "file", hrPpm: 5, hrDec: 4, xicLens: true };
 // peak labels, background levels and axis ticks: at least 3 decimals (2.243e+6); area and height columns use I18N.sciE
 const fmtA = (/** @type {number} */ v) => !Number.isFinite(v) || v === 0 ? "0" : Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(3) : (+v.toPrecision(4)).toString();
 let EXPORTING = false;          // true while a plot is drawn for a saved image
-// ---- chart colours (settings: "Colori dei grafici"). PAL = categorical colours of the current palette (filled in place by setPal, so every user of PAL follows it);
+// ---- chart colours (settings: "Colori grafici"). PAL = categorical colours of the current palette (filled in place by setPal, so every user of PAL follows it);
 // files of the Full Scan tab that have a time get a SEQUENTIAL scale ordered by time (seqColor), see paintFiles.
 function isDark() {
   if (EXPORTING) return false;
@@ -255,7 +254,7 @@ function nbMerge(/** @type {Bag} */ remote) {
   out._v = NB_V; out._t = Date.now(); return out;
 }
 function nbSave(now = false) {
-  clearTimeout(/** @type {number} */ (nbTimer));
+  clearTimeout(/** @type {number} */ (nbTimer)); if (window.QQ_RESETTING) return;      // a reset clears the storage: the closing page must not write its old notebook back
   const go = async (/** @type {number} */ gen) => {
     // not read yet (a save would erase the stored notebook), or nothing changed: no request (fewer aborted saves on reload)
     if (gen !== nbGen || !nbEverLoaded || JSON.stringify(NB) === nbLast) return;
@@ -265,7 +264,7 @@ function nbSave(now = false) {
     const snap = JSON.stringify(NB); nbLast = snap; nbBase = JSON.parse(snap); nbRemote = out; if (now) NBP.keep(body);
     return fetch("api/notebook", { method: "POST", body, keepalive: true }).then(r => { if (r && r.ok) NBP.done(body); }).catch(() => { nbLast = ""; });
   };
-  if (now) go(++nbGen); else nbTimer = setTimeout(() => { const gen = ++nbGen; nbQueue = nbQueue.then(() => go(gen)).catch(() => {}); }, 500);      // closing the page does not wait for the queue
+  if (now) return go(++nbGen); else nbTimer = setTimeout(() => { const gen = ++nbGen; nbQueue = nbQueue.then(() => go(gen)).catch(() => {}); }, 500);      // closing the page does not wait for the queue
 }
 let nbEverLoaded = false, nbNamed = /** @type {Set<string>} */ (new Set());      // nbNamed: the files the notebook names at load (open or removed), read by restoreRows (shell.js)
 async function nbLoad() {
@@ -314,16 +313,16 @@ function uiSave(now = false) {
     NB.ui = {
       contEx: window.LISTE ? LISTE.exclExport() : undefined,
       ref: { ...S.ref, k: S.ref.k === "auto" ? "auto" : E.files[S.ref.k]?.file ?? "auto" },
-      tab: E.tab, cur: E.cur, msn: window.INF ? INF.state() : undefined, files: E.files.map((/** @type {FileAperto} */ f) => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined, ugrp: f.ugrp || undefined })), ugBy: E.ugBy, ugOrder: E.ugOrder,
+      tab: E.tab, cur: E.cur, msn: window.INF ? INF.state() : undefined, files: E.files.map((/** @type {FileAperto} */ f) => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined, ugrp: f.ugrp || undefined })), ugBy: E.ugBy, ugOrder: E.ugOrder, ugNone: E.ugNone,
       panels: E.panels.map(panelRec)
     };
     nbSave(now);
   };
   if (now) run(); else uiTimer = setTimeout(run, 800);
 }
-// when the page closes (or the tab goes to the background) save at once: the last change is not lost
+// when the page closes (or the tab goes to the background) save at once: the last change is not lost (not during a reset: its pagehide must not write the session marker or notebook back)
 // (nbSave too: with no file open uiSave has nothing to write, but the Disegno or Flow fields of NB may still be waiting in the 500 ms timer)
-const flushAll = () => { uiSave(true); nbSave(true); };
+const flushAll = () => { if (window.QQ_RESETTING) return; uiSave(true); nbSave(true); };
 addEventListener("pagehide", flushAll);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushAll(); });
 
@@ -397,8 +396,8 @@ const getXic = /** @type {(k: string | number, ...rest: (number | string | null 
   ? memo(`x${k}|${mz}|${tol}|${lv}|${canale}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}&canale=${encodeURIComponent(canale)}`).then(j => j.traces ? j.traces[0] : j))
   : memo(`x${k}|${mz}|${tol}|${lv}`, () => xicBin(`api/xicbin?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0])));
 // + "&hr=0" when high resolution is switched off (hr.js)
-const MERGE = () => (UIP.merge ? "&merge=1" : "") + (window.HR ? HR.q() : "");
-const getSpec = (/** @type {string | number} */ k, /** @type {number | string} */ a, /** @type {number | string} */ b, /** @type {number} */ lv, /** @type {unknown} */ pr, /** @type {number[] | null | undefined} */ bg) => memo(`s${k}|${a}|${b}|${lv}|${pr}|${bg ? bg.join(",") : ""}|${UIP.merge ? 1 : 0}`, () => J(`api/spectrum?k=${k}&rt0=${a}&rt1=${b}&level=${lv}&precursor=${prSplit(pr)[0]}${FT(prSplit(pr)[1])}` + (bg ? `&bgk=${bg[0]}&bgrt0=${bg[1]}&bgrt1=${bg[2]}&bgf=${bg[3] ?? 1}&bgclip=${bg[4] ?? 1}` : "") + MERGE()));
+const MERGE = () => (window.HR ? HR.q() : "");   // no merge flag: the engine decides (unit-resolution centroids are merged, profile and HR never)
+const getSpec = (/** @type {string | number} */ k, /** @type {number | string} */ a, /** @type {number | string} */ b, /** @type {number} */ lv, /** @type {unknown} */ pr, /** @type {number[] | null | undefined} */ bg) => memo(`s${k}|${a}|${b}|${lv}|${pr}|${bg ? bg.join(",") : ""}`, () => J(`api/spectrum?k=${k}&rt0=${a}&rt1=${b}&level=${lv}&precursor=${prSplit(pr)[0]}${FT(prSplit(pr)[1])}` + (bg ? `&bgk=${bg[0]}&bgrt0=${bg[1]}&bgrt1=${bg[2]}&bgf=${bg[3] ?? 1}&bgclip=${bg[4] ?? 1}` : "") + MERGE()));
 const getFormula = (/** @type {string} */ f, /** @type {string | undefined} */ ad) => J(`api/formula?f=${encodeURIComponent(f)}&adduct=${encodeURIComponent(ad || "")}`);
 // default adduct from the polarity of the visible files
 // polarity of the files (read from the mzML): a small sign next to the name, the default adduct of a graph follows ITS files
@@ -440,10 +439,10 @@ function remapFileIndex(o, key, none, oldNames, files) {
   o[key] = out;
 }
 async function bootSession0() {
-  const j = await J("api/session");
+  const j = await J("api/session"); if (!window.INF && j.session) await TIPOF.infusione(j.session);      // an infusion file brings its tools before any cell reads INF
   S.sess = j.session;
   if (typeof AVVIO !== "undefined" && AVVIO.segnaSessione) AVVIO.segnaSessione(!!j.session);
-  if (!j.session) { E.files = []; E.ugBy = E.ugOrder = undefined; E.key = ""; E.pending = []; E._seq = false; E._mem = null; E.progTok = null; return; }
+  if (!j.session) { E.files = []; E.ugBy = E.ugOrder = E.ugNone = undefined; E.key = ""; E.pending = []; E._seq = false; E._mem = null; E.progTok = null; return; }
   const key = JSON.stringify(j.session.map((/** @type {Bag} */ s) => s.file));
   if (key === E.key) return;
   const oldNames = E.files.map((/** @type {FileAperto} */ f) => f.file), mem = E._mem || {};
@@ -525,7 +524,7 @@ function riapriPannello(sp) {
   });
 }
 function restoreUi() {
-  const u = NB.ui; if (u) { E.ugBy = u.ugBy; E.ugOrder = u.ugOrder; }
+  const u = NB.ui; if (u) { E.ugBy = u.ugBy; E.ugOrder = u.ugOrder; E.ugNone = u.ugNone; }
   // the contaminant exclusions travel with the session
   if (u && u.contEx && window.LISTE) LISTE.exclImport(u.contEx);
   // the grouping of the MSn tree travels with the session
@@ -783,7 +782,7 @@ function renderFileList() {
   if (E.ugBy && E.ugBy.by !== "custom" && E.ugBy.by !== "flat") carica("gruppi.js").then(() => GRUPPI.follow());
   if (window.GRUPPI) GRUPPI.order(groups); ugArrange(groups);
   if (window.BANCO && BANCO.on() && E.tab === "mrm") groups.sort((a, b) => ["standard", "sample", "blank"].indexOf(a.g) - ["standard", "sample", "blank"].indexOf(b.g));
-  const sub = (/** @type {FileAperto} */ f) => f.type === "sample" ? ((ESP.voce(f.kind) || {}).tempo ? fmtTime(f.time) : "") : (f.type === "blank" ? typeTag(true) : typeTag(false) + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
+  const sub = (/** @type {FileAperto} */ f) => f.type === "sample" ? ((ESP.voce(f.kind) || {}).tempo ? fmtTime(f.time) : timeBadge(f.time)) : (f.type === "blank" ? typeTag(true) : typeTag(false) + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
   const row = (/** @type {FileAperto} */ f) => {
     const hasPr = lrTog() && f.kind === "ms2" && f.precursors && f.precursors.length;
     const prOpen = f._prOpen !== false;
@@ -1010,7 +1009,7 @@ async function dl(/** @type {string} */ name, /** @type {string | Blob | Uint8Ar
   if (big) { try { await EP.save(name, text, type); } catch (e) { console.error(e); if (window.toast) toast(I18N.t("export.stream.fail")); } return; }
   saveBlob(new Blob([/** @type {BlobPart} */ (text)], { type }), name);
 }
-const LOCALE = I18N.lang === "it" ? "it-IT" : "en-GB";           // dates in the exported files
+const LOCALE = "en-GB";           // dates in the exported files
 // data of a plot as columns side by side (each trace has its own x), one sheet with the units in the headers: for graphs and tables made in Excel
 function plotSheets(/** @type {Pannello} */ p) {
   const a = p._a; if (!a) return null;

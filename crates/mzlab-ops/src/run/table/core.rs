@@ -1,0 +1,368 @@
+//! The steps of the bridge on any `ReadAt`, shared with the native example `table`, so the browser and the desktop write the same bytes.
+use mzlab_core::error::{Error, Result};
+use mzlab_core::idxread::{Index, ReadAt};
+use mzlab_core::json::Out;
+use mzlab_feat::export::{self, Ctx};
+use mzlab_feat::export_ms;
+use mzlab_feat::ms2spec;
+use mzlab_feat::qc;
+use mzlab_feat::report;
+use mzlab_feat::row;
+use mzlab_feat::samples::{self, Sample};
+use mzlab_feat::store::read_table_from;
+use mzlab_feat::tabcheck;
+use mzlab_feat::table::Aligned;
+use mzlab_feat::view::{self, View};
+
+/// The table and the samples, put in the order of its files by name; the samples must be one per file.
+fn load<R: ReadAt>(r: &mut R, size: u64, samples_json: &str) -> Result<(Aligned, Vec<Sample>)> {
+    let (t, meta) = read_table_from(r, size)?;
+    let text =
+        mzlab_core::samples::order_like(samples_json, &mzlab_feat::store::input_names(&meta))?;
+    let s = samples::from_json(text.as_bytes())?;
+    if s.len() != t.n_files {
+        return Err(Error::new("error.badView"));
+    }
+    Ok((t, s))
+}
+
+/// The duplicate window of the rules in `spec` is in Da on a unit-resolution table (`dup_da`) and in ppm on the other (`dup_ppm`); the wrong one is `err.flow.param.axis`.
+fn duplicate_axis(spec: &str, unit: bool) -> Result<()> {
+    let Ok(v) = mzlab_core::json::parse(spec.as_bytes()) else {
+        return Ok(());
+    };
+    let rules = v.get("filtra").map_or(&[][..], |f| f.arr());
+    for rule in rules
+        .iter()
+        .filter(|r| r.get("regola").and_then(|x| x.str()) == Some("duplicati"))
+    {
+        let (wrong, axis) = if unit { ("ppm", "Da") } else { ("da", "ppm") };
+        if rule.get(wrong).is_some() {
+            let param = if unit { "dup_ppm" } else { "dup_da" };
+            return Err(Error::new("err.flow.param.axis")
+                .with("param", param)
+                .with("axis", axis));
+        }
+    }
+    Ok(())
+}
+
+/// The view of the parameters `spec` (`{"normalizza":..., "filtra":[...]}`); an empty text is no view.
+fn view_of(t: &Aligned, s: &[Sample], spec: &str) -> Result<Option<View>> {
+    if spec.trim().is_empty() {
+        return Ok(None);
+    }
+    view::from_spec(t, s, spec.as_bytes()).map(Some)
+}
+
+fn ctx<'a>(
+    t: &'a Aligned,
+    s: &'a [Sample],
+    v: Option<&'a View>,
+    sha: &'a str,
+    polarity: i32,
+) -> Ctx<'a> {
+    Ctx {
+        table: t,
+        samples: s,
+        view: v,
+        table_sha256: sha,
+        polarity: if polarity < 0 { -1 } else { 1 },
+    }
+}
+
+/// The view of a table (an empty `spec` keeps every row, areas as measured): `{"digest", "righe":[id of every row kept], "fattori":[per file], "conteggi":{...}}`.
+pub fn view_json<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    spec: &str,
+) -> Result<String> {
+    let (_, meta) = read_table_from(r, size)?;
+    let unit = meta
+        .get("recipe")
+        .and_then(|v| v.str())
+        .is_some_and(mzlab_feat::recipe::is_unit_text);
+    duplicate_axis(spec, unit)?;
+    let (t, s) = load(r, size, samples_json)?;
+    let spec = if spec.trim().is_empty() { "{}" } else { spec };
+    let v = view::from_spec(&t, &s, spec.as_bytes())?;
+    let mut o = Out::default();
+    o.raw("{\"digest\":").str(&v.digest(&t)).raw(",\"righe\":[");
+    for (i, &row) in v.rows.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" })
+            .int(i64::from(t.id(row as usize)));
+    }
+    o.raw("],\"fattori\":").floats(&v.factors);
+    o.raw(",\"conteggi\":").raw(&v.counts_json()).raw("}");
+    Ok(o.0)
+}
+
+/// `view_json` of a `table.filter` step: the same view with `"origine":{"tabella":<SHA-256 of the table>,"spec":<the rules>,"campioni":<the samples>}` after it,
+/// so that an export that reads the view finds the table in the run and writes the rows the view keeps, and any other step reads `table_of_view`.
+pub fn view_json_origin<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    spec: &str,
+) -> Result<String> {
+    let mut text = view_json(r, size, samples_json, spec)?;
+    let sha = mzlab_core::budget::sha256_hex_at(r, size)?;
+    text.pop();
+    let mut o = Out::default();
+    o.raw(&text).raw(",\"origine\":{\"tabella\":").str(&sha);
+    o.raw(",\"spec\":").str(spec);
+    o.raw(",\"campioni\":").str(samples_json).raw("}}");
+    Ok(o.0)
+}
+
+pub use mzlab_feat::view_table::{is_view, table_of_view, view_origin};
+
+/// The `report/1` of a table under the view `spec` (empty = the whole table).
+pub fn report_json<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    spec: &str,
+    table_sha256: &str,
+) -> Result<String> {
+    let (t, s) = load(r, size, samples_json)?;
+    let v = view_of(&t, &s, spec)?;
+    Ok(report::to_json(&t, &s, v.as_ref(), table_sha256))
+}
+
+/// The `tptab/1` of a table: the rows of the JSON list `rows_json` (indices of the table), or, empty, the rows of the view `tp/1`, with their numbers and the controls.
+pub fn tp_table_json<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    rows_json: &str,
+) -> Result<String> {
+    let (t, s) = load(r, size, samples_json)?;
+    let rows: Option<Vec<usize>> = if rows_json.trim().is_empty() {
+        None
+    } else {
+        let v = mzlab_core::json::parse(rows_json.as_bytes())?;
+        Some(
+            v.arr()
+                .iter()
+                .filter_map(|x| x.f64())
+                .map(|x| x as usize)
+                .collect(),
+        )
+    };
+    mzlab_feat::tp::table_json(&t, &s, rows.as_deref())
+}
+
+/// `tp_table_json` with the conditions: `series_json` is the `campioni/2` of the files and `infos_json` the list `[{"row","neutral_formula","ion_formula","ppm"}]` of
+/// what the caller knows of the best hypothesis of each row. With fewer than two conditions the text is the one of `tp_table_json`; with more it carries `gruppi`.
+pub fn tp_table_cond_json<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    rows_json: &str,
+    series_json: &str,
+    infos_json: &str,
+) -> Result<String> {
+    let (t, s) = load(r, size, samples_json)?;
+    let rows: Option<Vec<usize>> = if rows_json.trim().is_empty() {
+        None
+    } else {
+        let v = mzlab_core::json::parse(rows_json.as_bytes())?;
+        Some(
+            v.arr()
+                .iter()
+                .filter_map(|x| x.f64())
+                .map(|x| x as usize)
+                .collect(),
+        )
+    };
+    let names = mzlab_feat::store::table_names(r, size)?;
+    let series_json = mzlab_core::samples::order_like(series_json, &names)?;
+    let cs = mzlab_core::samples::from_json(series_json.as_bytes())?;
+    let infos = mzlab_feat::tp::infos_from_json(infos_json)?;
+    mzlab_feat::tp::table_json_cond(&t, &s, rows.as_deref(), Some((&cs, &infos)))
+}
+
+/// The `campioni/1` that `propose` makes from the names of the files: `{"files":[{"name":..,"sha256":..}, ...]}` (type, time, replicate and group are read from the names).
+pub fn samples_json(files_json: &str) -> Result<String> {
+    let v = mzlab_core::json::parse(files_json.as_bytes())?;
+    let files: Vec<(String, String)> = v
+        .get("files")
+        .map(|a| a.arr())
+        .unwrap_or_default()
+        .iter()
+        .map(|f| {
+            (
+                f.get("name")
+                    .and_then(|x| x.str())
+                    .unwrap_or("")
+                    .to_string(),
+                f.get("sha256")
+                    .and_then(|x| x.str())
+                    .unwrap_or("")
+                    .to_string(),
+            )
+        })
+        .collect();
+    Ok(samples::to_json(&samples::propose(&files)))
+}
+
+/// The `qc/1` of a table under the view `spec` (empty = the whole table): per file the cells and the total, per condition the agreement of the replicates, the standard.
+pub fn qc_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &str) -> Result<String> {
+    let (t, s) = load(r, size, samples_json)?;
+    let v = view_of(&t, &s, spec)?;
+    Ok(qc::to_json(&t, &s, v.as_ref()))
+}
+
+/// The `tabcheck/1` of a table under the view `spec` (empty = the whole table): fifteen checks with value, threshold, flag, example rows and proof. `polarity` is the one the
+/// table was made with; `options_json` is empty or `{"expected_polarity": 1|-1, "mz_tol_da": number}` (what the inspection of the files found, the m/z tolerance of the alignment).
+pub fn tabcheck_json<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    spec: &str,
+    polarity: i32,
+    options_json: &str,
+) -> Result<String> {
+    let (t, s) = load(r, size, samples_json)?;
+    let v = view_of(&t, &s, spec)?;
+    let mut o = tabcheck::Options {
+        polarity: if polarity < 0 { -1 } else { 1 },
+        ..tabcheck::Options::default()
+    };
+    if !options_json.trim().is_empty() {
+        let j = mzlab_core::json::parse(options_json.as_bytes())?;
+        o.expected_polarity =
+            j.get("expected_polarity")
+                .and_then(|x| x.f64())
+                .map(|x| if x < 0.0 { -1 } else { 1 });
+        if let Some(x) = j
+            .get("mz_tol_da")
+            .and_then(|x| x.f64())
+            .filter(|x| x.is_finite() && *x > 0.0)
+        {
+            o.mz_tol_da = x;
+        }
+    }
+    tabcheck::to_json(&t, &s, v.as_ref(), &o)
+}
+
+/// The `plausible/1` of a table (the values it shows: finite, in range, ppm of the identity columns); `options_json` is empty or the keys of `plausible::Limits::from_json`
+/// (`mz_tol_da`, when given, is the alignment tolerance: 0.1 Da or more is unit resolution and the ppm error is not read; else the recipe of the table says).
+pub fn plausible_json<R: ReadAt>(r: &mut R, size: u64, options_json: &str) -> Result<String> {
+    let limits = mzlab_feat::plausible::Limits::from_json(options_json)?;
+    let (t, meta) = read_table_from(r, size)?;
+    let unit = meta
+        .get("recipe")
+        .and_then(|v| v.str())
+        .is_some_and(mzlab_feat::recipe::is_unit_text);
+    Ok(mzlab_feat::plausible::to_json(&t, unit, &limits))
+}
+
+/// A table file: `kind` is `full` (CSV full for mzmine), `full_mzmine` (the same with mzmine's words for the filled and targeted cells), `quant` (FBMN),
+/// `csv_semicolon` (the sheet of features as text with `;`), `xlsx_rows` (the same sheet as JSON rows for the page to zip) or `mztab` (mzTab-M 2.0).
+pub fn table_file<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    spec: &str,
+    table_sha256: &str,
+    polarity: i32,
+    kind: &str,
+) -> Result<String> {
+    let (t, s) = load(r, size, samples_json)?;
+    let v = view_of(&t, &s, spec)?;
+    let c = ctx(&t, &s, v.as_ref(), table_sha256, polarity);
+    match kind {
+        "full" => Ok(export::csv_full(&c, false)),
+        "full_mzmine" => Ok(export::csv_full(&c, true)),
+        "quant" => Ok(export::quant(&c)),
+        "csv_semicolon" => Ok(export::csv_semicolon(&c)),
+        "xlsx_rows" => Ok(export::xlsx_rows(&c)),
+        "mztab" => Ok(mzlab_feat::export_mztab::mztab(&c)),
+        _ => Err(Error::new("error.badView")),
+    }
+}
+
+/// An MS2 file: `kind` is `mgf` (FBMN), `mgf_unit` (the same with the note of unit resolution; there is no `sirius` version) or `sirius` (`.ms`). `open(k)` gives the index of file `k`, which holds the best MS2 of some rows.
+#[allow(clippy::too_many_arguments)]
+pub fn ms2_file<R: ReadAt, I: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    spec: &str,
+    table_sha256: &str,
+    polarity: i32,
+    kind: &str,
+    open: impl FnMut(usize) -> Result<Index<I>>,
+) -> Result<String> {
+    let (t, s) = load(r, size, samples_json)?;
+    let v = view_of(&t, &s, spec)?;
+    let c = ctx(&t, &s, v.as_ref(), table_sha256, polarity);
+    let (opts, blanks) = ms2_options(spec, kind, &s);
+    let (sp, info) = ms2spec::spectra_with(&c, &mut { open }, &opts, &blanks)?;
+    let text = match kind {
+        "mgf" => export_ms::mgf(&c, &sp),
+        "mgf_unit" => export_ms::mgf_unit(&c, &sp),
+        "sirius" => export_ms::sirius(&c, &sp),
+        _ => return Err(Error::new("error.badView")),
+    };
+    Ok(ms2_note(text, &info))
+}
+
+/// The choices of the spectrum from the keys `ms2_spectrum` (`best`, `consensus`) and `ms2_background` of the view spec, and the files with the role blank.
+fn ms2_options(spec: &str, kind: &str, samples: &[Sample]) -> (ms2spec::SpecOpts, Vec<usize>) {
+    let v = mzlab_core::json::parse(spec.as_bytes()).ok();
+    let get = |k: &str| v.as_ref().and_then(|v| v.get(k));
+    let opts = ms2spec::SpecOpts {
+        consensus: get("ms2_spectrum").and_then(|x| x.str()) == Some("consensus"),
+        background: get("ms2_background").and_then(|x| x.bool()) == Some(true),
+        unit: kind == "mgf_unit",
+    };
+    let blanks = (0..samples.len())
+        .filter(|&k| samples[k].kind == "blank")
+        .collect();
+    (opts, blanks)
+}
+
+/// A `#` line after the header of the file that says what the background step did; nothing when it was off.
+fn ms2_note(text: String, info: &ms2spec::SpecInfo) -> String {
+    if info.bg.is_empty() {
+        return text;
+    }
+    let lost: u32 = info.lost.iter().sum();
+    let note = format!("# MS2 background: {}, {} peaks removed\n", info.bg, lost);
+    let at = text
+        .split_inclusive('\n')
+        .take_while(|l| l.starts_with('#'))
+        .map(str::len)
+        .sum();
+    let mut out = text;
+    out.insert_str(at, &note);
+    out
+}
+
+/// The `riga/1` of the row with `id` (`error.rowNotFound` when the table has none).
+pub fn row_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, id: u32) -> Result<String> {
+    let (t, s) = load(r, size, samples_json)?;
+    row::row(&t, &s, id)
+}
+
+/// The `riga_tracce/1` of the row with `id`, read from the index of every file (`open(k)`), within `ppm` of its m/z.
+pub fn row_traces_json<R: ReadAt, I: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    id: u32,
+    ppm: f64,
+    open: impl FnMut(usize) -> Result<Index<I>>,
+) -> Result<String> {
+    let (t, s) = load(r, size, samples_json)?;
+    row::traces(&t, &s, id, open, ppm)
+}
+
+/// `campioni/2`: `op` is `proponi`, `valida`, `da_legacy`, `per_tp`, `canonico` or `digest` (`mzlab_core::samples::route_finder`: the rest is over the cap of this .wasm, `rotte` serves it).
+pub fn samples_route(op: &str, input: &str) -> Result<String> {
+    mzlab_core::samples::route_finder(op, input)
+}

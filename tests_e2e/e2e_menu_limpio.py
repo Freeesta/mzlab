@@ -28,15 +28,15 @@ try:
         def known_cont():
             assert "spec.cont" in rows(), "«Is it a known contaminant?» in the peak menu"
             pg.evaluate("__c.lab = __c.m.toFixed(4); AZIONI.esegui('spec.cont', __c)")
-            wait_for_js(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'cont')")
-            assert pg.input_value("#calcin") == pg.evaluate("__c.lab"), pg.input_value("#calcin")
+            wait_for_js(pg, "BARRA.curTab === 'lists'")
+            assert abs(float(pg.input_value("#lst-q")) - pg.evaluate("__c.m")) < 1e-9, pg.input_value("#lst-q")
             assert not pg.evaluate("[...document.querySelectorAll('dialog')].some(d => d.open)"), "the side panel, never a pop-up"
             pg.evaluate("BARRA.close(false)")
-        step("«Is it a known contaminant?» opens the Contaminants tab on the peak m/z", known_cont)
+        step("«Is it a known contaminant?» opens the Lists panel on the peak m/z", known_cont)
         def options():
             assert "spec.disp" in rows()
             pg.evaluate(f"menu({{preventDefault(){{}},clientX:50,clientY:50}},AZIONI.per(__c))")
-            t = pg.evaluate("document.querySelector('#ctx [data-azione=\"spec.disp\"]').textContent.trim()"); assert t == "Opzioni…", t
+            t = pg.evaluate("document.querySelector('#ctx [data-azione=\"spec.disp\"]').textContent.trim()"); assert t == "Options…", t
             assert pg.evaluate("!!document.querySelector('#ctx [data-azione=\"spec.disp\"] .ic svg circle')"), "gear icon"
             pg.evaluate("document.querySelector('#ctx').hidden=true")
         step("«Options…» with the gear", options)
@@ -60,7 +60,7 @@ try:
         step("the downloads are in the download button of the panel", dl_button)
         def lists():
             t = pg.evaluate(f"(()=>{{const b=document.createElement('div');DISP.panel(b,E.panels.find(p=>p.type==='spec'&&p.level===1&&p._a));return b.textContent}})()")
-            assert "contaminanti" in t.lower() and "marker" in t.lower() and "togli" in t.lower(), t
+            assert "contaminants" in t.lower() and "marker" in t.lower() and "remove" in t.lower(), t
         step("scan markers, contaminants and their lists are options of the spectrum", lists)
 finally:
     r.close(); r.report()

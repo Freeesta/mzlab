@@ -20,7 +20,9 @@ impl<R: ReadAt> Routes<R> {
         let level = q.level();
         let precursor = q.num("precursor")?;
         let bin = q.num("bin")?.unwrap_or(0.1);
-        let merge = q.get("merge") == Some("1");
+        // merge=0 opts out, merge=1 forces; omitted is AUTO: unit-resolution centroids (this path) are merged per nominal mass
+        let auto = !matches!(q.get("merge"), Some("0" | "1"));
+        let merge = q.get("merge") != Some("0");
         let filt = q.some("filt");
         // the mode of the scans of this level (all of them when there is none): only centroids, and not high resolution
         let of_level: Vec<&crate::idxread::Scan> =
@@ -48,7 +50,7 @@ impl<R: ReadAt> Routes<R> {
         let Some(m) = self.binned(level, lo, hi, precursor, bin, filt)? else {
             return Ok(Some(EMPTY.into()));
         };
-        Ok(Some(binned_json(m, 3, merge)))
+        Ok(Some(binned_json(m, 3, merge, auto)))
     }
 }
 
@@ -181,7 +183,8 @@ pub(crate) struct Binned {
 }
 
 /// The answer for a window: the peaks rounded to `nd` decimals (m/z) and 1 (intensity), the scans of the window and, for one scan, its number.
-pub(crate) fn binned_json(m: Binned, nd: usize, merge: bool) -> String {
+/// `auto`: the merge was the engine's own choice (the request did not say), which the answer states.
+pub(crate) fn binned_json(m: Binned, nd: usize, merge: bool, auto: bool) -> String {
     let mut o = Out::default();
     let Binned { mut mz, mut y, n, sel, in_win, scan_ids } = m;
     if merge {
@@ -211,6 +214,28 @@ pub(crate) fn binned_json(m: Binned, nd: usize, merge: bool) -> String {
     if in_win.len() == 1 {
         o.raw(",\"sid\":").int(scan_ids[sel[in_win[0]]]);
     }
+    if merge && auto {
+        o.raw(",\"auto_merge\":true");
+    }
     o.raw("}");
     o.0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn two_centroids() -> Binned {
+        Binned { mz: vec![364.0, 364.4], y: vec![1.0, 2.0], n: 1, sel: vec![0], in_win: vec![0], scan_ids: vec![0] }
+    }
+
+    #[test]
+    fn auto_merge_is_stated_and_an_explicit_choice_is_not() {
+        let auto = binned_json(two_centroids(), 3, true, true);
+        assert!(auto.starts_with("{\"mode\":\"centroid\",\"mz\":[364.267],") && auto.ends_with(",\"auto_merge\":true}"), "{auto}");
+        let forced = binned_json(two_centroids(), 3, true, false);
+        assert!(forced.contains("\"mz\":[364.267]") && !forced.contains("auto_merge"), "{forced}");
+        let off = binned_json(two_centroids(), 3, false, false);
+        assert!(off.contains("\"mz\":[364,364.4]") && !off.contains("auto_merge"), "{off}");
+    }
 }

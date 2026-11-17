@@ -10,5 +10,5 @@ def test_engine_cap_matches_pages_yml():
     import bench_viewer
     cap = bench_viewer.engine_cap()
     assert cap.isdigit() and int(cap) > 0
-    assert f" {cap} engine" in (ROOT / ".github" / "workflows" / "pages.yml").read_text()
+    assert "tools/moduli.py --tetto motore)\" engine" in (ROOT / ".github" / "workflows" / "pages.yml").read_text()
     assert "1884160" not in (ROOT / "tools" / "bench_viewer.py").read_text().replace('"1884160" not in', "")

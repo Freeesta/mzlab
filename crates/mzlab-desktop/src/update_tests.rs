@@ -1,0 +1,374 @@
+//! Tests of `update.rs`: manifest parsing (unsafe, non-canonical and colliding keys, sizes, desktop_min), diff and check, the patch of
+//! `index.html`, `serve_override` and the HTTP source; the tests that change folders are in `update_apply_tests.rs`.
+use super::*;
+use std::sync::Mutex;
+
+struct Mem(BTreeMap<String, Vec<u8>>, Mutex<Vec<String>>);
+impl Source for Mem {
+    fn get(&self, rel: &str) -> Result<Vec<u8>, UpdateError> {
+        self.1.lock().unwrap().push(rel.to_string());
+        self.0
+            .get(rel)
+            .cloned()
+            .ok_or_else(|| UpdateError::new("update.error.http", "404"))
+    }
+}
+
+fn manifest(version: &str, min: &str, files: &[(&str, &[u8])]) -> Manifest {
+    Manifest {
+        version: version.into(),
+        desktop_min: min.into(),
+        files: files
+            .iter()
+            .map(|(n, b)| {
+                (
+                    n.to_string(),
+                    Entry {
+                        sha256: sha256_hex(b),
+                        size: b.len() as u64,
+                    },
+                )
+            })
+            .collect(),
+    }
+}
+fn mem(files: &[(&str, &[u8])]) -> Mem {
+    Mem(
+        files
+            .iter()
+            .map(|(n, b)| (n.to_string(), b.to_vec()))
+            .collect(),
+        Mutex::new(vec![]),
+    )
+}
+
+const INDEX: &str = "<meta content=\"default-src 'self'; connect-src 'self'; img-src data:\"><script src=\"static/browser.js\"></script>";
+
+#[test]
+fn sha256_known_value() {
+    assert_eq!(
+        sha256_hex(b"abc"),
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    );
+}
+
+#[test]
+fn native_version_compare() {
+    assert!(native_ok("0.1.0", "0.1.0"));
+    assert!(native_ok("0.2.0", "0.1.9"));
+    assert!(native_ok("1.0.0", "0.9.9"));
+    assert!(!native_ok("0.1.0", "0.1.1"));
+    assert!(!native_ok("0.9.0", "0.10.0"));
+}
+
+#[test]
+fn diff_lists_only_changed_new_and_not_native() {
+    let local = manifest(
+        "a",
+        "0.1.0",
+        &[
+            ("index.html", b"1"),
+            ("static/a.js", b"a"),
+            ("static/pyodide/p.wasm", b"big"),
+        ],
+    );
+    let remote = manifest(
+        "b",
+        "0.1.0",
+        &[
+            ("index.html", b"2"),
+            ("static/a.js", b"a"),
+            ("static/pyodide/p.wasm", b"big"),
+            ("static/n.js", b"n"),
+            ("static/rust-worker.js", b"x"),
+            ("sw.js", b"s"),
+        ],
+    );
+    assert_eq!(
+        diff(&local, &remote),
+        vec!["index.html".to_string(), "static/n.js".to_string()]
+    );
+}
+
+#[test]
+fn check_cases() {
+    let a = manifest("a", "0.1.0", &[("static/a.js", b"a")]);
+    assert_eq!(
+        check(&a, &a, "0.1.0"),
+        Check::Uptodate {
+            version: "a".into()
+        }
+    );
+    let b = manifest("b", "0.1.0", &[("static/a.js", b"aa")]);
+    assert_eq!(
+        check(&a, &b, "0.1.0"),
+        Check::Available {
+            version: "b".into(),
+            files: 1,
+            bytes: 2
+        }
+    );
+    let c = manifest("c", "0.2.0", &[("static/a.js", b"aa")]);
+    assert!(matches!(check(&a, &c, "0.1.0"), Check::Newapp { .. }));
+}
+
+#[test]
+fn rejects_unsafe_paths() {
+    for bad in ["../x", "/etc/passwd", "a/../../b", "a\\b", "C:/x", ""] {
+        assert!(safe_rel(bad).is_err(), "{bad}");
+    }
+    assert!(safe_rel("static/pyodide/pyodide.asm.wasm").is_ok());
+}
+
+fn manifest_json(min: &str, keys: &[&str]) -> Vec<u8> {
+    let files: BTreeMap<&str, Entry> = keys
+        .iter()
+        .map(|k| {
+            let e = Entry {
+                sha256: sha256_hex(b"x"),
+                size: 1,
+            };
+            (*k, e)
+        })
+        .collect();
+    serde_json::to_vec(&serde_json::json!({ "version": "v", "desktop_min": min, "files": files }))
+        .unwrap()
+}
+
+#[test]
+fn rejects_non_canonical_and_colliding_keys() {
+    assert!(parse_manifest(&manifest_json(
+        "0.1.0",
+        &["index.html", "static/a.js", "static/rust-worker.js"]
+    ))
+    .is_ok());
+    for keys in [
+        &["a/./b.js"][..],
+        &["a//b.js"],
+        &["a/"],
+        &["index.html/."],
+        &["static/./desktop-shim.js"],
+        &["a/B.js", "a/b.js"],
+        &["Index.html"],
+        &["CHECK.JSON"],
+        &["Static/Manifest.json"],
+        &["static/Desktop-Shim.js"],
+    ] {
+        let err = parse_manifest(&manifest_json("0.1.0", keys)).unwrap_err();
+        assert_eq!(err.key, "update.error.manifest", "{keys:?}");
+    }
+    for min in [
+        "v2.0.0",
+        "2.0",
+        "2.0.0.1",
+        "2..0",
+        "99999999999999999999.0.0",
+        "",
+    ] {
+        let err = parse_manifest(&manifest_json(min, &["static/a.js"])).unwrap_err();
+        assert_eq!(err.key, "update.error.manifest", "{min}");
+    }
+}
+
+#[test]
+fn rejects_a_total_size_that_overflows() {
+    let big = Entry {
+        sha256: sha256_hex(b"x"),
+        size: u64::MAX,
+    };
+    let json = serde_json::json!({ "version": "v", "desktop_min": "0.1.0",
+        "files": { "static/a.js": big, "static/b.js": big } });
+    let err = parse_manifest(&serde_json::to_vec(&json).unwrap()).unwrap_err();
+    assert_eq!(err.key, "update.error.manifest");
+    let ok = Entry {
+        sha256: sha256_hex(b"x"),
+        size: 1 << 20,
+    };
+    let one = serde_json::json!({ "version": "v", "desktop_min": "0.1.0", "files": { "static/a.js": ok } });
+    assert!(parse_manifest(&serde_json::to_vec(&one).unwrap()).is_ok());
+}
+
+fn sizes_json(sizes: &[u64]) -> Vec<u8> {
+    let files: serde_json::Map<String, serde_json::Value> = sizes
+        .iter()
+        .enumerate()
+        .map(|(i, &size)| {
+            let e = Entry {
+                sha256: sha256_hex(b"x"),
+                size,
+            };
+            (format!("static/f{i}.bin"), serde_json::to_value(e).unwrap())
+        })
+        .collect();
+    serde_json::to_vec(
+        &serde_json::json!({ "version": "v", "desktop_min": "0.1.0", "files": files }),
+    )
+    .unwrap()
+}
+
+#[test]
+fn rejects_oversized_file_and_total() {
+    let e = parse_manifest(&sizes_json(&[1, MAX_FILE + 1])).unwrap_err();
+    assert_eq!(e.key, "update.error.manifest");
+    // each file within the per-file cap, the sum over the total cap
+    let n = (MAX_TOTAL / MAX_FILE) as usize + 1;
+    let e = parse_manifest(&sizes_json(&vec![MAX_FILE; n])).unwrap_err();
+    assert_eq!(e.key, "update.error.manifest");
+    assert!(e.detail.contains("total"), "{}", e.detail);
+}
+
+#[test]
+fn accepts_current_site_manifest_sizes() {
+    // measured on the built site: 727 files, largest 11_803_444 (a wasm), total 98_471_575
+    let mut sizes = vec![11_803_444, 7_366_854, 7_351_146];
+    sizes.extend(vec![98_471_575u64.saturating_sub(26_521_444) / 724; 724]);
+    assert!(parse_manifest(&sizes_json(&sizes)).is_ok());
+    assert!(parse_manifest(&sizes_json(&[MAX_FILE])).is_ok());
+}
+
+/// Serves `resp` verbatim to `n` connections; the port and the thread to join.
+fn serve_raw(resp: Vec<u8>, n: usize) -> (u16, std::thread::JoinHandle<()>) {
+    use std::io::{Read, Write};
+    let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = l.local_addr().unwrap().port();
+    let h = std::thread::spawn(move || {
+        for _ in 0..n {
+            let (mut c, _) = l.accept().unwrap();
+            let mut buf = [0u8; 2048];
+            let _ = c.read(&mut buf);
+            let _ = c.write_all(&resp);
+        }
+    });
+    (port, h)
+}
+
+/// A 200 answer with a Content-Length, or (`None`) close-delimited with no length at all.
+fn http_200(len: Option<usize>, body: &[u8]) -> Vec<u8> {
+    let head = match len {
+        Some(n) => format!("HTTP/1.1 200 OK\r\nContent-Length: {n}\r\nConnection: close\r\n\r\n"),
+        None => "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n".to_string(),
+    };
+    [head.as_bytes(), body].concat()
+}
+
+/// `apply` of one file declared as `want` against a server that answers `resp` (`n` connections).
+fn apply_served(
+    want: &[u8],
+    resp: Vec<u8>,
+    n: usize,
+) -> (Result<(), UpdateError>, tempfile::TempDir) {
+    let (port, h) = serve_raw(resp, n);
+    let src = Http::with_base(&format!("http://127.0.0.1:{port}/"));
+    let tmp = tempfile::tempdir().unwrap();
+    let local = manifest("a", "0.1.0", &[("static/a.js", b"old")]);
+    let remote = manifest("b", "0.1.0", &[("static/a.js", want)]);
+    let r = apply(tmp.path(), &local, &remote, "0.1.0", &src, |_| {});
+    h.join().unwrap();
+    (r.map(|_| ()), tmp)
+}
+
+fn nothing_left(tmp: &tempfile::TempDir) -> bool {
+    !tmp.path().join("web.next").exists() && !tmp.path().join("web").exists()
+}
+
+#[test]
+fn response_larger_than_declared_is_refused() {
+    // declared 3 bytes, 12 sent with a matching Content-Length; the retry gets the same
+    let (r, tmp) = apply_served(b"abc", http_200(Some(12), b"abcdefghijkl"), 2);
+    let err = r.unwrap_err();
+    assert_eq!(err.key, "update.error.hash");
+    // only size + 1 bytes were read
+    assert!(err.detail.contains("got 4/"), "{}", err.detail);
+    assert!(nothing_left(&tmp));
+}
+
+#[test]
+fn close_delimited_body_over_the_declared_size_is_refused() {
+    // no Content-Length: the reader must stop at size + 1 on its own
+    let (r, tmp) = apply_served(b"abc", http_200(None, &[b'x'; 64 * 1024]), 2);
+    let err = r.unwrap_err();
+    assert_eq!(err.key, "update.error.hash");
+    assert!(err.detail.contains("got 4/"), "{}", err.detail);
+    assert!(nothing_left(&tmp));
+}
+
+#[test]
+fn streamed_body_of_exactly_the_declared_size_passes_and_one_more_does_not() {
+    let want = vec![b'y'; 100_000];
+    for len in [Some(want.len()), None] {
+        let (r, tmp) = apply_served(&want, http_200(len, &want), 1);
+        r.unwrap();
+        assert_eq!(
+            std::fs::read(tmp.path().join("web/static/a.js")).unwrap(),
+            want
+        );
+        let mut more = want.clone();
+        more.push(b'y');
+        let (r, tmp) = apply_served(&want, http_200(len.map(|n| n + 1), &more), 2);
+        let err = r.unwrap_err();
+        assert_eq!(err.key, "update.error.hash");
+        assert!(err.detail.contains("got 100001/"), "{}", err.detail);
+        assert!(nothing_left(&tmp));
+    }
+}
+
+#[test]
+fn patch_index_matches_prepare_py() {
+    let p = patch_index(INDEX).unwrap();
+    assert!(
+        p.contains("connect-src 'self' mzlab: http://mzlab.localhost ipc: http://ipc.localhost;")
+    );
+    assert!(p.contains("<script src=\"static/desktop-shim.js\"></script>\n<script src=\"static/browser.js\"></script>"));
+    assert!(patch_index("<html></html>").is_err());
+}
+
+#[path = "update_apply_tests.rs"]
+mod apply;
+
+#[test]
+fn serve_override_never_leaves_the_folder() {
+    let tmp = tempfile::tempdir().unwrap();
+    fs::create_dir(tmp.path().join("web")).unwrap();
+    fs::write(tmp.path().join("secret.txt"), b"s").unwrap();
+    assert!(serve_override(&tmp.path().join("web"), "/../secret.txt").is_none());
+    assert!(serve_override(&tmp.path().join("web"), "/check.json").is_none());
+}
+
+#[test]
+fn http_source_reads_a_file_and_reports_offline() {
+    use std::io::{Read, Write};
+    let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = l.local_addr().unwrap().port();
+    let h = std::thread::spawn(move || {
+        for _ in 0..2 {
+            let (mut c, _) = l.accept().unwrap();
+            let mut buf = [0u8; 2048];
+            let n = c.read(&mut buf).unwrap();
+            let first = String::from_utf8_lossy(&buf[..n])
+                .lines()
+                .next()
+                .unwrap_or("")
+                .to_string();
+            let resp = if first.contains("static/a.js") {
+                "HTTP/1.1 200 OK\r\nContent-Length: 3\r\nConnection: close\r\n\r\nabc"
+            } else {
+                "HTTP/1.1 302 Found\r\nLocation: http://elsewhere/\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+            };
+            c.write_all(resp.as_bytes()).unwrap();
+        }
+    });
+    let src = Http::with_base(&format!("http://127.0.0.1:{port}/"));
+    assert_eq!(src.get("static/a.js").unwrap(), b"abc");
+    // a redirect is not followed: the host cannot change
+    assert_eq!(
+        src.get("static/other.js").unwrap_err().key,
+        "update.error.http"
+    );
+    h.join().unwrap();
+    let down = Http::with_base(&format!("http://127.0.0.1:{port}/"));
+    assert_eq!(
+        down.get("static/a.js").unwrap_err().key,
+        "update.error.offline"
+    );
+    assert!(down.get("../x").is_err());
+}

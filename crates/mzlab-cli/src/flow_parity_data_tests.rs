@@ -9,7 +9,7 @@ use mzlab_core::budget::sha256_hex;
 use mzlab_core::idxread::Index;
 use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::upload::prepare;
-use mzlab_feat_wasm::run;
+use mzlab_ops::run::feat::run;
 
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;

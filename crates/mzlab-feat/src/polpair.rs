@@ -6,7 +6,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::{self, Out, Value};
 
-use crate::legacy::identity::{form_shift, shape_r};
+use crate::finder_base::identity::{form_shift, shape_r};
 use crate::recipe::is_unit_text;
 use crate::sortc::SortC;
 use crate::store::read_table_from;

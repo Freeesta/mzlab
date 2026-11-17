@@ -143,7 +143,11 @@ pub trait WriteAt {
 
 impl WriteAt for Vec<u8> {
     fn write_at(&mut self, off: u64, data: &[u8]) -> Result<()> {
-        let (off, end) = (off as usize, off as usize + data.len());
+        // an offset past usize (wasm32) or a sum that wraps is the same refusal as a failed grow, never a wrong write or a panic
+        let off = usize::try_from(off).map_err(|_| Error::memory_budget())?;
+        let end = off
+            .checked_add(data.len())
+            .ok_or_else(Error::memory_budget)?;
         if self.len() < end {
             self.try_reserve(end - self.len())
                 .map_err(|_| Error::memory_budget())?;
@@ -151,6 +155,21 @@ impl WriteAt for Vec<u8> {
         }
         self[off..end].copy_from_slice(data);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod write_at_tests {
+    use super::*;
+
+    #[test]
+    fn a_write_past_the_address_space_is_the_memory_error_and_not_a_panic() {
+        let mut v: Vec<u8> = Vec::new();
+        let e = v.write_at(u64::MAX - 1, &[1, 2, 3]).unwrap_err();
+        assert_eq!(e.key, "error.memoryBudget");
+        assert!(v.is_empty());
+        v.write_at(2, &[7]).unwrap();
+        assert_eq!(v, [0, 0, 7]);
     }
 }
 

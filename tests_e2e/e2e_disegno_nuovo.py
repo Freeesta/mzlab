@@ -37,7 +37,7 @@ try:
             add(); new.click(); pg.wait_for_selector("#draw-new", timeout=5000)
             box = pg.locator("#draw-new .mm-box")
             assert box.get_attribute("role") == "alertdialog" and box.get_attribute("aria-modal") == "true"
-            assert pg.inner_text("#draw-new #mm-h") == "Cancellare il disegno?", pg.inner_text("#draw-new #mm-h")
+            assert pg.inner_text("#draw-new #mm-h") == "Clear the drawing?", pg.inner_text("#draw-new #mm-h")
             assert pg.locator("#draw-new p").count() == 0, "a question, no explanation"
             assert pg.evaluate("document.activeElement.id") == "mm-no", "the safe button has the focus"
             for b in ("#mm-yes", "#mm-no"):

@@ -44,6 +44,7 @@
   function save(p) {
     if (!p._a || !p._a.data || !p._a.data[0]) return false;
     (async () => {
+      await carica("xlsx.js");      // csvBuild is not in the start-up list
       let t = csvBuild({ head: rows(p).head, rows: rows(p).body });
       const w = await PROV.tsv(t, { p, table: "peaks" }), i = w.indexOf("\n");
       if (w !== t && i > 0) t += csvBuild({ rows: [[w.slice(0, i)]] });

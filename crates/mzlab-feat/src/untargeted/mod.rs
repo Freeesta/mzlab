@@ -1,6 +1,6 @@
 //! Detection of the features from the raw data after the algorithms of mzmine 3.9.0 (feature `untargeted`). One module per stage; each opens with the
 //! attribution of the Java file it was rewritten from (MIT, (c) 2004-2022 The mzmine Development Team; source read at the tag `v3.9.0`; licence line in
-//! `LICENZE-TERZI.md`). Here: `isofinder` (isotope pattern of a feature from its spectrum, mzmine 4.10.90), `arpls` (baseline, mzmine 4.10.90), `localmax` (local-maximum mass detector), `smooth` (Gaussian and Savitzky-Golay smoothing), `join` (join aligner), `gapfill` (peak finder that fills the empty cells), `table` (the result as the `Aligned` table), `flow` (the algorithm `adap_localmin` of `features.detect`), `flow_align` (the algorithms `join` of `features.align` and `peak_finder` of `features.gapfill`), `flow_iso` and `flow_isofinder` (the isotope groupings `grouper` and `finder` of `features.detect`), `isotopes` (isotope groups per ion), `ident` (families and identities as signs), `to_attributio` (the table as the input of the cascade of Attributio) and `pipeline` (the stages in one run).
+//! `LICENZE-TERZI.md`). Here: `isofinder` (isotope pattern of a feature from its spectrum, mzmine 4.10.90), `arpls` (baseline, mzmine 4.10.90), `localmax` (local-maximum mass detector), `smooth` (Gaussian and Savitzky-Golay smoothing), `join` (join aligner), `gapfill` (peak finder that fills the empty cells), `table` (the result as the `Aligned` table), `flow` (the algorithm `adap_localmin` of `features.detect`), `flow_align` (the algorithms `join` of `features.align` and `peak_finder` of `features.gapfill`), `flow_iso` and `flow_isofinder` (the isotope groupings `grouper` and `finder` of `features.detect`), `isotopes` (isotope groups per ion), `ident` (families and identities as signs), `to_attributio` (the table as the input of the cascade of Attributio, kept in `attributio::from_untargeted`) and `pipeline` (the stages in one run).
 
 pub mod adap;
 pub mod arpls;
@@ -20,8 +20,9 @@ mod pipeline_stream;
 pub mod resolve;
 pub mod smooth;
 pub mod table;
+/// The old path of `attributio::from_untargeted`, which lives in the attribution engine so that `untargeted` does not depend on it.
 #[cfg(feature = "attributio")]
-pub mod to_attributio;
+pub use crate::attributio::from_untargeted as to_attributio;
 
 /// One feature of one file in the units of mzmine: RT and its range in minutes, `area` in intensity x minutes (`table::to_aligned` converts it to
 /// counts x seconds). `filled` marks a feature estimated by the gap filler (mzmine `ESTIMATED`) rather than detected.

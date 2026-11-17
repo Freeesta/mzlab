@@ -6,7 +6,7 @@ use mzlab_core::json::parse;
 use mzlab_llm::agent::{step, Input, Output, State};
 use mzlab_llm::assist::{orchestrator_caps, roles, roles_for, with_prompts, Caps, DEMO_PROVIDER};
 use mzlab_llm::policy::{Level, Profile};
-use mzlab_llm::provider::demo::{for_send, host_ok, session_ok, PLACEHOLDER};
+use mzlab_llm::provider::demo::{for_send, host_ok, session_ok, url_belongs, PLACEHOLDER};
 use mzlab_llm::provider::{request, Request};
 
 const ROLES: &str = include_str!("../data/assist/assist-ruoli-1.json");
@@ -248,4 +248,39 @@ fn the_spend_header_is_two_whole_numbers_with_a_cap() {
     for bad in ["", "1/0", "a/2", "1.5/2", "-1/2", "1/2/3", "1"] {
         assert_eq!(spend_json(bad, false), None, "{bad}");
     }
+}
+
+#[test]
+fn a_key_only_goes_to_the_origin_of_its_provider() {
+    let a = common::provider("anthropic");
+    let ok = |u: &str| url_belongs(&a, u, "");
+    assert!(ok(&format!("{}/v1/messages", a.base_url)));
+    assert!(ok("HTTPS://API.anthropic.com:443/x?y#z"));
+    for bad in [
+        "https://api.anthropic.com.evil.org/v1/messages",
+        "https://api.anthropic.com@evil.org/v1/messages",
+        "https://api.anthropic.com\\@evil.org/",
+        "http://api.anthropic.com/v1/messages",
+        "https://api.anthropic.com:8443/v1/messages",
+        "https://evil.org/",
+        "ftp://api.anthropic.com/",
+        "//api.anthropic.com/",
+        "",
+    ] {
+        assert!(!ok(bad), "{bad}");
+    }
+    // the demo provider: the placeholder before `for_send`, the checked proxy host after, nothing else
+    let d = common::provider(DEMO_PROVIDER);
+    assert!(url_belongs(&d, &format!("{PLACEHOLDER}/v1/messages"), ""));
+    assert!(url_belongs(&d, &format!("{HOST}/v1/messages"), HOST));
+    assert!(!url_belongs(&d, &format!("{HOST}/v1/messages"), ""));
+    assert!(!url_belongs(&d, "https://evil.org/v1/messages", HOST));
+    assert!(!url_belongs(&d, &format!("{HOST}.evil.org/"), HOST));
+    assert!(!url_belongs(
+        &d,
+        &format!("{HOST}/x"),
+        "http://assist.example.org"
+    ));
+    // a vendor never accepts the proxy host
+    assert!(!url_belongs(&a, &format!("{HOST}/x"), HOST));
 }

@@ -54,6 +54,45 @@ def cancel_hides():
     finally:
         r.close()
 step("«Cancel» during the index takes the provisional TIC away and opens nothing", cancel_hides)
+# The gestures are dispatched from inside the page at the moment #ticprov first shows (a 2400-scan file is indexed in about a second, faster than a round trip of the test):
+# the handlers are the real ones, only the injection of the events differs. `mode`: "mouse" = Ctrl+wheel, drag, double click; "keys" = + + and an arrow.
+GESTURES = """(mode) => { window.__g = null; let done = false;
+  const look = () => { const b = document.getElementById('ticprov'); if (done || !b || b.hidden) return; done = true;
+    const cv = b.querySelector('canvas'), r = cv.getBoundingClientRect(), W = () => TICPROV.window(), g = { full: W() };
+    const pe = (t, x) => cv.dispatchEvent(new PointerEvent(t, { clientX: x, clientY: r.top + 60, pointerId: 7, button: 0, bubbles: true }));
+    const key = k => cv.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    if (mode === 'mouse') {
+      cv.dispatchEvent(new WheelEvent('wheel', { deltaY: -600, ctrlKey: true, clientX: r.left + r.width / 2, clientY: r.top + 60, bubbles: true, cancelable: true })); g.wheel = W();
+      pe('pointerdown', r.left + 200); pe('pointermove', r.left + 240); pe('pointerup', r.left + 240); g.drag = W();
+      cv.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })); g.reset = W();
+      cv.dispatchEvent(new WheelEvent('wheel', { deltaY: -900, ctrlKey: true, clientX: r.left + r.width / 3, clientY: r.top + 60, bubbles: true, cancelable: true }));
+    } else { key('+'); key('+'); key('ArrowRight'); }
+    g.final = W(); window.__g = g; };
+  new MutationObserver(look).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden'] }); }"""
+def zoom_handover(mode, port):
+    r = Run(port=port, wd=f"/tmp/wd_tic_provvisorio_{mode}")
+    try:
+        with sync_playwright() as p:
+            pg = r.page(p)
+            pg.wait_for_selector("#start:not([hidden])", timeout=60000)
+            pg.evaluate(GESTURES, mode)
+            pg.set_input_files("#pick", [f])
+            wait_for_js(pg, "window.__g !== null", 120000)
+            g = pg.evaluate("window.__g"); full, fin = g["full"], g["final"]
+            assert fin[1] - fin[0] < (full[1] - full[0]) * 0.95, ("the axis range did not change", g)
+            if mode == "mouse":
+                assert g["wheel"][1] - g["wheel"][0] < (full[1] - full[0]) * 0.95, ("Ctrl+wheel did not zoom", g)
+                assert abs(g["drag"][0] - g["wheel"][0]) > 1e-9, ("drag did not pan", g)
+                assert abs(g["reset"][0] - full[0]) < 1e-9 and abs(g["reset"][1] - full[1]) < 1e-9, ("double click did not reset", g)
+            wait_for_js(pg, "document.getElementById('ticprov-w').textContent.length > 0", 5000)
+            open_first(pg); ready(pg)
+            z = pg.evaluate("(E.panels.find(q => q.type === 'chrom') || {}).zoom")
+            assert z and abs(z[0] - fin[0]) < 1e-6 and abs(z[1] - fin[1]) < 1e-6, ("the first panel did not open on the chosen window", fin, z)
+            assert not [e for e in r.errs if e[0] == "pageerror"], r.errs
+    finally:
+        r.close()
+step("wheel zoom, drag and double click on the provisional TIC; the first panel opens on that window", lambda: zoom_handover('mouse', 8855))
+step("keyboard zoom and pan on the provisional TIC; the first panel opens on that window", lambda: zoom_handover('keys', 8856))
 shutil.rmtree(d, ignore_errors=True)
 print("\nSTEPS"); [print(" ", s) for s in steps]
 if any(s[1] != "ok" for s in steps): sys.exit(1)

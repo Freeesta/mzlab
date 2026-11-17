@@ -171,7 +171,7 @@ fn plan() -> Vec<Value> {
 
 /// The name operations of `campioni` (`variabili`, `nome_gruppo`): the worked list of the study, the manual variables, a long name and a bad operation.
 fn name_steps() -> Vec<Value> {
-    let mut names = vec![
+    let mut names: Vec<String> = [
         "MQ_blk",
         "MQ_Wash_1",
         "MQ_Wash_2",
@@ -179,15 +179,14 @@ fn name_steps() -> Vec<Value> {
         "MQ_std_BTZ_1ppm",
         "QC_Std_5ppm_mid",
     ]
-    .into_iter()
     .map(String::from)
-    .collect::<Vec<_>>();
+    .to_vec();
     for (m, conds) in [
         ("MQ", ["H2O2", "N2", "O2", "PMS"]),
         ("TW", ["AIR", "H2O2", "", ""]),
     ] {
         for c in conds.iter().filter(|c| !c.is_empty()) {
-            for t in ["T00", "T01", "T02", "T05"] {
+            for t in ["T00", "T01", "T02", "T05", "3h", "1 h 30"] {
                 names.push(format!("{m}_{c}_{t}"));
             }
         }
@@ -196,6 +195,7 @@ fn name_steps() -> Vec<Value> {
     let step =
         |cop: &str, body: Value| json!({"op": "lr_campioni", "cop": cop, "body": body.to_string()});
     vec![
+        step("proponi", json!({"files": files})), // the time points of the names, `3h` and `1 h 30` included
         step("variabili", json!({"files": files})),
         step(
             "variabili",

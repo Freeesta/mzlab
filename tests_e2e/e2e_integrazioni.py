@@ -13,8 +13,8 @@ r = Run(port=8883, wd="/tmp/wd83")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_selector("text=Carica dati")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_selector("text=Load data")
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); wait_for_js(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
         pg.evaluate(f"(()=>{{const p={XP};setActive(p);p.imode=null;p.intf=p._a.sr[0].key;p.el.scrollIntoView({{block:'center'}})}})()"); frames(pg, 2)
         def n(): return pg.evaluate(f"{XP}.ints.length")
@@ -28,7 +28,7 @@ try:
         def refused():
             assert add(14.3, 15.0) is False and n() == 1, "overlap must be refused"
             t = pg.evaluate("document.querySelector('#qnote')&&!document.querySelector('#qnote').hidden?document.querySelector('#qnote').textContent:''")
-            assert "già un picco integrato" in t, t
+            assert "already an integrated peak" in t, t
         step("overlapping integration refused with a notice", refused)
         def auto_in():
             pg.evaluate(f"(()=>{{const p={XP};autoInt(p,p._a.sr[0],14.3)}})()"); assert n() == 1
@@ -68,7 +68,7 @@ try:
         step("a grouped gesture is one undo step", gesture)
         def menu():
             labs = pg.evaluate(f"(()=>{{const p={XP};return intMenuItems(p,14.9,null,0).map(i=>i.label||i)}})()")
-            assert labs[0] == "Elimina questa integrazione" and "Elimina tutte le integrazioni di questo pannello" in labs, labs
+            assert labs[0] == "Delete this integration" and "Delete all the integrations of this panel" in labs, labs
         step("context menu: delete this one first, then all", menu)
         def table():
             pg.evaluate("showInts()"); wait_for_js(pg, "document.querySelectorAll('button[data-del]').length===3")
@@ -77,8 +77,8 @@ try:
             assert pg.locator("button[data-del]").count() == 2 and n() == 2
         step("table: × deletes the row and the peak from the graph", table)
         def legacy():
-            pg.evaluate(f"(()=>{{const p={XP},i=p.ints[0];p.ints.push({{...i,id:E.seq++,a:i.a+0.1,b:i.b+0.1}});showInts()}})()"); wait_for_js(pg, "document.querySelector('#bigbody').innerText.includes('sovrapposto')")
-            assert "sovrapposto" in pg.inner_text("#bigbody")
+            pg.evaluate(f"(()=>{{const p={XP},i=p.ints[0];p.ints.push({{...i,id:E.seq++,a:i.a+0.1,b:i.b+0.1}});showInts()}})()"); wait_for_js(pg, "document.querySelector('#bigbody').innerText.includes('overlapping')")
+            assert "overlapping" in pg.inner_text("#bigbody")
         step("old overlapping integrations load and are marked", legacy)
         pg.evaluate("document.querySelector('#bigdlg')&&document.querySelector('#bigdlg').open&&document.querySelector('#bigdlg').close()")
         pg.screenshot(path="tests_e2e/shots/integrazioni.png")

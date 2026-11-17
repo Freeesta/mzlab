@@ -15,12 +15,12 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [str(ES / f"MS2_t{t}.mzML") for t in (15, 60)])
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         open_ms2(pg); pg.locator('#flst [data-pg="229.1"]').dblclick(); wait_for_js(pg, f"{specs(pg)}.length >= 1"); ready(pg)
         def menu():
             q = pg.evaluate(f"({RULES})({specs(pg)}[0])")
             assert q["files"] == ["MS2_t15"], q["files"]                 # MS2_t60 has no scan of 229.1
-            assert q["prec"] == ["tutti", "229.1", "305"], q["prec"]
+            assert q["prec"] == ["all", "229.1", "305"], q["prec"]
             assert not q["fol"] and not q["all"], q
         step("product ion: files and precursors of the active file with counts, no Follows, no overlay", menu)
         def badge():
@@ -36,7 +36,7 @@ try:
             q = pg.evaluate(f"{specs(pg)}.map(p => ({RULES})(p))")
             assert len(q) == 1 and q[0]["file"] == "MS2_t60", q
             b = q[0]
-            assert b["files"] == ["MS2_t60"] and b["prec"] == ["tutti", "237", "333"] and not b["fol"] and not b["all"], b
+            assert b["files"] == ["MS2_t60"] and b["prec"] == ["all", "237", "333"] and not b["fol"] and not b["all"], b
             n = pg.evaluate(f"{specs(pg)}.every(p => p._a && p._a.data && p._a.data.length >= 1)"); assert n, "the spectrum has data"
         step("second pair (_bis) of the other file: it alone is drawn, same rules, with data", bis)
 finally:

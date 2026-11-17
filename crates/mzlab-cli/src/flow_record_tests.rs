@@ -8,7 +8,7 @@ use mzlab_core::idxread::Index;
 use mzlab_core::json::{Out, Value};
 use mzlab_core::step::json::registry_json;
 use mzlab_feat::slabs::Stored;
-use mzlab_feat_wasm::run::meta::{job_meta, meta_json};
+use mzlab_ops::run::feat::run::meta::{job_lineage_text, job_meta, meta_json};
 use std::path::Path;
 
 /// The stored files of a series held in memory.
@@ -85,9 +85,7 @@ fn meta_of(
     let src = stored.map(|h| h as &mut dyn Stored);
     meta_json(
         &job_meta(
-            plan.as_bytes(),
-            &reg,
-            instance,
+            &job_lineage_text(plan.as_bytes(), &reg, instance).unwrap(),
             (&mut first, &mut own),
             src,
             budget,
@@ -143,6 +141,8 @@ fn reports(out: &Path, plan: &str) -> Vec<String> {
 
 /// `modules` (the SHA-256 of the executable) is the one key only the CLI writes: the page passes the hashes of its own `.wasm`.
 fn without_modules(text: &str) -> String {
+    // the citation is a CLI-side key of prov.json (the page's route writes the record without it), like the modules
+    let text = &text.replacen(&format!("{},", crate::citation::member()), "", 1);
     let from = text.find(",\"modules\":{").unwrap();
     format!(
         "{}{}",

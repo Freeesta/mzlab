@@ -27,10 +27,11 @@ window.COLS = (() => {
   const n = () => active().length;
   /** the header cells, put before the last (empty) one @param {string} head */
   const head = head => {
-    const cols = active();
-    if (!cols.length) return head;
-    const at = head.lastIndexOf("<th></th></tr>");
-    return at < 0 ? head : head.slice(0, at) + cols.map(c => `<th scope="col"${c.type === "number" ? ' class="num"' : ""}>${EH(label(c))}</th>`).join("") + head.slice(at);
+    const cols = active(), at = head.lastIndexOf("<th></th></tr>");
+    if (at < 0) return head;
+    // the last header cell holds «+» (the same chooser as «Columns…»), sticky at the right edge while the table scrolls sideways
+    const plus = `<th class="colplus"><button type="button" class="sec sm" id="colsplus" aria-haspopup="dialog" aria-label="${EH(t("load.cols.plus"))}" title="${EH(t("load.cols.plus"))}">+</button></th></tr>`;
+    return head.slice(0, at) + cols.map(c => `<th scope="col"${c.type === "number" ? ' class="num"' : ""}>${EH(label(c))}</th>`).join("") + plus + head.slice(at + "<th></th></tr>".length);
   };
   /** the cells of a row, put before its last (buttons) one @param {{ name: string }} f @param {string} h */
   const row = (f, h) => cells(f, h);
@@ -84,7 +85,7 @@ ${s.custom.length ? `<fieldset class="colsset"><legend>${EH(t("load.cols.custom"
     const shell = `<h2 id="colshead">${EH(t("load.cols.head"))}</h2><div class="colsbody"></div><div class="colsfoot"><button type="button" id="colsclose">${EH(t("load.cols.close"))}</button></div>`;
     dlg.innerHTML = h`${raw(shell)}`;
     document.body.append(dlg); drawDialog(dlg);
-    dlg.addEventListener("close", () => { dlg.remove(); document.getElementById("colsbtn")?.focus(); });
+    dlg.addEventListener("close", () => { dlg.remove(); (document.getElementById("colsplus") || document.getElementById("colsbtn"))?.focus(); });
     dlg.addEventListener("click", ev => {
       const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (ev.target).closest("button"));
       if (!b) return;
@@ -127,6 +128,7 @@ ${s.custom.length ? `<fieldset class="colsset"><legend>${EH(t("load.cols.custom"
   /** the handlers of the table just drawn @param {HTMLElement} el */
   function wire(el) {
     document.getElementById("colsbtn")?.addEventListener("click", open);
+    document.getElementById("colsplus")?.addEventListener("click", open);
     el.querySelectorAll("[data-xk]").forEach((/** @type {any} */ x) => {
       x.onchange = () => {
         const c = def(x.dataset.xk);

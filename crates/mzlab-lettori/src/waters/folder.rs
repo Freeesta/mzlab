@@ -67,9 +67,11 @@ impl Folder {
             return Ok(None);
         };
         let m = &mut self.fs.membri[i];
-        if m.dim > cap.min(self.limits.byte) {
+        // past the small cap of a fixed member: a damaged size; past the byte limit: a run too big to hold here
+        if m.dim > cap && cap < self.limits.byte {
             return Err(Error::memory_budget());
         }
+        self.limits.fits(m.dim)?;
         let n = usize::try_from(m.dim).map_err(|_| Error::memory_budget())?;
         let mut b = vec![0u8; n];
         m.dati.read_at(0, &mut b)?;
@@ -87,9 +89,7 @@ impl Folder {
         if fine > m.dim {
             return Err(damage("range past the end of the file"));
         }
-        if len > self.limits.byte {
-            return Err(Error::memory_budget());
-        }
+        self.limits.fits(len)?;
         let mut b = vec![0u8; usize::try_from(len).map_err(|_| Error::memory_budget())?];
         m.dati.read_at(off, &mut b)?;
         Ok(b)

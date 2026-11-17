@@ -12,7 +12,7 @@ pan of the TIC, the spectrum and XIC traces of 3k, 50k and 1M points (served by 
 before and after MREPS XICs (default 1000). Phases per gesture: request (wall time of the `api/` fetches), engine (`X-Py-Ms`), JSON (`Response.json`), rest = drawing.
 `--trace` adds the phases of the opening (engine operations and their times, empty answers, errors, `MZLAB_LR_MISS`, memory) to each case. `--native` also runs `viewer_times` on the `.mzidx` of the first file of each case; `--g7 DIR` builds the >= 2 GB file in DIR and times the native engine on it.
 Nothing of the product is changed: the hooks wrap global functions of the page (draw, fetch, Response.json, Worker)."""
-import argparse, glob, json, os, platform, re, shutil, signal, subprocess, sys, tempfile, time
+import argparse, glob, json, os, platform, shutil, signal, subprocess, sys, tempfile, time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -101,11 +101,8 @@ def files_of(wd, kind, nscan, npk, nfiles):
 
 
 def engine_cap():
-    """Engine .wasm cap, read from the pages.yml step this bench mimics (single source of truth)."""
-    m = re.search(r"wasm_opt\.sh\s+\S+\s+(\d+)\s+engine\b", (ROOT / ".github" / "workflows" / "pages.yml").read_text())
-    if not m:
-        raise SystemExit("engine cap not found in .github/workflows/pages.yml")
-    return m.group(1)
+    """Engine .wasm cap: the `tetto` of tools/moduli/motore.toml, the value the pages.yml step this bench mimics passes (single source of truth)."""
+    return subprocess.run([sys.executable, str(ROOT / "tools" / "moduli.py"), "--tetto", "motore"], capture_output=True, text=True, check=True).stdout.strip()
 
 
 def build_site(out):
@@ -425,7 +422,7 @@ def main():
         with sync_playwright() as p:
             if a.g7_site:
                 prof = wd / "profile_g7"; shutil.rmtree(prof, ignore_errors=True)
-                ctx = p.chromium.launch_persistent_context(str(prof), executable_path=chromium_path(), viewport={"width": 1440, "height": 950}, args=["--enable-precise-memory-info"], locale="it-IT")
+                ctx = p.chromium.launch_persistent_context(str(prof), executable_path=chromium_path(), viewport={"width": 1440, "height": 950}, args=["--enable-precise-memory-info"], locale="en-US")
                 ctx.set_default_timeout(OPEN_MS); ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}" + INIT)
                 try:
                     pg = ctx.pages[0] if ctx.pages else ctx.new_page()
@@ -440,7 +437,7 @@ def main():
                 files = files_of(wd, kind, ns, npk, nf)
                 prof = wd / f"profile_{nm}"; shutil.rmtree(prof, ignore_errors=True)         # a profile on disk: the quota of a real browser (an incognito context refuses ~1 GB)
                 ctx = p.chromium.launch_persistent_context(str(prof), executable_path=chromium_path(), viewport={"width": 1440, "height": 950},
-                                                           args=["--enable-precise-memory-info", "--js-flags=--expose-gc"], locale="it-IT")
+                                                           args=["--enable-precise-memory-info", "--js-flags=--expose-gc"], locale="en-US")
                 ctx.set_default_timeout(OPEN_MS)
                 ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}" + INIT)
                 pg = ctx.pages[0] if ctx.pages else ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))

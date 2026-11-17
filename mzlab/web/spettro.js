@@ -3,7 +3,7 @@
 // Tools for the mass spectrum (Full Scan and MS2) and for the time axes. Classic script, loaded after scroll.js: it uses the globals of explore.js
 // (E, Q, EH, M, css, fmt, draw, uiSave, ctl, big, dlx, info, shown, tabPanels, IC_DL, IC_TAB).
 //  - ruler: difference of m/z between two peaks (the program only subtracts; what the difference means is for the student)
-//  - "Parametri dello spettro": absolute / % axis, threshold and number of the m/z labels, decimals
+//  - "Spectrum parameters": absolute / % axis, threshold and number of the m/z labels, decimals
 //  - table of the peaks, ready for Excel (copy as TSV + HTML, or .xlsx)
 //  - zoom history (Ctrl/Cmd+Z), whole view (Backspace), linked time axes, one-line description of the scan
 
@@ -192,6 +192,8 @@ function scanLine(p, data, d0) {
   const f = data[0].f, parts = [], i = p.si != null ? p.si : d0.i0, n = d0.n;
   parts.push(d0.scans === 1 && i != null ? I18N.t("spec.scanLine.one", { i: i + 1, of: n ? "/" + n : "" }) : I18N.t("spec.scanLine.avg", { n: d0.scans }));
   if (p.level > 1) { const ce = p.prec != null ? ((f.ms2_exps || []).find(x => Math.abs(x.prec - p.prec) < 0.6) || {}).ce : null; if (ce != null) parts.push(I18N.t("spec.scanLine.ce", { ce })); }
+  // the engine merges unit-resolution centroids per nominal mass on its own (profile and HR files never): say so wherever it applies
+  if (d0.mode === "centroid" && !(window.HR && HR.anyHr(data.map((/** @type {Bag} */ x) => x.f), p.level))) parts.push(I18N.t("spec.scanLine.merge"));
   return parts.join(" · ");
 }
 
@@ -222,9 +224,9 @@ function scanLine(p, data, d0) {
     return xs.map(ov);
   } });
   reg({ id: "spec.measure", gruppo: "tools", voci: /** @param {any} c */ c => measMenu(c.p, c.m).map((o, i) => ({ nome: o.label, tip: o.tip, dim: i === 0 && !c.has, esegui: o.fn })) });
-  // the m/z in the Contaminants tab of the Adducts & losses page (side panel only); the text shown sets the tolerance there, the polarity is the page's
+  // the m/z in the Lists panel (contaminants and other lists), with the polarity and resolution of the spectrum
   reg({ id: "spec.cont", gruppo: "cont", ordine: 0, visibile: () => !!window.BARRA, disponibile: /** @param {any} c */ c => c.has, nome: () => T("ctx.spec.cont"), aria: /** @param {any} c */ c => T("ctx.spec.cont.aria", { mz: c.lab }),
-    esegui: /** @param {any} c */ c => BARRA.setTab("cont", { q: c.lab }) });
+    esegui: /** @param {any} c */ c => { if (window.LISTE) LISTE.open({ mz: c.m, polarity: c.pol, hr: !!c.a?.hrp }); } });
   reg({ id: "spec.annotate", gruppo: "tools", disponibile: /** @param {any} c */ c => c.has, nome: () => T("ctx.spec.annotate"),
     esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.spec.annotate.prompt", { mz: c.lab }), ""); if (v) { COMANDI.fai("spec.annotation", c.p, () => c.p.anns.push({ x: c.m, text: v })); draw(c.p); } } });
   reg({ id: "spec.iso", gruppo: "tools", nome: () => T("ctx.spec.iso"), esegui: /** @param {any} c */ c => isoAsk(c.p) });

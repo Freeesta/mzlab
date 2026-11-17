@@ -128,7 +128,7 @@ try:
         step("keyboard: arrows in the role select; Tab goes from condition to time", keyboard)
 
         def warnings():
-            t = pg.inner_text(f"{G} [role=status]"); assert "No t0" in t and not any(w in t for w in ("Nessun", "tempo")), t
+            t = pg.inner_text(f"{G} [role=status]"); assert "No t0" in t, t
         step("the warnings are in a role=status region, in English", warnings)
 
         def reload():

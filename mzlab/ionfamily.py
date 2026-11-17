@@ -1,6 +1,6 @@
 """Ion families: where does this ion come from? Evidence for in-source fragments (ISF) versus real products.
 
-PUBLIC module (also used by the student tool "Da dove viene questo ione?"): it extracts and measures, it never
+PUBLIC module (also used by the student tool "Where does this ion come from?"): it extracts and measures, it never
 issues a verdict. The probabilistic verdict lives in the private TP Mine package (tpmine/isf.py), which imports this module.
 Everything is plain numpy (runs in Pyodide: no scipy, no sklearn); every function returns floats, lists or dicts that
 json.dumps can serialize (use `to_jsonable` on a whole report), and the unit-resolution caveat always applies: an m/z is a
@@ -54,7 +54,7 @@ _ISO = {   # element -> [(mass shift (nominal) relative to the lightest isotope,
     "Na": [(0, 1.0)], "K": [(0, 0.932581), (2, 0.067302)],
     "Si": [(k, p) for k, (_, p) in enumerate(_ISO_SCORE["Si"])],   # the IUPAC abundances of the isotope score
 }
-# common neutral losses (same list as the "Perdite neutre" table of the program: web/tables.js), formula -> note
+# common neutral losses (same list as the "Neutral losses" table of the program: web/tables.js), formula -> note
 NEUTRAL_LOSSES = ["H2O", "NH3", "CO", "CO2", "CH2O", "CH4O", "C2H2O", "HCOOH", "C2H4", "C3H6", "HCN", "HF", "HCl", "HBr",
                   "SO2", "SO3", "H2S", "CH3", "NO2", "C6H6"]
 # adducts of the neutral M, as (name, m/z shift from the neutral mass, multiplier of M)

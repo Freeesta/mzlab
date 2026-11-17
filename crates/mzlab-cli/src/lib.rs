@@ -7,10 +7,11 @@ use std::path::{Path, PathBuf};
 use mzlab_core::budget::{sha256_hex, MemBudget};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Out;
-use mzlab_feat_table_wasm::core::{samples_json, table_file};
-use mzlab_feat_wasm::run;
+use mzlab_ops::run::feat::run;
+use mzlab_ops::run::table::core::{samples_json, table_file};
 
 mod channels_cmd;
+pub mod citation;
 mod cmd;
 pub mod convert;
 mod convert_entries;
@@ -33,6 +34,7 @@ mod flow_chimeric;
 #[cfg(test)]
 mod flow_chimeric_tests;
 mod flow_compare;
+mod flow_curve;
 #[cfg(test)]
 mod flow_detect_adap_tests;
 #[cfg(test)]
@@ -159,6 +161,7 @@ mod name_rule_tests;
 pub mod normative;
 mod par;
 mod peaks_auto_cmd;
+mod peaks_auto_lr_cmd;
 mod peaks_edges_cmd;
 mod plain;
 mod samples_cmd;
@@ -263,8 +266,8 @@ pub fn execute(args: &[String]) -> Outcome {
 }
 
 fn executed(args: &[String]) -> Outcome {
-    if args.is_empty() || matches!(args[0].as_str(), "--help" | "-h") {
-        return cmd::help();
+    if let Some(o) = cmd::top_level(args) {
+        return o;
     }
     match cmd::find(args) {
         Some((e, n)) => (e.run)(args[n..].to_vec()),
@@ -297,6 +300,8 @@ mod flow_ident_tests;
 mod flow_json_tests;
 #[cfg(test)]
 mod flow_kmd_tests;
+#[cfg(test)]
+mod flow_level_ms2_tests;
 #[cfg(test)]
 mod flow_level_tests;
 #[cfg(test)]

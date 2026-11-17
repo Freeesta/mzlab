@@ -133,6 +133,9 @@ fn the_base_chain_of_the_canvas_gives_the_table_of_the_page() {
         untimed(&prov),
         untimed(&std::fs::read_to_string(out.join("prov.json")).unwrap())
     );
+    // the record carries the citation of the CLI, as a top-level key
+    let prov_value: serde_json::Value = serde_json::from_str(&prov).unwrap();
+    assert_eq!(prov_value["citation"], crate::citation::text());
     assert_eq!(
         std::fs::read(desk.join("gap.mzfeat")).unwrap(),
         std::fs::read(out.join("gap.mzfeat")).unwrap()
@@ -355,14 +358,14 @@ fn the_recipe_of_the_layers_gives_the_bytes_of_flow_run() {
         layered_table(&files, "[]", true),
         "the layers change the table"
     );
-    assert!(mzlab_feat_wasm::run::layers_from_json(r#"{"step":1}"#).is_err());
+    assert!(mzlab_ops::run::feat::run::layers_from_json(r#"{"step":1}"#).is_err());
     let _ = std::fs::remove_dir_all(&dir);
 }
 
 #[test]
 fn the_parallel_alignment_reports_its_progress_and_the_bytes_do_not_change() {
     use mzlab_core::budget::MemBudget;
-    use mzlab_feat_wasm::run;
+    use mzlab_ops::run::feat::run;
 
     use crate::flow_base::{open, Files};
 
@@ -419,7 +422,7 @@ fn the_alignment_reads_the_weak_candidates_the_detection_stored() {
     use mzlab_core::budget::MemBudget;
     use mzlab_feat::slabs::Stored;
     use mzlab_feat::weakfile;
-    use mzlab_feat_wasm::run;
+    use mzlab_ops::run::feat::run;
 
     use crate::flow_base::{open, Files};
 

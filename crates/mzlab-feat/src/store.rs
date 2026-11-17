@@ -8,35 +8,32 @@
 //! the file of one sample and when no graph was built. The bytes depend only on the table and on the meta given: no clock, no path.
 
 use mzlab_core::budget::WriteAt;
-use mzlab_core::error::{Error, Result};
+use mzlab_core::error::Result;
 use mzlab_core::json::Out;
 
-use crate::facts::FileFacts;
-use crate::recipe::Recipe;
 use crate::rowident::adduct_names;
 use crate::table::{Aligned, FileFeatures};
-use crate::tp::TpBlock;
+use crate::tp_block::TpBlock;
 
-pub(crate) const MAGIC: &[u8; 8] = b"MZFEAT01";
-pub(crate) const ALIGN: usize = 64;
-/// Version of the container of the aligned table (`"version"` of its meta): 2 adds the `id`, the summaries of the rows and, optional, the identity columns (`identity` = 1 in the meta); the files of version 1 are still read.
-pub const TABLE_FORMAT: i64 = 2;
+/// The old paths of the crate-internal base of the container (`interp::store`, `spill`), in `store_base` with the rest.
+pub(crate) use crate::store_base::{bad, ALIGN, MAGIC, PIECE};
+/// The old paths of the base of the container, which lives in `store_base` so that `store_read` and `evid` do not depend on `store`.
+pub use crate::store_base::{Origin, Section, TABLE_FORMAT};
 
-pub(crate) fn bad() -> Error {
-    Error::new("error.badMzfeat")
+/// The texts of a recipe that the meta of a container carries (`recipe::Recipe` implements it), so that `store` does not depend on the recipe.
+pub trait RecipeTexts {
+    fn file_text(&self) -> String;
+    fn table_text(&self) -> String;
 }
 
-/// What the meta says about the origin of a table.
-#[derive(Debug, Clone, Default)]
-pub struct Origin {
-    /// `(name, SHA-256)` of every input file, in the order of the files of the table.
-    pub inputs: Vec<(String, String)>,
-    /// How each input was acquired (meta `columns`, same order as `inputs`); empty when not read.
-    pub facts: Vec<FileFacts>,
-    /// SHA-256 of the `campioni/1` document of the series (meta `samples`), when there is one.
-    pub samples: Option<String>,
-    /// `(step, seconds)`; leave empty to get the same bytes in two runs.
-    pub times: Vec<(String, f64)>,
+/// FNV-1a over `text` in two 64-bit lanes with different seeds: 32 hex digits.
+pub fn fingerprint(text: &str) -> String {
+    let (mut a, mut b) = (0xcbf29ce484222325u64, 0x84222325cbf29ce4u64);
+    for &c in text.as_bytes() {
+        a = (a ^ c as u64).wrapping_mul(0x100000001b3);
+        b = (b ^ c as u64).wrapping_mul(0x100000001b3).rotate_left(5);
+    }
+    format!("{a:016x}{b:016x}")
 }
 
 /// A column of a container: a slice of one of the types of the format.
@@ -49,9 +46,6 @@ enum Col<'a> {
     U8(&'a [u8]),
     I8(&'a [i8]),
 }
-
-/// Elements converted and written at a time (the buffer of a write is at most `PIECE * 8` bytes).
-pub(crate) const PIECE: usize = 8192;
 
 macro_rules! put_le {
     ($seq:expr_2021, $v:expr_2021) => {
@@ -92,25 +86,6 @@ impl Col<'_> {
             }
         }
         Ok(())
-    }
-}
-
-/// A section that is written in pieces and whose length is known beforehand (the `evid` graph: tens of MB that never exist as one buffer).
-pub trait Section {
-    fn len(&self) -> usize;
-    fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-    /// Gives the bytes, in order, to `put`; they must add up to `len()`.
-    fn emit(&mut self, put: &mut dyn FnMut(&[u8]) -> Result<()>) -> Result<()>;
-}
-
-impl Section for &[u8] {
-    fn len(&self) -> usize {
-        <[u8]>::len(self)
-    }
-    fn emit(&mut self, put: &mut dyn FnMut(&[u8]) -> Result<()>) -> Result<()> {
-        put(self)
     }
 }
 
@@ -186,7 +161,7 @@ fn meta_json(
         .raw(",\"recipe\":")
         .str(text);
     j.raw(",\"recipe_hash\":")
-        .str(&crate::recipe::fingerprint(text))
+        .str(&fingerprint(text))
         .raw(",\"inputs\":[");
     for (i, (name, sha)) in o.inputs.iter().enumerate() {
         j.raw(if i > 0 { ",{\"name\":" } else { "{\"name\":" })
@@ -302,10 +277,10 @@ fn file_cols(f: &FileFeatures) -> Vec<(&'static str, Col<'_>)> {
 }
 
 /// Writes the `.mzfeatf` of one file to `sink`.
-pub fn write_file_to<W: WriteAt>(
+pub fn write_file_to<W: WriteAt, R: RecipeTexts + ?Sized>(
     sink: &mut W,
     f: &FileFeatures,
-    r: &Recipe,
+    r: &R,
     o: &Origin,
 ) -> Result<()> {
     let mut cols = file_cols(f);
@@ -327,7 +302,7 @@ pub fn write_file_to<W: WriteAt>(
 }
 
 /// Bytes of the `.mzfeatf` of one file.
-pub fn write_file(f: &FileFeatures, r: &Recipe, o: &Origin) -> Vec<u8> {
+pub fn write_file<R: RecipeTexts + ?Sized>(f: &FileFeatures, r: &R, o: &Origin) -> Vec<u8> {
     let mut v = Vec::new();
     write_file_to(&mut v, f, r, o).expect("a Vec grows");
     v
@@ -346,15 +321,15 @@ fn tp_cols<'a>(tp: &'a TpBlock, cols: &mut Vec<(&'static str, Col<'a>)>) -> bool
 }
 
 /// Bytes of the `.mzfeat` of a series, with an empty `evid` section.
-pub fn write_table(t: &Aligned, r: &Recipe, o: &Origin) -> Vec<u8> {
+pub fn write_table<R: RecipeTexts + ?Sized>(t: &Aligned, r: &R, o: &Origin) -> Vec<u8> {
     write_table_with_evid(t, r, o, &[])
 }
 
 /// Writes the `.mzfeat` of a series to `sink` with `evid` (the graph of the proofs, `evid/1` JSON) as its last section.
-pub fn write_table_to<W: WriteAt>(
+pub fn write_table_to<W: WriteAt, R: RecipeTexts + ?Sized>(
     sink: &mut W,
     t: &Aligned,
-    r: &Recipe,
+    r: &R,
     o: &Origin,
     evid: &mut dyn Section,
 ) -> Result<()> {
@@ -362,11 +337,11 @@ pub fn write_table_to<W: WriteAt>(
 }
 
 /// `write_table_to` with the block `tp/1` given apart from the table (the view of the products is computed from the proofs, which borrow the table).
-pub fn write_table_tp<W: WriteAt>(
+pub fn write_table_tp<W: WriteAt, R: RecipeTexts + ?Sized>(
     sink: &mut W,
     t: &Aligned,
     tp: &TpBlock,
-    r: &Recipe,
+    r: &R,
     o: &Origin,
     evid: &mut dyn Section,
 ) -> Result<()> {
@@ -448,7 +423,12 @@ fn write_table_recipe<W: WriteAt>(
 }
 
 /// Bytes of the `.mzfeat` of a series with the graph of the proofs (`evid/1`, JSON bytes of `evid::graph_json`) in the `evid` section.
-pub fn write_table_with_evid(t: &Aligned, r: &Recipe, o: &Origin, evid: &[u8]) -> Vec<u8> {
+pub fn write_table_with_evid<R: RecipeTexts + ?Sized>(
+    t: &Aligned,
+    r: &R,
+    o: &Origin,
+    evid: &[u8],
+) -> Vec<u8> {
     let mut v = Vec::new();
     write_table_to(&mut v, t, r, o, &mut { evid }).expect("a Vec grows");
     v

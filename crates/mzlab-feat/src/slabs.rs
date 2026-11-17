@@ -23,7 +23,7 @@ use crate::sortc;
 use crate::spill::Spill;
 use crate::store::{read_file_from, read_meta_mz, Slice, Want};
 use crate::table::{Aligned, FileFeatures};
-use crate::trace::filled;
+use crate::trace_base::filled;
 
 /// Bytes of a lean row in memory (`store::Want::lean`), and of what an alignment holds beside it (items, sorted copies, logarithms).
 pub(crate) const LEAN_ROW: usize = 39;

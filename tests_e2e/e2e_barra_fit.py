@@ -12,7 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0")])
-        frames(pg, 3); pg.click("text=Carica dati"); ready(pg)
+        frames(pg, 3); pg.click("text=Load data"); ready(pg)
         cdp = pg.context.new_cdp_session(pg); cdp.send("Performance.enable")
         layouts = lambda: next(m["value"] for m in cdp.send("Performance.getMetrics")["metrics"] if m["name"] == "LayoutCount")
         res = {}

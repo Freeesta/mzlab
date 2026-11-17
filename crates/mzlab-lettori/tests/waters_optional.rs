@@ -45,6 +45,12 @@ fn an_index_over_the_byte_budget_is_an_error_not_an_empty_function() {
     };
     match mzlab_lettori::open_bare(file_set(f), &small) {
         Ok(mut l) => panic!("opened with {} scans", l.index(0).unwrap().len()),
-        Err(e) => assert_eq!(e.key, "error.memoryBudget"),
+        Err(e) => {
+            assert_eq!(e.key, "error.memoryBudget");
+            assert!(
+                e.params.iter().any(|(k, v)| *k == "fase" && v == "whole"),
+                "{e:?}"
+            );
+        }
     }
 }

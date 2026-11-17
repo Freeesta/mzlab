@@ -1,6 +1,11 @@
 // @ts-strict
 // @ts-check
 // Mouse and keyboard on the charts, acquisition method, toolbar, formula calculator (tooltips: tooltip.js). Split from explore.js: classic script, loaded after picchi.js.
+// every peak of the traces shown, low resolution too (integra-tutti.js, read on first use): the ▾ of the toolbar and the menu of a trace
+const intAll = (/** @type {Bag} */ p) => carica("m:integra-tutti.js").then(() => /** @type {any} */ (window).INTTUTTI.run(p), () => nearMsg(I18N.t("int.autoOff")));
+// the ▾ next to the automatic tool: every peak shown, or the settings (stopPropagation: else the click reaches the document and closes the menu at once)
+const intFiles = (/** @type {Bag} */ p) => carica("m:integra-tutti.js").then(() => /** @type {any} */ (window).INTTUTTI.runFiles(p), () => nearMsg(I18N.t("int.autoOff")));
+const intMenu = (/** @type {Bag} */ p, /** @type {MouseEvent} */ e) => { e.stopPropagation(); menu(e, [{ label: I18N.t("int.menu.all"), icon: IC_AUTO, fn: () => intAll(p) }, ...(ESP.mrm(p) ? [{ label: I18N.t("int.menu.files"), icon: IC_AUTO, fn: () => intFiles(p) }] : []), { label: I18N.t("int.menu.params"), icon: AZIONI_ICONE.svg("sliders"), fn: peakParams }]); };
 // ------------------------------------------------------------------ mouse
 function attach(p) {
   const cv = p.cv;
@@ -126,7 +131,7 @@ function attach(p) {
       if (JSON.stringify(fin) !== JSON.stringify([d.zo, d.zyo])) { p.zoom = d.zo; p.zoomY = d.zyo; pushZh(p); [p.zoom, p.zoomY] = fin; }
       uiSave(); return;
     }
-    if (d.edge) { if (intSnap(p) !== d.edge.snap) pushIh(p, d.edge.snap); uiSave(); return; }
+    if (d.edge) { p._intCur = d.edge.it.id; p._intT = Date.now(); if (intSnap(p) !== d.edge.snap) pushIh(p, d.edge.snap); uiSave(); return; }
     if (d.cursor || d.fw) { uiSave(); return; }
     const a = p._a;
     if (a && (d.ya || d.xa) && Math.abs((d.ya ? d.y - d.y0 : d.x - d.x0)) > 4) pushZh(p);
@@ -140,7 +145,7 @@ function attach(p) {
     if (p._pickNoise && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {          // the noise stretch for S/N of an integration
       const it = p._pickNoise; p._pickNoise = null; p.sel = null; pushIh(p, intSnap(p)); setNoiseZone(p, it, [Math.min(x0, x1), Math.max(x0, x1)]); E.panels.filter(q => q.ints && q.ints.length).forEach(q => draw(q)); uiSave(); showInts(); return;
     }
-    if (p._pickIbk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {            // "Sottrai il fondo di un tratto": the stretch the student just dragged
+    if (p._pickIbk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {            // "Subtract the background of a stretch": the stretch the student just dragged
       p._pickIbk = false; p.sel = null; ibkSet(p, "mean", [Math.min(x0, x1), Math.max(x0, x1)]); ctl(p); return;
     }
     if (!pk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) <= 4 && p.imode !== "auto") {      // a click on a filled peak selects it; elsewhere it deselects
@@ -183,7 +188,7 @@ function attach(p) {
     }
     if (!(e.ctrlKey || e.metaKey) || !p._a) return;
     e.preventDefault();
-    const a = p._a, f = Math.exp(Math.max(-60, Math.min(60, e.deltaY)) * 0.004), x = xd(rect(e));
+    const a = p._a, f = ASSE.wheelFactor(e), x = xd(rect(e));
     if (!p._wz || Date.now() - p._wz > 600) pushZh(p); p._wz = Date.now();                // a burst of wheel steps is one zoom for the history
     if (rect(e) < M.l && canYZ(a)) { const v = a.yinv(recty(e)); zoomYTo(p, v - (v - a.ymin) * f, v + (a.ymax - v) * f); uiSave(); return; }      // over the y axis: only the vertical scale changes
     if (a.map) { const y = a.mzAt(recty(e)); p.zoomY = clampView(y - (y - a.y0) * f, y + (a.y1 - y) * f, a.fullY[0], a.fullY[1]); return void zoomTo(p, x - (x - a.x0) * f, x + (a.x1 - x) * f); }

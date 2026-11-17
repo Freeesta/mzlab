@@ -2,7 +2,7 @@
 // @ts-check
 "use strict";
 // Search box (the 🔍 button of the toolbar, Ctrl+K / ⌘K): one field for commands, numbers and formulas.
-// Words are looked up among the commands of BARRA.commands (by name, in Italian and English, without accents, by partial words); a number or a
+// Words are looked up among the commands of BARRA.commands (by name, without accents, by partial words); a number or a
 // formula also gets "compatible with" rows from ricerca.js (shown above the commands). Empty: the recent commands.
 // Enter runs, ↑ ↓ move, Esc closes. The list of commands is the one of barra.js: nothing is registered here.
 
@@ -151,6 +151,7 @@ const PALETTE = (() => {
   }
 
   function open() {
+    carica("ricerca.js").catch(e => console.error(e));      // the results part: not in the start-up list, there before the first key is typed
     if (!box) build();
     if (!box.hidden) { input.focus(); return; }
     prev = document.activeElement;

@@ -8,7 +8,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::step::DataType;
 use mzlab_feat::store::Slice;
-use mzlab_feat_table_wasm::rows_mgf::rows_mgf as query_mgf;
+use mzlab_ops::run::table::rows_mgf::rows_mgf as query_mgf;
 
 /// The executor of the step, read by the runner after its own list.
 pub(crate) const EXECUTORS: &[(&str, Exec)] =

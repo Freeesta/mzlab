@@ -305,6 +305,8 @@ impl State {
                 } else {
                     analysis::bin_centroids(&s.mz, &s.intensity, bin_da)
                 };
+                // the AUTO rule of `/api/spectra`: unit-resolution centroids are merged per nominal mass
+                let (mz, y) = mzlab_core::specpeaks::merge_unit(&mz, &y);
                 out.push(s.index as f64);
                 out.push(r4(s.rt));
                 out.push(mz.len() as f64);

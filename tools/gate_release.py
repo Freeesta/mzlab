@@ -17,6 +17,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+INDEX_ROW_MAX = 300   # characters per row of docs/agenti/INDICE.md
 MAX_COMMITS = 150  # a graphify map older than this many commits on the touched folders is stale
 Result = tuple[str, list[str]]  # (check name, problems "file:line: text -> remedy")
 
@@ -58,6 +59,27 @@ def check_area_files(root: Path) -> Result:
         for p in sorted((root / "docs/agenti").glob("*.md"))
         if p.name != "INDICE.md" and p.name not in cited
     ]
+
+
+def check_index_rows(root: Path) -> Result:
+    """INDICE.md: one row per area file (second cell is exactly one `docs/agenti/<file>.md`), rows sorted by file name, each at most 300 characters."""
+    f = root / "docs/agenti/INDICE.md"
+    errors: list[str] = []
+    names: list[str] = []
+    for n, line in enumerate(f.read_text(encoding="utf-8").splitlines() if f.is_file() else [], 1):
+        cells = line.split("|")
+        if not line.startswith("|") or len(cells) < 4 or "docs/agenti/" not in cells[-2]:
+            continue
+        m = re.fullmatch(r"\s*`docs/agenti/([\w.-]+\.md)`\s*", cells[-2])
+        if not m:
+            errors.append(f"docs/agenti/INDICE.md:{n}: the second cell must be exactly one `docs/agenti/<file>.md` -> one row per area file")
+            continue
+        names.append(m.group(1))
+        if len(line) > INDEX_ROW_MAX:
+            errors.append(f"docs/agenti/INDICE.md:{n}: row of {m.group(1)} has {len(line)} characters (max {INDEX_ROW_MAX}) -> shorten it")
+        if len(names) > 1 and names[-1] <= names[-2]:
+            errors.append(f"docs/agenti/INDICE.md:{n}: {names[-1]} is not after {names[-2]} -> rows are sorted by file name, one per file")
+    return "one sorted row per area file in INDICE.md", errors
 
 
 def known_commands(root: Path) -> set[str]:
@@ -127,7 +149,7 @@ def check_checklist(root: Path, version: str | None = None) -> Result:
     return "release checklist", bad
 
 
-CHECKS = (check_steps, check_area_files, check_guides, check_readme, check_map, check_checklist)
+CHECKS = (check_steps, check_area_files, check_index_rows, check_guides, check_readme, check_map, check_checklist)
 
 
 def run(root: Path = ROOT, version: str | None = None, out=print) -> int:

@@ -34,7 +34,7 @@ function ricClassify(q) {
 const ricHrNow = () => (typeof window.TBL_HR === "function" ? !!window.TBL_HR() : true);
 const ricSub = (/** @type {string} */ f) => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
 const ricSg = (/** @type {number} */ x) => (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(4);
-const ricLang = () => (I18N.lang === "it" ? "it" : "en");
+const ricLang = () => "en";
 
 // ------------------------------------------------------------------ the contaminant list (api/contaminants), read once
 /** @type {Promise<any[]> | null} */
@@ -52,7 +52,7 @@ function ricContaminants() {
 const RIC_GO = {
   loss: (/** @type {number} */ x) => { if (window.BARRA) BARRA.setTab("losses", { q: String(x) }); },
   adduct: (x = /** @type {number | null} */ (null)) => { if (window.BARRA) BARRA.setTab("adducts", x != null ? { q: String(x) } : {}); },
-  cont: (/** @type {number} */ x) => { if (window.BARRA) BARRA.setTab("cont", { q: String(x) }); }
+  cont: (/** @type {number} */ x) => { if (window.LISTE) LISTE.open({ mz: x, hr: ricHrNow() }); }
 };
 
 /** @param {number} x  @param {string} q  @returns {Promise<RicGroup[]>} */

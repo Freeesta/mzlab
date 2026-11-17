@@ -44,7 +44,8 @@ try:
         pg.on("popup", lambda q: q.close()); pg.on("filechooser", lambda fc: None); pg.on("dialog", lambda d: d.dismiss())
         pg.goto(URL, wait_until="commit")
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("crossOriginIsolated === true", timeout=60000); pg.wait_for_selector("#drop", timeout=120000)
-        wait_for_js(pg, "typeof setView === 'function' && typeof CMD !== 'undefined' && typeof PALETTE !== 'undefined'", 120000)
+        wait_for_js(pg, "typeof setView === 'function' && typeof CMD !== 'undefined'", 120000)
+        pg.evaluate("carica('paletta.js')"); wait_for_js(pg, "typeof PALETTE !== 'undefined'")      # the palette loads on first use
         def check(what):
             eb = pg.evaluate(GONE)
             if eb: bad.append(f"{what}: error box {eb[:200]}")
@@ -120,6 +121,7 @@ try:
             pg.evaluate("setView('draw')"); wait_for_js(pg, "!!(window.TPDraw && TPDraw.ready())", 120000)
             K = "document.querySelector('#kframe').contentWindow.ketcher"
             walk("draw", root="#v-draw")
+            pg.evaluate("document.querySelectorAll('#v-draw .rq-tg[aria-expanded=false]').forEach(b => b.click())")    # the walk above clicked the fold buttons of the cards: open them again
             where[0] = "draw: export of the empty canvas"; pg.evaluate(f"{K}.setMolecule('')"); wait_for_js(pg, f"{K}.editor.struct().isBlank()")
             pg.click("#ex-png"); wait_for_js(pg, "!document.getElementById('ex-warn').hidden"); assert pg.get_attribute("#ex-warn", "role") == "status"
             pg.fill("#ex-smi", "CCO"); pg.click("#ex-load"); wait_for_js(pg, f"!{K}.editor.struct().isBlank()")
@@ -142,7 +144,7 @@ try:
         def shortcuts_panel():
             back("data"); pg.evaluate("document.activeElement && document.activeElement.blur()"); pg.keyboard.press("?"); wait_for_js(pg, "!!document.querySelector('#scorc[open]')")
             heads = pg.evaluate("[...document.querySelectorAll('#scorc h3')].map(h => h.textContent)")
-            assert heads == ["Ovunque", "Sui grafici (con il fuoco sul grafico)"], heads      # no chart: the chart keys are not listed as «everywhere»
+            assert heads == ["Everywhere", "On charts (with the chart focused)"], heads      # no chart: the chart keys are not listed as «everywhere»
             rows = pg.evaluate("[...document.querySelectorAll('#scorc li')].map(li => li.innerText)")
             assert len(rows) == len(set(rows)), rows
             back("data"); check("data: shortcuts panel")

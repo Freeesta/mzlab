@@ -17,7 +17,9 @@ fn every_help_and_usage_error_is_unchanged() {
             String::from_utf8_lossy(&o.stdout),
             o.stderr
         );
-        assert_eq!(got, chunk, "mzlab-cli {line}");
+        // the version is the build's: the snapshot holds a placeholder
+        let want = chunk.replace("{VERSION}", env!("CARGO_PKG_VERSION"));
+        assert_eq!(got, want, "mzlab-cli {line}");
         n += 1;
     }
     assert!(n >= 60, "the snapshot lists {n} invocations");
@@ -42,4 +44,40 @@ fn the_command_list_of_the_docs_is_current() {
     let (_, rest) = DOC.split_once("<!--cli-->\n").unwrap();
     let (block, _) = rest.split_once("<!--/cli-->").unwrap();
     assert_eq!(block, super::list_md(), "run python3 tools/cli_doc.py");
+}
+
+#[test]
+fn the_citation_is_in_help_version_catalogs_and_the_run_record() {
+    let text = crate::citation::text();
+    assert!(
+        text.contains(env!("CARGO_PKG_VERSION"))
+            && text.contains("https://github.com/Freeesta/mzlab")
+    );
+    assert!(
+        text.ends_with("DOI: to be added"),
+        "no DOI is invented: {text}"
+    );
+    let out = |a: &[&str]| {
+        let o = execute(&a.iter().map(|s| s.to_string()).collect::<Vec<_>>());
+        assert_eq!(o.code, 0, "{a:?}");
+        String::from_utf8(o.stdout).unwrap()
+    };
+    for a in [&["--help"][..], &["-h"], &["--version"], &["-V"]] {
+        assert!(out(a).contains(&format!("please cite it: {text}")), "{a:?}");
+    }
+    // machine-readable catalogs carry it as a "citation" field and stay valid JSON
+    let tools: serde_json::Value = serde_json::from_str(&out(&["llm", "tools"])).unwrap();
+    assert_eq!(tools["citation"], text);
+    assert_eq!(tools["schema"], "strumenti/1");
+    let steps: serde_json::Value = serde_json::from_str(&out(&["steps", "--json"])).unwrap();
+    assert!(steps
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|s| s["citation"] == text));
+    let one: serde_json::Value =
+        serde_json::from_str(&out(&["steps", "--json", "--id", "features.detect"])).unwrap();
+    assert_eq!(one["citation"], text);
+    // data stays untouched: plain `steps` has no citation line
+    assert!(!out(&["steps"]).contains("cite"));
 }

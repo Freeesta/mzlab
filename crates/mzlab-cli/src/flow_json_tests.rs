@@ -61,15 +61,14 @@ fn steps_json_has_the_ids_of_the_exports_and_the_native_flags() {
         );
         assert_eq!(str_of(s, "schema"), "step/1");
     }
-    // the new key is the last of each step
+    // the new keys are the last of each step: executable_native, then the citation
     let text = String::from_utf8(all.stdout.clone()).unwrap();
     assert!(
         text.lines()
             .filter(|l| l.starts_with('{'))
-            .all(
-                |l| l.contains(",\"executable_native\":") && l.ends_with("e}")
-                    || l.ends_with("e},")
-            ),
+            .all(|l| l.contains(",\"executable_native\":")
+                && (l.ends_with(&format!("{}}}", crate::citation::member()))
+                    || l.ends_with(&format!("{}}},", crate::citation::member())))),
         "{text}"
     );
 
@@ -405,5 +404,36 @@ fn progress_jsonl_is_one_json_line_per_job() {
         .code,
         2
     );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn flow_check_and_run_refuse_a_step_id_that_leaves_the_run_folder() {
+    let dir = std::env::temp_dir().join(format!("mzlab-flow-id-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let outside = dir.join("outside");
+    for id in [
+        p(&outside).replace('\\', "\\\\"),
+        "../outside".into(),
+        "a/b".into(),
+    ] {
+        let plan = dir.join("plan.json");
+        let text = format!(
+            r#"{{"format":"mzflow/2","inputs":[{{"name":"q.mgf","type":"spectra"}},{{"name":"lib.msp","type":"library"}}],"steps":[{{"id":"{id}","step":"spectra.match@1","in":{{"query":"file:q.mgf","library":"file:lib.msp"}}}}]}}"#
+        );
+        std::fs::write(&plan, text).unwrap();
+        let check = run_cli(&["flow", "check", p(&plan), "--json"]);
+        assert_ne!(check.code, 0, "{id}");
+        assert!(
+            String::from_utf8_lossy(&check.stdout).contains("err.flow.instance.id"),
+            "{id}: {}",
+            String::from_utf8_lossy(&check.stdout)
+        );
+        let run = run_cli(&["flow", "run", p(&plan), "--out", p(&dir.join("run"))]);
+        assert_ne!(run.code, 0, "{id}");
+        assert!(!outside.with_extension("json").exists(), "{id}");
+        assert!(!dir.join("run/a").exists(), "{id}");
+    }
     let _ = std::fs::remove_dir_all(&dir);
 }

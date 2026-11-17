@@ -16,7 +16,7 @@ try:
         pg.set_viewport_size({"width": 1400, "height": 900})
         pg.click("#demobtn"); pg.click("#demochoice [data-demo=full]")
         pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length===5", timeout=60000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         def table():
             pg.click("#samptab"); frames(pg, 4)
             rows = pg.evaluate("[...document.querySelectorAll('#wtable tbody tr')].map(t => [t.querySelector('[data-open]')?.dataset.open || '', +t.querySelector('[data-k=time]').value])")
@@ -27,10 +27,10 @@ try:
         step("demo: the table has the five samples, in the order of the side list", table)
         def after_reload():
             pg.reload(); pg.wait_for_function("window.qqReady && E.files.length === 5", timeout=60000); frames(pg, 4)
-            if not pg.evaluate("S.table"): pg.click("#samptab"); frames(pg, 4)
+            if pg.is_hidden("#wtable"): pg.click("#samptab"); frames(pg, 4)
             rows = pg.evaluate("[...document.querySelectorAll('#wtable tbody tr')].map(t => t.querySelector('[data-open]')?.dataset.open || '')")
             assert rows == [n + ".mzML" for n in NAMES], rows
-            assert pg.evaluate("workState()") == "table"
+            assert pg.evaluate("workState()") == "add"
         step("reload: the table still has the five samples", after_reload)
 finally:
     r.close(); r.report()

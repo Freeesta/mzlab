@@ -114,6 +114,60 @@ fn the_bytes_do_not_depend_on_the_sink_and_equal_the_stages_by_hand() {
     assert_eq!(t.area, by_hand.area);
 }
 
+/// The `.mzfeat` bytes of the series through `detect_to` and `align_to`, the steps behind the `.wasm` exports and the routes of the app.
+fn table_bytes(p: &UntParams) -> Option<Vec<u8>> {
+    let mut ixs = series()?;
+    let stored: Vec<Vec<u8>> = ixs
+        .iter_mut()
+        .enumerate()
+        .map(|(k, ix)| {
+            let mut a = Vec::new();
+            detect_to(ix, &format!("oro_{}", k + 1), p, &mut a).unwrap();
+            a
+        })
+        .collect();
+    let mut open_ixs: Vec<_> = series()?.into_iter().map(Some).collect();
+    let mut table = Vec::new();
+    align_to(
+        &mut Held(stored),
+        &MemBudget::from_request(f64::NAN),
+        p,
+        |k| Ok(open_ixs[k].take().unwrap()),
+        &mut table,
+    )
+    .unwrap();
+    Some(table)
+}
+
+/// `ident.min_corr` (the opt-in correlation of the links): off (absent or 0) the bytes are the ones of the default recipe; on, the table equals the stages by
+/// hand and its identity columns come from the same code as the app's.
+#[test]
+fn the_ident_correlation_is_off_by_default_and_equal_by_hand_when_on() {
+    let json = |ident: &str| {
+        UntParams::from_json(&format!(r#"{{"engine":"untargeted","polarity":1{ident}}}"#)).unwrap()
+    };
+    let Some(base) = table_bytes(&json("")) else {
+        return;
+    };
+    assert_eq!(
+        table_bytes(&json(r#","ident":{"min_corr":0}"#)).unwrap(),
+        base
+    );
+    let on = json(r#","ident":{"min_corr":0.8}"#);
+    let bytes = table_bytes(&on).unwrap();
+    let mut ixs = series().unwrap();
+    let lists: Vec<_> = ixs
+        .iter_mut()
+        .map(|ix| run_file(ix, &on).unwrap())
+        .collect();
+    let names: Vec<String> = (1..=4).map(|i| format!("oro_{i}")).collect();
+    let by_hand = run_series(&lists, &mut ixs, &names, &on).unwrap();
+    let (t, _) =
+        read_table_from(&mut mzlab_feat::store::Slice(&bytes), bytes.len() as u64).unwrap();
+    assert_eq!(t.ident, by_hand.ident);
+    assert_eq!(t.iso, by_hand.iso);
+}
+
 #[test]
 fn a_budget_that_holds_nothing_is_refused_in_order() {
     let Some(mut ixs) = series() else { return };

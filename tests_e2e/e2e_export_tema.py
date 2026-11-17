@@ -16,7 +16,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); ready(pg)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='chrom'&&p.tab==='full');p.mode='cas';draw(p)})()"); ready(pg); frames(pg)
         shots = {}
         for theme in ("light", "dark"):

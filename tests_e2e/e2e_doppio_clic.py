@@ -10,7 +10,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
+        pg.wait_for_timeout(1000); pg.click("text=Load data"); ready(pg)
         def dbl(sel, fx=0.5, fy=0.5):
             c = pg.locator(sel + " canvas").first; c.scroll_into_view_if_needed(); b = c.bounding_box()
             pg.mouse.dblclick(b["x"] + b["width"] * fx, b["y"] + b["height"] * fy); pg.wait_for_timeout(900)
@@ -50,10 +50,10 @@ try:
         step("D8/D9: spectrum zoomed = whole view and undo; not zoomed = measures off", spec)
         def annot():
             open_kind(pg, "full"); ready(pg)
-            pg.evaluate(f"(()=>{{const p={CH};p.anns.push({{x:(p._a.x0+p._a.x1)/2,text:'prova'}});draw(p)}})()"); pg.wait_for_timeout(300)
+            pg.evaluate(f"(()=>{{const p={CH};p.anns.push({{x:(p._a.x0+p._a.x1)/2,text:'test'}});draw(p)}})()"); pg.wait_for_timeout(300)
             pos = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect(),l=p._a.lbls.find(b=>b.ann);return [q.left+l.x+l.w/2,q.top+l.y+l.h/2]}})()")
             pg.mouse.dblclick(pos[0], pos[1]); pg.wait_for_timeout(400)
-            assert "Annotazione" in pg.inner_text("#asktxt"), pg.inner_text("#asktxt"); pg.click("#askno")
+            assert "Annotation" in pg.inner_text("#asktxt"), pg.inner_text("#asktxt"); pg.click("#askno")
         step("D15: annotation window with the translated title", annot)
         def mapa():
             open_kind(pg, "full"); ready(pg); pg.click("#np-map"); ready(pg); wait_for_js(pg, "E.panels.some(p=>p.type==='map'&&p._a)")

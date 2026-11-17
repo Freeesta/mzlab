@@ -3,7 +3,7 @@
 
 use super::graph::{Edge, Identity, Inputs, Node};
 use super::prepared::{order as graph_order, Key, Prepared};
-use crate::store::Section;
+use crate::store_base::Section;
 use mzlab_core::error::Result;
 use super::{breakdown_fields, evidence_json, PointsTable};
 use crate::table::*;

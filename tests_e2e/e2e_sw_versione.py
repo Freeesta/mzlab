@@ -2,7 +2,8 @@
 to the same browser, with the headers of GitHub Pages (ETag, max-age=600). Build the site first: python tools/build_site.py.
 1 a normal reload after a deploy shows the new version at once (static/version.js) and the page never mixes files of two builds;
 2 the old cache goes, the new one is filled, and the next reload asks the server for no static file at all (cache-first);
-3 «Full reset» (QQRESET.wipe, then the reload it does) brings the newest version although the HTTP cache holds the old files."""
+3 «Full reset» (QQRESET.wipe, then the reload it does) brings the newest version although the HTTP cache holds the old files;
+4 ?nav=cache (opt-in): a load with no page request, the old version after a deploy, then the notice «New version ready», then the new version after «Reload»."""
 import hashlib, json, re, shutil, socket, subprocess, sys, tempfile, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -175,6 +176,46 @@ try:
             pg.goto(URL + "?riparti=1"); pg.wait_for_load_state("load")
             assert ver() == "N1", ("Full reset did not bring the newest version", ver())
         step("«Full reset» brings the newest version although the HTTP cache holds the old files", reset_full)
+        # ?nav=cache, in a browser profile of its own: the default flow above is untouched
+        state["root"]["x"] = work / "n0"
+        ctx2 = b.new_context(); ctx2.add_init_script(SKIP); pc = ctx2.new_page()
+        verc = lambda: pc.evaluate("window.MZLAB_VERSION")
+        def nav_cache_first():
+            pc.goto(URL + "?nav=cache"); pc.wait_for_function("navigator.serviceWorker.controller !== null && window.crossOriginIsolated", timeout=60000)
+            wait_cache(pc, app["n0"]); wait_big(pc)
+            state["hits"].clear()
+            pc.goto(URL); pc.wait_for_load_state("load")                   # the switch is remembered: the plain address is cache first too
+            assert verc() == V0[0], verc()
+            assert state["hits"].get("/", 0) == 0, ("nav=cache asked the server for the page", dict(state["hits"].items()))
+        step("nav=cache: a warm load asks the server for no page", nav_cache_first)
+        def nav_cache_deploy():
+            state["root"]["x"] = work / "n1"
+            pc.reload(); pc.wait_for_load_state("load")
+            assert verc() == V0[0], ("nav=cache: the first load after a deploy is the cached version", verc())
+            body = pc.evaluate("fetch('static/version.js').then(r => r.text())")
+            assert V0[0] in body, ("the page of the cached build got a file of the new one", body)
+            note = pc.locator("#sw-nuova[role=status]")
+            note.wait_for(state="visible", timeout=150000)
+            # the text comes from the catalogue loaded at start-up (lang/<L>/altre-press-xic.js), not from the key
+            assert note.locator("span").inner_text().strip() == "New version ready", note.inner_text()
+            assert note.get_by_role("button").inner_text().strip() == "Reload", note.inner_text()
+            assert verc() == V0[0], "no reload by itself"
+            with pc.expect_navigation(): note.get_by_role("button").click()
+            pc.wait_for_load_state("load")
+            assert verc() == "N1", ("nav=cache: Reload did not bring the new version", verc())
+            assert "N1" in pc.evaluate("fetch('static/version.js').then(r => r.text())")
+            assert not pc.locator("#sw-nuova").count()
+        step("nav=cache: old version after a deploy, then the notice, then the new version after Reload", nav_cache_deploy)
+        def nav_cache_after():
+            wait_cache(pc, app["n1"])
+            for _ in range(60):
+                if not any(k.endswith(app["n0"]) for k in pc.evaluate("caches.keys()")): break
+                pc.evaluate("new Promise(r => setTimeout(r, 500))")
+            keys = pc.evaluate("caches.keys()")
+            assert not any(k.endswith(app["n0"]) for k in keys), keys
+            pc.reload(); pc.wait_for_load_state("load"); assert verc() == "N1"
+        step("nav=cache: the new version's worker drops the old cache and stays", nav_cache_after)
+        ctx2.close()
         b.close()
     srv.terminate()
 finally:

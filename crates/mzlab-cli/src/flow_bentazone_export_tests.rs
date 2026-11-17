@@ -4,7 +4,7 @@
 use crate::flow_bentazone_tests::{fixture, plan, run};
 use mzlab_core::budget::sha256_hex;
 use mzlab_feat::store::Slice;
-use mzlab_feat_table_wasm::core::table_file;
+use mzlab_ops::run::table::core::table_file;
 
 fn exported(tag: &str, pol: i8) -> (std::path::PathBuf, [String; 2]) {
     let d = fixture(tag, pol, true);

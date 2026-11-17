@@ -5,7 +5,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out, Value};
 
 use super::{errors_json, from_csv, to_json, Kind, Liste};
-use crate::legacy::transf::delta_text;
+use crate::transf_base::delta_text;
 
 fn header(kind: Kind) -> &'static str {
     match kind {

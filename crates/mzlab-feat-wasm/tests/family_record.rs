@@ -9,8 +9,8 @@ use mzlab_core::budget::MemBudget;
 use mzlab_core::idxread::Index;
 use mzlab_feat::family::{analyse_families, FamParams};
 use mzlab_feat::famrecord;
-use mzlab_feat::pipeline::{analyse, Steps};
-use mzlab_feat::trace::Params;
+use mzlab_feat::pipeline::analyse;
+use mzlab_feat::recipe::Recipe;
 use mzlab_feat_wasm::{family, run};
 
 fn make() -> Option<(std::path::PathBuf, Vec<u8>)> {
@@ -53,9 +53,10 @@ fn the_record_equals_the_native_one_and_is_deterministic() {
     assert!(!fam.arcs.is_empty(), "the series has arcs to prove");
     assert_eq!(got, want, "wasm path and native path");
 
-    // exactly what `examples/families.rs` runs: default numbers, no recipe
+    // exactly what `examples/families.rs` runs: the numbers of the default recipe
     let mut ix = open();
-    let (p, steps) = (Params::default(), Steps::default());
+    let base = Recipe::default();
+    let (p, steps) = (base.detect, base.steps);
     let (mut f, links) = analyse(&mut ix, &p, &steps).unwrap();
     let fam = analyse_families(&mut ix, &mut f, &links, &p, &FamParams::default()).unwrap();
     let mut ix = open();

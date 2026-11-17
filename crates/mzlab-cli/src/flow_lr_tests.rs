@@ -10,7 +10,7 @@ use mzlab_core::idxread::Index;
 use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::upload::prepare;
 use mzlab_feat::legacy::lr::{self, summary::summary};
-use mzlab_feat_wasm::run;
+use mzlab_ops::run::feat::run;
 
 const NAMES: [&str; 5] = [
     "FullScan_t0.mzML",
