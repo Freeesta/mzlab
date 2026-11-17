@@ -68,6 +68,7 @@ pub mod nuclides;
 pub mod itemroutes;
 pub mod infusion;
 pub mod iteminfo;
+mod cespread;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod json;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]

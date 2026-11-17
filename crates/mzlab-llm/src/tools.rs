@@ -1,4 +1,4 @@
-//! The catalog of tools an assistant may call (`strumenti/1`). A few fixed meta-tools whose arguments are generated from the step registry, so a new
+//! The catalog of tools an assistant may call (`tools/1`). A few fixed meta-tools whose arguments are generated from the step registry, so a new
 //! step or parameter reaches the catalog without a line written here: `flow_add_step.step` is the enum of every `id@version`, `flow_set_param` has one
 //! branch per step with the names `--set` accepts (algorithm and preset included) and the value schema of each parameter.
 
@@ -433,7 +433,7 @@ fn spread(s: &[u8], i: usize, depth: usize, out: &mut String) -> usize {
     at + 1
 }
 
-/// The catalog as the file `strumenti/1`: one element per line in every long list, so the diff of a new step touches only its own lines, and without
+/// The catalog as the file `tools/1`: one element per line in every long list, so the diff of a new step touches only its own lines, and without
 /// the hash of the registry, which any change of the registry would rewrite on its own line.
 pub fn catalog_json(steps: &[Step], ui: &[UiTool], executable: &dyn Fn(&str) -> bool) -> String {
     tools_file(&catalog(steps, ui, executable))
@@ -441,7 +441,7 @@ pub fn catalog_json(steps: &[Step], ui: &[UiTool], executable: &dyn Fn(&str) -> 
 
 pub(crate) fn tools_file(tools: &[Tool]) -> String {
     let mut o = Out::default();
-    o.raw("{\"schema\":\"strumenti/1\",\"tools\":[");
+    o.raw("{\"schema\":\"tools/1\",\"tools\":[");
     for (i, t) in tools.iter().enumerate() {
         if i > 0 {
             o.raw(",");
@@ -460,12 +460,12 @@ pub(crate) fn tools_file(tools: &[Tool]) -> String {
     out
 }
 
-/// The tools of a catalog text (`strumenti/1`, the file the site ships): the page of the site has no step registry, so it hands the text to the
+/// The tools of a catalog text (`tools/1`, the file the site ships): the page of the site has no step registry, so it hands the text to the
 /// `.wasm` once. The names and texts are leaked to keep `Tool` `'static`: call it once per page, never per request.
 pub fn parse_catalog(text: &str) -> Result<Vec<Tool>> {
     let bad = |f: &str| Error::new("err.llm.tools").with("field", f);
     let v = parse(text.as_bytes()).map_err(|_| bad("json"))?;
-    if v.get("schema").and_then(Value::str) != Some("strumenti/1") {
+    if v.get("schema").and_then(Value::str) != Some("tools/1") {
         return Err(bad("schema"));
     }
     let leak = |s: &str| -> &'static str { Box::leak(s.to_string().into_boxed_str()) };
