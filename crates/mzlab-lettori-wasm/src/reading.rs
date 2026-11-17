@@ -27,7 +27,12 @@ fn error_json(e: &mzlab_core::Error) -> JsValue {
 const READ_AHEAD: usize = 256 << 10;
 
 /// `read(i, offset, length) -> Uint8Array`: `n` bytes of member `i` at `off`.
-fn from_js(read: &Function, i: u32, off: u64, n: usize) -> mzlab_core::Result<js_sys::Uint8Array> {
+pub(crate) fn from_js(
+    read: &Function,
+    i: u32,
+    off: u64,
+    n: usize,
+) -> mzlab_core::Result<js_sys::Uint8Array> {
     let bad = || mzlab_core::Error::new("error.badIndex");
     let v = read
         .call3(

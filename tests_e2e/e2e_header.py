@@ -26,7 +26,7 @@ try:
             assert ps.nth(2).inner_text() == "Suggestions and corrections: fedecrista@gmail.com."
             assert pg.locator("#helppop a").count() == 1 and pg.get_attribute("#helppop a", "href") == "mailto:fedecrista@gmail.com"
             pg.keyboard.press("Escape")
-        step("(i) opens the box with the mailto link", info)
+        step("the header info button opens the box with the mailto link", info)
         def centred():
             from PIL import Image; import io
             for scale in (1, 1.5, 2):
@@ -41,8 +41,8 @@ try:
                    if sum(abs(a - b) for a, b in zip(im.getpixel((x, y)), bg)) > 150]
             assert ink, "no glyph drawn"
             cx = (min(x for x, _ in ink) + max(x for x, _ in ink) + 1) / 2; cy = (min(y for _, y in ink) + max(y for _, y in ink) + 1) / 2
-            assert abs(cx - w / 2) <= 0.75 and abs(cy - h / 2) <= 0.75, ("the drawn i is off centre", cx, cy, w, h)
-        step("the i is centred in its round button (box and drawn glyph, three zoom levels)", centred)
+            assert abs(cx - w / 2) <= 0.75 and abs(cy - h / 2) <= 0.75, ("the drawn glyph is off centre", cx, cy, w, h)
+        step("the info glyph is centred in its button (box and drawn glyph, three zoom levels)", centred)
         def correction():
             pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t60")]); pg.wait_for_timeout(1000)
             pg.click("text=Load data"); ready(pg)

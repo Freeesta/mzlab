@@ -176,9 +176,11 @@ fn a_damaged_or_oversized_set_is_refused_with_a_key() {
         entries: 5_000_000,
         byte: 100,
     };
-    assert_eq!(
-        readers::apri(set(&idx, true), &tiny).err().unwrap().key,
-        "error.memoryBudget"
+    let e = readers::apri(set(&idx, true), &tiny).err().unwrap();
+    assert_eq!(e.key, "error.memoryBudget");
+    assert!(
+        e.params.iter().any(|(k, v)| *k == "fase" && v == "whole"),
+        "{e:?}"
     );
     // a table of more entries than allowed
     let few = Limits {

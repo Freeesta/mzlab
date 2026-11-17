@@ -127,9 +127,7 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     }
     let mut m = fs.membri.swap_remove(i);
     // the container and the raw stream are both in memory
-    if m.dim.saturating_mul(2) > limits.byte {
-        return Err(Error::memory_budget());
-    }
+    limits.fits(m.dim.saturating_mul(2))?;
     let mut data = Vec::new();
     data.try_reserve_exact(m.dim as usize)
         .map_err(|_| Error::memory_budget())?;

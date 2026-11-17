@@ -1,8 +1,8 @@
-"""Flow «This browser» runs quant.calibrate@1 (module `flowcal`, `flow_quant`): a synthetic series of 8 injections with four compounds; the plan detect → align → gapfill → quant.calibrate (the signal as area, and as
+"""Flow «This browser» runs quant.calibrate@1 (module `flowcal`, `flow_quant`) and quant.curve@1 (`flow_curve`, on the series of tools/synthetic_data_calibration.py): a synthetic series of 8 injections with four compounds; the plan detect → align → gapfill → quant.calibrate (the signal as area, and as
 height with a range and a dilution) goes to `mzlab-cli flow run`, and the CSV the browser keeps is the native file byte for byte (same SHA-256), the curve row without a peak is reported as a warning on the card;
 every job is `done` with `via: "browser"`, a second run takes the texts from OPFS, no request is left unserved (`MZLAB_LR_MISS`). Synthetic data only.
 Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen, python3 and numpy: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_web_quant.py"""
-# covers: flow/lazy/flow-web-quant.js, crates/mzlab-flowcal-wasm/src/lib.rs, crates/mzlab-ops/src/run/table/quant.rs
+# covers: flow/lazy/flow-web-quant.js, crates/mzlab-flowcal-wasm/src/lib.rs, crates/mzlab-ops/src/run/table/quant.rs, crates/mzlab-ops/src/run/table/curve.rs, crates/mzlab-core/src/calib.rs
 import hashlib, json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -58,17 +58,23 @@ CURVES = ("name,mz,rt,slope,intercept,unit,range_min,range_max,dilution\n"
           "gamma,415.3102,2.2,1500,0,ng/mL,10,,1\n"
           "ghost,999.9,9.0,1,0,ng/mL,,,1\n")
 IDS = ("qa", "qh")
+from synthetic_data_calibration import calibration_series
+CURVE_PARAMS = {"istd": "IS", "exclude": "B|std8|saturated detector"}   # the parameters of the golden files (flow_curve_tests.rs)
 
 def plan():
     """The plan: index → detect → align → gap filling, then the curves applied to the area and to the height."""
     inputs = [{"name": n + ".mzML", "sha256": "", "type": "mzml"} for n in NAMES] + [{"name": "samples.json", "sha256": "", "type": "samples"}, {"name": "curves.csv", "sha256": "", "type": "report"}]
+    inputs += [{"name": "responses.csv", "sha256": "", "type": "report"}, {"name": "standards.csv", "sha256": "", "type": "report"}]
     st = [{"id": "idx", "step": "index.mzidx@1", "in": {"source": ["file:" + n + ".mzML" for n in NAMES]}},
           {"id": "det", "step": "features.detect@1", "in": {"index": ["idx.index"]}},
           {"id": "ali", "step": "features.align@1", "in": {"peaks": ["det.peaks"]}},
           {"id": "gap", "step": "features.gapfill@1", "in": {"table": "ali.table", "index": ["idx.index"]}}]
     ins = {"table": "gap.table", "curves": "file:curves.csv", "samples": "file:samples.json"}
     st += [{"id": "qa", "step": "quant.calibrate@1", "in": ins, "params": {"kinds": "sample,qc"}},
-           {"id": "qh", "step": "quant.calibrate@1", "in": ins, "params": {"signal": "height", "kinds": "sample"}}]
+           {"id": "qh", "step": "quant.calibrate@1", "in": ins, "params": {"signal": "height", "kinds": "sample"}},
+           {"id": "cu", "step": "quant.curve@1", "in": {"responses": "file:responses.csv", "standards": "file:standards.csv"}, "params": CURVE_PARAMS},
+           # wired to the second port of cu: the browser must pass the concentrations CSV (read here as a standards table), as native does with Made.extra
+           {"id": "cu2", "step": "quant.curve@1", "in": {"responses": "file:responses.csv", "standards": "cu.concentrations"}, "params": CURVE_PARAMS}]
     return {"format": "mzflow/2", "inputs": inputs, "steps": st}
 
 tmp = Path(tempfile.mkdtemp(prefix="flow_quant_"))
@@ -80,12 +86,15 @@ run = tmp / "run"; run.mkdir()
 for i, f in enumerate(FILES): write_mzml(run / (f["name"] + ".mzML"), f["gain"], 100 + i)
 (run / "samples.json").write_text(SAMPLES); (run / "curves.csv").write_text(CURVES)
 (run / "quant.json").write_text(json.dumps(plan()))
+calibration_series(run)
+RESP, STDS = (run / "responses.csv").read_text(), (run / "standards.csv").read_text()
 out = run / "out"
 nat_run = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(run / "quant.json"), "--in", str(run), "--out", str(out)], cwd=ROOT, capture_output=True, text=True)
 assert nat_run.returncode == 0, nat_run.stderr[-1500:]
 data = site / "static" / "dati_flow_quant"; data.mkdir()
 for n in NAMES: shutil.copy2(next(out.glob("*-" + n + ".mzidx")), data / (n + ".mzidx"))
 NATIVE = {i: (out / (i + ".csv")).read_bytes() for i in IDS}
+NATIVE_CURVE = {n: (out / n).read_bytes() for n in ("cu.json", "cu.csv", "cu2.json", "cu2.csv")}
 
 PUT = """async (names) => {
   let d = await navigator.storage.getDirectory();
@@ -93,10 +102,10 @@ PUT = """async (names) => {
   for (const n of names) { const w = await (await d.getFileHandle(n + ".mzidx", { create: true })).createWritable(); await (await fetch("static/dati_flow_quant/" + n + ".mzidx")).body.pipeTo(w); }
 }"""
 # sets the plan and the files of the plan in the open Flow page, runs it, resolves with the events and the error key
-RUN = """async ([plan, samples, curves]) => {
+RUN = """async ([plan, samples, curves, resp, stds]) => {
   const S = document.querySelector('.flx-list').__flow, ev = [], on = e => ev.push(e.detail);
   S.plan.inputs = JSON.parse(JSON.stringify(plan.inputs)); S.plan.steps = JSON.parse(JSON.stringify(plan.steps));
-  S.samplesJson = S.samplesJson || {}; S.samplesJson['samples.json'] = samples; S.samplesJson['curves.csv'] = curves;
+  S.samplesJson = S.samplesJson || {}; S.samplesJson['samples.json'] = samples; S.samplesJson['curves.csv'] = curves; S.samplesJson['responses.csv'] = resp; S.samplesJson['standards.csv'] = stds;
   document.addEventListener('flow:web-step', on);
   try { await FLOW.runners.web.run(S); return { ev }; }
   catch (e) { return { ev, err: { key: e.key, params: e.params, msg: String(e && e.message || e) } }; }
@@ -131,13 +140,13 @@ try:
         seen = []   # the events of the first run: it runs the whole plan, so the quant steps are done there and only reused in the next run
 
         def upstream():
-            r = pg.evaluate(RUN, [plan(), SAMPLES, CURVES]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
+            r = pg.evaluate(RUN, [plan(), SAMPLES, CURVES, RESP, STDS]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
             seen.extend(r["ev"])
             for i in ("det", "ali", "gap"): assert any(e["passo"] == i and e["stato"] in ("done", "reused") and e["via"] == "browser" for e in r["ev"]), (i, r["ev"][-6:])   # the gap filling is made with the alignment
         step("the upstream steps of the plan (detect, align, gap filling) run in the browser", upstream)
 
         def first():
-            r = pg.evaluate(RUN, [plan(), SAMPLES, CURVES]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
+            r = pg.evaluate(RUN, [plan(), SAMPLES, CURVES, RESP, STDS]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
             for i in IDS: assert any(e["passo"] == i and e["stato"] == "done" and e["via"] == "browser" for e in seen + r["ev"]), (i, r["ev"][-6:])
             assert asked, "the flowcal module was not fetched when quant.calibrate ran"
             kept = pg.evaluate(KEPT)
@@ -150,11 +159,21 @@ try:
                 assert web.startswith("compound,mz,rt,sample,signal,concentration,unit,flag\n") and ",ok\n" in web and "ghost" not in web, (i, web[:300])
         step("the browser gives the concentrations CSV of the native flow run, byte for byte (area, and height with a range and a dilution)", first)
 
+        def curve():
+            kept = pg.evaluate(KEPT)
+            for i in ("cu", "cu2"): assert any(e["passo"] == i and e["stato"] in ("done", "reused") and e["via"] == "browser" for e in seen), (i, seen[-6:])
+            for n, nat in NATIVE_CURVE.items():
+                web = kept.get(n); assert web is not None, (n, list(kept))
+                at = next((j for j, (x, y) in enumerate(zip(nat.decode(), web)) if x != y), 0)
+                assert web.encode() == nat, (n, "first difference at", at, nat.decode()[max(0, at - 80):at + 80], web[max(0, at - 80):at + 80])
+            assert kept["cu.json"].startswith('{"format":"taratura/1"') and ",excluded_by_user\n" in kept["cu.csv"]
+        step("quant.curve gives the calibration JSON and the concentrations CSV of the native flow run, byte for byte, also to a step wired to cu.concentrations", curve)
+
         def again():
             before = len(asked)
-            r = pg.evaluate(RUN, [plan(), SAMPLES, CURVES]); assert not r.get("err"), r
-            assert not [e for e in r["ev"] if e["passo"] in IDS and e["stato"] == "running"], r["ev"]
-            for i in IDS: assert any(e["passo"] == i and e["stato"] in ("done", "reused") and e["via"] == "browser" for e in r["ev"]), (i, r["ev"][-6:])
+            r = pg.evaluate(RUN, [plan(), SAMPLES, CURVES, RESP, STDS]); assert not r.get("err"), r
+            assert not [e for e in r["ev"] if e["passo"] in IDS + ("cu", "cu2") and e["stato"] == "running"], r["ev"]
+            for i in IDS + ("cu", "cu2"): assert any(e["passo"] == i and e["stato"] in ("done", "reused") and e["via"] == "browser" for e in r["ev"]), (i, r["ev"][-6:])
             assert len(asked) == before, "the second run fetched the module again"
         step("a second run takes the texts from OPFS", again)
 

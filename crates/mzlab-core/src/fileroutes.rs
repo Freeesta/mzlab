@@ -125,7 +125,7 @@ pub fn fileinfo<R: ReadAt, M: ReadAt>(
         round(rt(f64::max, f64::NEG_INFINITY), 3),
     );
     let mut levels: Vec<(u8, usize)> = vec![];
-    for s in scans {
+    for s in scans.iter() {
         match levels.iter_mut().find(|(l, _)| *l == s.level) {
             Some(x) => x.1 += 1,
             None => levels.push((s.level, 1)),

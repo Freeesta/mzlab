@@ -130,7 +130,7 @@ try:
         step("a QqQ MRM run and a Q-TOF profile run open through the module (SRM chromatograms, profile spectra)", lc_runs)
         # the numpress mzML: the engine refuses it, so the page sends it to the «aperti» module with no parameter
         NP = """async () => { const rb = await window.MZLAB_RUST_READY; await new Promise(r => setTimeout(r, 300));
-          const tic = await (await fetch("api/chrom?k=0&level=1")).json(), sp = await (await fetch("api/spectrum?k=0&rt0=0.9&rt1=1.1&level=1")).json();
+          const tic = await (await fetch("api/chrom?k=0&level=1")).json(), sp = await (await fetch("api/spectrum?k=0&rt0=0.9&rt1=1.1&level=1&merge=0")).json();
           return { files: ST.files.map(x => x.name), tic, sp, miss: (window.MZLAB_LR_MISS || []).length }; }"""
         def one(folder):
             pg = page(b, ""); pg.set_input_files("#pickdir", str(tmp / folder))

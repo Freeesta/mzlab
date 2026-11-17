@@ -104,11 +104,14 @@ pub(super) struct LcRead {
 }
 
 /// The bytes of member `i`, counted against what is left of `Limiti::byte`.
-pub(super) fn read_all(fs: &mut FileSet, i: usize, left: &mut u64) -> Result<Vec<u8>> {
+pub(super) fn read_all(
+    fs: &mut FileSet,
+    i: usize,
+    left: &mut u64,
+    limits: &Limits,
+) -> Result<Vec<u8>> {
     let m = &mut fs.membri[i];
-    if m.dim > *left {
-        return Err(Error::memory_budget());
-    }
+    limits.fits_in(m.dim, *left)?;
     *left -= m.dim;
     let mut b = vec![0u8; m.dim as usize];
     m.dati.read_at(0, &mut b)?;
@@ -121,21 +124,22 @@ pub(super) fn side(
     n: &str,
     left: &mut u64,
     unread: &mut Vec<String>,
+    limits: &Limits,
 ) -> Option<Vec<u8>> {
     let i = find(fs, n)?;
-    read_all(fs, i, left)
+    read_all(fs, i, left, limits)
         .map_err(|_| unread.push(n.to_string()))
         .ok()
 }
 
 /// Reads the calibration, the method report and the small members of `AcqData` (a binary too large to hash is named by its size).
-pub(super) fn read_lc(fs: &mut FileSet, left: &mut u64) -> LcRead {
+pub(super) fn read_lc(fs: &mut FileSet, left: &mut u64, limits: &Limits) -> LcRead {
     let mut unread = Vec::new();
     let cal = (
-        side(fs, MASS_CAL, left, &mut unread),
-        side(fs, DEFAULT_CAL, left, &mut unread),
+        side(fs, MASS_CAL, left, &mut unread, limits),
+        side(fs, DEFAULT_CAL, left, &mut unread, limits),
     );
-    let method = side(fs, ACQ_METHOD, left, &mut unread);
+    let method = side(fs, ACQ_METHOD, left, &mut unread, limits);
     let mut files = Vec::new();
     let mut sizes = Vec::new();
     for (i, rel) in lc_extras(fs) {
@@ -143,7 +147,7 @@ pub(super) fn read_lc(fs: &mut FileSet, left: &mut u64) -> LcRead {
         if dim > UNDECODED_MAX || dim > *left {
             sizes.push((rel, dim));
         } else {
-            match read_all(fs, i, left) {
+            match read_all(fs, i, left, limits) {
                 Ok(b) => files.push((rel, b)),
                 Err(_) => unread.push(rel),
             }

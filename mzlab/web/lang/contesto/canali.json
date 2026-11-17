@@ -1,5 +1,7 @@
 {
   "int.split.mark": "aria-label of a split marker in the valleys; {rt} = time of the vertical line in minutes, 3 decimals.",
+  "int.base.clamped": "Line of the box on the \"A = …\" label when the baseline of an integration, extended past its two points, would have gone below zero and is held at 0; {v} = area not counted below zero (counts·s).",
+  "int.split.hand.mark": "aria-label of a marker of the split by hand; {rt} = time of the vertical line in minutes, 3 decimals.",
   "int.base.tip": "Line of the box on the \"A = …\" label of an integration: the baseline used; {b} = name of the mode (int.base.tag.*).",
   "int.follow.sn": "Box on the label of a window that follows the sample (SIM/MRM): signal-to-noise ratio measured by the engine; {sn} = number, \"…\" while waiting, \"—\" without a peak.",
   "canali.manint.cp.aria": "Accessible name of a copyable cell (apex, area, height) of the \"Manual integrations\" table; {c} = column header, {v} = value shown.",

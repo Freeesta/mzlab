@@ -27,7 +27,7 @@ pub fn file_facts<R: ReadAt>(index: &Index<R>) -> FileFacts {
     let mut an: Vec<(&str, u32)> = Vec::new();
     let mut wide = 0u32;
     let mut rt_range: Option<(f64, f64)> = None;
-    for s in &index.scans {
+    for s in index.scans.iter() {
         if s.level == 1 {
             ms1 += 1;
             rt_range = Some(rt_range.map_or((s.rt, s.rt), |(a, b)| (a.min(s.rt), b.max(s.rt))));

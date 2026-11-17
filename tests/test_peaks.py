@@ -116,8 +116,11 @@ def test_api_profile_and_centroid(tmp_path):
     rt = one["rt"]
     w = get("/api/spectrum", k=0, rt0=rt - 1e-3, rt1=rt + 1e-3, level=1)
     assert one["mz"] == w["mz"] and one["y"] == w["y"] and one["pmz"] == w["pmz"]
-    c = get("/api/spectrum", k=1, rt0=14.2, rt1=14.4, level=1)
-    cm = get("/api/spectrum", k=1, rt0=14.2, rt1=14.4, level=1, merge=1)
+    c = get("/api/spectrum", k=1, rt0=14.2, rt1=14.4, level=1, merge=0)       # explicit opt-out
+    cm = get("/api/spectrum", k=1, rt0=14.2, rt1=14.4, level=1, merge=1)      # explicit force
+    ca = get("/api/spectrum", k=1, rt0=14.2, rt1=14.4, level=1)               # omitted = AUTO: unit-resolution centroids are merged
     assert c["mode"] == "centroid" and "pmz" not in c and len(cm["mz"]) <= len(c["mz"])
+    assert ca.pop("auto_merge") is True and ca == cm and "auto_merge" not in c and "auto_merge" not in cm, "the auto choice is stated, an explicit one is not"
+    assert "auto_merge" not in p, "a profile spectrum is never merged"
     nom = [int(np.floor(m + XIC_BELOW)) for m in cm["mz"]]
     assert len(nom) == len(set(nom)), "merged: one peak per nominal mass"

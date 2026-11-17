@@ -52,7 +52,7 @@ function ricContaminants() {
 const RIC_GO = {
   loss: (/** @type {number} */ x) => { if (window.BARRA) BARRA.setTab("losses", { q: String(x) }); },
   adduct: (x = /** @type {number | null} */ (null)) => { if (window.BARRA) BARRA.setTab("adducts", x != null ? { q: String(x) } : {}); },
-  cont: (/** @type {number} */ x) => { if (window.BARRA) BARRA.setTab("cont", { q: String(x) }); }
+  cont: (/** @type {number} */ x) => { if (window.LISTE) LISTE.open({ mz: x, hr: ricHrNow() }); }
 };
 
 /** @param {number} x  @param {string} q  @returns {Promise<RicGroup[]>} */

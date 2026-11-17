@@ -6,8 +6,8 @@ I18N.add("en", {
   "cmd.addloss.lab": "Adducts & losses",
   "cmd.addloss.name": "Adducts & losses",
   "cmd.addloss.tip": "Adducts, neutral losses (Δm) and calculator",
-  "cmd.addloss.kw": "adduct adducts mass difference esi sodium ammonium neutral loss neutral losses delta calculator contaminants background",
-  "al.tabs": "Adducts, neutral losses or contaminants",
+  "cmd.addloss.kw": "adduct adducts mass difference esi sodium ammonium neutral loss neutral losses delta calculator",
+  "al.tabs": "Adducts or neutral losses",
   "cmd.calc.name": "Calculator",
   "cmd.calc.tip": "Calculator: sums, differences and formulas",
   "cmd.lists.lab": "Lists",
@@ -259,6 +259,5 @@ I18N.add("en", {
   "cmd.gra.name": "Fragmentation graph",
   "cmd.gra.tip": "Fragments of a known molecule in an MSn infusion",
   "cmd.gra.kw": "graph fragmentation infusion msn fragments formula ion",
-  "al.q.aria": "Number or formula to search in adducts, neutral losses and contaminants",
-  "al.t.cont": "Contaminants"
+  "al.q.aria": "Number or formula to search in adducts and neutral losses"
 });

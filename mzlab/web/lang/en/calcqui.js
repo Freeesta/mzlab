@@ -1,7 +1,6 @@
 I18N.add("en", {
   "cq.ctl": "Search options",
   "cq.none": "no match within ±{tol}",
-  "cq.liste.err": "Cannot read the contaminant lists. Try again shortly.",
   "cq.all": "show all ({n})",
   "cq.less": "show fewer",
   "cq.g.liste": "Contaminants and lists",
@@ -23,7 +22,6 @@ I18N.add("en", {
   "calc.pad.tip": "Types into the field",
   "al.t.adducts.tip": "Ions the molecule can form",
   "al.t.losses.tip": "Neutral pieces the ion can lose",
-  "al.t.cont.tip": "Frequent background ions in LC-MS",
   "cq.tol.tip": "Largest gap accepted from the value",
   "cq.pol.tip": "Positive ions, negative ones or both",
   "cq.all.tip": "Shows all matches",

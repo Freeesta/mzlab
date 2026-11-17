@@ -43,7 +43,6 @@
   "load.dup.one": "Short notice in the loading screen when a file already in the list is chosen again (same name and size). {name} = file name.",
   "load.dup.many": "Like load.dup.one, for several files together. {n} = number of files ignored.",
   "load.cell.of": "Accessible name of a cell of the loading table; {f} = file name, {col} = column name.",
-  "empty.cont": "Line with the leaf in the Contaminants tab until the field contains a number (calm empty state, 40 characters at most).",
   "load.cols.shown": "Checkbox label to show a column in the sample table; {name} = column name.",
   "load.cols.rename": "Name field label of a custom column; {name} = column name.",
   "load.cols.up": "Button label to move a custom column left; {name} = column name.",

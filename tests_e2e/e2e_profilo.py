@@ -57,17 +57,17 @@ try:
         step("labels: one per nominal mass", labels_peaks)
         def centroid():
             pg.evaluate("document.querySelector('#np-set').click()"); pg.wait_for_timeout(300)
-            assert pg.is_checked("#uip-merge"), "the merge is on by default"
-            assert pg.is_visible("#uip-merge"), "the merge switch is a plain row, visible without opening anything"
+            assert pg.locator("#uip-merge").count() == 0, "no merge switch any more: the engine decides"
+            pg.keyboard.press("Escape")
             show(ck, 14.2, 14.4)
             on = pg.evaluate(f"{SPEC}._a.data[0].d.mz.length")
-            pg.uncheck("#uip-merge"); pg.wait_for_timeout(1500)
-            off = pg.evaluate(f"{SPEC}._a.data[0].d.mz.length")
-            print("centroids merged/not merged", on, off); assert on <= off
-            nom = pg.evaluate(f"{SPEC}._a.data[0].d.mz.map(m=>Math.floor(m+0.2))")
-            pg.check("#uip-merge"); pg.wait_for_timeout(1500)
-            nom2 = pg.evaluate(f"{SPEC}._a.data[0].d.mz.map(m=>Math.floor(m+0.2))"); assert len(nom2) == len(set(nom2)), "merged: one per nominal mass"
-        step("centroid file: the merge setting works", centroid)
+            u = f"api/spectrum?k={ck}&rt0=14.2&rt1=14.4&level=1"
+            off = pg.evaluate("async u => (await (await fetch(u + '&merge=0')).json()).mz.length", u)
+            print("centroids merged (auto) / opted out (merge=0)", on, off); assert on <= off
+            nom = pg.evaluate(f"{SPEC}._a.data[0].d.mz.map(m=>Math.floor(m+0.2))"); assert len(nom) == len(set(nom)), "merged: one per nominal mass"
+            assert "merge by nominal mass: auto" in pg.evaluate(f"{SPEC}.leg.textContent"), "the page states the automatic merge"
+            assert pg.evaluate("async u => (await (await fetch(u)).json()).auto_merge", u) is True, "the route states it too"
+        step("centroid file: merged by the engine (auto), stated, merge=0 opts out", centroid)
         pg.screenshot(path=SH + "profilo.png")
     r.close()
 except Exception as e:

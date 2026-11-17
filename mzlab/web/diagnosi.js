@@ -37,7 +37,7 @@ const DIAG = {
   },
   // the diagnosis of an error `e` (Error from I18N.err: e.params = {fase, raw, ...}) for the file `info` = {name, size, format}
   da(e, info, head = "") {
-    const p = (e && e.params) || {}, fase = this.FASI.includes(p.fase) ? p.fase : (e && e.fase) || "open";
+    const p = (e && e.params) || {}, fase = this.FASI.includes(p.tappa) ? p.tappa : this.FASI.includes(p.fase) ? p.fase : (e && e.fase) || "open";      // tappa: the stage of lr.js when a memory phase holds `fase`
     let raw = String(p.raw != null ? p.raw : (e && e.message) || "");
     const nm = String((info && info.name) || ""), stem = nm.replace(/\.[^.]*(\.scan)?$/i, "");
     // the name of the file never goes in the text to copy (the messages of the engine carry it)

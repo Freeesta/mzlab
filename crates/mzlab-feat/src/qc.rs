@@ -50,9 +50,10 @@ pub fn per_file(t: &Aligned) -> Vec<FileQc> {
         .collect()
 }
 
-fn cv(v: &[f64]) -> f64 {
+/// CV with the divisor n - `ddof` (1 = sample SD, 0 = population SD).
+fn cv(v: &[f64], ddof: usize) -> f64 {
     let m = v.iter().sum::<f64>() / v.len() as f64;
-    (v.iter().map(|x| (x - m).powi(2)).sum::<f64>() / v.len() as f64).sqrt() / m
+    (v.iter().map(|x| (x - m).powi(2)).sum::<f64>() / (v.len() - ddof) as f64).sqrt() / m
 }
 
 fn median(mut v: Vec<f64>) -> f64 {
@@ -74,6 +75,7 @@ pub fn groups(t: &Aligned, samples: &[Sample], view: Option<&View>) -> Vec<Group
         if files.len() < 2 {
             continue;
         }
+        let ddof = view.map_or(1, |v| v.cv_ddof);
         let rows = view.map_or_else(|| (0..t.len() as u32).collect::<Vec<_>>(), |v| v.rows.clone());
         let cvs: Vec<f64> = rows
             .iter()
@@ -82,7 +84,7 @@ pub fn groups(t: &Aligned, samples: &[Sample], view: Option<&View>) -> Vec<Group
                     .iter()
                     .map(|&j| view.map_or_else(|| measured(t, r as usize, j), |v| v.area_at(t, r as usize, j)))
                     .collect();
-                vals.map(|v| cv(&v))
+                vals.map(|v| cv(&v, ddof))
             })
             .collect();
         out.push(GroupQc { kind: s.kind.clone(), group: s.group.clone(), time_min: s.time_min, files, rows: cvs.len(), cv_median: median(cvs) });
@@ -91,11 +93,11 @@ pub fn groups(t: &Aligned, samples: &[Sample], view: Option<&View>) -> Vec<Group
 }
 
 /// Coefficient of variation of the area of the standard over the files that decide the scale (None without a standard or with fewer than two peaks).
-pub fn standard_cv(t: &Aligned, samples: &[Sample], method: &Method) -> Option<f64> {
+pub fn standard_cv(t: &Aligned, samples: &[Sample], method: &Method, ddof: usize) -> Option<f64> {
     let Method::Istd(r) = method else { return None };
     let row = crate::norm::standard(t, r).ok()?;
     let v: Vec<f64> = (0..t.n_files).filter(|&k| crate::norm::decides(&samples[k])).filter_map(|k| measured(t, row, k)).collect();
-    (v.len() >= 2).then(|| cv(&v))
+    (v.len() >= 2).then(|| cv(&v, ddof))
 }
 
 /// Rows that have a peak in at least one blank: (blank files, rows considered, rows with a peak in a blank). The rows are those of the view, or all of the table.
@@ -137,9 +139,10 @@ pub fn to_json(t: &Aligned, samples: &[Sample], view: Option<&View>) -> String {
         j.raw(",\"file\":").int(g.files.len() as i64).raw(",\"righe\":").int(g.rows as i64);
         j.raw(",\"cv_mediano\":").opt(Some(g.cv_median).filter(|x| x.is_finite())).raw("}");
     }
-    j.raw("],\"standard_cv\":");
+    // which divisor the CVs used (1 = n - 1, the default since the sample SD; 0 = n, the earlier population SD)
+    j.raw("],\"cv_ddof\":").int(view.map_or(1, |v| v.cv_ddof) as i64).raw(",\"standard_cv\":");
     let method = view.map(|v| v.method.clone());
-    j.opt(method.and_then(|m| standard_cv(t, samples, &m)));
+    j.opt(method.and_then(|m| standard_cv(t, samples, &m, view.map_or(1, |v| v.cv_ddof))));
     let (nb, n, hit) = blank_share(t, samples, view);
     j.raw(",\"bianchi\":{\"file\":").int(nb as i64).raw(",\"righe\":").int(n as i64).raw(",\"righe_con_picco\":").int(hit as i64).raw("}");
     j.raw(",\"m1_su_m\":");
