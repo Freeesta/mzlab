@@ -48,7 +48,7 @@ Overlap and reuse:
 - #3398 (e) `convert --samples` becomes the shared `--sample 1,3,5` (`channels --sample ID` exists on main; accept a list).
 - #3398 (f) partial identity is an owner decision (Q4): honest and cheap, but it changes mzML identity and cache keys; not bundled.
 - #3398 (h) the +2.5 % cap is above the 1 % rule; see section 5.
-Verdict on #3398: CLOSE as superseded by the small PRs of section 6 (the owner closes it; this chat does not), reusing its tests `wiff_by_sector.rs`, `e2e_wiff_scelta.py` and its lang keys as raw material. Reviving it whole is not advisable (53 files across Rust, wasm, desktop, JS and e2e went red; the trigger must change anyway).
+Verdict on #3398: CLOSE as superseded by the small PRs of section 6 (the owner closes it; this chat does not), reusing its tests `wiff_by_sector.rs`, its picker e2e test and its lang keys as raw material. Reviving it whole is not advisable (53 files across Rust, wasm, desktop, JS and e2e went red; the trigger must change anyway).
 
 ## 4. UI proposal
 Entry points, all end in the same dialog: the Files picker, drag and drop of files, drag or pick of a folder (`cartella-carica.js`), and in the desktop app the native open dialog or a file opened from the OS (`opening.rs`).
@@ -99,13 +99,13 @@ Wasm cap (ESTIMATE; no wasm-bindgen or wasm toolchain here, nothing measured on 
 - `lettori-sciex`: cap 486 400, measured 485 158, room 1 242 B (`tools/moduli/lettori-sciex.toml`); 1 % of the cap is 4 864 B, so the accepted ceiling is 491 264 B. The estimate (+2 to +5 KB) straddles the ceiling: it fits only if the new code reuses the existing `Idx`/method readers instead of adding parsers. DO NOT assume it fits: measure with `python3 tools/moduli.py --misura` in the first PR, and if it passes 1 % stop and ask the owner (the PR body says so).
 - `motore` (2 147 104 B, cap 2 183 168, room 36 064 B): +5 KB is +0.2 %, fits.
 - The by-sector OLE open (#3398 a) is a separate cap question: #3398 measured it, with the partial identity and DAD change, at +2.5 % of `lettori-sciex`; this study cannot separate its share. Its PR repeats the measurement and asks if above 1 %.
-Lang keys (English, new `mzlab/web/lang/en/pick.js` with contexts in `lang/contesto/pick.json`, checked by `tools/controlla_i18n.py`): `pick.title`, `pick.intro`, `pick.filter`, `pick.all|none|invert`, `pick.file`, `pick.col.*`, `pick.type.*`, `pick.empty`, `pick.large`, `pick.partial`, `pick.sel` (live region), `pick.open|openAll|cancel|cancelled`, `pick.waiting`, `pick.remember`, `pick.setting.*`, `pick.aria.*`. Sample names come from the file and are never keys.
+Lang keys (English, new `pick` file under `mzlab/web/lang/en/` with its contexts, checked by `tools/controlla_i18n.py`): `pick.title`, `pick.intro`, `pick.filter`, `pick.all|none|invert`, `pick.file`, `pick.col.*`, `pick.type.*`, `pick.empty`, `pick.large`, `pick.partial`, `pick.sel` (live region), `pick.open|openAll|cancel|cancelled`, `pick.waiting`, `pick.remember`, `pick.setting.*`, `pick.aria.*`. Sample names come from the file and are never keys.
 
 ## 6. Split into small PRs (one task, one PR; each CI green before the next)
 1. Engine + CLI, no UI: `list_samples` + `samples_list/1` (cheap `.wiff` listing, cap measured), `mzlab-cli samples list`, parity tests (native/Node-wasm/CLI), docs rows. No behaviour change on the page.
 2. By-sector OLE open and DAD on demand for big `.wiff` (from #3398 a, b): memory only, the listing and `Wiff::open` work above `WIFF_MAX`; cap measured; tests `wiff_by_sector.rs` as base.
 3. `--sample 1,3,5` on `convert` / `channels` / `features` / `flow` inputs (+ partial-identity decision Q4 applied to whatever Q4 chooses). CLI only.
-4. The page dialog «Choose samples» (setting, remember, filter, a11y, i18n), reading `native_samples`; on the site it still copies the whole pair to OPFS; skipped samples are not indexed. e2e `e2e_wiff_scelta.py` revived for several files, one file, a pair without scan, drop of a folder.
+4. The page dialog «Choose samples» (setting, remember, filter, a11y, i18n), reading `native_samples`; on the site it still copies the whole pair to OPFS; skipped samples are not indexed. e2e its picker e2e test revived for several files, one file, a pair without scan, drop of a folder.
 5. OPFS copy by ranges of only the chosen samples (from #3398 d): the part that makes a huge pair openable in the browser at all; own PR, own risks.
 6. Optional: desktop-specific polish, a file-level chooser for folders, date/vial columns after X1.
 PRs 1-3 can run in parallel with the dialog design review; PR 4 needs PR 1; PR 5 needs 2 and 4.
