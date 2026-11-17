@@ -30,6 +30,7 @@
   "err.file.rawUnfinished": "No placeholder in the text. The error carries {detail} (what is missing, in English from the reader: no controller, the run header declares no scan) and {size} (file size in bytes): the CLI writes them in parentheses after the key, the page does not.",
   "err.file.rawVersion": "{version} = version number of the Thermo .raw format read from the header.",
   "err.file.notAgilentD": "{name} = name of the .D folder.",
+  "err.file.notAgilentDList": "{name} = name of the .D folder. {count} = number of files received for it. {found} = comma-separated list of the received files with their paths inside the folder and sizes, e.g. data.ms (2.0 MB), AcqData/Contents.xml (1.2 kB), at most 30 entries.",
   "err.file.agilentNoEngine": "{name} = name of the .D folder.",
   "err.file.agilentCalibration": "{scan} = scan number (ScanID) without its record in AcqData/MSMassCal.bin.",
   "err.file.brukerCalibration": "{frame} = frame number (Frames.Id) that has no usable MzCalibration row.",
