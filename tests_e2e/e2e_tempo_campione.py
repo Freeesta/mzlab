@@ -69,6 +69,7 @@ try:
             need(pg.evaluate(TAGS)["RET 3h_2"] == [], pg.evaluate(TAGS)["RET 3h_2"])
         step("a time typed in the sample table replaces the tag, an emptied one removes it", override)
         def manint():
+            drawer(pg)
             pg.click("#flst .fl >> text=PERM 3h"); wait_for_js(pg, "E.files.some(f => f.vis && !f.gone)", 30000)
             pg.click("#np-mrm"); wait_for_js(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)
             pg.evaluate("(() => { E.browse = false; E.files.forEach(f => { f.vis = true; }); const p = E.panels.find(q => q.type === 'mrm'); p.tr = ''; draw(p); })()")
