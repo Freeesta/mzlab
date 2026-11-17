@@ -19,7 +19,7 @@ usage: mzlab-cli match-mz X --tables FILE.json [--set NAME=VALUE...] [--out PATH
   --set pol=+|-   keep the adducts and contaminants of that polarity (default both)
   --out PATH      write there instead of the standard output
 
-The answer is {\"x\", \"hr\", \"hits\": [{kind, id, ...}], \"more\", \"tol\", \"contam\": {unit, tol}}; uses the same tables as the Addotti e perdite page.";
+The answer is {\"x\", \"hr\", \"hits\": [{kind, id, ...}], \"more\", \"tol\", \"contam\": {unit, tol}}; uses the same tables as the Adducts & losses panel.";
 
 fn number(name: &str, v: &str) -> Result<f64, String> {
     v.parse::<f64>()
