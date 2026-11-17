@@ -1,4 +1,4 @@
-"""HR_PANELS 3a: «Opzioni di visualizzazione» (right click on a chart → panel of the drawer, extendable per kind of chart; palette command) and the isotope simulation
+"""HR_PANELS 3a: «Display options» (right click on a chart → panel of the drawer, extendable per kind of chart; palette command) and the isotope simulation
 with several adducts (concentration) and a charge distribution. The decimals field and the ▾ button of the spectrum are gone from the bars in HR."""
 # covers: mzlab/web/visualizza.js, mzlab/web/hr.js, mzlab/web/banco.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -25,11 +25,11 @@ try:
         def menu_spec():
             assert pg.evaluate("getComputedStyle(document.querySelector('.pnl.spec [data-a=par]')).display") == "none", "the ▾ button is gone in HR"
             xy = at("spec"); pg.mouse.click(xy["x"], xy["y"], button="right"); pg.wait_for_timeout(300)
-            assert "Opzioni…" in pg.inner_text("#ctx")
-            pg.click("#ctx >> text=Opzioni…"); pg.wait_for_selector(".dsp", timeout=5000)
+            assert "Options…" in pg.inner_text("#ctx")
+            pg.click("#ctx >> text=Options…"); pg.wait_for_selector(".dsp", timeout=5000)
             t = pg.inner_text(".dsp"); assert "Decimals" in t and "Labels" in t and "at most" in t, t
             assert pg.evaluate("BARRA.curTab") == "disp" and pg.evaluate("document.querySelector('#sb-title').textContent") == "Display options"
-        step("right click on a spectrum → Opzioni di visualizzazione: decimals, labels (threshold, maximum)", menu_spec)
+        step("right click on a spectrum → Display options: decimals, labels (threshold, maximum)", menu_spec)
         def change():
             pg.fill("#dsp-2", "3"); pg.press("#dsp-2", "Tab"); pg.wait_for_timeout(500)
             assert pg.evaluate("E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp).nlab") == 3
@@ -37,8 +37,8 @@ try:
         step("changing an option redraws the chart", change)
         def menu_chrom():
             xy = at("chrom"); pg.mouse.click(xy["x"], xy["y"], button="right"); pg.wait_for_timeout(300)
-            pg.click("#ctx >> text=Opzioni…"); pg.wait_for_selector(".dsp", timeout=5000)
-            assert "cromatogramma" in pg.inner_text(".dsp") and "Normalizza" in pg.inner_text(".dsp")
+            pg.click("#ctx >> text=Options…"); pg.wait_for_selector(".dsp", timeout=5000)
+            assert "chromatogram" in pg.inner_text(".dsp") and "Normalize" in pg.inner_text(".dsp")
         step("right click on a chromatogram → its own list", menu_chrom)
         def extend():
             n0 = pg.evaluate("document.querySelectorAll('.dsp input[type=checkbox]').length")       # the options the list already has (normalise, peak time labels)

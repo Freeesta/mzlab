@@ -31,7 +31,7 @@ try:
         def refuse():
             open_dl(); pg.click("#ctx >> text=MassBank record"); pg.wait_for_selector("#fairdlg[open]")
             pg.fill("#fa-name", "Test compound"); pg.click("#fa-go"); pg.wait_for_timeout(400)
-            t = pg.inner_text("#fa-msg"); assert "SMILES" in t and "InChIKey" in t and "autori" in t.lower(), t        # nothing is downloaded with fields missing
+            t = pg.inner_text("#fa-msg"); assert "SMILES" in t and "InChIKey" in t and "authors" in t.lower(), t        # nothing is downloaded with fields missing
         step("MassBank dialog: missing fields are listed and block the download", refuse)
         def record():
             pg.fill("#fa-smiles", "Cn1cnc2c1c(=O)n(C)c(=O)n2C"); pg.dispatch_event("#fa-smiles", "change"); pg.wait_for_function("document.querySelector('#fa-calc').textContent.includes('C8H10N4O2')", timeout=30000)
