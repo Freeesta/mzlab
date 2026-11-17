@@ -8,7 +8,7 @@ import { cercaRoute, grafoRoute, libreriaRoute } from "./rust-msngrafo-pagina.js
 
 /** @param {string} path  @param {URL} u  @param {{slots: any[], rpc: (m: any) => Promise<any>, base: (n: string) => string, stats: any, t0: number, init?: any}} env */
 export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) {
-  if (path === "/api/manint" || path === "/api/manvalley" || path === "/api/manfollow") return manintRoute(u, { slots, rpc, stats, t0 }, path.slice(8));
+  if (path === "/api/manint" || path === "/api/manvalley" || path === "/api/manfollow" || path === "/api/manauto") return manintRoute(u, { slots, rpc, stats, t0 }, path.slice(8));
   if (path === "/api/msnlib/aggiungi") {                               // add an entry to the msnlib/1 library of the user (POST)
     const r = await libreriaRoute({ slots, rpc, stats }, init);
     return r && { ...r, ms: performance.now() - t0 };
@@ -71,9 +71,10 @@ export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) 
 /** api/manint?k=..&w=JSON windows (manint::table_text, `file` = the place in k)[&sums=1]: the `mrm` transitions of every slot, then the op `manint` of the
  * worker; "E" + JSON (a window that names no channel, an unknown baseline) = a 400. api/manvalley?k=..&w=JSON window&depth=D: the op `valleys`
  * (manint::valleys_text), `{"splits":[MIN,...]}`. api/manfollow?k=..&w=JSON window: the op `follow` (manint::follow_text), where the window lands in the other files.
- * @param {URL} u  @param {{slots: any[], rpc: (m: any) => Promise<any>, stats: any, t0: number}} env  @param {string} [what] "int" | "valley" | "follow" */
+ * api/manauto?k=..&p=JSON params: the op `auto` (manint::auto_text), every peak of every file grouped by time.
+ * @param {URL} u  @param {{slots: any[], rpc: (m: any) => Promise<any>, stats: any, t0: number}} env  @param {string} [what] "int" | "valley" | "follow" | "auto" */
 async function manintRoute(u, { slots, rpc, stats, t0 }, what = "int") {
-  const valleys = what === "valley", follow = what === "follow";
+  const valleys = what === "valley", follow = what === "follow", auto = what === "auto";
   const q = u.searchParams, ks = (q.get("k") || "").split(",").filter(Boolean).map(Number), windows = q.get("w") || "[]";
   if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return null;
   await Promise.all(ks.map(k => slots[k].opening));
@@ -82,9 +83,9 @@ async function manintRoute(u, { slots, rpc, stats, t0 }, what = "int") {
   if (rs.some(r => r.dead || r.error || !r.info)) return null;
   const files = `[${ks.map((k, i) => `{"name":${JSON.stringify(slots[k].name)},"transitions":${rs[i].info}}`).join(",")}]`;
   const r = await rpc(valleys ? { op: "valleys", files, window: windows, depth: Number(q.get("depth") || "NaN") }
-    : follow ? { op: "follow", files, window: windows } : { op: "manint", files, windows, sums: q.get("sums") === "1" });
+    : auto ? { op: "auto", files, params: q.get("p") || "{}" } : follow ? { op: "follow", files, window: windows } : { op: "manint", files, windows, sums: q.get("sums") === "1" });
   if (r.dead || r.error || !r.info) return null;
   stats.rust++;
   const bad = r.info[0] === "E";
-  return { status: bad ? 400 : 200, text: bad ? r.info.slice(1) : r.info, type: bad || valleys || follow ? "application/json" : "text/csv", ms: performance.now() - t0 };
+  return { status: bad ? 400 : 200, text: bad ? r.info.slice(1) : r.info, type: bad || valleys || follow || auto ? "application/json" : "text/csv", ms: performance.now() - t0 };
 }

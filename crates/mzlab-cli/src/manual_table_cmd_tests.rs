@@ -137,6 +137,50 @@ fn a_window_applied_to_the_other_samples_is_the_same_bytes_as_its_shifts() {
     let _ = std::fs::remove_dir_all(&d);
 }
 
+/// `auto=true` finds the peaks of every sample without a windows file: the same bytes twice, every window of the answer is a row of the table, and a
+/// `params` file moves the answer (a signal-to-noise nobody reaches finds no peak).
+#[test]
+fn auto_finds_the_peaks_of_every_sample_and_its_windows_are_the_table_rows() {
+    let Some(d) = fixture("auto") else { return };
+    let w = d.join("sim3.wiff");
+    let j = text(&table(&[&w], &["--set", "auto=true"]));
+    assert!(j.starts_with("{\"tol\":"), "{j}");
+    assert_eq!(
+        j,
+        text(&table(&[&w], &["--set", "auto=true"])),
+        "deterministic"
+    );
+    let v = parse(j.as_bytes()).unwrap();
+    let n = v.get("windows").unwrap().arr().len();
+    assert!(n >= 4, "{j}");
+    assert!(v.get("log").unwrap().arr().len() >= 4, "{j}");
+    let set = windows(
+        &d,
+        &j[j.find("\"windows\":").unwrap() + 10..j.find(",\"log\"").unwrap()],
+    );
+    let t = text(&table(&[&w], &["--set", &set]));
+    assert_eq!(t.lines().count() - 1, n, "{t}");
+    assert!(t.contains(",auto") || t.contains(",unmatched"), "{t}");
+    let p = d.join("params.json");
+    std::fs::write(&p, r#"{"sn":1000000}"#).unwrap();
+    let none = text(&table(
+        &[&w],
+        &[
+            "--set",
+            "auto=true",
+            "--set",
+            &format!("params={}", p.display()),
+        ],
+    ));
+    assert!(none.contains("\"windows\":[]"), "{none}");
+    assert_ne!(
+        table(&[&w], &["--set", "params=x.json"]).code,
+        0,
+        "params without auto"
+    );
+    let _ = std::fs::remove_dir_all(&d);
+}
+
 #[test]
 fn settings_and_windows_that_name_nothing_fail() {
     let Some(d) = fixture("bad") else { return };

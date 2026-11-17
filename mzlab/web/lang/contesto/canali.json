@@ -22,5 +22,15 @@
   "int.follow.org.applied": "Line of the tooltip of an integration applied to another sample: the peak is inside the window; {f} = source sample, {d} = shift (not used here).",
   "int.follow.org.shifted": "Tooltip: the window was moved to follow the peak (retention time drift); {d} = shift in minutes, already formatted; {f} = source sample.",
   "int.follow.org.nopeak": "Tooltip: no peak in this sample, the window of the source sample {f} stays; {d} not used.",
-  "int.follow.org.manual": "Tooltip of a window drawn by hand on this sample (not applied from another one)."
+  "int.follow.org.manual": "Tooltip of a window drawn by hand on this sample (not applied from another one).",
+  "canali.manint.org.auto": "Origin cell of a row found by «Integrate peaks in all selected files» and matched with the same peak of another file.",
+  "canali.manint.org.unmatched": "Origin cell of a row found by «Integrate peaks in all selected files» when no other file has a peak of that channel at that time.",
+  "canali.manint.unmatched.tip": "Tooltip (max 60 characters) on the Origin cell «No counterpart»: the peak exists in this file only.",
+  "canali.manint.auto.done": "Status (aria-live) and notice after «Integrate peaks in all selected files»; {n} peaks added, {f} files, {g} groups (peaks of one ion at the same time in two or more files), {u} peaks with no counterpart, {tol} = time tolerance between apexes in min, {sm} = text of canali.manint.auto.sm or the text of int.lrAll.auto, {v} valley depth in %, {sn} minimum S/N, {split} = text of pk.split.0 or pk.split.1.",
+  "canali.manint.auto.sm": "Smoothing window of the automatic integration; {w} = points (odd).",
+  "canali.manint.auto.skip": "Tail of the canali.manint.auto.done notice; {n} = peaks found but not added because they overlap integrations already there.",
+  "canali.manint.auto.few": "Notice when «Integrate peaks in all selected files» is chosen with fewer than two files shown.",
+  "canali.manint.log.h": "Heading of the log under the card «Manual integrations» after the automatic integration of all files: the peaks the engine found in each file.",
+  "canali.manint.log.line": "One line of that log; {f} = sample, {c} = channel, {n} = number of peaks, {rt} = apex times in min, separated by commas.",
+  "canali.manint.log.none": "One line of that log for a channel with no peak; {f} = sample, {c} = channel."
 }

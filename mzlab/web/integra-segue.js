@@ -5,22 +5,24 @@
 // «Manual integrations» has a row for each (the engine applies the same windows: `follow` of manint.rs). The apex is searched in each sample by the engine
 // (api/manfollow, MANINT.follow): a peak that drifted moves the window, none leaves it and says so. Drawing a window on that sample overrides it there.
 const SG_C = new WeakMap();      // panel -> Map(follower id -> follower): the same object across redraws, so the engine's answers cached per record stay
+// the last window drawn by hand on each channel (the automatic ones, `org`, hold a peak of their own in every file and apply to none)
+const sgLast = p => { const last = new Map(); for (const it of p.ints) { if (it.org) continue; const c = last.get(it.ion); if (!c || it.id > c.id) last.set(it.ion, it); } return last; };
 // the windows that apply to the other samples: those of the sample that holds the last one drawn on each channel
 function sgSources(p) {
   if (!ESP.mrm(p) || !p.ints.length) return [];
-  const last = new Map(); for (const it of p.ints) { const c = last.get(it.ion); if (!c || it.id > c.id) last.set(it.ion, it); }
-  return p.ints.filter(i => last.get(i.ion).key === i.key);
+  const last = sgLast(p);
+  return p.ints.filter(i => !i.org && last.get(i.ion) && last.get(i.ion).key === i.key);
 }
 // the name of a follower: the one given to its sample alone, else the group's (the source's)
 const sgName = (src, key) => (src.fn && src.fn[key]) || src.nm || "";
 // the committed windows of the panel and, for every shown trace of a channel with no window of its own, the followers of the last windows drawn on that channel
 function sgAll(p, sr) {
   if (!ESP.mrm(p) || !p.ints.length) return p.ints;
-  const last = new Map(); for (const it of p.ints) { const c = last.get(it.ion); if (!c || it.id > c.id) last.set(it.ion, it); }
+  const last = sgLast(p);
   const old = SG_C.get(p) || new Map(), now = new Map(), out = [...p.ints];
   for (const s of sr) {
     const top = last.get(s.ion || s.name); if (!top || p.ints.some(i => i.key === s.key)) continue;
-    for (const src of p.ints.filter(i => i.key === top.key)) {
+    for (const src of p.ints.filter(i => !i.org && i.key === top.key)) {
       const a = Math.min(src.a, src.b), b = Math.max(src.a, src.b), id = "fol|" + s.key + "|" + src.id, an = src.snap ? JSON.stringify([src.snap, src.my || {}]) : "";
       const sig = [a, b, src.bm || "", src.zero ? 1 : 0, an].join("|");
       let f = old.get(id);

@@ -4,7 +4,7 @@
 use super::*;
 
 /// A trace of 10 min at 0.8 s on a flat background of 50 with Gaussian peaks `(apex min, height)` of sigma 3.2 s.
-fn trace(q1: Option<f64>, q3: Option<f64>, name: &str, peaks: &[(f64, f64)]) -> String {
+pub(super) fn trace(q1: Option<f64>, q3: Option<f64>, name: &str, peaks: &[(f64, f64)]) -> String {
     let (mut t, mut y) = (Vec::new(), Vec::new());
     for i in 0..750 {
         let x = i as f64 * 0.8 / 60.0;
