@@ -1,4 +1,4 @@
-"""Measure the browser reset on the built site: «Reset completo» (QQRESET.run("all")), «File» (run("files")) and the error-banner reset (qqHardReset),
+"""Measure the browser reset on the built site: "Full reset" (QQRESET.run("all")), "Files" (run("files")) and the error-banner reset (qqHardReset),
 step by step (tests_e2e/lib_reset.py probe), and what they leave behind. Measures, never asserts. One JSON line per run, a summary table at the end.
 Variants: a = idle engine with filler files only, a2 = idle with two example files open, b = reset while the same tab builds an index,
 c = a second tab of the same context open and idle, d = a second tab building an index, e = the user lists read once in the tab (liste.js keeps a connection).
@@ -78,7 +78,7 @@ def run_one(b, base, mode, var, n, big):
             try: tab2 = pg2.evaluate("({ files: typeof E !== 'undefined' ? E.files.length : -1, failed: window.qqFailed || null, err: window.MZLAB_LR_ERR || null, busy: %s })" % BUSY)
             except Exception as e: tab2 = {"err": str(e)[:120]}
         rec = {"doc_loads": len(docs) - n_docs, "mode": mode, "var": var, "n": n, "seed_s": seed_s, "busy_at_reset": busy, "lists_conn_at_reset": conn, **st,
-               "ls_at_start": [k for k in ((m["mid"][0] if m["mid"] else m["cur"])["ls0"] or []) if k not in HARNESS_LS], "sessione_at_start": "mzlab.sessione" in ((m["mid"][0] if m["mid"] else m["cur"])["ls0"] or []),
+               "ls_at_start": [k for k in ((m["mid"][0] if m["mid"] else m["cur"])["ls0"] or []) if k not in HARNESS_LS], "session_at_start": "mzlab.sessione" in ((m["mid"][0] if m["mid"] else m["cur"])["ls0"] or []),
                "ls_at_start_last": [k for k in (m["cur"]["ls0"] or []) if k not in HARNESS_LS], "coi": pg.evaluate("crossOriginIsolated"),
                "before": {"usage": before["usage"], "stores": before["stores"]},
                "after": {**after, "ls": [k for k in after["ls"] if k not in HARNESS_LS]}, "tab2": tab2, "errs": errs[:5]}
@@ -104,7 +104,7 @@ def summary(rows):
             mm = med([r.get(key) for r in rs]); cells.append("-" if mm[0] is None else f"{mm[0]}/{mm[1]}")
         blk = sorted({x for r in rs for x in r.get("idb_blocked") or []})
         a = rs[-1]["after"]
-        res = f"mzlab/:{len(a['mzlab'])} opfs:{','.join(a['opfs'])} stores:{json.dumps(a['stores'], separators=(',', ':'))} ls:{','.join(a['ls'])} sess0:{sum(r['sessione_at_start'] for r in rs)}/{len(rs)}"
+        res = f"mzlab/:{len(a['mzlab'])} opfs:{','.join(a['opfs'])} stores:{json.dumps(a['stores'], separators=(',', ':'))} ls:{','.join(a['ls'])} sess0:{sum(r['session_at_start'] for r in rs)}/{len(rs)}"
         print(f"| {k} (x{len(rs)}) | " + " | ".join(cells) + f" | {','.join(blk) or '-'} | {res} |")
 
 
