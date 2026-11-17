@@ -167,6 +167,7 @@ impl State {
             "lr_campioni" => text(mzlab_core::samples::route_all(s("cop"), s("body"))?),
             "lr_molecole_archivio" => text(self.store.lock().unwrap_or_else(|e| e.into_inner()).molecules(s("mop"), s("body"))?),
             "lr_molecules" => text(mzlab_core::molecules::route(s("mop"), s("body"))?),
+            "lr_elements" => text(mzlab_core::periodic::elements_json()),
             "lr_formula" => {
                 let ad = s("adduct");
                 text(mzlab_core::elements::formula_mz(s("f"), if ad.is_empty() { None } else { Some(ad) })?)
