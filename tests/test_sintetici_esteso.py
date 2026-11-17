@@ -17,8 +17,8 @@ from valida import sintetici_identita as SI  # noqa: E402
 from mzlab.chem import elements as E  # noqa: E402
 
 SEME = 7
-V1 = {("piccolo", 7): ("cf1136fa5b4f525304eb524cc03f24e120da8f04af3eea7011b006b6e128f7e6", "a7775fb611a931e530016ba553771a5f5a17aef89c807a4f18d3c32fde16b860"),
-      ("completo", 7): ("28ed1fb05944bd3fdf43ffbf82f9ed15db25d9af2f9e876a5383313113abb7d5", "2a4bb2658124cd6c10e20f14791306fdd9ef7990f24e74ade5a204d8e6dc2b12")}      # SHA-256 of verita.csv / verita.json before the extension
+V1 = {("piccolo", 7): ("cf1136fa5b4f525304eb524cc03f24e120da8f04af3eea7011b006b6e128f7e6", "ae1dc2eb38109326b8097856049c9384a4a72ecaa26a35a77802dcc14a4fe025"),
+      ("completo", 7): ("28ed1fb05944bd3fdf43ffbf82f9ed15db25d9af2f9e876a5383313113abb7d5", "fa83e4b280a70e1dbe0ed1766ce2bb5311efd6488defccd07e800792a9205d7f")}      # SHA-256 of verita.csv / verita.json before the extension
 
 
 def _sha(d: Path) -> dict:

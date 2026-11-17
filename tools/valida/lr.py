@@ -112,7 +112,7 @@ def misura(real_folder: str | None, parent: tuple | None, work: Path, data: str,
     cs, ds = sintetici(work / "sintetici", seme)
     base = find_real(real_folder)
     cr, dr = real(base, parent, work / "reale")
-    det = {"sintetici": ds, "reale": dr, "dati_reali": "letti" if base else "saltato: nessuna cartella (MZLAB_DATI o --serie-lr)"}
+    det = {"sintetici": ds, "reale": dr, "dati_reali": "read" if base else "skipped: no folder (MZLAB_DATI or --serie-lr)"}
     return document(cr + cs, data, cancello.crate_version()), det
 
 
@@ -122,7 +122,7 @@ def a_json(c: dict) -> str:
 
 def markdown(c: dict, det: dict) -> str:
     """The report, aggregated numbers only (ready for studio/validazione/FT_*.md)."""
-    row = lambda k: f"| `{k['id']}` | {'saltato' if k['ok'] is None else ('passato' if k['ok'] else 'NON PASSATO')} | {k['valore']} | {k['soglia']} |"      # noqa: E731
+    row = lambda k: f"| `{k['id']}` | {'skipped' if k['ok'] is None else ('passed' if k['ok'] else 'NOT PASSED')} | {k['valore']} | {k['soglia']} |"      # noqa: E731
     out = [f"# Low-resolution table view ({c['data']}, crate {c['crate_version']})", "",
            f"`vista_tabella_lr`: **{'open' if c['vista_tabella_lr'] else 'closed'}**; real data: {det.get('dati_reali')}", "",
            "| criterion | result | value | threshold |", "|---|---|---|---|"] + [row(k) for k in c["criteri"]] + ["", "## Details", "```json",

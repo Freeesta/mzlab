@@ -44,7 +44,7 @@ def test_without_files_the_robustness_is_skipped_never_passed():
         assert all(c["ok"] is None for c in hr.criteria_robustness(m))
     assert hr.find_hr("/nessuna/cartella") is None
     c, det = hr.misura("/nessuna/cartella", None, None, Path("/nonexistent"), "2026-10-13")
-    assert c["vista_tabella_hr"] is False and all(k["ok"] is None for k in c["criteri"]) and "saltato" in det["dati_dda"] and c["concordanza_mzmine"] == "non_misurata"
+    assert c["vista_tabella_hr"] is False and all(k["ok"] is None for k in c["criteri"]) and "skipped" in det["dati_dda"] and c["concordanza_mzmine"] == "non_misurata"
 
 
 def test_cell_coherence():
@@ -113,7 +113,7 @@ def test_robustness_end_to_end_on_files_named_like_the_dda_ones(tmp_path):
     c, det = hr.misura(str(d), None, None, tmp_path / "lavoro", "2026-10-13")
     v = values(c["criteri"])
     assert det["robustezza"]["file"] == 2 and all(v[i] is True for i in hr.ID_ROBUSTNESS), (v, det)
-    assert c["vista_tabella_hr"] is True and c["concordanza_mzmine"] == "non_misurata" and "saltato" in det["csv"]
+    assert c["vista_tabella_hr"] is True and c["concordanza_mzmine"] == "non_misurata" and "skipped" in det["csv"]
     assert "hr_robustezza_gira" in hr.markdown(c, det)
 
 
