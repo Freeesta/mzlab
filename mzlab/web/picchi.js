@@ -15,9 +15,9 @@ function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number}
   const hb = ya + (yb - ya) * (xs[at] - xs[i0]) / ((xs[i1] - xs[i0]) || 1);
   return { area: Math.max(ar - area, 0), height: Math.max(mx - hb, 0), rt: xs[at] };       // conteggi x s, baseline lineare
 }
-// end point of the straight baseline: mean of 3 points; the drawing (grafici.js) uses the same value, so the dashed baseline is the one subtracted from the area
-const edge3 = (/** @type {number[]} */ ys, /** @type {number} */ i) => { let t = 0, c = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; c++; } return t / c; };
-const baseAt = (/** @type {number[]} */ b, /** @type {number} */ t) => b[1] + (b[3] - b[1]) * (t - b[0]) / ((b[2] - b[0]) || 1);
+// end point of the straight baseline: mean of 3 points; the drawing (grafici.js) uses the same value, so the dashed baseline is the one subtracted from the area; never below the zero line
+const edge3 = (/** @type {number[]} */ ys, /** @type {number} */ i) => { let t = 0, c = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; c++; } return Math.max(0, t / c); };
+const baseAt = (/** @type {number[]} */ b, /** @type {number} */ t) => Math.max(0, b[1] + (b[3] - b[1]) * (t - b[0]) / ((b[2] - b[0]) || 1));
 // the colour of a spectrum of the panel: the one of its file, or of its precursor when one file gives several (the bars and the legend entry use this one)
 const specColor = (/** @type {any} */ x) => (x.multi ? PAL[(x.idx + 3) % PAL.length] : x.f.color);
 // Settings of the automatic integration (dialog «Rilevamento dei picchi»), saved in this browser; any other stored key is dropped. The defaults are
@@ -120,7 +120,7 @@ function intRec(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} *
 }
 // SIM/MRM: an integration is two anchors, each end on the trace (curve), at zero or where the user put it (man, `my` = counts); two curve = edges, two zero = zero, else the line through them
 function snapBase(/** @type {Bag} */ s, /** @type {Bag} */ it) {
-  const q = it.snap, l = it.a <= it.b ? "a" : "b", h = l === "a" ? "b" : "a", y = (/** @type {string} */ e) => (q[e] === "zero" ? 0 : q[e] === "man" ? +((it.my || {})[e] || 0) : edge3(s.y, nearIdx(s.x, it[e])));
+  const q = it.snap, l = it.a <= it.b ? "a" : "b", h = l === "a" ? "b" : "a", y = (/** @type {string} */ e) => (q[e] === "zero" ? 0 : q[e] === "man" ? Math.max(0, +((it.my || {})[e] || 0)) : edge3(s.y, nearIdx(s.x, it[e])));
   if (q.a === q.b && q.a !== "man") { it.bm = q.a === "zero" ? "zero" : "edges"; delete it.bl; } else { it.bm = "line"; it.bl = [it[l], y(l), it[h], y(h)]; }
   delete it.zero; delete it.lvl; delete it.base; return it;
 }
