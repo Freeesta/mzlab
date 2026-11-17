@@ -1,6 +1,6 @@
 // @ts-check
 // Loading helpers of the engine's worker (rust-worker.js), apart so that node can test them: the copy of a plain upload to OPFS (cancellable, its room released on any failure),
-// the streaming gunzip of a .mzML.gz into OPFS (`putGz`) and the gate that lets lrOpen skip re-parsing an index that did not change.
+// the streaming gunzip of a .mzML.gz into OPFS (`putGz`) and the gate that lets lrOpen skip re-parsing an index that did not change, and the open of a stored index that keeps it on a memory refusal.
 
 // a .mzML.gz is read in pieces of GZ_STEP and inflated GZ_SLICE at a time (repetitive XML inflates up to ~1000 times: one push makes at most ~64 MB); the mzML is never whole
 // in memory. GZ_CAP: the 4 GB of a plain upload (lr.js)
@@ -118,4 +118,12 @@ export function createOpenGate() {
     drop: (/** @type {number} */ slot) => { seen.delete(slot); },
     clear: () => { seen.clear(); },
   };
+}
+
+/** a memory refusal of the engine (routes_open.rs): the index is good, there is no room for it beside the files open */
+export const noMemory = (/** @type {unknown} */ e) => typeof e === "string" && e.includes('"error.memoryBudget"');
+
+/** opens a stored index with `open()`: a memory refusal passes on and the index stays (neither rebuilt nor removed), any other failure gives `failed(e)` */
+export async function openStored(/** @type {() => Promise<any>} */ open, /** @type {(e: unknown) => any} */ failed) {
+  try { return await open(); } catch (e) { if (noMemory(e)) throw e; return failed(e); }
 }

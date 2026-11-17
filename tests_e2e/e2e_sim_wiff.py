@@ -1,10 +1,10 @@
 """The manual integrations of SIM traces on the built site with the Rust engine (synthetic SIM .wiff of tools/wiff_sim.py, `sim3`: a blank and three named
 samples, seven ions at a 0.8 s cycle, an isomer pair in one channel; no laboratory data): dragging the pair with an msconvert log opens four files (the
 log is skipped with a note); windows integrated on the ion traces fill the card «Manual integrations» under the chart (collapsible and remembered,
-fixed-height scroll with a sticky header, no layout shift), one row per window grouped by channel, each with a name the user types; the card, its CSV
+height of its rows up to a cap, then a scroll with a sticky header, nothing above it moves), one row per window grouped by channel, each with a name the user types; the card, its CSV
 export, the engine's sum rows and «Copy table» (tab-separated) are the bytes of `mzlab-cli manual-table` on the same .wiff and windows (after the provenance line);
 a row's Delete removes the integration; «Split at the valleys» (V) proposes the engine's drop line (`mzlab-cli peak-split`), moved by mouse, keys and finger and
-confirmed into one row per part; a window drawn on one sample stays drawn when another sample is chosen in the left panel, measured on that sample with no row added; the channels of a sample equal `mzlab-cli channels`. The copy whose .wiff.scan is cut at 60 % measures the
+confirmed into one row per part; a window drawn on one sample is applied to the other samples chosen in the left panel, measured on each by the engine, with a row of the table; the channels of a sample equal `mzlab-cli channels`. The copy whose .wiff.scan is cut at 60 % measures the
 points before the cut. Needs the site and the .wasm (python3 tools/prepara_sito.py) and cargo for the CLI. Run from the repo root: python3 tests_e2e/e2e_sim_wiff.py"""
 # covers: mzlab/web/integrazioni-manuali.js, mzlab/web/integra-segue.js, mzlab/web/integra-valli.js, mzlab/web/sim-ui.js, tools/wiff_sim.py
 import json, shutil, subprocess, sys, os, tempfile
@@ -23,11 +23,15 @@ D = Path(tempfile.mkdtemp(prefix="sim_wiff_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_sim.py"), str(D)], check=True, capture_output=True)
 (D / "sim3.wiff.log").write_text("msconvert log (synthetic)\n")
 TRUE = json.loads((D / "sim3.json").read_text())
-CLI = ["cargo", "run", "-q", "-p", "mzlab-cli", "--"]
+CLI = ["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--"]      # the release binary tools/verifica.py builds once before the tests: a debug build inside the 150 s of the CI job is too slow
 cli = lambda *a: subprocess.run(CLI + [str(x) for x in a], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout
 CHANNELS = json.loads(cli("channels", D / "sim3.wiff"))
 throw = lambda m: (_ for _ in ()).throw(AssertionError(m))
-SHOWN = "(() => { const c = document.querySelector('#manint'); return !!c && !c.hidden && c.querySelectorAll('tbody tr').length === %d; })()"
+OWN = '#manint tbody tr[data-org="manual"]'          # the rows of the windows drawn by hand; the others are what the engine applied from them to the samples shown
+SHOWN = "(() => { const c = document.querySelector('#manint'); return !!c && !c.hidden && c.querySelectorAll('tbody tr[data-org=manual]').length === %d; })()"
+OWN_ROW0 = "document.querySelector('" + OWN + "')"
+own = lambda n, rest="": f'{OWN} >> nth={n - 1}' + (f" >> {rest}" if rest else "")          # the n-th (from 1) own row, then what is inside it (Playwright selector)
+ownjs = lambda n, rest: f"[...document.querySelectorAll('{OWN} {rest}')][{n - 1}]"          # the same as a JS expression
 
 # integrates the window [a, b] (min) of ion `ion` (place in the list of ions) of sample `name` on the SIM panel, as a drag of the user ends (addInt, no copy to other panels)
 INTEG = """([name, ion, a, b, bm]) => { const p = E.panels.find(q => q.type === 'mrm' && q._a);
@@ -61,7 +65,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.context.grant_permissions(["clipboard-read", "clipboard-write"])
-        stage(pg, [D / "sim3.wiff", D / "sim3.wiff.scan", D / "sim3.wiff.log"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= 4", timeout=120000)
+        stage(pg, [D / "sim3.wiff", D / "sim3.wiff.scan", D / "sim3.wiff.log"]); pg.click("text=Load data"); ready(pg); wait_for_js(pg, "E.files.length >= 4", timeout=120000)
         open_first(pg)
         pg.click("#np-mrm"); wait_for_js(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)
         all_ions(pg)
@@ -72,9 +76,12 @@ try:
             pg.evaluate(INTEG, ["Sample_A", 0, pk[1][0][0] - 0.15, pk[1][0][0] + 0.15, "edges"])
             pg.evaluate(INTEG, ["Sample_B", 2, pk[2][2][0] - 0.15, pk[2][2][0] + 0.15, None])
             wait_for_js(pg, SHOWN % 3, timeout=60000)
-            cells = pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].map(r => [...r.children].slice(0, 3).map(c => c.textContent))")
-            need(cells == [["253.1", "ionA", "Sample_A"], ["253.1", "ionA", "Sample_C"], ["251.1", "ionC", "Sample_B"]], cells)
-            need(pg.evaluate("document.querySelector('#manint h3').textContent") == pg.evaluate("I18N.t('canali.manint.title', {n: 3})"), "title")
+            cells = pg.evaluate("[...document.querySelectorAll('" + OWN + "')].map(r => [...r.children].slice(0, 3).map(c => c.textContent))")
+            need(cells == [["253.1", "Sample_A", ""], ["253.1", "Sample_C", ""], ["251.1", "Sample_B", ""]], cells)   # channel, sample, name (no «method name» column)
+            heads = pg.evaluate("[...document.querySelectorAll('#manint thead th')].slice(0, 8).map(c => c.textContent)")
+            want = [pg.evaluate("k => I18N.t('canali.manint.h.' + k)", k) for k in ("channel", "sample", "label", "area", "start", "end", "apex", "height")]
+            need(heads == want, ("columns: channel, sample, name, area, start, end, apex, height", heads))
+            need(pg.evaluate("document.querySelector('#manint h3').textContent") == pg.evaluate("I18N.t('canali.manint.title', {n: 8})"), "title counts every row: 3 drawn, 5 applied (4 samples, 2 channels)")
             need(pg.evaluate("[...document.querySelectorAll('#manint tbody button')].every(b => b.getBoundingClientRect().height >= 24 && b.getAttribute('aria-label'))"), "24 px, named")
         step("windows on the ion traces fill the card, grouped by channel then sample", rows)
         PNL = "(() => { const r = E.panels.find(q => q.type === 'mrm' && q._a).el.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; })()"
@@ -93,14 +100,16 @@ try:
             c = pk[3][0][0]
             for i in range(6): pg.evaluate(INTEG, ["Sample_C", 1, c - 0.15 + 0.4 * i, c + 0.15 + 0.4 * i, None])      # apart: an overlapping window replaces the one under it
             wait_for_js(pg, SHOWN % 9, timeout=60000)
-            need(pg.evaluate(PNL) == p0 and pg.evaluate(WRAP) == w0, ("no layout shift", p0, w0, pg.evaluate(PNL), pg.evaluate(WRAP)))
-            sc = pg.evaluate("(() => { const w = document.getElementById('manint-b'); w.scrollTop = w.scrollHeight; const r = w.querySelector('thead th').getBoundingClientRect(); return [w.scrollHeight > w.clientHeight, Math.abs(r.top - w.getBoundingClientRect().top) < 3, Math.round(w.clientHeight / w.querySelector('tbody tr').getBoundingClientRect().height)]; })()")
-            need(sc[0] and sc[1] and 5 <= sc[2] <= 7, ("scrolls under a sticky header, about 6 rows", sc))
+            need(pg.evaluate(PNL) == p0 and pg.evaluate(WRAP)[3] > w0[3], ("the chart does not move, the table grows with its rows", p0, w0, pg.evaluate(PNL), pg.evaluate(WRAP)))   # height = rows (e2e_manint_layout.py has the numbers)
+            pg.set_viewport_size({"width": 1500, "height": 360})      # a short window: 9 rows (about 280 px) exceed 60 % of it, so the table scrolls inside
+            sc = pg.evaluate("(() => { const w = document.getElementById('manint-b'); w.scrollTop = w.scrollHeight; const r = w.querySelector('thead th').getBoundingClientRect(); return [w.scrollHeight > w.clientHeight, Math.abs(r.top - w.getBoundingClientRect().top) < 3]; })()")
+            need(sc[0] and sc[1], ("scrolls under a sticky header once capped", sc))
+            pg.set_viewport_size({"width": 1500, "height": 2200})
             pg.click("#manint .manint-tg")
             need(pg.evaluate("[document.getElementById('manint-b').hidden, document.querySelector('#manint .manint-tg').getAttribute('aria-expanded'), localStorage.getItem(NOMI.KEY('manint.open'))]") == [True, "false", "0"], "closed and remembered")
             need(pg.evaluate(PNL) == p0, "closing moves nothing above")
             pg.evaluate("(() => { const p = E.panels.find(q => q.type === 'mrm' && q._a); delInts(p, p.ints.slice(3)); })()")
-            wait_for_js(pg, "(() => { const c = document.querySelector('#manint'); return !c.hidden && c.querySelectorAll('tbody tr').length === 3; })()", timeout=60000)
+            wait_for_js(pg, SHOWN % 3, timeout=60000)
             need(pg.evaluate("document.getElementById('manint-b').hidden"), "a redraw keeps it closed")
             pg.evaluate("(() => { const p = E.panels.find(q => q.type === 'mrm' && q._a); delInts(p, p.ints.slice()); })()")
             wait_for_js(pg, "document.querySelector('#manint').hidden", timeout=60000)
@@ -108,7 +117,7 @@ try:
             need(not pg.evaluate("document.getElementById('manint-b').hidden"), "integrations after none open the card")
             pg.focus("#manint .manint-tg"); pg.keyboard.press("Enter"); need(pg.evaluate("document.getElementById('manint-b').hidden"), "Enter closes")
             pg.keyboard.press(" "); need(not pg.evaluate("document.getElementById('manint-b').hidden"), "Space opens")
-        step("the card sits under the chart: collapsible, remembered, icon buttons, fixed-height scroll with a sticky header, no layout shift", card_layout)
+        step("the card sits under the chart: collapsible, remembered, icon buttons, height of its rows up to a cap, then a scroll with a sticky header, nothing above it moves", card_layout)
         def parity():
             st = pg.evaluate("MANINT.state()")
             files = [D / "sim3.wiff"]
@@ -125,12 +134,12 @@ try:
         step("the table, its CSV and the engine's sums are the bytes of mzlab-cli manual-table", parity)
         def row_actions():
             need = lambda c, m: c or throw(m)
-            need(pg.evaluate("[...document.querySelectorAll('#manint tbody tr[data-go]')].every(r => r.tabIndex === 0 && r.getAttribute('aria-label') && r.querySelectorAll('button').length === 1)"), "a row is one focusable control with one X")
+            need(pg.evaluate("[...document.querySelectorAll('#manint tbody tr[data-go]')].every(r => r.tabIndex === 0 && r.getAttribute('aria-label') && r.querySelectorAll('button').length === (r.dataset.org === 'manual' ? 1 : 0))"), "a row is one focusable control; an own row has one X, an applied one none")
             x = pg.evaluate("(() => { const b = document.querySelector('#manint tbody [data-del]'), r = b.getBoundingClientRect(); return [r.width, r.height, b.title, b.textContent.trim(), !!document.querySelector('#manint [data-go] button:not([data-del])')]; })()")
             need(x[0] >= 24 and x[1] >= 24 and x[2] == pg.evaluate("I18N.t('canali.manint.del')") and x[3] == "×" and not x[4], x)
             pg.evaluate("(() => { window.__show = []; const o = window.reveal; window.reveal = p => { window.__show.push(p.id); return o(p); }; window.__orev = o; })()")
-            pg.click("#manint tbody tr[data-go] td:nth-child(5)")
-            pg.focus("#manint tbody tr[data-go]"); pg.keyboard.press("Enter"); pg.keyboard.press(" ")
+            pg.click(own(1, "td:nth-child(5)"))
+            pg.focus(own(1)); pg.keyboard.press("Enter"); pg.keyboard.press(" ")
             n = pg.evaluate("(() => { const n = window.__show.length; window.reveal = window.__orev; return n; })()")
             need(n == 3, n)
             wait_for_js(pg, SHOWN % 3, timeout=10000)
@@ -139,49 +148,49 @@ try:
             need = lambda c, m: c or throw(m)
             wait_for_js(pg, "!document.querySelector('.areacopied.show')", timeout=4000)      # the notice of «Copy table» has gone
             csv = [l.split(",") for l in pg.evaluate("MANINT.state().csv").strip().split("\n")]
-            head, row = csv[0], csv[1]
-            cells = pg.evaluate("[...document.querySelectorAll('#manint tbody tr')[0].querySelectorAll('[data-cp]')].map(c => { const r = c.getBoundingClientRect(); return [c.dataset.cp, c.getAttribute('role'), c.tabIndex, c.getAttribute('aria-label'), c.title, r.width, r.height, r.x + r.width / 2, r.y + r.height / 2]; })")
-            need([c[0] for c in cells] == [row[head.index(k)] for k in ("apex_rt_min", "area", "height")], (cells, row))
+            head = csv[0]; row = [x for x in csv[1:] if x[-1] == "manual"][0]
+            cells = pg.evaluate("[..." + OWN_ROW0 + ".querySelectorAll('[data-cp]')].map(c => { const r = c.getBoundingClientRect(); return [c.dataset.cp, c.getAttribute('role'), c.tabIndex, c.getAttribute('aria-label'), c.title, r.width, r.height, r.x + r.width / 2, r.y + r.height / 2]; })")
+            need([c[0] for c in cells] == [row[head.index(k)] for k in ("area", "apex_rt_min", "height")], (cells, row))   # the area sits right after the name, then the apex
             need(all(c[1] == "button" and c[2] == 0 and c[3] and c[4] and c[5] >= 24 and c[6] >= 24 for c in cells), cells)
             pg.evaluate("(() => { window.__show = 0; const o = window.reveal; window.__orev = o; window.reveal = p => { window.__show++; return o(p); }; })()")
             pg.evaluate("navigator.clipboard.writeText('x')")
-            area = cells[1]; pg.mouse.click(area[7], area[8])
+            area = cells[0]; pg.mouse.click(area[7], area[8])
             wait_for_js(pg, "!!document.querySelector('.areacopied.show')", timeout=5000)
             need(pg.evaluate("navigator.clipboard.readText()") == area[0], "the CSV value, full precision")
             n = pg.evaluate("(() => { const n = document.querySelector('.areacopied'), r = n.getBoundingClientRect(); return [n.textContent, n.getAttribute('aria-live'), r.x + r.width / 2, r.y]; })()")
             need(n[0] == pg.evaluate("I18N.t('int.copy.done')") and n[1] == "polite" and abs(n[2] - area[7]) < 60 and 0 < n[3] - area[8] < 60, ("by the pointer", n, area))
             wait_for_js(pg, "!document.querySelector('.areacopied.show')", timeout=4000)
-            pg.focus("#manint tbody tr:first-child [data-cp]"); pg.keyboard.press("Enter")
+            pg.focus(own(1, "[data-cp]")); pg.keyboard.press("Enter")
             wait_for_js(pg, "!!document.querySelector('.areacopied.show')", timeout=5000)
             need(pg.evaluate("navigator.clipboard.readText()") == cells[0][0], "Enter copies the apex")
             need(pg.evaluate("(() => { const n = window.__show; window.reveal = window.__orev; return n; })()") == 0, "a copy does not show the row's integration")
-        step("apex, area and height cells copy the CSV value with a «Copiato!» by the pointer", copy_cells)
+        step("apex, area and height cells copy the CSV value with a «Copied!» by the pointer", copy_cells)
         def names():
             need = lambda c, m: c or throw(m)
             P = "E.panels.find(q => q.type === 'mrm' && q._a)"
-            nm = "#manint tbody tr:nth-child(1) input[data-nm]"
-            info = pg.evaluate(f"(() => {{ const n = document.querySelector('{nm}'), r = n.getBoundingClientRect(); return [n.getAttribute('aria-label'), n.maxLength, r.height >= 24, document.querySelector('#manint thead th:nth-child(4)').textContent]; }})()")
+            nm = own(1, "input[data-nm]"); nmj = ownjs(1, "input[data-nm]")
+            info = pg.evaluate(f"(() => {{ const n = {nmj}, r = n.getBoundingClientRect(); return [n.getAttribute('aria-label'), n.maxLength, r.height >= 24, document.querySelector('#manint thead th:nth-child(3)').textContent]; }})()")
             need(info == [pg.evaluate("I18N.t('canali.manint.nm.aria')"), 40, True, pg.evaluate("I18N.t('canali.manint.h.label')")], info)
             pg.click(nm); pg.keyboard.type("Peak, left"); pg.keyboard.press("Enter")
-            wait_for_js(pg, "MANINT.state().csv.split('\\n')[1].endsWith(',\"Peak, left\"')", timeout=60000)
+            wait_for_js(pg, "MANINT.state().csv.includes('253.1,Sample_A,\"Peak, left\",')", timeout=60000)
             need(pg.evaluate("document.activeElement && document.activeElement.matches('input[data-nm]') && document.activeElement.value === 'Peak, left'"), "Enter keeps the focus on the name")
             st = pg.evaluate("MANINT.state()"); need(st["csv"] == manual(st, [D / "sim3.wiff"]), "the name is in the CLI's bytes")
             need(pg.evaluate(f"{P}.ints.filter(i => i.nm === 'Peak, left').length") == 1, "kept on the integration")
             need("Peak, left" in pg.evaluate(f"{P}._a.lbls.find(l => l.int.nm === 'Peak, left').tip"), "in the hover text")
             pg.click("#manint [data-copy]"); wait_for_js(pg, "navigator.clipboard.readText().then(t => t.includes('\\tPeak, left'))", timeout=10000)
             pg.fill(nm, "zzz"); pg.keyboard.press("Escape")
-            need(pg.evaluate(f"document.querySelector('{nm}').value") == "Peak, left" and pg.evaluate(f"{P}.ints.some(i => i.nm === 'zzz')") is False, "Esc gives the name back")
-            n2 = "#manint tbody tr:nth-child(3) input[data-nm]"
-            pg.click(n2); pg.keyboard.type("Second Sample"); pg.evaluate(f"document.querySelector('{n2}').blur()")
+            need(pg.evaluate(f"{nmj}.value") == "Peak, left" and pg.evaluate(f"{P}.ints.some(i => i.nm === 'zzz')") is False, "Esc gives the name back")
+            n2 = own(3, "input[data-nm]"); n2j = ownjs(3, "input[data-nm]")
+            pg.click(n2); pg.keyboard.type("Second Sample"); pg.evaluate(f"{n2j}.blur()")
             wait_for_js(pg, "MANINT.state().csv.includes(',Second Sample')", timeout=60000)
-            need(pg.evaluate("E.panels.find(q => q.type === 'mrm' && q._a).ints.length") == 3 and pg.evaluate("document.querySelectorAll('#manint tbody tr').length") == 3, "typing S or I adds nothing")
-            pg.fill(n2, "x" * 50); need(len(pg.evaluate(f"document.querySelector('{n2}').value")) == 40, "at most 40 characters")
+            need(pg.evaluate("E.panels.find(q => q.type === 'mrm' && q._a).ints.length") == 3 and pg.evaluate("document.querySelectorAll('" + OWN + "').length") == 3, "typing S or I adds nothing")
+            pg.fill(n2, "x" * 50); need(len(pg.evaluate(f"{n2j}.value")) == 40, "at most 40 characters")
             pg.keyboard.press("Escape")
             pg.evaluate("STORIA.annulla()"); wait_for_js(pg, "!MANINT.state().csv.includes('Second Sample')", timeout=60000)
             need("Peak, left" in pg.evaluate("MANINT.state().csv"), "undo takes back one name")
         step("each row has a name: Enter or blur keeps it, Esc gives it back, in the CSV, the copy and the hover text, undoable", names)
         def delete():
-            pg.click("#manint tbody tr:nth-child(2) [data-del]")
+            pg.click(own(2, "[data-del]"))
             wait_for_js(pg, SHOWN % 2, timeout=60000)
             assert pg.evaluate("E.panels.find(q => q.type === 'mrm').ints.length") == 2
         step("Delete removes the integration and its row", delete)
@@ -197,13 +206,11 @@ try:
                     if pg.evaluate(f"E.files.every(f => f.gone || f.vis === (f.k === {k}))"): break
                 wait_for_js(pg, f"(() => {{ const p = E.panels.find(q => q.type === 'mrm' && q._a); return !!p && p._a.sr.length > 0 && p._a.sr.every(s => s.k === {k}) && (p._a.lbls || []).some(l => l.int); }})()", timeout=60000)
             LB = "E.panels.find(q => q.type === 'mrm' && q._a)._a.lbls.filter(l => l.int).map(l => ({ text: l.text, tip: l.tip, fol: !!l.int.fol, ion: l.int.ion, a: l.int.a, b: l.int.b, area: l.int.area, key: l.int.key }))"
-            table = lambda: pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].map(r => r.textContent)")
-            before = table()
             only(ka)
             la = [l for l in pg.evaluate(LB) if not l["fol"]]
             need(len(la) == 1 and la[0]["key"].startswith(f"m|{ka}|"), la)
             need(la[0]["text"].startswith("A = ") and "(" not in la[0]["text"], la[0]["text"])
-            need(pg.evaluate("I18N.t('int.base.tag.edges')") in la[0]["tip"], "the baseline mode is in the hover text")
+            need(pg.evaluate("I18N.t('int.copy.tip')") in la[0]["tip"] and pg.evaluate("I18N.t('int.base.tag.edges')") not in la[0]["tip"], "the hover text is the copy hint only")
             only(kb)
             fb = [l for l in pg.evaluate(LB) if l["fol"]]
             need(len(fb) == 1 and fb[0]["ion"] == la[0]["ion"] and fb[0]["key"].startswith(f"m|{kb}|"), fb)
@@ -211,13 +218,15 @@ try:
             need(fb[0]["text"] not in ("A = —", la[0]["text"]) and fb[0]["area"] > 0 and fb[0]["area"] != la[0]["area"], (fb, la))
             need(not any(l["fol"] and l["ion"] == x["ion"] for l in pg.evaluate(LB) for x in pg.evaluate(LB) if not x["fol"]), "a committed window is shown as it is")
             wait_for_js(pg, LB + ".some(l => l.fol && !l.tip.includes('…') && l.tip.includes('S/N'))", timeout=60000)
-            frames(pg, 3); need(table() == before, "a follower adds no row")
+            # the engine applies the window to Sample_B too: a row of B on the channel of A's window, not drawn by hand, without a Delete
+            wait_for_js(pg, "[...document.querySelectorAll('#manint tbody tr')].some(r => r.dataset.org !== 'manual' && r.textContent.includes('Sample_B') && r.textContent.startsWith('253.1'))", timeout=60000)
+            need(pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].filter(r => r.dataset.org !== 'manual').every(r => !r.querySelector('[data-del]'))"), "an applied row has no Delete")
             none = pg.evaluate("SEGUE.all({ type: 'mrm', ints: [{ id: 1, ion: 'x', key: 'm|0|x', a: 50, b: 51, bm: 'edges' }] }, [{ key: 'm|1|x', ion: 'x', k: 1, name: 'n', x: [1, 2, 3] }]).filter(i => i.fol).map(i => i.none)")
             need(none == [True], none)
             only(ka)
-            need([l for l in pg.evaluate(LB) if not l["fol"]] == la and table() == before, "the committed row of A is unchanged")
+            need([l for l in pg.evaluate(LB) if not l["fol"]] == la and pg.evaluate("E.panels.find(q => q.type === 'mrm').ints.length") == 2, "the windows drawn are unchanged")
             all_ions(pg)
-        step("a manual window follows the sample chosen in the left panel, measured on that sample, with no row added", follow)
+        step("a manual window is applied to the sample chosen in the left panel: drawn, measured by the engine and a row of the table", follow)
         def anchors():
             need = lambda c, m: c or throw(m)
             P = "E.panels.find(q => q.type === 'mrm' && q._a)"
@@ -327,14 +336,47 @@ try:
             st = pg.evaluate("MANINT.state()")
             need(st["csv"] == manual(st, [D / "sim3.wiff"]), "the table with the parts = mzlab-cli manual-table")
             parts = [l.split(",") for l in st["csv"].strip().split("\n") if ",drop," in l]
-            need(len(parts) == 2 and parts[0][4] == parts[1][3] and float(parts[0][11]) > 0 and float(parts[1][11]) > 0, parts)
-            area = sum(float(x[6]) for x in parts)
-            need(abs(area - float(whole[6])) <= 1e-4 * float(whole[6]), ("the parts add up to the window", area, whole))
+            need(len(parts) == 2 and parts[0][5] == parts[1][4] and float(parts[0][11]) > 0 and float(parts[1][11]) > 0, parts)
+            area = sum(float(x[3]) for x in parts)
+            need(abs(area - float(whole[3])) <= 1e-4 * float(whole[3]), ("the parts add up to the window", area, whole))
             cut = table(one | {"splits": [t3]})
             need(cut == peak_split(f"split={t3}"), ("api/manint of the split window = peak-split", cut))
             th = pg.evaluate("[...document.querySelectorAll('#manint thead th')].map(t => [t.textContent, t.title])")
             need([pg.evaluate("I18N.t('canali.manint.h.overlap')"), pg.evaluate("I18N.t('canali.manint.h.overlap.tip')")] in th and any(x[0] == "p/v" and x[1] for x in th), th)
             need(pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].filter(r => r.textContent.includes(I18N.t('canali.manint.drop'))).length") == 2, "two rows say «yes»")
+            # every part has its own «A = …» label at its apex (not one label for the window), click-to-copy like a normal one
+            LBL = f"{P}._a.lbls.filter(l => l.int && l.int.id === {it}).sort((u, v) => u.x - v.x).map(l => [l.text, l.copy, l.x, l.w, l.copy != null, l.y, l.h])"
+            def labels(n, tag):
+                wait_for_js(pg, f"{P}._a.lbls.filter(l => l.int && l.int.id === {it}).length === {n}", timeout=30000)
+                ls = pg.evaluate(LBL)
+                need(all(x[4] for x in ls) and all(x[0].startswith("A = ") for x in ls), (tag, ls))
+                need(not any(a[2] < b[2] + b[3] and b[2] < a[2] + a[3] and a[5] < b[5] + b[6] and b[5] < a[5] + a[6] for i, a in enumerate(ls) for b in ls[i + 1:]), (tag, "labels overlap", ls))
+                return ls
+            ls = labels(2, "two parts")
+            tot = sum(float(x[1]) for x in ls)
+            need(abs(tot - float(whole[3])) <= 2e-4 * float(whole[3]), ("the labels add up to the window", tot, whole, ls))
+            need(all(abs(a - float(b[3])) <= 1e-4 * abs(float(b[3])) for a, b in zip(sorted(float(x[1]) for x in ls), sorted(parts, key=lambda r: float(r[3])))), ("labels = table rows", ls, parts))
+            # three parts (a second drop line in the trailing peak, close enough to the first apex to make the labels collide): three labels, three rows, same total
+            t3b = round(p1 + 0.04, 3)
+            pg.evaluate(f"(() => {{ const p = {P}; p.ints.find(i => i.id === {it}).splits = [{t3}, {t3b}]; draw(p); }})()")
+            wait_for_js(pg, "MANINT.state().csv.split(',drop,').length === 4", timeout=60000)
+            ls = labels(3, "three parts")
+            rows3 = [l.split(",") for l in pg.evaluate("MANINT.state().csv").strip().split("\n") if ",drop," in l]
+            need(len(rows3) == 3 and pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].filter(r => r.textContent.includes(I18N.t('canali.manint.drop'))).length") == 3, rows3)
+            need(abs(sum(float(x[3]) for x in rows3) - float(whole[3])) <= 1e-4 * float(whole[3]), ("three parts add up to the window", rows3, whole))
+            need(abs(sum(float(x[1]) for x in ls) - float(whole[3])) <= 2e-4 * float(whole[3]), ("three labels add up", ls))
+            pg.evaluate(f"(() => {{ const p = {P}; p.ints.find(i => i.id === {it}).splits = [{t3}]; draw(p); }})()")
+            wait_for_js(pg, "MANINT.state().csv.split(',drop,').length === 3", timeout=60000)
+            # the same three parts on a second overlaid file: six area labels, none over another, all inside the plot (stacked with a leader when they collide)
+            pg.evaluate(INTEG, ["Sample_A", 2, p0 - 0.15, p1 + 0.15, None]); ia = pg.evaluate(f"{P}.ints[{P}.ints.length - 1].id")
+            pg.evaluate(f"(() => {{ const p = {P}; p.ints.find(i => i.id === {ia}).splits = [{t3}, {t3b}]; p.ints.find(i => i.id === {it}).splits = [{t3}, {t3b}]; draw(p); }})()")
+            wait_for_js(pg, "MANINT.state().csv.split(',drop,').length === 7", timeout=60000)
+            wait_for_js(pg, f"{P}._a.lbls.filter(l => l.int && (l.int.id === {it} || l.int.id === {ia})).length === 6", timeout=30000)
+            box = pg.evaluate(f"(() => {{ const a = {P}._a, L = a.lbls.filter(l => l.int && (l.int.id === {it} || l.int.id === {ia})); return {{ L: L.map(l => [l.x, l.y, l.w, l.h]), plot: [M.l, M.t, a.W - M.r, a.H - M.b] }}; }})()")
+            need(all(x >= box["plot"][0] - 0.5 and x + w <= box["plot"][2] + 0.5 and y >= box["plot"][1] - 0.5 and y + h <= box["plot"][3] + 0.5 for x, y, w, h in box["L"]), ("a label leaves the plot", box))
+            need(not any(a[0] < b[0] + b[2] and b[0] < a[0] + a[2] and a[1] < b[1] + b[3] and b[1] < a[1] + a[3] for i, a in enumerate(box["L"]) for b in box["L"][i + 1:]), ("overlaid labels intersect", box))
+            pg.evaluate(f"(() => {{ const p = {P}; p.ints.find(i => i.id === {it}).splits = [{t3}]; draw(p); }})()")
+            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"!{P}.ints.some(i => i.id === {ia})", timeout=10000)
             pg.evaluate("STORIA.annulla()"); wait_for_js(pg, "!MANINT.state().csv.includes(',drop,')", timeout=60000)
             need(pg.evaluate(f"{P}.ints.find(i => i.id === {it}).splits") is None, "undo makes it whole")
             pg.evaluate("STORIA.ripeti()"); wait_for_js(pg, "MANINT.state().csv.includes(',drop,')", timeout=60000)
@@ -355,6 +397,57 @@ try:
             menu = pg.evaluate("AZIONI.voci.find(a => a.id === 'int.split')")
             need(menu and menu["scorciatoia"]["tasto"] == "v", menu)
         step("«Split at the valleys»: the engine's drop line (= peak-split), moved by mouse, keys and finger, confirmed into one row per part (= manual-table), undo, depth, Esc", split)
+        def split_hand():
+            need = lambda c, m: c or throw(m)
+            P = "E.panels.find(q => q.type === 'mrm' && q._a)"
+            p0, p1 = sorted(pk[2][2][:2])
+            key = pg.evaluate(SKEY, ["Sample_B", 2]); kb = pg.evaluate("E.files.find(x => x.label === 'Sample_B' || x.file.startsWith('Sample_B.')).k")
+            pg.evaluate(f"(() => {{ const p = {P}; p.ints = p.ints.filter(i => !(i.key === {json.dumps(key)} && i.a < {p1 + 0.15} && i.b > {p0 - 0.15})); draw(p); }})()")
+            pg.evaluate(INTEG, ["Sample_B", 2, p0 - 0.15, p1 + 0.15, None]); it = pg.evaluate(f"{P}.ints[{P}.ints.length - 1].id")
+            IT = f"{P}.ints.find(i => i.id === {it})"
+            wait_for_js(pg, f"(() => {{ const s = MANINT.state(); return JSON.parse(s.windows || '[]').some(x => s.ks[x.file] === {kb} && x.a < {p0} && x.b > {p1}); }})()", timeout=60000)
+            win = lambda: [x for x in json.loads(pg.evaluate("MANINT.state().windows")) if x["a"] < p0 and x["b"] > p1][0]
+            w = win(); one = {k: v for k, v in w.items() if k not in ("label", "splits")} | {"file": 0}
+            whole = float([l.split(",") for l in pg.evaluate("([k, w]) => fetch(`api/manint?k=${k}&sums=0&w=${encodeURIComponent(JSON.stringify([w]))}`).then(r => r.text())", [kb, one]).strip().split("\n")[1:]][0][3])
+            # the guide follows the pointer inside the window; a click splits there at once: each part has its own label and row, the areas add up to the window
+            pg.evaluate(f"(() => {{ const p = {P}; p.isel = {it}; draw(p); p.cv.focus(); }})()"); frames(pg, 2)
+            pg.keyboard.press("m")
+            wait_for_js(pg, f"{P}._split && {P}._split.manual && !!{P}.el.querySelector('.ivl-bar[data-m=\"1\"]')", timeout=30000)
+            at = lambda t: pg.evaluate(f"(() => {{ const r = {P}.cv.getBoundingClientRect(); return [r.x + {P}._a.X({t}), r.y + M.t + 60]; }})()")
+            def labs(n):
+                wait_for_js(pg, f"{P}._a.lbls.filter(l => l.int && l.int.id === {it}).length === {n}", timeout=30000)
+                wait_for_js(pg, f"MANINT.state().csv.split(',drop,').length === {n + 1 if n > 1 else 1}", timeout=60000)
+                ls = pg.evaluate(f"{P}._a.lbls.filter(l => l.int && l.int.id === {it}).map(l => [l.x, l.y, l.w, l.h, +l.copy])")
+                if n > 1:
+                    need(abs(sum(x[4] for x in ls) - whole) <= 2e-4 * whole, ("labels add up to the window", ls, whole))
+                    rows = [l.split(",") for l in pg.evaluate("MANINT.state().csv").strip().split("\n") if ",drop," in l]
+                    need(len(rows) == n and abs(sum(float(x[3]) for x in rows) - whole) <= 1e-4 * whole, ("rows add up to the window", rows, whole))
+                    need(not any(a[0] < b[0] + b[2] and b[0] < a[0] + a[2] and a[1] < b[1] + b[3] and b[1] < a[1] + a[3] for i, a in enumerate(ls) for b in ls[i + 1:]), ("labels overlap", ls))
+                return ls
+            tm = (p0 + p1) / 2; x, y = at(tm)
+            pg.mouse.move(x - 30, y); pg.mouse.move(x, y, steps=3)
+            wait_for_js(pg, f"(() => {{ const g = {P}.el.querySelector('.ivl-guide'); return !!g && !g.hidden && Math.abs(g.getBoundingClientRect().x - {x}) < 12; }})()", timeout=5000)
+            pg.mouse.click(x, y)
+            wait_for_js(pg, f"({IT}.splits || []).length === 1", timeout=10000); t1 = pg.evaluate(f"{IT}.splits[0]")
+            need(p0 < t1 < p1, ("the split is where the click was", t1, p0, p1)); labs(2)
+            x2, y2 = at(p1 + 0.05); pg.mouse.click(x2, y2)
+            wait_for_js(pg, f"({IT}.splits || []).length === 2", timeout=10000); labs(3)
+            # a drag moves a split (the areas follow); Delete removes one (the parts merge); Esc leaves the mode with the splits kept
+            mk = pg.evaluate(f"(() => {{ const r = {P}.el.querySelector('.ivl-mk').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }})()")
+            pg.mouse.move(*mk); pg.mouse.down(); pg.mouse.move(mk[0] + 8, mk[1], steps=4); pg.mouse.up()
+            wait_for_js(pg, f"{IT}.splits[0] !== {t1}", timeout=10000); labs(3)
+            pg.evaluate(f"{P}.el.querySelector('.ivl-mk').focus()"); pg.keyboard.press("Delete")
+            wait_for_js(pg, f"({IT}.splits || []).length === 1", timeout=10000); labs(2)
+            pg.keyboard.press("Escape")
+            wait_for_js(pg, f"!{P}._split && !{P}.el.querySelector('.ivl-bar, .ivl-mk, .ivl-guide:not([hidden])')", timeout=10000)
+            need(pg.evaluate(f"({IT}.splits || []).length") == 1, "Esc keeps what was split")
+            # one undo step per action: the delete, then the drag, then the second click
+            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"({IT}.splits || []).length === 2", timeout=10000)
+            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"({IT}.splits || [])[0] === {t1}", timeout=10000); need(pg.evaluate(f"{IT}.splits.length") == 2, "undo of the drag")
+            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"({IT}.splits || []).length === 1", timeout=10000)
+            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"!({IT}.splits || []).length", timeout=10000)
+            need(pg.evaluate("AZIONI.voci.find(a => a.id === 'int.split.hand')")["scorciatoia"]["tasto"] == "m", "key M")
+        step("«Split by hand»: a click splits at the pointer (guide line), every part its own label and row, drag, Delete, Esc, one undo step per action", split_hand)
         step("the msconvert log is skipped with a note", lambda: (lambda u: "sim3.wiff.log" in u or throw(u))(pg.evaluate("document.getElementById('unopen').textContent")))
         def channels():
             k = pg.evaluate("E.files.find(f => f.label === 'Blank' || /Blank/.test(f.file)).k")
@@ -373,7 +466,7 @@ r2 = Run(port=8877, wd="/tmp/wd_sim_wiff_cut")
 try:
     with sync_playwright() as p:
         pg = r2.page(p)
-        stage(pg, [D / "sim3_cut.wiff", D / "sim3_cut.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= 3", timeout=120000)
+        stage(pg, [D / "sim3_cut.wiff", D / "sim3_cut.wiff.scan"]); pg.click("text=Load data"); ready(pg); wait_for_js(pg, "E.files.length >= 3", timeout=120000)
         open_first(pg)
         pg.click("#np-mrm"); wait_for_js(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)
         all_ions(pg)

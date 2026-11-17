@@ -22,7 +22,7 @@ permissions:
 # so a push to main can no longer displace the release's installers from the single waiting slot of the group.
 concurrency:
   group: desktop-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}   # tags (release) and schedule are never cancelled
 
 jobs:
   shim:
@@ -132,6 +132,8 @@ jobs:
             target
           key: desktop-${{ matrix.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-tauri-${{ env.TAURI_CLI }}
           restore-keys: desktop-${{ matrix.os }}-
+      - name: numpy (the Python reference of tests/fast_spectra_merge.rs; the program itself has no Python)
+        run: python -m pip install numpy
       - name: cargo test (the mzlab:// protocol against the golden data)
         env:
           MZLAB_GOLDEN_STRICT: "1"

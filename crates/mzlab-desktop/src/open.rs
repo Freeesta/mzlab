@@ -17,6 +17,8 @@ pub struct Opened {
     /// Drawing files (`.ket`) read here: the page loads them into the drawing editor (nothing is written back by the app).
     pub drawings: Vec<Drawing>,
     pub ask: bool,
+    /// Names of `.scan` files that cannot be opened (no `.wiff` beside them, or not a `.wiff.scan`): the page says why with a translated notice.
+    pub refused: Vec<String>,
 }
 
 /// A `.ket` handed over by the system: its name and text, or why it could not be read.
@@ -71,6 +73,7 @@ pub fn take_opened(
         .take()
         .into_iter()
         .partition(|p| opening::is_drawing(p));
+    let refused = pending.take_refused();
     let drawings: Vec<Drawing> = draw.iter().map(|p| read_drawing(p)).collect();
     let files = register(&state, data);
     let ask = !(files.is_empty() && drawings.is_empty())
@@ -84,13 +87,17 @@ pub fn take_opened(
         files,
         drawings,
         ask,
+        refused,
     }
 }
 
 /// Queues files from outside and tells the page (which may not be loaded yet: then it takes them at start); the window comes to the front.
 fn hand_over(app: &AppHandle, plan: opening::Plan) {
-    tell_problems(app, &plan.problems);
     let paths = plan.files;
+    if !plan.refused.is_empty() {
+        app.state::<Pending>().push_refused(plan.refused);
+        let _ = app.emit("mzlab-open", ());
+    }
     if paths.is_empty() {
         return;
     }
@@ -99,18 +106,6 @@ fn hand_over(app: &AppHandle, plan: opening::Plan) {
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.unminimize();
         let _ = w.set_focus();
-    }
-}
-
-/// A file the system asked to open that cannot be opened (a `.wiff.scan` without its `.wiff`, a foreign `.scan`): said once, nothing is opened for it.
-fn tell_problems(app: &AppHandle, problems: &[String]) {
-    use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
-    for m in problems {
-        app.dialog()
-            .message(m.clone())
-            .title("mzLab")
-            .kind(MessageDialogKind::Warning)
-            .show(|_| {});
     }
 }
 
@@ -156,7 +151,7 @@ pub fn single_instance() -> tauri::plugin::TauriPlugin<tauri::Wry> {
 pub fn queue_command_line(app: &AppHandle) {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let plan = opening::plan_from_args(&args, None);
-    tell_problems(app, &plan.problems);
+    app.state::<Pending>().push_refused(plan.refused);
     app.state::<Pending>().push(plan.files);
 }
 

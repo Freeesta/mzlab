@@ -14,6 +14,7 @@ pub mod pairing;
 pub mod bench_stats;
 pub mod budget;
 pub mod budget_auto;
+pub mod calib;
 pub mod centroids;
 pub mod adduct_table;
 pub mod analysis;
@@ -142,6 +143,7 @@ pub mod valley;
 pub mod peakq;
 pub mod peakq_auto;
 pub mod peakq_lr;
+pub mod peakq_lrauto;
 #[cfg(test)]
 mod peakq_reach_test;
 #[cfg(test)]
@@ -177,6 +179,7 @@ pub mod jsonround;
 pub mod channels;
 pub mod channels_uv;
 pub mod routes;
+pub mod routes_open;
 pub mod routes_xicbin;
 pub mod scaninfo;
 pub mod scanstats;

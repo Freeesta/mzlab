@@ -32,14 +32,14 @@ try:
         for k in KEYS: step(f"drop-down: {k!r} first keeps the panel open", lambda k=k: stays(k))
         pg.click("#calcx"); pg.evaluate("setView('data')")
         # the Dati view: the calculator sits on top of the Adducts & losses page of the side drawer
-        pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.click("text=Carica dati"); ready(pg)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.click("text=Load data"); ready(pg)
         pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "window.BARRA.curTab === 'addloss' && window.BARRA.isOpen('calc') && !!document.querySelector('#calcin').offsetParent")
         def stays_docked(first):
             def check():
                 pg.fill("#calcin", ""); pg.click("#calcin"); pg.keyboard.type(first); frames(pg, 3)
                 assert pg.evaluate("window.BARRA.curTab === 'addloss' && window.BARRA.isOpen('calc')") and pg.is_visible("#calcin") and pg.is_visible("#calcpad"), "the panel closed or lost its keypad"
             check()
-        for k in KEYS: step(f"Dati panel: {k!r} first keeps the panel open", lambda k=k: stays_docked(k))
+        for k in KEYS: step(f"Data panel: {k!r} first keeps the panel open", lambda k=k: stays_docked(k))
         def err_in_place():
             pg.fill("#calcin", ""); pg.click("#calcin"); pg.keyboard.type(")"); frames(pg, 3)
             assert pg.inner_text("#calcsum").strip() != "", "the error is shown in place"

@@ -19,7 +19,7 @@ try:
             pg.wait_for_timeout(2500)
             if pg.is_visible("#start"):
                 pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
-                pg.click("text=Carica dati"); ready(pg)
+                pg.click("text=Load data"); ready(pg)
             pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(800)
             if theme == "dark": pg.evaluate("document.documentElement.setAttribute('data-theme','dark')"); pg.wait_for_timeout(300)
             def check():

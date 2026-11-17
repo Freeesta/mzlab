@@ -14,7 +14,7 @@ try:
         pg = r.page(p)
         pg.set_viewport_size({"width": 1280, "height": 700})
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_MS2-t15")]); wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 3")
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         pg.evaluate("setTab('full',true)"); ready(pg)
         for sel in ["#np-chrom", "#np-spec", "#np-chrom"]: pg.click(sel); ready(pg)
         top = lambda: pg.evaluate("document.querySelector('header').getBoundingClientRect().top")
@@ -37,7 +37,7 @@ try:
             assert pg.evaluate("window.__sc") == 0 and top() == 0, pg.evaluate("window.__sc")
             pg.evaluate("setTab('ms2')"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
             assert pg.evaluate("window.__sc") == 0, "switching Full Scan / MS2 does not scroll"
-        step("Dati from Disegno and tab changes: no scrolling", noscroll)
+        step("Data from Drawing and tab changes: no scrolling", noscroll)
         def layers():
             pg.evaluate("window.scrollTo(0, 400)"); wait_for_js(pg, "scrollY > 300"); frames(pg, 3)
             hh = pg.evaluate("document.querySelector('header').offsetHeight")

@@ -1,7 +1,6 @@
 {
-  "calc.add.hitDa": "Riga sopra la tabella degli addotti in bassa risoluzione quando l'm/z osservata combacia; {adduct} con apici (HTML), {ppm} scarto in Da con segno e due decimali.",
-  "calc.add.noneDa": "Riga sopra la tabella in bassa risoluzione quando nessun addotto combacia; {tol} = tolleranza in Da.",
-  "cq.all": "Pulsante che apre tutte le righe di un gruppo di candidati; {n} = numero totale di righe.",
-  "cq.none": "Riga sotto la calcolatrice quando nulla corrisponde al numero; {tol} = tolleranza con l'unità (es. «5 ppm» o «0.5 Da»).",
-  "cq.liste.err": "Riga nella scheda Contaminanti quando le liste integrate non si sono potute leggere (rete o motore); non è un «nessun risultato»."
+  "calc.add.hitDa": "Line above the low-resolution adducts table when the observed m/z matches; {adduct} with superscripts (HTML), {ppm} signed error in Da with two decimals.",
+  "calc.add.noneDa": "Line above the low-resolution table when no adduct matches; {tol} = tolerance in Da.",
+  "cq.all": "Button that opens all rows of a group of candidates; {n} = total number of rows.",
+  "cq.none": "Line below the calculator when nothing matches the number; {tol} = tolerance with unit (e.g. \"5 ppm\" or \"0.5 Da\")."
 }

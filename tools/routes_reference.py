@@ -41,7 +41,7 @@ def queries(item: Item) -> list[tuple[str, dict]]:
         out += [("/api/scanlist", {**base}), ("/api/scan_axis", {**base})]
         if item.spectrum_mode(lv) == "centroid" and not item.hr_on(lv, True):       # the spectra of a window: unit-resolution centroids (the rest is Python's)
             for r0, r1 in ((0, 1), (1.3, 2.9), (3, 3.0), (0, 1000), (5.5, 2.2), (500, 600)):
-                for extra in ({}, {"merge": "1"}, {"bin": "0.5"}):
+                for extra in ({}, {"merge": "0"}, {"merge": "1"}, {"bin": "0.5"}):      # omitted = AUTO (stated as auto_merge), 0 = opt out, 1 = forced
                     out.append(("/api/spectrum", {**base, "rt0": str(r0), "rt1": str(r1), **extra}))
             for p0 in sorted({round(s.precursor, 1) for s in scans if s.level == lv and s.precursor})[:2] if lv > 1 else []:
                 out.append(("/api/spectrum", {**base, "rt0": "0", "rt1": "1000", "precursor": str(p0)}))

@@ -1,6 +1,6 @@
-"""The inclusion list in the Method window (metodo-incl.js): the table sits at the head of «Metodo registrato nel file» (not inside a <details>), each row has the short buttons «XIC» and «MS2»
+"""The inclusion list in the Method window (metodo-incl.js): the table sits at the head of «Method stored in the file» (not inside a <details>), each row has the short buttons «XIC» and «MS2»
 (details in title/aria-label) that run the actions metodo.xic / metodo.ms2 of the registry azioni/1; XIC opens an XIC panel without the dialog, MS2 opens the MS2 scan of the precursor inside
-the RT window of the entry, an entry with no MS2 has the button grey with the reason; right click and Shift+F10 give the same actions; «Dati del grafico» opens the copyable table.
+the RT window of the entry, an entry with no MS2 has the button grey with the reason; right click and Shift+F10 give the same actions; «Chart data» opens the copyable table.
 The engine answers /api/metodo in the page, so the test puts a document with an `inclusione` in its place (the document of a real .raw is checked by crates/mzlab-core/tests/method_raw_parity.rs
 and the unit tests of method_raw/inclusion.rs). Synthetic HR DDA file."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -57,7 +57,7 @@ try:
             pg.click("#mincl ~ div button[data-ia=tab]"); pg.wait_for_selector("#tdati table")
             assert pg.evaluate("document.querySelectorAll('#tdati tbody tr').length") == 3
             pg.keyboard.press("Escape"); pg.evaluate("document.getElementById('tdati') && document.getElementById('tdati').remove()")
-        step("«Dati del grafico» opens the copyable table of the list", tab)
+        step("«Chart data» opens the copyable table of the list", tab)
         def xic():
             n0 = pg.evaluate("E.panels.filter(p => p.type === 'xic').length")
             pg.click("#mincl tr[data-i='0'] button[data-ia=xic]"); wait_for_js(pg, "E.panels.filter(p => p.type === 'xic').length > %d" % n0)

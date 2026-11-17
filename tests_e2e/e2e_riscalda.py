@@ -28,7 +28,7 @@ def shown(pg): return pg.evaluate("[ST.files.length, document.querySelectorAll('
 r = Run(port=8830 + 160, wd="/tmp/wd_riscalda"); hot = {}
 try:
     with sync_playwright() as p:
-        kw = dict(viewport={"width": 1500, "height": 2200}, locale="it-IT", reduced_motion="reduce")
+        kw = dict(viewport={"width": 1500, "height": 2200}, reduced_motion="reduce")
         try: r.b = p.chromium.launch_persistent_context(tempfile.mkdtemp(prefix="riscalda_prof_"), **kw)
         except Exception:          # a Playwright without its own headless shell (the cloud image): the Chromium that is installed
             exe = next(Path("/opt/pw-browsers").glob("chromium-*/chrome-linux64/chrome"), None); assert exe, "no Chromium"

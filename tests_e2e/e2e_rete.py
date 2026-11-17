@@ -44,7 +44,7 @@ try:
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.on("console", lambda m: errs.append("console: " + m.text) if m.type == "error" and re.search(r"rete|TPRETE", m.text + str(m.location)) else None)
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector('#nav button[data-v="tpmine"]', state="attached", timeout=120000)
-        pg.evaluate("() => { const l = document.getElementById('loading'); if (l && /motore|engine/i.test(l.innerText)) l.remove(); }")     # the view needs no engine
+        pg.evaluate("() => { const l = document.getElementById('loading'); if (l && /engine/i.test(l.innerText)) l.remove(); }")     # the view needs no engine
         pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-right", timeout=60000)
         pg.wait_for_function("typeof window.TDATI === 'object'", timeout=120000)
         pg.evaluate("() => window.TPLAZY.load('rete-vista.js')")

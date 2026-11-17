@@ -11,7 +11,7 @@ try:
         pg = r.page(p)
         pg.set_viewport_size({"width": 1400, "height": 900})
         pg.set_input_files("#pick", [mz(f) for f in ("C_IDA-t0", "C_MRM-EPI-t0", "C_POLALT-t0")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         lab = lambda: dict(pg.evaluate("E.files.map(f => [f.file, f.label])"))
         def labels():
             l = lab()

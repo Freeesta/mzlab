@@ -1,5 +1,5 @@
 """Extra columns of the loading table: a preset column and a custom one are added from the «Columns» dialog, values are typed in the cells, a reload keeps the definitions and the values,
-and the TSV of the sample table (the export of the Statistica panel) carries the columns. Synthetic files."""
+and the TSV of the sample table (the export of the Statistics panel) carries the columns. Synthetic files."""
 import sys, os, shutil, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
 lib.AUTO_TIMES = False

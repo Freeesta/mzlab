@@ -14,7 +14,7 @@ function baseY(/** @type {Bag} */ s, /** @type {Bag} */ it, /** @type {number} *
   if (q) return q === "zero" ? 0 : q === "man" ? +((it.my || {})[t === shown(s, it, "a") ? "a" : "b"] || 0) : edge3(s.y, nearIdx(s.x, t));
   if (it.zero || it.bm === "zero") return 0;
   if (it.bm === "line" && it.bl && typeof INTBASE !== "undefined") return INTBASE.lineAt(it, t);
-  return it.base ? baseAt(it.base, t) : edge3(s.y, nearIdx(s.x, t));
+  return it.base ? (typeof INTBASE !== "undefined" ? INTBASE.edgeAt(s, it, t) : baseAt(it.base, t)) : edge3(s.y, nearIdx(s.x, t));
 }
 // the borders of the other integrations on the trace this end may touch but not cross: [lo, hi] (null: none)
 function limits(/** @type {Bag} */ p, /** @type {Bag} */ it, /** @type {string} */ e) {
@@ -158,4 +158,7 @@ const splittable = (/** @type {Bag} */ c) => { const l = AREACOPY.target(c.p, c.
 AZIONI.registra({ id: "int.split", gruppo: "tools", ordine: 0, viste: ["mrm"], scorciatoia: { tasto: "v", dove: "chart", et: "int.split.menu" },
   visibile: (/** @type {Bag} */ c) => !!splittable(c), nome: () => I18N.t("int.split.menu"), tip: () => I18N.t("int.split.tip"),
   esegui: (/** @type {Bag} */ c) => { const it = splittable(c); if (it) carica("m:integra-valli.js").then(() => /** @type {any} */ (window).INTVALLI.start(c.p, it)); } });
+AZIONI.registra({ id: "int.split.hand", gruppo: "tools", ordine: 1, viste: ["mrm"], scorciatoia: { tasto: "m", dove: "chart", et: "int.split.hand.menu" },
+  visibile: (/** @type {Bag} */ c) => !!splittable(c), nome: () => I18N.t("int.split.hand.menu"), tip: () => I18N.t("int.split.hand.tip"),
+  esegui: (/** @type {Bag} */ c) => { const it = splittable(c); if (it) carica("m:integra-valli.js").then(() => /** @type {any} */ (window).INTVALLI.startManual(c.p, it)); } });
 window.INTEND = { sync, baseY, shown };

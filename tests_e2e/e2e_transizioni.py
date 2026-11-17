@@ -17,7 +17,7 @@ COUNT = """() => { window.__n = {fit: 0, draw: 0}; const f = window.fitWidth, d 
 LONG = """() => { window.__long = []; try { new PerformanceObserver(l => l.getEntries().forEach(e => window.__long.push(Math.round(e.duration)))).observe({type: 'long-animation-frame', buffered: false}); } catch (_) {} }"""
 def cold(p, vw, vh, reduced, saved=None):
     r = Run(port=8873, wd="/tmp/wd_transizioni"); r.b = p.chromium.launch()
-    ctx = r.b.new_context(viewport={"width": vw, "height": vh}, locale="it-IT", reduced_motion="reduce" if reduced else "no-preference")
+    ctx = r.b.new_context(viewport={"width": vw, "height": vh}, reduced_motion="reduce" if reduced else "no-preference")
     pg = ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
     init = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');"
     if "mzlab.barra.lr" not in (saved or {}): init += "localStorage.setItem('mzlab.barra.lr','{\"open\":false}');"      # the panel opens at first start: these tests slide it open from closed
@@ -25,7 +25,7 @@ def cold(p, vw, vh, reduced, saved=None):
     pg.add_init_script(init + "}catch(_){}")
     pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
     pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); pg.wait_for_timeout(800)
-    pg.click("text=Carica dati"); ready(pg); pg.wait_for_timeout(500)
+    pg.click("text=Load data"); ready(pg); pg.wait_for_timeout(500)
     # loading data opens the file list whatever was stored: these tests slide it open from closed, so close it first (reduced motion = at once)
     if "mzlab.barra.lr" not in (saved or {}) and pg.get_attribute("#sb-toggle", "aria-pressed") == "true":
         pg.click("#sb-toggle"); pg.wait_for_function("document.querySelector('#sb-toggle').getAttribute('aria-pressed') === 'false'"); pg.wait_for_function(SETTLED)

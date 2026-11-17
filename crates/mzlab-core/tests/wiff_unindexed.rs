@@ -51,6 +51,10 @@ fn reference() -> Option<(Tmp, Value)> {
 }
 
 fn open(dir: &Path, name: &str) -> Box<dyn Reader> {
+    open_with(dir, name, &Limits::sito())
+}
+
+fn open_with(dir: &Path, name: &str, limits: &Limits) -> Box<dyn Reader> {
     let member = |file: String| {
         let b = std::fs::read(dir.join(&file)).unwrap();
         Member {
@@ -66,7 +70,7 @@ fn open(dir: &Path, name: &str) -> Box<dyn Reader> {
             member(format!("{name}.wiff.scan")),
         ],
     };
-    readers::apri(set, &Limits::sito()).unwrap()
+    readers::apri(set, limits).unwrap()
 }
 
 fn trace(l: &mut Box<dyn Reader>, c: usize, tail: &str) -> (Vec<f64>, Vec<f64>) {
@@ -88,6 +92,11 @@ fn unlisted_sections_are_samples_with_inferred_name_and_method() {
     };
     let mut l = open(&dir, "nonindicizzato");
     assert_eq!(l.unindexed(), (2, 0));
+    // section 4 ends inside its last block: the cut block is a loss of that sample (`warn.wiff.damaged`), not dropped silently; section 3 is whole
+    let (whole, cut) = (l.losses(2).unwrap(), l.losses(3).unwrap());
+    assert_eq!((whole.declared, whole.read), (whole.read, whole.read));
+    assert_eq!((cut.declared, cut.read), (cut.read + 1, cut.read));
+    assert_eq!(cut.cause, "warn.wiff.damaged");
     let names: Vec<String> = l.samples().iter().map(|s| s.nome.clone()).collect();
     let ids: Vec<u32> = l.samples().iter().map(|s| s.id).collect();
     assert_eq!(ids, [1, 2, 3, 4]);
@@ -137,7 +146,7 @@ fn a_section_that_cannot_be_checked_is_left_out_and_counted() {
     // the donor holds scans: its blocks have no fixed size, the section's geometry is unknown
     let l = open(&dir, "nonindicizzato_scansione");
     assert_eq!((l.unindexed(), l.samples().len()), ((0, 1), 1));
-    // a block with a negative count is not an MRM block of that layout
+    // a block with a NaN count is not an MRM block of that layout
     let l = open(&dir, "nonindicizzato_guasto");
     assert_eq!((l.unindexed(), l.samples().len()), ((0, 1), 1));
 }
@@ -147,5 +156,68 @@ fn a_complete_pair_has_nothing_unlisted() {
     let Some((dir, _)) = reference() else { return };
     for name in ["one", "two", "transizioni_lotto", "buchi"] {
         assert_eq!(open(&dir, name).unindexed(), (0, 0), "{name}");
+    }
+}
+
+#[test]
+fn negative_baseline_noise_is_a_valid_block() {
+    let Some((dir, _)) = reference() else { return };
+    let l = open(&dir, "nonindicizzato_negativo");
+    assert_eq!((l.unindexed(), l.samples().len()), ((1, 0), 2));
+}
+
+#[test]
+fn queued_rows_without_a_section_do_not_hide_the_unlisted_section() {
+    let Some((dir, _)) = reference() else { return };
+    let mut l = open(&dir, "nonindicizzato_in_coda");
+    assert_eq!(l.unindexed(), (1, 0));
+    // the recovered injection replaces the queued row of its number: ids are unique and it is not also listed as empty
+    let ids: Vec<u32> = l.samples().iter().map(|s| s.id).collect();
+    assert_eq!(ids, [1, 3, 2]);
+    let json = readers::samples_json(&mut *l);
+    let rows: Value = serde_json::from_str(&json).unwrap();
+    let why = |id: u64| {
+        rows["samples"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|s| s["id"] == id)
+            .map(|s| s["why"].as_str().map(str::to_string))
+            .unwrap()
+    };
+    assert_eq!(why(2).as_deref(), Some("inferred"));
+    assert_eq!(why(3).as_deref(), Some("empty"));
+}
+
+#[test]
+fn site_and_app_limits_recover_the_same_bytes() {
+    let Some((dir, _)) = reference() else { return };
+    // the reader is one Rust code for the site (wasm), the app and the CLI: the recovered output must not depend on the limits profile
+    for name in [
+        "nonindicizzato",
+        "nonindicizzato_negativo",
+        "nonindicizzato_in_coda",
+    ] {
+        let (mut a, mut b) = (
+            open_with(&dir, name, &Limits::sito()),
+            open_with(&dir, name, &Limits::desktop()),
+        );
+        assert_eq!(a.unindexed(), b.unindexed(), "{name}");
+        assert_eq!(
+            readers::samples_json(&mut *a),
+            readers::samples_json(&mut *b),
+            "{name}"
+        );
+        for c in 0..a.samples().len() {
+            for tail in ["transition=0 ", "transition=1 "] {
+                if a.chromatograms(c)
+                    .unwrap()
+                    .iter()
+                    .any(|h| h.id.contains(tail))
+                {
+                    assert_eq!(trace(&mut a, c, tail), trace(&mut b, c, tail), "{name} {c}");
+                }
+            }
+        }
     }
 }

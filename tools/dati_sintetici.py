@@ -486,7 +486,9 @@ def make(out: Path) -> Path:
     dia(out / "D_DIA-t0.mzML", np.random.default_rng(67))      # written last: nothing else changes
     qc_series(out)                                    # written last: nothing else changes
     channel_cases(out / "canali")                       # written last, in a folder of its own: nothing else changes
-    (out / "SINTETICI.txt").write_text("Dati sintetici scritti da tools/dati_sintetici.py: NON sono misure del laboratorio.\n", encoding="utf-8")
+    from synthetic_data_calibration import calibration_series
+    calibration_series(out / "taratura")                # quant.curve: written last, in a folder of its own
+    (out / "SINTETICI.txt").write_text("Synthetic data written by tools/dati_sintetici.py: they are NOT laboratory measurements.\n", encoding="utf-8")
     return out
 
 

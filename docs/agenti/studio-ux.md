@@ -54,7 +54,7 @@ Ranked by how many first-time users meet them. Severity: **blocker** (the goal f
     54 of the 56 Flow step descriptions pass 90. The committed `docs/studi/TOOLTIP_ELENCO.*` differ from what the tool writes. *Fix: shorten the eight, regenerate the inventory.*
 20. **polish · Italian word in an English text** *(catalog)* (`load.table.remove`, `lang/en/load.js:76`: «Remove (moves to the _cestino folder)»). *Fix: «trash folder».*
 21. **polish · Small things on the first screen.** The file box in the bar cuts «B_FullMass-…» with free room beside it; a queued file reads «In coda 40%»; the phone gate says «Siete su uno smartphone» while the rest of the page says «tu»;
-    the landing has no line saying what the program does or that the files stay on the computer; `settings.merge` («Merge the centroids of the same nominal mass») has no explanation. *Fix: one pass on these texts.*
+    the landing has no line saying what the program does or that the files stay on the computer. *Fix: one pass on these texts.*
 
 ## Top 10 to fix first
 1. Say in the reset dialog what each button deletes (1).

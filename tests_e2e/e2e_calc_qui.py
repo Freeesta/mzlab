@@ -1,4 +1,4 @@
-"""«What can this number be?» under the floating Calculator (Disegno), the Adducts and the Neutral losses tabs of Adducts & losses (no data file needed):
+"""«What can this number be?» under the floating Calculator (Drawing), the Adducts and the Neutral losses tabs of Adducts & losses (no data file needed):
 groups for 214 / 30 / 18 / 100+114 / 21.98, resolution detected from the number (no switch), polarity, no observed field, no layout jump, cross-links, keystroke time, no engine miss; the contaminant list only once an m/z is typed."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -101,7 +101,7 @@ try:
             assert pg.input_value("#calcin") == "214" and pg.evaluate("BARRA.curSub") == "losses"
             pg.evaluate("BARRA.close(false); setView('draw')"); wait_for_js(pg, "!!document.querySelector('#np-calc2').offsetParent")
             if not pg.is_visible("#calcdlg"): pg.click("#np-calc2")
-        step("CALCQUI.apri(214) puts the number in the field of Adducts & losses (Dati view)", open_calc)
+        step("CALCQUI.apri(214) puts the number in the field of Adducts & losses (Data view)", open_calc)
         def shot(name, w):
             if not SHOTS: return
             pg.set_viewport_size({"width": w, "height": 900}); frames(pg, 25)
@@ -111,6 +111,7 @@ try:
         # the Adducts panel
         def adducts():
             pg.click("#np-addloss"); wait_for_js(pg, "document.querySelector('#refdlg') && !document.querySelector('#refdlg').hidden || document.querySelector('#sb-panel-adducts') && !document.querySelector('#sb-panel-adducts').hidden")
+            pg.click("#al-t-adducts")          # the panel reopens on the last tab used (Neutral losses, from the step above)
             q = pg.query_selector("#calcin")
             assert q
             q.fill("21.98"); frames(pg, 25)
@@ -127,7 +128,7 @@ try:
             pg.click("#al-t-adducts"); frames(pg, 25)
             assert pg.evaluate("!document.querySelector('#sb-panel-adducts').hidden")
             assert pg.input_value("#calcin") == "30", pg.input_value("#calcin")
-        step("one field for the tabs: Perdite -> Addotti keeps the number", link)
+        step("one field for the tabs: Losses -> Adducts keeps the number", link)
         def nolr():
             assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length")
         step("no engine miss", nolr)

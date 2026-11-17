@@ -1,55 +1,42 @@
 //! What a feature step of the Flow says of itself besides its bytes: the recipe it runs with (the one of the panel on the profile of the first file, then the
 //! values the plan writes) and the values it estimated, with their proofs. `flow run` and the browser (`job_meta`) both ask it, so the record of a run
-//! (`prov/1`) names the same estimates in both. Used by `mzlab-cli` (`flow_base.rs`) and the engine `.wasm` (`flow_job_meta`).
+//! (`prov/1`) names the same estimates in both. The lineage it reads comes from `mzlab_core::flow::lineage` (the `rotte` `.wasm` in the browser). Used by
+//! `mzlab-cli` (`flow_base.rs`) and the feature `.wasm` (`flow_job_meta`).
 
-use super::{recipe_for_estimated, recipe_of_layers, Layer};
-use mzlab_core::error::{Error, Result};
-use mzlab_core::flow::sched::{JobId, Sched};
-use mzlab_core::flow::{parse, value_text, Ctx, Instance, Job, Plan, Ref};
+use super::{recipe_for_estimated, recipe_of_layers};
+use mzlab_core::error::Result;
+use mzlab_core::flow::{lineage_from_text, value_text, Job};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{Out, Value};
-use mzlab_core::step::Step;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::{rows_of, stima, Stored};
 use mzlab_feat::steps::recipe_map;
 
+pub use mzlab_core::flow::{job_layers_text, job_lineage_text, written};
+
 /// A value the plan leaves out: name, value, proof.
 pub type Estimate = (String, Value, Value);
 
-/// What the plan writes for `job`: the algorithm it chose (feature steps only), the values of its preset, then its own parameters (descriptor names).
-pub fn written(job: &Job) -> Vec<(String, Value)> {
-    let mut v: Vec<(String, Value)> = Vec::new();
-    if let Some(a) = job
-        .instance
-        .algorithm
-        .as_deref()
-        .filter(|_| LAYERED.contains(&job.step.id))
-    {
-        v.push(("algorithm".to_string(), Value::Str(a.into())));
-    }
-    let preset = job.instance.preset.as_deref();
-    let presets = job.step.presets.iter().filter(|p| Some(p.id) == preset);
-    for (k, x) in presets.flat_map(|p| p.params.iter()) {
-        v.push((k.to_string(), x.clone()));
-    }
-    for (k, x) in &job.instance.params {
-        v.retain(|(n, _)| n != k);
-        v.push((k.clone(), x.clone()));
-    }
-    v
+/// The recipe of `job`: `base` with what the plan writes, and the values the plan leaves out that differ from the canonical ones (the estimates).
+pub fn recipe(job: &Job, base: Recipe) -> Result<(Recipe, Vec<Estimate>)> {
+    let r = &job.resolved;
+    recipe_of(job.step.id, &written(job), (&r.params, &r.noresult), base)
 }
 
-/// The recipe of `job`: `base` with what the plan writes, and the values the plan leaves out that differ from the canonical ones (the estimates).
-pub fn recipe(job: &Job, mut base: Recipe) -> Result<(Recipe, Vec<Estimate>)> {
-    let w = written(job);
-    recipe_map::apply(&mut base, job.step.id, &w)?;
-    let resolved = &job.resolved.params;
+/// `recipe` of a step `step` with what the plan writes `w`, its canonical values and the names that do not change the result.
+fn recipe_of(
+    step: &str,
+    w: &[(String, Value)],
+    (resolved, noresult): (&[(String, Value)], &[String]),
+    mut base: Recipe,
+) -> Result<(Recipe, Vec<Estimate>)> {
+    recipe_map::apply(&mut base, step, w)?;
     let proof = Value::Str("profile of the first file of the series".into());
-    let estimates = recipe_map::values(&base, job.step.id)
+    let estimates = recipe_map::values(&base, step)
         .into_iter()
         .filter(|(k, v)| {
             !w.iter().any(|x| x.0 == *k)
-                && !job.resolved.noresult.contains(k)
+                && !noresult.contains(k)
                 && resolved.iter().find(|x| x.0 == *k).map(|x| &x.1) != Some(v)
         })
         .map(|(k, v)| {
@@ -84,118 +71,24 @@ pub struct Meta {
     pub preset: Option<&'static str>,
 }
 
-const LAYERED: [&str; 3] = ["features.detect", "features.align", "features.gapfill"];
-
-/// The layers `flow run` carries with the output of `inst` (its lineage, `flow_base.rs`): a detection its own; an alignment those of its first source, then its
-/// own; a gap filling those of its table, then its own; any other step none. Only the line of `inst` counts, so a second branch of the plan never leaks in.
-fn carried(ctx: &Ctx, plan: &Plan, inst: &Instance, depth: usize) -> Vec<Layer> {
-    if !LAYERED.contains(&inst.step.as_str()) || depth > plan.steps.len() {
-        return Vec::new();
-    }
-    let port = match inst.step.as_str() {
-        "features.align" => "peaks",
-        "features.gapfill" => "table",
-        _ => "",
-    };
-    let first = inst
-        .ins
-        .iter()
-        .filter(|(p, _)| p == port)
-        .flat_map(|(_, refs)| refs)
-        .find_map(|r| match r {
-            Ref::Out { instance, .. } => plan.steps.iter().find(|s| s.id == *instance),
-            Ref::File(_) => None,
-        });
-    let mut layers = first.map_or_else(Vec::new, |s| carried(ctx, plan, s, depth + 1));
-    let job = ctx.job(&JobId::new(&inst.id, None), Vec::new());
-    layers.push((job.step.id.to_string(), written(&job)));
-    layers
-}
-
-/// The layers of the line of `inst` before its own: the recipe `flow run` rebuilds for it from the lineage of what it reads.
-fn upstream(ctx: &Ctx, plan: &Plan, inst: &Instance) -> Vec<Layer> {
-    let mut layers = carried(ctx, plan, inst, 0);
-    layers.pop();
-    layers
-}
-
-/// The recipe text the browser pool runs `instance` with (`{"fill": bool, "layers": [{"step", "params"}]}`), the recipe `flow run` builds for that job. The
-/// browser keeps one table per alignment, aligned and filled in one call: with `filled`, an alignment a gap filling reads takes the recipe of the first such filling.
-pub fn job_recipe_text(
-    plan_text: &[u8],
-    registry: &[Step],
-    instance: &str,
-    filled: bool,
-) -> Result<String> {
-    let plan = parse(plan_text)?;
-    let sched = Sched::new(&plan, registry, env!("CARGO_PKG_VERSION"), &[]);
-    let ctx = Ctx::new(&plan, registry, &sched)?;
-    let inst = plan
-        .steps
-        .iter()
-        .find(|s| s.id == instance)
-        .ok_or_else(|| Error::new("err.flow.lineage"))?;
-    let reads = |s: &&Instance| {
-        s.step == "features.gapfill"
-            && s.ins.iter().any(|(p, refs)| {
-                p == "table"
-                    && refs
-                        .iter()
-                        .any(|r| matches!(r, Ref::Out { instance, .. } if *instance == inst.id))
-            })
-    };
-    let target = match inst.step.as_str() {
-        "features.align" if filled => plan.steps.iter().find(reads).unwrap_or(inst),
-        _ => inst,
-    };
-    let mut o = Out::default();
-    o.raw("{\"fill\":")
-        .raw(if target.step == "features.gapfill" {
-            "true"
-        } else {
-            "false"
-        })
-        .raw(",\"layers\":[");
-    for (i, (step, params)) in carried(&ctx, &plan, target, 0).iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"step\":")
-            .str(step);
-        o.raw(",\"params\":")
-            .raw(&value_text(&Value::Obj(params.clone())))
-            .raw("}");
-    }
-    o.raw("]}");
-    Ok(o.0.clone())
-}
-
-/// The meta of `instance` of the plan: `own` is the index of the file a detection is about, `first` the first index of the series, `stored` the `.mzfeatf` an
-/// alignment reads; `budget_mb` the memory of the alignment. The same recipe as `flow run` builds (`recipe`), so the same estimates and memory.
+/// The meta of the job of `lineage` (the text of `job_lineage_text`): `own` is the index of the file a detection is about, `first` the first index of the series,
+/// `stored` the `.mzfeatf` an alignment reads; `budget_mb` the memory of the alignment. The same recipe as `flow run` builds (`recipe`), so the same estimates
+/// and memory.
 pub fn job_meta<R: ReadAt>(
-    plan_text: &[u8],
-    registry: &[Step],
-    instance: &str,
+    lineage: &str,
     (first, own): (&mut Index<R>, &mut Index<R>),
     stored: Option<&mut dyn Stored>,
     budget_mb: f64,
 ) -> Result<Meta> {
-    let plan = parse(plan_text)?;
-    let sched = Sched::new(&plan, registry, env!("CARGO_PKG_VERSION"), &[]);
-    let ctx = Ctx::new(&plan, registry, &sched)?;
-    let inst = plan
-        .steps
-        .iter()
-        .find(|s| s.id == instance)
-        .ok_or_else(|| Error::new("err.flow.lineage"))?;
-    let job = ctx.job(&JobId::new(instance, None), Vec::new());
-    let detect = job.step.id == "features.detect";
+    let l = lineage_from_text(lineage)?;
+    let detect = l.step == "features.detect";
     let base = if detect {
         recipe_for_estimated("", own)?
     } else {
-        recipe_of_layers(first, &upstream(&ctx, &plan, inst))?
+        recipe_of_layers(first, &l.layers)?
     };
-    let (mut recipe, estimates) = recipe(&job, base)?;
-    let fill = job.step.id == "features.gapfill";
-    recipe.fill_gaps = fill;
+    let (mut recipe, estimates) = recipe_of(&l.step, &l.params, (&l.resolved, &l.noresult), base)?;
+    recipe.fill_gaps = l.step == "features.gapfill";
     let mem = match stored {
         Some(src) if !detect => {
             let way = stima(&rows_of(src)?, &recipe, (budget_mb * 1048576.0) as usize);

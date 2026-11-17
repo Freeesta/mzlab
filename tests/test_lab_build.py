@@ -152,7 +152,7 @@ def test_guard_expiry_with_a_fake_clock(now, expired):
     assert (r["calls"] != []) == expired
     if expired:
         page = r["calls"][1][1]
-        assert r["calls"][0] == ["stop"] and "expired" in page and "scaduta" in page and not r["lab"] and r.get("banner") is None
+        assert r["calls"][0] == ["stop"] and "expired" in page and "scaduta" not in page and not r["lab"] and r.get("banner") is None
 
 
 @needs_node
@@ -166,6 +166,10 @@ def test_qqq_workflow_follows_the_pages_workflow():
     variables and the checkout of Freeesta/mzlab main differ."""
     cut = lambda t: t[t.index("# No run is ever cancelled"):]
     main = cut((ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8"))
+    # the lab copy keeps its single top-level `env:` (lab variables + strict wasm-opt) in the head, so the main one is not part of the comparison
+    strict = '# production builds: tools/wasm_opt.sh fails closed here, so no .wasm is tested or published without wasm-opt and its size gate\nenv:\n  MZLAB_WASM_OPT_STRICT: "1"\n\n'
+    assert strict in main
+    main = main.replace(strict, "")
     qqq = cut((ROOT / "tools" / "lab" / "qqq-pages.yml").read_text(encoding="utf-8"))
     co = "          repository: Freeesta/mzlab\n          ref: main\n"
     assert co in qqq and qqq.replace("        with:\n" + co, "") == main
@@ -173,3 +177,41 @@ def test_qqq_workflow_follows_the_pages_workflow():
     assert "schedule:" in head and "workflow_dispatch:" in head and 'MZLAB_LAB: "1"' in head and 'MZLAB_LAB_EXPIRES: "2026-12-29"' in head
     assert "secrets." not in qqq and "PAT" not in qqq
     assert (ROOT / "tools" / "lab" / "README.md").stat().st_size <= 2048
+
+
+def _strict_load(path):
+    """YAML loader that rejects a duplicate key at any mapping level (GitHub Actions rejects it; a lenient parser would keep the last one)."""
+    import yaml
+
+    class Strict(yaml.SafeLoader):
+        pass
+
+    def mapping(loader, node, deep=False):
+        keys = [loader.construct_object(k, deep=True) for k, _ in node.value]
+        dup = sorted({str(k) for k in keys if keys.count(k) > 1})
+        assert not dup, f"duplicate key(s) {dup} at line {node.start_mark.line + 1}"
+        return yaml.SafeLoader.construct_mapping(loader, node, deep)
+
+    Strict.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, mapping)
+    return yaml.load(path.read_text(encoding="utf-8"), Strict)
+
+
+def test_qqq_workflow_is_strictly_valid_and_keeps_the_lab_variables():
+    """A duplicate top-level `env:` once risked dropping MZLAB_LAB and publishing the FULL edition as the lab site."""
+    wf = _strict_load(ROOT / "tools" / "lab" / "qqq-pages.yml")
+    env = wf["env"]
+    assert env["MZLAB_LAB"] == "1" and env["MZLAB_LAB_EXPIRES"] and env["MZLAB_WASM_OPT_STRICT"] == "1"
+    assert wf["permissions"] == {"contents": "read"}
+    trig = wf.get("on", wf.get(True))  # PyYAML reads the bare key `on` as True
+    assert set(trig) == {"schedule", "workflow_dispatch"}
+    perms = wf["jobs"]["deploy"]["permissions"]
+    assert perms["pages"] == "write" and perms["id-token"] == "write"
+    # the jobs without a consumer in the lab repository are skipped there, and deploy does not wait for them
+    assert wf["jobs"]["native-e2e"]["if"] == "github.repository == 'Freeesta/mzlab'"
+    assert set(wf["jobs"]["deploy"]["needs"]) == {"assemble", "gate"}
+    assert "native-e2e" not in wf["jobs"]["assemble"]["needs"]
+
+
+def test_main_workflows_have_no_duplicate_keys():
+    for p in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
+        _strict_load(p)

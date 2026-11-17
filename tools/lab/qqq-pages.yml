@@ -14,6 +14,8 @@ permissions:
 env:
   MZLAB_LAB: "1"
   MZLAB_LAB_EXPIRES: "2026-12-29"
+  # production builds: tools/wasm_opt.sh fails closed here, so no .wasm is tested or published without wasm-opt and its size gate
+  MZLAB_WASM_OPT_STRICT: "1"
 
 # No run is ever cancelled: a running build/deploy finishes (the site always gets a new version), and of the runs waiting
 # GitHub keeps only the newest, so quick merges in a row end in one more deploy of the last commit, never in none.
@@ -21,10 +23,6 @@ env:
 concurrency:
   group: ${{ github.ref == 'refs/heads/main' && 'pages-build' || format('pages-build-{0}', github.ref) }}
   cancel-in-progress: false
-
-# production builds: tools/wasm_opt.sh fails closed here, so no .wasm is tested or published without wasm-opt and its size gate
-env:
-  MZLAB_WASM_OPT_STRICT: "1"
 
 # The site is built in parallel jobs and put together by `assemble`: `wasm-core` (engine, libraries, readers), `wasm-feat-a` and `wasm-feat-b` (mzFinder, the two halves of tools/build_feat_wasm.sh), `packages` (spectral libraries and suspect index); each hands its static/ subtree over as an artifact.
 jobs:
@@ -404,6 +402,7 @@ jobs:
   # the native release builds of sito-rust.yml's `sito-e2e` (its two slow e2e), with its very commands: only to keep their cache fresh, the site does not use them.
   # A cache saved once a night is evicted by the next morning (the repository saves far more than its 10 GB a day); one saved here on every Rust change is not.
   native-e2e:
+    if: github.repository == 'Freeesta/mzlab'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -494,7 +493,7 @@ jobs:
           PY
       # the built modules, for .github/workflows/metriche.yml (sizes per commit, measured off this critical path; small, kept 1 day)
       - name: .wasm modules for the metrics
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && github.repository == 'Freeesta/mzlab'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: metriche-wasm

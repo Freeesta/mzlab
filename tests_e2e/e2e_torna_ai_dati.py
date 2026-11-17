@@ -16,7 +16,7 @@ try:
         pg = r.page(p)
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")])
         pg.set_viewport_size({"width": 1500, "height": 700})
-        pg.click("text=Carica dati"); ready(pg)
+        pg.click("text=Load data"); ready(pg)
         for sel in ["#np-chrom", "#np-spec"]: pg.click(sel); frames(pg, 6)
         pg.evaluate("window.__fp = E.panels.find(q => q.type === 'chrom'); __fp.zoom = [5, 12]; draw(__fp)"); frames(pg, 4)
         def roundtrip(name, leave, **setup):

@@ -203,7 +203,7 @@ def test_mark_failed_translates_catalog_key_before_fail():
     global.window = {{
       fail: (arg) => {{ failedArg = arg; }},
       I18N: {{
-        t: (k, p) => k === 'load.err.engineStart' ? 'Il motore non risponde' : k
+        t: (k, p) => k === 'load.err.engineStart' ? 'The engine is not answering' : k
       }}
     }};
     global.I18N = global.window.I18N;
@@ -217,7 +217,7 @@ def test_mark_failed_translates_catalog_key_before_fail():
     """
     res = run_node(code)
     assert res["failedArg"] is None   # the text goes to the banner, not to #err (phase 3)
-    assert res["errore"] == "Il motore non risponde"
+    assert res["errore"] == "The engine is not answering"
 
 
 DOM_HELPERS = """
@@ -354,7 +354,7 @@ def test_duplicate_file_while_waiting_real_upload_drop_dups():
     const ST = {{ files: [] }};
     const CartCarica = {{ note: () => {{}} }};
     let UPBUSY = 0;
-    const CONVROWS = {{ clearDone: () => {{}}, paint: () => {{}}, onCancel: null }};
+    const CONVROWS = {{ clearDone: () => {{}}, paint: () => {{}}, onCancel: null, find: () => null, add: () => {{}}, set: () => {{}}, drop: () => {{}}, finish: () => {{}}, ready: () => "", skip: new Set() }};
     const FILETAB = {{ flush: () => {{}} }};
     function syncWork() {{}}
     // a table row that is not open is ticked again, not refused (dropDups): here the first copy is open

@@ -116,11 +116,11 @@ fn qc_and_report_hold_only_numbers() {
     assert!((files[3].total - (4e6 + 9e5 + 9e5 + 1e3)).abs() < 1e-6);
     let g = qc::groups(&t, &s, None);
     assert_eq!(g.len(), 1);
-    // the rows with a peak in both: 1, 2 and 3; their cv: 1/3, 0.28.., 0.058..
+    // the rows with a peak in both: 1, 2 and 3; their cv with the sample SD (n - 1): 0.471.., 0.404.., 0.083..
     assert_eq!(g[0].rows, 3);
-    assert!(g[0].cv_median > 0.2 && g[0].cv_median < 0.3, "{}", g[0].cv_median);
+    assert!((g[0].cv_median - 0.404_061_017_820_884_3).abs() < 1e-12, "{}", g[0].cv_median);
     let v = view::build(&t, &s, &Method::Istd(Reference::Id(3)), &[Rule::MinDetected(2)]).unwrap();
-    let sd = qc::standard_cv(&t, &s, &v.method).unwrap();
+    let sd = qc::standard_cv(&t, &s, &v.method, 1).unwrap();
     assert!(sd > 0.0 && sd < 0.1);
     let doc = report::to_json(&t, &s, Some(&v), &"ab".repeat(32));
     let d = parse(doc.as_bytes()).unwrap();
@@ -164,4 +164,41 @@ fn qc_json_has_the_blank_share_the_rejections_and_no_isotope_ratio_without_summa
     assert_eq!(sc.len(), 1);
     assert_eq!(sc[0].get("regola").and_then(|x| x.str()), Some("min_rilevati"));
     assert!(j.get("m1_su_m").unwrap().is_null());
+}
+
+#[test]
+fn replicate_cv_uses_the_sample_sd_and_the_population_sd_stays_selectable() {
+    use mzlab_feat::qc;
+    let (t, mut s) = (table(), samples());
+    s[2].time_min = Some(10.0);
+    s[3].time_min = Some(10.0);
+    // row 1 areas 2e6 and 4e6: mean 3e6, SD n-1 = 1.414e6 (0.4714), SD n = 1e6 (0.3333); the median row is row 2 (5e5, 9e5)
+    let spec = |extra: &str| format!("{{\"filtra\":[]{extra}}}");
+    let new = view::from_spec(&t, &s, spec("").as_bytes()).unwrap();
+    let old = view::from_spec(&t, &s, spec(",\"cv_ddof\":0").as_bytes()).unwrap();
+    let (gn, go) = (qc::groups(&t, &s, Some(&new)), qc::groups(&t, &s, Some(&old)));
+    assert!((gn[0].cv_median - 0.404_061_017_820_884_3).abs() < 1e-12);
+    assert!((go[0].cv_median - 0.285_714_285_714_285_7).abs() < 1e-12, "{}", go[0].cv_median);
+    // the ratio of the two is sqrt(n / (n - 1)) = sqrt(2) for two replicates
+    assert!((gn[0].cv_median / go[0].cv_median - 2f64.sqrt()).abs() < 1e-12);
+}
+
+#[test]
+fn cv_ddof_round_trips_changes_the_digest_is_written_in_qc_and_rejects_other_values() {
+    use mzlab_feat::qc;
+    let (t, s) = (table(), samples());
+    let new = view::from_spec(&t, &s, b"{\"filtra\":[]}").unwrap();
+    let old = view::from_spec(&t, &s, b"{\"filtra\":[],\"cv_ddof\":0}").unwrap();
+    assert!(!new.spec_json().contains("cv_ddof"), "default keeps the spec and the digest of existing views");
+    assert!(old.spec_json().contains("\"cv_ddof\":0"));
+    let back = view::from_spec(&t, &s, old.spec_json().as_bytes()).unwrap();
+    assert_eq!(back.cv_ddof, 0);
+    assert_ne!(new.digest(&t), old.digest(&t));
+    assert_eq!(old.digest(&t), back.digest(&t));
+    let q = |v: Option<&view::View>| parse(qc::to_json(&t, &s, v).as_bytes()).unwrap().get("cv_ddof").and_then(|x| x.f64());
+    assert_eq!((q(None), q(Some(&new)), q(Some(&old))), (Some(1.0), Some(1.0), Some(0.0)));
+    for bad in ["2", "-1", "0.5", "true", "\"0\""] {
+        let spec = format!("{{\"filtra\":[],\"cv_ddof\":{bad}}}");
+        assert!(view::from_spec(&t, &s, spec.as_bytes()).is_err(), "{bad}");
+    }
 }

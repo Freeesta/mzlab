@@ -43,7 +43,7 @@ const RAPPORTO = (() => {
     /** @type {any} */ const qa = { ioni: [], rapporto_campione_bianco: null, feature_mzfinder: null };
     if (window.QAQC && qaFeat()) {
       const r = await QAQC.run();
-      qa.ioni = r.ions.filter(o => !o.error).map(o => ({ etichetta: o.ion.label, funzione: o.ion.kind === "known" ? "ione noto" : "standard interno", file: o.files, ruoli: o.roles, ...slim(o.r) }));
+      qa.ioni = r.ions.filter(o => !o.error).map(o => ({ etichetta: o.ion.label, funzione: o.ion.kind === "known" ? "known ion" : "internal standard", file: o.files, ruoli: o.roles, ...slim(o.r) }));
       if (QAQC.state.ratio.text) { try { const q = await QAQC.runRatio(); qa.rapporto_campione_bianco = { mz: q.mz, rt: q.rt, soglia: q.thr, area_media_bianchi: q.r.ratio.blank_area, file: q.files, ruoli: q.roles, aree: q.r.rows.map(x => (x ? x.area : 0)), rapporti: q.r.ratio.rows }; } catch (_) { /* ion not found */ } }
       if (hr) { try { const f = await QAQC.runFeatures(); if (f) qa.feature_mzfinder = { soglia: f.thr, bianchi: f.blanks, campioni: f.samples, righe: f.rows }; } catch (_) { /* no table */ } }
     }
@@ -73,7 +73,7 @@ table{border-collapse:collapse;width:100%;font-size:12px;margin:6px 0}th,td{bord
   function html(rep) {
     const P = rep.programma || {}, D = rep.disegno_studio, A = rep.acquisizione, X = rep.elaborazione, Q = rep.qaqc;
     const qaOn = !!Q;      // section 4 (QA/QC) exists only when QA/QC is on: the numbering of the next one follows
-    let h = `<!doctype html><html lang="${eh(rep.lingua || "it")}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${eh(t("rep.title"))}</title><style>${CSS}</style></head><body>`;
+    let h = `<!doctype html><html lang="${eh(rep.lingua || "en")}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${eh(t("rep.title"))}</title><style>${CSS}</style></head><body>`;
     h += `<h1>${eh(t("rep.title"))}</h1><p class="m">${eh(t("rep.sub", { name: P.nome || "", ver: P.versione || "", commit: P.commit || "", date: (rep.creato || "").slice(0, 19).replace("T", " ") }))}</p><p class="m">${eh(t(qaOn ? "rep.note" : "rep.note.plain"))}</p>`;
     h += `<h2>1. ${eh(t("rep.s1"))}</h2><p>${eh(t("rep.s1.sum", { n: D.n_file, s: D.ruoli.sample, b: D.ruoli.blank, q: D.ruoli.qc, st: D.ruoli.standard, d: D.ruoli.dark }))}</p>`;
     h += tab([t("qaqc.col.file"), t("qaqc.col.type"), t("rep.size"), t("rep.time"), "SHA-256"], D.file.map(f => [f.nome, roleTxt(f.ruolo), f.dimensione, f.tempo == null ? "–" : String(f.tempo), `<${f.sha256}>`].map((c, i) => (i === 4 ? String(c).slice(1, -1) : c))));

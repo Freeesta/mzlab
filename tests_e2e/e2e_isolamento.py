@@ -38,7 +38,7 @@ try:
             pg.evaluate("location.hash = '#/data'"); pg.wait_for_selector("#demobtn", timeout=30000)
             pg.click("#demobtn"); pg.click("#demochoice [data-demo=full]")
             pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length===5", timeout=60000)
-            pg.click("text=Carica dati"); ready(pg)
+            pg.click("text=Load data"); ready(pg)
             assert pg.evaluate("tabFiles('full').length") == 5
             assert not pg.evaluate("(window.MZLAB_LR_MISS || []).length")
         step("engine idle, MZLAB_LR_MISS empty", data_view)

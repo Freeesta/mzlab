@@ -33,6 +33,7 @@ mod flow_chimeric;
 #[cfg(test)]
 mod flow_chimeric_tests;
 mod flow_compare;
+mod flow_curve;
 #[cfg(test)]
 mod flow_detect_adap_tests;
 #[cfg(test)]
@@ -159,6 +160,7 @@ mod name_rule_tests;
 pub mod normative;
 mod par;
 mod peaks_auto_cmd;
+mod peaks_auto_lr_cmd;
 mod peaks_edges_cmd;
 mod plain;
 mod samples_cmd;
