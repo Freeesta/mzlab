@@ -13,4 +13,6 @@ console.log(JSON.stringify([
   isDirty(b, s, false),             // same canvas as the saved one (undo back): clean
   isDirty(c, s, false),             // edited after the save
   isDirty(c, s, true),              // cleared after the save: nothing to lose
+  canon('{"x":[1.00000004]}') === canon('{"x":[1.00000011]}'),   // coordinate noise of 1e-7 is not an edit
+  canon('{"x":[1.0]}') === canon('{"x":[1.01]}'),               // a real move is
 ]));

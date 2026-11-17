@@ -12,4 +12,4 @@ pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is no
 
 def test_dirty_state_compares_a_stable_text_of_the_canvas():
     out = json.loads(subprocess.run(["node", str(MJS)], check=True, capture_output=True, encoding="utf-8").stdout)
-    assert out == [True, False, "not json", False, True, False, True, False]
+    assert out == [True, False, "not json", False, True, False, True, False, True, False]

@@ -27,7 +27,7 @@ try:
         def add(smi="CCO"): pg.evaluate(f"{K}.addFragment('{smi}')"); poll(lambda: not blank())
         def load(smi):
             pg.evaluate(f"(() => {{ window.__p = TPDraw.load({smi!r}); }})()")
-        def done(): return pg.evaluate("window.__p")      # awaits the load
+        def done(): return pg.evaluate("Promise.race([window.__p, new Promise(r => setTimeout(() => r('pending'), 15000))])")      # the load, or «pending» when a question is still open
 
         def clean():
             assert blank() and not unload(), "empty canvas: nothing to warn, no beforeunload handler"
@@ -59,7 +59,7 @@ try:
         step("a load over a dirty canvas asks; Esc cancels", cancel)
 
         def save_and_replace():
-            ket_before = pg.evaluate(f"{K}.getKet()")
+            smi_before = pg.evaluate("TPDraw.smiles()"); n_before = pg.evaluate(f"[{K}.editor.struct().atoms.size, {K}.editor.struct().bonds.size]")
             load("CCC"); pg.wait_for_selector("#draw-unsaved", timeout=5000)
             assert pg.input_value("#draw-unsaved #mm-fmt") == "ket", "the lossless .ket is the default"
             with pg.expect_download(timeout=60000) as d: pg.click("#draw-unsaved #mm-save")
@@ -70,7 +70,9 @@ try:
             assert pg.evaluate("TPDraw.smiles()") == "CCC"
             pg.evaluate(f"(() => {{ window.__p = TPDraw.load({text!r}); }})()"); frames(pg, 20)      # the saved file reopens to the same canvas
             assert done() is True and not dlg(), "a load over a clean canvas asks nothing"
-            poll(lambda: pg.evaluate(f"{K}.getKet()") == ket_before)
+            poll(lambda: pg.evaluate("TPDraw.smiles()") == smi_before)      # Ketcher recentres a loaded file, so the same structure, not the same coordinates
+            n = lambda: pg.evaluate(f"[{K}.editor.struct().atoms.size, {K}.editor.struct().bonds.size]")
+            assert n() == n_before, (n(), n_before)
         step("«Save and replace» downloads a .ket that reopens to the same canvas", save_and_replace)
 
         def drop_and_format():
@@ -91,17 +93,16 @@ try:
             add("O"); poll(unload)
             new.click(); pg.wait_for_selector("#draw-unsaved", timeout=5000)
             assert pg.inner_text("#draw-unsaved #mm-save") == "Save and clear"
-            pg.screenshot(path=os.environ.get("MZLAB_SHOT", "/tmp/dialog_unsaved.png"))
             pg.click("#draw-unsaved #mm-no"); poll(lambda: not dlg())
         step("«New»: saved asks the plain question, unsaved the «not saved» one", new_clean_and_tab)
 
         def real_unload():
-            seen = []
-            pg.on("dialog", lambda dd: (seen.append(dd.type), dd.accept()))
-            pg.click("#v-draw", position={"x": 5, "y": 5}) if False else None
-            pg.close(run_before_unload=True); frames_ok = True
-            assert seen == ["beforeunload"], seen
-        step("closing the tab with a dirty canvas raises the browser's beforeunload prompt", real_unload)
+            pg.mouse.click(700, 400)      # a page needs a user gesture before it may ask on unload
+            with pg.expect_event("dialog", timeout=15000) as dd:
+                pg.evaluate("setTimeout(() => location.reload(), 50)")
+            assert dd.value.type == "beforeunload", dd.value.type
+            dd.value.dismiss()            # stay on the page
+        step("leaving the page with a dirty canvas raises the browser's beforeunload prompt", real_unload)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

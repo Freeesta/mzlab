@@ -3,9 +3,10 @@
 // One question, `confirmDiscard()`, guards every way the canvas is lost on the page («New», a load over it, the desktop window close); the browser's own
 // `beforeunload` prompt is armed only while dirty (a page cannot word that prompt nor start a download from it). Page only: no CLI route, nothing in the engine.
 
-/** @param {unknown} v @returns {unknown} the same value with every object's keys in sorted order */
+/** @param {unknown} v @returns {unknown} the same value with every object's keys in sorted order and numbers rounded to 1e-4 */
 function sorted(v) {
   if (Array.isArray(v)) return v.map(sorted);
+  if (typeof v === "number") return Math.round(v * 1e4) / 1e4;        // Ketcher moves coordinates by ~1e-7 after a load or a zoom: not an edit
   if (v && typeof v === "object") { const o = /** @type {Record<string, unknown>} */ (v), r = /** @type {Record<string, unknown>} */ ({}); for (const k of Object.keys(o).sort()) r[k] = sorted(o[k]); return r; }
   return v;
 }
@@ -27,7 +28,7 @@ const T = () => ({
 const t = (/** @type {string} */ k) => /** @type {any} */ (window).I18N.t(k);
 /** @type {Hooks | null} */ let hooks = null;
 /** @type {string | null} */ let saved = null;
-let dirty = false;
+let dirty = false, gen = 0;       // `gen` changes when the saved state does: a check that started before it is stale and dropped
 /** @type {Promise<boolean> | null} */ let pending = null;
 
 const warn = (/** @type {Event} */ e) => { e.preventDefault(); /** @type {any} */ (e).returnValue = ""; };       // the browser shows its own generic prompt
@@ -41,11 +42,11 @@ function arm(on) {
 
 /** @returns {Promise<boolean>} recomputes the state from the canvas and arms or disarms the prompt */
 export async function check() {
-  const K = hooks && hooks.K();
+  const K = hooks && hooks.K(), g = gen;
   if (!K) return false;
   let blank = true, ket = "";
   try { blank = K.editor.struct().isBlank(); if (!blank) ket = await K.getKet(); } catch (_) { return dirty; }
-  arm(isDirty(ket, saved, blank));
+  if (g === gen) arm(isDirty(ket, saved, blank)); else return check();
   return dirty;
 }
 
@@ -53,8 +54,9 @@ export async function check() {
 export async function markSaved() {
   const K = hooks && hooks.K();
   if (!K) return;
+  gen++;
   try { saved = K.editor.struct().isBlank() ? null : canon(await K.getKet()); } catch (_) { return; }
-  arm(false);
+  arm(false); gen++;
 }
 
 /** @param {Hooks} h `K` gives Ketcher (or null), `save(kind)` is the panel's own export (true = the download was triggered) */
@@ -75,7 +77,7 @@ export async function confirmDiscard(why) {
   const K = hooks && hooks.K();
   if (!K || !hooks) return true;
   if (pending) return pending.then(() => false);
-  const d = dirty || await check();
+  const d = await check();
   let blank = true; try { blank = K.editor.struct().isBlank(); } catch (_) { /* no isBlank: treat as empty */ }
   if (blank || (!d && why !== "new")) return true;
   const fr = /** @type {HTMLIFrameElement | null} */ (document.getElementById("kframe")), doc = fr && fr.contentDocument;
