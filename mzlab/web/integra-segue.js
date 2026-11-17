@@ -1,8 +1,18 @@
 // @ts-nocheck
 // The windows drawn by hand on an ion or transition trace (SIM/MRM panel) follow the sample shown: on a trace of the same channel with no window of its own,
 // the windows of the sample that holds the last one drawn on that channel are drawn again (same minutes and anchors) and measured on that trace. A follower is
-// view state only: never in p.ints, the session, undo or the «Manual integrations» table; drawing a window on that sample commits it. Loaded by grafici.js.
+// view state only: never in p.ints, the session or undo (the source window is, with its name `nm` and the names given to one sample alone `fn`); the table
+// «Manual integrations» has a row for each (the engine applies the same windows: `follow` of manint.rs). The apex is searched in each sample by the engine
+// (api/manfollow, MANINT.follow): a peak that drifted moves the window, none leaves it and says so. Drawing a window on that sample overrides it there.
 const SG_C = new WeakMap();      // panel -> Map(follower id -> follower): the same object across redraws, so the engine's answers cached per record stay
+// the windows that apply to the other samples: those of the sample that holds the last one drawn on each channel
+function sgSources(p) {
+  if (!ESP.mrm(p) || !p.ints.length) return [];
+  const last = new Map(); for (const it of p.ints) { const c = last.get(it.ion); if (!c || it.id > c.id) last.set(it.ion, it); }
+  return p.ints.filter(i => last.get(i.ion).key === i.key);
+}
+// the name of a follower: the one given to its sample alone, else the group's (the source's)
+const sgName = (src, key) => (src.fn && src.fn[key]) || src.nm || "";
 // the committed windows of the panel and, for every shown trace of a channel with no window of its own, the followers of the last windows drawn on that channel
 function sgAll(p, sr) {
   if (!ESP.mrm(p) || !p.ints.length) return p.ints;
@@ -14,9 +24,13 @@ function sgAll(p, sr) {
       const a = Math.min(src.a, src.b), b = Math.max(src.a, src.b), id = "fol|" + s.key + "|" + src.id, an = src.snap ? JSON.stringify([src.snap, src.my || {}]) : "";
       const sig = [a, b, src.bm || "", src.zero ? 1 : 0, an].join("|");
       let f = old.get(id);
-      if (!f || f.sig !== sig) f = { fol: true, sig, id, k: s.k, key: s.key, ion: src.ion, a, b, name: s.name, src: src.file, ...(src.zero ? { zero: true } : {}),
+      if (!f || f.sig !== sig) f = { fol: true, sig, id, srcId: src.id, k: s.k, key: s.key, ion: src.ion, a, b, name: s.name, src: src.file, ...(src.zero ? { zero: true } : {}),
         ...(src.snap ? { snap: { ...src.snap }, ...(src.my ? { my: { ...src.my } } : {}) } : src.bm ? { bm: src.bm, ...(src.bm === "line" ? { bl: edgeLine(s, a, b, null) } : {}) } : {}) };   // anchors are placed again on this trace
-      let n = 0; for (const t of s.x) if (t >= a && t <= b && ++n > 1) break;
+      // where the engine put the window on this sample (its apex searched within the window's width), the source's edges until it answers
+      const ans = window.MANINT && MANINT.follow ? MANINT.follow(p, src, s.k, sr) : undefined;
+      f.a = ans ? ans.a : a; f.b = ans ? ans.b : b; f.org = ans ? ans.origin : ""; f.shift = ans ? ans.shift : 0; f.nm = sgName(src, s.key);
+      if (f.bm === "line" && !f.snap) f.bl = edgeLine(s, f.a, f.b, null);
+      let n = 0; for (const t of s.x) if (t >= f.a && t <= f.b && ++n > 1) break;
       f.none = n < 2;                                                // no points of this sample in the window: an empty state, never a number
       now.set(id, f); out.push(f);
     }
@@ -37,6 +51,8 @@ function sgTip(p, it) {
   const bm = it.bm ? `<div class="sm">${I18N.t("int.base.tip", { b: I18N.t("int.base.tag." + it.bm) })}</div>` : "";
   if (it.none) return `<div>${I18N.t("int.follow.none")}</div>` + bm;
   const sn = window.MANINT && MANINT.snr ? MANINT.snr(p, it) : undefined;
-  return `<div>${I18N.t("int.follow.sn", { sn: sn === undefined ? "…" : sn || "—" })}</div>` + bm + `<div class="sm">${I18N.t("int.follow.note", { f: EH(it.src || "") })}</div>`;
+  const ORG = { applied: "int.follow.org.applied", shifted: "int.follow.org.shifted", no_peak: "int.follow.org.nopeak", manual: "int.follow.org.manual" };   // literal keys: tools/controlla_i18n.py reads them
+  const org = it.org && ORG[it.org] ? `<div class="sm">${I18N.t(ORG[it.org], { d: I18N.sciE(it.shift, 2), f: EH(it.src || "") })}</div>` : "";
+  return `<div>${I18N.t("int.follow.sn", { sn: sn === undefined ? "…" : sn || "—" })}</div>` + bm + org + `<div class="sm">${I18N.t("int.follow.note", { f: EH(it.src || "") })}</div>`;
 }
-window.SEGUE = { all: sgAll, none: sgNone, tip: sgTip, dots: sgDots };
+window.SEGUE = { all: sgAll, sources: sgSources, name: sgName, none: sgNone, tip: sgTip, dots: sgDots };

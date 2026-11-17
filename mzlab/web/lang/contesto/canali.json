@@ -5,7 +5,7 @@
   "int.base.tip": "Line of the box on the \"A = …\" label of an integration: the baseline used; {b} = name of the mode (int.base.tag.*).",
   "int.follow.sn": "Box on the label of a window that follows the sample (SIM/MRM): signal-to-noise ratio measured by the engine; {sn} = number, \"…\" while waiting, \"—\" without a peak.",
   "canali.manint.cp.aria": "Accessible name of a copyable cell (apex, area, height) of the \"Manual integrations\" table; {c} = column header, {v} = value shown.",
-  "int.follow.note": "Box on the label of a window that follows the sample: which sample it comes from and how it becomes a table row; {f} = name of the sample where it was drawn.",
+  "int.follow.note": "Box on the label of a window applied from another sample: where it comes from and that drawing one on this sample overrides it; {f} = name of the sample where it was drawn.",
   "int.anchor.a": "Tooltip (title and aria-label) of the first anchor point of a SIM/MRM integration; {rt} = time in minutes, {y} = intensity, {m} = anchoring mode (Follow the curve, At zero, Manual).",
   "int.anchor.b": "Like int.anchor.a, for the second anchor point.",
   "canali.manint.title": "Title of the manual integrations card in Data; {n} = number of integrated windows.",
@@ -16,5 +16,11 @@
   "canali.btn.aria": "Accessible name of the channels button; {n} = number of traced channels.",
   "canali.pick.ck": "Tooltip on hovering the checkbox of a row of the transition / SIM ion picker; {et} = channel label (m/z).",
   "canali.row": "Description read by a screen reader of a row of the channel tree; {et} = channel label, {n} = number of points (scans), {a} and {b} = start and end time in minutes.",
-  "canali.kind.aria": "Accessible name of the button that chooses what the chromatogram traces; {v} = button text (for example TIC or TIC + 1)."
+  "canali.kind.aria": "Accessible name of the button that chooses what the chromatogram traces; {v} = button text (for example TIC or TIC + 1).",
+  "canali.manint.nopeak.tip": "Tooltip (max 60 characters) on the area and height of a row with no peak found: they are those of the window left where it was, not a result.",
+  "canali.manint.applied": "Announcement (aria-live) after a drawn integration has been applied to other samples; {n} = number of samples that have an applied row.",
+  "int.follow.org.applied": "Line of the tooltip of an integration applied to another sample: the peak is inside the window; {f} = source sample, {d} = shift (not used here).",
+  "int.follow.org.shifted": "Tooltip: the window was moved to follow the peak (retention time drift); {d} = shift in minutes, already formatted; {f} = source sample.",
+  "int.follow.org.nopeak": "Tooltip: no peak in this sample, the window of the source sample {f} stays; {d} not used.",
+  "int.follow.org.manual": "Tooltip of a window drawn by hand on this sample (not applied from another one)."
 }

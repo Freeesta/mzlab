@@ -649,10 +649,16 @@ mzlab-cli manual-table: the integrations drawn by hand on transition / SIM trace
 usage: mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--out PATH]
 
   FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in the order of the page
-  --set windows=PATH  a JSON list of windows [{"file": I, "tr": J, "a": MIN, "b": MIN, "baseline": "zero"|"edges"|"line", "line": [t0, y0, t1, y1], "label": NAME}]:
+  --set windows=PATH  a JSON list of windows [{"file": I, "tr": J, "a": MIN, "b": MIN, "baseline": "zero"|"edges"|"line", "line": [t0, y0, t1, y1], "label": NAME,
+                      "follow": true, "names": {"I": NAME}}]:
                       I = the sample (from 0, in the order above), J = its transition in the list of the file, a and b the edges in min,
-                      NAME the name given to the window (at most 40 characters, optional)
+                      NAME the name given to the window (at most 40 characters, optional). follow: apply the window to the same channel of every
+                      other sample that has no window of its own on it (the apex is searched within the window's width on each side; an apex
+                      outside the window moves it, no peak leaves it: column origin = manual|applied|shifted|no_peak); names: a name for one
+                      sample alone, by its place I
   --set sums=true     after the windows of each channel a row sum with the sum of their areas
+  --set shifts=true   instead of the table, where the FIRST window lands in the other samples, as JSON
+                      [{"file", "tr", "a", "b", "shift", "origin"}] (the bytes of the page's api/manfollow)
   --out PATH  write there instead of the standard output
 
 Columns: channel (m/z of a SIM ion, q1>q3 of a transition, ion N without Q1), sample, label (the name of the window), area (counts x s), start_min,
