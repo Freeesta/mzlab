@@ -1,5 +1,5 @@
 //! The text of `quant.curve@1`: calibration lines fitted to the integrated peaks of the standards (`mzlab_core::calib`), the back-calculation of every
-//! standard and of the unknowns, LOD/LOQ by two named conventions, as a `taratura/1` JSON and a long CSV of concentrations. Inputs are read by
+//! standard and of the unknowns, LOD/LOQ by two named conventions, as a `calibration/1` JSON and a long CSV of concentrations. Inputs are read by
 //! `curve_read.rs`, outputs written by `curve_write.rs`. Every automatic choice (a row skipped, a peak cut at the window edge kept, an S/N not used, a
 //! point left out or kept with a doubtful response, a unit that differs, the range, a limit not computed) is a line of `log`; outliers only on the
 //! user's `exclude`. Bytes in, text out: `flow run` and `flowcal`.
@@ -388,7 +388,7 @@ impl<'a> Run<'a> {
     }
 }
 
-/// The `taratura/1` JSON, the concentrations CSV and the `warn.flow.curve.*` keys of the conditions met.
+/// The `calibration/1` JSON, the concentrations CSV and the `warn.flow.curve.*` keys of the conditions met.
 pub fn curve_text(
     params: &[(String, Value)],
     responses: &[u8],
@@ -404,7 +404,7 @@ pub fn curve_text(
     } else {
         "quadratic"
     };
-    o.raw("{\"format\":\"taratura/1\",\"signal\":")
+    o.raw("{\"format\":\"calibration/1\",\"signal\":")
         .str(if run.set.by_height { "height" } else { "area" });
     o.raw(",\"model\":")
         .str(model)

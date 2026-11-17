@@ -65,7 +65,7 @@ fn line<'a>(csv: &'a str, start: &str) -> &'a str {
 fn an_exact_line_back_calculates_its_standards_and_flags_the_unknowns() {
     let (r, s) = exact();
     let (doc, csv, warn) = run(&[], &r, &s);
-    assert_eq!(doc.get("format").and_then(Value::str), Some("taratura/1"));
+    assert_eq!(doc.get("format").and_then(Value::str), Some("calibration/1"));
     assert_eq!(doc.get("weight").and_then(Value::str), Some("1/x"));
     let c = doc.get("curves").unwrap().at(0).unwrap();
     close(num(c, "a"), 100.0);
