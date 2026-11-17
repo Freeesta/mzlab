@@ -75,8 +75,8 @@ try:
         def spec_zoom():
             pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); frames(pg, 6); ready(pg)     # rows under the header (RT, CE, sample) arrive with the data: let the canvas settle before taking pixels
             s0 = pg.evaluate(f"(()=>{{const s={SPEC};return {{ym:s._a.ymax,x0:s._a.x0,x1:s._a.x1}}}})()")
-            YM = "Math.min(p._a.ymax,p._a.yfull[1])"      # the intensity lock can keep a top higher than the automatic one: the box must be inside the automatic range to zoom y
-            u = pt(SPEC, "p._a.x0+(p._a.x1-p._a.x0)*0.3", YM + "*0.6"); v = pt(SPEC, "p._a.x0+(p._a.x1-p._a.x0)*0.5", YM + "*0.05")
+            YM = "Math.min(p._a.ymax,p._a.yfull[1])"      # the intensity lock can keep a top higher than the automatic one: the box must be inside the automatic range to zoom y, and taller than the 4 px of a click (a short canvas with a locked top makes a small box)
+            u = pt(SPEC, "p._a.x0+(p._a.x1-p._a.x0)*0.3", YM + "*0.98"); v = pt(SPEC, "p._a.x0+(p._a.x1-p._a.x0)*0.5", YM + "*0.01")
             pg.mouse.move(u["x"], u["y"]); pg.mouse.down(); pg.mouse.move(v["x"], v["y"], steps=5); pg.mouse.up()
             try: wait_for_js(pg, SPEC + ".zoom && " + SPEC + ".zoomY")
             except Exception:       # what the drag met, to read in the CI log
