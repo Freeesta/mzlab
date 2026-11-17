@@ -87,7 +87,7 @@ def evaluate(repo: Path, pr: int, sha: str) -> dict:
     events = ci_metrics.branch_events(repo=str(repo))
     res["verde"], job = ci_green(events, sha)
     if not res["verde"]:
-        res["motivo"] = f"CI non verde: {job}"
+        res["motivo"] = f"CI not green: {job}"
         return res
     res["rischi"] = risks(git(repo, "diff", "--name-only", f"origin/main...{sha}").stdout.split(), csp_changed(repo, sha))
     res["combine"], reason = combine(repo, sha)

@@ -38,7 +38,8 @@ def cli_table(st):
     order = [n[:-5] for n in st["names"]]
     ws = [{**x, "file": SAMPLES.index(order[x["file"]])} for x in json.loads(st["windows"])]
     w = D / "windows.json"; w.write_text(json.dumps(ws))
-    return cli("manual-table", D / "sim3.wiff", "--set", f"windows={w}")
+    t = D / "times.json"; t.write_text(json.dumps(st["times"]))      # the time points the page shows (the helper fills the ones the names lack)
+    return cli("manual-table", D / "sim3.wiff", "--set", f"windows={w}", "--set", f"times={t}")
 
 r = Run(port=8879, wd="/tmp/wd_integrazione_auto")
 try:
@@ -56,8 +57,8 @@ try:
         def groups():
             rows = pg.evaluate(ROWS)
             heads = pg.evaluate("[...document.querySelectorAll('#manint thead th')].map(c => c.textContent)")
-            want = [pg.evaluate("k => I18N.t('canali.manint.h.' + k)", k) for k in ("channel", "sample", "label", "area", "start", "end", "apex", "height", "snr", "base", "origin")]
-            need(heads[:11] == want, ("columns in the order of the owner", heads))
+            want = [pg.evaluate("k => I18N.t('canali.manint.h.' + k)", k) for k in ("channel", "sample", "time", "label", "area", "start", "end", "apex", "height", "snr", "base", "origin")]
+            need(heads[:12] == want, ("columns in the order of the owner", heads))
             T = lambda k: pg.evaluate("k => I18N.t('canali.manint.org.' + k)", k)
             ion = lambda x: x[0]
             # every peak the writer put in a sample has one row at its apex; its origin says whether another sample has the same peak (the same channel)
@@ -65,10 +66,10 @@ try:
             for s, name in enumerate(SAMPLES):
                 for j, pk in enumerate(PK[s]):
                     for t in pk:
-                        hit = [x for x in rows if x[1] == name and abs(float(x[6]) - t) < 0.06]
+                        hit = [x for x in rows if x[1] == name and abs(float(x[7]) - t) < 0.06]
                         need(len(hit) == 1, ("a row at the peak the writer put", name, j, t))
                         twins = [x for s2 in range(len(SAMPLES)) if s2 != s for t2 in PK[s2][j] if abs(t2 - t) < 0.10
-                                 for x in rows if x[1] == SAMPLES[s2] and abs(float(x[6]) - t2) < 0.06]
+                                 for x in rows if x[1] == SAMPLES[s2] and abs(float(x[7]) - t2) < 0.06]
                         need(hit[0][-2] == (T("auto") if twins else T("unmatched")), ("origin", name, j, t, hit[0][-2], len(twins)))
                         need(all(x[0] == hit[0][0] for x in twins), ("the same peak is in the same channel", name, j, t))
         step("one row per peak, matched across the files, with its origin", groups)

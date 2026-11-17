@@ -40,7 +40,7 @@ try:
         step("no selection: no header line, the menu is named «Whole drawing»", whole)
         def part():
             opened("Selection (2 atoms)", 0)
-            rr = rows(); assert rr[:3] == ["copy-smiles", "info", "center"] and not {"break-bonds", "cut-bonds", "expected-ions"} & set(rr), rr
+            rr = rows(); assert rr[:6] == ["copy", "cut", "delete", "copy-smiles", "info", "center"] and not {"break-bonds", "cut-bonds", "expected-ions"} & set(rr), rr
             t = pg.locator("#ctx div[data-row=copy-smiles]").inner_text(); assert "CC" in t and "O" not in t, t     # the piece, not the whole drawing
         step("a selected bond: menu named «Selection (2 atoms)», SMILES of the piece, no bond rows", part)
         def added():
@@ -50,7 +50,7 @@ try:
               TPDraw.menu.add({ id: 'test-bad', order: 16, show: () => { throw new Error('boom'); }, label: 'x', run: () => {} }); })()""")
             ids = pg.evaluate("TPDraw.menu.ids()"); assert ids.index("test-sel") == ids.index("copy-smiles") + 1, ids
             opened("Selection (2 atoms)", 0)
-            rr = rows(); assert rr[:4] == ["copy-smiles", "test-sel", "info", "center"] and "test-whole" not in rr and "test-bad" not in rr, rr
+            rr = rows(); assert rr[:7] == ["copy", "cut", "delete", "copy-smiles", "test-sel", "info", "center"] and "test-whole" not in rr and "test-bad" not in rr, rr
             pg.locator("#ctx div[data-row=test-sel]").click()                # select, right click, row: two clicks
             assert pg.evaluate("window._got") == [2, False, 1], pg.evaluate("window._got")
             assert pg.locator("#ctx").is_hidden()

@@ -48,7 +48,8 @@ def cli_table(pg, st):
         if "names" in y: y["names"] = {str(SAMPLES.index(order[int(i)])): n for i, n in y["names"].items()}
         ws.append(y)
     w = D / "windows.json"; w.write_text(json.dumps(ws))
-    return cli("manual-table", D / "sim3.wiff", "--set", f"windows={w}")
+    t = D / "times.json"; t.write_text(json.dumps(st["times"]))      # the time points the page shows (the helper fills the ones the names lack)
+    return cli("manual-table", D / "sim3.wiff", "--set", f"windows={w}", "--set", f"times={t}")
 
 r = Run(port=8878, wd="/tmp/wd_integrazione_multi")
 try:
@@ -65,8 +66,8 @@ try:
             rows = pg.evaluate(ROWS)
             need([x[:2] for x in rows] == [["253.1", s] for s in SAMPLES], rows)         # grouped by channel, then sample, in the order of the files
             heads = pg.evaluate("[...document.querySelectorAll('#manint thead th')].map(c => c.textContent)")
-            want = [pg.evaluate("k => I18N.t('canali.manint.h.' + k)", k) for k in ("channel", "sample", "label", "area", "start", "end", "apex", "height", "snr", "base", "origin")]
-            need(heads[:11] == want, ("columns in the order of the owner, no «name in the method»", heads))
+            want = [pg.evaluate("k => I18N.t('canali.manint.h.' + k)", k) for k in ("channel", "sample", "time", "label", "area", "start", "end", "apex", "height", "snr", "base", "origin")]
+            need(heads[:12] == want, ("columns in the order of the owner, no «name in the method»", heads))
             org = {x[1]: x[-2] for x in rows}                 # the last cell is the action button
             T = lambda k: pg.evaluate("k => I18N.t('canali.manint.org.' + k)", k)
             need(org == {"Blank": T("nopeak"), "Sample_A": T("manual"), "Sample_B": T("applied"), "Sample_C": T("applied")}, org)
@@ -120,7 +121,7 @@ try:
             need(got == ["Caffeine 2", "Caffeine 2", "Caffeine 2", "Caffeine C"], got)
             st = pg.evaluate("MANINT.state()")
             need(st["csv"] == cli_table(pg, st), "the names are the bytes of mzlab-cli manual-table (`names`)")
-            tip = pg.evaluate("document.querySelector('#manint thead th:nth-child(3)').title")
+            tip = pg.evaluate("document.querySelector('#manint thead th:nth-child(4)').title")
             need(0 < len(tip) <= 60, tip)
             pg.evaluate("STORIA.annulla()"); frames(pg, 3)
             wait_for_js(pg, "!MANINT.state().csv.includes(',Caffeine 2,')", timeout=60000)

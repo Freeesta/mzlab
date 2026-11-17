@@ -1,7 +1,7 @@
 //! «Integrate peaks in all selected files»: the engine finds every peak of every SIM/MRM channel of every file (`peakq_lrauto::lr_auto_integrate`), puts the
 //! peaks of one channel that fall at the same time in different files into one group (apex within `rt_tol` of the group's mean) and returns them as the windows
 //! `manint::table_text` reads, plus a log per file. A peak alone in its group, while another file holds the channel, is marked `unmatched`. The page's
-//! `api/manauto`, the app op `auto` and `mzlab-cli manual-table --set auto=PATH` are these bytes.
+//! `api/manauto`, the app op `auto` and `mzlab-cli manual-table --set auto=true` (plus `--set params=PATH`) are these bytes.
 
 use super::{key_of, parse, samples_and_keys, Key, Result, Value};
 use crate::peakq_lrauto::{lr_auto_integrate, LrAutoParams};
@@ -87,7 +87,7 @@ pub fn auto_text(files: &str, params: &str) -> Result<String> {
     )?);
     let mut found: Vec<Found> = Vec::new();
     let mut log: Vec<String> = Vec::new();
-    for (file, (_, trs)) in samples.iter().enumerate() {
+    for (file, (_, trs, _)) in samples.iter().enumerate() {
         for tr in trs.iter().filter(|t| t.t.len() >= 2) {
             let last = tr.t[tr.t.len() - 1];
             let r = lr_auto_integrate(&tr.t, &tr.y, tr.t[0], last, lr);

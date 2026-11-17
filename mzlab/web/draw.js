@@ -10,11 +10,12 @@ import { mountBar } from "./disegno-barra.js"; import { mountRadical } from "./d
 import { mountTablet } from "./disegno-tablet.js"; import { mountNew } from "./disegno-nuovo.js"; import "./disegno-storage.js";
 import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js"; import { mountMech, ketWithoutMech, addExportMech } from "./disegno-meccanismo.js";
-import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partials, partialItems, pickBracket, deletePicked, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js"; import { stamp, freshName, exportName } from "./disegno-nomi.js";
+import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partials, partialItems, pickBracket, deletePicked, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js"; import { stamp, freshName, exportName } from "./disegno-nomi.js"; import { initAppunti } from "./disegno-appunti.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
 const Q = (/** @type {string} */ s) => document.querySelector(s);
+let AP = /** @type {any} */ (null);                       // clipboard and molecule selection for a finger (disegno-appunti.js), set when the editor is mounted
 let K = /** @type {DrawKet} */ (null), starting = /** @type {Promise<DrawKet> | null} */ (null), restored = false, timer = /** @type {number | undefined} */ (undefined), startTimeout = /** @type {number | undefined} */ (undefined);
 
 let kldTimer = /** @type {number | undefined} */ (undefined), kldN = 0;
@@ -170,23 +171,28 @@ function hideMacro(/** @type {HTMLIFrameElement} */ fr) {
 
     // Context menu on canvas / molecule (right click, ContextMenu key or Shift+F10; closes on a click or Esc inside the Ketcher document too)
     let ctxGen = 0;
+    AP = initAppunti(d, K, fr, { molfile: ids => /** @type {any} */ (pieceMolfile(ids)) });
     const openCtx = async (/** @type {any} */ ev, /** @type {boolean} */ kbd) => {
       const st = K && K.editor && K.editor.struct();
-      if (!st || st.isBlank()) return;
-      const hl = labelHit(ev); if (hl) { ev.preventDefault(); ev.stopPropagation(); labelMenu(ev, hl, fr, kbd); return; }      // right click on the label under a molecule
+      const blank = !st || st.isBlank();
+      if (!st || (blank && !AP.has())) return;                           // an empty canvas has a menu only to paste what was copied
+      const hl = blank ? null : labelHit(ev); if (hl) { ev.preventDefault(); ev.stopPropagation(); labelMenu(ev, hl, fr, kbd); return; }      // right click on the label under a molecule
       ev.preventDefault();
       ev.stopPropagation();
       const gen = ++ctxGen;                                              // the newest right click wins: an older one still waiting for Indigo neither fills nor shows the menu
+      // a long press with a finger on a molecule that is not selected selects the whole molecule first (the menu then acts on it)
+      const fromTouch = Date.now() - ((/** @type {any} */ (d.defaultView)).__tpLong || 0) < 400;
+      if (fromTouch && !blank && !(K.editor.selection() || {}).atoms) { const mol = AP.moleculeAt(ev); if (mol) AP.selectMolecule(mol); }
       const sel = K.editor.selection() || {};
       const set = new Set(sel.atoms || []);
       (sel.bonds || []).forEach((/** @type {number} */ id) => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
       /** @type {any} */ let smi = "";
       if (set.size) { try { smi = await pieceSmiles([...set]); } catch (_) {} }
-      if (!smi) { try { smi = plainSmiles(await indigo(() => K.getSmiles())); } catch (_) {} }
+      if (!smi && !blank) { try { smi = plainSmiles(await indigo(() => K.getSmiles())); } catch (_) {} }
       const frRect = fr.getBoundingClientRect();
       const mx = frRect.left + ev.clientX, my = frRect.top + ev.clientY;
       const m = Q("#ctx"); if (!m || gen !== ctxGen) return;
-      if (await menuFill(m, { K, ev, sel, atoms: set, bonds: [...(sel.bonds || [])], whole: !set.size, smiles: smi, x: mx, y: my, kbd }) && gen === ctxGen) ctxShow(m, mx, my, 240, kbd);
+      if (await menuFill(m, { K, ev, sel, atoms: set, bonds: [...(sel.bonds || [])], whole: !set.size, blank, touch: fromTouch, smiles: smi, x: mx, y: my, kbd }) && gen === ctxGen) ctxShow(m, mx, my, 240, kbd);
     };
     let kbdCtxAt = 0;                                                    // the ContextMenu key also raises a native contextmenu event: only the first one opens
     d.addEventListener("contextmenu", (/** @type {MouseEvent} */ ev) => { if (Date.now() - kbdCtxAt < 300) { ev.preventDefault(); ev.stopPropagation(); return; } openCtx(ev, false); }, true);
@@ -356,6 +362,13 @@ function mountCut(/** @type {HTMLIFrameElement} */ fr) { if (!cutLine) cutLine =
 const fragHelpers = { pieces: () => pieces(), pieceMolfile: (/** @type {number[]} */ ids) => pieceMolfile(ids), t: /** @type {(k: string, p?: Record<string, unknown>) => string} */ ((k, p) => I18N.t(k, p)), copy: (/** @type {string} */ s) => { copyText(s); },
   label: async (/** @type {number[]} */ ids, /** @type {string} */ delta) => { const st = K.editor.struct(), r = await labelsNow({ structures: [ids.map(i => atomOf(st.atoms.get(i)))], arrows: [], deltas: [delta] }), d = r && r.structures[0]; return d && !d.error ? { formula: d.text, mass: massOf({ ...d, q: d.charge }, +Q("#lb-dec").value) } : null; },   // what the label under the structure says
   num: (/** @type {number} */ v) => { const dec = +Q("#lb-dec").value; return dec ? rh(v, dec).toFixed(dec) : String(rh(v, 0)); }, table: (/** @type {Record<string, unknown>} */ o) => window.TDATI.table(o), ask: /** @type {(q: string, d?: string) => Promise<string | null>} */ ((q, d) => ask(EH(q), d)), note: (/** @type {string} */ s) => (window.toast ? toast(s) : dnote(s)) };
+// rows for a finger: select the molecule, copy, cut, paste, delete (disegno-appunti.js; they come first, the chemistry rows follow)
+menuAdd({ id: "select-molecule", order: 1, label: "draw.ctx.selectMolecule", title: "draw.ctx.selectMolecule.title", show: (/** @type {any} */ c) => { const m = AP.moleculeAt(c.ev); return !!m && !AP.covers(m); }, run: (/** @type {any} */ c) => AP.selectMolecule(AP.moleculeAt(c.ev)) });
+menuAdd({ id: "copy", when: "selection", order: 2, label: "draw.ctx.copy", title: "draw.ctx.copy.title", run: (/** @type {any} */ c) => { AP.copy().then((/** @type {boolean} */ ok) => { if (ok && c.touch) AP.arm(); else if (!ok) toast(I18N.t("draw.copy.fail")); }); } });
+menuAdd({ id: "cut", when: "selection", order: 3, label: "draw.ctx.cut", title: "draw.ctx.cut.title", run: (/** @type {any} */ c) => { AP.cut().then((/** @type {boolean} */ ok) => { if (ok && c.touch) AP.arm(); else if (!ok) toast(I18N.t("draw.copy.fail")); }); } });
+menuAdd({ id: "paste", order: 4, blank: true, label: (/** @type {any} */ c) => I18N.t(c.whole ? "draw.ctx.pasteHere" : "draw.ctx.paste"), title: (/** @type {any} */ c) => I18N.t(c.whole ? "draw.ctx.pasteHere.title" : "draw.ctx.paste.title"), show: () => AP.has(),
+  run: (/** @type {any} */ c) => { if (c.whole) AP.pasteHere(c.ev.clientX, c.ev.clientY); else if (c.touch) AP.arm(); else AP.pasteAttached(c.ev.clientX, c.ev.clientY); } });
+menuAdd({ id: "delete", when: "selection", order: 5, label: "draw.ctx.delete", title: "draw.ctx.delete.title", run: () => AP.del() });
 // built-in rows of the canvas menu (disegno-menu.js registry; other modules add theirs with TPDraw.menu.add, between these orders)
 const shortSmi = (/** @type {string} */ s) => s.length > 24 ? s.slice(0, 21) + "…" : s;
 menuAdd({ id: "copy-smiles", order: 10, label: (/** @type {any} */ c) => c.smiles ? I18N.t("draw.ctx.copySmilesOf", { smiles: shortSmi(c.smiles) }) : I18N.t("draw.ctx.copySmiles"), run: (/** @type {any} */ c) => { if (c.smiles) copyText(c.smiles); } });

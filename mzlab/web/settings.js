@@ -1,6 +1,6 @@
 // @ts-strict
 "use strict";
-// Settings gear: ONLY three controls (text size, theme, chart colours). Classic script, loaded after explore.js/tabs.js
+// Settings gear: one flat list (theme, font, chart colours, contrast, motion, XIC lens), then data and app groups. Classic script, loaded after explore.js/tabs.js
 // (uses UIP, PALS, setPal, paintFiles, Q, redrawAll from there). Everything is stored in localStorage inside try/catch: it may be blocked
 // (private window, strict settings) and the page must work without it.
 const UIP_KEY = NOMI.KEY("prefs"); // kept from the old name: renaming it would lose the users' data
@@ -119,7 +119,7 @@ try { const v = localStorage.getItem(NOMI.KEY("profilo")); if (v === "corso" || 
 function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminanti.on")) === "true"; } catch (_) { return false; } }
 
 // --- settings panel (shared pieces in impostazioni-comp.js)
-const UIP_GROUP_KEY = id => NOMI.KEY(id === "uip-a11y" ? "set.a11y" : "set." + id);      // the group «Accessibility» keeps the key it always had
+const UIP_GROUP_KEY = id => NOMI.KEY("set." + id);
 function uipGroupOpen(id, dflt) { try { const v = localStorage.getItem(UIP_GROUP_KEY(id)); return v === null ? dflt : v === "1"; } catch (_) { return dflt; } }
 function uipRestore() {            // theme, colours, reading and high-resolution options go back to the factory values; files and sessions are never touched
   uipDo(() => { Object.assign(UIP, { theme: "light", pal: "file", hrPpm: 5, hrDec: 4, xicLens: true }); QA11Y.write({}); });
@@ -133,10 +133,13 @@ function uipOpen(btn) {
   const d = document.createElement("div"); d.id = "uipset"; d.className = "impset"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", T("settings.title"));
   const pals = ["file", ...Object.keys(PALS).filter(k => k !== "file")].map(k => `<option value="${k}">${I18N.t(`settings.pal.${k}`)}</option>`).join("");
   const fld = (label, tip, inner) => `<div class="imp-fld" title="${esc(tip)}"><span>${label}</span>${inner}</div>`;
-  const look = C.section(T("settings.theme"), C.opts("seg3", C.radios("uip-th", [["auto", T("settings.theme.auto")], ["light", T("settings.theme.light")], ["dark", T("settings.theme.dark")]], UIP.theme, "seg"), T("settings.theme.tip")))
-    + `<div class="imp-fld imp-pal" title="${esc(T("settings.pal.title"))}"><label for="uip-pal">${T("settings.pal.label")}</label><select id="uip-pal">${pals}</select></div>`;
-  const read = C.section(T("settings.font.label"), C.opts("f3", C.radios("uip-font", [["", T("settings.font.default"), T("settings.font.default.tip")], ["atkinson", T("settings.font.atkinson"), T("settings.font.atkinson.tip")], ["dyslexic", T("settings.font.dyslexic"), T("settings.font.dyslexic.tip")]], a11y.font || "", "font")))
-    + C.sw(T("settings.hc.label"), T("settings.hc.tip"), 'id="uip-hc"', a11y.bg === "hc", "hc") + C.sw(T("settings.motion"), T("settings.motion.title"), 'id="uip-motion"', a11y.motion === "always", "motion");
+  // One flat list (no group headings), in order of use: Theme and Font as tile groups (radiogroups with a visible label), then rows with the control on the right.
+  const theme = C.section(T("settings.theme"), C.opts("seg3", C.radios("uip-th", [["auto", T("settings.theme.auto")], ["light", T("settings.theme.light")], ["dark", T("settings.theme.dark")]], UIP.theme, "seg"), T("settings.theme.tip"), "uip-th-l"), "uip-th-l");
+  const font = C.section(T("settings.font.label"), C.opts("f3", C.radios("uip-font", [["", T("settings.font.default"), T("settings.font.default.tip")], ["atkinson", T("settings.font.atkinson"), T("settings.font.atkinson.tip")], ["dyslexic", T("settings.font.dyslexic"), T("settings.font.dyslexic.tip")]], a11y.font || "", "font"), "", "uip-font-l"), "uip-font-l");
+  const rows = `<div class="imp-fld imp-pal" title="${esc(T("settings.pal.title"))}"><label for="uip-pal"><span class="ic">${C.GICON.pal}</span>${T("settings.pal.label")}</label><select id="uip-pal">${pals}</select></div>`
+    + C.sw(T("settings.hc.label"), T("settings.hc.tip"), 'id="uip-hc"', a11y.bg === "hc", "hc") + C.sw(T("settings.motion"), T("settings.motion.title"), 'id="uip-motion"', a11y.motion === "always", "motion")
+    + C.sw(T("settings.xiclens"), T("settings.xiclens.title"), 'id="uip-xiclens"', UIP.xicLens, "side");
+  const list = `<div class="imp-list" id="uip-list">${theme}${font}<div class="imp-rows">${rows}</div></div>`;
   const cen = window.MZLAB_BROWSER && typeof centroidTargets === "function" && centroidTargets().length
     ? `<div class="imp-fld"><button id="uip-cen" type="button" title="${esc(T("settings.cen.title"))}">${T("settings.cen.btn")}</button><button id="uip-cen-x" type="button" title="${esc(T("settings.cen.stop.tip"))}" hidden>${T("settings.cen.stop")}</button></div><div class="hint" id="uip-cen-st" role="status" aria-live="polite"></div>` : "";
   const dataItems = [
@@ -150,9 +153,7 @@ function uipOpen(btn) {
   const flat = (id, icon, title, items) => C.flatOrRow(id, icon, T(title), items);          // a fold or a title only for a real group of several controls
   const grp = (id, icon, title, body, dflt, tip) => body ? C.group(id, icon, T(title), body, uipGroupOpen(id, dflt), T(tip)) : "";
   d.innerHTML = `<div class="a-hd"><h2>${T("settings.title")}</h2><button type="button" class="x" id="uip-x" aria-label="${esc(T("settings.close"))}" title="${esc(T("settings.close.tip"))}"></button></div>`
-    + C.flat("uip-a11y", "read", T("settings.g.read"), read) + C.flat("uip-g-look", "look", T("settings.g.look"), look)
-    + flat("uip-g-data", "data", "settings.g.data", dataItems) + flat("uip-g-app", "app", "settings.g.app", appItems)
-    + C.flatOrRow("uip-g-xic", "look", T("settings.g.look"), [C.sw(T("settings.xiclens"), T("settings.xiclens.title"), 'id="uip-xiclens"', UIP.xicLens, "side")])      // a chart-interaction switch, kept among the last items
+    + list + flat("uip-g-data", "data", "settings.g.data", dataItems) + flat("uip-g-app", "app", "settings.g.app", appItems)
     + tour + C.bugRow(T("settings.g.bug"), T("settings.g.bug.tip")) + C.bugRow(T("settings.g.sug"), T("settings.g.sug.tip"), "sug")
     + (prof === "ricerca" ? grp("uip-g-llm", "app", "llm.g", '<div id="uip-llm"></div>', false, "llm.g.tip") : "") + grp("uip-g-diag", "cont", "settings.g.diag", mem ? mem.html : "", false, "settings.g.diag.tip")
     + `<div class="row"><button type="button" id="uip-reset" title="${esc(T("settings.reset.title"))}">${T("settings.reset")}</button></div>`;

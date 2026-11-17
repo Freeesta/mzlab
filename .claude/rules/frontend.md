@@ -5,6 +5,7 @@ paths:
   - "TP_Mine/**"
 ---
 # Interface rules
+- Everything in the repo is English (code, comments, docs, test names, messages, saved formats): no Italian anywhere.
 - Classic scripts in `index.html` order, ES modules for new files; texts only in the English catalog `lang/en/<area>.js` (`tools/controlla_i18n.py` enforces it). Tabui (`TP_Mine/`) is English-only, no `lang/` keys, never the bare word «formula».
 - Start-up scripts have a weight cap (`tests/test_peso_avvio.py`): new JS is lazy via `carica()`.
 - **Front end not tried in a browser is broken.** Every interface change keeps the guided tour (`tour.js`, `tests_e2e/e2e_tour.py`) valid.

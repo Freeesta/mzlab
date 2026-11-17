@@ -139,13 +139,13 @@ def i18n(results) -> None:
     p = subprocess.run([sys.executable, str(ROOT / "tools" / "controlla_i18n.py")], capture_output=True, text=True, encoding="utf-8", errors="replace")
     out = (p.stdout or "") + (p.stderr or "")
     (LOG / "i18n.log").write_text(out, encoding="utf-8")
-    results.append(("lingue (i18n)", "FAIL" if p.returncode else "OK", time.time() - t0, out.strip().splitlines()[:6] if p.returncode else []))
+    results.append(("languages (i18n)", "FAIL" if p.returncode else "OK", time.time() - t0, out.strip().splitlines()[:6] if p.returncode else []))
 
 
 def codice(results) -> None:
     """The index of the code can be generated and covers every source file (tools/indice.py); the size limits do not get worse (tools/controlla.py)."""
     subprocess.run([sys.executable, str(ROOT / "tools" / "indice.py")], capture_output=True)          # refresh the generated docs/agenti/mappa.md
-    for name, script, args in (("mappa del codice", "indice.py", ["--controlla"]), ("soglie di dimensione", "controlla.py", [])):
+    for name, script, args in (("code map", "indice.py", ["--controlla"]), ("size limits", "controlla.py", [])):
         t0 = time.time()
         p = subprocess.run([sys.executable, str(ROOT / "tools" / script)] + args, capture_output=True, text=True, encoding="utf-8", errors="replace")
         out = (p.stdout or "") + (p.stderr or "")
@@ -263,7 +263,7 @@ def hr_round(results) -> None:
     """Technical numbers of the real Orbitrap files (tools/prova_hr.py); nothing to check, only information."""
     dirs = hrms_dirs()
     if not dirs:
-        results.append(("prova_hr", "SKIP", 0, ["nessuna cartella HRMS (mzlab-dati/HRMS o ../Data/HRMS)"])); return
+        results.append(("prova_hr", "SKIP", 0, ["no HRMS folder (mzlab-dati/HRMS or ../Data/HRMS)"])); return
     for d in dirs:
         rc, out, dt = sh([sys.executable, str(ROOT / "tools" / "prova_hr.py"), str(d)], LOG / "prova_hr.log", 900)
         results.append((f"prova_hr {d.parent.name}/{d.name}", "OK" if rc == 0 and "ERRORE" not in out else "FAIL", dt,
@@ -289,7 +289,7 @@ def judge(out: str, rc: int) -> list[str]:
     m = re.search(r"BROWSER ERRORS (\d+)\n(.*?)(?:\n\S|\Z)", out, re.S)
     if m and int(m.group(1)):
         errs = [e for e in out[m.end(1):].splitlines()[1:int(m.group(1)) + 1] if e.strip() and not any(re.search(b, e) for b in BENIGN)]
-        probs += ["errore del browser: " + e.strip()[:200] for e in errs]
+        probs += ["browser error: " + e.strip()[:200] for e in errs]
     if rc and not probs:
         probs.append(f"uscita con codice {rc}: " + (out.strip().splitlines() or [""])[-1][:200])
     return probs
@@ -324,8 +324,8 @@ def parte_di(names: list[str], k: int, n: int) -> list[str]:
 def skip_why(need: set[str], *, dam: bool, src: str, only: bool, sito_pronto: bool) -> str:
     """Why an e2e with these NEEDS is skipped ("" = it runs). The `sito` ones run only when named (--solo) or when the CI says the full site is in place (--sito-pronto)."""
     return ("serve un file .dam (MZLAB_DAM / QQQ_DAM)" if "dam" in need and not dam else
-            "solo con i dati veri del laboratorio" if "veri" in need and src != "veri" else
-            "costruisce il sito con Pyodide: lancialo a parte (--solo)" if "sito" in need and not only and not sito_pronto else "")
+            "only with the real lab data" if "veri" in need and src != "veri" else
+            "builds the site with Pyodide: run it apart (--solo)" if "sito" in need and not only and not sito_pronto else "")
 
 
 def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | None = None, sito_pronto: bool = False) -> None:
@@ -365,7 +365,7 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
     if todo:           # the page the tests open is the built site with the Rust engine (tests_e2e/lib.py Run)
         rc, _out, dt = sh([sys.executable, str(ROOT / "tools" / "prepara_sito.py")], LOG / "prepara_sito.log", 3600, env=env)   # cold cache: engine, libraries, 9 reader families
         if rc:
-            results.append(("sito per gli e2e (tools/prepara_sito.py)", "FAIL", dt, ["vedi .verifica/log/prepara_sito.log"])); return
+            results.append(("site for the e2e (tools/prepara_sito.py)", "FAIL", dt, ["see .verifica/log/prepara_sito.log"])); return
     if shutil.which("cargo") and any("cargo" in (E2E / f"{n}.py").read_text(encoding="utf-8") for n in todo):      # the tests that call `cargo run` would each wait on cargo's build-folder lock, or rebuild a stale tree, inside the timeout of their own: build the two binaries once
         for pkg in (["-p", "mzlab-cli"], ["-p", "mzlab-feat-wasm", "--example", "native"]):
             rc, _out, dt = sh(["cargo", "build", "--release", "-q", *pkg], LOG / "precompila.log", 3000, env=env)
@@ -378,26 +378,26 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
         for r in ex.map(one, slow + [n for n in todo if n not in slow and n not in SOLI]):
             out_by[r[0]] = r
     out_by.update({n: one(n) for n in SOLI if n in todo}); results.extend(out_by[n] for n in names)
-    results.append(("dati usati per gli e2e", "INFO", 0, [f"{src}: {mz}" + (f" · .dam: {dam.name}" if dam else " · nessun .dam")]))
+    results.append(("data used by the e2e", "INFO", 0, [f"{src}: {mz}" + (f" · .dam: {dam.name}" if dam else " · no .dam")]))
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--rapida", action="store_true", help="sintassi + pytest + e2e3")
-    ap.add_argument("--solo", default="", help="solo questi e2e, separati da virgola (es. e2e6,e2e18)")
+    ap.add_argument("--solo", default="", help="only these e2e, comma-separated (e.g. e2e6,e2e18)")
     ap.add_argument("--senza-e2e", action="store_true")
-    ap.add_argument("--browser", choices=("chromium", "firefox", "webkit"), help="browser dei test e2e (predefinito chromium; webkit = il motore di Safari)")
-    ap.add_argument("--fumo", action="store_true", help="solo gli e2e di fumo (SMOKE), senza sintassi JS e pytest: è il giro del job «browser» della CI")
-    ap.add_argument("--setup", action="store_true", help="installa pytest, playwright e chromium se mancano")
-    ap.add_argument("--timeout", type=int, default=600, help="secondi per ogni e2e (predefinito 600)")
+    ap.add_argument("--browser", choices=("chromium", "firefox", "webkit"), help="browser of the e2e tests (default chromium; webkit = the Safari engine)")
+    ap.add_argument("--fumo", action="store_true", help="only the smoke e2e (SMOKE), without JS syntax and pytest: it is the round of the CI «browser» job")
+    ap.add_argument("--setup", action="store_true", help="install pytest, playwright and chromium if missing")
+    ap.add_argument("--timeout", type=int, default=600, help="seconds per e2e (default 600)")
     ap.add_argument("--paralleli", type=int, default=max(1, min(6, (os.cpu_count() or 2) - 1)),
-                    help="e2e eseguiti insieme (predefinito: CPU - 1, al massimo 6; 1 = uno alla volta)")
-    ap.add_argument("--ultimi-falliti", action="store_true", help="rilancia solo gli e2e che erano FAIL nel giro precedente (.verifica/ultimo.md)")
+                    help="e2e run together (default: CPU - 1, at most 6; 1 = one at a time)")
+    ap.add_argument("--ultimi-falliti", action="store_true", help="rerun only the e2e that were FAIL in the previous round (.verifica/ultimo.md)")
     ap.add_argument("--parte", default="", metavar="K/N", help="only part K of N of the complete run (the CI of notte.yml): part 1 also does syntax, texts, pytest and prova_hr, every part a share of the e2e")
     ap.add_argument("--budget", type=int, default=0, metavar="S", help="seconds for the whole run (notte.yml): when spent, no test starts, the running one is cut and the report is written (the tests not run are FAIL)")
     ap.add_argument("--sito-pronto", action="store_true", help="the built site with every .wasm is in place (notte.yml): the e2e that need `sito` run in --parte mode too")
-    ap.add_argument("--cambiati", action="store_true", help="solo gli e2e che riguardano i file cambiati rispetto a origin/main (vedi AREE); con file del nucleo li fa tutti")
-    ap.add_argument("--mostra-ok", "--tutto", dest="mostra_ok", action="store_true", help="stampa anche le righe OK (altrimenti solo FAIL/SKIP e il conteggio)")
+    ap.add_argument("--cambiati", action="store_true", help="only the e2e that concern the files changed against origin/main (see AREE); with core files it runs them all")
+    ap.add_argument("--mostra-ok", "--tutto", dest="mostra_ok", action="store_true", help="also print the OK lines (otherwise only FAIL/SKIP and the count)")
     a = ap.parse_args()
     if a.browser:
         os.environ["MZLAB_BROWSER"] = a.browser
@@ -425,7 +425,7 @@ def main() -> None:
         if a.ultimi_falliti and not only:
             only = last_failed()
             if not only:
-                results.append(("e2e", "INFO", 0, ["nessun e2e FAIL nel giro precedente (.verifica/ultimo.md)"]))
+                results.append(("e2e", "INFO", 0, ["no e2e FAIL in the previous round (.verifica/ultimo.md)"]))
         run = True
         if a.cambiati and not only:
             sel, why = changed_tests()
@@ -445,8 +445,8 @@ def main() -> None:
         lines.append(f"- {st:4} {name}" + (f" ({dt:.0f} s)" if dt else "") + (": " + " | ".join(notes) if notes and (st != "OK" or name.startswith("prova_hr")) else ""))
     timed = sorted((r for r in results if r[0].startswith("e2e") and r[1] in ("OK", "FAIL") and r[2]), key=lambda r: -r[2])[:5]
     if timed:
-        lines += ["", "I 5 e2e più lenti: " + ", ".join(f"{r[0]} {r[2]:.0f} s" for r in timed)]
-    lines += ["", "Log completi: .verifica/log/<nome>.log (leggili solo per i FAIL)."]
+        lines += ["", "The 5 slowest e2e: " + ", ".join(f"{r[0]} {r[2]:.0f} s" for r in timed)]
+    lines += ["", "Full logs: .verifica/log/<name>.log (read them only for the FAIL ones)."]
     text = "\n".join(lines)
     (OUT / "ultimo.md").write_text(text + "\n", encoding="utf-8")
     if a.mostra_ok:

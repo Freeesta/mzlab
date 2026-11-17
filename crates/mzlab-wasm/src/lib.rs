@@ -518,6 +518,12 @@ pub fn provenance(ctx: &str) -> String {
     mzlab_core::provenance::build(ctx)
 }
 
+/// `/api/elements`: the periodic table for MS (`elements/1`, `mzlab-core::periodic`).
+#[wasm_bindgen]
+pub fn elements() -> String {
+    mzlab_core::periodic::elements_json()
+}
+
 /// `/api/formula`: neutral mass and ion m/z of a formula (`mzlab-core::elements`); an error is JSON with a key.
 #[wasm_bindgen]
 pub fn formula_mz(formula: &str, adduct: &str) -> Result<String, JsValue> {

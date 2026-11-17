@@ -416,7 +416,7 @@ def write_truth(out: Path, c: Builder, seme: int, profilo: str) -> None:
         for r in rows:
             w.writerow([";".join(f"{x:.4f}" for x in r[k]) if k == "rt_obs" else "" if r[k] is None else f"{r[k]:.6f}" if k == "mz" else r[k] for k in COLONNE])
     parent = next(o for o in c.ioni if o.ruolo == "progenitore")
-    d = {"_note": "Verità dei dati sintetici di tools/valida/sintetici_identita.py: tutte le molecole e i numeri sono inventati. `parent` e `tps` hanno il formato di timolol_truth.json; `ioni` ha tutte le righe.",
+    d = {"_note": "Truth of the synthetic data of tools/valida/sintetici_identita.py: all the molecules and numbers are invented. `parent` and `tps` have the format of timolol_truth.json; `ioni` has all the rows.",
          "meta": {"seme": seme, "profilo": profilo, "colonne": COLONNE, "coincidenze": c.meta_coinc, "t_saturazione": c.P["t_sat"]},
          "parent": {"name": parent.id, "ion": parent.ion, "mz": round(parent.mz, 6), "rt_obs": round(parent.rt, 4), "notes": parent.note, "k_dec": parent.k_dec},
          "tps": [r for r in rows if r["ruolo"] in ("tp1", "tp2", "tp3", "isomero")], "ioni": rows, "file": [{"nome": f"SIN_{s}", "tipo": k, "time": t} for s, k, t in c.file]}

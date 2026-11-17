@@ -64,7 +64,7 @@ def main(args: list[str]) -> int:
         p = Path(a)
         files += sorted(p.glob("*.mzML")) if p.is_dir() else [p]
     if not files:
-        print("prova_hr: nessun file mzML in", args); return 0
+        print("prova_hr: no mzML file in", args); return 0
     for f in files:
         try:
             r = summarize(f)

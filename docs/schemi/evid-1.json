@@ -168,11 +168,11 @@
        "ruolo": {
         "enum": [
          "M",
-         "isotopo",
-         "addotto",
+         "isotope",
+         "adduct",
          "isf",
-         "dimero",
-         "non determinato",
+         "dimer",
+         "undetermined",
          ""
         ]
        }
@@ -245,10 +245,10 @@
    "properties": {
     "tipo": {
      "enum": [
-      "identita",
-      "membro",
-      "libreria",
-      "esterno"
+      "identity",
+      "member",
+      "library",
+      "external"
      ]
     },
     "id": {
@@ -275,14 +275,14 @@
    "properties": {
     "tipo": {
      "enum": [
-      "addotto",
+      "adduct",
       "isf",
-      "isotopo",
-      "non distinguibile",
-      "altro",
-      "progenitore-prodotto",
-      "libreria",
-      "esterno"
+      "isotope",
+      "undetermined",
+      "other",
+      "parent-product",
+      "library",
+      "external"
      ]
     },
     "da": {

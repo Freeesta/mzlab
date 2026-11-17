@@ -68,7 +68,7 @@ export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) 
   return done(`{"files":[${parts.join(",")}]}`);
 }
 
-/** api/manint?k=..&w=JSON windows (manint::table_text, `file` = the place in k)[&sums=1]: the `mrm` transitions of every slot, then the op `manint` of the
+/** api/manint?k=..&w=JSON windows (manint::table_text, `file` = the place in k)[&sums=1][&tm=JSON minutes of the files, null = none]: the `mrm` transitions of every slot, then the op `manint` of the
  * worker; "E" + JSON (a window that names no channel, an unknown baseline) = a 400. api/manvalley?k=..&w=JSON window&depth=D: the op `valleys`
  * (manint::valleys_text), `{"splits":[MIN,...]}`. api/manfollow?k=..&w=JSON window: the op `follow` (manint::follow_text), where the window lands in the other files.
  * api/manauto?k=..&p=JSON params: the op `auto` (manint::auto_text), every peak of every file grouped by time.
@@ -81,7 +81,10 @@ async function manintRoute(u, { slots, rpc, stats, t0 }, what = "int") {
   if (!ks.every(k => slots[k] && slots[k].idx && !slots[k].bad && slots[k].blob)) return null;
   const rs = await Promise.all(ks.map(k => rpc({ op: "mrm", slot: k, blob: slots[k].blob })));
   if (rs.some(r => r.dead || r.error || !r.info)) return null;
-  const files = `[${ks.map((k, i) => `{"name":${JSON.stringify(slots[k].name)},"transitions":${rs[i].info}}`).join(",")}]`;
+  // `tm`: the time point of each file in minutes (null = none), as the table of the files has it; without it the engine reads it from the name
+  let tm = /** @type {any} */ (null); try { tm = JSON.parse(q.get("tm") || "null"); } catch (_) { /* the names decide */ }
+  const timeOf = (/** @type {number} */ i) => Array.isArray(tm) && tm.length === ks.length ? `,"time":${typeof tm[i] === "number" && Number.isFinite(tm[i]) ? tm[i] : "null"}` : "";
+  const files = `[${ks.map((k, i) => `{"name":${JSON.stringify(slots[k].name)}${timeOf(i)},"transitions":${rs[i].info}}`).join(",")}]`;
   const r = await rpc(valleys ? { op: "valleys", files, window: windows, depth: Number(q.get("depth") || "NaN") }
     : auto ? { op: "auto", files, params: q.get("p") || "{}" } : follow ? { op: "follow", files, window: windows } : { op: "manint", files, windows, sums: q.get("sums") === "1" });
   if (r.dead || r.error || !r.info) return null;

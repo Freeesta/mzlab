@@ -1,4 +1,4 @@
-//! `mzlab-cli msn-graph --strutture`: the cleavages of a structure that give the m/z of a node, on the synthetic infusion of `/api/msntree` and a
+//! `mzlab-cli msn-graph --structures`: the cleavages of a structure that give the m/z of a node, on the synthetic infusion of `/api/msntree` and a
 //! public molecule (ethyl indole-3-carboxylate: its ester bond gives the acid of 162.05495, the node n3).
 
 use std::path::PathBuf;
@@ -29,7 +29,7 @@ fn text(o: crate::Outcome) -> String {
 
 #[test]
 fn the_cleavage_that_gives_the_node_is_found_with_its_ppm_and_atoms() {
-    let t = text(run(&["--smiles", SMILES, "--strutture", "n3"]));
+    let t = text(run(&["--smiles", SMILES, "--structures", "n3"]));
     let v = mzlab_core::json::parse(t.as_bytes()).unwrap();
     let s = v.get("strutture").unwrap();
     assert_eq!(s.get("nodo").unwrap().str(), Some("n3"));
@@ -57,7 +57,7 @@ fn the_cleavage_that_gives_the_node_is_found_with_its_ppm_and_atoms() {
 #[test]
 fn the_graph_without_the_key_does_not_change_and_the_answer_is_deterministic() {
     let base = text(run(&["--smiles", SMILES]));
-    let with_n3 = text(run(&["--smiles", SMILES, "--strutture", "n3"]));
+    let with_n3 = text(run(&["--smiles", SMILES, "--structures", "n3"]));
     let (prefix, view) = base.trim_end().split_once(",\"vista\":").unwrap();
     assert!(
         with_n3.starts_with(prefix),
@@ -70,13 +70,13 @@ fn the_graph_without_the_key_does_not_change_and_the_answer_is_deterministic() {
     );
     assert_eq!(
         with_n3,
-        text(run(&["--smiles", SMILES, "--strutture", "3"]))
+        text(run(&["--smiles", SMILES, "--structures", "3"]))
     );
 }
 
 #[test]
 fn a_node_that_no_cleavage_gives_has_no_candidates() {
-    let t = text(run(&["--smiles", SMILES, "--strutture", "n2"]));
+    let t = text(run(&["--smiles", SMILES, "--structures", "n2"]));
     let v = mzlab_core::json::parse(t.as_bytes()).unwrap();
     let c = v.get("strutture").unwrap().get("candidati").unwrap();
     assert!(c.arr().is_empty());
@@ -84,9 +84,9 @@ fn a_node_that_no_cleavage_gives_has_no_candidates() {
     let t = text(run(&[
         "--smiles",
         SMILES,
-        "--strutture",
+        "--structures",
         "n3",
-        "--ppm-struttura",
+        "--struct-ppm",
         "0.1",
     ]));
     let v = mzlab_core::json::parse(t.as_bytes()).unwrap();
@@ -102,17 +102,17 @@ fn a_node_that_no_cleavage_gives_has_no_candidates() {
 #[test]
 fn a_missing_structure_node_or_a_bad_smiles_is_a_keyed_error() {
     for (extra, key) in [
-        (vec!["--strutture", "n3"], "err.msngrafo.noSmiles"),
+        (vec!["--structures", "n3"], "err.msngrafo.noSmiles"),
         (
-            vec!["--smiles", SMILES, "--strutture", "n99"],
+            vec!["--smiles", SMILES, "--structures", "n99"],
             "err.msngrafo.badNode",
         ),
         (
-            vec!["--smiles", SMILES, "--strutture", "x"],
+            vec!["--smiles", SMILES, "--structures", "x"],
             "err.msngrafo.badNode",
         ),
         (
-            vec!["--smiles", "C(C", "--strutture", "n3"],
+            vec!["--smiles", "C(C", "--structures", "n3"],
             "err.msngrafo.badSmiles",
         ),
     ] {
@@ -124,7 +124,7 @@ fn a_missing_structure_node_or_a_bad_smiles_is_a_keyed_error() {
 
 #[test]
 fn every_node_of_level_two_or_more_with_a_cleavage_is_in_strutture_tutti() {
-    let t = text(run(&["--smiles", SMILES, "--strutture", "tutti"]));
+    let t = text(run(&["--smiles", SMILES, "--structures", "all"]));
     let v = mzlab_core::json::parse(t.as_bytes()).unwrap();
     assert!(v.get("strutture").is_none());
     let nodes: Vec<&str> = v
@@ -137,7 +137,7 @@ fn every_node_of_level_two_or_more_with_a_cleavage_is_in_strutture_tutti() {
     assert!(nodes.contains(&"n3"), "{nodes:?}");
     assert!(!nodes.contains(&"n0"), "the root is level 1");
     // the same cleavages as asking node by node
-    let one = text(run(&["--smiles", SMILES, "--strutture", "n3"]));
+    let one = text(run(&["--smiles", SMILES, "--structures", "n3"]));
     let uno = mzlab_core::json::parse(one.as_bytes()).unwrap();
     let in_all = v
         .get("strutture_tutti")
@@ -147,7 +147,7 @@ fn every_node_of_level_two_or_more_with_a_cleavage_is_in_strutture_tutti() {
         .find(|s| s.get("nodo").unwrap().str() == Some("n3"))
         .unwrap();
     assert_eq!(in_all, uno.get("strutture").unwrap());
-    assert_eq!(t, text(run(&["--smiles", SMILES, "--strutture", "tutti"])));
+    assert_eq!(t, text(run(&["--smiles", SMILES, "--structures", "all"])));
 }
 
 #[test]

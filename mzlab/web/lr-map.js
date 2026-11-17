@@ -45,6 +45,7 @@ export async function engineRoute(path, q, env) {
     const r = (await env.rpc({ op: "lr_composition", query: "?" + q.toString() })).info;
     return r ? { status: 200, text: r } : null;
   }
+  if (path === "/api/elements") return { status: 200, text: (await env.rpc({ op: "lr_elements" })).info };          // the periodic table for MS (elements/1)
   // the ?perf meter lists how Python read each file: Python reads none here
   if (path === "/api/perf") return { status: 200, text: '{"files":[]}' };
   // a built-in list: data, not a calculation

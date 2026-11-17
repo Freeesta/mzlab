@@ -41,8 +41,9 @@
     }).join("");
   }
   /** A section with a small-caps title: `grid` is the class of the row of buttons (seg2, seg3, f3, f4). */
-  const section = (title, body) => `<fieldset><legend>${title}</legend>${body}</fieldset>`;
-  const opts = (grid, html, tip) => `<div class="opts ${grid}"${tip ? ` title="${esc(tip)}"` : ""}>${html}</div>`;
+  const section = (title, body, id) => `<fieldset><legend${id ? ` id="${id}"` : ""}>${title}</legend>${body}</fieldset>`;
+  /** `labelledby`: id of the section legend; it makes the row of buttons a named radiogroup. */
+  const opts = (grid, html, tip, labelledby) => `<div class="opts ${grid}"${labelledby ? ` role="radiogroup" aria-labelledby="${labelledby}"` : ""}${tip ? ` title="${esc(tip)}"` : ""}>${html}</div>`;
   /** A wide switch; `attr` is what the panel binds on (data-k="…", id="…"); `icon` an optional key of GICON. */
   const sw = (text, hint, attr, on, icon) => `<label class="swrow"${hint ? ` title="${esc(hint)}"` : ""}><span>${icon && GICON[icon] ? `<span class="ic">${GICON[icon]}</span>` : ""}${text}</span><input type="checkbox" role="switch" ${attr}${on ? " checked" : ""}></label>`;
   /** A folding group with an icon; `id` is also the key under which the panel remembers if it was left open; `tip` the tooltip of its title. */
