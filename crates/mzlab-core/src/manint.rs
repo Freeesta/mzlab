@@ -30,9 +30,6 @@ pub const FOLLOW_SN: f64 = 3.0;
 /// The longest name the user gives a window (characters), as the page's input allows.
 pub const LABEL_MAX: usize = 40;
 
-/// The columns appended after `origin` when a trace names its panel (`Trace::panel`): the panel, the concentration of the sample and its unit, the
-/// correction note of the window, the part of the area under the baseline (counts x s; empty for `edges`), the unit of the area.
-pub const EXT_HEAD: &str = ",panel,conc,conc_unit,correction,below,area_unit";
 /// One channel of a file: its place in the file's list, Q1 / Q3 (absent when the reader gives none), name, times (min) and intensities. `dup`: how
 /// many earlier channels of the file round to the same Q1 / Q3 and name, so that two transitions closer than 0.005 Da stay two channels.
 struct Trace {
@@ -461,72 +458,10 @@ pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
     Ok(csv_text(&rows, &labels, &corrs, &keys, &samples, sums))
 }
 
-/// The CSV: the header, then for each channel (in the order of `keys`) its rows, and the `sum` row after them when `sums`.
-fn csv_text(
-    rows: &[(usize, Row)],
-    labels: &[String],
-    corrs: &[String],
-    keys: &[Channel],
-    samples: &[Sample],
-    sums: bool,
-) -> String {
-    // the extra columns only when a trace was supplied with its panel: the bytes of a table of file transitions do not change
-    let ext = samples
-        .iter()
-        .any(|s| s.1.iter().any(|t| t.panel.is_some()));
-    let mut out = String::from(HEAD.trim_end());
-    if ext {
-        out += EXT_HEAD;
-    }
-    out.push('\n');
-    for (ch, (_, label, _)) in keys.iter().enumerate() {
-        let mine: Vec<&Row> = rows.iter().filter(|r| r.0 == ch).map(|r| &r.1).collect();
-        if mine.is_empty() {
-            continue;
-        }
-        let head = field(label);
-        for r in &mine {
-            out += &format!(
-                "{head},{},{},{},{},{:.3},{:.3},{:.3},{},{},{},{},{},{}\n",
-                field(&samples[r.file].0),
-                minutes_text(samples[r.file].2),
-                field(&labels[r.label]),
-                sci(r.area, 5),
-                r.a,
-                r.b,
-                r.apex,
-                sci(r.height, 5),
-                r.snr.map_or(String::new(), |v| format!("{v:.1}")),
-                r.base,
-                if r.drop { "drop" } else { "" },
-                r.pv.map_or(String::new(), |v| format!("{v:.1}")),
-                r.origin
-            );
-            if ext {
-                let t = &samples[r.file].1[r.tr];
-                out.pop();
-                out += &format!(
-                    ",{},{},{},{},{},{}\n",
-                    field(t.panel.as_deref().unwrap_or("")),
-                    t.conc.map_or(String::new(), |c| format!("{c}")),
-                    field(if t.conc.is_some() { &t.conc_unit } else { "" }),
-                    field(&corrs[r.label]),
-                    r.below.map_or(String::new(), |v| sci(v, 5)),
-                    field(&t.unit)
-                );
-            }
-        }
-        if sums {
-            out += &format!(
-                "{head},sum,,,{},,,,,,,,,{}\n",
-                sci(mine.iter().map(|r| r.area).sum(), 5),
-                if ext { ",,,,,," } else { "" }
-            );
-        }
-    }
-    out
-}
-
+#[path = "manint_csv.rs"]
+mod csv;
+use csv::csv_text;
+pub use csv::EXT_HEAD;
 #[path = "manint_follow.rs"]
 mod follow;
 pub use follow::follow_text;
