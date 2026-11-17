@@ -144,6 +144,7 @@
     "../../mzlab/web/titoli.js",
     "../../mzlab/web/xic-spettro.js",
     "../../mzlab/web/tabella-picchi.js",
+    "../../mzlab/web/peak-info.js",
     "../../mzlab/web/area-copia.js",
     "../../mzlab/web/integra-estremi.js",
     "../../mzlab/web/integra-valli.js",
