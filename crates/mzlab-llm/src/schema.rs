@@ -1,4 +1,4 @@
-//! A small JSON Schema checker for tool arguments: the keywords the catalog `strumenti/1` uses (type, enum, const, required, properties,
+//! A small JSON Schema checker for tool arguments: the keywords the catalog `tools/1` uses (type, enum, const, required, properties,
 //! additionalProperties, items, oneOf, anyOf, bounds, array sizes). Used by the policy and the agent; no dependency.
 
 use mzlab_core::json::Value;

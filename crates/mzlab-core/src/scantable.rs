@@ -131,7 +131,7 @@ pub struct Table {
     pub n_chromatograms: usize,
     /// Lowest and highest m/z of the scan windows the method declares for the first 50 survey scans (`Run.scan_window_ms1`).
     pub window: Option<(f64, f64)>,
-    /// Spectra the file declares in `<spectrumList count>` (0 when it does not say); more than `rows.len()` means the file is truncated.
+    /// Scans the file declares in `<spectrumList count>` less the optical (DAD) spectra it holds (0 when it does not say); more than `rows.len()` means the file is truncated.
     pub declared: usize,
 }
 
@@ -460,7 +460,7 @@ pub(crate) use rows::Rows;
 /// A spectrum of the optical detector (`MS:1000804`) is not a scan: the DAD reader of `mzml_dad` takes it.
 fn push(rows: &mut Rows, a: u64, b: u64, h: &[u8]) {
     if h.windows(10).any(|w| w == b"MS:1000804") {
-        rows.skip_optical();
+        rows.optical_spectrum();
         return;
     }
     rows.spectrum(a, b, &String::from_utf8_lossy(h));
@@ -676,11 +676,6 @@ pub fn read_in<R: ReadAt>(r: &mut R, size: u64, budget: Option<&MemBudget>) -> R
         Some(e) => e,
         None => read_walked(&mut src, &mut rows, budget)?,
     };
-    // the list closes right after its last spectrum: nothing is missing, whatever the `count` attribute says
-    let tail_end = (last_end + 4096).min(size);
-    if last_end < tail_end && find(&src.read(last_end, tail_end)?, b"</spectrumList>").is_some() {
-        rows.mark_closed();
-    }
     let n_chrom = count_chromatograms(&mut src, last_end)?;
     finished(rows.finish(n_chrom))
 }

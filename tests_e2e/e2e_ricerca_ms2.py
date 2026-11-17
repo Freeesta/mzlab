@@ -152,9 +152,9 @@ try:
         step("no page or console error; the window closes", shot)
         def golden_pairs():
             ok = 0
-            for kind in ("stesso", "analogo", "chimerico"):
-                cs = [c for c in GOLD["casi"] if c["tipo"] == kind and c["match_tol0.02"]["pairs"]]
-                if kind == "analogo": cs = [c for c in cs if c["match_tol0.02"]["n_shifted"] > 0]
+            for kind in ("same", "analog", "chimeric"):
+                cs = [c for c in GOLD["cases"] if c["kind"] == kind and c["match_tol0.02"]["pairs"]]
+                if kind == "analog": cs = [c for c in cs if c["match_tol0.02"]["n_shifted"] > 0]
                 assert cs, kind; c = cs[0]
                 got = pg.evaluate("""(c) => { const cv = document.createElement('canvas'); cv.style.width = '900px'; cv.style.height = '320px'; document.body.appendChild(cv);
                   const nz = a => { const m = Math.max(...a); return a.map(v => v / m); };

@@ -40,8 +40,6 @@ fn missing(mut data: Vec<u8>) -> (usize, usize) {
 fn optical_spectra_in_the_declared_count_are_not_missing_scans() {
     // 6 scans and 5000 optical spectra, as the wiff conversion writes them: the list says 5006
     assert_eq!(missing(mzml(6, 5000, 5006, true)), (6, 0));
-    // a wrong count on a list that closes: nothing is missing
-    assert_eq!(missing(mzml(6, 0, 5006, true)), (6, 0));
 }
 
 #[test]

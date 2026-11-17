@@ -461,13 +461,16 @@ async function drawLines(p) {
 // ---- mouse over the chart: vertical line + box with the values; the line also shows in the other panels with an RT axis
 const xOf = (p, px) => { const a = p._a; return a.x0 + (px - M.l) / (a.W - M.l - M.r) * (a.x1 - a.x0); };
 function hideHover(p) {
-  if (p.tip) p.tip.hidden = true; if (p.vl) p.vl.hidden = true;
+  if (p.tip) p.tip.hidden = true; if (p.vl) p.vl.hidden = true; if (window.PEAKINFO) PEAKINFO.stick(p, null);
   E.panels.forEach(q => { if (q.vl && q !== p) q.vl.hidden = true; });
 }
 function showHover(p, px, py) {
   const a = p._a; if (!a || !a.hov || a.cas || px < M.l || px > a.W - M.r || py < M.t || py > a.H - M.b) return hideHover(p);
-  const h = a.hov(px, py); if (!h) return hideHover(p);
-  const cv = p.cv, el = p.el;
+  const h = a.hov(px, py); if (!h) return hideHover(p); putHover(p, h, px, py);
+}
+function putHover(p, h, px, py) {
+  const a = p._a, cv = p.cv, el = p.el;
+  if (window.PEAKINFO) PEAKINFO.stick(p, h.stick ? { px: h.px, ...h.stick } : null);
   p.vl.hidden = !!h.novl; p.vl.style.left = cv.offsetLeft + h.px + "px"; p.vl.style.top = cv.offsetTop + M.t + "px"; p.vl.style.height = a.H - M.t - M.b + "px";
   p.tip.hidden = false; p.tip.innerHTML = h.html;
   const tw = p.tip.offsetWidth, th = p.tip.offsetHeight;

@@ -138,10 +138,8 @@ pub(crate) struct Rows {
     /// The texts that many rows repeat (filter strings, activation names): one allocation each.
     pool: HashSet<Arc<str>>,
     window: super::DeclaredWindow,
-    /// Optical (DAD) spectra skipped: the `spectrumList` count includes them, the rows do not.
+    /// Optical (DAD/PDA, `MS:1000804`) spectra of the list: counted by `<spectrumList count>` but not scans.
     optical: usize,
-    /// The `spectrumList` closed after the last spectrum: every spectrum there is was read, whatever `count` says.
-    closed: bool,
 }
 
 impl Rows {
@@ -149,23 +147,12 @@ impl Rows {
         Rows {
             window: Default::default(),
             optical: 0,
-            closed: false,
             head,
             rows: Vec::new(),
             refs: HashMap::new(),
             level_of: HashMap::new(),
             pool: HashSet::new(),
         }
-    }
-
-    /// Notes a spectrum that is not a scan (optical): it counts as read for the declared total.
-    pub(crate) fn skip_optical(&mut self) {
-        self.optical += 1;
-    }
-
-    /// The list ended with its closing tag: a `count` above the spectra read is a wrong count, not a file that ends early.
-    pub(crate) fn mark_closed(&mut self) {
-        self.closed = true;
     }
 
     /// The rows kept so far.
@@ -224,7 +211,6 @@ impl Rows {
             pool,
             window,
             optical,
-            closed,
         } = self;
         // only reading needed them; the tables below are what the peak of this step is made of
         drop((level_of, pool));
@@ -264,24 +250,24 @@ impl Rows {
             r.parent = p;
         }
         let hr1 = is_hr(&rows.iter().filter(|r| r.level == 1).collect::<Vec<_>>());
-        // a list that closed holds what it declares (a wrong `count` is not a loss); the optical spectra are not rows
-        let declared = if closed {
-            rows.len()
-        } else {
-            head.declared.saturating_sub(optical)
-        };
         Table {
             rows,
             nce: head.nce,
             hr1,
             n_chromatograms,
             window: window.span,
-            declared,
+            // the list counts the optical spectra too: they are not scans, so a file that holds them all is not cut
+            declared: head.declared.saturating_sub(optical),
         }
     }
 }
 
 impl Rows {
+    /// An optical spectrum of the list: not a scan, but part of its `count`.
+    pub(crate) fn optical_spectrum(&mut self) {
+        self.optical += 1;
+    }
+
     /// One spectrum: `a`, `b` are its bytes in the mzML, `h` its header text (read by `spechead`, the reader every mzML path shares).
     pub(crate) fn spectrum(&mut self, a: u64, b: u64, h: &str) {
         let sh = spechead::parse(h, &self.head.groups).unwrap_or_default();

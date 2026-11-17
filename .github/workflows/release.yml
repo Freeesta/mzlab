@@ -293,6 +293,52 @@ jobs:
     needs: [controllo, versione]
     uses: ./.github/workflows/desktop.yml
 
+  # Prebuilt mzlab-cli for Linux (agents in Linux VMs cannot run the macOS binary or build from source). musl: a static-pie executable with no libc or distro
+  # dependency, so it runs on any distro. Each arch is built and smoke-tested on a runner of its own arch (no QEMU). Release path only, never the per-PR CI.
+  cli-linux:
+    name: mzlab-cli Linux (${{ matrix.arch }}, static musl)
+    needs: [controllo, versione]
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {arch: x86_64, runner: ubuntu-latest, target: x86_64-unknown-linux-musl}
+          - {arch: aarch64, runner: ubuntu-24.04-arm, target: aarch64-unknown-linux-musl}
+    env:
+      TAG: ${{ needs.controllo.outputs.tag }}
+      TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Toolchain (version pinned in rust-toolchain.toml) + musl target and C compiler (ring)
+        run: |
+          rustup show
+          rustup target add "$TARGET"
+          sudo apt-get update -qq && sudo apt-get install -y -qq musl-tools
+      - name: Build (profile cli, the one of the analysis binary in docs/agenti/rilascio.md)
+        run: |
+          export "CC_${TARGET//-/_}=musl-gcc"
+          cargo build --locked --profile cli --target "$TARGET" -p mzlab-cli
+      - name: Smoke test of the built binary (--version carries the release version and the citation line; steps --json is a non-empty JSON list)
+        run: |
+          b="target/$TARGET/cli/mzlab-cli"
+          file "$b" | grep -E 'statically linked|static-pie'
+          out=$("$b" --version); echo "$out"
+          grep -q 'please cite it: mzLab ' <<<"$out"
+          if [ "$TAG" != dev ]; then grep -qF "mzLab ${TAG#v}, https://github.com/Freeesta/mzlab" <<<"$out"; fi
+          "$b" steps --json | python3 -c 'import json, sys; d = json.load(sys.stdin); assert d and all("citation" in x for x in d), "steps --json"'
+      - name: Name the binary and write its SHA-256 file
+        run: |
+          v=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          mkdir out
+          cp "target/$TARGET/cli/mzlab-cli" "out/mzlab-cli-${v}-linux-${{ matrix.arch }}"
+          (cd out && sha256sum * > "mzlab-cli-${v}-linux-${{ matrix.arch }}.sha256" && cat *.sha256)
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mzlab-cli-linux-${{ matrix.arch }}
+          path: out/*
+          if-no-files-found: error
+
   sbom:
     name: SBOM of the Rust crates
     needs: [controllo, versione]
@@ -300,7 +346,7 @@ jobs:
 
   bozza:
     name: draft release
-    needs: [controllo, versione, sito, desktop, sbom]
+    needs: [controllo, versione, sito, desktop, sbom, cli-linux]
     if: needs.controllo.outputs.crea == 'true'
     runs-on: ubuntu-latest
     environment: release          # the owner can require an approval here (Settings > Environments); secrets for signing live only there
@@ -333,6 +379,8 @@ jobs:
           one mzlab-desktop-macOS '*.dmg' Mac.dmg
           one mzlab-desktop-Linux '*.AppImage' Linux.AppImage
           one mzlab-desktop-Linux '*.deb' Linux.deb
+          one mzlab-cli-linux-x86_64 'mzlab-cli-*-linux-x86_64' cli-Linux-x86_64
+          one mzlab-cli-linux-aarch64 'mzlab-cli-*-linux-aarch64' cli-Linux-aarch64
           one sito 'mzlab-site-*.zip' sito.zip
           (cd pezzi && zip -qr "../dist/${p}sicurezza-SBOM.zip" sbom sito/sbom-js.cdx.json)
           cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS

@@ -17,7 +17,7 @@ const DISP = (() => {
   const redraw = p => { draw(p); if (typeof uiSave === "function") uiSave(); };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   // the display options of a graph are one undoable action (comandi.js)
-  const DISPLAY = ["thr", "nlab", "dec", "sticks", "dots", "mk", "noCont", "rel", "gdelay", "pdaDelay", "pdaAlign", "overlay", "etpk"];
+  const DISPLAY = ["thr", "nlab", "dec", "sticks", "dots", "mk", "noCont", "rel", "gdelay", "pdaDelay", "pdaAlign", "overlay", "etpk", "lblOn", "lblOff"];
   COMANDI.gestore("spec.display", {
     leggi: p => JSON.stringify(DISPLAY.filter(k => p[k] !== undefined).map(k => [k, p[k]])),
     applica: (p, snap) => { const o = new Map(JSON.parse(snap)); DISPLAY.forEach(k => { if (o.has(k)) p[k] = o.get(k); else delete p[k]; }); if (typeof syncTb === "function") syncTb(p); },
