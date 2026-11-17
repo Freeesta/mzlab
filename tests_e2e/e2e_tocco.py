@@ -165,7 +165,7 @@ try:
         def filelong():
             drawer(pg); b = pg.locator("#flst .fl .nm").first.bounding_box(); x, y = b["x"] + 10, b["y"] + b["height"] / 2
             T("touchStart", [(x, y)]); wait(800); T("touchEnd", []); wait(300)
-            assert pg.is_visible("#ctx") and "Rinomina" in pg.inner_text("#ctx"), pg.inner_text("#ctx")
+            assert pg.is_visible("#ctx") and "Rename" in pg.inner_text("#ctx"), pg.inner_text("#ctx")
             pg.keyboard.press("Escape"); pg.mouse.click(2, 2); wait(200)
         step("long press on a file of the list = right click", filelong)
         def map3d():
