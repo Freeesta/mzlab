@@ -100,3 +100,11 @@ def test_title():
     assert node("B.titolo('', 'vuoto')") == "[Bug] vuoto"
     assert node("B.titolo('linea uno\\nlinea due', 'v')") == "[Bug] linea uno"
     assert len(node("B.titolo('parola '.repeat(40), 'v')")) < 90
+
+
+def test_lowercase_kebab_ids_and_function_names_built_from_a_name_are_hidden():
+    names = "['Paziente Rossi_t0.mzML']"
+    out = node(f"(()=>{{const d=B.campiDiagnostica({{actions:['#paziente-rossi-open','#rossi-t0','#load','button[data-v=draw]']}},{names});return d.find(f=>f.key==='actions').value}})()")
+    assert out == ["<id>", "<id>", "#load", "button[data-v=draw]"], out
+    fr = node(f"B.telai('at openPazienteRossi (https://x.io/mzlab/app.js:7:8)\\n    at paziente_rossi_t0 (https://x.io/mzlab/app.js:1:2)\\n    at f (https://x.io/mzlab/app.js:3:4)', 8, {names})")
+    assert fr == ["<fn> app.js:7:8", "<fn> app.js:1:2", "f app.js:3:4"], fr

@@ -33,6 +33,18 @@ export function anonimizza(text, nomi = [], pulisci = s => s, max = 160) {
   return s.length > max ? s.slice(0, max) + "…" : s;
 }
 
+/** True if `s` contains a loaded name in any spelling (case, separators, kebab/snake form) or a word of at least 4 letters of one: used for ids and function names, which are short and never free text.
+ * @param {string} s @param {string[]} [nomi] */
+export function contieneNome(s, nomi = []) {
+  const flat = (/** @type {string} */ x) => x.toLowerCase().replace(/[^a-z0-9]+/g, ""), t = flat(s);
+  for (const n of nomi) {
+    const full = String(n || "").split("#")[0], base = full.replace(/\.[A-Za-z0-9]{1,8}$/, "");
+    for (const x of [full, base]) if (flat(x).length >= 3 && t.includes(flat(x))) return true;
+    for (const w of base.toLowerCase().split(/[^a-z0-9]+/)) if (w.length >= 4 && t.includes(w)) return true;
+  }
+  return false;
+}
+
 /** @param {number} n bytes */
 export function dimensione(n) {
   if (!(n > 0)) return "0 B";
@@ -59,14 +71,15 @@ export function riassuntoFile(files) {
 }
 
 /** `Error.stack` lines as «function script.js:line:col»: a site script keeps its name, any other file becomes «<file>», the query and the hash of an URL are cut.
- * @param {unknown} stack @param {number} [max] frames kept */
-export function telai(stack, max = 8) {
+ * @param {unknown} stack @param {number} [max] frames kept @param {string[]} [nomi] names of the session: a function name holding one is hidden */
+export function telai(stack, max = 8, nomi = []) {
   const out = /** @type {string[]} */ ([]);
   for (const raw of String(stack == null ? "" : stack).split(/\r?\n/)) {
     const m = raw.match(/^\s*(?:at\s+)?(.*?)\s*[(@]?\s*((?:\w+:\/\/|blob:)\S*?)(?::(\d+):(\d+))?\)?\s*$/);
     if (!m || out.length >= max) continue;
     const base = m[2].replace(/[?#].*$/, "").split("/").pop() || "", name = /^[\w.-]+\.(?:m?js|wasm)$/.test(base) ? base : "<file>";
-    out.push(`${(m[1] || "<anonymous>").replace(/^async\s+/, "").slice(0, 60)} ${name}${m[3] ? `:${m[3]}:${m[4]}` : ""}`);
+    const fn = (m[1] || "<anonymous>").replace(/^async\s+/, "").slice(0, 60);
+    out.push(`${contieneNome(fn, nomi) ? "<fn>" : fn} ${name}${m[3] ? `:${m[3]}:${m[4]}` : ""}`);
   }
   return out;
 }
@@ -97,12 +110,12 @@ export function campiDiagnostica(d, nomi = [], pulisci = s => s, only = null) {
   one("sw", "Service worker", d.sw);
   one("storage", "Stored state", d.storage);
   if (d.errors) {
-    const es = list(d.errors).map(e => ({ where: a(e.where || "", 20), message: a(e.message, 160), frames: telai(e.stack).map(x => a(x, 120)) }));
+    const es = list(d.errors).map(e => ({ where: a(e.where || "", 20), message: a(e.message, 160), frames: telai(e.stack, 8, nomi).map(x => a(x, 120)) }));
     add("errors", "Recent errors", es, [es.length ? `- Recent errors (last ${es.length}):` : "- Recent errors: none", ...es.flatMap(e => [`  - ${e.where ? `[${e.where}] ` : ""}${e.message}`, ...e.frames.map(f => `    - ${f}`)])]);
   }
   if (d.actions) {
     // only the shapes of the static ids of the page (#kebab-case, tag[data-v=word], a tag): anything else (an id made from a name) is «<id>»
-    const ac = list(d.actions).map(x => (/^(#[a-z][a-z-]{0,30}|[a-z]{1,10}(\[data-(?:v|a|tab)=[a-z-]{1,20}\])?)$/.test(String(x)) ? a(x, 60) : "<id>")); add("actions", "Recent actions", ac, [ac.length ? `- Recent actions (oldest first): ${ac.join(" > ")}` : "- Recent actions: none"]);
+    const ac = list(d.actions).map(x => (/^(#[a-z][a-z-]{0,30}|[a-z]{1,10}(\[data-(?:v|a|tab)=[a-z-]{1,20}\])?)$/.test(String(x)) && !contieneNome(String(x), nomi) ? a(x, 60) : "<id>")); add("actions", "Recent actions", ac, [ac.length ? `- Recent actions (oldest first): ${ac.join(" > ")}` : "- Recent actions: none"]);
   }
   return F;
 }
