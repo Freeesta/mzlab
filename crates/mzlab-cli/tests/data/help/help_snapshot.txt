@@ -38,6 +38,8 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
   --help             this text
 
 old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl
+
+If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
 
 === mzlab-cli --help
@@ -80,6 +82,8 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
   --help             this text
 
 old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl
+
+If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
 
 === mzlab-cli -h
@@ -122,6 +126,8 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
   --help             this text
 
 old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl
+
+If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
 
 === mzlab-cli nosuchcommand
@@ -192,6 +198,8 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
   --help             this text
 
 old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl
+
+If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
 
 === mzlab-cli steps --help
@@ -202,7 +210,7 @@ mzlab-cli steps: the steps a Flow plan can use, from the registry of this progra
 usage: mzlab-cli steps [--json] [--id ID[@VERSION]]
 
   (no option)       one line per step: id@version, `native` when `flow run` executes it (else `page`: only the Flow page does), title
-  --json            the step/1 descriptors as a JSON array, each with "executable_native" at the end
+  --json            the step/1 descriptors as a JSON array, each with "executable_native" and "citation" at the end
   --id ID[@V]       one step only (with --json one step/1 object); without @V the highest version
   --help            this text
 

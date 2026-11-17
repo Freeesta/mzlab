@@ -34,6 +34,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | shard pytest della CI (cache `target`, `doppi`, `aree`, `prebuilt`, ordine e metà dei test lenti) | `docs/agenti/ci-selezione.md` |
 | workflow GitHub condizionali (concurrency, pages, job saltati) | `docs/agenti/ci-veloce.md` |
 | classi chimiche da regole (`crates/mzlab-feat/src/classes/`, tabella `data/classi-1.json`, `classi/1`: frammenti diagnostici e perdite neutre) | `docs/agenti/classi.md` |
+| mzlab-cli for AI agents: `--json` commands, exit codes, stdout vs stderr, `--dry-run`, `steps --json`, `flow check`, the citation rule (`citation.rs`, `CITATION.cff`) | `docs/agenti/cli-agenti.md` |
 | `mzlab-cli convert`: file e cartelle dei produttori in mzML, `--peaks`, `--report`, codici d'uscita | `docs/agenti/cli-convert.md` |
 | passo per passo (area: riga di comando `mzlab-cli features` (`crates/mzlab-cli`: feature…) | `docs/agenti/cli-passi.md` |
 | riga di comando `mzlab-cli features` (`crates/mzlab-cli`: feature table in CSV, stesso motore e ricetta della pagina) | `docs/agenti/cli.md` |

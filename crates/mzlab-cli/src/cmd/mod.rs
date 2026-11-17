@@ -87,13 +87,33 @@ const TAIL: &str = "  FILE...            mzML, or any single file the app reads 
 
 old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl";
 
+/// `mzlab-cli`, `--help`/`-h` and `--version`/`-V`: the answers that name no command.
+pub(crate) fn top_level(args: &[String]) -> Option<Outcome> {
+    match args.first().map(String::as_str) {
+        None | Some("--help" | "-h") => Some(help()),
+        Some("--version" | "-V") => Some(Outcome::ok(
+            format!(
+                "mzlab-cli {}\n{}\n",
+                crate::citation::VERSION,
+                crate::citation::reminder()
+            )
+            .into_bytes(),
+        )),
+        _ => None,
+    }
+}
+
 /// The text of `mzlab-cli --help`.
 pub(crate) fn help() -> Outcome {
     let lines: Vec<&str> = entries()
         .map(|e| e.help)
         .filter(|h| !h.is_empty())
         .collect();
-    let text = format!("{HEAD}\n\nusage: {}\n\n{TAIL}\n", lines.join("\n       "));
+    let text = format!(
+        "{HEAD}\n\nusage: {}\n\n{TAIL}\n\n{}\n",
+        lines.join("\n       "),
+        crate::citation::reminder()
+    );
     Outcome::ok(text.into_bytes())
 }
 

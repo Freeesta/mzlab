@@ -141,6 +141,8 @@ fn reports(out: &Path, plan: &str) -> Vec<String> {
 
 /// `modules` (the SHA-256 of the executable) is the one key only the CLI writes: the page passes the hashes of its own `.wasm`.
 fn without_modules(text: &str) -> String {
+    // the citation is a CLI-side key of prov.json (the page's route writes the record without it), like the modules
+    let text = &text.replacen(&format!("{},", crate::citation::member()), "", 1);
     let from = text.find(",\"modules\":{").unwrap();
     format!(
         "{}{}",
