@@ -75,7 +75,7 @@ def test_red(world):
     n, sha = pr("b.txt", "x\n")
     events(sha, rust="failure")
     r = c.evaluate(clone, n, sha)
-    assert not r["verde"] and not r["unire"] and r["motivo"] == "CI non verde: rust"
+    assert not r["verde"] and not r["unire"] and r["motivo"] == "CI not green: rust"
 
 
 def test_different_sha(world):
