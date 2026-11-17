@@ -123,7 +123,8 @@ function drawMeas(p, g, X, Y, W) {
 function specClick(p, px, py) {
   if (p.uv) return;
   if (window.XICBTN && XICBTN.click(p, px, py)) return;
-  if (!(p.rul || (p.meas && p.meas.ref != null)) || !p._a || !p._a.snap) return;
+  if (!p._a || !p._a.snap) return;
+  if (!(p.rul || (p.meas && p.meas.ref != null))) { if (window.PEAKINFO) PEAKINFO.click(p, px, py); return; }      // no ruler: a click on a peak pins or removes its label
   // the m/z labels are the targets (start and end alike): the nearest one within 34 px, whatever the height of the click
   /** @type {any} */ let lb = null, bd = 34;
   (p._a.lbls || []).forEach(l => { if (l.m == null) return; const d = Math.abs(l.x + l.w / 2 - px); if (d < bd) { bd = d; lb = l; } });

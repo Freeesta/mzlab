@@ -44,6 +44,7 @@ const COMMANDS: &[&[&str]] = &[
     &["items"],
     &["ion-pattern"],
     &["elements"],
+    &["folder"],
     &["ion-mz"],
     &["match-mz"],
     &["mol-label"],
