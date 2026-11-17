@@ -39,7 +39,7 @@ fn a_record_gives_a_line_of_numbers_with_the_rule_that_explains_the_loss() {
         "a.txt",
         &registry("SYN-A", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
     );
-    let o = run(&["msn-rules", &f, "--regole"]);
+    let o = run(&["msn-rules", &f, "--rules"]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let l = &rows(&o)[0];
     assert_eq!(l.get("strato").unwrap().str(), Some("hcd"));
@@ -81,7 +81,7 @@ fn the_stratum_comes_from_the_instrument_and_the_mode() {
         );
         assert!(
             l.get("v").unwrap().get("c").is_none(),
-            "without --regole only (a)"
+            "without --rules only (a)"
         );
     }
 }
@@ -100,7 +100,7 @@ fn a_record_that_cannot_be_judged_says_why() {
     for (t, reason) in [(without, "smiles"), (aduct, "ione"), (mode, "attivazione")] {
         let f = write_outputs("x.txt", &t);
         let l = rows(&run(&["msn-rules", &f])).remove(0);
-        assert_eq!(l.get("saltato").unwrap().str(), Some(reason));
+        assert_eq!(l.get("skipped").unwrap().str(), Some(reason));
     }
 }
 
@@ -115,10 +115,10 @@ fn the_decoys_explain_less_and_the_same_seed_gives_the_same_lines() {
         &registry("SYN-D2", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1O")
             .replace("C8H9NO", "C8H9NO2"),
     );
-    let args = ["msn-rules", &a, "--regole", "--decoy", "5"];
+    let args = ["msn-rules", &a, "--rules", "--decoy", "5"];
     let (x, y) = (run(&args), run(&args));
     assert_eq!(x.stdout, y.stdout);
-    let l = &rows(&run(&["msn-rules", &a, "--regole", "--decoy", "5"]))[0];
+    let l = &rows(&run(&["msn-rules", &a, "--rules", "--decoy", "5"]))[0];
     // the losses shifted by 13.7 mDa fall out of every window: nothing is explained
     let dl = l.get("dl").unwrap();
     assert_eq!(dl.get("a").unwrap().f64(), Some(0.0));
@@ -126,14 +126,14 @@ fn the_decoys_explain_less_and_the_same_seed_gives_the_same_lines() {
     // a lone record has no other spectrum of its nominal precursor
     assert!(l.get("dp").is_none());
     // two records with the same nominal precursor but another structure give each other the spectrum
-    let l2 = rows(&run(&["msn-rules", &a, &b, "--regole", "--decoy", "5"]));
+    let l2 = rows(&run(&["msn-rules", &a, &b, "--rules", "--decoy", "5"]));
     assert!(l2.iter().all(|l| l.get("dp").is_some()));
     // the same compound at another energy (same neutral formula) is not a decoy
     let a2 = write_outputs(
         "d3.txt",
         &registry("SYN-D3", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
     );
-    let l3 = rows(&run(&["msn-rules", &a, &a2, "--regole", "--decoy", "5"]));
+    let l3 = rows(&run(&["msn-rules", &a, &a2, "--rules", "--decoy", "5"]));
     assert!(l3.iter().all(|l| l.get("dp").is_none()));
 }
 
@@ -172,7 +172,7 @@ fn the_sum_applies_the_thresholds_of_the_protocol() {
             m(0.0, ""),
         );
     }
-    t += "{\"id\":\"X\",\"saltato\":\"smiles\"}\n";
+    t += "{\"id\":\"X\",\"skipped\":\"smiles\"}\n";
     let s = parse(summed(&t).unwrap().as_bytes()).unwrap();
     assert_eq!(
         s.get("saltati").unwrap().get("smiles").unwrap().f64(),
@@ -215,9 +215,9 @@ fn a_rule_with_fewer_than_twenty_applications_is_not_measured() {
     assert_eq!(st.get("soglia_copertura").unwrap().bool(), Some(false));
 }
 
-/// Every old flag and the subcommand `somma` give the same bytes and exit code as `--list`, `--activation`, `--rules` and `sum`.
+/// The Italian flags and the subcommand `somma` are gone: usage errors (exit 2); the English ones work.
 #[test]
-fn old_names_are_aliases_of_the_english_ones() {
+fn the_italian_names_are_refused() {
     let f = write_outputs(
         "al.txt",
         &registry("SYN-AL", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
@@ -228,37 +228,29 @@ fn old_names_are_aliases_of_the_english_ones() {
         "al.lines",
         &String::from_utf8(lines.stdout.clone()).unwrap(),
     );
-    let cases: [(&[&str], &[&str]); 4] = [
-        (
-            &["msn-rules", &f, "--regole"],
-            &["msn-rules", &f, "--rules"],
-        ),
-        (
-            &["msn-rules", &f, "--attivazione", "cid"],
-            &["msn-rules", &f, "--activation", "cid"],
-        ),
-        (
-            &["msn-rules", "--lista", &list, "--regole"],
-            &["msn-rules", "--list", &list, "--rules"],
-        ),
-        (&["msn-rules", "somma", &lf], &["msn-rules", "sum", &lf]),
-    ];
-    for (old, new) in cases {
-        let (o, n) = (run(old), run(new));
-        assert_eq!(n.code, 0, "{new:?}: {}", n.stderr);
-        assert!(!n.stdout.is_empty(), "{new:?}");
-        assert_eq!(
-            (o.code, &o.stdout),
-            (n.code, &n.stdout),
-            "{old:?} vs {new:?}"
-        );
+    for ok in [
+        vec!["msn-rules", &f, "--rules"],
+        vec!["msn-rules", &f, "--activation", "cid"],
+        vec!["msn-rules", "--list", &list, "--rules"],
+        vec!["msn-rules", "sum", &lf],
+    ] {
+        let o = run(&ok);
+        assert_eq!(o.code, 0, "{ok:?}: {}", o.stderr);
+        assert!(!o.stdout.is_empty(), "{ok:?}");
     }
+    for bad in [
+        vec!["msn-rules", &f, "--regole"],
+        vec!["msn-rules", &f, "--attivazione", "cid"],
+        vec!["msn-rules", "--lista", &list, "--rules"],
+    ] {
+        assert_eq!(run(&bad).code, 2, "{bad:?}");
+    }
+    // `somma` is no longer the sum command: it is read as an input path
+    assert_ne!(
+        run(&["msn-rules", "somma", &lf]).stdout,
+        run(&["msn-rules", "sum", &lf]).stdout
+    );
     let h = String::from_utf8(run(&["msn-rules", "--help"]).stdout).unwrap();
     assert!(h.contains("--activation A") && h.contains("msn-rules sum"));
-    assert!(h
-        .trim_end()
-        .lines()
-        .last()
-        .unwrap()
-        .starts_with("old names still accepted: --lista"));
+    assert!(!h.contains("old names still accepted"));
 }

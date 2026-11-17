@@ -1,5 +1,5 @@
 //! `msn.library_export@1` and `msn.table_export@1` after `spectra.msn_graph@1` on the synthetic infusion of the route `/api/msntree`: the library has the bytes of
-//! `msn-lib add` + `msn-lib export --tutti --annota`, and the tables read like the graph.
+//! `msn-lib add` + `msn-lib export --all --annotate`, and the tables read like the graph.
 
 use std::path::{Path, PathBuf};
 
@@ -55,7 +55,7 @@ fn command(d: &Path, flags: &[&str]) -> String {
 fn the_library_has_the_bytes_of_the_command() {
     let d = dir("a");
     let got = run(&d, "msn.library_export", r#"{"id":"STD"}"#, "msp");
-    assert_eq!(got, command(&d, &["--tutti", "--annota"]));
+    assert_eq!(got, command(&d, &["--all", "--annotate"]));
     // every MS level, the sub-formula and the loss of the explained peaks
     assert!(got.contains("MS2") && got.contains("MS3"));
     assert!(got.contains("\"C12H15N3O; loss C2O4 (87.98002)\""));
@@ -67,7 +67,7 @@ fn the_library_has_the_bytes_of_the_command() {
     );
     assert_eq!(
         mb,
-        command(&d, &["--tutti", "--annota", "--formato", "massbank"])
+        command(&d, &["--all", "--annotate", "--format", "massbank"])
     );
     assert!(mb.contains("PK$ANNOTATION") && mb.contains("neutral loss C2O4 87.98002"));
     let _ = std::fs::remove_dir_all(&d);
@@ -83,7 +83,7 @@ fn the_options_pick_levels_peaks_and_notes() {
         r#"{"id":"STD","levels":"ms2"}"#,
         "msp",
     );
-    assert_eq!(ms2, command(&d, &["--annota"]));
+    assert_eq!(ms2, command(&d, &["--annotate"]));
     assert!(!ms2.contains("MS3") && ms2.len() < all.len());
     let plain = run(
         &d,
@@ -91,7 +91,7 @@ fn the_options_pick_levels_peaks_and_notes() {
         r#"{"id":"STD","annotate":false}"#,
         "msp",
     );
-    assert_eq!(plain, command(&d, &["--tutti"]));
+    assert_eq!(plain, command(&d, &["--all"]));
     assert!(!plain.contains('"'));
     let clean = run(
         &d,
@@ -99,7 +99,7 @@ fn the_options_pick_levels_peaks_and_notes() {
         r#"{"id":"STD","clean":true}"#,
         "msp",
     );
-    assert_eq!(clean, command(&d, &["--tutti", "--annota", "--pulito"]));
+    assert_eq!(clean, command(&d, &["--all", "--annotate", "--clean"]));
     assert!(clean.len() < all.len());
     // without an id the records are named after the ion of the root
     assert!(run(&d, "msn.library_export", "{}", "msp").starts_with("Name: C14H15N3O5 "));

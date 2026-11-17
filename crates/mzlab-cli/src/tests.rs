@@ -230,7 +230,7 @@ fn a_numpress_mzml_gives_the_table_of_its_plain_twin() {
     let (a, b) = (rows(&plain, "a"), rows(&np, "b"));
     assert!(a.len() > 1, "{a:?}");
     assert_eq!(a, b);
-    let ch = cli(&["canali", np.to_str().unwrap()]);
+    let ch = cli(&["channels", np.to_str().unwrap()]);
     assert_eq!(ch.code, 0, "{}", ch.stderr);
     let _ = std::fs::remove_dir_all(&dir);
 }

@@ -1,5 +1,5 @@
 //! `mzlab-cli msn-graph FILE --formula ION [...]`: the fragmentation graph `msngrafo/1` of an MSn infusion, from the engine of the app.
-//! With `--verita FILE --riassunto` it prints only numbers: how many paths of a truth file (`{nodes: [{path: [nominal m/z...], formula}]}`)
+//! With `--truth FILE --summary` it prints only numbers: how many paths of a truth file (`{nodes: [{path: [nominal m/z...], formula}]}`)
 //! the graph finds and with which sub-formulas, so a check on private data leaves no data behind.
 
 use std::path::{Path, PathBuf};
@@ -64,21 +64,7 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
   figure               the figures of a graph already made (after `complete` if it has no `vista`): STEM.svg and STEM.html, STEM.png with --figure
   complete             adds the key `vista` (levels, best path, tree and radial layout) to an msngrafo/1 that has not got it, with the bytes the engine writes
   compare              validates a tree measured twice: two msngrafo/1 files in, a JSON (msnconfronto/1) out with the numbers of the five criteria
-                       (isolated nodes, arcs of rel >= 10 %, formulas, MS2 entropy >= 0.8 per energy, m/z shift <= 3 ppm) and `convalidata`
-
-old names still accepted: --mz-basso --ppm-basso --prove-min --attivazione --isotopi --scelta --verita --riassunto --pulito --nodo --strutture --interpreta --ppm-perdita --regole --toll-perdita-mda --figura --vista --rotture --max-legami --ppm-struttura (values albero|radiale, tutti)";
-
-/// Old flag names of `msn-graph` (old, new); resolved before the match in `parse_args`.
-#[rustfmt::skip]
-const ALIASES: &[(&str, &str)] = &[
-    ("--mz-basso", "--low-mz"), ("--ppm-basso", "--wide-ppm"), ("--prove-min", "--min-evidence"),
-    ("--attivazione", "--activation"), ("--isotopi", "--isotopes"), ("--scelta", "--pick"),
-    ("--verita", "--truth"), ("--riassunto", "--summary"), ("--pulito", "--clean"),
-    ("--nodo", "--node"), ("--strutture", "--structures"), ("--interpreta", "--interpret"),
-    ("--ppm-perdita", "--loss-ppm"), ("--regole", "--rules"), ("--toll-perdita-mda", "--loss-tol-mda"),
-    ("--figura", "--figure"), ("--vista", "--view"), ("--rotture", "--breaks"),
-    ("--max-legami", "--max-bonds"), ("--ppm-struttura", "--struct-ppm"),
-];
+                       (isolated nodes, arcs of rel >= 10 %, formulas, MS2 entropy >= 0.8 per energy, m/z shift <= 3 ppm) and `convalidata`";
 
 /// Default window of the cleavages of `--structures`, ppm.
 pub const PPM_STRUCTURE: f64 = 10.0;
@@ -173,7 +159,7 @@ pub fn parse_args(
     let (mut interpret, mut loss_ppm) = (false, PPM_PERDITA);
     let (mut rules, mut rules_p) = (false, RuleParams::default());
     let (mut figure, mut view) = (Vec::new(), mzlab_feat::msnfigure::View::Albero);
-    while let Some(x) = a.next().map(|x| crate::msn_outputs::canonical(ALIASES, x)) {
+    while let Some(x) = a.next() {
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
             "--formula" => o.formula = a.next(),
@@ -433,7 +419,7 @@ pub fn execute(a: &Args, tmp: &Path) -> Result<String> {
     summary(&g, &v)
 }
 
-/// With `--figura`: writes the figures of the graph text `graph` next to the file of `--out`; the lines for the standard output (the files made).
+/// With `--figure`: writes the figures of the graph text `graph` next to the file of `--out`; the lines for the standard output (the files made).
 pub fn figure_files(a: &Args, graph: &str) -> std::result::Result<String, String> {
     let Some(out) = a.out.as_ref().filter(|_| !a.figure.is_empty()) else {
         return Ok(String::new());

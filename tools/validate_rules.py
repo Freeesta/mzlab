@@ -79,7 +79,7 @@ def main() -> int:
         entries.write_text("".join(f"{p}\n" for p in sorted(folder.glob("*.txt"))))
         base = cli(args)
         for command in (
-            [*base, "msn-rules", "--lista", str(entries), "--regole", "--decoy", args.seme, "--out", str(righe)],
+            [*base, "msn-rules", "--list", str(entries), "--rules", "--decoy", args.seme, "--out", str(righe)],
         ):
             subprocess.run(command, cwd=ROOT, check=True)
         total = subprocess.run([*base, "msn-rules", "somma", str(righe)], cwd=ROOT, check=True, capture_output=True, text=True).stdout

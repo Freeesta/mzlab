@@ -1,5 +1,5 @@
 """The msnregole .wasm gives the expectations of the structure rules that the command line computes, and `msn_graph` fed with them (query key `attese`)
-gives the same bytes as `mzlab-cli msn-graph --regole --smiles` (the page = the command). Skipped without cargo, wasm-bindgen or node."""
+gives the same bytes as `mzlab-cli msn-graph --rules --smiles` (the page = the command). Skipped without cargo, wasm-bindgen or node."""
 import json
 import shutil
 import subprocess
@@ -44,6 +44,6 @@ def test_graph_with_the_expectations_of_the_wasm_is_the_graph_of_the_command(pkg
     base = f"formula=C14H15N3O5%2B&regole=1&smiles={quote(SMILES, safe='')}"
     query = f"{base}&attese={quote(expectations(pkg, SMILES), safe='')}"
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "mzlab-msngrafo-wasm"), str(pkg / "msn.mzidx"), str(MZML), query).stdout
-    want = cli("msn-graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", SMILES, "--regole").stdout
+    want = cli("msn-graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", SMILES, "--rules").stdout
     assert got + "\n" == want
     assert '"regole":' in got

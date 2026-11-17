@@ -177,8 +177,8 @@ pub(crate) fn partial_of(conv: &str) -> Option<(usize, usize, String)> {
     Some((n("dichiarate"), n("lette"), cause.to_string()))
 }
 
-/// The `--report` document: a JSON array with `{ingresso, uscita, sha256, spettri, secondi, saltato, conv/1, avvisi}` (and `centroidi` {merged, saturated}
-/// with `--peaks mzlab`) or `{ingresso, errore, causa}` per input.
+/// The `--report` document: a JSON array with `{input, output, sha256, spectra, seconds, skipped, conv/1, warnings}` (and `centroids` {merged, saturated}
+/// with `--peaks mzlab`) or `{input, error, cause}` per input.
 pub(crate) fn report(items: &[Item]) -> String {
     let mut o = Out::default();
     o.raw("[");
@@ -197,40 +197,36 @@ pub(crate) fn report(items: &[Item]) -> String {
                 flagged,
                 ..
             } => {
-                o.raw("{\"ingresso\":").str(input);
-                o.raw(",\"uscita\":").str(output);
+                o.raw("{\"input\":").str(input);
+                o.raw(",\"output\":").str(output);
                 o.raw(",\"sha256\":").str(sha256);
-                o.raw(",\"spettri\":").int(*spectra as i64);
-                o.raw(",\"secondi\":").num((seconds * 1e3).round() / 1e3);
+                o.raw(",\"spectra\":").int(*spectra as i64);
+                o.raw(",\"seconds\":").num((seconds * 1e3).round() / 1e3);
                 o.raw(if *skipped {
-                    ",\"saltato\":true"
+                    ",\"skipped\":true"
                 } else {
-                    ",\"saltato\":false"
+                    ",\"skipped\":false"
                 });
                 if let Some(c) = conv {
                     o.raw(",\"conv/1\":").raw(c);
                 }
-                o.raw(",\"avvisi\":[");
+                o.raw(",\"warnings\":[");
                 for (i, (k, d)) in notes.iter().enumerate() {
-                    o.raw(if i > 0 {
-                        ",{\"chiave\":"
-                    } else {
-                        "{\"chiave\":"
-                    });
-                    o.str(k).raw(",\"dove\":").str(d).raw("}");
+                    o.raw(if i > 0 { ",{\"key\":" } else { "{\"key\":" });
+                    o.str(k).raw(",\"place\":").str(d).raw("}");
                 }
                 o.raw("]");
                 if let Some((m, s)) = flagged {
-                    o.raw(",\"centroidi\":{\"merged\":").int(*m as i64);
+                    o.raw(",\"centroids\":{\"merged\":").int(*m as i64);
                     o.raw(",\"saturated\":").int(*s as i64).raw("}");
                 }
                 o.raw("}");
             }
             Item::Failed { input, cause } => {
-                o.raw("{\"ingresso\":").str(input);
+                o.raw("{\"input\":").str(input);
                 let key = cause.split(' ').next().unwrap_or_default();
-                o.raw(",\"errore\":").str(key);
-                o.raw(",\"causa\":").str(cause).raw("}");
+                o.raw(",\"error\":").str(key);
+                o.raw(",\"cause\":").str(cause).raw("}");
             }
         }
     }
