@@ -1,55 +1,55 @@
 // @ts-strict
 "use strict";
 // The confidence levels of the identifications (Schymanski et al. 2014; MSI 2007): ONE module used by «Cos'è?», «Identifica tutte le MS2» and mzFinder (same words, same colours).
-// The rules and the thresholds are in the data file livelli-1.js (format «livelli/1»); here only the cascade that reads them. Always «candidate, level N, evidence», never «it is X».
+// The rules and the thresholds are in the data file livelli-1.js (format «levels/1»); here only the cascade that reads them. Always «candidate, level N, evidence», never «it is X».
 // Every result has two distinct fields: `proposed` (what the programme computes) and `decided` (empty until the chemist decides; 2b can only be written there).
 // The user's thresholds are in localStorage `qqq.lib.soglie` and in the workflow file. Pure functions: no DOM, so that node can test them (tests/test_livelli.py).
 // a standard hit with only a cosine is read on the same threshold and its gate names the score
 const stdGate = (g, std) => (g.id === "stdscore" && std.ent == null ? { ...g, id: "stdscore_cos" } : g);
 // 3a from the listed fragments of a suspect of screen.suspects found in the MS2: never in a capped profile (unit resolution); null when the evidence is short
-const suspectFragments = (sp, P, TT) => (sp && !P.tetto && sp.matched > 0 && sp.matched >= (TT.sospetto_frammenti_min ?? 2) ? sp : null);
+const suspectFragments = (sp, P, TT) => (sp && !P.cap && sp.matched > 0 && sp.matched >= (TT.sospetto_frammenti_min ?? 2) ? sp : null);
 const LIVELLI = (() => {
   const D = (typeof window !== "undefined" ? window : globalThis).LIVELLI_DATI;
-  const KEY = NOMI.KEY("lib.soglie"), ORDER = D.livelli;
+  const KEY = NOMI.KEY("lib.soglie"), ORDER = D.levels;
   const t = (k, p) => (typeof I18N !== "undefined" ? I18N.t(k, p) : k);
   // lsObj lives in i18n.js (not loaded under node)
   const read = () => { if (typeof lsObj === "function") return lsObj(KEY); try { const o = JSON.parse(localStorage.getItem(KEY) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } };
   const write = o => { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { /* not available */ } };
 
   // ------------------------------------------------------------ profiles and thresholds
-  const names = (all = false) => Object.keys(D.profili).filter(n => all || D.profili[n].visibile);
-  function profileName(st = read()) { return D.profili[st.profilo] ? st.profilo : D.predefinito; }
-  function profile(name) { return D.profili[name || profileName()]; }
+  const names = (all = false) => Object.keys(D.profiles).filter(n => all || D.profiles[n].visible);
+  function profileName(st = read()) { return D.profiles[st.profilo] ? st.profilo : D.default; }
+  function profile(name) { return D.profiles[name || profileName()]; }
   function thresholds(name, st = read()) {            // data file < the user's values of this profile
-    const n = name || profileName(st), base = { ...D.profili[n].soglie }, mine = (st[n] && typeof st[n] === "object") ? st[n] : {};
+    const n = name || profileName(st), base = { ...D.profiles[n].thresholds }, mine = (st[n] && typeof st[n] === "object") ? st[n] : {};
     for (const [k, v] of Object.entries(mine)) if (k in base && typeof v === "number" && v >= 0) base[k] = v;
     return base;
   }
   function setThreshold(key, v, name) {
-    const st = read(), n = name || profileName(st); if (!(key in D.profili[n].soglie) || !(v >= 0)) return false;
+    const st = read(), n = name || profileName(st); if (!(key in D.profiles[n].thresholds) || !(v >= 0)) return false;
     st[n] = { ...(st[n] || {}), [key]: v }; write(st); return true;
   }
   function reset() { write({}); }
   // what the workflow file keeps
-  const exportState = () => ({ formato: D.formato, profilo: profileName(), soglie: thresholds() });
+  const exportState = () => ({ formato: D.format, profilo: profileName(), soglie: thresholds() });
   // accepts the workflow-file format only
   function importState(o) {
     if (!o || typeof o !== "object") return;
-    if (o.formato === D.formato && o.soglie) { const n = D.profili[o.profilo] ? o.profilo : D.predefinito; write({ profilo: n, [n]: o.soglie }); }
+    if (o.formato === D.format && o.soglie) { const n = D.profiles[o.profilo] ? o.profilo : D.default; write({ profilo: n, [n]: o.soglie }); }
   }
 
   // ------------------------------------------------------------ the gates
   const num = (v, d) => (v == null || !isFinite(v) ? "–" : (typeof I18N !== "undefined" ? I18N.fix(v, d) : Number(v).toFixed(d)));
-  const dec = g => (g.id === "score" || g.id === "distinct" || (g.id === "stdscore" || g.id === "stdscore_cos") ? 2 : g.unita === "ppm" || g.unita === "min" ? 1 : 0);
+  const dec = g => (g.id === "score" || g.id === "distinct" || (g.id === "stdscore" || g.id === "stdscore_cos") ? 2 : g.unit === "ppm" || g.unit === "min" ? 1 : 0);
   function evalGate(g, vals, T) {
-    let thr = T[g.soglia]; const r = g.ridotta;
-    if (r && vals[r.se_campo] != null && vals[r.se_campo] < r.minore_di) thr = T[r.soglia];
-    let v = vals[g.campo]; const known = v != null && !Number.isNaN(v);
-    if (known && g.assoluto) v = Math.abs(v);
+    let thr = T[g.threshold]; const r = g.reduced;
+    if (r && vals[r.if_field] != null && vals[r.if_field] < r.less_than) thr = T[r.threshold];
+    let v = vals[g.field]; const known = v != null && !Number.isNaN(v);
+    if (known && g.absolute) v = Math.abs(v);
     const ok = known && (g.op === "<=" ? v <= thr : v >= thr), dm = dec(g), inf = v === Infinity;
-    const label = t(`lv.gate.${g.id === "score" ? g.campo : g.id}`), unit = g.unita ? " " + g.unita : "";
+    const label = t(`lv.gate.${g.id === "score" ? g.field : g.id}`), unit = g.unit ? " " + g.unit : "";
     const txt = `${label} ${inf ? "∞" : num(v, dm)} vs ${num(thr, dm)}${unit} ${ok ? "✓" : "✗"}`;
-    return { id: g.id, ruolo: g.ruolo || "", value: known ? v : null, thr, op: g.op, unit: g.unita || "", ok, txt };
+    return { id: g.id, role: g.role || "", value: known ? v : null, thr, op: g.op, unit: g.unit || "", ok, txt };
   }
   // first InChIKey block (or the name)
   const ikKey = c => { const k = String(c.ik || "").slice(0, 14).toUpperCase(); return k || ("n:" + String(c.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "")); };
@@ -63,8 +63,8 @@ const LIVELLI = (() => {
   /** input: { cands: [{name, ik, ent, cos, shared, dprec (ppm), nlib, lib, q}], analogs: [{name, mcos, matched, delta}], nScans, std: {drt, ent, cos, dprec, name} | null, suspect: {name, matched} | null, formulaUnique } → { proposed, decided: null, why, best, gates, lines, decisive, std } */
   function assess(input, name, T) {
     const P = profile(name), TT = T || thresholds(name), inp = input || {};
-    const sf = (P.cancelli.find(g => g.id === "score") || { campo: "ent" }).campo, list = ranked(inp.cands, sf), best = list[0] || null;
-    const res = /** @type {Record<string, any>} */ ({ proposed: P.senza_prove, decided: null, why: "none", best, gates: [], lines: [], decisive: "", std: null, profile: name || profileName() });
+    const sf = (P.gates.find(g => g.id === "score") || { field: "ent" }).field, list = ranked(inp.cands, sf), best = list[0] || null;
+    const res = /** @type {Record<string, any>} */ ({ proposed: P.without_proofs, decided: null, why: "none", best, gates: [], lines: [], decisive: "", std: null, profile: name || profileName() });
     const fin = (lv, why, decisive) => { res.proposed = lv; res.why = why; res.decisive = decisive; return res; };
     const nm = c => c.name || "?", lb = c => (c.lib ? " " + c.lib : "");
     if (inp.std && P.standard.length) {                // level 1 only with the standard marked by the user
@@ -74,12 +74,12 @@ const LIVELLI = (() => {
     }
     if (best) {
       const vals = { ent: best.ent, cos: best.cos, shared: best.shared, ppm: best.dprec, nlib: best.nlib, nScans: inp.nScans ?? 1, margin: marginOf(list, "ent"), marginCos: marginOf(list, "cos") };
-      res.gates = P.cancelli.map(g => evalGate(g, vals, TT)); res.lines = res.gates.map(g => g.txt);
+      res.gates = P.gates.map(g => evalGate(g, vals, TT)); res.lines = res.gates.map(g => g.txt);
       if (best.q != null && isFinite(best.q)) res.lines.push(t("lv.decoyq", { q: num(best.q, 2) }));  // target-decoy q, always with its lower-bound note
-      const bad = res.gates.filter(g => !g.ok), srcBad = bad.filter(g => g.ruolo === "source"), conf = bad.filter(g => g.ruolo === "confirm"), fl = g => g.map(x => x.txt).join("; ");
-      if (!bad.length) return P.tetto ? fin(P.tetto, "tetto", t("lv.dec.tetto", { name: nm(best), lib: lb(best), lv: tag(P.tetto) })) : fin("2a", "2a", t("lv.dec.2a", { name: nm(best), lib: lb(best) }));
+      const bad = res.gates.filter(g => !g.ok), srcBad = bad.filter(g => g.role === "source"), conf = bad.filter(g => g.role === "confirm"), fl = g => g.map(x => x.txt).join("; ");
+      if (!bad.length) return P.cap ? fin(P.cap, "tetto", t("lv.dec.tetto", { name: nm(best), lib: lb(best), lv: tag(P.cap) })) : fin("2a", "2a", t("lv.dec.2a", { name: nm(best), lib: lb(best) }));
       if (!srcBad.length) return fin("3a", "confirm", t("lv.dec.3conf", { name: nm(best), lib: lb(best), gates: fl(conf) }));
-      if (P.provvisorio && best[P.provvisorio.campo] >= TT[P.provvisorio.soglia]) return fin("3a", "provvisorio", t("lv.dec.3prov", { name: nm(best), lib: lb(best), gates: fl(srcBad) }));
+      if (P.provisional && best[P.provisional.field] >= TT[P.provisional.threshold]) return fin("3a", "provvisorio", t("lv.dec.3prov", { name: nm(best), lib: lb(best), gates: fl(srcBad) }));
     }
     const sp = suspectFragments(inp.suspect, P, TT); if (sp) { res.suspect = sp; return fin("3a", "suspect_fragments", t("lv.dec.3susp", { name: nm(sp), n: sp.matched })); }
     const an = ranked(inp.analogs, "mcos")[0];
@@ -87,12 +87,12 @@ const LIVELLI = (() => {
       res.analog = an; return fin("3b", "analogo", t("lv.dec.3an", { name: nm(an), cos: num(an.mcos, 2), delta: (an.delta >= 0 ? "+" : "−") + num(Math.abs(an.delta), 4) }));
     }
     if (best) {
-      const g = res.gates.filter(x => !x.ok).sort((a, b) => (a.ruolo === "source" ? 0 : 1) - (b.ruolo === "source" ? 0 : 1))[0];
+      const g = res.gates.filter(x => !x.ok).sort((a, b) => (a.role === "source" ? 0 : 1) - (b.role === "source" ? 0 : 1))[0];
       res.nearest = best; res.decisive = t("lv.dec.none", { name: nm(best), gate: g ? g.txt : "" });
     }
-    if (inp.formulaUnique && P.senza_prove === "5") return fin("4", "formula", t("lv.dec.4"));
-    res.proposed = P.senza_prove; res.why = best ? "none" : "empty";
-    if (!best) res.decisive = t(P.senza_prove === "5" ? "lv.dec.5" : "lv.dec.0");
+    if (inp.formulaUnique && P.without_proofs === "5") return fin("4", "formula", t("lv.dec.4"));
+    res.proposed = P.without_proofs; res.why = best ? "none" : "empty";
+    if (!best) res.decisive = t(P.without_proofs === "5" ? "lv.dec.5" : "lv.dec.0");
     return res;
   }
   // the chemist's decision: 2b only by the chemist (the programme never assigns it), from 2a, 3a, 3b or 4; refused on 5 and 0; 1 only when a standard was marked

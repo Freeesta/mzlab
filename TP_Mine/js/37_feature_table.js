@@ -113,7 +113,7 @@
         spectrum: t && t.ms1 && t.ms1.mz.length ? { kind: "ms1", mz: t.ms1.mz, y: t.ms1.y, iso: isoOf(t.ms1, r.mz) } : null,
         spectrum2: t && t.ms2 && t.ms2.mz.length ? { kind: "ms2", mz: t.ms2.mz, y: t.ms2.y } : null,
         xicTip: w ? lineOf(w) : "",
-        identity: w ? { neutral: ii ? ii.neutral : null, adduct: ii && ii.adduct ? ii.adduct : "", candidates: idents.map((/** @type {any} */ x) => ({ formula: x.formula, source: "hypothesis", level: x.level, proofs: (x.proofs || []).map((/** @type {any} */ p) => ({ ok: p.segno !== "contro", text: `${p.tipo}: ${p.punti} points` })) })) } : null,
+        identity: w ? { neutral: ii ? ii.neutral : null, adduct: ii && ii.adduct ? ii.adduct : "", candidates: idents.map((/** @type {any} */ x) => ({ formula: x.formula, source: "hypothesis", level: x.level, proofs: (x.proofs || []).map((/** @type {any} */ p) => ({ ok: p.segno !== "against", text: `${p.tipo}: ${p.punti} points` })) })) } : null,
         quality: w ? { shape: w.quality ? w.quality.shape : null, snr: w.quality ? w.quality.snr : null, fwhm: w.quality ? w.quality.fwhm : null, flags: w.quality ? w.quality.flags : [], isoM1: w.iso_m1,
           blank: presence(w, ["blank", "dark"]), t0: presence(w, ["t0"]) } : null,
       };

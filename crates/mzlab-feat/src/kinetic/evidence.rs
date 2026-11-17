@@ -20,7 +20,7 @@ pub const POINTS_IF_WEIGHED: f64 = 1.0;
 pub const COUPLING_FACTOR: f64 = 2.0;
 /// Factor over the reference of `reference_difference` for "reduced" (not absent) in the controls.
 pub const CONTROL_FACTOR: f64 = 3.0;
-pub const KIND: &str = "cinetica";
+pub const KIND: &str = "kinetics";
 pub const SOURCE: &str = "mzlab-feat/kinetic";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

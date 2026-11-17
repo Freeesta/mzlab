@@ -99,9 +99,9 @@ def test_fullscan_the_threshold_is_95_percent():
 
 
 def test_fullscan_a_candidate_needs_its_proofs():
-    bene = {"formula": "C1", "contributi": [{"tipo": "RT", "segno": "neutra", "fonte": "x"}, {"tipo": "frequenza", "segno": "a favore", "fonte": "x"}]}
-    neutral_only = {"formula": "C2", "contributi": [{"tipo": "RT", "segno": "neutra", "fonte": "x"}]}
-    anonima = {"formula": "C3", "contributi": [{"tipo": "frequenza", "segno": "a favore", "fonte": ""}]}
+    bene = {"formula": "C1", "contributi": [{"tipo": "RT", "segno": "neutral", "fonte": "x"}, {"tipo": "frequency", "segno": "for", "fonte": "x"}]}
+    neutral_only = {"formula": "C2", "contributi": [{"tipo": "RT", "segno": "neutral", "fonte": "x"}]}
+    anonima = {"formula": "C3", "contributi": [{"tipo": "frequency", "segno": "for", "fonte": ""}]}
     no_formula = {"formula": None, "contributi": []}                # an unexpected ion is not a candidate
     assert C.lr_candidates([bene, neutral_only, anonima, no_formula]) == [bene, neutral_only, anonima]
     ok = C.criteria_fullscan(RIF, [257.4, 257.4, 333.6], [7.4, 8.3, 6.8], [bene, no_formula], [])[0]

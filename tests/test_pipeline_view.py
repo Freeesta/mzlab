@@ -34,9 +34,9 @@ def series():
     mz, rt = [200.1, 250.2, 300.3], [1.0, 2.0, 3.0]
     state = [0, 2, 3, 0, 0, 0, 3, 3, 1]                        # row * 3 + file
     area = [10.0, 5.0, 0, 7.0, 8.0, 9.0, 0, 0, 4.0]
-    ids = [{"id": 1, "massa_neutra": 199.1, "formula": "C9H9", "membri": [{"mz": 200.1, "rt": 1.0, "ruolo": "M"}], "contributi": [proof("massa", 1.0, 2.0, 2, "a favore"), proof("MS2", 0.5, 0.7, 3, "a favore")],
+    ids = [{"id": 1, "massa_neutra": 199.1, "formula": "C9H9", "membri": [{"mz": 200.1, "rt": 1.0, "ruolo": "M"}], "contributi": [proof("mass", 1.0, 2.0, 2, "for"), proof("MS2", 0.5, 0.7, 3, "for")],
             "totale": 5, "contro": 0, "n": 1, "probabilita": 1.0, "motivi": [], "ipotesi": 3, "livello_max": "2a", "archi": []},
-           {"id": 2, "massa_neutra": 249.2, "formula": "C8H9", "membri": [{"mz": 250.2, "rt": 2.0, "ruolo": "M"}], "contributi": [proof("cinetica", 1.0, 0.5, 0, "contro")],
+           {"id": 2, "massa_neutra": 249.2, "formula": "C8H9", "membri": [{"mz": 250.2, "rt": 2.0, "ruolo": "M"}], "contributi": [proof("kinetics", 1.0, 0.5, 0, "against")],
             "totale": 0, "contro": 1, "n": 2, "probabilita": 0.5, "motivi": [{"codice": "EV_AGAINST_OPEN", "numeri": {}}], "ipotesi": None, "livello_max": "4", "archi": []},
            {"id": 3, "massa_neutra": 299.3, "formula": "C7H9", "membri": [{"mz": 300.3, "rt": 3.0, "ruolo": "M"}], "contributi": [], "totale": 0, "contro": 0, "n": 1, "probabilita": 1.0, "motivi": [], "ipotesi": None, "livello_max": "4", "archi": []}]
     ev = json.dumps({"formato": "evid/1", "identita": ids}).encode()
@@ -56,7 +56,7 @@ const f = V.readFeat(require('fs').readFileSync({json.dumps(str(p))})); {body}""
 def test_read_and_cells(tmp_path):
     r = run_node(tmp_path, "const ids = V.identities(f); console.log(JSON.stringify({rows: f.rows, files: f.files, n: ids.length, cells: ids[0].cells, row: ids.map(x => x.row), chips: ids[0].chips.map(c => c.type + c.points)}));")
     assert (r["rows"], r["files"], r["n"]) == (3, 3, 3) and r["row"] == [0, 1, 2]
-    assert [c["state"] for c in r["cells"]] == [0, 2, 3] and r["cells"][0]["area"] == 10 and r["chips"] == ["massa2", "MS23"]
+    assert [c["state"] for c in r["cells"]] == [0, 2, 3] and r["cells"][0]["area"] == 10 and r["chips"] == ["mass2", "MS23"]
 
 
 def test_discarded_filter_with_reason(tmp_path):

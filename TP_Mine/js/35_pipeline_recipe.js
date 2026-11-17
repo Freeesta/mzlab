@@ -18,7 +18,7 @@
       ingressi: (a.data.meta.inputs || []).map(i => ({ nome: i.name, sha256: i.sha256 })),
       tabella_sha256: await sha(a.out.evid || a.out.table),
       regole: rulesText == null ? null : { nome: "regole_tp/1", versione: verOf(rulesText, /"version"\s*:\s*(\d+)/), sha256: await sha(bytesOf(rulesText)) },
-      livelli: a.levels == null ? null : { nome: "livelli/1", versione: verOf(a.levels, /"versione"\s*:\s*(\d+)/), sha256: await sha(bytesOf(a.levels)) },
+      livelli: a.levels == null ? null : { nome: "livelli/1", versione: verOf(a.levels, /"version"\s*:\s*(\d+)/), sha256: await sha(bytesOf(a.levels)) },
       sospetti: a.suspects || null,
       ipotesi: { cercate: a.out.tried || 0, trovate: a.out.found || 0, registro_sha256: reg == null ? null : await sha(bytesOf(reg)) },
       giri: 1,

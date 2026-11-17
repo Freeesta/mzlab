@@ -93,7 +93,7 @@ try:
             assert not pg.is_visible("#libwhat [data-thr=entropia_min]")
             pg.click("#lw-opt summary"); assert pg.is_visible("#libwhat [data-thr=entropia_min]") and pg.is_visible("#lw-tol") and pg.is_visible("#lw-libs")
             pg.fill("#libwhat [data-thr=entropia_min]", "0,999"); pg.dispatch_event("#libwhat [data-thr=entropia_min]", "change"); wait_for_js(pg, "(() => { try { return JSON.parse(localStorage.getItem('mzlab.lib.soglie')).mzlab.entropia_min === 0.999; } catch (e) { return false; } })()")
-            wf = pg.evaluate("LIVELLI.exportState()"); assert wf["soglie"]["entropia_min"] == 0.999 and wf["formato"] == "livelli/1"
+            wf = pg.evaluate("LIVELLI.exportState()"); assert wf["soglie"]["entropia_min"] == 0.999 and wf["formato"] == "levels/1"
             pg.click("#lw-thr-reset"); wait_for_js(pg, "LIVELLI.thresholds().entropia_min === 0.75")
             pg.keyboard.press("Escape"); frames(pg, 2)
             assert pg.evaluate("document.querySelector('#libwhat').open && !document.querySelector('#lw-opt').open"), "Esc closes the popup, not the window"
