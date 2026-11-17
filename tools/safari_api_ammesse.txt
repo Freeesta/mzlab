@@ -19,6 +19,7 @@ mzlab/web/capacita.js::file pickers::1  # the detection (cartellaLocale)
 mzlab/web/cartella-puntata.js::file pickers::2  # supported() = cartellaLocale
 mzlab/web/libreria-corpo.js::file pickers::2  # folderOk() = cartellaLocale
 mzlab/web/cartella-puntata.js::FileSystemObserver::2  # "in window": else a new read of the folder
+mzlab/web/bug-report-dati.js::deviceMemory::1  # shown only when the browser tells it (absent = no field)
 mzlab/web/cache-dati.js::deviceMemory::1  # || 4
 mzlab/web/conversione.js::deviceMemory::1  # || "?"
 mzlab/web/mappa.js::deviceMemory::1  # || 4

@@ -6,8 +6,12 @@ const seen = new Set();
 let count = 0;
 /** @type {string[]} */
 const details = [];
-/** @type {string[]} one short line per error (message only, no stack), for the bug report */
+/** @type {string[]} one short line per error (message only, no stack) */
 const brief = [];
+/** @type {{where: string, message: string, stack: string}[]} the last 20 errors for the bug report (the report cuts names and URLs: bug-report-testo.js) */
+const recent = [];
+/** @type {string[]} the last 15 clicks, as the id of the button (never its text, never what was typed) */
+const clicks = [];
 
 /** @param {unknown} e */
 function describe(e) {
@@ -33,6 +37,8 @@ export function segnala(e, where = "") {
   if (details.length > 20) details.shift();
   brief.push(((where ? "[" + where + "] " : "") + msg).split(/\r?\n/)[0].slice(0, 300));
   if (brief.length > 20) brief.shift();
+  recent.push({ where, message: msg.split(/\r?\n/)[0].slice(0, 300), stack: e instanceof Error ? String(e.stack || "") : "" });
+  if (recent.length > 20) recent.shift();
   count++;
   let box = document.getElementById(BOX);
   if (!box) {
@@ -63,4 +69,12 @@ export function segnala(e, where = "") {
 
 addEventListener("error", ev => segnala(ev.error || ev.message, "error"));
 addEventListener("unhandledrejection", ev => segnala(ev.reason, "promise"));
-/** @type {any} */ (window).ERRORI = { segnala, recenti: (/** @type {number} */ n) => brief.slice(-n) };
+// breadcrumb: the id of the control the user last pressed (or its data-v / data-a / data-tab), else its tag; capture phase, no text, nothing sent
+addEventListener("click", ev => {
+  const el = ev.target instanceof Element ? ev.target.closest("button,a,summary,[role=button],[role=tab],input[type=checkbox],input[type=radio]") : null;
+  if (!el) return;
+  const k = ["data-v", "data-a", "data-tab"].find(a => el.getAttribute(a));
+  clicks.push(el.id ? "#" + el.id : k ? `${el.tagName.toLowerCase()}[${k}=${el.getAttribute(k)}]` : el.tagName.toLowerCase());
+  if (clicks.length > 15) clicks.shift();
+}, true);
+/** @type {any} */ (window).ERRORI = { segnala, recenti: (/** @type {number} */ n) => brief.slice(-n), ultimi: (/** @type {number} */ n) => recent.slice(-n), azioni: (/** @type {number} */ n) => clicks.slice(-n) };
