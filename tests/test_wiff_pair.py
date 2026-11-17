@@ -3,15 +3,15 @@ and the page's twin (mzlab/web/wiff-pair.js, run by node) give the same answer f
 import json, shutil, subprocess, tempfile
 from pathlib import Path
 
+import cargo_util as cu
+
 ROOT = Path(__file__).resolve().parent.parent
 FILES = ["Run 1.wiff", "run 1.WIFF.SCAN", "B.WIFF", "B.wiff.scan", "b.Wiff.Scan", "C.wiff", "C.scan", "D.wiff.scan", "e.wiff2", "e.wiff.scan.bak", "A.mzML", "Ünï.wiff", "ünï.wiff.scan"]
 
 
 def cli_bin():
-    b = ROOT / "target" / "debug" / "mzlab-cli"
-    if not b.exists():
-        subprocess.run(["cargo", "build", "-p", "mzlab-cli"], cwd=ROOT, check=True, capture_output=True)
-    return b
+    cu.build("-p", "mzlab-cli")  # the prebuilt file in CI, else a release build
+    return ROOT / "target" / "release" / "mzlab-cli"
 
 
 def test_site_and_engine_pair_the_same_files():
