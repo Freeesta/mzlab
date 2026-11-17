@@ -1,0 +1,24 @@
+name: Suggestion
+description: An idea to improve mzLab.
+title: "Suggestion: "
+labels: ["suggestion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not attach laboratory or personal data** (mzML, wiff, raw files, screenshots with names). Describe the idea in words.
+        Support is best effort, with no guaranteed response time. The «Suggest an improvement» button of the site fills the box below for you.
+  - type: textarea
+    id: idea
+    attributes:
+      label: Suggestion
+      description: The idea and, if you wish, what you were doing when you thought of it. Headings «Suggestion», «What I was doing» and «Diagnostics» are kept by the button.
+    validations:
+      required: true
+  - type: checkboxes
+    id: dati
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have not attached laboratory or personal data.
+          required: true

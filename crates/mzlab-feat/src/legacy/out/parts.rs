@@ -8,8 +8,8 @@ pub(super) fn criteria(o: &mut Out, c: &Cand) {
     for (k, _, name) in KINDS.iter() {
         for p in c.ident.proofs.iter().filter(|p| p.kind == k.name()) {
             let status = match p.sign.as_str() {
-                "a favore" if p.points > 0.0 => "pass",
-                "contro" => "fail",
+                "for" if p.points > 0.0 => "pass",
+                "against" => "fail",
                 _ => "na",
             };
             o.raw(if first {
@@ -39,11 +39,11 @@ pub(super) fn spectrum(o: &mut Out, mz: &[f64], rel: &[f64], n: usize) {
 
 /// `isotopes` of `detail`: the proof of the isotope pattern as status and text.
 pub(super) fn isotopes(o: &mut Out, c: &Cand) {
-    let Some(p) = c.ident.proofs.iter().find(|p| p.kind == "isotopi") else {
+    let Some(p) = c.ident.proofs.iter().find(|p| p.kind == "isotopes") else {
         o.raw("null");
         return;
     };
-    let st = if p.sign == "contro" {
+    let st = if p.sign == "against" {
         "inconsistent"
     } else if p.points > 0.0 {
         "consistent"

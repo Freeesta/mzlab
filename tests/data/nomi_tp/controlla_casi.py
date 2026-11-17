@@ -39,23 +39,23 @@ def check_formula_atoms(formula: str, context: str) -> None:
     comp = pyteomics.mass.Composition(formula=formula)
     for elem, count in comp.items():
         if count <= 0:
-            raise ValueError(f"Conteggio atomico non positivo ({elem}={count}) nella formula '{formula}' ({context})")
+            raise ValueError(f"Non-positive atom count ({elem}={count}) in formula '{formula}' ({context})")
 
 
 def verify_transformations(path: Path) -> dict[str, int]:
     """Checks the structural and chemical constraints of trasformazioni.csv."""
     if not path.exists():
-        raise FileNotFoundError(f"File mancante: {path}")
+        raise FileNotFoundError(f"Missing file: {path}")
 
     with open(path, "r", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
 
     if len(rows) != 120:
-        raise ValueError(f"trasformazioni.csv deve contenere 120 righe, trovate: {len(rows)}")
+        raise ValueError(f"trasformazioni.csv must contain 120 rows, found: {len(rows)}")
 
     case_ids = [r["case_id"] for r in rows]
     if len(case_ids) != len(set(case_ids)):
-        raise ValueError("ID duplicati trovati in trasformazioni.csv")
+        raise ValueError("Duplicate IDs found in trasformazioni.csv")
 
     for r in rows:
         check_formula_atoms(r["parent_formula"], f"parent in {r['case_id']}")
@@ -67,17 +67,17 @@ def verify_transformations(path: Path) -> dict[str, int]:
 def verify_name_cases(path: Path) -> tuple[list[dict], dict[str, int]]:
     """Checks the basic consistency of casi_nomi.csv."""
     if not path.exists():
-        raise FileNotFoundError(f"File mancante: {path}")
+        raise FileNotFoundError(f"Missing file: {path}")
 
     with open(path, "r", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
 
     if not (100 <= len(rows) <= 150):
-        raise ValueError(f"casi_nomi.csv deve contenere 100-150 righe, trovate: {len(rows)}")
+        raise ValueError(f"casi_nomi.csv must contain 100-150 rows, found: {len(rows)}")
 
     case_ids = [r["case_id"] for r in rows]
     if len(case_ids) != len(set(case_ids)):
-        raise ValueError("ID duplicati trovati in casi_nomi.csv")
+        raise ValueError("Duplicate IDs found in casi_nomi.csv")
 
     mismatch_nominal = 0
     for r in rows:
@@ -91,7 +91,7 @@ def verify_name_cases(path: Path) -> tuple[list[dict], dict[str, int]]:
         charge = 1 if r["adduct"] == "[M+H]+" else -1
         py_mz = pyteomics.mass.calculate_mass(formula=r["tp_formula_neutral"], charge=charge)
         if abs(py_mz - mz_ex) > 1e-4:
-            raise ValueError(f"Massa m/z errata per {r['case_id']}: atteso ~{py_mz:.5f}, trovato {mz_ex}")
+            raise ValueError(f"Wrong m/z mass for {r['case_id']}: expected ~{py_mz:.5f}, found {mz_ex}")
 
     stats = {
         "rows": len(rows),
@@ -120,28 +120,28 @@ def analyze_groups(rows: list[dict]) -> dict[str, int]:
 
         rts = [float(r["rt_min"]) for r in grp_rows]
         if len(rts) != len(set(rts)):
-            raise ValueError(f"Tempi di ritenzione duplicati nel gruppo {grp_name}: {rts}")
+            raise ValueError(f"Duplicate retention times in group {grp_name}: {rts}")
 
         if kind == "single":
             if len(grp_rows) != 1:
-                raise ValueError(f"Gruppo single {grp_name} con {len(grp_rows)} righe")
+                raise ValueError(f"Single group {grp_name} with {len(grp_rows)} rows")
             single_groups += 1
         elif kind == "isomers":
             if not (2 <= len(grp_rows) <= 4):
-                raise ValueError(f"Gruppo isomeri {grp_name} di dimensione non valida: {len(grp_rows)}")
+                raise ValueError(f"Isomer group {grp_name} has invalid size: {len(grp_rows)}")
             formulas = set(r["tp_formula_neutral"] for r in grp_rows)
             if len(formulas) != 1:
-                raise ValueError(f"Formule eterogenee negli isomeri {grp_name}: {formulas}")
+                raise ValueError(f"Heterogeneous formulas in isomers {grp_name}: {formulas}")
             isomer_groups += 1
         elif kind == "different_formula":
             if len(grp_rows) < 2:
-                raise ValueError(f"Gruppo different_formula {grp_name} con <2 righe")
+                raise ValueError(f"Gruppo different_formula {grp_name} with <2 rows")
             formulas = set(r["tp_formula_neutral"] for r in grp_rows)
             if len(formulas) != len(grp_rows):
-                raise ValueError(f"Formule duplicate in different_formula {grp_name}: {formulas}")
+                raise ValueError(f"Duplicate formulas in different_formula {grp_name}: {formulas}")
             nominals = set(int(r["mz_nominal"]) for r in grp_rows)
             if len(nominals) != 1:
-                raise ValueError(f"Masse nominali disomogenee in different_formula {grp_name}: {nominals}")
+                raise ValueError(f"Inconsistent nominal masses in different_formula {grp_name}: {nominals}")
             diff_groups += 1
             if len(grp_rows) >= 3:
                 triplets += 1
@@ -173,7 +173,7 @@ def print_table(results: list[tuple[str, str, str, str]]) -> None:
     sep = "+" + "+".join("-" * (w + 2) for w in col_w) + "+"
 
     print(sep)
-    header = f"| {'Controllo':<{col_w[0]}} | {'Atteso':<{col_w[1]}} | {'Riscontrato':<{col_w[2]}} | {'Esito':<{col_w[3]}} |"
+    header = f"| {'Check':<{col_w[0]}} | {'Expected':<{col_w[1]}} | {'Found':<{col_w[2]}} | {'Result':<{col_w[3]}} |"
     print(header)
     print(sep)
     for row in results:
@@ -187,7 +187,7 @@ def main() -> int:
     py_ver, pyt_ver = get_versions()
 
     print("==========================================================================")
-    print("Self-check validazione casi test nomi TP (mzLab)")
+    print("Self-check: validation of the TP name test cases (mzLab)")
     print(f"Ambiente: Python {py_ver} | pyteomics {pyt_ver}")
     print("==========================================================================")
 
@@ -196,18 +196,18 @@ def main() -> int:
     group_stats = analyze_groups(rows)
 
     checks = [
-        ("Righe trasformazioni.csv", "== 120", str(transf_stats["rows"]), "OK"),
-        ("ID duplicati (trasformazioni)", "0", str(transf_stats["duplicate_ids"]), "OK"),
-        ("Righe casi_nomi.csv", "100..150", str(cases_stats["rows"]), "OK"),
-        ("ID duplicati (casi_nomi)", "0", str(cases_stats["duplicate_ids"]), "OK"),
-        ("Atomi negativi nelle formule", "0", "0", "OK"),
-        ("Accoppiamento mz_nominal == round(mz)", "100%", f"{len(rows) - cases_stats['nominal_mismatches']}/{len(rows)}", "OK"),
-        ("Gruppi isomeri (stessa formula, RT div)", ">= 6", str(group_stats["isomer_groups"]), "OK"),
-        ("Gruppi diversa formula (stesso nom)", ">= 8", str(group_stats["diff_groups"]), "OK"),
-        ("Triplette in gruppi diversa formula", ">= 1", str(group_stats["triplets"]), "OK"),
-        ("Casi singoli (single)", ">= 30", str(group_stats["single_groups"]), "OK"),
-        ("Coppie con RT inverso vs m/z esatto", ">= 1", str(group_stats["inverse_rt"]), "OK"),
-        ("Addotti negativi [M-H]-", ">= 1", str(group_stats["neg_adducts"]), "OK"),
+        ("Rows in trasformazioni.csv", "== 120", str(transf_stats["rows"]), "OK"),
+        ("Duplicate IDs (trasformazioni)", "0", str(transf_stats["duplicate_ids"]), "OK"),
+        ("Rows in casi_nomi.csv", "100..150", str(cases_stats["rows"]), "OK"),
+        ("Duplicate IDs (casi_nomi)", "0", str(cases_stats["duplicate_ids"]), "OK"),
+        ("Negative atoms in formulas", "0", "0", "OK"),
+        ("Pairing mz_nominal == round(mz)", "100%", f"{len(rows) - cases_stats['nominal_mismatches']}/{len(rows)}", "OK"),
+        ("Isomer groups (same formula, different RT)", ">= 6", str(group_stats["isomer_groups"]), "OK"),
+        ("Different-formula groups (same nominal)", ">= 8", str(group_stats["diff_groups"]), "OK"),
+        ("Triplets in different-formula groups", ">= 1", str(group_stats["triplets"]), "OK"),
+        ("Single cases (single)", ">= 30", str(group_stats["single_groups"]), "OK"),
+        ("Pairs with RT inverse to exact m/z", ">= 1", str(group_stats["inverse_rt"]), "OK"),
+        ("Negative adducts [M-H]-", ">= 1", str(group_stats["neg_adducts"]), "OK"),
     ]
 
     all_passed = (
@@ -227,9 +227,9 @@ def main() -> int:
     print_table(checks)
 
     if all_passed:
-        print("TUTTI I VINCOLI E I CONTROLLI CHIMICI SONO STATI VERIFICATI CON SUCCESSO!")
+        print("ALL CONSTRAINTS AND CHEMICAL CHECKS PASSED!")
         return 0
-    print("ERRORE: Uno o piu vincoli non risultano soddisfatti.")
+    print("ERROR: One or more constraints are not satisfied.")
     return 1
 
 

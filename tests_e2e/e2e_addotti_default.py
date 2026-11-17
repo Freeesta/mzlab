@@ -61,7 +61,7 @@ if __name__ == "__main__":
                 pg.evaluate("LISTE.open({})"); pg.wait_for_selector("#lst-tbody tr", timeout=8000)
                 t = pg.evaluate("[...document.querySelectorAll('#lst-tbody tr')].map(r => r.innerText).join('\\n')")
                 assert "n=" not in t, t[:300]
-                assert pg.evaluate("LISTE.buildIndex([{id: 'k', name: 'k', items: [{id: 'peg', name: 'PEG (polietilenglicole) n=3', mz: 150, pol: 1, series: {id: 'peg', n: 3}}]}], null).pos[0].name") == "PEG (polietilenglicole), 3 repeat units"
+                assert pg.evaluate("LISTE.buildIndex([{id: 'k', name: 'k', items: [{id: 'peg', name: 'PEG (polyethylene glycol) n=3', mz: 150, pol: 1, series: {id: 'peg', n: 3}}]}], null).pos[0].name") == "PEG (polyethylene glycol), 3 repeat units"
             step("polymer series are not named «n=…» in the reference list", ref_list)
     finally:
         print("page errors:", r.errs); r.close()

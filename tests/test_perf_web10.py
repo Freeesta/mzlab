@@ -11,7 +11,7 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "mzlab" / "web"
 NODE = shutil.which("node")
-pytestmark = pytest.mark.skipif(not NODE, reason="node non disponibile")
+pytestmark = pytest.mark.skipif(not NODE, reason="node not available")
 
 PRELUDE = r"""
 const fs = require('fs');

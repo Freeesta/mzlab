@@ -1,6 +1,6 @@
 //! The proofs of a candidate identity as data (`evid/1`, schema in `docs/schemi/evid-1.json`): every proof is a record {type, value, threshold,
 //! points, sign, source, version, parameters}, the same as an entry of `evidence[]` of `mzid/1`. The points are stepped (`points::PointsTable`, the
-//! section `punti` of `livelli/1`) and explain the order of the candidates: the total never assigns the level (that stays the cascade of
+//! section `points` of `levels/1`) and explain the order of the candidates: the total never assigns the level (that stays the cascade of
 //! `LIVELLI.assess`; 2b and 1 only by the chemist), a proof "against" earns nothing and is never offset by the points of another, and the
 //! probability is 1/N (N = candidates the proofs cannot tell apart). Every automatic decision leaves a reason code with the numbers behind it.
 
@@ -64,16 +64,16 @@ impl Kind {
     /// Name in the files (`tipo` of the schema).
     pub fn name(self) -> &'static str {
         match self {
-            Kind::Mass => "massa",
-            Kind::Isotopes => "isotopi",
+            Kind::Mass => "mass",
+            Kind::Isotopes => "isotopes",
             Kind::Ms2 => "MS2",
-            Kind::Fragments => "frammenti",
-            Kind::Network => "rete",
-            Kind::Kinetics => "cinetica",
-            Kind::Controls => "controlli",
+            Kind::Fragments => "fragments",
+            Kind::Network => "network",
+            Kind::Kinetics => "kinetics",
+            Kind::Controls => "controls",
             Kind::Rt => "RT",
-            Kind::Frequency => "frequenza",
-            Kind::External => "esterne",
+            Kind::Frequency => "frequency",
+            Kind::External => "external",
         }
     }
 }
@@ -89,9 +89,9 @@ impl Sign {
     /// Name in the files (`segno` of the schema).
     pub fn name(self) -> &'static str {
         match self {
-            Sign::For => "a favore",
-            Sign::Against => "contro",
-            Sign::Neutral => "neutra",
+            Sign::For => "for",
+            Sign::Against => "against",
+            Sign::Neutral => "neutral",
         }
     }
 }

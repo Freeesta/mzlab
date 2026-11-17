@@ -13,6 +13,7 @@
     look: ico('<circle cx="10" cy="10" r="7"/><path d="M10 3a7 7 0 0 0 0 14z" fill="currentColor"/>'),
     read: ico('<path d="M3 4.5h5a2 2 0 0 1 2 2V16a2 2 0 0 0-2-2H3zM17 4.5h-5a2 2 0 0 0-2 2V16a2 2 0 0 1 2-2h5z"/>'),
     data: ico('<ellipse cx="10" cy="5" rx="6" ry="2.5"/><path d="M4 5v10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V5M4 10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5"/>'),
+    sug: ico('<path d="M7.5 14.5h5M8.3 17h3.4M10 2.5a5 5 0 0 0-2.6 9.3c.4.3.6.7.6 1.2v.5h4V13c0-.5.2-.9.6-1.2A5 5 0 0 0 10 2.5z"/>'),
     bug: ico('<path d="M7.5 5.5a2.5 2.5 0 0 1 5 0"/><rect x="6" y="5.5" width="8" height="10" rx="4"/><path d="M10 8v7.5M6 10H3M6.2 13H3.5M14 10h3M13.8 13h2.7M7 4L5.5 2.8M13 4l1.5-1.2"/>'),
     app: ico('<rect x="3" y="3.5" width="14" height="13" rx="2"/><path d="M3 7.5h14"/>'),
     play: ico('<path d="M6 4l10 6-10 6z" fill="currentColor"/>'),
@@ -51,10 +52,10 @@
   const flat = (id, icon, title, body) => `<div class="imp-s" id="${id}" role="group" aria-labelledby="${id}-h"><h3 class="imp-h" id="${id}-h"><span class="gi">${GICON[icon] || ""}</span>${title}</h3>${body}</div>`;
   /** A group that folds into nothing: no controls → "", one control → a plain row (no title), several → a flat group with its title. */
   const flatOrRow = (id, icon, title, items) => { const it = items.filter(Boolean); return !it.length ? "" : it.length === 1 ? `<div class="imp-s" id="${id}">${it[0]}</div>` : flat(id, icon, title, it.join("")); };
-  /** The bug-report row: a plain button that shows the form (fetched at the first click through `load`) in #uip-bug. */
-  const bugRow = (label, tip) => `<div class="imp-fld imp-solo" id="uip-g-bug"><button id="uip-bugbtn" type="button" title="${esc(tip)}" aria-expanded="false" aria-controls="uip-bug"><span class="ic">${GICON.bug}</span>${label}</button></div><div id="uip-bug" hidden></div>`;
-  const bugBind = (root, load) => {
-    const btn = root.querySelector("#uip-bugbtn"), box = root.querySelector("#uip-bug"); let done = false;
+  /** The report row (`id` "bug" or "sug"): a plain button that shows the form (fetched at the first click through `load`) in #uip-<id>. */
+  const bugRow = (label, tip, id = "bug") => `<div class="imp-fld imp-solo" id="uip-g-${id}"><button id="uip-${id}btn" type="button" title="${esc(tip)}" aria-expanded="false" aria-controls="uip-${id}"><span class="ic">${GICON[id]}</span>${label}</button></div><div id="uip-${id}" hidden></div>`;
+  const bugBind = (root, load, id = "bug") => {
+    const btn = root.querySelector(`#uip-${id}btn`), box = root.querySelector(`#uip-${id}`); let done = false;
     if (btn && box) btn.addEventListener("click", () => {
       const show = box.hidden; box.hidden = !show; btn.setAttribute("aria-expanded", String(show));
       if (show && !done) { done = true; load(box).catch(() => { done = false; }); }

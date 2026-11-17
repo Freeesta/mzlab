@@ -1,5 +1,5 @@
 //! The chemistry the readers use: the formula of a library entry must explain the precursor of the entry (`formulaMass`, adducts, `checkStructure`),
-//! and the names of the library entries are cleaned with the profile «attributio» of `livelli/1` (`cleanName`).
+//! and the names of the library entries are cleaned with the profile «attributio» of `levels/1` (`cleanName`).
 
 use super::delim::{jstrim, txt};
 use mzlab_core::elements::{mass_of, ELECTRON};
@@ -191,7 +191,7 @@ struct Cleaning {
     suffixes: Vec<String>,
 }
 
-/// The cleaning rules of the profile «attributio» (`pulizia_nomi` of the bundled `livelli/1`).
+/// The cleaning rules of the profile «attributio» (`pulizia_nomi` of the bundled `levels/1`).
 fn cleaning() -> &'static Cleaning {
     static C: OnceLock<Cleaning> = OnceLock::new();
     C.get_or_init(|| {
@@ -207,12 +207,12 @@ fn cleaning() -> &'static Cleaning {
         let v = json::parse(crate::evid::points::BUNDLED.as_bytes()).ok();
         let p = v
             .as_ref()
-            .and_then(|v| v.get("profili"))
+            .and_then(|v| v.get("profiles"))
             .and_then(|p| p.get("attributio"))
-            .and_then(|p| p.get("pulizia_nomi"));
+            .and_then(|p| p.get("name_cleaning"));
         Cleaning {
-            prefixes: list(p.and_then(|p| p.get("prefissi"))),
-            suffixes: list(p.and_then(|p| p.get("suffissi"))),
+            prefixes: list(p.and_then(|p| p.get("prefixes"))),
+            suffixes: list(p.and_then(|p| p.get("suffixes"))),
         }
     })
 }

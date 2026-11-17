@@ -154,12 +154,13 @@ function uipOpen(btn) {
   const grp = (id, icon, title, body, dflt, tip) => body ? C.group(id, icon, T(title), body, uipGroupOpen(id, dflt), T(tip)) : "";
   d.innerHTML = `<div class="a-hd"><h2>${T("settings.title")}</h2><button type="button" class="x" id="uip-x" aria-label="${esc(T("settings.close"))}" title="${esc(T("settings.close.tip"))}"></button></div>`
     + list + flat("uip-g-data", "data", "settings.g.data", dataItems) + flat("uip-g-app", "app", "settings.g.app", appItems)
-    + tour + C.bugRow(T("settings.g.bug"), T("settings.g.bug.tip"))
+    + tour + C.bugRow(T("settings.g.bug"), T("settings.g.bug.tip")) + C.bugRow(T("settings.g.sug"), T("settings.g.sug.tip"), "sug")
     + (prof === "ricerca" ? grp("uip-g-llm", "app", "llm.g", '<div id="uip-llm"></div>', false, "llm.g.tip") : "") + grp("uip-g-diag", "cont", "settings.g.diag", mem ? mem.html : "", false, "settings.g.diag.tip")
     + `<div class="row"><button type="button" id="uip-reset" title="${esc(T("settings.reset.title"))}">${T("settings.reset")}</button></div>`;
   document.body.appendChild(d);
   d.querySelectorAll("details.imp-g").forEach(g => g.addEventListener("toggle", () => { try { localStorage.setItem(UIP_GROUP_KEY(g.id), /** @type {HTMLDetailsElement} */ (g).open ? "1" : "0"); } catch (_) { /* not remembered */ } }));
-  C.bugBind(d, box => import("./bug-report.js").then(m => m.mount(box)));      // the report form is fetched the first time the button opens it
+  C.bugBind(d, box => import("./bug-report.js").then(m => m.mount(box, "bug")));
+  C.bugBind(d, box => import("./bug-report.js").then(m => m.mount(box, "suggestion")), "sug");      // the report form is fetched the first time the button opens it
   if (window.DESKUPD) DESKUPD.bind(d);
   if (window.DESKDEF) DESKDEF.bind(d);
   if (mem) mem.bind(d);

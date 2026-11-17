@@ -44,7 +44,7 @@ impl Params {
         }
     }
 
-    /// The thresholds of the profile (`soglie` keys) that these parameters replace.
+    /// The thresholds of the profile (`thresholds` keys) that these parameters replace.
     pub fn overrides(&self) -> [(&'static str, f64); 4] {
         [
             ("std_rt_max", self.std_rt_max),

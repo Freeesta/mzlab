@@ -1,4 +1,4 @@
-//! Proofs and points (`evid/1`): the table of points is the one of `livelli/1` (the JSON of the crate is what `tools/export_levels.py` writes from the
+//! Proofs and points (`evid/1`): the table of points is the one of `levels/1` (the JSON of the crate is what `tools/export_levels.py` writes from the
 //! data file of the web page), the points are stepped and explain the order, a proof against is never offset, 1/N, the reason codes and the schema.
 
 use std::path::{Path, PathBuf};
@@ -124,7 +124,7 @@ fn a_proof_against_is_never_offset() {
 fn the_kinetic_proof_enters_with_the_points_of_the_table() {
     use mzlab_feat::kinetic::{Evidence as K, Sign as KS};
     let k = |sign| K {
-        kind: "cinetica",
+        kind: "kinetics",
         value: 0.2,
         threshold: 0.693,
         points: 0.0,
@@ -316,9 +316,9 @@ fn every_identity_has_its_table_of_contributions_and_it_follows_the_schema() {
 
 #[test]
 fn a_file_without_points_or_of_another_format_is_refused() {
-    assert!(PointsTable::parse(b"{\"formato\":\"livelli/2\"}").is_err());
+    assert!(PointsTable::parse(b"{\"format\":\"levels/2\"}").is_err());
     assert!(PointsTable::parse(
-        b"{\"formato\":\"livelli/1\",\"predefinito\":\"x\",\"profili\":{\"x\":{\"soglie\":{}}}}"
+        b"{\"format\":\"levels/1\",\"default\":\"x\",\"profiles\":{\"x\":{\"thresholds\":{}}}}"
     )
     .is_err());
     assert!(PointsTable::parse(b"not json").is_err());
