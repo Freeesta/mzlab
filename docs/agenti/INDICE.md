@@ -25,6 +25,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | azioni dei pannelli (registro `azioni/1`, menu del tasto destro, Maiusc+F10) | `docs/agenti/azioni.md` |
 | picchi spalmati: lotto sintetico, configurazioni MZmine default/wide, tabella di confronto (`tools/bench/confronto_larghi.py`) | `docs/agenti/bench-picchi-larghi.md` |
 | lettore Bruker timsTOF `.d` (`crates/mzlab-lettori/src/bruker/`: SQLite minimo, zstd, `tdf_bin`/`tsf_bin`, calibrazione m/z, `BrukerD` in `agilent-d.js`) | `docs/agenti/bruker.md` |
+| retta di taratura sui picchi integrati (`quant.curve`: pesi 1/x…1/y², QR, standard interno, LOD/LOQ ICH e S/N, esclusioni registrate, `taratura/1`, `calib.rs`, `curve.rs`) | `docs/agenti/calibrazione.md` |
 | campi numerici scritti a mano (`campi.js`, `CAMPI.num`, `data-num`, calcolatori, nota di rifiuto `campo.*`, `numIt` senza Infinity, `lib_campi.sweep`) | `docs/agenti/campi-numerici.md` |
 | ruoli dei file, tempi e metadati dei campioni (`campioni/2` e `/3`, `mzlab-core/src/samples/`: proposte dai nomi, modelli di nome, CSV, colonne libere, dati dal file, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |
 | canali dei dati (file → canali: TIC, filtri/transizioni/precursori, UV, analogici; tipo di esperimento come etichetta; lavori aperti) | `docs/agenti/canali-dati.md` |
@@ -76,7 +77,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | Thermo `.raw`: attivazione, «unknown», tabella eventi rifiutata, scansioni e controller danneggiati (`warn.raw.damaged`), precursori (target, ione selezionato, catene MSn, SPS, MSX, SRM dall'evento) | `docs/agenti/lettori-thermo-precursori.md` |
 | lettura nativa di `.raw`, `.wiff`, `.D` nel sito (campioni, OPFS, avanzamento, mzML su richiesta) | `docs/agenti/lettura-nativa.md` |
 | formato `.mzlib`, parser delle librerie, indici e punteggi (`crates/mzlab-lib`) | `docs/agenti/librerie.md` |
-| testi, `lang/`, `help.js`, solo inglese | `docs/agenti/lingue.md` |
+| testi, `lang/`, `help.js`, solo inglese; testi con markup (m/z in corsivo, MS2 con apice) scritti una volta, prima della prima pittura | `docs/agenti/lingue.md` |
 | liste dell'utente (trasformazioni, addotti, sospetti: CSV con errori per riga, `liste/1`, SHA-256 per `prov/1`) | `docs/agenti/liste.md` |
 | livelli di identificazione (scala di Schymanski 2a/2b/3a/3b, scala di previsione, etichette «L3» e «Prev. 2», Tabui, Attributio, untargeted) | `docs/agenti/livelli.md` |
 | assistente LLM e agenti esterni: principi, scelte, rischi, proposte non realizzate | `docs/agenti/llm-scelte.md` |
@@ -84,6 +85,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | assistente LLM: catalogo `strumenti/1` | `docs/agenti/llm.md` |
 | velocità della mappa: misure dei gesti (`tools/bench_map.py`), diagnosi e lavori aperti; visore 3D (`mappa3d.js`, `failure3d`, comandi e menu, precarico `preload3d`) | `docs/agenti/mappa-fluida.md` |
 | motore di confronto spettrale con più librerie per mzFlow (nodo «Attribution», `table.attribute`) e pannello laterale MSⁿ: `libset`, `libmatch/1`, preset, analoghi con ΔFormula, catalogo `librerie/2` | `docs/agenti/match-spettrale.md` |
+| «file troppo grande» nel browser: quando compare (file aperti insieme, formati letti per intero), misure per dimensione e numero di file, `openFiles`, `whole`, scansioni condivise fra slot | `docs/agenti/memoria-limiti.md` |
 | memoria: regole di scelta del budget, esperienza d'uso dell'avviso, proposte aperte (`memoria-avviso.js`) | `docs/agenti/memoria-scelte.md` |
 | contratto di memoria dei moduli WASM (`mzlab-core::budget`, uscite a offset, lastre, flusso delle prove) | `docs/agenti/memoria.md` |
 | metodo di acquisizione (`metodo/1`, `method.rs`, `method_wiff`, `method_raw`, schema) | `docs/agenti/metodo.md` |

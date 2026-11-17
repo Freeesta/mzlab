@@ -1,4 +1,11 @@
 {
+  "err.flow.curve.duplicate": "Engine error message; {analyte} = analyte, {sample} = sample.",
+  "err.flow.curve.param": "Engine error message; {name} = parameter name, {value} = value written.",
+  "err.flow.curve.responses": "Engine error message; {detail} = technical detail.",
+  "err.flow.curve.role": "Engine error message; {role} = role written in the standards file.",
+  "err.flow.curve.row": "Engine error message; {file} = responses or standards, {detail} = row and technical detail.",
+  "err.flow.curve.standards": "Engine error message; {detail} = technical detail.",
+  "err.flow.curve.unit": "Engine error message; {analyte} = analyte.",
   "err.flow.quant.curveRow": "Engine error message; {detail} = row and technical detail.",
   "err.flow.quant.curves": "Engine error message; {detail} = technical detail.",
   "err.flow.quant.duplicate": "Engine error message; {name} = curve name.",

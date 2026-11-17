@@ -80,11 +80,9 @@ fn riconosci(fs: &mut FileSet) -> Fiducia {
 }
 
 /// The bytes of member `i`, counted against what is left of `Limiti::byte`.
-fn read_all(fs: &mut FileSet, i: usize, left: &mut u64) -> Result<Vec<u8>> {
+fn read_all(fs: &mut FileSet, i: usize, left: &mut u64, limits: &Limits) -> Result<Vec<u8>> {
     let m = &mut fs.membri[i];
-    if m.dim > *left {
-        return Err(Error::memory_budget());
-    }
+    limits.fits_in(m.dim, *left)?;
     *left -= m.dim;
     let mut b = vec![0u8; m.dim as usize];
     m.dati.read_at(0, &mut b)?;
@@ -240,7 +238,7 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     {
         let Some(i) = find(&fs, n) else { continue };
         // the index, its layout and data.ms are the run; any other member that cannot be read is left out and named
-        match read_all(&mut fs, i, &mut left) {
+        match read_all(&mut fs, i, &mut left, limits) {
             Ok(b) => small.push((n, b)),
             Err(_) if ![SCAN, XSD, DATA_MS].contains(&n) => {
                 unread.push(format!("{n}: could not be read"))

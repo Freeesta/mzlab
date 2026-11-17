@@ -14,7 +14,7 @@
 const COMANDI_TAB = [
   { id: "view.zoom", nome: "storia.zoom", modulo: "eventi.js", dove: ["eventi.js", "mappa.js", "pannelli.js", "banco.js", "dda.js", "spettro.js", "azioni-tasti.js", "scroll.js", "tabs.js", "grafici.js", "xic-bordi.js", "zoom-reset.js"], campi: ["zoom", "zoomY", "lock"],
     parametri: "m/z or RT interval, intensity interval", tasto: "wheel, Backspace, double click, Shift+drag", unisci: "a burst of wheel steps, a drag and a pan are one step", annulla: "istantanea" },
-  { id: "peaks.integration", nome: "storia.int", modulo: "picchi.js", dove: ["picchi.js", "eventi.js", "xic-spettro.js", "pannelli.js", "pannelli-annulla.js", "integra-estremi.js", "integra-valli.js"], campi: ["ints", "isel"],
+  { id: "peaks.integration", nome: "storia.int", modulo: "picchi.js", dove: ["picchi.js", "eventi.js", "xic-spettro.js", "pannelli.js", "pannelli-annulla.js", "integra-estremi.js", "integra-valli.js", "integra-tutti.js"], campi: ["ints", "isel"],
     parametri: "limits of the integrated peak", tasto: "I, Del", unisci: "an edge drag is one step", annulla: "istantanea" },
   { id: "panel.fields", nome: "storia.campi", modulo: "grafici.js", dove: ["grafici.js", "pannelli.js", "fondo-spettro.js", "fondo-piatto.js", "sottrazione.js", "mappa.js", "barra.js"], campi: ["bk", "bg", "fondo", "smooth", "corr", "ref", "bgr"],
     parametri: "blank, background, smoothing, correction, reference", tasto: "", unisci: "", annulla: "istantanea" },
@@ -47,7 +47,7 @@ const COMANDI_TAB = [
   { id: "files.view", nome: "storia.campi", modulo: "lista-file.js", dove: ["lista-file.js", "lista-file-menu.js", "explore.js"], campi: [], parametri: "visibility, name, colour, group, order of a file", tasto: "", unisci: "", annulla: "comando" },
   { id: "samples.meta", nome: "storia.campi", modulo: "campioni-tabella.js", dove: ["campioni-tabella.js", "qaqc.js"], campi: [], parametri: "type, replicate, concentration, unit, time; TSV import", tasto: "", unisci: "", annulla: "comando" },
   { id: "peaks.settings", nome: "storia.campi", modulo: "picchi.js", dove: ["picchi.js"], campi: [], parametri: "peak-finding parameters, options of the integration table", tasto: "", unisci: "", annulla: "comando" },
-  { id: "app.settings", nome: "storia.campi", modulo: "settings.js", dove: ["settings.js"], campi: [], parametri: "theme, palette, font, contrast, motion, merge, side by side, tolerance and decimals of the high resolution (the language reloads the page and is not undone)", tasto: "", unisci: "", annulla: "comando" },
+  { id: "app.settings", nome: "storia.campi", modulo: "settings.js", dove: ["settings.js"], campi: [], parametri: "theme, palette, font, contrast, motion, side by side, tolerance and decimals of the high resolution (the language reloads the page and is not undone)", tasto: "", unisci: "", annulla: "comando" },
   { id: "flow.plan", nome: "storia.campi", modulo: "flow-shell.js", dove: ["flow-shell.js", "flow-form.js"], campi: [], parametri: "steps and parameters of the plan", tasto: "Ctrl+Z, Ctrl+Y", unisci: "one entry per change", annulla: "flow" },
   { id: "draw.editor", nome: "storia.campi", modulo: "draw.js", dove: ["draw.js"], campi: [], parametri: "the structure in the editor (Ketcher)", tasto: "Ctrl+Z, Ctrl+Y", unisci: "", annulla: "draw" },
   { id: "panel.selection", nome: "storia.campi", modulo: "eventi.js", dove: ["eventi.js"], campi: ["sel", "isel", "cur"], parametri: "selected interval, selected integration, cursor", tasto: "", unisci: "", annulla: "nessuna",

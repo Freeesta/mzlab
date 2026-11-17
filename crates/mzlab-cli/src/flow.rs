@@ -98,6 +98,7 @@ pub fn steps() -> Vec<Step> {
     all.extend(crate::flow_digl::cli_steps());
     all.extend([
         crate::flow_quant::quant_step(),
+        crate::flow_curve::curve_step(),
         crate::flow_massacc::massacc_step(),
     ]);
     all.extend([mzlab_feat::steps::run_order(), mzlab_feat::steps::methods()]);
@@ -376,6 +377,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
         Exec::File("comparison", crate::flow_compare::compare_job),
     ),
     ("quant.calibrate", Exec::Made(crate::flow_quant::quant_job)),
+    ("quant.curve", Exec::Made(crate::flow_curve::curve_job)),
     (
         "export.inclusion",
         Exec::File("report", crate::flow_inclusion::inclusion_job),

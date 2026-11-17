@@ -38,7 +38,7 @@ try:
             assert "Text size" not in t and "theme" in t.lower() and "chart colors" in t.lower()
             for bad in ("Size of the text of the", "Applies to menus", "tutorial", "Install", "Number", "suggestions"):
                 assert bad.lower() not in t.lower(), bad
-            assert pg.locator("#uipset input[type=checkbox]").count() == 4 and pg.locator("#uip-merge").count() == 1 and pg.locator("#uip-tog").count() == 0      # the merge of the centroids; no «Show all experiments together» (it is the only view)
+            assert pg.locator("#uipset input[type=checkbox]").count() == 3 and pg.locator("#uip-merge").count() == 0 and pg.locator("#uip-tog").count() == 0      # no merge switch (the engine decides); no «Show all experiments together» (it is the only view)
             assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["By file (default)", "By time", "Accessible", "High contrast", "Rainbow", "Black and white"]
             assert pg.input_value("#uip-pal") == "file"
             pg.check("input[name=uip-th][value=dark]", force=True); pg.wait_for_timeout(400)
@@ -100,7 +100,7 @@ try:
         step("4 palettes: colours change at once, hc >= 4.5:1 and +1 px, cb has line styles, order by time kept", palettes)
         def persists():
             set_pal(pg, "cb"); pg.wait_for_timeout(300)
-            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.prefs'))") == {"v": 2, "theme": "auto", "pal": "cb", "merge": True}
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.prefs'))") == {"v": 2, "theme": "auto", "pal": "cb"}
             pg.reload(); pg.wait_for_timeout(3500)
             assert pg.evaluate("UIP.pal") == "cb"
             c = [hexof(x[1]) for x in pg.evaluate(COLORS)]; assert c and c[0] == "#00204d", c       # cividis start: colours recomputed with the saved palette

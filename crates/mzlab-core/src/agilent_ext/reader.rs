@@ -325,8 +325,8 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     {
         // the index, its layout and data.ms are the run; any other member that cannot be read is left out and named
         if let (Some(i), true) = (find(&fs, n), [SCAN, XSD, DATA_MS].contains(&n)) {
-            small.push((n, lc::read_all(&mut fs, i, &mut left)?));
-        } else if let Some(b) = lc::side(&mut fs, n, &mut left, &mut unread) {
+            small.push((n, lc::read_all(&mut fs, i, &mut left, limits)?));
+        } else if let Some(b) = lc::side(&mut fs, n, &mut left, &mut unread, limits) {
             small.push((n, b));
         }
     }
@@ -341,7 +341,7 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         .filter(|&i| fs.membri[i].dim > 0)
         .or_else(|| find(&fs, PROFILE))
         .or(peak_at);
-    let mut lc = lc::read_lc(&mut fs, &mut left);
+    let mut lc = lc::read_lc(&mut fs, &mut left, limits);
     lc.unread.splice(0..0, unread);
     let data_file = match peak_at {
         Some(i) if find(&fs, PROFILE) == Some(i) => PROFILE,

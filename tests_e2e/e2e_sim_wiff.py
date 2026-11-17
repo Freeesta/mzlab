@@ -210,7 +210,7 @@ try:
             la = [l for l in pg.evaluate(LB) if not l["fol"]]
             need(len(la) == 1 and la[0]["key"].startswith(f"m|{ka}|"), la)
             need(la[0]["text"].startswith("A = ") and "(" not in la[0]["text"], la[0]["text"])
-            need(pg.evaluate("I18N.t('int.base.tag.edges')") in la[0]["tip"], "the baseline mode is in the hover text")
+            need(pg.evaluate("I18N.t('int.copy.tip')") in la[0]["tip"] and pg.evaluate("I18N.t('int.base.tag.edges')") not in la[0]["tip"], "the hover text is the copy hint only")
             only(kb)
             fb = [l for l in pg.evaluate(LB) if l["fol"]]
             need(len(fb) == 1 and fb[0]["ion"] == la[0]["ion"] and fb[0]["key"].startswith(f"m|{kb}|"), fb)
@@ -354,7 +354,7 @@ try:
                 return ls
             ls = labels(2, "two parts")
             tot = sum(float(x[1]) for x in ls)
-            need(abs(tot - float(whole[3])) <= 2e-4 * float(whole[3]), ("the labels add up to the window", tot, whole[3]))
+            need(abs(tot - float(whole[3])) <= 2e-4 * float(whole[3]), ("the labels add up to the window", tot, whole, ls))
             need(all(abs(a - float(b[3])) <= 1e-4 * abs(float(b[3])) for a, b in zip(sorted(float(x[1]) for x in ls), sorted(parts, key=lambda r: float(r[3])))), ("labels = table rows", ls, parts))
             # three parts (a second drop line in the trailing peak, close enough to the first apex to make the labels collide): three labels, three rows, same total
             t3b = round(p1 + 0.04, 3)
@@ -397,6 +397,57 @@ try:
             menu = pg.evaluate("AZIONI.voci.find(a => a.id === 'int.split')")
             need(menu and menu["scorciatoia"]["tasto"] == "v", menu)
         step("«Split at the valleys»: the engine's drop line (= peak-split), moved by mouse, keys and finger, confirmed into one row per part (= manual-table), undo, depth, Esc", split)
+        def split_hand():
+            need = lambda c, m: c or throw(m)
+            P = "E.panels.find(q => q.type === 'mrm' && q._a)"
+            p0, p1 = sorted(pk[2][2][:2])
+            key = pg.evaluate(SKEY, ["Sample_B", 2]); kb = pg.evaluate("E.files.find(x => x.label === 'Sample_B' || x.file.startsWith('Sample_B.')).k")
+            pg.evaluate(f"(() => {{ const p = {P}; p.ints = p.ints.filter(i => !(i.key === {json.dumps(key)} && i.a < {p1 + 0.15} && i.b > {p0 - 0.15})); draw(p); }})()")
+            pg.evaluate(INTEG, ["Sample_B", 2, p0 - 0.15, p1 + 0.15, None]); it = pg.evaluate(f"{P}.ints[{P}.ints.length - 1].id")
+            IT = f"{P}.ints.find(i => i.id === {it})"
+            wait_for_js(pg, f"(() => {{ const s = MANINT.state(); return JSON.parse(s.windows || '[]').some(x => s.ks[x.file] === {kb} && x.a < {p0} && x.b > {p1}); }})()", timeout=60000)
+            win = lambda: [x for x in json.loads(pg.evaluate("MANINT.state().windows")) if x["a"] < p0 and x["b"] > p1][0]
+            w = win(); one = {k: v for k, v in w.items() if k not in ("label", "splits")} | {"file": 0}
+            whole = float([l.split(",") for l in pg.evaluate("([k, w]) => fetch(`api/manint?k=${k}&sums=0&w=${encodeURIComponent(JSON.stringify([w]))}`).then(r => r.text())", [kb, one]).strip().split("\n")[1:]][0][3])
+            # the guide follows the pointer inside the window; a click splits there at once: each part has its own label and row, the areas add up to the window
+            pg.evaluate(f"(() => {{ const p = {P}; p.isel = {it}; draw(p); p.cv.focus(); }})()"); frames(pg, 2)
+            pg.keyboard.press("m")
+            wait_for_js(pg, f"{P}._split && {P}._split.manual && !!{P}.el.querySelector('.ivl-bar[data-m=\"1\"]')", timeout=30000)
+            at = lambda t: pg.evaluate(f"(() => {{ const r = {P}.cv.getBoundingClientRect(); return [r.x + {P}._a.X({t}), r.y + M.t + 60]; }})()")
+            def labs(n):
+                wait_for_js(pg, f"{P}._a.lbls.filter(l => l.int && l.int.id === {it}).length === {n}", timeout=30000)
+                wait_for_js(pg, f"MANINT.state().csv.split(',drop,').length === {n + 1 if n > 1 else 1}", timeout=60000)
+                ls = pg.evaluate(f"{P}._a.lbls.filter(l => l.int && l.int.id === {it}).map(l => [l.x, l.y, l.w, l.h, +l.copy])")
+                if n > 1:
+                    need(abs(sum(x[4] for x in ls) - whole) <= 2e-4 * whole, ("labels add up to the window", ls, whole))
+                    rows = [l.split(",") for l in pg.evaluate("MANINT.state().csv").strip().split("\n") if ",drop," in l]
+                    need(len(rows) == n and abs(sum(float(x[3]) for x in rows) - whole) <= 1e-4 * whole, ("rows add up to the window", rows, whole))
+                    need(not any(a[0] < b[0] + b[2] and b[0] < a[0] + a[2] and a[1] < b[1] + b[3] and b[1] < a[1] + a[3] for i, a in enumerate(ls) for b in ls[i + 1:]), ("labels overlap", ls))
+                return ls
+            tm = (p0 + p1) / 2; x, y = at(tm)
+            pg.mouse.move(x - 30, y); pg.mouse.move(x, y, steps=3)
+            wait_for_js(pg, f"(() => {{ const g = {P}.el.querySelector('.ivl-guide'); return !!g && !g.hidden && Math.abs(g.getBoundingClientRect().x - {x}) < 12; }})()", timeout=5000)
+            pg.mouse.click(x, y)
+            wait_for_js(pg, f"({IT}.splits || []).length === 1", timeout=10000); t1 = pg.evaluate(f"{IT}.splits[0]")
+            need(p0 < t1 < p1, ("the split is where the click was", t1, p0, p1)); labs(2)
+            x2, y2 = at(p1 + 0.05); pg.mouse.click(x2, y2)
+            wait_for_js(pg, f"({IT}.splits || []).length === 2", timeout=10000); labs(3)
+            # a drag moves a split (the areas follow); Delete removes one (the parts merge); Esc leaves the mode with the splits kept
+            mk = pg.evaluate(f"(() => {{ const r = {P}.el.querySelector('.ivl-mk').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }})()")
+            pg.mouse.move(*mk); pg.mouse.down(); pg.mouse.move(mk[0] + 8, mk[1], steps=4); pg.mouse.up()
+            wait_for_js(pg, f"{IT}.splits[0] !== {t1}", timeout=10000); labs(3)
+            pg.evaluate(f"{P}.el.querySelector('.ivl-mk').focus()"); pg.keyboard.press("Delete")
+            wait_for_js(pg, f"({IT}.splits || []).length === 1", timeout=10000); labs(2)
+            pg.keyboard.press("Escape")
+            wait_for_js(pg, f"!{P}._split && !{P}.el.querySelector('.ivl-bar, .ivl-mk, .ivl-guide:not([hidden])')", timeout=10000)
+            need(pg.evaluate(f"({IT}.splits || []).length") == 1, "Esc keeps what was split")
+            # one undo step per action: the delete, then the drag, then the second click
+            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"({IT}.splits || []).length === 2", timeout=10000)
+            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"({IT}.splits || [])[0] === {t1}", timeout=10000); need(pg.evaluate(f"{IT}.splits.length") == 2, "undo of the drag")
+            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"({IT}.splits || []).length === 1", timeout=10000)
+            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"!({IT}.splits || []).length", timeout=10000)
+            need(pg.evaluate("AZIONI.voci.find(a => a.id === 'int.split.hand')")["scorciatoia"]["tasto"] == "m", "key M")
+        step("«Split by hand»: a click splits at the pointer (guide line), every part its own label and row, drag, Delete, Esc, one undo step per action", split_hand)
         step("the msconvert log is skipped with a note", lambda: (lambda u: "sim3.wiff.log" in u or throw(u))(pg.evaluate("document.getElementById('unopen').textContent")))
         def channels():
             k = pg.evaluate("E.files.find(f => f.label === 'Blank' || /Blank/.test(f.file)).k")

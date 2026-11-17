@@ -14,7 +14,7 @@ import { createBufPool } from "./bufpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { createNativo } from "./rust-nativo.js";
 import { leasePlan } from "./rust-lease-plan.js";
-import { createPlainPut, createOpenGate, createCopyGate, gzRoom, gzClean } from "./rust-carica.js"; import { createUnaPassata } from "./una-passata.js"; import { createSulPosto } from "./rust-sul-posto.js";
+import { createPlainPut, createOpenGate, createCopyGate, gzRoom, gzClean, openStored } from "./rust-carica.js"; import { createUnaPassata } from "./una-passata.js"; import { createSulPosto } from "./rust-sul-posto.js";
 import { createImpronte } from "./impronta.js";
 import { rawSink } from "./rust-opfs.js";
 import { createFlowCentroid } from "./rust-flow-centroid.js";
@@ -270,7 +270,7 @@ function earlyTicOf(job) {
   }
   return null;
 }
-const lrIndex = m => ARCH.exclusive("idx", m.name, async () => !m.cen && await ARCH.get("idx", m.name + ".mzidx") && await safe(() => lrOpen(m.name)) ? { info: JSON.stringify({ ms: 0, missing: 0 }) } : lrIndexOwn(m));      // one tab builds an index at a time; the one that waited uses the finished index
+const lrIndex = m => ARCH.exclusive("idx", m.name, async () => !m.cen && await ARCH.get("idx", m.name + ".mzidx") && await openStored(() => lrOpen(m.name), () => false) ? { info: JSON.stringify({ ms: 0, missing: 0 }) } : lrIndexOwn(m));      // one tab builds an index at a time; the one that waited uses the finished index
 async function lrIndexOwn(m) {
   const kept = await ARCH.get("idx", m.name + ".mzidx"), keptInfo = kept && await safe(() => infoDi("idx", kept));
   if (nuovo("idx", keptInfo)) jerr("error.newerFormat", { file: m.name, version: keptInfo.versione_formato });      // an index of a newer program stays as it is: no new one is built over it
@@ -294,8 +294,7 @@ async function lrIndexOwn(m) {
     throw JSON.stringify({ error_key: res.reason === "crash" ? "err.engine.indexCrash" : "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } });
   }
   await ARCH.promote("idx", part, m.name + ".mzidx");
-  let opened = false;
-  try { opened = await lrOpen(m.name); } catch (_) { await ARCH.remove("idx", m.name + ".mzidx"); jerr("error.badIndex"); }      // an index that does not open (incomplete, damaged) is not kept
+  const opened = await openStored(() => lrOpen(m.name), async () => { await ARCH.remove("idx", m.name + ".mzidx"); jerr("error.badIndex"); });      // an index that does not open (incomplete, damaged) is not kept; one refused for memory is (rust-carica.js)
   if (!opened) jerr("err.engine.index", { name: m.name });
   nativo.early.drop(m.name); return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (res.stats && res.stats.missing) || 0, cause: (res.stats && res.stats.cause) || "" }) };      // missing: scans the index lists beyond the end of a truncated data file, or lists without their event (`cause`)
 }
@@ -461,7 +460,7 @@ async function handle(ev) {
         try { blob = await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("idx")).getFileHandle(m.name + ".mzidx").then(h => h.getFile()); }
         catch (_) { throw '{"error_key":"error.noIndex","params":{}}'; }                  // no OPFS or no index yet: not a fault of the engine, the page uses the mzML
         await ARCH.lease("idx", m.name + ".mzidx");
-        info = engine.open_index(m.slot, blob.size, readerFor(blob, ["idx", m.name + ".mzidx"])); engine.set_polarity(m.slot, m.pol | 0); tileName.set(m.slot, m.name); tilePol.set(m.slot, m.pol | 0); await nativo.attach(engine, m.name, m.slot); break;
+        const lr = lrSlot.get(m.name), reader = readerFor(blob, ["idx", m.name + ".mzidx"]); info = (lr !== undefined && lr !== m.slot && openGate.same(lr, blob) && engine.share_index(m.slot, lr, reader)) || engine.open_index(m.slot, blob.size, reader); engine.set_polarity(m.slot, m.pol | 0); tileName.set(m.slot, m.name); tilePol.set(m.slot, m.pol | 0); await nativo.attach(engine, m.name, m.slot); break;      // the same index already in the slot of the list: shared, not parsed again (one scan table per file)
       }
       case "route": info = engine.route(m.slot, m.path, m.query || ""); break;       // "" = not answered by the index
       case "scaninfo": info = engine.scaninfo(m.slot, m.sid, m.blob.size, readerFor(m.blob)); break;     // header of one scan: the index row + a slice of the mzML
