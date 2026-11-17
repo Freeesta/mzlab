@@ -39,7 +39,6 @@
   "conv.sum.fail": "Count in the summary: {n} = files not loaded because of an error.",
   "conv.sum.cancel": "Count in the summary: {n} = files stopped with \"Cancel\".",
   "conv.sum.cached": "Count in the summary: {n} = files taken from the browser cache without reading them again.",
-  "conv.row.missingList": "Same warning as conv.row.missing for an mzML: the count is the `count` attribute of its <spectrumList> (optical UV spectra of a DAD are not counted as lacking); {declared} = declared, {read} = scans found, {n} = lacking.",
   "conv.sum.missing": "Count in the summary: {n} = files loaded with a partial read (truncated file, or .raw with scans lacking their event): do not say that the file ends.",
   "conv.help.hint": "Sentence above the 5 steps of the \"No mzML files?\" guide when the user has just loaded files that cannot be opened; {types} = extensions, e.g. \".raw, .wiff\".",
   "conv.fmt.mzml": "Item of the download menu: the converted file as plain mzML (the format name, not translated).",
