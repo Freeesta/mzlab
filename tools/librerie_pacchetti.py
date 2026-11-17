@@ -294,7 +294,7 @@ def main() -> None:
     a = ap.parse_args()
     if a.check_catalog:
         bad = check_sources(load_sources())
-        print("\n".join(bad) if bad else "catalogo ok")
+        print("\n".join(bad) if bad else "catalog ok")
         sys.exit(1 if bad else 0)
     if not a.out:
         ap.error("--out is required")

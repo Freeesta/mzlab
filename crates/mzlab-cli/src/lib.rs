@@ -16,6 +16,7 @@ mod cmd;
 pub mod convert;
 mod convert_entries;
 mod convert_report;
+mod dad_cmd;
 pub mod error_text;
 pub mod flow;
 #[cfg(test)]

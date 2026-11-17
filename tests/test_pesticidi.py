@@ -32,7 +32,7 @@ def heavy_atoms(smiles):
 
 def test_counts_ids_and_inchikeys():
     assert len(ROWS) == 192
-    for k in ("id", "inchikey", "pubchem_cid", "name_en", "name"):
+    for k in ("id", "inchikey", "pubchem_cid", "name"):
         vals = [r[k].lower() for r in ROWS]
         assert len(set(vals)) == len(vals), (k, [v for v, n in collections.Counter(vals).items() if n > 1])
     assert all(re.fullmatch(r"[a-z0-9_]+", r["id"]) for r in ROWS)
@@ -51,7 +51,7 @@ def test_tags_come_from_the_closed_vocabulary():
     used_cls, used_use = {r["class"] for r in ROWS}, {r["use"] for r in ROWS}
     assert used_cls <= set(META["classes"]) and used_use <= set(META["uses"])
     assert set(META["classes"]) == used_cls and set(META["uses"]) == used_use, "a word of the vocabulary that no row uses"
-    assert all(len(v) == 2 and all(v) for v in [*META["classes"].values(), *META["uses"].values()]), "every class and use in Italian and English"
+    assert all(isinstance(v, str) and v for v in [*META["classes"].values(), *META["uses"].values()]), "every class and use has an English name"
     assert all(set(r["ions"].split("|")) <= IONS for r in ROWS)
     for cls in ("organophosphates", "carbamates", "triazines", "neonicotinoids", "strobilurins", "azoles", "phenylureas", "pfas"):
         assert sum(r["class"] == cls for r in ROWS) >= 5, cls
@@ -60,13 +60,13 @@ def test_tags_come_from_the_closed_vocabulary():
 def test_the_ions_carry_the_engine_masses():
     lst = pesticides()
     assert lst["id"] == "pesticides" and lst["background"] is False and lst["builtin"]
-    assert lst["license"] and lst["license_en"] and "PubChem" in lst["source"]
+    assert lst["license"] and "PubChem" in lst["source"]
     assert len(lst["items"]) == sum(len(r["ions"].split("|")) for r in ROWS)
     for it in lst["items"]:
         sh, z = ion_shift(it["adduct"])
         assert it["mz"] == pytest.approx((mass(parse_formula(it["formula"])) + sh) / z, abs=1e-5)
         assert it["pol"] == (1 if it["adduct"].endswith("+") else -1)
-        assert it["name"] and it["name_en"] and it["cls"] and it["cls_en"] and it["smiles"] and it["inchikey"]
+        assert it["name"] and it["cls"] and it["smiles"] and it["inchikey"] and not [k for k in it if k.endswith("_en")]
         assert [t.split(":")[0] for t in it["tags"]] == ["chemical", "use"]
     atz = [i["mz"] for i in lst["items"] if i["id"] == "atrazine" and i["adduct"] == "[M+H]+"]
     assert atz == [pytest.approx(216.10105, abs=2e-5)]
@@ -82,7 +82,7 @@ def test_the_list_sits_next_to_keller():
 NODE = __import__("shutil").which("node")
 
 
-@pytest.mark.skipif(not NODE, reason="node non disponibile")
+@pytest.mark.skipif(not NODE, reason="node not available")
 def test_the_formula_dialog_finds_neonicotinoids_by_name():
     """liste-nomi.js (formula dialog, XIC ion field) over the shipped lists: «imidacloprid» is one entry with its neutral formula and [M+H]+."""
     code = r"""
@@ -107,7 +107,7 @@ console.log(JSON.stringify({ hit: LISTENOMI.byName('imidacloprid'), plus: LISTEN
     assert o["sug"] == ["imidacloprid"] and all(o["all"])
 
 
-@pytest.mark.skipif(not NODE, reason="node non disponibile")
+@pytest.mark.skipif(not NODE, reason="node not available")
 def test_a_name_with_its_bracket_is_found_by_either_part():
     """«dibutyl phthalate (DBP)» of Keller: the name before the bracket and the short name inside it are the same entry; a bracket word shared by
     many entries («dimer») finds none; the full name still works."""

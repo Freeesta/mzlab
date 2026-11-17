@@ -9,15 +9,6 @@ use mzlab_core::msngraph::{aggiungi, cerca, Options, OpzioniCerca};
 
 use mzlab_core::msngraph::{export_text, LibFormato as Format};
 
-/// Old flag names of `msn-lib` (old, new); resolved before each match. The options of `add` are those of `msn-graph`, which has its own table.
-const ALIASES: &[(&str, &str)] = &[
-    ("--pulito", "--clean"),
-    ("--tutti", "--all"),
-    ("--annota", "--annotate"),
-    ("--formato", "--format"),
-    ("--min-prove", "--min-evidence"),
-];
-
 pub const HELP: &str = "mzlab-cli msn-lib: the library of MSn trees (msnlib/1).
 
 usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
@@ -27,17 +18,15 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
           The options are those of `msn-graph` (--help of that command)
-  build   one entry per row of the manifest (tab separated, header): id, formula_neutra, addotto_atteso, file (relative to DIR, by default the folder
-          of the manifest); optional smiles, attivazione. The ion is \"<formula_neutra> <addotto_atteso>\". Writes LIB.json next to the manifest unless --out
+  build   one entry per row of the manifest (tab separated, header): id, neutral_formula, expected_adduct, file (relative to DIR, by default the folder
+          of the manifest); optional smiles, activation. The ion is \"<neutral_formula> <expected_adduct>\". Writes LIB.json next to the manifest unless --out
   export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
   search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
           msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
-          --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
-
-old names still accepted: --pulito --tutti --annota --formato --min-prove";
+          --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not";
 
 fn io(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
@@ -130,14 +119,14 @@ fn build(args: Vec<String>, tmp: &Path) -> Result<String> {
         let (id, file) = (column(&row, "id"), column(&row, "file"));
         let ion = format!(
             "{} {}",
-            column(&row, "formula_neutra"),
-            column(&row, "addotto_atteso")
+            column(&row, "neutral_formula"),
+            column(&row, "expected_adduct")
         );
         let none = |s: &str| (!s.is_empty()).then(|| s.to_string());
         let o = Options {
             formula: Some(ion),
             smiles: none(column(&row, "smiles")),
-            activation: none(column(&row, "attivazione")),
+            activation: none(column(&row, "activation")),
             ..Options::default()
         };
         if id.is_empty() || file.is_empty() {
@@ -156,7 +145,6 @@ fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
     let mut lib_format = Format::Msp;
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
-        let x = crate::msn_outputs::canonical(ALIASES, x);
         match x.as_str() {
             "--clean" => clean = true,
             "--all" => all = true,
@@ -184,7 +172,6 @@ fn search(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
     let (mut files, mut out, mut o) = (Vec::new(), None, OpzioniCerca::default());
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
-        let x = crate::msn_outputs::canonical(ALIASES, x);
         let mut number = || {
             let v = it.next().unwrap_or_default();
             v.parse::<f64>()

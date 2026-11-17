@@ -1,7 +1,7 @@
 //! The static figure (SVG) of a fragmentation graph `msngrafo/1`: tree or radial view, drawn from the key `vista` (feature `figura`; the CLI and the `.wasm`
 //! `msnfigura` call it). It repeats the LABEL RULE at the top of `mzlab/web/msngrafo-vista.js` (the interactive drawer of the page, the Flow and the
 //! stand-alone HTML), so a test compares the texts of both. Colours are written in the file (Okabe-Ito, dark ink on white): the SVG lives alone. Used by
-//! `html`, `msn_graph` of the CLI (`--figura`, `figure`) and the step `msn.figure@1`.
+//! `html`, `msn_graph` of the CLI (`--figure`, `figure`) and the step `msn.figure@1`.
 
 use std::collections::{HashMap, HashSet};
 
@@ -27,11 +27,11 @@ pub enum View {
 }
 
 impl View {
-    /// `albero`/`tree` and `radiale`/`radial`.
+    /// `tree` and `radial`.
     pub fn da_nome(n: &str) -> Option<View> {
         match n {
-            "albero" | "tree" => Some(View::Albero),
-            "radiale" | "radial" => Some(View::Radial),
+            "tree" => Some(View::Albero),
+            "radial" => Some(View::Radial),
             _ => None,
         }
     }

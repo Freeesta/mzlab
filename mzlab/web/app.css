@@ -341,9 +341,9 @@ html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-beh
 @media (pointer:coarse){#v-draw input,#v-draw select{font-size:16px}}   /* under 16 px iOS Safari zooms the page on focus */
 /* skip link to Quick draw: out of the grid flow, visible only while focused */
 .tp-skip{position:absolute;left:-9999px;top:0;z-index:10001;padding:8px 14px;min-height:40px;background:var(--panel);color:var(--accent);border:2px solid var(--accent);border-radius:6px;font:inherit;font-weight:600;cursor:pointer}.tp-skip:focus{left:8px;top:8px;position:fixed}
-/* touch: labels, summaries and links of the Draw cards 40 px high, checkboxes and radios 20 px, context-menu rows 40 px (24 px at least, WCAG 2.5.8) */
+/* touch: labels, summaries and links of the Draw cards 40 px high, checkboxes and radios 20 px, context-menu rows 44 px (24 px at least, WCAG 2.5.8) */
 @media (pointer:coarse){#v-draw aside label,#v-draw aside #ex-link{display:inline-flex;align-items:center;gap:6px;min-height:40px;box-sizing:border-box}#v-draw aside summary{min-height:40px;box-sizing:border-box;padding-block:11px}#v-draw aside input[type=radio]{width:20px;height:20px;min-width:20px;min-height:20px;margin:0 4px 0 0}
-#ctx [role=menuitem],#ctx .mrow>div{min-height:40px;box-sizing:border-box;display:flex;align-items:center}#ctx .ck{margin-left:auto;float:none}#ctx .mrow>div{justify-content:center}}
+#ctx [role=menuitem],#ctx .mrow>div{min-height:44px;box-sizing:border-box;display:flex;align-items:center}#ctx .ck{margin-left:auto;float:none}#ctx .mrow>div{justify-content:center}}
 .sm{font-size:12px}
 #refdlg{max-width:min(1100px,96vw);width:96vw;max-height:92vh}#refbody{max-height:80vh;overflow:auto;margin:-3px;padding:3px}#refdlg h4{margin:12px 0 4px}
 #reftitle{margin:0;font-size:16px}
@@ -692,3 +692,7 @@ header>:not(#stbar){flex-shrink:0}header .hq{width:24px;height:24px}
 .pnl.spec .sr-notes input{width:100%;min-height:24px;box-sizing:border-box}
 .pnl.spec .sr-notes{order:1}.pnl.spec .sr-rt{order:2}.pnl.spec .sr-ce{order:3}.pnl.spec .sr-smp{order:4}   /* notes, retention times, CE, sample (rows are added as the data arrive) */
 .manint tr[data-org="unmatched"]>th[scope=row]{box-shadow:inset 3px 0 0 var(--ink)}.manint-log{margin:6px 0 0;font-size:12px}.manint-log summary{cursor:pointer;min-height:24px}.manint-log ul{margin:4px 0 0;padding-left:18px}
+
+/* touch paste: the chip over the drawing that says the next tap drops the copied structure (Cancel = a 44 px target) */
+#tp-paste-chip{position:fixed;z-index:9000;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:6px 8px 6px 14px;background:var(--panel);color:var(--ink);border:1px solid var(--accent);border-radius:8px;box-shadow:0 4px 14px rgba(60,45,10,.18)}
+#tp-paste-chip[hidden]{display:none}#tp-paste-chip button{min-height:44px;min-width:44px;padding:0 14px}

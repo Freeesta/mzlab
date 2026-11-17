@@ -37,4 +37,4 @@ def test_with_so_few_records_no_rule_is_measured(sommario):
 
 def test_the_script_computes_nothing_itself():
     testo = (ROOT / "tools" / "validate_rules.py").read_text()
-    assert "msn-rules" in testo and "somma" in testo
+    assert "msn-rules" in testo and "sum" in testo

@@ -21,7 +21,7 @@ const LISTENOMI = (() => {
     [...idx.pos, ...idx.neg].forEach((/** @type {Bag} */ x) => {
       if (!x.formula || !x.name) return;
       const f = plainFormula(x.formula), k = x.name + "|" + f, old = by.get(k);
-      if (!old || adRank(x.adduct) < adRank(old.adduct)) by.set(k, { name: x.name, formula: f, adduct: x.adduct || "", key: fold(x.name), keyEn: fold(x.name_en || x.name), parts: parts(x.name).concat(parts(x.name_en || "")) });
+      if (!old || adRank(x.adduct) < adRank(old.adduct)) by.set(k, { name: x.name, formula: f, adduct: x.adduct || "", key: fold(x.name), parts: parts(x.name) });
     });
     NAMES = { idx, rows: [...by.values()] };
     return NAMES.rows;
@@ -34,12 +34,12 @@ const LISTENOMI = (() => {
       .map((/** @type {Bag} */ r) => ({ r, k: r.key.startsWith(q1) ? 0 : r.key.includes(" " + q1) ? 1 : 2 })).sort((a, b) => a.k - b.k || a.r.key.length - b.r.key.length).slice(0, max).map(o => o.r);
   }
   /** The text of the dialog as a name (optionally followed by an adduct): {formula, adduct} when ONE entry has exactly that name, else null.
-   *  Either the name of a built-in entry or its English (ISO) name matches; then either part of a
+   *  The name of an entry matches; then either part of a
  *  name with a bracket («dibutylphthalate», «DBP»). */
   function byName(/** @type {string} */ text) {
     const m = String(text).match(/^\s*(.*?)\s*(\[.*\].*)?$/); if (!m || !m[1]) return null;
     const k = fold(m[1]), by = (/** @type {(r: Bag) => boolean} */ ok) => nameRows().filter(ok);
-    let hit = by(r => r.key === k); if (!hit.length) hit = by(r => r.keyEn === k); if (!hit.length) hit = by(r => r.parts.includes(k));
+    let hit = by(r => r.key === k); if (!hit.length) hit = by(r => r.parts.includes(k));
     return hit.length === 1 ? { formula: hit[0].formula, adduct: (m[2] || hit[0].adduct || "").trim() } : null;
   }
   return { suggest, byName };

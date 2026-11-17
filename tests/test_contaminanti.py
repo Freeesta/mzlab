@@ -79,7 +79,7 @@ def test_every_entry_has_source_and_ions():
 NODE = shutil.which("node")
 
 
-@pytest.mark.skipif(not NODE, reason="node non disponibile")
+@pytest.mark.skipif(not NODE, reason="node not available")
 def test_list_engine_with_node(tmp_path):
     code = r"""
 globalThis.NOMI = require(process.argv[1].replace(/[^\/\\]*$/, 'nomi.js'));
@@ -126,16 +126,12 @@ def test_static_file_equals_the_route():
     assert [l["id"] for l in json.loads(g.OUT.read_text(encoding="utf-8"))["lists"]] == ["keller", "pesticides"]
 
 
-def test_every_entry_has_english_name_and_class():
+def test_every_entry_has_a_name_and_class():
     d = json.loads((CHEM / "contaminants.json").read_text(encoding="utf-8"))
-    en = json.loads((CHEM / "contaminants_en.json").read_text(encoding="utf-8"))
-    ids = [e["id"] for e in d["entries"]]
-    assert not [i for i in ids if not en["names"].get(i)], "entries without an English name"
-    assert not [e["class"] for e in d["entries"] if e["class"] not in en["classes"]], "classes without an English name"
-    assert not set(en["names"]) - set(ids), "English names of entries that do not exist"
-    assert en["list"]["name"] and en["list"]["license"]
+    assert not [e["id"] for e in d["entries"] if not e["name"] or not e["class"]], "entries without a name or class"
+    assert d["name"] and d["license"] and not (CHEM / "contaminants_en.json").exists(), "one English file, no translation sidecar"
 
 
-def test_builtin_carries_english_fields():
+def test_builtin_carries_one_set_of_names():
     b = builtin()
-    assert b["name_en"] and all(i["name_en"] for i in b["items"] if not i.get("mzonly")) and all(i["cls_en"] for i in b["items"])
+    assert b["name"] and all(i["name"] and i["cls"] for i in b["items"]) and not [k for i in b["items"] for k in i if k.endswith("_en")]

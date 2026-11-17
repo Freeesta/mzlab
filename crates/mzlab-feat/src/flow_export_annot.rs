@@ -132,7 +132,7 @@ fn feature_of(id: &str, n: usize) -> Option<usize> {
 fn level_rank(level: &str) -> Option<usize> {
     json::parse(LEVELS.as_bytes())
         .ok()?
-        .get("livelli")?
+        .get("levels")?
         .arr()
         .iter()
         .position(|l| l.str() == Some(level))

@@ -164,7 +164,7 @@ pub fn summed(text: &str) -> Result<String, String> {
     let mut skipped: BTreeMap<String, usize> = BTreeMap::new();
     for l in text.lines().filter(|l| !l.trim().is_empty()) {
         let v = parse(l.as_bytes()).map_err(|_| format!("not a JSON line: {l}"))?;
-        if let Some(s) = v.get("saltato").and_then(Value::str) {
+        if let Some(s) = v.get("skipped").and_then(Value::str) {
             *skipped.entry(s.to_string()).or_default() += 1;
             continue;
         }

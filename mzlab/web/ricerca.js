@@ -83,7 +83,7 @@ async function ricForNumber(x, q) {
       return { ic: RIC_ICON.adduct, chip: ricT("pal.k.adduct"), html: EH(h.id) + sh, detail: d, aria: `${ricT("pal.k.adduct")}: ${h.id}, ${d}`, run: () => RIC_GO.adduct() };
     }
     const it = items[+h.id] || {};
-    const nm = (ricLang() === "en" && it.name_en) || it.name || "";
+    const nm = it.name || "";
     const mz = hr ? Number(it.mz).toFixed(4) : String(Math.round(it.mz));
     return { ic: RIC_ICON.cont, chip: ricT("pal.k.cont"), html: EH(nm) + ` <span class="pal-d">${EH(it.adduct || "")} m/z ${mz}</span>`, detail: d, aria: `${ricT("pal.k.cont")}: ${nm} ${it.adduct || ""}, ${d}`, run: () => RIC_GO.cont(x) };
   });

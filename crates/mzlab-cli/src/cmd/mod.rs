@@ -85,7 +85,7 @@ const TAIL: &str = "  FILE...            mzML, or any single file the app reads 
   --params FILE.json the numbers of the panel Pipeline: {\"polarity\", \"mode\", \"floor\", \"min_height\", \"min_points\", \"ppm\", \"rt_tol\", \"fill\"}
   --help             this text
 
-old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl";
+old names still accepted: peaks-edges, --jsonl";
 
 /// `mzlab-cli`, `--help`/`-h` and `--version`/`-V`: the answers that name no command.
 pub(crate) fn top_level(args: &[String]) -> Option<Outcome> {
