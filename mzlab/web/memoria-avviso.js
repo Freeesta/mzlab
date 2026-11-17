@@ -53,7 +53,8 @@ export function choiceBox(o) {
       const e = document.createElement("button"); e.type = "button"; if (b.id) e.id = b.id; e.textContent = b.label; if (b.tip) e.title = b.tip;
       e.onclick = async () => {
         if (!b.run) { end(b.key); return; }
-        lock(true); let r = false;
+        lock(true);
+        /** @type {boolean | string} */ let r = false;
         try { r = await b.run(); } catch (x) { r = String(x && /** @type {any} */ (x).message || x); }
         if (r === true) { end(b.key); return; }
         lock(false); const er = q("#mm-err"); er.textContent = typeof r === "string" ? r : ""; er.hidden = !er.textContent; e.focus();
