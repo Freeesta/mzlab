@@ -1,5 +1,5 @@
 //! `mzlab-cli steps [--json] [--id ID[@V]]`: the registry of Flow steps of this very binary, so an agent reads the versions it will run.
-//! The JSON is the `step/1` array of the exported `docs/schemi/steps-*-1.json`, each step with `executable_native` added at the end.
+//! The JSON is the `step/1` array of the exported `docs/schemi/steps-*-1.json`, each step with `executable_native` and `citation` added at the end.
 
 use mzlab_core::error::Error;
 use mzlab_core::step::json::step_json;
@@ -14,7 +14,7 @@ const HELP: &str = "mzlab-cli steps: the steps a Flow plan can use, from the reg
 usage: mzlab-cli steps [--json] [--id ID[@VERSION]]
 
   (no option)       one line per step: id@version, `native` when `flow run` executes it (else `page`: only the Flow page does), title
-  --json            the step/1 descriptors as a JSON array, each with \"executable_native\" at the end
+  --json            the step/1 descriptors as a JSON array, each with \"executable_native\" and \"citation\" at the end
   --id ID[@V]       one step only (with --json one step/1 object); without @V the highest version
   --help            this text
 
@@ -24,7 +24,11 @@ exit codes: 0 done, 2 usage or an unknown step (err.flow.step.unknown)";
 fn with_native(s: &Step) -> String {
     let text = step_json(s);
     let body = text.strip_suffix('}').unwrap_or(&text);
-    format!("{body},\"executable_native\":{}}}", executable(s.id))
+    format!(
+        "{body},\"executable_native\":{},{}}}",
+        executable(s.id),
+        crate::citation::member()
+    )
 }
 
 /// `mzlab-cli steps ARGS...` (the arguments after `steps`).
