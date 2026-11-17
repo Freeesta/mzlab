@@ -5,6 +5,8 @@ Needs the site and the .wasm (python tools/prepara_sito.py)."""
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+import numpy as np
+sys.path.insert(0, str(ROOT / "tools")); import dati_sintetici as ds
 
 steps = []
 def step(name, fn):
@@ -13,13 +15,15 @@ def step(name, fn):
 site = ROOT / "site"
 if not (site / "index.html").exists() or not (site / "static" / "wasm" / "mzlab_wasm.js").exists():
     print("  ", ("site", "SKIP site/ or site/static/wasm not built")); sys.exit(0)
+D = HERE / "shots" / "manint_tracce_tmp"; D.mkdir(parents=True, exist_ok=True)      # synthetic full scans (no laboratory data in this repository)
+ds.full_scan(D / "B_FullMass-t0.mzML", 0, np.random.default_rng(2026)); ds.full_scan(D / "B_FullMass-t15.mzML", 15, np.random.default_rng(2027))
 r = Run(port=8871, wd="/tmp/wd_manint_tracce")
 XP = "E.panels.find(p=>p.type==='xic')"
 try:
     with sync_playwright() as p:
         pg = r.page(p); errs = r.errs
         pg.wait_for_selector("#drop", timeout=120000)
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
+        pg.set_input_files("#pick", [str(D / "B_FullMass-t0.mzML"), str(D / "B_FullMass-t15.mzML")])
         pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
         pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
         pg.wait_for_function("E.files.length >= 2 && E.pending.length === 0", timeout=120000)
