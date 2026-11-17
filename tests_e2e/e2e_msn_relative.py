@@ -30,6 +30,14 @@ try:
             assert pg.evaluate(f"{S2}.el.querySelector('{BTN}').classList.contains('on')"), "MS2: % button on"
             t = pg.evaluate(f"{S2}._a.yticks"); assert t and max(t) == 100, t
         step("MS2 opens in % of the base peak (0-100)", ms2_rel)
+        def exact_range():
+            a = pg.evaluate(f"(()=>{{const a={S2}._a;return {{ymax:a.ymax,ymin:a.ymin,top:a.Y(100)-M.t,base:Math.max(...a.data[0].d.y),yf:a.yfull}}}})()")
+            assert a["ymax"] == 100 and a["ymin"] == 0 and abs(a["top"]) <= 1 and a["base"] == 100 and a["yf"][1] == 100, a
+            pg.evaluate(f"(()=>{{const p={S2};p.zoom=[p._a.x0+5,p._a.x1-5];draw(p)}})()"); frames(pg, 3)
+            assert pg.evaluate(f"{S2}._a.ymax") == 100, "zoom keeps 0-100"
+            pg.evaluate(f"(()=>{{const p={S2};p.zoom=null;draw(p)}})()"); frames(pg, 3)
+            assert pg.evaluate(f"{S2}._a.ymax") == 100, "reset keeps 0-100"
+        step("in %: axis 0-100 exactly, base peak touches the top (also after zoom and reset)", exact_range)
         def stays_abs():
             pg.evaluate(f"{S2}.el.querySelector('{BTN}').click()"); frames(pg, 3)
             assert pg.evaluate(f"{S2}.rel") is False and pg.evaluate(f"!{S2}.el.querySelector('{BTN}').classList.contains('on')")

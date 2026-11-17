@@ -363,7 +363,7 @@ async function drawSpec(p, snapped) {
   if (one && p.lock && p.lock.fresh) await scFetch(files[0].k, p.level, prk(p.prec, p.filt), p.si - SC_AHEAD, p.si + SC_AHEAD).catch(() => {});   // the axes of the walk look at +-20 scans
   const rel = specRel(p); p.el.querySelector('[data-a="rel"]')?.classList.toggle("on", rel);   // y axis in % of the highest peak of each scan (default for MSn, level >= 2) or in cps (MS1); the button follows
   const hrp = !!window.HR && HR.anyHr(files, p.level), DECP = p.dec ?? (window.HR ? HR.dec(files, p.level) : 1);       // high resolution: the m/z are the centroids of the file, written with the decimals of the profile
-  const relScale = (/** @type {Bag} */ d) => { let mx = 1e-9; for (const v of d.y) if (v > mx) mx = v; const k = 100 / mx; return { ...d, y0: d.y, y: d.y.map((/** @type {number} */ v) => v * k), py: d.py ? d.py.map((/** @type {number} */ v) => v * k) : d.py }; };
+  const relScale = (/** @type {Bag} */ d) => { let mx = 1e-9; for (const v of d.y) if (v > mx) mx = v; const k = 100 / mx; return { ...d, y0: d.y, y: d.y.map((/** @type {number} */ v) => v >= mx ? 100 : v * k), py: d.py ? d.py.map((/** @type {number} */ v) => v >= mx ? 100 : v * k) : d.py }; };
   /** @type {Bag[]} */ const reqs = [];
   files.forEach((/** @type {Bag} */ f) => {
     const isHr = !!window.HR && HR.isHr(f);
@@ -414,9 +414,9 @@ async function drawSpec(p, snapped) {
   const own = p.level > 1 ? data.flatMap((/** @type {Bag} */ x) => { const m = lineOf(x) ? x.d.pmz : x.d.mz; return m && m.length ? [m[0], m[m.length - 1], ...(x.prec > 0 ? [+x.prec + 5] : [])] : []; }) : [];
   const lo = own.reduce((a, v) => Math.min(a, v), Infinity), hi = own.reduce((a, v) => Math.max(a, v), -Infinity);   if (own.length > 1 && lo < hi) { const w = (hi - lo) * 0.05; full[0] = Math.max(0, lo - w - 1); full[1] = hi + w + 1; }
   const x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
-  let ymax = inRange(x0, x1) * 1.12 / (1 - (p._legPad || 0));
+  let ymax = relY ? 100 : inRange(x0, x1) * 1.12 / (1 - (p._legPad || 0));   // in %: exactly 0-100, the base peak touches the top (its label overflows into the card margin above the plot)
   const yfull = ymax;                                     // automatic top of the intensity axis (y zoom is relative to it)
-  const lk = p.zoomY ? null : lockSync(p, files[0].k, x0, x1, ymax, inRange, one);   // the lock freezes ONLY the intensity axis while walking over the scans
+  const lk = p.zoomY || relY ? null : lockSync(p, files[0].k, x0, x1, ymax, inRange, one);   // the lock freezes ONLY the intensity axis while walking over the scans
   if (lk) ymax = lk.ymax;
   let ymin = 0, negMax = 0;
   if (isDiff) { data.forEach(x => x.d.y.forEach((/** @type {number} */ v, /** @type {number} */ i) => { if (v < negMax && x.d.mz[i] >= x0 && x.d.mz[i] <= x1) negMax = v; })); if (negMax < 0) { ymin = negMax * 1.12; ymax = Math.max(ymax, -negMax * 0.3); } }
