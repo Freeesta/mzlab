@@ -73,6 +73,7 @@ try:
             pg.click(".pnl.chrom [data-a=fit] >> nth=0")
         step("drag on the numbers under the x axis: line, only x", line_x)
         def spec_zoom():
+            pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); frames(pg, 6); ready(pg)     # rows under the header (RT, CE, sample) arrive with the data: let the canvas settle before taking pixels
             s0 = pg.evaluate(f"(()=>{{const s={SPEC};return {{ym:s._a.ymax,x0:s._a.x0,x1:s._a.x1}}}})()")
             YM = "Math.min(p._a.ymax,p._a.yfull[1])"      # the intensity lock can keep a top higher than the automatic one: the box must be inside the automatic range to zoom y
             u = pt(SPEC, "p._a.x0+(p._a.x1-p._a.x0)*0.3", YM + "*0.6"); v = pt(SPEC, "p._a.x0+(p._a.x1-p._a.x0)*0.5", YM + "*0.05")
