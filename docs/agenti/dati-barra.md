@@ -47,6 +47,16 @@ Parte della vista Dati (`docs/agenti/dati.md`).
 - **Tour guidato** (`tour.js`, `TOUR`): tour in due capitoli (I tuoi dati, Strumenti e movimenti) con riflettore ed etichetta accessibile; solo mondo LR, invito in basso, largo come il pannello laterale con margini uguali (`TOURDOPO.centra`, dialogo non modale).
   «Non ora» o Esc fanno comparire sotto l'ingranaggio un fumetto (`TOURDOPO.mostra`, `#tour-later`, `aria-live` polite) che dice dove rifare il tour: sparisce da solo dopo 10 s, al clic o con Esc al primo caricamento e UNA volta sola per browser (`qqq.tour.lr`, in memoria se localStorage manca; azzerato da «Nuova sessione»), ripetibile dall'ingranaggio (da Disegno il pulsante avvia invece il tour del Disegno, vedi `disegno.md`).
   L'invito si chiude da solo dopo 30 s (`INVITO_MS` in `tour-dopo.js`) come «Non ora», fumetto compreso ma senza spostare il fuoco; il conto si ferma col puntatore sopra o col fuoco spostato dentro e riprende da dove era all'uscita; si azzera se il tour parte o l'invito si chiude (`TOUR.chiudiInvito`); nessuna durata nel testo.
+  **Fine del tour con il file di esempio** (`TOURSCELTA` in `tour-dopo.js`, `TOUR.chiudiEScegli`/`togliEsempio`
+  in `tour.js`, `e2e_tour_scelta`): solo se il tour stesso ha caricato l'esempio (`caricaEsempio`, che ricorda
+  il NOME salvato in `exampleName`, non gli oggetti: un nuovo caricamento ricostruisce `E.files`), «Fine»,
+  «Salta il tour» ed Esc aprono un dialogo modale (`role=dialog`, `aria-modal`, fuoco su «Keep exploring with
+  this file», Tab resta tra i due pulsanti, Esc = tenere). «Remove it and start fresh» toglie solo quel file con
+  `fileRemoval` (take + free + `reindexAfterFree`, subito e senza Annulla): pannelli, righe, sessione del motore
+  e `mzlab.nbpending` non lo nominano più, la vista torna `landing`; le impostazioni salvate non cambiano. Con
+  file propri già caricati il tour non ha caricato nulla: nessuna domanda, nessun file toccato. Un ricaricamento
+  a metà tour lascia l'esempio come file normale e nessuna sovrapposizione (lo stato del tour è solo in
+  memoria). `TOUR.chiudi` toglie anche `#tour-live`. Solo pagina: nessun comando CLI.
   Il passo «file» apre il pannello laterale File e lo richiude a fine passo (`prep` restituisce la funzione che annulla); il passo «barra» punta `#stbar`; `e2e_tour` controlla che ogni passo trovi il suo bersaglio visibile.
   La punta del fumetto (`--ta`) è calcolata in `updatePosition` dal rettangolo del bersaglio; prova geometrica: `e2e_tour_ancoraggio` (1280, 1440, 1024).
 - **Non esistono (non reintrodurre)**: schede Attribuzioni e Suggerimenti, retta di taratura, spettro simulato e sagoma, didascalie automatiche, scheda Isotopi, «?» nei pannelli dei grafici (resta la guida generale), «Da dove viene?» nei menu, «Intanto leggi la Teoria» durante il caricamento.
