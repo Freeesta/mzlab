@@ -73,16 +73,11 @@ try:
             pg.click(".pnl.chrom [data-a=fit] >> nth=0")
         step("drag on the numbers under the x axis: line, only x", line_x)
         def spec_zoom():
-            pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); frames(pg, 6); ready(pg)     # rows under the header (RT, CE, sample) arrive with the data: let the canvas settle before taking pixels
             s0 = pg.evaluate(f"(()=>{{const s={SPEC};return {{ym:s._a.ymax,x0:s._a.x0,x1:s._a.x1}}}})()")
             YM = "Math.min(p._a.ymax,p._a.yfull[1])"      # the intensity lock can keep a top higher than the automatic one: the box must be inside the automatic range to zoom y, and taller than the 4 px of a click (a short canvas with a locked top makes a small box)
             u = pt(SPEC, "p._a.x0+(p._a.x1-p._a.x0)*0.3", YM + "*0.98"); v = pt(SPEC, "p._a.x0+(p._a.x1-p._a.x0)*0.5", YM + "*0.01")
             pg.mouse.move(u["x"], u["y"]); pg.mouse.down(); pg.mouse.move(v["x"], v["y"], steps=5); pg.mouse.up()
-            try: wait_for_js(pg, SPEC + ".zoom && " + SPEC + ".zoomY")
-            except Exception:       # what the drag met, to read in the CI log
-                print("box drag:", u, v, pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),e=document.elementFromPoint({u['x']},{u['y']});return {{cv:q.toJSON(),zoom:p.zoom,zoomY:p.zoomY,hit:e&&(e.tagName+'.'+e.className),vh:innerHeight,rows:[...p.el.querySelectorAll('.srows .sr')].map(x=>x.className)}}}})()"))
-                raise
-            ready(pg)
+            wait_for_js(pg, SPEC + ".zoom && " + SPEC + ".zoomY"); ready(pg)
             a = pg.evaluate(f"(()=>{{const s={SPEC};return {{z:s.zoom,zy:s.zoomY,x0:s._a.x0,x1:s._a.x1}}}})()")
             assert a["z"] and a["zy"] and a["x0"] > s0["x0"] and a["x1"] < s0["x1"], a
             pg.click(".pnl.spec [data-a=fit]"); wait_for_js(pg, SPEC + ".zoom == null && " + SPEC + ".zoomY == null")
