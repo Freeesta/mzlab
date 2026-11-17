@@ -5,6 +5,7 @@ use super::Entry;
 pub(crate) static TABLE: &[Entry] = &[
     Entry { name: "msn-graph", aliases: &[], help: "mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)", run: |a| crate::msn_graph::cmd(a.into_iter()) },
     Entry { name: "channels", aliases: &[], help: "mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help); dda-window FILE --from MIN --to MIN: the MS2 of a window by precursor (dda-window --help)", run: crate::channels_cmd::run },
+    Entry { name: "dad", aliases: &[], help: "mzlab-cli dad subtract|spectrum|trace|ms-at|delay ...   the DAD / PDA matrix as JSON for agents: A minus B, the UV spectrum and trace, the linked MS (dad --help)", run: crate::dad_cmd::run },
     Entry { name: "dda-window", aliases: &[], help: "", run: crate::plain::dda_window_cmd::run },
     Entry { name: "ion-pattern", aliases: &[], help: "mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help); ion-mz TEXT [--adduct A]: the m/z of an ion with a signed shift (ion-mz --help)", run: crate::ion_pattern_cmd::run },
     Entry { name: "elements", aliases: &[], help: "", run: crate::plain::elements_cmd::run },
