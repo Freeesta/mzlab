@@ -1,4 +1,4 @@
-//! The catalog `strumenti/1` against the registry: every step and every `--set` name is reachable through it, defaults sit inside their limits, the
+//! The catalog `tools/1` against the registry: every step and every `--set` name is reachable through it, defaults sit inside their limits, the
 //! file `docs/schemi/strumenti-1.json` is the export (`MZLAB_UPDATE_STEPS=1 cargo test -p mzlab-cli --lib llm_tools` rewrites it) and the bytes are stable;
 //! the same for the demo subset `docs/schemi/strumenti-demo-1.json`, whose tools are those of the whole catalog, byte for byte.
 

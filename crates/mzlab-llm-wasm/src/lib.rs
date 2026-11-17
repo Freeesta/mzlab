@@ -128,7 +128,7 @@ pub struct Llm {
 
 #[wasm_bindgen]
 impl Llm {
-    /// `tools_json`: the catalog `strumenti/1` (`docs/schemi/strumenti-1.json`, shipped beside the page). Call it once per page.
+    /// `tools_json`: the catalog `tools/1` (`docs/schemi/strumenti-1.json`, shipped beside the page). Call it once per page.
     #[wasm_bindgen(constructor)]
     pub fn new(tools_json: &str) -> Result<Llm, String> {
         Ok(Llm {
