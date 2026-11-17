@@ -15,13 +15,34 @@ const CartPP = (() => {
   /** @type {[string, RegExp][]} */
   const TIPI = [["data", /\.(mzml|raw|wiff)$/i], ["method", /\.dam$/i], ["library", /\.(msp|mgf|mzlib|jsonl|ndjson)$/i], ["table", /\.(csv|tsv)$/i]];
   const kindOf = name => { for (const [t, re] of TIPI) if (re.test(name)) return t; return null; };
-
-  // list of a directory handle (also a fake one in the tests): [{path, name, dir, kind, h}], hidden folders skipped, depth and number limited
+  // folder datasets (the same the drop path reads, and `mzlab-cli folder list`): any *.d folder (Agilent .D, Bruker .d: the loader says what is missing), a *.raw folder that holds _FUNC001.DAT (Waters)
+  async function bundleOf(name, h) {
+    if (/\.d$/i.test(name) && name.length > 2) return "d";
+    if (/\.raw$/i.test(name) && name.length > 4) { for await (const [n] of h.entries()) if (/^_func001\.dat$/i.test(n)) return "waters-raw"; }
+    return null;
+  }
+  // the name a loaded run has in the list (x.D -> x.mzML as AgilentD.mzmlName / WatersRaw.mzmlName)
+  const listName = x => (x.bundle ? x.name.replace(/\.(d|raw)$/i, "").replace(/#/g, "_") + ".mzML" : x.name).toLowerCase();
+  // files, bytes and latest date inside a folder dataset (capped), like the `members`, `size` and `mtime` of `folder/1`
+  async function bundleStat(h, acc = { size: 0, mtime: 0, n: 0 }) {
+    for await (const [name, e] of h.entries()) {
+      if (HIDDEN(name) || acc.n >= 500) continue;
+      if (e.kind === "directory") await bundleStat(e, acc);
+      else { const f = await e.getFile(); acc.size += f.size; acc.mtime = Math.max(acc.mtime, f.lastModified); acc.n++; }
+    }
+    return acc;
+  }
+  // list of a directory handle (also a fake one in the tests): [{path, name, dir, kind, bundle?, h}], hidden folders skipped, depth and number limited
   async function collect(h, base = "", depth = 0, out = []) {
     for await (const [name, e] of h.entries()) {
       if (out.length >= CAP) break;
       if (HIDDEN(name)) continue;
-      if (e.kind === "directory") { if (depth < MAXD) await collect(e, base + name + "/", depth + 1, out); continue; }
+      if (e.kind === "directory") {
+        const b = await bundleOf(name, e);                  // a folder dataset is one row and is not entered
+        if (b) out.push({ path: base + name, name, dir: base, kind: "data", bundle: b, h: e });
+        else if (depth < MAXD) await collect(e, base + name + "/", depth + 1, out);
+        continue;
+      }
       const t = kindOf(name);
       if (t) out.push({ path: base + name, name, dir: base, kind: t, h: e });
       else if (/\.wiff\.scan$/i.test(name)) out.push({ path: base + name, name, dir: base, kind: "scan", h: e });
@@ -43,16 +64,16 @@ const CartPP = (() => {
   // `gen` changes with the folder (choose, forget): a scan that started on the old one drops its result; `opening` is "Load all" running
   const S = { handle: null, name: "", perm: "none", items: [], opened: new Set(), stats: new Map(), busy: false, gen: 0, opening: false, obs: null, timer: 0, native: null };
   const supported = () => typeof window !== "undefined" && !!window.CAPACITA && CAPACITA.ha("cartellaLocale") && !!/** @type {any} */ (window).showDirectoryPicker;
-  return { kindOf, collect, pairScan, visible, sameList, S, supported };
+  return { kindOf, collect, pairScan, visible, sameList, listName, bundleStat, S, supported };
 })();
 
 // the list in the page: rows, groups, messages (the buttons call CartPunt when they are pressed)
 const CartPuntVista = (() => {
-  const { visible, S, supported } = CartPP;
+  const { visible, listName, S, supported } = CartPP;
   const loadedNames = () => new Set((/** @type {any} */ (window).ST && ST.files || []).map(f => f.name.toLowerCase()));
   // a file counts as loaded by its name only when no other file of the folder has that name (pos/qc.mzML and neg/qc.mzML are told apart by path)
-  const sameNames = () => { const m = new Map(); for (const x of S.items) { const k = x.name.toLowerCase(); m.set(k, (m.get(k) || 0) + 1); } return m; };
-  const loadedTest = () => { const names = loadedNames(), same = sameNames(); return x => S.opened.has(x.path) || (names.has(x.name.toLowerCase()) && same.get(x.name.toLowerCase()) === 1); };
+  const sameNames = () => { const m = new Map(); for (const x of S.items) { const k = listName(x); m.set(k, (m.get(k) || 0) + 1); } return m; };
+  const loadedTest = () => { const names = loadedNames(), same = sameNames(); return x => S.opened.has(x.path) || (names.has(listName(x)) && same.get(listName(x)) === 1); };
   // a click whose pointer-down and pointer-up straddle a redraw is lost: no redraw while the pointer is down on the list
   let down = false, late = false;
   // ---- page
@@ -112,9 +133,12 @@ const CartPuntApri = (() => {
     const T = (k, p) => I18N.t(k, p);
     try {
       if (riscaldaDi()) await riscaldaDi().claim(x.path);       // a warm-up of this very file under way finishes first; one waiting for its turn is dropped
+      if (x.bundle && !S.native) await CartCarica.fromHandle(x.h, x.dir);      // folder dataset: the drop path (walk + load) reads it; the desktop app gets it as a stub like a dropped one
+      else {
       const f = CartCarica.setDir(await fileOf(x), x.dir);
       const sc = /\.wiff$/i.test(x.name) ? pairScan(S.items, x) : null;
       await upload(sc ? [f, CartCarica.setDir(await fileOf(sc), x.dir)] : [f], "data");
+      }
       S.opened.add(x.path);
     } catch (e_) { const e = /** @type {Lanciato} */ (e_); CartCarica.note(T("cartp.error", { name: x.name, message: String(e.message || e) })); }
     CartPuntVista.render();
@@ -169,7 +193,7 @@ const CartPuntScan = (() => {
     const BATCH = 25, todo = items.filter(x => !S.stats.has(x.path));
     for (let i = 0; i < todo.length; i += BATCH) {
       const batch = todo.slice(i, i + BATCH);
-      const got = await Promise.all(batch.map(x => x.h.getFile().then(f => ({ size: f.size, mtime: f.lastModified }), () => ({ size: 0, mtime: 0 }))));
+      const got = await Promise.all(batch.map(x => (x.bundle ? CartPP.bundleStat(x.h).then(a => ({ size: a.size, lastModified: a.mtime })) : x.h.getFile().then(f => f)).then(f => ({ size: f.size, mtime: f.lastModified }), () => ({ size: 0, mtime: 0 }))));
       if (gen !== S.gen) return;
       batch.forEach((x, j) => S.stats.set(x.path, got[j]));
       if (batch.length === BATCH) render();

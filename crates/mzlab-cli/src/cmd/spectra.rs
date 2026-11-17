@@ -8,6 +8,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry { name: "dad", aliases: &[], help: "mzlab-cli dad subtract|spectrum|trace|ms-at|delay ...   the DAD / PDA matrix as JSON for agents: A minus B, the UV spectrum and trace, the linked MS (dad --help)", run: crate::dad_cmd::run },
     Entry { name: "dda-window", aliases: &[], help: "", run: crate::plain::dda_window_cmd::run },
     Entry { name: "ion-pattern", aliases: &[], help: "mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help); ion-mz TEXT [--adduct A]: the m/z of an ion with a signed shift (ion-mz --help)", run: crate::ion_pattern_cmd::run },
+    Entry { name: "folder", aliases: &[], help: "", run: crate::folder_cmd::run },
     Entry { name: "elements", aliases: &[], help: "", run: crate::plain::elements_cmd::run },
     Entry { name: "ion-mz", aliases: &[], help: "", run: crate::plain::ion_mz_cmd::run },
     Entry { name: "match-mz", aliases: &[], help: "mzlab-cli match-mz X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adduct shifts, known contaminants, as candidates (match-mz --help)", run: crate::plain::match_mz_cmd::run },

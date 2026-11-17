@@ -43,6 +43,7 @@ const COMMANDS: &[&[&str]] = &[
     &["dda-window"],
     &["ion-pattern"],
     &["elements"],
+    &["folder"],
     &["ion-mz"],
     &["match-mz"],
     &["mol-label"],
