@@ -328,11 +328,11 @@ def test_a_gc_run_with_data_ms_on_top_and_only_contents_in_acqdata_reads_on_both
     the same scans as the older run with the data.ms alone, and the run is read as GC (EI) from Contents.xml."""
     import agilent_sintetico
     d = agilent_sintetico.write_old(tools["tmp"] / "in_agilent_gc", "gcsynth.D", 60, gc=True)
-    cli = da_cli(tools, "agilent", d)
+    cli = da_cli(tools, "agilent_gc", d)      # its own output folder: the other Agilent tests leave theirs in the shared tmp
     assert cli.count(b"<spectrum ") == 60
     wasm = da_wasm(tools, "agilent", d)
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
-    bare = da_cli(tools, "agilent", agilent_sintetico.write_old(tools["tmp"] / "in_agilent_gc_bare", "gcsynth.D", 60))
+    bare = da_cli(tools, "agilent_gcbare", agilent_sintetico.write_old(tools["tmp"] / "in_agilent_gc_bare", "gcsynth.D", 60))
     assert bare.count(b"<spectrum ") == 60
 
 
