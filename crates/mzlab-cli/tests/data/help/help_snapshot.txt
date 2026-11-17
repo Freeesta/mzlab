@@ -366,10 +366,12 @@ usage: mzlab-cli match-mz X --tables FILE.json [--set NAME=VALUE...] [--out PATH
   --set hr=1      high resolution: windows in mDa (losses, adducts) and ppm (contaminants); without it the window is +-0.5 Da
   --set mda=N     window of losses and adduct shifts in mDa (high resolution, default 3)
   --set ppm=N     window of contaminants in ppm (high resolution, default 5)
+  --set unit=da|ppm  with tol=N: the window of the contaminants in Da or ppm, in either resolution
+  --set tol=N     the window value for unit= (a number above 0)
   --set pol=+|-   keep the adducts and contaminants of that polarity (default both)
   --out PATH      write there instead of the standard output
 
-The answer is {"x", "hr", "hits": [{kind, id, ...}], "more", "tol"}; uses the same tables as the Addotti e perdite page.
+The answer is {"x", "hr", "hits": [{kind, id, ...}], "more", "tol", "contam": {unit, tol}}; uses the same tables as the Addotti e perdite page.
 --- stderr
 
 === mzlab-cli background --help
