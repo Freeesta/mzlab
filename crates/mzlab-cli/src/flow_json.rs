@@ -69,7 +69,13 @@ pub(crate) fn check_json(problems: &[Problem]) -> String {
 }
 
 /// `errore/1`: the exit code, the key and parameters of the error and the hint; `problems` (plan not valid) only when there are some.
-fn error_json(code: u8, err: &Error, message: &str, hint: &str, problems: &[Problem]) -> String {
+pub(crate) fn error_json(
+    code: u8,
+    err: &Error,
+    message: &str,
+    hint: &str,
+    problems: &[Problem],
+) -> String {
     let params: Vec<(&str, String)> = err.params.iter().map(|(k, v)| (*k, v.clone())).collect();
     let mut o = Out::default();
     o.raw("{\"schema\":\"errore/1\",\"code\":")
