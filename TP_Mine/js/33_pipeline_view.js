@@ -8,8 +8,8 @@
   const G = typeof window !== "undefined" ? window : globalThis;
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const STATE = ["D", "T", "F", "A"], STATE_NAME = ["detected", "targeted", "filled", "absent"];
-  const TYPES = ["massa", "isotopi", "MS2", "frammenti", "rete", "cinetica", "controlli", "RT", "frequenza", "esterne"];
-  const TYPE_NAME = { massa: "mass", isotopi: "isotopes", MS2: "MS2", frammenti: "fragments", rete: "network", cinetica: "kinetics", controlli: "controls", RT: "RT", frequenza: "frequency", esterne: "external" };
+  const TYPES = ["mass", "isotopes", "MS2", "fragments", "network", "kinetics", "controls", "RT", "frequency", "external"];
+  const TYPE_NAME = { mass: "mass", isotopes: "isotopes", MS2: "MS2", fragments: "fragments", network: "network", kinetics: "kinetics", controls: "controls", RT: "RT", frequency: "frequency", external: "external" };
   const REASON = { EV_AGAINST_OPEN: "a proof against is open", EV_INDISTINGUISHABLE: "cannot be told apart from another candidate", EV_NO_MS2: "no MS2", EV_WEAK_MS2: "weak MS2 (impure precursor)", EV_KINETICS_INFO: "kinetics is informative only", EV_NO_PROOF: "no proof in favour", EV_ONLY_FREQUENCY: "only the frequency, which proves nothing about the identity", EV_ONLY_CONTROLS: "only above the blank (and the frequency): the signal is real, the identity is not proved" };
   const ROW_H = 30;
 
@@ -38,7 +38,7 @@
   const cellsOf = (f, row) => Array.from({ length: f.files }, (_, j) => ({ state: f.state[row * f.files + j], area: f.area[row * f.files + j] }));
 
   /** the points of a proof as a chip: type, points; «against» flagged (always 0 points, never compensated) */
-  const chip = p => ({ type: p.tipo, name: TYPE_NAME[p.tipo] || p.tipo, points: p.punti, against: p.segno === "contro", sign: p.segno });
+  const chip = p => ({ type: p.tipo, name: TYPE_NAME[p.tipo] || p.tipo, points: p.punti, against: p.segno === "against", sign: p.segno });
 
   /** the identities of evid/1 with their cells; `discarded` = nothing in favour; the reasons are the codes of the engine (or EV_NO_PROOF) */
   function identities(f) {

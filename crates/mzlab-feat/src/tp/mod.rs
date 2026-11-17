@@ -1,5 +1,5 @@
 //! The view of the transformation products (`tp/1`): which rows of the table are formed in the treatment, are not the parent in disguise and are
-//! explained, and how sure their kinship with the parent is. It decides nothing about identity (that stays the cascade of `livelli/1`) and deletes no row:
+//! explained, and how sure their kinship with the parent is. It decides nothing about identity (that stays the cascade of `levels/1`) and deletes no row:
 //! every row keeps a status and the numbers behind it.
 //!
 //! Gates in order (`cancelli`): 1. formed (the treated samples beat the blanks, the dark and the t0 by `ratio`; with the roles, each reference in turn and

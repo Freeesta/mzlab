@@ -19,7 +19,7 @@ BUILDABLE = shutil.which("cargo") is not None
 
 
 def identita(i, mz, rt, gen, livello):
-    c = [{"tipo": "cinetica", "segno": "a favore", "fonte": "x", "parametri": {"generation": gen, "shape": 0}}] if gen is not None else []
+    c = [{"tipo": "kinetics", "segno": "for", "fonte": "x", "parametri": {"generation": gen, "shape": 0}}] if gen is not None else []
     return {"id": i, "totale": 1, "membri": [{"mz": mz, "rt": rt}], "contributi": c, "livello_max": livello, "ipotesi": None}
 
 

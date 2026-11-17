@@ -72,15 +72,15 @@ pub struct Assessment {
     pub suspect: Option<Suspect>,
 }
 
-/// The profile `name` of the data file with the thresholds of `over` (key of `soglie`, value) set on top.
+/// The profile `name` of the data file with the thresholds of `over` (key of `thresholds`, value) set on top.
 fn profile(name: &str, over: &[(&str, f64)]) -> Result<Value> {
     let mut p = json::parse(DATA.as_bytes())?
-        .get("profili")
+        .get("profiles")
         .and_then(|p| p.get(name))
         .cloned()
         .ok_or_else(|| Error::new("err.flow.level.profile").with("profile", name))?;
     if let Value::Obj(o) = &mut p
-        && let Some((_, Value::Obj(s))) = o.iter_mut().find(|(k, _)| k == "soglie")
+        && let Some((_, Value::Obj(s))) = o.iter_mut().find(|(k, _)| k == "thresholds")
     {
         for (k, v) in over {
             match s.iter_mut().find(|(n, _)| n == k) {
@@ -129,7 +129,7 @@ fn margin(list: &[Cand], campo: &str) -> Option<f64> {
 }
 
 pub(super) fn threshold(p: &Value, name: &str) -> f64 {
-    p.get("soglie")
+    p.get("thresholds")
         .and_then(|s| s.get(name))
         .and_then(Value::f64)
         .unwrap_or(f64::NAN)
@@ -137,17 +137,17 @@ pub(super) fn threshold(p: &Value, name: &str) -> f64 {
 
 pub(super) fn gate(p: &Value, g: &Value, vals: &dyn Fn(&str) -> Option<f64>) -> GateResult {
     let text = |k: &str| g.get(k).and_then(Value::str).unwrap_or("");
-    let mut thr = threshold(p, text("soglia"));
-    if let Some(r) = g.get("ridotta") {
-        let below = r.get("minore_di").and_then(Value::f64).unwrap_or(0.0);
-        let field = r.get("se_campo").and_then(Value::str).unwrap_or("");
+    let mut thr = threshold(p, text("threshold"));
+    if let Some(r) = g.get("reduced") {
+        let below = r.get("less_than").and_then(Value::f64).unwrap_or(0.0);
+        let field = r.get("if_field").and_then(Value::str).unwrap_or("");
         if vals(field).is_some_and(|v| v < below) {
-            thr = threshold(p, r.get("soglia").and_then(Value::str).unwrap_or(""));
+            thr = threshold(p, r.get("threshold").and_then(Value::str).unwrap_or(""));
         }
     }
-    let value = vals(text("campo")).filter(|v| !v.is_nan());
+    let value = vals(text("field")).filter(|v| !v.is_nan());
     let seen = value.map(|v| {
-        if g.get("assoluto").and_then(Value::bool) == Some(true) {
+        if g.get("absolute").and_then(Value::bool) == Some(true) {
             v.abs()
         } else {
             v
@@ -162,7 +162,7 @@ pub(super) fn gate(p: &Value, g: &Value, vals: &dyn Fn(&str) -> Option<f64>) -> 
     });
     GateResult {
         id: text("id").to_string(),
-        role: text("ruolo").to_string(),
+        role: text("role").to_string(),
         value: seen,
         threshold: thr,
         ok,
@@ -174,16 +174,16 @@ pub fn assess(e: &Evidence, name: &str) -> Result<Assessment> {
     assess_with(e, name, &[])
 }
 
-/// `assess` with thresholds of the profile replaced (`soglie` keys, as the Flow parameters do).
+/// `assess` with thresholds of the profile replaced (`thresholds` keys, as the Flow parameters do).
 pub fn assess_with(e: &Evidence, name: &str, over: &[(&str, f64)]) -> Result<Assessment> {
     let p = profile(name, over)?;
     let score = p
-        .get("cancelli")
+        .get("gates")
         .map(Value::arr)
         .unwrap_or(&[])
         .iter()
         .find(|g| g.get("id").and_then(Value::str) == Some("score"))
-        .and_then(|g| g.get("campo").and_then(Value::str))
+        .and_then(|g| g.get("field").and_then(Value::str))
         .unwrap_or("ent")
         .to_string();
     let mut list: Vec<Cand> = e
@@ -194,7 +194,7 @@ pub fn assess_with(e: &Evidence, name: &str, over: &[(&str, f64)]) -> Result<Ass
         .collect();
     list.sortc_by(|a, b| cmp_opt(field(b, &score), field(a, &score)));
     let without = p
-        .get("senza_prove")
+        .get("without_proofs")
         .and_then(Value::str)
         .unwrap_or("0")
         .to_string();
@@ -217,7 +217,7 @@ pub fn assess_with(e: &Evidence, name: &str, over: &[(&str, f64)]) -> Result<Ass
         return Ok(res);
     }
     // a suspect never lifts a level above 3 and is out of the capped (unit resolution) profile
-    if p.get("tetto").is_none() && extra::by_suspect(&p, e, &mut res) {
+    if p.get("cap").is_none() && extra::by_suspect(&p, e, &mut res) {
         return Ok(res);
     }
     let min = threshold(&p, "analogo_mcos_min");
@@ -251,7 +251,7 @@ fn by_best(p: &Value, e: &Evidence, list: &[Cand], score: &str, res: &mut Assess
         f => field(best, f),
     };
     res.gates = p
-        .get("cancelli")
+        .get("gates")
         .map(Value::arr)
         .unwrap_or(&[])
         .iter()
@@ -259,7 +259,7 @@ fn by_best(p: &Value, e: &Evidence, list: &[Cand], score: &str, res: &mut Assess
         .collect();
     let bad: Vec<&GateResult> = res.gates.iter().filter(|g| !g.ok).collect();
     if bad.is_empty() {
-        let cap = p.get("tetto").and_then(Value::str);
+        let cap = p.get("cap").and_then(Value::str);
         res.level = cap.unwrap_or("2a").to_string();
         res.why = if cap.is_some() { "tetto" } else { "2a" };
         return true;
@@ -269,10 +269,10 @@ fn by_best(p: &Value, e: &Evidence, list: &[Cand], score: &str, res: &mut Assess
         res.why = "confirm";
         return true;
     }
-    let prov = p.get("provvisorio");
-    let from = prov.and_then(|v| v.get("campo")).and_then(Value::str);
+    let prov = p.get("provisional");
+    let from = prov.and_then(|v| v.get("field")).and_then(Value::str);
     let at = prov
-        .and_then(|v| v.get("soglia"))
+        .and_then(|v| v.get("threshold"))
         .and_then(Value::str)
         .map_or(f64::NAN, |s| threshold(p, s));
     let provisional = from.and_then(|f| field(best, f)).is_some_and(|v| v >= at);
