@@ -39,6 +39,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | passo per passo (area: riga di comando `mzlab-cli features` (`crates/mzlab-cli`: feature…) | `docs/agenti/cli-passi.md` |
 | riga di comando `mzlab-cli features` (`crates/mzlab-cli`: feature table in CSV, stesso motore e ricetta della pagina) | `docs/agenti/cli.md` |
 | Safari e iPadOS (WebKit): API × versione minima × ripiego, pavimento 16.4, ripieghi di `compat.js` (`AbortSignal.any`, `createWritable`, appunti, `accept`); memoria Safari, iPad, iPhone (budget senza `deviceMemory`, rifiuto calmo, `estimate::check_reader`) | `docs/agenti/compat-safari.md` |
+| mappa RT-λ (DAD): studio del pannello — flusso dei dati, cause di sottrazione/strisce laterali/3D che non funzionano, formati (Agilent/Waters/SCIEX) e scarto DAD→MS, progetto del legame con l'MS, suddivisione in PR | `docs/agenti/dad-mappa-studio.md` |
 | rivelatore DAD (UV/Vis) del `.wiff`: matrice, mappa RT-λ, spettro UV, TWC/XWC (`xwc.js`), integrazione di una XWC, DAD sul pannello MRM (`dad-mrm.js`) | `docs/agenti/dad.md` |
 | calcolatrice (gruppi «cosa può essere» sotto il numero), pannello Addotti, fatti sui dati del 3200, gradiente, tracce analogiche, tabelle dei dati, tema | `docs/agenti/dati-3200.md` |
 | barra laterale della vista Dati, strumenti, suggerimenti, tour | `docs/agenti/dati-barra.md` |
