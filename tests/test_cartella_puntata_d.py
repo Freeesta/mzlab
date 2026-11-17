@@ -15,7 +15,12 @@ import agilent_sintetico as ag  # noqa: E402
 import cargo_util  # noqa: E402
 
 WEB = ROOT / "mzlab" / "web"
-pytestmark = pytest.mark.skipif(not (shutil.which("node") and shutil.which("cargo")), reason="node or cargo is not installed")
+
+
+def need_tools():
+    """node and cargo are guaranteed by the CI jobs: a missing one is a failure, never a skip."""
+    for tool in ("node", "cargo"):
+        assert shutil.which(tool), f"{tool} is required by this test and was not found"
 
 NODE_HANDLE = """
 const fs=require('fs'),path=require('path');
@@ -26,12 +31,14 @@ const H=(p)=>{const st=fs.statSync(p),name=path.basename(p);
 
 
 def node(code):
+    need_tools()
     out = subprocess.run(["node", "-e", NODE_HANDLE + "(async()=>{const r=await(" + code + ");console.log(JSON.stringify(r))})()"], check=True, capture_output=True, encoding="utf-8").stdout
     return json.loads(out)
 
 
 @pytest.fixture(scope="module")
 def tree(tmp_path_factory):
+    need_tools()
     r = tmp_path_factory.mktemp("lab")
     for f in ["a.mzML", "notes.txt", "sub/w.wiff", "sub/w.wiff.scan", "sub/.hid/x.mzML", "lc/k.d/analysis.tdf", "lc/k.d/analysis.tdf_bin",
               "wat/z.raw/_FUNC001.DAT", "wat/z.raw/_extern.inf", "other/q.raw/readme.csv", "a/b/c/d/deep.mzML"]:
