@@ -42,6 +42,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | caricamento della pagina (FCP, LCP, motore pronto, KB prima del paint per scenario; `tests_e2e/misura_primo_paint.py`) | `docs/agenti/misure-caricamento.md` |
 | lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` (altri strumenti SCIEX, sMRM, PIS/NL, feature `estesi`: `wiff-varianti.md`; specifica binaria: `wiff_specifica_completa.md`) |
 | rivelatore DAD (UV/Vis) del `.wiff`: matrice, mappa RT-λ, spettro UV, TWC/XWC (`xwc.js`), integrazione di una XWC, DAD sul pannello MRM (`dad-mrm.js`) | `docs/agenti/dad.md` |
+| mappa RT-λ (DAD): studio del pannello — flusso dei dati, cause di sottrazione/strisce laterali/3D che non funzionano, formati (Agilent/Waters/SCIEX) e scarto DAD→MS, progetto del legame con l'MS, suddivisione in PR | `docs/agenti/dad-mappa-studio.md` |
 | lettore cartelle Agilent `.D` (`crates/mzlab-core/src/agilent/`) | `docs/agenti/agilent.md` |
 | Agilent `.D` LC/MS: QqQ MRM/dMRM, Q-TOF profilo/centroidi/MS2, metodo LC/MS, DAD (`crates/mzlab-core/src/agilent_ext/`, feature `estesi`) | `docs/agenti/agilent-lcms.md` |
 | lettore Bruker timsTOF `.d` (`crates/mzlab-lettori/src/bruker/`: SQLite minimo, zstd, `tdf_bin`/`tsf_bin`, calibrazione m/z, `BrukerD` in `agilent-d.js`) | `docs/agenti/bruker.md` |
