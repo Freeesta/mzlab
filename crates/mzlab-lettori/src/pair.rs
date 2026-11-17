@@ -66,7 +66,6 @@ pub struct Companion {
 }
 
 /// The companion of the file `path` in its own folder (names only, no file is opened); `None` when `path` is not a half of a pair.
-#[cfg(not(target_arch = "wasm32"))]
 pub fn companion_in_dir(path: &std::path::Path) -> Option<Companion> {
     let name = path.file_name()?.to_string_lossy().into_owned();
     let half = half_of(&name)?;
