@@ -296,7 +296,7 @@ I18N.add("en", {
   "bug.r.diag": "Diagnostics",
   "bug.r.none": "(not given)",
   "bug.cut": "[text cut: the rest is in the «Copy» button]",
-  "bug.cutNote": "The report is long: the GitHub link and the email carry only its start; use «Copy» to get all of it.",
+  "bug.cutNote": "The report is too long for a link: GitHub and the email carry only its start. Use «Copy» or «Download full report» for all of it.",
   "cont.in.one": "Include the entry again: {n}",
   "cont.in.cls": "Include the class again: {n}",
   "cont.in.list": "Include the list again: {n}",

@@ -34,6 +34,7 @@
     "../../mzlab/web/compat.js",
     "../../mzlab/web/avviso-capacita.js",
     "../../mzlab/web/sw-avviso.js",
+    "../../mzlab/web/bug-report-dati.js",
     "../../mzlab/web/bug-report.js",
     "../../mzlab/web/bug-report-testo.js",
     "../../mzlab/web/esporta-dati.js",

@@ -153,12 +153,13 @@ function uipOpen(btn) {
     + C.flat("uip-a11y", "read", T("settings.g.read"), read) + C.flat("uip-g-look", "look", T("settings.g.look"), look)
     + flat("uip-g-data", "data", "settings.g.data", dataItems) + flat("uip-g-app", "app", "settings.g.app", appItems)
     + C.flatOrRow("uip-g-xic", "look", T("settings.g.look"), [C.sw(T("settings.xiclens"), T("settings.xiclens.title"), 'id="uip-xiclens"', UIP.xicLens, "side")])      // a chart-interaction switch, kept among the last items
-    + tour + C.bugRow(T("settings.g.bug"), T("settings.g.bug.tip"))
+    + tour + C.bugRow(T("settings.g.bug"), T("settings.g.bug.tip")) + C.bugRow(T("settings.g.sug"), T("settings.g.sug.tip"), "sug")
     + (prof === "ricerca" ? grp("uip-g-llm", "app", "llm.g", '<div id="uip-llm"></div>', false, "llm.g.tip") : "") + grp("uip-g-diag", "cont", "settings.g.diag", mem ? mem.html : "", false, "settings.g.diag.tip")
     + `<div class="row"><button type="button" id="uip-reset" title="${esc(T("settings.reset.title"))}">${T("settings.reset")}</button></div>`;
   document.body.appendChild(d);
   d.querySelectorAll("details.imp-g").forEach(g => g.addEventListener("toggle", () => { try { localStorage.setItem(UIP_GROUP_KEY(g.id), /** @type {HTMLDetailsElement} */ (g).open ? "1" : "0"); } catch (_) { /* not remembered */ } }));
-  C.bugBind(d, box => import("./bug-report.js").then(m => m.mount(box)));      // the report form is fetched the first time the button opens it
+  C.bugBind(d, box => import("./bug-report.js").then(m => m.mount(box, "bug")));
+  C.bugBind(d, box => import("./bug-report.js").then(m => m.mount(box, "suggestion")), "sug");      // the report form is fetched the first time the button opens it
   if (window.DESKUPD) DESKUPD.bind(d);
   if (window.DESKDEF) DESKDEF.bind(d);
   if (mem) mem.bind(d);
