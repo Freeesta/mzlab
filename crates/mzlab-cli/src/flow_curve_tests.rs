@@ -93,7 +93,7 @@ fn bad_parameters_fail_the_step_and_the_defaults_run() {
     assert!(run(&d, r#"{"istd":"nothing"}"#).is_err());
     let (json, _, _) = run(&d, "{}").unwrap();
     assert!(json.starts_with(
-        r#"{"format":"taratura/1","signal":"area","model":"linear","weight":"1/x","zero":false"#
+        r#"{"format":"calibration/1","signal":"area","model":"linear","weight":"1/x","zero":false"#
     ));
     let (json, _, _) = run(&d, r#"{"model":"quadratic","zero":true,"signal":"height"}"#).unwrap();
     assert!(json.contains(r#""model":"quadratic""#) && json.contains(r#""zero":true"#));
