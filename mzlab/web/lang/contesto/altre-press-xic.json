@@ -39,6 +39,7 @@
   "spec.scanLine.one": "{of} = \"/N\" (total number) or empty.",
   "spec.scanLine.avg": "Line above the spectrum when the average of several scans is shown; {n} = number of scans.",
   "spec.scanLine.ce": "Line above the spectrum: collision energy; {ce} = value in eV.",
+  "spec.scanLine.merge": "Line above the spectrum: says the engine merges the centroids of the same nominal mass (low-resolution files).",
   "tbl.pt.avgWeight": "Row in the periodic table cell; {w} = atomic weight (number).",
   "tbl.pt.mono": "{m} = mass, {a} = mass number of the isotope, {s} = element symbol.",
   "tbl.pt.peak": "{s} = symbol, {off} = offset in mass units (e.g. +1), {pct} = percentage.",

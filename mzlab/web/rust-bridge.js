@@ -217,7 +217,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       ks = [k0];
     } else if (path === "/api/xic") ks = (q.get("k") || "").split(",").filter(Boolean).map(Number);
     else if (path === "/api/spectra") {
-      if (!empty(q, "prec", "precursor", "filt") || q.get("merge") === "1") return null;
+      if (!empty(q, "prec", "precursor", "filt") || q.get("merge") === "0") return null;      // merge=0 (no merge) is Python's; omitted or 1 = the merge by nominal mass
       ks = [k0];
     } else return null;
     if (!ks.length || ks.some(k => !Number.isInteger(k) || !slots[k])) return null;

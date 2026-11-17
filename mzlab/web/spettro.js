@@ -192,6 +192,8 @@ function scanLine(p, data, d0) {
   const f = data[0].f, parts = [], i = p.si != null ? p.si : d0.i0, n = d0.n;
   parts.push(d0.scans === 1 && i != null ? I18N.t("spec.scanLine.one", { i: i + 1, of: n ? "/" + n : "" }) : I18N.t("spec.scanLine.avg", { n: d0.scans }));
   if (p.level > 1) { const ce = p.prec != null ? ((f.ms2_exps || []).find(x => Math.abs(x.prec - p.prec) < 0.6) || {}).ce : null; if (ce != null) parts.push(I18N.t("spec.scanLine.ce", { ce })); }
+  // the engine merges unit-resolution centroids per nominal mass on its own (profile and HR files never): say so wherever it applies
+  if (d0.mode === "centroid" && !(window.HR && HR.anyHr(data.map((/** @type {Bag} */ x) => x.f), p.level))) parts.push(I18N.t("spec.scanLine.merge"));
   return parts.join(" · ");
 }
 

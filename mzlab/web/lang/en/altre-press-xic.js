@@ -119,6 +119,7 @@ I18N.add("en", {
   "spec.scanLine.one": "scan {i}{of}",
   "spec.scanLine.avg": "average of {n} scans",
   "spec.scanLine.ce": "CE {ce} eV",
+  "spec.scanLine.merge": "merge by nominal mass: auto",
   "touch.grip.title": "Drag to change the height of the chart",
   "tbl.pt.avgWeight": "average atomic weight <b>{w}</b> <span class=\"muted\">(weighted mean over the natural isotopes)</span>",
   "tbl.na": "n/a",

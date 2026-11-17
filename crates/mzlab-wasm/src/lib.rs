@@ -379,6 +379,8 @@ impl Engine {
             } else {
                 analysis::bin_centroids(&s.mz, &s.intensity, bin_da)
             };
+            // unit-resolution centroids are merged per nominal mass (the AUTO rule of `/api/spectra`); `merge=0` is Python's (rust-bridge.js)
+            let (mz, y) = mzlab_core::specpeaks::merge_unit(&mz, &y);
             if w + 3 + 2 * mz.len() > out.len() {
                 return 0;
             }
