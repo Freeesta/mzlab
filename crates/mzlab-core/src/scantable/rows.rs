@@ -138,18 +138,34 @@ pub(crate) struct Rows {
     /// The texts that many rows repeat (filter strings, activation names): one allocation each.
     pool: HashSet<Arc<str>>,
     window: super::DeclaredWindow,
+    /// Optical (DAD) spectra skipped: the `spectrumList` count includes them, the rows do not.
+    optical: usize,
+    /// The `spectrumList` closed after the last spectrum: every spectrum there is was read, whatever `count` says.
+    closed: bool,
 }
 
 impl Rows {
     pub(super) fn with(head: Head) -> Rows {
         Rows {
             window: Default::default(),
+            optical: 0,
+            closed: false,
             head,
             rows: Vec::new(),
             refs: HashMap::new(),
             level_of: HashMap::new(),
             pool: HashSet::new(),
         }
+    }
+
+    /// Notes a spectrum that is not a scan (optical): it counts as read for the declared total.
+    pub(crate) fn skip_optical(&mut self) {
+        self.optical += 1;
+    }
+
+    /// The list ended with its closing tag: a `count` above the spectra read is a wrong count, not a file that ends early.
+    pub(crate) fn mark_closed(&mut self) {
+        self.closed = true;
     }
 
     /// The rows kept so far.
@@ -207,6 +223,8 @@ impl Rows {
             level_of,
             pool,
             window,
+            optical,
+            closed,
         } = self;
         // only reading needed them; the tables below are what the peak of this step is made of
         drop((level_of, pool));
@@ -252,7 +270,11 @@ impl Rows {
             hr1,
             n_chromatograms,
             window: window.span,
-            declared: head.declared,
+            declared: if closed {
+                0
+            } else {
+                head.declared.saturating_sub(optical)
+            },
         }
     }
 }

@@ -109,3 +109,28 @@ fn find_matches_a_plain_search() {
         }
     }
 }
+
+/// A file whose list counts optical (DAD) spectra the table does not keep, and one cut before the list closes.
+#[test]
+fn optical_spectra_and_closed_lists_never_count_as_missing() {
+    let (whole, _) = mzml(&[8, 8]);
+    let text = String::from_utf8(whole).unwrap();
+    let optical = |i: usize| {
+        format!("<spectrum index=\"{i}\" id=\"uv={i}\" defaultArrayLength=\"0\"><cvParam cvRef=\"MS\" accession=\"MS:1000804\" name=\"electromagnetic radiation spectrum\" value=\"\"/><binaryDataArrayList count=\"0\"></binaryDataArrayList></spectrum>\n")
+    };
+    let uv: String = (2..5).map(optical).collect();
+    // 2 scans + 3 optical spectra, the list says 5 and closes
+    let full = text
+        .replace("count=\"2\"", "count=\"5\"")
+        .replace("</spectrumList>", &format!("{uv}</spectrumList>"));
+    let t = read(&mut full.clone().into_bytes(), full.len() as u64).unwrap();
+    assert_eq!((t.rows.len(), t.declared), (2, 0));
+    // the same list closing with a wrong count (more than there is): the file is whole, nothing is missing
+    let wrong = full.replace("count=\"5\"", "count=\"5005\"");
+    let t = read(&mut wrong.clone().into_bytes(), wrong.len() as u64).unwrap();
+    assert_eq!((t.rows.len(), t.declared), (2, 0));
+    // cut before the list closes: the optical spectra read are subtracted, the rest is missing
+    let cut = &wrong[..wrong.find("</spectrumList>").unwrap()];
+    let t = read(&mut cut.as_bytes().to_vec(), cut.len() as u64).unwrap();
+    assert_eq!((t.rows.len(), t.declared), (2, 5002));
+}

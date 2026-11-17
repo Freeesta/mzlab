@@ -11,6 +11,8 @@
   "ctl.spec.lv": "Accessible label of the spectrum title (MS with the level as a superscript); {n} = MS level.",
   "ctl.spec.follow": "The two quoted names are the buttons of the mode selector (nav.mode.sel, nav.mode.all).",
   "ctl.ms2tr.opt": "Entry of the MS2 transitions menu; {q1} = precursor m/z, {q3} = fragment m/z.",
+  "ctl.ms2tr.grp": "Group heading in the MS2 fragments menu; {q1} = precursor m/z.",
+  "ctl.ms2tr.more": "Disabled last entry of the MS2 fragments menu; {n} = fragments found but not listed.",
   "ctl.prec.one": "Entry of the precursors menu; {v} = precursor m/z.",
   "ctl.files.aria": "Accessible name of the shown-files button; {n} = visible files, {tot} = files in the tab.",
   "ctl.files": "Button in the header of a chart: files shown out of total files; {n} and {tot} = numbers.",

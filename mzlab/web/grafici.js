@@ -68,8 +68,9 @@ async function ms2trSeries(p) {
   const data = await Promise.all(mf.map(f => getMs2Tr(f.k, f.lv).then(tr => ({ f, tr }))));
   const seen = new Map();
   data.forEach(({ tr }) => tr.forEach(t => { const key = `${t.q1}>${t.q3}`; if (!seen.has(key)) seen.set(key, { key, q1: t.q1, q3: t.q3, y: 0 }); seen.get(key).y += t.y; }));
-  const list = [...seen.values()].sort((a, b) => a.q1 - b.q1 || a.q3 - b.q3).slice(0, MS2TR_MAX * 4);
-  if (JSON.stringify(list.map(t => t.key)) !== JSON.stringify((p._trs || []).map(t => t.key))) { p._trs = list; ctl(p); }
+  const full = [...seen.values()].sort((a, b) => a.q1 - b.q1 || a.q3 - b.q3), list = full.slice(0, MS2TR_MAX * 4), more = full.length - list.length;
+  // the pairs beyond the cap stay unlisted but are counted in the menu (an automatic choice the user can see), never dropped silently
+  if (more !== (p._trsMore || 0) || JSON.stringify(list.map(t => t.key)) !== JSON.stringify((p._trs || []).map(t => t.key))) { p._trs = list; p._trsMore = more; ctl(p); }
   if (!p.tr) return null;
   const sel = p.tr === "__all" ? list.slice(0, MS2TR_MAX) : list.filter(t => t.key === p.tr);
   const out = await Promise.all(mf.flatMap((f, fi) => sel.map(t => getChrom(f.k, "tic", f.lv, t.q3 - 0.5, t.q3 + 0.5, t.q1, p.filt).then(d => ({
