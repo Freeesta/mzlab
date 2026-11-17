@@ -18,6 +18,7 @@
 .impset .ic{display:inline-flex;vertical-align:middle;margin-right:6px;color:var(--accent)}
 .impset .hint{margin:4px 0 0;font-size:13px;color:var(--muted)}
 .impset .imp-fld{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px}
+.impset .imp-pal>label{font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);flex:none}.impset .imp-pal select{min-width:0;flex:0 1 auto;max-width:100%;text-overflow:ellipsis}
 .impset .imp-fld select,.impset .imp-fld input[type=number]{font:inherit;min-height:32px}
 .impset .opts{display:grid;gap:6px}.impset .seg3{grid-template-columns:repeat(3,1fr)}.impset .f3{grid-template-columns:repeat(3,1fr)}.impset .f4{grid-template-columns:repeat(4,1fr)}
 .impset .opt{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:48px;padding:6px 4px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:13px;line-height:1.2;text-align:center;cursor:pointer}
