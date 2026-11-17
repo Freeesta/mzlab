@@ -68,7 +68,7 @@ def test_adduct_differences_huang1999():
     assert diff_cl == pytest.approx(35.97668, abs=5e-5)
 
 
-@pytest.mark.skipif(not NODE, reason="node non disponibile")
+@pytest.mark.skipif(not NODE, reason="node not available")
 def test_list_engine_nominal_vs_ppm_and_csv(tmp_path):
     code = r"""
 globalThis.NOMI = require(process.argv[1].replace(/[^\/\\]*$/, 'nomi.js'));
@@ -142,7 +142,7 @@ console.log(JSON.stringify(out));
     assert o["uListName0"] == "Atrazine"
 
 
-@pytest.mark.skipif(not NODE, reason="node non disponibile")
+@pytest.mark.skipif(not NODE, reason="node not available")
 def test_smiles_to_formula_via_openchemlib():
     code = r"""
 import('./mzlab/web/vendor/openchemlib.js').then(OCL => {

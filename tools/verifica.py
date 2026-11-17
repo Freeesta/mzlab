@@ -95,9 +95,9 @@ def sh(cmd, log: Path, timeout: int, env=None, cwd=ROOT) -> tuple[int, str, floa
         out, rc = (p.stdout or "") + (p.stderr or ""), p.returncode
     except subprocess.TimeoutExpired as e:
         txt = lambda v: v.decode("utf-8", "replace") if isinstance(v, bytes) else (v or "")
-        out, rc = f"{txt(e.stdout)}\n{txt(e.stderr)}\n" + (f"{CUT} after {timeout} s: the run's time (--budget) ended" if cut else f"TIMEOUT dopo {timeout} s"), 124
+        out, rc = f"{txt(e.stdout)}\n{txt(e.stderr)}\n" + (f"{CUT} after {timeout} s: the run's time (--budget) ended" if cut else f"TIMEOUT after {timeout} s"), 124
     except FileNotFoundError as e:
-        out, rc = f"comando non trovato: {e}", 127
+        out, rc = f"command not found: {e}", 127
     log.write_text(out, encoding="utf-8")
     return rc, out, time.time() - t0
 
@@ -193,7 +193,7 @@ def js_syntax(results) -> None:
     web = ROOT / "mzlab" / "web"
     tmp = OUT / "js"; tmp.mkdir(parents=True, exist_ok=True)
     if not shutil.which("node"):
-        results.append(("sintassi JS", "SKIP", 0, ["node non installato"])); return
+        results.append(("JS syntax", "SKIP", 0, ["node not installed"])); return
     t0, errs = time.time(), []
     files = [f for f in web.glob("*.js") if f.name not in ("elements.js",)]
     for f in files:
@@ -210,12 +210,12 @@ def js_syntax(results) -> None:
     if p.returncode:
         errs.append("explore.js e compagni + script inline di index.html: " + (p.stderr.strip().splitlines() or ["?"])[-1])
     (LOG / "sintassi_js.log").write_text("\n".join(errs) or "ok", encoding="utf-8")
-    results.append(("sintassi JS", "FAIL" if errs else "OK", time.time() - t0, errs[:5]))
+    results.append(("JS syntax", "FAIL" if errs else "OK", time.time() - t0, errs[:5]))
 
 
 def pytest(results, timeout) -> None:
     if not has("pytest"):
-        results.append(("pytest", "SKIP", 0, ["pytest non installato: python3 tools/verifica.py --setup"])); return
+        results.append(("pytest", "SKIP", 0, ["pytest not installed: python3 tools/verifica.py --setup"])); return
     # serial pytest needs 20+ min on 4 CPUs (1800 s with xdist); one serial cargo build up front: under xdist the tests that call cargo built together and one worker sat 1800 s on `--example native` (test_valida_hr.py); the cargo shim first in PATH as in test.yml, so no `cargo run` holds the lock for minutes (night 43)
     env = None if os.name == "nt" else {**os.environ, "PATH": str(ROOT / "tools" / "ci_cargo") + os.pathsep + os.environ.get("PATH", "")}; par = ["-n", "auto", "--dist", "loadfile"] if has("xdist") else []
     for pkg in (["-p", "mzlab-feat-wasm", "--example", "native"], ["-p", "mzlab-cli"]) if shutil.which("cargo") else []:
@@ -266,7 +266,7 @@ def hr_round(results) -> None:
         results.append(("prova_hr", "SKIP", 0, ["no HRMS folder (mzlab-dati/HRMS or ../Data/HRMS)"])); return
     for d in dirs:
         rc, out, dt = sh([sys.executable, str(ROOT / "tools" / "prova_hr.py"), str(d)], LOG / "prova_hr.log", 900)
-        results.append((f"prova_hr {d.parent.name}/{d.name}", "OK" if rc == 0 and "ERRORE" not in out else "FAIL", dt,
+        results.append((f"prova_hr {d.parent.name}/{d.name}", "OK" if rc == 0 and "ERROR" not in out else "FAIL", dt,
                         [l[:200] for l in out.strip().splitlines()]))
 
 
@@ -291,7 +291,7 @@ def judge(out: str, rc: int) -> list[str]:
         errs = [e for e in out[m.end(1):].splitlines()[1:int(m.group(1)) + 1] if e.strip() and not any(re.search(b, e) for b in BENIGN)]
         probs += ["browser error: " + e.strip()[:200] for e in errs]
     if rc and not probs:
-        probs.append(f"uscita con codice {rc}: " + (out.strip().splitlines() or [""])[-1][:200])
+        probs.append(f"exit with code {rc}: " + (out.strip().splitlines() or [""])[-1][:200])
     return probs
 
 
@@ -323,7 +323,7 @@ def parte_di(names: list[str], k: int, n: int) -> list[str]:
 
 def skip_why(need: set[str], *, dam: bool, src: str, only: bool, sito_pronto: bool) -> str:
     """Why an e2e with these NEEDS is skipped ("" = it runs). The `sito` ones run only when named (--solo) or when the CI says the full site is in place (--sito-pronto)."""
-    return ("serve un file .dam (MZLAB_DAM / QQQ_DAM)" if "dam" in need and not dam else
+    return ("needs a .dam file (MZLAB_DAM / QQQ_DAM)" if "dam" in need and not dam else
             "only with the real lab data" if "veri" in need and src != "veri" else
             "builds the site with Pyodide: run it apart (--solo)" if "sito" in need and not only and not sito_pronto else "")
 
@@ -336,7 +336,7 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
         keep = set(parte_di(names, *parte))
         names = [n for n in names if n in keep]
     if not browser_ok():
-        results.append(("e2e", "SKIP", 0, ["Playwright/Chromium non disponibili: python3 tools/verifica.py --setup"])); return
+        results.append(("e2e", "SKIP", 0, ["Playwright/Chromium not available: python3 tools/verifica.py --setup"])); return
     mz, src = data_dir()
     dam = dam_file()
     env = dict(os.environ, MZLAB_MZML=str(mz), QQQ_MZML=str(mz), PYTHONUNBUFFERED="1", RUSTUP_AUTO_INSTALL="0")  # tools/prepara_sito.py installs the toolchain once; a test may not
@@ -370,7 +370,7 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
         for pkg in (["-p", "mzlab-cli"], ["-p", "mzlab-feat-wasm", "--example", "native"]):
             rc, _out, dt = sh(["cargo", "build", "--release", "-q", *pkg], LOG / "precompila.log", 3000, env=env)
             if rc:
-                results.append((f"cargo build {' '.join(pkg)} (prima degli e2e)", "FAIL", dt, ["vedi .verifica/log/precompila.log"])); return
+                results.append((f"cargo build {' '.join(pkg)} (before the e2e)", "FAIL", dt, ["see .verifica/log/precompila.log"])); return
     # every test takes a free port and its own work folder (tests_e2e/lib.py), the site tests too: they all run in the same pool, the slowest first
     from concurrent.futures import ThreadPoolExecutor
     slow = [n for n in SLOW if n in todo]
@@ -383,7 +383,7 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--rapida", action="store_true", help="sintassi + pytest + e2e3")
+    ap.add_argument("--rapida", action="store_true", help="syntax + pytest + e2e3")
     ap.add_argument("--solo", default="", help="only these e2e, comma-separated (e.g. e2e6,e2e18)")
     ap.add_argument("--senza-e2e", action="store_true")
     ap.add_argument("--browser", choices=("chromium", "firefox", "webkit"), help="browser of the e2e tests (default chromium; webkit = the Safari engine)")
@@ -454,7 +454,7 @@ def main() -> None:
     else:          # fewer tokens for whoever reads it: only what is not OK, plus how many are OK (the full list is in .verifica/ultimo.md)
         ok = [r for r in results if r[1] == "OK"]
         print("\n".join([lines[0], ""] + [l for l in lines[2:] if not l.startswith("- OK")] +
-                         [f"OK: {len(ok)} controlli (elenco in .verifica/ultimo.md)"]))
+                         [f"OK: {len(ok)} checks (list in .verifica/ultimo.md)"]))
     sys.exit(1 if fails else 0)
 
 

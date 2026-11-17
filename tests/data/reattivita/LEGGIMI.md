@@ -1,9 +1,9 @@
-# Insieme di validazione della reattività (`validazione.json`)
+# Reactivity validation set (`validazione.json`)
 
-Molecola → sito sperimentale, per misurare il motore di `crates/mzlab-chem` (prova: `crates/mzlab-chem/tests/validation.rs`). Solo dati già nel repository: `docs/letteratura_cc/` (`siti_sperimentali.csv`, `coppie_isomeri_rt.csv`, `tp_noti/tp_noti.csv`) e la tabella della bozza CC-05 (`docs/bozze/teoria_cc05.md`). Nessun dato di laboratorio.
+Molecule → experimental site, to measure the `crates/mzlab-chem` engine (test: `crates/mzlab-chem/tests/validation.rs`). Only data already in the repository: `docs/letteratura_cc/` (`siti_sperimentali.csv`, `coppie_isomeri_rt.csv`, `tp_noti/tp_noti.csv`) and the table of draft CC-05 (`docs/bozze/teoria_cc05.md`). No lab data.
 
-- `molecules`: nome → SMILES. `atoms` di una riga = atomi pesanti da 0 nell'ordine dello SMILES (come `heavy_index` di `reatt/1`).
-- `rows`: `reaction` (`OH`, `O3`, `metabolism`), `scope` (`ch` = sito C–H insaturo, deve stare in `ch_sites`; `atom` = qualunque atomo pesante), `tier` (`literatura` = DOI per riga; `bozza` = regiochimica della bozza CC-05, senza DOI), `confidence`, `source`.
-- `baseline`: conteggi top-1/3/5 per `reazione/tier` misurati col motore attuale; la prova li confronta uno a uno. Se il motore cambia di proposito: `cargo test --release -p mzlab-chem --test validation -- --nocapture`, riga `BASELINE`, e aggiorna il campo.
-- `baseline_ph7`: gli stessi conteggi con `{"protomer":"ph7"}` (forma a pH 7, `crates/mzlab-chem/src/protomer.rs`); la prova `experimental_sites_ranking_ph7` li confronta uno a uno.
-- Escluse (sito non ricavabile): paracetamolo di `tp_noti` (nome del prodotto incoerente), trasformazioni senza posizione (timololo, atenololo, terbutilazina), triclosan «C6» (descrizione incoerente), cloro (nessun dato di sito nel repository).
+- `molecules`: name → SMILES. The `atoms` of a row are heavy atoms numbered from 0 in SMILES order (like `heavy_index` of `reatt/1`).
+- `rows`: `reaction` (`OH`, `O3`, `metabolism`), `scope` (`ch` = unsaturated C–H site, must be in `ch_sites`; `atom` = any heavy atom), `tier` (`literatura` = one DOI per row; `bozza` = regiochemistry of draft CC-05, no DOI), `confidence`, `source`.
+- `baseline`: top-1/3/5 counts per `reazione/tier` measured with the current engine; the test compares them one by one. If the engine changes on purpose: `cargo test --release -p mzlab-chem --test validation -- --nocapture`, `BASELINE` line, and update the field.
+- `baseline_ph7`: the same counts with `{"protomer":"ph7"}` (pH 7 form, `crates/mzlab-chem/src/protomer.rs`); the test `experimental_sites_ranking_ph7` compares them one by one.
+- Excluded (site cannot be derived): paracetamol from `tp_noti` (inconsistent product name), transformations without a position (timolol, atenolol, terbuthylazine), triclosan «C6» (inconsistent description), chlorine (no site data in the repository).

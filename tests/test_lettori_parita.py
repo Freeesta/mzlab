@@ -226,7 +226,7 @@ def test_waters_damaged_part_equals_the_cli(tools, part):
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
-def test_bruker_con_un_frame_senza_calibrazione_uguale_al_cli(tools):
+def test_bruker_with_one_frame_without_calibration_equals_cli(tools):
     """A `.d` of three frames whose middle one names an absent m/z calibration: both faces write the two whole frames, byte for byte, and the conv/1 of both
     names `warn.bruker.noCalibration` as the cause of the partial read."""
     ds = create("bruker_danneggiato", tools["tmp"] / "in_bruker_danneggiato")
@@ -237,7 +237,7 @@ def test_bruker_con_un_frame_senza_calibrazione_uguale_al_cli(tools):
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
-def test_bruker_con_tdf_bin_tagliato_uguale_al_cli(tools):
+def test_bruker_with_truncated_tdf_bin_equals_cli(tools):
     """A `.d` whose `analysis.tdf_bin` ends inside the fourth of five frames: both faces write the three whole frames, byte for byte, and the conv/1 of both
     names the cut `_bin` as the cause of the partial read."""
     ds = create("bruker_tagliato", tools["tmp"] / "in_bruker_tagliato")

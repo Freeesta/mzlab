@@ -1,15 +1,15 @@
-# Libreria di Parent Decoy e Regole di Trasformazione (T15)
+# Decoy Parent Library and Transformation Rules (T15)
 
-## 1. Scopo
-Questa cartella contiene una serie di dati di riferimento sintetici/negativi per il benchmark e la validazione del modulo Tabui di mzLab. In particolare, i composti parent inclusi qui fungono da **decoy (controlli negativi)** per misurare il tasso di **falsi positivi (false positive rate)** su spettri sperimentali o di demo:
-- I 30 composti parent selezionati sono molecole pubbliche ben caratterizzate (pesticidi, farmaci, composti industriali) che **non sono presenti** nei file di acquisizione Full Scan di esempio di mzLab (`mzlab/web/esempi/FullScan_t*.mzML`).
-- Eseguendo la ricerca non-target / screening con Tabui impostando uno di questi composti come genitore e applicando le regole di trasformazione, il numero atteso di prodotti di trasformazione (TP) candidati reali identificati deve essere pari a **zero** (o confinato al solo rumore statistico di fondo con score trascurabile).
+## 1. Purpose
+This folder holds synthetic/negative reference data for benchmarking and validating the Tabui module of mzLab. The parent compounds included here act as **decoys (negative controls)** to measure the **false positive rate** on experimental or demo spectra:
+- The 30 selected parent compounds are well-characterised public molecules (pesticides, drugs, industrial compounds) that are **not present** in the example Full Scan acquisition files of mzLab (`mzlab/web/esempi/FullScan_t*.mzML`).
+- When a non-targeted search / screening with Tabui is run with one of these compounds as parent and the transformation rules applied, the expected number of real candidate transformation products (TPs) identified must be **zero** (or confined to background statistical noise with a negligible score).
 
-## 2. File Inclusi
-- `decoy_parent.csv`: 30 composti decoy pubblici con nome, SMILES canonico, formula molecolare neutra Hill, massa teorica monoisotopica di `[M+H]+` e `[M-H]-` (calcolata con Pyteomics, 4 decimali, o `N/A` se non ionizzabile in ESI-) e il flag di presenza nei demo (`present_in_demo = no`).
-- `trasformazioni_decoy.csv`: 15 regole di trasformazione generiche (nomi in parole semplici senza trattini bassi, variazioni nette di formula) non duplicate rispetto al set `tests/data/nomi_tp/trasformazioni.csv`.
+## 2. Included files
+- `decoy_parent.csv`: 30 public decoy compounds with name, canonical SMILES, Hill neutral molecular formula, theoretical monoisotopic mass of `[M+H]+` and `[M-H]-` (computed with Pyteomics, 4 decimals, or `N/A` if not ionisable in ESI-) and the demo-presence flag (`present_in_demo = no`).
+- `trasformazioni_decoy.csv`: 15 generic transformation rules (names in plain words without underscores, net formula changes) not duplicated from the `tests/data/nomi_tp/trasformazioni.csv` set.
 
-## 3. Criteri di Selezione e Verifica
-- Intervallo di massa monoisotopica compreso rigorosamente tra 150 e 600 Da (da 279 Da a 585 Da).
-- Verifica strumentale: per ciascuna massa `mz_pos` e `mz_neg` è stato estratto il cromatogramma a ioni estratti (XIC, tolleranza $\pm 0.5$ Da) su tutti i file FullScan della serie temporale di demo. Nessun composto presenta picchi cromatografici reali (tutti con $S/N \le 8.2$, ben al di sotto della soglia di $S/N = 10$).
-- Tutti gli script di calcolo e screening sono stati eseguiti all'esterno del repository (in `~/Desktop/gemini_cc/script/`).
+## 3. Selection and verification criteria
+- Monoisotopic mass range strictly between 150 and 600 Da (from 279 Da to 585 Da).
+- Instrumental check: for each `mz_pos` and `mz_neg` mass the extracted ion chromatogram (XIC, tolerance $\pm 0.5$ Da) was taken on all FullScan files of the demo time series. No compound shows real chromatographic peaks (all with $S/N \le 8.2$, well below the $S/N = 10$ threshold).
+- All calculation and screening scripts were run outside the repository (in `~/Desktop/gemini_cc/script/`).

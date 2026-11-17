@@ -11,20 +11,20 @@ import moduli  # noqa: E402
 WORKFLOWS = ("sito-rust", "pages", "release", "notte")
 
 
-def test_dati_completi():
+def test_data_complete():
     assert moduli.errori(moduli.carica()) == []
     r = subprocess.run([sys.executable, str(ROOT / "tools/moduli.py"), "--controlla"], capture_output=True, text=True)
     assert r.returncode == 0, r.stdout
 
 
-def test_nessun_tetto_negli_script():
+def test_no_cap_in_the_scripts():
     """The caps are in the data only: no `limit*` variable or `tetti` table is left in the build scripts."""
     for sh in ("build_feat_wasm.sh", "build_lettori_wasm.sh"):
         testo = (ROOT / "tools" / sh).read_text(encoding="utf-8")
         assert not re.search(r"^\s*(limit\w*=|tetti=)|\b\d{6,7}\b", testo, re.M), sh
 
 
-def test_ogni_modulo_costruito_da_uno_script():
+def test_every_module_is_built_by_a_script():
     """Every module of part a, b or lettori has a package that exists in the workspace; the manifest keys are unique across the data."""
     mod = moduli.carica()
     for n, r in mod.items():
@@ -35,7 +35,7 @@ def test_ogni_modulo_costruito_da_uno_script():
     assert sorted(p for r in mod.values() for p in r.get("chiavi", {}).values()) == list(range(1, 29))
 
 
-def test_tetti_dei_workflow_dal_dato():
+def test_workflow_caps_come_from_the_data():
     """The engine and libraries steps of the workflows (and the lab copy of pages.yml) take their cap from the data: no literal, the module name exists."""
     mod = moduli.carica()
     for wf in [f".github/workflows/{w}.yml" for w in WORKFLOWS] + ["tools/lab/qqq-pages.yml"]:
@@ -50,7 +50,7 @@ def _con(tetto):
     return {"m": {"tetto": tetto}}
 
 
-def test_regola_del_dieci_per_cento():
+def test_ten_percent_rule():
     base = _con(1000)
     assert moduli.cambi(_con(1000), base) == []
     assert moduli.cambi(_con(900), base) == ["m: 1000 -> 900 (-10.0 %)"]       # lower is allowed
@@ -58,7 +58,7 @@ def test_regola_del_dieci_per_cento():
     assert moduli.cambi(_con(1101), base)[0].startswith("FAIL")                 # above 1.10 x
 
 
-def test_modulo_nuovo_e_tolto_si_vedono():
+def test_new_and_removed_modules_show():
     base = _con(1000)
     nuovo = moduli.cambi({**_con(1000), "nuovo": {"tetto": 5}}, base)
     assert nuovo == ["NEW nuovo: cap 5 — a new .wasm module is an owner decision"]
@@ -66,7 +66,7 @@ def test_modulo_nuovo_e_tolto_si_vedono():
     assert not any(x.startswith("FAIL") for x in nuovo)                         # shown, never a failure
 
 
-def test_misura_uguale_al_tetto_fallisce():
+def test_measure_equal_to_the_cap_fails():
     r = {"m": {"tetto": 100, "misura": 100}}
     assert any("misura 100" in e for e in moduli.errori(r))                     # same rule as tools/wasm_opt.sh: `>=` fails
     assert not any("misura" in e for e in moduli.errori({"m": {"tetto": 100, "misura": 99}}))
@@ -77,7 +77,7 @@ def test_base_sconosciuta_fallisce():
     assert r.returncode != 0
 
 
-def test_base_head_nessun_cambio():
+def test_base_head_no_change():
     r = subprocess.run([sys.executable, str(ROOT / "tools/moduli.py"), "--controlla", "--base", "HEAD"], capture_output=True, text=True)
     assert r.returncode == 0 and "0 caps changed" in r.stdout, r.stdout + r.stderr
 
@@ -97,7 +97,7 @@ def _finto(tmp_path, monkeypatch, byte):
     return dati, static
 
 
-def test_misura_scrive_e_ripetuta_non_cambia(tmp_path, monkeypatch):
+def test_measure_writes_and_a_repeat_changes_nothing(tmp_path, monkeypatch):
     dati, static = _finto(tmp_path, monkeypatch, 1234)
     assert moduli.misure(moduli.carica(), static) == []
     prima = {f.name: f.read_text() for f in dati.glob("*.toml")}
@@ -108,7 +108,7 @@ def test_misura_scrive_e_ripetuta_non_cambia(tmp_path, monkeypatch):
     assert moduli.errori(moduli.carica()) == []
 
 
-def test_misura_non_scrive_se_manca_o_supera(tmp_path, monkeypatch):
+def test_measure_does_not_write_if_missing_or_over(tmp_path, monkeypatch):
     dati, static = _finto(tmp_path, monkeypatch, 1234)
     prima = {f.name: f.read_text() for f in dati.glob("*.toml")}
     next(static.rglob("*.wasm")).unlink()
@@ -118,5 +118,5 @@ def test_misura_non_scrive_se_manca_o_supera(tmp_path, monkeypatch):
     assert any("not below the cap" in e for e in moduli.misure(moduli.carica(), static2))
 
 
-def test_ogni_modulo_ha_la_misura():
+def test_every_module_has_its_measure():
     assert [n for n, r in moduli.carica().items() if "misura" not in r] == []

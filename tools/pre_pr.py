@@ -71,7 +71,7 @@ def steps(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
         ("caps of the .wasm modules against the base", [PY, "tools/moduli.py", "--controlla", "--base", "origin/main"]),
     ]
     if shutil.which("node") and changed("mzlab/web/"):
-        p.append(("sintassi JS (job javascript)", JS_SYNTAX))
+        p.append(("JS syntax (javascript job)", JS_SYNTAX))
     p += [
         ("type globals", [PY, "tools/tipi/genera_globali.py", "--controlla"]),
         ("tsc", [PY, "tools/tipi/controlla_tsc.py"]),
