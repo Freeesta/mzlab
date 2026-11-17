@@ -14,7 +14,7 @@ function baseY(/** @type {Bag} */ s, /** @type {Bag} */ it, /** @type {number} *
   if (q) return q === "zero" ? 0 : q === "man" ? +((it.my || {})[t === shown(s, it, "a") ? "a" : "b"] || 0) : edge3(s.y, nearIdx(s.x, t));
   if (it.zero || it.bm === "zero") return 0;
   if (it.bm === "line" && it.bl && typeof INTBASE !== "undefined") return INTBASE.lineAt(it, t);
-  return it.base ? baseAt(it.base, t) : edge3(s.y, nearIdx(s.x, t));
+  return it.base ? (typeof INTBASE !== "undefined" ? INTBASE.edgeAt(s, it, t) : baseAt(it.base, t)) : edge3(s.y, nearIdx(s.x, t));
 }
 // the borders of the other integrations on the trace this end may touch but not cross: [lo, hi] (null: none)
 function limits(/** @type {Bag} */ p, /** @type {Bag} */ it, /** @type {string} */ e) {

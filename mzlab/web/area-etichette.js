@@ -17,7 +17,7 @@ const AREALBL = (() => {
       if (!free(ay)) ay = y0;
       if (Math.abs(ay - y0) > 1 || Math.abs(cx - ax) > 1) { g.strokeStyle = s.color; g.lineWidth = 1; g.beginPath(); g.moveTo(cx, ay + 3); g.lineTo(ax, top - 2); g.stroke(); }   // a thin leader to its apex
       g.lineWidth = 4; g.strokeStyle = ecss("--panel"); g.strokeText(lab, cx, ay); g.fillStyle = many ? s.color : ecss("--ink"); g.fillText(lab, cx, ay); g.lineWidth = 1;
-      lbls.push({ x: bx, y: ay - 2 - 13 * fz(), w: bw, h: bh, int: it, text: lab, copy: it.none ? null : I18N.sciE(q.area, 5), tip: (it.nm ? `<div><b>${EH(it.nm)}</b></div>` : "") + (many ? `<div>${EH(s.name)}</div>` : "") + (it.fol ? SEGUE.tip(p, it) : "") + (it.none ? "" : `<div class="sm">${I18N.t("int.copy.tip")}</div>`) }); g.font = fpx(12);
+      lbls.push({ x: bx, y: ay - 2 - 13 * fz(), w: bw, h: bh, int: it, text: lab, copy: it.none ? null : I18N.sciE(q.area, 5), tip: (it.nm ? `<div><b>${EH(it.nm)}</b></div>` : "") + (many ? `<div>${EH(s.name)}</div>` : "") + (it.fol ? SEGUE.tip(p, it) : "") + (it.clamped > 0 ? `<div class="sm">${I18N.t("int.base.clamped", { v: I18N.sciE(it.clamped) })}</div>` : "") + (it.none ? "" : `<div class="sm">${I18N.t("int.copy.tip")}</div>`) }); g.font = fpx(12);
     }
   }
   return { draw };

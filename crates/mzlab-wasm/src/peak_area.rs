@@ -110,6 +110,9 @@ mod tests {
             super::peak_area(&rt, &y, 0.0, 1.5, 2, &[0.0, 2.0, 1.5, 4.0]),
             peak_area_json(&rt, &y, 0.0, 1.5, line).unwrap()
         );
+        // dragged past its second point the line is held at 0: the text carries `clamped` (the bytes are the core's, `baseline_test.rs`)
+        let held = super::peak_area(&rt, &y, 0.0, 1.5, 2, &[0.0, 2.0, 0.5, 0.0]);
+        assert!(held.contains("\"clamped\""), "{held}");
         assert_eq!(super::peak_area(&rt, &y, 0.0, 1.5, 0, &[]), "");
         assert_eq!(super::peak_area(&rt, &y, 0.0, 1.5, 2, &[1.0]), "");
     }

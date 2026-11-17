@@ -3,25 +3,41 @@
 // cut through the peak). The numbers come from the Rust engine (QUALITA.peakArea, mzlab_core::baseline: signed area, the part under the line apart);
 // this file only asks, draws (the part under the line hatched) and moves the two points. Classic script, loaded on demand (carica) by grafici.js.
 const IB_MODE = { zero: 1, line: 2 }, IB_C = new WeakMap();           // the engine's answer per record (never saved: sessions and undo keep only bm/bl)
-const ibKey = (s, it) => [s.key, s.x.length, s.y[0], s.y[s.y.length - 1], it.a, it.b, it.bm, (it.bl || []).join()].join("|");
+const ibKey = (s, it) => [s.key, s.x.length, s.y[0], s.y[s.y.length - 1], it.a, it.b, it.bm, (it.bl || []).join(), ibDips(s, it) ? it.base.join() : ""].join("|");
 // the measure of the record; until the engine answers: the previous one, or nothing (wait), then the panel is drawn again
 function ibArea(p, s, it) {
   const k = ibKey(s, it), c = IB_C.get(it);
   if (c && c.k === k) return c.r;
   const r = c ? { ...c.r, wait: true } : { area: NaN, below: NaN, height: 0, rt: (it.a + it.b) / 2, wait: true };
   IB_C.set(it, { k, r });
-  if (window.QUALITA) QUALITA.peakArea(s.x, s.y, it.a, it.b, IB_MODE[it.bm], it.bm === "line" ? it.bl : []).then(t => {
+  const dips = ibDips(s, it);
+  if (window.QUALITA) QUALITA.peakArea(s.x, s.y, it.a, it.b, dips ? 2 : IB_MODE[it.bm], dips || it.bm === "line" ? ibBl(it) : []).then(t => {
     const e = IB_C.get(it); if (!e || e.k !== k) return;
     const v = t ? JSON.parse(t) : null;
-    e.r = v ? { area: v.area, below: v.below, height: v.height, rt: v.rt } : { area: NaN, below: NaN, height: 0, rt: r.rt };
+    e.r = v ? { area: v.area, below: v.below, height: v.height, rt: v.rt, clamped: v.clamped || 0 } : { area: NaN, below: NaN, height: 0, rt: r.rt, clamped: 0 };
     draw(p);
   });
   return r;
 }
-const ibLine = (it, t) => {
-  if (it.bm !== "line") return 0;
-  const [t0, y0, t1, y1] = it.bl; return t1 === t0 ? y0 : y0 + (y1 - y0) * (t - t0) / (t1 - t0);
+// the line as mzlab_core::baseline::Baseline::at has it: the straight line through the two points, held at 0 where it is extended past a point at or above 0
+// (an edge dragged out); between the points, past a point the user put below 0, and for a level it is the line itself
+const ibRaw = (/** @type {number[]} */ b, /** @type {number} */ t) => { const [t0, y0, t1, y1] = b; return t1 === t0 ? y0 : y0 + (y1 - y0) * (t - t0) / (t1 - t0); };
+const ibHeld = (/** @type {number[]} */ b, /** @type {number} */ t) => {
+  const v = ibRaw(b, t), [t0, y0, t1, y1] = b; if (t0 === t1) return v;
+  const up = t0 <= t1, ta = up ? t0 : t1, ya = up ? y0 : y1, tb = up ? t1 : t0, yb = up ? y1 : y0;
+  return (t < ta && ya >= 0) || (t > tb && yb >= 0) ? Math.max(v, 0) : v;
 };
+// a record of the line between the edges (`base`: HR automatic, still valid after an edge is dragged) that the dragged window now runs past, where the line would go below
+// zero: it is measured (QUALITA.peakArea) and drawn as the line, held at 0 there; inside its two points nothing changes, and a record without a `base` has no such case
+const ibDips = (s, it) => {
+  if (it.zero || !it.base || (it.bm && it.bm !== "edges")) return false;
+  const lo = s.x[nearIdx(s.x, Math.min(it.a, it.b))], hi = s.x[nearIdx(s.x, Math.max(it.a, it.b))];
+  return ibHeld(it.base, lo) !== ibRaw(it.base, lo) || ibHeld(it.base, hi) !== ibRaw(it.base, hi);
+};
+const ibBl = (it) => (it.bm === "line" ? it.bl : it.base);
+const ibLine = (it, t, s) => (it.bm === "line" ? ibHeld(it.bl, t) : s && ibDips(s, it) ? ibHeld(it.base, t) : 0);
+// the base of an `edges` record at t as its anchors and polygon show it (held at 0 where it dips)
+const ibEdgeAt = (s, it, t) => (ibDips(s, it) ? ibHeld(it.base, t) : ibRaw(it.base, t));
 // the part under the line: diagonal hatching in the colour of the trace (a pattern, not only a colour)
 function ibHatch(g, col) {
   const c = document.createElement("canvas"); c.width = c.height = 8; const h = c.getContext("2d");
@@ -31,18 +47,19 @@ function ibHatch(g, col) {
 // the region between the trace and the line: filled above the line, hatched under it; the line dashed, the two points of a custom line as dots
 function ibPaint(g, X, Y, U, s, it, chosen) {
   const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b)); if (i1 <= i0) return;
-  const xa = s.x[i0], xb = s.x[i1], L = t => Y(U(s, ibLine(it, t))), big = 1e5;
-  const region = () => {
+  const xa = s.x[i0], xb = s.x[i1], L = t => Y(U(s, ibLine(it, t, s))), big = 1e5;
+  const region = () => {                                           // the line below goes back through every sample: where it is held at 0 it bends there, as the number counts it
     g.beginPath(); g.moveTo(X(xa), Y(U(s, s.ys[i0])));
     for (let j = i0 + 1; j <= i1; j++) g.lineTo(X(s.x[j]), Y(U(s, s.ys[j])));
-    g.lineTo(X(xb), L(xb)); g.lineTo(X(xa), L(xa)); g.closePath();
+    for (let j = i1; j >= i0; j--) g.lineTo(X(s.x[j]), L(s.x[j]));
+    g.closePath();
   };
   const side = up => { g.beginPath(); g.moveTo(X(xa) - 1, L(xa)); g.lineTo(X(xb) + 1, L(xb)); g.lineTo(X(xb) + 1, up ? -big : big); g.lineTo(X(xa) - 1, up ? -big : big); g.closePath(); g.clip(); };
   g.save(); side(true); region(); g.globalAlpha = chosen ? 0.5 : 0.28; g.fillStyle = s.color; g.fill(); g.restore();
   g.save(); side(false); region(); g.globalAlpha = chosen ? 0.9 : 0.7; g.fillStyle = ibHatch(g, s.color); g.fill(); g.restore();
   if (chosen) { region(); g.strokeStyle = s.color; g.lineWidth = 2.5; g.stroke(); }
   const t0 = it.bm === "line" ? Math.min(xa, it.bl[0], it.bl[2]) : xa, t1 = it.bm === "line" ? Math.max(xb, it.bl[0], it.bl[2]) : xb;
-  g.strokeStyle = s.color; g.lineWidth = 1.5; g.setLineDash([5, 3]); g.beginPath(); g.moveTo(X(t0), L(t0)); g.lineTo(X(t1), L(t1)); g.stroke(); g.setLineDash([]);
+  g.strokeStyle = s.color; g.lineWidth = 1.5; g.setLineDash([5, 3]); g.beginPath(); g.moveTo(X(t0), L(t0)); for (let j = i0; j <= i1; j++) if (s.x[j] > t0 && s.x[j] < t1) g.lineTo(X(s.x[j]), L(s.x[j])); g.lineTo(X(t1), L(t1)); g.stroke(); g.setLineDash([]);
   if (it.bm === "line" && !it.snap) for (const k of [0, 2]) {          // two anchors (SIM/MRM) are buttons of integra-estremi.js
     g.beginPath(); g.arc(X(it.bl[k]), L(it.bl[k]), 5, 0, 2 * Math.PI); g.fillStyle = ecss("--panel"); g.fill(); g.lineWidth = 2; g.strokeStyle = s.color; g.stroke();
   }
@@ -116,4 +133,4 @@ function ibOpen(p, it) {
     "@media (forced-colors:active){.ibp:focus-visible{outline-color:Highlight}.ibp.on{background:Highlight}}";
   document.head.appendChild(st);
 }
-const INTBASE = { area: ibArea, paint: ibPaint, sync: ibSync, open: ibOpen, lineAt: ibLine };
+const INTBASE = { area: ibArea, paint: ibPaint, sync: ibSync, open: ibOpen, lineAt: ibLine, dips: ibDips, edgeAt: ibEdgeAt };
