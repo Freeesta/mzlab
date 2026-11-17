@@ -161,6 +161,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | service worker, cache per versione del sito, `sw-manifest.json`, aggiornamenti | `docs/agenti/service-worker.md` |
 | lettore Shimadzu `.qgd` e `.lcd` (`crates/mzlab-lettori/src/shimadzu/`, modulo `shimadzu`) | `docs/agenti/shimadzu.md` |
 | indice sospetti (area: mzFinder (`TP_Mine/`, `tpmine-loader.js`)) | `docs/agenti/sospetti.md` |
+| righe della scheda spettro MS² (note, tempi di ritenzione, CE ± spread, campione), `mzlab-cli items` | `docs/agenti/spettro-righe.md` |
 | statistica come passi: Welch/ANOVA con BH, PCA e KMD in Rust (`crates/mzlab-feat/src/stat/`, `table.stats`, `table.pca`, `table.kmd`, `stat/1`) | `docs/agenti/stat.md` |
 | registro delle azioni che cambiano stato (`comandi.js`, `docs/azioni.md` generato), annulla/ripeti, voci «tolto» (togliere un file, chiudere un pannello, svuotare le marcature: nessun avviso, voci di `STORIA`) | `docs/agenti/storia-tolto.md` |
 | positioning study: mzLab against other LC-MS tools (feature matrix, 10 missing functions with value and effort, 5 strengths, interoperability gaps, risks; public sources with the date read) | `docs/agenti/studio-concorrenti.md` |

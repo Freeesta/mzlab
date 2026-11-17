@@ -41,6 +41,7 @@ const COMMANDS: &[&[&str]] = &[
     &["channels"],
     &["dad"],
     &["dda-window"],
+    &["items"],
     &["ion-pattern"],
     &["elements"],
     &["ion-mz"],
