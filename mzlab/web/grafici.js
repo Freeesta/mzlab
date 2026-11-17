@@ -63,6 +63,8 @@ async function analogSeries(p) {
 }
 // MS2 transitions (unit resolution), like the MRM ones: listed from the scans; a pair's chromatogram is the fragment window in its precursor's scans
 const MS2TR_MAX = 12;
+/** Options of the transition menu: the pairs are the fragments of each precursor (one group per precursor), then the count of the pairs beyond the cap. @param {any} p */
+const ms2trOptions = (p) => [...(p._trs || []).reduce((/** @type {Map<number, any[]>} */ m, /** @type {any} */ t) => m.set(t.q1, [...(m.get(t.q1) || []), t]), new Map())].map(([q1, l]) => `<optgroup label="${EH(I18N.t("ctl.ms2tr.grp", { q1 }))}">${l.map((/** @type {any} */ t) => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(I18N.t("ctl.ms2tr.opt", { q1: t.q1, q3: t.q3 }))}</option>`).join("")}</optgroup>`).join("") + (p._trsMore > 0 ? `<option disabled>${EH(I18N.t("ctl.ms2tr.more", { n: p._trsMore }))}</option>` : "");
 async function ms2trSeries(p) {
   const mf = shownFor(p).filter(f => f.kind === "ms2" && !(window.HR && HR.isHr(f, f.lv)));
   const data = await Promise.all(mf.map(f => getMs2Tr(f.k, f.lv).then(tr => ({ f, tr }))));
