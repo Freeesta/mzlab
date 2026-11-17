@@ -52,6 +52,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | pseudo-spettri MS2 da DIA (`dia.rs`, `spectra.ms2` con `dia_pseudo`) | `docs/agenti/dia.md` |
 | errori di lettura dei file: causa breve, «Dettagli», «Copia diagnosi» (`diagnosi.js`), mzML sintetico stile msconvert | `docs/agenti/diagnosi.md` |
 | menu del tasto destro del Disegno (`#ctx`, `disegno-menu.js`, registro `menuAdd`, copia/taglia/incolla e pressione lunga al tocco `disegno-appunti.js`, «Informazioni…», ricerche PubChem/ChEBI/BioTransformer, `sel/1`, `link/1`) | `docs/agenti/disegno-menu.md` |
+| Disegno: unsaved changes (`disegno-pulito.js`, `confirmDiscard`, `beforeunload`, the «not saved» dialog, Tauri window close) | `docs/agenti/disegno-pulito.md` |
 | Disegno (Ketcher) | `docs/agenti/disegno.md` |
 | esportazione di tutti i dati dell'utente: inventario dello storage nel browser, scrittore ZIP (`zip.rs`); esportazioni a pezzi in OPFS (`dl()`, `export-pezzi.js`, `export-worker.js`, provenienza, pulizia di `export/`) | `docs/agenti/esporta-dati.md` |
 | contratto dei lettori dei produttori (`readers.rs`, trait `Lettore`, registro, `Limiti`), aggiungere un formato | `docs/agenti/estendere.md` |
