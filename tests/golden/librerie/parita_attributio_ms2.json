@@ -1,11 +1,11 @@
 {
-"formato": "parita_attributio_ms2/1",
-"fonte": "attributio 1.12.0, readers/ms2.py similarity() e review/matching.py match(); spettri sintetici",
-"regole": "picchi >= precursore-0.5 tolti; < 1% del picco base tolti; intensita' sqrt; accoppiamento avido per prodotto decrescente entro tol assoluta (Da); ogni picco una volta; reverse = norma sui soli picchi del campione accoppiati; coseno modificato: anche m/z + shift con shift = prec(a) - prec(b)",
-"casi": [
+"format": "parita_attributio_ms2/1",
+"source": "attributio 1.12.0, readers/ms2.py similarity() and review/matching.py match(); synthetic spectra",
+"rules": "peaks >= precursor-0.5 removed; < 1% of base peak removed; intensity sqrt; greedy pairing by decreasing product within absolute tol (Da); each peak once; reverse = norm over the matched sample peaks only; modified cosine: also m/z + shift with shift = prec(a) - prec(b)",
+"cases": [
 {
 "id": 0,
-"tipo": "stesso",
+"kind": "same",
 "a": {
 "mz": [
 57.51813,
@@ -149,7 +149,7 @@
 },
 {
 "id": 1,
-"tipo": "analogo",
+"kind": "analog",
 "a": {
 "mz": [
 73.90615,
@@ -222,7 +222,7 @@
 },
 {
 "id": 2,
-"tipo": "chimerico",
+"kind": "chimeric",
 "a": {
 "mz": [
 216.57146,
@@ -402,7 +402,7 @@
 },
 {
 "id": 3,
-"tipo": "diverso",
+"kind": "different",
 "a": {
 "mz": [
 52.24208,
@@ -526,7 +526,7 @@
 },
 {
 "id": 4,
-"tipo": "stesso",
+"kind": "same",
 "a": {
 "mz": [
 83.54879,
@@ -752,7 +752,7 @@
 },
 {
 "id": 5,
-"tipo": "analogo",
+"kind": "analog",
 "a": {
 "mz": [
 73.84517,
@@ -1002,7 +1002,7 @@
 },
 {
 "id": 6,
-"tipo": "chimerico",
+"kind": "chimeric",
 "a": {
 "mz": [
 66.01032,
@@ -1361,7 +1361,7 @@
 },
 {
 "id": 7,
-"tipo": "diverso",
+"kind": "different",
 "a": {
 "mz": [
 95.38041,
@@ -1543,7 +1543,7 @@
 },
 {
 "id": 8,
-"tipo": "stesso",
+"kind": "same",
 "a": {
 "mz": [
 50.86051,
@@ -1792,7 +1792,7 @@
 },
 {
 "id": 9,
-"tipo": "analogo",
+"kind": "analog",
 "a": {
 "mz": [
 142.82581,
@@ -1856,7 +1856,7 @@
 },
 {
 "id": 10,
-"tipo": "chimerico",
+"kind": "chimeric",
 "a": {
 "mz": [
 74.36839,
@@ -2209,7 +2209,7 @@
 },
 {
 "id": 11,
-"tipo": "diverso",
+"kind": "different",
 "a": {
 "mz": [
 86.96436,
@@ -2365,7 +2365,7 @@
 },
 {
 "id": 12,
-"tipo": "stesso",
+"kind": "same",
 "a": {
 "mz": [
 54.59064,
@@ -2706,7 +2706,7 @@
 },
 {
 "id": 13,
-"tipo": "analogo",
+"kind": "analog",
 "a": {
 "mz": [
 50.33911,
@@ -3013,7 +3013,7 @@
 },
 {
 "id": 14,
-"tipo": "chimerico",
+"kind": "chimeric",
 "a": {
 "mz": [
 103.29399,
@@ -3230,7 +3230,7 @@
 },
 {
 "id": 15,
-"tipo": "diverso",
+"kind": "different",
 "a": {
 "mz": [
 70.56808,
@@ -3368,7 +3368,7 @@
 },
 {
 "id": 16,
-"tipo": "stesso",
+"kind": "same",
 "a": {
 "mz": [
 63.11285,
@@ -3737,7 +3737,7 @@
 },
 {
 "id": 17,
-"tipo": "analogo",
+"kind": "analog",
 "a": {
 "mz": [
 68.69744,
@@ -3913,7 +3913,7 @@
 },
 {
 "id": 18,
-"tipo": "chimerico",
+"kind": "chimeric",
 "a": {
 "mz": [
 56.65745,
@@ -4172,7 +4172,7 @@
 },
 {
 "id": 19,
-"tipo": "diverso",
+"kind": "different",
 "a": {
 "mz": [
 50.34194,
@@ -4274,7 +4274,7 @@
 },
 {
 "id": 20,
-"tipo": "stesso",
+"kind": "same",
 "a": {
 "mz": [
 68.30819,
@@ -4488,7 +4488,7 @@
 },
 {
 "id": 21,
-"tipo": "analogo",
+"kind": "analog",
 "a": {
 "mz": [
 120.21065,
@@ -4552,7 +4552,7 @@
 },
 {
 "id": 22,
-"tipo": "chimerico",
+"kind": "chimeric",
 "a": {
 "mz": [
 54.8195,
@@ -4834,7 +4834,7 @@
 },
 {
 "id": 23,
-"tipo": "diverso",
+"kind": "different",
 "a": {
 "mz": [
 110.79742,
@@ -4916,7 +4916,7 @@
 },
 {
 "id": 24,
-"tipo": "stesso",
+"kind": "same",
 "a": {
 "mz": [
 74.94087,
@@ -5103,7 +5103,7 @@
 },
 {
 "id": 25,
-"tipo": "analogo",
+"kind": "analog",
 "a": {
 "mz": [
 70.74894,
@@ -5418,7 +5418,7 @@
 },
 {
 "id": 26,
-"tipo": "chimerico",
+"kind": "chimeric",
 "a": {
 "mz": [
 105.40943,
@@ -5513,7 +5513,7 @@
 },
 {
 "id": 27,
-"tipo": "diverso",
+"kind": "different",
 "a": {
 "mz": [
 77.42758,
@@ -5633,7 +5633,7 @@
 },
 {
 "id": 28,
-"tipo": "stesso",
+"kind": "same",
 "a": {
 "mz": [
 77.55504,
@@ -5894,7 +5894,7 @@
 },
 {
 "id": 29,
-"tipo": "analogo",
+"kind": "analog",
 "a": {
 "mz": [
 52.23509,
@@ -6094,7 +6094,7 @@
 },
 {
 "id": 30,
-"tipo": "chimerico",
+"kind": "chimeric",
 "a": {
 "mz": [
 82.51364,
@@ -6374,7 +6374,7 @@
 },
 {
 "id": 31,
-"tipo": "diverso",
+"kind": "different",
 "a": {
 "mz": [
 58.86091,
@@ -6498,7 +6498,7 @@
 },
 {
 "id": 32,
-"tipo": "stesso",
+"kind": "same",
 "a": {
 "mz": [
 50.19733,
@@ -6800,7 +6800,7 @@
 },
 {
 "id": 33,
-"tipo": "analogo",
+"kind": "analog",
 "a": {
 "mz": [
 69.03498,
@@ -7150,7 +7150,7 @@
 },
 {
 "id": 34,
-"tipo": "chimerico",
+"kind": "chimeric",
 "a": {
 "mz": [
 52.05647,
@@ -7427,7 +7427,7 @@
 },
 {
 "id": 35,
-"tipo": "diverso",
+"kind": "different",
 "a": {
 "mz": [
 53.3792,
@@ -7519,7 +7519,7 @@
 },
 {
 "id": 36,
-"tipo": "stesso",
+"kind": "same",
 "a": {
 "mz": [
 61.2758,
@@ -7859,7 +7859,7 @@
 },
 {
 "id": 37,
-"tipo": "analogo",
+"kind": "analog",
 "a": {
 "mz": [
 60.28068,
@@ -8084,7 +8084,7 @@
 },
 {
 "id": 38,
-"tipo": "chimerico",
+"kind": "chimeric",
 "a": {
 "mz": [
 63.17956,
@@ -8390,7 +8390,7 @@
 },
 {
 "id": 39,
-"tipo": "diverso",
+"kind": "different",
 "a": {
 "mz": [
 83.02291,
@@ -8492,7 +8492,7 @@
 },
 {
 "id": 40,
-"tipo": "stesso",
+"kind": "same",
 "a": {
 "mz": [
 80.91459,
@@ -8574,7 +8574,7 @@
 },
 {
 "id": 41,
-"tipo": "analogo",
+"kind": "analog",
 "a": {
 "mz": [
 50.13899,
@@ -8807,7 +8807,7 @@
 },
 {
 "id": 42,
-"tipo": "chimerico",
+"kind": "chimeric",
 "a": {
 "mz": [
 73.08674,
@@ -9131,7 +9131,7 @@
 },
 {
 "id": 43,
-"tipo": "diverso",
+"kind": "different",
 "a": {
 "mz": [
 68.93244,
@@ -9203,7 +9203,7 @@
 },
 {
 "id": 44,
-"tipo": "stesso",
+"kind": "same",
 "a": {
 "mz": [
 50.67929,
@@ -9450,7 +9450,7 @@
 },
 {
 "id": 45,
-"tipo": "analogo",
+"kind": "analog",
 "a": {
 "mz": [
 58.13385,
@@ -9772,7 +9772,7 @@
 },
 {
 "id": 46,
-"tipo": "chimerico",
+"kind": "chimeric",
 "a": {
 "mz": [
 59.87206,
@@ -10051,7 +10051,7 @@
 },
 {
 "id": 47,
-"tipo": "diverso",
+"kind": "different",
 "a": {
 "mz": [
 54.63791,
@@ -10121,7 +10121,7 @@
 },
 {
 "id": 48,
-"tipo": "stesso",
+"kind": "same",
 "a": {
 "mz": [
 51.3879,
@@ -10481,7 +10481,7 @@
 },
 {
 "id": 49,
-"tipo": "analogo",
+"kind": "analog",
 "a": {
 "mz": [
 77.18885,
@@ -10776,7 +10776,7 @@
 },
 {
 "id": 50,
-"tipo": "chimerico",
+"kind": "chimeric",
 "a": {
 "mz": [
 76.71441,
@@ -10933,7 +10933,7 @@
 },
 {
 "id": 51,
-"tipo": "diverso",
+"kind": "different",
 "a": {
 "mz": [
 51.15772,
@@ -11069,7 +11069,7 @@
 },
 {
 "id": 52,
-"tipo": "stesso",
+"kind": "same",
 "a": {
 "mz": [
 66.68406,
@@ -11169,7 +11169,7 @@
 },
 {
 "id": 53,
-"tipo": "analogo",
+"kind": "analog",
 "a": {
 "mz": [
 53.72838,
@@ -11362,7 +11362,7 @@
 },
 {
 "id": 54,
-"tipo": "chimerico",
+"kind": "chimeric",
 "a": {
 "mz": [
 58.86592,
@@ -11721,7 +11721,7 @@
 },
 {
 "id": 55,
-"tipo": "diverso",
+"kind": "different",
 "a": {
 "mz": [
 72.84296,
@@ -11793,7 +11793,7 @@
 },
 {
 "id": 56,
-"tipo": "stesso",
+"kind": "same",
 "a": {
 "mz": [
 55.67272,
@@ -12086,7 +12086,7 @@
 },
 {
 "id": 57,
-"tipo": "analogo",
+"kind": "analog",
 "a": {
 "mz": [
 59.75975,
@@ -12391,7 +12391,7 @@
 },
 {
 "id": 58,
-"tipo": "chimerico",
+"kind": "chimeric",
 "a": {
 "mz": [
 60.81697,
@@ -12629,7 +12629,7 @@
 },
 {
 "id": 59,
-"tipo": "diverso",
+"kind": "different",
 "a": {
 "mz": [
 93.71744,
