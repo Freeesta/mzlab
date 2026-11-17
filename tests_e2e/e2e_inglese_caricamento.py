@@ -72,7 +72,7 @@ try:
             assert pg.evaluate("E.files.length") >= 3
         step("open the files", load)
         def gear():
-            pg.click("#np-set"); pg.wait_for_selector("#uip-a11y")
+            pg.click("#np-set"); pg.wait_for_selector("#uip-list")
             pg.evaluate("document.querySelectorAll('#uipset details.imp-g').forEach(g => g.open = true)")       # the folding groups (assistant, diagnostics) open
             t = pg.inner_text("#uipset")
             for w in ("Settings", "Theme", "System", "Chart colors", "Reduce motion"): assert w.lower() in t.lower(), (w, t)

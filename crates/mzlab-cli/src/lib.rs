@@ -11,6 +11,7 @@ use mzlab_ops::run::feat::run;
 use mzlab_ops::run::table::core::{samples_json, table_file};
 
 mod channels_cmd;
+pub mod citation;
 mod cmd;
 pub mod convert;
 mod convert_entries;
@@ -266,8 +267,8 @@ pub fn execute(args: &[String]) -> Outcome {
 }
 
 fn executed(args: &[String]) -> Outcome {
-    if args.is_empty() || matches!(args[0].as_str(), "--help" | "-h") {
-        return cmd::help();
+    if let Some(o) = cmd::top_level(args) {
+        return o;
     }
     match cmd::find(args) {
         Some((e, n)) => (e.run)(args[n..].to_vec()),

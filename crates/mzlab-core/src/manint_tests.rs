@@ -4,7 +4,7 @@
 use super::*;
 
 /// A trace of 10 min at 0.8 s on a flat background of 50 with Gaussian peaks `(apex min, height)` of sigma 3.2 s.
-fn trace(q1: Option<f64>, q3: Option<f64>, name: &str, peaks: &[(f64, f64)]) -> String {
+pub(super) fn trace(q1: Option<f64>, q3: Option<f64>, name: &str, peaks: &[(f64, f64)]) -> String {
     let (mut t, mut y) = (Vec::new(), Vec::new());
     for i in 0..750 {
         let x = i as f64 * 0.8 / 60.0;
@@ -41,11 +41,21 @@ fn win(file: usize, tr: usize, a: f64, b: f64, base: &str) -> String {
     format!("{{\"file\":{file},\"tr\":{tr},\"a\":{a},\"b\":{b},\"baseline\":\"{base}\"}}")
 }
 
-fn rows(t: &str) -> Vec<Vec<String>> {
+/// The rows with every column (`time_min` is the third).
+fn rows_with_time(t: &str) -> Vec<Vec<String>> {
     t.lines()
         .skip(1)
         .map(|l| l.split(',').map(str::to_string).collect())
         .collect()
+}
+
+/// The rows without the `time_min` column: the other tests read the columns by their place before it existed.
+pub(super) fn rows(t: &str) -> Vec<Vec<String>> {
+    let mut r = rows_with_time(t);
+    for x in &mut r {
+        x.remove(2);
+    }
+    r
 }
 
 #[test]
@@ -204,9 +214,9 @@ fn the_name_of_a_window_is_the_third_column_cleaned_and_cut() {
     );
     let t = table_text(&files(), &w, true).unwrap();
     let l: Vec<&str> = t.lines().collect();
-    assert!(l[1].starts_with("237.1,s1,\"Peak 1, left\","), "{t}");
+    assert!(l[1].starts_with("237.1,s1,,\"Peak 1, left\","), "{t}");
     assert!(
-        l[2].starts_with(&format!("237.1,s2,{},", "x".repeat(LABEL_MAX))),
+        l[2].starts_with(&format!("237.1,s2,,{},", "x".repeat(LABEL_MAX))),
         "{t}"
     );
     assert!(

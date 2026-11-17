@@ -45,6 +45,16 @@ pub fn lr_auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, params: &[f64]
     lr_auto_json(&rt[..n], &r)
 }
 
+/// `api/manauto`: every peak of every channel of every sample, found by the engine and grouped by time (`manint::auto_text`): `{"windows","log","groups",
+/// "unmatched"}`; `params` is `{}` or the engine's numbers; "E" + JSON = the user's error. Here, not in `rotte`: `lr_auto_integrate` is already in this module.
+#[wasm_bindgen]
+pub fn manual_auto(files: &str, params: &str) -> String {
+    match mzlab_core::manint::auto_text(files, params) {
+        Ok(json) => json,
+        Err(e) => format!("E{}", e.to_json()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]

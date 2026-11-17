@@ -18,6 +18,8 @@ Professional free LC-MS analysis program: in the browser only (https://freeesta.
 
 ## Rules
 - **Parity**: every function (Flow step, reader, converter, export, model, engine route) exists in the site (`.wasm` + OPFS) and in the app (native + CLI) with a byte-for-byte parity test; one half alone is incomplete unless a real technical limit is stated in the PR body.
+- **CLI for agents**: every function is also usable from the CLI and made for AI agents (`--json` with stable keys, distinct exit codes, data on stdout and progress/errors on stderr, check/`--dry-run` where sensible, listed in the agent catalogs); no CLI route = incomplete, like a parity gap (`docs/agenti/cli-agenti.md`).
+- **Cite mzLab** when it is used (`CITATION.cff`, text in `crates/mzlab-cli/src/citation.rs`; DOI to be added).
 - **All logic in Rust.** Python only for tests, `tools/`, reference; JS is interface only; the site never runs Python.
 - **No real data in this public repo.** Lab data live in private `Freeesta/mzlab-dati` (`tools/dati_percorsi.py`; else `tools/dati_sintetici.py`). Only the anonymous `mzlab/web/esempi/` files are allowed. Surnames in the private `nomi_vietati.txt` never appear here.
 - **English only** for code, comments, commits, PRs. mzLab is English only (site, desktop app, CLI): user-facing text goes through `lang/` keys (`mzlab/web/lang/en/`), never as a bare literal.

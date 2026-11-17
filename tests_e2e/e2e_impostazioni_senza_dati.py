@@ -16,7 +16,7 @@ try:
         step("no «Data and privacy» group", gone)
         def kept(pg=pg):
             ids = pg.evaluate("[...document.querySelectorAll('#uipset > [id]')].map(d => d.id)")
-            for k in ("uip-g-look", "uip-a11y", "uip-g-bug"): assert k in ids, (k, ids)
+            for k in ("uip-list", "uip-g-bug"): assert k in ids, (k, ids)
             assert pg.locator("#uipset details.imp-g").count() == 0, "no folding group when each holds only a few plain controls"
         step("the flat groups (with «Report a bug») stay", kept)
 finally:

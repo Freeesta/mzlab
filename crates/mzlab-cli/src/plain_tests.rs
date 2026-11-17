@@ -25,8 +25,11 @@ fn the_short_english_names_and_the_old_ones_are_the_same_command() {
         );
     }
     let top = String::from_utf8_lossy(&run(&["--help"]).stdout).into_owned();
-    assert!(top.trim_end().ends_with(
+    // the citation reminder is the footer, after the list of old names
+    let (body, footer) = top.trim_end().rsplit_once("\n\n").unwrap();
+    assert!(body.ends_with(
         "old names still accepted: canali, campioni, peaks-edges, nome-gruppo, variabili, --canale, --jsonl"
     ));
+    assert_eq!(footer, crate::citation::reminder());
     assert!(!top.contains("mzlab-cli canali") && !top.contains("mzlab-cli campioni"));
 }

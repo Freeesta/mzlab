@@ -16,7 +16,7 @@ use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli manual-table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
 
-usage: mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--out PATH]
+usage: mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--set times=PATH] [--out PATH]
 
   FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in the order of the page
   --set windows=PATH  a JSON list of windows [{\"file\": I, \"tr\": J, \"a\": MIN, \"b\": MIN, \"baseline\": \"zero\"|\"edges\"|\"line\", \"line\": [t0, y0, t1, y1], \"label\": NAME,
@@ -27,11 +27,16 @@ usage: mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--ou
                       outside the window moves it, no peak leaves it: column origin = manual|applied|shifted|no_peak); names: a name for one
                       sample alone, by its place I
   --set sums=true     after the windows of each channel a row sum with the sum of their areas
+  --set times=PATH    a JSON object {\"<sample>\": MINUTES or null} that replaces the time point a sample's name carries (null = none); the others keep theirs
   --set shifts=true   instead of the table, where the FIRST window lands in the other samples, as JSON
                       [{\"file\", \"tr\", \"a\", \"b\", \"shift\", \"origin\"}] (the bytes of the page's api/manfollow)
+  --set auto=true     instead of the table, every peak of every channel of every sample found by the engine and grouped by time, as JSON
+                      {\"windows\", \"log\", \"groups\", \"unmatched\"} (the bytes of the page's api/manauto); no windows file is needed
+  --set params=PATH   with auto=true: a JSON file {\"rt_tol\", \"half\", \"valley\", \"sn\", \"min_pts\", \"despike\", \"split\"}; a missing key keeps its default
   --out PATH  write there instead of the standard output
 
-Columns: channel (m/z of a SIM ion, q1>q3 of a transition, ion N without Q1), sample, label (the name of the window), area (counts x s), start_min,
+Columns: channel (m/z of a SIM ion, q1>q3 of a transition, ion N without Q1), sample, time_min (the time point of the sample in minutes, read from its name
+(t0, 3h, 1 h 30, 90 s; none for a blank or when ambiguous), empty when unknown), label (the name of the window), area (counts x s), start_min,
 end_min, apex_rt_min, height, snr (peak1d around the window), baseline, overlap, pv. Rows grouped by channel, then by sample. Areas and heights in scientific notation with a decimal
 point (7.84077E+04), read as numbers by a spreadsheet in any locale.";
 
@@ -39,13 +44,16 @@ struct Request {
     files: Vec<PathBuf>,
     windows: PathBuf,
     sums: bool,
+    times: Option<PathBuf>,
     shifts: bool,
+    auto: Option<PathBuf>,
     out: Option<PathBuf>,
 }
 
 fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
     let (mut files, mut windows, mut sums, mut shifts, mut out) =
         (Vec::new(), None, false, false, None);
+    let (mut auto, mut params, mut times) = (false, None, None);
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -59,6 +67,10 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
                     Some(("sums", b)) => return Err(format!("sums is true or false, not {b}")),
                     Some(("shifts", b @ ("true" | "false"))) => shifts = b == "true",
                     Some(("shifts", b)) => return Err(format!("shifts is true or false, not {b}")),
+                    Some(("auto", b @ ("true" | "false"))) => auto = b == "true",
+                    Some(("auto", b)) => return Err(format!("auto is true or false, not {b}")),
+                    Some(("params", p)) if !p.is_empty() => params = Some(PathBuf::from(p)),
+                    Some(("times", p)) if !p.is_empty() => times = Some(PathBuf::from(p)),
                     _ => return Err(format!("unknown setting {v}")),
                 }
             }
@@ -69,12 +81,21 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
     if files.is_empty() {
         return Err("manual-table needs at least one file".into());
     }
-    let windows = windows.ok_or("manual-table needs --set windows=PATH")?;
+    if params.is_some() && !auto {
+        return Err("--set params=PATH goes with --set auto=true".into());
+    }
+    let windows = match (windows, auto) {
+        (Some(w), _) => w,
+        (None, true) => PathBuf::new(),
+        (None, false) => return Err("manual-table needs --set windows=PATH".into()),
+    };
     Ok(Some(Request {
         files,
         windows,
         sums,
+        times,
         shifts,
+        auto: auto.then(|| params.unwrap_or_default()),
         out,
     }))
 }
@@ -177,8 +198,17 @@ fn samples_of(
     Ok(out)
 }
 
-/// The `files` of `manint` (`[{"name", "transitions"}]`) for the files given, in order.
+/// The `files` of `manint` (`[{"name", "transitions"}]`) for the files given, in order; the time point is the engine's, from each name.
 pub(crate) fn files_json(files: &[PathBuf], warn: &mut String) -> Result<String> {
+    files_json_timed(files, warn, None)
+}
+
+/// `files_json` with the time points of `times` (`{"<sample>": minutes | null}`, the sample as the table writes it) in place of the ones of the names.
+fn files_json_timed(
+    files: &[PathBuf],
+    warn: &mut String,
+    times: Option<&mzlab_core::json::Value>,
+) -> Result<String> {
     let mut taken = Vec::new();
     let mut o = Out::default();
     o.raw("[");
@@ -186,10 +216,14 @@ pub(crate) fn files_json(files: &[PathBuf], warn: &mut String) -> Result<String>
     for p in files {
         for (name, tr) in samples_of(p, &mut taken, warn)? {
             o.raw(if first { "{\"name\":" } else { ",{\"name\":" })
-                .str(&name)
-                .raw(",\"transitions\":")
-                .raw(&tr)
-                .raw("}");
+                .str(&name);
+            if let Some(t) = times.and_then(|t| t.get(mzlab_core::manint::sample_of(&name))) {
+                match t.f64() {
+                    Some(m) => o.raw(",\"time\":").num(m),
+                    None => o.raw(",\"time\":null"),
+                };
+            }
+            o.raw(",\"transitions\":").raw(&tr).raw("}");
             first = false;
         }
     }
@@ -198,7 +232,21 @@ pub(crate) fn files_json(files: &[PathBuf], warn: &mut String) -> Result<String>
 }
 
 fn table(c: &Request, warn: &mut String) -> Result<String> {
-    let files = files_json(&c.files, warn)?;
+    let times = match &c.times {
+        Some(p) => Some(mzlab_core::json::parse(
+            std::fs::read_to_string(p).map_err(io)?.as_bytes(),
+        )?),
+        None => None,
+    };
+    let files = files_json_timed(&c.files, warn, times.as_ref())?;
+    if let Some(p) = &c.auto {
+        let params = if p.as_os_str().is_empty() {
+            String::new()
+        } else {
+            std::fs::read_to_string(p).map_err(io)?
+        };
+        return mzlab_core::manint::auto_text(&files, &params);
+    }
     let windows = std::fs::read_to_string(&c.windows).map_err(io)?;
     if c.shifts {
         let list = mzlab_core::json::parse(windows.as_bytes())?;

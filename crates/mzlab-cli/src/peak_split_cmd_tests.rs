@@ -100,11 +100,11 @@ fn the_isomer_pair_splits_once_and_its_parts_add_up() {
     assert_eq!(rows.len(), 2, "{parts}");
     assert!(
         rows.iter()
-            .all(|r| r[10] == "drop" && r[11].parse::<f64>().unwrap() > 1.0),
+            .all(|r| r[11] == "drop" && r[12].parse::<f64>().unwrap() > 1.0),
         "{parts}"
     );
     let whole = table(&d, r#"[{"file":2,"tr":2,"a":6.33,"b":7.05}]"#);
-    let area = |r: &Vec<&str>| r[3].parse::<f64>().unwrap();
+    let area = |r: &Vec<&str>| r[4].parse::<f64>().unwrap();
     let total: f64 = whole
         .lines()
         .nth(1)

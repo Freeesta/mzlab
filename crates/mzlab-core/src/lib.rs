@@ -26,6 +26,7 @@ pub mod ddafinestra;
 pub mod difference;
 pub mod diffroute;
 pub mod elements;
+pub mod periodic;
 pub mod entropy;
 pub mod score_terms;
 pub mod fileroutes;

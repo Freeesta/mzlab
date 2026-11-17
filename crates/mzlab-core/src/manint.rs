@@ -3,6 +3,8 @@
 //! name of the channel is not written: the channel is its m/z); the area sits right after the name the user gave. The engine measures every window again from
 //! the traces, so the site (`mzlab-wasm` `manual_table`), the app (`rpc.rs` op `manint`) and `mzlab-cli manual-table` write the same bytes.
 //! Baselines as the Data view draws them: `zero`, `line` (`baseline::peak_area`) and `edges` (the page's line between the 3-point means of the edges).
+//! `time_min` (right after the sample) is the time point of the sample in minutes: the file's `time` when the list gives one (`null` = none, as a user
+//! who emptied the cell), else the one the name carries (`samples::role_and_minutes`, none for a blank); empty when unknown.
 //! A window with `splits` gives one row per part (`valley::parts`, drop lines on the window's line, `overlap` = `drop`, `pv` = Hp/Hv).
 
 use crate::baseline::{peak_area, Baseline};
@@ -17,7 +19,7 @@ use crate::valley;
 pub const BASELINES: [&str; 3] = ["zero", "edges", "line"];
 /// The header of the table.
 pub const HEAD: &str =
-    "channel,sample,label,area,start_min,end_min,apex_rt_min,height,snr,baseline,overlap,pv,origin\n";
+    "channel,sample,time_min,label,area,start_min,end_min,apex_rt_min,height,snr,baseline,overlap,pv,origin\n";
 /// Smoothing and points across the peak of the S/N (`peak1d::find_peak` around the window, the defaults of `chrom.transitions@2`).
 const SN_SMOOTH: usize = 3;
 const SN_POINTS: usize = 3;
@@ -63,8 +65,8 @@ struct Row {
 
 /// The group of a channel across files: Q1 and Q3 at 0.01 (or the place in the list without Q1), the name the method gives it and `Trace::dup`.
 type Key = (i64, i64, String, usize);
-/// A sample: its name without `.mzML` and its channels.
-type Sample = (String, Vec<Trace>);
+/// A sample: its name without `.mzML`, its channels and its time point in minutes.
+type Sample = (String, Vec<Trace>, Option<f64>);
 /// A channel group with its label and name.
 type Channel = (Key, String, String);
 
@@ -179,6 +181,22 @@ fn baseline_of(w: &Value, shift: f64) -> Result<Baseline> {
     }
 }
 
+/// The time point of a sample in minutes: the `time` of the file (a number, or `null` for none), else the one its name carries.
+fn time_of(f: &Value, name: &str) -> Option<f64> {
+    match f.get("time") {
+        Some(t) => t.f64().filter(|m| m.is_finite() && *m >= 0.0),
+        None => crate::samples::role_and_minutes(name).1,
+    }
+}
+
+/// Minutes as written in the table: three decimals at most, no trailing zeros (`90`, `1.5`), empty when unknown.
+fn minutes_text(m: Option<f64>) -> String {
+    m.map_or(String::new(), |v| {
+        let t = format!("{v:.3}");
+        t.trim_end_matches('0').trim_end_matches('.').to_string()
+    })
+}
+
 /// The samples of `files` (name without `.mzML`, channels) and the channels in the order they first appear, with their label and name.
 fn samples_and_keys(files: &str) -> Result<(Vec<Sample>, Vec<Channel>)> {
     let list = parse(files.as_bytes())?;
@@ -190,11 +208,12 @@ fn samples_and_keys(files: &str) -> Result<(Vec<Sample>, Vec<Channel>)> {
             (
                 sample_of(name).to_string(),
                 traces(f.get("transitions").unwrap_or(&Value::Null)),
+                time_of(f, name),
             )
         })
         .collect();
     let mut keys: Vec<Channel> = Vec::new();
-    for (_, trs) in &samples {
+    for (_, trs, _) in &samples {
         for tr in trs {
             let k = key_of(tr);
             if !keys.iter().any(|(x, _, _)| *x == k) {
@@ -413,8 +432,9 @@ fn csv_text(
         let head = field(label);
         for r in &mine {
             out += &format!(
-                "{head},{},{},{},{:.3},{:.3},{:.3},{},{},{},{},{},{}\n",
+                "{head},{},{},{},{},{:.3},{:.3},{:.3},{},{},{},{},{},{}\n",
                 field(&samples[r.file].0),
+                minutes_text(samples[r.file].2),
                 field(&labels[r.label]),
                 sci(r.area, 5),
                 r.a,
@@ -430,7 +450,7 @@ fn csv_text(
         }
         if sums {
             out += &format!(
-                "{head},sum,,{},,,,,,,,,\n",
+                "{head},sum,,,{},,,,,,,,,\n",
                 sci(mine.iter().map(|r| r.area).sum(), 5)
             );
         }
@@ -441,7 +461,16 @@ fn csv_text(
 #[path = "manint_follow.rs"]
 mod follow;
 pub use follow::follow_text;
+#[path = "manint_auto.rs"]
+mod auto;
+pub use auto::auto_text;
 
+#[cfg(test)]
+#[path = "manint_auto_tests.rs"]
+mod auto_tests;
 #[cfg(test)]
 #[path = "manint_tests.rs"]
 mod tests;
+#[cfg(test)]
+#[path = "manint_time_tests.rs"]
+mod time_tests;

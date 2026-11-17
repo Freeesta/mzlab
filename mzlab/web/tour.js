@@ -191,6 +191,10 @@ const TOUR = (() => {
   let currentTargetEl = null;
   // what undoes the preparation of the step on screen (e.g. closes the drawer the step opened)
   let curLeave = null;
+  // the stored name of the example the tour itself loaded (never a file of the student's); set only by caricaEsempio, cleared once the choice at the end is made.
+  // A name, not the file objects: a later upload rebuilds E.files
+  /** @type {string | null} */ let exampleName = null;
+  const exampleLive = () => exampleName ? E.files.filter(f => !f.gone && (f.file || "").split("#")[0] === exampleName) : [];
 
   // the file list is a drawer of the toolbar: the tour opens it for the steps about the list and closes it again when the step ends
   function openFileDrawer() {
@@ -674,12 +678,34 @@ const TOUR = (() => {
 
     fine: () => {
       if (curCap !== 3) saveState("fatto");
-      TOUR.chiudi();
+      TOUR.chiudiEScegli();
     },
 
+    // Esc, «Skip tour» and «Finish» all end the same way: a tour that loaded its own example file asks what to do with it
     salta: () => {
       if (curCap !== 3) saveState("saltato");
+      TOUR.chiudiEScegli();
+    },
+
+    chiudiEScegli: () => {
+      const ask = curCap !== 3 && exampleLive().length > 0;
       TOUR.chiudi();
+      if (!ask) return;
+      TOURSCELTA.apri({ keep: () => { exampleName = null; }, remove: () => TOUR.togliEsempio() });
+    },
+
+    // closes the example file and what came from it (panels, XICs, integrations, selection) as «Remove all files» does, but at once and with no Undo:
+    // only the file the tour loaded (by its name) is closed, so a file of the student's own is never touched
+    togliEsempio: async () => {
+      const mine = exampleLive();
+      exampleName = null;
+      if (!mine.length) return;
+      const rs = mine.map(fileRemoval);
+      rs.forEach((r, i) => r.take(i < rs.length - 1));
+      await Promise.all(rs.map(r => r.free(true))).catch(() => { /* not in the browser store (desktop): nothing to free */ });
+      if (typeof renderFiles === "function") renderFiles();
+      await reindexAfterFree();
+      if (typeof uiSave === "function") uiSave();
     },
 
     chiudi: () => {
@@ -697,6 +723,7 @@ const TOUR = (() => {
       if (spot) spot.remove();
       const dlg = document.getElementById("tour-dialog");
       if (dlg) dlg.remove();
+      document.getElementById("tour-live")?.remove();      // the screen-reader announcer of the steps: nothing of the tour stays in the page
 
       const targetFocus = (prevFocus && document.body.contains(prevFocus) && prevFocus !== document.body) ? prevFocus : document.getElementById("np-set");
       if (targetFocus) {
@@ -724,6 +751,7 @@ const TOUR = (() => {
           const l = document.getElementById("loading");
           if ((!l || l.hidden) && document.querySelector("#flst .fl[data-k]")) {
             clearInterval(poll);
+            exampleName = file.name;
             TOUR.inizia(1, 0);
           }
         }, 200);

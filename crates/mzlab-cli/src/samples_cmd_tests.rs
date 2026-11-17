@@ -65,6 +65,44 @@ fn variabili_is_the_route_answer() {
     std::fs::remove_file(f).unwrap();
 }
 
+/// The generic labels of the time points (t0, 3h, 8h, a replicate two ways, names that only look like a time).
+const TIME_NAMES: [&str; 9] = [
+    "RET t0 (2)",
+    "RET 3h_2",
+    "RET 8h (2)",
+    "PERM t0",
+    "PERM 3h",
+    "PERM 8h",
+    "H20 demi",
+    "blk 90-10",
+    "S 1 h 30",
+];
+
+#[test]
+fn table_is_the_route_answer_with_the_time_points() {
+    let p = std::env::temp_dir().join(format!("mzlab-cli-{}-nomi-tempo.txt", std::process::id()));
+    std::fs::write(&p, TIME_NAMES.join("\n")).unwrap();
+    let (code, out, err) = run(&["campioni", "table", "--names", p.to_str().unwrap()]);
+    assert_eq!(code, 0, "{err}");
+    let files: Vec<String> = TIME_NAMES
+        .iter()
+        .map(|n| format!("{{\"name\":\"{n}\",\"sha256\":\"\",\"kind\":\"\"}}"))
+        .collect();
+    let want = route("proponi", &format!("{{\"files\":[{}]}}", files.join(","))).unwrap();
+    assert_eq!(out, want + "\n");
+    // the minutes of every name, in the order of the names (null: no time point)
+    let minutes: Vec<String> = out
+        .split("\"tempo_min\":")
+        .skip(1)
+        .map(|r| r.split([',', '}']).next().unwrap().to_string())
+        .collect();
+    assert_eq!(
+        minutes,
+        ["0", "180", "480", "0", "180", "480", "null", "null", "90"]
+    );
+    std::fs::remove_file(p).unwrap();
+}
+
 #[test]
 fn nome_gruppo_is_the_route_answer() {
     let (code, out, _) = run(&["campioni", "nome-gruppo", "MQ_H2O2_T00", "MQ_H2O2_T01"]);

@@ -1,30 +1,30 @@
-# File d'area: quale leggere
-Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi la zona a sinistra, leggi il file a destra (solo quello). Un file nuovo = una riga nuova al suo posto. Trovare una riga: `grep -n '<parola>' docs/agenti/INDICE.md`. Ogni `docs/agenti/*.md` ha la sua riga; ordine e una riga per file sono controllati da `tools/gate_release.py`.
+# Area files: which one to read
+One row per area file, in file-name order (max 300 characters): if you touch the area on the left, read the file on the right (only that one). A new file = a new row in its place. To find a row: `grep -n '<word>' docs/agenti/INDICE.md`. Every `docs/agenti/*.md` has its own row; order and one row per file are checked by `tools/gate_release.py`.
 
-| Se tocchi… | Leggi |
+| If you touch… | Read |
 |---|---|
-| accessibilità dell'intera applicazione (WCAG 2.1/2.2 AA, axe-core, controlli, lacune note e regole tollerate) | `docs/agenti/accessibilita.md` |
-| Agilent `.D` LC/MS: QqQ MRM/dMRM, Q-TOF profilo/centroidi/MS2, metodo LC/MS, DAD (`crates/mzlab-core/src/agilent_ext/`, feature `estesi`) | `docs/agenti/agilent-lcms.md` |
-| lettore cartelle Agilent `.D` (`crates/mzlab-core/src/agilent/`) | `docs/agenti/agilent.md` |
-| statistica in HR: tabella delle feature, bianco, differenza dal riferimento, PCA | `docs/agenti/alta-risoluzione-statistica.md` |
-| mondo HR: Banco, formule, isotopi, librerie, albero MSn | `docs/agenti/alta-risoluzione.md` |
-| lanciare la verifica nel container cloud (Chromium, `--setup`, test col sito costruito) | `docs/agenti/ambiente-cloud.md` |
-| animazione di caricamento (`base`) e analizzatori animati spenti (`an-*.js`: quadrupolo, TOF, Orbitrap, ESI, trappola, FT-ICR, QqQ, Paul, settore, IMS, MALDI) | `docs/agenti/analizzatori.md` |
-| proxy pubblico anonimo dell'assistente (`proxy/`, Worker Cloudflare, `Ledger` della spesa, porte, elenco degli hash) | `docs/agenti/assistente-proxy.md` |
-| Banco 2b (area: Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di…) | `docs/agenti/attributio-banco.md` |
-| esportazioni (area: Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di…) | `docs/agenti/attributio-export.md` |
-| isotopi e composizione elementare (area: Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di…) | `docs/agenti/attributio-isotopi.md` |
-| motore MS2 sperimentale, frammentazione in silico alla MetFrag, attribuzione dei frammenti alla MS-FINDER, previsione dell'RT (`attributio/ms2_engine/`) | `docs/agenti/attributio-ms2.md` |
-| parità con mzmine (area: Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di…) | `docs/agenti/attributio-mz-parita.md` |
-| binario MZ (area: Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di…) | `docs/agenti/attributio-mz.md` |
-| pannello (area: Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di…) | `docs/agenti/attributio-pannello.md` |
-| revisione, abbinamento e identità (area: Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di…) | `docs/agenti/attributio-revisione.md` |
-| Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di rilevamento alla mzmine: `crates/mzlab-feat/src/attributio/`, `untargeted/`, `.wasm` `attributio*` e `untargeted`) | `docs/agenti/attributio.md` |
-| audit dei file inutilizzati, morti o vecchi (solo rapporto: SAFE, PROBABLY-UNUSED, UNSURE, KEEP-BUT-OLD, con prova grep, byte e data) | `docs/agenti/audit-file-inutili.md` |
-| avvio progressivo (`AVVIO`), regola «interfaccia subito»; area e tabella di caricamento (area: header (schermo intero, logo, (i)), area e tabella di caricamento,…) | `docs/agenti/avvio.md` |
-| azioni dei pannelli (registro `azioni/1`, menu del tasto destro, Maiusc+F10) | `docs/agenti/azioni.md` |
-| picchi spalmati: lotto sintetico, configurazioni MZmine default/wide, tabella di confronto (`tools/bench/confronto_larghi.py`) | `docs/agenti/bench-picchi-larghi.md` |
-| lettore Bruker timsTOF `.d` (`crates/mzlab-lettori/src/bruker/`: SQLite minimo, zstd, `tdf_bin`/`tsf_bin`, calibrazione m/z, `BrukerD` in `agilent-d.js`) | `docs/agenti/bruker.md` |
+| accessibility of the whole application (WCAG 2.1/2.2 AA, axe-core, controls, known gaps and tolerated rules) | `docs/agenti/accessibilita.md` |
+| Agilent `.D` LC/MS: QqQ MRM/dMRM, Q-TOF profile/centroids/MS2, LC/MS method, DAD (`crates/mzlab-core/src/agilent_ext/`, feature `estesi`) | `docs/agenti/agilent-lcms.md` |
+| Agilent `.D` folder reader (`crates/mzlab-core/src/agilent/`) | `docs/agenti/agilent.md` |
+| statistics in HR: feature table, blank, difference from the reference, PCA | `docs/agenti/alta-risoluzione-statistica.md` |
+| HR world: Banco, formulas, isotopes, libraries, MSn tree | `docs/agenti/alta-risoluzione.md` |
+| running the verification in the cloud container (Chromium, `--setup`, tests against the built site) | `docs/agenti/ambiente-cloud.md` |
+| loading animation (`base`) and the switched-off animated analyzers (`an-*.js`: quadrupole, TOF, Orbitrap, ESI, trap, FT-ICR, QqQ, Paul, sector, IMS, MALDI) | `docs/agenti/analizzatori.md` |
+| anonymous public proxy of the assistant (`proxy/`, Cloudflare Worker, spending `Ledger`, ports, hash list) | `docs/agenti/assistente-proxy.md` |
+| Banco 2b (area: Attributio in Rust (level cascade, Banco 2b, MZ binary of…) | `docs/agenti/attributio-banco.md` |
+| exports (area: Attributio in Rust (level cascade, Banco 2b, MZ binary of…) | `docs/agenti/attributio-export.md` |
+| isotopes and elemental composition (area: Attributio in Rust (level cascade, Banco 2b, MZ binary of…) | `docs/agenti/attributio-isotopi.md` |
+| experimental MS2 engine, MetFrag-style in silico fragmentation, MS-FINDER-style fragment attribution, RT prediction (`attributio/ms2_engine/`) | `docs/agenti/attributio-ms2.md` |
+| parity with mzmine (area: Attributio in Rust (level cascade, Banco 2b, MZ binary of…) | `docs/agenti/attributio-mz-parita.md` |
+| MZ binary (area: Attributio in Rust (level cascade, Banco 2b, MZ binary of…) | `docs/agenti/attributio-mz.md` |
+| panel (area: Attributio in Rust (level cascade, Banco 2b, MZ binary of…) | `docs/agenti/attributio-pannello.md` |
+| review, matching and identity (area: Attributio in Rust (level cascade, Banco 2b, MZ binary of…) | `docs/agenti/attributio-revisione.md` |
+| Attributio in Rust (level cascade, Banco 2b, mzmine-style detection MZ binary: `crates/mzlab-feat/src/attributio/`, `untargeted/`, `.wasm` `attributio*` and `untargeted`) | `docs/agenti/attributio.md` |
+| audit of unused, dead or old files (report only: SAFE, PROBABLY-UNUSED, UNSURE, KEEP-BUT-OLD, with grep proof, bytes and date) | `docs/agenti/audit-file-inutili.md` |
+| progressive startup (`AVVIO`), «interface at once» rule; loading area and table (area: header (full screen, logo, (i)), loading area and table,…) | `docs/agenti/avvio.md` |
+| panel actions (`azioni/1` registry, right-click menu, Shift+F10) | `docs/agenti/azioni.md` |
+| smeared peaks: synthetic batch, MZmine default/wide configurations, comparison table (`tools/bench/confronto_larghi.py`) | `docs/agenti/bench-picchi-larghi.md` |
+| Bruker timsTOF `.d` reader (`crates/mzlab-lettori/src/bruker/`: minimal SQLite, zstd, `tdf_bin`/`tsf_bin`, m/z calibration, `BrukerD` in `agilent-d.js`) | `docs/agenti/bruker.md` |
 | retta di taratura sui picchi integrati (`quant.curve`: pesi 1/x…1/y², QR, standard interno, LOD/LOQ ICH e S/N, esclusioni registrate, `taratura/1`, `calib.rs`, `curve.rs`) | `docs/agenti/calibrazione.md` |
 | campi numerici scritti a mano (`campi.js`, `CAMPI.num`, `data-num`, calcolatori, nota di rifiuto `campo.*`, `numIt` senza Infinity, `lib_campi.sweep`) | `docs/agenti/campi-numerici.md` |
 | ruoli dei file, tempi e metadati dei campioni (`campioni/2` e `/3`, `mzlab-core/src/samples/`: proposte dai nomi, modelli di nome, CSV, colonne libere, dati dal file, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |
@@ -34,6 +34,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | shard pytest della CI (cache `target`, `doppi`, `aree`, `prebuilt`, ordine e metà dei test lenti) | `docs/agenti/ci-selezione.md` |
 | workflow GitHub condizionali (concurrency, pages, job saltati) | `docs/agenti/ci-veloce.md` |
 | classi chimiche da regole (`crates/mzlab-feat/src/classes/`, tabella `data/classi-1.json`, `classi/1`: frammenti diagnostici e perdite neutre) | `docs/agenti/classi.md` |
+| mzlab-cli for AI agents: `--json` commands, exit codes, stdout vs stderr, `--dry-run`, `steps --json`, `flow check`, the citation rule (`citation.rs`, `CITATION.cff`) | `docs/agenti/cli-agenti.md` |
 | `mzlab-cli convert`: file e cartelle dei produttori in mzML, `--peaks`, `--report`, codici d'uscita | `docs/agenti/cli-convert.md` |
 | passo per passo (area: riga di comando `mzlab-cli features` (`crates/mzlab-cli`: feature…) | `docs/agenti/cli-passi.md` |
 | riga di comando `mzlab-cli features` (`crates/mzlab-cli`: feature table in CSV, stesso motore e ricetta della pagina) | `docs/agenti/cli.md` |
@@ -170,6 +171,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | righe della scheda spettro MS² (note, tempi di ritenzione, CE ± spread, campione), `mzlab-cli items` | `docs/agenti/spettro-righe.md` |
 | tabella picchi dello spettro da copiare (TSV), asse y in % fino a 100, pulsante XIC solo su MS¹ | `docs/agenti/tabella-picchi.md` |
 | dove Tabui perde un prodotto atteso (`mzlab-cli explain-missing`) | `docs/agenti/tabui-spiega.md` |
+| periodic table dialog and `elements/1` (`crates/mzlab-core/src/periodic.rs`, `tavola-periodica.js`, `mzlab-cli elements`) | `docs/agenti/tavola-periodica.md` |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |
 | velocità del lettore Thermo `.raw`: criteri A1-A7 e B1-B5, banco `thermo_bench`, `tools/bench/thermo_velocita.py`, numeri di partenza contro RFR (T-7) | `docs/agenti/thermo-velocita.md` |
 | fondo chimico del TIC/BPC (ioni di fondo persistenti, linea di base per ione, finestra tranquilla, bianco, finestre m/z escluse: `ticbg.rs`, `api/tic_background`, `mzlab-cli background`) | `docs/agenti/tic-fondo.md` |
@@ -182,6 +184,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | tetti dei .wasm di mzFinder, moduli fusi (gruppo HR e Attributio) | `docs/agenti/wasm-tetti.md` |
 | lettore cartelle Waters MassLynx `.raw` (`crates/mzlab-lettori/src/waters/`, modulo `waters`, raggruppamento in `waters-raw.js`) | `docs/agenti/waters.md` |
 | altri strumenti SCIEX, sMRM, PIS/NL, feature `estesi` (area: lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`)) | `docs/agenti/wiff-varianti.md` |
+| writing a `.wiff` + `.wiff.scan`: create, add or remove samples (feasibility and design study, no writer code yet: streams per sample, lossless copy, verification, CLI `wiff`, wasm cap) | `docs/agenti/wiff-writer.md` |
 | lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` |
 | specifica binaria (area: lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`)) | `docs/agenti/wiff_specifica_completa.md` |
 | scarto con segno dopo l'm/z o la formula nella finestra «Estrai ioni» (`288.2+16`), `split_offset`, `mzlab-cli ion-mz`, `err.formula.offset`, `err.formula.mzLow`; campi «m/z da / a» e coppie m/z / RT (`xic-bordi.js`, `ctl.range.order`); `tabNuovo`, `msg.noFiles` | `docs/agenti/xic-scarto.md` |

@@ -1,6 +1,4 @@
 I18N.add("en", {
-  "settings.g.look": "Appearance",
-  "settings.g.read": "Accessibility",
   "settings.g.data": "Data and calculation",
   "settings.g.app": "Application",
   "settings.g.bug": "Report a bug",
