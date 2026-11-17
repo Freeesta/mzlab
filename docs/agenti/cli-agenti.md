@@ -8,6 +8,12 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - Data commands print NO banner: stdout stays pipe- and CSV-safe, stderr stays free for progress and errors, and `--json` output is never altered. The agent should add the citation to its own report or answer (`CITATION.cff` has the formatted reference).
 - The page and the `.wasm` write their records and catalogs without the key: the citation is a CLI-side field (a `prov.json` from the desktop app has it, because the app calls the same function).
 
+## Linux binaries (for agents in Linux VMs)
+- Every release carries static musl builds of `mzlab-cli` (profile `cli`; no libc or distro dependency, runs on any distro): `mzLab-X.Y.Z-cli-Linux-x86_64` and `mzLab-X.Y.Z-cli-Linux-aarch64` (plain executables), listed in `SHA256SUMS` of the release. The `release` workflow also keeps them, each with a `.sha256` file, as the artifacts `mzlab-cli-linux-x86_64` and `mzlab-cli-linux-aarch64`.
+- Fetch and verify (replace `X.Y.Z`, use `aarch64` on ARM):
+  `v=X.Y.Z; a=x86_64; u=https://github.com/Freeesta/mzlab/releases/download/v$v; curl -fsSLO $u/mzLab-$v-cli-Linux-$a -O $u/SHA256SUMS && sha256sum --ignore-missing -c SHA256SUMS && chmod +x mzLab-$v-cli-Linux-$a && ./mzLab-$v-cli-Linux-$a --version`
+- Each build is smoke-tested on a runner of its own architecture before it is attached: `--version` (version and citation line) and `steps --json`.
+
 ## Streams and exit codes
 - stdout is the data (CSV, JSON, a file list); stderr is progress (one line per job; `--progress jsonl` makes it one JSON line each), warnings and errors. Read stdout for results, stderr for diagnosis.
 - With `--json`, errors are an `errore/1` object on stdout (`error_key`, `params`, `hint`) as well as a line on stderr; the keys are stable.
