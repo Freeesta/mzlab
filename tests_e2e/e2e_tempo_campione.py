@@ -25,7 +25,7 @@ TAGS = "Object.fromEntries([...document.querySelectorAll('#flst .fl')].map(e => 
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, [D / "sim_tempo.wiff", D / "sim_tempo.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= %d && E.files.every(f => f.sim > 0)" % len(WANT), timeout=120000)
+        stage(pg, [D / "sim_tempo.wiff", D / "sim_tempo.wiff.scan"]); pg.click("text=Load data"); ready(pg); wait_for_js(pg, "E.files.length >= %d && E.files.every(f => f.sim > 0)" % len(WANT), timeout=120000)
         wait_for_js(pg, "document.querySelectorAll('#flst .fl small abbr.ftag').length >= 5 && ST.files.every(f => f.prop)", timeout=30000)
         def proposed():
             got = pg.evaluate("Object.fromEntries(E.files.map(f => [f.label, f.time ?? null]))")
