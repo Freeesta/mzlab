@@ -2,11 +2,10 @@
 the toolbar dialog shows: area, height, apex and edges of the same window. Step 1 of one integration table: the dialog stays until the card has everything.
 Needs the site and the .wasm (python tools/prepara_sito.py)."""
 # covers: mzlab/web/integrazioni-tracce, mzlab/web/integrazioni-manuali, mzlab/web/rust-bridge
-import subprocess, sys, time, os
+import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 
-from lib import free_port; PORT = free_port()
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -14,14 +13,12 @@ def step(name, fn):
 site = ROOT / "site"
 if not (site / "index.html").exists() or not (site / "static" / "wasm" / "mzlab_wasm.js").exists():
     print("  ", ("site", "SKIP site/ or site/static/wasm not built")); sys.exit(0)
-srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1)
+r = Run(port=8871, wd="/tmp/wd_manint_tracce")
 XP = "E.panels.find(p=>p.type==='xic')"
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None); pg = b.new_context(viewport={"width": 1500, "height": 1600}, locale="en-US").new_page()
-        errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
-        pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
+        pg = r.page(p); errs = r.errs
+        pg.wait_for_selector("#drop", timeout=120000)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
         pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
         pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
@@ -49,7 +46,6 @@ try:
                 assert abs(r["rt"] - d["rt"]) < 6e-4, (d, r)
         step("area, height and apex of the card are those of the dialog table", parity)
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
-        b.close()
 finally:
-    srv.terminate()
+    r.close()
 for s in steps: print("  ", s)
