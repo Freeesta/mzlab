@@ -3,7 +3,7 @@
 that lists what was received, with sizes. «Open folder» (the pointed folder) does not read .D folders yet, so it is not covered. Synthetic folders of tools/agilent_sintetico.py (no laboratory data).
 Needs the site and the .wasm, as e2e_agilent.py."""
 # covers: mzlab/web/agilent-d.js, tools/agilent_sintetico.py, mzlab/web/rust-nativo, mzlab/web/nativo
-import os, shutil, struct, subprocess, sys, tempfile, time
+import os, shutil, struct, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from lib import ROOT, wait_for_js
@@ -34,7 +34,9 @@ agilent_sintetico.write_old(top, "gcsynth.D", 60, gc=True)
 agilent_sintetico.write_old(top / "cut", "incompleta.D", 60, gc=True)
 (top / "cut/incompleta.D/data.ms").unlink()
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1)
+for _ in range(100):      # the server answers before the page is asked for
+    try: urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=1); break
+    except Exception: srv.poll() is None or sys.exit("server did not start"); threading.Event().wait(0.1)
 def names(pg): return pg.evaluate("Array.from(document.querySelectorAll('#flist tr:not(.grp)')).slice(1).map(tr=>tr.children[1].textContent.trim().split(' ')[0])")
 def tree(d): return {str(f.relative_to(d.parent)): f.read_bytes().hex() for f in sorted(d.rglob("*")) if f.is_file()}
 DROP = """async tree => { const file = (rel, hex) => ({ isFile: true, isDirectory: false, name: rel.split("/").pop(), file: ok => ok(new File([Uint8Array.from(hex.match(/../g) || [], h => parseInt(h, 16))], rel.split("/").pop())) });
