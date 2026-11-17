@@ -1,3 +1,4 @@
+#![allow(clippy::cast_possible_truncation, clippy::unwrap_used)]
 use super::*;
 
 fn grid(

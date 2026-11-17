@@ -372,7 +372,7 @@ pub fn run(args: Vec<String>) -> Outcome {
                 };
             if c.json {
                 o.stdout = crate::flow_json::error_json(
-                    o.code as u8,
+                    o.code,
                     &e,
                     &o.stderr,
                     "see mzlab-cli dad --help",

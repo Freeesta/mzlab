@@ -85,7 +85,7 @@ fn range(v: &[f64]) -> (f64, f64) {
 }
 
 fn median_step(v: &[f64]) -> f64 {
-    let mut d: Vec<f64> = v.windows(2).map(|w| w[1] - w[0]).collect();
+    let mut d: Vec<f64> = v.iter().zip(v.iter().skip(1)).map(|(a, b)| b - a).collect();
     crate::sortc::slice_by(&mut d, f64::total_cmp);
     d.get(d.len() / 2).copied().unwrap_or(0.0)
 }
@@ -103,7 +103,8 @@ fn locate(ax: &[f64], x: f64, half: f64) -> Option<(usize, f64)> {
         return Some((ax.len() - 1, 0.0));
     }
     let i = ax.partition_point(|&t| t <= x) - 1;
-    let w = (x - ax[i]) / (ax[i + 1] - ax[i]);
+    let (x0, x1) = (ax.get(i)?, ax.get(i + 1)?);
+    let w = (x - x0) / (x1 - x0);
     Some((i, if w == 0.0 { 0.0 } else { w }))
 }
 
@@ -143,7 +144,7 @@ fn align(a_ax: &[f64], b_ax: &[f64], shift: f64) -> (Axis, bool) {
         .collect();
     let interp = kept
         .iter()
-        .any(|(i, (k, w))| *w != 0.0 || (a_ax[*i] - shift - b_ax[*k]).abs() > 1e-9);
+        .any(|(i, (k, w))| *w != 0.0 || matches!((a_ax.get(*i), b_ax.get(*k)), (Some(x), Some(y)) if (x - shift - y).abs() > 1e-9));
     (kept, interp)
 }
 
@@ -184,6 +185,7 @@ impl SubReport {
 }
 
 /// `A - scale * B` on the grid of A restricted to the rows and channels that B covers. `Err("err.pda.nooverlap")` when nothing overlaps, `err.pda.none` for an empty matrix.
+#[allow(clippy::cast_possible_truncation)] // the matrix is f32
 pub fn dad_subtract(a: &DadData, b: &DadData, o: &SubOpts) -> Result<(DadData, SubReport)> {
     let ok = |d: &DadData| {
         d.points() > 0 && d.channels() > 0 && d.matrix_mau.len() >= d.points() * d.channels()
@@ -222,8 +224,14 @@ pub fn dad_subtract(a: &DadData, b: &DadData, o: &SubOpts) -> Result<(DadData, S
         .chunks(cols.len())
         .map(|r| r.iter().map(|&v| f64::from(v)).sum())
         .collect();
-    let time_min: Vec<f64> = rows.iter().map(|(i, _)| a.time_min[*i]).collect();
-    let wavelengths_nm: Vec<f64> = cols.iter().map(|(j, _)| a.wavelengths_nm[*j]).collect();
+    let time_min: Vec<f64> = rows
+        .iter()
+        .filter_map(|(i, _)| a.time_min.get(*i).copied())
+        .collect();
+    let wavelengths_nm: Vec<f64> = cols
+        .iter()
+        .filter_map(|(j, _)| a.wavelengths_nm.get(*j).copied())
+        .collect();
     let (wl_start_nm, wl_stop_nm) = range(&wavelengths_nm);
     let nm_step_a = median_step(&a.wavelengths_nm);
     let out = DadData {
