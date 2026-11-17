@@ -141,6 +141,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | tentativi scartati, tagli della CI già misurati e tempi dei job Rust (area: tabella cumulativa dei guadagni di velocità (data · PR · passo ·…) | `docs/agenti/ottimizzazioni-tentate.md` |
 | affiancare e spostare i pannelli (maniglia, zone di rilascio, divisori, annulla) | `docs/agenti/pannelli-affianca.md` |
 | parità sito ↔ app (funzioni e passi del Flow presenti da una parte sola, operazioni del motore assenti nell'app, test di parità mancanti, prossimi passi); funzione × faccia × prova, guardia delle op di `rust-worker.js` senza ramo (`test_parita_operazioni.py`) | `docs/agenti/parita.md` |
+| peak box on a spectrum (hover, keys, live region), highlighted stick, pinned/removed labels (`peak-info.js`, `p.lblOn`/`lblOff`) | `docs/agenti/peak-info.md` |
 | agenti esterni (Claude Code, Cowork) che usano `mzlab-cli` dalla shell: sequenza, codici, esempi di piani | `docs/agenti/per-agenti.md` |
 | lista integrata di pesticidi e contaminanti ambientali (`mzlab/chem/pesticides.csv`, `pesticides_meta.json`, `tools/download_pesticides.py`, seconda lista di `contaminanti.json`) | `docs/agenti/pesticidi.md` |
 | posizione della sostituzione negli isomeri dei TP (classi compatibili con la MS2, `chem/positions.rs`, `posiz/1`) | `docs/agenti/posizioni.md` |
