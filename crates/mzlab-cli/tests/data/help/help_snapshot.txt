@@ -650,7 +650,7 @@ exit 0
 --- stdout
 mzlab-cli manual-table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
 
-usage: mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--out PATH]
+usage: mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--set times=PATH] [--out PATH]
 
   FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in the order of the page
   --set windows=PATH  a JSON list of windows [{"file": I, "tr": J, "a": MIN, "b": MIN, "baseline": "zero"|"edges"|"line", "line": [t0, y0, t1, y1], "label": NAME,
@@ -661,6 +661,7 @@ usage: mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--ou
                       outside the window moves it, no peak leaves it: column origin = manual|applied|shifted|no_peak); names: a name for one
                       sample alone, by its place I
   --set sums=true     after the windows of each channel a row sum with the sum of their areas
+  --set times=PATH    a JSON object {"<sample>": MINUTES or null} that replaces the time point a sample's name carries (null = none); the others keep theirs
   --set shifts=true   instead of the table, where the FIRST window lands in the other samples, as JSON
                       [{"file", "tr", "a", "b", "shift", "origin"}] (the bytes of the page's api/manfollow)
   --set auto=true     instead of the table, every peak of every channel of every sample found by the engine and grouped by time, as JSON
@@ -668,7 +669,8 @@ usage: mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--ou
   --set params=PATH   with auto=true: a JSON file {"rt_tol", "half", "valley", "sn", "min_pts", "despike", "split"}; a missing key keeps its default
   --out PATH  write there instead of the standard output
 
-Columns: channel (m/z of a SIM ion, q1>q3 of a transition, ion N without Q1), sample, label (the name of the window), area (counts x s), start_min,
+Columns: channel (m/z of a SIM ion, q1>q3 of a transition, ion N without Q1), sample, time_min (the time point of the sample in minutes, read from its name
+(t0, 3h, 1 h 30, 90 s; none for a blank or when ambiguous), empty when unknown), label (the name of the window), area (counts x s), start_min,
 end_min, apex_rt_min, height, snr (peak1d around the window), baseline, overlap, pv. Rows grouped by channel, then by sample. Areas and heights in scientific notation with a decimal
 point (7.84077E+04), read as numbers by a spreadsheet in any locale.
 --- stderr
