@@ -92,7 +92,7 @@ const AgilentD = (() => {
     const taken = (ST.files || []).map(x => x.name);
     for (const r of runs) {
       if (r.bruker) BrukerD.toModulo(r, out, T, mzmlName(r, [...taken, ...out.files.map(f => f.name)]));
-      else if (r.missing.length) out.errs.push([T("err.file.notAgilentD", { name: r.name, count: r.found.length, found: agFoundText(r) }), r.name]);
+      else if (r.missing.length) out.errs.push([T("err.file.notAgilentDList", { name: r.name, count: r.found.length, found: agFoundText(r) }), r.name]);
       else if (!rb || rb.disabled || !rb.nativeSamples) out.errs.push([T("err.file.agilentNoEngine", { name: r.name }), r.name]);
       else {
         // the folder is read as it is: its files are the members, a run is one sample
