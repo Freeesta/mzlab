@@ -659,6 +659,9 @@ usage: mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--ou
   --set sums=true     after the windows of each channel a row sum with the sum of their areas
   --set shifts=true   instead of the table, where the FIRST window lands in the other samples, as JSON
                       [{"file", "tr", "a", "b", "shift", "origin"}] (the bytes of the page's api/manfollow)
+  --set auto=true     instead of the table, every peak of every channel of every sample found by the engine and grouped by time, as JSON
+                      {"windows", "log", "groups", "unmatched"} (the bytes of the page's api/manauto); no windows file is needed
+  --set params=PATH   with auto=true: a JSON file {"rt_tol", "half", "valley", "sn", "min_pts", "despike", "split"}; a missing key keeps its default
   --out PATH  write there instead of the standard output
 
 Columns: channel (m/z of a SIM ion, q1>q3 of a transition, ion N without Q1), sample, label (the name of the window), area (counts x s), start_min,

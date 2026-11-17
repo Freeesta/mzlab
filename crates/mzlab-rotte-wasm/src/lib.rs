@@ -118,6 +118,16 @@ pub fn manual_follow(files: &str, window: &str) -> String {
     }
 }
 
+/// `api/manauto`: every peak of every channel of every sample, found by the engine and grouped by time (`manint::auto_text`): `{"windows","log","groups",
+/// "unmatched"}`; `params` is `{}` or the engine's numbers; "E" + JSON = the user's error.
+#[wasm_bindgen]
+pub fn manual_auto(files: &str, params: &str) -> String {
+    match mzlab_core::manint::auto_text(files, params) {
+        Ok(json) => json,
+        Err(e) => format!("E{}", e.to_json()),
+    }
+}
+
 /// `api/manvalley`: where one window of `manual_table` splits at `depth` (`manint::valleys_text`): `{"splits":[MIN,...]}`; "E" + JSON = the user's
 /// error.
 #[wasm_bindgen]

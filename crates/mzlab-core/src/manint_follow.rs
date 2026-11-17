@@ -97,6 +97,12 @@ pub(super) fn items_of(list: &Value, samples: &[Sample]) -> Result<Vec<Item>> {
     let mut items: Vec<Item> = Vec::new();
     for (i, w) in list.arr().iter().enumerate() {
         let (file, tr, a, b) = channel_of(w, samples)?;
+        // a window of the automatic mode (`manint_auto`) says its group (`grp`, the mean apex) and whether it has a counterpart in another file
+        let origin = match w.get("origin").and_then(Value::str) {
+            Some("auto") => "auto",
+            Some("unmatched") => "unmatched",
+            _ => "manual",
+        };
         items.push(Item {
             w: i,
             file,
@@ -104,8 +110,8 @@ pub(super) fn items_of(list: &Value, samples: &[Sample]) -> Result<Vec<Item>> {
             a,
             b,
             shift: 0.0,
-            origin: "manual",
-            gkey: a,
+            origin,
+            gkey: w.get("grp").and_then(Value::f64).unwrap_or(a),
         });
     }
     // a sample with a window of its own on a channel keeps it: the ones applied from another sample skip that channel there
