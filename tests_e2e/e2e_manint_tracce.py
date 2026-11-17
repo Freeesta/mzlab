@@ -26,12 +26,12 @@ try:
         pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
         pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
         pg.wait_for_function("E.files.length >= 2 && E.pending.length === 0", timeout=120000)
-        pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.wait_for_timeout(2500)
+        pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.wait_for_function("E.panels.some(p=>p.type==='xic'&&p._a&&p._a.sr&&p._a.sr.length)", timeout=60000)
         pg.evaluate(f"(()=>{{const p={XP};setActive(p);p.imode=null;p.intf='all'}})()")
         x = pg.evaluate(f"(()=>{{const s={XP}._a.sr[0];let k=0;s.y.forEach((v,i)=>{{if(v>s.y[k])k=i}});return s.x[k]}})()")
         pg.evaluate(f"(()=>{{const p={XP};intTargets(p,{x},null).forEach(s=>autoInt(p,s,{x}))}})()")
         pg.wait_for_function("document.querySelector('#manint') && !document.querySelector('#manint').hidden && document.querySelector('#manint-x tbody tr')", timeout=60000)
-        pg.wait_for_timeout(500)
+        pg.wait_for_function("MANTR.count() > 0", timeout=60000)
         def card():
             n = pg.evaluate(f"{XP}.ints.length"); assert n >= 1
             assert pg.locator("#manint-x tbody tr").count() == n, (n, pg.locator("#manint-x tbody tr").count())
