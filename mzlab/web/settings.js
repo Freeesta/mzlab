@@ -136,7 +136,7 @@ function uipOpen(btn) {
   // One flat list (no group headings), in order of use: Theme and Font as tile groups (radiogroups with a visible label), then rows with the control on the right.
   const theme = C.section(T("settings.theme"), C.opts("seg3", C.radios("uip-th", [["auto", T("settings.theme.auto")], ["light", T("settings.theme.light")], ["dark", T("settings.theme.dark")]], UIP.theme, "seg"), T("settings.theme.tip"), "uip-th-l"), "uip-th-l");
   const font = C.section(T("settings.font.label"), C.opts("f3", C.radios("uip-font", [["", T("settings.font.default"), T("settings.font.default.tip")], ["atkinson", T("settings.font.atkinson"), T("settings.font.atkinson.tip")], ["dyslexic", T("settings.font.dyslexic"), T("settings.font.dyslexic.tip")]], a11y.font || "", "font"), "", "uip-font-l"), "uip-font-l");
-  const rows = `<div class="imp-fld imp-pal" title="${esc(T("settings.pal.title"))}"><label for="uip-pal"><span class="ic">${C.GICON.look}</span>${T("settings.pal.label")}</label><select id="uip-pal">${pals}</select></div>`
+  const rows = `<div class="imp-fld imp-pal" title="${esc(T("settings.pal.title"))}"><label for="uip-pal"><span class="ic">${C.GICON.pal}</span>${T("settings.pal.label")}</label><select id="uip-pal">${pals}</select></div>`
     + C.sw(T("settings.hc.label"), T("settings.hc.tip"), 'id="uip-hc"', a11y.bg === "hc", "hc") + C.sw(T("settings.motion"), T("settings.motion.title"), 'id="uip-motion"', a11y.motion === "always", "motion")
     + C.sw(T("settings.xiclens"), T("settings.xiclens.title"), 'id="uip-xiclens"', UIP.xicLens, "side");
   const list = `<div class="imp-list" id="uip-list">${theme}${font}<div class="imp-rows">${rows}</div></div>`;
