@@ -166,7 +166,7 @@ try:
                 web = kept.get(n); assert web is not None, (n, list(kept))
                 at = next((j for j, (x, y) in enumerate(zip(nat.decode(), web)) if x != y), 0)
                 assert web.encode() == nat, (n, "first difference at", at, nat.decode()[max(0, at - 80):at + 80], web[max(0, at - 80):at + 80])
-            assert kept["cu.json"].startswith('{"format":"taratura/1"') and ",excluded_by_user\n" in kept["cu.csv"]
+            assert kept["cu.json"].startswith('{"format":"calibration/1"') and ",excluded_by_user\n" in kept["cu.csv"]
         step("quant.curve gives the calibration JSON and the concentrations CSV of the native flow run, byte for byte, also to a step wired to cu.concentrations", curve)
 
         def again():

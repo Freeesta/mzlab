@@ -135,7 +135,7 @@ def analyze_groups(rows: list[dict]) -> dict[str, int]:
             isomer_groups += 1
         elif kind == "different_formula":
             if len(grp_rows) < 2:
-                raise ValueError(f"Gruppo different_formula {grp_name} with <2 rows")
+                raise ValueError(f"Group different_formula {grp_name} with <2 rows")
             formulas = set(r["tp_formula_neutral"] for r in grp_rows)
             if len(formulas) != len(grp_rows):
                 raise ValueError(f"Duplicate formulas in different_formula {grp_name}: {formulas}")

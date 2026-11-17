@@ -52,7 +52,7 @@ I18N.add("en", {
   "conv.row.done": "Loaded ✓ ({scans} scans, {secs} s)",
   "conv.row.cancel": "Cancelled",
   "conv.row.cached": "Loaded from cache ✓ ({scans} scans)",
-  "conv.row.missing": "partial read: {read} of {declared} scans, the file ends before the rest",
+  "conv.row.missing": "partial read: the file declares {declared} scans, {read} found ({n} lacking), the file ends before the rest",
   "conv.row.noEvent": "{n} of {read} scans without their scan event: level and polarity unknown",
   "conv.row.damaged": "{n} of {read} scans damaged: left without their points, the other scans are read",
   "conv.row.leftOut": "partial read: {read} of {declared} scans, {n} damaged records left out",

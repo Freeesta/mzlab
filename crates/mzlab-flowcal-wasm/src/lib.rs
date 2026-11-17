@@ -58,7 +58,7 @@ pub fn flow_quant(
     Ok(o.0)
 }
 
-/// `curve_text` for the browser: the answer is `{"calibration": <taratura/1 text>, "concentrations": <the CSV>, "warnings": [<warn.* keys>]}`.
+/// `curve_text` for the browser: the answer is `{"calibration": <calibration/1 text>, "concentrations": <the CSV>, "warnings": [<warn.* keys>]}`.
 #[wasm_bindgen]
 pub fn flow_curve(
     params_json: &str,

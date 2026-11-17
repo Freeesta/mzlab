@@ -47,7 +47,7 @@ fn spec(v: &Value) -> Spec {
 #[test]
 fn pairs_not_quantised_match_ms_entropy_and_matchms() {
     let g = golden("pares.json");
-    for (n, c) in g["casi"].as_array().unwrap().iter().enumerate() {
+    for (n, c) in g["cases"].as_array().unwrap().iter().enumerate() {
         let (a, b, tol) = (spec(&c["a"]), spec(&c["b"]), c["tol"].as_f64().unwrap());
         let s = pair_scores(&a, &b, tol);
         assert!(
@@ -86,7 +86,7 @@ fn pairs_not_quantised_match_ms_entropy_and_matchms() {
 fn the_brute_force_of_mzlab_core_agrees_to_1e_9() {
     // mzlab-core::entropy is the reference of the golden data (tools/golden.py): the same pairs, the same score
     let g = golden("pares.json");
-    for (n, c) in g["casi"].as_array().unwrap().iter().enumerate() {
+    for (n, c) in g["cases"].as_array().unwrap().iter().enumerate() {
         let (a, b, tol) = (spec(&c["a"]), spec(&c["b"]), c["tol"].as_f64().unwrap());
         let core = mzlab_core::entropy::entropy_similarity(&a.mz, &a.it, &b.mz, &b.it, tol);
         let ours = pair_scores(&a, &b, tol).entropy;
@@ -334,7 +334,7 @@ fn quant(s: &Spec) -> Spec {
 
 fn check_attributio(quantise: bool, tol_score: f64) {
     let g = golden("parita_attributio_ms2.json");
-    for c in g["casi"].as_array().unwrap() {
+    for c in g["cases"].as_array().unwrap() {
         let id = c["id"].as_u64().unwrap();
         let (mut a, mut b) = (gnps_spec(&c["a"]), gnps_spec(&c["b"]));
         if quantise {

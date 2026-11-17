@@ -136,5 +136,16 @@ I18N.add("en", {
   "ctl.ticbg.col.hi": "To m/z",
   "ctl.ticbg.col.persist": "Persistence",
   "ctl.ticbg.col.share": "Share of the TIC",
-  "ctl.ticbg.col.conf": "Confidence"
+  "ctl.ticbg.col.conf": "Confidence",
+  "srow.frag": "Fragments and intensities",
+  "srow.notes": "Notes",
+  "srow.notes.ph": "Your notes on this spectrum",
+  "srow.notes.title": "Notes on this spectrum, saved with the session",
+  "srow.rt": "Retention times",
+  "srow.rt.win": "Scans {rt}",
+  "srow.rt.peak": "peak {a}–{b} min",
+  "srow.ce": "Collision energy",
+  "srow.ce.one": "CE {ce} eV",
+  "srow.ce.spread": "CE {ce} ± {sd} eV",
+  "srow.sample": "Sample"
 });

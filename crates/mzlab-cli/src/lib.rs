@@ -140,6 +140,7 @@ mod flow_transitions;
 mod idx_open;
 pub mod insilico_pack;
 mod ion_pattern_cmd;
+mod items_cmd;
 pub mod llm;
 mod llm_ctx;
 mod manual_table_cmd;
@@ -323,6 +324,7 @@ mod flow_rule_tests;
 mod flow_run_tests;
 #[cfg(test)]
 mod flow_stats_tests;
+pub mod folder_cmd;
 #[cfg(test)]
 mod llm_agent_tests;
 #[cfg(test)]
