@@ -170,6 +170,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | usability study of the site as a first-time user (opening a file, XIC, integration, export, reset, errors; it/en, 390 px, keyboard): findings by severity, what works, top 10, areas not covered | `docs/agenti/studio-ux.md` |
 | tabella picchi dello spettro da copiare (TSV), asse y in % fino a 100, pulsante XIC solo su MS¹ | `docs/agenti/tabella-picchi.md` |
 | dove Tabui perde un prodotto atteso (`mzlab-cli explain-missing`) | `docs/agenti/tabui-spiega.md` |
+| periodic table dialog and `elements/1` (`crates/mzlab-core/src/periodic.rs`, `tavola-periodica.js`, `mzlab-cli elements`) | `docs/agenti/tavola-periodica.md` |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |
 | velocità del lettore Thermo `.raw`: criteri A1-A7 e B1-B5, banco `thermo_bench`, `tools/bench/thermo_velocita.py`, numeri di partenza contro RFR (T-7) | `docs/agenti/thermo-velocita.md` |
 | fondo chimico del TIC/BPC (ioni di fondo persistenti, linea di base per ione, finestra tranquilla, bianco, finestre m/z escluse: `ticbg.rs`, `api/tic_background`, `mzlab-cli background`) | `docs/agenti/tic-fondo.md` |
