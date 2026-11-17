@@ -66,9 +66,9 @@ The dataset lets Tabui check the following algorithms:
 
 The file `attesi.json` holds the structured analytical truth for automatic checking:
 - `metadata`: chemical parameters of the parent, list of conditions, times, replicates and controls.
-- `composti`: definition of each compound (formula, m/z, RT, analytical role, description).
-- `file`: dictionary indexed by file name with experimental metadata and, for each
-  compound, the presence state (`presente: true/false`), expected retention time, height
+- `compounds`: definition of each compound (formula, m/z, RT, analytical role, description).
+- `files`: dictionary indexed by file name with experimental metadata and, for each
+  compound, the presence state (`present: true/false`), expected retention time, height
   and area (in counts * s).
 
 ## 5. Check with mzlab-cli
