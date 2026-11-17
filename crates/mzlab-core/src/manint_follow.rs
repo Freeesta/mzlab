@@ -42,7 +42,7 @@ pub(super) fn followers(src: &Item, samples: &[Sample], own: &[(usize, Key)]) ->
     let tr = &samples[src.file].1[src.tr];
     let k = key_of(tr);
     let mut out = Vec::new();
-    for (f, (_, trs)) in samples.iter().enumerate() {
+    for (f, (_, trs, _)) in samples.iter().enumerate() {
         let Some(dst) = trs.iter().find(|t| key_of(t) == k) else {
             continue;
         };

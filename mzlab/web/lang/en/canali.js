@@ -83,6 +83,7 @@ I18N.add("en", {
   "int.snap.menu": "Point snap",
   "canali.manint.h.channel": "Channel",
   "canali.manint.h.sample": "Sample",
+  "canali.manint.h.time": "Time",
   "canali.manint.h.start": "Start (min)",
   "canali.manint.h.end": "End (min)",
   "canali.manint.h.apex": "Apex RT (min)",

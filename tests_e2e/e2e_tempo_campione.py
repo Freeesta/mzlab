@@ -1,8 +1,8 @@
 """The time point written in a sample name (t0, 3h, 8h, ...) on the built site with the Rust engine: the loading table proposes it (yellow, editable), the file list shows a small muted tag
 beside the name of a SIM file («3h», with an accessible label), a name that only looks like a time (H20, a 90-10 ratio, a blank) has none, a time typed in the table replaces the proposal and the tag,
-and «Group by» offers the time. Synthetic SIM .wiff of tools/wiff_sim.py (sim_tempo: generic labels, invented numbers). Needs the site and the .wasm (python3 tools/prepara_sito.py).
+«Group by» offers the time, and the Manual-integrations table has a Time column after the sample (tag on screen, minutes in the CSV). Synthetic SIM .wiff of tools/wiff_sim.py (sim_tempo: generic labels, invented numbers). Needs the site and the .wasm (python3 tools/prepara_sito.py).
 Run from the repo root: python3 tests_e2e/e2e_tempo_campione.py"""
-# covers: mzlab/web/explore.js, mzlab/web/ordine.js, mzlab/web/ruoli-carica.js, crates/mzlab-core/src/samples/names.rs, tools/wiff_sim.py
+# covers: mzlab/web/integrazioni-manuali.js, mzlab/web/explore.js, mzlab/web/ordine.js, mzlab/web/ruoli-carica.js, crates/mzlab-core/src/samples/names.rs, tools/wiff_sim.py
 import subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -68,6 +68,28 @@ try:
             wait_for_js(pg, "E.files.find(f => f.label === 'RET 3h_2').time == null")
             need(pg.evaluate(TAGS)["RET 3h_2"] == [], pg.evaluate(TAGS)["RET 3h_2"])
         step("a time typed in the sample table replaces the tag, an emptied one removes it", override)
+        def manint():
+            pg.click("#flst .fl >> text=PERM 3h"); wait_for_js(pg, "E.files.some(f => f.vis && !f.gone)", 30000)
+            pg.click("#np-mrm"); wait_for_js(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)
+            pg.evaluate("(() => { E.browse = false; E.files.forEach(f => { f.vis = true; }); const p = E.panels.find(q => q.type === 'mrm'); p.tr = ''; draw(p); })()")
+            wait_for_js(pg, "(() => { const p = E.panels.find(q => q.type === 'mrm' && q._a); return !!p && new Set(p._a.sr.map(s => s.k)).size === E.files.length; })()", timeout=60000)
+            for n in ("PERM 3h", "RET t0 (2)", "H20 demi", "RET 3h_2"):      # the last two: a time typed above, a time emptied above
+                pg.evaluate("n => { const p = E.panels.find(q => q.type === 'mrm' && q._a); const f = E.files.find(x => x.label === n); addInt(p, p._a.sr.filter(x => x.k === f.k)[0], 1.0, 1.3, false); }", n)
+            wait_for_js(pg, "document.querySelectorAll('#manint tbody tr[data-org=manual]').length === 4", 60000)
+            col = lambda: pg.evaluate("Object.fromEntries([...document.querySelectorAll('#manint tbody tr[data-org=manual]')].map(r => [r.children[1].textContent, r.children[2].textContent]))")
+            need(col() == {"PERM 3h": "3h", "RET t0 (2)": "t0", "H20 demi": "90min", "RET 3h_2": ""}, col())
+            need(pg.evaluate("document.querySelector('#manint thead th:nth-child(3)').textContent") == pg.evaluate("I18N.t('canali.manint.h.time')"), "the Time header sits after the sample")
+            pg.evaluate("document.querySelector('#manint').scrollIntoView()")
+            with pg.expect_download() as d: pg.click("#manint [data-dl]")
+            rows = Path(d.value.path()).read_text(encoding="utf-8").strip().split("\n")
+            head = rows[0] if not rows[0].startswith("# mzLab ") else rows[1]
+            need(head.split(",")[:3] == ["channel", "sample", "time_min"], head)
+            tm = {l.split(",")[1]: l.split(",")[2] for l in rows if l.split(",")[1:2] and l.startswith(("253", "251", "2"))}
+            need(tm.get("PERM 3h") == "180" and tm.get("RET t0 (2)") == "0" and tm.get("H20 demi") == "90" and tm.get("RET 3h_2") == "", tm)      # minutes in the file, tags only on screen
+            drawer(pg, "stat"); wait_for_js(pg, "[...document.querySelectorAll('#cmp-tab input[data-m=time]')].some(i => i.offsetWidth > 0)", 8000)
+            pg.locator("#cmp-tab input[data-m=time][data-f='H20 demi.mzML']").fill("30"); pg.keyboard.press("Tab")
+            wait_for_js(pg, "[...document.querySelectorAll('#manint tbody tr[data-org=manual]')].some(r => r.children[1].textContent === 'H20 demi' && r.children[2].textContent === '30min')", 30000)
+        step("the Manual-integrations table shows the time of each sample, in minutes in the CSV, and follows an edit of the sample table", manint)
         step("no page error", lambda: (lambda e: e and (_ for _ in ()).throw(AssertionError(e)))([x for x in r.errs if x[0] == "pageerror"]))
     r.close()
 except Exception as e:
