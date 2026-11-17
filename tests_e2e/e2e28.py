@@ -21,7 +21,9 @@ try:
             # two built-in lists (known contaminants, pesticides): one switch each, titles without the reference
             n = pg.evaluate("document.querySelectorAll('#lst-src-checks input[type=checkbox]').length"); assert n == 2, n
             t = pg.inner_text("#lst-src-checks"); assert "Keller" not in t and "Anal. Chim" not in t and "contaminants" in t.lower() and "pesticides" in t.lower(), t
-            assert pg.locator("#lst-mode-seg").count() == 0 and pg.is_visible("#lst-view-seg"), "no files: HR version, no mode switch"
+            assert pg.locator("#lst-mode-seg").count() == 0 and pg.locator("#lst-view-seg").count() == 0, "no files: HR version, no mode switch, no tab bar (target screening is behind its flag)"
+            assert pg.is_visible("#lst-q") and pg.is_visible("#lst-tol") and pg.is_visible("#lst-unit") and pg.locator("#lst-pol").count() == 0, "one search field, the shared tolerance (no polarity buttons)"
+            assert pg.is_visible("#lst-count") and "matches" in pg.inner_text("#lst-count"), pg.inner_text("#lst-count")
             assert pg.locator("#lst-tbody tr").first.locator("td").count() == 9 and "." in pg.inner_text("#lst-tbody tr >> nth=0")
             # a simulated user list adds its own switch
             pg.evaluate("LISTE.addUserListFromCsv('prova.csv','mz,name,formula,polarity\\n100.1,Test,,1\\n')"); pg.wait_for_timeout(600)
@@ -34,7 +36,8 @@ try:
             try:
                 pg.evaluate("LISTE.open({})"); pg.wait_for_selector("#lst-tbody tr", timeout=8000)
                 assert pg.locator("#lst-tbody tr").first.locator("td").count() == 4 and pg.locator("#lst-table-wrap thead th:visible").count() == 4
-                assert not pg.is_visible("#lst-view-seg") and not pg.is_visible("#lst-tol-wrap") and not pg.is_visible("#lst-cont-signs")
+                assert pg.locator("#lst-view-seg").count() == 0 and pg.is_visible("#lst-tol") and not pg.is_visible("#lst-cont-signs")
+                assert pg.locator("#lst-unit button.on").inner_text() == "Da" and pg.input_value("#lst-tol") == "0.5", "unit resolution: Da, as in Adducts & losses"
                 import re
                 mzs = pg.evaluate("[...document.querySelectorAll('#lst-tbody tr td:first-child')].map(t=>t.textContent)"); assert mzs and all(re.fullmatch(r"\d+\.\d{4}", m) for m in mzs), mzs[:5]      # exact m/z with 4 decimals in LR too
                 pg.fill("#lst-q", "63,3"); t = pg.inner_text("#lst-tbody"); assert "63." in t and "PEG" in t, t[:200]      # comma decimals rank by m/z
@@ -49,6 +52,24 @@ try:
             finally:
                 pg.evaluate("E.files.splice(E.files.indexOf(window.__fake),1); HR.isHr=HR.__ish")
         step("Reference lists in LR: four columns, m/z rounded, no references", lists_lr)
+        def lists_tolerance():
+            # the tolerance is the one of Adducts & losses (same remembered choice) and the search honours Da and ppm
+            pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())")
+            pg.evaluate("CALCQUI.set({ppm:'5', da:'0.5', unit:{hr:null, lr:null}})")
+            pg.evaluate("LISTE.open({})"); pg.wait_for_selector("#lst-tbody tr", timeout=8000)
+            mz = pg.evaluate("LISTE.ensure().pos[300].mz")
+            q = "%.4f" % (mz + 0.02)                                   # 4 decimals: high resolution, ppm by default
+            pg.fill("#lst-q", q); wait_for_js(pg, "document.querySelector('#lst-unit button.on').textContent === 'ppm'", 5000)
+            n_ppm = pg.locator("#lst-tbody tr .pol").count()           # 5 ppm is far below 0.02 Da at this m/z unless the list is dense there
+            pg.click("#lst-unit button[data-u=da]"); pg.fill("#lst-tol", "0.05"); wait_for_js(pg, "CALCQUI.st.da === '0.05'", 5000)
+            assert pg.evaluate("JSON.parse(localStorage.getItem(NOMI.KEY('calcqui'))).unit.hr") == "da" and pg.evaluate("CALCQUI.st.da") == "0.05", "remembered like the Adducts & losses panel"
+            hits = pg.evaluate("[...document.querySelectorAll('#lst-tbody tr')].map(r => r.innerText)")
+            assert any("Da" in h for h in hits) and "match" in pg.inner_text("#lst-count"), (hits[:2], pg.inner_text("#lst-count"))
+            assert pg.evaluate("LISTE.find(LISTE.ensure(), 0, %s, 5).length" % q) == n_ppm, "ppm window of the engine unchanged"
+            pg.fill("#lst-tol", "0.00001"); wait_for_js(pg, "CALCQUI.st.da === '0.00001'", 5000)
+            assert pg.locator("#lst-tbody tr .pol").count() <= n_ppm
+            pg.evaluate("CALCQUI.set({ppm:'5', da:'0.5', unit:{hr:null, lr:null}})")
+        step("Reference lists: tolerance control of Adducts & losses, Da and ppm honoured, choice remembered", lists_tolerance)
         def ptable():
             pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())")
             pg.click("#np-pt"); pg.wait_for_timeout(500)

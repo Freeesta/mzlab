@@ -14,10 +14,12 @@ usage: mzlab-cli match-mz X --tables FILE.json [--set NAME=VALUE...] [--out PATH
   --set hr=1      high resolution: windows in mDa (losses, adducts) and ppm (contaminants); without it the window is +-0.5 Da
   --set mda=N     window of losses and adduct shifts in mDa (high resolution, default 3)
   --set ppm=N     window of contaminants in ppm (high resolution, default 5)
+  --set unit=da|ppm  with tol=N: the window of the contaminants in Da or ppm, in either resolution
+  --set tol=N     the window value for unit= (a number above 0)
   --set pol=+|-   keep the adducts and contaminants of that polarity (default both)
   --out PATH      write there instead of the standard output
 
-The answer is {\"x\", \"hr\", \"hits\": [{kind, id, ...}], \"more\", \"tol\"}; uses the same tables as the Addotti e perdite page.";
+The answer is {\"x\", \"hr\", \"hits\": [{kind, id, ...}], \"more\", \"tol\", \"contam\": {unit, tol}}; uses the same tables as the Addotti e perdite page.";
 
 fn number(name: &str, v: &str) -> Result<f64, String> {
     v.parse::<f64>()
@@ -34,6 +36,8 @@ struct Opts {
     mda: f64,
     ppm: f64,
     pol: String,
+    unit: String,
+    tol: Option<f64>,
 }
 
 /// `Ok(None)` = help was asked.
@@ -46,6 +50,8 @@ fn parse(args: Vec<String>) -> Result<Option<Opts>, String> {
         mda: 3.0,
         ppm: 5.0,
         pol: String::new(),
+        unit: String::new(),
+        tol: None,
     };
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
@@ -60,6 +66,8 @@ fn parse(args: Vec<String>) -> Result<Option<Opts>, String> {
                     "hr" => o.hr = matches!(v, "1" | "true"),
                     "mda" => o.mda = number(k, v)?,
                     "ppm" => o.ppm = number(k, v)?,
+                    "unit" if matches!(v, "da" | "ppm") => o.unit = v.to_string(),
+                    "tol" => o.tol = Some(number(k, v)?).filter(|t| *t > 0.0).or(Some(f64::NAN)),
                     "pol" if matches!(v, "+" | "-" | "") => o.pol = v.to_string(),
                     _ => return Err(format!("unknown --set {k}={v}")),
                 }
@@ -97,8 +105,16 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     // the opening brace is an escape: the size checker counts the braces of literals
     let open = "\x7b";
+    if o.tol.is_some_and(f64::is_nan) {
+        return Outcome::fail("--set tol needs a number above 0");
+    }
+    // unit and tol travel together: one without the other keeps the default window
+    let cont = match (o.unit.as_str(), o.tol) {
+        ("", _) | (_, None) => String::new(),
+        (u, Some(t)) => format!(r#""tol_unit":"{u}","tol":{t},"#),
+    };
     let req = format!(
-        r#"{open}"x":{x},"hr":{},"tol_mda":{},"tol_ppm":{},"pol":"{}",{rest}"#,
+        r#"{open}"x":{x},"hr":{},"tol_mda":{},"tol_ppm":{},"pol":"{}",{cont}{rest}"#,
         o.hr, o.mda, o.ppm, o.pol
     );
     match mzlab_core::search::match_number(&req) {

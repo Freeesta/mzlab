@@ -545,51 +545,59 @@ const LISTE = (() => {
   // the markup of the panel: search bar, active lists, user lists, exclusions and the table (the handlers are bound in mount())
   // the panel shows list names without a trailing bibliographic reference, e.g. «(Keller 2008)»
   const noRef = (/** @type {unknown} */ n) => String(n).replace(/\s*\([^)]*\d{4}\)\s*$/, "");
+  // the dormant HRMS Target Screening tab: shown only behind FEATURES.targetScreening («?targetscreening=1» or localStorage «qqq.dev.targetscreening» = «1», features.js)
+  const targetOn = () => typeof FEATURES !== "undefined" && !!FEATURES.targetScreening;
+  // the short names of the built-in lists (the chips); any other list keeps its own name
+  const GROUP_KEY = /** @type {Record<string, string>} */ ({ keller: "lst.grp.keller", pesticides: "lst.grp.pesticides" });
+  const grpName = (/** @type {Bag} */ L) => (GROUP_KEY[L.id] ? I18N.t(GROUP_KEY[L.id]) : noRef(L.name_en || L.name || L.id));
+  const srcName = (/** @type {string} */ id, /** @type {string} */ fallback) => { const L = [...ST.lists, ...ST.userLists].find(x => x.id === id); return L ? grpName(L) : noRef(fallback); };
   function panelHtml(/** @type {Bag} */ state) {
+    const compact = state.mode === "da";                      // unit resolution: the short table
     return `
       <div class="liste-panel" style="display:flex;flex-direction:column;gap:6px;padding:6px 8px;height:100%;box-sizing:border-box;overflow:auto">
-        <div style="display:${state.mode === "da" ? "none" : "flex"};align-items:center;gap:6px;border-bottom:1px solid var(--line,#cbd5e1);padding-bottom:4px;margin-bottom:2px">
+        ${targetOn() ? `<div style="display:${compact ? "none" : "flex"};align-items:center;gap:6px;border-bottom:1px solid var(--line,#cbd5e1);padding-bottom:4px;margin-bottom:2px">
           <span class="seg" id="lst-view-seg">
-            <button type="button" data-v="ref" class="on">${I18N.t("lst.view.ref")}</button>
+            <button type="button" data-v="ref" class="on">${I18N.t("lst.title")}</button>
             <button type="button" data-v="target">${I18N.t("lst.view.target")}</button>
           </span>
-        </div>
+        </div>` : ""}
         <div id="lst-ref-box" style="display:flex;flex-direction:column;gap:6px;flex:1">
         <div class="liste-bar">
           <div class="lb-row">
-            <label class="lb-grow"><span><i>m/z</i></span> <input type="text" id="lst-q" value="${EH(state.q)}" placeholder="${I18N.t("lst.qPh")}" aria-label="${I18N.t("lst.qPh")}"></label>
-            <label id="lst-tol-wrap"${state.mode === "da" ? " hidden" : ""}><span id="lst-tol-lbl">${state.mode === "da" ? "&plusmn; Da" : "&plusmn; ppm"}</span> <input id="lst-tol" data-num=">0" value="${state.mode === "da" ? state.tolDa : state.tolPpm}" step="${state.mode === "da" ? "0.1" : "1"}" min="0.001" aria-label="${I18N.t("lst.tolAria")}"></label>
+            <label class="lb-grow"><span class="sr-only">${I18N.t("lst.qPh")}</span><input type="search" id="lst-q" value="${EH(state.q)}" placeholder="${I18N.t("lst.qPh")}" aria-label="${I18N.t("lst.qPh")}" autocomplete="off"></label>
           </div>
+          <div id="lst-ctl"></div>
         </div>
 
-        <div style="display:${state.mode === "da" ? "none" : "flex"};align-items:center;gap:12px;font-size:12px;flex-wrap:wrap">
+        <div role="group" aria-labelledby="lst-src-lbl" style="display:flex;align-items:center;gap:6px;font-size:12px;flex-wrap:wrap">
+          <span class="muted" id="lst-src-lbl">${I18N.t("lst.active")}</span>
+          <span id="lst-src-checks" class="lst-chips"></span>
+        </div>
+
+        <div style="display:${compact ? "none" : "flex"};align-items:center;font-size:12px">
           <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer" title="${I18N.t("lst.contSigns.title")}">
             <input type="checkbox" id="lst-cont-signs" ${isOn() ? "checked" : ""}>
             <span>${I18N.t("lst.contSigns")}</span>
           </label>
         </div>
 
-        <div style="display:flex;align-items:center;gap:12px;font-size:12px;flex-wrap:wrap">
-          <span class="muted" id="lst-src-lbl">${I18N.t("lst.active")}</span>
-          <span id="lst-src-checks" style="display:inline-flex;gap:10px;flex-wrap:wrap"></span>
-        </div>
-
         <div id="lst-userlists-bar" style="font-size:12px;padding:4px 8px;background:var(--panel,#fff);border:1px dashed var(--line,#cbd5e1);border-radius:6px" hidden></div>
         <div id="lst-excl" class="sm" style="padding:4px 8px;border:1px dashed var(--line,#cbd5e1);border-radius:6px" hidden></div>
-        <span id="lst-count" class="sm muted" role="status" hidden></span>
+        <span id="lst-count" class="sm muted" role="status" aria-live="polite"></span>
 
-        <div id="lst-table-wrap" style="flex:1;min-height:220px;overflow:auto;border:1px solid var(--line,#e2e8f0);border-radius:6px;background:var(--panel,#fff)">
+        <div id="lst-table-wrap" role="region" tabindex="0" aria-label="${I18N.t("lst.title")}" style="flex:1;min-height:220px;overflow:auto;border:1px solid var(--line,#e2e8f0);border-radius:6px;background:var(--panel,#fff)">
           <table class="lct" style="width:100%;border-collapse:collapse;font-size:12px">
+            <caption class="sr-only">${I18N.t("lst.title")}</caption>
             <thead>
               <tr style="position:sticky;top:0;background:var(--soft,#f1f5f9);z-index:2">
-                <th class="num" style="width:${state.mode === "da" ? 76 : 84}px"><i>m/z</i>${state.mode === "da" ? "" : " " + I18N.t("lst.th.theo")}</th>
-                ${state.mode === "da" ? "" : `<th class="num" style="width:70px">&Delta;</th>`}
-                <th>${I18N.t("lst.col.name")}</th>
-                ${state.mode === "da" ? "" : `<th>${I18N.t("lst.th.series")}</th>`}
-                <th>${I18N.t("lst.th.ion")}</th>
-                ${state.mode === "da" ? "" : `<th>${I18N.t("lst.col.formula")}</th>`}
-                <th>${I18N.t("lst.th.pol")}</th>
-                ${state.mode === "da" ? "" : `<th>${I18N.t("lst.th.class")}</th><th class="lst-src-col">${I18N.t("lst.th.source")}</th>`}
+                <th scope="col" class="num" style="width:${compact ? 76 : 84}px" title="${I18N.t("lst.th.theo")}"><i>m/z</i></th>
+                ${compact ? "" : `<th scope="col" class="num" style="width:70px">${I18N.t("lst.th.err")}</th>`}
+                <th scope="col">${I18N.t("lst.col.name")}</th>
+                ${compact ? "" : `<th scope="col">${I18N.t("lst.th.series")}</th>`}
+                <th scope="col">${I18N.t("lst.th.ion")}</th>
+                ${compact ? "" : `<th scope="col">${I18N.t("lst.col.formula")}</th>`}
+                <th scope="col">${I18N.t("lst.th.pol")}</th>
+                ${compact ? "" : `<th scope="col">${I18N.t("lst.th.class")}</th><th scope="col" class="lst-src-col">${I18N.t("lst.th.source")}</th>`}
               </tr>
             </thead>
             <tbody id="lst-tbody"></tbody>
@@ -626,7 +634,7 @@ const LISTE = (() => {
     if (elViewSeg) {
       elViewSeg.querySelectorAll("button").forEach((/** @type {HTMLElement} */ b) => { b.onclick = () => switchToView(b.dataset.v); });
     }
-    if (opt.targetScreening) switchToView("target");
+    if (opt.targetScreening && elViewSeg) switchToView("target");       // without the flag there is no tab bar: the lists stay
   }
 
   function mount(/** @type {HTMLElement} */ container, /** @type {Bag} */ opt = {}) {
@@ -636,16 +644,16 @@ const LISTE = (() => {
     // Initial state of controls
     const /** @type {Bag} */ state = {
       q: opt.mz != null ? String(opt.mz) : "",
-      mode: opt.hr ? "ppm" : (opt.mz != null ? "da" : (window.TBL_HR ? (TBL_HR() ? "ppm" : "da") : "ppm")),
-      tolDa: 0.5,
-      tolPpm: typeof UIP !== "undefined" && UIP.hrPpm ? UIP.hrPpm : 5
+      mode: opt.hr ? "ppm" : (opt.mz != null ? "da" : (window.TBL_HR ? (TBL_HR() ? "ppm" : "da") : "ppm"))     // only the layout: the short table at unit resolution
     };
 
     container.innerHTML = panelHtml(state);
     setupViewSwitcher(container, opt);
 
     const elQ = container.querySelector("#lst-q");
-    const elTol = container.querySelector("#lst-tol");
+    // the tolerance (number + Da/ppm) is the one of the Adducts & losses panel: same component, same remembered choice (calc-qui-ui.js, controls only)
+    const elCtl = /** @type {HTMLElement | null} */ (container.querySelector("#lst-ctl"));
+    const tolView = elCtl && typeof CALCQUI !== "undefined" && CALCQUI.mount ? CALCQUI.mount({ ctl: elCtl, out: document.createElement("div"), idp: "lst-", controls: true, noPol: true, arg: () => ({ text: state.q, ans: 0 }), change: () => render() }) : null;
     const elTbody = container.querySelector("#lst-tbody");
     const elCount = container.querySelector("#lst-count");
     const elChecks = container.querySelector("#lst-src-checks");
@@ -668,21 +676,19 @@ const LISTE = (() => {
       renderExcl();
       const act = rd(KEY_LISTS, {});
       const allLists = [...ST.lists, ...ST.userLists];
-      if (allLists.length < 2) {                              // one list only: a fixed title with its source, no switch
+      const lbl = (/** @type {Bag} */ L) => `<span>${EH(grpName(L))}</span> <span class="muted">(${(L.items || []).length})</span>`;
+      if (allLists.length < 2) {                              // one list only: a fixed chip, no switch
         const L = allLists[0];
-        elChecks.innerHTML = L ? `<b>${EH(noRef(L.name_en || L.name))}</b>` : "";
+        const one = L ? `<span class="lst-chip">${lbl(L)}</span>` : "";
+        elChecks.innerHTML = one;
         elChecksLbl.hidden = true;
       } else {
-      elChecksLbl.hidden = false;
-      elChecks.innerHTML = allLists.map(L => {
-        const on = act[L.id] !== false;
-        return `<label style="display:inline-flex;align-items:center;gap:3px;cursor:pointer">
-          <input type="checkbox" data-lid="${EH(L.id)}" ${on ? "checked" : ""}> <span>${EH(noRef(L.name_en || L.name))}</span>
-        </label>`;
-      }).join("");
-      elChecks.querySelectorAll("input[data-lid]").forEach((/** @type {HTMLInputElement} */ chk) => {
-        chk.onchange = () => { toggleListActive(/** @type {string} */ (chk.dataset.lid), chk.checked); render(); };
-      });
+        elChecksLbl.hidden = false;
+        const chips = allLists.map(L => `<label class="lst-chip"><input type="checkbox" data-lid="${EH(L.id)}" ${act[L.id] !== false ? "checked" : ""}> ${lbl(L)}</label>`).join("");
+        elChecks.innerHTML = chips;
+        elChecks.querySelectorAll("input[data-lid]").forEach((/** @type {HTMLInputElement} */ chk) => {
+          chk.onchange = () => { toggleListActive(/** @type {string} */ (chk.dataset.lid), chk.checked); render(); };
+        });
       }
 
       if (ST.userLists.length) {
@@ -713,12 +719,12 @@ const LISTE = (() => {
       const hasMz = /^\d+(?:[.,]\d*)?$|^[.,]\d+$/.test(qRaw) && numIt(qRaw) > 0;
       const qMz = hasMz ? numIt(qRaw) : NaN;
       const qTxt = hasMz ? "" : qRaw.toLowerCase();
-      const isNom = state.mode === "da";
-      const tolVal = numIt(state.tol) || (isNom ? 0.5 : 5);
+      const compact = state.mode === "da";
+      const o = CALCQUI.opts(CALCQUI.arg(state.q, 0)), byDa = o.unit === "da", tolVal = o.tol;     // the choice of the Adducts & losses panel: Da or ppm
 
       /** @type {Bag[]} */ let items = [];
       if (hasMz) {
-        items = isNom ? findNominal(idx, 0, qMz, tolVal) : find(idx, 0, qMz, tolVal, false);
+        items = byDa ? findNominal(idx, 0, qMz, tolVal) : find(idx, 0, qMz, tolVal, false);
       } else {
         // Collect all items from active lists for browsing
         const act = activeMap();
@@ -742,23 +748,19 @@ const LISTE = (() => {
 
       const limit = 400;
       const shown = items.slice(0, limit);
-      if (elCount) {                                          // a calm note on the cut, never a silent one
-        const cut = items.length > limit;
-        elCount.hidden = !cut;
-        elCount.textContent = cut ? I18N.t("lst.cut", { n: limit, m: items.length }) : "";
-      }
+      if (elCount) elCount.textContent = items.length > limit ? I18N.t("lst.count.cut", { n: limit, m: items.length }) : I18N.t("lst.count", { n: items.length });     // always says how many, and when the table is cut
 
       if (!shown.length) {
-        elTbody.innerHTML = `<tr><td colspan="${isNom ? 4 : 9}" class="muted">${/** @type {any} */ (window).EMPTYLEAF("empty.lists")}</td></tr>`;
+        elTbody.innerHTML = `<tr><td colspan="${compact ? 4 : 9}" class="muted">${/** @type {any} */ (window).EMPTYLEAF("empty.lists")}</td></tr>`;
         return;
       }
 
       elTbody.innerHTML = shown.map(it => {
-        const delta = hasMz ? (isNom ? (it.diffDa != null ? (it.diffDa >= 0 ? "+" : "") + it.diffDa.toFixed(3) + " Da" : "")
+        const delta = hasMz ? (byDa ? (it.diffDa != null ? (it.diffDa >= 0 ? "+" : "") + it.diffDa.toFixed(3) + " Da" : "")
                                     : (it.err != null ? (it.err >= 0 ? "+" : "") + it.err.toFixed(1) + " ppm" : "")) : "";
         const polBadge = it.pol === 1 ? `<span class="pol pos" title="${I18N.t("lst.pol.pos")}" style="font-size:12px">+</span>` : it.pol === -1 ? `<span class="pol neg" title="${I18N.t("lst.pol.neg")}" style="font-size:12px">&minus;</span>` : `<span class="pol both" title="${I18N.t("lst.pol.both")}" style="font-size:12px">&plusmn;</span>`;
         const seriesInfo = it.series ? `<span class="sm" title="${I18N.t("lst.member", { n: it.series.n })}">${I18N.t(it.series.n === 1 ? "lst.unitShort.one" : "lst.unitShort.many", { n: it.series.n })}</span>` : "";
-        if (isNom) return `<tr>
+        if (compact) return `<tr>
           <td class="num font-mono"><b>${it.mz.toFixed(4)}</b></td>
           <td class="lst-name" title="${EH(it.name)}"><b>${EH(it.name)}</b></td>
           <td>${EH(it.adduct || I18N.t("lst.mzOnly"))}</td>
@@ -773,19 +775,13 @@ const LISTE = (() => {
           <td>${it.formula ? fmtSub(it.formula) : "<span class='muted'>&ndash;</span>"}</td>
           <td>${polBadge}</td>
           <td class="sm muted">${EH(it.cls || "")}</td>
-          <td class="sm lst-src-col">${EH(noRef(it.listName || it.list))}</td>
+          <td class="sm lst-src-col">${EH(srcName(it.list, it.listName || it.list))}</td>
         </tr>`;
       }).join("");
     }
 
     // Bind event listeners
-    elQ.oninput = (/** @type {Event} */ e) => { state.q = /** @type {HTMLInputElement} */ (e.target).value; render(); };
-    elTol.oninput = (/** @type {Event} */ e) => {
-      const v = numIt(/** @type {HTMLInputElement} */ (e.target).value);
-      if (state.mode === "da") state.tolDa = v || 0.5;
-      else state.tolPpm = v || 5;
-      render();
-    };
+    elQ.oninput = (/** @type {Event} */ e) => { state.q = /** @type {HTMLInputElement} */ (e.target).value; if (tolView) CALCQUI.sync(tolView); render(); };
 
     ready().then(() => {
       renderSourceChecks();
