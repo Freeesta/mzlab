@@ -446,8 +446,8 @@ mod auto;
 pub use auto::auto_text;
 
 #[cfg(test)]
-#[path = "manint_tests.rs"]
-mod tests;
-#[cfg(test)]
 #[path = "manint_auto_tests.rs"]
 mod auto_tests;
+#[cfg(test)]
+#[path = "manint_tests.rs"]
+mod tests;
