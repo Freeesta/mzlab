@@ -173,7 +173,7 @@
     if (!on) return;
     showTabs();
     // a direct address (#/tpmine) fired its tpview before this tab and its section existed: show the view now
-    if (shellReady() && S.view === "tpmine" && tabs.has("tpmine")) openView("tpmine");
+    { const x = tabs.get("tpmine"); if (shellReady() && S.view === "tpmine" && x && !x.opened) openView("tpmine"); }   // once: openView fires tpview, which calls this again
   }
   // for callers (tests, tools) that need the package without opening a tab: same promise as the idle start
   /** @type {any} */ (reg).ensure = ensureLoaded;
