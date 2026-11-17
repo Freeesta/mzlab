@@ -13,7 +13,7 @@ try:
         h = {}
         def normal():
             s = pg.evaluate(ST); h.update(s)
-            assert s["pr"] == "false" and s["t"] == "Schermo intero" and s["al"] == "Schermo intero" and not s["inn"] and s["out"] and s["pad"] == "4px", s
+            assert s["pr"] == "false" and s["t"] == "Full screen" and s["al"] == "Full screen" and not s["inn"] and s["out"] and s["pad"] == "4px", s
         step("window: expand icon, title «Schermo intero», no margin", normal)
         def full():
             pg.click("#fs-btn"); pg.wait_for_function("!!document.fullscreenElement"); pg.wait_for_timeout(300)
@@ -23,7 +23,7 @@ try:
         step("full screen: collapse icon, title with Esc, 14 px margin only on top", full)
         def back():
             pg.evaluate("document.exitFullscreen()"); pg.wait_for_function("!document.fullscreenElement"); pg.wait_for_timeout(300)
-            s = pg.evaluate(ST); assert s["pr"] == "false" and s["t"] == "Schermo intero" and s["pad"] == "4px" and not s["inn"], s
+            s = pg.evaluate(ST); assert s["pr"] == "false" and s["t"] == "Full screen" and s["pad"] == "4px" and not s["inn"], s
         step("leaving (as Esc does) restores icon, title and margin", back)
 finally:
     r.close(); r.report()

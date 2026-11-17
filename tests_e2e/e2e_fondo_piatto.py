@@ -44,7 +44,7 @@ try:
             pg.locator(f"[data-ib='fl+']").first.focus(); pg.keyboard.press("ArrowRight"); ready(pg)
             pg.wait_for_function(f"{CP}.fondo.ib.mod === true", timeout=10000); ready(pg)
             s = state(); assert s["a"][0] > A0[0] and s["mod"], (s, A0)
-            t = pg.evaluate(f"{CP}.el.querySelector('.ibk').textContent"); assert "modificata da te" in t and "ripristina automatico" in t, t
+            t = pg.evaluate(f"{CP}.el.querySelector('.ibk').textContent"); assert "modified by you" in t and "restore automatic" in t, t
             ae = pg.evaluate("document.activeElement && (document.activeElement.dataset.ib || document.activeElement.outerHTML.slice(0, 80))"); assert ae == "fl+", ("the focus must stay on the arrow", ae)
         step("one arrow key moves the window: «modificata da te» and the restore button appear, the focus stays", keyboard)
         def drag():
