@@ -264,17 +264,19 @@ impl Rows {
             r.parent = p;
         }
         let hr1 = is_hr(&rows.iter().filter(|r| r.level == 1).collect::<Vec<_>>());
+        // a list that closed holds what it declares (a wrong `count` is not a loss); the optical spectra are not rows
+        let declared = if closed {
+            rows.len()
+        } else {
+            head.declared.saturating_sub(optical)
+        };
         Table {
             rows,
             nce: head.nce,
             hr1,
             n_chromatograms,
             window: window.span,
-            declared: if closed {
-                0
-            } else {
-                head.declared.saturating_sub(optical)
-            },
+            declared,
         }
     }
 }

@@ -124,11 +124,11 @@ fn optical_spectra_and_closed_lists_never_count_as_missing() {
         .replace("count=\"2\"", "count=\"5\"")
         .replace("</spectrumList>", &format!("{uv}</spectrumList>"));
     let t = read(&mut full.clone().into_bytes(), full.len() as u64).unwrap();
-    assert_eq!((t.rows.len(), t.declared), (2, 0));
+    assert_eq!((t.rows.len(), t.declared), (2, 2));
     // the same list closing with a wrong count (more than there is): the file is whole, nothing is missing
     let wrong = full.replace("count=\"5\"", "count=\"5005\"");
     let t = read(&mut wrong.clone().into_bytes(), wrong.len() as u64).unwrap();
-    assert_eq!((t.rows.len(), t.declared), (2, 0));
+    assert_eq!((t.rows.len(), t.declared), (2, 2));
     // cut before the list closes: the optical spectra read are subtracted, the rest is missing
     let cut = &wrong[..wrong.find("</spectrumList>").unwrap()];
     let t = read(&mut cut.as_bytes().to_vec(), cut.len() as u64).unwrap();
