@@ -696,3 +696,6 @@ header>:not(#stbar){flex-shrink:0}header .hq{width:24px;height:24px}
 /* touch paste: the chip over the drawing that says the next tap drops the copied structure (Cancel = a 44 px target) */
 #tp-paste-chip{position:fixed;z-index:9000;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:6px 8px 6px 14px;background:var(--panel);color:var(--ink);border:1px solid var(--accent);border-radius:8px;box-shadow:0 4px 14px rgba(60,45,10,.18)}
 #tp-paste-chip[hidden]{display:none}#tp-paste-chip button{min-height:44px;min-width:44px;padding:0 14px}
+
+.wiffpair{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:7000;max-width:min(560px,calc(100vw - 24px));background:var(--panel);color:var(--ink);border:1px solid var(--accent);border-radius:6px;padding:8px 12px;box-shadow:0 2px 10px color-mix(in srgb,var(--ink) 25%,transparent)}
+.wiffpair[hidden]{display:none}.wiffpair .wp-msg{margin:0 0 6px}.wiffpair .wp-act{display:flex;gap:8px;flex-wrap:wrap}.wiffpair button{min-height:28px;min-width:28px}
