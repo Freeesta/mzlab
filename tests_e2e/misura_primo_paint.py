@@ -113,7 +113,7 @@ def one(b, base, scen, browser_name):
     if scen in VIEWS:
         btn, shown = VIEWS[scen]
         t0 = pg.evaluate("performance.now()")
-        if scen == "tabui": pg.evaluate("location.hash = '#/tpmine'")      # no nav button: the exact address
+        if scen == "tabui": pg.evaluate("location.hash = '#/tpmine'")      # no nav button: the exact address (the page is usable here)
         else: pg.click(btn)
         poll(pg, f"!!document.querySelector('{shown}')", 60)
         t1 = pg.evaluate("performance.now()")
