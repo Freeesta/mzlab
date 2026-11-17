@@ -132,6 +132,8 @@ jobs:
             target
           key: desktop-${{ matrix.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-tauri-${{ env.TAURI_CLI }}
           restore-keys: desktop-${{ matrix.os }}-
+      - name: numpy (the Python reference of tests/fast_spectra_merge.rs; the program itself has no Python)
+        run: python -m pip install numpy
       - name: cargo test (the mzlab:// protocol against the golden data)
         env:
           MZLAB_GOLDEN_STRICT: "1"
