@@ -183,6 +183,11 @@ fn insilico_score_follows_the_reference() {
     assert_eq!(r.len(), 1);
     assert_eq!(r[0].candidate.name, "Caffeine");
     assert!(r[0].mass_ppm.abs() < 1.0);
+
+    // sign: a precursor above the theoretical m/z gives a positive error, (observed - theoretical) / theoretical (study item A3)
+    let hi = rank(195.0882, "POS", &[(138.0662, 100.0)], &cands, &InSilicoOpts::default());
+    assert_eq!(hi.len(), 1);
+    assert!((1.0..5.0).contains(&hi[0].mass_ppm), "{}", hi[0].mass_ppm);
 }
 
 /// MS-03: the hydrogen-rearrangement attribution equals the reference built on Attributio's sub-formula table (formulas, shifts, ppm, losses, score at 1e-9).
