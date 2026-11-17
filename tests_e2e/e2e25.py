@@ -39,7 +39,7 @@ try:
             for bad in ("Size of the text of the", "Applies to menus", "tutorial", "Install", "Number", "suggestions"):
                 assert bad.lower() not in t.lower(), bad
             assert pg.locator("#uipset input[type=checkbox]").count() == 3 and pg.locator("#uip-merge").count() == 0 and pg.locator("#uip-tog").count() == 0      # no merge switch (the engine decides); no «Show all experiments together» (it is the only view)
-            assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["By file (default)", "By time", "Accessible", "High contrast", "Rainbow", "Black and white"]
+            assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["By file", "By time", "Accessible", "High contrast", "Rainbow", "Black and white"]
             assert pg.input_value("#uip-pal") == "file"
             pg.check("input[name=uip-th][value=dark]", force=True); pg.wait_for_timeout(400)
             pg.check("input[name=uip-th][value=auto]", force=True); pg.wait_for_timeout(300)

@@ -105,11 +105,7 @@ Not imported or run by any test, workflow, `pre_pr.py` or `verifica.py`; each is
 |---|---|---|---|
 | `docs/schemi/runorder-1.json` | 2 724 | 2026-10-30 | `git grep -n runorder-1.json` is empty: the only schema of `docs/schemi/` no test validates against, but `runorder/1` is a live output (`crates/mzlab-feat/src/runorder.rs`). Better wired into a test than deleted. |
 | `tools/generate_preview.py` | 3 277 | 2026-11-13 | `git grep -n generate_preview -- ':!tools/generate_preview.py'` is empty, yet it is the only generator of the live `mzlab/web/anteprima.png` (link preview). |
-| `docs/inventari/TOOLTIP-disegno.md` | 8 423 | 2026-11-13 | The seven `TOOLTIP-*.md` are written by `python3 tools/inventory_tooltip.py --md docs/inventari`; no test checks they are current and nothing links them except the generator. `TOOLTIP.md` itself is live (read by tests). |
-| `docs/inventari/TOOLTIP-liste-1.md` | 21 411 | 2026-11-13 | as above |
-| `docs/inventari/TOOLTIP-liste-2.md` | 918 | 2026-11-13 | as above |
-| `docs/inventari/TOOLTIP-pannelli-1.md` | 21 392 | 2026-11-13 | as above |
-| `docs/inventari/TOOLTIP-pannelli-2.md` | 2 197 | 2026-11-13 | as above |
+| `docs/inventari/TOOLTIP-disegno.md` | 8 423 | 2026-11-13 | The five `TOOLTIP-*.md` are written by `python3 tools/inventory_tooltip.py --md docs/inventari`; no test checks they are current and nothing links them except the generator. `TOOLTIP.md` itself is live (read by tests). |
 | `docs/inventari/TOOLTIP-spettri.md` | 14 695 | 2026-11-13 | as above |
 | `docs/inventari/TOOLTIP-tabui.md` | 10 968 | 2026-11-13 | as above |
 
