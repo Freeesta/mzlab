@@ -1,4 +1,4 @@
-# Statistics of the CI bottlenecks (tools/ci_metrics.py, docs/agenti/ci-veloce.md): one JSONL line per event on the orphan branch `stat-ci`.
+# Statistics of the CI bottlenecks (tools/ci_metrics.py, docs/agenti/ci-fast.md): one JSONL line per event on the orphan branch `stat-ci`.
 # No secret and no third-party action; GITHUB_TOKEN only reads the API and pushes to `stat-ci` (a push with GITHUB_TOKEN starts no workflow).
 # pull_request_target and workflow_run run the file from main and check out main only: code of a pull request is never run with the write token.
 name: stat-ci

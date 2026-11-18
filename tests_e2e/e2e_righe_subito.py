@@ -1,4 +1,4 @@
-"""Files dropped before the engine is ready are rows of the side list at once, «Waiting for engine» (upload in shell.js, docs/agenti/avvio.md): the .wasm is held back, two mzML are
+"""Files dropped before the engine is ready are rows of the side list at once, «Waiting for engine» (upload in shell.js, docs/agenti/startup.md): the .wasm is held back, two mzML are
 dropped, two rows with the right names and no percent are there (role=status count); released, the same rows complete; an engine that fails turns them into failed rows with the banner's reason;
 × on a waiting row leaves that file out. Synthetic data. Needs the site and the .wasm (python tools/prepara_sito.py)."""
 # covers: mzlab/web/shell.js, mzlab/web/avvio-progressivo.js, mzlab/web/upload-rows.js, mzlab/web/conversione.js

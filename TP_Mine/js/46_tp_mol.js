@@ -3,7 +3,7 @@
 // a full structure when the site is certain, one hydroxyl bond from the centre of the ring (variable attachment, as in ChemDraw) for a substitution on an aromatic ring, square brackets with the change («+O»,
 // «−2H») for any other zone. Never one drawing per possible position. The zone the fragments point to is shaded and hatched; a zone of the uncertain case gets its class number and its own dash.
 // 2D coordinates come from OpenChemLib (the SMILES of the parent, atoms in SMILES order), so the drawing in the Draw tab is never touched. Brackets and the dashed attachment are `parentesi.js`.
-// Nothing here is chemistry: atoms, ends and labels arrive from the engine. «Open in Draw» builds the V3000 that the Draw tab reads (S-group DAT «MZLAB» / «MZLAB_ENDPTS», docs/agenti/disegno.md).
+// Nothing here is chemistry: atoms, ends and labels arrive from the engine. «Open in Draw» builds the V3000 that the Draw tab reads (S-group DAT «MZLAB» / «MZLAB_ENDPTS», docs/agenti/drawing.md).
 // Colours only from CSS variables (Okabe-Ito `--oi1..6`); every cue also has a shape (hatch, dash, number). No animation. Texts in English.
 (() => {
   "use strict";
@@ -194,7 +194,7 @@
   }
 
   /**
-   * The V3000 molfile the Draw tab reads («Open in Draw»): the parent with the change, written as the Draw tab does (docs/agenti/disegno.md): `structure` = the product with its new atom;
+   * The V3000 molfile the Draw tab reads («Open in Draw»): the parent with the change, written as the Draw tab does (docs/agenti/drawing.md): `structure` = the product with its new atom;
    * `bracket` = the zone as a data S-group «MZLAB» whose data is the change; `multicenter` = the new atom bonded to the first candidate plus a data S-group «MZLAB_ENDPTS» («ANY») on the candidates and it.
    * @param {string} smiles @param {Drawing} d @returns {Promise<string | null>}
    */

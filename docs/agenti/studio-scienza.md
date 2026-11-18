@@ -98,7 +98,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Status: OPEN (owner decision): naming the estimator or computing it on the raw trace changes exported S/N columns.
 
 ### B7 - convention unclear - areas in counts x s and counts x min
-- Place: `crates/mzlab-core/src/baseline.rs` and `peakq.rs` (minutes) against the manual and feature areas (seconds); stated in `docs/agenti/dati-integrazione.md`.
+- Place: `crates/mzlab-core/src/baseline.rs` and `peakq.rs` (minutes) against the manual and feature areas (seconds); stated in `docs/agenti/data-integration.md`.
 - Expected: one unit for the same quantity (H sigma sqrt(2 pi) = 125.331 counts x min = 7519.88 counts x s for the test Gaussian).
 - Observed: `mzlab-cli peak-area g1.csv --from 0.6 --to 1.4` -> 7519.8848; `mzlab-cli peak-auto g1.csv` -> 125.291.
 - Fix: counts x s everywhere, with the unit in the field name.

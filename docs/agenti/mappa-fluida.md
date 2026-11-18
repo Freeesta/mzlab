@@ -1,6 +1,6 @@
 # Fluid map: study of the RT×m/z map transitions
 
-Measurements, diagnoses and open work for zoom, pan, crosshair, file switching, scale and 3D of the 2D map, with synthetic files up to HRMS scale. The map functions are described in `dati-mappa.md`.
+Measurements, diagnoses and open work for zoom, pan, crosshair, file switching, scale and 3D of the 2D map, with synthetic files up to HRMS scale. The map functions are described in `data-map.md`.
 
 ## How to repeat the measurements
 - `MZLAB_CHROMIUM=<chrome> python3 tools/bench_map.py lr,hrc,hrp --wd DIR [--json]`: creates the synthetic mzML files in `DIR` (not in the repository), builds the site with the WASM engine (`build_site.py` + `cargo build` + `wasm-bindgen`), opens two files per case in headless Chromium with a persistent profile (the quota of an incognito context rejects the 300 MB files) and measures the gestures. `--json` prints one line per case.
@@ -84,7 +84,7 @@ Each piece of work is delivered with its `bench_map.py` measurement before and a
 - Measurements on a headless 4-CPU Linux container; iPad and Safari are not measured (handle reading and P10 need a real test).
 
 ## 3D map viewer (`mappa3d.js`)
-Viewer of the Data view: opening errors, controls, preload, drawing cost. The 2D map is in `dati-mappa.md`.
+Viewer of the Data view: opening errors, controls, preload, drawing cost. The 2D map is in `data-map.md`.
 
 - **If 3D does not open** (`failure3d` in `mappa.js`, `Fail`/`makeContext`/`diagnose` in `mappa3d.js`; proof `e2e_mappa3d_errori`): the window states the true cause — `nowebgl2` (no context, tried viewer options, no options, low-power; WebGL1 only to say so), `shader` (compiler line), `import` (file not downloaded or stale in cache), `error` (JavaScript error, never passed off as WebGL2),
   `lost` (lost context, message in the viewer) — with what to do in Chrome and the copyable technical lines (version, renderer, GPU, attributes, `getError`); the 2D stays intact and the test context is released immediately.
@@ -92,7 +92,7 @@ Viewer of the Data view: opening errors, controls, preload, drawing cost. The 2D
   Retractable sidebar: Data (file, comparison A − B, numeric RT and m/z, "Use the 2D zoom"), Representation (surface | sticks for HR | spectra waterfall | contour lines on the floor; linear height (default)/root/log, vertical exaggeration, RT:m/z proportion, palette, light, 2D map on the floor, time plane), Background (threshold with histogram, "remove the background", smoothing: 0 in HR, 1 in LR), Views (from above, RT side = chromatogram, m/z side = spectrum, isometric, reset, high-resolution PNG).
   Grid up to 1024×1024 (512 on phone, iPad or `deviceMemory` ≤ 4), HR in cells of equal ppm (`mzscale=log`), LR at nominal masses; sticks from the points of `/api/mappunti3d` (200 000, 50 000 on small devices).
   Drag = rotate, Shift+drag or two fingers = pan, wheel or pinch = zoom, double click = centre (on a marked point: spectrum panel); on hover the ray from the floor to the surface (intersection on the height grid, CPU) gives RT, m/z, intensity and two boxes (XIC at that m/z, spectrum at that RT, from the grid); click = pin the point (as in the 2D it adds it to `NB.mappaPunti` only with "Mark" active); arrows = cursor of one bin (and time plane), +/− zoom, 1-4 views, R reset (also height and region), L locks the cursor, ? gestures;
-  gestures and menu: "Map navigation" of `dati-mappa.md`; `prefers-reduced-motion`: no ▶ and no inertia. Viewer choices in `qqq.mappa` (`d3`); the old `t3*` keys are ignored. Measurements only: no automatic label. Tests `e2e_mappa3d`, `e2e_pannelli2`.
+  gestures and menu: "Map navigation" of `data-map.md`; `prefers-reduced-motion`: no ▶ and no inertia. Viewer choices in `qqq.mappa` (`d3`); the old `t3*` keys are ignored. Measurements only: no automatic label. Tests `e2e_mappa3d`, `e2e_pannelli2`.
 - **3D viewer** (same controls, same `menu()`, same `MAPPA.barFor` bar at the top right of `.m3d-main`; test `e2e_mappa_nav3d`): adapter `ad3(hit)` in `mappa3d.js`; the point is the locked cursor (`V.lock`: pointer hover does not move it, the readout says "locked"), otherwise the cell under the pointer at right click (`pick` ray) or the cursor.
   Right click without moving or long press (550 ms) or Menu/Shift+F10 = menu (the dragged right button moves the view); the page's `#ctx` is moved inside the dialog while it is open (Esc closes first the menu, then the viewer) and returns to the body on closing.
   Entries: Extract XIC/spectrum/both (the viewer closes and the extract appears in the page's XIC and spectrum panels; the file is the one chosen in the viewer), Lock/Unlock, Reset zoom = camera (35°, 32°), Top view / RT side / m/z side (keys 1-3), Copy coordinates, Gestures (sheet `mapnav.h.3d.*`). One finger rotates, two fingers pan and pinch, wheel = zoom, + / − zoom. The Ctrl/⌘K palette does not open above the modal dialog: the 3D commands are in the menu and the bar.

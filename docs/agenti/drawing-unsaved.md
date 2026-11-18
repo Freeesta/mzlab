@@ -1,5 +1,5 @@
 # Draw: unsaved changes (`disegno-pulito.js`)
-The core is in CLAUDE.md; the rest of Draw is in `disegno.md` (its «Nuovo» bullet: «New» now asks through `confirmDiscard`).
+The core is in CLAUDE.md; the rest of Draw is in `drawing.md` (its «Nuovo» bullet: «New» now asks through `confirmDiscard`).
 
 - Unsaved state (`disegno-pulito.js`, tests `e2e_disegno_pulito`, `tests/test_disegno_pulito.py`): the canvas is dirty when it is not empty and `canon(getKet())` (sorted keys) differs from the last
   one exported (.ket/.mol/.sdf/PNG/SVG/JPEG through `doExport`), loaded (`TPDraw.load`) or restored from the notebook; undo back to it is clean.

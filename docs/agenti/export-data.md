@@ -1,6 +1,6 @@
 # Export all my data (inventory of what the app saves in the browser + ZIP writer)
 
-All of the user's work lives in THEIR browser; the export gathers it into a single `mzlab-dati-<date>.zip` downloaded locally (nothing leaves the computer). Storage names: `docs/agenti/dati.md` ("Key inventory"), `mzlab/web/nomi.js`.
+All of the user's work lives in THEIR browser; the export gathers it into a single `mzlab-dati-<date>.zip` downloaded locally (nothing leaves the computer). Storage names: `docs/agenti/data.md` ("Key inventory"), `mzlab/web/nomi.js`.
 
 ## ZIP writer (Rust)
 - `crates/mzlab-core/src/zip.rs`: `zip_stored(&[(name, bytes)])` writes a "stored" ZIP (no compression, no dependency, no ZIP64: at most 65535 entries and 4 GiB), UTF-8 names (bit 11), fixed DOS date 1980-01-01 (deterministic archive), CRC-32 IEEE. `zip_packed(packed)` builds it from a single buffer: per entry `u16` name length, `u32` data length (little endian), name, data.
@@ -49,7 +49,7 @@ Note: keys and folders are read BY NAME from the browser (like `reset.js`, no fi
 - All text exports go through `dl(name, text, type, prov)` (`explore.js`); `text` is a string, a `Blob`/`Uint8Array` or an iterable (possibly async) of chunks (strings, `Uint8Array`, `Blob`).
 - A string or `Blob` under 8 MB and an iterable that ends under 8 MB are saved with `saveBlob` as a whole `Blob`; beyond that, `EXPORT_PEZZI.save` (`export-pezzi.js`, ES module loaded with `carica()` at the first large or iterable export, outside the start-up list) writes the chunks with `export-worker.js` into OPFS `mzlab/export/<id>` (`createSyncAccessHandle`, chunks of about 1 MB, one acknowledgement message per chunk) and downloads the `File` read from there. Same bytes: strings are UTF-8 and a surrogate pair is never split between two messages.
 - Without OPFS or `Worker` the chunks are collected in memory and a `Blob` is saved (`save` returns `false`). Write error (space, storage): notice `export.stream.fail`, no file.
-- Provenance (`provenienza/1`): CSV/TSV carry the `# mzLab …` line first; on an iterable the line is prepended to the first chunk, identical; `prov === false` does not write it.
+- Provenance (`provenance/1`): CSV/TSV carry the `# mzLab …` line first; on an iterable the line is prepended to the first chunk, identical; `prov === false` does not write it.
 - Cleanup: the file in `export/` is removed 10 minutes after the download starts (`drop`); at the first load of the module `clean` removes files older than 1 hour. The download URL stays valid for the same 10 minutes.
 - Whoever produces a lot of text passes a generator: MGF/MSP of all MS2 (`piecesMgf`, `piecesMsp` in `workflow.js`, same bytes as `formatMgf`/`formatMsp`).
 - Test: `tests_e2e/e2e_esporta_pezzi.py` (byte by byte on small sources, 9 MB with a cut surrogate pair, 210 MB in chunks with SHA-256).

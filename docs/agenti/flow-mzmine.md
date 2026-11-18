@@ -1,6 +1,6 @@
 # Flow: from mzmine steps to mzLab steps
 
-Working table of the graphical Flow (`docs/agenti/flow-grafica.md`). It says what exists today, without promising: **step** = has a `step/1` descriptor in the palette; **engine** = the computation exists in Rust (`crates/mzlab-feat`, binary `untargeted`) but has no descriptor yet, so the Flow does not put it in a chain; **planned** = in the descriptor it is a `planned` algorithm or a row of the study, with no executor; **none** = does not exist. No row invents an algorithm.
+Working table of the graphical Flow (`docs/agenti/flow-graphics.md`). It says what exists today, without promising: **step** = has a `step/1` descriptor in the palette; **engine** = the computation exists in Rust (`crates/mzlab-feat`, binary `untargeted`) but has no descriptor yet, so the Flow does not put it in a chain; **planned** = in the descriptor it is a `planned` algorithm or a row of the study, with no executor; **none** = does not exist. No row invents an algorithm.
 
 | mzmine step | In mzLab | Status |
 |---|---|---|

@@ -1,4 +1,4 @@
-//! The contract of the readers of vendor files (`docs/agenti/estendere.md`): a `Lettore` serves the scans of a file by position, one at a time, so that the pages
+//! The contract of the readers of vendor files (`docs/agenti/extending.md`): a `Lettore` serves the scans of a file by position, one at a time, so that the pages
 //! read a `.raw`, a `.wiff` or a `.D` as they read an mzML, and the conversion to mzML is one export among the others (`scrivi_mzml`, the one writer).
 //! A format is a `ReaderEntry` (how to recognise it, how to open it) in the static registry `LETTORI`; nothing is loaded at run time.
 //! `Limiti` is passed to every `apri`: depth, entries and bytes that a damaged or hostile file may ask for are bounded by construction.
