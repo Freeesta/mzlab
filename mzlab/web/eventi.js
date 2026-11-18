@@ -90,7 +90,8 @@ function attach(p) {
     if (p.type === "spec" && window.PEAKINFO) PEAKINFO.hover(p, px, py, () => !!drag); else showHover(p, px, py);
     if (drag) p.tip.hidden = true; if (p.type === "spec" && window.XICLENS) XICLENS.move(p, px, py, !!drag);
     if (p.type === "map" && window.MAPPA) MAPPA.move(p, px, py, e);
-    if (lh) { p.tip.hidden = false; p.tip.innerHTML = lh.tip; p.vl.hidden = true; const tw = p.tip.offsetWidth; let l = cv.offsetLeft + px + 14; if (l + tw > p.el.clientWidth - 4) l = cv.offsetLeft + px - tw - 14; p.tip.style.left = Math.max(2, l) + "px"; p.tip.style.top = cv.offsetTop + py + 14 + "px"; }
+    if (lh && !lh.tip) p.tip.hidden = true;      // the area label has no hover text: it only copies on click
+    else if (lh) { p.tip.hidden = false; p.tip.innerHTML = lh.tip; p.vl.hidden = true; const tw = p.tip.offsetWidth; let l = cv.offsetLeft + px + 14; if (l + tw > p.el.clientWidth - 4) l = cv.offsetLeft + px - tw - 14; p.tip.style.left = Math.max(2, l) + "px"; p.tip.style.top = cv.offsetTop + py + 14 + "px"; }
   };
   cv.addEventListener("click", e => {                                     // click on the diamond of a contaminant sign: exclude / include
     const mk = (p._a && p._a.cmarks || []).find(c => Math.abs(rect(e) - c.x) <= 9 && Math.abs(recty(e) - c.y) <= 9);
