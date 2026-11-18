@@ -111,7 +111,7 @@ fn plain(json: &str) -> serde_json::Value {
 /// Pairs where the full open and the listing must agree: no refused sample (the full open drops its rows), no unindexed section, no failing block head.
 const CLEAN: [&str; 10] = [
     "blocchi",
-    "buchi",
+    "gaps",
     "dadmetodo",
     "dispositivi",
     "energia",
