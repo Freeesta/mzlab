@@ -2,7 +2,7 @@
 //! Detection runs on a smoothed copy (median of 3 against single-point spikes, then the quadratic Savitzky-Golay of `peaks::savgol`); neighbouring
 //! maxima merge unless the valley between them is deep enough; the area is the trapezoid of the RAW trace above a straight baseline drawn between
 //! the two ends only (never extrapolated, so never raised to zero) and never set above the signal; the part of the trace under that line is cut
-//! off and reported as `below`, so no area is ever negative (docs/agenti/dati-integrazione.md). Measured with tools/lr_auto_misura.py.
+//! off and reported as `below`, so no area is ever negative (docs/agenti/data-integration.md). Measured with tools/lr_auto_misura.py.
 
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;

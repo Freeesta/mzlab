@@ -1,6 +1,6 @@
 // @ts-check
 "use strict";
-// Channels of the files (api/canali, canali-dati.md): the cache of the channels of a file, the trace of a channel, the same channel across files (omologo),
+// Channels of the files (api/canali, data-channels.md): the cache of the channels of a file, the trace of a channel, the same channel across files (omologo),
 // the tree selector of the chromatogram and MRM panels and the default channel of an experiment type. Only glue: every number comes from the engine.
 // Classic helpers used by name: E, I18N, EH, J, memo, getMrm, PAL, DASHES, fdash, shownFor, tabFiles, ESC, COMANDI, ctl, draw, uiSave, CAL, ESP.
 (() => {

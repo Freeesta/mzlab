@@ -1,5 +1,5 @@
 //! ZIP writer with method "stored" (no compression, no dependencies, no ZIP64): the one-file export of the user's data
-//! (docs/agenti/esporta-dati.md). The page packs the files, the engine returns the archive; any unzip tool opens it.
+//! (docs/agenti/export-data.md). The page packs the files, the engine returns the archive; any unzip tool opens it.
 
 /// Largest archive and entry count the plain (non-ZIP64) format can describe.
 const MAX_ENTRIES: usize = u16::MAX as usize;

@@ -88,16 +88,16 @@ Not imported or run by any test, workflow, `pre_pr.py` or `verifica.py`; each is
 | `tools/bench/thermo_velocita.py` | 3 960 | 2026-11-07 | `thermo-velocita.md`, INDICE |
 | `tools/bench_librerie_cartella.py` | 3 399 | 2026-11-14 | `misure-rust.md` |
 | `tools/bench_raw.py` | 5 227 | 2026-11-14 | `misure-rust.md`, `lettori-modulo.md`, `mappa-fluida.md`, `thermo-velocita.md` |
-| `tools/bench_table_hr.py` | 4 062 | 2026-11-13 | `alta-risoluzione-statistica.md`, `misure-grafici.md`, INDICE |
+| `tools/bench_table_hr.py` | 4 062 | 2026-11-13 | `high-resolution-statistics.md`, `misure-grafici.md`, INDICE |
 | `tools/compare_profiles.py` | 1 883 | 2026-11-13 | `rilascio.md` |
 | `tools/lat_arrows.py` | 4 488 | 2026-10-12 | `test.md` |
 | `tools/measure_formats.py` | 9 613 | 2026-11-13 | `misure-formati.md` |
 | `tools/measure_groups.py` | 4 482 | 2026-11-13 | `gruppi.md`, `misure-rust.md` |
 | `tools/measure_redraw.py` | 1 018 | 2026-11-13 | `misure-diario.md` |
-| `tools/mzml_diagnosis.py` | 3 426 | 2026-11-13 | `diagnosi.md` |
-| `tools/state_pr.py` | 4 479 | 2026-11-13 | `ci-veloce.md` |
+| `tools/mzml_diagnosis.py` | 3 426 | 2026-11-13 | `diagnosis.md` |
+| `tools/state_pr.py` | 4 479 | 2026-11-13 | `ci-fast.md` |
 | `tools/synthetic_data_large.py` | 7 892 | 2026-11-13 | `misure-rust.md`, `misure-velocita.md`, `misure-velocita-raw.md` |
-| `tools/test_isotopes.py` | 4 718 | 2026-11-13 | `alta-risoluzione.md` (lives in `tools/`, so pytest `testpaths = ["tests"]` never collects it) |
+| `tools/test_isotopes.py` | 4 718 | 2026-11-13 | `high-resolution.md` (lives in `tools/`, so pytest `testpaths = ["tests"]` never collects it) |
 | `tools/wiff_probe.py` | 5 476 | 2026-11-13 | `wiff.md` |
 
 ## UNSURE (9 files, 86 005 bytes)

@@ -1,4 +1,4 @@
-//! The channels of a file (`docs/agenti/canali-dati.md`): every file is a list of channels, each a trace (time → intensity) and, when it has them, a
+//! The channels of a file (`docs/agenti/data-channels.md`): every file is a list of channels, each a trace (time → intensity) and, when it has them, a
 //! slice of the scans. Built once from the scan table and the chromatogram headers; the tools ask "channel + file", never "kind".
 //! Used by `channels::routes` (`api/canali`, `canale=`) and `mzlab-cli channels`.
 

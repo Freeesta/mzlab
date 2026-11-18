@@ -111,7 +111,7 @@ Setup: `main` `2cf7180`, site from `tools/prepara_sito.py`, Chrome for Testing 1
 
 Files: synthetic mzML 50.7 MB (2400 scans, `mzml_msconvert_synthetic.py --peaks1 5000 --peaks2 500`) and synthetic Thermo `.raw` 50.6 MB (`thermo_synthetic --scans 950 --peaks 600`); a drop of ten = the same file first plus nine copies with other names. **warm** = copy of a profile whose SW fill is done (`.fill-done`); **cold** = empty profile, the drop 3 s after `qqReady` unless the arm says otherwise.
 
-N = 5 per cell, arms interleaved run by run, median [min-max], ms from the `change` of the file input. CPU 1× and 4× throttle the page's main thread only (workers run at full speed). Provisional TIC = `#ticprov` drawn; first chart = a panel drawn; all indexed = nothing read or opened any more; copy start = first `mzlab-index` event (for a `.raw` the first «read» event, there is no OPFS copy).
+N = 5 per cell, arms interleaved run by run, median [min-max], ms from the `change` of the file input. CPU 1× and 4× throttle the page's main thread only (workers run at full speed). Provisional TIC = `#ticprov` drawn; first chart = a panel drawn; all indexed = nothing read or opened any more; copy start = first `mzlab-index` event (for a `.raw` the first "read" event, there is no OPFS copy).
 
 **(c) one file alone vs first in a drop of ten (warm)**
 
@@ -150,7 +150,7 @@ N = 5 per cell, arms interleaved run by run, median [min-max], ms from the `chan
 
 The 333-438 requests of the cold +0 arm are the SW's fill (all the `.wasm` modules, the library engine, the readers, the example files excluded) and the mzFinder/OpenChemLib files; the warm arms serve them from the SW cache (0 network requests).
 
-**(e) first chart's responsiveness while files 2..10 index** (mzML, warm; 20 Ctrl+wheel zooms, 20 Shift+drags of 3 pointermoves, 5 clicks on the TIC; input → next frame is two rAFs after the event; click → last `spec` draw; Event Timing durations ≥ 16 ms from the first chart on; «busy» = the loading still running when the event happened)
+**(e) first chart's responsiveness while files 2..10 index** (mzML, warm; 20 Ctrl+wheel zooms, 20 Shift+drags of 3 pointermoves, 5 clicks on the TIC; input → next frame is two rAFs after the event; click → last `spec` draw; Event Timing durations ≥ 16 ms from the first chart on; "busy" = the loading still running when the event happened)
 
 | arm | CPU | wheel p50 / p95 | wheel in the busy window | drag p50 / p95 | drag in the busy window | Event Timing p50 / p98 | click → spectrum | rAF delta p95 (first chart → all indexed) |
 |---|---|---|---|---|---|---|---|---|
@@ -183,4 +183,4 @@ Medians: +105 ms (1×) and +80 ms (4×) for the arm asked at the drop, inside th
 
 ### Verdicts
 
-The verdicts (a)-(f) of this section, with the copy gate that answers (c): `misure-copie.md`, «Critical path: verdicts».
+The verdicts (a)-(f) of this section, with the copy gate that answers (c): `misure-copie.md`, "Critical path: verdicts".

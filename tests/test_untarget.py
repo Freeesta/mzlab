@@ -42,15 +42,15 @@ def test_detect_recognises_every_file_by_its_columns():
 
 def test_mzmine_full_table_model():
     t = js("const t = U.build([F('mzmine/tabella_pos.csv', 't')], {pol: 1}); return {n: t.features.length, s: t.samples, f1: t.features[0], f4: t.features[3], f6: t.features[5], st: t.stats}")
-    assert t["n"] == 6 and t["s"] == ["Campione_A_pos", "Campione_B_pos"]
+    assert t["n"] == 6 and t["s"] == ["Sample_A_pos", "Sample_B_pos"]
     f1 = t["f1"]
-    assert f1["key"] == "POS:1" and f1["mz"] == 184.1332 and f1["rt"] == 5.2 and f1["areas"] == {"Campione_A_pos": 100000} and f1["nScans"] == 3
-    assert f1["detected"] == ["Campione_A_pos"] and f1["iin"]["id"] == "7" and f1["iin"]["neutral"] == 183.1259
+    assert f1["key"] == "POS:1" and f1["mz"] == 184.1332 and f1["rt"] == 5.2 and f1["areas"] == {"Sample_A_pos": 100000} and f1["nScans"] == 3
+    assert f1["detected"] == ["Sample_A_pos"] and f1["iin"]["id"] == "7" and f1["iin"]["neutral"] == 183.1259
     a = f1["ann"][0]
     assert (a["source"], a["type"], a["score"], a["shared"], a["adduct"]) == ("mzMine library", "cosine", 0.91, 8, "[M+H]+") and a["cleanName"] == "Testamine"
     assert abs(a["ppm"]) < 1e-6
     assert t["f4"]["detected"] == []          # ESTIMATED is not DETECTED
-    assert t["f6"]["areas"] == {"Campione_B_pos": 35000}          # tolerant number format
+    assert t["f6"]["areas"] == {"Sample_B_pos": 35000}          # tolerant number format
     assert t["st"]["withMatch"] == 3
 
 
@@ -93,16 +93,16 @@ def test_mgf_ms2_only_and_most_peaks_per_feature():
 
 def test_fbmn_quant_and_iin_edges():
     d = js("const t = U.build([F('mzmine/fbmn_quant.csv'), F('mzmine/fbmn_edges.csv')], {pol: 1}); return {f: t.features.map(f => [f.id, f.group, f.iin && f.iin.id, f.areas]), s: t.samples, e: t.edges, n: t.stats.edges}")
-    assert d["s"] == ["Campione_A_pos", "Campione_B_pos"] and d["n"] == 2
-    assert d["f"][0] == ["1", "3", "7", {"Campione_A_pos": 100000}] and d["f"][1][1] is None          # −1 = no group
+    assert d["s"] == ["Sample_A_pos", "Sample_B_pos"] and d["n"] == 2
+    assert d["f"][0] == ["1", "3", "7", {"Sample_A_pos": 100000}] and d["f"][1][1] is None          # −1 = no group
     assert d["e"][0] == {"a": "1", "b": "6", "type": "MS1 annotation", "score": 0.97, "annotation": "[M+H]+ [M+Na]+ dm/z=21.98"}
 
 
 def test_msdial_alignment_skips_the_metadata_rows():
     t = js("const t = U.build([F('msdial/allineamento.txt', 'a')], {pol: 1}); return {f: t.features, s: t.samples}")
-    assert t["s"] == ["Campione_A", "Campione_B"] and len(t["f"]) == 4
+    assert t["s"] == ["Sample_A", "Sample_B"] and len(t["f"]) == 4
     f0 = t["f"][0]
-    assert f0["mz"] == 184.1332 and f0["rt"] == 5.2 and f0["ms2"]["mz"] == [56.05, 84.08, 156.1] and f0["ms2"]["it"] == [120, 800, 300] and f0["areas"] == {"Campione_A": 100000}
+    assert f0["mz"] == 184.1332 and f0["rt"] == 5.2 and f0["ms2"]["mz"] == [56.05, 84.08, 156.1] and f0["ms2"]["it"] == [120, 800, 300] and f0["areas"] == {"Sample_A": 100000}
     assert f0["ann"][0]["source"] == "MS-DIAL" and f0["ann"][0]["score"] == 912 and f0["ann"][0]["ik"].startswith("AAAA")
     assert t["f"][1]["ann"] == [] and t["f"][2]["ann"] == []          # «Unknown» and «w/o MS2» are not annotations
     assert t["f"][3]["ms2"]["mz"] == [100, 110]
