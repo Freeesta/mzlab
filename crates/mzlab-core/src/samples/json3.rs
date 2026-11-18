@@ -199,10 +199,7 @@ pub fn table_from_value(doc: &Value) -> Result<Table> {
         .map(|a| a.arr().iter().map(read_column).collect::<Result<_>>())
         .transpose()?
         .unwrap_or_default();
-    Ok(Table {
-        samples: samples,
-        columns: columns,
-    })
+    Ok(Table { samples, columns })
 }
 
 pub fn table_from_json(bytes: &[u8]) -> Result<Table> {

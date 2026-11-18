@@ -305,7 +305,7 @@ pub fn read(text: &str, sep: Option<char>, declared: &[Column]) -> Result<Table>
     let columns = place_free(&mut cs, &free, declared);
     Ok(Table {
         samples: cs,
-        columns: columns,
+        columns,
     })
 }
 
