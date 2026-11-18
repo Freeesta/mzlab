@@ -97,7 +97,7 @@ export function query(/** @type {number} */ k) {
 export const graphUrl = (/** @type {number} */ k) => "api/msn_grafo?" + query(k);
 
 /** The URL the tab draws from: the graph plus the interpretation of the losses and the fragmentation rules and, with a SMILES, the bond breaks of the structure (evidence for the arcs and the panel of a node; exports and the library do not carry them). */
-const viewUrl = (/** @type {number} */ k, /** @type {boolean} */ withCuts = true) => graphUrl(k) + "&interpreta=1&regole=1" + (withCuts && G.smiles && ionText() ? "&rotture=1" : "") + (G.smiles && G.molfile ? "&molfile=" + encodeURIComponent(G.molfile) + (withCuts ? "&strutture=tutti" : "") : "");
+const viewUrl = (/** @type {number} */ k, /** @type {boolean} */ withCuts = true) => graphUrl(k) + "&interpret=1&rules=1" + (withCuts && G.smiles && ionText() ? "&breaks=1" : "") + (G.smiles && G.molfile ? "&molfile=" + encodeURIComponent(G.molfile) + (withCuts ? "&structures=all" : "") : "");
 
 /** Asks for the graph of the file; keeps the answer in G.j or the error in G.error. @returns {Promise<boolean>} false when a newer request took over. */
 export async function fetchGraph(/** @type {number} */ k) {
@@ -126,13 +126,13 @@ export async function fetchGraph(/** @type {number} */ k) {
 const cuts = new Map();
 
 /**
- * The cleavages of the SMILES of the tab that explain a node: the value of `strutture_tutti` of the graph when it has it (no request), else the key `strutture` of the graph request plus `strutture=<id>`.
+ * The cleavages of the SMILES of the tab that explain a node: the value of `structures_all` of the graph when it has it (no request), else the key `structures` of the graph request plus `structures=<id>`.
  * Null when there is no SMILES, no ion, the node is a root, the engine answers without the key or the request fails.
  */
 export async function fetchStrutture(/** @type {any} */ n) {
   if (G.ro || !G.smiles || !G.j || !ionText() || n.level < 2) return null;
   if (G.j.structures_all) return G.j.structures_all.find((/** @type {any} */ s) => s.node === n.id) || null;
-  const url = graphUrl(G.k) + "&strutture=" + n.id;
+  const url = graphUrl(G.k) + "&structures=" + n.id;
   if (!cuts.has(url)) cuts.set(url, J(url).then((/** @type {any} */ j) => j.structures || null).catch(() => null));
   return cuts.get(url);
 }

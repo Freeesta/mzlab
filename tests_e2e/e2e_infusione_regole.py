@@ -23,8 +23,8 @@ STAND_IN = """([fx, rx]) => {
     const s = String(u), url = new URL(s, location.href), q = url.searchParams, path = url.pathname.replace(/^.*\\/api\\//, "api/");
     if (path === "api/msn_grafo") {
       window.__REQ.push([path, s]);
-      const j = JSON.parse(JSON.stringify(fx)); j.avvisi = [];
-      if (q.get("regole") === "1") j.regole = JSON.parse(JSON.stringify(rx));
+      const j = JSON.parse(JSON.stringify(fx)); j.warnings = [];
+      if (q.get("rules") === "1") j.rules = JSON.parse(JSON.stringify(rx));
       return Promise.resolve(new Response(JSON.stringify(j), { headers: { "content-type": "application/json" } }));
     }
     return orig(u, init);
@@ -41,7 +41,7 @@ try:
         pg.context.grant_permissions(["clipboard-read", "clipboard-write"])
         pg.evaluate(STAND_IN, [FX, RX]); drawer(pg, "gra"); pg.wait_for_selector(".ig-node", timeout=30000)
         def labels():
-            assert "regole=1" in pg.evaluate("window.__REQ[0][1]"), pg.evaluate("window.__REQ[0][1]")
+            assert "rules=1" in pg.evaluate("window.__REQ[0][1]"), pg.evaluate("window.__REQ[0][1]")
             t = pg.evaluate("[...document.querySelectorAll('.ig-rule')].map(e=>e.textContent)")
             assert "loss_co2" in t and any(x.startswith("loss_nh3_amide") and "weak" in x for x in t), t
             assert any("loss_co2 + loss_nh3_amide" in x for x in t), t

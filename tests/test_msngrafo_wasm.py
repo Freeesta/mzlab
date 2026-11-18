@@ -27,23 +27,23 @@ def pkg(tmp_path_factory):
 @pytest.mark.parametrize("query,args", [
     ("", []),
     ("formula=C14H15N3O5%2B&ppm_formula=10", ["--formula", "C14H15N3O5+"]),
-    ("formula=C14H15N3O5%2B&scelte=%5B%7B%22mz%22%3A177.0546%2C%22formula%22%3A%22C9H8NO2%2B%22%7D%5D", ["--formula", "C14H15N3O5+", "--pick", "177.0546=C9H8NO2+"]),
-    ("formula=C14H15N3O5%2B&smiles=CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12&strutture=n3", ["--formula", "C14H15N3O5+", "--smiles", "CCOC(=O)c1c[nH]c2ccccc12", "--structures", "n3"]),
-    ("formula=C14H15N3O5%2B&smiles=CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12&strutture=3&ppm_struttura=5", ["--formula", "C14H15N3O5+", "--smiles", "CCOC(=O)c1c[nH]c2ccccc12", "--structures", "3", "--struct-ppm", "5"]),
+    ("formula=C14H15N3O5%2B&choices=%5B%7B%22mz%22%3A177.0546%2C%22formula%22%3A%22C9H8NO2%2B%22%7D%5D", ["--formula", "C14H15N3O5+", "--pick", "177.0546=C9H8NO2+"]),
+    ("formula=C14H15N3O5%2B&smiles=CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12&structures=n3", ["--formula", "C14H15N3O5+", "--smiles", "CCOC(=O)c1c[nH]c2ccccc12", "--structures", "n3"]),
+    ("formula=C14H15N3O5%2B&smiles=CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12&structures=3&struct_ppm=5", ["--formula", "C14H15N3O5+", "--smiles", "CCOC(=O)c1c[nH]c2ccccc12", "--structures", "3", "--struct-ppm", "5"]),
 ])
 def test_wasm_and_cli_give_the_same_graph(pkg, query, args):
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), query).stdout
     want = cli("msn-graph", str(MZML), *args).stdout
     assert got + "\n" == want  # the command line ends its output with a newline
     assert '"schema":"msn-graph/1"' in got
-    assert ('"structures":{' in got) == ("strutture=" in query)
+    assert ('"structures":{' in got) == ("structures=" in query)
 
 
 def test_the_whole_structure_and_the_molfile_are_the_same_in_cli_and_wasm(pkg, tmp_path):
     mol = tmp_path / "x.mol"
     mol.write_text("\n  mzlab\n\n  1  0  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0\nM  END\n", encoding="utf-8")
     smiles = "CCOC(=O)c1c[nH]c2ccccc12"
-    q = "formula=C14H15N3O5%2B&smiles=" + "CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12" + "&strutture=tutti&molfile=" + urllib.parse.quote(mol.read_text(encoding="utf-8"))
+    q = "formula=C14H15N3O5%2B&smiles=" + "CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12" + "&structures=all&molfile=" + urllib.parse.quote(mol.read_text(encoding="utf-8"))
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), q).stdout
     want = cli("msn-graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", smiles, "--structures", "all", "--molfile", str(mol)).stdout
     assert got + "\n" == want
@@ -111,10 +111,10 @@ def test_a_graph_without_an_ion_or_a_foreign_file_is_a_keyed_error(pkg, tmp_path
 
 
 @pytest.mark.parametrize("query,key", [
-    ("strutture=n3", "err.msngrafo.noSmiles"),
-    ("smiles=CCO&strutture=n99", "err.msngrafo.badNode"),
-    ("smiles=C%28%28&strutture=n3", "err.msngrafo.badSmiles"),
-    ("smiles=CCO&strutture=n3&ppm_struttura=abc", "err.request.badNumber"),
+    ("structures=n3", "err.msngrafo.noSmiles"),
+    ("smiles=CCO&structures=n99", "err.msngrafo.badNode"),
+    ("smiles=C%28%28&structures=n3", "err.msngrafo.badSmiles"),
+    ("smiles=CCO&structures=n3&struct_ppm=abc", "err.request.badNumber"),
 ])
 def test_the_cleavages_errors_are_keyed(pkg, query, key):
     r = subprocess.run(["node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), query], capture_output=True, encoding="utf-8")

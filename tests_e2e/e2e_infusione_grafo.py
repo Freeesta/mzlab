@@ -35,7 +35,7 @@ STAND_IN = """(fx) => {
       if (!q.get("formula")) { j.ion = null; j.nodes.forEach(n => { n.formula = null; }); }
       (JSON.parse(q.get("choices") || "[]")).forEach(c => { const n = j.nodes.find(x => Math.abs(x.mz - c.mz) < 1e-3); if (n && n.formula) { n.formula.choice = c.formula; n.formula.source = "user"; } });
       const sx = j._sx; delete j._sx;
-      if (sx && q.get("structures") === "tutti") j.structures_all = [Object.assign({}, sx, { node: "n2" })];
+      if (sx && q.get("structures") === "all") j.structures_all = [Object.assign({}, sx, { node: "n2" })];
       else if (sx && q.get("structures")) j.structures = Object.assign({}, sx, { node: q.get("structures") });
       if (q.get("interpret") === "1") j.interpretation = { version: 1, ppm: 10, edges: j.edges.map(a => ({ from: a.from, to: a.to, activations: ["cid"], loss: { name: "Carbon dioxide", formula: "CO2", mass: 43.98983, error_ppm: 0.4, source: "formula", confidence: "high", alternative: [] } })) };
       if (q.get("breaks") === "1") j.breaks = { version: 1, edges: j.edges.map(a => ({ from: a.from, to: a.to, explained: a.to === "n2" })), nodes: [{ node: "n2", n: 3, hypotheses: [{ bonds: [[1, 2]], piece: [0, 1], formula: "C13H10NO4", h: 1, theoretical_mz: 244.0604, ppm: 0.8 }] }] };
@@ -93,7 +93,7 @@ try:
             pg.click(".ig-node[data-id=n2]"); pg.wait_for_selector(".ig-use", timeout=10000)
             assert pg.locator(".ig-cands tbody tr").count() == 2
             assert "identified" not in pg.inner_text("#ig-node").lower()
-            pg.locator(".ig-use").first.click(); pg.wait_for_function("window.__REQ.some(r=>r[1].includes('scelte='))", timeout=10000)
+            pg.locator(".ig-use").first.click(); pg.wait_for_function("window.__REQ.some(r=>r[1].includes('choices='))", timeout=10000)
             pg.wait_for_selector(".ig-cands tr.on", timeout=10000)
             assert pg.locator(".ig-cands tr.on").count() == 1
         step("«Use» asks again with the choice; several candidates are never proposed alone", use)
@@ -115,7 +115,7 @@ try:
             pg.wait_for_selector(".ig-pic svg", timeout=20000)
         step("the drawing box opens Draw from the SMILES and keeps the user's fragment", draw)
         def breaks():
-            assert any("rotture=1" in r[1] for r in pg.evaluate("window.__REQ") if r[0] == "api/msn_grafo")
+            assert any("breaks=1" in r[1] for r in pg.evaluate("window.__REQ") if r[0] == "api/msn_grafo")
             pg.click(".ig-node[data-id=n2]"); pg.wait_for_selector(".ig-brk li", timeout=10000)
             t = pg.inner_text(".ig-brk"); assert "C₁₃H₁₀NO₄" in t and "244.0604" in t and "0.8 ppm" in t, t
             assert pg.evaluate("I18N.t('msngrafo.brk.explained')") in t, t
@@ -125,8 +125,8 @@ try:
             assert pg.locator(".ig-cuts").count() == 0
             pg.click(".ig-node[data-id=n2]"); pg.wait_for_selector(".ig-cuts .ig-cut", timeout=10000)
             reqs = [r[1] for r in pg.evaluate("window.__REQ")]
-            assert any("strutture=tutti" in r and "smiles=" in r and "molfile=" in r for r in reqs), reqs[-3:]
-            assert not any("strutture=n2" in r for r in reqs), "the cuts of every ion come in the one graph request"
+            assert any("structures=all" in r and "smiles=" in r and "molfile=" in r for r in reqs), reqs[-3:]
+            assert not any("structures=n2" in r for r in reqs), "the cuts of every ion come in the one graph request"
             txt = pg.inner_text(".ig-str")
             assert "C2-O3" in txt and "-0.35 ppm" in txt.replace("−", "-") and "226.0499" in txt and "hypothesis" in txt, txt
             assert pg.locator(".ig-cuts caption").count() == 1 and pg.locator(".ig-cuts th[scope=col]").count() == 6
@@ -242,7 +242,7 @@ try:
             pg.wait_for_selector(".ig-find-t tbody tr", timeout=5000)
         step("Run MSn workflow: graph and library search with one click", workflow)
         def interp():
-            assert "interpreta=1" in pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msn_grafo')[0][1]")
+            assert "interpret=1" in pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msn_grafo')[0][1]")
             assert all("interpret" not in r[1] for r in json.loads(pg.evaluate("JSON.stringify(window.__REQ.filter(r=>r[0]==='api/msn_grafo/export'))")))
             pg.click(".ig-node[data-id=n2]"); pg.wait_for_selector(".ig-int li", timeout=10000)
             t = pg.inner_text(".ig-int"); assert "Carbon dioxide" in t and "CO₂" in t and pg.evaluate("I18N.t('msngrafo.int.high')") in t, t
