@@ -74,7 +74,10 @@ fn area_of_a_peak_next_to_a_far_neighbour() {
 fn overlapping_peaks_keep_the_drop_line() {
     for d in [0.15, 0.16, 0.18] {
         let (rt, y) = trace(|t| g(t, 2.0, 1000.0) + g(t, 2.0 + d, 700.0));
-        let (r1, r2) = (area_ratio(&rt, &y, 2.0, 1000.0), area_ratio(&rt, &y, 2.0 + d, 700.0));
+        let (r1, r2) = (
+            area_ratio(&rt, &y, 2.0, 1000.0),
+            area_ratio(&rt, &y, 2.0 + d, 700.0),
+        );
         for (c, r) in [(2.0, r1), (2.0 + d, r2)] {
             assert!((0.8..1.1).contains(&r), "d {d} apex {c}: area ratio {r}");
         }
