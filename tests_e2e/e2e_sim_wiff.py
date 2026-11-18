@@ -90,11 +90,11 @@ try:
         def card_layout():
             need = lambda c, m: c or throw(m)
             need(pg.evaluate("(() => { const a = document.getElementById('dpanels').getBoundingClientRect(), b = document.getElementById('manint').getBoundingClientRect(); return b.top >= a.bottom - 1; })()"), "under the panels")
-            need(not pg.evaluate("!!document.querySelector('#manint p, #manint caption, #manint [data-sums], #manint label')"), "no helper line, no sums")
+            need(not pg.evaluate("!!document.querySelector('#manint p, #manint caption, #manint [data-sums], #manint label:not(.manint-opt label)')"), "no helper line, no sums")
             tg = pg.evaluate("(() => { const b = document.querySelector('#manint .manint-tg'), d = document.getElementById(b.getAttribute('aria-describedby')); return [b.getAttribute('aria-expanded'), b.getAttribute('aria-controls'), b.title, d.textContent, d.classList.contains('sr-only'), document.getElementById('manint-b').getAttribute('aria-describedby')]; })()")
             note = pg.evaluate("I18N.t('canali.manint.note')")
             need(tg == ["true", "manint-b", note, note, True, "manint-d"], tg)
-            ic = pg.evaluate("[...document.querySelectorAll('#manint .manint-head .manint-ic')].map(b => { const r = b.getBoundingClientRect(); return [b.matches('[data-dl]') || b.matches('[data-copy]'), b.getAttribute('aria-label') === b.title && !!b.title, !b.textContent.trim(), r.width >= 24 && r.height >= 24]; })")
+            ic = pg.evaluate("[...document.querySelectorAll('#manint .manint-head .manint-ic:not(.manint-xl)')].map(b => { const r = b.getBoundingClientRect(); return [b.matches('[data-dl]') || b.matches('[data-copy]'), b.getAttribute('aria-label') === b.title && !!b.title, !b.textContent.trim(), r.width >= 24 && r.height >= 24]; })")
             need(len(ic) == 2 and all(all(x) for x in ic), ic)
             need(pg.evaluate("getComputedStyle(document.querySelector('#manint thead th')).position") == "sticky", "sticky header")
             p0, w0 = pg.evaluate(PNL), pg.evaluate(WRAP)
@@ -177,7 +177,7 @@ try:
             need(pg.evaluate("document.activeElement && document.activeElement.matches('input[data-nm]') && document.activeElement.value === 'Peak, left'"), "Enter keeps the focus on the name")
             st = pg.evaluate("MANINT.state()"); need(st["csv"] == manual(st, [D / "sim3.wiff"]), "the name is in the CLI's bytes")
             need(pg.evaluate(f"{P}.ints.filter(i => i.nm === 'Peak, left').length") == 1, "kept on the integration")
-            need("Peak, left" in pg.evaluate(f"{P}._a.lbls.find(l => l.int.nm === 'Peak, left').tip"), "in the hover text")
+            need(not pg.evaluate(f"{P}._a.lbls.find(l => l.int.nm === 'Peak, left').tip"), "the area label has no hover text; the name is on the card")
             pg.click("#manint [data-copy]"); wait_for_js(pg, "navigator.clipboard.readText().then(t => t.includes('\\tPeak, left'))", timeout=10000)
             pg.fill(nm, "zzz"); pg.keyboard.press("Escape")
             need(pg.evaluate(f"{nmj}.value") == "Peak, left" and pg.evaluate(f"{P}.ints.some(i => i.nm === 'zzz')") is False, "Esc gives the name back")
@@ -211,14 +211,14 @@ try:
             la = [l for l in pg.evaluate(LB) if not l["fol"]]
             need(len(la) == 1 and la[0]["key"].startswith(f"m|{ka}|"), la)
             need(la[0]["text"].startswith("A = ") and "(" not in la[0]["text"], la[0]["text"])
-            need(pg.evaluate("I18N.t('int.copy.tip')") in la[0]["tip"] and pg.evaluate("I18N.t('int.base.tag.edges')") not in la[0]["tip"], "the hover text is the copy hint only")
+            need(not la[0].get("tip"), "the area label has no hover text")
             only(kb)
             fb = [l for l in pg.evaluate(LB) if l["fol"]]
             need(len(fb) == 1 and fb[0]["ion"] == la[0]["ion"] and fb[0]["key"].startswith(f"m|{kb}|"), fb)
             need(abs(fb[0]["a"] - la[0]["a"]) < 1e-9 and abs(fb[0]["b"] - la[0]["b"]) < 1e-9, (fb, la))
             need(fb[0]["text"] not in ("A = —", la[0]["text"]) and fb[0]["area"] > 0 and fb[0]["area"] != la[0]["area"], (fb, la))
             need(not any(l["fol"] and l["ion"] == x["ion"] for l in pg.evaluate(LB) for x in pg.evaluate(LB) if not x["fol"]), "a committed window is shown as it is")
-            wait_for_js(pg, LB + ".some(l => l.fol && !l.tip.includes('…') && l.tip.includes('S/N'))", timeout=60000)
+            wait_for_js(pg, LB + ".some(l => l.fol && l.text.startsWith('A = ') && !l.text.includes('…'))", timeout=60000)
             # the engine applies the window to Sample_B too: a row of B on the channel of A's window, not drawn by hand, without a Delete
             wait_for_js(pg, "[...document.querySelectorAll('#manint tbody tr')].some(r => r.dataset.org !== 'manual' && r.textContent.includes('Sample_B') && r.textContent.startsWith('253.1'))", timeout=60000)
             need(pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].filter(r => r.dataset.org !== 'manual').every(r => !r.querySelector('[data-del]'))"), "an applied row has no Delete")
@@ -453,7 +453,7 @@ try:
         def channels():
             k = pg.evaluate("E.files.find(f => f.label === 'Blank' || /Blank/.test(f.file)).k")
             got = pg.evaluate(f"fetch('api/canali?k={k}').then(r => r.json())")
-            assert got["canali"] == CHANNELS["canali"], (got, CHANNELS)
+            assert got["channels"] == CHANNELS["channels"], (got, CHANNELS)
         step("the channels of a sample are those of mzlab-cli channels", channels)
         step("the engine answered every request", lambda: (lambda m: m and throw(m))(pg.evaluate("window.MZLAB_LR_MISS || []")))
         step("no page error", lambda: (lambda e: e and throw(e))([x for x in r.errs if x[0] == "pageerror"]))

@@ -66,10 +66,10 @@ fn tune_blocks_are_an_infusion() {
     assert_eq!(
         got,
         Infusione {
-            reason: "blocchi",
-            livelli: 4,
+            reason: "blocks",
+            levels: 4,
             nodes: 4,
-            chiavi: 4
+            keys: 4
         }
     );
 }
@@ -80,9 +80,9 @@ fn cycled_fixed_precursors_need_a_hint() {
     assert_eq!(infusione(&v, None, "run_t10.mzML"), None);
     assert_eq!(infusione(&v, Some(true), "run_t10.mzML"), None);
     let m = infusione(&v, Some(false), "run_t10.mzML").unwrap();
-    assert_eq!((m.reason, m.livelli, m.nodes), ("metodo_senza_lc", 2, 10));
+    assert_eq!((m.reason, m.levels, m.nodes), ("method_without_lc", 2, 10));
     let n = infusione(&v, None, "dir/std_Infusion_MSn.mzML").unwrap();
-    assert_eq!(n.reason, "nome");
+    assert_eq!(n.reason, "name");
 }
 
 #[test]
@@ -107,10 +107,10 @@ fn constant_rt_or_one_scan() {
     v.iter_mut().for_each(|s| s.rt = 1.5);
     assert_eq!(
         infusione(&v, Some(true), "x.mzML").unwrap().reason,
-        "rt_costante"
+        "constant_rt"
     );
     let one = infusione(&[ms1(3.0)], None, "x.mzML").unwrap();
-    assert_eq!((one.reason, one.livelli, one.nodes), ("rt_costante", 1, 0));
+    assert_eq!((one.reason, one.levels, one.nodes), ("constant_rt", 1, 0));
     let run: Vec<Scan> = (0..50).map(|i| ms1(i as f64 * 0.1)).collect();
     assert_eq!(infusione(&run, Some(false), "infusion.mzML"), None);
     assert_eq!(infusione(&[], None, "infusion.mzML"), None);
@@ -125,7 +125,7 @@ fn energies_split_keys_but_not_nodes() {
         }
     }
     let got = infusione(&v, None, "a.mzML").unwrap();
-    assert_eq!((got.reason, got.nodes), ("blocchi", 1));
+    assert_eq!((got.reason, got.nodes), ("blocks", 1));
 }
 
 #[test]
@@ -197,5 +197,5 @@ fn one_fixed_precursor_over_an_lc_run_is_not_an_infusion() {
     assert!(!with_msn(&v, None, "BTZ_std_10ppm.mzML"));
     // the same structure in a file that says infusion in its name keeps the hint, with its reason
     let n = infusione(&v, None, "BTZ_infusion.mzML").unwrap();
-    assert_eq!(n.reason, "nome");
+    assert_eq!(n.reason, "name");
 }

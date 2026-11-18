@@ -64,8 +64,8 @@ fn blocks_v1_v2_v3_are_read_with_the_polarity_of_the_header() {
     }
     // a block nobody can read is an error with the cause, never an empty scan
     for (name, text) in [
-        ("versione4", "scan block version 4"),
-        ("bloccotof", "TOF block"),
+        ("version4", "scan block version 4"),
+        ("tofblock", "TOF block"),
     ] {
         let ole = container(
             std::fs::read(out.join(format!("{name}.wiff"))).unwrap(),

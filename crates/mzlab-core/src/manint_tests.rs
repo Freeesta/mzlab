@@ -42,7 +42,7 @@ fn win(file: usize, tr: usize, a: f64, b: f64, base: &str) -> String {
 }
 
 /// The rows with every column (`time_min` is the third).
-fn rows_with_time(t: &str) -> Vec<Vec<String>> {
+pub(super) fn rows_with_time(t: &str) -> Vec<Vec<String>> {
     t.lines()
         .skip(1)
         .map(|l| l.split(',').map(str::to_string).collect())
@@ -84,7 +84,7 @@ fn zero_and_line_are_the_measure_of_the_data_view() {
     let w = format!("[{}]", win(0, 0, 2.8, 3.2, "zero"));
     let r = rows(&table_text(&files(), &w, false).unwrap());
     let l = parse(files().as_bytes()).unwrap();
-    let tr = &traces(l.arr()[0].get("transitions").unwrap())[0];
+    let tr = &traces(l.arr()[0].get("transitions").unwrap(), None, "")[0];
     let [area, _, height, apex] = peak_area(&tr.t, &tr.y, 2.8, 3.2, Baseline::Zero).unwrap();
     assert_eq!(r[0][4], sci(area, 5));
     assert_eq!(r[0][7], sci(height, 5));

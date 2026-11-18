@@ -27,14 +27,19 @@ PROBE = r"""(() => { const v = window.__b = { lt: [], cls: 0, fcp: 0, drop: 0 };
   obs("longtask", e => v.lt.push([e.startTime, e.duration]));
   obs("paint", e => { if (e.name === "first-contentful-paint") v.fcp = e.startTime; });
   obs("layout-shift", e => { if (!e.hadRecentInput) v.cls += e.value; });
+  // links a script adds once the page is parsed (the engine's .wasm preload, hints for lazy files) are hints, not part of what the page needs
+  // to paint; whether they start before the first paint only depends on how slow the runner is (3.2 MB of .wasm counted on a slow CI reload)
+  v.late = [];
+  new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.tagName === "LINK" && document.readyState !== "loading") v.late.push(n.href); })))
+    .observe(document, { childList: true, subtree: true });
   const poll = () => { const d = document.getElementById("drop"); if (d && d.offsetParent && d.getBoundingClientRect().height > 0) { v.drop = performance.now(); return; } setTimeout(poll, 10); };
   poll();
   try { localStorage.setItem("mzlab.tour.lr", JSON.stringify({ stato: "saltato" })); localStorage.setItem("mzlab.barra.hint", "1"); } catch (_) {}
 })()"""
 # the critical set: render-blocking files and the head's preloads (fixed by the page, not by how fast the cache answers; non-blocking scripts that
-# merely start before the paint on a fast machine are not counted)
+# merely start before the paint on a fast machine, and links added by script after parsing, are not counted)
 SNAP = """(() => { const r = performance.getEntriesByType("resource"), f = __b.fcp,
-    pre = r.filter(e => e.startTime <= f && (e.renderBlockingStatus === "blocking" || e.initiatorType === "link"));
+    pre = r.filter(e => e.startTime <= f && !__b.late.includes(e.name) && (e.renderBlockingStatus === "blocking" || e.initiatorType === "link"));
   return { fcp: f, drop: __b.drop, cls: __b.cls, lt: __b.lt.filter(x => x[0] <= __b.drop).map(x => Math.round(x[1])),
     req_fcp: pre.length, kb_fcp: Math.round(pre.reduce((s, e) => s + e.decodedBodySize, 0) / 1024),
     blocking: r.filter(e => e.renderBlockingStatus === "blocking").map(e => e.name.replace(location.origin, "")) }; })()"""

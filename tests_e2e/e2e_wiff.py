@@ -143,16 +143,16 @@ try:
             try: pg.wait_for_function("document.querySelector('#tp-files') && /serie\\s+Full scan/.test(document.querySelector('#tp-files').innerText)", timeout=60000)
             except Exception: raise AssertionError(pg.evaluate("[document.querySelector('#tp-files').innerText, document.querySelector('#tp-fsum').innerText, (document.querySelector('#tp-msg')||{}).innerText, Array.from(document.querySelectorAll('#flist tr')).length]"), diag(pg))
         step("mzFinder lists the converted Full Scan file", mzfinder)
-        def empty_injection():                           # an injection in the sample table that acquired nothing (no Idx): listed as an empty sample under its number, as `mzlab-cli convert` writes buchi-2.mzML
+        def empty_injection():                           # an injection in the sample table that acquired nothing (no Idx): listed as an empty sample under its number, as `mzlab-cli convert` writes gaps-2.mzML
             c5 = b.new_context(viewport={"width": 1500, "height": 1800}); c5.set_default_timeout(120000); pg = c5.new_page()
             pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
-            pg.set_input_files("#pick", [str(D / "buchi.wiff"), str(D / "buchi.wiff.scan")])
+            pg.set_input_files("#pick", [str(D / "gaps.wiff"), str(D / "gaps.wiff.scan")])
             got = "ST.files.map(f => [f.name, f.kind || ''])"
             try: pg.wait_for_function("ST.files.length === 3 && ST.files.every(f => f.kind) && UPBUSY === 0", timeout=60000)
             except Exception: raise AssertionError(pg.evaluate(got))
-            assert sorted(pg.evaluate(got)) == [["buchi_s1.mzML", "full"], ["buchi_s2.mzML", "empty"], ["buchi_s3.mzML", "full"]], pg.evaluate(got)
+            assert sorted(pg.evaluate(got)) == [["gaps_s1.mzML", "full"], ["gaps_s2.mzML", "empty"], ["gaps_s3.mzML", "full"]], pg.evaluate(got)
             assert not errs, errs
             c5.close()
         step("an injection that acquired nothing is listed as an empty sample under its own number", empty_injection)

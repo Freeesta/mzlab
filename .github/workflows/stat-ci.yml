@@ -1,6 +1,7 @@
 # Statistics of the CI bottlenecks (tools/ci_metrics.py, docs/agenti/ci-fast.md): one JSONL line per event on the orphan branch `stat-ci`.
 # No secret and no third-party action; GITHUB_TOKEN only reads the API and pushes to `stat-ci` (a push with GITHUB_TOKEN starts no workflow).
-# pull_request_target and workflow_run run the file from main and check out main only: code of a pull request is never run with the write token.
+# No pull_request_target (GitHub blocks it by default in public repositories from 2 December 2026) and no event carrying pull request code:
+# pull request events are read from the API by the poll, so code of a pull request is never run with the write token.
 name: stat-ci
 
 # The runs of test/rust/pages are read by a poll (schedule, plus every push to main; cursor in cursore.json on stat-ci), not one job per completed run.
@@ -9,9 +10,6 @@ on:
     - cron: "*/10 * * * *"
   workflow_dispatch:
   push:
-    branches: [main]
-  pull_request_target:
-    types: [opened, reopened, synchronize, closed]
     branches: [main]
 
 # One poll at a time; the events of pull requests and pushes have a group each, so none is dropped.
@@ -46,7 +44,6 @@ jobs:
         run: |
           case "$GITHUB_EVENT_NAME" in
             schedule|workflow_dispatch) cmd=registra-recenti ;;
-            pull_request_target) cmd=registra-pr ;;
             push) cmd=registra-conflitti
               # history without file contents: enough for the read-only trial merge (git merge-tree) of the conflicting pull requests
               git fetch -q --filter=blob:none --unshallow origin main || true ;;
@@ -62,6 +59,11 @@ jobs:
             python3 tools/ci_metrics.py registra-coda --nuovi nuovi-coda.jsonl
             cat nuovi-coda.jsonl >> nuovi.jsonl
           fi
+          # pull request events (opened, pushed heads, merged/closed) are read from the API, metadata only; rows are deduplicated
+          case "$GITHUB_EVENT_NAME" in schedule|workflow_dispatch|push)
+            python3 tools/ci_metrics.py registra-pr-recenti --dati dati/eventi.jsonl --nuovi nuovi-pr.jsonl
+            cat nuovi-pr.jsonl >> nuovi.jsonl ;;
+          esac
       # metrics are best effort: a failed publish must never turn a pull request red
       - name: Publish on stat-ci
         continue-on-error: true

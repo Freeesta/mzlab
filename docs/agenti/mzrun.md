@@ -1,6 +1,6 @@
-# The `mzrun/1` file (`*.mzrun.json`)
+# The `mzrun/2` file (`*.mzrun.json`)
 
-One analysis in one canonical JSON file, in two modes: a `record` replicates a run exactly, a `preset` keeps the parameters only and starts a new analysis. Schema `docs/schemi/mzrun-1.json` (JSON Schema 2020-12, `$id` `mzrun/1`), examples `tests/data/mzrun/` (synthetic, no lab data), test `tests/test_mzrun_schema.py`. `mzlab_core::mzrun` (`crates/mzlab-core/src/mzrun/`) writes and checks it; the site and app routes come later (parity rule of CLAUDE.md).
+One analysis in one canonical JSON file, in two modes: a `record` replicates a run exactly, a `preset` keeps the parameters only and starts a new analysis. Schema `docs/schemi/mzrun-2.json` (JSON Schema 2020-12, `$id` `mzrun/2`), examples `tests/data/mzrun/` (synthetic, no lab data), test `tests/test_mzrun_schema.py`. `mzlab_core::mzrun` (`crates/mzlab-core/src/mzrun/`) writes and checks it; it is a CLI function (`flow record`, `flow verify`) with no site or app route.
 
 ## Build and verify (Rust)
 - `build(&Parts)`: the record of a finished run from the `mzflow/2` plan, the `prov/1` and the roles of the files (`campioni/2`: the role of each plan input is found by its SHA-256, `pool` is written as `qc`). `resolved` and `seeds` (integer parameters named `seed` or `*_seed`) come from the `prov/1`; `resources`, `decisions` and `limits` are given by the caller.
@@ -13,11 +13,11 @@ One analysis in one canonical JSON file, in two modes: a `record` replicates a r
 - A file on disk is the canonical text plus one final LF.
 
 ## Fields (both modes unless marked)
-- `schema` = `mzrun/1`; `kind` = `record|preset`; `min_reader` (integer, 1): the lowest schema version that reads the file.
+- `schema` = `mzrun/2`; `kind` = `record|preset`; `min_reader` (integer, 1): the lowest schema version that reads the file.
 - `engine`: `name`, `version`, `commit` (40 hex), `platform` (`wasm|native`); optional `target`, `rustc`, `cargo_lock_sha256`, `modules` (module name → SHA-256 of each `.wasm` or native binary). In a preset it is the origin of the parameters.
 - `plan`: the `mzflow/2` object verbatim (contract `$defs/mzflow2`) and `plan_sha256`. In a preset the plan inputs are slots: `name` is the slot, `sha256` is 64 zeros and the steps read `file:SLOT`.
 - `resolved`: instance → `step` (`id@version`), `algorithm` (`id@version`), `preset`, `params` (EVERY parameter, canonical: `mzflow/2` keeps only the differences from the defaults), `pin` (parameter → `fixed|estimate`), `estimates` (parameter → proof).
-- `inputs` (record only): `alias` (`S01`, `BLK_P1`…; letters, digits, `_+.-`, no path, no URL), optional original `name`, `sha256`, `bytes`, `type` (data type of the contract), `role` (`tipo` of `campioni/2`), optional `tipo_bianco`, `polarity` (`+|-`), `injection_order`, `replicate`, `series`; optional `raw_sha256` (the vendor file) and `converter` `{name, version, image_digest}`.
+- `inputs` (record only): `alias` (`S01`, `BLK_P1`…; letters, digits, `_+.-`, no path, no URL), optional original `name`, `sha256`, `bytes`, `type` (data type of the contract), `role` (`tipo` of `campioni/2`), optional `blank_kind` (`solvent|procedure|wash`), `polarity` (`+|-`), `injection_order`, `replicate`, `series`; optional `raw_sha256` (the vendor file) and `converter` `{name, version, image_digest}`.
 - `slots` (preset only): `{slot (e.g. blank.procedure), type, role, polarity, min, max}`. `roles_sha256` (record): the `digest` of the `campioni/2` document (`samples.md`).
 - `resources`: `{kind (library|suspects|adducts|transformations|rules|other), id, version, licence, url, retrieved (YYYY-MM-DD), sha256, bytes, builtin}`. `seeds`: `instance.param` → integer.
 - `decisions` (record): the manual acts of the chemist, in order: `{seq, kind (tpdec|feature|role|param), target, before, after, note_sha256, input_sha256}`; the `tpdec/1` decisions of the review are one kind.
@@ -50,4 +50,9 @@ One analysis in one canonical JSON file, in two modes: a `record` replicates a r
 - Planned, later: RO-Crate (Provenance Run Crate) and mzQC exports.
 
 ## Planned
-browser `prov` for all steps; wasm and desktop routes; preset apply; Attributio decisions; UI; ESI+/ESI- merge; exports; e2e replicate.
+`flow record` and `flow verify` as site (`.wasm` + OPFS) and desktop routes with a parity test (only the CLI has them); browser `prov` for all steps; preset apply; Attributio decisions; UI; ESI+/ESI- merge; exports; e2e replicate.
+
+## From the CLI
+- The commit of `engine` comes from `crates/mzlab-cli/build.rs` (`MZLAB_COMMIT`, else `git rev-parse HEAD`); `flow run` writes it in the `prov/1` agent (`build_agent(name, Some(commit))`), the `.wasm` passes `None` and stays commit-free. A run from a build with neither has no commit: `flow record` exits 3 with `err.mzrun.commit` (set `MZLAB_COMMIT` at build time).
+- `flow record RUNDIR --roles ROLES.json`: a role with an empty `sha256` takes it from the run input of the same file name (full name, then last path part), logged on stderr; no match or several: `err.mzrun.roles` (exit 3) naming the inputs. `samples table FILE...` hashes real files.
+- `flow verify RECORD [--json]`: mismatches on stderr, exit 3; `--json` writes `{"schema":"verify/1","ok","self_sha256","problems"}` on stdout.

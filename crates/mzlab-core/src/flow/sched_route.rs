@@ -212,7 +212,7 @@ pub fn ask(s: &Sched, op: &str, body: &Value) -> Option<String> {
 
 /// The program that records a run made in the page: this engine (`wasm` on the site), the same keys as the CLI (`build_agent`).
 fn record_agent() -> Agent {
-    build_agent("mzLab")
+    build_agent("mzLab", None)
 }
 
 /// One call. `new` builds the scheduler of the session (`plan`, `registry`, `version`, `identities`); `update` takes `plan`; the other ops are the methods of
