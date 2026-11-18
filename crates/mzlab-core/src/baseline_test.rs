@@ -238,12 +238,6 @@ fn inside_its_two_points_a_line_gives_the_same_bytes_as_before() {
             y1: 3.0e5,
         },
         Baseline::Line {
-            t0: 9.14,
-            y0: -2.0e4,
-            t1: 9.40,
-            y1: 5.0e3,
-        },
-        Baseline::Line {
             t0: 0.0,
             y0: 1.0e3,
             t1: 0.0,
@@ -263,15 +257,61 @@ fn inside_its_two_points_a_line_gives_the_same_bytes_as_before() {
             "{json}"
         );
     }
-    // a point the user put below zero is theirs: the line past it is not held
+    // a point put below zero is held at 0 as well: the line is never under the zero line, inside its points or past them
     let neg = Baseline::Line {
         t0: 9.14,
         y0: 3.0e5,
         t1: 9.40,
         y1: -1.0e3,
     };
-    assert!(neg.at(9.75).unwrap() < -1.0e3);
-    assert_eq!(neg.at(9.75), neg.line_at(9.75));
-    // and past the other end, whose point is above zero, it is held
-    assert_eq!(neg.at(9.0), Some(neg.line_at(9.0).unwrap().max(0.0)));
+    assert_eq!(neg.at(9.75), Some(0.0));
+    assert_eq!(neg.at(9.0), Some(neg.line_at(9.0).unwrap()));
+    assert_eq!(neg.at(9.40), Some(0.0));
+}
+
+#[test]
+fn a_line_dragged_under_zero_never_counts_area_under_it() {
+    let (rt, y) = dragged();
+    let (lo, hi) = (9.14, 9.40);
+    let under = Baseline::Line {
+        t0: lo,
+        y0: -2.0e4,
+        t1: hi,
+        y1: 5.0e3,
+    };
+    let held = Baseline::Line {
+        t0: lo,
+        y0: 0.0,
+        t1: hi,
+        y1: 5.0e3,
+    };
+    // the line is above 0 from the point where it crosses 0 on; before that it is 0
+    for t in [lo, 9.2] {
+        assert!(under.line_at(t).unwrap() < 0.0);
+        assert_eq!(under.at(t), Some(0.0));
+    }
+    assert_eq!(under.at(hi), Some(5.0e3));
+    // the area is the one of a line whose handle was never under zero, up to what the held part adds back (the triangle under zero is gone)
+    let (u, h) = (
+        peak_area(&rt, &y, lo, hi, under).unwrap(),
+        peak_area(&rt, &y, lo, hi, held).unwrap(),
+    );
+    assert!(u[0] >= h[0] - 1e-6 * h[0].abs(), "{u:?} {h:?}");
+    assert!(
+        u[1] <= h[1] + 1e-9,
+        "never more under the line than from zero"
+    );
+    let json = super::peak_area_json(&rt, &y, lo, hi, under).unwrap();
+    assert!(json.contains("\"clamped\":"), "{json}");
+    // a level under zero is zero
+    let lvl = Baseline::Line {
+        t0: 0.0,
+        y0: -5.0e3,
+        t1: 0.0,
+        y1: -5.0e3,
+    };
+    assert_eq!(
+        peak_area(&rt, &y, lo, hi, lvl),
+        peak_area(&rt, &y, lo, hi, Baseline::Zero)
+    );
 }
