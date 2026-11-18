@@ -89,13 +89,18 @@ pub(crate) struct Dataset {
 
 impl Members {
     /// The reader of `fs` (this dataset's members): the engine's own, and when none recognises it the one of the readers module the page registered with `native_external`.
-    fn open_fs(&self, fs: FileSet) -> mzlab_core::Result<Box<dyn Reader>> {
+    fn open_fs(&self, fs: FileSet, listing: bool) -> mzlab_core::Result<Box<dyn Reader>> {
         let sha1: Vec<String> = fs
             .membri
             .iter()
             .map(|m| m.sha1.clone().unwrap_or_default())
             .collect();
-        match readers::apri(fs, &Limits::sito()) {
+        let opened = if listing {
+            readers::apri_listing(fs, &Limits::sito())
+        } else {
+            readers::apri(fs, &Limits::sito())
+        };
+        match opened {
             Err(e) if e.key == "err.file.notAccepted" => self.external(&sha1).unwrap_or(Err(e)),
             r => r,
         }
@@ -123,7 +128,18 @@ impl Members {
 
     /// The reader of the dataset; with `centroid` its profile scans become centroids (as the conversion of a `.wiff` does by default).
     pub(crate) fn open(&self, centroid: bool) -> Result<Box<dyn Reader>, JsValue> {
-        let l = self.open_fs(self.fileset()).map_err(|e| error_json(&e))?;
+        self.open_as(centroid, false)
+    }
+
+    /// `open`; with `listing` a `.wiff` is read from its container and index alone (`readers::apri_listing`).
+    pub(crate) fn open_as(
+        &self,
+        centroid: bool,
+        listing: bool,
+    ) -> Result<Box<dyn Reader>, JsValue> {
+        let l = self
+            .open_fs(self.fileset(), listing)
+            .map_err(|e| error_json(&e))?;
         Ok(if centroid {
             readers_centroids::centroidato(l)
         } else {
@@ -308,7 +324,7 @@ pub fn build_mzidx_native(
     let fingerprints = crate::fingerprints::Fingerprints::new(&mut fs, &prints, &tell)?;
     let mut members = || fingerprints.given(|| m.fileset());
     let c = c as usize;
-    let mut l = crate::counted::open(fs, |fs| m.open_fs(fs), &tell, step, c)?;
+    let mut l = crate::counted::open(fs, |fs| m.open_fs(fs, false), &tell, step, c)?;
     let mut out = Accorpa::flussi(JsOutput { write });
     // peaks that do not fit in the budget go to the scratch file (a second file of OPFS) instead of being decoded again by every round; OPFS writes in 1 MiB blocks (`accorpa`)
     let mut spill = spill_put

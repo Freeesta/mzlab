@@ -5,7 +5,7 @@ use mzlab_core::step::Step;
 
 use super::{catalog, tools_file, Tool, UiTool};
 
-/// The tools of the demo of the public site (`docs/agenti/llm-subagenti.md`, «Demo pubblica»): read, propose and set a parameter,
+/// The tools of the demo of the public site (`docs/agenti/llm-subagents.md`, «Demo pubblica»): read, propose and set a parameter,
 /// nothing that runs, removes or exports; the proxy accepts only this catalog (SHA-256 in its allow-list).
 pub const DEMO_TOOLS: &[&str] = &[
     "flow_list_steps",

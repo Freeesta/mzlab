@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Times the Flow (index -> detect -> align -> gapfill) on the same synthetic series written in each input format the CLI reads without a vendor file.
 `genera OUT BASE_DIR [--n N]` writes OUT/<format>/ from the zlib, non-indexed mzML of BASE_DIR (made by tools/dati_sintetici.py); `misura BIN DIR...` runs
-`BIN flow run` on each directory with N workers and prints one Markdown row per directory (MB, s per step, MB/s of the whole). Used by docs/agenti/misure-formati.md."""
+`BIN flow run` on each directory with N workers and prints one Markdown row per directory (MB, s per step, MB/s of the whole). Used by docs/agenti/measurements-formats.md."""
 import argparse, base64, json, re, struct, subprocess, sys, tempfile, time, zlib
 from pathlib import Path
 

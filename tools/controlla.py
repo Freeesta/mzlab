@@ -144,7 +144,7 @@ IDB_OK = {"mzlab/web/qqq-db.js", "mzlab/web/libreria-corpo.js", "mzlab/web/libre
 
 
 def static_rules() -> list[str]:
-    """Rules of memory that grep can keep true (docs/agenti/memoria.md): no exported WASM function returns a whole `Vec<u8>` unless it is in the list of
+    """Rules of memory that grep can keep true (docs/agenti/memory.md): no exported WASM function returns a whole `Vec<u8>` unless it is in the list of
     tools/api_byte_ammesse.txt (`file::function`; new outputs go to a `WriteAt` sink), and IndexedDB is opened only in the files of IDB_OK."""
     import re
     bad = []

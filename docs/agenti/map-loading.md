@@ -1,7 +1,7 @@
 # Map of loading a file (site and desktop app)
 
-A snapshot of the code, not a plan: where a file goes from the click to the screen, what it costs, what is missing. Where the area guide disagrees with the code it is written under "Doubts". "Not found" = searched for and absent. Details already written elsewhere are not repeated: `startup.md` (page start-up), `progresso.md` (progress bar), `lettura-nativa.md` (`.raw`, `.wiff`, `.D` without mzML), `lettori-modulo.md` (modules per family), `mzidx.md` and `rust-mzidx.md` (index and pool), `rust-desktop.md`
-(desktop), `capabilities.md`, `visore-veloce.md` (after opening: XIC, zoom), `misure-velocita-sito.md` and `ottimizzazioni-tentate.md` (numbers and routes already discarded: read them BEFORE optimizing), `misure-macchine.md` (opening on slow machines).
+A snapshot of the code, not a plan: where a file goes from the click to the screen, what it costs, what is missing. Where the area guide disagrees with the code it is written under "Doubts". "Not found" = searched for and absent. Details already written elsewhere are not repeated: `startup.md` (page start-up), `progress.md` (progress bar), `native-reading.md` (`.raw`, `.wiff`, `.D` without mzML), `readers-module.md` (modules per family), `mzidx.md` and `rust-mzidx.md` (index and pool), `rust-desktop.md`
+(desktop), `capabilities.md`, `fast-viewer.md` (after opening: XIC, zoom), `measurements-speed-site.md` and `optimizations-tried.md` (numbers and routes already discarded: read them BEFORE optimizing), `measurements-machines.md` (opening on slow machines).
 
 ## 1. Site: the common path (mzML)
 
@@ -11,7 +11,7 @@ A snapshot of the code, not a plan: where a file goes from the click to the scre
 | 2 | `upload0` (314) | page | `wiffToMzml` 184 and `rawToMzml` 179 analyse what the engine reads by itself, then `moduloToMzml` 227 converts the readers-module files one at a time. Up to 50 files, each file goes to `upload0` (`fileKind`, `PROGRESSO.begin`, `CONVROWS` row, `one` read) as soon as it is ready: the first sample opens while the following ones convert (`e2e_apertura_pipeline`). Beyond 50 files, first the "Choose" question, then the whole batch: `Promise.all(files.map(one))` in the browser, otherwise one at a time. |
 | 3 | `one` → `sendFile` → `fetch POST api/upload` → `browser.js` → `lr.js` `upload` (84) | page | The browser has no network: `browser.js` intercepts `fetch("api/...")` and forwards it to the engine. Rejects files > 4 GB (`err.memory.over4gb`). The `File` goes to the worker by reference (no copy). |
 | 4 | `rust-worker.js` `lrPut` → `rust-carica.js` `copyPrints` | engine worker, async | `ARCH.ensureRoom` (space ×1.8 for file + index), removes the old index of the same name (238), copies into OPFS in chunks (`blob.slice().arrayBuffer()`, `putChunks`; "Cancel" stops the copy at the next chunk and the promised space is freed on every error). For a `.wiff` sample the space requested covers only the members not yet in OPFS. In the same pass SHA-256, SHA-1 and `probe` go to `impronta-worker.js` (≤4 chunks waiting). Bar 0-40 %, updated every 100 ms. Reads the WHOLE file once. |
-| 5 | `lrIndex` (277) → `prepare_upload` (`mzlab-wasm/src/lib.rs` 624 → `upload::prepare_in`) | engine worker, SYNCHRONOUS (answers nothing else) | Scan table: with a valid `indexListOffset` (`scantable::read_listed`) it reads the header, the last 2 KB, the index and ≥4 KB per spectrum (never the arrays); without an index (`read_walked`) it reads the file in 1 MiB blocks. Fingerprints already known: no re-read. One pass: `misure-una-passata.md`. |
+| 5 | `lrIndex` (277) → `prepare_upload` (`mzlab-wasm/src/lib.rs` 624 → `upload::prepare_in`) | engine worker, SYNCHRONOUS (answers nothing else) | Scan table: with a valid `indexListOffset` (`scantable::read_listed`) it reads the header, the last 2 KB, the index and ≥4 KB per spectrum (never the arrays); without an index (`read_walked`) it reads the file in 1 MiB blocks. Fingerprints already known: no re-read. One pass: `measurements-one-pass.md`. |
 | 6 | `earlyTicOf` (258) | engine worker | From the table it derives the declared rt and TIC and sends `progress {early_tic}`: while no file is open the workspace draws the PROVISIONAL TIC of the first file being loaded, with its `TDATI` table (`tic-provvisorio.js`, loaded at the first `early_tic` by `area-lavoro.js`, `#ticprov` under the drop zone, which therefore does not move, goes away with the entry page, not before, or when loading ends); `getChrom` (`explore.js`, `provvisorio:true`) uses it for an already-open file. Test: `e2e_tic_provvisorio`. |
 | 7 | `idxPool().build` → `idx-worker.js` `build` + `build_mzidx` | pool of short-lived workers (min(cores−1, 4); 2 on iPad/phone) | Reads the OPFS copy with `SyncAccessHandle` (`lettura-sync.js`) in 4 MiB blocks (`BLOCK`, `mzlab-wasm/src/lib.rs` 74), decodes each spectrum ONCE, sorts by m/z into buckets; peaks beyond `budget` (64 MB, 32 on iPad) go to an OPFS spill file `.sp.part` (~20 B/peak). With isolation (SharedArrayBuffer) up to 4 helpers decode base64/zlib (`idx-aiuti.js`). Writes `.mzidx.part`, then `ARCH.promote`. Bar 40-100 %. |
 | 8 | `lrOpen`, `lr_entry`, `mergeFiles` | engine worker + page | Opens the index (header, meta, scan table; the peaks stay in the file and are read in windows) and fills the load table. No peaks in memory. |
@@ -40,12 +40,12 @@ A single engine worker serves ALL requests (`rust-worker.js` `handle`): a long c
 | `.mzidx` | index | only as a derivative in OPFS (`idx/`); as a file to open: not found | only as a cache (`app_cache_dir()/mzidx`) | 64 B header + meta + scan table; peaks in 64K windows (`idxwalk.rs`); version > 2 → `error.newerFormat` |
 | `.dam` | SCIEX method | `lr_put` without an index (`rust-worker.js` 231) | same | read on demand |
 | mzMLb, imzML | – | not found | not found | – |
-| Libraries `.msp`, `.mgf`, `.json`, MassBank, `.mzlib` | – | not raw data: `mzlab-lib` (`parse.rs` `detect`; `.mzlib` read by directory, blocks decoded on demand); `libreria-worker.js` | – | `librerie.md` |
+| Libraries `.msp`, `.mgf`, `.json`, MassBank, `.mzlib` | – | not raw data: `mzlab-lib` (`parse.rs` `detect`; `.mzlib` read by directory, blocks decoded on demand); `libreria-worker.js` | – | `libraries.md` |
 | `.mzfeat`, `.mzflow` | – | derivatives/plans, not raw data (`file-sicuri.js`: 8 MB, depth 32; beyond, `workflow.err.too*`) | – | – |
 
 The site engine has in its registry only base Agilent `.D` and SCIEX `.wiff` (`readers.rs` 270, `Limiti::sito()` 192 MB); every other family is a separate `.wasm` (`crates/mzlab-lettori-wasm`), loaded only when a file of that family arrives (`lettori-modulo.js`, `lettori-worker.js`: ONE worker for the conversions, no internal parallelism found). Module→engine transport: `transport.rs` (`PROTOCOLLO` 2, binary columns).
 
-Native samples (`.raw`, `.wiff`, `.D`): `lr_put` with `nat` copies the members into OPFS (no mzML), then `build_mzidx_native` writes the v2 index (phases copy .2, sha .1, open .1, scans .35, chrom .25: `nativo-fasi.js`); `natsame` recognises an already loaded `.wiff` pair or `.raw` ("from cache"). Details: `lettura-nativa.md`.
+Native samples (`.raw`, `.wiff`, `.D`): `lr_put` with `nat` copies the members into OPFS (no mzML), then `build_mzidx_native` writes the v2 index (phases copy .2, sha .1, open .1, scans .35, chrom .25: `nativo-fasi.js`); `natsame` recognises an already loaded `.wiff` pair or `.raw` ("from cache"). Details: `native-reading.md`.
 
 ## 3. Desktop app
 
@@ -78,14 +78,14 @@ Native samples (`.raw`, `.wiff`, `.D`): `lr_put` with `nat` copies the members i
 | Lazy reading with an index | present | `.mzidx`: scan table in memory, peaks in windows (`idxwalk.rs`), TIC/base peak inside the index (opening reads no peaks); mzML with an offset index: headers only |
 | First approximate picture then refined | partial | provisional TIC from the table (step 6); map preview. No approximate XIC/spectrum; a `.raw` already has one during the copy (`tic-nativo.js`) |
 | Workers / threads | present | site: engine worker, index pool, helpers, fingerprint worker, module workers; desktop: rayon, thread per request, conversion queue. The page does no heavy I/O |
-| Preloading the next / the likely one | partial | engine and `.wasm` start at `DOMContentLoaded` (`browser.js`), manufacturer scripts cached by the service worker, Ketcher and 3D map at idle, `XICBTN.prefetch`; queued files are indexed by the pool BEFORE opening them. No speculative preload of data TIC/XIC/spectra: not found (routes tried in `ottimizzazioni-tentate.md`) |
+| Preloading the next / the likely one | partial | engine and `.wasm` start at `DOMContentLoaded` (`browser.js`), manufacturer scripts cached by the service worker, Ketcher and 3D map at idle, `XICBTN.prefetch`; queued files are indexed by the pool BEFORE opening them. No speculative preload of data TIC/XIC/spectra: not found (routes tried in `optimizations-tried.md`) |
 | Cache of decoded data | partial | yes: `.mzidx` on disk (the decoded data sorted by m/z), `CACHE` LRU of responses, map tile pyramid in OPFS (`rust-worker.js` 39-70). No: decoded spectra, mmap maps (desktop), desktop index after a cold restart |
 | Parallel decoding | present | SharedArrayBuffer helpers (only with isolation), `parse_helped` (3 threads), sorting up to 8 threads (native), mzML encoding in a pool (`mzmlwrite/pool.rs`); the engine `.wasm` stays sequential where there is no isolation |
 | Zero-copy Rust/WASM/JS | partial | numeric results transferred and recycled; `Blob` by reference; `mmap` on the desktop. One copy for every `read` towards WASM and every chunk written to OPFS; tables copied in `prepare_upload` |
 | Compact structures | present | column-based `.mzidx` with `fence` for blocks of 16384, HR MS1 in `f32`, binary column transport of the modules (`transport.rs`), `xicbin`; table rows as compact JSON |
 | Cancellation | partial | site: queue, copy and builder yes, `prepare_upload` no; desktop: index builds yes (`lr_cancel`), `natsamples` and `nat2mzml` no |
 | Memory limits | present | §4; module caps (`tools/build_lettori_wasm.sh`), engine `.wasm` ≤ 2 174 976 B |
-| Faithful progress | present on the site, partial on the desktop | `progresso.md`; desktop without events for indexing |
+| Faithful progress | present on the site, partial on the desktop | `progress.md`; desktop without events for indexing |
 
 ## 6. Doubts and discrepancies found (verify before acting)
 
@@ -93,7 +93,7 @@ Native samples (`.raw`, `.wiff`, `.D`): `lr_put` with `nat` copies the members i
 2. `rust-desktop.md` says the index is `<size>_<name>`; the code writes `<name>.mzidx` (`idxbuild.rs` 84): two mzML files with the same name overwrite each other.
 3. Desktop: no `progress` for `lr_put`/`lr_index`; index that does not survive a cold restart; budget on Windows probably 1024 MB because of `ram_mb()`; more threads than the declared cap of 4.
 4. Desktop: `.D` folders and `.mzidx` as input: not found; not traced what the page shows when a `.D` folder is dragged in.
-5. The site's work plan after `lr_index`: `lr_entry` and `lr_items` re-read the index for every file (sequence per file in `lr.js` `explore`): not measured how much this weighs with many files (see `misure-macchine.md`, opening at 6×).
+5. The site's work plan after `lr_index`: `lr_entry` and `lr_items` re-read the index for every file (sequence per file in `lr.js` `explore`): not measured how much this weighs with many files (see `measurements-machines.md`, opening at 6×).
 
 ## 7. Batches for Gemini (priority: what weighs most on opening time)
 

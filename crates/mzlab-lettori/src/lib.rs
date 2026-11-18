@@ -1,4 +1,4 @@
-//! The readers of the vendor files, one module `.wasm` per family of formats (docs/agenti/lettori-modulo.md): the engine (`mzlab-wasm`) carries none of this crate.
+//! The readers of the vendor files, one module `.wasm` per family of formats (docs/agenti/readers-module.md): the engine (`mzlab-wasm`) carries none of this crate.
 //! The readers of a family sit in `src/<family>/` behind the Cargo feature of the same name and implement `mzlab_core::readers::Lettore`; variants of the readers that live
 //! in `mzlab-core` sit behind its `estesi` feature, which this crate turns on and the engine leaves off.
 use mzlab_core::error::{Error, Result};
@@ -120,14 +120,36 @@ pub fn riconosci(fs: &mut FileSet) -> Option<&'static ReaderEntry> {
 /// Opens `fs` with the reader that recognises it, as it is (the sessions of the modules: the engine decides itself what it does with SRM scans), except
 /// a Thermo `.raw`: a TSQ keeps its SRM transitions only as scans, so its reader is wrapped to give them as chromatograms (`srm::SrmFromScans`). Every reader
 /// answers through `finite::Finished`: a NaN or infinite number of the file is an error, not a value.
-pub fn open_bare(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+pub fn open_bare(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+    open_as(fs, limits, false)
+}
+
+/// `open_bare` for a listing: a SCIEX pair is read from its container and index alone (`wiff::reader::open_listing`).
+fn open_as(mut fs: FileSet, limits: &Limits, listing: bool) -> Result<Box<dyn Reader>> {
     let name = fs
         .membri
         .first()
         .map(|m| m.nome.clone())
         .unwrap_or_default();
     let v = riconosci(&mut fs).ok_or_else(|| refusal(&fs, name))?;
-    let mut l = (v.apri)(fs, limits)?;
+    // only a build with the SCIEX reader names it: the other families must not pull it in
+    #[cfg(any(feature = "sciex", feature = "tutte"))]
+    let sciex = listing && v.id == mzlab_core::wiff::reader::ENTRY.id;
+    #[cfg(not(any(feature = "sciex", feature = "tutte")))]
+    let sciex = {
+        let _ = listing;
+        false
+    };
+    let mut l = if sciex {
+        #[cfg(any(feature = "sciex", feature = "tutte"))]
+        {
+            mzlab_core::wiff::reader::open_listing(fs, limits)?
+        }
+        #[cfg(not(any(feature = "sciex", feature = "tutte")))]
+        unreachable!()
+    } else {
+        (v.apri)(fs, limits)?
+    };
     if l.format() == readers::Format::ThermoRaw && srm::has_srm_scans(&mut *l, 0) {
         l = Box::new(srm::SrmFromScans::new(l));
     }
@@ -186,6 +208,12 @@ fn refusal(fs: &FileSet, name: String) -> Error {
 /// Opens `fs` with the reader that recognises it; the SRM traces of scans with an SRM filter become chromatograms (`srm::SrmFromScans`).
 pub fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     Ok(Box::new(srm::SrmFromScans::new(open_bare(fs, limits)?)))
+}
+
+/// `apri` for a listing (`readers::list_samples`): the dataset is read as far as its index and no further where the reader can (a `.wiff.scan` is not read).
+/// Not wrapped in `SrmFromScans`: it probes the scans of every sample, which a listing must not do (a refused sample would fail the whole file).
+pub fn apri_listing(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+    open_as(fs, limits, true)
 }
 
 /// Every extension of the registry of this build, without repeats.

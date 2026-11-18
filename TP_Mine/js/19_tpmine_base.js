@@ -108,7 +108,7 @@
           const d = document.createElement("div"); d.className = "tp-toast"; d.setAttribute("role", "status"); d.textContent = t; document.body.appendChild(d);
           setTimeout(() => d.classList.add("out"), 4200); setTimeout(() => d.remove(), 4800); return;
         }
-        if (m.type === "ask") {               // what only this page can do for the worker: the engine of the Data tab reads the maker's files (docs/agenti/lettura-nativa.md)
+        if (m.type === "ask") {               // what only this page can do for the worker: the engine of the Data tab reads the maker's files (docs/agenti/native-reading.md)
           asked(m.what, m.name).then(value => worker.postMessage({ type: "ask-reply", rid: m.rid, value }), () => worker.postMessage({ type: "ask-reply", rid: m.rid, value: null }));
           return;
         }

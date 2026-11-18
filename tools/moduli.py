@@ -2,7 +2,7 @@
 The only reader of those files: `--elenco <part>` (names, for the shell scripts), `--riga <name>` (how to build one), `--tetto <name>`,
 `--manifest <wasm-feat dir>` (writes its manifest.json from a build),
 `--misura <site/static dir>` (writes `misura` = bytes after wasm-opt of every module from a real build; the only writer of that field), `--controlla [--base <git ref>]`.
-Cap rule (docs/agenti/wasm-tetti.md): a cap rises by at most 10 % per new function and never in a workflow; with --base a cap above 1.10 x its base value fails."""
+Cap rule (docs/agenti/wasm-caps.md): a cap rises by at most 10 % per new function and never in a workflow; with --base a cap above 1.10 x its base value fails."""
 import argparse
 import hashlib
 import json

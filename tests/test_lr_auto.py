@@ -47,7 +47,7 @@ def answers(tmp_path_factory):
             t, y, truth = trace(name, seed)
             # the engine reads the same rounded numbers as the CSV
             t, y = np.round(t, 6), np.round(y, 3)
-            r = json.loads(cli("peak-auto-lr", str(write_csv(d / f"{name}-{seed}.csv", t, y))).stdout)
+            r = json.loads(cli("peak-auto-lr", str(write_csv(d / f"{name}-{seed}.csv", t, y)), "--set", "area_unit=min").stdout)
             out[(name, seed)] = (t, y, truth, r)
     return out
 
@@ -114,7 +114,7 @@ def test_a_trace_below_zero_is_never_a_negative_area(tmp_path):
         a = int(np.argmin(np.abs(t - truth["apex"][0])))
         y[a - 4] = -1000.0
         t, y = np.round(t, 6), np.round(y, 3)
-        r = json.loads(cli("peak-auto-lr", str(write_csv(tmp_path / f"neg-{seed}.csv", t, y))).stdout)
+        r = json.loads(cli("peak-auto-lr", str(write_csv(tmp_path / f"neg-{seed}.csv", t, y)), "--set", "area_unit=min").stdout)
         assert r["params"]["baseline"] == "engine"
         for p in r["peaks"]:
             lo, hi = p["lo"], p["hi"]
@@ -125,3 +125,16 @@ def test_a_trace_below_zero_is_never_a_negative_area(tmp_path):
             assert up == pytest.approx(p["area"], rel=1e-9, abs=1e-9) and down == pytest.approx(p["below"], rel=1e-9, abs=1e-9), (seed, p)
             cut += lo < a - 4 < hi and p["below"] > 0
     assert cut >= len(SEEDS) // 2, cut
+
+
+def test_areas_are_counts_seconds_by_default_and_minutes_on_request(tmp_path):
+    """The default unit is counts x s (as peak-area); area_unit=min gives the old counts x min: the same peaks, every area 60 times larger."""
+    t, y, _ = trace("singles", 1)
+    f = str(write_csv(tmp_path / "unit.csv", np.round(t, 6), np.round(y, 3)))
+    s = json.loads(cli("peak-auto-lr", f).stdout)
+    m = json.loads(cli("peak-auto-lr", f, "--set", "area_unit=min").stdout)
+    assert s["peaks"] and len(s["peaks"]) == len(m["peaks"])
+    for a, b in zip(s["peaks"], m["peaks"]):
+        for k in ("area", "below", "area_zero"):
+            assert a[k] == pytest.approx(60 * b[k], rel=1e-12, abs=1e-12), (k, a, b)
+        assert {k: v for k, v in a.items() if k not in ("area", "below", "area_zero")} == {k: v for k, v in b.items() if k not in ("area", "below", "area_zero")}

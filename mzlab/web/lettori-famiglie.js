@@ -1,5 +1,5 @@
 // @ts-strict
-// The families of the readers modules (docs/agenti/lettori-modulo.md): one .wasm per family in wasm-lettori/<family>/, loaded only when a file of the family arrives.
+// The families of the readers modules (docs/agenti/readers-module.md): one .wasm per family in wasm-lettori/<family>/, loaded only when a file of the family arrives.
 // `ext` = every extension the family reads (a test of crates/mzlab-lettori checks that the extensions of each reader are in its row), `membri` = names of the members of a dataset
 // (lower case, a part of the path) that tell the family, `errori` = the keys of the engine's errors that send a sample to the module, `soloModulo` = the extensions only the module reads
 // (the engine reads the others as they are): a file with one of these is taken by the module and is not refused as «cannot be opened». The errors a module raises itself reach the page

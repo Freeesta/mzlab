@@ -1,4 +1,4 @@
-# e2e_ms2_titoli: MS2 panels follow the naming scheme of docs/agenti/titoli-pannelli.md («TIC · MS² · precursor 229.1», «MS² of 229.1»; IT and EN, whole in the tooltip when the header cuts them),
+# e2e_ms2_titoli: MS2 panels follow the naming scheme of docs/agenti/panel-titles.md («TIC · MS² · precursor 229.1», «MS² of 229.1»; IT and EN, whole in the tooltip when the header cuts them),
 # the precursor menu and the legends list numbers only, MS2 files are never ticked together
 # (one MS2 trace per panel, no overlay control at level 2) and Full scan and MS2 never share a panel.
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

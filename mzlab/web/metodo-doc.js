@@ -1,6 +1,6 @@
 // @ts-strict
 "use strict";
-// The Method window shows here what the file itself says about its acquisition: the `metodo/1` document (docs/agenti/metodo.md) that /api/metodo gives for the open item
+// The Method window shows here what the file itself says about its acquisition: the `metodo/1` document (docs/agenti/method.md) that /api/metodo gives for the open item
 // (the engine reads it from the .raw, the .wiff, the .D, the .dam or the mzML that carries it). Only what the file holds is drawn, as the file says it; a value the file
 // lacks has no row. What the reader could not read (`avvisi`: parts not decoded, missing, cut) is listed first, in plain words.
 // Everything that comes from a file goes through EH().

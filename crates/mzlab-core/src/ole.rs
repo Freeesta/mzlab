@@ -295,6 +295,11 @@ impl Ole {
         self
     }
 
+    /// Bytes of the container file.
+    pub fn byte_len(&self) -> u64 {
+        self.src.len()
+    }
+
     /// SHA-1 (lower-case hex) of the whole container file.
     pub fn sha1_hex(&self) -> String {
         if let Some(h) = self.sha1.borrow().as_ref() {

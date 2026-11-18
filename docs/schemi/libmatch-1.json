@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "libmatch/1",
  "title": "libmatch/1: library match of one query spectrum, by compound",
- "description": "Format «libmatch/1» (crates/mzlab-lib/src/matchres.rs, docs/agenti/librerie.md): the compounds found in a set of spectral libraries, exact before analog before in_silico, each with all its matching spectra (best score first) and the peak pairs a mirror plot draws. delta_mz = query precursor minus library precursor. confidence is always null here: the cascade of the Flow fills it from experimental, hr, scores and peaks.",
+ "description": "Format «libmatch/1» (crates/mzlab-lib/src/matchres.rs, docs/agenti/libraries.md): the compounds found in a set of spectral libraries, exact before analog before in_silico, each with all its matching spectra (best score first) and the peak pairs a mirror plot draws. delta_mz = query precursor minus library precursor. confidence is always null here: the cascade of the Flow fills it from experimental, hr, scores and peaks.",
  "type": "object",
  "additionalProperties": false,
  "required": ["schema", "hr", "mask", "top_compounds", "libraries", "compounds"],

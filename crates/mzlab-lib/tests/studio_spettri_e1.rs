@@ -1,4 +1,4 @@
-//! Spectral study, E1 (small compounds): today's numbers of the baseline arms, pinned (`docs/agenti/studio-spettri.md`, MISURA studio_e1).
+//! Spectral study, E1 (small compounds): today's numbers of the baseline arms, pinned (`docs/agenti/study-spectra.md`, MISURA studio_e1).
 //! E1: compounds below 200 Da with 2-3 fragments, the library entry with 5 more peaks at 1-2 %, two isobaric (same formula)
 //! competitors in the precursor window.
 //! A change of the engine or of the generator that moves a number updates the pin and the MISURA line together.

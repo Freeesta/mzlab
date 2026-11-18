@@ -4,7 +4,7 @@
 # wasm-opt is binaryen version_133 from the official GitHub tarball (SHA-256 pinned below), installed once per $RUNNER_TEMP
 # (under a lock, because tools/wasm_paralleli.sh runs several of these at the same time). If the tarball cannot be used it falls back to npm wasm-opt@1.4.0;
 # with neither, MZLAB_WASM_OPT_STRICT=1 (the production workflows) is an error, otherwise (local builds) a warning.
-# The ONE level for every module: -O3 runs the formula compositions 34-35 % faster in Firefox and WebKit than -Oz on the same rustc output, within the caps (docs/agenti/wasm-tetti.md).
+# The ONE level for every module: -O3 runs the formula compositions 34-35 % faster in Firefox and WebKit than -Oz on the same rustc output, within the caps (docs/agenti/wasm-caps.md).
 # MZLAB_WASM_OPT_LEVEL overrides it for tools/banco_wasm.py only (the -Oz baseline of the bench); the workflows never set it.
 # Never enable the relaxed vector (SIMD) proposal: its results depend on the CPU and site = app byte for byte (tests/test_guardie_regole.py).
 set -u

@@ -1,6 +1,6 @@
 //! The hard family of `tools/valida/sintetici_degdma.py` (weak [M+H]+, adducts and a base-peak in-source fragment stronger than the molecule, the same m/z coming
 //! from a later product): the rules must never join the product's fragment to the molecule, and two runs give the same bytes. How many members of the molecule
-//! are found is a measure (`docs/agenti/mzfeat-prove.md`), not an assertion. Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
+//! are found is a measure (`docs/agenti/mzfeat-tests.md`), not an assertion. Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 use std::path::Path;
 

@@ -1,4 +1,4 @@
-# Metrics of every main commit (tools/metriche.py, docs/agenti/metriche.md): one JSONL line per commit and part on the branch `stat-ci`
+# Metrics of every main commit (tools/metriche.py, docs/agenti/metrics.md): one JSONL line per commit and part on the branch `stat-ci`
 # (files metriche-YYYY-MM.jsonl; the big eventi*.jsonl files of ci_metrics.py are never checked out or touched).
 # Not a required check and it runs after the real work: workflow_run of `pages` and `test` on main. GITHUB_TOKEN reads the API and pushes to
 # `stat-ci` (a push with it starts no workflow). Only commits already merged into main are checked out, never code of a pull request.

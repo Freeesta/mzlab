@@ -4,7 +4,7 @@
     python3 tools/gate_release.py            # all the checks for the version of Cargo.toml
     python3 tools/gate_release.py --root D   # same on another tree (tests)
 
-Each check prints OK or FAIL with file:line and the remedy; exit 1 if any FAIL. Stdlib only. Rules: docs/agenti/rilascio.md."""
+Each check prints OK or FAIL with file:line and the remedy; exit 1 if any FAIL. Stdlib only. Rules: docs/agenti/release.md."""
 from __future__ import annotations
 
 import argparse
@@ -95,15 +95,15 @@ def check_guides(root: Path) -> Result:
     known = known_commands(root)
     bad: list[str] = []
     if not known:
-        return "commands in llms.txt / per-agenti.md", []
-    for rel in ("llms.txt", "docs/agenti/per-agenti.md"):
+        return "commands in llms.txt / for-agents.md", []
+    for rel in ("llms.txt", "docs/agenti/for-agents.md"):
         for n, line in enumerate(_lines(root / rel), 1):
             for a, b in re.findall(r"mzlab-cli ([a-z][a-z-]*)(?: ([a-z][a-z-]*))?", line):
                 if a not in known:
                     bad.append(f"{rel}:{n}: `mzlab-cli {a}` does not exist -> fix the guide or the command")
                 elif a == "flow" and b and b not in known and not b.isupper():
                     bad.append(f"{rel}:{n}: `mzlab-cli flow {b}` does not exist -> fix the guide or the command")
-    return "commands in llms.txt / per-agenti.md", bad
+    return "commands in llms.txt / for-agents.md", bad
 
 
 def check_readme(root: Path) -> Result:

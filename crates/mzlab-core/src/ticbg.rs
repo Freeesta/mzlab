@@ -27,7 +27,7 @@ pub enum Action {
     Exclude,
 }
 
-/// Knobs; `Default` is the automatic removal. Thresholds and their sources: `docs/agenti/tic-fondo.md`.
+/// Knobs; `Default` is the automatic removal. Thresholds and their sources: `docs/agenti/tic-background.md`.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Params {
     pub mode: Mode,

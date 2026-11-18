@@ -9,7 +9,7 @@
 //!    (`naming`); 2b exists only as the chemist's decision (`decide`);
 //! 3. CSI:FingerID structure with COSMIC ≥ `cosmic_min`; 0. none, or a standard matched on mass + RT only (`suspect-RT`).
 //!
-//! A CANOPUS class (`canopus_min`) is shown as a column of its own and gives no level: Level 4 is a unique formula (`docs/agenti/livelli.md`). Then the retention-time rule (`rt`) and the explanation of each level (`reasons`). The curation of names is read through `Curation` (`curate`).
+//! A CANOPUS class (`canopus_min`) is shown as a column of its own and gives no level: Level 4 is a unique formula (`docs/agenti/levels.md`). Then the retention-time rule (`rt`) and the explanation of each level (`reasons`). The curation of names is read through `Curation` (`curate`).
 
 pub mod curate;
 pub mod decide;

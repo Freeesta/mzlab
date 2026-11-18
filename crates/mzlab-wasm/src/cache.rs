@@ -1,4 +1,4 @@
-//! The routes of the maps of the session and the byte-budgeted cache of the whole-file maps (see `docs/agenti/memoria.md`).
+//! The routes of the maps of the session and the byte-budgeted cache of the whole-file maps (see `docs/agenti/memory.md`).
 
 use mzlab_core::routes::Query;
 use wasm_bindgen::prelude::*;

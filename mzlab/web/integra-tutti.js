@@ -20,7 +20,7 @@ function records(p, s, r) {
     if (mrm) { it.snap = { a: "man", b: "man" }; it.my = { a: k.b0, b: k.b1 }; snapBase(s, it); }
     else { delete it.zero; delete it.base; it.bm = "line"; it.bl = [k.t0, k.b0, k.t1, k.b1]; }
     it.auto = { half: q.half, half_auto: q.half_auto, valley: q.valley, sn_min: q.sn, split: q.split, baseline: q.baseline, noise: q.noise, sn: k.sn, end0: k.end0, end1: k.end1,
-      b0: k.b0, b1: k.b1, clamp0: k.clamp0, clamp1: k.clamp1, area: k.area * 60, below: k.below * 60, area_zero: k.area_zero * 60 };       // the engine's areas, counts x min -> counts x s
+      b0: k.b0, b1: k.b1, clamp0: k.clamp0, clamp1: k.clamp1, area: k.area, below: k.below, area_zero: k.area_zero };       // the engine's areas, already counts x s (area_unit default)
     return it;
   });
 }
