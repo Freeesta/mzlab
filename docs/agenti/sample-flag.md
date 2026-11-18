@@ -16,7 +16,7 @@ Plan and decisions: `wiff-sample-choice.md`. List what a file holds first: `mzla
 - `samples select FILE --default [--budget-mb N] [--json]`: the samples the page dialog ticks first (`readers::selection::suggest`, the site's `sample_default`): all when their section bytes are at most a quarter of the budget (default 1024 MB), none otherwise; exactly one of `--sample` and `--default`.
 
 ## Not here
-- A `samples` property of a `flow run` input (plan inputs already name a sample as `NAME@ID`) and the partial identity of Q4: the mzML of a chosen sample is the same bytes as in a full run, so no identity changes here. The page dialog is PR 4 (`wiff-sample-choice.md`, «PR 4 as built»), the OPFS range copy PR 5.
+- A `samples` property of a `flow run` input (plan inputs already name a sample as `NAME@ID`) and the partial identity of Q4: the mzML of a chosen sample is the same bytes as in a full run, so no identity changes here. The page dialog is PR 4 (`wiff-sample-dialog.md`), the OPFS range copy PR 5.
 - `dad --sample ID` keeps its single id.
 
 Tests: `crates/mzlab-cli/src/sample_select_tests.rs` (synthetic `tools/wiff_grande.py` pair; python3 is part of the test), `readers/selection.rs` unit tests.
