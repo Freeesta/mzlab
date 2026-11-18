@@ -1,5 +1,5 @@
 //! wasm-bindgen bridge of `mzlab-chem`: `reatt/1` of a SMILES (ETKDG geometry, GFN2-xTB charges, condensed Fukui functions, C–H sites;
-//! `docs/agenti/reattivita.md`) for the page in administrator mode, and of the parent file of the Flow step `structure.reactivity` for the pool of the Flow.
+//! `docs/agenti/reactivity.md`) for the page in administrator mode, and of the parent file of the Flow step `structure.reactivity` for the pool of the Flow.
 //! A `.wasm` of its own. Memory: one call allocates its matrices and frees them on return; the output is one JSON string, no offsets
 //! (`docs/agenti/memory.md`). Errors are JSON `{"error_key", "params"}` strings.
 use mzlab_core::error::Error;

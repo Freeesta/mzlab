@@ -1,7 +1,7 @@
 //! `qc.mass_accuracy`: how well each file was calibrated, measured on ions that are known to be there (the lab background list, the internal standards and the standards of the user),
 //! and, if asked, the m/z of a feature table corrected with what was measured. Raw data and indexes are only read; the table is the one thing that can be written, as a copy.
 //! Everything here is arithmetic over the peak tables of the indexes, so the native command and the browser run the same code (`run`). The method of the fit is one module per
-//! method (`ols`, `huber`, `ransac`; `offset`, `linear_mz`, `linear_mz_rt`), chosen by enum in `fit`. Contract: `docs/schemi/massacc-1.json`, `docs/agenti/qc-massa.md`.
+//! method (`ols`, `huber`, `ransac`; `offset`, `linear_mz`, `linear_mz_rt`), chosen by enum in `fit`. Contract: `docs/schemi/massacc-1.json`, `docs/agenti/qc-mass.md`.
 
 mod analyse;
 mod correct;

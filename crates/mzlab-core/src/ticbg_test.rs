@@ -1,5 +1,5 @@
 //! `ticbg` on a synthetic unit-resolution run of known truth (`synth`): six background lines with drift and noise, random chemical noise,
-//! two real peaks of which one shares two m/z with background lines. Acceptance of `docs/agenti/tic-fondo.md`.
+//! two real peaks of which one shares two m/z with background lines. Acceptance of `docs/agenti/tic-background.md`.
 use crate::ticbg::*;
 
 const N: usize = 1200; // 20 min, 1 s per scan

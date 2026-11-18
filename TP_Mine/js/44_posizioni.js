@@ -1,6 +1,6 @@
 // @ts-check
 // TPMINE-PRIVATE  TPPOS: the button «Substitution position» in the open row of a TP (administrator mode only) and its panel: the classes of positions the MS2 of the TP supports, excludes or
-// cannot tell apart (`posiz/1`, docs/agenti/posizioni.md), the evidence, the type of oxidation and the checks that would settle it. A proposal 3a/3b is written as a proposal: no button saves a level.
+// cannot tell apart (`posiz/1`, docs/agenti/positions.md), the evidence, the type of oxidation and the checks that would settle it. A proposal 3a/3b is written as a proposal: no button saves a level.
 // The engine is the `positions` of the `.wasm` «grafo» (verified against its SHA-256 in wasm-feat/manifest.json) or, in the app, the native route `feat/grafo`.
 // Column «Prev. f(−)»: with the `reatt/1` of the parent (event «tp-reatt» from TPREATT, or TPPOS.setReatt) the engine adds `prior` (`positions_prior`); a prediction shown next to the
 // classes, never used to reorder, exclude or propose. Until the `reatt/1` arrives the column says «computing…».

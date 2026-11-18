@@ -6,7 +6,7 @@ Severity tags: **[H]** hides a real bug · **[W]** weak (passes, proves little) 
 
 ## Method
 
-- Greps over `tests/`, `tests_e2e/`, `crates/**/tests`, `tools/verifica.py`, `.github/workflows/`, plus the current-state docs `docs/agenti/test.md`, `docs/agenti/mutanti.md`, `docs/agenti/parita.md`.
+- Greps over `tests/`, `tests_e2e/`, `crates/**/tests`, `tools/verifica.py`, `.github/workflows/`, plus the current-state docs `docs/agenti/test.md`, `docs/agenti/mutants.md`, `docs/agenti/parity.md`.
 - Hand mutation: 30 one-line bugs in a scratch git worktree (never committed, removed afterwards). Rust mutants ran `cargo test -p mzlab-core --lib` and then the matching integration tests; JavaScript mutants ran only their pytest/node tests. `cargo mutants` is not installed and was not added.
 - A mutant counts as killed only when a test that passes on the clean tree fails on the mutated one (the clean baseline was re-run for the JavaScript tests: 11 passed).
 
@@ -24,7 +24,7 @@ Severity tags: **[H]** hides a real bug · **[W]** weak (passes, proves little) 
 10. **[W]** `tests/test_xlsx.py:46` — `pytest.importorskip("openpyxl")`: the only check that an independent reader opens the written workbook never runs in CI. Fix: as above.
 11. **[W]** `tests/test_sw_cache_node.py:12` — `skipif(shutil.which("node") is None)`: the only unit test of the service worker disappears silently on a runner without node; `tests/*.py` hold 184 `skip`/`skipif`/`importorskip` sites in total. Fix: one strict environment variable in CI that turns "tool missing" skips into errors.
 12. **[W]** 15 `#[ignore]` Rust tests (e.g. `crates/mzlab-core/src/scantable/tests_window.rs:37`, `crates/mzlab-feat/tests/groups.rs:441`, `crates/mzlab-lettori/tests/sqlite_columns.rs:295`, `crates/mzlab-chem/tests/validation.rs:201`, five in `crates/mzlab-finder-lr-wasm/tests/`); no workflow passes `--ignored`, so they run only by hand. Fix: give each a reason string and run them in the nightly job.
-13. **[H]** Lab data: 40 Rust test files and 21 Python test files return early or skip without the private data; CI has none. Behaviours therefore **never tested in CI** (from `docs/agenti/test.md` and `docs/agenti/mutanti.md`):
+13. **[H]** Lab data: 40 Rust test files and 21 Python test files return early or skip without the private data; CI has none. Behaviours therefore **never tested in CI** (from `docs/agenti/test.md` and `docs/agenti/mutants.md`):
     - the whole teaching flow (`e2e_studenti`), `e2e_tpmine_mem`, the real series part of `e2e_tpmine2`, `e2e_hr_msntree`, `prova_hr`;
     - the Orbitrap cut steps of `e2e_hr_base` and `e2e_hr_ppm`;
     - every `.dam` path: `e2e9`, `e2e10`, `e2e15`, `e2e_dam_incoerente`;
@@ -83,7 +83,7 @@ Reading of the survivors:
 
 ## 3. Parity gaps
 
-1. **[H]** Parity "by same function": `docs/agenti/parita.md` lists tests (`parity_msn`, `natregistry`, `parity_masscal`, the `channels` unit tests) where both halves call the same Rust function through two entry points. They prove the wiring, not the result: a wrong formula passes on both sides. Fix: add one independent expected value (hand-computed or from the Python reference) per function.
+1. **[H]** Parity "by same function": `docs/agenti/parity.md` lists tests (`parity_msn`, `natregistry`, `parity_masscal`, the `channels` unit tests) where both halves call the same Rust function through two entry points. They prove the wiring, not the result: a wrong formula passes on both sides. Fix: add one independent expected value (hand-computed or from the Python reference) per function.
 2. **[H]** The Flow site↔app byte comparisons are e2e scripts that need the built site, so they run only in the nightly job; a pull request that breaks byte parity merges green. Fix: one small synthetic Flow byte comparison in the pull-request smoke set.
 3. **[W]** `tests_e2e/e2e_normative_screen.py` and `tests_e2e/e2e_flow_web_tabella.py` exercise the site route and check shapes and a few values, with no byte comparison against the CLI. Fix: compare the route output with `mzlab-cli` output for the same synthetic input.
 4. **[W]** Python↔Rust goldens use tolerances, not bytes: `crates/mzlab-core/tests/golden.rs:18-20` (1e-4, 1e-6, 1e-9) and `crates/mzlab-core/tests/chemistry_parity.rs:1` (1e-9). Reasonable for floats, but 1e-4 on an area is wide enough to let R08-class integration errors through on small peaks. Fix: state per field why the tolerance is needed; use exact equality for integers and strings.

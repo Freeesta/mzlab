@@ -1,4 +1,4 @@
-"""Tabui, panel of reactivity of the parent (TP_Mine/lazy/reattivita.js + viewer3d.js, docs/agenti/reattivita.md): administrator mode only.
+"""Tabui, panel of reactivity of the parent (TP_Mine/lazy/reattivita.js + viewer3d.js, docs/agenti/reactivity.md): administrator mode only.
 Without «mzlab.admin» there is no TPREATT, no panel and no .wasm «chem» request. With it, a hand-written `reatt/1` (paracetamol, geometry and values invented here, not a calculation) gives the six cards, the
 table per atom with as many rows as `atoms`, the threshold (slider and number linked) that filters the rows and the atoms of the viewer, the buttons and the keys that rotate and zoom (the state of the view
 changes), the switch of the H, no automatic rotation, the exports (XYZ has N + 2 lines), the states of the calculation, and the 2D drawing (a halo under each heavy atom). The order of the heavy atoms of

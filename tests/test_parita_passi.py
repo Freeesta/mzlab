@@ -1,6 +1,6 @@
 """Every Flow step of the registry (docs/schemi/steps-*-1.json, the exports of `mzlab_cli::flow::steps()`) runs in the browser too: it has an executor in
 `F.liveJobs` (flow/lazy/flow-live-jobs.js, plus the ones other files add to it). The native side is guarded by `flow_rule_tests.rs` (`native: true` = an
-executor of `flow run`). The steps the browser does not run yet stay in SOLO_APP with the reason (docs/agenti/parita.md); the list only shrinks."""
+executor of `flow run`). The steps the browser does not run yet stay in SOLO_APP with the reason (docs/agenti/parity.md); the list only shrinks."""
 import json
 import re
 from pathlib import Path

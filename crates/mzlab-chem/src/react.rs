@@ -1,4 +1,4 @@
-//! `reactivity_json(smiles, opts)`: the contract `reatt/1` (`docs/agenti/reattivita.md`). ETKDG geometry, GFN2-xTB of the neutral
+//! `reactivity_json(smiles, opts)`: the contract `reatt/1` (`docs/agenti/reactivity.md`). ETKDG geometry, GFN2-xTB of the neutral
 //! molecule, the cation and the anion at the same geometry (ALPB water by default), condensed Fukui functions, f(−) on the lowest
 //! conformers, C–H sites by symmetry class; extended Hückel as the fallback when an SCC does not converge.
 
@@ -15,7 +15,7 @@ use mzlab_feat::chem::graph::Mol;
 pub const ENGINE: &str = "mzlab-chem/1";
 /// GFN2-xTB is the published method; the extended Hückel fallback is used only when an SCC does not converge.
 pub const PUBLISH_GFN2: bool = true;
-/// Whether the pH 7 form is the default (`docs/agenti/reattivita.md`, section «Protomer at pH 7»).
+/// Whether the pH 7 form is the default (`docs/agenti/reactivity.md`, section «Protomer at pH 7»).
 pub const PROTOMER_DEFAULT: bool = false;
 /// Conformers on which f(−) is also computed, to give its spread.
 const SPREAD_CONFORMERS: usize = 3;

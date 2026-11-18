@@ -1,5 +1,5 @@
 # User lists (`liste/1`, `crates/mzlab-feat/src/lists/`)
-Neighbouring areas: `mzfinder-ingresso.md` (the mzFinder transformation list), `rust-flow.md` (`prov/1`).
+Neighbouring areas: `mzfinder-input.md` (the mzFinder transformation list), `rust-flow.md` (`prov/1`).
 
 - Two kinds: `transformations` (name, formula change, maximum repeats 1-10 or the rules' default, comment), `adducts` (name, formula change, charge ±1…3). Suspects are not a list: a `nome;formula;mass;comment` file is imported as a molecule collection (`molecules.md`: short columns `formula`, `mass`, `comment`, collection named after the file; a row with only the mass becomes a mass-only entry, one with neither formula nor mass is refused with its own error). Schema `docs/schemi/liste-1.json`.
 - Kind `transitions` (the transition table of `chrom.transitions`): `liste::route` hands it to `transitions::route`, which keeps the row order and answers `rows`, `csv`, `json` (`transitions/1`) and `sha256`; columns and errors in `transizioni.md`.
