@@ -8,7 +8,7 @@ fn failure_of(o: &mut Outcome, message: &str) -> Failure {
     match o.error.take() {
         Some(f) => *f,
         None => Failure {
-            key: "err.cli.usage".to_string(),
+            key: crate::exit::generic_key(o.code).to_string(),
             params: vec![("message".to_string(), message.to_string())],
             ..Failure::default()
         },
@@ -33,17 +33,20 @@ fn message_of(stderr: &str) -> (String, String) {
 /// `o` with the contract applied; `command` is the name of the entry that ran (`""` when none matched).
 pub(crate) fn finish(args: &[String], command: &str, mut o: Outcome) -> Outcome {
     let json = args.iter().any(|a| a == "--json") || crate::cmd::json_by_default(command);
-    if o.code != 0
-        && json
-        && !String::from_utf8_lossy(&o.stdout).contains("\"schema\":\"error/1\"")
-        && o.stdout.is_empty()
+    if o.code != 0 && json && !String::from_utf8_lossy(&o.stdout).contains("\"schema\":\"error/1\"")
     {
         let (message, hint) = message_of(&o.stderr);
         let mut f = failure_of(&mut o, &message);
         if f.hint.is_empty() {
             f.hint = hint;
         }
-        o.stdout = crate::flow_json::error_json(o.code, &f, &message, command).into_bytes();
+        // what the command printed before it failed (a report, a partial listing) rides in the document as `report`
+        let report = String::from_utf8(std::mem::take(&mut o.stdout))
+            .ok()
+            .map(|t| t.trim().to_string())
+            .filter(|t| !t.is_empty() && mzlab_core::json::parse(t.as_bytes()).is_ok());
+        o.stdout = crate::flow_json::error_json(o.code, &f, &message, command, report.as_deref())
+            .into_bytes();
         o.error = Some(Box::new(f));
     }
     if !o.stdout.is_empty() && !o.stdout.ends_with(b"\n") && std::str::from_utf8(&o.stdout).is_ok()
@@ -71,5 +74,5 @@ pub(crate) fn error_line(code: u8, e: &mzlab_core::Error, hint: &str, command: &
         hint: hint.to_string(),
         problems: None,
     };
-    crate::flow_json::error_json(code, &f, &crate::error_text::human_error(e), command)
+    crate::flow_json::error_json(code, &f, &crate::error_text::human_error(e), command, None)
 }

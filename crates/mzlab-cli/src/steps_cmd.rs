@@ -39,7 +39,7 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
     };
     let usage = |msg: &str| {
         let err = Error::new("err.cli.usage").with("message", msg);
-        fail(2, &err, msg, "mzlab-cli steps --help")
+        fail(&err, msg, "mzlab-cli steps --help")
     };
     let mut id = None;
     let mut it = args.into_iter();
@@ -65,7 +65,6 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
         let Some(last) = list.pop() else {
             let err = Error::new("err.flow.step.unknown").with("step", want);
             return fail(
-                2,
                 &err,
                 &format!("unknown step {want}"),
                 "mzlab-cli steps lists the steps",

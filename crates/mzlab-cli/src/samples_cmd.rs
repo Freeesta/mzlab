@@ -301,9 +301,7 @@ fn select_run(args: Vec<String>) -> Outcome {
     };
     if !file.exists() {
         let e = Error::new("err.session.fileNotFound").with("name", file.display());
-        return Outcome::fail_error(&e)
-            .with_code(crate::exit::INPUT)
-            .with_hint("check the path");
+        return Outcome::fail_error(&e).with_hint("check the path");
     }
     let chosen =
         crate::sample_select::parse(&text).and_then(|w| crate::sample_select::resolve(&file, &w));

@@ -276,6 +276,9 @@ impl Outcome {
     /// A failure with the message as typed: an engine key at its start (`err.x.y k=v`) keeps it and takes its code from the table,
     /// any other text is a usage error (`err.cli.usage`) that carries the text as its `message` parameter.
     fn fail(msg: &str) -> Self {
+        if let Some(o) = Self::unreadable_input(msg) {
+            return o;
+        }
         let key = msg.split(' ').next().unwrap_or("");
         let (code, error) = if key.starts_with("err.") || key.starts_with("error.") {
             let params = error_text::text_params(&msg[key.len()..]);
@@ -305,10 +308,22 @@ impl Outcome {
         }
     }
 
-    /// The same failure with a code of the table other than the one its key gives.
-    pub(crate) fn with_code(mut self, code: u8) -> Self {
-        self.code = code;
-        self
+    /// A `PATH: reason (os error N)` text of a file that is not there or cannot be opened (not found, permission, a folder where a file was
+    /// expected): an input failure (`err.cli.file`, exit 4), whatever the command that read it.
+    fn unreadable_input(msg: &str) -> Option<Self> {
+        let (path, rest) = msg.split_once(": ")?;
+        let errno: u32 = rest
+            .rsplit_once("(os error ")?
+            .1
+            .strip_suffix(')')?
+            .parse()
+            .ok()?;
+        if !matches!(errno, 2 | 13 | 20 | 21) || path.contains(' ') && path.starts_with("error") {
+            return None;
+        }
+        Some(Self::fail_error(
+            &Error::new("err.cli.file").with("path", path),
+        ))
     }
 
     /// The same failure with a hint: a `hint:` line on stderr and the `hint` of `error/1`.

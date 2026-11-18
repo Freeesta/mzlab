@@ -35,26 +35,24 @@ impl fmt::Display for NormError {
 }
 
 impl NormError {
-    fn new(key: &'static str, code: u8, msg: String) -> NormError {
-        NormError { key, msg, code }
+    fn new(key: &'static str, msg: String) -> NormError {
+        NormError { key, msg }
     }
     pub fn usage(m: &str) -> Self {
-        Self::new("err.normative.usage", crate::exit::USAGE, m.into())
+        Self::new("err.normative.usage", m.into())
     }
     pub fn sources(m: &str) -> Self {
-        Self::new("err.normative.sources", crate::exit::INTEGRITY, m.into())
+        Self::new("err.normative.sources", m.into())
     }
     pub fn pin(m: &str) -> Self {
         Self::new(
             "err.normative.pin",
-            crate::exit::INTEGRITY,
             format!("{m} (run with --update-pins after checking the change)"),
         )
     }
     pub fn large(url: &str, limit: u64) -> Self {
         Self::new(
             "err.normative.large",
-            crate::exit::OUTPUT,
             format!(
                 "{url} is above {} MB (use --allow-large)",
                 limit / 1_000_000
@@ -62,39 +60,22 @@ impl NormError {
         )
     }
     pub fn fetch(url: &str, m: &str) -> Self {
-        Self::new(
-            "err.normative.fetch",
-            crate::exit::OUTPUT,
-            format!("{url}: {m}"),
-        )
+        Self::new("err.normative.fetch", format!("{url}: {m}"))
     }
     pub fn parse(list: &str, m: &str) -> Self {
-        Self::new(
-            "err.normative.parse",
-            crate::exit::OUTPUT,
-            format!("{list}: {m}"),
-        )
+        Self::new("err.normative.parse", format!("{list}: {m}"))
     }
     /// A file that cannot be written.
     pub fn io(p: &Path, e: &std::io::Error) -> Self {
-        Self::new(
-            "err.normative.io",
-            crate::exit::OUTPUT,
-            format!("{}: {e}", p.display()),
-        )
+        Self::new("err.normative.io", format!("{}: {e}", p.display()))
     }
     /// A file that cannot be read.
     pub fn input(p: &Path, e: &std::io::Error) -> Self {
-        Self::new(
-            "err.normative.io",
-            crate::exit::INPUT,
-            format!("{}: {e}", p.display()),
-        )
+        Self::new("err.normative.input", format!("{}: {e}", p.display()))
     }
     /// The failure as the dispatcher reports it: the text of its key, `message` as parameter, the code of the table.
     fn outcome(&self) -> Outcome {
         Outcome::fail_error(&mzlab_core::Error::new(self.key).with("message", &self.msg))
-            .with_code(self.code)
     }
 }
 
@@ -116,14 +97,13 @@ usage: mzlab-cli normative pack IN OUT       the data release of the committed l
   --sources FILE  default OUT/sources.json
   --overrides FILE  default OUT/overrides.tsv (list_id;entry_ref;cas;inchikey;reason)
 
-exit: 0 done; 1 a list kept its last good file (stale); 2 usage; 3 sources.json not valid or pin mismatch; 4 an input file cannot be read; 6 a download was refused, a source failed or a file cannot be written";
+exit: 0 done; 1 a list kept its last good file (stale); 2 usage; 3 sources.json not valid or pin mismatch; 4 an input file cannot be read; 6 a download was refused, a source failed or a file cannot be written (the table is in docs/agenti/cli-agenti.md)";
 
 /// An error of the builder with its `err.normative.*` key.
 #[derive(Debug, Clone)]
 pub struct NormError {
     pub key: &'static str,
     pub msg: String,
-    pub code: u8,
 }
 
 struct Args {

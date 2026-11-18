@@ -16,35 +16,96 @@ pub const SELECTOR: u8 = 5;
 /// An output that cannot be written, or an external source that failed.
 pub const OUTPUT: u8 = 6;
 
-/// The code the table gives the engine error `key`, when it names a kind of failure.
-pub fn classify(key: &str) -> Option<u8> {
+/// The exit code of the engine error `key`: the one mapping of keys onto the table (exact keys first, then prefixes). A key that names no
+/// class is a data or domain error (1); what the command line asked wrongly is listed as usage.
+pub fn code_of_key(key: &str) -> u8 {
+    const INPUT_KEYS: &[&str] = &[
+        "err.cli.input.missing",
+        "err.cli.file",
+        "err.flow.io",
+        "err.flow.input.missing",
+        "err.flow.input.sha",
+        "err.session.fileNotFound",
+        "err.normative.input",
+        "error.badIndex",
+    ];
+    const OUTPUT_KEYS: &[&str] = &[
+        "err.cli.out",
+        "err.normative.io",
+        "err.normative.fetch",
+        "err.normative.large",
+        "err.normative.parse",
+    ];
+    const SELECTOR_KEYS: &[&str] = &[
+        "err.sample.unknown",
+        "err.canali.unknown",
+        "err.msn.node",
+        "err.flow.step.unknown",
+        "err.flow.instance",
+        "err.llm.tool.unknown",
+    ];
+    const INTEGRITY_PREFIXES: &[&str] = &[
+        "err.flow.format",
+        "err.flow.check",
+        "err.flow.lineage",
+        "err.flow.port.",
+        "err.flow.param.",
+        "err.flow.algorithm.",
+        "err.flow.preset.",
+        "err.flow.ref.",
+        "err.flow.instance.",
+        "err.flow.step",
+        "err.flow.input.",
+        "err.flow.unknownStep",
+        "err.mzrun.",
+        "err.normative.pin",
+        "err.normative.sources",
+    ];
+    const USAGE_KEYS: &[&str] = &[
+        "err.sample.list",
+        "err.sample.single",
+        "err.pda.scale",
+        "err.pda.view",
+        "err.pda.window",
+        "err.normative.usage",
+    ];
     match key {
-        "err.cli.input.missing"
-        | "err.cli.file"
-        | "err.flow.io"
-        | "error.badIndex"
-        | "err.session.fileNotFound" => Some(INPUT),
-        "err.cli.out" | "err.flow.cancelled" => Some(OUTPUT),
-        "err.sample.unknown" | "err.canali.unknown" => Some(SELECTOR),
-        k if k.starts_with("err.cli.") => Some(USAGE),
-        k if k.starts_with("err.file.") => Some(INPUT),
-        _ => None,
+        "err.run.integrity" => return INTEGRITY,
+        "err.run.input" => return INPUT,
+        "err.run.selector" => return SELECTOR,
+        "err.run.output" => return OUTPUT,
+        _ => {}
+    }
+    if INPUT_KEYS.contains(&key) || key.starts_with("err.file.") {
+        INPUT
+    } else if OUTPUT_KEYS.contains(&key) {
+        OUTPUT
+    } else if SELECTOR_KEYS.contains(&key) {
+        SELECTOR
+    } else if USAGE_KEYS.contains(&key) || key.starts_with("err.cli.") {
+        USAGE
+    } else if INTEGRITY_PREFIXES.iter().any(|p| key.starts_with(p)) {
+        INTEGRITY
+    } else {
+        DATA
     }
 }
 
-/// The exit code of the engine error `key`: its class in the table, a usage error (2) when it has none (the engine refused what the command line asked).
-pub fn code_of_key(key: &str) -> u8 {
-    classify(key).unwrap_or(USAGE)
+/// The generic key (`err.run.*`) for a command that failed with `code` and gave no key of its own: it maps back onto the same code.
+pub fn generic_key(code: u8) -> &'static str {
+    match code {
+        INTEGRITY => "err.run.integrity",
+        INPUT => "err.run.input",
+        SELECTOR => "err.run.selector",
+        OUTPUT => "err.run.output",
+        USAGE => "err.cli.usage",
+        _ => "err.run.data",
+    }
 }
 
 /// The exit code of `e`.
 pub fn code_of(e: &mzlab_core::Error) -> u8 {
     code_of_key(e.key)
-}
-
-/// The exit code of `e` for a command whose unclassified errors are about the data it read (1), not about its arguments.
-pub fn code_of_data(e: &mzlab_core::Error) -> u8 {
-    classify(e.key).unwrap_or(DATA)
 }
 
 #[cfg(test)]
@@ -55,9 +116,16 @@ mod tests {
     fn keys_map_onto_the_table() {
         assert_eq!(code_of_key("err.file.cutShort"), INPUT);
         assert_eq!(code_of_key("err.sample.unknown"), SELECTOR);
+        assert_eq!(code_of_key("err.flow.step.unknown"), SELECTOR);
+        assert_eq!(code_of_key("err.flow.param.range"), INTEGRITY);
         assert_eq!(code_of_key("err.cli.set"), USAGE);
         assert_eq!(code_of_key("err.cli.file"), INPUT);
-        assert_eq!(code_of_key("err.flow.compare.few"), USAGE);
-        assert_eq!(classify("err.flow.compare.few"), None);
+        assert_eq!(code_of_key("err.cli.out"), OUTPUT);
+        assert_eq!(code_of_key("err.normative.input"), INPUT);
+        assert_eq!(code_of_key("err.flow.cancelled"), DATA);
+        for c in [DATA, USAGE, INTEGRITY, INPUT, SELECTOR, OUTPUT] {
+            assert_eq!(code_of_key(generic_key(c)), c);
+        }
+        assert_eq!(code_of_key("err.flow.compare.few"), DATA);
     }
 }

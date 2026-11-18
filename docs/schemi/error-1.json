@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "error/1",
   "title": "error/1: why `mzlab-cli` stopped",
-  "description": "On stdout, next to the text of stderr, for every non-zero exit under `--json` and for every command whose stdout is JSON. `code` is the exit code (1 data or domain error, 2 usage, 3 plan, schema or integrity, 4 input missing or unreadable, 5 selector not found, 6 output write or external source failure); `error_key` and `params` are those of the error (`err.*` keys of the engine and of the command line); `message` is the text without `error: ` and the final newline; `command` names the command that failed; `problems` only for a plan that is not valid. Code: crates/mzlab-cli/src/contract.rs, exit.rs.",
+  "description": "On stdout, next to the text of stderr, for every non-zero exit under `--json` and for every command whose stdout is JSON. `code` is the exit code (1 data or domain error, 2 usage, 3 plan, schema or integrity, 4 input missing or unreadable, 5 selector not found, 6 output write or external source failure); `error_key` and `params` are those of the error (`err.*` keys of the engine and of the command line); `message` is the text without `error: ` and the final newline; `command` names the command that failed; `problems` only for a plan that is not valid; `report` only when the command had printed a document before failing. Code: crates/mzlab-cli/src/contract.rs, exit.rs.",
   "type": "object",
   "required": [
     "schema",
@@ -73,6 +73,9 @@
     },
     "command": {
       "type": "string"
+    },
+    "report": {
+      "description": "The document the command had printed before it failed (a flowrun/1 report, a validate listing, a partial answer), when it printed one."
     }
   }
 }

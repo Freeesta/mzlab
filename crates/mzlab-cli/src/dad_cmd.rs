@@ -361,18 +361,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     match run_req(&c) {
         Ok(t) => crate::emit(t + "\n", &c.out),
-        Err(e) => {
-            let code =
-                if e.key == "err.pda.scale" || e.key == "err.pda.view" || e.key == "err.pda.window"
-                {
-                    crate::exit::USAGE
-                } else {
-                    crate::exit::code_of_data(&e)
-                };
-            Outcome::fail_error(&e)
-                .with_code(code)
-                .with_hint("see mzlab-cli dad --help")
-        }
+        Err(e) => Outcome::fail_error(&e).with_hint("see mzlab-cli dad --help"),
     }
 }
 

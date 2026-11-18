@@ -106,7 +106,7 @@ fn run(args: Vec<String>) -> Outcome {
         Ok(c) => c,
         Err(e) if e.key.starts_with("err.sample.") => return crate::sample_select::fail(&e),
         // a file that cannot be listed is a data error (1) with its own message, not a usage error
-        Err(e) => return Outcome::fail_error(&e).with_code(crate::exit::code_of_data(&e)),
+        Err(e) => return Outcome::fail_error(&e),
     };
     match &a.out {
         None => Outcome::ok(csv.into_bytes()),

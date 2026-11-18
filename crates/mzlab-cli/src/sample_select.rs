@@ -33,7 +33,7 @@ pub(crate) fn code_of(e: &Error) -> u8 {
 
 /// The failed `Outcome` of a selection error: the text on stderr, the key for `error/1` and the way out.
 pub(crate) fn fail(e: &Error) -> Outcome {
-    let o = Outcome::fail_error(e).with_code(code_of(e));
+    let o = Outcome::fail_error(e);
     if e.key.starts_with("err.sample.") {
         o.with_hint("list the samples with `mzlab-cli samples list FILE --json`")
     } else {

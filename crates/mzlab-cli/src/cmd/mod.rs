@@ -78,6 +78,7 @@ const JSON_DEFAULT: &[&str] = &[
     "ion-mz",
     "match-mz",
     "background",
+    "wiff",
     "peak-edges",
     "peak-auto",
     "peak-auto-lr",
@@ -205,11 +206,28 @@ pub(crate) fn wants_help(rest: &[String]) -> bool {
         .any(|a| a == "--help" || a == "-h")
 }
 
-/// The help of `e` for `--help`/`-h` anywhere in its arguments `rest`: the text the command prints itself when it knows `--help` (asked with
-/// the subcommand word and nothing else, so nothing runs), otherwise its usage line(s) from the table. Always exit 0, on stdout.
+/// The subcommand words an entry lists in its usage lines (`mzlab-cli samples vars|group|list|select ...`).
+pub(crate) fn subwords(e: &Entry) -> Vec<&str> {
+    let marker = format!("mzlab-cli {} ", e.name);
+    e.help
+        .split("\n       ")
+        .filter_map(|l| l.strip_prefix(marker.as_str()))
+        .filter_map(|r| r.split(' ').next())
+        .filter(|w| {
+            w.contains('|')
+                && w.chars()
+                    .all(|c| c.is_ascii_lowercase() || c == '|' || c == '-')
+        })
+        .flat_map(|w| w.split('|'))
+        .collect()
+}
+
+/// The help of `e` for `--help`/`-h` anywhere in its arguments `rest`: nothing but `--help` (after a subcommand word the usage line lists) is
+/// given to the command, so no file named before the flag is ever read; a command that has no text of its own for it prints its usage lines
+/// from the table. Always exit 0, on stdout.
 pub(crate) fn help_of(e: &Entry, rest: &[String]) -> Outcome {
     let mut ask = Vec::new();
-    if let Some(w) = rest.first().filter(|w| !w.starts_with('-')) {
+    if let Some(w) = rest.first().filter(|w| subwords(e).contains(&w.as_str())) {
         ask.push(w.clone());
     }
     ask.push("--help".to_string());

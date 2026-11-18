@@ -277,12 +277,7 @@ pub fn read_piece(dir: &Path, catalogue: &[u8], file: &str) -> Result<Vec<u8>> {
 }
 
 fn fail(msg: &str) -> Outcome {
-    Outcome {
-        code: 2,
-        stdout: Vec::new(),
-        stderr: format!("error: {msg}\n{HELP}\n"),
-        error: None,
-    }
+    Outcome::fail(msg)
 }
 
 /// `mzlab-cli insilico ...`
@@ -322,12 +317,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     match pack_with(&bytes, Path::new(out), &version, &doi, cut) {
         Ok(t) => Outcome::ok((t + "\n").into_bytes()),
-        Err(e) => Outcome {
-            code: 1,
-            stdout: Vec::new(),
-            stderr: format!("error: {}\n", e.key),
-            error: None,
-        },
+        Err(e) => Outcome::fail_error(&e),
     }
 }
 

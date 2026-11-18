@@ -15,7 +15,7 @@ pub(crate) use crate::convert_help::HELP;
 use crate::convert_report::{compression_sets, head_of, partial_lines, report, Item};
 use crate::flow::{steps, DoneFn, FileRunner};
 use crate::flow_base::convert_file;
-use crate::flow_run::{apply_set, fail, fill_inputs, prepare, problem_text, run_checked};
+use crate::flow_run::{apply_set, fill_inputs, prepare, problem_text, run_checked};
 use crate::flow_set::{digest_known, is_set_folder, known_sha};
 use crate::Outcome;
 
@@ -338,6 +338,16 @@ fn summary(items: &[Item], out: &Path) -> Outcome {
         code,
         stdout: stdout.into_bytes(),
         stderr,
+        error: None,
+    }
+}
+
+/// A failure of `convert` with its own code (the key of the dispatcher is the generic one of that code) and a hint.
+fn fail(code: u8, msg: &str, hint: &str) -> Outcome {
+    Outcome {
+        code,
+        stdout: Vec::new(),
+        stderr: format!("error: {msg}\nhint: {hint}\n"),
         error: None,
     }
 }

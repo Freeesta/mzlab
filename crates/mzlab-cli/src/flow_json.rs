@@ -70,7 +70,13 @@ pub(crate) fn check_json(problems: &[Problem]) -> String {
 
 /// `error/1`: the exit code, the key and parameters of the error, its text without `error: `, the hint, the command that failed; `problems`
 /// (plan not valid) only when there are some. Built once, by `contract::finish`, for every command that fails.
-pub(crate) fn error_json(code: u8, f: &crate::Failure, message: &str, command: &str) -> String {
+pub(crate) fn error_json(
+    code: u8,
+    f: &crate::Failure,
+    message: &str,
+    command: &str,
+    report: Option<&str>,
+) -> String {
     let params: Vec<(&str, String)> = f
         .params
         .iter()
@@ -92,13 +98,21 @@ pub(crate) fn error_json(code: u8, f: &crate::Failure, message: &str, command: &
     if let Some(p) = &f.problems {
         o.raw(",\"problems\":").raw(p);
     }
+    if let Some(r) = report {
+        o.raw(",\"report\":").raw(r);
+    }
     o.raw("}\n");
     o.0
 }
 
 /// The failure of `flow run`/`flow check` with its code, text and hint (stderr as ever; `error/1` is written by the dispatcher).
-pub(crate) fn fail(code: u8, err: &Error, msg: &str, hint: &str) -> Outcome {
-    let mut o = crate::flow_run::fail(code, msg, hint);
+pub(crate) fn fail(err: &Error, msg: &str, hint: &str) -> Outcome {
+    let mut o = Outcome {
+        code: crate::exit::code_of(err),
+        stdout: Vec::new(),
+        stderr: format!("error: {msg}\nhint: {hint}\n"),
+        error: None,
+    };
     o.error = Some(Box::new(crate::Failure {
         key: err.key.to_string(),
         params: err
@@ -119,7 +133,7 @@ pub(crate) fn invalid(problems: &[Problem]) -> Outcome {
     let hint = "fix the plan in the Flow page or with --set";
     let msg = format!("the plan is not valid:\n{}", lines.join("\n"));
     let err = mzlab_core::flow::check_error(problems).with("problems", list.join(" "));
-    let mut o = fail(crate::exit::INTEGRITY, &err, &msg, hint);
+    let mut o = fail(&err, &msg, hint);
     let mut j = Out::default();
     problem_list(&mut j, problems);
     if let Some(f) = o.error.as_mut() {
@@ -328,7 +342,7 @@ exit codes: 0 valid, 2 usage, 3 the plan is not valid (also a step that has no n
 fn check_args(args: Vec<String>) -> Result<(String, Vec<String>), Outcome> {
     let usage = |msg: &str| {
         let err = Error::new("err.cli.usage").with("message", msg);
-        fail(2, &err, msg, "mzlab-cli flow check --help")
+        fail(&err, msg, "mzlab-cli flow check --help")
     };
     let (mut plan_path, mut sets) = (None, Vec::new());
     let mut it = args.into_iter();
@@ -357,22 +371,17 @@ fn check_args(args: Vec<String>) -> Result<(String, Vec<String>), Outcome> {
 fn check_plan(path: &str, sets: &[String], reg: &[Step]) -> Result<Plan, Outcome> {
     let text = std::fs::read(path).map_err(|e| {
         let err = Error::new("err.cli.file").with("path", path);
-        fail(
-            4,
-            &err,
-            &format!("{path}: {e}"),
-            "check the path of the plan",
-        )
+        fail(&err, &format!("{path}: {e}"), "check the path of the plan")
     })?;
     let hint = "the plan must be the mzflow/2 file the Flow page downloads";
-    let mut plan = parse(&text).map_err(|e| fail(3, &e, &e.to_string(), hint))?;
+    let mut plan = parse(&text).map_err(|e| fail(&e, &e.to_string(), hint))?;
     let (setting, plain): (Vec<&String>, Vec<&String>) = sets
         .iter()
         .partition(|s| s.contains(".algorithm=") || s.contains(".preset="));
     for s in setting.into_iter().chain(plain) {
         apply_set(&mut plan, reg, s).map_err(|e| {
             let err = Error::new("err.cli.set").with("set", s).with("message", &e);
-            fail(2, &err, &e, "mzlab-cli flow check --help")
+            fail(&err, &e, "mzlab-cli flow check --help")
         })?;
     }
     Ok(plan)
@@ -415,7 +424,6 @@ pub(crate) fn check(args: Vec<String>) -> Outcome {
             o
         }
         Err(e) => fail(
-            3,
             &e,
             &e.to_string(),
             "fix the plan in the Flow page or with --set",

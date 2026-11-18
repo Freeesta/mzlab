@@ -318,15 +318,6 @@ pub(crate) fn memory_advice(
     }
 }
 
-pub(crate) fn fail(code: u8, msg: &str, hint: &str) -> Outcome {
-    Outcome {
-        code,
-        stdout: Vec::new(),
-        stderr: format!("error: {msg}\nhint: {hint}\n"),
-        error: None,
-    }
-}
-
 /// What `--dry-run` prints: the inputs where they were found and every instance in order with its canonical parameters.
 fn dry_text(plan: &Plan, reg: &[Step], found: &HashMap<String, PathBuf>) -> String {
     let mut s = String::from("inputs:\n");
@@ -367,10 +358,10 @@ fn ready(a: &Args, reg: &[Step]) -> Result<Ready, Outcome> {
     let text = std::fs::read(&plan_path).map_err(|e| {
         let err = Error::new("err.cli.file").with("path", plan_path.display());
         let msg = format!("{}: {e}", plan_path.display());
-        jfail(4, &err, &msg, "check the path of the plan")
+        jfail(&err, &msg, "check the path of the plan")
     })?;
     let hint = "the plan must be the mzflow/2 file the Flow page downloads";
-    let mut plan = parse(&text).map_err(|e| jfail(3, &e, &e.to_string(), hint))?;
+    let mut plan = parse(&text).map_err(|e| jfail(&e, &e.to_string(), hint))?;
     apply_sets(&mut plan, reg, &a.sets).map_err(|e| {
         // the CLI keeps the text apart from the error: the page reads it from the parameters
         let of = |k: &str| {
@@ -383,7 +374,6 @@ fn ready(a: &Args, reg: &[Step]) -> Result<Ready, Outcome> {
             .with("set", of("set").unwrap_or(""))
             .with("message", of("message").unwrap_or(""));
         jfail(
-            2,
             &err,
             of("message").unwrap_or(""),
             "mzlab-cli flow run --help",
@@ -394,19 +384,17 @@ fn ready(a: &Args, reg: &[Step]) -> Result<Ready, Outcome> {
         .map_or(PathBuf::from("."), Path::to_path_buf);
     let found = locate(&plan, &a.ins, &plan_dir).map_err(|(err, msg)| {
         jfail(
-            4,
             &err,
             &msg,
             "pass the file, or the folder that holds it, with --in",
         )
     })?;
     let hint = "the file differs from the one the plan names (sha256); remove the sha256 from the plan to accept it";
-    fill_inputs(&mut plan, |n| found[n].clone()).map_err(|e| jfail(4, &e, &e.to_string(), hint))?;
+    fill_inputs(&mut plan, |n| found[n].clone()).map_err(|e| jfail(&e, &e.to_string(), hint))?;
     match prepare(plan.clone(), reg) {
         Ok(Ok(r)) => Ok((plan, r, found)),
         Ok(Err(problems)) => Err(invalid(&problems)),
         Err(e) => Err(jfail(
-            3,
             &e,
             &e.to_string(),
             "fix the plan in the Flow page or with --set",
@@ -421,7 +409,7 @@ pub fn run(args: Vec<String>, meter: Option<Meter>) -> Outcome {
         Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => {
             let err = Error::new("err.cli.usage").with("message", &e);
-            return jfail(2, &err, &e, "mzlab-cli flow run --help");
+            return jfail(&err, &e, "mzlab-cli flow run --help");
         }
     };
     let reg = steps();
