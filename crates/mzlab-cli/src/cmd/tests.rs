@@ -68,7 +68,7 @@ fn the_citation_is_in_help_version_catalogs_and_the_run_record() {
     // machine-readable catalogs carry it as a "citation" field and stay valid JSON
     let tools: serde_json::Value = serde_json::from_str(&out(&["llm", "tools"])).unwrap();
     assert_eq!(tools["citation"], text);
-    assert_eq!(tools["schema"], "strumenti/1");
+    assert_eq!(tools["schema"], "tools/1");
     let steps: serde_json::Value = serde_json::from_str(&out(&["steps", "--json"])).unwrap();
     assert!(steps
         .as_array()

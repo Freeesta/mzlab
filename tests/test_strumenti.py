@@ -1,4 +1,4 @@
-"""The catalog strumenti/1 (docs/schemi/strumenti-1.json, made by `mzlab-cli llm tools`): valid JSON Schema, the ids of ui_show exist in the registry of
+"""The catalog tools/1 (docs/schemi/strumenti-1.json, made by `mzlab-cli llm tools`): valid JSON Schema, the ids of ui_show exist in the registry of
 actions, and no Italian in what the model reads."""
 import json
 import re
@@ -22,7 +22,7 @@ def ui_actions():
 
 
 def test_header_and_tools():
-    assert CATALOG["schema"] == "strumenti/1"
+    assert CATALOG["schema"] == "tools/1"
     # the file carries no hash of the registry: it would be rewritten by every change of the registry
     assert set(CATALOG) == {"schema", "tools"}
     assert len(CATALOG["tools"]) == 20

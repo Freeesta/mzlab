@@ -28,14 +28,14 @@
   function rows(p) {
     const a = p._a, s = st(p), d = a.data[0].d, ms2 = p.level >= 2 && p.prec != null, dec = a.hrp ? a.dec : 2, y = d.y0 || d.y;
     const z = zoomed(p), inz = (/** @type {number} */ j) => !z || (d.mz[j] >= z[0] && d.mz[j] <= z[1]);   // zoomed: the peaks in view, the base peak of that window is 100
-    let top = 1e-9; for (let j = 0; j < y.length; j++) if (inz(j) && y[j] > top) top = y[j];
+    const top = PEAKINFO.top(p);
     const lab = s.lab ? (a.lbls || []).filter((/** @type {any} */ b) => typeof b.m === "number" && !b.ann).map((/** @type {any} */ b) => b.m) : null;
     /** @type {number[]} */ let ix = [];
     for (let j = 0; j < d.mz.length; j++) if (inz(j) && y[j] > 0 && y[j] / top * 100 >= s.thr && (!lab || lab.some((/** @type {number} */ m) => Math.abs(m - d.mz[j]) < 1e-9))) ix.push(j);
     ix.sort((u, v) => y[v] - y[u]); ix = ix.slice(0, Math.max(1, s.max));                       // most intense first, then the cut
     if (s.sort === "mz") ix.sort((u, v) => d.mz[u] - d.mz[v]);
     const head = ["m/z", T("tabp.c.int"), T("tabp.c.rel"), ...(ms2 ? [T("tabp.c.dmz"), T("tabp.c.nl")] : [])];
-    const body = ix.map(j => [I18N.num(d.mz[j], dec), I18N.sciE(y[j], 5), I18N.num(y[j] / top * 100, 1), ...(ms2 ? [I18N.num(d.mz[j] - p.prec, dec), I18N.num(p.prec - d.mz[j], dec)] : [])]);
+    const body = ix.map(j => [I18N.num(d.mz[j], dec), I18N.sciE(y[j], 5), I18N.num(y[j] / top * 100, 1), ...(ms2 ? [I18N.num(PEAKINFO.dmz(d.mz[j], p.prec), dec), I18N.num(PEAKINFO.nl(d.mz[j], p.prec), dec)] : [])]);
     return { head, body };
   }
   /** @param {{ head: string[], body: string[][] }} r */

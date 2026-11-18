@@ -6,6 +6,8 @@
 
 mod bpc;
 mod chromatograms;
+mod container;
+pub use container::{container, container_at, container_within};
 mod devices;
 pub mod dad;
 #[cfg(feature = "mappa-dad")]
@@ -181,6 +183,8 @@ pub struct Wiff {
     pub method: Option<Method>,
     /// Optical DAD / PDA 3D matrix and TWC when the sample has a `DAD` storage.
     pub dad: Option<dad::DadData>,
+    /// The DAD stream was not read when the sample was opened (`open_or_refuse`: it is most of a `.wiff` and nobody may ask for it): `load_dad` reads it.
+    pub(crate) dad_unread: bool,
     pub devices: Vec<crate::mzml::Chromatogram>, // pressure, flow, ... of `Devices/Device_N/DevData` (`devices.rs`)
     /// `Component ID` of the mass spectrometer in the Log, and the creation time of the file: the header of the mzML.
     pub model: Option<String>,
@@ -214,34 +218,6 @@ pub(crate) fn span(head: usize, width: usize, n: usize) -> Option<usize> {
 
 fn bad(detail: &str) -> Error {
     Error::new("err.file.wiff").with("detail", detail)
-}
-
-/// The container of a `.wiff`; one cut short (sectors its header or its FAT use lie past the end) is refused whole: its streams would read empty or short,
-/// so the samples, the index or the method would be missing unsaid.
-pub fn container(wiff: Vec<u8>, name: &str) -> Result<Ole> {
-    container_within(wiff, name, &crate::readers::Limits::held())
-}
-
-/// `container` bounded by `limits`: a file past the memory budget is told as such, not as a file that is not a `.wiff`.
-pub fn container_within(wiff: Vec<u8>, name: &str, limits: &crate::readers::Limits) -> Result<Ole> {
-    let size = wiff.len();
-    let cut = Ole::header_cut(&wiff);
-    let ole = Ole::open(wiff, name, limits).map_err(|e| match cut {
-        _ if e.key == Error::memory_budget().key || e.key == "error.fixedLimit" => e,
-        Some(needed) => truncated(name, size, needed),
-        None => Error::new("err.file.notWiff").with("name", name),
-    })?;
-    match ole.cut_short() {
-        Some(needed) => Err(truncated(name, size, needed)),
-        None => Ok(ole),
-    }
-}
-
-fn truncated(name: &str, size: usize, needed: u64) -> Error {
-    Error::new("err.file.wiffTruncated")
-        .with("name", name)
-        .with("size", size)
-        .with("needed", needed)
 }
 
 /// The numbers of the samples of the sample table, in order: an injection that acquired nothing (no `Idx` stream) is a sample with no scans,
@@ -349,7 +325,7 @@ fn one_period(ole: &Ole, sample: u32) -> Result<()> {
     Ok(())
 }
 
-fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Result<Wiff> {
+fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32, with_dad: bool) -> Result<Wiff> {
     let scan_len = scan_len.ok_or_else(|| Error::new("err.file.wiffNoScan").with("name", name))?;
     let table = ole
         .read(&format!("{SAMPLES}SampleIdxTable"))
@@ -390,7 +366,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
     let method = methodinfo::method_of_sample(ole, method_no(ole, sample));
     let method = method.or_else(|| methodinfo::method_of_sample(ole, sample));
     activation(&mut experiments, &method);
-    let dad = dad::DadData::read(ole, sample);
+    let dad = if with_dad { dad::DadData::read(ole, sample) } else { None };
     let (model, created, serial, source_type) = crate::method_wiff::run_facts_full(ole, sample);
     Ok(Wiff {
         sample,
@@ -399,6 +375,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         polarity: modes::source_polarity(method.as_ref()),
         method,
         dad,
+        dad_unread: !with_dad,
         devices: devices::traces(ole, sample),
         model,
         serial,
@@ -424,6 +401,7 @@ impl Wiff {
             polarity: 0,
             method: None,
             dad: None,
+            dad_unread: false,
             devices: Vec::new(),
             model: None,
             serial: None,
@@ -440,7 +418,7 @@ impl Wiff {
 
     /// Sample `sample` of the container, or (a scan type the reader does not know, several periods, a `.wiff2`) the sample kept with its reason: only a file-level error ends the open.
     pub fn open_or_refuse(ole: &Ole, name: &str, scan_len: u64, sample: u32) -> Result<Wiff> {
-        match open_wiff(ole, name, Some(scan_len), sample) {
+        match open_wiff(ole, name, Some(scan_len), sample, false) {
             Err(e) if e.key.starts_with("err.file.wiff") && e.key != "err.file.wiffNoScan" => {
                 Ok(Wiff::refused(sample, scan_len, e))
             }
@@ -462,7 +440,14 @@ impl Wiff {
 
     /// Sample `sample` of the container. `scan_len` is the size of the `.wiff.scan`, `None` when that file is missing (`err.file.wiffNoScan`).
     pub fn open(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Result<Wiff> {
-        open_wiff(ole, name, scan_len, sample)
+        open_wiff(ole, name, scan_len, sample, true)
+    }
+
+    /// Reads the DAD stream of a sample opened without it (`open_or_refuse`); once, and not at all for a sample nobody asks the optical data of.
+    pub(crate) fn load_dad(&mut self, ole: &Ole) {
+        if std::mem::take(&mut self.dad_unread) {
+            self.dad = dad::DadData::read(ole, self.sample);
+        }
     }
 
     /// The polarity of the scans of experiment `e`: the one of its header (offset 86, u32: 0 positive, 1 negative), else the sign of the ion spray voltage of the method.

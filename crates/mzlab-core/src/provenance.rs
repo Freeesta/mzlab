@@ -1,10 +1,10 @@
-//! Provenance of an exported table (schema `provenienza/1`): the one place that decides which fields the first
+//! Provenance of an exported table (schema `provenance/1`): the one place that decides which fields the first
 //! line `# mzLab x.y.z · key=value · ...` of a CSV/TSV (or the "Provenance" sheet of an .xlsx) carries.
 //! The page sends what it knows about the export as `key<TAB>value` lines, in the order of the line; the version is the crate's own.
 
 macro_rules! schema {
     () => {
-        "provenienza/1"
+        "provenance/1"
     };
 }
 

@@ -1,5 +1,5 @@
 // @ts-check
-// Flow (administrator mode): the tools the assistant may call on the plan (catalog `strumenti/1`, docs/agenti/llm.md). Each call is the same function the user's click uses (F.addStep, F.setParam,
+// Flow (administrator mode): the tools the assistant may call on the plan (catalog `tools/1`, docs/agenti/llm.md). Each call is the same function the user's click uses (F.addStep, F.setParam,
 // F.removeStep, F.validate, the runners), so an edit of the assistant is a change of the plan like any other: one entry of S.undo. Whether a call may happen at all is decided by Rust (policy),
 // not here. Loaded with flow-llm.js only when the assistant is on. English only.
 (() => {

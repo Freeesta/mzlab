@@ -8,11 +8,12 @@
 (() => {
   const Q1 = (/** @type {string} */ s) => /** @type {HTMLElement | null} */ (document.querySelector(s));
   const H = CALCQUIHTML, DEBOUNCE = 90;
+  // controls: only the choices row (tolerance, unit, optionally no polarity), no groups: `change` runs at every change of the shared choices (the Known contaminants panel looks its own table up);
   // ctl: the choices row (null: the view follows a row drawn by another view of the same page); flat: no fold around the groups (a tab already names them); combos: only the pairs and repetitions of losses (the single ones light up in the list); pick: the view keeps only these groups/items
-  /** @typedef {{ ctl: HTMLElement | null, out: HTMLElement, idp: string, quiet?: boolean, catalogue?: boolean, numOnly?: boolean, flat?: boolean, combos?: boolean, arg: () => { text: string, ans: number }, groups?: string[], pick?: (gs: CqGroup[]) => CqGroup[], after?: (a: any, gs: CqGroup[]) => void }} CqCfg */
+  /** @typedef {{ ctl: HTMLElement | null, out: HTMLElement, idp: string, controls?: boolean, noPol?: boolean, change?: () => void, quiet?: boolean, catalogue?: boolean, numOnly?: boolean, flat?: boolean, combos?: boolean, arg: () => { text: string, ans: number }, groups?: string[], pick?: (gs: CqGroup[]) => CqGroup[], after?: (a: any, gs: CqGroup[]) => void }} CqCfg */
   /** @typedef {{ cfg: CqCfg, open: Set<string>, all: Set<string>, more: boolean, diffs: boolean, delta: string, seq: number, timer: number, tab: any, formula: string }} CqView */
   const views = /** @type {CqView[]} */ ([]);
-  const prune = () => { for (let i = views.length - 1; i >= 0; i--) if (!views[i].cfg.out.isConnected) views.splice(i, 1); };      // a panel redrawn leaves its old view behind
+  const prune = () => { for (let i = views.length - 1; i >= 0; i--) if (!(views[i].cfg.controls ? views[i].cfg.ctl : views[i].cfg.out)?.isConnected) views.splice(i, 1); };      // a panel redrawn leaves its old view behind
   const memo = /** @type {Map<string, number>} */ (new Map());
   const mass = (/** @type {string} */ f) => { const c = memo.get(f); if (c != null) return c; const m = QQQRef.massOf(f); memo.set(f, m); return m; };
 
@@ -41,6 +42,7 @@
 
   /** Draws the groups of the view for its argument (the newest call wins). @param {CqView} v */
   async function render(v) {
+    if (v.cfg.controls) { sync(v); return; }
     const my = ++v.seq, o = options(v), t = v.cfg.arg(), a = { ...CALCQUI.arg(t.text, t.ans), catalogue: !!v.cfg.catalogue };
     if (v.cfg.idp === "calc" && docked()) {                                                   // docked in the Adducts & losses page: the lists under it answer; only the line on how a formula was read stays
       v.cfg.out.innerHTML = "";
@@ -85,14 +87,14 @@
     const v = /** @type {CqView} */ ({ cfg, open: new Set(), all: new Set(), more: false, diffs: false, delta: "", seq: 0, timer: 0, tab: null, formula: "" });
     views.push(v);
     if (cfg.ctl) bindCtl(v, cfg.ctl);
-    bindOut(v);
-    sync(v); later(v);
+    if (!cfg.controls) bindOut(v);
+    sync(v); if (!cfg.controls) later(v);
     return v;
   }
   /** The choices row of a view. @param {CqView} v @param {HTMLElement} ctl */
   function bindCtl(v, ctl) {
     const cfg = v.cfg;
-    ctl.innerHTML = H.ctrlHtml(cfg.idp, options(v));
+    ctl.innerHTML = H.ctrlHtml(cfg.idp, { ...options(v), noPol: !!cfg.noPol });
     const set = (/** @type {Partial<CqState>} */ p) => CALCQUI.set(p), tolKey = () => options(v).unit;
     ctl.addEventListener("click", ev => {
       const b = /** @type {HTMLElement} */ (ev.target).closest("button");
@@ -146,7 +148,7 @@
     openXic(panel, XIC_ADDUCTS.includes(r.n) && f ? { formula: f, adduct: r.n } : { mz: r.mz5 });
   }
 
-  CALCQUI.onChange(() => { prune(); views.slice().forEach(v => { sync(v); later(v); }); });
+  CALCQUI.onChange(() => { prune(); views.slice().forEach(v => { sync(v); if (v.cfg.controls) { if (v.cfg.change) v.cfg.change(); } else later(v); }); });
 
   const docked = () => { const d = Q1("#calcdlg"); return !!d && d.classList.contains("sb-docked"); };
   /** Opens «what can this number be?» on a number: in the drawer the Adducts & losses page (gruppo «diff»: the Adducts tab with the differences open, otherwise

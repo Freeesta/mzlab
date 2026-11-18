@@ -1,5 +1,5 @@
 // @ts-strict
-// Provenance of an exported table (schema provenienza/1). The Rust engine (api/provenance, mzlab-core::provenance) writes the first line
+// Provenance of an exported table (schema provenance/1). The Rust engine (api/provenance, mzlab-core::provenance) writes the first line
 // «# mzLab x.y.z · file=... · background=... · ...»; this file only collects what the page knows (files, background, SNIP, smoothing, tolerance)
 // and puts the result in the three places a table leaves the program: dl() (CSV/TSV: the line, first row), dlx() (.xlsx: a last sheet) and the clipboard (PROV.tsv).
 // The line starts with «#»: pandas skips it (read_csv(..., comment="#")), R too (comment.char = "#"); Excel shows it as row 1 (delete it, or Data > From Text/CSV and start at row 2).

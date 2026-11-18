@@ -258,10 +258,10 @@ def scenario(r, p, files):
     wait_for_js(pg, "window.qqReady === true"); ready(pg)
     snaps["2_engine_ready"] = measure(pg, ctx, cdp)
     stage(pg, files); pg.click("#opbtn")
-    wait_for_js(pg, "!document.querySelector('#v-data').hidden && PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw chrom')", 90000); ready(pg)
+    wait_for_js(pg, "!document.querySelector('#v-data').hidden && PERF.rows.some(x => x.kind === 'draw' && x.what === 'draw chrom')", 90000); ready(pg)
     snaps["3_demo_files_open"] = measure(pg, ctx, cdp)
     pg.evaluate("document.querySelector('#np-map').click()")
-    wait_for_js(pg, "PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw map')", 60000); ready(pg)
+    wait_for_js(pg, "PERF.rows.some(x => x.kind === 'draw' && x.what === 'draw map')", 60000); ready(pg)
     snaps["4_after_map"] = measure(pg, ctx, cdp)
     try:
         # Tabui takes the files already open in the page
