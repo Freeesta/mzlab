@@ -59,7 +59,7 @@ fn infusion_exception(got: &mut Value, want: &Value) {
         && let Some(inf) = o.get("infusion").and_then(Value::as_bool)
     {
         assert_eq!(inf, !m.is_null(), "infusion and msn disagree");
-        if m["motivo"] != "rt_costante" {
+        if m["reason"] != "constant_rt" {
             o.insert("infusion".into(), want["infusion"].clone());
         }
     }
