@@ -96,7 +96,7 @@ try:
             wait_for_js(pg, "!!document.querySelector('#manint-h')", timeout=60000)
             pg.evaluate("(h => { if (h.getAttribute('aria-expanded') !== 'true') h.click(); })(document.querySelector('#manint-h'))"); wait_for_js(pg, "document.querySelectorAll('#manint-x tbody tr').length >= 10", timeout=60000)
             tb = pg.inner_text("#manint-x"); assert "Conc." in tb and "Area contro tempo" not in tb, tb[:300]
-            rows = pg.evaluate("[...document.querySelectorAll('#manint-x table tr')].map(r=>[...r.children].map(c=>c.textContent))")
+            rows = pg.evaluate("[...document.querySelectorAll('#manint-x tr')].map(r=>[...r.children].map(c=>c.textContent))")
             assert any("Std_5" in " ".join(r) and any(c.strip() not in ("", "–") and c.strip().replace(".", "").isdigit() for c in r) for r in rows), rows[:4]      # the concentration of the standards is in the table
             with pg.expect_download() as d: pg.click("#manint [data-xlsx]")
             xr = xlsx_rows(d.value.path()); head = [c[1] for c in xr[0] if c]; assert "Conc." in head and "Channel" in head and "Sample" in head, head

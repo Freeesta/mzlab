@@ -74,9 +74,9 @@ try:
             wait_for_js(pg, "!!document.querySelector('#manint-h')", timeout=60000)
             pg.evaluate("(h => { if (h.getAttribute('aria-expanded') !== 'true') h.click(); })(document.querySelector('#manint-h'))")
         def table():
-            opencard(); wait_for_js(pg, "document.querySelectorAll('#manint-x button[data-del]').length===3", timeout=60000)
-            pg.locator("#manint-x button[data-del]").first.click(); wait_for_js(pg, "document.querySelectorAll('#manint-x button[data-del]').length===2", timeout=60000)
-            assert pg.locator("#manint-x button[data-del]").count() == 2 and n() == 2
+            opencard(); wait_for_js(pg, "document.querySelectorAll('#manint-x button[data-xdel]').length===3", timeout=60000)
+            pg.locator("#manint-x button[data-xdel]").first.click(); wait_for_js(pg, "document.querySelectorAll('#manint-x button[data-xdel]').length===2", timeout=60000)
+            assert pg.locator("#manint-x button[data-xdel]").count() == 2 and n() == 2
         step("card: × deletes the row and the peak from the graph", table)
         def legacy():      # a record of an earlier session that overlaps another one still loads and is listed (new ones are refused by intClash)
             pg.evaluate(f"(()=>{{const p={XP},i=p.ints[0];p.ints.push({{...i,id:E.seq++,a:i.a+0.1,b:i.b+0.1}});draw(p)}})()"); wait_for_js(pg, "document.querySelectorAll('#manint-x tbody tr').length===3", timeout=60000)

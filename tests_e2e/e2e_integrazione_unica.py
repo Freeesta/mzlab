@@ -19,7 +19,7 @@ try:
         pg.evaluate(f"(()=>{{const p={XP};p.sr=p._a.sr;addInt(p,p._a.sr[0],13.9,14.9)}})()")
         wait_for_js(pg, "!!document.querySelector('#manint-h')", timeout=60000)
         pg.evaluate("(h => { if (h.getAttribute('aria-expanded') !== 'true') h.click(); })(document.querySelector('#manint-h'))")
-        wait_for_js(pg, "!!document.querySelector('#manint-x tbody tr')", timeout=60000)
+        wait_for_js(pg, "!!document.querySelector('#manint-b > table tbody tr')", timeout=60000)
         def gone():
             assert pg.locator("[data-a=itab]").count() == 0, "the toolbar button of the integrations dialog is gone"
             assert pg.evaluate("typeof showInts") == "undefined" and pg.evaluate("typeof allInts") == "undefined"
@@ -27,7 +27,7 @@ try:
         def options():
             assert pg.locator("#manint input[data-opt]").count() == 3, "S/N, parameters and quality switches are on the card"
             for k in ("sn", "par", "q"): pg.evaluate("k => { const i = document.querySelector(`#manint input[data-opt=${k}]`); if (!i.checked) i.click(); }", k)
-            wait_for_js(pg, "['N (plates)', 'Gaussian similarity'].every(h => document.querySelector('#manint-x').innerText.includes(h))", timeout=60000)
+            wait_for_js(pg, "['N (plates)', 'Gaussian similarity'].every(h => document.querySelector('#manint').innerText.includes(h))", timeout=60000)
         step("the card has the switches and the columns they add", options)
         def exports():
             with pg.expect_download() as d: pg.click("#manint [data-dl]")

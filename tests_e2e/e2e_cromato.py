@@ -9,8 +9,8 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_cromato.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 XP = "E.panels.find(p=>p.type==='xic')"
-TBL = "#manint-x table"
-def rows_of(pg): return pg.evaluate("[...document.querySelectorAll('#manint-x table tr')].map(r=>[...r.children].map(c=>c.textContent))")
+TBL = "#manint-x"
+def rows_of(pg): return pg.evaluate("[...document.querySelectorAll('#manint-x tr')].map(r=>[...r.children].map(c=>c.textContent))")
 def open_card(pg):
     wait_for_js(pg, "!!document.querySelector('#manint-h')", timeout=60000)
     pg.evaluate("(h => { if (h.getAttribute('aria-expanded') !== 'true') h.click(); })(document.querySelector('#manint-h'))"); wait_for_js(pg, f"!!document.querySelector('{TBL} tbody tr')", timeout=60000)
@@ -27,10 +27,10 @@ try:
         pg.evaluate(f"(()=>{{const p={XP};p.sr=p._a.sr;addInt(p,p._a.sr[0],13.9,14.9)}})()"); pg.wait_for_timeout(800)
         def default_off():
             open_card(pg)
-            t = pg.inner_text("#manint-x"); assert "N (plates)" not in t and "S/N" not in t and pg.locator("input[data-opt=par]").is_checked() is False, t[:300]
+            t = pg.inner_text("#manint-x"); assert "N (plates)" not in t and pg.locator("input[data-opt=par]").is_checked() is False and pg.locator("input[data-opt=sn]").is_checked() is False, t[:300]
         step("columns are optional and off by default", default_off)
         def params():
-            tick(pg, "input[data-opt=par]"); wait_for_js(pg, "document.querySelector('#manint-x').innerText.includes('N (plates)')", timeout=60000)
+            tick(pg, "input[data-opt=par]"); wait_for_js(pg, "document.querySelector('#manint').innerText.includes('N (plates)')", timeout=60000)
             rows = rows_of(pg); h, d = rows[0], rows[1]
             i = [j for j, x in enumerate(h) if x.startswith("w")][0]
             w, N, T = float(d[i]), float(d[i + 1]), float(d[i + 2]); print(w, N, T)
@@ -38,12 +38,12 @@ try:
         step("w1/2, N and tailing appear with the switch", params)
         def sn():
             tick(pg, "input[data-opt=sn]"); pg.wait_for_timeout(400)
-            assert pg.locator("#manint-x button[data-nz]").count() == 1, "no noise stretch yet: the cell asks for it"
-            pg.click("button[data-nz]"); pg.wait_for_timeout(300)
+            assert pg.locator("#manint-x button[data-xnz]").count() == 1, "no noise stretch yet: the cell asks for it"
+            pg.click("button[data-xnz]"); pg.wait_for_timeout(300)
             c = pg.evaluate(f"(()=>{{const p={XP},r=p.cv.getBoundingClientRect();p.el.scrollIntoView({{block:'center'}});const q=p.cv.getBoundingClientRect();return {{x0:q.left+p._a.X(2),x1:q.left+p._a.X(5),y:q.top+q.height/2}}}})()")
             pg.mouse.move(c["x0"], c["y"]); pg.mouse.down(); pg.mouse.move(c["x1"], c["y"], steps=6); pg.mouse.up(); pg.wait_for_timeout(800)
             assert pg.evaluate(f"Object.keys({XP}.noise||{{}}).length") == 1 and True      # the zone is stored once, on the trace of the panel
-            wait_for_js(pg, "!document.querySelector('#manint-x button[data-nz]')", timeout=60000)
+            wait_for_js(pg, "!document.querySelector('#manint-x button[data-xnz]')", timeout=60000)
             rows = rows_of(pg); h = rows[0]; v = rows[1][[j for j, x in enumerate(h) if x.startswith("S/N")][0]]
             assert float(v) > 1, rows[1]
         step("S/N: the student drags a noise stretch, the number appears", sn)
@@ -51,10 +51,10 @@ try:
             pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()")
             pg.wait_for_function(f"{XP}._a.sr.length>=3", timeout=30000)      # one trace per visible file
             pg.evaluate(f"(()=>{{const p={XP};p._a.sr.slice(1,3).forEach(s=>addInt(p,s,13.9,14.9))}})()"); wait_for_js(pg, f"{XP}.ints.length===3")
-            wait_for_js(pg, "document.querySelectorAll('#manint-x table tr').length>=4", timeout=60000)
+            wait_for_js(pg, "document.querySelectorAll('#manint-x tr').length>=4", timeout=60000)
             rows = rows_of(pg); h = rows[0]; body = rows[1:]
             assert len(body) == 3, ("rows", len(body), pg.evaluate(f"{XP}.ints.length"))
-            assert pg.locator("#manint-x button[data-nz]").count() == 0, "one noise zone serves every file of the trace: no more per-row buttons"
+            assert pg.locator("#manint-x button[data-xnz]").count() == 0, "one noise zone serves every file of the trace: no more per-row buttons"
             assert all(float(r[[j for j, x in enumerate(h) if x.startswith("S/N")][0]]) > 0 for r in body), body
         step("one noise zone gives S/N on all 3 files", sn_all_files)
         def xl():

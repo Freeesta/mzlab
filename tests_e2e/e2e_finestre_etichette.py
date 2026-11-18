@@ -75,8 +75,9 @@ def mrm(size, touch):
         check(q, "baseline", size, "!!document.querySelector('#bigdlg[open] #ib-pts')")
         assert w <= 40 * 16 + 1, (size, "the baseline dialog is at most 40rem wide", w)
         q.evaluate("peakParams()"); check(q, "peak detection", size, "!!document.querySelector('#bigdlg[open] [data-pk]')")
+        wait_for_js(q, "!!document.querySelector('#manint-h')", 30000)
         q.evaluate("(h => { if (h.getAttribute('aria-expanded') !== 'true') h.click(); })(document.querySelector('#manint-h'))")      # the card, in place of the former integrations dialog
-        wait_for_js(q, "!!document.querySelector('#manint-x tbody tr')", 30000); frames(q, 3)
+        wait_for_js(q, "!!document.querySelector('#manint-b > table tbody tr')", 30000); frames(q, 3)
         bad = q.evaluate("[...document.querySelectorAll('#manint .manint-opt label')].filter(l => l.getBoundingClientRect().height < 23.5 || l.control.getBoundingClientRect().width > 32).map(l => l.textContent.trim())")
         assert not bad, (size, "the options of the manual integrations card are labelled controls of at least 24 px", bad)
     finally:
