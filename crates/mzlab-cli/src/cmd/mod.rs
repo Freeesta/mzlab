@@ -80,6 +80,8 @@ pub(crate) fn list_md() -> String {
 
 const HEAD: &str = "mzlab-cli features: the feature table of one or more LC-MS files as CSV, from the engine of the mzLab app.";
 const TAIL: &str = "  FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
+  --sample LIST      of a file with several samples (.wiff) only these, by id: 1,3,5 or 2-4, each one a member of the series (the others are
+                     not read; an id the file does not have: exit 5); without it the first sample of such a file
   --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
   --preset NAME      auto (default: both polarities as the panel does), pos or neg
   --params FILE.json the numbers of the panel Pipeline: {\"polarity\", \"mode\", \"floor\", \"min_height\", \"min_points\", \"ppm\", \"rt_tol\", \"fill\"}

@@ -157,10 +157,12 @@ def mrm(size, touch, theme):
         assert q.evaluate("E.panels.some(p => p.type === 'mrm' && p.ints && p.ints.length)"), (tag, "no integration")
         hold(q, 400); look(q, tag)
         sweep(q, tag)
-        for nm, js, ready_js in (("peak detection", "peakParams()", "[data-pk]"), ("integrations", "showInts()", "#ig-sn"),
-                                 ("baseline", "carica('integra-base.js').then(() => { const p = E.panels.find(p => p.type === 'mrm' && p.ints.length); INTBASE.open(p, p.ints[0]); })", "#ib-pts")):
+        for nm, js, ready_js in (("peak detection", "peakParams()", "[data-pk]"), ("baseline", "carica('integra-base.js').then(() => { const p = E.panels.find(p => p.type === 'mrm' && p.ints.length); INTBASE.open(p, p.ints[0]); })", "#ib-pts")):
             q.evaluate(js); wait_for_js(q, f"!!document.querySelector('dialog[open] {ready_js}')", 30000)
             look(q, f"{tag} › {nm}"); q.keyboard.press("Escape"); wait_for_js(q, "!document.querySelector('dialog[open]')")
+        wait_for_js(q, "!!document.querySelector('#manint-h')", 60000)      # the card with the optional columns on, in place of the former integrations dialog
+        q.evaluate("(() => { const h = document.querySelector('#manint-h'); if (h.getAttribute('aria-expanded') !== 'true') h.click(); document.querySelectorAll('#manint input[data-opt]').forEach(i => { if (!i.checked) i.click(); }); document.querySelector('#manint').scrollIntoView({block: 'center'}); })()"); frames(q, 3)
+        look(q, f"{tag} › manual integrations card")
     finally:
         q.context.close()
 

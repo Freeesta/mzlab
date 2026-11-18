@@ -9,6 +9,7 @@ import { cercaRoute, grafoRoute, libreriaRoute } from "./rust-msngrafo-pagina.js
 /** @param {string} path  @param {URL} u  @param {{slots: any[], rpc: (m: any) => Promise<any>, base: (n: string) => string, stats: any, t0: number, init?: any}} env */
 export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) {
   if (path === "/api/manint" || path === "/api/manvalley" || path === "/api/manfollow" || path === "/api/manauto") return manintRoute(u, { slots, rpc, stats, t0 }, path.slice(8));
+  if (path === "/api/mantraces") return tracesRoute({ rpc, stats, t0 }, init);   // POST {files, windows, sums}: the traces the page supplies (chromatogram, XIC, DAD)
   if (path === "/api/msnlib/aggiungi") {                               // add an entry to the msnlib/1 library of the user (POST)
     const r = await libreriaRoute({ slots, rpc, stats }, init);
     return r && { ...r, ms: performance.now() - t0 };
@@ -66,6 +67,19 @@ export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) 
     parts.push(`{"k":${k},"transitions":${r.info}}`);
   }
   return done(`{"files":[${parts.join(",")}]}`);
+}
+
+/** api/mantraces (POST `{files, windows, sums}`, `files` = `[{"name", "conc"?, "conc_unit"?, "transitions": [{"rt", "y", "panel", "label", "unit"}]}]`): the same table as api/manint
+ * (manint::table_text), for traces that are not the file's transitions; "E" + JSON = a 400.
+ * @param {{rpc: (m: any) => Promise<any>, stats: any, t0: number}} env  @param {any} init the init of the fetch */
+async function tracesRoute({ rpc, stats, t0 }, init) {
+  /** @type {any} */ let b = null; try { b = JSON.parse(String(init && init.body)); } catch (_) { return null; }
+  if (!b || typeof b.files !== "string" || typeof b.windows !== "string") return null;
+  const r = await rpc({ op: "manint", files: b.files, windows: b.windows, sums: !!b.sums });
+  if (r.dead || r.error || !r.info) return null;
+  stats.rust++;
+  const bad = r.info[0] === "E";
+  return { status: bad ? 400 : 200, text: bad ? r.info.slice(1) : r.info, type: bad ? "application/json" : "text/csv", ms: performance.now() - t0 };
 }
 
 /** api/manint?k=..&w=JSON windows (manint::table_text, `file` = the place in k)[&sums=1][&tm=JSON minutes of the files, null = none]: the `mrm` transitions of every slot, then the op `manint` of the

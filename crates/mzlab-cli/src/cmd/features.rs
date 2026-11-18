@@ -1,13 +1,15 @@
 //! `features`: the feature table of LC-MS files as CSV; the arguments are parsed here.
 
 use super::Entry;
-use crate::{features as run_features, Outcome};
+use crate::{features_of, Outcome};
 use std::path::PathBuf;
 
 struct Args {
     files: Vec<PathBuf>,
     out: Option<PathBuf>,
     params: String,
+    /// `--sample`: the ids to take of every file with several samples
+    sample: Option<Vec<u32>>,
 }
 
 fn parse(mut a: impl Iterator<Item = String>) -> std::result::Result<Option<Args>, String> {
@@ -15,6 +17,7 @@ fn parse(mut a: impl Iterator<Item = String>) -> std::result::Result<Option<Args
         files: Vec::new(),
         out: None,
         params: String::new(),
+        sample: None,
     };
     let mut set = false;
     while let Some(x) = a.next() {
@@ -34,6 +37,12 @@ fn parse(mut a: impl Iterator<Item = String>) -> std::result::Result<Option<Args
                 };
                 set = true;
             }
+            "--sample" => {
+                r.sample = Some(
+                    crate::sample_select::parse(&value("a list such as 1,3,5")?)
+                        .map_err(|e| crate::error_text::human_error(&e))?,
+                )
+            }
             "--params" => {
                 let p = value("a JSON file")?;
                 r.params = std::fs::read_to_string(&p).map_err(|e| format!("{p}: {e}"))?;
@@ -49,6 +58,35 @@ fn parse(mut a: impl Iterator<Item = String>) -> std::result::Result<Option<Args
     Ok(Some(r))
 }
 
+/// The files and the sample labels of the series: with `--sample`, a file with several samples gives one member per selected sample (`NAME@ID`, in the
+/// order of the file), any other file is one member as it is; with no file of several samples the selection has nothing to apply to.
+fn expand(a: &Args) -> mzlab_core::error::Result<(Vec<PathBuf>, Vec<String>)> {
+    let Some(want) = &a.sample else {
+        return Ok((a.files.clone(), vec![String::new(); a.files.len()]));
+    };
+    let (mut files, mut labels, mut applied) = (Vec::new(), Vec::new(), false);
+    for f in &a.files {
+        let present = crate::sample_select::present(f)?;
+        if present.len() < 2 {
+            files.push(f.clone());
+            labels.push(String::new());
+            continue;
+        }
+        applied = true;
+        let name = f
+            .file_name()
+            .map_or(String::new(), |n| n.to_string_lossy().into_owned());
+        for id in mzlab_core::readers::selection::resolve(&present, want)? {
+            files.push(f.clone());
+            labels.push(format!("{name}@{id}"));
+        }
+    }
+    if !applied {
+        return Err(mzlab_core::error::Error::new("err.sample.single"));
+    }
+    Ok((files, labels))
+}
+
 /// `mzlab-cli features ...`: the feature table in CSV on the standard output or at `--out`.
 fn run(args: Vec<String>) -> Outcome {
     let a = match parse(args.into_iter()) {
@@ -61,11 +99,20 @@ fn run(args: Vec<String>) -> Outcome {
     let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-feat{k}", std::process::id()));
     let r = std::fs::create_dir_all(&tmp)
         .map_err(crate::io)
-        .and_then(|_| run_features(&a.files, &a.params, &tmp));
+        .and_then(|_| expand(&a))
+        .and_then(|(files, labels)| features_of(&files, &labels, &a.params, &tmp));
     let _ = std::fs::remove_dir_all(&tmp);
     let csv = match r {
         Ok(c) => c,
-        Err(e) => return Outcome::fail_error(&e),
+        Err(e) if e.key.starts_with("err.sample.") => return crate::sample_select::fail(&e, false),
+        // a file that cannot be listed is a data error (1) with its own message, not a usage error
+        Err(e) => {
+            return Outcome {
+                code: 1,
+                stdout: Vec::new(),
+                stderr: format!("error: {}\n", crate::error_text::human_error(&e)),
+            }
+        }
     };
     match &a.out {
         None => Outcome::ok(csv.into_bytes()),
@@ -86,6 +133,6 @@ fn run(args: Vec<String>) -> Outcome {
 pub(crate) static TABLE: &[Entry] = &[Entry {
     name: "features",
     aliases: &[],
-    help: "mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params FILE.json]",
+    help: "mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|pos|neg | --params FILE.json]",
     run,
 }];

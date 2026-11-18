@@ -1,5 +1,6 @@
 I18N.add("en", {
   "err.manint.channel": "An integration window names no trace of the open files.",
+  "err.manint.columns": "Unknown column group of the integrations table: {column} (sn, fig, quality).",
   "err.manint.baseline": "Unknown baseline of an integration: {baseline} (zero, edges, or line with its two points).",
   "err.http": "error {status}",
   "err.hr.mix": "Low- and high-resolution files cannot be in the same session. Open the high-resolution files in another session, or remove them from this one.",
@@ -46,7 +47,9 @@ I18N.add("en", {
   "error.featFailed": "The pipeline failed.",
   "error.badRecipe": "The parameters of the pipeline are not valid.",
   "err.canali.unknown": "Channel {id} does not exist in this file.",
-  "err.canali.sample": "This file has no sample {id}: its samples are {ids}.",
+  "err.sample.list": "“{text}” is not a list of samples: use numbers and ranges such as 1,3,5 or 2-4.",
+  "err.sample.unknown": "This file has no sample {missing}: its samples are {ids}.",
+  "err.sample.single": "--sample is for a file with several samples (.wiff): none of the inputs has more than one.",
   "err.cli.line": "The command line cannot be read: {message}.",
   "err.cli.set": "The setting “{set}” is not valid: {message}.",
   "err.conv.noProfile": "This file has only centroided peaks and no profile data, so it cannot be converted to a profile mzML. Use the centroid mzML as it is.",

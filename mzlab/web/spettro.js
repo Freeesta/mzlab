@@ -1,7 +1,7 @@
 // @ts-strict
 "use strict";
 // Tools for the mass spectrum (Full Scan and MS2) and for the time axes. Classic script, loaded after scroll.js: it uses the globals of explore.js
-// (E, Q, EH, M, css, fmt, draw, uiSave, ctl, big, dlx, info, shown, tabPanels, IC_DL, IC_TAB).
+// (E, Q, EH, M, css, fmt, draw, uiSave, ctl, big, dlx, info, shown, tabPanels, IC_DL).
 //  - ruler: difference of m/z between two peaks (the program only subtracts; what the difference means is for the student)
 //  - "Spectrum parameters": absolute / % axis, threshold and number of the m/z labels, decimals
 //  - table of the peaks, ready for Excel (copy as TSV + HTML, or .xlsx)

@@ -3,7 +3,8 @@
 
 use std::path::{Path, PathBuf};
 
-use mzlab_core::readers::{Format, Limits};
+use mzlab_core::error::{Error, Result};
+use mzlab_core::readers::{selection, Format, Limits};
 
 use crate::flow_set::file_set;
 
@@ -19,8 +20,17 @@ pub(crate) struct Entry {
 }
 
 /// The ids of the samples of a dataset with more than one (each with whether it has no scans), else none (a dataset the reader cannot open is converted as one and fails there).
-fn sample_ids(p: &Path) -> Vec<(u32, bool, bool)> {
+/// With `sel`, only those samples are looked at (the others are never read) and one the dataset does not have is `err.sample.unknown`.
+fn sample_ids(p: &Path, sel: Option<&[u32]>) -> Result<Vec<(u32, bool, bool)>> {
     let opened = file_set(p).and_then(|fs| mzlab_lettori::apri(fs, &Limits::desktop()));
+    let found: Vec<u32> = opened
+        .as_ref()
+        .map_or(Vec::new(), |l| l.samples().iter().map(|s| s.id).collect());
+    // a selection names ids of a dataset with several samples; a dataset with one is converted as it is
+    let keep = match sel.filter(|_| found.len() > 1) {
+        Some(w) => Some(selection::resolve(&found, w)?),
+        None => None,
+    };
     let ids: Vec<(u32, bool, bool)> = opened.map_or(Vec::new(), |mut l| {
         // one calm line per dataset, never per sample
         let (found, skipped) = l.unindexed();
@@ -33,6 +43,7 @@ fn sample_ids(p: &Path) -> Vec<(u32, bool, bool)> {
             .iter()
             .enumerate()
             .map(|(c, s)| (s.id, c as u32, s.scansioni))
+            .filter(|(id, _, _)| keep.as_ref().is_none_or(|k| k.contains(id)))
             .collect();
         // empty = no scans and no chromatograms (an MRM sample has chromatograms only), and nothing lost: a damaged sample is not an empty acquisition
         ids.into_iter()
@@ -45,11 +56,12 @@ fn sample_ids(p: &Path) -> Vec<(u32, bool, bool)> {
             })
             .collect()
     });
-    if ids.len() > 1 {
+    // one sample left by a selection still gets its `NAME-ID.mzML`: the bytes are those of the same sample of an unrestricted run
+    Ok(if ids.len() > 1 || keep.is_some() {
         ids
     } else {
         Vec::new()
-    }
+    })
 }
 
 /// `NAME.mzML` or `NAME-ID.mzML`, NAME without its extension unless `long`.
@@ -64,7 +76,7 @@ fn out_name(name: &str, id: Option<u32>, long: bool) -> String {
 }
 
 /// The mzML files of the datasets: one per sample of a dataset with several; two that would get the same name keep the extension of their input.
-pub(crate) fn entries(units: &[PathBuf]) -> Vec<Entry> {
+pub(crate) fn entries(units: &[PathBuf], sel: Option<&[u32]>) -> Result<Vec<Entry>> {
     let mut all: Vec<(PathBuf, String, Option<u32>)> = Vec::new();
     let mut empty = Vec::new();
     let mut wiff = Vec::new();
@@ -74,7 +86,7 @@ pub(crate) fn entries(units: &[PathBuf]) -> Vec<Entry> {
             .unwrap_or_default()
             .to_string_lossy()
             .into_owned();
-        let ids = sample_ids(p);
+        let ids = sample_ids(p, sel)?;
         if ids.is_empty() {
             all.push((p.clone(), name.clone(), None));
             empty.push(false);
@@ -85,6 +97,9 @@ pub(crate) fn entries(units: &[PathBuf]) -> Vec<Entry> {
             empty.push(none);
             wiff.push(is_wiff);
         }
+    }
+    if sel.is_some() && all.iter().all(|(_, _, id)| id.is_none()) {
+        return Err(Error::new("err.sample.single"));
     }
     let short: Vec<String> = all
         .iter()
@@ -109,7 +124,7 @@ pub(crate) fn entries(units: &[PathBuf]) -> Vec<Entry> {
             wiff: wiff[k],
         });
     }
-    made
+    Ok(made)
 }
 
 impl Entry {
