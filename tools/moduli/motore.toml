@@ -3,5 +3,5 @@ pacchetto = "mzlab-wasm"
 wasm_opt = "@motore"
 parte = "core"
 tetto = 2250000
-misura = 2222323
+misura = 2235261
 nota = "engine: mzlab-core at O3 leaves 1.3 % margin; every growth is recorded in docs/agenti/wasm-caps-measurements.md"

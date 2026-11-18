@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "verify/1",
+  "title": "verify/1: the answer of `mzlab-cli flow verify RECORD --json`",
+  "description": "Whether the fingerprints of an mzrun record match its own content. `problems` names each part that does not match (`self_sha256`, `plan_sha256`, `results_digest`, `entity:NAME`); empty when `ok`. Exit 0 when ok, 3 otherwise. Code: crates/mzlab-cli/src/flow_mzrun.rs.",
+  "type": "object",
+  "required": ["schema", "ok", "self_sha256", "problems"],
+  "properties": {
+    "schema": {"const": "verify/1"},
+    "ok": {"type": "boolean"},
+    "self_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "the fingerprint computed from the record"},
+    "problems": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

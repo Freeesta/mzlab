@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import moduli  # noqa: E402
 
-FAMIGLIE = ("aperti", "andi", "thermo", "agilent", "sciex", "waters", "shimadzu", "bruker", "valida")
+FAMIGLIE = ("aperti", "andi", "thermo", "agilent", "sciex", "waters", "shimadzu", "bruker", "valida", "wiffwrite")
 
 
 def tabella():
@@ -29,7 +29,7 @@ def test_every_family_has_its_feature():
     for crate in ("mzlab-lettori", "mzlab-lettori-wasm"):
         c = (ROOT / "crates" / crate / "Cargo.toml").read_text(encoding="utf-8")
         for f in FAMIGLIE:
-            if f == "valida" and crate == "mzlab-lettori":    # the validator reads no maker's format
+            if f in ("valida", "wiffwrite") and crate == "mzlab-lettori":    # these read no maker's format through the readers crate
                 continue
             assert re.search(rf"^{f} = ", c, re.M), (crate, f)
 

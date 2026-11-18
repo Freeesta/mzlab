@@ -90,7 +90,7 @@ try:
             for sel, expect in [(".pnl.chrom", ["izoom", "fit", "tlink", "iauto", "iall", "iman", "idel", "smooth", "log", "xic", "ticbg", "dl", "max"]), (".pnl.xic", ["izoom", "fit", "tlink", "iauto", "iall", "iman", "idel", "smooth", "log", "dl", "max"]), (".pnl.spec", ["xicb", "fit", "rul", "par", "rel", "lock", "dl", "tabp", "max"])]:
                 got = pg.evaluate(f"[...document.querySelector('{sel}').querySelectorAll('.tbs [data-a]')].filter(b=>b.tagName==='BUTTON'&&!b.hidden).map(b=>b.dataset.a)"); assert got == expect, (sel, got)
             # hidden until needed
-            assert pg.evaluate("[...document.querySelectorAll('.pnl.xic [data-a=intf], .pnl.xic [data-a=iclr], .pnl.xic [data-a=itab]')].every(b=>b.hidden)")
+            assert pg.evaluate("[...document.querySelectorAll('.pnl.xic [data-a=intf], .pnl.xic [data-a=iclr]')].every(b=>b.hidden) && !document.querySelector('.pnl.xic [data-a=itab]')")
             # one row for the buttons, and the groups are told apart by a vertical bar
             for w in (1500, 1100, 700):
                 pg.set_viewport_size({"width": w, "height": 2200}); wait_for_js(pg, "[...document.querySelectorAll('.pnl')].filter(p=>p.offsetParent).every(p=>p.querySelector('.tbs').getBoundingClientRect().height<=30)")
@@ -107,17 +107,16 @@ try:
             nums = [c[1] for r_ in rows[1:] for c in r_ if c and c[0] == "n"]; assert len(nums) > 400 and max(nums) > 1000, len(nums)
             xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')"); xp.locator("[data-a=iauto]").click()
             xbox = xp.locator("canvas").bounding_box(); xx = pg.evaluate(f"E.panels[{xi}]._a.X(14.33)")
-            pg.mouse.click(xbox["x"] + xx, xbox["y"] + 120); wait_for_js(pg, "(()=>{const b=document.querySelector('.pnl.xic [data-a=itab]');return !!b&&!b.hidden})()")
-            xp.locator("[data-a=itab]").click(); pg.wait_for_selector("#ig-xlsx")
-            with pg.expect_download() as d2: pg.click("#ig-xlsx")
+            pg.mouse.click(xbox["x"] + xx, xbox["y"] + 120); wait_for_js(pg, "!!document.querySelector('#manint-h')", timeout=60000)
+            pg.evaluate("(h => { if (h.getAttribute('aria-expanded') !== 'true') h.click(); })(document.querySelector('#manint-h'))"); wait_for_js(pg, "!!document.querySelector('#manint-x tbody tr')", timeout=60000)
+            with pg.expect_download() as d2: pg.click("#manint [data-xlsx]")
             g = d2.value.path(); assert d2.value.suggested_filename == "integrations.xlsx"; rr = xlsx_rows(g)
-            heads = [c[1] for c in rr[0]]; assert "Area (counts*s)" in heads and "RT start (min)" in heads, heads
+            heads = [c[1] for c in rr[0]]; assert "Area (counts × s)" in heads and "Start (min)" in heads, heads
             assert "Type of file" in heads and heads.index("Type of file") > heads.index("Correction"), heads
-            assert rr[1][heads.index("Type of file")][1] and not any(c and c[1] for c in rr[1][heads.index("Q1 (m/z)"):heads.index("Q1 (m/z)") + 3]), rr[1]      # an XIC has no transition: Q1, Q3 and the name are empty
-            area = rr[1][heads.index("Area (counts*s)")]; assert area[0] == "n" and area[1] > 0, area
+            assert rr[1][heads.index("Type of file")][1], rr[1]
+            area = rr[1][heads.index("Area (counts × s)")]; assert area[0] == "n" and area[1] > 0, area
             wb = xlsx_openpyxl(g)
-            if wb: assert wb.active.cell(2, heads.index("Area (counts*s)") + 1).value > 0
-            pg.click("#bigx")
+            if wb: assert wb.active.cell(2, heads.index("Area (counts × s)") + 1).value > 0
         step("xlsx of an XIC and of the integrations table", xlsx)
 finally:
     r.close(); r.report()

@@ -43,3 +43,6 @@ mzlab/web/draw.js::CSS zoom::2  # Ketcher toolbars a little larger; Firefox befo
 mzlab/web/mappa-dati.js::base64 typed arrays::1  # feature check, atob loop otherwise
 mzlab/web/explore.js::fetch keepalive::1  # on the site api/ is answered in the page (browser.js), never sent; an engine without keepalive sends a plain fetch
 mzlab/web/transizioni.css::backdrop var()::1  # only the fade of the backdrop: below Chrome 122 / Safari 17.4 it appears at once
+mzlab/web/drop-unico.js::getAsFileSystemHandle::1  # checked in the same line, the loader goes on without a handle
+mzlab/web/shell.js::file pickers::2  # typeof check, <input> otherwise
+mzlab/web/wiff-pair.js::file pickers::2  # typeof check, a webkitdirectory input otherwise

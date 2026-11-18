@@ -71,10 +71,10 @@ try:
         step("integrate + drag bar", integrate)
         pg.screenshot(path=SH + "13_integrated.png")
         def ints_tbl():
-            pg.locator('.pnl.xic [data-a="itab"]').first.click(); pg.wait_for_selector("#bigdlg[open] table")
-            assert pg.locator("#bigdlg[open] table").count() == 1
-            pg.screenshot(path=SH + "14_ints.png"); pg.click("#bigx")
-        step("integration table", ints_tbl)
+            pg.wait_for_selector("#manint-x tbody tr", timeout=30000)
+            assert pg.locator("#manint-x").count() == 1 and pg.locator('.pnl.xic [data-a="itab"]').count() == 0
+            pg.screenshot(path=SH + "14_ints.png")
+        step("integration table on the card", ints_tbl)
         def method():
             pg.click("#np-method"); ready(pg)
             txt = pg.inner_text("#bigdlg"); assert "Method" in txt or len(txt) > 50
