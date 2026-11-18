@@ -97,18 +97,6 @@ function guardFocus(d) {
   guarded.mzGuard = true; w.HTMLElement.prototype.focus = guarded;
 }
 
-/** Guards the frame's real document as soon as the navigation commits (before its scripts run), not at `load`: Ketcher can mount and focus
- * its clipboard element before `load` on a slow machine, and the guard installed on the replaced about:blank document would not be there.
- * @param {HTMLIFrameElement} fr */
-export function guardFrame(fr) {
-  const t0 = Date.now();
-  const tick = () => {
-    try { const d = fr.contentDocument; if (d && fr.contentWindow && fr.contentWindow.location.href !== "about:blank") { guardFocus(d); return; } } catch (_) { /* not ready */ }
-    if (Date.now() - t0 < 30000) setTimeout(tick, 2);
-  };
-  tick();
-}
-
 /** @param {Document} d  the document of the Ketcher iframe */
 export function mountTablet(d) {
   if (!d.head || !d.body || d.getElementById("tp-tablet")) return;
