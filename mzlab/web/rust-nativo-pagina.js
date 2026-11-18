@@ -23,11 +23,13 @@ export function makeNativo(h) {
     isNative: (/** @type {string} */ n) => names.has(h.base(n)),
     nativeNames: () => [...names],
     /** the samples of a dataset (`members`: [{ name, blob }], names relative to the dataset): { format, samples: [{ id, name, scans }] } */
-    async nativeSamples(/** @type {{ name: string, blob: Blob }[]} */ members) {
-      const r = await h.rpc({ op: "natsamples", members });
+    async nativeSamples(/** @type {{ name: string, blob: Blob }[]} */ members, /** @type {boolean | undefined} */ listing) {
+      const r = await h.rpc({ op: "natsamples", members, listing: !!listing });
       if (r.dead || r.error) throw fail(r, "err.file.nativeStopped", dataset(members));
       return JSON.parse(r.info);
     },
+    /** the engine's answer for the sample chooser: `{ op: "natdefault", ids, sizes }` (the ids ticked first) or `{ op: "natselect", present, text }` (`1,3,5`, `2-4`); its refusal is thrown (`err.sample.unknown`, `err.sample.list`) */
+    async nativeAsk(/** @type {any} */ m) { const r = await h.rpc(m); if (r.dead || r.error) throw fail(r, "err.file.nativeStopped", ""); return JSON.parse(r.info); },
     /** which of `names` (files of the session) are samples of these very files (`members`: [{ name, blob }]: same names, sizes and lastModified) with their index kept: the same dataset given again (the blob: the desktop app knows a file by its number) */
     async nativeSame(/** @type {{ name: string, blob: Blob }[]} */ members, /** @type {string[]} */ names) {
       const r = await h.rpc({ op: "natsame", members: members.map(m => ({ name: m.name, size: m.blob.size, mtime: /** @type {any} */ (m.blob).lastModified || 0, blob: m.blob })), names: names.map(h.base) });

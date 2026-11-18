@@ -703,3 +703,9 @@ header>:not(#stbar){flex-shrink:0}header .hq{width:24px;height:24px}
 
 .wiffpair{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:7000;max-width:min(560px,calc(100vw - 24px));background:var(--panel);color:var(--ink);border:1px solid var(--accent);border-radius:6px;padding:8px 12px;box-shadow:0 2px 10px color-mix(in srgb,var(--ink) 25%,transparent)}
 .wiffpair[hidden]{display:none}.wiffpair .wp-msg{margin:0 0 6px}.wiffpair .wp-act{display:flex;gap:8px;flex-wrap:wrap}.wiffpair button{min-height:28px;min-width:28px}
+.wiffchoose{max-width:min(760px,calc(100vw - 24px));width:100%;max-height:calc(100vh - 24px);background:var(--panel);color:var(--ink);border:1px solid var(--accent);border-radius:6px;padding:12px 16px;box-sizing:border-box;overflow:auto}
+.wiffchoose h2{margin:0 0 4px}.wiffchoose .wc-intro,.wiffchoose .wc-sel,.wiffchoose .wc-msg{margin:4px 0}
+.wiffchoose .wc-bar,.wiffchoose .wc-act{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}.wiffchoose .wc-act{justify-content:flex-end}
+.wiffchoose button,.wiffchoose input[type=text]{min-height:28px;min-width:28px}.wiffchoose input[type=checkbox]{width:24px;height:24px}
+.wiffchoose .wc-scroll{overflow:auto;max-height:42vh;margin:8px 0}.wiffchoose .wc-tab{border-collapse:collapse;width:100%}
+.wiffchoose caption{text-align:left;font-weight:600;padding:4px 0}.wiffchoose th,.wiffchoose td{padding:2px 8px;text-align:left;border-bottom:1px solid var(--line)}.wiffchoose .n{text-align:right}

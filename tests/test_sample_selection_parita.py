@@ -51,3 +51,20 @@ def test_the_site_and_the_cli_select_the_same_samples(work):
             assert rc == (5 if a["error_key"] == "err.sample.unknown" else 2), (text, rc)
     assert site(work, [1, 2, 3], "3,1") == (0, '{"samples":[1,3]}')
     assert app(work, "1,9")[0] == 5
+
+
+DEFAULT = """const w = require(process.argv[2]);
+console.log(w.sample_default(Uint32Array.from(JSON.parse(process.argv[3])), Float64Array.from(JSON.parse(process.argv[4])), Number(process.argv[5])));"""
+
+
+def test_the_default_ticks_are_the_same_from_the_site_and_the_cli(work):
+    """`sample_default` (site) and `samples select --default` (CLI) tick all of a small set and none of a set that does not fit the budget."""
+    (work / "d.js").write_text(DEFAULT, encoding="utf-8")
+    sized = subprocess.run(cli_argv("samples", "list", str(work / "big" / "grande.wiff"), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8", check=True)
+    smp = json.loads(sized.stdout)["samples"]
+    ids, sizes = [x["id"] for x in smp], [x.get("size", 0) for x in smp]
+    for mb in (1024, 0):
+        site_out = subprocess.run(["node", str(work / "d.js"), str(work / "pkg" / "mzlab_wasm.js"), json.dumps(ids), json.dumps(sizes), str(mb)], cwd=ROOT, capture_output=True, encoding="utf-8", check=True).stdout.strip()
+        cli_out = subprocess.run(cli_argv("samples", "select", str(work / "big" / "grande.wiff"), "--default", "--budget-mb", str(mb), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8", check=True).stdout.strip()
+        assert site_out == cli_out, (mb, site_out, cli_out)
+    assert cli_out == '{"samples":[]}'

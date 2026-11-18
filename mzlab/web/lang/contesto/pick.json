@@ -1,0 +1,9 @@
+{
+  "pick.intro": "Opening line of the dialog: {files} = the file name or «N files», {samples} = total number of samples in them.",
+  "pick.file": "Caption of the sample table of one file: {name} = file name, {n} = samples in it, {size} = their size, already formatted (e.g. 12 MB).",
+  "pick.table": "Accessible name of the sample table: {name} = file name.",
+  "pick.sel": "Live status under the table: {n} = samples ticked, {total} = all samples, {size} = about how much is read, already formatted.",
+  "pick.ids.bad": "The typed sample numbers are not a list: {text} = what was typed.",
+  "pick.ids.unknown": "A file lacks a typed sample number: {missing} = the numbers it lacks, {ids} = the numbers it has.",
+  "pick.cancelled": "Note when the dialog is cancelled: {name} = the file that was not opened."
+}

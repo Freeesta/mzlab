@@ -196,3 +196,33 @@ fn features_with_sample_reports_an_unreadable_file_not_a_single_sample_file() {
     let _ = wiff;
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn select_default_ticks_a_small_set_and_nothing_when_it_would_not_fit() {
+    let (dir, wiff) = pair("default");
+    let big = run(&["samples", "select", &wiff, "--default", "--json"]);
+    assert_eq!(
+        (big.code, String::from_utf8_lossy(&big.stdout).trim()),
+        (0, "{\"samples\":[1,2,3]}")
+    );
+    let tight = run(&[
+        "samples",
+        "select",
+        &wiff,
+        "--default",
+        "--budget-mb",
+        "0",
+        "--json",
+    ]);
+    assert_eq!(
+        String::from_utf8_lossy(&tight.stdout).trim(),
+        "{\"samples\":[]}"
+    );
+    // exactly one of the two ways to choose
+    assert_eq!(
+        run(&["samples", "select", &wiff, "--default", "--sample", "1"]).code,
+        2
+    );
+    assert_eq!(run(&["samples", "select", &wiff]).code, 2);
+    let _ = std::fs::remove_dir_all(dir);
+}
