@@ -6,7 +6,7 @@ Outcome: **adopted** (see `measurements-speed.md`, site loading in `measurements
 
 | Date | Route | Outcome | Why / numbers | Retry only if |
 |---|---|---|---|---|
-| 22/10 | `.wasm` with `simd128` (20 Full Scan LR) | adopted | 9.1 s with vs 9.3 s without on the LR Full Scans (`misure-diario.md`); Federico's decision: desktop target (minimum browsers in `wasm-potential.md` §8), a single build; faster mzML read and index (`wasm-potential.md` §3) | - |
+| 22/10 | `.wasm` with `simd128` (20 Full Scan LR) | adopted | 9.1 s with vs 9.3 s without on the LR Full Scans; Federico's decision: desktop target (minimum browsers in `wasm-potential.md` §8), a single build; faster mzML read and index (`wasm-potential.md` §3) | - |
 | 24/10 | `.raw`: table and "table + .mzidx" without SHA-1 or `metodo/1` | adopted | -43...-71% (raw-fast-mzidx-1) | - |
 | 25/10 | SIMD (AVX2) in `.raw` decoding (`to_mz_intensity_into`) | discarded | m/z only 3.04 -> 2.06 ns/point (-14% of the conversion alone), centroids without margin, safe two-pass rewrite slower (9.4 ns/point) | a corpus with many profile `.raw` arrives |
 | 25/10 | Block cache in the wasm reader (RAW-FAST-IO-WASM) | adopted, reduced | first version: andi +537 B over the cap; succeeded with 3 blocks only for thermo; caps unchanged; andi has 192 B of margin, every change to `lettori-wasm/src/lib.rs` risks it | a cap is raised with a measurement (cap = measurement x1.10 at 4 KiB) |
