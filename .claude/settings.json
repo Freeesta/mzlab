@@ -34,8 +34,7 @@
       "Read(./.git/**)",
       "Read(./**/__pycache__/**)",
       "Read(./.pytest_cache/**)",
-      "Read(./**/*.egg-info/**)",
-      "Read(./docs/agenti/misure-diario.md)"
+      "Read(./**/*.egg-info/**)"
     ]
   },
   "hooks": {
