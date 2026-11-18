@@ -177,7 +177,7 @@ fn ridge_lines_join_the_same_maxima_as_the_all_pairs_search() {
     let mut long = 0;
     for case in 0..400 {
         let n = 20 + (rng.next() * 400.0) as usize;
-        let widths = scale_widths(n);
+        let widths = scale_widths(n, 1.0);
         let smooth = 1 + case % 5;
         // noisy scales whose maxima are dense, with ties and plateaus
         let c: Vec<Vec<f64>> = (0..widths.len())

@@ -28,6 +28,11 @@ fn load() -> BTreeMap<String, Case> {
     serde_json::from_str(&std::fs::read_to_string(path).expect("tests/golden/picchi_qualita.json")).unwrap()
 }
 
+/// The limits frozen from the Python engine are those of the legacy parameters (no scaling to the sampling).
+fn legacy() -> Params {
+    Params { scale_to_width: false, ..Params::default() }
+}
+
 fn by_apex(mut v: Vec<Peak>) -> Vec<Peak> {
     v.sort_by_key(|p| p.apex_i);
     v
@@ -36,7 +41,7 @@ fn by_apex(mut v: Vec<Peak>) -> Vec<Peak> {
 #[test]
 fn cwt_keeps_the_limits_of_the_python_engine() {
     for (name, c) in load() {
-        let got = by_apex(detect_peaks(&c.rt, &c.y, Params::default()));
+        let got = by_apex(detect_peaks(&c.rt, &c.y, legacy()));
         assert_eq!(got.len(), c.cwt.len(), "{name}: {got:?}");
         for (g, e) in got.iter().zip(&c.cwt) {
             assert_eq!((g.apex_i, g.lo, g.hi), (e.apex_i, e.lo, e.hi), "{name}");
@@ -49,7 +54,7 @@ fn cwt_keeps_the_limits_of_the_python_engine() {
 fn prominence_finds_the_expected_peaks_and_limits() {
     for (name, c) in load() {
         let got = by_apex(detect_prominence(&c.rt, &c.y, ProminenceParams::default()));
-        let cwt = by_apex(detect_peaks(&c.rt, &c.y, Params::default()));
+        let cwt = by_apex(detect_peaks(&c.rt, &c.y, legacy()));
         match name.as_str() {
             "singolo" | "coda" | "spalla" => assert_eq!(got.len(), 1, "{name}: {got:?}"),
             "doppio" | "doppio_stretto" => {
