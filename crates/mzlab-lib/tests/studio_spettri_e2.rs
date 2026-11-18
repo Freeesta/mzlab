@@ -1,4 +1,4 @@
-//! Spectral study, E2 (positional isomers): today's numbers of the baseline arms, pinned (`docs/agenti/studio-spettri.md`, MISURA studio_e2).
+//! Spectral study, E2 (positional isomers): today's numbers of the baseline arms, pinned (`docs/agenti/study-spectra.md`, MISURA studio_e2).
 //! E2: two isomers in the library with a shared base peak (90 % of the intensity) and 2 diagnostic ions at 3 % each.
 //! A change of the engine or of the generator that moves a number updates the pin and the MISURA line together.
 

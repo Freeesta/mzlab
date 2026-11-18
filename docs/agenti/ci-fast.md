@@ -34,7 +34,7 @@
   The memory guards (`tests/test_guardie_memoria.py`, `tests/test_feat_wasm.py`) build, generate the series and measure in parallel, each measurement in its own folder: 112 s → 57 s with the builds cached.
 
 - **`e2e_flow_msn`**: the `mzlab-cli msn-graph` reference (211 s cold) goes to the background at the start and the `graph` step collects its output.
-- **Measurements of the Rust jobs and discarded cuts** (rust-det, opt-level, single upstream build, crate fan-out): `docs/agenti/ottimizzazioni-tentate.md` ("CI: misure dei job Rust e tagli scartati").
+- **Measurements of the Rust jobs and discarded cuts** (rust-det, opt-level, single upstream build, crate fan-out): `docs/agenti/optimizations-tried.md` ("CI: misure dei job Rust e tagli scartati").
 
 ## Ten practical rules before opening a PR
 Before opening the PR: `python3 tools/pre_pr.py --veloce` (about 30 s: only the cheap checks, plus CSP hash and the list of the e2e tests that `--cambiati` would run; never clippy nor e2e; every step prints "[i/N] name" before starting) or `python3 tools/pre_pr.py` (1-2 minutes: map, thresholds, i18n, JS syntax if you touched `mzlab/web/`, globals, tsc, e2e imports, fmt, clippy and `cargo machete` if the Rust paths of `rust.yml` change, then `verifica.py --cambiati`; `--senza-e2e` skips the last step).

@@ -142,6 +142,8 @@ fn list_peaks(e: &mut Exp, rt_min: f64, rt_tol: f64) {
     }
     let par = Params {
         snr: SN_PEAK,
+        // the frozen low-resolution engine has the fixed widths
+        scale_to_width: false,
         ..Params::default()
     };
     let found = detect_peaks(&e.rt, &e.tic, par);

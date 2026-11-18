@@ -22,7 +22,7 @@ Rule: no loss of information from the raw files (`.wiff`, `.raw`, `.dam`). This 
 ## SCIEX `.wiff` / `.dam`
 - PDA/UV 3D of the `.wiff` (streams `DAD/DADSampleHeader`, `DADIdx`, `DADRealTimeData`): decoded in `crates/mzlab-core/src/wiff/dad.rs` (`DadData`, `read_dad`), `dad_map.rs`, `dad_uv.rs` (feature `mappa-dad`, active in `mzlab-wasm`).
   - Extracts a 2D time × wavelength matrix in mAU (row-major `f32`), pre-summed TWC and single-wavelength chromatograms (`ChromKind::Pda`, `"mAU"`). 2D map, UV spectra and per-λ traces are reachable both natively and from the site via `itemroutes::pda_map/pda_spectrum/pda_wavelength`. Status: decoded, not validated against Analyst (no numeric comparison with Analyst exports; no `meta.nonDecodificato` warning).
-- Device traces (`Devices/Device_N/DevData`: pressure in pascal, flow, temperature): chromatograms of the reader (`wiff/devices.rs`, `wiff-varianti.md`).
+- Device traces (`Devices/Device_N/DevData`: pressure in pascal, flow, temperature): chromatograms of the reader (`wiff/devices.rs`, `wiff-variants.md`).
 - Not decoded: `DDERealTimeData` (IDA), TripleTOF/ZenoTOF blocks (other codec, refused), binaries `MSConfigInfo*`, `MassSpecMethod*`, `ExperimentHeader*Ex`, `PeriodStream*`, `CycleDepParam`.
 - Mass calibration and resolution (`GLPTables`) and strings of `DabsInfo`/`SampleTable`: in `metodo/1.campi` from the `sciex` module; status of the Log at start and end of run, CFR audit, acquisition time per sample: not extracted.
 - User, computer, institution and paths are in the OLE properties and in `CFR_INFO`: identity, not copied into the mzML.

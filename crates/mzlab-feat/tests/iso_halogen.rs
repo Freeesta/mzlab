@@ -1,6 +1,6 @@
 //! MEASURE (no default is changed): can the row isotope score (`evid::producers::isotope_score`, M+1/M only) tell a halogenated or sulfur compound from an
 //! isobaric CHNO formula (within 5 ppm)? Every CHNO formula in range is scored against the observed pattern of the true compound with the row score and with
-//! `mzlab_core::isoscore` (M, M+1, M+2, ...). Numbers: `docs/agenti/mzfeat-prove.md` (MISURA). Synthetic, no real data.
+//! `mzlab_core::isoscore` (M, M+1, M+2, ...). Numbers: `docs/agenti/mzfeat-tests.md` (MISURA). Synthetic, no real data.
 
 use mzlab_core::composition::{isotope_ratios, Counts};
 use mzlab_core::elements::{mass, parse_formula, C13_STEP, PROTON};

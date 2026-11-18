@@ -1,5 +1,5 @@
 # covers: mzlab/web/tic-fondo-ui.js, mzlab/web/rust-ticfondo.js
-"""The TIC without the chemical background (api/tic_background, docs/agenti/tic-fondo.md) on the built site: the module `ticfondo`
+"""The TIC without the chemical background (api/tic_background, docs/agenti/tic-background.md) on the built site: the module `ticfondo`
 (crates/mzlab-ticfondo-wasm) is fetched on the first request, never at start-up; the answer finds the six background lines of the synthetic run
 (tools/tic_fondo_sintetico.py) and equals `mzlab-cli background` byte for byte, alone and with a blank sample (mode=blank).
 The button of the TIC/BPC panel (tic-fondo-ui.js): one click draws the cleaned trace (the same bytes as the CLI), a second the raw one; right click

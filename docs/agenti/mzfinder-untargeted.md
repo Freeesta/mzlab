@@ -12,7 +12,7 @@ The rest of mzFinder: `mzfinder.md`. Rust readers of the tables: section "Reader
   without MS2 or without a candidate the level is 5, and 4 only if ONE formula from an external source explains the m/z within 5 ppm.
   External annotations (mzMine, GNPS2, MS-DIAL) are evidence only, with source and score in the "External evidence" column, never a level.
   2b is not assigned by the program: `UNTM.decide` ("Level decided by the chemist" menu) accepts it from 2a, 3a, 3b or 4 and rejects it on 5 and 0.
-  The table (`#unt-t`) is a `TPTAB` (`docs/agenti/mzfinder-tabella.md`): frozen level and m/z columns, sorting from the headers, "Columns", chips (L2/L3/L4 "or better", L5, MS2, decided) in AND, search, "Export view";
+  The table (`#unt-t`) is a `TPTAB` (`docs/agenti/mzfinder-table.md`): frozen level and m/z columns, sorting from the headers, "Columns", chips (L2/L3/L4 "or better", L5, MS2, decided) in AND, search, "Export view";
   a click on a row opens it below itself (only one open) with the Overview tab (chromatogram and mirror with `LIB.mirror` on the first candidate of `LIB.call("search")`),
   Samples (if there is more than one sample, `TPRIGA.fill`) and Identity (evidence, external annotations, the decided-level menu and "What is it?" with `LIB.whatIs(UNTM.panelOf(f, table))`, a fake panel shaped like those of the Data tab).
 - **Untargeted export** (`js/28_untarget_export.js` = `window.UNTX`; tests `tests/test_untarget_export.py`, `e2e_untarget`): the buttons "Excel (.xlsx)" (`xlsx.js`: sheets Features, Evidence, Library records, Parameters),

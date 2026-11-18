@@ -1,6 +1,6 @@
 # `--sample LIST`: open only some samples of a multi-sample file (CLI, PR 3 of the chooser plan)
 
-Plan and decisions: `wiff-scelta-campioni.md`. List what a file holds first: `mzlab-cli samples list FILE --json` (`samples_list/1`).
+Plan and decisions: `wiff-sample-choice.md`. List what a file holds first: `mzlab-cli samples list FILE --json` (`samples_list/1`).
 
 ## Semantics
 - `LIST` is sample ids and ranges: `1,3,5`, `2-4`, `5, 2-4,3`. The ids are those of `samples list` (not positions), each taken once, the answer in the order of the file. One code for all routes: `mzlab_core::readers::selection` (`parse`, `resolve`, `selection_json`), also exported by the engine .wasm as `sample_selection(present_ids, text)` for the site (same bytes; `tests/test_sample_selection_parita.py`).

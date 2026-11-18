@@ -1,4 +1,4 @@
-//! Spectral study, E4 (collision energy): today's numbers of the baseline arms, pinned (`docs/agenti/studio-spettri.md`, MISURA studio_e4).
+//! Spectral study, E4 (collision energy): today's numbers of the baseline arms, pinned (`docs/agenti/study-spectra.md`, MISURA studio_e4).
 //! E4: queries at CE 10/20/50/65 against the library at CE 35 (the kinetic model moves the branching ratios).
 //! A change of the engine or of the generator that moves a number updates the pin and the MISURA line together.
 

@@ -1,6 +1,6 @@
 # DAD (UV/Vis detector) in the 3200 `.wiff` files
 
-Reading the DAD matrix of `.wiff` files (feature `mappa-dad`), its routes and interface: RT-λ map, UV spectrum, TWC (total trace), XWC (single-band trace), integration, MRM panel. On-screen names: DAD, TWC, XWC; stored keys and values stay `pda`. Other SCIEX variants: `wiff-varianti.md`.
+Reading the DAD matrix of `.wiff` files (feature `mappa-dad`), its routes and interface: RT-λ map, UV spectrum, TWC (total trace), XWC (single-band trace), integration, MRM panel. On-screen names: DAD, TWC, XWC; stored keys and values stay `pda`. Other SCIEX variants: `wiff-variants.md`.
 
 - `Devices/Device_N/DAD/{DADSampleHeader, DADIdx, DADRealTimeData}` (only in lab files with the detector): decoded in `crates/mzlab-core/src/wiff/dad.rs` (`struct DadData`, `read_dad`).
   - Byte layout: standard 32-byte OLE header offset (`+0..+32`); in `DADSampleHeader` (86 bytes total) there are `n_points` at `+34` (`u32`, N_t), `n_channels` at `+38` (`u32`, N_λ), duration at `+46` (`f32`, min), start wavelength `wl_start_nm` at `+50` (`f32`, nm), end `wl_stop_nm` at `+54` (`f32`, nm) and step `wl_step_nm` at `+58` (`f32`, nm, e.g. 200–400 nm, step 1.0, 201 channels).

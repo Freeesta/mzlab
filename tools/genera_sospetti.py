@@ -5,7 +5,7 @@
     python tools/genera_sospetti.py --fonte DIR --pacchetto site/static/mzfinder/sospetti    # also the zlib-compressed pieces + catalogo.json
 
 Sources (all CC BY 4.0): NORMAN SusDat, PubChemLite for Exposomics, Transformations in PubChem. Versions and SHA-256 are pinned below: a different file stops
-the build. The index is a list of suspects by monoisotopic mass (never a name for a feature); the format is specified in docs/agenti/sospetti.md.
+the build. The index is a list of suspects by monoisotopic mass (never a name for a feature); the format is specified in docs/agenti/suspects.md.
 `read_suspects()` is the reference reader (the Rust reader is crates/mzlab-feat/src/suspects.rs).
 """
 from __future__ import annotations
@@ -130,7 +130,7 @@ def _pad8(b: bytes) -> bytes:
 
 
 def write_mzsus(rows: list[tuple], manifest: dict) -> bytes:
-    """Layout (little-endian, every section starts at a multiple of 8): header, manifest JSON, then the columns; see docs/agenti/sospetti.md."""
+    """Layout (little-endian, every section starts at a multiple of 8): header, manifest JSON, then the columns; see docs/agenti/suspects.md."""
     formulas = sorted({r[2] for r in rows})
     fidx = {f: i for i, f in enumerate(formulas)}
     react = [(i, r[6]) for i, r in enumerate(rows) if r[6]]

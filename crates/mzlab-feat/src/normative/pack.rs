@@ -1,6 +1,6 @@
 //! The writer of the regulatory-lists package: the A1+ CSV of each list becomes one row per skeleton of the `listings` extension of `mzlab_feat::suspects`
 //! (`write_mzsus`), with its manifest (`manifest_json`) and the `normative/1` catalogue (`catalog_json`). No clock, no disk: same input, same bytes. Used by
-//! `mzlab-cli normative pack` and by `official::import`. Layout: `docs/agenti/sospetti.md`.
+//! `mzlab-cli normative pack` and by `official::import`. Layout: `docs/agenti/suspects.md`.
 
 use std::collections::BTreeMap;
 
@@ -171,7 +171,7 @@ fn intern(rows: &[(&String, &Row)]) -> (Vec<String>, Vec<u32>, Vec<Packed>) {
     (entries, member_offs, members)
 }
 
-/// The `listings` extension after the formula blob (layout: `docs/agenti/sospetti.md`).
+/// The `listings` extension after the formula blob (layout: `docs/agenti/suspects.md`).
 fn write_listings(
     v: &mut Vec<u8>,
     rows: &[(&String, &Row)],

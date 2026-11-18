@@ -55,7 +55,7 @@ fn csv_keys(names: bool) -> String {
         })
 }
 
-/// A `.mzsus` v1 with the rows of `ROWS` (a file of the format of `docs/agenti/sospetti.md`).
+/// A `.mzsus` v1 with the rows of `ROWS` (a file of the format of `docs/agenti/suspects.md`).
 fn mzsus() -> Vec<u8> {
     let mut rows: Vec<(f64, &str, &str)> = ROWS.iter().map(|r| (neutral(r.2), r.1, r.2)).collect();
     rows.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(b.1)));

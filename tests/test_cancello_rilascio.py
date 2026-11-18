@@ -74,8 +74,8 @@ def test_plain_commands_of_the_cli_are_known(tmp_path):
     root = tree(tmp_path)
     (root / "crates/mzlab-cli/src").mkdir(parents=True)
     (root / "crates/mzlab-cli/src/lib.rs").write_text('const PLAIN: [&str; 2] = ["llm", "steps"];\nmatch a { Some("flow") => {} }\n')
-    (root / "docs/agenti/per-agenti.md").write_text("run `mzlab-cli steps --json`\n")
-    (root / "docs/agenti/INDICE.md").write_text("see docs/agenti/area.md and per-agenti.md\n")
+    (root / "docs/agenti/for-agents.md").write_text("run `mzlab-cli steps --json`\n")
+    (root / "docs/agenti/INDICE.md").write_text("see docs/agenti/area.md and for-agents.md\n")
     assert g.known_commands(root) == {"flow", "llm", "steps"}
     assert g.check_guides(root)[1] == []
 
