@@ -2046,7 +2046,7 @@
                   {
                     "type":"string",
                     "default":"",
-                    "description":"Node nK of the graph: adds the key `strutture`, the bonds of the structure whose cleavage gives its m/z (needs the structure); `all` (or `tutti`) = the key `strutture_tutti` for every node of level 2 or more; empty = none"
+                    "description":"Node nK of the graph: adds the key `structures`, the bonds of the structure whose cleavage gives its m/z (needs the structure); `all` = the key `structures_all` for every node of level 2 or more; empty = none"
                   },
                   {
                     "type":"number",
@@ -2057,7 +2057,7 @@
                   {
                     "type":"boolean",
                     "default":false,
-                    "description":"Adds the key `interpretazione`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the activations that saw it"
+                    "description":"Adds the key `interpretation`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the activations that saw it"
                   },
                   {
                     "type":"number",
@@ -2068,7 +2068,7 @@
                   {
                     "type":"boolean",
                     "default":false,
-                    "description":"Adds the key `regole`: the rules of the table `fragrules/1` that the formulas alone decide (which rule explains the loss of an arc, even-electron check, trap cut-off, composite and stepped losses)"
+                    "description":"Adds the key `rules`: the rules of the table `fragrules/1` that the formulas alone decide (which rule explains the loss of an arc, even-electron check, trap cut-off, composite and stepped losses)"
                   },
                   {
                     "type":"number",
@@ -2090,7 +2090,7 @@
                   {
                     "type":"boolean",
                     "default":false,
-                    "description":"Adds the key `rotture`: the sets of atoms of the structure (one or two bonds cut, a few hydrogens moved) that give the m/z of each node, the arcs they explain and the share of each spectrum's intensity explained (needs the structure; window `struct_ppm`)"
+                    "description":"Adds the key `breaks`: the sets of atoms of the structure (one or two bonds cut, a few hydrogens moved) that give the m/z of each node, the arcs they explain and the share of each spectrum's intensity explained (needs the structure; window `struct_ppm`)"
                   },
                   {
                     "type":"integer",
