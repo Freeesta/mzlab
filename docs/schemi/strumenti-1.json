@@ -450,7 +450,7 @@
                     "type":"number",
                     "minimum":0,
                     "default":3,
-                    "description":"A peak under this signal-to-noise is reported as no_peak; the S/N is the smoothed height over 1.4826 MAD of the raw trace far from the peak (see S/N noise)"
+                    "description":"A peak under this signal-to-noise is reported as no_peak"
                   },
                   {
                     "enum":[1,3,5],
