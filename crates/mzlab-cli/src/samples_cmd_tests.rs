@@ -115,7 +115,6 @@ fn nome_gruppo_is_the_route_answer() {
 fn bad_use_is_an_error_of_use() {
     for a in [
         vec!["samples", "nope"],
-        vec!["samples", "vars", "--names", "/nonexistent/x.txt"],
         vec![
             "samples",
             "vars",
@@ -127,6 +126,10 @@ fn bad_use_is_an_error_of_use() {
     ] {
         assert_eq!(run(&a).0, 2, "{a:?}");
     }
+    assert_eq!(
+        run(&["samples", "vars", "--names", "/nonexistent/x.txt"]).0,
+        4
+    );
     assert_eq!(run(&["samples", "--help"]).0, 0);
 }
 
