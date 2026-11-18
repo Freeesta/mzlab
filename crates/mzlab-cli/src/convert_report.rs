@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
+use crate::Outcome;
 use mzlab_core::json::Out;
 
 /// One input of the conversion as `--report` writes it.
