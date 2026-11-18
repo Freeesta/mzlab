@@ -93,7 +93,7 @@ try:
         step("XIC inside a channel (api/xic canale=)", xic)
         def restore():
             rec = pg.evaluate("panelRec(E.panels.find(p => p.type==='chrom')).channels"); assert rec, rec
-        step("the panel saves the omologo, not the index", restore)
+        step("the panel saves the group, not the index", restore)
         def miss_routes():
             assert pg.evaluate("(window.MZLAB_LR_MISS||[]).length") == 0, pg.evaluate("window.MZLAB_LR_MISS")
         step("no request left unanswered", miss_routes)
