@@ -41,3 +41,6 @@ export function show(p, S, err, f, rf) {
   (p.corrbar || p.leg).insertAdjacentHTML("beforeend", h`<div class="sm subnote" role="status">${raw(full.map(t => h`${t}`).join("<br>"))}</div>`);
   p.leg.insertAdjacentHTML("beforeend", h`<span class="sm subnote" title="${full.join(" ")}">${n.head}${n.warn.length ? ` (${n.warn.length})` : ""}</span>`);
 }
+
+/** The scale factor and RT shift boxes of the popover of a DAD map with a correction file. @param {any} p @param {Function} num */
+export const controls = (p, num) => `<label class="muted" title="${T("ctl.map.subfactor.title")}">${T("ctl.map.subfactor.lab")} ${num("subFactor", p.subFactor, -1000, 1000, 0.01, true)}</label><label class="muted" title="${T("ctl.map.subshift.title")}">${T("ctl.map.subshift.lab")} ${num("subShift", p.subShift || 0, -5, 5, 0.01, true)}</label>`;
