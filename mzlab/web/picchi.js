@@ -214,7 +214,7 @@ const INTOPT = { sn: false, par: false, q: false };
 // the peak-finding parameters and the columns of the integration table are one undoable action (comandi.js)
 COMANDI.gestore("peaks.settings", {
   leggi: () => JSON.stringify([PK, INTOPT]),
-  applica: (/** @type {unknown} */ _p, /** @type {string} */ snap) => { const [pk, io] = JSON.parse(snap); Object.assign(PK, pk); Object.assign(INTOPT, io); pkSave(); const dlg = Q("#bigdlg"); if (dlg && dlg.open) showInts(); if (window.MANINT) MANINT.sync(); },
+  applica: (/** @type {unknown} */ _p, /** @type {string} */ snap) => { const [pk, io] = JSON.parse(snap); Object.assign(PK, pk); Object.assign(INTOPT, io); pkSave(); const dlg = Q("#bigdlg"); if (dlg && dlg.open) showInts(); /** @type {any} */ (window).MANINT?.sync(); },
 });
 const INT_COLS = ["panel", "ion", "file", "time", "conc", "cunit", "a", "b", "rt", "area", "height", "corr"];
 const INT_HEADS = ["panel", "trace", "sample", "time", "conc", "unit", "rt0", "rt1", "apex", "area", "height", "corr"].map(k => I18N.t(`export.int.${k}`));

@@ -20,6 +20,17 @@ const SN_HEAD: &str = ",sn_zone";
 const FIG_HEAD: &str = ",w_half_min,plates,tailing";
 const QUALITY_HEAD: &str = ",gaussian,asymmetry,noise_score";
 
+/// The windows alone (an array), or `{"windows": [...], "columns": ["sn", "fig", "quality"]}` to add the optional figure columns.
+pub(super) fn split(doc: &Value) -> Result<(&Value, Cols)> {
+    match doc {
+        Value::Obj(_) => Ok((
+            doc.get("windows").unwrap_or(&Value::Null),
+            Cols::of(doc.get("columns"))?,
+        )),
+        _ => Ok((doc, Cols::default())),
+    }
+}
+
 impl Cols {
     /// The groups named in `columns` (a JSON array of `sn`, `fig`, `quality`); an unknown name is an error, never ignored.
     pub(super) fn of(v: Option<&Value>) -> Result<Cols> {

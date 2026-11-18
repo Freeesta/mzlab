@@ -627,7 +627,7 @@ exit 0
 --- stdout
 mzlab-cli manual-table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
 
-usage: mzlab-cli manual-table (FILE... | --set traces=PATH) --set windows=PATH [--set sums=true] [--set times=PATH] [--out PATH]
+usage: mzlab-cli manual-table (FILE... | --set traces=PATH) --set windows=PATH [--set sums=true] [--set times=PATH] [--set columns=sn,fig,quality] [--json] [--out PATH]
 
   FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in the order of the page
   --set windows=PATH  a JSON list of windows [{"file": I, "tr": J, "a": MIN, "b": MIN, "baseline": "zero"|"edges"|"line", "line": [t0, y0, t1, y1], "label": NAME,
@@ -647,6 +647,9 @@ usage: mzlab-cli manual-table (FILE... | --set traces=PATH) --set windows=PATH [
   --set traces=PATH   instead of FILEs: a JSON list [{"name", "conc"?, "conc_unit"?, "transitions": [{"rt": [MIN], "y": [..], "panel"?, "label"?, "unit"?, "q1"?, "q3"?, "name"?}]}] of
                       traces you supply (a chromatogram, an XIC, a DAD trace); "corr" on a window is a note kept in its row. With a panel on a trace the
                       table has five more columns after origin: panel, conc, conc_unit, correction, below (counts x s), area_unit
+  --set columns=LIST  more columns after the others, any of: sn (sn_zone: the height over the noise of the stretch a window names with "noise": [a, b], empty without),
+                      fig (w_half_min, plates, tailing, on the window's own baseline), quality (gaussian, asymmetry, noise_score); the bytes of the page's table
+  --json      the table as JSON {"columns": [NAME], "rows": [{NAME: TEXT}]} (every cell the text of the CSV, so a number keeps its digits); only for the table
   --out PATH  write there instead of the standard output
 
 Columns: channel (m/z of a SIM ion, q1>q3 of a transition, ion N without Q1), sample, time_min (the time point of the sample in minutes, read from its name

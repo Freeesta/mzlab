@@ -435,12 +435,8 @@ pub fn valleys_text(files: &str, window: &str, depth: f64) -> Result<String> {
 /// that names no channel or no times, `err.manint.baseline` for an unknown baseline or a `line` without its four numbers.
 pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
     let (samples, keys) = samples_and_keys(files)?;
-    // the windows alone (an array), or `{"windows": [...], "columns": ["sn", "fig", "quality"]}` to add the optional figure columns
     let doc = parse(windows.as_bytes())?;
-    let (list, cols) = match &doc {
-        Value::Obj(_) => (doc.get("windows").unwrap_or(&Value::Null), Cols::of(doc.get("columns"))?),
-        _ => (&doc, Cols::default()),
-    };
+    let (list, cols) = fig::split(&doc)?;
     let items = follow::items_of(list, &samples)?;
     let mut rows: Vec<(usize, Row)> = Vec::new();
     let mut labels: Vec<String> = Vec::new();
@@ -466,7 +462,9 @@ pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
             .then(x.1.file.cmp(&y.1.file))
             .then(x.1.a.total_cmp(&y.1.a))
     });
-    Ok(csv_text(&rows, &labels, &corrs, &keys, &samples, sums, cols))
+    Ok(csv_text(
+        &rows, &labels, &corrs, &keys, &samples, sums, cols,
+    ))
 }
 
 #[path = "manint_csv.rs"]
