@@ -136,6 +136,16 @@ function rowRemoval(/** @type {FileRiga} */ r0) {
   });
   return { take, back, free };
 }
+/** The × of a row of the loading table: the same path as the × of the side panel. A source with open samples goes through removeFile (one sample) or removeAllFiles (several, one Undo); a row read but not open goes through rowRemoval, with its own Undo. */
+function removeSourceRow(/** @type {FileRiga} */ r) {
+  const open = E.files.filter(g => !g.gone && (g.file || "").split("#")[0] === r.name);
+  if (open.length === 1) return removeFile(open[0]);
+  if (open.length > 1) return removeAllFiles(open, r.name);
+  const x = rowRemoval(r); x.take();
+  if (STORIA) STORIA.tolto({ what: r.name, dati: r.name, undo: x.back, redo: x.take, scade: window.MZLAB_BROWSER ? () => x.free().then(reindexAfterFree) : null });
+  else x.free();
+  renderFiles();
+}
 /** Removes every file of the list (or of `fs`, a user group named `what`) with ONE «Removed · Undo» entry that takes them all back (same mechanism as removeFile). The whole list also takes the rows read but not open (rowRemoval). */
 function removeAllFiles(/** @type {any[] | null} */ fs = null, /** @type {string | null} */ what = null) {
   const rows = fs ? [] : unopenedRows().map(rowRemoval);
