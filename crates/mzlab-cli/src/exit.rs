@@ -17,10 +17,12 @@ pub const SELECTOR: u8 = 5;
 pub const OUTPUT: u8 = 6;
 
 /// The exit code of the engine error `key`: the one mapping of keys onto the table (exact keys first, then prefixes). A key that names no
-/// class is a data or domain error (1); what the command line asked wrongly is listed as usage.
+/// class is the engine refusing what the command line asked (a formula, a molecule, a setting it cannot use): usage (2). The errors about
+/// the data a command read (nothing overlaps, a run cancelled) are listed as data (1).
 pub fn code_of_key(key: &str) -> u8 {
     const INPUT_KEYS: &[&str] = &[
         "err.cli.input.missing",
+        "err.cli.input.twice",
         "err.cli.file",
         "err.flow.io",
         "err.flow.input.missing",
@@ -49,9 +51,9 @@ pub fn code_of_key(key: &str) -> u8 {
         "err.flow.check",
         "err.flow.lineage",
         "err.flow.port.",
-        "err.flow.param.",
-        "err.flow.algorithm.",
-        "err.flow.preset.",
+        "err.flow.param.unknown",
+        "err.flow.algorithm.unknown",
+        "err.flow.preset.unknown",
         "err.flow.ref.",
         "err.flow.instance.",
         "err.flow.step",
@@ -61,14 +63,7 @@ pub fn code_of_key(key: &str) -> u8 {
         "err.normative.pin",
         "err.normative.sources",
     ];
-    const USAGE_KEYS: &[&str] = &[
-        "err.sample.list",
-        "err.sample.single",
-        "err.pda.scale",
-        "err.pda.view",
-        "err.pda.window",
-        "err.normative.usage",
-    ];
+    const DATA_KEYS: &[&str] = &["err.pda.none", "err.flow.cancelled", "err.run.data"];
     match key {
         "err.run.integrity" => return INTEGRITY,
         "err.run.input" => return INPUT,
@@ -82,12 +77,12 @@ pub fn code_of_key(key: &str) -> u8 {
         OUTPUT
     } else if SELECTOR_KEYS.contains(&key) {
         SELECTOR
-    } else if USAGE_KEYS.contains(&key) || key.starts_with("err.cli.") {
-        USAGE
+    } else if DATA_KEYS.contains(&key) {
+        DATA
     } else if INTEGRITY_PREFIXES.iter().any(|p| key.starts_with(p)) {
         INTEGRITY
     } else {
-        DATA
+        USAGE
     }
 }
 
@@ -108,6 +103,16 @@ pub fn code_of(e: &mzlab_core::Error) -> u8 {
     code_of_key(e.key)
 }
 
+/// For the tests of usage errors: the code a list of arguments earns, 4 when one names a path that is not there (`/no/such`, `/nonexistent`), else 2.
+#[cfg(test)]
+pub(crate) fn usage_or_missing(a: &[&str]) -> u8 {
+    if a.iter().any(|x| x.starts_with("/no")) {
+        INPUT
+    } else {
+        USAGE
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -117,7 +122,8 @@ mod tests {
         assert_eq!(code_of_key("err.file.cutShort"), INPUT);
         assert_eq!(code_of_key("err.sample.unknown"), SELECTOR);
         assert_eq!(code_of_key("err.flow.step.unknown"), SELECTOR);
-        assert_eq!(code_of_key("err.flow.param.range"), INTEGRITY);
+        assert_eq!(code_of_key("err.flow.param.unknown"), INTEGRITY);
+        assert_eq!(code_of_key("err.flow.param.range"), USAGE);
         assert_eq!(code_of_key("err.cli.set"), USAGE);
         assert_eq!(code_of_key("err.cli.file"), INPUT);
         assert_eq!(code_of_key("err.cli.out"), OUTPUT);
@@ -126,6 +132,7 @@ mod tests {
         for c in [DATA, USAGE, INTEGRITY, INPUT, SELECTOR, OUTPUT] {
             assert_eq!(code_of_key(generic_key(c)), c);
         }
-        assert_eq!(code_of_key("err.flow.compare.few"), DATA);
+        assert_eq!(code_of_key("err.flow.compare.few"), USAGE);
+        assert_eq!(code_of_key("err.pda.none"), DATA);
     }
 }

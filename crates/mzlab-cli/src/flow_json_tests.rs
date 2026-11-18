@@ -88,7 +88,7 @@ fn steps_json_has_the_ids_of_the_exports_and_the_native_flags() {
     );
 
     let unknown = run_cli(&["steps", "--json", "--id", "nope.nothing"]);
-    assert_eq!(unknown.code, 2);
+    assert_eq!(unknown.code, 5);
     let err = json(&unknown.stdout);
     assert_eq!(
         (str_of(&err, "schema"), str_of(&err, "error_key")),
@@ -129,7 +129,9 @@ fn flow_check_says_what_is_wrong_without_the_input_files() {
     ]);
     assert_eq!(bad.code, 3, "{}", bad.stderr);
     let v = json(&bad.stdout);
-    assert_eq!(v.get("valid").and_then(Value::bool), Some(false));
+    assert_eq!(str_of(&v, "schema"), "error/1");
+    let report = v.get("report").unwrap();
+    assert_eq!(report.get("valid").and_then(Value::bool), Some(false));
     let first = v.get("problems").unwrap().at(0).unwrap();
     assert_eq!(str_of(first, "instance"), "det");
     assert_eq!(str_of(first, "error_key"), "err.flow.param.range");

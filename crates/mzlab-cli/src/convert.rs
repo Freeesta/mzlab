@@ -12,6 +12,7 @@ use mzlab_core::json::Out;
 
 use crate::convert_entries::{entries, Entry};
 pub(crate) use crate::convert_help::HELP;
+use crate::convert_report::fail;
 use crate::convert_report::{compression_sets, head_of, partial_lines, report, Item};
 use crate::flow::{steps, DoneFn, FileRunner};
 use crate::flow_base::convert_file;
@@ -338,16 +339,6 @@ fn summary(items: &[Item], out: &Path) -> Outcome {
         code,
         stdout: stdout.into_bytes(),
         stderr,
-        error: None,
-    }
-}
-
-/// A failure of `convert` with its own code (the key of the dispatcher is the generic one of that code) and a hint.
-fn fail(code: u8, msg: &str, hint: &str) -> Outcome {
-    Outcome {
-        code,
-        stdout: Vec::new(),
-        stderr: format!("error: {msg}\nhint: {hint}\n"),
         error: None,
     }
 }

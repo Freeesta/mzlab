@@ -63,16 +63,27 @@ fn a_record_of_a_run_verifies_and_is_the_same_bytes_twice() {
         (3, 0, "self_sha256\n")
     );
     let j = cli(&["flow", "verify", p(&file), "--json"]);
-    sample("verify.json", &j.stdout);
     let j_out = String::from_utf8(j.stdout).unwrap();
     assert_eq!(j.code, 3);
+    // one error/1 (code 3) that carries the verify/1 report
     assert!(
-        j_out.starts_with("{\"schema\":\"verify/1\",\"ok\":false,"),
+        j_out.starts_with("{\"schema\":\"error/1\",\"code\":3,"),
         "{j_out}"
     );
+    let report = j_out
+        .split_once("\"report\":")
+        .unwrap()
+        .1
+        .strip_suffix("}\n")
+        .unwrap();
+    sample("verify.json", report.as_bytes());
     assert!(
-        j_out.ends_with("\"problems\":[\"self_sha256\"]}\n"),
-        "{j_out}"
+        report.starts_with("{\"schema\":\"verify/1\",\"ok\":false,"),
+        "{report}"
+    );
+    assert!(
+        report.ends_with("\"problems\":[\"self_sha256\"]}"),
+        "{report}"
     );
     let _ = std::fs::remove_dir_all(out.parent().unwrap());
 }
@@ -85,7 +96,7 @@ fn usage_mistakes_exit_2() {
         &["flow", "verify"],
         &["flow", "verify", "/nope.json"],
     ] {
-        assert_eq!(cli(a).code, 2, "{a:?}");
+        assert_eq!(cli(a).code, crate::exit::usage_or_missing(&a), "{a:?}");
     }
 }
 

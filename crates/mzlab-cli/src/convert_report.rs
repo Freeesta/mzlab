@@ -248,3 +248,13 @@ pub(crate) fn sans_gz(name: &str) -> &str {
         .filter(|n| n.to_lowercase().ends_with(".mzml"))
         .unwrap_or(name)
 }
+
+/// A failure of `convert` with its own code and a hint (its `error/1` key is the generic one of the code).
+pub(crate) fn fail(code: u8, msg: &str, hint: &str) -> Outcome {
+    Outcome {
+        code,
+        stdout: Vec::new(),
+        stderr: format!("error: {msg}\nhint: {hint}\n"),
+        error: None,
+    }
+}

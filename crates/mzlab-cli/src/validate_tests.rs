@@ -98,7 +98,9 @@ fn several_files_prefix_each_line_and_json_is_an_array() {
         .lines()
         .all(|l| l.starts_with("bad.mzML: error ")));
     let o = run(&["validate", "--json", g, b]);
-    let v = mzlab_core::json::parse(&o.stdout).unwrap();
+    // exit 1 (an error found): one error/1 whose `report` is the array of the files
+    let doc = mzlab_core::json::parse(&o.stdout).unwrap();
+    let v = doc.get("report").unwrap();
     assert_eq!(v.arr().len(), 2);
     assert_eq!(
         v.at(0).and_then(|f| f.get("valid")).and_then(|x| x.bool()),
