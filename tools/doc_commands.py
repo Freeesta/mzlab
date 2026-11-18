@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 import lang_catalog  # noqa: E402
 JS = ROOT / "mzlab" / "web" / "comandi.js"
-OUT = ROOT / "docs" / "actions.md"
+OUT = ROOT / "docs" / "azioni.md"
 UNDO = {
     "istantanea": "undo with a snapshot (storia.js)", "comando": "command: do / undo handler (comandi.js)", "tolto": "removal with its own undo / redo (STORIA.tolto)",
     "layout": "arrangement of the panels (affianca.js)", "flow": "own stack of the Flow (S.undo)", "draw": "own stack of the editor (Ketcher)",
