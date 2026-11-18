@@ -355,7 +355,7 @@ def check_leaks_in_code(rel: str, text: str, exc: set, errs: list) -> None:
             if italian_in(rx) and not any(f == rel and sn in line for f, sn in exc):
                 errs.append(f"Italian in a regular expression on text: {rel}:{n} «{rx[:40]}» (test the key or a flag, not the translated text)")
         if rel not in FORMAT_OK and BAD_FORMAT.search(line) and not any(f == rel and sn in line for f, sn in exc):
-            errs.append(f"number formatting outside NF: {rel}:{n} (use I18N.num / I18N.fix; see docs/agenti/lingue.md)")
+            errs.append(f"number formatting outside NF: {rel}:{n} (use I18N.num / I18N.fix; see docs/agenti/languages.md)")
 
 
 def check_italian(errs: list, listing: bool) -> None:

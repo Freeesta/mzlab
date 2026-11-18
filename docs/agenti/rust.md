@@ -12,13 +12,13 @@ Module-level detail lives in the code (module headers) and in the area files lis
 ## Crates (workspace in `Cargo.toml`; `vendor/opentfraw` is excluded)
 - `mzlab-core`: the engine. mzML reader (`mzml*.rs`, quick-xml, base64, flate2 with `zlib-rs`), mzML writer (`mzmlwrite/`), `.mzidx` builder and readers (`mzidx*.rs`, `idx*.rs`), every `api/...` route of the page (`*route*.rs`, `fileroutes.rs`, `hrroutes.rs`, `lr.rs`, `iteminfo.rs`, …).
 - `mzlab-core`, continued: chemistry (`elements.rs`, `composition.rs`, `isoscore.rs`, `subformulas.rs`), statistics (`stats.rs`, `statmat.rs`, `pca.rs`), centroiding (`centroids/`), maps, the MSn tree and graph (`msntree_build.rs`, `msntree.rs`, `msngraph/`), method readers (`metodo*.rs`), the memory budget (`budget_auto.rs`), the Flow step descriptors (`step/`).
-- `mzlab-core` features: `thermo` (default; the `.raw` reader via `vendor/opentfraw`), `precursori`, `mappa-dad` (default), `estesi`, `sciex`, `valida`, `indice`. The engine `.wasm` (`mzlab-wasm`) turns off `thermo` and `estesi`: vendor readers reach the page through the readers modules (`lettori-modulo.md`).
+- `mzlab-core` features: `thermo` (default; the `.raw` reader via `vendor/opentfraw`), `precursori`, `mappa-dad` (default), `estesi`, `sciex`, `valida`, `indice`. The engine `.wasm` (`mzlab-wasm`) turns off `thermo` and `estesi`: vendor readers reach the page through the readers modules (`readers-module.md`).
 - `mzlab-picchi`: peak picking, signal processing, compact sorts (`sortc`); its own crate so it builds at opt-level 3. `mzlab-core` re-exports its modules under the same paths (`mzlab_core::sortc`, …).
 - `mzlab-wasm`: wasm-bindgen bridge of `mzlab-core` (`Engine`, one slot per opened file); runs ONLY in a Web Worker (`rust-worker.js`).
-- `mzlab-lettori` + `mzlab-lettori-wasm`: vendor-format readers, one `.wasm` per family (`aperti`, `andi`, `thermo`, `agilent`, `sciex`, `waters`, `shimadzu`, `bruker`, `valida`), loaded on demand; never in the engine `.wasm` (`tests/test_lettori_wasm.py`). See `lettori-modulo.md`.
-- `mzlab-lib` + `mzlab-lib-wasm`: spectral libraries (MSP/MGF/MassBank/JSON parsers, `.mzlib`, Flash indexes, scores); used only by `libreria-worker.js` (`librerie.md`).
+- `mzlab-lettori` + `mzlab-lettori-wasm`: vendor-format readers, one `.wasm` per family (`aperti`, `andi`, `thermo`, `agilent`, `sciex`, `waters`, `shimadzu`, `bruker`, `valida`), loaded on demand; never in the engine `.wasm` (`tests/test_lettori_wasm.py`). See `readers-module.md`.
+- `mzlab-lib` + `mzlab-lib-wasm`: spectral libraries (MSP/MGF/MassBank/JSON parsers, `.mzlib`, Flash indexes, scores); used only by `libreria-worker.js` (`libraries.md`).
 - `mzlab-feat` + `mzlab-feat-wasm`, `-table-wasm`, `-grafo-wasm`, `-import-wasm`, `mzlab-attributio-wasm`, `mzlab-finder-lr-wasm`: feature detection, tables, mzFinder and Attributio (`mzfeat.md`, `attributio*.md`, `wasm-tetti.md`).
-- `mzlab-msngrafo-wasm`, `mzlab-msnregole-wasm`: the MSn fragmentation graph and its structure rules, separate `.wasm` loaded on first use (`msn-grafo.md`).
+- `mzlab-msngrafo-wasm`, `mzlab-msnregole-wasm`: the MSn fragmentation graph and its structure rules, separate `.wasm` loaded on first use (`msn-graph.md`).
 - `mzlab-chem` + `mzlab-chem-wasm`: 3D geometry from SMILES and reactivity (`reatt/1`), administrator mode only.
 - `mzlab-mol`: the `mol/1` structure record (SMILES/CXSMILES, molfile, deterministic JSON, core hash); in no `.wasm` (`mol.md`).
 - `mzlab-target`: target and suspect lists (RFC 4180 CSV). `mzlab-llm` + `-wasm`: the assistant's tool catalog and streams.
@@ -34,7 +34,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - **WASM graph is pure Rust**: `rust-wasm` fails if `cargo tree -e no-dev --target wasm32-unknown-unknown` of `mzlab-wasm`, `mzlab-lib`, `mzlab-lib-wasm`, `mzlab-feat`, `mzlab-feat-wasm`, `mzlab-feat-table-wasm`, `mzlab-flowcal-wasm` or `mzlab-feat-grafo-wasm` contains `memmap2`, `zstd-sys`, `libz-sys` or `cc`. Zstandard is always `ruzstd`; `memmap2` only in `mzlab-desktop`.
 - **No relaxed SIMD** in build files (`tests/test_guardie_regole.py`). Every `.wasm` is built with `+simd128` (`.cargo/config.toml`), one binary with no fallback; the page checks support with `WebAssembly.validate` in `capacita.js`.
 - **Mass constants** `ELECTRON`, `PROTON`, `PROTON_6DP` (the rounded value of the golden data and the Python reference) and `C13_STEP` are written only in `mzlab-core/src/elements.rs`; other files import them by name (`test_guard_mass_constants_only_in_elements`).
-- **Memory** (`memoria.md`, `tests/test_guardie_memoria.py` in `rust-wasm-guardie`): the peak linear memory of each phase on the synthetic series stays under `tools/guardie_memoria.json` + 10 %; an exported WASM function returning a whole `Vec<u8>` is refused unless listed in `tools/api_byte_ammesse.txt` (new outputs write to a `WriteAt` sink; `tools/controlla.py`).
+- **Memory** (`memory.md`, `tests/test_guardie_memoria.py` in `rust-wasm-guardie`): the peak linear memory of each phase on the synthetic series stays under `tools/guardie_memoria.json` + 10 %; an exported WASM function returning a whole `Vec<u8>` is refused unless listed in `tools/api_byte_ammesse.txt` (new outputs write to a `WriteAt` sink; `tools/controlla.py`).
 - **Size caps** of every `.wasm` (bytes after `wasm-opt`, via `tools/wasm_opt.sh`): the `limit_*` variables of `tools/build_feat_wasm.sh` and `tools/build_lettori_wasm.sh`, the library cap in the build steps of `pages.yml`; numbers and margins in `wasm-tetti.md`. A build over its cap is red.
 - **Determinism**: the same synthetic Flow gives the same SHA-256 natively and as WASI (`tests/test_flow_determinismo.py`, job `rust-det`).
 - **Dependencies**: `cargo deny` (`deny.toml`: licences and sources) blocks when manifests, lockfile, `vendor/` or `deny.toml` change; RustSec advisories run daily in `advisories.yml`, outside the PR checks.
@@ -45,7 +45,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 ## Build profiles and memory
 - Toolchain pinned in `rust-toolchain.toml` (with the `wasm32-unknown-unknown` target); `Cargo.lock` is committed. `.wasm` and `pkg/` are never committed: `pages.yml` builds them into `site/static/`.
 - `release`: `opt-level = "z"`, LTO, one codegen unit, `panic = "abort"` (a panic kills the instance; the JS supervisor restarts the worker, and two deaths in a minute make the page ask for a reload). `mzlab-core`, `mzlab-picchi`, `quick-xml`, `base64`, `zlib-rs`, `miniz_oxide` build at opt-level 3 (measured with `tools/banco_wasm.py`). `desktop` and `cli` profiles inherit `release` at opt-level 3.
-- WASM memory: 32 MB initial, 4 GiB maximum (`.cargo/config.toml`; it reserves nothing). The working budget is chosen by `mzlab-core::budget_auto` (`memoria.md`). Large allocations use `try_reserve` and fail with an i18n key, never abort.
+- WASM memory: 32 MB initial, 4 GiB maximum (`.cargo/config.toml`; it reserves nothing). The working budget is chosen by `mzlab-core::budget_auto` (`memory.md`). Large allocations use `try_reserve` and fail with an i18n key, never abort.
 - Numbers: m/z `f64`, intensity `f32` (an array is read only at the width it needs), entropy `f64`.
 
 ## Parity with the Python reference
@@ -58,7 +58,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - Python with no Rust equivalent: `ion_shift` and `expand` of `mzlab/chem/contaminants.py` (catalogue `mzlab/chem/contaminants.json`, PEG/PPG/siloxane series), to port with a parity test; the validation gates and metrics of `tools/valida/` (`metriche.py`, `cancello_misure.py`, `lr_criteri.py`, `isotopologhi.py`) and the endpoints `p1`…`p5` of `tools/bench/metriche.py` stay Python, since they are dev tools that check the engine from outside.
 
 ## Speed
-- A speed gain counts, even a few percent, when measured beyond the noise (repeated, median, same result) with small readable code: the PR gives the % on the step and on the total and adds a row to `misure-velocita.md`.
+- A speed gain counts, even a few percent, when measured beyond the noise (repeated, median, same result) with small readable code: the PR gives the % on the step and on the total and adds a row to `measurements-speed.md`.
 - A dependency for speed is accepted if it gains ≥ 3 % measured on its target, has a permissive licence (`cargo deny`) and the PR shows the Cargo lines and the before/after numbers.
 - Load time of a file: `cargo run --release --example load -- FILE.mzML`; other timing examples sit in `crates/mzlab-core/examples/*_tempi.rs`; WASM benches across browsers: `tools/banco_wasm.py` (`banco-wasm.yml`).
 
@@ -71,9 +71,9 @@ Module-level detail lives in the code (module headers) and in the area files lis
 
 ## Area files
 - Engine in the page, `api/...` routes, Thermo `.raw`: `rust-rotte.md`. `.mzidx` builder and the site's worker pool: `rust-mzidx.md`, format in `mzidx.md`.
-- Readers modules: `lettori-modulo.md`. Memory and budget: `memoria.md`. `.wasm` caps: `wasm-tetti.md`. Measures: `misure-rust.md`, `misure-velocita.md`.
+- Readers modules: `readers-module.md`. Memory and budget: `memory.md`. `.wasm` caps: `wasm-tetti.md`. Measures: `measurements-rust.md`, `measurements-speed.md`.
 - Desktop app: `rust-desktop.md` (mzFinder native: `rust-desktop-finder.md`). Flow: `rust-flow.md` (`mzflow/2`, `prov/1`), `rust-step.md` (`step/1`), `cli.md`.
-- `mol/1`: `mol.md`. Libraries: `librerie.md`. Features: `mzfeat.md`. MSn graph: `msn-grafo.md`.
+- `mol/1`: `mol.md`. Libraries: `libraries.md`. Features: `mzfeat.md`. MSn graph: `msn-graph.md`.
 
 ## Code written twice (rules)
 - **Consolidate without growing**: a shared JS helper goes into a startup file that everyone already loads (`numeri.js`, `html-sicuro.js`, `i18n.js`), never into a new startup file. A function moved into `mzlab-core` is free in the modules that already link it, but brings JSON and formatting into those that did not use it: run `tools/ci_wasm_dimensioni.py` before and after, the caps do not rise. Every replacement in Rust keeps the bytes wherever a golden datum or a parity test pins them.

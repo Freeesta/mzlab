@@ -1,4 +1,4 @@
-//! The formulas of the fragments from the ion of the root given by the user (`docs/agenti/msn-grafo.md` §3): the sub-formulas of the root
+//! The formulas of the fragments from the ion of the root given by the user (`docs/agenti/msn-graph.md` §3): the sub-formulas of the root
 //! within the window of each node, reduced to a fixed point on the DAG (a fragment is under a formula of each precursor, a candidate of the
 //! wide low-mass window needs its evidences), the choices of the user, then the nodes with no candidate leave the graph. No score, no proposal.
 

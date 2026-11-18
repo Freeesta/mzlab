@@ -64,7 +64,7 @@ The crate runs detection (level L1 of the pipeline): from the MS1 peaks of a `.m
 - Dependencies: `mzlab-core` and `libm`. `cargo check --target wasm32-unknown-unknown -p mzlab-feat` and the graph check (no `memmap2`, `zstd-sys`, `libz-sys`, `cc`) are in `rust.yml`.
 
 ## Example `examples/feat.rs`
-`cargo run --release -p mzlab-feat --example feat -- FILE.mzidx... [--neg] [--budget-mb N] [--analyse] [--tsv DIR]` prints per file time, memory peak (`VmHWM`, one process per file), number of features and SHA-256 of the table (same SHA with different memory budgets). The measurements are in `misure.md`.
+`cargo run --release -p mzlab-feat --example feat -- FILE.mzidx... [--neg] [--budget-mb N] [--analyse] [--tsv DIR]` prints per file time, memory peak (`VmHWM`, one process per file), number of features and SHA-256 of the table (same SHA with different memory budgets). The measurements are in `measurements.md`.
 `--analyse` runs the whole pipeline and prints times per step and counts (`--no-split` skips the maximum splitting), `--tsv DIR` writes the table; `python3 tools/valida/picchi.py DIR_VERITA DIR_TSV` compares it with the truth of the synthetics of `sintetici_identita.py`.
 
 ## Example `examples/perf_batch8.rs`

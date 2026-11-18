@@ -43,7 +43,7 @@ export function createMethodRoutes({ rpc, json, items }) {
         return json({ gradient: g || gradients.get(name) || null });
       }
       if (path === "/api/method") return raw(await rpc({ op: "lr_method", name }));
-      // metodo/1 of the item (docs/agenti/metodo.md)
+      // metodo/1 of the item (docs/agenti/method.md)
       if (path === "/api/metodo") return raw(await rpc({ op: "lr_metodo", name }));
       if (path === "/api/analog") return raw(await rpc({ op: "lr_analog", name, i: num(q, "i", NaN), n: Math.max(10, Math.min(Math.trunc(num(q, "n", 2000)), 20000)) }));
       // a series of the instrument log of a .raw: {id, kind, unit, time, intensity}

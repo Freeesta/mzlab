@@ -2,7 +2,7 @@
 // @ts-strict
 // @ts-noany
 "use strict";
-// The «Cartella delle librerie» (docs/agenti/librerie.md): ONE folder holds the spectral libraries of the user. It is read by libreria-worker.js (classic script,
+// The «Cartella delle librerie» (docs/agenti/libraries.md): ONE folder holds the spectral libraries of the user. It is read by libreria-worker.js (classic script,
 // loaded with importScripts; node loads it in tests/test_libreria_cartella.py for the pure parts).
 //   desktop app  -> a native folder, read by the native side (memory-mapped) through the mzlab:// protocol (`nativeDir`)
 //   Chrome, Edge -> a folder chosen once with showDirectoryPicker (the handle lives in IndexedDB of the page), read and written through the handle (`handleDir`)
@@ -172,7 +172,7 @@ const CARTELLA = (() => {
     } catch (e) { return null; }
   };
   const HEAD = [0x4d, 0x5a, 0x4c, 0x42];
-  // the 36-byte header of a .mzlib (docs/agenti/librerie.md): null if it is not one
+  // the 36-byte header of a .mzlib (docs/agenti/libraries.md): null if it is not one
   async function readHead(/** @type {LibFile} */ file) {
     try { const b = new Uint8Array(await file.slice(0, 36).arrayBuffer()); if (b.length < 36 || !HEAD.every((x, i) => b[i] === x)) return null; const dv = new DataView(b.buffer); return { n: dv.getUint32(8, true), peaks: Number(dv.getBigUint64(16, true)), minReader: dv.getUint16(6, true) }; } catch (e) { return null; }
   }

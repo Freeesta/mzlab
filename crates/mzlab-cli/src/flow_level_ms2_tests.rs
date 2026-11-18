@@ -1,6 +1,6 @@
 //! MEASURE (no default is changed): MS2 level gates on 50 small compounds (m/z < 200, 3 true fragments against a library entry of 3 strong peaks and 5 peaks at 1-2 %)
 //! and 50 co-isolated ones (isobaric interferent at 40 %, purity 0.60), in a library of 300 entries. Level reached, failing gates, entropy drop and the decoy q-value
-//! are pinned with the current thresholds; see `docs/agenti/livelli.md` (MISURA). Synthetic data, fixed seed.
+//! are pinned with the current thresholds; see `docs/agenti/levels.md` (MISURA). Synthetic data, fixed seed.
 
 use std::path::PathBuf;
 

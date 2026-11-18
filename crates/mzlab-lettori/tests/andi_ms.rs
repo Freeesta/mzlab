@@ -1,4 +1,4 @@
-//! The family `andi` reads ANDI-MS (ASTM E2077) and ANDI-Chromatography (ASTM E1947) files, built here with an encoder in every form of the format (docs/agenti/lettori-andi.md).
+//! The family `andi` reads ANDI-MS (ASTM E2077) and ANDI-Chromatography (ASTM E1947) files, built here with an encoder in every form of the format (docs/agenti/readers-andi.md).
 #![cfg(feature = "andi")]
 
 mod common;

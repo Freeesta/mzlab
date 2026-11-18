@@ -4,7 +4,7 @@ Measurements of the site's copy gate (`createCopyGate` in `rust-carica.js`, choi
 
 Tool: `tests_e2e/misura_caricamento.py --scenarios copie,raw-copie,copie-mem,cinquanta` (arms in `tests_e2e/scenari_caricamento.py`, `copie` = localStorage `mzlab.dev.copie`). Base `main` `7e81096`, site from `tools/prepara_sito.py`, Chrome for Testing 153 headless, one warm persistent profile per run (normal window, cross-origin isolation), cloud machine 4 vCPU Intel Xeon 2.30 GHz. N = 5 per cell, arms alternated run by run, median [min-max], ms from the input's `change`. CPU 1× and 4× slow down only the page's main thread (the workers run at full speed).
 
-Files: synthetic mzML 50.7 MB (2400 scans) and synthetic Thermo `.raw` 50.6 MB as in `misure-caricamento.md` ("First file and many files"); the batch of 50 = mzML of ~10 MB (480 scans). A batch = the first file plus copies with other names. Provisional TIC = `#ticprov` drawn; first chart = a panel drawn; all indexed = nothing left reading or opening.
+Files: synthetic mzML 50.7 MB (2400 scans) and synthetic Thermo `.raw` 50.6 MB as in `measurements-loading.md` ("First file and many files"); the batch of 50 = mzML of ~10 MB (480 scans). A batch = the first file plus copies with other names. Provisional TIC = `#ticprov` drawn; first chart = a panel drawn; all indexed = nothing left reading or opening.
 
 **Threshold** (decided before measuring): first chart with ten files ≥ 25 % earlier than K = 0 AND the whole batch within +5 %. K = 2 passes it at 1× (mzML −27 %, batch −13 %; `.raw` −49 %, −15 %) and for the 50 files (−53 %, −1 %; 4×: −41 %, −4 %); at 4× with ten mzML the first chart is only −10 % (K = 1: −23 %).
 
@@ -64,7 +64,7 @@ Where the first file's time goes (mzML, 1×, a typical run): alone the builder r
 | 4× | dieci+mem-k1 | 4002 [3671-4186] | 8494 [7781-9022] | -11 % | 104 [60-161] | 1832 [1763-1875] |
 | 4× | dieci+mem-k2 | 3955 [3172-4642] | 8152 [6841-8811] | -15 % | 117 [59-161] | 1792 [1767-1819] |
 
-## Critical path: verdicts (tables in `misure-caricamento.md`, "First file and many files")
+## Critical path: verdicts (tables in `measurements-loading.md`, "First file and many files")
 
 - **(a) `rotte` on the path to the first chart: no.** Held 3 s the first chart does not move (1514 → 1611 ms at 1×, 2432 → 2307 at 4×, inside the min-max); the page asks for it about 1.4 s after the drop, when the chart is nearly drawn, and does not wait for it. Gain bound: 0 ms.
 - **(b) `thermo` download serial before the `.raw` copy start: no, but on the path to the first chart: yes.** The first event of the file does not move (50 → 62 ms, 84 → 83) while the chart comes about 0.6 s (1×) / 1.1 s (4×) after the module arrives (held 3 s: 3608 and 4104 ms).

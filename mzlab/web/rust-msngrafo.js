@@ -1,7 +1,7 @@
 // @ts-strict
 // The fragmentation graph of an MSn infusion in the worker of the engine (rust-worker.js, op "msngrafo"): the .wasm `msngrafo` of
 // wasm-feat/manifest.json (crates/mzlab-msngrafo-wasm) is fetched on the first request, checked against its SHA-256, and reads the .mzidx of
-// OPFS and the mzML of the file through `readerFor`. The engine itself is not touched. docs/agenti/msn-grafo.md.
+// OPFS and the mzML of the file through `readerFor`. The engine itself is not touched. docs/agenti/msn-graph.md.
 
 import { featManifest } from "./feat-manifesto.js";
 

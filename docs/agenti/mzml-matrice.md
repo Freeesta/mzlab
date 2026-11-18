@@ -1,6 +1,6 @@
 # mzML conformance matrix
 
-Fixtures: `tools/mzml_variants.py OUT_DIR` (20 synthetic files, invented numbers); test: `crates/mzlab-cli/src/mzml_variants_tests.rs` (`canali`, `features`, `validate` on every variant; skipped without python3 + numpy). Numpress fixtures are written with `MzmlWriter` (`Opzioni::numpress`), not from Python. Reading = `mzlab-core` (`scantable` table) for plain mzML, the `mzml-numpress` reader (`aperti`) for Numpress: `lettori-aperti.md`.
+Fixtures: `tools/mzml_variants.py OUT_DIR` (20 synthetic files, invented numbers); test: `crates/mzlab-cli/src/mzml_variants_tests.rs` (`canali`, `features`, `validate` on every variant; skipped without python3 + numpy). Numpress fixtures are written with `MzmlWriter` (`Opzioni::numpress`), not from Python. Reading = `mzlab-core` (`scantable` table) for plain mzML, the `mzml-numpress` reader (`aperti`) for Numpress: `readers-open.md`.
 
 | Variant | Fixture | Outcome (CLI) |
 |---|---|---|
@@ -16,7 +16,7 @@ Fixtures: `tools/mzml_variants.py OUT_DIR` (20 synthetic files, invented numbers
 | MS-Numpress linear/pic/slof, with and without zlib | `Opzioni::numpress`, `open_numpress*.rs` | opens from the `aperti` reader (site, app, CLI) |
 | empty file, not XML | `empty`, `notxml` | `err.file.notMzml` |
 | broken base64 | `badb64` | `err.file.base64` |
-| gzip (`.mzML.gz`) | `gz.mzML.gz`, `open_gz.rs` | opens from the `mzml-gz` reader (`open/mzml_gz.rs`): decompresses in memory up to `Limiti::byte` (`error.fixedLimit` beyond), then `mzml-numpress` reads it; a gzip truncated after a few spectra opens with the ones it has (`mancanti` = `declared` minus the rows), a broken gzip or one truncated before the first byte is `err.file.zlib`; on the site it is inflated as a stream on OPFS (`gz-flusso.js`, `lettori-aperti.md`) |
+| gzip (`.mzML.gz`) | `gz.mzML.gz`, `open_gz.rs` | opens from the `mzml-gz` reader (`open/mzml_gz.rs`): decompresses in memory up to `Limiti::byte` (`error.fixedLimit` beyond), then `mzml-numpress` reads it; a gzip truncated after a few spectra opens with the ones it has (`mancanti` = `declared` minus the rows), a broken gzip or one truncated before the first byte is `err.file.zlib`; on the site it is inflated as a stream on OPFS (`gz-flusso.js`, `readers-open.md`) |
 | truncated file | `truncated` | opens with the spectra it has; `Table::declared` (the `<spectrumList>` count, read even beyond the run userParams (`metodo/1`, `head_read::run_end`); tests `mzml_run_window.rs`, `test_parziali_parita.py`) minus the rows read gives `stats.missing` and the loading row says "N scans missing" (`conv.row.missing`); the CLI writes `warn.file.truncated` on stderr (also for files read by `aperti`: `.mzML.gz`, Numpress; on the site the module returns the count with the conversion and `lr.js` adds it to the index one); `validate` flags it INVALID |
 | mzMLb, imzML | – | not read |
 

@@ -1,4 +1,4 @@
-//! The block `gruppi` of the summary (`gruppi/1`, `docs/agenti/gruppi.md`) for a series that compares conditions: the rows of the Dig on the cells of
+//! The block `gruppi` of the summary (`gruppi/1`, `docs/agenti/groups.md`) for a series that compares conditions: the rows of the Dig on the cells of
 //! the ONE table of the pipeline (no second peak search, no new alignment), the roles of the columns as `campioni/2` and the options of the settings.
 //! A series with fewer than two conditions has no block.
 

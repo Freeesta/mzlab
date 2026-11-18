@@ -1,6 +1,6 @@
 # "aperti" module: open formats (mzML with numpress, gzip mzML and mzXML, mzXML)
 
-Family `aperti` (`crates/mzlab-lettori/src/open/`, feature `aperti`, cap in `tools/build_lettori_wasm.sh` (copied in `tests/test_lettori_wasm.py`), `.wasm` in `wasm-lettori/aperti/`). Reader contract and on-demand loading: `lettori-modulo.md`, `extending.md`.
+Family `aperti` (`crates/mzlab-lettori/src/open/`, feature `aperti`, cap in `tools/build_lettori_wasm.sh` (copied in `tests/test_lettori_wasm.py`), `.wasm` in `wasm-lettori/aperti/`). Reader contract and on-demand loading: `readers-module.md`, `extending.md`.
 
 ## mzML with MS-Numpress (`open/mzml_numpress.rs`)
 - `numpress.rs` (`mzlab-core`, only with `estesi`, outside the engine): decodes `Np::{Linear, Pic, Slof}` (MS:1002312/13/14, and the zlib forms 1002746/47/48 via `of_accession`); `decode(np, byte, atteso)` limits the values to `atteso` (8 M if 0) and gives `err.file.numpress`; `decode_text` adds base64 and bounded zlib (`error.memoryBudget` beyond `max_bytes`); `plain_base64` writes plain f64; the encoders `encode_linear/pic/slof` serve the tests.
