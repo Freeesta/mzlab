@@ -453,7 +453,7 @@ try:
         def channels():
             k = pg.evaluate("E.files.find(f => f.label === 'Blank' || /Blank/.test(f.file)).k")
             got = pg.evaluate(f"fetch('api/canali?k={k}').then(r => r.json())")
-            assert got["canali"] == CHANNELS["canali"], (got, CHANNELS)
+            assert got["channels"] == CHANNELS["channels"], (got, CHANNELS)
         step("the channels of a sample are those of mzlab-cli channels", channels)
         step("the engine answered every request", lambda: (lambda m: m and throw(m))(pg.evaluate("window.MZLAB_LR_MISS || []")))
         step("no page error", lambda: (lambda e: e and throw(e))([x for x in r.errs if x[0] == "pageerror"]))

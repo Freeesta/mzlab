@@ -36,7 +36,7 @@ const BANCO = (() => {
   const sync = () => { try { document.body.classList.toggle("hrw", on()); } catch (e) { /* page not ready */ } return on(); };
   // an MSn infusion lists the nodes of its precursor tree instead of the scan types (infusione.js)
   // the scan filter lists the channels of the file (api/canali); an MSn infusion lists the nodes of its precursor tree instead (infusione.js)
-  const channelsOf = k => J(`api/canali?k=${k}`).then(j => j.canali.filter(c => (c.fam === "ms" || c.fam === "dd") && c.n > 0).map(c => ({ key: "canale:" + c.id, level: c.liv, n: c.n, label: c.et })));
+  const channelsOf = k => J(`api/canali?k=${k}`).then(j => j.channels.filter(c => (c.family === "ms" || c.family === "dd") && c.n_points > 0).map(c => ({ key: "canale:" + c.id, level: c.ms_level, n: c.n_points, label: c.label })));
   const groupsOf = k => memo(`flt|${k}|${window.INF && INF.isInf(E.files[k]) ? INF.O.tol + INF.O.ce : ""}`, () => (window.INF && INF.isInf(E.files[k]) ? INF.groups(k) : channelsOf(k).catch(() => J(`api/filters?k=${k}`).then(j => j.filters))));
   const nfmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   const IC_PIN = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 1.8l4.7 4.7-2 .6-2.4 2.6.1 3-1 1-2.6-3.1-3.6 3.6-.4-.4 3.6-3.6-3.1-2.6 1-1 3 .1 2.6-2.4z"/></svg>';

@@ -33,11 +33,11 @@ try:
             assert g[0] == "Mass spectrometry" and "Detectors" in g, g
             h = pg.evaluate("[...document.querySelectorAll('.can-pop:not([hidden]) .can-hd span')].map(e => e.textContent)")
             assert h[:4] == ["Channel", "Experiment", "Points", "Time (min)"], h
-            ms1 = pg.evaluate("(document.querySelector('.can-pop:not([hidden]) [data-omo^=\"ms|1\"]') || {}).title || ''")
+            ms1 = pg.evaluate("(document.querySelector('.can-pop:not([hidden]) [data-group^=\"ms|1\"]') || {}).title || ''")
             assert ms1 == "TIC of the MS¹ scans only", ms1          # lang/en/canali.js canali.tip.ms1
         step("groups, column names and the hover text of MS¹", groups)
         def label():
-            pg.click(".can-pop:not([hidden]) [data-omo^='ms|1']"); ready(pg)
+            pg.click(".can-pop:not([hidden]) [data-group^='ms|1']"); ready(pg)
             t = pg.evaluate(f"{CH}.el.querySelector('[data-o=kind] .can-bt').textContent"); assert t.endswith("+ 1"), t
         step("two channels: the label reads «… + 1»", label)
         def pressure():
@@ -49,7 +49,7 @@ try:
         step("the pump pressure is drawn when picked", pressure)
         def back():
             pg.click(".pnl.chrom [data-o=kind]"); wait_for_js(pg, "document.querySelector('.can-pop:not([hidden])')")
-            pg.click(".can-pop:not([hidden]) [data-omo='tic']"); ready(pg); frames(pg, 6)
+            pg.click(".can-pop:not([hidden]) [data-group='tic']"); ready(pg); frames(pg, 6)
             k = pg.evaluate(f"{CH}.kind"); assert k == "tic", k
         step("going back to a channel of scans", back)
         def keys():

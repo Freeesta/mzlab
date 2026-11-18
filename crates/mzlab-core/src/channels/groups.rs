@@ -17,7 +17,7 @@ pub(super) struct Group {
     pub(super) path: Vec<i64>,
     pub(super) tag: Option<&'static str>,
     pub(super) etichetta: String,
-    pub(super) omologo: String,
+    pub(super) group: String,
 }
 
 pub(super) fn nominal(m: f64) -> i64 {
@@ -114,7 +114,7 @@ pub(super) fn new_group(id: String, s: &Scan, percorso: Vec<i64>) -> Group {
             path: percorso,
             tag: sigla,
             etichetta: format!("{} IDA", apex(s.level)),
-            omologo: format!("dd|{}|{}", s.level, sigla.unwrap_or_default()),
+            group: format!("dd|{}|{}", s.level, sigla.unwrap_or_default()),
         };
     }
     let masse = percorso
@@ -140,7 +140,7 @@ pub(super) fn new_group(id: String, s: &Scan, percorso: Vec<i64>) -> Group {
             ce_int.map(|c| c.to_string()).unwrap_or_default()
         );
     }
-    let omologo = format!(
+    let group = format!(
         "ms|{}|{masse}|{act}|{}|{}|{}",
         s.level,
         ce_int.map(|c| c.to_string()).unwrap_or_default(),
@@ -156,7 +156,7 @@ pub(super) fn new_group(id: String, s: &Scan, percorso: Vec<i64>) -> Group {
         path: percorso,
         tag: sigla,
         etichetta: label,
-        omologo,
+        group,
     }
 }
 
@@ -228,7 +228,7 @@ pub(super) fn merge_dd(groups: Vec<Group>) -> (Vec<Group>, Vec<u32>) {
                 path: Vec::new(),
                 tag: Some("DDA"),
                 etichetta: format!("{} DDA", apex(g.level)),
-                omologo: format!("dd|{}", g.level),
+                group: format!("dd|{}", g.level),
             });
             (finali.len() - 1) as u32
         });

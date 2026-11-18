@@ -1065,7 +1065,7 @@ function choosePanelOption(/** @type {Pannello} */ p, /** @type {string} */ k, /
 }
 
 // the choices of the panel menu (file, level, precursor, kind, mode, m/z limits, scale…) with what they reset are one undoable action (comandi.js)
-const SORGENTE = ["k", "kSet", "level", "prec", "all", "kind", "canali", "mode", "mz0", "mz1", "tr", "mapKind", "norm", "scale", "gamma", "log", "meas", "zoom", "zoomY", "bw0", "bw1", "bwi", "xw"];
+const SORGENTE = ["k", "kSet", "level", "prec", "all", "kind", "channels", "mode", "mz0", "mz1", "tr", "mapKind", "norm", "scale", "gamma", "log", "meas", "zoom", "zoomY", "bw0", "bw1", "bwi", "xw"];
 COMANDI.gestore("panel.source", {
   leggi: (/** @type {Pannello} */ p) => JSON.stringify([SORGENTE.filter(k => p[k] !== undefined).map(k => [k, p[k]]), p.fondo]),  // the background setting is reset by a mode choice
   applica: (/** @type {Pannello} */ p, /** @type {string} */ snap) => { const [campi, bg] = JSON.parse(snap), o = new Map(campi); if (bg == null) delete p.fondo; else p.fondo = bg; SORGENTE.forEach(k => { if (o.has(k)) p[k] = o.get(k); else delete p[k]; }); ctl(p); syncTb(p); },
