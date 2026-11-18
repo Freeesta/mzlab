@@ -1,4 +1,4 @@
-//! Header of an index written by a newer program (`error.newerFormat`, docs/agenti/formato-nuovo.md).
+//! Header of an index written by a newer program (`error.newerFormat`, docs/agenti/new-format.md).
 
 /// Highest header version this reader knows (1 = mzML, 2 = vendor file).
 pub const VERSION_MAX: u32 = 2;

@@ -1,4 +1,4 @@
-"""Guard against HTML injection through template literals (docs/agenti/dati.md, «HTML sicuro»).
+"""Guard against HTML injection through template literals (docs/agenti/data.md, «HTML sicuro»).
 
 A line of mzlab/web/*.js that assigns innerHTML / outerHTML or calls insertAdjacentHTML with a `${...}` interpolation must use the tagged template
 `h` (explore.js: every `${}` is escaped, `raw()` lets trusted markup through). The lines that still do not are counted per file in

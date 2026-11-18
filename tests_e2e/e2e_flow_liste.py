@@ -1,4 +1,4 @@
-"""Flow, a parameter that is a list of the user (docs/agenti/flow-grafica.md): the adducts of «Inclusion list» are edited in a table inside the inspector (add and remove rows, import a CSV,
+"""Flow, a parameter that is a list of the user (docs/agenti/flow-graphics.md): the adducts of «Inclusion list» are edited in a table inside the inspector (add and remove rows, import a CSV,
 export JSON, SHA-256 shown, no dialog); every change reaches the plan, whose text (and so its SHA-256) changes with the list. The app is faked at the native route flow/liste (flow_desktop_fake.js).
 Run from the repo root: python3 tests_e2e/e2e_flow_liste.py"""
 import hashlib, json, subprocess, sys, tempfile, socket

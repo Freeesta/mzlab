@@ -1,6 +1,6 @@
 // @ts-check
 "use strict";
-// SIM files in the interface (engine side: canali-dati.md). A SIM file opens as an MRM-kind file whose transitions have a Q1 and no Q3; this module tells the two apart
+// SIM files in the interface (engine side: data-channels.md). A SIM file opens as an MRM-kind file whose transitions have a Q1 and no Q3; this module tells the two apart
 // (f.sim = number of ions, 0 for MRM), colours overlaid traces by sample and builds the entries of the ion menu of the chromatogram. Only glue: every number comes from the engine.
 // Classic helpers used by name: E, J, I18N, PAL, DASHES, fdash, getMrm, shownFor, ctl, draw, uiSave, COMANDI, addPanel, reveal, apriAnnullabile, renderFiles, renderFileList, toolbar.
 (() => {

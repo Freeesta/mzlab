@@ -1,6 +1,6 @@
 # Export all my data (inventory of what the app saves in the browser + ZIP writer)
 
-All of the user's work lives in THEIR browser; the export gathers it into a single `mzlab-dati-<date>.zip` downloaded locally (nothing leaves the computer). Storage names: `docs/agenti/dati.md` ("Key inventory"), `mzlab/web/nomi.js`.
+All of the user's work lives in THEIR browser; the export gathers it into a single `mzlab-dati-<date>.zip` downloaded locally (nothing leaves the computer). Storage names: `docs/agenti/data.md` ("Key inventory"), `mzlab/web/nomi.js`.
 
 ## ZIP writer (Rust)
 - `crates/mzlab-core/src/zip.rs`: `zip_stored(&[(name, bytes)])` writes a "stored" ZIP (no compression, no dependency, no ZIP64: at most 65535 entries and 4 GiB), UTF-8 names (bit 11), fixed DOS date 1980-01-01 (deterministic archive), CRC-32 IEEE. `zip_packed(packed)` builds it from a single buffer: per entry `u16` name length, `u32` data length (little endian), name, data.
