@@ -1,4 +1,4 @@
-//! `migrate`: an `mzrun/1` file written by an engine whose steps had older versions (`spectra.msn_graph@1`) brought to the current ones with the table of
+//! `migrate`: an `mzrun/2` file written by an engine whose steps had older versions (`spectra.msn_graph@1`) brought to the current ones with the table of
 //! `flow::migrate`: the plan, `resolved` and `seeds` take the new versions and names, every renamed parameter is a `compat.changes` entry of kind
 //! `migrated` and each migrated instance a limit `preset.param.migrated`; `plan_sha256` and `self_sha256` are recomputed. Used when a preset is applied.
 
@@ -167,10 +167,10 @@ fn record(v: &mut Value, done: &[Done]) {
 }
 
 /// The file `text` with its steps at the current versions (canonical text, one final LF); a file with nothing to migrate comes back unchanged but
-/// canonical. Not an `mzrun/1` object: `err.mzrun.read`; a newer schema: `error.newerFormat`.
+/// canonical. Not an `mzrun/2` object: `err.mzrun.read`; a newer schema: `error.newerFormat`.
 pub fn migrate(text: &[u8]) -> Result<String> {
     let mut v = parse(text).map_err(|_| Error::new("err.mzrun.read"))?;
-    if v.get("schema").and_then(Value::str) != Some("mzrun/1") {
+    if v.get("schema").and_then(Value::str) != Some("mzrun/2") {
         return Err(Error::new("err.mzrun.read"));
     }
     let min_reader = v.get("min_reader").and_then(Value::f64);

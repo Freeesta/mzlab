@@ -70,17 +70,17 @@ try:
             labs = pg.evaluate(f"(()=>{{const p={XP};return intMenuItems(p,14.9,null,0).map(i=>i.label||i)}})()")
             assert labs[0] == "Delete this integration" and "Delete all the integrations of this panel" in labs, labs
         step("context menu: delete this one first, then all", menu)
+        def opencard():
+            wait_for_js(pg, "!!document.querySelector('#manint-h')", timeout=60000)
+            pg.evaluate("(h => { if (h.getAttribute('aria-expanded') !== 'true') h.click(); })(document.querySelector('#manint-h'))")
         def table():
-            pg.evaluate("showInts()"); wait_for_js(pg, "document.querySelectorAll('button[data-del]').length===3")
-            assert pg.locator("button[data-del]").count() == 3
-            pg.locator("button[data-del]").first.click(); wait_for_js(pg, "document.querySelectorAll('button[data-del]').length===2")
-            assert pg.locator("button[data-del]").count() == 2 and n() == 2
-        step("table: × deletes the row and the peak from the graph", table)
-        def legacy():
-            pg.evaluate(f"(()=>{{const p={XP},i=p.ints[0];p.ints.push({{...i,id:E.seq++,a:i.a+0.1,b:i.b+0.1}});showInts()}})()"); wait_for_js(pg, "document.querySelector('#bigbody').innerText.includes('overlapping')")
-            assert "overlapping" in pg.inner_text("#bigbody")
-        step("old overlapping integrations load and are marked", legacy)
-        pg.evaluate("document.querySelector('#bigdlg')&&document.querySelector('#bigdlg').open&&document.querySelector('#bigdlg').close()")
+            opencard(); wait_for_js(pg, "document.querySelectorAll('#manint-x button[data-xdel]').length===3", timeout=60000)
+            pg.locator("#manint-x button[data-xdel]").first.click(); wait_for_js(pg, "document.querySelectorAll('#manint-x button[data-xdel]').length===2", timeout=60000)
+            assert pg.locator("#manint-x button[data-xdel]").count() == 2 and n() == 2
+        step("card: × deletes the row and the peak from the graph", table)
+        def legacy():      # a record of an earlier session that overlaps another one still loads and is listed (new ones are refused by intClash)
+            pg.evaluate(f"(()=>{{const p={XP},i=p.ints[0];p.ints.push({{...i,id:E.seq++,a:i.a+0.1,b:i.b+0.1}});draw(p)}})()"); wait_for_js(pg, "document.querySelectorAll('#manint-x tbody tr').length===3", timeout=60000)
+        step("old overlapping integrations load and are listed", legacy)
         pg.screenshot(path="tests_e2e/shots/integrazioni.png")
     r.close()
 except Exception as e:

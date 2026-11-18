@@ -35,5 +35,5 @@ function area(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} 
     if (chosen) { g.strokeStyle = s.color; g.lineWidth = 2.5; g.stroke(); }
   }
   const clamp = (s, t) => Math.max(s.x[0], Math.min(s.x[s.x.length - 1], t));          // a bar time kept inside the trace
-  return { area, draw, clamp, base: [0, 0, 1, 0] };                      // base = the zero line, for chromPeak
+  return { area, draw, clamp, base: [0, 0, 1, 0] };                      // base = the zero line, for the figures
 })();

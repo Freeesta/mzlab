@@ -1,5 +1,5 @@
-"""The card «Manual integrations» lists the windows drawn on an XIC too (engine route api/mantraces, manint::table_text), and its numbers are those of the table
-the toolbar dialog shows: area, height, apex, edges, below-the-line and correction of the same window, on an XIC and on the TIC. Step 1 of one integration table: the dialog stays until the card has everything.
+"""The card «Manual integrations» lists the windows drawn on an XIC too (engine route api/mantraces, manint::table_text), and its numbers are those stored on the
+window records: area, height and apex, on an XIC and on the TIC; with the optional columns on (S/N of a noise zone, w1/2, plates, tailing, quality) the engine fills the figures in.
 Needs the site and the .wasm (python tools/prepara_sito.py)."""
 # covers: mzlab/web/integrazioni-tracce, mzlab/web/integrazioni-manuali, mzlab/web/rust-bridge
 import sys, os
@@ -44,16 +44,34 @@ try:
             for h in ["Panel", "Channel", "Sample", "Conc.", "Below the line", "Correction"]: assert h in heads, (h, heads)
         step("the card has a row per window drawn on the XIC, with panel, conc., below and correction columns", card)
         def parity():
-            dlg = pg.evaluate("allInts().map(r => ({panel: r.panel, file: r.file, a: r.a, b: r.b, area: r.area, height: r.height, rt: r.rt, below: r.below || 0, corr: r.corr || ''}))")
+            dlg = pg.evaluate("E.panels.flatMap(p => p.ints.map(r => ({panel: ptitle(p.title), file: r.file, a: r.a, b: r.b, area: r.area, height: r.height, rt: r.rt})))")
             rows = pg.evaluate("(() => { const [h, ...b] = MANINT.rows(MANTR.csv()); const c = n => h.indexOf(n); return b.map(r => ({panel: r[c('panel')], below: +r[c('below')] || 0, corr: r[c('correction')], sample: r[c('sample')], a: +r[c('start_min')], b: +r[c('end_min')], area: +r[c('area')], height: +r[c('height')], rt: +r[c('apex_rt_min')]})); })()")
             assert len(dlg) == len(rows) and dlg, (dlg, rows)
             for d in dlg:
                 r = next(r for r in rows if r["panel"] == d["panel"] and r["sample"] in d["file"] and abs(r["a"] - min(d["a"], d["b"])) < 6e-4)
                 for k in ("area", "height"): assert abs(r[k] - d[k]) <= 1e-4 * max(abs(d[k]), 1), (k, d, r)
                 assert abs(r["rt"] - d["rt"]) < 6e-4, (d, r)
-                assert abs(r["below"] - d["below"]) <= 1e-4 * max(abs(d["below"]), 1) and r["corr"] == d["corr"], (d, r)
             assert len({d["panel"] for d in dlg}) >= 2, dlg      # the XIC and the TIC are both compared
-        step("area, height and apex of the card are those of the dialog table", parity)
+        step("area, height and apex of the card are those of the window records", parity)
+        def figures():
+            # a noise zone for each trace (the first tenth of it), the three optional groups on; then the card asks the engine again
+            pg.evaluate("""(() => { for (const p of E.panels) { if (!p.ints || !p.ints.length || ESP.mrm(p)) continue;
+              const it = p.ints[0], s = p._a.sr.find(q => q.key === it.key), n = Math.floor(s.x.length / 10); setNoiseZone(p, it, [s.x[0], s.x[n]]); }
+              COMANDI.fai('peaks.settings', COMANDI.GLOBALE, () => { INTOPT.sn = INTOPT.par = INTOPT.q = true; }); E.panels.forEach(p => draw(p)); })()""")
+            pg.wait_for_function("MANINT.rows(MANTR.csv())[0].includes('gaussian') && MANINT.rows(MANTR.csv())[0].includes('sn_zone')", timeout=60000)
+            heads = pg.locator("#manint-x th").all_inner_texts()
+            for h in ["S/N (noise zone)", "w½ (min)", "N (plates)", "Tailing (USP, 5%)", "Gaussian similarity", "Asymmetry 10%", "Noise score"]: assert h in heads, (h, heads)
+            rows = pg.evaluate("""(() => { const [h, ...b] = MANINT.rows(MANTR.csv()); const c = n => h.indexOf(n); return b.map(r => ({panel: r[c('panel')],
+              sn: r[c('sn_zone')], w50: r[c('w_half_min')], N: r[c('plates')], T: r[c('tailing')], qg: r[c('gaussian')], qa: r[c('asymmetry')], qn: r[c('noise_score')]})); })()""")
+            for r in rows:      # numbers when present, never NaN text; the values themselves are tested in Rust (manint_fig_tests.rs)
+                for k in ("sn", "w50", "N", "T", "qg", "qa", "qn"): assert r[k] == "" or float(r[k]) == float(r[k]), (k, r)
+                if r["w50"] != "": assert float(r["w50"]) > 0 and float(r["N"]) > 0, r
+            assert any(r["sn"] != "" for r in rows) and any(r["N"] != "" for r in rows), rows
+        step("with the optional columns on, S/N, w1/2, plates, tailing and quality are filled in by the engine", figures)
+        def excel():
+            with pg.expect_download() as dl: pg.click("#manint [data-xlsx]")
+            assert dl.value.suggested_filename.endswith(".xlsx"), dl.value.suggested_filename
+        step("the card exports its tables to Excel", excel)
         bad = [e for e in errs if e[0] in ("pageerror", "console.error")]
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(bad[:3])) if bad else None)
 finally:

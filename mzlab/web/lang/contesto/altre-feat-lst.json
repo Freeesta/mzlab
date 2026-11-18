@@ -28,7 +28,6 @@
   "ibk.first": "The quoted name is the right-click menu entry (ctx.ibk.line).",
   "ibk.leg": "Chip in the legend above the chart that says which segment is the internal blank and its level; {ranges} = interval(s) in min, {level} = level with unit (for example 2.70e8 cps).",
   "int.clash": "\"Delete\" is the menu entry int.menu.del.",
-  "int.tbl.none": "The quoted name is int.menu.auto.",
   "leg.traces": "Label of the collapsed legend; {n} = number of traces.",
   "leg.note.mz": "Note below the legend of a filtered TIC; {lo} and {hi} = m/z ends (or \"min\"/\"max\").",
   "leg.note.prec": "Note below the legend; {prec} = precursor m/z.",

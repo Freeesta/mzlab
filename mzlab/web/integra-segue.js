@@ -48,13 +48,4 @@ function sgDots(g, X, Y, U, s, it) {
 }
 // the measure shown for a window with no points of the sample
 const sgNone = it => ({ area: NaN, height: NaN, rt: (it.a + it.b) / 2, below: NaN });
-// the hover lines of a follower's label: its S/N (by the engine, as a table row has it), the baseline mode, the sample it comes from and how to commit it
-function sgTip(p, it) {
-  const bm = it.bm ? `<div class="sm">${I18N.t("int.base.tip", { b: I18N.t("int.base.tag." + it.bm) })}</div>` : "";
-  if (it.none) return `<div>${I18N.t("int.follow.none")}</div>` + bm;
-  const sn = window.MANINT && MANINT.snr ? MANINT.snr(p, it) : undefined;
-  const ORG = { applied: "int.follow.org.applied", shifted: "int.follow.org.shifted", no_peak: "int.follow.org.nopeak", manual: "int.follow.org.manual" };   // literal keys: tools/controlla_i18n.py reads them
-  const org = it.org && ORG[it.org] ? `<div class="sm">${I18N.t(ORG[it.org], { d: I18N.sciE(it.shift, 2), f: EH(it.src || "") })}</div>` : "";
-  return `<div>${I18N.t("int.follow.sn", { sn: sn === undefined ? "…" : sn || "—" })}</div>` + bm + org + `<div class="sm">${I18N.t("int.follow.note", { f: EH(it.src || "") })}</div>`;
-}
-window.SEGUE = { all: sgAll, sources: sgSources, name: sgName, none: sgNone, tip: sgTip, dots: sgDots };
+window.SEGUE = { all: sgAll, sources: sgSources, name: sgName, none: sgNone, dots: sgDots };
