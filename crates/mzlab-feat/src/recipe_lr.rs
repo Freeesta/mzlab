@@ -43,9 +43,11 @@ impl Recipe {
             },
             ..Recipe::default()
         };
-        // the evidence for window and wide is high resolution; the unit profile keeps the channel area and the strict stitch
+        // the evidence for window and wide is high resolution; the unit profile keeps the channel area (not the `xic` default of the high-resolution recipe) and the strict stitch
         r.detect.stitch_wide = false;
         r.steps.quality.area_window = false;
+        r.steps.quality.area_xic = false;
+        r.fill.xic = false;
         r.steps.quality.window_ppm = da(LR_TRACE);
         r.steps.resolve.window_ppm = da(LR_TRACE);
         r.steps.resolve.bin = LR_MS2_BIN;

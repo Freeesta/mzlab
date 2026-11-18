@@ -1,5 +1,5 @@
 # Drawing: right-click menu
-The core is in CLAUDE.md; the rest of the Drawing area is in `disegno.md`.
+The core is in CLAUDE.md; the rest of the Drawing area is in `drawing.md`.
 
 - **Right-click menu** (`#ctx`, rows of `disegno-menu.js`: `role=menuitem`, arrows/Enter/Space/Esc): opens with a right click, the Menu key or Shift+F10 and closes with a click or Esc, also inside the Ketcher iframe. `TPDraw.undo` ignores an empty stack (an extra Ctrl+Z shows no error). Clipboard copies (`copyText` in `disegno-menu.js`) say "Copied" only if the browser accepted, otherwise "Copy failed: select the text"; no rejected promise is left unhandled.
 - **Menu row registry** (`menuAdd`/`menuFill` in `disegno-menu.js`, also `TPDraw.menu.add`/`.ids()`): no header row: the menu `aria-label` says "Selection (n atoms)" or "Whole drawing". An entry is `{id, when: 'selection'|'whole'|'any', order, label (key or function), title?, show?, run}` or `{id, when, order, rows: async ctx => [{text, title?, id?, run?, sub?}]}`; a row with `sub` (rows of the same kind) opens a submenu (`ctxSub`: `div.ctx-sub[role=menu]`, row `aria-haspopup`/`aria-expanded`;

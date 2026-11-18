@@ -1,4 +1,4 @@
-// The anonymous public proxy of the mzLab assistant for the Claude API (docs/agenti/assistente-proxy.md): paths, CORS and Origin, phase and switch,
+// The anonymous public proxy of the mzLab assistant for the Claude API (docs/agenti/assistant-proxy.md): paths, CORS and Origin, phase and switch,
 // the closed body (only the prompts, schemas and catalog of mzLab pass), the reservation in the Rust ledger, forwarding with the secret key, the SSE
 // stream passed through unchanged while only `message_start`/`message_delta` are read for the usage, and the settlement. Standard Request/Response
 // only; the host gives the ledger, the secrets, the rate limit and the upstream fetch (adapters/). It never logs content.

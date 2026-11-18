@@ -6,7 +6,7 @@ const NPHRASES = 17;   // the phrases are the catalog keys load.phrase.1 ... loa
 // loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
 let ldTimer = null, ldDotTimer = null, ldShown = "", ldSince = 0, ldBag = [], ldLast = -1;
 // data loading: three ions drawn always the same way (a dot with a fading trail of its past positions), advancing and weaving together.
-// The analyser screens (an-*.js, docs/agenti/analizzatori.md) are switched off: LD_ANALYSERS = true loads them on demand and picks one at random.
+// The analyser screens (an-*.js, docs/agenti/analyzers.md) are switched off: LD_ANALYSERS = true loads them on demand and picks one at random.
 const LD_ANALYSERS = false, LD_AN = ["util", "quad", "paul", "tof", "settore", "orbi", "ims", "esi", "maldi", "trappola", "fticr", "qqq"];
 let ldIonRaf = 0, ldAnLoad = null;
 // plain scripts, in order (an-util first); resolves once they have all run

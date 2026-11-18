@@ -1,4 +1,4 @@
-"""Flow, the metadata grid of the Import data card (docs/agenti/flow-grafica.md): virtual rows, keyboard, paste of a spreadsheet block, sort, filter, name pattern, free columns, CSV, SHA of the saved document, axe.
+"""Flow, the metadata grid of the Import data card (docs/agenti/flow-graphics.md): virtual rows, keyboard, paste of a spreadsheet block, sort, filter, name pattern, free columns, CSV, SHA of the saved document, axe.
 Run from the repo root: python3 tests_e2e/e2e_flow_meta_grid.py"""
 import json, subprocess, sys, tempfile, socket
 from pathlib import Path

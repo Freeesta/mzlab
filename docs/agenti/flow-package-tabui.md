@@ -1,8 +1,8 @@
 # Package "Tabui steps in mzFlow": ready DEV prompt
-Goal: make `mzlab-cli flow run` (and "Run on this computer") execute the steps that Tabui has and mzFlow only describes. Starting state and full table: `flow-copertura-tabui.md`. Rules: computation only in Rust on the existing engines, every descriptor parameter with its `--set INSTANCE.NAME=VALUE`, one registry (`flow::steps()`), executors in `EXECUTORS`, CLI = page parity test, `flow_rule_tests.rs` green, new gaps in `BUCHI`. One PR per step, in the order below.
+Goal: make `mzlab-cli flow run` (and "Run on this computer") execute the steps that Tabui has and mzFlow only describes. Starting state and full table: `flow-coverage-tabui.md`. Rules: computation only in Rust on the existing engines, every descriptor parameter with its `--set INSTANCE.NAME=VALUE`, one registry (`flow::steps()`), executors in `EXECUTORS`, CLI = page parity test, `flow_rule_tests.rs` green, new gaps in `BUCHI`. One PR per step, in the order below.
 
 ## DEV prompt (copy it into a new chat)
-You are the DEV "Flow Tabui". Zone: `crates/mzlab-cli` and the engines already in `crates/mzlab-feat`. Read `docs/agenti/cli.md`, `rust-flow.md`, `flow-copertura-tabui.md`. Bring the following steps into `EXECUTORS` (`crates/mzlab-cli/src/flow.rs`), one per PR, each with a `flow_<name>.rs` + `flow_<name>_tests.rs` file (model: `flow_network.rs` and `flow_ms2.rs`; `flow.rs` ≤ 500 lines, functions ≤ 80).
+You are the DEV "Flow Tabui". Zone: `crates/mzlab-cli` and the engines already in `crates/mzlab-feat`. Read `docs/agenti/cli.md`, `rust-flow.md`, `flow-coverage-tabui.md`. Bring the following steps into `EXECUTORS` (`crates/mzlab-cli/src/flow.rs`), one per PR, each with a `flow_<name>.rs` + `flow_<name>_tests.rs` file (model: `flow_network.rs` and `flow_ms2.rs`; `flow.rs` ≤ 500 lines, functions ≤ 80).
 
 For each step: (1) register the descriptor in the CLI registry (`flow::steps()`; the Tabui descriptors are in `crates/mzlab-feat/src/steps/tabui*.rs`, exported in `docs/schemi/steps-tabui-1.json`), (2) an executor that reads the inputs as files and produces a file of the output port's type, (3) test: same result as Tabui on the same synthetic data (never lab data), (4) one line in the area file. Do not touch `.github/workflows`, do not raise the `.wasm` ceilings.
 
@@ -17,7 +17,7 @@ For each step: (1) register the descriptor in the CLI registry (`flow::steps()`;
 ## When the package is finished
 - State: five steps out of six have the native executor (`table.filter`, `tp.generate`, `tp.link@2`, `tp.filter@2`, `tp.position`); `features.ms2_link` stays without its own executor, with the reason written in `BUCHI`. The plan of the "TP time series" model (`tp.generate` → `tp.link` → `tp.filter` → `table.filter` → `tp.network`) runs with `flow run` (cache and replay tests as in `flow_run_tests.rs`).
 - HR chain: the chain from files to the network is proven on a synthetic HR series (`flow_hr_tests.rs`: `tp.network` reads the `.mzfeat` of `tp.link@2` on the `table` port); on the synthetic series the network has only the parent node and 0 edges by construction (the only accepted product with a formula is not one rule step away from the parent; a network with no edges is just the parent), not because of a Flow defect.
-- `flow-copertura-tabui.md` and `cli.md` describe the state; the list of gaps below is what remains.
+- `flow-coverage-tabui.md` and `cli.md` describe the state; the list of gaps below is what remains.
 
 ## Gaps by module (today)
 - **No executor, Tabui**: `features.ms2_link` (included in `features.detect`, not separable without changing the bytes); `tp.position` does not redo the MSn tree votes (rows with `source: tree` keep their `site`).
