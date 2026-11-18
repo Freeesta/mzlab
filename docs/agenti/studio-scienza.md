@@ -31,7 +31,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Expected: (measured - theoretical)/theoretical x 1e6 (Brenton and Godfrey, J. Am. Soc. Mass Spectrom. 2010, 21, 1821).
 - Observed: observed 195.088652 against theory 195.08765: the formula finder gives `delta_ppm` -5.126 and `delta_mda` -1, the adduct table gives `ppm` +5.13.
 - Fix: one sign and one denominator everywhere, (observed - theoretical)/theoretical.
-- Status: OPEN (owner decision): one sign changes the exported `delta_ppm`/`delta_mda`/`ppm` columns of some routes.
+- Status: FIXED: every route reports (observed - theoretical)/theoretical (formula finder, library search `dprec`, flow match `mass_ppm`, MS2 engine matcher `ppm`; the in-silico candidate `mass_ppm` and the library window's JS search `dprec` in `libreria-worker.js` too; the adduct table and `matchres` already did; the denominator is always the theoretical value); caffeine [M+H]+ typed 195.088652 gives +5.13 ppm, test `the_mass_error_is_observed_minus_theoretical` in `crates/mzlab-core/tests/composition_ions.rs`.
 
 ### A4 - convention unclear - even-electron cations typed as `[M]+` always fail SENIOR (and LEWIS when saturated)
 - Place: `crates/mzlab-core/src/composition.rs:419-441` (`broken`), with `half_ok` for `[M]+`/`[M]-`.
