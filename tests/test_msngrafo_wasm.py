@@ -124,10 +124,10 @@ def test_the_cleavages_errors_are_keyed(pkg, query, key):
 def test_a_tiny_budget_is_the_same_calm_refusal_in_cli_and_wasm(pkg):
     # the spectra of a consensus over the budget (`budget_mb` of the page, `--budget-mb` of the command line) end in error.memoryBudget, phase msnGraph
     r = subprocess.run(["node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), "budget_mb=0.0001"], capture_output=True, encoding="utf-8")
-    assert r.returncode != 0 and '"error_key":"error.memoryBudget"' in r.stderr and '"phase":"msnGraph"' in r.stderr, r.stderr[-800:]
+    assert r.returncode != 0 and '"error_key":"error.memoryBudget"' in r.stderr and '"fase":"msnGraph"' in r.stderr, r.stderr[-800:]
     c = subprocess.run(cli_argv("msn-graph", str(MZML), "--budget-mb", "0.0001"), cwd=ROOT, capture_output=True, encoding="utf-8")
     assert c.returncode != 0 and "error.memoryBudget, fase=msnGraph" in c.stderr, c.stderr[-800:]
-    stima = r.stderr.split('"estimate_mb":"')[1].split('"')[0]
+    stima = r.stderr.split('"stima_mb":"')[1].split('"')[0]
     assert f"about {stima} MB" in c.stderr
     big = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), "budget_mb=64").stdout
     assert big == run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), "").stdout
