@@ -1,5 +1,5 @@
 // @ts-check
-// The ONE naming scheme of the panels (table in docs/agenti/titoli-pannelli.md): a title says only what the panel shows, never a file name.
+// The ONE naming scheme of the panels (table in docs/agenti/panel-titles.md): a title says only what the panel shows, never a file name.
 // `nome(p, ctx)` is pure (tests/titoli_node.js); `di(p)` reads the page state.
 (() => {
   const T = (/** @type {string} */ k, /** @type {any} */ a) => I18N.t(k, a);

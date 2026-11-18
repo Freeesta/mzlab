@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Permanent bench of the mzlab-core jobs compiled to wasm in several build variants (docs/agenti/wasm-potenziale.md §9).
+"""Permanent bench of the mzlab-core jobs compiled to wasm in several build variants (docs/agenti/wasm-potential.md §9).
 
     python3 tools/banco_wasm.py --varianti base,o3 [--chromium] [--firefox] [--webkit] [--giri 5] [--raw] [--lavoro CARTELLA]
 

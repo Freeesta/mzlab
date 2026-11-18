@@ -1,4 +1,4 @@
-//! `MassRangeEx/MassRangeEx` of an Analyst experiment read by its counted grammar (`docs/agenti/wiff_specifica_completa.md` §2.2): a 40-byte head
+//! `MassRangeEx/MassRangeEx` of an Analyst experiment read by its counted grammar (`docs/agenti/wiff-full-spec.md` §2.2): a 40-byte head
 //! (`+36` u32 = parameters per entry), then exactly `n` entries (n = `ExperimentHeader` +176) of Q1/start, 0/stop, Q3/step, dwell or RT, a reserved u32,
 //! a u16 byte length and the UTF-16 name, then the parameter blocks (u16 tag length, tag, start, stop, step). Any other length is an error, never a guess.
 

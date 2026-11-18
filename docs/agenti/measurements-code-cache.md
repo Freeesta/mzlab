@@ -35,7 +35,7 @@ so a hit is the `cache.match` answer itself, with every header of the contract. 
 | `new Response` per hit (`main`) | 0/8 | 22-33 |
 
 A built `Response` has `type: "default"` and an empty `url`, also once it is stored, and Chromium does not attach a code cache to it. A response can carry COEP/CORP/`no-cache` only if it is built (GitHub Pages does not send them), so **no answer that keeps the
-contract can be code-cached**. The `.wasm` gains nothing measurable in any arm: compiling it is 10-19 ms of Liftoff (`wasm-potenziale.md` §3), which bounds what a wasm code cache could save.
+contract can be code-cached**. The `.wasm` gains nothing measurable in any arm: compiling it is 10-19 ms of Liftoff (`wasm-potential.md` §3), which bounds what a wasm code cache could save.
 
 ### Site: 4th load (`--warm-reloads 2`; trace = `trace-warm` 3rd load), ms from the navigation start, median [min-max]
 

@@ -1,7 +1,7 @@
 # Map of loading a file (site and desktop app)
 
 A snapshot of the code, not a plan: where a file goes from the click to the screen, what it costs, what is missing. Where the area guide disagrees with the code it is written under "Doubts". "Not found" = searched for and absent. Details already written elsewhere are not repeated: `startup.md` (page start-up), `progresso.md` (progress bar), `native-reading.md` (`.raw`, `.wiff`, `.D` without mzML), `readers-module.md` (modules per family), `mzidx.md` and `rust-mzidx.md` (index and pool), `rust-desktop.md`
-(desktop), `capabilities.md`, `visore-veloce.md` (after opening: XIC, zoom), `measurements-speed-site.md` and `ottimizzazioni-tentate.md` (numbers and routes already discarded: read them BEFORE optimizing), `measurements-machines.md` (opening on slow machines).
+(desktop), `capabilities.md`, `fast-viewer.md` (after opening: XIC, zoom), `measurements-speed-site.md` and `ottimizzazioni-tentate.md` (numbers and routes already discarded: read them BEFORE optimizing), `measurements-machines.md` (opening on slow machines).
 
 ## 1. Site: the common path (mzML)
 

@@ -1,5 +1,5 @@
 # Triple-quadrupole transition table (`chrom.transitions@2`, `crates/mzlab-feat/src/transitions/`)
-Nearby areas: `wiff.md` (SIM channels `SIM SIC Q1=`), `lists.md` (`flow/liste` editor), `cli-passi.md`, `wasm-tetti.md` (`flowtab`).
+Nearby areas: `wiff.md` (SIM channels `SIM SIC Q1=`), `lists.md` (`flow/liste` editor), `cli-passi.md`, `wasm-caps.md` (`flowtab`).
 
 - What it does: for every sample and every row of a table of SIM ions (Q1 only) or MRM/SRM transitions (Q1>Q3) it finds the row's chromatogram and integrates the peak in RT ± window with `mzlab_core::peak1d::find_peak` (`legacy::lr::peak1d` re-exports it; no second integrator). Rows without RT give only candidates, never an isomer assignment.
 - Table = data, never code: an editable CSV (parameter `transitions`, `x-liste` = `transitions`), saved in the plan and in the session, edited by the lists editor (`flow-liste.js`, app only). Mandatory header starting with `name`; columns `name;q1;q3;polarity;rt;rt_window;isomer_group;note;formula;adduct` in any order (`table.rs`, `HEADER`). `to_csv` rewrites the cells as written (`;`).
