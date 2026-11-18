@@ -1,13 +1,13 @@
 # .wasm module measurements
 A module's record is the `misura` field of its `tools/moduli/<nome>.toml` (bytes after `wasm-bindgen` and `tools/wasm_opt.sh`, binaryen 133) plus the before → after line in the body of the PR that makes it grow. Only `python3 tools/moduli.py --misura <site/static>` writes the field, from a real build (engine and libraries with the commands of the "libraries" step of `sito-rust.yml`, the rest with `tools/build_feat_wasm.sh <dir> all`);
 On two consecutive runs the second result is identical, and `--controlla` fails if a measurement exceeds the ceiling. The values of the CI "size" step are authoritative.
-A measurement line in a PR says: module, bytes before → after, growth in %, and whether it is "raw" (`tools/cargo_wasm.sh build --release` before `wasm-opt`) or optimized. The ceiling is not changed here: rule and check in `wasm-tetti.md`.
+A measurement line in a PR says: module, bytes before → after, growth in %, and whether it is "raw" (`tools/cargo_wasm.sh build --release` before `wasm-opt`) or optimized. The ceiling is not changed here: rule and check in `wasm-caps.md`.
 
 ## What costs the most (rules fixed by past measurements)
 - The check and substructure search of `mzlab-mol` weigh about 95 KB in the module that contains them: that is why `molkit` is a separate module and does not live inside `grafo` (+61 %). Inside `molkit` each function grows less than 10 % (CIP +7 %, MOL/SDF export +6 %, colors +3 %), substructure search alone +44 % on a still small module.
 - Three table steps (`table.stats`, `table.pca`, `table.kmd`) inside `flowtab` took it from 373 402 to 541 412 B (+45 %): they live in `flowstat`. A `HashSet` in `ionnet::group` cost +12 KB: bisection is used.
 - A module that receives the whole SCIEX reader carries the Unicode tables (+9.4 KB in `waters`): `FileSet::find` in the rejection stays only with the SCIEX reader.
-- std `slice::sort*` costs 2-10 KB per instance; `sortc` and `order_by_f64` (`wasm-tetti.md`) avoid the copy.
+- std `slice::sort*` costs 2-10 KB per instance; `sortc` and `order_by_f64` (`wasm-caps.md`) avoid the copy.
 - `libm` instead of std `exp`/`ln`/`pow`/trig changes the `.wasm` by less than 1 % (`mzlab-chem` keeps std for `fm.rs`).
 - An error with the values of its text (`Error::new` with parameters) costs about 0.01-0.1 % per module: no module gets near the ceiling because of this.
 - In the engine a read function costs 0.1-0.3 % on average; growths above 1 % (`.wiff` devices +1.3 % in `sciex`, `isotopes = finder` +4.4 % in `hr`) each have their own line in the PR.

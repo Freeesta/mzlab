@@ -51,6 +51,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | English in code (identifiers, comments, file and folder names): measured inventory, `tools/check_english.py`, `tools/italian_words.tsv`, rename map (`tools/english_rename_map.py`), batch plan | `docs/agenti/english.md` |
 | export of all user data: browser storage inventory, ZIP writer (`zip.rs`); chunked exports in OPFS (`dl()`, `export-pezzi.js`, `export-worker.js`, provenance, `export/` cleanup) | `docs/agenti/export-data.md` |
 | contract of the vendor readers (`readers.rs`, `Lettore` trait, registry, `Limiti`), adding a format | `docs/agenti/extending.md` |
+| "XIC" button in the spectrum bar, XIC lens on peak hover (`xic-lente.js`), bench and baseline table of viewer times (`tools/bench_viewer.py`, `viewer_times.rs`) | `docs/agenti/fast-viewer.md` |
 | Tabui coverage (area: graphical Flow (tab: step palette `step/1`, chain, modules…) | `docs/agenti/flow-coverage-tabui.md` |
 | graphical Flow (tab: step palette `step/1`, chain, parameter modules, `meta.compare` comparison, `mzflow/2` export/import; `flow/`) | `docs/agenti/flow-graphics.md` |
 | state scheduler of the "live" Flow (`mzlab_core::flow::sched`, `run_sched.rs`) | `docs/agenti/flow-live.md` |
@@ -134,6 +135,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | hand-typed numeric fields (`campi.js`, `CAMPI.num`, `data-num`, calculators, `campo.*` rejection note, `numIt` without Infinity, `lib_campi.sweep`) | `docs/agenti/number-fields.md` |
 | extremes of large arrays without spread, binary search of points in a window (`numeri.js`: `maxOf`, `minOf`, `maxAbs`, `spanOf`) | `docs/agenti/numbers.md` |
 | discarded attempts, CI cuts already measured and Rust job times (area: cumulative speed-gain table (date · PR · step ·…) | `docs/agenti/optimizations-tried.md` |
+| panel titles (single rules per panel type × signal, `titoli.js`, "spectrum of" label, exported file names) | `docs/agenti/panel-titles.md` |
 | docking and moving panels (handle, drop zones, dividers, undo) | `docs/agenti/panels-side-by-side.md` |
 | site ↔ app parity (functions and Flow steps on one side only, engine operations missing in the app, missing parity tests, next steps); function × face × test, guard for `rust-worker.js` ops without a branch (`test_parita_operazioni.py`) | `docs/agenti/parity.md` |
 | peak box on a spectrum (hover, keys, live region), highlighted stick, pinned/removed labels (`peak-info.js`, `p.lblOn`/`lblOff`) | `docs/agenti/peak-info.md` |
@@ -179,17 +181,15 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | test structure, new tests | `docs/agenti/test.md` |
 | Thermo `.raw` reader speed: criteria A1-A7 and B1-B5, bench `thermo_bench`, `tools/bench/thermo_velocita.py`, baseline numbers against RFR (T-7) | `docs/agenti/thermo-speed.md` |
 | chemical background of the TIC/BPC (persistent background ions, per-ion baseline, quiet window, blank, excluded m/z windows: `ticbg.rs`, `api/tic_background`, `mzlab-cli background`) | `docs/agenti/tic-background.md` |
-| provisional TIC: zoom/pan of the RT axis while the index is being built, window handoff to the first panel | `docs/agenti/tic-provvisorio.md` |
-| panel titles (single rules per panel type × signal, `titoli.js`, "spectrum of" label, exported file names) | `docs/agenti/titoli-pannelli.md` |
-| SIM/MRM transition table of a triple quadrupole (`chrom.transitions`, `transitions/`, per-sample integration, RT candidates, example presets) | `docs/agenti/transizioni.md` |
-| "XIC" button in the spectrum bar, XIC lens on peak hover (`xic-lente.js`), bench and baseline table of viewer times (`tools/bench_viewer.py`, `viewer_times.rs`) | `docs/agenti/visore-veloce.md` |
-| WebAssembly potential (`opt-level` profiles, SIMD128, binaryen, zlib-rs, threads, memory64, minimum browsers; measurements) | `docs/agenti/wasm-potenziale.md` |
-| .wasm measurements (`misura` field of `tools/moduli/*.toml`, before → after line in PR, what costs most) | `docs/agenti/wasm-tetti-misure.md` |
-| mzFinder .wasm ceilings, merged modules (HR group and Attributio) | `docs/agenti/wasm-tetti.md` |
+| provisional TIC: zoom/pan of the RT axis while the index is being built, window handoff to the first panel | `docs/agenti/tic-provisional.md` |
+| SIM/MRM transition table of a triple quadrupole (`chrom.transitions`, `transitions/`, per-sample integration, RT candidates, example presets) | `docs/agenti/transitions.md` |
+| .wasm measurements (`misura` field of `tools/moduli/*.toml`, before → after line in PR, what costs most) | `docs/agenti/wasm-caps-measurements.md` |
+| mzFinder .wasm ceilings, merged modules (HR group and Attributio) | `docs/agenti/wasm-caps.md` |
+| WebAssembly potential (`opt-level` profiles, SIMD128, binaryen, zlib-rs, threads, memory64, minimum browsers; measurements) | `docs/agenti/wasm-potential.md` |
 | Waters MassLynx `.raw` folder reader (`crates/mzlab-lettori/src/waters/`, `waters` module, grouping in `waters-raw.js`) | `docs/agenti/waters.md` |
-| choosing which samples of a `.wiff` (or other multi-sample file) to open: how Analyst does it, cost of listing (measured), #3398 reuse, dialog mockup, `samples list` CLI, cap estimate, PR split, questions (study, no feature code) | `docs/agenti/wiff-scelta-campioni.md` |
-| other SCIEX instruments, sMRM, PIS/NL, feature `estesi` (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-varianti.md` |
+| full binary specification (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-full-spec.md` |
+| choosing which samples of a `.wiff` (or other multi-sample file) to open: how Analyst does it, cost of listing (measured), #3398 reuse, dialog mockup, `samples list` CLI, cap estimate, PR split, questions (study, no feature code) | `docs/agenti/wiff-sample-choice.md` |
+| other SCIEX instruments, sMRM, PIS/NL, feature `estesi` (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-variants.md` |
 | writing a `.wiff` + `.wiff.scan`: create, add or remove samples (feasibility and design study, no writer code yet: streams per sample, lossless copy, verification, CLI `wiff`, wasm cap) | `docs/agenti/wiff-writer.md` |
 | `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` |
-| full binary specification (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff_specifica_completa.md` |
-| signed offset after the m/z or formula in the "Extract ions" window (`288.2+16`), `split_offset`, `mzlab-cli ion-mz`, `err.formula.offset`, `err.formula.mzLow`; "m/z from / to" fields and m/z / RT pairs (`xic-bordi.js`, `ctl.range.order`); `tabNuovo`, `msg.noFiles` | `docs/agenti/xic-scarto.md` |
+| signed offset after the m/z or formula in the "Extract ions" window (`288.2+16`), `split_offset`, `mzlab-cli ion-mz`, `err.formula.offset`, `err.formula.mzLow`; "m/z from / to" fields and m/z / RT pairs (`xic-bordi.js`, `ctl.range.order`); `tabNuovo`, `msg.noFiles` | `docs/agenti/xic-discard.md` |

@@ -1,6 +1,6 @@
 //! Optical DAD / PDA detector streams (`SampleSubtree/SampleN/Devices/Device_K/DAD/`) and real-time device analog logs (`Channel`, `DevRealTimeHeader`, `DevData`),
 //! plus high-resolution TOF / SCIEX OS sample streams (`Wiff2SampleInfo`, `DDERealTimeData`, `TDCInfo`, `TDCStatistics`, `TOFCalibrationData`, `Itc`, and `.wiff.scan`
-//! `0xffffffff` TDC blocks). Spec: `docs/agenti/wiff_specifica_completa.md`.
+//! `0xffffffff` TDC blocks). Spec: `docs/agenti/wiff-full-spec.md`.
 
 use super::{bad, span};
 use crate::error::Result;

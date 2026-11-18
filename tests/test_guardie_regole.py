@@ -191,7 +191,7 @@ def test_guard_no_relaxed_simd_in_build_files():
     assert not found, f"relaxed SIMD in build files: {found}"
 
 
-# Std sorts cost 2-10 KB of .wasm per instance: the wasm crates use `mzlab_picchi::sortc` (docs/agenti/wasm-tetti.md, «Ordinamenti»).
+# Std sorts cost 2-10 KB of .wasm per instance: the wasm crates use `mzlab_picchi::sortc` (docs/agenti/wasm-caps.md, «Ordinamenti»).
 SORT_STD = re.compile(r"\.sort(_unstable)?(_by(_key)?|_by_cached_key)?\(")
 # folders that keep std sorts (raw-data detection, legacy reference)
 SORT_STD_ALLOWED = ("crates/mzlab-feat/src/untargeted/", "crates/mzlab-feat/src/legacy/")
