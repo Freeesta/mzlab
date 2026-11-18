@@ -95,7 +95,7 @@ I18N.add("en", {
   "panel.rul.title": "m/z difference between two peaks",
   "panel.par.title": "Axis in % or cps, m/z labels and decimals",
   "panel.par.aria": "More settings",
-  "panel.rel.title": "On: intensity as % of the highest peak",
+  "panel.rel.title": "Intensity in % of the base peak (default for MS² and up)",
   "panel.tlink.title": "Same zoom and cursor in the other linked chromatograms",
   "panel.iauto.title": "Click a peak: edges and area found automatically",
   "panel.iall.title": "Integrate every peak shown, or its settings",
