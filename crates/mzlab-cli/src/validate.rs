@@ -1,5 +1,5 @@
 //! `mzlab-cli validate FILE...`: is this mzML valid? Structure, PSI-MS vocabulary and, for `indexedmzML`, offsets and SHA-1 (`mzlab_core::mzml_validate`).
-//! One line per finding on the standard output; the summary of each file on the standard error. Exit 0: no error in any file; 1: errors; 2: usage or a
+//! One line per finding on the standard output; the summary of each file on the standard error. Exit 0: no error in any file; 1: errors; 2: usage; 4: a
 //! file that cannot be read.
 
 use std::fs::File;
@@ -19,7 +19,7 @@ usage: mzlab-cli validate FILE.mzML... [--json] [--help]
 
 Without --json each finding is a line `error|warning PATH MESSAGE` (PATH is the XML path, MESSAGE starts with the code of the check); with
 several files each line starts with `FILE: `. The summary of every file goes to the standard error. Exit code: 0 no error in any file,
-1 at least one error, 2 usage or a file that cannot be read. Warnings (obsolete terms, a value without its unit) never change the code.";
+1 at least one error, 2 usage, 4 a file that cannot be read. Warnings (obsolete terms, a value without its unit) never change the code.";
 
 struct Args {
     files: Vec<PathBuf>,
@@ -114,7 +114,11 @@ pub fn run(args: impl Iterator<Item = String>) -> Outcome {
     }
     json.raw("]\n");
     Outcome {
-        code: if unreadable { 2 } else { u8::from(bad) },
+        code: if unreadable {
+            crate::exit::INPUT
+        } else {
+            u8::from(bad)
+        },
         stdout: if a.json { json.0 } else { text }.into_bytes(),
         stderr: err,
         error: None,

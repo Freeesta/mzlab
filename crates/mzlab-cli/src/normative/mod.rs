@@ -232,12 +232,7 @@ fn run_package(args: &[String]) -> Option<Outcome> {
         _ => return None,
     };
     Some(match r {
-        Ok(t) => Outcome {
-            code: 0,
-            stdout: t.into_bytes(),
-            stderr: String::new(),
-            error: None,
-        },
+        Ok(t) => Outcome::ok(t.into_bytes()),
         Err(e) => e.outcome(),
     })
 }
@@ -248,12 +243,7 @@ pub fn run_with<F: fetch::Fetch>(args: Vec<String>, net: F) -> Outcome {
         return o;
     }
     match parse(args) {
-        Ok(None) => Outcome {
-            code: 0,
-            stdout: format!("{HELP}\n").into_bytes(),
-            stderr: String::new(),
-            error: None,
-        },
+        Ok(None) => Outcome::ok(format!("{HELP}\n").into_bytes()),
         Ok(Some(a)) => {
             let limit = if a.large { u64::MAX } else { fetch::LARGE };
             let cache = fetch::Cache::new(&a.cache, net, fetch::today, limit);

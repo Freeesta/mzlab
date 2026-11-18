@@ -254,14 +254,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     }
     let a = match parse_args(args.into_iter()) {
         Ok(Some(a)) => a,
-        Ok(None) => {
-            return Outcome {
-                code: 0,
-                stdout: format!("{HELP}\n").into_bytes(),
-                stderr: String::new(),
-                error: None,
-            }
-        }
+        Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => return failed(e),
     };
     match rows(&a) {

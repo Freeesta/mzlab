@@ -153,9 +153,7 @@ const TAIL: &str = "  FILE...            mzML, or any single file the app reads 
   --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
   --preset NAME      auto (default: both polarities as the panel does), pos or neg
   --params FILE.json the numbers of the panel Pipeline: {\"polarity\", \"mode\", \"floor\", \"min_height\", \"min_points\", \"ppm\", \"rt_tol\", \"fill\"}
-  --help             this text
-
-old names still accepted: peaks-edges, --jsonl";
+  --help             this text";
 
 /// `mzlab-cli`, `--help`/`-h` and `--version`/`-V`: the answers that name no command.
 pub(crate) fn top_level(args: &[String]) -> Option<Outcome> {

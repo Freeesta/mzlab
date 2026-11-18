@@ -367,7 +367,7 @@ pub fn run(args: Vec<String>) -> Outcome {
                 {
                     crate::exit::USAGE
                 } else {
-                    crate::exit::DATA
+                    crate::exit::code_of_data(&e)
                 };
             Outcome::fail_error(&e)
                 .with_code(code)

@@ -16,21 +16,35 @@ pub const SELECTOR: u8 = 5;
 /// An output that cannot be written, or an external source that failed.
 pub const OUTPUT: u8 = 6;
 
-/// The exit code of the engine error `key`: the table above, by key.
-pub fn code_of_key(key: &str) -> u8 {
+/// The code the table gives the engine error `key`, when it names a kind of failure.
+pub fn classify(key: &str) -> Option<u8> {
     match key {
-        "err.cli.input.missing" | "err.cli.file" | "err.flow.io" | "error.badIndex" => INPUT,
-        "err.cli.out" | "err.flow.cancelled" => OUTPUT,
-        "err.sample.unknown" | "err.canali.unknown" => SELECTOR,
-        k if k.starts_with("err.cli.") => USAGE,
-        k if k.starts_with("err.file.") => INPUT,
-        _ => DATA,
+        "err.cli.input.missing"
+        | "err.cli.file"
+        | "err.flow.io"
+        | "error.badIndex"
+        | "err.session.fileNotFound" => Some(INPUT),
+        "err.cli.out" | "err.flow.cancelled" => Some(OUTPUT),
+        "err.sample.unknown" | "err.canali.unknown" => Some(SELECTOR),
+        k if k.starts_with("err.cli.") => Some(USAGE),
+        k if k.starts_with("err.file.") => Some(INPUT),
+        _ => None,
     }
+}
+
+/// The exit code of the engine error `key`: its class in the table, a usage error (2) when it has none (the engine refused what the command line asked).
+pub fn code_of_key(key: &str) -> u8 {
+    classify(key).unwrap_or(USAGE)
 }
 
 /// The exit code of `e`.
 pub fn code_of(e: &mzlab_core::Error) -> u8 {
     code_of_key(e.key)
+}
+
+/// The exit code of `e` for a command whose unclassified errors are about the data it read (1), not about its arguments.
+pub fn code_of_data(e: &mzlab_core::Error) -> u8 {
+    classify(e.key).unwrap_or(DATA)
 }
 
 #[cfg(test)]
@@ -43,6 +57,7 @@ mod tests {
         assert_eq!(code_of_key("err.sample.unknown"), SELECTOR);
         assert_eq!(code_of_key("err.cli.set"), USAGE);
         assert_eq!(code_of_key("err.cli.file"), INPUT);
-        assert_eq!(code_of_key("err.flow.compare.few"), DATA);
+        assert_eq!(code_of_key("err.flow.compare.few"), USAGE);
+        assert_eq!(classify("err.flow.compare.few"), None);
     }
 }

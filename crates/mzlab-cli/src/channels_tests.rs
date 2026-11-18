@@ -77,7 +77,6 @@ fn usage_errors_exit_with_2() {
         vec!["channels"],
         vec!["channels", "a", "b"],
         vec!["channels", "--nope"],
-        vec!["channels", "/nonexistent/x.mzML"],
         vec!["channels", "a.mzML", "--sample", "1"],
         vec!["channels", "a.wiff", "--sample", "x"],
     ] {
@@ -88,6 +87,7 @@ fn usage_errors_exit_with_2() {
         );
     }
     assert_eq!(execute(&["channels".into(), "--help".into()]).code, 0);
+    assert_eq!(run_new("/nonexistent/x.mzML", &[]).code, 4);
 }
 
 /// `--channel uv:auto` prints the XWC band of `itemroutes::pda_propose` (what `api/uvpropose` answers in the site and the app), with and without `--rt`.
@@ -256,7 +256,7 @@ fn an_unknown_sim_id_is_named_whole() {
         "--channel".into(),
         id.into(),
     ]);
-    assert_eq!(o.code, 2);
+    assert_eq!(o.code, 5);
     let want = format!("error: Channel {id} does not exist in this file. (err.canali.unknown)\n");
     assert!(o.stderr.starts_with(&want), "{}", o.stderr);
     let _ = std::fs::remove_dir_all(&dir);
@@ -452,7 +452,7 @@ fn canale_reads_a_uv_and_an_analog_trace() {
     assert!(String::from_utf8(an.stdout)
         .unwrap()
         .contains("\"unit\":\"bar\""));
-    assert_eq!(run(&["--channel", "tic"]).code, 2);
+    assert_eq!(run(&["--channel", "tic"]).code, 5);
     assert_eq!(run(&["--rt", "1"]).code, 2);
     let _ = std::fs::remove_dir_all(&dir);
 }

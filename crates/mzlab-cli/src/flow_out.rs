@@ -30,7 +30,12 @@ pub(crate) fn write_run(
     if let Err(e) = std::fs::create_dir_all(&out) {
         let err = Error::new("err.cli.out").with("path", out.display());
         let msg = format!("{}: {e}", out.display());
-        return fail(crate::exit::OUTPUT, &err, &msg, "--out must be a folder that can be written");
+        return fail(
+            crate::exit::OUTPUT,
+            &err,
+            &msg,
+            "--out must be a folder that can be written",
+        );
     }
     let text = plan_json(plan);
     let mut order: Vec<String> = plan_order(ready)

@@ -418,14 +418,7 @@ fn ready(a: &Args, reg: &[Step]) -> Result<Ready, Outcome> {
 pub fn run(args: Vec<String>, meter: Option<Meter>) -> Outcome {
     let a = match parse_args(args) {
         Ok(Some(a)) => a,
-        Ok(None) => {
-            return Outcome {
-                code: 0,
-                stdout: format!("{HELP}\n").into_bytes(),
-                stderr: String::new(),
-                error: None,
-            }
-        }
+        Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => {
             let err = Error::new("err.cli.usage").with("message", &e);
             return jfail(2, &err, &e, "mzlab-cli flow run --help");
@@ -442,12 +435,7 @@ pub fn run(args: Vec<String>, meter: Option<Meter>) -> Outcome {
         } else {
             dry_text(&ready, &reg, &found)
         };
-        return Outcome {
-            code: 0,
-            stdout: text.into_bytes(),
-            stderr: String::new(),
-            error: None,
-        };
+        return Outcome::ok(text.into_bytes());
     }
     let out = a.out.unwrap_or_default();
     let opts = (a.fresh, a.budget_mb, a.style);

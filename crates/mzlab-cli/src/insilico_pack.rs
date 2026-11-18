@@ -289,12 +289,7 @@ fn fail(msg: &str) -> Outcome {
 pub fn run(args: Vec<String>) -> Outcome {
     if args.first().map(String::as_str) != Some("pack") {
         return if args.iter().any(|a| a == "--help") {
-            Outcome {
-                code: 0,
-                stdout: format!("{HELP}\n").into_bytes(),
-                stderr: String::new(),
-                error: None,
-            }
+            Outcome::ok(format!("{HELP}\n").into_bytes())
         } else {
             fail("unknown subcommand")
         };
@@ -326,12 +321,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         Err(e) => return fail(&format!("{csv}: {e}")),
     };
     match pack_with(&bytes, Path::new(out), &version, &doi, cut) {
-        Ok(t) => Outcome {
-            code: 0,
-            stdout: (t + "\n").into_bytes(),
-            stderr: String::new(),
-            error: None,
-        },
+        Ok(t) => Outcome::ok((t + "\n").into_bytes()),
         Err(e) => Outcome {
             code: 1,
             stdout: Vec::new(),

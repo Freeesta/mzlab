@@ -419,14 +419,7 @@ fn make_work(work: &Path, out: &Path) -> Result<(), Outcome> {
 pub fn run(args: Vec<String>) -> Outcome {
     let a = match parse_args(args) {
         Ok(Some(a)) => a,
-        Ok(None) => {
-            return Outcome {
-                code: 0,
-                stdout: format!("{HELP}\n").into_bytes(),
-                stderr: String::new(),
-                error: None,
-            }
-        }
+        Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => return fail(2, &e, "mzlab-cli convert --help"),
     };
     let Some(out) = a.out.clone() else {

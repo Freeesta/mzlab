@@ -83,5 +83,10 @@
   "error.hypo.structureMismatch": "Engine error message; {parent} = precursor, {structure} = structure.",
   "error.interp.failed": "Engine error message; {detail} = technical detail.",
   "error.interp.noTp": "Engine error message; {detail} = technical detail.",
-  "error.generic": "Error without its own text; {detail} = technical message from the engine."
+  "error.generic": "Error without its own text; {detail} = technical message from the engine.",
+  "err.cli.usage": "Engine error message of a command line the CLI cannot use; {message} = what is wrong.",
+  "err.cli.file": "CLI error: a file cannot be read; {path} = the file.",
+  "err.cli.out": "CLI error: an output cannot be written; {path} = the path.",
+  "err.cli.input.missing": "CLI error of flow run: an input of the plan was not found; {input} = its name.",
+  "err.cli.input.twice": "CLI error of flow run: an input was given more than once; {input} = its name."
 }

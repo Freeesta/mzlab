@@ -343,30 +343,6 @@ pub fn execute(args: &[String]) -> Outcome {
     error_text::with_help(args, contract::finish(args, command, o))
 }
 
-fn executed(args: &[String]) -> (&'static str, Outcome) {
-    if let Some(o) = cmd::top_level(args) {
-        return ("", o);
-    }
-    let Some((e, n)) = cmd::find(args) else {
-        let o = Outcome::fail_error(&Error::new("err.cli.usage").with(
-            "message",
-            format!("unknown command {}", plain::canonical(&args[0])),
-        ));
-        return ("", o);
-    };
-    let mut rest = args[n..].to_vec();
-    if cmd::wants_help(&rest) {
-        return (e.name, cmd::help_of(e, &rest));
-    }
-    if rest.iter().any(|a| a == "--json") && !cmd::reads_json(e.name) {
-        if !cmd::json_by_default(e.name) {
-            return (e.name, contract::json_unsupported());
-        }
-        rest.retain(|a| a != "--json");
-    }
-    (e.name, (e.run)(rest))
-}
-
 #[cfg(test)]
 mod tests;
 
@@ -433,3 +409,27 @@ mod msn_graph_tests;
 mod msn_lib_tests;
 #[cfg(all(test, not(target_family = "wasm")))]
 mod validate_tests;
+
+fn executed(args: &[String]) -> (&'static str, Outcome) {
+    if let Some(o) = cmd::top_level(args) {
+        return ("", o);
+    }
+    let Some((e, n)) = cmd::find(args) else {
+        let o = Outcome::fail_error(&Error::new("err.cli.usage").with(
+            "message",
+            format!("unknown command {}", plain::canonical(&args[0])),
+        ));
+        return ("", o);
+    };
+    let mut rest = args[n..].to_vec();
+    if cmd::wants_help(&rest) {
+        return (e.name, cmd::help_of(e, &rest));
+    }
+    if rest.iter().any(|a| a == "--json") && !cmd::reads_json(e.name) {
+        if !cmd::json_by_default(e.name) {
+            return (e.name, contract::json_unsupported());
+        }
+        rest.retain(|a| a != "--json");
+    }
+    (e.name, (e.run)(rest))
+}

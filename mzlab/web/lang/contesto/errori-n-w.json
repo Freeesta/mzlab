@@ -64,5 +64,12 @@
   "error.posiz.transform": "Engine error message; {transform} = transformation.",
   "error.qc.tooFew": "Engine error message; {have} = how many there are.",
   "error.rowNotFound": "Engine error message; {id} = identifier.",
-  "error.stats.condition": "Engine error message; {name} = name."
+  "error.stats.condition": "Engine error message; {name} = name.",
+  "err.normative.usage": "CLI error of normative; {message} = what is wrong with the command line.",
+  "err.normative.sources": "CLI error of normative; {message} = what is wrong with sources.json.",
+  "err.normative.pin": "CLI error of normative; {message} = the sources whose SHA-256 changed.",
+  "err.normative.large": "CLI error of normative; {message} = the download and its limit.",
+  "err.normative.fetch": "CLI error of normative; {message} = the source and the reason.",
+  "err.normative.parse": "CLI error of normative; {message} = the list and the reason.",
+  "err.normative.io": "CLI error of normative; {message} = the file and the reason."
 }

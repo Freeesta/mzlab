@@ -45,14 +45,7 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
         match x.as_str() {
-            "--help" | "-h" => {
-                return Outcome {
-                    code: 0,
-                    stdout: format!("{HELP}\n").into_bytes(),
-                    stderr: String::new(),
-                    error: None,
-                }
-            }
+            "--help" | "-h" => return Outcome::ok(format!("{HELP}\n").into_bytes()),
             "--json" => {}
             "--id" => match it.next() {
                 Some(v) => id = Some(v),
@@ -106,10 +99,5 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
             .collect();
         lines.concat()
     };
-    Outcome {
-        code: 0,
-        stdout: stdout.into_bytes(),
-        stderr: String::new(),
-        error: None,
-    }
+    Outcome::ok(stdout.into_bytes())
 }

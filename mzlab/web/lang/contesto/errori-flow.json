@@ -52,5 +52,6 @@
   "err.flow.step.unknown": "Engine error message; {step} = step.",
   "err.flow.step.version": "Engine error message; {available} = available version, {step} = step, {version} = version.",
   "err.flow.type": "Engine error message; {from} = source type, {to} = target type.",
-  "err.flow.unavailable": "Engine error message; {platform} = platform, {step} = step."
+  "err.flow.unavailable": "Engine error message; {platform} = platform, {step} = step.",
+  "err.flow.step.native": "CLI error: a step with no native executor; {step} = step."
 }

@@ -9,7 +9,9 @@ fn example() -> String {
 }
 
 fn dad(a: &[&str]) -> Outcome {
-    run(a.iter().map(|s| s.to_string()).collect())
+    let mut all = vec!["dad".to_string()];
+    all.extend(a.iter().map(|s| s.to_string()));
+    crate::execute(&all)
 }
 
 fn engine_dad() -> Arc<DadData> {
@@ -59,7 +61,7 @@ fn a_file_minus_itself_is_zero_and_reports_no_warning() {
 }
 
 #[test]
-fn bad_use_is_exit_2_and_a_data_error_is_1_with_error_json() {
+fn bad_use_is_exit_2_and_a_missing_file_is_4_with_error_json() {
     let f = example();
     for a in [
         vec!["subtract", &f],
@@ -71,7 +73,7 @@ fn bad_use_is_exit_2_and_a_data_error_is_1_with_error_json() {
         assert_eq!(dad(&a).code, 2, "{a:?}");
     }
     let o = dad(&["spectrum", "/nonexistent/x.mzML", "--rt", "1", "--json"]);
-    assert_eq!(o.code, 1);
+    assert_eq!(o.code, 4);
     assert!(String::from_utf8(o.stdout)
         .unwrap()
         .contains("\"schema\":\"error/1\""));

@@ -336,12 +336,7 @@ fn check_args(args: Vec<String>) -> Result<(String, Vec<String>), Outcome> {
         match x.as_str() {
             "--help" | "-h" => {
                 let help = format!("{CHECK_HELP}\n").into_bytes();
-                return Err(Outcome {
-                    code: 0,
-                    stdout: help,
-                    stderr: String::new(),
-                    error: None,
-                });
+                return Err(Outcome::ok(help));
             }
             "--json" => {}
             "--set" => match it.next() {

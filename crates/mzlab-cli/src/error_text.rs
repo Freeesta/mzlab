@@ -162,9 +162,12 @@ fn render_params(msg: &str, key: &str, par: Vec<(String, String)>) -> String {
     format!("{t} ({key}{rest})")
 }
 
-/// A usage or engine error (`Outcome::fail`, code 2) ends with the help of the command that was run: `(mzlab-cli channels --help)`, not another's.
+/// A usage, input or selector failure (codes 2, 4, 5) ends with the help of the command that was run: `(mzlab-cli channels --help)`, not another's.
 pub(crate) fn with_help(args: &[String], mut o: crate::Outcome) -> crate::Outcome {
-    if o.code != 2 || !o.stderr.starts_with("error: ") || o.stderr.contains("--help)") {
+    if !matches!(o.code, 2 | 4 | 5)
+        || !o.stderr.starts_with("error: ")
+        || o.stderr.contains("--help)")
+    {
         return o;
     }
     if o.stderr.starts_with("error: unknown command") {
