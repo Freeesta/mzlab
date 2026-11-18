@@ -610,6 +610,7 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], mode: u8, out: &mut [f64]) -> u32 {
 /// counts, counts x s; counts x min when `area_unit` is 1, as `mzlab-cli peak-auto --set area_unit=min`): the one-click integration of
 /// high-resolution traces (`peakq_auto`). `smooth` = Savitzky-Golay window of the apex picking (points), `snr` = prominence over the noise
 /// (`AutoParams::from_dialog`). Returns the number of peaks written.
+#[allow(clippy::too_many_arguments)]
 #[wasm_bindgen]
 pub fn auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, smooth: u32, snr: f64, area_unit: f64, out: &mut [f64]) -> u32 {
     let p = mzlab_core::peakq_auto::AutoParams::from_dialog(smooth as usize, snr);
