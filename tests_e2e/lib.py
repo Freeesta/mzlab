@@ -117,31 +117,27 @@ def show_table(pg):
     if pg.is_hidden("#wtable"): _real_click(pg, "#samptab")
     pg.wait_for_selector("#wtable", state="visible", timeout=10000)
 TABUI_BTN = re.compile(r'#nav (?:button)?\[data-v=["\']?tpmine["\']?\]')
+_CLR = "history.replaceState(null, '', location.pathname + location.search)"
 def open_tabui(pg):
     """Tabui has no nav button (TABUI_VISIBLE = false in first-paint.js): it opens on its exact address, as a person with the link would."""
-    # the address only counts once the shell listens to it (the hidden button is in the static HTML long before shell.js has run)
-    pg.wait_for_function("typeof setView === 'function' && typeof S !== 'undefined' && !!window.QTOOLS", timeout=120000)
-    pg.evaluate("history.replaceState(null, '', location.pathname + location.search)")         # a hash left by an earlier visit would make the next one a no-op
-    pg.evaluate("location.hash = '#/tpmine'")
+    pg.wait_for_function("typeof setView === 'function' && typeof S !== 'undefined' && !!window.QTOOLS", timeout=120000)     # the shell must listen first
+    pg.evaluate(_CLR + "; location.hash = '#/tpmine'")          # a hash left by an earlier visit would make this one a no-op
     pg.wait_for_function("S.view === 'tpmine'", timeout=15000)
 _real_reload = _Page.reload
 def _reload(self, *a, **k):
-    """A reload keeps the address, so a page left on Tabui would come back on it: tests that reload want the page they started on (Data)."""
-    try: self.evaluate("if (location.hash === '#/tpmine') history.replaceState(null, '', location.pathname + location.search)")
+    try: self.evaluate("if (location.hash === '#/tpmine') " + _CLR)         # a reload keeps the address: tests that reload want Data back
     except Exception: pass
     return _real_reload(self, *a, **k)
 _Page.reload = _reload
 _real_click = _Page.click
 def _click(self, selector, *a, **k):
-    # the Tabui nav button is hidden: a click on it is the exact address #/tpmine
-    if isinstance(selector, str) and TABUI_BTN.search(selector): return open_tabui(self)
+    if isinstance(selector, str) and TABUI_BTN.search(selector): return open_tabui(self)     # the hidden Tabui button: the exact address instead
     # «Load data» is gone: the files are open already, the click is the first click on a file
     if isinstance(selector, str) and (selector == "#opbtn" or "Load data" in selector): return open_first(self)
     return _real_click(self, selector, *a, **k)
 _Page.click = _click
 _real_wfs = _Page.wait_for_selector
 def _wfs(self, selector, *a, **k):
-    # the hidden Tabui button is still in the page: waiting for it means waiting for it to exist
     if isinstance(selector, str) and TABUI_BTN.search(selector) and "state" not in k: k["state"] = "attached"
     # waiting for «Load data» = waiting for the end of the loading (the button is gone)
     if isinstance(selector, str) and (selector == "#opbtn" or "Load data" in selector):
