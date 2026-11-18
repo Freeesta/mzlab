@@ -384,10 +384,7 @@ fn experiment_of(scans: &[Scan], v: &[Channel], facts: &Facts, name: &str) -> Ex
         .iter()
         .filter(|c| matches!(c.famiglia, Famiglia::Ms | Famiglia::Dd))
         .collect();
-    let t = |proposed, reason| ExperimentType {
-        proposed: proposed,
-        reason: reason,
-    };
+    let t = |proposed, reason| ExperimentType { proposed, reason };
     if scans.is_empty() {
         // SIM channels are MS data: a SIM file is never "UV only" or "empty"
         return match (srm, sim, facts.pda) {
@@ -401,10 +398,10 @@ fn experiment_of(scans: &[Scan], v: &[Channel], facts: &Facts, name: &str) -> Ex
         return t("mixed", "srm_and_scans");
     }
     if crate::infusion::with_msn(scans, facts.lc, name) {
-        let reason = match crate::infusion::infusione(scans, facts.lc, name).map(|i| i.reason) {
-            Some(r @ ("blocks" | "method_without_lc")) => r,
-            _ => "name",
-        };
+        // `with_msn` is false for a constant RT, so the reason is blocks, method_without_lc or name
+        let reason = crate::infusion::infusione(scans, facts.lc, name)
+            .map(|i| i.reason)
+            .unwrap_or("name");
         return t("msn-infusion", reason);
     }
     if ms.iter().any(|c| c.famiglia == Famiglia::Dd) {
