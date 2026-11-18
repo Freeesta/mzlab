@@ -10,3 +10,5 @@ mod wiff_method;
 pub use wiff_method::wiff_metodo;
 #[cfg(feature = "valida")]
 mod validate;
+#[cfg(feature = "wiffwrite")]
+mod wiffwrite;

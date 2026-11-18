@@ -1,4 +1,4 @@
-# `.wiff` writer: feasibility and design study (phase 1, no writer code)
+# `.wiff` writer: design study and the read-only inventory (`wiff list`, `wiff verify`); the writer itself is not built
 
 Goal of the owner: create a `.wiff` + `.wiff.scan` pair, add or remove samples (recombine samples of different pairs), lose nothing the reader sees (or anything else in the samples), and have Analyst 1.6.3 still open the result.
 Source of every statement below: the reader (`crates/mzlab-core/src/wiff/`, `ole.rs`), `wiff.md`, `wiff-full-spec.md`, `wiff-variants.md` and the synthetic fixtures of `tools/wiff_riferimento.py`. Nothing here was checked on a real file or in Analyst: no lab data is reachable from a cloud chat (`MZLAB_DATI` empty). Where the repo does not show something it says UNKNOWN and names the experiment (E1..E8, last section).
@@ -80,9 +80,14 @@ Decisions asked (recommendation first):
 - D7 New wasm module (see below).
 
 ## CLI shape (`mzlab-cli wiff`, same logic as site and app; usable by agents)
-- `mzlab-cli wiff list IN.wiff... [--json]`: dry-run listing, writes nothing. Per file: path, bytes, SHA-256 of `.wiff` and `.wiff.scan`, container (sector size, version), `unaccounted` (`.scan` bytes outside every section, global streams). Per sample: `source` (`file#number`), `name`, `method_no`, `scans`, `blocks`, `section` (start, bytes, SHA-256), `streams` (path, bytes, SHA-256, `read`: whether the reader parses it), `status` `ok|refused|partial`, `reason` (an `err.file.wiff*` key). Keys are stable; the schema id is `wiff.list/1`.
+- Built (read only, feature `wiffwrite`, `crates/mzlab-core/src/wiff/inventory.rs`, `ole/inventory.rs`, `crates/mzlab-cli/src/wiff_cmd.rs`): `mzlab-cli wiff list IN.wiff... [--inventory] [--json]`, schema `wiff.list/1`. Per file: name, SHA-256 of the `.wiff`, `container` (OLE version, sector sizes, bytes), `scan` (bytes, `head_bytes` before the first section, `unindexed_skipped`), `global_streams`.
+  Per sample: `number`, `name`, `method`, `scans`, `status` (`ok|refused|truncated|damaged|unindexed`), `reason`, `section` (start, bytes, `slack` after the last block, SHA-256, `lead_hex` of the first 44 bytes), `idx` (rows, zero rows), `streams` (path, bytes, SHA-256).
+- `--inventory` adds the SHA-256 of the whole `.wiff.scan` and `directory` (every entry: kind, bytes, CLSID, state bits, creation and modification FILETIME as hex). A refused sample is listed with its reason, never hidden: a code the reader refuses, a TOF experiment or block, periods, an unknown block version. Exit 3 when any sample is not `ok`.
+- Built: `mzlab-cli wiff verify OUT.wiff --against SRC.wiff...`, schema `wiff.verify/1`. Each output sample is matched to the source sample with the same section SHA-256 (an empty injection: the same name) and compared stream by stream (path without the sample and method numbers) and on the directory metadata; the streams shared by all samples must equal those of the first source; `equal` is the answer and `differences` the evidence. Exit 0 equal, 1 any difference or a sample that is not `ok`.
+- The site serves the same two functions from the lazily loaded module `wiffwrite` (`wiff_list`, `wiff_verify`, `crates/mzlab-lettori-wasm/src/wiffwrite.rs`); `tests/test_wiff_inventory_wasm.py` compares its text with the CLI's byte for byte.
+- Planned, not built:
 - `mzlab-cli wiff write --out OUT.wiff SRC.wiff[#N[,M..]]... [--exclude SRC.wiff#N]... [--renumber keep|sequential] [--dry-run] [--force] [--json]`: positional sources in output order (no `#`: every sample of that file); `--dry-run` prints the plan (`wiff.plan/1`: output number, source, bytes copied, method, collisions, refusals, projected sizes) and writes nothing; a real run prints `wiff.write/1` (the plan plus SHA-256 of both outputs, `verified`).
-- `mzlab-cli wiff split IN.wiff --out DIR` (one pair per sample; sugar over `write`). `mzlab-cli wiff verify OUT.wiff --against SRC.wiff... [--json]`: `wiff.verify/1`, per output sample the matching source sample and each stream/section `equal: true|false`.
+- `mzlab-cli wiff split IN.wiff --out DIR` (one pair per sample; sugar over `write`).
 - Streams: stdout one JSON document with `--json`, progress and warnings on stderr, texts through `lang/` keys (`err.wiff.*`, `warn.wiff.*`).
 - Exit codes (the pattern of `validate` and `flow`): 0 done and verified; 1 done but `verify` found a difference (the output is removed, nothing is left behind); 2 usage, read or write error; 3 plan refused (unsupported variant, damaged section, unresolved collision): nothing written.
 - Writes are atomic (temp name then rename), refuse an output equal to an input, refuse to overwrite without `--force`.
@@ -93,8 +98,8 @@ Decisions asked (recommendation first):
 - Wasm cap (numbers from `tools/moduli/*.toml`; the writer's size is an ESTIMATE, to be measured with `python3 tools/moduli.py --misura` in the writer PR): OLE writer + plan + copy loops about 1 000-1 400 lines of Rust, estimated +20 to +45 KB optimized.
   - in `lettori-sciex` (485 158 B, cap 486 400, room 1 242 B): +4 to +9 %, far above the 1 % rule.
   - in `motore` (2 147 104 B, cap 2 183 168, room 36 064 B): +1 to +2 % of the module; the low end fits under the cap, the high end passes it by less than the 1 % allowance (21 832 B), the middle is unclear until measured.
-  - in a NEW lazily loaded module `wiffwrite` (like the `lettori-*` modules, loaded only when the user combines files): no change to any existing cap, but a new cap entry in `tools/moduli/`: a limit change, so by the standing rule I stop and ask (D7). Recommended.
-  - No cap or limit is changed by this study.
+  - the module `wiffwrite` (like the `lettori-*` modules, loaded only on use) holds the inventory today and takes the writer next, with its own entry `tools/moduli/lettori-wiffwrite.toml`; no existing cap changes (owner decision D7). Its numbers are in `wasm-caps-measurements.md`.
+  - No existing cap or limit is changed.
 
 ## Unknowns and experiments
 - E1 `.wiff.scan` coverage map of real files: bytes before the first section, between sections, after the last, and what the 44-byte section lead and the 12 bytes after the marker hold. Read-only tool in the first implementation PR (`wiff list --inventory`), run by the owner on his files (or in the private data chat).
@@ -107,7 +112,7 @@ Decisions asked (recommendation first):
 - E8 How often real files hold unindexed sections or truncated `.scan` tails (the reader's `losses` already counts them).
 
 ## Next steps (each one PR, after the owner answers D1-D7)
-1. `wiff list --json --inventory` + `wiff verify`: read-only, no OLE writer; settles E1-E5 on real files and gives the owner the evidence tool.
+1. Done: `wiff list --json --inventory` and `wiff verify`, read only, no OLE writer; the owner runs them on real files to settle E1-E5 (E3, every place a sample number occurs, is not searched by the tool).
 2. OLE writer in core with an identity copy of one sample file and its round-trip test; owner checklist step 1.
 3. Remove and add, CLI first; owner checklist steps 3-5.
 4. Site and app surfaces with the parity tests.

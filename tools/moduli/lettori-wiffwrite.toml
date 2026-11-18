@@ -1,0 +1,9 @@
+uscita = "wasm-lettori/wiffwrite"
+pacchetto = "mzlab-lettori-wasm"
+feature = "wiffwrite"
+senza_default = true
+wasm_opt = "@estesi"
+parte = "lettori"
+tetto = 250880
+misura = 248118
+nota = "new module, own cap: measured plus margin, rounded to 1 KiB; the read-only .wiff inventory and verify (mzlab-cli wiff list|verify), its own module, loaded only on use"
