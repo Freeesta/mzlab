@@ -43,14 +43,14 @@ else:                                                      # fresh sources of mz
 
 DATA = ROOT / "tests" / "data" / "gruppi"
 TRUTH = json.loads((DATA / "attesi.json").read_text())
-COND = TRUTH["metadata"]["condizioni"]; REF = "Reference"
+COND = TRUTH["metadata"]["conditions"]; REF = "Reference"
 GROUPS = [DATA / n for n in sorted(os.listdir(DATA)) if n.endswith(".mzML")]
 assert len(GROUPS) == 38, len(GROUPS)
 # truth: a compound is present in a condition when it is in a treated file (t5, t10) of it; keyed by the nominal m/z
 PRESENT = {}
-for c, v in TRUTH["composti"].items():
+for c, v in TRUTH["compounds"].items():
     if c == "Parent": continue
-    PRESENT[v["mz"]] = {k: any(f["composti"][c]["presente"] for n, f in TRUTH["file"].items() if f["condizione"] == k and f["tempo"] != "t0") for k in COND}
+    PRESENT[v["mz"]] = {k: any(f["compounds"][c]["present"] for n, f in TRUTH["files"].items() if f["condition"] == k and f["time"] != "t0") for k in COND}
 MS2_DIR = tmp / "ms2"
 SHARED = lr_synth.write_ms2(MS2_DIR, [{"precursor": 273.0, "ce": 10.0, "peaks": [(1.8, 0.07, 6e5)]}], None, name="MS2_shared.mzML")      # TP2 (273): in O2 and Air
 ONLY_O2 = lr_synth.write_ms2(MS2_DIR, [{"precursor": 257.0, "ce": 10.0, "peaks": [(2.2, 0.07, 6e5)]}], None, name="MS2_O2.mzML")        # TP1 (257): linked in O2 only

@@ -60,7 +60,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Expected: the area is the integral over the real retention times (trapezoid); |log2(area/true)| = 0.
 - Observed: `cargo test -p mzlab-cli the_xic_area_follows_uneven_scans -- --nocapture` prints |log2| to the XIC 1.10, 1.08, 1.08, 1.07, 1.05, 1.07 with `window` and 0.0000 x 6 with `xic`; `docs/agenti/mzfeat-prove.md` records -0.48 log2 for `window` on simulated DDA. The bias follows the local scan density, so it changes with co-eluting precursors and is not a constant factor.
 - Fix: make `xic` (trapezoid on the real retention times) the default of `area_from`.
-- Status: OPEN (owner decision): reproduced (|log2| 1.10, 1.08, 1.08, 1.07, 1.05, 1.07 with `window`, 0 with `xic`); the fix is a new default of `area_from`.
+- Status: FIXED: `area_from` defaults to `xic` (|log2| 0.0000 x 6 on uneven scans, was 1.10 to 1.05); the unit-resolution recipe keeps `window`; the old behaviour is `det.area_from=window`.
 
 ### B2 - wrong result - targeted cells lose 12 % of a clean Gaussian
 - Place: `crates/mzlab-core/src/peakq.rs:197-232` (`detect_prominence`: limits where the smoothed trace exceeds 5 % of the apex, area above the straight line between the limits), consumed by `crates/mzlab-feat/src/target/extract.rs:120`.
