@@ -106,8 +106,7 @@ try:
             pg.click(n0 % 2); pg.keyboard.type("Caffeine"); pg.keyboard.press("Enter")            # the row of Sample_A, channel 253.1: the whole group
             wait_for_js(pg, "MANINT.state().csv.split('\\n').filter(l => l.includes(',Caffeine,')).length === 4", timeout=60000)
             need(all(pg.evaluate(f"document.querySelector('{n0 % i}').value") == "Caffeine" for i in (1, 2, 3, 4)), "the name goes to the same peak of every sample")
-            lb = pg.evaluate(LB)
-            need(sum("Caffeine" in l["tip"] for l in lb) >= 4, "the name is in the hover text")
+            need(pg.evaluate("[...document.querySelectorAll('#manint input[data-nm]')].filter(i => i.value === 'Caffeine').length") >= 4, "the name is on every row of the card")
             pg.click(n0 % 4); pg.keyboard.press("Control+a"); pg.keyboard.type("Caffeine C"); pg.keyboard.press("Alt+Enter")     # Sample_C alone
             wait_for_js(pg, "MANINT.state().csv.includes(',Caffeine C,')", timeout=60000)
             got = [pg.evaluate(f"document.querySelector('{n0 % i}').value") for i in (1, 2, 3, 4)]
