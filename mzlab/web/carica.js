@@ -29,7 +29,7 @@
   window.carica = function (n) { return add(n); };
   // «Da dove viene questo ione?» (origine.js) is read on its first use: the module puts the real openOrigin in place of this one
   window.openOrigin = function (a) { return add("m:origine.js").then(function () { return window.openOrigin(a); }); };
-  // Tools loaded on first use, not in L (docs/agenti/avvio.md): the download helpers and the command palette (Ctrl/Cmd+K) here, the
+  // Tools loaded on first use, not in L (docs/agenti/startup.md): the download helpers and the command palette (Ctrl/Cmd+K) here, the
   // periodic table in tables.js, the MSn infusion tools in TIPOF.infusione (tipo-file.js). A stub waits for the script, which then replaces it.
   ["dlx", "dlc"].forEach(function (g) { window[g] = function () { var a = arguments; return add("xlsx.js").then(function () { return window[g].apply(null, a); }); }; });
   var opening = false;

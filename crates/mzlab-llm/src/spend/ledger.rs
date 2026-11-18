@@ -1,4 +1,4 @@
-//! The ledger of the public proxy (`proxy/assist-proxy.js`, `docs/agenti/assistente-proxy.md`): micro-dollar counters per session (`s:`), per IP hash
+//! The ledger of the public proxy (`proxy/assist-proxy.js`, `docs/agenti/assistant-proxy.md`): micro-dollar counters per session (`s:`), per IP hash
 //! (`ip:`), per UTC day and per month, as a JSON state that the host keeps in one serialized store. `admit` reserves the worst case of a call before it
 //! is forwarded and refuses it when any cap would pass; `settle` puts the true cost in place of the reservation; `rollover` starts a new day. Pure: no
 //! clock, no randomness (the caller hands over the day and the entropy of the salt).

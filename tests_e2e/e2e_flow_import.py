@@ -1,4 +1,4 @@
-"""Flow, the «Import data» card (docs/agenti/flow-grafica.md): it says what the Data tab holds (no file / N files), shows no stray «null» and no «Ready.».
+"""Flow, the «Import data» card (docs/agenti/flow-graphics.md): it says what the Data tab holds (no file / N files), shows no stray «null» and no «Ready.».
 Run from the repo root: python3 tests_e2e/e2e_flow_import.py"""
 import subprocess, sys, tempfile, socket
 from pathlib import Path

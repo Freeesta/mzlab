@@ -60,7 +60,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Expected: the area is the integral over the real retention times (trapezoid); |log2(area/true)| = 0.
 - Observed: `cargo test -p mzlab-cli the_xic_area_follows_uneven_scans -- --nocapture` prints |log2| to the XIC 1.10, 1.08, 1.08, 1.07, 1.05, 1.07 with `window` and 0.0000 x 6 with `xic`; `docs/agenti/mzfeat-prove.md` records -0.48 log2 for `window` on simulated DDA. The bias follows the local scan density, so it changes with co-eluting precursors and is not a constant factor.
 - Fix: make `xic` (trapezoid on the real retention times) the default of `area_from`.
-- Status: OPEN (owner decision): reproduced (|log2| 1.10, 1.08, 1.08, 1.07, 1.05, 1.07 with `window`, 0 with `xic`); the fix is a new default of `area_from`.
+- Status: FIXED: `area_from` defaults to `xic` (|log2| 0.0000 x 6 on uneven scans, was 1.10 to 1.05); the unit-resolution recipe keeps `window`; the old behaviour is `det.area_from=window`.
 
 ### B2 - wrong result - targeted cells lose 12 % of a clean Gaussian
 - Place: `crates/mzlab-core/src/peakq.rs:197-232` (`detect_prominence`: limits where the smoothed trace exceeds 5 % of the apex, area above the straight line between the limits), consumed by `crates/mzlab-feat/src/target/extract.rs:120`.
@@ -98,7 +98,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Status: OPEN (owner decision): naming the estimator or computing it on the raw trace changes exported S/N columns.
 
 ### B7 - convention unclear - areas in counts x s and counts x min
-- Place: `crates/mzlab-core/src/baseline.rs` and `peakq.rs` (minutes) against the manual and feature areas (seconds); stated in `docs/agenti/dati-integrazione.md`.
+- Place: `crates/mzlab-core/src/baseline.rs` and `peakq.rs` (minutes) against the manual and feature areas (seconds); stated in `docs/agenti/data-integration.md`.
 - Expected: one unit for the same quantity (H sigma sqrt(2 pi) = 125.331 counts x min = 7519.88 counts x s for the test Gaussian).
 - Observed: `mzlab-cli peak-area g1.csv --from 0.6 --to 1.4` -> 7519.8848; `mzlab-cli peak-auto g1.csv` -> 125.291.
 - Fix: counts x s everywhere, with the unit in the field name.

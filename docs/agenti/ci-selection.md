@@ -1,6 +1,6 @@
 # CI: which tests run and how they are split
 
-The pytest shards of `test.yml`: `target` cache, diff-based exclusions (`doppi`, `aree`), shared builds (`prebuilt`), order and halves. The rest of the conditional workflows is in `ci-veloce.md`.
+The pytest shards of `test.yml`: `target` cache, diff-based exclusions (`doppi`, `aree`), shared builds (`prebuilt`), order and halves. The rest of the conditional workflows is in `ci-fast.md`.
 
 - The `target` cache is saved only by the 3.11 shards, one per shard (key `pytest-wasm-<shard>-…-rel`, with the hash of `tools/ci_cargo_mtime.py` and of the shim: changing the shim rebuilds the cache); the `solo311` shard runs the `--release` builds of the slow tests.
 - `tools/ci_pytest_doppi.py <base>` (step `doppi`) excludes `test_guardie_memoria`, `test_feat_wasm` and `test_flow_determinismo` if the diff triggers the Rust filter of `rust.yml`, which already runs them. Test: `tests/test_ci_pytest_doppi.py`.

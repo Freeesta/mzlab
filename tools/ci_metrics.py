@@ -2,7 +2,7 @@
 """Statistics of the CI bottlenecks: one JSONL line per event, no log text, no personal data.
 
 Used by .github/workflows/stat-ci.yml (the `registra-*` commands, one event per call) and by hand (`riepilogo`).
-Standard library only. The data file `eventi.jsonl` lives on the orphan branch `stat-ci` (docs/agenti/ci-veloce.md).
+Standard library only. The data file `eventi.jsonl` lives on the orphan branch `stat-ci` (docs/agenti/ci-fast.md).
 
     python3 tools/ci_metrics.py registra-run --evento E.json --nuovi N.jsonl   # workflow_run completed: run + failed jobs
     python3 tools/ci_metrics.py registra-pr --evento E.json --nuovi N.jsonl    # pull_request_target: opened/push/merged/closed

@@ -88,7 +88,7 @@ fn truth(c: &str, t: &str, compound: &str) -> f64 {
     let a: Vec<f64> = ["r1", "r2"]
         .iter()
         .map(|r| {
-            v["file"][format!("{c}_{t}_{r}.mzML")]["composti"][compound]["area_attesa"]
+            v["files"][format!("{c}_{t}_{r}.mzML")]["compounds"][compound]["expected_area"]
                 .as_f64()
                 .unwrap()
         })

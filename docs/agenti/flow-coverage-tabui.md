@@ -1,5 +1,5 @@
 # Coverage of Tabui (mzFinder) by mzFlow
-Package to close the gaps: `flow-pacchetto-tabui.md`.
+Package to close the gaps: `flow-package-tabui.md`.
 Snapshot of the code to decide whether Tabui can be retired: for each Tabui function, the mzFlow step or model that covers it and whether it can run today. "Executable" = the step has an executor in `EXECUTORS` of `crates/mzlab-cli/src/flow.rs` (`flow::executable`), so it runs with `mzlab-cli flow run` and with "Run on this computer" of the desktop app (`flow/run`, same engine).
 The site runs some of the steps with the web executor (`F.runners.web`, "This browser", `docs/agenti/flow-web.md`): `index.mzidx`, `features.detect|align|gapfill`, `tp.generate`, `tp.link@2`, `tp.filter@2`, `tp.position`, `tp.network`, `tp.review`, `tp.dig_lr`, `export.table_csv`, `export.mztab`, `table.filter` and the MSn steps; the others stay on the computer (`via: "computer"`). `F.runners` has `cli`, `web` and, in the app, `desktop`.
 

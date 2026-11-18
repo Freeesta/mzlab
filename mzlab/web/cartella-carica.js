@@ -1,6 +1,6 @@
 // @ts-strict
 "use strict";
-// Loading a whole folder (docs/agenti/dati.md): a folder chosen with the «Load a folder» button (input webkitdirectory) or dropped on the start box is read
+// Loading a whole folder (docs/agenti/data.md): a folder chosen with the «Load a folder» button (input webkitdirectory) or dropped on the start box is read
 // recursively and every compatible file in it goes through the usual upload(); the others are only counted. Files keep the folder they came from (`dir`): a
 // .wiff and its .wiff.scan are paired only inside the same folder, and two files with the same name in different folders are told apart.
 // The pure parts (dir, kind, split, pairKey, uniqueNames, readEntries) have no DOM and are tested in node (tests/test_cartella_carica.py).
