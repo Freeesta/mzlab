@@ -328,10 +328,10 @@ fn each_sample_of_a_wiff_has_the_channels_of_its_mzml() {
         first.stderr
     );
     let bad = run(&["channels".into(), wiff, "--sample".into(), "9".into()]);
-    assert_eq!(bad.code, 2);
+    assert_eq!(bad.code, 5);
     assert!(
         bad.stderr.starts_with(
-            "error: This file has no sample 9: its samples are 1, 2. (err.canali.sample)"
+            "error: This file has no sample 9: its samples are 1, 2. (err.sample.unknown"
         ),
         "{}",
         bad.stderr

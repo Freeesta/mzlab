@@ -11,35 +11,13 @@ use mzlab_core::flow::{file_roots, parse, plan_json, Run};
 use mzlab_core::json::Out;
 
 use crate::convert_entries::{entries, Entry};
+pub(crate) use crate::convert_help::HELP;
 use crate::convert_report::{compression_sets, head_of, partial_lines, report, Item};
 use crate::flow::{steps, DoneFn, FileRunner};
 use crate::flow_base::convert_file;
 use crate::flow_run::{apply_set, fail, fill_inputs, prepare, problem_text, run_checked};
 use crate::flow_set::{digest_known, is_set_folder, known_sha};
 use crate::Outcome;
-
-pub(crate) const HELP: &str = "mzlab-cli convert: vendor files to indexed mzML, the step convert.mzml of the Flow page.
-
-usage: mzlab-cli convert INPUT... --out FOLDER [--compression KIND] [--zlib N] [--numpress] [--peaks WHICH] [--workers N] [--report FILE.json] [--fresh] [--set conv.NAME=VALUE...]
-
-  INPUT...             a file, a maker's folder (.D, .d, .raw) or a folder to look through; a .wiff is taken with its .wiff.scan, and a dataset
-                       with several samples gives one mzML per sample
-  --out FOLDER         where the mzML files are written: NAME.mzML (NAME-ID.mzML for the sample ID of a dataset with several); the cache is in
-                       FOLDER/.convert
-  --compression KIND   standard (zlib level 2, default), smallest (zlib and MS-Numpress) or none (uncompressed): the short form of the two options below
-  --zlib N, --numpress zlib level of the arrays, 0 (none) to 9 (smallest), default 2; MS-Numpress coding of m/z and intensities
-  --peaks WHICH        the peaks written: file (those of the file, default; a profile file keeps its points and the run warns), profile (the
-                       points of the profile) or mzlab (centroids of mzLab)
-  --workers N          files converted at once (default: the cores but one, 1 to 4, fewer when the memory budget of the computer does not give
-                       each its share, with a note; the bytes written do not depend on it)
-  --report FILE.json   one object per input: input, output, sha256, spectra, seconds, skipped, conv/1, warnings (centroids with --peaks mzlab); or input, error, cause
-  --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
-                       program is not converted again
-  --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
-  --help               this text
-
-progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 3 a file was written with scans missing (conv/1 parziale; a
-warning line names it), 4 an input is missing or holds nothing to convert";
 
 #[derive(Default)]
 pub(crate) struct Args {
@@ -50,6 +28,8 @@ pub(crate) struct Args {
     /// `--workers`; `None` = the default of `workers_for`
     pub(crate) workers: Option<usize>,
     fresh: bool,
+    /// `--sample`: the ids to convert of a dataset with several samples
+    sample: Option<Vec<u32>>,
 }
 
 fn value(it: &mut impl Iterator<Item = String>, name: &str) -> Result<String, String> {
@@ -78,6 +58,12 @@ pub(crate) fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
             }
             "--set" => a.sets.push(value(&mut it, &x)?),
             "--fresh" => a.fresh = true,
+            "--sample" => {
+                a.sample = Some(
+                    crate::sample_select::parse(&value(&mut it, &x)?)
+                        .map_err(|e| crate::error_text::human_error(&e))?,
+                )
+            }
             "--workers" => {
                 let v = value(&mut it, &x)?;
                 a.workers = Some(
@@ -417,6 +403,17 @@ fn overwrites(entries: &[Entry], out: &Path) -> Option<String> {
     })
 }
 
+/// The work folder `work` (inside `out`), or the usage failure that says `out` cannot be written.
+fn make_work(work: &Path, out: &Path) -> Result<(), Outcome> {
+    std::fs::create_dir_all(work).map_err(|e| {
+        fail(
+            2,
+            &format!("{}: {e}", out.display()),
+            "--out must be a folder that can be written",
+        )
+    })
+}
+
 /// `mzlab-cli convert ARGS...` (the arguments after `convert`).
 pub fn run(args: Vec<String>) -> Outcome {
     let a = match parse_args(args) {
@@ -434,12 +431,8 @@ pub fn run(args: Vec<String>) -> Outcome {
         return fail(2, "convert needs --out FOLDER", "mzlab-cli convert --help");
     };
     let work = out.join(".convert");
-    if let Err(e) = std::fs::create_dir_all(&work) {
-        return fail(
-            2,
-            &format!("{}: {e}", out.display()),
-            "--out must be a folder that can be written",
-        );
+    if let Err(o) = make_work(&work, &out) {
+        return o;
     }
     let out = out.canonicalize().unwrap_or(out);
     let units = match gather(&a.inputs, &out) {
@@ -452,7 +445,10 @@ pub fn run(args: Vec<String>) -> Outcome {
             )
         }
     };
-    let list = entries(&units);
+    let list = match entries(&units, a.sample.as_deref()) {
+        Ok(l) => l,
+        Err(e) => return crate::sample_select::fail(&e, false),
+    };
     if let Some(to) = overwrites(&list, &out) {
         return fail(
             2,

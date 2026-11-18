@@ -14,7 +14,7 @@ const HEADS = () => /** @type {Record<string, string>} */ ({ channel: t("canali.
   gaussian: t("int.tbl.gauss"), asymmetry: t("int.tbl.asym"), noise_score: t("int.tbl.nscore") });
 /** The tooltips of the columns of a split window. */
 const TIPS = () => /** @type {Record<string, string>} */ ({ overlap: t("canali.manint.h.overlap.tip"), pv: t("canali.manint.h.pv.tip"), label: t("canali.manint.nm.tip"),
-  area: t("canali.manint.h.area.tip"), below: t("canali.manint.h.below.tip"), sn_zone: t("int.tbl.sn.title"), gaussian: t("int.tbl.gauss.h"), asymmetry: t("int.tbl.asym.h"), noise_score: t("int.tbl.nscore.h") });
+  area: t("canali.manint.h.area.tip"), below: t("canali.manint.h.below.tip"), sn_zone: t("int.tbl.sn.title"), gaussian: t("canali.manint.h.gauss.tip"), asymmetry: t("canali.manint.h.asym.tip"), noise_score: t("canali.manint.h.nscore.tip") });
 /** The optional column groups the user switched on (INTOPT of picchi.js: the same switches as the dialog's, one undoable setting), as the engine names them. */
 const optCols = () => typeof INTOPT === "undefined" ? [] : [INTOPT.sn && "sn", INTOPT.par && "fig", INTOPT.q && "quality"].filter(Boolean);
 /** The windows document the engine reads: the windows alone, or with the optional columns asked for. @param {string} w */

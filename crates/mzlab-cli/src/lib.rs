@@ -15,6 +15,7 @@ pub mod citation;
 mod cmd;
 pub mod convert;
 mod convert_entries;
+mod convert_help;
 mod convert_report;
 mod dad_cmd;
 pub mod error_text;
@@ -161,11 +162,13 @@ mod mzml_variants_tests;
 mod name_rule_tests;
 #[cfg(not(target_family = "wasm"))]
 pub mod normative;
+mod pair_cmd;
 mod par;
 mod peaks_auto_cmd;
 mod peaks_auto_lr_cmd;
 mod peaks_edges_cmd;
 mod plain;
+mod sample_select;
 mod samples_cmd;
 mod steps_cmd;
 #[cfg(not(target_family = "wasm"))]
@@ -187,10 +190,20 @@ pub(crate) use idx_open::open;
 
 /// The CSV of the series `files`, indexes kept in `tmp` (the caller owns it: WASI has no temporary folder).
 pub fn features(files: &[PathBuf], params: &str, tmp: &Path) -> Result<String> {
+    features_of(files, &vec![String::new(); files.len()], params, tmp)
+}
+
+/// `features` of the samples `labels` name: `NAME@ID` is the sample `ID` of the dataset `files[k]`, an empty label the first (or only) sample.
+pub fn features_of(
+    files: &[PathBuf],
+    labels: &[String],
+    params: &str,
+    tmp: &Path,
+) -> Result<String> {
     let idxs: Vec<PathBuf> = (0..files.len())
         .map(|k| tmp.join(format!("{k}.mzidx")))
         .collect();
-    let (recipe, detected, weak) = crate::par::index_and_detect(files, &idxs, params)?;
+    let (recipe, detected, weak) = crate::par::index_and_detect(files, labels, &idxs, params)?;
     let mut series = crate::par::Series(detected, weak);
     let origin = run::origin_of(&mut series)?;
     eprintln!("align {} file(s)", files.len());
