@@ -1,6 +1,6 @@
 //! RV-01: the memory work on the `.raw` reader (trailers and events kept compact) changes no result. Proof on the real files: the three reads of a trailer
 //! agree field by field, and `opentfraw` tests that the compact event table gives back every event. Regression pins: the SHA-256 of the `.mzidx`, the mzML,
-//! the `metodo/1` document and the headers of a sample of scans; a change meant to change the output re-pins them (`RAW_EQ_PRINT=1`) and says which change.
+//! the `method/1` document and the headers of a sample of scans; a change meant to change the output re-pins them (`RAW_EQ_PRINT=1`) and says which change.
 //! Needs the private data repository (`MZLAB_DATI`; LAB-A by `dati/formati/raw_veloce_alias.tsv`; the big public DDA as `$MZLAB_RAW_BAF` or by the name its download row in `dati/formati/_grandi_thermo_aperti.tsv` gives); a missing file skips its case.
 use std::io::Cursor;
 use std::path::{Path, PathBuf};

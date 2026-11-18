@@ -77,8 +77,8 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | `.mzlib` format, library parsers, indexes and scores (`crates/mzlab-lib`) | `docs/agenti/libraries.md` |
 | user lists (transformations, adducts, suspects: CSV with per-row errors, `liste/1`, SHA-256 for `prov/1`) | `docs/agenti/lists.md` |
 | LLM assistant and external agents: principles, choices, risks, unrealized proposals | `docs/agenti/llm-choices.md` |
-| subagents, reads and reader runner on the `llm-agente.js` page (area: LLM assistant: `strumenti/1` catalog) | `docs/agenti/llm-subagents.md` |
-| LLM assistant: `strumenti/1` catalog | `docs/agenti/llm.md` |
+| subagents, reads and reader runner on the `llm-agente.js` page (area: LLM assistant: `tools/1` catalog) | `docs/agenti/llm-subagents.md` |
+| LLM assistant: `tools/1` catalog | `docs/agenti/llm.md` |
 | map of the open path of every file (click → screen, site and app, by format), strategies present/absent, file batches for external assistants (`tools/batch_gemini.py`) | `docs/agenti/map-loading.md` |
 | chromatogram drawing cost on dense traces (`tools/bench_charts.py`: 10^6 points, 20 files, wheel, drag, resize, line); 100,000-row HR table in "Statistics" (`tools/bench_table_hr.py`: KMD, click, "Data") | `docs/agenti/measurements-charts.md` |
 | V8 and wasm code cache of the site's scripts under the service worker: trace of main (0 hits), control page (which SW answers Chromium code-caches), S3 (headers stored with the copy, adopted, remeasured) and upper bound (`tests_e2e/misura_avvio_sw.py`) | `docs/agenti/measurements-code-cache.md` |
@@ -97,7 +97,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | memory: budget choice rules, notice user experience, open proposals (`memoria-avviso.js`) | `docs/agenti/memory-choices.md` |
 | "file too large" in the browser: when it appears (files opened together, formats read whole), measurements by size and file count, `openFiles`, `whole`, scans shared between slots | `docs/agenti/memory-limits.md` |
 | memory contract of the WASM modules (`mzlab-core::budget`, offset outputs, slabs, test flow) | `docs/agenti/memory.md` |
-| acquisition method (`metodo/1`, `method.rs`, `method_wiff`, `method_raw`, schema) | `docs/agenti/method.md` |
+| acquisition method (`method/1`, `method.rs`, `method_wiff`, `method_raw`, schema) | `docs/agenti/method.md` |
 | main metrics over time (`tools/metriche.py`, `stat-ci` branch, trends) | `docs/agenti/metrics.md` |
 | chemical structure record `mol/1` (`crates/mzlab-mol`: types, JSON, core hash; SMILES/molfile readers; CIP R/S and E/Z descriptors, `cip/1`, `disegno-cip.js`) | `docs/agenti/mol.md` |
 | molecule database (`crates/mzlab-core/src/molecules/`, `molecules/1`: record, CSV and canonical JSON, search, catalog/imported/user levels, catalog `mzlab/web/molecole/catalogo.csv`, `api/molecules/*` routes) | `docs/agenti/molecules.md` |

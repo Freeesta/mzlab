@@ -1,6 +1,6 @@
 // @ts-strict
 "use strict";
-// The inclusion list of a Thermo method (metodo/1: ms.periodi[].esperimenti[].inclusione) in the Method window, read only, at the head of "Method recorded in the file" (metodo-doc.js).
+// The inclusion list of a Thermo method (method/1: ms.periodi[].esperimenti[].inclusione) in the Method window, read only, at the head of "Method recorded in the file" (metodo-doc.js).
 // Each row has two short buttons, «XIC» and «MS2», that run the actions "metodo.xic" and "metodo.ms2" of the registry azioni/1 (so the right-click menu and Shift+F10 have them too);
 // the XIC is the usual one (openXic with `diretto`, pannelli.js), the MS2 is the one DDA.ms2For finds for the precursor inside the RT window of the entry (dda.js). Nothing here is turned into expected products.
 

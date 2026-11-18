@@ -1,4 +1,4 @@
-//! The run folder of `mzlab-cli flow run`: `plan.json` (the plan as run), the files of the steps, `prov.json` and `corsa.json`, and the exit code.
+//! The run folder of `mzlab-cli flow run`: `plan.json` (the plan as run), the files of the steps, `prov.json` and `report.json`, and the exit code.
 //! Called by `flow_run.rs` once the plan, the settings and the inputs are checked; `probe_plan` counts the cache hits of a plan (`flow/reuse`).
 
 use std::collections::{HashMap, HashSet};
@@ -80,11 +80,11 @@ pub(crate) fn write_run(
         );
     }
     let run_report = crate::flow_report::report(&out)
-        .and_then(|c| std::fs::write(out.join("corsa.json"), c).map_err(crate::flow::io));
+        .and_then(|c| std::fs::write(out.join("report.json"), c).map_err(crate::flow::io));
     if let Err(e) = run_report {
-        let err = Error::new("err.cli.out").with("path", out.join("corsa.json").display());
+        let err = Error::new("err.cli.out").with("path", out.join("report.json").display());
         let hint = "prov.json and the files of the steps are written";
-        return fail(st, 1, &err, &format!("corsa.json: {e}"), hint);
+        return fail(st, 1, &err, &format!("report.json: {e}"), hint);
     }
     let mut o = summary(&run, steps, &out);
     if st.json {
@@ -129,7 +129,7 @@ fn summary(run: &Run, steps: usize, out: &Path) -> Outcome {
             }
         }
         stderr += &format!(
-            "hint: the other outputs, prov.json and corsa.json are in {}\n",
+            "hint: the other outputs, prov.json and report.json are in {}\n",
             out.display()
         );
         1

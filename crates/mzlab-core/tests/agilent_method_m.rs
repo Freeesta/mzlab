@@ -1,4 +1,4 @@
-//! The `metodo/1` document of the real Agilent method folders `GC-MS/*.m` (skipped without the data repository): the compounds, qualifier ions and calibration levels
+//! The `method/1` document of the real Agilent method folders `GC-MS/*.m` (skipped without the data repository): the compounds, qualifier ions and calibration levels
 //! are the values read from `quantitative.xml` with an independent parse (Python ElementTree), every name/value of the files is in `campi`, and every key is in the schema.
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
@@ -52,7 +52,7 @@ fn document(dir: &Path) -> (Value, usize) {
 
 fn schema_has_all_keys(doc: &Value, comp: &[Value]) {
     let schema: Value =
-        serde_json::from_str(include_str!("../../../mzlab/web/schemi/metodo-1.json")).unwrap();
+        serde_json::from_str(include_str!("../../../mzlab/web/schemi/method-1.json")).unwrap();
     for key in doc.as_object().unwrap().keys() {
         assert!(
             !schema["properties"][key.as_str()].is_null(),
@@ -76,7 +76,7 @@ fn the_geosmin_and_mib_methods_say_what_quantitative_xml_says() {
     let Some(d) = gcms() else { return };
     for (m, rts, sim) in [("scan", [7.195, 10.0], false), ("SIM", [7.7, 10.6], true)] {
         let (doc, n_items) = document(&d.join(format!("Geosmin and MIB method for {m}.m")));
-        assert_eq!(doc["schema"], "metodo/1");
+        assert_eq!(doc["schema"], "method/1");
         assert_eq!(doc["origine"]["formato"], "agilent-m");
         let q = &doc["quantificazione"];
         let comp = q["composti"].as_array().unwrap();

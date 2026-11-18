@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "metodo/1",
+  "title": "method/1",
   "description": "Metodo di acquisizione di UN campione (o, per una cartella di metodo `.m` senza corsa, il metodo di analisi dei dati). Un valore sconosciuto è ASSENTE (mai null, mai 0); le sezioni vuote sono omesse; le unità stanno nel nome del campo.",
   "type": "object",
   "required": [
@@ -8,7 +8,7 @@
   ],
   "properties": {
     "schema": {
-      "const": "metodo/1"
+      "const": "method/1"
     },
     "origine": {
       "type": "object",

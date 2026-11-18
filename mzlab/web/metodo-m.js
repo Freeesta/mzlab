@@ -1,12 +1,12 @@
 // @ts-strict
 "use strict";
 // The Agilent method folders *.m loaded outside any run (AgilentD.held, cartella-carica.js) in the Method window: the engine (Rust, rust-metodo.js) turns the folder into its
-// `metodo/1` document (docs/agenti/method.md) and this file only draws the section «quantificazione»: what the method looks for, compound by compound, as the file says.
+// `method/1` document (docs/agenti/method.md) and this file only draws the section «quantificazione»: what the method looks for, compound by compound, as the file says.
 // Everything that comes from a file goes through EH().
 
 const METODO_M = (() => {
   /** @type {Map<string, any>} */
-  const docs = new Map();           // folder root -> metodo/1 document (or { error })
+  const docs = new Map();           // folder root -> method/1 document (or { error })
   /** @param {string} k @param {any} [p] */
   const T = (k, p) => I18N.t(k, p);
   const any = () => AgilentD.held.length > 0;

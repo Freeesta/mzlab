@@ -1,5 +1,5 @@
 //! `convert.mzml` and its `peaks` parameter on a synthetic profile mzML (numpress, the one open format the step takes): `--set c.peaks=mzlab` gives our
-//! centroids, the default keeps the profile and warns in `prov.json` and `corsa.json`, also when the step is taken again from the cache.
+//! centroids, the default keeps the profile and warns in `prov.json` and `report.json`, also when the step is taken again from the cache.
 
 use mzlab_core::mzml::Spectrum;
 use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options};
@@ -75,7 +75,7 @@ fn convert_peaks_mzlab_writes_our_centroids() {
 fn convert_peaks_file_keeps_the_profile_and_warns() {
     let (out, mzml) = run("file", &[]);
     assert!(mzml.contains("MS:1000128") && !mzml.contains("MS:1000035"));
-    for f in ["prov.json", "corsa.json"] {
+    for f in ["prov.json", "report.json"] {
         let t = std::fs::read_to_string(out.join(f)).unwrap();
         assert!(
             t.contains("\"warnings\":[\"warn.flow.profile\"]"),

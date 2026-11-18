@@ -1,4 +1,4 @@
-//! What `metodo/1` of a `.wiff` says more when the file is not from the 3200 QTRAP (feature `estesi`, the `sciex` readers module): the scheduled-MRM
+//! What `method/1` of a `.wiff` says more when the file is not from the 3200 QTRAP (feature `estesi`, the `sciex` readers module): the scheduled-MRM
 //! flag and window of each experiment, the strings of `DabsInfo` / `SampleTable`, the tables of `GLPTables` (calibration and tuning of the instrument,
 //! with the Analyst version that wrote the file) and the header of the DAD (points, channels and range). Layouts measured on the files of
 //! `dati/formati/sciex/wiff/` (`docs/agenti/wiff.md`); nothing here is read from a position that no file confirms.

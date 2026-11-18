@@ -1,5 +1,5 @@
 //! `mzlab-cli flow run PLAN.json`: a whole `mzflow/2` plan on files, with every parameter of the descriptors reachable by `--set`, the inputs found by
-//! name with `--in`, one progress line per step on stderr and the run folder (`plan.json`, the files of each step, `prov.json`, `corsa.json`).
+//! name with `--in`, one progress line per step on stderr and the run folder (`plan.json`, the files of each step, `prov.json`, `report.json`).
 //! Exit codes: 0 done, 1 some step failed, 2 usage, 3 plan not valid, 4 input files. Rules: `docs/agenti/cli.md`.
 
 use std::collections::HashMap;
@@ -27,7 +27,7 @@ usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] [--out FOLDER] [--set 
 
   PLAN.json                the plan; its inputs are files named in it
   --in FILE|FOLDER...      where the inputs are: a file is matched by its name, a folder holds files with those names (default: the folder of the plan)
-  --out FOLDER             the run folder: plan.json (the plan as run), one file per step, prov.json and corsa.json
+  --out FOLDER             the run folder: plan.json (the plan as run), one file per step, prov.json and report.json
   --set INSTANCE.NAME=V    a parameter of a step instance (INSTANCE is its id, or the step id when the plan has one instance of it);
                            NAME may also be `algorithm` or `preset`; repeat for more
   --workers N              threads for the steps of a level and the files of a per-file step (default: the cores but one, 1 to 4, as the

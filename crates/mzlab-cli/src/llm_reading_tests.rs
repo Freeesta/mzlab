@@ -122,7 +122,7 @@ fn text(v: &Value) -> String {
 /// The input of `param-scelte/1`: the proposals of the rules for the unit-resolution series G01 and the answers of the user.
 fn proposals_input() -> String {
     let out = run(G01, "{}");
-    let mut o = String::from(r#"{"proposta-param/1":"#);
+    let mut o = String::from(r#"{"param-proposal/1":"#);
     o.push_str(&text(&out));
     o.push_str(r#","answers":{"goal":"transformation products"}}"#);
     o
@@ -132,7 +132,7 @@ fn proposals_input() -> String {
 fn choices_doc(input: &str, edit: &dyn Fn(&str, &Value) -> Option<String>) -> String {
     let doc = json(input);
     let props = doc
-        .get("proposta-param/1")
+        .get("param-proposal/1")
         .unwrap()
         .get("proposals")
         .unwrap();
@@ -172,7 +172,7 @@ fn a_changed_value_says_model_a_kept_one_names_its_rule() {
     let input = proposals_input();
     let doc = json(&input);
     let props = doc
-        .get("proposta-param/1")
+        .get("param-proposal/1")
         .unwrap()
         .get("proposals")
         .unwrap();

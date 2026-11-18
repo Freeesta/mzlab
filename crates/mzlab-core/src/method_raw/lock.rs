@@ -1,4 +1,4 @@
-//! The lock mass (internal calibrant) of a Thermo Orbitrap `.raw`, for `metodo/1.ms.calibrazione.lock_mass`: what the readable method says (`Use lock masses best`, the
+//! The lock mass (internal calibrant) of a Thermo Orbitrap `.raw`, for `method/1.ms.calibrazione.lock_mass`: what the readable method says (`Use lock masses best`, the
 //! `Lock Masses:` block with the `Pos`/`Neg List Name` and `Mass List`) and what the scan trailer records (`Number of Lock Masses`, `LM m/z-Correction (ppm)`). It only describes: the data are never corrected here.
 
 use crate::method::{num, obj, text, V};

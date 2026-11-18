@@ -1,5 +1,5 @@
 //! The record the browser writes: the reports of the jobs of the base chain (the files of a native run, the estimates and the memory of `job_meta`) give, through
-//! the route `record_prov`/`record_corsa`, the `prov.json` and `corsa.json` of `flow run` byte for byte, apart from the times and the heap.
+//! the route `record_prov`/`record_corsa`, the `prov.json` and `report.json` of `flow run` byte for byte, apart from the times and the heap.
 
 use crate::flow_run_tests::{fixture, flow_run, p, untimed};
 use mzlab_core::budget::sha256_hex;
@@ -151,7 +151,7 @@ fn without_modules(text: &str) -> String {
     )
 }
 
-/// The record the route gives of `jobs` is the `prov.json` and the `corsa.json` of `flow run` in `out`, apart from the times; gives the prov.
+/// The record the route gives of `jobs` is the `prov.json` and the `report.json` of `flow run` in `out`, apart from the times; gives the prov.
 fn same_record(out: &Path, plan: &str, jobs: &[String]) -> String {
     let mut body = Out::default();
     body.raw("{\"plan\":")
@@ -165,7 +165,7 @@ fn same_record(out: &Path, plan: &str, jobs: &[String]) -> String {
     let mut c = Out::default();
     c.raw("{\"prov\":").str(&prov).raw(",\"uscite\":[]}");
     let run = mzlab_core::flow::sched_route("record_corsa", &c.0).unwrap();
-    let native = without_modules(&std::fs::read_to_string(out.join("corsa.json")).unwrap());
+    let native = without_modules(&std::fs::read_to_string(out.join("report.json")).unwrap());
     assert_eq!(untimed(&run), untimed(&native));
     prov
 }

@@ -1,13 +1,13 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
- "$id": "proposta-param/1",
- "title": "proposta-param/1: the parameters of mzFlow proposed by rules from an ispezione/1",
- "description": "Format «proposta-param/1» (crates/mzlab-llm/src/params_rules.rs, docs/agenti/llm.md): one proposal per parameter with the rule `R-*` of docs/studi/assistente-dati/03-parametri.md §5, the signals it used, the confidence, whether the value is inside the limits of the step/1 (`range_ok`) and where the proof is; a signal that is absent is a question in `missing`, never an invented value. The same input gives the same bytes.",
+ "$id": "param-proposal/1",
+ "title": "param-proposal/1: the parameters of mzFlow proposed by rules from an inspection/1",
+ "description": "Format «param-proposal/1» (crates/mzlab-llm/src/params_rules.rs, docs/agenti/llm.md): one proposal per parameter with the rule `R-*` of docs/studi/assistente-dati/03-parametri.md §5, the signals it used, the confidence, whether the value is inside the limits of the step/1 (`range_ok`) and where the proof is; a signal that is absent is a question in `missing`, never an invented value. The same input gives the same bytes.",
  "type": "object",
  "additionalProperties": false,
  "required": ["schema", "series", "proposals", "missing", "warnings"],
  "properties": {
-  "schema": {"const": "proposta-param/1"},
+  "schema": {"const": "param-proposal/1"},
   "series": {"type": "string"},
   "proposals": {
    "type": "array",
@@ -24,7 +24,7 @@
      "signals": {"type": "array", "minItems": 1, "items": {"type": "string"}},
      "confidence": {"enum": ["high", "medium", "low"]},
      "range_ok": {"type": "boolean"},
-     "proof": {"type": "string", "pattern": "^ispezione:f[0-9]+:[a-z_]+$"}
+     "proof": {"type": "string", "pattern": "^inspection:f[0-9]+:[a-z_]+$"}
     }
    }
   },

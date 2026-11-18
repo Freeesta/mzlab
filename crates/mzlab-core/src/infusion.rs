@@ -176,7 +176,7 @@ pub(crate) fn json(o: &mut Out, m: Option<&Infusione>) {
     };
 }
 
-/// Whether the `.raw` method an mzML carries (`metodo/1` written by the converter of a `.raw`) has an LC part: `None` when the file is
+/// Whether the `.raw` method an mzML carries (`method/1` written by the converter of a `.raw`) has an LC part: `None` when the file is
 /// not a Thermo mzML, carries no such document or the `.raw` had no method.
 pub(crate) fn raw_lc<M: ReadAt>(m: &mut Mzml<M>) -> Result<Option<bool>> {
     if !m.nce()? {

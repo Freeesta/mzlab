@@ -14,5 +14,5 @@
   "method.doc.solvent": "Label of the row of an LC pump solvent in the recorded method; {ch} = channel (A, B...).",
   "method.m.error": "Error reading a .m method in the Method window; {name} = folder, {message} = reason.",
   "method.reg.go": "Accessible name of the button of an error-log entry in the method window: moves the cursor to its time; {t} = time in minutes.",
-  "method.doc.notes": "Title of the list, at the top of the method section in the Method window, of the metodo/1.avvisi entries (parts not decoded, missing, truncated)."
+  "method.doc.notes": "Title of the list, at the top of the method section in the Method window, of the method/1.avvisi entries (parts not decoded, missing, truncated)."
 }

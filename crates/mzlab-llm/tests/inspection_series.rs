@@ -1,4 +1,4 @@
-//! `ispezione/1` for a series: the QC files give their drift, the blanks their own signal, and a small budget drops the curves first.
+//! `inspection/1` for a series: the QC files give their drift, the blanks their own signal, and a small budget drops the curves first.
 
 mod inspect;
 

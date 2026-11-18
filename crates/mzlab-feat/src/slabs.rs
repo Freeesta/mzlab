@@ -126,7 +126,7 @@ pub enum Via {
 }
 
 impl Via {
-    /// The word `prov/1` and `corsa/1` report: `memory`, `slabs` or `refused`.
+    /// The word `prov/1` and `run-report/1` report: `memory`, `slabs` or `refused`.
     pub fn name(self) -> &'static str {
         match self {
             Via::Memory => "memory",

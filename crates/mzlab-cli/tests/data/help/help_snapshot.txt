@@ -7,11 +7,11 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan (flow run --help)
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)
        mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)
-       mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
+       mzlab-cli flow report RUNDIR [--out FILE]   the run-report/1 report of a run folder (prov.json and the files beside it)
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/1 record of a run; flow verify RECORD checks its fingerprints
        mzlab-cli llm tools [--out FILE]   the catalog tools/1 of the assistant tools (llm tools --help)
        mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the events a recording gives for a conversation, one per line
-       mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
+       mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the context/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
        mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help); dda-window FILE --from MIN --to MIN: the MS2 of a window by precursor (dda-window --help)
        mzlab-cli pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) found by name in the folder of the file; exit 1 when one is missing (pair --help)
@@ -56,11 +56,11 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan (flow run --help)
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)
        mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)
-       mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
+       mzlab-cli flow report RUNDIR [--out FILE]   the run-report/1 report of a run folder (prov.json and the files beside it)
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/1 record of a run; flow verify RECORD checks its fingerprints
        mzlab-cli llm tools [--out FILE]   the catalog tools/1 of the assistant tools (llm tools --help)
        mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the events a recording gives for a conversation, one per line
-       mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
+       mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the context/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
        mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help); dda-window FILE --from MIN --to MIN: the MS2 of a window by precursor (dda-window --help)
        mzlab-cli pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) found by name in the folder of the file; exit 1 when one is missing (pair --help)
@@ -105,11 +105,11 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan (flow run --help)
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)
        mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)
-       mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
+       mzlab-cli flow report RUNDIR [--out FILE]   the run-report/1 report of a run folder (prov.json and the files beside it)
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/1 record of a run; flow verify RECORD checks its fingerprints
        mzlab-cli llm tools [--out FILE]   the catalog tools/1 of the assistant tools (llm tools --help)
        mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the events a recording gives for a conversation, one per line
-       mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
+       mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the context/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
        mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help); dda-window FILE --from MIN --to MIN: the MS2 of a window by precursor (dda-window --help)
        mzlab-cli pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) found by name in the folder of the file; exit 1 when one is missing (pair --help)
@@ -182,11 +182,11 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan (flow run --help)
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)
        mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)
-       mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
+       mzlab-cli flow report RUNDIR [--out FILE]   the run-report/1 report of a run folder (prov.json and the files beside it)
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/1 record of a run; flow verify RECORD checks its fingerprints
        mzlab-cli llm tools [--out FILE]   the catalog tools/1 of the assistant tools (llm tools --help)
        mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the events a recording gives for a conversation, one per line
-       mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
+       mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the context/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
        mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help); dda-window FILE --from MIN --to MIN: the MS2 of a window by precursor (dda-window --help)
        mzlab-cli pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) found by name in the folder of the file; exit 1 when one is missing (pair --help)
@@ -244,10 +244,10 @@ exit 2
 error: usage: mzlab-cli llm tools [--demo] [--out FILE]   the catalog tools/1 of the assistant tools (stdout, or FILE); --demo: the subset of the public demo
 mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the normalized events of a recording, one JSON line per event (stdout);
   the turn defaults to the number of assistant messages of the conversation; --strict also compares the SHA-256 of the request
-mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 the assistant gets from a run folder (stdout)
+mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the context/1 the assistant gets from a run folder (stdout)
 mzlab-cli llm eval CASES_DIR --replay DIR   score the evaluation cases against their recordings DIR/<id>.jsonl (exit 1 if one fails)
-mzlab-cli llm inspect DIR [--budget N] [--hide-names]   the ispezione/1 of the mzML files of a folder, without a model (stdout)
-mzlab-cli llm params DIR [--answers FILE] [--budget N] [--hide-names]   the proposta-param/1 of the rules for the same files (stdout)
+mzlab-cli llm inspect DIR [--budget N] [--hide-names]   the inspection/1 of the mzML files of a folder, without a model (stdout)
+mzlab-cli llm params DIR [--answers FILE] [--budget N] [--hide-names]   the param-proposal/1 of the rules for the same files (stdout)
 (mzlab-cli llm --help --help)
 
 === mzlab-cli msn-graph --help
@@ -834,13 +834,13 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--sample LIST] [--compression KI
                        points of the profile) or mzlab (centroids of mzLab)
   --workers N          files converted at once (default: the cores but one, 1 to 4, fewer when the memory budget of the computer does not give
                        each its share, with a note; the bytes written do not depend on it)
-  --report FILE.json   one object per input: input, output, sha256, spectra, seconds, skipped, conv/1, warnings (centroids with --peaks mzlab); or input, error, cause
+  --report FILE.json   one object per input: input, output, sha256, spectra, seconds, skipped, conversion/1, warnings (centroids with --peaks mzlab); or input, error, cause
   --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
                        program is not converted again
   --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
   --help               this text
 
-progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 3 a file was written with scans missing (conv/1 parziale; a
+progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 3 a file was written with scans missing (conversion/1 parziale; a
 warning line names it), 4 an input is missing or holds nothing to convert, 5 a --sample id the dataset does not have
 --- stderr
 
@@ -900,7 +900,7 @@ usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] [--out FOLDER] [--set 
 
   PLAN.json                the plan; its inputs are files named in it
   --in FILE|FOLDER...      where the inputs are: a file is matched by its name, a folder holds files with those names (default: the folder of the plan)
-  --out FOLDER             the run folder: plan.json (the plan as run), one file per step, prov.json and corsa.json
+  --out FOLDER             the run folder: plan.json (the plan as run), one file per step, prov.json and report.json
   --set INSTANCE.NAME=V    a parameter of a step instance (INSTANCE is its id, or the step id when the plan has one instance of it);
                            NAME may also be `algorithm` or `preset`; repeat for more
   --workers N              threads for the steps of a level and the files of a per-file step (default: the cores but one, 1 to 4, as the
@@ -968,10 +968,10 @@ exit 0
 mzlab-cli llm tools [--demo] [--out FILE]   the catalog tools/1 of the assistant tools (stdout, or FILE); --demo: the subset of the public demo
 mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the normalized events of a recording, one JSON line per event (stdout);
   the turn defaults to the number of assistant messages of the conversation; --strict also compares the SHA-256 of the request
-mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 the assistant gets from a run folder (stdout)
+mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the context/1 the assistant gets from a run folder (stdout)
 mzlab-cli llm eval CASES_DIR --replay DIR   score the evaluation cases against their recordings DIR/<id>.jsonl (exit 1 if one fails)
-mzlab-cli llm inspect DIR [--budget N] [--hide-names]   the ispezione/1 of the mzML files of a folder, without a model (stdout)
-mzlab-cli llm params DIR [--answers FILE] [--budget N] [--hide-names]   the proposta-param/1 of the rules for the same files (stdout)
+mzlab-cli llm inspect DIR [--budget N] [--hide-names]   the inspection/1 of the mzML files of a folder, without a model (stdout)
+mzlab-cli llm params DIR [--answers FILE] [--budget N] [--hide-names]   the param-proposal/1 of the rules for the same files (stdout)
 --- stderr
 
 === mzlab-cli llm replay --help
@@ -980,10 +980,10 @@ exit 0
 mzlab-cli llm tools [--demo] [--out FILE]   the catalog tools/1 of the assistant tools (stdout, or FILE); --demo: the subset of the public demo
 mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the normalized events of a recording, one JSON line per event (stdout);
   the turn defaults to the number of assistant messages of the conversation; --strict also compares the SHA-256 of the request
-mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 the assistant gets from a run folder (stdout)
+mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the context/1 the assistant gets from a run folder (stdout)
 mzlab-cli llm eval CASES_DIR --replay DIR   score the evaluation cases against their recordings DIR/<id>.jsonl (exit 1 if one fails)
-mzlab-cli llm inspect DIR [--budget N] [--hide-names]   the ispezione/1 of the mzML files of a folder, without a model (stdout)
-mzlab-cli llm params DIR [--answers FILE] [--budget N] [--hide-names]   the proposta-param/1 of the rules for the same files (stdout)
+mzlab-cli llm inspect DIR [--budget N] [--hide-names]   the inspection/1 of the mzML files of a folder, without a model (stdout)
+mzlab-cli llm params DIR [--answers FILE] [--budget N] [--hide-names]   the param-proposal/1 of the rules for the same files (stdout)
 --- stderr
 
 === mzlab-cli llm context --help

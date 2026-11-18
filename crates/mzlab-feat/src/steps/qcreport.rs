@@ -47,10 +47,10 @@ pub fn run_order() -> Step {
     }
 }
 
-/// `report.methods`: the methods text from the `corsa/1` record of a run.
+/// `report.methods`: the methods text from the `run-report/1` record of a run.
 pub fn methods() -> Step {
     Step {
-        ins: vec![Port::new("run", DataType::Report, "Run record (corsa/1)")],
+        ins: vec![Port::new("run", DataType::Report, "Run record (run-report/1)")],
         outs: vec![Port::new("methods", DataType::Report, "Methods text (Markdown)")],
         params: vec![Param::choice("style", "Layout", &["paragraph", "list"])
             .default_str("paragraph")

@@ -1,6 +1,6 @@
 //! What a file says about itself, put into `campioni/3` (`dal_file`): polarity, date and time of the acquisition, instrument model, method name,
 //! range of m/z and of RT, number of scans (`FileData`, never edited by the user). The summary of a file comes from its scans (`summary_from_scans`,
-//! the `.mzidx`) and from its `metodo/1`; the JSON binding takes the summary already made. Polarity and date replace what the names proposed, and
+//! the `.mzidx`) and from its `method/1`; the JSON binding takes the summary already made. Polarity and date replace what the names proposed, and
 //! the replaced values are reported (`discordanze`).
 
 use super::{table_from_value, to_json3, FileData, Sample, Table};
@@ -93,7 +93,7 @@ fn pair(v: &Value, lo: &str, hi: &str) -> Option<(f64, f64)> {
         .filter(|p| p.0 <= p.1)
 }
 
-/// The m/z range of the experiments of a `metodo/1`.
+/// The m/z range of the experiments of a `method/1`.
 fn method_mz(m: &Value) -> Option<(f64, f64)> {
     let mut r = None;
     for p in m.get("ms")?.get("periodi")?.arr() {
@@ -109,7 +109,7 @@ fn method_mz(m: &Value) -> Option<(f64, f64)> {
     r
 }
 
-/// The summary of one entry of the binding: what it says outright wins over what its `metodo_json` (a `metodo/1`) gives.
+/// The summary of one entry of the binding: what it says outright wins over what its `metodo_json` (a `method/1`) gives.
 fn summary(e: &Value) -> FileSummary {
     let m = e.get("metodo_json");
     let pols: Vec<i8> = e

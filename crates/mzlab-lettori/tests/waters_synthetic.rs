@@ -65,7 +65,7 @@ fn the_method_and_the_header_carry_the_header_txt_and_hide_the_operator() {
     let doc = &h
         .run_params
         .iter()
-        .find(|(k, _)| k == "mzLab metodo/1")
+        .find(|(k, _)| k == "mzLab method/1")
         .unwrap()
         .1;
     assert!(doc.contains("identita"), "operator marked as identity");

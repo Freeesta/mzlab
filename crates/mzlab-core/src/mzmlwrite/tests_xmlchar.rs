@@ -30,7 +30,7 @@ fn vendor_header() -> Header {
         serial: Some("SN\u{0}1".into()),
         sample: Some(("s\u{FFFF}".into(), "name\u{1B}".into())),
         run_params: vec![(
-            "mzLab metodo/1".into(),
+            "mzLab method/1".into(),
             "method \u{FFFF}\u{FFFE}\u{7} block".into(),
         )],
         ..Default::default()

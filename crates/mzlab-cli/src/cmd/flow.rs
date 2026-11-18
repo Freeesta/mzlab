@@ -28,7 +28,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry { name: "flow run", aliases: &[], help: "mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan (flow run --help)", run: |a| crate::flow_run::run(a, None) },
     Entry { name: "flow check", aliases: &[], help: "mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)", run: crate::flow_json::check },
     Entry { name: "steps", aliases: &[], help: "mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)", run: crate::steps_cmd::run },
-    Entry { name: "flow report", aliases: &[], help: "mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)", run: report },
+    Entry { name: "flow report", aliases: &[], help: "mzlab-cli flow report RUNDIR [--out FILE]   the run-report/1 report of a run folder (prov.json and the files beside it)", run: report },
     Entry { name: "flow record", aliases: &[], help: "mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/1 record of a run; flow verify RECORD checks its fingerprints", run: crate::flow_mzrun::record },
     Entry { name: "flow verify", aliases: &[], help: "", run: crate::flow_mzrun::check },
     Entry { name: "flow command", aliases: &[], help: "", run: command },

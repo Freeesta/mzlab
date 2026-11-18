@@ -1,6 +1,6 @@
 // @ts-strict
 "use strict";
-// The Method window shows here what the file itself says about its acquisition: the `metodo/1` document (docs/agenti/method.md) that /api/metodo gives for the open item
+// The Method window shows here what the file itself says about its acquisition: the `method/1` document (docs/agenti/method.md) that /api/metodo gives for the open item
 // (the engine reads it from the .raw, the .wiff, the .D, the .dam or the mzML that carries it). Only what the file holds is drawn, as the file says it; a value the file
 // lacks has no row. What the reader could not read (`avvisi`: parts not decoded, missing, cut) is listed first, in plain words.
 // Everything that comes from a file goes through EH().
@@ -48,7 +48,7 @@ const METODO_DOC = (() => {
     return r ? `<table>${r}</table>` : "";
   }
 
-  // the `metodo/1.avvisi` keys of the readers; another is shown as it is, with its place
+  // the `method/1.avvisi` keys of the readers; another is shown as it is, with its place
   const NOTE_KEYS = ["meta.nonDecodificato", "meta.mancante", "meta.troncato", "meta.danneggiato", "meta.ioneScartata", "meta.daTabella"];
   function notes(/** @type {any} */ d) {
     const a = (d.avvisi || []).filter((/** @type {any} */ x) => x && x.chiave);

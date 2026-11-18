@@ -299,7 +299,7 @@ fn summary(items: &[Item], out: &Path) -> Outcome {
             Item::Failed { .. } => None,
         })
         .collect();
-    // what the readers could not read (`metodo/1.avvisi`), one note per entry, as the Method window lists it
+    // what the readers could not read (`method/1.avvisi`), one note per entry, as the Method window lists it
     let notes: String = items
         .iter()
         .flat_map(|i| match i {

@@ -29,7 +29,7 @@ pub struct Case {
     pub id: String,
     pub request: String,
     pub level: Level,
-    /// Sources for `contesto/1` (the profile `ricerca` is implied).
+    /// Sources for `context/1` (the profile `research` is implied).
     pub context: Option<Value>,
     /// What each read tool answers, by tool name; any other tool answers `{"ok":true}`.
     pub tool_results: Vec<(String, Value)>,
@@ -227,7 +227,7 @@ pub fn run(
         let mut sources = src.clone();
         if let Value::Obj(o) = &mut sources {
             o.retain(|(k, _)| k != "profile");
-            o.push(("profile".into(), Value::Str("ricerca".into())));
+            o.push(("profile".into(), Value::Str("research".into())));
         }
         s.add_context(parse(build(&sources, 8000)?.as_bytes()).map_err(|_| bad("context"))?);
     }

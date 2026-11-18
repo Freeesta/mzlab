@@ -53,7 +53,7 @@ Turno 1, dopo l'apertura dei 7 file full scan di `dati_sintetici.py` (alias `f1`
 ```json
 {"role":"user","content":"I opened my files, what are they?"}
 ```
-Risultato di `data_inspect` (ridotto): `{"schema":"ispezione/1","files":[{"alias":"f1","format":"mzML","analyzer":"quadrupole","resolution":"unit","polarity":"+","ms_levels":[1],"scan_types":{"full_scan":1102},"rt_min":[0.5,20.0],"mz_range":[120,480],"cycle_s":1.09,"fwhm_s_median":8.4,"role_proposed":"sample","order":1}, …]}`
+Risultato di `data_inspect` (ridotto): `{"schema":"inspection/1","files":[{"alias":"f1","format":"mzML","analyzer":"quadrupole","resolution":"unit","polarity":"+","ms_levels":[1],"scan_types":{"full_scan":1102},"rt_min":[0.5,20.0],"mz_range":[120,480],"cycle_s":1.09,"fwhm_s_median":8.4,"role_proposed":"sample","order":1}, …]}`
 
 ## Uscita attesa
 

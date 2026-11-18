@@ -1,4 +1,4 @@
-//! The LC/MS part of the `metodo/1` document of an Agilent `.D` (feature `estesi`): the sections that `AcqData/AcqMethod.xml` (`lcmethod.rs`) fills for a QqQ or a
+//! The LC/MS part of the `method/1` document of an Agilent `.D` (feature `estesi`): the sections that `AcqData/AcqMethod.xml` (`lcmethod.rs`) fills for a QqQ or a
 //! Q-TOF run: `ms` (source, one experiment per time segment with its MRM transitions, dMRM windows, Q-TOF precursor lists), `lc` (flow, oven, gradient),
 //! `campionatore`, `rivelatori` (DAD) and the modules of `Devices.xml`, and the fields of the method as `campi` items. Only what the method says: a cell that is not
 //! a number stays a text in `campi`, an empty cell is absent.

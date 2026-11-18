@@ -17,11 +17,11 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--sample LIST] [--compression KI
                        points of the profile) or mzlab (centroids of mzLab)
   --workers N          files converted at once (default: the cores but one, 1 to 4, fewer when the memory budget of the computer does not give
                        each its share, with a note; the bytes written do not depend on it)
-  --report FILE.json   one object per input: input, output, sha256, spectra, seconds, skipped, conv/1, warnings (centroids with --peaks mzlab); or input, error, cause
+  --report FILE.json   one object per input: input, output, sha256, spectra, seconds, skipped, conversion, warnings (centroids with --peaks mzlab); or input, error, cause
   --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
                        program is not converted again
   --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
   --help               this text
 
-progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 3 a file was written with scans missing (conv/1 parziale; a
+progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 3 a file was written with scans missing (conversion/1 parziale; a
 warning line names it), 4 an input is missing or holds nothing to convert, 5 a --sample id the dataset does not have";

@@ -1,4 +1,4 @@
-//! `metodo/1` of an mzML written by another program (`Mzml::metodo`): header facts, constant and changing scan parameters, the schema, and the
+//! `method/1` of an mzML written by another program (`Mzml::metodo`): header facts, constant and changing scan parameters, the schema, and the
 //! document an mzML already carries (it wins). The mzML is built here; the parity with the raw file of the same run needs the private data.
 use mzlab_core::mzmlhead::Mzml;
 use serde_json::Value;
@@ -51,7 +51,7 @@ fn doc(bytes: Vec<u8>) -> Value {
 #[test]
 fn the_header_gives_instrument_serial_software_origin_and_sample() {
     let d = doc(mzml(""));
-    assert_eq!(d["schema"], "metodo/1");
+    assert_eq!(d["schema"], "method/1");
     assert_eq!(d["strumento"]["modello"], "LTQ Orbitrap Velos");
     assert_eq!(d["strumento"]["serie"], "SN123");
     assert_eq!(
@@ -100,7 +100,7 @@ fn constant_scan_parameters_go_to_ms_and_changing_ones_to_an_interval() {
 #[test]
 fn every_key_is_known_to_the_schema() {
     let schema: Value =
-        serde_json::from_str(include_str!("../../../mzlab/web/schemi/metodo-1.json")).unwrap();
+        serde_json::from_str(include_str!("../../../mzlab/web/schemi/method-1.json")).unwrap();
     for (key, value) in doc(mzml("")).as_object().unwrap() {
         let section = &schema["properties"][key.as_str()];
         assert!(!section.is_null(), "{key} is not in the schema");
@@ -114,7 +114,7 @@ fn every_key_is_known_to_the_schema() {
 
 #[test]
 fn a_document_the_file_carries_wins_and_a_file_without_run_has_none() {
-    let own = "{\"schema\":\"metodo/1\",\"x\":1}";
+    let own = "{\"schema\":\"method/1\",\"x\":1}";
     let up = mzlab_core::method::userparam_xml(own);
     let d = doc(mzml(&up));
     assert_eq!(d["x"], 1);

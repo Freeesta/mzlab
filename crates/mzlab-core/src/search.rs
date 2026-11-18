@@ -1,4 +1,4 @@
-//! Search box, numeric part (`ricerca/1`): what a typed number is compatible with. A number x is read as a neutral loss (Δm),
+//! Search box, numeric part (`mz-match/1`): what a typed number is compatible with. A number x is read as a neutral loss (Δm),
 //! as a shift of an adduct, or as the m/z of a known contaminant. The tables stay in the page (losses, adducts, contaminant list);
 //! this module owns the tolerance, the order and the numbers shown. Only compatibilities are returned, never verdicts.
 
@@ -167,6 +167,7 @@ fn render(hits: Vec<Hit>, q: &Req) -> String {
     }
     write(
         &Obj::new()
+            .put("schema", text("mz-match/1"))
             .n("x", q.x)
             .b("hr", q.hr)
             .put("hits", Value::Arr(shown))
@@ -183,7 +184,7 @@ fn render(hits: Vec<Hit>, q: &Req) -> String {
     )
 }
 
-/// `{x, hr, tol_mda, tol_ppm, tol_unit, tol, pol, losses:[{id,f}], adducts:[{id,k,add,sub,z}], contam:[{id,mz,pol}]}` -> `{x, hr, hits, more, tol, contam:{unit, tol}}`.
+/// `{x, hr, tol_mda, tol_ppm, tol_unit, tol, pol, losses:[{id,f}], adducts:[{id,k,add,sub,z}], contam:[{id,mz,pol}]}` -> `{schema, x, hr, hits, more, tol, contam:{unit, tol}}`.
 /// `tol_unit` ("da" or "ppm") with `tol` (> 0) sets the window of the contaminants in either resolution; without them it is `tol_ppm` (HR) or ±0.5 Da.
 /// `hr` false: tolerance ±0.5 and no deltas in the answer. `hr` true: `tol_mda` for losses and adduct shifts, `tol_ppm` for contaminants.
 /// `pol` ("+", "-" or "") keeps the adducts and contaminants of that polarity; the losses have no polarity.

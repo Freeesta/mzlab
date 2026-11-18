@@ -1,5 +1,5 @@
 //! What a Shimadzu file says besides its scans: the property streams (`prop.rs`), the instrument names found in its configuration streams, and the list of what is not decoded. It becomes
-//! the `metodo/1` document and the header of the mzML we write (the operator and the paths are in the document of the reader, not in the one of the mzML).
+//! the `method/1` document and the header of the mzML we write (the operator and the paths are in the document of the reader, not in the one of the mzML).
 
 use mzlab_core::method::{self, num, obj, text, Source, SrcFile, V};
 use mzlab_core::method_fields::Field;
@@ -304,7 +304,7 @@ fn instrument(fam: Fam, m: &Meta) -> Option<V> {
     ])
 }
 
-/// The `metodo/1` document. `con_identita` false leaves out the operator and the fields that name a person, a computer, a serial or a path (the one inside an mzML).
+/// The `method/1` document. `con_identita` false leaves out the operator and the fields that name a person, a computer, a serial or a path (the one inside an mzML).
 pub(super) fn document(
     (nome, dim, sha1): (&str, u64, &str),
     fam: Fam,

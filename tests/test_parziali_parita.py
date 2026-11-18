@@ -1,5 +1,5 @@
 """Partial reads told alike on the site (engine .wasm through Node) and in the app. A truncated mzML whose run userParams push `<spectrumList count>`
-far past the `<run ` tag (mzLab's own `metodo/1` does) declares its spectra in `prepare_upload` and in the CLI (`flow` step `index.mzidx`, warning on
+far past the `<run ` tag (mzLab's own `method/1` does) declares its spectra in `prepare_upload` and in the CLI (`flow` step `index.mzidx`, warning on
 stderr) (H6-3). A sample the engine refuses is listed by `native_samples` with its reason, the text the app lists (`mzlab-desktop` natives_tests.rs) (H6-15).
 Synthetic files (built here, tools/wiff_riferimento.py). Skipped without cargo, wasm-bindgen or node."""
 import json
@@ -39,7 +39,7 @@ def work(tmp_path_factory):
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), "target/wasm32-unknown-unknown/release/mzlab_wasm.wasm")
     build("-p", "mzlab-cli")
     head = ('<?xml version="1.0" encoding="utf-8"?>\n<mzML xmlns="http://psi.hupo.org/ms/mzml" version="1.1.0"><run id="r">\n'
-            f'<userParam name="mzLab metodo/1" value="{"m" * 6000}"/>\n<spectrumList count="6">\n')
+            f'<userParam name="mzLab method/1" value="{"m" * 6000}"/>\n<spectrumList count="6">\n')
     (d / "cut.mzML").write_text(head + "".join(spectrum(i) for i in range(3)), encoding="utf-8")
     return d
 

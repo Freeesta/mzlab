@@ -1,4 +1,4 @@
-//! The routes that do not read the TIC of the index rows (probe, mzML, conv/1) skip the decoding of every PASEF frame: same mzML byte for byte,
+//! The routes that do not read the TIC of the index rows (probe, mzML, conversion/1) skip the decoding of every PASEF frame: same mzML byte for byte,
 //! and the full index asked afterwards still carries the TIC summed from the points (synthetic DDA-PASEF folder, no lab data).
 #![cfg(feature = "bruker")]
 

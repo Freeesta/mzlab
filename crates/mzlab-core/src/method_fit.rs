@@ -1,4 +1,4 @@
-//! A `metodo/1` document cut to the room the readers of an mzML give it: every reader of the document (site, assistant, the mzML reader of the
+//! A `method/1` document cut to the room the readers of an mzML give it: every reader of the document (site, assistant, the mzML reader of the
 //! readers module, infusion) reads at most `DOC_MAX` bytes after `<run`, so a longer document would be lost whole. A document that fits is never
 //! touched; one that does not loses the last entries of `campi`, then the last texts of `grezzo`, each cut named by a `meta.troncato` warning.
 
@@ -38,7 +38,7 @@ pub fn fit(doc: &str, room: usize, size: &dyn Fn(&str) -> usize) -> String {
     if over(&top) {
         // what is left is too long by itself: the document keeps only where it comes from and why it is empty
         top.retain(|(k, _)| k == "schema" || k == "origine");
-        warn(&mut top, "metodo/1");
+        warn(&mut top, "method/1");
     }
     text(&top)
 }

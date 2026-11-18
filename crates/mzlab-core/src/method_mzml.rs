@@ -1,4 +1,4 @@
-//! `metodo/1` of an mzML that mzLab did not write (`from_mzml_head`): what the header of the file says (instrument, serial, software, source files
+//! `method/1` of an mzML that mzLab did not write (`from_mzml_head`): what the header of the file says (instrument, serial, software, source files
 //! with SHA-1, `run@startTimeStamp`, sample, scan settings, data processing) and the scan parameters that are the same in the first scans.
 //! Only the start of the file is read: the header up to `<spectrumList` and at most `SCANS` spectra. Every field carries `origine = "mzml:<element>"`.
 //! Spec: `docs/agenti/method.md`. The reference is the mzML 1.1 schema and the PSI-MS CV; nothing is copied from another program.
@@ -228,7 +228,7 @@ fn scan_part(scans: &str, fields: &mut Vec<Field>) -> Option<V> {
     )])
 }
 
-/// The `metodo/1` document an mzML header describes. `head` = the file up to `<spectrumList`; `scans` = the first spectra (their text);
+/// The `method/1` document an mzML header describes. `head` = the file up to `<spectrumList`; `scans` = the first spectra (their text);
 /// `name`/`bytes` = the file itself; `meta` = `Mzml::metadata`.
 pub fn from_mzml_head(head: &str, scans: &str, name: &str, bytes: u64, meta: &Metadata) -> String {
     let mut files = vec![SrcFile {
@@ -276,7 +276,7 @@ pub fn from_mzml_head(head: &str, scans: &str, name: &str, bytes: u64, meta: &Me
 }
 
 impl<R: ReadAt> Mzml<R> {
-    /// The `metodo/1` of an mzML: the document it carries (`userParam mzLab metodo/1`) or, when it has none, what its header and first scans say.
+    /// The `method/1` of an mzML: the document it carries (`userParam mzLab method/1`) or, when it has none, what its header and first scans say.
     /// `name` is the name of the file; `None` when the file has no header to read.
     pub fn method(&mut self, name: &str, doc_max: u64) -> Result<Option<String>> {
         let run = self.run_head(doc_max)?;

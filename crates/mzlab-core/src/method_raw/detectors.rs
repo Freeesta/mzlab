@@ -1,4 +1,4 @@
-//! The UV detector of a Thermo `.raw` acquired through Chromeleon, for `metodo/1.rivelatori`: the lines of the instrument script that give the channels
+//! The UV detector of a Thermo `.raw` acquired through Chromeleon, for `method/1.rivelatori`: the lines of the instrument script that give the channels
 //! (`UV_VIS_1.Wavelength = 260.0 [nm]`, `.Bandwidth`, `.RefWavelength`, `.RefBandwidth`), the 3D field (`3DFIELD.MinWavelength`, `.MaxWavelength`, `.BunchWidth`) and the
 //! sampling rate (`Data_Collection_Rate = 2 [Hz]`). The first line of each key wins (later lines change the value during the run).
 

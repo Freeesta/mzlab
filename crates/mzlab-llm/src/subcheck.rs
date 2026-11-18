@@ -53,7 +53,7 @@ fn bad(field: &str) -> Error {
     Error::new("err.llm.assist.call").with("field", field)
 }
 
-/// The call of `role` for `input`, the data blocks it may see keyed by source (`{"ispezione/1": ...}`).
+/// The call of `role` for `input`, the data blocks it may see keyed by source (`{"inspection/1": ...}`).
 pub fn request(provider: &Provider, role: &Role, prompt: &str, input: &Value) -> Result<Request> {
     let mut o = Out::default();
     value(&mut o, input);

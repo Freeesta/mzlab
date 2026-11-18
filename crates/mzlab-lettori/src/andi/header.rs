@@ -1,4 +1,4 @@
-//! What an ANDI file says about itself outside its scans: the global attributes and the `instrument_*` variables. They become the `metodo/1` document and the header of the mzML we write;
+//! What an ANDI file says about itself outside its scans: the global attributes and the `instrument_*` variables. They become the `method/1` document and the header of the mzML we write;
 //! every global attribute goes into `campi` (nothing is lost), the ones that identify a person, a serial or a path marked `identita`.
 
 use super::netcdf::{Cdf, Val};
@@ -60,7 +60,7 @@ impl AndiHeader {
         Ok(t)
     }
 
-    /// The `metodo/1` document of the file `nome` (`dim` bytes, `sha1` when read).
+    /// The `method/1` document of the file `nome` (`dim` bytes, `sha1` when read).
     pub(super) fn document(&self, nome: &str, dim: u64, sha1: Option<String>) -> String {
         let src = Source {
             format: "andi-ms",

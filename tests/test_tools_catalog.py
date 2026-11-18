@@ -1,4 +1,4 @@
-"""The catalog tools/1 (docs/schemi/strumenti-1.json, made by `mzlab-cli llm tools`): valid JSON Schema, the ids of ui_show exist in the registry of
+"""The catalog tools/1 (docs/schemi/tools-1.json, made by `mzlab-cli llm tools`): valid JSON Schema, the ids of ui_show exist in the registry of
 actions, and no Italian in what the model reads."""
 import json
 import re
@@ -9,7 +9,7 @@ from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "mzlab" / "web"
-CATALOG = json.loads((ROOT / "docs" / "schemi" / "strumenti-1.json").read_text(encoding="utf-8"))
+CATALOG = json.loads((ROOT / "docs" / "schemi" / "tools-1.json").read_text(encoding="utf-8"))
 
 # Actions the page registers later (the LLM application PRs); the list only gets shorter.
 NOT_YET = {"table.showRow", "flow.selectNode"}

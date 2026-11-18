@@ -6,7 +6,7 @@
 /** the classes of data a request may carry; a class that is not in the stored consent asks again */
 export const CLASSES = ["plan", "summary", "names"];
 const DEMO = "mzlab-demo";
-/** the demo sends the reduced facts (`ispezione/1`, `contesto/1`) and the plan; file names are always hidden */
+/** the demo sends the reduced facts (`inspection/1`, `context/1`) and the plan; file names are always hidden */
 export const DEMO_CLASSES = ["inspection", "plan"];
 const KEY = "mzlab.llm.consenso";
 /** catalog keys of each class: its name and what it carries */

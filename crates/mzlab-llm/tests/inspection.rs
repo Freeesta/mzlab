@@ -1,4 +1,4 @@
-//! `ispezione/1` on the synthetic files of `tools/dati_sintetici.py` (skipped without python3 and numpy; `MZLAB_GOLDEN_STRICT=1` fails instead): the sources
+//! `inspection/1` on the synthetic files of `tools/dati_sintetici.py` (skipped without python3 and numpy; `MZLAB_GOLDEN_STRICT=1` fails instead): the sources
 //! are made here with the engine of `mzlab-core` the way the page and the CLI make them, the kind of each file is the one the generator built it as
 //! (table G01-G09 of `docs/studi/assistente-dati/06-valutazione.md`), the QC series gives its drift, no private field goes out and the same input gives
 //! the same bytes. `MZLAB_UPDATE_LLM=1 cargo test -p mzlab-llm` rewrites the golden file.
@@ -80,7 +80,7 @@ fn bytes_are_stable_and_the_golden_file_matches() {
     assert_eq!(a, build(&src, 30000).unwrap());
     assert!((a.len() as u64).div_ceil(3) <= 30000);
     // the golden file holds the files without the numbers that come from the detection of signals (they depend on the generator's floats)
-    let golden = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/ispezione_sintetici.json");
+    let golden = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/inspection_synthetic.json");
     let files: Vec<String> = files_of(&a)
         .iter()
         .map(|f| {
@@ -103,7 +103,7 @@ fn bytes_are_stable_and_the_golden_file_matches() {
 #[test]
 fn an_unreadable_file_is_said_so() {
     let src = j(
-        r#"{"profile":"ricerca","files":[{"name":"C:\\Users\\ana\\broken.mzML","error":{"error_key":"err.file.unreadable"}},{"name":"empty.mzML","items":[]}]}"#,
+        r#"{"profile":"research","files":[{"name":"C:\\Users\\ana\\broken.mzML","error":{"error_key":"err.file.unreadable"}},{"name":"empty.mzML","items":[]}]}"#,
     );
     let out = j(&build(&src, 2000).unwrap());
     let f = out.get("files").unwrap().arr();
@@ -129,7 +129,7 @@ fn nothing_private_goes_out() {
       "lc":{"gradiente":[{"t_min":0,"B_pct":5},{"t_min":10,"B_pct":95}],"flusso_mL_min":0.3,"forno_C":40},"ms":{"sorgente":{"tipo":"ESI"}}}"#;
     let name = "Ana\u{202E}fdp.exe 123456789 \u{0007}file.mzML";
     let src = format!(
-        r#"{{"profile":"ricerca","hide_names":false,"files":[{{"name":{},"items":[{item}],"method":{method},"sample":{{"tipo":"sample","ordine_iniezione":1,"note":"private-note"}}}}]}}"#,
+        r#"{{"profile":"research","hide_names":false,"files":[{{"name":{},"items":[{item}],"method":{method},"sample":{{"tipo":"sample","ordine_iniezione":1,"note":"private-note"}}}}]}}"#,
         quoted(name)
     );
     let out = build_text(&src, 4000).unwrap();
@@ -178,7 +178,7 @@ fn nothing_private_goes_out() {
 fn a_long_name_is_cut() {
     let long = "x".repeat(300);
     let src = format!(
-        r#"{{"profile":"ricerca","files":[{{"name":"{long}.mzML","error":{{"error_key":"e"}}}}]}}"#
+        r#"{{"profile":"research","files":[{{"name":"{long}.mzML","error":{{"error_key":"e"}}}}]}}"#
     );
     let f = files_of(&build_text(&src, 4000).unwrap());
     assert_eq!(text(&f[0], "name").chars().count(), MAX_STR);

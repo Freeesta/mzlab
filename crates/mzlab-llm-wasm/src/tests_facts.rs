@@ -23,7 +23,7 @@ fn inspect_build_gives_the_golden_bytes() {
     let out = inspect_build(&text, 30000).unwrap();
     assert_eq!(out, mzlab_llm::inspect::build(&src, 30000).unwrap());
     let lines: Vec<String> = files_of(&out).iter().map(stats_text).collect();
-    assert_eq!(lines.join("\n") + "\n", data("ispezione_sintetici.json"));
+    assert_eq!(lines.join("\n") + "\n", data("inspection_synthetic.json"));
 }
 
 #[test]
@@ -39,8 +39,8 @@ fn params_propose_gives_the_bytes_of_the_cli() {
         "/../../docs/schemi/steps-1.json"
     ))
     .unwrap();
-    let out = params_propose(data("ispezione_g01.json").trim_end(), "", &steps).unwrap();
-    assert_eq!(out + "\n", data("proposta_g01.json"));
+    let out = params_propose(data("inspection_g01.json").trim_end(), "", &steps).unwrap();
+    assert_eq!(out + "\n", data("proposal_g01.json"));
     let e = params_propose("not json", "", &steps).unwrap_err();
     assert!(e.contains("err.llm.params.input"), "{e}");
 }

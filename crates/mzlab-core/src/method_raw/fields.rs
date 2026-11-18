@@ -1,4 +1,4 @@
-//! `metodo/1.campi` of a Thermo `.raw`: every field the file holds that the sections of the document do not carry, as `{origine, chiave, valore, unita?, mappato?, identita?}`
+//! `method/1.campi` of a Thermo `.raw`: every field the file holds that the sections of the document do not carry, as `{origine, chiave, valore, unita?, mappato?, identita?}`
 //! (spec: `docs/agenti/method.md`). Fixed places of the container (header, sequence row, InstID, run header), the 62 fields of the scan trailer
 //! (the value when it is the same in every scan, else the range), the lines of the LC script and the items of the XML method.
 

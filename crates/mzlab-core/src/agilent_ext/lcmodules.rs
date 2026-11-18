@@ -1,4 +1,4 @@
-//! The LC modules of the `metodo/1` of an LC/MS run (pump gradient, column compartment, sampler, detectors), from `lcmethod::LcMethod`.
+//! The LC modules of the `method/1` of an LC/MS run (pump gradient, column compartment, sampler, detectors), from `lcmethod::LcMethod`.
 
 use super::doc::param;
 use super::lcdoc::*;

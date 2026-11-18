@@ -127,7 +127,7 @@ fn site_body(conv: &str, catalog_file: &str) -> String {
 fn the_demo_body_of_the_app_is_the_body_of_the_site() {
     let conv = std::fs::read_to_string(root("tests/data/llm/demo/conv.json")).unwrap();
     let (_, _, app) = build(&conv).unwrap();
-    let site = site_body(&conv, "docs/schemi/strumenti-demo-1.json");
+    let site = site_body(&conv, "docs/schemi/tools-demo-1.json");
     let sha = mzlab_core::budget::sha256_hex(app.body.as_bytes());
     assert_eq!(sha, mzlab_core::budget::sha256_hex(site.as_bytes()));
     // the same digest the .wasm test of the site checks (crates/mzlab-llm-wasm/src/tests.rs)

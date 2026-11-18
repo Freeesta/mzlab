@@ -1,6 +1,6 @@
 // The allow-list of the proxy, generated from the repository: the SHA-256 of every system prompt mzLab sends (with its role, models and the demo
 // `max_tokens` cap of that role, `demo_max_tokens` of assist-ruoli-1.json), of the phase prompt that may come mid-conversation, of the closed answer
-// schemas (from Rust) and of the demo tool catalog as the Anthropic request carries it (built by Rust from `docs/schemi/strumenti-demo-1.json`).
+// schemas (from Rust) and of the demo tool catalog as the Anthropic request carries it (built by Rust from `docs/schemi/tools-demo-1.json`).
 // Usage: node build-allowlist.mjs <wasm dir> > allowlist.json
 
 import { readFileSync } from "node:fs";
@@ -12,7 +12,7 @@ import { bindRust } from "./rust.js";
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ASSIST = "crates/mzlab-llm/data/assist";
 // the tool catalog the demo sends (the subset `mzlab_llm::tools::DEMO_TOOLS`)
-export const CATALOGS = ["docs/schemi/strumenti-demo-1.json"];
+export const CATALOGS = ["docs/schemi/tools-demo-1.json"];
 
 const read = (root, p) => readFileSync(join(root, p), "utf-8");
 

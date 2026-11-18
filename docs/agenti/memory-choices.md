@@ -19,6 +19,6 @@ Continuation of `memory.md` (contract, budget, slabs, tests) and `compat-safari.
 ## Unrealized proposals
 - Unrealized proposal: a single "big permit" per origin, Web Lock `mzlab-mem-grande` (exclusive also across tabs), for a worker that uses more than the safe budget; whoever used it closes its own worker at the end of the step if it exceeds 512 MB.
 - Unrealized proposal: third button "Work in parts (slower)" in the warning, where the step has slabs, and "≈ X MB · in memory/in parts" with "part N of M" on every canvas step before and during the run.
-- Unrealized proposal: a single `flow::stima_passo(job, ingressi) -> {mb, via}` for CLI, desktop and site, with `mem_mb` and `via` per step in `prov/1` and `corsa/1`.
+- Unrealized proposal: a single `flow::stima_passo(job, ingressi) -> {mb, via}` for CLI, desktop and site, with `mem_mb` and `via` per step in `prov/1` and `run-report/1`.
 - Unrealized proposal: `Stored` and `Spill` of the web runner on OPFS files read in ranges with `createSyncAccessHandle` (worker heap during `align` ≤ one slab + one file), instead of copying all the `.mzfeatf` into the worker heap.
 - Unrealized proposal: `--import-memory` fallback (the page creates the `WebAssembly.Memory` with the chosen maximum, same `.wasm`) if a browser does not instantiate a module with a 4 GiB maximum.

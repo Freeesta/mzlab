@@ -270,7 +270,7 @@
     await replan(x);
   };
 
-  /** the record of the run of `x` (prov/1, corsa/1) for the plans of the base chain; a failure of it never fails the run @param {any} x */
+  /** the record of the run of `x` (prov/1, run-report/1) for the plans of the base chain; a failure of it never fails the run @param {any} x */
   const recordOf = async (/** @type {any} */ x) => F.webProv ? F.webProv.record(x, /** @type {any[]} */ (await call(x, "jobs"))).catch((/** @type {any} */ e) => { console.warn("record of the run:", e && e.key || e && e.message || e); return null; }) : null;
   const refused = (/** @type {any} */ x, /** @type {string} */ instance) => x.errors.get(instance) || Object.assign(new Error("error.featMemory"), { key: "error.featMemory", params: {} });
   /** the page asks to use more memory for the blocked alignments, detections and groupings; the user answers once per phase, and only here (never in the middle of an edit) @param {any} x @param {any} o */

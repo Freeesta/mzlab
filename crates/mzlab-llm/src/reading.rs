@@ -182,7 +182,7 @@ impl Cx<'_> {
     /// The proposals of the rules that the subagent was given.
     fn proposals(&self) -> &[Value] {
         self.input
-            .get("proposta-param/1")
+            .get("param-proposal/1")
             .and_then(|p| p.get("proposals"))
             .map_or(&[][..], Value::arr)
     }
@@ -270,7 +270,7 @@ pub fn problems_json(problems: &[Problem]) -> String {
 }
 
 /// Checks `reading` (a `lettura/1` or a `param-scelte/1`) against `input`, the data blocks the subagent saw as one object keyed by source
-/// (`{"ispezione/1": ..., "answers": ...}`); `registry` gives the limits of the parameters.
+/// (`{"inspection/1": ..., "answers": ...}`); `registry` gives the limits of the parameters.
 pub fn validate(reading: &Value, input: &Value, registry: &[Step]) -> Result<(), Found> {
     let mut found = Found::new();
     let known = known_numbers(input);
@@ -310,7 +310,7 @@ fn known_numbers(v: &Value) -> BTreeSet<String> {
 }
 
 /// One step of an evidence path: a key of an object, or the element of an array whose `id`, `alias`, `name` or `step` is `seg` (else its position).
-/// An object without the key lends its arrays (`tabcheck.blank` is the check `blank` of `checks`, `ispezione.f1` the file `f1` of `files`).
+/// An object without the key lends its arrays (`tabcheck.blank` is the check `blank` of `checks`, `inspection.f1` the file `f1` of `files`).
 fn step_in<'a>(v: &'a Value, seg: &str) -> Option<&'a Value> {
     match v {
         Value::Arr(a) => a

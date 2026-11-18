@@ -1,13 +1,13 @@
 // @ts-strict
 // @ts-noany
-// LC gradient (%B) of a file, read-only: from the .dam (the server) or from the file's own method document (metodo/1); nothing can be typed or imported.
+// LC gradient (%B) of a file, read-only: from the .dam (the server) or from the file's own method document (method/1); nothing can be typed or imported.
 // The model is {source: dam|raw|file, points: [{t, b, flow?, curve?}], run_time?, solvents?}. Classic globals are used as they are (E, J, I18N, EH).
 const cache = new Map();                                     // file name -> model | null (what the server answered)
 const nameOf = (/** @type {FileAperto} */ f) => f.file.split("#")[0];
 /** @param {string} k @param {Bag} [p] */ const T = (k, p) => I18N.t(k, p);
 
 
-// The pump program that the file's own method document (metodo/1: .raw, .wiff, .D, Waters) carries, as a gradient model; null when it has fewer than two %B points.
+// The pump program that the file's own method document (method/1: .raw, .wiff, .D, Waters) carries, as a gradient model; null when it has fewer than two %B points.
 async function fromMethod(/** @type {FileAperto} */ f) {
   let lc = null;
   try { lc = (((await J("api/metodo?k=" + f.k)) || {}).metodo || {}).lc; } catch (_) { return null; }

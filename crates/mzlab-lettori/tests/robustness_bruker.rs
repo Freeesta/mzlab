@@ -340,9 +340,9 @@ fn the_mzml_of_a_cut_tdf_bin_carries_the_partial_read() {
         String::from_utf8(out).unwrap()
     };
     let cut = conv(whole[..3 * b.len() + 9].to_vec());
-    assert!(cut.contains(r#"&quot;dichiarate&quot;:5,&quot;lette&quot;:3,&quot;parziale&quot;:true,&quot;perdita&quot;:&quot;warn.file.brukerCutBin&quot;"#), "{}", &cut[..cut.len().min(3000)]);
+    assert!(cut.contains(r#"&quot;declared&quot;:5,&quot;read&quot;:3,&quot;partial&quot;:true,&quot;loss&quot;:&quot;warn.file.brukerCutBin&quot;"#), "{}", &cut[..cut.len().min(3000)]);
     let all = conv(whole);
-    assert!(all.contains("&quot;parziale&quot;:false") && !all.contains("brukerCutBin"));
+    assert!(all.contains("&quot;partial&quot;:false") && !all.contains("brukerCutBin"));
 }
 
 #[test]

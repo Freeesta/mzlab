@@ -472,7 +472,7 @@ pub fn step(s: &mut State, input: Input) -> Vec<Output> {
 }
 
 impl State {
-    /// A `contesto/1` object that goes with the next user message.
+    /// A `context/1` object that goes with the next user message.
     pub fn add_context(&mut self, context: Value) {
         self.context = Some(context);
     }

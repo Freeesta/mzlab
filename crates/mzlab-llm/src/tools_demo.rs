@@ -1,4 +1,4 @@
-//! The catalog of the public demo: the subset of `catalog` that the proxy of mzLab accepts (`docs/schemi/strumenti-demo-1.json`, SHA-256 in its
+//! The catalog of the public demo: the subset of `catalog` that the proxy of mzLab accepts (`docs/schemi/tools-demo-1.json`, SHA-256 in its
 //! allow-list), with the order and the schemas of the whole catalog. Used by the CLI export, the app and the worker of the site.
 
 use mzlab_core::step::Step;
@@ -29,7 +29,7 @@ pub fn demo_catalog(steps: &[Step], ui: &[UiTool], executable: &dyn Fn(&str) -> 
     all
 }
 
-/// `demo_catalog` as the file `tools/1` (`docs/schemi/strumenti-demo-1.json`).
+/// `demo_catalog` as the file `tools/1` (`docs/schemi/tools-demo-1.json`).
 pub fn demo_catalog_json(
     steps: &[Step],
     ui: &[UiTool],

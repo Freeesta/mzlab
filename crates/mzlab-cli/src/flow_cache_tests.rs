@@ -22,9 +22,9 @@ fn cached(out: &Path) -> Vec<(String, bool)> {
     list
 }
 
-/// The files the steps made (`plan.json`, `prov.json` and `corsa.json` aside).
+/// The files the steps made (`plan.json`, `prov.json` and `report.json` aside).
 fn made(out: &Path) -> Vec<(String, Vec<u8>)> {
-    let skip = ["plan.json", "prov.json", "corsa.json"];
+    let skip = ["plan.json", "prov.json", "report.json"];
     folder(out)
         .into_iter()
         .filter(|(n, _)| !skip.contains(&n.as_str()))

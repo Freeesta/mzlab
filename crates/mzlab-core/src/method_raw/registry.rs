@@ -1,5 +1,5 @@
 //! The error log of a `.raw` (`RawFileReader::error_log`): what the instrument reported while it acquired (an unstable spray, a failed calibration, a warning of the electronics, the
-//! configuration of the ETD reagent), as the entries of `metodo/1.registro`: `t_min` (minutes), `testo` as the file says it and `livello` when the text begins with it.
+//! configuration of the ETD reagent), as the entries of `method/1.registro`: `t_min` (minutes), `testo` as the file says it and `livello` when the text begins with it.
 
 use crate::method::{num, obj, text, V};
 use opentfraw::error_log::ErrorEntry;

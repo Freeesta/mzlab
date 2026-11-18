@@ -53,8 +53,8 @@ const TOL: Tol = Tol {
 };
 
 fn open_file(scan: &[Scan]) -> Box<dyn mzlab_core::readers::Reader> {
-    // the mzML of another program has no `metodo/1`; the one the bench is tried on carries the document, as an mzML written by mzLab does
-    let method = r#"{"schema":"metodo/1","origine":{"file_creato":"2024-03-05T10:11:12Z"}}"#;
+    // the mzML of another program has no `method/1`; the one the bench is tried on carries the document, as an mzML written by mzLab does
+    let method = r#"{"schema":"method/1","origine":{"file_creato":"2024-03-05T10:11:12Z"}}"#;
     open(mzml_di(
         scan,
         Cod::Np {
@@ -160,7 +160,7 @@ fn test_path(rel: &str) -> Option<std::path::PathBuf> {
 fn the_corpus_walks_a_built_folder() {
     let root = std::env::temp_dir().join(format!("rosina-banco-{}", std::process::id()));
     let scan = scans();
-    let method = r#"{"schema":"metodo/1","origine":{"file_creato":"2024-03-05T10:11:12Z"}}"#;
+    let method = r#"{"schema":"method/1","origine":{"file_creato":"2024-03-05T10:11:12Z"}}"#;
     let native = root.join("dati/formati/aperti/prova/campione.mzML");
     std::fs::create_dir_all(native.parent().unwrap()).unwrap();
     std::fs::write(

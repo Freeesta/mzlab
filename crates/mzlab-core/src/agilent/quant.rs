@@ -1,4 +1,4 @@
-//! The `metodo/1` document (`method.rs`) of an Agilent MassHunter method folder `*.m` that is not part of a run (the data-analysis method of a GC/MS:
+//! The `method/1` document (`method.rs`) of an Agilent MassHunter method folder `*.m` that is not part of a run (the data-analysis method of a GC/MS:
 //! `DaMethod/Quant/quantitative.xml`, with the acquisition method files next to it when the folder is a whole copy). It has no sample and no instrument: it says
 //! WHAT the method looks for. Section `quantificazione`: the windows of the method and, for each compound, its expected RT, its extraction window, the qualifier ions
 //! with their relative response and range, the calibration levels and the curve settings; every name/value of the files goes to `campi` with `mappato` where the section
@@ -222,7 +222,7 @@ fn sha1_hex(b: &[u8]) -> String {
     Sha1::digest(b).iter().map(|x| format!("{x:02x}")).collect()
 }
 
-/// `metodo/1` of the method folder `name` (`x.m`) whose files are `files` (path inside the folder, bytes). Never an error: what is missing is absent.
+/// `method/1` of the method folder `name` (`x.m`) whose files are `files` (path inside the folder, bytes). Never an error: what is missing is absent.
 pub fn metodo_m(name: &str, files: &[(&str, &[u8])]) -> String {
     let items = meta::collect(files);
     let quant = files

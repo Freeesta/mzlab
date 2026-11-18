@@ -86,7 +86,7 @@ fn fake(filter: &str) -> SrmFromScans {
     fake_with(filter, 1, "")
 }
 
-/// Four scans with `filtro` and polarity `pol`; `metodo` is the `metodo/1` document the reader gives.
+/// Four scans with `filtro` and polarity `pol`; `metodo` is the `method/1` document the reader gives.
 fn fake_with(filter: &str, pol: i8, method: &str) -> SrmFromScans {
     let index = (0..4)
         .map(|k| {

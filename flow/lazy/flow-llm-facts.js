@@ -1,6 +1,6 @@
 // @ts-check
 // Flow (profile «ricerca»): the facts of the open files that need no model. It collects from the engine routes (the same in the site and in the app: `api/session`, `api/scan_stats`,
-// `api/mrm`, `api/metodo`, `api/campioni/proponi`) the sources of `ispezione/1`, asks Rust (llm/ worker, no conversation, nothing leaves the site) for the inspection and the proposals
+// `api/mrm`, `api/metodo`, `api/campioni/proponi`) the sources of `inspection/1`, asks Rust (llm/ worker, no conversation, nothing leaves the site) for the inspection and the proposals
 // of the parameters, and shows them as the «Files» card with «Apply»/«Discard» (one entry of S.undo each). It also gives the readers of the assistant their inputs (`readerInput`) and the
 // charts their sources (`F.chartSources`). Loaded by flow-shell.js in the profile «ricerca», with or without the assistant. English only.
 (() => {
@@ -44,7 +44,7 @@
     return [...by].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
   };
 
-  /** the sources of `ispezione/1`, in the order and with the keys of `mzlab-cli llm inspect` (crates/mzlab-cli/src/llm_facts.rs) @param {boolean} hide */
+  /** the sources of `inspection/1`, in the order and with the keys of `mzlab-cli llm inspect` (crates/mzlab-cli/src/llm_facts.rs) @param {boolean} hide */
   const collect = async hide => {
     const files = await openFiles();
     let samples = /** @type {any[]} */ ([]);
@@ -62,7 +62,7 @@
         out.push(o);
       } catch (e) { out.push({ name, error: { error_key: (/** @type {any} */ (e) && /** @type {any} */ (e).error_key) || "err.file.unreadable" } }); }
     }
-    return { profile: "ricerca", hide_names: hide, files: out };
+    return { profile: "research", hide_names: hide, files: out };
   };
 
   /** the worker of the facts, opened on first use @type {any} */ let run = null;
@@ -100,7 +100,7 @@
     try { f = await facts(S); } catch (_) { return null; }
     const insp = JSON.parse(f.inspection);
     if (!insp.files || !insp.files.length) return null;
-    return role === "parametri" ? { "proposta-param/1": JSON.parse(f.proposal) } : { "ispezione/1": insp };
+    return role === "parametri" ? { "param-proposal/1": JSON.parse(f.proposal) } : { "inspection/1": insp };
   };
 
   /** the sources of the charts: TIC and BPC of the open files, `{files: [{name, tic: {rt, i}, bpc: {rt, i}}]}` */

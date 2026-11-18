@@ -324,7 +324,7 @@ pub fn index(raw: &RawFileReader, rows: Rows) -> Vec<Entry> {
     out
 }
 
-/// The list as the `serie_registro` section of `metodo/1`: no points, the page asks for them one series at a time.
+/// The list as the `serie_registro` section of `method/1`: no points, the page asks for them one series at a time.
 pub fn sezione(entries: &[Entry]) -> Vec<V> {
     entries
         .iter()

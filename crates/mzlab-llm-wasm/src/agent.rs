@@ -91,7 +91,7 @@ impl Agent {
         Ok(n)
     }
 
-    /// A user message with the optional `contesto/1` object that goes with it.
+    /// A user message with the optional `context/1` object that goes with it.
     pub fn user(&mut self, text: &str, context_json: &str) -> Result<String, String> {
         if !context_json.is_empty() {
             let c = parse(context_json.as_bytes()).map_err(fail)?;

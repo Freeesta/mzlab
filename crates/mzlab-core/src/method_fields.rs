@@ -1,4 +1,4 @@
-//! The fields of `metodo/1.campi` (`{origine, chiave, valore, unita?, mappato?, identita?}`, spec: `docs/agenti/method.md`) and the ident of the acquisition that marks them
+//! The fields of `method/1.campi` (`{origine, chiave, valore, unita?, mappato?, identita?}`, spec: `docs/agenti/method.md`) and the ident of the acquisition that marks them
 //! `identita`: shared by the readers of Thermo (`method_raw::fields`) and Agilent, so they sit outside the Thermo feature.
 
 use crate::method::{obj, text, V};

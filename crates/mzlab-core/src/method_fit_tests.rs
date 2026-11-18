@@ -8,7 +8,7 @@ use crate::mzmlwrite::{Header, MzmlWriter};
 /// A document like the one of a `.raw` with a big instrument method (synthetic: `n` fields, an XML text of `xml` bytes).
 fn big(n: usize, xml: usize) -> String {
     let mut o = Out(String::new());
-    o.raw("{\"schema\":\"metodo/1\",\"origine\":{\"formato\":\"thermo-raw\"},\"campi\":[");
+    o.raw("{\"schema\":\"method/1\",\"origine\":{\"formato\":\"thermo-raw\"},\"campi\":[");
     for i in 0..n {
         if i > 0 {
             o.raw(",");
@@ -42,7 +42,7 @@ fn a_long_document_is_cut_to_the_room_and_still_parses() {
     let cut = fit(&d, DOC_MAX, &esc_len);
     assert!(esc_len(&cut) <= DOC_MAX, "{}", esc_len(&cut));
     let v = json::parse(cut.as_bytes()).unwrap();
-    assert_eq!(v.get("schema").and_then(json::Value::str), Some("metodo/1"));
+    assert_eq!(v.get("schema").and_then(json::Value::str), Some("method/1"));
     // the fields go before the texts of the file: here the texts stay whole, and the head of `campi` is kept
     let texts: Vec<&str> = v
         .get("grezzo")

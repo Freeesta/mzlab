@@ -1,4 +1,4 @@
-//! The text of `report.methods@1`: a methods paragraph in English from a `corsa/1` record. Every step of the run gets a sentence from the table of `templates.rs` (or the generic sentence listing
+//! The text of `report.methods@1`: a methods paragraph in English from a `run-report/1` record. Every step of the run gets a sentence from the table of `templates.rs` (or the generic sentence listing
 //! its parameters) with the version of the step, and the text starts with the version of mzLab. It states only what was set, never a result. Bytes in, text out: `flow run` (`mzlab-cli`) and
 //! the browser module `flowtab` (`mzlab-feat-wasm`) both call it, so they write the same Markdown bytes.
 
@@ -285,10 +285,10 @@ pub fn generic_sentence(id: &str, params: &[(&str, &str)]) -> String {
     sentence(&s)
 }
 
-/// The Markdown of the methods for the record `run` (a `corsa/1` text); `params` are the parameters of the step.
+/// The Markdown of the methods for the record `run` (a `run-report/1` text); `params` are the parameters of the step.
 pub fn methods_text(params: &[(String, Value)], run: &[u8]) -> Result<String> {
     let doc = parse(run)?;
-    if doc.get("schema").and_then(Value::str) != Some("corsa/1") {
+    if doc.get("schema").and_then(Value::str) != Some("run-report/1") {
         return Err(Error::new("err.corsa.prov"));
     }
     let engine = doc.get("engine");

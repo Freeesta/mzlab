@@ -129,12 +129,12 @@ pub fn file_set(file: Vec<(String, Vec<u8>)>) -> FileSet {
     }
 }
 
-/// Every key of the `metodo/1` document and of its sections is one the schema knows; returns the parsed document.
+/// Every key of the `method/1` document and of its sections is one the schema knows; returns the parsed document.
 pub fn check_schema(method: &str, label: &str) -> serde_json::Value {
     let doc: serde_json::Value =
         serde_json::from_str(method).unwrap_or_else(|e| panic!("{label}: {e}"));
     let schema: serde_json::Value =
-        serde_json::from_str(include_str!("../../../../mzlab/web/schemi/metodo-1.json")).unwrap();
+        serde_json::from_str(include_str!("../../../../mzlab/web/schemi/method-1.json")).unwrap();
     for (key, value) in doc.as_object().unwrap() {
         let section = &schema["properties"][key.as_str()];
         assert!(!section.is_null(), "{label}: {key} is not in the schema");

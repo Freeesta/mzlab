@@ -16,8 +16,8 @@ const ROUTER: &str = include_str!("../data/assist/02_router.md");
 const META: &str = include_str!("../data/assist/03_metadati.md");
 const PHASE: &str = include_str!("../data/assist/06_piano.md");
 const INPUT: &str =
-    r#"{"ispezione/1":{"files":[{"alias":"f1","polarity":"positive","resolution":"unit"}]}}"#;
-const GOOD: &str = r#"{"schema":"lettura/1","kind":"acquisition","findings":[{"id":"F1","topic":"polarity","statement":"f1 is positive","evidence":["ispezione/1.files.f1.polarity"],"confidence":"high","action":{"type":"none"}}],"questions":[],"numbers":[]}"#;
+    r#"{"inspection/1":{"files":[{"alias":"f1","polarity":"positive","resolution":"unit"}]}}"#;
+const GOOD: &str = r#"{"schema":"lettura/1","kind":"acquisition","findings":[{"id":"F1","topic":"polarity","statement":"f1 is positive","evidence":["inspection/1.files.f1.polarity"],"confidence":"high","action":{"type":"none"}}],"questions":[],"numbers":[]}"#;
 
 fn provider() -> Provider {
     builtin().into_iter().find(|p| p.id == "anthropic").unwrap()
@@ -50,7 +50,7 @@ fn the_request_is_the_role_of_the_data_with_the_input_as_data() {
     );
     assert!(v.get("tools").is_none());
     assert!(r.body.contains("\"format\"") && r.body.contains("lettura/1"));
-    assert!(r.body.contains("ispezione/1") && !r.body.contains("temperature"));
+    assert!(r.body.contains("inspection/1") && !r.body.contains("temperature"));
     // the chart drawer has no reading schema: its answer is checked by `chart::make`
     let g = request(&provider(), &role("grafici"), META, &input()).unwrap();
     assert!(!g.body.contains("\"format\""));
@@ -79,7 +79,7 @@ fn an_invented_number_goes_back_once_with_the_problems_then_the_reading_is_dropp
     assert!(
         text.contains("previous")
             && text.contains("err.llm.reading.number")
-            && text.contains("ispezione/1")
+            && text.contains("inspection/1")
     );
     let Verdict::Dropped { problems } = verdict(&bad, 1) else {
         panic!("not dropped")

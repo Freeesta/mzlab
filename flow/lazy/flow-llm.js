@@ -109,7 +109,7 @@
   /** what the model may know of the page, the reference of a run in `prov/1` and the estimated cost @param {any} S @param {any} runs @param {any} st @param {HTMLElement} cost */
   const dataKit = (S, runs, st, cost) => {
     const sources = () => ({
-      profile: "ricerca", hide_names: !!(st.agent && st.agent.hideNames),
+      profile: "research", hide_names: !!(st.agent && st.agent.hideNames),
       plan: { sha256: S.snap || "", instances: S.plan.steps.map((/** @type {any} */ i) => ({ id: i.id, step: i.step, params: i.params })), problems: S.problems.map((/** @type {any} */ p) => ({ error_key: p.key, instance: p.instance, port: p.port })) },
       run: { steps: S.plan.steps.filter((/** @type {any} */ i) => runs.states[i.id]).map((/** @type {any} */ i) => ({ instance: i.id, step: i.step, status: runs.states[i.id] })) },
     });

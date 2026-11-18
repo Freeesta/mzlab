@@ -1,4 +1,4 @@
-//! What a timsTOF run says about itself outside its spectra: `GlobalMetadata`, the properties of the first frame and the calibrations become the `metodo/1` document and the header of
+//! What a timsTOF run says about itself outside its spectra: `GlobalMetadata`, the properties of the first frame and the calibrations become the `method/1` document and the header of
 //! the mzML we write. Every key of `GlobalMetadata` goes into `campi` (nothing is lost); names, serials and paths are marked `identita`.
 
 use super::tables::Data;
@@ -81,7 +81,7 @@ impl BrukerHeader {
         t
     }
 
-    /// The `metodo/1` document. `files`: the members read, with the SHA-1 of the database when it was computed.
+    /// The `method/1` document. `files`: the members read, with the SHA-1 of the database when it was computed.
     pub fn document(&self, files: Vec<SrcFile>) -> String {
         let src = Source {
             format: if self.tsf { "bruker-tsf" } else { "bruker-tdf" },

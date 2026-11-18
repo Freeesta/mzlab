@@ -294,7 +294,7 @@ impl Reader for BrukerReader {
     fn losses(&mut self, c: usize) -> Result<Losses> {
         self.one(c)?;
         let n = self.desc.len();
-        // a cut `_bin` keeps its cause; the frames without calibration are counted in `metodo/1.avvisi` too, so both are said when both occur
+        // a cut `_bin` keeps its cause; the frames without calibration are counted in `method/1.avvisi` too, so both are said when both occur
         let cause = if self.uncalibrated > 0 && self.missing_ones == 0 {
             BRUKER_NO_CALIBRATION
         } else {

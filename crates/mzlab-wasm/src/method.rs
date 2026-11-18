@@ -1,4 +1,4 @@
-//! `metodo/1` for the page (`mzlab-core::metodo`): the method of an item from the mzML that carries it, from the `.dam` preselected for it, or from the `.wiff` it was made from
+//! `method/1` for the page (`mzlab-core::metodo`): the method of an item from the mzML that carries it, from the `.dam` preselected for it, or from the `.wiff` it was made from
 //! (found by the SHA-1 that ProteoWizard writes in the mzML); the `.wiff` is only read, never converted here.
 use super::{error_json, Engine, JsReader};
 use crate::natives::Src;
@@ -9,7 +9,7 @@ use mzlab_core::method::{self, Source, SrcFile};
 use mzlab_core::mzmlhead::Mzml;
 use wasm_bindgen::prelude::*;
 
-/// How much of the mzML after `<run ` is read for the `metodo/1` document it carries (the texts of a `.raw` method and its `campi` take ~100 kB).
+/// How much of the mzML after `<run ` is read for the `method/1` document it carries (the texts of a `.raw` method and its `campi` take ~100 kB).
 const DOC_MAX: u64 = 1 << 20;
 /// How much of the start of an mzML is searched for the source files and the first `sample=N`.
 const HEAD: usize = 1 << 20;
@@ -50,7 +50,7 @@ impl Engine {
         Ok(o.raw("}").0.clone())
     }
 
-    /// The `metodo/1` document an mzML carries in its `<run>` (`""` when it has none).
+    /// The `method/1` document an mzML carries in its `<run>` (`""` when it has none).
     pub fn mzml_metodo(&mut self, size: f64, read: Function) -> Result<String, JsValue> {
         // through `Src`, as the routes read an mzML: one copy of `Mzml` in the engine
         let mut m = Mzml::new(Src::Js(JsReader { read }), size as u64);
@@ -58,7 +58,7 @@ impl Engine {
         Ok(method::from_userparam(&head).unwrap_or_default())
     }
 
-    /// `metodo/1` of an mzML from its header and first scans (`""` when it has no header); a document the file carries wins.
+    /// `method/1` of an mzML from its header and first scans (`""` when it has no header); a document the file carries wins.
     pub fn mzml_head_metodo(
         &mut self,
         name: &str,
@@ -70,7 +70,7 @@ impl Engine {
         Ok(doc.unwrap_or_default())
     }
 
-    /// `metodo/1` of an Agilent method folder `*.m` outside any run (`mzlab-core::agilent::quant`): `names` = the paths inside the folder, one per line,
+    /// `method/1` of an Agilent method folder `*.m` outside any run (`mzlab-core::agilent::quant`): `names` = the paths inside the folder, one per line,
     /// `lens` = the length of each file, `data` = the bytes of all of them one after the other.
     pub fn agilent_m_metodo(
         &mut self,
@@ -89,7 +89,7 @@ impl Engine {
         mzlab_core::agilent::quant::metodo_m(name, &files)
     }
 
-    /// `metodo/1` of the `.dam` preselected for the item `item` of the file at `slot`; `""` when no method is loaded.
+    /// `method/1` of the `.dam` preselected for the item `item` of the file at `slot`; `""` when no method is loaded.
     pub fn lab_metodo(
         &mut self,
         slot: u32,

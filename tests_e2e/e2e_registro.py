@@ -32,7 +32,7 @@ FAKE = """(() => {
     if (s.startsWith('api/metodo')) {
       const j = await r.clone().json();
       if (j) {
-        j.metodo = Object.assign({schema: 'metodo/1'}, j.metodo || {});
+        j.metodo = Object.assign({schema: 'method/1'}, j.metodo || {});
         j.metodo.serie_registro = ids;
         j.metodo.registro = [{t_min: 1.5, testo: 'Warning: spray unstable', livello: 'Warning'}, {t_min: 4, testo: 'Info: lock mass found', livello: 'Info'}, {t_min: 7.25, testo: 'Error: pump'}];
         return json(j);

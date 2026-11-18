@@ -1,6 +1,6 @@
 //! The `.wiff` reader of the readers module (feature `estesi`) on the real files of other SCIEX instruments (private data repository, `dati/formati/`):
 //! every sample opens with the TIC of the index or is refused with a cause, the chromatograms and spectra match the ProteoWizard mzML next to the file,
-//! `metodo/1` says what the files say. Skipped without the data repository.
+//! `method/1` says what the files say. Skipped without the data repository.
 
 #![cfg(feature = "sciex")]
 
@@ -360,7 +360,7 @@ fn real_files_match_proteowizard_mzml() {
     assert!(done > 0, "no mzML paired with a wiff");
 }
 
-/// `metodo/1` of the real file `file` in `sub` of the data repository, sample `sample`.
+/// `method/1` of the real file `file` in `sub` of the data repository, sample `sample`.
 fn method(sub: &str, file: &str, sample: u32) -> Value {
     use mzlab_core::method::Source;
     let path = dati_percorsi::percorso(&format!("{sub}/{file}")).unwrap();
@@ -380,7 +380,7 @@ fn experiments(m: &Value) -> Vec<Value> {
         .unwrap_or_default()
 }
 
-/// `metodo/1` of real files: the sample name of ProteoWizard's mzML (`<wiff>-<name>.mzML`) is `campione.nome`, a scheduled experiment says so with the window the
+/// `method/1` of real files: the sample name of ProteoWizard's mzML (`<wiff>-<name>.mzML`) is `campione.nome`, a scheduled experiment says so with the window the
 /// method states (the file named «6minWindow» has 360 s), the transitions of a scheduled experiment carry their target time, the version of Analyst is in the GLP tables.
 #[test]
 fn real_methods_say_what_the_files_say() {

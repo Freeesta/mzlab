@@ -1,4 +1,4 @@
-"""Every key a reader writes in `metodo/1.avvisi` has a text (lang/en/errori-*.js, the catalogue the CLI reads too) and is in the
+"""Every key a reader writes in `method/1.avvisi` has a text (lang/en/errori-*.js, the catalogue the CLI reads too) and is in the
 list the Method window translates (`NOTE_KEYS` of metodo-doc.js): a warning nobody can read is a silent loss."""
 import re
 from pathlib import Path

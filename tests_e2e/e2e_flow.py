@@ -395,10 +395,10 @@ try:
         step("the Feature table has the column and the tab «Family»", family_hooks)
 
         def report_and_network():
-            # a run report (corsa/1) opens in the Run report view; a product network (rete/1) opens with the network view and shares the one selection
+            # a run report (run-report/1) opens in the Run report view; a product network (rete/1) opens with the network view and shares the one selection
             pg.evaluate("""async () => {
-              const corsa = { schema: "corsa/1", engine: { name: "mzLab", version: "1.0", platform: "native" }, inputs: [], lists: [], steps: [], total_ms: 0, levels: { files: 0, rows: 0, auto: {}, other: {} } };
-              await FLOW.openResult({ type: "report", label: "corsa.json", text: async () => JSON.stringify(corsa) });
+              const corsa = { schema: "run-report/1", engine: { name: "mzLab", version: "1.0", platform: "native" }, inputs: [], lists: [], steps: [], total_ms: 0, levels: { files: 0, rows: 0, auto: {}, other: {} } };
+              await FLOW.openResult({ type: "report", label: "report.json", text: async () => JSON.stringify(corsa) });
             }""")
             try: wait_for_js(pg, "document.querySelector('.flx-res .rf h1') && /Flow run report/.test(document.querySelector('.flx-res .rf h1').textContent)", 15000)
             except Exception: raise AssertionError("report view: " + pg.inner_text(".flx-res-body")[:300] + " base=" + str(pg.evaluate("String(QTOOLS.ctx.base)")))

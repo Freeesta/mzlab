@@ -53,19 +53,19 @@ pub fn http_error(status: u16, body: &str) -> String {
     provider::http_error(status, body).to_json()
 }
 
-/// The `contesto/1` text for sources collected by the page (`mzlab_llm::context::build_text`), within `budget_tokens`.
+/// The `context/1` text for sources collected by the page (`mzlab_llm::context::build_text`), within `budget_tokens`.
 #[wasm_bindgen]
 pub fn context_build(sources_json: &str, budget_tokens: u32) -> Result<String, String> {
     mzlab_llm::context::build_text(sources_json, u64::from(budget_tokens)).map_err(fail)
 }
 
-/// The `ispezione/1` of the sources the page collected from the engine (`mzlab_llm::inspect::build_text`), within `budget_tokens`: no model needed.
+/// The `inspection/1` of the sources the page collected from the engine (`mzlab_llm::inspect::build_text`), within `budget_tokens`: no model needed.
 #[wasm_bindgen]
 pub fn inspect_build(sources_json: &str, budget_tokens: u32) -> Result<String, String> {
     mzlab_llm::inspect::build_text(sources_json, u64::from(budget_tokens)).map_err(fail)
 }
 
-/// The `proposta-param/1` of the rules `R-*` for an `ispezione/1` and the user's answers (`""` = none), checked against the `step/1` descriptors of the
+/// The `param-proposal/1` of the rules `R-*` for an `inspection/1` and the user's answers (`""` = none), checked against the `step/1` descriptors of the
 /// page's registry (`mzlab_llm::params_rules::propose_text`): no model needed.
 #[wasm_bindgen]
 pub fn params_propose(
@@ -128,7 +128,7 @@ pub struct Llm {
 
 #[wasm_bindgen]
 impl Llm {
-    /// `tools_json`: the catalog `tools/1` (`docs/schemi/strumenti-1.json`, shipped beside the page). Call it once per page.
+    /// `tools_json`: the catalog `tools/1` (`docs/schemi/tools-1.json`, shipped beside the page). Call it once per page.
     #[wasm_bindgen(constructor)]
     pub fn new(tools_json: &str) -> Result<Llm, String> {
         Ok(Llm {

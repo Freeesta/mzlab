@@ -1,5 +1,5 @@
 //! The tools of the data assistant (`data_inspect`, `params_propose`, `table_check`, `table_rows`, `ask_user`): read or propose only, never an edit
-//! or a run. Their arguments are closed schemas; the answers are built by Rust (`ispezione/1`, `proposta-param/1`, `tabcheck/1`). Used by `tools::catalog`.
+//! or a run. Their arguments are closed schemas; the answers are built by Rust (`inspection/1`, `param-proposal/1`, `tabcheck/1`). Used by `tools::catalog`.
 
 use crate::tools::{object, quote, s, step_refs, Class, Tool};
 use mzlab_core::step::Step;

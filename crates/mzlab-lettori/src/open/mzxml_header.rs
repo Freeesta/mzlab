@@ -1,4 +1,4 @@
-//! The header of an mzXML (everything before the first `<scan`): the instrument, the files the data come from, the processing, the operator. It becomes the `metodo/1` document and the
+//! The header of an mzXML (everything before the first `<scan`): the instrument, the files the data come from, the processing, the operator. It becomes the `method/1` document and the
 //! header of the mzML we write; every attribute of every element goes into `campi` (nothing is lost), the identifying ones (operator, paths) marked `identita`.
 
 use mzlab_core::error::Result;
@@ -127,7 +127,7 @@ pub(super) fn read(head: &str, limits: &Limits) -> Result<Cabin> {
     error.map_or(Ok(c), Err)
 }
 
-/// The `metodo/1` document of the file `nome` (`dim` bytes, `sha1` when read).
+/// The `method/1` document of the file `nome` (`dim` bytes, `sha1` when read).
 pub(super) fn document(c: &Cabin, nome: &str, dim: u64, sha1: Option<String>) -> String {
     let src = Source {
         format: "mzxml",

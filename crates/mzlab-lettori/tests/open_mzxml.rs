@@ -1,5 +1,5 @@
 //! The module `aperti` reads an mzXML (docs/agenti/readers-open.md): files built here in every form (32 and 64 bit, zlib or not, with and without `<index>`, flat and nested), SRM scans,
-//! the `metodo/1` document and the header of the mzML we write. The real-data parity is in `open_mzxml_hostile.rs` (it needs `MZLAB_DATI`).
+//! the `method/1` document and the header of the mzML we write. The real-data parity is in `open_mzxml_hostile.rs` (it needs `MZLAB_DATI`).
 #![cfg(feature = "aperti")]
 
 mod common;
@@ -161,7 +161,7 @@ fn the_method_and_the_header_carry_instrument_file_and_software() {
         h.source_sha1,
         vec!["0123456789abcdef0123456789abcdef01234567".to_string()]
     );
-    assert!(h.run_params.iter().any(|(k, _)| k == "mzLab metodo/1"));
+    assert!(h.run_params.iter().any(|(k, _)| k == "mzLab method/1"));
     let mzml = String::from_utf8(written_mzml(&mut l)).unwrap();
     assert!(mzml.contains("<spectrumList count=\"5\""));
     assert!(mzml.contains("Q Exactive"));

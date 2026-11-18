@@ -31,7 +31,7 @@ The `variante` method of the `Lettore` trait and the `cv:` parameters of `mzmlwr
 - Not seen in any file: `MS:1000789` enhanced multiply charged, `MS:1000791` enhanced resolution, Q1/Q3 scans: no code produces them yet.
 - Instrument: `Header` with the CV term of the model (`estesi::instrument_cv`: 4000 QTRAP, API 4000, 3200, QTRAP 4500/5500/6500/6500+, Triple Quad 4500, TripleTOF 5600/6600, QSTAR); a model without a term is `MS:1000031` + userParam `instrument model`.
 
-## `metodo/1` (estesi: `method_wiff/extended.rs`)
+## `method/1` (estesi: `method_wiff/extended.rs`)
 - Fallback method (above) for samples without a `MethodN`.
 - Scheduled experiment: in the stream `Experiment<i>/sMRM` (52 bytes) u32 at +36 = 1 and u32 at +40 = window in seconds (360 in the "6minWindow" file, 120 in the one whose mzML keeps 120 s around the target). The experiment carries `programmato: true` and `finestra_s`; in its transitions the number that the method keeps in the dwell time field is the target time in minutes and the field is called `rt_min` (not `dwell_ms`).
 - `campi`: strings of `SampleSubtree/DabsInfo` and `SampleTable` (`s1`, `s2`, …: sample name, plate type, position), tables of `MethodN/GLPTables` (UTF-16 text: Q1/Q3 calibrations and resolution, detector; one entry per table, titled by the first row) with the Analyst version ("File was created with the software version", `mappato: strumento.software`), DAD header (see below).
@@ -50,7 +50,7 @@ The `variante` method of the `Lettore` trait and the `cv:` parameters of `mzmlwr
 
 ## Tests
 - `tools/wiff_riferimento.py`: `variants(out)` writes `variante.wiff` (QTRAP 5500, V1 and V3 blocks, EPI, PIS, NL, an empty block) and the files to reject (`periodi`, `tof`, `codice`, `bloccotof`, `versione4`), with the expected values in `riferimento.json`.
-- `tests/wiff_variants.rs` (feature `estesi`): synthetic, rejections, damage (every byte overwritten: no panic); `tests/wiff_variants_real.rs`: with `MZLAB_DATI` the real files (`dati/formati/sciex/wiff`, `scansioni_speciali`): 32 files, 388 samples read, 6 rejected (TOF and `.wiff2`), index TIC always equal; comparison with the ProteoWizard mzMLs of PIS/NL (3594 spectra) and MRM (108 chromatograms, 94 scheduled); `metodo/1` (name, window, `rt_min`, version, DAD).
+- `tests/wiff_variants.rs` (feature `estesi`): synthetic, rejections, damage (every byte overwritten: no panic); `tests/wiff_variants_real.rs`: with `MZLAB_DATI` the real files (`dati/formati/sciex/wiff`, `scansioni_speciali`): 32 files, 388 samples read, 6 rejected (TOF and `.wiff2`), index TIC always equal; comparison with the ProteoWizard mzMLs of PIS/NL (3594 spectra) and MRM (108 chromatograms, 94 scheduled); `method/1` (name, window, `rt_min`, version, DAD).
 - `tests/wiff_scheduled.rs` (`programmati`: two MRM experiments, one sMRM with a 60 s window): one TIC per experiment, `rt=`/`window=` in the ids, optional cut; `tests/wiff_mrm.rs` (`transizioni`): CE, dwell and name up to the mzML.
 - `tests_e2e/e2e_wiff.py`: the synthetic "variant" pair goes through the `sciex` module.
 - Real files are missing for: multiple periods, EMC/ER, Q1/Q3 scans, EPI with precursor (the mass at +42 is the method's), TripleTOF/ZenoTOF (TOF block codec).

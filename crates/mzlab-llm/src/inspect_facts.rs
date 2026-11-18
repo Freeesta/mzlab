@@ -1,5 +1,5 @@
-//! Facts of one file for `ispezione/1`: polarity, resolution class, acquisition type, ranges, MRM, gradient and estimates read from the engine
-//! answers (`Item.info()`, `metodo/1`, `features.estimate`) by whitelisted keys only. Used by `inspect`.
+//! Facts of one file for `inspection/1`: polarity, resolution class, acquisition type, ranges, MRM, gradient and estimates read from the engine
+//! answers (`Item.info()`, `method/1`, `features.estimate`) by whitelisted keys only. Used by `inspect`.
 
 use mzlab_core::json::Value;
 

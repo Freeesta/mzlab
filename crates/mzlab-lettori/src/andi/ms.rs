@@ -1,5 +1,5 @@
 //! An ANDI-MS file (ASTM E2077, netCDF-3, `.cdf`) as a `Lettore`: the scans of `scan_index`/`point_count` over `mass_values` and `intensity_values`, the TIC of `total_intensity`, the header
-//! of the file as `metodo/1`. A file with `ordinate_values` and no `mass_values` is ANDI-Chromatography (ASTM E1947): one sample without scans and one analog chromatogram (`chromato.rs`).
+//! of the file as `method/1`. A file with `ordinate_values` and no `mass_values` is ANDI-Chromatography (ASTM E1947): one sample without scans and one analog chromatogram (`chromato.rs`).
 //! Written from the two ASTM specifications and the netCDF documentation, checked against files exported by ChemStation and MassHunter.
 
 use super::chromato;

@@ -1,4 +1,4 @@
-//! `ricerca/1` export: the numeric match of the search box (`mzlab_core::search`); an error is JSON with a key.
+//! `mz-match/1` export: the numeric match of the search box (`mzlab_core::search`); an error is JSON with a key.
 
 use crate::error_json;
 use wasm_bindgen::prelude::*;

@@ -1,5 +1,5 @@
 // @ts-strict
-// Report page of one Flow run (`corsa/1`, written by `mzlab-cli flow report`): lays out the numbers Rust made, in one column that prints well in black and white.
+// Report page of one Flow run (`run-report/1`, written by `mzlab-cli flow report`): lays out the numbers Rust made, in one column that prints well in black and white.
 // English only (Flow/Tabui rule: no lang/ keys). Every figure has its data table right under it. Same JSON, same HTML: nothing here reads a clock or a random value.
 window.RAPPORTO_FLOW = (() => {
   /** @typedef {{name:string,bytes:number,sha256:string,type:string}} RFFile */
@@ -156,7 +156,7 @@ window.RAPPORTO_FLOW = (() => {
   /** @param {Corsa} corsa */
   function download(corsa) {
     const url = URL.createObjectURL(new Blob([JSON.stringify(corsa, null, 1) + "\n"], { type: "application/json" }));
-    const a = document.createElement("a"); a.href = url; a.download = "corsa.json"; document.body.appendChild(a); a.click(); a.remove();
+    const a = document.createElement("a"); a.href = url; a.download = "report.json"; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 

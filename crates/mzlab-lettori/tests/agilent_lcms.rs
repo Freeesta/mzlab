@@ -126,7 +126,7 @@ fn every_real_run_opens_and_gives_its_scans_and_traces() {
         let tic = l.chromatogram(0, "TIC").unwrap();
         assert!(!tic.time.is_empty(), "{label}: TIC");
         let m = l.method(0).unwrap();
-        assert!(m.contains("\"schema\":\"metodo/1\""), "{label}: method");
+        assert!(m.contains("\"schema\":\"method/1\""), "{label}: method");
         eprintln!(
             "{label}: {n} spectra, {srm} SRM, TIC {} points",
             tic.time.len()

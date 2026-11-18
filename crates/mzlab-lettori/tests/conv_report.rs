@@ -1,4 +1,4 @@
-//! `conv/1` of every reader that can be built here without laboratory data: the reader named, the version, and each gap declared with its reason.
+//! `conversion/1` of every reader that can be built here without laboratory data: the reader named, the version, and each gap declared with its reason.
 //! The readers of the other families (Thermo, SCIEX, Bruker) are covered by the data of the private repository (`tests/thermo_data.rs`, ...).
 #![allow(dead_code)]
 
@@ -15,8 +15,8 @@ fn conv_di(l: &mut dyn Reader) -> json::Value {
         .write(l, 0, Vec::new(), &mut |_, _| {})
         .unwrap();
     let t = String::from_utf8_lossy(&xml);
-    let key = "name=\"mzLab conv/1\" value=\"";
-    let v = &t[t.find(key).expect("conv/1 in the run") + key.len()..];
+    let key = "name=\"mzLab conversion/1\" value=\"";
+    let v = &t[t.find(key).expect("conversion/1 in the run") + key.len()..];
     let v = &v[..v.find("\"/>").unwrap()];
     let v = v
         .replace("&quot;", "\"")
@@ -29,16 +29,16 @@ fn conv_di(l: &mut dyn Reader) -> json::Value {
 fn check(l: &mut dyn Reader, id: &str) {
     assert_eq!(l.format().id(), id);
     let doc = conv_di(l);
-    assert_eq!(doc.get("schema").and_then(|s| s.str()), Some("conv/1"));
-    assert_eq!(doc.get("lettore").and_then(|s| s.str()), Some(id));
+    assert_eq!(doc.get("schema").and_then(|s| s.str()), Some("conversion/1"));
+    assert_eq!(doc.get("reader").and_then(|s| s.str()), Some(id));
     assert!(doc
-        .get("versione")
+        .get("version")
         .and_then(|s| s.str())
         .is_some_and(|v| !v.is_empty()));
-    assert!(doc.get("campi_cv").and_then(|n| n.f64()).is_some());
-    assert!(doc.get("campi_user").and_then(|n| n.f64()).is_some());
+    assert!(doc.get("cv_fields").and_then(|n| n.f64()).is_some());
+    assert!(doc.get("user_fields").and_then(|n| n.f64()).is_some());
     let declared = l.not_carried();
-    let written = doc.get("non_portati").expect("non_portati").arr();
+    let written = doc.get("not_carried").expect("not_carried").arr();
     assert_eq!(
         written.len(),
         declared.len(),

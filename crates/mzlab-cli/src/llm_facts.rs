@@ -1,4 +1,4 @@
-//! `mzlab-cli llm inspect DIR` and `mzlab-cli llm params DIR`: the `ispezione/1` and the `proposta-param/1` of the mzML files of a folder, without any
+//! `mzlab-cli llm inspect DIR` and `mzlab-cli llm params DIR`: the `inspection/1` and the `param-proposal/1` of the mzML files of a folder, without any
 //! model. The sources are the answers of the engine routes the page asks for the same files (items of `Item.info()`, `/api/scan_stats`, `/api/mrm`,
 //! `/api/metodo`, `campioni/2 proponi`), assembled in the same order as `flow/lazy/flow-llm-facts.js`, so the page and the CLI give the same bytes.
 
@@ -104,7 +104,7 @@ fn file_source(path: &Path, sample: &Value, order: usize) -> String {
     }
 }
 
-/// The sources of `ispezione/1` for the mzML files of `dir`.
+/// The sources of `inspection/1` for the mzML files of `dir`.
 pub(crate) fn sources(dir: &Path, hide: bool) -> Result<String, String> {
     let files = files_of(dir)?;
     let names: Vec<String> = files
@@ -126,12 +126,12 @@ pub(crate) fn sources(dir: &Path, hide: bool) -> Result<String, String> {
         .map(|(k, p)| file_source(p, samples.get(k).unwrap_or(&Value::Null), k + 1))
         .collect();
     Ok(format!(
-        "{{\"profile\":\"ricerca\",\"hide_names\":{hide},\"files\":[{}]}}",
+        "{{\"profile\":\"research\",\"hide_names\":{hide},\"files\":[{}]}}",
         parts.join(",")
     ))
 }
 
-/// The `ispezione/1` of the mzML files of `dir`.
+/// The `inspection/1` of the mzML files of `dir`.
 pub(crate) fn inspection(dir: &Path, hide: bool, budget: u64) -> Result<String, String> {
     let src = parse(sources(dir, hide)?.as_bytes()).map_err(|e| e.to_string())?;
     build(&src, budget).map_err(|e| e.to_string())

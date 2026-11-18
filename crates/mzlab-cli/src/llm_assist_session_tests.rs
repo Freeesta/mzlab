@@ -78,17 +78,17 @@ fn inspection(comment: &str) -> String {
 fn input(role: &str) -> Value {
     let ins = inspection("");
     let j = match role {
-        "metadati" => format!("{{\"ispezione/1\":{ins}}}"),
-        "cromatografia" => format!("{{\"ispezione/1\":{ins},\"qc/1\":{{\"contaminant\":{{\"rt\":18.3}}}}}}"),
-        "parametri" => "{\"proposta-param/1\":{\"proposals\":[{\"step\":\"tp.dig_lr@1\",\"name\":\"tol_da\",\"value\":0.4,\"rule\":\"R-tol-1\"}]},\"answers\":{\"goal\":\"transformation products\"}}".to_string(),
+        "metadati" => format!("{{\"inspection/1\":{ins}}}"),
+        "cromatografia" => format!("{{\"inspection/1\":{ins},\"qc/1\":{{\"contaminant\":{{\"rt\":18.3}}}}}}"),
+        "parametri" => "{\"param-proposal/1\":{\"proposals\":[{\"step\":\"tp.dig_lr@1\",\"name\":\"tol_da\",\"value\":0.4,\"rule\":\"R-tol-1\"}]},\"answers\":{\"goal\":\"transformation products\"}}".to_string(),
         "interprete" => "{\"tabcheck/1\":{\"checks\":[{\"id\":\"adducts\",\"flag\":\"note\",\"rows\":[\"r4\"],\"proof\":{\"pair_mz\":[364.4,386.3]}}]},\"answers\":{\"goal\":\"transformation products\"},\"resolution\":\"unit\"}".to_string(),
         _ => "{\"request\":\"show the TIC of all files\",\"views\":[{\"ref\":\"tic:*\"}]}".to_string(),
     };
     parse(j.as_bytes()).unwrap()
 }
 
-const META_BAD: &str = r#"{"schema":"lettura/1","kind":"acquisition","findings":[{"id":"F1","topic":"polarity","statement":"f1–f7 are ESI+ full scan at unit resolution, peak sigma 0.06 min","evidence":["ispezione.files.f1.polarity","ispezione.files.f1.class"],"confidence":"high","action":{"type":"none"}}],"questions":[],"numbers":["0.06"]}"#;
-const META_OK: &str = r#"{"schema":"lettura/1","kind":"acquisition","findings":[{"id":"F1","topic":"polarity","statement":"f1–f7 are ESI+ full scan at unit resolution","evidence":["ispezione.files.f1.polarity","ispezione.files.f1.class"],"confidence":"high","action":{"type":"none"}}],"questions":[],"numbers":[]}"#;
+const META_BAD: &str = r#"{"schema":"lettura/1","kind":"acquisition","findings":[{"id":"F1","topic":"polarity","statement":"f1–f7 are ESI+ full scan at unit resolution, peak sigma 0.06 min","evidence":["inspection.files.f1.polarity","inspection.files.f1.class"],"confidence":"high","action":{"type":"none"}}],"questions":[],"numbers":["0.06"]}"#;
+const META_OK: &str = r#"{"schema":"lettura/1","kind":"acquisition","findings":[{"id":"F1","topic":"polarity","statement":"f1–f7 are ESI+ full scan at unit resolution","evidence":["inspection.files.f1.polarity","inspection.files.f1.class"],"confidence":"high","action":{"type":"none"}}],"questions":[],"numbers":[]}"#;
 const CROM: &str = r#"{"schema":"lettura/1","kind":"chromatography","findings":[{"id":"F1","topic":"contaminant","statement":"A signal recurs at 18.3 min in every file: a candidate contaminant","evidence":["qc.contaminant.rt"],"confidence":"medium","action":{"type":"none"}}],"questions":[],"numbers":["18.3"]}"#;
 const PARAM: &str = r#"{"schema":"param-scelte/1","choices":[{"step":"tp.dig_lr@1","name":"tol_da","value":0.4,"source":"rule:R-tol-1","reason":"unit resolution: the value of the rule is kept"}],"questions":[],"numbers":[]}"#;
 const TABLE: &str = r#"{"schema":"lettura/1","kind":"table","findings":[{"id":"F1","topic":"adducts","statement":"m/z 364.4 and 386.3 may be one compound as two adducts: a candidate pair","evidence":["tabcheck.adducts.proof"],"confidence":"medium","action":{"type":"none"}}],"questions":[],"numbers":["364.4","386.3"]}"#;

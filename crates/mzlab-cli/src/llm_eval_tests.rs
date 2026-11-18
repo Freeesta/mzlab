@@ -58,7 +58,7 @@ fn context_reads_a_run_folder_and_can_hide_names() {
     let dir = std::env::temp_dir().join(format!("mzlab-ctx-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(
-        dir.join("corsa.json"),
+        dir.join("report.json"),
         "{\"inputs\":[{\"name\":\"secret_sample.mzML\"}],\"steps\":[]}",
     )
     .unwrap();

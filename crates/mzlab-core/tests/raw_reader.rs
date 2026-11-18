@@ -235,8 +235,8 @@ fn the_mzml_of_a_raw_carries_the_instrument_the_hash_the_start_and_the_method() 
     assert!(top.contains("MS:1000563"), "source file format");
     assert!(top.contains("startTimeStamp=\""), "start of the run");
     assert!(top.contains("opentfraw.computer_name"), "run terms");
-    let doc = method::from_userparam(top).expect("metodo/1 in the run");
-    assert!(doc.contains("\"schema\":\"metodo/1\""));
+    let doc = method::from_userparam(top).expect("method/1 in the run");
+    assert!(doc.contains("\"schema\":\"method/1\""));
     assert!(
         doc.contains(&want),
         "the document names the file by its hash"

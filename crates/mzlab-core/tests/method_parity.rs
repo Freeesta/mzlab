@@ -1,4 +1,4 @@
-//! `metodo/1` of the `.wiff` files of the 3200 QTRAP against what is known of them: the `.dam` that the file names, the SHA-1 that ProteoWizard wrote in its mzML.
+//! `method/1` of the `.wiff` files of the 3200 QTRAP against what is known of them: the `.dam` that the file names, the SHA-1 that ProteoWizard wrote in its mzML.
 //! Needs the private data repository (`MZLAB_DATI`, or `mzlab-dati` beside this one); without it the test is skipped (no data of the laboratory lives here).
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
@@ -69,7 +69,7 @@ fn check_sample(ole: &Ole, wiff: &str, bytes: &[u8], sample: u32) -> usize {
         json::parse(doc.as_bytes()).unwrap_or_else(|e| panic!("{wiff} {sample}: not JSON: {e:?}"));
     assert_eq!(
         v.get("schema").and_then(|s| s.str()),
-        Some("metodo/1"),
+        Some("method/1"),
         "{wiff} {sample}"
     );
     for k in ["origine", "campione", "strumento", "registro", "grezzo"] {

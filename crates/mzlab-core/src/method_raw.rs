@@ -1,4 +1,4 @@
-//! The Thermo `.raw` adapter of `metodo/1` (`method.rs`): the sequence row (vial, volume, id, comment, method), the instrument (model, serial number, versions of
+//! The Thermo `.raw` adapter of `method/1` (`method.rs`): the sequence row (vial, volume, id, comment, method), the instrument (model, serial number, versions of
 //! the InstID block), the people and the computer, the LC and the mass spectrometer methods embedded in the file (`method_raw/script.rs`) and, in `campi`,
 //! every other field of the container, of the scan trailer and of the method (`method_raw/fields.rs`). What is only guessed from position is marked in `docs/agenti/method.md`.
 //! The status log is in `campi` (`campi/status.rs`); when its schema is not found `avvisi` says so.
@@ -407,7 +407,7 @@ fn trailer_pass<R: Read + Seek>(
     (t.finish(raw), entries)
 }
 
-/// The `metodo/1` document of a `.raw` already opened as `raw` (`source` is the same file, read again for the texts of the method). Never an error: what is missing is absent.
+/// The `method/1` document of a `.raw` already opened as `raw` (`source` is the same file, read again for the texts of the method). Never an error: what is missing is absent.
 pub fn from_raw<R: Read + Seek>(
     raw: &RawFileReader,
     source: &mut R,

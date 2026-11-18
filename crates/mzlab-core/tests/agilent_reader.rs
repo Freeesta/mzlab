@@ -110,7 +110,7 @@ fn the_reader_gives_the_scans_the_chromatograms_and_the_method_of_the_run() {
     }
 }
 
-/// The TIC and the BPC from the records, one SIC per ion of a SIM method, and the `metodo/1` document.
+/// The TIC and the BPC from the records, one SIC per ion of a SIM method, and the `method/1` document.
 fn chromatograms_and_method(l: &mut dyn Reader, run: &Run, label: &str) {
     let listed = l.chromatograms(0).unwrap();
     for c in &run.chromatograms {

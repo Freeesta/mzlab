@@ -18,7 +18,7 @@ fn insieme(membri: Vec<(&str, Vec<u8>)>) -> FileSet {
     }
 }
 
-/// Opens `data` as the members `nomi` of one dataset through the registry of the readers module and reads what a page reads first: `metodo/1`, index, a few scans and their
+/// Opens `data` as the members `nomi` of one dataset through the registry of the readers module and reads what a page reads first: `method/1`, index, a few scans and their
 /// headers, the chromatograms. With two names the input is a u32 LE length, that many bytes for the first member and the rest for the second (as `ingressi::wiff`).
 fn lettori_famiglia(nomi: &[&str], data: &[u8]) {
     let membri: Vec<(&str, Vec<u8>)> = match nomi {

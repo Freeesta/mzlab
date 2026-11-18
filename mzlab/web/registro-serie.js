@@ -1,7 +1,7 @@
 // @ts-strict
 // The instrument log of a Thermo .raw as chromatogram kind «Registro dello strumento» (p.kind = "reg", p.reg = id of the series): the status log of the instrument (temperatures, voltages,
 // vacuum, gas) and the numeric fields of the scan trailer that change (injection time, AGC, lock mass), each one drawn like an analog trace. Loaded as a module after the classic scripts; pannelli.js
-// and grafici.js use window.REGISTRO. The list of the series comes in `metodo/1.serie_registro` (api/metodo); the points are asked one series at a time (api/registro, engine worker `natregistro`).
+// and grafici.js use window.REGISTRO. The list of the series comes in `method/1.serie_registro` (api/metodo); the points are asked one series at a time (api/registro, engine worker `natregistro`).
 // A file with no such list (an mzML, a .wiff) has no entry: the kind is offered only when a file of the tab has series.
 
 /** @typedef {{ id: string, gruppo?: string, nome: string, unita?: string, n: number, min: number, max: number }} Voce */
