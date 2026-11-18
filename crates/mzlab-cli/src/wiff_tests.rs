@@ -40,7 +40,7 @@ fn list_gives_the_schema_and_exit_0_for_a_clean_file() {
 #[test]
 fn list_exits_3_when_a_sample_is_refused() {
     let Some(d) = fixtures() else { return };
-    let f = d.join("periodi.wiff");
+    let f = d.join("periods.wiff");
     let o = run(&["wiff", "list", f.to_str().unwrap()]);
     assert_eq!(o.code, 3, "{}", o.stderr);
     assert!(String::from_utf8_lossy(&o.stdout).contains("\"refused\""));

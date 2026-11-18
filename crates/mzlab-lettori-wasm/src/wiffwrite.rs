@@ -114,9 +114,7 @@ pub fn wiff_list(
 pub fn wiff_verify(names: Vec<String>, sizes: Vec<f64>, read: Function) -> Result<String, JsValue> {
     let mut all = sets(&names, &sizes, &read);
     if all.len() < 2 {
-        return Err(err(
-            mzlab_core::Error::new("err.file.wiff").with("detail", "no source")
-        ));
+        return Err(err(mzlab_core::Error::new("err.file.wiffNoSource")));
     }
     let out = all.remove(0);
     mzlab_core::wiff::inventory::verify(out, all, &Limits::sito())

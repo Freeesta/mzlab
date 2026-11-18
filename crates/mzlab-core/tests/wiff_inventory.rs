@@ -79,7 +79,7 @@ fn every_sample_is_listed_with_a_status() {
 #[test]
 fn refused_pairs_are_listed_as_refused_never_hidden() {
     let Some(dir) = fixtures() else { return };
-    for stem in ["periodi", "tof", "codice", "bloccotof", "versione4"] {
+    for stem in ["periods", "tof", "code", "tofblock", "version4"] {
         let s = statuses(&dir, stem);
         assert!(s.iter().any(|x| x == "refused"), "{stem}: {s:?}");
     }
@@ -88,9 +88,7 @@ fn refused_pairs_are_listed_as_refused_never_hidden() {
 #[test]
 fn a_section_the_index_does_not_list_is_reported() {
     let Some(dir) = fixtures() else { return };
-    assert!(statuses(&dir, "nonindicizzato")
-        .iter()
-        .any(|x| x == "unindexed"));
+    assert!(statuses(&dir, "unindexed").iter().any(|x| x == "unindexed"));
 }
 
 #[test]
@@ -116,4 +114,37 @@ fn the_inventory_lists_the_directory_metadata() {
     assert!(d
         .iter()
         .any(|e| matches!(e.get("path"), Some(Value::Str(p)) if p == "SampleSubtree/Sample1/Idx")));
+}
+
+/// The CLI reads with `Limits::desktop()`, the site with `Limits::sito()`: the inventory only goes through the entries and depth checks of the container
+/// (it reads by sector, whatever the size), so both give the same text. At the smallest `entries` that still opens the file the text is the same too; one
+/// below it the pair is refused with a named key, never a different listing.
+#[test]
+fn the_site_and_the_app_limits_give_the_same_inventory() {
+    let Some(dir) = fixtures() else { return };
+    for stem in ["one", "two", "gaps", "periods", "tof", "unindexed"] {
+        for full in [false, true] {
+            let a = list(vec![set(&dir, stem)], &Limits::sito(), full).unwrap();
+            let b = list(vec![set(&dir, stem)], &Limits::desktop(), full).unwrap();
+            assert_eq!(a, b, "{stem} full={full}");
+        }
+    }
+    let at = |n: usize| Limits {
+        entries: n,
+        ..Limits::sito()
+    };
+    let want = list(vec![set(&dir, "two")], &Limits::sito(), true).unwrap();
+    let ok = |n: usize| list(vec![set(&dir, "two")], &at(n), true);
+    let min = (1..=64)
+        .find(|&n| ok(n).is_ok())
+        .expect("a small entries limit opens the fixture");
+    assert_eq!(ok(min).unwrap(), want, "entries = {min}");
+    if min > 1 {
+        let e = ok(min - 1).unwrap_err();
+        assert!(
+            e.key.starts_with("err.") || e.key.starts_with("error."),
+            "{}",
+            e.key
+        );
+    }
 }

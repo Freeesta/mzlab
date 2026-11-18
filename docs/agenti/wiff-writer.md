@@ -47,7 +47,7 @@ Design (all logic in Rust, `crates/mzlab-core/src/wiffwrite/`, streaming through
 
 ## (d) How "nothing lost" is verified, and what cannot be
 Automatic (a Rust integration test, later phase, synthetic data only):
-- split: every sample of a multi-sample fixture (`nomi`, `buchi`, `two`, `prodotto`, `dadmetodo`, `dispositivi`, `variante`, `ida`) into its own pair; merge them back in the original order; compare with the source.
+- split: every sample of a multi-sample fixture (`nomi`, `gaps`, `two`, `prodotto`, `dadmetodo`, `dispositivi`, `variante`, `ida`) into its own pair; merge them back in the original order; compare with the source.
 - raw level, per sample: every stream under `SampleN` and its method byte-equal (after the number mapping); the `.scan` section byte range equal (SHA-256); directory metadata of every kept entry equal; free-form extra streams injected into a fixture (random names and bytes) must survive (the canary for "unparsed stream").
 - decoded level: `Wiff::run` of each sample gives equal spectra, chromatograms, polarity, CE, precursors, `metodo/1`, names, `losses` zero; also the DAD and device traces.
 - operations: remove one sample (the rest equal, `.scan` smaller by exactly that section); add (the new sample equal to its source); every permutation and subset of 3 samples; the same plan twice gives identical bytes (determinism); an empty injection survives.

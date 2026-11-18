@@ -1,6 +1,7 @@
 """The module `wiffwrite` (crates/mzlab-lettori-wasm, feature `wiffwrite`) gives through Node the same bytes as `mzlab-cli wiff list|verify` on the synthetic pairs of
 tools/wiff_riferimento.py: a clean file, one with an empty injection, refused ones, an unindexed section, the full inventory and a verify of equal and of different files.
-Skipped without cargo, wasm-bindgen or node."""
+Skipped without cargo, wasm-bindgen or node only outside CI (CI has them all, so there a missing tool fails the test)."""
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -9,7 +10,7 @@ import pytest
 from cargo_util import build
 
 ROOT = Path(__file__).resolve().parents[1]
-pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
+pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")) and not os.environ.get("CI"), reason="cargo, wasm-bindgen or node not available")
 
 
 def run(*a, ok=(0,)):
@@ -34,7 +35,7 @@ def node(pkg, *a, ok=(0,)):
     return run("node", "tests/wiff_inventory_node.js", str(pkg / "mzlab_lettori_wasm.js"), *a, ok=ok)
 
 
-@pytest.mark.parametrize("stem,codes", [("one", (0,)), ("two", (0,)), ("buchi", (0, 3)), ("periodi", (3,)), ("tof", (3,)), ("nonindicizzato", (3,))])
+@pytest.mark.parametrize("stem,codes", [("one", (0,)), ("two", (0,)), ("gaps", (0, 3)), ("periods", (3,)), ("tof", (3,)), ("unindexed", (3,))])
 def test_list_same_bytes_as_the_command_line(built, stem, codes):
     pkg, files = built
     f = str(files / f"{stem}.wiff")
