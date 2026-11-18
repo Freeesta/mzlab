@@ -30,7 +30,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 ## Commands with and without `--json`
 - With a `--json` flag: `flow run`, `flow check`, `steps`, `validate`, `dad` (all its answers are JSON; `--json` adds `errore/1`).
 - Without it yet (not added in this change): `features` (CSV), `convert`, `flow report`, `flow record`, `flow verify`, `flow command`, `normative`, `insilico pack`, `msn-lib`, `msn-rules`, `msn-graph`, `explain-missing`, `background`, `manual-table`, `peak-auto`, `peak-auto-lr`, `peak-area`, `peak-edges`, `peak-split`, `peak-window`, `channels`, `dda-window`, `samples`, `ion-pattern`, `ion-mz`, `match-mz`, the `mol-*` commands and the `llm` subcommands. Several of these already print JSON (or CSV) by default and have a stable schema; read the command's `--help` before parsing.
-- `manual-table` has no `--json` yet: its answer is CSV on stdout with a stable header (`docs/agenti/transizioni.md`), errors on stderr, exit 0 done / 2 usage or data error.
+- `manual-table`: CSV on stdout with a stable header (`docs/agenti/transizioni.md`), or `--json` = `{"columns": [NAME], "rows": [{NAME: TEXT}]}` (the same cells, as text); `--set columns=sn,fig,quality` adds the optional figure columns; errors on stderr, exit 0 done / 2 usage or data error.
   `--set traces=PATH` takes the traces (chromatogram, XIC, DAD) as JSON instead of files; with a `panel` on a trace the header ends with `panel,conc,conc_unit,correction,below,area_unit`.
   `--set shifts=true` and `--set auto=true` answer JSON.
 

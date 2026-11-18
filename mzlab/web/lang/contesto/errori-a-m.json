@@ -30,6 +30,7 @@
   "warn.bruker.noCalibration": "Calm partial-read notice (CLI, flow, loading row): frames of a .d folder without a usable MzCalibration; their spectra are left out and counted because their m/z cannot be calculated. Do not say that the file ends.",
   "error.featMemory": "Tabui (pipeline) error: a stage does not fit in memory. {fase} = stage (align, proofs), {files} = number of files, {stima_mb} and {budget_mb} = estimated memory and budget in MB.",
   "error.fileInUse": "Error: the file has been written by another mzLab tab for more than 2 seconds. {file} = file name.",
+  "err.manint.columns": "Error of the manual integrations table for an unknown optional column group; {column} = name requested.",
   "err.manint.baseline": "Error of the manual integrations table for an unknown baseline; {baseline} = name requested.",
   "err.canali.unknown": "Engine error message; {id} = identifier.",
   "err.canali.sample": "Error message of the channels CLI; {id} = sample requested, {ids} = list of the samples in the file.",

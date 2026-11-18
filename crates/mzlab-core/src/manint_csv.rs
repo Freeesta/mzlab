@@ -13,6 +13,7 @@ pub(super) fn csv_text(
     keys: &[Channel],
     samples: &[Sample],
     sums: bool,
+    cols: Cols,
 ) -> String {
     // the extra columns only when a trace was supplied with its panel: the bytes of a table of file transitions do not change
     let ext = samples
@@ -22,6 +23,7 @@ pub(super) fn csv_text(
     if ext {
         out += EXT_HEAD;
     }
+    out += &cols.head();
     out.push('\n');
     for (ch, (_, label, _)) in keys.iter().enumerate() {
         let mine: Vec<&Row> = rows.iter().filter(|r| r.0 == ch).map(|r| &r.1).collect();
@@ -50,6 +52,12 @@ pub(super) fn csv_text(
                 out.pop();
                 out += &ext_cells(&samples[r.file].1[r.tr], r, &corrs[r.label]);
             }
+            let more = cols.cells(&samples[r.file].1[r.tr], r);
+            if !more.is_empty() {
+                out.pop();
+                out += &more;
+                out.push('\n');
+            }
         }
         if sums {
             out += &format!(
@@ -57,6 +65,11 @@ pub(super) fn csv_text(
                 sci(mine.iter().map(|r| r.area).sum(), 5),
                 if ext { ",,,,,," } else { "" }
             );
+            if cols.any() {
+                out.pop();
+                out += &",".repeat(cols.count());
+                out.push('\n');
+            }
         }
     }
     out

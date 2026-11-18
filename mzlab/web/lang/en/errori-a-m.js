@@ -1,5 +1,6 @@
 I18N.add("en", {
   "err.manint.channel": "An integration window names no trace of the open files.",
+  "err.manint.columns": "Unknown column group of the integrations table: {column} (sn, fig, quality).",
   "err.manint.baseline": "Unknown baseline of an integration: {baseline} (zero, edges, or line with its two points).",
   "err.http": "error {status}",
   "err.hr.mix": "Low- and high-resolution files cannot be in the same session. Open the high-resolution files in another session, or remove them from this one.",
