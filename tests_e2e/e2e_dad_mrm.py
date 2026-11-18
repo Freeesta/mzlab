@@ -78,7 +78,7 @@ try:
             assert pg.evaluate("document.activeElement.dataset.o") == "canali"
             pg.keyboard.press("ArrowDown"); wait_for_js(pg, f"!{MRM}.el.querySelector('.can-pop').hidden && document.activeElement.classList.contains('can-row')")
             pg.keyboard.press("End"); assert pg.evaluate("document.activeElement.dataset.kind") == "pda"
-            pg.keyboard.press("ArrowUp"); assert pg.evaluate("document.activeElement.dataset.omo || ''").startswith("srm"), pg.evaluate("document.activeElement.outerHTML.slice(0, 200)")
+            pg.keyboard.press("ArrowUp"); assert pg.evaluate("document.activeElement.dataset.group || ''").startswith("srm"), pg.evaluate("document.activeElement.outerHTML.slice(0, 200)")
             pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter")
             wait_for_js(pg, f"!!{UV('mrm')} && !!{UV('mrm')}._a && {UV('mrm')}._a.sr.length === shownFor({UV('mrm')}).length", timeout=60000)
         step("keyboard: Esc closes, ArrowDown opens, End reaches the DAD row, Enter opens the DAD panel", mrm_keys)

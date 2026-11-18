@@ -35,7 +35,7 @@
         ions = tr.map((/** @type {any} */ t) => ({ key: trKey(t), name: t.name || "", sim: t.q3 == null }));
         if (!ions.length) {
           const c = await CANALI.canali(f.k);
-          ions = c.canali.filter((/** @type {any} */ x) => x.fam === "sim").map((/** @type {any} */ x) => ({ key: chKey(x.id), name: "", sim: true }));
+          ions = c.channels.filter((/** @type {any} */ x) => x.family === "sim").map((/** @type {any} */ x) => ({ key: chKey(x.id), name: "", sim: true }));
         }
       } catch (e) { return; }
       LIST.set(keyOf(f.k), ions);
