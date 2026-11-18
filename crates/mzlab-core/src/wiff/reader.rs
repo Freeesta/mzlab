@@ -3,7 +3,7 @@
 
 use super::reader_extra::extra_of;
 use super::window::Window;
-use super::{container_within, losses::isolate, samples, scan, Record, Wiff, SAMPLES};
+use super::{losses::isolate, samples, scan, Record, Wiff, SAMPLES};
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::method::{sha1_hex, Source, SrcFile};
@@ -15,11 +15,11 @@ use crate::readers::{
     ReaderEntry, Sample, ScanEntry, CONTRATTO,
 };
 
-const SCAN: &str = ".wiff.scan";
+pub(super) const SCAN: &str = ".wiff.scan";
 const WIFF: &str = ".wiff";
 const OLE_MAGIC: [u8; 8] = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
 
-fn wiff_member(fs: &FileSet) -> Option<usize> {
+pub(super) fn wiff_member(fs: &FileSet) -> Option<usize> {
     fs.find(WIFF)
 }
 
@@ -81,7 +81,7 @@ impl Part {
 }
 
 pub struct WiffReader {
-    ole: Ole,
+    pub(super) ole: Ole,
     nome: String,
     scan: Box<dyn ReadAt>,
     pub(super) scan_len: u64,
@@ -209,6 +209,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     fn refused(&mut self, c: usize) -> Option<Error> { self.parts.get(c).and_then(|p| p.w.readable().err()) }
     fn samples(&self) -> &[Sample] { &self.campioni }
     fn unindexed(&self) -> (usize, usize) { self.unindexed }
+    fn listing(&mut self) -> crate::readers::Listing { self.listing_of() }
     fn index(&mut self, c: usize) -> Result<&[ScanEntry]> { Ok(&self.ready(c)?.indice) }
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.ready(c)?;
@@ -306,7 +307,7 @@ fn file_header(l: &mut WiffReader, c: usize) -> Result<Header> {
     Ok(h)
 }
 
-fn member(fs: &mut FileSet, i: usize) -> Result<&mut Member> {
+pub(super) fn member(fs: &mut FileSet, i: usize) -> Result<&mut Member> {
     fs.membri
         .get_mut(i)
         .ok_or_else(|| Error::new("err.file.wiff").with("detail", "member"))
@@ -318,30 +319,31 @@ fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
 
 /// Opens the pair; with `solo = Some(c)` only injection `c` reads the heads of its blocks in the `.wiff.scan` (the index of one sample in its own worker: the other injections
 /// of a container with many would read the whole `.wiff.scan` each), and the others are listed with 0 scans until they are used.
-pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Result<Box<dyn Reader>> {
-    let wi = wiff_member(&fs).ok_or_else(|| Error::new("err.file.notWiff").with("name", "?"))?;
-    let name = member(&mut fs, wi)?
-        .nome
-        .rsplit(['/', '\\'])
-        .next()
-        .unwrap_or("x.wiff")
-        .to_string();
-    let si = fs
-        .find(SCAN)
-        .ok_or_else(|| Error::new("err.file.wiffNoScan").with("name", &name))?;
-    let m = member(&mut fs, wi)?;
-    limits.fits(m.dim)?;
-    let mut bytes = vec![0u8; usize::try_from(m.dim).map_err(|_| Error::memory_budget())?];
-    m.dati.read_at(0, &mut bytes)?;
-    let ole = container_within(bytes, &name, limits)?;
+pub fn open_only(fs: FileSet, limits: &Limits, only: Option<usize>) -> Result<Box<dyn Reader>> {
+    open_with(fs, limits, only, false)
+}
+
+/// Opens the pair for a listing (`readers::apri_listing`): the container and the `Idx` rows give the samples, no block head of the `.wiff.scan` is read and
+/// the sections the index lacks are not looked for; the scan count of a sample is the index's (`listing::counts`). An index or a chromatogram asked later
+/// reads the heads of that sample then, as after `open_only`.
+pub fn open_listing(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+    open_with(fs, limits, None, true)
+}
+
+fn open_with(
+    mut fs: FileSet,
+    limits: &Limits,
+    only: Option<usize>,
+    listing: bool,
+) -> Result<Box<dyn Reader>> {
+    let (name, ole, si) = super::listing::container_of(&mut fs, limits)?;
     let sm = member(&mut fs, si)?;
     let scan_len = sm.dim;
     // the SHA-1 of the `.wiff.scan` when the fingerprints were already taken (`upload::impronte`, `known_fingerprints`): the header does not read the whole file again
     let scan_sha1 = sm.sha1.take().filter(|s| !s.is_empty()).map(Some);
     let mut scan = std::mem::replace(&mut sm.dati, Box::new(Vec::<u8>::new()));
     let membro = u16::try_from(si).unwrap_or(0);
-    let (mut parti, mut campioni, mut total) = (Vec::new(), Vec::new(), 0u64);
-    let mut raw_names = Vec::new();
+    let (mut parti, mut campioni, mut total, mut raw_names) = (Vec::new(), Vec::new(), 0u64, Vec::new());
     let sha1 = ole.sha1_hex();
     for (i, s) in samples(&ole).into_iter().enumerate() {
         let mut w = Wiff::open_or_refuse(&ole, &name, scan_len, s)?;
@@ -350,9 +352,14 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
         limits.ok_entries(total)?;
         let mut part = Part::new(w);
         // a sample the engine cannot read is left unbuilt: `pronta` refuses it when it is asked for, the others open
-        if only.is_none_or(|c| c == i) && part.w.readable().is_ok() {
+        if !listing && only.is_none_or(|c| c == i) && part.w.readable().is_ok() {
             build(&mut part, &mut scan, scan_len, membro)?;
         }
+        let (scans, size) = if listing {
+            super::listing::counts(&part.w)
+        } else {
+            (part.scans.len(), 0)
+        };
         raw_names.push((
             s,
             ole.read(&format!("{SAMPLES}Sample{s}/SampleDABE/DATA"))
@@ -361,20 +368,27 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
         campioni.push(Sample {
             id: s,
             nome: String::new(),
-            scansioni: part.scans.len(),
-            size: None,
+            scansioni: scans,
+            size: Some(size).filter(|_| listing),
         });
         parti.push(part);
     }
-    let unindexed = super::unindexed::add(
-        &mut parti,
-        &mut campioni,
-        &mut raw_names,
-        (&mut scan, scan_len, membro),
-        (&ole, limits, only),
-        &mut total,
-    )?;
-    Wiff::all_refused(parti.iter().map(|p| &p.w))?;
+    let unindexed = if listing {
+        (0, 0)
+    } else {
+        super::unindexed::add(
+            &mut parti,
+            &mut campioni,
+            &mut raw_names,
+            (&mut scan, scan_len, membro),
+            (&ole, limits, only),
+            &mut total,
+        )?
+    };
+    // a listing says what each sample is, a refused one with its reason, even when none of them opens
+    if !listing {
+        Wiff::all_refused(parti.iter().map(|p| &p.w))?;
+    }
     for (c, n) in campioni
         .iter_mut()
         .zip(super::names::display_names(&name, &raw_names))

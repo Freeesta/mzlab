@@ -267,6 +267,11 @@ impl Ole {
         (need > self.data.len() as u64 + self.ss as u64 - 1).then_some(need)
     }
 
+    /// Bytes of the container file.
+    pub fn byte_len(&self) -> u64 {
+        self.data.len() as u64
+    }
+
     /// SHA-1 (lower-case hex) of the whole container file.
     pub fn sha1_hex(&self) -> String {
         crate::method::sha1_hex_bytes(&self.data)

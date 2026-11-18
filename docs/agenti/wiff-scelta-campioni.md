@@ -102,7 +102,7 @@ Wasm cap (ESTIMATE; no wasm-bindgen or wasm toolchain here, nothing measured on 
 Lang keys (English, new `pick` file under `mzlab/web/lang/en/` with its contexts, checked by `tools/controlla_i18n.py`): `pick.title`, `pick.intro`, `pick.filter`, `pick.all|none|invert`, `pick.file`, `pick.col.*`, `pick.type.*`, `pick.empty`, `pick.large`, `pick.partial`, `pick.sel` (live region), `pick.open|openAll|cancel|cancelled`, `pick.waiting`, `pick.remember`, `pick.setting.*`, `pick.aria.*`. Sample names come from the file and are never keys.
 
 ## 6. Split into small PRs (one task, one PR; each CI green before the next)
-1. Engine + CLI, no UI: `list_samples` + `samples_list/1` (cheap `.wiff` listing, cap measured), `mzlab-cli samples list`, parity tests (native/Node-wasm/CLI), docs rows. No behaviour change on the page.
+1. (DONE, this PR) Engine + CLI, no UI: `list_samples` + `samples_list/1` (cheap `.wiff` listing, cap measured), `mzlab-cli samples list`, parity tests (native/Node-wasm/CLI), docs rows. No behaviour change on the page.
 2. By-sector OLE open and DAD on demand for big `.wiff` (from #3398 a, b): memory only, the listing and `Wiff::open` work above `WIFF_MAX`; cap measured; tests `wiff_by_sector.rs` as base.
 3. `--sample 1,3,5` on `convert` / `channels` / `features` / `flow` inputs (+ partial-identity decision Q4 applied to whatever Q4 chooses). CLI only.
 4. The page dialog «Choose samples» (setting, remember, filter, a11y, i18n), reading `native_samples`; on the site it still copies the whole pair to OPFS; skipped samples are not indexed. e2e its picker e2e test revived for several files, one file, a pair without scan, drop of a folder.

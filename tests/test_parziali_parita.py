@@ -18,9 +18,10 @@ const p = w.prepare_upload(b.length, (o, n) => b.subarray(o, o + n), "cut.mzML",
 console.log(JSON.stringify({ rows: p[0].length, declared: p[9] }));"""
 LIST = """const w = require(process.argv[2]), fs = require("fs"), names = process.argv.slice(3), bs = names.map(n => fs.readFileSync(n));
 console.log(w.native_samples(names.map(n => n.split("/").pop()), new Float64Array(bs.map(b => b.length)), (i, o, n) => bs[i].subarray(o, o + n)));"""
+LISTING_CHEAP = ('{"schema":"samples_list/1","format":"SciexWiff","bytes":5504,"scan":{"bytes":384,"indexed_end":384},"samples":[{"id":1,"name":"rifiutato_s1","scans":1,"size":126,"kinds":["ms"],"polarity":"+","rt":[0.016666666666666666,0.016666666666666666],"tic":{"apex_rt":0.016666666666666666,"apex":1,"sum":1}},{"id":2,"name":"rifiutato_s2","scans":0,"size":0,"why":"empty"},{"id":3,"name":"rifiutato_s3","scans":0,"size":0,"why":"refused","refused":{"error_key":"err.file.wiffScanType","params":{"code":"8","experiment":"1","type":"TOF MS"}}}]}')
 # the listing of mzlab-core/tests/wiff_refused_listing.rs and mzlab-desktop natives_tests.rs, byte for byte
-LISTING = ('{"format":"SciexWiff","samples":[{"id":1,"name":"rifiutato_s1","scans":1},{"id":2,"name":"rifiutato_s2","scans":0,"why":"empty"},'
-           '{"id":3,"name":"rifiutato_s3","scans":0,"why":"refused","refused":{"error_key":"err.file.wiffScanType","params":{"code":"8","experiment":"1","type":"TOF MS"}}}]}')
+LISTING = ('{"schema":"samples_list/1","format":"SciexWiff","bytes":5504,"scan":{"bytes":384,"indexed_end":384},"samples":[{"id":1,"name":"rifiutato_s1","scans":1'
+           ',"kinds":["ms"],"polarity":"+","rt":[0.016666666666666666,0.016666666666666666],"tic":{"apex_rt":0.016666666666666666,"apex":1,"sum":1}},{"id":2,"name":"rifiutato_s2","scans":0,"why":"empty"},{"id":3,"name":"rifiutato_s3","scans":0,"why":"refused","refused":{"error_key":"err.file.wiffScanType","params":{"code":"8","experiment":"1","type":"TOF MS"}}}]}')
 
 
 def spectrum(i):

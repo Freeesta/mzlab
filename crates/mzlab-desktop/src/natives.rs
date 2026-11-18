@@ -46,10 +46,15 @@ pub(crate) fn open(members: &[(String, PathBuf)], centroid: bool) -> Result<Box<
     })
 }
 
-/// The samples of a dataset: the JSON of `readers::samples_json`, the listing the site gives too.
-pub(crate) fn samples(members: &[(String, PathBuf)]) -> Result<String> {
-    let mut l = open(members, false)?;
-    Ok(mzlab_core::readers::samples_json(&mut *l))
+/// The samples of a dataset: the JSON `samples_list/1` of `readers::list_samples`, the listing the site gives too; with `listing` a `.wiff` is listed from its
+/// container and index alone (the `.wiff.scan` is not read).
+pub(crate) fn samples(members: &[(String, PathBuf)], listing: bool) -> Result<String> {
+    let mut l = if listing {
+        mzlab_lettori::apri_listing(fileset(members)?, &Limits::desktop())?
+    } else {
+        open(members, false)?
+    };
+    Ok(mzlab_core::readers::list_samples(&mut *l))
 }
 
 pub(super) struct Dataset {
