@@ -1,5 +1,5 @@
 """The card «Manual integrations» lists the windows drawn on an XIC too (engine route api/mantraces, manint::table_text), and its numbers are those of the table
-the toolbar dialog shows: area, height, apex and edges of the same window. Step 1 of one integration table: the dialog stays until the card has everything.
+the toolbar dialog shows: area, height, apex, edges, below-the-line and correction of the same window, on an XIC and on the TIC. Step 1 of one integration table: the dialog stays until the card has everything.
 Needs the site and the .wasm (python tools/prepara_sito.py)."""
 # covers: mzlab/web/integrazioni-tracce, mzlab/web/integrazioni-manuali, mzlab/web/rust-bridge
 import sys, os
@@ -14,7 +14,7 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:300]))
 site = ROOT / "site"
 if not (site / "index.html").exists() or not (site / "static" / "wasm" / "mzlab_wasm.js").exists():
-    print("  ", ("site", "SKIP site/ or site/static/wasm not built")); sys.exit(0)
+    print("  ", ("site", "FAIL site/ or site/static/wasm not built: run python tools/prepara_sito.py")); sys.exit(1)
 D = HERE / "shots" / "manint_tracce_tmp"; D.mkdir(parents=True, exist_ok=True)      # synthetic full scans (no laboratory data in this repository)
 ds.full_scan(D / "B_FullMass-t0.mzML", 0, np.random.default_rng(2026)); ds.full_scan(D / "B_FullMass-t15.mzML", 15, np.random.default_rng(2027))
 r = Run(port=8871, wd="/tmp/wd_manint_tracce")
@@ -31,23 +31,28 @@ try:
         pg.evaluate(f"(()=>{{const p={XP};setActive(p);p.imode=null;p.intf='all'}})()")
         x = pg.evaluate(f"(()=>{{const s={XP}._a.sr[0];let k=0;s.y.forEach((v,i)=>{{if(v>s.y[k])k=i}});return s.x[k]}})()")
         pg.evaluate(f"(()=>{{const p={XP};intTargets(p,{x},null).forEach(s=>autoInt(p,s,{x}))}})()")
+        TP = "E.panels.find(p=>p.type==='chrom')"
+        pg.evaluate(f"(()=>{{const p={TP};setActive(p);p.imode=null;p.intf='all';const s=p._a.sr[0];let k=0;s.y.forEach((v,i)=>{{if(v>s.y[k])k=i}});intTargets(p,s.x[k],null).forEach(q=>autoInt(p,q,s.x[k]))}})()")
+        pg.wait_for_function(f"{TP}.ints.length > 0", timeout=60000)
         pg.wait_for_function("document.querySelector('#manint') && !document.querySelector('#manint').hidden && document.querySelector('#manint-x tbody tr')", timeout=60000)
         pg.wait_for_function("MANTR.count() > 0", timeout=60000)
         def card():
-            n = pg.evaluate(f"{XP}.ints.length"); assert n >= 1
+            n = pg.evaluate("E.panels.reduce((a,p)=>a+p.ints.length,0)"); assert n >= 1
             assert pg.locator("#manint-x tbody tr").count() == n, (n, pg.locator("#manint-x tbody tr").count())
             assert f"({n})" in pg.inner_text("#manint-h")
             heads = pg.locator("#manint-x th").all_inner_texts()
             for h in ["Panel", "Channel", "Sample", "Conc.", "Below the line", "Correction"]: assert h in heads, (h, heads)
         step("the card has a row per window drawn on the XIC, with panel, conc., below and correction columns", card)
         def parity():
-            dlg = pg.evaluate("allInts().map(r => ({file: r.file, a: r.a, b: r.b, area: r.area, height: r.height, rt: r.rt}))")
-            rows = pg.evaluate("(() => { const [h, ...b] = MANINT.rows(MANTR.csv()); const c = n => h.indexOf(n); return b.map(r => ({sample: r[c('sample')], a: +r[c('start_min')], b: +r[c('end_min')], area: +r[c('area')], height: +r[c('height')], rt: +r[c('apex_rt_min')]})); })()")
+            dlg = pg.evaluate("allInts().map(r => ({panel: r.panel, file: r.file, a: r.a, b: r.b, area: r.area, height: r.height, rt: r.rt, below: r.below || 0, corr: r.corr || ''}))")
+            rows = pg.evaluate("(() => { const [h, ...b] = MANINT.rows(MANTR.csv()); const c = n => h.indexOf(n); return b.map(r => ({panel: r[c('panel')], below: +r[c('below')] || 0, corr: r[c('correction')], sample: r[c('sample')], a: +r[c('start_min')], b: +r[c('end_min')], area: +r[c('area')], height: +r[c('height')], rt: +r[c('apex_rt_min')]})); })()")
             assert len(dlg) == len(rows) and dlg, (dlg, rows)
             for d in dlg:
-                r = next(r for r in rows if abs(r["a"] - min(d["a"], d["b"])) < 6e-4 and r["sample"] in d["file"] or r["sample"] == d["file"] and abs(r["a"] - d["a"]) < 6e-4)
+                r = next(r for r in rows if r["panel"] == d["panel"] and r["sample"] in d["file"] and abs(r["a"] - min(d["a"], d["b"])) < 6e-4)
                 for k in ("area", "height"): assert abs(r[k] - d[k]) <= 1e-4 * max(abs(d[k]), 1), (k, d, r)
                 assert abs(r["rt"] - d["rt"]) < 6e-4, (d, r)
+                assert abs(r["below"] - d["below"]) <= 1e-4 * max(abs(d["below"]), 1) and r["corr"] == d["corr"], (d, r)
+            assert len({d["panel"] for d in dlg}) >= 2, dlg      # the XIC and the TIC are both compared
         step("area, height and apex of the card are those of the dialog table", parity)
         bad = [e for e in errs if e[0] in ("pageerror", "console.error")]
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(bad[:3])) if bad else None)
