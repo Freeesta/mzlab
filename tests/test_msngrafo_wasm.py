@@ -74,7 +74,7 @@ def test_a_bad_number_is_a_keyed_error(pkg):
 
 @pytest.mark.parametrize("fmt,clean", [("csv", False), ("mgf", False), ("msp", True), ("csv", True)])
 def test_wasm_and_cli_give_the_same_export(pkg, fmt, clean):
-    q = f"formato={fmt}" + ("&pulito=1" if clean else "")
+    q = f"format={fmt}" + ("&clean=1" if clean else "")
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), q, "export").stdout
     want = cli("msn-graph", str(MZML), "--export", fmt, *(["--clean"] if clean else [])).stdout
     assert got == want and got.strip()

@@ -50,11 +50,11 @@ try:
             assert res[0] == 400 and res[1]["error_key"] == "err.request.badNumber", res
         step("a bad number is a keyed error", bad)
         def export():
-            res = pg.evaluate("fetch('api/msn_grafo/export?k=0&formato=msp&pulito=1').then(async r=>[r.status, r.headers.get('content-type'), await r.text(), r.headers.get('content-disposition')])")
+            res = pg.evaluate("fetch('api/msn_grafo/export?k=0&format=msp&clean=1').then(async r=>[r.status, r.headers.get('content-type'), await r.text(), r.headers.get('content-disposition')])")
             assert res[0] == 200 and res[1] == "text/plain" and "Num Peaks:" in res[2] and res[3] == 'attachment; filename="msn-graph.msp"', res[:2] + res[3:]
-            csv = pg.evaluate("fetch('api/msn_grafo/export?k=0&formato=csv').then(r=>r.text())")
+            csv = pg.evaluate("fetch('api/msn_grafo/export?k=0&format=csv').then(r=>r.text())")
             assert csv.startswith("tree,level,"), csv[:80]
-            bad = pg.evaluate("fetch('api/msn_grafo/export?k=0&formato=xls').then(r=>r.status)")
+            bad = pg.evaluate("fetch('api/msn_grafo/export?k=0&format=xls').then(r=>r.status)")
             assert bad == 400, bad
         step("the export gives CSV and MSP text and a bad format is a keyed error", export)
         def library():

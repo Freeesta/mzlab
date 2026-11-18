@@ -8,7 +8,7 @@ const MIME = { csv: "text/csv", mgf: "text/plain", msp: "text/plain" };
 
 /** The text of an export from the engine. @returns {Promise<string>} */
 export async function exportText(/** @type {number} */ k, /** @type {"csv" | "mgf" | "msp"} */ fmt, /** @type {boolean} */ clean, /** @type {string} */ node) {
-  const r = await fetch(`api/msn_grafo/export?formato=${fmt}&pulito=${clean ? 1 : 0}&nodo=${encodeURIComponent(node)}&${query(k)}`);
+  const r = await fetch(`api/msn_grafo/export?format=${fmt}&clean=${clean ? 1 : 0}&node=${encodeURIComponent(node)}&${query(k)}`);
   const t = await r.text();
   if (t.startsWith("{") && /^\{\s*"error"/.test(t)) throw I18N.err(JSON.parse(t));
   return t;

@@ -29,7 +29,7 @@ STAND_IN = """(fx) => {
   window.fetch = (u, init) => {
     const s = String(u), url = new URL(s, location.href), q = url.searchParams, path = url.pathname.replace(/^.*\\/api\\//, "api/");
     if (path.startsWith("api/msn_grafo") || path.startsWith("api/msnlib") || path.startsWith("api/molecules")) window.__REQ.push([path, s, init && init.body ? String(init.body) : ""]);
-    if (path === "api/msn_grafo/export") return Promise.resolve(new Response(`export ${q.get("schema")} clean=${q.get("clean")} node=${q.get("node")}\\nmz,rel,formula,ppm\\n244.06035,100,C13H10NO4,-0.35\\n`));
+    if (path === "api/msn_grafo/export") return Promise.resolve(new Response(`export ${q.get("format")} clean=${q.get("clean")} node=${q.get("node")}\\nmz,rel,formula,ppm\\n244.06035,100,C13H10NO4,-0.35\\n`));
     if (path === "api/msn_grafo") {
       const j = JSON.parse(JSON.stringify(fx));
       if (!q.get("formula")) { j.ion = null; j.nodes.forEach(n => { n.formula = null; }); }
@@ -215,7 +215,7 @@ try:
                 with pg.expect_download(timeout=15000) as d: pg.click("#ig-exp [data-a=dl]")
                 body = open(d.value.path(), encoding="utf-8").read(); got.append((fmt, d.value.suggested_filename, body))
             for fmt, name, body in got:
-                assert name.endswith("." + fmt) and f"export {fmt} clean=1 node=tutto" in body, (fmt, name, body[:80])
+                assert name.endswith("." + fmt) and f"export {fmt} clean=1 node=all" in body, (fmt, name, body[:80])
             pg.select_option("#ig-scope", index=1); pg.select_option("#ig-clean", "0"); pg.select_option("#ig-fmt", "mgf")
             pg.click("#ig-exp [data-a=copy]"); wait_for_js(pg, "navigator.clipboard.readText().then(t => t.includes('export mgf'))")
             clip = pg.evaluate("navigator.clipboard.readText()")
