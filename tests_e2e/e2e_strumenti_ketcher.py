@@ -19,6 +19,8 @@ r = Run(port=8904, wd="/tmp/wd_kstr")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
+        # diagnostics: where a console error comes from (the policy violation names the script and line that called focus())
+        pg.on("console", lambda m: print("CONSOLE-ERROR-AT", m.location, m.text[:100], flush=True) if m.type == "error" else None)
         pg.set_viewport_size({"width": 1440, "height": 900}); ready(pg)
         def layout():
             o = pg.evaluate("""() => { const f = document.querySelector('#kframe'), d = f.contentDocument, box = q => d.querySelector(q).getBoundingClientRect();
