@@ -180,6 +180,6 @@ fn area_unit_min_keeps_the_old_counts_x_min() {
     for (g, k) in v["peaks"].as_array().unwrap().iter().zip(&core) {
         assert_eq!(g["area"].as_f64().unwrap(), k.area);
     }
-    assert_ne!(run(args(&[p, "--set", "area_unit=s"])).code, 2);
+    assert_eq!(run(args(&[p, "--set", "area_unit=s"])).code, 0);
     assert_ne!(run(args(&[p, "--set", "area_unit=h"])).code, 0);
 }

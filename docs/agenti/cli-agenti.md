@@ -29,7 +29,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 
 ## Commands with and without `--json`
 - With a `--json` flag: `flow run`, `flow check`, `steps`, `validate`, `dad` (all its answers are JSON; `--json` adds `errore/1`).
-- Without it yet (not added in this change): `features` (CSV), `convert`, `flow report`, `flow record`, `flow verify`, `flow command`, `normative`, `insilico pack`, `msn-lib`, `msn-rules`, `msn-graph`, `explain-missing`, `background`, `manual-table`, `peak-auto`, `peak-auto-lr`, `peak-area`, `peak-edges`, `peak-split`, `peak-window`, `channels`, `dda-window`, `samples`, `ion-pattern`, `ion-mz`, `match-mz`, the `mol-*` commands and the `llm` subcommands. Several of these already print JSON (or CSV) by default and have a stable schema; read the command's `--help` before parsing.
+- Without it yet (not added in this change): `features` (CSV), `convert`, `flow report`, `flow record`, `flow verify`, `flow command`, `normative`, `insilico pack`, `msn-lib`, `msn-rules`, `msn-graph`, `explain-missing`, `background`, `manual-table`, `peak-auto` and `peak-auto-lr` (areas in counts × s; `--set area_unit=s|min`, `min` = the old counts × min),  `peak-area`, `peak-edges`, `peak-split`, `peak-window`, `channels`, `dda-window`, `samples`, `ion-pattern`, `ion-mz`, `match-mz`, the `mol-*` commands and the `llm` subcommands. Several of these already print JSON (or CSV) by default and have a stable schema; read the command's `--help` before parsing.
 
 ## Rules for the agent
 - The CLI uses no network (except `normative build` and `insilico pack`, which say so) and reads/writes only the paths it is given; never delete user files.
