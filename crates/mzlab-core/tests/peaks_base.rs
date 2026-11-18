@@ -68,15 +68,18 @@ fn area_of_a_peak_next_to_a_far_neighbour() {
     assert!((0.95..1.05).contains(&r), "area ratio {r}");
 }
 
-/// Neighbours that overlap keep the drop line: both areas stay below the true ones, never above.
+/// Neighbours that overlap keep the drop line at their valley: the pair together stays within 3 % of the true total (with limits at 0.1 % of
+/// the apex the first peak also carries a few percent of the tail of the second, so one area alone may sit slightly above the true one).
 #[test]
 fn overlapping_peaks_keep_the_drop_line() {
     for d in [0.15, 0.16, 0.18] {
         let (rt, y) = trace(|t| g(t, 2.0, 1000.0) + g(t, 2.0 + d, 700.0));
-        for (c, a) in [(2.0, 1000.0), (2.0 + d, 700.0)] {
-            let r = area_ratio(&rt, &y, c, a);
-            assert!((0.8..1.0).contains(&r), "d {d} apex {c}: area ratio {r}");
+        let (r1, r2) = (area_ratio(&rt, &y, 2.0, 1000.0), area_ratio(&rt, &y, 2.0 + d, 700.0));
+        for (c, r) in [(2.0, r1), (2.0 + d, r2)] {
+            assert!((0.8..1.1).contains(&r), "d {d} apex {c}: area ratio {r}");
         }
+        let total = (r1 * 1000.0 + r2 * 700.0) / 1700.0;
+        assert!((0.97..1.03).contains(&total), "d {d}: total ratio {total}");
     }
 }
 
