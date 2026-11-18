@@ -69,7 +69,7 @@ fn the_windows_are_the_table_rows_grouped_by_peak_then_file() {
     // sample, origin (columns 1 and 13, after the time): the first peak of s0 then s1, then the peak of s0 alone
     let who: Vec<(&str, &str)> = rows.iter().map(|r| (r[1], r[13])).collect();
     assert_eq!(who, [("s0", "auto"), ("s1", "auto"), ("s0", "unmatched")]);
-    assert!(rows.iter().all(|r| r[4].parse::<f64>().unwrap() > 0.0));
+    assert!(rows.iter().all(|r| r[5].parse::<f64>().unwrap() > 0.0));
 }
 
 #[test]

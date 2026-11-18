@@ -17,7 +17,7 @@ const ORIGINS = () => /** @type {Record<string, string>} */ ({ manual: t("canali
 const BASES = () => /** @type {Record<string, string>} */ ({ zero: t("int.base.zero"), edges: t("int.base.edges"), line: t("int.base.line") });
 /** The longest name of an integration (manint::LABEL_MAX). */
 const NM_MAX = 40;
-/** The place of a column in the engine's header (the columns are shown in the engine's order: channel, sample, time, name, area, ...). @param {string[]} head @param {string} c */
+/** The place of a column in the engine's header (the columns are shown in the engine's order: channel, sample, time, name, apex RT, area, ...). @param {string[]} head @param {string} c */
 const col = (head, c) => head.indexOf(c);
 const ICON = {
   dl: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 2.5v7.5M4.8 7L8 10.2 11.2 7M3 12.5v1h10v-1"/></svg>',
@@ -99,8 +99,14 @@ const fmt = (v, col) => col === "time_min" ? G.timeTag(v === "" ? null : +v) : c
 /** A channel as shown: the m/z, «q1 > q3», or «ione N». @param {string} c */
 const chShown = c => c.replace(/^ion (\d+)$/, (_, n) => t("canali.sim.ion", { n: +n })).replace(">", " > ");
 const COPY = ["apex_rt_min", "area", "height"];
+/** The two columns the eye looks for (the apex RT and the area): semi-bold on a light tint, header included (app.css `.manint-key`). */
+const KEY = ["apex_rt_min", "area"];
+/** The colour of a sample as the Files list and the chart draw it (`f.color`), by the sample name the engine writes; "" when no file has that name. @param {string} name */
+const colorOfSample = name => { const f = (typeof E !== "undefined" ? E.files : []).find((/** @type {any} */ x) => x && !x.gone && sampleOf(x.file || "") === name); return f && f.color ? String(f.color) : ""; };
 /** A cell: its value as shown; apex, area and height are buttons that copy the CSV value (full precision); the name is an input. Where the engine found no peak (`np`) the area and height of the unmoved window are not a result: «–», dimmed. @param {string} v @param {string} col @param {number} i @param {boolean} [np] */
-const cell = (v, col, i, np = false) => np && (col === "area" || col === "height")
+const cell = (v, col, i, np = false) => col === "sample" && colorOfSample(v)
+  ? h`<span class="manint-sw" aria-hidden="true" style="background:${colorOfSample(v)}"></span>${v}`
+  : np && (col === "area" || col === "height")
   ? h`<span class="manint-np" title="${t("canali.manint.nopeak.tip")}">–</span>`
   : col === "label"
   ? h`<input type="text" class="manint-nm" maxlength="${NM_MAX}" data-nm="${i}" value="${v}" aria-label="${t("canali.manint.nm.aria")}" autocomplete="off" spellcheck="false">`
@@ -137,11 +143,12 @@ function draw() {
   if (!body.length) { el.hidden = true; el.innerHTML = ""; return; }
   if (had === 0) setOpen(true);      // an integration after none opens the card; otherwise it stays as the user left it (a reload included)
   const H = HEADS(), tips = TIPS(), cols = head.map((_, i) => i).filter(c => head[c] === "origin" ? body.some(r => r[c] !== "manual") : !["overlap", "pv"].includes(head[c]) || body.some(r => r[c] !== "")), open = isOpen(), plain = ["channel", "sample", "time_min", "baseline", "overlap", "label", "origin"];
-  const ths = cols.map(c => h`<th scope="col"${raw(plain.includes(head[c]) ? "" : ' class="num"')}${raw(tips[head[c]] ? h` title="${tips[head[c]]}"` : "")}>${H[head[c]] || head[c]}</th>`).join("");
+  const cls = (/** @type {string} */ c) => [plain.includes(c) ? "" : "num", KEY.includes(c) ? "manint-key" : ""].filter(Boolean).join(" "), clsAttr = (/** @type {string} */ c) => cls(c) ? ` class="${cls(c)}"` : "";
+  const ths = cols.map(c => h`<th scope="col"${raw(clsAttr(head[c]))}${raw(tips[head[c]] ? h` title="${tips[head[c]]}"` : "")}>${H[head[c]] || head[c]}</th>`).join("");
   const trs = body.map((r, i) => {
     const rec = recOf(r, head), who = { ch: chShown(r[0]), s: r[iS] };
     const act = rec && !rec.fol ? h`<button type="button" class="manint-x" data-del="${i}" aria-label="${t("canali.manint.del.aria", who)}" title="${t("canali.manint.del")}">×</button>` : "";
-    const tds = cols.slice(1).map(c => h`<td${raw(plain.includes(head[c]) ? "" : ' class="num"')}${raw(head[c] === "origin" && r[c] === "unmatched" ? h` title="${t("canali.manint.unmatched.tip")}"` : "")}>${raw(head[c] === "label" && !rec ? h`${r[c]}` : cell(r[c], head[c], i, r[iO] === "no_peak"))}</td>`).join("");
+    const tds = cols.slice(1).map(c => h`<td${raw(clsAttr(head[c]))}${raw(head[c] === "origin" && r[c] === "unmatched" ? h` title="${t("canali.manint.unmatched.tip")}"` : "")}>${raw(head[c] === "label" && !rec ? h`${r[c]}` : cell(r[c], head[c], i, r[iO] === "no_peak"))}</td>`).join("");
     return h`<tr data-org="${r[iO]}"${raw(rec ? h` class="manint-go" data-go="${i}" tabindex="0" aria-label="${t("canali.manint.show.aria", who)}"` : "")}><th scope="row">${chShown(r[cols[0]])}</th>${raw(tds)}<td>${raw(act)}</td></tr>`;
   }).join("");
   el.innerHTML = h`<div class="manint-head"><h3><button type="button" class="manint-tg" id="manint-h" aria-expanded="${open ? "true" : "false"}" aria-controls="manint-b" aria-describedby="manint-d" title="${t("canali.manint.note")}"><svg class="manint-chev" width="12" height="12" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true" focusable="false"><path d="M1.5 3.5h7L5 7.5z"/></svg>${t("canali.manint.title", { n: body.length })}</button></h3>
@@ -212,7 +219,7 @@ async function ask() {
 /** The table follows the integrations (asked again only when a window, a baseline or a file changes) and the work area. */
 async function sync() {
   const recs = await records(), ks = [...new Set(recs.map(r => r.k))].sort((a, b) => a - b), windows = windowsOf(recs, ks);
-  const times = JSON.stringify(ks.map(k => E.files[k].time ?? null)), sig = ks.join(",") + times + windows;   // the time points of the samples as the table of the files has them
+  const times = JSON.stringify(ks.map(k => E.files[k].time ?? null)), colors = JSON.stringify(ks.map(k => E.files[k].color || "")), sig = ks.join(",") + times + colors + windows;   // the time points of the samples as the table of the files has them
   if (sig !== st.sig) {
     st.sig = sig; st.recs = recs; st.ks = ks; st.windows = windows; st.times = times;
     await ask();

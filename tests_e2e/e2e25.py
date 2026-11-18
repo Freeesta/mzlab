@@ -131,7 +131,7 @@ try:
             n0 = pg.evaluate("E.files.length"); assert n0 > 0
             pg.keyboard.press("Escape"); pg.click("#newrun"); pg.wait_for_timeout(500)
             assert pg.is_visible("#resetdlg [data-reset=all]") and pg.is_visible("#resetdlg [data-reset=files]")
-            pg.click("#resetdlg .rs-cancel"); pg.wait_for_timeout(500)                               # cancel: nothing is touched
+            pg.click("#resetdlg .rs-x"); pg.wait_for_timeout(500)                                    # close X: nothing is touched
             assert pg.evaluate("E.files.length") == n0 and pg.evaluate("localStorage.getItem('mzlab.extra')") == "1" and pg.evaluate("UIP.pal") == "rainbow"
             pg.keyboard.press("Escape"); pg.click("#newrun"); pg.click("#resetdlg [data-reset=all]"); pg.wait_for_timeout(3000)
             print("after:", pg.evaluate("[E.files.length, localStorage.getItem('mzlab.extra'), localStorage.getItem('mzlab.prefs')]"))
