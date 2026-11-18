@@ -451,7 +451,9 @@ const LISTE = (() => {
 
   // the markup of the panel: search bar, active lists, user lists, exclusions and the table (the handlers are bound in mount())
   // the panel shows list names without a trailing bibliographic reference, e.g. «(Keller 2008)»
-  const noRef = (/** @type {unknown} */ n) => String(n).replace(/\s*\([^)]*\d{4}\)\s*$/, "");
+  // the short LR table names a list without its reference: "(Keller et al.)", "(… 2008)"
+  let short = false;
+  const noRef = (/** @type {unknown} */ n) => String(n).replace(short ? /\s*\([^)]*(?:\d{4}|et al\.?)[^)]*\)\s*$/ : /\s*\([^)]*\d{4}\)\s*$/, "");
   // the dormant HRMS Target Screening tab: shown only behind FEATURES.targetScreening («?targetscreening=1» or localStorage «qqq.dev.targetscreening» = «1», features.js)
   const targetOn = () => typeof FEATURES !== "undefined" && !!FEATURES.targetScreening;
   // the short name of the pesticides chip; any other list keeps its own name (the Keller list is named in its data: «Known contaminants (Keller et al.)»)
@@ -578,6 +580,7 @@ const LISTE = (() => {
       mode: opt.hr ? "ppm" : (opt.mz != null ? "da" : (window.TBL_HR ? (TBL_HR() ? "ppm" : "da") : "ppm"))     // only the layout: the short table at unit resolution
     };
 
+    short = state.mode === "da";
     container.innerHTML = panelHtml(state);
     setupViewSwitcher(container, opt);
 
