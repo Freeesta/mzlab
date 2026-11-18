@@ -1,46 +1,46 @@
-# Indice dei sospetti `.mzsus` v1 (mzFinder, offline) e sua estensione `listings` (liste normative)
-Elenco di composti noti ordinato per massa monoisotopica, per le ipotesi H1 di mzFinder come LISTA di sospetti: un hit di massa è un candidato di livello 5/4 con le sue prove, mai un nome dato alla feature. Nessuna rete né API esterna a runtime. Mai nel repository né nel primo caricamento del sito: lo scarica solo mzFinder.
+# `.mzsus` v1 suspect index (mzFinder, offline) and its `listings` extension (normative lists)
+List of known compounds sorted by monoisotopic mass, for the H1 hypotheses of mzFinder as a LIST of suspects: a mass hit is a level 5/4 candidate with its evidence, never a name given to the feature. No network or external API at runtime. Never in the repository nor in the first load of the site: only mzFinder downloads it.
 
-## Fonti (tutte CC BY 4.0, versioni e SHA-256 fissati in `tools/genera_sospetti.py`, `SOURCES`)
-- NORMAN SusDat (Zenodo 15741861, NORMAN-SLE-S0.0.6.1): colonne `StdInChIKey`, `Molecular_Formula`, `Monoiso_Mass`.
-- PubChemLite for Exposomics (Zenodo 22953038, 3.3.0): `FirstBlock`, `MolecularFormula`, `MonoisotopicMass`, `PubMed_Count`, `Patent_Count`. Il CSV (200 MB) si scarica e si scarta.
+## Sources (all CC BY 4.0, versions and SHA-256 fixed in `tools/genera_sospetti.py`, `SOURCES`)
+- NORMAN SusDat (Zenodo 15741861, NORMAN-SLE-S0.0.6.1): columns `StdInChIKey`, `Molecular_Formula`, `Monoiso_Mass`.
+- PubChemLite for Exposomics (Zenodo 22953038, 3.3.0): `FirstBlock`, `MolecularFormula`, `MonoisotopicMass`, `PubMed_Count`, `Patent_Count`. The CSV (200 MB) is downloaded and discarded.
 - Transformations in PubChem (Zenodo 19150892, 0.2.3): `PubChem_all_transformations.csv` + `Transformations_CID_Info_all.csv`.
-- Un file diverso dall'impronta fissata ferma la costruzione. BioTransformer, enviPath e CTS non entrano mai nell'indice (solo liste importate).
+- A file different from the fixed fingerprint stops the build. BioTransformer, enviPath and CTS never enter the index (only imported lists).
 
-## Costruzione
-`python3 tools/genera_sospetti.py [--fonte DIR] --out FILE [--pacchetto DIR]`. Righe fuse per InChIKey-14 (solo A-Z): massa e formula della prima fonte (SusDat, PubChemLite, Transformations), fonti in unione, conteggi al massimo, id di reazione il più basso. Scartate le righe senza chiave valida, massa o formula (conteggiate nel manifest: `letti` / `usati`). Ordine stabile (massa, InChIKey-14): stesse fonti = stesso file byte per byte. Con `--pacchetto` scrive anche `DIR/cas/` (sidecar `mzlab-cas/1` dei CAS di SusDat e `catalogo.json`; formato in `docs/agenti/normative.md`).
-`--pacchetto`: il file grezzo compresso con zlib (livello 9) a pezzi di 4 MiB, ciascuno con SHA-256, più `catalogo.json` (formato `sospetti/1`: dimensioni, SHA-256 del file grezzo, fonti con licenza e DOI, attribuzione). Il browser decomprime con `DecompressionStream("deflate")` e passa i byte grezzi al lettore. La CI di Pages lo mette in `static/mzfinder/sospetti/`.
+## Build
+`python3 tools/genera_sospetti.py [--fonte DIR] --out FILE [--pacchetto DIR]`. Rows merged by InChIKey-14 (A-Z only): mass and formula from the first source (SusDat, PubChemLite, Transformations), sources in union, counts at the maximum, lowest reaction id. Rows without a valid key, mass or formula are discarded (counted in the manifest: `letti` / `usati`). Stable order (mass, InChIKey-14): same sources = same file byte for byte. With `--pacchetto` it also writes `DIR/cas/` (`mzlab-cas/1` sidecar of the SusDat CAS numbers and `catalogo.json`; format in `docs/agenti/normative.md`).
+`--pacchetto`: the raw file compressed with zlib (level 9) in 4 MiB pieces, each with its SHA-256, plus `catalogo.json` (format `sospetti/1`: sizes, SHA-256 of the raw file, sources with licence and DOI, attribution). The browser decompresses with `DecompressionStream("deflate")` and passes the raw bytes to the reader. The Pages CI puts it in `static/mzfinder/sospetti/`.
 
-## File grezzo (little-endian, ogni sezione comincia a un multiplo di 8)
-Testata (32 byte): magic `MZSU`; u16 versione (1); u16 versione minima del lettore (1); u32 righe `n`; u32 formule `nf`; u32 reazioni `nr`; u32 byte del manifest; u32 bandierine (bit 0 = estensione `listings`, altrimenti 0); u32 riservato (0). Seguono, ciascuna riempita a 8:
-| Sezione | Contenuto |
+## Raw file (little-endian, every section starts at a multiple of 8)
+Header (32 bytes): magic `MZSU`; u16 version (1); u16 minimum reader version (1); u32 rows `n`; u32 formulae `nf`; u32 reactions `nr`; u32 manifest bytes; u32 flags (bit 0 = `listings` extension, otherwise 0); u32 reserved (0). Then follow, each padded to 8:
+| Section | Content |
 |---|---|
-| manifest | JSON UTF-8: `formato`, `righe`, `attribuzione`, `fonti[]` (id, nome, versione, licenza, doi, url, istituzione, bit, sha256 dei file, letti, usati) |
-| masse | `n` × f64 (Da monoisotopici, crescenti) |
-| chiavi | `n` × 14 byte ASCII, InChIKey-14 |
-| formule | `n` × u32, indice nella tabella delle formule |
-| fonti | `n` × u8, bit: 1 SusDat, 2 PubChemLite, 4 Transformations, 8 liste normative |
-| letteratura | `n` × u16 (PubMed, saturato a 65535) |
-| brevetti | `n` × u16 (saturato) |
-| reazioni | `nr` × (u32 indice di riga, u32 id), ordinate per riga; id = riga (da 1) della prima reazione del file di Transformations in cui il composto compare; assente = nessuna |
-| offset formule | `nf+1` × u32 nel blob |
-| blob formule | formule ASCII, ordinate, senza separatori |
+| manifest | UTF-8 JSON: `formato`, `righe`, `attribuzione`, `fonti[]` (id, name, version, licence, doi, url, institution, bit, sha256 of the files, read, used) |
+| masses | `n` × f64 (monoisotopic Da, increasing) |
+| keys | `n` × 14 ASCII bytes, InChIKey-14 |
+| formulae | `n` × u32, index into the formula table |
+| sources | `n` × u8, bits: 1 SusDat, 2 PubChemLite, 4 Transformations, 8 normative lists |
+| literature | `n` × u16 (PubMed, saturated at 65535) |
+| patents | `n` × u16 (saturated) |
+| reactions | `nr` × (u32 row index, u32 id), sorted by row; id = row (from 1) of the first reaction in the Transformations file in which the compound appears; absent = none |
+| formula offsets | `nf+1` × u32 into the blob |
+| formula blob | ASCII formulae, sorted, without separators |
 
-## Lettore
-`read_suspects(percorso_o_byte)` → `Suspects` (`.manifest`, `.n`, `.hit(i)`, `.cerca(massa, ppm)`): finestra `|m − massa| ≤ massa·ppm·1e-6` con ricerca binaria, righe in ordine di massa e chiave. Un file senza magic o più nuovo di quanto il lettore sappia è rifiutato (`ValueError`). Il test è `tests/test_sospetti.py` (mini-insieme sintetico di chiavi inventate).
+## Reader
+`read_suspects(path_or_bytes)` -> `Suspects` (`.manifest`, `.n`, `.hit(i)`, `.cerca(mass, ppm)`): window `|m − mass| ≤ mass·ppm·1e-6` with binary search, rows in order of mass and key. A file without the magic or newer than the reader knows is refused (`ValueError`). The test is `tests/test_sospetti.py` (synthetic mini-set of invented keys).
 
-## Lettore Rust (`crates/mzlab-feat/src/suspects.rs`)
-`Suspects::open(&[u8])` legge il file grezzo (già decompresso) in righe `Hit` ordinate per massa (`mass`, `key` 14 byte, `formula` indice per `Suspects::formula`, `sources` bit `SRC_*`, `pubmed`, `patents`, `reaction`); `search(mass, ppm) -> &[Hit]` è una ricerca binaria con la stessa finestra del lettore Python. Errori: `Corrupt` e `Version`; nessuna dipendenza oltre il crate.
-Il test `crates/mzlab-feat/tests/suspects.rs` confronta le risposte con `tools/suspects_reference.py` (si salta senza python3; `MZLAB_GOLDEN_STRICT=1` fallisce) e misura la ricerca su 10⁶ righe sintetiche.
-## Passo Flow `screen.suspects@1` (`crates/mzlab-feat/src/flow_screen_suspects/`)
-Cerca per massa neutra e addotto (gli addotti e i ppm di `attributio::reglists::screen_types`) le feature dell'allineamento HR in uno o più file di sospetti dell'utente: `.mzsus` (`Suspects::search`) o CSV (`name`, `inchikey` o `smiles`, `formula` o `mass`, `rt`, `fragments` separati da `;`). Chiave = primo blocco dell'InChIKey; i risultati con la stessa formula sono un gruppo di isomeri, mai un solo nome.
-Uscita `screen/1` (`docs/schemi/screen-1.json`): `suspect_files` (nome, SHA-256, manifest del `.mzsus` o «user CSV»), `hits[]` per feature × addotto × formula con `candidates[]`, `memberships[]` (`list`, `entry_ref`, `form`, `group`, `attr`; `[]` senza l'estensione `listings`), livello 5 o 4 (formula in `formulas/1`). Stessi byte nel CLI e nel `.wasm` `table` (`flow_screen_suspects`).
-Con un pacchetto normativo (`.mzsus` con `listings`) i parametri `lists` (id separati da virgola; vuoto = tutte) e `include` (`proposal`, `draft`, `reference`; vuoto = solo `in_force` e `adopted_not_applicable`) fanno la maschera (`mzlab_feat::regulatory::Package`): una riga che nessuna lista tenuta nomina non è candidata; il nome e la chiave intera vengono da `listings`; `suspect_files[].lists` porta il manifest di ogni lista tenuta (versione, SHA-256, copertura), quindi la maschera entra in `params_sha256` e in `prov/1`.
-Le liste importate (porta `imported_lists`, `normative.md`) sono sorgenti in più dopo i file di sospetti, con la maschera vuota; le loro appartenenze si aggiungono a quelle del pacchetto sullo stesso candidato.
-Test: `crates/mzlab-cli/src/flow_screen_suspects_reg_tests.rs` (pacchetto inventato `crates/mzlab-cli/tests/data/normative_screen/`).
+## Rust reader (`crates/mzlab-feat/src/suspects.rs`)
+`Suspects::open(&[u8])` reads the raw file (already decompressed) into `Hit` rows sorted by mass (`mass`, `key` 14 bytes, `formula` index for `Suspects::formula`, `sources` `SRC_*` bits, `pubmed`, `patents`, `reaction`); `search(mass, ppm) -> &[Hit]` is a binary search with the same window as the Python reader. Errors: `Corrupt` and `Version`; no dependency beyond the crate.
+The test `crates/mzlab-feat/tests/suspects.rs` compares the answers with `tools/suspects_reference.py` (skipped without python3; `MZLAB_GOLDEN_STRICT=1` fails) and measures the search on 10⁶ synthetic rows.
+## Flow step `screen.suspects@1` (`crates/mzlab-feat/src/flow_screen_suspects/`)
+Searches by neutral mass and adduct (the adducts and ppm of `attributio::reglists::screen_types`) the features of the HR alignment in one or more of the user's suspect files: `.mzsus` (`Suspects::search`) or CSV (`name`, `inchikey` or `smiles`, `formula` or `mass`, `rt`, `fragments` separated by `;`). Key = first block of the InChIKey; results with the same formula are a group of isomers, never a single name.
+Output `screen/1` (`docs/schemi/screen-1.json`): `suspect_files` (name, SHA-256, manifest of the `.mzsus` or "user CSV"), `hits[]` per feature × adduct × formula with `candidates[]`, `memberships[]` (`list`, `entry_ref`, `form`, `group`, `attr`; `[]` without the `listings` extension), level 5 or 4 (formula in `formulas/1`). Same bytes in the CLI and in the `.wasm` `table` (`flow_screen_suspects`).
+With a normative package (`.mzsus` with `listings`) the parameters `lists` (ids separated by commas; empty = all) and `include` (`proposal`, `draft`, `reference`; empty = only `in_force` and `adopted_not_applicable`) make the mask (`mzlab_feat::regulatory::Package`): a row that no kept list names is not a candidate; the name and the full key come from `listings`; `suspect_files[].lists` carries the manifest of each kept list (version, SHA-256, coverage), so the mask enters `params_sha256` and `prov/1`.
+Imported lists (port `imported_lists`, `normative.md`) are additional sources after the suspect files, with an empty mask; their memberships are added to those of the package on the same candidate.
+Test: `crates/mzlab-cli/src/flow_screen_suspects_reg_tests.rs` (invented package `crates/mzlab-cli/tests/data/normative_screen/`).
 
-## Estensione `listings` (liste normative, bandierina bit 0; `reader_min` resta 1)
-Dopo il blob delle formule, ogni sezione riempita a 8: testata (16 byte: u32 liste `nl`, u32 appartenenze `m`, u32 voci `ne`, u32 byte del blob delle voci); chiavi complete (`n` × 27 byte ASCII, l'InChIKey della forma elencata rappresentativa, spazi se manca); nomi (`n+1` × u32 offset, poi blob UTF-8); offset delle appartenenze (`n+1` × u32); appartenenze (`m` × [u16 indice di lista, u8 forma, u8 bit, u32 indice di voce]); voci (`ne+1` × u32 offset, poi blob di un oggetto JSON compatto per voce: `{"ref","name","cas","ec","attr"}`).
-Forma: 0 non indicata, 1 `as_listed`, 2 `parent`, 3 `salt`, 4 `anion`. Bit: 1 membro di gruppo, 2 isomero indicato, 4 il CAS elencato è un anione o un sale. L'indice di lista punta a `normative/1.lists` del manifest (ordine del catalogo); le liste sono etichettate lì (`tags`, `coverage`, `csv_sha256`). Il manifest ha anche `fonti` con la sola fonte `normative` (bit 8).
-`Suspects::listings() -> Option<&Listings>` (`None` senza la bandierina; `list_count`, `full_key`, `name`, `memberships`, `entry`, `entry_count`) e `Suspects::listings_json()` (tutta l'estensione come un solo JSON: stessi byte nel `.wasm` `normative_listings` e in `mzlab-cli normative listings`). I file v1 senza bandierina e mzFinder non cambiano. Il lettore di riferimento Python è `tools/suspects_reference.py` (`write_listings`, `read_listings`); il test `crates/mzlab-feat/tests/suspects.rs` confronta `listings_json` con il suo.
-Il costruttore è `mzlab-cli normative pack` (`docs/agenti/normative.md`): una riga per scheletro, massa e formula dalla CSV, appartenenze ordinate per (lista, `entry_ref`), byte deterministici.
+## `listings` extension (normative lists, flag bit 0; `reader_min` stays 1)
+After the formula blob, each section padded to 8: header (16 bytes: u32 lists `nl`, u32 memberships `m`, u32 entries `ne`, u32 bytes of the entry blob); full keys (`n` × 27 ASCII bytes, the InChIKey of the representative listed form, spaces if missing); names (`n+1` × u32 offsets, then UTF-8 blob); membership offsets (`n+1` × u32); memberships (`m` × [u16 list index, u8 form, u8 bit, u32 entry index]); entries (`ne+1` × u32 offsets, then a blob of one compact JSON object per entry: `{"ref","name","cas","ec","attr"}`).
+Form: 0 not stated, 1 `as_listed`, 2 `parent`, 3 `salt`, 4 `anion`. Bits: 1 group member, 2 isomer indicated, 4 the listed CAS is an anion or a salt. The list index points to `normative/1.lists` of the manifest (catalogue order); the lists are labelled there (`tags`, `coverage`, `csv_sha256`). The manifest also has `fonti` with the single source `normative` (bit 8).
+`Suspects::listings() -> Option<&Listings>` (`None` without the flag; `list_count`, `full_key`, `name`, `memberships`, `entry`, `entry_count`) and `Suspects::listings_json()` (the whole extension as a single JSON: same bytes in the `.wasm` `normative_listings` and in `mzlab-cli normative listings`). v1 files without the flag and mzFinder do not change. The Python reference reader is `tools/suspects_reference.py` (`write_listings`, `read_listings`); the test `crates/mzlab-feat/tests/suspects.rs` compares `listings_json` with its output.
+The builder is `mzlab-cli normative pack` (`docs/agenti/normative.md`): one row per skeleton, mass and formula from the CSV, memberships sorted by (list, `entry_ref`), deterministic bytes.

@@ -31,14 +31,14 @@ pub(super) fn csv_text(
         let head = field(label);
         for r in &mine {
             out += &format!(
-                "{head},{},{},{},{},{:.3},{:.3},{:.3},{},{},{},{},{},{}\n",
+                "{head},{},{},{},{:.3},{},{:.3},{:.3},{},{},{},{},{},{}\n",
                 field(&samples[r.file].0),
                 minutes_text(samples[r.file].2),
                 field(&labels[r.label]),
+                r.apex,
                 sci(r.area, 5),
                 r.a,
                 r.b,
-                r.apex,
                 sci(r.height, 5),
                 r.snr.map_or(String::new(), |v| format!("{v:.1}")),
                 r.base,
@@ -53,7 +53,7 @@ pub(super) fn csv_text(
         }
         if sums {
             out += &format!(
-                "{head},sum,,,{},,,,,,,,,{}\n",
+                "{head},sum,,,,{},,,,,,,,{}\n",
                 sci(mine.iter().map(|r| r.area).sum(), 5),
                 if ext { ",,,,,," } else { "" }
             );

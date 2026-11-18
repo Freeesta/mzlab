@@ -57,8 +57,10 @@ const count = () => st.csv ? parsed().body.length : 0;
 function recOf(r, c) {
   return st.recs.find(x => x.panel === r[c("panel")] && x.label === r[0] && x.sample === r[c("sample")] && +Math.min(x.it.a, x.it.b).toFixed(3) === +r[c("start_min")] && +Math.max(x.it.a, x.it.b).toFixed(3) === +r[c("end_min")]) || null;
 }
-const COLS = ["panel", "channel", "sample", "time_min", "conc", "area", "start_min", "end_min", "apex_rt_min", "height", "snr", "baseline", "below", "correction"];
-const NUM = ["time_min", "conc", "area", "start_min", "end_min", "apex_rt_min", "height", "snr", "below"];
+const COLS = ["panel", "channel", "sample", "time_min", "conc", "apex_rt_min", "area", "start_min", "end_min", "height", "snr", "baseline", "below", "correction"];
+const KEY = ["apex_rt_min", "area"];      // the two columns the eye looks for, as in the card (app.css `.manint-key`)
+const cls = k => [NUM.includes(k) ? "num" : "", KEY.includes(k) ? "manint-key" : ""].filter(Boolean).join(" "), clsAttr = k => cls(k) ? ` class="${cls(k)}"` : "";
+const NUM = ["time_min", "conc", "apex_rt_min", "area", "start_min", "end_min", "height", "snr", "below"];
 const HEAD = { panel: "canali.manint.h.panel", channel: "canali.manint.h.channel", sample: "canali.manint.h.sample", time_min: "canali.manint.h.time", conc: "canali.manint.h.conc",
   area: "canali.manint.h.area", start_min: "canali.manint.h.start", end_min: "canali.manint.h.end", apex_rt_min: "canali.manint.h.apex", height: "canali.manint.h.height",
   snr: "canali.manint.h.snr", baseline: "canali.manint.h.base", below: "canali.manint.h.below", correction: "canali.manint.h.corr" };
@@ -77,10 +79,10 @@ function html() {
   const { head, body, c } = parsed(); if (!body.length) return "";
   const uv = body.every(r => r[c("area_unit")] === UV), mix = !uv && body.some(r => r[c("area_unit")] === UV);
   const area = t(uv ? "canali.manint.h.areaUv" : mix ? "canali.manint.h.areaMix" : "canali.manint.h.area");
-  const ths = COLS.map(k => h`<th scope="col"${raw(NUM.includes(k) ? ' class="num"' : "")}>${k === "area" ? area : t(HEAD[k])}</th>`).join("");
+  const ths = COLS.map(k => h`<th scope="col"${raw(clsAttr(k))}>${k === "area" ? area : t(HEAD[k])}</th>`).join("");
   const trs = body.map((r, i) => {
     const rec = recOf(r, c), who = { ch: r[0], s: r[c("sample")] };
-    const tds = COLS.map(k => h`<td${raw(NUM.includes(k) ? ' class="num"' : "")}>${raw(cell(r, c, k, uv))}</td>`).join("");
+    const tds = COLS.map(k => h`<td${raw(clsAttr(k))}>${raw(cell(r, c, k, uv))}</td>`).join("");
     const act = rec ? h`<button type="button" class="manint-x" data-xdel="${i}" aria-label="${t("canali.manint.del.aria", who)}" title="${t("canali.manint.del")}">×</button>` : "";
     return h`<tr class="manint-go" data-xgo="${i}" tabindex="0" aria-label="${t("canali.manint.show.aria", who)}">${raw(tds)}<td>${raw(act)}</td></tr>`;
   }).join("");

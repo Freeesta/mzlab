@@ -223,12 +223,12 @@ fn a_trace_below_zero_never_gives_a_negative_area_and_reports_the_part_cut_off()
         let r = run(&rt, &y);
         assert_eq!(r.peaks.len(), 1, "seed {seed}: {:?}", r.peaks);
         let k = &r.peaks[0];
-        // the line is never extrapolated, so an end is never raised to zero: both stay on the background below zero, none above the trace
-        assert!(k.base_lo <= y[k.lo] && k.base_hi <= y[k.hi], "{k:?}");
-        assert!(k.base_lo < -300.0 && k.base_hi < -300.0, "{k:?}");
-        for (b, i, c) in [(k.base_lo, k.lo, k.clamp_lo), (k.base_hi, k.hi, k.clamp_hi)] {
-            assert!(c == Clamp::None || b == y[i], "{k:?}");
-        }
+        // the zero line is the floor: both ends are held at 0 (the background sits below it), and say so
+        assert!(k.base_lo == 0.0 && k.base_hi == 0.0, "{k:?}");
+        assert!(
+            k.clamp_lo == Clamp::Zero || k.clamp_hi == Clamp::Zero,
+            "{k:?}"
+        );
         // the trace dips under the line between the ends: that part is cut off (`below`), not subtracted from the area
         assert!(
             k.lo < 116 && 116 < k.hi && k.area > 0.0 && k.below > 0.0,
@@ -244,7 +244,7 @@ fn a_trace_below_zero_never_gives_a_negative_area_and_reports_the_part_cut_off()
         assert!(k.area_zero >= 0.0);
         let j = lr_auto_json(&rt, &r);
         assert!(
-            j.contains("\"baseline\":\"engine\"") && !j.contains("zero\","),
+            j.contains("\"baseline\":\"engine\"") && j.contains(":\"zero\""),
             "{j}"
         );
     }

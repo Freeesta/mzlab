@@ -1,7 +1,7 @@
-# Numeri (`mzlab/web/numeri.js`)
-Caricato prima di `grafici.js`; lo usano `picchi.js`, `liste.js`, `banco.js`, `conversione.js`. Prova: `tests/test_perf_web10.py`, `e2e_spettro_grande`.
+# Numbers (`mzlab/web/numeri.js`)
+Loaded before `grafici.js`; used by `picchi.js`, `liste.js`, `banco.js`, `conversione.js`. Tests: `tests/test_perf_web10.py`, `e2e_spettro_grande`.
 
-- `maxOf(a, init)`, `minOf(a, init)`, `maxAbs(a, init)`: estremi di un array (anche tipizzato) senza spread; un NaN dà NaN come `Math.max`; `init` vale per l'array vuoto. `Math.max(...a)` su ~125 000 elementi dà RangeError: nei file nuovi si usano questi.
-- `lowerIdx(a, v)`: primo indice con `a[i] >= v` in un array crescente.
-- `spanOf(a, lo, hi)`: intervallo `[i0, i1)` che contiene ogni indice con `lo <= a[i] <= hi`: ricerca binaria se `a` è crescente (controllo una volta per array, in una WeakMap), altrimenti tutto l'array. I cicli chiamanti tengono i propri test esatti, quindi c'è un solo percorso e i pixel non cambiano.
-- `b64F32(str, n)`: i float32 di un payload base64 delle rotte mappa (`getMap` in `grafici.js`); un payload non base64, di lunghezza non multipla di 4 o con un numero di valori diverso da `n` (nrt×nmz) lancia un `Error` chiaro invece di un RangeError.
+- `maxOf(a, init)`, `minOf(a, init)`, `maxAbs(a, init)`: extremes of an array (typed arrays too) without spread; a NaN gives NaN like `Math.max`; `init` is the value for an empty array. `Math.max(...a)` on ~125 000 elements throws RangeError: new files use these.
+- `lowerIdx(a, v)`: first index with `a[i] >= v` in an ascending array.
+- `spanOf(a, lo, hi)`: the interval `[i0, i1)` that contains every index with `lo <= a[i] <= hi`: binary search if `a` is ascending (checked once per array, in a WeakMap), otherwise the whole array. Calling loops keep their own exact tests, so there is a single path and the pixels do not change.
+- `b64F32(str, n)`: the float32 values of a base64 payload of the map routes (`getMap` in `grafici.js`); a payload that is not base64, whose length is not a multiple of 4, or with a number of values different from `n` (nrt×nmz) throws a clear `Error` instead of a RangeError.
