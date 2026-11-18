@@ -38,6 +38,14 @@ fn field(v: &Value, i: usize, k: &str) -> f64 {
         .unwrap()
 }
 
+fn pts(v: &Value, i: usize) -> f64 {
+    field(v, i, "n_points")
+}
+
+fn gen(v: &Value, i: usize) -> f64 {
+    field(v, i, "generator")
+}
+
 fn proposed(v: &Value) -> &str {
     v.get("kind")
         .unwrap()
@@ -177,11 +185,8 @@ fn channels_of_the_synthetic_files() {
             "ms:ITMS + ms2 305 @cid"
         ]
     );
-    assert_eq!(
-        (field(&v, 2, "n_points"), field(&v, 3, "n_points"), field(&v, 4, "n_points")),
-        (100.0, 100.0, 100.0)
-    );
-    assert_eq!((field(&v, 3, "generator"), field(&v, 4, "generator")), (2.0, 2.0));
+    assert_eq!((pts(&v, 2), pts(&v, 3), pts(&v, 4)), (100.0, 100.0, 100.0));
+    assert_eq!((gen(&v, 3), gen(&v, 4)), (2.0, 2.0));
     assert_eq!(proposed(&v), "lc-ms2-targeted");
     // MSn in blocks: MS3 hangs from the MS2 of its first precursor
     let v = channels_of(&d.join("canali/K_BLOCCHI-t0.mzML"));
@@ -196,12 +201,12 @@ fn channels_of_the_synthetic_files() {
             "ms:ITMS + ms3 317 > 299 @cid30"
         ]
     );
-    assert_eq!((field(&v, 4, "generator"), field(&v, 5, "generator")), (3.0, 3.0));
+    assert_eq!((gen(&v, 4), gen(&v, 5)), (3.0, 3.0));
     assert_eq!(proposed(&v), "msn-infusion");
     // 70 distinct precursors: one channel for all of them
     let v = channels_of(&d.join("canali/K_DDA-t0.mzML"));
     assert_eq!(ids(&v), ["tic", "bpc", "ms:FTMS + p ESI Full ms", "dd:2"]);
-    assert_eq!((field(&v, 3, "n_points"), field(&v, 3, "ms_level")), (70.0, 2.0));
+    assert_eq!((pts(&v, 3), field(&v, 3, "ms_level")), (70.0, 2.0));
     assert_eq!(proposed(&v), "lc-dda");
     // the lab-like MS2 file: two precursors, no survey scan
     let v = channels_of(&d.join("B_MS2.mzML"));
@@ -209,7 +214,7 @@ fn channels_of_the_synthetic_files() {
         ids(&v),
         ["tic", "bpc", "ms:ms2 229", "ms:ms2 305", "uv:twc"]
     );
-    assert_eq!((field(&v, 2, "n_points"), field(&v, 3, "n_points")), (503.0, 502.0));
+    assert_eq!((pts(&v, 2), pts(&v, 3)), (503.0, 502.0));
     // MRM + EPI: the triggered scans next to the transitions
     let v = channels_of(&d.join("C_MRM-EPI.mzML"));
     assert_eq!(
@@ -377,7 +382,10 @@ fn the_device_traces_of_a_wiff_are_the_analog_channels_of_its_mzml() {
         "Column Pressure #1 (pascal)",
         "Oven Temperature (°C)",
     ] {
-        assert!(list.contains(&format!("\"label\":\"{et}\"")), "{et}: {list}");
+        assert!(
+            list.contains(&format!("\"label\":\"{et}\"")),
+            "{et}: {list}"
+        );
     }
     assert!(!list.contains("Empty"), "{list}");
     let one = execute(&["channels".into(), mzml, "--channel".into(), "an:1".into()]);
@@ -454,28 +462,5 @@ fn canale_reads_a_uv_and_an_analog_trace() {
         .contains("\"unit\":\"bar\""));
     assert_eq!(run(&["--channel", "tic"]).code, 2);
     assert_eq!(run(&["--rt", "1"]).code, 2);
-    let _ = std::fs::remove_dir_all(&dir);
-}
-
-/// The output keys are exactly those the schema documents (each with its unit in the description).
-#[test]
-fn every_channel_key_is_in_the_schema() {
-    let schema = parse(include_bytes!("../../../docs/schemi/channels-1.json")).unwrap();
-    let props = |v: &Value| -> Vec<String> {
-        v.get("properties").unwrap().entries().iter().map(|e| e.0.clone()).collect()
-    };
-    let dir = std::env::temp_dir().join(format!("mzlab_cli_chkeys_{}", std::process::id()));
-    std::fs::create_dir_all(&dir).unwrap();
-    let f = dir.join("a.mzML");
-    std::fs::write(&f, crate::tests::mzml(10.0)).unwrap();
-    let v = channels_of(&f);
-    let keys = |o: &Value| -> Vec<String> { o.entries().iter().map(|e| e.0.clone()).collect() };
-    assert_eq!(keys(&v), props(&schema));
-    let top = schema.get("properties").unwrap();
-    assert_eq!(keys(v.get("kind").unwrap()), props(top.get("kind").unwrap()));
-    let item = top.get("channels").unwrap().get("items").unwrap();
-    for c in v.get("channels").unwrap().arr() {
-        assert_eq!(keys(c), props(item));
-    }
     let _ = std::fs::remove_dir_all(&dir);
 }

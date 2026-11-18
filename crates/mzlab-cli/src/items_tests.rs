@@ -63,8 +63,18 @@ fn a_single_ce_has_no_spread() {
 fn every_item_key_is_in_the_schema() {
     let schema = parse(include_bytes!("../../../docs/schemi/items-1.json")).unwrap();
     let info_props = schema
-        .get("properties").unwrap().get("items").unwrap().get("items").unwrap()
-        .get("properties").unwrap().get("info").unwrap().get("properties").unwrap();
+        .get("properties")
+        .unwrap()
+        .get("items")
+        .unwrap()
+        .get("items")
+        .unwrap()
+        .get("properties")
+        .unwrap()
+        .get("info")
+        .unwrap()
+        .get("properties")
+        .unwrap();
     let p = std::env::temp_dir().join(format!("items-{}-schema.mzML", std::process::id()));
     std::fs::write(&p, mzml(&[20.0, 35.0, 50.0])).unwrap();
     let o = execute(&["items".to_string(), p.to_string_lossy().into_owned()]);
@@ -73,7 +83,10 @@ fn every_item_key_is_in_the_schema() {
     let v = parse(&o.stdout).unwrap();
     for it in v.get("items").unwrap().arr() {
         for (k, _) in it.get("info").unwrap().entries() {
-            assert!(info_props.get(k).is_some(), "key `{k}` is not in docs/schemi/items-1.json");
+            assert!(
+                info_props.get(k).is_some(),
+                "key `{k}` is not in docs/schemi/items-1.json"
+            );
         }
     }
 }

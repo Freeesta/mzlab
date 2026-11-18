@@ -69,7 +69,10 @@ fn read(file: &PathBuf, tmp: &std::path::Path) -> Result<String> {
         .iter()
         .map(|i| format!("{{\"info\":{},\"hr\":{}}}", i.info, i.hr))
         .collect();
-    Ok(format!("{{\"schema\":\"items/1\",\"items\":[{}]}}", body.join(",")))
+    Ok(format!(
+        "{{\"schema\":\"items/1\",\"items\":[{}]}}",
+        body.join(",")
+    ))
 }
 
 pub fn run(args: Vec<String>) -> Outcome {

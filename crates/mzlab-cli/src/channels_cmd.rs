@@ -214,3 +214,7 @@ pub fn run(args: Vec<String>) -> Outcome {
 #[cfg(test)]
 #[path = "channels_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "channels_schema_tests.rs"]
+mod schema_tests;

@@ -328,7 +328,10 @@ fn channels_lists_the_sim_channels_of_the_wiff() {
     ]);
     let t = text(&o);
     assert_eq!(t.matches("\"family\":\"sim\"").count(), 7, "{t}");
-    assert!(t.contains("\"label\":\"SIM 251.1 (+) 20 ms «ionC»\""), "{t}");
+    assert!(
+        t.contains("\"label\":\"SIM 251.1 (+) 20 ms «ionC»\""),
+        "{t}"
+    );
     let _ = std::fs::remove_dir_all(&d);
 }
 
