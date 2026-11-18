@@ -1,6 +1,7 @@
 //! `readers::list_samples` (`samples_list/1`) of a `.wiff` pair read from its container and index alone (`readers::apri_listing`): the `.wiff.scan` is
 //! never read, the numbers are the ones the full open finds on a clean pair, and a copy cut short shows as index rows past its end (`missing`).
 //! Synthetic pairs of tools/wiff_riferimento.py and tools/wiff_grande.py; python3 is required (the test fails without it, it never skips).
+#![allow(clippy::disallowed_methods)] // the test sorts file names with the standard sort
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
