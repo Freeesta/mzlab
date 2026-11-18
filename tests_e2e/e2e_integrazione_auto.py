@@ -66,10 +66,10 @@ try:
             for s, name in enumerate(SAMPLES):
                 for j, pk in enumerate(PK[s]):
                     for t in pk:
-                        hit = [x for x in rows if x[1] == name and abs(float(x[7]) - t) < 0.06]
+                        hit = [x for x in rows if x[1] == name and abs(float(x[4]) - t) < 0.06]
                         need(len(hit) == 1, ("a row at the peak the writer put", name, j, t))
                         twins = [x for s2 in range(len(SAMPLES)) if s2 != s for t2 in PK[s2][j] if abs(t2 - t) < 0.10
-                                 for x in rows if x[1] == SAMPLES[s2] and abs(float(x[7]) - t2) < 0.06]
+                                 for x in rows if x[1] == SAMPLES[s2] and abs(float(x[4]) - t2) < 0.06]
                         need(hit[0][-2] == (T("auto") if twins else T("unmatched")), ("origin", name, j, t, hit[0][-2], len(twins)))
                         need(all(x[0] == hit[0][0] for x in twins), ("the same peak is in the same channel", name, j, t))
         step("one row per peak, matched across the files, with its origin", groups)
