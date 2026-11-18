@@ -58,7 +58,7 @@ def follow(pg, cdp, bcdp, until, limit=1500):
 
 try:
     with sync_playwright() as p:
-        # a normal window (a profile on disk): the ephemeral context of Playwright behaves like a private window, whose OPFS holds only about 200 MB (error.quota with room left, misure-formati.md)
+        # a normal window (a profile on disk): the ephemeral context of Playwright behaves like a private window, whose OPFS holds only about 200 MB (error.quota with room left, measurements-formats.md)
         prof = tempfile.mkdtemp(prefix="wiff240_prof_")
         c = p.chromium.launch_persistent_context(prof, executable_path=os.environ.get("MZLAB_CHROMIUM") or None, locale="en-US", viewport={"width": 1500, "height": 1800}); c.set_default_timeout(120000)
         pg = c.pages[0] if c.pages else c.new_page(); pg.on("pageerror", lambda e: errs.append(("pageerror", str(e)))); pg.on("crash", lambda: errs.append(("crash", "page crashed")))

@@ -67,14 +67,14 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Expected: area/true = 1 for a noise-free Gaussian on a zero baseline; cutting at 5 % of the height and subtracting that level leaves 0.888 analytically.
 - Observed: area/true = 0.876 for sigma from 2.5 to 20 points, while the cells of the detection route give about 1.0 on the same traces.
 - Fix: integrate from zero between the limits with `quality::trapezoid`, or widen the limits to the baseline.
-- Status: OPEN (owner decision): reproduced (`detect_prominence` area/true 0.8747, 0.8758, 0.8760, 0.8761 at sigma 2.5, 5, 10, 20 points); either fix changes the 5 % limit (`frac`) or the baseline convention of a function the resolver and `peak-auto` share.
+- Status: FIXED: default `frac` 0.001 (area/true 0.9952, 0.9953, 0.9966, 0.9966 at sigma 2.5, 5, 10, 20 points, was 0.8747 to 0.8761); the old limit is `frac` 0.05.
 
 ### B3 - wrong result - CWT peak area and FWHM depend on the points per peak
 - Place: `crates/mzlab-picchi/src/peaks.rs:325-357` (`asls_baseline(y, 1e5, 0.01, 10, 160)`, lambda in points, CWT widths up to 12); consumers `chrom.uv_peaks@1` (`crates/mzlab-feat/src/uv_bands.rs:60,170`), peak labels, `tracestat`.
 - Expected: area/true = 1 and FWHM/true = 1 whatever the sampling rate (Eilers and Boelens 2005: lambda scales with the fourth power of the sampling density).
 - Observed (n = 3000, height 1e5, baseline 500, noise 100; the same without noise): area/true 0.987 (sigma 2.5 points), 0.977 (5), 0.924 (10), 0.796 (20); sigma 40 is split into 3 peaks (largest 0.485), sigma 80 into 6; FWHM/true 1.007, 0.996, 0.979, 0.937, 0.833.
 - Fix: scale lambda and the CWT widths with the points per peak, or resample to a fixed density before detection.
-- Status: OPEN (owner decision): reproduced without noise (largest piece 0.987, 0.977, 0.924, 0.795, 0.485 at sigma 2.5, 5, 10, 20, 40 points; a clean Gaussian also yields 30-40 tiny pieces under 0.2 %); the fix changes the fixed AsLS lambda and CWT widths.
+- Status: FIXED: `detect_full` scales the AsLS lambda with the 4th power of the sampling density and the CWT widths with the points per peak (`Params.scale_to_width`, on by default; `false` gives the old fixed values, which the Python golden pins); largest piece 0.98-0.987 at sigma 2.5-80 points without noise (before 0.987, 0.977, 0.924, 0.796, 0.485 at 2.5-40), up to sigma 40 with noise; test `crates/mzlab-picchi/tests/peaks_width.rs`.
 
 ### B4 - precision loss - S/N of the line-residual route is biased high
 - Place: `crates/mzlab-core/src/peakq_lr.rs:234-251,316-318` (noise = SD of the Savitzky-Golay residual).

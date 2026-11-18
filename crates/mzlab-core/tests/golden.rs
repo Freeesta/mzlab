@@ -93,11 +93,19 @@ fn check_trace(what: &str, rt: &[f64], y: &[f64], g: &GTrace) {
         );
         assert!((t - gt).abs() <= 2e-6, "{what}: rt[{i}] {t} vs {gt}");
     }
+    // the golden is the Python engine, whose lambda and widths are fixed
     let max = y.iter().copied().fold(0.0_f64, f64::max);
-    let mut got: Vec<_> = detect_peaks(rt, y, Params::default())
-        .into_iter()
-        .filter(|p| p.height >= MIN_REL_HEIGHT * max)
-        .collect();
+    let mut got: Vec<_> = detect_peaks(
+        rt,
+        y,
+        Params {
+            scale_to_width: false,
+            ..Params::default()
+        },
+    )
+    .into_iter()
+    .filter(|p| p.height >= MIN_REL_HEIGHT * max)
+    .collect();
     got.sort_by_key(|p| p.apex_i);
     let lim = |v: &[(usize, usize, usize)]| format!("{v:?}");
     let a: Vec<_> = got.iter().map(|p| (p.apex_i, p.lo, p.hi)).collect();

@@ -1,7 +1,7 @@
 // @ts-strict
 // What api/msn_grafo reads when the infusion is a sample of a maker's file (.raw ...): the .wasm msngrafo only decodes an mzML by offset, so the sample is
 // written once as mzML on OPFS (conv/) with its own index (idx/), kept for the next request of the same sample; the page shows one bar over the phases.
-// Used by rust-worker.js (op "msngrafo"). docs/agenti/lettura-nativa.md.
+// Used by rust-worker.js (op "msngrafo"). docs/agenti/native-reading.md.
 
 /** Share of the bar of each phase when the sample has to be converted first. */
 const PESI = { convert: [0, 0.5], index: [0.5, 0.65], graph: [0.65, 1] };

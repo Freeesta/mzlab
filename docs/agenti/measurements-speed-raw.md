@@ -1,6 +1,6 @@
 # Speed measurements of the vendor readers
 
-One row per speed change of a vendor reader (Thermo `.raw`, `.wiff`, `.D`: open, decode, reads of the members), oldest first; same columns and rules as `misure-velocita.md`, which holds the other measurements and takes no new rows. Abandoned routes go in `ottimizzazioni-tentate.md`.
+One row per speed change of a vendor reader (Thermo `.raw`, `.wiff`, `.D`: open, decode, reads of the members), oldest first; same columns and rules as `measurements-speed.md`, which holds the other measurements and takes no new rows. Abandoned routes go in `ottimizzazioni-tentate.md`.
 
 | Date | PR | Step | Before | After | % |
 |---|---|---|---|---|---|

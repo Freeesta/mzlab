@@ -1,4 +1,4 @@
-//! Speed bench of the Bruker timsTOF reader (docs/agenti/misure-formati.md) on a synthetic DDA-PASEF folder of realistic size (invented numbers, no lab data):
+//! Speed bench of the Bruker timsTOF reader (docs/agenti/measurements-formats.md) on a synthetic DDA-PASEF folder of realistic size (invented numbers, no lab data):
 //! `scrivi` writes `analysis.tdf` + `analysis.tdf_bin` (zstd, codec 2), `misura` times open, index, TIC, BPC, first spectrum, all spectra and the mzML conversion.
 //! A tool of the bench: it never enters a .wasm.
 //!   bruker_bench scrivi DIR.d [--cicli 100] [--ms1 60000] [--ms2 15000]

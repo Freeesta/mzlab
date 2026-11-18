@@ -39,7 +39,7 @@ Proof: `git grep -nE 'copioni|oro/(G|U|fumo)|insiemi\.json' -- ':!docs/studi'` g
 | `tests/data/assist/insiemi.json` | 2 944 | 2026-10-22 |
 
 ### `tests/data/nomi_tp/` (5 files, 51 641 bytes)
-Self-contained generator + checker of a TP-name case set; nothing else reads it. Proof: `git grep -nE 'nomi_tp|casi_nomi' -- ':!tests/data/nomi_tp'` gives only a mention in `docs/agenti/inglese.md` and in `tests/data/decoy/LEGGIMI.md`.
+Self-contained generator + checker of a TP-name case set; nothing else reads it. Proof: `git grep -nE 'nomi_tp|casi_nomi' -- ':!tests/data/nomi_tp'` gives only a mention in `docs/agenti/english.md` and in `tests/data/decoy/LEGGIMI.md`.
 
 | File | Bytes | Last change |
 |---|---|---|
@@ -74,7 +74,7 @@ Self-contained generator + checker of a TP-name case set; nothing else reads it.
 | `docs/letteratura_cc/RAPPORTO.md` | 22 067 | 2026-10-16 | `git grep -n 'RAPPORTO\.md' -- ':!docs/letteratura_cc/RAPPORTO.md'` is empty; the CSVs next to it are live (`tests/data/reattivita/validazione.json`). |
 | `docs/studi/CONFRONTO_MZFLOW.md` | 23 853 | 2026-11-14 | Recent study, not in INDICE; only the roadmap below links it (`git grep -nE 'CONFRONTO_MZFLOW\|ROADMAP_MZFLOW'` outside the pair is empty). |
 | `docs/studi/ROADMAP_MZFLOW.md` | 12 545 | 2026-11-14 | as above |
-| `TP_Mine/tests/gruppi_vista.html` | 607 | 2026-10-16 | Hand test page; only `docs/agenti/gruppi.md` names it (`e2e_tabui_gruppi_vista.py` mounts the view itself). |
+| `TP_Mine/tests/gruppi_vista.html` | 607 | 2026-10-16 | Hand test page; only `docs/agenti/groups.md` names it (`e2e_tabui_gruppi_vista.py` mounts the view itself). |
 
 ### Documented manual tools with no caller (18 files, 74 327 bytes)
 Not imported or run by any test, workflow, `pre_pr.py` or `verifica.py`; each is described only in the doc named. They are measurements/benches run by hand: remove one only if its doc procedure is obsolete, and fix that doc in the same PR.
@@ -86,17 +86,17 @@ Not imported or run by any test, workflow, `pre_pr.py` or `verifica.py`; each is
 | `tools/bench/parita_raw.py` | 3 135 | 2026-11-07 | `mzfinder-benchmark.md` |
 | `tools/bench/prepara_d1.py` | 2 208 | 2026-11-08 | `mzfinder-benchmark.md` |
 | `tools/bench/thermo_velocita.py` | 3 960 | 2026-11-07 | `thermo-velocita.md`, INDICE |
-| `tools/bench_librerie_cartella.py` | 3 399 | 2026-11-14 | `misure-rust.md` |
-| `tools/bench_raw.py` | 5 227 | 2026-11-14 | `misure-rust.md`, `lettori-modulo.md`, `mappa-fluida.md`, `thermo-velocita.md` |
-| `tools/bench_table_hr.py` | 4 062 | 2026-11-13 | `high-resolution-statistics.md`, `misure-grafici.md`, INDICE |
+| `tools/bench_librerie_cartella.py` | 3 399 | 2026-11-14 | `measurements-rust.md` |
+| `tools/bench_raw.py` | 5 227 | 2026-11-14 | `measurements-rust.md`, `readers-module.md`, `fluid-map.md`, `thermo-velocita.md` |
+| `tools/bench_table_hr.py` | 4 062 | 2026-11-13 | `high-resolution-statistics.md`, `measurements-charts.md`, INDICE |
 | `tools/compare_profiles.py` | 1 883 | 2026-11-13 | `rilascio.md` |
 | `tools/lat_arrows.py` | 4 488 | 2026-10-12 | `test.md` |
-| `tools/measure_formats.py` | 9 613 | 2026-11-13 | `misure-formati.md` |
-| `tools/measure_groups.py` | 4 482 | 2026-11-13 | `gruppi.md`, `misure-rust.md` |
+| `tools/measure_formats.py` | 9 613 | 2026-11-13 | `measurements-formats.md` |
+| `tools/measure_groups.py` | 4 482 | 2026-11-13 | `groups.md`, `measurements-rust.md` |
 | `tools/measure_redraw.py` | 1 018 | 2026-11-13 | `misure-diario.md` |
 | `tools/mzml_diagnosis.py` | 3 426 | 2026-11-13 | `diagnosis.md` |
 | `tools/state_pr.py` | 4 479 | 2026-11-13 | `ci-fast.md` |
-| `tools/synthetic_data_large.py` | 7 892 | 2026-11-13 | `misure-rust.md`, `misure-velocita.md`, `misure-velocita-raw.md` |
+| `tools/synthetic_data_large.py` | 7 892 | 2026-11-13 | `measurements-rust.md`, `measurements-speed.md`, `measurements-speed-raw.md` |
 | `tools/test_isotopes.py` | 4 718 | 2026-11-13 | `high-resolution.md` (lives in `tools/`, so pytest `testpaths = ["tests"]` never collects it) |
 | `tools/wiff_probe.py` | 5 476 | 2026-11-13 | `wiff.md` |
 
