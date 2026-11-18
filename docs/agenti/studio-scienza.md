@@ -18,7 +18,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Expected: M+2/M of Br2 = 2 x 0.4931 / 0.5069 = 1.95; Br3 2.92; Cl4 1.28; Cl6 1.92 (binomial of the IUPAC abundances, Meija et al., Pure Appl. Chem. 2016, 88, 293).
 - Observed (`isotopes::group`, synthetic features, binomial areas, same RT): Br1 areas [100, 97] -> `iso_group` [1, 1]; Br2 [100, 195, 95] -> [0, 2, 2]; Br3 [100, 292, 284, 92] -> [0, 2, 2, 2]; Cl3 -> one group; Cl4 [100, 128, 61, 13, 1] -> [0, 2, 2, 2, 2]. The monoisotopic ion of a compound with 2 or more Br, or 4 or more Cl, stays alone and M+2 becomes the head of the cluster.
 - Fix: bound the M+2/M ratio by the binomial of the halogen count that the mass allows instead of the constant 1.2.
-- Status: OPEN (owner decision): reproduced on the engine (Br1 [1, 1], Br2 [0, 2, 2], Br3 [0, 2, 2, 2]); the fix replaces the 1.2 cap of `plausible` with a bound from the mass.
+- Status: FIXED: the M+2/M cap is the averagine value plus the M+2 of the most Br or Cl the mass holds ((M - 12) / 78.918 Br, / 34.969 Cl; 0.9727 and 0.3199 each), never below the old 1.2; Br2 [100, 195, 95] and Br3 [100, 292, 284, 92] now give one group. The old cap stays selectable (`IsoParams::legacy_plus2_cap`, off by default, written in the recipe text only when on). Tests in `crates/mzlab-feat/src/isotopes.rs`.
 
 ### A2 - wrong result - fine pattern cut 6.5 Da above the lightest isotopologue
 - Place: `crates/mzlab-core/src/isoscore.rs:133` (`fine_pattern` = `fine_pattern_cut(.., MAX_SHIFT + 0.5)`), used by `isotope_score` (`isoscore.rs:214`).
@@ -44,7 +44,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Expected: nominal mass = sum of the mass numbers of the most abundant isotopes (Murray et al., Pure Appl. Chem. 2013, 85, 1515): tristearin C57H110O6 = 890.
 - Observed: `mzlab-cli ion-mz C57H110O6` -> neutral 890.8302, `nominal_neutral` 891, [M+H]+ `nominal` 892; `mzlab-cli mol-anal` on the same formula -> `nominal` 890.
 - Fix: compute it from integer isotope masses, or rename the field (rounded m/z).
-- Status: OPEN (owner decision): the fix changes or renames the exported `nominal` fields.
+- Status: FIXED in `formula_mz` (`ion-mz`, `/api/formula`): `nominal_neutral` is the sum of the mass numbers of the main isotopes (890), `nominal` of an ion that plus the adduct shift (891); the old rounded values are the new keys `neutral0` and `mz0` (the page search keeps using them). OPEN: the `nominal` column of `adduct_table.rs` (the calculator) is still the rounded m/z, which is what a unit-resolution instrument shows.
 
 ### A6 - precision loss (at most 0.15 ppm) - four mass tables from different evaluations
 - Place: `crates/mzlab-core/src/elements.rs` `MASS` (AME2016, correct to 1e-9 u) against `crates/mzlab-core/src/nuclides.rs` and `isotable.rs` (generated from OpenChemLib), `crates/mzlab-feat/src/attributio/review/adduct.rs` `MASS`, and the typed shifts in `crates/mzlab-feat/src/adducts.rs` and `crates/mzlab-target/src/entry.rs`.
