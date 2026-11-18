@@ -6,4 +6,3 @@
 4. CE: `ce_mid ± ce_spread` eV for a stepped CE, else `ce`; read from `ms2_exps` of the engine (`crates/mzlab-core/src/cespread.rs`), never typed; no CE, no row.
 5. Sample: the file label (MS², no overlay).
 Same data in site, app and CLI: `mzlab-cli items FILE` prints the `Item.info()` JSON (`ms2_exps` has `prec`, `ce`, `ce_mid`, `ce_spread`, `n`; the Python reference is `Item._ms2_exps` in `mzlab/explore.py`, checked by `iteminfo_parity`). Tests: `e2e_spettro_righe`, `items_cmd` and `cespread` unit tests, `iteminfo_parity`.
-The header is two lines by design (title and buttons, then `.ctl`); `hdWrapped` in `pannelli.js` makes `fitHd` move groups into «⋯» when the title row would wrap, so it never grows a third line. `e2e_intestazioni` measures each line as one row.

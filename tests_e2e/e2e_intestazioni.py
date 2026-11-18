@@ -21,13 +21,14 @@ CHECK = """(() => E.panels.filter(p => p.el && p.el.offsetParent).map(p => {
   const hd = p.el.querySelector('.hd'), hr = hd.getBoundingClientRect();
   const items = [...hd.querySelectorAll(':scope > *, .ctl > *, .tbs > *')].filter(e => e.offsetParent && !e.closest('.hmore') && !e.classList.contains('rd') && !e.classList.contains('hmore') && e.getBoundingClientRect().width);
   // the MS² spectrum header is two lines by design (#3435): the title and buttons, then the fragments controls (.ctl) on their own line; every other header is one line.
+  // at narrow widths the spectrum title row may itself wrap (flex-wrap), so only its controls line is held to one row; nothing may be cut or outside, and the .ctl line stays below.
   // Each line is measured on its own (the controls of one line share a row); the two lines of the spectrum must be two distinct rows, one under the other.
   const two = p.type === 'spec' && !!hd.querySelector(':scope > .ctl'), mids = e => e.map(x => { const q = x.getBoundingClientRect(); return q.top + q.height / 2; });
   const spread = m => m.length ? Math.max(...m) - Math.min(...m) : 0, inCtl = e => !!e.closest('.ctl');
   const top = two ? items.filter(e => !inCtl(e)) : items, low = two ? items.filter(inCtl) : [];
   const out = items.filter(e => { const q = e.getBoundingClientRect(); return q.right > hr.right + 1.5 || q.left < hr.left - 1.5; }).map(e => e.className || e.tagName);
   const stacked = !two || (low.length > 0 && Math.min(...low.map(e => e.getBoundingClientRect().top)) >= Math.max(...top.map(e => e.getBoundingClientRect().bottom)) - 1);
-  return {id: p.id, type: p.type, lines: two ? 2 : 1, stacked, rows: Math.round(Math.max(spread(mids(top)), spread(mids(low)))), hh: Math.round(hr.height), over: hd.scrollWidth - hd.clientWidth, out,
+  return {id: p.id, type: p.type, lines: two ? 2 : 1, stacked, rows: Math.round(Math.max(two ? 0 : spread(mids(top)), spread(mids(low)))), hh: Math.round(hr.height), over: hd.scrollWidth - hd.clientWidth, out,
           ch: Math.round(p.cv.getBoundingClientRect().height), more: !!(p.el.querySelector('[data-a=more]') && !p.el.querySelector('[data-a=more]').hidden), pw: p.el.offsetWidth};
 }))()"""
 
