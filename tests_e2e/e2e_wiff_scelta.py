@@ -45,10 +45,10 @@ try:
         step("several samples: the dialog opens with every sample ticked and is accessible", several)
         def none_then_numbers():
             pg.click("#wiffchoose button:text('Select none')"); assert ticked(pg) == 0 and pg.is_disabled("#wiffchoose button.go")
-            pg.fill("#wc-ids", "2-3"); pg.click("#wiffchoose button:text('Tick numbers')"); assert ticked(pg) == 2, ticked(pg)
+            pg.fill("#wc-ids", "2-3"); pg.click("#wiffchoose button:text('Tick numbers')"); pg.wait_for_function("document.querySelectorAll('#wiffchoose tbody input:checked').length === 2"); assert ticked(pg) == 2
             pg.fill("#wc-ids", "9"); pg.click("#wiffchoose button:text('Tick numbers')")
-            assert "no sample number 9" in pg.inner_text("#wiffchoose .wc-msg"), pg.inner_text("#wiffchoose .wc-msg")
-            pg.fill("#wc-ids", "x"); pg.click("#wiffchoose button:text('Tick numbers')"); assert "Not a list" in pg.inner_text("#wiffchoose .wc-msg")
+            pg.wait_for_function("document.querySelector('#wiffchoose .wc-msg').textContent.includes('no sample number 9')")
+            pg.fill("#wc-ids", "x"); pg.click("#wiffchoose button:text('Tick numbers')"); pg.wait_for_function("document.querySelector('#wiffchoose .wc-msg').textContent.includes('Not a list')")
         step("Select none disables Open; numbers go through the engine (2-3 ticks two, 9 and x are told)", none_then_numbers)
         def cancel():
             pg.keyboard.press("Escape"); settle(pg); assert rows(pg) == 0, rows(pg)
