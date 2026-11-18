@@ -1,4 +1,4 @@
-"""Provenance of the exported tables (provenienza/1): every export of the program that leaves a table passes its provenance
+"""Provenance of the exported tables (provenance/1): every export of the program that leaves a table passes its provenance
 (`table:` in the options of dlx()/dl()/PROV.tsv()), and the Rust engine is the only place that writes the line (mzlab-core::provenance,
 unit tests there; the files really downloaded are proved by tests_e2e/e2e_provenienza.py)."""
 import re
@@ -51,11 +51,11 @@ def test_clipboard_copies_use_the_same_helper():
 def test_one_helper_and_the_engine_writes_the_line():
     assert "api/provenance" in (WEB / "provenienza.js").read_text(encoding="utf-8")
     rust = (WEB.parent.parent / "crates" / "mzlab-core" / "src" / "provenance.rs").read_text(encoding="utf-8")
-    assert '"provenienza/1"' in rust and '# mzLab ' in rust
+    assert '"provenance/1"' in rust and '# mzLab ' in rust
     # the schema name lives in the engine and in the helper only: a second copy would be a second schema
     for f in WEB.glob("*.js"):
         if f.name not in ("provenienza.js", "xlsx.js", "explore.js", "lr-map.js"):
-            assert "provenienza/1" not in f.read_text(encoding="utf-8"), f.name
+            assert "provenance/1" not in f.read_text(encoding="utf-8"), f.name
 
 
 def test_own_imports_skip_the_provenance_line():

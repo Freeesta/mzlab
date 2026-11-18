@@ -50,7 +50,7 @@ export async function engineRoute(path, q, env) {
   if (path === "/api/perf") return { status: 200, text: '{"files":[]}' };
   // a built-in list: data, not a calculation
   if (path === "/api/contaminants") return { status: 200, text: await (await fetch(new URL("contaminanti.json", import.meta.url))).text() };
-  // schema provenienza/1: the engine writes the line of an exported table
+  // schema provenance/1: the engine writes the line of an exported table
   if (path === "/api/provenance") return { status: 200, text: (await env.rpc({ op: "lr_provenance", ctx: [...q].map(([k, v]) => [k, String(v).replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/·/g, "-").trim()]).filter(kv => kv[1]).map(kv => " · " + kv[0] + "=" + kv[1]).join("") })).info };
   if (path === "/api/subxic") return await subxicRoute(q, env);
   if (path === "/api/qaqc") return await qaqcRoute(q, env);
