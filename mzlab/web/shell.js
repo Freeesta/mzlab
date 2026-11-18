@@ -51,7 +51,7 @@ window.hdrH=()=>document.querySelector("header").offsetHeight;
 /** @param {boolean} [fromHistory] */ function setView(/** @type {string} */ v,fromHistory){STATO.vista(v,"view");applyView();if(!fromHistory&&VIEW_HASH[v]&&location.hash!=="#/"+VIEW_HASH[v])history.pushState(null,"","#/"+VIEW_HASH[v]);}
 document.querySelectorAll("#nav button:not([data-late])").forEach(b=>b.onclick=()=>setView(b.dataset.v));
 // Back/Forward and typed addresses: the view follows the hash
-addEventListener("popstate",()=>{const v=hashView()||"data";if(v!==S.view)setView(v,true)});
+{const follow=()=>{const v=hashView()||"data";if(v!==S.view)setView(v,true)};addEventListener("popstate",follow);addEventListener("hashchange",follow)}   // a typed or pasted address fires both or only one, depending on the browser
 // a direct address shows its view at once, without waiting for the engine (the loading veil stays until the program is ready)
 if(S.view!=="data"){$("#v-draw").hidden=S.view!=="draw";document.documentElement.classList.toggle("in-draw",S.view==="draw");document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.view))}
 

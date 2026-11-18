@@ -44,7 +44,7 @@ PROBE = r"""(() => {
 })();"""
 
 VIEWS = {"draw": ("#nav button[data-v=draw]", "#v-draw:not([hidden])"), "flow": ("#nav button[data-v=flow]", "#v-flow:not([hidden]), #flowview:not([hidden])"),
-         "tabui": ("#nav button[data-v=tpmine]", "#v-tpmine:not([hidden]), #tpmine:not([hidden])")}
+         "tabui": ("", "#v-tpmine:not([hidden]), #tpmine:not([hidden])")}
 
 
 def poll(pg, expr, timeout=120.0):
@@ -113,7 +113,8 @@ def one(b, base, scen, browser_name):
     if scen in VIEWS:
         btn, shown = VIEWS[scen]
         t0 = pg.evaluate("performance.now()")
-        pg.click(btn)
+        if scen == "tabui": pg.evaluate("location.hash = '#/tpmine'")      # no nav button: the exact address (the page is usable here)
+        else: pg.click(btn)
         poll(pg, f"!!document.querySelector('{shown}')", 60)
         t1 = pg.evaluate("performance.now()")
         settle(pg, 1000, 20)
