@@ -59,7 +59,7 @@ const WORKFLOW = (() => {
         sha256: f.sha256 || "",
         dimensione: f.size || 0,
         tipo: f.type || "sample",
-        ruolo: window.CDOC ? CDOC.kindOf(f) : undefined,           // role of campioni/2 (the base type above is kept for the old readers)
+        ruolo: window.CDOC ? CDOC.kindOf(f) : undefined,           // role of samples/1 (the base type above is kept for the old readers)
         etichetta: f.label || "",
         tempo: f.time ?? null,
         concentrazione: f.conc ?? null,
@@ -113,10 +113,10 @@ const WORKFLOW = (() => {
     };
   }
 
-  // the operation `campioni` (schema campioni/2, the canonical entries and their SHA-256, both from the Rust of mzlab-core): the roles and times of this moment
+  // the operation `campioni` (schema samples/1, the canonical entries and their SHA-256, both from the Rust of mzlab-core): the roles and times of this moment
   async function campioniOp() {
     if (!window.CAMPIONI || !window.CDOC) return null;
-    try { const c = await CDOC.canonical(CAMPIONI.docNow()), d = JSON.parse(c.json); return { op: "campioni", t: new Date().toISOString(), da: "dati", schema: d.schema, campioni: d.campioni, sha256: c.sha256 }; } catch (_) { return null; }
+    try { const c = await CDOC.canonical(CAMPIONI.docNow()), d = JSON.parse(c.json); return { op: "campioni", t: new Date().toISOString(), da: "dati", schema: d.schema, samples: d.samples, sha256: c.sha256 }; } catch (_) { return null; }
   }
   async function exportWorkflow() {
     if (typeof E === "undefined" || !E.files || !E.files.filter(f => !f.gone).length) {
@@ -135,13 +135,12 @@ const WORKFLOW = (() => {
   }
 
   // ---------------------------------------------------------------- .mzflow open & apply
-  // roles, subtypes, times and their confirmation: from the last operation `campioni` (campioni/2) or, for an old file, migrated by the Rust (`da_legacy`)
+  // roles, subtypes, times and their confirmation: from the last operation `campioni` (samples/1); a file without one keeps the roles of its own entries below
   async function restoreCampioni(/** @type {any} */ wf, /** @type {any[]} */ needed, /** @type {any} */ p) {
     if (!window.CAMPIONI || !window.CDOC) return;
     try {
-      const ops = (Array.isArray(wf.operazioni) ? wf.operazioni : []).filter((/** @type {any} */ o) => o && o.op === "campioni" && o.schema === "campioni/2" && Array.isArray(o.campioni));
-      if (ops.length) CAMPIONI.importDoc({ campioni: ops[ops.length - 1].campioni });
-      else CAMPIONI.importDoc(await CDOC.post("da_legacy", { mzflow: { files: needed }, qaqc: { roles: (p.qaqc && p.qaqc.ruoli) || {} } }));
+      const ops = (Array.isArray(wf.operazioni) ? wf.operazioni : []).filter((/** @type {any} */ o) => o && o.op === "campioni" && o.schema === "samples/1" && Array.isArray(o.samples));
+      if (ops.length) CAMPIONI.importDoc({ samples: ops[ops.length - 1].samples });
     } catch (_) { /* the roles of the old shape below still apply */ }
     CAMPIONI.importState(needed.map(nf => ({ nome: nf.nome, ruolo: nf.ruolo || (p.qaqc && p.qaqc.ruoli && p.qaqc.ruoli[nf.nome]), concentrazione: nf.concentrazione, unita_conc: nf.unita_conc, replica: nf.replica })).filter(x => x.ruolo || x.replica || x.concentrazione != null));
   }

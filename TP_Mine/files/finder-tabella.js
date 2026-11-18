@@ -1,22 +1,22 @@
 // @ts-check
 // @ts-strict
 // TPMINE-PRIVATE  The numbers of the table of the products for the page: the .wasm «table» of wasm-feat/manifest.json (route tp_table) read over the .mzfeat of the last Dig.
-// The roles of the files (treated, t0, blank) go to Rust as a campioni/1 built in ONE place, samplesOf, from the model campioni/2 of finder-ruoli.js. Imported by tpmine-worker.js on the first request.
+// The roles of the files (treated, t0, blank) go to Rust as a sample-meta/1 built in ONE place, samplesOf, from the model samples/1 of finder-ruoli.js. Imported by tpmine-worker.js on the first request.
 
 import * as ruoli from "./finder-ruoli.js";
 
 /** @type {any} */ let mod = null;
 
 /**
- * campioni/1 of the files of a Dig, in the order of the table, for the Rust of the table. The roles and the minutes are those of campioni/2 (finder-ruoli.js, the Rust
+ * sample-meta/1 of the files of a Dig, in the order of the table, for the Rust of the table. The roles and the minutes are those of samples/1 (finder-ruoli.js, the Rust
  * `per_tp`): the type and the time the user set on the page are written into the model as explicit choices, and the model gives the indices per role.
- * @param {(op: string, json: string) => string | Promise<string>} call the operation `campioni`: the table .wasm (synchronous) or the native route of the desktop app (asynchronous)
+ * @param {(op: string, json: string) => string | Promise<string>} call the operation `samples`: the table .wasm (synchronous) or the native route of the desktop app (asynchronous)
  * @param {string[]} lc names of the files of the series, in the order of the table
  * @param {{name: string, type?: string, time?: number | null}[]} files the files of the page
  */
 export async function samplesOf(call, lc, files) {
   const by = new Map(files.map(f => [f.name, f]));
-  const cs = await ruoli.build(call, lc, null, null);
+  const cs = await ruoli.build(call, lc, null);
   cs.forEach((c, i) => {
     const f = by.get(lc[i]);
     if (!f) return;
@@ -31,8 +31,8 @@ export async function samplesOf(call, lc, files) {
   for (const k of p.blank) kind.set(k, "blank");
   for (const k of p.dark) kind.set(k, "dark");
   return JSON.stringify({
-    schema: "campioni/1",
-    campioni: lc.map((name, k) => ({ file: name, sha256: "", tipo: kind.get(k) || "std", tempo_min: p.minuti[k], replica: 1, gruppo: "", concentrazione: null, unita: null, ordine_iniezione: k + 1, istd: false, note: "" })),
+    schema: "sample-meta/1",
+    samples: lc.map((name, k) => ({ file: name, sha256: "", kind: kind.get(k) || "std", time_min: p.minutes[k], replicate: 1, group: "", concentration: null, concentration_unit: null, injection_order: k + 1, istd: false, note: "" })),
   });
 }
 
@@ -44,7 +44,7 @@ export async function samplesOf(call, lc, files) {
  */
 export async function tpTable(deps, run, rowsJson) {
   const t = run.table;
-  return (await engine(deps)).tp_table((/** @type {number} */ _k, /** @type {number} */ off, /** @type {number} */ len) => t.subarray(off, off + len), t.length, await samplesOf(campioni, run.lc, run.files), rowsJson);
+  return (await engine(deps)).tp_table((/** @type {number} */ _k, /** @type {number} */ off, /** @type {number} */ len) => t.subarray(off, off + len), t.length, await samplesOf(samplesCall, run.lc, run.files), rowsJson);
 }
 
 /** the table .wasm, loaded once @param {{manifest: () => Promise<any>, url: (p: string) => string, sha: (b: ArrayBuffer) => Promise<string>}} deps */
@@ -58,7 +58,7 @@ async function engine(deps) {
   await js.default({ module_or_path: bytes });
   return (mod = js);
 }
-const campioni = (/** @type {string} */ op, /** @type {string} */ j) => /** @type {any} */ (mod).samples(op, j);
+const samplesCall = (/** @type {string} */ op, /** @type {string} */ j) => /** @type {any} */ (mod).samples(op, j);
 
 /**
  * riga/1 of one row of the table of the last Dig, with its traces (riga_tracce/1: XIC of every file, MS1 at the best apex) read from the .mzidx of the series.
@@ -70,7 +70,7 @@ const campioni = (/** @type {string} */ op, /** @type {string} */ j) => /** @typ
  * @param {(name: string) => string} idxName the name of the .mzidx of a file in OPFS (without the extension)
  */
 export async function tpRow(deps, run, id, pool, idxName) {
-  const m = await engine(deps), t = run.table, samples = await samplesOf(campioni, run.lc, run.files);
+  const m = await engine(deps), t = run.table, samples = await samplesOf(samplesCall, run.lc, run.files);
   const row = JSON.parse(m.table_row((/** @type {number} */ _k, /** @type {number} */ off, /** @type {number} */ len) => t.subarray(off, off + len), t.length, samples, id));
   /** @type {any} */ let traces = null;
   try { traces = JSON.parse(await pool.rowTraces({ table: t, samples, sha: await deps.sha(/** @type {ArrayBuffer} */ (t.slice().buffer)), id, ppm: 10, paths: run.lc.map(n => "mzlab/idx/" + idxName(n) + ".mzidx") })); } catch (e) { traces = null; console.warn("tp_row: the traces cannot be read:", e); }

@@ -26,9 +26,9 @@ PARENT3 = "CC(=O)Nc1ccc(O)cc1"
 GRAPH = (HERE / "fixtures" / "msngrafo_esempio.json").read_text(encoding="utf-8")
 def sample(n, i):
     kind, t = ("blank", None) if n.endswith("blank") else ("dark", None) if n.endswith("dark") else ("t0", 0) if n.endswith("t0") else ("sample", {"t05min": 5, "t10min": 10, "t20min": 20}[n.split("_")[1]])
-    return {"composto": "", "concentrazione": None, "file": n + ".mzML", "istd": False, "note": "", "ordine_iniezione": i + 1, "replica": 1, "serie": "", "sha256": "", "tempo": t, "tempo_confermato": False,
-            "tempo_min": t, "tipo": kind, "tipo_bianco": None, "unita": None, "unita_tempo": "min"}
-SAMPLES = json.dumps({"campioni": [sample(n, i) for i, n in enumerate(NAMES)], "schema": "campioni/2"}, separators=(",", ":"))
+    return {"compound": "", "concentration": None, "file": n + ".mzML", "istd": False, "note": "", "injection_order": i + 1, "replicate": 1, "series": "", "sha256": "", "time": t, "time_confirmed": False,
+            "time_min": t, "kind": kind, "blank_kind": None, "concentration_unit": None, "time_unit": "min"}
+SAMPLES = json.dumps({"samples": [sample(n, i) for i, n in enumerate(NAMES)], "schema": "samples/1"}, separators=(",", ":"))
 # instance id -> the name of its file in the native output folder
 OUTS = {"drw": "drw.json", "rx": "rx.json", "rn": "rn.json", "fs": "fs.svg", "fh": "fh.html"}
 

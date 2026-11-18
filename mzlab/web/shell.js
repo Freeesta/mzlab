@@ -73,7 +73,7 @@ function mergeFiles(/** @type {FileRiga[]} */ list,/** @type {boolean} */ defer=
     gC:o?o.gC:conc!=null,role:o&&o.role,prop:o&&o.prop,ed:o&&o.ed,ugrp:o&&o.ugrp}});
   if(typeof CONV!=="undefined")CONV.forget(Object.keys(old).filter(n=>!ST.files.some((/** @type {FileRiga} */ f)=>f.name===n)));
   if(list.some(f=>!old[f.name]))hrMixPreselect();
-  // roles and times proposed from the names by the engine (campioni/2)
+  // roles and times proposed from the names by the engine (samples/1)
   if(defer)FILETAB.soon();else FILETAB.flush(true)}
 // low- and high-resolution files cannot be opened together: the world of the session is the world of the first file read (OPENNOW); before it, the most numerous world is preselected
 const hrMixCount=()=>{const l=ST.files.filter((/** @type {FileRiga} */ f)=>f.kind in GORD);return {lr:l.filter((/** @type {FileRiga} */ f)=>!f.hr).length,hr:l.filter((/** @type {FileRiga} */ f)=>f.hr).length,onLr:l.filter((/** @type {FileRiga} */ f)=>f.use&&!f.hr).length,onHr:l.filter((/** @type {FileRiga} */ f)=>f.use&&f.hr).length}};

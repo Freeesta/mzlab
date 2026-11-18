@@ -217,7 +217,7 @@ ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.er
   }
   const again = () => { res = null; if (live && live.isConnected && live.querySelector("#ref-res")) { if (TABELLA.table) refresh(live); else paint(live); } };
   document.addEventListener("tabella", again);
-  document.addEventListener("campioni", again);
+  document.addEventListener("samples", again);
   return { mount, run, inspect, tsv, get params() { return st; }, get result() { return res; } };
 })();
 window.RIFERIMENTO = RIFERIMENTO_CORPO;

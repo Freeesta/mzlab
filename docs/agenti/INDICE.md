@@ -162,7 +162,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | `step/1` descriptors (area: Rust engine (`crates/`, golden data `tools/golden.py`)) | `docs/agenti/rust-step.md` |
 | Rust engine (`crates/`, golden data `tools/golden.py`) | `docs/agenti/rust.md` |
 | `--sample 1,3,5` / `2-4` on `convert`, `channels`, `features`, `samples select` (dry run): semantics, exit 5, `readers::selection`, wasm `sample_selection` | `docs/agenti/sample-flag.md` |
-| sample file roles, times and metadata (`campioni/2` and `/3`, `mzlab-core/src/samples/`: proposals from names, name patterns, CSV, free columns, data from file, warnings, migration, indexes for the TP path) | `docs/agenti/samples.md` |
+| sample file roles, times and metadata (`samples/1` and `/3`, `mzlab-core/src/samples/`: proposals from names, name patterns, CSV, free columns, data from file, warnings, migration, indexes for the TP path) | `docs/agenti/samples.md` |
 | scandump, RFR oracle | `docs/agenti/scandump.md` |
 | service worker, per-version site cache, `sw-manifest.json`, updates | `docs/agenti/service-worker.md` |
 | Shimadzu `.qgd` and `.lcd` reader (`crates/mzlab-lettori/src/shimadzu/`, `shimadzu` module) | `docs/agenti/shimadzu.md` |

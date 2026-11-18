@@ -48,11 +48,11 @@ def write_mzml(path, gains, seed):
                     + f'<chromatogramList count="{len(chroms)}">' + "".join(chroms) + "</chromatogramList></run></mzML>", encoding="utf-8")
 
 def sample(f):
-    return {"composto": "", "concentrazione": None, "file": f["name"] + ".mzML", "istd": False, "note": "", "ordine_iniezione": f["order"], "replica": 1, "serie": f["series"], "sha256": "", "tempo": None,
-            "tempo_confermato": False, "tempo_min": None, "tipo": f["kind"], "tipo_bianco": None, "unita": None, "unita_tempo": "min"}
-SAMPLES = json.dumps({"campioni": [sample(f) for f in FILES], "schema": "campioni/2"}, separators=(",", ":"))
-DESIGN = json.dumps({"condizioni": [{"livelli": {}, "nome": n, "repliche": 4} for n in ("ref", "trt")], "confronti": [{"tipo": "vs_reference"}], "fattori": [], "lotti": [],
-                     "riferimento": "ref", "schema": "disegno/1"}, separators=(",", ":"))
+    return {"compound": "", "concentration": None, "file": f["name"] + ".mzML", "istd": False, "note": "", "injection_order": f["order"], "replicate": 1, "series": f["series"], "sha256": "", "time": None,
+            "time_confirmed": False, "time_min": None, "kind": f["kind"], "blank_kind": None, "concentration_unit": None, "time_unit": "min"}
+SAMPLES = json.dumps({"samples": [sample(f) for f in FILES], "schema": "samples/1"}, separators=(",", ":"))
+DESIGN = json.dumps({"conditions": [{"levels": {}, "name": n, "replicates": 4} for n in ("ref", "trt")], "comparisons": [{"kind": "vs_reference"}], "factors": [], "batches": [],
+                     "reference": "ref", "schema": "design/1"}, separators=(",", ":"))
 IDS = ("st", "pc", "pa", "kf", "kc")
 VIEW = ("vst", "vpc", "vkm")   # the same steps on a table.filter view of the table
 

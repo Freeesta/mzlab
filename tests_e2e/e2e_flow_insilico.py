@@ -25,9 +25,9 @@ if not AXE: print("FAIL axe-core not available (pip install axe-playwright-pytho
 NAMES = ["SIN_blank", "SIN_dark", "SIN_t0", "SIN_t05min", "SIN_t10min", "SIN_t20min"]
 def sample(n, i):
     kind, t = ("blank", None) if n.endswith("blank") else ("dark", None) if n.endswith("dark") else ("t0", 0) if n.endswith("t0") else ("sample", {"t05min": 5, "t10min": 10, "t20min": 20}[n.split("_")[1]])
-    return {"composto": "", "concentrazione": None, "file": n + ".mzML", "istd": False, "note": "", "ordine_iniezione": i + 1, "replica": 1, "serie": "", "sha256": "", "tempo": t, "tempo_confermato": False,
-            "tempo_min": t, "tipo": kind, "tipo_bianco": None, "unita": None, "unita_tempo": "min"}
-SAMPLES = json.dumps({"campioni": [sample(n, i) for i, n in enumerate(NAMES)], "schema": "campioni/2"}, separators=(",", ":"))
+    return {"compound": "", "concentration": None, "file": n + ".mzML", "istd": False, "note": "", "injection_order": i + 1, "replicate": 1, "series": "", "sha256": "", "time": t, "time_confirmed": False,
+            "time_min": t, "kind": kind, "blank_kind": None, "concentration_unit": None, "time_unit": "min"}
+SAMPLES = json.dumps({"samples": [sample(n, i) for i, n in enumerate(NAMES)], "schema": "samples/1"}, separators=(",", ":"))
 PROTON = 1.00727646677
 
 def precursors(mgf):

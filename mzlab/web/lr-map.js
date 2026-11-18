@@ -62,7 +62,7 @@ export async function engineRoute(path, q, env) {
 /** The POST routes of the statistics (`api/stat/profile|blank|reference|pca`): the Rust engine from the table the page sends. null = not served.
  * @param {string} path  @param {string} body  @param {{rpc: (m: any) => Promise<any>}} env */
 export async function statRoute(path, body, { rpc }) {
-  // roles and times of the files (campioni/2): proponi, valida, ...
+  // roles and times of the files (samples/1): propose, validate, ...
   // search box: what a typed number is compatible with (ricerca/1)
   if (path === "/api/ricerca") return { status: 200, text: (await rpc({ op: "lr_ricerca", body })).info };
   if (path === "/api/flow/command") {
@@ -75,7 +75,7 @@ export async function statRoute(path, body, { rpc }) {
     return r[0] === "E" ? { status: 400, text: r.slice(1) } : { status: 200, text: r };
   }
   if (path.startsWith("/api/flow/sched/")) return { status: 200, text: (await rpc({ op: "lr_flow_sched", sop: path.slice(16), body })).info };
-  if (path.startsWith("/api/campioni/")) return { status: 200, text: (await rpc({ op: "lr_campioni", cop: path.slice(14), body })).info };
+  if (path.startsWith("/api/samples/")) return { status: 200, text: (await rpc({ op: "lr_samples", cop: path.slice(13), body })).info };
   // molecules database (molecules/1): carica, cerca, get, elenca, da_csv, a_csv, a_json, valida, digest
   // the molecules of the user kept between sessions: archivio/leggi gives a molecules/1 document, archivio/scrivi (the document as body) replaces them
   if (path === "/api/molecules/archivio/leggi" || path === "/api/molecules/archivio/scrivi") return { status: 200, text: (await rpc({ op: "lr_molecole_archivio", mop: path.slice(24), body })).info };

@@ -8,12 +8,12 @@
   /** the file stem used to match a sample list to the files of a table @param {string} name */
   const stem = name => String(name || "").replace(/^.*[\\/]/, "").replace(/\.(mzidx|mzml|raw|wiff|d)$/i, "");
 
-  /** the roles of the files of a table from the sample list of the plan (`campioni/2` kept in `S.samples[input name]`), in the order of `names`; null when the plan has no list or it leaves a file out
+  /** the roles of the files of a table from the sample list of the plan (`samples/1` kept in `S.samples[input name]`), in the order of `names`; null when the plan has no list or it leaves a file out
    * @param {any} S @param {string[]} names @returns {{cs: any[] | null, note: string}} */
   F.samplesFor = (S, names) => {
     const inp = S && S.plan && S.plan.inputs.find((/** @type {any} */ i) => i.type === "samples");
     if (!inp) return { cs: null, note: "No sample list in the plan, so the table has no roles for the files." };
-    const doc = S.samples && S.samples[inp.name], list = doc && Array.isArray(doc.campioni) ? doc.campioni : null;
+    const doc = S.samples && S.samples[inp.name], list = doc && Array.isArray(doc.samples) ? doc.samples : null;
     if (!list) return { cs: null, note: `The sample list ${inp.name} has no content yet, so the table has no roles for the files.` };
     const by = new Map(list.map((/** @type {any} */ c) => [stem(c.file), c])), cs = names.map(n => by.get(stem(n)));
     const missing = names.filter((n, i) => !cs[i]);

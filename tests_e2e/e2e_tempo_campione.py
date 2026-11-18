@@ -53,9 +53,9 @@ try:
         step("the table shows the proposed time in yellow, empty for H20", table)
         def group():
             ans = pg.evaluate("carica('gruppi.js').then(() => GRUPPI.vars())")
-            v = [x for x in ans["variabili"] if x["id"] == "time"]
-            need(v, [x["id"] for x in ans["variabili"]])
-            labels = {x["etichetta"]: len(x["file"]) for x in v[0]["valori"]}
+            v = [x for x in ans["variables"] if x["id"] == "time"]
+            need(v, [x["id"] for x in ans["variables"]])
+            labels = {x["label"]: len(x["files"]) for x in v[0]["values"]}
             need(labels == {"t0": 1, "3h": 2, "8h": 1}, labels)
         step("Group by offers the time", group)
         def override():

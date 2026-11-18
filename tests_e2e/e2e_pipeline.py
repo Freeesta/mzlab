@@ -173,10 +173,10 @@ try:
         def roles_confirm():
             pg.click("#pr-all"); pg.wait_for_function("document.querySelectorAll('#pr-tab tr.pr-prop').length === 0")
             assert not pg.is_disabled("#pipe-run-go") and "Times not confirmed" not in pg.inner_text("#pr-warn")
-            assert pg.evaluate("PIPER.state.tp.minuti") == [None, None, 0, 5, 10, 20], pg.evaluate("PIPER.state.tp.minuti")
+            assert pg.evaluate("PIPER.state.tp.minutes") == [None, None, 0, 5, 10, 20], pg.evaluate("PIPER.state.tp.minutes")
             pg.fill("#pr-t4", "12"); pg.press("#pr-t4", "Enter"); pg.wait_for_function("document.querySelector('#pr-t4').value === '12'")
-            assert pg.evaluate("document.activeElement.id") == "pr-t4" and pg.evaluate("PIPER.state.tp.minuti[4]") == 12
-            pg.fill("#pr-t4", "10"); pg.press("#pr-t4", "Enter"); pg.wait_for_function("PIPER.state.tp.minuti[4] === 10")
+            assert pg.evaluate("document.activeElement.id") == "pr-t4" and pg.evaluate("PIPER.state.tp.minutes[4]") == 12
+            pg.fill("#pr-t4", "10"); pg.press("#pr-t4", "Enter"); pg.wait_for_function("PIPER.state.tp.minutes[4] === 10")
         step("«Confirm times» and Enter accept the times; the minutes for the pipeline come from the Rust", roles_confirm)
 
         def roles_warn():
@@ -191,32 +191,23 @@ try:
 
         def roles_kept():
             pg.select_option("#pr-r3", "infusion"); pg.wait_for_function("document.querySelector('#pr-t3').disabled")
-            nb = pg.evaluate("NB.campioni"); assert nb["schema"] == "campioni/2" and nb["campioni"][3]["tipo"] == "infusion" and nb["campioni"][3]["tempo"] is None
+            nb = pg.evaluate("NB.samples"); assert nb["schema"] == "samples/1" and nb["samples"][3]["kind"] == "infusion" and nb["samples"][3]["time"] is None
             pg.select_option("#pr-r3", "sample"); pg.fill("#pr-t3", "5"); pg.press("#pr-t3", "Enter")
-            pg.wait_for_function("PIPER.state.tp.minuti[3] === 5")
+            pg.wait_for_function("PIPER.state.tp.minutes[3] === 5")
             pg.evaluate("PIPE.open()"); pg.wait_for_function("document.querySelectorAll('#pr-tab .pr-role').length > 0")
             assert pg.evaluate("[...document.querySelectorAll('#pr-tab .pr-role')].map(e => e.value)") == ["blank", "dark", "t0", "sample", "sample", "sample"]
             assert pg.locator("#pr-tab tr.pr-prop").count() == 0, "the confirmed times stay confirmed"
-        step("a role set in the panel is kept in the notebook (NB.campioni) and found again", roles_kept)
-
-        def roles_from_data_view():
-            pg.evaluate("""() => { window.__c = NB.campioni; delete NB.campioni;
-              NB.session = [{ file: "SIN_t05min.mzML", label: "a", time: 5, type: "blank", conc: null }, { file: "SIN_t10min.mzML", label: "b", time: 10, type: "sample", conc: null }]; return null; }""")
-            pg.evaluate("PIPE.open()"); pg.wait_for_function("document.querySelector('#pr-r3') && document.querySelector('#pr-r3').value === 'blank'", timeout=20000)
-            assert pg.evaluate("[...document.querySelectorAll('#pr-tab .pr-time')].map(e => e.value)")[4] == "10" and pg.locator("#pr-tab tr.pr-prop").count() == 2
-            pg.evaluate("() => { NB.session = null; NB.campioni = window.__c; return null; }"); pg.evaluate("PIPE.open()")
-            pg.wait_for_function("document.querySelector('#pr-r3').value === 'sample'")
-        step("the roles and times of the Data view are taken over (confirmed), the rest is proposed", roles_from_data_view)
+        step("a role set in the panel is kept in the notebook (NB.samples) and found again", roles_kept)
 
         def roles_names():
             r = pg.evaluate("""async () => {
               const url = URL.createObjectURL(new Blob([QTOOLS.ctx.files["finder-ruoli.js"]], { type: "text/javascript" })), R = await import(url);
               const m = await PIPEQC.engine(QTOOLS.ctx.base), call = (op, j) => m.samples(op, j);
-              const cs = await R.build(call, ["S-t5.mzidx", "S-t30 (2).mzidx", "S_blank.mzidx", "S_dark.mzidx", "S_standard_direct-infusion_MSn.mzidx"], null, null);
-              return { roles: cs.map(c => c.tipo), min: cs.map(c => c.tempo_min), conf: cs.map(c => c.tempo_confermato), tp: await R.forTp(call, cs), sha: (await R.canonical(call, cs)).sha256 };
+              const cs = await R.build(call, ["S-t5.mzidx", "S-t30 (2).mzidx", "S_blank.mzidx", "S_dark.mzidx", "S_standard_direct-infusion_MSn.mzidx"], null);
+              return { roles: cs.map(c => c.kind), min: cs.map(c => c.time_min), conf: cs.map(c => c.time_confirmed), tp: await R.forTp(call, cs), sha: (await R.canonical(call, cs)).sha256 };
             }""")
             assert r["roles"] == ["sample", "sample", "blank", "dark", "infusion"] and r["min"][:2] == [5, 30] and not any(r["conf"]), r
-            assert r["tp"]["infusion"] == [4] and r["tp"]["blank"] == [2] and r["tp"]["minuti"][4] is None and len(r["sha"]) == 64, r
+            assert r["tp"]["infusion"] == [4] and r["tp"]["blank"] == [2] and r["tp"]["minutes"][4] is None and len(r["sha"]) == 64, r
         step("the names S-t5, S-t30 (2), blank, dark and direct infusion give the right roles and minutes (infusion is not a control)", roles_names)
 
         def run_plain():
@@ -237,7 +228,7 @@ try:
             pg.evaluate("(c) => { QTOOLS.ctx.files['cancello.json'] = new TextEncoder().encode(JSON.stringify(c)); PIPE.open(); }", dict(GATE, crate_version=crate))
             pg.wait_for_function("PIPE.state.gate && PIPE.state.gate.why === 'open'", timeout=60000)
             pg.fill("#pipe-pf", "C21H32N2O2"); pg.fill("#pipe-pmz", "345.253655"); pg.fill("#pipe-prt", "1.0"); pg.fill("#pipe-psmi", SMILES)
-            assert pg.evaluate("PIPER.state.tp.minuti") == [None, None, 0, 5, 10, 20]
+            assert pg.evaluate("PIPER.state.tp.minutes") == [None, None, 0, 5, 10, 20]
             pg.click("#pipe-run-go")
             pg.wait_for_function("document.querySelectorAll('#pv-list [data-cand]').length > 0", timeout=180000)
             assert pg.locator("#pv-list .pv-chip").count() > 0 and pg.locator("#pv-list .pv-cells").count() > 0
@@ -403,7 +394,7 @@ try:
             assert o["crate_version"] and len(o["tabella_sha256"]) == 64 and o["regole"]["versione"] and o["giri"] == 1 and len(o["ingressi"]) == len(names), o
             assert o["genitore"]["formula"] == "C21H32N2O2" and o["genitore"]["smiles"] == SMILES and json.loads(o["recipe"]) == o["parametri"]
             wf = pg.evaluate("WORKFLOW.buildWorkflow()"); assert any(x["op"] == "feature_pipeline" for x in wf["operazioni"])
-            c = [x for x in wf["operazioni"] if x["op"] == "campioni"]; assert c and c[-1]["schema"] == "campioni/2" and len(c[-1]["sha256"]) == 64 and len(c[-1]["campioni"]) == len(names), c
+            c = [x for x in wf["operazioni"] if x["op"] == "campioni"]; assert c and c[-1]["schema"] == "samples/1" and len(c[-1]["sha256"]) == 64 and len(c[-1]["samples"]) == len(names), c
             pg.evaluate("window.__sha = NB.ops.filter(o => o.op === 'feature_pipeline').pop().tabella_sha256; window.__wf = WORKFLOW.buildWorkflow(); null")
         step("the run is in the log of operations and in the .mzflow with parameters, proofs, inputs, versions and the SHA-256 of the table", recipe_logged)
 
