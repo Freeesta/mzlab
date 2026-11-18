@@ -26,5 +26,6 @@ I18N.add("en", {
   "export.int.areaUv": "Area (mAU*s)",
   "export.int.areaMix": "Area (counts*s; DAD: mAU*s)",
   "corr.from.file": "From a file",
-  "corr.from.bg": "From the background"
+  "corr.from.bg": "From the background",
+  "int.base.floor": "A baseline never goes below zero: the point was put on the zero line"
 });

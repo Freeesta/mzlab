@@ -714,7 +714,8 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
             .filter(|(_, v)| *v != 0)
             .collect();
         let calc = ion_mass(&counts, z);
-        let d_da = calc - mz;
+        // observed - theoretical, as everywhere (study item A3)
+        let d_da = mz - calc;
         let bad: Vec<&'static str> = RULES
             .iter()
             .zip(&c.failed)
@@ -746,7 +747,7 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
             };
             Some(isotope_score(&counts, z, &o.obs, &io)?)
         };
-        let delta_ppm = round(d_da / mz * 1e6, 3);
+        let delta_ppm = round(d_da / calc * 1e6, 3);
         let iso_t = iso.as_ref().map(|s| round(s.score, 4));
         let total = if scored {
             round(

@@ -166,7 +166,8 @@ pub fn rank(
     let mz: Vec<f64> = peaks.iter().map(|p| p.0).collect();
     let mut out: Vec<Ranked> = Vec::new();
     for c in cands {
-        let ppm = (c.mass - neutral) / neutral * 1e6;
+        // observed - theoretical, as everywhere (study item A3); the candidate mass is the theoretical one
+        let ppm = (neutral - c.mass) / c.mass * 1e6;
         if ppm.abs() > o.db_ppm {
             continue;
         }

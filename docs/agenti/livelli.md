@@ -1,59 +1,59 @@
-# Livelli di identificazione (Tabui, Attributio, flusso untargeted)
+# Identification levels (Tabui, Attributio, untargeted flow)
 
-Definizioni scelte da Federico. Valgono per Tabui (MS2 a bassa risoluzione), Attributio, la vista «Cos'è?», «Identifica tutte le MS2» e il flusso untargeted di mzFinder. Regole in `mzlab/web/livelli-1.js` (dati), cascata in `mzlab/web/livelli.js`, copia per Rust in `crates/mzlab-feat/data/livelli-1.json` (`python3 tools/export_levels.py`).
+Definitions chosen by Federico. They apply to Tabui (low-resolution MS2), Attributio, the "What is it?" view, "Identify all MS2" and the mzFinder untargeted flow. Rules in `mzlab/web/livelli-1.js` (data), cascade in `mzlab/web/livelli.js`, Rust copy in `crates/mzlab-feat/data/livelli-1.json` (`python3 tools/export_levels.py`).
 
-## Scala di Schymanski (livello di identificazione)
-- **L1**: standard di riferimento segnato dal chimico (massa, RT, MS2).
-- **L2a**: corrispondenza dello spettro MS2 ad alta risoluzione con una libreria sperimentale (mzCloud, MassBank, MoNA). Una libreria in silico o un'MS2 senza libreria non danno mai 2a (`evid/graph.rs`: `LibHit.experimental`, `max_level`).
-- **L2b**: struttura probabile supportata da frammenti diagnostici e da spettri in silico (MetFrag, CFM-ID, SIRIUS/CSI:FingerID), oppure da evidenze di contesto chimico univoche senza standard in libreria. **Il 2b lo assegna il chimico; il programma lo scrive da sé solo con `[levels] auto_2b = true` (spento di default, marcato «auto-2b», contato a parte, con registro)**: di norma il programma propone le prove e il chimico può sempre cambiare ciò che è scritto in automatico; il livello sta in «deciso» (`LIVELLI.decide`: da 2a, 3a, 3b o 4; rifiutato su 5 e 0).
-- **L3a**: pochi candidati posizionali/isomerici tra omologhi (proposto dal programma per candidato che non passa la conferma, provvisorio, nomi in conflitto, isomeri non distinti, isomero di RT, revisione dell'esperto, CSI:FingerID).
-- **L3b**: classi generiche con molti isomeri plausibili (proposto per il solo analogo; strutture parziali del Disegno `parz/1`, `level: "3b"`).
-- **L4** formula univoca; **L5** massa esatta, **L0** rilevata senza annotazione.
-- Una classe CANOPUS (ClassyFire, NPClassifier) è un'annotazione separata (colonne `classes`/`class_probs`, soglia `canopus_min`): non assegna né alza alcun livello, in nessun profilo.
-- A risoluzione unitaria (profilo `lr`, `tetto` "4" in `livelli-1.json`) una massa nominale è un candidato e una MS2 non alza il livello: oggi il profilo emette solo 4 (la formula nominale basta a spiegare lo ione) o 5.
-- **Tabui** (risoluzione unitaria): il programma non propone alcun livello di Schymanski (`level` null, colonna «Lvl» vuota) e mostra solo «Prev. N» della regola; il livello lo sceglie e lo cambia il chimico nella riga aperta (`TPDEC`, il 2b resta rifiutato senza livello proposto). `level_text` dice cosa reggono i dati: «Proposed formula» vuole un picco cromatografico vero, il progenitore che decade, un solo passo e una classe di ipotesi sopra il caso (`legacy/lr/summary.rs`, `docs/agenti/mzfinder-lr.md`). Una MS2 abbinata non cambia nulla (D6 = no).
+## Schymanski scale (identification level)
+- **L1**: reference standard marked by the chemist (mass, RT, MS2).
+- **L2a**: match of the high-resolution MS2 spectrum against an experimental library (mzCloud, MassBank, MoNA). An in silico library or an MS2 without a library never gives 2a (`evid/graph.rs`: `LibHit.experimental`, `max_level`).
+- **L2b**: probable structure supported by diagnostic fragments and in silico spectra (MetFrag, CFM-ID, SIRIUS/CSI:FingerID), or by unambiguous chemical-context evidence without a library standard. **The chemist assigns 2b; the program writes it by itself only with `[levels] auto_2b = true` (off by default, marked "auto-2b", counted separately, with a log)**: as a rule the program proposes the evidence and the chemist can always change what is written automatically; the level lives in "decided" (`LIVELLI.decide`: from 2a, 3a, 3b or 4; rejected on 5 and 0).
+- **L3a**: few positional/isomeric candidates among homologues (proposed by the program for a candidate that fails confirmation, provisional, conflicting names, indistinct isomers, RT isomer, expert review, CSI:FingerID).
+- **L3b**: generic classes with many plausible isomers (proposed for the analogue only; partial structures of the Drawing `parz/1`, `level: "3b"`).
+- **L4** unique formula; **L5** exact mass, **L0** detected without annotation.
+- A CANOPUS class (ClassyFire, NPClassifier) is a separate annotation (columns `classes`/`class_probs`, threshold `canopus_min`): it neither assigns nor raises any level, in any profile.
+- At unit resolution (profile `lr`, `tetto` "4" in `livelli-1.json`) a nominal mass is a candidate and an MS2 does not raise the level: the profile currently emits only 4 (the nominal formula is enough to explain the ion) or 5.
+- **Tabui** (unit resolution): the program proposes no Schymanski level (`level` null, "Lvl" column empty) and shows only the rule's "Prev. N"; the chemist chooses and changes the level in the open row (`TPDEC`, 2b stays rejected without a proposed level). `level_text` says what the data support: "Proposed formula" needs a real chromatographic peak, the decaying precursor, a single step and a hypothesis class above chance (`legacy/lr/summary.rs`, `docs/agenti/mzfinder-lr.md`). A matched MS2 changes nothing (D6 = no).
 
-## Livelli raggiungibili per risoluzione
-Principio: il programma non mostra mai un livello oltre il `tetto` del profilo; in bassa risoluzione (LR) tetto 4 (decisione D6 di Tabui), quindi L1-L3 non si emettono. La regola resta `livelli.js` / `livelli-1.json` (parità `tests/livelli_casi.json`).
+## Levels reachable by resolution
+Principle: the program never shows a level beyond the profile's `tetto`; in low resolution (LR) the cap is 4 (Tabui decision D6), so L1-L3 are not emitted. The rule stays `livelli.js` / `livelli-1.json` (parity `tests/livelli_casi.json`).
 
-| Livello | Servono | Emesso in LR |
+| Level | Needs | Emitted in LR |
 |---|---|---|
-| L1 | standard: massa, RT, MS2 | no (profilo `lr` senza `standard`, sopra il tetto) |
-| L2a | MS2 sperimentale ad alta risoluzione + libreria | no (spettro HR) |
-| L2b | frammenti diagnostici / in silico / contesto, deciso dal chimico | no (sopra il tetto) |
-| L3a/L3b | candidati posizionali o classe + MS2 o libreria | no (sopra il tetto) |
-| L4 | formula univoca | sì: la formula nominale basta a spiegare lo ione |
-| L5 | massa esatta | sì (senza prove) |
-| L0 | rilevata, nessuna annotazione | sì |
+| L1 | standard: mass, RT, MS2 | no (profile `lr` without `standard`, above the cap) |
+| L2a | experimental high-resolution MS2 + library | no (HR spectrum) |
+| L2b | diagnostic fragments / in silico / context, decided by the chemist | no (above the cap) |
+| L3a/L3b | positional candidates or class + MS2 or library | no (above the cap) |
+| L4 | unique formula | yes: the nominal formula is enough to explain the ion |
+| L5 | exact mass | yes (without evidence) |
+| L0 | detected, no annotation | yes |
 
-Tabui emette `level` null anche dove la tabella dice sì: il livello lo sceglie il chimico (`TPDEC`).
+Tabui emits `level` null even where the table says yes: the chemist chooses the level (`TPDEC`).
 
-## Due scale, due etichette
-- Scala di Schymanski: etichetta «L» + livello, sottolivello in minuscolo («L2a», «L3b»); in JS `LIVELLI.tag(lv)`, classi colore `.lv-2a`, `.lv-3a`, `.lv-3b`… (variabili `--lv*` in `app.css`). Nelle esportazioni (CSV, JSON) i valori restano senza «L» (`2a`, `3b`).
-- Scala di previsione di Löffler et al., ES&T 59:19095 (2025): etichetta «Prev. N» (gradi 1-4), colonna «Prev.» della tabella dei prodotti di mzFinder (`.lvb.pd-N`).
-- Sono scale diverse e nell'interfaccia non si confondono mai: la stessa cifra con etichette diverse («L3a» contro «Prev. 3») è normale.
-- Il programma propone un livello (in HR; in Tabui LR nessuno) e mostra le prove; il livello deciso resta vuoto finché il chimico non decide. In Attributio ogni riga porta l'origine (`origin`: `auto`, `auto-2b` o `user`) e una decisione del chimico, che può cambiare la scelta automatica, la lascia nel registro; la casella «Automatic 2b» della pagina accende l'opzione `auto_2b` (`docs/agenti/attributio.md`).
-- La tabella dei prodotti HR di mzFinder (`21_tpmine_hr.js`) mostra il livello proposto 5/4 senza sottolivello come «L5/L4» (`TPTAB.level`, colonna «Lvl», la qualità va da prova diagnostica a L4, L5; una MS2 abbinata non dà L3, la dice «Prev. N») e la previsione come «Prev. N» (`TPTAB.pred`); le intestazioni dell'esportazione sono «Level (Schymanski)» e «Prediction (Löffler)».
+## Two scales, two labels
+- Schymanski scale: label "L" + level, sublevel in lowercase ("L2a", "L3b"); in JS `LIVELLI.tag(lv)`, colour classes `.lv-2a`, `.lv-3a`, `.lv-3b`... (variables `--lv*` in `app.css`). In exports (CSV, JSON) the values stay without "L" (`2a`, `3b`).
+- Prediction scale of Löffler et al., ES&T 59:19095 (2025): label "Prev. N" (grades 1-4), "Prev." column of the mzFinder products table (`.lvb.pd-N`).
+- They are different scales and are never confused in the interface: the same digit with different labels ("L3a" versus "Prev. 3") is normal.
+- The program proposes a level (in HR; in Tabui LR none) and shows the evidence; the decided level stays empty until the chemist decides. In Attributio each row carries the origin (`origin`: `auto`, `auto-2b` or `user`) and a decision by the chemist, who can change the automatic choice, is left in the log; the page's "Automatic 2b" checkbox turns on the `auto_2b` option (`docs/agenti/attributio.md`).
+- The mzFinder HR products table (`21_tpmine_hr.js`) shows the proposed level 5/4 without sublevel as "L5/L4" (`TPTAB.level`, "Lvl" column, quality goes from diagnostic evidence to L4, L5; a matched MS2 does not give L3, it is stated as "Prev. N") and the prediction as "Prev. N" (`TPTAB.pred`); the export headers are "Level (Schymanski)" and "Prediction (Löffler)".
 - Test `tests/test_livelli_schymanski.py`: one fixed fixture per evidence class of the 2014 paper (standard, library, weak match, analogue, unique formula, exact mass, unit resolution) must give the level and name its evidence; 2b only through the chemist's decision.
-- Il q-value da esche del passo `spectra.match` (`decoys=spectrum`, `docs/agenti/rust-flow.md`) entra come `q` del candidato e `LIVELLI.assess` lo scrive come ultima riga del motivo («decoy q 0.03 (lower bound)»): una riga di prova, il livello non cambia.
+- The decoy q-value of the `spectra.match` step (`decoys=spectrum`, `docs/agenti/rust-flow.md`) enters as `q` of the candidate and `LIVELLI.assess` writes it as the last line of the reason ("decoy q 0.03 (lower bound)"): an evidence line, the level does not change.
 
-## Termini dei punteggi (`score_terms`)
-- Ogni punteggio si apre come somma pesata di termini con nome: record `{name, value, terms:[{name, value, weight}], formula_ref}` di `mzlab-core::score_terms` (`ScoreTerms`, `sum`, `mean`, `over_pairs`); `value = Σ weight · value` entro 1e-12 (`residual()`), `formula_ref` è la chiave stabile della formula (`score/entropy-similarity`, `score/cosine`, `score/modified-cosine`, `score/composition`, `score/fragmenter`, `score/rt-residual`) e il testo della formula sta nella Teoria, di Federico.
-- Il record si scrive accanto al valore solo con l'opzione `score_terms` (spenta: le uscite sono identiche).
-- Davano già i loro termini, senza pesi: `composition::compose` (`score{mass, iso, frag, total}`, media pesata di `isoscore::combined`), `formula_id/1` (`terms{mass, isotopes}`), il controllo RT-logP (`resid`, `window`). Non li davano: la corrispondenza di libreria (entropia, coseno, coseno modificato), il punteggio in silico, il controllo RT-logP come somma.
-- Con il record: `spectra.match` (`score_terms`: un termine per coppia, le 6 più forti col m/z del picco e il resto in «n other pairs»), `formula_id/1` (`score_terms` nelle opzioni: massa e isotopi coi pesi di `compose`, 1 e 2), `spectra.insilico` (`score_terms`: quota di ogni picco spiegato), `rt.predict` (impostazione `rt_logp_terms`: osservato, intercetta e un termine per descrittore col coefficiente negato). Prove: `mzlab-lib/tests/score_terms.rs`, `mzlab-cli` `flow_ident_tests`, `tests/untargeted_formula_id.rs`, `score_terms_insilico.rs`, `score_terms_rt.rs`.
+## Score terms (`score_terms`)
+- Every score opens as a weighted sum of named terms: record `{name, value, terms:[{name, value, weight}], formula_ref}` of `mzlab-core::score_terms` (`ScoreTerms`, `sum`, `mean`, `over_pairs`); `value = Σ weight · value` within 1e-12 (`residual()`), `formula_ref` is the stable key of the formula (`score/entropy-similarity`, `score/cosine`, `score/modified-cosine`, `score/composition`, `score/fragmenter`, `score/rt-residual`) and the formula text lives in the Theory, by Federico.
+- The record is written next to the value only with the `score_terms` option (off: outputs are identical).
+- Already giving their terms, without weights: `composition::compose` (`score{mass, iso, frag, total}`, weighted mean of `isoscore::combined`), `formula_id/1` (`terms{mass, isotopes}`), the RT-logP check (`resid`, `window`). Not giving them: library matching (entropy, cosine, modified cosine), the in silico score, the RT-logP check as a sum.
+- With the record: `spectra.match` (`score_terms`: one term per pair, the 6 strongest with the peak m/z and the rest in "n other pairs"), `formula_id/1` (`score_terms` in the options: mass and isotopes with the `compose` weights, 1 and 2), `spectra.insilico` (`score_terms`: share of each explained peak), `rt.predict` (setting `rt_logp_terms`: observed, intercept and one term per descriptor with the negated coefficient). Proofs: `mzlab-lib/tests/score_terms.rs`, `mzlab-cli` `flow_ident_tests`, `tests/untargeted_formula_id.rs`, `score_terms_insilico.rs`, `score_terms_rt.rs`.
 
-- Il passo `export.annotations` (schema `docs/schemi/annotations-1.json`) scrive un CSV con, per ogni feature, i candidati di ogni metodo (standard, libreria, in silico, sospetto, formula) affiancati, ciascuno col proprio `score_name`, e `level`/`level_why` di `annot/1` ripetuti su ogni riga: non assegna né alza alcun livello; con `min_level` scrive solo le feature a quel livello o migliori.
+- The `export.annotations` step (schema `docs/schemi/annotations-1.json`) writes a CSV with, for each feature, the candidates of every method (standard, library, in silico, suspect, formula) side by side, each with its own `score_name`, and `level`/`level_why` of `annot/1` repeated on every row: it neither assigns nor raises any level; with `min_level` it writes only the features at that level or better.
 
-## Flow: livello 1 da standard e frammenti di sospetto (`annot.level@1`)
-- Il passo `annot.level` dà L1 solo con un file `standards` dell'utente (CSV: `name`, `inchikey`, `rt` in min, opzionali `mz` e `adduct`; `,`, `;` o tab): vale il miglior colpo di `candidates/1` il cui primo blocco InChIKey è quello di uno standard, con i cancelli `standard` di `livelli-1.json` (RT, punteggio, ppm), controllati prima della libreria come in `livelli.js`. Il punteggio è `ent` (entropia); un colpo con il solo coseno usa la stessa soglia su `cos` e il cancello si chiama `stdscore_cos`.
-- L'RT della query viene dalla MGF della porta opzionale `spectra` (`SPECTRUMID`, `ACCESSION`, `FEATURE_ID` o `TITLE`; media delle scansioni): senza, la riga porta `standard.ran=false` e non è mai L1 (nessun passaggio muto).
-- Le soglie del Flow sono parametri che prendono il posto dei valori del profilo `mzlab` (che non cambia): `std_rt_max` 0,2 min, `std_score_min` 0,7, `std_ppm_max` 5, `suspect_fragments_min` 2.
-- La porta `candidates` accetta più file: un `screen/1` di `screen.suspects` (riconosciuto da `format`) entra qui. Il join è esatto sull'id: `query` di `candidates/1` (la `SPECTRUMID` di `spectra.ms2` con la tabella cablata, o l'`ACCESSION` di `table.match`) è l'id di riga della tabella, uguale a `feature` di `screen/1`; con `spectra.ms2` senza tabella gli id sono titoli e non si uniscono mai (nessun join approssimato).
-- Frammenti di sospetto: senza colpo di libreria a 2a né standard, un candidato di `screen/1` con almeno `suspect_fragments_min` frammenti trovati dà `3a` (`why` `suspect_fragments`, con nome e m/z); mai sopra 3, mai nel profilo `lr`; un colpo solo di massa non cambia il livello. Casi comuni a pagina e Rust in `tests/livelli_casi.json` (campo `thresholds`).
+## Flow: level 1 from standards and suspect fragments (`annot.level@1`)
+- The `annot.level` step gives L1 only with a user `standards` file (CSV: `name`, `inchikey`, `rt` in min, optional `mz` and `adduct`; `,`, `;` or tab): the best hit of `candidates/1` whose first InChIKey block is that of a standard counts, with the `standard` gates of `livelli-1.json` (RT, score, ppm), checked before the library as in `livelli.js`. The score is `ent` (entropy); a hit with cosine only uses the same threshold on `cos` and the gate is called `stdscore_cos`.
+- The query RT comes from the MGF of the optional `spectra` port (`SPECTRUMID`, `ACCESSION`, `FEATURE_ID` or `TITLE`; mean of the scans): without it, the row carries `standard.ran=false` and is never L1 (no silent pass).
+- The Flow thresholds are parameters that take the place of the values of the `mzlab` profile (which does not change): `std_rt_max` 0.2 min, `std_score_min` 0.7, `std_ppm_max` 5, `suspect_fragments_min` 2.
+- The `candidates` port accepts several files: a `screen/1` from `screen.suspects` (recognised by `format`) enters here. The join is exact on the id: `query` of `candidates/1` (the `SPECTRUMID` of `spectra.ms2` with the wired table, or the `ACCESSION` of `table.match`) is the row id of the table, equal to `feature` of `screen/1`; with `spectra.ms2` without a table the ids are titles and never join (no approximate join).
+- Suspect fragments: without a library hit at 2a or a standard, a `screen/1` candidate with at least `suspect_fragments_min` fragments found gives `3a` (`why` `suspect_fragments`, with name and m/z); never above 3, never in profile `lr`; a mass-only hit does not change the level. Cases shared by page and Rust in `tests/livelli_casi.json` (field `thresholds`).
 
-## Misure dei cancelli MS2 (`crates/mzlab-cli/src/flow_level_ms2_tests.rs`)
-- MISURA livelli_ms2_piccoli (50 composti m/z < 200, 3 frammenti veri contro una voce di libreria con 3 picchi forti e 5 all'1-2 %, libreria di 300 voci, `spectral_entropy`, soglie del profilo `mzlab`): entropia mediana 0,90; con 1 scansione per feature tutti e 50 restano a 3a (cancelli che falliscono: `scans` 50, `shared` 50); con 3 file (3 scansioni) tutti e 150 restano a 3a e fallisce solo `shared` (3 picchi condivisi contro `picchi_min` 6: `nlib` conta i 5 picchi deboli, quindi la soglia ridotta a 3 non scatta).
-- MISURA livelli_ms2_chimerici (50 composti co-isolati, interferente isobarico al 40 %, purezza 0,60): entropia mediana 0,75 contro 0,999 degli stessi bersagli puri (calo 0,25). Con 1 scansione 3a per tutti (`scans` 50, `score` 27); con 3 scansioni 2a per 70 su 150 e 3a per 80 (fallisce solo `score`); i bersagli puri a 3 scansioni sono tutti 2a.
-- MISURA livelli_ms2_esche (`decoys=spectrum`): q mediano e massimo 0 per i migliori colpi dei piccoli e dei chimerici: le esche non separano i colpi chimerici da quelli puliti (limite inferiore, `lib.fdr.note`). `scansioni_min` 2 vale per scansioni con lo stesso colpo migliore: un composto visto in un file con una scansione non arriva mai a 2a.
-- La cascata in JS (`mzlab/web/livelli-1.js`) legge gli stessi dati e le stesse soglie; la parità resta in `tests/livelli_casi.json`.
+## Measurements of the MS2 gates (`crates/mzlab-cli/src/flow_level_ms2_tests.rs`)
+- MEASURE livelli_ms2_piccoli (50 compounds m/z < 200, 3 true fragments against a library entry with 3 strong peaks and 5 at 1-2 %, library of 300 entries, `spectral_entropy`, thresholds of the `mzlab` profile): median entropy 0.90; with 1 scan per feature all 50 stay at 3a (failing gates: `scans` 50, `shared` 50); with 3 files (3 scans) all 150 stay at 3a and only `shared` fails (3 shared peaks against `picchi_min` 6: `nlib` counts the 5 weak peaks, so the reduced threshold of 3 does not trigger).
+- MEASURE livelli_ms2_chimerici (50 co-isolated compounds, isobaric interferent at 40 %, purity 0.60): median entropy 0.75 against 0.999 for the same pure targets (drop 0.25). With 1 scan 3a for all (`scans` 50, `score` 27); with 3 scans 2a for 70 of 150 and 3a for 80 (only `score` fails); the pure targets at 3 scans are all 2a.
+- MEASURE livelli_ms2_esche (`decoys=spectrum`): median and maximum q 0 for the best hits of the small and chimeric sets: decoys do not separate chimeric hits from clean ones (lower bound, `lib.fdr.note`). `scansioni_min` 2 counts scans with the same best hit: a compound seen in one file with one scan never reaches 2a.
+- The JS cascade (`mzlab/web/livelli-1.js`) reads the same data and the same thresholds; parity stays in `tests/livelli_casi.json`.

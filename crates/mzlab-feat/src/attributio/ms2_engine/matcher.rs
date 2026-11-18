@@ -142,7 +142,7 @@ impl Ms2Library {
                     adduct: e.adduct.clone(),
                     score: sc.entropy,
                     shared: sc.shared,
-                    ppm: (e.precursor_mz - q.precursor_mz) / q.precursor_mz * 1e6,
+                    ppm: (q.precursor_mz - e.precursor_mz) / e.precursor_mz * 1e6,
                 });
             }
         }

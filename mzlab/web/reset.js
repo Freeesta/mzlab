@@ -116,16 +116,16 @@ const RESET = (function () {
     return rep;
   }
 
-  // ---- «Start a new session»: the one entry to every reset (header button, reminder): a short question with two ways to clear (the milder one first) and Cancel (Esc too)
+  // ---- «Start a new session»: the one entry to every reset (header button, reminder): a short question with two ways to clear (the milder one first) and a close X (Esc too)
   function ask() {
     const T = (k, o) => I18N.t(k, o), btn = (m, cls, lab) => `<button type="button" class="rs-big ${cls}" data-reset="${m}"><b>${lab}</b></button>`;
     document.getElementById("resetdlg")?.remove();
     const d = document.createElement("dialog"); d.id = "resetdlg"; d.setAttribute("aria-labelledby", "rs-t");
-    d.innerHTML = `<h3 id="rs-t">${T("reset.title")}</h3>${btn("files", "rs-blue", T("reset.files.btn"))}${btn("all", "rs-red", T("reset.all.btn"))}<div class="rs-end"><button type="button" class="rs-cancel" data-reset="">${T("reset.cancel")}</button></div>`;
+    d.innerHTML = `<h3 id="rs-t">${T("reset.title")}</h3>${btn("files", "rs-blue", T("reset.files.btn"))}${btn("all", "rs-red", T("reset.all.btn"))}<button type="button" class="x rs-x" data-reset="" aria-label="${T("reset.close")}" title="${T("reset.close")}">&times;</button>`;
     document.body.appendChild(d);
     d.addEventListener("click", e => { const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("button[data-reset]")); if (!b) return; if (b.dataset.reset) { d.querySelectorAll("button").forEach(x => { x.disabled = true; }); run(b.dataset.reset); } else d.close(); });
     d.addEventListener("close", () => d.remove());
-    d.showModal(); /** @type {HTMLElement | null} */ (d.querySelector(".rs-cancel"))?.focus();
+    d.showModal(); /** @type {HTMLElement | null} */ (d.querySelector(".rs-x"))?.focus();
   }
   // ---- once: «the files stay in the browser» (off: no popup)
   function remind() {

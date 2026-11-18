@@ -157,7 +157,7 @@ try:
             pg.check("#ex-nobg"); pg.wait_for_timeout(300)
             assert pg.is_disabled("#ex-jpg") and "transparency" in (pg.get_attribute("#ex-jpg", "title") or "")
             assert pg.evaluate("getComputedStyle(document.getElementById('ex-jpg')).opacity") < "0.6"
-            assert pg.inner_text("label:has(#ex-nobg)").strip() == "Transparent background"
+            assert pg.inner_text("label:has(#ex-nobg)").strip() == "Transparent"
             t = grab("png"); tn = t.suggested_filename; assert tn.endswith("_transparent.png") or "_transparent-" in tn, tn
             from PIL import Image
             im = Image.open(t.path()).convert("RGBA"); assert im.getpixel((2, 2))[3] == 0 and im.getpixel((im.width - 3, im.height - 3))[3] == 0, "PNG corners not transparent"
