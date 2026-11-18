@@ -337,6 +337,7 @@
                   "baseline",
                   "snr_min",
                   "smooth",
+                  "snr_basis",
                   "min_points",
                   "max_candidates",
                   "group_rt"
@@ -375,12 +376,17 @@
                     "type":"number",
                     "minimum":0,
                     "default":3,
-                    "description":"A peak under this signal-to-noise is reported as no_peak"
+                    "description":"A peak under this signal-to-noise is reported as no_peak; the S/N is the smoothed height over 1.4826 MAD of the raw trace far from the peak (see S/N noise)"
                   },
                   {
                     "enum":[1,3,5],
                     "default":3,
                     "description":"1 = none, 3 = 1-2-1, 5 = 1-4-6-4-1 before the apex and the edges are found"
+                  },
+                  {
+                    "enum":["raw","smoothed"],
+                    "default":"raw",
+                    "description":"raw: the noise of the S/N is read on the raw trace far from the peak; smoothed: on the smoothed trace, the former reading, 1.6-1.8 times too high at smoothing 3"
                   },
                   {
                     "type":"integer",
