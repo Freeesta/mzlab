@@ -126,7 +126,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` |
 | `.mzidx` format | `docs/agenti/mzidx.md` |
 | mzML conformance matrix (variants, `tools/mzml_variants.py` fixtures, known gaps) | `docs/agenti/mzml-matrix.md` |
-| `mzrun/1` file (`*.mzrun.json`: record and presets of an analysis, `self_sha256` fingerprint, application rules, schema `docs/schemi/mzrun-1.json`) | `docs/agenti/mzrun.md` |
+| `mzrun/2` file (`*.mzrun.json`: record and presets of an analysis, `self_sha256` fingerprint, application rules, schema `docs/schemi/mzrun-2.json`) | `docs/agenti/mzrun.md` |
 | native reading of `.raw`, `.wiff`, `.D` in the site (samples, OPFS, progress, mzML on request) | `docs/agenti/native-reading.md` |
 | product network (`crates/mzlab-feat/src/network/`, `rete/1`: edges by rule on `tp/1`, steps, coordinates, edge reason) | `docs/agenti/network.md` |
 | derived files (`.mzidx`, `.mzfeat`, `.mzfeatf`) of a newer format than the program: `error.newerFormat`, read-only | `docs/agenti/new-format.md` |

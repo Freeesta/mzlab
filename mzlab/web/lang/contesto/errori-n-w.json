@@ -1,4 +1,6 @@
 {
+  "err.mzrun.commit": "Run-log engine error. The prov/1 of the run has no 40-character commit in its agent (program built outside git without MZLAB_COMMIT); no parameter.",
+  "err.mzrun.roles": "Run-log error. {file} = a file name of the roles file, {detail} = why it matches no single input of the run, with the names the run has (English text from the CLI).",
   "err.mzrun.build": "Run-log engine error. {what} = part of the plan or of the files that is missing or invalid, {detail} = its name (English text from the engine).",
   "err.module.reply": "Site error: a reader module (wasm-lettori) answers with bytes the engine cannot decode; it is not the fault of the file type. {detail} = part of the reply (index, scan, protocol, module, samples, open).",
   "error.workStopped": "Engine error: a worker thread (file fingerprint) stopped without a result. {detail} = which job (hash).",

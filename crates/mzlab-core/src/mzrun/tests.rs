@@ -146,7 +146,7 @@ fn an_input_without_a_role_or_a_run_without_a_commit_does_not_build() {
         mk(&nc, &[sample("S01.mzML", &sha('a'), 1)])
             .unwrap_err()
             .key,
-        "err.mzrun.build"
+        "err.mzrun.commit"
     );
 }
 
@@ -230,7 +230,7 @@ fn a_preset_with_nothing_to_migrate_keeps_its_content() {
     );
     assert_ne!(migrate(PRESET.as_bytes()).unwrap(), text);
     assert_eq!(
-        migrate(b"{\"schema\":\"mzrun/1\",\"min_reader\":2}")
+        migrate(b"{\"schema\":\"mzrun/2\",\"min_reader\":2}")
             .unwrap_err()
             .key,
         "error.newerFormat"
