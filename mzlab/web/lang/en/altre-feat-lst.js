@@ -164,7 +164,6 @@ I18N.add("en", {
   "int.base.level": "Horizontal: a level at the intensity of point 1",
   "int.base.apply": "Apply",
   "int.base.bad": "Type four numbers for the two points of the line",
-  "int.base.floor": "A baseline never goes below zero: the point was put on the zero line",
   "int.base.pt": "Point {n} of the baseline: {rt} min, {y}. Arrows: move",
   "int.tbl.base": "Baseline",
   "int.tbl.below": "Below the line",
