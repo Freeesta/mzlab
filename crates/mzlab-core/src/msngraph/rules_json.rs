@@ -1,4 +1,4 @@
-//! The text of the key `regole` of `msn-graph/1` (schema `docs/schemi/msngrafo-1.json`) from an evaluation (`regole_valuta`): fixed key order, rounded numbers.
+//! The text of the key `rules` of `msn-graph/1` (schema `docs/schemi/msn-graph-1.json`) from an evaluation (`regole_valuta`): fixed key order, rounded numbers.
 
 use super::rules::table;
 use super::rules_evaluate::{valuta, Applicata, EdgeVal, Evaluation, RuleParams, VERSION};
@@ -123,7 +123,7 @@ fn sources_and_thresholds(o: &mut Out, v: &Evaluation) {
     o.raw("]");
 }
 
-/// The value of the key `regole` (see `docs/schemi/msngrafo-1.json`): keys in a fixed order, rounded numbers.
+/// The value of the key `rules` (see `docs/schemi/msn-graph-1.json`): keys in a fixed order, rounded numbers.
 pub fn rules_json(g: &Graph, v: &Evaluation, p: &RuleParams) -> String {
     let mut o = Out::default();
     o.raw("{\"version\":")
@@ -178,7 +178,7 @@ pub fn rules_json(g: &Graph, v: &Evaluation, p: &RuleParams) -> String {
     o.0
 }
 
-/// `grafo` (the text of an `msn-graph/1`) with the key `regole` added at the end; the text of a graph without it does not change.
+/// `grafo` (the text of an `msn-graph/1`) with the key `rules` added at the end; the text of a graph without it does not change.
 pub fn with_rules(graph: &str, g: &Graph, o: &Options, p: &RuleParams) -> String {
     super::view::with_key(graph, "rules", &rules_json(g, &valuta(g, o, p), p))
 }

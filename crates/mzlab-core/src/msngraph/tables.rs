@@ -67,7 +67,7 @@ fn formula_of(n: Option<&Value>) -> (String, String) {
     (cell(name.unwrap_or("")), num(ppm, 2))
 }
 
-/// The bond-break hypotheses of the node `id` in the key `rotture`: how many, and the formula of the best one.
+/// The bond-break hypotheses of the node `id` in the key `breaks`: how many, and the formula of the best one.
 fn breaks_of(g: &Value, id: Option<&str>) -> (String, String) {
     let hit = g
         .get("breaks")
@@ -124,7 +124,7 @@ fn nodes_csv(g: &Value) -> String {
     t
 }
 
-/// Extra cells of an edge: the named loss and its confidence (`interpretazione`), the bond-break flag (`rotture`).
+/// Extra cells of an edge: the named loss and its confidence (`interpretation`), the bond-break flag (`breaks`).
 fn edge_extras(g: &Value, a: &Value) -> String {
     let same = |x: &&Value| {
         x.get("from").and_then(Value::str) == a.get("from").and_then(Value::str)

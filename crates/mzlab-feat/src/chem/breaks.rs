@@ -13,7 +13,7 @@ use mzlab_core::msngraph::{
 
 const ION_H: f64 = mzlab_core::elements::PROTON;
 const MASS_H: f64 = 1.00782503207;
-/// Single bonds cut at most (as the one-bond cleavages of `strutture`).
+/// Single bonds cut at most (as the one-bond cleavages of `structures`).
 const MAX_BONDS: usize = 400;
 /// Bonds that take part in pairs at most (a pair is a quadratic number of cuts).
 const MAX_PAIRS: usize = 120;
@@ -284,7 +284,7 @@ fn enumera(g: &Graph, m: &Mol, out: &mut Breaks, hypotheses: &mut [Vec<Hypothesi
     }
 }
 
-/// The graph text `j` of `g` with the key `rotture` for `smiles`.
+/// The graph text `j` of `g` with the key `breaks` for `smiles`.
 pub fn breaks_text(g: &Graph, j: &str, smiles: Option<&str>, p: Params) -> CoreResult<String> {
     let smiles = smiles.filter(|s| !s.trim().is_empty());
     let smiles = smiles.ok_or_else(|| Error::new("err.msngrafo.noSmiles"))?;

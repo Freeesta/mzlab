@@ -108,7 +108,7 @@ pub struct Options {
     pub evidence_min: usize,
     /// Formulas chosen by the user among the candidates: (m/z of the node, formula of the ion).
     pub choices: Vec<(f64, String)>,
-    /// The rules of `fragrules/1` (key `regole` and the evidence `regola` of the candidates); `None` = off.
+    /// The rules of `fragrules/1` (key `rules` and the evidence `regola` of the candidates); `None` = off.
     pub regole: Option<RuleParams>,
     /// What the structure of the user expects of the rules (`mzlab_feat::chem::rules::attese`); empty = no structure given.
     pub attese: Vec<Expectation>,

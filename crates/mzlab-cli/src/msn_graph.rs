@@ -121,12 +121,6 @@ pub struct Args {
     pub out: Option<PathBuf>,
 }
 
-/// The value of `--structures`: `all` is the engine's `tutti`.
-#[rustfmt::skip]
-fn all(v: String) -> String {
-    if v == "all" { "tutti".into() } else { v }
-}
-
 fn number(v: Option<String>, k: &str) -> std::result::Result<f64, String> {
     v.and_then(|x| x.parse().ok())
         .ok_or(format!("{k} needs a number"))
@@ -186,7 +180,7 @@ pub fn parse_args(
             }
             "--clean" => clean = true,
             "--node" => node = a.next(),
-            "--structures" => structures = a.next().map(all),
+            "--structures" => structures = a.next(),
             "--interpret" => interpret = true,
             "--loss-ppm" => loss_ppm = number(a.next(), &x)?,
             "--rules" => rules = true,
@@ -362,7 +356,7 @@ pub fn summary(g: &Graph, truth: &str) -> Result<String> {
     Ok(o.0)
 }
 
-/// The graph text `j` of `g` with the key `structures` of node `nodo` (`nK` or `K`): the cleavages of `o.smiles` that give its m/z within `ppm`.
+/// The graph text `j` of `g` with the key `structures` of node `node` (`nK` or `K`): the cleavages of `o.smiles` that give its m/z within `ppm`.
 pub fn structures_text(
     g: &Graph,
     j: &str,

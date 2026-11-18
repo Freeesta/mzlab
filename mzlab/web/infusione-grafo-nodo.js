@@ -51,7 +51,7 @@ function unexplained(/** @type {any} */ n) {
   return h`<p class="sm ig-unexp">${I18N.t("msngrafo.unexp", { n: u.n })} ${top}</p>`;
 }
 
-/** The neutral loss that led to the node (`interpretazione` of the graph, when the engine gives it): name, formula, mass, error, confidence, activations; evidence, never a verdict. */
+/** The neutral loss that led to the node (`interpretation` of the graph, when the engine gives it): name, formula, mass, error, confidence, activations; evidence, never a verdict. */
 function lossLine(/** @type {any} */ n) {
   const it = G.j.interpretation; if (!it) return "";
   const arcs = it.edges.filter((/** @type {any} */ a) => a.to === n.id && a.loss);
@@ -64,7 +64,7 @@ function lossLine(/** @type {any} */ n) {
   return h`<div class="ig-int"><b class="sm">${I18N.t("msngrafo.int.title")}</b><ul class="sm">${rows.map((/** @type {string} */ r) => raw(r))}</ul><p class="muted sm">${I18N.t("msngrafo.int.hyp")}</p></div>`;
 }
 
-/** How the ion was reached: the activation (CID/HCD) and the collision energy of each spectrum where it shows, from `misure` of the arcs that end in the node. */
+/** How the ion was reached: the activation (CID/HCD) and the collision energy of each spectrum where it shows, from `measurements` of the arcs that end in the node. */
 function activationLine(/** @type {any} */ n) {
   const seen = new Set();
   for (const a of G.j.edges) if (a.to === n.id) for (const m of a.measurements || []) {

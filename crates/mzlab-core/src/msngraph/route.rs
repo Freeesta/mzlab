@@ -102,7 +102,7 @@ pub fn from_request(get: &dyn Fn(&str) -> Option<String>) -> Result<(Options, Gr
     Ok((o, r))
 }
 
-/// The graph of the scans of a file and its `msn-graph/1`; `nome` and `sha` (SHA-256 of its `.mzidx`) go in the `sorgente`.
+/// The graph of the scans of a file and its `msn-graph/1`; `nome` and `sha` (SHA-256 of its `.mzidx`) go in the `source`.
 pub fn graph_json<M: Scansioni + ?Sized>(
     scans: &[Scan],
     m: &mut M,

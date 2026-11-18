@@ -1,4 +1,4 @@
-//! The JSON `msn-graph/1` of a graph (`docs/schemi/msngrafo-2.json`; `/1` had the Italian `opzioni` keys): keys in a fixed order, rounded numbers, the same bytes for the same
+//! The JSON `msn-graph/1` of a graph (`docs/schemi/msn-graph-1.json`): keys in a fixed order, rounded numbers, the same bytes for the same
 //! input. `ione` and the formulas are `null` without the formula of the ion of the root.
 
 use super::{Candidate, Edge, GNode, Graph, NodeFormula, Options, SpettroG, NARROW};
@@ -314,7 +314,7 @@ fn spettro(o: &mut Out, s: &SpettroG) {
     o.raw("]}");
 }
 
-/// The graph as `msn-graph/1`; `sorgente` = (name of the file, SHA-256 of its `.mzidx`) when the caller knows them.
+/// The graph as `msn-graph/1`; `source` = (name of the file, SHA-256 of its `.mzidx`) when the caller knows them.
 pub fn json(g: &Graph, op: &Options, source: Option<(&str, &str)>) -> String {
     let mut o = Out::default();
     testa(&mut o, g, op, source);

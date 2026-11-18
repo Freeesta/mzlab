@@ -41,7 +41,7 @@ export function molSvg(/** @type {number[]} */ atoms, /** @type {number} */ w, /
   } catch (_) { return null; }
 }
 
-/** The atoms of the piece of the first cut of the first candidate of the cleavages of a node (`strutture` of the graph), or null. */
+/** The atoms of the piece of the first cut of the first candidate of the cleavages of a node (`structures` of the graph), or null. */
 export const pieceOf = (/** @type {any} */ s) => (s && s.candidates && s.candidates[0] && s.candidates[0].cuts[0] ? /** @type {number[]} */ (s.candidates[0].cuts[0].piece) : null);
 
 /** The drawing of the root and of every ion with cleavages for the graph in G.j: `{ root, byId }` with SVG texts (empty without a molfile or with the structures off). */

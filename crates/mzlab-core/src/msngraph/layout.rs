@@ -1,5 +1,5 @@
 //! The drawing of `msngrafo`: one column per MS level, the rows ordered by the barycentre of the neighbours in the other columns (one pass
-//! from the root, one back), starting from the m/z from high to low. `pos` is that; the tree view of `vista` (`albero`) adds a pass of
+//! from the root, one back), starting from the m/z from high to low. `pos` is that; the tree view of `view` (`tree`) adds a pass of
 //! adjacent swaps that removes arc crossings. The page only draws these positions.
 
 use super::Graph;

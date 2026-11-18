@@ -26,7 +26,7 @@ fn in_script(t: &str) -> String {
         .replace("<!--", "<\\u0021--")
 }
 
-/// The HTML of the graph `graph` (the key `vista` is added when missing), opened on the view `vista`.
+/// The HTML of the graph `graph` (the key `view` is added when missing), opened on the view `view`.
 pub fn html(graph: &str, view: View) -> Result<String> {
     let done =
         mzlab_core::msngraph::completa(graph).map_err(|_| Error::new("err.msnfigura.bad"))?;

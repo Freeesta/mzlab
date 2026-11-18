@@ -55,7 +55,7 @@ fn cut(
     }
 }
 
-/// The graph text `j` of `g` with the key `strutture` of node `nodo` (`nK` or `K`): the cleavages of `smiles` that give its m/z within `ppm`.
+/// The graph text `j` of `g` with the key `structures` of node `node` (`nK` or `K`, or `all`): the cleavages of `smiles` that give its m/z within `ppm`.
 pub fn strutture_testo(
     g: &Graph,
     j: &str,
@@ -65,7 +65,7 @@ pub fn strutture_testo(
     let smiles = smiles.filter(|s| !s.trim().is_empty());
     let smiles = smiles.ok_or_else(|| Error::new("err.msngrafo.noSmiles"))?;
     let bad = || Error::new("err.msngrafo.badNode").with("node", nodo);
-    if nodo == "tutti" || nodo == "all" {
+    if nodo == "all" {
         let mut all_items = vec![];
         for (k, _) in g.nodi.iter().enumerate().filter(|(_, n)| n.livello >= 2) {
             let ing = g.structures_input(k).ok_or_else(bad)?;

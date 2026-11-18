@@ -291,7 +291,7 @@ fn with_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> Result<String>
     Ok(j)
 }
 
-/// `msn_graph` of the `.wasm`: the graph text, with the cleavages of a node when `strutture` asks.
+/// `msn_graph` of the `.wasm`: the graph text, with the cleavages of a node when `structures` asks.
 fn graph_text(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
     let (g, j, o) = run()?;
     match q.some("structures") {
@@ -312,7 +312,7 @@ fn graph_text(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
     }
 }
 
-/// `msn_graph_export` of the `.wasm`: the spectra of the graph as text, a table of it (`vista`) or the tree as a library (`formato=massbank`, `library=1`).
+/// `msn_graph_export` of the `.wasm`: the spectra of the graph as text, a table of it (`view`) or the tree as a library (`format=massbank`, `library=1`).
 fn export(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
     let clean = q.get("clean") == Some("1");
     if let Some(view) = q.some("view") {

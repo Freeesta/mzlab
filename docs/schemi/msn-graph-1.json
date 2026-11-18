@@ -192,7 +192,7 @@
    ]
   },
   "root_candidates": {
-   "description": "Without opzioni.formula: up to 8 formulas of the ion of the first root that fit its m/z (candidates, never an identification); empty otherwise.",
+   "description": "Without options.formula: up to 8 formulas of the ion of the first root that fit its m/z (candidates, never an identification); empty otherwise.",
    "type": "array",
    "maxItems": 8,
    "items": {
@@ -250,7 +250,7 @@
     "discarded_formula": {
      "type": "integer",
      "minimum": 0,
-     "description": "Nodes with no sub-formula of the root in their window (they are not in nodi)"
+     "description": "Nodes with no sub-formula of the root in their window (they are not in nodes)"
     }
    }
   },
@@ -406,7 +406,7 @@
             },
             "ppm": {
              "type": "number",
-             "description": "(m/z of the node − mz_teorico) / mz_teorico"
+             "description": "(m/z of the node − theoretical_mz) / theoretical_mz"
             },
             "dbe": {
              "type": "number"
@@ -645,7 +645,7 @@
   },
   "spectra": {
    "type": "array",
-   "description": "Every spectrum of the tree in the graph, with its peaks: a peak with nodo null left the graph (unexplained); the clean spectrum is the others",
+   "description": "Every spectrum of the tree in the graph, with its peaks: a peak with node null left the graph (unexplained); the clean spectrum is the others",
    "items": {
     "type": "object",
     "additionalProperties": false,
@@ -722,7 +722,7 @@
   "structures": {
    "type": "object",
    "additionalProperties": false,
-   "description": "Present only when asked (mzlab-cli msn-graph --strutture NODO): the cleavages of the structure (opzioni.smiles) of ONE node whose piece gives its m/z. Candidates with their evidence, never identifications: the broken bond is a hypothesis. The rest of the document keeps its bytes without it.",
+   "description": "Present only when asked (mzlab-cli msn-graph --structures NODE): the cleavages of the structure (options.smiles) of ONE node whose piece gives its m/z. Candidates with their evidence, never identifications: the broken bond is a hypothesis. The rest of the document keeps its bytes without it.",
    "required": [
     "node",
     "smiles",
@@ -928,7 +928,7 @@
   "interpretation": {
    "type": "object",
    "additionalProperties": false,
-   "description": "Present only when asked (mzlab-cli msn-graph --interpreta): for each arc the neutral loss as evidence (name, formula, exact mass, ppm, source, confidence) and the activations that observed it. Never a verdict. The rest of the document keeps its bytes without it.",
+   "description": "Present only when asked (mzlab-cli msn-graph --interpret): for each arc the neutral loss as evidence (name, formula, exact mass, ppm, source, confidence) and the activations that observed it. Never a verdict. The rest of the document keeps its bytes without it.",
    "required": [
     "version",
     "ppm",
@@ -1316,11 +1316,11 @@
      }
     }
    },
-   "description": "Present only when asked (mzlab-cli msn-graph --regole): the rules of fragrules/1 that the formulas alone decide and, when the options give a SMILES, those its structure allows (groups, sites, cleavages), as evidence with their references. Never a verdict. The rest of the document keeps its bytes without it."
+   "description": "Present only when asked (mzlab-cli msn-graph --rules): the rules of fragrules/1 that the formulas alone decide and, when the options give a SMILES, those its structure allows (groups, sites, cleavages), as evidence with their references. Never a verdict. The rest of the document keeps its bytes without it."
   },
   "structures_all": {
    "type": "array",
-   "description": "Present only when asked (strutture=tutti): the `strutture` value of every node of level 2 or more that has candidates, in the order of the nodes",
+   "description": "Present only when asked (structures=all): the `structures` value of every node of level 2 or more that has candidates, in the order of the nodes",
    "items": {
     "type": "object"
    }
@@ -1328,7 +1328,7 @@
   "breaks": {
    "type": "object",
    "additionalProperties": false,
-   "description": "Present only when asked (mzlab-cli msn-graph --rotture): the sets of atoms of the structure (opzioni.smiles) with one or two bonds cut and a few hydrogens moved whose m/z is a node's, the arcs whose child piece lies inside the parent's, and the share of each spectrum's intensity on explained arcs. Hypotheses with their evidence, never an assignment.",
+   "description": "Present only when asked (mzlab-cli msn-graph --breaks): the sets of atoms of the structure (options.smiles) with one or two bonds cut and a few hydrogens moved whose m/z is a node's, the arcs whose child piece lies inside the parent's, and the share of each spectrum's intensity on explained arcs. Hypotheses with their evidence, never an assignment.",
    "required": [
     "version",
     "smiles",
@@ -1510,7 +1510,7 @@
   "view": {
    "type": "object",
    "additionalProperties": false,
-   "description": "Always the last key. What a drawer needs and the graph does not say outright, computed only from the fields above (so `completa` adds it to an older graph with the same bytes). Abstract coordinates: pixels and styles belong to the drawer. A proposal of a rule, never a mechanism.",
+   "description": "Always the last key. What a drawer needs and the graph does not say outright, computed only from the fields above (so `complete` adds it to an older graph with the same bytes). Abstract coordinates: pixels and styles belong to the drawer. A proposal of a rule, never a mechanism.",
    "required": [
     "version",
     "algorithm",

@@ -1,5 +1,5 @@
 //! The cleavages of a structure (the SMILES of the user) that explain the m/z of ONE node of the graph: the types of the answer, the input taken from
-//! the graph and the `strutture` key of `msn-graph/1`. The cleaving itself is `mzlab_feat::chem::structures` (the fragmenter of mzLab, which this crate
+//! the graph and the `structures` key of `msn-graph/1`. The cleaving itself is `mzlab_feat::chem::structures` (the fragmenter of mzLab, which this crate
 //! cannot depend on). Candidates, never identifications: a broken bond is a hypothesis.
 
 use super::{GNode, Graph};
@@ -153,7 +153,7 @@ fn cut_at(o: &mut Out, t: &Cut) {
     o.raw("]}");
 }
 
-/// The value of the key `strutture` (see `docs/schemi/msngrafo-1.json`): keys in a fixed order, rounded numbers.
+/// The value of the key `structures` (see `docs/schemi/msn-graph-1.json`): keys in a fixed order, rounded numbers.
 pub fn structures_json(s: &Structures) -> String {
     let mut o = Out::default();
     o.raw("{\"node\":")
@@ -194,13 +194,13 @@ pub fn structures_json(s: &Structures) -> String {
     o.0
 }
 
-/// `grafo` with the key `strutture_tutti`: the cleavages of every node of level 2 or more (`strutture=tutti`), one `strutture` value each, by node.
+/// `grafo` with the key `structures_all`: the cleavages of every node of level 2 or more (`structures=all`), one `structures` value each, by node.
 pub fn with_all_structures(graph: &str, s: &[Structures]) -> String {
     let v: Vec<String> = s.iter().map(structures_json).collect();
     super::view::with_key(graph, "structures_all", &format!("[{}]", v.join(",")))
 }
 
-/// `grafo` (the text of an `msn-graph/1`) with the key `strutture` added at the end; the text of a graph without it does not change.
+/// `grafo` (the text of an `msn-graph/1`) with the key `structures` added at the end; the text of a graph without it does not change.
 pub fn with_structures(graph: &str, s: &Structures) -> String {
     super::view::with_key(graph, "structures", &structures_json(s))
 }

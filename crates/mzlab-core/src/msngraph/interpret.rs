@@ -5,7 +5,7 @@ use super::Graph;
 use crate::elements::{fmt, mass, parse_formula};
 use crate::json::{round, Out};
 
-/// Version of the `interpretazione` key.
+/// Version of the `interpretation` key.
 pub const VERSION: u32 = 1;
 /// Default window of the loss match by mass, ppm of the m/z of the precursor.
 pub const PPM: f64 = 10.0;
@@ -192,7 +192,7 @@ fn loss_json(o: &mut Out, p: &EdgeLoss) {
     o.raw("]}");
 }
 
-/// The value of the key `interpretazione` (see `docs/schemi/msngrafo-1.json`): keys in a fixed order, rounded numbers.
+/// The value of the key `interpretation` (see `docs/schemi/msn-graph-1.json`): keys in a fixed order, rounded numbers.
 pub fn interpretation_json(v: &[EdgeInterp], ppm: f64) -> String {
     let mut o = Out::default();
     o.raw("{\"version\":")
@@ -223,7 +223,7 @@ pub fn interpretation_json(v: &[EdgeInterp], ppm: f64) -> String {
     o.0
 }
 
-/// `grafo` (the text of an `msn-graph/1`) with the key `interpretazione` added at the end; the text of a graph without it does not change.
+/// `grafo` (the text of an `msn-graph/1`) with the key `interpretation` added at the end; the text of a graph without it does not change.
 pub fn with_interpretation(graph: &str, g: &Graph, ppm: f64) -> String {
     super::view::with_key(
         graph,

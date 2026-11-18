@@ -1,4 +1,4 @@
-//! The key `vista` of `msn-graph/1`: what a drawer needs and the graph does not say outright, computed ONLY from the fields the JSON already has
+//! The key `view` of `msn-graph/1`: what a drawer needs and the graph does not say outright, computed ONLY from the fields the JSON already has
 //! (so an old graph is completed by `completa` with the same bytes): the MS levels of each ion, its intensity in the spectrum of its parent on
 //! the best path, the best path itself (`best-path/1`), the number of precursors, the tree layout (barycentre plus swaps against crossings)
 //! and the radial layout (ring, angle). Coordinates are abstract numbers: pixels and styles belong to the drawer. A proposal of a rule
@@ -242,7 +242,7 @@ fn node_json(
         .raw("}}");
 }
 
-/// The value of the key `vista` of the graph `d` (its keys in a fixed order).
+/// The value of the key `view` of the graph `d` (its keys in a fixed order).
 fn view(d: &Data) -> String {
     let n = d.id.len();
     let best = paths(d);
@@ -291,7 +291,7 @@ pub(super) fn with_view(json: String) -> String {
     completa(&json).unwrap_or(json)
 }
 
-/// The text of a graph with the key `vista` added at its end; `Err` when it is not an `msn-graph/1` or `/2` (`error.newerFormat` for a newer one). A graph that has `vista` is returned as it is.
+/// The text of a graph with the key `view` added at its end; `Err` when it is not an `msn-graph/1` or `/2` (`error.newerFormat` for a newer one). A graph that has `view` is returned as it is.
 pub fn completa(json: &str) -> Result<String> {
     let v = parse(json.as_bytes()).map_err(|_| bad())?;
     if v.get("view").is_some() {
@@ -303,7 +303,7 @@ pub fn completa(json: &str) -> Result<String> {
     Ok(format!("{testa},\"view\":{}}}", view(&read(&v)?)))
 }
 
-/// `grafo` with the key `chiave` (its value is `valore`) added after the keys that are there, and before `vista`, which stays the last.
+/// `grafo` with the key `chiave` (its value is `valore`) added after the keys that are there, and before `view`, which stays the last.
 pub(super) fn with_key(graph: &str, key: &str, value: &str) -> String {
     let (testa, tail) = match graph.rfind(",\"view\":{") {
         Some(p) => graph.split_at(p),

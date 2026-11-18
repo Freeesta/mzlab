@@ -1,5 +1,5 @@
 // @ts-strict
-// Drawer of the fragmentation graph (msn-graph/1 with its `vista`): pure SVG, no page globals (texts and choices come in `opts`), so the tab, the Flow and the
+// Drawer of the fragmentation graph (msn-graph/1 with its `view`): pure SVG, no page globals (texts and choices come in `opts`), so the tab, the Flow and the
 // stand-alone HTML draw the same figure. Two views of the same data: the tree (columns by MS level) and the radial (precursor in the centre, one ring per step of
 // the best path). Imports nothing from the page.
 //
@@ -72,7 +72,7 @@ export const formulaHtml = (/** @type {string} */ f, /** @type {string} */ charg
 
 // ---- the model ---------------------------------------------------------------------------------------------------------
 
-/** The `vista` of a graph, or a modest one made of the fields of the graph (an answer without `vista`: tree only, no radial view). */
+/** The `view` of a graph, or a modest one made of the fields of the graph (an answer without `view`: tree only, no radial view). */
 export function vistaOf(/** @type {any} */ j) {
   if (j.view) return j.view;
   const into = new Map();

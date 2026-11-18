@@ -1,11 +1,11 @@
-//! The bond breaks of the structure of the user that explain the ions of an `msn-graph/1` (key `rotture`): per node the sets of atoms (one or
+//! The bond breaks of the structure of the user that explain the ions of an `msn-graph/1` (key `breaks`): per node the sets of atoms (one or
 //! two bonds cut, a few hydrogens moved) whose m/z is the node's, per arc whether the child's set lies inside the parent's, per spectrum the
 //! share of the intensity so explained. Hypotheses with their evidence, never an assignment. The calculation is `mzlab_feat::chem::breaks`
 //! (it needs the structure); here the types and the JSON, used by `mzlab-cli msn-graph --breaks` and the `.wasm` `msngrafo`.
 
 use crate::json::{round, Out};
 
-/// Version of the `rotture` key.
+/// Version of the `breaks` key.
 pub const VERSION: u32 = 1;
 
 /// One set of atoms of the structure that gives the m/z of a node.
@@ -85,7 +85,7 @@ fn list(o: &mut Out, v: &[usize]) {
     o.raw("]");
 }
 
-/// The value of the key `rotture` (see `docs/schemi/msngrafo-1.json`): keys in a fixed order, rounded numbers.
+/// The value of the key `breaks` (see `docs/schemi/msn-graph-1.json`): keys in a fixed order, rounded numbers.
 pub fn breaks_json(r: &Breaks) -> String {
     let (sp, tot, int) = r.counts();
     let mut o = Out::default();
@@ -164,7 +164,7 @@ pub fn breaks_json(r: &Breaks) -> String {
     o.0
 }
 
-/// `grafo` (the text of an `msn-graph/1`) with the key `rotture` added at the end; the text of a graph without it does not change.
+/// `grafo` (the text of an `msn-graph/1`) with the key `breaks` added at the end; the text of a graph without it does not change.
 pub fn with_breaks(graph: &str, r: &Breaks) -> String {
     super::view::with_key(graph, "breaks", &breaks_json(r))
 }

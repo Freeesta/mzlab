@@ -1,5 +1,5 @@
 // @ts-strict
-// Opening a saved fragmentation graph (a g.json, msn-graph/1 or /2) without its raw data: a dropped or picked .json is recognised by its head, a graph without `vista`
+// Opening a saved fragmentation graph (a g.json, msn-graph/1 or /2) without its raw data: a dropped or picked .json is recognised by its head, a graph without `view`
 // is completed by the .wasm msngrafo (op `complete`; no calculation here) and shown read-only in a window with the same body as the «Fragmentation graph» tab.
 // Used by shell.js (upload0, the data area) and infusione-grafo.js (the tab). docs/agenti/infusion-graph.md.
 import { G } from "./infusione-grafo-stato.js";
@@ -21,7 +21,7 @@ export async function version(f) {
 const fail = (key, params = {}) => I18N.err({ error_key: key, params });
 
 /**
- * The graph of a file as an object, with `vista` (a graph without it goes through the .wasm); a keyed error when it is broken, newer than this page or cannot be completed.
+ * The graph of a file as an object, with `view` (a graph without it goes through the .wasm); a keyed error when it is broken, newer than this page or cannot be completed.
  * @param {File} f @param {number} v the version `version(f)` found
  */
 async function read(f, v) {
