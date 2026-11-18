@@ -118,7 +118,7 @@ try:
             wait_for_js(pg, "[...document.querySelectorAll('#cmp-tab .ftag')].length > 0", 8000)
             need(pg.evaluate("[...document.querySelectorAll('#cmp-tab .ftag')].map(e => e.textContent).every(t => E.files.some(f => f.ugrp === t))"), "the group tags of the table differ from the panel")
             # delete: the x of the panel -> gone from the sample table and the loading table
-            n0 = len(pg.evaluate(cmp_names)); drawer(pg); pg.locator("#flst .fl", has_text="RET 8h (2)").locator(".fl-x").click()
+            n0 = len(pg.evaluate(cmp_names)); drawer(pg); pg.locator("#flst .fl", has_text="RET 8h (2)").locator(".fl-x").dispatch_event("click")
             wait_for_js(pg, "!%s.includes('RET 8h (2)')" % cmp_names, 8000)
             need(len(pg.evaluate(cmp_names)) == n0 - 1 and "RET 8h (2)" not in pg.evaluate(side), pg.evaluate(cmp_names))
             need(pg.evaluate("![...document.querySelectorAll('#flist tbody tr')].some(r => r.textContent.includes('RET 8h (2)') && r.querySelector('input[data-k=use]').checked)"), "the loading table still lists the deleted file as open")
