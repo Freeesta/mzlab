@@ -98,9 +98,10 @@ try:
             e = mode(pg, "edges")
             assert e["bm"] == "edges" and e["area"] == res["edges"], (e, res)   # chosen in the dialog: written, the number of integ()
             mode(pg, "line")
-            tab = pg.evaluate("(async()=>{await showInts();return document.querySelector('#bigbody table').innerText})()")
+            wait_for_js(pg, "!!document.querySelector('#manint-h')", timeout=60000)
+            tab = pg.evaluate("(async () => { const h = document.querySelector('#manint-h'); if (h.getAttribute('aria-expanded') !== 'true') h.click(); await new Promise(r => setTimeout(r, 1500)); return document.querySelector('#manint-x').innerText; })()")
+            wait_for_js(pg, "document.querySelector('#manint-x').innerText.includes('Custom line')", timeout=30000); tab = pg.inner_text("#manint-x")
             assert "Custom line" in tab, tab
-            pg.evaluate("Q('#bigdlg').close()")
         step("the three modes on the same peak: edges, zero (more area), a line on the edges (the same area)", three)
         def mouse():
             x, y, b = point(pg, 0)
@@ -124,10 +125,9 @@ try:
             pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"{IT}.bl[2]=={t0}")         # one undo per key press
         step("keyboard: arrows move point 2 (time and intensity), the part under the line is reported, undo", keys)
         def note():
-            tab = pg.evaluate("(async()=>{await showInts();return document.querySelector('#bigbody').innerText})()")
-            assert "Below the line" in tab, tab
-            pg.evaluate("Q('#bigdlg').close()")
-        step("the table carries the baseline, the part below and the note", note)
+            wait_for_js(pg, "document.querySelector('#manint-x') && document.querySelector('#manint-x').innerText.includes('Below the line')", timeout=30000)
+            assert "Below the line" in pg.inner_text("#manint-x")
+        step("the card carries the baseline and the part below", note)
         def themes():
             for th in ("light", "dark"):
                 pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", th); pg.evaluate(f"draw({PN})"); wait_for_js(pg, f"document.documentElement.dataset.theme===%r && Number.isFinite({IT}.area)" % th)

@@ -199,77 +199,13 @@ function intMenuItems(/** @type {Bag} */ p, /** @type {number} */ x, /** @type {
 // the integration entries of the menu of a trace (registry azioni/1): the rows of intMenuItems, one action
 if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.int", gruppo: "tools", ordine: 1, viste: ["chrom", "xic", "mrm"],
   voci: (/** @type {Bag} */ c) => intMenuItems(c.p, c.x, c.near, c.py).filter(/** @param {any} i */ i => i !== "-").map(/** @param {any} i */ i => ({ nome: i.label, icon: i.icon, esegui: i.fn })) });
-function allInts() {
-  // the concentration is for standards and QCs (the calibration line is made by the student in Excel); q1/q3/transition only for MRM traces
-  return E.panels.flatMap((/** @type {Bag} */ p) => p.ints.map((/** @type {Bag} */ i) => {
-    const f = E.files[i.k], kind = f ? CAMPIONI.kindOf(f) : "sample", withConc = f && (kind === "std" || kind === "qc") && f.conc != null;
-    const s = p._a && p._a.sr && p._a.sr.find((/** @type {Bag} */ q) => q.key === i.key), mrm = !!(s && s.q1 != null);
-    return { ...i, _p: p, _it: i, panel: ptitle(p.title), conc: withConc ? f.conc : null, cunit: withConc ? f.cunit || "" : "",
-      role: I18N.t(`export.int.role.${kind === "calibration" ? "std" : ["sample", "blank", "dark", "infusion", "std", "qc"].includes(kind) ? kind : "sample"}`),
-      q1: mrm ? s.q1 : null, q3: mrm ? s.q3 : null, transition: mrm ? s.tname || "" : "" };
-  }));
-}
 // optional columns of the integration table (off by default): S/N and the figures of the peak (width at half height, plates, tailing)
 const INTOPT = { sn: false, par: false, q: false };
 // the peak-finding parameters and the columns of the integration table are one undoable action (comandi.js)
 COMANDI.gestore("peaks.settings", {
   leggi: () => JSON.stringify([PK, INTOPT]),
-  applica: (/** @type {unknown} */ _p, /** @type {string} */ snap) => { const [pk, io] = JSON.parse(snap); Object.assign(PK, pk); Object.assign(INTOPT, io); pkSave(); const dlg = Q("#bigdlg"); if (dlg && dlg.open) showInts(); /** @type {any} */ (window).MANINT?.sync(); },
+  applica: (/** @type {unknown} */ _p, /** @type {string} */ snap) => { const [pk, io] = JSON.parse(snap); Object.assign(PK, pk); Object.assign(INTOPT, io); pkSave(); /** @type {any} */ (window).MANINT?.sync(); },
 });
-const INT_COLS = ["panel", "ion", "file", "time", "conc", "cunit", "a", "b", "rt", "area", "height", "corr"];
-const INT_HEADS = ["panel", "trace", "sample", "time", "conc", "unit", "rt0", "rt1", "apex", "area", "height", "corr"].map(k => I18N.t(`export.int.${k}`));
-// appended after every other column of the export: role of the file, and the MRM transition (Q1, Q3, name; empty for an XIC)
-const INT_NEW = ["role", "q1", "q3", "transition"];
-const INT_NEW_HEADS = INT_NEW.map(k => I18N.t(`export.int.${k}`));
-// the baseline of a record by name (int.base.*)
-const bName = (/** @type {Bag} */ it) => it.bm || (it.zero ? "window" : "edges");
-function intExtra(/** @type {Bag} */ r) {
-  const p = r._p, it = r._it, s = p && p._a && p._a.sr && p._a.sr.find((/** @type {Bag} */ q) => q.key === it.key);
-  const pk = s ? chromPeak(s.x, s.y, r.a, r.b, it.bl || (it.zero || it.bm === "zero" ? [0, 0, 1, 0] : it.base)) : null, z = noiseZone(p, it), sd = s && z ? noiseSD(s.x, s.y, z[0], z[1]) : null;
-  const h = Number.isFinite(r.height) ? r.height : pk ? pk.height : null;      // the height shown in the table, so S/N and «height» never disagree
-  return { sn: h != null && sd ? h / sd : null, noise: !!z, w50: pk ? pk.w50 : null, N: pk ? pk.N : null, T: pk ? pk.tailing : null };
-}
-// quality of each integrated peak from the Rust engine (qualita.js): Gaussian similarity, asymmetry at 10 %, noise score; null where the engine or the trace is missing
-async function qualityOf(/** @type {Bag} */ r) {
-  const p = r._p, it = r._it, s = p && p._a && p._a.sr && p._a.sr.find((/** @type {Bag} */ q) => q.key === it.key);
-  if (!s || !window.QUALITA) return null;
-  return QUALITA.quality(s.x, s.y, nearIdx(s.x, r.a), nearIdx(s.x, r.b));
-}
-async function showInts() {
-  const /** @type {Bag[]} */ rows = allInts().map((/** @type {Bag} */ r) => ({ ...r, ...intExtra(r) })), uv = (/** @type {Bag} */ r) => r._p.kind === "pda", ak = rows.some(uv) ? rows.every(uv) ? "Uv" : "Mix" : "";      // a DAD area is in mAU·s
-  if (INTOPT.q) { const qs = await Promise.all(rows.map(qualityOf)); rows.forEach((/** @type {Bag} */ r, /** @type {number} */ i) => { r.qg = qs[i] ? qs[i].gaussian : null; r.qa = qs[i] ? qs[i].asymmetry : null; r.qn = qs[i] ? qs[i].noise : null; }); }
-  const fx = (/** @type {number | null | undefined} */ v, /** @type {number} */ d) => v == null || !isFinite(v) ? "" : String(+v.toFixed(d));
-  const head = [INT_HEADS[0], INT_HEADS[1], INT_HEADS[2], I18N.t("int.tbl.time"), I18N.t("int.tbl.conc"), I18N.t("int.tbl.rt0"), I18N.t("int.tbl.rt1"), I18N.t("int.tbl.apex"), I18N.t("int.tbl.area" + ak), I18N.t("int.tbl.height"), I18N.t("int.tbl.base"), I18N.t("int.tbl.below")], num = [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1];
-  const th = (/** @type {string} */ t, /** @type {number} */ n) => `<th${n ? ' class="num"' : ""}>${t}</th>`;
-  const hx = (INTOPT.sn ? th("S/N", 1) : "") + (INTOPT.par ? th("w<sub>1/2</sub> (min)", 1) + th(I18N.t("int.tbl.plates"), 1) + th(I18N.t("int.tbl.tail"), 1) : "") +
-    (INTOPT.q ? ["gauss", "asym", "nscore"].map(k => `<th class="num" title="${I18N.t(`int.tbl.${k}.h`)}">${I18N.t(`int.tbl.${k}`)}</th>`).join("") : "");
-  big(I18N.t("int.tbl.title"), rows.length ? `<div class="bar"><button id="ig-xlsx">${IC_DL}Excel</button><button id="ig-csv">${IC_DL}CSV</button>
-    <label title="${I18N.t("int.tbl.sn.title")}"><input type="checkbox" id="ig-sn" ${INTOPT.sn ? "checked" : ""}> S/N</label><button type="button" class="hq" data-help="sn" title="${I18N.t("common.help")}" aria-label="${I18N.t("common.help")}">?</button>
-    <label title="${I18N.t("int.tbl.par.title")}"><input type="checkbox" id="ig-par" ${INTOPT.par ? "checked" : ""}> ${I18N.t("int.tbl.par")}</label>
-    <label title="${I18N.t("int.tbl.q.title")}"><input type="checkbox" id="ig-q" ${INTOPT.q ? "checked" : ""}> ${I18N.t("int.tbl.q")}</label></div>
-    <table><tr>${head.map((t, i) => th(t, num[i])).join("")}${hx}<th>${I18N.t("int.tbl.corr")}</th><th></th></tr>` +
-    rows.map((/** @type {Bag} */ r, /** @type {number} */ i) => `<tr><td>${EH(r.panel)}</td><td>${EH(r.ion)}</td><td>${EH(r.file)}</td><td class="num">${r.time ?? ""}</td><td class="num">${r.conc != null ? r.conc + " " + EH(r.cunit) : ""}</td><td class="num">${r.a.toFixed(2)}</td><td class="num">${r.b.toFixed(2)}</td><td class="num">${(r.rt ?? 0).toFixed(2)}</td><td class="num" title="${I18N.sciE(r.area ?? 0, 5)}">${I18N.sciE(r.area ?? 0)}</td><td class="num">${I18N.sciE(r.height ?? 0)}</td><td>${I18N.t(`int.base.${bName(r._it)}`)}</td><td class="num">${r._it.bm ? I18N.sciE(r.below ?? 0) : ""}</td>` +
-      (INTOPT.sn ? `<td class="num">${r.sn != null ? fx(r.sn, 1) : `<button data-nz="${i}" title="${I18N.t("int.tbl.pickNoise.title")}">${I18N.t("int.tbl.pickNoise")}</button>`}</td>` : "") +
-      (INTOPT.par ? `<td class="num">${fx(r.w50, 3)}</td><td class="num">${r.N != null ? Math.round(r.N) : ""}</td><td class="num">${fx(r.T, 2)}</td>` : "") +
-      (INTOPT.q ? `<td class="num">${fx(r.qg, 3)}</td><td class="num">${fx(r.qa, 2)}</td><td class="num">${fx(r.qn, 2)}</td>` : "") + `<td>${EH(r.corr || I18N.t("ibk.no"))}</td><td>${intClash(r._p, r.key, r.a, r.b, r._it) ? `<span class="warn" title="${I18N.t("int.tbl.overlap.title")}">${I18N.t("int.tbl.overlap")}</span> ` : ""}<button data-del="${i}" title="${I18N.t("int.tbl.del.title")}">×</button></td></tr>`).join("") +
-    `</table><div class="muted sm">${I18N.t("int.tbl.note")}</div>` + (rows.some((/** @type {Bag} */ r) => r.below > 0) ? `<div class="muted sm">${I18N.t("int.tbl.below.note")}</div>` : "")
-    : `<div class="muted">${I18N.t("int.tbl.none")}</div>`, () => {
-    if (!rows.length) return;
-    Q("#ig-sn").onchange = (/** @type {Event} */ e) => { COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => { INTOPT.sn = /** @type {HTMLInputElement} */ (e.target).checked; }); showInts(); };
-    Q("#ig-par").onchange = (/** @type {Event} */ e) => { COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => { INTOPT.par = /** @type {HTMLInputElement} */ (e.target).checked; }); showInts(); };
-    Q("#ig-q").onchange = (/** @type {Event} */ e) => { COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => { INTOPT.q = /** @type {HTMLInputElement} */ (e.target).checked; }); showInts(); };
-    Q("#bigbody").querySelectorAll("button[data-del]").forEach((/** @type {HTMLElement} */ b) => b.onclick = () => { const r = rows[Number(b.dataset.del)]; delInts(r._p, [r._it]); showInts(); });
-    Q("#bigbody").querySelectorAll("button[data-nz]").forEach((/** @type {HTMLElement} */ b) => b.onclick = () => {
-      const r = rows[Number(b.dataset.nz)]; r._p._pickNoise = r._it; Q("#bigdlg").close(); reveal(r._p);
-      stepMsg(r._p, I18N.t("int.pickNoise.msg"), true);
-    });
-    const bx = rows.some((/** @type {Bag} */ r) => r._it.bm);          // only then the two columns: old exports unchanged
-    const sheetsOf = () => [{ name: I18N.t("int.xlsx.sheet"), head: [...INT_HEADS.map((h, i) => i === 9 && ak ? I18N.t("export.int.area" + ak) : h), ...(INTOPT.sn ? [I18N.t("int.xlsx.sn")] : []), ...(INTOPT.par ? ["w1/2 (min)", I18N.t("int.xlsx.plates"), I18N.t("int.xlsx.tail")] : []), ...(INTOPT.q ? [I18N.t("int.xlsx.gauss"), I18N.t("int.xlsx.asym"), I18N.t("int.xlsx.nscore")] : []), ...INT_NEW_HEADS, ...(bx ? [I18N.t("export.int.base"), I18N.t("export.int.below")] : [])],
-      rows: rows.map((/** @type {Bag} */ r) => [...INT_COLS.map(c => r[c]), ...(INTOPT.sn ? [r.sn] : []), ...(INTOPT.par ? [r.w50, r.N, r.T] : []), ...(INTOPT.q ? [r.qg, r.qa, r.qn] : []), ...INT_NEW.map(c => r[c]), ...(bx ? [I18N.t(`int.base.${bName(r._it)}`), r._it.bm ? r.below : null] : [])]), widths: [16, 18, 22, 14, 16, 8, 14, 14, 14, 18, 14, 34, 18, 12, 14, 14, 18, 18, 18, 14, 10, 10, 22] }];
-    Q("#ig-xlsx").onclick = () => dlx(I18N.t("int.xlsx.file"), sheetsOf(), { table: "integration" });
-    Q("#ig-csv").onclick = () => dlc(I18N.t("int.xlsx.file"), sheetsOf(), { table: "integration" });
-  });
-}
 
 // ------------------------------------------------------------------ spettri
 // Triangles of the scans/precursors on a spectrum (dda.js): shown with the «Marker» switch (p.mk), by default only up to MARK_N of them; otherwise the

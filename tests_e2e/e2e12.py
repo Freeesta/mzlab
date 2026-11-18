@@ -67,7 +67,7 @@ with sync_playwright() as p:
         assert pg.evaluate(f"E.panels[{xi}].ints.length") == 1
         hd_click(pg, ".pnl.xic [data-a=iauto]"); hd_click(pg, ".pnl.xic [data-a=iman]")
         pg.mouse.move(xbox["x"] + pg.evaluate(f"E.panels[{xi}]._a.X(5)"), xbox["y"] + 100); pg.mouse.down(); pg.mouse.move(xbox["x"] + pg.evaluate(f"E.panels[{xi}]._a.X(6)"), xbox["y"] + 100, steps=5); pg.mouse.up(); pg.wait_for_timeout(500)
-        assert pg.evaluate(f"E.panels[{xi}].ints.length") == 2 and shown(pg, ".pnl.xic [data-a=itab]")
+        assert pg.evaluate(f"E.panels[{xi}].ints.length") == 2 and pg.locator(".pnl.xic [data-a=itab]").count() == 0
         hd_click(pg, ".pnl.xic [data-a=iman]")
         # header: only the m/z range; quick file chooser; RT readout bottom right; clear integrations
         xp.locator('[data-a=cpar]').click()      # the m/z edges live in «Range»

@@ -146,7 +146,7 @@ function attach(p) {
     if (p.type === "map" && !d.alt && window.MAPPA && (Math.abs(d.x - d.x0) > 4 || Math.abs(d.y - d.y0) > 4)) { MAPPA.boxZoom(p, d.x0, d.y0, d.x, d.y); return; }   // mappa.js: box = zoom
     if (p.type === "map" && window.MAPPA && MAPPA.click(p, d.x0, d.y0)) return;       // mappa.js: «Segna» adds a point; a click on a point chooses it
     if (p._pickNoise && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {          // the noise stretch for S/N of an integration
-      const it = p._pickNoise; p._pickNoise = null; p.sel = null; pushIh(p, intSnap(p)); setNoiseZone(p, it, [Math.min(x0, x1), Math.max(x0, x1)]); E.panels.filter(q => q.ints && q.ints.length).forEach(q => draw(q)); uiSave(); showInts(); return;
+      const it = p._pickNoise; p._pickNoise = null; p.sel = null; pushIh(p, intSnap(p)); setNoiseZone(p, it, [Math.min(x0, x1), Math.max(x0, x1)]); E.panels.filter(q => q.ints && q.ints.length).forEach(q => draw(q)); uiSave(); /** @type {any} */ (window).MANINT?.sync(); return;
     }
     if (p._pickIbk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {            // "Subtract the background of a stretch": the stretch the student just dragged
       p._pickIbk = false; p.sel = null; ibkSet(p, "mean", [Math.min(x0, x1), Math.max(x0, x1)]); ctl(p); return;

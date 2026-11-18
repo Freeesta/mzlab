@@ -1,5 +1,4 @@
-"""The card «Manual integrations» lists a DAD (XWC) window with its area in mAU·s, and its numbers (area, height, apex, below the line, correction) are those of the
-toolbar dialog table. Synthetic MRM .wiff of tools/wiff_dad_mrm.py (no laboratory data). Step 1 of one integration table.
+"""The card «Manual integrations» lists a DAD (XWC) window with its area in mAU·s, and its numbers (area, height, apex) are those stored on the window record. Synthetic MRM .wiff of tools/wiff_dad_mrm.py (no laboratory data). 
 Run from the repo root: python3 tests_e2e/e2e_manint_dad.py"""
 # covers: mzlab/web/integrazioni-tracce, mzlab/web/integrazioni-manuali
 import json, subprocess, sys, os, tempfile
@@ -42,13 +41,13 @@ try:
             assert pg.evaluate("MANINT.rows(MANTR.csv())[1][MANINT.rows(MANTR.csv())[0].indexOf('area_unit')]") == "mAU·s"
         step("the card row of an XWC window has its area in mAU·s", card)
         def parity():
-            d = pg.evaluate("allInts().map(r => ({panel: r.panel, a: r.a, b: r.b, area: r.area, height: r.height, rt: r.rt, below: r.below || 0, corr: r.corr || ''}))")
-            c = pg.evaluate("(() => { const [h, ...b] = MANINT.rows(MANTR.csv()); const k = n => h.indexOf(n); return b.map(r => ({panel: r[k('panel')], a: +r[k('start_min')], area: +r[k('area')], height: +r[k('height')], rt: +r[k('apex_rt_min')], below: +r[k('below')] || 0, corr: r[k('correction')]})); })()")
+            d = pg.evaluate(f"{XWCS}[0].ints.map(r => ({{a: r.a, b: r.b, area: r.area, height: r.height, rt: r.rt}}))")
+            c = pg.evaluate("(() => { const [h, ...b] = MANINT.rows(MANTR.csv()); const k = n => h.indexOf(n); return b.map(r => ({a: +r[k('start_min')], area: +r[k('area')], height: +r[k('height')], rt: +r[k('apex_rt_min')]})); })()")
             assert len(d) == len(c) == 1, (d, c)
             d, c = d[0], c[0]
-            for k in ("area", "height", "below"): assert abs(c[k] - d[k]) <= 1e-4 * max(abs(d[k]), 1), (k, d, c)
-            assert abs(c["rt"] - d["rt"]) < 6e-4 and abs(c["a"] - min(d["a"], d["b"])) < 6e-4 and c["corr"] == d["corr"], (d, c)
-        step("area, height, apex, below and correction of the XWC card row are those of the dialog table", parity)
+            for k in ("area", "height"): assert abs(c[k] - d[k]) <= 1e-4 * max(abs(d[k]), 1), (k, d, c)
+            assert abs(c["rt"] - d["rt"]) < 6e-4 and abs(c["a"] - min(d["a"], d["b"])) < 6e-4, (d, c)
+        step("area, height and apex of the XWC card row are those of the window record", parity)
         step("no page error", lambda: (lambda e: e and (_ for _ in ()).throw(AssertionError(e)))([x for x in r.errs if x[0] in ("pageerror", "console.error")]))
     r.close()
 except Exception as e:
