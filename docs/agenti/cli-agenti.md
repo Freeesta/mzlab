@@ -17,7 +17,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 ## Streams and exit codes
 - stdout is the data (CSV, JSON, a file list); stderr is progress (one line per job; `--progress jsonl` makes it one JSON line each), warnings and errors. Read stdout for results, stderr for diagnosis.
 - With `--json`, errors are an `errore/1` object on stdout (`error_key`, `params`, `hint`) as well as a line on stderr; the keys are stable.
-- Exit codes: 0 done; 1 data errors (a step or file failed, the other outputs are written); 2 usage (unknown option, unknown step, bad value); 3 plan problems (invalid plan, or a file written with a problem such as `convert` partial); 4 unreadable plan or missing/different input. `flow run --help` and each command's `--help` list their own.
+- Exit codes: 0 done; 1 data errors (a step or file failed, the other outputs are written); 2 usage (unknown option, unknown step, bad value); 3 plan problems (invalid plan, or a file written with a problem such as `convert` partial); 4 unreadable plan or missing/different input; 5 a `--sample` id the file does not have (`convert`, `channels`, `features`, `samples select`). `flow run --help` and each command's `--help` list their own.
 
 ## Sequence
 1. `mzlab-cli steps --json [--id ID[@V]]`: the `step/1` descriptors of this very binary (`params` is a JSON Schema; `executable_native` says whether `flow run` runs it). Plain `steps` gives one line per step.
@@ -28,7 +28,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 6. Read `RUN/prov.json`, `RUN/corsa.json` (`mzlab-cli flow report RUN`) and the output files. `mzlab-cli flow record RUN --roles ROLES.json` writes the `mzrun/1`; `flow verify` checks it.
 
 ## Commands with and without `--json`
-- With a `--json` flag: `flow run`, `flow check`, `steps`, `validate`, `dad` (all its answers are JSON; `--json` adds `errore/1`), `samples list` (`samples_list/1`, one line per file; exit 0 ok, 1 some file or sample refused or, with `--probe`, a `.wiff.scan` shorter than its index, 2 usage, 4 missing or unreadable input; stdout holds the data, `listing FILE` progress and warnings go to stderr).
+- With a `--json` flag: `flow run`, `flow check`, `steps`, `validate`, `dad` (all its answers are JSON; `--json` adds `errore/1`), `samples select` (`{"samples":[ids]}` or `errore/1`; exit 0, 2 usage, 4 missing file, 5 unknown id), `samples list` (`samples_list/1`, one line per file; exit 0 ok, 1 some file or sample refused or, with `--probe`, a `.wiff.scan` shorter than its index, 2 usage, 4 missing or unreadable input; stdout holds the data, `listing FILE` progress and warnings go to stderr).
 - Without it yet (not added in this change): `features` (CSV), `convert`, `flow report`, `flow record`, `flow verify`, `flow command`, `normative`, `insilico pack`, `msn-lib`, `msn-rules`, `msn-graph`, `explain-missing`, `background`, `manual-table`, `peak-auto`, `peak-auto-lr`, `peak-area`, `peak-edges`, `peak-split`, `peak-window`, `channels`, `dda-window`, `samples vars|group|table`, `ion-pattern`, `ion-mz`, `match-mz`, the `mol-*` commands and the `llm` subcommands. Several of these already print JSON (or CSV) by default and have a stable schema; read the command's `--help` before parsing.
 
 ## Rules for the agent
