@@ -18,7 +18,7 @@ usage: mzlab-cli ref-list FILE.csv [--name N] [--match X] [--set unit=da|ppm] [-
   --match X       also answer what the number X is compatible with in the list (ricerca/1 under \"match\")
   --out PATH      write there instead of the standard output
 
-The answer is {\"format\":\"reflist/1\",\"name\",\"items\":[{line,name,formula,adduct,mz,pol,note}],\"errors\":[{line,key,field,value}]}.
+The answer is {\"format\":\"reflist/1\",\"name\",\"compounds\",\"items\":[{line,name,formula,adduct,mz,pol,note}],\"errors\":[{line,key,field,value}]}.
 Exit codes: 0 all rows read; 1 some rows have errors (listed with their line, the good rows are in items); 2 usage; 4 unreadable file.";
 
 pub fn run(args: Vec<String>) -> Outcome {
@@ -83,7 +83,8 @@ pub fn run(args: Vec<String>) -> Outcome {
             Err(o) => return o,
         }
     }
-    let bad = list.contains("\"errors\":[{");
+    let bad = parse(list.as_bytes())
+        .is_ok_and(|v| !v.get("errors").map_or(&[][..], Value::arr).is_empty());
     let mut o = crate::emit(format!("{answer}\n"), &out);
     if bad && o.code == 0 {
         o.code = 1;

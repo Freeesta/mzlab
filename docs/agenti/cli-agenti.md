@@ -35,7 +35,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
   `--set traces=PATH` takes the traces (chromatogram, XIC, DAD) as JSON instead of files; with a `panel` on a trace the header ends with `panel,conc,conc_unit,correction,below,area_unit`.
   `--set shifts=true` and `--set auto=true` answer JSON.
 
-- `ref-list FILE.csv` (JSON `reflist/1`: items and line-numbered row errors; exit 1 = some rows wrong, 2 usage, 4 unreadable file; `--match X` adds `ricerca/1`): `liste-riferimento.md`.
+- `ref-list FILE.csv` (JSON `reflist/1`: items and line-numbered row errors; exit 1 = some rows wrong, 2 usage, 4 unreadable file; `--match X` adds `ricerca/1`): `reference-lists.md`.
 
 - `peak-auto` and `peak-auto-lr`: areas in counts x s; `--set area_unit=s|min` (`min` = the old counts x min).
 

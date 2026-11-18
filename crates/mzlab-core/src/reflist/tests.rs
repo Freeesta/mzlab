@@ -13,6 +13,7 @@ fn n(v: &Value, k: &str) -> usize {
 fn rows_with_mz_or_formula_become_ions() {
     let v = run("mz;name;formula;polarity\n100.5;A;;+\n;B;C6H12O6;\n;C;C6H12O6;-\n");
     assert_eq!((n(&v, "items"), n(&v, "errors")), (3, 0));
+    assert_eq!(v.get("compounds").and_then(Value::f64), Some(3.0)); // distinct names: A, B, C
     let it = v.get("items").unwrap().arr();
     assert_eq!(it[0].get("pol").and_then(Value::f64), Some(1.0));
     assert_eq!(it[1].get("adduct").and_then(Value::str), Some("[M+H]+"));
@@ -51,4 +52,21 @@ fn header_and_request_problems() {
     assert_eq!(n(&run("a;b\n1;2\n"), "errors"), 1);
     assert_eq!(n(&run(""), "errors"), 1);
     assert!(route("{}").is_err());
+}
+
+#[test]
+fn norman_style_headers_and_decimal_comma_are_read() {
+    let v = run("Compound_Name;Molecular_Formula;Monoisotopic_Mass;SMILES;Ionization_Mode\nCaffeine;C8H10N4O2;194,0804;CN1C=NC2=C1C(=O)N(C(=O)N2C)C;positive\n");
+    assert_eq!((n(&v, "items"), n(&v, "errors")), (1, 0));
+    let it = &v.get("items").unwrap().arr()[0];
+    assert_eq!(it.get("name").and_then(Value::str), Some("Caffeine"));
+    assert_eq!(it.get("mz").and_then(Value::f64), Some(194.0804));
+    assert_eq!(it.get("pol").and_then(Value::f64), Some(1.0));
+}
+
+#[test]
+fn a_header_with_monoisotopicmass_and_a_quoted_decimal_comma_gives_the_number() {
+    let v = run("name,monoisotopicmass\nA,\"150,5\"\n");
+    let it = &v.get("items").unwrap().arr()[0];
+    assert_eq!(it.get("mz").and_then(Value::f64), Some(150.5));
 }

@@ -60,9 +60,7 @@ def test_one_helper_and_the_engine_writes_the_line():
 
 def test_own_imports_skip_the_provenance_line():
     assert 'startsWith("#")' in (WEB / "campioni.js").read_text(encoding="utf-8")
-    # the CSV of a list is read in Rust: `#` lines (the provenance line) are skipped there
-    rust = (WEB.parent.parent / "crates" / "mzlab-core" / "src" / "reflist.rs").read_text(encoding="utf-8")
-    assert "starts_with('#')" in rust
+    # the CSV of a list is read in Rust, where the `#` provenance line is skipped: tested by `wrong_rows_carry_their_file_line` (crates/mzlab-core/src/reflist/tests.rs)
 
 
 def test_default_on_and_mzfinder_opts_out():

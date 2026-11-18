@@ -154,7 +154,7 @@ const LISTE = (() => {
   });
 
   // Creates the list object for an uploaded user suspect list
-  function userList(/** @type {string} */ id, /** @type {string} */ name, /** @type {string} */ filename, /** @type {Bag[] | null | undefined} */ rows) {
+  function userList(/** @type {string} */ id, /** @type {string} */ name, /** @type {string} */ filename, /** @type {Bag[] | null | undefined} */ rows, /** @type {number} */ compounds) {
     const items = (rows || []).map((/** @type {Bag} */ r, /** @type {number} */ i) => {
       let mz = r.mz;
       // Default to [M+H]+ for positive or [M-H]- for negative if formula is known and adduct is not
@@ -182,7 +182,7 @@ const LISTE = (() => {
       source: I18N.t("lst.user.source"),
       license: I18N.t("lst.user.of"),
       builtin: false,
-      info: { url: null, doi: null, version: null, date: new Date().toISOString().slice(0, 10), source_known: true, provenance: filename || "", compounds: new Set(items.map((/** @type {Bag} */ x) => x.name)).size, classes: 0 },
+      info: { url: null, doi: null, version: null, date: new Date().toISOString().slice(0, 10), source_known: true, provenance: filename || "", compounds, classes: 0 },
       items
     };
   }
@@ -410,7 +410,7 @@ const LISTE = (() => {
     if ((j.errors.length && !partial) || !j.items.length) return { list: null, errors: j.errors, valid: j.items.length };
     const name = customName || (filename ? filename.replace(/\.[^/.]+$/, "") : I18N.t("lst.user.name"));
     const id = "usr_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
-    const uList = userList(id, name, filename, j.items);
+    const uList = userList(id, name, filename, j.items, j.compounds);
     ST.userLists.push(uList);
     await idbSaveUserList(uList);
     reindex();

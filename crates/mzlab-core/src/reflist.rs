@@ -7,12 +7,46 @@ use crate::json::{parse, Value};
 use crate::jsonb::{int, num, text, write, Obj};
 
 const HEAD: [(&str, &[&str]); 6] = [
-    ("mz", &["mz", "m/z", "ionmz"]),
-    ("name", &["name", "compound", "compoundname"]),
-    ("formula", &["formula", "molecularformula"]),
-    ("polarity", &["polarity", "ionmode", "mode"]),
+    (
+        "mz",
+        &[
+            "mz",
+            "m/z",
+            "ionmz",
+            "monoisotopicmass",
+            "exactmass",
+            "mass",
+        ],
+    ),
+    (
+        "name",
+        &[
+            "name",
+            "compound",
+            "compoundname",
+            "preferredname",
+            "substance",
+            "title",
+        ],
+    ),
+    ("formula", &["formula", "molecularformula", "molformula"]),
+    (
+        "polarity",
+        &["polarity", "ionmode", "ionizationmode", "mode"],
+    ),
     ("adduct", &["adduct", "ion"]),
-    ("note", &["note", "comment", "source", "cas"]),
+    (
+        "note",
+        &[
+            "note",
+            "comment",
+            "source",
+            "cas",
+            "casrn",
+            "description",
+            "id",
+        ],
+    ),
 ];
 
 fn split(line: &str, sep: char) -> Vec<String> {
@@ -81,7 +115,7 @@ fn error(line: usize, key: &str, field: &str, value: &str) -> Value {
         .done()
 }
 
-/// `{"csv": TEXT, "name": optional}` -> `reflist/1`: `{format, name, items:[{line,name,formula,adduct,mz,pol,note}], errors:[{line,key,field,value}]}`.
+/// `{"csv": TEXT, "name": optional}` -> `reflist/1`: `{format, name, compounds, items:[{line,name,formula,adduct,mz,pol,note}], errors:[{line,key,field,value}]}`.
 /// A row needs an m/z or a formula; with a formula only, the ion is `[M+H]+` (negative polarity: `[M-H]-`) unless the adduct column says another.
 pub fn route(body: &str) -> Result<String> {
     let req = parse(body.as_bytes()).map_err(|_| Error::new("err.reflist.request"))?;
@@ -116,9 +150,15 @@ pub fn route(body: &str) -> Result<String> {
     } else {
         errors.push(error(1, "err.reflist.empty", "file", ""));
     }
+    let compounds = items
+        .iter()
+        .filter_map(|v| v.get("name").and_then(Value::str))
+        .collect::<std::collections::BTreeSet<_>>()
+        .len();
     let o = Obj::new()
         .put("format", text("reflist/1"))
         .put("name", text(name))
+        .i("compounds", compounds as i64)
         .put("items", Value::Arr(items))
         .put("errors", Value::Arr(errors))
         .done();
