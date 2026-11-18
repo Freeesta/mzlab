@@ -15,7 +15,7 @@ const HEADS = () => /** @type {Record<string, string>} */ ({ channel: t("canali.
 /** The tooltips of the columns of a split window. */
 const TIPS = () => /** @type {Record<string, string>} */ ({ overlap: t("canali.manint.h.overlap.tip"), pv: t("canali.manint.h.pv.tip"), label: t("canali.manint.nm.tip"),
   area: t("canali.manint.h.area.tip"), below: t("canali.manint.h.below.tip"), sn_zone: t("int.tbl.sn.title"), gaussian: t("canali.manint.h.gauss.tip"), asymmetry: t("canali.manint.h.asym.tip"), noise_score: t("canali.manint.h.nscore.tip") });
-/** The optional column groups the user switched on (INTOPT of picchi.js: the same switches as the dialog's, one undoable setting), as the engine names them. */
+/** The optional column groups the user switched on (INTOPT of picchi.js, one undoable setting), as the engine names them. */
 const optCols = () => typeof INTOPT === "undefined" ? [] : [INTOPT.sn && "sn", INTOPT.par && "fig", INTOPT.q && "quality"].filter(Boolean);
 /** The windows document the engine reads: the windows alone, or with the optional columns asked for. @param {string} w */
 const withCols = w => optCols().length ? `{"windows":${w},"columns":${JSON.stringify(optCols())}}` : w;
@@ -145,7 +145,7 @@ function rename(rec, v, only = false) {
   G.draw(p); G.uiSave(); return true;
 }
 
-/** The switches of the optional columns (S/N, chromatographic parameters, quality): the dialog's INTOPT, one undoable setting. */
+/** The switches of the optional columns (S/N, chromatographic parameters, quality): INTOPT of picchi.js, one undoable setting. */
 const optsHtml = () => typeof INTOPT === "undefined" ? "" : h`<span class="manint-opt" role="group" aria-label="${t("canali.manint.opt")}">${raw([["sn", "S/N", "int.tbl.sn.title"], ["par", t("int.tbl.par"), "int.tbl.par.title"], ["q", t("int.tbl.q"), "int.tbl.q.title"]]
   .map(([k, l, tip]) => h`<label title="${t(tip)}"><input type="checkbox" data-opt="${k}"${raw(INTOPT[k] ? " checked" : "")}> ${l}</label>`).join(""))}</span>`;
 /** The role of a sample's file (sample, blank, standard...) as the sheets of the Excel file write it. @param {string} name */
@@ -165,7 +165,7 @@ function xlsx() {
   if (X && X.count()) sheets.push(sheetOf(X.csv(), sheets.length ? t("canali.manint.xlsx.traces") : t("int.xlsx.sheet"), X.labels()));
   if (sheets.length) G.dlx(t("int.xlsx.file"), sheets, { table: "integration" });
 }
-/** The switches: each one is an undoable setting (the same command as the dialog's), then the table is asked again with the columns. @param {HTMLElement} el */
+/** The switches: each one is an undoable setting (`peaks.settings`), then the table is asked again with the columns. @param {HTMLElement} el */
 function wireOpts(el) {
   el.querySelectorAll("input[data-opt]").forEach(i => i.addEventListener("change", () => {
     const k = /** @type {HTMLInputElement} */ (i).dataset.opt || "";
