@@ -183,6 +183,7 @@ impl Reader for Finished {
         self.inner.not_carried()
     }
     #[rustfmt::skip]    fn unindexed(&self) -> (usize, usize) { self.inner.unindexed() }
+    #[rustfmt::skip]    fn listing(&mut self) -> crate::readers::Listing { self.inner.listing() }
     fn missing(&mut self, c: usize) -> usize {
         self.inner.missing(c)
     }

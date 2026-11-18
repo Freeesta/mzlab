@@ -1,9 +1,13 @@
 //! `mzlab-cli samples vars|group|table`: the name operations of `samples::route` (`variabili`, `nome_gruppo`, `proponi`), printing the JSON the page gets
-//! from `api/campioni/<op>`. The names come one per line from a file or the standard input.
+//! from `api/campioni/<op>`. The names come one per line from a file or the standard input. `samples list FILE...` is what the files hold, sample by
+//! sample, from their index alone (`samples_list/1`: the same JSON as the site's `native_samples` and the app's native listing).
 
 use std::io::Read;
+use std::path::{Path, PathBuf};
 
-use mzlab_core::json::Out;
+use mzlab_core::error::Error;
+use mzlab_core::json::{parse, Out, Value};
+use mzlab_core::readers::Limits;
 
 use crate::Outcome;
 
@@ -12,6 +16,7 @@ pub const HELP: &str = "mzlab-cli samples: how the names of a set of files split
 usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
        mzlab-cli samples group NAME...
        mzlab-cli samples table [--names FILE|-]
+       mzlab-cli samples list FILE... [--json] [--probe]   (samples list --help)
 
   --names FILE|-  one file name per line (default: the standard input)
   --pos N         also the manual variable of the N-th token (1 = first, -1 = last), cut at --sep (default \"_-. \")
@@ -119,6 +124,188 @@ fn table(args: Vec<String>) -> Result<String, String> {
     Ok(format!("{{\"files\":[{}]}}", files.join(",")))
 }
 
+const LIST_HELP: &str = "mzlab-cli samples list: what each file holds, sample by sample, from its container and index alone (samples_list/1).
+
+usage: mzlab-cli samples list FILE... [--json] [--probe]
+
+  FILE     a .wiff (its .wiff.scan beside it is not read), another vendor file or a .D / .raw folder
+  --json   one samples_list/1 JSON per line on stdout, in the order of the FILEs (a file that cannot be listed gives an errore/1 line); without it, a table
+  --probe  also compare the size of the .wiff.scan with where its indexed part ends and add `probe` to the JSON: {scan_bytes, indexed_end, status}
+           (ok | short: the copy is cut, exit 1 | longer: bytes after the last indexed section | n/a: no data file)
+Per sample: id, name, scans (as the index counts them), size (bytes of its section), kinds (ms, ms2, sim, mrm, dad), polarity, rt [min, max] and
+tic {apex_rt, apex, sum} (minutes), method (the .dam file), missing (index rows past the end of the data file), why (refused | inferred | empty),
+refused. Per file: format, bytes, scan {bytes, indexed_end}. No hashes, no log text, no operator. Nothing is written.
+Streams: data on stdout; progress (one line per file) and warnings on stderr.
+Exit codes: 0 listed; 1 a file or sample refused, or a cut .wiff.scan with --probe (the listing is still printed); 2 usage; 4 a file missing or unreadable.";
+
+struct Listed {
+    json: String,
+    refused: bool,
+    cut: bool,
+}
+
+/// `{"scan_bytes", "indexed_end", "status"}` of the data file of a pair, `n/a` for a format without one.
+fn probe_json(scan: Option<(u64, u64)>) -> (String, &'static str) {
+    let Some((bytes, end)) = scan else {
+        return ("{\"status\":\"n/a\"}".into(), "n/a");
+    };
+    let status = match bytes.cmp(&end) {
+        std::cmp::Ordering::Less => "short",
+        std::cmp::Ordering::Equal => "ok",
+        std::cmp::Ordering::Greater => "longer",
+    };
+    (
+        format!("{{\"scan_bytes\":{bytes},\"indexed_end\":{end},\"status\":\"{status}\"}}"),
+        status,
+    )
+}
+
+/// The `samples_list/1` of one file (a `.wiff` from its container and index alone), `Err((exit code, error))` when it cannot be listed.
+fn list_one(path: &Path, probe: bool) -> Result<Listed, (u8, Error)> {
+    if !path.exists() {
+        let name = path.display().to_string();
+        return Err((4, Error::new("err.session.fileNotFound").with("name", name)));
+    }
+    let fs = crate::flow_set::file_set(path).map_err(|e| (4, e))?;
+    let mut l = mzlab_lettori::apri_listing(fs, &Limits::desktop()).map_err(|e| (1, e))?;
+    let refused = (0..l.samples().len()).any(|i| l.refused(i).is_some());
+    let mut json = mzlab_core::readers::list_samples(&mut *l);
+    let mut cut = false;
+    if probe {
+        let (p, status) = probe_json(l.listing().scan);
+        cut = status == "short";
+        json.pop();
+        json += &format!(",\"probe\":{p}}}");
+    }
+    Ok(Listed { json, refused, cut })
+}
+
+fn mb(bytes: f64) -> String {
+    format!("{:.1} MB", bytes / 1e6)
+}
+
+/// The table of a `samples_list/1`: one header line per file and one line per sample (`-` where the reader does not say).
+fn list_table(json: &str, file: &str) -> String {
+    let Ok(v) = parse(json.as_bytes()) else {
+        return String::new();
+    };
+    let num = |x: Option<&Value>| x.and_then(Value::f64);
+    let n = v.get("samples").map_or(0, |s| s.arr().len());
+    let mut t = format!(
+        "{file}  {}  {n} samples  {}\n",
+        v.get("format").and_then(Value::str).unwrap_or("?"),
+        mb(num(v.get("bytes")).unwrap_or(0.0))
+    );
+    for s in v.get("samples").map_or(&[][..], Value::arr) {
+        let kinds: Vec<&str> = s
+            .get("kinds")
+            .map_or(&[][..], Value::arr)
+            .iter()
+            .filter_map(Value::str)
+            .collect();
+        let rt = s.get("rt").map(Value::arr).filter(|r| r.len() == 2);
+        let rt = rt.map_or("-".to_string(), |r| {
+            format!(
+                "{:.2}-{:.2}",
+                r[0].f64().unwrap_or(0.0),
+                r[1].f64().unwrap_or(0.0)
+            )
+        });
+        let apex = num(s.get("tic").and_then(|c| c.get("apex_rt")));
+        let note = ["why", "missing"]
+            .iter()
+            .filter_map(|k| {
+                let x = s.get(k)?;
+                Some(x.str().map_or_else(
+                    || format!("{k} {}", x.f64().unwrap_or(0.0)),
+                    |w| w.to_string(),
+                ))
+            })
+            .chain(s.get("refused").map(|_| "see --json".to_string()))
+            .collect::<Vec<_>>()
+            .join(", ");
+        t += &format!(
+            "  {:>4}  {}  {} scans  {}  {}  rt {rt} min  tic apex {}  {}  {note}\n",
+            num(s.get("id")).unwrap_or(0.0),
+            s.get("name").and_then(Value::str).unwrap_or(""),
+            num(s.get("scans")).unwrap_or(0.0),
+            if kinds.is_empty() {
+                "-".to_string()
+            } else {
+                kinds.join("+")
+            },
+            s.get("polarity").and_then(Value::str).unwrap_or("-"),
+            apex.map_or("-".to_string(), |a| format!("{a:.2}")),
+            num(s.get("size")).map_or("-".to_string(), mb),
+        );
+    }
+    t
+}
+
+/// `samples list FILE... [--json] [--probe]`.
+fn list_run(args: Vec<String>) -> Outcome {
+    let (mut files, mut json, mut probe) = (Vec::<PathBuf>::new(), false, false);
+    for a in args {
+        match a.as_str() {
+            "--help" | "-h" => return Outcome::ok(format!("{LIST_HELP}\n").into_bytes()),
+            "--json" => json = true,
+            "--probe" => probe = true,
+            o if o.starts_with('-') && o.len() > 1 => {
+                return Outcome::fail(&format!("unknown option {o} (samples list --help)"))
+            }
+            _ => files.push(PathBuf::from(a)),
+        }
+    }
+    if files.is_empty() {
+        return Outcome::fail("samples list needs at least one FILE");
+    }
+    let (mut out, mut err, mut code) = (String::new(), String::new(), 0u8);
+    for f in &files {
+        err += &format!("listing {}\n", f.display());
+        match list_one(f, probe) {
+            Ok(l) => {
+                if json {
+                    out += &(l.json.clone() + "\n");
+                } else {
+                    out += &list_table(&l.json, &f.display().to_string());
+                }
+                if l.refused {
+                    err += &format!(
+                        "warning: {}: a sample is refused (see its `refused`)\n",
+                        f.display()
+                    );
+                }
+                if l.cut {
+                    err += &format!("warning: {}: the .wiff.scan is shorter than the index says: a copy cut short\n", f.display());
+                }
+                if l.json.contains("\"status\":\"longer\"") {
+                    err += &format!("warning: {}: the .wiff.scan holds bytes after the last indexed section (a copy made while acquiring, or padding)\n", f.display());
+                }
+                code = code.max(u8::from(l.refused || l.cut));
+            }
+            Err((c, e)) => {
+                let msg = crate::error_text::human_error(&e);
+                err += &format!("error: {msg}\n");
+                if json {
+                    out += &crate::flow_json::error_json(
+                        c,
+                        &e,
+                        &msg,
+                        "check the path and that the whole pair was copied",
+                        &[],
+                    );
+                }
+                code = if c == 4 || code == 4 { 4 } else { code.max(c) };
+            }
+        }
+    }
+    Outcome {
+        code,
+        stdout: out.into_bytes(),
+        stderr: err,
+    }
+}
+
 pub fn run(args: Vec<String>) -> Outcome {
     let mut it = args.into_iter();
     let first = it.next();
@@ -130,6 +317,7 @@ pub fn run(args: Vec<String>) -> Outcome {
             let n: Vec<String> = it.collect();
             ("nome_gruppo", Ok(format!("{{\"names\":{}}}", list(&n))))
         }
+        Some("list") => return list_run(it.collect()),
         Some("--help" | "-h") | None => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Some(c) => return Outcome::fail(&format!("unknown samples operation {c}")),
     };

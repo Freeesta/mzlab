@@ -22,7 +22,7 @@ impl State {
         }
     }
 
-    /// `natsamples {members: [{name, fid}]}`: `{"format", "samples": [{id, name, scans}]}` of the dataset the members make.
+    /// `natsamples {members: [{name, fid}], listing?}`: the `samples_list/1` JSON of the dataset the members make (`listing`: from the index alone, the data file is not read).
     pub(crate) fn nat_samples(&self, p: &Value) -> Result<Answer> {
         let mut members: Vec<(String, PathBuf)> = Vec::new();
         for m in p["members"].as_array().map_or(&[][..], |a| a.as_slice()) {
@@ -34,7 +34,10 @@ impl State {
         if members.is_empty() {
             return Err(Error::new("err.file.notAccepted").with("name", ""));
         }
-        text(natives::samples(&members)?)
+        text(natives::samples(
+            &members,
+            p["listing"].as_bool().unwrap_or(false),
+        )?)
     }
 
     /// `natsame {members: [{name, fid}], names}`: `{"names"}`, those of `names` that are samples of these very members (same names and paths, unchanged since

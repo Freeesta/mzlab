@@ -18,15 +18,31 @@ fn run_before(b: &[u8], end: usize) -> String {
     chars.iter().rev().collect()
 }
 
-/// The `.dam` file names (lower case, no folder) written as UTF-16LE in `b`, whatever the byte alignment.
-fn dam_names(b: &[u8]) -> Vec<String> {
+/// The `.dam` file names (no folder, as written) in UTF-16LE in `b`, whatever the byte alignment.
+fn dam_raw(b: &[u8]) -> Vec<String> {
     let ext: Vec<u8> = ".dam".chars().flat_map(|c| [c as u8, 0]).collect();
     b.windows(ext.len())
         .enumerate()
         .filter(|(_, w)| w.eq_ignore_ascii_case(&ext))
-        .map(|(at, _)| run_before(b, at + ext.len()).to_ascii_lowercase())
+        .map(|(at, _)| run_before(b, at + ext.len()))
         .filter(|n| n.len() > 4)
         .collect()
+}
+
+/// `dam_raw` in lower case: what the sample and the methods are matched by.
+fn dam_names(b: &[u8]) -> Vec<String> {
+    dam_raw(b)
+        .into_iter()
+        .map(|n| n.to_ascii_lowercase())
+        .collect()
+}
+
+/// The name of the method file `sample` ran (its `.dam` without folder and extension, as written), `None` when it names none: the listing shows it.
+pub(super) fn dam_of(ole: &Ole, sample: u32) -> Option<String> {
+    let data = ole.read(&format!("SampleSubtree/Sample{sample}/SampleDABE/DATA"))?;
+    let mut name = dam_raw(&data).into_iter().next()?;
+    name.truncate(name.len() - 4);
+    Some(name)
 }
 
 /// The method of `sample` found by the name of its `.dam` file: its own `MethodN` when that one matches, else the first method that does.
