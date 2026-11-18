@@ -3,7 +3,7 @@
 //! A feature is the isotopologue of a lighter one when it lies one 13C (or one of the +2 steps: 13C2, 34S, 37Cl, 81Br) above it divided by
 //! the charge, within a few ppm, with the same apex (RT within `rt_tol` minutes) and a ratio of `area_win` (raw trace around the apex, no floor) that natural abundance allows. The
 //! allowed ratio is the one of an averagine of the same mass, computed with `isoscore::fine_pattern` (the same isotope table as the rest
-//! of the program): M+1 over M between a quarter and two and a half times the averagine value; M+2 over M up to 1.2 (two bromines) and
+//! of the program): M+1 over M between a quarter and two and a half times the averagine value; M+2 over M up to the M+2 of the most halogens the mass holds (Br2 1.95, Br3 2.92, Cl4 1.28, never below the old 1.2) and
 //! not below a fifth of the averagine value. Chains (M+1 of an M+1) follow the same rule from the previous member. The group is
 //! numbered after its lightest member (`iso_group` = position + 1, 0 = alone); isotopologues carry `FLAG_ISOTOPE`; members share the
 //! charge. Everything is evidence: a feature that sits one mass unit above a stronger co-eluting ion with the right ratio is grouped,
@@ -23,12 +23,28 @@ const D_PLUS2: [f64; 4] = [2.006_710, 1.995_796, 1.997_050, 1.997_954];
 const AVERAGINE_DA: f64 = 111.1254;
 const MASS_BIN: f64 = 25.0;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct IsoParams {
     pub max_charge: i32,
     pub rt_tol: f64,
     /// Tolerance of m/z, ppm or minus Da (`axis::half`); in Da (unit resolution) only the steps +1 and +2 are looked for.
     pub tol_ppm: f64,
+    /// The old cap of 1.2 on M+2/M (two bromines) in place of the bound from the halogens the mass allows; off by default.
+    pub legacy_plus2_cap: bool,
+}
+
+/// The derived text, with `legacy_plus2_cap` written only when on: the recipe fingerprint of the default stays the same.
+impl std::fmt::Debug for IsoParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut d = f.debug_struct("IsoParams");
+        d.field("max_charge", &self.max_charge)
+            .field("rt_tol", &self.rt_tol)
+            .field("tol_ppm", &self.tol_ppm);
+        if self.legacy_plus2_cap {
+            d.field("legacy_plus2_cap", &true);
+        }
+        d.finish()
+    }
 }
 
 impl Default for IsoParams {
@@ -37,6 +53,7 @@ impl Default for IsoParams {
             max_charge: 3,
             rt_tol: 0.05,
             tol_ppm: 5.0,
+            legacy_plus2_cap: false,
         }
     }
 }
@@ -94,12 +111,26 @@ fn averagine_ratios(mass: f64) -> (f64, f64) {
     (nominal[1] / nominal[0], nominal[2] / nominal[0])
 }
 
-/// Whether the area ratio `r` (isotopologue over its parent) is one natural abundance allows for a step of `k` mass units.
-fn plausible(r: f64, k: u8, expect: (f64, f64)) -> bool {
+/// The largest M+2/M of a compound of neutral `mass`: the averagine value plus the M+2 of the most halogens the mass holds (81Br/79Br 0.9727 each,
+/// 37Cl/35Cl 0.3199 each; Br2 1.95, Br3 2.92, Cl4 1.28, Cl6 1.92), never below the old cap of 1.2 (Meija et al., Pure Appl. Chem. 2016, 88, 293).
+fn plus2_cap(mass: f64, averagine: f64) -> f64 {
+    let room = (mass - 12.0).max(0.0);
+    let br = (room / 78.918).floor() * 0.9727;
+    let cl = (room / 34.969).floor() * 0.3199;
+    (br.max(cl) + averagine).max(1.2)
+}
+
+/// Whether the area ratio `r` (isotopologue over its parent of neutral `mass`) is one natural abundance allows for a step of `k` mass units.
+fn plausible(r: f64, k: u8, expect: (f64, f64), mass: f64, legacy: bool) -> bool {
     if k == 1 {
         r >= 0.25 * expect.0 - 0.005 && r <= 2.5 * expect.0 + 0.05
     } else {
-        r >= 0.2 * expect.1 && r <= 1.2
+        r >= 0.2 * expect.1
+            && r <= if legacy {
+                1.2
+            } else {
+                plus2_cap(mass, expect.1)
+            }
     }
 }
 
@@ -167,7 +198,7 @@ fn parent_of(
                 }
                 let mass = (f.mz[i] - ELECTRON_PROTON) * z as f64;
                 let r = f.area_win[j] / f.area_win[i].max(1e-300);
-                if !plausible(r, k, ex.ratios(mass)) {
+                if !plausible(r, k, ex.ratios(mass), mass, p.legacy_plus2_cap) {
                     continue;
                 }
                 let err = ((f.mz[i] + d / z as f64 - f.mz[j]) / f.mz[j]).abs() * 1e6;
@@ -213,6 +244,56 @@ pub fn group(f: &mut FileFeatures, p: &IsoParams) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Features at `mz` with the same apex and the given window areas, sorted by m/z.
+    fn feats(mz: &[f64], area: &[f64]) -> FileFeatures {
+        FileFeatures {
+            mz: mz.to_vec(),
+            rt: vec![5.0; mz.len()],
+            area_win: area.to_vec(),
+            flags: vec![0; mz.len()],
+            iso_group: vec![0; mz.len()],
+            charge: vec![0; mz.len()],
+            ..FileFeatures::default()
+        }
+    }
+
+    /// `iso_group` of a halogenated ion of neutral mass `m`: members at M, M+2, M+4... (81Br steps) with binomial areas.
+    fn groups_of(m: f64, area: &[f64], legacy: bool) -> Vec<u32> {
+        let mz: Vec<f64> = (0..area.len())
+            .map(|i| m + ELECTRON_PROTON + i as f64 * D_PLUS2[3])
+            .collect();
+        let mut f = feats(&mz, area);
+        let p = IsoParams {
+            legacy_plus2_cap: legacy,
+            ..IsoParams::default()
+        };
+        group(&mut f, &p).unwrap();
+        f.iso_group
+    }
+
+    #[test]
+    fn polybrominated_clusters_group_with_the_binomial_ratios() {
+        // Br2 M+2/M = 1.95, Br3 2.92 (Meija 2016 abundances): one group each, not [0, g, g] with M+2 as the head
+        for area in [vec![100.0, 195.0, 95.0], vec![100.0, 292.0, 284.0, 92.0]] {
+            let g = groups_of(400.0, &area, false);
+            assert!(g[0] != 0 && g.iter().all(|&x| x == g[0]), "{area:?}: {g:?}");
+        }
+    }
+
+    #[test]
+    fn the_old_cap_of_1_2_stays_selectable() {
+        let g = groups_of(400.0, &[100.0, 195.0, 95.0], true);
+        assert_eq!(g[0], 0, "{g:?}");
+        assert_eq!(g[1], g[2], "{g:?}");
+    }
+
+    #[test]
+    fn the_halogen_bound_follows_the_mass() {
+        // a 150 Da ion holds one Br at most (0.97 + averagine): a ratio of 1.95 is still refused
+        let g = groups_of(150.0, &[100.0, 195.0], false);
+        assert_eq!(g, vec![0, 0]);
+    }
 
     #[test]
     fn a_cursor_finds_the_partition_point_wherever_it_starts() {

@@ -112,7 +112,7 @@ async function ricForFormula(q) {
   if (embedded) {
     const j = await call("none");
     if (j && j.adduct) {
-      const mz = hr ? Number(j.mz).toFixed(4) : String(j.nominal);
+      const mz = hr ? Number(j.mz).toFixed(4) : String(j.mz0);
       const d = ricT("pal.formula.ion", { adduct: j.adduct });
       rows.push({ ic: RIC_ICON.formula, chip: ricT("pal.k.ion"), html: `${ricSub(j.formula)} <span class="pal-d">${EH(j.adduct || "")}</span> · m/z <b>${mz}</b>`, detail: d, aria: `${ricT("pal.k.ion")}: ${j.formula} ${j.adduct}, m/z ${mz}`, run: go(j.formula) });
       return [{ id: "formula", title: ricT("pal.res.formula"), rows }];
@@ -120,7 +120,7 @@ async function ricForFormula(q) {
   }
   const j = await call("");
   if (!j) return [];
-  const M = hr ? Number(j.neutral).toFixed(4) : String(j.nominal_neutral);
+  const M = hr ? Number(j.neutral).toFixed(4) : String(j.neutral0);
   rows.push({ ic: RIC_ICON.formula, chip: ricT("pal.k.formula"), html: `${ricSub(j.formula)} <span class="pal-d">${EH(ricT("pal.formula.mass", { m: M }))}</span>`, detail: "", aria: `${ricT("pal.k.formula")}: ${j.formula}, ${ricT("pal.formula.mass", { m: M })}`, run: go(j.formula) });
   const view = (await CALCADD.table(j.formula, "", "", "")).rows.map(a => ({ ...a, mz: hr ? String(a.mz4) : String(a.nominal) }));
   const pol = typeof E !== "undefined" && E.files.some((/** @type {any} */ f) => !f.gone && f.polarity === "negative") && !E.files.some((/** @type {any} */ f) => !f.gone && f.polarity === "positive") ? -1 : 1;

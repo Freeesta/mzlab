@@ -429,6 +429,7 @@ pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
         None => e,
     })?;
     let m = mass(&f);
+    let nom = nominal_mass(&f);
     if let Some(d) = offset.filter(|d| m + d < MZ_MIN) {
         return Err(Error::new("err.formula.mzLow").with("mz", round(m + d, 4)));
     }
@@ -438,9 +439,12 @@ pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
         .raw(",\"neutral\":")
         .num(round(m, 4))
         .raw(",\"nominal_neutral\":")
+        .int(nom as i64)
+        .raw(",\"neutral0\":")
         .int(round_half_up(m, 0) as i64)
         .raw(",\"adducts\":{");
-    let row = |o: &mut Out, z: f64| {
+    // `nominal` of an ion = the nominal mass plus the same shift as the exact one; `mz0` = the exact m/z rounded to an integer (the old `nominal`)
+    let row = |o: &mut Out, z: f64, shift: f64| {
         o.raw("\"mz\":")
             .num(round(z, 4))
             .raw(",\"mz5\":")
@@ -448,30 +452,42 @@ pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
             .raw(",\"mz1\":")
             .num(round_half_up(z, 1))
             .raw(",\"nominal\":")
+            .int(round_half_up(nom + shift, 0) as i64)
+            .raw(",\"mz0\":")
             .int(round_half_up(z, 0) as i64);
     };
     for (i, (a, s)) in adducts().iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(a).raw(":{");
-        row(&mut o, m + s);
+        row(&mut o, m + s, *s);
         o.raw("}");
     }
     o.raw("}");
     if adduct == Some(NO_ADDUCT) {
         o.raw(",\"adduct\":").str(inner.unwrap_or("")).raw(",");
-        row(
-            &mut o,
-            inner.and_then(|a| ion_mz(m, a)).unwrap_or(m) + offset.unwrap_or(0.0),
-        );
+        let z = inner.and_then(|a| ion_mz(m, a)).unwrap_or(m) + offset.unwrap_or(0.0);
+        row(&mut o, z, z - m);
     } else if let Some(a) = adduct {
         let z = ion_mz(m, a).ok_or_else(|| Error::new("err.adduct.unknown").with("adduct", a))?;
         o.raw(",\"adduct\":").str(a).raw(",");
-        row(&mut o, z + offset.unwrap_or(0.0));
+        let z = z + offset.unwrap_or(0.0);
+        row(&mut o, z, z - m);
     }
     if let Some(d) = offset {
         o.raw(",\"offset\":").num(d);
     }
     o.raw("}");
     Ok(o.0)
+}
+
+/// The nominal mass of a formula: the sum of the mass numbers of the most abundant isotope of each element (Murray et al., Pure Appl. Chem. 2013,
+/// 85, 1515); an element outside the table counts by its rounded exact mass.
+pub fn nominal_mass(f: &Formula) -> f64 {
+    f.iter()
+        .map(|(e, n)| {
+            let a = nuclide(e, None).map_or_else(|| mass(&vec![(e.clone(), 1)]).round(), |(a, _)| f64::from(a));
+            a * *n as f64
+        })
+        .sum()
 }
 
 /// Mass number and exact mass of a nuclide of `el` (`None` = its monoisotopic isotope), from the generated table `nuclidi`; `D` and `T` are
