@@ -88,7 +88,7 @@ try:
                 pg.keyboard.press("Escape"); frames(pg, 3)
                 click(pg, "file", True); s = state(pg); assert s["open"] and s["tab"] == "file", s
             else:
-                click(pg, "file", True); s = state(pg)      # with a file a second click goes back to the previous tool (docs: dati-barra.md)
+                click(pg, "file", True); s = state(pg)      # with a file a second click goes back to the previous tool (docs: data-bar.md)
                 assert s["open"] and s["tab"] == "lists", s
         step("no files: File after Adducts and losses / Lists shows the File panel; active button follows", lambda: scenario(p, lambda pg: sequence(pg, True)))
         step("one file: same sequence; a second click on the active tool goes back to the previous one", lambda: scenario(p, lambda pg: sequence(pg, False), with_file=True))

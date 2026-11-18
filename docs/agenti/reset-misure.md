@@ -1,5 +1,5 @@
 # Browser reset: measurements
-Timings and residues of the reset on the built site, for the three entry points: "Full reset" (`QQRESET.run("all")`), "Files" (`QQRESET.run("files")`) and the error-banner reset (`window.qqHardReset()`, which since #3369 is the same full wipe as `run("all")`). How it works: `dati-3200.md` ("Reset vero"); here only the numbers and what is left.
+Timings and residues of the reset on the built site, for the three entry points: "Full reset" (`QQRESET.run("all")`), "Files" (`QQRESET.run("files")`) and the error-banner reset (`window.qqHardReset()`, which since #3369 is the same full wipe as `run("all")`). How it works: `data-3200.md` ("Reset vero"); here only the numbers and what is left.
 
 ## How to measure
 - `python3 tools/prepara_sito.py` (builds the `.wasm` engine too; `tools/build_site.py` alone is not enough), then `python3 tests_e2e/misura_reset.py [--rep 3] [--only all_a_50,files_b_50] [--out FILE] [-v]`, then delete `site/`. It prints one JSON line per run and a table (median/max); it asserts nothing. `verifica.py` runs only `e2e*.py`, so CI never launches it.

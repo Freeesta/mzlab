@@ -1,4 +1,4 @@
-"""Flow starts light (docs/agenti/flow-grafica.md, «Avvio»): with the modules of the page and the .wasm held back by the test, the tab of Flow exists and opens on a skeleton with its
+"""Flow starts light (docs/agenti/flow-graphics.md, «Avvio»): with the modules of the page and the .wasm held back by the test, the tab of Flow exists and opens on a skeleton with its
 controls BEFORE any of those requests finishes; the shell (CORE) comes when its files are let through, the late modules (results, review, runners) only after the first draw, and
 once they arrive everything works as before. Order and presence of nodes, never milliseconds. Run from the repo root: python3 tests_e2e/e2e_flow_avvio.py"""
 import json, re, subprocess, sys, tempfile

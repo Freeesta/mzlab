@@ -6,7 +6,7 @@
   - The id holds for one recipe and one set of inputs (same bytes of the `.mzfeat`), not across different recipes.
 - **Counts per row**: `Aligned::state_counts(row)` = (detected, targeted, filled); presence is read from `state`, never from `area > 0`.
 - **Samples** (`samples.rs`, schema `docs/schemi/campioni-1.json`): metadata of each file of the series.
-  - `propose(&[(name, sha256)])` proposes type (`sample`, `blank`, `dark`, `t0`, `qc`, `std`, `calibration`), time, replicate, group, concentration and injection order from the names: it is a wrapper of `mzlab_core::samples::proponi` (`campioni/2`, `docs/agenti/campioni.md`) that brings the infusion back to the type and time of the `campioni/1` rules and gives the QC the time of the name.
+  - `propose(&[(name, sha256)])` proposes type (`sample`, `blank`, `dark`, `t0`, `qc`, `std`, `calibration`), time, replicate, group, concentration and injection order from the names: it is a wrapper of `mzlab_core::samples::proponi` (`campioni/2`, `docs/agenti/samples.md`) that brings the infusion back to the type and time of the `campioni/1` rules and gives the QC the time of the name.
   - The replicate is numbered per type, time and concentration; `istd` starts false.
   - `to_json` is canonical (same key order, same bytes) and `digest` is its SHA-256, the one recorded by the `campioni` operation of the `.mzflow`.
   - `from_json` rejects invalid schema, type and numbers (`error.badCampioni`); `to_tsv` writes the metadata table in the mzmine format.

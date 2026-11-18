@@ -18,7 +18,7 @@ One analysis in one canonical JSON file, in two modes: a `record` replicates a r
 - `plan`: the `mzflow/2` object verbatim (contract `$defs/mzflow2`) and `plan_sha256`. In a preset the plan inputs are slots: `name` is the slot, `sha256` is 64 zeros and the steps read `file:SLOT`.
 - `resolved`: instance → `step` (`id@version`), `algorithm` (`id@version`), `preset`, `params` (EVERY parameter, canonical: `mzflow/2` keeps only the differences from the defaults), `pin` (parameter → `fixed|estimate`), `estimates` (parameter → proof).
 - `inputs` (record only): `alias` (`S01`, `BLK_P1`…; letters, digits, `_+.-`, no path, no URL), optional original `name`, `sha256`, `bytes`, `type` (data type of the contract), `role` (`tipo` of `campioni/2`), optional `tipo_bianco`, `polarity` (`+|-`), `injection_order`, `replicate`, `series`; optional `raw_sha256` (the vendor file) and `converter` `{name, version, image_digest}`.
-- `slots` (preset only): `{slot (e.g. blank.procedure), type, role, polarity, min, max}`. `roles_sha256` (record): the `digest` of the `campioni/2` document (`campioni.md`).
+- `slots` (preset only): `{slot (e.g. blank.procedure), type, role, polarity, min, max}`. `roles_sha256` (record): the `digest` of the `campioni/2` document (`samples.md`).
 - `resources`: `{kind (library|suspects|adducts|transformations|rules|other), id, version, licence, url, retrieved (YYYY-MM-DD), sha256, bytes, builtin}`. `seeds`: `instance.param` → integer.
 - `decisions` (record): the manual acts of the chemist, in order: `{seq, kind (tpdec|feature|role|param), target, before, after, note_sha256, input_sha256}`; the `tpdec/1` decisions of the review are one kind.
 - `revisions` (integer) and optional `plan_chain` (the `plan_sha256` of each revision): parameters changed in the middle of a run.
@@ -36,7 +36,7 @@ One analysis in one canonical JSON file, in two modes: a `record` replicates a r
 ## Applying a preset written by another version
 - A parameter the running step has and the preset lacks (new): ALWAYS ask for confirmation, never silent; the answer goes in `compat.changes` (`confirmed`) and the limit `preset.param.new` is written.
 - A parameter removed, or a new version of a step: a Rust migration or a refusal with `err.flow.step.version`. `mzrun::migrate(bytes)` (`mzrun/migrate.rs`) applies the table of `flow::migrate` to `plan`, `resolved` (with `pin`, `estimates`) and `seeds`: each renamed parameter is a `compat.changes` entry `{kind: migrated, value, confirmed: true}` under the new name, each migrated instance a limit `preset.param.migrated` (`detail`: `g: spectra.msn_graph@1 → @2 (mz_basso → low_mz, …)`), `plan_sha256` and `self_sha256` recomputed; a file with nothing to migrate keeps its content.
-- A schema above the reader (`min_reader` greater than the reader's): the file opens read-only with `error.newerFormat` (`formato-nuovo.md`), never rewritten.
+- A schema above the reader (`min_reader` greater than the reader's): the file opens read-only with `error.newerFormat` (`new-format.md`), never rewritten.
 
 ## Comparing two records
 - Verdicts come from `results_digest` only, the SHA-256 of the lines `name<TAB>sha256\n` sorted by name over `results.entities`. It leaves out `ms`, `heap_peak_bytes`, `cached` and the agent.

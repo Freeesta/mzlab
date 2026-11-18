@@ -1,6 +1,6 @@
 # Sample metadata grid (Flow, `flow/lazy/flow-meta-grid.js`)
 
-English only. A virtual-row ARIA grid (`role=grid`, `aria-rowcount`, `aria-colindex`; 28 px rows, a window of about 13 rows plus 4 of margin, the active row always exists) on top of a `campioni/3` document (`campioni.md`). All logic is Rust, reached with `CDOC.post("<op>")` (`api/campioni/<op>`): the file lays out the cells and moves the focus.
+English only. A virtual-row ARIA grid (`role=grid`, `aria-rowcount`, `aria-colindex`; 28 px rows, a window of about 13 rows plus 4 of margin, the active row always exists) on top of a `campioni/3` document (`samples.md`). All logic is Rust, reached with `CDOC.post("<op>")` (`api/campioni/<op>`): the file lays out the cells and moves the focus.
 
 ## Document and saving
 - `F.metaGrid(S, input)` (`F.samplesEditor` calls it): the document lives in `S.samples[input.name]`; a `/2` is migrated with `migra`. With no document and with files open in Data, it opens by itself: `F.samplesFromData` → `migra` → `dal_file` with polarity, ranges, scans and instrument read from `E.files`.

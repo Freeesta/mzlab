@@ -172,7 +172,7 @@ def static_rules() -> list[str]:
 
 
 def rules_state() -> list[str]:
-    """E.tab / E.active / E.cur / E.panels and S.view / S.adding are written only by the transitions of mzlab/web/stato.js (docs/agenti/dati.md)."""
+    """E.tab / E.active / E.cur / E.panels and S.view / S.adding are written only by the transitions of mzlab/web/stato.js (docs/agenti/data.md)."""
     import re
     rx = re.compile(r"\b(?:E\.(?:tab|active|cur|panels)|S\.(?:view|adding)|UIP\.tog)\s*=(?!=)")
     bad = []
