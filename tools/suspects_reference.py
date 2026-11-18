@@ -70,7 +70,7 @@ def write_listings(rows=LISTING_ROWS, entries=LISTING_ENTRIES, nl: int = 2) -> b
 
 
 def read_listings(data: bytes) -> dict:
-    """Parses the extension of `write_listings` by offsets, the way docs/agenti/sospetti.md lays it out, and returns the JSON of `Listings::to_json`."""
+    """Parses the extension of `write_listings` by offsets, the way docs/agenti/suspects.md lays it out, and returns the JSON of `Listings::to_json`."""
     _, _, _, n, nf, nr, nman, flags, _ = struct.unpack_from("<4sHHIIIIII", data)
     assert flags & 1
     p = 32

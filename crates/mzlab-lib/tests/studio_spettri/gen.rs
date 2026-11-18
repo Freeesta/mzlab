@@ -1,4 +1,4 @@
-//! Synthetic MS/MS of the spectral study (`docs/agenti/studio-spettri.md`): CHNO(P,S,Cl) [M+H]+ precursors, fragmentation trees of neutral losses
+//! Synthetic MS/MS of the spectral study (`docs/agenti/study-spectra.md`): CHNO(P,S,Cl) [M+H]+ precursors, fragmentation trees of neutral losses
 //! with kinetic edges (A, E0), so the branching ratios move with the collision energy, and the noise of a real acquisition (2 ppm, 8 % lognormal,
 //! weak noise peaks). Every random draw comes from `decoy::XorShift` with a fixed seed, masses from `mzlab_core::elements`, exp/ln/cos
 //! from `libm` (the same bits on every target).

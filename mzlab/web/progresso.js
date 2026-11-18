@@ -17,7 +17,7 @@ function progCompose(profile, phase, local) {
   return Math.min(1, before + w[phase] * Math.max(0, Math.min(1, local || 0)));
 }
 
-/** the stages of an mzML's loading and their cost in ms ≈ fixed + per MB (Chromium, synthetic mzML of 0.16 and 76 MB, `progresso.md`): copy to OPFS, start of the
+/** the stages of an mzML's loading and their cost in ms ≈ fixed + per MB (Chromium, synthetic mzML of 0.16 and 76 MB, `progress.md`): copy to OPFS, start of the
  * pool worker, scan table, builder reading the file, its rounds from the scratch file (only when the peaks overflow the builder's memory), opening the index and listing the file («list», not «open»: that phase ends the provisional TIC, explore.js) */
 const MZML_STAGES = ["load", "start", "scan", "read", "index", "list"];
 const MZML_COST = { load: [25, 11.5], start: [60, 0], scan: [15, 2.7], read: [60, 19], index: [0, 19], list: [30, 0] };

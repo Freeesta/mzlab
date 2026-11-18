@@ -1,6 +1,6 @@
 # Release: a tag `vX.Y.Z` builds the site as a zip, the installers (macOS, Windows, Linux), the SBOMs in one zip and SHA256SUMS, and prepares a DRAFT
 # release with a download table and the notes of CHANGELOG.md (English). Nothing is published by itself: the owner reads the draft and presses "Publish release"
-# (that is also what makes Zenodo archive it). Steps for the owner: docs/agenti/rilascio.md.
+# (that is also what makes Zenodo archive it). Steps for the owner: docs/agenti/release.md.
 # Without a terminal: Actions > release > Run workflow on main, with the version typed twice. The draft is made from the head of main; the tag is
 # created when the owner publishes it. With the version left empty it is a dry run: everything is built and kept as artifacts, no release is made.
 # When a published draft creates its tag, this workflow starts again on that tag and sees the release exists: it does nothing.
@@ -315,7 +315,7 @@ jobs:
           rustup show
           rustup target add "$TARGET"
           sudo apt-get update -qq && sudo apt-get install -y -qq musl-tools
-      - name: Build (profile cli, the one of the analysis binary in docs/agenti/rilascio.md)
+      - name: Build (profile cli, the one of the analysis binary in docs/agenti/release.md)
         run: |
           export "CC_${TARGET//-/_}=musl-gcc"
           cargo build --locked --profile cli --target "$TARGET" -p mzlab-cli

@@ -212,7 +212,7 @@ def test_guard_std_sorts_only_sortc_in_wasm_crates():
 
 
 # Std exp/ln/pow/trig come from the system library in a native build and from the libm port in the .wasm, which differ in the last bit:
-# the engine crates call `libm::` so the site, the app and the CLI write the same bytes (docs/agenti/parita.md, «Funzioni matematiche»).
+# the engine crates call `libm::` so the site, the app and the CLI write the same bytes (docs/agenti/parity.md, «Funzioni matematiche»).
 MATH_STD = re.compile(r"\.(exp|ln|log10|log2|powf|sin|cos|tan|asin|acos|atan|atan2|sinh|cosh|tanh|exp2|exp_m1|ln_1p|cbrt|hypot)\(")
 
 

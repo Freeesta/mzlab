@@ -14,8 +14,8 @@ Not done here: no tool was installed or run, no result quality was compared (tha
 - **Libraries**: `.mzlib`; parsers for MSP, MGF, MassBank `.txt`, MoNA/GNPS/mzMine JSON; entropy, cosine, modified cosine, analogue search, decoys and FDR estimate (`spectral-match.md`, `measurements.md`).
 - **MS/MS interpretation**: in-silico candidates from a PubChemLite package (`insilico.md`), MS2 engine and MetFrag-like fragmentation shown as evidence only, off by default (`attributio-ms2.md`), MSn fragmentation graph and fragment formulae (`msn-graph.md`, `msn-interpret.md`), class rules (`classes.md`), Schymanski levels (`levels.md`). No external service is called (`rust-step.md`).
 - **Statistics**: Welch/ANOVA with Benjamini-Hochberg, PCA, KMD as native-only steps; no view shows p-values (`stat.md`).
-- **Workflows and provenance**: `mzflow/2` plans checked before running, `prov/1` record with SHA-256 of inputs and every parameter marked estimated or fixed (`rust-flow.md`); `mzrun/1` record/preset, site and app routes still to come (`mzrun.md`); site, app and CLI give the same bytes (`parita.md`).
-- **Reports and exports**: printable HTML and JSON study report `mzreport/1` (`data-tools.md`); table CSV (`full`, `full_mzmine`, `quant`), mzTab-M (`cli-passi.md`, `mzfeat-tabella.md`); FBMN zip, SIRIUS `.ms`, MGF, MSP/MassBank (`mzfinder-untargeted.md`, `cli-passi.md`).
+- **Workflows and provenance**: `mzflow/2` plans checked before running, `prov/1` record with SHA-256 of inputs and every parameter marked estimated or fixed (`rust-flow.md`); `mzrun/1` record/preset, site and app routes still to come (`mzrun.md`); site, app and CLI give the same bytes (`parity.md`).
+- **Reports and exports**: printable HTML and JSON study report `mzreport/1` (`data-tools.md`); table CSV (`full`, `full_mzmine`, `quant`), mzTab-M (`cli-passi.md`, `mzfeat-table.md`); FBMN zip, SIRIUS `.ms`, MGF, MSP/MassBank (`mzfinder-untargeted.md`, `cli-passi.md`).
 - **Tables read from other tools**: mzMine, FBMN, MS-DIAL alignment `.txt`, GNPS2 (`mzfinder-untargeted.md`).
 - **Deployment**: static site with an offline copy (`export-data.md`, `compat-safari.md`), Tauri desktop app (`rust-desktop.md`), `mzlab-cli` (`cli.md`); MIT licence (`LICENSE`); no account.
 
@@ -61,7 +61,7 @@ Other tools read (not in the matrix):
 
 ## 3. Findings
 ### (a) Ten things users of those tools rely on that mzLab lacks
-Ranked by likely value for a university analytical lab. Effort S/M/L follows the repo's architecture: a function needs Rust engine code, a `step/1` descriptor, the `.wasm` and the native side, and a parity test (`parita.md`, `rust-step.md`); S = a new output or reader on existing data, M = a new engine module plus a view, L = new science or a new file format.
+Ranked by likely value for a university analytical lab. Effort S/M/L follows the repo's architecture: a function needs Rust engine code, a `step/1` descriptor, the `.wasm` and the native side, and a parity test (`parity.md`, `rust-step.md`); S = a new output or reader on existing data, M = a new engine module plus a view, L = new science or a new file format.
 
 | # | Missing | Who has it | Value | Effort | Note from the docs |
 |---|---|---|---|---|---|
@@ -81,12 +81,12 @@ Also absent but of lower value for a university lab: electronic signatures and a
 ### (b) Five strengths worth stating publicly
 1. **No installation, no account, no upload**: the site reads six vendor families in the browser and keeps an offline copy (`native-reading.md`, `export-data.md`). Among the tools read, MZmine needs an account [1], GNPS and XCMS Online need an upload [13][7], and vendor reading elsewhere is tied to Windows or to MSConvert for part of the formats [1][8][12].
 2. **Triple-quadrupole and non-targeted HR in one free tool**: MRM is a paid module in MZmine [1], a companion program for MS-DIAL [4], and Skyline states it is not meant for non-targeted work [11]. Limit to state with it: no calibration curve yet.
-3. **Same bytes in site, app and CLI**, with parity tests and deterministic maths (`parita.md`).
+3. **Same bytes in site, app and CLI**, with parity tests and deterministic maths (`parity.md`).
 4. **Provenance by default**: plan checked before the run, `prov/1` with SHA-256 of every input and each parameter marked estimated or fixed, `conv/1` listing what a conversion did not carry (`rust-flow.md`, `cli-convert.md`).
 5. **Open in both directions**: reads mzMine, FBMN, MS-DIAL and GNPS2 tables; writes mzML, FBMN, SIRIUS `.ms`, mzTab-M, MSP/MassBank (`mzfinder-untargeted.md`, `cli-passi.md`); identifications are shown as evidence with Schymanski levels, never raised automatically (`levels.md`).
 
 ### (c) Interoperability gaps
-- **mzTab-M**: written without the SME section (`mzfeat-tabella.md`); jmzTab-m 1.0.6 finds no structural error and 4 semantic errors for empty mandatory fields (`measurements.md`). The specification says SMF and SME SHOULD be present [21]; MS-DIAL writes SME when MS/MS is assigned [5] and SIRIUS writes mzTab-M [14]. No mzTab-M reader in mzLab.
+- **mzTab-M**: written without the SME section (`mzfeat-table.md`); jmzTab-m 1.0.6 finds no structural error and 4 semantic errors for empty mandatory fields (`measurements.md`). The specification says SMF and SME SHOULD be present [21]; MS-DIAL writes SME when MS/MS is assigned [5] and SIRIUS writes mzTab-M [14]. No mzTab-M reader in mzLab.
 - **SIRIUS**: `.ms` and MGF out only; five adducts accepted by the campaign export (`attributio-export.md`); results (`analysis_report.mztab`, TSV summaries [14]) are not read.
 - **GNPS FBMN**: `quant.csv` in the MZmine layout, `ms2.mgf`, `iin_edges.csv` are written (`mzfinder-untargeted.md`). GNPS requires the feature id to equal `SCANS=` in the MGF [13]; the docs name `FEATURE_ID` only: to verify in the code and add to the doc.
 - **MZmine**: full table read and `full_mzmine` written (`cli-passi.md`); the column names of MZmine's newer modular CSV are not in its docs [1], so compatibility with mzmine 4 exports should be tested on a file.
@@ -94,7 +94,7 @@ Also absent but of lower value for a university lab: electronic signatures and a
 - **XCMS, OpenMS, patRoon, asari tables**: adapters exist only in the benchmark tools (`mzfinder-benchmark.md`), not in the program; OpenMS featureXML/consensusXML [8] are neither read nor written.
 - **Skyline**: its small-molecule transition list uses columns such as Molecule List Name, Precursor Name, Precursor Formula, Precursor Adduct, Precursor RT, Product m/z [11]; mzLab's transition CSV has its own columns (`transitions.md`): a converter in both directions is small work. Skyline `.blib` libraries are not read.
 - **Libraries**: MSP, MGF, MassBank, MoNA/GNPS/mzMine JSON are read (`spectral-match.md`); MZmine also reads JCAMP `.jdx` [1]; NIST binary libraries and mzCloud are vendor-side [17].
-- **mzML out**: complete for all read families (`cli-convert.md`); this is the entry format of GNPS, SIRIUS, XCMS, MassCube, patRoon and OpenMS [13][14][6][9][10][8]. Conformance and known holes: `mzml-matrice.md`.
+- **mzML out**: complete for all read families (`cli-convert.md`); this is the entry format of GNPS, SIRIUS, XCMS, MassCube, patRoon and OpenMS [13][14][6][9][10][8]. Conformance and known holes: `mzml-matrix.md`.
 - **Docs to align**: `flow-mzmine.md` lists mzTab-M among exports with no step, while `cli-passi.md` and `flow-coverage-tabui.md` describe `export.mztab` as a step.
 
 ### (d) Risks

@@ -11,7 +11,7 @@ use mzlab_core::mzml_estimate;
 use super::table::{parse, Row};
 use super::traces::{channels, Channel};
 use crate::sortc::SortC;
-use mzlab_core::peak1d::{find_peak, Found};
+use mzlab_core::peak1d::{find_peak_basis, Found, SnrBasis};
 
 /// What the step writes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -34,6 +34,8 @@ pub struct Settings {
     pub group_rt: f64,
     /// What the areas are measured from: `Zero` (the default) or `Edges` (the line between the edges of the peak, what `@1` plans keep).
     pub baseline: Baseline,
+    /// The trace the noise of the S/N is read on: `Raw` (the default) or `Smoothed` (the former reading).
+    pub snr_basis: SnrBasis,
 }
 
 impl Default for Settings {
@@ -48,6 +50,7 @@ impl Default for Settings {
             max_candidates: 5,
             group_rt: 0.1,
             baseline: mzlab_core::baseline::DEFAULT,
+            snr_basis: SnrBasis::Raw,
         }
     }
 }
@@ -77,6 +80,10 @@ impl Settings {
                 Some("edges") => Baseline::Edges,
                 _ => Baseline::Zero,
             },
+            snr_basis: get("snr_basis")
+                .and_then(Value::str)
+                .and_then(SnrBasis::parse)
+                .unwrap_or(d.snr_basis),
         }
     }
 }
@@ -130,7 +137,7 @@ fn integrate(row: &Row, c: Option<&Channel>, s: &Settings) -> Cell {
         };
     };
     let w = row.rt_window.unwrap_or(s.rt_window);
-    let mut found = find_peak(&c.t, &c.y, Some(rt), w, s.smooth, s.min_points);
+    let mut found = find_peak_basis(&c.t, &c.y, Some(rt), w, s.smooth, s.min_points, s.snr_basis);
     let below = found.as_mut().and_then(|f| measured(c, f, s.baseline));
     let flag = match &found {
         None => "no_peak",
@@ -162,13 +169,14 @@ fn measured(c: &Channel, f: &mut Found, base: Baseline) -> Option<f64> {
 
 /// Up to `s.max_candidates` peaks of a channel, highest first (`peak1d::peaks`).
 fn candidates(c: &Channel, s: &Settings) -> Vec<Found> {
-    let mut v = mzlab_core::peak1d::peaks(
+    let mut v = mzlab_core::peak1d::peaks_basis(
         &c.t,
         &c.y,
         s.smooth,
         s.min_points,
         s.snr_min,
         s.max_candidates,
+        s.snr_basis,
     );
     v.iter_mut().for_each(|f| {
         measured(c, f, s.baseline);

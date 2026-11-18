@@ -47,7 +47,7 @@ Bench: a test crate outside the repository with the real `mzlab-core` functions 
 ¹ `[profile.release.package.<crate>] opt-level = 3` for `mzlab-core`, `miniz_oxide`, `quick-xml`, `base64`: in the bench it gives the same speed as O3 on everything; in the engine almost all the code is `mzlab-core`, so it weighs the same as O3.
 - **`wasm-opt` level**: does not change speed (O3 + `-Oz` = O3 + `-O3` within noise, 535 vs 537 KB): only rustc's `opt-level` matters. Keep `-Oz`.
 - **O2 / Os**: O2 like O3 (slower centroids, 547 KB); Os in between (499 KB, HR read 1168 ms in Node). Not worth it.
-- **SIMD128 (auto-vectorization)**: −1.5 % size with `z`, +0.6 % with O3; +5-15 % on read and index, none on the rest. Consistent with `ottimizzazioni-tentate.md` (22/10, 20 LR Full Scan: 9.1 vs 9.3 s): the gain is small but free.
+- **SIMD128 (auto-vectorization)**: −1.5 % size with `z`, +0.6 % with O3; +5-15 % on read and index, none on the rest. Consistent with `optimizations-tried.md` (22/10, 20 LR Full Scan: 9.1 vs 9.3 s): the gain is small but free.
 - **zlib-rs** (`zlib-rs` feature of `flate2`, already in `Cargo.lock` 0.6.8): +42-43 KB (+8 %) on the bench; inflate ×1.35-2.3, HR index −9 % (Chromium).
 - **SHA crates** (`sha1`, `sha2` at O3 in the `release` profile; `upload::Passata` fingerprints of a file while it is copied into OPFS): SHA-256 + SHA-1 on 64 MB ×1.68 in Node (774 → 461 ms) and ×1.34 in Chromium 153 (654 → 489 ms), median of 9, `tools/banco_wasm.py` variant `sol_hash`, identical check value; ±1 KB per module. With 300 MB in Chromium the hash (2030 ms) remains slower than the copy into OPFS (1511 ms): copy + hash 2156 ms, so the copy waits for the hash.
 - **binaryen 132/133 vs 112**: same size (−0.1 %), same speed, `wasm-opt` **8× faster** (1.5 vs 12.8 s for the bench).
@@ -84,7 +84,7 @@ Bench: a test crate outside the repository with the real `mzlab-core` functions 
 - **One large file across several workers**: across files the pool already scales ×4; within ONE large file, without threads, the index could be split by scan ranges across the pool workers (separate study if real files call for it).
 
 ## 7. Discarded paths
-Wasm threads, memory64, relaxed SIMD, exception handling, explicit SIMD, `DecompressionStream`, double build, O2/Os, `wasm-opt` levels other than `-Oz`, `wasm32v1-none`, `-Zbuild-std`, `Module` cache in IndexedDB, `simd-json`: one line each, with the numbers, in `ottimizzazioni-tentate.md`, section "WebAssembly: leve scartate".
+Wasm threads, memory64, relaxed SIMD, exception handling, explicit SIMD, `DecompressionStream`, double build, O2/Os, `wasm-opt` levels other than `-Oz`, `wasm32v1-none`, `-Zbuild-std`, `Module` cache in IndexedDB, `simd-json`: one line each, with the numbers, in `optimizations-tried.md`, section "WebAssembly: leve scartate".
 
 ## 8. Decisions in force
 - **One build only, the fast one**: SIMD128 on, `opt-level = 3` where time is spent, recent binaryen `-Oz` for size, no fallback. Two builds would cost a second round of `sito-wasm-*` (~600 s of CPU in CI per PR), double the bytes in `site/` and double the e2e tests.

@@ -1,7 +1,7 @@
 # Map of loading a file (site and desktop app)
 
-A snapshot of the code, not a plan: where a file goes from the click to the screen, what it costs, what is missing. Where the area guide disagrees with the code it is written under "Doubts". "Not found" = searched for and absent. Details already written elsewhere are not repeated: `startup.md` (page start-up), `progresso.md` (progress bar), `native-reading.md` (`.raw`, `.wiff`, `.D` without mzML), `readers-module.md` (modules per family), `mzidx.md` and `rust-mzidx.md` (index and pool), `rust-desktop.md`
-(desktop), `capabilities.md`, `fast-viewer.md` (after opening: XIC, zoom), `measurements-speed-site.md` and `ottimizzazioni-tentate.md` (numbers and routes already discarded: read them BEFORE optimizing), `measurements-machines.md` (opening on slow machines).
+A snapshot of the code, not a plan: where a file goes from the click to the screen, what it costs, what is missing. Where the area guide disagrees with the code it is written under "Doubts". "Not found" = searched for and absent. Details already written elsewhere are not repeated: `startup.md` (page start-up), `progress.md` (progress bar), `native-reading.md` (`.raw`, `.wiff`, `.D` without mzML), `readers-module.md` (modules per family), `mzidx.md` and `rust-mzidx.md` (index and pool), `rust-desktop.md`
+(desktop), `capabilities.md`, `fast-viewer.md` (after opening: XIC, zoom), `measurements-speed-site.md` and `optimizations-tried.md` (numbers and routes already discarded: read them BEFORE optimizing), `measurements-machines.md` (opening on slow machines).
 
 ## 1. Site: the common path (mzML)
 
@@ -78,14 +78,14 @@ Native samples (`.raw`, `.wiff`, `.D`): `lr_put` with `nat` copies the members i
 | Lazy reading with an index | present | `.mzidx`: scan table in memory, peaks in windows (`idxwalk.rs`), TIC/base peak inside the index (opening reads no peaks); mzML with an offset index: headers only |
 | First approximate picture then refined | partial | provisional TIC from the table (step 6); map preview. No approximate XIC/spectrum; a `.raw` already has one during the copy (`tic-nativo.js`) |
 | Workers / threads | present | site: engine worker, index pool, helpers, fingerprint worker, module workers; desktop: rayon, thread per request, conversion queue. The page does no heavy I/O |
-| Preloading the next / the likely one | partial | engine and `.wasm` start at `DOMContentLoaded` (`browser.js`), manufacturer scripts cached by the service worker, Ketcher and 3D map at idle, `XICBTN.prefetch`; queued files are indexed by the pool BEFORE opening them. No speculative preload of data TIC/XIC/spectra: not found (routes tried in `ottimizzazioni-tentate.md`) |
+| Preloading the next / the likely one | partial | engine and `.wasm` start at `DOMContentLoaded` (`browser.js`), manufacturer scripts cached by the service worker, Ketcher and 3D map at idle, `XICBTN.prefetch`; queued files are indexed by the pool BEFORE opening them. No speculative preload of data TIC/XIC/spectra: not found (routes tried in `optimizations-tried.md`) |
 | Cache of decoded data | partial | yes: `.mzidx` on disk (the decoded data sorted by m/z), `CACHE` LRU of responses, map tile pyramid in OPFS (`rust-worker.js` 39-70). No: decoded spectra, mmap maps (desktop), desktop index after a cold restart |
 | Parallel decoding | present | SharedArrayBuffer helpers (only with isolation), `parse_helped` (3 threads), sorting up to 8 threads (native), mzML encoding in a pool (`mzmlwrite/pool.rs`); the engine `.wasm` stays sequential where there is no isolation |
 | Zero-copy Rust/WASM/JS | partial | numeric results transferred and recycled; `Blob` by reference; `mmap` on the desktop. One copy for every `read` towards WASM and every chunk written to OPFS; tables copied in `prepare_upload` |
 | Compact structures | present | column-based `.mzidx` with `fence` for blocks of 16384, HR MS1 in `f32`, binary column transport of the modules (`transport.rs`), `xicbin`; table rows as compact JSON |
 | Cancellation | partial | site: queue, copy and builder yes, `prepare_upload` no; desktop: index builds yes (`lr_cancel`), `natsamples` and `nat2mzml` no |
 | Memory limits | present | §4; module caps (`tools/build_lettori_wasm.sh`), engine `.wasm` ≤ 2 174 976 B |
-| Faithful progress | present on the site, partial on the desktop | `progresso.md`; desktop without events for indexing |
+| Faithful progress | present on the site, partial on the desktop | `progress.md`; desktop without events for indexing |
 
 ## 6. Doubts and discrepancies found (verify before acting)
 

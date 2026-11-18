@@ -1,4 +1,4 @@
-//! wasm-bindgen bridge of `api/tic_background` (`mzlab_core::ticbg_route`, `docs/agenti/tic-fondo.md`): the TIC or BPC without the chemical
+//! wasm-bindgen bridge of `api/tic_background` (`mzlab_core::ticbg_route`, `docs/agenti/tic-background.md`): the TIC or BPC without the chemical
 //! background, over the `.mzidx` of a file and of its blank. A `.wasm` of its own (the engine has no room for it), fetched by the worker of the
 //! engine on the first request (`load("ticfondo")` of `mzlab/web/rust-msngrafo.js`). Errors are JSON `{"error_key", "params"}` strings, as in the engine.
 #![forbid(unsafe_code)]
