@@ -30,6 +30,9 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 ## Commands with and without `--json`
 - With a `--json` flag: `flow run`, `flow check`, `steps`, `validate`, `dad` (all its answers are JSON; `--json` adds `errore/1`), `samples select` (`{"samples":[ids]}` or `errore/1`; exit 0, 2 usage, 4 missing file, 5 unknown id), `samples list` (`samples_list/1`, one line per file; exit 0 ok, 1 some file or sample refused or, with `--probe`, a `.wiff.scan` shorter than its index, 2 usage, 4 missing or unreadable input; stdout holds the data, `listing FILE` progress and warnings go to stderr).
 - Without it yet (not added in this change): `features` (CSV), `convert`, `flow report`, `flow record`, `flow verify`, `flow command`, `normative`, `insilico pack`, `msn-lib`, `msn-rules`, `msn-graph`, `explain-missing`, `background`, `manual-table`, `peak-auto`, `peak-auto-lr`, `peak-area`, `peak-edges`, `peak-split`, `peak-window`, `channels`, `dda-window`, `samples vars|group|table`, `ion-pattern`, `ion-mz`, `match-mz`, the `mol-*` commands and the `llm` subcommands. Several of these already print JSON (or CSV) by default and have a stable schema; read the command's `--help` before parsing.
+- `manual-table` has no `--json` yet: its answer is CSV on stdout with a stable header (`docs/agenti/transitions.md`), errors on stderr, exit 0 done / 2 usage or data error.
+  `--set traces=PATH` takes the traces (chromatogram, XIC, DAD) as JSON instead of files; with a `panel` on a trace the header ends with `panel,conc,conc_unit,correction,below,area_unit`.
+  `--set shifts=true` and `--set auto=true` answer JSON.
 
 - `peak-auto` and `peak-auto-lr`: areas in counts x s; `--set area_unit=s|min` (`min` = the old counts x min).
 

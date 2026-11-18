@@ -99,7 +99,6 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | memory contract of the WASM modules (`mzlab-core::budget`, offset outputs, slabs, test flow) | `docs/agenti/memory.md` |
 | acquisition method (`metodo/1`, `method.rs`, `method_wiff`, `method_raw`, schema) | `docs/agenti/method.md` |
 | main metrics over time (`tools/metriche.py`, `stat-ci` branch, trends) | `docs/agenti/metrics.md` |
-| Measurements: diary (DO NOT READ) [file title] | `docs/agenti/misure-diario.md` |
 | chemical structure record `mol/1` (`crates/mzlab-mol`: types, JSON, core hash; SMILES/molfile readers; CIP R/S and E/Z descriptors, `cip/1`, `disegno-cip.js`) | `docs/agenti/mol.md` |
 | molecule database (`crates/mzlab-core/src/molecules/`, `molecules/1`: record, CSV and canonical JSON, search, catalog/imported/user levels, catalog `mzlab/web/molecole/catalogo.csv`, `api/molecules/*` routes) | `docs/agenti/molecules.md` |
 | infusion MSn fragmentation graph (`msngrafo/1`: ions merged across levels and energies, proposed fragment formulas, "Fragmentation graph" tab) and standards' MSn tree library (`msnlib/1`, acquisition protocol) | `docs/agenti/msn-graph.md` |
@@ -172,7 +171,10 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | progressive startup (`AVVIO`), «interface at once» rule; loading area and table (area: header (full screen, logo, (i)), loading area and table,…) | `docs/agenti/startup.md` |
 | statistics as steps: Welch/ANOVA with BH, PCA and KMD in Rust (`crates/mzlab-feat/src/stat/`, `table.stats`, `table.pca`, `table.kmd`, `stat/1`) | `docs/agenti/stat.md` |
 | positioning study: mzLab against other LC-MS tools (feature matrix, 10 missing functions with value and effort, 5 strengths, interoperability gaps, risks; public sources with the date read) | `docs/agenti/study-competitors.md` |
-| scientific correctness study of the calculations (report only, in English): masses and formulas, chromatography and quantification, spectral scores, statistics; CONFIRMED and SUSPECTED findings with severity, `file:line`, expected value and source, reproduction | `docs/agenti/study-science.md` |
+| study findings, area 2 (B1-B7): feature area on uneven MS1 spacing, CWT, S/N, `find_peak` FWHM, area units | `docs/agenti/study-science-chromatography.md` |
+| study findings, area 1 (A1-A6): masses and formulas, isotope grouping, mass-error sign, `[M]+`, `nominal`, mass tables | `docs/agenti/study-science-mass.md` |
+| study findings, areas 3-4 (C1-C3, D1-D2): spectral matching scores, replicate CV, PCA ellipses | `docs/agenti/study-science-matching-stats.md` |
+| scientific correctness study (report only): method, severity words, suspected findings, checked-correct list, coverage gaps; confirmed findings are in the three `study-science-*` files | `docs/agenti/study-science.md` |
 | security study: exploitable weaknesses with a crafted file or by probing the published site (Rust readers, front end, desktop app, supply chain), severity, `file:line`, how to reproduce, fix | `docs/agenti/study-security.md` |
 | spectral study on synthetic data: fragmentation tree generator, scenarios E0-E6, arms against the engine (calibrated null, coincidence p-value, sub-formulas, multi-shift analogs), MISURA studio_* rows | `docs/agenti/study-spectra.md` |
 | test-suite quality study (report only): tests that cannot fail, hand mutation of 30 functions with survivors, parity gaps, coverage holes, flakiness and cost, unread fixtures, top 15 tests to add | `docs/agenti/study-tests.md` |
@@ -189,6 +191,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | WebAssembly potential (`opt-level` profiles, SIMD128, binaryen, zlib-rs, threads, memory64, minimum browsers; measurements) | `docs/agenti/wasm-potential.md` |
 | Waters MassLynx `.raw` folder reader (`crates/mzlab-lettori/src/waters/`, `waters` module, grouping in `waters-raw.js`) | `docs/agenti/waters.md` |
 | full binary specification (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-full-spec.md` |
+| a `.wiff` or `.wiff.scan` loaded alone: which file is its companion (shared Rust rule, `mzlab-cli pair`), the folder prompt of the page (`wiff-pair.js`), what each browser does | `docs/agenti/wiff-pair.md` |
 | choosing which samples of a `.wiff` (or other multi-sample file) to open: how Analyst does it, cost of listing (measured), #3398 reuse, dialog mockup, `samples list` CLI, cap estimate, PR split, questions (study, no feature code) | `docs/agenti/wiff-sample-choice.md` |
 | other SCIEX instruments, sMRM, PIS/NL, feature `estesi` (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-variants.md` |
 | writing a `.wiff` + `.wiff.scan`: create, add or remove samples (feasibility and design study, no writer code yet: streams per sample, lossless copy, verification, CLI `wiff`, wasm cap) | `docs/agenti/wiff-writer.md` |

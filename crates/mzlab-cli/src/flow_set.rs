@@ -58,12 +58,24 @@ pub(crate) fn members(path: &Path) -> Result<Vec<(String, PathBuf)>> {
     if path.is_dir() {
         walk(path, &name, &mut out)?;
     } else {
-        out.push((name.clone(), path.to_path_buf()));
-        if lower(path).ends_with(".wiff") {
-            let scan = path.with_file_name(format!("{name}.scan"));
-            if scan.is_file() {
+        // a `.wiff` or a `.wiff.scan` brings the other half of its pair by the rule of the engine (`mzlab_lettori::pair`, any case); the `.wiff` leads
+        let found =
+            mzlab_lettori::pair::companion_in_dir(path).and_then(|c| c.found.map(|f| (c.half, f)));
+        match found {
+            Some((mzlab_lettori::pair::Half::Scan, w)) => {
+                let wn = w
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned();
+                out.push((format!("{wn}.scan"), path.to_path_buf()));
+                out.insert(0, (wn, w));
+            }
+            Some((_, scan)) => {
+                out.push((name.clone(), path.to_path_buf()));
                 out.push((format!("{name}.scan"), scan));
             }
+            None => out.push((name.clone(), path.to_path_buf())),
         }
     }
     Ok(out)
