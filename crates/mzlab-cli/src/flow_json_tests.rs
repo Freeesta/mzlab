@@ -141,7 +141,15 @@ fn flow_check_says_what_is_wrong_without_the_input_files() {
         "{}",
         bad.stderr
     );
-    sample("flowcheck.json", &bad.stdout);
+    // the flowcheck/1 report of the invalid plan rides in the error/1 as `report`
+    let text = String::from_utf8(bad.stdout.clone()).unwrap();
+    let report = text
+        .split_once("\"report\":")
+        .unwrap()
+        .1
+        .strip_suffix("}\n")
+        .unwrap();
+    sample("flowcheck.json", report.as_bytes());
 
     let set = run_cli(&[
         "flow",
