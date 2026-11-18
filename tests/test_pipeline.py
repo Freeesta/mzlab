@@ -157,6 +157,12 @@ def test_ionmap_is_mean_per_scan_on_common_grid(tmp_path):
     assert m.sum() == pytest.approx(250.0)                                      # nothing else anywhere
 
 
+def test_formula_mz_nominal_is_the_sum_of_the_mass_numbers():
+    r = E.formula_mz("C57H110O6", "[M+H]+")           # exact 890.8302, nominal mass 890 (not the rounded mass 891)
+    assert r["nominal_neutral"] == 890 and r["nominal"] == 891 and r["neutral0"] == 891 and r["mz0"] == 892
+    assert E.formula_mz("C2H4Cl2")["nominal_neutral"] == 98
+
+
 def test_formula_mz_one_decimal_and_nominal():
     r = E.formula_mz("C9H10N2O", "[M+H]+")            # neutral 162.0793
     assert r["neutral"] == pytest.approx(162.0793, abs=1e-3)
