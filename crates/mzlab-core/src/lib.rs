@@ -146,6 +146,7 @@ pub mod valley;
 pub mod peakq;
 pub mod peakq_auto;
 pub mod peakq_lr;
+pub mod area_unit;
 pub mod peakq_lrauto;
 #[cfg(test)]
 mod peakq_reach_test;

@@ -34,6 +34,8 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
   `--set traces=PATH` takes the traces (chromatogram, XIC, DAD) as JSON instead of files; with a `panel` on a trace the header ends with `panel,conc,conc_unit,correction,below,area_unit`.
   `--set shifts=true` and `--set auto=true` answer JSON.
 
+- `peak-auto` and `peak-auto-lr`: areas in counts x s; `--set area_unit=s|min` (`min` = the old counts x min).
+
 ## Rules for the agent
 - The CLI uses no network (except `normative build` and `insilico pack`, which say so) and reads/writes only the paths it is given; never delete user files.
 - At unit resolution an m/z is a candidate, not an identification.

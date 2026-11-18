@@ -50,7 +50,7 @@ def score(fs: list, cmd: str, sets: list) -> str:
     """One line: the windows of `mzlab-cli CMD --set ...` on every file against the true apexes and areas."""
     def one(x):
         f, tr = x
-        r = json.loads(subprocess.run([str(CLI), cmd, str(f), *[a for s in sets for a in ("--set", s)]], capture_output=True, text=True, check=True).stdout)
+        r = json.loads(subprocess.run([str(CLI), cmd, str(f), *[a for s in ["area_unit=min", *sets] for a in ("--set", s)]], capture_output=True, text=True, check=True).stdout)
         ap, w = tr["apex"], [(p["t0"], p["t1"], p["area"]) for p in r["peaks"]]
         inside = [[a for a in ap if lo <= a <= hi] for lo, hi, _ in w]
         err = [abs(k[0][2] / ar - 1) for a, ar in zip(ap, tr["area"]) for k in [[x for x in w if x[0] <= a <= x[1]]] if len(k) == 1]
