@@ -292,7 +292,7 @@ function panelRec(p) {
   return {
     type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, riga: p.full ? p.riga : undefined, quota: p.quota ?? undefined, kind: p.kind, smooth: p.smooth, area: window.SIMUI ? SIMUI.areaOf(p) : undefined, tol: p.tol,
     traces: (p.traces || []).map((/** @type {Bag} */ t) => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined, canale: t.canale || undefined })),
-    canali: p.canali && p.canali.length ? p.canali : undefined,
+    channels: p.channels && p.channels.length ? p.channels : undefined,
     k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, ks: p.ks ? p.ks.map((/** @type {number} */ k) => E.files[k]?.file).filter(Boolean) : undefined, ptol: p.ptol ?? undefined, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, note: p.note || undefined, ints: p.ints, noise: p.noise || undefined, tr: p.tr,
     link: p.link ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.link) : -1, src: p.src ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.src) : -1,
     dda: p.dda != null ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.dda) : undefined, dock: p.dock != null ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.dock) : undefined, duo: p.duo != null ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.duo) : undefined, extra: p.extra || undefined, sid: p.sid ?? undefined, ion: p.ion ?? undefined, avg: p.avg || undefined, imode: p.imode || null, intf: p.intf || "",

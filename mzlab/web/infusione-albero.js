@@ -187,7 +187,7 @@
     let changed = false;
     for (const f of files) {
       if (!f || f.gone || HAS.has(f.k)) continue;
-      try { const j = await J(`api/canali?k=${f.k}`); const has = j.canali.some((/** @type {any} */ c) => (c.fam === "ms" || c.fam === "dd") && c.liv >= 2); HAS.set(f.k, has); changed ||= has && !INF.isInf(f); } catch (e) { console.info("INF probe", e); }
+      try { const j = await J(`api/canali?k=${f.k}`); const has = j.channels.some((/** @type {any} */ c) => (c.family === "ms" || c.family === "dd") && c.ms_level >= 2); HAS.set(f.k, has); changed ||= has && !INF.isInf(f); } catch (e) { console.info("INF probe", e); }
     }
     if (changed && window.BARRA) BARRA.syncMode();
   }

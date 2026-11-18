@@ -15,7 +15,7 @@ pub const HELP: &str = "mzlab-cli samples: how the names of a set of files split
 
 usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
        mzlab-cli samples group NAME...
-       mzlab-cli samples table [--names FILE|-]
+       mzlab-cli samples table [--names FILE|- | FILE...]
        mzlab-cli samples list FILE... [--json] [--probe]   (samples list --help)
        mzlab-cli samples select FILE --sample LIST [--json]   (samples select --help)
 
@@ -24,6 +24,7 @@ usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,
   --has a,b       also the manual variable of terms: a file goes to the first term equal to one of its tokens
   --substring     with --has: the term may be inside a token (O2 then catches H2O2)
   group           the name of a group made of NAMEs: their common tokens in order, empty when none
+  FILE...         with table: real files, named by their file name and hashed (SHA-256), so `flow record` can match the roles
   table           the sample table the names propose (samples/1): role, time point (`time`, `time_unit`, `time_min`), series, replicate, concentration";
 
 fn names(src: &str) -> Result<Vec<String>, String> {
@@ -102,23 +103,46 @@ fn variables_args(args: Vec<String>) -> Result<String, String> {
     Ok(body)
 }
 
-/// The body of `table`: the names, in the order given, as the files of `propose` (no SHA-256, no file kind).
+/// The body of `table`: the names, in the order given, as the files of `propose` (no file kind). The SHA-256 is empty for a name and the real one for a
+/// FILE path (hashed here, in the order given), which is what `flow record` matches a role by.
 fn table(args: Vec<String>) -> Result<String, String> {
-    let mut src = "-".to_string();
+    let mut src = None;
+    let mut paths = Vec::new();
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
-            "--names" => src = it.next().ok_or("--names needs a file")?,
-            o => return Err(format!("unknown option {o}")),
+            "--names" => src = Some(it.next().ok_or("--names needs a file")?),
+            o if o.starts_with("--") => return Err(format!("unknown option {o}")),
+            _ => paths.push(a),
         }
     }
-    let files: Vec<String> = names(&src)?
+    if src.is_some() && !paths.is_empty() {
+        return Err("--names and FILE paths do not go together".into());
+    }
+    let mut named: Vec<(String, String)> = Vec::new();
+    for p in &paths {
+        let (_, sha) =
+            crate::flow_hash::file_sha256(Path::new(p)).map_err(|e| format!("{p}: {e}"))?;
+        let name = Path::new(p)
+            .file_name()
+            .map_or(p.clone(), |n| n.to_string_lossy().into_owned());
+        named.push((name, sha));
+    }
+    if paths.is_empty() {
+        named = names(src.as_deref().unwrap_or("-"))?
+            .into_iter()
+            .map(|n| (n, String::new()))
+            .collect();
+    }
+    let files: Vec<String> = named
         .iter()
-        .map(|n| {
+        .map(|(n, sha)| {
             let mut o = Out::default();
             o.raw("{\"name\":")
                 .str(n)
-                .raw(",\"sha256\":\"\",\"kind\":\"\"}");
+                .raw(",\"sha256\":")
+                .str(sha)
+                .raw(",\"kind\":\"\"}");
             o.0
         })
         .collect();

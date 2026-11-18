@@ -49,7 +49,7 @@ The `variante` method of the `Lettore` trait and the `cv:` parameters of `mzmlwr
 - `DDERealTimeData` (IDA) is not read: `raw-not-extracted.md`.
 
 ## Tests
-- `tools/wiff_riferimento.py`: `variants(out)` writes `variante.wiff` (QTRAP 5500, V1 and V3 blocks, EPI, PIS, NL, an empty block) and the files to reject (`periodi`, `tof`, `codice`, `bloccotof`, `versione4`), with the expected values in `riferimento.json`.
+- `tools/wiff_riferimento.py`: `variants(out)` writes `variante.wiff` (QTRAP 5500, V1 and V3 blocks, EPI, PIS, NL, an empty block) and the files to reject (`periods`, `tof`, `codice`, `tofblock`, `version4`), with the expected values in `riferimento.json`.
 - `tests/wiff_variants.rs` (feature `estesi`): synthetic, rejections, damage (every byte overwritten: no panic); `tests/wiff_variants_real.rs`: with `MZLAB_DATI` the real files (`dati/formati/sciex/wiff`, `scansioni_speciali`): 32 files, 388 samples read, 6 rejected (TOF and `.wiff2`), index TIC always equal; comparison with the ProteoWizard mzMLs of PIS/NL (3594 spectra) and MRM (108 chromatograms, 94 scheduled); `metodo/1` (name, window, `rt_min`, version, DAD).
 - `tests/wiff_scheduled.rs` (`programmati`: two MRM experiments, one sMRM with a 60 s window): one TIC per experiment, `rt=`/`window=` in the ids, optional cut; `tests/wiff_mrm.rs` (`transizioni`): CE, dwell and name up to the mzML.
 - `tests_e2e/e2e_wiff.py`: the synthetic "variant" pair goes through the `sciex` module.

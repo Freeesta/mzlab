@@ -141,7 +141,7 @@ fn the_synthetic_pairs_read_the_same_through_the_registry() {
     mzml_of_one_sample(&out, "two");
     mzml_with_known_sha1(&out, "two");
     truncated(&out, "serie");
-    no_idx(&out, "buchi");
+    no_idx(&out, "gaps");
 }
 
 /// A full scan with a DAD (`tools/wiff_dad_mrm.py`, `dadscan`): the TWC carries the same place in the list on the reader the site uses and in `Wiff::run`,

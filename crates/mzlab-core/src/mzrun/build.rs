@@ -1,4 +1,4 @@
-//! `build`: the `mzrun/1` record of a finished run, from the `mzflow/2` plan, the `prov/1` the run left and the roles of the files (`samples/1`).
+//! `build`: the `mzrun/2` record of a finished run, from the `mzflow/2` plan, the `prov/1` the run left and the roles of the files (`samples/1`).
 
 use super::{results_digest, self_sha256};
 use crate::budget::sha256_hex;
@@ -43,7 +43,7 @@ fn text<'a>(v: &'a Value, k: &str, what: &'static str) -> Result<&'a str> {
 fn engine(prov: &Value) -> Result<Value> {
     let agent = prov.get("agent").ok_or_else(|| bad("prov", "agent"))?;
     if text(agent, "commit", "engine").map_or(true, |c| c.len() != 40) {
-        return Err(bad("engine", "commit"));
+        return Err(Error::new("err.mzrun.commit"));
     }
     Ok(Value::Obj(agent.entries().to_vec()))
 }
@@ -102,7 +102,7 @@ fn input(f: &Value, roles: &[Sample]) -> Result<Value> {
         ("role", s(role)),
     ];
     if let Some(b) = &c.blank_kind {
-        kv.push(("tipo_bianco", s(b)));
+        kv.push(("blank_kind", s(b)));
     }
     if let Some(p) = c.polarity {
         kv.push(("polarity", s(if p > 0 { "+" } else { "-" })));
@@ -141,7 +141,7 @@ pub fn build(p: &Parts) -> Result<String> {
         .collect();
     let entities = Value::Obj(made.iter().map(|(k, h)| (k.clone(), s(h))).collect());
     let mut kv = vec![
-        ("schema", s("mzrun/1")),
+        ("schema", s("mzrun/2")),
         ("kind", s("record")),
         ("min_reader", int(1)),
         ("engine", engine(p.prov)?),

@@ -173,6 +173,7 @@ mod samples_cmd;
 mod steps_cmd;
 #[cfg(not(target_family = "wasm"))]
 mod validate;
+mod wiff_cmd;
 
 fn io(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
