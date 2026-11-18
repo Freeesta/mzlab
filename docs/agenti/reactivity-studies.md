@@ -1,6 +1,6 @@
 # mzLab · reactivity: validation and discarded experiments
 
-Measurements and negative results of the reactivity engine (`crates/mzlab-chem`); the current state of the engine is in `docs/agenti/reattivita.md`.
+Measurements and negative results of the reactivity engine (`crates/mzlab-chem`); the current state of the engine is in `docs/agenti/reactivity.md`.
 
 ## Validation on experimental sites (`crates/mzlab-chem/tests/validation.rs`, `tests/data/reattivita/`)
 - **Set**: `validazione.json` has 23 molecules and 57 rows (one experimental site per row) from `docs/letteratura_cc/` (48 rows with DOI, `tier` `literatura`) and from the CC-05 draft table (9 rows without DOI, `tier` `bozza`, textbook ·OH regiochemistry). Reactions: ·OH, ozone, metabolism; no site data for chlorine. Format and excluded rows: `tests/data/reattivita/LEGGIMI.md`. The number of molecules is the maximum derivable from the repository data.

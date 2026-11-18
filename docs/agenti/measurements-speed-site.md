@@ -1,6 +1,6 @@
 # Cumulative table of speed measurements: site loading
 
-One row per speed change to site loading (page, first paint, update, batches of files, side list, "Remove all", first file of a batch), oldest first, with the same rules as `measurements-speed.md` (the table of the other changes); the row is added in the same PR that makes the change. Abandoned routes go in `ottimizzazioni-tentate.md`.
+One row per speed change to site loading (page, first paint, update, batches of files, side list, "Remove all", first file of a batch), oldest first, with the same rules as `measurements-speed.md` (the table of the other changes); the row is added in the same PR that makes the change. Abandoned routes go in `optimizations-tried.md`.
 
 | Date | PR | Step | Before | After | % |
 |---|---|---|---|---|---|

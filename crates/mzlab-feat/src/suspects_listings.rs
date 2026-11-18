@@ -1,4 +1,4 @@
-//! The regulatory extension of `.mzsus` (flag bit 0): per row the full InChIKey, a name and the laws naming it (layout: `docs/agenti/sospetti.md`).
+//! The regulatory extension of `.mzsus` (flag bit 0): per row the full InChIKey, a name and the laws naming it (layout: `docs/agenti/suspects.md`).
 //! Read by `Suspects::open`; `to_json` is the text the `.wasm`, the app and the CLI must give byte for byte.
 
 use mzlab_core::json::Out;

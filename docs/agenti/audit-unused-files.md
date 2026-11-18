@@ -85,11 +85,11 @@ Not imported or run by any test, workflow, `pre_pr.py` or `verifica.py`; each is
 | `tools/bench/corri_openms.py` | 2 972 | 2026-11-08 | `mzfinder-benchmark.md` |
 | `tools/bench/parita_raw.py` | 3 135 | 2026-11-07 | `mzfinder-benchmark.md` |
 | `tools/bench/prepara_d1.py` | 2 208 | 2026-11-08 | `mzfinder-benchmark.md` |
-| `tools/bench/thermo_velocita.py` | 3 960 | 2026-11-07 | `thermo-velocita.md`, INDICE |
+| `tools/bench/thermo_velocita.py` | 3 960 | 2026-11-07 | `thermo-speed.md`, INDICE |
 | `tools/bench_librerie_cartella.py` | 3 399 | 2026-11-14 | `measurements-rust.md` |
-| `tools/bench_raw.py` | 5 227 | 2026-11-14 | `measurements-rust.md`, `readers-module.md`, `fluid-map.md`, `thermo-velocita.md` |
+| `tools/bench_raw.py` | 5 227 | 2026-11-14 | `measurements-rust.md`, `readers-module.md`, `fluid-map.md`, `thermo-speed.md` |
 | `tools/bench_table_hr.py` | 4 062 | 2026-11-13 | `high-resolution-statistics.md`, `measurements-charts.md`, INDICE |
-| `tools/compare_profiles.py` | 1 883 | 2026-11-13 | `rilascio.md` |
+| `tools/compare_profiles.py` | 1 883 | 2026-11-13 | `release.md` |
 | `tools/lat_arrows.py` | 4 488 | 2026-10-12 | `test.md` |
 | `tools/measure_formats.py` | 9 613 | 2026-11-13 | `measurements-formats.md` |
 | `tools/measure_groups.py` | 4 482 | 2026-11-13 | `groups.md`, `measurements-rust.md` |

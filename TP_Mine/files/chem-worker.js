@@ -1,6 +1,6 @@
 // @ts-check
 // @ts-strict
-// TPMINE-PRIVATE  Module Worker of the reactivity of the parent (crates/mzlab-chem-wasm, wasm-feat/chem/; docs/agenti/reattivita.md). The .wasm `chem` is fetched and compiled on the first
+// TPMINE-PRIVATE  Module Worker of the reactivity of the parent (crates/mzlab-chem-wasm, wasm-feat/chem/; docs/agenti/reactivity.md). The .wasm `chem` is fetched and compiled on the first
 // request only (never at start), verified against its SHA-256 of wasm-feat/manifest.json, and `reactivity(smiles, opts)` runs here, away from the page. One calculation at a time:
 // the page (lazy/reatt-auto.js) terminates this worker to cancel a calculation that is half done and creates a new one.
 // Messages: { id, smiles, opts, jsUrl, wasmUrl, sha256 } -> { id, ok: true, json, version, ms } | { id, error: { error_key, params } }.

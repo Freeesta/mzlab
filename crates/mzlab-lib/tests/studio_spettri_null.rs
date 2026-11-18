@@ -1,5 +1,5 @@
 //! Spectral study, arm A (calibrated null): the entropy ranking with five other decoy kinds and the +1-corrected q, on E6 (traps), E1 (small
-//! compounds) and E3 (chimeric spectra); today's numbers pinned (`docs/agenti/studio-spettri.md`, MISURA studio_null_*).
+//! compounds) and E3 (chimeric spectra); today's numbers pinned (`docs/agenti/study-spectra.md`, MISURA studio_null_*).
 //! A change of the engine, the generator or a decoy kind that moves a number updates the pin and the MISURA line together.
 
 mod studio_spettri;

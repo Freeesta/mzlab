@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Speed tables of the Thermo `.raw` reader against the RFR oracle (criteria A5/A6, docs/agenti/thermo-velocita.md).
+"""Speed tables of the Thermo `.raw` reader against the RFR oracle (criteria A5/A6, docs/agenti/thermo-speed.md).
 
   thermo_velocita.py unisci BANCO.jsonl RFR.jsonl > UNITO.tsv   join `banco/1` (ours) and `banco/1` with reader=rfr, by file id
   thermo_velocita.py tabella UNITO.tsv --sha SHA40 [--maquina TEXT]   Markdown tables per family

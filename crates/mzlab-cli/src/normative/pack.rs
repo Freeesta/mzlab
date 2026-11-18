@@ -1,6 +1,6 @@
 //! `normative pack IN OUT`: the committed lists (`IN/lists/*.csv`, `IN/provenance.json`) become the data release: `normative.mzsus` (one row per skeleton, the
 //! `listings` extension of `mzlab_feat::suspects`), its zlib pieces of 4 MiB with SHA-256 and `catalogo.json` (`normative/1`). No network, no clock: same
-//! input, same bytes. `normative listings PATH` reads a package back (folder or `.mzsus`). Used by `pages.yml` and the app; layout in `docs/agenti/sospetti.md`.
+//! input, same bytes. `normative listings PATH` reads a package back (folder or `.mzsus`). Used by `pages.yml` and the app; layout in `docs/agenti/suspects.md`.
 //! The writer itself is `mzlab_feat::normative::pack`; this file reads the folder and writes the pieces.
 
 use std::io::Write;

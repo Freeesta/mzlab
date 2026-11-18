@@ -1,5 +1,5 @@
 // @ts-strict
-// One button on a TIC/BPC chromatogram: the trace without the chemical background, ion by ion (api/tic_background, engine ticbg.rs; docs/agenti/tic-fondo.md).
+// One button on a TIC/BPC chromatogram: the trace without the chemical background, ion by ion (api/tic_background, engine ticbg.rs; docs/agenti/tic-background.md).
 // Click = automatic removal, click again = the raw trace; right click, long press or ↓ opens the options (mode, action, blank, RT window, m/z windows, kept ions,
 // persistence) and the table of the background ions. Loaded by grafici.js on the first drawing of a TIC/BPC; state p.ticbg = { on, mode, action, blank, rt0, rt1, ex, keep, persist }.
 const T = (/** @type {string} */ k, /** @type {any} */ o = {}) => I18N.t(k, o);

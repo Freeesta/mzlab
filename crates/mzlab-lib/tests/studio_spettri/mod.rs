@@ -1,4 +1,4 @@
-//! The spectral study (`docs/agenti/studio-spettri.md`): synthetic generator, scenarios E0-E6, arms and metrics, shared by the tests
+//! The spectral study (`docs/agenti/study-spectra.md`): synthetic generator, scenarios E0-E6, arms and metrics, shared by the tests
 //! `studio_spettri_*.rs` (small N, pinned numbers) and the example `studio_spettri` (large N, release mode).
 #![allow(dead_code)]
 
