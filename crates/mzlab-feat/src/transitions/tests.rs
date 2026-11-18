@@ -1,5 +1,6 @@
 use super::*;
 use mzlab_core::json::{parse as parse_json, Value};
+use mzlab_core::peak1d::SnrBasis;
 
 /// One ion: Q1, polarity and its (apex RT, height) peaks.
 type Ion = (f64, i8, &'static [(f64, f64)]);
@@ -347,4 +348,13 @@ fn a_sim_ion_of_an_mzml_is_a_channel() {
     let c = traces::channels(&bytes).unwrap();
     let got: Vec<_> = c.iter().map(|c| (c.q1, c.q3, c.polarity)).collect();
     assert_eq!(got, [(300.0, None, Some(1)), (300.0, Some(150.0), Some(1))]);
+}
+
+#[test]
+fn snr_basis_is_raw_by_default_and_smoothed_on_request() {
+    assert_eq!(Settings::default().snr_basis, SnrBasis::Raw);
+    let p = |v: &str| vec![("snr_basis".to_string(), Value::Str(v.to_string()))];
+    assert_eq!(Settings::of(&p("smoothed")).snr_basis, SnrBasis::Smoothed);
+    assert_eq!(Settings::of(&p("raw")).snr_basis, SnrBasis::Raw);
+    assert_eq!(Settings::of(&p("bogus")).snr_basis, SnrBasis::Raw);
 }
