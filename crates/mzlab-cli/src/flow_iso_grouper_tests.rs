@@ -20,16 +20,18 @@ const PLAN: &str = r#"{"format":"mzflow/2","inputs":[{"name":"a.mzML","type":"ra
 {"id":"idx","step":"index.mzidx@1","in":{"source":["file:a.mzML"]}},
 {"id":"det","step":"features.detect@1","in":{"index":["idx.index"]}}]}"#;
 
-/// m/z of the ion and of its M+1 (one 13C), whose height is 1.5 times the one of the ion: no averagine of 300 Da has it.
+/// m/z of the ion and of its M+1 (one 13C), whose height is `RATIO` times the one of the ion: no averagine of 300 Da has it. The same pair also reads as
+/// the M+2 of a doubly charged ion of mass 598 (13C2 over 2 is the same step), whose cap on M+2/M (halogens, about 7) the ratio must stay above too.
 const MONO: f64 = 300.1;
 const HEAVY: f64 = MONO + 1.003355;
 const SCANS: usize = 200;
+const RATIO: f64 = 8.0;
 
 fn gauss(k: f64, apex: f64, h: f64, sigma: f64) -> f64 {
     h * (-0.5 * ((k - apex) / sigma).powi(2)).exp()
 }
 
-/// One centroid MS1 run, 0.02 min a scan: the ion (1e6) and its M+1 (1.5e6) with the apex at scan 100; two flat traces at 1e3 keep every scan
+/// One centroid MS1 run, 0.02 min a scan: the ion (1e6) and its M+1 (`RATIO` times that) with the apex at scan 100; two flat traces at 1e3 keep every scan
 /// non-empty.
 fn mzml() -> String {
     let mut x = format!(
@@ -38,7 +40,7 @@ fn mzml() -> String {
     for i in 0..SCANS {
         let k = i as f64;
         let mut pts: Vec<(f64, f64)> = vec![(150.05, 1e3), (500.05, 1e3)];
-        for (m, h) in [(MONO, 1e6), (HEAVY, 1.5e6)] {
+        for (m, h) in [(MONO, 1e6), (HEAVY, RATIO * 1e6)] {
             let y = gauss(k, 100.0, h, 3.0);
             if y >= 1e3 {
                 pts.push((m, y));
