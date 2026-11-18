@@ -28,7 +28,15 @@ pub struct PeakX {
 
 /// `ionfamily.detect_peaks(rt, y)["peaks"]`, highest first.
 pub fn detect(rt: &[f64], y: &[f64]) -> Vec<PeakX> {
-    let d = detect_full(rt, y, Params::default());
+    // the Python reference (`ionfamily`) has the fixed widths: origin, similarity and the other routes that are compared to it keep them
+    let d = detect_full(
+        rt,
+        y,
+        Params {
+            scale_to_width: false,
+            ..Params::default()
+        },
+    );
     if d.peaks.is_empty() {
         return Vec::new();
     }
