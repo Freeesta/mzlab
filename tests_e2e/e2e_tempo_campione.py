@@ -1,5 +1,5 @@
 """The time point written in a sample name (t0, 3h, 8h, ...) on the built site with the Rust engine: the loading table proposes it (yellow, editable), the file list shows a small muted tag
-beside the name of a SIM file («3h», with an accessible label), a name that only looks like a time (H20, a 90-10 ratio, a blank) has none, a time typed in the table replaces the proposal and the tag,
+beside the name of a SIM file («180min», in the unit of the table, with an accessible label), a name that only looks like a time (H20, a 90-10 ratio, a blank) has none, a time typed in the table replaces the proposal and the tag,
 «Group by» offers the time, and the Manual-integrations table has a Time column after the sample (tag on screen, minutes in the CSV). Synthetic SIM .wiff of tools/wiff_sim.py (sim_tempo: generic labels, invented numbers). Needs the site and the .wasm (python3 tools/prepara_sito.py).
 Run from the repo root: python3 tests_e2e/e2e_tempo_campione.py"""
 # covers: mzlab/web/integrazioni-manuali.js, mzlab/web/explore.js, mzlab/web/ordine.js, mzlab/web/ruoli-carica.js, crates/mzlab-core/src/samples/names.rs, tools/wiff_sim.py
@@ -20,7 +20,7 @@ subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_sim.py"), str(D)], ch
 r = Run(port=8933, wd="/tmp/wd_tempo")
 def need(c, m): c or (_ for _ in ()).throw(AssertionError(m))
 # name of the sample -> (minutes proposed, tag in the file list)
-WANT = {"blk 90-10": (None, None), "RET t0 (2)": (0, "t0"), "RET 3h_2": (180, "3h"), "RET 8h (2)": (480, "8h"), "PERM 3h": (180, "3h"), "H20 demi": (None, None)}
+WANT = {"blk 90-10": (None, None), "RET t0 (2)": (0, "t0"), "RET 3h_2": (180, "180min"), "RET 8h (2)": (480, "480min"), "PERM 3h": (180, "180min"), "H20 demi": (None, None)}
 TAGS = "Object.fromEntries([...document.querySelectorAll('#flst .fl')].map(e => [e.querySelector('.nm').textContent, [...e.querySelectorAll('small abbr.ftag')].map(a => a.textContent)]))"
 try:
     with sync_playwright() as p:
@@ -41,7 +41,7 @@ try:
         step("the file list tags a time point beside the name (only when one was read)", tags)
         def label():
             lab = pg.evaluate("[...document.querySelectorAll('#flst .fl')].filter(e => e.querySelector('.nm').textContent === 'RET 3h_2').map(e => { const a = e.querySelector('small abbr.ftag'); return [a.getAttribute('aria-label'), a.title]; })[0]")
-            need(lab and lab[0] and lab[0] == lab[1] and "3" in lab[0], lab)
+            need(lab and lab[0] and lab[0] == lab[1] and "180" in lab[0], lab)
         step("the tag has an accessible label naming the time", label)
         def cls():
             need(pg.evaluate("(() => { const a = document.querySelector('#flst .fl small abbr.ftag'); return !!a && getComputedStyle(a).textDecorationLine === 'none'; })()"), "the tag is a plain muted abbr")
@@ -68,6 +68,13 @@ try:
             wait_for_js(pg, "E.files.find(f => f.label === 'RET 3h_2').time == null")
             need(pg.evaluate(TAGS)["RET 3h_2"] == [], pg.evaluate(TAGS)["RET 3h_2"])
         step("a time typed in the sample table replaces the tag, an emptied one removes it", override)
+        def unit():
+            sel = lambda u: (pg.select_option("#cmp-tu", u), wait_for_js(pg, "tunitGet() === '%s'" % u))
+            sel("h")
+            need(pg.evaluate(TAGS)["PERM 3h"] == ["3h"] and pg.evaluate(TAGS)["RET 8h (2)"] == ["8h"] and pg.evaluate(TAGS)["H20 demi"] == ["1.5h"] and pg.evaluate(TAGS)["RET t0 (2)"] == ["t0"], pg.evaluate(TAGS))
+            sel("min")
+            need(pg.evaluate(TAGS)["PERM 3h"] == ["180min"] and pg.evaluate(TAGS)["RET 8h (2)"] == ["480min"] and pg.evaluate(TAGS)["H20 demi"] == ["90min"], pg.evaluate(TAGS))
+        step("the tags in the file list follow the Time unit selector of the sample table, live", unit)
         def manint():
             drawer(pg)
             pg.click("#flst .fl >> text=PERM 3h"); wait_for_js(pg, "E.files.some(f => f.vis && !f.gone)", 30000)

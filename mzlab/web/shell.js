@@ -145,7 +145,7 @@ function wireFiles(/** @type {HTMLElement} */ el,/** @type {FileRiga[]} */ F){
       if(keep)go();else setTimeout(go,0)};
     if(x.dataset.k==="conc")x.addEventListener("keydown",(/** @type {KeyboardEvent} */ e)=>{if(e.key==="Enter"){F[+x.dataset.i].gC=false;x.classList.remove("guess");x.title="";modeNote()}})});
   el.querySelectorAll("[data-dl]").forEach((/** @type {ElementoDati} */ b)=>b.onclick=()=>CONV.menu(b,b.dataset.dl||null));const npc=$("#cvcomp");if(npc)npc.onchange=()=>{CONV.compression=npc.value;CONV.paintSizes();const e=$("#cvest");if(e)e.textContent=CONV.estimate()};const dla=$("#dlall");if(dla)dla.onclick=()=>CONV.menu(dla,null);const rma=$("#rmall");if(rma)rma.onclick=confirmRemoveAll;const sva=$("#saveall");if(sva)sva.onclick=()=>CONVQ.saveAll();
-  const tuEl=$("#tunit");if(tuEl)tuEl.onchange=()=>{tunitSet(tuEl.value);renderFiles()};
+  const tuEl=$("#tunit");if(tuEl)tuEl.onchange=()=>{tunitSet(tuEl.value);renderFiles();if(typeof renderFileList==="function"&&E.files.length)renderFileList()};
   const cu=$("#cunit");if(cu)cu.onchange=()=>{const k=cu.value,r=CU[ST.unit][1]/CU[k][1];F.forEach((/** @type {FileRiga} */ f)=>{if(f.conc!=null)f.conc=roundc(f.conc*r)});ST.unit=k;renderFiles()};
   el.querySelectorAll("[data-rm]").forEach((/** @type {ElementoDati} */ b)=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];
     // in the browser the table × is the side panel ×: same take / Undo / free and the same re-indexing of the panels
