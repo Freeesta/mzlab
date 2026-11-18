@@ -91,7 +91,7 @@ function timeTag(min) {
 }
 
 // the time as a compact tag in the unit chosen for the table («t0», «90min», «1.5h»): the side-list badge follows the selector of the table
-const timeTagUnit = min => min == null || !(min >= 0) ? "" : min === 0 ? I18N.t("files.time.zero") : String(+timeShown(min, tunitGet()).toFixed(2)) + tunitLabel(tunitGet());
+const timeTagUnit = min => min == null || !(min >= 0) ? "" : min === 0 ? I18N.t("files.time.zero") : String(+Number(timeShown(min, tunitGet())).toFixed(2)) + tunitLabel(tunitGet());
 
 // the tag beside the name of a file in the list, for a file whose type has no time text of its own (SIM, MRM, MS2...): only when the name or the table gave a time
 const timeBadge = min => { const tag = timeTagUnit(min), ttl = EH(I18N.t("files.time.title", { t: tag })); return tag ? `<abbr class="ftag" title="${ttl}" aria-label="${ttl}">${EH(tag)}</abbr>` : ""; };
