@@ -44,11 +44,12 @@ try:
         def lists():
             drawer(pg, "lists"); ready(pg)
             rows = pg.evaluate("[...document.querySelectorAll('#sb-panel-lists .lb-row')].map(r => [r.querySelectorAll('input').length, r.querySelectorAll('.seg').length])")
-            assert rows == [[2, 0]], rows          # m/z and ppm on one row (the search is the m/z box)
+            assert rows == [[1, 0]], rows          # the search is one field; the tolerance (number + Da/ppm) is the shared control under it
             segs = pg.evaluate("[...document.querySelectorAll('#sb-panel-lists .seg')].map(e => Math.round(e.getBoundingClientRect().height))")
-            assert len(segs) == 1 and segs[0] < 30, segs          # the view switch (reference / target) is the one small segmented control; the sources are checkboxes
+            assert len(segs) == 1 and segs[0] < 30, segs          # the Da/ppm unit is the one small segmented control (no target tab bar); the lists are chips
+            assert pg.locator("#sb-panel-lists #lst-ctl input").count() == 1
             rh = pg.evaluate("document.querySelector('#lst-tbody tr').getBoundingClientRect().height"); assert rh < 34, rh
-        step("reference lists: m/z and ppm on one row, one small segmented control, compact rows", lists)
+        step("known contaminants: one search field, tolerance control, one small segmented control, compact rows", lists)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))
