@@ -28,5 +28,10 @@
   "srow.rt.win": "Row \"Retention times\" of the MS² card: the scan window of the spectrum; {rt} = time or range with unit.",
   "srow.rt.peak": "Row \"Retention times\": limits of an integrated chromatographic peak the spectrum comes from; {a}, {b} = minutes.",
   "srow.ce.one": "Row \"Collision energy\" of the MS² card; {ce} = value in eV read from the file.",
-  "srow.ce.spread": "Row \"Collision energy\" with stepped energies; {ce} = centre, {sd} = half width, in eV."
+  "srow.ce.spread": "Row \"Collision energy\" with stepped energies; {ce} = centre, {sd} = half width, in eV.",
+  "ctl.map.norm.fit": "Option of the normalization menu of a DAD difference: the reference is multiplied by the least-squares factor that best matches the sample on the overlap.",
+  "ctl.map.subfactor.lab": "Label of a number box in the DAD map options; the reference is multiplied by this number before it is subtracted. Empty = use the normalization menu.",
+  "ctl.map.subfactor.title": "Tooltip of the scale factor box of the DAD difference.",
+  "ctl.map.subshift.lab": "Label of a number box in the DAD map options: retention-time shift applied to the reference before subtracting.",
+  "ctl.map.subshift.title": "Tooltip of the shift box of the DAD difference."
 }

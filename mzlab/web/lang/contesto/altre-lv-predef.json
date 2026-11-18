@@ -98,5 +98,22 @@
   "predef.ket.error": "Error (alert) if a .ket drawing opened by the system cannot be read; {name} = file name, {detail} = cause (may be empty).",
   "int.lrAll.done": "Notice after «Integrate every peak shown» (low resolution); {n} = peaks added, {w} = smoothing window in points (odd), {a} = text of int.lrAll.auto or empty, {v} = valley depth in %, {sn} = minimum S/N, {noise} = trace noise in counts (scientific notation), {split} = how touching peaks are split (pk.split.0 or pk.split.1), {c} = baseline ends lowered onto the trace, {e} = all ends, {below} = total area under the line.",
   "int.lrAll.skip": "Tail of the int.lrAll.done notice; {n} = peaks found but not added because they overlap integrations already there.",
-  "int.menu.files": "Menu entry (next to «Integrate every peak shown»): finds the peaks of the ions of every file shown, groups the ones at the same time and adds them as integrations."
+  "int.menu.files": "Menu entry (next to «Integrate every peak shown»): finds the peaks of the ions of every file shown, groups the ones at the same time and adds them as integrations.",
+  "map.sub.note": "Visible note under a DAD difference map; {a},{b} = file names, the rest numbers already rounded.",
+  "map.sub.short": "Short form of the note of a DAD difference in the map legend; hover shows the full note.",
+  "map.sub.scale.none": "Scale of the reference in a DAD difference: none.",
+  "map.sub.scale.used": "Scale of the reference in a DAD difference; {name} = how it was chosen, {f} = factor used.",
+  "map.sub.scale.max": "Name of the max normalization in a DAD difference note.",
+  "map.sub.scale.tic": "Name of the total normalization in a DAD difference note.",
+  "map.sub.scale.fit": "Name of the least-squares fit in a DAD difference note.",
+  "map.sub.scale.factor": "Name of a typed factor in a DAD difference note.",
+  "map.sub.w.rt_range_partial": "Warning of a DAD difference.",
+  "map.sub.w.nm_range_partial": "Warning of a DAD difference.",
+  "map.sub.w.rt_interpolated": "Warning of a DAD difference.",
+  "map.sub.w.nm_interpolated": "Warning of a DAD difference.",
+  "map.sub.w.rt_step_differs": "Warning of a DAD difference; steps in minutes.",
+  "map.sub.w.nm_step_differs": "Warning of a DAD difference; steps in nm.",
+  "map.sub.w.shift_applied": "Warning of a DAD difference.",
+  "map.sub.w.scale_applied": "Warning of a DAD difference.",
+  "map.sub.fail": "Shown on a DAD map when the difference fails; the plain map is drawn; {file} escaped, {why} escaped reason."
 }

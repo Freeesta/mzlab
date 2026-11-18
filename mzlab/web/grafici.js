@@ -576,11 +576,11 @@ async function drawMap(p) {
   const sf = isPda ? tabFiles(p.tab) : scanFiles(tabFiles(p.tab)); if (!sf.length) return say(I18N.t("map.noScans"));
   let f = E.browse && E.files[E.cur] && E.files[E.cur].kind === p.tab ? E.files[E.cur] : E.files[p.k];
   if (!f || (!isPda && f.kind === "mrm")) f = sf[0];
-  const lv = isPda ? "pda" : f.lv;
-  const se = window.SUBREF ? SUBREF.eff(p) : null;
-  const rf = !isPda && se && E.files[se.k].kind !== "mrm" && E.files[se.k].lv === lv && se.k !== f.k ? E.files[se.k] : null;      // the reference: the one of the panel or the one of the session
-  const A = { ...(await getMap(f.k, lv, mapBg(p))), k: f.k }, B = rf ? { ...(await getMap(rf.k, lv, mapBg(p))), k: rf.k } : null, others = await Promise.all(sf.filter(q => q.k !== f.k && (isPda || q.lv === lv) && !(rf && q.k === rf.k)).map(q => getMap(q.k, lv, mapBg(p)).catch(() => null)));      // the other files of the tab, same level: their extents fix the whole view
-  if (B && window.MAPPA) B.d = await MAPPA.diffMap(f.k, rf.k, lv, p.norm || "abs");       // mappa.js: A - B in numpy, with the tolerance in RT
+  const lv = isPda ? "pda" : f.lv, se = window.SUBREF ? SUBREF.eff(p) : null;
+  let rf = isPda ? (se && se.k !== f.k ? E.files[se.k] : null) : se && E.files[se.k].kind !== "mrm" && E.files[se.k].lv === lv && se.k !== f.k ? E.files[se.k] : null;      // the reference: the one of the panel or the one of the session
+  let sub = null, subErr = ""; if (isPda && rf) ({ sub, err: subErr, rf } = await (window.MAPDAD ||= await import("./mappa-dad.js")).sub(p, f, rf));      // DAD minus DAD: the engine resamples the reference onto the grid of A (mappa-dad.js)
+  const A = sub ? { ...sub, k: f.k } : { ...(await getMap(f.k, lv, mapBg(p))), k: f.k }, B = sub ? { k: rf.k, d: sub.m } : rf ? { ...(await getMap(rf.k, lv, mapBg(p))), k: rf.k } : null, others = await Promise.all(sf.filter(q => q.k !== f.k && (isPda || q.lv === lv) && !(rf && q.k === rf.k)).map(q => getMap(q.k, lv, mapBg(p)).catch(() => null)));      // the other files of the tab, same level: their extents fix the whole view
+  if (B && !sub && window.MAPPA) B.d = await MAPPA.diffMap(f.k, rf.k, lv, p.norm || "abs");       // mappa.js: A - B in numpy, with the tolerance in RT
   const fix = !B && window.MAPPA && MAPPA.diffOpt(false).fix ? maxOf([A, ...others].filter(Boolean).map(o => o.m._r?.[p.norm || "abs"] ?? ((o.m._r ||= {})[p.norm || "abs"] = MAPREND.ref(mapNorm(o.m, p.norm || "abs"))))) : 0;      // fixed colour scale: the top is the same on every file
   const im = mapImage(p, A, B, p.scale, p.norm || "abs", fix);
   const rt0 = A.rt0, rt1 = A.rt1, mzA = A.mz0, mzB = A.mz0 + A.nmz * A.dmz;
@@ -607,7 +607,7 @@ async function drawMap(p) {
   const rng = B ? [`<span title="${EH(I18N.t("map.leg2d.up.tip"))}">${I18N.t("map.leg2d.up")}</span>`, `<span title="${EH(I18N.t("map.leg2d.down.tip"))}">${I18N.t("map.leg2d.down")}</span>`] : ["0", fmt(im.ref)];       // the colour bar ends: the 99.5th percentile (above it the colour saturates)
   p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? I18N.t("map.leg.minus", { label: EH(rf.label) }) : ""}</span><span class="sm">${rng[0]}</span><span class="cbar" style="background:${palCss(mapPal(), !!B)}"></span><span class="sm">${rng[1]}</span><span class="sm">${B ? "" : I18N.t("map.leg2d.mean", { scale: scTxt })}${nTxt}</span>`;
   if (p.corrbar) p.corrbar.innerHTML = "";
-  if (window.SUBREF && B) SUBREF.chip(p);
+  if (window.SUBREF && B) SUBREF.chip(p); if (sub || subErr) window.MAPDAD.show(p, sub, subErr, f, rf);       // what the subtraction did, or why it could not be done
   if (window.MAPPA) MAPPA.after(p);
 }
 
