@@ -157,6 +157,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | routes (area: Rust engine (`crates/`, golden data `tools/golden.py`)) | `docs/agenti/rust-rotte.md` |
 | `step/1` descriptors (area: Rust engine (`crates/`, golden data `tools/golden.py`)) | `docs/agenti/rust-step.md` |
 | Rust engine (`crates/`, golden data `tools/golden.py`) | `docs/agenti/rust.md` |
+| `--sample 1,3,5` / `2-4` on `convert`, `channels`, `features`, `samples select` (dry run): semantics, exit 5, `readers::selection`, wasm `sample_selection` | `docs/agenti/sample-flag.md` |
 | sample file roles, times and metadata (`campioni/2` and `/3`, `mzlab-core/src/samples/`: proposals from names, name patterns, CSV, free columns, data from file, warnings, migration, indexes for the TP path) | `docs/agenti/samples.md` |
 | scandump, RFR oracle | `docs/agenti/scandump.md` |
 | service worker, per-version site cache, `sw-manifest.json`, updates | `docs/agenti/service-worker.md` |
@@ -188,7 +189,6 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | mzFinder .wasm ceilings, merged modules (HR group and Attributio) | `docs/agenti/wasm-tetti.md` |
 | Waters MassLynx `.raw` folder reader (`crates/mzlab-lettori/src/waters/`, `waters` module, grouping in `waters-raw.js`) | `docs/agenti/waters.md` |
 | choosing which samples of a `.wiff` (or other multi-sample file) to open: how Analyst does it, cost of listing (measured), #3398 reuse, dialog mockup, `samples list` CLI, cap estimate, PR split, questions (study, no feature code) | `docs/agenti/wiff-scelta-campioni.md` |
-| `--sample 1,3,5` / `2-4` on `convert`, `channels`, `features`, `samples select` (dry run): semantics, exit 5, `readers::selection`, wasm `sample_selection` | `docs/agenti/sample-flag.md` |
 | other SCIEX instruments, sMRM, PIS/NL, feature `estesi` (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-varianti.md` |
 | writing a `.wiff` + `.wiff.scan`: create, add or remove samples (feasibility and design study, no writer code yet: streams per sample, lossless copy, verification, CLI `wiff`, wasm cap) | `docs/agenti/wiff-writer.md` |
 | `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` |
