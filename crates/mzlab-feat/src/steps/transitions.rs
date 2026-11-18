@@ -53,11 +53,15 @@ pub fn transitions() -> Step {
             Param::number("snr_min", "Min. S/N")
                 .min(0.0)
                 .default_num(3.0)
-                .doc("A peak under this signal-to-noise is reported as no_peak"),
+                .doc("A peak under this signal-to-noise is reported as no_peak; the S/N is the smoothed height over 1.4826 MAD of the raw trace far from the peak (see S/N noise)"),
             Param::choice_num("smooth", "Smoothing", &[1.0, 3.0, 5.0])
                 .default_num(3.0)
                 .unit("points")
                 .doc("1 = none, 3 = 1-2-1, 5 = 1-4-6-4-1 before the apex and the edges are found")
+                .advanced(),
+            Param::choice("snr_basis", "S/N noise", &["raw", "smoothed"])
+                .default_str("raw")
+                .doc("raw: the noise of the S/N is read on the raw trace far from the peak; smoothed: on the smoothed trace, the former reading, 1.6-1.8 times too high at smoothing 3")
                 .advanced(),
             Param::integer("min_points", "Min. points per peak")
                 .min(1.0)

@@ -244,6 +244,19 @@ pub fn peaks(
     snr_min: f64,
     max: usize,
 ) -> Vec<Found> {
+    peaks_basis(t, y, smooth_k, min_points, snr_min, max, SnrBasis::Raw)
+}
+
+/// `peaks` with the trace the S/N noise is read on chosen (`find_peak_basis`).
+pub fn peaks_basis(
+    t: &[f64],
+    y: &[f64],
+    smooth_k: usize,
+    min_points: usize,
+    snr_min: f64,
+    max: usize,
+    basis: SnrBasis,
+) -> Vec<Found> {
     let (Some(&a), Some(&b)) = (t.first(), t.last()) else {
         return Vec::new();
     };
@@ -251,13 +264,14 @@ pub fn peaks(
     while out.len() < max && !spans.is_empty() {
         let mut best: Option<(usize, Found)> = None;
         for (i, &(lo, hi)) in spans.iter().enumerate() {
-            let f = find_peak(
+            let f = find_peak_basis(
                 t,
                 y,
                 Some((lo + hi) / 2.0),
                 (hi - lo) / 2.0,
                 smooth_k,
                 min_points,
+                basis,
             );
             if let Some(f) = f.filter(|f| best.as_ref().is_none_or(|(_, g)| f.height > g.height)) {
                 best = Some((i, f));
