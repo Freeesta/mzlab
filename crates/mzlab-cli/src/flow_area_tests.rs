@@ -195,7 +195,7 @@ fn the_window_area_removes_the_bias_of_a_wandering_mass() {
     let channel = bias(&features(&run("channel", &["det.area_from=channel"])).0);
     let window = bias(&features(&run("window", &["det.area_from=window"])).0);
     // the default, `xic`: a little less exact than `window` on this wandering mass (0.037 against 0.025) but exact on uneven scans (below)
-    let xic = bias(&features(&run("xic", &[])).0);
+    let xic = bias(&features(&run("wander_xic", &[])).0);
     eprintln!(
         "|log2| channel {channel:.4?}\n|log2| window  {window:.4?}\n|log2| xic (default) {xic:.4?}"
     );
@@ -277,7 +277,7 @@ fn the_xic_area_follows_uneven_scans() {
 /// `area_from=xic` reaches the run, also on wandering ions (its window is the one of `window`), and changes the recipe of the features.
 #[test]
 fn the_xic_area_can_be_set_from_the_command_line() {
-    let xic = run("xic", &["det.area_from=xic"]);
+    let xic = run("xic_cli", &["det.area_from=xic"]);
     let plan = xic.iter().find(|f| f.0 == "plan.json").unwrap();
     let plan = String::from_utf8(plan.1.clone()).unwrap();
     assert!(plan.contains("\"area_from\":\"xic\""), "{plan}");
