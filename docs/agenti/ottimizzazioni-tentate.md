@@ -52,7 +52,7 @@ Outcome: **adopted** (see `misure-velocita.md`, site loading in `misure-velocita
 | 15/11 | Start-up list `L`: `xlsx.js`, `paletta.js`, `ricerca.js`, `tavola-periodica.js`, `infusione*.js` behind `carica(n)` | adopted | 152 -> 144 files, 1,899,911 -> 1,838,247 B (room 89 -> 61,753 B, caps unchanged). Kept in `L` after reading callers: `banco.js` (`BANCO.on()` read synchronously at 20 sites), `composizione.js` (registers menu actions at load), `rapporto.js`, `workflow.js`, `qaqc.js`, `livelli*.js` (sync guards) | an entry point can await its script |
 
 ## CI: measurements of the Rust jobs and discarded cuts
-What is measured and why it is not done; how the CI works: `ci-veloce.md`.
+What is measured and why it is not done; how the CI works: `ci-fast.md`.
 
 - **Measurement of the Rust jobs** (median over green PRs, warm caches, seconds): `rust` (feat) 107, `rust-core` 172, `rust-misc` 155, `rust-wasm` 186, `rust-lint` 30, `deny` 23; total workflow time 563. The Rust path is the slowest among `rust-core`, `rust-det` and `rust-wasm`: lowering only one moves the bottleneck onto the others.
 - **Cuts evaluated and discarded**: splitting `rust-wasm` (under 60 s), a fourth test group between `rust-core` and `rust-misc` (about 0) and a separate `sito-wasm-lettori` job (one more runner, with the queue weighing more).

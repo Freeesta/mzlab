@@ -1,6 +1,6 @@
 // @ts-strict
 "use strict";
-// The folder pointed at and remembered (docs/agenti/dati-cartella.md). The user points at a folder of the computer ONCE (showDirectoryPicker); the handle is kept in
+// The folder pointed at and remembered (docs/agenti/data-folder.md). The user points at a folder of the computer ONCE (showDirectoryPicker); the handle is kept in
 // IndexedDB "qqq_lab" (store `kv`, key `cartella.puntata`) and found again at the next visit. The compatible files it holds appear GREY («not loaded») and a click
 // loads one: nothing is copied before that, the file is read through the handle. Four kinds (kindOf): data (mzML, raw, wiff), method (.dam), library, table; data are listed
 // under «Data», the others under «Others». The list follows the folder: FileSystemObserver where it exists, otherwise a light rescan when the tab is shown again and every 20 s.

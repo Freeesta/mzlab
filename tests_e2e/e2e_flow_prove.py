@@ -1,4 +1,4 @@
-"""Flow, the button «Show proofs» in the tab «Family» of the Feature table (docs/agenti/flow-grafica.md): the pool of the engine is a stub that answers like `family_record`
+"""Flow, the button «Show proofs» in the tab «Family» of the Feature table (docs/agenti/flow-graphics.md): the pool of the engine is a stub that answers like `family_record`
 (famiglia/1) or fails like the .wasm (error.badRecipe, error.featMemory); the tab asks for the file chosen, filters the families that share an ion with the row, shows the arcs with
 their proofs and says what went wrong in words; on a phone it only says the function is for computers. The engine itself is proved by e2e_feat_worker.py.
 Run from the repo root: python3 tests_e2e/e2e_flow_prove.py"""

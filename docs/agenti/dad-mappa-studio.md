@@ -61,7 +61,7 @@ Plan: step 5 teaches the viewer `kind=pda` (axes in nm, "mAU", data = the page m
 |---|---|---|
 | SCIEX `.wiff` (3200 QTRAP, `Device_N/DAD`) | decoded: matrix, TWC, times in the `DADIdx` rows (`wiff/dad.rs`) | not found: nothing in `DADSampleHeader` or the method decoded so far; the lab compensates with the measured `/api/delay` (tubing/flow-cell delay) |
 | mzML (converted `.wiff` variant, ProteoWizard, `MS:1000804` spectra or `dad_matrix`) | read by `mzml_dad.rs` | no standard term; RT of the optical spectra is written as in the source |
-| Agilent `.D` | NOT decoded (`AcqData/DAD1.*` listed with size/SHA only; `canali-dati.md` §1.7) | not read; the card shows `uv.none` |
+| Agilent `.D` | NOT decoded (`AcqData/DAD1.*` listed with size/SHA only; `data-channels.md` §1.7) | not read; the card shows `uv.none` |
 | Shimadzu | NOT decoded | – |
 | Thermo `UV_VIS_n` | no matrix (`uv.none`) | – |
 | Waters MassLynx `.raw` | only analog traces (`_CHROMS.INF`); no PDA matrix reader | – |

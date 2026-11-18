@@ -96,7 +96,7 @@ pub struct Sample {
     pub note: String,
     /// For an infusion: formula or name of the parent (filled by mzFinder).
     pub compound: String,
-    // `campioni/3` (docs/agenti/campioni.md): sample, +1/-1 polarity, matrix, batch (disegno/1), ISO date and time, group, free columns (sorted by name), what the file says
+    // `campioni/3` (docs/agenti/samples.md): sample, +1/-1 polarity, matrix, batch (disegno/1), ISO date and time, group, free columns (sorted by name), what the file says
     pub sample_id: String,
     pub polarity: Option<i8>,
     pub matrix: String,

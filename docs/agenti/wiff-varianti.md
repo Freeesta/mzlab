@@ -46,7 +46,7 @@ The `variante` method of the `Lettore` trait and the `cv:` parameters of `mzmlwr
 ## DAD
 - 3200 UV/Vis detector (DAD): reading, map, UV spectrum, TWC/XWC, integration and MRM panel in `dad.md`.
 - `Devices/Device_N/{Channel, DevRealTimeHeader, DevData}` (column pressure, flow, temperature) are chromatograms after the TIC (`wiff/devices.rs`): a pressure (name with "pressure" or unit psi, bar, mbar, Pa, kPa, MPa) in pascal as `pressure array` (MS:1000821, `pressure_unit.rs`, like Thermo), the others with the file's unit; a channel without points is missing, a repeated name takes ` #N` (the device). Assumption: point k is at k × the channel step from the start (the stream has no times); `scale_min/max` are not used.
-- `DDERealTimeData` (IDA) is not read: `grezzi-non-estratti.md`.
+- `DDERealTimeData` (IDA) is not read: `raw-not-extracted.md`.
 
 ## Tests
 - `tools/wiff_riferimento.py`: `variants(out)` writes `variante.wiff` (QTRAP 5500, V1 and V3 blocks, EPI, PIS, NL, an empty block) and the files to reject (`periodi`, `tof`, `codice`, `bloccotof`, `versione4`), with the expected values in `riferimento.json`.

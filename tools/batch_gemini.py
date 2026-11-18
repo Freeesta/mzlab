@@ -2,12 +2,12 @@
 """Joins several project files into ONE document to hand to an assistant that takes a single upload.
 
     python3 tools/batch_gemini.py LISTA.txt -o lotto.txt            # every file of the list
-    python3 tools/batch_gemini.py docs/agenti/caricamento-mappa.md --lotto 2 -o lotto2.txt
+    python3 tools/batch_gemini.py docs/agenti/map-loading.md --lotto 2 -o lotto2.txt
     python3 tools/batch_gemini.py LISTA.txt --max-kb 200 --controlla  # sizes only, writes nothing
 
 The list has one path per line (relative to the repository root); empty lines and lines starting with `#` are ignored.
 A line `@lotto N` starts the batch N: with `--lotto N` only the paths after it (up to the next `@lotto`) are joined, so a Markdown file
-that holds the lists (docs/agenti/caricamento-mappa.md) can be passed as it is: only lines that are paths of existing files, or `@lotto`, count.
+that holds the lists (docs/agenti/map-loading.md) can be passed as it is: only lines that are paths of existing files, or `@lotto`, count.
 Each file is written between `=== FILE: path (n of N) — ... ===` and `=== END OF FILE ===`. A warning on stderr (exit code 0, or 1 with `--strict`)
 says when the document is over the limit (`--max-kb`, 200 by default); a listed path that does not exist is an error. Standard library only.
 """

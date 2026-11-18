@@ -1,6 +1,6 @@
 # "aperti" module: open formats (mzML with numpress, gzip mzML and mzXML, mzXML)
 
-Family `aperti` (`crates/mzlab-lettori/src/open/`, feature `aperti`, cap in `tools/build_lettori_wasm.sh` (copied in `tests/test_lettori_wasm.py`), `.wasm` in `wasm-lettori/aperti/`). Reader contract and on-demand loading: `lettori-modulo.md`, `estendere.md`.
+Family `aperti` (`crates/mzlab-lettori/src/open/`, feature `aperti`, cap in `tools/build_lettori_wasm.sh` (copied in `tests/test_lettori_wasm.py`), `.wasm` in `wasm-lettori/aperti/`). Reader contract and on-demand loading: `lettori-modulo.md`, `extending.md`.
 
 ## mzML with MS-Numpress (`open/mzml_numpress.rs`)
 - `numpress.rs` (`mzlab-core`, only with `estesi`, outside the engine): decodes `Np::{Linear, Pic, Slof}` (MS:1002312/13/14, and the zlib forms 1002746/47/48 via `of_accession`); `decode(np, byte, atteso)` limits the values to `atteso` (8 M if 0) and gives `err.file.numpress`; `decode_text` adds base64 and bounded zlib (`error.memoryBudget` beyond `max_bytes`); `plain_base64` writes plain f64; the encoders `encode_linear/pic/slof` serve the tests.
@@ -14,7 +14,7 @@ Family `aperti` (`crates/mzlab-lettori/src/open/`, feature `aperti`, cap in `too
 - `testata_mzml` = original header (instrument, serial, components, sources with SHA-1, software, date; the SHA-1 of the whole file is computed only if the original names no source) with mzLab as converter; `metodo` repeats the `mzLab metodo/1` document if the file carries it, otherwise `{}`.
 - Page: `LETTORI_FAM.aperti` (`lettori-famiglie.js`) and `LETTORI_MOD.variante` (`lettori-modulo.js`: reads 64 KB and doubles up to 16 MB, like `riconosci`) recognise the numpress mzML; `numpressToNat` (`shell.js`, `NATIVO.numpress`) opens them as a native sample of a single member and the engine indexes them from the module's reader (`famigliaEsterna` gives "aperti"), without rewriting the mzML; "Download .mzML" converts it at that moment (`nativeToMzml`). Desktop and CLI already read it natively.
 - Tests: `crates/mzlab-lettori/tests/open_numpress.rs` (synthetic files; builders in `tests/common/`), `open_numpress_hostile.rs` (hostile cases and real data if `MZLAB_DATI` is set), units in `numpress/tests.rs`, `tests_e2e/e2e_lettori_modulo.py` (numpress mzML and zlib twin).
-- Known limits: the spectrum cvParams that the rewrite does not know become userParam "ACC name" in the rewritten mzML; `dataProcessing`, `referenceableParamGroup` and `scanSettings` do not pass (`grezzi-non-estratti.md`).
+- Known limits: the spectrum cvParams that the rewrite does not know become userParam "ACC name" in the rewritten mzML; `dataProcessing`, `referenceableParamGroup` and `scanSettings` do not pass (`raw-not-extracted.md`).
 
 ## gzip mzML (`open/mzml_gz.rs`)
 - `ENTRY` `id "mzml-gz"`, `.mzml.gz`: `riconosci` wants the gzip magic bytes and `<mzML`/`<indexedmzML` in the first 4 KB decompressed (`Fiducia::Si`). `apri` decompresses EVERYTHING in memory (`gunzip::Membri`, fixed cap `Limiti::byte`, `error.fixedLimit` beyond; broken gzip `err.file.zlib`; a truncated gzip with some bytes already inflated opens with the spectra it has and `Lettore::missing` counts the others) and passes the file to `mzml_numpress::apri`, which also reads plain arrays.
