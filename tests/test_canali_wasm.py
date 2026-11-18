@@ -50,4 +50,4 @@ def test_wasm_and_cli_give_the_same_channels(work, which):
     want = cli("channels", str(mzml)).stdout
     assert got.strip() == want.strip()
     doc = json.loads(got)
-    assert doc["v"] == "canali/1" and doc["canali"]
+    assert doc["schema"] == "channels/1" and doc["channels"]

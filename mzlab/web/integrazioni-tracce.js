@@ -99,7 +99,9 @@ function html() {
 /** Wires the rows of the table inside `el`: a click shows the integration on its chart, the X deletes it. */
 function bind(el) {
   if (!st.csv) return;
-  const { body, c } = parsed(), recAt = b => recOf(body[Number(b.dataset.xgo ?? b.dataset.xdel)], c);
+  // An undo or redo rebuilds p.ints from JSON, so the records kept by the last sync can name integrations that are no longer in the panel (delInts matches by identity):
+  // they are taken again from the live panels at every click, not at the next sync.
+  const { body, c } = parsed(), recAt = b => { st.recs = build().recs; return recOf(body[Number(b.dataset.xgo ?? b.dataset.xdel)], c); };
   const show = b => { const rec = recAt(b); if (rec) { G.reveal(rec.p); G.draw(rec.p); } };
   el.querySelectorAll("tr[data-xgo]").forEach(b => {
     b.addEventListener("click", e => { if (!e.target.closest("button, [data-cp]")) show(b); });
