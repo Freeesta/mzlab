@@ -165,8 +165,8 @@ def scenario(r, p, name, f):
     rows = pg.evaluate("PERF.rows.slice(window.__perf0).map(x => ({kind: x.kind, what: x.what, ms: x.ms, t: x.t}))")
     t0 = pg.evaluate("window.__t0")
     first = lambda pred: next((round(x["t"] - t0) for x in rows if pred(x)), None)
-    res["t_first_chrom_ms"] = first(lambda x: x["kind"] == "disegno" and x["what"] == "draw chrom")
-    res["t_first_spec_ms"] = first(lambda x: x["kind"] == "disegno" and x["what"] == "draw spec")
+    res["t_first_chrom_ms"] = first(lambda x: x["kind"] == "draw" and x["what"] == "draw chrom")
+    res["t_first_spec_ms"] = first(lambda x: x["kind"] == "draw" and x["what"] == "draw spec")
     res["api"] = [{"what": x["what"][:40], "end": round(x["t"] - t0), "ms": round(x["ms"])} for x in rows if x["kind"] == "api"]
     res["calls"] = sorted(pg.evaluate("window.__ev"), key=lambda e: e["s"])
     res["longtasks"] = [{"s": round(x["s"]), "d": round(x["d"])} for x in pg.evaluate("window.__lt")]
@@ -174,8 +174,8 @@ def scenario(r, p, name, f):
     # (c) the map, opened from the toolbar once the file is in
     t1 = pg.evaluate("performance.now()")
     pg.evaluate("document.querySelector('#np-map').click()")
-    wait_for_js(pg, "PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw map')"); ready(pg)
-    mrow = pg.evaluate("PERF.rows.filter(x => x.kind === 'disegno' && x.what === 'draw map').map(x => ({t: x.t, ms: x.ms}))")[0]
+    wait_for_js(pg, "PERF.rows.some(x => x.kind === 'draw' && x.what === 'draw map')"); ready(pg)
+    mrow = pg.evaluate("PERF.rows.filter(x => x.kind === 'draw' && x.what === 'draw map').map(x => ({t: x.t, ms: x.ms}))")[0]
     res["map_open_to_drawn_ms"] = round(mrow["t"] - t1); res["map_first_draw_ms"] = round(mrow["ms"])
     res["t_map_since_click_ms"] = round(mrow["t"] - t0)
     res["lr_miss"] = pg.evaluate("(window.MZLAB_LR_MISS || []).length")

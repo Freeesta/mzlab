@@ -76,11 +76,13 @@ try:
         step("?reset=files: no files or session, folders and databases removed by name, libraries and preferences stay", partial)
         def full_cmd():
             load_files(); pg.click("#newrun"); pg.wait_for_selector("#resetdlg[open]")
-            txt = pg.inner_text("#resetdlg"); assert "Start a new session?" in txt and "Choose what to delete." not in txt and "Full reset" in txt and "Everything, as the first time" not in txt and "Keeps preferences" not in txt and "Cancel" in txt, txt
+            txt = pg.inner_text("#resetdlg"); assert "Start a new session?" in txt and "Choose what to delete." not in txt and "Full reset" in txt and "Everything, as the first time" not in txt and "Keeps preferences" not in txt and "Cancel" not in txt, txt
             lab = pg.evaluate("[...document.querySelectorAll('#resetdlg button')].map(b => [b.dataset.reset, b.textContent.trim()])")
-            assert lab == [["files", "Files"], ["all", "Full reset"], ["", "Cancel"]], ("the milder button first, the red one second, then Cancel", lab)
-            assert pg.evaluate("document.activeElement.classList.contains('rs-cancel')"), "the first focus is Cancel, never the destructive button"
-            hs = pg.evaluate("[...document.querySelectorAll('#resetdlg button')].map(b => b.getBoundingClientRect().height)"); assert all(round(h, 2) >= 44 for h in hs), hs
+            assert lab == [["files", "Files"], ["all", "Full reset"], ["", "×"]], ("the milder button first, the red one second, then the close X", lab)
+            x = pg.locator("#resetdlg .rs-x"); assert x.get_attribute("aria-label") == "Close" and x.get_attribute("title") == "Close"
+            bx = x.bounding_box(); assert bx["width"] >= 24 and bx["height"] >= 24, bx
+            assert pg.evaluate("document.activeElement.classList.contains('rs-x')"), "the first focus is the close X, never the destructive button"
+            hs = pg.evaluate("[...document.querySelectorAll('#resetdlg .rs-big')].map(b => b.getBoundingClientRect().height)"); assert all(round(h, 2) >= 44 for h in hs), hs
             assert pg.evaluate("(() => { const p = document.createElement('span'); p.style.color = 'var(--on-accent)'; p.style.background = 'var(--bad)'; document.body.appendChild(p); const c = getComputedStyle(p).backgroundColor; p.remove(); return c === getComputedStyle(document.querySelector('#resetdlg [data-reset=all]')).backgroundColor; })()"), "the wide button is red (CSS variable)"
             pg.click("#resetdlg [data-reset=all]"); pg.wait_for_function("location.search.includes('riparti')", timeout=30000); ready_start(pg)
             s = pg.evaluate(STATE)
@@ -134,10 +136,11 @@ try:
             s = pg.evaluate(STATE); assert s["files"] == 0 and [n for n in s["opfs"] if n != "mzlab"] == [] and s["mzlab"] == [], s
         step("?reset=1 is the full reset at start", url_all)
         def cancel():
-            load_files(); pg.click("#newrun"); pg.wait_for_selector("#resetdlg[open]"); pg.click("#resetdlg .rs-cancel"); pg.wait_for_timeout(300)
+            load_files(); pg.click("#newrun"); pg.wait_for_selector("#resetdlg[open]"); pg.click("#resetdlg .rs-x"); pg.wait_for_timeout(300)
             s = pg.evaluate(STATE); assert s["files"] >= 2 and not pg.locator("#resetdlg").count(), s
+            assert pg.evaluate("document.activeElement && document.activeElement.id") == "newrun", "focus returns to the opener"
             pg.click("#newrun"); pg.wait_for_selector("#resetdlg[open]"); pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
-            s = pg.evaluate(STATE); assert s["files"] >= 2 and not pg.locator("#resetdlg").count(), "Esc = Cancel"
+            s = pg.evaluate(STATE); assert s["files"] >= 2 and not pg.locator("#resetdlg").count(), "Esc = close"
         step("Cancel changes nothing", cancel)
         def remove_one():
             load_files(); pg.evaluate("redrawAll()"); pg.wait_for_timeout(1500)

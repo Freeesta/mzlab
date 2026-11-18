@@ -7,7 +7,6 @@ use super::Wiff;
 use crate::error::{Error, Result};
 use crate::ole::Ole;
 use crate::readers::{FileSet, Limits, Listing, Summary};
-use super::container_within;
 
 /// Scans the index places in the data file, and the bytes of the section: the numbers the sample list holds before any block is read. A block counts as a scan
 /// when its row holds points, or (IDA: the rows hold no count) when its experiment acquires scans.
@@ -129,8 +128,6 @@ pub(super) fn container_of(fs: &mut FileSet, limits: &Limits) -> Result<(String,
         .find(SCAN)
         .ok_or_else(|| Error::new("err.file.wiffNoScan").with("name", &name))?;
     let m = member(fs, wi)?;
-    limits.fits(m.dim)?;
-    let mut bytes = vec![0u8; usize::try_from(m.dim).map_err(|_| Error::memory_budget())?];
-    m.dati.read_at(0, &mut bytes)?;
-    Ok((name.clone(), container_within(bytes, &name, limits)?, si))
+    let ole = super::container::open_member(m, &name, limits)?;
+    Ok((name, ole, si))
 }

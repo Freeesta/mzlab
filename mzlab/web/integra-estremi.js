@@ -11,7 +11,7 @@ const lo = (/** @type {Bag} */ it) => (it.a <= it.b ? "a" : "b");
 const shown = (/** @type {Bag} */ s, /** @type {Bag} */ it, /** @type {string} */ e) => (it.zero && typeof INTZERO !== "undefined" ? INTZERO.clamp(s, it[e]) : s.x[nearIdx(s.x, it[e])]);
 function baseY(/** @type {Bag} */ s, /** @type {Bag} */ it, /** @type {number} */ t) {
   const q = it.snap && (Math.abs(t - shown(s, it, "a")) < EPS ? it.snap.a : Math.abs(t - shown(s, it, "b")) < EPS ? it.snap.b : null);   // an anchor: its own mode, even before the next drawing
-  if (q) return q === "zero" ? 0 : q === "man" ? +((it.my || {})[t === shown(s, it, "a") ? "a" : "b"] || 0) : edge3(s.y, nearIdx(s.x, t));
+  if (q) return q === "zero" ? 0 : q === "man" ? Math.max(0, +((it.my || {})[t === shown(s, it, "a") ? "a" : "b"] || 0)) : edge3(s.y, nearIdx(s.x, t));
   if (it.zero || it.bm === "zero") return 0;
   if (it.bm === "line" && it.bl && typeof INTBASE !== "undefined") return INTBASE.lineAt(it, t);
   return it.base ? (typeof INTBASE !== "undefined" ? INTBASE.edgeAt(s, it, t) : baseAt(it.base, t)) : edge3(s.y, nearIdx(s.x, t));
@@ -34,7 +34,7 @@ const raw = (/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ p
 // the mode of one anchor; a manual one keeps the level it has now, the stamp makes it the mode a new integration inherits
 function setMode(/** @type {Bag} */ p, /** @type {Bag} */ n, /** @type {string} */ q, /** @type {number | null} */ y) {
   const it = n._it, e = n._e, s = n._s;
-  if (q === "man") it.my = { ...(it.my || {}), [e]: y == null ? baseY(s, it, shown(s, it, e)) : y };
+  if (q === "man") it.my = { ...(it.my || {}), [e]: Math.max(0, y == null ? baseY(s, it, shown(s, it, e)) : y) };   // never below the zero line
   if (it.snap[e] !== q) { it.snap = { ...it.snap, [e]: q }; it.st = E.seq++; }
 }
 // one move of an end: the engine's point, then the record, the chart and the live text; the last answer wins

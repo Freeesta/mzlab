@@ -112,10 +112,10 @@ try:
             open_kind(pg, "ms2")          # at the first load only the first file is open: the MS2 file opens with a click in the list
             wait_for_js(pg, "(()=>{const p=E.panels.find(q=>q.tab==='ms2'&&q.type==='spec'&&q.cv);return !!p&&!!p._a&&p.cv.parentElement.querySelector('.leg').textContent.length>0})()")
             s = pg.evaluate("(()=>{const p=E.panels.find(q=>q.tab==='ms2'&&q.type==='spec');return {rel:specRel(p),ymax:p._a&&p._a.ymax,lock:!!p.lock,t:p.cv.parentElement.querySelector('.leg').textContent}})()"); print(s)
-            assert s["rel"] is False and not s["lock"], s                      # cps by default since 8/10 (the «%» button switches)
+            assert s["rel"] is True and not s["lock"], s                       # % of the base peak by default for MSn (the «%» button switches)
             assert "precursor" not in s["t"] and "CE" in s["t"] and "scan" in s["t"], s    # the title names the precursor, the line only the scan and the energy
             assert pg.evaluate("document.querySelector('.pnl.spec:not([style*=\"display: none\"]) canvas')") is not None
-        step("S6/G2: MS2 spectrum starts in cps, no lock, shows scan and CE", ms2)
+        step("S6/G2: MS2 spectrum starts in %, no lock, shows scan and CE", ms2)
         def thin_trace():
             # the TIC is a thin line (like the vendor software): every stroke is 1 to 1.25 px; 1 px where the line is dense (decima.js hairline: a wider
             # stroke of dense noise is slow in a software canvas), TRACE_LW = 1.25 px on a zoom of a few points

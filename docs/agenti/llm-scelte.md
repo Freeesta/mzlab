@@ -1,32 +1,32 @@
-# LLM: principi, scelte e proposte aperte
-Le regole di fondo dell'assistente e degli agenti esterni che restano vincolanti; il codice che c'è sta in `llm.md`, `llm-subagenti.md`, `assistente-proxy.md` e `per-agenti.md`.
+# LLM: principles, choices and open proposals
+The basic rules of the assistant and of external agents that remain binding; the code that exists is described in `llm.md`, `llm-subagenti.md`, `assistente-proxy.md` and `per-agenti.md`.
 
-## Principi
-- Opt-in esplicito, per persona: spento di default su sito e desktop; si accende in Impostazioni con la finestra di consenso. Nessuna richiesta verso un fornitore prima del consenso (un e2e conta le richieste) e zero byte scaricati da chi non lo accende; i tetti dei `.wasm` esistenti non cambiano.
-- Profilo `corso`: l'LLM non esiste (nessun pulsante, nessun modulo, `contesto/1` rifiutato con `err.llm.profile.course` come difesa in profondità). Profilo `ricerca`: esiste spento; a risoluzione unitaria un m/z è un candidato e i passi `hr` non si chiamano. Il profilo è un'impostazione didattica, non una barriera di sicurezza.
-- Tutto in Rust: richieste, lettura dello stream, ciclo dell'agente, permessi, riassunti, controllo dei grafici. JS solo trasporto (fetch), interfaccia e disegno. Il crate `mzlab-llm` non fa I/O: costruisce `{url, headers senza chiave, body}` e il trasporto aggiunge la chiave.
-- Dati: l'LLM vede solo riassunti costruiti da Rust (`contesto/1`, `ispezione/1`), mai file grezzi, spettri interi o percorsi; ciò che parte si vede prima («What will be sent»).
-- Mai in silenzio: ogni azione sul piano o sulle corse è mostrata, registrata (`llmlog/1` e `llm` in `prov/1`) e annullabile; il codice generato non si esegue mai da solo. Non esistono strumenti che cancellano file, scrivono fuori dalla cartella di corsa, cambiano privacy o profilo, aprono la rete.
+## Principles
+- Explicit opt-in, per person: off by default on site and desktop; it is turned on in Settings with the consent window. No request to a provider before consent (an e2e counts the requests) and zero bytes downloaded by whoever does not turn it on; the caps of the existing `.wasm` files do not change.
+- Profile `corso`: the LLM does not exist (no button, no module, `contesto/1` rejected with `err.llm.profile.course` as defence in depth). Profile `ricerca`: it exists, off; at unit resolution an m/z is a candidate and the `hr` steps are not called. The profile is a teaching setting, not a security barrier.
+- Everything in Rust: requests, stream reading, agent loop, permissions, summaries, chart checking. JS only transport (fetch), interface and drawing. The `mzlab-llm` crate does no I/O: it builds `{url, headers without key, body}` and the transport adds the key.
+- Data: the LLM sees only summaries built by Rust (`contesto/1`, `ispezione/1`), never raw files, whole spectra or paths; what is sent is shown first ("What will be sent").
+- Never silent: every action on the plan or on the runs is shown, logged (`llmlog/1` and `llm` in `prov/1`) and can be undone; generated code is never run by itself. There are no tools that delete files, write outside the run folder, change privacy or profile, or open the network.
 
-## Scelte
-- Fornitori: adattatori in Rust (`anthropic`, `openai_compat`, `gemini`) sopra un trasporto sottile; niente SDK in JS né gateway di terzi. Un fornitore compatibile nuovo è una riga di `fornitori-1.json`. I prezzi del descrittore sono stime mostrate, mai fatturazione: 0 = sconosciuto, nessun numero inventato.
-- Rete del sito: la CSP di `index.html` non si allarga; i fornitori stanno nella CSP propria di `llm/trasporto.html`, iframe creato solo dopo il consenso. Il desktop usa rotte native senza cambiare la CSP del webview. Un endpoint arbitrario (server dell'università) vale solo nel desktop.
-- Consenso per fornitore e classe di dati, revocabile; una classe nuova (per esempio immagini) lo richiede. Le immagini partono solo con un modello `vision` e un clic su un grafico (PNG del grafico, mai uno screenshot).
-- Catalogo: pochi meta-strumenti fissi con argomenti generati dal registro (`strumenti/1`), non uno strumento per passo; un passo nuovo entra da solo e il test di copertura prova che ogni passo e parametro è raggiungibile.
-- Grafici solo come specifica `grafico/1` validata in Rust e disegnata dalla pagina con la sua tabella dei dati; l'LLM non scrive mai SVG, HTML o JS da inserire nella pagina. Codice in Python nel sito: vietato.
-- Token senza tokenizzatore: stima prudente `ceil(byte/3)`. Nessun modello locale nel `.wasm` o nel sito: girano in un server locale dell'utente.
-- Agenti esterni: nessun server, l'agente chiama `mzlab-cli` dalla shell; `--json` non cambia codici d'uscita, file di `--out` né byte di `prov.json`/`corsa.json`; stdout porta un solo documento JSON, stderr resta per le persone (o JSONL con `--progress jsonl`). Un involucro in Python o Node è scartato.
+## Choices
+- Providers: adapters in Rust (`anthropic`, `openai_compat`, `gemini`) on top of a thin transport; no SDK in JS and no third-party gateway. A new compatible provider is one line of `fornitori-1.json`. The prices in the descriptor are displayed estimates, never billing: 0 = unknown, no invented number.
+- Site network: the CSP of `index.html` is not widened; providers live in the own CSP of `llm/trasporto.html`, an iframe created only after consent. The desktop uses native routes without changing the webview CSP. An arbitrary endpoint (university server) is valid only in the desktop.
+- Consent per provider and data class, revocable; a new class (for example images) requires it. Images are sent only with a `vision` model and a click on a chart (PNG of the chart, never a screenshot).
+- Catalogue: a few fixed meta-tools with arguments generated from the registry (`strumenti/1`), not one tool per step; a new step enters by itself and the coverage test proves that every step and parameter is reachable.
+- Charts only as a `grafico/1` specification validated in Rust and drawn by the page with its data table; the LLM never writes SVG, HTML or JS to insert in the page. Python code on the site: forbidden.
+- Tokens without a tokenizer: conservative estimate `ceil(byte/3)`. No local model in the `.wasm` or on the site: they run in a local server of the user.
+- External agents: no server, the agent calls `mzlab-cli` from the shell; `--json` changes neither exit codes, `--out` files nor bytes of `prov.json`/`corsa.json`; stdout carries a single JSON document, stderr stays for people (or JSONL with `--progress jsonl`). A Python or Node wrapper is rejected.
 
-## Rischi da tenere presenti
-- CORS dei fornitori e modelli locali dal sito (`http://localhost` da una pagina https, Private Network Access, `OLLAMA_ORIGINS`): un fornitore che non permette chiamate dal browser è `site_allowed: false`, solo desktop.
-- Chiave nella pagina: uno script della stessa origine può leggerla; per questo vive solo nel documento del trasporto (cifrata con una `CryptoKey` non estraibile se ricordata) e nel desktop solo in Rust.
+## Risks to keep in mind
+- Provider CORS and local models from the site (`http://localhost` from an https page, Private Network Access, `OLLAMA_ORIGINS`): a provider that does not allow browser calls is `site_allowed: false`, desktop only.
+- Key in the page: a script of the same origin can read it; for this reason it lives only in the transport document (encrypted with a non-extractable `CryptoKey` if remembered) and in the desktop only in Rust.
 
-## Proposte non realizzate
-- Proposta non realizzata: `code_export` (script Python o R scaricato con intestazione di provenienza: turno di `llmlog/1`, SHA-256 del contesto, «generated by an assistant, review before running», dati in CSV accanto, mai eseguito). Oggi risponde `err.llm.tool.unavailable`.
-- Proposta non realizzata: sandbox per JS generato dietro `localStorage mzlab.llm.sandbox = "1"` e il «via» del Coordinatore (`sandbox.html` in `<iframe sandbox="allow-scripts">`, CSP `default-src 'none'; script-src 'self'`, Worker con 5 s al massimo, uscita solo `grafico/1` o tabella validati, «Run» a ogni esecuzione). È un'eccezione a «Tutto in Rust».
-- Proposta non realizzata: «Send this chart» (PNG di un grafico a un modello `vision`, classe di consenso propria) e «Custom endpoint» nel desktop.
-- Proposta non realizzata: portachiavi del sistema nel desktop (crate `keyring`, dipendenza nuova da chiedere).
-- Proposta non realizzata: guida per IA `llms.txt` nella radice (inglese, ≤ 6 KB, forma della convenzione `llms.txt`), copiata in `site/llms.txt` da `tools/build_site.py` e incorporata in `mzlab-cli guide` con `include_str!`; un test controlla che ogni comando, opzione, passo, `--set` e chiave `err.*` citati esistano. Niente dati veri, percorsi, nomi di modelli, istruzioni che allargano i permessi.
-- Proposta non realizzata: `mzlab cli <argomenti>` nel binario dell'app desktop (chiama `mzlab_cli::execute` prima di Tauri, stessi byte e codici) e `--by NOME` di `flow run` (`launched_by{name, via}` in `prov/1`).
-- Proposta non realizzata: server `mzlab-cli mcp --root CARTELLA` (stdio JSON-RPC, strumenti `steps`, `flow_check`, `flow_dry_run`, `flow_run`, `flow_report`, `read_output` ≤ 4 MB solo dentro `--root`), solo con il «via»: è un componente nuovo da mantenere.
-- Proposta non realizzata: binari di `mzlab-cli` (e WASI) nei rilasci, job nuovo in `release.yml`.
+## Proposals not implemented
+- Proposal not implemented: `code_export` (Python or R script downloaded with a provenance header: `llmlog/1` turn, SHA-256 of the context, "generated by an assistant, review before running", data in CSV alongside, never run). Today it answers `err.llm.tool.unavailable`.
+- Proposal not implemented: sandbox for generated JS behind `localStorage mzlab.llm.sandbox = "1"` and the Coordinator's "go" (`sandbox.html` in `<iframe sandbox="allow-scripts">`, CSP `default-src 'none'; script-src 'self'`, Worker with 5 s at most, output only a validated `grafico/1` or table, "Run" at every execution). It is an exception to "Everything in Rust".
+- Proposal not implemented: "Send this chart" (PNG of a chart to a `vision` model, own consent class) and "Custom endpoint" in the desktop.
+- Proposal not implemented: system keychain in the desktop (`keyring` crate, new dependency to be requested).
+- Proposal not implemented: AI guide `llms.txt` in the root (English, ≤ 6 KB, form of the `llms.txt` convention), copied to `site/llms.txt` by `tools/build_site.py` and embedded in `mzlab-cli guide` with `include_str!`; a test checks that every command, option, step, `--set` and `err.*` key cited exists. No real data, paths, model names, instructions that widen permissions.
+- Proposal not implemented: `mzlab cli <arguments>` in the desktop app binary (calls `mzlab_cli::execute` before Tauri, same bytes and codes) and `--by NAME` of `flow run` (`launched_by{name, via}` in `prov/1`).
+- Proposal not implemented: `mzlab-cli mcp --root FOLDER` server (stdio JSON-RPC, tools `steps`, `flow_check`, `flow_dry_run`, `flow_run`, `flow_report`, `read_output` ≤ 4 MB only inside `--root`), only with the "go": it is a new component to maintain.
+- Proposal not implemented: `mzlab-cli` binaries (and WASI) in the releases, a new job in `release.yml`.

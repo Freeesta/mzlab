@@ -46,6 +46,19 @@ struct Req {
     tol_dm: f64,
     tol_ppm: f64,
     pol: i32,
+    /// Window of the contaminant lookup, given by the caller: `(unit_is_ppm, value)`; `None` keeps the old rule (HR: `tol_ppm`, LR: half a dalton).
+    cont: Option<(bool, f64)>,
+}
+
+impl Req {
+    /// The contaminant window as it is reported: unit and value.
+    fn cont_window(&self) -> (bool, f64) {
+        self.cont.unwrap_or(if self.hr {
+            (true, self.tol_ppm)
+        } else {
+            (false, LR_TOL)
+        })
+    }
 }
 
 fn losses(r: &Value, q: &Req, hits: &mut Vec<Hit>) -> Result<()> {
@@ -94,11 +107,8 @@ fn adducts(r: &Value, q: &Req, hits: &mut Vec<Hit>) -> Result<()> {
 }
 
 fn contaminants(r: &Value, q: &Req, hits: &mut Vec<Hit>) -> Result<()> {
-    let tol = if q.hr {
-        q.x.abs() * q.tol_ppm * 1e-6
-    } else {
-        LR_TOL
-    };
+    let (ppm, v) = q.cont_window();
+    let tol = if ppm { q.x.abs() * v * 1e-6 } else { v };
     for c in field(r, "contam")?.arr() {
         let mz = field(c, "mz")?.f64().unwrap_or(f64::NAN);
         let p = c.get("pol").and_then(Value::f64).unwrap_or(0.0);
@@ -162,11 +172,19 @@ fn render(hits: Vec<Hit>, q: &Req) -> String {
             .put("hits", Value::Arr(shown))
             .put("more", int(more))
             .put("tol", num(q.tol_dm))
+            .put(
+                "contam",
+                Obj::new()
+                    .put("unit", text(if q.cont_window().0 { "ppm" } else { "da" }))
+                    .n("tol", q.cont_window().1)
+                    .done(),
+            )
             .done(),
     )
 }
 
-/// `{x, hr, tol_mda, tol_ppm, pol, losses:[{id,f}], adducts:[{id,k,add,sub,z}], contam:[{id,mz,pol}]}` -> `{x, hr, hits, more, tol}`.
+/// `{x, hr, tol_mda, tol_ppm, tol_unit, tol, pol, losses:[{id,f}], adducts:[{id,k,add,sub,z}], contam:[{id,mz,pol}]}` -> `{x, hr, hits, more, tol, contam:{unit, tol}}`.
+/// `tol_unit` ("da" or "ppm") with `tol` (> 0) sets the window of the contaminants in either resolution; without them it is `tol_ppm` (HR) or ±0.5 Da.
 /// `hr` false: tolerance ±0.5 and no deltas in the answer. `hr` true: `tol_mda` for losses and adduct shifts, `tol_ppm` for contaminants.
 /// `pol` ("+", "-" or "") keeps the adducts and contaminants of that polarity; the losses have no polarity.
 fn request(r: &Value) -> Result<Req> {
@@ -187,6 +205,16 @@ fn request(r: &Value) -> Result<Req> {
         tol_dm: if hr { tol_mda / 1000.0 } else { LR_TOL },
         tol_ppm: r.get("tol_ppm").and_then(Value::f64).unwrap_or(5.0),
         pol,
+        cont: match (
+            r.get("tol_unit").and_then(Value::str),
+            r.get("tol")
+                .and_then(Value::f64)
+                .filter(|v| v.is_finite() && *v > 0.0),
+        ) {
+            (Some("da"), Some(v)) => Some((false, v)),
+            (Some("ppm"), Some(v)) => Some((true, v)),
+            _ => None,
+        },
     };
     Ok(q)
 }

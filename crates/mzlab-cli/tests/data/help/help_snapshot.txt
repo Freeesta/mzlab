@@ -345,7 +345,8 @@ usage: mzlab-cli ion-mz TEXT [--adduct ADDUCT] [--out PATH]
   --adduct A     an adduct of the catalogue, e.g. "[M+H]+"; "none" = the text is already the ion
   --out PATH     write there instead of the standard output
 
-The answer is {"formula", "neutral", "adducts", "adduct", "mz", "mz5", "mz1", "nominal", "offset" (only with a shift)}.
+The answer is {"formula", "neutral", "adducts", "adduct", "mz", "mz5", "mz1", "nominal", "mz0", "offset" (only with a shift)};
+"nominal_neutral" and "nominal" are nominal masses (sum of the mass numbers of the main isotopes, plus the adduct shift for an ion), "neutral0" and "mz0" the exact values rounded to integers.
 The m/z is a candidate to extract, never an identification.
 --- stderr
 
@@ -361,10 +362,12 @@ usage: mzlab-cli match-mz X --tables FILE.json [--set NAME=VALUE...] [--out PATH
   --set hr=1      high resolution: windows in mDa (losses, adducts) and ppm (contaminants); without it the window is +-0.5 Da
   --set mda=N     window of losses and adduct shifts in mDa (high resolution, default 3)
   --set ppm=N     window of contaminants in ppm (high resolution, default 5)
+  --set unit=da|ppm  with tol=N: the window of the contaminants in Da or ppm, in either resolution
+  --set tol=N     the window value for unit= (a number above 0)
   --set pol=+|-   keep the adducts and contaminants of that polarity (default both)
   --out PATH      write there instead of the standard output
 
-The answer is {"x", "hr", "hits": [{kind, id, ...}], "more", "tol"}; uses the same tables as the Addotti e perdite page.
+The answer is {"x", "hr", "hits": [{kind, id, ...}], "more", "tol", "contam": {unit, tol}}; uses the same tables as the Adducts & losses panel.
 --- stderr
 
 === mzlab-cli background --help

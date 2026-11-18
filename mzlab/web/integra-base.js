@@ -6,6 +6,7 @@ const IB_MODE = { zero: 1, line: 2 }, IB_C = new WeakMap();           // the eng
 const ibKey = (s, it) => [s.key, s.x.length, s.y[0], s.y[s.y.length - 1], it.a, it.b, it.bm, (it.bl || []).join(), ibDips(s, it) ? it.base.join() : ""].join("|");
 // the measure of the record; until the engine answers: the previous one, or nothing (wait), then the panel is drawn again
 function ibArea(p, s, it) {
+  ibFloor(it);
   const k = ibKey(s, it), c = IB_C.get(it);
   if (c && c.k === k) return c.r;
   const r = c ? { ...c.r, wait: true } : { area: NaN, below: NaN, height: 0, rt: (it.a + it.b) / 2, wait: true };
@@ -19,13 +20,15 @@ function ibArea(p, s, it) {
   });
   return r;
 }
-// the line as mzlab_core::baseline::Baseline::at has it: the straight line through the two points, held at 0 where it is extended past a point at or above 0
-// (an edge dragged out); between the points, past a point the user put below 0, and for a level it is the line itself
+// the line as mzlab_core::baseline::Baseline::at has it: the straight line through the two points, held at 0 wherever it would go below it
 const ibRaw = (/** @type {number[]} */ b, /** @type {number} */ t) => { const [t0, y0, t1, y1] = b; return t1 === t0 ? y0 : y0 + (y1 - y0) * (t - t0) / (t1 - t0); };
-const ibHeld = (/** @type {number[]} */ b, /** @type {number} */ t) => {
-  const v = ibRaw(b, t), [t0, y0, t1, y1] = b; if (t0 === t1) return v;
-  const up = t0 <= t1, ta = up ? t0 : t1, ya = up ? y0 : y1, tb = up ? t1 : t0, yb = up ? y1 : y0;
-  return (t < ta && ya >= 0) || (t > tb && yb >= 0) ? Math.max(v, 0) : v;
+const ibHeld = (/** @type {number[]} */ b, /** @type {number} */ t) => Math.max(ibRaw(b, t), 0);
+// the two points of a line, a manual anchor or a restored session never sit below the zero line: put back on it (true when one was moved)
+const ibFloor = (/** @type {Record<string, any>} */ it) => {
+  let moved = false;
+  if (it.bl) for (const k of [1, 3]) if (!(it.bl[k] >= 0)) { it.bl[k] = 0; moved = true; }
+  if (it.my) for (const e of ["a", "b"]) if (e in it.my && !(it.my[e] >= 0)) { it.my[e] = 0; moved = true; }
+  return moved;
 };
 // a record of the line between the edges (`base`: HR automatic, still valid after an edge is dragged) that the dragged window now runs past, where the line would go below
 // zero: it is measured (QUALITA.peakArea) and drawn as the line, held at 0 there; inside its two points nothing changes, and a record without a `base` has no such case
@@ -67,6 +70,7 @@ function ibPaint(g, X, Y, U, s, it, chosen) {
 // the two points of a custom line as 24 px buttons over the chart: drag with mouse, finger or pen; ← → one sample (Shift five), ↑ ↓ 1 % of the axis (Shift 10 %)
 function ibSync(p) {
   const a = p._a, old = p._bp || []; p._bp = [];
+  p.ints.forEach(ibFloor);
   const list = a && a.sr && !a.cas && a.X && a.yinv && !p._exp ? p.ints.filter(it => it.bm === "line" && it.bl && !it.snap && a.sr.some(q => q.key === it.key)) : [];
   for (const it of list) for (const k of [0, 2]) {
     const s = a.sr.find(q => q.key === it.key), b = old.shift() || ibButton(p);
@@ -81,7 +85,7 @@ function ibSync(p) {
 function ibButton(p) {
   const n = document.createElement("button"); n.type = "button"; n.className = "ibp"; n.setAttribute("role", "slider"); p.el.appendChild(n);
   const raw = (s, py) => (p._a.yinv(py) - s.off) * s.sc;          // y on the canvas -> counts of the trace (U is linear: s.off + v / s.sc)
-  const put = (t, y) => { const it = n._it, k = n._k; it.bl[k] = t; it.bl[k + 1] = y; if (it.lvl) it.bl[1] = it.bl[3] = y; draw(p); };
+  const put = (t, y0) => { const it = n._it, k = n._k, y = Math.max(0, y0); it.bl[k] = t; it.bl[k + 1] = y; if (it.lvl) it.bl[1] = it.bl[3] = y; draw(p); };
   const at = ev => { const r = p.cv.getBoundingClientRect(); return [xOf(p, ev.clientX - r.left), raw(n._s, ev.clientY - r.top)]; };
   n.addEventListener("pointerdown", ev => { ev.preventDefault(); ev.stopPropagation(); try { n.setPointerCapture(ev.pointerId); } catch (_) { /* events still arrive */ } setActive(p); pushIh(p); n.classList.add("on"); });
   n.addEventListener("pointermove", ev => { if (n.classList.contains("on")) put(...at(ev)); });
@@ -115,6 +119,7 @@ function ibOpen(p, it) {
       const v = [...Q("#bigbody").querySelectorAll("[data-ib]")].map(i => numIt(i.value)), k = sel(), lvl = Q("#ib-lvl").checked;
       if (k === "line" && !v.every(Number.isFinite)) { Q("#ib-msg").textContent = I18N.t("int.base.bad"); return; }   // in the modal: a toast would sit behind it
       pushIh(p); delete it.zero;
+      const low = k === "line" && (v[1] < 0 || v[3] < 0); if (low) { v[1] = Math.max(0, v[1]); v[3] = Math.max(0, v[3]); }
       if (k === "edges") { it.bm = "edges"; delete it.bl; delete it.lvl; }
       else if (k === "zero") { it.bm = "zero"; delete it.bl; delete it.lvl; }
       else { it.bm = "line"; it.bl = lvl ? [v[0], v[1], v[2], v[1]] : v; if (lvl) it.lvl = true; else delete it.lvl; }
@@ -122,7 +127,7 @@ function ibOpen(p, it) {
         const q = k === "line" ? "man" : k === "zero" ? "zero" : "curve"; it.snap = { a: q, b: q }; it.st = E.seq++;
         if (q === "man") { const l = it.a <= it.b ? "a" : "b", h = l === "a" ? "b" : "a"; it[l] = it.bl[0]; it[h] = it.bl[2]; it.my = { [l]: it.bl[1], [h]: it.bl[3] }; } else delete it.my;
       }
-      Q("#bigdlg").close(); uiSave(); draw(p);
+      Q("#bigdlg").close(); uiSave(); draw(p); if (low) nearMsg(I18N.t("int.base.floor"));
     };
   });
 }

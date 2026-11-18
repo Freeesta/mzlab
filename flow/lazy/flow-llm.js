@@ -57,7 +57,8 @@
       el("div", { class: "flx-llm-head" }, el("h3", { text: "Assistant" }), el("span", { class: "flx-llm-level", id: "flx-llm-level", text: level, title: level === "L0" ? "L0: proposes, never edits" : level === "L1" ? "L1: asks before each edit" : "L2: edits by itself within limits" }), closeBtn), note, cost, spend,
       log, regList, sentBox, chips, input, el("div", { class: "row" }, send, stop), grip);
     const open = btn("chat", "Open the assistant", () => act.toggle(), "Assistant"); open.id = "flx-assistant"; open.setAttribute("aria-expanded", "false");
-    ctx.bar.insertBefore(open, ctx.bar.querySelector(".flx-run"));
+    const hold = ctx.bar.querySelector(".flx-asst-slot");
+    if (hold) hold.replaceWith(open); else ctx.bar.insertBefore(open, ctx.bar.querySelector(".flx-run"));
     ctx.body.append(panel);
     return { log, cost, spend, sent, regList, input, send, stop, panel, open, chips };
   };

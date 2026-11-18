@@ -1,42 +1,42 @@
-# Flow: dai passi di mzmine ai passi di mzLab
+# Flow: from mzmine steps to mzLab steps
 
-Tabella di lavoro del Flow grafico (`docs/agenti/flow-grafica.md`). Dice cosa esiste oggi, senza promettere: **step** = ha un descrittore `step/1` nella palette; **motore** = il calcolo esiste in Rust (`crates/mzlab-feat`, binario `untargeted`) ma non ha ancora un descrittore, quindi il Flow non lo mette in catena; **previsto** = nel descrittore è un algoritmo `planned` o una riga dello studio, senza esecutore; **nessuno** = non c'è. Nessuna riga inventa un algoritmo.
+Working table of the graphical Flow (`docs/agenti/flow-grafica.md`). It says what exists today, without promising: **step** = has a `step/1` descriptor in the palette; **engine** = the computation exists in Rust (`crates/mzlab-feat`, binary `untargeted`) but has no descriptor yet, so the Flow does not put it in a chain; **planned** = in the descriptor it is a `planned` algorithm or a row of the study, with no executor; **none** = does not exist. No row invents an algorithm.
 
-| Passo di mzmine | In mzLab | Stato |
+| mzmine step | In mzLab | Status |
 |---|---|---|
-| Raw data import | `import.raw` (file RAW, WIFF, D...) e `convert.mzml` | step |
-| Mass detection: centroid, exact mass | `features.detect` legge i centroidi dell'indice; nessun rilevatore di massa separato | nessuno |
-| Mass detection: local maxima | `untargeted/localmax.rs` (da `LocalMaxMassDetector` 4.10.90), fuori dalla pipeline | motore |
-| Mass detection: factor of lowest signal | `features.detect`, algoritmo `adap_localmin`, parametro `noise_factor` (soglia per scansione, `untargeted/pipeline_stream.rs`); 0 = soglia assoluta `floor` | step |
-| Mass detection: wavelet, auto, recursive threshold | nessuna implementazione | nessuno |
-| Scan index per accesso a finestre | `index.mzidx` | step |
-| Chromatogram building (ADAP / ion chromatogram builder) | `features.detect`, algoritmo `masstrace` (HR e LR) o `adap_localmin` (ADAP di `untargeted/adap.rs`, ponte `untargeted/flow.rs`: `floor`, `min_height`, `min_points` comuni, tolleranza `ppm`/`abs_da`) | step |
-| Feature detection alternativa | `features.detect`: `centwave` (onde Ricker sulle tracce, `centwave.rs`) disponibile; `threshold` | `threshold` previsto |
-| Parametri dai dati | `features.estimate` (rumore, tolleranza m/z, larghezza del picco, tempo morto) | step |
-| Smoothing | Savitzky-Golay in `features.detect` `adap_localmin` (`smooth_window`, 0 = spento; solo la forma su cui cerca i minimi, altezza e area dal grezzo); gaussiana in `untargeted/smooth.rs`; LOESS no | step (SG), motore (gauss), nessuno (LOESS) |
-| Baseline | `untargeted/arpls.rs`, opzionale | motore |
-| Feature resolving: local minimum | `features.detect` `adap_localmin` (`untargeted/resolve.rs`, da `MinimumSearchFeatureResolver`: `chrom_threshold`, `search_rt`, `min_ratio`, `duration`; il taglio di `resolve.rs` non si applica); con `masstrace` il taglio di `resolve.rs` | step |
-| Feature resolving: ADAP wavelets, Savitzky-Golay, baseline resolver, noise amplitude | nessuna implementazione | nessuno |
-| Deisotoping: isotope grouper | `features.detect`, parametro `isotopes`: `averagine` di default (`isotopes.rs`, rapporti dell'abbondanza naturale), `grouper` = il grouper di mzmine (`untargeted/isotopes.rs`, ponte `untargeted/flow_iso.rs`: `iso_ppm`, `iso_abs_da`, `iso_rt_tol`, `iso_max_charge`, `iso_monotonic`, `iso_representative`; passi di 1,0033 Da senza prova del rapporto); gruppo e isotopologhi solo segnati, mai scartati; anche per i candidati deboli | step |
-| Deisotoping: isotope finder 4.10 | `features.detect`, `isotopes` = `finder` (`untargeted/isofinder.rs`, ponte `untargeted/flow_isofinder.rs`: `finder_ppm`, `finder_abs_da`, `finder_max_charge`, `finder_elements`, `finder_require_c13`, `finder_auto`): lo spettro MS1 all'apice di ogni feature, dalla più intensa; si uniscono al gruppo le righe la cui traccia copre quella scansione e il cui m/z è un picco del pattern vincente; carica del pattern; anche per i candidati deboli; non fatti il raffinamento tra scansioni e la mobilità | step, motore |
-| Deisotoping: isotope finder, ricerca dei candidati | `find_candidates` (`untargeted/isofinder.rs`): la discesa parte dal punto sotto il bersaglio quando gli m/z sono finiti, `max_diff` ≥ 0 e ogni differenza isotopica supera la tolleranza fra il bersaglio e la cima dello spettro, altrimenti dalla cima; stessi candidati bit per bit (`tests/untargeted_isofinder_start.rs`). 500 bersagli × 3 cariche, mediana di 11: 145 → 15 ms su 9.500 picchi, 9,7 → 5,9 ms su 300 picchi in 24 Da, 1,7 → 0,9 ms su 60 | motore |
-| Alignment: join aligner | `features.align`, algoritmo `join` (`untargeted/join.rs`, ponte `untargeted/flow_align.rs`: `mz_weight`, `rt_weight`, `rt_tol`, tolleranza `ppm`/`abs_da`; righe per ione qualunque `mode`, solo in memoria, quindi una serie che non ci sta è rifiutata); `groups` di default (modalità «per ione» e «per famiglia») | step, motore |
-| Alignment: RANSAC, correzione dell'RT tra campioni | `features.align`, parametro `rt_warp` (`piecewise`, `loess`, `ransac`; `crates/mzlab-feat/src/rtwarp.rs`): ancore da un allineamento grossolano (`rt_coarse_gap`), curva per file, RT riportato a quello comune prima del raggruppamento; `off` di default | step |
-| Gap filling (stesso RT e m/z) | `features.gapfill`, algoritmo `integrate` di default; algoritmo `peak_finder` (`untargeted/gapfill.rs`, ponte `untargeted/flow_align.rs`: `intensity_tol`, tolleranza `ppm`/`abs_da`, `rt_tol`, `min_points`, `floor` comuni; `max_gap`, `long_trace` e la mappa RT non si applicano) | step, motore |
-| Duplicate feature filter | `table.filter`, parametri `dup_ppm` e `dup_rt` (regola `duplicati`, `filters.rs`): tiene la riga più forte entro la finestra; l'allineamento scarta già i lobi FT | step |
-| Feature list rows filter | `table.filter` (campioni minimi, area, altezza, rapporto al bianco, MS2 richiesta) | step |
-| Blank subtraction | `table.filter`, parametro `blank_ratio`; `bianco.js` nella vista Dati HR | step |
-| Normalization | `table.filter`, parametro `normalize` | step |
-| Ion mobility | nessuna elaborazione (il lettore Bruker legge i dati) | nessuno |
-| Adduct, complex, fragment search | famiglie di ioni in `features.align` («per famiglia»), `ionfamily` | motore |
-| Correlation grouping (metaCorrelate), ion identity networking | nessun passo; i legami di famiglia sono in `features.align` | nessuno |
+| Raw data import | `import.raw` (RAW, WIFF, D... files) and `convert.mzml` | step |
+| Mass detection: centroid, exact mass | `features.detect` reads the centroids of the index; no separate mass detector | none |
+| Mass detection: local maxima | `untargeted/localmax.rs` (from `LocalMaxMassDetector` 4.10.90), outside the pipeline | engine |
+| Mass detection: factor of lowest signal | `features.detect`, algorithm `adap_localmin`, parameter `noise_factor` (per-scan threshold, `untargeted/pipeline_stream.rs`); 0 = absolute threshold `floor` | step |
+| Mass detection: wavelet, auto, recursive threshold | no implementation | none |
+| Scan index for window access | `index.mzidx` | step |
+| Chromatogram building (ADAP / ion chromatogram builder) | `features.detect`, algorithm `masstrace` (HR and LR) or `adap_localmin` (ADAP of `untargeted/adap.rs`, bridge `untargeted/flow.rs`: `floor`, `min_height`, `min_points` shared, tolerance `ppm`/`abs_da`) | step |
+| Alternative feature detection | `features.detect`: `centwave` (Ricker wavelets on the traces, `centwave.rs`) available; `threshold` | `threshold` planned |
+| Parameters from the data | `features.estimate` (noise, m/z tolerance, peak width, dead time) | step |
+| Smoothing | Savitzky-Golay in `features.detect` `adap_localmin` (`smooth_window`, 0 = off; only the shape it searches minima on, height and area from the raw data); Gaussian in `untargeted/smooth.rs`; LOESS no | step (SG), engine (Gaussian), none (LOESS) |
+| Baseline | `untargeted/arpls.rs`, optional | engine |
+| Feature resolving: local minimum | `features.detect` `adap_localmin` (`untargeted/resolve.rs`, from `MinimumSearchFeatureResolver`: `chrom_threshold`, `search_rt`, `min_ratio`, `duration`; the cut of `resolve.rs` does not apply); with `masstrace` the cut of `resolve.rs` | step |
+| Feature resolving: ADAP wavelets, Savitzky-Golay, baseline resolver, noise amplitude | no implementation | none |
+| Deisotoping: isotope grouper | `features.detect`, parameter `isotopes`: `averagine` by default (`isotopes.rs`, natural-abundance ratios), `grouper` = the mzmine grouper (`untargeted/isotopes.rs`, bridge `untargeted/flow_iso.rs`: `iso_ppm`, `iso_abs_da`, `iso_rt_tol`, `iso_max_charge`, `iso_monotonic`, `iso_representative`; steps of 1.0033 Da with no ratio check); group and isotopologues only marked, never discarded; also for weak candidates | step |
+| Deisotoping: isotope finder 4.10 | `features.detect`, `isotopes` = `finder` (`untargeted/isofinder.rs`, bridge `untargeted/flow_isofinder.rs`: `finder_ppm`, `finder_abs_da`, `finder_max_charge`, `finder_elements`, `finder_require_c13`, `finder_auto`): the MS1 spectrum at the apex of each feature, from the most intense; rows whose trace covers that scan and whose m/z is a peak of the winning pattern join the group; pattern charge; also for weak candidates; refinement across scans and mobility not done | step, engine |
+| Deisotoping: isotope finder, candidate search | `find_candidates` (`untargeted/isofinder.rs`): the descent starts from the point below the target when the m/z values are finite, `max_diff` ≥ 0 and every isotopic difference exceeds the tolerance between the target and the top of the spectrum, otherwise from the top; same candidates bit for bit (`tests/untargeted_isofinder_start.rs`). 500 targets × 3 charges, median of 11: 145 → 15 ms on 9,500 peaks, 9.7 → 5.9 ms on 300 peaks in 24 Da, 1.7 → 0.9 ms on 60 | engine |
+| Alignment: join aligner | `features.align`, algorithm `join` (`untargeted/join.rs`, bridge `untargeted/flow_align.rs`: `mz_weight`, `rt_weight`, `rt_tol`, tolerance `ppm`/`abs_da`; rows per ion in any `mode`, in memory only, so a series that does not fit is rejected); `groups` by default ("per ion" and "per family" modes) | step, engine |
+| Alignment: RANSAC, RT correction between samples | `features.align`, parameter `rt_warp` (`piecewise`, `loess`, `ransac`; `crates/mzlab-feat/src/rtwarp.rs`): anchors from a coarse alignment (`rt_coarse_gap`), curve per file, RT brought back to the common one before grouping; `off` by default | step |
+| Gap filling (same RT and m/z) | `features.gapfill`, algorithm `integrate` by default; algorithm `peak_finder` (`untargeted/gapfill.rs`, bridge `untargeted/flow_align.rs`: `intensity_tol`, tolerance `ppm`/`abs_da`, `rt_tol`, `min_points`, `floor` shared; `max_gap`, `long_trace` and the RT map do not apply) | step, engine |
+| Duplicate feature filter | `table.filter`, parameters `dup_ppm` and `dup_rt` (rule `duplicati`, `filters.rs`): keeps the strongest row within the window; alignment already discards FT lobes | step |
+| Feature list rows filter | `table.filter` (minimum samples, area, height, blank ratio, MS2 required) | step |
+| Blank subtraction | `table.filter`, parameter `blank_ratio`; `bianco.js` in the HR Data view | step |
+| Normalization | `table.filter`, parameter `normalize` | step |
+| Ion mobility | no processing (the Bruker reader reads the data) | none |
+| Adduct, complex, fragment search | ion families in `features.align` ("per family"), `ionfamily` | engine |
+| Correlation grouping (metaCorrelate), ion identity networking | no step; family links are in `features.align` | none |
 | MS2 scan pairing | `features.ms2_link` | step |
-| MS2 spectral library search | `spectra.match` (entropia spettrale, coseno, coseno modificato) | step |
-| Local compound database search | `annot.regulatory` copre solo liste e screening di sospetti, non una banca locale qualsiasi | parziale (step) |
-| Lipid annotation | nessuno | nessuno |
+| MS2 spectral library search | `spectra.match` (spectral entropy, cosine, modified cosine) | step |
+| Local compound database search | `annot.regulatory` covers only lists and suspect screening, not an arbitrary local database | partial (step) |
+| Lipid annotation | none | none |
 | Formula prediction | `formula.ms1`, `formula.ms2` | step |
-| SIRIUS / CSI:FingerID | nessuno; non si chiama alcun servizio esterno | nessuno |
+| SIRIUS / CSI:FingerID | none; no external service is called | none |
 | In silico fragmentation | `spectra.insilico` | step |
-| Identification level | `annot.level` (cascata dei livelli di Schymanski) | step |
+| Identification level | `annot.level` (Schymanski level cascade) | step |
 | Export: CSV | `export.table_csv` | step |
-| Export: GNPS FBMN/IIN, SIRIUS, mzTab-M | solo le esportazioni dell'interfaccia (`attributio-export.md`), nessun passo | nessuno |
+| Export: GNPS FBMN/IIN, SIRIUS, mzTab-M | only the interface exports (`attributio-export.md`), no step | none |

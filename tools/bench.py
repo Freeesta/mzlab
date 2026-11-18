@@ -278,8 +278,8 @@ def main() -> None:
         if a.scrivi:
             md = ROOT / "docs" / "agenti" / "misure.md"
             commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
-            sec = [f"## Librerie spettrali (`python3 tools/bench.py --librerie{' --gb' if a.gb else ''} --scrivi`, Chromium Linux, {time.strftime('%Y-%m-%d')}, commit {commit})"] + lines
-            md.write_text(replace_section(md.read_text(encoding="utf-8"), "## Librerie spettrali", sec), encoding="utf-8")
+            sec = [f"## Spectral libraries (`python3 tools/bench.py --librerie{' --gb' if a.gb else ''} --scrivi`, Chromium Linux, {time.strftime('%Y-%m-%d')}, commit {commit})"] + lines
+            md.write_text(replace_section(md.read_text(encoding="utf-8"), "## Spectral libraries", sec), encoding="utf-8")
         return
     names = sorted(p for p in Path(MZ).glob("*FullMass*.mzML"))[:a.files]
     if not names:
@@ -289,7 +289,7 @@ def main() -> None:
         print(json.dumps(rows))
         return
     mb = sum(x.stat().st_size for x in names) / 2**20
-    print("\n".join([f"## Tempi ({len(names)} file Full Scan, {mb:.1f} MB)"] + table(["engine", "start_s", "open_s", "tic_xic_s", "requests", "browser_rss_mb"], rows)))
+    print("\n".join([f"## Timings ({len(names)} file Full Scan, {mb:.1f} MB)"] + table(["engine", "start_s", "open_s", "tic_xic_s", "requests", "browser_rss_mb"], rows)))
 
 
 if __name__ == "__main__":

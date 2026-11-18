@@ -580,6 +580,7 @@ document.addEventListener("nbloaded", () => {      // older notebooks only have 
   Q("#lb-dec").value = String(Math.min(5, Math.max(0, +NB.labDec || 0)));
   Q("#lb-a").checked = NB.labA === true;
   Q("#ex-name").value = NB.drawName || stamp();
+  Q("#ex-ion").value = NB.drawIon || "none"; if (!Q("#ex-ion").value) Q("#ex-ion").value = "none";   // an unknown saved ion falls back to none
   drawLabels();
 });
 // the two example drawings (made with this very tab: see tests_e2e/make_examples.py)
@@ -741,6 +742,10 @@ function syncBg() {                                    // JPEG cannot be transpa
   j.disabled = on; j.title = on ? I18N.t("draw.export.jpegNoAlpha") : "";
 }
 Q("#ex-nobg").addEventListener("change", syncBg); syncBg(); freshName();
+// the adduct of the SDF m/z sits behind a small button next to SDF (one click on SDF keeps the last choice); it is saved with the notebook
+Q("#ex-sdfopt").onclick = () => { const p = Q("#ex-sdfpop"), open = p.hidden; p.hidden = !open; Q("#ex-sdfopt").setAttribute("aria-expanded", String(open)); if (open) Q("#ex-ion").focus(); };
+Q("#ex-sdfpop").addEventListener("keydown", (/** @type {KeyboardEvent} */ e) => { if (e.key === "Escape") { Q("#ex-sdfpop").hidden = true; Q("#ex-sdfopt").setAttribute("aria-expanded", "false"); Q("#ex-sdfopt").focus(); } });
+Q("#ex-ion").addEventListener("change", () => { NB.drawIon = Q("#ex-ion").value === "none" ? "" : Q("#ex-ion").value; nbSave(); });
 Q("#ex-load").onclick = async () => { let v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote(""); const named = await nameToSmiles(v, dnote, I18N.t.bind(I18N)); if (named === null) return; v = named;   // a name draws its first suggestion; never sent to Ketcher as text (query atoms)
   try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
   catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };

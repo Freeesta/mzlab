@@ -3,20 +3,24 @@
 
 use super::{End, LrAuto, Split};
 
-/// What the clamp of a baseline end changed. The line runs only between the two ends of a peak (it is never extrapolated), so an end is never
-/// raised to zero: a background below zero (a blank subtracted too much) keeps its level, and only an end above the raw trace is lowered onto it.
+/// What the clamp of a baseline end changed. The line runs only between the two ends of a peak, and an end is never below zero (the zero line of the
+/// trace shown, the subtracted background of a subtracted one): a background under zero is raised to it, and an end above the raw trace is lowered onto it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Clamp {
     /// The end is the engine's level as found.
     None,
     /// The level was above the raw trace and was lowered onto it.
     Trace,
+    /// The level was below zero and was raised to zero.
+    Zero,
 }
 
-/// A baseline level `v` at a point of raw value `y`: never above `y`, never raised to zero.
+/// A baseline level `v` at a point of raw value `y`: never below zero; never above `y` unless `y` itself is below zero (then the end stays at zero).
 pub(super) fn clamp(v: f64, y: f64) -> (f64, Clamp) {
-    if v > y {
-        (y, Clamp::Trace)
+    if v < 0.0 {
+        (0.0, Clamp::Zero)
+    } else if v > y {
+        (y.max(0.0), Clamp::Trace)
     } else {
         (v, Clamp::None)
     }
@@ -26,6 +30,7 @@ fn clamp_name(c: Clamp) -> &'static str {
     match c {
         Clamp::None => "none",
         Clamp::Trace => "trace",
+        Clamp::Zero => "zero",
     }
 }
 

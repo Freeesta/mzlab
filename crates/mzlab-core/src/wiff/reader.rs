@@ -137,6 +137,16 @@ impl WiffReader {
         Ok(p)
     }
 
+    /// Injection `c` with its DAD stream read (it is left unread at the opening: `Wiff::load_dad`).
+    pub(super) fn dad_part(&mut self, c: usize) -> Result<&Part> {
+        let p = self
+            .parts
+            .get_mut(c)
+            .ok_or_else(|| Error::new("error.badIndex").with("c", c))?;
+        p.w.load_dad(&self.ole);
+        Ok(p)
+    }
+
     /// The chromatograms of injection `c`, read once (the MRM blocks only).
     pub(super) fn chromatograms(&mut self, c: usize) -> Result<&[Chromatogram]> {
         let p = self
@@ -144,6 +154,7 @@ impl WiffReader {
             .get_mut(c)
             .ok_or_else(|| Error::new("error.badIndex").with("c", c))?;
         if p.chroms.is_none() {
+            p.w.load_dad(&self.ole);
             p.w.readable()?;
             let mut win = Window::new(&mut self.scan, self.scan_len);
             let counts = Some(&p.counts[..]).filter(|c| p.ready && c.len() == p.w.records.len());
@@ -154,8 +165,8 @@ impl WiffReader {
     }
 
     /// The optical DAD / PDA 3D matrix and TWC of injection `c`, when the injection has a `DAD` storage.
-    pub fn dad(&self, c: usize) -> Result<Option<&super::dad::DadData>> {
-        Ok(self.part(c)?.w.dad.as_ref())
+    pub fn dad(&mut self, c: usize) -> Result<Option<&super::dad::DadData>> {
+        Ok(self.dad_part(c)?.w.dad.as_ref())
     }
 }
 
@@ -199,7 +210,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     dad.wavelength_chromatogram(nm, None, 0)
 }
 
-#[rustfmt::skip] impl Reader for WiffReader { #[cfg(feature = "sciex")] fn variant(&mut self, c: usize) -> bool { variant_of(&self.parts, c) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } fn losses(&mut self, c: usize) -> Result<crate::readers::Losses> { self.losses_of(c) } fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { self.watch(c, k, s); extra_of(self, s) } #[cfg(feature = "mappa-dad")] fn dad_propose(&mut self, c: usize, rt0: f64, rt1: f64) -> Result<Option<String>> { Ok(self.part(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_propose_json(d, rt0, rt1))) }
+#[rustfmt::skip] impl Reader for WiffReader { #[cfg(feature = "sciex")] fn variant(&mut self, c: usize) -> bool { variant_of(&self.parts, c) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } fn losses(&mut self, c: usize) -> Result<crate::readers::Losses> { self.losses_of(c) } fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { self.watch(c, k, s); extra_of(self, s) } #[cfg(feature = "mappa-dad")] fn dad_propose(&mut self, c: usize, rt0: f64, rt1: f64) -> Result<Option<String>> { Ok(self.dad_part(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_propose_json(d, rt0, rt1))) }
     fn format(&self) -> Format { Format::SciexWiff }
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         use crate::conv::{IDENTITY, NOT_DECODED};
@@ -236,23 +247,23 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
         if let Some(ch) = self.bpc_chroms(c)?.into_iter().find(|h| h.id == id) {
             return Ok(ch);
         }
-        dad_chrom(self.part(c)?.w.dad.as_ref(), id).ok_or_else(|| Error::new("error.badIndex").with("id", id))
+        dad_chrom(self.dad_part(c)?.w.dad.as_ref(), id).ok_or_else(|| Error::new("error.badIndex").with("id", id))
     }
     #[cfg(any(not(target_family = "wasm"), feature = "sciex", feature = "mappa-dad"))]
     fn dad_data(&mut self, c: usize) -> Result<Option<super::dad::DadData>> {
-        Ok(self.part(c)?.w.dad.clone())
+        Ok(self.dad_part(c)?.w.dad.clone())
     }
     #[cfg(feature = "mappa-dad")]
     fn dad_map(&mut self, c: usize) -> Result<Option<String>> {
-        Ok(self.part(c)?.w.dad.as_ref().map(|d| d.to_map_json()))
+        Ok(self.dad_part(c)?.w.dad.as_ref().map(|d| d.to_map_json()))
     }
     #[cfg(feature = "mappa-dad")]
     fn dad_wavelength(&mut self, c: usize, nm0: f64, nm1: f64) -> Result<Option<String>> {
-        Ok(self.part(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_wavelength_json(d, nm0, nm1)))
+        Ok(self.dad_part(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_wavelength_json(d, nm0, nm1)))
     }
     #[cfg(feature = "mappa-dad")]
     fn dad_spectrum(&mut self, c: usize, rt0: f64, rt1: f64) -> Result<Option<String>> {
-        Ok(self.part(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_spectrum_json(d, rt0, rt1)))
+        Ok(self.dad_part(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_spectrum_json(d, rt0, rt1)))
     }
     fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> { with_method(self, c).map(Some) }
     fn table_header(&mut self, c: usize) -> Result<Option<Header>> { file_header(self, c).map(Some) }
@@ -287,6 +298,12 @@ fn with_method(l: &mut WiffReader, c: usize) -> Result<Header> {
 /// The header of the mzML of injection `c`, with the SHA-1 of the `.wiff.scan`.
 fn file_header(l: &mut WiffReader, c: usize) -> Result<Header> {
     l.ready(c)?;
+    // the SHA-1 of the whole `.wiff` is taken here, for the header of one mzML, never when the pair is opened (it would read the whole file)
+    if let Some(p) = l.parts.get_mut(c)
+        && p.w.wiff_sha1.is_none()
+    {
+        p.w.wiff_sha1 = Some(l.ole.sha1_hex());
+    }
     if l.scan_sha1.is_none() {
         let win = &mut Window::new(&mut l.scan, l.scan_len);
         l.scan_sha1 = Some(sha1_hex(win, l.scan_len).ok());
@@ -344,10 +361,8 @@ fn open_with(
     let mut scan = std::mem::replace(&mut sm.dati, Box::new(Vec::<u8>::new()));
     let membro = u16::try_from(si).unwrap_or(0);
     let (mut parti, mut campioni, mut total, mut raw_names) = (Vec::new(), Vec::new(), 0u64, Vec::new());
-    let sha1 = ole.sha1_hex();
     for (i, s) in samples(&ole).into_iter().enumerate() {
-        let mut w = Wiff::open_or_refuse(&ole, &name, scan_len, s)?;
-        w.wiff_sha1 = Some(sha1.clone());
+        let w = Wiff::open_or_refuse(&ole, &name, scan_len, s)?;
         total += w.records.len() as u64;
         limits.ok_entries(total)?;
         let mut part = Part::new(w);
