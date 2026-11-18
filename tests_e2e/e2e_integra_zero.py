@@ -57,13 +57,17 @@ try:
         xic(pg, "194")
         line_record(pg)
         held = {}
+        def drag(to_y):
+            x, y, b = point(pg, 0)
+            pg.mouse.move(x, y); pg.mouse.down(); pg.mouse.move(x, y - 40, steps=4); pg.mouse.move(x, to_y(), steps=8)
+            return pg.mouse
         def mouse():
+            m = drag(lambda: axis_y(pg)); m.up(); wait_for_js(pg, f"{IT}.bl[1]===0"); held["area"] = settle(pg)["area"]       # dropped exactly on the axis: the number a held handle must give
+            held["t"] = pg.evaluate(f"{IT}.bl[0]")
             x, y, b = point(pg, 0)
-            pg.evaluate(f"(()=>{{const i={IT};i.bl[1]=0;draw({PN})}})()"); wait_for_js(pg, f"{IT}.bl[1]===0"); held["area"] = settle(pg)["area"]     # the line on the axis: the number a handle held at zero must give
-            x, y, b = point(pg, 0)
-            pg.mouse.move(x, y); pg.mouse.down(); pg.mouse.move(x, y - 40, steps=4); pg.mouse.move(x, axis_y(pg) + 120, steps=8)
+            m = drag(lambda: axis_y(pg) + 120)                                                                           # then dragged 120 px under it
             pg.screenshot(path=str(OUT / "zero-dragging.png"))
-            pg.mouse.up()
+            m.up()
             y0 = pg.evaluate(f"{IT}.bl[1]"); assert y0 == 0, f"the handle went to {y0} counts, below the zero line"
             hx, hy, _ = point(pg, 0); assert abs(hy - axis_y(pg)) < 1.5, (hy, axis_y(pg))      # the handle sits on the axis, not under it
             e = settle(pg); assert e["area"] == held["area"] and e["below"] >= 0, (e, held)  # the area is the one of the line at zero
@@ -72,7 +76,7 @@ try:
         def keys():
             pg.locator(".ibp[data-k='0']").focus()
             for _ in range(6): pg.keyboard.press("Shift+ArrowDown")
-            assert pg.evaluate(f"{IT}.bl[1]") == 0 and pg.evaluate(f"{IT}.bl[3]") >= 0
+            bl = pg.evaluate(f"{IT}.bl"); assert bl[1] == 0 and bl[3] >= 0, bl
             assert settle(pg)["area"] == held["area"]
         step("keyboard: the down arrow stops at zero", keys)
         def typed():
@@ -80,8 +84,8 @@ try:
             pg.keyboard.press("b"); pg.wait_for_selector("#bigdlg[open] input[name=ib-m]")
             pg.fill("[data-ib='1']", "-50000"); pg.click("#ib-ok"); wait_for_js(pg, "!document.querySelector('#bigdlg').open")
             assert pg.evaluate(f"{IT}.bl[1]") == 0, pg.evaluate(f"{IT}.bl")
-            msg = pg.evaluate("I18N.t('int.base.floor')"); wait_for_js(pg, f"[...document.querySelectorAll('body *')].some(e=>e.children.length===0&&e.textContent==={msg!r}&&e.offsetParent!==null)", 4000)
-            assert settle(pg)["area"] == held["area"]
+            msg = pg.evaluate("I18N.t('int.base.floor')"); wait_for_js(pg, f"(()=>{{const d=document.querySelector('#qnote');return !!d&&!d.hidden&&d.textContent==={msg!r}}})()", 4000)
+            assert abs(settle(pg)["area"] - held["area"]) <= 1e-4 * held["area"]          # the dialog rounds the typed times to 6 digits
         step("typed: a point below zero in the dialog is put on zero and the page says so", typed)
         def restored():
             pg.evaluate(f"(()=>{{const i={IT};i.bl[1]=-30000;i.bl[3]=-1000;draw({PN})}})()")
