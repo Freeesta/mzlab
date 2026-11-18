@@ -216,11 +216,11 @@ fn an_empty_injection_keeps_its_number_and_gives_an_empty_mzml() {
         return;
     }
     let out = dir.join("out");
-    let o = convert(&[p(&src.join("buchi.wiff")), "--out", p(&out)]);
+    let o = convert(&[p(&src.join("gaps.wiff")), "--out", p(&out)]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let files = mzmls(&out);
     let names: Vec<&str> = files.iter().map(|f| f.0.as_str()).collect();
-    assert_eq!(names, ["buchi-1.mzML", "buchi-2.mzML", "buchi-3.mzML"]);
+    assert_eq!(names, ["gaps-1.mzML", "gaps-2.mzML", "gaps-3.mzML"]);
     let spectra = |b: &[u8]| String::from_utf8_lossy(b).matches("<spectrum ").count();
     assert_eq!(
         files.iter().map(|f| spectra(&f.1)).collect::<Vec<_>>(),
@@ -252,7 +252,7 @@ fn a_refused_wiff_is_told_with_the_text_of_the_site() {
             "Not supported yet: TOF MS scan (scan type code 8, experiment 1 of this .wiff)",
         ),
         (
-            "periodi",
+            "periods",
             "The method of this .wiff has 2 periods and this program reads one-period methods only",
         ),
     ] {
