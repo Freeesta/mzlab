@@ -32,9 +32,14 @@ fn main() {
         let path = if path.is_absolute() {
             path
         } else {
-            std::env::current_dir().map(|d| d.join(&path)).unwrap_or(path)
+            std::env::current_dir()
+                .map(|d| d.join(&path))
+                .unwrap_or(path)
         };
         println!("cargo:rerun-if-changed={}", path.display());
     }
-    println!("cargo:rustc-env=MZLAB_CLI_COMMIT={}", commit.unwrap_or_default());
+    println!(
+        "cargo:rustc-env=MZLAB_CLI_COMMIT={}",
+        commit.unwrap_or_default()
+    );
 }

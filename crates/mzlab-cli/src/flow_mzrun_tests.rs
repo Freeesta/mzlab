@@ -50,12 +50,21 @@ fn a_record_of_a_run_verifies_and_is_the_same_bytes_twice() {
     )
     .unwrap();
     let v = cli(&["flow", "verify", p(&file)]);
-    assert_eq!((v.code, v.stdout.len(), v.stderr.as_str()), (3, 0, "self_sha256\n"));
+    assert_eq!(
+        (v.code, v.stdout.len(), v.stderr.as_str()),
+        (3, 0, "self_sha256\n")
+    );
     let j = cli(&["flow", "verify", p(&file), "--json"]);
     let j_out = String::from_utf8(j.stdout).unwrap();
     assert_eq!(j.code, 3);
-    assert!(j_out.starts_with("{\"schema\":\"verify/1\",\"ok\":false,"), "{j_out}");
-    assert!(j_out.ends_with("\"problems\":[\"self_sha256\"]}\n"), "{j_out}");
+    assert!(
+        j_out.starts_with("{\"schema\":\"verify/1\",\"ok\":false,"),
+        "{j_out}"
+    );
+    assert!(
+        j_out.ends_with("\"problems\":[\"self_sha256\"]}\n"),
+        "{j_out}"
+    );
     let _ = std::fs::remove_dir_all(out.parent().unwrap());
 }
 
@@ -75,12 +84,26 @@ fn usage_mistakes_exit_2() {
 fn roles_without_sha256_take_it_from_the_run_and_the_record_verifies() {
     let (out, roles) = run_folder("mzrun_b", false);
     let file = out.join("run.mzrun.json");
-    let r = cli(&["flow", "record", p(&out), "--roles", p(&roles), "--out", p(&file)]);
+    let r = cli(&[
+        "flow",
+        "record",
+        p(&out),
+        "--roles",
+        p(&roles),
+        "--out",
+        p(&file),
+    ]);
     assert_eq!(r.code, 0, "{}", r.stderr);
-    assert!(r.stderr.contains("taken from the run input of that name"), "{}", r.stderr);
+    assert!(
+        r.stderr.contains("taken from the run input of that name"),
+        "{}",
+        r.stderr
+    );
     let v = cli(&["flow", "verify", p(&file), "--json"]);
     assert_eq!(v.code, 0, "{}", v.stderr);
-    assert!(String::from_utf8(v.stdout).unwrap().starts_with("{\"schema\":\"verify/1\",\"ok\":true,"));
+    assert!(String::from_utf8(v.stdout)
+        .unwrap()
+        .starts_with("{\"schema\":\"verify/1\",\"ok\":true,"));
     let _ = std::fs::remove_dir_all(out.parent().unwrap());
 }
 
@@ -88,7 +111,10 @@ fn roles_without_sha256_take_it_from_the_run_and_the_record_verifies() {
 fn samples_table_on_real_files_gives_roles_that_record_accepts() {
     let (dir, _) = fixture("mzrun_c");
     let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
-    assert_eq!(flow_run(&[p(&plan), "--in", p(&data), "--out", p(&out)]).code, 0);
+    assert_eq!(
+        flow_run(&[p(&plan), "--in", p(&data), "--out", p(&out)]).code,
+        0
+    );
     let mut paths: Vec<String> = std::fs::read_dir(&data)
         .unwrap()
         .map(|e| e.unwrap().path().to_string_lossy().into_owned())
@@ -99,7 +125,10 @@ fn samples_table_on_real_files_gives_roles_that_record_accepts() {
     let t = cli(&args);
     assert_eq!(t.code, 0, "{}", t.stderr);
     let table = String::from_utf8(t.stdout).unwrap();
-    assert!(!table.contains("\"sha256\":\"\""), "every file is hashed: {table}");
+    assert!(
+        !table.contains("\"sha256\":\"\""),
+        "every file is hashed: {table}"
+    );
     let roles = dir.join("table.json");
     std::fs::write(&roles, table).unwrap();
     let r = cli(&["flow", "record", p(&out), "--roles", p(&roles)]);
@@ -111,11 +140,17 @@ fn samples_table_on_real_files_gives_roles_that_record_accepts() {
 fn a_role_that_matches_no_input_is_refused_with_the_names_the_run_has() {
     let (out, roles) = run_folder("mzrun_d", false);
     let text = std::fs::read_to_string(&roles).unwrap();
-    let first = mzlab_core::samples::from_json(text.as_bytes()).unwrap()[0].file.clone();
+    let first = mzlab_core::samples::from_json(text.as_bytes()).unwrap()[0]
+        .file
+        .clone();
     std::fs::write(&roles, text.replacen(&first, "nothing.mzML", 1)).unwrap();
     let r = cli(&["flow", "record", p(&out), "--roles", p(&roles)]);
     assert_eq!(r.code, 3);
-    assert!(r.stderr.contains("nothing.mzML") && r.stderr.contains(&first), "{}", r.stderr);
+    assert!(
+        r.stderr.contains("nothing.mzML") && r.stderr.contains(&first),
+        "{}",
+        r.stderr
+    );
     let _ = std::fs::remove_dir_all(out.parent().unwrap());
 }
 
@@ -123,11 +158,21 @@ fn a_role_that_matches_no_input_is_refused_with_the_names_the_run_has() {
 fn a_run_made_without_a_commit_is_refused_with_the_key_and_the_hint() {
     let (out, roles) = run_folder("mzrun_e", true);
     let prov = std::fs::read_to_string(out.join("prov.json")).unwrap();
-    let start = prov.find("\"commit\":\"").expect("this build names its commit");
+    let start = prov
+        .find("\"commit\":\"")
+        .expect("this build names its commit");
     let end = start + prov[start..].find(',').unwrap() + 1;
-    std::fs::write(out.join("prov.json"), format!("{}{}", &prov[..start], &prov[end..])).unwrap();
+    std::fs::write(
+        out.join("prov.json"),
+        format!("{}{}", &prov[..start], &prov[end..]),
+    )
+    .unwrap();
     let r = cli(&["flow", "record", p(&out), "--roles", p(&roles)]);
     assert_eq!(r.code, 3);
-    assert!(r.stderr.contains("[err.mzrun.commit]") && r.stderr.contains("MZLAB_COMMIT"), "{}", r.stderr);
+    assert!(
+        r.stderr.contains("(err.mzrun.commit)") && r.stderr.contains("MZLAB_COMMIT"),
+        "{}",
+        r.stderr
+    );
     let _ = std::fs::remove_dir_all(out.parent().unwrap());
 }

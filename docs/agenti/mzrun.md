@@ -51,3 +51,8 @@ One analysis in one canonical JSON file, in two modes: a `record` replicates a r
 
 ## Planned
 browser `prov` for all steps; wasm and desktop routes; preset apply; Attributio decisions; UI; ESI+/ESI- merge; exports; e2e replicate.
+
+## From the CLI
+- The commit of `engine` comes from `crates/mzlab-cli/build.rs` (`MZLAB_COMMIT`, else `git rev-parse HEAD`); `flow run` writes it in the `prov/1` agent (`build_agent(name, Some(commit))`), the `.wasm` passes `None` and stays commit-free. A run from a build with neither has no commit: `flow record` exits 3 with `err.mzrun.commit` (set `MZLAB_COMMIT` at build time).
+- `flow record RUNDIR --roles ROLES.json`: a role with an empty `sha256` takes it from the run input of the same file name (full name, then last path part), logged on stderr; no match or several: `err.mzrun.roles` (exit 3) naming the inputs. `samples table FILE...` hashes real files.
+- `flow verify RECORD [--json]`: mismatches on stderr, exit 3; `--json` writes `{"schema":"verify/1","ok","self_sha256","problems"}` on stdout.

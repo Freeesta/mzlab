@@ -121,8 +121,11 @@ fn table(args: Vec<String>) -> Result<String, String> {
     }
     let mut named: Vec<(String, String)> = Vec::new();
     for p in &paths {
-        let (_, sha) = crate::flow_hash::file_sha256(Path::new(p)).map_err(|e| format!("{p}: {e}"))?;
-        let name = Path::new(p).file_name().map_or(p.clone(), |n| n.to_string_lossy().into_owned());
+        let (_, sha) =
+            crate::flow_hash::file_sha256(Path::new(p)).map_err(|e| format!("{p}: {e}"))?;
+        let name = Path::new(p)
+            .file_name()
+            .map_or(p.clone(), |n| n.to_string_lossy().into_owned());
         named.push((name, sha));
     }
     if paths.is_empty() {

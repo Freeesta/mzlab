@@ -73,7 +73,12 @@ fn plan_inputs(plan: &Value) -> Vec<(String, String)> {
     plan.get("inputs")
         .map_or(&[][..], Value::arr)
         .iter()
-        .filter_map(|f| Some((f.get("name")?.str()?.to_string(), f.get("sha256")?.str()?.to_string())))
+        .filter_map(|f| {
+            Some((
+                f.get("name")?.str()?.to_string(),
+                f.get("sha256")?.str()?.to_string(),
+            ))
+        })
         .collect()
 }
 
@@ -87,7 +92,11 @@ fn fill_roles(roles: &mut [samples::Sample], plan: &Value, log: &mut String) -> 
     let inputs = plan_inputs(plan);
     for r in roles.iter_mut().filter(|r| r.sha256.is_empty()) {
         let by = |same: &dyn Fn(&str) -> bool| -> Vec<&str> {
-            let mut v: Vec<&str> = inputs.iter().filter(|(n, _)| same(n)).map(|(_, h)| h.as_str()).collect();
+            let mut v: Vec<&str> = inputs
+                .iter()
+                .filter(|(n, _)| same(n))
+                .map(|(_, h)| h.as_str())
+                .collect();
             v.sort_unstable();
             v.dedup();
             v
@@ -98,17 +107,24 @@ fn fill_roles(roles: &mut [samples::Sample], plan: &Value, log: &mut String) -> 
         }
         match hit[..] {
             [sha] => {
-                log.push_str(&format!("role {}: sha256 {sha} taken from the run input of that name\n", r.file));
+                log.push_str(&format!(
+                    "role {}: sha256 {sha} taken from the run input of that name\n",
+                    r.file
+                ));
                 r.sha256 = sha.to_string();
             }
             _ => {
                 let names: Vec<&str> = inputs.iter().map(|(n, _)| n.as_str()).collect();
-                let why = if hit.is_empty() { "no input of the run has that name" } else { "several inputs of the run have that name" };
-                return Err(Fail::Refused(format!(
-                    "err.mzrun.roles file={} detail={why}; the inputs are {}",
-                    r.file,
-                    names.join(", ")
-                )));
+                let why = if hit.is_empty() {
+                    "no input of the run has that name"
+                } else {
+                    "several inputs of the run have that name"
+                };
+                let detail = format!("{why}; the inputs are {}", names.join(", "));
+                let e = mzlab_core::error::Error::new("err.mzrun.roles")
+                    .with("file", r.file.as_str())
+                    .with("detail", detail);
+                return Err(refused(e));
             }
         }
     }
@@ -168,8 +184,11 @@ pub fn check(args: Vec<String>) -> Outcome {
     let code = if v.problems.is_empty() { 0 } else { 3 };
     if json {
         let mut o = Out::default();
-        o.raw("{\"schema\":\"verify/1\",\"ok\":").raw(if code == 0 { "true" } else { "false" });
-        o.raw(",\"self_sha256\":").str(&v.self_sha256).raw(",\"problems\":[");
+        o.raw("{\"schema\":\"verify/1\",\"ok\":")
+            .raw(if code == 0 { "true" } else { "false" });
+        o.raw(",\"self_sha256\":")
+            .str(&v.self_sha256)
+            .raw(",\"problems\":[");
         for (k, p) in v.problems.iter().enumerate() {
             if k > 0 {
                 o.raw(",");
@@ -177,7 +196,11 @@ pub fn check(args: Vec<String>) -> Outcome {
             o.str(p);
         }
         o.raw("]}\n");
-        return Outcome { code, stdout: o.0.into_bytes(), stderr: String::new() };
+        return Outcome {
+            code,
+            stdout: o.0.into_bytes(),
+            stderr: String::new(),
+        };
     }
     Outcome {
         code,

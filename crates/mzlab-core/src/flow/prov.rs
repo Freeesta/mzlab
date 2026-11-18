@@ -41,9 +41,7 @@ pub fn build_agent(name: &str, commit: Option<&str>) -> Agent {
     Agent {
         name: name.into(),
         version: env!("CARGO_PKG_VERSION").into(),
-        commit: commit
-            .or(option_env!("MZLAB_COMMIT"))
-            .map(str::to_string),
+        commit: commit.or(option_env!("MZLAB_COMMIT")).map(str::to_string),
         platform: Platform::current().name(),
         target: Some(target),
         rustc: option_env!("MZLAB_RUSTC").map(str::to_string),
