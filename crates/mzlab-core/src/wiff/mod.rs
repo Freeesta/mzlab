@@ -19,6 +19,8 @@ mod devices;
 pub mod idx;
 #[cfg(feature = "wiffwrite")]
 pub mod inventory;
+#[cfg(feature = "wiffwrite")]
+mod inventory_verify;
 mod listing;
 mod losses;
 mod mass_check;
