@@ -682,9 +682,10 @@ usage: mzlab-cli peak-auto TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VALUE
   --from/--to  the stretch whose apexes count (default: the whole trace)
   --set        the page dialog: hr_smooth (points, odd), hr_sn; engine only: hr_prom (% of the tallest), hr_scans, hr_half (points, 0 = auto), hr_slope (%);
                the area of every peak: baseline = zero (default: any background under the peak is part of the area), edges (the line b0-b1),
-               or line with base_y0, base_t0, base_y1, base_t1 (see peak-area --help)
-  output       {"peaks":[{"t0":MIN,"t1":MIN,"b0":BASELINE,"b1":BASELINE,"area":COUNTS_MIN,"baseline":MODE}...]}; with zero or line each
-               peak also has "below" (COUNTS_MIN, the part under the line) and its area is the signed one against that line
+               or line with base_y0, base_t0, base_y1, base_t1 (see peak-area --help);
+               area_unit: s = counts x s (default, as peak-area), min = counts x min (the old unit)
+  output       {"peaks":[{"t0":MIN,"t1":MIN,"b0":BASELINE,"b1":BASELINE,"area":COUNTS_S,"baseline":MODE}...]}; with zero or line each
+               peak also has "below" (COUNTS_S, the part under the line) and its area is the signed one against that line
 --- stderr
 
 === mzlab-cli peak-auto-lr --help
@@ -698,9 +699,10 @@ usage: mzlab-cli peak-auto-lr TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VA
   --from/--to  the stretch whose apexes count (default: the whole trace)
   --set        lr_half (Savitzky-Golay half window of the detection copy, points; 0 = 40 % of the FWHM of the tallest peak), lr_valley (% of the
                smaller peak the valley must go down to keep two peaks), lr_sn (smallest height over the noise), lr_min_pts, lr_despike (1/0:
-               median of 3 against spikes), lr_split (drop = one baseline under touching peaks, valley = each baseline ends at the valley)
+               median of 3 against spikes), lr_split (drop = one baseline under touching peaks, valley = each baseline ends at the valley),
+               area_unit (s = counts x s, default, as peak-area; min = counts x min, the old unit)
   output       {"params":{half, half_auto, valley, sn, min_pts, despike, split, noise}, "peaks":[{lo, hi, t0, t1, rt, b0, b1, area, below,
-               area_zero, height, sn, end0, end1}...]}: indices, min, counts; areas in counts x min of the raw trace against the straight line
+               area_zero, height, sn, end0, end1}...]}: indices, min, counts; areas in counts x s (area_unit) of the raw trace against the straight line
                b0-b1 (signed; below = the part under it) and from zero; end = background | valley | cap (5 FWHM)
 --- stderr
 
