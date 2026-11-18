@@ -92,6 +92,15 @@ try:
             # a row without a peak keeps the engine's numbers (the chart integrates the same window): area and height are copy buttons, the origin says "No peak"
             np_ = pg.evaluate("[...document.querySelectorAll('#manint tbody tr[data-org=no_peak]')].map(r => [r.querySelectorAll('.manint-np').length, r.querySelectorAll('[data-cp]').length])")
             need(np_ and all(x[0] == 0 and x[1] >= 2 for x in np_), ("no peak: area and height are numbers like any other row", np_))
+            # the card shows the engine's numbers: the copy value of each area/height cell is the CSV's, and each area label of the chart is the card's area
+            cmp = pg.evaluate("""(() => { const [h, ...b] = MANINT.rows(MANINT.state().csv); const k = n => h.indexOf(n), tr = [...document.querySelectorAll('#manint tbody tr')];
+              const rows = b.filter(r => r[k('sample')] !== 'sum' || r[k('start_min')] !== '');
+              const cells = tr.map((r, i) => [...r.querySelectorAll('[data-cp]')].map(c => c.dataset.cp));
+              const ok = rows.every((r, i) => cells[i] && cells[i].includes(r[k('area')]) && cells[i].includes(r[k('height')]));
+              const txt = new Set(rows.map(r => 'A = ' + I18N.sciE(+r[k('area')])));
+              const lab = E.panels.find(q => q.type === 'mrm' && q._a)._a.lbls.filter(l => l.int && l.int.fol).map(l => l.text);
+              return { ok, n: rows.length, lab, missing: lab.filter(t => !txt.has(t)) }; })()""")
+            need(cmp["ok"] and cmp["n"] >= 4 and not cmp["missing"], ("card = engine numbers = chart labels", cmp))
             w1 = D / "w1.json"; w1.write_text(json.dumps([{"file": 1, "tr": 1, "a": PK[1][1][0] - 0.02, "b": PK[1][1][0] + 0.02, "baseline": "zero"}]))
             sh = json.loads(cli("manual-table", D / "sim3.wiff", "--set", "shifts=true", "--set", f"windows={w1}"))
             ks = pg.evaluate("n => n.map(x => E.files.find(f => f.label === x || f.file.startsWith(x + '.')).k)", SAMPLES)
