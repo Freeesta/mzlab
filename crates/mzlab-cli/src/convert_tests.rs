@@ -252,7 +252,7 @@ fn a_refused_wiff_is_told_with_the_text_of_the_site() {
             "Not supported yet: TOF MS scan (scan type code 8, experiment 1 of this .wiff)",
         ),
         (
-            "periods",
+            "periodi",
             "The method of this .wiff has 2 periods and this program reads one-period methods only",
         ),
     ] {

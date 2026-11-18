@@ -98,7 +98,7 @@ fn every_role_has_a_prompt_a_priced_model_and_a_known_schema() {
                 && r.max_tokens > 0
                 && r.max_tokens <= 8192
         );
-        assert!(["router/1", "lettura/1", "param-scelte/1", "grafico/1"]
+        assert!(["router/1", "reading/1", "param-choices/1", "grafico/1"]
             .contains(&r.output_schema.as_str()));
         assert!(book.digest(&r.prompt_file).is_some_and(|d| d.len() == 64));
     }
@@ -114,8 +114,8 @@ fn every_role_has_a_prompt_a_priced_model_and_a_known_schema() {
 #[test]
 fn the_schemas_are_json_with_their_id() {
     for (file, id) in [
-        ("lettura-1", "lettura/1"),
-        ("param-scelte-1", "param-scelte/1"),
+        ("lettura-1", "reading/1"),
+        ("param-scelte-1", "param-choices/1"),
         ("assist-ruoli-1", "assist-ruoli/1"),
     ] {
         let s = std::fs::read_to_string(root().join(format!("docs/schemi/{file}.json"))).unwrap();

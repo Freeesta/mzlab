@@ -1,5 +1,5 @@
-//! The readers of the data assistant seen from outside: the request of a role for the data it may see, and the verdict on its answer. A `lettura/1` or
-//! `param-scelte/1` that `reading::validate` accepts goes to the orchestrator as a summary (at most `MAX_SUMMARY_TOKENS`, never the input of the reader);
+//! The readers of the data assistant seen from outside: the request of a role for the data it may see, and the verdict on its answer. A `reading/1` or
+//! `param-choices/1` that `reading::validate` accepts goes to the orchestrator as a summary (at most `MAX_SUMMARY_TOKENS`, never the input of the reader);
 //! one with problems goes back to the reader once with the problems, and a second failure drops it. Used by the wasm class `Assist` and the tests.
 
 use mzlab_core::error::{Error, Result};
@@ -29,11 +29,11 @@ fn format(schema: &str) -> Option<String> {
         r#"{"anyOf":[{"type":"number"},{"type":"string"},{"type":"boolean"},{"type":"array","items":{"type":"number"}}]}"#
     );
     match schema {
-        "lettura/1" => Some(format!(
-            r#"{{"type":"object","additionalProperties":false,"required":["schema","kind","findings"],"properties":{{"schema":{{"enum":["lettura/1"]}},"kind":{{"enum":["acquisition","chromatography","table"]}},"findings":{{"type":"array","items":{finding}}},"questions":{QUESTIONS},"numbers":{NUMBERS}}}}}"#
+        "reading/1" => Some(format!(
+            r#"{{"type":"object","additionalProperties":false,"required":["schema","kind","findings"],"properties":{{"schema":{{"enum":["reading/1"]}},"kind":{{"enum":["acquisition","chromatography","table"]}},"findings":{{"type":"array","items":{finding}}},"questions":{QUESTIONS},"numbers":{NUMBERS}}}}}"#
         )),
-        "param-scelte/1" => Some(format!(
-            r#"{{"type":"object","additionalProperties":false,"required":["schema","choices"],"properties":{{"schema":{{"enum":["param-scelte/1"]}},"choices":{{"type":"array","items":{choice}}},"questions":{QUESTIONS},"numbers":{NUMBERS}}}}}"#
+        "param-choices/1" => Some(format!(
+            r#"{{"type":"object","additionalProperties":false,"required":["schema","choices"],"properties":{{"schema":{{"enum":["param-choices/1"]}},"choices":{{"type":"array","items":{choice}}},"questions":{QUESTIONS},"numbers":{NUMBERS}}}}}"#
         )),
         _ => None,
     }
@@ -43,7 +43,7 @@ fn format(schema: &str) -> Option<String> {
 /// (`proxy/build-allowlist.mjs`) hashes them, so no other schema passes the proxy.
 pub fn closed_schemas() -> Vec<(&'static str, String)> {
     let mut v = vec![("router/1", crate::router::SCHEMA.to_string())];
-    for name in ["lettura/1", "param-scelte/1"] {
+    for name in ["reading/1", "param-choices/1"] {
         v.extend(format(name).map(|s| (name, s)));
     }
     v
@@ -92,7 +92,7 @@ pub fn check(
         Ok(reading) => {
             let mut o = Out::default();
             value(&mut o, &reading);
-            let readable = matches!(role.output_schema.as_str(), "lettura/1" | "param-scelte/1");
+            let readable = matches!(role.output_schema.as_str(), "reading/1" | "param-choices/1");
             match (readable, o.0.len().div_ceil(3) > MAX_SUMMARY_TOKENS) {
                 (_, true) => Err(vec![problem("size")]),
                 (true, _) => validate(&reading, input, registry).map(|()| o.0),

@@ -1,4 +1,4 @@
-//! Checks of what a subagent of the assistant wrote: `lettura/1` (findings, questions, actions) and `param-scelte/1` (the choices on the parameters
+//! Checks of what a subagent of the assistant wrote: `reading/1` (findings, questions, actions) and `param-choices/1` (the choices on the parameters
 //! proposed by the rules). Every `evidence` key must exist in the input the subagent was given, every number of a sentence must be in the input, actions
 //! must name real parameters inside the `step/1` limits. The problems go back to the subagent once; then the reading is dropped. Used by the agent.
 
@@ -269,7 +269,7 @@ pub fn problems_json(problems: &[Problem]) -> String {
     o.0
 }
 
-/// Checks `reading` (a `lettura/1` or a `param-scelte/1`) against `input`, the data blocks the subagent saw as one object keyed by source
+/// Checks `reading` (a `reading/1` or a `param-choices/1`) against `input`, the data blocks the subagent saw as one object keyed by source
 /// (`{"inspection/1": ..., "answers": ...}`); `registry` gives the limits of the parameters.
 pub fn validate(reading: &Value, input: &Value, registry: &[Step]) -> Result<(), Found> {
     let mut found = Found::new();
@@ -280,8 +280,8 @@ pub fn validate(reading: &Value, input: &Value, registry: &[Step]) -> Result<(),
         known: &known,
     };
     match reading.get("schema").and_then(Value::str) {
-        Some("lettura/1") => cx.reading(reading, &mut found),
-        Some("param-scelte/1") => cx.choices(reading, &mut found),
+        Some("reading/1") => cx.reading(reading, &mut found),
+        Some("param-choices/1") => cx.choices(reading, &mut found),
         _ => flag(&mut found, "schema", "schema"),
     }
     if found.is_empty() {

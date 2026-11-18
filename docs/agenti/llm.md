@@ -91,4 +91,4 @@ Principles and choices: `llm-choices.md`. The `mzlab-llm` crate (workspace membe
 - Proofs: `cargo test -p mzlab-llm chart`, `tests/test_llm_grafico.py` (golden files against the schema), `tests_e2e/e2e_llm_grafici.py` (includes axe and targets).
 
 ## Subagents and readings (`assist.rs`, `reading.rs`)
-- Roles (`assist.rs`), `lettura/1` (`reading.rs`), `subcheck.rs`, router (`router.rs`), prompt phase, session on `fs_pos` and data assistant tools (`tools_assist.rs`): `docs/agenti/llm-subagents.md`.
+- Roles (`assist.rs`), `reading/1` (`reading.rs`), `subcheck.rs`, router (`router.rs`), prompt phase, session on `fs_pos` and data assistant tools (`tools_assist.rs`): `docs/agenti/llm-subagents.md`.

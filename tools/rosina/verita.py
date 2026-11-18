@@ -41,8 +41,8 @@ SECONDO = "UO:0000010"
 
 # fields of the mzML header whose place in method/1 is known (method_mzml.rs); the others are declared "not mapped" by the bench, never silently skipped
 METHOD_MZML = {
-    "mzml:run@startTimeStamp": "origine.file_creato",
-    "mzml:instrument:instrument serial number": "strumento.serie",
+    "mzml:run@startTimeStamp": "origin.file_created",
+    "mzml:instrument:instrument serial number": "instrument.series",
 }
 
 

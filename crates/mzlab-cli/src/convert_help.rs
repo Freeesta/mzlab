@@ -23,5 +23,5 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--sample LIST] [--compression KI
   --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
   --help               this text
 
-progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 3 a file was written with scans missing (conversion/1 parziale; a
+progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 3 a file was written with scans missing (conversion/1 partial; a
 warning line names it), 4 an input is missing or holds nothing to convert, 5 a --sample id the dataset does not have";

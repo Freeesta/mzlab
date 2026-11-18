@@ -34,7 +34,7 @@ Servono due aggiunte al generatore (PR A2): una serie con 3 QC e 2 bianchi (rumo
 
 | Metrica | Definizione | Soglia di accettazione |
 |---|---|---|
-| esattezza dei metadati | campi di `lettura/1 acquisition` uguali alla risposta nota (tipo, polarità, risoluzione, modo, cromatografia) | ≥ 98 % dei campi, 0 errori di polarità o risoluzione |
+| esattezza dei metadati | campi di `reading/1 acquisition` uguali alla risposta nota (tipo, polarità, risoluzione, modo, cromatografia) | ≥ 98 % dei campi, 0 errori di polarità o risoluzione |
 | errori nei parametri | quota di parametri proposti fuori dall'intervallo accettato (dalla regola o dal chimico) | ≤ 5 % |
 | piani validi | piani che passano `flow::check` al primo tentativo / entro 3 | ≥ 80 % / 100 % |
 | fedeltà ai numeri | numeri nel testo presenti nell'ingresso | 100 % (ogni eccezione è un errore) |

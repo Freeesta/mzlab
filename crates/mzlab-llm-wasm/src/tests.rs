@@ -220,7 +220,7 @@ fn assist() -> Assist {
 }
 
 const INPUT: &str = r#"{"inspection/1":{"files":[{"alias":"f1","polarity":"positive"}]}}"#;
-const GOOD: &str = r#"{"schema":"lettura/1","kind":"acquisition","findings":[{"id":"F1","topic":"polarity","statement":"f1 is positive","evidence":["inspection.files.f1.polarity"],"confidence":"high","action":{"type":"none"}}]}"#;
+const GOOD: &str = r#"{"schema":"reading/1","kind":"acquisition","findings":[{"id":"F1","topic":"polarity","statement":"f1 is positive","evidence":["inspection.files.f1.polarity"],"confidence":"high","action":{"type":"none"}}]}"#;
 
 #[test]
 fn assist_asks_a_role_and_gives_the_orchestrator_only_what_passed() {
@@ -234,7 +234,7 @@ fn assist_asks_a_role_and_gives_the_orchestrator_only_what_passed() {
         .contains("err.llm.assist.call"));
     let ok = a.check("metadati", INPUT, GOOD, 0).unwrap();
     assert!(
-        ok.starts_with("{\"verdict\":\"accepted\",\"summary\":{\"schema\":\"lettura/1\""),
+        ok.starts_with("{\"verdict\":\"accepted\",\"summary\":{\"schema\":\"reading/1\""),
         "{ok}"
     );
     let bad = GOOD.replace("f1 is positive", "f1 is positive at 14.3 min");

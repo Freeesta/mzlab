@@ -17,7 +17,7 @@ const META: &str = include_str!("../data/assist/03_metadati.md");
 const PHASE: &str = include_str!("../data/assist/06_piano.md");
 const INPUT: &str =
     r#"{"inspection/1":{"files":[{"alias":"f1","polarity":"positive","resolution":"unit"}]}}"#;
-const GOOD: &str = r#"{"schema":"lettura/1","kind":"acquisition","findings":[{"id":"F1","topic":"polarity","statement":"f1 is positive","evidence":["inspection/1.files.f1.polarity"],"confidence":"high","action":{"type":"none"}}],"questions":[],"numbers":[]}"#;
+const GOOD: &str = r#"{"schema":"reading/1","kind":"acquisition","findings":[{"id":"F1","topic":"polarity","statement":"f1 is positive","evidence":["inspection/1.files.f1.polarity"],"confidence":"high","action":{"type":"none"}}],"questions":[],"numbers":[]}"#;
 
 fn provider() -> Provider {
     builtin().into_iter().find(|p| p.id == "anthropic").unwrap()
@@ -49,7 +49,7 @@ fn the_request_is_the_role_of_the_data_with_the_input_as_data() {
         Some("claude-sonnet-5-5")
     );
     assert!(v.get("tools").is_none());
-    assert!(r.body.contains("\"format\"") && r.body.contains("lettura/1"));
+    assert!(r.body.contains("\"format\"") && r.body.contains("reading/1"));
     assert!(r.body.contains("inspection/1") && !r.body.contains("temperature"));
     // the chart drawer has no reading schema: its answer is checked by `chart::make`
     let g = request(&provider(), &role("grafici"), META, &input()).unwrap();
@@ -62,7 +62,7 @@ fn a_valid_reading_is_the_summary_the_orchestrator_sees() {
         panic!("not accepted")
     };
     assert!(
-        s.starts_with("{\"schema\":\"lettura/1\"") && s.len().div_ceil(3) <= MAX_SUMMARY_TOKENS
+        s.starts_with("{\"schema\":\"reading/1\"") && s.len().div_ceil(3) <= MAX_SUMMARY_TOKENS
     );
 }
 
@@ -91,7 +91,7 @@ fn an_invented_number_goes_back_once_with_the_problems_then_the_reading_is_dropp
 fn text_that_is_not_json_or_too_long_is_a_problem_not_a_summary() {
     assert!(matches!(verdict("I think so", 1), Verdict::Dropped { .. }));
     let long = format!(
-        "{{\"schema\":\"lettura/1\",\"kind\":\"table\",\"findings\":[],\"pad\":\"{}\"}}",
+        "{{\"schema\":\"reading/1\",\"kind\":\"table\",\"findings\":[],\"pad\":\"{}\"}}",
         "x".repeat(4600)
     );
     let Verdict::Dropped { problems } = verdict(&long, 1) else {

@@ -71,18 +71,18 @@ const PINNED: &[(&str, [&str; 4])] = &[
     (
         "LAB-A",
         [
-            "d4a3ff4a5f804c1903ae148e92dedf3ee0645ada6ba61eecd4a0bed2477edce8",
-            "0016e68470322082f8d480fd8360a58a4dff4cf3d9ab81202b515c492d389a46",
-            "a0b8cf5e8842050982725bed2d2e0f53e269066b667a3877cdafd7f0a77ce887",
+            "341c0443e439db21387b7e932eaf583663ce6b9d90fcee7006e497a27222fe69",
+            "c624928b0f468a1dddab510cea7764f0ca63400e224e7113364762c17fa263ea",
+            "769eece3601b43de970b0bdcb385c5712354f3ec94f1bc12280d60dafc5311e5",
             "9aea18ce54aed30996187adbf32d15255a83ef102b2b4ca428a8b7b5b776d9ab",
         ],
     ),
     (
         "PXD077492",
         [
-            "03b07cbfee6b98a5f4e770a58580e00da525d4a64ef6c64056fc689b0ca80862",
-            "bf006e1395e2ab091e6b00b3fd7cbff7c63a9414d6b9fa8b91809e850f2b3889",
-            "27267e8b1fee3fafbe6d541768e6cbad21cebeec6968f1a7139a7336459343f1",
+            "a7b720f76b31016966eb62becf950eb7f061465da67aaa8796ffd15b7b01547f",
+            "6f26fe3338241676e215c7cbe36b442e008c0e71b5c7ef41ff2ba8c95925056e",
+            "e8114cccd6fbf6b1f5f8cd0ad3fc07019803d87e5317fb12bb8962c8d270325f",
             "d146d4ece74e6fad473d0465d4cac9bfccdd5f416e4843779fd904b189b7e3bf",
         ],
     ),

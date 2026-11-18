@@ -112,7 +112,7 @@ test("the allow-list holds every prompt of assist-ruoli-1.json, and the catalog 
   const named = new Set(Object.values(s.allow.system).map((e) => e.role));
   for (const r of roles.roles) assert.ok(named.has(r.role), r.role);
   assert.ok(named.has("orchestrator"));
-  assert.equal(s.allow.schemas.length, 3, "router/1, lettura/1, param-scelte/1");
+  assert.equal(s.allow.schemas.length, 3, "router/1, reading/1, param-choices/1");
   const toolsOf = (file) => {
     const llm = new s.rust.Llm(readFileSync(new URL(`../../docs/schemi/${file}`, import.meta.url), "utf-8"));
     const conv = { schema: "llm-conv/1", provider: "mzlab-demo", model: "claude-sonnet-5-5", system: "x", max_output_tokens: 1, messages: [{ role: "user", parts: [{ text: "x" }] }] };

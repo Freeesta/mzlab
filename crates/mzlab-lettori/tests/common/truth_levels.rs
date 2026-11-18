@@ -85,10 +85,10 @@ fn f2_scan(k: usize, s: &ScanEntry, t: &Value, tol: Tol, d: &mut Vec<String>, m:
     {
         d.push(format!("scan {k}: RT {} vs {rt}", s.rt));
     }
-    if t["level"].as_u64() != Some(u64::from(s.livello)) {
-        d.push(format!("scan {k}: level {} vs {}", s.livello, t["level"]));
+    if t["livello"].as_u64() != Some(u64::from(s.livello)) {
+        d.push(format!("scan {k}: level {} vs {}", s.livello, t["livello"]));
     }
-    let pol = t["polarity"].as_i64().unwrap_or(0);
+    let pol = t["polarita"].as_i64().unwrap_or(0);
     if pol != 0 && s.polarita != 0 && pol != i64::from(s.polarita) {
         d.push(format!("scan {k}: polarity {} vs {pol}", s.polarita));
     } else if pol != 0 && s.polarita == 0 {
@@ -99,7 +99,7 @@ fn f2_scan(k: usize, s: &ScanEntry, t: &Value, tol: Tol, d: &mut Vec<String>, m:
             Some(q) if (q - p).abs() <= tol.mz_da => {}
             other => d.push(format!("scan {k}: precursor {other:?} vs {p}")),
         }
-    } else if s.precursore.is_some() && t["level"].as_u64() == Some(1) {
+    } else if s.precursore.is_some() && t["livello"].as_u64() == Some(1) {
         d.push(format!("scan {k}: precursor on an MS1 scan"));
     }
 }
@@ -225,7 +225,7 @@ fn f4_trace(
         }
     }
     let n = ch.intensity.len();
-    for p in t["sample"].as_array().into_iter().flatten() {
+    for p in t["campione"].as_array().into_iter().flatten() {
         let (Some(tt), Some(yy)) = (num(&p[0]), num(&p[1])) else {
             continue;
         };
@@ -252,11 +252,11 @@ pub fn f4_chromatograms(
         m4.push("no chromatograms in the truth".into());
     }
     for (j, t) in vc.iter().enumerate() {
-        let kind = t["type"].as_str().unwrap_or("altro");
+        let kind = t["tipo"].as_str().unwrap_or("altro");
         let id = t["id"].as_str().unwrap_or("");
         let order = vc[..j]
             .iter()
-            .filter(|x| x["type"].as_str() == Some(kind))
+            .filter(|x| x["tipo"].as_str() == Some(kind))
             .count();
         let entry = croms.iter().find(|x| x.id == id).or_else(|| {
             croms
@@ -337,7 +337,7 @@ pub fn metadata(l: &mut dyn Reader, v: &Value, c: usize) -> Outcome {
             defects.push(format!("{name}: {path} is absent"));
             continue;
         };
-        let Some(b) = text(&f["value"]) else {
+        let Some(b) = text(&f["valore"]) else {
             continue;
         };
         let equal = if path.contains("file_created") || name.contains("TimeStamp") {

@@ -102,7 +102,7 @@ try:
             q = fresh(on=True)
             q.wait_for_selector("#flx-assistant", timeout=30000); wait_for_js(q, "!!window.MZLAB_LLM_AGENT")
             route = json.dumps({"route": "inspect", "need_data": ["inspection"], "language": "en", "suspicious": False})
-            ok = json.dumps({"schema": "lettura/1", "kind": "acquisition", "findings": [{"id": "F1", "topic": "polarity", "statement": "f1 is ESI+ full scan at unit resolution",
+            ok = json.dumps({"schema": "reading/1", "kind": "acquisition", "findings": [{"id": "F1", "topic": "polarity", "statement": "f1 is ESI+ full scan at unit resolution",
                              "evidence": ["inspection.files.f1.polarity", "inspection.files.f1.class"], "confidence": "high", "action": {"type": "none"}}], "questions": [], "numbers": []})
             r = q.evaluate("""async ([route, ok]) => {
               const S = (() => { let n = document.querySelector('#flx-root'); while (n && !n.__flow) n = n.parentElement; return n.__flow; })();

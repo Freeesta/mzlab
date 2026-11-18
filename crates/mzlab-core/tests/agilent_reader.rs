@@ -126,7 +126,7 @@ fn chromatograms_and_method(l: &mut dyn Reader, run: &Run, label: &str) {
     assert!(l.chromatogram(0, "nothing").is_err());
     let doc = l.method(0).unwrap();
     assert!(
-        doc.contains("\"formato\":\"agilent-d\"") && doc.contains("MSPeak.bin"),
+        doc.contains("\"format\":\"agilent-d\"") && doc.contains("MSPeak.bin"),
         "{label}"
     );
 }
