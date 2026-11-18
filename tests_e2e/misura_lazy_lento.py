@@ -1,7 +1,7 @@
 """Probe of the modules read on first use (`carica`) on a slow link, first visit: how long the page waits for `elementare-pannello.js` (first
 opening of «Elemental composition») and `origine.js` (first «Where does this ion come from?») right after a file is loaded, while the service
 worker fills its cache in the background; `--probe cmp` instead times the click on «Elemental composition» (BARRA.show) until its panel is
-drawn, as a user does it. Measures, never asserts: used by docs/agenti/misure-caricamento.md.
+drawn, as a user does it. Measures, never asserts: used by docs/agenti/measurements-loading.md.
 Link model: 1.6 Mbit/s down shared by every connection and 150 ms before each answer, applied by the local server (tools/slow_network.py); CPU x4 over CDP (misura_ricarica.Throttle). The server speaks HTTP/1.1
 (six connections per host), GitHub Pages HTTP/2: a request queues behind open ones here, there it shares the bandwidth only.
 """

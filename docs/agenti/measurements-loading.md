@@ -21,7 +21,7 @@
 - **Head round trips** (local HTTP/2 mirror like GitHub Pages: gzip, 40 ms per answer, shared 30 Mbit/s; Chromium, 6 interleaved visits, medians): with `preload` of `reset.js`, `telefono.js`, `browser.js`, `sito.js` the head scripts arrive together instead of one round trip each. First visit, navigation to engine ready: 1885 → 1426 ms, FCP 597 → 345 ms; reload: 610 → 573 ms. Firefox first visit 2664 → 2510 ms (3 visits). No file downloaded twice; KB and requests before ready unchanged.
 - **Early hints tried and dropped** (same mirror, Chromium, 6 interleaved visits, medians, min-max): `preload` of `lang/<L>.js` from the inline language script: first-visit FCP 312 [272-337] → 341 [308-376] ms; `modulepreload` of the bridge's static imports: engine ready 3450 [3206-3536] → 3460 [3426-3684] ms (modules start earlier, `.wasm` still sets the pace); warm unchanged (742 → 746 ms). Gate was 20 ms; see `ottimizzazioni-tentate.md`.
 - **Not measured here**: WebKit/Safari (not installed in the cloud), a real Fast 4G link (the CDP profile does not slow the mirror: same numbers as cold).
-- **Site update**: see LOAD-FIRST-PAINT-5 (the page is ready in about 0.55 s on both reloads after a deploy; only the changed files are downloaded); behaviour in `e2e_sw_versione`. Warm page from navigation preload and the `?nav=cache` option: `misure-navigazione.md`.
+- **Site update**: see LOAD-FIRST-PAINT-5 (the page is ready in about 0.55 s on both reloads after a deploy; only the changed files are downloaded); behaviour in `e2e_sw_versione`. Warm page from navigation preload and the `?nav=cache` option: `measurements-navigation.md`.
 - KB before FCP counts every request started before the paint: on a warm load non-blocking scripts start earlier, so the number grows when the page is faster.
 
 ## Restarted service worker, latency, code cache, boot order
@@ -83,7 +83,7 @@ Cold at RTT 40 / 150 (mirror): `qqReady` 3359 / 7585 (HTTP/1.1 queue, see above)
 
 ### 3. Code cache
 
-Moved to `misure-code-cache.md` (S1 trace of main and the S3 test of serving cached copies without a new `Response`).
+Moved to `measurements-code-cache.md` (S1 trace of main and the S3 test of serving cached copies without a new `Response`).
 
 ### 5. Isolation reload (cold; first page not isolated, second page after `isolateOnce`)
 
@@ -183,4 +183,4 @@ Medians: +105 ms (1×) and +80 ms (4×) for the arm asked at the drop, inside th
 
 ### Verdicts
 
-The verdicts (a)-(f) of this section, with the copy gate that answers (c): `misure-copie.md`, "Critical path: verdicts".
+The verdicts (a)-(f) of this section, with the copy gate that answers (c): `measurements-copies.md`, "Critical path: verdicts".

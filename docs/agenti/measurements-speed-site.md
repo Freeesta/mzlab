@@ -1,6 +1,6 @@
 # Cumulative table of speed measurements: site loading
 
-One row per speed change to site loading (page, first paint, update, batches of files, side list, "Remove all", first file of a batch), oldest first, with the same rules as `misure-velocita.md` (the table of the other changes); the row is added in the same PR that makes the change. Abandoned routes go in `ottimizzazioni-tentate.md`.
+One row per speed change to site loading (page, first paint, update, batches of files, side list, "Remove all", first file of a batch), oldest first, with the same rules as `measurements-speed.md` (the table of the other changes); the row is added in the same PR that makes the change. Abandoned routes go in `ottimizzazioni-tentate.md`.
 
 | Date | PR | Step | Before | After | % |
 |---|---|---|---|---|---|
@@ -17,4 +17,4 @@ One row per speed change to site loading (page, first paint, update, batches of 
 | 6/11 | LOAD-REMOVE-1 | "Remove all" of N synthetic Full Scan files (120 scans, 266 KB each; built site, Chromium 4 vCPU cloud, CPU ×1): the batch repaints the list, side bar and panels once (`removeAllFiles`, last `take`/`back` only), on "Undo" and on the free too (`tests/test_rimozione_blocco.py`) | N=100: 8.6 s in one task; N=200: 41.6 s task, removed 46.7 s after the click | N=100: 0.08 s; N=200: 0.16 s task, removed 6.3 s after the click (the 6 s of "Undo") | −98 % / −99.6 % |
 | 6/11 | LOAD-REMOVE-2 | "Remove all" of 200 synthetic files as LOAD-REMOVE-1: `lr_remove` drops its own indexes, one trailing `lrFree` + `sweep` after the burst (`tidySoon`, `rust-worker.js`) | idx/ empty 16.4 s, last removal answered 52.4 s after the click | 7.0 s, 6.5 s | −57 % / −88 % |
 | 6/11 | LOAD-TABLE-1 | 200 synthetic Full Scan files loaded at once (266 KB each; built site, Chromium 4 vCPU, CPU ×1, 2 runs): the loading table waits 8× its last repaint before the next (`RUOLI.coalesce`) | `renderFiles` 165 calls 5.3 s; long tasks 9.7 s; 24.5-24.8 s | 77-88 calls 2.2-2.4 s; 4.1-4.2 s; 21.7-22.4 s | −57 % long tasks |
-| 15/11 | primo-file-precedenza | Ten synthetic files dropped at once, drop → first chart, built site, Chromium 4 vCPU, CPU 1×, median of 5 interleaved, warm persistent profile; copy gate K = 2 vs all at once (`misure-copie.md`; `main` `7e810960cc0d3074f802a74197d25dd564ac8073`) | mzML 53 MB 3456 ms; `.raw` 4390; batch 6764 | 2538; 2239; 5871 | −27 %; −49 %; −13 % |
+| 15/11 | primo-file-precedenza | Ten synthetic files dropped at once, drop → first chart, built site, Chromium 4 vCPU, CPU 1×, median of 5 interleaved, warm persistent profile; copy gate K = 2 vs all at once (`measurements-copies.md`; `main` `7e810960cc0d3074f802a74197d25dd564ac8073`) | mzML 53 MB 3456 ms; `.raw` 4390; batch 6764 | 2538; 2239; 5871 | −27 %; −49 %; −13 % |

@@ -1,4 +1,4 @@
-//! Groups of experiments, `gruppi/1` (`docs/agenti/gruppi.md`, schema `docs/schemi/gruppi-1.json`): the same degradation in several conditions,
+//! Groups of experiments, `gruppi/1` (`docs/agenti/groups.md`, schema `docs/schemi/gruppi-1.json`): the same degradation in several conditions,
 //! compared on ONE alignment. Input: the matrix rows x files, the metadata of the rows and the canonical `campioni/2`; output: per row and condition
 //! the presence, mean area of the replicates, ratio to a reference condition, shape over time and the controls as "Prev." suggestions, the exact
 //! sets of conditions and the decay of the parent per condition. The module reads no file and never realigns: it uses the rows it receives.
@@ -177,7 +177,7 @@ pub struct CondFiles {
     pub controls: Controls,
 }
 
-/// The conditions of `cs` (see the rules in `docs/agenti/gruppi.md`), for the callers that need the files of each.
+/// The conditions of `cs` (see the rules in `docs/agenti/groups.md`), for the callers that need the files of each.
 pub fn condition_files(cs: &[Sample]) -> Vec<CondFiles> {
     presence::conditions(cs)
         .into_iter()
@@ -256,7 +256,7 @@ fn check_factors(o: &GroupOpts, conds: &[CondModel]) -> Result<()> {
     Ok(())
 }
 
-/// The groups of a table: see the module documentation and `docs/agenti/gruppi.md`.
+/// The groups of a table: see the module documentation and `docs/agenti/groups.md`.
 pub fn build(tb: &GroupTable, cs: &[Sample], opts: &GroupOpts) -> Result<GroupsOut> {
     check(tb, cs, opts)?;
     let conds = presence::conditions(cs);

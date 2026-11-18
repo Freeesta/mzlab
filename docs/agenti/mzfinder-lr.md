@@ -3,7 +3,7 @@
 The mzFinder Dig on a unit-resolution series (3200 QTRAP, full scan) runs in Rust: the table rows are the peaks of the `crates/mzlab-feat` pipeline (profile `lr`: detection, alignment, L7 hypotheses with `regole_tp_2.json`), then an adapter writes the JSON of the `run` and `detail` calls, which `20_tpmine.js` and `24_tpmine_diretta.js` read unchanged.
 
 ## LR Dig: files
-- `legacy/lr/cond.rs` (view, score and generation per condition) and `groups_out.rs` (`gruppi` block of the output): `docs/agenti/gruppi.md`.
+- `legacy/lr/cond.rs` (view, score and generation per condition) and `groups_out.rs` (`gruppi` block of the output): `docs/agenti/groups.md`.
 - `crates/mzlab-feat/src/legacy/lr/`: `plan.rs` (files, columns, parent, settings; `plan_json` = `{rust, lc, ms2, mrm, minutes, formula}`), `rows.rs` (calibration on the parent, candidates from the hypothesis registry, isomers, unexpected ions, isotopes), `labels.rs` (criteria and score of `score_candidate`), `kin.rs` (parent decay, kinetic generation), `summary.rs` (`summary`, `live`, levels 4/5), `detail.rs` (`detail` with the XICs from the `.mzidx` files, `frag_tree`, `frag_tree_compare`), `mod.rs` (`dig`).
 - `crates/mzlab-feat/src/legacy/lr/ms2link.rs` and `ms2link/{exp,rules,json}.rs`: matching of the MS2 experiments to the rows and the `ms2_links/1` contract (weight of `finder-lr` in `build_feat_wasm.sh`).
 - `crates/mzlab-finder-lr-wasm`: a `.wasm` of its own (`wasm-feat/finder-lr/`, `finder_lr` entry of the manifest, limit 741 376 B in `build_feat_wasm.sh`, with `chem` for the tree and the MRM): `finder_lr_plan`, `finder_lr_mrm(files, read, sizes, ends, rt_tol)` (reads the `mrm` files from their mzML with `mrm::file_from_mzml`, the same as the desktop, and calls `mrm::analyse`),

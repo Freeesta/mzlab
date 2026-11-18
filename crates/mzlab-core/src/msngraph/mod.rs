@@ -1,4 +1,4 @@
-//! The fragmentation graph of an MSn infusion (`msngrafo/2`, `docs/agenti/msn-grafo.md`): the nodes of the precursor tree (`msnalbero`) and
+//! The fragmentation graph of an MSn infusion (`msngrafo/2`, `docs/agenti/msn-graph.md`): the nodes of the precursor tree (`msnalbero`) and
 //! their consensus spectra become ONE graph of ions, a node per ion seen at any level, energy or path, an arc per precursor → fragment
 //! observed in the spectrum of that precursor, with the neutral loss. A DAG ordered by m/z, never a verdict: with the formula of the ion
 //! of the root given by the user, each fragment gets the sub-formulas within the window of ppm (`formule`), and the others leave the graph.

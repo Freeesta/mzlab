@@ -113,6 +113,9 @@ pub struct Params {
     pub smooth: usize,
     /// true = AsLS baseline (default), false = SNIP.
     pub asls: bool,
+    /// true (default): the AsLS lambda and the widest wavelet follow the width of the tallest peak in points (`width_scale`); false = the fixed
+    /// lambda 1e5 and widths up to 12 of the Python engine, which cut a peak wider than about 5 points of sigma.
+    pub scale_to_width: bool,
 }
 
 impl Default for Params {
@@ -123,6 +126,7 @@ impl Default for Params {
             frac: 0.05,
             smooth: 5,
             asls: true,
+            scale_to_width: true,
         }
     }
 }
@@ -145,8 +149,8 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], params: Params) -> Vec<Peak> {
 
 /// `detect_peaks` with the corrected and smoothed traces and the noise level.
 /// `unique(round(geomspace(1, max(3, min(n/6, 12)), 7), 2))`: the widths of the wavelet scales.
-fn scale_widths(n: usize) -> Vec<f64> {
-    let stop = (n as f64 / 6.0).min(12.0).max(3.0);
+fn scale_widths(n: usize, k: f64) -> Vec<f64> {
+    let stop = (n as f64 / 6.0).min(12.0 * k).max(3.0);
     let mut widths: Vec<f64> = (0..7)
         .map(|i| {
             let g = if i == 0 {
@@ -274,8 +278,7 @@ fn ridge_apexes(
         found.push((apex, r.val[k], w));
     }
     crate::sortc::by(&mut found, |a, b| {
-        a.0.cmp(&b.0)
-            .then(crate::sortc::asc_nan_last(a.1, b.1))
+        a.0.cmp(&b.0).then(crate::sortc::asc_nan_last(a.1, b.1))
     });
     found
 }
@@ -318,8 +321,31 @@ fn peaks_of(
             snr: rsn,
         });
     }
-    crate::sortc::by(&mut peaks, |a, b| crate::sortc::desc_nan_last(a.height, b.height));
+    crate::sortc::by(&mut peaks, |a, b| {
+        crate::sortc::desc_nan_last(a.height, b.height)
+    });
     peaks
+}
+
+/// How many times wider than the 3 points of sigma the fixed lambda and widths were tuned on the tallest peak of `y` is (1 = not wider): the
+/// half-height width of the smoothed trace above its median, over 2.355 sigma. The AsLS lambda grows with its 4th power (Eilers and Boelens
+/// 2005: lambda scales with the 4th power of the sampling density) and the widest wavelet with the factor itself.
+pub fn width_scale(y: &[f64]) -> f64 {
+    let ys = savgol(y, 5, 2);
+    let med = median_in(ys.iter().copied(), &mut Vec::new());
+    let Some(apex) = (0..ys.len()).max_by(|&a, &b| ys[a].total_cmp(&ys[b])) else {
+        return 1.0;
+    };
+    let half = (ys[apex] + med) / 2.0;
+    let (mut lo, mut hi) = (apex, apex);
+    while lo > 0 && ys[lo - 1] > half {
+        lo -= 1;
+    }
+    while hi + 1 < ys.len() && ys[hi + 1] > half {
+        hi += 1;
+    }
+    let sigma = (hi - lo + 1) as f64 / 2.355;
+    (sigma / 3.0).max(1.0)
 }
 
 pub fn detect_full(rt: &[f64], y: &[f64], params: Params) -> Detection {
@@ -327,8 +353,13 @@ pub fn detect_full(rt: &[f64], y: &[f64], params: Params) -> Detection {
     if n < 7 || !y.iter().any(|&v| v > 0.0) {
         return Detection::default();
     }
+    let k = if params.scale_to_width {
+        width_scale(y)
+    } else {
+        1.0
+    };
     let base = if params.asls {
-        asls_baseline(y, 1e5, 0.01, 10, 160)
+        asls_baseline(y, 1e5 * k.powi(4), 0.01, 10, 160)
     } else {
         snip_baseline(y, 20)
     };
@@ -338,7 +369,7 @@ pub fn detect_full(rt: &[f64], y: &[f64], params: Params) -> Detection {
         .map(|v| v.max(0.0))
         .collect();
     let noise = noise_level(&yc).max(1e-9);
-    let widths = scale_widths(n);
+    let widths = scale_widths(n, k);
     let c = cwt_ricker(&ys, &widths);
     let ridges = ridge_lines(&c, &widths);
     let found = ridge_apexes(&ridges, &widths, &ys, noise, params.snr);

@@ -1,4 +1,4 @@
-//! Candidate formulas for the ion of the root when the user gave none (`docs/agenti/msn-grafo.md` §2): up to `MAX` formulas of `composition::compose` for
+//! Candidate formulas for the ion of the root when the user gave none (`docs/agenti/msn-graph.md` §2): up to `MAX` formulas of `composition::compose` for
 //! the m/z of the first root of the graph, to fill the field `formula` of the options. Candidates only, never an identification.
 
 use super::{Graph, Options};

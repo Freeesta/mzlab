@@ -2,7 +2,7 @@
 // @ts-noany
 "use strict";
 // Spectral libraries (MSP, MGF, JSON, MassBank records) read in a Web Worker, kept in the browser's private file system (OPFS) and searched with a MS2 spectrum.
-// No Pyodide. Where WebAssembly works the work is done by static/wasm-lib/ (crates/mzlab-lib-wasm: the .mzlib format of docs/agenti/librerie.md, Flash indexes, scores);
+// No Pyodide. Where WebAssembly works the work is done by static/wasm-lib/ (crates/mzlab-lib-wasm: the .mzlib format of docs/agenti/libraries.md, Flash indexes, scores);
 // the plain JavaScript below (parser, scores, search over an index: also run by node in tests/test_libreria.py) is the fallback for browsers that cannot load it,
 // and still reads the libraries stored in the old MZL1 archive format until they are converted into .mzlib (once, at the first listing).
 //

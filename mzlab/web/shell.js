@@ -237,7 +237,7 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
       else{const er=x.json?I18N.err(x.json):x;CONVROWS.finish(e.row,"fail",{msg:er.message,diag:DIAG.da(er,{name:e.scan.name,size:e.wiff.size+e.scan.size})});continue}}
     CONVROWS.drop(e.row)}
   return res}
-// Rule R (docs/agenti/lettori-modulo.md): the readers module (lettori-modulo.js) writes the mzML of what the engine does not read, into OPFS, and the mzML enters upload() as any other: a file with an extension of the
+// Rule R (docs/agenti/readers-module.md): the readers module (lettori-modulo.js) writes the mzML of what the engine does not read, into OPFS, and the mzML enters upload() as any other: a file with an extension of the
 // module, a sample the engine refused with an error of variant (File with `mzlabModulo`, made by LETTORI_MOD.stand), an mzML with numpress arrays, a dataset the module's probe says the engine cannot do, and, with ?lettori=modulo, a .D folder (proof of the path).
 const LETT_FORCE=/[?&]lettori=modulo\b/.test(location.search);
 /** the family whose module takes `f` ("" = none): a sample the engine refused, a file with an extension only a module reads, a dataset the module of its family says the engine cannot do (probe) */

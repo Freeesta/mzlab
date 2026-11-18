@@ -3,7 +3,7 @@ navigator.hardwareConcurrency set to 2 and 4, on the example files (Full Scan de
 and the script is not in the CI. Not in the normal test run (name without e2e_).
 
     python3 tools/prepara_sito.py                       # once: site/ with the engine
-    python3 tests_e2e/misura_macchine.py --md docs/agenti/misure-macchine.md [--json OUT.json] [--reps 12] [--rates 1,4,6] [--cores 2,4]
+    python3 tests_e2e/misura_macchine.py --md docs/agenti/measurements-machines.md [--json OUT.json] [--reps 12] [--rates 1,4,6] [--cores 2,4]
 
 Actions (time from the event of the user to the end of the repaint that shows the result, measured inside the page): open the demo (first chart,
 ready), drag the vertical line of the chromatogram with the linked MS1 spectrum (frames, long tasks, time per update), change of panel and of file, 2D map,

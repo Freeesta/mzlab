@@ -1,7 +1,7 @@
 //! `metodo/1` of an mzML that mzLab did not write (`from_mzml_head`): what the header of the file says (instrument, serial, software, source files
 //! with SHA-1, `run@startTimeStamp`, sample, scan settings, data processing) and the scan parameters that are the same in the first scans.
 //! Only the start of the file is read: the header up to `<spectrumList` and at most `SCANS` spectra. Every field carries `origine = "mzml:<element>"`.
-//! Spec: `docs/agenti/metodo.md`. The reference is the mzML 1.1 schema and the PSI-MS CV; nothing is copied from another program.
+//! Spec: `docs/agenti/method.md`. The reference is the mzML 1.1 schema and the PSI-MS CV; nothing is copied from another program.
 
 use crate::error::Result;
 use crate::idxread::ReadAt;

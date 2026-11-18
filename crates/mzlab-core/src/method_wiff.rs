@@ -1,6 +1,6 @@
 //! The `.wiff` adapter of `metodo/1` (`method.rs`): the method of the sample (`methodinfo.rs`) plus what the container says about the sample and the run:
 //! `SampleN/Log` (instrument, run status, LC modules in text), `SampleN/SampleDABE/DATA` (sample name, method file, vial), `CFR_INFO` (Analyst version, user, computer)
-//! and the OLE property set `SummaryInformation`. Layouts measured on the 3200 QTRAP files; what is only guessed from position is marked in `docs/agenti/metodo.md`.
+//! and the OLE property set `SummaryInformation`. Layouts measured on the 3200 QTRAP files; what is only guessed from position is marked in `docs/agenti/method.md`.
 
 use crate::method::{lc_sections, ms_section, num, obj, text, Source, V};
 use crate::methodinfo::method_of_sample;

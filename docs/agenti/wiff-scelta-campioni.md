@@ -1,7 +1,7 @@
 # «Choose samples» for `.wiff` and other multi-sample files: feasibility study and proposal (no feature code)
 
 Request of the owner: after choosing or dropping a `.wiff` (+ `.wiff.scan`), or several, mzLab shows the samples the file holds and the user ticks which to open (one, several, all), like SCIEX Analyst 1.6.x `File > Open Data File`. Today `shell.js::wiffToMzml` lists the samples with `rb.nativeSamples` and makes one list entry per sample, all of them.
-Sources: the code at `origin/main` 0feb211, `wiff.md`, `wiff-writer.md`, `wiff-varianti.md`, `memoria-limiti.md`, `wasm-tetti.md`, `cli-agenti.md`, `lettura-nativa.md`, the description and file list of PR #3398 (its diff was NOT read), and measurements on synthetic pairs made for this study. No real file, no Analyst, no wasm toolchain here: what could not be done is in the last section. Marks: CERTAIN (repo or measured), MEMORY (public knowledge recalled, not checked), UNKNOWN.
+Sources: the code at `origin/main` 0feb211, `wiff.md`, `wiff-writer.md`, `wiff-varianti.md`, `memory-limits.md`, `wasm-tetti.md`, `cli-agenti.md`, `native-reading.md`, the description and file list of PR #3398 (its diff was NOT read), and measurements on synthetic pairs made for this study. No real file, no Analyst, no wasm toolchain here: what could not be done is in the last section. Marks: CERTAIN (repo or measured), MEMORY (public knowledge recalled, not checked), UNKNOWN.
 
 ## Verdict
 - Feasible, small, and mostly already there. The engine already has a format-generic listing of what a file holds: `readers::samples_json` (`crates/mzlab-core/src/readers/listing.rs`; `id`, `name`, `scans`, `size`, `why`, `refused`, `unindexed`), served by wasm `native_samples` and the app. Only its COST and its CONTENT are not right for a chooser (below).
@@ -19,7 +19,7 @@ What our reader does NOT know (UNKNOWN, no code reads it): per-sample acquisitio
 `Log`. Experiment X1 below finds out; until then the dialog has no date and no vial column (an empty column is not shown, never filled with a guess).
 
 ## 2. What the engine can list cheaply
-Container (CERTAIN): the `.wiff` is an OLE2 file read whole into memory by `wiff::container` (limit `WIFF_MAX`: `Limits::sito().byte` 192 MB site, `desktop()` 1024 MB, `memoria-limiti.md`); the `.wiff.scan` is read by position. PR #3398 says a real `.wiff` with one 15 MB DAD stream per sample reached 614 MB while its `.scan` was 13 MB: so «the `.wiff` is small» is false for DAD files and a by-sector OLE open (`Ole::open_at` in #3398) is needed for the listing on the site (limit untouched on the page today: `error.memoryBudget` phase `whole`).
+Container (CERTAIN): the `.wiff` is an OLE2 file read whole into memory by `wiff::container` (limit `WIFF_MAX`: `Limits::sito().byte` 192 MB site, `desktop()` 1024 MB, `memory-limits.md`); the `.wiff.scan` is read by position. PR #3398 says a real `.wiff` with one 15 MB DAD stream per sample reached 614 MB while its `.scan` was 13 MB: so «the `.wiff` is small» is false for DAD files and a by-sector OLE open (`Ole::open_at` in #3398) is needed for the listing on the site (limit untouched on the page today: `error.memoryBudget` phase `whole`).
 Measurements (throwaway Rust probe over the real `Reader`/`Ole` code, built `--release`, 4 vCPU Linux container, files in the page cache, synthetic pairs from `tools/wiff_grande.py`; the probe was not committed). «apri» = `readers::apri` + `samples()`, what `native_samples` runs today (it reads the block heads to count scans). «cheap» = `wiff::container` + `wiff::samples` + the `Idx` rows of every sample (count, time range, TIC apex, section bytes), the `.scan` never opened.
 
 | Pair | Samples / scans | `.scan` | apri: bytes read, time, peak RSS | cheap: bytes read, time, peak RSS |
@@ -33,7 +33,7 @@ Measurements (throwaway Rust probe over the real `Reader`/`Ole` code, built `--r
 - cheap is bounded by the `.wiff` size and the number of samples (4 ms for 40 samples and 80 000 rows; the `Idx` streams are 54 B per scan: 0.36 MB per sample in #3398's real pair). Memory: whole `.wiff` today; with a by-sector open only the FAT, the directory and the streams asked.
 - Caveats: the fixtures carry no `SampleDABE/DATA` (names are one small read per sample, not measured); the real cost on the page depends on `File.slice` latency and is NOT measured; polarity and type from the method need the `MethodN` streams (a few KB each, not measured).
 - Cheap does not touch the `.wiff.scan`, so it cannot see a damaged or cut block: the dialog shows the evidence it has (counts from the index) and the PROBLEM flags (`unindexed`, truncated `.scan` length shorter than the last section end, which is a file-size comparison and free) while the exact `losses` appear after opening, as today (`warn.wiff.damaged`, `Lettore::missing`). A sample is never refused by the listing (rule R1/R2 of `wiff.md`).
-- Size class for the warning: section bytes from the `Idx` sizes; OPFS estimate from the figures of `misure-formati.md` and `lettura-nativa.md` (about 200 MB of OPFS per profile sample), not recomputed here.
+- Size class for the warning: section bytes from the `Idx` sizes; OPFS estimate from the figures of `measurements-formats.md` and `native-reading.md` (about 200 MB of OPFS per profile sample), not recomputed here.
 
 ## 3. Existing work: #3398 and the `.wiff` writer study
 Facts from the PR description (the diff was not read):
@@ -102,7 +102,7 @@ Wasm cap (ESTIMATE; no wasm-bindgen or wasm toolchain here, nothing measured on 
 Lang keys (English, new `pick` file under `mzlab/web/lang/en/` with its contexts, checked by `tools/controlla_i18n.py`): `pick.title`, `pick.intro`, `pick.filter`, `pick.all|none|invert`, `pick.file`, `pick.col.*`, `pick.type.*`, `pick.empty`, `pick.large`, `pick.partial`, `pick.sel` (live region), `pick.open|openAll|cancel|cancelled`, `pick.waiting`, `pick.remember`, `pick.setting.*`, `pick.aria.*`. Sample names come from the file and are never keys.
 
 ## 6. Split into small PRs (one task, one PR; each CI green before the next)
-1. Engine + CLI, no UI: `list_samples` + `samples_list/1` (cheap `.wiff` listing, cap measured), `mzlab-cli samples list`, parity tests (native/Node-wasm/CLI), docs rows. No behaviour change on the page.
+1. (DONE, this PR) Engine + CLI, no UI: `list_samples` + `samples_list/1` (cheap `.wiff` listing, cap measured), `mzlab-cli samples list`, parity tests (native/Node-wasm/CLI), docs rows. No behaviour change on the page.
 2. By-sector OLE open and DAD on demand for big `.wiff` (from #3398 a, b): memory only, the listing and `Wiff::open` work above `WIFF_MAX`; cap measured; tests `wiff_by_sector.rs` as base.
 3. `--sample 1,3,5` on `convert` / `channels` / `features` / `flow` inputs (+ partial-identity decision Q4 applied to whatever Q4 chooses). CLI only.
 4. The page dialog «Choose samples» (setting, remember, filter, a11y, i18n), reading `native_samples`; on the site it still copies the whole pair to OPFS; skipped samples are not indexed. e2e its picker e2e test revived for several files, one file, a pair without scan, drop of a folder.

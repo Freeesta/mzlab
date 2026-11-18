@@ -12,7 +12,7 @@ const DENSE_EVERY: usize = 256;
 
 /// The bytes of peaks one round may hold: half of the budget (a round holds its peaks and, while it is written, the same peaks as byte arrays) minus
 /// what the build holds whatever the round (`fixed`). Read from a scratch file (`spill`) a round costs no decoding, so a larger one only holds more
-/// memory, and measured slower (`misure-rust.md`): at most `ROUND_MAX`.
+/// memory, and measured slower (`measurements-rust.md`): at most `ROUND_MAX`.
 pub(super) fn round_cap(budget: usize, fixed: usize, spill: bool) -> usize {
     let cap = (budget / 2).saturating_sub(fixed).max(budget / 8);
     if spill {

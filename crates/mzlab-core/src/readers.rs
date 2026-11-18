@@ -222,7 +222,7 @@ pub struct ChromatogramEntry {
     pub unita: String,
 }
 
-pub use listing::samples_json;
+pub use listing::{list_samples, samples_json, Listing, Summary};
 pub use outcome::{
     cause_key, Losses, ReadOutcome, ReadOutcomes, AGILENT_DAMAGED, BRUKER_CUT_BIN,
     BRUKER_NO_CALIBRATION, CYCLES, DAMAGED, EVENTS_REFUSED, MEMBER_MISSING, RAW_DAMAGED,
@@ -275,7 +275,7 @@ pub trait Reader {
     fn dad_data(&mut self, _c: usize) -> Result<Option<crate::wiff::dad::DadData>> {
         Ok(None)
     }
-    /// The `metodo/1` document of the sample (`docs/agenti/metodo.md`).
+    /// The `metodo/1` document of the sample (`docs/agenti/method.md`).
     fn method(&mut self, c: usize) -> Result<String>;
     /// The header of the mzML of sample `c` (instrument, sources, hashes); `None`: `readers_mzml::scrivi` makes a plain one from the format.
     fn mzml_header(&mut self, _c: usize) -> Result<Option<Header>> {
@@ -294,17 +294,16 @@ pub trait Reader {
         self.extra_mzml(s)
     }
     /// What the format holds and the mzML of the conversion does not carry, as (field, reason) with the reasons of `conv`: the account `conv/1` gives.
-    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
-        &[]
-    }
-    #[rustfmt::skip]    fn unindexed(&self) -> (usize, usize) { (0, 0) } // data sections the index lacks (an incomplete copy): (recovered, left out)
+    #[rustfmt::skip]    fn not_carried(&self) -> &'static [(&'static str, &'static str)] { &[] }
+    #[rustfmt::skip]    fn unindexed(&self) -> (usize, usize) { (0, 0) }
+    #[rustfmt::skip]    fn listing(&mut self) -> Listing { Listing::default() } // `unindexed`: data sections the index lacks (an incomplete copy): (recovered, left out); `listing`: what `list_samples` adds, from the index alone; a wrapper forwards it
     #[rustfmt::skip]    fn missing(&mut self, _c: usize) -> usize { 0 } // scans of sample `c` the index lists beyond the end of the data file (a truncated copy): not in the index
     #[rustfmt::skip]    fn refused(&mut self, _c: usize) -> Option<Error> { None } // why sample `c` will not be read (its method, a damaged block): the listing carries it; a wrapper forwards it
     /// The scans of sample `c` the file declares and the ones read (`ReadOutcomes` pairs them with the data). A reader that drops scans for another reason than a cut file overrides this; a wrapper forwards it. Default: the rows of `index_without_tic` plus `missing`.
     fn losses(&mut self, c: usize) -> Result<Losses> {
         outcome::default_losses(self, c)
     }
-    /// True when the engine's reader would not read sample `c` as the file is (another instrument model, a scan type it does not know): the readers module is then the one to open it (`docs/agenti/lettori-modulo.md`).
+    /// True when the engine's reader would not read sample `c` as the file is (another instrument model, a scan type it does not know): the readers module is then the one to open it (`docs/agenti/readers-module.md`).
     #[cfg(feature = "sciex")]
     fn variant(&mut self, _c: usize) -> bool {
         false
@@ -353,6 +352,20 @@ pub fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let refused = fs.not_accepted();
     let v = riconosci(&mut fs).ok_or(refused)?;
     let l = (v.apri)(fs, limits)?;
+    Ok(Box::new(crate::readers_finite::Finished::new(l)))
+}
+
+/// `apri` for a listing (`list_samples`): a SCIEX pair is read from its container and its index alone, the `.wiff.scan` is not read (its scan counts are the
+/// index's, and sections the index lacks are not looked for); any other format opens as `apri` does.
+pub fn apri_listing(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+    let mut fs = fs;
+    let refused = fs.not_accepted();
+    let v = riconosci(&mut fs).ok_or(refused)?;
+    let l = if v.id == crate::wiff::reader::ENTRY.id {
+        crate::wiff::reader::open_listing(fs, limits)?
+    } else {
+        (v.apri)(fs, limits)?
+    };
     Ok(Box::new(crate::readers_finite::Finished::new(l)))
 }
 

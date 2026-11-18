@@ -1,5 +1,5 @@
 //! `metodo/1`: the acquisition method of one sample (instrument, source, experiments, LC, detectors, log) as one JSON document, whatever file it comes from
-//! (`.dam`, `.wiff`, the mzML that carries it). Spec: `docs/agenti/metodo.md`, schema `mzlab/web/schemi/metodo-1.json`. An unknown value is ABSENT (never null, never 0).
+//! (`.dam`, `.wiff`, the mzML that carries it). Spec: `docs/agenti/method.md`, schema `mzlab/web/schemi/metodo-1.json`. An unknown value is ABSENT (never null, never 0).
 //! This file: the tree, the `.dam` adapter, the SHA-1 helpers and the `userParam` of the mzML; the `.wiff` adapter is `method_wiff.rs`.
 
 use crate::error::Result;
@@ -9,7 +9,7 @@ use crate::methodinfo::{Kind, Lc, Method, Param};
 use sha1::{Digest as _, Sha1};
 
 pub const SCHEMA: &str = "metodo/1";
-/// Name of the `userParam` of the mzML `<run>` that holds the document (`docs/agenti/metodo.md`).
+/// Name of the `userParam` of the mzML `<run>` that holds the document (`docs/agenti/method.md`).
 pub const USERPARAM: &str = "mzLab metodo/1";
 pub const READER: &str = "mzlab-core";
 

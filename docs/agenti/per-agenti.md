@@ -1,6 +1,6 @@
 # mzLab for external agents (`mzlab-cli` from the shell)
 
-For an agent running on the user's computer (Claude Code, Claude Cowork or others) and using mzLab without the page: it prepares an `mzflow/2` plan, checks it, runs it and reads the results with `mzlab-cli`. Full command rules: `cli.md`; plans and `prov/1`: `rust-flow.md`; `step/1` steps: `rust-step.md`. Choices and open proposals: `llm-scelte.md`.
+For an agent running on the user's computer (Claude Code, Claude Cowork or others) and using mzLab without the page: it prepares an `mzflow/2` plan, checks it, runs it and reads the results with `mzlab-cli`. Full command rules: `cli.md`; plans and `prov/1`: `rust-flow.md`; `step/1` steps: `rust-step.md`. Choices and open proposals: `llm-choices.md`.
 
 ## Installation
 - Today only from source: `cargo install --path crates/mzlab-cli --profile cli` (needs Rust; the `cli` profile is `opt-level = 3`, in `target/cli/`: `cargo build --profile cli -p mzlab-cli`, about a quarter faster than the `release` profile, which is size-optimised and stays for the `.wasm`; same output bytes), then `mzlab-cli` is in the PATH. The same CLI compiles for `wasm32-wasip1` and runs a plan under node with `tools/wasi_run.mjs`.
