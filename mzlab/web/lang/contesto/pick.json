@@ -9,5 +9,6 @@
   "pick.sel": "Live status under the table: {n} = samples ticked, {total} = all samples, {size} = about how much is read, already formatted.",
   "pick.ids.bad": "The typed sample numbers are not a list: {text} = what was typed.",
   "pick.ids.unknown": "A file lacks a typed sample number: {missing} = the numbers it lacks, {ids} = the numbers it has.",
+  "pick.failed": "Note when the chooser fails before it can ask: {reason} = the error text. Every sample of the files is opened then.",
   "pick.cancelled": "Note when the dialog is cancelled: {name} = the file that was not opened."
 }

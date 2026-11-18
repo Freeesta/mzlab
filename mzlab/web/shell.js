@@ -220,7 +220,7 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
     WIFF_WAIT.delete(k);e.row=e.stem+".wiff";pairs.push(e);CONVROWS.add(e.row,"open",memDesc([e.wiff,e.scan]))}
   // a file with several samples: the user ticks which to open (wiff-choose.js; the engine lists them from the index, the setting is in Settings); null = nothing to ask
   let pick=/** @type {any} */ (null);const pickMode=typeof uipPickMode==="function"?uipPickMode():"several";
-  if(pairs.length&&!(signal&&signal.aborted)&&pickMode!=="never"){try{await carica("wiff-choose.js");pick=await WIFFCHOOSE.ask(pairs.map(e=>({key:e.row,name:e.wiff.name,mem:[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}]})),rb,pickMode)}catch(_){pick=null}}
+  if(pairs.length&&!(signal&&signal.aborted)&&pickMode!=="never"){try{await carica("wiff-choose.js");pick=await WIFFCHOOSE.ask(pairs.map(e=>({key:e.row,name:e.wiff.name,mem:[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}]})),rb,pickMode)}catch(x){pick=null;(res.notes=res.notes||[]).push(T("pick.failed",{reason:String(x&&/** @type {any} */ (x).message||x)}))}}
   // each sample (injection) is a file of the list: the .wiff and the .wiff.scan are read as they are
   for(const e of pairs){
     if(signal&&signal.aborted){CONVROWS.finish(e.row,"cancel");continue}

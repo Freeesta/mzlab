@@ -27,6 +27,7 @@ I18N.add("en", {
   "pick.open.tip": "Open the ticked samples",
   "pick.cancel": "Cancel",
   "pick.cancel.tip": "Open nothing from these files",
+  "pick.failed": "The sample chooser could not be shown, so every sample is opened: {reason}",
   "pick.cancelled": "{name} was not opened: no samples were chosen.",
   "pick.empty": "no scans",
   "pick.why.empty": "acquired nothing",

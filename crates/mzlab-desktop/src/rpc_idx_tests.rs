@@ -87,7 +87,7 @@ fn the_chooser_answers_are_the_engines() {
     assert_eq!(
         t(
             "natdefault",
-            serde_json::json!({"ids": [1], "sizes": [900000000]})
+            serde_json::json!({"ids": [1], "sizes": [900000000], "budget_mb": 1024})
         ),
         "{\"samples\":[]}"
     );

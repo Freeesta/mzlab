@@ -267,7 +267,7 @@ fn list_table(json: &str, file: &str) -> String {
     t
 }
 
-const SELECT_HELP: &str = "mzlab-cli samples select: which samples of a file `--sample LIST` would open, checked against its container and index (nothing is read beyond them, nothing is written).
+const SELECT_HELP: &str = "mzlab-cli samples select: which samples of a file `--sample LIST` would open, or which ones the chooser of the site ticks first (`--default`), checked against its container and index (nothing is read beyond them, nothing is written).
 
 usage: mzlab-cli samples select FILE (--sample LIST | --default [--budget-mb N]) [--json]
 
@@ -277,9 +277,9 @@ usage: mzlab-cli samples select FILE (--sample LIST | --default [--budget-mb N])
   --budget-mb N  the memory budget for --default in MB (default 1024; 0 = the default)
   --json       {\"samples\":[ids]} on stdout, the ids in the order of the file: the same bytes as the site's `sample_selection` / `sample_default`
 The same LIST is taken by `convert`, `channels` and `features`.
-Exit codes: 0 selected; 2 usage (LIST is not a list); 4 the file is missing or unreadable; 5 an id the file does not have (the ids present are named).";
+Exit codes: 0 selected; 2 usage (LIST is not a list, both or neither of --sample and --default, a --budget-mb that is not a number of MB); 4 the file is missing or unreadable; 5 an id the file does not have (the ids present are named).";
 
-/// `samples select FILE --sample LIST [--json]`: the dry run of `--sample`.
+/// `samples select FILE (--sample LIST | --default [--budget-mb N]) [--json]`: the dry run of `--sample`, or the first ticks of the page chooser.
 fn select_run(args: Vec<String>) -> Outcome {
     let (mut file, mut text, mut json) = (None::<PathBuf>, None::<String>, false);
     let (mut default, mut budget) = (false, 0.0f64);

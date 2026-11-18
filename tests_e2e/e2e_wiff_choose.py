@@ -15,7 +15,7 @@ wasm = ROOT / "site" / "static" / "wasm" / "mzlab_wasm.js"
 if not (ROOT / "site" / "index.html").exists() or not wasm.exists():
     print("  ", ("site", "FAIL site/ or its .wasm missing: python tools/build_site.py, then build mzlab-wasm")); sys.exit(0)
 
-D = Path(tempfile.mkdtemp(prefix="wiffscelta_e2e_"))
+D = Path(tempfile.mkdtemp(prefix="wiffchoose_e2e_"))
 for name, n in (("multi", 3), ("solo", 1)):
     subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_grande.py"), str(D / name), "--name", name, "--samples", str(n), "--scans", "40", "--points", "50"], check=True, capture_output=True)
 def pair(name): return [str(D / name / f"{name}.wiff"), str(D / name / f"{name}.wiff.scan")]
