@@ -559,7 +559,7 @@ pub fn item_info<R: ReadAt>(
             "ms2" => "ms2",
             _ => "mrm",
         },
-        None if all.len() > n1 && msn.as_ref().is_some_and(|m| m.reason != "rt_costante") => {
+        None if all.len() > n1 && msn.as_ref().is_some_and(|m| m.reason != "constant_rt") => {
             "infusion"
         }
         None if all.len() - n1 > 0 => "ms2",
@@ -660,9 +660,9 @@ pub fn item_info<R: ReadAt>(
             .str(&a.id)
             .raw(",\"unit\":")
             .str(&a.unit);
-        o.raw(",\"rt_start_min\":")
+        o.raw(",\"rt_min\":")
             .num(a.t0)
-            .raw(",\"rt_end_min\":")
+            .raw(",\"rt_max\":")
             .num(a.t1)
             .raw(",\"n\":")
             .int(a.n)

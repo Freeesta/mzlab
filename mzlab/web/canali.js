@@ -1,6 +1,6 @@
 // @ts-check
 "use strict";
-// Channels of the files (api/canali, data-channels.md): the cache of the channels of a file, the trace of a channel, the same channel across files (omologo),
+// Channels of the files (api/canali, data-channels.md): the cache of the channels of a file, the trace of a channel, the same channel across files (group),
 // the tree selector of the chromatogram and MRM panels and the default channel of an experiment type. Only glue: every number comes from the engine.
 // Classic helpers used by name: E, I18N, EH, J, memo, getMrm, PAL, DASHES, fdash, shownFor, tabFiles, ESC, COMANDI, ctl, draw, uiSave, CAL, ESP.
 (() => {
@@ -25,8 +25,8 @@
   }
   /** the channels already read (null: not yet) @param {number} k @returns {Canali | null} */
   const cached = k => DONE.get(keyOf(k)) || null;
-  /** @param {number} k @param {string} omo @returns {Canale | null} */
-  const find = (k, omo) => { const c = cached(k); return c && c.channels.find(x => x.group === omo) || null; };
+  /** @param {number} k @param {string} group @returns {Canale | null} */
+  const find = (k, group) => { const c = cached(k); return c && c.channels.find(x => x.group === group) || null; };
 
   /** transition key «q1>q3» of an srm channel (the key of the MRM panel) @param {Canale} c */
   const srmKey = c => c.family === "sim" || c.id.startsWith("sim:") ? SIMUI.chKey(c.id) : c.id.slice(4).replace(/@.*$/, "");
@@ -48,14 +48,14 @@
     return { rt: d.rt, y: d.y };
   }
 
-  /** for each file its channel with this omologo (null: the file has none) @param {any[]} files @param {string} omo */
-  async function omologhi(files, omo) {
-    return Promise.all(files.map(async f => { const c = await canali(f.k).catch(() => null); return { f, c: c && c.channels.find(x => x.group === omo) || null }; }));
+  /** for each file its channel with this group (null: the file has none) @param {any[]} files @param {string} group */
+  async function byGroup(files, group) {
+    return Promise.all(files.map(async f => { const c = await canali(f.k).catch(() => null); return { f, c: c && c.channels.find(x => x.group === group) || null }; }));
   }
 
   // ---------------------------------------------------------------- the selector
   /** @typedef {{ group: string, label: string, code: string, family: string, level: number, up: string | null, n: number, rt_start_min: number, rt_end_min: number, ids: string[], files: number, kids: string[] }} Nodo */
-  /** The channels of the files merged by omologo, as a tree (parents before children) @param {any[]} files @returns {Nodo[]} */
+  /** The channels of the files merged by group, as a tree (parents before children) @param {any[]} files @returns {Nodo[]} */
   function albero(files) {
     /** @type {Map<string, Nodo>} */ const m = new Map();
     files.forEach(f => {
@@ -74,10 +74,10 @@
     [...m.values()].filter(n => !n.up).forEach(visit);
     return out;
   }
-  /** the omologhi a panel plots: its own list, or the channel its kind stands for @param {any} p */
-  const chosen = p => p.canali && p.canali.length ? p.canali : [p.kind === "bpc" ? "bpc" : "tic"];
+  /** the byGroup a panel plots: its own list, or the channel its kind stands for @param {any} p */
+  const chosen = p => p.channels && p.channels.length ? p.channels : [p.kind === "bpc" ? "bpc" : "tic"];
   /** a chromatogram panel that plots channels (and not one of its kinds: PDA, pressure, log of the instrument) @param {any} p */
-  const on = p => p.type === "chrom" && Array.isArray(p.canali) && p.canali.length > 0 && !isOther(p);
+  const on = p => p.type === "chrom" && Array.isArray(p.channels) && p.channels.length > 0 && !isOther(p);
 
   /** the files whose channels the selector of a panel lists @param {any} p */
   const filesOf = p => { const t = p.tab || E.tab, s = shownFor(p); return (s.length ? s : tabFiles(t)).filter((/** @type {any} */ f) => !f.gone); };
@@ -104,7 +104,7 @@
   const isOther = p => ["pda", "press", "reg"].includes(p.kind) || (typeof p.kind === "string" && p.kind.startsWith("an:"));
   /** the rows of the tree the picker lists: the channels of the files, or TIC and BPC while they are not known @param {Nodo[]} tree @param {Ctx | null} cx @returns {Nodo[]} */
   function msTree(tree, cx) {
-    const fall = (/** @type {string} */ omo, /** @type {string} */ et) => ({ group: omo, label: et, code: "", family: omo, level: 1, up: null, n: 0, rt_start_min: Infinity, rt_end_min: -Infinity, ids: [], files: 0, kids: [] });
+    const fall = (/** @type {string} */ group, /** @type {string} */ et) => ({ group: group, label: et, code: "", family: group, level: 1, up: null, n: 0, rt_start_min: Infinity, rt_end_min: -Infinity, ids: [], files: 0, kids: [] });
     // only the families traccia() can draw: a channel with no trace in the list is ticked and nothing appears
     const t = tree.length ? tree.filter(n => ["tic", "bpc", "ms", "dd", "srm"].includes(n.family)) : [fall("tic", T("ctl.kind.tic")), fall("bpc", T("ctl.kind.bpc"))];
     return cx && !cx.hasScan ? t.filter(n => n.family !== "bpc") : t;
@@ -147,7 +147,7 @@
       const lv = onlySrm ? 1 : depth(n), has = n.kids.length > 0 && !onlySrm, open = has && !col.has(n.group), et = sim && n.family === "sim" ? simShort(n, mixed) : label(n);
       const t = sim ? (n.n ? T("canali.row", { et: n.label, n: n.n, a: +n.rt_start_min.toFixed(2), b: +n.rt_end_min.toFixed(2) }) : n.label) : tip(n);
       const ck = onlySrm ? `<span class="can-hit" aria-hidden="true" title="${EH(T("canali.pick.ck", { et }))}"><span class="can-ck"></span></span>` : `<span class="can-ck" aria-hidden="true"></span>`;
-      const head = `<div class="can-row" role="treeitem" aria-level="${lv}" aria-selected="${sel.has(n.group)}"${has ? ` aria-expanded="${open}"` : ""} tabindex="-1" data-omo="${EH(n.group)}" aria-label="${EH(sim ? rowLabelOf(n, et) : rowLabel(n))}"${t ? ` title="${EH(t)}"` : ""}>` +
+      const head = `<div class="can-row" role="treeitem" aria-level="${lv}" aria-selected="${sel.has(n.group)}"${has ? ` aria-expanded="${open}"` : ""} tabindex="-1" data-group="${EH(n.group)}" aria-label="${EH(sim ? rowLabelOf(n, et) : rowLabel(n))}"${t ? ` title="${EH(t)}"` : ""}>` +
         `<span class="can-in" style="padding-left:${(lv - 1) * 14}px"><span class="can-car" aria-hidden="true">${has ? (open ? "▾" : "▸") : ""}</span>${ck}<span class="can-et">${EH(et)}</span></span>`;
       if (sim) return head + `</div>`;
       return head + `<span class="can-sg" aria-hidden="true"${sgTitle(n.code)}>${EH(sgShort(n.code))}</span><span class="can-n" aria-hidden="true">${n.n || ""}</span><span class="can-rt" aria-hidden="true">${n.n ? `${+n.rt_start_min.toFixed(1)}–${+n.rt_end_min.toFixed(1)}` : ""}</span>` +
@@ -167,7 +167,7 @@
     `<div class="can-row" role="treeitem" aria-level="1" aria-selected="${cur === v}" tabindex="-1" data-kind="${EH(v)}" aria-label="${EH(et)}"${t ? ` title="${EH(t)}"` : ""}><span class="can-in"><span class="can-car" aria-hidden="true"></span><span class="can-ck can-rd" aria-hidden="true"></span><span class="can-et">${EH(et)}</span></span></div>`).join("");
   /** transition key of a merged srm row @param {Nodo} n */
   const nodeKey = n => srmKey(/** @type {any} */ ({ id: n.ids[0] }));
-  /** the omologhi that the panel shows as ticked @param {any} p @param {Nodo[]} tree */
+  /** the byGroup that the panel shows as ticked @param {any} p @param {Nodo[]} tree */
   function ticked(p, tree) {
     if (!ESP.mrm(p)) return isOther(p) ? new Set() : new Set(chosen(p));
     const tr = mrmSel(p.tr, tree.filter(isTr).map(nodeKey)), all = !tr, want = new Set(Array.isArray(tr) ? tr : [tr]);
@@ -203,20 +203,20 @@
 
   /** the channels ticked in the picker: one channel of scans that is TIC or BPC is the kind, anything else a list @param {any} p @param {string[]} order */
   function setMs(p, order) {
-    if (order.length === 1 && (order[0] === "tic" || order[0] === "bpc")) { p.kind = order[0]; p.canali = undefined; } else { p.kind = "tic"; p.canali = order; }
+    if (order.length === 1 && (order[0] === "tic" || order[0] === "bpc")) { p.kind = order[0]; p.channels = undefined; } else { p.kind = "tic"; p.channels = order; }
   }
   /** a click on a row of scans: the channel is ticked or not (the first click after another kind starts again from that channel); in a transition / SIM picker
-   * solo plots that channel alone, and the last ticked channel cannot be unticked (an empty choice would plot them all) @param {any} p @param {string} omo @param {Nodo[]} tree @param {boolean} [solo] */
-  function toggle(p, omo, tree, solo = false) {
+   * solo plots that channel alone, and the last ticked channel cannot be unticked (an empty choice would plot them all) @param {any} p @param {string} group @param {Nodo[]} tree @param {boolean} [solo] */
+  function toggle(p, group, tree, solo = false) {
     if (ESP.mrm(p)) {
       const srm = tree.filter(isTr), cur = solo ? new Set() : new Set(ticked(p, tree));
-      if (cur.has(omo)) cur.delete(omo); else cur.add(omo);
+      if (cur.has(group)) cur.delete(group); else cur.add(group);
       const pick = srm.filter(n => cur.has(n.group)).map(nodeKey);
       if (pick.length) { COMANDI.fai("panel.source", p, () => { p.tr = pick.length === srm.length ? "" : pick; }); ctl(p); draw(p); uiSave(); }
       return;
     }
     COMANDI.fai("panel.source", p, () => {
-      const cur = new Set(isOther(p) ? [] : chosen(p)); if (cur.has(omo)) cur.delete(omo); else cur.add(omo);
+      const cur = new Set(isOther(p) ? [] : chosen(p)); if (cur.has(group)) cur.delete(group); else cur.add(group);
       const order = tree.map(n => n.group).filter(o => cur.has(o));
       if (order.length) setMs(p, order);
     });
@@ -237,7 +237,7 @@
   /** a click on a row of another kind (PDA, a detector, the log): the panel plots that and nothing else @param {any} p @param {string} v */
   function pickKind(p, v) {
     if (ESP.mrm(p) || ms2Chrom(p)) { p._canOpen = false; ctl(p); return void carica("canali-uv.js").then(() => CANALIUV(p, v)); }
-    COMANDI.fai("panel.source", p, () => { p.kind = v; p.canali = undefined; });
+    COMANDI.fai("panel.source", p, () => { p.kind = v; p.channels = undefined; });
     p._canOpen = false; ctl(p); draw(p); uiSave();
     const b = /** @type {HTMLElement | null} */ (p.el.querySelector('[data-o="kind"]')); if (b) b.focus();
   }
@@ -250,7 +250,7 @@
   function wire(p, c) {
     // the older selectors (precursor, transition) and the channels say the same thing: the last choice wins
     const cc = /** @type {any} */ (c);
-    if (!cc._canR) { cc._canR = true; c.addEventListener("change", e => { if (/^(prec|tr)$/.test((/** @type {HTMLElement} */ (e.target)).dataset?.o || "")) p.canali = undefined; }, true); }
+    if (!cc._canR) { cc._canR = true; c.addEventListener("change", e => { if (/^(prec|tr)$/.test((/** @type {HTMLElement} */ (e.target)).dataset?.o || "")) p.channels = undefined; }, true); }
     const b = /** @type {HTMLElement | null} */ (c.querySelector('[data-o="canali"],[data-o="kind"]')), pop = /** @type {HTMLElement | null} */ (c.querySelector(".can-pop"));
     if (!b || !pop) return;
     // a transition / SIM panel lists its own rows (msTree keeps only the families the chromatogram draws, no SIM ion)
@@ -264,12 +264,12 @@
     b.onkeydown = e => { if (e.key === "ArrowDown" && !p._canOpen) { e.preventDefault(); set(true); } };
     if (p._canOpen) place();
     pop.querySelectorAll(".can-row").forEach(el => {
-      const row = /** @type {HTMLElement} */ (el), omo = row.dataset.omo || "", kind = row.dataset.kind || "";
-      const act = (/** @type {boolean} */ solo) => { if (kind) pickKind(p, kind); else toggle(p, omo, tree, solo); };
+      const row = /** @type {HTMLElement} */ (el), group = row.dataset.group || "", kind = row.dataset.kind || "";
+      const act = (/** @type {boolean} */ solo) => { if (kind) pickKind(p, kind); else toggle(p, group, tree, solo); };
       row.onclick = e => {
-        if ((/** @type {HTMLElement} */ (e.target)).closest(".can-car") && row.hasAttribute("aria-expanded")) { const col = /** @type {Set<string>} */ (p._canCol ||= new Set()); if (col.has(omo)) col.delete(omo); else col.add(omo); p._canFocus = omo; ctl(p); return; }
+        if ((/** @type {HTMLElement} */ (e.target)).closest(".can-car") && row.hasAttribute("aria-expanded")) { const col = /** @type {Set<string>} */ (p._canCol ||= new Set()); if (col.has(group)) col.delete(group); else col.add(group); p._canFocus = group; ctl(p); return; }
         // transitions / SIM ions: a click on the name plots that one alone, the box (or Ctrl/⌘) adds or removes it
-        p._canFocus = omo || kind;
+        p._canFocus = group || kind;
         act(only && !(/** @type {HTMLElement} */ (e.target)).closest(".can-hit") && !e.ctrlKey && !e.metaKey);
       };
       row.onkeydown = e => {
@@ -280,16 +280,16 @@
         else if (e.key === "ArrowUp") { e.preventDefault(); moveFocus(row, -1); }
         else if (e.key === "Home") { e.preventDefault(); moveFocus(row, -1e6); }
         else if (e.key === "End") { e.preventDefault(); moveFocus(row, 1e6); }
-        else if (e.key === "ArrowRight") { e.preventDefault(); if (row.getAttribute("aria-expanded") === "false") { col.delete(omo); p._canFocus = omo; ctl(p); } else moveFocus(row, 1); }
+        else if (e.key === "ArrowRight") { e.preventDefault(); if (row.getAttribute("aria-expanded") === "false") { col.delete(group); p._canFocus = group; ctl(p); } else moveFocus(row, 1); }
         else if (e.key === "ArrowLeft") {
           e.preventDefault();
-          if (row.getAttribute("aria-expanded") === "true") { col.add(omo); p._canFocus = omo; ctl(p); }
+          if (row.getAttribute("aria-expanded") === "true") { col.add(group); p._canFocus = group; ctl(p); }
           else { const lv = +(row.getAttribute("aria-level") || 1), all = rowsOf(), i = all.indexOf(row); for (let j = i - 1; j >= 0; j--) if (+(all[j].getAttribute("aria-level") || 1) < lv) { moveFocus(row, j - i); break; } }
         }
-        else if (e.key === " " || e.key === "Enter") { e.preventDefault(); p._canFocus = omo || kind; act(only && e.key === "Enter"); }
+        else if (e.key === " " || e.key === "Enter") { e.preventDefault(); p._canFocus = group || kind; act(only && e.key === "Enter"); }
       };
     });
-    if (p._canFocus) { const key = p._canFocus, r = [...pop.querySelectorAll(".can-row")].find(x => /** @type {HTMLElement} */ (x).dataset.omo === key || /** @type {HTMLElement} */ (x).dataset.kind === key); p._canFocus = null; if (r && p._canOpen) focusRow(r); }
+    if (p._canFocus) { const key = p._canFocus, r = [...pop.querySelectorAll(".can-row")].find(x => /** @type {HTMLElement} */ (x).dataset.group === key || /** @type {HTMLElement} */ (x).dataset.kind === key); p._canFocus = null; if (r && p._canOpen) focusRow(r); }
     if (!p._canAway) { p._canAway = (/** @type {Event} */ e) => { if (p._canOpen && p.el.isConnected && !(/** @type {HTMLElement} */ (e.target)).closest(".can")) { p._canOpen = false; const q = p.el.querySelector(".can-pop"); if (q) { /** @type {HTMLElement} */ (q).hidden = true; } const bb = p.el.querySelector('[data-o="canali"],[data-o="kind"]'); if (bb) bb.setAttribute("aria-expanded", "false"); } }; document.addEventListener("pointerdown", p._canAway, { capture: true, signal: p._ac && p._ac.signal }); }
   }
   ESC.registra({ id: "canali", prio: 27, aperto: () => E.panels.some(/** @param {any} p */ p => p._canOpen && p.el.isConnected), chiudi: () => {
@@ -305,19 +305,19 @@
     await Promise.all(files.map((/** @type {any} */ f) => canali(f.k).catch(() => null)));
     const one = list.length === 1, out = [];
     for (let ci = 0; ci < list.length; ci++) {
-      const omo = list[ci];
+      const group = list[ci];
       const got = await Promise.all(files.map(async (/** @type {any} */ f, /** @type {number} */ fi) => {
-        const c = find(f.k, omo);
-        if (!c) { miss.push({ f, omo }); return null; }
+        const c = find(f.k, group);
+        if (!c) { miss.push({ f, group }); return null; }
         const t = await traccia(f.k, c, { kind: p.kind, mz0: p.mz0, mz1: p.mz1 }); if (!t || !t.rt.length) return null;
         const et = c.label;
         // SIM / SRM channels: colour = sample, dash = channel (SIMUI.style); other channels: colour = channel, dash = file
         const sr = c.family === "sim" || c.family === "srm", st = sr && window.SIMUI ? SIMUI.style(f, ci, list.length, files.length) : { color: one ? f.color : PAL[ci % PAL.length], dash: one ? fdash(f) : fi > 0 ? DASHES[fi % 4] : [] };
-        return { x: t.rt, y: t.y, k: f.k, key: `c|${f.k}|can|${omo}`, ion: et, time: f.time, color: st.color, dash: st.dash, name: one ? f.label : files.length > 1 ? (sr ? `${f.label} · ${et}` : `${et} · ${f.label}`) : et, tid_label: et };
+        return { x: t.rt, y: t.y, k: f.k, key: `c|${f.k}|can|${group}`, ion: et, time: f.time, color: st.color, dash: st.dash, name: one ? f.label : files.length > 1 ? (sr ? `${f.label} · ${et}` : `${et} · ${f.label}`) : et, tid_label: et };
       }));
       got.forEach(s => { if (s) out.push(s); });
     }
-    p._canMiss = miss.map(m => ({ f: m.f, label: (albero(files).find(n => n.group === m.omo) || { label: m.omo }).label, one }));
+    p._canMiss = miss.map(m => ({ f: m.f, label: (albero(files).find(n => n.group === m.group) || { label: m.group }).label, one }));
     return out;
   }
   /** the entries «—» of the legend: the files that have not a channel the panel plots @param {any} p */
@@ -337,14 +337,14 @@
     if (!c) canali(f.k).catch(() => null);        // read now: the next drawing knows it
     return c ? c.kind.proposed : null;
   };
-  /** the omologo of the channel the linked chromatogram of a spectrum plots in file f, if it is a channel of scans of the level of the file (null: the whole level) @param {any} p @param {any} f */
-  function xicOmo(p, f) {
+  /** the group of the channel the linked chromatogram of a spectrum plots in file f, if it is a channel of scans of the level of the file (null: the whole level) @param {any} p @param {any} f */
+  function xicGroup(p, f) {
     const q = p && p.link ? E.panels.find((/** @type {any} */ x) => x.id === p.link) : null;
     if (!q || !f || !on(q)) return null;
-    for (const o of q.canali) { const c = find(f.k, o); if (c && (c.family === "ms" || c.family === "dd") && c.ms_level === (f.lv || 1)) return o; }
+    for (const o of q.channels) { const c = find(f.k, o); if (c && (c.family === "ms" || c.family === "dd") && c.ms_level === (f.lv || 1)) return o; }
     return null;
   }
-  /** the id of the channel with this omologo in file f (null: none, or no omologo) @param {any} f @param {string | null | undefined} omo */
-  const idOf = (f, omo) => { const c = omo && f ? find(f.k, omo) : null; return c ? c.id : null; };
-  /** @type {any} */ (window).CANALI = { canali, cached, find, traccia, omologhi, albero, on, html, wire, series, legend, iniziale, tipo, xicOmo, idOf, ensure, chosen };
+  /** the id of the channel with this group in file f (null: none, or no group) @param {any} f @param {string | null | undefined} group */
+  const idOf = (f, group) => { const c = group && f ? find(f.k, group) : null; return c ? c.id : null; };
+  /** @type {any} */ (window).CANALI = { canali, cached, find, traccia, byGroup, albero, on, html, wire, series, legend, iniziale, tipo, xicGroup, idOf, ensure, chosen };
 })();

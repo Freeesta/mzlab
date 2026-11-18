@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "items/1",
   "title": "items/1: what is learned about a file, `mzlab-cli items`",
-  "description": "One item per part of a mixed file. `info` is the same text the page and the app read (`Item.info()`); `hr` tells high resolution. Retention times are in minutes, m/z in Da/Th, collision energy in eV unless `nce` is true (then %). `ms2_events` is [[rt_min, mz], ...] . Code: crates/mzlab-core/src/iteminfo.rs, crates/mzlab-cli/src/items_cmd.rs.",
+  "description": "One item per part of a mixed file. `info` is the same text the page and the app read (`Item.info()`); `hr` tells high resolution. Retention times are in minutes, m/z in Da/Th, collision energy in eV unless `nce` is true (then %). `ms2_events` is [[rt_min, mz], ...] . Code: crates/mzlab-core/src/iteminfo.rs, crates/mzlab-cli/src/items_cmd.rs. Deliberate exceptions to unit suffixes in key names: `time`, `conc` and `cunit` mirror the sample record of the series (renamed with the sample formats, not here: `time` is minutes, `conc` is in `cunit`); `prof1`/`prof2` keep the site's high-resolution profile `{hr, an, dec, tol, unit}` that `HR.prof()` reads across the page (`tol` is in `unit`, Da or ppm).",
   "type": "object",
   "required": [
     "schema",
@@ -216,16 +216,16 @@
                       "type": "string",
                       "description": "Unit of the signal."
                     },
-                    "rt_start_min": {
-                      "type": "number",
-                      "description": "Minutes."
-                    },
-                    "rt_end_min": {
-                      "type": "number",
-                      "description": "Minutes."
-                    },
                     "n": {
                       "type": "integer"
+                    },
+                    "rt_min": {
+                      "type": "number",
+                      "description": "First retention time, minutes."
+                    },
+                    "rt_max": {
+                      "type": "number",
+                      "description": "Last retention time, minutes."
                     }
                   }
                 }
@@ -263,7 +263,46 @@
               "infusion": {
                 "type": "boolean"
               },
-              "msn": {},
+              "msn": {
+                "description": "Null unless the file is an MSn infusion (fixed precursors, no LC run).",
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "reason",
+                      "levels",
+                      "nodes",
+                      "keys"
+                    ],
+                    "properties": {
+                      "reason": {
+                        "enum": [
+                          "constant_rt",
+                          "blocks",
+                          "method_without_lc",
+                          "name"
+                        ],
+                        "description": "Why it was recognised: constant retention time, long blocks of one precursor, a method without LC, or the file name."
+                      },
+                      "levels": {
+                        "type": "integer",
+                        "description": "Deepest MSn level."
+                      },
+                      "nodes": {
+                        "type": "integer",
+                        "description": "Nominal MSn nodes, energies merged."
+                      },
+                      "keys": {
+                        "type": "integer",
+                        "description": "Distinct MSn keys, energies kept."
+                      }
+                    }
+                  }
+                ]
+              },
               "max_level": {
                 "type": "integer"
               },

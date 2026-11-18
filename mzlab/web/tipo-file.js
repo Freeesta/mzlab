@@ -25,9 +25,9 @@ const TIPOF = (() => {
   };
   /** Reason of the automatic choice, from the facts the engine reports (`msn`: motive, levels, nodes, keys). @param {any} f */
   const why = f => {
-    const auto = f.kindAuto || f.kind, m = f.msn, p = { n: m ? m.chiavi ?? m.nodi : 0, max: 512 };
-    const byMotive = { blocchi: () => I18N.t("load.exp.why.blocchi", p), metodo_senza_lc: () => I18N.t("load.exp.why.metodo_senza_lc", p), nome: () => I18N.t("load.exp.why.nome", p) };
-    const byKind = { ms2: () => I18N.t("load.exp.why.ms2"), mrm: () => I18N.t("load.exp.why.mrm"), infusion: byMotive[m && m.motivo] || (() => I18N.t("load.exp.why.infusion")) };
+    const auto = f.kindAuto || f.kind, m = f.msn, p = { n: m ? m.keys : 0, max: 512 };
+    const byMotive = { blocks: () => I18N.t("load.exp.why.blocks", p), method_without_lc: () => I18N.t("load.exp.why.method_without_lc", p), name: () => I18N.t("load.exp.why.name", p) };
+    const byKind = { ms2: () => I18N.t("load.exp.why.ms2"), mrm: () => I18N.t("load.exp.why.mrm"), infusion: byMotive[m && m.reason] || (() => I18N.t("load.exp.why.infusion")) };
     return (byKind[auto] || (() => I18N.t("load.exp.why.full")))();
   };
   return { get KINDS() { return ESP.ids; }, manual, set, apply, viewer, why, infusione };

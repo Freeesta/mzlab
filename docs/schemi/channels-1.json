@@ -97,7 +97,7 @@
           },
           "group": {
             "type": "string",
-            "description": "Key that puts the same channel of several files together (`omologo`)."
+            "description": "Key that puts the same channel of several files together (same scan type, precursor and polarity)."
           },
           "n_points": {
             "type": "integer",

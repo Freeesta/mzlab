@@ -74,7 +74,7 @@ pub struct Channel {
     pub sigla: Option<&'static str>,
     pub label: String,
     /// Same value in two files = the same channel (level, nominal masses of the path, activation, collision energy rounded; q1/q3 to 0.1).
-    pub omologo: String,
+    pub group: String,
     pub n: u32,
     pub rt: (f64, f64),
     /// The channel has scans with a spectrum (`ms`, `dd`, `uv`).
@@ -84,7 +84,7 @@ pub struct Channel {
 
 /// A proposal for the default tools, never a verdict: the user's own value (CANALI-F) wins.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Tipo {
+pub struct ExperimentType {
     /// `lc-full` | `lc-ms2-targeted` | `lc-dda` | `lc-mrm` | `msn-infusion` | `mixed` | `uv-only`
     pub proposed: &'static str,
     pub reason: &'static str,
@@ -95,7 +95,7 @@ pub struct Channels {
     pub v: Vec<Channel>,
     /// The indices of the scans (in `idx.scans`) partitioned by leaf channel, file order inside each channel: 4 B per scan.
     pub scan_ids: Vec<u32>,
-    pub tipo: Tipo,
+    pub experiment: ExperimentType,
 }
 
 /// `tic` (and `bpc` when there are scans): from the scan table, else from the TIC chromatogram, else the sum of the MRM traces.
@@ -139,7 +139,7 @@ fn tic_channels(scans: &[Scan], chroms: &[Chrom], facts: &Facts) -> Vec<Channel>
         pol: 0,
         sigla: None,
         label: "TIC".into(),
-        omologo: "tic".into(),
+        group: "tic".into(),
         n,
         rt,
         spettri: false,
@@ -152,7 +152,7 @@ fn tic_channels(scans: &[Scan], chroms: &[Chrom], facts: &Facts) -> Vec<Channel>
             famiglia: Famiglia::Bpc,
             parent: Some(0),
             label: "BPC".into(),
-            omologo: "bpc".into(),
+            group: "bpc".into(),
             ..v[0].clone()
         });
     }
@@ -207,8 +207,8 @@ fn srm_channels(v: &mut Vec<Channel>, chroms: &[Chrom], facts: &Facts, root: Opt
                 || format!("#{}", id_field(&c.id, "transition=").unwrap_or("?")),
                 |q| format!("{q:.1}"),
             );
-            let omologo = format!("sim|1|{ion}|{pol}");
-            v.push(sim_channel(c, facts, root, omologo));
+            let group = format!("sim|1|{ion}|{pol}");
+            v.push(sim_channel(c, facts, root, group));
             continue;
         }
         let ce = c.ce.filter(|x| x.is_finite());
@@ -228,7 +228,7 @@ fn srm_channels(v: &mut Vec<Channel>, chroms: &[Chrom], facts: &Facts, root: Opt
             etichetta += &format!(" «{}»", c.name);
         }
         let rt = facts.srm_rt.unwrap_or((0.0, 0.0));
-        let omologo = format!(
+        let group = format!(
             "srm|2|{:.1}>{:.1}||{}||",
             q1,
             q3,
@@ -243,7 +243,7 @@ fn srm_channels(v: &mut Vec<Channel>, chroms: &[Chrom], facts: &Facts, root: Opt
             pol: 0,
             sigla: Some("MRM"),
             label: etichetta,
-            omologo,
+            group,
             n: c.n.unwrap_or(0).max(0) as u32,
             rt,
             spettri: false,
@@ -304,7 +304,7 @@ fn sim_channels(v: &mut Vec<Channel>, chroms: &[Chrom], facts: &Facts, root: Opt
 }
 
 /// The channel of one SIM / SIC chromatogram.
-fn sim_channel(c: &Chrom, facts: &Facts, root: Option<u32>, omologo: String) -> Channel {
+fn sim_channel(c: &Chrom, facts: &Facts, root: Option<u32>, group: String) -> Channel {
     Channel {
         id: format!("sim:{}", c.id),
         famiglia: Famiglia::Sim,
@@ -313,7 +313,7 @@ fn sim_channel(c: &Chrom, facts: &Facts, root: Option<u32>, omologo: String) -> 
         pol: 0,
         sigla: Some("SIM"),
         label: sim_label(&c.id),
-        omologo,
+        group,
         n: c.n.unwrap_or(0).max(0) as u32,
         rt: facts.srm_rt.unwrap_or((0.0, 0.0)),
         spettri: false,
@@ -347,7 +347,7 @@ impl Channels {
                 pol: f.pol,
                 sigla: f.tag,
                 label: f.etichetta.clone(),
-                omologo: f.omologo.clone(),
+                group: f.group.clone(),
                 n: f.n,
                 rt: f.rt,
                 spettri: true,
@@ -362,8 +362,12 @@ impl Channels {
         srm_channels(&mut v, chroms, facts, root);
         sim_channels(&mut v, chroms, facts, root);
         crate::channels_uv::add(&mut v, chroms, facts);
-        let tipo = tipo_di(scans, &v, facts, name);
-        Channels { v, scan_ids, tipo }
+        let experiment = experiment_of(scans, &v, facts, name);
+        Channels {
+            v,
+            scan_ids,
+            experiment,
+        }
     }
 
     /// Index of the channel `id`.
@@ -373,16 +377,16 @@ impl Channels {
 }
 
 /// The proposed type of experiment from the structure of the channels (`infusione` decides the infusions).
-fn tipo_di(scans: &[Scan], v: &[Channel], facts: &Facts, name: &str) -> Tipo {
+fn experiment_of(scans: &[Scan], v: &[Channel], facts: &Facts, name: &str) -> ExperimentType {
     let srm = v.iter().any(|c| c.famiglia == Famiglia::Srm);
     let sim = v.iter().any(|c| c.famiglia == Famiglia::Sim);
     let ms: Vec<&Channel> = v
         .iter()
         .filter(|c| matches!(c.famiglia, Famiglia::Ms | Famiglia::Dd))
         .collect();
-    let t = |proposto, motivo| Tipo {
-        proposed: proposto,
-        reason: motivo,
+    let t = |proposed, reason| ExperimentType {
+        proposed: proposed,
+        reason: reason,
     };
     if scans.is_empty() {
         // SIM channels are MS data: a SIM file is never "UV only" or "empty"
@@ -397,12 +401,11 @@ fn tipo_di(scans: &[Scan], v: &[Channel], facts: &Facts, name: &str) -> Tipo {
         return t("mixed", "srm_and_scans");
     }
     if crate::infusion::with_msn(scans, facts.lc, name) {
-        let motivo = match crate::infusion::infusione(scans, facts.lc, name).map(|i| i.reason) {
-            Some("blocchi") => "blocks",
-            Some("metodo_senza_lc") => "method_without_lc",
+        let reason = match crate::infusion::infusione(scans, facts.lc, name).map(|i| i.reason) {
+            Some(r @ ("blocks" | "method_without_lc")) => r,
             _ => "name",
         };
-        return t("msn-infusion", motivo);
+        return t("msn-infusion", reason);
     }
     if ms.iter().any(|c| c.famiglia == Famiglia::Dd) {
         return t("lc-dda", "many_precursors");

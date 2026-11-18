@@ -60,9 +60,9 @@ try:
             assert all(not g or g not in et.split(" ") for et, g in sg), sg
         step("tree with levels, aria and a short title", tree)
         def two():
-            before = pg.evaluate("E.panels.find(p => p.type==='chrom').canali")
-            pg.click(".can-pop [role=treeitem][data-omo^='ms|1']"); ready(pg); frames(pg, 6)
-            c = pg.evaluate("E.panels.find(p => p.type==='chrom').canali"); assert c and len(c) == 2, (before, c)
+            before = pg.evaluate("E.panels.find(p => p.type==='chrom').channels")
+            pg.click(".can-pop [role=treeitem][data-group^='ms|1']"); ready(pg); frames(pg, 6)
+            c = pg.evaluate("E.panels.find(p => p.type==='chrom').channels"); assert c and len(c) == 2, (before, c)
             ns = pg.evaluate("E.panels.find(p => p.type==='chrom')._a.sr.length"); assert ns >= 4, ns
         step("two channels over several files = more traces", two)
         def table():
@@ -73,7 +73,7 @@ try:
         def keys():
             pg.focus(".can-pop [role=treeitem][aria-selected=true]")
             pg.keyboard.press("ArrowDown"); pg.keyboard.press(" "); ready(pg)
-            c = pg.evaluate("E.panels.find(p => p.type==='chrom').canali"); assert c and len(c) >= 2, c
+            c = pg.evaluate("E.panels.find(p => p.type==='chrom').channels"); assert c and len(c) >= 2, c
             pg.keyboard.press("Escape"); assert pg.evaluate("document.querySelector('.can-pop').hidden")
         step("keyboard: arrows, space, Escape", keys)
         def size():
@@ -83,7 +83,7 @@ try:
             pg.keyboard.press("Escape")
         step("targets of at least 24 px", size)
         def miss():
-            pg.evaluate("(() => { const p = E.panels.find(p => p.type==='chrom'); p.canali = [CANALI.albero(E.files.filter(f=>f.kind==='full')).find(n => n.group.startsWith('ms|2')).group]; draw(p); })()"); ready(pg); frames(pg, 6)
+            pg.evaluate("(() => { const p = E.panels.find(p => p.type==='chrom'); p.channels = [CANALI.albero(E.files.filter(f=>f.kind==='full')).find(n => n.group.startsWith('ms|2')).group]; draw(p); })()"); ready(pg); frames(pg, 6)
             t = pg.evaluate("E.panels.find(p => p.type==='chrom').leg.innerText"); assert "—" in t, t
         step("a file without the channel: «—» in the legend", miss)
         def xic():
@@ -92,7 +92,7 @@ try:
             assert d[0] > 0 and d[0] <= d[1], d
         step("XIC inside a channel (api/xic canale=)", xic)
         def restore():
-            rec = pg.evaluate("panelRec(E.panels.find(p => p.type==='chrom')).canali"); assert rec, rec
+            rec = pg.evaluate("panelRec(E.panels.find(p => p.type==='chrom')).channels"); assert rec, rec
         step("the panel saves the omologo, not the index", restore)
         def miss_routes():
             assert pg.evaluate("(window.MZLAB_LR_MISS||[]).length") == 0, pg.evaluate("window.MZLAB_LR_MISS")

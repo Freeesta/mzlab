@@ -25,7 +25,7 @@ impl Channels {
                 .v
                 .iter()
                 .map(|c| {
-                    std::mem::size_of::<Channel>() + c.id.len() + c.label.len() + c.omologo.len()
+                    std::mem::size_of::<Channel>() + c.id.len() + c.label.len() + c.group.len()
                 })
                 .sum::<usize>()
     }
@@ -34,9 +34,9 @@ impl Channels {
     pub fn json(&self) -> String {
         let mut o = Out::default();
         o.raw("{\"schema\":\"channels/1\",\"kind\":{\"proposed\":")
-            .str(self.tipo.proposed)
+            .str(self.experiment.proposed)
             .raw(",\"reason\":")
-            .str(self.tipo.reason)
+            .str(self.experiment.reason)
             .raw("},\"channels\":[");
         for (i, c) in self.v.iter().enumerate() {
             o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
@@ -60,7 +60,7 @@ impl Channels {
             o.raw(",\"label\":")
                 .str(&c.label)
                 .raw(",\"group\":")
-                .str(&c.omologo)
+                .str(&c.group)
                 .raw(",\"n_points\":")
                 .int(c.n as i64);
             let (a, b) = if c.rt.0.is_finite() { c.rt } else { (0.0, 0.0) };

@@ -87,7 +87,7 @@ fn a_file_with_uv_lists_roots_and_one_without_has_none() {
         (None, Famiglia::Analog, false)
     );
     assert_eq!(an.label, "Pump Pressure (bar)");
-    assert_eq!(c.tipo.proposed, "uv-only");
+    assert_eq!(c.experiment.proposed, "uv-only");
     // the derived channel is never listed
     assert!(c.v.iter().all(|x| !x.id.starts_with("uv:2")));
     let (empty, _) = channels(&mut file(false, false));

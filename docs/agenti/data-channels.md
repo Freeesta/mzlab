@@ -38,38 +38,37 @@ The "experiment type" is a label and a heuristic for the defaults; the tools wor
 - `ms:<key>`: a group of scans with the same `Scan::key()` (MS1 full, SIM, EMS, EPI with fixed precursor, MS2/MS3… of a path). Children of `tic`; for MSn the parent is the precursor's channel (`ms:<key>` of level n-1), so the precursor tree IS the channel hierarchy.
 - `dd:<level>[:<tag>]`: aggregate of the data-dependent MSn (DDA, IDA EMS→EPI) when the distinct keys of that level exceed 64 (same cap as `infusion.rs`): a single channel with the scans and the precursors as an on-demand sub-view (not 3 000 channels).
 - `srm:<q1>><q3>[@ce]` (one MRM/SRM/CRM transition), `sim:<id>` (SIC chromatograms), `uv:twc`, `uv:<nm>[±bw]` (wavelength asked by the user: derived channel), `uv:auto` (CLI only: the proposed band), `an:<i>` (pressure, flow, single UV).
-- `omologo`: key to overlay different files (level + nominal masses of the path + activation + rounded CE; q1/q3 at 0.1; nm). Two files share a channel if they have the same `omologo`.
+- `group`: key to overlay different files (level + nominal masses of the path + activation + rounded CE; q1/q3 at 0.1; nm). Two files share a channel if they have the same `group`.
 
 **Structure in Rust (`crates/mzlab-core/src/channels.rs` and `channels/`; field names in English in the code).**
 ```rust
 pub enum Famiglia { Tic, Bpc, Ms, Dd, Srm, Sim, Uv, Analog }
-pub struct Canale {
+pub struct Channel {
     pub id: String,            // "ms:FTMS + p ESI ms3 317 261 @cid30"
     pub famiglia: Famiglia,
-    pub genitore: Option<u32>, // index of the parent channel (tic, precursor)
+    pub parent: Option<u32>,   // index of the parent channel (tic, precursor)
     pub livello: u8,           // 0 for uv/analog
     pub pol: i8,
     pub sigla: Option<&'static str>, // EMS, EPI, MRM, Prec, NL, Q1MI… (modes.rs) or "SIM", "DDA"
-    pub etichetta: String,     // short, for the list: "MS3 317→261 @CID30"
-    pub omologo: String,
+    pub label: String,         // short, for the list: "MS3 317→261 @CID30"
+    pub group: String,         // same value in two files = the same channel
     pub n: u32,                // scans or points
     pub rt: (f64, f64),
     pub spettri: bool,         // has scans with a spectrum (ms, dd, uv)
-    pub sorgente: Sorgente,    // where the trace lives
+    pub source: Source,        // where the trace lives
 }
-pub enum Sorgente { Scan { da: u32, a: u32 }, Cromatogramma(i64), Dad, DadNm(f64, f64) }
-pub struct Canali { pub v: Vec<Canale>, pub scan_ids: Vec<u32>, pub tipo: Tipo }
+pub struct Channels { pub v: Vec<Channel>, pub scan_ids: Vec<u32>, pub experiment: ExperimentType }
 ```
 `scan_ids` is a partition of the MS scans ordered by channel (`Sorgente::Scan{da,a}` = slice): 4 B per scan, no spectral data copied. Built in O(n scans) from the table already in memory (`idx.scans`, ~640 B/scan) + the chromatogram list (`Facts`/`mzmlhead::Chrom`); done once per file and kept in the `Routes` (100 000 scans → 400 KB + a few hundred channels). No change to the `.mzidx` format.
 
-**Experiment type as a label (`Tipo`).** `Tipo { proposto: &'static str, motivo, utente: Option<..> }` with descriptive values `lc-full`, `lc-ms2-targeted`, `lc-dda`, `lc-mrm`, `lc-sim` (SIM chromatograms only, even with a UV trace), `msn-infusion`, `mixed`, `uv-only`; computed from `infusion.rs` + channels (`tipo_di`); it is a proposal: the user's value, when it exists, wins and lives in the session. It serves ONLY the defaults (`ESP.predefinito` in `esperimenti.js`): initial channel, XIC lens proposed or not, "alb" tab open at startup.
+**Experiment type as a label (`ExperimentType`).** `ExperimentType { proposed: &'static str, reason: &'static str }` with descriptive values `lc-full`, `lc-ms2-targeted`, `lc-dda`, `lc-mrm`, `lc-sim` (SIM chromatograms only, even with a UV trace), `msn-infusion`, `mixed`, `uv-only`; computed from `infusion.rs` + channels (`experiment_of`); it is a proposal: the user's value, when it exists, wins and lives in the session. It serves ONLY the defaults (`ESP.predefinito` in `esperimenti.js`): initial channel, XIC lens proposed or not, "alb" tab open at startup.
 
 **API (`/api` routes, the same in wasm and desktop; JSON with version).**
 - `GET api/canali?k` → `{"schema":"channels/1","kind":{proposed,reason},"channels":[{id,family,generator,ms_level,polarity,code,label,group,n_points,rt_start_min,rt_end_min,has_spectra}]}` (times in minutes; the full key list with units is `docs/schemi/channels-1.json`).
 - `GET api/chrom?k&canale=<id>&kind=tic|bpc&mz0&mz1` → channel trace (for `srm:`/`uv:`/`an:` it redirects to the current reader: `api/mrm`, `pda_trace`, `analog`).
 - `GET api/xic?k&mz&tol&canale=<id>` → XIC inside the scans of the channel (without `canale=`: per level).
 - `GET api/scanlist?k&canale=<id>`, `api/spectrum?k&canale=<id>&rt|scan&modo=somma`.
-Adapter: `canale=ms:<k>` ≡ `filt=<k>`, `canale=msn:<node>` stays, `level`/`prec` stay accepted and translated; no old route disappears while a test uses it. In JS a single module `canali.js`: `canali(k)` (cache), `traccia(k, id, opz)`, `omologhi(files, omo)`. CLI: `mzlab-cli channels FILE` (`cli.md`).
+Adapter: `canale=ms:<k>` ≡ `filt=<k>`, `canale=msn:<node>` stays, `level`/`prec` stay accepted and translated; no old route disappears while a test uses it. In JS a single module `canali.js`: `canali(k)` (cache), `traccia(k, id, opz)`, `byGroup(files, group)`. CLI: `mzlab-cli channels FILE` (`cli.md`).
 
 **Construction per format.**
 - mzML/mzXML and Thermo `.raw`: keys from `Scan::key()`; SIM = MS1 key with "SIM"; `srm`/`pda`/`pressure` chromatograms from the tail (`mzmlhead`).
@@ -81,19 +80,19 @@ Adapter: `canale=ms:<k>` ≡ `filt=<k>`, `canale=msn:<node>` stays, `level`/`pre
 - File TIC = all MS scans (like the vendor TIC), with `MS1` as a child.
 - DDA: cap of 64 keys per level before the `dd:` aggregate.
 - Defaults per type (initial channel, proposed lens): table `predefiniti` in `esperimenti.js`, editable; a default, never a permission: a type never turns a tool off.
-- File overlay: the panel saves the channel as `omologo`, not as an index; each file resolves its own; a file that does not have it appears in the legend as "—" (no error). Overlay with CE rounded to the integer, exact CE in the channel `title`.
+- File overlay: the panel saves the channel as its `group`, not as an index; each file resolves its own; a file that does not have it appears in the legend as "—" (no error). Overlay with CE rounded to the integer, exact CE in the channel `title`.
 - The "alb" tab exists for every file with MSn channels (`infusione-albero.js` reads `api/canali`), not only for infusions.
 - Texts: no paragraphs where the interface is self-explanatory; tooltips only to say what a field does or what to enter in it.
 - No new dependency; no change to the `.mzidx` format.
 
 ## 4. Open work
-- **One row per file** in the table "1. Data files": `file_parts` (`iteminfo.rs`) still splits a mixed file into several rows; the parts become channels, "Type" column as an editable label (the user's field in `Tipo` does not exist yet), "Channels" column (n). The `ESP` registry becomes only `default` per type.
+- **One row per file** in the table "1. Data files": `file_parts` (`iteminfo.rs`) still splits a mixed file into several rows; the parts become channels, "Type" column as an editable label (the user's field in `ExperimentType` does not exist yet), "Channels" column (n). The `ESP` registry becomes only `default` per type.
 - **Tabs per kind** (`tabFiles` in `explore.js`): the direction is a single workspace, with the same tools for every file. Tabs and `file_parts` are turned off last (many e2e tests use them).
 - **Duplicate selectors**: `prec` (0.6 Da), MS2 `tr` (`api/ms2tr`), `filt`/`msn:` stay behind the adapter while e2e tests use them, then are turned off first; the `mrm` panel stays a type of its own.
 - **Scan list** of the selected channel (`api/scanlist?canale`) in every view, also in LR (only the HR Bench uses it, `banco.js`).
 - **`.wiff`**: periods beyond `Period0` and experiment as a field (optional `exp` column of the `.mzidx` only if the `native` text is not enough).
 - **PDA** Agilent and Shimadzu (§1, point 7).
-- **Flow**: the Raw files node shows `tipo` and the number of channels from `api/canali`; the steps receive a channel (`ms:<MS1 key>` for features, `srm:` for quantification) instead of guessing the level from the kind.
+- **Flow**: the Raw files node shows the type and the number of channels from `api/canali`; the steps receive a channel (`ms:<MS1 key>` for features, `srm:` for quantification) instead of guessing the level from the kind.
 
 ## 5. Channel selector (Data page)
 `canali.js` (`window.CANALI`, `canali.css`, keys `canali.*`): the single chromatogram selector (button `data-o=kind`, label "TIC", "TIC + 1") opens a tree of groups (`role=tree`, arrows/Space/Enter/Esc): "Mass spectrometry" (name without the mode tag, already in the "Experiment" column; multiple choice: `p.canali`, saved by `panelRec`; only the families that `traccia()` draws), "UV/Vis" (DAD), "Detectors" (analog) and "Logs", single-choice rows (`data-kind`, they set `p.kind`); the MRM panel has "Transitions" / "Ions" (`data-o=canali`, `p.tr`).

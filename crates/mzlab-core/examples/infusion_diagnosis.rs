@@ -57,7 +57,7 @@ fn report(path: &str) {
     keys_report(scans);
     tic_report(scans);
     match infusione(scans, None, &name) {
-        Some(i) => println!("verdict: infusion, reason {} · levels {} · nodes {} · kind in the Dati view: {}", i.reason, i.livelli, i.nodes, if with_msn(scans, None, &name) { "infusion" } else { "not infusion (constant RT or MS1 only)" }),
+        Some(i) => println!("verdict: infusion, reason {} · levels {} · nodes {} · kind in the Dati view: {}", i.reason, i.levels, i.nodes, if with_msn(scans, None, &name) { "infusion" } else { "not infusion (constant RT or MS1 only)" }),
         None => println!("verdict: not an infusion (no fixed precursors in blocks of at least two segments, no hint in the name)"),
     }
 }
