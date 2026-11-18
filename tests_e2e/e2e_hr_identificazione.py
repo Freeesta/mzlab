@@ -39,7 +39,7 @@ try:
             pg.evaluate(f"LIB.identifyAll(E.files.find(f=>f.kind==='ms2').k)"); pg.wait_for_selector("#li-body table", timeout=60000)
             t = pg.inner_text("#li-body"); print(t[:300])
             assert "Voce di prova" in t and pg.locator("#li-body .lvb").count() >= 1, t
-            assert "scansion" in pg.inner_text("#li-st") or "confrontate" in pg.inner_text("#li-st")
+            assert "compared" in pg.inner_text("#li-st")
             assert pg.is_visible("#libwhat") and "Level" in pg.inner_text("#li-list thead")
             assert pg.evaluate("(() => { const L = document.querySelector('#li-list'); return L.scrollWidth - L.clientWidth; })()") <= 1, "no horizontal overflow"
             xs = pg.evaluate("[...document.querySelectorAll('#li-list tr')].map(tr=>[...tr.children].map(c=>Math.round(c.getBoundingClientRect().x)))")
@@ -54,7 +54,7 @@ try:
             pg.evaluate("(()=>{const d=document.querySelector('#libwhat');d.style.width='';d.style.height='';localStorage.removeItem('mzlab.libwhat.size')})()")
             pg.click("#lw-dl summary")
             with pg.expect_download() as dl: pg.click("#li-xlsx")
-            assert dl.value.suggested_filename.startswith("identificazione") and os.path.getsize(dl.value.path()) > 1500
+            assert dl.value.suggested_filename.startswith("identification") and os.path.getsize(dl.value.path()) > 1500
             pg.locator("#li-list tr.row", has_text="Voce di prova").first.click(); pg.wait_for_selector("#libwhat #lw-list tr.row[data-k=id]", timeout=60000)
             assert "Voce di prova" in pg.inner_text("#lw-list") and pg.is_visible("#lw-cv") and pg.is_visible("#lw-goto")
             pg.click("#lw-back"); pg.wait_for_selector("#li-list tr.row", timeout=10000)
@@ -90,7 +90,7 @@ try:
             heads = pg.inner_text("#li-list thead")
             for w in ("Structure", "Name", "Adduct", "Library", "InChIKey", "Best entropy", "Shared peaks", "Δ ppm"): assert w in heads, (w, heads)
             geo = pg.evaluate("""(()=>{const L=document.querySelector('#li-list'),r=L.getBoundingClientRect(); const th=[...L.querySelectorAll('th')]; const by=t=>th.find(x=>x.innerText.includes(t)).getBoundingClientRect();
-              return {over:L.scrollWidth-L.clientWidth, name:by('Name').width, right:Math.max(...['Entropy','Peaks','Δ ppm'].map(t=>by(t).right))-r.right, left:Math.min(...['Entropy','Peaks','Δ ppm'].map(t=>by(t).left))}})()""")
+              return {over:L.scrollWidth-L.clientWidth, name:by('Name').width, right:Math.max(...['entropy','peaks','Δ ppm'].map(t=>by(t).right))-r.right, left:Math.min(...['entropy','peaks','Δ ppm'].map(t=>by(t).left))}})()""")
             assert geo["over"] <= 1 and geo["name"] >= 100 and geo["right"] <= 1, ("columns fit at 1280 px", geo)
             tot = pg.locator("#li-list .lw-th").count(); assert tot >= 8, tot
             wait_for_js(pg, "document.querySelectorAll('#li-list .lw-th svg').length > 0"); frames(pg, 3)
