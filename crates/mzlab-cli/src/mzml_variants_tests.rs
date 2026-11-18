@@ -1,4 +1,4 @@
-//! The mzML variants of `tools/mzml_variants.py` (the conformance matrix, docs/agenti/mzml-matrice.md) through `canali`, `features` and `validate`: each opens
+//! The mzML variants of `tools/mzml_variants.py` (the conformance matrix, docs/agenti/mzml-matrix.md) through `canali`, `features` and `validate`: each opens
 //! or fails with the key the matrix states. Skipped without `python3` + numpy (the generator is a tool, not a runtime dependency).
 use std::path::{Path, PathBuf};
 use std::process::Command;

@@ -17,7 +17,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - `mzlab-wasm`: wasm-bindgen bridge of `mzlab-core` (`Engine`, one slot per opened file); runs ONLY in a Web Worker (`rust-worker.js`).
 - `mzlab-lettori` + `mzlab-lettori-wasm`: vendor-format readers, one `.wasm` per family (`aperti`, `andi`, `thermo`, `agilent`, `sciex`, `waters`, `shimadzu`, `bruker`, `valida`), loaded on demand; never in the engine `.wasm` (`tests/test_lettori_wasm.py`). See `readers-module.md`.
 - `mzlab-lib` + `mzlab-lib-wasm`: spectral libraries (MSP/MGF/MassBank/JSON parsers, `.mzlib`, Flash indexes, scores); used only by `libreria-worker.js` (`libraries.md`).
-- `mzlab-feat` + `mzlab-feat-wasm`, `-table-wasm`, `-grafo-wasm`, `-import-wasm`, `mzlab-attributio-wasm`, `mzlab-finder-lr-wasm`: feature detection, tables, mzFinder and Attributio (`mzfeat.md`, `attributio*.md`, `wasm-tetti.md`).
+- `mzlab-feat` + `mzlab-feat-wasm`, `-table-wasm`, `-grafo-wasm`, `-import-wasm`, `mzlab-attributio-wasm`, `mzlab-finder-lr-wasm`: feature detection, tables, mzFinder and Attributio (`mzfeat.md`, `attributio*.md`, `wasm-caps.md`).
 - `mzlab-msngrafo-wasm`, `mzlab-msnregole-wasm`: the MSn fragmentation graph and its structure rules, separate `.wasm` loaded on first use (`msn-graph.md`).
 - `mzlab-chem` + `mzlab-chem-wasm`: 3D geometry from SMILES and reactivity (`reatt/1`), administrator mode only.
 - `mzlab-mol`: the `mol/1` structure record (SMILES/CXSMILES, molfile, deterministic JSON, core hash); in no `.wasm` (`mol.md`).
@@ -35,7 +35,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - **No relaxed SIMD** in build files (`tests/test_guardie_regole.py`). Every `.wasm` is built with `+simd128` (`.cargo/config.toml`), one binary with no fallback; the page checks support with `WebAssembly.validate` in `capacita.js`.
 - **Mass constants** `ELECTRON`, `PROTON`, `PROTON_6DP` (the rounded value of the golden data and the Python reference) and `C13_STEP` are written only in `mzlab-core/src/elements.rs`; other files import them by name (`test_guard_mass_constants_only_in_elements`).
 - **Memory** (`memory.md`, `tests/test_guardie_memoria.py` in `rust-wasm-guardie`): the peak linear memory of each phase on the synthetic series stays under `tools/guardie_memoria.json` + 10 %; an exported WASM function returning a whole `Vec<u8>` is refused unless listed in `tools/api_byte_ammesse.txt` (new outputs write to a `WriteAt` sink; `tools/controlla.py`).
-- **Size caps** of every `.wasm` (bytes after `wasm-opt`, via `tools/wasm_opt.sh`): the `limit_*` variables of `tools/build_feat_wasm.sh` and `tools/build_lettori_wasm.sh`, the library cap in the build steps of `pages.yml`; numbers and margins in `wasm-tetti.md`. A build over its cap is red.
+- **Size caps** of every `.wasm` (bytes after `wasm-opt`, via `tools/wasm_opt.sh`): the `limit_*` variables of `tools/build_feat_wasm.sh` and `tools/build_lettori_wasm.sh`, the library cap in the build steps of `pages.yml`; numbers and margins in `wasm-caps.md`. A build over its cap is red.
 - **Determinism**: the same synthetic Flow gives the same SHA-256 natively and as WASI (`tests/test_flow_determinismo.py`, job `rust-det`).
 - **Dependencies**: `cargo deny` (`deny.toml`: licences and sources) blocks when manifests, lockfile, `vendor/` or `deny.toml` change; RustSec advisories run daily in `advisories.yml`, outside the PR checks.
 - **`unsafe`**: `#![forbid(unsafe_code)]` in `mzlab-core`, `mzlab-wasm`, `mzlab-lib`, `mzlab-lib-wasm`, `mzlab-feat`, `mzlab-feat-wasm`, `mzlab-feat-table-wasm`, `mzlab-flowcal-wasm`, `mzlab-attributio-wasm`; the only `unsafe` in the workspace is `Mmap::map` in `mzlab-desktop/src/mapped.rs`.
@@ -70,8 +70,8 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - Page-side debugging: `MZLAB_TRACE` (an array defined on `window` before loading) records rpc and fetch with timings; every route served by `lr.js` gives the same JSON as Python (`e2e_lr.py`).
 
 ## Area files
-- Engine in the page, `api/...` routes, Thermo `.raw`: `rust-rotte.md`. `.mzidx` builder and the site's worker pool: `rust-mzidx.md`, format in `mzidx.md`.
-- Readers modules: `readers-module.md`. Memory and budget: `memory.md`. `.wasm` caps: `wasm-tetti.md`. Measures: `measurements-rust.md`, `measurements-speed.md`.
+- Engine in the page, `api/...` routes, Thermo `.raw`: `rust-routes.md`. `.mzidx` builder and the site's worker pool: `rust-mzidx.md`, format in `mzidx.md`.
+- Readers modules: `readers-module.md`. Memory and budget: `memory.md`. `.wasm` caps: `wasm-caps.md`. Measures: `measurements-rust.md`, `measurements-speed.md`.
 - Desktop app: `rust-desktop.md` (mzFinder native: `rust-desktop-finder.md`). Flow: `rust-flow.md` (`mzflow/2`, `prov/1`), `rust-step.md` (`step/1`), `cli.md`.
 - `mol/1`: `mol.md`. Libraries: `libraries.md`. Features: `mzfeat.md`. MSn graph: `msn-graph.md`.
 

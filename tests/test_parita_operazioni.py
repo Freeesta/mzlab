@@ -1,6 +1,6 @@
 """Every operation of the site's engine worker (mzlab/web/rust-worker.js) has a branch in the app: the desktop worker (shim/desktop-worker.js) or the
 native `rpc` (crates/mzlab-desktop/src/*.rs). An operation the app does not answer gives `rpc.unknown` there, so a function would exist in the site only.
-The few that are of the site by nature, or a gap not closed yet, are named in SOLO_SITO with the reason (docs/agenti/parita.md)."""
+The few that are of the site by nature, or a gap not closed yet, are named in SOLO_SITO with the reason (docs/agenti/parity.md)."""
 import re
 from pathlib import Path
 

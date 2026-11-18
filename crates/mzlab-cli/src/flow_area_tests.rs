@@ -424,7 +424,7 @@ fn pinned_edges() -> Vec<Pin> {
 
 /// MEASURE (every choice is named, so the default does not matter here): ions on a channel border (of either grid) with an m/z noise that grows as the point weakens (`jitter`). Pinned for
 /// `area_from` channel / window x `stitch` strict / wide: ions lost, median and max |log2(area / true)| of the largest row, rows per ion. Without noise the
-/// same ions give 1 row and |log2| <= 0.03 (harness control). See `docs/agenti/mzfeat-prove.md` (MISURA bordo_canale).
+/// same ions give 1 row and |log2| <= 0.03 (harness control). See `docs/agenti/mzfeat-tests.md` (MISURA bordo_canale).
 #[test]
 fn ions_on_a_channel_border_lose_area() {
     let still: fn(f64, f64, f64, &mut u64) -> f64 = |m, _, _, _| m;

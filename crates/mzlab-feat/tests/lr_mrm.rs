@@ -4,7 +4,7 @@
 
 use mzlab_core::json::{self, Value};
 use mzlab_feat::legacy::lr::mrm::{analyse, MrmFile, Trace};
-use mzlab_feat::legacy::lr::peak1d::find_peak;
+use mzlab_feat::legacy::lr::peak1d::{find_peak_basis, SnrBasis};
 
 const N: usize = 300;
 
@@ -51,7 +51,9 @@ fn find_peak_as_python() {
         ),
     ] {
         for center in [None, Some(5.0)] {
-            let p = find_peak(&t, &trace(c, h), center, 0.25, 5, 5).unwrap();
+            // the former Python engine read the noise on the smoothed trace
+            let p =
+                find_peak_basis(&t, &trace(c, h), center, 0.25, 5, 5, SnrBasis::Smoothed).unwrap();
             near(p.apex_rt, apex, "apex");
             near(p.height, height, "height");
             near(p.area, area, "area");
@@ -63,8 +65,12 @@ fn find_peak_as_python() {
             assert!(p.ok);
         }
     }
-    assert!(find_peak(&t[..2], &[1.0, 2.0], None, 0.25, 5, 5).is_none());
-    assert!(find_peak(&t, &vec![0.0; N], None, 0.25, 5, 5).is_none());
+    assert!(
+        mzlab_feat::legacy::lr::peak1d::find_peak(&t[..2], &[1.0, 2.0], None, 0.25, 5, 5).is_none()
+    );
+    assert!(
+        mzlab_feat::legacy::lr::peak1d::find_peak(&t, &vec![0.0; N], None, 0.25, 5, 5).is_none()
+    );
 }
 
 fn file(name: &str, kind: &str, time: Option<f64>, hs: [f64; 2]) -> MrmFile {

@@ -125,7 +125,7 @@ Measured with the blocks no longer zero-filled and without the adaptive window o
 
 ## Rows to repeat
 - Row A on the Mac with the bench on both readers (R-15, RFR against `thermo_bench`): new SHA, same A-1 table with the `thermo_bench` definitions; the repetition on the cloud after T-3 is A-2b.
-- `wasm` target: A-3 must be repeated with 5 repetitions and, for the ratio with the native, with the same profile (`release`) for both targets; cap of the `thermo` module 546 304 B (`wasm-tetti.md`).
+- `wasm` target: A-3 must be repeated with 5 repetitions and, for the ratio with the native, with the same profile (`release`) for both targets; cap of the `thermo` module 546 304 B (`wasm-caps.md`).
 
 ## RFR as oracle, and where to beat it
 - **RFR only as oracle**: the RawFileReader license is proprietary: DLL and NuGet package enter no repository, binary, `.wasm` or CI; they are used only on the Mac, in a folder outside the repositories, to write the `scandump/1` dumps with the public API only; never copy or decompile its code. A field that RFR does not expose is omitted, never invented.

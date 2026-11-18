@@ -1,4 +1,4 @@
-# Wasm bench of the real mzlab-core functions (docs/agenti/wasm-potenziale.md §9; driven by tools/banco_wasm.py).
+# Wasm bench of the real mzlab-core functions (docs/agenti/wasm-potential.md §9; driven by tools/banco_wasm.py).
 # Own [workspace]: it is not part of the root workspace and builds only when the bench asks.
 [package]
 name = "wbench"

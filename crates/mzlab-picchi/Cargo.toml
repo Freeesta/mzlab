@@ -6,5 +6,5 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-# exp/ln from libm on every target: the system library of a native build and the libm port of wasm32 differ in the last bit (docs/agenti/parita.md)
+# exp/ln from libm on every target: the system library of a native build and the libm port of wasm32 differ in the last bit (docs/agenti/parity.md)
 libm = "0.2"

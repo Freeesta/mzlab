@@ -1,5 +1,5 @@
 //! Scenarios E0-E6 of the spectral study: a base library of random compounds at CE 35 plus the entries and queries each scenario needs, with the
-//! ground truth of every query (`docs/agenti/studio-spettri.md`). The same seed gives the same library and the same queries.
+//! ground truth of every query (`docs/agenti/study-spectra.md`). The same seed gives the same library and the same queries.
 
 use super::r#gen::*;
 
