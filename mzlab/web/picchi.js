@@ -15,8 +15,8 @@ function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number}
   const hb = ya + (yb - ya) * (xs[at] - xs[i0]) / ((xs[i1] - xs[i0]) || 1);
   return { area: Math.max(ar - area, 0), height: Math.max(mx - hb, 0), rt: xs[at] };       // conteggi x s, baseline lineare
 }
-// end point of the straight baseline: mean of 3 points; the drawing (grafici.js) uses the same value, so the dashed baseline is the one subtracted from the area
-const edge3 = (/** @type {number[]} */ ys, /** @type {number} */ i) => { let t = 0, c = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; c++; } return t / c; };
+// end point of the straight baseline: mean of 3 points; the drawing (grafici.js) uses the same value, so the dashed baseline is the one subtracted from the area; never below the zero line
+const edge3 = (/** @type {number[]} */ ys, /** @type {number} */ i) => { let t = 0, c = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; c++; } return Math.max(0, t / c); };
 const baseAt = (/** @type {number[]} */ b, /** @type {number} */ t) => b[1] + (b[3] - b[1]) * (t - b[0]) / ((b[2] - b[0]) || 1);
 // the colour of a spectrum of the panel: the one of its file, or of its precursor when one file gives several (the bars and the legend entry use this one)
 const specColor = (/** @type {any} */ x) => (x.multi ? PAL[(x.idx + 3) % PAL.length] : x.f.color);
@@ -120,14 +120,14 @@ function intRec(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} *
 }
 // SIM/MRM: an integration is two anchors, each end on the trace (curve), at zero or where the user put it (man, `my` = counts); two curve = edges, two zero = zero, else the line through them
 function snapBase(/** @type {Bag} */ s, /** @type {Bag} */ it) {
-  const q = it.snap, l = it.a <= it.b ? "a" : "b", h = l === "a" ? "b" : "a", y = (/** @type {string} */ e) => (q[e] === "zero" ? 0 : q[e] === "man" ? +((it.my || {})[e] || 0) : edge3(s.y, nearIdx(s.x, it[e])));
+  const q = it.snap, l = it.a <= it.b ? "a" : "b", h = l === "a" ? "b" : "a", y = (/** @type {string} */ e) => (q[e] === "zero" ? 0 : q[e] === "man" ? Math.max(0, +((it.my || {})[e] || 0)) : edge3(s.y, nearIdx(s.x, it[e])));
   if (q.a === q.b && q.a !== "man") { it.bm = q.a === "zero" ? "zero" : "edges"; delete it.bl; } else { it.bm = "line"; it.bl = [it[l], y(l), it[h], y(h)]; }
   delete it.zero; delete it.lvl; delete it.base; return it;
 }
 // the anchors of a new integration: those of the last one the user made or changed on the panel (a manual point keeps its counts), else both on the curve
 const snapNew = (/** @type {Bag} */ p) => { const o = p.ints.filter((/** @type {Bag} */ i) => i.snap).sort((/** @type {Bag} */ x, /** @type {Bag} */ y) => (y.st || y.id) - (x.st || x.id))[0]; return o ? { snap: { ...o.snap }, ...(o.my ? { my: { ...o.my } } : {}) } : { snap: { a: "curve", b: "curve" } }; };
 // [t0, y0, t1, y1] of the line between the edges: a custom line starts there
-const edgeLine = (/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, /** @type {number[] | null | undefined} */ base) => { const i0 = nearIdx(s.x, Math.min(a, b)), i1 = nearIdx(s.x, Math.max(a, b)), y = (/** @type {number} */ i) => (base ? baseAt(base, s.x[i]) : edge3(s.y, i)); return [s.x[i0], y(i0), s.x[i1], y(i1)]; };
+const edgeLine = (/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, /** @type {number[] | null | undefined} */ base) => { const i0 = nearIdx(s.x, Math.min(a, b)), i1 = nearIdx(s.x, Math.max(a, b)), y = (/** @type {number} */ i) => (base ? Math.max(0, baseAt(base, s.x[i])) : edge3(s.y, i)); return [s.x[i0], y(i0), s.x[i1], y(i1)]; };
 // a trace of a high-resolution file: the automatic tool integrates all its peaks at once (low resolution keeps one peak per click)
 const hrTrace = (/** @type {Bag} */ s) => { const f = E.files[s.k]; return !!f && !!window.HR && HR.isHr(f, f.lv); };
 // every peak of the stretch shown, found and given its baseline by the Rust engine (auto_integrate, peakq_auto.rs), in one undoable step;

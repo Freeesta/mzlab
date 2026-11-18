@@ -177,3 +177,40 @@ fn a_line_dragged_past_its_points_is_held_at_zero_in_the_same_bytes_as_the_page(
         .unwrap()
         .contains("clamped"));
 }
+
+#[test]
+fn a_line_with_a_point_under_zero_is_held_at_zero_in_the_same_bytes_as_the_page() {
+    let (rt, y, p) = trace_file("mzlab_peak_area_trace5.tsv");
+    // the left point dragged 2e4 under the zero line: the line is 0 where it would be negative, inside its two points too
+    let line = Baseline::Line {
+        t0: 1.7,
+        y0: -2.0e4,
+        t1: 2.3,
+        y1: 3.0e3,
+    };
+    let o = run(args(&[
+        &p,
+        "--from",
+        "1.7",
+        "--to",
+        "2.3",
+        "--set",
+        "baseline=line",
+        "--set",
+        "base_t0=1.7",
+        "--set",
+        "base_y0=-20000",
+        "--set",
+        "base_t1=2.3",
+        "--set",
+        "base_y1=3000",
+    ]));
+    let want = peak_area_json(&rt, &y, 1.7, 2.3, line).unwrap();
+    assert_eq!(String::from_utf8(o.stdout).unwrap(), format!("{want}\n"));
+    let v: serde_json::Value = serde_json::from_str(&want).unwrap();
+    assert!(v["clamped"].as_f64().unwrap() > 0.0);
+    // never more than from zero would give less: the held line is at or above 0, so the area is at most the one from zero
+    let z: serde_json::Value =
+        serde_json::from_str(&peak_area_json(&rt, &y, 1.7, 2.3, Baseline::Zero).unwrap()).unwrap();
+    assert!(v["area"].as_f64().unwrap() <= z["area"].as_f64().unwrap());
+}
