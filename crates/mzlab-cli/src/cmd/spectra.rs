@@ -13,5 +13,6 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry { name: "elements", aliases: &[], help: "", run: crate::plain::elements_cmd::run },
     Entry { name: "ion-mz", aliases: &[], help: "", run: crate::plain::ion_mz_cmd::run },
     Entry { name: "match-mz", aliases: &[], help: "mzlab-cli match-mz X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adduct shifts, known contaminants, as candidates (match-mz --help)", run: crate::plain::match_mz_cmd::run },
+    Entry { name: "ref-list", aliases: &[], help: "mzlab-cli ref-list FILE.csv [--name N] [--match X]   read a CSV list of reference ions as JSON (reflist/1) with line-numbered row errors; exit 1 if rows are wrong (ref-list --help)", run: crate::plain::ref_list_cmd::run },
     Entry { name: "background", aliases: &[], help: "", run: crate::plain::background_cmd::run },
 ];

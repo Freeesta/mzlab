@@ -2,6 +2,12 @@
   "id": "pesticides",
   "name": "Pesticides and environmental contaminants (LC-MS)",
   "source": "PubChem (NCBI): formula, SMILES and InChIKey computed by PubChem for the given CIDs; classes and uses compiled for this program",
+  "url": "https://pubchem.ncbi.nlm.nih.gov/",
+  "doi": null,
+  "version": null,
+  "date": null,
+  "source_known": false,
+  "provenance": "Formula, SMILES and InChIKey: computed by PubChem for the listed CIDs. Which compounds were chosen, and their classes and uses, was compiled for this program; no published source for that selection is documented",
   "license": "descriptors computed by PubChem: NCBI places no restriction on their use; ISO common names and chemical classes: facts, no restriction",
   "classes": {
     "alkylphenols": "alkylphenols",

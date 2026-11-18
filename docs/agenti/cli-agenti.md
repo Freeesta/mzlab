@@ -31,6 +31,8 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - With a `--json` flag: `flow run`, `flow check`, `steps`, `validate`, `dad` (all its answers are JSON; `--json` adds `errore/1`), `samples list` (`samples_list/1`, one line per file; exit 0 ok, 1 some file or sample refused or, with `--probe`, a `.wiff.scan` shorter than its index, 2 usage, 4 missing or unreadable input; stdout holds the data, `listing FILE` progress and warnings go to stderr).
 - Without it yet (not added in this change): `features` (CSV), `convert`, `flow report`, `flow record`, `flow verify`, `flow command`, `normative`, `insilico pack`, `msn-lib`, `msn-rules`, `msn-graph`, `explain-missing`, `background`, `manual-table`, `peak-auto`, `peak-auto-lr`, `peak-area`, `peak-edges`, `peak-split`, `peak-window`, `channels`, `dda-window`, `samples vars|group|table`, `ion-pattern`, `ion-mz`, `match-mz`, the `mol-*` commands and the `llm` subcommands. Several of these already print JSON (or CSV) by default and have a stable schema; read the command's `--help` before parsing.
 
+- `ref-list FILE.csv` (JSON `reflist/1`: items and line-numbered row errors; exit 1 = some rows wrong, 2 usage, 4 unreadable file; `--match X` adds `ricerca/1`): `liste-riferimento.md`.
+
 - `peak-auto` and `peak-auto-lr`: areas in counts x s; `--set area_unit=s|min` (`min` = the old counts x min).
 
 ## Rules for the agent

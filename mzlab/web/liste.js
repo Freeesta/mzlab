@@ -7,7 +7,6 @@
 // Principle 1 of CLAUDE.md: in low resolution, coincidences are often accidental. The program NEVER shows automatic annotations on LR spectra.
 const LISTE = (() => {
   // ---------------------------------------------------------------- pure part
-  const PROTON = 1.007276;                      // [M+H]+ / [M-H]- shift, the value of the adduct tables of the page (liste-target-core.js, fair.js)
   const tolDa = (/** @type {number} */ mz, /** @type {number} */ ppm) => Math.max(mz * ppm * 1e-6, mz < 200 ? 0.001 : 0);
 
   // index: the active lists, one array per polarity sorted by m/z (a list item with pol 0 goes in both)
@@ -116,84 +115,18 @@ const LISTE = (() => {
     return `<div class="cont"><div class="sm cont-h">${I18N.t("lst.compatible")}</div>${shown.map(row).join("")}${more > 0 ? `<div class="sm">${I18N.t("lst.more", { n: more })}</div>` : ""}</div>`;
   }
 
-  // CSV parsing: supports comma or semicolon, double quotes, decimal comma (e.g. 150,5), NORMAN suspect lists
-  function csvSplit(/** @type {string} */ line, /** @type {string} */ sep) {
-    const out = []; let cur = "", q = false;
-    for (let i = 0; i < line.length; i++) {
-      const c = line[i];
-      if (q) {
-        if (c === '"' && line[i + 1] === '"') { cur += '"'; i++; }
-        else if (c === '"') q = false;
-        else cur += c;
-      } else if (c === '"') q = true;
-      else if (c === sep) { out.push(cur); cur = ""; }
-      else cur += c;
-    }
-    out.push(cur);
-    return out.map(s => s.trim());
+  // The CSV of a list is read in Rust (reflist/1, `mzlab-cli ref-list`): the same items and the same line-numbered errors on the site, in the app and in the CLI.
+  /** @param {string} text @param {string} [name] @returns {Promise<Bag>} */
+  async function readCsv(text, name) {
+    const r = await fetch("api/reflist", { method: "POST", body: JSON.stringify({ csv: String(text), name: name || "" }) });
+    const j = await r.json();
+    if (!j || j.error || !Array.isArray(j.items)) throw Object.assign(new Error("reflist"), { key: (j && j.error && j.error.key) || "err.reflist.request" });
+    return j;
   }
-
-  const polOf = (/** @type {string | undefined} */ s) => {
-    s = String(s || "").trim().toLowerCase();
-    return /^(\+|pos)/.test(s) ? 1 : /^(-|neg)/.test(s) ? -1 : 0;
-  };
-
-  // Find column index matching any of the candidate names (case-insensitive, normalized)
-  function matchCol(/** @type {string[]} */ head, /** @type {string[]} */ candidates) {
-    const clean = (/** @type {string} */ s) => s.toLowerCase().replace(/[\s_\-\/]/g, "");
-    const clHead = head.map(clean);
-    for (const cand of candidates) {
-      const idx = clHead.indexOf(clean(cand));
-      if (idx >= 0) return idx;
-    }
-    return -1;
-  }
-
-  // separator of the header line: the more frequent of ; and , outside double quotes
-  function headSep(/** @type {string} */ line) {
-    let semi = 0, comma = 0, q = false;
-    for (const c of line) { if (c === '"') q = !q; else if (!q) { if (c === ";") semi++; else if (c === ",") comma++; } }
-    return semi > comma ? ";" : ",";
-  }
-  function csvParse(/** @type {string} */ text) {
-    // «# mzLab ...» = provenance line of our own exports
-    const lines = String(text).replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim() && !l.startsWith("#"));
-    if (!lines.length) return [];
-    const sep = headSep(lines[0]);
-    const head = csvSplit(lines[0], sep);
-
-    const cMz = matchCol(head, ["mz", "m/z", "monoisotopic_mass", "monoisotopicmass", "exact_mass", "exactmass", "mass", "massa"]);
-    const cName = matchCol(head, ["name", "compound_name", "compoundname", "preferred_name", "nome", "substance", "title"]);
-    const cForm = matchCol(head, ["formula", "molecular_formula", "molecularformula", "mol_formula", "molformula"]);
-    const cPol = matchCol(head, ["polarity", "ion_mode", "ionization_mode", "polarita", "mode"]);
-    const cSmiles = matchCol(head, ["smiles", "canonical_smiles", "structure"]);
-    const cAdduct = matchCol(head, ["adduct", "ion", "ione", "addotto"]);
-    const cNote = matchCol(head, ["note", "source", "cas_rn", "cas", "comment", "description", "id"]);
-
-    const hasHead = cMz >= 0 || cName >= 0 || cForm >= 0 || cSmiles >= 0;
-    const c = hasHead ? { mz: cMz, name: cName, formula: cForm, polarity: cPol, smiles: cSmiles, adduct: cAdduct, note: cNote }
-                      : { mz: 0, name: 1, formula: 2, polarity: 3, smiles: -1, adduct: -1, note: 4 };
-
-    const /** @type {Bag[]} */ rows = [];
-    lines.slice(hasHead ? 1 : 0).forEach(l => {
-      const f = csvSplit(l, sep);
-      const mzRaw = c.mz >= 0 ? String(f[c.mz] || "").replace(",", ".") : "";
-      const mz = parseFloat(mzRaw);
-      const name = c.name >= 0 ? f[c.name] || "" : "";
-      const formula = c.formula >= 0 ? f[c.formula] || "" : "";
-      const smiles = c.smiles >= 0 ? f[c.smiles] || "" : "";
-      const adduct = c.adduct >= 0 ? f[c.adduct] || "" : "";
-      const note = c.note >= 0 ? f[c.note] || "" : "";
-      const polarity = c.polarity >= 0 ? polOf(f[c.polarity]) : 0;
-
-      if (!(mz > 0) && !smiles && !formula) return;
-      const /** @type {Bag} */ obj = { mz: mz > 0 ? mz : null, name, formula, polarity, note };
-      if (smiles) obj.smiles = smiles;
-      if (adduct) obj.adduct = adduct;
-      rows.push(obj);
-    });
-    return rows;
-  }
+  // the text of a row error: «Line 7: …»
+  const rowErr = (/** @type {Bag} */ e) => I18N.t("lst.err.line", { line: e.line, text: I18N.t(e.key, { value: e.value, field: e.field }) });
+  // the template people start from: parsed by the same Rust reader (test_liste_csv)
+  const TEMPLATE = "mz,name,formula,polarity,adduct,note\n100.1234,Example A,,+,,only the m/z is known\n,Example B,C6H12O6,,[M+H]+,the m/z is computed from the formula\n,Example C,C6H12O6,-,,negative: [M-H]- is used\n";
 
   const csvCell = (/** @type {unknown} */ s) => (/[",;\n]/.test(String(s)) ? '"' + String(s).replace(/"/g, '""') + '"' : String(s));
   const csvOut = (/** @type {Bag[]} */ rows) => "mz,name,formula,polarity,note\n" + rows.map((/** @type {Bag} */ r) => [r.mz, r.name, r.formula, r.polarity === 1 ? "positive" : r.polarity === -1 ? "negative" : "both", r.note].map(csvCell).join(",")).join("\n") + "\n";
@@ -226,7 +159,7 @@ const LISTE = (() => {
       let mz = r.mz;
       // Default to [M+H]+ for positive or [M-H]- for negative if formula is known and adduct is not
       let adduct = r.adduct;
-      if (!adduct) adduct = r.formula ? (r.polarity === -1 ? "[M-H]-" : "[M+H]+") : "m/z osservata";
+      if (!adduct) adduct = "";
       return {
         id: (id || "usr") + "_" + i,
         name: r.name || (r.formula ? r.formula : `m/z ${mz}`),
@@ -235,9 +168,9 @@ const LISTE = (() => {
         adduct,
         z: 1,
         mz: mz ? +mz : 0,
-        pol: r.polarity || 0,
+        pol: r.pol || r.polarity || 0,
         series: null,
-        source: name || filename || "lista utente",
+        source: name || filename || I18N.t("lst.user.name"),
         mzonly: !r.formula
       };
     }).filter((/** @type {Bag} */ x) => x.mz > 0);
@@ -249,6 +182,7 @@ const LISTE = (() => {
       source: I18N.t("lst.user.source"),
       license: I18N.t("lst.user.of"),
       builtin: false,
+      info: { url: null, doi: null, version: null, date: new Date().toISOString().slice(0, 10), source_known: true, provenance: filename || "", compounds: new Set(items.map((/** @type {Bag} */ x) => x.name)).size, classes: 0 },
       items
     };
   }
@@ -461,7 +395,7 @@ const LISTE = (() => {
           const bIm = document.querySelector("#lab-im"); const fIm = document.querySelector("#lab-f");
           if (bIm && fIm) {
             bIm.onclick = () => fIm.click();
-            fIm.onchange = async (/** @type {Bag} */ e) => { const f = e.target.files[0]; if (!f) return; let n, all; try { all = csvParse(await FILESICURI.readText(f)); n = all.slice(0, LAB_MAX); } catch (x_) { const x = /** @type {Lanciato} */ (x_); if (typeof toast === "function") toast(I18N.t(x.key || "workflow.err.invalidFormat", x.params)); return; } saveRows([...labRows(), ...n]); draw(); if (typeof toast === "function") toast(all.length > LAB_MAX ? I18N.t("lst.lab.importedCut", { max: LAB_MAX, m: all.length, rest: all.length - LAB_MAX }) : I18N.t("lst.lab.imported", { n: n.length })); };
+            fIm.onchange = async (/** @type {Bag} */ e) => { const f = e.target.files[0]; if (!f) return; let n, all, nErr = 0; try { const j = await readCsv(await FILESICURI.readText(f)); nErr = j.errors.length; all = j.items.map((/** @type {Bag} */ r) => ({ mz: r.mz, name: r.name, formula: r.formula, polarity: r.pol, note: r.note })); n = all.slice(0, LAB_MAX); } catch (x_) { const x = /** @type {Lanciato} */ (x_); if (typeof toast === "function") toast(I18N.t(x.key || "workflow.err.invalidFormat", x.params)); return; } saveRows([...labRows(), ...n]); draw(); if (nErr && typeof toast === "function") toast(I18N.t("lst.user.skipped", { n: nErr })); else if (typeof toast === "function") toast(all.length > LAB_MAX ? I18N.t("lst.lab.importedCut", { max: LAB_MAX, m: all.length, rest: all.length - LAB_MAX }) : I18N.t("lst.lab.imported", { n: n.length })); };
           }
         });
       }
@@ -469,52 +403,29 @@ const LISTE = (() => {
     draw();
   }
 
-  // Load OpenChemLib dynamically if needed to calculate formula from SMILES
-  async function ensureOCL() {
-    if (typeof window !== "undefined" && window.OCL) return window.OCL;
-    try {
-      const mod = await import("./vendor/openchemlib.js");
-      if (typeof window !== "undefined") window.OCL = mod.default || mod;
-      return window.OCL;
-    } catch (_) { return null; }
-  }
-
-  // Process rows from CSV: derive formula and exact mass from SMILES via OpenChemLib when missing
-  async function enrichRowsWithOcl(/** @type {Bag[]} */ rows) {
-    let ocl = null;
-    for (const r of rows) {
-      if (r.smiles && (!r.formula || !(r.mz > 0))) {
-        if (!ocl) ocl = await ensureOCL();
-        if (ocl && ocl.Molecule) {
-          try {
-            const m = ocl.Molecule.fromSmiles(r.smiles);
-            const mf = m.getMolecularFormula();
-            if (!r.formula) r.formula = mf.formula;
-            if (!(r.mz > 0)) {
-              const exactM = mf.absoluteWeight;
-              r.mz = r.polarity === -1 ? exactM - PROTON : exactM + PROTON;
-            }
-          } catch (_) { /* invalid smiles */ }
-        }
-      }
-    }
-    return rows;
-  }
-
-  // Add user list from CSV text
-  /** @param {string} filename @param {string} text @param {string} [customName] */
-  async function addUserListFromCsv(filename, text, customName) {
-    const rawRows = csvParse(text);
-    const rows = await enrichRowsWithOcl(rawRows);
-    const base = filename ? filename.replace(/\.[^/.]+$/, "") : "Lista sospetti";
-    const name = customName || base;
+  // Adds a user list from CSV text. Rows with an error are never imported silently: without `partial` a CSV with errors adds nothing and answers its errors.
+  /** @param {string} filename @param {string} text @param {string} [customName] @param {boolean} [partial] @returns {Promise<{list: Bag | null, errors: Bag[], valid: number}>} */
+  async function addUserListFromCsv(filename, text, customName, partial) {
+    const j = await readCsv(text);
+    if ((j.errors.length && !partial) || !j.items.length) return { list: null, errors: j.errors, valid: j.items.length };
+    const name = customName || (filename ? filename.replace(/\.[^/.]+$/, "") : I18N.t("lst.user.name"));
     const id = "usr_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
-    const uList = userList(id, name, filename, rows);
+    const uList = userList(id, name, filename, j.items);
     ST.userLists.push(uList);
     await idbSaveUserList(uList);
     reindex();
-    if (typeof toast === "function") toast(`Lista «${name}» caricata (${uList.items.length} sostanze)`);
-    return uList;
+    if (typeof toast === "function") toast(I18N.t("lst.user.added", { name, n: uList.items.length }));
+    return { list: uList, errors: j.errors, valid: j.items.length };
+  }
+
+  // Renames a user list (the name is the list's label in the chips, the table and the peak boxes)
+  async function renameUserList(/** @type {string} */ id, /** @type {string} */ name) {
+    const L = ST.userLists.find(x => x.id === id), n = String(name || "").trim();
+    if (!L || !n) return;
+    L.name = n;
+    L.items.forEach((/** @type {Bag} */ it) => { it.source = n; });
+    await idbSaveUserList(L);
+    reindex();
   }
 
   // Delete user list
@@ -522,7 +433,7 @@ const LISTE = (() => {
     ST.userLists = ST.userLists.filter(x => x.id !== id);
     await idbDeleteUserList(id);
     reindex();
-    if (typeof toast === "function") toast("Lista eliminata");
+    if (typeof toast === "function") toast(I18N.t("lst.user.removed"));
   }
 
   // Toggle active list
@@ -543,8 +454,8 @@ const LISTE = (() => {
   const noRef = (/** @type {unknown} */ n) => String(n).replace(/\s*\([^)]*\d{4}\)\s*$/, "");
   // the dormant HRMS Target Screening tab: shown only behind FEATURES.targetScreening («?targetscreening=1» or localStorage «qqq.dev.targetscreening» = «1», features.js)
   const targetOn = () => typeof FEATURES !== "undefined" && !!FEATURES.targetScreening;
-  // the short names of the built-in lists (the chips); any other list keeps its own name
-  const GROUP_KEY = /** @type {Record<string, string>} */ ({ keller: "lst.grp.keller", pesticides: "lst.grp.pesticides" });
+  // the short name of the pesticides chip; any other list keeps its own name (the Keller list is named in its data: «Known contaminants (Keller et al.)»)
+  const GROUP_KEY = /** @type {Record<string, string>} */ ({ pesticides: "lst.grp.pesticides" });
   const grpName = (/** @type {Bag} */ L) => (GROUP_KEY[L.id] ? I18N.t(GROUP_KEY[L.id]) : noRef(L.name_en || L.name || L.id));
   const srcName = (/** @type {string} */ id, /** @type {string} */ fallback) => { const L = [...ST.lists, ...ST.userLists].find(x => x.id === id); return L ? grpName(L) : noRef(fallback); };
   function panelHtml(/** @type {Bag} */ state) {
@@ -577,7 +488,14 @@ const LISTE = (() => {
           </label>
         </div>
 
-        <div id="lst-userlists-bar" style="font-size:12px;padding:4px 8px;background:var(--panel,#fff);border:1px dashed var(--line,#cbd5e1);border-radius:6px" hidden></div>
+        <div id="lst-add" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;padding:4px 8px;border:1px dashed var(--line,#cbd5e1);border-radius:6px">
+          <button type="button" id="lst-add-btn">${I18N.t("lst.add.btn")}</button>
+          <button type="button" id="lst-add-tpl">${I18N.t("lst.add.tpl")}</button>
+          <span class="muted">${I18N.t("lst.add.drop")}</span>
+          <input type="file" id="lst-add-file" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden aria-label="${I18N.t("lst.add.btn")}">
+          <div id="lst-add-err" role="alert" style="flex:1 1 100%" hidden></div>
+        </div>
+        <details id="lst-about" style="font-size:12px"><summary>${I18N.t("lst.info.h")}</summary><div id="lst-lists"></div></details>
         <div id="lst-excl" class="sm" style="padding:4px 8px;border:1px dashed var(--line,#cbd5e1);border-radius:6px" hidden></div>
         <span id="lst-count" class="sm muted" role="status" aria-live="polite"></span>
 
@@ -633,6 +551,23 @@ const LISTE = (() => {
     if (opt.targetScreening && elViewSeg) switchToView("target");       // without the flag there is no tab bar: the lists stay
   }
 
+  // a CSV from the file picker or a drop: read in Rust; rows with errors are listed with their line, never skipped silently
+  async function addFile(/** @type {File} */ f, /** @type {HTMLElement} */ elAddErr, /** @type {() => void} */ redraw) {
+    elAddErr.hidden = true;
+    let text;
+    try { text = await FILESICURI.readText(f); } catch (x_) { const x = /** @type {Lanciato} */ (x_); elAddErr.hidden = false; elAddErr.textContent = I18N.t(x.key || "workflow.err.invalidFormat", x.params); return; }
+    let r;
+    try { r = await addUserListFromCsv(f.name, text, undefined, false); } catch (x_) { const x = /** @type {Lanciato} */ (x_); elAddErr.hidden = false; elAddErr.textContent = I18N.t(x.key || "err.reflist.request"); return; }
+    if (r.list) { redraw(); return; }
+    elAddErr.hidden = false;
+    const shown = r.errors.slice(0, 20).map(rowErr), more = r.errors.length - shown.length;
+    elAddErr.innerHTML = `<div><b>${r.errors.length ? I18N.t("lst.add.errs", { n: r.errors.length }) : I18N.t("lst.add.none")}</b></div><ul class="lst-add-errs" style="margin:2px 0 4px 16px;padding:0">${shown.map(t => `<li>${EH(t)}</li>`).join("")}</ul>${more > 0 ? `<div class="muted">${I18N.t("lst.more", { n: more })}</div>` : ""}`
+      + (r.valid ? `<button type="button" id="lst-add-valid">${I18N.t("lst.add.importValid", { n: r.valid })}</button> ` : "") + `<button type="button" id="lst-add-cancel">${I18N.t("lst.add.cancel")}</button>`;
+    const bv = elAddErr.querySelector("#lst-add-valid");
+    if (bv) /** @type {HTMLElement} */ (bv).onclick = async () => { await addUserListFromCsv(f.name, text, undefined, true); elAddErr.hidden = true; redraw(); };
+    /** @type {HTMLElement} */ (elAddErr.querySelector("#lst-add-cancel")).onclick = () => { elAddErr.hidden = true; };
+  }
+
   function mount(/** @type {HTMLElement} */ container, /** @type {Bag} */ opt = {}) {
     if (!container) return;
     ensure();
@@ -654,7 +589,8 @@ const LISTE = (() => {
     const elCount = container.querySelector("#lst-count");
     const elChecks = container.querySelector("#lst-src-checks");
     const elChecksLbl = container.querySelector("#lst-src-lbl");
-    const elUListBar = container.querySelector("#lst-userlists-bar");
+    const elLists = container.querySelector("#lst-lists");
+    const elAddErr = /** @type {HTMLElement} */ (container.querySelector("#lst-add-err"));
     const elContSigns = container.querySelector("#lst-cont-signs");
     if (elContSigns) elContSigns.onchange = (/** @type {Event} */ e) => { setOn(/** @type {HTMLInputElement} */ (e.target).checked); };
 
@@ -687,20 +623,46 @@ const LISTE = (() => {
         });
       }
 
-      if (ST.userLists.length) {
-        elUListBar.hidden = false;
-        elUListBar.innerHTML = `<span class="muted">${I18N.t("lst.userLoaded")}</span> ` + ST.userLists.map(u => `
-          <span style="display:inline-flex;align-items:center;gap:4px;background:var(--soft,#f1f5f9);padding:2px 6px;border-radius:4px;margin-right:6px">
-            <b>${EH(u.name)}</b> <span class="muted">(${u.items.length})</span>
-            <button type="button" data-del-ul="${EH(u.id)}" title="${I18N.t("lst.userDelete")}" style="border:none;background:none;cursor:pointer;color:var(--muted);padding:0 2px">&times;</button>
-          </span>`).join("");
-        elUListBar.querySelectorAll("[data-del-ul]").forEach((/** @type {HTMLElement} */ b) => {
-          b.onclick = async () => { await deleteUserList(/** @type {string} */ (b.dataset.delUl)); renderSourceChecks(); render(); };
-        });
-      } else {
-        elUListBar.hidden = true;
-      }
+      renderLists();
     }
+
+    // what each list is: name (with its link), how many, which version or date, where it comes from; the user's lists can be renamed and removed
+    function renderLists() {
+      const link = (/** @type {Bag} */ L) => { const i = L.info || {}; const n = EH(L.builtin ? L.name_en || L.name : L.name); return i.url ? `<a href="${EH(i.url)}" target="_blank" rel="noopener noreferrer">${n}</a>` : n; };
+      elLists.innerHTML = [...ST.lists, ...ST.userLists].map(L => {
+        const i = L.info || {}, mine = !L.builtin;
+        const when = i.version || i.date ? [i.version, i.date].filter(Boolean).map(EH).join(" · ") : I18N.t("lst.info.noDate");
+        const src = mine ? I18N.t("lst.info.local") + (L.filename ? " · " + I18N.t("lst.info.file", { file: L.filename }) : "")
+          : i.source_known === false ? `<b>${I18N.t("lst.info.unknown")}</b>. ${EH(i.provenance || "")}` : I18N.t("lst.info.source", { source: EH(L.source || "") }) + (i.doi ? ` · DOI <a href="https://doi.org/${EH(i.doi)}" target="_blank" rel="noopener noreferrer">${EH(i.doi)}</a>` : "");
+        const cov = I18N.t("lst.info.count", { n: (L.items || []).length, m: i.compounds || 0 }) + (i.classes ? " · " + I18N.t("lst.info.classes", { n: i.classes }) : "");
+        return `<div class="lst-info" data-lid="${EH(L.id)}" style="padding:4px 0;border-top:1px solid var(--line,#e2e8f0)">
+          <div><b class="lst-info-name">${link(L)}</b>${mine ? ` <button type="button" data-ren="${EH(L.id)}" class="sm">${I18N.t("lst.info.rename")}</button> <button type="button" data-del-ul="${EH(L.id)}" title="${I18N.t("lst.userDelete")}" class="sm">${I18N.t("lst.info.remove")}</button>` : ""}</div>
+          <div class="muted">${cov}</div><div class="muted">${when}</div><div class="muted lst-info-src">${src}</div></div>`;
+      }).join("");
+      elLists.querySelectorAll("[data-del-ul]").forEach((/** @type {HTMLElement} */ b) => {
+        b.onclick = async () => { await deleteUserList(/** @type {string} */ (b.dataset.delUl)); renderSourceChecks(); render(); };
+      });
+      elLists.querySelectorAll("[data-ren]").forEach((/** @type {HTMLElement} */ b) => {
+        b.onclick = () => {
+          const L = ST.userLists.find(x => x.id === b.dataset.ren); if (!L) return;
+          const row = /** @type {HTMLElement} */ (b.closest(".lst-info")), nm = /** @type {HTMLElement} */ (row.querySelector(".lst-info-name"));
+          nm.innerHTML = `<input type="text" class="lst-ren" value="${EH(L.name)}" aria-label="${I18N.t("lst.info.rename")}" style="width:60%">`;
+          const inp = /** @type {HTMLInputElement} */ (nm.querySelector("input")); inp.focus(); inp.select();
+          const done = async (/** @type {boolean} */ save) => { if (save) await renameUserList(L.id, inp.value); renderSourceChecks(); render(); };
+          inp.onkeydown = (/** @type {KeyboardEvent} */ e) => { if (e.key === "Enter") done(true); else if (e.key === "Escape") done(false); };
+          inp.onblur = () => done(true);
+        };
+      });
+    }
+
+    const redrawAll_ = () => { renderSourceChecks(); render(); };
+    const elAdd = /** @type {HTMLElement} */ (container.querySelector("#lst-add")), elFile = /** @type {HTMLInputElement} */ (container.querySelector("#lst-add-file"));
+    /** @type {HTMLElement} */ (container.querySelector("#lst-add-btn")).onclick = () => elFile.click();
+    elFile.onchange = () => { const f = elFile.files && elFile.files[0]; elFile.value = ""; if (f) addFile(f, elAddErr, redrawAll_); };
+    /** @type {HTMLElement} */ (container.querySelector("#lst-add-tpl")).onclick = () => { if (typeof dl === "function") dl("known_mz_template.csv", TEMPLATE, "text/csv", { table: "reference-list-template" }); };
+    elAdd.ondragover = (/** @type {DragEvent} */ e) => { e.preventDefault(); elAdd.style.background = "var(--soft,#f1f5f9)"; };
+    elAdd.ondragleave = () => { elAdd.style.background = ""; };
+    elAdd.ondrop = (/** @type {DragEvent} */ e) => { e.preventDefault(); elAdd.style.background = ""; const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) addFile(f, elAddErr, redrawAll_); };
 
     function render() {
       container.classList.toggle("lst-onelist", ST.lists.length + ST.userLists.length < 2);
@@ -830,8 +792,8 @@ const LISTE = (() => {
     hasMatch,
     seriesRuns,
     tipHtml,
-    csvSplit,
-    csvParse,
+    readCsv,
+    renameUserList,
     csvOut,
     labList,
     userList,

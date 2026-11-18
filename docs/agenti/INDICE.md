@@ -136,6 +136,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | peak box on a spectrum (hover, keys, live region), highlighted stick, pinned/removed labels (`peak-info.js`, `p.lblOn`/`lblOff`) | `docs/agenti/peak-info.md` |
 | external agents (Claude Code, Cowork) using `mzlab-cli` from the shell: sequence, codes, plan examples | `docs/agenti/per-agenti.md` |
 | built-in list of pesticides and environmental contaminants (`mzlab/chem/pesticides.csv`, `pesticides_meta.json`, `tools/download_pesticides.py`, second list of `contaminanti.json`) | `docs/agenti/pesticidi.md` |
+| Known contaminants panel: Add list (CSV, template, row errors), provenance of the lists, `reflist/1`, `mzlab-cli ref-list` | `docs/agenti/liste-riferimento.md` |
 | substitution position in TP isomers (MS2-compatible classes, `chem/positions.rs`, `posiz/1`) | `docs/agenti/posizioni.md` |
 | single loading bar for every format (`progresso.js`, `PROGRESSO`, `mzlab-index` event, phase weights, monotonicity tests) | `docs/agenti/progresso.md` |
 | `qc.mass_accuracy` (mass accuracy, table correction, calibration check from the TIC right-click `masscal.js`: `crates/mzlab-feat/src/massacc/`, `flow_massacc.rs`, `flow-web-qc.js`, `flow-views-qc.js`) | `docs/agenti/qc-massa.md` |
