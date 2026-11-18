@@ -96,10 +96,14 @@ fn iso(f: &FileFeatures, mz: f64) -> (u32, bool) {
 
 #[test]
 fn the_grouper_groups_an_m1_that_the_averagine_ratio_rejects() {
-    let (avg, _) = features(&run("avg", &[]));
+    // the ratios are those of the `window` areas this fixture was built on (the default area is `xic`)
+    let (avg, _) = features(&run("avg", &["det.area_from=window"]));
     assert_eq!(iso(&avg, MONO), (0, false));
     assert_eq!(iso(&avg, HEAVY), (0, false));
-    let (grp, _) = features(&run("grp", &["det.isotopes=grouper"]));
+    let (grp, _) = features(&run(
+        "grp",
+        &["det.isotopes=grouper", "det.area_from=window"],
+    ));
     let (g, heavy_flag) = iso(&grp, HEAVY);
     let (g_mono, mono_flag) = iso(&grp, MONO);
     assert!(g != 0 && g == g_mono, "{g} {g_mono}");

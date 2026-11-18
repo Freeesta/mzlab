@@ -208,9 +208,9 @@ fn isotope_params() -> Vec<Param> {
 fn trace_choices() -> Vec<Param> {
     vec![
         Param::choice("area_from", "Area from", &["channel", "window", "xic"])
-            .default_str("window")
-            .doc("Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area.")
-            .tip("Window sums the quality trace over the row; xic integrates it by trapezoid on the real retention times.")
+            .default_str("xic")
+            .doc("Xic integrates the quality trace of the row by trapezoid on the real retention times, so scans spaced unevenly by MS2 events keep their weight; window (the former default) sums every point of the quality window over the row's scans.")
+            .tip("Xic integrates the quality trace by trapezoid on the real retention times; window sums it over the row.")
             .advanced(),
         Param::choice("stitch", "Stitch", &["strict", "wide"])
             .default_str("wide")
