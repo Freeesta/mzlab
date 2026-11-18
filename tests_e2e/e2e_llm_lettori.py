@@ -1,4 +1,4 @@
-"""Runner of the subagents on the page (llm/llm-agente.js, docs/agenti/llm.md «Subagenti e letture»): a whole session on the set fs_pos plays from the recording of the CLI
+"""Runner of the subagents on the page (llm/llm-agente.js, docs/agenti/llm.md «Subagents and readings»): a whole session on the set fs_pos plays from the recording of the CLI
 (tests/data/assist/reg/fs_pos.jsonl): the router, the readers it names (one answer with an invented number goes back once), the questions, the plan, the table check and the chart;
 the readings reach the orchestrator as data; an instruction inside a method comment changes no decision; the requests of the readers go over the client of the page as ready requests
 with no key. No request leaves the site. Run from the repo root: python3 tests_e2e/e2e_llm_lettori.py"""

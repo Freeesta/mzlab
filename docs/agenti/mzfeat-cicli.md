@@ -1,55 +1,55 @@
-# Cicli fra i moduli di `mzlab-feat`: mappa e piano dei tagli
-Grafo dei moduli di primo livello di `crates/mzlab-feat/src` (quelli di `lib.rs`, con tutte le feature accese) e piano per tagliarne il ciclo grande senza toccare il corpo di nessun algoritmo: si spostano verso il basso i tipi semplici e le piccole funzioni che creano gli archi di ritorno, i vecchi percorsi pubblici `mzlab_feat::…` restano con un `pub use`. I byte dei risultati non cambiano; la prova sono i test di parità.
+# Cycles between `mzlab-feat` modules: map and cut plan
+Graph of the top-level modules of `crates/mzlab-feat/src` (those in `lib.rs`, with all features on) and a plan to cut its big cycle without touching the body of any algorithm: simple types and small functions that create the back edges move down, and the old public paths `mzlab_feat::…` stay through a `pub use`. The result bytes do not change; the proof is the parity tests.
 
-## Come si misura
-- Nodo = modulo di primo livello (`X.rs` più `X/**`); arco X → Y = un percorso `crate::Y` o `super::Y` (anche dentro `use crate::{…}`) in un file di X, esclusi commenti, stringhe, file e blocchi `#[cfg(test)]` e i `*_tests.rs`. Righe = righe dei file di codice del modulo, senza i test.
-- Ciclo = componente fortemente connessa (Tarjan). Un `pub use` che tiene soltanto il vecchio percorso pubblico di un elemento spostato non conta come arco (nessun codice dipende dal modulo di sopra); questi `pub use` sono elencati nella PR del taglio e restano finché i chiamanti usano il vecchio percorso.
-- Lo script è usa e getta (non è un tool del repository): il suo esito si incolla nel corpo di ogni PR, prima → dopo.
+## How it is measured
+- Node = top-level module (`X.rs` plus `X/**`); edge X → Y = a path `crate::Y` or `super::Y` (also inside `use crate::{…}`) in a file of X, excluding comments, strings, files and blocks under `#[cfg(test)]` and the `*_tests.rs`. Lines = lines of the module's code files, without the tests.
+- Cycle = strongly connected component (Tarjan). A `pub use` that only keeps the old public path of a moved item does not count as an edge (no code depends on the module above); these `pub use` are listed in the PR of the cut and stay as long as callers use the old path.
+- The script is throwaway (not a repository tool): its result is pasted in the body of each PR, before → after.
 
-## Il ciclo oggi
-- **50 moduli, 43 369 righe** (su 115 moduli e 108 958 righe di codice). `attributio` (27 772 righe) ne è fuori: dipende da `aligned`, `rowident`, `untargeted` e `interp`, nessun modulo del ciclo dipende da lui. Altri cicli: 4 moduli (`weakfile`, `slabs`, `spill`, `series`, 1 115 righe), 2 (`suspects`, `suspects_listings`). Fuori dal ciclo: `chem`, `steps`, `hypo`, `axis`, `aligned_meta`, `kinetic` e gli altri.
-- Membri, righe: `legacy` 15 177 · `untargeted` 5 476 · `interp` 3 421 · `evid` 1 932 · `tp` 1 725 · `family` 1 503 · `groups` 1 396 · `transitions` 746 · `network` 692 · `lists` 673 · `broad` 554 · `rtwarp` 550 · `params` 493 · `quality` 487 · `store_read` 459 · `store` 457 · `filters` 447
-- (segue) `filters_blank` 445 · `centwave` 421 · `resolve` 412 · `ms2spec` 405 · `align` 389 · `trace` 385 · `sweep` 362 · `broad_gt` 334 · `gapfill` 320 · `famalign` 315 · `channels` 300 · `ms2` 285 · `rtmap` 249 · `isotopes` 242 · `norm` 234 · `export` 231 · `post` 208 · `recipe` 196 · `qc` 159 · `pipeline` 148
-- (segue) `table` 140 · `aligned` 132 · `rowmeta` 130 · `broad_blank` 130 · `view` 124 · `filters_nts` 81 · `rowident` 78 · `export_ms` 74 · `lrnoise` 59 · `broad_front` 58 · `params_unit` 47 · `params_height` 45 · `report` 43.
-- Mozzi: `trace` e `table` hanno 24 moduli entranti ciascuno, `aligned` 14; `legacy` 7 entranti e 9 uscenti. `table` riesporta `aligned` (`pub use crate::aligned::*`), quindi ogni arco che sale da `aligned` lega al ciclo i 24 utenti di `table`.
+## The cycle today
+- **50 modules, 43 369 lines** (out of 115 modules and 108 958 lines of code). `attributio` (27 772 lines) is outside it: it depends on `aligned`, `rowident`, `untargeted` and `interp`, no module of the cycle depends on it. Other cycles: 4 modules (`weakfile`, `slabs`, `spill`, `series`, 1 115 lines), 2 (`suspects`, `suspects_listings`). Outside the cycle: `chem`, `steps`, `hypo`, `axis`, `aligned_meta`, `kinetic` and the others.
+- Members, lines: `legacy` 15 177 · `untargeted` 5 476 · `interp` 3 421 · `evid` 1 932 · `tp` 1 725 · `family` 1 503 · `groups` 1 396 · `transitions` 746 · `network` 692 · `lists` 673 · `broad` 554 · `rtwarp` 550 · `params` 493 · `quality` 487 · `store_read` 459 · `store` 457 · `filters` 447
+- (continued) `filters_blank` 445 · `centwave` 421 · `resolve` 412 · `ms2spec` 405 · `align` 389 · `trace` 385 · `sweep` 362 · `broad_gt` 334 · `gapfill` 320 · `famalign` 315 · `channels` 300 · `ms2` 285 · `rtmap` 249 · `isotopes` 242 · `norm` 234 · `export` 231 · `post` 208 · `recipe` 196 · `qc` 159 · `pipeline` 148
+- (continued) `table` 140 · `aligned` 132 · `rowmeta` 130 · `broad_blank` 130 · `view` 124 · `filters_nts` 81 · `rowident` 78 · `export_ms` 74 · `lrnoise` 59 · `broad_front` 58 · `params_unit` 47 · `params_height` 45 · `report` 43.
+- Hubs: `trace` and `table` have 24 incoming modules each, `aligned` 14; `legacy` 7 incoming and 9 outgoing. `table` re-exports `aligned` (`pub use crate::aligned::*`), so every edge that climbs from `aligned` ties the 24 users of `table` to the cycle.
 
-## Cosa compila oggi una build leggera
-- `attributio` sta già dietro la feature `attributio`: `mzlab-feat-wasm --no-default-features --features untargeted` (wasm32, release) legge 305 file e 62 883 righe di `mzlab-feat`, nessuno di `attributio/` (dep-info); `flow_tab` e `flow_stat` (stesse feature di `mzlab-feat`, un'unica unità) 280 file e 57 176 righe.
-- Dopo una modifica di `attributio/mod.rs` le tre build non ricompilano `mzlab-feat` (0,1-1,6 s); dopo una modifica di `legacy.rs` lo ricompilano in 40 s (4 CPU). Il peso delle build leggere è il resto del nodo: `legacy` 12 460 righe lette, `untargeted` 5 475, `steps` 4 039, `evid` 1 932, `tp` 1 725.
-- Chiusura dei moduli che usano `run_tab.rs` e `run_stat.rs` (`flow_drift`, `flow_export_annot`, `flow_stat`, `ionnet`, `methods`, `plausible`, `runorder`, `transitions`): 80 moduli, 86 938 righe nel grafo con tutte le feature; dopo i tagli 1-8 sotto: 68 moduli, 46 267 righe, ancora tirate da `transitions` → `legacy` e `groups` → `legacy`.
+## What a light build compiles today
+- `attributio` already sits behind the `attributio` feature: `mzlab-feat-wasm --no-default-features --features untargeted` (wasm32, release) reads 305 files and 62 883 lines of `mzlab-feat`, none of `attributio/` (dep-info); `flow_tab` and `flow_stat` (same features as `mzlab-feat`, a single unit) 280 files and 57 176 lines.
+- After a change to `attributio/mod.rs` the three builds do not recompile `mzlab-feat` (0.1-1.6 s); after a change to `legacy.rs` they recompile it in 40 s (4 CPU). The weight of the light builds is the rest of the node: `legacy` 12 460 lines read, `untargeted` 5 475, `steps` 4 039, `evid` 1 932, `tp` 1 725.
+- Closure of the modules that use `run_tab.rs` and `run_stat.rs` (`flow_drift`, `flow_export_annot`, `flow_stat`, `ionnet`, `methods`, `plausible`, `runorder`, `transitions`): 80 modules, 86 938 lines in the graph with all features; after cuts 1-8 below: 68 modules, 46 267 lines, still pulled in by `transitions` → `legacy` and `groups` → `legacy`.
 
-## Archi di ritorno, per quanti moduli tengono nel ciclo
-Togliendo un solo arco dal grafo prima del taglio 1 (51 moduli, 71 387 righe), il ciclo più grande diventa di (moduli, righe):
+## Back edges, by how many modules they keep in the cycle
+Removing a single edge from the graph before cut 1 (51 modules, 71 387 lines), the biggest cycle becomes (modules, lines):
 
-| Arco | Elementi usati | Dopo |
+| Edge | Items used | After |
 |---|---|---|
 | `recipe` → `pipeline` | `Steps` | 44, 69 941 |
 | `pipeline` → `lrnoise` | `reject` | 47, 70 743 |
 | `lrnoise` → `params` | `median`, `strongest` | 48, 70 802 |
 | `legacy` → `network` | `arcs` (`best_pairs`, `counts`, `neutral_mass`) | 49, 67 222 |
 | `legacy` → `lists` | `from_legacy_text` | 49, 69 968 |
-| `table` → `aligned` (cioè `aligned` → `tp`, `rowident`) | `*` | 49, 70 998 |
+| `table` → `aligned` (that is `aligned` → `tp`, `rowident`) | `*` | 49, 70 998 |
 | `network` → `interp` | `RowInterp`, `store` | 50, 67 914 |
-| `untargeted` → `attributio` e `interp` → `attributio` (insieme) | `to_attributio`, `ms1_window_metrics` | 50, 43 615 |
-| `sweep`, `channels` … → `trace` | `filled`, `reserve`, costanti | 50, ~71 000 ciascuno |
+| `untargeted` → `attributio` and `interp` → `attributio` (together) | `to_attributio`, `ms1_window_metrics` | 50, 43 615 |
+| `sweep`, `channels` … → `trace` | `filled`, `reserve`, constants | 50, ~71 000 each |
 
-Togliendo gli archi uno dopo l'altro (il migliore a ogni passo): `recipe` → `pipeline` (44), `legacy` → `network` (42), `trace` → `untargeted` (40 moduli, 32 334 righe), `table` → `aligned` (22), `store` → `recipe` (11), `legacy` → `lists` (10), poi cicli locali ≤ 9.
+Removing the edges one after another (the best at each step): `recipe` → `pipeline` (44), `legacy` → `network` (42), `trace` → `untargeted` (40 modules, 32 334 lines), `table` → `aligned` (22), `store` → `recipe` (11), `legacy` → `lists` (10), then local cycles ≤ 9.
 
-## Piano dei tagli (una PR per taglio, ≤ ~600 righe cambiate)
-Numeri = ciclo più grande dopo il taglio, cumulato nell'ordine qui sotto (simulato sul grafo; la PR misura sul codice).
+## Cut plan (one PR per cut, ≤ ~600 changed lines)
+Numbers = biggest cycle after the cut, cumulative in the order below (simulated on the graph; the PR measures on the code).
 
-1. **`attributio` fuori dal ciclo** (fatto: 51 → 50 moduli, 71 387 → 43 369 righe). La tabella di `untargeted` come ingresso della cascata sta in `attributio/from_untargeted.rs` (`#[cfg(feature = "untargeted")]`), `ms1_window_metrics` in `attributio/review/window.rs` (`#[cfg(feature = "interp")]`); i vecchi percorsi `untargeted::to_attributio` e `interp::ms2link::ms1_window_metrics` restano con un `pub use` (commento «The old path of»), usati da `tests/untargeted_to_attributio.rs` e `mzlab-cli/src/flow_chimeric.rs`.
-2. **`aligned` diventa base** (→ 46, 42 750). La struttura `TpBlock` con `TpParams`, `RoleCounts`, le costanti `NO_PARENT`, `ST_*`, `NOTE_*`, `VIA_*`, `KIN_*` (da `tp/mod.rs`) e `FitCandidate` (da `tp/candidates.rs`) vanno nel modulo nuovo `tp_block.rs`, senza dipendenze; la struttura `RowIdent` e `SRC_DETECTED` vanno in `aligned_meta.rs` (in `rowident.rs` restano `impl RowIdent { compute… }`, `adduct_names`, `code_of`). Cambiano: `tp/mod.rs`, `tp/candidates.rs`, `tp_block.rs`, `aligned.rs`, `aligned_meta.rs`, `rowident.rs`, `lib.rs`.
-3. **`pipeline::Steps` in basso** (→ 42, 42 008). `Steps` con il suo `Debug` e `Default` va in `pipeline_steps.rs` (dipende solo da `quality`, `isotopes`, `ms2`, `resolve`, `align_mzmine`); `pipeline.rs` lo riesporta. Cambiano: `pipeline.rs`, `pipeline_steps.rs`, `recipe.rs`, `lib.rs`.
-4. **`network::arcs` in basso** (→ 39, 36 228). `git mv crates/mzlab-feat/src/network/arcs.rs crates/mzlab-feat/src/netarcs.rs` (82 righe, usa solo `hypo`); `network/mod.rs` ha `pub use crate::netarcs as arcs;`. Cambiano: `network/mod.rs`, `legacy/network.rs`, `lib.rs`.
-5. **Base di `trace`** (→ 33, 34 210). `reserve`, `filled` e le costanti `SLAB_PEAKS`, `BYTES_PER_PEAK`, `FLOOR`, `MIN_HEIGHT`, `TOUCH_HEIGHT` vanno in `trace_base.rs` (solo `mzlab_core::error`); `trace.rs` le riesporta; `Params` resta in `trace` (porta `centwave::Peak`). Cambiano: `trace.rs`, `trace_base.rs`, `lib.rs` e i ~30 file che importano solo quegli elementi da `crate::trace` (`sweep`, `isotopes`, `broad*`, `post`, `rowmeta`, `align`, `famalign`, `slabs`, `tp`, `untargeted/*`, `family/roles.rs`, …).
-6. **`trace` → `untargeted`** (→ 13, 23 327): la via ADAP di `trace::detect_with` chiama `untargeted::flow::detect`, che usa `untargeted::pipeline`. Strade, da scegliere leggendo `untargeted::pipeline`: la parte di `untargeted` che serve a `flow` scende in un modulo sotto `trace`, oppure la scelta della via passa a chi chiama (`pipeline`, `series`) come parametro.
-7. **`store` → `recipe`** (→ 9, 22 421): `recipe::fingerprint` (funzione pura) scende in `store`/base e la funzione di `store.rs` che legge un `&Recipe` riceve i testi già pronti.
-8. **`family` → `legacy`** (→ 9, 2 847): `legacy::edge::{Iimn, ISOTOPES}` usati da `family/rel.rs` scendono in un modulo base.
+1. **`attributio` out of the cycle** (done: 51 → 50 modules, 71 387 → 43 369 lines). The `untargeted` table as entry of the cascade lives in `attributio/from_untargeted.rs` (`#[cfg(feature = "untargeted")]`), `ms1_window_metrics` in `attributio/review/window.rs` (`#[cfg(feature = "interp")]`); the old paths `untargeted::to_attributio` and `interp::ms2link::ms1_window_metrics` stay through a `pub use` (comment "The old path of"), used by `tests/untargeted_to_attributio.rs` and `mzlab-cli/src/flow_chimeric.rs`.
+2. **`aligned` becomes a base** (→ 46, 42 750). The struct `TpBlock` with `TpParams`, `RoleCounts`, the constants `NO_PARENT`, `ST_*`, `NOTE_*`, `VIA_*`, `KIN_*` (from `tp/mod.rs`) and `FitCandidate` (from `tp/candidates.rs`) go into the new module `tp_block.rs`, with no dependencies; the struct `RowIdent` and `SRC_DETECTED` go into `aligned_meta.rs` (`rowident.rs` keeps `impl RowIdent { compute… }`, `adduct_names`, `code_of`). Changed: `tp/mod.rs`, `tp/candidates.rs`, `tp_block.rs`, `aligned.rs`, `aligned_meta.rs`, `rowident.rs`, `lib.rs`.
+3. **`pipeline::Steps` down** (→ 42, 42 008). `Steps` with its `Debug` and `Default` goes into `pipeline_steps.rs` (depends only on `quality`, `isotopes`, `ms2`, `resolve`, `align_mzmine`); `pipeline.rs` re-exports it. Changed: `pipeline.rs`, `pipeline_steps.rs`, `recipe.rs`, `lib.rs`.
+4. **`network::arcs` down** (→ 39, 36 228). `git mv crates/mzlab-feat/src/network/arcs.rs crates/mzlab-feat/src/netarcs.rs` (82 lines, uses only `hypo`); `network/mod.rs` has `pub use crate::netarcs as arcs;`. Changed: `network/mod.rs`, `legacy/network.rs`, `lib.rs`.
+5. **Base of `trace`** (→ 33, 34 210). `reserve`, `filled` and the constants `SLAB_PEAKS`, `BYTES_PER_PEAK`, `FLOOR`, `MIN_HEIGHT`, `TOUCH_HEIGHT` go into `trace_base.rs` (only `mzlab_core::error`); `trace.rs` re-exports them; `Params` stays in `trace` (it carries `centwave::Peak`). Changed: `trace.rs`, `trace_base.rs`, `lib.rs` and the ~30 files that import only those items from `crate::trace` (`sweep`, `isotopes`, `broad*`, `post`, `rowmeta`, `align`, `famalign`, `slabs`, `tp`, `untargeted/*`, `family/roles.rs`, …).
+6. **`trace` → `untargeted`** (→ 13, 23 327): the ADAP route of `trace::detect_with` calls `untargeted::flow::detect`, which uses `untargeted::pipeline`. Ways out, to be chosen by reading `untargeted::pipeline`: the part of `untargeted` that `flow` needs moves down into a module under `trace`, or the choice of route passes to the caller (`pipeline`, `series`) as a parameter.
+7. **`store` → `recipe`** (→ 9, 22 421): `recipe::fingerprint` (a pure function) moves down into `store`/base and the function of `store.rs` that reads a `&Recipe` receives the texts already prepared.
+8. **`family` → `legacy`** (→ 9, 2 847): `legacy::edge::{Iimn, ISOTOPES}` used by `family/rel.rs` move down into a base module.
 
-Dopo l'8 restano cicli locali di ≤ 9 moduli: `trace`, `centwave`, `channels`, `broad*`, `post`, `quality` (2 847 righe); `legacy`, `groups`, `lists`, `transitions` (17 992); `store`, `store_read`, `evid`, `rowident` (2 926); `weakfile`, `series`, `spill`, `slabs`; `filters*`; `params*`.
+After 8, local cycles of ≤ 9 modules remain: `trace`, `centwave`, `channels`, `broad*`, `post`, `quality` (2 847 lines); `legacy`, `groups`, `lists`, `transitions` (17 992); `store`, `store_read`, `evid`, `rowident` (2 926); `weakfile`, `series`, `spill`, `slabs`; `filters*`; `params*`.
 
-## Dopo i tagli: `legacy` dietro una feature
-- Nessuna crate nuova per il motore di attribuzione: `attributio` sta già dietro la sua feature e le build leggere non ne leggono nessun file, quindi una crate a parte non toglie loro nulla.
-- Dopo i tagli dentro la crate, `legacy` (12 460 righe lette da `untargeted`) va dietro una feature di cargo, accesa solo dove serve la bassa risoluzione: prima si tagliano gli archi `transitions` → `legacy::lr` e `groups` → `legacy::lr`, da cui `flowtab` e `flowstat` raggiungono `legacy`. Una separazione in crate si fa solo se una misura mostra un risparmio che la feature non dà.
-- Senza LTO vero i margini sotto il tetto sono di pochi KB (`hr`, `table`): ogni PR misura ogni modulo `.wasm` prima e dopo.
+## After the cuts: `legacy` behind a feature
+- No new crate for the attribution engine: `attributio` already sits behind its feature and the light builds read none of its files, so a separate crate takes nothing away from them.
+- After the cuts inside the crate, `legacy` (12 460 lines read by `untargeted`) goes behind a cargo feature, turned on only where low resolution is needed: first the edges `transitions` → `legacy::lr` and `groups` → `legacy::lr` are cut, through which `flowtab` and `flowstat` reach `legacy`. A split into crates is done only if a measurement shows a saving that the feature does not give.
+- Without real LTO the margins under the cap are a few KB (`hr`, `table`): each PR measures every `.wasm` module before and after.
