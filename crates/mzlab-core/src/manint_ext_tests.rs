@@ -47,7 +47,7 @@ fn extra_columns_follow_origin() {
     );
     assert_eq!(rows[1][14], "XIC 1");
     assert_eq!(rows[1][15], "");
-    assert_eq!(rows[2][2 + 0], "");
+    assert_eq!(rows[2][2], "");
     assert_eq!(rows[2][1], "sum");
 }
 
