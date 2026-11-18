@@ -189,8 +189,8 @@ fn dataset_is_well_formed() {
             "{id}"
         );
         match row["tier"].as_str().unwrap() {
-            "literatura" => assert!(row["doi"].as_str().unwrap().starts_with("10."), "{id}"),
-            "bozza" => assert!(row["doi"].is_null(), "{id}"),
+            "literature" => assert!(row["doi"].as_str().unwrap().starts_with("10."), "{id}"),
+            "draft" => assert!(row["doi"].is_null(), "{id}"),
             t => panic!("{id}: tier {t}"),
         }
     }
