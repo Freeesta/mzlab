@@ -83,10 +83,12 @@ try:
         step("axe: calculator window", calc)
         def integration():
             pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); wait_for_js(pg, "(()=>{const p=E.panels.find(p=>p.type==='xic');return !!(p&&p._a&&p._a.sr&&p._a.sr.length)})()")
-            pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='xic');addInt(p,p._a.sr[0],13.9,14.6);showInts()})()"); pg.wait_for_selector("#bigdlg[open]")
-            assert pg.evaluate("document.querySelectorAll('#bigbody table tr').length") > 1, "the integration table must list the peak"
-            axe_ok(pg, "#bigdlg"); pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#bigdlg').open")
-        step("axe: integration window", integration)
+            pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='xic');addInt(p,p._a.sr[0],13.9,14.6)})()"); wait_for_js(pg, "!!document.querySelector('#manint-h')", timeout=60000)
+            pg.evaluate("(h => { if (h.getAttribute('aria-expanded') !== 'true') h.click(); })(document.querySelector('#manint-h'))")
+            wait_for_js(pg, "document.querySelectorAll('#manint-x table tr').length > 1", timeout=60000)      # the card must list the peak
+            pg.evaluate("document.querySelectorAll('#manint input[data-opt]').forEach(i => { if (!i.checked) i.click(); })"); wait_for_js(pg, "document.querySelector('#manint-x').innerText.includes('Gaussian')", timeout=60000)
+            axe_ok(pg, "#manint")
+        step("axe: Manual integrations card", integration)
         def esc_closes():
             pg.evaluate("E.panels.find(p=>p.type==='chrom').cv.focus()"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]")
             pg.keyboard.press("Escape"); pg.wait_for_timeout(300); assert not pg.evaluate("!!document.querySelector('#tdati[open]')"), "Esc must close the data table"

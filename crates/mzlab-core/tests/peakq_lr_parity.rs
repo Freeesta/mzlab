@@ -1,4 +1,4 @@
-//! `peakq_lr` against the values the page's JS (`autoEdges`, `sgFilter`, `noiseSD` of picchi.js / cromato.js) gave on synthetic traces before it
+//! `peakq_lr` against the values the page's JS (`autoEdges`, `sgFilter`, `noiseSD` of the former page JS) gave on synthetic traces before it
 //! moved to Rust (tests/golden/picchi_lr.json: 672 edge cases over 6 traces, 7 parameter sets, MRM or not, with and without a reference width).
 use mzlab_core::peakq_lr::{lr_edges, noise_sd, sg_filter, LrParams};
 use serde_json::Value;

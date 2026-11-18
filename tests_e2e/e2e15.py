@@ -93,13 +93,14 @@ try:
             # make the areas differ (as real standards do): the window of each standard scales with its concentration
             pg.evaluate(f"""()=>{{tabPanels().filter(p=>p.type==='mrm').forEach(p=>{{p.ints.forEach(it=>{{const f=E.files[it.k],c=f.type==='standard'?f.conc:3,h=0.12*Math.min(c,10)/10+0.03,ap={ap};it.a=ap-h;it.b=ap+h}});draw(p)}})}}""")
             pg.wait_for_timeout(1200)
-            pg.locator(".pnl.mrm [data-a=itab]").first.click(); pg.wait_for_timeout(500)
-            tb = pg.inner_text("#bigbody"); assert "Conc." in tb and "ig-cv" not in pg.inner_html("#bigbody") and "Area contro tempo" not in tb, tb[:300]
-            rows = pg.evaluate("[...document.querySelectorAll('#bigbody table tr')].map(r=>[...r.children].map(c=>c.textContent))")
-            assert any("Std_5" in " ".join(r) and any("mg" in c or "ppm" in c or "ug" in c.lower() for c in r) for r in rows), rows[:4]      # the concentration of the standards is in the table
-            with pg.expect_download() as d: pg.click("#ig-xlsx")
-            xr = xlsx_rows(d.value.path()); head = [c[1] for c in xr[0] if c]; assert "Concentration (standard / QC)" in head and "Unit" in head, head
-            for h in ("Type of file", "Q1 (m/z)", "Q3 (m/z)", "Transition name"): assert h in head, (h, head)      # appended after the existing columns
+            wait_for_js(pg, "!!document.querySelector('#manint-h')", timeout=60000)
+            pg.evaluate("(h => { if (h.getAttribute('aria-expanded') !== 'true') h.click(); })(document.querySelector('#manint-h'))"); wait_for_js(pg, "document.querySelectorAll('#manint-x tbody tr').length >= 10", timeout=60000)
+            tb = pg.inner_text("#manint-x"); assert "Conc." in tb and "Area contro tempo" not in tb, tb[:300]
+            rows = pg.evaluate("[...document.querySelectorAll('#manint-x table tr')].map(r=>[...r.children].map(c=>c.textContent))")
+            assert any("Std_5" in " ".join(r) and any(c.strip() not in ("", "–") and c.strip().replace(".", "").isdigit() for c in r) for r in rows), rows[:4]      # the concentration of the standards is in the table
+            with pg.expect_download() as d: pg.click("#manint [data-xlsx]")
+            xr = xlsx_rows(d.value.path()); head = [c[1] for c in xr[0] if c]; assert "Conc." in head and "Channel" in head and "Sample" in head, head
+            assert "Type of file" in head, head      # the role of each file is appended after the engine's columns
             assert head.index("Type of file") > head.index("Correction"), head
             body = [[c[1] if c else None for c in r_] for r_ in xr[1:]]
             std = [r_ for r_ in body if r_[head.index("Concentration (standard / QC)")] not in (None, "")]

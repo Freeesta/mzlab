@@ -36,19 +36,23 @@ try:
             x = apex()
             pg.evaluate(f"(()=>{{const p={XP};autoInt(p,p._a.sr[0],{x})}})()"); pg.wait_for_timeout(300)
             assert pg.evaluate(f"{XP}.ints.length") == 1
-            pg.evaluate("INTOPT.q = true; showInts()"); pg.wait_for_selector("#ig-q", timeout=10000); pg.wait_for_timeout(500)
-            heads = pg.locator("#bigbody th[title]").all_inner_texts()
+            wait_for_js(pg, "!!document.querySelector('#manint-h')", timeout=60000)
+            pg.evaluate("(h => { if (h.getAttribute('aria-expanded') !== 'true') h.click(); })(document.querySelector('#manint-h'))")
+            pg.wait_for_selector("#manint input[data-opt=q]", timeout=10000); pg.evaluate("document.querySelector('#manint input[data-opt=q]').click()")
+            wait_for_js(pg, "document.querySelector('#manint-x').innerText.includes('Gaussian')", timeout=60000)
+            heads = pg.locator("#manint-x th").all_inner_texts()
             assert any("Gaussian" in h for h in heads) and any("Asymmetry" in h for h in heads) and any("Noise" in h for h in heads), heads
-            cells = pg.evaluate("[...document.querySelectorAll('#bigbody tr:nth-child(2) td.num')].slice(-3).map(c=>c.textContent)")
+            ix = [next(j for j, h in enumerate(heads) if k in h) for k in ("Gaussian", "Asymmetry", "Noise")]
+            row = pg.evaluate("[...document.querySelectorAll('#manint-x tbody tr:first-child > *')].map(c=>c.textContent)")
+            cells = [row[j] for j in ix]
             g, n = float(cells[0]), float(cells[2])
             assert -1 <= g <= 1 and g > 0.8, cells         # a real chromatographic peak is bell shaped
             assert 0 <= n <= 1, cells
-        step("integration table: quality columns with values", columns)
+        step("Manual integrations card: quality columns with values", columns)
         def excel():
-            rows = pg.evaluate("allInts().length"); assert rows == 1
+            rows = pg.locator("#manint-x tbody tr").count(); assert rows == 1
         step("one integration listed", excel)
         def one_method():
-            pg.evaluate("document.querySelector('#bigdlg').close()")
             assert pg.evaluate("typeof compareMethods") == "undefined" and pg.evaluate("PK.method") is None           # one method only, no comparison window
             labels = pg.evaluate("(() => { const p = " + XP + "; return intMenuItems(p, " + str(apex()) + ", null, 0).map(i => i === '-' ? '-' : i.label); })()")
             assert not any("Compare" in l for l in labels if l != "-"), labels
