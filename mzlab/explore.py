@@ -452,7 +452,7 @@ class Item:
                 if not len(t):
                     continue
                 out.append({"i": c["index"], "kind": c["kind"], "id": c["id"], "unit": self.run.chromatogram_unit(c["index"]),
-                            "t0": round(float(t[0]), 4), "t1": round(float(t[-1]), 4), "n": int(len(t))})
+                            "rt_start_min": round(float(t[0]), 4), "rt_end_min": round(float(t[-1]), 4), "n": int(len(t))})
             self._analog = out
         return self._analog
 

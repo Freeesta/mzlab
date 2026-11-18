@@ -94,7 +94,7 @@ def _get(app, path, **q):
 
 def test_analog_route(pressure_app):
     tr = pressure_app._item(0).analog_list()
-    assert len(tr) == 1 and tr[0]["kind"] == "pressure" and tr[0]["unit"] == "pascal" and tr[0]["n"] == 6000 and tr[0]["t0"] == 0 and abs(tr[0]["t1"] - 15) < 1e-3
+    assert len(tr) == 1 and tr[0]["kind"] == "pressure" and tr[0]["unit"] == "pascal" and tr[0]["n"] == 6000 and tr[0]["rt_start_min"] == 0 and abs(tr[0]["rt_end_min"] - 15) < 1e-3
     code, a = _get(pressure_app, "/api/analog", k=0, i=tr[0]["i"], n=500)
     assert code == 200 and a["unit"] == "bar" and "unit_note" not in a and len(a["t"]) <= 1000
     y1 = np.interp(1.0, a["t"], a["y"])
