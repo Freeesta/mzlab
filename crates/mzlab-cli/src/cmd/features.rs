@@ -66,7 +66,7 @@ fn expand(a: &Args) -> mzlab_core::error::Result<(Vec<PathBuf>, Vec<String>)> {
     };
     let (mut files, mut labels, mut applied) = (Vec::new(), Vec::new(), false);
     for f in &a.files {
-        let present = crate::sample_select::present(f).unwrap_or_default();
+        let present = crate::sample_select::present(f)?;
         if present.len() < 2 {
             files.push(f.clone());
             labels.push(String::new());
@@ -104,7 +104,15 @@ fn run(args: Vec<String>) -> Outcome {
     let _ = std::fs::remove_dir_all(&tmp);
     let csv = match r {
         Ok(c) => c,
-        Err(e) => return crate::sample_select::fail(&e, false),
+        Err(e) if e.key.starts_with("err.sample.") => return crate::sample_select::fail(&e, false),
+        // a file that cannot be listed is a data error (1) with its own message, not a usage error
+        Err(e) => {
+            return Outcome {
+                code: 1,
+                stdout: Vec::new(),
+                stderr: format!("error: {}\n", crate::error_text::human_error(&e)),
+            }
+        }
     };
     match &a.out {
         None => Outcome::ok(csv.into_bytes()),

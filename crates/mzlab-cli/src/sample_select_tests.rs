@@ -183,3 +183,16 @@ fn features_takes_one_member_per_chosen_sample() {
     assert_eq!(states(&o), 1);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn features_with_sample_reports_an_unreadable_file_not_a_single_sample_file() {
+    let (dir, wiff) = pair("features_unreadable");
+    // a .wiff whose companion scan file is gone cannot be listed: the error is the file's, exit 1, not "single sample" (2)
+    let broken = dir.join("broken.wiff");
+    std::fs::write(&broken, b"not a wiff container").unwrap();
+    let o = run(&["features", broken.to_str().unwrap(), "--sample", "1"]);
+    assert_eq!(o.code, 1, "{}", o.stderr);
+    assert!(!o.stderr.contains("err.sample.single"), "{}", o.stderr);
+    let _ = wiff;
+    let _ = std::fs::remove_dir_all(&dir);
+}
