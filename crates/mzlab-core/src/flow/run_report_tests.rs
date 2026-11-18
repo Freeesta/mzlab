@@ -73,7 +73,10 @@ fn json_is_stable_and_valid() {
         .arr()[0];
     assert_eq!(p.get("state").unwrap().str(), Some("estimated"));
     for old in ["corsa", "uscite", "stato", "ingresso"] {
-        assert!(!a.contains(&format!("\"{old}")), "Italian word {old} in the run report");
+        assert!(
+            !a.contains(&format!("\"{old}")),
+            "Italian word {old} in the run report"
+        );
     }
 }
 
