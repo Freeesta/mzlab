@@ -37,7 +37,8 @@ impl SnrBasis {
 }
 
 /// The estimator named beside every S/N of this module.
-pub const SNR_ESTIMATOR: &str = "smoothed height over 1.4826 MAD of the raw trace far from the peak";
+pub const SNR_ESTIMATOR: &str =
+    "smoothed height over 1.4826 MAD of the raw trace far from the peak";
 
 fn median(v: &[f64]) -> f64 {
     let mut s = v.to_vec();
