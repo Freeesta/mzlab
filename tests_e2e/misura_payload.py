@@ -1,4 +1,4 @@
-"""First-package probe of the built site (what the browser must download and run before the page is usable), for docs/agenti/misure-caricamento.md.
+"""First-package probe of the built site (what the browser must download and run before the page is usable), for docs/agenti/measurements-loading.md.
 Measures, never asserts; not run in CI.
 
 Local mode (default): serves `site/` over HTTP/1.1 with GitHub-Pages-like headers and gzip -9 (GitHub Pages sends gzip, never brotli: checked with

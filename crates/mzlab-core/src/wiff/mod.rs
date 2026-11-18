@@ -8,7 +8,6 @@ mod bpc;
 mod chromatograms;
 mod container;
 pub use container::{container, container_at, container_within};
-mod devices;
 pub mod dad;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_map;
@@ -16,7 +15,9 @@ pub mod dad_map;
 pub mod dad_ops;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_uv;
+mod devices;
 pub mod idx;
+mod listing;
 mod losses;
 mod mass_check;
 mod method_name;
@@ -207,7 +208,10 @@ pub struct Wiff {
 /// A scan type the reader does not read: the code, the experiment and the name of the type (`modi`), so that the message says what it is.
 pub(crate) fn scan_type_error(code: u32, experiment: usize) -> Error {
     let kind = modes::mode(code).map_or("unknown", |m| m.tag);
-    Error::new("err.file.wiffScanType").with("code", code).with("experiment", experiment).with("type", kind)
+    Error::new("err.file.wiffScanType")
+        .with("code", code)
+        .with("experiment", experiment)
+        .with("type", kind)
 }
 
 /// `head + width * n` bytes, `None` when it does not fit a `usize`: on a 32-bit target (the site) a count of 2^29 rows would wrap to a few bytes,
@@ -290,7 +294,10 @@ fn dependent_scans(ole: &Ole, sample: u32, experiments: &mut [Experiment]) -> bo
     if !ole.has(&format!("{SAMPLES}Sample{sample}/DDERealTimeData")) {
         return false;
     }
-    experiments.iter_mut().filter(|e| e.code == Some(CODE_PRODUCT)).for_each(|e| e.precursor = None);
+    experiments
+        .iter_mut()
+        .filter(|e| e.code == Some(CODE_PRODUCT))
+        .for_each(|e| e.precursor = None);
     true
 }
 

@@ -140,7 +140,7 @@ def build_mzlib(builder: list[str], src: Path, dest: Path) -> None:
 
 
 def header(p: Path) -> dict:
-    """What the 36-byte header of a `.mzlib` says (docs/agenti/librerie.md): minimum reader version, spectra, peaks."""
+    """What the 36-byte header of a `.mzlib` says (docs/agenti/libraries.md): minimum reader version, spectra, peaks."""
     with open(p, "rb") as f:
         h = f.read(36)
     if h[:4] != b"MZLB":

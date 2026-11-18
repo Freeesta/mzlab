@@ -1,5 +1,5 @@
 # Parity of the three faces: function x face x test
-Rule (`CLAUDE.md`): every function exists in the site (`.wasm` + OPFS) and in the app (native desktop or `mzlab-cli`), with a byte-for-byte test. Here the state of each class of functions; formats in `lettura-nativa.md` ("Recognised formats"), CLI steps in `cli-passi.md`.
+Rule (`CLAUDE.md`): every function exists in the site (`.wasm` + OPFS) and in the app (native desktop or `mzlab-cli`), with a byte-for-byte test. Here the state of each class of functions; formats in `native-reading.md` ("Recognised formats"), CLI steps in `cli-passi.md`.
 
 ## Automatic guards
 - **Page engine operations**: `tests/test_parita_operazioni.py` reads every op of `mzlab/web/rust-worker.js` and requires a branch in the app (`shim/desktop-worker.js` or an `"op" =>` arm of `crates/mzlab-desktop/src/*.rs`); the site-only ops are in `SOLO_SITO` with the reason, and the list cannot name ops that the app serves or that the site does not have.

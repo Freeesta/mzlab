@@ -1,5 +1,5 @@
 # Memory: choice rules, user experience and open proposals
-Continuation of `memoria.md` (contract, budget, slabs, tests) and `compat-safari.md` ("Memory on WebKit"): why the budget is built this way, what the user sees when memory is not enough, what remains to be built.
+Continuation of `memory.md` (contract, budget, slabs, tests) and `compat-safari.md` ("Memory on WebKit"): why the budget is built this way, what the user sees when memory is not enough, what remains to be built.
 
 ## Rules
 - A memory refusal is first looked at upstream: too many noise features (fixed threshold below the data noise) weigh more than any ceiling; the threshold estimated from the data (`params::noise_from_hist`) lives in `Recipe::for_index`, so the site, `mzlab-cli` and the Flow steps have the same recipe.

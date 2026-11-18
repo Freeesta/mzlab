@@ -4,7 +4,7 @@ Reader in `crates/mzlab-lettori/src/waters/` (feature `waters`, `ENTRY` `id: "wa
 
 ## Page
 - `waters-raw.js` (`WatersRaw`, classic, `// @ts-strict`, called by `cartella-carica.js` before `AgilentD.group`): `group(files)` gives `{ runs, rest }`; the `*.raw` folders with `_FUNC001.DAT` are `runs`, as `{ name, root, files: [{ rel, file }] }` (only the files directly in the folder, without hidden ones); a `*.raw` folder without `_FUNC001.DAT` is not a run and its files stay in `rest`.
-- `toMzml` makes a placeholder `File` of it with `LETTORI_MOD.stand(nome, membri, 0, "waters")`: no engine reads Waters, so the run goes straight to the module (rule R of `shell.js`, `docs/agenti/lettori-modulo.md`), which writes the mzML into OPFS. The members are called `x.raw/_FUNC001.DAT`, ….
+- `toMzml` makes a placeholder `File` of it with `LETTORI_MOD.stand(nome, membri, 0, "waters")`: no engine reads Waters, so the run goes straight to the module (rule R of `shell.js`, `docs/agenti/readers-module.md`), which writes the mzML into OPFS. The members are called `x.raw/_FUNC001.DAT`, ….
 - `lettori-famiglie.js`: row `waters` (`ext: [".raw"]`, `membri: ["_func001.dat"]`, `errori: []`: no engine error sends a folder to the module, the run goes there directly). `cartella-carica.js` counts the folder as one file to load. Tests: `tests/test_waters_raw.py` (node), `tests_e2e/e2e_waters.py` (synthetic folder from `tools/waters_sintetico.py`).
 
 ## The reader

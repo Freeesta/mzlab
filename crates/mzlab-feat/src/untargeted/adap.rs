@@ -16,7 +16,7 @@
 //!
 //! Scan identity is the position in the `scans` slice. Output order: by m/z interval, like the Java (which then sorts the rows by RT).
 //! Memory: `build_slabs` cuts the m/z axis where the gap between two points exceeds twice the tolerance, so no interval crosses a cut, and builds a slab at a
-//! time (`docs/agenti/memoria.md`); the result equals `build`. `SlabStream` does the same cuts on points that arrive already in m/z order (the peak table of
+//! time (`docs/agenti/memory.md`); the result equals `build`. `SlabStream` does the same cuts on points that arrive already in m/z order (the peak table of
 //! the `.mzidx`), so a caller never holds more than one slab of points.
 
 use crate::sortc::SortC;

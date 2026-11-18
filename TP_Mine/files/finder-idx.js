@@ -129,7 +129,7 @@ export function createIngress(base, say, notify = () => {}) {
     idxName: name => cen.has(name) ? name + ".cen" : name,
     /**
      * every named file the page sent (name -> Blob | ArrayBuffer) has a fresh .mzidx when this returns; one that cannot be indexed rejects.
-     * `natives` = the names whose held bytes are the stub of a sample of a maker's file (docs/agenti/lettura-nativa.md): its index (version 2) is the one of the Data tab and no mzML is
+     * `natives` = the names whose held bytes are the stub of a sample of a maker's file (docs/agenti/native-reading.md): its index (version 2) is the one of the Data tab and no mzML is
      * written; a sample with profile scans (mzFinder works on centroids) gets a centroid index apart, `<name>.cen` (`ask("cenidx", name)`, see `idxName`); only one without an index gets its mzML from the page (`ask("mzml", name)`) and goes the way of any mzML.
      * @param {string[]} names @param {Map<string, any>} held @param {Set<string>} [natives] @param {(what: string, name: string) => Promise<any>} [ask]
      */

@@ -1,4 +1,4 @@
-# WASM functions that return a whole Vec<u8> and are allowed to (docs/agenti/memoria.md): file::function. New outputs go to a WriteAt sink.
+# WASM functions that return a whole Vec<u8> and are allowed to (docs/agenti/memory.md): file::function. New outputs go to a WriteAt sink.
 # Each stays for a reason; remove the line when the function goes.
 scans.rs::scanbin
 lib.rs::detect_file

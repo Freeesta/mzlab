@@ -22,7 +22,7 @@ Measurements, diagnoses and open work for zoom, pan, crosshair, file switching, 
 11. **Tile pyramid** (`maptiles.rs`, `api/maptiles`): levels of maxima on a snapped grid, sparse 256 × 256 tiles, equal to `region_map` on aligned grids (`tests/maptiles_parity.rs`); the worker saves it in OPFS (`mzlab/tiles/<file>.L<level>.mzt`, `tilesEnsure` in `rust-worker.js`). Proof `e2e_hr_mappa`. The page does not yet ask for it for zoom or for 3D.
 8. **Crosshair**: own LRU of spectra (64 MB, 32 on iPad) with read-ahead: it is adequate.
 9. **3D** (`mappa3d.js`): the same region route up to 1024², so it inherits point 3.
-10. **Thermo `.raw`** (external reader): the scans read by the `thermo` module (map, XIC outside the index, MS1/MS2 scrolling) reach the engine as a single `Uint8Array` (`lettori-modulo.md`, binary transport), without JSON meta; the `.raw` row in this table is measured on real data with `python3 tools/bench_raw.py FILE.raw --steps scansione` (µs per scan in the module).
+10. **Thermo `.raw`** (external reader): the scans read by the `thermo` module (map, XIC outside the index, MS1/MS2 scrolling) reach the engine as a single `Uint8Array` (`readers-module.md`, binary transport), without JSON meta; the `.raw` row in this table is measured on real data with `python3 tools/bench_raw.py FILE.raw --steps scansione` (µs per scan in the module).
 
 ## Measurements (headless Chromium, 4-CPU container, site with Rust/WASM engine; baseline: reading with `FileReaderSync`, colour as a function, unlimited `CACHE`)
 | gesture | LR 1500×500 | HRC 3000×3000 |
@@ -52,7 +52,7 @@ Colour of the HRC full map (600 × 901, Node): per-pixel algorithm with function
 - **D3 Colour**: 52 ms for the HRC full map, but redone at every file switch (a single `p._img`).
 - **D5 Long frames during the gesture**: p95 33-50 ms; one `draw` per event and overlay work (resizes the canvas, legend, table) at every draw.
 - **D7 Text transport**: six copies and +33 %; a few ms of time but double memory at the peaks.
-- **D8 WASM peak 175 MB in HR** with cap 256 and budget 192 (`memoria.md`): on iPad it is the nearest limit.
+- **D8 WASM peak 175 MB in HR** with cap 256 and budget 192 (`memory.md`): on iPad it is the nearest limit.
 - **D9 3D**: like D2 for windows long in RT.
 - **D10 Crosshair**: 10-35 ms per spectrum in HR with LRU and read-ahead: not a bottleneck.
 
@@ -78,7 +78,7 @@ Each piece of work is delivered with its `bench_map.py` measurement before and a
 - **P7 Colour on GPU** (only if after P3-P6 the frames are not at 60 fps on 2048 × 1024 grids): cells in a float texture, scale as a 1D texture, fallback to JS colour without WebGL; medium-high risk (CSP, lost contexts on iPad, same colour rendering).
 - **P8 Desktop app**: `memmap2` for the `.mzidx` and `rayon` to build tiles over several files (`crates/mzlab-desktop`, feature of `mzlab-core` that the `.wasm` does not compile). Acceptance: pyramid of an HR file ≤ 0.5 s native.
 - **P9 3D on the pyramid** (D9): `mappa3d.js` asks for the tiles at the level of its grid instead of `api/map`. Acceptance: opening 3D on HRC ≤ 0.3 s; `e2e_mappa3d`, `e2e_mappa_nav3d`, `e2e_mappa3d_errori` green.
-- **P10 Memory budgets for iPad** (D8): WASM peak ≤ 128 MB; the cache of full maps (`mapcells.rs`, 6 grids per file) enters the budget of `mzlab-core::budget`; measurement on a real iPad (`memoria.md`).
+- **P10 Memory budgets for iPad** (D8): WASM peak ≤ 128 MB; the cache of full maps (`mapcells.rs`, 6 grids per file) enters the budget of `mzlab-core::budget`; measurement on a real iPad (`memory.md`).
 
 ## Limits of the study
 - Measurements on a headless 4-CPU Linux container; iPad and Safari are not measured (handle reading and P10 need a real test).

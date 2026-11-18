@@ -10,7 +10,7 @@ Oracle and dump format: `scandump.md`. Two levels with SEPARATE criteria and num
 - Coordinator rules: only Rust in the product; **native** (CLI, desktop) without `.wasm` caps (`mmap`, `rayon`, SIMD with `std::arch` behind a CPU check at startup); **browser** with the caps and the declared +10 % (no SharedArrayBuffer: more workers).
 - `unsafe` only in small, isolated modules with tests, fuzzing and a safe twin compared bit by bit.
 - A new dependency for speed only if the measured gain is ≥ 3 % on its target (`REGOLE.md` rule of 22/10: even a few percent points count) and the license is permissive; in the PR the `Cargo.toml`/`Cargo.lock` lines, license and before/after numbers.
-- No speed rule overrides A1-A4. Every speed change adds a row to the cumulative table `misure-velocita.md` (date · PR · step · before · after · %).
+- No speed rule overrides A1-A4. Every speed change adds a row to the cumulative table `measurements-speed.md` (date · PR · step · before · after · %).
 
 ## Level A criteria (reader)
 - **A1 Byte register**: every byte belongs to a named section (header, `RawFileInfo`, `RunHeader`, OLE2 method, index, events, trailer, status, tune, error log, packets, padding), interpreted or kept raw under a name. Bytes outside every section = `unexplained_bytes`: red test on built files, goal 0 on the corpus. The register lives in an example or in a native-only feature, never in the `thermo` module.
@@ -78,7 +78,7 @@ Oracle and dump format: `scandump.md`. Two levels with SEPARATE criteria and num
 | other 13 files ≤ 4.2 MB | 0.1-4.2 | 1-5396 | | 1.1-63.0 | ≤ 0.04 | 4-86 | 0.0-10.8 | | | 1-76 / 1-107 |
 
 - The open is dominated by something that is not the reading of the peaks: on the SRM files (PXD064022, MTBLS14496, PXD057351) it opens in 214-437 ms and reads everything in 21-43 ms, i.e. the open is 10-20× the read; this is where RFR wins (A-1). Causes to look for in the profile before T-7c (index of events and trailers, `GenericRecordStream`).
-- Opening an Orbitrap `.raw` looked up every `ScanParams` label in each scan's trailer by comparing strings field by field (`GenericRecord::get`); the label index of `Etichette`, built once per stream, makes each lookup a map hit. Numbers in `misure-velocita-raw.md`.
+- Opening an Orbitrap `.raw` looked up every `ScanParams` label in each scan's trailer by comparing strings field by field (`GenericRecord::get`); the label index of `Etichette`, built once per stream, makes each lookup a map hit. Numbers in `measurements-speed-raw.md`.
 - TIC/BPC and first scan are already below one millisecond and 100 µs on all files: for A6 the comparison with RFR is the only missing datum.
 - The read at 0.7-1.1 GB/s with the file in memory measures decoding, not the disk: the time from disk or OPFS is in `file_read_ms` of the bench and in the chunked reads of the browser.
 
@@ -114,7 +114,7 @@ Oracle and dump format: `scandump.md`. Two levels with SEPARATE criteria and num
 
 **B-2 · Cloud 4 vCPU, `wasm`, site `.mzidx` build in Node 22** (`build_mzidx_native` of the engine with the `thermo` module as external reader, `fs.readSync` reads on demand, spill to file, 64 MB budget, fingerprints given; modules without `wasm-opt`; 10 alternating runs, median [min-max] in ms; same `.mzidx` bytes). `thermo_synthetic` files: normal 288 MB (`--scans 5400 --peaks 600`), heavy 2.14 GB (`--scans 82500 --peaks 3000 --ms2 10`).
 
-Measured with the blocks no longer zero-filled and without the adaptive window of `rawreader::Stream`, whose numbers are in `misure-velocita-raw.md`.
+Measured with the blocks no longer zero-filled and without the adaptive window of `rawreader::Stream`, whose numbers are in `measurements-speed-raw.md`.
 
 | file | open | scans | chromatograms | total |
 |---|---|---|---|---|

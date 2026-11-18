@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Measures the interpretation of the rows (`interp/1`) on the real series of the private repository and writes the numbers in the PRIVATE repository
-(`coordinamento/consegne/TABUI_TP_TIMOLOLO_MISURE.md`); the public one only names the metrics (`docs/agenti/misure.md`). Nothing here is a function of the
+(`coordinamento/consegne/TABUI_TP_TIMOLOLO_MISURE.md`); the public one only names the metrics (`docs/agenti/measurements.md`). Nothing here is a function of the
 product. The literature products and sites of `scratchpad/timolol_truth.json` and `timolol_msn_truth.json` are hypotheses found by hand: agreement and
 disagreement are listed to be reviewed, never counted as right or wrong. Run: `python3 tools/valida/tp_timololo.py [--out FILE]` (skips without the data)."""
 from __future__ import annotations

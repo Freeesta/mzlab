@@ -1,4 +1,4 @@
-# Measurements of the Rust engines and modules (continuation of `misure.md`)
+# Measurements of the Rust engines and modules (continuation of `measurements.md`)
 Rust flow without Pyodide, ion families, origin of an ion, map, composition, spectra, peaks, HR/DDA, features, gestures, readers, `desktop` profile, TPs.
 
 ## Rust flow without Pyodide (`tests_e2e/e2e_lr.py`, "MISURA" line)
@@ -82,7 +82,7 @@ Two synthetic Orbitrap DDA files (`tools/hr_reference.py`, ~15,000 MS1 peaks per
 1 259 216 features in total, the same as `features.detect` file by file; 0.5-0.7 s and 62-78 MB peak per file (Python: 3.5 s and 565 MB); two runs and a budget of 8 MB (peak 42-43 MB) give the same SHA-256.
 
 ## Map gestures (`python3 tools/bench_map.py lr,hrc,hrp --wd DIR`, headless Chromium 4 CPUs, WASM engine, synthetic files)
-- Full table, native comparison and diagnosis in `mappa-fluida.md`. First map: LR 1500×500 791 ms, HRC 3000×3000 (9 M peaks) 6332 ms (native 254 ms). Sharp after wheel: 176 ms LR, 249 ms HR; RT-only zoom in HR 1617 ms. Warm file switch: 211 ms LR, 441 ms HR. Frames during the wheel p95 33-50 ms. HR WASM peak 175 MB.
+- Full table, native comparison and diagnosis in `fluid-map.md`. First map: LR 1500×500 791 ms, HRC 3000×3000 (9 M peaks) 6332 ms (native 254 ms). Sharp after wheel: 176 ms LR, 249 ms HR; RT-only zoom in HR 1617 ms. Warm file switch: 211 ms LR, 441 ms HR. Frames during the wheel p95 33-50 ms. HR WASM peak 175 MB.
 - Accelerated colour rendering (`grafici.js`, `mapImage`): 32-bit writing with `Uint32Array` (`buf32` and `tab32`) and sampling at 10 000 cells for the 99.5th percentile: `ImageData` generation on a 600×901 grid reduced from 314 ms to 52 ms (6× faster), warm file switch on HRC ≤ 50 ms.
 
 ## Reader modules (`tools/build_lettori_wasm.sh`, after `wasm_opt -Oz`)
@@ -112,7 +112,7 @@ Metrics (numbers only in the private repository): literature TPs in view, concor
 
 ## Interp `.wasm` (`tools/build_feat_wasm.sh`, `cargo build --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features interp`)
 After `wasm-bindgen --target web` and `wasm-opt -Oz` (binaryen from npm): 496 569 B after `wasm-opt` (388 039 B without the sites and the drawing): above the gate of 470 000 B and below the cap of 512 000 B, which does not rise; the MSn tree is still built by `interp` itself and is an exception accepted for now: `interp` must not grow beyond this; every new weight is paid first by moving the tree into `finder_msn` (a small separate PR). The other `.wasm` files do not change weight.
-Tabui click and mzTab-M: `misure.md`, "Validated exports and click".
+Tabui click and mzTab-M: `measurements.md`, "Validated exports and click".
 Viewer gestures, site and native: `tools/bench_viewer.py`; table in `visore-veloce.md`.
 
 ## Spectral libraries: `libset_bench` (native, 1 million synthetic spectra, `cargo run --release -p mzlab-lib --example libset_bench -- 1000000 unit|hr [libraries]`)

@@ -74,4 +74,4 @@ The lines apply to every crate that runs in WASM: build ceiling 4 GiB per instan
 - Read block of the `.wasm` engine (`BLOCK` in `mzlab-wasm/src/blocks.rs`): 4 MiB, a single constant; the JS buffers (`readerFor`, `openSource`) grow to the requested length. The block held by `BlockReader` counts 4 MiB in the peak per open file; the write queue of `BlockWriter` is also 4 MiB.
 - Buffers returned by `recycle` (`bufpool.js`, used by `rust-worker.js`): the next answer takes the smallest that suffices (best fit); at most 8 and 64 MB are kept, the oldest leave first, one larger than 64 MB does not enter. A single `FileReaderSync` serves all the file readers of the worker.
 
-- When "file too large" appears, measurements by format and number of files, files open together: `docs/agenti/memoria-limiti.md`.
+- When "file too large" appears, measurements by format and number of files, files open together: `docs/agenti/memory-limits.md`.

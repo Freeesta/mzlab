@@ -33,7 +33,7 @@ def test_csv_semicolon_bom_quoting_key_and_areas():
     lines = c.lstrip("﻿").split("\r\n")[:-1]
     assert len(lines) == r["n"] + 1
     head = lines[0].split(";")
-    assert head[:6] == ["key", "polarity", "feature_id", "mz", "rt_min", "level"] and head[-2:] == ["Campione_A_pos", "Campione_B_pos"] and "table_sha256" in head
+    assert head[:6] == ["key", "polarity", "feature_id", "mz", "rt_min", "level"] and head[-2:] == ["Sample_A_pos", "Sample_B_pos"] and "table_sha256" in head
     row1 = lines[1]
     assert row1.startswith("POS:1;POS;1;184.1332;5.2;") and '"Alpha; ""beta"""' in row1          # quoted: the name has «;» and quotes
     assert row1.count(";") >= len(head) - 1

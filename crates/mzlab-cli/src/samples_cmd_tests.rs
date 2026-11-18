@@ -148,3 +148,52 @@ fn the_italian_names_are_refused() {
         .1
         .contains("old names still accepted"));
 }
+
+/// The synthetic pairs of tools/wiff_riferimento.py (python3 is part of the test: it fails without it).
+fn pairs(tag: &str) -> std::path::PathBuf {
+    let out = std::env::temp_dir().join(format!("mzlab-cli-{}-list-{tag}", std::process::id()));
+    let script =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_riferimento.py");
+    let made = std::process::Command::new("python3")
+        .arg(script)
+        .arg(&out)
+        .output()
+        .expect("python3 is required");
+    assert!(
+        made.status.success(),
+        "{}",
+        String::from_utf8_lossy(&made.stderr)
+    );
+    out
+}
+
+#[test]
+fn list_gives_data_on_stdout_progress_on_stderr_and_exit_codes() {
+    let d = pairs("a");
+    let at = |n: &str| d.join(format!("{n}.wiff")).to_str().unwrap().to_string();
+    let (code, out, err) = run(&["samples", "list", &at("totale"), "--json"]);
+    assert_eq!((code, out.lines().count()), (0, 1), "{err}");
+    assert!(
+        out.starts_with(r#"{"schema":"samples_list/1","format":"SciexWiff""#),
+        "{out}"
+    );
+    assert!(err.contains("listing "), "{err}");
+    // a refused sample is listed with its reason and the exit code says it
+    let (code, out, _) = run(&["samples", "list", &at("rifiutato"), "--json"]);
+    assert_eq!(code, 1);
+    assert!(out.contains(r#""why":"refused""#), "{out}");
+    // the probe adds what the `.wiff.scan` is
+    let (code, out, _) = run(&["samples", "list", &at("totale"), "--json", "--probe"]);
+    assert_eq!(code, 0);
+    assert!(
+        out.contains(r#""probe":{"scan_bytes":"#) && out.contains(r#""status":"ok""#),
+        "{out}"
+    );
+    // a missing file is 4 and an error line, no usage is 2
+    let (code, out, _) = run(&["samples", "list", &at("nothing"), "--json"]);
+    assert_eq!(code, 4);
+    assert!(out.contains(r#""schema":"errore/1""#), "{out}");
+    assert_eq!(run(&["samples", "list", "--json"]).0, 2);
+    assert_eq!(run(&["samples", "list", &at("totale"), "--bogus"]).0, 2);
+    let _ = std::fs::remove_dir_all(&d);
+}

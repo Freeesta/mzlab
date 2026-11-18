@@ -1,4 +1,4 @@
-//! A reader that lives in a readers module (`wasm-lettori/<family>/`, docs/agenti/lettori-modulo.md) and not in the engine: `ExternalReader` is a `Lettore` over the synchronous
+//! A reader that lives in a readers module (`wasm-lettori/<family>/`, docs/agenti/readers-module.md) and not in the engine: `ExternalReader` is a `Lettore` over the synchronous
 //! functions of the session interface of the module, which the page loads in the same worker (`rust-nativo.js`). The conversion of the answers (JSON, typed arrays) into the types of
 //! the contract is in `Replies` and does not touch JS, so it is tried natively with a fake `Module`; `JsModule` is the one that calls the functions. The index and the scans cross as
 //! one byte array each (`mzlab_core::transport`), the rest as JSON.
