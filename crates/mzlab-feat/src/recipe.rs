@@ -63,7 +63,7 @@ impl Default for Recipe {
     /// The high-resolution recipe. Unlike the bare `Params`/`QParams` defaults (kept for the frozen parity answers), it integrates the area of a row by
     /// trapezoid on the real retention times and stitches touching pieces of neighbouring channels at any height (`area_from` = `xic`, `stitch` = `wide`):
     /// on ions whose m/z wanders across a channel border the channel area and the strict stitch lose area and split rows (`mzfeat-tests.md`, MISURA
-    /// bordo_canale), and the sum of `window` is about 2 times low on MS1 scans spaced unevenly by MS2 events (`study-science.md` B1); `area_from` =
+    /// bordo_canale), and the sum of `window` is about 2 times low on MS1 scans spaced unevenly by MS2 events (`study-science-chromatography.md` B1); `area_from` =
     /// `window` keeps the former default.
     fn default() -> Self {
         let mut steps = Steps::default();

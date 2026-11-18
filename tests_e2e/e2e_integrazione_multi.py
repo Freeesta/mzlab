@@ -89,12 +89,18 @@ try:
             T = lambda k: pg.evaluate("k => I18N.t('canali.manint.org.' + k)", k)
             org = {x[1]: x[-2] for x in rows}
             need(org["Sample_A"] == T("manual") and org["Sample_B"] == T("shifted") and org["Blank"] == T("nopeak"), org)
-            # a row without a peak is not a result: area and height are «–» (dimmed, with the reason), not copy buttons; the CSV keeps the engine's numbers
-            np_ = pg.evaluate("[...document.querySelectorAll('#manint tbody tr[data-org=no_peak]')].map(r => [r.querySelectorAll('.manint-np').length, r.querySelectorAll('[data-cp]').length, [...r.querySelectorAll('.manint-np')].map(c => c.textContent + '|' + c.title)])")
-            want = pg.evaluate("I18N.t('canali.manint.nopeak.tip')")
-            need(np_ and all(x[0] == 2 and all(v == "–|" + want for v in x[2]) for x in np_), ("no peak: area and height shown as –", np_))
-            need(pg.evaluate("[...document.querySelectorAll('#manint tbody tr[data-org=no_peak] [data-cp]')].map(c => c.getAttribute('aria-label')).every(a => !/area|height/i.test(a))"), "no copy button for them")
-            need(want and len(want) <= 60, ("tooltip up to 60 characters", want))
+            # a row without a peak keeps the engine's numbers (the chart integrates the same window): area and height are copy buttons, the origin says "No peak"
+            np_ = pg.evaluate("[...document.querySelectorAll('#manint tbody tr[data-org=no_peak]')].map(r => [r.querySelectorAll('.manint-np').length, r.querySelectorAll('[data-cp]').length])")
+            need(np_ and all(x[0] == 0 and x[1] >= 2 for x in np_), ("no peak: area and height are numbers like any other row", np_))
+            # the card shows the engine's numbers: the copy value of each area/height cell is the CSV's, and each area label of the chart is the card's area
+            cmp = pg.evaluate("""(() => { const [h, ...b] = MANINT.rows(MANINT.state().csv); const k = n => h.indexOf(n), tr = [...document.querySelectorAll('#manint tbody tr')];
+              const rows = b.filter(r => r[k('sample')] !== 'sum' || r[k('start_min')] !== '');
+              const cells = tr.map((r, i) => [...r.querySelectorAll('[data-cp]')].map(c => c.dataset.cp));
+              const ok = rows.every((r, i) => cells[i] && cells[i].includes(r[k('area')]) && cells[i].includes(r[k('height')]));
+              const txt = new Set(rows.map(r => 'A = ' + I18N.sciE(+r[k('area')])));
+              const lab = E.panels.find(q => q.type === 'mrm' && q._a)._a.lbls.filter(l => l.int && l.int.fol).map(l => l.text);
+              return { ok, n: rows.length, lab, missing: lab.filter(t => !txt.has(t)) }; })()""")
+            need(cmp["ok"] and cmp["n"] >= 4 and not cmp["missing"], ("card = engine numbers = chart labels", cmp))
             w1 = D / "w1.json"; w1.write_text(json.dumps([{"file": 1, "tr": 1, "a": PK[1][1][0] - 0.02, "b": PK[1][1][0] + 0.02, "baseline": "zero"}]))
             sh = json.loads(cli("manual-table", D / "sim3.wiff", "--set", "shifts=true", "--set", f"windows={w1}"))
             ks = pg.evaluate("n => n.map(x => E.files.find(f => f.label === x || f.file.startsWith(x + '.')).k)", SAMPLES)
@@ -109,8 +115,7 @@ try:
             pg.click(n0 % 2); pg.keyboard.type("Caffeine"); pg.keyboard.press("Enter")            # the row of Sample_A, channel 253.1: the whole group
             wait_for_js(pg, "MANINT.state().csv.split('\\n').filter(l => l.includes(',Caffeine,')).length === 4", timeout=60000)
             need(all(pg.evaluate(f"document.querySelector('{n0 % i}').value") == "Caffeine" for i in (1, 2, 3, 4)), "the name goes to the same peak of every sample")
-            lb = pg.evaluate(LB)
-            need(sum("Caffeine" in l["tip"] for l in lb) >= 4, "the name is in the hover text")
+            need(pg.evaluate("[...document.querySelectorAll('#manint input[data-nm]')].filter(i => i.value === 'Caffeine').length") >= 4, "the name is on every row of the card")
             pg.click(n0 % 4); pg.keyboard.press("Control+a"); pg.keyboard.type("Caffeine C"); pg.keyboard.press("Alt+Enter")     # Sample_C alone
             wait_for_js(pg, "MANINT.state().csv.includes(',Caffeine C,')", timeout=60000)
             got = [pg.evaluate(f"document.querySelector('{n0 % i}').value") for i in (1, 2, 3, 4)]

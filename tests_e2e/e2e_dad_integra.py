@@ -57,14 +57,14 @@ try:
             wait_for_js(pg, f"{XWCS}[0].ints.length === 1 && Number.isFinite({XWCS}[0].ints[0].area)", timeout=30000)
             i = pg.evaluate(f"(() => {{ const i = {XWCS}[0].ints[0]; return {{ area: i.area, rt: i.rt }}; }})()")
             assert i["area"] > 0 and abs(i["rt"] - TRUE["a"]["rt"]) < 0.05, i
-            pg.evaluate("showInts()"); wait_for_js(pg, "document.querySelector('#bigdlg') && document.querySelector('#bigdlg').open")
-            wait_for_js(pg, "document.querySelector('#bigbody').innerText.includes('XWC')", timeout=30000)
-            hs = pg.evaluate("[...document.querySelectorAll('#bigbody th')].map(e => e.textContent)")
-            assert pg.evaluate("I18N.t('int.tbl.areaUv')") in hs and pg.evaluate("I18N.t('int.tbl.area')") not in hs, hs
-            pg.evaluate("document.querySelector('#bigdlg').close()")
-            tip = pg.evaluate(f"(() => {{ const l = ({XWCS}[0]._a.lbls || []).find(l => l.int); return l ? l.tip : ''; }})()")
-            assert pg.evaluate("I18N.t('int.copy.tip')") in tip and "mAU" not in tip, tip      # only the copy hint: the area is on the label itself
-        step("an XWC integrates like an XIC: no question, the peak of compound A has its area in mAU·s in the integration table and the copy hint as its tooltip", integrate)
+            wait_for_js(pg, "MANTR.count() > 0 && !!document.querySelector('#manint-h')", timeout=60000)
+            pg.evaluate("(h => { if (h.getAttribute('aria-expanded') !== 'true') h.click(); })(document.querySelector('#manint-h'))")
+            wait_for_js(pg, "document.querySelector('#manint-x') && document.querySelector('#manint-x').innerText.includes('XWC')", timeout=30000)
+            hs = pg.evaluate("[...document.querySelectorAll('#manint-x th')].map(e => e.textContent)")
+            assert pg.evaluate("I18N.t('canali.manint.h.areaUv')") in hs and pg.evaluate("I18N.t('canali.manint.h.area')") not in hs, hs
+            tip = pg.evaluate(f"(() => {{ const l = ({XWCS}[0]._a.lbls || []).find(l => l.int); return l ? (l.tip || '') : null; }})()")
+            assert tip == "" or tip is None, tip      # the area label has no hover text: the area is on the label itself
+        step("an XWC integrates like an XIC: no question, the peak of compound A has its area in mAU·s on the Manual integrations card and a label without hover text", integrate)
         def unit():
             t = pg.evaluate(f"JSON.stringify(plotSheets({XWCS}[0]))")
             assert pg.evaluate("I18N.t('export.col.pdaSignal')") in t and "mAU" in t and "PDA" not in t, t[max(0, t.find("PDA") - 300):t.find("PDA") + 100]

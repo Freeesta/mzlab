@@ -104,7 +104,6 @@ I18N.add("en", {
   "panel.intf.title": "The trace you click, all visible ones or one file",
   "panel.iclr.title": "Delete all the integrations of this chart",
   "panel.iclr": "Clear integrations",
-  "panel.itab.title": "Table of the integrated areas and kinetics",
   "panel.xic.off": "Not available for MS2",
   "panel.xic.title": "m/z window of one ion",
   "panel.dl.title": "Download the image or the data of the chart",

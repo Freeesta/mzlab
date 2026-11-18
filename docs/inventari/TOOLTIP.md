@@ -48,7 +48,7 @@ Guardia: `tests/test_tooltip_inventario.py` (nessun tooltip uguale al testo del 
 | `grafici.js:596` mappa 2D (`map.hov`) | **RT · m/z**, «intensità» o «differenza», bin di m/z | A | è il formato più completo |
 | `grafici.js:596` mappa PDA | RT min, nm, mAU scritti nel codice, non da `lang/` | C | unità fuori dai cataloghi |
 | `uv-spettro.js:101` spettro UV | nm e mAU scritti nel codice | C | come sopra |
-| `grafici.js` etichetta d'area (`int.copy.tip`) | solo «clic per copiare l'area» | — | la riga con area, intensità e linea di base è stata tolta |
+| `area-etichette.js` area label (no key) | no hover text (a click copies the area) | — | the hover box with area, intensity and baseline lines was removed |
 | `picchi.js:458` etichetta m/z (`tip.peakLabel`) | m/z e «Right-click: actions» | D | l'm/z è già sull'etichetta; CROMA-CLICK-PICCO |
 | `etichette-picchi.js:54` etichetta RT (`etpk.tip.rt`) | «Peak at RT 14.34 min» | B | ripete l'etichetta; CROMA-CLICK-PICCO |
 | `spettro.js:100` etichette Δ del righello | addotto, Δ, «Clic destro: …» | C | un solo suggerimento di gesto |

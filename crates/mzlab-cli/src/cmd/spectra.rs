@@ -5,6 +5,7 @@ use super::Entry;
 pub(crate) static TABLE: &[Entry] = &[
     Entry { name: "msn-graph", aliases: &[], help: "mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)", run: |a| crate::msn_graph::cmd(a.into_iter()) },
     Entry { name: "channels", aliases: &[], help: "mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help); dda-window FILE --from MIN --to MIN: the MS2 of a window by precursor (dda-window --help)", run: crate::channels_cmd::run },
+    Entry { name: "pair", aliases: &[], help: "mzlab-cli pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) found by name in the folder of the file; exit 1 when one is missing (pair --help)", run: crate::pair_cmd::run },
     Entry { name: "dad", aliases: &[], help: "mzlab-cli dad subtract|spectrum|trace|ms-at|delay ...   the DAD / PDA matrix as JSON for agents: A minus B, the UV spectrum and trace, the linked MS (dad --help)", run: crate::dad_cmd::run },
     Entry { name: "items", aliases: &[], help: "mzlab-cli items FILE [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps with CE and its spread (items --help)", run: crate::items_cmd::run },
     Entry { name: "dda-window", aliases: &[], help: "", run: crate::plain::dda_window_cmd::run },

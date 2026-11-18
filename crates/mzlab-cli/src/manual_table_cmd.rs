@@ -16,7 +16,7 @@ use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli manual-table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
 
-usage: mzlab-cli manual-table (FILE... | --set traces=PATH) --set windows=PATH [--set sums=true] [--set times=PATH] [--out PATH]
+usage: mzlab-cli manual-table (FILE... | --set traces=PATH) --set windows=PATH [--set sums=true] [--set times=PATH] [--set columns=sn,fig,quality] [--json] [--out PATH]
 
   FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in the order of the page
   --set windows=PATH  a JSON list of windows [{\"file\": I, \"tr\": J, \"a\": MIN, \"b\": MIN, \"baseline\": \"zero\"|\"edges\"|\"line\", \"line\": [t0, y0, t1, y1], \"label\": NAME,
@@ -36,6 +36,9 @@ usage: mzlab-cli manual-table (FILE... | --set traces=PATH) --set windows=PATH [
   --set traces=PATH   instead of FILEs: a JSON list [{\"name\", \"conc\"?, \"conc_unit\"?, \"transitions\": [{\"rt\": [MIN], \"y\": [..], \"panel\"?, \"label\"?, \"unit\"?, \"q1\"?, \"q3\"?, \"name\"?}]}] of
                       traces you supply (a chromatogram, an XIC, a DAD trace); \"corr\" on a window is a note kept in its row. With a panel on a trace the
                       table has five more columns after origin: panel, conc, conc_unit, correction, below (counts x s), area_unit
+  --set columns=LIST  more columns after the others, any of: sn (sn_zone: the height over the noise of the stretch a window names with \"noise\": [a, b], empty without),
+                      fig (w_half_min, plates, tailing, on the window's own baseline), quality (gaussian, asymmetry, noise_score); the bytes of the page's table
+  --json      the table as JSON {\"columns\": [NAME], \"rows\": [{NAME: TEXT}]} (every cell the text of the CSV, so a number keeps its digits); only for the table
   --out PATH  write there instead of the standard output
 
 Columns: channel (m/z of a SIM ion, q1>q3 of a transition, ion N without Q1), sample, time_min (the time point of the sample in minutes, read from its name
@@ -51,6 +54,8 @@ struct Request {
     shifts: bool,
     auto: Option<PathBuf>,
     traces: Option<PathBuf>,
+    columns: Vec<String>,
+    json: bool,
     out: Option<PathBuf>,
 }
 
@@ -58,10 +63,12 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
     let (mut files, mut windows, mut sums, mut shifts, mut out) =
         (Vec::new(), None, false, false, None);
     let (mut auto, mut params, mut times, mut traces) = (false, None, None, None);
+    let (mut columns, mut json): (Vec<String>, bool) = (Vec::new(), false);
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
             "--help" | "-h" => return Ok(None),
+            "--json" => json = true,
             "--out" => out = Some(PathBuf::from(it.next().ok_or("--out needs a path")?)),
             "--set" => {
                 let v = it.next().ok_or("--set needs NAME=VALUE")?;
@@ -76,6 +83,9 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
                     Some(("params", p)) if !p.is_empty() => params = Some(PathBuf::from(p)),
                     Some(("times", p)) if !p.is_empty() => times = Some(PathBuf::from(p)),
                     Some(("traces", p)) if !p.is_empty() => traces = Some(PathBuf::from(p)),
+                    Some(("columns", l)) if !l.is_empty() => {
+                        columns = l.split(',').map(str::to_string).collect()
+                    }
                     _ => return Err(format!("unknown setting {v}")),
                 }
             }
@@ -88,6 +98,9 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
     }
     if params.is_some() && !auto {
         return Err("--set params=PATH goes with --set auto=true".into());
+    }
+    if json && (auto || shifts) {
+        return Err("--json is for the table, which auto and shifts do not write".into());
     }
     let windows = match (windows, auto) {
         (Some(w), _) => w,
@@ -102,6 +115,8 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
         shifts,
         auto: auto.then(|| params.unwrap_or_default()),
         traces,
+        columns,
+        json,
         out,
     }))
 }
@@ -268,7 +283,74 @@ fn table(c: &Request, warn: &mut String) -> Result<String> {
         mzlab_core::json::write_value(&mut w, first);
         return mzlab_core::manint::follow_text(&files, &w.0);
     }
-    mzlab_core::manint::table_text(&files, &windows, c.sums)
+    // the optional columns go with the windows, as the page sends them
+    let windows = if c.columns.is_empty() {
+        windows
+    } else {
+        let mut o = Out::default();
+        o.raw("{\"windows\":").raw(&windows).raw(",\"columns\":[");
+        for (i, n) in c.columns.iter().enumerate() {
+            if i > 0 {
+                o.raw(",");
+            }
+            o.str(n);
+        }
+        o.raw("]}");
+        o.0
+    };
+    let csv = mzlab_core::manint::table_text(&files, &windows, c.sums)?;
+    Ok(if c.json { csv_to_json(&csv) } else { csv })
+}
+
+/// The cells of one CSV line (a quoted cell may hold commas and doubled quotes).
+fn cells_of(line: &str) -> Vec<String> {
+    let (mut out, mut cur, mut quoted) = (Vec::new(), String::new(), false);
+    let mut ch = line.chars().peekable();
+    while let Some(c) = ch.next() {
+        match c {
+            '"' if quoted && ch.peek() == Some(&'"') => {
+                cur.push('"');
+                ch.next();
+            }
+            '"' => quoted = !quoted,
+            ',' if !quoted => out.push(std::mem::take(&mut cur)),
+            c => cur.push(c),
+        }
+    }
+    out.push(cur);
+    out
+}
+
+/// The table as `{"columns": [..], "rows": [{column: text}]}`: the keys are the header's names, in order; each cell keeps the text of the CSV.
+fn csv_to_json(csv: &str) -> String {
+    let mut lines = csv.lines();
+    let head = cells_of(lines.next().unwrap_or(""));
+    let mut o = Out::default();
+    o.raw("{\"columns\":[");
+    for (i, h) in head.iter().enumerate() {
+        if i > 0 {
+            o.raw(",");
+        }
+        o.str(h);
+    }
+    o.raw("],\"rows\":[");
+    for (r, line) in lines.enumerate() {
+        if r > 0 {
+            o.raw(",");
+        }
+        o.raw("{");
+        for (i, c) in cells_of(line).iter().enumerate() {
+            if i > 0 {
+                o.raw(",");
+            }
+            o.str(head.get(i).map_or("", String::as_str))
+                .raw(":")
+                .str(c);
+        }
+        o.raw("}");
+    }
+    o.raw("]}\n");
+    o.0
 }
 
 pub fn run(args: Vec<String>) -> Outcome {
