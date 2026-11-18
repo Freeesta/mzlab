@@ -1,9 +1,9 @@
 //! Monoisotopic masses, formulas and adducts: the rules of `mzlab/chem/elements.py` (same masses, same reading of lower case, same
 //! rounding). Errors carry the i18n keys that Python's `UserError` carries.
 
-use crate::nominal::nominal_mass;
 use crate::error::{Error, Result};
 use crate::json::{round, Out};
+use crate::nominal::nominal_mass;
 
 pub const MASS: [(&str, f64); 15] = [
     ("H", 1.00782503223),
