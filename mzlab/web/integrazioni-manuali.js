@@ -139,8 +139,9 @@ function rename(rec, v, only = false) {
 function draw() {
   const el = card(); if (!el) return;
   const all = rows(st.csv), head = all[0] || [], iS = col(head, "sample"), iA = col(head, "start_min"), iO = col(head, "origin"), body = all.slice(1).filter(r => r[iS] !== "sum" || r[iA] !== "");
-  const had = st.had; st.had = body.length;
-  if (!body.length) { el.hidden = true; el.innerHTML = ""; return; }
+  const X = G.MANTR, xn = X ? X.count() : 0, total = body.length + xn;      // + the windows on the traces the page makes itself (integrazioni-tracce.js)
+  const had = st.had; st.had = total;
+  if (!total) { el.hidden = true; el.innerHTML = ""; return; }
   if (had === 0) setOpen(true);      // an integration after none opens the card; otherwise it stays as the user left it (a reload included)
   const H = HEADS(), tips = TIPS(), cols = head.map((_, i) => i).filter(c => head[c] === "origin" ? body.some(r => r[c] !== "manual") : !["overlap", "pv"].includes(head[c]) || body.some(r => r[c] !== "")), open = isOpen(), plain = ["channel", "sample", "time_min", "baseline", "overlap", "label", "origin"];
   const cls = (/** @type {string} */ c) => [plain.includes(c) ? "" : "num", KEY.includes(c) ? "manint-key" : ""].filter(Boolean).join(" "), clsAttr = (/** @type {string} */ c) => cls(c) ? ` class="${cls(c)}"` : "";
@@ -151,10 +152,10 @@ function draw() {
     const tds = cols.slice(1).map(c => h`<td${raw(clsAttr(head[c]))}${raw(head[c] === "origin" && r[c] === "unmatched" ? h` title="${t("canali.manint.unmatched.tip")}"` : "")}>${raw(head[c] === "label" && !rec ? h`${r[c]}` : cell(r[c], head[c], i, r[iO] === "no_peak"))}</td>`).join("");
     return h`<tr data-org="${r[iO]}"${raw(rec ? h` class="manint-go" data-go="${i}" tabindex="0" aria-label="${t("canali.manint.show.aria", who)}"` : "")}><th scope="row">${chShown(r[cols[0]])}</th>${raw(tds)}<td>${raw(act)}</td></tr>`;
   }).join("");
-  el.innerHTML = h`<div class="manint-head"><h3><button type="button" class="manint-tg" id="manint-h" aria-expanded="${open ? "true" : "false"}" aria-controls="manint-b" aria-describedby="manint-d" title="${t("canali.manint.note")}"><svg class="manint-chev" width="12" height="12" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true" focusable="false"><path d="M1.5 3.5h7L5 7.5z"/></svg>${t("canali.manint.title", { n: body.length })}</button></h3>
+  el.innerHTML = h`<div class="manint-head"><h3><button type="button" class="manint-tg" id="manint-h" aria-expanded="${open ? "true" : "false"}" aria-controls="manint-b" aria-describedby="manint-d" title="${t("canali.manint.note")}"><svg class="manint-chev" width="12" height="12" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true" focusable="false"><path d="M1.5 3.5h7L5 7.5z"/></svg>${t("canali.manint.title", { n: total })}</button></h3>
 <button type="button" class="manint-ic" data-dl aria-label="${t("canali.manint.csv")}" title="${t("canali.manint.csv")}">${raw(ICON.dl)}</button><button type="button" class="manint-ic" data-copy aria-label="${t("canali.manint.copy")}" title="${t("canali.manint.copy")}">${raw(ICON.copy)}</button><span id="manint-d" class="sr-only">${t("canali.manint.note")}</span><span id="manint-live" class="sr-only" role="status" aria-live="polite"></span></div>
-<div id="manint-b" class="manint-wrap" tabindex="0" role="region" aria-labelledby="manint-h" aria-describedby="manint-d"${raw(open ? "" : " hidden")}><table class="qq-tab">
-<thead><tr>${raw(ths)}<th scope="col"><span class="sr-only">${t("canali.manint.h.act")}</span></th></tr></thead><tbody>${raw(trs)}</tbody></table></div>${raw(st.log.length && body.some(r => r[iO] === "auto" || r[iO] === "unmatched") ? h`<details class="manint-log"><summary>${t("canali.manint.log.h")}</summary><ul>${raw(st.log.map(l => h`<li>${l}</li>`).join(""))}</ul></details>` : "")}`;
+<div id="manint-b" class="manint-wrap" tabindex="0" role="region" aria-labelledby="manint-h" aria-describedby="manint-d"${raw(open ? "" : " hidden")}>${raw(body.length ? h`<table class="qq-tab">
+<thead><tr>${raw(ths)}<th scope="col"><span class="sr-only">${t("canali.manint.h.act")}</span></th></tr></thead><tbody>${raw(trs)}</tbody></table>` : "")}${raw(X ? X.html() : "")}</div>${raw(st.log.length && body.some(r => r[iO] === "auto" || r[iO] === "unmatched") ? h`<details class="manint-log"><summary>${t("canali.manint.log.h")}</summary><ul>${raw(st.log.map(l => h`<li>${l}</li>`).join(""))}</ul></details>` : "")}`;
   const ws = document.getElementById("v-workspace");
   el.hidden = !(ws && ws.dataset.work === "panels");
   // told when integrations reach more samples than before (the rows of another sample that the engine applied)
@@ -192,6 +193,7 @@ function draw() {
     });
     inp.addEventListener("blur", () => { if (rec) rename(rec, inp.value); });
   });
+  if (X) X.bind(el);
   el.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
     const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.del)], head); if (rec) G.delInts(rec.p, [rec.it]);
   }));
@@ -218,16 +220,18 @@ async function ask() {
 
 /** The table follows the integrations (asked again only when a window, a baseline or a file changes) and the work area. */
 async function sync() {
+  if (!G.MANTR && E.panels.some(p => p && p.ints && p.ints.length && !ESP.mrm(p))) await carica("m:integrazioni-tracce.js");
+  const xch = G.MANTR ? await G.MANTR.sync() : false;
   const recs = await records(), ks = [...new Set(recs.map(r => r.k))].sort((a, b) => a - b), windows = windowsOf(recs, ks);
   const times = JSON.stringify(ks.map(k => E.files[k].time ?? null)), colors = JSON.stringify(ks.map(k => E.files[k].color || "")), sig = ks.join(",") + times + colors + windows;   // the time points of the samples as the table of the files has them
-  if (sig !== st.sig) {
+  if (sig !== st.sig || xch) {
     st.sig = sig; st.recs = recs; st.ks = ks; st.windows = windows; st.times = times;
     await ask();
     if (sig === st.sig) { draw(); for (const r of recs) if (r.it.splits) G.draw(r.p); }   // a split window's labels come from the new rows
   } else {
     st.recs = recs;
     const el = card(), ws = document.getElementById("v-workspace");
-    if (el && st.csv) el.hidden = !(ws && ws.dataset.work === "panels");
+    if (el && (st.csv || (G.MANTR && G.MANTR.count()))) el.hidden = !(ws && ws.dataset.work === "panels");
   }
 }
 
@@ -299,6 +303,6 @@ const soon = () => { clearTimeout(timer); timer = setTimeout(sync, 150); };
 /** The notice and the per-file log of an automatic integration, shown at the next draw of the card. @param {string} say @param {string[]} log */
 const report = (say, log) => { st.say = say; st.log = log; st.sig = ""; };
 
-G.MANINT = { report, sync: soon, now: sync, snr, valleys, parts, follow, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file), times: Object.fromEntries(st.ks.map(k => [E.files[k].label, E.files[k].time ?? null])) }) };
+G.MANINT = { rows, report, sync: soon, now: sync, snr, valleys, parts, follow, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file), times: Object.fromEntries(st.ks.map(k => [E.files[k].label, E.files[k].time ?? null])) }) };
 document.addEventListener("campioni", soon);      // a time point typed in the sample table changes the column
 soon();

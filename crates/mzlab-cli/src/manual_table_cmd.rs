@@ -16,7 +16,7 @@ use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli manual-table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
 
-usage: mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--set times=PATH] [--out PATH]
+usage: mzlab-cli manual-table (FILE... | --set traces=PATH) --set windows=PATH [--set sums=true] [--set times=PATH] [--out PATH]
 
   FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in the order of the page
   --set windows=PATH  a JSON list of windows [{\"file\": I, \"tr\": J, \"a\": MIN, \"b\": MIN, \"baseline\": \"zero\"|\"edges\"|\"line\", \"line\": [t0, y0, t1, y1], \"label\": NAME,
@@ -33,6 +33,9 @@ usage: mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--se
   --set auto=true     instead of the table, every peak of every channel of every sample found by the engine and grouped by time, as JSON
                       {\"windows\", \"log\", \"groups\", \"unmatched\"} (the bytes of the page's api/manauto); no windows file is needed
   --set params=PATH   with auto=true: a JSON file {\"rt_tol\", \"half\", \"valley\", \"sn\", \"min_pts\", \"despike\", \"split\"}; a missing key keeps its default
+  --set traces=PATH   instead of FILEs: a JSON list [{\"name\", \"conc\"?, \"conc_unit\"?, \"transitions\": [{\"rt\": [MIN], \"y\": [..], \"panel\"?, \"label\"?, \"unit\"?, \"q1\"?, \"q3\"?, \"name\"?}]}] of
+                      traces you supply (a chromatogram, an XIC, a DAD trace); \"corr\" on a window is a note kept in its row. With a panel on a trace the
+                      table has five more columns after origin: panel, conc, conc_unit, correction, below (counts x s), area_unit
   --out PATH  write there instead of the standard output
 
 Columns: channel (m/z of a SIM ion, q1>q3 of a transition, ion N without Q1), sample, time_min (the time point of the sample in minutes, read from its name
@@ -47,13 +50,14 @@ struct Request {
     times: Option<PathBuf>,
     shifts: bool,
     auto: Option<PathBuf>,
+    traces: Option<PathBuf>,
     out: Option<PathBuf>,
 }
 
 fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
     let (mut files, mut windows, mut sums, mut shifts, mut out) =
         (Vec::new(), None, false, false, None);
-    let (mut auto, mut params, mut times) = (false, None, None);
+    let (mut auto, mut params, mut times, mut traces) = (false, None, None, None);
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -71,6 +75,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
                     Some(("auto", b)) => return Err(format!("auto is true or false, not {b}")),
                     Some(("params", p)) if !p.is_empty() => params = Some(PathBuf::from(p)),
                     Some(("times", p)) if !p.is_empty() => times = Some(PathBuf::from(p)),
+                    Some(("traces", p)) if !p.is_empty() => traces = Some(PathBuf::from(p)),
                     _ => return Err(format!("unknown setting {v}")),
                 }
             }
@@ -78,8 +83,8 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
             _ => files.push(PathBuf::from(a)),
         }
     }
-    if files.is_empty() {
-        return Err("manual-table needs at least one file".into());
+    if files.is_empty() == traces.is_none() {
+        return Err("manual-table needs at least one file, or --set traces=PATH (not both)".into());
     }
     if params.is_some() && !auto {
         return Err("--set params=PATH goes with --set auto=true".into());
@@ -96,6 +101,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
         times,
         shifts,
         auto: auto.then(|| params.unwrap_or_default()),
+        traces,
         out,
     }))
 }
@@ -238,7 +244,11 @@ fn table(c: &Request, warn: &mut String) -> Result<String> {
         )?),
         None => None,
     };
-    let files = files_json_timed(&c.files, warn, times.as_ref())?;
+    let files = match &c.traces {
+        // traces the caller supplies (a chromatogram, an XIC, a DAD trace), as the page sends them to the engine
+        Some(p) => std::fs::read_to_string(p).map_err(io)?,
+        None => files_json_timed(&c.files, warn, times.as_ref())?,
+    };
     if let Some(p) = &c.auto {
         let params = if p.as_os_str().is_empty() {
             String::new()
@@ -281,3 +291,7 @@ pub fn run(args: Vec<String>) -> Outcome {
 #[cfg(test)]
 #[path = "manual_table_cmd_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "manual_table_traces_tests.rs"]
+mod traces_tests;
