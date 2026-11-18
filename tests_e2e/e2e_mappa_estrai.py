@@ -41,7 +41,9 @@ try:
             assert not pg.evaluate(M + "._mz.ex")
         step("off at the start; the bar has the button", nothing_before)
         def on():
-            x, y = at(.4, .5); pg.mouse.move(x, y); ready(pg)
+            # the pointer goes on the brightest cell of the map, so the window of the box always holds data (a fixed fraction of the canvas lands on empty m/z on another layout)
+            px, py, cw, ch = pg.evaluate("(() => { const a = " + M + "._a, m = a.mat; let b = 0; for (let k = 1; k < m.v.length; k++) if (m.v[k] > m.v[b]) b = k; const i = Math.floor(b / m.nmz), j = b % m.nmz; return [a.X(m.rt0 + (i + .5) * (m.rt1 - m.rt0) / m.nrt), a.Y(m.mz0 + (j + .5) * m.dmz), a.W, a.H]; })()")
+            c = box(); pg.mouse.move(c[0] + px * c[2] / cw, c[1] + py * c[3] / ch); ready(pg)
             pg.evaluate("MAPPA.explain(" + M + ", true)"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000); ready(pg)
             assert pg.evaluate("!!" + M + "._mz.ex")
             assert pg.evaluate(f"!{M}.el.querySelector('.mzside').hidden && !{M}.el.querySelector('.mzbot').hidden"), "the two plots at the margins are on"
