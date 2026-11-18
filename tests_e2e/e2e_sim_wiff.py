@@ -43,12 +43,13 @@ SKEY = """([name, ion]) => { const p = E.panels.find(q => q.type === 'mrm' && q.
 ANCH = """id => E.panels.find(q => q.type === 'mrm' && q._a)._ep.filter(b => b._it.id === id).map(b => { const r = b.getBoundingClientRect(); return [b._e, r.x + r.width / 2, r.y + r.height / 2, b.dataset.m, b.hidden, r.width, r.height]; })"""
 REC = "id => { const i = E.panels.find(q => q.type === 'mrm').ints.find(x => x.id === id); return i && JSON.parse(JSON.stringify({ snap: i.snap, my: i.my || null, bm: i.bm, bl: i.bl || null, st: i.st || 0, a: i.a, b: i.b })); }"
 
-def manual(st, files, sums=False):
+def manual(st, files, sums=False, times=True):
     # the page numbers the files it sends; the CLI reads every sample of the .wiff, the blank first
     order = [n[:-5] for n in st["names"]]
     ws = [{**x, "file": TRUE["campioni"].index(order[x["file"]])} for x in json.loads(st["windows"])]
     w = D / "windows.json"; w.write_text(json.dumps(ws))
-    return cli("manual-table", *files, "--set", f"windows={w}", *(["--set", "sums=true"] if sums else []))
+    tm = D / "times.json"; tm.write_text(json.dumps(st["times"]))      # the time points the page shows (the sample table), as the CLI reads them
+    return cli("manual-table", *files, "--set", f"windows={w}", *(["--set", f"times={tm}"] if times else []), *(["--set", "sums=true"] if sums else []))
 
 def download(pg):
     with pg.expect_download() as d:
@@ -130,7 +131,7 @@ try:
             got = pg.evaluate("navigator.clipboard.readText()")
             assert got.startswith("# mzLab ") and got.split("\n", 1)[1] == want.replace(",", "\t"), got
             sums = pg.evaluate("s => fetch(`api/manint?k=${s.ks.join(',')}&sums=1&w=${encodeURIComponent(s.windows)}`).then(r => r.text())", st)
-            assert sums == manual(st, files, sums=True) and sums.count(",sum,") == 2, sums
+            assert sums == manual(st, files, sums=True, times=False) and sums.count(",sum,") == 2, sums
         step("the table, its CSV and the engine's sums are the bytes of mzlab-cli manual-table", parity)
         def row_actions():
             need = lambda c, m: c or throw(m)
@@ -138,7 +139,7 @@ try:
             x = pg.evaluate("(() => { const b = document.querySelector('#manint tbody [data-del]'), r = b.getBoundingClientRect(); return [r.width, r.height, b.title, b.textContent.trim(), !!document.querySelector('#manint [data-go] button:not([data-del])')]; })()")
             need(x[0] >= 24 and x[1] >= 24 and x[2] == pg.evaluate("I18N.t('canali.manint.del')") and x[3] == "×" and not x[4], x)
             pg.evaluate("(() => { window.__show = []; const o = window.reveal; window.reveal = p => { window.__show.push(p.id); return o(p); }; window.__orev = o; })()")
-            pg.click(own(1, "td:nth-child(6)"))
+            pg.click(own(1, "td:nth-child(7)"))      # the start cell: a plain one, not a copy button
             pg.focus(own(1)); pg.keyboard.press("Enter"); pg.keyboard.press(" ")
             n = pg.evaluate("(() => { const n = window.__show.length; window.reveal = window.__orev; return n; })()")
             need(n == 3, n)
@@ -172,7 +173,7 @@ try:
             info = pg.evaluate(f"(() => {{ const n = {nmj}, r = n.getBoundingClientRect(); return [n.getAttribute('aria-label'), n.maxLength, r.height >= 24, document.querySelector('#manint thead th:nth-child(4)').textContent]; }})()")
             need(info == [pg.evaluate("I18N.t('canali.manint.nm.aria')"), 40, True, pg.evaluate("I18N.t('canali.manint.h.label')")], info)
             pg.click(nm); pg.keyboard.type("Peak, left"); pg.keyboard.press("Enter")
-            wait_for_js(pg, "MANINT.state().csv.includes('253.1,Sample_A,\"Peak, left\",')", timeout=60000)
+            wait_for_js(pg, "MANINT.state().csv.includes('253.1,Sample_A,10,\"Peak, left\",')", timeout=60000)
             need(pg.evaluate("document.activeElement && document.activeElement.matches('input[data-nm]') && document.activeElement.value === 'Peak, left'"), "Enter keeps the focus on the name")
             st = pg.evaluate("MANINT.state()"); need(st["csv"] == manual(st, [D / "sim3.wiff"]), "the name is in the CLI's bytes")
             need(pg.evaluate(f"{P}.ints.filter(i => i.nm === 'Peak, left').length") == 1, "kept on the integration")
@@ -364,7 +365,7 @@ try:
             rows3 = [l.split(",") for l in pg.evaluate("MANINT.state().csv").strip().split("\n") if ",drop," in l]
             need(len(rows3) == 3 and pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].filter(r => r.textContent.includes(I18N.t('canali.manint.drop'))).length") == 3, rows3)
             need(abs(sum(float(x[5]) for x in rows3) - float(whole[5])) <= 1e-4 * float(whole[5]), ("three parts add up to the window", rows3, whole))
-            need(abs(sum(float(x[1]) for x in ls) - float(whole[3])) <= 2e-4 * float(whole[3]), ("three labels add up", ls))
+            need(abs(sum(float(x[1]) for x in ls) - float(whole[5])) <= 2e-4 * float(whole[5]), ("three labels add up", ls))
             pg.evaluate(f"(() => {{ const p = {P}; p.ints.find(i => i.id === {it}).splits = [{t3}]; draw(p); }})()")
             wait_for_js(pg, "MANINT.state().csv.split(',drop,').length === 3", timeout=60000)
             # the same three parts on a second overlaid file: six area labels, none over another, all inside the plot (stacked with a leader when they collide)
