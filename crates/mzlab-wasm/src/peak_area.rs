@@ -3,9 +3,10 @@
 //! goes (`mzlab_core::intwin`, the bytes of `mzlab-cli peak-window`, `QUALITA.windowEnd`). `lr_auto_integrate`: every peak of a low-resolution trace
 //! (`mzlab_core::peakq_lrauto`, the bytes of `mzlab-cli peak-auto-lr`, `QUALITA.lrAuto`).
 
+use mzlab_core::area_unit::{lr_auto_json_in, AreaUnit};
 use mzlab_core::baseline::{peak_area_json, Baseline};
 use mzlab_core::intwin::move_end_json;
-use mzlab_core::peakq_lrauto::{lr_auto_integrate as lr_auto, lr_auto_json, LrAutoParams};
+use mzlab_core::peakq_lrauto::{lr_auto_integrate as lr_auto, LrAutoParams};
 use wasm_bindgen::prelude::*;
 
 /// The area of the Data view between the times `a` and `b` against zero (`mode` 1) or the line `line` = `[t0, y0, t1, y1]` (`mode` 2): the JSON of
@@ -42,7 +43,7 @@ pub fn window_end(
 pub fn lr_auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, params: &[f64]) -> String {
     let n = rt.len().min(y.len());
     let r = lr_auto(&rt[..n], &y[..n], x0, x1, LrAutoParams::from_slice(params));
-    lr_auto_json(&rt[..n], &r)
+    lr_auto_json_in(&rt[..n], &r, AreaUnit::from_number(params.get(6).copied()))
 }
 
 /// `api/manauto`: every peak of every channel of every sample, found by the engine and grouped by time (`manint::auto_text`): `{"windows","log","groups",
@@ -59,7 +60,8 @@ pub fn manual_auto(files: &str, params: &str) -> String {
 mod tests {
     #[test]
     fn lr_auto_integrate_is_the_core_text() {
-        use mzlab_core::peakq_lrauto::{lr_auto_integrate, lr_auto_json, LrAutoParams};
+        use mzlab_core::area_unit::{lr_auto_json_in, AreaUnit};
+        use mzlab_core::peakq_lrauto::{lr_auto_integrate, LrAutoParams};
         let rt: Vec<f64> = (0..280).map(|i| f64::from(i) * 0.025).collect();
         let g = |t: f64, c: f64, h: f64| h * (-((t - c) / 0.06).powi(2) / 2.0).exp();
         let y: Vec<f64> = rt
@@ -76,8 +78,14 @@ mod tests {
             half: 3,
             ..Default::default()
         };
-        let want = lr_auto_json(&rt, &lr_auto_integrate(&rt, &y, 0.0, 7.0, p));
+        let r = lr_auto_integrate(&rt, &y, 0.0, 7.0, p);
+        let want = lr_auto_json_in(&rt, &r, AreaUnit::Seconds);
         assert_eq!(super::lr_auto_integrate(&rt, &y, 0.0, 7.0, &[3.0]), want);
+        // slot 6 = 1 keeps the old unit (counts x min); the other slots keep their defaults when negative
+        let old = lr_auto_json_in(&rt, &r, AreaUnit::Minutes);
+        let p6 = [3.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0];
+        assert_eq!(super::lr_auto_integrate(&rt, &y, 0.0, 7.0, &p6), old);
+        assert_ne!(old, want);
         assert!(want.contains("\"end1\":\"valley\""), "{want}");
     }
 

@@ -39,7 +39,7 @@ fn peaks_are_the_core_result_and_set_names_are_accepted() {
     for (g, k) in got.iter().zip(&core) {
         assert_eq!(g["t0"].as_f64().unwrap(), rt[k.lo]);
         assert_eq!(g["t1"].as_f64().unwrap(), rt[k.hi]);
-        assert_eq!(g["area"].as_f64().unwrap(), k.area);
+        assert_eq!(g["area"].as_f64().unwrap(), k.area * 60.0);
         assert_eq!(g["baseline"], "edges");
     }
     // the page names are accepted; a prominence above the tallest peak keeps nothing
@@ -136,7 +136,7 @@ fn the_baseline_mode_applies_to_every_peak() {
         let z = integrate(&rt, &y, k.lo, k.hi, |_| 0.0);
         assert_eq!(
             (g["area"].as_f64().unwrap(), g["below"].as_f64().unwrap()),
-            (z.area, 0.0)
+            (z.area * 60.0, 0.0)
         );
         assert_eq!(g["baseline"], "zero");
         assert!(z.area > k.area);
@@ -159,4 +159,27 @@ fn the_baseline_mode_applies_to_every_peak() {
         .iter()
         .all(|g| g["baseline"] == "line" && g["below"].as_f64().unwrap() > 0.0));
     assert_ne!(run(args(&[p, "--set", "baseline=valley"])).code, 0);
+}
+
+#[test]
+fn area_unit_min_keeps_the_old_counts_x_min() {
+    let (rt, y) = trace();
+    let f = std::env::temp_dir().join("mzlab_peaks_auto_unit.csv");
+    let body: Vec<String> = rt.iter().zip(&y).map(|(a, b)| format!("{a},{b}")).collect();
+    std::fs::write(&f, format!("rt,y\n{}", body.join("\n"))).unwrap();
+    let p = f.to_str().unwrap();
+    let core = auto_integrate(&rt, &y, rt[0], rt[rt.len() - 1], AutoParams::default());
+    let o = run(args(&[
+        p,
+        "--set",
+        "baseline=edges",
+        "--set",
+        "area_unit=min",
+    ]));
+    let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
+    for (g, k) in v["peaks"].as_array().unwrap().iter().zip(&core) {
+        assert_eq!(g["area"].as_f64().unwrap(), k.area);
+    }
+    assert_ne!(run(args(&[p, "--set", "area_unit=s"])).code, 2);
+    assert_ne!(run(args(&[p, "--set", "area_unit=h"])).code, 0);
 }

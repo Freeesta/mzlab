@@ -102,7 +102,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Expected: one unit for the same quantity (H sigma sqrt(2 pi) = 125.331 counts x min = 7519.88 counts x s for the test Gaussian).
 - Observed: `mzlab-cli peak-area g1.csv --from 0.6 --to 1.4` -> 7519.8848; `mzlab-cli peak-auto g1.csv` -> 125.291.
 - Fix: counts x s everywhere, with the unit in the field name.
-- Status: OPEN (owner decision): one unit changes exported area fields.
+- Status: FIXED (owner decision: yes, at the export boundary): `peak-auto-lr`, `peak-auto` and the page's `lr_auto_integrate` export counts x s by default; `area_unit=min` (wasm params slot 6 = 1) keeps the old counts x min byte for byte. The engines keep minutes inside; JSON keys are unchanged.
 
 ## CONFIRMED - area 3, spectral matching
 
