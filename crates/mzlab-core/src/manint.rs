@@ -5,6 +5,8 @@
 //! Baselines as the Data view draws them: `zero`, `line` (`baseline::peak_area`) and `edges` (the page's line between the 3-point means of the edges).
 //! `time_min` (right after the sample) is the time point of the sample in minutes: the file's `time` when the list gives one (`null` = none, as a user
 //! who emptied the cell), else the one the name carries (`samples::role_and_minutes`, none for a blank); empty when unknown.
+//! Traces the page supplies itself (a chromatogram, an XIC, a DAD trace) may carry `panel`, `label`, `unit` and, per file, `conc` / `conc_unit`, and a window
+//! `corr`: then the five columns `EXT_HEAD` follow `origin` (otherwise the bytes are the ones above, unchanged).
 //! A window with `splits` gives one row per part (`valley::parts`, drop lines on the window's line, `overlap` = `drop`, `pv` = Hp/Hv).
 
 use crate::baseline::{peak_area, Baseline};
@@ -36,6 +38,12 @@ struct Trace {
     q1: Option<f64>,
     q3: Option<f64>,
     name: String,
+    /// Set by a page-supplied trace: the panel, the channel's own label, the unit of its area, the concentration of the sample and its unit.
+    panel: Option<String>,
+    label: Option<String>,
+    unit: String,
+    conc: Option<f64>,
+    conc_unit: String,
     t: Vec<f64>,
     y: Vec<f64>,
 }
@@ -43,6 +51,11 @@ struct Trace {
 /// One measured window.
 #[derive(Clone, Copy)]
 struct Row {
+    tr: usize,
+    below: Option<f64>,
+    /// The baseline as `[t0, y0, t1, y1]` (`None`: `edges`) and the noise zone the window names, for the optional figure columns.
+    bl: Option<[f64; 4]>,
+    zone: Option<[f64; 2]>,
     file: usize,
     a: f64,
     b: f64,
@@ -77,7 +90,7 @@ fn nums(v: Option<&Value>) -> Vec<f64> {
 }
 
 /// The channels of one `/api/mrm` transition list.
-fn traces(list: &Value) -> Vec<Trace> {
+fn traces(list: &Value, conc: Option<f64>, conc_unit: &str) -> Vec<Trace> {
     let mut out: Vec<Trace> = Vec::new();
     for (pos, t) in list.arr().iter().enumerate() {
         let (rt, y) = (nums(t.get("rt")), nums(t.get("y")));
@@ -88,6 +101,11 @@ fn traces(list: &Value) -> Vec<Trace> {
             q1: t.get("q1").and_then(Value::f64),
             q3: t.get("q3").and_then(Value::f64),
             name: t.get("name").and_then(Value::str).unwrap_or("").to_string(),
+            panel: t.get("panel").and_then(Value::str).map(str::to_string),
+            label: t.get("label").and_then(Value::str).map(str::to_string),
+            unit: t.get("unit").and_then(Value::str).unwrap_or("").to_string(),
+            conc,
+            conc_unit: conc_unit.to_string(),
             t: rt[..n].to_vec(),
             y: y[..n].to_vec(),
         };
@@ -99,6 +117,15 @@ fn traces(list: &Value) -> Vec<Trace> {
 
 fn key_of(tr: &Trace) -> Key {
     let c = |v: f64| (v * 100.0).round() as i64;
+    // a trace with its own label is one channel by that label (and panel), whatever its place in its file's list
+    if let Some(l) = &tr.label {
+        return (
+            i64::MIN,
+            0,
+            format!("{}\u{1}{l}", tr.panel.as_deref().unwrap_or("")),
+            tr.dup,
+        );
+    }
     (
         tr.q1.map_or(-1 - tr.pos as i64, c),
         tr.q3.map_or(-1, c),
@@ -109,6 +136,9 @@ fn key_of(tr: &Trace) -> Key {
 
 /// The channel as the page names it: the m/z of a SIM ion, «q1>q3» of a transition, `ion N` without Q1.
 fn label_of(tr: &Trace) -> String {
+    if let Some(l) = &tr.label {
+        return l.clone();
+    }
     match (tr.q1, tr.q3) {
         (Some(q1), Some(q3)) => format!("{q1}>{q3}"),
         (Some(q1), None) => format!("{q1}"),
@@ -207,7 +237,11 @@ fn samples_and_keys(files: &str) -> Result<(Vec<Sample>, Vec<Channel>)> {
             let name = f.get("name").and_then(Value::str).unwrap_or("");
             (
                 sample_of(name).to_string(),
-                traces(f.get("transitions").unwrap_or(&Value::Null)),
+                traces(
+                    f.get("transitions").unwrap_or(&Value::Null),
+                    f.get("conc").and_then(Value::f64).filter(|v| v.is_finite()),
+                    f.get("conc_unit").and_then(Value::str).unwrap_or(""),
+                ),
                 time_of(f, name),
             )
         })
@@ -307,12 +341,17 @@ fn measure(
 ) -> Result<Vec<(usize, Row)>> {
     let (file, tr, a, b) = (it.file, &samples[it.file].1[it.tr], it.a, it.b);
     let base = baseline_of(w, it.shift)?;
+    let (bl, zone) = fig::inputs(base, w);
     let ch = keys
         .iter()
         .position(|(k, _, _)| *k == key_of(tr))
         .unwrap_or(0);
     let row =
         |a: f64, b: f64, apex: f64, area: f64, height: f64, pv: Option<f64>, drop: bool| Row {
+            tr: it.tr,
+            below: None,
+            bl,
+            zone,
             file,
             a,
             b,
@@ -339,11 +378,16 @@ fn measure(
         Vec::new()
     };
     if cuts.is_empty() {
-        let [area, height, apex] = match peak_area(&tr.t, &tr.y, a, b, base) {
-            Some([area, _, height, apex]) => [area, height, apex],
-            None => edges_area(&tr.t, &tr.y, a, b),
+        let (area, height, apex, below) = match peak_area(&tr.t, &tr.y, a, b, base) {
+            Some([area, below, height, apex]) => (area, height, apex, Some(below)),
+            None => {
+                let [area, height, apex] = edges_area(&tr.t, &tr.y, a, b);
+                (area, height, apex, None)
+            }
         };
-        return Ok(vec![(ch, row(a, b, apex, area, height, None, false))]);
+        let mut r = row(a, b, apex, area, height, None, false);
+        r.below = below;
+        return Ok(vec![(ch, r)]);
     }
     let line = drop_line(base, tr, lo, hi);
     let parts = valley::parts(&tr.t, &tr.y, lo, hi, &cuts, |x| line.at(x).unwrap_or(0.0));
@@ -391,10 +435,13 @@ pub fn valleys_text(files: &str, window: &str, depth: f64) -> Result<String> {
 /// that names no channel or no times, `err.manint.baseline` for an unknown baseline or a `line` without its four numbers.
 pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
     let (samples, keys) = samples_and_keys(files)?;
-    let list = parse(windows.as_bytes())?;
-    let items = follow::items_of(&list, &samples)?;
+    let doc = parse(windows.as_bytes())?;
+    let (list, cols) = fig::split(&doc)?;
+    let items = follow::items_of(list, &samples)?;
     let mut rows: Vec<(usize, Row)> = Vec::new();
     let mut labels: Vec<String> = Vec::new();
+    // the correction note of each window, by the same place as its name
+    let mut corrs: Vec<String> = Vec::new();
     for it in &items {
         let w = &list.arr()[it.w];
         // the name of the window, or the one given for this sample alone (`names`: {"<sample>": name})
@@ -404,6 +451,9 @@ pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
             .and_then(Value::str);
         let label = own_name.map_or_else(|| label_of_window(w), clean_label);
         labels.push(label);
+        corrs.push(clean_label(
+            w.get("corr").and_then(Value::str).unwrap_or(""),
+        ));
         rows.extend(measure(it, w, labels.len() - 1, &samples, &keys)?);
     }
     crate::sortc::by(&mut rows, |x, y| {
@@ -412,52 +462,18 @@ pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
             .then(x.1.file.cmp(&y.1.file))
             .then(x.1.a.total_cmp(&y.1.a))
     });
-    Ok(csv_text(&rows, &labels, &keys, &samples, sums))
+    Ok(csv_text(
+        &rows, &labels, &corrs, &keys, &samples, sums, cols,
+    ))
 }
 
-/// The CSV: the header, then for each channel (in the order of `keys`) its rows, and the `sum` row after them when `sums`.
-fn csv_text(
-    rows: &[(usize, Row)],
-    labels: &[String],
-    keys: &[Channel],
-    samples: &[Sample],
-    sums: bool,
-) -> String {
-    let mut out = String::from(HEAD);
-    for (ch, (_, label, _)) in keys.iter().enumerate() {
-        let mine: Vec<&Row> = rows.iter().filter(|r| r.0 == ch).map(|r| &r.1).collect();
-        if mine.is_empty() {
-            continue;
-        }
-        let head = field(label);
-        for r in &mine {
-            out += &format!(
-                "{head},{},{},{},{:.3},{},{:.3},{:.3},{},{},{},{},{},{}\n",
-                field(&samples[r.file].0),
-                minutes_text(samples[r.file].2),
-                field(&labels[r.label]),
-                r.apex,
-                sci(r.area, 5),
-                r.a,
-                r.b,
-                sci(r.height, 5),
-                r.snr.map_or(String::new(), |v| format!("{v:.1}")),
-                r.base,
-                if r.drop { "drop" } else { "" },
-                r.pv.map_or(String::new(), |v| format!("{v:.1}")),
-                r.origin
-            );
-        }
-        if sums {
-            out += &format!(
-                "{head},sum,,,,{},,,,,,,,\n",
-                sci(mine.iter().map(|r| r.area).sum(), 5)
-            );
-        }
-    }
-    out
-}
-
+#[path = "manint_csv.rs"]
+mod csv;
+use csv::csv_text;
+pub use csv::EXT_HEAD;
+#[path = "manint_fig.rs"]
+mod fig;
+use fig::Cols;
 #[path = "manint_follow.rs"]
 mod follow;
 pub use follow::follow_text;
@@ -468,6 +484,12 @@ pub use auto::auto_text;
 #[cfg(test)]
 #[path = "manint_auto_tests.rs"]
 mod auto_tests;
+#[cfg(test)]
+#[path = "manint_ext_tests.rs"]
+mod ext_tests;
+#[cfg(test)]
+#[path = "manint_nopeak_tests.rs"]
+mod nopeak_tests;
 #[cfg(test)]
 #[path = "manint_tests.rs"]
 mod tests;

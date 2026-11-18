@@ -1,7 +1,7 @@
 """Size limits of the first-party code: files over 500 lines and functions over 80 lines are WARNINGS; the check FAILS only when
 the list gets worse than the saved base (tools/soglie_base.json): a file or function over the limit that is not in the base, or one
 that grew by more than 10% (at least 10 lines) over its base. The base can only shrink.
-The agent documents (CLAUDE.md, docs/agenti/*.md except the generated mappa.md and misure-diario.md) have two more limits:
+The agent documents (CLAUDE.md, docs/agenti/*.md except the generated mappa.md) have two more limits:
 lines over 600 characters (counted per file) and files over 25 KB. It also fails on a web API newer than the Safari floor that
 tools/safari_api_ammesse.txt does not list (tools/safari_api.py).
 
@@ -24,7 +24,7 @@ import safari_api  # noqa: E402
 BASE = indice.ROOT / "tools" / "soglie_base.json"
 MAX_FILE, MAX_FUNC = 500, 80
 MAX_DOC_LINE, MAX_DOC_BYTES = 600, 25 * 1024
-DOC_SKIP = {"mappa.md", "misure-diario.md"}
+DOC_SKIP = {"mappa.md"}
 SIZE_EXEMPT = {"INDICE.md"}   # a table with one row per area file (checked by gate_release.py): no 25 KB cap, the 600-character line cap stays
 NEAR_FILE, NEAR_DOC_BYTES = 475, int(23.5 * 1024)       # strong warning (never an error) before the limits: two parallel PRs may cross them together
 KINDS = ("file", "funzioni", "doc_righe", "doc_kb")

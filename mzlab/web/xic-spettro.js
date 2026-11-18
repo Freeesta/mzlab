@@ -38,7 +38,7 @@
   function lowWin(p, sel) { return sel.tol != null ? [sel.m - sel.tol, sel.m + sel.tol] : xicWin(sel.m, sel.obs); }
   /** the trace of the XIC for the chosen ion: the default one of xicDirect, or with the tolerance written by the student @param {any} p @param {Sel} sel */
   function traceFor(p, sel) {
-    const t = traceFor0(p, sel), o = window.CANALI ? CANALI.xicOmo(p, specFile(p)) : null;      // the channel of the chromatogram the spectrum follows (canali.js)
+    const t = traceFor0(p, sel), o = window.CANALI ? CANALI.xicGroup(p, specFile(p)) : null;      // the channel of the chromatogram the spectrum follows (canali.js)
     if (o) t.canale = o;
     return t;
   }

@@ -93,7 +93,7 @@ Not imported or run by any test, workflow, `pre_pr.py` or `verifica.py`; each is
 | `tools/lat_arrows.py` | 4 488 | 2026-10-12 | `test.md` |
 | `tools/measure_formats.py` | 9 613 | 2026-11-13 | `measurements-formats.md` |
 | `tools/measure_groups.py` | 4 482 | 2026-11-13 | `groups.md`, `measurements-rust.md` |
-| `tools/measure_redraw.py` | 1 018 | 2026-11-13 | `misure-diario.md` |
+| `tools/measure_redraw.py` | 1 018 | 2026-11-13 | none (run by hand) |
 | `tools/mzml_diagnosis.py` | 3 426 | 2026-11-13 | `diagnosis.md` |
 | `tools/state_pr.py` | 4 479 | 2026-11-13 | `ci-fast.md` |
 | `tools/synthetic_data_large.py` | 7 892 | 2026-11-13 | `measurements-rust.md`, `measurements-speed.md`, `measurements-speed-raw.md` |

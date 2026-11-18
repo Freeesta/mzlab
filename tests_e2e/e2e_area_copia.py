@@ -32,8 +32,10 @@ try:
         step("click on the label copies the displayed number and shows the notice", click_copies)
         def tip_is_hint():
             t = pg.evaluate(f"{XP}._a.lbls.find(b=>b.copy!=null).tip")
-            assert t == '<div class="sm">' + pg.evaluate("I18N.t('int.copy.tip')") + '</div>', t      # no area, intensity or baseline line
-        step("the hover text of the area label is only the copy hint", tip_is_hint)
+            assert not t, t      # no hover text at all: the label only copies on click
+            pg.mouse.move(*pg.evaluate(f"(()=>{{const b={XP}._a.lbls.find(b=>b.copy!=null),r={XP}.cv.getBoundingClientRect();return [r.left+b.x+b.w/2,r.top+b.y+b.h/2]}})()"))
+            assert pg.evaluate(f"{XP}.tip.hidden"), "no hover box over the area label"
+        step("the area label has no hover text", tip_is_hint)
         def fades():
             # the click of click_copies was just made: still visible at ~1 s (a 0.5 s timer fails here), gone by ~2 s
             assert pg.evaluate("document.querySelector('.areacopied').getAttribute('role')") == "status" and pg.evaluate("document.querySelector('.areacopied').getAttribute('aria-live')") == "polite"
