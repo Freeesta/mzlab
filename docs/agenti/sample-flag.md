@@ -11,7 +11,7 @@ Plan and decisions: `wiff-sample-choice.md`. List what a file holds first: `mzla
 ## Commands
 - `samples select FILE --sample LIST [--json]`: the dry run; `{"samples":[1,3]}` (or ids on one line without `--json`); `errore/1` on stdout with `--json` on failure; exit 0, 2, 4 (missing file), 5.
 - `convert INPUT... --out DIR --sample LIST`: one `NAME-ID.mzML` per chosen sample, byte for byte the file a run without `--sample` writes for that sample (a single chosen sample keeps its `NAME-ID` name). Exit 5 before anything is written.
-- `channels FILE --sample LIST`: one `canali/1` line per sample, in the order of the file, each the bytes of its own single-sample run; the whole list is checked first (no partial answer); `--channel` needs one id.
+- `channels FILE --sample LIST`: one `channels/1` line per sample, in the order of the file, each the bytes of its own single-sample run; the whole list is checked first (no partial answer); `--channel` needs one id.
 - `features FILE... --sample LIST`: every file with several samples gives one series member per chosen sample (progress lines name it `FILE@ID`), single-sample files stay one member; without `--sample` a multi-sample file is its first sample, as before.
 
 ## Not here

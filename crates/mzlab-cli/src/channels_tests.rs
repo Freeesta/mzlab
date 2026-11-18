@@ -15,7 +15,7 @@ fn channels_of(file: &Path) -> Value {
 }
 
 fn ids(v: &Value) -> Vec<String> {
-    v.get("canali")
+    v.get("channels")
         .unwrap()
         .arr()
         .iter()
@@ -31,7 +31,7 @@ fn run_new(p: &str, extra: &[&str]) -> crate::Outcome {
 }
 
 fn field(v: &Value, i: usize, k: &str) -> f64 {
-    v.get("canali").unwrap().arr()[i]
+    v.get("channels").unwrap().arr()[i]
         .get(k)
         .unwrap()
         .f64()
@@ -39,9 +39,9 @@ fn field(v: &Value, i: usize, k: &str) -> f64 {
 }
 
 fn proposed(v: &Value) -> &str {
-    v.get("tipo")
+    v.get("kind")
         .unwrap()
-        .get("proposto")
+        .get("proposed")
         .unwrap()
         .str()
         .unwrap()
@@ -157,9 +157,9 @@ fn mrm_file_lists_its_uv_trace_as_a_root() {
     );
     assert_eq!(proposed(&v), "lc-mrm");
     let uv = ids(&v).iter().position(|i| i == "uv:twc").unwrap();
-    let c = &v.get("canali").unwrap().arr()[uv];
-    assert!(matches!(c.get("gen"), Some(g) if g.f64().is_none()));
-    assert_eq!(c.get("fam").unwrap().str(), Some("uv"));
+    let c = &v.get("channels").unwrap().arr()[uv];
+    assert!(matches!(c.get("generator"), Some(g) if g.f64().is_none()));
+    assert_eq!(c.get("family").unwrap().str(), Some("uv"));
 }
 
 #[test]
@@ -178,11 +178,11 @@ fn channels_of_the_synthetic_files() {
         ]
     );
     assert_eq!(
-        (field(&v, 2, "n"), field(&v, 3, "n"), field(&v, 4, "n")),
+        (field(&v, 2, "n_points"), field(&v, 3, "n_points"), field(&v, 4, "n_points")),
         (100.0, 100.0, 100.0)
     );
-    assert_eq!((field(&v, 3, "gen"), field(&v, 4, "gen")), (2.0, 2.0));
-    assert_eq!(proposed(&v), "lc-ms2-mirato");
+    assert_eq!((field(&v, 3, "generator"), field(&v, 4, "generator")), (2.0, 2.0));
+    assert_eq!(proposed(&v), "lc-ms2-targeted");
     // MSn in blocks: MS3 hangs from the MS2 of its first precursor
     let v = channels_of(&d.join("canali/K_BLOCCHI-t0.mzML"));
     assert_eq!(
@@ -196,12 +196,12 @@ fn channels_of_the_synthetic_files() {
             "ms:ITMS + ms3 317 > 299 @cid30"
         ]
     );
-    assert_eq!((field(&v, 4, "gen"), field(&v, 5, "gen")), (3.0, 3.0));
-    assert_eq!(proposed(&v), "infusione-msn");
+    assert_eq!((field(&v, 4, "generator"), field(&v, 5, "generator")), (3.0, 3.0));
+    assert_eq!(proposed(&v), "msn-infusion");
     // 70 distinct precursors: one channel for all of them
     let v = channels_of(&d.join("canali/K_DDA-t0.mzML"));
     assert_eq!(ids(&v), ["tic", "bpc", "ms:FTMS + p ESI Full ms", "dd:2"]);
-    assert_eq!((field(&v, 3, "n"), field(&v, 3, "liv")), (70.0, 2.0));
+    assert_eq!((field(&v, 3, "n_points"), field(&v, 3, "ms_level")), (70.0, 2.0));
     assert_eq!(proposed(&v), "lc-dda");
     // the lab-like MS2 file: two precursors, no survey scan
     let v = channels_of(&d.join("B_MS2.mzML"));
@@ -209,7 +209,7 @@ fn channels_of_the_synthetic_files() {
         ids(&v),
         ["tic", "bpc", "ms:ms2 229", "ms:ms2 305", "uv:twc"]
     );
-    assert_eq!((field(&v, 2, "n"), field(&v, 3, "n")), (503.0, 502.0));
+    assert_eq!((field(&v, 2, "n_points"), field(&v, 3, "n_points")), (503.0, 502.0));
     // MRM + EPI: the triggered scans next to the transitions
     let v = channels_of(&d.join("C_MRM-EPI.mzML"));
     assert_eq!(
@@ -223,16 +223,16 @@ fn channels_of_the_synthetic_files() {
             "srm:364.1>152.1@20"
         ]
     );
-    assert_eq!(proposed(&v), "misto");
+    assert_eq!(proposed(&v), "mixed");
     // IDA with a few precursors: the survey scan and the MS2 channels that add up to the product-ion scans
     let v = channels_of(&d.join("C_IDA.mzML"));
-    let c = v.get("canali").unwrap().arr();
+    let c = v.get("channels").unwrap().arr();
     assert_eq!(c[2].get("id").unwrap().str(), Some("ms:ms1"));
-    assert_eq!(c[2].get("n").unwrap().f64(), Some(160.0));
+    assert_eq!(c[2].get("n_points").unwrap().f64(), Some(160.0));
     let ms2: f64 = c
         .iter()
-        .filter(|x| x.get("liv").unwrap().f64() == Some(2.0))
-        .map(|x| x.get("n").unwrap().f64().unwrap())
+        .filter(|x| x.get("ms_level").unwrap().f64() == Some(2.0))
+        .map(|x| x.get("n_points").unwrap().f64().unwrap())
         .sum();
     assert_eq!(ms2, 320.0);
     let _ = std::fs::remove_dir_all(&d);
@@ -311,7 +311,7 @@ fn each_sample_of_a_wiff_has_the_channels_of_its_mzml() {
     )
     .unwrap();
     assert!(
-        mrm.contains("\"proposto\":\"lc-mrm\"") && mrm.contains("\"id\":\"srm:"),
+        mrm.contains("\"proposed\":\"lc-mrm\"") && mrm.contains("\"id\":\"srm:"),
         "{mrm}"
     );
     let first = run(&["channels".into(), wiff.clone()]);
@@ -377,7 +377,7 @@ fn the_device_traces_of_a_wiff_are_the_analog_channels_of_its_mzml() {
         "Column Pressure #1 (pascal)",
         "Oven Temperature (°C)",
     ] {
-        assert!(list.contains(&format!("\"et\":\"{et}\"")), "{et}: {list}");
+        assert!(list.contains(&format!("\"label\":\"{et}\"")), "{et}: {list}");
     }
     assert!(!list.contains("Empty"), "{list}");
     let one = execute(&["channels".into(), mzml, "--channel".into(), "an:1".into()]);
@@ -437,7 +437,7 @@ fn canale_reads_a_uv_and_an_analog_trace() {
         ids.contains(&"uv:twc".to_string()) && ids.contains(&"an:1".to_string()),
         "{ids:?}"
     );
-    assert_eq!(proposed(&channels_of(&f)), "solo-uv");
+    assert_eq!(proposed(&channels_of(&f)), "uv-only");
     // The Italian command and flag are gone: refused as usage errors.
     assert_eq!(execute(&["canali".into(), p.clone()]).code, 2);
     assert_eq!(run(&["--canale", "uv:twc"]).code, 2);
@@ -454,5 +454,28 @@ fn canale_reads_a_uv_and_an_analog_trace() {
         .contains("\"unit\":\"bar\""));
     assert_eq!(run(&["--channel", "tic"]).code, 2);
     assert_eq!(run(&["--rt", "1"]).code, 2);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The output keys are exactly those the schema documents (each with its unit in the description).
+#[test]
+fn every_channel_key_is_in_the_schema() {
+    let schema = parse(include_bytes!("../../../docs/schemi/channels-1.json")).unwrap();
+    let props = |v: &Value| -> Vec<String> {
+        v.get("properties").unwrap().entries().iter().map(|e| e.0.clone()).collect()
+    };
+    let dir = std::env::temp_dir().join(format!("mzlab_cli_chkeys_{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let f = dir.join("a.mzML");
+    std::fs::write(&f, crate::tests::mzml(10.0)).unwrap();
+    let v = channels_of(&f);
+    let keys = |o: &Value| -> Vec<String> { o.entries().iter().map(|e| e.0.clone()).collect() };
+    assert_eq!(keys(&v), props(&schema));
+    let top = schema.get("properties").unwrap();
+    assert_eq!(keys(v.get("kind").unwrap()), props(top.get("kind").unwrap()));
+    let item = top.get("channels").unwrap().get("items").unwrap();
+    for c in v.get("channels").unwrap().arr() {
+        assert_eq!(keys(c), props(item));
+    }
     let _ = std::fs::remove_dir_all(&dir);
 }

@@ -62,10 +62,10 @@ pub struct Canali { pub v: Vec<Canale>, pub scan_ids: Vec<u32>, pub tipo: Tipo }
 ```
 `scan_ids` is a partition of the MS scans ordered by channel (`Sorgente::Scan{da,a}` = slice): 4 B per scan, no spectral data copied. Built in O(n scans) from the table already in memory (`idx.scans`, ~640 B/scan) + the chromatogram list (`Facts`/`mzmlhead::Chrom`); done once per file and kept in the `Routes` (100 000 scans → 400 KB + a few hundred channels). No change to the `.mzidx` format.
 
-**Experiment type as a label (`Tipo`).** `Tipo { proposto: &'static str, motivo, utente: Option<..> }` with descriptive values `lc-full`, `lc-ms2-mirato`, `lc-dda`, `lc-mrm`, `lc-sim` (SIM chromatograms only, even with a UV trace), `infusione-msn`, `misto`, `solo-uv`; computed from `infusion.rs` + channels (`tipo_di`); it is a proposal: the user's value, when it exists, wins and lives in the session. It serves ONLY the defaults (`ESP.predefinito` in `esperimenti.js`): initial channel, XIC lens proposed or not, "alb" tab open at startup.
+**Experiment type as a label (`Tipo`).** `Tipo { proposto: &'static str, motivo, utente: Option<..> }` with descriptive values `lc-full`, `lc-ms2-targeted`, `lc-dda`, `lc-mrm`, `lc-sim` (SIM chromatograms only, even with a UV trace), `msn-infusion`, `mixed`, `uv-only`; computed from `infusion.rs` + channels (`tipo_di`); it is a proposal: the user's value, when it exists, wins and lives in the session. It serves ONLY the defaults (`ESP.predefinito` in `esperimenti.js`): initial channel, XIC lens proposed or not, "alb" tab open at startup.
 
 **API (`/api` routes, the same in wasm and desktop; JSON with version).**
-- `GET api/canali?k` → `{"v":"canali/1","tipo":{…},"canali":[{id,fam,gen,liv,pol,sigla,et,omo,n,rt0,rt1,spettri}]}`.
+- `GET api/canali?k` → `{"schema":"channels/1","kind":{proposed,reason},"channels":[{id,family,generator,ms_level,polarity,code,label,group,n_points,rt_start_min,rt_end_min,has_spectra}]}` (times in minutes; the full key list with units is `docs/schemi/channels-1.json`).
 - `GET api/chrom?k&canale=<id>&kind=tic|bpc&mz0&mz1` → channel trace (for `srm:`/`uv:`/`an:` it redirects to the current reader: `api/mrm`, `pda_trace`, `analog`).
 - `GET api/xic?k&mz&tol&canale=<id>` → XIC inside the scans of the channel (without `canale=`: per level).
 - `GET api/scanlist?k&canale=<id>`, `api/spectrum?k&canale=<id>&rt|scan&modo=somma`.

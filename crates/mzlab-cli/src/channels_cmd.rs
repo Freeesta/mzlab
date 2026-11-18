@@ -1,4 +1,4 @@
-//! `mzlab-cli channels FILE [--out PATH]`: the channels (`canali/1`) of a file, the JSON of `api/canali`. An mzML also gives its SRM and SIC chromatograms;
+//! `mzlab-cli channels FILE [--out PATH]`: the channels (`channels/1`) of a file, the JSON of `api/canali`. An mzML also gives its SRM and SIC chromatograms;
 //! any other file the app reads gives the channels of one sample (`--sample ID`, else the first): its scans and its chromatograms (the mzML shell the site
 //! reads), what the site and the app list for that sample.
 
@@ -11,12 +11,12 @@ use mzlab_core::routes::Routes;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli channels: the channels of a file (TIC, BPC, one per scan type or precursor, one per SRM transition) as JSON (canali/1).
+pub const HELP: &str = "mzlab-cli channels: the channels of a file (TIC, BPC, one per scan type or precursor, one per SRM transition) as JSON (channels/1).
 
 usage: mzlab-cli channels FILE [--sample LIST] [--channel ID [--rt T0[,T1]] [--n N]] [--out PATH]
 
   FILE        an mzML, or any single file the app reads (.raw, mzXML, ...); SRM, SIC, UV and analog channels only for an mzML
-  --sample LIST the samples of a file with several (.wiff), by their ids: one id, or a list and ranges (1,3,5 or 2-4: one canali/1 line each, in the order
+  --sample LIST the samples of a file with several (.wiff), by their ids: one id, or a list and ranges (1,3,5 or 2-4: one channels/1 line each, in the order
               of the file, only those samples are read); default the first, the others are named on the standard error; an id the file does not have: exit 5
   --channel ID the trace of a UV or analog channel (uv:twc, uv:<nm>±<bw>, an:<i>) instead of the list; with --rt (minutes) the UV spectrum of uv:twc;
               uv:auto prints the XWC band proposed from the DAD matrix ({nm, bw, rt, n}), in the --rt window when given

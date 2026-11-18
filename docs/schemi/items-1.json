@@ -1,0 +1,346 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "items/1",
+  "title": "items/1: what is learned about a file, `mzlab-cli items`",
+  "description": "One item per part of a mixed file. `info` is the same text the page and the app read (`Item.info()`); `hr` tells high resolution. Retention times are in minutes, m/z in Da/Th, collision energy in eV unless `nce` is true (then %). `ms2_events` is [[rt_min, mz], ...] . Code: crates/mzlab-core/src/iteminfo.rs, crates/mzlab-cli/src/items_cmd.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "items"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "items/1"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "info",
+          "hr"
+        ],
+        "properties": {
+          "hr": {
+            "type": "boolean"
+          },
+          "info": {
+            "type": "object",
+            "required": [
+              "file",
+              "label",
+              "sha256",
+              "scans",
+              "rt_min",
+              "rt_max",
+              "polarity",
+              "kind"
+            ],
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "part": {
+                "type": "string",
+                "description": "Tag of the part of a mixed file (MS1, MS2, ...)."
+              },
+              "time": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Sample time of a series, minutes."
+              },
+              "type": {
+                "type": "string",
+                "description": "sample, blank, qc, std, ..."
+              },
+              "conc": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Concentration, in `cunit`."
+              },
+              "cunit": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Unit of `conc`."
+              },
+              "rep": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Replicate label."
+              },
+              "scans": {
+                "type": "integer"
+              },
+              "ms1": {
+                "type": "integer",
+                "description": "Number of MS1 scans."
+              },
+              "ms2": {
+                "type": "integer",
+                "description": "Number of MS2 scans."
+              },
+              "rt_min": {
+                "type": "number",
+                "description": "First retention time, minutes."
+              },
+              "rt_max": {
+                "type": "number",
+                "description": "Last retention time, minutes."
+              },
+              "mz_min": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "mz_max": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "mz2_min": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "mz2_max": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "polarity": {
+                "type": "string"
+              },
+              "precursors": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "description": "Precursor m/z values."
+              },
+              "spectrum_mode": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ms2_exps": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "prec": {
+                      "type": "number",
+                      "description": "Precursor m/z."
+                    },
+                    "ce": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "Collision energy, eV (% when `nce`)."
+                    },
+                    "ce_mid": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "Centre of a stepped CE, same unit as ce."
+                    },
+                    "ce_spread": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "description": "Half width of a stepped CE, same unit as ce."
+                    },
+                    "n": {
+                      "type": "integer",
+                      "description": "Number of scans."
+                    }
+                  }
+                }
+              },
+              "chromatograms": {
+                "type": "integer"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "msn_level": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "srm": {
+                "type": "integer",
+                "description": "Number of SRM transitions."
+              },
+              "pda": {
+                "type": "boolean"
+              },
+              "analog": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "i": {
+                      "type": "integer"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "unit": {
+                      "type": "string",
+                      "description": "Unit of the signal."
+                    },
+                    "rt_start_min": {
+                      "type": "number",
+                      "description": "Minutes."
+                    },
+                    "rt_end_min": {
+                      "type": "number",
+                      "description": "Minutes."
+                    },
+                    "n": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              },
+              "prof1": {
+                "$ref": "#/$defs/profile"
+              },
+              "prof2": {
+                "$ref": "#/$defs/profile"
+              },
+              "instrument": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "res1": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "res2": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "nce": {
+                "type": "boolean"
+              },
+              "dda": {
+                "type": "boolean"
+              },
+              "infusion": {
+                "type": "boolean"
+              },
+              "msn": {},
+              "max_level": {
+                "type": "integer"
+              },
+              "acq": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "mode1": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "mode2": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ims": {
+                "type": "object",
+                "properties": {
+                  "unit": {
+                    "type": "string"
+                  },
+                  "min": {
+                    "type": "number"
+                  },
+                  "max": {
+                    "type": "number"
+                  },
+                  "n": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "ms2_events": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "description": "[[rt_min, precursor_mz], ...]: retention time in minutes, precursor m/z in Th (null without a precursor)."
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "properties": {
+        "hr": {
+          "type": "boolean"
+        },
+        "an": {
+          "type": "string",
+          "description": "Analyser."
+        },
+        "dec": {
+          "type": "integer",
+          "description": "Decimals shown."
+        },
+        "tol": {
+          "type": "number",
+          "description": "Default m/z tolerance, in `unit`."
+        },
+        "unit": {
+          "type": "string",
+          "description": "Da or ppm."
+        }
+      }
+    }
+  }
+}

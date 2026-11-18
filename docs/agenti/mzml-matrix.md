@@ -8,7 +8,7 @@ Fixtures: `tools/mzml_variants.py OUT_DIR` (20 synthetic files, invented numbers
 | float 32/64 bit × uncompressed/zlib | `plain_32_*`, `plain_64_*` | opens |
 | `defaultArrayLength` `0` or missing with non-empty zlib arrays | `robustness_mzml.rs` | before inflating, the declared points for the bytes kept must fit in `budget::TARGET_BYTES`; without a length the array is inflated at most up to `budget::undeclared_inflate` (32 times the compressed bytes, at least 1 MB): beyond that it is `error.memoryBudget` (the size, not damage); a broken or incomplete zlib is `err.file.zlib` |
 | CRLF, UTF-8 BOM | `crlf`, `bom` | opens |
-| MS2, MS3, MS4 | `ms3_4`, `ms3_only_idx` | opens; the type proposed by `canali` is `lc-ms2-mirato` |
+| MS2, MS3, MS4 | `ms3_4`, `ms3_only_idx` | opens; the type proposed by `canali` is `lc-ms2-targeted` |
 | profile / centroids | `profile` | opens |
 | ion mobility (`MS:1002893` array) | `mobility` | opens; the extra array is not used |
 | `referenceableParamGroup`, `scanSettings` | `rpg`, `scansettings` | opens; the scan table rereads the group parameters where the reference sits (`spechead`) |

@@ -1,5 +1,5 @@
 //! `mzlab-cli items FILE [--out PATH]`: the items of a file as the page and the app list them (`Item.info()`, `lr::open_items`): counts, ranges,
-//! polarity and `ms2_exps` (precursor, CE, and for a stepped CE its centre `ce_mid` and half width `ce_spread`). Stable keys, JSON only.
+//! polarity and `ms2_exps` (precursor, CE, and for a stepped CE its centre `ce_mid` and half width `ce_spread`). Stable keys, JSON only (units: `docs/schemi/items-1.json`).
 
 use std::fs::File;
 use std::path::PathBuf;
@@ -10,14 +10,14 @@ use mzlab_core::routes::Routes;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli items: what the page learns about a file (one item, or one per part of a mixed file) as a JSON list of {info, hr}.
+pub const HELP: &str = "mzlab-cli items: what the page learns about a file (one item, or one per part of a mixed file) as {\"schema\":\"items/1\",\"items\":[{info, hr}]}.
 
 usage: mzlab-cli items FILE [--out PATH]
 
   FILE        an mzML, or any single file the app reads (.raw, mzXML, ...); a file of several samples gives its first
   --out PATH  write there instead of the standard output
 
-info.ms2_exps lists {prec, ce, ce_mid, ce_spread, n}: ce_mid and ce_spread (35 and 15 for a stepped 20/35/50) are null with a single CE.";
+info.ms2_exps lists {prec (m/z), ce (eV, or % when info.nce), ce_mid, ce_spread, n}: ce_mid and ce_spread (35 and 15 for a stepped 20/35/50) are null with a single CE.";
 
 fn parse(args: Vec<String>) -> std::result::Result<Option<(PathBuf, Option<PathBuf>)>, String> {
     let (mut file, mut out) = (None, None);
@@ -69,7 +69,7 @@ fn read(file: &PathBuf, tmp: &std::path::Path) -> Result<String> {
         .iter()
         .map(|i| format!("{{\"info\":{},\"hr\":{}}}", i.info, i.hr))
         .collect();
-    Ok(format!("[{}]", body.join(",")))
+    Ok(format!("{{\"schema\":\"items/1\",\"items\":[{}]}}", body.join(",")))
 }
 
 pub fn run(args: Vec<String>) -> Outcome {

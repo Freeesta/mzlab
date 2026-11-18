@@ -83,7 +83,7 @@ fn targeted_ms2_in_lc_has_one_channel_per_precursor() {
             entry("ms:ms2 300 @cid", "ms", 2, 20, Some(2)),
         ]
     );
-    assert_eq!(c.tipo.proposed, "lc-ms2-mirato");
+    assert_eq!(c.tipo.proposed, "lc-ms2-targeted");
     assert_eq!(c.v[3].label, "MS² 222 @CID35");
     assert_eq!(c.v[3].omologo, "ms|2|222|cid|35||");
     // the partition: scans of the channel in file order, 4 bytes per scan
@@ -131,7 +131,7 @@ fn msn_in_blocks_is_a_tree_of_channels() {
     assert_eq!(
         c.tipo,
         Tipo {
-            proposed: "infusione-msn",
+            proposed: "msn-infusion",
             reason: "blocks"
         }
     );
@@ -257,7 +257,7 @@ fn mrm_with_product_ion_scans_is_mixed() {
         &Facts::default(),
         "c.mzML",
     );
-    assert_eq!(c.tipo.proposed, "misto");
+    assert_eq!(c.tipo.proposed, "mixed");
     let ids: Vec<&str> = c.v.iter().map(|x| x.id.as_str()).collect();
     assert_eq!(
         ids,
@@ -283,7 +283,7 @@ fn a_uv_flag_without_the_trace_header_lists_no_channel() {
         "u.mzML",
     );
     assert!(c.v.is_empty());
-    assert_eq!(c.tipo.proposed, "solo-uv");
+    assert_eq!(c.tipo.proposed, "uv-only");
 }
 
 #[test]

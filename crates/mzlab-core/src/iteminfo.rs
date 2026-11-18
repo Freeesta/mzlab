@@ -660,9 +660,9 @@ pub fn item_info<R: ReadAt>(
             .str(&a.id)
             .raw(",\"unit\":")
             .str(&a.unit);
-        o.raw(",\"t0\":")
+        o.raw(",\"rt_start_min\":")
             .num(a.t0)
-            .raw(",\"t1\":")
+            .raw(",\"rt_end_min\":")
             .num(a.t1)
             .raw(",\"n\":")
             .int(a.n)

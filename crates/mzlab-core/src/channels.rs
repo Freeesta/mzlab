@@ -85,7 +85,7 @@ pub struct Channel {
 /// A proposal for the default tools, never a verdict: the user's own value (CANALI-F) wins.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tipo {
-    /// `lc-full` | `lc-ms2-mirato` | `lc-dda` | `lc-mrm` | `infusione-msn` | `misto` | `solo-uv`
+    /// `lc-full` | `lc-ms2-targeted` | `lc-dda` | `lc-mrm` | `msn-infusion` | `mixed` | `uv-only`
     pub proposed: &'static str,
     pub reason: &'static str,
 }
@@ -389,12 +389,12 @@ fn tipo_di(scans: &[Scan], v: &[Channel], facts: &Facts, name: &str) -> Tipo {
         return match (srm, sim, facts.pda) {
             (true, _, _) => t("lc-mrm", "srm_only"),
             (false, true, _) => t("lc-sim", "sim_only"),
-            (false, false, true) => t("solo-uv", "uv_only"),
-            _ => t("misto", "empty"),
+            (false, false, true) => t("uv-only", "uv_only"),
+            _ => t("mixed", "empty"),
         };
     }
     if srm {
-        return t("misto", "srm_and_scans");
+        return t("mixed", "srm_and_scans");
     }
     if crate::infusion::with_msn(scans, facts.lc, name) {
         let motivo = match crate::infusion::infusione(scans, facts.lc, name).map(|i| i.reason) {
@@ -402,13 +402,13 @@ fn tipo_di(scans: &[Scan], v: &[Channel], facts: &Facts, name: &str) -> Tipo {
             Some("metodo_senza_lc") => "method_without_lc",
             _ => "name",
         };
-        return t("infusione-msn", motivo);
+        return t("msn-infusion", motivo);
     }
     if ms.iter().any(|c| c.famiglia == Famiglia::Dd) {
         return t("lc-dda", "many_precursors");
     }
     if ms.iter().any(|c| c.livello >= 2) {
-        return t("lc-ms2-mirato", "few_precursors");
+        return t("lc-ms2-targeted", "few_precursors");
     }
     t("lc-full", "ms1_only")
 }

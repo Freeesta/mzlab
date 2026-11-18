@@ -24,7 +24,8 @@ fn exps(ces: &[f64], tag: &str) -> Vec<(f64, Option<f64>, Option<f64>)> {
     let _ = std::fs::remove_file(&p);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let v = parse(&o.stdout).unwrap();
-    v.arr()[0]
+    assert_eq!(v.get("schema").unwrap().str(), Some("items/1"));
+    v.get("items").unwrap().arr()[0]
         .get("info")
         .unwrap()
         .get("ms2_exps")
@@ -55,4 +56,24 @@ fn a_stepped_ce_has_centre_and_spread_in_the_cli_json() {
 fn a_single_ce_has_no_spread() {
     let e = exps(&[30.0, 30.0], "one");
     assert_eq!(e, vec![(30.0, None, None)]);
+}
+
+/// Every key of `info` is declared in the schema (with its unit), and `items` carries the schema tag first.
+#[test]
+fn every_item_key_is_in_the_schema() {
+    let schema = parse(include_bytes!("../../../docs/schemi/items-1.json")).unwrap();
+    let info_props = schema
+        .get("properties").unwrap().get("items").unwrap().get("items").unwrap()
+        .get("properties").unwrap().get("info").unwrap().get("properties").unwrap();
+    let p = std::env::temp_dir().join(format!("items-{}-schema.mzML", std::process::id()));
+    std::fs::write(&p, mzml(&[20.0, 35.0, 50.0])).unwrap();
+    let o = execute(&["items".to_string(), p.to_string_lossy().into_owned()]);
+    let _ = std::fs::remove_file(&p);
+    assert!(o.stdout.starts_with(b"{\"schema\":\"items/1\",\"items\":["));
+    let v = parse(&o.stdout).unwrap();
+    for it in v.get("items").unwrap().arr() {
+        for (k, _) in it.get("info").unwrap().entries() {
+            assert!(info_props.get(k).is_some(), "key `{k}` is not in docs/schemi/items-1.json");
+        }
+    }
 }
