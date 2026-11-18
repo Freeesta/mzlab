@@ -11,7 +11,7 @@ from lib import *
 from e2e_memoria_misure import INIT, pss, procs, browser_pid
 
 
-DRAWN = "!document.querySelector('#v-data').hidden && !!window.PERF && PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw chrom')"
+DRAWN = "!document.querySelector('#v-data').hidden && !!window.PERF && PERF.rows.some(x => x.kind === 'draw' && x.what === 'draw chrom')"
 
 
 def make(tmp, spec):
