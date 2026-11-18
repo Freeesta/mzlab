@@ -1,6 +1,6 @@
 # scandump/1: the per-scan dump, written the same by RFR and by our reader
 
-The RFR oracle (Thermo RawFileReader, only on the Mac, never in the repository) and our reader write the same format; `tools/rosina/scandump_compare.py` compares them field by field. Oracle rules: `thermo-velocita.md`. Outputs: `thermo_scandump` (ours), `scandump_compare.py` (comparison and aggregate), `verita_scandump.py` (→ `verita/1` for the F0-F5 bench), test `crates/mzlab-lettori/tests/scandump_thermo.rs` (RFR dump of the private data in `scratchpad/rfr/<file>.scandump.jsonl.gz`, skipped without `MZLAB_DATI`).
+The RFR oracle (Thermo RawFileReader, only on the Mac, never in the repository) and our reader write the same format; `tools/rosina/scandump_compare.py` compares them field by field. Oracle rules: `thermo-speed.md`. Outputs: `thermo_scandump` (ours), `scandump_compare.py` (comparison and aggregate), `verita_scandump.py` (→ `verita/1` for the F0-F5 bench), test `crates/mzlab-lettori/tests/scandump_thermo.rs` (RFR dump of the private data in `scratchpad/rfr/<file>.scandump.jsonl.gz`, skipped without `MZLAB_DATI`).
 
 ## Format rules
 - JSON Lines, UTF-8, gzip (`.scandump.jsonl.gz`); each line is an object with `type`. Keys in English, times in minutes, m/z in Th, intensities as the file gives them.

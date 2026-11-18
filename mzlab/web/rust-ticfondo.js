@@ -1,7 +1,7 @@
 // @ts-strict
 // `api/tic_background` in the worker of the engine (rust-worker.js, op "ticbg"): the .wasm `ticfondo` of wasm-feat/manifest.json
 // (crates/mzlab-ticfondo-wasm) is fetched on the first request and opens the .mzidx of the file, and of its blank, from OPFS itself.
-// The engine's .wasm has no room for it (docs/agenti/tic-fondo.md).
+// The engine's .wasm has no room for it (docs/agenti/tic-background.md).
 
 import { load } from "./rust-msngrafo.js";
 import * as ARCH from "./archivio.js";

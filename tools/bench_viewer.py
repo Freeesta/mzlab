@@ -386,7 +386,7 @@ ROWS = [("G1 click on the TIC -> spectrum", "G1_click_tic_to_spectrum"), ("G2 XI
 
 
 def md(path):
-    """The starting table (gesture x case, `p50 / p95 ms (n)`) from the JSON lines of a run, for docs/agenti/visore-veloce.md."""
+    """The starting table (gesture x case, `p50 / p95 ms (n)`) from the JSON lines of a run, for docs/agenti/fast-viewer.md."""
     cs = [o for o in (json.loads(l) for l in open(path) if l.startswith("{")) if "case" in o]
     cell = lambda c, k: (f'{c[k]["p50"]} / {c[k]["p95"]} ({c[k]["n"]})' if isinstance(c.get(k), dict) and c[k].get("n") else "–") if "error" not in c else "not measured"
     out = ["| gesture | " + " | ".join(c["case"] for c in cs) + " |", "|---" * (len(cs) + 1) + "|"]

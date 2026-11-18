@@ -1,6 +1,6 @@
 //! exp/ln/pow/trig with the same bits on every target. A native build calls the `libm` crate (the system library differs in the last bit);
 //! the `.wasm` keeps std, whose wasm32 maths is the same libm code (2·10⁶ random inputs per function give identical bits), so the module
-//! does not carry a second copy next to the one `sci-form` and `nalgebra` already pull in (cap of the chem module, docs/agenti/parita.md).
+//! does not carry a second copy next to the one `sci-form` and `nalgebra` already pull in (cap of the chem module, docs/agenti/parity.md).
 
 macro_rules! same_bits {
     ($($name:ident => $std:ident ($($a:ident),+);)+) => {$(

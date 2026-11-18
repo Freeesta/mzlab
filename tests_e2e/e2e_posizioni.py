@@ -1,4 +1,4 @@
-"""Tabui, panel «Substitution position» (TP_Mine/js/44_posizioni.js, docs/agenti/posizioni.md): administrator mode only.
+"""Tabui, panel «Substitution position» (TP_Mine/js/44_posizioni.js, docs/agenti/positions.md): administrator mode only.
 Without «mzlab.admin» the package of Tabui is not even loaded (no TPPOS, no button). With it the panel shows, for a case built here (4-methyldiphenylamine + O, the MS2 has the fragment
 with the oxygen on ring A and the rest of the molecule), the classes the spectrum tells apart, the table of the data of the spectrum (TDATI), the proposal 3a, the box of the
 oxidation type and the suggested checks; a spectrum with no useful peak gives 3b; a row whose change is not covered, or without SMILES, has no button. In the LR demo the detail of the

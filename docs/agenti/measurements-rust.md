@@ -86,7 +86,7 @@ Two synthetic Orbitrap DDA files (`tools/hr_reference.py`, ~15,000 MS1 peaks per
 - Accelerated colour rendering (`grafici.js`, `mapImage`): 32-bit writing with `Uint32Array` (`buf32` and `tab32`) and sampling at 10 000 cells for the 99.5th percentile: `ImageData` generation on a 600×901 grid reduced from 314 ms to 52 ms (6× faster), warm file switch on HRC ≤ 50 ms.
 
 ## Reader modules (`tools/build_lettori_wasm.sh`, after `wasm_opt -Oz`)
-- `.wasm` of mzFinder and of the readers: measures, caps (a merged module has a group cap, not the per-module ones) and separate build in `docs/agenti/wasm-tetti.md`. The engine `.wasm` weighs 1 439 240 B (without the Thermo reader, which lives in the `thermo` module).
+- `.wasm` of mzFinder and of the readers: measures, caps (a merged module has a group cap, not the per-module ones) and separate build in `docs/agenti/wasm-caps.md`. The engine `.wasm` weighs 1 439 240 B (without the Thermo reader, which lives in the `thermo` module).
 - Memory of the `thermo` module (`tools/bench_raw.py`, initial memory 32 MB) on the 595 MB DDA BAF (56 061 scans): after `apri` 33.5 MB (`apri` 1.0 s), after `indice` 48.0 MB (186 ms, JSON of 13.7 MB), peak of all steps 122 MB (`to_mzml` 21.8 s); on smaller files 44.4 MB for 7 952 scans and 85.1 MB for 16 524 (before compact memory).
 
 ## `desktop` profile (`Cargo.toml`, `opt-level = 3` against `"z"`)
@@ -113,7 +113,7 @@ Metrics (numbers only in the private repository): literature TPs in view, concor
 ## Interp `.wasm` (`tools/build_feat_wasm.sh`, `cargo build --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features interp`)
 After `wasm-bindgen --target web` and `wasm-opt -Oz` (binaryen from npm): 496 569 B after `wasm-opt` (388 039 B without the sites and the drawing): above the gate of 470 000 B and below the cap of 512 000 B, which does not rise; the MSn tree is still built by `interp` itself and is an exception accepted for now: `interp` must not grow beyond this; every new weight is paid first by moving the tree into `finder_msn` (a small separate PR). The other `.wasm` files do not change weight.
 Tabui click and mzTab-M: `measurements.md`, "Validated exports and click".
-Viewer gestures, site and native: `tools/bench_viewer.py`; table in `visore-veloce.md`.
+Viewer gestures, site and native: `tools/bench_viewer.py`; table in `fast-viewer.md`.
 
 ## Spectral libraries: `libset_bench` (native, 1 million synthetic spectra, `cargo run --release -p mzlab-lib --example libset_bench -- 1000000 unit|hr [libraries]`)
 hr, 1 library: identity 0.06 ms/query warm (0.28 cold); analogs 51 ms; hybrid open search with flat accumulators 49–52 ms against 138 ms for the pair-based version (×2.8). unit, 1 library: identity 1.4 ms (1.7 cold); analogs 73–93 ms; hybrid open 77–106 ms (the machine varies) against 207–230 ms pair-based (×2.1–2.8). unit, 3 libraries of 1M each merged: identity 1.5 ms, hybrid open 70–81 ms per library searched.

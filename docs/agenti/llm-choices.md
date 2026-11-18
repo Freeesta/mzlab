@@ -1,5 +1,5 @@
 # LLM: principles, choices and open proposals
-The basic rules of the assistant and of external agents that remain binding; the code that exists is described in `llm.md`, `llm-subagents.md`, `assistant-proxy.md` and `per-agenti.md`.
+The basic rules of the assistant and of external agents that remain binding; the code that exists is described in `llm.md`, `llm-subagents.md`, `assistant-proxy.md` and `for-agents.md`.
 
 ## Principles
 - Explicit opt-in, per person: off by default on site and desktop; it is turned on in Settings with the consent window. No request to a provider before consent (an e2e counts the requests) and zero bytes downloaded by whoever does not turn it on; the caps of the existing `.wasm` files do not change.

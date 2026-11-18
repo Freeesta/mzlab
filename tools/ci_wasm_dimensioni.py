@@ -1,5 +1,5 @@
 """Size of every built .wasm against its cap, for tools/ci_metrics.py: `python3 tools/ci_wasm_dimensioni.py <site-dir> [out.json]` writes
-{"<file>": {"byte": N, "tetto": N|null}}. Caps are the `tetto` of tools/moduli/<name>.toml (docs/agenti/wasm-tetti.md); no cap = null."""
+{"<file>": {"byte": N, "tetto": N|null}}. Caps are the `tetto` of tools/moduli/<name>.toml (docs/agenti/wasm-caps.md); no cap = null."""
 import json
 import sys
 from pathlib import Path

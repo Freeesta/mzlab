@@ -1,5 +1,5 @@
 # Molecules database (`molecules/1`, `crates/mzlab-core/src/molecules/`)
-Related areas: `samples.md` (the structure model), `lists.md` (CSV and canonical JSON), `rust-rotte.md` (the routes), `mzfinder.md` (Tabui's "Name" field). Schema `docs/schemi/molecules-1.json`.
+Related areas: `samples.md` (the structure model), `lists.md` (CSV and canonical JSON), `rust-routes.md` (the routes), `mzfinder.md` (Tabui's "Name" field). Schema `docs/schemi/molecules-1.json`.
 
 - **What it is**: one record = one molecule (`id`, `nome`, `sinonimi`, `formula`, `carica`, `massa`, `smiles`, `inchikey`, `addotti`, `raccolte`, `classi`, `esterni` (`cas`, `pubchem_cid`), `proprieta`, `note`, `origine`). Fields in Italian, values in English. The engine gives no verdicts: it holds and searches data.
 - **`id`**: `ik:<full InChIKey>` if there is an InChIKey, otherwise `u:<12 hex of the SHA-256 of the record's canonical JSON at birth>`; assigned by `finalizza` when empty and never changed again (renaming a molecule does not change the `id`).

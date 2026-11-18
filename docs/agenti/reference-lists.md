@@ -1,5 +1,5 @@
 # Known contaminants panel: lists, Add list, provenance (`liste.js`, `reflist/1`)
-Nearby areas: `data-tools.md` (panel, matching, exclusions), `pesticidi.md` (pesticides list), `lists.md` (Flow lists), `cli-agenti.md`.
+Nearby areas: `data-tools.md` (panel, matching, exclusions), `pesticides.md` (pesticides list), `lists.md` (Flow lists), `cli-agenti.md`.
 
 - **Add list** (`#lst-add`): «Add list…» (file picker), drop a CSV on the strip, «Download template» (`TEMPLATE` in `liste.js`). The CSV is read in Rust by `mzlab-core::reflist` (`reflist/1`): route `api/reflist` (`lr-map.js`), op `lr_reflist`, wasm export `reflist_parse`, desktop `rpc_lr.rs`, CLI `mzlab-cli ref-list`. The page has no parser of its own.
 - **Columns** (header required; `;`, tab or `,`; `#` lines and blank lines skipped; quotes allowed): `mz`, `name`, `formula`, `polarity` (`+`, `-`, `positive`, `negative`, `both`, empty), `adduct` (one of the seven adducts of `elements::adducts`), `note`. A row needs an m/z or a formula; with a formula only the ion is [M+H]+ ([M-H]- if the polarity is negative) unless `adduct` says another; with both, the m/z given wins. A polarity left empty is taken from the adduct.

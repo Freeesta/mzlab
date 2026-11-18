@@ -5,7 +5,7 @@
 set -eu
 part=${2:-all}
 want() { [ "$part" = all ] || [ "$part" = "$1" ]; }
-# What each module is built from (package, features, wasm-opt set, cap after wasm-opt) is in tools/moduli/<name>.toml, read by tools/moduli.py: the cap rule is in docs/agenti/wasm-tetti.md.
+# What each module is built from (package, features, wasm-opt set, cap after wasm-opt) is in tools/moduli/<name>.toml, read by tools/moduli.py: the cap rule is in docs/agenti/wasm-caps.md.
 static=${1:-site/static}
 out=$static/wasm-feat
 R=target/wasm32-unknown-unknown/release

@@ -77,7 +77,7 @@ def main(argv: list[str] | None = None) -> int:
         import gate_release
 
         if gate_release.run(ROOT, a.tag.lstrip("v"), out=lambda m: print(m, file=sys.stderr)):
-            errors.append("release gate failed: fix the FAIL lines above (docs/agenti/rilascio.md)")
+            errors.append("release gate failed: fix the FAIL lines above (docs/agenti/release.md)")
             print("ERROR", errors[-1], file=sys.stderr)
     if not errors:
         print("version", next(iter(versioni().values())))

@@ -1,6 +1,6 @@
 //! The real-time device traces of a `.wiff` sample (`Devices/Device_N/DevData`: column pressure, pump flow, oven temperature, ...) as chromatograms of the
 //! reader: a pressure in pascal (`pressure array` in the mzML), every other trace with the unit the file names. The time of point k is k × the channel step
-//! from the start of the acquisition: an assumption, the stream holds no time of its own (`docs/agenti/wiff-varianti.md`).
+//! from the start of the acquisition: an assumption, the stream holds no time of its own (`docs/agenti/wiff-variants.md`).
 
 use super::dad::device_channels;
 use crate::mzml::{ChromKind, Chromatogram};
