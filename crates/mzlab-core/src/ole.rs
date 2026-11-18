@@ -354,6 +354,11 @@ impl Ole {
     }
 }
 
+#[cfg(feature = "wiffwrite")]
+mod inventory;
+#[cfg(feature = "wiffwrite")]
+pub use inventory::{DirMeta, Info};
+
 #[cfg(test)]
 mod tests;
 

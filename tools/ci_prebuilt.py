@@ -38,7 +38,7 @@ GROUPS = {
         f"build --target {WASM} -p mzlab-attributio-wasm --features rev",
         f"build --target {WASM} -p mzlab-attributio-wasm --features all",
     ],
-    "wasm-b": [f"build --target {WASM} {BASE} {f}" for f in ("aperti", "agilent", "waters", "shimadzu", "sciex", "thermo", "bruker", "andi", "valida")],
+    "wasm-b": [f"build --target {WASM} {BASE} {f}" for f in ("aperti", "agilent", "waters", "shimadzu", "sciex", "thermo", "bruker", "andi", "valida", "wiffwrite")],
 }
 
 
