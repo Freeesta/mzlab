@@ -3,7 +3,7 @@
 Synthetic spectra with noise, fixed seed, no compound names: random formulas of CHNOS (+Cl/Br in the halogen series), the observed isotope peaks
 come from the theoretical fine structure fused at the resolving power, with a mass error, a relative intensity error, dropout of weak peaks and
 noise peaks; the MS2 is made of random sub-formulas of the precursor. `python3 tools/test_isotopes.py [N]` prints the table written in
-docs/agenti/alta-risoluzione.md.
+docs/agenti/high-resolution.md.
 """
 from __future__ import annotations
 

@@ -66,7 +66,7 @@ try:
             rows = pg.evaluate(ROWS)
             need([x[:2] for x in rows] == [["253.1", s] for s in SAMPLES], rows)         # grouped by channel, then sample, in the order of the files
             heads = pg.evaluate("[...document.querySelectorAll('#manint thead th')].map(c => c.textContent)")
-            want = [pg.evaluate("k => I18N.t('canali.manint.h.' + k)", k) for k in ("channel", "sample", "time", "label", "area", "start", "end", "apex", "height", "snr", "base", "origin")]
+            want = [pg.evaluate("k => I18N.t('canali.manint.h.' + k)", k) for k in ("channel", "sample", "time", "label", "apex", "area", "start", "end", "height", "snr", "base", "origin")]
             need(heads[:12] == want, ("columns in the order of the owner, no «name in the method»", heads))
             org = {x[1]: x[-2] for x in rows}                 # the last cell is the action button
             T = lambda k: pg.evaluate("k => I18N.t('canali.manint.org.' + k)", k)

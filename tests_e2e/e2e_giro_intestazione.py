@@ -28,7 +28,7 @@ HDR = r"""() => [...document.querySelectorAll('header button')].filter(b => { co
  .map(b => b.id ? '#' + b.id : b.dataset.cmd ? `header [data-cmd="${b.dataset.cmd}"]` : b.dataset.cmdMain ? `header [data-cmd-main="${b.dataset.cmdMain}"]` : b.dataset.cmdCar ? `header [data-cmd-car="${b.dataset.cmdCar}"]` : b.dataset.help != null ? `header .hq[data-help="${b.dataset.help}"]` : null).filter(Boolean)"""
 # outside Data these open their window: a click that does nothing there is a dead button
 FLOATING = {"#np-calc2", "#np-add", "#np-nl", "#np-addloss", "#np-liste", "#np-pt", "#tb-search", "#tb-more", "#np-set", "#newrun"}
-# outside Data these go back to Data with their side panel page (the Adducts & losses lists never float: docs/agenti/dati-3200.md)
+# outside Data these go back to Data with their side panel page (the Adducts & losses lists never float: docs/agenti/data-3200.md)
 TO_DATA = {"#np-addloss": "addloss"}
 MOVE_PX = 2       # rounding of sub-pixel layouts; a slide or a jump is tens of pixels
 
@@ -76,7 +76,7 @@ def walk(pg, where):
             # leaving full screen is asynchronous (exitFullscreen resolves later): wait for it, bounded, before reading what is left
             try: pg.wait_for_function("fs => !!document.fullscreenElement === fs", arg=base["fs"], timeout=5000)
             except Exception: pass                     # still in full screen: the check below reports it
-            # a window, menu or full screen must be gone; a tool of the side panel may close the panel (a second click hides it, dati-barra.md)
+            # a window, menu or full screen must be gone; a tool of the side panel may close the panel (a second click hides it, data-bar.md)
             left = {k: v for k, v in pg.evaluate(OPEN).items() if k in ("dlg", "exp", "fs") and v != base[k]}
             if left: bad.append(f"{sel}: left {left}")
         back_to(pg, base); ready(pg, settle=200)
@@ -203,7 +203,7 @@ try:
         def clean():
             errs = [e for e in r.errs if "wasm-feat/manifest.json" not in str(e)          # the optional modules are not built for the e2e site (tools/prepara_sito.py)
                     and not (e[0] == "console.error" and "404" in str(e[1]))               # its console twin
-                    and "allow-scripts and allow-same-origin" not in str(e)]               # Chromium's note on the sandboxed Ketcher iframe (docs/agenti/disegno.md)
+                    and "allow-scripts and allow-same-origin" not in str(e)]               # Chromium's note on the sandboxed Ketcher iframe (docs/agenti/drawing.md)
             assert not errs, errs[:5]
         step("no console error, no failed request", clean)
 finally:

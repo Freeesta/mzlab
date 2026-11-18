@@ -155,7 +155,7 @@ function searchIndex(/** @type {LibIdx} */ idx, /** @type {LibQ} */ q, /** @type
     if (opts.pol && lp && lp !== opts.pol) continue;
     const s = getSpec(pos), sc = score(q, s, opts.frag), m = meta ? meta[pos] : null;
     out.push({ pos, name: m ? m[0] : "", type: m ? m[1] : "", ce: m ? m[2] : "", inst: m ? m[3] : "", formula: m ? m[4] : "", ik: m ? m[5] : "", accession: m ? m[6] || "" : "", authors: m ? m[7] || "" : "", license: m ? m[8] || "" : "", smiles: m ? m[9] || "" : "",
-      cos: sc.cos, ent: sc.ent, shared: sc.shared, reverse: sc.reverse, explained: sc.explained, polarity: lp, dprec: opts.ppm != null ? (idx.prec[k] - q.prec) / q.prec * 1e6 : idx.prec[k] - q.prec, prec: idx.prec[k], pairs: sc.pairs, mz: Array.from(s.mz), it: Array.from(s.it) });
+      cos: sc.cos, ent: sc.ent, shared: sc.shared, reverse: sc.reverse, explained: sc.explained, polarity: lp, dprec: opts.ppm != null ? (q.prec - idx.prec[k]) / idx.prec[k] * 1e6 : q.prec - idx.prec[k], prec: idx.prec[k], pairs: sc.pairs, mz: Array.from(s.mz), it: Array.from(s.it) });
   }
   return out;
 }

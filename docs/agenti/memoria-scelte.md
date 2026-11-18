@@ -1,24 +1,24 @@
-# Memoria: regole di scelta, esperienza d'uso e proposte aperte
-Seguito di `memoria.md` (contratto, budget, lastre, prove) e `compat-safari.md` («Memoria su WebKit»): perché il budget è fatto così, che cosa vede l'utente quando la memoria non basta, che cosa resta da costruire.
+# Memory: choice rules, user experience and open proposals
+Continuation of `memoria.md` (contract, budget, slabs, tests) and `compat-safari.md` ("Memory on WebKit"): why the budget is built this way, what the user sees when memory is not enough, what remains to be built.
 
-## Regole
-- Un rifiuto per memoria si guarda prima a monte: troppe feature di rumore (soglia fissa sotto il rumore dei dati) pesano più di qualunque tetto; la soglia stimata dai dati (`params::noise_from_hist`) sta in `Recipe::for_index`, così sito, `mzlab-cli` e i passi del Flow hanno la stessa ricetta.
-- Il budget più grande cambia solo la via (memoria o lastre), mai i byte del risultato; ogni fase stima prima di allocare. Il tetto di costruzione di 4 GiB non riserva memoria.
-- Rust decide budget e discesa (`budget_auto`, `budget_down`) dai fatti del dispositivo; JS raccoglie i fatti (`deviceMemory`, core, telefono, iOS, prova di crescita) e scrive il registro, senza soglie in MB scritte a mano.
-- La prova di crescita gira in un'istanza a parte (`rust-sonda.js`), perché la memoria WASM non si restringe: una prova dentro il motore gli lascerebbe gigabyte. Misura il limite del browser, non la RAM libera; oltre 2 s vale la tabella dei livelli.
-- `measureUserAgentSpecificMemory` non si usa: chiede l'isolamento cross-origin che GitHub Pages non dà.
-- Non conviene lo spill della tabella allineata (letta a caso da `finish` e `rowmeta`) né della cache del motore (si rifà dall'indice).
-- Sullo stesso contratto girano i passi del Flow sul sito, nell'app e in `mzlab-cli flow run` (nativo: budget = RAM/4): stessa stima per passo, stessa via, stessi byte.
+## Rules
+- A memory refusal is first looked at upstream: too many noise features (fixed threshold below the data noise) weigh more than any ceiling; the threshold estimated from the data (`params::noise_from_hist`) lives in `Recipe::for_index`, so the site, `mzlab-cli` and the Flow steps have the same recipe.
+- A bigger budget only changes the route (memory or slabs), never the bytes of the result; every phase estimates before allocating. The 4 GiB build ceiling reserves no memory.
+- Rust decides budget and descent (`budget_auto`, `budget_down`) from the device facts; JS collects the facts (`deviceMemory`, cores, phone, iOS, growth probe) and writes the registry, with no hand-written MB thresholds.
+- The growth probe runs in a separate instance (`rust-sonda.js`), because WASM memory does not shrink: a probe inside the engine would leave it gigabytes. It measures the browser limit, not the free RAM; beyond 2 s the level table applies.
+- `measureUserAgentSpecificMemory` is not used: it requires the cross-origin isolation that GitHub Pages does not give.
+- Spilling the aligned table (read randomly by `finish` and `rowmeta`) or the engine cache (rebuilt from the index) is not worthwhile.
+- The Flow steps run on the same contract on the site, in the app and in `mzlab-cli flow run` (native: budget = RAM/4): same estimate per step, same route, same bytes.
 
-## Esperienza d'uso
-- Predefinito sicuro: nessuna domanda finché la stima entra nel budget sicuro; le lastre sono silenziose (stessi byte), si vede solo l'avanzamento.
-- Avviso prima di partire, una volta per corsa, quando la stima supera il budget sicuro ma entra in quello alto (`memoria-avviso.js`): il pulsante sicuro è il predefinito (Invio, Esc, clic fuori), «Use more memory» è la scelta dell'utente. Oltre il budget alto il rifiuto porta `libero_mb` (l'eccesso è contro il libero, non contro il tetto) e il consiglio «Try fewer files at once.».
-- Dopo una morte del motore: una riga nello stato, non una finestra («The engine ran out of memory…; finished steps are saved; it restarts with less memory»), le fasi finite restano dalla cache; la discesa vale per la sessione.
-- Mai errori muti: un passo fallito mostra chiave, numeri e consiglio.
+## User experience
+- Safe default: no question while the estimate fits in the safe budget; slabs are silent (same bytes), only the progress is visible.
+- Warning before starting, once per run, when the estimate exceeds the safe budget but fits in the high one (`memoria-avviso.js`): the safe button is the default (Enter, Esc, click outside), "Use more memory" is the user's choice. Beyond the high budget the refusal carries `libero_mb` (the excess is against the free memory, not against the ceiling) and the advice "Try fewer files at once.".
+- After an engine death: one line in the status, not a window ("The engine ran out of memory…; finished steps are saved; it restarts with less memory"), finished phases stay from the cache; the descent holds for the session.
+- Never mute errors: a failed step shows key, numbers and advice.
 
-## Proposte non realizzate
-- Proposta non realizzata: un solo «permesso grande» per origine, Web Lock `mzlab-mem-grande` (esclusivo anche fra schede), per un worker che usa più del budget sicuro; chi l'ha usato chiude il proprio worker a fine passo se supera 512 MB.
-- Proposta non realizzata: terzo pulsante «Work in parts (slower)» nell'avviso, dove il passo ha le lastre, e «≈ X MB · in memory/in parts» con «part N of M» su ogni passo della tela prima e durante la corsa.
-- Proposta non realizzata: `flow::stima_passo(job, ingressi) -> {mb, via}` unica per CLI, desktop e sito, con `mem_mb` e `via` per passo in `prov/1` e `corsa/1`.
-- Proposta non realizzata: `Stored` e `Spill` del runner web su file OPFS letti a intervalli con `createSyncAccessHandle` (heap del worker durante `align` ≤ una lastra + un file), invece di copiare tutti i `.mzfeatf` nell'heap del worker.
-- Proposta non realizzata: ripiego `--import-memory` (la pagina crea la `WebAssembly.Memory` col massimo scelto, stesso `.wasm`) se un browser non istanzia un modulo con massimo 4 GiB.
+## Unrealized proposals
+- Unrealized proposal: a single "big permit" per origin, Web Lock `mzlab-mem-grande` (exclusive also across tabs), for a worker that uses more than the safe budget; whoever used it closes its own worker at the end of the step if it exceeds 512 MB.
+- Unrealized proposal: third button "Work in parts (slower)" in the warning, where the step has slabs, and "≈ X MB · in memory/in parts" with "part N of M" on every canvas step before and during the run.
+- Unrealized proposal: a single `flow::stima_passo(job, ingressi) -> {mb, via}` for CLI, desktop and site, with `mem_mb` and `via` per step in `prov/1` and `corsa/1`.
+- Unrealized proposal: `Stored` and `Spill` of the web runner on OPFS files read in ranges with `createSyncAccessHandle` (worker heap during `align` ≤ one slab + one file), instead of copying all the `.mzfeatf` into the worker heap.
+- Unrealized proposal: `--import-memory` fallback (the page creates the `WebAssembly.Memory` with the chosen maximum, same `.wasm`) if a browser does not instantiate a module with a 4 GiB maximum.

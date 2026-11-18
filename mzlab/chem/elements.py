@@ -96,17 +96,23 @@ def formula_mz(formula: str, adduct: str | None = None) -> dict:
     """Formula -> neutral mass and ion m/z, exact, at 1 decimal (unit-resolution instrument) and nominal (integer)."""
     f = parse_formula(formula)
     m = mass(f)
+    nom = nominal_mass(f)
     rows = {}
     for a in ADDUCT_SHIFT:
         z = ion_mz(m, a)
-        rows[a] = {"mz": round(z, 4), "mz5": round(z, 5), "mz1": round_half_up(z, 1), "nominal": int(round_half_up(z, 0))}      # mz5: the decimals of a high-resolution profile
-    out = {"formula": fmt(f), "neutral": round(m, 4), "nominal_neutral": int(round_half_up(m, 0)), "adducts": rows}
+        rows[a] = {"mz": round(z, 4), "mz5": round(z, 5), "mz1": round_half_up(z, 1), "nominal": int(round_half_up(ion_mz(nom, a), 0)), "mz0": int(round_half_up(z, 0))}      # mz5: the decimals of a high-resolution profile; nominal: the nominal mass plus the shift; mz0: the exact m/z rounded
+    out = {"formula": fmt(f), "neutral": round(m, 4), "nominal_neutral": nom, "neutral0": int(round_half_up(m, 0)), "adducts": rows}
     if adduct:
         if adduct not in ADDUCT_SHIFT:
             raise UserError("err.adduct.unknown", {"adduct": adduct}, f"unknown adduct {adduct!r}")
         out["adduct"] = adduct
         out.update(rows[adduct])
     return out
+
+
+def nominal_mass(f: dict[str, int]) -> int:
+    """Sum of the mass numbers of the most abundant isotopes (Murray et al., Pure Appl. Chem. 2013, 85, 1515): the rounded monoisotopic mass of each element."""
+    return sum(int(round(MASS[e])) * n for e, n in f.items())
 
 
 def mass(f: dict[str, int]) -> float:

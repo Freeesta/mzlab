@@ -1,4 +1,4 @@
-"""Flow, the graphical workflow page (docs/agenti/flow-grafica.md): its tab is in the header at first load, the palette comes from the three lists of
+"""Flow, the graphical workflow page (docs/agenti/flow-graphics.md): its tab is in the header at first load, the palette comes from the three lists of
 descriptors, a chain is built by clicking steps (each is wired to what fits), the plan is validated after every change and leaves and returns as mzflow/2 JSON. Also the click budget of
 rule 26 (few clicks): a valid four-step chain exported in at most CEILING clicks and keys, counted by capture listeners; the five clicks of the logo are reported apart.
 Run from the repo root: python3 tests_e2e/e2e_flow.py"""  # covers: flow/

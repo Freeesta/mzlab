@@ -849,8 +849,8 @@
                   {"type":"integer","minimum":1,"default":96000000,"description":"Working memory"},
                   {
                     "enum":["channel","window","xic"],
-                    "default":"window",
-                    "description":"Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area."
+                    "default":"xic",
+                    "description":"Xic integrates the quality trace of the row by trapezoid on the real retention times, so scans spaced unevenly by MS2 events keep their weight; window (the former default) sums every point of the quality window over the row's scans."
                   },
                   {
                     "enum":["strict","wide"],

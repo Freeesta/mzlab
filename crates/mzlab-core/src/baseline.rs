@@ -1,8 +1,8 @@
 //! The baseline of a peak integration: `zero` (y = 0, the default), `edges` (the straight line each engine draws between the boundaries, the
 //! numbers of records made before `zero` was the default) or `line` (a line the user sets: a level or two points, which may cut through the peak). The area against `zero` or `line` is
 //! the signed trapezoid integral of the trace minus the line; the part of the trace under the line is reported apart (`below`), never dropped.
-//! One exception, only where a `line` is extended past one of its two points (an edge dragged beyond them): there the line is held at 0 once it would go
-//! below it (`at`), and the area it would have counted under zero is reported apart (`clamped`, only when it applies). Inside the two points nothing changes.
+//! A `line` is never below zero: it is held at 0 wherever it would go below it (`at`), and the area it would have counted under zero is reported apart
+//! (`clamped`, only when it applies).
 //! One function for the Data view (`peak_area` of mzlab-wasm, `mzlab-cli peak-area`), `peak-auto`, `chrom.transitions@2` and the SIM table.
 
 use crate::peakq_lr::near_idx;
@@ -34,21 +34,15 @@ impl Baseline {
         }
     }
 
-    /// The baseline at time `t`; `None` for `Edges`, which each engine draws itself. A `line` extended past a point whose level is at or above 0 is held
-    /// at 0 there; between its two points, past a point below 0 that the user placed, and for a level, it is the line itself (`line_at`).
+    /// The baseline at time `t`; `None` for `Edges`, which each engine draws itself. A `line` is held at 0 wherever it would go below it (between its two
+    /// points, past them and for a level alike): the area never counts anything under the zero line. `line_at` is the line itself.
     pub fn at(&self, t: f64) -> Option<f64> {
         let v = self.line_at(t)?;
-        if let Baseline::Line { t0, y0, t1, y1 } = *self {
-            let (ta, ya, tb, yb) = if t0 <= t1 {
-                (t0, y0, t1, y1)
-            } else {
-                (t1, y1, t0, y0)
-            };
-            if (t < ta && ya >= 0.0) || (t > tb && yb >= 0.0) {
-                return Some(v.max(0.0));
-            }
-        }
-        Some(v)
+        Some(if matches!(self, Baseline::Line { .. }) {
+            v.max(0.0)
+        } else {
+            v
+        })
     }
 
     /// The straight line itself at `t`, extended without limit (what `at` holds at 0 past its points).
@@ -161,8 +155,8 @@ pub fn peak_area(rt: &[f64], y: &[f64], a: f64, b: f64, base: Baseline) -> Optio
     Some([r.area * 60.0, r.below * 60.0, r.height, rt[r.apex]])
 }
 
-/// What holding an extended `line` at 0 took out of the area between the times `a` and `b` (counts x s, same samples and trapezoids as `peak_area`):
-/// 0 for `zero`, `edges`, a level and every window inside the two points, so the page and the CLI add it to the JSON only when it is above 0.
+/// What holding a `line` at 0 took out of the area between the times `a` and `b` (counts x s, same samples and trapezoids as `peak_area`):
+/// 0 for `zero`, `edges` and a line that stays at or above 0 there, so the page and the CLI add it to the JSON only when it is above 0.
 pub fn clamped_removed(rt: &[f64], a: f64, b: f64, base: Baseline) -> f64 {
     let n = rt.len();
     if n == 0 || !matches!(base, Baseline::Line { .. }) {

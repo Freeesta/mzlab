@@ -18,7 +18,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Expected: M+2/M of Br2 = 2 x 0.4931 / 0.5069 = 1.95; Br3 2.92; Cl4 1.28; Cl6 1.92 (binomial of the IUPAC abundances, Meija et al., Pure Appl. Chem. 2016, 88, 293).
 - Observed (`isotopes::group`, synthetic features, binomial areas, same RT): Br1 areas [100, 97] -> `iso_group` [1, 1]; Br2 [100, 195, 95] -> [0, 2, 2]; Br3 [100, 292, 284, 92] -> [0, 2, 2, 2]; Cl3 -> one group; Cl4 [100, 128, 61, 13, 1] -> [0, 2, 2, 2, 2]. The monoisotopic ion of a compound with 2 or more Br, or 4 or more Cl, stays alone and M+2 becomes the head of the cluster.
 - Fix: bound the M+2/M ratio by the binomial of the halogen count that the mass allows instead of the constant 1.2.
-- Status: OPEN (owner decision): reproduced on the engine (Br1 [1, 1], Br2 [0, 2, 2], Br3 [0, 2, 2, 2]); the fix replaces the 1.2 cap of `plausible` with a bound from the mass.
+- Status: FIXED: the M+2/M cap is the averagine value plus the M+2 of the most Br or Cl the mass holds ((M - 12) / 78.918 Br, / 34.969 Cl; 0.9727 and 0.3199 each), never below the old 1.2; Br2 [100, 195, 95] and Br3 [100, 292, 284, 92] now give one group. The old cap stays selectable (`IsoParams::legacy_plus2_cap`, off by default, written in the recipe text only when on). Tests in `crates/mzlab-feat/src/isotopes.rs`.
 
 ### A2 - wrong result - fine pattern cut 6.5 Da above the lightest isotopologue
 - Place: `crates/mzlab-core/src/isoscore.rs:133` (`fine_pattern` = `fine_pattern_cut(.., MAX_SHIFT + 0.5)`), used by `isotope_score` (`isoscore.rs:214`).
@@ -31,7 +31,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Expected: (measured - theoretical)/theoretical x 1e6 (Brenton and Godfrey, J. Am. Soc. Mass Spectrom. 2010, 21, 1821).
 - Observed: observed 195.088652 against theory 195.08765: the formula finder gives `delta_ppm` -5.126 and `delta_mda` -1, the adduct table gives `ppm` +5.13.
 - Fix: one sign and one denominator everywhere, (observed - theoretical)/theoretical.
-- Status: OPEN (owner decision): one sign changes the exported `delta_ppm`/`delta_mda`/`ppm` columns of some routes.
+- Status: FIXED: every route reports (observed - theoretical)/theoretical (formula finder, library search `dprec`, flow match `mass_ppm`, MS2 engine matcher `ppm`; the in-silico candidate `mass_ppm` and the library window's JS search `dprec` in `libreria-worker.js` too; the adduct table and `matchres` already did; the denominator is always the theoretical value); caffeine [M+H]+ typed 195.088652 gives +5.13 ppm, test `the_mass_error_is_observed_minus_theoretical` in `crates/mzlab-core/tests/composition_ions.rs`.
 
 ### A4 - convention unclear - even-electron cations typed as `[M]+` always fail SENIOR (and LEWIS when saturated)
 - Place: `crates/mzlab-core/src/composition.rs:419-441` (`broken`), with `half_ok` for `[M]+`/`[M]-`.
@@ -44,7 +44,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Expected: nominal mass = sum of the mass numbers of the most abundant isotopes (Murray et al., Pure Appl. Chem. 2013, 85, 1515): tristearin C57H110O6 = 890.
 - Observed: `mzlab-cli ion-mz C57H110O6` -> neutral 890.8302, `nominal_neutral` 891, [M+H]+ `nominal` 892; `mzlab-cli mol-anal` on the same formula -> `nominal` 890.
 - Fix: compute it from integer isotope masses, or rename the field (rounded m/z).
-- Status: OPEN (owner decision): the fix changes or renames the exported `nominal` fields.
+- Status: FIXED in `formula_mz` (`ion-mz`, `/api/formula`): `nominal_neutral` is the sum of the mass numbers of the main isotopes (890), `nominal` of an ion that plus the adduct shift (891); the old rounded values are the new keys `neutral0` and `mz0` (the page search keeps using them). OPEN: the `nominal` column of `adduct_table.rs` (the calculator) is still the rounded m/z, which is what a unit-resolution instrument shows.
 
 ### A6 - precision loss (at most 0.15 ppm) - four mass tables from different evaluations
 - Place: `crates/mzlab-core/src/elements.rs` `MASS` (AME2016, correct to 1e-9 u) against `crates/mzlab-core/src/nuclides.rs` and `isotable.rs` (generated from OpenChemLib), `crates/mzlab-feat/src/attributio/review/adduct.rs` `MASS`, and the typed shifts in `crates/mzlab-feat/src/adducts.rs` and `crates/mzlab-target/src/entry.rs`.
@@ -60,7 +60,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Expected: the area is the integral over the real retention times (trapezoid); |log2(area/true)| = 0.
 - Observed: `cargo test -p mzlab-cli the_xic_area_follows_uneven_scans -- --nocapture` prints |log2| to the XIC 1.10, 1.08, 1.08, 1.07, 1.05, 1.07 with `window` and 0.0000 x 6 with `xic`; `docs/agenti/mzfeat-prove.md` records -0.48 log2 for `window` on simulated DDA. The bias follows the local scan density, so it changes with co-eluting precursors and is not a constant factor.
 - Fix: make `xic` (trapezoid on the real retention times) the default of `area_from`.
-- Status: OPEN (owner decision): reproduced (|log2| 1.10, 1.08, 1.08, 1.07, 1.05, 1.07 with `window`, 0 with `xic`); the fix is a new default of `area_from`.
+- Status: FIXED: `area_from` defaults to `xic` (|log2| 0.0000 x 6 on uneven scans, was 1.10 to 1.05); the unit-resolution recipe keeps `window`; the old behaviour is `det.area_from=window`.
 
 ### B2 - wrong result - targeted cells lose 12 % of a clean Gaussian
 - Place: `crates/mzlab-core/src/peakq.rs:197-232` (`detect_prominence`: limits where the smoothed trace exceeds 5 % of the apex, area above the straight line between the limits), consumed by `crates/mzlab-feat/src/target/extract.rs:120`.
@@ -98,7 +98,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Status: FIXED (owner decision: yes) for `find_peak` (manual table, transitions, candidates, follow): noise = 1.4826 MAD of the RAW trace far from the peak, named by `peak1d::SNR_ESTIMATOR` and in the `snr_min` doc of `chrom.transitions`; median S/N of 21 draws at true 100: 99, 97, 95 at smoothing 1, 3, 5 (before 99, 160, 182). Old reading: `SnrBasis::Smoothed`, step parameter `snr_basis=smoothed`. Test `peak_snr_basis.rs`. OPEN: the flank MAD of `quality.rs` and `peakq_lr::noise_sd` are not named yet.
 
 ### B7 - convention unclear - areas in counts x s and counts x min
-- Place: `crates/mzlab-core/src/baseline.rs` and `peakq.rs` (minutes) against the manual and feature areas (seconds); stated in `docs/agenti/dati-integrazione.md`.
+- Place: `crates/mzlab-core/src/baseline.rs` and `peakq.rs` (minutes) against the manual and feature areas (seconds); stated in `docs/agenti/data-integration.md`.
 - Expected: one unit for the same quantity (H sigma sqrt(2 pi) = 125.331 counts x min = 7519.88 counts x s for the test Gaussian).
 - Observed: `mzlab-cli peak-area g1.csv --from 0.6 --to 1.4` -> 7519.8848; `mzlab-cli peak-auto g1.csv` -> 125.291.
 - Fix: counts x s everywhere, with the unit in the field name.

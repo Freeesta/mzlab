@@ -198,7 +198,7 @@ try:
                 let err = ''; try { await UNT.build([{ name: 'fbmn.mgf', text: mgf }], { pol: 1 }); } catch (e) { err = e.key || String(e); }
                 return { n: t.features.length, s: t.samples, mz: t.byId.get('1').mz, has99: t.byId.has('99'), ann: t.features[0].ann[0].cleanName, ok: UNT.checkStructure('C10H17NO2', 184.1332, 'M+H', 1).ok, bad: UNT.checkStructure('C10H17NO2', 301.1547, 'M+H', 1).ok, err };
             }""", [tab, ann, mgf])
-            assert r["n"] == 6 and r["s"] == ["Campione_A_pos", "Campione_B_pos"] and r["mz"] == 184.1332 and not r["has99"] and r["ann"] == "Testamine", r
+            assert r["n"] == 6 and r["s"] == ["Sample_A_pos", "Sample_B_pos"] and r["mz"] == 184.1332 and not r["has99"] and r["ann"] == "Testamine", r
             assert r["ok"] is True and r["bad"] is False and r["err"] == "noTable", r
         step("tables of other programs: mzMine table and annotations read by the native route, structure checks in a batch, a reader error keeps its key", import_native)
         def grafo_native():
