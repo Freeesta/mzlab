@@ -8,6 +8,7 @@ use mzlab_core::json::{parse, Out, Value};
 use mzlab_core::mzrun::{build, verify, Parts};
 use mzlab_core::samples;
 
+use crate::convert::Notice;
 use crate::Outcome;
 
 /// The full commit this binary was built from (`build.rs`: `MZLAB_COMMIT`, else git); None when the build knew neither.
@@ -107,23 +108,24 @@ fn fill_roles(roles: &mut [samples::Sample], plan: &Value, log: &mut String) -> 
         }
         match hit[..] {
             [sha] => {
-                log.push_str(&format!(
-                    "role {}: sha256 {sha} taken from the run input of that name\n",
-                    r.file
-                ));
+                let note = Notice {
+                    key: "warn.mzrun.roleSha",
+                    params: vec![("file", r.file.clone()), ("sha256", sha.to_string())],
+                };
+                log.push_str(&crate::error_text::warning(&note));
+                log.push('\n');
                 r.sha256 = sha.to_string();
             }
             _ => {
                 let names: Vec<&str> = inputs.iter().map(|(n, _)| n.as_str()).collect();
-                let why = if hit.is_empty() {
-                    "no input of the run has that name"
+                let key = if hit.is_empty() {
+                    "err.mzrun.roleNone"
                 } else {
-                    "several inputs of the run have that name"
+                    "err.mzrun.roleSeveral"
                 };
-                let detail = format!("{why}; the inputs are {}", names.join(", "));
-                let e = mzlab_core::error::Error::new("err.mzrun.roles")
+                let e = mzlab_core::error::Error::new(key)
                     .with("file", r.file.as_str())
-                    .with("detail", detail);
+                    .with("inputs", names.join(", "));
                 return Err(refused(e));
             }
         }

@@ -1,6 +1,6 @@
 # The `mzrun/2` file (`*.mzrun.json`)
 
-One analysis in one canonical JSON file, in two modes: a `record` replicates a run exactly, a `preset` keeps the parameters only and starts a new analysis. Schema `docs/schemi/mzrun-2.json` (JSON Schema 2020-12, `$id` `mzrun/2`), examples `tests/data/mzrun/` (synthetic, no lab data), test `tests/test_mzrun_schema.py`. `mzlab_core::mzrun` (`crates/mzlab-core/src/mzrun/`) writes and checks it; the site and app routes come later (parity rule of CLAUDE.md).
+One analysis in one canonical JSON file, in two modes: a `record` replicates a run exactly, a `preset` keeps the parameters only and starts a new analysis. Schema `docs/schemi/mzrun-2.json` (JSON Schema 2020-12, `$id` `mzrun/2`), examples `tests/data/mzrun/` (synthetic, no lab data), test `tests/test_mzrun_schema.py`. `mzlab_core::mzrun` (`crates/mzlab-core/src/mzrun/`) writes and checks it; it is a CLI function (`flow record`, `flow verify`) with no site or app route.
 
 ## Build and verify (Rust)
 - `build(&Parts)`: the record of a finished run from the `mzflow/2` plan, the `prov/1` and the roles of the files (`campioni/2`: the role of each plan input is found by its SHA-256, `pool` is written as `qc`). `resolved` and `seeds` (integer parameters named `seed` or `*_seed`) come from the `prov/1`; `resources`, `decisions` and `limits` are given by the caller.
@@ -50,7 +50,7 @@ One analysis in one canonical JSON file, in two modes: a `record` replicates a r
 - Planned, later: RO-Crate (Provenance Run Crate) and mzQC exports.
 
 ## Planned
-browser `prov` for all steps; wasm and desktop routes; preset apply; Attributio decisions; UI; ESI+/ESI- merge; exports; e2e replicate.
+`flow record` and `flow verify` as site (`.wasm` + OPFS) and desktop routes with a parity test (only the CLI has them); browser `prov` for all steps; preset apply; Attributio decisions; UI; ESI+/ESI- merge; exports; e2e replicate.
 
 ## From the CLI
 - The commit of `engine` comes from `crates/mzlab-cli/build.rs` (`MZLAB_COMMIT`, else `git rev-parse HEAD`); `flow run` writes it in the `prov/1` agent (`build_agent(name, Some(commit))`), the `.wasm` passes `None` and stays commit-free. A run from a build with neither has no commit: `flow record` exits 3 with `err.mzrun.commit` (set `MZLAB_COMMIT` at build time).

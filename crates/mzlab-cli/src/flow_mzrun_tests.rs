@@ -1,7 +1,15 @@
 //! `flow record` and `flow verify` on a real run of the synthetic base chain: the record verifies, the same run gives the same bytes, a changed byte is named.
+//! The chains need a build that names its commit (a git checkout, or `MZLAB_COMMIT` at build time): `flow run` writes it, `flow record` needs it.
 
 use crate::flow_run_tests::{fixture, flow_run, p};
 use mzlab_core::budget::sha256_hex;
+
+/// When `MZLAB_JSON_SAMPLES` names a folder the document is left there for `tests/test_cli_json.py`.
+fn sample(name: &str, bytes: &[u8]) {
+    if let Some(dir) = std::env::var_os("MZLAB_JSON_SAMPLES") {
+        std::fs::write(std::path::Path::new(&dir).join(name), bytes).unwrap();
+    }
+}
 
 fn cli(args: &[&str]) -> crate::Outcome {
     crate::execute(&args.iter().map(|s| s.to_string()).collect::<Vec<_>>())
@@ -55,6 +63,7 @@ fn a_record_of_a_run_verifies_and_is_the_same_bytes_twice() {
         (3, 0, "self_sha256\n")
     );
     let j = cli(&["flow", "verify", p(&file), "--json"]);
+    sample("verify.json", &j.stdout);
     let j_out = String::from_utf8(j.stdout).unwrap();
     assert_eq!(j.code, 3);
     assert!(
@@ -94,11 +103,7 @@ fn roles_without_sha256_take_it_from_the_run_and_the_record_verifies() {
         p(&file),
     ]);
     assert_eq!(r.code, 0, "{}", r.stderr);
-    assert!(
-        r.stderr.contains("taken from the run input of that name"),
-        "{}",
-        r.stderr
-    );
+    assert!(r.stderr.contains("(warn.mzrun.roleSha)"), "{}", r.stderr);
     let v = cli(&["flow", "verify", p(&file), "--json"]);
     assert_eq!(v.code, 0, "{}", v.stderr);
     assert!(String::from_utf8(v.stdout)
@@ -158,15 +163,12 @@ fn a_role_that_matches_no_input_is_refused_with_the_names_the_run_has() {
 fn a_run_made_without_a_commit_is_refused_with_the_key_and_the_hint() {
     let (out, roles) = run_folder("mzrun_e", true);
     let prov = std::fs::read_to_string(out.join("prov.json")).unwrap();
-    let start = prov
-        .find("\"commit\":\"")
-        .expect("this build names its commit");
-    let end = start + prov[start..].find(',').unwrap() + 1;
-    std::fs::write(
-        out.join("prov.json"),
-        format!("{}{}", &prov[..start], &prov[end..]),
-    )
-    .unwrap();
+    // a build with a commit has the key to take out; one without (no git, no MZLAB_COMMIT) already has none
+    if let Some(start) = prov.find("\"commit\":\"") {
+        let end = start + prov[start..].find(',').unwrap() + 1;
+        let text = format!("{}{}", &prov[..start], &prov[end..]);
+        std::fs::write(out.join("prov.json"), text).unwrap();
+    }
     let r = cli(&["flow", "record", p(&out), "--roles", p(&roles)]);
     assert_eq!(r.code, 3);
     assert!(
