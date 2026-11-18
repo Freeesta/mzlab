@@ -18,7 +18,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Expected: M+2/M of Br2 = 2 x 0.4931 / 0.5069 = 1.95; Br3 2.92; Cl4 1.28; Cl6 1.92 (binomial of the IUPAC abundances, Meija et al., Pure Appl. Chem. 2016, 88, 293).
 - Observed (`isotopes::group`, synthetic features, binomial areas, same RT): Br1 areas [100, 97] -> `iso_group` [1, 1]; Br2 [100, 195, 95] -> [0, 2, 2]; Br3 [100, 292, 284, 92] -> [0, 2, 2, 2]; Cl3 -> one group; Cl4 [100, 128, 61, 13, 1] -> [0, 2, 2, 2, 2]. The monoisotopic ion of a compound with 2 or more Br, or 4 or more Cl, stays alone and M+2 becomes the head of the cluster.
 - Fix: bound the M+2/M ratio by the binomial of the halogen count that the mass allows instead of the constant 1.2.
-- Status: FIXED: the M+2/M cap is the averagine value plus the M+2 of the most Br or Cl the mass holds ((M - 12) / 78.918 Br, / 34.969 Cl; 0.9727 and 0.3199 each), never below the old 1.2; Br2 [100, 195, 95] and Br3 [100, 292, 284, 92] now give one group. The old cap stays selectable (`IsoParams::legacy_plus2_cap`, off by default, written in the recipe text only when on). Tests in `crates/mzlab-feat/src/isotopes.rs`.
+- Status: FIXED: the M+2/M cap is the averagine value plus the M+2 of the most Br or Cl the mass holds ((M - 12) / 78.918 Br, / 34.969 Cl; 0.9727 and 0.3199 each), never below the old 1.2; Br2 [100, 195, 95] and Br3 [100, 292, 284, 92] now give one group. Old cap: `IsoParams::legacy_plus2_cap` (off by default, in the recipe text only when on). Tests in `crates/mzlab-feat/src/isotopes.rs`.
 
 ### A2 - wrong result - fine pattern cut 6.5 Da above the lightest isotopologue
 - Place: `crates/mzlab-core/src/isoscore.rs:133` (`fine_pattern` = `fine_pattern_cut(.., MAX_SHIFT + 0.5)`), used by `isotope_score` (`isoscore.rs:214`).
@@ -31,7 +31,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Expected: (measured - theoretical)/theoretical x 1e6 (Brenton and Godfrey, J. Am. Soc. Mass Spectrom. 2010, 21, 1821).
 - Observed: observed 195.088652 against theory 195.08765: the formula finder gives `delta_ppm` -5.126 and `delta_mda` -1, the adduct table gives `ppm` +5.13.
 - Fix: one sign and one denominator everywhere, (observed - theoretical)/theoretical.
-- Status: FIXED: every route reports (observed - theoretical)/theoretical (formula finder, library search `dprec`, flow match `mass_ppm`, MS2 engine matcher `ppm`; the in-silico candidate `mass_ppm` and the library window's JS search `dprec` in `libreria-worker.js` too; the adduct table and `matchres` already did; the denominator is always the theoretical value); caffeine [M+H]+ typed 195.088652 gives +5.13 ppm, test `the_mass_error_is_observed_minus_theoretical` in `crates/mzlab-core/tests/composition_ions.rs`.
+- Status: FIXED: every route reports (observed - theoretical)/theoretical (formula finder, library search `dprec`, flow match `mass_ppm`, MS2 engine matcher `ppm`, in-silico candidate `mass_ppm`, the JS library search `dprec` in `libreria-worker.js`; the adduct table and `matchres` already did; the denominator is always the theoretical value); caffeine [M+H]+ typed 195.088652 gives +5.13 ppm, test `the_mass_error_is_observed_minus_theoretical` in `crates/mzlab-core/tests/composition_ions.rs`.
 
 ### A4 - convention unclear - even-electron cations typed as `[M]+` always fail SENIOR (and LEWIS when saturated)
 - Place: `crates/mzlab-core/src/composition.rs:419-441` (`broken`), with `half_ok` for `[M]+`/`[M]-`.
@@ -44,7 +44,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Expected: nominal mass = sum of the mass numbers of the most abundant isotopes (Murray et al., Pure Appl. Chem. 2013, 85, 1515): tristearin C57H110O6 = 890.
 - Observed: `mzlab-cli ion-mz C57H110O6` -> neutral 890.8302, `nominal_neutral` 891, [M+H]+ `nominal` 892; `mzlab-cli mol-anal` on the same formula -> `nominal` 890.
 - Fix: compute it from integer isotope masses, or rename the field (rounded m/z).
-- Status: FIXED in `formula_mz` (`ion-mz`, `/api/formula`): `nominal_neutral` is the sum of the mass numbers of the main isotopes (890), `nominal` of an ion that plus the adduct shift (891); the old rounded values are the new keys `neutral0` and `mz0` (the page search keeps using them). OPEN: the `nominal` column of `adduct_table.rs` (the calculator) is still the rounded m/z, which is what a unit-resolution instrument shows.
+- Status: FIXED in `formula_mz` (`ion-mz`, `/api/formula`): `nominal_neutral` is the sum of the mass numbers of the main isotopes (890), `nominal` of an ion that plus the adduct shift (891); the old rounded values are the keys `neutral0` and `mz0` (the page search uses them). OPEN: the `nominal` column of `adduct_table.rs` (the calculator) is still the rounded m/z of a unit-resolution instrument.
 
 ### A6 - precision loss (at most 0.15 ppm) - four mass tables from different evaluations
 - Place: `crates/mzlab-core/src/elements.rs` `MASS` (AME2016, correct to 1e-9 u) against `crates/mzlab-core/src/nuclides.rs` and `isotable.rs` (generated from OpenChemLib), `crates/mzlab-feat/src/attributio/review/adduct.rs` `MASS`, and the typed shifts in `crates/mzlab-feat/src/adducts.rs` and `crates/mzlab-target/src/entry.rs`.
@@ -58,51 +58,51 @@ Each finding gives severity, place, expected value with source, observed value, 
 ### B1 - wrong result - the default feature area is about 2 times low on uneven MS1 spacing (DDA)
 - Place: `crates/mzlab-feat/src/quality.rs:260-267` (sum of y x median dt), default `area_from` = `window` in `crates/mzlab-feat/src/steps/detect.rs:210-211`.
 - Expected: the area is the integral over the real retention times (trapezoid); |log2(area/true)| = 0.
-- Observed: `cargo test -p mzlab-cli the_xic_area_follows_uneven_scans -- --nocapture` prints |log2| to the XIC 1.10, 1.08, 1.08, 1.07, 1.05, 1.07 with `window` and 0.0000 x 6 with `xic`; `docs/agenti/mzfeat-prove.md` records -0.48 log2 for `window` on simulated DDA. The bias follows the local scan density, so it changes with co-eluting precursors and is not a constant factor.
+- Observed: `cargo test -p mzlab-cli the_xic_area_follows_uneven_scans -- --nocapture` prints |log2| to the XIC 1.10, 1.08, 1.08, 1.07, 1.05, 1.07 with `window` and 0.0000 x 6 with `xic`; `docs/agenti/mzfeat-tests.md` records -0.48 log2 for `window` on simulated DDA. The bias follows the local scan density, so it changes with co-eluting precursors and is not a constant factor.
 - Fix: make `xic` (trapezoid on the real retention times) the default of `area_from`.
-- Status: FIXED: `area_from` defaults to `xic` (|log2| 0.0000 x 6 on uneven scans, was 1.10 to 1.05); the unit-resolution recipe keeps `window`; the old behaviour is `det.area_from=window`.
+- Status: FIXED: `area_from` defaults to `xic` (|log2| 0.0000 x 6 on uneven scans, was 1.10 to 1.05); the unit-resolution recipe keeps `window` (also `det.area_from=window`).
 
 ### B2 - wrong result - targeted cells lose 12 % of a clean Gaussian
 - Place: `crates/mzlab-core/src/peakq.rs:197-232` (`detect_prominence`: limits where the smoothed trace exceeds 5 % of the apex, area above the straight line between the limits), consumed by `crates/mzlab-feat/src/target/extract.rs:120`.
 - Expected: area/true = 1 for a noise-free Gaussian on a zero baseline; cutting at 5 % of the height and subtracting that level leaves 0.888 analytically.
 - Observed: area/true = 0.876 for sigma from 2.5 to 20 points, while the cells of the detection route give about 1.0 on the same traces.
 - Fix: integrate from zero between the limits with `quality::trapezoid`, or widen the limits to the baseline.
-- Status: FIXED: default `frac` 0.001 (area/true 0.9952, 0.9953, 0.9966, 0.9966 at sigma 2.5, 5, 10, 20 points, was 0.8747 to 0.8761); the old limit is `frac` 0.05.
+- Status: FIXED: default `frac` 0.001 (area/true 0.9952, 0.9953, 0.9966, 0.9966 at sigma 2.5, 5, 10, 20 points, was 0.8747 to 0.8761); old limit `frac` 0.05.
 
 ### B3 - wrong result - CWT peak area and FWHM depend on the points per peak
 - Place: `crates/mzlab-picchi/src/peaks.rs:325-357` (`asls_baseline(y, 1e5, 0.01, 10, 160)`, lambda in points, CWT widths up to 12); consumers `chrom.uv_peaks@1` (`crates/mzlab-feat/src/uv_bands.rs:60,170`), peak labels, `tracestat`.
 - Expected: area/true = 1 and FWHM/true = 1 whatever the sampling rate (Eilers and Boelens 2005: lambda scales with the fourth power of the sampling density).
 - Observed (n = 3000, height 1e5, baseline 500, noise 100; the same without noise): area/true 0.987 (sigma 2.5 points), 0.977 (5), 0.924 (10), 0.796 (20); sigma 40 is split into 3 peaks (largest 0.485), sigma 80 into 6; FWHM/true 1.007, 0.996, 0.979, 0.937, 0.833.
 - Fix: scale lambda and the CWT widths with the points per peak, or resample to a fixed density before detection.
-- Status: FIXED: `detect_full` scales the AsLS lambda with the 4th power of the sampling density and the CWT widths with the points per peak (`Params.scale_to_width`, on by default; `false` gives the old fixed values, which the Python golden pins); largest piece 0.98-0.987 at sigma 2.5-80 points without noise (before 0.987, 0.977, 0.924, 0.796, 0.485 at 2.5-40), up to sigma 40 with noise; test `crates/mzlab-picchi/tests/peaks_width.rs`.
+- Status: FIXED: `detect_full` scales the AsLS lambda with the 4th power of the sampling density and the CWT widths with the points per peak (`Params.scale_to_width`, default on; `false` = old values, pinned by the Python golden); largest piece 0.98-0.987 at sigma 2.5-80 points without noise (before 0.987, 0.977, 0.924, 0.796, 0.485 at 2.5-40), up to sigma 40 with noise; test `crates/mzlab-picchi/tests/peaks_width.rs`.
 
 ### B4 - precision loss - S/N of the line-residual route is biased high
 - Place: `crates/mzlab-core/src/peakq_lr.rs:234-251,316-318` (noise = SD of the Savitzky-Golay residual).
 - Expected: the residual SD is sigma x sqrt(1 - c0), c0 the central coefficient, so the estimate must be divided by sqrt(1 - c0), as `crates/mzlab-core/src/peakq_auto.rs:206-209` does.
 - Observed: true S/N 100 -> 114 (sigma 1 point), 128 (3 points), 109 (10), 101.5 (25), read through `mzlab-cli peak-edges --set sn_min=`.
 - Fix: divide the residual SD by sqrt(1 - c0(m)).
-- Status: FIXED: the `sn_min` gate divides the residual noise by sqrt(1 - c0(m)) (`residual_shrink`); median S/N of 20 draws at true 100: 103, 98, 98 at sigma 3, 10, 25 points (before 144, 105, 101), test `crates/mzlab-core/tests/peak_width_noise.rs`. Under 3 points per sigma the smoothed apex is low (86 at 1 point): height convention. OPEN (owner decision): the edge limits (`area_noise` x noise, the 800 ratio, the valley slope) keep the residual scale they are tuned on.
+- Status: FIXED: the `sn_min` gate divides the residual noise by sqrt(1 - c0(m)) (`residual_shrink`); median S/N of 20 draws at true 100: 103, 98, 98 at sigma 3, 10, 25 points (before 144, 105, 101); test `crates/mzlab-core/tests/peak_width_noise.rs`. Under 3 points per sigma the smoothed apex is low (86 at 1 point): height convention. OPEN (owner decision): the edge limits (`area_noise` x noise, the 800 ratio, the valley slope) keep the residual scale they are tuned on.
 
 ### B5 - precision loss - `find_peak` FWHM is not interpolated
 - Place: `crates/mzlab-core/src/peak1d.rs:164-169` (`(rt[b] - rt[a]) * 60`).
 - Expected: FWHM = 2.3548 sigma, read at half height by linear interpolation (as `peakext::fwhm`, -1.4 %).
 - Observed (dt 0.8 s): 2.40 s against 2.83 (-15 %, sigma 1.5 points); 5.60 against 5.65 clean and 4.80 noisy (-15 %, sigma 3 points); 10.40 against 11.30 (-8 %, sigma 6 points).
 - Fix: interpolate the two half-height crossings.
-- Status: FIXED: `find_peak` interpolates both half-height crossings (`crossing`); error at 3 and 6 points per sigma at most +1.2 %, at 1.5 points at most +6.1 % (the sampled apex is low), before -43 % to -1 %; test `crates/mzlab-core/tests/peak_width_noise.rs`. `legacy/lr/peakchk.rs` (SUSPECTED below) is unchanged.
+- Status: FIXED: `find_peak` interpolates both half-height crossings (`crossing`); error at 3 and 6 points per sigma at most +1.2 %, at 1.5 points at most +6.1 % (sampled apex low), before -43 % to -1 %; test `crates/mzlab-core/tests/peak_width_noise.rs`. `legacy/lr/peakchk.rs` (SUSPECTED below) unchanged.
 
 ### B6 - convention unclear - several unlabelled S/N definitions
 - Place: `crates/mzlab-core/src/peak1d.rs` (`find_peak`: smoothed height over 1.4826 MAD of the smoothed trace; manual table and transitions, `manint.rs:22`), flank MAD in `crates/mzlab-feat/src/quality.rs`, `peakq_lr::noise_sd`, CWT ridge, prominence over sigma of differences.
 - Expected: one named estimator; the pharmacopoeial one is 2H/h (Ph. Eur. 2.2.46, USP <621>), which gives about 33 for height/sigma = 100.
 - Observed: for a true height/sigma_raw of 100 `find_peak` reports 100 (smoothing 1), 166-169 (smoothing 3, the default of the manual table), 184 (smoothing 5).
 - Fix: name the estimator beside every S/N and compute the noise on the raw trace (or offer 2H/h).
-- Status: FIXED (owner decision: yes) for `find_peak`: noise = 1.4826 MAD of the RAW trace far from the peak, named by `peak1d::SNR_ESTIMATOR` and in the `snr_min` doc of `chrom.transitions`; median S/N of 21 draws at true 100: 99, 97, 95 at smoothing 1, 3, 5 (before 99, 160, 182). Old reading: `snr_basis=smoothed`. Test `peak_snr_basis.rs`. OPEN: the flank MAD of `quality.rs` and `peakq_lr::noise_sd` are not named yet.
+- Status: FIXED (owner decision: yes) for `find_peak`: noise = 1.4826 MAD of the RAW trace far from the peak, named by `peak1d::SNR_ESTIMATOR` and in the `snr_min` doc of `chrom.transitions`; median S/N of 21 draws at true 100: 99, 97, 95 at smoothing 1, 3, 5 (before 99, 160, 182); old reading `snr_basis=smoothed`; test `peak_snr_basis.rs`. OPEN: the flank MAD of `quality.rs` and `peakq_lr::noise_sd` are not named yet.
 
 ### B7 - convention unclear - areas in counts x s and counts x min
 - Place: `crates/mzlab-core/src/baseline.rs` and `peakq.rs` (minutes) against the manual and feature areas (seconds); stated in `docs/agenti/data-integration.md`.
 - Expected: one unit for the same quantity (H sigma sqrt(2 pi) = 125.331 counts x min = 7519.88 counts x s for the test Gaussian).
 - Observed: `mzlab-cli peak-area g1.csv --from 0.6 --to 1.4` -> 7519.8848; `mzlab-cli peak-auto g1.csv` -> 125.291.
 - Fix: counts x s everywhere, with the unit in the field name.
-- Status: FIXED (owner decision: yes, at the export boundary): `peak-auto-lr`, `peak-auto` and the page's `lr_auto_integrate` export counts x s by default; `area_unit=min` (wasm params slot 6 = 1) keeps the old counts x min byte for byte. The engines keep minutes inside; JSON keys are unchanged.
+- Status: FIXED (owner decision: yes, at the export boundary): `peak-auto-lr`, `peak-auto` and the page's `lr_auto_integrate` export counts x s by default; `area_unit=min` (wasm params slot 6 = 1) keeps counts x min byte for byte. Engines keep minutes inside; JSON keys unchanged.
 
 ## CONFIRMED - area 3, spectral matching
 
@@ -110,7 +110,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Place: `crates/mzlab-core/src/entropy.rs` (`entropy_similarity`), `crates/mzlab-lib/src/prep.rs` (`entropy_with_query`, behind `pair_scores`, `entropy_from_pairs` and the library scan), the JS fallback `mzlab/web/libreria-worker.js` (`entropySimilarity`), the Python reference `tools/golden.py`.
 - Expected: 0, as `ms_entropy` and as the sum of the pair contributions (`contrib::entropy_contributions`) say: an empty spectrum shares nothing.
 - Observed: with no peaks, or every peak at 0, S_AB = (S_B + ln 2)/2 and the formula gives 1 - ln 2/ln 4 = 0.5 (0.4999999999999999 on the engine); the JS fallback followed the same formula, the Python reference divided by zero.
-- Status: FIXED: every route returns 0 when either spectrum has no positive intensity; tests `crates/mzlab-core/src/entropy_tests.rs`, `crates/mzlab-lib/tests/empty_spectrum.rs`, `tests/test_libreria.py`. No golden contains such a spectrum, so no expected value moves.
+- Status: FIXED: every route returns 0 when either spectrum has no positive intensity; tests `crates/mzlab-core/src/entropy_tests.rs`, `crates/mzlab-lib/tests/empty_spectrum.rs`, `tests/test_libreria.py`; no golden holds such a spectrum.
 
 ### C2 - precision loss - the library cleaning cuts the noise before merging, in one pass
 - Place: `crates/mzlab-lib/src/clean.rs` (`clean`, `centroid`), used to build every `.mzlib` and to clean every query.
@@ -131,7 +131,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Expected: CV = s/mean with s the sample SD, divisor n - 1 (ICH Q2(R2), repeatability; Broadhurst et al., Metabolomics 2018, 14, 72 for QC CV).
 - Observed: two groups of replicates -> 0.0909 and 0.1859; numpy with `ddof=1` gives 0.1286 and 0.2277, with `ddof=0` 0.0909 and 0.1859. With 3 replicates the CV is low by sqrt(2/3) = 0.816.
 - Fix: divide by n - 1.
-- Status: FIXED: the QC replicate CV and `standard_cv` divide by n - 1 (`qc::cv`); two replicates now give sqrt(2) times the old value, test `replicate_cv_uses_the_sample_sd_and_the_population_sd_stays_selectable` in `crates/mzlab-feat/tests/view.rs`. The old divisor n stays selectable with `"cv_ddof":0` in the view spec.
+- Status: FIXED: the QC replicate CV and `standard_cv` divide by n - 1 (`qc::cv`); two replicates give sqrt(2) times the old value, test `replicate_cv_uses_the_sample_sd_and_the_population_sd_stays_selectable` in `crates/mzlab-feat/tests/view.rs`; old divisor n: `"cv_ddof":0` in the view spec.
 
 ### D2 - convention unclear - the 95 % ellipses of the PCA use the chi-square quantile 5.991
 - Place: `crates/mzlab-core/src/pca.rs` (`ellipse`), reference `mzlab/statistica.py` (`ellipse`, same constant).

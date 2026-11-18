@@ -1,6 +1,6 @@
 //! The comparison of the candidate positions with the observed MS2: which groups of positions the spectrum supports, excludes or cannot tell apart.
 //!
-//! Rules (all of them written in `docs/agenti/posizioni.md`):
+//! Rules (all of them written in `docs/agenti/positions.md`):
 //! * the spectrum is reduced to its 30 most intense peaks above 1 % of the base peak (precursor removed); «intense» means at least 10 % of the base peak;
 //! * a candidate explains a peak WITH the change when a fragment carrying it matches, WITHOUT when a fragment that does not carry it matches;
 //! * candidates with the same set of peaks explained with the change (and the same exclusion) form one class: the spectrum cannot tell them apart;

@@ -70,7 +70,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - Page-side debugging: `MZLAB_TRACE` (an array defined on `window` before loading) records rpc and fetch with timings; every route served by `lr.js` gives the same JSON as Python (`e2e_lr.py`).
 
 ## Area files
-- Engine in the page, `api/...` routes, Thermo `.raw`: `rust-rotte.md`. `.mzidx` builder and the site's worker pool: `rust-mzidx.md`, format in `mzidx.md`.
+- Engine in the page, `api/...` routes, Thermo `.raw`: `rust-routes.md`. `.mzidx` builder and the site's worker pool: `rust-mzidx.md`, format in `mzidx.md`.
 - Readers modules: `readers-module.md`. Memory and budget: `memory.md`. `.wasm` caps: `wasm-tetti.md`. Measures: `measurements-rust.md`, `measurements-speed.md`.
 - Desktop app: `rust-desktop.md` (mzFinder native: `rust-desktop-finder.md`). Flow: `rust-flow.md` (`mzflow/2`, `prov/1`), `rust-step.md` (`step/1`), `cli.md`.
 - `mol/1`: `mol.md`. Libraries: `libraries.md`. Features: `mzfeat.md`. MSn graph: `msn-graph.md`.

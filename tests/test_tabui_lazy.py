@@ -2,7 +2,7 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-LAZY = ["reattivita.js", "viewer3d.js", "reatt-auto.js"]       # panel of reactivity of the parent and its 3D viewer (docs/agenti/reattivita.md)
+LAZY = ["reattivita.js", "viewer3d.js", "reatt-auto.js"]       # panel of reactivity of the parent and its 3D viewer (docs/agenti/reactivity.md)
 
 
 def test_lazy_scripts_are_not_in_startup_folder():

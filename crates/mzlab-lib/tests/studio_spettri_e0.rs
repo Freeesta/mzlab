@@ -1,4 +1,4 @@
-//! Spectral study, E0 (clean replicate): today's numbers of the baseline arms, pinned (`docs/agenti/studio-spettri.md`, MISURA studio_e0).
+//! Spectral study, E0 (clean replicate): today's numbers of the baseline arms, pinned (`docs/agenti/study-spectra.md`, MISURA studio_e0).
 //! E0: every query is a new measurement (CE 35, fresh noise) of a library entry.
 //! A change of the engine or of the generator that moves a number updates the pin and the MISURA line together.
 

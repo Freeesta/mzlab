@@ -4,7 +4,7 @@ The profile `V1X` (or `V1X-piccolo`) of tools/valida/sintetici_identita.py runs 
 (`flow`: the seed plus a fixed label), never `c.rng`, so the V1 part of the model is the same as in the profile it extends. Halogens and close isomers are in
 sintetici_esteso_chimica.py, the truth in sintetici_esteso_verita.py. Every molecule and number is invented; the progenitor is a generic formula.
 
-Modules (parameters in `PROFILI[...]["esteso"]`, table in docs/agenti/mzfinder-validazione.md):
+Modules (parameters in `PROFILI[...]["esteso"]`, table in docs/agenti/mzfinder-validation.md):
 - M1 `catene`: chains progenitor -> TP1 -> TP2 (-> TP3) with the steps taken from the `fotocatalisi` rules table; the total change of a TP is never one rule of the table
   (and, for a third generation, never two): the observed network or a cleavage is needed. One family in the manner of a cleavage followed by oxidations, one chain whose
   third generation is a trace (3-10 times the noise). Delayed maxima: the amount of generation n is the n-th species of a chain of first-order steps.

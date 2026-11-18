@@ -1,4 +1,4 @@
-"""Automatic reactivity of the parent in Tabui (TP_Mine/lazy/reatt-auto.js, TP_Mine/files/chem-worker.js; docs/agenti/reattivita.md).
+"""Automatic reactivity of the parent in Tabui (TP_Mine/lazy/reatt-auto.js, TP_Mine/files/chem-worker.js; docs/agenti/reactivity.md).
 The 38 synthetic files of tests/data/gruppi go in through the page. Without «mzlab.admin» a Dig fetches no .wasm «chem» and shows no bar. With it: after a Dig the panel goes
 waiting -> computing -> done and the table has the values (bentazone, a public compound); a new Dig while it computes stops the worker, the panel waits and the calculation runs again after the TPs;
 a cancelled Dig starts nothing; the same SMILES and options give the session's copy; the options (solvent, conformers, form at pH 7) and «Recompute»; the time of a Dig does not grow with the reactivity armed.

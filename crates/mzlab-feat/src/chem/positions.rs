@@ -2,7 +2,7 @@
 //! can sit, group them by symmetry, compute the fragments each one predicts and say which groups of positions the spectrum supports, excludes or cannot
 //! tell apart. It never picks a position and never assigns a level: `proposal.sublevel` is a suggestion (3a or 3b) for the chemist.
 //! With the `reatt/1` of the parent the report also carries `prior`, the f(−) of each site as a «Prev.» that never changes the classes (`prior.rs`).
-//! Graph limits are those of `graph::Mol` (rings are not opened, no stereochemistry). Contract and rules: `docs/agenti/posizioni.md`.
+//! Graph limits are those of `graph::Mol` (rings are not opened, no stereochemistry). Contract and rules: `docs/agenti/positions.md`.
 
 mod comparison;
 mod fragments;

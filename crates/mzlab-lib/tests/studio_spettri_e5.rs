@@ -1,4 +1,4 @@
-//! Spectral study, E5 (two-shift analogues): today's numbers of the baseline arms, pinned (`docs/agenti/studio-spettri.md`, MISURA studio_e5).
+//! Spectral study, E5 (two-shift analogues): today's numbers of the baseline arms, pinned (`docs/agenti/study-spectra.md`, MISURA studio_e5).
 //! E5: analogues with +O and -Cl+H (or -CH2) on disjoint subtrees; the modified compound is absent, its parent is the truth.
 //! A change of the engine or of the generator that moves a number updates the pin and the MISURA line together.
 
