@@ -49,7 +49,7 @@ Counts per area. `identifiers` and `keys` are distinct names per file, summed ov
 | other | 2 | 26 | 2 (the workflow files themselves) | 0 |
 
 - Notes of the map: `GITHUB` = a `.github/` file names the old path (crate names included): it is renamed only in the final batch, together with the workflow. `MERGE` = the new directory exists (`tests/dati` → `tests/data`). `COLLISION` = two sources, an existing file, or a module directory next to another module's file get the same path (none left). `REORDERED` = a word-order rule fired: read the row before the rename.
-- Crate renames (`mzlab-lettori` → `mzlab-readers`, `mzlab-picchi` → `mzlab-peaks`, `mzlab-rotte-wasm` → `mzlab-routes-wasm`, `mzlab-msngrafo-wasm`, `mzlab-msnfigura-wasm`, `mzlab-msnregole-wasm`, `mzlab-lettori-wasm`, `mzlab-feat-grafo-wasm`) also rename the `.wasm` files: `sw.js` precache, `tools/build_site.py`, the caps of `wasm-tetti.md` and the size checks follow.
+- Crate renames (`mzlab-lettori` → `mzlab-readers`, `mzlab-picchi` → `mzlab-peaks`, `mzlab-rotte-wasm` → `mzlab-routes-wasm`, `mzlab-msngrafo-wasm`, `mzlab-msnfigura-wasm`, `mzlab-msnregole-wasm`, `mzlab-lettori-wasm`, `mzlab-feat-grafo-wasm`) also rename the `.wasm` files: `sw.js` precache, `tools/build_site.py`, the caps of `wasm-caps.md` and the size checks follow.
 
 ## Scope (decisions)
 - Out of scope: the Markdown prose of `docs/` stays Italian (15100 lines); only `docs/` file and directory names are renamed, and only those without the `GITHUB` note.

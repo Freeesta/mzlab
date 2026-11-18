@@ -191,7 +191,7 @@ def test_guard_no_relaxed_simd_in_build_files():
     assert not found, f"relaxed SIMD in build files: {found}"
 
 
-# Std sorts cost 2-10 KB of .wasm per instance: the wasm crates use `mzlab_picchi::sortc` (docs/agenti/wasm-tetti.md, «Ordinamenti»).
+# Std sorts cost 2-10 KB of .wasm per instance: the wasm crates use `mzlab_picchi::sortc` (docs/agenti/wasm-caps.md, «Ordinamenti»).
 SORT_STD = re.compile(r"\.sort(_unstable)?(_by(_key)?|_by_cached_key)?\(")
 # folders that keep std sorts (raw-data detection, legacy reference)
 SORT_STD_ALLOWED = ("crates/mzlab-feat/src/untargeted/", "crates/mzlab-feat/src/legacy/")
@@ -212,7 +212,7 @@ def test_guard_std_sorts_only_sortc_in_wasm_crates():
 
 
 # Std exp/ln/pow/trig come from the system library in a native build and from the libm port in the .wasm, which differ in the last bit:
-# the engine crates call `libm::` so the site, the app and the CLI write the same bytes (docs/agenti/parita.md, «Funzioni matematiche»).
+# the engine crates call `libm::` so the site, the app and the CLI write the same bytes (docs/agenti/parity.md, «Funzioni matematiche»).
 MATH_STD = re.compile(r"\.(exp|ln|log10|log2|powf|sin|cos|tan|asin|acos|atan|atan2|sinh|cosh|tanh|exp2|exp_m1|ln_1p|cbrt|hypot)\(")
 
 

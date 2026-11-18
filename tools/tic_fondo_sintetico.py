@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Synthetic unit-resolution LC-MS run with chemical background and known truth, for the background removal of the TIC (`ticbg`, `docs/agenti/tic-fondo.md`).
+"""Synthetic unit-resolution LC-MS run with chemical background and known truth, for the background removal of the TIC (`ticbg`, `docs/agenti/tic-background.md`).
 The same model as `crates/mzlab-core/src/ticbg_synth.rs` (the Rust tests use that one): six background lines (m/z 141, 149, 158, 198, 214, 236)
 with a 60 % drift over the run and 5 % noise, eight random noise ions per scan, and real peaks; the default peak at 14.3 min has ions at 198 and
 158 (on two background lines) and 305. No lab data.

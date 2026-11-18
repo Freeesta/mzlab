@@ -1,4 +1,4 @@
-"""Spectral study (docs/agenti/studio-spettri.md): runs the `studio_spettri` example of mzlab-lib in release mode for 3 seeds per scenario and
+"""Spectral study (docs/agenti/study-spectra.md): runs the `studio_spettri` example of mzlab-lib in release mode for 3 seeds per scenario and
 prints one `MISURA studio_<scenario>: ...` line per arm (mean over the seeds, min-max in brackets for Recall@1 and AUPRC@FDR<=1 %). The arm
 set is `base` (the baselines), `null` (arm A: the decoy kinds and the +1-corrected q, `MISURA studio_null_<scenario>`), `idf` (arm B:
 coincidence p-value and information weights, `MISURA studio_idf_<scenario>`), `subf` (arm C: sub-formula filter and NNLS, `studio_subf_*`) or
