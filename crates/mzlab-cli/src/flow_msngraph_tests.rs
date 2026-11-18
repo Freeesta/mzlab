@@ -191,8 +191,8 @@ fn a_saved_plan_at_1_gives_the_bytes_of_the_plan_at_2_with_the_new_names() {
             r#"{"formula":"C14H15N3O5+","interpret":true,"loss_ppm":5,"rules":true,"loss_tol_mda":2}"#,
         ),
         (
-            r#"{"formula":"C14H15N3O5+","smiles":"CCOC(=O)c1c[nH]c2ccccc12","strutture_nodo":"tutti","ppm_struttura":5}"#,
-            r#"{"formula":"C14H15N3O5+","smiles":"CCOC(=O)c1c[nH]c2ccccc12","structures":"all","struct_ppm":5}"#,
+            r#"{"formula":"C14H15N3O5+","smiles":"CCOC(=O)c1c[nH]c2ccccc12","strutture_nodo":"n3","ppm_struttura":5}"#,
+            r#"{"formula":"C14H15N3O5+","smiles":"CCOC(=O)c1c[nH]c2ccccc12","structures":"n3","struct_ppm":5}"#,
         ),
         (
             r#"{"formula":"C14H15N3O5+","smiles":"CCOC(=O)c1c[nH]c2ccccc12","rotture":true,"max_legami":1}"#,

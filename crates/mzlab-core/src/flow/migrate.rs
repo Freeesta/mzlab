@@ -53,14 +53,7 @@ fn rename(p: Params, table: &[(&str, &str)]) -> Params {
 }
 
 fn msn_graph_1_2(p: Params) -> Params {
-    // the value `tutti` of the structures parameter is `all` now
     rename(p, MSN_GRAPH_1_2)
-        .into_iter()
-        .map(|(k, v)| match (k.as_str(), &v) {
-            ("structures", Value::Str(s)) if s == "tutti" => (k, Value::Str("all".into())),
-            _ => (k, v),
-        })
-        .collect()
 }
 
 /// `table.filter@1 → @2`: version 1 counted the gap-filled blank cells, so a saved plan keeps that rule until it is changed by hand.
