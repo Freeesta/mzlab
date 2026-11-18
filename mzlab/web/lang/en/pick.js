@@ -32,10 +32,5 @@ I18N.add("en", {
   "pick.kind.ms2": "MS²",
   "pick.kind.sim": "SIM",
   "pick.kind.mrm": "MRM",
-  "pick.kind.dad": "DAD",
-  "settings.pick": "Choose samples of a file",
-  "settings.pick.title": "Ask which samples of a .wiff to open",
-  "settings.pick.several": "When a file has several",
-  "settings.pick.always": "Always ask",
-  "settings.pick.never": "Never, open all"
+  "pick.kind.dad": "DAD"
 });
