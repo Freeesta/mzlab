@@ -193,19 +193,26 @@ fn median(v: &[f64]) -> f64 {
 #[test]
 fn the_window_area_removes_the_bias_of_a_wandering_mass() {
     let channel = bias(&features(&run("channel", &["det.area_from=channel"])).0);
-    let window = bias(&features(&run("window", &[])).0);
-    eprintln!("|log2| channel {channel:.4?}\n|log2| window  {window:.4?}");
+    let window = bias(&features(&run("window", &["det.area_from=window"])).0);
+    // the default, `xic`: a little less exact than `window` on this wandering mass (0.037 against 0.025) but exact on uneven scans (below)
+    let xic = bias(&features(&run("xic", &[])).0);
+    eprintln!(
+        "|log2| channel {channel:.4?}\n|log2| window  {window:.4?}\n|log2| xic (default) {xic:.4?}"
+    );
     assert!(median(&channel) > 0.1, "{channel:?}");
     assert!(median(&window) <= 0.025, "{window:?}");
     assert!(window.iter().all(|&b| b <= 0.03), "{window:?}");
+    assert!(xic.iter().all(|&b| b <= 0.05), "{xic:?}");
 }
 
-/// `area_from` reaches the run: the plan as run carries it and the recipe text in the meta of the features changes; `window` is the default.
+/// `area_from` reaches the run: the plan as run carries it and the recipe text in the meta of the features changes; `xic` is the default and `window` the former one.
 #[test]
 fn area_from_can_be_set_from_the_command_line() {
     let base = run("base", &[]);
+    let xic = run("xic", &["det.area_from=xic"]);
+    assert_eq!(features(&xic), features(&base));
     let window = run("win", &["det.area_from=window"]);
-    assert_eq!(features(&window), features(&base));
+    assert_ne!(features(&window).1, features(&base).1);
     let channel = run("chan", &["det.area_from=channel"]);
     let plan = channel.iter().find(|f| f.0 == "plan.json").unwrap();
     let plan = String::from_utf8(plan.1.clone()).unwrap();
@@ -217,8 +224,14 @@ fn area_from_can_be_set_from_the_command_line() {
 /// above 2e6 counts, `wide` joins them all and keeps the low ones, so each ion is one row with its whole area.
 #[test]
 fn the_wide_stitch_keeps_one_row_per_ion_at_three_ppm() {
-    let strict = features(&run_at("strict3", &["det.stitch=strict"], 3.0)).0;
-    let wide = features(&run_at("wide3", &[], 3.0)).0;
+    let strict = features(&run_at(
+        "strict3",
+        &["det.stitch=strict", "det.area_from=window"],
+        3.0,
+    ))
+    .0;
+    // `window` as the evidence of the stitch was measured (the default `xic` is bounded below)
+    let wide = features(&run_at("wide3", &["det.area_from=window"], 3.0)).0;
     let (n_strict, n_wide) = (rows_per_ion(&strict), rows_per_ion(&wide));
     let (b_strict, b_wide) = (bias(&strict), bias(&wide));
     eprintln!("rows strict {n_strict:?} wide {n_wide:?}\n|log2| strict {b_strict:.4?}\n|log2| wide   {b_wide:.4?}");
@@ -226,6 +239,10 @@ fn the_wide_stitch_keeps_one_row_per_ion_at_three_ppm() {
     assert!(n_wide.iter().all(|&n| n == 1), "{n_wide:?}");
     assert!(b_strict.iter().any(|&b| b > 0.5), "{b_strict:?}");
     assert!(b_wide.iter().all(|&b| b <= 0.05), "{b_wide:?}");
+    // the default area (`xic`) with the same stitch: one row per ion and an area within 0.07 log2 of the truth
+    let xic = features(&run_at("xic3", &[], 3.0)).0;
+    assert!(rows_per_ion(&xic).iter().all(|&n| n == 1));
+    assert!(bias(&xic).iter().all(|&b| b <= 0.07), "{:?}", bias(&xic));
 }
 
 /// `stitch` reaches the run like `area_from`; `wide` is the default.
