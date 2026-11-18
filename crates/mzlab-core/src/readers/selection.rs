@@ -67,6 +67,19 @@ pub fn selection_json(present: &[u32], text: &str) -> Result<String> {
 /// A set whose sections add up to at most this share of the memory budget opens whole without asking for a choice.
 const SMALL_SHARE: u64 = 4;
 
+/// The memory budget, in MB, the first ticks are measured against when the caller has none (the page before its engine reports one, the CLI without `--budget-mb`, the app).
+pub const DEFAULT_BUDGET_MB: f64 = 1024.0;
+
+/// `budget_mb` in bytes; zero, negative or not a number means `DEFAULT_BUDGET_MB`.
+pub fn budget_bytes(budget_mb: f64) -> u64 {
+    let mb = if budget_mb.is_finite() && budget_mb > 0.0 {
+        budget_mb
+    } else {
+        DEFAULT_BUDGET_MB
+    };
+    (mb * 1_048_576.0) as u64
+}
+
 /// The samples the chooser ticks at the start: every one when the whole set is small (its section bytes, `sizes` in the order of `ids`, add up to at most a
 /// quarter of `budget_bytes`), none when it is not, so that opening is never started by default on a set the memory may not hold. The user changes it.
 pub fn suggest(ids: &[u32], sizes: &[u64], budget_bytes: u64) -> Vec<u32> {
@@ -122,5 +135,14 @@ mod tests {
         assert!(suggest(&[1, 2], &[10, 20], 100).is_empty());
         assert_eq!(suggest_json(&[1, 2], &[10], 400), "{\"samples\":[1,2]}");
         assert_eq!(suggest_json(&[1], &[500], 400), "{\"samples\":[]}");
+    }
+
+    #[test]
+    fn a_missing_budget_is_the_default_one() {
+        let d = (DEFAULT_BUDGET_MB * 1_048_576.0) as u64;
+        assert_eq!(budget_bytes(0.0), d);
+        assert_eq!(budget_bytes(-3.0), d);
+        assert_eq!(budget_bytes(f64::NAN), d);
+        assert_eq!(budget_bytes(2.0), 2 * 1_048_576);
     }
 }

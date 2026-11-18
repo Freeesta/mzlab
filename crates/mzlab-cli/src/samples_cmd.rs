@@ -17,7 +17,7 @@ usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,
        mzlab-cli samples group NAME...
        mzlab-cli samples table [--names FILE|-]
        mzlab-cli samples list FILE... [--json] [--probe]   (samples list --help)
-       mzlab-cli samples select FILE --sample LIST [--json]   (samples select --help)
+       mzlab-cli samples select FILE (--sample LIST | --default [--budget-mb N]) [--json]   (samples select --help)
 
   --names FILE|-  one file name per line (default: the standard input)
   --pos N         also the manual variable of the N-th token (1 = first, -1 = last), cut at --sep (default \"_-. \")
@@ -250,7 +250,7 @@ usage: mzlab-cli samples select FILE (--sample LIST | --default [--budget-mb N])
   FILE         a .wiff (its .wiff.scan is not read), another vendor file or a .D / .raw folder
   --sample LIST  sample ids and ranges: 1,3,5 or 2-4 (the ids of `samples list`, not positions)
   --default    the samples the site's chooser ticks at the start (`sample_default`): all when their section bytes are small against the budget, none otherwise
-  --budget-mb N  the memory budget for --default in MB (default 1024)
+  --budget-mb N  the memory budget for --default in MB (default 1024; 0 = the default)
   --json       {\"samples\":[ids]} on stdout, the ids in the order of the file: the same bytes as the site's `sample_selection` / `sample_default`
 The same LIST is taken by `convert`, `channels` and `features`.
 Exit codes: 0 selected; 2 usage (LIST is not a list); 4 the file is missing or unreadable; 5 an id the file does not have (the ids present are named).";
@@ -258,7 +258,7 @@ Exit codes: 0 selected; 2 usage (LIST is not a list); 4 the file is missing or u
 /// `samples select FILE --sample LIST [--json]`: the dry run of `--sample`.
 fn select_run(args: Vec<String>) -> Outcome {
     let (mut file, mut text, mut json) = (None::<PathBuf>, None::<String>, false);
-    let (mut default, mut budget) = (false, 1024.0f64);
+    let (mut default, mut budget) = (false, 0.0f64);
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -302,7 +302,11 @@ fn select_run(args: Vec<String>) -> Outcome {
             crate::sample_select::parse(t).and_then(|w| crate::sample_select::resolve(&file, &w))
         }
         None => crate::sample_select::sized(&file).map(|(ids, sizes)| {
-            mzlab_core::readers::selection::suggest(&ids, &sizes, (budget * 1_048_576.0) as u64)
+            mzlab_core::readers::selection::suggest(
+                &ids,
+                &sizes,
+                mzlab_core::readers::selection::budget_bytes(budget),
+            )
         }),
     };
     match chosen {

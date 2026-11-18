@@ -5,7 +5,7 @@
 // (`sample_selection`) are the engine's; this file draws a dialog and reports the ticked ids. Lazy (carica("wiff-choose.js")), called by wiffToMzml (shell.js).
 
 const wcT = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p);
-const wcMb = (/** @type {number} */ n) => n >= 1 << 20 ? (n / 1048576).toFixed(n >= 10 << 20 ? 0 : 1) + " MB" : Math.max(n > 0 ? 1 : 0, Math.round(n / 1024)) + " KB";
+const wcMb = (/** @type {number} */ n) => n >= 1 << 20 ? wcT("pick.mb", { n: (n / 1048576).toFixed(n >= 10 << 20 ? 0 : 1) }) : wcT("pick.kb", { n: Math.max(n > 0 ? 1 : 0, Math.round(n / 1024)) });
 const wcEl = (/** @type {string} */ tag, /** @type {Record<string, any>} */ a = {}, /** @type {(Node | string)[]} */ kids = []) => {
   const e = document.createElement(tag);
   for (const [k, v] of Object.entries(a)) { if (k === "text") e.textContent = v; else if (k in e && k !== "list") /** @type {any} */ (e)[k] = v; else e.setAttribute(k, v); }
@@ -70,13 +70,13 @@ function wcDialog(/** @type {Entry[]} */ entries, /** @type {any} */ rb) {
         cb.setAttribute("aria-label", s.name);
         cb.onchange = upd;
         boxes.push({ cb, e, s });
-        const note = s.why ? " (" + wcT(WC_WHY[s.why] || "pick.why.refused") + ")" : "", kinds = (s.kinds || []).map(k => wcT(WC_KIND[k] || k)).join(", ");
+        const note = s.why ? wcT("pick.note", { why: wcT(WC_WHY[s.why] || "pick.why.refused") }) : "", kinds = (s.kinds || []).map(k => wcT(WC_KIND[k] || k)).join(", ");
         tbody.append(wcEl("tr", {}, [wcEl("td", {}, [cb]), wcEl("td", { text: s.name + note }), wcEl("td", { className: "n", text: String(s.id) }), wcEl("td", { text: kinds }), wcEl("td", { className: "n", text: s.scans ? s.scans.toLocaleString("en") : wcT("pick.empty") }), wcEl("td", { className: "n", text: s.size ? wcMb(s.size) : "" })]));
       }
       tb.append(tbody); body.append(wcEl("div", { className: "wc-scroll" }, [tb]));
     }
     const foot = wcEl("div", { className: "wc-act" }, [ok, cancel]);
-    dlg.append(wcEl("h2", { id: "wc-title", text: wcT("pick.title") }), wcEl("p", { className: "wc-intro", text: wcT("pick.intro", { files: entries.length === 1 ? entries[0].name : entries.length + " files", samples: total }) }), bar, msg, body, status, foot);
+    dlg.append(wcEl("h2", { id: "wc-title", text: wcT("pick.title") }), wcEl("p", { className: "wc-intro", text: wcT("pick.intro", { files: entries.length === 1 ? entries[0].name : wcT("pick.files", { n: entries.length }), samples: total }) }), bar, msg, body, status, foot);
     let result = /** @type {Map<string, number[]> | null} */ (null);
     const finish = () => { dlg.close(); dlg.remove(); if (prior && prior.isConnected) prior.focus(); done(result); };
     ok.onclick = () => { result = new Map(entries.map(e => [e.key, boxes.filter(b => b.e === e && b.cb.checked).map(b => b.s.id)])); finish(); };

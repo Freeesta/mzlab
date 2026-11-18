@@ -14,7 +14,7 @@ use crate::natives;
 use crate::rpc::{io_error, text, Answer, Eng};
 
 /// `natdefault {ids, sizes, budget_mb?}` / `natselect {present, text}`: the answers the page's sample chooser asks of the engine (`readers::selection`, the twins of the
-/// site worker's ops; the same bytes as `sample_default`, `sample_selection` and `mzlab-cli samples select`). The app has no wasm cap: the budget is the page's or 1024 MB.
+/// site worker's ops; the same bytes as `sample_default`, `sample_selection` and `mzlab-cli samples select`). The app has no wasm cap: the budget is the page's or `selection::DEFAULT_BUDGET_MB`.
 pub(crate) fn nat_choose(op: &str, p: &Value) -> Result<Answer> {
     use mzlab_core::readers::selection;
     let nums = |k: &str| -> Vec<f64> {
@@ -33,14 +33,10 @@ pub(crate) fn nat_choose(op: &str, p: &Value) -> Result<Answer> {
     }
     let ids: Vec<u32> = nums("ids").iter().map(|x| *x as u32).collect();
     let sizes: Vec<u64> = nums("sizes").iter().map(|x| x.max(0.0) as u64).collect();
-    let mb = p["budget_mb"]
-        .as_f64()
-        .filter(|x| *x > 0.0)
-        .unwrap_or(1024.0);
     text(selection::suggest_json(
         &ids,
         &sizes,
-        (mb * 1_048_576.0) as u64,
+        selection::budget_bytes(p["budget_mb"].as_f64().unwrap_or(0.0)),
     ))
 }
 

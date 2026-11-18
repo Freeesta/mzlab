@@ -211,7 +211,7 @@ fn select_default_ticks_a_small_set_and_nothing_when_it_would_not_fit() {
         &wiff,
         "--default",
         "--budget-mb",
-        "0",
+        "0.0001",
         "--json",
     ]);
     assert_eq!(

@@ -37,5 +37,9 @@ pub fn sample_default(ids: &[u32], sizes: &[f64], budget_mb: f64) -> String {
         }
     };
     let sizes: Vec<u64> = sizes.iter().map(|x| bytes(*x)).collect();
-    mzlab_core::readers::selection::suggest_json(ids, &sizes, bytes(budget_mb * 1_048_576.0))
+    mzlab_core::readers::selection::suggest_json(
+        ids,
+        &sizes,
+        mzlab_core::readers::selection::budget_bytes(budget_mb),
+    )
 }

@@ -593,7 +593,7 @@ usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,
        mzlab-cli samples group NAME...
        mzlab-cli samples table [--names FILE|-]
        mzlab-cli samples list FILE... [--json] [--probe]   (samples list --help)
-       mzlab-cli samples select FILE --sample LIST [--json]   (samples select --help)
+       mzlab-cli samples select FILE (--sample LIST | --default [--budget-mb N]) [--json]   (samples select --help)
 
   --names FILE|-  one file name per line (default: the standard input)
   --pos N         also the manual variable of the N-th token (1 = first, -1 = last), cut at --sep (default "_-. ")

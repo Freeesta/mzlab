@@ -1,6 +1,10 @@
 I18N.add("en", {
   "pick.title": "Choose samples",
   "pick.intro": "{files} with {samples} samples. Tick what to open; the samples you leave out are not read.",
+  "pick.files": "{n} files",
+  "pick.mb": "{n} MB",
+  "pick.kb": "{n} KB",
+  "pick.note": " ({why})",
   "pick.file": "{name} ({n} samples, {size})",
   "pick.table": "Samples of {name}",
   "pick.col.open": "Open",

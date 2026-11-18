@@ -63,8 +63,8 @@ def test_the_default_ticks_are_the_same_from_the_site_and_the_cli(work):
     sized = subprocess.run(cli_argv("samples", "list", str(work / "big" / "grande.wiff"), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8", check=True)
     smp = json.loads(sized.stdout)["samples"]
     ids, sizes = [x["id"] for x in smp], [x.get("size", 0) for x in smp]
-    for mb in (1024, 0):
+    for mb in (1024, 0.0001, 0):                   # 0 is the default budget: the same answer from both
         site_out = subprocess.run(["node", str(work / "d.js"), str(work / "pkg" / "mzlab_wasm.js"), json.dumps(ids), json.dumps(sizes), str(mb)], cwd=ROOT, capture_output=True, encoding="utf-8", check=True).stdout.strip()
         cli_out = subprocess.run(cli_argv("samples", "select", str(work / "big" / "grande.wiff"), "--default", "--budget-mb", str(mb), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8", check=True).stdout.strip()
         assert site_out == cli_out, (mb, site_out, cli_out)
-    assert cli_out == '{"samples":[]}'
+        assert json.loads(cli_out)["samples"] == ([] if mb == 0.0001 else ids), (mb, cli_out)       # a tiny budget ticks nothing, the real and the default ones tick the small set

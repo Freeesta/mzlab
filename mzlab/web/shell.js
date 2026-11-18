@@ -225,7 +225,7 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
   for(const e of pairs){
     if(signal&&signal.aborted){CONVROWS.finish(e.row,"cancel");continue}
     const want=/** @type {number[] | null} */ (pick&&pick.picks?pick.picks.get(e.row)||null:null),partial=!!want&&want.length<(pick.total.get(e.row)||0);
-    if(pick&&pick.cancelled){CONVROWS.finish(e.row,"cancel");(res.notes=res.notes||[]).push(T("pick.cancelled",{name:e.wiff.name}));continue}
+    if(pick&&(pick.cancelled||(want&&!want.length))){CONVROWS.finish(e.row,"cancel");(res.notes=res.notes||[]).push(T("pick.cancelled",{name:e.wiff.name}));continue}
     // a cache hit comes before anything is read; else the engine parses the pair while the module probes it (two workers), and a «variante» pair drops the parse
     try{const mem=[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],M0=window.LETTORI_MOD;let sp=/** @type {Promise<{ samples: any[] }> | null} */ (null);const parsed=()=>sp||(sp=rb.nativeSamples(mem));
       const hit=partial?null:await NATIVO.cached(rb,mem,ST.files||[],parsed);if(hit){for(const x of hit){CONVROWS.add(x.name,"open");CONVROWS.finish(x.name,"done",{scans:x.n_spectra||x.scans||0,kind:(x.mixed||[]).length>1?"mixed":x.kind,missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(x.name))||0,note:(/** @type {any} */ (window).MZLAB_LR?.noteKey?.(x.name))||"",cached:true})}CONVROWS.drop(e.row);continue}      // the same pair again: its samples are in the list with their index, nothing is copied or read again
