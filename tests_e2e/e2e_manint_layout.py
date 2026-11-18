@@ -110,6 +110,29 @@ try:
             need(abs(g["ct"] - g["pb"]) <= 20 and g["wh"] <= g["vh"] * 0.6 + 2, ("full screen", g))
             pg.evaluate("document.exitFullscreen()")
         step("in full screen", fullscreen)
+        def key_cols():
+            pg.evaluate("window.scrollTo(0, 0)")
+            heads = pg.evaluate("[...document.querySelectorAll('#manint thead th')].map(t => t.textContent.trim())")
+            ia, ib = pg.evaluate("I18N.t('canali.manint.h.apex')"), pg.evaluate("I18N.t('canali.manint.h.area')")
+            need(heads.index(ib) == heads.index(ia) + 1, ("Apex RT is immediately left of Area", heads))
+            need(heads.index(ia) == heads.index(pg.evaluate("I18N.t('canali.manint.h.label')")) + 1, ("Apex RT follows the name", heads))
+            r = pg.evaluate("""(() => { const q = s => [...document.querySelectorAll(s)], bg = e => getComputedStyle(e).backgroundColor, fw = e => +getComputedStyle(e).fontWeight;
+              const th = q('#manint thead th.manint-key'), td = q('#manint tbody tr:first-child td.manint-key'), plain = document.querySelector('#manint tbody tr:first-child td:not(.manint-key):not(.num)');
+              return { n: th.length, m: td.length, hb: th.map(bg), tb: td.map(bg), fw: td.map(fw).concat(th.map(fw)), pb: bg(plain), pw: fw(plain) }; })()""")
+            need(r["n"] == 2 and r["m"] == 2, ("exactly two emphasised columns, header and cells", r))
+            need(all(w >= 600 for w in r["fw"]) and r["pw"] < 600, ("semi-bold only on the two columns", r))
+            need(all(b != r["pb"] for b in r["hb"] + r["tb"]), ("a tinted background on the two columns, header included", r))
+        step("Apex RT sits left of Area; both columns are semi-bold on a tint, header included", key_cols)
+        def sw_colour():
+            probe = """(() => { const f = E.files.find(x => x.file.startsWith('Sample_A.')), c = document.querySelector('#manint tbody tr:first-child td:nth-child(2)'), sw = c.querySelector('.manint-sw'),
+              d = document.createElement('i'); d.style.background = f.color; return { want: d.style.backgroundColor, got: sw && sw.style.backgroundColor, hidden: sw && sw.getAttribute('aria-hidden'), text: c.textContent.trim(), name: f.file.replace(/\\.wiff$/i, '') }; })()"""
+            g = pg.evaluate(probe)
+            need(g["got"] and g["got"] == g["want"] and g["hidden"] == "true", ("the square is the sample colour and decorative", g))
+            need(g["text"] != "" , ("the sample name stays as text", g))
+            pg.evaluate("(() => { const f = E.files.find(x => x.file.startsWith('Sample_A.')); f.color = '#123456'; f.colorSet = true; draw(E.panels.find(q => q.type === 'mrm' && q._a)); })()")
+            wait_for_js(pg, "(() => { const s = document.querySelector('#manint tbody tr:first-child .manint-sw'); return !!s && s.style.backgroundColor === 'rgb(18, 52, 86)'; })()", timeout=30000)
+            shot("swatch")
+        step("the sample colour square equals the sample colour and follows a change", sw_colour)
         step("no page error", lambda: (lambda e: e and throw(e))([x for x in r.errs if x[0] == "pageerror"]))
     r.close()
 except Exception as e:

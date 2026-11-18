@@ -996,7 +996,7 @@ document.addEventListener("click", e => { document.querySelectorAll(".corrm:not(
 document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".corrm:not([hidden])").forEach(m => { m.hidden = true; }); });
 // _ctxWas: this Esc only closed the menu (the full-screen handler below leaves the panel alone)
 document.addEventListener("keydown", e => { if (e.key === "Escape") { /** @type {any} */ (e)._ctxWas = !Q("#ctx").hidden; if (/** @type {any} */ (e)._ctxWas) e.preventDefault(); Q("#ctx").hidden = true; } });
-// CSV/TSV text carries its provenance line (PROV, schema provenienza/1) by default; prov = the fields the export knows ({table, p, file}), or false for a file made for another program (mzFinder).
+// CSV/TSV text carries its provenance line (PROV, schema provenance/1) by default; prov = the fields the export knows ({table, p, file}), or false for a file made for another program (mzFinder).
 // `text` is a string, a Blob/Uint8Array or an (async) iterable of those: an iterable, or a string/Blob over 8 MB, goes piece by piece through OPFS (export-pezzi.js) with the same bytes.
 async function dl(/** @type {string} */ name, /** @type {string | Blob | Uint8Array | Iterable<string | Uint8Array> | AsyncIterable<string | Uint8Array>} */ text, type = "application/octet-stream", prov = undefined) {
   const iter = typeof text !== "string" && !(text instanceof Blob) && !(text instanceof Uint8Array) && !!text && (Symbol.asyncIterator in text || Symbol.iterator in text);

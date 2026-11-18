@@ -1,24 +1,24 @@
-# Griglia dei metadati dei campioni (Flow, `flow/lazy/flow-meta-grid.js`)
+# Sample metadata grid (Flow, `flow/lazy/flow-meta-grid.js`)
 
-Solo inglese. Una griglia ARIA a righe virtuali (`role=grid`, `aria-rowcount`, `aria-colindex`; righe di 28 px, finestra di circa 13 righe più 4 di margine, la riga attiva esiste sempre) sopra un documento `campioni/3` (`campioni.md`). Tutta la logica è Rust, raggiunto con `CDOC.post("<op>")` (`api/campioni/<op>`): il file dispone le celle e muove il fuoco.
+English only. A virtual-row ARIA grid (`role=grid`, `aria-rowcount`, `aria-colindex`; 28 px rows, a window of about 13 rows plus 4 of margin, the active row always exists) on top of a `campioni/3` document (`campioni.md`). All logic is Rust, reached with `CDOC.post("<op>")` (`api/campioni/<op>`): the file lays out the cells and moves the focus.
 
-## Documento e salvataggio
-- `F.metaGrid(S, input)` (`F.samplesEditor` lo chiama): il documento sta in `S.samples[input.name]`; un `/2` si migra con `migra`. Senza documento e con file aperti in Dati si apre da sola: `F.samplesFromData` → `migra` → `dal_file` con polarità, intervalli, scansioni e strumento letti da `E.files`.
-- Ogni modifica si vede subito; 120 ms dopo `F.samplesSet` calcola lo SHA-256 canonico (`CDOC.canonical`, in `input.sha256`) e `valida` ridisegna gli avvisi. Il documento salvato ha quindi lo stesso SHA di `CDOC.canonical`.
-- `F.metaImport(S, input, testo)`: `csv_leggi` (`,` `;` tab; `F.META_HEADERS` rinomina «Time (min)», «Series»…) e fusione per file+campione o SHA-256: le righe note si sovrascrivono tenendo i dati del file, le nuove si aggiungono, le colonne libere si uniscono.
+## Document and saving
+- `F.metaGrid(S, input)` (`F.samplesEditor` calls it): the document lives in `S.samples[input.name]`; a `/2` is migrated with `migra`. With no document and with files open in Data, it opens by itself: `F.samplesFromData` → `migra` → `dal_file` with polarity, ranges, scans and instrument read from `E.files`.
+- Every edit shows at once; 120 ms after `F.samplesSet` it computes the canonical SHA-256 (`CDOC.canonical`, in `input.sha256`) and `valida` redraws the warnings. The saved document therefore has the same SHA as `CDOC.canonical`.
+- `F.metaImport(S, input, testo)`: `csv_leggi` (`,` `;` tab; `F.META_HEADERS` renames "Time (min)", "Series"...) and merge by file+sample or SHA-256: known rows are overwritten keeping the file data, new ones are added, free columns are merged.
 
-## Colonne
-- Fisse e modificabili: `file`, `campione`, `campione_id`, `tipo`, `matrice`, `serie`, `gruppo`, `tempo`, `unita_tempo`, `replica`, `lotto`, `concentrazione`, `unita`, `note`; poi le colonne libere di `colonne` (testo, numero, categoria), poi in sola lettura polarità, re-iniezione, acquisito, strumento, intervallo m/z e RT, scansioni.
-- «Columns…»: aggiungi, rinomina (le `extra` seguono), cambia tipo e valori ammessi, obbligatoria, elimina. Un valore che non rispetta il tipo non si rifiuta: `valida` lo segna (`typeMismatch`).
+## Columns
+- Fixed and editable: `file`, `campione`, `campione_id`, `tipo`, `matrice`, `serie`, `gruppo`, `tempo`, `unita_tempo`, `replica`, `lotto`, `concentrazione`, `unita`, `note`; then the free columns of `colonne` (text, number, category), then read-only polarity, re-injection, acquired, instrument, m/z and RT range, scans.
+- "Columns...": add, rename (the `extra` follow), change type and allowed values, required, delete. A value that does not respect the type is not rejected: `valida` flags it (`typeMismatch`).
 
-## Tastiera e mouse
-- Frecce, Home/End (Ctrl = prima/ultima riga), PagSu/PagGiù spostano; Maiusc estende l'intervallo; Invio, F2 o un carattere aprono la cella (un elenco prende la prima voce che comincia con la lettera); Invio conferma e scende, Tab conferma e va a destra, Esc annulla e torna alla cella; Ctrl+D riempie in giù (riga sopra, o la prima dell'intervallo); Canc svuota; Ctrl+C copia in TSV; Ctrl+V incolla un blocco TSV da Excel dalla cella attiva (celle in sola lettura, fuori dalla griglia o non valide si contano e si dicono). Tab da fuori entra nella cella attiva; nessuna trappola.
-- Ordina con l'intestazione (`aria-sort`), filtra con colonna + testo (chip rimovibili), raggruppa per matrice, gruppo o condizione (bordo e fondo alternato sui gruppi). Bersagli di almeno 28 px, colori solo da variabili CSS.
+## Keyboard and mouse
+- Arrows, Home/End (Ctrl = first/last row), PageUp/PageDown move; Shift extends the range; Enter, F2 or a character opens the cell (a list takes the first entry that starts with the letter); Enter confirms and goes down, Tab confirms and goes right, Esc cancels and returns to the cell; Ctrl+D fills down (row above, or the first of the range); Del clears; Ctrl+C copies as TSV; Ctrl+V pastes a TSV block from Excel starting at the active cell (read-only cells, cells outside the grid or invalid ones are counted and reported). Tab from outside enters the active cell; no trap.
+- Sort with the header (`aria-sort`), filter with column + text (removable chips), group by matrix, group or condition (border and alternating background on the groups). Targets of at least 28 px, colors only from CSS variables.
 
-## Avvisi e Rust
-- `valida` → avvisi per cella (`colonna`, `file` = indice di riga): segno `✖`/`⚠` più bordo, `aria-invalid` sugli errori, riga con coppia mancante (`pairMissing`) con bordo tratteggiato; la cella attiva scrive il suo avviso in un `role=status` e un secondo `role=status` riassume in parole («6 times guessed from file names: check them.», «N other problems to fix.», «N warnings.», «No problems found.», più gli avvisi di serie).
-- I tempi letti dai nomi (`timeUnconfirmed`) hanno il pulsante «Confirm guesses» (`mg.confirm`, visibile solo se ce ne sono): mette `tempo_confermato: true` su tutte quelle righe in un colpo e `valida` ricontrolla; la gravità in Rust non cambia.
-- «Fill from name pattern…» (`modello`, predefinito `{campione_id}`): anteprima delle prime 8 righe con le parti catturate (`posizioni`) e i nomi senza corrispondenza; «Apply» scrive. «Read file data» (`dal_file`) e «Generate metadata» da Dati; «Export CSV» (`csv_scrivi`, separatore a scelta) e «Download JSON».
+## Warnings and Rust
+- `valida` → warnings per cell (`colonna`, `file` = row index): `✖`/`⚠` mark plus border, `aria-invalid` on errors, a row with a missing pair (`pairMissing`) with a dashed border; the active cell writes its warning in a `role=status` and a second `role=status` summarizes in words ("6 times guessed from file names: check them.", "N other problems to fix.", "N warnings.", "No problems found.", plus the series warnings).
+- Times read from names (`timeUnconfirmed`) have the "Confirm guesses" button (`mg.confirm`, visible only if there are any): it sets `tempo_confermato: true` on all those rows at once and `valida` rechecks; the severity in Rust does not change.
+- "Fill from name pattern..." (`modello`, default `{campione_id}`): preview of the first 8 rows with the captured parts (`posizioni`) and the names with no match; "Apply" writes. "Read file data" (`dal_file`) and "Generate metadata" from Data; "Export CSV" (`csv_scrivi`, separator of choice) and "Download JSON".
 
-## Prove
-`tests_e2e/e2e_flow_meta_grid.py` (240 righe, incolla 240×6 in meno di 300 ms, SHA, tastiera, ordine, filtro, colonna libera, modello, CSV, axe), `e2e_flow_import`, tipi `tools/tipi/pagina.json`. Il sito con il motore: `python3 tools/prepara_sito.py` (non guarda `flow/`: cancella `site/static/wasm/mzlab_wasm_bg.wasm` per riprepararlo).
+## Tests
+`tests_e2e/e2e_flow_meta_grid.py` (240 rows, pastes 240×6 in under 300 ms, SHA, keyboard, sort, filter, free column, pattern, CSV, axe), `e2e_flow_import`, types `tools/tipi/pagina.json`. The site with the engine: `python3 tools/prepara_sito.py` (it does not watch `flow/`: delete `site/static/wasm/mzlab_wasm_bg.wasm` to prepare it again).

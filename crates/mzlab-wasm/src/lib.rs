@@ -512,7 +512,7 @@ pub fn build_mzidx(
     ))
 }
 
-/// `/api/provenance`: the first line and the rows of the provenance of an exported table (`mzlab-core::provenance`, schema `provenienza/1`).
+/// `/api/provenance`: the first line and the rows of the provenance of an exported table (`mzlab-core::provenance`, schema `provenance/1`).
 #[wasm_bindgen]
 pub fn provenance(ctx: &str) -> String {
     mzlab_core::provenance::build(ctx)

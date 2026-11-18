@@ -136,6 +136,11 @@
     // the live controls (Auto-run, and Pause once a job runs) arrive with a late module: invisible twins hold their place, so Run, Terminal and More do not jump when they land
     const slot = el("span", { class: "flx-live-slot", "aria-hidden": "true" }, el("button", { type: "button", class: "fl-b", tabindex: "-1" }, el("span", { text: "Auto-run" })), btn("stop", "", () => {}, "Pause"));
     slot.setAttribute("inert", ""); bar.insertBefore(slot, run);
+    // the assistant button lands after its modules load: an invisible twin holds its place (flow-llm.js swaps it for the real one)
+    if (F.research() && F.llmOn()) {
+      const aslot = el("span", { class: "flx-live-slot flx-asst-slot", "aria-hidden": "true" }, btn("chat", "", () => {}, "Assistant"));
+      aslot.setAttribute("inert", ""); bar.insertBefore(aslot, slot);
+    }
     const issuesHost = el("div", { class: "flx-issues-host" });
     // the divider between the canvas and the settings: drag, or the arrow keys (the width is kept for the session of the page)
     const split = el("div", { class: "flx-split", role: "separator", "aria-orientation": "vertical", "aria-label": "Width of the settings panel", tabindex: 0, "aria-valuemin": 240, "aria-valuemax": 900, "aria-valuenow": 500 });

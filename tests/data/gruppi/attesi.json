@@ -1,15 +1,15 @@
 {
   "metadata": {
-    "titolo": "Ground truth multi-condizione Bentazone (T10)",
-    "descrizione": "Matrice di verita strutturata per validazione del modulo di confronto condizioni di Tabui con 38 file mzML sintetici a bassa risoluzione (full scan Q1, massa nominale, ESI+).",
+    "title": "Multi-condition ground truth for Bentazone (T10)",
+    "description": "Structured truth matrix to validate the Tabui condition-comparison module with 38 synthetic low-resolution mzML files (full scan Q1, nominal mass, ESI+).",
     "parent": {
-      "nome": "Bentazone",
+      "name": "Bentazone",
       "formula": "C10H12N2O3S",
-      "mz_nominale": 241,
-      "mz_monoisotopico": 241.0645,
-      "rt_teorico_min": 3.0
+      "nominal_mz": 241,
+      "monoisotopic_mz": 241.0645,
+      "theoretical_rt_min": 3.0
     },
-    "condizioni": [
+    "conditions": [
       "Air",
       "O2",
       "N2",
@@ -17,2025 +17,2025 @@
       "He",
       "Reference"
     ],
-    "tempi": [
+    "times": [
       "t0",
       "t5",
       "t10"
     ],
-    "repliche": [
+    "replicates": [
       "r1",
       "r2"
     ],
-    "controlli": [
+    "controls": [
       "bianco.mzML",
       "standard.mzML"
     ],
-    "totale_file_mzml": 38,
-    "scansioni_per_file": 80,
+    "total_mzml_files": 38,
+    "scans_per_file": 80,
     "rt_range_min": [
       1.0,
       5.0
     ],
-    "unita_area": "counts * s"
+    "area_unit": "counts * s"
   },
-  "composti": {
+  "compounds": {
     "Parent": {
       "id": "Parent",
-      "nome": "Bentazone",
+      "name": "Bentazone",
       "formula": "C10H12N2O3S",
       "mz": 241.0,
       "rt": 3.0,
       "fwhm": 0.14,
-      "ruolo": "Parent compound (Bentazone, substrato di partenza)",
-      "descrizione": "Composto bersaglio di partenza; degrada nelle condizioni attive fotocatalitiche e fotolitiche, stabile nel Reference."
+      "role": "Parent compound (Bentazone, starting substrate)",
+      "description": "Starting target compound; degrades under the active photocatalytic and photolytic conditions, stable in the Reference."
     },
     "TP1": {
       "id": "TP1",
-      "nome": "Intermedio mono-idrossilato",
+      "name": "Mono-hydroxylated intermediate",
       "formula": "C10H12N2O4S",
       "mz": 257.0,
       "rt": 2.2,
       "fwhm": 0.13,
-      "ruolo": "Intermedio comune con cinetica a campana",
-      "descrizione": "Intermedio di reazione primario formato in tutte le condizioni con cinetica a campana (massimo a t5, calo a t10)."
+      "role": "Common intermediate with bell-shaped kinetics",
+      "description": "Primary reaction intermediate formed under all conditions with bell-shaped kinetics (maximum at t5, decline at t10)."
     },
     "TP2": {
       "id": "TP2",
-      "nome": "Prodotto di foto-ossigenazione",
+      "name": "Photo-oxygenation product",
       "formula": "C10H12N2O5S",
       "mz": 273.0,
       "rt": 1.8,
       "fwhm": 0.12,
-      "ruolo": "Marcatore di foto-ossigenazione (specifico O2 e Air)",
-      "descrizione": "Prodotto dipendente dall'ossigeno disciolto; presente solo in atmosfera di O2 e Air, assente in atmosfere inerti."
+      "role": "Photo-oxygenation marker (specific to O2 and Air)",
+      "description": "Product that depends on dissolved oxygen; present only under O2 and Air, absent under inert atmospheres."
     },
     "TP3": {
       "id": "TP3",
-      "nome": "Prodotto di fotolisi anaerobica",
+      "name": "Anaerobic photolysis product",
       "formula": "C10H12N2O2S",
       "mz": 225.0,
       "rt": 2.6,
       "fwhm": 0.13,
-      "ruolo": "Marcatore di fotolisi anaerobica (specifico N2, Ar, He)",
-      "descrizione": "Prodotto di degradazione fotochimica anaerobica / deossigenato; formato in N2, Ar e He, assente con O2."
+      "role": "Anaerobic photolysis marker (specific to N2, Ar, He)",
+      "description": "Anaerobic / deoxygenated photochemical degradation product; formed under N2, Ar and He, absent with O2."
     },
     "TP4": {
       "id": "TP4",
-      "nome": "Contaminante di fondo / plastificante",
+      "name": "Background contaminant / plasticiser",
       "formula": "C16H22O4",
       "mz": 279.0,
       "rt": 4.2,
       "fwhm": 0.15,
-      "ruolo": "Contaminante di fondo (scartato dal filtro del bianco)",
-      "descrizione": "Artefatto dell'eluente/sistema a concentrazione costante in tutti i file (inclusi bianco e standard)."
+      "role": "Background contaminant (removed by the blank filter)",
+      "description": "Eluent/system artefact at constant concentration in all files (blank and standard included)."
     },
     "TP5": {
       "id": "TP5",
-      "nome": "Frammento in sorgente (ISF)",
+      "name": "In-source fragment (ISF)",
       "formula": "C9H12N2O",
       "mz": 197.0,
       "rt": 3.0,
       "fwhm": 0.14,
-      "ruolo": "In-source fragment del Bentazone (co-eluente, ~18%)",
-      "descrizione": "Frammento generato per dissociazione termica/elettrica in sorgente ESI; co-eluisce perfettamente col parent ed ha altezza pari a circa il 18% del parent."
+      "role": "In-source fragment of Bentazone (co-eluting, ~18%)",
+      "description": "Fragment generated by thermal/electrical dissociation in the ESI source; co-elutes exactly with the parent and its height is about 18% of the parent's."
     }
   },
-  "file": {
+  "files": {
     "Air_t0_r1.mzML": {
-      "condizione": "Air",
-      "tempo": "t0",
-      "replica": "r1",
+      "condition": "Air",
+      "time": "t0",
+      "replicate": "r1",
       "delta_rt_min": 0.0221,
       "scale_factor": 0.998,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.0221,
-          "altezza_attesa": 499017.9,
-          "area_attesa": 4461979.9
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.0221,
+          "expected_height": 499017.9,
+          "expected_area": 4461979.9
         },
         "TP1": {
-          "presente": false,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 257,
+          "expected_rt": 2.2,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.2221,
-          "altezza_attesa": 119764.3,
-          "area_attesa": 1147366.3
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.2221,
+          "expected_height": 119764.3,
+          "expected_area": 1147366.3
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.0221,
-          "altezza_attesa": 89823.2,
-          "area_attesa": 803156.4
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.0221,
+          "expected_height": 89823.2,
+          "expected_area": 803156.4
         }
       }
     },
     "Air_t0_r2.mzML": {
-      "condizione": "Air",
-      "tempo": "t0",
-      "replica": "r2",
+      "condition": "Air",
+      "time": "t0",
+      "replicate": "r2",
       "delta_rt_min": 0.0006,
       "scale_factor": 1.0069,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.0006,
-          "altezza_attesa": 503456.7,
-          "area_attesa": 4501669.4
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.0006,
+          "expected_height": 503456.7,
+          "expected_area": 4501669.4
         },
         "TP1": {
-          "presente": false,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 257,
+          "expected_rt": 2.2,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.2006,
-          "altezza_attesa": 120829.6,
-          "area_attesa": 1157572.1
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.2006,
+          "expected_height": 120829.6,
+          "expected_area": 1157572.1
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.0006,
-          "altezza_attesa": 90622.2,
-          "area_attesa": 810300.5
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.0006,
+          "expected_height": 90622.2,
+          "expected_area": 810300.5
         }
       }
     },
     "Air_t5_r1.mzML": {
-      "condizione": "Air",
-      "tempo": "t5",
-      "replica": "r1",
+      "condition": "Air",
+      "time": "t5",
+      "replicate": "r1",
       "delta_rt_min": -0.0255,
       "scale_factor": 1.0188,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.9745,
-          "altezza_attesa": 254687.6,
-          "area_attesa": 2277295.3
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.9745,
+          "expected_height": 254687.6,
+          "expected_area": 2277295.3
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.1745,
-          "altezza_attesa": 203750.1,
-          "area_attesa": 1691705.1
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.1745,
+          "expected_height": 203750.1,
+          "expected_area": 1691705.1
         },
         "TP2": {
-          "presente": true,
-          "mz_nominale": 273,
-          "rt_atteso": 1.7745,
-          "altezza_attesa": 101875.1,
-          "area_attesa": 780787.0
+          "present": true,
+          "nominal_mz": 273,
+          "expected_rt": 1.7745,
+          "expected_height": 101875.1,
+          "expected_area": 780787.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1745,
-          "altezza_attesa": 122250.1,
-          "area_attesa": 1171180.4
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1745,
+          "expected_height": 122250.1,
+          "expected_area": 1171180.4
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.9745,
-          "altezza_attesa": 45843.8,
-          "area_attesa": 409913.1
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.9745,
+          "expected_height": 45843.8,
+          "expected_area": 409913.1
         }
       }
     },
     "Air_t5_r2.mzML": {
-      "condizione": "Air",
-      "tempo": "t5",
-      "replica": "r2",
+      "condition": "Air",
+      "time": "t5",
+      "replicate": "r2",
       "delta_rt_min": -0.0021,
       "scale_factor": 1.0344,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.9979,
-          "altezza_attesa": 258606.4,
-          "area_attesa": 2312335.2
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.9979,
+          "expected_height": 258606.4,
+          "expected_area": 2312335.2
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.1979,
-          "altezza_attesa": 206885.1,
-          "area_attesa": 1717734.7
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.1979,
+          "expected_height": 206885.1,
+          "expected_area": 1717734.7
         },
         "TP2": {
-          "presente": true,
-          "mz_nominale": 273,
-          "rt_atteso": 1.7979,
-          "altezza_attesa": 103442.6,
-          "area_attesa": 792800.6
+          "present": true,
+          "nominal_mz": 273,
+          "expected_rt": 1.7979,
+          "expected_height": 103442.6,
+          "expected_area": 792800.6
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1979,
-          "altezza_attesa": 124131.1,
-          "area_attesa": 1189200.9
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1979,
+          "expected_height": 124131.1,
+          "expected_area": 1189200.9
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.9979,
-          "altezza_attesa": 46549.2,
-          "area_attesa": 416220.3
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.9979,
+          "expected_height": 46549.2,
+          "expected_area": 416220.3
         }
       }
     },
     "Air_t10_r1.mzML": {
-      "condizione": "Air",
-      "tempo": "t10",
-      "replica": "r1",
+      "condition": "Air",
+      "time": "t10",
+      "replicate": "r1",
       "delta_rt_min": -0.0025,
       "scale_factor": 0.9694,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.9975,
-          "altezza_attesa": 72707.6,
-          "area_attesa": 650116.3
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.9975,
+          "expected_height": 72707.6,
+          "expected_area": 650116.3
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.1975,
-          "altezza_attesa": 58166.0,
-          "area_attesa": 482943.5
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.1975,
+          "expected_height": 58166.0,
+          "expected_area": 482943.5
         },
         "TP2": {
-          "presente": true,
-          "mz_nominale": 273,
-          "rt_atteso": 1.7975,
-          "altezza_attesa": 145415.1,
-          "area_attesa": 1114485.1
+          "present": true,
+          "nominal_mz": 273,
+          "expected_rt": 1.7975,
+          "expected_height": 145415.1,
+          "expected_area": 1114485.1
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1975,
-          "altezza_attesa": 116332.1,
-          "area_attesa": 1114485.1
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1975,
+          "expected_height": 116332.1,
+          "expected_area": 1114485.1
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.9975,
-          "altezza_attesa": 13087.4,
-          "area_attesa": 117020.9
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.9975,
+          "expected_height": 13087.4,
+          "expected_area": 117020.9
         }
       }
     },
     "Air_t10_r2.mzML": {
-      "condizione": "Air",
-      "tempo": "t10",
-      "replica": "r2",
+      "condition": "Air",
+      "time": "t10",
+      "replicate": "r2",
       "delta_rt_min": 0.0276,
       "scale_factor": 1.0053,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.0276,
-          "altezza_attesa": 75400.4,
-          "area_attesa": 674194.3
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.0276,
+          "expected_height": 75400.4,
+          "expected_area": 674194.3
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2276,
-          "altezza_attesa": 60320.3,
-          "area_attesa": 500830.0
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.2276,
+          "expected_height": 60320.3,
+          "expected_area": 500830.0
         },
         "TP2": {
-          "presente": true,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8276,
-          "altezza_attesa": 150800.8,
-          "area_attesa": 1155761.6
+          "present": true,
+          "nominal_mz": 273,
+          "expected_rt": 1.8276,
+          "expected_height": 150800.8,
+          "expected_area": 1155761.6
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.2276,
-          "altezza_attesa": 120640.6,
-          "area_attesa": 1155761.6
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.2276,
+          "expected_height": 120640.6,
+          "expected_area": 1155761.6
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.0276,
-          "altezza_attesa": 13572.1,
-          "area_attesa": 121355.0
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.0276,
+          "expected_height": 13572.1,
+          "expected_area": 121355.0
         }
       }
     },
     "O2_t0_r1.mzML": {
-      "condizione": "O2",
-      "tempo": "t0",
-      "replica": "r1",
+      "condition": "O2",
+      "time": "t0",
+      "replicate": "r1",
       "delta_rt_min": 0.032,
       "scale_factor": 1.034,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.032,
-          "altezza_attesa": 516997.6,
-          "area_attesa": 4622746.2
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.032,
+          "expected_height": 516997.6,
+          "expected_area": 4622746.2
         },
         "TP1": {
-          "presente": false,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 257,
+          "expected_rt": 2.2,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.232,
-          "altezza_attesa": 124079.4,
-          "area_attesa": 1188706.2
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.232,
+          "expected_height": 124079.4,
+          "expected_area": 1188706.2
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.032,
-          "altezza_attesa": 93059.6,
-          "area_attesa": 832094.3
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.032,
+          "expected_height": 93059.6,
+          "expected_area": 832094.3
         }
       }
     },
     "O2_t0_r2.mzML": {
-      "condizione": "O2",
-      "tempo": "t0",
-      "replica": "r2",
+      "condition": "O2",
+      "time": "t0",
+      "replicate": "r2",
       "delta_rt_min": -0.0299,
       "scale_factor": 1.0316,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.9701,
-          "altezza_attesa": 515794.1,
-          "area_attesa": 4611984.9
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.9701,
+          "expected_height": 515794.1,
+          "expected_area": 4611984.9
         },
         "TP1": {
-          "presente": false,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 257,
+          "expected_rt": 2.2,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1701,
-          "altezza_attesa": 123790.6,
-          "area_attesa": 1185939.0
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1701,
+          "expected_height": 123790.6,
+          "expected_area": 1185939.0
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.9701,
-          "altezza_attesa": 92842.9,
-          "area_attesa": 830157.3
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.9701,
+          "expected_height": 92842.9,
+          "expected_area": 830157.3
         }
       }
     },
     "O2_t5_r1.mzML": {
-      "condizione": "O2",
-      "tempo": "t5",
-      "replica": "r1",
+      "condition": "O2",
+      "time": "t5",
+      "replicate": "r1",
       "delta_rt_min": 0.0115,
       "scale_factor": 1.0328,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.0115,
-          "altezza_attesa": 258188.2,
-          "area_attesa": 2308595.7
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.0115,
+          "expected_height": 258188.2,
+          "expected_area": 2308595.7
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2115,
-          "altezza_attesa": 206550.6,
-          "area_attesa": 1714956.8
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.2115,
+          "expected_height": 206550.6,
+          "expected_area": 1714956.8
         },
         "TP2": {
-          "presente": true,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8115,
-          "altezza_attesa": 185895.5,
-          "area_attesa": 1424733.3
+          "present": true,
+          "nominal_mz": 273,
+          "expected_rt": 1.8115,
+          "expected_height": 185895.5,
+          "expected_area": 1424733.3
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.2115,
-          "altezza_attesa": 123930.3,
-          "area_attesa": 1187277.8
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.2115,
+          "expected_height": 123930.3,
+          "expected_area": 1187277.8
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.0115,
-          "altezza_attesa": 46473.9,
-          "area_attesa": 415547.2
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.0115,
+          "expected_height": 46473.9,
+          "expected_area": 415547.2
         }
       }
     },
     "O2_t5_r2.mzML": {
-      "condizione": "O2",
-      "tempo": "t5",
-      "replica": "r2",
+      "condition": "O2",
+      "time": "t5",
+      "replicate": "r2",
       "delta_rt_min": -0.0163,
       "scale_factor": 1.0289,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.9837,
-          "altezza_attesa": 257231.9,
-          "area_attesa": 2300044.8
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.9837,
+          "expected_height": 257231.9,
+          "expected_area": 2300044.8
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.1837,
-          "altezza_attesa": 205785.5,
-          "area_attesa": 1708604.7
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.1837,
+          "expected_height": 205785.5,
+          "expected_area": 1708604.7
         },
         "TP2": {
-          "presente": true,
-          "mz_nominale": 273,
-          "rt_atteso": 1.7837,
-          "altezza_attesa": 185207.0,
-          "area_attesa": 1419456.2
+          "present": true,
+          "nominal_mz": 273,
+          "expected_rt": 1.7837,
+          "expected_height": 185207.0,
+          "expected_area": 1419456.2
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1837,
-          "altezza_attesa": 123471.3,
-          "area_attesa": 1182880.2
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1837,
+          "expected_height": 123471.3,
+          "expected_area": 1182880.2
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.9837,
-          "altezza_attesa": 46301.7,
-          "area_attesa": 414008.1
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.9837,
+          "expected_height": 46301.7,
+          "expected_area": 414008.1
         }
       }
     },
     "O2_t10_r1.mzML": {
-      "condizione": "O2",
-      "tempo": "t10",
-      "replica": "r1",
+      "condition": "O2",
+      "time": "t10",
+      "replicate": "r1",
       "delta_rt_min": -0.0197,
       "scale_factor": 0.9637,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.9803,
-          "altezza_attesa": 72274.0,
-          "area_attesa": 646239.3
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.9803,
+          "expected_height": 72274.0,
+          "expected_area": 646239.3
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.1803,
-          "altezza_attesa": 57819.2,
-          "area_attesa": 480063.5
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.1803,
+          "expected_height": 57819.2,
+          "expected_area": 480063.5
         },
         "TP2": {
-          "presente": true,
-          "mz_nominale": 273,
-          "rt_atteso": 1.7803,
-          "altezza_attesa": 240913.2,
-          "area_attesa": 1846398.0
+          "present": true,
+          "nominal_mz": 273,
+          "expected_rt": 1.7803,
+          "expected_height": 240913.2,
+          "expected_area": 1846398.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1803,
-          "altezza_attesa": 115638.3,
-          "area_attesa": 1107838.8
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1803,
+          "expected_height": 115638.3,
+          "expected_area": 1107838.8
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.9803,
-          "altezza_attesa": 13009.3,
-          "area_attesa": 116323.1
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.9803,
+          "expected_height": 13009.3,
+          "expected_area": 116323.1
         }
       }
     },
     "O2_t10_r2.mzML": {
-      "condizione": "O2",
-      "tempo": "t10",
-      "replica": "r2",
+      "condition": "O2",
+      "time": "t10",
+      "replicate": "r2",
       "delta_rt_min": -0.0055,
       "scale_factor": 1.016,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.9945,
-          "altezza_attesa": 76199.5,
-          "area_attesa": 681339.7
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.9945,
+          "expected_height": 76199.5,
+          "expected_area": 681339.7
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.1945,
-          "altezza_attesa": 60959.6,
-          "area_attesa": 506138.0
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.1945,
+          "expected_height": 60959.6,
+          "expected_area": 506138.0
         },
         "TP2": {
-          "presente": true,
-          "mz_nominale": 273,
-          "rt_atteso": 1.7945,
-          "altezza_attesa": 253998.4,
-          "area_attesa": 1946684.8
+          "present": true,
+          "nominal_mz": 273,
+          "expected_rt": 1.7945,
+          "expected_height": 253998.4,
+          "expected_area": 1946684.8
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1945,
-          "altezza_attesa": 121919.2,
-          "area_attesa": 1168010.9
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1945,
+          "expected_height": 121919.2,
+          "expected_area": 1168010.9
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.9945,
-          "altezza_attesa": 13715.9,
-          "area_attesa": 122641.1
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.9945,
+          "expected_height": 13715.9,
+          "expected_area": 122641.1
         }
       }
     },
     "N2_t0_r1.mzML": {
-      "condizione": "N2",
-      "tempo": "t0",
-      "replica": "r1",
+      "condition": "N2",
+      "time": "t0",
+      "replicate": "r1",
       "delta_rt_min": -0.0143,
       "scale_factor": 0.9602,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.9857,
-          "altezza_attesa": 480106.1,
-          "area_attesa": 4292879.8
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.9857,
+          "expected_height": 480106.1,
+          "expected_area": 4292879.8
         },
         "TP1": {
-          "presente": false,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 257,
+          "expected_rt": 2.2,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1857,
-          "altezza_attesa": 115225.5,
-          "area_attesa": 1103883.4
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1857,
+          "expected_height": 115225.5,
+          "expected_area": 1103883.4
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.9857,
-          "altezza_attesa": 86419.1,
-          "area_attesa": 772718.4
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.9857,
+          "expected_height": 86419.1,
+          "expected_area": 772718.4
         }
       }
     },
     "N2_t0_r2.mzML": {
-      "condizione": "N2",
-      "tempo": "t0",
-      "replica": "r2",
+      "condition": "N2",
+      "time": "t0",
+      "replicate": "r2",
       "delta_rt_min": 0.0034,
       "scale_factor": 1.0001,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.0034,
-          "altezza_attesa": 500071.4,
-          "area_attesa": 4471399.8
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.0034,
+          "expected_height": 500071.4,
+          "expected_area": 4471399.8
         },
         "TP1": {
-          "presente": false,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 257,
+          "expected_rt": 2.2,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.2034,
-          "altezza_attesa": 120017.1,
-          "area_attesa": 1149788.5
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.2034,
+          "expected_height": 120017.1,
+          "expected_area": 1149788.5
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.0034,
-          "altezza_attesa": 90012.8,
-          "area_attesa": 804852.0
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.0034,
+          "expected_height": 90012.8,
+          "expected_area": 804852.0
         }
       }
     },
     "N2_t5_r1.mzML": {
-      "condizione": "N2",
-      "tempo": "t5",
-      "replica": "r1",
+      "condition": "N2",
+      "time": "t5",
+      "replicate": "r1",
       "delta_rt_min": -0.0133,
       "scale_factor": 0.9798,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.9867,
-          "altezza_attesa": 244955.4,
-          "area_attesa": 2190274.5
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.9867,
+          "expected_height": 244955.4,
+          "expected_area": 2190274.5
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.1867,
-          "altezza_attesa": 195964.3,
-          "area_attesa": 1627061.1
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.1867,
+          "expected_height": 195964.3,
+          "expected_area": 1627061.1
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": true,
-          "mz_nominale": 225,
-          "rt_atteso": 2.5867,
-          "altezza_attesa": 117578.6,
-          "area_attesa": 976236.7
+          "present": true,
+          "nominal_mz": 225,
+          "expected_rt": 2.5867,
+          "expected_height": 117578.6,
+          "expected_area": 976236.7
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1867,
-          "altezza_attesa": 117578.6,
-          "area_attesa": 1126426.9
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1867,
+          "expected_height": 117578.6,
+          "expected_area": 1126426.9
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.9867,
-          "altezza_attesa": 44092.0,
-          "area_attesa": 394249.4
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.9867,
+          "expected_height": 44092.0,
+          "expected_area": 394249.4
         }
       }
     },
     "N2_t5_r2.mzML": {
-      "condizione": "N2",
-      "tempo": "t5",
-      "replica": "r2",
+      "condition": "N2",
+      "time": "t5",
+      "replicate": "r2",
       "delta_rt_min": 0.0167,
       "scale_factor": 0.9881,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.0167,
-          "altezza_attesa": 247037.4,
-          "area_attesa": 2208891.0
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.0167,
+          "expected_height": 247037.4,
+          "expected_area": 2208891.0
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2167,
-          "altezza_attesa": 197630.0,
-          "area_attesa": 1640890.4
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.2167,
+          "expected_height": 197630.0,
+          "expected_area": 1640890.4
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": true,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6167,
-          "altezza_attesa": 118578.0,
-          "area_attesa": 984534.3
+          "present": true,
+          "nominal_mz": 225,
+          "expected_rt": 2.6167,
+          "expected_height": 118578.0,
+          "expected_area": 984534.3
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.2167,
-          "altezza_attesa": 118578.0,
-          "area_attesa": 1136001.1
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.2167,
+          "expected_height": 118578.0,
+          "expected_area": 1136001.1
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.0167,
-          "altezza_attesa": 44466.7,
-          "area_attesa": 397600.4
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.0167,
+          "expected_height": 44466.7,
+          "expected_area": 397600.4
         }
       }
     },
     "N2_t10_r1.mzML": {
-      "condizione": "N2",
-      "tempo": "t10",
-      "replica": "r1",
+      "condition": "N2",
+      "time": "t10",
+      "replicate": "r1",
       "delta_rt_min": -0.0102,
       "scale_factor": 1.0304,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.9898,
-          "altezza_attesa": 77282.7,
-          "area_attesa": 691024.6
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.9898,
+          "expected_height": 77282.7,
+          "expected_area": 691024.6
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.1898,
-          "altezza_attesa": 61826.1,
-          "area_attesa": 513332.6
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.1898,
+          "expected_height": 61826.1,
+          "expected_area": 513332.6
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": true,
-          "mz_nominale": 225,
-          "rt_atteso": 2.5898,
-          "altezza_attesa": 206087.1,
-          "area_attesa": 1711108.5
+          "present": true,
+          "nominal_mz": 225,
+          "expected_rt": 2.5898,
+          "expected_height": 206087.1,
+          "expected_area": 1711108.5
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1898,
-          "altezza_attesa": 123652.2,
-          "area_attesa": 1184613.6
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1898,
+          "expected_height": 123652.2,
+          "expected_area": 1184613.6
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.9898,
-          "altezza_attesa": 13910.9,
-          "area_attesa": 124384.4
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.9898,
+          "expected_height": 13910.9,
+          "expected_area": 124384.4
         }
       }
     },
     "N2_t10_r2.mzML": {
-      "condizione": "N2",
-      "tempo": "t10",
-      "replica": "r2",
+      "condition": "N2",
+      "time": "t10",
+      "replicate": "r2",
       "delta_rt_min": -0.0066,
       "scale_factor": 0.9684,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.9934,
-          "altezza_attesa": 72631.6,
-          "area_attesa": 649437.0
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.9934,
+          "expected_height": 72631.6,
+          "expected_area": 649437.0
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.1934,
-          "altezza_attesa": 58105.3,
-          "area_attesa": 482438.9
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.1934,
+          "expected_height": 58105.3,
+          "expected_area": 482438.9
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": true,
-          "mz_nominale": 225,
-          "rt_atteso": 2.5934,
-          "altezza_attesa": 193684.2,
-          "area_attesa": 1608129.7
+          "present": true,
+          "nominal_mz": 225,
+          "expected_rt": 2.5934,
+          "expected_height": 193684.2,
+          "expected_area": 1608129.7
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1934,
-          "altezza_attesa": 116210.5,
-          "area_attesa": 1113320.6
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1934,
+          "expected_height": 116210.5,
+          "expected_area": 1113320.6
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.9934,
-          "altezza_attesa": 13073.7,
-          "area_attesa": 116898.7
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.9934,
+          "expected_height": 13073.7,
+          "expected_area": 116898.7
         }
       }
     },
     "Ar_t0_r1.mzML": {
-      "condizione": "Ar",
-      "tempo": "t0",
-      "replica": "r1",
+      "condition": "Ar",
+      "time": "t0",
+      "replicate": "r1",
       "delta_rt_min": -0.0283,
       "scale_factor": 1.0417,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.9717,
-          "altezza_attesa": 520874.5,
-          "area_attesa": 4657410.9
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.9717,
+          "expected_height": 520874.5,
+          "expected_area": 4657410.9
         },
         "TP1": {
-          "presente": false,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 257,
+          "expected_rt": 2.2,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1717,
-          "altezza_attesa": 125009.9,
-          "area_attesa": 1197620.0
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1717,
+          "expected_height": 125009.9,
+          "expected_area": 1197620.0
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.9717,
-          "altezza_attesa": 93757.4,
-          "area_attesa": 838334.0
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.9717,
+          "expected_height": 93757.4,
+          "expected_area": 838334.0
         }
       }
     },
     "Ar_t0_r2.mzML": {
-      "condizione": "Ar",
-      "tempo": "t0",
-      "replica": "r2",
+      "condition": "Ar",
+      "time": "t0",
+      "replicate": "r2",
       "delta_rt_min": 0.0234,
       "scale_factor": 1.004,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.0234,
-          "altezza_attesa": 501982.2,
-          "area_attesa": 4488485.1
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.0234,
+          "expected_height": 501982.2,
+          "expected_area": 4488485.1
         },
         "TP1": {
-          "presente": false,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 257,
+          "expected_rt": 2.2,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.2234,
-          "altezza_attesa": 120475.7,
-          "area_attesa": 1154181.9
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.2234,
+          "expected_height": 120475.7,
+          "expected_area": 1154181.9
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.0234,
-          "altezza_attesa": 90356.8,
-          "area_attesa": 807927.3
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.0234,
+          "expected_height": 90356.8,
+          "expected_area": 807927.3
         }
       }
     },
     "Ar_t5_r1.mzML": {
-      "condizione": "Ar",
-      "tempo": "t5",
-      "replica": "r1",
+      "condition": "Ar",
+      "time": "t5",
+      "replicate": "r1",
       "delta_rt_min": 0.0293,
       "scale_factor": 0.9678,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.0293,
-          "altezza_attesa": 241950.6,
-          "area_attesa": 2163407.3
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.0293,
+          "expected_height": 241950.6,
+          "expected_area": 2163407.3
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2293,
-          "altezza_attesa": 193560.5,
-          "area_attesa": 1607102.5
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.2293,
+          "expected_height": 193560.5,
+          "expected_area": 1607102.5
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": true,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6293,
-          "altezza_attesa": 116136.3,
-          "area_attesa": 964261.5
+          "present": true,
+          "nominal_mz": 225,
+          "expected_rt": 2.6293,
+          "expected_height": 116136.3,
+          "expected_area": 964261.5
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.2293,
-          "altezza_attesa": 116136.3,
-          "area_attesa": 1112609.4
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.2293,
+          "expected_height": 116136.3,
+          "expected_area": 1112609.4
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.0293,
-          "altezza_attesa": 43551.1,
-          "area_attesa": 389413.3
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.0293,
+          "expected_height": 43551.1,
+          "expected_area": 389413.3
         }
       }
     },
     "Ar_t5_r2.mzML": {
-      "condizione": "Ar",
-      "tempo": "t5",
-      "replica": "r2",
+      "condition": "Ar",
+      "time": "t5",
+      "replicate": "r2",
       "delta_rt_min": -0.002,
       "scale_factor": 1.035,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.998,
-          "altezza_attesa": 258744.7,
-          "area_attesa": 2313571.5
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.998,
+          "expected_height": 258744.7,
+          "expected_area": 2313571.5
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.198,
-          "altezza_attesa": 206995.7,
-          "area_attesa": 1718653.1
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.198,
+          "expected_height": 206995.7,
+          "expected_area": 1718653.1
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": true,
-          "mz_nominale": 225,
-          "rt_atteso": 2.598,
-          "altezza_attesa": 124197.4,
-          "area_attesa": 1031191.9
+          "present": true,
+          "nominal_mz": 225,
+          "expected_rt": 2.598,
+          "expected_height": 124197.4,
+          "expected_area": 1031191.9
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.198,
-          "altezza_attesa": 124197.4,
-          "area_attesa": 1189836.8
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.198,
+          "expected_height": 124197.4,
+          "expected_area": 1189836.8
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.998,
-          "altezza_attesa": 46574.0,
-          "area_attesa": 416442.9
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.998,
+          "expected_height": 46574.0,
+          "expected_area": 416442.9
         }
       }
     },
     "Ar_t10_r1.mzML": {
-      "condizione": "Ar",
-      "tempo": "t10",
-      "replica": "r1",
+      "condition": "Ar",
+      "time": "t10",
+      "replicate": "r1",
       "delta_rt_min": -0.0044,
       "scale_factor": 0.9994,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.9956,
-          "altezza_attesa": 74952.5,
-          "area_attesa": 670189.4
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.9956,
+          "expected_height": 74952.5,
+          "expected_area": 670189.4
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.1956,
-          "altezza_attesa": 59962.0,
-          "area_attesa": 497855.0
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.1956,
+          "expected_height": 59962.0,
+          "expected_area": 497855.0
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": true,
-          "mz_nominale": 225,
-          "rt_atteso": 2.5956,
-          "altezza_attesa": 199873.3,
-          "area_attesa": 1659516.6
+          "present": true,
+          "nominal_mz": 225,
+          "expected_rt": 2.5956,
+          "expected_height": 199873.3,
+          "expected_area": 1659516.6
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1956,
-          "altezza_attesa": 119924.0,
-          "area_attesa": 1148896.1
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1956,
+          "expected_height": 119924.0,
+          "expected_area": 1148896.1
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.9956,
-          "altezza_attesa": 13491.4,
-          "area_attesa": 120634.1
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.9956,
+          "expected_height": 13491.4,
+          "expected_area": 120634.1
         }
       }
     },
     "Ar_t10_r2.mzML": {
-      "condizione": "Ar",
-      "tempo": "t10",
-      "replica": "r2",
+      "condition": "Ar",
+      "time": "t10",
+      "replicate": "r2",
       "delta_rt_min": 0.0051,
       "scale_factor": 0.983,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.0051,
-          "altezza_attesa": 73723.8,
-          "area_attesa": 659202.8
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.0051,
+          "expected_height": 73723.8,
+          "expected_area": 659202.8
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2051,
-          "altezza_attesa": 58979.0,
-          "area_attesa": 489693.5
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.2051,
+          "expected_height": 58979.0,
+          "expected_area": 489693.5
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": true,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6051,
-          "altezza_attesa": 196596.7,
-          "area_attesa": 1632311.8
+          "present": true,
+          "nominal_mz": 225,
+          "expected_rt": 2.6051,
+          "expected_height": 196596.7,
+          "expected_area": 1632311.8
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.2051,
-          "altezza_attesa": 117958.0,
-          "area_attesa": 1130062.0
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.2051,
+          "expected_height": 117958.0,
+          "expected_area": 1130062.0
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.0051,
-          "altezza_attesa": 13270.3,
-          "area_attesa": 118656.5
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.0051,
+          "expected_height": 13270.3,
+          "expected_area": 118656.5
         }
       }
     },
     "He_t0_r1.mzML": {
-      "condizione": "He",
-      "tempo": "t0",
-      "replica": "r1",
+      "condition": "He",
+      "time": "t0",
+      "replicate": "r1",
       "delta_rt_min": 0.0287,
       "scale_factor": 0.9703,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.0287,
-          "altezza_attesa": 485171.6,
-          "area_attesa": 4338172.8
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.0287,
+          "expected_height": 485171.6,
+          "expected_area": 4338172.8
         },
         "TP1": {
-          "presente": false,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 257,
+          "expected_rt": 2.2,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.2287,
-          "altezza_attesa": 116441.2,
-          "area_attesa": 1115530.2
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.2287,
+          "expected_height": 116441.2,
+          "expected_area": 1115530.2
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.0287,
-          "altezza_attesa": 87330.9,
-          "area_attesa": 780871.1
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.0287,
+          "expected_height": 87330.9,
+          "expected_area": 780871.1
         }
       }
     },
     "He_t0_r2.mzML": {
-      "condizione": "He",
-      "tempo": "t0",
-      "replica": "r2",
+      "condition": "He",
+      "time": "t0",
+      "replicate": "r2",
       "delta_rt_min": -0.0164,
       "scale_factor": 1.0359,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.9836,
-          "altezza_attesa": 517967.7,
-          "area_attesa": 4631420.0
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.9836,
+          "expected_height": 517967.7,
+          "expected_area": 4631420.0
         },
         "TP1": {
-          "presente": false,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 257,
+          "expected_rt": 2.2,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1836,
-          "altezza_attesa": 124312.2,
-          "area_attesa": 1190936.6
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1836,
+          "expected_height": 124312.2,
+          "expected_area": 1190936.6
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.9836,
-          "altezza_attesa": 93234.2,
-          "area_attesa": 833655.6
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.9836,
+          "expected_height": 93234.2,
+          "expected_area": 833655.6
         }
       }
     },
     "He_t5_r1.mzML": {
-      "condizione": "He",
-      "tempo": "t5",
-      "replica": "r1",
+      "condition": "He",
+      "time": "t5",
+      "replicate": "r1",
       "delta_rt_min": -0.024,
       "scale_factor": 0.9655,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.976,
-          "altezza_attesa": 241366.4,
-          "area_attesa": 2158183.4
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.976,
+          "expected_height": 241366.4,
+          "expected_area": 2158183.4
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.176,
-          "altezza_attesa": 193093.1,
-          "area_attesa": 1603221.9
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.176,
+          "expected_height": 193093.1,
+          "expected_area": 1603221.9
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": true,
-          "mz_nominale": 225,
-          "rt_atteso": 2.576,
-          "altezza_attesa": 115855.9,
-          "area_attesa": 961933.2
+          "present": true,
+          "nominal_mz": 225,
+          "expected_rt": 2.576,
+          "expected_height": 115855.9,
+          "expected_area": 961933.2
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.176,
-          "altezza_attesa": 115855.9,
-          "area_attesa": 1109922.9
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.176,
+          "expected_height": 115855.9,
+          "expected_area": 1109922.9
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.976,
-          "altezza_attesa": 43446.0,
-          "area_attesa": 388473.0
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.976,
+          "expected_height": 43446.0,
+          "expected_area": 388473.0
         }
       }
     },
     "He_t5_r2.mzML": {
-      "condizione": "He",
-      "tempo": "t5",
-      "replica": "r2",
+      "condition": "He",
+      "time": "t5",
+      "replicate": "r2",
       "delta_rt_min": -0.0111,
       "scale_factor": 0.9596,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.9889,
-          "altezza_attesa": 239909.2,
-          "area_attesa": 2145154.0
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.9889,
+          "expected_height": 239909.2,
+          "expected_area": 2145154.0
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.1889,
-          "altezza_attesa": 191927.4,
-          "area_attesa": 1593543.0
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.1889,
+          "expected_height": 191927.4,
+          "expected_area": 1593543.0
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": true,
-          "mz_nominale": 225,
-          "rt_atteso": 2.5889,
-          "altezza_attesa": 115156.4,
-          "area_attesa": 956125.8
+          "present": true,
+          "nominal_mz": 225,
+          "expected_rt": 2.5889,
+          "expected_height": 115156.4,
+          "expected_area": 956125.8
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1889,
-          "altezza_attesa": 115156.4,
-          "area_attesa": 1103222.1
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1889,
+          "expected_height": 115156.4,
+          "expected_area": 1103222.1
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.9889,
-          "altezza_attesa": 43183.7,
-          "area_attesa": 386127.7
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.9889,
+          "expected_height": 43183.7,
+          "expected_area": 386127.7
         }
       }
     },
     "He_t10_r1.mzML": {
-      "condizione": "He",
-      "tempo": "t10",
-      "replica": "r1",
+      "condition": "He",
+      "time": "t10",
+      "replicate": "r1",
       "delta_rt_min": 0.0219,
       "scale_factor": 1.0259,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.0219,
-          "altezza_attesa": 76939.2,
-          "area_attesa": 687953.6
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.0219,
+          "expected_height": 76939.2,
+          "expected_area": 687953.6
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2219,
-          "altezza_attesa": 61551.4,
-          "area_attesa": 511051.3
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.2219,
+          "expected_height": 61551.4,
+          "expected_area": 511051.3
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": true,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6219,
-          "altezza_attesa": 205171.2,
-          "area_attesa": 1703504.2
+          "present": true,
+          "nominal_mz": 225,
+          "expected_rt": 2.6219,
+          "expected_height": 205171.2,
+          "expected_area": 1703504.2
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.2219,
-          "altezza_attesa": 123102.7,
-          "area_attesa": 1179349.1
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.2219,
+          "expected_height": 123102.7,
+          "expected_area": 1179349.1
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.0219,
-          "altezza_attesa": 13849.1,
-          "area_attesa": 123831.7
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.0219,
+          "expected_height": 13849.1,
+          "expected_area": 123831.7
         }
       }
     },
     "He_t10_r2.mzML": {
-      "condizione": "He",
-      "tempo": "t10",
-      "replica": "r2",
+      "condition": "He",
+      "time": "t10",
+      "replicate": "r2",
       "delta_rt_min": 0.0302,
       "scale_factor": 0.9749,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.0302,
-          "altezza_attesa": 73118.9,
-          "area_attesa": 653794.5
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.0302,
+          "expected_height": 73118.9,
+          "expected_area": 653794.5
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2302,
-          "altezza_attesa": 58495.1,
-          "area_attesa": 485675.9
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.2302,
+          "expected_height": 58495.1,
+          "expected_area": 485675.9
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": true,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6302,
-          "altezza_attesa": 194983.8,
-          "area_attesa": 1618919.6
+          "present": true,
+          "nominal_mz": 225,
+          "expected_rt": 2.6302,
+          "expected_height": 194983.8,
+          "expected_area": 1618919.6
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.2302,
-          "altezza_attesa": 116990.3,
-          "area_attesa": 1120790.5
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.2302,
+          "expected_height": 116990.3,
+          "expected_area": 1120790.5
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.0302,
-          "altezza_attesa": 13161.4,
-          "area_attesa": 117683.0
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.0302,
+          "expected_height": 13161.4,
+          "expected_area": 117683.0
         }
       }
     },
     "Reference_t0_r1.mzML": {
-      "condizione": "Reference",
-      "tempo": "t0",
-      "replica": "r1",
+      "condition": "Reference",
+      "time": "t0",
+      "replicate": "r1",
       "delta_rt_min": 0.0011,
       "scale_factor": 1.0058,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.0011,
-          "altezza_attesa": 502892.8,
-          "area_attesa": 4496627.3
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.0011,
+          "expected_height": 502892.8,
+          "expected_area": 4496627.3
         },
         "TP1": {
-          "presente": false,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 257,
+          "expected_rt": 2.2,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.2011,
-          "altezza_attesa": 120694.3,
-          "area_attesa": 1156275.6
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.2011,
+          "expected_height": 120694.3,
+          "expected_area": 1156275.6
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.0011,
-          "altezza_attesa": 90520.7,
-          "area_attesa": 809392.9
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.0011,
+          "expected_height": 90520.7,
+          "expected_area": 809392.9
         }
       }
     },
     "Reference_t0_r2.mzML": {
-      "condizione": "Reference",
-      "tempo": "t0",
-      "replica": "r2",
+      "condition": "Reference",
+      "time": "t0",
+      "replicate": "r2",
       "delta_rt_min": -0.0247,
       "scale_factor": 1.0285,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.9753,
-          "altezza_attesa": 514257.3,
-          "area_attesa": 4598243.9
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.9753,
+          "expected_height": 514257.3,
+          "expected_area": 4598243.9
         },
         "TP1": {
-          "presente": false,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 257,
+          "expected_rt": 2.2,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1753,
-          "altezza_attesa": 123421.8,
-          "area_attesa": 1182405.6
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1753,
+          "expected_height": 123421.8,
+          "expected_area": 1182405.6
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.9753,
-          "altezza_attesa": 92566.3,
-          "area_attesa": 827683.9
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.9753,
+          "expected_height": 92566.3,
+          "expected_area": 827683.9
         }
       }
     },
     "Reference_t5_r1.mzML": {
-      "condizione": "Reference",
-      "tempo": "t5",
-      "replica": "r1",
+      "condition": "Reference",
+      "time": "t5",
+      "replicate": "r1",
       "delta_rt_min": 0.005,
       "scale_factor": 1.0142,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.005,
-          "altezza_attesa": 496958.1,
-          "area_attesa": 4443562.0
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.005,
+          "expected_height": 496958.1,
+          "expected_area": 4443562.0
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.205,
-          "altezza_attesa": 30426.0,
-          "area_attesa": 252622.3
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.205,
+          "expected_height": 30426.0,
+          "expected_area": 252622.3
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.205,
-          "altezza_attesa": 121704.0,
-          "area_attesa": 1165949.2
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.205,
+          "expected_height": 121704.0,
+          "expected_area": 1165949.2
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.005,
-          "altezza_attesa": 89452.5,
-          "area_attesa": 799841.2
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.005,
+          "expected_height": 89452.5,
+          "expected_area": 799841.2
         }
       }
     },
     "Reference_t5_r2.mzML": {
-      "condizione": "Reference",
-      "tempo": "t5",
-      "replica": "r2",
+      "condition": "Reference",
+      "time": "t5",
+      "replicate": "r2",
       "delta_rt_min": 0.0264,
       "scale_factor": 1.0006,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.0264,
-          "altezza_attesa": 490310.0,
-          "area_attesa": 4384118.6
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.0264,
+          "expected_height": 490310.0,
+          "expected_area": 4384118.6
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2264,
-          "altezza_attesa": 30019.0,
-          "area_attesa": 249242.9
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.2264,
+          "expected_height": 30019.0,
+          "expected_area": 249242.9
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.2264,
-          "altezza_attesa": 120075.9,
-          "area_attesa": 1150351.8
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.2264,
+          "expected_height": 120075.9,
+          "expected_area": 1150351.8
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.0264,
-          "altezza_attesa": 88255.8,
-          "area_attesa": 789141.3
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.0264,
+          "expected_height": 88255.8,
+          "expected_area": 789141.3
         }
       }
     },
     "Reference_t10_r1.mzML": {
-      "condizione": "Reference",
-      "tempo": "t10",
-      "replica": "r1",
+      "condition": "Reference",
+      "time": "t10",
+      "replicate": "r1",
       "delta_rt_min": -0.0128,
       "scale_factor": 1.0354,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 2.9872,
-          "altezza_attesa": 497003.3,
-          "area_attesa": 4443966.1
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 2.9872,
+          "expected_height": 497003.3,
+          "expected_area": 4443966.1
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.1872,
-          "altezza_attesa": 10354.2,
-          "area_attesa": 85969.6
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.1872,
+          "expected_height": 10354.2,
+          "expected_area": 85969.6
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1872,
-          "altezza_attesa": 124250.8,
-          "area_attesa": 1190348.1
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1872,
+          "expected_height": 124250.8,
+          "expected_area": 1190348.1
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 2.9872,
-          "altezza_attesa": 89460.6,
-          "area_attesa": 799913.9
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 2.9872,
+          "expected_height": 89460.6,
+          "expected_area": 799913.9
         }
       }
     },
     "Reference_t10_r2.mzML": {
-      "condizione": "Reference",
-      "tempo": "t10",
-      "replica": "r2",
+      "condition": "Reference",
+      "time": "t10",
+      "replicate": "r2",
       "delta_rt_min": 0.0234,
       "scale_factor": 0.9792,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.0234,
-          "altezza_attesa": 470030.6,
-          "area_attesa": 4202789.0
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.0234,
+          "expected_height": 470030.6,
+          "expected_area": 4202789.0
         },
         "TP1": {
-          "presente": true,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2234,
-          "altezza_attesa": 9792.3,
-          "area_attesa": 81304.0
+          "present": true,
+          "nominal_mz": 257,
+          "expected_rt": 2.2234,
+          "expected_height": 9792.3,
+          "expected_area": 81304.0
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.2234,
-          "altezza_attesa": 117507.6,
-          "area_attesa": 1125747.0
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.2234,
+          "expected_height": 117507.6,
+          "expected_area": 1125747.0
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.0234,
-          "altezza_attesa": 84605.5,
-          "area_attesa": 756502.0
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.0234,
+          "expected_height": 84605.5,
+          "expected_area": 756502.0
         }
       }
     },
     "bianco.mzML": {
-      "condizione": "bianco",
-      "tempo": "t0",
-      "replica": "r1",
+      "condition": "blank",
+      "time": "t0",
+      "replicate": "r1",
       "delta_rt_min": -0.0182,
       "scale_factor": 1.0136,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": false,
-          "mz_nominale": 241,
-          "rt_atteso": 3.0,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 241,
+          "expected_rt": 3.0,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP1": {
-          "presente": false,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 257,
+          "expected_rt": 2.2,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.1818,
-          "altezza_attesa": 121629.0,
-          "area_attesa": 1165230.9
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.1818,
+          "expected_height": 121629.0,
+          "expected_area": 1165230.9
         },
         "TP5": {
-          "presente": false,
-          "mz_nominale": 197,
-          "rt_atteso": 3.0,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 197,
+          "expected_rt": 3.0,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         }
       }
     },
     "standard.mzML": {
-      "condizione": "standard",
-      "tempo": "t0",
-      "replica": "r1",
+      "condition": "standard",
+      "time": "t0",
+      "replicate": "r1",
       "delta_rt_min": 0.0288,
       "scale_factor": 0.9768,
-      "composti": {
+      "compounds": {
         "Parent": {
-          "presente": true,
-          "mz_nominale": 241,
-          "rt_atteso": 3.0288,
-          "altezza_attesa": 488388.4,
-          "area_attesa": 4366935.8
+          "present": true,
+          "nominal_mz": 241,
+          "expected_rt": 3.0288,
+          "expected_height": 488388.4,
+          "expected_area": 4366935.8
         },
         "TP1": {
-          "presente": false,
-          "mz_nominale": 257,
-          "rt_atteso": 2.2,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 257,
+          "expected_rt": 2.2,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP2": {
-          "presente": false,
-          "mz_nominale": 273,
-          "rt_atteso": 1.8,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 273,
+          "expected_rt": 1.8,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP3": {
-          "presente": false,
-          "mz_nominale": 225,
-          "rt_atteso": 2.6,
-          "altezza_attesa": 0.0,
-          "area_attesa": 0.0
+          "present": false,
+          "nominal_mz": 225,
+          "expected_rt": 2.6,
+          "expected_height": 0.0,
+          "expected_area": 0.0
         },
         "TP4": {
-          "presente": true,
-          "mz_nominale": 279,
-          "rt_atteso": 4.2288,
-          "altezza_attesa": 117213.2,
-          "area_attesa": 1122926.4
+          "present": true,
+          "nominal_mz": 279,
+          "expected_rt": 4.2288,
+          "expected_height": 117213.2,
+          "expected_area": 1122926.4
         },
         "TP5": {
-          "presente": true,
-          "mz_nominale": 197,
-          "rt_atteso": 3.0288,
-          "altezza_attesa": 87909.9,
-          "area_attesa": 786048.4
+          "present": true,
+          "nominal_mz": 197,
+          "expected_rt": 3.0288,
+          "expected_height": 87909.9,
+          "expected_area": 786048.4
         }
       }
     }

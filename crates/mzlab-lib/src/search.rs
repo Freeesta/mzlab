@@ -121,7 +121,8 @@ pub fn identity_with<S: Source>(
             lib.peaks_into(i, &mut s.mz, &mut s.it)?;
             s.prec = rec.prec;
             let sc = scorer.score(&q.spec, &s, frag);
-            let d = rec.prec - q.prec;
+            // observed (query) - theoretical (library), over the library value (study item A3)
+            let d = q.prec - rec.prec;
             light.push(Hit {
                 index: i,
                 prec: rec.prec,
@@ -135,7 +136,7 @@ pub fn identity_with<S: Source>(
                 explained: sc.explained,
                 nl_shared: 0,
                 dprec: if matches!(o.prec_tol, Tol::Ppm(_)) {
-                    d / q.prec * 1e6
+                    d / rec.prec * 1e6
                 } else {
                     d
                 },

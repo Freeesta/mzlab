@@ -12,13 +12,13 @@ const CALCQUIHTML = (() => {
   const loss = (/** @type {Bag} */ l) => (window.QQQRef ? QQQRef.lossName(l) : `<b>${EH(l.f)}</b>`);
 
   /** The choices row: tolerance (field, then its name), unit, polarity (ESI+ and ESI− toggle on their own: both can be on). Ids are `<idp>tol|unit|pol`.
-   * @param {string} idp @param {{ hr: boolean, unit: string, tol: number, pol: number, mode: { src: string, name: string } }} o */
+   * @param {string} idp @param {{ hr: boolean, unit: string, tol: number, pol: number, noPol?: boolean, mode: { src: string, name: string } }} o */
   function ctrlHtml(idp, o) {
     const on = (/** @type {boolean} */ b) => ` class="${b ? "on" : ""}" aria-pressed="${b}"`;
     return `<div class="cadd cq-ctl" data-mode="${o.hr ? "hr" : "lr"}" role="group" aria-label="${EH(T("cq.ctl"))}">
       <label class="cadd-f cq-tolf" title="${EH(T("cq.tol.tip"))}"><input id="${idp}tol" data-num=">0" value="${o.tol}"><span class="cq-tl">${T("calc.tol.plain")}</span></label>
       <span class="seg" id="${idp}unit" role="group" aria-label="${EH(T("cq.unit"))}" title="${EH(T("cq.unit"))}"><button type="button" data-u="da"${on(o.unit === "da")}>Da</button><button type="button" data-u="ppm"${on(o.unit === "ppm")}>ppm</button></span>
-      <span class="seg" id="${idp}pol" role="group" aria-label="${EH(T("calc.pol"))}" title="${EH(T("cq.pol.tip"))}"><button type="button" data-p="1"${on(o.pol !== -1)}>ESI+</button><button type="button" data-p="-1"${on(o.pol !== 1)}>ESI&minus;</button></span>
+      ${o.noPol ? "" : `<span class="seg" id="${idp}pol" role="group" aria-label="${EH(T("calc.pol"))}" title="${EH(T("cq.pol.tip"))}"><button type="button" data-p="1"${on(o.pol !== -1)}>ESI+</button><button type="button" data-p="-1"${on(o.pol !== 1)}>ESI&minus;</button></span>`}
       </div>`;
   }
 

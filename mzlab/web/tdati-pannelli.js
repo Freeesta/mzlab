@@ -42,7 +42,7 @@ function specData(p) {
     const d = x.d, top = Math.max(topOf(d.y), 1e-9), thr = (p.thr ?? 5) / 100 * top, sel = [], [i0, i1] = spanOf(d.mz, a.x0, a.x1);      // the top kept per spectrum, the window by binary search
     for (let i = i0; i < i1; i++) if (d.mz[i] >= a.x0 && d.mz[i] <= a.x1 && d.y[i] >= thr) sel.push(i);
     sel.sort((u, v) => d.y[v] - d.y[u]).splice(MAXROWS);
-    sel.sort((u, v) => d.mz[u] - d.mz[v]).forEach(i => rows.push([x.f ? x.f.label : "", nm(d.mz[i], a.dec || 4), nm(d.y[i], 1), nm(100 * d.y[i] / top, 1)]));
+    sel.sort((u, v) => d.mz[u] - d.mz[v]).forEach(i => rows.push([x.f ? x.f.label : "", nm(d.mz[i], a.dec || 4), nm((d.y0 || d.y)[i], 1), nm(100 * d.y[i] / top, 1)]));
   });
   return { title: ptitle(p), head: [T("tdati.col.file"), "m/z", T("tdati.col.int"), T("tdati.col.rel")], rows, rowHeader: true, note: T("tdati.note.spec", { thr: p.thr ?? 5, a: nm(a.x0, 2), b: nm(a.x1, 2) }) };
 }

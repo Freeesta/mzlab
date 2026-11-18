@@ -122,7 +122,7 @@ fn prec_tol(job: &MatchJob, ppm_name: &str) -> Tol {
     }
 }
 
-/// The precursor error in ppm, whichever unit the window had (`Hit.dprec` is in the unit of the window).
+/// The precursor error in ppm, whichever unit the window had (`Hit.dprec` is in the unit of the window); `prec` is the library (theoretical) value.
 fn dprec_ppm(tol: Tol, d: f64, prec: f64) -> f64 {
     match tol {
         Tol::Ppm(_) => d,
@@ -244,7 +244,7 @@ fn exact(lib: &Lib, q: &Query, job: &MatchJob, alg: &str, terms: bool) -> Result
             index: h.index,
             score,
             shared,
-            mass_ppm: dprec_ppm(tol, h.dprec, q.prec),
+            mass_ppm: dprec_ppm(tol, h.dprec, h.prec),
             delta: 0.0,
             delta_formula: None,
             explained: pairs
@@ -286,7 +286,7 @@ fn analogues(lib: &Lib, q: &Query, job: &MatchJob, terms: bool) -> Result<Vec<Ca
             index: h.index,
             score: h.mc.cosine,
             shared: h.mc.matched,
-            mass_ppm: (h.prec - q.prec) / q.prec * 1e6,
+            mass_ppm: (q.prec - h.prec) / h.prec * 1e6,
             delta: h.mc.delta,
             delta_formula: None,
             explained: h

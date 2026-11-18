@@ -15,8 +15,8 @@ function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number}
   const hb = ya + (yb - ya) * (xs[at] - xs[i0]) / ((xs[i1] - xs[i0]) || 1);
   return { area: Math.max(ar - area, 0), height: Math.max(mx - hb, 0), rt: xs[at] };       // conteggi x s, baseline lineare
 }
-// end point of the straight baseline: mean of 3 points; the drawing (grafici.js) uses the same value, so the dashed baseline is the one subtracted from the area
-const edge3 = (/** @type {number[]} */ ys, /** @type {number} */ i) => { let t = 0, c = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; c++; } return t / c; };
+// end point of the straight baseline: mean of 3 points; the drawing (grafici.js) uses the same value, so the dashed baseline is the one subtracted from the area; never below the zero line
+const edge3 = (/** @type {number[]} */ ys, /** @type {number} */ i) => { let t = 0, c = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; c++; } return Math.max(0, t / c); };
 const baseAt = (/** @type {number[]} */ b, /** @type {number} */ t) => b[1] + (b[3] - b[1]) * (t - b[0]) / ((b[2] - b[0]) || 1);
 // the colour of a spectrum of the panel: the one of its file, or of its precursor when one file gives several (the bars and the legend entry use this one)
 const specColor = (/** @type {any} */ x) => (x.multi ? PAL[(x.idx + 3) % PAL.length] : x.f.color);
@@ -120,14 +120,14 @@ function intRec(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} *
 }
 // SIM/MRM: an integration is two anchors, each end on the trace (curve), at zero or where the user put it (man, `my` = counts); two curve = edges, two zero = zero, else the line through them
 function snapBase(/** @type {Bag} */ s, /** @type {Bag} */ it) {
-  const q = it.snap, l = it.a <= it.b ? "a" : "b", h = l === "a" ? "b" : "a", y = (/** @type {string} */ e) => (q[e] === "zero" ? 0 : q[e] === "man" ? +((it.my || {})[e] || 0) : edge3(s.y, nearIdx(s.x, it[e])));
+  const q = it.snap, l = it.a <= it.b ? "a" : "b", h = l === "a" ? "b" : "a", y = (/** @type {string} */ e) => (q[e] === "zero" ? 0 : q[e] === "man" ? Math.max(0, +((it.my || {})[e] || 0)) : edge3(s.y, nearIdx(s.x, it[e])));
   if (q.a === q.b && q.a !== "man") { it.bm = q.a === "zero" ? "zero" : "edges"; delete it.bl; } else { it.bm = "line"; it.bl = [it[l], y(l), it[h], y(h)]; }
   delete it.zero; delete it.lvl; delete it.base; return it;
 }
 // the anchors of a new integration: those of the last one the user made or changed on the panel (a manual point keeps its counts), else both on the curve
 const snapNew = (/** @type {Bag} */ p) => { const o = p.ints.filter((/** @type {Bag} */ i) => i.snap).sort((/** @type {Bag} */ x, /** @type {Bag} */ y) => (y.st || y.id) - (x.st || x.id))[0]; return o ? { snap: { ...o.snap }, ...(o.my ? { my: { ...o.my } } : {}) } : { snap: { a: "curve", b: "curve" } }; };
 // [t0, y0, t1, y1] of the line between the edges: a custom line starts there
-const edgeLine = (/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, /** @type {number[] | null | undefined} */ base) => { const i0 = nearIdx(s.x, Math.min(a, b)), i1 = nearIdx(s.x, Math.max(a, b)), y = (/** @type {number} */ i) => (base ? baseAt(base, s.x[i]) : edge3(s.y, i)); return [s.x[i0], y(i0), s.x[i1], y(i1)]; };
+const edgeLine = (/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, /** @type {number[] | null | undefined} */ base) => { const i0 = nearIdx(s.x, Math.min(a, b)), i1 = nearIdx(s.x, Math.max(a, b)), y = (/** @type {number} */ i) => (base ? Math.max(0, baseAt(base, s.x[i])) : edge3(s.y, i)); return [s.x[i0], y(i0), s.x[i1], y(i1)]; };
 // a trace of a high-resolution file: the automatic tool integrates all its peaks at once (low resolution keeps one peak per click)
 const hrTrace = (/** @type {Bag} */ s) => { const f = E.files[s.k]; return !!f && !!window.HR && HR.isHr(f, f.lv); };
 // every peak of the stretch shown, found and given its baseline by the Rust engine (auto_integrate, peakq_auto.rs), in one undoable step;
@@ -361,9 +361,9 @@ async function drawSpec(p, snapped) {
   // scan-by-scan walk (arrows): one file, no background subtraction -> the scan comes from the cache of neighbouring scans, not from a window request
   const one = !isDda && files.length === 1 && p.si != null && !bgOf(files[0]) && !p._exp;
   if (one && p.lock && p.lock.fresh) await scFetch(files[0].k, p.level, prk(p.prec, p.filt), p.si - SC_AHEAD, p.si + SC_AHEAD).catch(() => {});   // the axes of the walk look at +-20 scans
-  const rel = specRel(p);                                // y axis in % of the highest peak of each scan (default for MS2) or in cps
+  const rel = specRel(p); p.el.querySelector('[data-a="rel"]')?.classList.toggle("on", rel);   // y axis in % of the highest peak of each scan (default for MSn, level >= 2) or in cps (MS1); the button follows
   const hrp = !!window.HR && HR.anyHr(files, p.level), DECP = p.dec ?? (window.HR ? HR.dec(files, p.level) : 1);       // high resolution: the m/z are the centroids of the file, written with the decimals of the profile
-  const relScale = (/** @type {Bag} */ d) => { let mx = 1e-9; for (const v of d.y) if (v > mx) mx = v; const k = 100 / mx; return { ...d, y0: d.y, y: d.y.map((/** @type {number} */ v) => v * k), py: d.py ? d.py.map((/** @type {number} */ v) => v * k) : d.py }; };
+  const relScale = (/** @type {Bag} */ d) => { let mx = 1e-9; for (const v of d.y) if (v > mx) mx = v; const k = 100 / mx; return { ...d, y0: d.y, y: d.y.map((/** @type {number} */ v) => v >= mx ? 100 : v * k), py: d.py ? d.py.map((/** @type {number} */ v) => v >= mx ? 100 : v * k) : d.py }; };
   /** @type {Bag[]} */ const reqs = [];
   files.forEach((/** @type {Bag} */ f) => {
     const isHr = !!window.HR && HR.isHr(f);
@@ -414,9 +414,9 @@ async function drawSpec(p, snapped) {
   const own = p.level > 1 ? data.flatMap((/** @type {Bag} */ x) => { const m = lineOf(x) ? x.d.pmz : x.d.mz; return m && m.length ? [m[0], m[m.length - 1], ...(x.prec > 0 ? [+x.prec + 5] : [])] : []; }) : [];
   const lo = own.reduce((a, v) => Math.min(a, v), Infinity), hi = own.reduce((a, v) => Math.max(a, v), -Infinity);   if (own.length > 1 && lo < hi) { const w = (hi - lo) * 0.05; full[0] = Math.max(0, lo - w - 1); full[1] = hi + w + 1; }
   const x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
-  let ymax = inRange(x0, x1) * 1.12 / (1 - (p._legPad || 0));
+  let ymax = relY ? 100 : inRange(x0, x1) * 1.12 / (1 - (p._legPad || 0));   // in %: exactly 0-100, the base peak touches the top (its label overflows into the card margin above the plot)
   const yfull = ymax;                                     // automatic top of the intensity axis (y zoom is relative to it)
-  const lk = p.zoomY ? null : lockSync(p, files[0].k, x0, x1, ymax, inRange, one);   // the lock freezes ONLY the intensity axis while walking over the scans
+  const lk = p.zoomY || relY ? null : lockSync(p, files[0].k, x0, x1, ymax, inRange, one);   // the lock freezes ONLY the intensity axis while walking over the scans
   if (lk) ymax = lk.ymax;
   let ymin = 0, negMax = 0;
   if (isDiff) { data.forEach(x => x.d.y.forEach((/** @type {number} */ v, /** @type {number} */ i) => { if (v < negMax && x.d.mz[i] >= x0 && x.d.mz[i] <= x1) negMax = v; })); if (negMax < 0) { ymin = negMax * 1.12; ymax = Math.max(ymax, -negMax * 0.3); } }

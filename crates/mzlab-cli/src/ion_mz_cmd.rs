@@ -14,7 +14,8 @@ usage: mzlab-cli ion-mz TEXT [--adduct ADDUCT] [--out PATH]
   --adduct A     an adduct of the catalogue, e.g. \"[M+H]+\"; \"none\" = the text is already the ion
   --out PATH     write there instead of the standard output
 
-The answer is {\"formula\", \"neutral\", \"adducts\", \"adduct\", \"mz\", \"mz5\", \"mz1\", \"nominal\", \"offset\" (only with a shift)}.
+The answer is {\"formula\", \"neutral\", \"adducts\", \"adduct\", \"mz\", \"mz5\", \"mz1\", \"nominal\", \"mz0\", \"offset\" (only with a shift)};
+\"nominal_neutral\" and \"nominal\" are nominal masses (sum of the mass numbers of the main isotopes, plus the adduct shift for an ion), \"neutral0\" and \"mz0\" the exact values rounded to integers.
 The m/z is a candidate to extract, never an identification.";
 
 pub fn run(args: Vec<String>) -> Outcome {

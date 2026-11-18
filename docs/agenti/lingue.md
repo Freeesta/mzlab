@@ -19,7 +19,7 @@ The core is in CLAUDE.md. mzLab (site, desktop app, CLI) and the qqq teaching si
   and mark what they write with `mark`, before the first paint (the inline `apply(document)` of `index.html`); the same `apply(document)` marks
   the static text without a key and starts the observer that marks, in the same task, text written by other code. Never inputs, options, titles,
   selects, scripts or an `<i>`/`<sup>` already there. The observer used to live in `shell.js`, ~0.3-0.5 s after the first paint: after a full
-  reset (two loads) the «m/z» of the map button went upright → italic → upright → italic. Test: `tests_e2e/e2e_corsivo_avvio.py` (every
+  reset (two loads) the "m/z" of the map button went upright → italic → upright → italic. Test: `tests_e2e/e2e_corsivo_avvio.py` (every
   frame of every load after `QQRESET.run("all")`: the first painted frame already italic, no change, CLS 0).
 - **Traps**: a literal key in `t("…")` or `data-i18n` must exist in the catalog (the check does not see keys built from pieces: use `t(`prefix.${x}`)`); `t()` never builds a sentence from pieces; an HTML attribute (`title`) cannot contain `"` or entities (`&Delta;` is written `Δ`).
 

@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use mzlab_core::idxread::Index;
+use mzlab_feat::isotopes::IsoParams;
 use mzlab_feat::pipeline::{analyse, Steps};
 use mzlab_feat::table::{FileFeatures, FLAG_ISOTOPE};
 use mzlab_feat::trace::Params;
@@ -15,13 +16,17 @@ fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-/// Without the cut of the maxima: the reference does not cut.
+/// Without the cut of the maxima: the reference does not cut. The frozen reference predates the plausible +2 cap, so it runs with the legacy cap.
 fn run(idx: &Path, p: &Params) -> (FileFeatures, mzlab_feat::ms2::Ms2Links) {
     let f = std::fs::File::open(idx).unwrap();
     let size = f.metadata().unwrap().len();
     let mut ix = Index::open(f, size).unwrap();
     let st = Steps {
         split: false,
+        iso: IsoParams {
+            legacy_plus2_cap: true,
+            ..IsoParams::default()
+        },
         ..Steps::default()
     };
     analyse(&mut ix, p, &st).unwrap()

@@ -1,18 +1,18 @@
-# Titoli dei pannelli
+# Panel titles
 
-Un titolo dice solo ciò che il pannello mostra, mai un nome di file (la legenda e l'elenco dei file nominano i campioni). Le regole stanno in `mzlab/web/titoli.js` (`TITOLI.nome`, pura; `TITOLI.di(p)` legge lo stato) e sono provate da `tests/test_titoli.py` e `tests_e2e/e2e_titoli.py`. Un titolo digitato dallo studente resta com'è; i titoli predefiniti si salvano come codici (`@ms2tic`, `@ms2prec:X`, `@product:X`), mai come testo tradotto.
+A title says only what the panel shows, never a file name (the legend and the file list name the samples). The rules live in `mzlab/web/titoli.js` (`TITOLI.nome`, pure; `TITOLI.di(p)` reads the state) and are tested by `tests/test_titoli.py` and `tests_e2e/e2e_titoli.py`. A title typed by the student stays as it is; default titles are saved as codes (`@ms2tic`, `@ms2prec:X`, `@product:X`), never as translated text.
 
-| Pannello | Segnale | Titolo (EN) |
+| Panel | Signal | Title (EN) |
 |---|---|---|
-| Cromatogramma | TIC / BPC | `TIC` / `BPC` (con precursore: `TIC · precursor X`) |
-| Cromatogramma, scheda MS² | file con un solo precursore | `TIC · MS²` |
-| Cromatogramma, scheda MS² | più precursori, nessuno scelto | `TIC · MS² (all precursors)` |
-| Cromatogramma, scheda MS² | più precursori, uno scelto | `TIC · MS² · precursor X` |
-| Cromatogramma PDA | tutte le λ / una / un intervallo | `PDA (all λ)` / `PDA 254 nm` / `PDA 250–260 nm` |
-| XIC | una traccia / più tracce | `XIC · etichetta` / `Extracted ion (XIC)` |
-| MRM, SIM | una transizione / tutte | `MRM · Q1>Q3` (`SIM · …`) / `MRM` (`SIM ions`) |
-| Spettro | MS¹ / MS² senza precursore / MS² con precursore | `MS¹` / `MS²` / `MS² of X` (il tempo e l'energia restano nella barra) |
-| Spettro UV | a un tempo | `UV spectrum` |
-| Mappa | m/z / λ | `RT-m/z map` / `RT-λ map (PDA)` |
+| Chromatogram | TIC / BPC | `TIC` / `BPC` (with precursor: `TIC · precursor X`) |
+| Chromatogram, MS² tab | file with a single precursor | `TIC · MS²` |
+| Chromatogram, MS² tab | several precursors, none chosen | `TIC · MS² (all precursors)` |
+| Chromatogram, MS² tab | several precursors, one chosen | `TIC · MS² · precursor X` |
+| PDA chromatogram | all λ / one / a range | `PDA (all λ)` / `PDA 254 nm` / `PDA 250–260 nm` |
+| XIC | one trace / several traces | `XIC · label` / `Extracted ion (XIC)` |
+| MRM, SIM | one transition / all | `MRM · Q1>Q3` (`SIM · …`) / `MRM` (`SIM ions`) |
+| Spectrum | MS¹ / MS² without precursor / MS² with precursor | `MS¹` / `MS²` / `MS² of X` (time and energy stay in the bar) |
+| UV spectrum | at one time | `UV spectrum` |
+| Map | m/z / λ | `RT-m/z map` / `RT-λ map (PDA)` |
 
-Spettro che segue un cromatogramma con più file sovrapposti: l'etichetta secondaria «spettro di <file>» sta nell'intestazione dello spettro (classe `.pscan`), non nel titolo del cromatogramma. Il nome del file di un'esportazione aggiunge precursore (`precX`) e λ (`PDA-254nm`).
+Spectrum that follows a chromatogram with several overlaid files: the secondary label "spectrum of <file>" sits in the spectrum header (class `.pscan`), not in the chromatogram title. The file name of an export adds precursor (`precX`) and λ (`PDA-254nm`).

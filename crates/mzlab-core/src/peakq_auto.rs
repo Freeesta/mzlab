@@ -169,11 +169,13 @@ impl Ctx<'_> {
             return None;
         }
         let end = |i: usize, on_bg: bool| {
-            if on_bg {
+            // never below the zero line of the trace
+            (if on_bg {
                 self.b[i]
             } else {
                 self.b[i] + self.sc[i]
-            }
+            })
+            .max(0.0)
         };
         let (base_lo, base_hi) = (end(lo, lo_bg), end(hi, hi_bg));
         let raw: f64 = (lo + 1..=hi)

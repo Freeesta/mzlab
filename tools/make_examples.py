@@ -85,7 +85,7 @@ def main():
                 return json.load(urllib.request.urlopen(f"http://127.0.0.1:8822/api/formula?f={f}&adduct={urllib.parse.quote(ad)}"))
             import urllib.parse
             for f in ["C8H9NO2", "C8H9NO3", "C8H9NO4", "C6H7NO"]:
-                x = fm(f, "[M+H]+"); print(f, "M", round(x["neutral"], 4), "[M+H]+", round(x["mz"], 4), "unit", x["nominal"])
+                x = fm(f, "[M+H]+"); print(f, "M", round(x["neutral"], 4), "[M+H]+", round(x["mz"], 4), "unit", x["mz0"])
             pg.evaluate("setView('draw')"); pg.wait_for_function("window.TPDraw && TPDraw.ready()", timeout=60000); pg.wait_for_timeout(1500)
             pg.check("#lb-f"); pg.check("#lb-m"); pg.select_option("#lb-dec", "0")
             I = lambda s: [s, "ITALIC"]

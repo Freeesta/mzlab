@@ -68,16 +68,16 @@ Columns:
 
 ### Format of `riepilogo.csv`
 Columns:
-- `molecola`: identifying name of the compound.
+- `molecule`: identifying name of the compound.
 - `cid`: PubChem Compound ID.
-- `n_atomi_pesanti`: number of heavy atoms.
-- `tempo_xtb_water_s`: CPU/wall time in seconds (measured with `perf_counter`).
-- `tempo_xtb_gas_s`: CPU/wall time in seconds in the gas phase.
-- `convergente_water`: SCF convergence in water (`true`/`false`).
-- `convergente_gas`: SCF convergence in gas (`true`/`false`).
-- `sito_f_minus_water`: index(es) of the heavy atom of the site with the highest $f(-)$ (unsaturated C with H, averaged over symmetry classes).
-- `sito_f_minus_gas`: corresponding site in the gas phase.
-- `note`: chemical and methodological notes.
+- `n_heavy_atoms`: number of heavy atoms.
+- `time_xtb_water_s`: CPU/wall time in seconds (measured with `perf_counter`).
+- `time_xtb_gas_s`: CPU/wall time in seconds in the gas phase.
+- `converged_water`: SCF convergence in water (`true`/`false`).
+- `converged_gas`: SCF convergence in gas (`true`/`false`).
+- `site_f_minus_water`: index(es) of the heavy atom of the site with the highest $f(-)$ (unsaturated C with H, averaged over symmetry classes).
+- `site_f_minus_gas`: corresponding site in the gas phase.
+- `notes`: chemical and methodological notes.
 
 ---
 

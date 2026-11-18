@@ -105,9 +105,8 @@ def test_parameters_are_reported(answers):
 
 
 def test_a_trace_below_zero_is_never_a_negative_area(tmp_path):
-    """A blank subtracted too much (the whole trace 600 counts lower) and one over-subtracted point in a flank: the baseline ends stay on the
-    background below zero (never raised to zero: the line is not extrapolated) and never above the trace, the dip under the line is
-    `below`, every area >= 0."""
+    """A blank subtracted too much (the whole trace 600 counts lower) and one over-subtracted point in a flank: the baseline ends are held at
+    the zero line (never below it), the dip under the line is `below`, every area >= 0."""
     cut = 0
     for seed in SEEDS:
         t, y, truth = trace("singles", seed)
@@ -120,7 +119,7 @@ def test_a_trace_below_zero_is_never_a_negative_area(tmp_path):
         for p in r["peaks"]:
             lo, hi = p["lo"], p["hi"]
             for b, i, c in ((p["b0"], lo, p["clamp0"]), (p["b1"], hi, p["clamp1"])):
-                assert b < 0 and b <= y[i] and c in ("none", "trace") and (c == "none" or b == y[i]), (seed, p)
+                assert b == 0 and c in ("none", "trace", "zero"), (seed, p)
             up, down = _trapezoid(t, y, lo, hi, [p["t0"], p["b0"], p["t1"], p["b1"]])
             assert p["area"] >= 0 and p["below"] >= 0 and p["area_zero"] >= 0, (seed, p)
             assert up == pytest.approx(p["area"], rel=1e-9, abs=1e-9) and down == pytest.approx(p["below"], rel=1e-9, abs=1e-9), (seed, p)

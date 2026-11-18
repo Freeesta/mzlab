@@ -76,14 +76,14 @@ fn one_row_per_window_grouped_by_channel_at_the_peaks_written() {
         ],
         "channels in the order of the file, samples in order, the pair by start"
     );
-    let apex: Vec<f64> = r[1..].iter().map(|x| x[7].parse().unwrap()).collect();
+    let apex: Vec<f64> = r[1..].iter().map(|x| x[4].parse().unwrap()).collect();
     let want = [at(1, 0, 0), at(3, 0, 0), at(2, 2, 0), at(2, 2, 1)];
     for (g, w) in apex.iter().zip(want) {
         assert!((g - w).abs() <= 0.014, "{apex:?} vs {want:?}");
     }
     assert_eq!((r[1][10], r[2][10]), ("edges", "zero"));
     assert!(
-        r[1..].iter().all(|x| x[4].parse::<f64>().unwrap() > 0.0),
+        r[1..].iter().all(|x| x[5].parse::<f64>().unwrap() > 0.0),
         "{t}"
     );
     let sums = text(&table(

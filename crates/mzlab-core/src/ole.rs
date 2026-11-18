@@ -1,8 +1,10 @@
 //! Minimal reader of OLE2 compound files (the container of Analyst `.wiff` and `.dam` files): `mzlab/reader/ole.py`.
-//! Only what is needed to list and read streams; the whole file is held in memory (a method is a few KB). Every chain and walk is bounded by the bytes
+//! Only what is needed to list and read streams; the file is held in memory (`open`) or read by sector on demand (`open_at`: a `.wiff` of hundreds of MB
+//! whose streams are mostly a detector trace nobody asked for; only the FAT, directory and mini stream are held). Every chain and walk is bounded by the bytes
 //! present and by `Limits` (bytes, directory entries, storage depth), so a damaged or hostile header costs at most a linear pass over the file.
 
 use crate::error::{Error, Result};
+use crate::idxread::ReadAt;
 use crate::readers::Limits;
 
 const END: u32 = 0xFFFF_FFFE;
@@ -15,6 +17,22 @@ impl Ole {
         if data.len() as u64 > limits.byte {
             return Err(Error::fixed_limit("OLE file", limits.byte));
         }
+        let len = data.len() as u64;
+        Self::build(
+            Src(std::cell::RefCell::new(Box::new(data)), len),
+            name,
+            limits,
+        )
+    }
+
+    /// `open` over `len` bytes read at offsets: only the FAT, the directory, the mini FAT and the mini stream are held (bounded by `limits.byte`), a stream is
+    /// read when it is asked for. The same errors and the same stream bytes as `open` of the whole file.
+    pub fn open_at(src: Box<dyn ReadAt>, len: u64, name: &str, limits: &Limits) -> Result<Ole> {
+        Self::build(Src(std::cell::RefCell::new(src), len), name, limits)
+    }
+
+    fn build(src: Src, name: &str, limits: &Limits) -> Result<Ole> {
+        let data = src.read(0, 512);
         if !matches!(
             data.get(..8),
             Some([0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1])
@@ -38,7 +56,9 @@ impl Ole {
             u32_at(&data, 0x48)?,
         );
         let mut o = Ole {
-            data,
+            src,
+            sha1: Default::default(),
+            last_big: Default::default(),
             ss,
             mss,
             cutoff,
@@ -49,12 +69,12 @@ impl Ole {
             streams: vec![],
         };
         let mut difat: Vec<u32> = (0..109)
-            .map(|i| u32_at(&o.data, 0x4C + 4 * i))
+            .map(|i| u32_at(&data, 0x4C + 4 * i))
             .collect::<Result<_>>()?;
         let mut s = dif0;
         // a chain of DIFAT sectors is at most as long as the file has sectors, and never visits a sector twice (a loop would grow `difat` for ever)
         let mut visited = std::collections::HashSet::new();
-        for _ in 0..(n_dif as usize).min(o.data.len() / ss) {
+        for _ in 0..(n_dif as usize).min(o.len() / ss) {
             if s >= END || !visited.insert(s) {
                 break;
             }
@@ -75,13 +95,14 @@ impl Ole {
                 o.fat.push(u32_at(&sec, 4 * i)?);
             }
         }
+        let held = usize::try_from(limits.byte).unwrap_or(usize::MAX);
         o.dir = o.parse_dir(dir0, limits)?;
         let root = o.dir.first().cloned().ok_or_else(bad)?;
         if root.start < END {
-            o.ministream = o.chain_bytes(root.start, usize::MAX);
+            o.ministream = o.chain_bytes(root.start, held);
         }
         if mfat0 < END {
-            let raw = o.chain_bytes(mfat0, usize::MAX);
+            let raw = o.chain_bytes(mfat0, held);
             o.minifat = (0..raw.len() / 4)
                 .map(|i| u32_at(&raw, 4 * i))
                 .collect::<Result<_>>()?;
@@ -91,19 +112,20 @@ impl Ole {
     }
 
     fn sector(&self, sid: u32) -> Vec<u8> {
-        let off = (sid as usize).saturating_add(1).saturating_mul(self.ss);
-        let a = off.min(self.data.len());
-        self.data
-            .get(a..off.saturating_add(self.ss).min(self.data.len()))
-            .unwrap_or_default()
-            .to_vec()
+        let off = (sid as u64)
+            .saturating_add(1)
+            .saturating_mul(self.ss as u64);
+        self.src.read(off, self.ss)
+    }
+
+    fn len(&self) -> usize {
+        usize::try_from(self.src.len()).unwrap_or(usize::MAX)
     }
 
     /// The sectors of the chain from `start`, up to `cap` bytes: a chain is at most as long as the file has sectors, so a loop ends after one pass.
     fn chain_bytes(&self, start: u32, cap: usize) -> Vec<u8> {
         let (mut out, mut sid, mut seen) = (Vec::new(), start, 0);
-        while sid < END && out.len() < cap && seen <= self.fat.len().min(self.data.len() / self.ss)
-        {
+        while sid < END && out.len() < cap && seen <= self.fat.len().min(self.len() / self.ss) {
             out.extend(self.sector(sid));
             sid = self.fat.get(sid as usize).copied().unwrap_or(END);
             seen += 1;
@@ -112,7 +134,7 @@ impl Ole {
     }
 
     fn parse_dir(&self, start: u32, limits: &Limits) -> Result<Vec<Entry>> {
-        let raw = self.chain_bytes(start, usize::MAX);
+        let raw = self.chain_bytes(start, usize::try_from(limits.byte).unwrap_or(usize::MAX));
         limits.ok_entries((raw.len() / 128) as u64)?;
         Ok(raw
             .chunks_exact(128)
@@ -264,12 +286,24 @@ impl Ole {
     pub fn cut_short(&self) -> Option<u64> {
         let used = self.fat.iter().rposition(|&v| v != FREE)?;
         let need = (used as u64 + 2).saturating_mul(self.ss as u64);
-        (need > self.data.len() as u64 + self.ss as u64 - 1).then_some(need)
+        (need > self.src.len() + self.ss as u64 - 1).then_some(need)
+    }
+
+    /// Takes the SHA-1 of the whole file (lower-case hex) from the caller, who already has it, instead of reading the file for it.
+    pub fn with_sha1(self, sha1: Option<String>) -> Ole {
+        *self.sha1.borrow_mut() = sha1;
+        self
     }
 
     /// SHA-1 (lower-case hex) of the whole container file.
     pub fn sha1_hex(&self) -> String {
-        crate::method::sha1_hex_bytes(&self.data)
+        if let Some(h) = self.sha1.borrow().as_ref() {
+            return h.clone();
+        }
+        let h =
+            crate::method::sha1_dyn(&mut **self.src.0.borrow_mut(), self.src.1).unwrap_or_default();
+        *self.sha1.borrow_mut() = Some(h.clone());
+        h
     }
 
     pub fn has(&self, path: &str) -> bool {
@@ -278,6 +312,19 @@ impl Ole {
 
     /// The bytes of a stream (`None` when the path is not one). A later stream of the same path wins, as in a Python dict.
     pub fn read(&self, path: &str) -> Option<Vec<u8>> {
+        if let Some((p, b)) = self.last_big.borrow().as_ref()
+            && p == path
+        {
+            return Some(b.clone());
+        }
+        let b = self.read_stream(path)?;
+        if b.len() >= 1 << 20 {
+            *self.last_big.borrow_mut() = Some((path.to_string(), b.clone()));
+        }
+        Some(b)
+    }
+
+    fn read_stream(&self, path: &str) -> Option<Vec<u8>> {
         let e = self
             .dir
             .get(self.streams.iter().rev().find(|(p, _)| p == path)?.1)?;
@@ -316,8 +363,34 @@ struct Entry {
     size: u32,
 }
 
+/// The bytes of the file, read at offsets (a `Vec<u8>` is one too).
+struct Src(std::cell::RefCell<Box<dyn ReadAt>>, u64);
+
+impl Src {
+    fn len(&self) -> u64 {
+        self.1
+    }
+
+    /// Up to `n` bytes at `off`, cut at the end of the file (a read that fails gives what a cut file would: nothing).
+    #[inline(never)]
+    fn read(&self, off: u64, n: usize) -> Vec<u8> {
+        let end = off.saturating_add(n as u64).min(self.1);
+        if off >= end {
+            return Vec::new();
+        }
+        let mut b = vec![0u8; usize::try_from(end - off).unwrap_or(n)];
+        match self.0.borrow_mut().read_at(off, &mut b) {
+            Ok(()) => b,
+            Err(_) => Vec::new(),
+        }
+    }
+}
+
 pub struct Ole {
-    data: Vec<u8>,
+    src: Src,
+    sha1: std::cell::RefCell<Option<String>>,
+    /// The last stream of a megabyte or more that `read` gave: the DAD is asked for by the identity, the losses and the chromatograms of one injection.
+    last_big: std::cell::RefCell<Option<(String, Vec<u8>)>>,
     ss: usize,
     mss: usize,
     cutoff: u32,
