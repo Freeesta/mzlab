@@ -102,7 +102,9 @@ try:
         def mrm():
             pg.evaluate("setTab('mrm')"); ready(pg); wait_for_js(pg, "document.querySelector('[data-o=canali]')")
             pg.click("[data-o=canali]"); wait_for_js(pg, "document.querySelector('.can-pop [role=treeitem]')")
-            rows = pg.evaluate("document.querySelectorAll('.can-pop [role=treeitem]').length"); assert rows == 2, rows
+            # the two SRM transitions plus the DAD (TWC) row: the MRM picker also lists the UV trace of a file that carries a DAD
+            rows = pg.evaluate("document.querySelectorAll('.can-pop [role=treeitem]').length"); assert rows == 3, rows
+            srm = pg.evaluate("document.querySelectorAll(\".can-pop [role=treeitem][data-group^='srm']\").length"); assert srm == 2, srm
             pg.click(".can-pop [role=treeitem] >> nth=1"); ready(pg); frames(pg, 6)
             tr = pg.evaluate("E.panels.find(p => p.type==='mrm').tr"); assert isinstance(tr, list) and len(tr) == 1, tr
         step("MRM panel: srm channels give the transitions", mrm)
