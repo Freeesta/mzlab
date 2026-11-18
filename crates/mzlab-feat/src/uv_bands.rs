@@ -57,7 +57,13 @@ pub fn uv_peaks(rt_min: &[f64], y: &[f64], p: &UvParams) -> Result<Vec<UvPeak>> 
     if rt_min.len() != y.len() || y.len() < 2 {
         return Ok(Vec::new());
     }
-    let narrow = detect_peaks(rt_min, y, Params::default());
+    // the narrow finder looks for sharp peaks beside broad bands (`detect_broad` takes the bands): the width of the tallest peak, which is a
+    // band here, must not rescale it, so the fixed widths stay
+    let fixed = Params {
+        scale_to_width: false,
+        ..Params::default()
+    };
+    let narrow = detect_peaks(rt_min, y, fixed);
     let rt_s: Vec<f64> = rt_min.iter().map(|t| t * 60.0).collect();
     let mut out: Vec<UvPeak> = narrow
         .iter()
