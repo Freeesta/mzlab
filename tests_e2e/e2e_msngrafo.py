@@ -1,5 +1,5 @@
 """api/msn_grafo on the built site: the .wasm msngrafo (crates/mzlab-msngrafo-wasm, wasm-feat/msngrafo/) answers the graph of a synthetic MSn infusion from the .mzidx and the
-mzML in OPFS, with the same bytes as `mzlab-cli msn-graph` (only the SHA-256 of the index may differ), a bad number is a keyed error, the export route gives CSV, MGF or MSP text, api/msnlib/aggiungi adds an entry to the library once,
+mzML in OPFS, with the same bytes as `mzlab-cli msn-graph` (only the SHA-256 of the index may differ), a bad number is a keyed error, the export route gives CSV, MGF or MSP text, api/msnlib/add adds an entry to the library once,
 MZLAB_LR_MISS stays empty and the .wasm is under 545000 bytes. Needs the site (python3 tools/prepara_sito.py); the module is built here when it is not in site/static/wasm-feat."""
 import hashlib, json, re, shutil, subprocess, sys
 sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
@@ -58,7 +58,7 @@ try:
             assert bad == 400, bad
         step("the export gives CSV and MSP text and a bad format is a keyed error", export)
         def library():
-            post = "(b)=>fetch('api/msnlib/aggiungi',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(async r=>[r.status,await r.json()])"
+            post = "(b)=>fetch('api/msnlib/add',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(async r=>[r.status,await r.json()])"
             body = {"library": "", "molecule_id": "STD-1", "k": 0, "formula": "C8H11N4O2+", "tol": "nom", "ce": 1, "choices": []}
             st, a = pg.evaluate(post, body)
             assert st == 200 and a["duplicate"] is False and a["library"].startswith('{"schema":"msn-lib/1"'), (st, str(a)[:200])
@@ -70,15 +70,15 @@ try:
         def search():
             post = "([u,b])=>fetch(u,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(async r=>[r.status,await r.json()])"
             body = {"library": "", "molecule_id": "STD-1", "k": 0, "formula": "C8H11N4O2+", "tol": "nom", "ce": 1, "choices": []}
-            st, a = pg.evaluate(post, ["api/msnlib/aggiungi", body])
+            st, a = pg.evaluate(post, ["api/msnlib/add", body])
             assert st == 200, (st, a)
             q = {k: v for k, v in body.items() if k != "molecule_id"}
-            st, c = pg.evaluate(post, ["api/msnlib/cerca", {**q, "library": a["library"]}])
+            st, c = pg.evaluate(post, ["api/msnlib/search", {**q, "library": a["library"]}])
             assert st == 200 and c["schema"] == "msn-search/1" and c["candidates"][0]["id"] == "STD-1", (st, str(c)[:300])
             assert c["candidates"][0]["analog"] is None and abs(c["candidates"][0]["delta_ppm"]) < 1, c["candidates"][0]
-            st, e = pg.evaluate(post, ["api/msnlib/cerca", {**q, "library": a["library"], "top": "abc"}])
+            st, e = pg.evaluate(post, ["api/msnlib/search", {**q, "library": a["library"], "top": "abc"}])
             assert st == 400 and e["error_key"] == "err.request.badNumber", (st, e)
-            st, e = pg.evaluate(post, ["api/msnlib/cerca", {**q, "library": "no"}])
+            st, e = pg.evaluate(post, ["api/msnlib/search", {**q, "library": "no"}])
             assert st == 400 and e["error_key"] == "err.msnlib.bad", (st, e)
         step("the library search finds the entry of the same infusion and bad options or a bad library are keyed errors", search)
         errs = [e for e in r.errs if e[0] in ("pageerror",)]

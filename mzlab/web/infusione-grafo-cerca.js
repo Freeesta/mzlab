@@ -1,6 +1,6 @@
 // @ts-strict
 // «Search lab library» of the «Fragmentation graph»: the graph in view is compared with the local library of MSn trees (OPFS, see «Add to library»)
-// through POST api/msnlib/cerca. Shows the candidates with their three separate scores and proofs, analogs marked; never a verdict. The engine ranks and scores.
+// through POST api/msnlib/search. Shows the candidates with their three separate scores and proofs, analogs marked; never a verdict. The engine ranks and scores.
 import { params } from "./infusione-grafo-stato.js";
 import { readLibrary } from "./infusione-grafo-esporta.js";
 
@@ -25,7 +25,7 @@ async function search(/** @type {HTMLElement} */ out, /** @type {any} */ file, /
     const lib = await readLibrary();
     if (!lib) { out.innerHTML = h`<p class="muted sm" role="status">${I18N.t("msngrafo.lib.empty")}</p>`; return; }
     const body = { library: lib, ...params(file.k), delta_max: delta };
-    const r = await fetch("api/msnlib/cerca", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const r = await fetch("api/msnlib/search", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     const j = await r.json();
     if (j.error) throw I18N.err(j);
     out.innerHTML = table(j);

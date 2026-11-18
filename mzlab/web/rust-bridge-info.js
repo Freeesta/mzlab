@@ -1,6 +1,6 @@
 // @ts-check
 // @ts-strict
-// The routes of the bridge that read the head of a file or one answer per file from the indexes: `api/ms2tr`, `api/fileinfo`, `api/msn_grafo` (the graph) and `api/msn_grafo/export` (its spectra as text), `api/msnlib/aggiungi` and `api/msnlib/cerca` (POST) and the `api/chrom` of an MRM file.
+// The routes of the bridge that read the head of a file or one answer per file from the indexes: `api/ms2tr`, `api/fileinfo`, `api/msn_grafo` (the graph) and `api/msn_grafo/export` (its spectra as text), `api/msnlib/add` and `api/msnlib/search` (POST) and the `api/chrom` of an MRM file.
 // `api/manint` (the table of the integrations drawn by hand: the api/mrm transitions of the files measured again by the engine, manint.rs) and
 // `api/manvalley` (where one of them splits at its valleys).
 // Returns { status, text, ms } or null (the route is unavailable: browser.js answers err.route.unavailable).
@@ -10,11 +10,11 @@ import { cercaRoute, grafoRoute, libreriaRoute } from "./rust-msngrafo-pagina.js
 export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) {
   if (path === "/api/manint" || path === "/api/manvalley" || path === "/api/manfollow" || path === "/api/manauto") return manintRoute(u, { slots, rpc, stats, t0 }, path.slice(8));
   if (path === "/api/mantraces") return tracesRoute({ rpc, stats, t0 }, init);   // POST {files, windows, sums}: the traces the page supplies (chromatogram, XIC, DAD)
-  if (path === "/api/msnlib/aggiungi") {                               // add an entry to the msnlib/1 library of the user (POST)
+  if (path === "/api/msnlib/add") {                               // add an entry to the msnlib/1 library of the user (POST)
     const r = await libreriaRoute({ slots, rpc, stats }, init);
     return r && { ...r, ms: performance.now() - t0 };
   }
-  if (path === "/api/msnlib/cerca") {                                  // search the msnlib/1 library of the user for the graph of a file (POST)
+  if (path === "/api/msnlib/search") {                                  // search the msnlib/1 library of the user for the graph of a file (POST)
     const r = await cercaRoute({ slots, rpc, stats }, init);
     return r && { ...r, ms: performance.now() - t0 };
   }

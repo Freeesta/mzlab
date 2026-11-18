@@ -81,11 +81,11 @@ fn the_graph_and_its_exports_are_those_of_the_command_line() {
         with(&["--breaks"])
     );
     assert_eq!(
-        ask("format=csv", json!({"esporta": true})),
+        ask("format=csv", json!({"export": true})),
         cli(&["--export", "csv"])
     );
     assert_eq!(
-        ask("format=msp&clean=1", json!({"esporta": true})),
+        ask("format=msp&clean=1", json!({"export": true})),
         cli(&["--export", "msp", "--clean"])
     );
     // the library entry and the search over it
@@ -103,7 +103,8 @@ fn the_graph_and_its_exports_are_those_of_the_command_line() {
     ))
     .unwrap();
     assert_eq!(again["duplicate"], true);
-    assert!(ask(f, json!({"cerca": true, "library": lib})).contains("\"schema\":\"msn-search/1\""));
+    assert!(ask(f, json!({"library_search": true, "library": lib}))
+        .contains("\"schema\":\"msn-search/1\""));
     // errors keep their key as the .wasm throws it
     let e = r(
         "msngrafo",
@@ -322,7 +323,7 @@ fn the_graph_of_a_native_sample_is_that_of_its_mzml() {
     // the second request reads what the first one wrote
     assert_eq!(ask(3, "x", json!({})), got);
     assert_eq!(
-        ask(3, "x", json!({"esporta": true})).is_ok(),
-        ask(4, "x.mzML", json!({"esporta": true})).is_ok()
+        ask(3, "x", json!({"export": true})).is_ok(),
+        ask(4, "x.mzML", json!({"export": true})).is_ok()
     );
 }

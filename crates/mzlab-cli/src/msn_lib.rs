@@ -1,6 +1,6 @@
 //! `mzlab-cli msn-lib add|build|export`: the library of MSn trees `msn-lib/1` of the standards (`docs/agenti/msnlib.md`). `add` puts the graph of one infusion
 //! into a library file, `build` does it for every row of a manifest, `export` writes the MS2 spectra of the entries as MSP or MassBank. The library is always written by the
-//! same function as the route `api/msnlib/aggiungi` (`mzlab_core::msngraph::aggiungi`).
+//! same function as the route `api/msnlib/add` (`mzlab_core::msngraph::aggiungi`).
 
 use std::path::{Path, PathBuf};
 

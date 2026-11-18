@@ -60,7 +60,7 @@ pub(super) struct G {
     losses: Vec<Loss>,
 }
 
-/// The options of the search from a request (`precursor_ppm`, `tol_mz`, `min_evidence`, `top`, `delta_max`; the route `api/msnlib/cerca`): absent = the default, not a number = `err.request.badNumber`.
+/// The options of the search from a request (`precursor_ppm`, `tol_mz`, `min_evidence`, `top`, `delta_max`; the route `api/msnlib/search`): absent = the default, not a number = `err.request.badNumber`.
 pub fn options_from_request(get: &dyn Fn(&str) -> Option<String>) -> Result<Options> {
     let num = |k: &str, por: f64| match get(k).filter(|v| !v.is_empty()) {
         None => Ok(por),

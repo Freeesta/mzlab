@@ -345,11 +345,11 @@ pub fn summary(g: &Graph, truth: &str) -> Result<String> {
         }
     }
     let mut o = Out::default();
-    o.raw("{\"percorsi_verita\":").int(expected.len() as i64);
+    o.raw("{\"truth_paths\":").int(expected.len() as i64);
     o.raw(",\"paths_found\":").int(found);
     o.raw(",\"correct_formula_among_candidates\":").int(between);
     o.raw(",\"unique_and_correct\":").int(single);
-    o.raw(",\"ppm_max_giuste\":")
+    o.raw(",\"ppm_max_correct\":")
         .num(mzlab_core::json::round(ppm_max, 2));
     let annotated = g.nodi.iter().filter(|n| n.formula.is_some()).count();
     o.raw(",\"annotated_fragments\":")

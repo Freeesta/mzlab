@@ -27,8 +27,8 @@ use crate::store::Nat;
 const STRUCTURE_PPM: f64 = 10.0;
 
 impl State {
-    /// `msngrafo {slot, name, fid, query, esporta?, cerca?, library?, molecule?}`: the graph of the file `name` (its `.mzidx` and the mzML at `slot`), or its export as text,
-    /// or the library text with an entry added (`library` given), or the library search (`cerca`). A sample of a maker's file is read from the mzML made from it (`derived_mzml`:
+    /// `msngrafo {slot, name, fid, query, export?, library_search?, library?, molecule?}`: the graph of the file `name` (its `.mzidx` and the mzML at `slot`), or its export as text,
+    /// or the library text with an entry added (`library` given), or the library search (`library_search`). A sample of a maker's file is read from the mzML made from it (`derived_mzml`:
     /// written once to the temporary folder with its own index), as the `.wasm` does with its copy on OPFS.
     pub(crate) fn op_msngraph(&self, eng: &mut Eng, p: &Value) -> Result<Answer> {
         let s = |k: &str| p[k].as_str().unwrap_or("");
@@ -51,13 +51,13 @@ impl State {
         add_expected(&mut q);
         let name = s("name");
         let mut run = || graph(MapAt(idx_map.0.clone()), idx_size, &mut *mzml, name, &q);
-        if p["cerca"].as_bool().unwrap_or(false) {
+        if p["library_search"].as_bool().unwrap_or(false) {
             let o = opzioni_cerca(&|k| q.get(k).map(String::from))?;
             let (_, j, _) = run()?;
             return text(cerca(s("library"), &j, &o)?);
         }
         if p["library"].is_null() {
-            return if p["esporta"].as_bool().unwrap_or(false) {
+            return if p["export"].as_bool().unwrap_or(false) {
                 text(export(&q, &mut run)?)
             } else {
                 text(graph_text(&q, &mut run)?)

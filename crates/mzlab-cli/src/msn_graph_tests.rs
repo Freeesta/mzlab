@@ -51,7 +51,7 @@ fn the_graph_of_a_file_with_the_formula_of_its_ion() {
 fn a_truth_file_gives_one_line_of_numbers() {
     let dir = std::env::temp_dir().join(format!("mzlab_cli_msn_{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
-    let truth = dir.join("verita.json");
+    let truth = dir.join("truth.json");
     let t = r#"{"nodes":[{"path":[305],"formula":"C14H15N3O5"},{"path":[305,244],"formula":"C13H10NO4"},{"path":[305,261],"formula":"C13H9N2O4"}]}"#;
     std::fs::write(&truth, t).unwrap();
     let f = msn();
@@ -72,14 +72,14 @@ fn a_truth_file_gives_one_line_of_numbers() {
     let n = |k: &str| v.get(k).and_then(|x| x.f64());
     assert_eq!(
         (
-            n("percorsi_verita"),
+            n("truth_paths"),
             n("paths_found"),
             n("correct_formula_among_candidates"),
             n("unique_and_correct")
         ),
         (Some(3.0), Some(2.0), Some(2.0), Some(2.0))
     );
-    assert!(n("ppm_max_giuste").unwrap() <= 10.0);
+    assert!(n("ppm_max_correct").unwrap() <= 10.0);
     // only numbers: no formula and no name of the file in the line
     assert!(!r.contains('C') && !r.contains("msn"));
 }
@@ -95,71 +95,39 @@ fn bad_arguments_are_refused() {
     assert_eq!(run(&["msn-graph", "--help"]).code, 0);
 }
 
-/// (old flags, new flags) of every flag of `msn-graph` that had an Italian name; `t` is a truth file.
+/// Every flag of `msn-graph` that has a step parameter next to it; `t` is a truth file.
 const SMILES: &str = "CCOC(=O)c1c[nH]c2ccccc12";
 
-fn alias_cases(t: &str) -> Vec<(Vec<&str>, Vec<&str>)> {
+fn flag_cases(t: &str) -> Vec<Vec<&str>> {
     vec![
-        (vec!["--mz-basso", "200"], vec!["--low-mz", "200"]),
-        (vec!["--ppm-basso", "30"], vec!["--wide-ppm", "30"]),
-        (vec!["--prove-min", "2"], vec!["--min-evidence", "2"]),
-        (vec!["--attivazione", "cid"], vec!["--activation", "cid"]),
-        (vec!["--isotopi"], vec!["--isotopes"]),
-        (
-            vec!["--scelta", "244=C13H10NO4"],
-            vec!["--pick", "244=C13H10NO4"],
-        ),
-        (
-            vec!["--interpreta", "--ppm-perdita", "5"],
-            vec!["--interpret", "--loss-ppm", "5"],
-        ),
-        (
-            vec!["--regole", "--toll-perdita-mda", "5"],
-            vec!["--rules", "--loss-tol-mda", "5"],
-        ),
-        (
-            vec![
-                "--smiles",
-                SMILES,
-                "--rotture",
-                "--max-legami",
-                "1",
-                "--ppm-struttura",
-                "5",
-            ],
-            vec![
-                "--smiles",
-                SMILES,
-                "--breaks",
-                "--max-bonds",
-                "1",
-                "--struct-ppm",
-                "5",
-            ],
-        ),
-        (
-            vec!["--smiles", SMILES, "--strutture", "n3"],
-            vec!["--smiles", SMILES, "--structures", "n3"],
-        ),
-        (
-            vec!["--smiles", SMILES, "--strutture", "tutti"],
-            vec!["--smiles", SMILES, "--structures", "all"],
-        ),
-        (
-            vec!["--export", "csv", "--pulito", "--nodo", "all"],
-            vec!["--export", "csv", "--clean", "--node", "all"],
-        ),
-        (
-            vec!["--verita", t, "--riassunto"],
-            vec!["--truth", t, "--summary"],
-        ),
+        vec!["--low-mz", "200"],
+        vec!["--wide-ppm", "30"],
+        vec!["--min-evidence", "2"],
+        vec!["--activation", "cid"],
+        vec!["--isotopes"],
+        vec!["--pick", "244=C13H10NO4"],
+        vec!["--interpret", "--loss-ppm", "5"],
+        vec!["--rules", "--loss-tol-mda", "5"],
+        vec![
+            "--smiles",
+            SMILES,
+            "--breaks",
+            "--max-bonds",
+            "1",
+            "--struct-ppm",
+            "5",
+        ],
+        vec!["--smiles", SMILES, "--structures", "n3"],
+        vec!["--smiles", SMILES, "--structures", "all"],
+        vec!["--export", "csv", "--clean", "--node", "all"],
+        vec!["--truth", t, "--summary"],
     ]
 }
 
-/// The English flags work; the former Italian names (and `tutti`) are refused: no alias is kept.
+/// The English flags work and a flag that does not exist is refused: no alias is kept.
 #[test]
 fn only_the_english_flags_are_accepted() {
-    let dir = std::env::temp_dir().join(format!("mzlab_cli_msn_alias_{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("mzlab_cli_msn_flags_{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let truth = dir.join("t.json");
     std::fs::write(
@@ -168,19 +136,18 @@ fn only_the_english_flags_are_accepted() {
     )
     .unwrap();
     let t = truth.to_str().unwrap();
-    let cases = alias_cases(t);
     let f = msn();
-    for (old, new) in cases {
-        let go = |flags: &[&str]| {
-            let mut a = vec!["msn-graph", f.to_str().unwrap(), "--formula", "C14H15N3O5+"];
-            a.extend(flags);
-            run(&a)
-        };
-        let (o, n) = (go(&old), go(&new));
-        assert_eq!(n.code, 0, "{new:?}: {}", n.stderr);
-        assert_eq!(o.code, 2, "{old:?} must be refused");
+    let go = |flags: &[&str]| {
+        let mut a = vec!["msn-graph", f.to_str().unwrap(), "--formula", "C14H15N3O5+"];
+        a.extend(flags);
+        run(&a)
+    };
+    for flags in flag_cases(t) {
+        let o = go(&flags);
+        assert_eq!(o.code, 0, "{flags:?}: {}", o.stderr);
     }
-    // the refusals name the new flags
+    assert_eq!(go(&["--no-such-flag"]).code, 2);
+    // the refusals name the flags
     let r = run(&["msn-graph", "x.mzML", "--summary"]);
     assert_eq!(r.code, 2);
     assert!(r.stderr.contains("--summary needs --truth"), "{}", r.stderr);
@@ -192,7 +159,7 @@ fn only_the_english_flags_are_accepted() {
 fn help_shows_the_english_flags_only() {
     let h = String::from_utf8(run(&["msn-graph", "--help"]).stdout).unwrap();
     assert!(h.contains("--low-mz N") && h.contains("(param low_mz)"));
-    assert!(!h.contains("old names still accepted") && !h.contains("--mz-basso"));
+    assert!(!h.contains("old names still accepted"));
 }
 
 // Every key and string value of the MSn JSON outputs on the synthetic infusion holds no Italian word of `tools/italian_words.tsv`.
@@ -285,6 +252,21 @@ fn the_msn_json_outputs_hold_no_italian_word() {
     let cmp = run(&["msn-graph", "compare", p, p]);
     assert_eq!(cmp.code, 0, "{}", cmp.stderr);
     assert_english("msn-compare", &cmp.stdout);
+
+    let truth = d.join("truth.json");
+    std::fs::write(
+        &truth,
+        r#"{"nodes":[{"path":[305],"formula":"C14H15N3O5"},{"path":[305,244],"formula":"C13H10NO4"}]}"#,
+    )
+    .unwrap();
+    let t = run(&[
+        &["msn-graph", f.to_str().unwrap()][..],
+        &ion[..],
+        &["--truth", truth.to_str().unwrap(), "--summary"][..],
+    ]
+    .concat());
+    assert_eq!(t.code, 0, "{}", t.stderr);
+    assert_english("msn-graph --truth --summary", &t.stdout);
 
     let lines = "{\"id\":\"R\",\"layer\":\"hcd\",\"pol\":1,\"v\":{\"n\":2,\"it\":100,\"a\":2,\"ia\":100,\"b\":0,\"ib\":0,\"c\":1,\"ic\":80,\"r\":{\"loss_c2h2o_acetyl\":1}}}\n";
     let lf = d.join("lines.jsonl");

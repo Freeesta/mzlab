@@ -43,13 +43,13 @@ async function indexOf(name) {
 
 /**
  * The `msn-graph/1` of the file `name` (a JSON string); a failure is thrown as the JSON string `{error_key, params}` of the module.
- * @param {string} name @param {Blob} blob the mzML @param {string} query the query string of the request @param {boolean} esporta the spectra as text
+ * @param {string} name @param {Blob} blob the mzML @param {string} query the query string of the request @param {boolean} asExport the spectra as text
  * @param {(blob: Blob) => (offset: number, length: number) => Uint8Array} readerFor
  * @param {File} [idxFile] the index to read instead of the one of `name` (the derived mzML of a sample of a maker's file, rust-msngrafo-nativo.js)
  */
-export async function msnGrafo(name, blob, query, readerFor, esporta = false, idxFile = undefined) {
+export async function msnGrafo(name, blob, query, readerFor, asExport = false, idxFile = undefined) {
   const [m, idx] = await Promise.all([load("msngrafo"), idxFile || indexOf(name)]);
-  const f = esporta ? m.msn_graph_export : m.msn_graph;
+  const f = asExport ? m.msn_graph_export : m.msn_graph;
   return f(readerFor(idx), idx.size, readerFor(blob), name, await conAttese(query));
 }
 

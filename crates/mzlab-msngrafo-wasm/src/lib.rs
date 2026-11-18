@@ -218,7 +218,7 @@ pub fn msn_graph_export(
     Ok(esporta(&g, f, clean, node.as_deref()))
 }
 
-/// `api/msnlib/aggiungi`: the library text `library` ("" = none yet) with the entry of `molecule_id` for the graph of the query added;
+/// `api/msnlib/add`: the library text `library` ("" = none yet) with the entry of `molecule_id` for the graph of the query added;
 /// `{"library": text, "duplicate": bool}` (the text unchanged when the same entry was already there).
 #[wasm_bindgen]
 pub fn msnlib_add(
@@ -239,7 +239,7 @@ pub fn msnlib_add(
     Ok(o.0)
 }
 
-/// `api/msnlib/cerca`: the candidates of the library text `library` for the graph of the query (`msn-search/1`); the query carries the options of the graph and
+/// `api/msnlib/search`: the candidates of the library text `library` for the graph of the query (`msn-search/1`); the query carries the options of the graph and
 /// those of the search (`precursor_ppm`, `tol_mz`, `min_evidence`, `top`, `delta_max`).
 #[wasm_bindgen]
 pub fn msnlib_search(

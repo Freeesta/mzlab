@@ -1,6 +1,6 @@
 //! The library file `msn-lib/1` of the user (`docs/agenti/msnlib.md`): `aggiungi` appends the entry of one standard in one condition (ion,
 //! polarity, activations) to the text of the library and answers whether the same entry was already there. One entry per line, sorted by
-//! (id, ion, activations), so the same entries give the same bytes. Used by the `.wasm` module of the page (`api/msnlib/aggiungi`).
+//! (id, ion, activations), so the same entries give the same bytes. Used by the `.wasm` module of the page (`api/msnlib/add`).
 
 use super::{Graph, SpettroG};
 use crate::error::{Error, Result};

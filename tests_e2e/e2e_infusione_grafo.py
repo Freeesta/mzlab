@@ -1,7 +1,7 @@
 """INFG: the «Fragmentation graph» tab of an MSn infusion. The tab shows only with ONE file loaded that is an infusion; an ion formula (or a name) gives the graph with the
 candidates and their ppm, «Use» chooses one, the isolation window and the unexplained peaks are written, a drawing box keeps the user's fragment, the cleaned spectra
 export as CSV, MGF and MSP, «Add to library» warns about a duplicate, «Copy data», the keys, axe. The engine routes (/api/msn_grafo, the export,
-/api/msnlib/aggiungi, /api/molecules/*) are answered here by a stand-in with the JSON of tests_e2e/fixtures/msngrafo_esempio.json until the Rust ones are in main; the
+/api/msnlib/add, /api/molecules/*) are answered here by a stand-in with the JSON of tests_e2e/fixtures/msngrafo_esempio.json until the Rust ones are in main; the
 file is the synthetic one of TP_Mine/tests/msn_synth.py (no real data, no real compounds)."""
 # covers: mzlab/web/mol-svg.js, mzlab/web/infusione-grafo
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -45,8 +45,8 @@ STAND_IN = """(fx) => {
     }
     if (path === "api/molecules/cerca") return Promise.resolve(jr([{ id: "ik:TESTONLY", name: "exampline", formula: "C14H15N3O5", mass: 305.1, smiles: "CCOC(=O)c1ccccc1N", addotti: ["[M+H]+"], punteggio: 1 }]));
     if (path === "api/molecules/get") return Promise.resolve(jr({ id: "ik:TESTONLY", name: "exampline", formula: "C14H15N3O5", mass: 305.1, smiles: "CCOC(=O)c1ccccc1N", addotti: ["[M+H]+"] }));
-    if (path === "api/msnlib/aggiungi") { const b = JSON.parse(init.body), tag = "entry:" + b.molecule_id + "\\n"; const dup = (b.library || "").includes(tag); return Promise.resolve(jr({ library: dup ? b.library : (b.library || "") + tag, duplicate: dup })); }
-    if (path === "api/msnlib/cerca") return Promise.resolve(jr({ schema: "msn-search/1", options: {}, candidates: [
+    if (path === "api/msnlib/add") { const b = JSON.parse(init.body), tag = "entry:" + b.molecule_id + "\\n"; const dup = (b.library || "").includes(tag); return Promise.resolve(jr({ library: dup ? b.library : (b.library || "") + tag, duplicate: dup })); }
+    if (path === "api/msnlib/search") return Promise.resolve(jr({ schema: "msn-search/1", options: {}, candidates: [
       { id: "STD-1", ion: "C14H15N3O5 [M+H]+", activation: [], delta_ppm: 0.4, scores: { ms2: 0.91, tree: 0.8, losses: null }, proofs: { common_peaks: 5, aligned_nodes: 3, unknown_nodes: 4, common_losses: 2, unknown_losses: 3 }, analog: null },
       { id: "STD-2", ion: "C15H17N3O5 [M+H]+", activation: [], delta_ppm: 0, scores: { ms2: 0.5, tree: null, losses: null }, proofs: { common_peaks: 2, aligned_nodes: 0, unknown_nodes: 4, common_losses: 0, unknown_losses: 3 }, analog: { delta_da: 14.0157, shifted: 2, unshifted: 1, coverage: 0.6 } }] }));
     return orig(u, init);
@@ -222,23 +222,23 @@ try:
             assert "export mgf clean=0 node=n2" in clip, clip[:80]
         step("clean spectra: CSV, MGF, MSP for the tree, copy for a node (all, discarded marked)", exports)
         def library():
-            pg.click("#ig-lib"); wait_for_js(pg, "window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').length >= 1")
-            n1 = pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').length"); assert n1 == 1
-            pg.click("#ig-lib"); wait_for_js(pg, "window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').length >= 2")
-            body = json.loads(pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').slice(-1)[0][2]"))
+            pg.click("#ig-lib"); wait_for_js(pg, "window.__REQ.filter(r=>r[0]==='api/msnlib/add').length >= 1")
+            n1 = pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/add').length"); assert n1 == 1
+            pg.click("#ig-lib"); wait_for_js(pg, "window.__REQ.filter(r=>r[0]==='api/msnlib/add').length >= 2")
+            body = json.loads(pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/add').slice(-1)[0][2]"))
             assert body["library"] and body["formula"].startswith("C14H15N3O5"), body
             assert pg.evaluate("document.body.textContent").count("already in the library") > 0
         step("Add to library: the second time says the entry is already there", library)
         def find():
             pg.fill("#ig-delta", "20"); pg.click("#ig-find-go"); pg.wait_for_selector(".ig-find-t tbody tr", timeout=5000)
             assert pg.locator(".ig-find-t tbody tr").count() == 2
-            body = json.loads(pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/cerca').slice(-1)[0][2]"))
+            body = json.loads(pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/search').slice(-1)[0][2]"))
             assert body["library"] and body["delta_max"] == 20 and body["formula"].startswith("C14H15N3O5"), body
             assert pg.locator(".ig-find-t tbody tr").nth(1).inner_text().count("14.0157") == 1
         step("Search lab library: candidates with the scores apart, the analog marked", find)
         def workflow():
-            n0 = pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/cerca').length")
-            pg.click("#ig-flow"); wait_for_js(pg, f"window.__REQ.filter(r=>r[0]==='api/msnlib/cerca').length > {n0}")
+            n0 = pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/search').length")
+            pg.click("#ig-flow"); wait_for_js(pg, f"window.__REQ.filter(r=>r[0]==='api/msnlib/search').length > {n0}")
             pg.wait_for_selector(".ig-find-t tbody tr", timeout=5000)
         step("Run MSn workflow: graph and library search with one click", workflow)
         def interp():

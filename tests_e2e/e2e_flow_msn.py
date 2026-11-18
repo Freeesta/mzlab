@@ -92,7 +92,7 @@ try:
             pg.evaluate("document.querySelector('#tmpform').remove()")
         step("the molecule box of the step fills the ion with its adduct, the name and the SMILES", molecule_box)
         def search():
-            added = pg.evaluate("""(async () => { const r = await fetch('api/msnlib/aggiungi', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ library: '', molecule_id: 'STD', k: 0, formula: '%s' }) }); const j = await r.json(); return j.error ? j : j.library })()""" % ION)
+            added = pg.evaluate("""(async () => { const r = await fetch('api/msnlib/add', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ library: '', molecule_id: 'STD', k: 0, formula: '%s' }) }); const j = await r.json(); return j.error ? j : j.library })()""" % ION)
             assert isinstance(added, str), added
             put = """async (t) => { const d = await navigator.storage.getDirectory(), w = await (await d.getFileHandle('msnlib.json', { create: true })).createWritable(); await w.write(t); await w.close() }"""
             pg.evaluate(put, "")

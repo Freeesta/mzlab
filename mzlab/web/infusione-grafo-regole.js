@@ -27,9 +27,9 @@ export function arcLabel(/** @type {any} */ j, /** @type {any} */ a, /** @type {
 /** The graph with only the losses a rule explains and the ions they reach (the roots stay); the same object when the filter is off or the answer has no rules. */
 export function filtered(/** @type {any} */ j, /** @type {boolean} */ only) {
   if (!only || !j.rules) return j;
-  const archi = j.edges.filter((/** @type {any} */ a) => isExplained(arcRules(j, a)));
-  const reached = new Set(archi.map((/** @type {any} */ a) => a.to)), inner = new Set(j.edges.map((/** @type {any} */ a) => a.to));
-  return { ...j, archi, nodes: j.nodes.filter((/** @type {any} */ n) => reached.has(n.id) || !inner.has(n.id)) };
+  const kept = j.edges.filter((/** @type {any} */ a) => isExplained(arcRules(j, a)));
+  const reached = new Set(kept.map((/** @type {any} */ a) => a.to)), inner = new Set(j.edges.map((/** @type {any} */ a) => a.to));
+  return { ...j, edges: kept, nodes: j.nodes.filter((/** @type {any} */ n) => reached.has(n.id) || !inner.has(n.id)) };
 }
 
 /** The source of a reference key as a link to its DOI (a new tab, no opener), or the bare key when the table gives no DOI. @returns {string} */

@@ -43,7 +43,7 @@ export async function addToLibrary(/** @type {any} */ file) {
   const mol = G.mol;
   try {
     const body = { library: await readLibrary(), molecule_id: mol ? mol.id : "", ...params(file.k) };
-    const r = await fetch("api/msnlib/aggiungi", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const r = await fetch("api/msnlib/add", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     const j = await r.json();
     if (j.error) throw I18N.err(j);
     if (j.duplicate) { nearMsg(I18N.t("msngrafo.lib.dup")); return; }

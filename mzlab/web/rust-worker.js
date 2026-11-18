@@ -218,8 +218,8 @@ async function msnGrafoOp(m, id) {                                              
   annuncia({ phase: "load", frac: 0 });
   const d = await derivata(name, p => { nat = true; annuncia(p); });
   const blob = d ? d.mzml : m.blob, rd = conAvanzamento(readerFor, blob, annuncia), idx = d ? d.idx : undefined, q = (m.query || "") + (BUDGET_MB > 0 ? (m.query ? "&" : "") + "budget_mb=" + BUDGET_MB : "");      // q: with the engine's budget, spectra over it end in the calm error.memoryBudget (phase msnGraph), not a trap that restarts the engine
-  if (m.cerca) return msnLibCerca(name, blob, q, m.library || "", rd, idx);
-  if (m.library == null) return msnGrafo(name, blob, q, rd, !!m.esporta, idx);
+  if (m.library_search) return msnLibCerca(name, blob, q, m.library || "", rd, idx);
+  if (m.library == null) return msnGrafo(name, blob, q, rd, !!m.export, idx);
   return msnLibAggiungi(name, blob, q, m.library, m.molecule || "", rd, idx);
 }
 const labOp = createLabOps({ engine: () => engine, ARCH, fileOf, lrOpen, slotOf, readerFor, jerr });      // methods (.dam) and the routes of one item about its acquisition
