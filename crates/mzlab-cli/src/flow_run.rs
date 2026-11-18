@@ -37,7 +37,7 @@ usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] [--out FOLDER] [--set 
   --dry-run                checks the plan, the settings and the inputs and prints what would run; writes nothing
   --fresh                  computes every step again; without it a step whose inputs, parameters and program are those of a run already in
                            FOLDER is reused (`... reused`, `cached` in prov.json)
-  --json                   one JSON document on stdout, flowrun/1 (flowdry/1 with --dry-run; errore/1 when the command stops); stderr and files are the same
+  --json                   one JSON document on stdout, flowrun/1 (flowdry/1 with --dry-run; error/1 when the command stops); stderr and files are the same
   --progress jsonl         one JSON line per job on stderr instead of `[3/9] ...`: {\"job\", \"of\", \"instance\", \"item\", \"status\", \"ms\"} (default: text)
   --events                 the flowlive/1 events of the run on stdout, one JSON line each, as they happen (not with --json); the files and prov.json are the same
   --help                   this text
@@ -275,7 +275,8 @@ pub(crate) fn progress_line(
                     .map(|(_, v)| v.clone())
             };
             format!(
-                "{what} ... failed: {e}{}",
+                "{what} ... failed: {}{}",
+                crate::error_text::human_error(e),
                 memory_advice(e.key, &get, &job.instance.id)
             )
         }
@@ -322,6 +323,7 @@ pub(crate) fn fail(code: u8, msg: &str, hint: &str) -> Outcome {
         code,
         stdout: Vec::new(),
         stderr: format!("error: {msg}\nhint: {hint}\n"),
+        error: None,
     }
 }
 
@@ -361,15 +363,14 @@ fn dry_text(plan: &Plan, reg: &[Step], found: &HashMap<String, PathBuf>) -> Stri
 type Ready = (Plan, Plan, HashMap<String, PathBuf>);
 
 fn ready(a: &Args, reg: &[Step]) -> Result<Ready, Outcome> {
-    let st = a.style;
     let plan_path = a.plan.clone().unwrap_or_default();
     let text = std::fs::read(&plan_path).map_err(|e| {
         let err = Error::new("err.cli.file").with("path", plan_path.display());
         let msg = format!("{}: {e}", plan_path.display());
-        jfail(st, 4, &err, &msg, "check the path of the plan")
+        jfail(4, &err, &msg, "check the path of the plan")
     })?;
     let hint = "the plan must be the mzflow/2 file the Flow page downloads";
-    let mut plan = parse(&text).map_err(|e| jfail(st, 3, &e, &e.to_string(), hint))?;
+    let mut plan = parse(&text).map_err(|e| jfail(3, &e, &e.to_string(), hint))?;
     apply_sets(&mut plan, reg, &a.sets).map_err(|e| {
         // the CLI keeps the text apart from the error: the page reads it from the parameters
         let of = |k: &str| {
@@ -382,7 +383,6 @@ fn ready(a: &Args, reg: &[Step]) -> Result<Ready, Outcome> {
             .with("set", of("set").unwrap_or(""))
             .with("message", of("message").unwrap_or(""));
         jfail(
-            st,
             2,
             &err,
             of("message").unwrap_or(""),
@@ -394,7 +394,6 @@ fn ready(a: &Args, reg: &[Step]) -> Result<Ready, Outcome> {
         .map_or(PathBuf::from("."), Path::to_path_buf);
     let found = locate(&plan, &a.ins, &plan_dir).map_err(|(err, msg)| {
         jfail(
-            st,
             4,
             &err,
             &msg,
@@ -402,13 +401,11 @@ fn ready(a: &Args, reg: &[Step]) -> Result<Ready, Outcome> {
         )
     })?;
     let hint = "the file differs from the one the plan names (sha256); remove the sha256 from the plan to accept it";
-    fill_inputs(&mut plan, |n| found[n].clone())
-        .map_err(|e| jfail(st, 4, &e, &e.to_string(), hint))?;
+    fill_inputs(&mut plan, |n| found[n].clone()).map_err(|e| jfail(4, &e, &e.to_string(), hint))?;
     match prepare(plan.clone(), reg) {
         Ok(Ok(r)) => Ok((plan, r, found)),
-        Ok(Err(problems)) => Err(invalid(st, &problems)),
+        Ok(Err(problems)) => Err(invalid(&problems)),
         Err(e) => Err(jfail(
-            st,
             3,
             &e,
             &e.to_string(),
@@ -419,7 +416,6 @@ fn ready(a: &Args, reg: &[Step]) -> Result<Ready, Outcome> {
 
 /// `mzlab-cli flow run ARGS...` (the arguments after `flow run`).
 pub fn run(args: Vec<String>, meter: Option<Meter>) -> Outcome {
-    let json = args.iter().any(|x| x == "--json");
     let a = match parse_args(args) {
         Ok(Some(a)) => a,
         Ok(None) => {
@@ -427,15 +423,12 @@ pub fn run(args: Vec<String>, meter: Option<Meter>) -> Outcome {
                 code: 0,
                 stdout: format!("{HELP}\n").into_bytes(),
                 stderr: String::new(),
+                error: None,
             }
         }
         Err(e) => {
-            let err = Error::new("err.cli.usage").with("detail", &e);
-            let st = Style {
-                json,
-                ..Style::default()
-            };
-            return jfail(st, 2, &err, &e, "mzlab-cli flow run --help");
+            let err = Error::new("err.cli.usage").with("message", &e);
+            return jfail(2, &err, &e, "mzlab-cli flow run --help");
         }
     };
     let reg = steps();
@@ -453,6 +446,7 @@ pub fn run(args: Vec<String>, meter: Option<Meter>) -> Outcome {
             code: 0,
             stdout: text.into_bytes(),
             stderr: String::new(),
+            error: None,
         };
     }
     let out = a.out.unwrap_or_default();

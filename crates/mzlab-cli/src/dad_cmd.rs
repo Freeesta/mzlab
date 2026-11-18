@@ -1,5 +1,5 @@
 //! `mzlab-cli dad subtract|spectrum|trace|ms-at|delay`: the DAD / PDA matrix of a file for agents, the same engine routes as the site and the app (`itemroutes`,
-//! `wiff::dad_ops`). Every answer is JSON on stdout with stable keys; progress and errors go to stderr; with `--json` an error is also an `errore/1` on stdout.
+//! `wiff::dad_ops`). Every answer is JSON on stdout with stable keys; progress and errors go to stderr; with `--json` an error is also an `error/1` on stdout.
 //! Exit codes: 0 done, 1 data error (no DAD, nothing overlaps), 2 usage.
 
 use std::fs::File;
@@ -30,7 +30,7 @@ usage: mzlab-cli dad subtract A B [--view report|map|spectrum|trace] [--scale no
   ms-at       the MS1 spectrum and the TIC of the same file at the UV time + --offset (minutes, signed, default 0; the MS time is the UV time plus the offset)
   delay       the offset the engine estimates by matching the UV peaks with the TIC (`delay`, `peaks`, `corr`): evidence to accept or not, never applied
   --sample ID the sample of a file with several (.wiff); --minus-sample ID the same for B
-  --json      accepted; every answer is JSON, and an error is also an errore/1 document on stdout
+  --json      accepted; every answer is JSON, and an error is also an error/1 document on stdout
   --out PATH  write there instead of the standard output
 exit codes: 0 done, 1 data error (no DAD, nothing overlaps), 2 usage";
 
@@ -362,25 +362,16 @@ pub fn run(args: Vec<String>) -> Outcome {
     match run_req(&c) {
         Ok(t) => crate::emit(t + "\n", &c.out),
         Err(e) => {
-            let mut o = Outcome::fail_error(&e);
-            o.code =
+            let code =
                 if e.key == "err.pda.scale" || e.key == "err.pda.view" || e.key == "err.pda.window"
                 {
-                    2
+                    crate::exit::USAGE
                 } else {
-                    1
+                    crate::exit::DATA
                 };
-            if c.json {
-                o.stdout = crate::flow_json::error_json(
-                    o.code,
-                    &e,
-                    &o.stderr,
-                    "see mzlab-cli dad --help",
-                    &[],
-                )
-                .into_bytes();
-            }
-            o
+            Outcome::fail_error(&e)
+                .with_code(code)
+                .with_hint("see mzlab-cli dad --help")
         }
     }
 }

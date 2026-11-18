@@ -74,6 +74,7 @@ pub fn check(args: Vec<String>) -> Outcome {
             code: 3,
             stdout: (v.problems.join("\n") + "\n").into_bytes(),
             stderr: String::new(),
+            error: None,
         },
     }
 }

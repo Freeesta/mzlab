@@ -200,7 +200,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     });
     let _ = std::fs::remove_dir_all(&tmp);
     match r {
-        Err(e) => crate::sample_select::fail(&e, false),
+        Err(e) => crate::sample_select::fail(&e),
         Ok((t, note)) => {
             let mut o = crate::emit(t + "\n", &c.out);
             if o.code == 0 {

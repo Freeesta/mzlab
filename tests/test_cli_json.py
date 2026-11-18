@@ -1,4 +1,4 @@
-"""The JSON answers of `mzlab-cli` for agents: the four schemas (flowcheck/1, flowdry/1, flowrun/1, errore/1) are valid JSON Schema, and the documents
+"""The JSON answers of `mzlab-cli` for agents: the four schemas (flowcheck/1, flowdry/1, flowrun/1, error/1) are valid JSON Schema, and the documents
 the Rust test `flow_json` produces on its synthetic plan (left in a temporary folder by MZLAB_JSON_SAMPLES) respect them."""
 import json
 import os
@@ -9,7 +9,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1]
-NAMES = {"flowcheck": "flowcheck.json", "flowdry": "flowdry.json", "flowrun": "flowrun.json", "errore": "errore.json"}
+NAMES = {"flowcheck": "flowcheck.json", "flowdry": "flowdry.json", "flowrun": "flowrun.json", "error": "error.json"}
 
 
 def schema(name):

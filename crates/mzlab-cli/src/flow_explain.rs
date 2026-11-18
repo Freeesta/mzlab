@@ -39,6 +39,7 @@ fn parse(a: Vec<String>) -> Result<Args, String> {
                     .map_err(|_| "--rt-tol is not a number")?
             }
             "--out" => out = Some(val("--out")?),
+            _ if x.len() > 1 && x.starts_with('-') => return Err(format!("unknown option {x}")),
             _ => pos.push(x),
         }
     }

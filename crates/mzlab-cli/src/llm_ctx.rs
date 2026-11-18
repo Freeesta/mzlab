@@ -188,6 +188,7 @@ pub(crate) fn eval(args: Vec<String>) -> Outcome {
             )
             .into_bytes(),
             stderr: String::new(),
+            error: None,
         },
     }
 }

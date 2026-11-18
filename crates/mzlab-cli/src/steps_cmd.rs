@@ -38,8 +38,8 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
         ..Style::default()
     };
     let usage = |msg: &str| {
-        let err = Error::new("err.cli.usage").with("detail", msg);
-        fail(st, 2, &err, msg, "mzlab-cli steps --help")
+        let err = Error::new("err.cli.usage").with("message", msg);
+        fail(2, &err, msg, "mzlab-cli steps --help")
     };
     let mut id = None;
     let mut it = args.into_iter();
@@ -50,6 +50,7 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
                     code: 0,
                     stdout: format!("{HELP}\n").into_bytes(),
                     stderr: String::new(),
+                    error: None,
                 }
             }
             "--json" => {}
@@ -71,7 +72,6 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
         let Some(last) = list.pop() else {
             let err = Error::new("err.flow.step.unknown").with("step", want);
             return fail(
-                st,
                 2,
                 &err,
                 &format!("unknown step {want}"),
@@ -110,5 +110,6 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
         code: 0,
         stdout: stdout.into_bytes(),
         stderr: String::new(),
+        error: None,
     }
 }

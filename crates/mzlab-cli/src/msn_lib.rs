@@ -246,6 +246,7 @@ pub(crate) fn cmd(args: Vec<String>) -> crate::Outcome {
             code: 0,
             stdout: data,
             stderr: note,
+            error: None,
         },
         Err(e) => crate::Outcome::fail_error(&e),
     }

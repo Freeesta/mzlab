@@ -281,6 +281,7 @@ fn fail(msg: &str) -> Outcome {
         code: 2,
         stdout: Vec::new(),
         stderr: format!("error: {msg}\n{HELP}\n"),
+        error: None,
     }
 }
 
@@ -292,6 +293,7 @@ pub fn run(args: Vec<String>) -> Outcome {
                 code: 0,
                 stdout: format!("{HELP}\n").into_bytes(),
                 stderr: String::new(),
+                error: None,
             }
         } else {
             fail("unknown subcommand")
@@ -328,11 +330,13 @@ pub fn run(args: Vec<String>) -> Outcome {
             code: 0,
             stdout: (t + "\n").into_bytes(),
             stderr: String::new(),
+            error: None,
         },
         Err(e) => Outcome {
             code: 1,
             stdout: Vec::new(),
             stderr: format!("error: {}\n", e.key),
+            error: None,
         },
     }
 }

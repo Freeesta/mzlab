@@ -96,6 +96,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         } else {
             "pair: a companion is missing\n".into()
         },
+        error: None,
     }
 }
 

@@ -192,7 +192,7 @@ fn list_gives_data_on_stdout_progress_on_stderr_and_exit_codes() {
     // a missing file is 4 and an error line, no usage is 2
     let (code, out, _) = run(&["samples", "list", &at("nothing"), "--json"]);
     assert_eq!(code, 4);
-    assert!(out.contains(r#""schema":"errore/1""#), "{out}");
+    assert!(out.contains(r#""schema":"error/1""#), "{out}");
     assert_eq!(run(&["samples", "list", "--json"]).0, 2);
     assert_eq!(run(&["samples", "list", &at("totale"), "--bogus"]).0, 2);
     let _ = std::fs::remove_dir_all(&d);

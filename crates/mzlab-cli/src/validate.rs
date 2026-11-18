@@ -117,5 +117,6 @@ pub fn run(args: impl Iterator<Item = String>) -> Outcome {
         code: if unreadable { 2 } else { u8::from(bad) },
         stdout: if a.json { json.0 } else { text }.into_bytes(),
         stderr: err,
+        error: None,
     }
 }

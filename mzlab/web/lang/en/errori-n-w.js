@@ -1,4 +1,11 @@
 I18N.add("en", {
+  "err.normative.usage": "{message}",
+  "err.normative.sources": "The sources file is not valid: {message}.",
+  "err.normative.pin": "A source changed since it was pinned: {message}.",
+  "err.normative.large": "A download is above the size limit: {message}.",
+  "err.normative.fetch": "A source could not be fetched: {message}.",
+  "err.normative.parse": "A list could not be read: {message}.",
+  "err.normative.io": "A file could not be read or written: {message}.",
   "err.module.reply": "The readers module gave an answer this page cannot read ({detail}). Reload the page; if it happens again, the module and the page come from different versions.",
   "err.transitions.empty": "The transition table has no rows.",
   "err.transitions.manifest": "The list of mzML files of the step is not valid.",

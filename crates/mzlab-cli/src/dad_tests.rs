@@ -59,7 +59,7 @@ fn a_file_minus_itself_is_zero_and_reports_no_warning() {
 }
 
 #[test]
-fn bad_use_is_exit_2_and_a_data_error_is_1_with_errore_json() {
+fn bad_use_is_exit_2_and_a_data_error_is_1_with_error_json() {
     let f = example();
     for a in [
         vec!["subtract", &f],
@@ -74,7 +74,7 @@ fn bad_use_is_exit_2_and_a_data_error_is_1_with_errore_json() {
     assert_eq!(o.code, 1);
     assert!(String::from_utf8(o.stdout)
         .unwrap()
-        .contains("\"schema\":\"errore/1\""));
+        .contains("\"schema\":\"error/1\""));
     assert_eq!(dad(&["--help"]).code, 0);
 }
 

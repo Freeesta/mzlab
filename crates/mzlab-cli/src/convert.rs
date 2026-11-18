@@ -338,6 +338,7 @@ fn summary(items: &[Item], out: &Path) -> Outcome {
         code,
         stdout: stdout.into_bytes(),
         stderr,
+        error: None,
     }
 }
 
@@ -423,6 +424,7 @@ pub fn run(args: Vec<String>) -> Outcome {
                 code: 0,
                 stdout: format!("{HELP}\n").into_bytes(),
                 stderr: String::new(),
+                error: None,
             }
         }
         Err(e) => return fail(2, &e, "mzlab-cli convert --help"),
@@ -447,7 +449,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     let list = match entries(&units, a.sample.as_deref()) {
         Ok(l) => l,
-        Err(e) => return crate::sample_select::fail(&e, false),
+        Err(e) => return crate::sample_select::fail(&e),
     };
     if let Some(to) = overwrites(&list, &out) {
         return fail(

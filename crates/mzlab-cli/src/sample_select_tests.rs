@@ -48,7 +48,7 @@ fn select_names_the_samples_in_the_order_of_the_file_and_the_exit_codes_differ()
         (o.code, String::from_utf8_lossy(&o.stdout).as_ref()),
         (0, "2 3\n")
     );
-    // an id the file does not have: 5, the ids present named, an errore/1 with --json
+    // an id the file does not have: 5, the ids present named, an error/1 with --json
     let o = run(&["samples", "select", &wiff, "--sample", "1,9", "--json"]);
     assert_eq!(o.code, 5);
     assert!(
@@ -58,7 +58,7 @@ fn select_names_the_samples_in_the_order_of_the_file_and_the_exit_codes_differ()
     );
     let j = String::from_utf8_lossy(&o.stdout).into_owned();
     assert!(
-        j.contains("\"schema\":\"errore/1\"")
+        j.contains("\"schema\":\"error/1\"")
             && j.contains("\"code\":5")
             && j.contains("err.sample.unknown"),
         "{j}"
@@ -82,7 +82,7 @@ fn select_names_the_samples_in_the_order_of_the_file_and_the_exit_codes_differ()
         "--json",
     ]);
     assert_eq!(o.code, 4);
-    assert!(String::from_utf8_lossy(&o.stdout).contains("errore/1"));
+    assert!(String::from_utf8_lossy(&o.stdout).contains("error/1"));
     let _ = std::fs::remove_dir_all(&dir);
 }
 

@@ -47,7 +47,8 @@ fn returned_key(key: &str, phase: Option<&str>) -> String {
         _ => key.to_string(),
     };
     let native = format!("{base}.native");
-    if text_of(&native).is_some() {
+    // only the memory sentences have a native variant (`err.flow.step.native` is a key of its own)
+    if base.starts_with("error.memory") && text_of(&native).is_some() {
         native
     } else {
         base
@@ -55,6 +56,10 @@ fn returned_key(key: &str, phase: Option<&str>) -> String {
 }
 
 /// The parameters of `Error`'s `Display` form (` k=v k2=v2`): a word that starts with `name=` opens a parameter, the others continue its value.
+pub(crate) fn text_params(remainder: &str) -> Vec<(String, String)> {
+    params(remainder)
+}
+
 fn params(remainder: &str) -> Vec<(String, String)> {
     let mut v: Vec<(String, String)> = Vec::new();
     for word in remainder.split(' ').filter(|p| !p.is_empty()) {
@@ -108,12 +113,22 @@ pub(crate) fn human_error(e: &mzlab_core::Error) -> String {
 }
 
 impl crate::Outcome {
-    /// A usage or engine error (code 2) with its text rendered from the error itself (`human_error`).
+    /// An engine error as a failure: the code of its key (`exit::code_of`), its text rendered from the error itself (`human_error`)
+    /// and its key and parameters for `error/1`.
     pub(crate) fn fail_error(e: &mzlab_core::Error) -> Self {
         crate::Outcome {
-            code: 2,
+            code: crate::exit::code_of(e),
             stdout: Vec::new(),
             stderr: format!("error: {}\n", human_error(e)),
+            error: Some(crate::Failure {
+                key: e.key.to_string(),
+                params: e
+                    .params
+                    .iter()
+                    .map(|(k, v)| (k.to_string(), v.clone()))
+                    .collect(),
+                ..crate::Failure::default()
+            }),
         }
     }
 }
