@@ -67,7 +67,7 @@ Each finding gives severity, place, expected value with source, observed value, 
 - Expected: area/true = 1 for a noise-free Gaussian on a zero baseline; cutting at 5 % of the height and subtracting that level leaves 0.888 analytically.
 - Observed: area/true = 0.876 for sigma from 2.5 to 20 points, while the cells of the detection route give about 1.0 on the same traces.
 - Fix: integrate from zero between the limits with `quality::trapezoid`, or widen the limits to the baseline.
-- Status: OPEN (owner decision): reproduced (`detect_prominence` area/true 0.8747, 0.8758, 0.8760, 0.8761 at sigma 2.5, 5, 10, 20 points); either fix changes the 5 % limit (`frac`) or the baseline convention of a function the resolver and `peak-auto` share.
+- Status: FIXED: default `frac` 0.001 (area/true 0.9952, 0.9953, 0.9966, 0.9966 at sigma 2.5, 5, 10, 20 points, was 0.8747 to 0.8761); the old limit is `frac` 0.05.
 
 ### B3 - wrong result - CWT peak area and FWHM depend on the points per peak
 - Place: `crates/mzlab-picchi/src/peaks.rs:325-357` (`asls_baseline(y, 1e5, 0.01, 10, 160)`, lambda in points, CWT widths up to 12); consumers `chrom.uv_peaks@1` (`crates/mzlab-feat/src/uv_bands.rs:60,170`), peak labels, `tracestat`.
