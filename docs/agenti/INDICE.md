@@ -166,7 +166,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | rows of the MS² spectrum card (notes, retention times, CE ± spread, sample), `mzlab-cli items` | `docs/agenti/spettro-righe.md` |
 | progressive startup (`AVVIO`), «interface at once» rule; loading area and table (area: header (full screen, logo, (i)), loading area and table,…) | `docs/agenti/startup.md` |
 | statistics as steps: Welch/ANOVA with BH, PCA and KMD in Rust (`crates/mzlab-feat/src/stat/`, `table.stats`, `table.pca`, `table.kmd`, `stat/1`) | `docs/agenti/stat.md` |
-| registry of state-changing actions (`comandi.js`, generated `docs/actions.md`), undo/redo, "removed" entries (remove a file, close a panel, clear marks: no warning, `STORIA` entries) | `docs/agenti/storia-tolto.md` |
+| registry of state-changing actions (`comandi.js`, generated `docs/azioni.md`), undo/redo, "removed" entries (remove a file, close a panel, clear marks: no warning, `STORIA` entries) | `docs/agenti/storia-tolto.md` |
 | positioning study: mzLab against other LC-MS tools (feature matrix, 10 missing functions with value and effort, 5 strengths, interoperability gaps, risks; public sources with the date read) | `docs/agenti/studio-concorrenti.md` |
 | scientific correctness study of the calculations (report only, in English): masses and formulas, chromatography and quantification, spectral scores, statistics; CONFIRMED and SUSPECTED findings with severity, `file:line`, expected value and source, reproduction | `docs/agenti/studio-scienza.md` |
 | security study: exploitable weaknesses with a crafted file or by probing the published site (Rust readers, front end, desktop app, supply chain), severity, `file:line`, how to reproduce, fix | `docs/agenti/studio-sicurezza.md` |

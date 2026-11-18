@@ -1,5 +1,5 @@
 """Registry of the actions that change state (mzlab/web/comandi.js): well-formed table, handlers and call sites with registered ids, no assignment to a
-registered field outside the files the action lists, the ratchet of the actions not undoable yet, and docs/actions.md up to date."""
+registered field outside the files the action lists, the ratchet of the actions not undoable yet, and docs/azioni.md up to date."""
 import re
 import shutil
 import sys

@@ -1,4 +1,4 @@
-"""Writes docs/actions.md, the encyclopedia of the actions that change state, from COMANDI_TAB in mzlab/web/comandi.js (never by hand).
+"""Writes docs/azioni.md, the encyclopedia of the actions that change state, from COMANDI_TAB in mzlab/web/comandi.js (never by hand).
 
     python3 tools/doc_commands.py          # rewrite the page
     python3 tools/doc_commands.py --check  # exit 1 if the page is not the one the table gives (tests/test_comandi.py)
