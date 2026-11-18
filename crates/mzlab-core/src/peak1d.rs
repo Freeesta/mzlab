@@ -17,6 +17,28 @@ pub struct Found {
     pub ok: bool,
 }
 
+/// Which trace the noise of the S/N is read on: the raw one (default: height over the noise the points really have) or the smoothed one (the
+/// old reading, 1.6-1.8 times too high at smoothing 3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SnrBasis {
+    Raw,
+    Smoothed,
+}
+
+impl SnrBasis {
+    /// `"raw"` or `"smoothed"`.
+    pub fn parse(s: &str) -> Option<SnrBasis> {
+        match s {
+            "raw" => Some(SnrBasis::Raw),
+            "smoothed" => Some(SnrBasis::Smoothed),
+            _ => None,
+        }
+    }
+}
+
+/// The estimator named beside every S/N of this module.
+pub const SNR_ESTIMATOR: &str = "smoothed height over 1.4826 MAD of the raw trace far from the peak";
+
 fn median(v: &[f64]) -> f64 {
     let mut s = v.to_vec();
     crate::sortc::by(&mut s, |a, b| a.total_cmp(b));
@@ -142,7 +164,7 @@ fn crossing(rt: &[f64], ys: &[f64], i: usize, o: usize, half: f64) -> f64 {
     }
 }
 
-/// `find_peak(rt, y, rt_center, rt_tol, smooth_k, min_points)`; `None` for an empty trace or no point in the window.
+/// `find_peak(rt, y, rt_center, rt_tol, smooth_k, min_points)`; `None` for an empty trace or no point in the window. S/N on the raw trace.
 pub fn find_peak(
     rt: &[f64],
     y: &[f64],
@@ -150,6 +172,19 @@ pub fn find_peak(
     rt_tol: f64,
     smooth_k: usize,
     min_points: usize,
+) -> Option<Found> {
+    find_peak_basis(rt, y, center, rt_tol, smooth_k, min_points, SnrBasis::Raw)
+}
+
+/// `find_peak` with the trace the S/N noise is read on chosen; the edges always use the noise of the smoothed trace, so only `snr` differs.
+pub fn find_peak_basis(
+    rt: &[f64],
+    y: &[f64],
+    center: Option<f64>,
+    rt_tol: f64,
+    smooth_k: usize,
+    min_points: usize,
+    basis: SnrBasis,
 ) -> Option<Found> {
     let ymax = y.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     if rt.len() < 3 || rt.len() != y.len() || ymax <= 0.0 {
@@ -169,6 +204,10 @@ pub fn find_peak(
     }
     let (base, noise) = noise_of(rt, &ys, ia, rt_tol);
     let height = ys[ia] - base;
+    let sn_noise = match basis {
+        SnrBasis::Raw => noise_of(rt, y, ia, rt_tol).1,
+        SnrBasis::Smoothed => noise,
+    };
     let thr = base + (0.01 * height).max(noise);
     let (l, r) = edges(&ys, ia, thr, base + 0.5 * height, noise);
     let points = points_across(y, ia, base + 0.05 * height);
@@ -186,7 +225,7 @@ pub fn find_peak(
         height,
         area: area_of(rt, y, l, r),
         fwhm,
-        snr: height / noise,
+        snr: height / sn_noise,
         points,
         left: rt[l],
         right: rt[r],
