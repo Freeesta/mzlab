@@ -16,6 +16,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help); dda-window FILE --from MIN --to MIN: the MS2 of a window by precursor (dda-window --help)
        mzlab-cli pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) found by name in the folder of the file; exit 1 when one is missing (pair --help)
        mzlab-cli dad subtract|spectrum|trace|ms-at|delay ...   the DAD / PDA matrix as JSON for agents: A minus B, the UV spectrum and trace, the linked MS (dad --help)
+       mzlab-cli wiff list FILE.wiff... [--inventory]   what a .wiff + .wiff.scan holds, sample by sample, with SHA-256 and a status as JSON; wiff verify OUT.wiff --against SRC.wiff...: whether an output equals its sources (wiff --help)
        mzlab-cli items FILE [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps with CE and its spread (items --help)
        mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help); ion-mz TEXT [--adduct A]: the m/z of an ion with a signed shift (ion-mz --help)
        mzlab-cli match-mz X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adduct shifts, known contaminants, as candidates (match-mz --help)
@@ -66,6 +67,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help); dda-window FILE --from MIN --to MIN: the MS2 of a window by precursor (dda-window --help)
        mzlab-cli pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) found by name in the folder of the file; exit 1 when one is missing (pair --help)
        mzlab-cli dad subtract|spectrum|trace|ms-at|delay ...   the DAD / PDA matrix as JSON for agents: A minus B, the UV spectrum and trace, the linked MS (dad --help)
+       mzlab-cli wiff list FILE.wiff... [--inventory]   what a .wiff + .wiff.scan holds, sample by sample, with SHA-256 and a status as JSON; wiff verify OUT.wiff --against SRC.wiff...: whether an output equals its sources (wiff --help)
        mzlab-cli items FILE [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps with CE and its spread (items --help)
        mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help); ion-mz TEXT [--adduct A]: the m/z of an ion with a signed shift (ion-mz --help)
        mzlab-cli match-mz X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adduct shifts, known contaminants, as candidates (match-mz --help)
@@ -116,6 +118,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help); dda-window FILE --from MIN --to MIN: the MS2 of a window by precursor (dda-window --help)
        mzlab-cli pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) found by name in the folder of the file; exit 1 when one is missing (pair --help)
        mzlab-cli dad subtract|spectrum|trace|ms-at|delay ...   the DAD / PDA matrix as JSON for agents: A minus B, the UV spectrum and trace, the linked MS (dad --help)
+       mzlab-cli wiff list FILE.wiff... [--inventory]   what a .wiff + .wiff.scan holds, sample by sample, with SHA-256 and a status as JSON; wiff verify OUT.wiff --against SRC.wiff...: whether an output equals its sources (wiff --help)
        mzlab-cli items FILE [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps with CE and its spread (items --help)
        mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help); ion-mz TEXT [--adduct A]: the m/z of an ion with a signed shift (ion-mz --help)
        mzlab-cli match-mz X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adduct shifts, known contaminants, as candidates (match-mz --help)
@@ -194,6 +197,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help); dda-window FILE --from MIN --to MIN: the MS2 of a window by precursor (dda-window --help)
        mzlab-cli pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) found by name in the folder of the file; exit 1 when one is missing (pair --help)
        mzlab-cli dad subtract|spectrum|trace|ms-at|delay ...   the DAD / PDA matrix as JSON for agents: A minus B, the UV spectrum and trace, the linked MS (dad --help)
+       mzlab-cli wiff list FILE.wiff... [--inventory]   what a .wiff + .wiff.scan holds, sample by sample, with SHA-256 and a status as JSON; wiff verify OUT.wiff --against SRC.wiff...: whether an output equals its sources (wiff --help)
        mzlab-cli items FILE [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps with CE and its spread (items --help)
        mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help); ion-mz TEXT [--adduct A]: the m/z of an ion with a signed shift (ion-mz --help)
        mzlab-cli match-mz X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adduct shifts, known contaminants, as candidates (match-mz --help)
@@ -1150,4 +1154,37 @@ exit 2
 --- stderr
 error: unknown argument --help
 (mzlab-cli msn-graph --help)
+
+=== mzlab-cli wiff --help
+exit 0
+--- stdout
+mzlab-cli wiff: inspect and compare SCIEX .wiff + .wiff.scan pairs (read only), JSON on stdout for agents.
+
+usage: mzlab-cli wiff list FILE.wiff... [--inventory] [--out PATH]
+       mzlab-cli wiff verify OUT.wiff --against SRC.wiff... [--out PATH]
+
+  list        wiff.list/1: per file the SHA-256, the container (version, sector sizes), the .scan size and the streams shared by all samples; per sample its number,
+              name, method, scans, status (ok, refused, truncated, damaged, unindexed) with the reason, its section of the .scan (start, bytes, slack, SHA-256, first
+              44 bytes) and every stream with bytes and SHA-256. A refused or damaged sample is listed, never hidden
+  --inventory also the whole .wiff.scan SHA-256 and the directory metadata of every entry (CLSID, state bits, creation and modification times)
+  verify      wiff.verify/1: each sample of OUT is matched to the source sample with the same section (SHA-256) and compared stream by stream and on the directory
+              metadata; the streams shared by all samples must equal those of the first source; `equal` is the answer, `differences` the evidence
+  --json      accepted (the output is always JSON)
+  --out PATH  write there instead of the standard output
+exit codes: 0 done (verify: everything equal), 1 verify found a difference, 2 usage or read error, 3 list found a sample that is not ok
+--- stderr
+
+=== mzlab-cli wiff
+exit 2
+--- stdout
+--- stderr
+error: wiff needs a verb: list or verify
+(mzlab-cli wiff --help)
+
+=== mzlab-cli wiff nosuch
+exit 2
+--- stdout
+--- stderr
+error: unknown wiff verb nosuch
+(mzlab-cli wiff --help)
 
