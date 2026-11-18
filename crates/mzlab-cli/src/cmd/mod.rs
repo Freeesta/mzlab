@@ -42,6 +42,7 @@ pub(crate) fn entries() -> impl Iterator<Item = &'static Entry> {
 const JSON_FLAG: &[&str] = &[
     "flow run",
     "flow check",
+    "flow verify",
     "steps",
     "validate",
     "pair",

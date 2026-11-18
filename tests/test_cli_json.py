@@ -1,4 +1,4 @@
-"""The JSON answers of `mzlab-cli` for agents: the four schemas (flowcheck/1, flowdry/1, flowrun/1, error/1) are valid JSON Schema, and the documents
+"""The JSON answers of `mzlab-cli` for agents: the schemas (flowcheck/1, flowdry/1, flowrun/1, error/1, verify/1) are valid JSON Schema, and the documents
 the Rust test `flow_json` produces on its synthetic plan (left in a temporary folder by MZLAB_JSON_SAMPLES) respect them."""
 import json
 import os
@@ -9,7 +9,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1]
-NAMES = {"flowcheck": "flowcheck.json", "flowdry": "flowdry.json", "flowrun": "flowrun.json", "error": "error.json"}
+NAMES = {"flowcheck": "flowcheck.json", "flowdry": "flowdry.json", "flowrun": "flowrun.json", "error": "error.json", "verify": "verify.json"}
 
 
 def schema(name):
@@ -28,6 +28,11 @@ def samples(tmp_path_factory):
     folder = tmp_path_factory.mktemp("json_samples")
     r = subprocess.run(
         ["cargo", "test", "-p", "mzlab-cli", "--lib", "flow_json"],
+        cwd=ROOT, capture_output=True, text=True, env={**os.environ, "MZLAB_JSON_SAMPLES": str(folder)},
+    )
+    assert r.returncode == 0, (r.stdout + r.stderr)[-2000:]
+    r = subprocess.run(
+        ["cargo", "test", "-p", "mzlab-cli", "--lib", "flow_mzrun"],
         cwd=ROOT, capture_output=True, text=True, env={**os.environ, "MZLAB_JSON_SAMPLES": str(folder)},
     )
     assert r.returncode == 0, (r.stdout + r.stderr)[-2000:]

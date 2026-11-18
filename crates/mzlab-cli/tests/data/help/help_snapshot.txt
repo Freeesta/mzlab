@@ -18,7 +18,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)
        mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
-       mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/1 record of a run; flow verify RECORD checks its fingerprints
+       mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run (a role without sha256 takes it from the run inputs); flow verify RECORD [--json] checks its fingerprints
        mzlab-cli flow verify RECORD   whether the fingerprints of an mzrun/1 record match its files
        mzlab-cli flow command PLAN.json   the script that reruns the plan, on stdout
        mzlab-cli llm tools [--out FILE]   the catalog tools/1 of the assistant tools (llm tools --help)
@@ -69,7 +69,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)
        mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
-       mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/1 record of a run; flow verify RECORD checks its fingerprints
+       mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run (a role without sha256 takes it from the run inputs); flow verify RECORD [--json] checks its fingerprints
        mzlab-cli flow verify RECORD   whether the fingerprints of an mzrun/1 record match its files
        mzlab-cli flow command PLAN.json   the script that reruns the plan, on stdout
        mzlab-cli llm tools [--out FILE]   the catalog tools/1 of the assistant tools (llm tools --help)
@@ -120,7 +120,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)
        mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
-       mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/1 record of a run; flow verify RECORD checks its fingerprints
+       mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run (a role without sha256 takes it from the run inputs); flow verify RECORD [--json] checks its fingerprints
        mzlab-cli flow verify RECORD   whether the fingerprints of an mzrun/1 record match its files
        mzlab-cli flow command PLAN.json   the script that reruns the plan, on stdout
        mzlab-cli llm tools [--out FILE]   the catalog tools/1 of the assistant tools (llm tools --help)
@@ -171,7 +171,7 @@ exit 0
 usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan (flow run --help)
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)
        mzlab-cli flow report RUNDIR [--out FILE]   the corsa/1 report of a run folder (prov.json and the files beside it)
-       mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/1 record of a run; flow verify RECORD checks its fingerprints
+       mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run (a role without sha256 takes it from the run inputs); flow verify RECORD [--json] checks its fingerprints
        mzlab-cli flow verify RECORD   whether the fingerprints of an mzrun/1 record match its files
        mzlab-cli flow command PLAN.json   the script that reruns the plan, on stdout
 
@@ -284,12 +284,12 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
 === mzlab-cli channels --help
 exit 0
 --- stdout
-mzlab-cli channels: the channels of a file (TIC, BPC, one per scan type or precursor, one per SRM transition) as JSON (canali/1).
+mzlab-cli channels: the channels of a file (TIC, BPC, one per scan type or precursor, one per SRM transition) as JSON (channels/1).
 
 usage: mzlab-cli channels FILE [--sample LIST] [--channel ID [--rt T0[,T1]] [--n N]] [--out PATH]
 
   FILE        an mzML, or any single file the app reads (.raw, mzXML, ...); SRM, SIC, UV and analog channels only for an mzML
-  --sample LIST the samples of a file with several (.wiff), by their ids: one id, or a list and ranges (1,3,5 or 2-4: one canali/1 line each, in the order
+  --sample LIST the samples of a file with several (.wiff), by their ids: one id, or a list and ranges (1,3,5 or 2-4: one channels/1 line each, in the order
               of the file, only those samples are read); default the first, the others are named on the standard error; an id the file does not have: exit 5
   --channel ID the trace of a UV or analog channel (uv:twc, uv:<nm>±<bw>, an:<i>) instead of the list; with --rt (minutes) the UV spectrum of uv:twc;
               uv:auto prints the XWC band proposed from the DAD matrix ({nm, bw, rt, n}), in the --rt window when given
@@ -569,7 +569,7 @@ mzlab-cli samples: how the names of a set of files split them (nomivar/1), as JS
 
 usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
        mzlab-cli samples group NAME...
-       mzlab-cli samples table [--names FILE|-]
+       mzlab-cli samples table [--names FILE|- | FILE...]
        mzlab-cli samples list FILE... [--json] [--probe]   (samples list --help)
        mzlab-cli samples select FILE --sample LIST [--json]   (samples select --help)
 
@@ -578,6 +578,7 @@ usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,
   --has a,b       also the manual variable of terms: a file goes to the first term equal to one of its tokens
   --substring     with --has: the term may be inside a token (O2 then catches H2O2)
   group           the name of a group made of NAMEs: their common tokens in order, empty when none
+  FILE...         with table: real files, named by their file name and hashed (SHA-256), so `flow record` can match the roles
   table           the sample table the names propose (campioni/2): role, time point (`tempo`, `unita_tempo`, `tempo_min`), series, replicate, concentration
 --- stderr
 
@@ -923,7 +924,7 @@ If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/m
 === mzlab-cli flow record --help
 exit 0
 --- stdout
-usage: mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/1 record of a run; flow verify RECORD checks its fingerprints
+usage: mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run (a role without sha256 takes it from the run inputs); flow verify RECORD [--json] checks its fingerprints
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr

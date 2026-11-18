@@ -24,9 +24,10 @@ pub struct Agent {
     pub modules: Vec<(String, String)>,
 }
 
-/// The agent of this build: crate version, platform and, from the variables the build tools set (`tools/prepara_sito.py`), the full commit, `rustc`
-/// and the SHA-256 of `Cargo.lock`. The CLI, the desktop and the `.wasm` all call it, so they write the same keys; `modules` is left to the caller (it needs I/O).
-pub fn build_agent(name: &str) -> Agent {
+/// The agent of this build: crate version, platform and, from the variables the build tools set (`tools/prepara_sito.py`), `rustc` and the SHA-256 of
+/// `Cargo.lock`. The full `commit` only comes from the caller (the CLI build script): the engine never reads `MZLAB_COMMIT`, so a `.wasm` built with it
+/// set still has none and its bytes do not change at every commit. `modules` is left to the caller (it needs I/O).
+pub fn build_agent(name: &str, commit: Option<&str>) -> Agent {
     let target = option_env!("MZLAB_TARGET")
         .map(str::to_string)
         .unwrap_or_else(|| {
@@ -40,7 +41,7 @@ pub fn build_agent(name: &str) -> Agent {
     Agent {
         name: name.into(),
         version: env!("CARGO_PKG_VERSION").into(),
-        commit: option_env!("MZLAB_COMMIT").map(str::to_string),
+        commit: commit.map(str::to_string),
         platform: Platform::current().name(),
         target: Some(target),
         rustc: option_env!("MZLAB_RUSTC").map(str::to_string),

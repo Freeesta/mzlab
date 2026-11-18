@@ -84,15 +84,15 @@ fn route_lists_the_channels_of_the_file() {
         ],
     );
     let v = crate::json::parse(ask(&mut r, "/api/canali", "k=0").as_bytes()).unwrap();
-    assert_eq!(v.get("v").and_then(|x| x.str()), Some("canali/1"));
+    assert_eq!(v.get("schema").and_then(|x| x.str()), Some("channels/1"));
     assert_eq!(
-        v.get("tipo")
-            .and_then(|t| t.get("proposto"))
+        v.get("kind")
+            .and_then(|t| t.get("proposed"))
             .and_then(|x| x.str()),
-        Some("lc-ms2-mirato")
+        Some("lc-ms2-targeted")
     );
     let ids: Vec<&str> = v
-        .get("canali")
+        .get("channels")
         .unwrap()
         .arr()
         .iter()
@@ -108,10 +108,10 @@ fn route_lists_the_channels_of_the_file() {
             "ms:ITMS + ms2 300 @cid"
         ]
     );
-    let ms2 = &v.get("canali").unwrap().arr()[3];
-    assert_eq!(ms2.get("n").unwrap().f64(), Some(10.0));
-    assert_eq!(ms2.get("gen").unwrap().f64(), Some(2.0));
-    assert_eq!(ms2.get("spettri").unwrap().bool(), Some(true));
+    let ms2 = &v.get("channels").unwrap().arr()[3];
+    assert_eq!(ms2.get("n_points").unwrap().f64(), Some(10.0));
+    assert_eq!(ms2.get("generator").unwrap().f64(), Some(2.0));
+    assert_eq!(ms2.get("has_spectra").unwrap().bool(), Some(true));
 }
 
 #[test]

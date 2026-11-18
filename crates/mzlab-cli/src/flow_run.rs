@@ -204,7 +204,7 @@ pub(crate) fn problem_text(p: &Problem) -> String {
 fn agent() -> Agent {
     // the executable does not change while it runs: hashed once per process, not once per plan
     static SHA: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
-    let mut a = build_agent("mzLab");
+    let mut a = build_agent("mzLab", crate::flow_mzrun::build_commit());
     let sha = SHA.get_or_init(|| {
         std::env::current_exe()
             .ok()
