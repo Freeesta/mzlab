@@ -253,10 +253,10 @@ def compose(mz: float, *, elements: dict[str, tuple[int, int]] | None = None, io
         counts = {k: int(v) for k, v in zip(syms, X[n]) if v}
         neutral = {k: int(v) for k, v in zip(syms, Nn[n]) if v}
         calc = ion_mass(counts, z)
-        d_da = calc - mz
+        d_da = mz - calc   # observed - theoretical (study item A3)
         bad = [rn for rn in RULES if failed[rn][n]]
         res = {"formula": format_formula(counts), "neutral": format_formula(neutral) if add_atoms else None, "mz_calc": round(calc, 5),
-               "delta_mda": round(d_da * 1000, 3), "delta_ppm": round(d_da / mz * 1e6, 3), "rdb": float(r_db[n]), "rules_failed": bad, "rules_ok": len(RULES) - len(bad)}
+               "delta_mda": round(d_da * 1000, 3), "delta_ppm": round(d_da / calc * 1e6, 3), "rdb": float(r_db[n]), "rules_failed": bad, "rules_ok": len(RULES) - len(bad)}
         t1, t2 = isotope_ratios(counts)
         iso = {"m1": round(t1, 4), "m2": round(t2, 4)}
         if m1 is not None or m2 is not None:

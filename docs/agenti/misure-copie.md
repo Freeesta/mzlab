@@ -1,18 +1,18 @@
-# Il primo file di un lotto: cancello delle copie, misure
+# The first file of a batch: the copy gate, measurements
 
-Misure del cancello delle copie del sito (`createCopyGate` in `rust-carica.js`, scelta `copiesOf` in `lr.js`; comportamento in `dati-carico.md`, «Il primo file prima»): in un lotto al più K copie in OPFS (`lr_put`) insieme, nell'ordine dell'elenco; K = 0 = tutte insieme, come senza cancello. Predefinito K = 2. Solo sito: l'app desktop carica già un file alla volta (catena di `upload0` in `shell.js`) e non copia i file.
+Measurements of the site's copy gate (`createCopyGate` in `rust-carica.js`, choice `copiesOf` in `lr.js`; behaviour in `dati-carico.md`, "The first file first"): in a batch at most K copies into OPFS (`lr_put`) at once, in list order; K = 0 = all together, as without the gate. Default K = 2. Site only: the desktop app already loads one file at a time (chain of `upload0` in `shell.js`) and does not copy the files.
 
-Strumento: `tests_e2e/misura_caricamento.py --scenarios copie,raw-copie,copie-mem,cinquanta` (bracci in `tests_e2e/scenari_caricamento.py`, `copie` = localStorage `mzlab.dev.copie`). Base `main` `7e81096`, sito di `tools/prepara_sito.py`, Chrome for Testing 153 headless, un profilo persistente caldo per giro (finestra normale, isolamento cross-origin), macchina cloud 4 vCPU Intel Xeon 2,30 GHz. N = 5 per cella, bracci alternati giro per giro, mediana [min-max], ms dal `change` dell'input. CPU 1× e 4× rallentano solo il thread principale della pagina (i worker vanno a piena velocità).
+Tool: `tests_e2e/misura_caricamento.py --scenarios copie,raw-copie,copie-mem,cinquanta` (arms in `tests_e2e/scenari_caricamento.py`, `copie` = localStorage `mzlab.dev.copie`). Base `main` `7e81096`, site from `tools/prepara_sito.py`, Chrome for Testing 153 headless, one warm persistent profile per run (normal window, cross-origin isolation), cloud machine 4 vCPU Intel Xeon 2.30 GHz. N = 5 per cell, arms alternated run by run, median [min-max], ms from the input's `change`. CPU 1× and 4× slow down only the page's main thread (the workers run at full speed).
 
-File: mzML sintetico 50,7 MB (2400 scansioni) e `.raw` Thermo sintetico 50,6 MB come in `misure-caricamento.md` («First file and many files»); il lotto da 50 = mzML di ~10 MB (480 scansioni). Un lotto = il primo file più copie con altri nomi. TIC provvisorio = `#ticprov` disegnato; primo grafico = un pannello disegnato; tutto indicizzato = niente più in lettura o apertura.
+Files: synthetic mzML 50.7 MB (2400 scans) and synthetic Thermo `.raw` 50.6 MB as in `misure-caricamento.md` ("First file and many files"); the batch of 50 = mzML of ~10 MB (480 scans). A batch = the first file plus copies with other names. Provisional TIC = `#ticprov` drawn; first chart = a panel drawn; all indexed = nothing left reading or opening.
 
-**Soglia** (decisa prima di misurare): primo grafico con dieci file ≥ 25 % prima di K = 0 E tutto il lotto entro +5 %. K = 2 la passa a 1× (mzML −27 %, lotto −13 %; `.raw` −49 %, −15 %) e per i 50 file (−53 %, −1 %; 4×: −41 %, −4 %); a 4× con dieci mzML il primo grafico è solo −10 % (K = 1: −23 %).
+**Threshold** (decided before measuring): first chart with ten files ≥ 25 % earlier than K = 0 AND the whole batch within +5 %. K = 2 passes it at 1× (mzML −27 %, batch −13 %; `.raw` −49 %, −15 %) and for the 50 files (−53 %, −1 %; 4×: −41 %, −4 %); at 4× with ten mzML the first chart is only −10 % (K = 1: −23 %).
 
-K = 1 dà il primo grafico più presto ma allunga il lotto oltre +5 % in due misure su tre a 1× (50 file +12 %, braccio con la memoria +15 %): una copia alla volta lascia fermi i costruttori quando i file sono piccoli. Indici identici: SHA-256 di ogni `.mzidx` uguale fra K = 2 e K = 0 (`tests_e2e/e2e_copie_coda.py`).
+K = 1 gives the first chart sooner but stretches the batch beyond +5 % in two measures out of three at 1× (50 files +12 %, arm with memory +15 %): one copy at a time leaves the builders idle when the files are small. Identical indexes: SHA-256 of every `.mzidx` equal between K = 2 and K = 0 (`tests_e2e/e2e_copie_coda.py`).
 
-Dove va il tempo del primo file (mzML, 1×, un giro tipico): da solo il costruttore legge in 213 ms e il grafico arriva 309 ms dopo l'indice; con K = 1 la lettura dura 586 ms (CPU divisa con la copia seguente e gli altri costruttori) e il grafico arriva 535 ms dopo l'indice (il worker del motore serve anche le copie); con K = 0 la copia del primo file finisce solo con le altre (1,8 s invece di 0,3 s).
+Where the first file's time goes (mzML, 1×, a typical run): alone the builder reads in 213 ms and the chart arrives 309 ms after the index; with K = 1 the read takes 586 ms (CPU shared with the next copy and the other builders) and the chart arrives 535 ms after the index (the engine worker also serves the copies); with K = 0 the first file's copy finishes only with the others (1.8 s instead of 0.3 s).
 
-**Dieci mzML da 53 MB**
+**Ten mzML of 53 MB**
 
 | CPU | arm | provisional TIC | first chart | all indexed | first chart vs K0 | all vs K0 |
 |---|---|---|---|---|---|---|
@@ -27,7 +27,7 @@ Dove va il tempo del primo file (mzML, 1×, un giro tipico): da solo il costrutt
 | 4× | dieci-k2 | 1160 [930-1306] | 4097 [3494-4365] | 7616 [7143-8022] | -10 % | -11 % |
 | 4× | dieci-k3 | 1421 [1238-1755] | 4323 [3992-4982] | 7996 [7526-9027] | -5 % | -6 % |
 
-**Dieci `.raw` da 51 MB**
+**Ten `.raw` of 51 MB**
 
 | CPU | arm | provisional TIC | first chart | all indexed | first chart vs K0 | all vs K0 |
 |---|---|---|---|---|---|---|
@@ -42,7 +42,7 @@ Dove va il tempo del primo file (mzML, 1×, un giro tipico): da solo il costrutt
 | 4× | raw-dieci-k2 | 566 [459-665] | 3479 [3371-3737] | 6679 [6505-7896] | -38 % | -15 % |
 | 4× | raw-dieci-k3 | 597 [528-1040] | 4034 [3482-5637] | 6848 [6698-9131] | -28 % | -13 % |
 
-**Cinquanta mzML da 10 MB** (fino a 50 file il lotto va a pipeline: nessuna domanda «Scegli»)
+**Fifty mzML of 10 MB** (up to 50 files the batch runs as a pipeline: no "Choose" question)
 
 | CPU | arm | provisional TIC | first chart | all indexed | first chart vs K0 | all vs K0 |
 |---|---|---|---|---|---|---|
@@ -53,7 +53,7 @@ Dove va il tempo del primo file (mzML, 1×, un giro tipico): da solo il costrutt
 | 4× | cinquanta-k1 | 1730 [1443-2288] | 3428 [3142-4313] | 23054 [20942-24078] | -39 % | -10 % |
 | 4× | cinquanta-k2 | 1617 [1535-1994] | 3308 [3163-4479] | 24551 [23479-25358] | -41 % | -4 % |
 
-**Memoria, dieci mzML** (`measureUserAgentSpecificMemory` ogni 500 ms, gruppo di agenti della pagina; RSS di tutti i processi del browser da `/proc`; nessun errore in nessun giro)
+**Memory, ten mzML** (`measureUserAgentSpecificMemory` every 500 ms, the page's agent group; RSS of all browser processes from `/proc`; no error in any run)
 
 | CPU | arm | first chart | all indexed | all vs K0 | page memory peak MB | RSS peak MB |
 |---|---|---|---|---|---|---|
@@ -64,7 +64,7 @@ Dove va il tempo del primo file (mzML, 1×, un giro tipico): da solo il costrutt
 | 4× | dieci+mem-k1 | 4002 [3671-4186] | 8494 [7781-9022] | -11 % | 104 [60-161] | 1832 [1763-1875] |
 | 4× | dieci+mem-k2 | 3955 [3172-4642] | 8152 [6841-8811] | -15 % | 117 [59-161] | 1792 [1767-1819] |
 
-## Critical path: verdicts (tables in `misure-caricamento.md`, «First file and many files»)
+## Critical path: verdicts (tables in `misure-caricamento.md`, "First file and many files")
 
 - **(a) `rotte` on the path to the first chart: no.** Held 3 s the first chart does not move (1514 → 1611 ms at 1×, 2432 → 2307 at 4×, inside the min-max); the page asks for it about 1.4 s after the drop, when the chart is nearly drawn, and does not wait for it. Gain bound: 0 ms.
 - **(b) `thermo` download serial before the `.raw` copy start: no, but on the path to the first chart: yes.** The first event of the file does not move (50 → 62 ms, 84 → 83) while the chart comes about 0.6 s (1×) / 1.1 s (4×) after the module arrives (held 3 s: 3608 and 4104 ms).

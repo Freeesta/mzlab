@@ -1,61 +1,61 @@
-# Misure del Flow per formato di ingresso
+# Flow measurements by input format
 
-Tempo di index → detect → align → gapfill su 12 file sintetici (1365 scansioni, 185544 picchi ciascuno, serie di `tools/dati_sintetici.py`) riscritti nel formato da provare con `tools/measure_formats.py genera`; `tools/measure_formats.py misura BIN DIR...` fa un solo `mzlab-cli flow run` con 4 worker e somma i `ms` per istanza di `prov.json`. Binario `--profile cli`, main `3e5dd52cc51d6b74305af40a1558a4de0d387e8a`, 4 CPU, senza SHA-NI, file nella cache del sistema (cache fredda non ottenibile nel contenitore); il rumore tra due giri è ±15 %.
+Time of index → detect → align → gapfill on 12 synthetic files (1365 scans, 185544 peaks each, series of `tools/dati_sintetici.py`) rewritten in the format to be tested with `tools/measure_formats.py genera`; `tools/measure_formats.py misura BIN DIR...` makes a single `mzlab-cli flow run` with 4 workers and sums the per-instance `ms` of `prov.json`. Binary `--profile cli`, main `3e5dd52cc51d6b74305af40a1558a4de0d387e8a`, 4 CPUs, no SHA-NI, files in the system cache (a cold cache cannot be obtained in the container); the noise between two runs is ±15 %.
 
-| formato | MB | index s | detect s | align s | gapfill s | totale s (muro) | MB/s (muro) | index MB/s per core |
+| format | MB | index s | detect s | align s | gapfill s | total s (wall) | MB/s (wall) | index MB/s per core |
 |---|---|---|---|---|---|---|---|---|
 | mzML raw | 74 | 1.29 | 0.51 | 0.05 | 0.09 | 1.07 | 69 | 57 |
-| mzML raw indicizzato | 75 | 1.10 | 0.45 | 0.05 | 0.09 | 0.98 | 77 | 68 |
+| mzML raw indexed | 75 | 1.10 | 0.45 | 0.05 | 0.09 | 0.98 | 77 | 68 |
 | mzML zlib | 73 | 1.63 | 0.47 | 0.05 | 0.09 | 1.14 | 64 | 45 |
-| mzML zlib indicizzato | 75 | 1.39 | 0.44 | 0.04 | 0.10 | 1.03 | 73 | 54 |
+| mzML zlib indexed | 75 | 1.39 | 0.44 | 0.04 | 0.10 | 1.03 | 73 | 54 |
 | mzXML raw | 54 | 1.73 | 0.48 | 0.05 | 0.09 | 1.01 | 54 | 31 |
 | mzXML zlib | 44 | 2.49 | 0.47 | 0.05 | 0.09 | 1.36 | 32 | 18 |
 | ANDI/AIA .cdf (*) | 19 | 0.88 | 1.17 | 0.47 | 0.61 | 1.82 | 10 | 22 |
 
-Come si leggono le colonne: i secondi per passo sono la somma sulle 12 istanze (tempo di CPU, non di muro); «totale» è il muro dell'intera corsa con 4 worker; «index MB/s per core» è MB / index s. (*) Il .cdf è scritto da un codificatore CDF1 di `measure_formats.py` (non è un file di strumento) e non ha l'analizzatore: la ricetta di rilevamento è quella a risoluzione unitaria, quindi detect, align e gapfill NON sono confrontabili con le altre righe; vale solo la colonna index.
+How to read the columns: the seconds per step are the sum over the 12 instances (CPU time, not wall time); "total" is the wall time of the whole run with 4 workers; "index MB/s per core" is MB / index s. (*) The .cdf is written by a CDF1 encoder in `measure_formats.py` (it is not an instrument file) and has no analyser: the detection recipe is the unit-resolution one, so detect, align and gapfill are NOT comparable with the other rows; only the index column is valid.
 
-## Il peggiore e perché
-- **Più lento: mzXML con zlib, passo index, 18 MB/s per core** (mzXML raw 31, mzML 45-68). Profilo (callgrind, un file): `MzxmlReader::completa` gira 3 volte per ogni scansione (da `scansione`, `indice` e `cromatogramma`, 21 % ciascuna del totale) e ogni volta decodifica base64 e inflate dei picchi; in più memset/memcpy 24 %, ricerca di caratteri e conversione UTF-8 12 %, SHA-256 + SHA-1 del file 26 % (in mzML la SHA-1 non c'è più, e senza SHA-NI il costo qui è sovrastimato).
-- Il passo detect è uguale per tutti i formati centroidati (0.44-0.51 s): il formato pesa solo sull'index.
-- Align e gapfill non dipendono dal formato.
+## The worst and why
+- **Slowest: mzXML with zlib, index step, 18 MB/s per core** (mzXML raw 31, mzML 45-68). Profile (callgrind, one file): `MzxmlReader::completa` runs 3 times for every scan (from `scansione`, `indice` and `cromatogramma`, 21 % each of the total) and every time it decodes base64 and inflates the peaks; in addition memset/memcpy 24 %, character search and UTF-8 conversion 12 %, SHA-256 + SHA-1 of the file 26 % (in mzML the SHA-1 is gone, and without SHA-NI the cost here is overestimated).
+- The detect step is the same for all centroided formats (0.44-0.51 s): the format weighs only on the index.
+- Align and gapfill do not depend on the format.
 
-## Bruker timsTOF `.d` (DDA-PASEF sintetico)
-`cargo run --release -p mzlab-lettori --features bruker --example bruker_bench -- scrivi X.d --cicli 100` scrive 1100 frame (100 MS1 da 60 000 punti, 1000 PASEF da 15 000 punti con 12 precursori), `analysis.tdf_bin` 80 MB in zstd (codec 2); `misura X.d` dà i ms per fase e la firma FNV di tutti i punti (uguale prima e dopo ogni modifica). 4 CPU, file nella cache del sistema, rumore ±5 %.
+## Bruker timsTOF `.d` (synthetic DDA-PASEF)
+`cargo run --release -p mzlab-lettori --features bruker --example bruker_bench -- scrivi X.d --cicli 100` writes 1100 frames (100 MS1 of 60 000 points, 1000 PASEF of 15 000 points with 12 precursors), `analysis.tdf_bin` 80 MB in zstd (codec 2); `misura X.d` gives the ms per phase and the FNV signature of all points (equal before and after every change). 4 CPUs, files in the system cache, noise ±5 %.
 
-| fase (12 100 spettri, 16 M punti) | nativo ms | `.wasm` in Node (mzML) |
+| phase (12 100 spectra, 16 M points) | native ms | `.wasm` in Node (mzML) |
 |---|---|---|
-| apertura (tabelle) | 16 | — |
-| indice (TIC degli MS2: decodifica di ogni frame) | 423 | — |
+| open (tables) | 16 | — |
+| index (TIC of the MS2: decoding of every frame) | 423 | — |
 | BPC | 245 | — |
-| tutti gli spettri | 910 | — |
-| mzML (`readers_mzml::scrivi`, nuova apertura) | 1 610 | 6 040 |
+| all spectra | 910 | — |
+| mzML (`readers_mzml::scrivi`, new open) | 1 610 | 6 040 |
 
-- Profilo (callgrind, 88 frame, tutte le fasi): la decodifica dei frame è il 50 % delle istruzioni e zstd ne è il 58 %; il deflate dell'mzML scritto il 33 %. L'unione per indice TOF (radix a 11 bit da 1024 punti, `spettri::sort_tof`) e il taglio per scansioni (offset `Picchi::inizio`) pesano meno del 10 %, contro il 41 % di ordinamento e filtro punto per punto che c'erano prima (stesse misure: indice 670 → 423 ms, BPC 335 → 245, tutti gli spettri 1 450 → 910, mzML 2 560 → 1 610; `.wasm` 8,97 → 6,04 s, stesso SHA-256).
-- Il passo indice decodifica ogni frame PASEF una volta per il TIC degli MS2, e la conversione li decodifica di nuovo: il doppio passaggio resta.
+- Profile (callgrind, 88 frames, all phases): frame decoding is 50 % of the instructions and zstd is 58 % of that; the deflate of the written mzML 33 %. The merge by TOF index (11-bit radix of 1024 points, `spettri::sort_tof`) and the cut by scans (offset `Picchi::inizio`) weigh less than 10 %, against the 41 % of point-by-point sorting and filtering that was there before (same measures: index 670 → 423 ms, BPC 335 → 245, all spectra 1 450 → 910, mzML 2 560 → 1 610; `.wasm` 8.97 → 6.04 s, same SHA-256).
+- The index step decodes every PASEF frame once for the TIC of the MS2, and the conversion decodes them again: the double pass remains.
 
-## Non misurato (servono i file del Mac di Federico)
-Thermo .raw (lettore nostro), Agilent .D, Bruker .d veri, SCIEX .wiff/.wiff.scan, .cdf di strumento e MGF: nel contenitore non ci sono file veri né i convertitori. Il rapporto con mzmine (serie 23-29: 0.56-0.64) non ha un numero nel repository, per cui non è riportato.
+## Not measured (the files of Federico's Mac are needed)
+Thermo .raw (our reader), Agilent .D, real Bruker .d, SCIEX .wiff/.wiff.scan, instrument .cdf and MGF: the container has no real files and no converters. The ratio with mzmine (series 23-29: 0.56-0.64) has no number in the repository, so it is not reported.
 
-## Caricamento di file SCIEX (.wiff + .wiff.scan) multi-campione
-Coppie sintetiche di `tools/wiff_grande.py` (3000 scansioni × 3333 punti di profilo per campione, 16 MB di `.wiff.scan` ciascuno); 4 CPU, 16 GB, Chromium con profilo su disco (una finestra normale), motore Rust del sito, `tests_e2e/e2e_wiff_240.py` (`MZLAB_CARICO_DIR=CARTELLA` misura una cartella con `counts.json` {file: campioni}). Il browser vuoto occupa già ≈1,1 GB; il picco è la somma dei processi Chromium.
+## Loading multi-sample SCIEX files (.wiff + .wiff.scan)
+Synthetic pairs from `tools/wiff_grande.py` (3000 scans × 3333 profile points per sample, 16 MB of `.wiff.scan` each); 4 CPUs, 16 GB, Chromium with an on-disk profile (a normal window), the site's Rust engine, `tests_e2e/e2e_wiff_240.py` (`MZLAB_CARICO_DIR=FOLDER` measures a folder with `counts.json` {file: samples}). The empty browser already takes ≈1.1 GB; the peak is the sum of the Chromium processes.
 
-| carico (sito) | campioni | s | s/campione | picco MB | OPFS GB |
+| load (site) | samples | s | s/sample | peak MB | OPFS GB |
 |---|---|---|---|---|---|
-| 1 file × 24 campioni | 24 | 49 | 2,0 | 1868 | 5,2 |
-| 4 file × 11 campioni | 44 | 84 | 1,9 | 1969 | 9,6 |
-| 11 file (10 × 11 + 1 × 24) | 134 | ≈240 | 1,8 | — | 26 (disco pieno) |
-| 240 coppie piccole (60 × 300) | 240 | 41 | 0,17 | 2200-2900 | 0,14 |
+| 1 file × 24 samples | 24 | 49 | 2.0 | 1868 | 5.2 |
+| 4 files × 11 samples | 44 | 84 | 1.9 | 1969 | 9.6 |
+| 11 files (10 × 11 + 1 × 24) | 134 | ≈240 | 1.8 | — | 26 (disk full) |
+| 240 small pairs (60 × 300) | 240 | 41 | 0.17 | 2200-2900 | 0.14 |
 
-- **Spazio**: l'indice di un campione a profilo pesa 191-218 MB (circa 12 volte il suo `.wiff.scan`): 240 campioni chiedono ≈46 GB di OPFS. Con 134 campioni il disco del contenitore si è riempito a 25,7 GB: 117 caricati, 17 con `error.quota` al 96-99 % del loro indice (ogni campione fallisce da solo, nessun ricaricamento).
-- Il messaggio dice «ne restano 10240 MB» perché la quota del browser supera lo spazio vero del disco. Una finestra privata di Chromium regge circa 200 MB di OPFS.
-- **Costruttori**: al più 3 insieme (picco osservato con 4 CPU); la memoria della pagina (heap JS) resta sotto 230 MB.
-- **Riapertura**: 0,15 s per campione salvato (240 campioni: 36 s); il limite della schermata di avvio (`?ripresa=ms`) è 30 s più 1 s per file salvato, contato da quando il worker ha il motore (`api.up` di `rust-bridge.js`; un download fallito o di oltre 5 min lo fa partire subito, e un download fallito finisce sempre nell'errore).
-- **Elenco**: l'ordine è quello di `ordine.js` (tempo, concentrazione o ordine naturale dei nomi) applicato a tutta la lista, non quello d'arrivo: lo stesso con i file lasciati in ordine inverso.
+- **Space**: the index of a profile sample weighs 191-218 MB (about 12 times its `.wiff.scan`): 240 samples need ≈46 GB of OPFS. With 134 samples the container's disk filled up at 25.7 GB: 117 loaded, 17 with `error.quota` at 96-99 % of their index (each sample fails on its own, no reload).
+- The message says "10240 MB left" because the browser quota exceeds the real disk space. A private Chromium window holds about 200 MB of OPFS.
+- **Builders**: at most 3 together (peak observed with 4 CPUs); the page memory (JS heap) stays under 230 MB.
+- **Reopening**: 0.15 s per saved sample (240 samples: 36 s); the limit of the start screen (`?ripresa=ms`) is 30 s plus 1 s per saved file, counted from when the worker has the engine (`api.up` of `rust-bridge.js`; a failed download or one over 5 min makes it start at once, and a failed download always ends in the error).
+- **List**: the order is that of `ordine.js` (time, concentration or natural order of the names) applied to the whole list, not the arrival order: the same with the files left in reverse order.
 
-| carico (`mzlab-cli convert --peaks mzlab`) | `--workers` | s | s/file (mediana) | RSS massimo MB |
+| load (`mzlab-cli convert --peaks mzlab`) | `--workers` | s | s/file (median) | max RSS MB |
 |---|---|---|---|---|
-| 240 coppie da 1 campione (1200 × 3333) | 1 / 2 / 4 | 498 / 249 / 133,5 | 2,05 / 2,04 / 2,15 | 23 / 37 / 53 |
-| 1 file × 11 campioni | 1 / 4 | 58,5 / 18,8 | — | 31 / 102 |
-| 11 file, 134 campioni, 1,7 GB di mzML | 4 | 220,7 | — | 174 |
+| 240 pairs of 1 sample (1200 × 3333) | 1 / 2 / 4 | 498 / 249 / 133.5 | 2.05 / 2.04 / 2.15 | 23 / 37 / 53 |
+| 1 file × 11 samples | 1 / 4 | 58.5 / 18.8 | — | 31 / 102 |
+| 11 files, 134 samples, 1.7 GB of mzML | 4 | 220.7 | — | 174 |
 
-I byte degli mzML sono identici con 1, 2 e 4 worker (SHA-256 di tutti i file). Buchi: desktop (nessun build nel contenitore), PDA Shimadzu (il generatore non lo scrive), 3333 punti per scansione invece dei ≈3900 reali.
+The mzML bytes are identical with 1, 2 and 4 workers (SHA-256 of all files). Gaps: desktop (no build in the container), Shimadzu PDA (the generator does not write it), 3333 points per scan instead of the ≈3900 real ones.
