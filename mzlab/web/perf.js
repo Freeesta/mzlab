@@ -30,7 +30,7 @@
     rows,
     // browser.js reports the engine steps here
     mark: (text, at) => { rows.push({ t: at == null ? performance.now() : at, kind: "start", what: String(text), ms: at == null ? performance.now() : at, extra: "" }); schedule(); },
-    t: (what, ms, extra) => { note("misura", what, ms, extra); add("misura " + what, ms); },
+    t: (what, ms, extra) => { note("measure", what, ms, extra); add("measure " + what, ms); },
   };
 
   // ---- fetch: outermost wrapper, whatever order the scripts are loaded in (browser.js replaces window.fetch too)
@@ -56,7 +56,7 @@
     if (typeof f !== "function" || f.__perf) return;
     const w = /** @this {any} */ function (...a) {
       const t = performance.now(), p = a[0];
-      const done = () => { const ms = performance.now() - t, what = label + (p && p.type ? " " + p.type : ""); note("disegno", what, ms); add("disegno " + what, ms); };
+      const done = () => { const ms = performance.now() - t, what = label + (p && p.type ? " " + p.type : ""); note("draw", what, ms); add("draw " + what, ms); };
       let r;
       try { r = f.apply(this, a); } catch (e) { done(); throw e; }
       if (r && typeof r.then === "function") return r.then(v => { done(); return v; }, e => { done(); throw e; });
@@ -73,7 +73,7 @@
   // Firefox and Safari warn in the console if asked for an unknown type
   const kinds = (window.PerformanceObserver && PerformanceObserver.supportedEntryTypes) || [];
   if (kinds.includes("longtask")) try {
-    new PerformanceObserver(l => { for (const e of l.getEntries()) { note("lento", "long task", e.duration, "main thread"); add("lento", e.duration); } }).observe({ entryTypes: ["longtask"] });
+    new PerformanceObserver(l => { for (const e of l.getEntries()) { note("slow", "long task", e.duration, "main thread"); add("slow", e.duration); } }).observe({ entryTypes: ["longtask"] });
   } catch (_) { /* Safari: no long tasks */ }
   if (kinds.includes("paint")) try {
     new PerformanceObserver(l => { for (const e of l.getEntries()) note("start", e.name, e.startTime); }).observe({ type: "paint", buffered: true });

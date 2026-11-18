@@ -235,8 +235,8 @@ body.sb-resizing{-webkit-user-select:none!important;user-select:none!important;c
 #sb-panel-stat tbody tr[tabindex]{cursor:pointer}
 .cmp-grad{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin:6px 0}
 .cmp-grad i{display:block;flex:1;min-width:60px;height:8px;border-radius:4px;border:1px solid var(--line)}
-.liste-bar{display:flex;flex-direction:column;gap:5px}.lb-row{display:flex;flex-wrap:wrap;gap:5px 8px;align-items:center}.lb-row label{display:inline-flex;align-items:center;gap:4px;flex:1 1 110px;min-width:0}.lb-row label.lb-grow{flex:1 1 100%}.lb-row input{flex:1 1 40px;min-width:0;width:100%;padding:2px 6px}#lst-tol-wrap{flex:0 1 112px}
-.liste-panel .seg button{padding:1px 7px;font-size:11px;min-height:0;line-height:1.5;white-space:nowrap}
+.liste-bar{display:flex;flex-direction:column;gap:5px}.lb-row{display:flex;flex-wrap:wrap;gap:5px 8px;align-items:center}.lb-row label{display:inline-flex;align-items:center;gap:4px;flex:1 1 110px;min-width:0}.lb-row label.lb-grow{flex:1 1 100%}.lb-row input{flex:1 1 40px;min-width:0;width:100%;padding:2px 6px}#lst-tol-wrap{flex:0 1 112px}.lst-chips{display:inline-flex;flex-wrap:wrap;gap:5px}.lst-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border:1px solid var(--line);border-radius:999px;background:var(--soft);font-size:12px;cursor:pointer}.lst-chip:has(input:checked){border-color:var(--accent);background:var(--panel)}.lst-chip:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+.liste-panel .seg button{padding:1px 7px;font-size:11px;min-height:0;line-height:1.5;white-space:nowrap}.liste-panel .cq-ctl .seg button{min-width:0;min-height:24px;padding:1px 7px}
 #sb-panel-lists .lct td,#sb-panel-lists .lct th{height:22px;padding:1px 6px;font-size:11px;line-height:1.25}#sb-panel-lists .lct th.num{white-space:nowrap}#sb-panel-lists .liste-panel{font-size:12px}#sb-panel-lists .lct td,#sb-panel-lists .lct th{white-space:nowrap}#sb-panel-lists .lct td.lst-name{white-space:normal;overflow-wrap:anywhere;min-width:150px}#sb-panel-lists .lct td.num.font-mono{min-width:6ch}
 /* flow-root: the top margin of the first group header stays inside the list, so the list does not move when the first file joins it */
 #sb-panel-file #flst{max-height:none;overflow:visible;display:flow-root}
@@ -269,6 +269,7 @@ button.x::before{content:"";display:block;width:12px;height:12px;background:curr
 .zl::after{content:attr(data-v);position:absolute;white-space:nowrap;font-size:10.5px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:0 5px}.zl[data-v=""]::after{display:none}
 .zl.v::after{left:calc(100% + 8px);top:50%;transform:translateY(-50%)}.zl.h::after{left:calc(100% + 8px);top:-3px}
 .zl.hint{background:color-mix(in srgb,var(--zc) 8%,transparent);border:0;width:auto}.zl.hint.v{width:auto}.pnl .vl,.pnl .cl{position:absolute;width:0;border-left:1px dashed var(--muted);pointer-events:none;z-index:2}
+.pnl .pkhi{position:absolute;z-index:3;width:3px;margin-left:-1px;background:var(--accent);border-radius:1px;pointer-events:none}.pnl .pkhi[hidden]{display:none}
 .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 dialog.tdati{max-width:min(92vw,820px);width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink)}
 dialog.tdati::backdrop{background:rgba(0,0,0,.35)}

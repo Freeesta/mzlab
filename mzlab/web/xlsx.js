@@ -84,7 +84,7 @@ function xlsxBuild(sheets) {
   ].map(([n, t]) => [n, enc.encode(t)]);
   return zipStore(files);
 }
-// download as .xlsx (name without extension is completed); a last sheet «Provenance» (PROV, schema provenienza/1) by default; prov = the fields the export knows, or false for none (mzFinder)
+// download as .xlsx (name without extension is completed); a last sheet «Provenance» (PROV, schema provenance/1) by default; prov = the fields the export knows, or false for none (mzFinder)
 async function dlx(name, sheets, prov = undefined) {
   if (prov !== false) sheets = await PROV.sheets(sheets, prov || {});
   dl(/\.xlsx$/i.test(name) ? name : name + ".xlsx", xlsxBuild(sheets), XLSX_MIME);

@@ -35,4 +35,5 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - The CLI uses no network (except `normative build` and `insilico pack`, which say so) and reads/writes only the paths it is given; never delete user files.
 - At unit resolution an m/z is a candidate, not an identification.
 - Keep the evidence (scores, parameters, versions) in the answer; the `prov.json` has them.
+- `mzlab-cli folder list DIR --json` (`folder/1`): what «Open folder» lists, one row per file and per .D / .d / Waters .raw folder (`bundle`, `members`); exit 4 if DIR is missing.
 - Policy for new functions (`CLAUDE.md`): every function is also reachable from the CLI and made for agents: `--json` with stable keys, distinct exit codes, data on stdout and progress/errors on stderr, a check or `--dry-run` mode where it makes sense, and a row in the agent catalogs (`steps --json`, `llm tools`). A function with no CLI route is incomplete, like a parity gap.
