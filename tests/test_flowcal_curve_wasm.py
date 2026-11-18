@@ -52,7 +52,7 @@ def test_wasm_and_cli_give_the_same_bytes(pkg, tmp_path, params):
     got = wasm(pkg, params)
     j, c = native(tmp_path, params)
     assert got["calibration"] == j and got["concentrations"] == c
-    assert j.startswith('{"format":"taratura/1"')
+    assert j.startswith('{"format":"calibration/1"')
     if params == PARAMS:
         assert j == (DATA / "golden.json").read_text(encoding="utf-8") and c == (DATA / "golden.csv").read_text(encoding="utf-8")
         assert "warn.flow.curve.excluded" in got["warnings"]

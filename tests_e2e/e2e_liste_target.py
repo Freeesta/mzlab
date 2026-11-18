@@ -22,6 +22,10 @@ try:
         pg = r.page(p)
         def engine_loaded():
             pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())")
+            pg.evaluate("localStorage.removeItem(NOMI.KEY('dev.targetscreening'))")
+            pg.evaluate("LISTE.openTargetScreening({})"); pg.wait_for_selector("#lst-q", timeout=8000)
+            assert pg.locator("#lst-view-seg").count() == 0 and pg.locator("#ts-start").count() == 0, "hidden: no tab bar, the lists show directly"
+            pg.evaluate("localStorage.setItem(NOMI.KEY('dev.targetscreening'), '1'); document.querySelectorAll('dialog[open]').forEach(d=>d.close())")      # the single flag (features.js)
             pg.evaluate("LISTE.openTargetScreening({})"); pg.wait_for_selector("#ts-start", timeout=20000)
             n = pg.evaluate("Object.keys(window.LISTE_TARGET_CORE || {}).length"); assert n > 5, "engine not loaded: LISTE_TARGET_CORE has %d members" % n
         step("the target view loads its engine", engine_loaded)
