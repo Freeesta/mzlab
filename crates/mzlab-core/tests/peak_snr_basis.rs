@@ -39,7 +39,7 @@ fn median_snr(smooth: usize, basis: Option<SnrBasis>) -> f64 {
             .snr
         })
         .collect();
-    v.sort_by(f64::total_cmp);
+    mzlab_core::sortc::slice_by(&mut v, |a, b| a.total_cmp(b));
     v[10]
 }
 
