@@ -106,13 +106,11 @@ try:
             std = [r_ for r_ in body if r_[head.index("Concentration (standard / QC)")] not in (None, "")]
             assert std and all(r_[head.index("Type of file")] == "standard" for r_ in std), std[:2]
             assert all(isinstance(r_[head.index("Q1 (m/z)")], (int, float)) and r_[head.index("Q3 (m/z)")] > 0 for r_ in body), body[:2]      # MRM rows carry Q1 and Q3 as numbers
-            with pg.expect_download() as dc: pg.click("#ig-csv")
-            raw = open(dc.value.path(), "rb").read(); assert raw[:3] == b"\xef\xbb\xbf"
-            ln = raw[3:].decode("utf-8").rstrip("\n").split("\n")
-            assert ";" in ln[0] and "," not in ln[0] and ln[0].startswith("Panel"), ln[0][:80]      # header on line 1, ';' separated
-            assert any(l.count(",") >= 1 and l.count(";") == ln[0].count(";") for l in ln[1:-1]), ln[1:3]      # decimal comma in the numbers
-            assert ln[-1].startswith('"# mzLab ') or ln[-1].startswith("# mzLab "), ln[-1][:30]
-            pg.click("#bigx")
+            with pg.expect_download() as dc: pg.click("#manint [data-dl]")
+            assert dc.value.suggested_filename == "manual-integrations.csv", dc.value.suggested_filename
+            ln = open(dc.value.path(), encoding="utf-8").read().rstrip("\n").split("\n")
+            assert ln[0].startswith("channel,sample,") and "area" in ln[0].split(","), ln[0][:80]      # the engine's bytes: header on line 1, ',' separated
+            assert len(ln) > 10 and all(l.count(",") >= ln[0].count(",") for l in ln[1:]), ln[1:3]
         step("drag integrates every file in one window; a new drag replaces", integrate)
 finally:
     r.close()
