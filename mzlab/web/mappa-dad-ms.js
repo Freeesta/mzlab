@@ -81,7 +81,7 @@ function bottom(/** @type {any} */ p, /** @type {any} */ pt, /** @type {any} */ 
 }
 
 /** The options of the popover of a DAD map: what the strips show, the signed DAD→MS offset with its source and the evidence of the estimate. */
-export function controls(/** @type {any} */ p, /** @type {Function} */ num, /** @type {Function} */ opt) {
+export function msControls(/** @type {any} */ p, /** @type {Function} */ num, /** @type {Function} */ opt) {
   const SRC = { default: "ctl.map.ms.src.default", user: "ctl.map.ms.src.user", estimated: "ctl.map.ms.src.estimated" }, ms = p.stripMs === "ms";
   const v = p.msOffset != null && isFinite(p.msOffset) ? +p.msOffset : 0, src = p.msOffset == null || !isFinite(p.msOffset) ? "default" : p._msUsed != null && +p.msOffset === p._msUsed ? "estimated" : "user", e = p._msEst, d = e && e.d;
   const bt = (/** @type {string} */ k, /** @type {string} */ lab, /** @type {string} */ tip, /** @type {boolean} */ off) => `<button class="bt" type="button" data-o="${k}" title="${tip}"${off ? " disabled" : ""}>${lab}</button>`;
@@ -99,3 +99,6 @@ export async function act(p, k, ctl, draw) {
   if (k === "msUse") use(p); else { const q = estimate(p); ctl(p); await q; }
   ctl(p); draw(p);
 }
+
+// the buttons of the popover are plain markup: one listener finds the panel they belong to
+document.addEventListener("click", e => { const b = /** @type {any} */ (e.target).closest && /** @type {any} */ (e.target).closest("[data-o=msEst],[data-o=msUse]"), p = b && E.panels.find((/** @type {any} */ q) => q.el && q.el.contains(b)); if (p) act(p, b.dataset.o, ctl, draw); });
