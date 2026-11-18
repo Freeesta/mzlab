@@ -1,6 +1,6 @@
 # The first file of a batch: the copy gate, measurements
 
-Measurements of the site's copy gate (`createCopyGate` in `rust-carica.js`, choice `copiesOf` in `lr.js`; behaviour in `dati-carico.md`, "The first file first"): in a batch at most K copies into OPFS (`lr_put`) at once, in list order; K = 0 = all together, as without the gate. Default K = 2. Site only: the desktop app already loads one file at a time (chain of `upload0` in `shell.js`) and does not copy the files.
+Measurements of the site's copy gate (`createCopyGate` in `rust-carica.js`, choice `copiesOf` in `lr.js`; behaviour in `data-loading.md`, "The first file first"): in a batch at most K copies into OPFS (`lr_put`) at once, in list order; K = 0 = all together, as without the gate. Default K = 2. Site only: the desktop app already loads one file at a time (chain of `upload0` in `shell.js`) and does not copy the files.
 
 Tool: `tests_e2e/misura_caricamento.py --scenarios copie,raw-copie,copie-mem,cinquanta` (arms in `tests_e2e/scenari_caricamento.py`, `copie` = localStorage `mzlab.dev.copie`). Base `main` `7e81096`, site from `tools/prepara_sito.py`, Chrome for Testing 153 headless, one warm persistent profile per run (normal window, cross-origin isolation), cloud machine 4 vCPU Intel Xeon 2.30 GHz. N = 5 per cell, arms alternated run by run, median [min-max], ms from the input's `change`. CPU 1× and 4× slow down only the page's main thread (the workers run at full speed).
 

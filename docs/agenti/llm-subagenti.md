@@ -33,7 +33,7 @@ Continuation of `llm.md` (section "Subagents and readings"): roles, `lettura/1`,
 - Output checks: plan → `flow::check`, parameters → limits, chart → `chart::validate`, text → numbers present in the input, no URL, no shell command to run without review.
 - Proof: the red set of `docs/studi/assistente-dati/prompt/10_red-team-iniezione.md` (file names with instructions, comments asking for `flow_run`, fake system messages, request for the system text or the key, invisible Unicode); criterion 0 unrequested actions and ≥ 95 % of attacks flagged.
 - Log: `llmlog/1` of level a (role, model requested and served, SHA-256 of request and prompt, full `usage`, cost, `stop_reason`, tools, result of `flow::check`, duration) on the user's computer; no text or file name. Level b (conversation text) is not built without the opinion of the data protection officer.
-- Keys: on the site no personal key (the shared key lives only in the proxy, `assistente-proxy.md`); in the app the own key stays in `llm-chiavi.json`, read only by Rust. Guards: `log::has_secret`, `tests/test_llm_chiavi.py`.
+- Keys: on the site no personal key (the shared key lives only in the proxy, `assistant-proxy.md`); in the app the own key stays in `llm-chiavi.json`, read only by Rust. Guards: `log::has_secret`, `tests/test_llm_chiavi.py`.
 - Proposal not implemented: `mzlab-cli assist` for evaluations with a dedicated key (key from a 0600 file or from stdin, never in arguments) and a `refusal` that closes the turn with `err.llm.refusal` and the category, without retrying with another model.
 
 ## Public demo

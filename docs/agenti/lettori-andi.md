@@ -1,6 +1,6 @@
 # "andi" module: netCDF/AIA files exported by the vendors (`.cdf`)
 
-Family `andi` (`crates/mzlab-lettori/src/andi/`, feature `andi`, cap 262 144 B, `.wasm` in `wasm-lettori/andi/`), separate from `aperti` because `aperti` is at its cap. Reader contract and on-demand loading: `lettori-modulo.md`, `estendere.md`.
+Family `andi` (`crates/mzlab-lettori/src/andi/`, feature `andi`, cap 262 144 B, `.wasm` in `wasm-lettori/andi/`), separate from `aperti` because `aperti` is at its cap. Reader contract and on-demand loading: `lettori-modulo.md`, `extending.md`.
 
 - `netcdf.rs`: read-only netCDF-3 reader, classic (`CDF\x01`) and 64-bit offset (`CDF\x02`): `numrecs` (also "streaming"), dimensions, global attributes, variables (type byte/char/short/int/float/double, `vsize`, `begin`), big-endian, record variables with `recsize` (a single record variable has no padding). The header is read with a 64 KB window; every count, name length, `begin` and data range goes through `Limiti` and the file size before allocating; the rest is `err.dam.unreadable` with the reason.
 - netCDF-4/HDF5 (`\x89HDF`) is `err.file.netcdf4` ("export to netCDF-3/AIA"); `CDF\x05` does not open. A header describing more data than the file contains (a list with more entries than the bytes left, a variable with more values than the file's bytes, a `begin` past the end, an unknown tag) is `err.file.cdfDamaged` ("damaged or truncated, copy or export again"), with `detail` in English only in the CLI; never `error.memoryBudget` for a file of a few KB.
