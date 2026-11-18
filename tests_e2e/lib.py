@@ -124,6 +124,13 @@ def open_tabui(pg):
     pg.evaluate("history.replaceState(null, '', location.pathname + location.search)")         # a hash left by an earlier visit would make the next one a no-op
     pg.evaluate("location.hash = '#/tpmine'")
     pg.wait_for_function("S.view === 'tpmine'", timeout=15000)
+_real_reload = _Page.reload
+def _reload(self, *a, **k):
+    """A reload keeps the address, so a page left on Tabui would come back on it: tests that reload want the page they started on (Data)."""
+    try: self.evaluate("if (location.hash === '#/tpmine') history.replaceState(null, '', location.pathname + location.search)")
+    except Exception: pass
+    return _real_reload(self, *a, **k)
+_Page.reload = _reload
 _real_click = _Page.click
 def _click(self, selector, *a, **k):
     # the Tabui nav button is hidden: a click on it is the exact address #/tpmine
