@@ -172,6 +172,8 @@
     }
     if (!on) return;
     showTabs();
+    // a direct address (#/tpmine) fired its tpview before this tab and its section existed: show the view now
+    { const x = tabs.get("tpmine"); if (shellReady() && S.view === "tpmine" && x && !x.opened) openView("tpmine"); }   // once: openView fires tpview, which calls this again
   }
   // for callers (tests, tools) that need the package without opening a tab: same promise as the idle start
   /** @type {any} */ (reg).ensure = ensureLoaded;
@@ -191,6 +193,8 @@
     // a click that came before this script ran (first-paint.js keeps it): replayed now, so it is not lost while the page's own scripts load
     const pending = /** @type {any} */ (window).MZLAB_LATE_CLICK; /** @type {any} */ (window).MZLAB_LATE_CLICK = null;
     if (pending) { if (tabs.has(pending)) openView(pending); else openLate(pending); }
+    // a direct address (#/tpmine) typed or pasted: opened like a click that came early, since its tpview may have fired before this listener existed
+    else if (typeof hashView === "function" && hashView() === "tpmine") openLate("tpmine");
     document.addEventListener("tpview", ev => { const v = /** @type {CustomEvent} */ (ev).detail.view; if (!BUILTIN.has(v)) ensureLoaded(); });
     const idle = () => { const run = () => { ensureLoaded(true); }; if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 3000 }); else setTimeout(run, 1000); };
     // without an engine qqReady never comes (plain web folder, failed engine): start anyway after a long delay

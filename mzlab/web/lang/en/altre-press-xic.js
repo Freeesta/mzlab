@@ -203,7 +203,7 @@ I18N.add("en", {
   "reset.title": "Start a new session?",
   "reset.all.btn": "Full reset",
   "reset.files.btn": "Files",
-  "reset.cancel": "Cancel",
+  "reset.close": "Close",
   "reset.busy": "Clearing the data of this browser…",
   "spec.contRemoved": " · {n} contaminant peaks removed",
   "press.read": "t {t} min · {p} {u}",
