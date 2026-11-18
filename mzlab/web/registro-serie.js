@@ -1,10 +1,10 @@
 // @ts-strict
 // The instrument log of a Thermo .raw as chromatogram kind «Registro dello strumento» (p.kind = "reg", p.reg = id of the series): the status log of the instrument (temperatures, voltages,
 // vacuum, gas) and the numeric fields of the scan trailer that change (injection time, AGC, lock mass), each one drawn like an analog trace. Loaded as a module after the classic scripts; pannelli.js
-// and grafici.js use window.REGISTRO. The list of the series comes in `method/1.serie_registro` (api/metodo); the points are asked one series at a time (api/registro, engine worker `natregistro`).
+// and grafici.js use window.REGISTRO. The list of the series comes in `method/1.log_series` (api/metodo); the points are asked one series at a time (api/registro, engine worker `natregistro`).
 // A file with no such list (an mzML, a .wiff) has no entry: the kind is offered only when a file of the tab has series.
 
-/** @typedef {{ id: string, gruppo?: string, nome: string, unita?: string, n: number, min: number, max: number }} Voce */
+/** @typedef {{ id: string, group?: string, name: string, unit?: string, n: number, min: number, max: number }} Voce */
 
 // files of a tab asked for their list (the others are mzML or other makers' files with no log)
 const MAX_FILES = 8;
@@ -19,7 +19,7 @@ async function ask(f) {
   /** @type {Voce[] | null} */ let list = null;
   try {
     const d = ((await J(`api/metodo?k=${f.k}`)) || {}).metodo;
-    const l = d && Array.isArray(d.serie_registro) ? d.serie_registro : [];
+    const l = d && Array.isArray(d.log_series) ? d.log_series : [];
     if (l.length) {
       // the list is in the document of any file that came from a .raw; the series are served only when the file is read by the engine as such: one request tells
       await J(`api/registro?k=${f.k}&id=${encodeURIComponent(l[0].id)}`);
@@ -54,8 +54,8 @@ function union(/** @type {any[]} */ files) {
   return [...m.values()];
 }
 
-const groupOf = (/** @type {Voce} */ v) => (v.id.startsWith("trailer:") ? I18N.t("reg.group.trailer") : v.gruppo || I18N.t("reg.group.none"));
-const label = (/** @type {Voce} */ v) => v.nome + (v.unita ? ` (${v.unita})` : "");
+const groupOf = (/** @type {Voce} */ v) => (v.id.startsWith("trailer:") ? I18N.t("reg.group.trailer") : v.group || I18N.t("reg.group.none"));
+const label = (/** @type {Voce} */ v) => v.name + (v.unit ? ` (${v.unit})` : "");
 
 /** the options of the select, in a group each (`<optgroup>`), keeping only those whose name has `q` */
 function options(/** @type {Voce[]} */ list, /** @type {string} */ cur, /** @type {string} */ q) {
@@ -107,7 +107,7 @@ async function series(/** @type {any} */ p, /** @type {any[]} */ files) {
   const out = await Promise.all(files.filter(f => (LISTS.get(f.file) || []).some(x => x.id === v.id)).map(f =>
     memo(`reg${f.k}|${v.id}`, () => J(`api/registro?k=${f.k}&id=${encodeURIComponent(v.id)}`)).then((/** @type {any} */ d) => {
       const r = decimate(d.time, d.intensity);
-      return { x: r.t, y: r.y, color: f.color, dash: fdash(f), name: f.label, k: f.k, key: `r|${f.k}|${v.id}`, ion: v.nome, time: f.time, unit: d.unit || v.unita || "" };
+      return { x: r.t, y: r.y, color: f.color, dash: fdash(f), name: f.label, k: f.k, key: `r|${f.k}|${v.id}`, ion: v.name, time: f.time, unit: d.unit || v.unit || "" };
     })));
   return out.filter(s => s.x.length);
 }

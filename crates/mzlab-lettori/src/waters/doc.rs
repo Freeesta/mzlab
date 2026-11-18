@@ -87,12 +87,12 @@ fn polarity_v(p: i8) -> Option<V> {
 fn param(id: &str, label: &str, value: f64, units: &str) -> Option<V> {
     obj(vec![
         ("id", text(id)),
-        ("etichetta", text(label)),
+        ("label", text(label)),
         (
-            "valore",
+            "value",
             num(Some(value)).filter(|_| value.is_finite() && value != 0.0),
         ),
-        ("unita", text(units)),
+        ("unit", text(units)),
     ])
 }
 
@@ -110,8 +110,8 @@ fn experiment(f: &Fun) -> Option<V> {
                         "ce_eV",
                         num(f.ee.as_ref().and_then(|t| t.value("Collision Energy", j))),
                     ),
-                    ("nome", f.names.get(j).and_then(|n| text(n))),
-                    ("polarita", polarity_v(f.polarita)),
+                    ("name", f.names.get(j).and_then(|n| text(n))),
+                    ("polarity", polarity_v(f.polarita)),
                 ])
             })
             .collect();
@@ -126,12 +126,12 @@ fn experiment(f: &Fun) -> Option<V> {
         _ => None,
     };
     obj(vec![
-        ("indice", Some(V::Num(f64::from(f.f.indice)))),
-        ("tipo", Some(V::s(kind(f)))),
+        ("index", Some(V::Num(f64::from(f.f.indice)))),
+        ("type", Some(V::s(kind(f)))),
         ("mz", mz),
         ("ce_eV", ce.filter(|_| !mirato)),
         (
-            "parametri",
+            "parameters",
             Some(V::Arr(
                 [
                     param("cycle_time", "Cycle time", f64::from(f.f.cycle_s), "s"),
@@ -147,7 +147,7 @@ fn experiment(f: &Fun) -> Option<V> {
                 .collect(),
             )),
         ),
-        ("transizioni", Some(V::Arr(transitions))),
+        ("transitions", Some(V::Arr(transitions))),
     ])
 }
 
@@ -157,26 +157,26 @@ fn ms(l: &WatersReader) -> Option<V> {
     let lock = reference.and_then(|f| {
         obj(vec![
             (
-                "modo",
+                "mode",
                 Some(V::s(if l.funs.iter().any(|f| f.righe.iter().any(|r| r.mark == super::idx::CALIBRATED)) {
                     "reference function; scans marked 0x4C in the index are as the acquisition stored them (already calibrated, with any lock mass correction of the acquisition); mzLab applies no correction of its own"
                 } else {
                     "reference function; the correction is not applied to the m/z"
                 })),
             ),
-            ("numero_nel_trailer", Some(V::Num(f64::from(f.f.indice)))),
+            ("number_in_trailer", Some(V::Num(f64::from(f.f.indice)))),
         ])
     });
     obj(vec![
         (
-            "sorgente",
-            obj(vec![("tipo", source(l).as_deref().and_then(text))]),
+            "source",
+            obj(vec![("type", source(l).as_deref().and_then(text))]),
         ),
         (
-            "periodi",
-            obj(vec![("esperimenti", Some(V::Arr(experiments)))]).map(|p| V::Arr(vec![p])),
+            "periods",
+            obj(vec![("experiments", Some(V::Arr(experiments)))]).map(|p| V::Arr(vec![p])),
         ),
-        ("calibrazione", obj(vec![("lock_mass", lock)])),
+        ("calibration", obj(vec![("lock_mass", lock)])),
     ])
 }
 
@@ -198,16 +198,16 @@ fn lc(l: &WatersReader) -> Option<V> {
             obj(vec![
                 ("t_min", num(Some(t))),
                 ("B_pct", num(b)),
-                ("flusso_mL_min", num(stream)),
+                ("flow_mL_min", num(stream)),
             ])
         })
         .collect();
     obj(vec![
-        ("gradiente", Some(V::Arr(grad))),
-        ("flusso_mL_min", num(i.gradiente.first().and_then(|g| g.1))),
-        ("B_iniziale_pct", num(i.gradiente.first().and_then(|g| g.2))),
-        ("forno_C", num(i.oven_c)),
-        ("durata_min", num(i.duration_min)),
+        ("gradient", Some(V::Arr(grad))),
+        ("flow_mL_min", num(i.gradiente.first().and_then(|g| g.1))),
+        ("B_start_pct", num(i.gradiente.first().and_then(|g| g.2))),
+        ("oven_C", num(i.oven_c)),
+        ("duration_min", num(i.duration_min)),
     ])
 }
 
@@ -247,11 +247,11 @@ fn fields(l: &WatersReader) -> Vec<Field> {
             break;
         }
         let map = match k.as_str() {
-            "Sample Description" => Some("campione.nome"),
-            "Bottle Number" => Some("campione.vial"),
-            "SampleID" => Some("campione.id"),
-            "User Name" => Some("operatore.utente"),
-            "Instrument" => Some("strumento.modello"),
+            "Sample Description" => Some("sample.name"),
+            "Bottle Number" => Some("sample.vial"),
+            "SampleID" => Some("sample.id"),
+            "User Name" => Some("operator.user"),
+            "Instrument" => Some("instrument.model"),
             _ => None,
         };
         let c = Field::new("waters:_HEADER.TXT", k, v);
@@ -300,38 +300,38 @@ pub(super) fn document(l: &mut WatersReader) -> Result<String> {
     let method_file = l.testata.get("MS Method").map(|p| base(p).to_string());
     let doc = obj(vec![
         ("schema", Some(V::s(method::SCHEMA))),
-        ("origine", method::origin(&src, acquisito(l).as_deref())),
+        ("origin", method::origin(&src, acquisito(l).as_deref())),
         (
-            "campione",
+            "sample",
             obj(vec![
-                ("nome", h("Sample Description")),
+                ("name", h("Sample Description")),
                 ("vial", h("Bottle Number")),
                 ("id", h("SampleID")),
-                ("commento", h("Conditions")),
-                ("metodo_file", method_file.as_deref().and_then(text)),
+                ("comment", h("Conditions")),
+                ("method_file", method_file.as_deref().and_then(text)),
             ]),
         ),
         (
-            "strumento",
+            "instrument",
             obj(vec![
-                ("produttore", Some(V::s("Waters"))),
-                ("modello", model.as_deref().and_then(text)),
-                ("serie", series.as_deref().and_then(text)),
+                ("manufacturer", Some(V::s("Waters"))),
+                ("model", model.as_deref().and_then(text)),
+                ("series", series.as_deref().and_then(text)),
             ]),
         ),
-        ("operatore", obj(vec![("utente", h("User Name"))])),
+        ("operator", obj(vec![("user", h("User Name"))])),
         ("ms", ms(l)),
         ("lc", lc(l)),
         (
-            "campi",
+            "fields",
             Some(V::Arr(fields(l).iter().filter_map(Field::json).collect())),
         ),
         (
-            "avvisi",
+            "warnings",
             Some(V::Arr(
                 l.warnings
                     .iter()
-                    .filter_map(|(k, d)| obj(vec![("chiave", text(k)), ("dove", text(d))]))
+                    .filter_map(|(k, d)| obj(vec![("key", text(k)), ("place", text(d))]))
                     .collect(),
             )),
         ),

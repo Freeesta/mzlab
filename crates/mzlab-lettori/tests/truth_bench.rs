@@ -19,7 +19,7 @@ fn truth_of(scan: &[Scan]) -> Value {
         .map(|(k, x)| {
             json!({
                 "id": format!("controllerType=0 controllerNumber=1 scan={}", k + 1),
-                "rt_min": x.rt_min, "livello": x.level, "polarita": 1,
+                "rt_min": x.rt_min, "level": x.level, "polarity": 1,
                 "precursore_mz": x.precursor, "profilo": false,
                 "n_punti": x.mz.len(), "tic": x.intensities.iter().sum::<f64>()
             })
@@ -34,12 +34,12 @@ fn truth_of(scan: &[Scan]) -> Value {
     }
     json!({
         "schema": "verita/1",
-        "file": {"nome": "sintetico.mzML"},
+        "file": {"name": "sintetico.mzML"},
         "conteggi": {"spettri": {"ms1": scan.iter().filter(|s| s.level == 1).count(), "ms2": scan.iter().filter(|s| s.level == 2).count()}, "cromatogrammi": {}},
         "scansioni": sc,
         "punti": points,
         "cromatogrammi": [],
-        "metadati": {"mzml:run@startTimeStamp": {"valore": "2024-03-05T10:11:12Z", "metodo": "origine.file_creato"}}
+        "metadati": {"mzml:run@startTimeStamp": {"value": "2024-03-05T10:11:12Z", "metodo": "origin.file_created"}}
     })
 }
 
@@ -54,7 +54,7 @@ const TOL: Tol = Tol {
 
 fn open_file(scan: &[Scan]) -> Box<dyn mzlab_core::readers::Reader> {
     // the mzML of another program has no `method/1`; the one the bench is tried on carries the document, as an mzML written by mzLab does
-    let method = r#"{"schema":"method/1","origine":{"file_creato":"2024-03-05T10:11:12Z"}}"#;
+    let method = r#"{"schema":"method/1","origin":{"file_created":"2024-03-05T10:11:12Z"}}"#;
     open(mzml_di(
         scan,
         Cod::Np {
@@ -117,7 +117,7 @@ fn a_different_metadata_field_is_an_f5_defect() {
     let scan = scans();
     let mut l = open_file(&scan);
     let mut v = truth_of(&scan);
-    v["metadati"]["mzml:run@startTimeStamp"]["valore"] = json!("1999-01-01T00:00:00Z");
+    v["metadati"]["mzml:run@startTimeStamp"]["value"] = json!("1999-01-01T00:00:00Z");
     let r = compare(&mut *l, &v, 0, TOL, "sintetico");
     let Outcome::Defect(d) = &r.levels[5].1 else {
         panic!("{:?}", r.levels)
@@ -130,7 +130,7 @@ fn a_field_without_path_is_not_a_defect_but_missing() {
     let scan = scans();
     let mut l = open_file(&scan);
     let mut v = truth_of(&scan);
-    v["metadati"] = json!({"mzml:analyzer": {"valore": "orbitrap"}});
+    v["metadati"] = json!({"mzml:analyzer": {"value": "orbitrap"}});
     let r = compare(&mut *l, &v, 0, TOL, "sintetico");
     let Outcome::Missing(m) = &r.levels[5].1 else {
         panic!("{:?}", r.levels)
@@ -141,7 +141,7 @@ fn a_field_without_path_is_not_a_defect_but_missing() {
 #[test]
 fn normalization_folds_spaces_and_the_path_follows_indices() {
     assert_eq!(truth::normalize("  Q   Exactive\tPlus "), "Q Exactive Plus");
-    let d = json!({"ms": {"periodi": [{"nome": "a"}, {"nome": "b"}]}});
+    let d = json!({"ms": {"periods": [{"name": "a"}, {"name": "b"}]}});
     assert_eq!(
         truth::json_path(&d, "ms.periodi[1].nome"),
         Some(&json!("b"))
@@ -160,7 +160,7 @@ fn test_path(rel: &str) -> Option<std::path::PathBuf> {
 fn the_corpus_walks_a_built_folder() {
     let root = std::env::temp_dir().join(format!("rosina-banco-{}", std::process::id()));
     let scan = scans();
-    let method = r#"{"schema":"method/1","origine":{"file_creato":"2024-03-05T10:11:12Z"}}"#;
+    let method = r#"{"schema":"method/1","origin":{"file_created":"2024-03-05T10:11:12Z"}}"#;
     let native = root.join("dati/formati/aperti/prova/campione.mzML");
     std::fs::create_dir_all(native.parent().unwrap()).unwrap();
     std::fs::write(
@@ -216,9 +216,9 @@ fn the_truth_of_verita_py_agrees_with_the_mzml_parser() {
     assert_eq!(v["cromatogrammi"].as_array().unwrap().len(), croms.len());
     for (t, s) in sc.iter().zip(&spectra) {
         assert!((t["rt_min"].as_f64().unwrap() - s.rt).abs() < 1e-9, "RT");
-        assert_eq!(t["livello"].as_u64(), Some(u64::from(s.level)));
+        assert_eq!(t["level"].as_u64(), Some(u64::from(s.level)));
         assert_eq!(t["n_punti"].as_u64(), Some(s.mz.len() as u64));
-        assert_eq!(t["polarita"].as_i64(), Some(i64::from(s.polarity)));
+        assert_eq!(t["polarity"].as_i64(), Some(i64::from(s.polarity)));
         assert_eq!(t["precursore_mz"].as_f64(), s.precursor);
     }
     for (k, p) in v["punti"].as_object().unwrap() {

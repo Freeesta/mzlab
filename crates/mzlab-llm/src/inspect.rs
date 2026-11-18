@@ -212,9 +212,9 @@ fn file(
     o.put("gradient", gradient(method));
     o.put(
         "flow_uL_min",
-        num(path(method, &["lc", "flusso_mL_min"])).map(|f| n(f * 1000.0)),
+        num(path(method, &["lc", "flow_mL_min"])).map(|f| n(f * 1000.0)),
     );
-    o.put("oven_C", num(path(method, &["lc", "forno_C"])).map(n));
+    o.put("oven_C", num(path(method, &["lc", "oven_C"])).map(n));
     estimate_fields(&mut o, est, class == "unit");
     let (role, order) = put_role(&mut o, sample, rank, confirmed);
     let mut warn: Vec<String> = Vec::new();
@@ -243,7 +243,7 @@ fn file(
 fn ranks(files: &[Value]) -> Vec<Option<usize>> {
     let dates: Vec<Option<&str>> = files
         .iter()
-        .map(|f| path(f, &["method", "origine", "file_creato"]).and_then(Value::str))
+        .map(|f| path(f, &["method", "origin", "file_created"]).and_then(Value::str))
         .collect();
     dates
         .iter()

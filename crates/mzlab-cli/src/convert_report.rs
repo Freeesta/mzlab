@@ -17,7 +17,7 @@ pub(crate) enum Item {
         seconds: f64,
         skipped: bool,
         conv: Option<String>,
-        /// `method/1.avvisi`: key and place of what the reader could not read.
+        /// `method/1.warnings`: key and place of what the reader could not read.
         notes: Vec<(String, String)>,
         /// With `--peaks mzlab`: the centroids flagged (merged, saturated).
         flagged: Option<(usize, usize)>,
@@ -58,7 +58,7 @@ pub(crate) fn lost_of(run: &mzlab_core::flow::Run, label: &str) -> Option<(usize
 /// The read step through the head of an mzML.
 const CHUNK: u64 = 1 << 20;
 
-/// Number of spectra, the `conversion/1` document and the `method/1.avvisi` entries of the mzML at `path`. Both sit in the header before the first spectrum, after the `method/1`
+/// Number of spectra, the `conversion/1` document and the `method/1.warnings` entries of the mzML at `path`. Both sit in the header before the first spectrum, after the `method/1`
 /// document, which can be many MiB: the head is read until the `spectrumList` opening (or the `chromatogramList`, or the end), not a fixed size.
 pub(crate) fn head_of(path: &Path) -> (usize, Option<String>, Vec<(String, String)>) {
     let mut bytes = Vec::new();
@@ -94,7 +94,7 @@ pub(crate) fn head_of(path: &Path) -> (usize, Option<String>, Vec<(String, Strin
     (spectra, conv, notes_of(&text))
 }
 
-/// The `avvisi` of the `method/1` document in the head `text` of an mzML, as (key, place).
+/// The `warnings` of the `method/1` document in the head `text` of an mzML, as (key, place).
 fn notes_of(text: &str) -> Vec<(String, String)> {
     let Some(doc) = text
         .split_once("name=\"mzLab method/1\" value=\"")
@@ -110,11 +110,11 @@ fn notes_of(text: &str) -> Vec<(String, String)> {
             .unwrap_or_default()
             .to_string()
     };
-    doc.get("avvisi")
+    doc.get("warnings")
         .map(|a| a.arr())
         .unwrap_or_default()
         .iter()
-        .map(|a| (s(a, "chiave"), s(a, "dove")))
+        .map(|a| (s(a, "key"), s(a, "place")))
         .filter(|(k, _)| !k.is_empty())
         .collect()
 }

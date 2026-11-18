@@ -51,7 +51,7 @@ fn gradient(m: &LcMethod, pump: &str) -> Vec<V> {
             obj(vec![
                 ("t_min", Some(V::Num(t))),
                 ("B_pct", num(b)),
-                ("flusso_mL_min", num(f)),
+                ("flow_mL_min", num(f)),
             ])
         })
         .collect()
@@ -111,15 +111,15 @@ pub(super) fn lc(m: &LcMethod) -> Option<V> {
             .and_then(whole);
     let pressure = value(pump, "High Pressure Limit");
     obj(vec![
-        ("gradiente", Some(V::Arr(gradient(m, pump)))),
+        ("gradient", Some(V::Arr(gradient(m, pump)))),
         (
-            "flusso_mL_min",
+            "flow_mL_min",
             num(value(pump, "Flow").and_then(|r| r.value.as_deref().and_then(whole))),
         ),
-        ("B_iniziale_pct", num(initial_b(m, pump))),
-        ("forno_C", num(oven)),
+        ("B_start_pct", num(initial_b(m, pump))),
+        ("oven_C", num(oven)),
         (
-            "durata_min",
+            "duration_min",
             num(m
                 .rc
                 .iter()
@@ -128,11 +128,11 @@ pub(super) fn lc(m: &LcMethod) -> Option<V> {
                 .and_then(whole)),
         ),
         (
-            "pressione_max",
+            "pressure_max",
             pressure.and_then(|r| {
                 obj(vec![
-                    ("valore", num(r.value.as_deref().and_then(whole))),
-                    ("unita", r.unit.as_deref().and_then(text)),
+                    ("value", num(r.value.as_deref().and_then(whole))),
+                    ("unit", r.unit.as_deref().and_then(text)),
                 ])
             }),
         ),
@@ -149,7 +149,7 @@ pub(super) fn sampler(m: &LcMethod) -> Option<V> {
                 param(&r.name, &r.section, v, r.unit.as_deref().unwrap_or(""))
             })
             .collect();
-    obj(vec![("parametri", Some(V::Arr(params)))])
+    obj(vec![("parameters", Some(V::Arr(params)))])
 }
 
 /// The diode-array detector: the signals in use (wavelength, bandwidth, reference), the spectrum range and step, the data rate, the slit and the lamps.
@@ -181,16 +181,16 @@ pub(super) fn detectors(m: &LcMethod) -> Vec<V> {
             let reference = signal(k, "Use Ref.") == Some("Yes");
             obj(vec![
                 ("nm", num(signal(k, "Wavelength").and_then(whole))),
-                ("banda_nm", num(signal(k, "Bandwidth").and_then(whole))),
+                ("bandwidth_nm", num(signal(k, "Bandwidth").and_then(whole))),
                 (
-                    "riferimento_nm",
+                    "reference_nm",
                     num(signal(k, "Ref Wavel.").and_then(whole)).filter(|_| reference),
                 ),
                 (
-                    "banda_riferimento_nm",
+                    "reference_bandwidth_nm",
                     num(signal(k, "Ref Bandw.").and_then(whole)).filter(|_| reference),
                 ),
-                ("nome", signal(k, "Signal").and_then(text)),
+                ("name", signal(k, "Signal").and_then(text)),
             ])
         })
         .collect();
@@ -207,17 +207,17 @@ pub(super) fn detectors(m: &LcMethod) -> Vec<V> {
         .filter_map(|r| r.name.strip_suffix(" Lamp Required"))
         .collect();
     obj(vec![
-        ("tipo", Some(V::s("DAD"))),
+        ("type", Some(V::s("DAD"))),
         (
             "nm",
             from.zip(to)
                 .map(|(a, b)| V::Arr(vec![V::Num(a), V::Num(b)])),
         ),
-        ("passo_nm", num(own("Spectrum Step").and_then(whole))),
-        ("frequenza_Hz", num(hz)),
-        ("lampada", text(&lamps.join("+"))),
-        ("fenditura_nm", num(own("Slit").and_then(lead))),
-        ("canali", Some(V::Arr(channels))),
+        ("step_nm", num(own("Spectrum Step").and_then(whole))),
+        ("frequency_Hz", num(hz)),
+        ("lamp", text(&lamps.join("+"))),
+        ("slit_nm", num(own("Slit").and_then(lead))),
+        ("channels", Some(V::Arr(channels))),
     ])
     .into_iter()
     .collect()

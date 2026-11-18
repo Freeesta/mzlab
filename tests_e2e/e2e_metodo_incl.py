@@ -21,10 +21,10 @@ try:
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 6000, 2)
         wait_for_js(pg, "E.files.some(f => f.dda && f.kind === 'full')")
         par = pg.evaluate("(async()=>{const k=E.files.findIndex(f=>f.dda&&f.kind==='full');const d=await DDA.get(k);const bg=m=>d.sid.some((_,j)=>d.prec[j]!=null&&Math.abs(d.prec[j]-m)<0.01&&d.rt[j]>=1&&d.rt[j]<=2);const i=d.sid.findIndex((_,i)=>d.prec[i]!=null&&d.rt[i]>14&&d.rt[i]<14.6&&!bg(d.prec[i]));return {k, mz:d.prec[i], rt:d.rt[i]}})()")
-        doc = {"schema": "method/1", "origine": {"formato": "thermo-raw"}, "ms": {"periodi": [{"esperimenti": [{"indice": 1, "mz": [100, 1000]}, {"indice": 2, "inclusione": [
-            {"mz": par["mz"], "formula": "C10H12N2O", "specie": "[M+H]+", "carica": 1, "polarita": "positive", "t_inizio_min": par["rt"] - 0.5, "t_fine_min": par["rt"] + 0.5, "nce": [20, 35, 60], "nome": "entry one"},
-            {"mz": 123.4567, "polarita": "positive", "t_inizio_min": 1, "t_fine_min": 2, "nome": "entry two"},
-            {"mz": par["mz"], "t_inizio_min": 1, "t_fine_min": 2, "nome": "right m/z, wrong window"}]}]}]}}
+        doc = {"schema": "method/1", "origin": {"format": "thermo-raw"}, "ms": {"periods": [{"experiments": [{"index": 1, "mz": [100, 1000]}, {"index": 2, "inclusion": [
+            {"mz": par["mz"], "formula": "C10H12N2O", "species": "[M+H]+", "charge": 1, "polarity": "positive", "t_start_min": par["rt"] - 0.5, "t_end_min": par["rt"] + 0.5, "nce": [20, 35, 60], "name": "entry one"},
+            {"mz": 123.4567, "polarity": "positive", "t_start_min": 1, "t_end_min": 2, "name": "entry two"},
+            {"mz": par["mz"], "t_start_min": 1, "t_end_min": 2, "name": "right m/z, wrong window"}]}]}]}}
         pg.evaluate("(d => { const f = window.fetch; window.fetch = function (u, ...a) { return String(u).startsWith('api/metodo') ? Promise.resolve(new Response(JSON.stringify({ source: 'raw', metodo: d }), { headers: { 'content-type': 'application/json' } })) : f.call(this, u, ...a); }; })(%s)" % json.dumps(doc))
         pg.evaluate("E.cur = E.files.findIndex(f => f.dda && f.kind === 'full')")
         def table():

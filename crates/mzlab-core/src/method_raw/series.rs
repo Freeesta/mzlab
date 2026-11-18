@@ -331,9 +331,9 @@ pub fn sezione(entries: &[Entry]) -> Vec<V> {
         .filter_map(|v| {
             obj(vec![
                 ("id", text(&v.id)),
-                ("gruppo", text(&v.group)),
-                ("nome", text(&v.name)),
-                ("unita", text(&v.unita)),
+                ("group", text(&v.group)),
+                ("name", text(&v.name)),
+                ("unit", text(&v.unita)),
                 ("n", num(Some(v.n as f64))),
                 ("min", num(Some(v.min))),
                 ("max", num(Some(v.max))),

@@ -130,10 +130,10 @@ pub fn section<R: Read + Seek>(
         .flat_map(|m| m.lists.iter())
         .filter_map(|l| {
             obj(vec![
-                ("polarita", Some(V::s(l.polarity))),
-                ("nome", text(&l.name).filter(|_| l.name != "N/A")),
+                ("polarity", Some(V::s(l.polarity))),
+                ("name", text(&l.name).filter(|_| l.name != "N/A")),
                 (
-                    "masse_mz",
+                    "masses_mz",
                     Some(V::Arr(l.masses.iter().map(|x| V::Num(*x)).collect())),
                 ),
             ])
@@ -141,12 +141,12 @@ pub fn section<R: Read + Seek>(
         .collect();
     obj(vec![
         (
-            "modo",
+            "mode",
             m.as_ref().and_then(|m| m.mode.as_deref()).and_then(text),
         ),
-        ("elenchi", (!lists.is_empty()).then_some(V::Arr(lists))),
-        ("numero_nel_trailer", num(number.map(|r| r.1))),
-        ("correzione_ppm", pair(correction)),
+        ("lists", (!lists.is_empty()).then_some(V::Arr(lists))),
+        ("number_in_trailer", num(number.map(|r| r.1))),
+        ("correction_ppm", pair(correction)),
     ])
 }
 

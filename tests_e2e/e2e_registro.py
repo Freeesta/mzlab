@@ -26,15 +26,15 @@ FAKE = """(() => {
       const id = new URL(s, location.href).searchParams.get('id'), v = ids.find(x => x.id === id);
       if (!v) return json({error: 'no', error_key: 'x', params: {}});
       const t = [...Array(40).keys()].map(i => i * 0.5);
-      return json({time: t, intensity: t.map(x => v.min + (v.max - v.min) * x / 20), unit: v.unita});
+      return json({time: t, intensity: t.map(x => v.min + (v.max - v.min) * x / 20), unit: v.unit});
     }
     const r = await orig(u, o);
     if (s.startsWith('api/metodo')) {
       const j = await r.clone().json();
       if (j) {
         j.metodo = Object.assign({schema: 'method/1'}, j.metodo || {});
-        j.metodo.serie_registro = ids;
-        j.metodo.registro = [{t_min: 1.5, testo: 'Warning: spray unstable', livello: 'Warning'}, {t_min: 4, testo: 'Info: lock mass found', livello: 'Info'}, {t_min: 7.25, testo: 'Error: pump'}];
+        j.metodo.log_series = ids;
+        j.metodo.log = [{t_min: 1.5, text: 'Warning: spray unstable', level: 'Warning'}, {t_min: 4, text: 'Info: lock mass found', level: 'Info'}, {t_min: 7.25, text: 'Error: pump'}];
         return json(j);
       }
     }

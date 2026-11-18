@@ -114,8 +114,8 @@ fn run_attr(head: &str, k: &str) -> Option<String> {
 /// `strumento`: model, serial number and software the header names.
 fn instrument(meta: &Metadata) -> Option<V> {
     obj(vec![
-        ("modello", text(&meta.instrument)),
-        ("serie", text(&meta.serial)),
+        ("model", text(&meta.instrument)),
+        ("series", text(&meta.serial)),
         ("software", Some(V::Arr(software(meta)))),
     ])
 }
@@ -125,7 +125,7 @@ fn software(meta: &Metadata) -> Vec<V> {
         .iter()
         .filter_map(|s| {
             let (n, v) = s.rsplit_once(' ').unwrap_or((s.as_str(), ""));
-            obj(vec![("nome", text(n)), ("versione", text(v))])
+            obj(vec![("name", text(n)), ("version", text(v))])
         })
         .collect()
 }
@@ -203,9 +203,9 @@ fn scan_part(scans: &str, fields: &mut Vec<Field>) -> Option<V> {
                 if lo == hi {
                     ps.push(obj(vec![
                         ("id", text(pr.1)),
-                        ("etichetta", text(pr.2)),
-                        ("valore", Some(V::Num(lo))),
-                        ("unita", text(pr.3)),
+                        ("label", text(pr.2)),
+                        ("value", Some(V::Num(lo))),
+                        ("unit", text(pr.3)),
                     ]));
                 } else {
                     let key = format!("MS{level} {}", pr.2);
@@ -214,17 +214,17 @@ fn scan_part(scans: &str, fields: &mut Vec<Field>) -> Option<V> {
                 }
             }
             obj(vec![
-                ("indice", Some(V::Num(f64::from(*level)))),
+                ("index", Some(V::Num(f64::from(*level)))),
                 (
-                    "parametri",
+                    "parameters",
                     Some(V::Arr(ps.into_iter().flatten().collect())),
                 ),
             ])
         })
         .collect();
     obj(vec![(
-        "periodi",
-        obj(vec![("esperimenti", Some(V::Arr(exps)))]).map(|p| V::Arr(vec![p])),
+        "periods",
+        obj(vec![("experiments", Some(V::Arr(exps)))]).map(|p| V::Arr(vec![p])),
     )])
 }
 
@@ -260,15 +260,15 @@ pub fn from_mzml_head(head: &str, scans: &str, name: &str, bytes: u64, meta: &Me
     });
     let doc = obj(vec![
         ("schema", Some(V::s(SCHEMA))),
-        ("origine", origin(&src, created.as_deref())),
+        ("origin", origin(&src, created.as_deref())),
         (
-            "campione",
-            obj(vec![("nome", sample_name.as_deref().and_then(text))]),
+            "sample",
+            obj(vec![("name", sample_name.as_deref().and_then(text))]),
         ),
-        ("strumento", instrument(meta)),
+        ("instrument", instrument(meta)),
         ("ms", ms),
         (
-            "campi",
+            "fields",
             Some(V::Arr(fields.iter().filter_map(Field::json).collect())),
         ),
     ]);

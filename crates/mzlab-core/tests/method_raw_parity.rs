@@ -76,7 +76,7 @@ fn the_raw_method_agrees_with_msconvert_and_with_the_script() {
         let head = String::from_utf8_lossy(&head);
         if let Some(serial) = value_after(&head, "MS:1000529") {
             assert_eq!(
-                text(&v, &["strumento", "serie"]),
+                text(&v, &["instrument", "series"]),
                 Some(serial.as_str()),
                 "serial number of {raw_path:?}"
             );
@@ -86,10 +86,10 @@ fn the_raw_method_agrees_with_msconvert_and_with_the_script() {
             .nth(1)
             .and_then(|t| t.split('"').next());
         let got = v
-            .get("strumento")
+            .get("instrument")
             .and_then(|s| s.get("software"))
             .and_then(|s| s.at(0))
-            .and_then(|s| s.get("versione"))
+            .and_then(|s| s.get("version"))
             .and_then(|s| s.str());
         assert_eq!(got, sw, "Xcalibur version of {raw_path:?}");
         // the gradient of the document is the one of the script
@@ -100,7 +100,7 @@ fn the_raw_method_agrees_with_msconvert_and_with_the_script() {
         if let Ok(g) = chromeleon::parse(&script) {
             let n = v
                 .get("lc")
-                .and_then(|l| l.get("gradiente"))
+                .and_then(|l| l.get("gradient"))
                 .map_or(0, |g| g.arr().len());
             assert_eq!(n, g.points.len(), "gradient points of {raw_path:?}");
         }
@@ -204,12 +204,12 @@ fn every_channel_of_the_status_log_is_a_field_and_the_log_is_no_longer_a_warning
         let reader =
             opentfraw::RawFileReader::open(BufReader::new(File::open(&raw_path).unwrap())).unwrap();
         let v = json::parse(doc(&raw_path).as_bytes()).unwrap();
-        let fields = v.get("campi").map_or(&[][..], |c| c.arr());
+        let fields = v.get("fields").map_or(&[][..], |c| c.arr());
         let warned = v
-            .get("avvisi")
+            .get("warnings")
             .map_or(&[][..], |a| a.arr())
             .iter()
-            .any(|a| a.get("dove").and_then(|d| d.str()) == Some("Status log"));
+            .any(|a| a.get("place").and_then(|d| d.str()) == Some("Status log"));
         let Some(log) = &reader.status_log else {
             assert_eq!(
                 warned,
@@ -235,8 +235,8 @@ fn every_channel_of_the_status_log_is_a_field_and_the_log_is_no_longer_a_warning
                 continue;
             }
             let found = fields.iter().any(|c| {
-                c.get("origine").and_then(|o| o.str()) == Some("thermo-raw:StatusLog")
-                    && c.get("chiave")
+                c.get("origin").and_then(|o| o.str()) == Some("thermo-raw:StatusLog")
+                    && c.get("key")
                         .and_then(|k| k.str())
                         .is_some_and(|k| k.starts_with(&name))
             });
@@ -257,7 +257,7 @@ fn the_instrument_log_is_listed_and_each_series_is_served_on_demand() {
         let reader =
             opentfraw::RawFileReader::open(BufReader::new(File::open(&raw_path).unwrap())).unwrap();
         let v = json::parse(doc(&raw_path).as_bytes()).unwrap();
-        let series = v.get("serie_registro").map_or(&[][..], |c| c.arr());
+        let series = v.get("log_series").map_or(&[][..], |c| c.arr());
         // the channels of the status log that take at least two different values are the status series
         let varying = reader.status_log.as_ref().map_or(0, |log| {
             log.series()
@@ -274,7 +274,7 @@ fn the_instrument_log_is_listed_and_each_series_is_served_on_demand() {
             })
             .count();
         assert_eq!(status, varying, "{raw_path:?}: status series");
-        let log = v.get("registro").map_or(&[][..], |c| c.arr());
+        let log = v.get("log").map_or(&[][..], |c| c.arr());
         let named = reader
             .error_log
             .iter()

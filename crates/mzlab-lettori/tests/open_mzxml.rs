@@ -140,14 +140,14 @@ fn the_method_and_the_header_carry_instrument_file_and_software() {
     let mut l = open_mzxml(mzxml(&run(), FLAT));
     let m = l.method(0).unwrap();
     for t in [
-        "\"formato\":\"mzxml\"",
+        "\"format\":\"mzxml\"",
         "Thermo Scientific",
         "Q Exactive",
         "Xcalibur",
         "msconvert",
-        "\"tipo\":\"ESI\"",
+        "\"type\":\"ESI\"",
         "Orbitrap",
-        "\"utente\":\"Mario Verdi\"",
+        "\"user\":\"Mario Verdi\"",
     ] {
         assert!(m.contains(t), "{t} missing in {m}");
     }
@@ -207,10 +207,10 @@ fn the_parent_file_path_is_marked_as_identity() {
     let mut l = open_mzxml(mzxml(&run(), FLAT));
     let m = l.method(0).unwrap();
     let field = |key: &str| {
-        let i = m.find(&format!("\"chiave\":\"{key}\"")).unwrap();
+        let i = m.find(&format!("\"key\":\"{key}\"")).unwrap();
         let end = i + m[i..].find('}').unwrap();
         m[i..end].to_string()
     };
-    assert!(field("fileName").contains("\"identita\":true"), "{m}");
-    assert!(!field("fileType").contains("identita"), "{m}");
+    assert!(field("fileName").contains("\"identity\":true"), "{m}");
+    assert!(!field("fileType").contains("identity"), "{m}");
 }

@@ -374,7 +374,7 @@ fn method(sub: &str, file: &str, sample: u32) -> Value {
 }
 
 fn experiments(m: &Value) -> Vec<Value> {
-    m["ms"]["periodi"][0]["esperimenti"]
+    m["ms"]["periods"][0]["experiments"]
         .as_array()
         .cloned()
         .unwrap_or_default()
@@ -394,25 +394,25 @@ fn real_methods_say_what_the_files_say() {
         1,
     );
     assert_eq!(
-        blank["campione"]["nome"], "Blank ext",
+        blank["sample"]["name"], "Blank ext",
         "the mzML of msconvert is named QTrap007483_031618-Blank ext"
     );
     let sched = experiments(&blank)
         .into_iter()
-        .find(|e| e["programmato"] == true)
+        .find(|e| e["scheduled"] == true)
         .expect("a scheduled experiment");
-    assert_eq!(sched["finestra_s"], 120);
-    let t = &sched["transizioni"][0];
+    assert_eq!(sched["window_s"], 120);
+    let t = &sched["transitions"][0];
     assert!(
         t.get("dwell_ms").is_none() && t["rt_min"].as_f64().is_some_and(|v| v > 0.0 && v < 60.0),
         "{t}"
     );
-    assert!(blank["campi"]
+    assert!(blank["fields"]
         .as_array()
         .unwrap()
         .iter()
-        .any(|c| c["chiave"] == "software"
-            && c["valore"]
+        .any(|c| c["key"] == "software"
+            && c["value"]
                 .as_str()
                 .is_some_and(|v| v.starts_with("Analyst "))));
     let moss = method(
@@ -421,7 +421,7 @@ fn real_methods_say_what_the_files_say() {
         1,
     );
     assert!(
-        experiments(&moss).iter().any(|e| e["finestra_s"] == 360),
+        experiments(&moss).iter().any(|e| e["window_s"] == 360),
         "6minWindow"
     );
     let plain = method(
@@ -432,18 +432,18 @@ fn real_methods_say_what_the_files_say() {
     assert!(
         experiments(&plain)
             .iter()
-            .all(|e| e.get("programmato").is_none())
-            && experiments(&plain)[0]["transizioni"][0]
+            .all(|e| e.get("scheduled").is_none())
+            && experiments(&plain)[0]["transitions"][0]
                 .get("dwell_ms")
                 .is_some()
     );
     let lab = method("dati/3200 qtrap/wiff", "MRM.wiff", 1);
-    let dad = lab["campi"]
+    let dad = lab["fields"]
         .as_array()
         .unwrap()
         .iter()
         .filter(|c| {
-            c["origine"]
+            c["origin"]
                 .as_str()
                 .is_some_and(|o| o.ends_with("DADSampleHeader"))
         })

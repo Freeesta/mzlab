@@ -108,22 +108,22 @@ pub fn origin(src: &Source, created: Option<&str>) -> Option<V> {
         .iter()
         .filter_map(|f| {
             obj(vec![
-                ("nome", text(&f.name)),
+                ("name", text(&f.name)),
                 ("sha1", f.sha1.as_deref().and_then(text)),
                 ("byte", (f.bytes > 0).then_some(V::Num(f.bytes as f64))),
             ])
         })
         .collect();
     obj(vec![
-        ("formato", Some(V::s(src.format))),
+        ("format", Some(V::s(src.format))),
         ("file", Some(V::Arr(files))),
-        ("campione", src.sample.map(|n| V::Num(n as f64))),
-        ("file_creato", created.and_then(text)),
+        ("sample", src.sample.map(|n| V::Num(n as f64))),
+        ("file_created", created.and_then(text)),
         (
-            "lettore",
+            "reader",
             obj(vec![
-                ("nome", Some(V::s(READER))),
-                ("versione", Some(V::s(env!("CARGO_PKG_VERSION")))),
+                ("name", Some(V::s(READER))),
+                ("version", Some(V::s(env!("CARGO_PKG_VERSION")))),
             ]),
         ),
     ])
@@ -138,9 +138,9 @@ fn params(p: &[Param]) -> V {
             .filter_map(|p| {
                 obj(vec![
                     ("id", text(&p.id)),
-                    ("etichetta", text(p.label)),
-                    ("valore", num(Some(p.value))),
-                    ("unita", text(p.unit)),
+                    ("label", text(p.label)),
+                    ("value", num(Some(p.value))),
+                    ("unit", text(p.unit)),
                 ])
             })
             .collect(),
@@ -174,7 +174,7 @@ pub fn ms_section(m: &Method, source_type: Option<&str>) -> Option<V> {
                                     ("ep_V", num(t.ep)),
                                     ("cep_V", num(t.cep)),
                                     ("cxp_V", num(t.cxp)),
-                                    ("nome", text(&t.name)),
+                                    ("name", text(&t.name)),
                                 ])
                             })
                             .collect(),
@@ -192,26 +192,26 @@ pub fn ms_section(m: &Method, source_type: Option<&str>) -> Option<V> {
                 _ => None,
             };
             obj(vec![
-                ("indice", Some(V::Num(e.index as f64))),
-                ("tipo", experiment_type(e).map(V::s)),
+                ("index", Some(V::Num(e.index as f64))),
+                ("type", experiment_type(e).map(V::s)),
                 ("mz", mz),
                 ("ce_eV", ce),
-                ("parametri", Some(params(&m.compound))),
-                ("transizioni", Some(transitions)),
+                ("parameters", Some(params(&m.compound))),
+                ("transitions", Some(transitions)),
             ])
         })
         .collect();
     obj(vec![
         (
-            "sorgente",
+            "source",
             obj(vec![
-                ("tipo", source_type.and_then(text)),
-                ("parametri", Some(params(&m.source))),
+                ("type", source_type.and_then(text)),
+                ("parameters", Some(params(&m.source))),
             ]),
         ),
         (
-            "periodi",
-            obj(vec![("esperimenti", Some(V::Arr(exps)))]).map(|p| V::Arr(vec![p])),
+            "periods",
+            obj(vec![("experiments", Some(V::Arr(exps)))]).map(|p| V::Arr(vec![p])),
         ),
     ])
 }
@@ -225,36 +225,36 @@ pub fn lc_sections(lc: &Lc) -> (Option<V>, Option<V>) {
             obj(vec![
                 ("t_min", num(Some(g.t))),
                 ("B_pct", num(g.b)),
-                ("flusso_mL_min", num(g.flow)),
+                ("flow_mL_min", num(g.flow)),
             ])
         })
         .collect();
     let lc_v = obj(vec![
-        ("gradiente", Some(V::Arr(grad))),
-        ("flusso_mL_min", num(lc.flow)),
-        ("B_iniziale_pct", num(lc.b0)),
-        ("forno_C", num(lc.oven)),
-        ("durata_min", num(lc.run_time)),
+        ("gradient", Some(V::Arr(grad))),
+        ("flow_mL_min", num(lc.flow)),
+        ("B_start_pct", num(lc.b0)),
+        ("oven_C", num(lc.oven)),
+        ("duration_min", num(lc.run_time)),
     ]);
     let p = &lc.pda;
     let channels: Vec<V> = lc
         .channels
         .iter()
-        .filter_map(|(w, bw)| obj(vec![("nm", num(Some(*w))), ("banda_nm", num(*bw))]))
+        .filter_map(|(w, bw)| obj(vec![("nm", num(Some(*w))), ("bandwidth_nm", num(*bw))]))
         .collect();
     let nm = match (p.start, p.stop) {
         (Some(a), Some(b)) => Some(V::Arr(vec![V::Num(a), V::Num(b)])),
         _ => None,
     };
     let det = obj(vec![
-        ("tipo", Some(V::s("PDA"))),
+        ("type", Some(V::s("PDA"))),
         ("nm", nm),
-        ("passo_nm", num(p.step)),
-        ("frequenza_Hz", num(p.freq)),
-        ("lampada", text(&p.lamp)),
-        ("cella_C", num(p.cell)),
-        ("fenditura_nm", num(p.slit)),
-        ("canali", Some(V::Arr(channels))),
+        ("step_nm", num(p.step)),
+        ("frequency_Hz", num(p.freq)),
+        ("lamp", text(&p.lamp)),
+        ("cell_C", num(p.cell)),
+        ("slit_nm", num(p.slit)),
+        ("channels", Some(V::Arr(channels))),
     ]);
     // a detector with only its type is no information: it exists when the method says something about it
     let det = det.filter(|d| matches!(d, V::Obj(f) if f.len() > 1));
@@ -267,14 +267,14 @@ pub fn from_dam(m: &Method, src: &Source) -> String {
     let file = src.files.first().map(|f| f.name.clone());
     let doc = obj(vec![
         ("schema", Some(V::s(SCHEMA))),
-        ("origine", origin(src, None)),
+        ("origin", origin(src, None)),
         (
-            "campione",
-            obj(vec![("metodo_file", file.as_deref().and_then(text))]),
+            "sample",
+            obj(vec![("method_file", file.as_deref().and_then(text))]),
         ),
         ("ms", ms_section(m, None)),
         ("lc", lc),
-        ("rivelatori", det),
+        ("detectors", det),
     ]);
     doc.map_or_else(String::new, |d| d.json())
 }

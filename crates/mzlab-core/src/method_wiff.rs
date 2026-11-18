@@ -121,10 +121,10 @@ fn kv(k: &str, v: &str) -> Option<V> {
     };
     obj(vec![
         ("id", text(k)),
-        ("etichetta", text(k)),
-        ("valore", value.clone()),
-        ("testo", if value.is_none() { text(v) } else { None }),
-        ("unita", unita),
+        ("label", text(k)),
+        ("value", value.clone()),
+        ("text", if value.is_none() { text(v) } else { None }),
+        ("unit", unita),
     ])
 }
 
@@ -225,7 +225,7 @@ fn user_and_computer<'a>(
 fn ms_sec(method: Option<&crate::methodinfo::Method>, st: Option<&str>) -> Option<V> {
     method
         .and_then(|m| ms_section(m, st))
-        .or_else(|| st.and_then(|s| obj(vec![("sorgente", obj(vec![("tipo", text(s))]))])))
+        .or_else(|| st.and_then(|s| obj(vec![("source", obj(vec![("type", text(s))]))])))
 }
 
 /// The document of sample `n` of the `.wiff` in `ole`; never an error: what is missing is absent, what cannot be read is in `avvisi`.
@@ -274,24 +274,27 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
 
     let doc = obj(vec![
         ("schema", Some(V::s(crate::method::SCHEMA))),
-        ("origine", crate::method::origin(src, prop(12))),
-        ("campione", campione(&data, get("", "Injection Volume"))),
-        ("strumento", strumento(cfg, software, version)),
-        ("operatore", operator(user, computer)),
+        ("origin", crate::method::origin(src, prop(12))),
+        ("sample", campione(&data, get("", "Injection Volume"))),
+        ("instrument", strumento(cfg, software, version)),
+        ("operator", operator(user, computer)),
         ("ms", ms_sec(method.as_ref(), source_type.as_deref())),
         ("lc", lc),
         (
-            "campionatore",
-            obj(vec![("parametri", Some(V::Arr(autosampler)))]),
+            "autosampler",
+            obj(vec![("parameters", Some(V::Arr(autosampler)))]),
         ),
-        ("rivelatori", det),
-        ("registro", Some(V::Arr(registry))),
+        ("detectors", det),
+        ("log", Some(V::Arr(registry))),
         (
-            "grezzo",
-            obj(vec![("sezione", Some(V::s("Log"))), ("testo", text(&raw))])
+            "raw",
+            obj(vec![("section", Some(V::s("Log"))), ("text", text(&raw))])
                 .map(|g| V::Arr(vec![g])),
         ),
-        ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),
+        (
+            "warnings",
+            Some(V::Arr(warn.into_iter().flatten().collect())),
+        ),
     ]);
     let doc = extended(doc, ole, n, &sample);
     doc.map_or_else(String::new, |d| d.json())
@@ -334,11 +337,8 @@ fn lc_with_pressure(
         .map_or((None, None), lc_sections);
     if let (Some(pmax), Some(V::Obj(f))) = (pmax.and_then(value_unit), lc.as_mut()) {
         f.extend(
-            obj(vec![
-                ("valore", num(Some(pmax.0))),
-                ("unita", text(&pmax.1)),
-            ])
-            .map(|p| ("pressione_max", p)),
+            obj(vec![("value", num(Some(pmax.0))), ("unit", text(&pmax.1))])
+                .map(|p| ("pressure_max", p)),
         );
     }
     (lc, det)
@@ -348,14 +348,14 @@ fn lc_with_pressure(
 fn campione(data: &[String], injection: Option<&str>) -> Option<V> {
     let named = data.len() >= 4;
     obj(vec![
-        ("nome", data.first().filter(|_| named).and_then(|s| text(s))),
+        ("name", data.first().filter(|_| named).and_then(|s| text(s))),
         ("vial", data.last().filter(|_| named).and_then(|s| text(s))),
         (
-            "iniezione_uL",
+            "injection_uL",
             injection.and_then(value_unit).and_then(|v| num(Some(v.0))),
         ),
         (
-            "metodo_file",
+            "method_file",
             data.iter()
                 .find(|s| s.to_lowercase().ends_with(".dam"))
                 .and_then(|s| text(s)),
@@ -383,14 +383,14 @@ fn source_type(log: &[String]) -> Option<String> {
 fn strumento(cfg: Option<&String>, software: &str, version: Option<&String>) -> Option<V> {
     let f = |k| cfg.and_then(|r| field(r, k)).and_then(text);
     let sw = obj(vec![
-        ("nome", Some(V::s(software))),
-        ("versione", version.and_then(|v| text(v))),
+        ("name", Some(V::s(software))),
+        ("version", version.and_then(|v| text(v))),
     ])
     .map(|s| V::Arr(vec![s]));
     obj(vec![
-        ("produttore", f("Manufacturer:")),
-        ("modello", f("Component ID:")),
-        ("serie", f("Serial Number:")),
+        ("manufacturer", f("Manufacturer:")),
+        ("model", f("Component ID:")),
+        ("series", f("Serial Number:")),
         ("firmware", f("Firmware Version:")),
         ("software", sw),
     ])
@@ -399,7 +399,7 @@ fn strumento(cfg: Option<&String>, software: &str, version: Option<&String>) -> 
 /// The `operatore` section.
 fn operator(user: Option<&str>, computer: Option<&str>) -> Option<V> {
     obj(vec![
-        ("utente", user.and_then(text)),
+        ("user", user.and_then(text)),
         ("computer", computer.and_then(text)),
     ])
 }
@@ -409,8 +409,8 @@ fn run_records<'a>(ms_rec: &impl Fn(&str) -> Option<&'a String>) -> Vec<V> {
     let record = |when: &str, r: Option<&String>| {
         r.and_then(|r| {
             obj(vec![
-                ("quando", Some(V::s(when))),
-                ("testo", text(r.split_once(":,").map_or(r, |x| x.1))),
+                ("when", Some(V::s(when))),
+                ("text", text(r.split_once(":,").map_or(r, |x| x.1))),
             ])
         })
     };
@@ -441,8 +441,8 @@ fn warnings(_ole: &Ole, _sample: &str, no_log: bool) -> Vec<Option<V>> {
     let mut warn = vec![];
     if no_log {
         warn.push(obj(vec![
-            ("chiave", Some(V::s("meta.mancante"))),
-            ("dove", Some(V::s("Log"))),
+            ("key", Some(V::s("meta.mancante"))),
+            ("place", Some(V::s("Log"))),
         ]));
     }
     warn

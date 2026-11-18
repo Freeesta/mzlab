@@ -96,8 +96,8 @@ fn pair(v: &Value, lo: &str, hi: &str) -> Option<(f64, f64)> {
 /// The m/z range of the experiments of a `method/1`.
 fn method_mz(m: &Value) -> Option<(f64, f64)> {
     let mut r = None;
-    for p in m.get("ms")?.get("periodi")?.arr() {
-        for e in p.get("esperimenti").map(|a| a.arr()).unwrap_or_default() {
+    for p in m.get("ms")?.get("periods")?.arr() {
+        for e in p.get("experiments").map(|a| a.arr()).unwrap_or_default() {
             if let (Some(a), Some(b)) = (
                 e.get("mz").and_then(|x| x.at(0)).and_then(|x| x.f64()),
                 e.get("mz").and_then(|x| x.at(1)).and_then(|x| x.f64()),
@@ -128,13 +128,13 @@ fn summary(e: &Value) -> FileSummary {
         mz: pair(e, "mz_min", "mz_max").or_else(|| m.and_then(method_mz)),
         scans: e.get("scansioni").and_then(|x| x.f64()).map(|x| x as u32),
         acquired: text(e, &["acquisito"])
-            .or_else(|| m.and_then(|m| text(m, &["origine", "file_creato"])))
+            .or_else(|| m.and_then(|m| text(m, &["origin", "file_created"])))
             .and_then(|t| iso(&t)),
         instrument: text(e, &["modello"])
-            .or_else(|| m.and_then(|m| text(m, &["strumento", "modello"])))
+            .or_else(|| m.and_then(|m| text(m, &["instrument", "model"])))
             .unwrap_or_default(),
         method: text(e, &["metodo"])
-            .or_else(|| m.and_then(|m| text(m, &["campione", "metodo_file"])))
+            .or_else(|| m.and_then(|m| text(m, &["sample", "method_file"])))
             .unwrap_or_default(),
     }
 }

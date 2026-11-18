@@ -67,12 +67,12 @@ impl Field {
     }
     pub fn json(&self) -> Option<V> {
         obj(vec![
-            ("origine", text(&self.origine)),
-            ("chiave", text(&self.chiave)),
-            ("valore", Some(V::s(self.valore.as_str()))),
-            ("unita", self.unita.as_deref().and_then(text)),
-            ("mappato", self.mappato.map(V::s)),
-            ("identita", self.identita.then_some(V::Bool(true))),
+            ("origin", text(&self.origine)),
+            ("key", text(&self.chiave)),
+            ("value", Some(V::s(self.valore.as_str()))),
+            ("unit", self.unita.as_deref().and_then(text)),
+            ("mapped", self.mappato.map(V::s)),
+            ("identity", self.identita.then_some(V::Bool(true))),
         ])
     }
 }

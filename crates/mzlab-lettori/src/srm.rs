@@ -48,7 +48,7 @@ fn number_of(seg: &str, key: &str) -> Option<f64> {
 /// The transitions of the `method/1` document `m` (`ms.periodi[].esperimenti[].transizioni[]`), read without a JSON parser (the module is size-capped): every
 /// `"q1":` opens a transition that goes on to the next one. Nothing when `m` has none or cannot be read.
 fn transitions_of_the_method(m: &str) -> Vec<FromMethod> {
-    let Some(from) = m.find("\"transizioni\"") else {
+    let Some(from) = m.find("\"transitions\"") else {
         return Vec::new();
     };
     let mut out = Vec::new();
@@ -65,7 +65,7 @@ fn transitions_of_the_method(m: &str) -> Vec<FromMethod> {
         let (Some(q1), Some(q3)) = (number_of(seg, "\"q1\":"), number_of(seg, "\"q3\":")) else {
             continue;
         };
-        let pol = match seg.find("\"polarita\":").and_then(|k| seg.get(k + 11..)) {
+        let pol = match seg.find("\"polarity\":").and_then(|k| seg.get(k + 11..)) {
             Some(r) if r.trim_start().starts_with("\"positive\"") => 1,
             Some(r) if r.trim_start().starts_with("\"negative\"") => -1,
             _ => 0,

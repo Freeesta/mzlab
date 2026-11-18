@@ -20,11 +20,11 @@ fn notices(l: &mut Box<dyn Reader>) -> Vec<String> {
         .unwrap()
         .1;
     let v: serde_json::Value = serde_json::from_str(doc).unwrap();
-    v["avvisi"]
+    v["warnings"]
         .as_array()
         .map(|a| {
             a.iter()
-                .map(|x| x["dove"].as_str().unwrap_or("").to_string())
+                .map(|x| x["place"].as_str().unwrap_or("").to_string())
                 .collect()
         })
         .unwrap_or_default()

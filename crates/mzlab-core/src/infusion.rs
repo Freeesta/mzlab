@@ -190,8 +190,8 @@ pub(crate) fn raw_lc<M: ReadAt>(m: &mut Mzml<M>) -> Result<Option<bool>> {
         return Ok(None);
     };
     let raw = v
-        .get("origine")
-        .and_then(|o| o.get("formato"))
+        .get("origin")
+        .and_then(|o| o.get("format"))
         .and_then(|f| f.str())
         == Some("thermo-raw");
     let no_method = doc.contains("\"meta.mancante\"");

@@ -8,20 +8,20 @@ use crate::mzmlwrite::{Header, MzmlWriter};
 /// A document like the one of a `.raw` with a big instrument method (synthetic: `n` fields, an XML text of `xml` bytes).
 fn big(n: usize, xml: usize) -> String {
     let mut o = Out(String::new());
-    o.raw("{\"schema\":\"method/1\",\"origine\":{\"formato\":\"thermo-raw\"},\"campi\":[");
+    o.raw("{\"schema\":\"method/1\",\"origin\":{\"format\":\"thermo-raw\"},\"fields\":[");
     for i in 0..n {
         if i > 0 {
             o.raw(",");
         }
-        o.raw("{\"origine\":\"thermo-raw:InstrumentMethod/XML\",\"chiave\":");
+        o.raw("{\"origin\":\"thermo-raw:InstrumentMethod/XML\",\"key\":");
         o.str(&format!("CmData/Item{i}/Name@value"));
-        o.raw(",\"valore\":");
+        o.raw(",\"value\":");
         o.str(&format!("\"value\" <{i}> & more"));
         o.raw("}");
     }
-    o.raw("],\"grezzo\":[{\"sezione\":\"Method LC\",\"testo\":\"Pump.Flow = 0.3\"},{\"sezione\":\"Method XML\",\"testo\":");
+    o.raw("],\"raw\":[{\"section\":\"Method LC\",\"text\":\"Pump.Flow = 0.3\"},{\"section\":\"Method XML\",\"text\":");
     o.str(&"<Item Name=\"x\" Value=\"1\"/>".repeat(xml / 26 + 1));
-    o.raw("}],\"avvisi\":[]}");
+    o.raw("}],\"warnings\":[]}");
     o.0
 }
 
@@ -45,25 +45,25 @@ fn a_long_document_is_cut_to_the_room_and_still_parses() {
     assert_eq!(v.get("schema").and_then(json::Value::str), Some("method/1"));
     // the fields go before the texts of the file: here the texts stay whole, and the head of `campi` is kept
     let texts: Vec<&str> = v
-        .get("grezzo")
+        .get("raw")
         .unwrap()
         .arr()
         .iter()
-        .filter_map(|t| t.get("testo").and_then(json::Value::str))
+        .filter_map(|t| t.get("text").and_then(json::Value::str))
         .collect();
     assert_eq!(texts[0], "Pump.Flow = 0.3");
     assert!(texts[1].len() >= 300_000, "{}", texts[1].len());
-    let fields = v.get("campi").unwrap().arr();
+    let fields = v.get("fields").unwrap().arr();
     assert!(!fields.is_empty() && fields.len() < 17_000);
     assert_eq!(
-        fields[0].get("chiave").and_then(json::Value::str),
+        fields[0].get("key").and_then(json::Value::str),
         Some("CmData/Item0/Name@value")
     );
-    let warnings = format!("{:?}", v.get("avvisi").unwrap());
+    let warnings = format!("{:?}", v.get("warnings").unwrap());
     assert!(
         warnings.contains("meta.troncato")
-            && warnings.contains("campi")
-            && !warnings.contains("grezzo"),
+            && warnings.contains("fields")
+            && !warnings.contains("raw"),
         "{warnings}"
     );
 }

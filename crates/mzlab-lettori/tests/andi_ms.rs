@@ -118,29 +118,29 @@ fn the_method_carries_instrument_operator_and_every_attribute() {
     let mut l = open_andi(andi_ms(&FLAT_RUN));
     let m = l.method(0).unwrap();
     for t in [
-        "\"formato\":\"andi-ms\"",
-        "\"file_creato\":\"20190312141102+0100\"",
-        "\"produttore\":\"Testmaker\"",
-        "\"modello\":\"Model 7\"",
-        "\"utente\":\"Some Operator\"",
-        "\"tipo\":\"Electron Impact\"",
-        "\"chiave\":\"test_scan_function\"",
+        "\"format\":\"andi-ms\"",
+        "\"file_created\":\"20190312141102+0100\"",
+        "\"manufacturer\":\"Testmaker\"",
+        "\"model\":\"Model 7\"",
+        "\"user\":\"Some Operator\"",
+        "\"type\":\"Electron Impact\"",
+        "\"key\":\"test_scan_function\"",
     ] {
         assert!(m.contains(t), "{t} in {m}");
     }
     // the operator and the serial number are marked as identifying
-    let da = m.find("\"chiave\":\"operator_name\"").unwrap();
+    let da = m.find("\"key\":\"operator_name\"").unwrap();
     assert!(m[da..]
         .split('}')
         .next()
         .unwrap()
-        .contains("\"identita\":true"));
-    let da = m.find("\"chiave\":\"instrument_serial_no\"").unwrap();
+        .contains("\"identity\":true"));
+    let da = m.find("\"key\":\"instrument_serial_no\"").unwrap();
     assert!(m[da..]
         .split('}')
         .next()
         .unwrap()
-        .contains("\"identita\":true"));
+        .contains("\"identity\":true"));
 }
 
 #[test]

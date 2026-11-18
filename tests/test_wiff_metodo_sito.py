@@ -41,7 +41,7 @@ def doc_of_site(work, sample):
 
 def without_origin(text):
     d = json.loads(text)
-    d.pop("origine")
+    d.pop("origin")
     return json.dumps(d, ensure_ascii=False, separators=(",", ":"))
 
 
@@ -52,5 +52,5 @@ def test_the_site_document_of_a_sample_is_the_one_of_the_cli(work, sample):
 
 def test_the_samples_that_share_a_method_carry_the_extended_metadata(work):
     site, cli = json.loads(doc_of_site(work, 2)), json.loads(doc_of_cli(work, 2))
-    assert site["ms"] and len(site["campi"]) >= 7, list(site)
-    assert site["campi"] == cli["campi"]
+    assert site["ms"] and len(site["fields"]) >= 7, list(site)
+    assert site["fields"] == cli["fields"]

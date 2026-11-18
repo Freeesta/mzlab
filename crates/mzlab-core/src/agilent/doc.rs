@@ -43,11 +43,11 @@ impl AgilentD {
 
 fn sample(d: &AgilentD) -> Option<V> {
     obj(vec![
-        ("nome", d.sample_name().and_then(text)),
+        ("name", d.sample_name().and_then(text)),
         ("vial", d.seq("Vial").and_then(text)),
-        ("iniezione_uL", num(d.seq_number("InjectorVolume"))),
-        ("metodo_file", d.seq("AcqMethodFileName").and_then(text)),
-        ("diluizione", num(d.seq_number("Dilution"))),
+        ("injection_uL", num(d.seq_number("InjectorVolume"))),
+        ("method_file", d.seq("AcqMethodFileName").and_then(text)),
+        ("dilution", num(d.seq_number("Dilution"))),
     ])
 }
 
@@ -55,12 +55,12 @@ fn strumento(d: &AgilentD) -> Option<V> {
     let dev = d.device.as_ref();
     let model = dev.map(|v| format!("{} {}", v.model, v.name));
     let soft = d.acquisition_software().and_then(|(_, name, version)| {
-        obj(vec![("nome", text(&name)), ("versione", text(&version))])
+        obj(vec![("name", text(&name)), ("version", text(&version))])
     });
     obj(vec![
-        ("produttore", Some(V::s("Agilent Technologies"))),
-        ("modello", model.as_deref().and_then(text)),
-        ("serie", dev.and_then(|v| text(&v.serial))),
+        ("manufacturer", Some(V::s("Agilent Technologies"))),
+        ("model", model.as_deref().and_then(text)),
+        ("series", dev.and_then(|v| text(&v.serial))),
         ("firmware", dev.and_then(|v| text(&v.firmware))),
         ("software", soft.map(|s| V::Arr(vec![s]))),
     ])
@@ -69,9 +69,9 @@ fn strumento(d: &AgilentD) -> Option<V> {
 fn param(id: &str, label: &str, value: f64, unit: &str) -> Option<V> {
     obj(vec![
         ("id", text(id)),
-        ("etichetta", text(label)),
-        ("valore", num(Some(value))),
-        ("unita", text(unit)),
+        ("label", text(label)),
+        ("value", num(Some(value))),
+        ("unit", text(unit)),
     ])
 }
 
@@ -112,9 +112,12 @@ fn experiments(d: &AgilentD) -> Vec<V> {
                     ));
                 }
                 obj(vec![
-                    ("indice", Some(V::Num((k + 1) as f64))),
-                    ("tipo", Some(V::s("SIM"))),
-                    ("parametri", Some(V::Arr(p.into_iter().flatten().collect()))),
+                    ("index", Some(V::Num((k + 1) as f64))),
+                    ("type", Some(V::s("SIM"))),
+                    (
+                        "parameters",
+                        Some(V::Arr(p.into_iter().flatten().collect())),
+                    ),
                 ])
             })
             .collect();
@@ -128,9 +131,12 @@ fn experiments(d: &AgilentD) -> Vec<V> {
     ];
     p.retain(Option::is_some);
     obj(vec![
-        ("indice", Some(V::Num(1.0))),
+        ("index", Some(V::Num(1.0))),
         ("mz", range.map(|(a, b)| V::Arr(vec![V::Num(a), V::Num(b)]))),
-        ("parametri", Some(V::Arr(p.into_iter().flatten().collect()))),
+        (
+            "parameters",
+            Some(V::Arr(p.into_iter().flatten().collect())),
+        ),
     ])
     .into_iter()
     .collect()
@@ -139,15 +145,15 @@ fn experiments(d: &AgilentD) -> Vec<V> {
 fn ms(d: &AgilentD) -> Option<V> {
     obj(vec![
         (
-            "sorgente",
+            "source",
             obj(vec![
-                ("tipo", d.is_gc().then(|| V::s("EI"))),
-                ("parametri", Some(V::Arr(tune(d)))),
+                ("type", d.is_gc().then(|| V::s("EI"))),
+                ("parameters", Some(V::Arr(tune(d)))),
             ]),
         ),
         (
-            "periodi",
-            obj(vec![("esperimenti", Some(V::Arr(experiments(d))))]).map(|p| V::Arr(vec![p])),
+            "periods",
+            obj(vec![("experiments", Some(V::Arr(experiments(d))))]).map(|p| V::Arr(vec![p])),
         ),
     ])
 }
@@ -155,24 +161,26 @@ fn ms(d: &AgilentD) -> Option<V> {
 /// Where a field is carried by a section of the document (`mappato`), by origin and name.
 fn mapped(origin: &str, name: &str) -> Option<&'static str> {
     match (origin, name) {
-        ("AcqData/Devices.xml", n) if n.ends_with("/SerialNumber") => Some("strumento.serie"),
-        ("AcqData/Devices.xml", n) if n.ends_with("/FirmwareVersion") => Some("strumento.firmware"),
+        ("AcqData/Devices.xml", n) if n.ends_with("/SerialNumber") => Some("instrument.series"),
+        ("AcqData/Devices.xml", n) if n.ends_with("/FirmwareVersion") => {
+            Some("instrument.firmware")
+        }
         ("AcqData/Devices.xml", n) if n.ends_with("/ModelNumber") || n.ends_with("/Name") => {
-            Some("strumento.modello")
+            Some("instrument.model")
         }
-        ("AcqData/Contents.xml", "Contents/AcqSoftwareVersion") => Some("strumento.software"),
-        ("AcqData/Contents.xml", "Contents/AcquiredTime") => Some("origine.file_creato"),
-        (SEQ, "SequenceTableDataSet@SequenceOperator") => Some("operatore.utente"),
-        ("AcqData/sample_info.xml", "OperatorName") => Some("operatore.utente"),
-        (SEQ, n) if n.ends_with("/SampleName") => Some("campione.nome"),
-        (SEQ, n) if n.ends_with("/Vial") => Some("campione.vial"),
-        (SEQ, n) if n.ends_with("/InjectorVolume") => Some("campione.iniezione_uL"),
-        (SEQ, n) if n.ends_with("/AcqMethodFileName") => Some("campione.metodo_file"),
-        (SEQ, n) if n.ends_with("/Dilution") => Some("campione.diluizione"),
+        ("AcqData/Contents.xml", "Contents/AcqSoftwareVersion") => Some("instrument.software"),
+        ("AcqData/Contents.xml", "Contents/AcquiredTime") => Some("origin.file_created"),
+        (SEQ, "SequenceTableDataSet@SequenceOperator") => Some("operator.user"),
+        ("AcqData/sample_info.xml", "OperatorName") => Some("operator.user"),
+        (SEQ, n) if n.ends_with("/SampleName") => Some("sample.name"),
+        (SEQ, n) if n.ends_with("/Vial") => Some("sample.vial"),
+        (SEQ, n) if n.ends_with("/InjectorVolume") => Some("sample.injection_uL"),
+        (SEQ, n) if n.ends_with("/AcqMethodFileName") => Some("sample.method_file"),
+        (SEQ, n) if n.ends_with("/Dilution") => Some("sample.dilution"),
         ("AcqData-CumulativeAuditTrail.xml", n) if n.ends_with("/ComputerName") => {
-            Some("operatore.computer")
+            Some("operator.computer")
         }
-        ("acqmeth.txt", n) if n.starts_with("tune ") => Some("ms.sorgente.parametri"),
+        ("acqmeth.txt", n) if n.starts_with("tune ") => Some("ms.source.parameters"),
         _ => None,
     }
 }
@@ -249,8 +257,8 @@ fn raw_texts(d: &AgilentD) -> Vec<V> {
         let part = t.get(..end).unwrap_or("");
         left = left.saturating_sub(part.len());
         out.extend(obj(vec![
-            ("sezione", Some(V::s(title))),
-            ("testo", text(part)),
+            ("section", Some(V::s(title))),
+            ("text", text(part)),
         ]));
     }
     out
@@ -264,7 +272,7 @@ fn warnings(d: &AgilentD) -> Vec<V> {
             seen.push(&i.origin);
         }
     }
-    let note = |k: &str, o: &str| obj(vec![("chiave", Some(V::s(k))), ("dove", text(o))]);
+    let note = |k: &str, o: &str| obj(vec![("key", Some(V::s(k))), ("place", text(o))]);
     let undecoded = seen.into_iter().map(|o| note("meta.nonDecodificato", o));
     let left_out = d.notes.iter().map(|o| note("meta.danneggiato", o));
     undecoded.chain(left_out).flatten().collect()
@@ -279,20 +287,20 @@ impl AgilentD {
             .map(|t| t.chars().take(19).collect::<String>());
         let doc = obj(vec![
             ("schema", Some(V::s(method::SCHEMA))),
-            ("origine", method::origin(src, created.as_deref())),
-            ("campione", sample(self)),
-            ("strumento", strumento(self)),
+            ("origin", method::origin(src, created.as_deref())),
+            ("sample", sample(self)),
+            ("instrument", strumento(self)),
             (
-                "operatore",
+                "operator",
                 obj(vec![
-                    ("utente", self.operator().and_then(text)),
+                    ("user", self.operator().and_then(text)),
                     ("computer", self.computer().and_then(text)),
                 ]),
             ),
             ("ms", ms(self)),
-            ("campi", Some(V::Arr(fields(self, &ident)))),
-            ("grezzo", Some(V::Arr(raw_texts(self)))),
-            ("avvisi", Some(V::Arr(warnings(self)))),
+            ("fields", Some(V::Arr(fields(self, &ident)))),
+            ("raw", Some(V::Arr(raw_texts(self)))),
+            ("warnings", Some(V::Arr(warnings(self)))),
         ]);
         doc.map_or_else(String::new, |d| d.json())
     }

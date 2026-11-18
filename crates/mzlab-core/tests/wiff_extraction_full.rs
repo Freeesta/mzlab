@@ -151,15 +151,15 @@ fn mrm_fine_parameters_and_hplc_gradient_extraction() {
     let doc = json::parse(l.method(0).unwrap().as_bytes()).unwrap();
     let tr_json = doc
         .get("ms")
-        .and_then(|ms| ms.get("periodi"))
+        .and_then(|ms| ms.get("periods"))
         .and_then(|p| p.arr().first())
-        .and_then(|p| p.get("esperimenti"))
+        .and_then(|p| p.get("experiments"))
         .and_then(|e| e.arr().first())
-        .and_then(|e| e.get("transizioni"))
+        .and_then(|e| e.get("transitions"))
         .unwrap()
         .arr();
     assert_eq!(tr_json.len(), 2);
-    assert_eq!(tr_json[0].get("nome").and_then(|v| v.str()), Some("Quant"));
+    assert_eq!(tr_json[0].get("name").and_then(|v| v.str()), Some("Quant"));
     assert_eq!(tr_json[0].get("dp_V").and_then(|v| v.f64()), Some(50.0));
     assert_eq!(tr_json[0].get("ce_eV").and_then(|v| v.f64()), Some(20.0));
     assert_eq!(tr_json[0].get("cxp_V").and_then(|v| v.f64()), Some(3.0));

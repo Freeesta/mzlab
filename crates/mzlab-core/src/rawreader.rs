@@ -152,7 +152,7 @@ fn entry(raw: &RawFileReader, m: &ScanMetadata) -> ScanEntry {
 }
 
 /// The kind of an analog channel: the UV channels of a Dionex detector (`UV_VIS_1`) are PDA traces, a channel with a pressure unit or a pump pressure is a pressure,
-/// the rest (temperatures) are analog. A spectrum of the UV field is never a trace of this list: it is not decoded (`method/1.avvisi`).
+/// the rest (temperatures) are analog. A spectrum of the UV field is never a trace of this list: it is not decoded (`method/1.warnings`).
 fn analog_kind(t: &opentfraw::AnalogTrace) -> ChromKind {
     let n = t.name.to_ascii_lowercase();
     if n.starts_with("uv_vis") || n.starts_with("pda") {
@@ -176,7 +176,7 @@ fn in_pascal(kind: ChromKind, mut t: opentfraw::AnalogTrace) -> opentfraw::Analo
 /// Id, kind and samples of every analog channel; two channels with the same name get the number of their controller after it.
 fn analogiche(l: &mut RawReader) -> &[(String, ChromKind, opentfraw::AnalogTrace)] {
     if l.analogiche.is_none() {
-        // a controller that cannot be read is left out; `method/1.avvisi` counts it (`method_raw::from_raw`)
+        // a controller that cannot be read is left out; `method/1.warnings` counts it (`method_raw::from_raw`)
         let (traces, _) = l.raw.analog_traces_counted(&mut l.src);
         let mut out: Vec<(String, ChromKind, opentfraw::AnalogTrace)> = Vec::new();
         for t in traces {

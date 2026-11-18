@@ -52,49 +52,49 @@ fn doc(bytes: Vec<u8>) -> Value {
 fn the_header_gives_instrument_serial_software_origin_and_sample() {
     let d = doc(mzml(""));
     assert_eq!(d["schema"], "method/1");
-    assert_eq!(d["strumento"]["modello"], "LTQ Orbitrap Velos");
-    assert_eq!(d["strumento"]["serie"], "SN123");
+    assert_eq!(d["instrument"]["model"], "LTQ Orbitrap Velos");
+    assert_eq!(d["instrument"]["series"], "SN123");
     assert_eq!(
-        d["strumento"]["software"][0]["nome"],
+        d["instrument"]["software"][0]["name"],
         "ProteoWizard software"
     );
-    assert_eq!(d["origine"]["formato"], "mzml");
-    assert_eq!(d["origine"]["file_creato"], "2024-05-01T10:00:00Z");
-    assert_eq!(d["origine"]["file"][1]["nome"], "run1.raw");
-    assert_eq!(d["origine"]["file"][1]["sha1"], "aabb");
-    assert_eq!(d["campione"]["nome"], "campione A");
-    assert!(d["campi"]
+    assert_eq!(d["origin"]["format"], "mzml");
+    assert_eq!(d["origin"]["file_created"], "2024-05-01T10:00:00Z");
+    assert_eq!(d["origin"]["file"][1]["name"], "run1.raw");
+    assert_eq!(d["origin"]["file"][1]["sha1"], "aabb");
+    assert_eq!(d["sample"]["name"], "campione A");
+    assert!(d["fields"]
         .as_array()
         .unwrap()
         .iter()
-        .any(|c| c["origine"] == "mzml:dataProcessing"));
+        .any(|c| c["origin"] == "mzml:dataProcessing"));
 }
 
 #[test]
 fn constant_scan_parameters_go_to_ms_and_changing_ones_to_an_interval() {
     let d = doc(mzml(""));
-    let exps = d["ms"]["periodi"][0]["esperimenti"].as_array().unwrap();
+    let exps = d["ms"]["periods"][0]["experiments"].as_array().unwrap();
     assert_eq!(exps.len(), 2);
     let p = |e: &Value, id: &str| {
-        e["parametri"]
+        e["parameters"]
             .as_array()
             .unwrap()
             .iter()
             .find(|x| x["id"] == id)
             .cloned()
     };
-    assert_eq!(p(&exps[0], "ion_injection_time").unwrap()["valore"], 50.0);
-    assert_eq!(p(&exps[0], "resolving_power").unwrap()["valore"], 60000.0);
-    assert_eq!(p(&exps[1], "collision_energy").unwrap()["valore"], 30.0);
+    assert_eq!(p(&exps[0], "ion_injection_time").unwrap()["value"], 50.0);
+    assert_eq!(p(&exps[0], "resolving_power").unwrap()["value"], 60000.0);
+    assert_eq!(p(&exps[1], "collision_energy").unwrap()["value"], 30.0);
     assert!(p(&exps[1], "ion_injection_time").is_none());
-    let c = d["campi"]
+    let c = d["fields"]
         .as_array()
         .unwrap()
         .iter()
-        .find(|c| c["chiave"] == "MS2 ion injection time")
+        .find(|c| c["key"] == "MS2 ion injection time")
         .unwrap();
-    assert_eq!(c["valore"], "21..29");
-    assert_eq!(c["origine"], "mzml:spectrum");
+    assert_eq!(c["value"], "21..29");
+    assert_eq!(c["origin"], "mzml:spectrum");
 }
 
 #[test]

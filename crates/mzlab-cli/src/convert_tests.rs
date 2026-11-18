@@ -252,7 +252,7 @@ fn a_refused_wiff_is_told_with_the_text_of_the_site() {
             "Not supported yet: TOF MS scan (scan type code 8, experiment 1 of this .wiff)",
         ),
         (
-            "periodi",
+            "periods",
             "The method of this .wiff has 2 periods and this program reads one-period methods only",
         ),
     ] {
@@ -470,12 +470,12 @@ fn a_budget_too_small_for_the_default_converts_fewer_files_at_once_and_says_so()
     );
 }
 
-/// Each entry of `method/1.avvisi` in the head of an mzML is a note with its catalogue text and place, and a key without a text keeps its place.
+/// Each entry of `method/1.warnings` in the head of an mzML is a note with its catalogue text and place, and a key without a text keeps its place.
 #[test]
 fn the_method_warnings_are_notes_with_their_text() {
     let dir = folder("notes");
     let file = dir.join("n.mzML");
-    let doc = "{&quot;schema&quot;:&quot;method/1&quot;,&quot;avvisi&quot;:[{&quot;chiave&quot;:&quot;meta.troncato&quot;,&quot;dove&quot;:&quot;scan 7&quot;},{&quot;chiave&quot;:&quot;meta.nuovo&quot;,&quot;dove&quot;:&quot;x&quot;}]}";
+    let doc = "{&quot;schema&quot;:&quot;method/1&quot;,&quot;warnings&quot;:[{&quot;key&quot;:&quot;meta.troncato&quot;,&quot;place&quot;:&quot;scan 7&quot;},{&quot;key&quot;:&quot;meta.nuovo&quot;,&quot;place&quot;:&quot;x&quot;}]}";
     let text = format!(
         "<?xml version=\"1.0\"?>\n<mzML><run id=\"r\"><userParam name=\"mzLab method/1\" value=\"{doc}\"/>\n<spectrumList count=\"0\" defaultDataProcessingRef=\"c\">\n</spectrumList></run></mzML>\n"
     );

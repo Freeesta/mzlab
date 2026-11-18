@@ -125,17 +125,17 @@ pub(super) fn mapped(origin: &str, name: &str, value: &str) -> Option<&'static s
     let in_rc = |p: &str| name.starts_with(p);
     if origin == RC_ORIGIN {
         return if in_rc("Binary Pump/Timetable[") {
-            Some("lc.gradiente")
+            Some("lc.gradient")
         } else if name == "Binary Pump/Flow" {
-            Some("lc.flusso_mL_min")
+            Some("lc.flow_mL_min")
         } else if in_rc("Binary Pump/") && name.ends_with("/Stoptime") {
-            Some("lc.durata_min")
+            Some("lc.duration_min")
         } else if name == "Binary Pump/High Pressure Limit" {
-            Some("lc.pressione_max")
+            Some("lc.pressure_max")
         } else if in_rc("Column Comp.")
             && (name.ends_with("/Temperature") || name.ends_with("/Right temperature"))
         {
-            Some("lc.forno_C")
+            Some("lc.oven_C")
         } else if in_rc("DAD/")
             && (name.contains("Signal table[")
                 || name.contains("Spectrum Range WL")
@@ -144,12 +144,12 @@ pub(super) fn mapped(origin: &str, name: &str, value: &str) -> Option<&'static s
                 || name.ends_with("/Slit")
                 || name.ends_with("Lamp Required"))
         {
-            Some("rivelatori")
+            Some("detectors")
         } else if (in_rc("HiP") || name.contains("Sampler") || name.contains("ALS"))
             && !name.contains('[')
             && whole(value).is_some()
         {
-            Some("campionatore.parametri")
+            Some("autosampler.parameters")
         } else {
             None
         };
@@ -158,11 +158,11 @@ pub(super) fn mapped(origin: &str, name: &str, value: &str) -> Option<&'static s
         return None;
     }
     if name.contains("/Scan Segments[") && (name.ends_with("/Prec Ion") || name.contains("/Prod")) {
-        Some("ms.periodi.esperimenti.transizioni")
+        Some("ms.periods.experiments.transitions")
     } else if name.contains("/Scan Segments[") && name.ends_with("/Collision Energy") {
-        Some("ms.periodi.esperimenti.ce_eV")
+        Some("ms.periods.experiments.ce_eV")
     } else if name.contains("/Auto MS/MS Preferred/Exclude Table[") {
-        Some("ms.periodi.esperimenti.liste_precursori")
+        Some("ms.periods.experiments.precursor_lists")
     } else if name.contains("/Reference Masses[")
         || (name.contains("Parameters[")
             && name
@@ -171,9 +171,9 @@ pub(super) fn mapped(origin: &str, name: &str, value: &str) -> Option<&'static s
                 .is_some_and(|c| c.starts_with("Value"))
             && whole(value).is_some())
     {
-        Some("ms.sorgente.parametri")
+        Some("ms.source.parameters")
     } else if name.matches('/').count() == 2 && whole(value).is_some() && !name.contains('[') {
-        Some("ms.periodi.esperimenti.parametri")
+        Some("ms.periods.experiments.parameters")
     } else {
         None
     }
@@ -199,16 +199,16 @@ fn transitions(t: &MsTable) -> Vec<V> {
                 ("q3", cell_num(t, k, "Prod Ion")),
                 ("dwell_ms", cell_num(t, k, "Dwell")),
                 ("ce_eV", cell_num(t, k, "CE (V)")),
-                ("nome", cell_text(t, k, "Cpd Name")),
-                ("gruppo", cell_text(t, k, "Cpd Group")),
+                ("name", cell_text(t, k, "Cpd Name")),
+                ("group", cell_text(t, k, "Cpd Group")),
                 ("frammentatore_V", cell_num(t, k, "Frag (V)")),
                 ("cell_acc_V", cell_num(t, k, "Cell Acc (V)")),
                 ("rt_min", cell_num(t, k, "Ret Time (min)")),
-                ("finestra_rt_min", cell_num(t, k, "Ret Window")),
-                ("polarita", cell_text(t, k, "Polarity")),
+                ("window_rt_min", cell_num(t, k, "Ret Window")),
+                ("polarity", cell_text(t, k, "Polarity")),
                 ("istd", cell_text(t, k, "ISTD?")),
-                ("risoluzione_q1", cell_text(t, k, "MS1 Res")),
-                ("risoluzione_q3", cell_text(t, k, "MS2 Res")),
+                ("resolution_q1", cell_text(t, k, "MS1 Res")),
+                ("resolution_q3", cell_text(t, k, "MS2 Res")),
             ])
         })
         .collect()
@@ -220,12 +220,12 @@ fn precursor_list(t: &MsTable) -> Vec<V> {
         .filter_map(|k| {
             obj(vec![
                 ("mz", cell_num(t, k, "Mass")),
-                ("carica", cell_num(t, k, "Charge")),
-                ("tipo", cell_text(t, k, "Type")),
+                ("charge", cell_num(t, k, "Charge")),
+                ("type", cell_text(t, k, "Type")),
                 ("rt_min", cell_num(t, k, "Retention Time (min)")),
-                ("finestra_rt_min", cell_num(t, k, "Delta Ret. Time (min)")),
+                ("window_rt_min", cell_num(t, k, "Delta Ret. Time (min)")),
                 ("delta_ppm", cell_num(t, k, "Delta Mass (ppm)")),
-                ("isolamento", cell_text(t, k, "Isolation Width")),
+                ("isolation", cell_text(t, k, "Isolation Width")),
                 ("ce_eV", cell_num(t, k, "Collision Energy")),
             ])
         })
@@ -296,8 +296,8 @@ fn source(m: &LcMethod) -> Option<V> {
         }
     }
     obj(vec![
-        ("tipo", m.param("Ion Source").and_then(text)),
-        ("parametri", Some(V::Arr(params))),
+        ("type", m.param("Ion Source").and_then(text)),
+        ("parameters", Some(V::Arr(params))),
     ])
 }
 
@@ -328,25 +328,25 @@ pub(super) fn ms(d: &AgilentD) -> Option<V> {
             .map(precursor_list)
             .unwrap_or_default();
         experiments.extend(obj(vec![
-            ("indice", Some(V::Num(seg as f64))),
+            ("index", Some(V::Num(seg as f64))),
             (
-                "tipo",
+                "type",
                 (!trans.is_empty())
                     .then(|| V::s("MRM"))
                     .or(mode.and_then(text)),
             ),
             ("mz", range.map(|(a, b)| V::Arr(vec![V::Num(a), V::Num(b)]))),
             ("ce_eV", Some(V::Arr(ce))),
-            ("parametri", Some(V::Arr(params))),
-            ("transizioni", Some(V::Arr(trans))),
-            ("liste_precursori", Some(V::Arr(lists))),
+            ("parameters", Some(V::Arr(params))),
+            ("transitions", Some(V::Arr(trans))),
+            ("precursor_lists", Some(V::Arr(lists))),
         ]));
     }
     obj(vec![
-        ("sorgente", source(m)),
+        ("source", source(m)),
         (
-            "periodi",
-            obj(vec![("esperimenti", Some(V::Arr(experiments)))]).map(|p| V::Arr(vec![p])),
+            "periods",
+            obj(vec![("experiments", Some(V::Arr(experiments)))]).map(|p| V::Arr(vec![p])),
         ),
     ])
 }
@@ -356,8 +356,8 @@ pub(super) fn sections(d: &AgilentD) -> Vec<(&'static str, Option<V>)> {
     let Some(m) = &d.lcm else { return vec![] };
     vec![
         ("lc", lc(m)),
-        ("campionatore", sampler(m)),
-        ("rivelatori", Some(V::Arr(detectors(m)))),
+        ("autosampler", sampler(m)),
+        ("detectors", Some(V::Arr(detectors(m)))),
     ]
 }
 
@@ -369,9 +369,9 @@ pub(super) fn modules(d: &AgilentD) -> Option<V> {
         .skip(1)
         .filter_map(|v| {
             obj(vec![
-                ("nome", text(&v.name)),
-                ("modello", text(&v.model)),
-                ("serie", text(&v.serial)),
+                ("name", text(&v.name)),
+                ("model", text(&v.model)),
+                ("series", text(&v.serial)),
                 ("firmware", text(&v.firmware)),
             ])
         })
@@ -389,7 +389,7 @@ pub(super) fn extend(
 ) -> (Option<V>, Option<V>, Option<V>) {
     let instrument = match (instrument, modules(d)) {
         (Some(V::Obj(mut f)), Some(m)) => {
-            f.push(("moduli", m));
+            f.push(("modules", m));
             Some(V::Obj(f))
         }
         (i, _) => i,
@@ -406,22 +406,22 @@ pub(super) fn sample(d: &AgilentD) -> Option<V> {
     let f = |name: &str| d.field(SAMPLE_INFO, name).and_then(text);
     let name_of = |p: &str| p.rsplit(['\\', '/']).next().unwrap_or(p).to_string();
     obj(vec![
-        ("nome", f("Sample Name")),
+        ("name", f("Sample Name")),
         ("vial", f("Sample Position")),
         (
-            "iniezione_uL",
+            "injection_uL",
             num(d.field(SAMPLE_INFO, "Inj Vol (µl)").and_then(whole)),
         ),
         (
-            "metodo_file",
+            "method_file",
             d.field(SAMPLE_INFO, "Method")
                 .and_then(|p| text(&name_of(p))),
         ),
         (
-            "diluizione",
+            "dilution",
             num(d.field(SAMPLE_INFO, "Dilution").and_then(whole)),
         ),
-        ("tipo", f("Sample Type")),
+        ("type", f("Sample Type")),
     ])
 }
 

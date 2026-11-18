@@ -20,8 +20,8 @@ pub fn entries(log: &[ErrorEntry]) -> Vec<V> {
         .filter_map(|e| {
             obj(vec![
                 ("t_min", num(Some(f64::from(e.time)))),
-                ("testo", text(&e.message)),
-                ("livello", level(&e.message).map(V::s)),
+                ("text", text(&e.message)),
+                ("level", level(&e.message).map(V::s)),
             ])
         })
         .collect()

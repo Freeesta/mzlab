@@ -126,15 +126,15 @@ pub fn experiments(items: &[Item]) -> Vec<V> {
                 .filter_map(|(k, v, u)| {
                     obj(vec![
                         ("id", text(k)),
-                        ("valore", num(Some(*v))),
-                        ("unita", text(u)),
+                        ("value", num(Some(*v))),
+                        ("unit", text(u)),
                     ])
                 })
                 .collect();
             obj(vec![
-                ("indice", num(Some(id))),
+                ("index", num(Some(id))),
                 ("mz", range),
-                ("parametri", Some(V::Arr(params))),
+                ("parameters", Some(V::Arr(params))),
             ])
         })
         .collect()

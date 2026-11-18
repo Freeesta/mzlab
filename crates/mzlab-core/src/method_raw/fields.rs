@@ -171,15 +171,13 @@ fn container(raw: &RawFileReader) -> Vec<Field> {
         let from = format!("thermo-raw:FileHeader/{tag}");
         let when = clock(a.time).unwrap_or_default();
         v.push(if tag == "AuditStart" {
-            Field::new(&from, "time", when).map("origine.file_creato")
+            Field::new(&from, "time", when).map("origin.file_created")
         } else {
             Field::new(&from, "time", when)
         });
         v.push(Field::new(&from, "tag1", &a.tag1).id());
         v.push(if tag == "AuditStart" {
-            Field::new(&from, "tag2", &a.tag2)
-                .map("operatore.utente")
-                .id()
+            Field::new(&from, "tag2", &a.tag2).map("operator.user").id()
         } else {
             Field::new(&from, "tag2", &a.tag2).id()
         });
@@ -190,18 +188,18 @@ fn container(raw: &RawFileReader) -> Vec<Field> {
     v.push(
         Field::new(q, "InjectionVolume", i.injection_volume)
             .unit("µL")
-            .map("campione.iniezione_uL"),
+            .map("sample.injection_uL"),
     );
     v.push(Field::new(q, "SampleWeight", i.sample_weight));
     v.push(Field::new(q, "SampleVolume", i.sample_volume));
     v.push(Field::new(q, "IstdAmount", i.istd_amount));
     v.push(Field::new(q, "DilutionFactor", i.dilution_factor));
-    v.push(Field::new(q, "Id", &s.id).map("campione.id"));
-    v.push(Field::new(q, "Comment", &s.comment).map("campione.commento"));
-    v.push(Field::new(q, "Vial", &s.vial).map("campione.vial"));
+    v.push(Field::new(q, "Id", &s.id).map("sample.id"));
+    v.push(Field::new(q, "Comment", &s.comment).map("sample.comment"));
+    v.push(Field::new(q, "Vial", &s.vial).map("sample.vial"));
     v.push(
         Field::new(q, "InstMethod", &s.inst_method)
-            .map("campione.metodo_file")
+            .map("sample.method_file")
             .id(),
     );
     v.push(Field::new(q, "ProcMethod", &s.proc_method).id());
@@ -227,7 +225,7 @@ fn container(raw: &RawFileReader) -> Vec<Field> {
     let r = "thermo-raw:RawFileInfo";
     v.push(
         Field::new(r, "ComputerName", &raw.raw_file_info.computer_name)
-            .map("operatore.computer")
+            .map("operator.computer")
             .id(),
     );
     v.push(Field::new(
@@ -243,9 +241,9 @@ fn instid(raw: &RawFileReader) -> Vec<Field> {
     const NAMES: [(&str, Option<&str>); 5] = [
         ("Model", None),
         ("Model (2)", None),
-        ("SerialNumber", Some("strumento.serie")),
-        ("SoftwareVersion", Some("strumento.software")),
-        ("HardwareVersion", Some("strumento.hardware")),
+        ("SerialNumber", Some("instrument.series")),
+        ("SoftwareVersion", Some("instrument.software")),
+        ("HardwareVersion", Some("instrument.hardware")),
     ];
     raw.inst_id_strings
         .iter()
@@ -300,10 +298,10 @@ fn run_header(raw: &RawFileReader) -> Vec<Field> {
 /// Where a key of the LC script ends up in the sections.
 fn script_map(key: &str) -> Option<&'static str> {
     match key {
-        "ColumnComp.CC.Temperature.Nominal" => Some("lc.forno_C"),
-        "PumpModule.Pump.Pressure.UpperLimit" => Some("lc.pressione_max"),
-        "PumpModule.Pump.Flow.Nominal" | "PumpModule.Pump.%B.Value" => Some("lc.gradiente"),
-        k if k.starts_with("SamplerModule.") => Some("campionatore.parametri"),
+        "ColumnComp.CC.Temperature.Nominal" => Some("lc.oven_C"),
+        "PumpModule.Pump.Pressure.UpperLimit" => Some("lc.pressure_max"),
+        "PumpModule.Pump.Flow.Nominal" | "PumpModule.Pump.%B.Value" => Some("lc.gradient"),
+        k if k.starts_with("SamplerModule.") => Some("autosampler.parameters"),
         _ => None,
     }
 }
@@ -338,7 +336,7 @@ pub fn fields(
     // an XML item is a field only when a section carries it: an Orbitrap method has some 17 000 items, all kept as text in `grezzo`
     for it in xml.iter().filter(|it| it.name.contains("/ScanEvent/")) {
         all.push(
-            Field::new("thermo-raw:InstrumentMethod/XML", &it.name, &it.value).map("ms.periodi"),
+            Field::new("thermo-raw:InstrumentMethod/XML", &it.name, &it.value).map("ms.periods"),
         );
     }
     for c in &mut all {

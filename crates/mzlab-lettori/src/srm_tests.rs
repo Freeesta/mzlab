@@ -137,10 +137,10 @@ fn one_trace_per_transition() {
 /// A TSQ filter as the vendor writes it: no collision energy in it, the product window in brackets.
 const TSQ_FILTER: &str = "+ c ESI SRM ms2 300.000 [100.000-100.000, 150.000-150.002]";
 
-const TSQ_METHOD: &str = r#"{"ms":{"periodi":[{"esperimenti":[{"transizioni":[
-{"q1":300,"q3":100,"ce_eV":18.5,"polarita":"negative"},
-{"q1":300,"q3":150.001,"ce_eV":30,"polarita":"negative"},
-{"q1":400,"q3":200,"ce_eV":22,"polarita":"negative"}]}]}]}}"#;
+const TSQ_METHOD: &str = r#"{"ms":{"periods":[{"experiments":[{"transitions":[
+{"q1":300,"q3":100,"ce_eV":18.5,"polarity":"negative"},
+{"q1":300,"q3":150.001,"ce_eV":30,"polarity":"negative"},
+{"q1":400,"q3":200,"ce_eV":22,"polarity":"negative"}]}]}]}}"#;
 
 #[test]
 fn a_tsq_filter_without_ce_takes_ce_and_polarity_from_the_method() {
@@ -180,9 +180,9 @@ fn a_tsq_filter_without_method_does_not_invent_the_ce() {
 
 #[test]
 fn a_transition_duplicated_in_the_method_stays_as_the_scans() {
-    let m = r#"{"ms":{"periodi":[{"esperimenti":[{"transizioni":[
-{"q1":300,"q3":100,"ce_eV":10,"polarita":"positive"},
-{"q1":300,"q3":100,"ce_eV":40,"polarita":"negative"}]}]}]}}"#;
+    let m = r#"{"ms":{"periods":[{"experiments":[{"transitions":[
+{"q1":300,"q3":100,"ce_eV":10,"polarity":"positive"},
+{"q1":300,"q3":100,"ce_eV":40,"polarity":"negative"}]}]}]}}"#;
     let mut l = fake_with(TSQ_FILTER, 1, m);
     assert_eq!(l.chromatograms(0).unwrap()[0].id, "SRM SIC Q1=300 Q3=100");
 }

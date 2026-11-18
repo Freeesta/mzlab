@@ -1,5 +1,5 @@
 //! A part of an Agilent `.D` that cannot be read is left out and said, never the run: an MRM visit whose points do not decode leaves the SRM chromatograms
-//! and is counted in `method/1.avvisi`, a side member that cannot be read (here `MSTS.xml`) is named there. Synthetic folders only.
+//! and is counted in `method/1.warnings`, a side member that cannot be read (here `MSTS.xml`) is named there. Synthetic folders only.
 
 #![allow(clippy::disallowed_methods)]
 

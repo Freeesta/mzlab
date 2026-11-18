@@ -83,16 +83,16 @@ fn method() -> LcMethod {
 fn gradient_oven_and_detector_come_from_the_rows() {
     let m = method();
     let doc = lc(&m).unwrap().json();
-    assert!(doc.contains("\"forno_C\":40"), "{doc}");
-    assert!(doc.contains("\"flusso_mL_min\":0.4"), "{doc}");
+    assert!(doc.contains("\"oven_C\":40"), "{doc}");
+    assert!(doc.contains("\"flow_mL_min\":0.4"), "{doc}");
     assert!(
-        doc.contains("{\"t_min\":10,\"B_pct\":95,\"flusso_mL_min\":0.4}"),
+        doc.contains("{\"t_min\":10,\"B_pct\":95,\"flow_mL_min\":0.4}"),
         "{doc}"
     );
     let det = V::Arr(detectors(&m)).json();
-    assert!(det.contains("\"frequenza_Hz\":5"), "{det}");
-    assert!(det.contains("\"lampada\":\"UV\""), "{det}");
-    assert!(det.contains("\"riferimento_nm\":360"), "{det}");
+    assert!(det.contains("\"frequency_Hz\":5"), "{det}");
+    assert!(det.contains("\"lamp\":\"UV\""), "{det}");
+    assert!(det.contains("\"reference_nm\":360"), "{det}");
 }
 
 #[test]

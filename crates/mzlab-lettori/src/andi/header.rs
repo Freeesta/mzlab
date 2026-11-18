@@ -73,19 +73,19 @@ impl AndiHeader {
         };
         let s = |t: &Option<String>| t.as_deref().and_then(text);
         let sw = obj(vec![
-            ("nome", text("instrument")),
-            ("versione", s(&self.software)),
+            ("name", text("instrument")),
+            ("version", s(&self.software)),
         ]);
         let doc = obj(vec![
             ("schema", Some(V::s(method::SCHEMA))),
-            ("origine", method::origin(&src, self.created.as_deref())),
-            ("campione", obj(vec![("nome", s(&self.title))])),
+            ("origin", method::origin(&src, self.created.as_deref())),
+            ("sample", obj(vec![("name", s(&self.title))])),
             (
-                "strumento",
+                "instrument",
                 obj(vec![
-                    ("produttore", s(&self.maker)),
-                    ("modello", s(&self.model)),
-                    ("serie", s(&self.series)),
+                    ("manufacturer", s(&self.maker)),
+                    ("model", s(&self.model)),
+                    ("series", s(&self.series)),
                     ("firmware", s(&self.firmware)),
                     (
                         "software",
@@ -95,16 +95,13 @@ impl AndiHeader {
                     ),
                 ]),
             ),
-            ("operatore", obj(vec![("utente", s(&self.user))])),
+            ("operator", obj(vec![("user", s(&self.user))])),
             (
                 "ms",
-                obj(vec![(
-                    "sorgente",
-                    obj(vec![("tipo", s(&self.ionizzazione))]),
-                )]),
+                obj(vec![("source", obj(vec![("type", s(&self.ionizzazione))]))]),
             ),
             (
-                "campi",
+                "fields",
                 Some(V::Arr(self.fields.iter().filter_map(Field::json).collect())),
             ),
         ]);
@@ -169,9 +166,9 @@ fn identity(name: &str) -> bool {
 /// Where a global attribute is also in the document.
 fn map(name: &str) -> Option<&'static str> {
     match name {
-        "experiment_title" => Some("campione.nome"),
-        "operator_name" => Some("operatore.utente"),
-        "test_ionization_mode" => Some("ms.sorgente.tipo"),
+        "experiment_title" => Some("sample.name"),
+        "operator_name" => Some("operator.user"),
+        "test_ionization_mode" => Some("ms.source.type"),
         _ => None,
     }
 }

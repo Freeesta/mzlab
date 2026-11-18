@@ -57,12 +57,12 @@ fn a_text_without_a_table_gives_none() {
 fn the_experiment_carries_the_transitions() {
     let t = parse(ALTIS).unwrap();
     let e = experiment(&t, 1).unwrap().json();
-    assert!(e.contains("\"tipo\":\"SRM\""));
+    assert!(e.contains("\"type\":\"SRM\""));
     assert!(e.contains("\"q1\":549.272,\"q3\":246.108,\"dwell_ms\":2.598,\"ce_eV\":18.2,"));
-    assert!(e.contains("\"polarita\":\"positive\",\"t_inizio_min\":8.13,\"t_fine_min\":11.13,\"nome\":\"Peptide A(+3)\""));
-    assert!(e.contains(
-        "\"id\":\"cycle_time\",\"etichetta\":\"Cycle Time\",\"valore\":0.6,\"unita\":\"sec\""
-    ));
+    assert!(e.contains("\"polarity\":\"positive\",\"t_start_min\":8.13,\"t_end_min\":11.13,\"name\":\"Peptide A(+3)\""));
+    assert!(
+        e.contains("\"id\":\"cycle_time\",\"label\":\"Cycle Time\",\"value\":0.6,\"unit\":\"sec\"")
+    );
 }
 
 #[test]

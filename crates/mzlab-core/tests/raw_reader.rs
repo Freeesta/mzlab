@@ -248,7 +248,7 @@ fn the_mzml_of_a_raw_carries_the_instrument_the_hash_the_start_and_the_method() 
         .and_then(|t| t.split('"').next())
         .unwrap();
     assert!(
-        doc.contains(&format!("\"file_creato\":\"{start}\"")),
+        doc.contains(&format!("\"file_created\":\"{start}\"")),
         "{start}"
     );
 }
@@ -269,7 +269,7 @@ fn the_series_of_the_instrument_log_are_served_by_id_and_are_not_chromatograms_o
             .into_iter()
             .map(|v| v.id)
             .collect();
-        for s in doc.get("serie_registro").map_or(&[][..], |a| a.arr()) {
+        for s in doc.get("log_series").map_or(&[][..], |a| a.arr()) {
             let id = s.get("id").and_then(|i| i.str()).unwrap();
             assert!(!listed.iter().any(|x| x == id), "{id} is in the mzML list");
             let c = l.chromatogram(0, id).unwrap();

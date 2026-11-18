@@ -27,15 +27,15 @@ pub fn section(blocks: &[String]) -> Option<V> {
             obj(vec![
                 ("nm", num(Some(nm))),
                 (
-                    "banda_nm",
+                    "bandwidth_nm",
                     num(first(blocks, &format!("UV_VIS_{k}.Bandwidth"))),
                 ),
                 (
-                    "riferimento_nm",
+                    "reference_nm",
                     num(first(blocks, &format!("UV_VIS_{k}.RefWavelength"))),
                 ),
                 (
-                    "banda_riferimento_nm",
+                    "reference_bandwidth_nm",
                     num(first(blocks, &format!("UV_VIS_{k}.RefBandwidth"))),
                 ),
             ])
@@ -44,9 +44,9 @@ pub fn section(blocks: &[String]) -> Option<V> {
     let rate = first(blocks, "Data_Collection_Rate");
     let uv = (!channels.is_empty()).then(|| {
         obj(vec![
-            ("tipo", text("UV_VIS")),
-            ("frequenza_Hz", num(rate)),
-            ("canali", Some(V::Arr(channels))),
+            ("type", text("UV_VIS")),
+            ("frequency_Hz", num(rate)),
+            ("channels", Some(V::Arr(channels))),
         ])
     });
     let (lo, hi) = (
@@ -55,10 +55,10 @@ pub fn section(blocks: &[String]) -> Option<V> {
     );
     let field = lo.zip(hi).and_then(|(lo, hi)| {
         obj(vec![
-            ("tipo", text("PDA")),
+            ("type", text("PDA")),
             ("nm", Some(V::Arr(vec![V::Num(lo), V::Num(hi)]))),
-            ("passo_nm", num(first(blocks, "3DFIELD.BunchWidth"))),
-            ("frequenza_Hz", num(rate)),
+            ("step_nm", num(first(blocks, "3DFIELD.BunchWidth"))),
+            ("frequency_Hz", num(rate)),
         ])
     });
     let all: Vec<V> = uv.flatten().into_iter().chain(field).collect();
@@ -80,7 +80,7 @@ mod tests {
     fn channels_field_and_rate_are_read() {
         let v = section(&[SCRIPT.to_string()]).unwrap().json();
         assert!(
-            v.contains(r#""tipo": "UV_VIS""#) || v.contains(r#""tipo":"UV_VIS""#),
+            v.contains(r#""type": "UV_VIS""#) || v.contains(r#""type":"UV_VIS""#),
             "{v}"
         );
         assert!(v.contains("260"), "{v}");

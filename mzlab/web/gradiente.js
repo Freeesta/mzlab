@@ -11,8 +11,8 @@ const nameOf = (/** @type {FileAperto} */ f) => f.file.split("#")[0];
 async function fromMethod(/** @type {FileAperto} */ f) {
   let lc = null;
   try { lc = (((await J("api/metodo?k=" + f.k)) || {}).metodo || {}).lc; } catch (_) { return null; }
-  const pts = ((lc && lc.gradiente) || []).filter((/** @type {Bag} */ q) => q.t_min != null && q.B_pct != null).map((/** @type {Bag} */ q) => ({ t: +q.t_min, b: +q.B_pct, ...(q.flusso_mL_min != null ? { flow: +q.flusso_mL_min } : {}) }));
-  return pts.length > 1 ? { source: "file", points: pts, run_time: lc.durata_min != null ? +lc.durata_min : pts[pts.length - 1].t } : null;
+  const pts = ((lc && lc.gradient) || []).filter((/** @type {Bag} */ q) => q.t_min != null && q.B_pct != null).map((/** @type {Bag} */ q) => ({ t: +q.t_min, b: +q.B_pct, ...(q.flow_mL_min != null ? { flow: +q.flow_mL_min } : {}) }));
+  return pts.length > 1 ? { source: "file", points: pts, run_time: lc.duration_min != null ? +lc.duration_min : pts[pts.length - 1].t } : null;
 }
 // The gradient of file f: the .dam first (the server), then the file's own method.
 async function get(/** @type {FileAperto} */ f) {

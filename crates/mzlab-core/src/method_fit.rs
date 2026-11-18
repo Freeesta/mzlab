@@ -30,14 +30,14 @@ pub fn fit(doc: &str, room: usize, size: &dyn Fn(&str) -> usize) -> String {
     // a later step starts only when the document, warnings and all, is still too long
     let over = |top: &Top| size(&text(top)) > room;
     // `campi` first: they repeat what the file says, while `grezzo` is the text of the file itself
-    for key in ["campi", "grezzo"] {
+    for key in ["fields", "raw"] {
         if over(&top) && keep_head(&mut top, key, &fits) {
             warn(&mut top, key);
         }
     }
     if over(&top) {
         // what is left is too long by itself: the document keeps only where it comes from and why it is empty
-        top.retain(|(k, _)| k == "schema" || k == "origine");
+        top.retain(|(k, _)| k == "schema" || k == "origin");
         warn(&mut top, "method/1");
     }
     text(&top)
@@ -71,12 +71,12 @@ fn keep_head(top: &mut Top, key: &str, fits: &dyn Fn(&Top) -> bool) -> bool {
 /// A `meta.troncato` warning whose `dove` is the part that was cut.
 fn warn(top: &mut Vec<(String, Value)>, part: &str) {
     let w = Value::Obj(vec![
-        ("chiave".into(), Value::Str("meta.troncato".into())),
-        ("dove".into(), Value::Str(part.into())),
+        ("key".into(), Value::Str("meta.troncato".into())),
+        ("place".into(), Value::Str(part.into())),
     ]);
-    match top.iter_mut().find(|(k, _)| k == "avvisi") {
+    match top.iter_mut().find(|(k, _)| k == "warnings") {
         Some((_, Value::Arr(a))) => a.push(w),
-        _ => top.push(("avvisi".into(), Value::Arr(vec![w]))),
+        _ => top.push(("warnings".into(), Value::Arr(vec![w]))),
     }
 }
 

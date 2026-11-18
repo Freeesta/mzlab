@@ -47,7 +47,7 @@ try:
             r = pg.evaluate(JSON, "api/metodo?k=0")
             assert r["status"] == 200 and r["j"]["source"] == "mzml", r
             m = r["j"]["metodo"]
-            assert m["schema"] == "method/1" and m["origine"]["formato"] == "mzml", r
+            assert m["schema"] == "method/1" and m["origin"]["format"] == "mzml", r
         step("an mzML without method: /api/metodo builds method/1 from its header", none_yet)
         def lone_with_match():
             pg.set_input_files("#pick", [str(D / "one.wiff")])
@@ -60,8 +60,8 @@ try:
             r = pg.evaluate(JSON, "api/metodo?k=0")
             assert r["status"] == 200 and r["j"]["source"] == "wiff", r
             m = r["j"]["metodo"]
-            assert m["schema"] == "method/1" and m["origine"]["formato"] == "sciex-wiff" and m["origine"]["file"][0]["sha1"] == sha, m["origine"]
-            assert m["origine"]["campione"] == 1, m["origine"]
+            assert m["schema"] == "method/1" and m["origin"]["format"] == "sciex-wiff" and m["origin"]["file"][0]["sha1"] == sha, m["origin"]
+            assert m["origin"]["sample"] == 1, m["origin"]
         step("/api/metodo gives the method/1 of the .wiff sample", route)
         def window():
             pg.click("#np-method")

@@ -27,22 +27,22 @@ const METODO_M = (() => {
   }
 
   function compound(/** @type {any} */ c) {
-    const ions = (c.ioni || []).map((/** @type {any} */ q) => `${n(q.mz)} (${n(q.risposta_relativa_pct)} %${q.min_pct != null ? `, ${n(q.min_pct)}–${n(q.max_pct)}` : ""})`).join("; ");
-    const lv = (c.livelli || []).map((/** @type {any} */ l) => n(l.conc)).join(", ");
-    const w = c.finestra_rt || {}, z = c.finestra_mz || {}, k = c.curva || {};
+    const ions = (c.ions || []).map((/** @type {any} */ q) => `${n(q.mz)} (${n(q.relative_response_pct)} %${q.min_pct != null ? `, ${n(q.min_pct)}–${n(q.max_pct)}` : ""})`).join("; ");
+    const lv = (c.levels || []).map((/** @type {any} */ l) => n(l.conc)).join(", ");
+    const w = c.window_rt || {}, z = c.window_mz || {}, k = c.curve || {};
     const cell = (/** @type {any} */ v) => `<td>${EH(String(v ?? ""))}</td>`;
-    return `<tr>${cell(c.nome)}${cell(c.tipo)}<td class="num">${EH(n(c.rt_min))}</td>${cell(w.valore != null ? `${n(w.valore)} ${w.unita || ""}` : "")}${cell(z.sinistra != null ? `−${n(z.sinistra)} / +${n(z.destra)} ${z.unita || ""}` : "")}${cell(ions)}${cell(lv ? `${lv} ${c.unita_conc || ""}` : "")}${cell([k.modello, k.origine, k.peso].filter(Boolean).join(", "))}</tr>`;
+    return `<tr>${cell(c.name)}${cell(c.type)}<td class="num">${EH(n(c.rt_min))}</td>${cell(w.value != null ? `${n(w.value)} ${w.unit || ""}` : "")}${cell(z.left != null ? `−${n(z.left)} / +${n(z.right)} ${z.unit || ""}` : "")}${cell(ions)}${cell(lv ? `${lv} ${c.conc_unit || ""}` : "")}${cell([k.model, k.origin, k.weight].filter(Boolean).join(", "))}</tr>`;
   }
 
   function section(/** @type {{ name: string }} */ m, /** @type {any} */ d) {
     const title = `<h4>${EH(T("method.m.title", { name: m.name }))}</h4>`;
     if (d.error) return `<section class="msec">${title}<div class="fail">${EH(T("method.m.error", { name: m.name, message: d.error }))}</div></section>`;
-    const q = d.quantificazione;
-    if (!q || !(q.composti || []).length) return `<section class="msec">${title}<div class="muted sm">${EH(T("method.m.none"))}</div></section>`;
-    const f = q.finestre || {};
-    const win = f.riferimento != null ? `<div class="sm muted" style="margin:4px 0">${EH(T("method.m.windows", { ref: n(f.riferimento), non: n(f.non_riferimento), unit: f.unita === "Percent" ? "%" : f.unita || "", corr: n(f.correlazione) }))}</div>` : "";
+    const q = d.quantification;
+    if (!q || !(q.compounds || []).length) return `<section class="msec">${title}<div class="muted sm">${EH(T("method.m.none"))}</div></section>`;
+    const f = q.windows || {};
+    const win = f.reference != null ? `<div class="sm muted" style="margin:4px 0">${EH(T("method.m.windows", { ref: n(f.reference), non: n(f.non_reference), unit: f.unit === "Percent" ? "%" : f.unit || "", corr: n(f.correlation) }))}</div>` : "";
     const th = ["method.m.col.name", "method.m.col.type", "method.m.col.rt", "method.m.col.rtwin", "method.m.col.mzwin", "method.m.col.ions", "method.m.col.levels", "method.m.col.curve"].map(k => `<th>${EH(T(k))}</th>`).join("");
-    return `<section class="msec">${title}<div class="sm hw">${EH(T("method.m.about"))}</div>${win}<table><tr>${th}</tr>${q.composti.map(compound).join("")}</table></section>`;
+    return `<section class="msec">${title}<div class="sm hw">${EH(T("method.m.about"))}</div>${win}<table><tr>${th}</tr>${q.compounds.map(compound).join("")}</table></section>`;
   }
 
   // the sections of all the held folders (a folder dropped twice counts once)

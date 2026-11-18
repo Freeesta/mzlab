@@ -170,7 +170,7 @@ fn the_original_header_stays_and_mzlab_writes() {
 #[test]
 fn the_method_repeats_only_if_the_mzml_carries_it() {
     let scan = scans();
-    let doc = "{\"schema\":\"method/1\",\"strumento\":{\"modello\":\"x\"}}";
+    let doc = "{\"schema\":\"method/1\",\"instrument\":{\"model\":\"x\"}}";
     let mut con = open(mzml_di(
         &scan,
         Cod::Np {

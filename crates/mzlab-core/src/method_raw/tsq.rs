@@ -189,9 +189,9 @@ pub fn experiment(t: &Table, index: usize) -> Option<V> {
         .filter_map(|(id, label, value, unit)| {
             obj(vec![
                 ("id", text(id)),
-                ("etichetta", text(label)),
-                ("valore", num(Some(*value))),
-                ("unita", text(unit)),
+                ("label", text(label)),
+                ("value", num(Some(*value))),
+                ("unit", text(unit)),
             ])
         })
         .collect();
@@ -205,18 +205,18 @@ pub fn experiment(t: &Table, index: usize) -> Option<V> {
                 ("dwell_ms", num(r.dwell_ms)),
                 ("ce_eV", num(r.ce_ev)),
                 ("rf_lens_V", num(r.rf_lens_v)),
-                ("polarita", r.polarity.map(V::s)),
-                ("t_inizio_min", num(r.start_min)),
-                ("t_fine_min", num(r.end_min)),
-                ("nome", text(&r.name)),
+                ("polarity", r.polarity.map(V::s)),
+                ("t_start_min", num(r.start_min)),
+                ("t_end_min", num(r.end_min)),
+                ("name", text(&r.name)),
             ])
         })
         .collect();
     obj(vec![
-        ("indice", num(Some(index as f64))),
-        ("tipo", t.kind.as_deref().and_then(text)),
-        ("parametri", Some(V::Arr(params))),
-        ("transizioni", Some(V::Arr(transitions))),
+        ("index", num(Some(index as f64))),
+        ("type", t.kind.as_deref().and_then(text)),
+        ("parameters", Some(V::Arr(params))),
+        ("transitions", Some(V::Arr(transitions))),
     ])
 }
 

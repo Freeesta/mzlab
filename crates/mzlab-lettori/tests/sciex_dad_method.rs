@@ -105,7 +105,7 @@ fn the_variant_mzml_carries_the_matrix_and_the_method() {
     )
     .unwrap();
     assert_eq!(doc["schema"], "method/1");
-    let grad = doc["lc"]["gradiente"]
+    let grad = doc["lc"]["gradient"]
         .as_array()
         .expect("the gradient of the time program");
     let got: Vec<(f64, f64)> = grad

@@ -123,10 +123,10 @@ fn the_course_profile_has_no_assistant() {
 #[test]
 fn nothing_private_goes_out() {
     let item = r#"{"kind":"full","polarity":"positive","ms1":10,"ms2":0,"spectrum_mode":"centroid","prof1":{"hr":false,"an":"?","dec":1,"tol":0.5,"unit":"Da"},"acq":["MS1"],"instrument":"Test Q","sha256":"abc123secretsha","label":"patient_Ana_Pérez","file":"D:/lab/ana/x.mzML","precursors":[1],"rt_min":0.5,"rt_max":9}"#;
-    let method = r#"{"operatore":{"utente":"anaperez","computer":"LAB-PC-ANA"},"strumento":{"produttore":"Acme","modello":"Q 3000","serie":"SN-0012345-SECRET","computer":"LAB-PC-ANA"},
-      "origine":{"formato":"wiff","file_creato":"2026-03-04T10:11:12","file":[{"nome":"D:/lab/ana/secret.wiff","sha1":"deadbeef"}]},
-      "campione":{"nome":"Ana-Perez-2026","commento":"phone 555-0123"},"campi":[{"clave":"k","valore":"top-secret-value"}],"grezzo":[{"testo":"RAW-LOG-SECRET"}],
-      "lc":{"gradiente":[{"t_min":0,"B_pct":5},{"t_min":10,"B_pct":95}],"flusso_mL_min":0.3,"forno_C":40},"ms":{"sorgente":{"tipo":"ESI"}}}"#;
+    let method = r#"{"operator":{"user":"anaperez","computer":"LAB-PC-ANA"},"instrument":{"manufacturer":"Acme","model":"Q 3000","series":"SN-0012345-SECRET","computer":"LAB-PC-ANA"},
+      "origin":{"format":"wiff","file_created":"2026-03-04T10:11:12","file":[{"name":"D:/lab/ana/secret.wiff","sha1":"deadbeef"}]},
+      "sample":{"name":"Ana-Perez-2026","comment":"phone 555-0123"},"fields":[{"key":"k","value":"top-secret-value"}],"raw":[{"text":"RAW-LOG-SECRET"}],
+      "lc":{"gradient":[{"t_min":0,"B_pct":5},{"t_min":10,"B_pct":95}],"flow_mL_min":0.3,"oven_C":40},"ms":{"source":{"type":"ESI"}}}"#;
     let name = "Ana\u{202E}fdp.exe 123456789 \u{0007}file.mzML";
     let src = format!(
         r#"{{"profile":"research","hide_names":false,"files":[{{"name":{},"items":[{item}],"method":{method},"sample":{{"tipo":"sample","ordine_iniezione":1,"note":"private-note"}}}}]}}"#,
