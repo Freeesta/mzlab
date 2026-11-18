@@ -1,6 +1,6 @@
 """INFG rules: the arcs of the «Fragmentation graph» carry the id of the rule that explains the loss (weak ones tagged), the panel of an ion lists the rules of the losses
 that reach it with their reason and their sources as DOI links, the filter «only losses with a rule» works with the keyboard, the data table has the columns rule, source and
-priority, the thresholds say «to be calibrated», axe. The engine answer is the one of tests_e2e/fixtures/msngrafo_esempio.json plus the key `regole` of
+priority, the thresholds say «to be calibrated», axe. The engine answer is the one of tests_e2e/fixtures/msngrafo_esempio.json plus the key `rules` of
 fixtures/msngrafo_regole.json (synthetic: no real data, no real compounds)."""
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -14,7 +14,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_infusione_regole.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 FIX = Path(__file__).parent / "fixtures"
-FX = json.loads((FIX / "msngrafo_esempio.json").read_text()); RX = json.loads((FIX / "msngrafo_regole.json").read_text())["regole"]
+FX = json.loads((FIX / "msngrafo_esempio.json").read_text()); RX = json.loads((FIX / "msngrafo_regole.json").read_text())["rules"]
 D = synth("infregole")
 F = write_msn(D / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)
 STAND_IN = """([fx, rx]) => {
