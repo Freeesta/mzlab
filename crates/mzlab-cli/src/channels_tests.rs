@@ -42,7 +42,7 @@ fn pts(v: &Value, i: usize) -> f64 {
     field(v, i, "n_points")
 }
 
-fn gen(v: &Value, i: usize) -> f64 {
+fn gen_of(v: &Value, i: usize) -> f64 {
     field(v, i, "generator")
 }
 
@@ -186,7 +186,7 @@ fn channels_of_the_synthetic_files() {
         ]
     );
     assert_eq!((pts(&v, 2), pts(&v, 3), pts(&v, 4)), (100.0, 100.0, 100.0));
-    assert_eq!((gen(&v, 3), gen(&v, 4)), (2.0, 2.0));
+    assert_eq!((gen_of(&v, 3), gen_of(&v, 4)), (2.0, 2.0));
     assert_eq!(proposed(&v), "lc-ms2-targeted");
     // MSn in blocks: MS3 hangs from the MS2 of its first precursor
     let v = channels_of(&d.join("canali/K_BLOCCHI-t0.mzML"));
@@ -201,7 +201,7 @@ fn channels_of_the_synthetic_files() {
             "ms:ITMS + ms3 317 > 299 @cid30"
         ]
     );
-    assert_eq!((gen(&v, 4), gen(&v, 5)), (3.0, 3.0));
+    assert_eq!((gen_of(&v, 4), gen_of(&v, 5)), (3.0, 3.0));
     assert_eq!(proposed(&v), "msn-infusion");
     // 70 distinct precursors: one channel for all of them
     let v = channels_of(&d.join("canali/K_DDA-t0.mzML"));
