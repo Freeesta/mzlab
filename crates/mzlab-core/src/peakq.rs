@@ -116,7 +116,7 @@ pub struct ProminenceParams {
     /// ... and by at least this fraction of the highest point of the trace.
     pub rel_prominence: f64,
     pub min_scans: usize,
-    /// The outer limits stop where the trace falls below this fraction of the apex.
+    /// The outer limits stop where the trace falls below this fraction of the apex (0.001; the old 0.05 left 12 % of a clean Gaussian out of its area).
     pub frac: f64,
     /// Window of the light Savitzky-Golay smoothing used to find the maxima (odd).
     pub smooth: usize,
@@ -127,7 +127,7 @@ pub struct ProminenceParams {
 
 impl Default for ProminenceParams {
     fn default() -> Self {
-        ProminenceParams { snr: 5.0, rel_prominence: 0.01, min_scans: 3, frac: 0.05, smooth: 5, local_snr: 0.0 }
+        ProminenceParams { snr: 5.0, rel_prominence: 0.01, min_scans: 3, frac: 0.001, smooth: 5, local_snr: 0.0 }
     }
 }
 

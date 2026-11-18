@@ -8,11 +8,11 @@ Copy to `CHECKLIST-vX.Y.Z.md` (same folder), tick every box with `[x]`: `tools/g
 
 ## Guides for agents
 - [ ] every step of `mzlab-cli steps` has its row in `docs/agenti/cli.md`
-- [ ] `docs/agenti/per-agenti.md` and `llms.txt` (if it exists) cite only existing commands
+- [ ] `docs/agenti/for-agents.md` and `llms.txt` (if it exists) cite only existing commands
 
 ## Guides for us
 - [ ] `CLAUDE.md` and `docs/agenti/` describe the current state (no «now…», «it used to be…»)
-- [ ] `docs/agenti/rilascio.md` mirrors `release.yml`
+- [ ] `docs/agenti/release.md` mirrors `release.yml`
 
 ## Readmes of everything
 - [ ] every crate has a non-empty `README.md`

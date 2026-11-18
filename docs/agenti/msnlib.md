@@ -16,7 +16,7 @@ Goal: measure in the lab the MSn trees of the available standards (the idea of s
 - **Analogues searched**: `analogo` is null for exact entries, otherwise `{delta_da, spostati, non_spostati, copertura}`; they are searched with `delta_max` > 0 (`--delta N`, Da): entries with the precursor farther than `ppm_prec` and at most `delta_max` away, in the best MS2 pair each peak of the unknown is "unshifted" (m/z of a peak of the entry) or "shifted" (m/z of the entry + Δ, Δ = unknown − entry); at least 1 shifted and `min_prove` peaks are needed; they come after the exact entries, by decreasing coverage (explained intensity).
 - Test: `msngraph::tests_search` (synthetic graphs) and `msn_lib_tests`.
 - **In the Flow**: `spectra.match` with `algorithm=tree` writes `msncerca/1` or, with `tree_output=candidates`, the `candidates/1` that `annot.level` reads (`rust-flow.md`).
-- **Route**: POST `api/msnlib/cerca` (`rust-rotte.md`), in the `.wasm` `msngrafo` (`msnlib_search`); test in `tests_e2e/e2e_msngrafo.py`.
+- **Route**: POST `api/msnlib/cerca` (`rust-routes.md`), in the `.wasm` `msngrafo` (`msnlib_search`); test in `tests_e2e/e2e_msngrafo.py`.
 - **Evidence for Attributio**: `cerca_ms2` (`msngraph/search.rs`) compares the MS2 of a row (peaks and precursor m/z, without activation: every MS2 of the entry counts) with the entries of the same polarity within 10 ppm; `evid::msntree::msn_tree_hits` turns them into `ExternalHit`s "MSn tree of a reference" (score = entropy, at least 3 shared peaks) that shift the order of the candidates without giving the level. It is not yet wired to `prove.rs` or to the `.wasm`.
 ## 3. Acquisition protocol (Orbitrap, direct infusion)
 - **Solution**: 0.1-1 µg/mL (≈ 0.5-5 µM) in MeOH/H2O 50:50 with 0.1 % formic acid (ESI+) or 5 mM ammonium acetate (ESI−); syringe at 3-5 µL/min; stable spray before the MSn (MS1 TIC with RSD < 15 % over 1 min).
@@ -33,4 +33,4 @@ Goal: measure in the lab the MSn trees of the available standards (the idea of s
 - **Validation of a tree**: two days (`d1`, `d2`) → two graphs with the same options → `msn-graph compare`: same isolated nodes (precursor paths within ppm), edges with `rel` ≥ 10 % present in both, same proposed formulas, MS2 entropy ≥ 0.8 per energy, m/z deviation ≤ 3 ppm after calibration. Outcome and numbers in `convalida`; an entry that is not validated stays in the library with `convalida: null` and the search says so.
 - **`msn-graph compare A.json B.json`** (`crates/mzlab-cli/src/msn_graph_compare.rs`): JSON `msnconfronto/1` with the numbers of each criterion and `convalidata`; pairing window 5 ppm; an isolated node is the same if they have the same path labels (rounded) and the precise m/z within the ppm; maximum deviation over the paired nodes.
 
-Step-by-step use (command line and Flow steps): `msn-manuale.md`.
+Step-by-step use (command line and Flow steps): `msn-manual.md`.

@@ -1,4 +1,4 @@
-//! Spectral study, E6 (traps): today's numbers of the baseline arms, pinned (`docs/agenti/studio-spettri.md`, MISURA studio_e6).
+//! Spectral study, E6 (traps): today's numbers of the baseline arms, pinned (`docs/agenti/study-spectra.md`, MISURA studio_e6).
 //! E6: per style of E0-E3, half the queries in the library and half traps (same formula as an entry, another tree, absent).
 //! A change of the engine or of the generator that moves a number updates the pin and the MISURA line together.
 

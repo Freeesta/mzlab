@@ -6,7 +6,7 @@ use crate::json::{round, Out};
 use crate::routes::{Query, Routes};
 use crate::ticbg::{blank_profile, clean, flagged, presence, Action, BlankProfile, Mode, Params};
 
-/// The parameters of a request (names of `docs/agenti/tic-fondo.md`); unknown values are `err.request.badValue`.
+/// The parameters of a request (names of `docs/agenti/tic-background.md`); unknown values are `err.request.badValue`.
 #[inline(never)]
 pub fn params_of(q: &Query, hr_file: bool) -> Result<Params> {
     let bad = |k: &str| Error::new("err.request.badValue").with("name", k);

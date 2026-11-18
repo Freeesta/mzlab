@@ -1,4 +1,4 @@
-//! Spectral study, E3 (chimeric spectra): today's numbers of the baseline arms, pinned (`docs/agenti/studio-spettri.md`, MISURA studio_e3).
+//! Spectral study, E3 (chimeric spectra): today's numbers of the baseline arms, pinned (`docs/agenti/study-spectra.md`, MISURA studio_e3).
 //! E3: (1 - eta) Q + eta I, eta 0.1-0.6, the interferent isobaric (0.02-0.5 Da away) or an isomer, absent from the library.
 //! A change of the engine or of the generator that moves a number updates the pin and the MISURA line together.
 

@@ -1,4 +1,5 @@
 use super::run;
+use mzlab_core::area_unit::{lr_auto_json_in, AreaUnit};
 use mzlab_core::peakq_lrauto::{lr_auto_integrate, lr_auto_json, LrAutoParams, Split};
 
 fn args(v: &[&str]) -> Vec<String> {
@@ -41,7 +42,7 @@ fn the_output_is_the_core_json_byte_for_byte() {
     assert_eq!(core.peaks.len(), 3);
     assert_eq!(
         String::from_utf8(o.stdout).unwrap(),
-        format!("{}\n", lr_auto_json(&rt, &core))
+        format!("{}\n", lr_auto_json_in(&rt, &core, AreaUnit::Seconds))
     );
     // the dialog names, in the units of the page (valley in %)
     let o = run(args(&[
@@ -75,9 +76,21 @@ fn the_output_is_the_core_json_byte_for_byte() {
         String::from_utf8(o.stdout).unwrap(),
         format!(
             "{}\n",
-            lr_auto_json(&rt, &lr_auto_integrate(&rt, &y, 4.0, 6.0, want))
+            lr_auto_json_in(
+                &rt,
+                &lr_auto_integrate(&rt, &y, 4.0, 6.0, want),
+                AreaUnit::Seconds
+            )
         )
     );
+    // the old unit stays selectable and is the old bytes
+    let o = run(args(&[p, "--set", "area_unit=min"]));
+    let core = lr_auto_integrate(&rt, &y, rt[0], rt[rt.len() - 1], LrAutoParams::default());
+    assert_eq!(
+        String::from_utf8(o.stdout).unwrap(),
+        format!("{}\n", lr_auto_json(&rt, &core))
+    );
+    assert_ne!(run(args(&[p, "--set", "area_unit=h"])).code, 0);
     let _ = std::fs::remove_file(&f);
 }
 
