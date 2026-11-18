@@ -340,9 +340,8 @@ pub fn open_only(fs: FileSet, limits: &Limits, only: Option<usize>) -> Result<Bo
     open_with(fs, limits, only, false)
 }
 
-/// Opens the pair for a listing (`readers::apri_listing`): the container and the `Idx` rows give the samples, no block head of the `.wiff.scan` is read and
-/// the sections the index lacks are not looked for; the scan count of a sample is the index's (`listing::counts`). An index or a chromatogram asked later
-/// reads the heads of that sample then, as after `open_only`.
+/// Opens the pair for a listing (`readers::apri_listing`): the container and the `Idx` rows give the samples, no block head is read and the sections the index lacks
+/// are not looked for (`listing::counts`). An index or a chromatogram asked later reads the heads of that sample then, as after `open_only`.
 pub fn open_listing(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     open_with(fs, limits, None, true)
 }
@@ -360,7 +359,8 @@ fn open_with(
     let scan_sha1 = sm.sha1.take().filter(|s| !s.is_empty()).map(Some);
     let mut scan = std::mem::replace(&mut sm.dati, Box::new(Vec::<u8>::new()));
     let membro = u16::try_from(si).unwrap_or(0);
-    let (mut parti, mut campioni, mut total, mut raw_names) = (Vec::new(), Vec::new(), 0u64, Vec::new());
+    let (mut parti, mut campioni, mut total) = (Vec::new(), Vec::new(), 0u64);
+    let mut raw_names = Vec::new();
     for (i, s) in samples(&ole).into_iter().enumerate() {
         let w = Wiff::open_or_refuse(&ole, &name, scan_len, s)?;
         total += w.records.len() as u64;
@@ -370,11 +370,7 @@ fn open_with(
         if !listing && only.is_none_or(|c| c == i) && part.w.readable().is_ok() {
             build(&mut part, &mut scan, scan_len, membro)?;
         }
-        let (scans, size) = if listing {
-            super::listing::counts(&part.w)
-        } else {
-            (part.scans.len(), 0)
-        };
+        let (scans, size) = super::listing::counts_of(listing, &part);
         raw_names.push((
             s,
             ole.read(&format!("{SAMPLES}Sample{s}/SampleDABE/DATA"))
@@ -384,7 +380,7 @@ fn open_with(
             id: s,
             nome: String::new(),
             scansioni: scans,
-            size: Some(size).filter(|_| listing),
+            size,
         });
         parti.push(part);
     }
@@ -400,7 +396,6 @@ fn open_with(
             &mut total,
         )?
     };
-    // a listing says what each sample is, a refused one with its reason, even when none of them opens
     if !listing {
         Wiff::all_refused(parti.iter().map(|p| &p.w))?;
     }

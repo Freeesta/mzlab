@@ -20,6 +20,16 @@ pub(super) fn counts(w: &Wiff) -> (usize, u64) {
     (w.records.iter().filter(|r| scan(r)).count(), size)
 }
 
+/// The scan count and the index bytes of a sample as `open_with` lists it: the index's for a listing, the built scans' (no size) otherwise.
+pub(super) fn counts_of(listing: bool, part: &super::reader::Part) -> (usize, Option<u64>) {
+    if listing {
+        let (n, size) = counts(&part.w);
+        (n, Some(size))
+    } else {
+        (part.scans.len(), None)
+    }
+}
+
 fn summary(w: &Wiff, method: Option<String>) -> Summary {
     let mut present = vec![false; w.experiments.len()];
     for r in &w.records {
