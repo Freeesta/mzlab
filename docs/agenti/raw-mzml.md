@@ -1,6 +1,6 @@
 # `.raw` → mzML conversion: bench, roofline, measured causes
 
-Measurement bench of the converter (`crates/mzlab-core/examples/raw_mzml_bench/`, launcher `tools/bench/raw_mzml.py`) and baseline numbers for the V1-V9 criteria (section "Acceptance criteria"). The bench changes no output byte: it reads with the real `Lettore` and writes with the real `Conversione`/`MzmlWriter`. Cumulative table of gains: `misure-velocita.md`; Thermo reader: `thermo-velocita.md`.
+Measurement bench of the converter (`crates/mzlab-core/examples/raw_mzml_bench/`, launcher `tools/bench/raw_mzml.py`) and baseline numbers for the V1-V9 criteria (section "Acceptance criteria"). The bench changes no output byte: it reads with the real `Lettore` and writes with the real `Conversione`/`MzmlWriter`. Cumulative table of gains: `measurements-speed.md`; Thermo reader: `thermo-velocita.md`.
 
 ## How to run
 - `python3 tools/bench/raw_mzml.py --file X.raw` (real file) or `--denso 2` (synthetic dense case of 2 GB, generated in `--tmp` and deleted); `--zlib-rs` redoes everything with the `banco-zlib-rs` feature; options after `--` go to the bench. It writes `.verifica/raw-mzml/<label>.<backend>.json` (fields: machine, git, rustc, kernel, `cli` profile, disk bandwidth measured with `dd`).

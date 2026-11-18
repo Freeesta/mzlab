@@ -1,6 +1,6 @@
 # Code cache of the scripts and the engine `.wasm` (site only)
 
-Site only: the desktop app serves `mzlab://` locally and has no service worker, so none of this applies there. Tool: `tests_e2e/misura_avvio_sw.py` (setup and scenarios in `misure-caricamento.md`, "Restarted service worker").
+Site only: the desktop app serves `mzlab://` locally and has no service worker, so none of this applies there. Tool: `tests_e2e/misura_avvio_sw.py` (setup and scenarios in `measurements-loading.md`, "Restarted service worker").
 
 ## S1 (main): code cache (Chromium trace; categories `v8,v8.wasm,disabled-by-default-v8.compile,devtools.timeline`; traced load = 2nd reload after the first visit; 5 runs, CPU ×1 | ×4)
 

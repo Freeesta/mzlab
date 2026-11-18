@@ -1,4 +1,4 @@
-//! The module `aperti` reads an mzML with MS-Numpress arrays (docs/agenti/lettori-aperti.md): files built here with the encoders of `mzlab_core::numpress`, hostile ones, and (with the
+//! The module `aperti` reads an mzML with MS-Numpress arrays (docs/agenti/readers-open.md): files built here with the encoders of `mzlab_core::numpress`, hostile ones, and (with the
 //! private data repository, `MZLAB_DATI`) the numpress files of OpenMS and pymzML. Without it the real-data tests are skipped.
 #![cfg(feature = "aperti")]
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts

@@ -1,7 +1,7 @@
 //! wasm-bindgen bridge of `mzlab_core::msngraph`: the `.mzidx` of an infusion and its mzML (both read through `read(offset, length)`) give the
 //! `msngrafo/1` of a request, with the same functions as `mzlab-cli msn-graph` (same bytes). A `.wasm` of its own, loaded by the worker of the
 //! engine on the first request of the graph; `strutture=<id>` (and `ppm_struttura`) adds the cleavages of the SMILES that explain a node; `interpreta=1` adds the interpretation of the losses. Memory: the index is read once for its SHA-256 and once to open it; the output is one JSON string,
-//! no offsets (`docs/agenti/memoria.md`). Errors are JSON `{"error_key", "params"}` strings.
+//! no offsets (`docs/agenti/memory.md`). Errors are JSON `{"error_key", "params"}` strings.
 use js_sys::{Function, Uint8Array};
 use mzlab_core::budget::{sha256_hex_at, MemBudget};
 use mzlab_core::error::Error;

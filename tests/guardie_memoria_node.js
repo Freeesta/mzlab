@@ -1,5 +1,5 @@
 // Peak of the linear memory of the .wasm after each phase, on the synthetic series of tools/feat_mirato.py (profile `piccolo`) and its .mzidx: the growth of the
-// WASM memory is deterministic for a given input, so it is a guard of the architecture, not a measure of speed (docs/agenti/memoria.md). Prints JSON { phase: bytes }.
+// WASM memory is deterministic for a given input, so it is a guard of the architecture, not a measure of speed (docs/agenti/memory.md). Prints JSON { phase: bytes }.
 // usage: node guardie_memoria_node.js <pkg feat> <pkg engine> <out dir> <file.mzidx>...
 const fs = require("fs");
 const path = require("path");

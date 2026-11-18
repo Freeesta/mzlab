@@ -1,6 +1,6 @@
 //! The memory detecting one file asks for, from the header of its index and a sampled histogram of its intensities, before anything is detected:
 //! what `features.detect` refuses with `error.memoryBudget` (phase `detect`) when it does not fit, on the page, in the app and in `flow run`.
-//! The coefficients come from a synthetic sweep (`docs/agenti/memoria.md`), the larger of the `.wasm` and the native peak, with a margin.
+//! The coefficients come from a synthetic sweep (`docs/agenti/memory.md`), the larger of the `.wasm` and the native peak, with a margin.
 
 use mzlab_core::budget::refusal;
 use mzlab_core::error::Result;

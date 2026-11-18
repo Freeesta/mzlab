@@ -1,5 +1,5 @@
 # Thermo `.raw`: activation and precursors
-How `vendor/opentfraw` and `crates/mzlab-core/src/rawreader/extra.rs` name the activation, what stays unknown, and which precursors a scan gives (filter, scan header, mzML). The rest of the reader is in `docs/agenti/lettori-modulo.md`.
+How `vendor/opentfraw` and `crates/mzlab-core/src/rawreader/extra.rs` name the activation, what stays unknown, and which precursors a scan gives (filter, scan header, mzML). The rest of the reader is in `docs/agenti/readers-module.md`.
 
 - Activation of a step: the reaction's own code (`Reaction::activation`, bit 0 set; a code the Thermo enumeration does not name is unknown); without one, the final step falls back on the preamble only for the codes seen in real files (`CONFIRMED_ACTIVATION_CODES`: 1 HCD, 4 CID or HCD on FTMS) and an earlier step stays unknown.
 - Unknown is written as `opentfraw.activation = unknown` (both mzML writers, scan header), an mzML `<activation>` without a dissociation term and a filter clause without `@<activation>`; `rawreader/extra.rs` maps CID to `MS:1000133` on every analyzer, as the writer of `opentfraw` does.

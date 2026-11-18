@@ -177,4 +177,4 @@ Full-screen map with the crosshair on. LR: a synthetic Full Scan of 1500 scans Ã
 Size: 0,9 KB gzip the CSS + 2,2 KB gzip the JS (3,1 KB in all, threshold 4 KB). Cold open on the dev server (median of 7, `loadEventEnd`): 461 ms with, 456 ms without (no regression). While opening/closing the left panel, the right one and as a sheet: 0 *long animation frame* (`e2e_transizioni` prints them); a single `fitWidth` and a single `draw` round per transition.
 
 ## Rust and module measurements
-`docs/agenti/misure-rust.md`: Rust flow without Pyodide, ion families, `api/origin`, map and points, composition, profile spectra, peak detectors, HR/DDA, feature detection, map gestures, reader modules, `desktop` profile, table and `.mzidx`, Dig LR, TP interpretation, `.wasm` interp.
+`docs/agenti/measurements-rust.md`: Rust flow without Pyodide, ion families, `api/origin`, map and points, composition, profile spectra, peak detectors, HR/DDA, feature detection, map gestures, reader modules, `desktop` profile, table and `.mzidx`, Dig LR, TP interpretation, `.wasm` interp.

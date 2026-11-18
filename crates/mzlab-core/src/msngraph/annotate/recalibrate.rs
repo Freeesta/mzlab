@@ -1,4 +1,4 @@
-//! Narrowing of the formula candidates of a graph (`docs/agenti/msn-grafo.md` §3): the even-electron preference and the removal of the systematic
+//! Narrowing of the formula candidates of a graph (`docs/agenti/msn-graph.md` §3): the even-electron preference and the removal of the systematic
 //! mass error. Called by `annota::annota` after the fixed point of the reduction.
 
 use super::{evidence, retain_mask, Cand, State};

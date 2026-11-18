@@ -1,5 +1,5 @@
 //! An mzML whose arrays are MS-Numpress (msconvert `--numpressLinear/--numpressPic/--numpressSlof/--numpressAll`), as a `Lettore`. The engine of the page refuses it
-//! (`err.file.numpress`); the module reads it and `readers_mzml::scrivi` writes it again as a plain mzML (zlib) in OPFS (rule R, docs/agenti/lettori-modulo.md).
+//! (`err.file.numpress`); the module reads it and `readers_mzml::scrivi` writes it again as a plain mzML (zlib) in OPFS (rule R, docs/agenti/readers-module.md).
 //! The index comes from one pass over the offsets (`mzlab_core::scantable`, the headers only); `scansione(c, k)` reads the bytes of spectrum `k` and gives them to `mzml::parse`,
 //! whose numpress decoding is on in this build (`mzlab_core::numpress`, feature `estesi`). Reference of the codecs: the MS-Numpress documentation; the code is written from it.
 

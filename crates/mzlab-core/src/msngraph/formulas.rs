@@ -1,4 +1,4 @@
-//! Formulas of the graph from the formula of the ion of the root given by the user (`docs/agenti/msn-grafo.md` §3): the ion as typed,
+//! Formulas of the graph from the formula of the ion of the root given by the user (`docs/agenti/msn-graph.md` §3): the ion as typed,
 //! the root node that matches it, then `annota` gives every fragment the sub-formulas of the root within its window.
 
 use super::candidates::elementi;

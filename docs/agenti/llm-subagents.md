@@ -46,7 +46,7 @@ Continuation of `llm.md` (section "Subagents and readings"): roles, `lettura/1`,
 ## External options (none active)
 - Copilot on PRs, mzLab MCP server, sandbox for generated JS, evaluations in the cloud: none is turned on from a chat. Before any use, a card of ≤ 10 lines goes to the Coordinator (task, data that leaves and to whom, account and cost, secrets, files touched, how to turn it off, duration); without an answer the option stays off.
 - MCP server: results would go to the client's provider without the proxy caps or the L0-L2 policy, and file names must be hidden by the server itself; route in use: `mzlab-cli` from the shell (`per-agenti.md`).
-- JS sandbox: only in the HR world and only if frequent chart questions remain without a named view; never in place of a calculation with parity (`llm-scelte.md`).
+- JS sandbox: only in the HR world and only if frequent chart questions remain without a named view; never in place of a calculation with parity (`llm-choices.md`).
 - Cloud evaluations: only on synthetic data, key as an environment secret; comparisons with the chemist and real data stay local.
 
 ## Reader runner on the page (`mzlab/web/llm/llm-agente.js`)

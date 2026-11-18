@@ -1,5 +1,5 @@
 // @ts-check
-// A .mzML.gz or .mzXML.gz picked on the site (docs/agenti/lettori-aperti.md, «gzip»): the worker of the engine inflates it piece by piece into OPFS (`rust-carica.js` putGz /
+// A .mzML.gz or .mzXML.gz picked on the site (docs/agenti/readers-open.md, «gzip»): the worker of the engine inflates it piece by piece into OPFS (`rust-carica.js` putGz /
 // gunzipTo), never whole in memory. An mzML becomes a plain upload (a stand-in File named without .gz); an mzXML becomes a temporary .mzXML of conv/ that the readers module reads.
 // Without the stream (no sync handles of OPFS, `?gz=memoria`) a .mzML.gz takes the older path, inflated in memory by the module `aperti`, with a notice. Loaded by shell.js.
 

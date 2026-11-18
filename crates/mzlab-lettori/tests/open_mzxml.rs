@@ -1,4 +1,4 @@
-//! The module `aperti` reads an mzXML (docs/agenti/lettori-aperti.md): files built here in every form (32 and 64 bit, zlib or not, with and without `<index>`, flat and nested), SRM scans,
+//! The module `aperti` reads an mzXML (docs/agenti/readers-open.md): files built here in every form (32 and 64 bit, zlib or not, with and without `<index>`, flat and nested), SRM scans,
 //! the `metodo/1` document and the header of the mzML we write. The real-data parity is in `open_mzxml_hostile.rs` (it needs `MZLAB_DATI`).
 #![cfg(feature = "aperti")]
 

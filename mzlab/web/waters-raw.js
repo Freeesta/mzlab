@@ -1,7 +1,7 @@
 // @ts-strict
 "use strict";
 // Waters MassLynx .raw folders (docs/agenti/waters.md): a folder loaded with «Load a folder» (cartella-carica.js) that is called *.raw and holds _FUNC001.DAT is one run. No engine reads it, so it goes
-// straight to the readers module `waters` (rule R of shell.js, docs/agenti/lettori-modulo.md): a File that stands for it in the list until the module has written its mzML. A Thermo .raw is a FILE and never matches.
+// straight to the readers module `waters` (rule R of shell.js, docs/agenti/readers-module.md): a File that stands for it in the list until the module has written its mzML. A Thermo .raw is a FILE and never matches.
 // The pure parts (locate, group, mzmlName) have no DOM and are tested in node (tests/test_waters_raw.py).
 
 const WatersRaw = (() => {

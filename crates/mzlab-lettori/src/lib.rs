@@ -1,4 +1,4 @@
-//! The readers of the vendor files, one module `.wasm` per family of formats (docs/agenti/lettori-modulo.md): the engine (`mzlab-wasm`) carries none of this crate.
+//! The readers of the vendor files, one module `.wasm` per family of formats (docs/agenti/readers-module.md): the engine (`mzlab-wasm`) carries none of this crate.
 //! The readers of a family sit in `src/<family>/` behind the Cargo feature of the same name and implement `mzlab_core::readers::Lettore`; variants of the readers that live
 //! in `mzlab-core` sit behind its `estesi` feature, which this crate turns on and the engine leaves off.
 use mzlab_core::error::{Error, Result};

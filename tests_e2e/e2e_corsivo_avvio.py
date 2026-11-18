@@ -3,7 +3,7 @@ the service worker, then the one cross-origin-isolation reload) and every frame 
 «+ RT-m/z map» must be italic in the first painted frame and never change (it was upright until shell.js marked it, ~0.3-0.5 s later, on
 each load: upright, italic, upright, italic), the «MS2» of the demo button keeps its superscript from the first apply on, no node is
 rewritten with the same text, and nothing shifts (CLS 0).
-Persistent Chromium profile (the service worker and the isolation reload are real). Rule: docs/agenti/lingue.md «Marked-up texts»."""
+Persistent Chromium profile (the service worker and the isolation reload are real). Rule: docs/agenti/languages.md «Marked-up texts»."""
 # covers: mzlab/web/i18n.js, mzlab/web/reset.js
 import sys, os, json, tempfile, time; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pathlib import Path

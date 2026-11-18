@@ -275,7 +275,7 @@ pub trait Reader {
     fn dad_data(&mut self, _c: usize) -> Result<Option<crate::wiff::dad::DadData>> {
         Ok(None)
     }
-    /// The `metodo/1` document of the sample (`docs/agenti/metodo.md`).
+    /// The `metodo/1` document of the sample (`docs/agenti/method.md`).
     fn method(&mut self, c: usize) -> Result<String>;
     /// The header of the mzML of sample `c` (instrument, sources, hashes); `None`: `readers_mzml::scrivi` makes a plain one from the format.
     fn mzml_header(&mut self, _c: usize) -> Result<Option<Header>> {
@@ -304,7 +304,7 @@ pub trait Reader {
     fn losses(&mut self, c: usize) -> Result<Losses> {
         outcome::default_losses(self, c)
     }
-    /// True when the engine's reader would not read sample `c` as the file is (another instrument model, a scan type it does not know): the readers module is then the one to open it (`docs/agenti/lettori-modulo.md`).
+    /// True when the engine's reader would not read sample `c` as the file is (another instrument model, a scan type it does not know): the readers module is then the one to open it (`docs/agenti/readers-module.md`).
     #[cfg(feature = "sciex")]
     fn variant(&mut self, _c: usize) -> bool {
         false

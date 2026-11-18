@@ -6,7 +6,7 @@ edition.workspace = true
 license.workspace = true
 
 [features]
-# one feature per family (docs/agenti/lettori-modulo.md); `tutte` is for the desktop app and for cargo test
+# one feature per family (docs/agenti/readers-module.md); `tutte` is for the desktop app and for cargo test
 aperti = ["mzlab-core/precursori"]
 andi = []
 thermo = ["mzlab-core/thermo", "mzlab-core/precursori"]

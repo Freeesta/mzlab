@@ -1,7 +1,7 @@
 #![cfg(feature = "thermo")]
 //! The Thermo reader on files that are not as the format says, built here (`comune/thermo.rs`, invented numbers): cut files open up to the last whole scan,
 //! a version no real file has verified is refused with its number, an unreadable stream does not stop the scans, and what cannot be opened says why.
-//! Not checked against RawFileReader: these are constructed files (docs/agenti/lettori-modulo.md).
+//! Not checked against RawFileReader: these are constructed files (docs/agenti/readers-module.md).
 mod common;
 
 use common::thermo::{Layout, Raw};

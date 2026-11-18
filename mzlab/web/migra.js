@@ -1,5 +1,5 @@
 // @ts-strict
-// Migrations of the archive (docs/agenti/memoria.md): numbered steps, each idempotent and repeatable (an interrupted step is done again from the start),
+// Migrations of the archive (docs/agenti/memory.md): numbered steps, each idempotent and repeatable (an interrupted step is done again from the start),
 // run once at start inside an exclusive Web Lock so that two tabs never migrate together, before the engine and the pools open any file.
 // `kv.schema` (IndexedDB "qqq_lab") says which step the data are at; SCHEMA (qqq-db.js) is where they must be.
 import { SCHEMA } from "./qqq-db.js";

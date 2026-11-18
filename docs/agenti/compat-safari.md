@@ -51,7 +51,7 @@
 - Finger tooltip (`tooltip.js`): a 0.6 s press on a control with `title` shows the `#qtip`; the click the finger sends on lift (iOS and Chromium, also after a long press) is absorbed for 700 ms after the lift, and the next tap removes the tooltip. Test: `e2e_safari_ipad` (in WebKit synthetic events, without CDP).
 
 ## Memory on WebKit (Safari, iPad, iPhone)
-Safari closes a tab long before the device runs out of RAM (iPad about 1-1.5 GB, iPhone less) and does not expose `navigator.deviceMemory`. Here: which budget the site uses on WebKit, which large paths end in the calm refusal `error.memoryBudget` (`budget::refusal`: phase, estimate, budget in MB) and which test proves it with a fake small budget. General contract: `docs/agenti/memoria.md`.
+Safari closes a tab long before the device runs out of RAM (iPad about 1-1.5 GB, iPhone less) and does not expose `navigator.deviceMemory`. Here: which budget the site uses on WebKit, which large paths end in the calm refusal `error.memoryBudget` (`budget::refusal`: phase, estimate, budget in MB) and which test proves it with a fake small budget. General contract: `docs/agenti/memory.md`.
 
 ### Budget on WebKit
 - **Device estimate**: `rust-budget.js` recognises iOS/iPadOS (`iPad|iPhone|iPod`, or `MacIntel` with `maxTouchPoints > 1`) and treats it as a small device: `budget_auto` gives 192 MB safe and 192 high (`smallDevice`). Safari on Mac (no `deviceMemory`) starts from 512/2048 MB, lowered by the growth probe (`rust-sonda.js`, `probe_mb`).

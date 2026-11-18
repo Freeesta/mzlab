@@ -1,4 +1,4 @@
-"""Guards of memory (docs/agenti/memoria.md): the peak of the linear memory of the .wasm after each phase, on the synthetic series `piccolo`, must stay under the
+"""Guards of memory (docs/agenti/memory.md): the peak of the linear memory of the .wasm after each phase, on the synthetic series `piccolo`, must stay under the
 recorded value + 10 % (tools/guardie_memoria.json). The growth of WASM memory is deterministic for a given input: it is a guard of the architecture, not a measure of
 speed. To record new values on purpose: MZLAB_UPDATE_GUARDS=1 pytest tests/test_guardie_memoria.py (and say why in the PR). Skipped without cargo, the wasm32 target,
 wasm-bindgen, node or numpy. The static rules (exported WASM functions that return a whole Vec<u8>, IndexedDB) are in tools/controlla.py and tested here."""

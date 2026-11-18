@@ -1,5 +1,5 @@
 """Probe of the boot path a returning user meets and misura_primo_paint.py does not: a service worker (SW) the browser stopped, a network with latency,
-the V8 code cache, the order of the boot steps, and the isolation reload. Measures, never asserts (docs/agenti/misure-caricamento.md).
+the V8 code cache, the order of the boot steps, and the isolation reload. Measures, never asserts (docs/agenti/measurements-loading.md).
 
     python3 tests_e2e/misura_avvio_sw.py --mirror DIR [--runs 5] [--rtt 0,40,150] [--cpu 1,4] [--scenari warm,warm-restarted,cold,trace-warm,trace-restarted]
                                          [--out run.json]            # local mirror of --url with GitHub-Pages headers (filled from --url once)

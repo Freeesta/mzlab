@@ -1,7 +1,7 @@
 //! The memory a step asks for when it decodes a whole mzML (`mzml::read`), from a pass over its XML tags before anything is decoded: spectra and points
 //! (`defaultArrayLength`), 64-bit intensities and the arrays beyond m/z and intensity. Steps that read whole files (`spectra.ms2`, `formula.ms1`,
 //! `chrom.transitions`, `chrom.uv_peaks`; `spectra.chimeric` by `text_bytes`) refuse with `error.memoryBudget` (phase `read`) when it does not fit, on
-//! the page, in the app and in `flow run`. Coefficients: `docs/agenti/memoria.md`.
+//! the page, in the app and in `flow run`. Coefficients: `docs/agenti/memory.md`.
 
 use crate::budget::refusal;
 use crate::error::Result;
