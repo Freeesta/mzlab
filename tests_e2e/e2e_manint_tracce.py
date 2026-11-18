@@ -1,5 +1,6 @@
 """The card «Manual integrations» lists the windows drawn on an XIC too (engine route api/mantraces, manint::table_text), and its numbers are those of the table
-the toolbar dialog shows: area, height, apex, edges, below-the-line and correction of the same window, on an XIC and on the TIC. Step 1 of one integration table: the dialog stays until the card has everything.
+the toolbar dialog shows: area, height, apex, edges, below-the-line and correction of the same window, on an XIC and on the TIC; with the optional columns on (S/N of a noise zone, w1/2,
+plates, tailing, quality) the engine's figures are those the dialog computes. Steps 1 and 2 of one integration table: the dialog stays until the card has everything.
 Needs the site and the .wasm (python tools/prepara_sito.py)."""
 # covers: mzlab/web/integrazioni-tracce, mzlab/web/integrazioni-manuali, mzlab/web/rust-bridge
 import sys, os
@@ -54,6 +55,31 @@ try:
                 assert abs(r["below"] - d["below"]) <= 1e-4 * max(abs(d["below"]), 1) and r["corr"] == d["corr"], (d, r)
             assert len({d["panel"] for d in dlg}) >= 2, dlg      # the XIC and the TIC are both compared
         step("area, height and apex of the card are those of the dialog table", parity)
+        def figures():
+            # a noise zone for each trace (the first tenth of it), the three optional groups on; then the card asks the engine again
+            pg.evaluate("""(() => { for (const p of E.panels) { if (!p.ints || !p.ints.length || ESP.mrm(p)) continue;
+              const it = p.ints[0], s = p._a.sr.find(q => q.key === it.key), n = Math.floor(s.x.length / 10); setNoiseZone(p, it, [s.x[0], s.x[n]]); }
+              COMANDI.fai('peaks.settings', COMANDI.GLOBALE, () => { INTOPT.sn = INTOPT.par = INTOPT.q = true; }); E.panels.forEach(p => draw(p)); })()""")
+            pg.wait_for_function("MANINT.rows(MANTR.csv())[0].includes('gaussian') && MANINT.rows(MANTR.csv())[0].includes('sn_zone')", timeout=60000)
+            heads = pg.locator("#manint-x th").all_inner_texts()
+            for h in ["S/N (noise zone)", "w½ (min)", "N (plates)", "Tailing (USP, 5%)", "Gaussian similarity", "Asymmetry 10%", "Noise score"]: assert h in heads, (h, heads)
+            dlg = pg.evaluate("""(async () => { const rs = allInts().map(r => ({...r, ...intExtra(r)})); const out = [];
+              for (const r of rs) { const q = await qualityOf(r); out.push({panel: r.panel, file: r.file, a: Math.min(r.a, r.b), sn: r.sn, w50: r.w50, N: r.N, T: r.T, qg: q && q.gaussian, qa: q && q.asymmetry, qn: q && q.noise}); } return out; })()""")
+            rows = pg.evaluate("""(() => { const [h, ...b] = MANINT.rows(MANTR.csv()); const c = n => h.indexOf(n); return b.map(r => ({panel: r[c('panel')], sample: r[c('sample')], a: +r[c('start_min')],
+              sn: r[c('sn_zone')], w50: r[c('w_half_min')], N: r[c('plates')], T: r[c('tailing')], qg: r[c('gaussian')], qa: r[c('asymmetry')], qn: r[c('noise_score')]})); })()""")
+            def same(x, y, tol, name, d):
+                if x is None or x != x: assert y == "", (name, d, y); return
+                assert y != "" and abs(float(y) - x) <= tol, (name, x, y, d)
+            for d in dlg:
+                r = next(r for r in rows if r["panel"] == d["panel"] and r["sample"] in d["file"] and abs(r["a"] - d["a"]) < 6e-4)
+                same(d["sn"], r["sn"], 0.051, "S/N", d); same(d["w50"], r["w50"], 6e-4, "w1/2", d); same(d["N"], r["N"], 0.51, "plates", d); same(d["T"], r["T"], 0.0051, "tailing", d)
+                same(d["qg"], r["qg"], 6e-4, "gaussian", d); same(d["qa"], r["qa"], 0.0051, "asymmetry", d); same(d["qn"], r["qn"], 0.0051, "noise score", d)
+            assert any(r["sn"] != "" for r in rows) and any(r["N"] != "" for r in rows), rows
+        step("with the optional columns on, S/N, w1/2, plates, tailing and quality are the dialog's figures", figures)
+        def excel():
+            with pg.expect_download() as dl: pg.click("#manint [data-xlsx]")
+            assert dl.value.suggested_filename.endswith(".xlsx"), dl.value.suggested_filename
+        step("the card exports its tables to Excel", excel)
         bad = [e for e in errs if e[0] in ("pageerror", "console.error")]
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(bad[:3])) if bad else None)
 finally:

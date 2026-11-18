@@ -53,6 +53,9 @@ struct Trace {
 struct Row {
     tr: usize,
     below: Option<f64>,
+    /// The baseline as `[t0, y0, t1, y1]` (`None`: `edges`) and the noise zone the window names, for the optional figure columns.
+    bl: Option<[f64; 4]>,
+    zone: Option<[f64; 2]>,
     file: usize,
     a: f64,
     b: f64,
@@ -338,6 +341,7 @@ fn measure(
 ) -> Result<Vec<(usize, Row)>> {
     let (file, tr, a, b) = (it.file, &samples[it.file].1[it.tr], it.a, it.b);
     let base = baseline_of(w, it.shift)?;
+    let (bl, zone) = fig::inputs(base, w);
     let ch = keys
         .iter()
         .position(|(k, _, _)| *k == key_of(tr))
@@ -346,6 +350,8 @@ fn measure(
         |a: f64, b: f64, apex: f64, area: f64, height: f64, pv: Option<f64>, drop: bool| Row {
             tr: it.tr,
             below: None,
+            bl,
+            zone,
             file,
             a,
             b,
@@ -429,8 +435,9 @@ pub fn valleys_text(files: &str, window: &str, depth: f64) -> Result<String> {
 /// that names no channel or no times, `err.manint.baseline` for an unknown baseline or a `line` without its four numbers.
 pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
     let (samples, keys) = samples_and_keys(files)?;
-    let list = parse(windows.as_bytes())?;
-    let items = follow::items_of(&list, &samples)?;
+    let doc = parse(windows.as_bytes())?;
+    let (list, cols) = fig::split(&doc)?;
+    let items = follow::items_of(list, &samples)?;
     let mut rows: Vec<(usize, Row)> = Vec::new();
     let mut labels: Vec<String> = Vec::new();
     // the correction note of each window, by the same place as its name
@@ -455,13 +462,18 @@ pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
             .then(x.1.file.cmp(&y.1.file))
             .then(x.1.a.total_cmp(&y.1.a))
     });
-    Ok(csv_text(&rows, &labels, &corrs, &keys, &samples, sums))
+    Ok(csv_text(
+        &rows, &labels, &corrs, &keys, &samples, sums, cols,
+    ))
 }
 
 #[path = "manint_csv.rs"]
 mod csv;
 use csv::csv_text;
 pub use csv::EXT_HEAD;
+#[path = "manint_fig.rs"]
+mod fig;
+use fig::Cols;
 #[path = "manint_follow.rs"]
 mod follow;
 pub use follow::follow_text;

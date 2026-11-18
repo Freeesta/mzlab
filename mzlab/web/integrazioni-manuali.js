@@ -9,9 +9,18 @@ const t = (/** @type {string} */ k, /** @type {Record<string, any>} */ p = {}) =
 const HEADS = () => /** @type {Record<string, string>} */ ({ channel: t("canali.manint.h.channel"), sample: t("canali.manint.h.sample"), time_min: t("canali.manint.h.time"),
   start_min: t("canali.manint.h.start"), end_min: t("canali.manint.h.end"), apex_rt_min: t("canali.manint.h.apex"), area: t("canali.manint.h.area"),
   height: t("canali.manint.h.height"), snr: t("canali.manint.h.snr"), baseline: t("canali.manint.h.base"), overlap: t("canali.manint.h.overlap"),
-  pv: t("canali.manint.h.pv"), label: t("canali.manint.h.label"), origin: t("canali.manint.h.origin") });
+  pv: t("canali.manint.h.pv"), label: t("canali.manint.h.label"), origin: t("canali.manint.h.origin"),
+  sn_zone: t("canali.manint.h.snz"), w_half_min: t("canali.manint.h.w50"), plates: t("int.tbl.plates"), tailing: t("int.tbl.tail"),
+  gaussian: t("int.tbl.gauss"), asymmetry: t("int.tbl.asym"), noise_score: t("int.tbl.nscore") });
 /** The tooltips of the columns of a split window. */
-const TIPS = () => /** @type {Record<string, string>} */ ({ overlap: t("canali.manint.h.overlap.tip"), pv: t("canali.manint.h.pv.tip"), label: t("canali.manint.nm.tip") });
+const TIPS = () => /** @type {Record<string, string>} */ ({ overlap: t("canali.manint.h.overlap.tip"), pv: t("canali.manint.h.pv.tip"), label: t("canali.manint.nm.tip"),
+  area: t("canali.manint.h.area.tip"), below: t("canali.manint.h.below.tip"), sn_zone: t("int.tbl.sn.title"), gaussian: t("canali.manint.h.gauss.tip"), asymmetry: t("canali.manint.h.asym.tip"), noise_score: t("canali.manint.h.nscore.tip") });
+/** The optional column groups the user switched on (INTOPT of picchi.js: the same switches as the dialog's, one undoable setting), as the engine names them. */
+const optCols = () => typeof INTOPT === "undefined" ? [] : [INTOPT.sn && "sn", INTOPT.par && "fig", INTOPT.q && "quality"].filter(Boolean);
+/** The windows document the engine reads: the windows alone, or with the optional columns asked for. @param {string} w */
+const withCols = w => optCols().length ? `{"windows":${w},"columns":${JSON.stringify(optCols())}}` : w;
+/** The stretch a window's noise is measured on (the user's pick, picchi.js `noiseZone`), as the engine's `noise` field. @param {any} p @param {any} it */
+const noiseOf = (p, it) => { const z = typeof noiseZone === "function" ? noiseZone(p, it) : null; return z ? { noise: [Math.min(z[0], z[1]), Math.max(z[0], z[1])] } : {}; };
 /** How a row came to be (manint.rs, column `origin`), as shown. */
 const ORIGINS = () => /** @type {Record<string, string>} */ ({ manual: t("canali.manint.org.manual"), applied: t("canali.manint.org.applied"), shifted: t("canali.manint.org.shifted"), no_peak: t("canali.manint.org.nopeak"), auto: t("canali.manint.org.auto"), unmatched: t("canali.manint.org.unmatched") });
 const BASES = () => /** @type {Record<string, string>} */ ({ zero: t("int.base.zero"), edges: t("int.base.edges"), line: t("int.base.line") });
@@ -80,10 +89,10 @@ async function records() {
 }
 
 /** The window of a record as `api/manint` reads it: a name only when the user gave one, the drop lines of a split one. @param {any} it @param {number} file @param {number} tr */
-const windowOf = (it, file, tr, ks, follow) => ({ file, tr, a: Math.min(it.a, it.b), b: Math.max(it.a, it.b), ...baseOf(it), ...(it.nm ? { label: it.nm } : {}), ...(it.splits && it.splits.length ? { splits: it.splits } : {}),
+const windowOf = (p, it, file, tr, ks, follow) => ({ file, tr, a: Math.min(it.a, it.b), b: Math.max(it.a, it.b), ...baseOf(it), ...noiseOf(p, it), ...(it.nm ? { label: it.nm } : {}), ...(it.splits && it.splits.length ? { splits: it.splits } : {}),
   ...(it.org ? { origin: it.org, grp: it.grp } : {}), ...(follow ? { follow: true } : {}), ...(follow && it.fn ? { names: Object.fromEntries(Object.entries(it.fn).map(([key, n]) => [ks.indexOf(+String(key).split("|")[1]), n]).filter(([i]) => i >= 0)) } : {}) });
 /** The windows JSON of the records (the followers are the engine's: only the windows drawn), files numbered in the order of `ks`. @param {Rec[]} recs @param {number[]} ks */
-const windowsOf = (recs, ks) => JSON.stringify(recs.filter(r => !r.fol).map(r => windowOf(r.it, ks.indexOf(r.k), r.tr, ks, !!r.src)));
+const windowsOf = (recs, ks) => JSON.stringify(recs.filter(r => !r.fol).map(r => windowOf(r.p, r.it, ks.indexOf(r.k), r.tr, ks, !!r.src)));
 
 /** The record of a row: same sample and channel, the row inside its edges (the engine writes the edges at 0.001 min; a part of a split window lies
  * between them). @param {string[]} row @param {string[]} head */
@@ -104,7 +113,9 @@ const KEY = ["apex_rt_min", "area"];
 /** The colour of a sample as the Files list and the chart draw it (`f.color`), by the sample name the engine writes; "" when no file has that name. @param {string} name */
 const colorOfSample = name => { const f = (typeof E !== "undefined" ? E.files : []).find((/** @type {any} */ x) => x && !x.gone && sampleOf(x.file || "") === name); return f && f.color ? String(f.color) : ""; };
 /** A cell: its value as shown; apex, area and height are buttons that copy the CSV value (full precision); the name is an input. Where the engine found no peak (`np`) the area and height of the unmoved window are not a result: «–», dimmed. @param {string} v @param {string} col @param {number} i @param {boolean} [np] */
-const cell = (v, col, i, np = false) => col === "sample" && colorOfSample(v)
+const cell = (v, col, i, np = false) => col === "sn_zone" && v === ""
+  ? h`<button type="button" class="manint-nz" data-nz="${i}" title="${t("int.tbl.pickNoise.title")}">${t("int.tbl.pickNoise")}</button>`
+  : col === "sample" && colorOfSample(v)
   ? h`<span class="manint-sw" aria-hidden="true" style="background:${colorOfSample(v)}"></span>${v}`
   : np && (col === "area" || col === "height")
   ? h`<span class="manint-np" title="${t("canali.manint.nopeak.tip")}">–</span>`
@@ -136,6 +147,40 @@ function rename(rec, v, only = false) {
   G.draw(p); G.uiSave(); return true;
 }
 
+/** The switches of the optional columns (S/N, chromatographic parameters, quality): the dialog's INTOPT, one undoable setting. */
+const optsHtml = () => typeof INTOPT === "undefined" ? "" : h`<span class="manint-opt" role="group" aria-label="${t("canali.manint.opt")}">${raw([["sn", "S/N", "int.tbl.sn.title"], ["par", t("int.tbl.par"), "int.tbl.par.title"], ["q", t("int.tbl.q"), "int.tbl.q.title"]]
+  .map(([k, l, tip]) => h`<label title="${t(tip)}"><input type="checkbox" data-opt="${k}"${raw(INTOPT[k] ? " checked" : "")}> ${l}</label>`).join(""))}</span>`;
+/** The role of a sample's file (sample, blank, standard...) as the sheets of the Excel file write it. @param {string} name */
+const roleOf = name => { const f = (typeof E !== "undefined" ? E.files : []).find((/** @type {any} */ x) => x && !x.gone && sampleOf(x.file || "") === name), k = f ? CAMPIONI.kindOf(f) : "sample";
+  return t(`export.int.role.${k === "calibration" ? "std" : ["sample", "blank", "dark", "infusion", "std", "qc"].includes(k) ? k : "sample"}`); };
+const TEXT_COLS = ["channel", "sample", "label", "baseline", "origin", "overlap", "panel", "correction", "conc_unit", "area_unit"];
+/** One sheet of the Excel file from a table of the engine: its header as shown, the numbers as numbers, the role of the file last. @param {string} text @param {string} name @param {Record<string, string>} labels */
+function sheetOf(text, name, labels) {
+  const all = rows(text), head = all[0] || [], iS = col(head, "sample"), iA = col(head, "start_min"), body = all.slice(1).filter(r => r[iS] !== "sum" || r[iA] !== "");
+  return { name, head: [...head.map(c => labels[c] || HEADS()[c] || c), t("export.int.role")],
+    rows: body.map(r => [...r.map((v, i) => v !== "" && !TEXT_COLS.includes(head[i]) && Number.isFinite(+v) ? +v : v), roleOf(r[iS])]), widths: [...head.map(c => TEXT_COLS.includes(c) ? 20 : 14), 12] };
+}
+/** The Excel file of the card: one sheet per table (the files' transitions, the traces the page makes), the engine's numbers. */
+function xlsx() {
+  const X = G.MANTR, sheets = [];
+  if (st.csv) sheets.push(sheetOf(st.csv, t("int.xlsx.sheet"), {}));
+  if (X && X.count()) sheets.push(sheetOf(X.csv(), sheets.length ? t("canali.manint.xlsx.traces") : t("int.xlsx.sheet"), X.labels()));
+  if (sheets.length) G.dlx(t("int.xlsx.file"), sheets, { table: "integration" });
+}
+/** The switches: each one is an undoable setting (the same command as the dialog's), then the table is asked again with the columns. @param {HTMLElement} el */
+function wireOpts(el) {
+  el.querySelectorAll("input[data-opt]").forEach(i => i.addEventListener("change", () => {
+    const k = /** @type {HTMLInputElement} */ (i).dataset.opt || "";
+    G.COMANDI.fai("peaks.settings", G.COMANDI.GLOBALE, () => { INTOPT[k] = /** @type {HTMLInputElement} */ (i).checked; }); st.sig = ""; soon();
+  }));
+  el.querySelectorAll("button[data-nz]").forEach(b => b.addEventListener("click", e => {
+    e.stopPropagation();
+    const rec = recOf(rowsOf()[Number(/** @type {HTMLElement} */ (b).dataset.nz)], rows(st.csv)[0] || []); if (!rec) return;
+    rec.p._pickNoise = rec.it; G.reveal(rec.p); G.stepMsg(rec.p, t("int.pickNoise.msg"), true);
+  }));
+}
+const rowsOf = () => { const all = rows(st.csv), head = all[0] || [], iS = col(head, "sample"), iA = col(head, "start_min"); return all.slice(1).filter(r => r[iS] !== "sum" || r[iA] !== ""); };
+
 function draw() {
   const el = card(); if (!el) return;
   const all = rows(st.csv), head = all[0] || [], iS = col(head, "sample"), iA = col(head, "start_min"), iO = col(head, "origin"), body = all.slice(1).filter(r => r[iS] !== "sum" || r[iA] !== "");
@@ -153,7 +198,7 @@ function draw() {
     return h`<tr data-org="${r[iO]}"${raw(rec ? h` class="manint-go" data-go="${i}" tabindex="0" aria-label="${t("canali.manint.show.aria", who)}"` : "")}><th scope="row">${chShown(r[cols[0]])}</th>${raw(tds)}<td>${raw(act)}</td></tr>`;
   }).join("");
   el.innerHTML = h`<div class="manint-head"><h3><button type="button" class="manint-tg" id="manint-h" aria-expanded="${open ? "true" : "false"}" aria-controls="manint-b" aria-describedby="manint-d" title="${t("canali.manint.note")}"><svg class="manint-chev" width="12" height="12" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true" focusable="false"><path d="M1.5 3.5h7L5 7.5z"/></svg>${t("canali.manint.title", { n: total })}</button></h3>
-<button type="button" class="manint-ic" data-dl aria-label="${t("canali.manint.csv")}" title="${t("canali.manint.csv")}">${raw(ICON.dl)}</button><button type="button" class="manint-ic" data-copy aria-label="${t("canali.manint.copy")}" title="${t("canali.manint.copy")}">${raw(ICON.copy)}</button><span id="manint-d" class="sr-only">${t("canali.manint.note")}</span><span id="manint-live" class="sr-only" role="status" aria-live="polite"></span></div>
+<button type="button" class="manint-ic" data-dl aria-label="${t("canali.manint.csv")}" title="${t("canali.manint.csv")}">${raw(ICON.dl)}</button><button type="button" class="manint-ic" data-copy aria-label="${t("canali.manint.copy")}" title="${t("canali.manint.copy")}">${raw(ICON.copy)}</button><button type="button" class="manint-ic manint-xl" data-xlsx aria-label="${t("canali.manint.xlsx")}" title="${t("canali.manint.xlsx")}">${raw(ICON.dl)}<span aria-hidden="true">xlsx</span></button>${raw(optsHtml())}<span id="manint-d" class="sr-only">${t("canali.manint.note")}</span><span id="manint-live" class="sr-only" role="status" aria-live="polite"></span></div>
 <div id="manint-b" class="manint-wrap" tabindex="0" role="region" aria-labelledby="manint-h" aria-describedby="manint-d"${raw(open ? "" : " hidden")}>${raw(body.length ? h`<table class="qq-tab">
 <thead><tr>${raw(ths)}<th scope="col"><span class="sr-only">${t("canali.manint.h.act")}</span></th></tr></thead><tbody>${raw(trs)}</tbody></table>` : "")}${raw(X ? X.html() : "")}</div>${raw(st.log.length && body.some(r => r[iO] === "auto" || r[iO] === "unmatched") ? h`<details class="manint-log"><summary>${t("canali.manint.log.h")}</summary><ul>${raw(st.log.map(l => h`<li>${l}</li>`).join(""))}</ul></details>` : "")}`;
   const ws = document.getElementById("v-workspace");
@@ -165,6 +210,8 @@ function draw() {
   if (lv && st.say) { lv.textContent = st.say; st.say = ""; }
   const tg = /** @type {HTMLElement} */ (el.querySelector(".manint-tg")), bx = /** @type {HTMLElement} */ (el.querySelector("#manint-b"));
   tg.addEventListener("click", () => { const v = bx.hidden; bx.hidden = !v; tg.setAttribute("aria-expanded", String(v)); setOpen(v); });
+  wireOpts(el);
+  el.querySelector("[data-xlsx]")?.addEventListener("click", xlsx);
   el.querySelector("[data-dl]")?.addEventListener("click", () => G.dl("manual-integrations.csv", st.csv, "text/csv", { table: "manint" }));
   el.querySelector("[data-copy]")?.addEventListener("click", e => copy(all, /** @type {HTMLElement} */ (e.currentTarget)));
   /** A row shows its integration on the chart (click, Enter or Space); its X deletes it. @param {Element} b */
@@ -211,7 +258,7 @@ async function ask() {
   const n = ++st.busy;
   if (!st.recs.length) { st.csv = ""; return true; }
   try {
-    const r = await fetch(`api/manint?k=${st.ks.join(",")}&sums=0&tm=${encodeURIComponent(st.times)}&w=${encodeURIComponent(st.windows)}`);
+    const r = await fetch(`api/manint?k=${st.ks.join(",")}&sums=0&tm=${encodeURIComponent(st.times)}&w=${encodeURIComponent(withCols(st.windows))}`);
     const text = r.ok ? await r.text() : "";
     if (n === st.busy) st.csv = text;
     return r.ok;
@@ -223,7 +270,7 @@ async function sync() {
   if (!G.MANTR && E.panels.some(p => p && p.ints && p.ints.length && !ESP.mrm(p))) await carica("m:integrazioni-tracce.js");
   const xch = G.MANTR ? await G.MANTR.sync() : false;
   const recs = await records(), ks = [...new Set(recs.map(r => r.k))].sort((a, b) => a - b), windows = windowsOf(recs, ks);
-  const times = JSON.stringify(ks.map(k => E.files[k].time ?? null)), colors = JSON.stringify(ks.map(k => E.files[k].color || "")), sig = ks.join(",") + times + colors + windows;   // the time points of the samples as the table of the files has them
+  const times = JSON.stringify(ks.map(k => E.files[k].time ?? null)), colors = JSON.stringify(ks.map(k => E.files[k].color || "")), sig = ks.join(",") + times + colors + windows + optCols();   // the time points of the samples as the table of the files has them
   if (sig !== st.sig || xch) {
     st.sig = sig; st.recs = recs; st.ks = ks; st.windows = windows; st.times = times;
     await ask();
@@ -303,6 +350,6 @@ const soon = () => { clearTimeout(timer); timer = setTimeout(sync, 150); };
 /** The notice and the per-file log of an automatic integration, shown at the next draw of the card. @param {string} say @param {string[]} log */
 const report = (say, log) => { st.say = say; st.log = log; st.sig = ""; };
 
-G.MANINT = { rows, report, sync: soon, now: sync, snr, valleys, parts, follow, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file), times: Object.fromEntries(st.ks.map(k => [E.files[k].label, E.files[k].time ?? null])) }) };
+G.MANINT = { rows, report, opts: optCols, wrap: withCols, sync: soon, now: sync, snr, valleys, parts, follow, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file), times: Object.fromEntries(st.ks.map(k => [E.files[k].label, E.files[k].time ?? null])) }) };
 document.addEventListener("campioni", soon);      // a time point typed in the sample table changes the column
 soon();
