@@ -39,9 +39,19 @@ try:
             assert '"mol1"' in ket and "monomer" not in ket.lower(), ket[:200]
         step("a second structure is added and the .ket has no monomers", draw_more)
         def mol_sdf():
+            assert pg.evaluate("document.querySelector('#ex-sdfpop').hidden") and not pg.is_visible("#ex-ion"), "the ion select is behind the SDF options"
+            assert pg.get_attribute("#ex-sdfopt", "aria-expanded") == "false"
+            pg.click("#ex-sdfopt"); assert pg.is_visible("#ex-ion") and pg.get_attribute("#ex-sdfopt", "aria-expanded") == "true"
+            assert pg.evaluate("document.activeElement.id") == "ex-ion" and pg.evaluate("document.querySelector('#ex-ion').closest('label').innerText").startswith("Adduct for the SDF m/z")
             pg.select_option("#ex-ion", "[M+H]+")
-            with pg.expect_download(timeout=60000) as d: pg.click("#ex-sdf")
+            pg.keyboard.press("Escape"); assert pg.evaluate("document.querySelector('#ex-sdfpop').hidden") and pg.evaluate("document.activeElement.id") == "ex-sdfopt"
+            with pg.expect_download(timeout=60000) as d: pg.click("#ex-sdf")      # one click, the last chosen ion
             sdf = open(d.value.path(), encoding="utf-8").read()
+            stem = d.value.suggested_filename[:-4]
+            # the layout change does not touch the files: the bytes of the buttons are those of the engine request
+            direct = pg.evaluate("async([k, ion, name]) => (await import('./disegno-esporta.js')).exportText(document.querySelector('#kframe').contentWindow.ketcher, k, ion, name)", ["sdf", "[M+H]+", stem])
+            assert direct == sdf, "SDF button bytes differ from the engine request"
+            assert pg.evaluate("fetch('api/notebook').then(r => r.json()).then(n => n.drawIon)") == "[M+H]+", "the ion is saved with the panel settings"
             assert d.value.suggested_filename.endswith(".sdf"), d.value.suggested_filename
             recs = [x for x in sdf.split("$$$$\n") if x.strip()]
             assert len(recs) == 2, sdf[:400]
@@ -51,6 +61,7 @@ try:
             assert "152.0706" in sdf, "paracetamol [M+H]+"
             with pg.expect_download(timeout=60000) as d: pg.click("#ex-mol")
             mol = open(d.value.path(), encoding="utf-8").read()
+            assert pg.evaluate("async([k, ion, name]) => (await import('./disegno-esporta.js')).exportText(document.querySelector('#kframe').contentWindow.ketcher, k, ion, name)", ["mol", "[M+H]+", d.value.suggested_filename[:-4]]) == mol, "MOL button bytes differ"
             assert d.value.suggested_filename.endswith(".mol") and mol.endswith("M  END\n") and "$$$$" not in mol and "> <" not in mol, mol[-200:]
             assert int(mol.split("\n")[3][:3]) == 14, mol.split("\n")[3]
             assert pg.evaluate("document.querySelector('#ex-warn').hidden"), pg.inner_text("#ex-warn")

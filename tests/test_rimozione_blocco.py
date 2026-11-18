@@ -1,6 +1,6 @@
 """Removing many files at once (mzlab/web/lista-file.js removeAllFiles, run by node with the page globals stubbed): the list, the side bar and the
 panels are repainted once for the whole batch, on «Undo» too, and every file still leaves (and comes back to) the session and the loading table.
-One repaint per file made «Remove all» quadratic: 200 files held the main thread for 41 s (docs/agenti/misure-velocita-sito.md, LOAD-REMOVE-1)."""
+One repaint per file made «Remove all» quadratic: 200 files held the main thread for 41 s (docs/agenti/measurements-speed-site.md, LOAD-REMOVE-1)."""
 import json
 import shutil
 import subprocess

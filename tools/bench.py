@@ -5,7 +5,7 @@ Time to open the files (upload + first TIC drawn), time for the TIC and five XIC
 works) and the resident memory of the whole browser (Linux: sum of /proc RSS of the Chromium processes). It does not interpret the
 numbers: CLAUDE.md decides what they mean. Needs the site (python3 tools/build_site.py) and site/static/wasm (see .github/workflows/pages.yml).
 Usage: python3 tools/bench.py [--files N] [--json]
---librerie: the spectral libraries (docs/agenti/librerie.md): synthetic libraries of 1e5 and 1e6 spectra (and the MassBank of the data repository when it is found
+--librerie: the spectral libraries (docs/agenti/libraries.md): synthetic libraries of 1e5 and 1e6 spectra (and the MassBank of the data repository when it is found
 by tools/dati_percorsi.py), imported and searched through LIB in Chromium with the old JavaScript path (?libjs=1, only up to 1e5) and the WebAssembly engine
 (site/static/wasm-lib), and the native builder (cargo example `build`); --gb adds an MGF of about 1 GB. Measure only, no interpretation.
 Files: MZLAB_MZML or the usual data folders (tests_e2e/lib.py); Chromium: MZLAB_CHROMIUM = path of an executable, if needed."""
@@ -268,7 +268,7 @@ def main() -> None:
     ap.add_argument("--files", type=int, default=4, help="how many Full Scan files to open")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--site", default=str(ROOT / "site"), help="folder of the built site to measure (default site/)")
-    ap.add_argument("--scrivi", action="store_true", help="with --librerie: overwrite its section of docs/agenti/misure.md (date and commit)")
+    ap.add_argument("--scrivi", action="store_true", help="with --librerie: overwrite its section of docs/agenti/measurements.md (date and commit)")
     a = ap.parse_args()
     if not (Path(a.site) / "index.html").exists():
         sys.exit("site/ missing: python3 tools/build_site.py")
@@ -276,10 +276,10 @@ def main() -> None:
         lines = main_libraries(a.gb)
         print("\n".join(lines))
         if a.scrivi:
-            md = ROOT / "docs" / "agenti" / "misure.md"
+            md = ROOT / "docs" / "agenti" / "measurements.md"
             commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
-            sec = [f"## Librerie spettrali (`python3 tools/bench.py --librerie{' --gb' if a.gb else ''} --scrivi`, Chromium Linux, {time.strftime('%Y-%m-%d')}, commit {commit})"] + lines
-            md.write_text(replace_section(md.read_text(encoding="utf-8"), "## Librerie spettrali", sec), encoding="utf-8")
+            sec = [f"## Spectral libraries (`python3 tools/bench.py --librerie{' --gb' if a.gb else ''} --scrivi`, Chromium Linux, {time.strftime('%Y-%m-%d')}, commit {commit})"] + lines
+            md.write_text(replace_section(md.read_text(encoding="utf-8"), "## Spectral libraries", sec), encoding="utf-8")
         return
     names = sorted(p for p in Path(MZ).glob("*FullMass*.mzML"))[:a.files]
     if not names:
@@ -289,7 +289,7 @@ def main() -> None:
         print(json.dumps(rows))
         return
     mb = sum(x.stat().st_size for x in names) / 2**20
-    print("\n".join([f"## Tempi ({len(names)} file Full Scan, {mb:.1f} MB)"] + table(["engine", "start_s", "open_s", "tic_xic_s", "requests", "browser_rss_mb"], rows)))
+    print("\n".join([f"## Timings ({len(names)} file Full Scan, {mb:.1f} MB)"] + table(["engine", "start_s", "open_s", "tic_xic_s", "requests", "browser_rss_mb"], rows)))
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-"""The anonymous public proxy of the assistant (proxy/, docs/agenti/assistente-proxy.md): builds the `llm` .wasm once and runs `node --test proxy/test/`
+"""The anonymous public proxy of the assistant (proxy/, docs/agenti/assistant-proxy.md): builds the `llm` .wasm once and runs `node --test proxy/test/`
 (gates, closed body, ledger caps, settlement, rollover, no key in any output, no logging, CPU per request). Skipped without node, cargo, the wasm32 target
 or wasm-bindgen."""
 import os

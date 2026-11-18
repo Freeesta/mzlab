@@ -1,9 +1,9 @@
-# Affiancare e spostare i pannelli (`affianca.js`, `AFFIANCA`)
+# Tiling and moving panels (`affianca.js`, `AFFIANCA`)
 
-- Maniglia `.aff-grip` nell'intestazione del pannello; trascinarla mostra l'anteprima del rettangolo finale (`.aff-prev`, z-index sopra quello dei pannelli, che sale a ogni attivazione) senza ridisegnare; Esc annulla. Senza trascinare: menu della maniglia e Alt+frecce. `rifai()` applica una mossa a una pila (vera o copiata). Chiudere un pannello (`closePanel`) lascia l'ultimo compagno della riga a larghezza piena (`quota` nulla, `x` 0); un pannello ridimensionato da solo non cambia.
-- Le stesse mosse della maniglia stanno nel menu del tasto destro e nella paletta (azioni `disp.*`, `docs/agenti/azioni.md`); `disp.ripristina` rimette ogni pannello a tutta larghezza (si annulla con Ctrl+Z); `layout.js` non nomina mai un esperimento (guardia in `controlla.py`).
-- Lo spettro aperto con il doppio clic (`newSpec`, `eventi.js`) va sempre sotto il cromatogramma, in una riga propria; per affiancarlo si usano la maniglia o le azioni `disp.*`. Un vecchio `beside` nelle preferenze salvate viene ignorato.
-- Zone di rilascio a croce sul pannello bersaglio (`zona()`): 30% in alto = «Sopra» (riga propria prima del bersaglio), 30% in basso = «Sotto», fascia centrale metà sinistra / metà destra = «A sinistra» / «A destra»; «Spazio insufficiente» se non entra. Ogni zona ha la sua etichetta nell'anteprima.
-- Una cromatografia trascina con sé i suoi spettri figli; rilasciata sul proprio spettro (o con Alt+freccia verso di esso) si sposta da sola oltre di lui (`solo` nella mossa).
-- Divisori `.aff-sep` (`role=separator`, frecce ±16, Maiusc ±48, Invio = uguali) rifatti da `sync()` in `fitHost`. Si annulla con `HSEQ` (Ctrl/⌘+Z o pulsante Annulla della barra); nessun avviso visibile, solo l'annuncio in `#aff-live`.
-- Prove: `e2e_affianca`, `e2e_affianca_zone`.
+- `.aff-grip` handle in the panel header; dragging it shows a preview of the final rectangle (`.aff-prev`, z-index above the panels, which rises on every activation) without redrawing; Esc cancels. Without dragging: the handle menu and Alt+arrows. `rifai()` applies a move to a stack (real or copied). Closing a panel (`closePanel`) leaves the last companion in the row at full width (`quota` null, `x` 0); a panel resized on its own does not change.
+- The same handle moves are in the right-click menu and in the palette (`disp.*` actions, `docs/agenti/actions.md`); `disp.ripristina` puts every panel back at full width (undone with Ctrl+Z); `layout.js` never names an experiment (guard in `controlla.py`).
+- The spectrum opened with a double click (`newSpec`, `eventi.js`) always goes below the chromatogram, in its own row; to tile it use the handle or the `disp.*` actions. An old `beside` in saved preferences is ignored.
+- Cross-shaped drop zones on the target panel (`zona()`): top 30% = "Above" (own row before the target), bottom 30% = "Below", central band left half / right half = "Left" / "Right"; "Not enough space" if it does not fit. Each zone has its own label in the preview.
+- A chromatogram drags its child spectra with it; dropped on its own spectrum (or with Alt+arrow towards it) it moves by itself past it (`solo` in the move).
+- `.aff-sep` dividers (`role=separator`, arrows +-16, Shift +-48, Enter = equal) rebuilt by `sync()` in `fitHost`. Undone with `HSEQ` (Ctrl/Cmd+Z or the Undo button of the bar); no visible notice, only the announcement in `#aff-live`.
+- Tests: `e2e_affianca`, `e2e_affianca_zone`.

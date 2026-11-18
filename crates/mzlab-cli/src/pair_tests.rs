@@ -1,5 +1,5 @@
-//! `mzlab-cli pair` and the companion rule on a synthetic folder: names only (empty files), then a real synthetic pair (`tools/wiff_grande.py`, skipped
-//! without python3 and numpy) opened from either half, also when the case of the names differs.
+//! `mzlab-cli pair` and the companion rule on a synthetic folder: names only (empty files), then a real synthetic pair (`tools/wiff_grande.py`, needs
+//! python3 and numpy: it fails without them) opened from either half, also when the case of the names differs.
 
 use std::path::Path;
 
@@ -89,9 +89,10 @@ fn usage_errors_exit_2() {
 #[test]
 fn a_synthetic_pair_opens_from_either_half() {
     let d = tmp("real");
-    if !crate::convert_fixtures::wiff(&d, "Pair", 2) {
-        return;
-    }
+    assert!(
+        crate::convert_fixtures::wiff(&d, "Pair", 2),
+        "the synthetic pair needs python3 and numpy (tools/wiff_grande.py)"
+    );
     // the scan renamed in capitals: the engine's rule still pairs them
     std::fs::rename(d.join("Pair.wiff.scan"), d.join("PAIR.WIFF.SCAN")).unwrap();
     let ids = |f: &str| {

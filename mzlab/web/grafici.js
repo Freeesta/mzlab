@@ -61,15 +61,15 @@ async function analogSeries(p) {
   }));
   return r.filter(s => s.x.length);
 }
-// MS2 transitions (unit resolution), like the MRM ones: listed from the scans; a pair's chromatogram is the fragment window in its precursor's scans
-const MS2TR_MAX = 12;
+// MS2 transitions (unit resolution), like the MRM ones, grouped by precursor in the menu (pairs beyond the cap are counted there, not dropped silently): listed from the scans; a pair's chromatogram is the fragment window in its precursor's scans
+const MS2TR_MAX = 12, ms2trOptions = (/** @type {any} */ p) => [...(p._trs || []).reduce((/** @type {Map<number, any[]>} */ m, /** @type {any} */ t) => m.set(t.q1, [...(m.get(t.q1) || []), t]), new Map())].map(([q1, l]) => `<optgroup label="${EH(I18N.t("ctl.ms2tr.grp", { q1 }))}">${l.map((/** @type {any} */ t) => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(I18N.t("ctl.ms2tr.opt", { q1: t.q1, q3: t.q3 }))}</option>`).join("")}</optgroup>`).join("") + (p._trsMore > 0 ? `<option disabled>${EH(I18N.t("ctl.ms2tr.more", { n: p._trsMore }))}</option>` : "");
 async function ms2trSeries(p) {
   const mf = shownFor(p).filter(f => f.kind === "ms2" && !(window.HR && HR.isHr(f, f.lv)));
   const data = await Promise.all(mf.map(f => getMs2Tr(f.k, f.lv).then(tr => ({ f, tr }))));
   const seen = new Map();
   data.forEach(({ tr }) => tr.forEach(t => { const key = `${t.q1}>${t.q3}`; if (!seen.has(key)) seen.set(key, { key, q1: t.q1, q3: t.q3, y: 0 }); seen.get(key).y += t.y; }));
-  const list = [...seen.values()].sort((a, b) => a.q1 - b.q1 || a.q3 - b.q3).slice(0, MS2TR_MAX * 4);
-  if (JSON.stringify(list.map(t => t.key)) !== JSON.stringify((p._trs || []).map(t => t.key))) { p._trs = list; ctl(p); }
+  const full = [...seen.values()].sort((a, b) => a.q1 - b.q1 || a.q3 - b.q3), list = full.slice(0, MS2TR_MAX * 4), more = full.length - list.length;
+  if (more !== (p._trsMore || 0) || JSON.stringify(list.map(t => t.key)) !== JSON.stringify((p._trs || []).map(t => t.key))) { p._trs = list; p._trsMore = more; ctl(p); }
   if (!p.tr) return null;
   const sel = p.tr === "__all" ? list.slice(0, MS2TR_MAX) : list.filter(t => t.key === p.tr);
   const out = await Promise.all(mf.flatMap((f, fi) => sel.map(t => getChrom(f.k, "tic", f.lv, t.q3 - 0.5, t.q3 + 0.5, t.q1, p.filt).then(d => ({
@@ -458,13 +458,16 @@ async function drawLines(p) {
 // ---- mouse over the chart: vertical line + box with the values; the line also shows in the other panels with an RT axis
 const xOf = (p, px) => { const a = p._a; return a.x0 + (px - M.l) / (a.W - M.l - M.r) * (a.x1 - a.x0); };
 function hideHover(p) {
-  if (p.tip) p.tip.hidden = true; if (p.vl) p.vl.hidden = true;
+  if (p.tip) p.tip.hidden = true; if (p.vl) p.vl.hidden = true; if (window.PEAKINFO) PEAKINFO.stick(p, null);
   E.panels.forEach(q => { if (q.vl && q !== p) q.vl.hidden = true; });
 }
 function showHover(p, px, py) {
   const a = p._a; if (!a || !a.hov || a.cas || px < M.l || px > a.W - M.r || py < M.t || py > a.H - M.b) return hideHover(p);
-  const h = a.hov(px, py); if (!h) return hideHover(p);
-  const cv = p.cv, el = p.el;
+  const h = a.hov(px, py); if (!h) return hideHover(p); putHover(p, h, px, py);
+}
+function putHover(p, h, px, py) {
+  const a = p._a, cv = p.cv, el = p.el;
+  if (window.PEAKINFO) PEAKINFO.stick(p, h.stick ? { px: h.px, ...h.stick } : null);
   p.vl.hidden = !!h.novl; p.vl.style.left = cv.offsetLeft + h.px + "px"; p.vl.style.top = cv.offsetTop + M.t + "px"; p.vl.style.height = a.H - M.t - M.b + "px";
   p.tip.hidden = false; p.tip.innerHTML = h.html;
   const tw = p.tip.offsetWidth, th = p.tip.offsetHeight;

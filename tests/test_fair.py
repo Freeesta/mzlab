@@ -207,7 +207,7 @@ def test_quant_header_and_rows_follow_the_mzmine_format():
     q = js2("return N.quant(T(), T().features)")
     lines = q.strip().split("\n")
     assert lines[0].split(",")[:7] == ["row ID", "row m/z", "row retention time", "correlation group ID", "annotation network number", "best ion", "neutral M mass"]
-    assert lines[0].endswith("Campione_A_pos.mzML Peak area,Campione_B_pos.mzML Peak area") and lines[1].startswith("1,184.1332,5.2,3,7,[M+H]+,183.1259,100000,0")
+    assert lines[0].endswith("Sample_A_pos.mzML Peak area,Sample_B_pos.mzML Peak area") and lines[1].startswith("1,184.1332,5.2,3,7,[M+H]+,183.1259,100000,0")
 
 
 def test_subset_edges_and_no_ms2():

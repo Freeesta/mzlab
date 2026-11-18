@@ -3,7 +3,7 @@
 
 use super::reader_extra::extra_of;
 use super::window::Window;
-use super::{container_within, losses::isolate, samples, scan, Record, Wiff, SAMPLES};
+use super::{losses::isolate, samples, scan, Record, Wiff, SAMPLES};
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::method::{sha1_hex, Source, SrcFile};
@@ -15,11 +15,11 @@ use crate::readers::{
     ReaderEntry, Sample, ScanEntry, CONTRATTO,
 };
 
-const SCAN: &str = ".wiff.scan";
+pub(super) const SCAN: &str = ".wiff.scan";
 const WIFF: &str = ".wiff";
 const OLE_MAGIC: [u8; 8] = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
 
-fn wiff_member(fs: &FileSet) -> Option<usize> {
+pub(super) fn wiff_member(fs: &FileSet) -> Option<usize> {
     fs.find(WIFF)
 }
 
@@ -81,7 +81,7 @@ impl Part {
 }
 
 pub struct WiffReader {
-    ole: Ole,
+    pub(super) ole: Ole,
     nome: String,
     scan: Box<dyn ReadAt>,
     pub(super) scan_len: u64,
@@ -137,6 +137,16 @@ impl WiffReader {
         Ok(p)
     }
 
+    /// Injection `c` with its DAD stream read (it is left unread at the opening: `Wiff::load_dad`).
+    pub(super) fn dad_part(&mut self, c: usize) -> Result<&Part> {
+        let p = self
+            .parts
+            .get_mut(c)
+            .ok_or_else(|| Error::new("error.badIndex").with("c", c))?;
+        p.w.load_dad(&self.ole);
+        Ok(p)
+    }
+
     /// The chromatograms of injection `c`, read once (the MRM blocks only).
     pub(super) fn chromatograms(&mut self, c: usize) -> Result<&[Chromatogram]> {
         let p = self
@@ -144,6 +154,7 @@ impl WiffReader {
             .get_mut(c)
             .ok_or_else(|| Error::new("error.badIndex").with("c", c))?;
         if p.chroms.is_none() {
+            p.w.load_dad(&self.ole);
             p.w.readable()?;
             let mut win = Window::new(&mut self.scan, self.scan_len);
             let counts = Some(&p.counts[..]).filter(|c| p.ready && c.len() == p.w.records.len());
@@ -154,8 +165,8 @@ impl WiffReader {
     }
 
     /// The optical DAD / PDA 3D matrix and TWC of injection `c`, when the injection has a `DAD` storage.
-    pub fn dad(&self, c: usize) -> Result<Option<&super::dad::DadData>> {
-        Ok(self.part(c)?.w.dad.as_ref())
+    pub fn dad(&mut self, c: usize) -> Result<Option<&super::dad::DadData>> {
+        Ok(self.dad_part(c)?.w.dad.as_ref())
     }
 }
 
@@ -199,7 +210,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     dad.wavelength_chromatogram(nm, None, 0)
 }
 
-#[rustfmt::skip] impl Reader for WiffReader { #[cfg(feature = "sciex")] fn variant(&mut self, c: usize) -> bool { variant_of(&self.parts, c) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } fn losses(&mut self, c: usize) -> Result<crate::readers::Losses> { self.losses_of(c) } fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { self.watch(c, k, s); extra_of(self, s) } #[cfg(feature = "mappa-dad")] fn dad_propose(&mut self, c: usize, rt0: f64, rt1: f64) -> Result<Option<String>> { Ok(self.part(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_propose_json(d, rt0, rt1))) }
+#[rustfmt::skip] impl Reader for WiffReader { #[cfg(feature = "sciex")] fn variant(&mut self, c: usize) -> bool { variant_of(&self.parts, c) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } fn losses(&mut self, c: usize) -> Result<crate::readers::Losses> { self.losses_of(c) } fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { self.watch(c, k, s); extra_of(self, s) } #[cfg(feature = "mappa-dad")] fn dad_propose(&mut self, c: usize, rt0: f64, rt1: f64) -> Result<Option<String>> { Ok(self.dad_part(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_propose_json(d, rt0, rt1))) }
     fn format(&self) -> Format { Format::SciexWiff }
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         use crate::conv::{IDENTITY, NOT_DECODED};
@@ -209,6 +220,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     fn refused(&mut self, c: usize) -> Option<Error> { self.parts.get(c).and_then(|p| p.w.readable().err()) }
     fn samples(&self) -> &[Sample] { &self.campioni }
     fn unindexed(&self) -> (usize, usize) { self.unindexed }
+    fn listing(&mut self) -> crate::readers::Listing { self.listing_of() }
     fn index(&mut self, c: usize) -> Result<&[ScanEntry]> { Ok(&self.ready(c)?.indice) }
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.ready(c)?;
@@ -235,23 +247,23 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
         if let Some(ch) = self.bpc_chroms(c)?.into_iter().find(|h| h.id == id) {
             return Ok(ch);
         }
-        dad_chrom(self.part(c)?.w.dad.as_ref(), id).ok_or_else(|| Error::new("error.badIndex").with("id", id))
+        dad_chrom(self.dad_part(c)?.w.dad.as_ref(), id).ok_or_else(|| Error::new("error.badIndex").with("id", id))
     }
     #[cfg(any(not(target_family = "wasm"), feature = "sciex", feature = "mappa-dad"))]
     fn dad_data(&mut self, c: usize) -> Result<Option<super::dad::DadData>> {
-        Ok(self.part(c)?.w.dad.clone())
+        Ok(self.dad_part(c)?.w.dad.clone())
     }
     #[cfg(feature = "mappa-dad")]
     fn dad_map(&mut self, c: usize) -> Result<Option<String>> {
-        Ok(self.part(c)?.w.dad.as_ref().map(|d| d.to_map_json()))
+        Ok(self.dad_part(c)?.w.dad.as_ref().map(|d| d.to_map_json()))
     }
     #[cfg(feature = "mappa-dad")]
     fn dad_wavelength(&mut self, c: usize, nm0: f64, nm1: f64) -> Result<Option<String>> {
-        Ok(self.part(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_wavelength_json(d, nm0, nm1)))
+        Ok(self.dad_part(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_wavelength_json(d, nm0, nm1)))
     }
     #[cfg(feature = "mappa-dad")]
     fn dad_spectrum(&mut self, c: usize, rt0: f64, rt1: f64) -> Result<Option<String>> {
-        Ok(self.part(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_spectrum_json(d, rt0, rt1)))
+        Ok(self.dad_part(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_spectrum_json(d, rt0, rt1)))
     }
     fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> { with_method(self, c).map(Some) }
     fn table_header(&mut self, c: usize) -> Result<Option<Header>> { file_header(self, c).map(Some) }
@@ -286,6 +298,12 @@ fn with_method(l: &mut WiffReader, c: usize) -> Result<Header> {
 /// The header of the mzML of injection `c`, with the SHA-1 of the `.wiff.scan`.
 fn file_header(l: &mut WiffReader, c: usize) -> Result<Header> {
     l.ready(c)?;
+    // the SHA-1 of the whole `.wiff` is taken here, for the header of one mzML, never when the pair is opened (it would read the whole file)
+    if let Some(p) = l.parts.get_mut(c)
+        && p.w.wiff_sha1.is_none()
+    {
+        p.w.wiff_sha1 = Some(l.ole.sha1_hex());
+    }
     if l.scan_sha1.is_none() {
         let win = &mut Window::new(&mut l.scan, l.scan_len);
         l.scan_sha1 = Some(sha1_hex(win, l.scan_len).ok());
@@ -306,7 +324,7 @@ fn file_header(l: &mut WiffReader, c: usize) -> Result<Header> {
     Ok(h)
 }
 
-fn member(fs: &mut FileSet, i: usize) -> Result<&mut Member> {
+pub(super) fn member(fs: &mut FileSet, i: usize) -> Result<&mut Member> {
     fs.membri
         .get_mut(i)
         .ok_or_else(|| Error::new("err.file.wiff").with("detail", "member"))
@@ -318,22 +336,23 @@ fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
 
 /// Opens the pair; with `solo = Some(c)` only injection `c` reads the heads of its blocks in the `.wiff.scan` (the index of one sample in its own worker: the other injections
 /// of a container with many would read the whole `.wiff.scan` each), and the others are listed with 0 scans until they are used.
-pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Result<Box<dyn Reader>> {
-    let wi = wiff_member(&fs).ok_or_else(|| Error::new("err.file.notWiff").with("name", "?"))?;
-    let name = member(&mut fs, wi)?
-        .nome
-        .rsplit(['/', '\\'])
-        .next()
-        .unwrap_or("x.wiff")
-        .to_string();
-    let si = fs
-        .find(SCAN)
-        .ok_or_else(|| Error::new("err.file.wiffNoScan").with("name", &name))?;
-    let m = member(&mut fs, wi)?;
-    limits.fits(m.dim)?;
-    let mut bytes = vec![0u8; usize::try_from(m.dim).map_err(|_| Error::memory_budget())?];
-    m.dati.read_at(0, &mut bytes)?;
-    let ole = container_within(bytes, &name, limits)?;
+pub fn open_only(fs: FileSet, limits: &Limits, only: Option<usize>) -> Result<Box<dyn Reader>> {
+    open_with(fs, limits, only, false)
+}
+
+/// Opens the pair for a listing (`readers::apri_listing`): the container and the `Idx` rows give the samples, no block head is read and the sections the index lacks
+/// are not looked for (`listing::counts`). An index or a chromatogram asked later reads the heads of that sample then, as after `open_only`.
+pub fn open_listing(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+    open_with(fs, limits, None, true)
+}
+
+fn open_with(
+    mut fs: FileSet,
+    limits: &Limits,
+    only: Option<usize>,
+    listing: bool,
+) -> Result<Box<dyn Reader>> {
+    let (name, ole, si) = super::listing::container_of(&mut fs, limits)?;
     let sm = member(&mut fs, si)?;
     let scan_len = sm.dim;
     // the SHA-1 of the `.wiff.scan` when the fingerprints were already taken (`upload::impronte`, `known_fingerprints`): the header does not read the whole file again
@@ -342,17 +361,16 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
     let membro = u16::try_from(si).unwrap_or(0);
     let (mut parti, mut campioni, mut total) = (Vec::new(), Vec::new(), 0u64);
     let mut raw_names = Vec::new();
-    let sha1 = ole.sha1_hex();
     for (i, s) in samples(&ole).into_iter().enumerate() {
-        let mut w = Wiff::open_or_refuse(&ole, &name, scan_len, s)?;
-        w.wiff_sha1 = Some(sha1.clone());
+        let w = Wiff::open_or_refuse(&ole, &name, scan_len, s)?;
         total += w.records.len() as u64;
         limits.ok_entries(total)?;
         let mut part = Part::new(w);
         // a sample the engine cannot read is left unbuilt: `pronta` refuses it when it is asked for, the others open
-        if only.is_none_or(|c| c == i) && part.w.readable().is_ok() {
+        if !listing && only.is_none_or(|c| c == i) && part.w.readable().is_ok() {
             build(&mut part, &mut scan, scan_len, membro)?;
         }
+        let (scans, size) = super::listing::counts_of(listing, &part);
         raw_names.push((
             s,
             ole.read(&format!("{SAMPLES}Sample{s}/SampleDABE/DATA"))
@@ -361,20 +379,26 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
         campioni.push(Sample {
             id: s,
             nome: String::new(),
-            scansioni: part.scans.len(),
-            size: None,
+            scansioni: scans,
+            size,
         });
         parti.push(part);
     }
-    let unindexed = super::unindexed::add(
-        &mut parti,
-        &mut campioni,
-        &mut raw_names,
-        (&mut scan, scan_len, membro),
-        (&ole, limits, only),
-        &mut total,
-    )?;
-    Wiff::all_refused(parti.iter().map(|p| &p.w))?;
+    let unindexed = if listing {
+        (0, 0)
+    } else {
+        super::unindexed::add(
+            &mut parti,
+            &mut campioni,
+            &mut raw_names,
+            (&mut scan, scan_len, membro),
+            (&ole, limits, only),
+            &mut total,
+        )?
+    };
+    if !listing {
+        Wiff::all_refused(parti.iter().map(|p| &p.w))?;
+    }
     for (c, n) in campioni
         .iter_mut()
         .zip(super::names::display_names(&name, &raw_names))

@@ -1,7 +1,7 @@
 // @ts-check
 // Flow (administrator mode): registers the tab. Loaded with Tabui's package only in the administrator mode (static/mzfinder/, tpmine-loader.js), FIRST in the run order.
 // Opening the tab draws a small static skeleton at once; the modules the shell needs (CORE) and the descriptors come in the background, the rest (LATE: results, review,
-// runners) after the first draw. Nothing heavy runs before the first draw. English only. Docs: docs/agenti/flow-grafica.md («Avvio»).
+// runners) after the first draw. Nothing heavy runs before the first draw. English only. Docs: docs/agenti/flow-graphics.md («Avvio»).
 (() => {
   "use strict";
   const T = /** @type {any} */ (window).QTOOLS;

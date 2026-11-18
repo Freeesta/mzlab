@@ -226,6 +226,7 @@ impl Reader for SrmFromScans {
         self.inner.samples()
     }
     #[rustfmt::skip]    fn unindexed(&self) -> (usize, usize) { self.inner.unindexed() }
+    #[rustfmt::skip]    fn listing(&mut self) -> mzlab_core::readers::Listing { self.inner.listing() }
     fn missing(&mut self, c: usize) -> usize {
         self.inner.missing(c)
     }

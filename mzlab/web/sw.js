@@ -3,7 +3,7 @@
 // App files are cache-first: the cache name carries the hash of the whole site, so a file in it is the right version by construction and
 // needs no revalidation. A miss is fetched, checked against the SHA-256 of static/sw-manifest.json and stored; the cache is also filled in the
 // background from that manifest. Navigations are network-first (short timeout, navigation preload), so a new deploy is seen at the next page load;
-// `?nav=cache` (remembered, `?nav=rete` undoes it) answers them from a complete cache and shows a newer version one load later (service-worker.md).
+// `?nav=cache` (remembered, `?nav=network` undoes it) answers them from a complete cache and shows a newer version one load later (service-worker.md).
 // The big, rarely changing files (Ketcher; the Python of mzFinder) live in their own cache. Offline, everything comes from the caches.
 try { importScripts("static/nomi.js"); } catch (_) { /* local testing */ }
 const APPV = "__APP__";
@@ -26,14 +26,14 @@ const OPZ = (typeof NOMI !== "undefined" ? NOMI.CACHE_PREFIX : "mzlab-") + "opz"
 /** @type {Promise<boolean> | null} */
 let navP = null;
 const navCache = () => navP || (navP = caches.match(NAVK, { cacheName: OPZ }).then(r => {      // a lookup, not an open: no empty cache for everyone
-  if (r) console.info("[mzLab] sw: page loads cache first (?nav=cache; ?nav=rete for network first)");
+  if (r) console.info("[mzLab] sw: page loads cache first (?nav=cache; ?nav=network for network first)");
   return !!r;
 }).catch(() => false));
-/** `?nav=cache` / `?nav=rete` of a page load sets the switch; navigation preload only serves the network-first mode. */
+/** `?nav=cache` / `?nav=network` of a page load sets the switch; navigation preload only serves the network-first mode. */
 const impostaNav = async (/** @type {boolean} */ on) => {
   if (await navCache() === on) return;                               // an address that keeps the query: nothing to write at every load
   navP = Promise.resolve(on);
-  console.info("[mzLab] sw: page loads", on ? "cache first (?nav=cache)" : "network first (?nav=rete)");
+  console.info("[mzLab] sw: page loads", on ? "cache first (?nav=cache)" : "network first (?nav=network)");
   try { if (on) await (await caches.open(OPZ)).put(NAVK, new Response("1")); else await caches.delete(OPZ); } catch (_) { /* storage full: this run only */ }
   await preload(!on);
 };
@@ -51,7 +51,7 @@ const ISO = [["Cross-Origin-Embedder-Policy", "require-corp"], ["Cross-Origin-Op
   // the worker is the cache: without this the browser's memory cache (max-age=600 of the origin) would hand a file of the previous version to the next page without asking us
   ["Cache-Control", "no-cache"]];
 // The copies are stored with these headers (`guardar`) and a copy that has them is answered as the cache gave it: a new Response per hit pipes each of
-// the ~300 bodies of a load through this worker's thread (warm `qqReady` ~100 ms later, misure-code-cache.md). Not for the code cache: Chromium keeps
+// the ~300 bodies of a load through this worker's thread (warm `qqReady` ~100 ms later, measurements-code-cache.md). Not for the code cache: Chromium keeps
 // none for a built Response, stored or not. A copy stored by an older worker (no headers) is still wrapped until a deploy carries it over (`heredado`).
 /** @param {Response} res */
 const isolata = res => {
@@ -259,7 +259,7 @@ const app = async (/** @type {Request} */ req, /** @type {(p: Promise<unknown>) 
  * the next page load is that version: this worker hands over and the page comes from the network). */
 const navegar = async (/** @type {Request} */ req, /** @type {FetchEvent} */ e) => {
   const cache = await abrirApp(), u = new URL(req.url), q = u.searchParams.get("nav");
-  if (q === "cache" || q === "rete") await impostaNav(q === "cache");
+  if (q === "cache" || q === "network") await impostaNav(q === "cache");
   const pre = Promise.resolve(e.preloadResponse).catch(() => undefined);
   if (await navCache()) {
     const next = sw.registration.waiting, hit = !next && await cache.match(MARK) && await buscar(cache, req);

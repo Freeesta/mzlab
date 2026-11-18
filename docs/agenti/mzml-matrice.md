@@ -1,36 +1,36 @@
-# Matrice di conformità mzML
+# mzML conformance matrix
 
-Fixture: `tools/mzml_variants.py OUT_DIR` (20 file sintetici, numeri inventati); prova: `crates/mzlab-cli/src/mzml_variants_tests.rs` (`canali`, `features`, `validate` su ogni variante; salta senza python3 + numpy). Le fixture Numpress si scrivono con `MzmlWriter` (`Opzioni::numpress`), non da Python. Lettura = `mzlab-core` (tabella `scantable`) per l'mzML semplice, lettore `mzml-numpress` (`aperti`) per Numpress: `lettori-aperti.md`.
+Fixtures: `tools/mzml_variants.py OUT_DIR` (20 synthetic files, invented numbers); test: `crates/mzlab-cli/src/mzml_variants_tests.rs` (`canali`, `features`, `validate` on every variant; skipped without python3 + numpy). Numpress fixtures are written with `MzmlWriter` (`Opzioni::numpress`), not from Python. Reading = `mzlab-core` (`scantable` table) for plain mzML, the `mzml-numpress` reader (`aperti`) for Numpress: `readers-open.md`.
 
-| Variante | Fixture | Esito (CLI) |
+| Variant | Fixture | Outcome (CLI) |
 |---|---|---|
-| mzML semplice, indicizzato (`indexedmzML`), offset assurdi | `plain_*`, `indexed`, `bigoffsets` | si apre; la tabella delle scansioni legge le teste agli offset dell'indice (un indice che non torna col file si ignora e il file si percorre), il motore (`mzml::read`) legge in sequenza |
-| float 32/64 bit × senza compressione/zlib | `plain_32_*`, `plain_64_*` | si apre |
-| `defaultArrayLength` `0` o assente con array zlib non vuoti | `robustness_mzml.rs` | prima di gonfiare, i punti dichiarati per i byte tenuti devono stare in `budget::TARGET_BYTES`; senza lunghezza l'array si gonfia al più fino a `budget::undeclared_inflate` (32 volte i byte compressi, almeno 1 MB): oltre è `error.memoryBudget` (la dimensione, non un danno); uno zlib rotto o incompleto è `err.file.zlib` |
-| CRLF, BOM UTF-8 | `crlf`, `bom` | si apre |
-| MS2, MS3, MS4 | `ms3_4`, `ms3_only_idx` | si apre; il tipo proposto da `canali` è `lc-ms2-mirato` |
-| profilo / centroidi | `profile` | si apre |
-| mobilità ionica (array `MS:1002893`) | `mobility` | si apre; l'array extra non è usato |
-| `referenceableParamGroup`, `scanSettings` | `rpg`, `scansettings` | si apre; la tabella delle scansioni rilegge i parametri del gruppo dove sta il riferimento (`spechead`) |
-| cromatogrammi TIC, BPC, SRM, SIM, assorbimento | `chroms_all` | si apre; tipo proposto `misto` |
-| MS-Numpress linear/pic/slof, con e senza zlib | `Opzioni::numpress`, `open_numpress*.rs` | si apre dal lettore `aperti` (sito, app, CLI) |
-| file vuoto, non XML | `empty`, `notxml` | `err.file.notMzml` |
-| base64 rotta | `badb64` | `err.file.base64` |
-| gzip (`.mzML.gz`) | `gz.mzML.gz`, `open_gz.rs` | si apre dal lettore `mzml-gz` (`open/mzml_gz.rs`): decomprime in memoria fino a `Limiti::byte` (`error.fixedLimit` oltre), poi lo legge `mzml-numpress`; gzip troncato dopo qualche spettro si apre con quelli che ha (`mancanti` = `declared` meno le righe), gzip rotto o troncato prima del primo byte `err.file.zlib`; sul sito si gonfia a flusso su OPFS (`gz-flusso.js`, `lettori-aperti.md`) |
-| file troncato | `truncated` | si apre con gli spettri che ha; `Table::declared` (conteggio di `<spectrumList>`, letto anche oltre i userParam del run (`metodo/1`, `head_read::run_end`); prove `mzml_run_window.rs`, `test_parziali_parita.py`) meno le righe lette dà `stats.missing` e la riga del caricamento dice «N scansioni mancanti» (`conv.row.missing`); la CLI scrive `warn.file.truncated` su stderr (anche per i file letti da `aperti`: `.mzML.gz`, Numpress; sul sito il modulo restituisce il conteggio con la conversione e `lr.js` lo somma a quello dell'indice); `validate` lo segnala INVALID |
-| mzMLb, imzML | – | non letti |
+| plain mzML, indexed (`indexedmzML`), absurd offsets | `plain_*`, `indexed`, `bigoffsets` | opens; the scan table reads the heads at the index offsets (an index that does not match the file is ignored and the file is walked), the engine (`mzml::read`) reads sequentially |
+| float 32/64 bit × uncompressed/zlib | `plain_32_*`, `plain_64_*` | opens |
+| `defaultArrayLength` `0` or missing with non-empty zlib arrays | `robustness_mzml.rs` | before inflating, the declared points for the bytes kept must fit in `budget::TARGET_BYTES`; without a length the array is inflated at most up to `budget::undeclared_inflate` (32 times the compressed bytes, at least 1 MB): beyond that it is `error.memoryBudget` (the size, not damage); a broken or incomplete zlib is `err.file.zlib` |
+| CRLF, UTF-8 BOM | `crlf`, `bom` | opens |
+| MS2, MS3, MS4 | `ms3_4`, `ms3_only_idx` | opens; the type proposed by `canali` is `lc-ms2-mirato` |
+| profile / centroids | `profile` | opens |
+| ion mobility (`MS:1002893` array) | `mobility` | opens; the extra array is not used |
+| `referenceableParamGroup`, `scanSettings` | `rpg`, `scansettings` | opens; the scan table rereads the group parameters where the reference sits (`spechead`) |
+| TIC, BPC, SRM, SIM, absorption chromatograms | `chroms_all` | opens; proposed type `misto` |
+| MS-Numpress linear/pic/slof, with and without zlib | `Opzioni::numpress`, `open_numpress*.rs` | opens from the `aperti` reader (site, app, CLI) |
+| empty file, not XML | `empty`, `notxml` | `err.file.notMzml` |
+| broken base64 | `badb64` | `err.file.base64` |
+| gzip (`.mzML.gz`) | `gz.mzML.gz`, `open_gz.rs` | opens from the `mzml-gz` reader (`open/mzml_gz.rs`): decompresses in memory up to `Limiti::byte` (`error.fixedLimit` beyond), then `mzml-numpress` reads it; a gzip truncated after a few spectra opens with the ones it has (`mancanti` = `declared` minus the rows), a broken gzip or one truncated before the first byte is `err.file.zlib`; on the site it is inflated as a stream on OPFS (`gz-flusso.js`, `readers-open.md`) |
+| truncated file | `truncated` | opens with the spectra it has; `Table::declared` (the `<spectrumList>` count, read even beyond the run userParams (`metodo/1`, `head_read::run_end`); tests `mzml_run_window.rs`, `test_parziali_parita.py`) minus the rows read gives `stats.missing` and the loading row says "N scans missing" (`conv.row.missing`); the CLI writes `warn.file.truncated` on stderr (also for files read by `aperti`: `.mzML.gz`, Numpress; on the site the module returns the count with the conversion and `lr.js` adds it to the index one); `validate` flags it INVALID |
+| mzMLb, imzML | – | not read |
 
-Non provato qui: il motore `.wasm` del sito e l'app desktop sulle stesse fixture (stesso codice del core, ma senza e2e per variante).
+Not tested here: the site `.wasm` engine and the desktop app on the same fixtures (same core code, but no e2e per variant).
 
-## Misure (file grande sintetico, 700 scansioni × 100 000 punti, profilo)
-`tools/mzml_grande.py` scrive il file zlib (893 MB); `mzlab-cli convert x.mzML.gz --compression smallest|standard` ne fa i gemelli; `mzlab-cli canali FILE` costruisce l'indice (CLI nativa, release, 4 CPU). Tempi e picco di memoria: Standard 1003 MB, 20,5 s, 109 MB; Smallest (zlib + Numpress) 180 MB, 26,9 s, 67 MB; scrittura Standard 43 s / 940 MB, Smallest 35 s / 916 MB (il `.gz` si gonfia in memoria). Numpress è con perdita; il dato è sintetico (rumore e picchi inventati), il rapporto reale dipende dal file.
+## Measurements (large synthetic file, 700 scans × 100 000 points, profile)
+`tools/mzml_grande.py` writes the zlib file (893 MB); `mzlab-cli convert x.mzML.gz --compression smallest|standard` makes its twins; `mzlab-cli canali FILE` builds the index (native CLI, release, 4 CPU). Times and memory peak: Standard 1003 MB, 20.5 s, 109 MB; Smallest (zlib + Numpress) 180 MB, 26.9 s, 67 MB; writing Standard 43 s / 940 MB, Smallest 35 s / 916 MB (the `.gz` is inflated in memory). Numpress is lossy; the data is synthetic (invented noise and peaks), the real ratio depends on the file.
 
-Testa di uno spettro o cromatogramma (`spechead`): un solo lettore, usato dalla tabella delle scansioni e dal motore (`mzml::parse`, `mzml/build.rs`), dà i termini in ordine di file (spettro, `scanList`, scansioni), i precursori in ordine di file (finestra, primo ione selezionato, attivazione), i prodotti (mai un precursore) e i termini degli array; un `referenceableParamGroupRef` ripete i parametri del gruppo dove sta, il primo termine di un'accession vince, nomi senza prefisso di namespace, CDATA come testo, il tempo in ogni unità (`UO`) diventa minuti.
-Motore (`mzml::parse`): un array con dati senza tipo numerico è `err.file.mzmlPrecision`, due array di lunghezze diverse `err.file.mzmlLengths`, liste che dichiarano elementi senza mostrarne nessuno `err.file.mzmlNoItems`; il precursore è quello immediato (`spechead::immediate`), Q1/Q3 di un SRM vengono dalle finestre. `Run.losses` (`parse_counted`) dà spettri dichiarati da `spectrumList` e letti: file tagliato `warn.file.truncated`, conteggio sbagliato in un file chiuso `warn.file.mzmlFewer`. Prove: `mzml/tests_head.rs`.
-Limiti di `spechead`: una lista tiene al più 4096 termini e un elemento 64 stadi (un file ostile non riempie la memoria). Prove: `spechead/tests.rs`, `scantable/tests_variants.rs`.
+Head of a spectrum or chromatogram (`spechead`): a single reader, used by the scan table and by the engine (`mzml::parse`, `mzml/build.rs`), gives the terms in file order (spectrum, `scanList`, scans), the precursors in file order (window, first selected ion, activation), the products (never a precursor) and the array terms; a `referenceableParamGroupRef` repeats the parameters of the group where it sits, the first term of an accession wins, names have no namespace prefix, CDATA counts as text, time in any unit (`UO`) becomes minutes.
+Engine (`mzml::parse`): an array with data but no numeric type is `err.file.mzmlPrecision`, two arrays of different lengths `err.file.mzmlLengths`, lists that declare items without showing any `err.file.mzmlNoItems`; the precursor is the immediate one (`spechead::immediate`), Q1/Q3 of an SRM come from the windows. `Run.losses` (`parse_counted`) gives spectra declared by `spectrumList` and read: truncated file `warn.file.truncated`, wrong count in a closed file `warn.file.mzmlFewer`. Tests: `mzml/tests_head.rs`.
+Limits of `spechead`: a list holds at most 4096 terms and an element 64 stages (a hostile file does not fill memory). Tests: `spechead/tests.rs`, `scantable/tests_variants.rs`.
 
-Scrittura (`mzmlwrite/text.rs`): ogni testo letto da un file passa da `esc` (`& < > "` e i caratteri fuori dalla produzione `Char` di XML 1.0 diventano U+FFFD), anche i nomi dei termini CV.
-Un termine generico con un testo del file (`GENERIC`: `MS:1000031` e i modelli dei produttori, `MS:1000531` software, `MS:1000008`/`MS:1000443`/`MS:1000026` tipo di sorgente, analizzatore, rivelatore) tiene il nome CV; il testo va in un `userParam` (`instrument model` per i modelli, altrimenti il nome CV), riletto da `mzmlhead/params.rs`, `scantable/analyzer.rs` e `open/mzml_header.rs`.
-`tests/test_mzml_secondo_parser.py` legge con lxml (libxml2, senza recupero) l'mzML di `convert` di ogni famiglia sintetica, in Standard e Smallest.
+Writing (`mzmlwrite/text.rs`): every text read from a file goes through `esc` (`& < > "` and characters outside the XML 1.0 `Char` production become U+FFFD), also the CV term names.
+A generic term with a text from the file (`GENERIC`: `MS:1000031` and the vendor models, `MS:1000531` software, `MS:1000008`/`MS:1000443`/`MS:1000026` source type, analyzer, detector) keeps the CV name; the text goes into a `userParam` (`instrument model` for the models, otherwise the CV name), reread by `mzmlhead/params.rs`, `scantable/analyzer.rs` and `open/mzml_header.rs`.
+`tests/test_mzml_secondo_parser.py` reads with lxml (libxml2, no recovery) the `convert` mzML of every synthetic family, in Standard and Smallest.
 
-Validatore (`mzml_validate`): prima un passaggio XML 1.0 rigoroso (`wellformed.rs`: caratteri fuori da `Char`, attributi malformati o ripetuti, `<` in un valore, entità sconosciute, contenuto fuori dalla radice; si ferma al primo, codice `xml`). Ogni mzML scritto da una conversione passa da `check_written`: un errore è `err.file.mzmlInvalid` e il file non resta (`convert.mzml` della CLI, `nat2mzml` dell'app, «Scarica .mzML» del sito con il modulo `valida`: `CONV.valid`).
+Validator (`mzml_validate`): first a strict XML 1.0 pass (`wellformed.rs`: characters outside `Char`, malformed or repeated attributes, `<` in a value, unknown entities, content outside the root; it stops at the first, code `xml`). Every mzML written by a conversion goes through `check_written`: an error is `err.file.mzmlInvalid` and the file is not kept (`convert.mzml` of the CLI, `nat2mzml` of the app, "Download .mzML" of the site with the `valida` module: `CONV.valid`).

@@ -1,6 +1,7 @@
 //! `mzlab-cli peak-auto TRACE.csv`: every peak of a high-resolution trace with its baseline, from `mzlab_core::peakq_auto::auto_integrate`, the
 //! function behind the one-click integration of the page (`QUALITA.autoIntegrate`). The `--set` names are the snake_case of the page settings (`PK`).
 
+use mzlab_core::area_unit::AreaUnit;
 use mzlab_core::baseline::integrate;
 use mzlab_core::peakq_auto::{auto_integrate, AutoParams};
 
@@ -16,9 +17,10 @@ usage: mzlab-cli peak-auto TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VALUE
   --from/--to  the stretch whose apexes count (default: the whole trace)
   --set        the page dialog: hr_smooth (points, odd), hr_sn; engine only: hr_prom (% of the tallest), hr_scans, hr_half (points, 0 = auto), hr_slope (%);
                the area of every peak: baseline = zero (default: any background under the peak is part of the area), edges (the line b0-b1),
-               or line with base_y0, base_t0, base_y1, base_t1 (see peak-area --help)
-  output       {\"peaks\":[{\"t0\":MIN,\"t1\":MIN,\"b0\":BASELINE,\"b1\":BASELINE,\"area\":COUNTS_MIN,\"baseline\":MODE}...]}; with zero or line each
-               peak also has \"below\" (COUNTS_MIN, the part under the line) and its area is the signed one against that line";
+               or line with base_y0, base_t0, base_y1, base_t1 (see peak-area --help);
+               area_unit: s = counts x s (default, as peak-area), min = counts x min (the old unit)
+  output       {\"peaks\":[{\"t0\":MIN,\"t1\":MIN,\"b0\":BASELINE,\"b1\":BASELINE,\"area\":COUNTS_S,\"baseline\":MODE}...]}; with zero or line each
+               peak also has \"below\" (COUNTS_S, the part under the line) and its area is the signed one against that line";
 
 fn set(p: &mut AutoParams, name: &str, v: &str) -> Result<(), String> {
     let n: f64 = v.parse().map_err(|_| format!("{name} needs a number"))?;
@@ -46,6 +48,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     let mut it = args.into_iter();
     let (mut src, mut from, mut to, mut p) = (None, None, None, AutoParams::default());
     let mut bases = Vec::new();
+    let mut unit = AreaUnit::default();
     let res = (|| -> Result<(), String> {
         while let Some(a) = it.next() {
             match a.as_str() {
@@ -54,7 +57,9 @@ pub fn run(args: Vec<String>) -> Outcome {
                 "--set" => {
                     let kv = it.next().ok_or("--set needs NAME=VALUE")?;
                     let (k, v) = kv.split_once('=').ok_or("--set needs NAME=VALUE")?;
-                    if is_base(k) {
+                    if k == "area_unit" {
+                        unit = AreaUnit::parse(v)?;
+                    } else if is_base(k) {
                         bases.push((k.to_string(), v.to_string()));
                     } else {
                         set(&mut p, k, v)?;
@@ -83,6 +88,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         Err(e) => Outcome::fail(&e),
         Ok((x, y)) => {
             let (x0, x1) = (from.unwrap_or(x[0]), to.unwrap_or(x[x.len() - 1]));
+            let f = unit.factor();
             let rows: Vec<String> = auto_integrate(&x, &y, x0, x1, p)
                 .iter()
                 .map(|k| {
@@ -91,14 +97,14 @@ pub fn run(args: Vec<String>) -> Outcome {
                         x[k.lo], x[k.hi], k.base_lo, k.base_hi
                     );
                     match base.at(0.0) {
-                        None => format!("{head},\"area\":{},\"baseline\":\"edges\"}}", k.area),
+                        None => format!("{head},\"area\":{},\"baseline\":\"edges\"}}", k.area * f),
                         Some(_) => {
                             let r = integrate(&x, &y, k.lo, k.hi, |t| base.at(t).unwrap_or(0.0));
                             format!(
                                 "{head},\"area\":{},\"baseline\":\"{}\",\"below\":{}}}",
-                                r.area,
+                                r.area * f,
                                 base.name(),
-                                r.below
+                                r.below * f
                             )
                         }
                     }

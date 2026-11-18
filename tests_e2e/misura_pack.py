@@ -5,7 +5,7 @@ not in the CI and not in the normal run (name without e2e_), like misura_macchin
     python3 tests_e2e/misura_pack.py --runs 3 [--parts hr,export,draw] [--json OUT.json] [--md OUT.md]
 
 hr      15 high-resolution DDA files (synthetic Orbitrap): sending + reading + index, first chart, TIC + 5 XIC of every file, one XIC on all files, reopening (same profile),
-        engine memory and browser RSS. Same rows as the table «Indice .mzidx» of docs/agenti/misure.md.
+        engine memory and browser RSS. Same rows as the table «Indice .mzidx» of docs/agenti/measurements.md.
 export  worker of «Export all my data» / «Import my data» (esporta-dati-worker.js): time from `new Worker` to the first answer (cold: fresh browser, empty HTTP cache; warm:
         same browser again; app: page with the engine up) and the export / import of 50 MB of OPFS files (read, pack, zip, unzip) through the real esporta-dati.js.
 draw    long tasks (> 50 ms) and long animation frames while the heaviest charts are drawn, CPU 1x and 4x: a map at full screen (1500 scans x 500 centroids), TIC and XIC with

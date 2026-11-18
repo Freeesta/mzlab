@@ -15,8 +15,8 @@ function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number}
   const hb = ya + (yb - ya) * (xs[at] - xs[i0]) / ((xs[i1] - xs[i0]) || 1);
   return { area: Math.max(ar - area, 0), height: Math.max(mx - hb, 0), rt: xs[at] };       // conteggi x s, baseline lineare
 }
-// end point of the straight baseline: mean of 3 points; the drawing (grafici.js) uses the same value, so the dashed baseline is the one subtracted from the area
-const edge3 = (/** @type {number[]} */ ys, /** @type {number} */ i) => { let t = 0, c = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; c++; } return t / c; };
+// end point of the straight baseline: mean of 3 points; the drawing (grafici.js) uses the same value, so the dashed baseline is the one subtracted from the area; never below the zero line
+const edge3 = (/** @type {number[]} */ ys, /** @type {number} */ i) => { let t = 0, c = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; c++; } return Math.max(0, t / c); };
 const baseAt = (/** @type {number[]} */ b, /** @type {number} */ t) => b[1] + (b[3] - b[1]) * (t - b[0]) / ((b[2] - b[0]) || 1);
 // the colour of a spectrum of the panel: the one of its file, or of its precursor when one file gives several (the bars and the legend entry use this one)
 const specColor = (/** @type {any} */ x) => (x.multi ? PAL[(x.idx + 3) % PAL.length] : x.f.color);
@@ -120,14 +120,14 @@ function intRec(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} *
 }
 // SIM/MRM: an integration is two anchors, each end on the trace (curve), at zero or where the user put it (man, `my` = counts); two curve = edges, two zero = zero, else the line through them
 function snapBase(/** @type {Bag} */ s, /** @type {Bag} */ it) {
-  const q = it.snap, l = it.a <= it.b ? "a" : "b", h = l === "a" ? "b" : "a", y = (/** @type {string} */ e) => (q[e] === "zero" ? 0 : q[e] === "man" ? +((it.my || {})[e] || 0) : edge3(s.y, nearIdx(s.x, it[e])));
+  const q = it.snap, l = it.a <= it.b ? "a" : "b", h = l === "a" ? "b" : "a", y = (/** @type {string} */ e) => (q[e] === "zero" ? 0 : q[e] === "man" ? Math.max(0, +((it.my || {})[e] || 0)) : edge3(s.y, nearIdx(s.x, it[e])));
   if (q.a === q.b && q.a !== "man") { it.bm = q.a === "zero" ? "zero" : "edges"; delete it.bl; } else { it.bm = "line"; it.bl = [it[l], y(l), it[h], y(h)]; }
   delete it.zero; delete it.lvl; delete it.base; return it;
 }
 // the anchors of a new integration: those of the last one the user made or changed on the panel (a manual point keeps its counts), else both on the curve
 const snapNew = (/** @type {Bag} */ p) => { const o = p.ints.filter((/** @type {Bag} */ i) => i.snap).sort((/** @type {Bag} */ x, /** @type {Bag} */ y) => (y.st || y.id) - (x.st || x.id))[0]; return o ? { snap: { ...o.snap }, ...(o.my ? { my: { ...o.my } } : {}) } : { snap: { a: "curve", b: "curve" } }; };
 // [t0, y0, t1, y1] of the line between the edges: a custom line starts there
-const edgeLine = (/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, /** @type {number[] | null | undefined} */ base) => { const i0 = nearIdx(s.x, Math.min(a, b)), i1 = nearIdx(s.x, Math.max(a, b)), y = (/** @type {number} */ i) => (base ? baseAt(base, s.x[i]) : edge3(s.y, i)); return [s.x[i0], y(i0), s.x[i1], y(i1)]; };
+const edgeLine = (/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, /** @type {number[] | null | undefined} */ base) => { const i0 = nearIdx(s.x, Math.min(a, b)), i1 = nearIdx(s.x, Math.max(a, b)), y = (/** @type {number} */ i) => (base ? Math.max(0, baseAt(base, s.x[i])) : edge3(s.y, i)); return [s.x[i0], y(i0), s.x[i1], y(i1)]; };
 // a trace of a high-resolution file: the automatic tool integrates all its peaks at once (low resolution keeps one peak per click)
 const hrTrace = (/** @type {Bag} */ s) => { const f = E.files[s.k]; return !!f && !!window.HR && HR.isHr(f, f.lv); };
 // every peak of the stretch shown, found and given its baseline by the Rust engine (auto_integrate, peakq_auto.rs), in one undoable step;
@@ -305,20 +305,20 @@ async function snapNearest(/** @type {Pannello} */ p, /** @type {Bag} */ f, /** 
 // Builds p._a.snap of drawSpec: the peak nearest to a pixel, by binary search around it (the loops keep their exact tests).
 function makeSnap(/** @type {Bag[]} */ data, /** @type {(m: number) => number} */ X, /** @type {number} */ x0, /** @type {number} */ x1, /** @type {number} */ W, /** @type {boolean} */ isDiff, /** @type {any} */ hrp) {
   // indices of x.d.mz that can lie within 14 px of a pixel (and inside [x0, x1]): a binary search, the callers keep their own tests
-  const near = (/** @type {Bag} */ x, /** @type {number} */ px) => { const k = (x1 - x0) / (W - M.l - M.r); return spanOf(x.d.mz, Math.max(x0, x0 + (px - 16 - M.l) * k), Math.min(x1, x0 + (px + 16 - M.l) * k)); };
-  return (/** @type {number} */ px) => {                                      // the peak nearest to a pixel: the top bin around it and the centroid (intensity weighted) of that peak
+  let tol = 14; const near = (/** @type {Bag} */ x, /** @type {number} */ px) => { const k = (x1 - x0) / (W - M.l - M.r); return spanOf(x.d.mz, Math.max(x0, x0 + (px - tol - 2 - M.l) * k), Math.min(x1, x0 + (px + tol + 2 - M.l) * k)); };
+  return (/** @type {number} */ px, /** @type {number} */ t = 14) => {                                      // the peak nearest to a pixel (within t px): the top bin around it and the centroid (intensity weighted) of that peak tol = t;
     if (isDiff) {                                          // a difference: the nearest line, up or down, as it is
       /** @type {any} */ let b = null;
-      for (const x of data) { const mz = x.d.mz, [a0, a1] = near(x, px); for (let j = a0; j < a1; j++) { const m = mz[j]; if (m < x0 || m > x1 || x.d.y[j] === 0) continue; const dd = Math.abs(X(m) - px); if (dd < 14 && (!b || dd < b.dd)) b = { dd, m, y: x.d.y[j], f: x.f, multi: x.multi, prec: x.prec }; } }
+      for (const x of data) { const mz = x.d.mz, [a0, a1] = near(x, px); for (let j = a0; j < a1; j++) { const m = mz[j]; if (m < x0 || m > x1 || x.d.y[j] === 0) continue; const dd = Math.abs(X(m) - px); if (dd < tol && (!b || dd < b.dd)) b = { dd, m, y: x.d.y[j], f: x.f, multi: x.multi, prec: x.prec }; } }
       return b && { m: b.m, y: b.y, y0: b.y, f: b.f, multi: b.multi, prec: b.prec };
     }
     if (hrp) {                                             // high resolution: the nearest centroid itself (never an average of neighbours); on a tie the taller one
       /** @type {any} */ let b = null;
-      for (const x of data) { const mz = x.d.mz, [a0, a1] = near(x, px); for (let j = a0; j < a1; j++) { const m = mz[j]; if (m < x0 || m > x1 || x.d.y[j] <= 0) continue; const dd = Math.abs(X(m) - px); if (dd < 14 && (!b || dd < b.dd - 0.5 || (Math.abs(dd - b.dd) <= 0.5 && x.d.y[j] > b.y))) b = { dd, m, y: x.d.y[j], y0: (x.d.y0 || x.d.y)[j], f: x.f, multi: x.multi, prec: x.prec }; } }
+      for (const x of data) { const mz = x.d.mz, [a0, a1] = near(x, px); for (let j = a0; j < a1; j++) { const m = mz[j]; if (m < x0 || m > x1 || x.d.y[j] <= 0) continue; const dd = Math.abs(X(m) - px); if (dd < tol && (!b || dd < b.dd - 0.5 || (Math.abs(dd - b.dd) <= 0.5 && x.d.y[j] > b.y))) b = { dd, m, y: x.d.y[j], y0: (x.d.y0 || x.d.y)[j], f: x.f, multi: x.multi, prec: x.prec }; } }
       return b && { m: b.m, y: b.y, y0: b.y0, f: b.f, multi: b.multi, prec: b.prec };
     }
     /** @type {any} */ let best = null;
-    for (const x of data) { const mz = x.d.mz, [a0, a1] = near(x, px); for (let j = a0; j < a1; j++) { const m = mz[j]; if (m < x0 || m > x1 || x.d.y[j] <= 0) continue; const dd = Math.abs(X(m) - px); if (dd < 14 && (!best || dd < best.dd)) best = { dd, m, j, x }; } }
+    for (const x of data) { const mz = x.d.mz, [a0, a1] = near(x, px); for (let j = a0; j < a1; j++) { const m = mz[j]; if (m < x0 || m > x1 || x.d.y[j] <= 0) continue; const dd = Math.abs(X(m) - px); if (dd < tol && (!best || dd < best.dd)) best = { dd, m, j, x }; } }
     if (!best) return null;
     const { mz, y } = best.x.d; let jb = best.j;
     const [c0, c1] = spanOf(mz, best.m - 0.5 - 1e-6, best.m + 0.5 + 1e-6);          // the tests below are exact; the span only skips what cannot pass
@@ -361,9 +361,9 @@ async function drawSpec(p, snapped) {
   // scan-by-scan walk (arrows): one file, no background subtraction -> the scan comes from the cache of neighbouring scans, not from a window request
   const one = !isDda && files.length === 1 && p.si != null && !bgOf(files[0]) && !p._exp;
   if (one && p.lock && p.lock.fresh) await scFetch(files[0].k, p.level, prk(p.prec, p.filt), p.si - SC_AHEAD, p.si + SC_AHEAD).catch(() => {});   // the axes of the walk look at +-20 scans
-  const rel = specRel(p);                                // y axis in % of the highest peak of each scan (default for MS2) or in cps
+  const rel = specRel(p); p.el.querySelector('[data-a="rel"]')?.classList.toggle("on", rel);   // y axis in % of the highest peak of each scan (default for MSn, level >= 2) or in cps (MS1); the button follows
   const hrp = !!window.HR && HR.anyHr(files, p.level), DECP = p.dec ?? (window.HR ? HR.dec(files, p.level) : 1);       // high resolution: the m/z are the centroids of the file, written with the decimals of the profile
-  const relScale = (/** @type {Bag} */ d) => { let mx = 1e-9; for (const v of d.y) if (v > mx) mx = v; const k = 100 / mx; return { ...d, y0: d.y, y: d.y.map((/** @type {number} */ v) => v * k), py: d.py ? d.py.map((/** @type {number} */ v) => v * k) : d.py }; };
+  const relScale = (/** @type {Bag} */ d) => { let mx = 1e-9; for (const v of d.y) if (v > mx) mx = v; const k = 100 / mx; return { ...d, y0: d.y, y: d.y.map((/** @type {number} */ v) => v >= mx ? 100 : v * k), py: d.py ? d.py.map((/** @type {number} */ v) => v >= mx ? 100 : v * k) : d.py }; };
   /** @type {Bag[]} */ const reqs = [];
   files.forEach((/** @type {Bag} */ f) => {
     const isHr = !!window.HR && HR.isHr(f);
@@ -414,9 +414,9 @@ async function drawSpec(p, snapped) {
   const own = p.level > 1 ? data.flatMap((/** @type {Bag} */ x) => { const m = lineOf(x) ? x.d.pmz : x.d.mz; return m && m.length ? [m[0], m[m.length - 1], ...(x.prec > 0 ? [+x.prec + 5] : [])] : []; }) : [];
   const lo = own.reduce((a, v) => Math.min(a, v), Infinity), hi = own.reduce((a, v) => Math.max(a, v), -Infinity);   if (own.length > 1 && lo < hi) { const w = (hi - lo) * 0.05; full[0] = Math.max(0, lo - w - 1); full[1] = hi + w + 1; }
   const x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
-  let ymax = inRange(x0, x1) * 1.12 / (1 - (p._legPad || 0));
+  let ymax = relY ? 100 : inRange(x0, x1) * 1.12 / (1 - (p._legPad || 0));   // in %: exactly 0-100, the base peak touches the top (its label overflows into the card margin above the plot)
   const yfull = ymax;                                     // automatic top of the intensity axis (y zoom is relative to it)
-  const lk = p.zoomY ? null : lockSync(p, files[0].k, x0, x1, ymax, inRange, one);   // the lock freezes ONLY the intensity axis while walking over the scans
+  const lk = p.zoomY || relY ? null : lockSync(p, files[0].k, x0, x1, ymax, inRange, one);   // the lock freezes ONLY the intensity axis while walking over the scans
   if (lk) ymax = lk.ymax;
   let ymin = 0, negMax = 0;
   if (isDiff) { data.forEach(x => x.d.y.forEach((/** @type {number} */ v, /** @type {number} */ i) => { if (v < negMax && x.d.mz[i] >= x0 && x.d.mz[i] <= x1) negMax = v; })); if (negMax < 0) { ymin = negMax * 1.12; ymax = Math.max(ymax, -negMax * 0.3); } }
@@ -437,11 +437,11 @@ async function drawSpec(p, snapped) {
   p._a.cont = cont;
   const cst = (/** @type {Bag} */ x) => { if (!cont) return () => null; const c = x.cs = x.cs || new Map(); return (/** @type {number} */ j) => { let r = c.get(j); if (r === undefined) { r = cont.state(x.d.mz[j]); c.set(j, r); } return r; }; };     // contaminant state of a peak (HR only): compatible entries, hidden or not
   const hidOf = (/** @type {Bag} */ x) => { const f = cst(x), t1 = 0.01 * maxOf(x.d.y, 1e-9); return (/** @type {number} */ j) => !p.showHid && x.d.y[j] >= t1 && !!(f(j) && f(j).hid); };
-  p._a.hov = (/** @type {number} */ px) => {                                       // peak nearest to the mouse
-    const b = p._a.snap(px); if (!b) return null;
+  p._a.tipOf = (/** @type {Bag} */ b) => {                                       // the box of a peak: the mouse (hov) and the arrow keys (peak-info.js) show the same
     const rf = p.meas && p.meas.ref != null ? `<div>Δ<i>m/z</i> <b>${Math.abs(b.m - p.meas.ref).toFixed(hrp ? DECP : 1)}</b> <span class="sm">da ${p.meas.ref.toFixed(hrp ? DECP : 1)}</span>${hrp ? ` <span class="sm">(${((b.m - p.meas.ref) * 1000).toFixed(1)} mDa)</span>` : ""}</div>` : "";
-    return { px: X(b.m), html: I18N.t("tip.peak", { mz: b.m.toFixed(hrp ? DECP : 2), y: relY ? b.y.toFixed(1) + " %" : isDiff ? (b.y < 0 ? "−" : "+") + fmt(Math.abs(b.y)) + " " + I18N.t(b.y < 0 ? "spec.diff.down" : "spec.diff.up") : fmt(b.y), abs: rel ? ` <span class="sm">(${fmt(b.y0)} cps)</span>` : "" }) + `${data.length > 1 ? `<div class="sm">${EH(b.f.label)}${b.multi ? ` (${I18N.t("ctl.prec.one", { v: b.prec })})` : ""}</div>` : ""}${rf}${cont ? cont.tip(b.m) : ""}` };
+    return { px: X(b.m), stick: { y0: Y(0), y1: Y(Math.min(b.y, ymax)) }, html: I18N.t("tip.peak", { mz: b.m.toFixed(hrp ? DECP : 2), y: relY ? b.y.toFixed(1) + " %" : isDiff ? (b.y < 0 ? "−" : "+") + fmt(Math.abs(b.y)) + " " + I18N.t(b.y < 0 ? "spec.diff.down" : "spec.diff.up") : fmt(b.y), abs: rel ? ` <span class="sm">(${fmt(b.y0)} cps)</span>` : isDiff || !window.PEAKINFO ? "" : PEAKINFO.relOf(p, b) }) + `${data.length > 1 ? `<div class="sm">${EH(b.f.label)}${b.multi ? ` (${I18N.t("ctl.prec.one", { v: b.prec })})` : ""}</div>` : ""}${rf}${window.PEAKINFO ? PEAKINFO.extra(p, b) : ""}${cont ? cont.tip(b.m) : ""}` };
   };
+  p._a.hov = (/** @type {number} */ px) => { const b = p._a.snap(px, window.PEAKINFO ? PEAKINFO.tol(false) : 14); return b ? p._a.tipOf(b) : null; };       // peak nearest to the mouse
   g.save(); g.beginPath(); g.rect(M.l, M.t - 1, W - M.l - M.r, H - M.t - M.b + 1); g.clip();     // bars taller than the (magnified) graph end at the top edge
   data.forEach(x => {
     const color = specColor(x);
@@ -480,11 +480,11 @@ async function drawSpec(p, snapped) {
   const hid0 = cont ? hidOf(data[0]) : null;
   { const lab = (/** @type {number} */ j) => { const m = d0.mz[j]; if (m >= x0 && m <= x1 && Math.abs(d0.y[j]) >= thr && d0.y[j] <= ymax && d0.y[j] >= ymin && !(hid0 && hid0(j))) pk.push([m, d0.y[j]]); };
     if (data[0].tall && !p.zoomY && !lk) data[0].tall.forEach(lab); else { const [a0, a1] = spanOf(d0.mz, x0, x1); for (let j = a0; j < a1; j++) lab(j); } }      // too many peaks: the tallest of each column hold every label (a shorter one shares its pixel)
-  pk.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+  const pinned = window.PEAKINFO ? PEAKINFO.pinned(p, pk, d0, x0, x1, ymin, ymax) : []; pk.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
   /** @type {{ x: number, w: number }[]} */ const used = [];
   g.fillStyle = ecss("--ink"); g.textAlign = "center"; g.font = fpx(12);
   /** @type {Bag[]} */ const lbls = []; p._a.lbls = lbls;                      // clickable labels: hover draws a small box, right click opens the menu
-  for (const [m, y] of pk.slice(0, 40)) { const px = X(m), t = m.toFixed(DEC), w = g.measureText(t).width; if (used.length >= NL || used.some(u => Math.abs(u.x - px) < (u.w + w) / 2 + 8)) continue; used.push({ x: px, w }); const fo = p.fm && p.fm.find((/** @type {Bag} */ z) => Math.abs(z.m - m) < 1e-4), up = fo ? 13 * fz() : 0;   // a formula applied to the peak (candidate, italic) sits between the m/z and the bar
+  for (const [m, y] of [...pinned, ...pk.slice(0, 40)]) { const px = X(m), t = m.toFixed(DEC), w = g.measureText(t).width, pin = pinned.some((/** @type {number[]} */ v) => v[0] === m); if (!pin && (used.length - pinned.length >= NL || used.some(u => Math.abs(u.x - px) < (u.w + w) / 2 + 8))) continue; used.push({ x: px, w }); const fo = p.fm && p.fm.find((/** @type {Bag} */ z) => Math.abs(z.m - m) < 1e-4), up = fo ? 13 * fz() : 0;   // a formula applied to the peak (candidate, italic) sits between the m/z and the bar
     // the label clears the tallest bar under its own width (a taller neighbour must not cross the text)
     let yb = Y(y); if (y > 0) { const sx = (/** @type {number} */ a0, /** @type {number} */ a1) => { let lo = a0, hi = a1; while (lo < hi) { const mid = (lo + hi) >> 1; if (X(d0.mz[mid]) < px - w / 2 - 3) lo = mid + 1; else hi = mid; } return lo; }; const [s0, s1] = spanOf(d0.mz, x0, x1); for (let j = sx(s0, s1); j < s1 && X(d0.mz[j]) <= px + w / 2 + 3; j++) { const yy = Y(Math.min(d0.y[j], ymax)); if (d0.y[j] > 0 && yy < yb) yb = yy; } }
     const ly = y < 0 ? Y(y) + 15 : yb - 4 - up;

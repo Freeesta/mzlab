@@ -1,6 +1,6 @@
 //! One-click integration of every peak of a high-resolution XIC (`auto_integrate` of mzlab-wasm, `autoAll` of picchi.js): AsLS background,
 //! Savitzky-Golay smoothing scaled to the peak width, apexes from the prominence picking, edges walked out to the noise of the smoothed trace.
-//! The method won the benchmark of tests/integration_bench.rs (docs/agenti/dati-integrazione.md).
+//! The method won the benchmark of tests/integration_bench.rs (docs/agenti/data-integration.md).
 
 use crate::peakq::{detect_prominence, ProminenceParams};
 use crate::peaks::{noise_level, savgol};
@@ -169,11 +169,13 @@ impl Ctx<'_> {
             return None;
         }
         let end = |i: usize, on_bg: bool| {
-            if on_bg {
+            // never below the zero line of the trace
+            (if on_bg {
                 self.b[i]
             } else {
                 self.b[i] + self.sc[i]
-            }
+            })
+            .max(0.0)
         };
         let (base_lo, base_hi) = (end(lo, lo_bg), end(hi, hi_bg));
         let raw: f64 = (lo + 1..=hi)

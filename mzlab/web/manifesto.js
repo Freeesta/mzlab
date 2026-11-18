@@ -1,6 +1,6 @@
 // @ts-strict
 // @ts-noany
-// What the derived files of the archive say about themselves (docs/agenti/memoria.md): the format version, the crate that wrote them and the SHA-256 of the source.
+// What the derived files of the archive say about themselves (docs/agenti/memory.md): the format version, the crate that wrote them and the SHA-256 of the source.
 // The values are read from the file itself (the meta of `.mzidx` and of `.mzfeatf`/`.mzfeat`), so every producer is covered, also the one that writes OPFS without the archive.
 
 /** the format versions that the readers of this page understand: `idx` = version of the `.mzidx` header, `feat` = `feat_version` of the meta (crates/mzlab-feat/src/lib.rs) */

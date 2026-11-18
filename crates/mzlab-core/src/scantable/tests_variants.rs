@@ -128,3 +128,38 @@ fn the_immediate_precursor_is_the_stage_just_before() {
     assert_eq!(t.rows[2].precursor(), Some(250.0));
     assert_eq!(t.rows[3].precursor(), Some(250.0));
 }
+
+/// A file written with a DAD (`MS:1000804` spectra counted by `<spectrumList count>`) is whole: the optical spectra are not scans, so they are not "missing".
+fn with_optical(scans: usize, optical: usize, written_scans: usize) -> Table {
+    let mut s = format!(
+        "{HEAD}<run id=\"r\"><spectrumList count=\"{}\">\n",
+        scans + optical
+    );
+    for i in 0..written_scans {
+        s += &format!(
+            "<spectrum index=\"{i}\" id=\"scan={}\" defaultArrayLength=\"0\"><cvParam cvRef=\"MS\" accession=\"MS:1000511\" name=\"ms level\" value=\"2\"/>{}</spectrum>\n",
+            i + 1,
+            rt("1.5", MIN)
+        );
+    }
+    for i in 0..optical {
+        s += &format!(
+            "<spectrum index=\"{}\" id=\"uv={i}\" defaultArrayLength=\"0\"><cvParam cvRef=\"MS\" accession=\"MS:1000804\" name=\"electromagnetic radiation spectrum\"/>{}</spectrum>\n",
+            scans + i,
+            rt("1.5", MIN)
+        );
+    }
+    s += "</spectrumList></run></mzML>\n";
+    let mut data = s.into_bytes();
+    let n = data.len() as u64;
+    read(&mut data, n).unwrap()
+}
+
+#[test]
+fn optical_spectra_of_the_list_count_are_not_missing_scans() {
+    let t = with_optical(3, 5, 3);
+    assert_eq!((t.rows.len(), t.declared), (3, 3));
+    // the scans cut short while the list still says 8: a real gap, shown as such
+    let cut = with_optical(6, 0, 3);
+    assert_eq!((cut.rows.len(), cut.declared), (3, 6));
+}

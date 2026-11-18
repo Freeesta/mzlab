@@ -1,4 +1,4 @@
-//! `riconosci` of the numpress reader looks to the end of the first spectrum, not at the first 64 KB only (docs/agenti/lettori-aperti.md).
+//! `riconosci` of the numpress reader looks to the end of the first spectrum, not at the first 64 KB only (docs/agenti/readers-open.md).
 #![cfg(feature = "aperti")]
 
 mod common;

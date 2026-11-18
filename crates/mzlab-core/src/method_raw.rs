@@ -1,6 +1,6 @@
 //! The Thermo `.raw` adapter of `metodo/1` (`method.rs`): the sequence row (vial, volume, id, comment, method), the instrument (model, serial number, versions of
 //! the InstID block), the people and the computer, the LC and the mass spectrometer methods embedded in the file (`method_raw/script.rs`) and, in `campi`,
-//! every other field of the container, of the scan trailer and of the method (`method_raw/fields.rs`). What is only guessed from position is marked in `docs/agenti/metodo.md`.
+//! every other field of the container, of the scan trailer and of the method (`method_raw/fields.rs`). What is only guessed from position is marked in `docs/agenti/method.md`.
 //! The status log is in `campi` (`campi/status.rs`); when its schema is not found `avvisi` says so.
 
 mod detectors;

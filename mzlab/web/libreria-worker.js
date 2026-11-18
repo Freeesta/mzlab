@@ -2,7 +2,7 @@
 // @ts-noany
 "use strict";
 // Spectral libraries (MSP, MGF, JSON, MassBank records) read in a Web Worker, kept in the browser's private file system (OPFS) and searched with a MS2 spectrum.
-// No Pyodide. Where WebAssembly works the work is done by static/wasm-lib/ (crates/mzlab-lib-wasm: the .mzlib format of docs/agenti/librerie.md, Flash indexes, scores);
+// No Pyodide. Where WebAssembly works the work is done by static/wasm-lib/ (crates/mzlab-lib-wasm: the .mzlib format of docs/agenti/libraries.md, Flash indexes, scores);
 // the plain JavaScript below (parser, scores, search over an index: also run by node in tests/test_libreria.py) is the fallback for browsers that cannot load it,
 // and still reads the libraries stored in the old MZL1 archive format until they are converted into .mzlib (once, at the first listing).
 //
@@ -155,7 +155,7 @@ function searchIndex(/** @type {LibIdx} */ idx, /** @type {LibQ} */ q, /** @type
     if (opts.pol && lp && lp !== opts.pol) continue;
     const s = getSpec(pos), sc = score(q, s, opts.frag), m = meta ? meta[pos] : null;
     out.push({ pos, name: m ? m[0] : "", type: m ? m[1] : "", ce: m ? m[2] : "", inst: m ? m[3] : "", formula: m ? m[4] : "", ik: m ? m[5] : "", accession: m ? m[6] || "" : "", authors: m ? m[7] || "" : "", license: m ? m[8] || "" : "", smiles: m ? m[9] || "" : "",
-      cos: sc.cos, ent: sc.ent, shared: sc.shared, reverse: sc.reverse, explained: sc.explained, polarity: lp, dprec: opts.ppm != null ? (idx.prec[k] - q.prec) / q.prec * 1e6 : idx.prec[k] - q.prec, prec: idx.prec[k], pairs: sc.pairs, mz: Array.from(s.mz), it: Array.from(s.it) });
+      cos: sc.cos, ent: sc.ent, shared: sc.shared, reverse: sc.reverse, explained: sc.explained, polarity: lp, dprec: opts.ppm != null ? (q.prec - idx.prec[k]) / idx.prec[k] * 1e6 : q.prec - idx.prec[k], prec: idx.prec[k], pairs: sc.pairs, mz: Array.from(s.mz), it: Array.from(s.it) });
   }
   return out;
 }

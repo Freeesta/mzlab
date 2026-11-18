@@ -51,7 +51,7 @@ window.hdrH=()=>document.querySelector("header").offsetHeight;
 /** @param {boolean} [fromHistory] */ function setView(/** @type {string} */ v,fromHistory){STATO.vista(v,"view");applyView();if(!fromHistory&&VIEW_HASH[v]&&location.hash!=="#/"+VIEW_HASH[v])history.pushState(null,"","#/"+VIEW_HASH[v]);}
 document.querySelectorAll("#nav button:not([data-late])").forEach(b=>b.onclick=()=>setView(b.dataset.v));
 // Back/Forward and typed addresses: the view follows the hash
-addEventListener("popstate",()=>{const v=hashView()||"data";if(v!==S.view)setView(v,true)});
+{const follow=()=>{const v=hashView()||"data";if(v!==S.view)setView(v,true)};addEventListener("popstate",follow);addEventListener("hashchange",follow)}   // a typed or pasted address fires both or only one, depending on the browser
 // a direct address shows its view at once, without waiting for the engine (the loading veil stays until the program is ready)
 if(S.view!=="data"){$("#v-draw").hidden=S.view!=="draw";document.documentElement.classList.toggle("in-draw",S.view==="draw");document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.view))}
 
@@ -147,7 +147,10 @@ function wireFiles(/** @type {HTMLElement} */ el,/** @type {FileRiga[]} */ F){
   el.querySelectorAll("[data-dl]").forEach((/** @type {ElementoDati} */ b)=>b.onclick=()=>CONV.menu(b,b.dataset.dl||null));const npc=$("#cvcomp");if(npc)npc.onchange=()=>{CONV.compression=npc.value;CONV.paintSizes();const e=$("#cvest");if(e)e.textContent=CONV.estimate()};const dla=$("#dlall");if(dla)dla.onclick=()=>CONV.menu(dla,null);const rma=$("#rmall");if(rma)rma.onclick=confirmRemoveAll;const sva=$("#saveall");if(sva)sva.onclick=()=>CONVQ.saveAll();
   const tuEl=$("#tunit");if(tuEl)tuEl.onchange=()=>{tunitSet(tuEl.value);renderFiles()};
   const cu=$("#cunit");if(cu)cu.onchange=()=>{const k=cu.value,r=CU[ST.unit][1]/CU[k][1];F.forEach((/** @type {FileRiga} */ f)=>{if(f.conc!=null)f.conc=roundc(f.conc*r)});ST.unit=k;renderFiles()};
-  el.querySelectorAll("[data-rm]").forEach((/** @type {ElementoDati} */ b)=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];const j=await post("api/remove",{name:f.name});mergeFiles(j.files)}catch(e){fail(e)}});modeNote()}
+  el.querySelectorAll("[data-rm]").forEach((/** @type {ElementoDati} */ b)=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];
+    // in the browser the table × is the side panel ×: same take / Undo / free and the same re-indexing of the panels
+    if(window.MZLAB_BROWSER){removeSourceRow(f);return}
+    const j=await post("api/remove",{name:f.name});mergeFiles(j.files)}catch(e){fail(e)}});modeNote()}
 function hrMixNote(){const n=$("#hrmix");if(!n)return;const c=hrMixCount(),w=OPENNOW.world(),L=$("#hrmix-lr"),H=$("#hrmix-hr");n.hidden=!(c.lr>0&&c.hr>0);if(n.hidden)return;
   if(w===null){$("#hrmix-t").textContent=I18N.t("load.hrmix.note");L.textContent=I18N.t("load.hrmix.lr",{n:c.lr});H.textContent=I18N.t("load.hrmix.hr",{n:c.hr});L.hidden=H.hidden=false;
     L.setAttribute("aria-pressed",String(c.onLr>0&&c.onHr===0));H.setAttribute("aria-pressed",String(c.onHr>0&&c.onLr===0));return}
@@ -234,7 +237,7 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
       else{const er=x.json?I18N.err(x.json):x;CONVROWS.finish(e.row,"fail",{msg:er.message,diag:DIAG.da(er,{name:e.scan.name,size:e.wiff.size+e.scan.size})});continue}}
     CONVROWS.drop(e.row)}
   return res}
-// Rule R (docs/agenti/lettori-modulo.md): the readers module (lettori-modulo.js) writes the mzML of what the engine does not read, into OPFS, and the mzML enters upload() as any other: a file with an extension of the
+// Rule R (docs/agenti/readers-module.md): the readers module (lettori-modulo.js) writes the mzML of what the engine does not read, into OPFS, and the mzML enters upload() as any other: a file with an extension of the
 // module, a sample the engine refused with an error of variant (File with `mzlabModulo`, made by LETTORI_MOD.stand), an mzML with numpress arrays, a dataset the module's probe says the engine cannot do, and, with ?lettori=modulo, a .D folder (proof of the path).
 const LETT_FORCE=/[?&]lettori=modulo\b/.test(location.search);
 /** the family whose module takes `f` ("" = none): a sample the engine refused, a file with an extension only a module reads, a dataset the module of its family says the engine cannot do (probe) */

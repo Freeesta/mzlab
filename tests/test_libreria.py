@@ -168,11 +168,13 @@ def test_search_window_polarity_order_and_the_pack_round_trip():
       const q=L.queryOf([[100,1000],[200,500]],300.1234,1);
       const ppm=L.searchIndex(idx,q,{ppm:5,frag:0.01,pol:1},p=>peaks[p],meta);
       const wide=L.searchIndex(idx,q,{da:0.5,frag:0.01,pol:0},p=>peaks[p],meta);
-      console.log(JSON.stringify({sorted:Array.from(idx.prec), ord:Array.from(idx.ord), ppm:ppm.map(x=>[x.name,Math.round(x.dprec*10)/10,x.shared]), wide:wide.map(x=>x.name)}));""")
+      console.log(JSON.stringify({sorted:Array.from(idx.prec), ord:Array.from(idx.ord), ppm:ppm.map(x=>[x.name,Math.round(x.dprec*10)/10,x.shared]), wide:wide.map(x=>x.name), wideD:wide.map(x=>Math.round(x.dprec*1e4)/1e4)}));""")
     assert r["sorted"] == sorted([300.1234, 300.1260, 255.5, 300.1235, 500]) and r["ord"] == [2, 0, 3, 1, 4]
     assert r["ppm"][0][0] == "n0" and r["ppm"][0][1] == 0 and r["ppm"][0][2] == 2                      # 300.1260 is 8.7 ppm away; the negative one is another polarity
     assert [x[0] for x in r["ppm"]] == ["n0"] or len(r["ppm"]) == 1
     assert sorted(r["wide"]) == ["n0", "n1", "n3"]
+    # sign (study item A3): query (observed) minus library (theoretical); n1 is the library entry above the query, n3 the one 0.0001 above
+    assert dict(zip(r["wide"], r["wideD"])) == {"n0": 0, "n1": -0.0026, "n3": -0.0001}
 
 
 def test_archive_index_round_trip():

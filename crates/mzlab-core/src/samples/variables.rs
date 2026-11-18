@@ -1,5 +1,5 @@
 //! `variabili` and `nome_gruppo`: how the NAMES of a set of files split them (matrix, condition, time, role, concentration, replicate), ranked as grouping keys
-//! (`nomivar/1`, `docs/agenti/campioni.md`). Role, time and concentration come from the parser of `names.rs`; the pieces are cut by `variable_classes.rs`.
+//! (`nomivar/1`, `docs/agenti/samples.md`). Role, time and concentration come from the parser of `names.rs`; the pieces are cut by `variable_classes.rs`.
 //! The same answer for every order of the files (the order only decides the order of `files[]` and the indices that follow it).
 
 use super::names::role_and_time;

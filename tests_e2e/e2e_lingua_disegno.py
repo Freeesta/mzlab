@@ -24,7 +24,7 @@ try:
               v.querySelectorAll('[title],[placeholder],[aria-label]').forEach(e => out.push(e.title || '', e.placeholder || '', e.getAttribute('aria-label') || '')); return out.join('\\n'); }""")
         def english():
             pg = page("en-US"); t = visible_text(pg)
-            for w in ("Under each structure", "Quick draw", "Export the canvas", "Transparent background", "File name", "Shortcuts", "Editor tools", "Hide panels"):
+            for w in ("Under each structure", "Quick draw", "Export the canvas", "Transparent", "File name", "Shortcuts", "Editor tools", "Hide panels"):
                 assert w in t, (w, t[:300])
             bad = ITALIAN.findall(t); assert not bad, bad
             assert pg.input_value("#ex-name").startswith("drawing_"), pg.input_value("#ex-name")

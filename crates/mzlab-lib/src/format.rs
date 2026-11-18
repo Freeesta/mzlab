@@ -1,4 +1,4 @@
-//! Constants and fixed-size records of the `.mzlib` format (v1, and v2 which adds the retention index, the library info and the InChIKey hashes) (the byte-by-byte specification is docs/agenti/librerie.md).
+//! Constants and fixed-size records of the `.mzlib` format (v1, and v2 which adds the retention index, the library info and the InChIKey hashes) (the byte-by-byte specification is docs/agenti/libraries.md).
 
 use crate::util::{crc32c, le_f32, le_f64, le_u16, le_u32, le_u64};
 

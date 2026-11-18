@@ -220,7 +220,12 @@ fn narrow_peaks_are_detect_peaks_when_broad_is_off() {
     let c = case();
     let (rt, y) = trace(&c, 2.0, true, |t| 5.0 * t / RUN_S, 0x5eed_0001);
     let found = uv_peaks(&rt, &y, &UvParams::default()).unwrap();
-    let mut want = detect_peaks(&rt, &y, Params::default());
+    // the UV narrow finder keeps the fixed widths (a band must not rescale it)
+    let fixed = Params {
+        scale_to_width: false,
+        ..Params::default()
+    };
+    let mut want = detect_peaks(&rt, &y, fixed);
     want.sort_by_key(|w| w.apex_i);
     assert_eq!(found.len(), want.len());
     for (f, w) in found.iter().zip(&want) {

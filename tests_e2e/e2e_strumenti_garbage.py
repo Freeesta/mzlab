@@ -44,7 +44,9 @@ try:
             typed(pg, "#lst-tol", "2,5"); assert pg.get_attribute("#lst-tol", "aria-invalid") is None and pg.input_value("#lst-tol") == "2,5"
         step("reference lists: the ± tolerance refuses garbage; «2,5» is taken", lists)
         def target():
-            pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close()); LISTE.openTargetScreening({})"); pg.wait_for_selector("#ts-start", timeout=20000)
+            # the dormant tab: behind its flag (features.js)
+            pg.evaluate("localStorage.setItem(NOMI.KEY('dev.targetscreening'), '1'); document.querySelectorAll('dialog[open]').forEach(d=>d.close()); BARRA.close(false); LISTE.openTargetScreening({})"); pg.wait_for_selector("#ts-start", timeout=20000)
+            wait_for_js(pg, "document.querySelectorAll('#lst-target-box input[data-num]').length >= 2", 10000)
             assert sweep(pg, "#lst-target-box") == 2
         step("target screening: ppm and S/N refuse garbage", target)
         def what_is():

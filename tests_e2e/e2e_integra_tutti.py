@@ -43,14 +43,14 @@ try:
         def same_area():
             v = pg.evaluate(f"""(async()=>{{const p={M},a=p._a;const out=[];for(const s of a.sr){{const t=await QUALITA.lrAuto(s.x,s.y,a.x0,a.x1,INTTUTTI.engineParams(PK));
               const r=JSON.parse(t);const its=p.ints.filter(i=>i.key===s.key).sort((u,w)=>u.a-w.a);
-              its.forEach((it,k)=>{{const q=r.peaks[k];out.push([it.area,(q.area-q.below)*60,it.below,q.below*60,it.bm,it.snap&&it.snap.a,it.my&&it.my.a,q.b0,it.auto,q])}})}}return out}})()""")
+              its.forEach((it,k)=>{{const q=r.peaks[k];out.push([it.area,(q.area-q.below),it.below,q.below,it.bm,it.snap&&it.snap.a,it.my&&it.my.a,q.b0,it.auto,q])}})}}return out}})()""")
             assert v, v
             for page, net, pb, eb, bm, snap, my, b0, au, q in v:
                 assert bm == "line" and snap == "man" and my == b0 and au["half_auto"] is True, v      # the engine's baseline as two manual anchors
                 # the page keeps its signed measure of a line (above minus the part under it, shown apart): the engine's area minus its `below`
                 assert abs(page - net) <= 1e-6 * abs(net) and abs(pb - eb) <= 1e-6 * max(abs(eb), 1), (page, net, pb, eb)
                 # the record keeps every choice: the engine's areas (counts x s), its baseline, why each end stopped and what its clamp did
-                assert au["baseline"] == "engine" and abs(au["area"] - q["area"] * 60) <= 1e-9 * q["area"] * 60 and au["area"] >= 0 and au["below"] >= 0, au
+                assert au["baseline"] == "engine" and abs(au["area"] - q["area"]) <= 1e-9 * q["area"] and au["area"] >= 0 and au["below"] >= 0, au
                 assert au["split"] == "drop" and {au["clamp0"], au["clamp1"]} <= {"none", "trace"} and au["end0"] and au["end1"], au
             note = pg.evaluate("document.querySelector('#qnote').textContent")
             assert pg.evaluate("I18N.t('pk.split.0')") in note and pg.evaluate("I18N.t('int.lrAll.done',{n:0,w:0,a:'',v:0,sn:0,noise:0,split:'',c:0,e:0,below:0})").split(" · ")[6] in note, note

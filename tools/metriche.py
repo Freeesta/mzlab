@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Metrics of every main commit, to see whether the project improves over time (docs/agenti/metriche.md). Standard library only.
+"""Metrics of every main commit, to see whether the project improves over time (docs/agenti/metrics.md). Standard library only.
 
     python3 tools/metriche.py --registra --sito SITE --dati DIR [--sha SHA] [--ci]   # measure and append one line to DIR/metriche-YYYY-MM.jsonl
     python3 tools/metriche.py --aggiungi nome=valore ... --dati DIR [--sha SHA]       # hand-measured numbers (private-data benches) for a commit
