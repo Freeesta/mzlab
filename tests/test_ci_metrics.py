@@ -56,6 +56,40 @@ def test_pr_unit_record():
     assert (p["azione"], p["merge_main"], p["aree"]) == ("push", True, {"docs": 1})
 
 
+def test_pr_poll_without_pull_request_target(tmp_path):
+    from datetime import datetime, timezone
+    dati = tmp_path / "e.jsonl"
+    ora = datetime(2026, 11, 18, 12, 0, tzinfo=timezone.utc)
+    prs = [{"number": 7, "state": "closed", "created_at": "2026-11-18T08:00:00Z", "updated_at": "2026-11-18T11:00:00Z", "merged_at": "2026-11-18T11:00:00Z",
+            "closed_at": "2026-11-18T11:00:00Z", "head": {"sha": "h7"}},
+           {"number": 1, "state": "closed", "created_at": "2026-01-01T00:00:00Z", "updated_at": "2026-01-02T00:00:00Z", "head": {"sha": "old"}}]
+    detail = {**prs[0], "merged": True, "commits": 2}
+
+    def api(p):
+        if p.startswith("/pulls?state=all"):
+            return prs
+        if p == "/pulls/7":
+            return detail
+        if p.startswith("/actions/runs?event=pull_request"):
+            return {"workflow_runs": [{"name": "test", "head_sha": "h7", "created_at": "2026-11-18T09:00:00Z", "pull_requests": [{"number": 7}]},
+                                      {"name": "test", "head_sha": "fork", "created_at": "2026-11-18T09:30:00Z", "pull_requests": []},
+                                      {"name": "rust", "head_sha": "h7", "created_at": "2026-11-18T09:00:00Z", "pull_requests": [{"number": 7}]}]}
+        if p.startswith("/commits/") and "check-runs" not in p:
+            return {"commit": {"message": "work"}, "parents": [1], "files": [{"filename": "docs/a.md"}]}
+        if "/files" in p:
+            return [{"filename": "docs/a.md"}]
+        if "/reviews" in p:
+            return []
+        if "/commits?" in p:
+            return [{"parents": [1], "commit": {"message": "start"}}]
+        return {"check_runs": [{"id": 1, "name": "a", "status": "completed", "conclusion": "success", "completed_at": "2026-11-18T10:00:00Z"}]}
+    rows = s.pr_recent_rows(str(dati), api, ora)
+    assert sorted((r["azione"], r["sha"]) for r in rows) == [("aperta", "h7"), ("push", "h7"), ("unita", "h7")]
+    assert [r["ts_utc"] for r in rows if r["azione"] == "push"] == ["2026-11-18T09:00:00Z"]
+    s.enqueue(rows, str(dati))
+    assert s.pr_recent_rows(str(dati), api, ora) == []
+
+
 def test_conflicts_and_dedup(tmp_path):
     dati = tmp_path / "e.jsonl"
 
