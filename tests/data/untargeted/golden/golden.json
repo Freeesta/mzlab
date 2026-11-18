@@ -25,10 +25,10 @@
       "mz": 184.1332,
       "rt": 5.2,
       "areas": {
-       "Campione_A_pos": 100000
+       "Sample_A_pos": 100000
       },
       "detected": [
-       "Campione_A_pos"
+       "Sample_A_pos"
       ],
       "ms2": {
        "mz": [
@@ -123,12 +123,12 @@
       "mz": 301.1547,
       "rt": 6,
       "areas": {
-       "Campione_A_pos": 80000,
-       "Campione_B_pos": 70000
+       "Sample_A_pos": 80000,
+       "Sample_B_pos": 70000
       },
       "detected": [
-       "Campione_A_pos",
-       "Campione_B_pos"
+       "Sample_A_pos",
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [
@@ -188,12 +188,12 @@
       "mz": 195.0875,
       "rt": 4,
       "areas": {
-       "Campione_A_pos": 150000,
-       "Campione_B_pos": 160000
+       "Sample_A_pos": 150000,
+       "Sample_B_pos": 160000
       },
       "detected": [
-       "Campione_A_pos",
-       "Campione_B_pos"
+       "Sample_A_pos",
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [
@@ -229,7 +229,7 @@
       "mz": 280.1,
       "rt": 6.5,
       "areas": {
-       "Campione_A_pos": 99999
+       "Sample_A_pos": 99999
       },
       "detected": [],
       "ms2": null,
@@ -247,10 +247,10 @@
       "mz": 299.1754,
       "rt": 9.5,
       "areas": {
-       "Campione_A_pos": 60000
+       "Sample_A_pos": 60000
       },
       "detected": [
-       "Campione_A_pos"
+       "Sample_A_pos"
       ],
       "ms2": {
        "mz": [
@@ -305,10 +305,10 @@
       "mz": 310.3,
       "rt": 8,
       "areas": {
-       "Campione_B_pos": 35000
+       "Sample_B_pos": 35000
       },
       "detected": [
-       "Campione_B_pos"
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [],
@@ -320,8 +320,8 @@
      }
     ],
     "samples": [
-     "Campione_A_pos",
-     "Campione_B_pos"
+     "Sample_A_pos",
+     "Sample_B_pos"
     ],
     "edges": [],
     "warnings": [],
@@ -376,10 +376,10 @@
       "mz": 184.1332,
       "rt": 5.2,
       "areas": {
-       "Campione_A_pos": 100000
+       "Sample_A_pos": 100000
       },
       "detected": [
-       "Campione_A_pos"
+       "Sample_A_pos"
       ],
       "ms2": {
        "mz": [
@@ -474,12 +474,12 @@
       "mz": 301.1547,
       "rt": 6,
       "areas": {
-       "Campione_A_pos": 80000,
-       "Campione_B_pos": 70000
+       "Sample_A_pos": 80000,
+       "Sample_B_pos": 70000
       },
       "detected": [
-       "Campione_A_pos",
-       "Campione_B_pos"
+       "Sample_A_pos",
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [
@@ -539,12 +539,12 @@
       "mz": 195.0875,
       "rt": 4,
       "areas": {
-       "Campione_A_pos": 150000,
-       "Campione_B_pos": 160000
+       "Sample_A_pos": 150000,
+       "Sample_B_pos": 160000
       },
       "detected": [
-       "Campione_A_pos",
-       "Campione_B_pos"
+       "Sample_A_pos",
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [
@@ -580,7 +580,7 @@
       "mz": 280.1,
       "rt": 6.5,
       "areas": {
-       "Campione_A_pos": 99999
+       "Sample_A_pos": 99999
       },
       "detected": [],
       "ms2": null,
@@ -598,10 +598,10 @@
       "mz": 299.1754,
       "rt": 9.5,
       "areas": {
-       "Campione_A_pos": 60000
+       "Sample_A_pos": 60000
       },
       "detected": [
-       "Campione_A_pos"
+       "Sample_A_pos"
       ],
       "ms2": {
        "mz": [
@@ -656,10 +656,10 @@
       "mz": 310.3,
       "rt": 8,
       "areas": {
-       "Campione_B_pos": 35000
+       "Sample_B_pos": 35000
       },
       "detected": [
-       "Campione_B_pos"
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [],
@@ -671,8 +671,8 @@
      }
     ],
     "samples": [
-     "Campione_A_pos",
-     "Campione_B_pos"
+     "Sample_A_pos",
+     "Sample_B_pos"
     ],
     "edges": [],
     "warnings": [],
@@ -727,10 +727,10 @@
       "mz": 184.1332,
       "rt": 5.2,
       "areas": {
-       "Campione_A_pos": 100000
+       "Sample_A_pos": 100000
       },
       "detected": [
-       "Campione_A_pos"
+       "Sample_A_pos"
       ],
       "ms2": {
        "mz": [
@@ -825,12 +825,12 @@
       "mz": 301.1547,
       "rt": 6,
       "areas": {
-       "Campione_A_pos": 80000,
-       "Campione_B_pos": 70000
+       "Sample_A_pos": 80000,
+       "Sample_B_pos": 70000
       },
       "detected": [
-       "Campione_A_pos",
-       "Campione_B_pos"
+       "Sample_A_pos",
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [
@@ -890,12 +890,12 @@
       "mz": 195.0875,
       "rt": 4,
       "areas": {
-       "Campione_A_pos": 150000,
-       "Campione_B_pos": 160000
+       "Sample_A_pos": 150000,
+       "Sample_B_pos": 160000
       },
       "detected": [
-       "Campione_A_pos",
-       "Campione_B_pos"
+       "Sample_A_pos",
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [
@@ -931,7 +931,7 @@
       "mz": 280.1,
       "rt": 6.5,
       "areas": {
-       "Campione_A_pos": 99999
+       "Sample_A_pos": 99999
       },
       "detected": [],
       "ms2": null,
@@ -949,10 +949,10 @@
       "mz": 299.1754,
       "rt": 9.5,
       "areas": {
-       "Campione_A_pos": 60000
+       "Sample_A_pos": 60000
       },
       "detected": [
-       "Campione_A_pos"
+       "Sample_A_pos"
       ],
       "ms2": {
        "mz": [
@@ -1007,10 +1007,10 @@
       "mz": 310.3,
       "rt": 8,
       "areas": {
-       "Campione_B_pos": 35000
+       "Sample_B_pos": 35000
       },
       "detected": [
-       "Campione_B_pos"
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [],
@@ -1022,8 +1022,8 @@
      }
     ],
     "samples": [
-     "Campione_A_pos",
-     "Campione_B_pos"
+     "Sample_A_pos",
+     "Sample_B_pos"
     ],
     "edges": [],
     "warnings": [],
@@ -1079,10 +1079,10 @@
       "mz": 184.1332,
       "rt": 5.2,
       "areas": {
-       "Campione_A_pos": 100000
+       "Sample_A_pos": 100000
       },
       "detected": [
-       "Campione_A_pos"
+       "Sample_A_pos"
       ],
       "ms2": {
        "mz": [
@@ -1177,12 +1177,12 @@
       "mz": 301.1547,
       "rt": 6,
       "areas": {
-       "Campione_A_pos": 80000,
-       "Campione_B_pos": 70000
+       "Sample_A_pos": 80000,
+       "Sample_B_pos": 70000
       },
       "detected": [
-       "Campione_A_pos",
-       "Campione_B_pos"
+       "Sample_A_pos",
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [
@@ -1242,12 +1242,12 @@
       "mz": 195.0875,
       "rt": 4,
       "areas": {
-       "Campione_A_pos": 150000,
-       "Campione_B_pos": 160000
+       "Sample_A_pos": 150000,
+       "Sample_B_pos": 160000
       },
       "detected": [
-       "Campione_A_pos",
-       "Campione_B_pos"
+       "Sample_A_pos",
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [
@@ -1278,8 +1278,8 @@
      }
     ],
     "samples": [
-     "Campione_A_pos",
-     "Campione_B_pos"
+     "Sample_A_pos",
+     "Sample_B_pos"
     ],
     "edges": [],
     "warnings": [],
@@ -1335,10 +1335,10 @@
       "mz": 184.1332,
       "rt": 5.2,
       "areas": {
-       "Campione_A_pos": 100000
+       "Sample_A_pos": 100000
       },
       "detected": [
-       "Campione_A_pos"
+       "Sample_A_pos"
       ],
       "ms2": {
        "mz": [
@@ -1433,12 +1433,12 @@
       "mz": 301.1547,
       "rt": 6,
       "areas": {
-       "Campione_A_pos": 80000,
-       "Campione_B_pos": 70000
+       "Sample_A_pos": 80000,
+       "Sample_B_pos": 70000
       },
       "detected": [
-       "Campione_A_pos",
-       "Campione_B_pos"
+       "Sample_A_pos",
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [
@@ -1498,12 +1498,12 @@
       "mz": 195.0875,
       "rt": 4,
       "areas": {
-       "Campione_A_pos": 150000,
-       "Campione_B_pos": 160000
+       "Sample_A_pos": 150000,
+       "Sample_B_pos": 160000
       },
       "detected": [
-       "Campione_A_pos",
-       "Campione_B_pos"
+       "Sample_A_pos",
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [
@@ -1539,7 +1539,7 @@
       "mz": 280.1,
       "rt": 6.5,
       "areas": {
-       "Campione_A_pos": 99999
+       "Sample_A_pos": 99999
       },
       "detected": [],
       "ms2": null,
@@ -1557,10 +1557,10 @@
       "mz": 299.1754,
       "rt": 9.5,
       "areas": {
-       "Campione_A_pos": 60000
+       "Sample_A_pos": 60000
       },
       "detected": [
-       "Campione_A_pos"
+       "Sample_A_pos"
       ],
       "ms2": {
        "mz": [
@@ -1615,10 +1615,10 @@
       "mz": 310.3,
       "rt": 8,
       "areas": {
-       "Campione_B_pos": 35000
+       "Sample_B_pos": 35000
       },
       "detected": [
-       "Campione_B_pos"
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [],
@@ -1630,8 +1630,8 @@
      }
     ],
     "samples": [
-     "Campione_A_pos",
-     "Campione_B_pos"
+     "Sample_A_pos",
+     "Sample_B_pos"
     ],
     "edges": [],
     "warnings": [],
@@ -1682,10 +1682,10 @@
       "mz": 184.1332,
       "rt": 5.2,
       "areas": {
-       "Campione_A_pos": 100000
+       "Sample_A_pos": 100000
       },
       "detected": [
-       "Campione_A_pos"
+       "Sample_A_pos"
       ],
       "ms2": null,
       "ann": [
@@ -1728,12 +1728,12 @@
       "mz": 301.1547,
       "rt": 6,
       "areas": {
-       "Campione_A_pos": 80000,
-       "Campione_B_pos": 70000
+       "Sample_A_pos": 80000,
+       "Sample_B_pos": 70000
       },
       "detected": [
-       "Campione_A_pos",
-       "Campione_B_pos"
+       "Sample_A_pos",
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [
@@ -1774,12 +1774,12 @@
       "mz": 195.0875,
       "rt": 4,
       "areas": {
-       "Campione_A_pos": 150000,
-       "Campione_B_pos": 160000
+       "Sample_A_pos": 150000,
+       "Sample_B_pos": 160000
       },
       "detected": [
-       "Campione_A_pos",
-       "Campione_B_pos"
+       "Sample_A_pos",
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [],
@@ -1796,7 +1796,7 @@
       "mz": 280.1,
       "rt": 6.5,
       "areas": {
-       "Campione_A_pos": 99999
+       "Sample_A_pos": 99999
       },
       "detected": [],
       "ms2": null,
@@ -1814,10 +1814,10 @@
       "mz": 299.1754,
       "rt": 9.5,
       "areas": {
-       "Campione_A_pos": 60000
+       "Sample_A_pos": 60000
       },
       "detected": [
-       "Campione_A_pos"
+       "Sample_A_pos"
       ],
       "ms2": null,
       "ann": [
@@ -1856,10 +1856,10 @@
       "mz": 310.3,
       "rt": 8,
       "areas": {
-       "Campione_B_pos": 35000
+       "Sample_B_pos": 35000
       },
       "detected": [
-       "Campione_B_pos"
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [],
@@ -1871,8 +1871,8 @@
      }
     ],
     "samples": [
-     "Campione_A_pos",
-     "Campione_B_pos"
+     "Sample_A_pos",
+     "Sample_B_pos"
     ],
     "edges": [],
     "warnings": [
@@ -1911,10 +1911,10 @@
       "mz": 184.1332,
       "rt": 5.2,
       "areas": {
-       "Campione_A_pos": 100000
+       "Sample_A_pos": 100000
       },
       "detected": [
-       "Campione_A_pos"
+       "Sample_A_pos"
       ],
       "ms2": null,
       "ann": [
@@ -1958,12 +1958,12 @@
       "mz": 301.1547,
       "rt": 6,
       "areas": {
-       "Campione_A_pos": 80000,
-       "Campione_B_pos": 70000
+       "Sample_A_pos": 80000,
+       "Sample_B_pos": 70000
       },
       "detected": [
-       "Campione_A_pos",
-       "Campione_B_pos"
+       "Sample_A_pos",
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [
@@ -2005,12 +2005,12 @@
       "mz": 195.0875,
       "rt": 4,
       "areas": {
-       "Campione_A_pos": 150000,
-       "Campione_B_pos": 160000
+       "Sample_A_pos": 150000,
+       "Sample_B_pos": 160000
       },
       "detected": [
-       "Campione_A_pos",
-       "Campione_B_pos"
+       "Sample_A_pos",
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [],
@@ -2027,7 +2027,7 @@
       "mz": 280.1,
       "rt": 6.5,
       "areas": {
-       "Campione_A_pos": 99999
+       "Sample_A_pos": 99999
       },
       "detected": [],
       "ms2": null,
@@ -2045,10 +2045,10 @@
       "mz": 299.1754,
       "rt": 9.5,
       "areas": {
-       "Campione_A_pos": 60000
+       "Sample_A_pos": 60000
       },
       "detected": [
-       "Campione_A_pos"
+       "Sample_A_pos"
       ],
       "ms2": null,
       "ann": [
@@ -2088,10 +2088,10 @@
       "mz": 310.3,
       "rt": 8,
       "areas": {
-       "Campione_B_pos": 35000
+       "Sample_B_pos": 35000
       },
       "detected": [
-       "Campione_B_pos"
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [],
@@ -2103,8 +2103,8 @@
      }
     ],
     "samples": [
-     "Campione_A_pos",
-     "Campione_B_pos"
+     "Sample_A_pos",
+     "Sample_B_pos"
     ],
     "edges": [],
     "warnings": [],
@@ -2146,7 +2146,7 @@
       "mz": 184.1332,
       "rt": 5.2,
       "areas": {
-       "Campione_A_pos": 100000
+       "Sample_A_pos": 100000
       },
       "detected": null,
       "ms2": {
@@ -2181,8 +2181,8 @@
       "mz": 301.1547,
       "rt": 6,
       "areas": {
-       "Campione_A_pos": 80000,
-       "Campione_B_pos": 70000
+       "Sample_A_pos": 80000,
+       "Sample_B_pos": 70000
       },
       "detected": null,
       "ms2": null,
@@ -2200,7 +2200,7 @@
       "mz": 299.1754,
       "rt": 9.5,
       "areas": {
-       "Campione_A_pos": 60000
+       "Sample_A_pos": 60000
       },
       "detected": null,
       "ms2": {
@@ -2228,8 +2228,8 @@
      }
     ],
     "samples": [
-     "Campione_A_pos",
-     "Campione_B_pos"
+     "Sample_A_pos",
+     "Sample_B_pos"
     ],
     "edges": [
      {
@@ -2286,7 +2286,7 @@
       "mz": 184.1332,
       "rt": 5.2,
       "areas": {
-       "Campione_A_pos": 100000
+       "Sample_A_pos": 100000
       },
       "detected": null,
       "ms2": null,
@@ -2308,8 +2308,8 @@
       "mz": 301.1547,
       "rt": 6,
       "areas": {
-       "Campione_A_pos": 80000,
-       "Campione_B_pos": 70000
+       "Sample_A_pos": 80000,
+       "Sample_B_pos": 70000
       },
       "detected": null,
       "ms2": null,
@@ -2327,7 +2327,7 @@
       "mz": 299.1754,
       "rt": 9.5,
       "areas": {
-       "Campione_A_pos": 60000
+       "Sample_A_pos": 60000
       },
       "detected": null,
       "ms2": null,
@@ -2340,8 +2340,8 @@
      }
     ],
     "samples": [
-     "Campione_A_pos",
-     "Campione_B_pos"
+     "Sample_A_pos",
+     "Sample_B_pos"
     ],
     "edges": [
      {
@@ -2392,7 +2392,7 @@
       "mz": 184.1332,
       "rt": 5.2,
       "areas": {
-       "Campione_A": 100000
+       "Sample_A": 100000
       },
       "detected": null,
       "ms2": {
@@ -2441,8 +2441,8 @@
       "mz": 301.1547,
       "rt": 6,
       "areas": {
-       "Campione_A": 80000,
-       "Campione_B": 70000
+       "Sample_A": 80000,
+       "Sample_B": 70000
       },
       "detected": null,
       "ms2": null,
@@ -2460,7 +2460,7 @@
       "mz": 250.1,
       "rt": 7,
       "areas": {
-       "Campione_B": 5000
+       "Sample_B": 5000
       },
       "detected": null,
       "ms2": null,
@@ -2478,8 +2478,8 @@
       "mz": 310.3,
       "rt": 8.1,
       "areas": {
-       "Campione_A": 30000,
-       "Campione_B": 20000
+       "Sample_A": 30000,
+       "Sample_B": 20000
       },
       "detected": null,
       "ms2": {
@@ -2521,8 +2521,8 @@
      }
     ],
     "samples": [
-     "Campione_A",
-     "Campione_B"
+     "Sample_A",
+     "Sample_B"
     ],
     "edges": [],
     "warnings": [],
@@ -2558,7 +2558,7 @@
       "mz": 184.1332,
       "rt": 5.2,
       "areas": {
-       "Campione_A": 100000
+       "Sample_A": 100000
       },
       "detected": null,
       "ms2": {
@@ -2607,8 +2607,8 @@
       "mz": 301.1547,
       "rt": 6,
       "areas": {
-       "Campione_A": 80000,
-       "Campione_B": 70000
+       "Sample_A": 80000,
+       "Sample_B": 70000
       },
       "detected": null,
       "ms2": null,
@@ -2626,7 +2626,7 @@
       "mz": 250.1,
       "rt": 7,
       "areas": {
-       "Campione_B": 5000
+       "Sample_B": 5000
       },
       "detected": null,
       "ms2": null,
@@ -2644,8 +2644,8 @@
       "mz": 310.3,
       "rt": 8.1,
       "areas": {
-       "Campione_A": 30000,
-       "Campione_B": 20000
+       "Sample_A": 30000,
+       "Sample_B": 20000
       },
       "detected": null,
       "ms2": {
@@ -2687,8 +2687,8 @@
      }
     ],
     "samples": [
-     "Campione_A",
-     "Campione_B"
+     "Sample_A",
+     "Sample_B"
     ],
     "edges": [],
     "warnings": [],
@@ -2746,10 +2746,10 @@
       "mz": 184.1332,
       "rt": 5.2,
       "areas": {
-       "Campione_A_pos": 100000
+       "Sample_A_pos": 100000
       },
       "detected": [
-       "Campione_A_pos"
+       "Sample_A_pos"
       ],
       "ms2": null,
       "ann": [
@@ -2830,12 +2830,12 @@
       "mz": 301.1547,
       "rt": 6,
       "areas": {
-       "Campione_A_pos": 80000,
-       "Campione_B_pos": 70000
+       "Sample_A_pos": 80000,
+       "Sample_B_pos": 70000
       },
       "detected": [
-       "Campione_A_pos",
-       "Campione_B_pos"
+       "Sample_A_pos",
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [
@@ -2894,12 +2894,12 @@
       "mz": 195.0875,
       "rt": 4,
       "areas": {
-       "Campione_A_pos": 150000,
-       "Campione_B_pos": 160000
+       "Sample_A_pos": 150000,
+       "Sample_B_pos": 160000
       },
       "detected": [
-       "Campione_A_pos",
-       "Campione_B_pos"
+       "Sample_A_pos",
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [
@@ -2935,7 +2935,7 @@
       "mz": 280.1,
       "rt": 6.5,
       "areas": {
-       "Campione_A_pos": 99999
+       "Sample_A_pos": 99999
       },
       "detected": [],
       "ms2": null,
@@ -2953,10 +2953,10 @@
       "mz": 299.1754,
       "rt": 9.5,
       "areas": {
-       "Campione_A_pos": 60000
+       "Sample_A_pos": 60000
       },
       "detected": [
-       "Campione_A_pos"
+       "Sample_A_pos"
       ],
       "ms2": null,
       "ann": [
@@ -2995,10 +2995,10 @@
       "mz": 310.3,
       "rt": 8,
       "areas": {
-       "Campione_B_pos": 35000
+       "Sample_B_pos": 35000
       },
       "detected": [
-       "Campione_B_pos"
+       "Sample_B_pos"
       ],
       "ms2": null,
       "ann": [],
@@ -3010,8 +3010,8 @@
      }
     ],
     "samples": [
-     "Campione_A_pos",
-     "Campione_B_pos"
+     "Sample_A_pos",
+     "Sample_B_pos"
     ],
     "edges": [],
     "warnings": [],
