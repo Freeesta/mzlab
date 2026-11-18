@@ -211,8 +211,8 @@ fn same_bytes_whatever_the_order_of_the_input() {
     let (_, b) = graph(&Options::default(), &[3, 2, 1, 0], true);
     assert_eq!(a, b);
     let v = crate::json::parse(a.as_bytes()).unwrap();
-    assert_eq!(v.get("formato").unwrap().str(), Some("msngrafo/2"));
-    assert_eq!(v.get("nodi").unwrap().arr().len(), 8);
+    assert_eq!(v.get("schema").unwrap().str(), Some("msn-graph/1"));
+    assert_eq!(v.get("nodes").unwrap().arr().len(), 8);
 }
 
 #[test]
@@ -340,7 +340,7 @@ fn without_the_ion_formula_the_root_gets_candidates_and_with_it_none() {
         g.candidati_radice
     );
     assert!(
-        json.contains("\"candidati_radice\":[{\"formula\":"),
+        json.contains("\"root_candidates\":[{\"formula\":"),
         "{json}"
     );
     let o = Options {
@@ -348,7 +348,7 @@ fn without_the_ion_formula_the_root_gets_candidates_and_with_it_none() {
         ..Options::default()
     };
     let (g, json) = graph(&o, &[0, 1, 2, 3], false);
-    assert!(g.candidati_radice.is_empty() && json.contains("\"candidati_radice\":[]"));
+    assert!(g.candidati_radice.is_empty() && json.contains("\"root_candidates\":[]"));
     let (g, _) = graph_with(
         &Options::default(),
         &[0, 1, 2, 3],

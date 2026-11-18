@@ -1,4 +1,4 @@
-"""A saved fragmentation graph (g.json, msngrafo/1 or /2) opens without its raw data, from the data area (picker and drop): an old graph without `vista` is completed by the .wasm
+"""A saved fragmentation graph (g.json, msn-graph/1) opens without its raw data, from the data area (picker and drop): an old graph without `view` is completed by the .wasm
 msngrafo (op `completa`), a new one opens as it is, a broken file and a newer format are keyed errors with «Details» and «Copy diagnosis». The window is read-only: the spectrum
 of an ion, «Use», the cleavages and the raw requests are off with a reason. No request to api/ is made, MZLAB_LR_MISS stays empty, axe, Italian and English. Needs the built
 site (python3 tools/prepara_sito.py); the .wasm msngrafo is built here when it is not in site/static/wasm-feat. Synthetic fixtures only (tests_e2e/fixtures)."""
@@ -16,15 +16,13 @@ lib_msngrafo.prepare()
 FX = Path(__file__).parent / "fixtures"
 OLD = FX / "msngrafo_esempio.json"
 NEW = FX / "msngrafo_esempio_vista.json"
-N = len(json.loads(OLD.read_text())["nodi"])
+N = len(json.loads(OLD.read_text())["nodes"])
 TMP = Path("/tmp/wd_msngrafo_apri_files"); TMP.mkdir(exist_ok=True)
-BROKEN = TMP / "broken.json"; BROKEN.write_text('{\n "formato": "msngrafo/1",\n "nodi": [{"id": "n1", ')
-NEWER = TMP / "newer.json"; NEWER.write_text(OLD.read_text().replace('"msngrafo/1"', '"msngrafo/3"', 1))
-# the /1 fixture as the engine writes it now: msngrafo/2, English `opzioni` keys
-V2 = TMP / "v2.json"; V2.write_text(json.dumps({**(o := json.loads(OLD.read_text())), "formato": "msngrafo/2", "opzioni": {({"max_picchi": "max_peaks", "isotopi": "isotopes", "attivazione": "activation", "mz_basso": "low_mz", "ppm_basso": "wide_ppm", "prove_min": "min_evidence", "scelte": "pick"}).get(k, k): v for k, v in o["opzioni"].items()}}))
-OTHER = TMP / "other.json"; OTHER.write_text('{"formato": "something/1"}')
+BROKEN = TMP / "broken.json"; BROKEN.write_text('{\n "schema": "msn-graph/1",\n "nodes": [{"id": "n1", ')
+NEWER = TMP / "newer.json"; NEWER.write_text(OLD.read_text().replace('"msn-graph/1"', '"msn-graph/2"', 1))
+OTHER = TMP / "other.json"; OTHER.write_text('{"schema": "something/1"}')
 # a saved graph over the page's 200 MB: only its head is real, the rest is a sparse hole (no disk used)
-BIG = TMP / "big.json"; BIG.write_text('{"formato": "msngrafo/2", "nodi": ['); import os; os.truncate(BIG, 201_000_000)
+BIG = TMP / "big.json"; BIG.write_text('{"schema": "msn-graph/1", "nodes": ['); import os; os.truncate(BIG, 201_000_000)
 r = Run(port=8979, wd="/tmp/wd_msngrafo_apri")
 try:
     with sync_playwright() as p:
@@ -39,7 +37,7 @@ try:
         def old():
             opened(OLD)
             assert pg.locator("#ig-ro .ig-node").count() == N, pg.locator("#ig-ro .ig-node").count()
-            assert pg.evaluate("INFG.G.j.vista && INFG.G.j.vista.algoritmo") == "best-path/1", "the old graph was not completed"
+            assert pg.evaluate("INFG.G.j.view && INFG.G.j.view.algorithm") == "best-path/1", "the old graph was not completed"
             assert pg.evaluate("INFG.G.ro") == "msngrafo_esempio.json"
         step("an old graph (no vista) dropped in the data area is completed by the .wasm and opens", old)
         def readonly():
@@ -72,13 +70,7 @@ try:
             opened(NEW)
             assert pg.locator("#ig-ro .ig-node").count() == N
             close()
-        step("a new graph (with vista) opens as it is", new)
-        def v2():
-            opened(V2)
-            assert pg.locator("#ig-ro .ig-node").count() == N
-            assert pg.evaluate("INFG.G.j.formato") == "msngrafo/2" and pg.evaluate("INFG.G.j.vista.algoritmo") == "best-path/1"
-            close()
-        step("an msngrafo/2 graph (English options) opens too", v2)
+        step("a new graph (with view) opens as it is", new)
         def drop():
             pg.evaluate("""async (t) => { const dt = new DataTransfer(); dt.items.add(new File([t], "dropped.json", { type: "application/json" }));
               document.querySelector("#drop").dispatchEvent(new DragEvent("drop", { dataTransfer: dt, bubbles: true, cancelable: true })); }""", NEW.read_text())
@@ -96,7 +88,7 @@ try:
         def newer():
             pg.set_input_files("#pick", str(NEWER)); pg.wait_for_selector("#unopen .fail", timeout=15000)
             txt = pg.inner_text("#unopen")
-            assert "newer version" in txt and "format 3" in txt, txt[:300]
+            assert "newer version" in txt and "format 2" in txt, txt[:300]
             assert pg.locator("#ig-ro").count() == 0
             pg.click("#unopen [data-a=close]")
         step("a newer format is error.newerFormat and does not open", newer)

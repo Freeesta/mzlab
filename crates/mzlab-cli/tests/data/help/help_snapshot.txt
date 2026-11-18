@@ -253,7 +253,7 @@ mzlab-cli llm params DIR [--answers FILE] [--budget N] [--hide-names]   the prop
 === mzlab-cli msn-graph --help
 exit 0
 --- stdout
-mzlab-cli msn-graph: the fragmentation graph (msngrafo/2) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
+mzlab-cli msn-graph: the fragmentation graph (msn-graph/1) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
 
 usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
        mzlab-cli msn-graph FILE.mzML --formula ION --truth TRUTH.json --summary
@@ -264,17 +264,17 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
   --formula ION        the ion of the root: C13H25N4O3S+, C13H24N4O3S+H or "C13H24N4O3S [M+H]+"; without it, masses only
   --smiles TEXT        written back in the JSON; with --structures, the structure that is cleaved
   --molfile FILE       the 2D structure of the molecule (a molfile), written back in the JSON for the drawings of the root and of the fragments
-  --structures NODE    add to the JSON the key `strutture`: the bonds of --smiles whose cleavage gives the m/z of the node nK of the graph (candidates, with the
-                       ppm and the peaks of its spectrum that the same piece explains); `all` = the key `strutture_tutti`, those of every node of level 2
+  --structures NODE    add to the JSON the key `structures`: the bonds of --smiles whose cleavage gives the m/z of the node nK of the graph (candidates, with the
+                       ppm and the peaks of its spectrum that the same piece explains); `all` = the key `structures_all`, those of every node of level 2
                        or more that has a cleavage
-  --interpret          add to the JSON the key `interpretazione`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the
+  --interpret          add to the JSON the key `interpretation`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the
                        activations that observed it (param interpret)
   --loss-ppm N         window of the loss match by mass, ppm of the precursor m/z (10) (param loss_ppm)
-  --rules              add to the JSON the key `regole`: the fragmentation rules of the table `fragrules/1` that the formulas alone decide (which rule explains the loss
+  --rules              add to the JSON the key `rules`: the fragmentation rules of the table `fragrules/1` that the formulas alone decide (which rule explains the loss
                        of an arc, even-electron check, trap cut-off, composite and stepped losses) and the evidence `regola` of the candidates (param rules)
   --cutoff-q N         q of the trap cut-off, fragments below q/0.908 of the precursor m/z are not observable in a trap CID (0.25) (param cutoff_q)
   --loss-tol-mda N     tolerance of a loss against a rule, mDa (3) (param loss_tol_mda)
-  --breaks             add to the JSON the key `rotture`: the sets of atoms of --smiles (one or two bonds cut, a few hydrogens moved) that give the m/z of each
+  --breaks             add to the JSON the key `breaks`: the sets of atoms of --smiles (one or two bonds cut, a few hydrogens moved) that give the m/z of each
                        node, the arcs they explain and the share of each spectrum's intensity explained (hypotheses, never an assignment) (param breaks)
   --h-max N            hydrogens moved at most beyond the plain cleavage, for --breaks (2) (param h_max)
   --max-bonds N        bonds cut at most, 1 or 2, for --breaks (2) (param max_bonds)
@@ -290,17 +290,17 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
   --export FORMAT      the spectra of the tree as csv, mgf or msp text instead of the graph
   --clean              with --export: only the peaks a node of the graph explains
   --node ID            with --export: nK = the spectra of which node nK of the graph is the precursor; msn:<id> or <id> = those of that node of
-                       the tree; tutto = all
+                       the tree; all = all
   --figure LIST        with --out: also write the figures of the graph next to it (g.json → g.svg, g.html, g.png): svg, html (one file, no external
                        resource, two views, data table) and png (only in a build with the cargo feature `png`)
   --view V             the view the figures open on: tree (default) or radial
   --budget-mb N        memory the spectra of one consensus may take, MB (default: the budget of this machine); over it the calm error.memoryBudget
   --out PATH           write there instead of the standard output
 
-  figure               the figures of a graph already made (after `complete` if it has no `vista`): STEM.svg and STEM.html, STEM.png with --figure
-  complete             adds the key `vista` (levels, best path, tree and radial layout) to an msngrafo/1 that has not got it, with the bytes the engine writes
-  compare              validates a tree measured twice: two msngrafo/1 files in, a JSON (msnconfronto/1) out with the numbers of the five criteria
-                       (isolated nodes, arcs of rel >= 10 %, formulas, MS2 entropy >= 0.8 per energy, m/z shift <= 3 ppm) and `convalidata`
+  figure               the figures of a graph already made (after `complete` if it has no `view`): STEM.svg and STEM.html, STEM.png with --figure
+  complete             adds the key `view` (levels, best path, tree and radial layout) to an msn-graph/1 that has not got it, with the bytes the engine writes
+  compare              validates a tree measured twice: two msn-graph/1 files in, a JSON (msn-compare/1) out with the numbers of the five criteria
+                       (isolated nodes, arcs of rel >= 10 %, formulas, MS2 entropy >= 0.8 per energy, m/z shift <= 3 ppm) and `validated`
 --- stderr
 
 === mzlab-cli channels --help
@@ -774,7 +774,7 @@ output: one CSV line per expected product: id, mz, rt, rows_mz (rows within the 
 === mzlab-cli msn-lib --help
 exit 0
 --- stdout
-mzlab-cli msn-lib: the library of MSn trees (msnlib/1).
+mzlab-cli msn-lib: the library of MSn trees (msn-lib/1).
 
 usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
        mzlab-cli msn-lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
@@ -789,7 +789,7 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
   search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
-          msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
+          msn-search/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
           --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
 --- stderr
@@ -799,15 +799,15 @@ exit 0
 --- stdout
 mzlab-cli msn-rules: the fragmentation rules judged on library spectra with a known structure.
 
-usage: mzlab-cli msn-rules RECORD... [--list FILE] [--smiles S] [--activation A] [--rules] [--decoy SEME] [--out PATH]
+usage: mzlab-cli msn-rules RECORD... [--list FILE] [--smiles S] [--activation A] [--rules] [--decoy SEED] [--out PATH]
        mzlab-cli msn-rules sum LINES... [--out PATH]
 
   RECORD...         MassBank records (one spectrum each) or MSP files; --list: a file with one path per line
   --smiles S        the structure, when the record has none (one record)
   --activation A    cid (trap type) or hcd (beam type), for a file that does not say (MSP)
   --rules           also the peaks explained with the rules of the formula and of the structure, and the peaks per rule id
-  --decoy SEME      the same numbers on three decoys: the structure rewired (same formula), the spectrum of another record with the same nominal
-                    precursor, the losses shifted by 0.0137 Da; SEME fixes the choice, the same seed gives the same lines
+  --decoy SEED      the same numbers on three decoys: the structure rewired (same formula), the spectrum of another record with the same nominal
+                    precursor, the losses shifted by 0.0137 Da; SEED fixes the choice, the same seed gives the same lines
   sum               the lines of the records added up per stratum (trap CID, HCD, Q-TOF, other beam) and polarity: coverage of (c) against the decoys,
                     peaks per rule, decoy rate per rule and the thresholds of the protocol (a rule with fewer than 20 applications is not measured)
 
@@ -1017,7 +1017,7 @@ error: unknown option --help
 === mzlab-cli msn-lib add --help
 exit 0
 --- stdout
-mzlab-cli msn-lib: the library of MSn trees (msnlib/1).
+mzlab-cli msn-lib: the library of MSn trees (msn-lib/1).
 
 usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
        mzlab-cli msn-lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
@@ -1032,7 +1032,7 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
   search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
-          msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
+          msn-search/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
           --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
 --- stderr
@@ -1040,7 +1040,7 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
 === mzlab-cli msn-lib build --help
 exit 0
 --- stdout
-mzlab-cli msn-lib: the library of MSn trees (msnlib/1).
+mzlab-cli msn-lib: the library of MSn trees (msn-lib/1).
 
 usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
        mzlab-cli msn-lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
@@ -1055,7 +1055,7 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
   search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
-          msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
+          msn-search/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
           --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
 --- stderr
@@ -1063,7 +1063,7 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
 === mzlab-cli msn-lib export --help
 exit 0
 --- stdout
-mzlab-cli msn-lib: the library of MSn trees (msnlib/1).
+mzlab-cli msn-lib: the library of MSn trees (msn-lib/1).
 
 usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
        mzlab-cli msn-lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
@@ -1078,7 +1078,7 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
   search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
-          msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
+          msn-search/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
           --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
 --- stderr
@@ -1086,7 +1086,7 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
 === mzlab-cli msn-lib search --help
 exit 0
 --- stdout
-mzlab-cli msn-lib: the library of MSn trees (msnlib/1).
+mzlab-cli msn-lib: the library of MSn trees (msn-lib/1).
 
 usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
        mzlab-cli msn-lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
@@ -1101,7 +1101,7 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
   search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
-          msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
+          msn-search/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
           --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
 --- stderr

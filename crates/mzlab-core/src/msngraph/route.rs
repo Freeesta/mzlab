@@ -1,5 +1,5 @@
 //! The request of `/api/msn_grafo` and the one function that answers it: the query becomes the options of the graph and the grouping of the
-//! tree, the scans and their spectra become the `msngrafo/1`. Used by the `.wasm` module of the page and by the command line, so both
+//! tree, the scans and their spectra become the `msn-graph/1`. Used by the `.wasm` module of the page and by the command line, so both
 //! write the same bytes.
 
 use super::{build, json, read, with_rules, Expectation, Graph, Input, Options, RuleParams};
@@ -39,7 +39,7 @@ fn tol_di(v: Option<&str>) -> Result<Tol> {
 
 /// `[{"mz": 195.0877, "formula": "C10H11N4O2+"}, ...]`: the formulas the user chose among the candidates.
 fn choices(text: &str) -> Result<Vec<(f64, String)>> {
-    let bad = || Error::new("err.request.badNumber").with("name", "scelte");
+    let bad = || Error::new("err.request.badNumber").with("name", "choices");
     let v = parse(text.as_bytes()).map_err(|_| bad())?;
     v.arr()
         .iter()
@@ -53,7 +53,7 @@ fn choices(text: &str) -> Result<Vec<(f64, String)>> {
 
 /// `[["loss_h2o","H2O",0], ...]`: the expectations of the structure (`Expectation`: rule, formula, 1 = ion), computed by the `.wasm` `msnregole`.
 fn attese(text: &str) -> Result<Vec<Expectation>> {
-    let bad = || Error::new("err.request.badNumber").with("name", "attese");
+    let bad = || Error::new("err.request.badNumber").with("name", "expected");
     let v = parse(text.as_bytes()).map_err(|_| bad())?;
     v.arr()
         .iter()
@@ -74,21 +74,21 @@ pub fn from_request(get: &dyn Fn(&str) -> Option<String>) -> Result<(Options, Gr
     let text = |k: &str| get(k).filter(|v| !v.is_empty());
     let o = Options {
         ppm_formula: number(get, "ppm_formula", d.ppm_formula)?,
-        mz_low: number(get, "mz_basso", d.mz_low)?,
-        ppm_low: number(get, "ppm_basso", d.ppm_low)?,
-        evidence_min: number(get, "prove_min", d.evidence_min as f64)? as usize,
-        isotopi: get("isotopi").as_deref() == Some("1"),
-        activation: text("attivazione"),
+        mz_low: number(get, "low_mz", d.mz_low)?,
+        ppm_low: number(get, "low_ppm", d.ppm_low)?,
+        evidence_min: number(get, "min_evidence", d.evidence_min as f64)? as usize,
+        isotopi: get("isotopes").as_deref() == Some("1"),
+        activation: text("activation"),
         formula: text("formula"),
         smiles: text("smiles"),
         molfile: text("molfile"),
-        choices: text("scelte").map_or(Ok(vec![]), |t| choices(&t))?,
-        attese: text("attese").map_or(Ok(vec![]), |t| attese(&t))?,
-        regole: if get("regole").as_deref() == Some("1") {
+        choices: text("choices").map_or(Ok(vec![]), |t| choices(&t))?,
+        attese: text("expected").map_or(Ok(vec![]), |t| attese(&t))?,
+        regole: if get("rules").as_deref() == Some("1") {
             let r = RuleParams::default();
             Some(RuleParams {
                 cutoff_q: number(get, "cutoff_q", r.cutoff_q)?,
-                toll_mda: number(get, "toll_perdita_mda", r.toll_mda)?,
+                toll_mda: number(get, "loss_tol_mda", r.toll_mda)?,
             })
         } else {
             None
@@ -102,7 +102,7 @@ pub fn from_request(get: &dyn Fn(&str) -> Option<String>) -> Result<(Options, Gr
     Ok((o, r))
 }
 
-/// The graph of the scans of a file and its `msngrafo/1`; `nome` and `sha` (SHA-256 of its `.mzidx`) go in the `sorgente`.
+/// The graph of the scans of a file and its `msn-graph/1`; `nome` and `sha` (SHA-256 of its `.mzidx`) go in the `sorgente`.
 pub fn graph_json<M: Scansioni + ?Sized>(
     scans: &[Scan],
     m: &mut M,
@@ -146,8 +146,8 @@ mod tests {
 
     #[test]
     fn the_parameters_of_the_page_are_read() {
-        let q = "formula=C8H11N4O2%2B&ppm_formula=5&prove_min=2&isotopi=1&attivazione=hcd&tol=10ppm&ce=0\
-                 &scelte=%5B%7B%22mz%22%3A195.0877%2C%22formula%22%3A%22C8H11N4O2%2B%22%7D%5D";
+        let q = "formula=C8H11N4O2%2B&ppm_formula=5&min_evidence=2&isotopes=1&activation=hcd&tol=10ppm&ce=0\
+                 &choices=%5B%7B%22mz%22%3A195.0877%2C%22formula%22%3A%22C8H11N4O2%2B%22%7D%5D";
         let (o, r) = con(q).unwrap();
         assert_eq!(o.formula.as_deref(), Some("C8H11N4O2+"));
         assert_eq!((o.ppm_formula, o.evidence_min, o.isotopi), (5.0, 2, true));
@@ -160,9 +160,9 @@ mod tests {
     fn a_bad_number_or_choice_is_a_keyed_error() {
         for q in [
             "ppm_formula=abc",
-            "mz_basso=-1",
-            "scelte=%5B%7B%22mz%22%3A1%7D%5D",
-            "scelte=x",
+            "low_mz=-1",
+            "choices=%5B%7B%22mz%22%3A1%7D%5D",
+            "choices=x",
             "tol=zz",
         ] {
             assert!(con(q).is_err(), "{q}");

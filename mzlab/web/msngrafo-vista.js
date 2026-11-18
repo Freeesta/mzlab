@@ -1,17 +1,17 @@
 // @ts-strict
-// Drawer of the fragmentation graph (msngrafo/1 with its `vista`): pure SVG, no page globals (texts and choices come in `opts`), so the tab, the Flow and the
+// Drawer of the fragmentation graph (msn-graph/1 with its `vista`): pure SVG, no page globals (texts and choices come in `opts`), so the tab, the Flow and the
 // stand-alone HTML draw the same figure. Two views of the same data: the tree (columns by MS level) and the radial (precursor in the centre, one ring per step of
 // the best path). Imports nothing from the page.
 //
 // LABEL RULE (the only one; the Rust figure of the CLI repeats it):
 //  node  line 1  «m/z» with 4 decimals, then the relative intensity «rel %» with 1 decimal (a root shows none);
-//        line 2  the MS levels where the ion shows: «MS2», or «MS2, MS3» (vista.livelli);
+//        line 2  the MS levels where the ion shows: «MS2», or «MS2, MS3» (vista.levels);
 //        then    the chosen formula, or up to 4 candidates as the engine gives them, each with the error «+0.12 ppm» and its proofs;
 //  arc   the loss as a formula («−H2O»), else «Δ 18.011 Da» and, when the engine names one, «(compatible with H2O)»; the rule ids go below.
 //  Formulas are drawn with subscript digits (tspan baseline-shift) and the charge as a superscript; the plain form «C13H25N4O3S+» is used only in aria-label
 //  and in the data tables. CSV, MGF, MSP, JSON and «Copy data» stay ASCII (machines read them).
 //
-// Best path: the arcs with `vista.archi[].best` are solid, the others thin and dashed. A node with two or more precursors (`comune`) has a double border and
+// Best path: the arcs with `vista.edges[].best` are solid, the others thin and dashed. A node with two or more precursors (`comune`) has a double border and
 // the number of its precursors.
 
 const W = 176, WR = 150, LH = 14, GAP_X = 130, GAP_Y = 20, MAXC = 4, DW = 150, DH = 80;
@@ -40,7 +40,7 @@ const SUB = "₀₁₂₃₄₅₆₇₈₉";
 // ---- formulas ----------------------------------------------------------------------------------------------------------
 
 /** The charge sign of the graph (polarity 1 / −1) as «+» or «-». */
-const signOf = (/** @type {any} */ j) => (j && j.polarita === -1 ? "-" : "+");
+const signOf = (/** @type {any} */ j) => (j && j.polarity === -1 ? "-" : "+");
 
 /** A formula split into its plain text and charge: «C13H25N4O3S+» → [«C13H25N4O3S», «+»]; the charge defaults to the polarity of the graph. */
 export function splitCharge(/** @type {string} */ f, /** @type {string} */ dflt = "+") {
@@ -74,38 +74,38 @@ export const formulaHtml = (/** @type {string} */ f, /** @type {string} */ charg
 
 /** The `vista` of a graph, or a modest one made of the fields of the graph (an answer without `vista`: tree only, no radial view). */
 export function vistaOf(/** @type {any} */ j) {
-  if (j.vista) return j.vista;
+  if (j.view) return j.view;
   const into = new Map();
-  for (const a of j.archi) (into.get(a.a) || into.set(a.a, []).get(a.a)).push(a);
+  for (const a of j.edges) (into.get(a.to) || into.set(a.to, []).get(a.to)).push(a);
   return {
-    versione: 1, algoritmo: null, regola: "", ordine: [], fallback: true,
-    nodi: j.nodi.map((/** @type {any} */ n) => {
+    version: 1, algorithm: null, rule: "", order: [], fallback: true,
+    nodes: j.nodes.map((/** @type {any} */ n) => {
       const ins = into.get(n.id) || [], first = ins[0];
-      const rel = first ? Math.max(...first.misure.map((/** @type {any} */ m) => m.rel), 0) : null;
-      return { id: n.id, livelli: [n.livello], rel, rel_max: n.rel_max, best: { da: first ? first.da : null, passi: n.livello - 1, costo: [] }, entranti: ins.length, comune: ins.length > 1, albero: n.pos, radiale: null };
+      const rel = first ? Math.max(...first.measurements.map((/** @type {any} */ m) => m.rel), 0) : null;
+      return { id: n.id, levels: [n.level], rel, rel_max: n.rel_max, best: { from: first ? first.from : null, steps: n.level - 1, cost: [] }, incoming: ins.length, common: ins.length > 1, tree: n.pos, radial: null };
     }),
-    archi: j.archi.map((/** @type {any} */ a, /** @type {number} */ i) => ({ da: a.da, a: a.a, best: into.get(a.a)[0] === a })),
+    edges: j.edges.map((/** @type {any} */ a, /** @type {number} */ i) => ({ from: a.from, to: a.to, best: into.get(a.to)[0] === a })),
   };
 }
 
 /** The ions and arcs to draw after the filters. @returns {{ ids: Set<string>, arcs: any[], hidden: Map<string, number> }} `hidden`: ions closed under a collapsed one. */
 export function visible(/** @type {any} */ j, /** @type {Opts} */ o) {
-  const v = vistaOf(j), byId = new Map(v.nodi.map((/** @type {any} */ x) => [x.id, x]));
-  const present = new Map(j.nodi.map((/** @type {any} */ n) => [n.id, n]));
-  const best = new Set(v.archi.filter((/** @type {any} */ a) => a.best).map((/** @type {any} */ a) => a.da + ">" + a.a));
-  const arcs = j.archi.filter((/** @type {any} */ a) => present.has(a.da) && present.has(a.a) && (!o.bestOnly || best.has(a.da + ">" + a.a)));
+  const v = vistaOf(j), byId = new Map(v.nodes.map((/** @type {any} */ x) => [x.id, x]));
+  const present = new Map(j.nodes.map((/** @type {any} */ n) => [n.id, n]));
+  const best = new Set(v.edges.filter((/** @type {any} */ a) => a.best).map((/** @type {any} */ a) => a.from + ">" + a.to));
+  const arcs = j.edges.filter((/** @type {any} */ a) => present.has(a.from) && present.has(a.to) && (!o.bestOnly || best.has(a.from + ">" + a.to)));
   const out = new Map();
-  for (const a of arcs) (out.get(a.da) || out.set(a.da, []).get(a.da)).push(a.a);
-  const hasIn = new Set(j.archi.filter((/** @type {any} */ a) => present.has(a.da) && present.has(a.a)).map((/** @type {any} */ a) => a.a));
+  for (const a of arcs) (out.get(a.from) || out.set(a.from, []).get(a.from)).push(a.to);
+  const hasIn = new Set(j.edges.filter((/** @type {any} */ a) => present.has(a.from) && present.has(a.to)).map((/** @type {any} */ a) => a.to));
   const pass = (/** @type {string} */ id) => {
     const n = present.get(id), x = byId.get(id);
     if (!n || !x) return false;
-    if (o.maxLevel && n.livello > o.maxLevel && n.livello > 1) return false;
-    if (o.minRel && x.best.da && x.rel != null && x.rel < o.minRel) return false;
+    if (o.maxLevel && n.level > o.maxLevel && n.level > 1) return false;
+    if (o.minRel && x.best.from && x.rel != null && x.rel < o.minRel) return false;
     return true;
   };
   const ids = new Set(), todo = [];
-  for (const n of j.nodi) if (!hasIn.has(n.id) || n.livello === 1) if (pass(n.id)) { ids.add(n.id); todo.push(n.id); }
+  for (const n of j.nodes) if (!hasIn.has(n.id) || n.level === 1) if (pass(n.id)) { ids.add(n.id); todo.push(n.id); }
   const collapsed = o.collapsed || new Set();
   while (todo.length) {
     const id = /** @type {string} */ (todo.pop());
@@ -117,43 +117,43 @@ export function visible(/** @type {any} */ j, /** @type {Opts} */ o) {
   for (const id of collapsed) {
     if (!ids.has(id)) continue;
     let n = 0;
-    const walk = (/** @type {string} */ x) => { for (const y of v.nodi) if (y.best.da === x) { if (!ids.has(y.id)) n++; walk(y.id); } };
+    const walk = (/** @type {string} */ x) => { for (const y of v.nodes) if (y.best.from === x) { if (!ids.has(y.id)) n++; walk(y.id); } };
     walk(id);
     hidden.set(id, n);
   }
-  return { ids, arcs: arcs.filter((/** @type {any} */ a) => ids.has(a.da) && ids.has(a.a)), hidden };
+  return { ids, arcs: arcs.filter((/** @type {any} */ a) => ids.has(a.from) && ids.has(a.to)), hidden };
 }
 
 /** The chosen formula of an ion: the engine's choice, else the only candidate. */
-const chosenOf = (/** @type {any} */ n) => { const f = n.formula; return f ? f.scelta || (f.candidati.length === 1 ? f.candidati[0].formula : null) : null; };
+const chosenOf = (/** @type {any} */ n) => { const f = n.formula; return f ? f.choice || (f.candidates.length === 1 ? f.candidates[0].formula : null) : null; };
 
 const sgn = (/** @type {number} */ v) => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2);
-const levelsText = (/** @type {any} */ x) => x.livelli.map((/** @type {number} */ l) => "MS" + l).join(", ");
+const levelsText = (/** @type {any} */ x) => x.levels.map((/** @type {number} */ l) => "MS" + l).join(", ");
 
 /** What a box says: the lines of m/z and level, the candidates (the chosen first) and the pieces for the tooltip and the accessible name. */
 function boxModel(/** @type {any} */ j, /** @type {any} */ n, /** @type {any} */ x, /** @type {Opts} */ o, /** @type {boolean} */ compact) {
   const t = o.t, chosen = (o.chosen || chosenOf)(n), dflt = signOf(j), f = n.formula;
-  const cs = f ? [...f.candidati].sort((/** @type {any} */ a, /** @type {any} */ b) => (b.formula === chosen ? 1 : 0) - (a.formula === chosen ? 1 : 0)) : [];
+  const cs = f ? [...f.candidates].sort((/** @type {any} */ a, /** @type {any} */ b) => (b.formula === chosen ? 1 : 0) - (a.formula === chosen ? 1 : 0)) : [];
   const keep = compact ? 1 : MAXC;
   const lines = cs.slice(0, keep).map((/** @type {any} */ c) => {
     const [base, ch] = splitCharge(c.formula, dflt);
-    return { parts: formulaParts(base, ch), ppm: sgn(c.ppm) + " ppm", on: c.formula === chosen, prove: (c.prove || []).map((/** @type {string} */ p) => (o.proveText ? o.proveText(p) : p)), plain: plainFormula(base, ch) };
+    return { parts: formulaParts(base, ch), ppm: sgn(c.ppm) + " ppm", on: c.formula === chosen, proofs: (c.proofs || []).map((/** @type {string} */ p) => (o.proveText ? o.proveText(p) : p)), plain: plainFormula(base, ch) };
   });
   const more = cs.length > keep ? t("msngrafo.more", { n: cs.length - keep }) : "";
-  const rel = x.best.da ? x.rel : null;
+  const rel = x.best.from ? x.rel : null;
   const chosenPlain = chosen ? (([b, c]) => plainFormula(b, c))(splitCharge(chosen, dflt)) : "";
   const aria = [`m/z ${n.mz.toFixed(4)}`, t("msngrafo.v.aria.levels", { levels: levelsText(x) })];
   if (rel != null) aria.push(t("msngrafo.v.aria.rel", { rel: rel.toFixed(1) }));
   if (chosenPlain) aria.push(t("msngrafo.v.aria.formula", { f: chosenPlain }));
   else if (cs.length) aria.push(t("msngrafo.v.aria.cands", { n: cs.length }));
-  if (x.comune) aria.push(t("msngrafo.v.aria.common", { n: x.entranti }));
+  if (x.common) aria.push(t("msngrafo.v.aria.common", { n: x.incoming }));
   return { lines, more, rel, chosenPlain, aria, amb: !!f && !chosen };
 }
 
 /** The tooltip of an ion: one line per measure of the arcs that end in it (MS level, activation, energy, % of the base peak). */
 function nodeTip(/** @type {any} */ j, /** @type {any} */ n, /** @type {any} */ x) {
   const out = [`m/z ${n.mz.toFixed(5)} · ${levelsText(x)}`];
-  for (const a of j.archi) if (a.a === n.id) for (const m of a.misure || []) out.push(`MS${m.livello}${m.att ? " " + String(m.att).toUpperCase() : ""}${m.ce != null ? " " + m.ce : ""}: ${m.rel.toFixed(1)} %`);
+  for (const a of j.edges) if (a.to === n.id) for (const m of a.measurements || []) out.push(`MS${m.level}${m.activation ? " " + String(m.activation).toUpperCase() : ""}${m.ce != null ? " " + m.ce : ""}: ${m.rel.toFixed(1)} %`);
   return out.join("\n");
 }
 
@@ -161,16 +161,16 @@ function nodeTip(/** @type {any} */ j, /** @type {any} */ n, /** @type {any} */ 
 
 const heightOf = (/** @type {any} */ m, /** @type {boolean} */ withDrawing, /** @type {boolean} */ more) => 36 + LH * Math.max(1, m.lines.length) + (more ? LH : 0) + (withDrawing ? DH + 18 : 0) + 6;
 
-/** @typedef {{ mode: Mode, boxes: Map<string, Box>, ids: string[], col: Map<string, number>, ring: Map<string, number>, angle: Map<string, number>, w: number, h: number, vista: any, centre: { x: number, y: number } }} Layout */
+/** @typedef {{ mode: Mode, boxes: Map<string, Box>, ids: string[], col: Map<string, number>, ring: Map<string, number>, angle: Map<string, number>, w: number, h: number, view: any, centre: { x: number, y: number } }} Layout */
 
 /** Where every visible ion goes. Tree: x by column, rows as the engine ordered them (empty rows closed up). Radial: ring by steps of the best path, angle by the engine, radii grown until no box touches another. */
 export function layout(/** @type {any} */ j, /** @type {Opts} */ o, /** @type {{ ids: Set<string> }} */ vis) {
   const v = vistaOf(j), mode = /** @type {Mode} */ (o.mode === "radial" && !v.fallback ? "radial" : "tree");
-  const nodes = j.nodi.filter((/** @type {any} */ n) => vis.ids.has(n.id));
-  const vx = new Map(v.nodi.map((/** @type {any} */ x) => [x.id, x]));
+  const nodes = j.nodes.filter((/** @type {any} */ n) => vis.ids.has(n.id));
+  const vx = new Map(v.nodes.map((/** @type {any} */ x) => [x.id, x]));
   const compact = mode === "radial";
   const size = new Map(nodes.map((/** @type {any} */ n) => {
-    const m = boxModel(j, n, vx.get(n.id), o, compact), dr = !!(o.drawing && o.drawing(n.id)) || (!!o.root && !(vx.get(n.id).best.da));
+    const m = boxModel(j, n, vx.get(n.id), o, compact), dr = !!(o.drawing && o.drawing(n.id)) || (!!o.root && !(vx.get(n.id).best.from));
     return [n.id, { w: compact ? WR : W, h: heightOf(m, dr, !!m.more) }];
   }));
   /** @type {Map<string, Box>} */
@@ -178,41 +178,41 @@ export function layout(/** @type {any} */ j, /** @type {Opts} */ o, /** @type {{
   const col = new Map(), ring = new Map(), angle = new Map();
   let w = 0, h = 0, centre = { x: 0, y: 0 };
   if (mode === "tree") {
-    const rows = [...new Set(nodes.map((/** @type {any} */ n) => vx.get(n.id).albero.riga))].sort((a, b) => a - b);
+    const rows = [...new Set(nodes.map((/** @type {any} */ n) => vx.get(n.id).tree.row))].sort((a, b) => a - b);
     const rowOf = new Map(rows.map((r, i) => [r, i]));
     const rowH = rows.map(() => 0);
-    for (const n of nodes) { const r = /** @type {number} */ (rowOf.get(vx.get(n.id).albero.riga)); rowH[r] = Math.max(rowH[r], /** @type {any} */ (size.get(n.id)).h); }
+    for (const n of nodes) { const r = /** @type {number} */ (rowOf.get(vx.get(n.id).tree.row)); rowH[r] = Math.max(rowH[r], /** @type {any} */ (size.get(n.id)).h); }
     const top = [20]; rowH.forEach((hh, i) => top.push(top[i] + hh + GAP_Y));
     for (const n of nodes) {
-      const a = vx.get(n.id).albero, s = /** @type {any} */ (size.get(n.id));
-      boxes.set(n.id, { x: 20 + a.col * (W + GAP_X), y: top[/** @type {number} */ (rowOf.get(a.riga))], w: s.w, h: s.h });
+      const a = vx.get(n.id).tree, s = /** @type {any} */ (size.get(n.id));
+      boxes.set(n.id, { x: 20 + a.col * (W + GAP_X), y: top[/** @type {number} */ (rowOf.get(a.row))], w: s.w, h: s.h });
       col.set(n.id, a.col);
     }
   } else {
     // the roots sit in the middle; ring r grows from the ring inside until nothing overlaps
     const placed = /** @type {string[]} */ ([]);
-    const maxRing = Math.max(0, ...nodes.map((/** @type {any} */ n) => vx.get(n.id).radiale.anello));
+    const maxRing = Math.max(0, ...nodes.map((/** @type {any} */ n) => vx.get(n.id).radial.ring));
     const at = new Map();
     let radius = 0;
     for (let r = 0; r <= maxRing; r++) {
-      const here = nodes.filter((/** @type {any} */ n) => vx.get(n.id).radiale.anello === r);
+      const here = nodes.filter((/** @type {any} */ n) => vx.get(n.id).radial.ring === r);
       if (!here.length) continue;
       const put = (/** @type {number} */ rad) => here.map((/** @type {any} */ n) => {
-        const a = vx.get(n.id).radiale.angolo * Math.PI / 180, s = /** @type {any} */ (size.get(n.id)), cx = r === 0 ? 0 : rad * Math.sin(a), cy = r === 0 ? 0 : -rad * Math.cos(a);
+        const a = vx.get(n.id).radial.angle * Math.PI / 180, s = /** @type {any} */ (size.get(n.id)), cx = r === 0 ? 0 : rad * Math.sin(a), cy = r === 0 ? 0 : -rad * Math.cos(a);
         return { id: n.id, box: { x: cx - s.w / 2, y: cy - s.h / 2, w: s.w, h: s.h } };
       });
       const clash = (/** @type {{ id: string, box: Box }[]} */ list) => list.some((p, i) => list.slice(i + 1).some(q => touch(p.box, q.box)) || placed.some(id => touch(p.box, /** @type {Box} */ (at.get(id)))));
       radius = r === 0 ? 0 : Math.max(radius + 40, 120);
       let list = put(radius);
       for (let k = 0; clash(list) && k < 4000; k++) { radius += 10; list = put(radius); }
-      for (const p of list) { at.set(p.id, p.box); placed.push(p.id); ring.set(p.id, r); angle.set(p.id, vx.get(p.id).radiale.angolo); }
+      for (const p of list) { at.set(p.id, p.box); placed.push(p.id); ring.set(p.id, r); angle.set(p.id, vx.get(p.id).radial.angle); }
     }
     const xs = [...at.values()], x0 = Math.min(...xs.map(b => b.x)) - 20, y0 = Math.min(...xs.map(b => b.y)) - 20;
     for (const [id, b] of at) boxes.set(id, { x: b.x - x0, y: b.y - y0, w: b.w, h: b.h });
     centre = { x: -x0, y: -y0 };
   }
   for (const b of boxes.values()) { w = Math.max(w, b.x + b.w + 30); h = Math.max(h, b.y + b.h + 30); }
-  return { mode, boxes, ids: nodes.map((/** @type {any} */ n) => n.id), col, ring, angle, w: Math.max(w, 60), h: Math.max(h, 60), vista: v, centre };
+  return { mode, boxes, ids: nodes.map((/** @type {any} */ n) => n.id), col, ring, angle, w: Math.max(w, 60), h: Math.max(h, 60), view: v, centre };
 }
 
 /** Two boxes closer than 6 px. */
@@ -223,7 +223,7 @@ export function neighbour(/** @type {Layout} */ L, /** @type {string} */ id, /**
   const b = L.boxes.get(id); if (!b) return null;
   const mid = (/** @type {string} */ k) => { const x = /** @type {Box} */ (L.boxes.get(k)); return x.y + x.h / 2; };
   const near = (/** @type {string[]} */ list) => list.sort((p, q) => Math.abs(mid(p) - mid(id)) - Math.abs(mid(q) - mid(id)))[0] || null;
-  const x = L.vista.nodi.find((/** @type {any} */ y) => y.id === id);
+  const x = L.view.nodes.find((/** @type {any} */ y) => y.id === id);
   if (L.mode === "tree") {
     const c = /** @type {number} */ (L.col.get(id));
     if (key === "ArrowUp" || key === "ArrowDown") {
@@ -233,9 +233,9 @@ export function neighbour(/** @type {Layout} */ L, /** @type {string} */ id, /**
     return near(L.ids.filter(k => L.col.get(k) === c + (key === "ArrowRight" ? 1 : -1)));
   }
   const r = /** @type {number} */ (L.ring.get(id));
-  if (key === "ArrowLeft") return x && x.best.da && L.boxes.has(x.best.da) ? x.best.da : null;
+  if (key === "ArrowLeft") return x && x.best.from && L.boxes.has(x.best.from) ? x.best.from : null;
   if (key === "ArrowRight") {
-    const kids = L.ids.filter(k => (L.vista.nodi.find((/** @type {any} */ y) => y.id === k) || {}).best?.da === id).sort((p, q) => /** @type {number} */ (L.angle.get(p)) - /** @type {number} */ (L.angle.get(q)));
+    const kids = L.ids.filter(k => (L.view.nodes.find((/** @type {any} */ y) => y.id === k) || {}).best?.from === id).sort((p, q) => /** @type {number} */ (L.angle.get(p)) - /** @type {number} */ (L.angle.get(q)));
     return kids[0] || null;
   }
   const ringIds = L.ids.filter(k => L.ring.get(k) === r).sort((p, q) => /** @type {number} */ (L.angle.get(p)) - /** @type {number} */ (L.angle.get(q))), i = ringIds.indexOf(id);
@@ -245,7 +245,7 @@ export function neighbour(/** @type {Layout} */ L, /** @type {string} */ id, /**
 /** Ids of the ions on the paths from the roots to an ion and the arcs between them. */
 export function pathTo(/** @type {any} */ j, /** @type {string | null} */ id) {
   /** @type {Set<string>} */ const nodes = new Set(), arcs = new Set();
-  const up = (/** @type {string} */ x) => { if (nodes.has(x)) return; nodes.add(x); j.archi.filter((/** @type {any} */ a) => a.a === x).forEach((/** @type {any} */ a) => { arcs.add(a.da + ">" + a.a); up(a.da); }); };
+  const up = (/** @type {string} */ x) => { if (nodes.has(x)) return; nodes.add(x); j.edges.filter((/** @type {any} */ a) => a.to === x).forEach((/** @type {any} */ a) => { arcs.add(a.from + ">" + a.to); up(a.from); }); };
   if (id) up(id);
   return { nodes, arcs };
 }
@@ -280,9 +280,9 @@ function edge(/** @type {Box} */ b, /** @type {number} */ tx, /** @type {number}
 
 /** The label of a loss: [pieces of the first line, pieces of the second line or null]. */
 function lossText(/** @type {any} */ a, /** @type {Tr} */ t) {
-  const p = a.perdita;
+  const p = a.loss;
   if (p.formula) return { first: [{ t: "−", k: "n" }, ...formulaParts(p.formula)], second: null };
-  const comp = (p.compatibile || []).slice(0, 2);
+  const comp = (p.compatible || []).slice(0, 2);
   /** @type {{ t: string, k: string }[] | null} */
   let second = null;
   if (comp.length) {
@@ -293,27 +293,27 @@ function lossText(/** @type {any} */ a, /** @type {Tr} */ t) {
     parts.push({ t: (post || "") + ")", k: "n" });
     second = parts;
   }
-  return { first: [{ t: `Δ ${p.da_massa.toFixed(3)} Da`, k: "n" }], second };
+  return { first: [{ t: `Δ ${p.da_mass.toFixed(3)} Da`, k: "n" }], second };
 }
 
 /** The plain text of a loss for tooltips and tables: «−H2O» or «Δ 18.011 Da (compatible with H2O)». */
 export function lossPlain(/** @type {any} */ a, /** @type {Tr} */ t) {
-  const p = a.perdita;
+  const p = a.loss;
   if (p.formula) return "−" + prettyFormula(p.formula);
-  const comp = (p.compatibile || []).slice(0, 2);
-  return `Δ ${p.da_massa.toFixed(3)} Da` + (comp.length ? " (" + t("msngrafo.v.compat", { f: comp.map(prettyFormula).join(" / ") }) + ")" : "");
+  const comp = (p.compatible || []).slice(0, 2);
+  return `Δ ${p.da_mass.toFixed(3)} Da` + (comp.length ? " (" + t("msngrafo.v.compat", { f: comp.map(prettyFormula).join(" / ") }) + ")" : "");
 }
 
 function drawArcs(/** @type {Element} */ g, /** @type {any} */ j, /** @type {Layout} */ L, /** @type {any[]} */ arcs, /** @type {Set<string>} */ on, /** @type {Opts} */ o) {
-  const bestSet = new Set(L.vista.archi.filter((/** @type {any} */ a) => a.best).map((/** @type {any} */ a) => a.da + ">" + a.a));
+  const bestSet = new Set(L.view.edges.filter((/** @type {any} */ a) => a.best).map((/** @type {any} */ a) => a.from + ">" + a.to));
   const t = o.t;
   // the thin ones first so that the best path lies on top
-  const sorted = [...arcs].sort((p, q) => Number(bestSet.has(p.da + ">" + p.a)) - Number(bestSet.has(q.da + ">" + q.a)));
+  const sorted = [...arcs].sort((p, q) => Number(bestSet.has(p.from + ">" + p.to)) - Number(bestSet.has(q.from + ">" + q.to)));
   for (const a of sorted) {
-    const p = L.boxes.get(a.da), q = L.boxes.get(a.a); if (!p || !q) continue;
-    const best = bestSet.has(a.da + ">" + a.a), hot = on.has(a.da + ">" + a.a);
-    const rel = Math.max(...a.misure.map((/** @type {any} */ m) => m.rel), 0);
-    const cls = "ig-arc" + (best ? " best" : " alt") + (hot ? " on" : "") + (a.isolamento ? " iso" : "");
+    const p = L.boxes.get(a.from), q = L.boxes.get(a.to); if (!p || !q) continue;
+    const best = bestSet.has(a.from + ">" + a.to), hot = on.has(a.from + ">" + a.to);
+    const rel = Math.max(...a.measurements.map((/** @type {any} */ m) => m.rel), 0);
+    const cls = "ig-arc" + (best ? " best" : " alt") + (hot ? " on" : "") + (a.isolation ? " iso" : "");
     const w = best ? (1 + Math.log10(1 + rel) * 1.2).toFixed(2) : "1";
     let mx, my, lx, ly;
     if (L.mode === "tree") {
@@ -350,15 +350,15 @@ function inline(/** @type {Element} */ parent, /** @type {string} */ text, /** @
 
 function drawNode(/** @type {Element} */ g, /** @type {any} */ j, /** @type {any} */ n, /** @type {any} */ x, /** @type {Box} */ b, /** @type {Layout} */ L, /** @type {Opts} */ o, /** @type {boolean} */ isSel, /** @type {boolean} */ hot, /** @type {number} */ hiddenBelow) {
   const t = o.t, m = boxModel(j, n, x, o, L.mode === "radial");
-  const isRoot = !x.best.da, drawingText = isRoot ? o.root || (o.drawing && o.drawing(n.id)) : o.drawing && o.drawing(n.id);
+  const isRoot = !x.best.from, drawingText = isRoot ? o.root || (o.drawing && o.drawing(n.id)) : o.drawing && o.drawing(n.id);
   const aria = m.aria.concat(hiddenBelow ? [t("msngrafo.v.aria.collapsed", { n: hiddenBelow })] : []);
-  const box = el("g", { class: "ig-node" + (isSel ? " sel" : "") + (hot ? " hot" : "") + (n.isolato ? " iso" : "") + (x.comune ? " common" : ""), "data-id": n.id, tabindex: -1, role: "button", transform: `translate(${b.x},${b.y})`,
+  const box = el("g", { class: "ig-node" + (isSel ? " sel" : "") + (hot ? " hot" : "") + (n.isolated ? " iso" : "") + (x.common ? " common" : ""), "data-id": n.id, tabindex: -1, role: "button", transform: `translate(${b.x},${b.y})`,
     "aria-pressed": String(isSel), "aria-label": aria.join(", ") }, g);
   box.appendChild(Object.assign(document.createElementNS(NS, "title"), { textContent: nodeTip(j, n, x) }));
-  el("rect", { width: b.w, height: b.h, rx: 6, class: "ig-box", "stroke-dasharray": n.isolato ? "0" : "5 3" }, box);
-  if (x.comune) {
+  el("rect", { width: b.w, height: b.h, rx: 6, class: "ig-box", "stroke-dasharray": n.isolated ? "0" : "5 3" }, box);
+  if (x.common) {
     el("rect", { x: 3, y: 3, width: b.w - 6, height: b.h - 6, rx: 4, class: "ig-box2" }, box);
-    el("text", { x: b.w - 36, y: 17, class: "ig-com", "text-anchor": "end" }, box, `×${x.entranti}`).appendChild(Object.assign(document.createElementNS(NS, "title"), { textContent: t("msngrafo.v.common", { n: x.entranti }) }));
+    el("text", { x: b.w - 36, y: 17, class: "ig-com", "text-anchor": "end" }, box, `×${x.incoming}`).appendChild(Object.assign(document.createElementNS(NS, "title"), { textContent: t("msngrafo.v.common", { n: x.incoming }) }));
   }
   el("text", { x: 8, y: 17, class: "ig-mz" }, box, `m/z ${n.mz.toFixed(4)}` + (m.rel != null ? `  ·  ${m.rel.toFixed(1)} %` : ""));
   el("text", { x: 8, y: 31, class: "ig-lvl" }, box, levelsText(x) + (hiddenBelow ? `  ·  ${t("msngrafo.v.hidden", { n: hiddenBelow })}` : ""));
@@ -366,7 +366,7 @@ function drawNode(/** @type {Element} */ g, /** @type {any} */ j, /** @type {any
   let y = 48;
   m.lines.forEach(l => {
     const row = runs(box, { x: 8, y, class: "ig-cand" + (l.on ? " on" : "") }, [...l.parts, { t: `  ${l.ppm}`, k: "n" }]);
-    if (l.prove.length) row.appendChild(document.createTextNode("  " + l.prove.join(" ")));
+    if (l.proofs.length) row.appendChild(document.createTextNode("  " + l.proofs.join(" ")));
     y += LH;
   });
   if (m.more) { el("text", { x: 8, y, class: "ig-cand" }, box, m.more); y += LH; }
@@ -383,9 +383,9 @@ function drawNode(/** @type {Element} */ g, /** @type {any} */ j, /** @type {any
  */
 export function drawVista(/** @type {HTMLElement} */ host, /** @type {any} */ j, /** @type {{ onSelect: (id: string | null) => void, onOpen: (id: string) => void }} */ cb, /** @type {Opts} */ o) {
   host.textContent = "";
-  const sel = o.sel || null, vis = visible(j, o), L = layout(j, o, vis), v = L.vista;
-  const vx = new Map(v.nodi.map((/** @type {any} */ x) => [x.id, x]));
-  const { nodes: hot, arcs: hotArcs } = pathTo({ archi: vis.arcs }, sel);
+  const sel = o.sel || null, vis = visible(j, o), L = layout(j, o, vis), v = L.view;
+  const vx = new Map(v.nodes.map((/** @type {any} */ x) => [x.id, x]));
+  const { nodes: hot, arcs: hotArcs } = pathTo({ edges: vis.arcs }, sel);
   const svg = /** @type {SVGSVGElement} */ (el("svg", { class: "ig-svg", viewBox: `0 0 ${L.w} ${L.h}`, width: L.w, height: L.h, role: "group", "data-mode": L.mode, "aria-label": o.t(L.mode === "radial" ? "msngrafo.v.graph.radial" : "msngrafo.graph.aria") }, null));
   const defs = el("defs", {}, svg);
   el("path", { d: "M0,0 L8,4 L0,8 z", class: "ig-headp" }, el("marker", { id: "ig-head", viewBox: "0 0 8 8", refX: 8, refY: 4, markerWidth: 7, markerHeight: 7, orient: "auto" }, defs));
@@ -395,7 +395,7 @@ export function drawVista(/** @type {HTMLElement} */ host, /** @type {any} */ j,
     el("circle", { cx: L.centre.x, cy: L.centre.y, r: rad.toFixed(1), class: "ig-ring" }, g);
   }
   drawArcs(g, j, L, vis.arcs, hotArcs, o);
-  for (const n of j.nodi) {
+  for (const n of j.nodes) {
     const b = L.boxes.get(n.id); if (!b) continue;
     drawNode(g, j, n, vx.get(n.id), b, L, o, n.id === sel, hot.has(n.id), vis.hidden.get(n.id) || 0);
   }

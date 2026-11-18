@@ -1,12 +1,12 @@
 // @ts-strict
-// Opening a saved fragmentation graph (a g.json, msngrafo/1 or /2) without its raw data: a dropped or picked .json is recognised by its head, a graph without `vista`
+// Opening a saved fragmentation graph (a g.json, msn-graph/1 or /2) without its raw data: a dropped or picked .json is recognised by its head, a graph without `vista`
 // is completed by the .wasm msngrafo (op `complete`; no calculation here) and shown read-only in a window with the same body as the «Fragmentation graph» tab.
 // Used by shell.js (upload0, the data area) and infusione-grafo.js (the tab). docs/agenti/infusion-graph.md.
 import { G } from "./infusione-grafo-stato.js";
 import { mostraErrore } from "./infusione-grafo-avanza.js";
 
-const HEAD = /"formato"\s*:\s*"msngrafo\/(\d+)/;
-const KNOWN = 2;
+const HEAD = /"schema"\s*:\s*"msn-graph\/(\d+)/;
+const KNOWN = 1;
 /** A saved graph larger than this is not parsed (its text and objects would not fit in the memory of the page): error.msngrafo.tooBig says so. */
 const MAX_BYTES = 200e6;
 
@@ -25,12 +25,12 @@ const fail = (key, params = {}) => I18N.err({ error_key: key, params });
  * @param {File} f @param {number} v the version `version(f)` found
  */
 async function read(f, v) {
-  if (v > KNOWN) throw fail("error.newerFormat", { kind: "msngrafo", version: v, file: f.name });
+  if (v > KNOWN) throw fail("error.newerFormat", { kind: "msn-graph", version: v, file: f.name });
   if (f.size > MAX_BYTES) throw fail("error.msngrafo.tooBig", { file: f.name, mb: Math.round(f.size / 1e6), max: MAX_BYTES / 1e6 });
   let text = await f.text(), j;
   try { j = JSON.parse(text); } catch (e) { throw fail("error.msngrafo.badFile", { file: f.name, raw: String(/** @type {Error} */ (e).message) }); }
-  if (!j || !/^msngrafo\/[12]$/.test(j.formato) || !Array.isArray(j.nodi) || !Array.isArray(j.archi)) throw fail("error.msngrafo.badFile", { file: f.name, raw: "not an msngrafo graph" });
-  if (!j.vista) {
+  if (!j || !/^msn-graph\/1$/.test(j.schema) || !Array.isArray(j.nodes) || !Array.isArray(j.edges)) throw fail("error.msngrafo.badFile", { file: f.name, raw: "not an msngrafo graph" });
+  if (!j.view) {
     try { text = await (await import("./rust-msngrafo.js")).msnCompleta(text); } catch (e) {
       let o = null; try { o = JSON.parse(String(e)); } catch (_) { /* a plain error of the page */ }
       throw o && o.error_key ? fail(o.error_key, o.params) : fail("error.msngrafo.badFile", { file: f.name, raw: String(e && /** @type {Error} */ (e).message || e) });

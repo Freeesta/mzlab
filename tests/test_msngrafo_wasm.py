@@ -35,8 +35,8 @@ def test_wasm_and_cli_give_the_same_graph(pkg, query, args):
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), query).stdout
     want = cli("msn-graph", str(MZML), *args).stdout
     assert got + "\n" == want  # the command line ends its output with a newline
-    assert '"formato":"msngrafo/2"' in got
-    assert ('"strutture":{' in got) == ("strutture=" in query)
+    assert '"schema":"msn-graph/1"' in got
+    assert ('"structures":{' in got) == ("strutture=" in query)
 
 
 def test_the_whole_structure_and_the_molfile_are_the_same_in_cli_and_wasm(pkg, tmp_path):
@@ -48,21 +48,21 @@ def test_the_whole_structure_and_the_molfile_are_the_same_in_cli_and_wasm(pkg, t
     want = cli("msn-graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", smiles, "--structures", "all", "--molfile", str(mol)).stdout
     assert got + "\n" == want
     doc = json.loads(got)
-    assert doc["opzioni"]["molfile"].startswith("\n  mzlab")
-    assert isinstance(doc["strutture_tutti"], list) and list(doc)[-1] == "vista" and list(doc)[-2] == "strutture_tutti"
+    assert doc["options"]["molfile"].startswith("\n  mzlab")
+    assert isinstance(doc["structures_all"], list) and list(doc)[-1] == "view" and list(doc)[-2] == "structures_all"
 
 
 def test_complete_adds_the_view_with_the_same_bytes_in_cli_and_wasm(pkg, tmp_path):
     full = cli("msn-graph", str(MZML), "--formula", "C14H15N3O5+").stdout
     doc = json.loads(full)
-    assert list(doc)[-1] == "vista" and doc["vista"]["algoritmo"] == "best-path/1"
+    assert list(doc)[-1] == "view" and doc["view"]["algorithm"] == "best-path/1"
     old = tmp_path / "old.json"
-    old.write_text(full[:full.index(',"vista":')] + "}", encoding="utf-8")
+    old.write_text(full[:full.index(',"view":')] + "}", encoding="utf-8")
     via_cli = cli("msn-graph", "complete", str(old)).stdout
     via_wasm = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), str(old), "completa").stdout
     assert via_cli == full and via_wasm + "\n" == full
     notgraph = tmp_path / "x.json"
-    notgraph.write_text('{"formato":"msnlib/1"}', encoding="utf-8")
+    notgraph.write_text('{"schema":"msn-lib/1"}', encoding="utf-8")
     r = subprocess.run(["node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), str(notgraph), "completa"], capture_output=True, encoding="utf-8")
     assert r.returncode != 0 and "err.msngrafo.badGraph" in r.stderr
 
@@ -89,15 +89,15 @@ def test_the_library_gets_an_entry_once(pkg, tmp_path):
     import json as _j
     q = "formula=C14H15N3O5%2B&ppm_formula=10"
     a = lib_call(pkg, q, "-")
-    assert a["doppione"] is False and a["libreria"].startswith('{"formato":"msnlib/1"')
+    assert a["duplicate"] is False and a["library"].startswith('{"schema":"msn-lib/1"')
     f = tmp_path / "msnlib.json"
-    f.write_text(a["libreria"], encoding="utf-8")
+    f.write_text(a["library"], encoding="utf-8")
     again = lib_call(pkg, q, str(f))
-    assert again["doppione"] is True and again["libreria"] == a["libreria"]
+    assert again["duplicate"] is True and again["library"] == a["library"]
     # the file is valid JSON and its entry holds the graph the route gives
-    doc = _j.loads(a["libreria"])
+    doc = _j.loads(a["library"])
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), q).stdout
-    assert doc["voci"][0]["grafo"] == _j.loads(got) and doc["voci"][0]["id"] == "STD-0001"
+    assert doc["entries"][0]["graph"] == _j.loads(got) and doc["entries"][0]["id"] == "STD-0001"
 
 
 def test_a_graph_without_an_ion_or_a_foreign_file_is_a_keyed_error(pkg, tmp_path):
@@ -124,10 +124,10 @@ def test_the_cleavages_errors_are_keyed(pkg, query, key):
 def test_a_tiny_budget_is_the_same_calm_refusal_in_cli_and_wasm(pkg):
     # the spectra of a consensus over the budget (`budget_mb` of the page, `--budget-mb` of the command line) end in error.memoryBudget, phase msnGraph
     r = subprocess.run(["node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), "budget_mb=0.0001"], capture_output=True, encoding="utf-8")
-    assert r.returncode != 0 and '"error_key":"error.memoryBudget"' in r.stderr and '"fase":"msnGraph"' in r.stderr, r.stderr[-800:]
+    assert r.returncode != 0 and '"error_key":"error.memoryBudget"' in r.stderr and '"phase":"msnGraph"' in r.stderr, r.stderr[-800:]
     c = subprocess.run(cli_argv("msn-graph", str(MZML), "--budget-mb", "0.0001"), cwd=ROOT, capture_output=True, encoding="utf-8")
     assert c.returncode != 0 and "error.memoryBudget, fase=msnGraph" in c.stderr, c.stderr[-800:]
-    stima = r.stderr.split('"stima_mb":"')[1].split('"')[0]
+    stima = r.stderr.split('"estimate_mb":"')[1].split('"')[0]
     assert f"about {stima} MB" in c.stderr
     big = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), "budget_mb=64").stdout
     assert big == run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), "").stdout

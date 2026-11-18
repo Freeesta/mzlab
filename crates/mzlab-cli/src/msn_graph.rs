@@ -1,4 +1,4 @@
-//! `mzlab-cli msn-graph FILE --formula ION [...]`: the fragmentation graph `msngrafo/1` of an MSn infusion, from the engine of the app.
+//! `mzlab-cli msn-graph FILE --formula ION [...]`: the fragmentation graph `msn-graph/1` of an MSn infusion, from the engine of the app.
 //! With `--truth FILE --summary` it prints only numbers: how many paths of a truth file (`{nodes: [{path: [nominal m/z...], formula}]}`)
 //! the graph finds and with which sub-formulas, so a check on private data leaves no data behind.
 
@@ -17,7 +17,7 @@ use mzlab_core::msntree_build::Grouping;
 use mzlab_core::mzmlwrite::Options as MzmlOpzioni;
 use mzlab_core::readers_mzml::Peaks;
 
-pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msngrafo/2) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
+pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msn-graph/1) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
 
 usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
        mzlab-cli msn-graph FILE.mzML --formula ION --truth TRUTH.json --summary
@@ -28,17 +28,17 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
   --formula ION        the ion of the root: C13H25N4O3S+, C13H24N4O3S+H or \"C13H24N4O3S [M+H]+\"; without it, masses only
   --smiles TEXT        written back in the JSON; with --structures, the structure that is cleaved
   --molfile FILE       the 2D structure of the molecule (a molfile), written back in the JSON for the drawings of the root and of the fragments
-  --structures NODE    add to the JSON the key `strutture`: the bonds of --smiles whose cleavage gives the m/z of the node nK of the graph (candidates, with the
-                       ppm and the peaks of its spectrum that the same piece explains); `all` = the key `strutture_tutti`, those of every node of level 2
+  --structures NODE    add to the JSON the key `structures`: the bonds of --smiles whose cleavage gives the m/z of the node nK of the graph (candidates, with the
+                       ppm and the peaks of its spectrum that the same piece explains); `all` = the key `structures_all`, those of every node of level 2
                        or more that has a cleavage
-  --interpret          add to the JSON the key `interpretazione`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the
+  --interpret          add to the JSON the key `interpretation`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the
                        activations that observed it (param interpret)
   --loss-ppm N         window of the loss match by mass, ppm of the precursor m/z (10) (param loss_ppm)
-  --rules              add to the JSON the key `regole`: the fragmentation rules of the table `fragrules/1` that the formulas alone decide (which rule explains the loss
+  --rules              add to the JSON the key `rules`: the fragmentation rules of the table `fragrules/1` that the formulas alone decide (which rule explains the loss
                        of an arc, even-electron check, trap cut-off, composite and stepped losses) and the evidence `regola` of the candidates (param rules)
   --cutoff-q N         q of the trap cut-off, fragments below q/0.908 of the precursor m/z are not observable in a trap CID (0.25) (param cutoff_q)
   --loss-tol-mda N     tolerance of a loss against a rule, mDa (3) (param loss_tol_mda)
-  --breaks             add to the JSON the key `rotture`: the sets of atoms of --smiles (one or two bonds cut, a few hydrogens moved) that give the m/z of each
+  --breaks             add to the JSON the key `breaks`: the sets of atoms of --smiles (one or two bonds cut, a few hydrogens moved) that give the m/z of each
                        node, the arcs they explain and the share of each spectrum's intensity explained (hypotheses, never an assignment) (param breaks)
   --h-max N            hydrogens moved at most beyond the plain cleavage, for --breaks (2) (param h_max)
   --max-bonds N        bonds cut at most, 1 or 2, for --breaks (2) (param max_bonds)
@@ -54,17 +54,17 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
   --export FORMAT      the spectra of the tree as csv, mgf or msp text instead of the graph
   --clean              with --export: only the peaks a node of the graph explains
   --node ID            with --export: nK = the spectra of which node nK of the graph is the precursor; msn:<id> or <id> = those of that node of
-                       the tree; tutto = all
+                       the tree; all = all
   --figure LIST        with --out: also write the figures of the graph next to it (g.json → g.svg, g.html, g.png): svg, html (one file, no external
                        resource, two views, data table) and png (only in a build with the cargo feature `png`)
   --view V             the view the figures open on: tree (default) or radial
   --budget-mb N        memory the spectra of one consensus may take, MB (default: the budget of this machine); over it the calm error.memoryBudget
   --out PATH           write there instead of the standard output
 
-  figure               the figures of a graph already made (after `complete` if it has no `vista`): STEM.svg and STEM.html, STEM.png with --figure
-  complete             adds the key `vista` (levels, best path, tree and radial layout) to an msngrafo/1 that has not got it, with the bytes the engine writes
-  compare              validates a tree measured twice: two msngrafo/1 files in, a JSON (msnconfronto/1) out with the numbers of the five criteria
-                       (isolated nodes, arcs of rel >= 10 %, formulas, MS2 entropy >= 0.8 per energy, m/z shift <= 3 ppm) and `convalidata`";
+  figure               the figures of a graph already made (after `complete` if it has no `view`): STEM.svg and STEM.html, STEM.png with --figure
+  complete             adds the key `view` (levels, best path, tree and radial layout) to an msn-graph/1 that has not got it, with the bytes the engine writes
+  compare              validates a tree measured twice: two msn-graph/1 files in, a JSON (msn-compare/1) out with the numbers of the five criteria
+                       (isolated nodes, arcs of rel >= 10 %, formulas, MS2 entropy >= 0.8 per energy, m/z shift <= 3 ppm) and `validated`";
 
 /// Default window of the cleavages of `--structures`, ppm.
 pub const PPM_STRUCTURE: f64 = 10.0;
@@ -272,7 +272,7 @@ fn hill(f: &str) -> String {
 
 /// Nodes of each MS level, and the peaks of the spectra of each level: kept (with a node) and discarded (unexplained).
 fn per_level(o: &mut Out, g: &Graph) {
-    o.raw("\"per_livello\":{");
+    o.raw("\"per_level\":{");
     let max = g.nodi.iter().map(|n| n.livello).max().unwrap_or(0);
     for l in 1..=max {
         let k = g.nodi.iter().filter(|n| n.livello == l).count();
@@ -282,7 +282,7 @@ fn per_level(o: &mut Out, g: &Graph) {
             .int(k as i64);
     }
     // peaks of the spectra of each MS level: kept (with a node) and discarded (unexplained)
-    o.raw("},\"picchi_per_livello\":{");
+    o.raw("},\"peaks_per_level\":{");
     let lv = g.spettri.iter().map(|s| s.level).max().unwrap_or(0);
     let mut first_one = true;
     for l in 2..=lv {
@@ -346,23 +346,23 @@ pub fn summary(g: &Graph, truth: &str) -> Result<String> {
     }
     let mut o = Out::default();
     o.raw("{\"percorsi_verita\":").int(expected.len() as i64);
-    o.raw(",\"percorsi_trovati\":").int(found);
-    o.raw(",\"formula_giusta_fra_candidati\":").int(between);
-    o.raw(",\"unica_e_giusta\":").int(single);
+    o.raw(",\"paths_found\":").int(found);
+    o.raw(",\"correct_formula_among_candidates\":").int(between);
+    o.raw(",\"unique_and_correct\":").int(single);
     o.raw(",\"ppm_max_giuste\":")
         .num(mzlab_core::json::round(ppm_max, 2));
     let annotated = g.nodi.iter().filter(|n| n.formula.is_some()).count();
-    o.raw(",\"frammenti_annotati\":")
+    o.raw(",\"annotated_fragments\":")
         .int(annotated.saturating_sub(1) as i64);
-    o.raw(",\"scartati_formula\":")
+    o.raw(",\"discarded_formula\":")
         .int(g.scartati.formula as i64);
-    o.raw(",\"avvisi\":").int(g.avvisi.len() as i64).raw(",");
+    o.raw(",\"warnings\":").int(g.avvisi.len() as i64).raw(",");
     per_level(&mut o, g);
     o.raw("}\n");
     Ok(o.0)
 }
 
-/// The graph text `j` of `g` with the key `strutture` of node `nodo` (`nK` or `K`): the cleavages of `o.smiles` that give its m/z within `ppm`.
+/// The graph text `j` of `g` with the key `structures` of node `nodo` (`nK` or `K`): the cleavages of `o.smiles` that give its m/z within `ppm`.
 pub fn structures_text(
     g: &Graph,
     j: &str,
@@ -372,7 +372,7 @@ pub fn structures_text(
     mzlab_feat::chem::structures::strutture_testo(g, j, o.smiles.as_deref(), (nodo, ppm))
 }
 
-/// `msn-graph complete IN.json [--out PATH]`: the graph of the file with the key `vista` added; the text and the file to write it to.
+/// `msn-graph complete IN.json [--out PATH]`: the graph of the file with the key `view` added; the text and the file to write it to.
 pub fn complete_cmd(
     mut a: impl Iterator<Item = String>,
 ) -> std::result::Result<(String, Option<PathBuf>), String> {
@@ -384,13 +384,13 @@ pub fn complete_cmd(
             f => return Err(format!("unknown argument {f}")),
         }
     }
-    let file = file.ok_or("complete needs an msngrafo/1 file")?;
+    let file = file.ok_or("complete needs an msn-graph/1 file")?;
     let json = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
     let done = mzlab_core::msngraph::completa(&json).map_err(|e| e.to_string())?;
     Ok((done + "\n", out))
 }
 
-/// The graph text `j` of `g` with the keys `interpretazione` and `rotture` the options ask for (also used by `msn-lib add`).
+/// The graph text `j` of `g` with the keys `interpretation` and `breaks` the options ask for (also used by `msn-lib add`).
 pub fn with_keys(a: &Args, g: &Graph, mut j: String) -> Result<String> {
     if let Some(ppm) = a.interpret {
         j = with_interpretation(&j, g, ppm);

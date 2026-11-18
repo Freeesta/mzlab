@@ -50,7 +50,7 @@ fn every_option_of_the_command_is_a_parameter() {
     let d = dir("b");
     let got = graph(
         &d,
-        r#"{"formula":"C14H15N3O5+","smiles":"CC","ppm_formula":5,"mz_basso":100,"ppm_basso":15,"prove_min":2,"attivazione":"cid","isotopi":true,"scelte":"305.1=C14H15N3O5"}"#,
+        r#"{"formula":"C14H15N3O5+","smiles":"CC","ppm_formula":5,"low_mz":100,"wide_ppm":15,"min_evidence":2,"activation":"cid","isotopes":true,"pick":"305.1=C14H15N3O5"}"#,
     )
     .unwrap();
     let want = cli(&[
@@ -81,7 +81,7 @@ fn the_cleavages_of_a_node_are_a_parameter_of_the_step() {
     let d = dir("c");
     let got = graph(
         &d,
-        r#"{"formula":"C14H15N3O5+","smiles":"CCOC(=O)c1c[nH]c2ccccc12","strutture_nodo":"n3","ppm_struttura":5}"#,
+        r#"{"formula":"C14H15N3O5+","smiles":"CCOC(=O)c1c[nH]c2ccccc12","structures":"n3","struct_ppm":5}"#,
     )
     .unwrap();
     let want = cli(&[
@@ -95,7 +95,7 @@ fn the_cleavages_of_a_node_are_a_parameter_of_the_step() {
         "5",
     ]);
     assert_eq!(got, want);
-    assert!(got.contains("\"strutture\":{"));
+    assert!(got.contains("\"structures\":{"));
     let _ = std::fs::remove_dir_all(&d);
 }
 
@@ -104,12 +104,12 @@ fn the_interpretation_of_the_losses_is_a_parameter_of_the_step() {
     let d = dir("d");
     let got = graph(
         &d,
-        r#"{"formula":"C14H15N3O5+","interpreta":true,"ppm_perdita":5}"#,
+        r#"{"formula":"C14H15N3O5+","interpret":true,"loss_ppm":5}"#,
     )
     .unwrap();
     let want = cli(&["--formula", "C14H15N3O5+", "--interpret", "--loss-ppm", "5"]);
     assert_eq!(got, want);
-    assert!(got.contains("\"interpretazione\":{\"versione\":1,\"ppm\":5,"));
+    assert!(got.contains("\"interpretation\":{\"version\":1,\"ppm\":5,"));
     let _ = std::fs::remove_dir_all(&d);
 }
 
@@ -118,7 +118,7 @@ fn the_rules_are_a_parameter_of_the_step_and_without_them_the_bytes_do_not_chang
     let d = dir("r");
     let got = graph(
         &d,
-        r#"{"formula":"C14H15N3O5+","regole":true,"cutoff_q":0.3,"toll_perdita_mda":2}"#,
+        r#"{"formula":"C14H15N3O5+","rules":true,"cutoff_q":0.3,"loss_tol_mda":2}"#,
     )
     .unwrap();
     let want = cli(&[
@@ -131,12 +131,10 @@ fn the_rules_are_a_parameter_of_the_step_and_without_them_the_bytes_do_not_chang
         "2",
     ]);
     assert_eq!(got, want);
-    assert!(
-        got.contains("\"regole\":{\"versione\":1,\"tabella\":\"fragrules/1\",\"cutoff_q\":0.3,")
-    );
+    assert!(got.contains("\"rules\":{\"version\":1,\"table\":\"fragrules/1\",\"cutoff_q\":0.3,"));
     let without = graph(&d, r#"{"formula":"C14H15N3O5+"}"#).unwrap();
     assert_eq!(without, cli(&["--formula", "C14H15N3O5+"]));
-    assert!(!without.contains("\"regole\""));
+    assert!(!without.contains("\"rules\""));
     let _ = std::fs::remove_dir_all(&d);
 }
 
@@ -145,7 +143,7 @@ fn the_structure_rules_give_the_same_bytes_in_the_step_and_in_the_command() {
     let d = dir("s");
     let got = graph(
         &d,
-        r#"{"formula":"C14H15N3O5+","smiles":"NCCCC(=O)O","regole":true}"#,
+        r#"{"formula":"C14H15N3O5+","smiles":"NCCCC(=O)O","rules":true}"#,
     )
     .unwrap();
     let want = cli(&[
@@ -159,10 +157,10 @@ fn the_structure_rules_give_the_same_bytes_in_the_step_and_in_the_command() {
     // a SMILES that does not parse leaves the rules of the formula alone: the structure is reported where it is used
     let bad = graph(
         &d,
-        r#"{"formula":"C14H15N3O5+","smiles":"C(C","regole":true}"#,
+        r#"{"formula":"C14H15N3O5+","smiles":"C(C","rules":true}"#,
     )
     .unwrap();
-    assert!(bad.contains("\"regole\":{"));
+    assert!(bad.contains("\"rules\":{"));
     let _ = std::fs::remove_dir_all(&d);
 }
 
@@ -204,7 +202,7 @@ fn a_saved_plan_at_1_gives_the_bytes_of_the_plan_at_2_with_the_new_names() {
     for (old, new) in pairs {
         let a = graph(&d, old).unwrap();
         assert_eq!(a, graph_2(&d, new), "{old}");
-        assert!(a.starts_with("{\"formato\":\"msngrafo/2\""));
+        assert!(a.starts_with("{\"schema\":\"msn-graph/1\""));
     }
     let _ = std::fs::remove_dir_all(&d);
 }

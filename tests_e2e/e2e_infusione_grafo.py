@@ -29,26 +29,26 @@ STAND_IN = """(fx) => {
   window.fetch = (u, init) => {
     const s = String(u), url = new URL(s, location.href), q = url.searchParams, path = url.pathname.replace(/^.*\\/api\\//, "api/");
     if (path.startsWith("api/msn_grafo") || path.startsWith("api/msnlib") || path.startsWith("api/molecules")) window.__REQ.push([path, s, init && init.body ? String(init.body) : ""]);
-    if (path === "api/msn_grafo/export") return Promise.resolve(new Response(`export ${q.get("formato")} clean=${q.get("pulito")} node=${q.get("nodo")}\\nmz,rel,formula,ppm\\n244.06035,100,C13H10NO4,-0.35\\n`));
+    if (path === "api/msn_grafo/export") return Promise.resolve(new Response(`export ${q.get("schema")} clean=${q.get("clean")} node=${q.get("node")}\\nmz,rel,formula,ppm\\n244.06035,100,C13H10NO4,-0.35\\n`));
     if (path === "api/msn_grafo") {
       const j = JSON.parse(JSON.stringify(fx));
-      if (!q.get("formula")) { j.ione = null; j.nodi.forEach(n => { n.formula = null; }); }
-      (JSON.parse(q.get("scelte") || "[]")).forEach(c => { const n = j.nodi.find(x => Math.abs(x.mz - c.mz) < 1e-3); if (n && n.formula) { n.formula.scelta = c.formula; n.formula.fonte = "utente"; } });
+      if (!q.get("formula")) { j.ion = null; j.nodes.forEach(n => { n.formula = null; }); }
+      (JSON.parse(q.get("choices") || "[]")).forEach(c => { const n = j.nodes.find(x => Math.abs(x.mz - c.mz) < 1e-3); if (n && n.formula) { n.formula.choice = c.formula; n.formula.source = "user"; } });
       const sx = j._sx; delete j._sx;
-      if (sx && q.get("strutture") === "tutti") j.strutture_tutti = [Object.assign({}, sx, { nodo: "n2" })];
-      else if (sx && q.get("strutture")) j.strutture = Object.assign({}, sx, { nodo: q.get("strutture") });
-      if (q.get("interpreta") === "1") j.interpretazione = { versione: 1, ppm: 10, archi: j.archi.map(a => ({ da: a.da, a: a.a, attivazioni: ["cid"], perdita: { nome: "Carbon dioxide", formula: "CO2", massa: 43.98983, errore_ppm: 0.4, fonte: "formula", confidenza: "high", alternative: [] } })) };
-      if (q.get("rotture") === "1") j.rotture = { versione: 1, archi: j.archi.map(a => ({ da: a.da, a: a.a, spiegato: a.a === "n2" })), nodi: [{ nodo: "n2", n: 3, ipotesi: [{ legami: [[1, 2]], pezzo: [0, 1], formula: "C13H10NO4", h: 1, mz_teorico: 244.0604, ppm: 0.8 }] }] };
-      j.avvisi = [{ chiave: "warn.msngrafo.isolation", albero: "x", nodo: "n1" }];
-      if (q.get("formula") === "C99H99+") j.avvisi.push({ chiave: "warn.msngrafo.mostUnexplained", albero: "", nodo: null });
+      if (sx && q.get("structures") === "tutti") j.structures_all = [Object.assign({}, sx, { node: "n2" })];
+      else if (sx && q.get("structures")) j.structures = Object.assign({}, sx, { node: q.get("structures") });
+      if (q.get("interpret") === "1") j.interpretation = { version: 1, ppm: 10, edges: j.edges.map(a => ({ from: a.from, to: a.to, activations: ["cid"], loss: { name: "Carbon dioxide", formula: "CO2", mass: 43.98983, error_ppm: 0.4, source: "formula", confidence: "high", alternative: [] } })) };
+      if (q.get("breaks") === "1") j.breaks = { version: 1, edges: j.edges.map(a => ({ from: a.from, to: a.to, explained: a.to === "n2" })), nodes: [{ node: "n2", n: 3, hypotheses: [{ bonds: [[1, 2]], piece: [0, 1], formula: "C13H10NO4", h: 1, theoretical_mz: 244.0604, ppm: 0.8 }] }] };
+      j.warnings = [{ key: "warn.msngrafo.isolation", tree: "x", node: "n1" }];
+      if (q.get("formula") === "C99H99+") j.warnings.push({ key: "warn.msngrafo.mostUnexplained", tree: "", node: null });
       return Promise.resolve(jr(j));
     }
-    if (path === "api/molecules/cerca") return Promise.resolve(jr([{ id: "ik:TESTONLY", nome: "exampline", formula: "C14H15N3O5", massa: 305.1, smiles: "CCOC(=O)c1ccccc1N", addotti: ["[M+H]+"], punteggio: 1 }]));
-    if (path === "api/molecules/get") return Promise.resolve(jr({ id: "ik:TESTONLY", nome: "exampline", formula: "C14H15N3O5", massa: 305.1, smiles: "CCOC(=O)c1ccccc1N", addotti: ["[M+H]+"] }));
-    if (path === "api/msnlib/aggiungi") { const b = JSON.parse(init.body), tag = "entry:" + b.molecola_id + "\\n"; const dup = (b.libreria || "").includes(tag); return Promise.resolve(jr({ libreria: dup ? b.libreria : (b.libreria || "") + tag, doppione: dup })); }
-    if (path === "api/msnlib/cerca") return Promise.resolve(jr({ formato: "msncerca/1", opzioni: {}, candidati: [
-      { id: "STD-1", ione: "C14H15N3O5 [M+H]+", att: [], delta_ppm: 0.4, punteggi: { ms2: 0.91, albero: 0.8, perdite: null }, prove: { picchi_comuni: 5, nodi_allineati: 3, nodi_ignoto: 4, perdite_comuni: 2, perdite_ignoto: 3 }, analogo: null },
-      { id: "STD-2", ione: "C15H17N3O5 [M+H]+", att: [], delta_ppm: 0, punteggi: { ms2: 0.5, albero: null, perdite: null }, prove: { picchi_comuni: 2, nodi_allineati: 0, nodi_ignoto: 4, perdite_comuni: 0, perdite_ignoto: 3 }, analogo: { delta_da: 14.0157, spostati: 2, non_spostati: 1, copertura: 0.6 } }] }));
+    if (path === "api/molecules/cerca") return Promise.resolve(jr([{ id: "ik:TESTONLY", name: "exampline", formula: "C14H15N3O5", mass: 305.1, smiles: "CCOC(=O)c1ccccc1N", addotti: ["[M+H]+"], punteggio: 1 }]));
+    if (path === "api/molecules/get") return Promise.resolve(jr({ id: "ik:TESTONLY", name: "exampline", formula: "C14H15N3O5", mass: 305.1, smiles: "CCOC(=O)c1ccccc1N", addotti: ["[M+H]+"] }));
+    if (path === "api/msnlib/aggiungi") { const b = JSON.parse(init.body), tag = "entry:" + b.molecule_id + "\\n"; const dup = (b.library || "").includes(tag); return Promise.resolve(jr({ library: dup ? b.library : (b.library || "") + tag, duplicate: dup })); }
+    if (path === "api/msnlib/cerca") return Promise.resolve(jr({ schema: "msn-search/1", options: {}, candidates: [
+      { id: "STD-1", ion: "C14H15N3O5 [M+H]+", activation: [], delta_ppm: 0.4, scores: { ms2: 0.91, tree: 0.8, losses: null }, proofs: { common_peaks: 5, aligned_nodes: 3, unknown_nodes: 4, common_losses: 2, unknown_losses: 3 }, analog: null },
+      { id: "STD-2", ion: "C15H17N3O5 [M+H]+", activation: [], delta_ppm: 0, scores: { ms2: 0.5, tree: null, losses: null }, proofs: { common_peaks: 2, aligned_nodes: 0, unknown_nodes: 4, common_losses: 0, unknown_losses: 3 }, analog: { delta_da: 14.0157, shifted: 2, unshifted: 1, coverage: 0.6 } }] }));
     return orig(u, init);
   };
 }"""
@@ -59,9 +59,9 @@ try:
         load(pg, [F], 6000, 1)
         wait_for_js(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
         tree = pg.evaluate("fetch('api/msn_albero?k=0').then(r=>r.json())")
-        ids = [n["id"] for n in tree["nodi"]]
+        ids = [n["id"] for n in tree["nodes"]]
         fx = json.loads(json.dumps(FX))
-        for n, tid in zip([n for n in fx["nodi"] if n["isolato"]], ids): n["albero"] = [tid]
+        for n, tid in zip([n for n in fx["nodes"] if n["isolated"]], ids): n["tree"] = [tid]
         pg.context.grant_permissions(["clipboard-read", "clipboard-write"])
         fx["_sx"] = SX; pg.evaluate(STAND_IN, fx)
         def appears():
@@ -70,7 +70,7 @@ try:
             assert pg.locator("#ig-ion").count() == 1
         step("one infusion file: the tab shows and the graph comes from the file", appears)
         def masses():
-            assert pg.locator(".ig-node").count() == len(fx["nodi"]), pg.locator(".ig-node").count()
+            assert pg.locator(".ig-node").count() == len(fx["nodes"]), pg.locator(".ig-node").count()
             assert pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msn_grafo')[0][1]").find("&formula=") < 0
             assert "Ion formula" in pg.inner_text("#ig-field")
         step("without an ion formula: masses only", masses)
@@ -146,7 +146,7 @@ try:
         TEXTS = """() => { const w = document.createTreeWalker(document.querySelector('.ig-svg'), NodeFilter.SHOW_TEXT); const out = []; while (w.nextNode()) { const t = w.currentNode.nodeValue.replace(/MS\\d/g, ''); if (/[A-Z][a-z]?[0-9]/.test(t)) out.push(t); } return out; }"""
         OVERLAP = """() => { const r = [...document.querySelectorAll('.ig-svg .ig-box')].map(e => e.getBoundingClientRect()); let n = 0; for (let i = 0; i < r.length; i++) for (let k = i + 1; k < r.length; k++) { const a = r[i], b = r[k]; if (a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1) n++; } return n; }"""
         ids = lambda: pg.evaluate("[...document.querySelectorAll('.ig-node')].map(n => n.dataset.id).sort()")
-        V = fx["vista"]
+        V = fx["view"]
         def labels():
             pg.click("#ig-vt"); pg.wait_for_selector(".ig-svg[data-mode=tree]")
             txt = lambda i: pg.evaluate("i => document.querySelector(`.ig-node[data-id=${i}]`).textContent", i)
@@ -157,8 +157,8 @@ try:
             lab = pg.get_attribute(".ig-node[data-id=n0]", "aria-label")
             assert "305.1000" in lab and "C14H15N3O5+" in lab and "MS1" in lab, lab
             assert pg.locator(".ig-node.common").count() == 2 and "×2" in txt("n2")
-            best = sum(1 for a in V["archi"] if a["best"])
-            assert pg.locator(".ig-arc.best").count() == best and pg.locator(".ig-arc.alt").count() == len(V["archi"]) - best
+            best = sum(1 for a in V["edges"] if a["best"])
+            assert pg.locator(".ig-arc.best").count() == best and pg.locator(".ig-arc.alt").count() == len(V["edges"]) - best
             assert pg.evaluate("document.querySelector('.ig-svg').textContent").count("Δ 87.980 Da") >= 1
             assert pg.locator("#ig-bp").count() == 0 and "Shortest observed path" not in pg.inner_text("body")
             assert pg.evaluate(OVERLAP) == 0
@@ -166,7 +166,7 @@ try:
         def views():
             pg.click(".ig-node[data-id=n2]"); pg.click("#ig-vr"); pg.wait_for_selector(".ig-svg[data-mode=radial]", timeout=5000)
             assert pg.get_attribute("#ig-vr", "aria-pressed") == "true" and pg.get_attribute("#ig-vt", "aria-pressed") == "false"
-            assert len(ids()) == len(fx["nodi"]) and pg.evaluate("INFG.G.sel") == "n2"
+            assert len(ids()) == len(fx["nodes"]) and pg.evaluate("INFG.G.sel") == "n2"
             assert pg.locator(".ig-node.sel[data-id=n2]").count() == 1 and pg.evaluate(OVERLAP) == 0
             assert not pg.evaluate(TEXTS), pg.evaluate(TEXTS)
             c = pg.evaluate("(() => { const b = id => { const r = document.querySelector(`.ig-node[data-id=${id}] .ig-box`).getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }; const ring = document.querySelector('.ig-ring').getBoundingClientRect(); return [b('n0'), [ring.x + ring.width / 2, ring.y + ring.height / 2]]; })()")
@@ -175,11 +175,11 @@ try:
             assert min(sizes) >= 24, sizes
             pg.focus(".ig-node[data-id=n0]"); pg.keyboard.press("ArrowRight"); wait_for_js(pg, "INFG.G.sel === 'n3'")
             pg.keyboard.press("ArrowDown"); wait_for_js(pg, "INFG.G.sel === 'n2'"); pg.keyboard.press("ArrowLeft"); wait_for_js(pg, "INFG.G.sel === 'n0'")
-            pg.click("#ig-vt"); pg.wait_for_selector(".ig-svg[data-mode=tree]"); assert pg.evaluate("INFG.G.sel") == "n0" and len(ids()) == len(fx["nodi"])
+            pg.click("#ig-vt"); pg.wait_for_selector(".ig-svg[data-mode=tree]"); assert pg.evaluate("INFG.G.sel") == "n0" and len(ids()) == len(fx["nodes"])
         step("the Tree / Radial switch keeps the ion, puts the precursor in the middle, no box over another; arrows follow the rings", views)
         def filters():
-            n = len(fx["nodi"])
-            pg.check("#ig-best"); assert pg.locator(".ig-arc").count() == sum(1 for a in V["archi"] if a["best"]); pg.uncheck("#ig-best")
+            n = len(fx["nodes"])
+            pg.check("#ig-best"); assert pg.locator(".ig-arc").count() == sum(1 for a in V["edges"] if a["best"]); pg.uncheck("#ig-best")
             pg.fill("#ig-minrel", "30"); pg.dispatch_event("#ig-minrel", "change")
             assert "n1" not in ids() and "n4" not in ids() and len(ids()) == n - 2, ids()
             pg.fill("#ig-minrel", "0"); pg.dispatch_event("#ig-minrel", "change")
@@ -193,7 +193,7 @@ try:
             assert pg.locator(".ig-node[data-id=n0] .ig-thumb").count() == 1, "the molecule is drawn at the root"
             assert pg.locator(".ig-node[data-id=n1] .ig-thumb").count() == 0, "no drawing without cuts"
             hl = pg.evaluate("[...document.querySelectorAll('.ig-node[data-id=n2] .ig-thumb .ig-hl')].map(c => +c.getAttribute('data-atom')).sort((a, b) => a - b)")
-            assert hl == SX["candidati"][0]["tagli"][0]["pezzo"], (hl, pg.evaluate("document.querySelector('.ig-node[data-id=n2] .ig-thumb .ig-hl').outerHTML"))
+            assert hl == SX["candidates"][0]["cuts"][0]["piece"], (hl, pg.evaluate("document.querySelector('.ig-node[data-id=n2] .ig-thumb .ig-hl').outerHTML"))
             assert pg.locator(".ig-node[data-id=n2] .ig-hyp").count() == 1
             pg.click(".ig-node[data-id=n2]"); pg.wait_for_selector(".ig-hypo svg .ig-hl", timeout=10000)
             assert pg.locator(".ig-hypo svg .ig-hl").count() == len(hl)
@@ -211,7 +211,7 @@ try:
             pg.click(".ig-node[data-id=n2]")
             got = []
             for fmt in ("csv", "mgf", "msp"):
-                pg.select_option("#ig-fmt", fmt); pg.select_option("#ig-scope", "tutto")
+                pg.select_option("#ig-fmt", fmt); pg.select_option("#ig-scope", "all")
                 with pg.expect_download(timeout=15000) as d: pg.click("#ig-exp [data-a=dl]")
                 body = open(d.value.path(), encoding="utf-8").read(); got.append((fmt, d.value.suggested_filename, body))
             for fmt, name, body in got:
@@ -226,14 +226,14 @@ try:
             n1 = pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').length"); assert n1 == 1
             pg.click("#ig-lib"); wait_for_js(pg, "window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').length >= 2")
             body = json.loads(pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').slice(-1)[0][2]"))
-            assert body["libreria"] and body["formula"].startswith("C14H15N3O5"), body
+            assert body["library"] and body["formula"].startswith("C14H15N3O5"), body
             assert pg.evaluate("document.body.textContent").count("already in the library") > 0
         step("Add to library: the second time says the entry is already there", library)
         def find():
             pg.fill("#ig-delta", "20"); pg.click("#ig-find-go"); pg.wait_for_selector(".ig-find-t tbody tr", timeout=5000)
             assert pg.locator(".ig-find-t tbody tr").count() == 2
             body = json.loads(pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/cerca').slice(-1)[0][2]"))
-            assert body["libreria"] and body["delta_max"] == 20 and body["formula"].startswith("C14H15N3O5"), body
+            assert body["library"] and body["delta_max"] == 20 and body["formula"].startswith("C14H15N3O5"), body
             assert pg.locator(".ig-find-t tbody tr").nth(1).inner_text().count("14.0157") == 1
         step("Search lab library: candidates with the scores apart, the analog marked", find)
         def workflow():
@@ -243,7 +243,7 @@ try:
         step("Run MSn workflow: graph and library search with one click", workflow)
         def interp():
             assert "interpreta=1" in pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msn_grafo')[0][1]")
-            assert all("interpreta" not in r[1] for r in json.loads(pg.evaluate("JSON.stringify(window.__REQ.filter(r=>r[0]==='api/msn_grafo/export'))")))
+            assert all("interpret" not in r[1] for r in json.loads(pg.evaluate("JSON.stringify(window.__REQ.filter(r=>r[0]==='api/msn_grafo/export'))")))
             pg.click(".ig-node[data-id=n2]"); pg.wait_for_selector(".ig-int li", timeout=10000)
             t = pg.inner_text(".ig-int"); assert "Carbon dioxide" in t and "CO₂" in t and pg.evaluate("I18N.t('msngrafo.int.high')") in t, t
             assert pg.evaluate("I18N.t('msngrafo.act.line', { list: 'CID 35' })") in pg.inner_text(".ig-act"), pg.inner_text(".ig-act")
@@ -252,7 +252,7 @@ try:
             pg.click("#ig-copyd"); wait_for_js(pg, "navigator.clipboard.readText().then(t => t.includes('n2'))")
             clip = pg.evaluate("navigator.clipboard.readText()"); assert "n2" in clip and "C13H10NO4" in clip, clip[:200]
             pg.click("#ig-data"); pg.wait_for_selector("dialog#tdati table", timeout=5000)
-            assert pg.locator("dialog#tdati tbody tr").count() == len(fx["nodi"]) + len(fx["archi"])
+            assert pg.locator("dialog#tdati tbody tr").count() == len(fx["nodes"]) + len(fx["edges"])
             pg.keyboard.press("Escape")
         step("Copy data and the table of the chart data", data)
         def keys():
@@ -262,9 +262,9 @@ try:
             pg.keyboard.press("ArrowDown"); pg.keyboard.press("ArrowLeft")
             assert pg.evaluate("INFG.G.sel") == "n0", pg.evaluate("INFG.G.sel")
             pg.keyboard.press("ArrowRight"); wait_for_js(pg, "INFG.G.sel !== 'n0'")
-            cur = pg.evaluate("INFG.G.sel"); node = [n for n in fx["nodi"] if n["id"] == cur][0]
+            cur = pg.evaluate("INFG.G.sel"); node = [n for n in fx["nodes"] if n["id"] == cur][0]
             pg.keyboard.press("Enter")
-            if node["albero"]: wait_for_js(pg, f"E.panels.some(p=>p.type==='spec' && p.filt==='msn:{node['albero'][0]}')", 15000)
+            if node["tree"]: wait_for_js(pg, f"E.panels.some(p=>p.type==='spec' && p.filt==='msn:{node['tree'][0]}')", 15000)
             pg.keyboard.press("Escape"); wait_for_js(pg, "INFG.G.sel === null")
             assert pg.evaluate("INFG.G.sel") is None
         step("arrows move between ions, Enter puts the spectrum in the active cell, Esc clears", keys)
@@ -299,7 +299,7 @@ try:
             wait_for_js(pg, "document.querySelector('#ig-sum sub')")
         step("the ion field has the formula only (the adduct is its select), with a subscript preview; the ion line has subscripts", ionfield)
         def capital():
-            assert pg.input_value("#ig-mol input") == "Exampline" and pg.evaluate("INFG.G.mol.nome") == "exampline"
+            assert pg.input_value("#ig-mol input") == "Exampline" and pg.evaluate("INFG.G.mol.name") == "exampline"
             pg.fill("#ig-mol input", "Exam"); pg.wait_for_selector("#ig-mol [role=option]", timeout=5000)
             assert pg.inner_text("#ig-mol [role=option] span") == "Exampline"
         step("the molecule name shows its first letter in capitals; the stored name does not change", capital)

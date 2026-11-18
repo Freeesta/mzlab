@@ -140,15 +140,15 @@ fn evidence(g: &Graph, st: &State, o: &Options, j: usize, c: &[u32]) -> Vec<&'st
             .any(|q| below(c, &q.c) && known_loss(st.e, &q.c, c))
     });
     if loss {
-        v.push("perdita");
+        v.push("loss");
     }
     if o.regole.is_some() && rule_loss(g, st, o, j, c) {
-        v.push("regola");
+        v.push("rule");
     }
     // behind a window narrower than the M+1 the isotopes are not expected: no evidence for or against
     let narrow = g.nodi[j].upstream.is_some_and(|w| w < NARROW);
     if !narrow && g.nodi[j].m1.is_some_and(|x| m1_consistent(st.e, c, x)) {
-        v.push("isotopi");
+        v.push("isotopes");
     }
     let msn = !g.nodi[j].albero.is_empty()
         && st.figli[j]
@@ -273,11 +273,11 @@ fn formula(g: &Graph, st: &State, o: &Options, j: usize) -> NodeFormula {
             .then(a.formula.cmp(&b.formula))
     });
     let source = if j == st.r {
-        Some("radice")
+        Some("root")
     } else if st.user[j] {
-        Some("utente")
+        Some("user")
     } else if cs.len() == 1 {
-        Some("unica")
+        Some("single")
     } else {
         None
     };

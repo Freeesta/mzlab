@@ -42,17 +42,17 @@ export function molSvg(/** @type {number[]} */ atoms, /** @type {number} */ w, /
 }
 
 /** The atoms of the piece of the first cut of the first candidate of the cleavages of a node (`strutture` of the graph), or null. */
-export const pieceOf = (/** @type {any} */ s) => (s && s.candidati && s.candidati[0] && s.candidati[0].tagli[0] ? /** @type {number[]} */ (s.candidati[0].tagli[0].pezzo) : null);
+export const pieceOf = (/** @type {any} */ s) => (s && s.candidates && s.candidates[0] && s.candidates[0].cuts[0] ? /** @type {number[]} */ (s.candidates[0].cuts[0].piece) : null);
 
 /** The drawing of the root and of every ion with cleavages for the graph in G.j: `{ root, byId }` with SVG texts (empty without a molfile or with the structures off). */
 export function drawingsOf() {
   /** @type {Map<string, string>} */
   const byId = new Map();
   if (!G.structs || !G.j || !G.molfile || !OCL) return { root: null, byId };
-  for (const s of G.j.strutture_tutti || []) {
+  for (const s of G.j.structures_all || []) {
     const atoms = pieceOf(s);
-    const svg = atoms && molSvg(atoms, 150, 80, "igs-" + s.nodo);
-    if (svg) byId.set(s.nodo, svg);
+    const svg = atoms && molSvg(atoms, 150, 80, "igs-" + s.node);
+    if (svg) byId.set(s.node, svg);
   }
   return { root: molSvg([], 150, 80, "igs-root"), byId };
 }

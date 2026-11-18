@@ -1,4 +1,4 @@
-//! The static figure (SVG) of a fragmentation graph `msngrafo/1`: tree or radial view, drawn from the key `vista` (feature `figura`; the CLI and the `.wasm`
+//! The static figure (SVG) of a fragmentation graph `msn-graph/1`: tree or radial view, drawn from the key `vista` (feature `figura`; the CLI and the `.wasm`
 //! `msnfigura` call it). It repeats the LABEL RULE at the top of `mzlab/web/msngrafo-vista.js` (the interactive drawer of the page, the Flow and the
 //! stand-alone HTML), so a test compares the texts of both. Colours are written in the file (Okabe-Ito, dark ink on white): the SVG lives alone. Used by
 //! `html`, `msn_graph` of the CLI (`--figure`, `figure`) and the step `msn.figure@1`.
@@ -284,7 +284,7 @@ pub fn molecule_svg(graph: &str) -> Result<Option<String>> {
     }))
 }
 
-/// The figure of the graph `graph` (an `msngrafo/1` text; the key `vista` is added when missing) as a stand-alone SVG.
+/// The figure of the graph `graph` (an `msn-graph/1` text; the key `vista` is added when missing) as a stand-alone SVG.
 pub fn svg(graph: &str, view: View) -> Result<String> {
     let sc = scena(graph)?;
     if sc.ions.is_empty() {

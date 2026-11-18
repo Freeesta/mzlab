@@ -1,4 +1,4 @@
-//! The native executor of `spectra.msn_graph@2`: the fragmentation graph `msngrafo/2` of an MSn infusion (mzML or a vendor file such as a Thermo `.raw`),
+//! The native executor of `spectra.msn_graph@2`: the fragmentation graph `msn-graph/1` of an MSn infusion (mzML or a vendor file such as a Thermo `.raw`),
 //! the same bytes as `mzlab-cli msn-graph FILE`. The step takes the options of `msngraph::Opzioni` that the command has, plus the name of the molecule
 //! looked up in a molecules list the user gives; its output is read by the page and by `msn-lib`.
 
@@ -24,7 +24,7 @@ pub fn msn_graph_step() -> Step {
                     .formats(&["csv"])
             },
         ],
-        outs: vec![Port::new("graph", DataType::Report, "Fragmentation graph (msngrafo/2)").format("msngrafo")],
+        outs: vec![Port::new("graph", DataType::Report, "Fragmentation graph (msn-graph/1)").format("msngrafo")],
         params: params(),
         runs_in: RunsIn {
             wasm: Some("wasip1 (mzlab-cli)"),

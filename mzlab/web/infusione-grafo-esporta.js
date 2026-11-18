@@ -1,5 +1,5 @@
 // @ts-strict
-// Export of the cleaned spectra of the «Fragmentation graph» (CSV, MGF, MSP; one node or the whole tree; clean or all) and «Add to library»: one msnlib/1 entry
+// Export of the cleaned spectra of the «Fragmentation graph» (CSV, MGF, MSP; one node or the whole tree; clean or all) and «Add to library»: one msn-lib/1 entry
 // appended to the library file of the user, kept in the browser (OPFS) and downloadable. The text of every export and the library are made by the engine.
 import { G, params, query } from "./infusione-grafo-stato.js";
 
@@ -21,7 +21,7 @@ export async function runExport(/** @type {any} */ file, /** @type {"csv" | "mgf
   try {
     const text = await exportText(file.k, fmt, clean, node);
     if (copy) { await navigator.clipboard.writeText(text); nearMsg(I18N.t("msngrafo.copied")); return; }
-    await dl(`${baseName(file)}_${node === "tutto" ? "tree" : node.replace(/\W+/g, "_")}${clean ? "" : "_all"}.${fmt}`, text, MIME[fmt]);
+    await dl(`${baseName(file)}_${node === "all" ? "tree" : node.replace(/\W+/g, "_")}${clean ? "" : "_all"}.${fmt}`, text, MIME[fmt]);
   } catch (e) { nearMsg(/** @type {any} */ (e).message || String(e)); }
 }
 
@@ -42,12 +42,12 @@ async function writeLibrary(/** @type {string} */ text) {
 export async function addToLibrary(/** @type {any} */ file) {
   const mol = G.mol;
   try {
-    const body = { libreria: await readLibrary(), molecola_id: mol ? mol.id : "", ...params(file.k) };
+    const body = { library: await readLibrary(), molecule_id: mol ? mol.id : "", ...params(file.k) };
     const r = await fetch("api/msnlib/aggiungi", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     const j = await r.json();
     if (j.error) throw I18N.err(j);
-    if (j.doppione) { nearMsg(I18N.t("msngrafo.lib.dup")); return; }
-    await writeLibrary(j.libreria);
+    if (j.duplicate) { nearMsg(I18N.t("msngrafo.lib.dup")); return; }
+    await writeLibrary(j.library);
     nearMsg(I18N.t("msngrafo.lib.added"));
   } catch (e) { nearMsg(/** @type {any} */ (e).message || String(e)); }
 }
@@ -62,7 +62,7 @@ export async function downloadLibrary() {
 /** The export row: scope (node or tree), clean or all, format, then Download | Copy; and the library buttons. */
 export function exportRow(/** @type {HTMLElement} */ host, /** @type {any} */ file, /** @type {string | null} */ node) {
   const opt = (/** @type {string} */ v, /** @type {string} */ t, /** @type {boolean} */ sel = false) => raw(h`<option value="${v}"${raw(sel ? " selected" : "")}>${t}</option>`);
-  host.innerHTML = h`<div class="row ig-export"><label>${I18N.t("msngrafo.scope")} <select id="ig-scope">${opt("tutto", I18N.t("msngrafo.scope.tree"))}${node ? opt(node, I18N.t("msngrafo.scope.node"), true) : ""}</select></label>` +
+  host.innerHTML = h`<div class="row ig-export"><label>${I18N.t("msngrafo.scope")} <select id="ig-scope">${opt("all", I18N.t("msngrafo.scope.tree"))}${node ? opt(node, I18N.t("msngrafo.scope.node"), true) : ""}</select></label>` +
     h`<label>${I18N.t("msngrafo.spectra")} <select id="ig-clean">${opt("1", I18N.t("msngrafo.clean"))}${opt("0", I18N.t("msngrafo.all"))}</select></label>` +
     h`<label>${I18N.t("msngrafo.format")} <select id="ig-fmt">${opt("csv", "CSV")}${opt("mgf", "MGF")}${opt("msp", "MSP")}</select></label>` +
     h`<button type="button" class="bt" data-a="dl" title="${I18N.t("msngrafo.export.tip")}">${I18N.t("msngrafo.export")}</button><button type="button" class="bt" data-a="copy" title="${I18N.t("msngrafo.copy.tip")}">${I18N.t("msngrafo.copy")}</button>` +

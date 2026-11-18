@@ -16,7 +16,7 @@ def step(name, fn):
 
 def crossings(pos, arcs):
     """The measure of the engine (layout.rs `incroci`): pairs of arcs between the same two columns whose ends are in opposite order in both; arcs sharing an end never count."""
-    seg = [(pos[a["da"]], pos[a["a"]], a["da"], a["a"]) for a in arcs if a["da"] in pos and a["a"] in pos]
+    seg = [(pos[a["from"]], pos[a["to"]], a["from"], a["to"]) for a in arcs if a["from"] in pos and a["to"] in pos]
     n = 0
     for i in range(len(seg)):
         for k in range(i + 1, len(seg)):
@@ -39,10 +39,10 @@ r = Run(port=8869, wd="/tmp/wd_vista")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1600, "height": 1000})
-        n = len(FX["nodi"]); assert n >= 80, n
+        n = len(FX["nodes"]); assert n >= 80, n
         def cross():
-            base = crossings({x["id"]: (x["pos"]["col"], x["pos"]["riga"]) for x in FX["nodi"]}, FX["archi"])
-            ours = crossings({x["id"]: (x["albero"]["col"], x["albero"]["riga"]) for x in FX["vista"]["nodi"]}, FX["archi"])
+            base = crossings({x["id"]: (x["pos"]["col"], x["pos"]["row"]) for x in FX["nodes"]}, FX["edges"])
+            ours = crossings({x["id"]: (x["tree"]["col"], x["tree"]["row"]) for x in FX["view"]["nodes"]}, FX["edges"])
             assert base > 0 and ours <= base * 0.5, (ours, base)
         step("tree: at most half of the crossings of the barycentre layout (80 ions)", cross)
         for mode in ("tree", "radial"):

@@ -46,4 +46,4 @@ def test_graph_with_the_expectations_of_the_wasm_is_the_graph_of_the_command(pkg
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "mzlab-msngrafo-wasm"), str(pkg / "msn.mzidx"), str(MZML), query).stdout
     want = cli("msn-graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", SMILES, "--rules").stdout
     assert got + "\n" == want
-    assert '"regole":' in got
+    assert '"rules":' in got

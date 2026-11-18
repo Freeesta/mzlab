@@ -69,41 +69,41 @@ fn the_graph_and_its_exports_are_those_of_the_command_line() {
     ];
     let with = |extra: &[&str]| cli(&[&args[..], extra].concat());
     assert_eq!(
-        ask(&format!("{f}&{smi}&strutture=n3"), json!({})) + "\n",
+        ask(&format!("{f}&{smi}&structures=n3"), json!({})) + "\n",
         with(&["--structures", "n3"])
     );
     assert_eq!(
-        ask(&format!("{f}&{smi}&interpreta=1"), json!({})) + "\n",
+        ask(&format!("{f}&{smi}&interpret=1"), json!({})) + "\n",
         with(&["--interpret"])
     );
     assert_eq!(
-        ask(&format!("{f}&{smi}&rotture=1"), json!({})) + "\n",
+        ask(&format!("{f}&{smi}&breaks=1"), json!({})) + "\n",
         with(&["--breaks"])
     );
     assert_eq!(
-        ask("formato=csv", json!({"esporta": true})),
+        ask("format=csv", json!({"esporta": true})),
         cli(&["--export", "csv"])
     );
     assert_eq!(
-        ask("formato=msp&pulito=1", json!({"esporta": true})),
+        ask("format=msp&clean=1", json!({"esporta": true})),
         cli(&["--export", "msp", "--clean"])
     );
     // the library entry and the search over it
     let add: Value = serde_json::from_str(&ask(
         &format!("{f}&{smi}"),
-        json!({"libreria": "", "molecola": "m1"}),
+        json!({"library": "", "molecule": "m1"}),
     ))
     .unwrap();
-    assert_eq!(add["doppione"], false);
-    let lib = add["libreria"].as_str().unwrap();
+    assert_eq!(add["duplicate"], false);
+    let lib = add["library"].as_str().unwrap();
     assert!(!lib.is_empty());
     let again: Value = serde_json::from_str(&ask(
         &format!("{f}&{smi}"),
-        json!({"libreria": lib, "molecola": "m1"}),
+        json!({"library": lib, "molecule": "m1"}),
     ))
     .unwrap();
-    assert_eq!(again["doppione"], true);
-    assert!(ask(f, json!({"cerca": true, "libreria": lib})).contains("\"formato\":\"msncerca/1\""));
+    assert_eq!(again["duplicate"], true);
+    assert!(ask(f, json!({"cerca": true, "library": lib})).contains("\"schema\":\"msn-search/1\""));
     // errors keep their key as the .wasm throws it
     let e = r(
         "msngrafo",
@@ -309,7 +309,7 @@ fn the_graph_of_a_native_sample_is_that_of_its_mzml() {
     let norm = |s: Result<String, String>| {
         s.map(|t| {
             let mut j: Value = serde_json::from_str(&t).unwrap();
-            j["sorgente"] = json!(null);
+            j["source"] = json!(null);
             j
         })
     };

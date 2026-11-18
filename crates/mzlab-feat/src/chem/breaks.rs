@@ -1,4 +1,4 @@
-//! The bond breaks of the structure of the user that explain the ions of an `msngrafo/1`: every set of one or two single bonds is cut, each
+//! The bond breaks of the structure of the user that explain the ions of an `msn-graph/1`: every set of one or two single bonds is cut, each
 //! piece takes a hydrogen per cut and may gain or lose a few more (hydrogen transfer), and the pieces whose m/z is a node's become its hypotheses;
 //! an arc is explained when a hypothesis of the child lies inside one of the parent. Used by `mzlab-cli msn-graph --breaks` and the `.wasm`
 //! `msngrafo` (`breaks_text`, the same bytes); the types of the answer are in `mzlab_core::msngraph`. Hypotheses, never identifications.

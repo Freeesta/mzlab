@@ -23,12 +23,12 @@ use crate::natives;
 use crate::rpc::{io_error, map_file, text, Answer, Eng, MapAt};
 use crate::store::Nat;
 
-/// Default window of the cleavages (`ppm_struttura`), ppm; as in the `.wasm`.
+/// Default window of the cleavages (`struct_ppm`), ppm; as in the `.wasm`.
 const STRUCTURE_PPM: f64 = 10.0;
 
 impl State {
-    /// `msngrafo {slot, name, fid, query, esporta?, cerca?, libreria?, molecola?}`: the graph of the file `name` (its `.mzidx` and the mzML at `slot`), or its export as text,
-    /// or the library text with an entry added (`libreria` given), or the library search (`cerca`). A sample of a maker's file is read from the mzML made from it (`derived_mzml`:
+    /// `msngrafo {slot, name, fid, query, esporta?, cerca?, library?, molecule?}`: the graph of the file `name` (its `.mzidx` and the mzML at `slot`), or its export as text,
+    /// or the library text with an entry added (`library` given), or the library search (`cerca`). A sample of a maker's file is read from the mzML made from it (`derived_mzml`:
     /// written once to the temporary folder with its own index), as the `.wasm` does with its copy on OPFS.
     pub(crate) fn op_msngraph(&self, eng: &mut Eng, p: &Value) -> Result<Answer> {
         let s = |k: &str| p[k].as_str().unwrap_or("");
@@ -54,9 +54,9 @@ impl State {
         if p["cerca"].as_bool().unwrap_or(false) {
             let o = opzioni_cerca(&|k| q.get(k).map(String::from))?;
             let (_, j, _) = run()?;
-            return text(cerca(s("libreria"), &j, &o)?);
+            return text(cerca(s("library"), &j, &o)?);
         }
-        if p["libreria"].is_null() {
+        if p["library"].is_null() {
             return if p["esporta"].as_bool().unwrap_or(false) {
                 text(export(&q, &mut run)?)
             } else {
@@ -64,9 +64,9 @@ impl State {
             };
         }
         let (g, j, _) = run()?;
-        let (l, duplicate) = aggiungi(s("libreria"), s("molecola"), &g, &j)?;
+        let (l, duplicate) = aggiungi(s("library"), s("molecule"), &g, &j)?;
         let mut o = Out::default();
-        o.raw("{\"libreria\":").str(&l).raw(",\"doppione\":");
+        o.raw("{\"library\":").str(&l).raw(",\"duplicate\":");
         o.raw(if duplicate { "true}" } else { "false}" });
         text(o.0)
     }
@@ -213,7 +213,7 @@ impl State {
 
 /// `regole=1` with a `smiles`: the expectations of the structure rules go into the query as `attese` (the `.wasm` `msnregole`); a SMILES that does not parse is left to the graph.
 fn add_expected(q: &mut Query) {
-    if q.get("regole") != Some("1") || q.some("smiles").is_none() || q.some("attese").is_some() {
+    if q.get("rules") != Some("1") || q.some("smiles").is_none() || q.some("expected").is_some() {
         return;
     }
     let Ok(a) = mzlab_feat::chem::rules::attese(q.get("smiles").unwrap_or(""), tabella_regole())
@@ -231,7 +231,7 @@ fn add_expected(q: &mut Query) {
         o.raw(if x.ione { ",1]" } else { ",0]" });
     }
     o.raw("]");
-    q.0.push(("attese".to_string(), o.0));
+    q.0.push(("expected".to_string(), o.0));
 }
 
 type Computed = Result<(Graph, String, Options)>;
@@ -257,20 +257,20 @@ impl ReadAt for DynRead<'_> {
     }
 }
 
-/// The optional keys of the query on the graph text: `interpreta=1` and `rotture=1`, shared by the graph and its exports.
+/// The optional keys of the query on the graph text: `interpret=1` and `rotture=1`, shared by the graph and its exports.
 fn with_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> Result<String> {
-    if q.get("interpreta") == Some("1") {
-        let ppm = match q.some("ppm_perdita") {
+    if q.get("interpret") == Some("1") {
+        let ppm = match q.some("loss_ppm") {
             None => PPM_PERDITA,
             Some(v) => v
                 .parse::<f64>()
                 .ok()
                 .filter(|p| p.is_finite() && *p > 0.0)
-                .ok_or_else(|| Error::new("err.request.badNumber").with("name", "ppm_perdita"))?,
+                .ok_or_else(|| Error::new("err.request.badNumber").with("name", "loss_ppm"))?,
         };
         j = with_interpretation(&j, g, ppm);
     }
-    if q.get("rotture") == Some("1") {
+    if q.get("breaks") == Some("1") {
         let num = |k: &str, d: f64| -> Result<f64> {
             match q.some(k) {
                 None => Ok(d),
@@ -282,9 +282,9 @@ fn with_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> Result<String>
             }
         };
         let par = mzlab_feat::chem::breaks::Params {
-            ppm: num("ppm_struttura", STRUCTURE_PPM)?,
+            ppm: num("struct_ppm", STRUCTURE_PPM)?,
             h_max: num("h_max", 2.0)?.min(4.0) as u8,
-            max_bonds: num("max_legami", 2.0)?.clamp(1.0, 2.0) as u8,
+            max_bonds: num("max_bonds", 2.0)?.clamp(1.0, 2.0) as u8,
         };
         j = mzlab_feat::chem::breaks::breaks_text(g, &j, o.smiles.as_deref(), par)?;
     }
@@ -294,17 +294,17 @@ fn with_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> Result<String>
 /// `msn_graph` of the `.wasm`: the graph text, with the cleavages of a node when `strutture` asks.
 fn graph_text(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
     let (g, j, o) = run()?;
-    match q.some("strutture") {
+    match q.some("structures") {
         None => Ok(j),
         Some(node) => {
-            let ppm = match q.some("ppm_struttura") {
+            let ppm = match q.some("struct_ppm") {
                 None => STRUCTURE_PPM,
                 Some(v) => v
                     .parse::<f64>()
                     .ok()
                     .filter(|p| p.is_finite() && *p > 0.0)
                     .ok_or_else(|| {
-                        Error::new("err.request.badNumber").with("name", "ppm_struttura")
+                        Error::new("err.request.badNumber").with("name", "struct_ppm")
                     })?,
             };
             strutture_testo(&g, &j, o.smiles.as_deref(), (node, ppm))
@@ -312,10 +312,10 @@ fn graph_text(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
     }
 }
 
-/// `msn_graph_export` of the `.wasm`: the spectra of the graph as text, a table of it (`vista`) or the tree as a library (`formato=massbank`, `libreria=1`).
+/// `msn_graph_export` of the `.wasm`: the spectra of the graph as text, a table of it (`vista`) or the tree as a library (`formato=massbank`, `library=1`).
 fn export(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
-    let clean = q.get("pulito") == Some("1");
-    if let Some(view) = q.some("vista") {
+    let clean = q.get("clean") == Some("1");
+    if let Some(view) = q.some("view") {
         let (_, j, _) = run()?;
         return Ok(table_text(
             &mzlab_core::json::parse(j.as_bytes())?,
@@ -323,8 +323,8 @@ fn export(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
             clean,
         ));
     }
-    let format = q.get("formato").unwrap_or("");
-    if format == "massbank" || q.get("libreria") == Some("1") {
+    let format = q.get("format").unwrap_or("");
+    if format == "massbank" || q.get("library") == Some("1") {
         let (_, j, _) = run()?;
         let v = mzlab_core::json::parse(j.as_bytes())?;
         let get = |k: &str, d: &'static str| q.some(k).unwrap_or(d);
@@ -339,9 +339,9 @@ fn export(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
             (
                 get("id", ""),
                 format,
-                get("livelli", "all"),
+                get("levels", "all"),
                 clean,
-                get("annota", "1") != "0",
+                get("annotate", "1") != "0",
             ),
         );
     }

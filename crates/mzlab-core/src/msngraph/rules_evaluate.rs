@@ -1,4 +1,4 @@
-//! The rules of `fragrules/1` evaluated on the graph `msngrafo/1` (by the formula alone, or with the products the structure expects): which rule
+//! The rules of `fragrules/1` evaluated on the graph `msn-graph/1` (by the formula alone, or with the products the structure expects): which rule
 //! explains the loss of an arc, the even-electron check, the trap cut-off, composite and stepped losses, `after` chains. Evidence with its reason and source, never a verdict.
 //! Used by `graph_json` (so by the `.wasm` module and the command line) when the option `regole` is on.
 

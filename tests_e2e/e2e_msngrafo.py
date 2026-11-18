@@ -29,21 +29,21 @@ try:
         got = {}
         def same():
             got["t"] = pg.evaluate("fetch('api/msn_grafo?k=0&formula=C8H11N4O2%2B').then(r=>r.text())")
-            assert got["t"].startswith('{"formato":"msngrafo/2"'), got["t"][:200]
+            assert got["t"].startswith('{"schema":"msn-graph/1"'), got["t"][:200]
             assert mask(got["t"]) == mask(cli), "the site and the command line differ"
         step("the graph of the site is the one of the command line", same)
         def cuts():
             smi, q = "CNC(=O)c1cnc(N)nc1C", "k=0&formula=C8H11N4O2%2B&smiles=CNC%28%3DO%29c1cnc%28N%29nc1C&strutture=n3"
             want = subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(F), "--formula", ION, "--smiles", smi, "--structures", "n3"], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout.rstrip("\n")
             t = pg.evaluate(f"fetch('api/msn_grafo?{q}').then(r=>r.text())")
-            assert mask(t) == mask(want) and '"strutture":{' in t, "the site and the command line differ"
-            assert '"strutture"' not in pg.evaluate("fetch('api/msn_grafo?k=0&formula=C8H11N4O2%2B&smiles=CCO').then(r=>r.text())")
+            assert mask(t) == mask(want) and '"structures":{' in t, "the site and the command line differ"
+            assert '"structures"' not in pg.evaluate("fetch('api/msn_grafo?k=0&formula=C8H11N4O2%2B&smiles=CCO').then(r=>r.text())")
             res = pg.evaluate("fetch('api/msn_grafo?k=0&strutture=n3').then(async r=>[r.status, await r.json()])")
             assert res[0] == 400 and res[1]["error_key"] == "err.msngrafo.noSmiles", res
         step("the cleavages of a node (strutture=) are the ones of the command line; without the key the graph is unchanged", cuts)
         def masses():
             j = json.loads(pg.evaluate("fetch('api/msn_grafo?k=0').then(r=>r.text())"))
-            assert j["ione"] is None and len(j["nodi"]) > 3, (j["ione"], len(j["nodi"]))
+            assert j["ion"] is None and len(j["nodes"]) > 3, (j["ion"], len(j["nodes"]))
         step("without a formula the graph is by masses", masses)
         def bad():
             res = pg.evaluate("fetch('api/msn_grafo?k=0&ppm_formula=abc').then(async r=>[r.status, await r.json()])")
@@ -53,32 +53,32 @@ try:
             res = pg.evaluate("fetch('api/msn_grafo/export?k=0&formato=msp&pulito=1').then(async r=>[r.status, r.headers.get('content-type'), await r.text(), r.headers.get('content-disposition')])")
             assert res[0] == 200 and res[1] == "text/plain" and "Num Peaks:" in res[2] and res[3] == 'attachment; filename="msn-graph.msp"', res[:2] + res[3:]
             csv = pg.evaluate("fetch('api/msn_grafo/export?k=0&formato=csv').then(r=>r.text())")
-            assert csv.startswith("albero,livello,"), csv[:80]
+            assert csv.startswith("tree,level,"), csv[:80]
             bad = pg.evaluate("fetch('api/msn_grafo/export?k=0&formato=xls').then(r=>r.status)")
             assert bad == 400, bad
         step("the export gives CSV and MSP text and a bad format is a keyed error", export)
         def library():
             post = "(b)=>fetch('api/msnlib/aggiungi',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(async r=>[r.status,await r.json()])"
-            body = {"libreria": "", "molecola_id": "STD-1", "k": 0, "formula": "C8H11N4O2+", "tol": "nom", "ce": 1, "scelte": []}
+            body = {"library": "", "molecule_id": "STD-1", "k": 0, "formula": "C8H11N4O2+", "tol": "nom", "ce": 1, "choices": []}
             st, a = pg.evaluate(post, body)
-            assert st == 200 and a["doppione"] is False and a["libreria"].startswith('{"formato":"msnlib/1"'), (st, str(a)[:200])
-            st, again = pg.evaluate(post, {**body, "libreria": a["libreria"]})
-            assert st == 200 and again["doppione"] is True and again["libreria"] == a["libreria"], (st, str(again)[:200])
-            st, err = pg.evaluate(post, {"libreria": "", "molecola_id": "STD-1", "k": 0})
+            assert st == 200 and a["duplicate"] is False and a["library"].startswith('{"schema":"msn-lib/1"'), (st, str(a)[:200])
+            st, again = pg.evaluate(post, {**body, "library": a["library"]})
+            assert st == 200 and again["duplicate"] is True and again["library"] == a["library"], (st, str(again)[:200])
+            st, err = pg.evaluate(post, {"library": "", "molecule_id": "STD-1", "k": 0})
             assert st == 400 and err["error_key"] == "err.msnlib.noIon", (st, err)
         step("the library gets an entry once, the same one is a duplicate and a graph without ion is a keyed error", library)
         def search():
             post = "([u,b])=>fetch(u,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(async r=>[r.status,await r.json()])"
-            body = {"libreria": "", "molecola_id": "STD-1", "k": 0, "formula": "C8H11N4O2+", "tol": "nom", "ce": 1, "scelte": []}
+            body = {"library": "", "molecule_id": "STD-1", "k": 0, "formula": "C8H11N4O2+", "tol": "nom", "ce": 1, "choices": []}
             st, a = pg.evaluate(post, ["api/msnlib/aggiungi", body])
             assert st == 200, (st, a)
-            q = {k: v for k, v in body.items() if k != "molecola_id"}
-            st, c = pg.evaluate(post, ["api/msnlib/cerca", {**q, "libreria": a["libreria"]}])
-            assert st == 200 and c["formato"] == "msncerca/1" and c["candidati"][0]["id"] == "STD-1", (st, str(c)[:300])
-            assert c["candidati"][0]["analogo"] is None and abs(c["candidati"][0]["delta_ppm"]) < 1, c["candidati"][0]
-            st, e = pg.evaluate(post, ["api/msnlib/cerca", {**q, "libreria": a["libreria"], "top": "abc"}])
+            q = {k: v for k, v in body.items() if k != "molecule_id"}
+            st, c = pg.evaluate(post, ["api/msnlib/cerca", {**q, "library": a["library"]}])
+            assert st == 200 and c["schema"] == "msn-search/1" and c["candidates"][0]["id"] == "STD-1", (st, str(c)[:300])
+            assert c["candidates"][0]["analog"] is None and abs(c["candidates"][0]["delta_ppm"]) < 1, c["candidates"][0]
+            st, e = pg.evaluate(post, ["api/msnlib/cerca", {**q, "library": a["library"], "top": "abc"}])
             assert st == 400 and e["error_key"] == "err.request.badNumber", (st, e)
-            st, e = pg.evaluate(post, ["api/msnlib/cerca", {**q, "libreria": "no"}])
+            st, e = pg.evaluate(post, ["api/msnlib/cerca", {**q, "library": "no"}])
             assert st == 400 and e["error_key"] == "err.msnlib.bad", (st, e)
         step("the library search finds the entry of the same infusion and bad options or a bad library are keyed errors", search)
         errs = [e for e in r.errs if e[0] in ("pageerror",)]

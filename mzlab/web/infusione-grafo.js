@@ -21,21 +21,21 @@ import { formulaHtml, prettyFormula, splitCharge, vistaOf } from "./msngrafo-vis
 const V = { el: null, svg: null, scale: 1 };
 let tokenNow = 0;
 
-const nodeLabel = (/** @type {any} */ n) => `MS${n.livello} ${n.mz.toFixed(4)}`;
+const nodeLabel = (/** @type {any} */ n) => `MS${n.level} ${n.mz.toFixed(4)}`;
 
 /** The rows of «the data of the chart»: one per ion with the formula, the candidates, the levels and the intensity, then one per loss. `pretty` writes formulas with Unicode subscripts (what the dialog shows); «Copy data» stays plain ASCII. */
 function dataTable(pretty = false) {
-  const j = filtered(G.j, G.rf), v = vistaOf(j), byId = new Map(j.nodi.map((/** @type {any} */ n) => [n.id, n])), vx = new Map(v.nodi.map((/** @type {any} */ x) => [x.id, x]));
-  const sign = j.polarita === -1 ? "-" : "+", fm = (/** @type {string} */ f) => (pretty ? prettyFormula(...(/** @type {[string, string]} */ (splitCharge(f, sign)))) : f);
+  const j = filtered(G.j, G.rf), v = vistaOf(j), byId = new Map(j.nodes.map((/** @type {any} */ n) => [n.id, n])), vx = new Map(v.nodes.map((/** @type {any} */ x) => [x.id, x]));
+  const sign = j.polarity === -1 ? "-" : "+", fm = (/** @type {string} */ f) => (pretty ? prettyFormula(...(/** @type {[string, string]} */ (splitCharge(f, sign)))) : f);
   const lv = (/** @type {number[]} */ l) => l.map(x => "MS" + x).join(", ");
-  const rows = j.nodi.map((/** @type {any} */ n) => {
+  const rows = j.nodes.map((/** @type {any} */ n) => {
     const x = vx.get(n.id), c = chosen(n);
-    return [n.id, lv(x.livelli), n.mz.toFixed(5), x.best.da ? String(x.rel) : "", c ? fm(c) : "", n.formula ? n.formula.candidati.map((/** @type {any} */ k) => `${fm(k.formula)} ${k.ppm} ppm`).join("; ") : "", "", "", x.comune ? String(x.entranti) : "", n.isolato ? I18N.t("msngrafo.yes") : "", n.osservazioni, "", "", ""];
+    return [n.id, lv(x.levels), n.mz.toFixed(5), x.best.from ? String(x.rel) : "", c ? fm(c) : "", n.formula ? n.formula.candidates.map((/** @type {any} */ k) => `${fm(k.formula)} ${k.ppm} ppm`).join("; ") : "", "", "", x.common ? String(x.incoming) : "", n.isolated ? I18N.t("msngrafo.yes") : "", n.observations, "", "", ""];
   });
-  const best = new Set(v.archi.filter((/** @type {any} */ a) => a.best).map((/** @type {any} */ a) => a.da + ">" + a.a));
-  const arcs = j.archi.map((/** @type {any} */ a) => {
-    const p = a.perdita, loss = p.formula ? fm(p.formula) : `${p.da_massa.toFixed(5)} Da`, comp = !p.formula && p.compatibile.length ? I18N.t("msngrafo.v.compat", { f: p.compatibile.map(fm).join(" / ") }) : "";
-    return [`${a.da}>${a.a}`, lv([...new Set(a.misure.map((/** @type {any} */ m) => m.livello))]), `${(/** @type {any} */ (byId.get(a.a))).mz.toFixed(5)}`, String(Math.max(...a.misure.map((/** @type {any} */ m) => m.rel), 0)), "", comp, loss, best.has(a.da + ">" + a.a) ? I18N.t("msngrafo.yes") : "", "", a.isolamento ? I18N.t("msngrafo.yes") : "", a.misure.length, ...arcCells(j, a)];
+  const best = new Set(v.edges.filter((/** @type {any} */ a) => a.best).map((/** @type {any} */ a) => a.from + ">" + a.to));
+  const arcs = j.edges.map((/** @type {any} */ a) => {
+    const p = a.loss, loss = p.formula ? fm(p.formula) : `${p.da_mass.toFixed(5)} Da`, comp = !p.formula && p.compatible.length ? I18N.t("msngrafo.v.compat", { f: p.compatible.map(fm).join(" / ") }) : "";
+    return [`${a.from}>${a.to}`, lv([...new Set(a.measurements.map((/** @type {any} */ m) => m.level))]), `${(/** @type {any} */ (byId.get(a.to))).mz.toFixed(5)}`, String(Math.max(...a.measurements.map((/** @type {any} */ m) => m.rel), 0)), "", comp, loss, best.has(a.from + ">" + a.to) ? I18N.t("msngrafo.yes") : "", "", a.isolation ? I18N.t("msngrafo.yes") : "", a.measurements.length, ...arcCells(j, a)];
   });
   return { title: I18N.t("msngrafo.data.title"), head: ["id", I18N.t("msngrafo.v.col.levels"), "m/z", I18N.t("msngrafo.v.col.rel"), I18N.t("msngrafo.col.chosen"), I18N.t("msngrafo.col.cand"), I18N.t("msngrafo.v.col.loss"), I18N.t("msngrafo.v.col.best"), I18N.t("msngrafo.v.col.common"), I18N.t("msngrafo.col.iso"), I18N.t("msngrafo.col.n"), I18N.t("msngrafo.col.rule"), I18N.t("msngrafo.col.source"), I18N.t("msngrafo.col.priority")], rows: [...rows, ...arcs], rowHeader: true };
 }
@@ -48,7 +48,7 @@ async function copyData() {
 /** The spectrum of a node in the active cell: its own when it was isolated, else the one of the precursor it comes from. */
 function openSpectrum(/** @type {string} */ id) {
   const n = nodeOf(id); if (!n || !G.j) return;
-  const arc = G.j.archi.find((/** @type {any} */ a) => a.a === id), tree = n.albero[0] || (arc && arc.misure[0] && arc.misure[0].albero);
+  const arc = G.j.edges.find((/** @type {any} */ a) => a.to === id), tree = n.tree[0] || (arc && arc.measurements[0] && arc.measurements[0].tree);
   const cell = INF.target(E.active);
   if (tree && cell) INF.pick(cell, tree);
 }
@@ -57,7 +57,7 @@ function zoomBar(/** @type {HTMLElement} */ bar, /** @type {HTMLElement} */ wrap
   const act = { in: () => setScale(V.scale * 1.25), out: () => setScale(V.scale / 1.25), fit: () => setScale(1), l: () => wrap.scrollBy(-80, 0), r: () => wrap.scrollBy(80, 0), u: () => wrap.scrollBy(0, -80), d: () => wrap.scrollBy(0, 80) };
   const defs = [["in", "+", "msngrafo.zoom.in"], ["out", "−", "msngrafo.zoom.out"], ["fit", "1:1", "msngrafo.zoom.fit"], ["l", "←", "msngrafo.pan.l"], ["r", "→", "msngrafo.pan.r"], ["u", "↑", "msngrafo.pan.u"], ["d", "↓", "msngrafo.pan.d"]];
   bar.innerHTML = defs.map(([a, t, k]) => h`<button type="button" class="bt" data-z="${a}" aria-label="${I18N.t(k)}" title="${I18N.t(k)}">${t}</button>`).join("") +
-    h`<button type="button" class="bt" id="ig-data" title="${I18N.t("tdati.btn.title")}">${I18N.t("tdati.btn")}</button><button type="button" class="bt" id="ig-copyd">${I18N.t("msngrafo.copydata")}</button><label class="ig-flt" title="${I18N.t("msngrafo.rule.filter.tip")}"><input type="checkbox" id="ig-rf"${raw(G.rf ? " checked" : "")}${raw(G.ro && !(G.j && G.j.regole) ? ' disabled title="' + EH(I18N.t("msngrafo.file.off")) + '"' : "")} aria-label="${I18N.t("msngrafo.rule.filter.aria")}"> ${I18N.t("msngrafo.rule.filter")}</label>`;
+    h`<button type="button" class="bt" id="ig-data" title="${I18N.t("tdati.btn.title")}">${I18N.t("tdati.btn")}</button><button type="button" class="bt" id="ig-copyd">${I18N.t("msngrafo.copydata")}</button><label class="ig-flt" title="${I18N.t("msngrafo.rule.filter.tip")}"><input type="checkbox" id="ig-rf"${raw(G.rf ? " checked" : "")}${raw(G.ro && !(G.j && G.j.rules) ? ' disabled title="' + EH(I18N.t("msngrafo.file.off")) + '"' : "")} aria-label="${I18N.t("msngrafo.rule.filter.aria")}"> ${I18N.t("msngrafo.rule.filter")}</label>`;
   bar.querySelectorAll("[data-z]").forEach(b => b.addEventListener("click", () => /** @type {any} */ (act)[/** @type {string} */ (/** @type {HTMLElement} */ (b).dataset.z)]()));
   bar.querySelector("#ig-data")?.addEventListener("click", () => G.j && TDATI.table(dataTable(true)));
   bar.querySelector("#ig-copyd")?.addEventListener("click", () => G.j && copyData());
@@ -87,14 +87,14 @@ function viewBar(/** @type {HTMLElement} */ bar, /** @type {() => void} */ redra
 function syncBar(/** @type {HTMLElement} */ b) {
   const j = G.j; if (!j) return;
   const q = (/** @type {string} */ id) => /** @type {HTMLInputElement} */ (b.querySelector("#" + id));
-  const radial = !!j.vista;
+  const radial = !!j.view;
   if (!radial && G.view === "radial") G.view = "tree";
   q("ig-vt").setAttribute("aria-pressed", String(G.view === "tree")); q("ig-vr").setAttribute("aria-pressed", String(G.view === "radial")); q("ig-vr").disabled = !radial;
   q("ig-minrel").value = String(G.minRel); q("ig-best").checked = G.bestOnly; q("ig-structs").checked = G.structs;
-  const top = Math.max(1, ...j.nodi.map((/** @type {any} */ n) => n.livello)), sel = q("ig-lvl"), vals = [0, ...Array.from({ length: Math.max(0, top - 2) }, (_, i) => i + 2)];
+  const top = Math.max(1, ...j.nodes.map((/** @type {any} */ n) => n.level)), sel = q("ig-lvl"), vals = [0, ...Array.from({ length: Math.max(0, top - 2) }, (_, i) => i + 2)];
   if (sel.dataset.top !== String(top)) { sel.dataset.top = String(top); sel.innerHTML = vals.map(v => h`<option value="${v}">${v ? I18N.t("msngrafo.v.level.upto", { n: v }) : I18N.t("msngrafo.v.level.all")}</option>`).join(""); }
   sel.value = String(G.maxLevel);
-  const kids = !!G.sel && vistaOf(j).nodi.some((/** @type {any} */ x) => x.best.da === G.sel), shut = !!G.sel && G.collapsed.has(G.sel), btn = q("ig-collapse");
+  const kids = !!G.sel && vistaOf(j).nodes.some((/** @type {any} */ x) => x.best.from === G.sel), shut = !!G.sel && G.collapsed.has(G.sel), btn = q("ig-collapse");
   btn.disabled = !(kids || shut); btn.textContent = I18N.t(shut ? "msngrafo.v.open" : "msngrafo.v.close"); btn.setAttribute("aria-pressed", String(shut));
   /** @type {HTMLElement} */ (b.querySelector("#ig-structs-l")).hidden = !G.molfile;
 }
@@ -110,8 +110,8 @@ function setScale(/** @type {number} */ s) {
 function warnLines() {
   const j = G.j; if (!j) return "";
   const seen = new Set();
-  return j.avvisi.map((/** @type {any} */ a) => {
-    const n = nodeOf(a.nodo), txt = I18N.t(/** @type {any} */ (TXT.warn)[a.chiave], { node: n ? n.mz.toFixed(4) : "" }), key = a.chiave + "|" + a.nodo;
+  return j.warnings.map((/** @type {any} */ a) => {
+    const n = nodeOf(a.node), txt = I18N.t(/** @type {any} */ (TXT.warn)[a.key], { node: n ? n.mz.toFixed(4) : "" }), key = a.key + "|" + a.node;
     if (seen.has(key)) return ""; seen.add(key);
     return h`<p class="sm ig-warn" role="status">${txt}</p>`;
   }).join("");
@@ -119,34 +119,34 @@ function warnLines() {
 
 function summary() {
   const j = G.j; if (!j) return "";
-  const i = j.ione, c = j.conteggi;
-  const counts = I18N.t("msngrafo.counts", { nodes: c.nodi, arcs: c.archi });
+  const i = j.ion, c = j.counts;
+  const counts = I18N.t("msngrafo.counts", { nodes: c.nodes, arcs: c.edges });
   if (!i) return h`<p class="sm" id="ig-sum">${I18N.t("msngrafo.masses")} · ${counts}</p>`;
   // the formula is drawn with subscripts and the charge as a superscript: the line is split at the place of the formula
-  const [pre, post] = I18N.t("msngrafo.ion.line", { f: "\u0001", mz: i.mz_teorico.toFixed(5), ppm: i.ppm }).split("\u0001"), [f, ch] = splitCharge(i.formula, j.polarita === -1 ? "-" : "+");
+  const [pre, post] = I18N.t("msngrafo.ion.line", { f: "\u0001", mz: i.theoretical_mz.toFixed(5), ppm: i.ppm }).split("\u0001"), [f, ch] = splitCharge(i.formula, j.polarity === -1 ? "-" : "+");
   return h`<p class="sm" id="ig-sum">${pre}${raw(formulaHtml(f, ch))}${post} · ${counts}</p>`;
 }
 
 function settings(/** @type {any} */ file) {
   const { o } = G, num = (/** @type {string} */ id, /** @type {string} */ k, /** @type {number} */ v, /** @type {string} */ tip) => h`<label title="${I18N.t(tip)}">${I18N.t(k)} <input id="ig-${id}" data-num="${id === "pm" ? "0: i" : id === "mzl" ? "0:" : ">0"}" value="${v}"></label>`;
   return h`<details class="ig-set"><summary>${I18N.t("msngrafo.settings")}</summary><div class="row">` +
-    num("ppmf", "msngrafo.ppm", o.ppm_formula, "msngrafo.ppm.tip") + num("mzl", "msngrafo.mzlow", o.mz_basso, "msngrafo.mzlow.tip") + num("ppml", "msngrafo.ppmlow", o.ppm_basso, "msngrafo.ppmlow.tip") + num("pm", "msngrafo.proofs", o.prove_min, "msngrafo.proofs.tip") +
-    h`<label>${I18N.t("msngrafo.activation")} <select id="ig-act">${["", "cid", "hcd"].map(a => raw(h`<option value="${a}"${raw(a === o.attivazione ? " selected" : "")}>${a ? a.toUpperCase() : I18N.t("msngrafo.act.all")}</option>`))}</select></label>` +
-    h`<label><input type="checkbox" id="ig-iso"${raw(o.isotopi ? " checked" : "")}> ${I18N.t("msngrafo.isotopes")}</label></div></details>`;
+    num("ppmf", "msngrafo.ppm", o.ppm_formula, "msngrafo.ppm.tip") + num("mzl", "msngrafo.mzlow", o.low_mz, "msngrafo.mzlow.tip") + num("ppml", "msngrafo.ppmlow", o.low_ppm, "msngrafo.ppmlow.tip") + num("pm", "msngrafo.proofs", o.min_evidence, "msngrafo.proofs.tip") +
+    h`<label>${I18N.t("msngrafo.activation")} <select id="ig-act">${["", "cid", "hcd"].map(a => raw(h`<option value="${a}"${raw(a === o.activation ? " selected" : "")}>${a ? a.toUpperCase() : I18N.t("msngrafo.act.all")}</option>`))}</select></label>` +
+    h`<label><input type="checkbox" id="ig-iso"${raw(o.isotopes ? " checked" : "")}> ${I18N.t("msngrafo.isotopes")}</label></div></details>`;
 }
 
 function wireSettings(/** @type {HTMLElement} */ b, /** @type {() => void} */ go) {
-  const nums = /** @type {const} */ ([["ppmf", "ppm_formula"], ["mzl", "mz_basso"], ["ppml", "ppm_basso"], ["pm", "prove_min"]]);
+  const nums = /** @type {const} */ ([["ppmf", "ppm_formula"], ["mzl", "low_mz"], ["ppml", "low_ppm"], ["pm", "min_evidence"]]);
   nums.forEach(([id, key]) => { const e = /** @type {HTMLInputElement | null} */ (b.querySelector("#ig-" + id)); if (e) e.onchange = () => { const v = numIt(e.value); if (Number.isFinite(v) && v >= 0) { G.o[key] = v; go(); } }; });
   const act = /** @type {HTMLSelectElement | null} */ (b.querySelector("#ig-act")), iso = /** @type {HTMLInputElement | null} */ (b.querySelector("#ig-iso"));
-  if (act) act.onchange = () => { G.o.attivazione = act.value; go(); };
-  if (iso) iso.onchange = () => { G.o.isotopi = iso.checked; go(); };
+  if (act) act.onchange = () => { G.o.activation = act.value; go(); };
+  if (iso) iso.onchange = () => { G.o.isotopes = iso.checked; go(); };
 }
 
 /** Draws the graph, the panel of the node and the export row from the answer in G.j. */
 function drawBody(/** @type {HTMLElement} */ b, /** @type {any} */ file, /** @type {boolean} */ keepFocus) {
   const wrap = /** @type {HTMLElement} */ (b.querySelector("#ig-wrap")), pan = /** @type {HTMLElement} */ (b.querySelector("#ig-node")), exp = /** @type {HTMLElement} */ (b.querySelector("#ig-exp")), find = /** @type {HTMLElement} */ (b.querySelector("#ig-find"));
-  if (!G.j || !G.j.nodi.length) { wrap.textContent = ""; pan.innerHTML = ""; exp.innerHTML = ""; find.innerHTML = ""; G.auto = false; return; }
+  if (!G.j || !G.j.nodes.length) { wrap.textContent = ""; pan.innerHTML = ""; exp.innerHTML = ""; find.innerHTML = ""; G.auto = false; return; }
   const redo = () => run(b, file);
   syncBar(b);
   V.svg = drawGraph(wrap, filtered(G.j, G.rf), { onSelect: id => { G.sel = id; drawBody(b, file, true); }, onOpen: G.ro ? () => {} : openSpectrum });
@@ -195,7 +195,7 @@ async function render(/** @type {HTMLElement} */ b, /** @type {any} */ p, /** @t
   b.innerHTML = h`<div id="ig-open"></div><div id="ig-field"></div><div id="ig-set">${raw(settings(file))}</div><div class="ig-stage" id="ig-stage"><div id="ig-msg" aria-live="polite"></div><div class="ig-bar" id="ig-bar" role="toolbar" aria-label="${I18N.t("msngrafo.zoom.aria")}"></div><div class="ig-bar" id="ig-bar2" role="toolbar" aria-label="${I18N.t("msngrafo.v.view.aria")}"></div><div class="ig-wrap" id="ig-wrap" tabindex="0" role="region" aria-label="${I18N.t("msngrafo.graph.aria")}"></div><div id="ig-node" aria-live="polite"></div></div><div id="ig-exp"></div><div id="ig-find"></div>`;
   V.el = b; leaveFull();
   openRow(/** @type {HTMLElement} */ (b.querySelector("#ig-open"))); dropZone(b);
-  const go = () => { G.scelte = []; run(b, file); };
+  const go = () => { G.choices = []; run(b, file); };
   drawField(/** @type {HTMLElement} */ (b.querySelector("#ig-field")), file, go);
   wireSettings(b, () => run(b, file));
   zoomBar(/** @type {HTMLElement} */ (b.querySelector("#ig-bar")), /** @type {HTMLElement} */ (b.querySelector("#ig-wrap")), () => drawBody(b, file, false));

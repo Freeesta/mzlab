@@ -144,8 +144,8 @@ fn the_html_is_one_file_with_nothing_outside() {
             && h.contains("function drawVista")
             && !h.contains("\nexport ")
     );
-    // the graph (an msngrafo/1 fixture: older graphs still draw) is inside, and the text of a script cannot end its element early
-    assert!(h.contains("\"formato\":\"msngrafo/1\""));
+    // the graph (an msn-graph/1 fixture: older graphs still draw) is inside, and the text of a script cannot end its element early
+    assert!(h.contains("\"schema\":\"msn-graph/1\""));
     let end = html(&graph().replace("msn.mzML", "a</script><b>"), View::Albero).unwrap();
     // the five script elements of the page, no more
     assert_eq!(end.matches("</script>").count(), 5);
@@ -154,7 +154,7 @@ fn the_html_is_one_file_with_nothing_outside() {
 #[test]
 fn a_graph_without_vista_is_completed_first() {
     let j = graph();
-    let at = j.rfind(",\"vista\":").unwrap();
+    let at = j.rfind(",\"view\":").unwrap();
     let old = format!("{}}}", &j[..at]);
     assert_eq!(
         svg(&old, View::Radial).unwrap(),

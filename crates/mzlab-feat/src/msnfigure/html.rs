@@ -1,4 +1,4 @@
-//! The stand-alone HTML of a fragmentation graph `msngrafo/1`: one file, no external resource. It holds the graph (JSON), the drawer `msngrafo-vista.js` of the
+//! The stand-alone HTML of a fragmentation graph `msn-graph/1`: one file, no external resource. It holds the graph (JSON), the drawer `msngrafo-vista.js` of the
 //! page (the same code, `include_str!`), the page script `page.js`, and both static figures (the SVG of `super::svg`, for the downloads).
 
 use mzlab_core::error::{Error, Result};
