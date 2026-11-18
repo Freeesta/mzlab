@@ -1003,7 +1003,7 @@ fn pascal_per(unit: &str) -> Option<f64> {
 }
 
 /// The pressure channels of the analog controllers as `pressure chromatogram` records (MS:1003019) in pascal, which is the unit the mzML
-/// states for them; `first` is the index of the first record. Channels in another unit are not written (they stay in `metodo/1.campi`).
+/// states for them; `first` is the index of the first record. Channels in another unit are not written (they stay in `method/1.fields`).
 fn analog_records(traces: &[crate::AnalogTrace], first: usize) -> Vec<msc::ChromatogramRecord> {
     let mut out = Vec::new();
     for t in traces {

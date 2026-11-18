@@ -10,7 +10,7 @@ use crate::scan_index::ScanIndexEntry;
 /// still knows, is refused (`Error::UnsupportedVersion`) until a real file verifies it: a layout read on trust would give values nobody checked.
 pub const VERIFIED_VERSIONS: [u32; 4] = [57, 63, 64, 66];
 
-/// What `open` left out or assumed. Order of the file is kept; every entry is one line in `metodo/1.avvisi`.
+/// What `open` left out or assumed. Order of the file is kept; every entry is one line in `method/1.warnings`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Warning {
     /// The file ends inside the scan data: the scans that lie whole before byte `file_len` are in the index, the others are not.
@@ -30,7 +30,7 @@ pub enum Warning {
 }
 
 impl Warning {
-    /// One line of English for the method document and the diagnosis (`metodo/1.avvisi`, "Copy diagnostics").
+    /// One line of English for the method document and the diagnosis (`method/1.warnings`, "Copy diagnostics").
     pub fn text(&self) -> String {
         match self {
             Self::Truncated {
