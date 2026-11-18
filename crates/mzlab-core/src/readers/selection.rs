@@ -21,7 +21,7 @@ pub fn parse(text: &str) -> Result<Vec<u32>> {
             None => ids.push(num(item)?),
         }
     }
-    ids.sort_unstable();
+    crate::sortc::slice_ord(&mut ids);
     ids.dedup();
     Ok(ids)
 }
