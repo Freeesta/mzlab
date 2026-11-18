@@ -29,7 +29,10 @@ fn conv_di(l: &mut dyn Reader) -> json::Value {
 fn check(l: &mut dyn Reader, id: &str) {
     assert_eq!(l.format().id(), id);
     let doc = conv_di(l);
-    assert_eq!(doc.get("schema").and_then(|s| s.str()), Some("conversion/1"));
+    assert_eq!(
+        doc.get("schema").and_then(|s| s.str()),
+        Some("conversion/1")
+    );
     assert_eq!(doc.get("reader").and_then(|s| s.str()), Some(id));
     assert!(doc
         .get("version")

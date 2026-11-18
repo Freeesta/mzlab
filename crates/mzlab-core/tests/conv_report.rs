@@ -26,10 +26,20 @@ pub fn conv_di(xml: &[u8]) -> json::Value {
 
 /// Every declared gap has a field and a reason; the document names the reader and the version of the program.
 pub fn check(doc: &json::Value, reader: &str) {
-    for old in ["lettore", "versione", "compressore", "campi_cv", "campi_user", "non_portati"] {
+    for old in [
+        "lettore",
+        "versione",
+        "compressore",
+        "campi_cv",
+        "campi_user",
+        "non_portati",
+    ] {
         assert!(doc.get(old).is_none(), "Italian key {old} in conversion/1");
     }
-    assert_eq!(doc.get("schema").and_then(|s| s.str()), Some("conversion/1"));
+    assert_eq!(
+        doc.get("schema").and_then(|s| s.str()),
+        Some("conversion/1")
+    );
     assert_eq!(doc.get("reader").and_then(|s| s.str()), Some(reader));
     assert_eq!(
         doc.get("version").and_then(|s| s.str()),

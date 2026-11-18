@@ -116,7 +116,10 @@ fn a_conversion_writes_every_scan_and_counts_the_damaged_one() {
         .expect("one damaged scan never stops the conversion");
     let t = String::from_utf8_lossy(&xml);
     assert_eq!(t.matches("<spectrum ").count(), SCANS as usize);
-    assert!(t.contains("warn.raw.damaged"), "conversion/1 names the cause");
+    assert!(
+        t.contains("warn.raw.damaged"),
+        "conversion/1 names the cause"
+    );
     assert!(t.contains("&quot;read&quot;:11"), "conversion/1 counts it");
 }
 
