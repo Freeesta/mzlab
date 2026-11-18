@@ -22,6 +22,7 @@
   "err.comp.range": "{symbol} = symbol.",
   "err.comp.ion": "{ion} = name of the ion.",
   "err.load.cancelled": "The loading of a file was stopped with \"Cancel\" (the file row already says so: the text does not repeat the name).",
+  "warn.mzrun.roleSha": "CLI flow record notice on stderr. {file} = a file name in the roles file with an empty sha256, {sha256} = the SHA-256 of the run input of that name that was used.",
   "warn.convert.fewerWorkers": "Calm conversion notice (CLI and desktop app queue): the memory budget allows fewer simultaneous conversions. {workers} = simultaneous conversions, {wanted} = the default ones (cores-1, max 4), {budget_mb} = computer budget in MB.",
   "err.conv.mzlabNoProfile": "Error of convert with peaks = mzlab (CLI, app) on a file that has only the vendor centroids: mzLab does not write the instrument centroids as its own.",
   "warn.centroid.widthFallback": "Warning of the spectra.centroid step (Flow, CLI and site): the width is not measured but a fallback; never call it estimated.",
