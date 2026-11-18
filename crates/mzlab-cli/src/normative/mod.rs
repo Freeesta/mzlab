@@ -214,10 +214,11 @@ pub fn run(args: Vec<String>) -> Outcome {
 fn run_package(args: &[String]) -> Option<Outcome> {
     let rest = args.get(1..).unwrap_or_default();
     // `import-official` has options of its own; for `pack` and `listings` any option is unknown
-    if matches!(args.first().map(String::as_str), Some("pack" | "listings")) {
-        if let Err(e) = crate::argv::no_options(rest) {
-            return Some(Outcome::fail_error(&e));
-        }
+    if let (Some("pack" | "listings"), Err(e)) = (
+        args.first().map(String::as_str),
+        crate::argv::no_options(rest),
+    ) {
+        return Some(Outcome::fail_error(&e));
     }
     let paths: Vec<&Path> = rest
         .iter()

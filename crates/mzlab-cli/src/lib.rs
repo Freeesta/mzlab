@@ -259,7 +259,7 @@ pub struct Outcome {
     pub code: u8,
     pub stdout: Vec<u8>,
     pub stderr: String,
-    pub error: Option<Failure>,
+    pub error: Option<Box<Failure>>,
 }
 
 impl Outcome {
@@ -300,7 +300,7 @@ impl Outcome {
             code,
             stdout: Vec::new(),
             stderr: format!("error: {}\n", error_text::human(msg)),
-            error: Some(error),
+            error: Some(Box::new(error)),
         }
     }
 

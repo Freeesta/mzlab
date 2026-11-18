@@ -5,11 +5,14 @@ use crate::{Failure, Outcome};
 
 /// The failure of `o` as `error/1` needs it: the data the command gave, or a generic usage failure carrying its text.
 fn failure_of(o: &mut Outcome, message: &str) -> Failure {
-    o.error.take().unwrap_or_else(|| Failure {
-        key: "err.cli.usage".to_string(),
-        params: vec![("message".to_string(), message.to_string())],
-        ..Failure::default()
-    })
+    match o.error.take() {
+        Some(f) => *f,
+        None => Failure {
+            key: "err.cli.usage".to_string(),
+            params: vec![("message".to_string(), message.to_string())],
+            ..Failure::default()
+        },
+    }
 }
 
 /// The text of the failure: stderr without the `error: ` prefix, the `hint:` line and the closing `(mzlab-cli ... --help)` pointer.
@@ -41,7 +44,7 @@ pub(crate) fn finish(args: &[String], command: &str, mut o: Outcome) -> Outcome 
             f.hint = hint;
         }
         o.stdout = crate::flow_json::error_json(o.code, &f, &message, command).into_bytes();
-        o.error = Some(f);
+        o.error = Some(Box::new(f));
     }
     if !o.stdout.is_empty() && !o.stdout.ends_with(b"\n") && std::str::from_utf8(&o.stdout).is_ok()
     {

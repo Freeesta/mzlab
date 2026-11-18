@@ -99,7 +99,7 @@ pub(crate) fn error_json(code: u8, f: &crate::Failure, message: &str, command: &
 /// The failure of `flow run`/`flow check` with its code, text and hint (stderr as ever; `error/1` is written by the dispatcher).
 pub(crate) fn fail(code: u8, err: &Error, msg: &str, hint: &str) -> Outcome {
     let mut o = crate::flow_run::fail(code, msg, hint);
-    o.error = Some(crate::Failure {
+    o.error = Some(Box::new(crate::Failure {
         key: err.key.to_string(),
         params: err
             .params
@@ -108,7 +108,7 @@ pub(crate) fn fail(code: u8, err: &Error, msg: &str, hint: &str) -> Outcome {
             .collect(),
         hint: hint.to_string(),
         problems: None,
-    });
+    }));
     o
 }
 

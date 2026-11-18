@@ -120,7 +120,7 @@ impl crate::Outcome {
             code: crate::exit::code_of(e),
             stdout: Vec::new(),
             stderr: format!("error: {}\n", human_error(e)),
-            error: Some(crate::Failure {
+            error: Some(Box::new(crate::Failure {
                 key: e.key.to_string(),
                 params: e
                     .params
@@ -128,7 +128,7 @@ impl crate::Outcome {
                     .map(|(k, v)| (k.to_string(), v.clone()))
                     .collect(),
                 ..crate::Failure::default()
-            }),
+            })),
         }
     }
 }
