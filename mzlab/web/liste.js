@@ -590,6 +590,7 @@ const LISTE = (() => {
     const elChecks = container.querySelector("#lst-src-checks");
     const elChecksLbl = container.querySelector("#lst-src-lbl");
     const elLists = container.querySelector("#lst-lists");
+    const elAbout = /** @type {HTMLElement} */ (container.querySelector("#lst-about"));
     const elAddErr = /** @type {HTMLElement} */ (container.querySelector("#lst-add-err"));
     const elContSigns = container.querySelector("#lst-cont-signs");
     if (elContSigns) elContSigns.onchange = (/** @type {Event} */ e) => { setOn(/** @type {HTMLInputElement} */ (e.target).checked); };
@@ -629,7 +630,10 @@ const LISTE = (() => {
     // what each list is: name (with its link), how many, which version or date, where it comes from; the user's lists can be renamed and removed
     function renderLists() {
       const link = (/** @type {Bag} */ L) => { const i = L.info || {}; const n = EH(L.builtin ? L.name_en || L.name : L.name); return i.url ? `<a href="${EH(i.url)}" target="_blank" rel="noopener noreferrer">${n}</a>` : n; };
-      elLists.innerHTML = [...ST.lists, ...ST.userLists].map(L => {
+      // the short LR table carries no references: there only the user's own lists (rename, remove) are listed
+      const shown = state.mode === "da" ? ST.userLists : [...ST.lists, ...ST.userLists];
+      elAbout.hidden = !shown.length;
+      elLists.innerHTML = shown.map(L => {
         const i = L.info || {}, mine = !L.builtin;
         const when = i.version || i.date ? [i.version, i.date].filter(Boolean).map(EH).join(" · ") : I18N.t("lst.info.noDate");
         const src = mine ? I18N.t("lst.info.local") + (L.filename ? " · " + I18N.t("lst.info.file", { file: L.filename }) : "")
