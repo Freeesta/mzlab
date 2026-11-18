@@ -107,7 +107,6 @@ I18N.add("en", {
   "int.autoOff": "The peak engine is not available: integrate the peaks one at a time from the menu or by hand",
   "int.copy.done": "Copied!",
   "int.copy.menu": "Copy value",
-  "int.copy.tip": "click to copy the area",
   "int.menu.del": "Delete this integration",
   "int.menu.delAll": "Delete all the integrations of this panel",
   "int.menu.params": "Peak detection parameters…",

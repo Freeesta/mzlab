@@ -73,9 +73,9 @@ try:
         step("the polygon drawn has no vertex under zero and its area is the number", polygon)
 
         def hover():
-            ok = pg.evaluate(f"(()=>{{const p={PN},i=p.ints[0];return (p._a.lbls||[]).some(l=>l.int===i&&l.tip.includes(I18N.t('int.base.clamped',{{v:I18N.sciE(i.clamped)}})))}})()")
-            assert ok, "the hover text of the label does not say the baseline was held at 0"
-        step("the label says that the baseline was held at 0 and what was not counted", hover)
+            ok = pg.evaluate(f"(()=>{{const p={PN},i=p.ints[0];return (p._a.lbls||[]).filter(l=>l.int===i).every(l=>!l.tip)}})()")
+            assert ok, "the area label has no hover text"
+        step("the area label has no hover text, even where the baseline was held at 0", hover)
         pg.context.close() if False else None
         r.b.close()
 finally:

@@ -42,7 +42,7 @@ fn win(file: usize, tr: usize, a: f64, b: f64, base: &str) -> String {
 }
 
 /// The rows with every column (`time_min` is the third).
-fn rows_with_time(t: &str) -> Vec<Vec<String>> {
+pub(super) fn rows_with_time(t: &str) -> Vec<Vec<String>> {
     t.lines()
         .skip(1)
         .map(|l| l.split(',').map(str::to_string).collect())
