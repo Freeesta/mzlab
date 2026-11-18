@@ -33,14 +33,20 @@ pub fn run(args: Vec<String>) -> Outcome {
             "--match" => val("--match").map(|v| x = Some(v)),
             "--out" => val("--out").map(|v| out = Some(PathBuf::from(v))),
             "--set" => val("--set").and_then(|kv| match kv.split_once('=') {
-                Some(("unit", v @ ("da" | "ppm"))) => Ok(unit = v.to_string()),
+                Some(("unit", v @ ("da" | "ppm"))) => {
+                    unit = v.to_string();
+                    Ok(())
+                }
                 Some(("tol", v)) => v
                     .parse::<f64>()
                     .ok()
                     .filter(|t| t.is_finite() && *t > 0.0)
                     .map(|t| tol = Some(t))
                     .ok_or("--set tol needs a number above 0".to_string()),
-                Some(("pol", v @ ("+" | "-" | ""))) => Ok(pol = v.to_string()),
+                Some(("pol", v @ ("+" | "-" | ""))) => {
+                    pol = v.to_string();
+                    Ok(())
+                }
                 _ => Err(format!("unknown --set {kv}")),
             }),
             f if f.starts_with("--") => Err(format!("unknown option {f}")),
