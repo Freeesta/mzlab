@@ -1,7 +1,7 @@
 // @ts-check
 // Flow (administrator mode): the metadata grid over a campioni/3 document (virtual rows, ARIA grid). The cells, the checks (`valida`), the name patterns (`modello`), the CSV (`csv_*`) and the data read
 // from the files (`dal_file`) are all the Rust of mzlab-core reached through CDOC.post("<op>"); this file only lays the cells out and moves the keyboard focus. Used by flow-samples.js (F.samplesEditor)
-// and flow-import.js (F.metaImport). The document lives in S.samples[input name]; its SHA-256 is the canonical one (F.samplesSet). English only. Docs: docs/agenti/flow-grafica.md.
+// and flow-import.js (F.metaImport). The document lives in S.samples[input name]; its SHA-256 is the canonical one (F.samplesSet). English only. Docs: docs/agenti/flow-graphics.md.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);

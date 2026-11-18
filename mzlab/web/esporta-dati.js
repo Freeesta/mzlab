@@ -1,7 +1,7 @@
 // @ts-strict
 // «Export all my data» (settings, group «Data and privacy»): gathers what the user made in THIS browser (settings and views in localStorage, notebook, lists
 // and molecules in IndexedDB, saved libraries in OPFS), adds manifesto.json (what is in, what is left out and why) and downloads one mzlab-dati-<date>.zip.
-// The ZIP is written by Rust (esporta-dati-worker.js); nothing leaves the computer. Format and inventory: docs/agenti/esporta-dati.md.
+// The ZIP is written by Rust (esporta-dati-worker.js); nothing leaves the computer. Format and inventory: docs/agenti/export-data.md.
 
 import { lab } from "./qqq-db.js";
 

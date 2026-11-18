@@ -1,5 +1,5 @@
 # Built-in list of pesticides and environmental contaminants (`pesticides`)
-Nearby areas: `dati-strumenti.md` (list engine `liste.js`, Lists panel), `qc-massa.md` (mass check), `molecules.md` (catalogue and `structure:` classes).
+Nearby areas: `data-tools.md` (list engine `liste.js`, Lists panel), `qc-massa.md` (mass check), `molecules.md` (catalogue and `structure:` classes).
 
 - **What it is**: the second list of `mzlab/web/contaminanti.json` (`{"lists":[keller, pesticides]}`), 192 compounds: pesticides by chemical class (organophosphates, carbamates, triazines, neonicotinoids, strobilurins, azoles, phenylureas, pyrethroids, chloroacetanilides, sulfonylureas, phenoxyalkanoic acids...), metabolites and common environmental contaminants in LC-MS (PFAS, bisphenols, parabens, organophosphate esters, benzotriazoles, sweeteners).
 - **Files**: `mzlab/chem/pesticides.csv` (`id;name_en;name;class;use;ions;query;pubchem_cid;formula;smiles;inchikey`, one row per compound; the Italian name is in `name`) and `mzlab/chem/pesticides_meta.json` (list header, source, IT/EN licence, closed vocabulary of `classes` and `uses` with Italian and English name).

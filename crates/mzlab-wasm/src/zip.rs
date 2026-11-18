@@ -1,4 +1,4 @@
-//! One-file export of the user's data (docs/agenti/esporta-dati.md): wasm-bindgen wrappers of `mzlab_core::zip`.
+//! One-file export of the user's data (docs/agenti/export-data.md): wasm-bindgen wrappers of `mzlab_core::zip`.
 
 use wasm_bindgen::prelude::*;
 
