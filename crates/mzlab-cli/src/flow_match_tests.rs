@@ -267,7 +267,7 @@ fn matched_peaks_list_the_pairs_behind_the_score() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// `tree`: a graph `msngrafo/1` against an `msnlib/1` library gives the `msncerca/1` text of `mzlab-cli msn-lib search`, byte for byte.
+/// `tree`: a graph `msn-graph/1` against an `msn-lib/1` library gives the `msn-search/1` text of `mzlab-cli msn-lib search`, byte for byte.
 #[test]
 fn tree_writes_the_search_of_the_msn_library() {
     let dir = std::env::temp_dir().join(format!("mzlab_match_tree_{}", std::process::id()));
@@ -340,7 +340,7 @@ fn tree_candidates_carry_the_scores_apart_and_obey_the_filters() {
     // a name that no entry has leaves no hit
     assert!(run(r#"{"tree_output":"candidates","name_contains":"zzz"}"#).contains("\"hits\":[]"));
     assert!(run(r#"{"tree_output":"candidates","name_contains":"std-1"}"#).contains("STD-1"));
-    // the entry is the unknown itself, so a window in Da cannot drop it: the window echoed by msncerca/1 shows the conversion
+    // the entry is the unknown itself, so a window in Da cannot drop it: the window echoed by msn-search/1 shows the conversion
     let narrow = run(r#"{"precursor_da":0.5}"#);
     assert!(
         narrow.contains("STD-1") && !narrow.contains("\"ppm_prec\":10,"),

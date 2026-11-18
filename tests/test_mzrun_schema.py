@@ -1,4 +1,4 @@
-"""`mzrun/1` (docs/schemi/mzrun-1.json, docs/agenti/mzrun.md): the synthetic record and preset of tests/data/mzrun validate, the mode rules and the
+"""`mzrun/2` (docs/schemi/mzrun-2.json, docs/agenti/mzrun.md): the synthetic record and preset of tests/data/mzrun validate, the mode rules and the
 privacy rule refuse what they must, and `self_sha256` follows the canonical text. No engine involved: the files are format examples, never lab data."""
 import copy
 import hashlib
@@ -10,7 +10,7 @@ from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA = json.loads((ROOT / "docs/schemi/mzrun-1.json").read_text())
+SCHEMA = json.loads((ROOT / "docs/schemi/mzrun-2.json").read_text())
 CONTRACT = json.loads((ROOT / "docs/studi/workflow/contract.schema.json").read_text())
 EXAMPLES = ROOT / "tests/data/mzrun"
 

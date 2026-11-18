@@ -11,17 +11,17 @@ const ESP = (() => {
     { id: "infusion", ordine: 4, etichetta: I18N.t("inf.name"), didattica: "msn", spettri: true, vista: "tic-spettro", nodi: true },
   ];
   const voce = id => voci.find(v => v.id === id);
-  // What an experiment type of api/canali (tipo.proposto) starts on: the kind of channel of the first trace (canali.js picks the channel of the file) and
+  // What an experiment type of api/canali (kind.proposed) starts on: the kind of channel of the first trace (canali.js picks the channel of the file) and
   // whether the XIC lens is proposed. A default, not a permission: a type never switches a tool off.
   const predefiniti = {
     "lc-full": { canale: "tic", lente: true },
-    "lc-ms2-mirato": { canale: "ms2", lente: true },
+    "lc-ms2-targeted": { canale: "ms2", lente: true },
     "lc-dda": { canale: "ms1", lente: true },
     "lc-mrm": { canale: "srm", lente: true },
     "lc-sim": { canale: "sim", lente: true },
-    "infusione-msn": { canale: "profondo", lente: false },
-    "misto": { canale: "tic", lente: true },
-    "solo-uv": { canale: "uv", lente: true },
+    "msn-infusion": { canale: "profondo", lente: false },
+    "mixed": { canale: "tic", lente: true },
+    "uv-only": { canale: "uv", lente: true },
   };
   /** @param {string | null | undefined} tipo */
   const predefinito = tipo => predefiniti[tipo || ""] || predefiniti["lc-full"];
@@ -29,9 +29,9 @@ const ESP = (() => {
   // the channel a type starts on among the channels `v` of a file (`quant`: tells the SRM transition the student quantifies); null = the TIC
   /** @param {string} tipo @param {any[]} v @param {(x: any) => boolean} quant */
   const scegli = (tipo, v, quant) => {
-    const d = predefinito(tipo).canale, liv = n => v.find(x => x.fam === "ms" && x.liv === n);
-    return d === "ms1" ? liv(1) : d === "ms2" ? liv(2) : d === "profondo" ? v.filter(x => x.fam === "ms").sort((a, b) => b.liv - a.liv)[0]
-      : d === "srm" ? v.find(x => x.fam === "srm" && quant(x)) || v.find(x => x.fam === "srm") : d === "uv" ? v.find(x => x.fam === "uv") : d === "sim" ? v.find(x => x.fam === "sim") || null : null;
+    const d = predefinito(tipo).canale, liv = n => v.find(x => x.family === "ms" && x.ms_level === n);
+    return d === "ms1" ? liv(1) : d === "ms2" ? liv(2) : d === "profondo" ? v.filter(x => x.family === "ms").sort((a, b) => b.ms_level - a.ms_level)[0]
+      : d === "srm" ? v.find(x => x.family === "srm" && quant(x)) || v.find(x => x.family === "srm") : d === "uv" ? v.find(x => x.family === "uv") : d === "sim" ? v.find(x => x.family === "sim") || null : null;
   };
   // The types flagged `unico` (MS2) are never overlaid: of several ticked files of such a type only one is drawn, and the list never keeps two ticked.
   /** @param {any} f */

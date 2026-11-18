@@ -23,9 +23,9 @@ try:
         stage(pg, [D / "sim.wiff", D / "sim.wiff.scan"]); pg.click("text=Load data"); ready(pg); wait_for_js(pg, "E.files.length >= 2", timeout=120000)
         def channels():
             for k in pg.evaluate("E.files.map(f => f.k)"):
-                got = pg.evaluate(f"CANALI.canali({k}).then(j => j.canali.filter(c => c.fam === 'sim').map(c => c.et))")
+                got = pg.evaluate(f"CANALI.canali({k}).then(j => j.channels.filter(c => c.family === 'sim').map(c => c.label))")
                 assert sorted(got) == WANT, (k, got, WANT)
-                srm = pg.evaluate(f"CANALI.canali({k}).then(j => j.canali.filter(c => c.fam === 'srm').length)")
+                srm = pg.evaluate(f"CANALI.canali({k}).then(j => j.channels.filter(c => c.family === 'srm').length)")
                 assert srm == 0, (k, srm)
         step("every SIM ion of both samples is one labelled channel, none an MRM transition", channels)
         def transitions():
