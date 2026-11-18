@@ -3,7 +3,7 @@
     python3 tools/wiff_riferimento.py OUT
 
 Writes into OUT/ synthetic pairs in the layout of the 3200 QTRAP files (`one.wiff` + `.wiff.scan`: one sample with two experiments, a full scan and a
-product-ion scan, with a method; `two.wiff` + `.wiff.scan`: a scan sample and an MRM sample without method; `lonely.wiff`: no `.scan`; `buchi.wiff`: sample 2 in the table with no Idx stream (an injection that acquired nothing); `serie.wiff`: 80 profile scans with a chromatographic peak; `prodotto.wiff`: two samples of product-ion scans: one precursor 305.0, and two (229.1, 305.0), no reference entry), built with
+product-ion scan, with a method; `two.wiff` + `.wiff.scan`: a scan sample and an MRM sample without method; `lonely.wiff`: no `.scan`; `gaps.wiff`: sample 2 in the table with no Idx stream (an injection that acquired nothing); `serie.wiff`: 80 profile scans with a chromatographic peak; `prodotto.wiff`: two samples of product-ion scans: one precursor 305.0, and two (229.1, 305.0), no reference entry), built with
 tools/cfb_write.py, and OUT/riferimento.json: what the reader must give (spectra with m/z = start + bin * step, intensity = count * scale; MRM
 chromatograms), computed here from the inputs with an encoder of the nibble stream that shares no code with the reader. No laboratory data is used.
 The variants of the readers module (feature `estesi`): `variante.wiff` (Log model QTRAP 5500; survey scan V1, enhanced product ion V3, precursor-ion scan V1, neutral-loss scan V1,
@@ -190,7 +190,7 @@ def main():
     w.sample(2, [])
     w.sample(3, [("scan", FULL, 600.0, 1.0)])
     del w.streams["SampleSubtree/Sample2/Idx"]
-    w.save(out, "buchi")
+    w.save(out, "gaps")
     cfb_write.write({"SampleSubtree/Sample1/Idx": bytes(32)}, out / "lonely.wiff")
     w, series = Writer(), []
     for k in range(80):  # a peak at m/z ~229.1 (9 bins wide) eluting at 4 min, on sparse noise: enough points per scan for the profile step
@@ -253,8 +253,8 @@ def ida_file(out: Path):
 
 def unindexed(out: Path):
     """Pairs whose `.wiff.scan` is newer than its `.wiff`: indexed MRM samples (two transitions per block, 1 s per cycle), then sections the index does not list.
-    `nonindicizzato`: sections 3 (4 blocks) and 4 (8 blocks, more than the donor has, the last one cut by 3 bytes); `nonindicizzato_scansione`: the donor holds full scans, so the
-    section cannot be read (left out); `nonindicizzato_guasto`: a block with a NaN count is not what the layout says (left out); `nonindicizzato_negativo`: negative baseline is valid (recovered); `nonindicizzato_in_coda`: queued table rows without a section do not hide the section. Written to nonindicizzati.json."""
+    `unindexed`: sections 3 (4 blocks) and 4 (8 blocks, more than the donor has, the last one cut by 3 bytes); `unindexed_scansione`: the donor holds full scans, so the
+    section cannot be read (left out); `unindexed_guasto`: a block with a NaN count is not what the layout says (left out); `unindexed_negativo`: negative baseline is valid (recovered); `unindexed_in_coda`: queued table rows without a section do not hide the section. Written to unindexed.json."""
     trs = [(300.0, 100.0, 50.0, "q1", 30.0, 9.0, 15.0, 4.0), (300.0, 80.0, 50.0, "q2", 30.0, 9.0, 25.0, 4.0)]
     method = {"Experiment0/ExperimentHeader": header(4, 0.0), "Experiment0/MassRangeEx/MassRangeEx": mrm_method(trs), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
     mine = [[float(10 * (k + 1)), float(k)] for k in range(6)]
@@ -265,15 +265,15 @@ def unindexed(out: Path):
     b = [[200.0 + k, 0.0] for k in range(8)]
     w.unindexed(3, a)
     w.unindexed(4, b, cut=3)
-    w.save(out, "nonindicizzato")
+    w.save(out, "unindexed")
     w = Writer()
     w.sample(1, [("scan", FULL, 1000.0, 1.0), ("scan", FULL, 2000.0, 1.0)], {"Experiment0/ExperimentHeader": header(15, 30.0)})
     w.unindexed(2, a)
-    w.save(out, "nonindicizzato_scansione")
+    w.save(out, "unindexed_scansione")
     from wiff_riferimento_coda import unindexed_more; unindexed_more(out, Writer, method, mine, a)  # noqa: E402,E702
     t = [1000.0 * k / 60000.0 for k in range(8)]
     ref = {"sections": {"3": {"time": t[:4], "q1": [v[0] for v in a], "q2": [v[1] for v in a]}, "4": {"time": t[:7], "q1": [v[0] for v in b[:7]], "q2": [v[1] for v in b[:7]]}}}
-    (out / "nonindicizzati.json").write_text(json.dumps(ref))
+    (out / "unindexed.json").write_text(json.dumps(ref))
     return ref
 
 
@@ -394,8 +394,8 @@ def variants(out: Path):
     one = [("scan", FULL, 1000.0, 1.0)]
     w = Writer()  # two periods: the reader has no real file with one, so it refuses
     w.sample(1, one, {"Experiment0/ExperimentHeader": header(15, 30.0), "Period1/Experiment0/ExperimentHeader": header(15, 30.0)}, log="QTRAP 6500+")
-    w.save(out, "periodi")
-    refusals["periodi"] = "periods=2"
+    w.save(out, "periods")
+    refusals["periods"] = "periods=2"
     w = Writer()  # one pair, three samples: read, acquired nothing (no Idx), refused (a TOF experiment, outside the engine reader): the listing tells the refused one from the empty one
     w.sample(1, one, {"Experiment0/ExperimentHeader": header(15, 30.0)})
     w.sample(2, [])
@@ -408,18 +408,18 @@ def variants(out: Path):
     refusals["tof"] = "scan type code 8 (experiment 1)"
     w = Writer()  # an unknown code
     w.sample(1, one, {"Experiment0/ExperimentHeader": header(21, 0.0)}, log="QTRAP 5500")
-    w.save(out, "codice")
-    refusals["codice"] = "scan type code 21 (experiment 1)"
+    w.save(out, "code")
+    refusals["code"] = "scan type code 21 (experiment 1)"
     w = Writer()  # a block of the TOF family under a scan experiment
     w.sample(1, one, {"Experiment0/ExperimentHeader": header(15, 30.0)}, log="QTRAP 5500")
     w.scan[44:48] = b"\xff\xff\xff\xff"
-    w.save(out, "bloccotof")
-    refusals["bloccotof"] = "TOF block"
+    w.save(out, "tofblock")
+    refusals["tofblock"] = "TOF block"
     w = Writer()  # a scan block of a version nobody knows
     w.sample(1, one, {"Experiment0/ExperimentHeader": header(15, 30.0)}, log="QTRAP 5500")
     w.scan[48:52] = struct.pack("<I", 4)
-    w.save(out, "versione4")
-    refusals["versione4"] = "scan block version 4"
+    w.save(out, "version4")
+    refusals["version4"] = "scan block version 4"
     return variante, refusals
 
 

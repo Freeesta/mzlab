@@ -195,6 +195,6 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | choosing which samples of a `.wiff` (or other multi-sample file) to open: how Analyst does it, cost of listing (measured), #3398 reuse, dialog mockup, `samples list` CLI, cap estimate, PR split, questions (study, no feature code) | `docs/agenti/wiff-sample-choice.md` |
 | the page dialog «Choose samples» of a .wiff with several samples (`wiff-choose.js`, setting, `sample_default`, decisions, what is not done) | `docs/agenti/wiff-sample-dialog.md` |
 | other SCIEX instruments, sMRM, PIS/NL, feature `estesi` (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-variants.md` |
-| writing a `.wiff` + `.wiff.scan`: create, add or remove samples (feasibility and design study, no writer code yet: streams per sample, lossless copy, verification, CLI `wiff`, wasm cap) | `docs/agenti/wiff-writer.md` |
+| writing a `.wiff` + `.wiff.scan`: create, add or remove samples (design study, and the built read-only `mzlab-cli wiff list|verify` with the `wiffwrite` module: streams per sample, lossless copy, verification, wasm cap) | `docs/agenti/wiff-writer.md` |
 | `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` |
 | signed offset after the m/z or formula in the "Extract ions" window (`288.2+16`), `split_offset`, `mzlab-cli ion-mz`, `err.formula.offset`, `err.formula.mzLow`; "m/z from / to" fields and m/z / RT pairs (`xic-bordi.js`, `ctl.range.order`); `tabNuovo`, `msg.noFiles` | `docs/agenti/xic-discard.md` |

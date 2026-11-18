@@ -465,6 +465,8 @@ mod index;
 mod index;
 mod text;
 pub use text::{generic_name, generic_term, generic_user_name};
+// `xml_char` is used by the validator and `method_raw`; a module with neither (`wiffwrite`) leaves it unused
+#[allow(unused_imports)]
 pub(crate) use text::{esc, esc_into, xml_char};
 use text::{header_term, instrument_terms};
 #[cfg(test)]
