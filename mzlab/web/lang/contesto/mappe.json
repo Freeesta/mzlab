@@ -17,5 +17,10 @@
   "mappa.uv.side": "Caption under the right strip of a DAD map: UV spectrum at the cursor time; {rt} = time in min.",
   "mappa.uv.sideDiff": "Caption under the right strip of a subtracted DAD map; {rt} = time in min.",
   "mappa.uv.bot": "Title of the bottom strip of a DAD map: absorbance against time at the cursor wavelength; {lo},{hi} = band in nm, {max} = maximum.",
-  "mappa.uv.botDiff": "Title of the bottom strip of a subtracted DAD map; {lo},{hi} = band in nm, {max} = largest absolute value."
+  "mappa.uv.botDiff": "Title of the bottom strip of a subtracted DAD map; {lo},{hi} = band in nm, {max} = largest absolute value.",
+  "mappa.ms.side": "Title of the right strip of a DAD map in MS mode: {file} file, {rt} MS retention time, {dad} cursor time, {off} signed offset.",
+  "mappa.ms.sideNone": "Right strip of a DAD map in MS mode when the file has no scan there.",
+  "mappa.ms.bot": "Title of the bottom strip of a DAD map in MS mode: {kind} trace name, {file} file, {off} offset.",
+  "mappa.ms.mz": "Axis label of the MS1 spectrum in the right strip.",
+  "mappa.ms.wait": "Placeholder of the strips while the MS is read."
 }

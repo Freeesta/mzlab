@@ -56,3 +56,4 @@ export async function grid(V, p) {
   V.rt = [a.rt0 + i0 * dr, a.rt0 + i1 * dr]; V.mz = [a.mz0 + j0 * a.dmz, a.mz0 + j1 * a.dmz];
   return { nrt: i1 - i0, nmz: j1 - j0, mz0: V.mz[0], dmz: a.dmz, log: false, m };
 }
+export * from "./mappa-dad-ms.js";

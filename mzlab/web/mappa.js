@@ -333,7 +333,7 @@ window.MAPPA = (() => {
   function show(/** @type {Pannello} */ p, /** @type {Record<string, any>} */ pt) {
     const s = st(p); if (s.sp.hidden && s.xc.hidden) return;
     const uv = !!(p._a && p._a.pda), sp = uv ? null : specFor(p, pt), xi = uv ? null : xicFor(p, pt), pv = uv || !sp || !xi ? preview(p, pt) : null;      // a DAD map: UV spectrum and trace read from its matrix (exact), never the MS routes
-    if (MEAS && pv) window.__mirPrev = (window.__mirPrev || 0) + 1;
+    if (uv && p.stripMs === "ms" && window.MAPDAD) return window.MAPDAD.ms(p, pt, { st, canvasOf, M, ecss, fpx, XICDRAW, MAPMARGINI, MIRINO, axisWait, getScan }); if (MEAS && pv) window.__mirPrev = (window.__mirPrev || 0) + 1;
     // what the two plots hold (read by e2e_mappa_mirino)
     s.shown = { pt, sp: sp ? sp.key : null, xi: xi ? xi.key : null, uv: uv ? pv : null };
     drawSide(p, pt, sp || (pv && pv.spec) || s.spec, !sp && !uv); drawBottom(p, pt, xi || (pv && pv.xic) || s.xic, !xi && !uv);
