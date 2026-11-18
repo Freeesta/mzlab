@@ -41,18 +41,18 @@ try:
             assert down is not None and down < -200, down                        # the peak only B has: negative
         step("choosing a file subtracts its DAD map: A's peak up, B's peak down (not a silent no-op)", diff)
         def note():
-            t = pg.evaluate(f"{M}.el.innerText")
-            assert "on the grid of" in t and "220-380 nm" in t.replace("–", "-").replace(" ", " ") or "nm kept" in t, t[:400]
+            t = pg.evaluate(f"[...{M}.el.querySelectorAll('.subnote')].map(e => e.title + ' ' + e.textContent).join(' ')")
+            assert "on the grid of" in t and "wavelengths" in t, t[:400]
             assert "interpolated" in t, t[:600]                                  # B has other steps: the user is told
         step("a visible note says what was kept, interpolated and scaled", note)
         def scaled():
             pg.evaluate(f"(() => {{ const p = {M}; p.subFactor = 0.5; draw(p); }})()")
-            wait_for_js(pg, f"{M}.el.innerText.includes('×0.5')")
+            wait_for_js(pg, f"[...{M}.el.querySelectorAll('.subnote')].some(e => e.textContent.includes('×0.5'))")
             d2 = pg.evaluate(f"{M}._a.mapv(1.5, 260)"); assert d2 > -200 and d2 < -50, d2       # half of B subtracted
         step("a typed scale factor changes the difference and is shown", scaled)
         def nooverlap():
             pg.evaluate(f"(() => {{ const p = {M}; p.subFactor = null; p.subShift = 50; draw(p); }})()")
-            wait_for_js(pg, f"{M}.el.innerText.includes('Cannot subtract')")
+            wait_for_js(pg, f"[...{M}.el.querySelectorAll('.subnote')].some(e => e.textContent.includes('Cannot subtract'))")
             assert pg.evaluate(f"!{M}._a.ref")                                   # the plain map stays, with the reason written
         step("a shift with no overlap says so and keeps the plain map", nooverlap)
     r.close()

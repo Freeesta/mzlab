@@ -15,24 +15,29 @@ export async function sub(p, f, rf) {
     return { sub: j, err: "", rf };
   } catch (e_) {
     const e = /** @type {any} */ (e_);
-    return { sub: null, err: T("map.sub.fail", { file: EH(rf.label), why: EH(String(e && e.message || e)) }), rf: null };
+    return { sub: null, err: T("map.sub.fail", { file: rf.label, why: String(e && e.message || e) }), rf: null };
   }
 }
+
+// literal keys (the i18n check finds a key by its text)
+const SCALE = { max: "map.sub.scale.max", tic: "map.sub.scale.tic", fit: "map.sub.scale.fit", factor: "map.sub.scale.factor" };
+const WARN = { rt_range_partial: "map.sub.w.rtRange", nm_range_partial: "map.sub.w.nmRange", rt_interpolated: "map.sub.w.rtInterp", nm_interpolated: "map.sub.w.nmInterp",
+  rt_step_differs: "map.sub.w.rtStep", nm_step_differs: "map.sub.w.nmStep", shift_applied: "map.sub.w.shift", scale_applied: "map.sub.w.scaled" };
 
 /** What the subtraction did, in words: the kept ranges, the scale, the shift and one line per warning code of the engine. @param {any} S @param {string} a @param {string} b */
 export function note(S, a, b) {
   const r = S.sub, nm1 = S.mz0 + S.nmz * S.dmz;
-  const sc = r.scale === "none" ? T("map.sub.scale.none") : T("map.sub.scale.used", { name: T(`map.sub.scale.${r.scale}`), f: +(+r.factor).toPrecision(4) });
+  const sc = r.scale === "none" ? T("map.sub.scale.none") : T("map.sub.scale.used", { name: T(/** @type {any} */ (SCALE)[r.scale]), f: +(+r.factor).toPrecision(4) });
   const head = T("map.sub.note", { a, b, rt0: f2(S.rt0), rt1: f2(S.rt1), nm0: f2(S.mz0), nm1: f2(nm1), rows: r.rows[0], rowsA: r.rows[1], cols: r.cols[0], colsA: r.cols[1], scale: sc, shift: f2(r.shift_min) });
-  const warn = r.warnings.map((/** @type {string} */ c) => T(`map.sub.w.${c}`, { a, b, sa: g3(r.rt_step_a), sb: g3(r.rt_step_b), na: g3(r.nm_step_a), nb: g3(r.nm_step_b) }));
+  const warn = r.warnings.map((/** @type {string} */ c) => T(/** @type {any} */ (WARN)[c], { a, b, sa: g3(r.rt_step_a), sb: g3(r.rt_step_b), na: g3(r.nm_step_a), nb: g3(r.nm_step_b) }));
   return { head, warn };
 }
 
 /** Writes the note (summary and legend) or the reason of a failure on the panel. @param {any} p @param {any} S @param {string} err @param {any} f @param {any} rf */
 export function show(p, S, err, f, rf) {
-  if (err) p.leg.insertAdjacentHTML("beforeend", `<span class="sm subnote" role="status">${err}</span>`);
+  if (err) p.leg.insertAdjacentHTML("beforeend", h`<span class="sm subnote" role="status">${err}</span>`);
   if (!S) return;
   const n = note(S, f.label, rf.label), full = [n.head, ...n.warn];
-  (p.corrbar || p.leg).insertAdjacentHTML("beforeend", `<div class="sm subnote" role="status">${full.map(EH).join("<br>")}</div>`);
-  p.leg.insertAdjacentHTML("beforeend", `<span class="sm subnote" title="${EH(full.join(" "))}">${EH(T("map.sub.short", { rows: S.sub.rows[0], rowsA: S.sub.rows[1], cols: S.sub.cols[0], colsA: S.sub.cols[1], n: n.warn.length }))}</span>`);
+  (p.corrbar || p.leg).insertAdjacentHTML("beforeend", h`<div class="sm subnote" role="status">${raw(full.map(t => h`${t}`).join("<br>"))}</div>`);
+  p.leg.insertAdjacentHTML("beforeend", h`<span class="sm subnote" title="${full.join(" ")}">${n.head}${n.warn.length ? ` (${n.warn.length})` : ""}</span>`);
 }
