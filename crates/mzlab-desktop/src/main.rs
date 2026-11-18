@@ -156,7 +156,7 @@ fn data_get_dir(app: AppHandle) -> Option<String> {
 
 /// The compatible files of the remembered folder (`folder.rs`).
 #[tauri::command]
-fn data_list(app: AppHandle) -> Vec<folder::Item> {
+fn data_list(app: AppHandle) -> Vec<serde_json::Value> {
     data_root(&app)
         .map(|r| folder::list(&r))
         .unwrap_or_default()

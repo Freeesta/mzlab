@@ -65,6 +65,37 @@ fn contaminant_and_order() {
 }
 
 #[test]
+fn contaminant_window_in_da_or_ppm() {
+    // 63.0441 vs 63.04406: 0.00004 Da = 0.6 ppm; 63.2 is 0.156 Da away
+    let da = |x: &str, tol: &str| ids(x, &format!(r#""tol_unit":"da","tol":{tol},"#));
+    assert!(has(&da("63.2", "0.2"), "contaminant", "peg1"));
+    assert!(!has(&da("63.2", "0.1"), "contaminant", "peg1"));
+    let ppm = |x: &str, tol: &str| ids(x, &format!(r#""hr":true,"tol_unit":"ppm","tol":{tol},"#));
+    assert!(has(&ppm("63.0441", "2"), "contaminant", "peg1"));
+    assert!(!has(&ppm("63.0441", "0.1"), "contaminant", "peg1"));
+    // a unit without a value (or a bad value) keeps the old rule; the answer always says the window it used
+    let out = match_number(&format!(
+        r#"{{"x":63.2,"tol_unit":"da","tol":-1,{TABLES}}}"#
+    ))
+    .unwrap();
+    assert!(
+        out.contains(r#""contam":{"tol":0.5,"unit":"da"}"#)
+            || out.contains(r#""contam":{"unit":"da","tol":0.5}"#),
+        "{out}"
+    );
+    let out = match_number(&format!(
+        r#"{{"x":63.2,"tol_unit":"ppm","tol":3,{TABLES}}}"#
+    ))
+    .unwrap();
+    assert!(
+        out.contains(r#""unit":"ppm""#)
+            && out.contains(r#""tol":3"#)
+            && !out.contains(r#""id":"peg1""#),
+        "{out}"
+    );
+}
+
+#[test]
 fn bad_request_is_an_error_with_a_key() {
     assert_eq!(
         match_number(r#"{"losses":[]}"#).unwrap_err().key,

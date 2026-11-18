@@ -324,6 +324,7 @@ mod flow_rule_tests;
 mod flow_run_tests;
 #[cfg(test)]
 mod flow_stats_tests;
+pub mod folder_cmd;
 #[cfg(test)]
 mod llm_agent_tests;
 #[cfg(test)]

@@ -11,7 +11,7 @@ const CART_CAP = 16;
 const cartCall = (o, m, ...a) => new Promise((ok, ko) => o[m](...a, ok, ko));
 // The entries are read in parallel (one IPC per file in the desktop app) with at most CART_CAP calls in flight; each walk returns its own array and the
 // arrays are flattened in order, so the result is the same as a sequential walk (uniqueNames depends on that order). One unreadable entry rejects the walk.
-async function cartWalkEntries(entries, onFile, HIDDEN, setDir) {
+async function cartWalkEntries(entries, onFile, HIDDEN, setDir, base = "") {
   let live = 0, done = 0, failed = false;
   const waiting = [];
   // a freed slot goes straight to the first waiter, so the count never passes CART_CAP
@@ -29,8 +29,13 @@ async function cartWalkEntries(entries, onFile, HIDDEN, setDir) {
     }
     return (await Promise.all(parts)).flat();
   }
-  return (await Promise.all(entries.map(e => walk(e, "")))).flat();
+  return (await Promise.all(entries.map(e => walk(e, base)))).flat();
 }
+// A directory handle (File System Access API, «Open folder») seen as a FileSystemEntry: a pointed folder or folder dataset goes through the SAME walk and the same
+// CartCarica.load() as a dropped one, so .D / .d / Waters .raw are told, grouped and reported (incomplete .D notice included) by one code path.
+const cartEntry = h => h.kind === "directory"
+  ? { isFile: false, isDirectory: true, name: h.name, createReader: () => { let done = false; return { readEntries: async (ok, ko) => { if (done) return ok([]); done = true; try { const l = []; for await (const [, e] of h.entries()) l.push(cartEntry(e)); ok(l); } catch (x) { ko(x); } } }; } }
+  : { isFile: true, isDirectory: false, name: h.name, file: (ok, ko) => h.getFile().then(ok, ko) };
 const CartCarica = (() => {
   const OK = /\.(mzml(\.gz)?|mzxml(\.gz)?|cdf|nc|dam|raw|wiff|wiff\.scan)$/i;
   const HIDDEN = n => n[0] === "." || n === "__MACOSX";
@@ -76,7 +81,7 @@ const CartCarica = (() => {
     const es = (dt?.items ? [...dt.items] : []).map(i => (i.kind === "file" && i.webkitGetAsEntry ? i.webkitGetAsEntry() : null)).filter(Boolean);
     return es.some(e => e.isDirectory) ? es : null;
   }
-  const readEntries = (entries, onFile) => cartWalkEntries(entries, onFile, HIDDEN, setDir);
+  const readEntries = (entries, onFile, base = "") => cartWalkEntries(entries, onFile, HIDDEN, setDir, base);
   const rootName = (entries, files) => (entries && entries.length === 1 && entries[0].isDirectory ? entries[0].name : (files[0] && dir(files[0]).split("/")[0]) || "");
   // ---- page part (only where there is a DOM)
   function note(text) { const n = document.getElementById("cartinfo"); if (!n) return; n.textContent = text; n.hidden = !text; }
@@ -98,7 +103,9 @@ const CartCarica = (() => {
     readEntries(es, n => { if (n % 50 === 0) note(I18N.t("cart.reading", { n })); }).then(files => load(files, rootName(es, files))).catch(x => note(String(x.message || x))).then(() => { if (done) done(); });
     return true;
   }
+  // a folder of the pointed list (a .D / .raw folder dataset): `base` is the folder it lies in, relative to the pointed root (the notice and the names read it)
+  async function fromHandle(h, base) { note(I18N.t("cart.reading", { n: 0 })); const files = await readEntries([cartEntry(h)], null, base); await load(files, h.name); }
   async function fromInput(list) { const files = [...list]; await load(files, rootName(null, files)); }
-  return { dir, setDir, pairKey, split, flexMaldi, byproduct: n => BYPRODUCT.test(n), uniqueNames, entriesOf, readEntries, fromDrop, fromInput, note, load };
+  return { dir, setDir, pairKey, split, flexMaldi, byproduct: n => BYPRODUCT.test(n), uniqueNames, entriesOf, readEntries, entryOfHandle: cartEntry, fromDrop, fromHandle, fromInput, note, load };
 })();
 if (typeof module !== "undefined") module.exports = CartCarica;

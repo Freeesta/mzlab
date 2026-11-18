@@ -10,7 +10,7 @@ use mzlab_ops::run::table::curve::curve_text;
 
 use crate::flow::{io, read_one, FileRunner, Made};
 
-/// The descriptor of `quant.curve@1`: responses and standards CSV in, the `taratura/1` JSON and the concentrations CSV out.
+/// The descriptor of `quant.curve@1`: responses and standards CSV in, the `calibration/1` JSON and the concentrations CSV out.
 pub fn curve_step() -> Step {
     Step {
         ins: vec![
@@ -18,7 +18,7 @@ pub fn curve_step() -> Step {
             Port::new("standards", DataType::Report, "Standards table as CSV: sample, level, concentration, unit, role; optional analyte, dilution"),
         ],
         outs: vec![
-            Port::new("calibration", DataType::Report, "Lines, back-calculated standards, LOD/LOQ and the log of choices (taratura/1)").format("taratura/1"),
+            Port::new("calibration", DataType::Report, "Lines, back-calculated standards, LOD/LOQ and the log of choices (calibration/1)").format("calibration/1"),
             Port::new("concentrations", DataType::Report, "Concentration of every analyte in every sample as CSV").format("csv"),
         ],
         params: vec![

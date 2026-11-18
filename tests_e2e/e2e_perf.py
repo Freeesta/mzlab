@@ -25,9 +25,9 @@ try:
         pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.wait_for_timeout(2500)
         def rows():
             kinds = pg.evaluate("[...new Set(PERF.rows.map(r => r.kind))]")
-            assert "api" in kinds and "disegno" in kinds, kinds
+            assert "api" in kinds and "draw" in kinds, kinds
             assert any(r["what"].startswith("explore") for r in pg.evaluate("PERF.rows")), "api/explore not measured"
-            assert pg.evaluate("PERF.rows.some(r => r.kind === 'disegno' && /draw (chrom|xic|spec)/.test(r.what))"), "panel draws"
+            assert pg.evaluate("PERF.rows.some(r => r.kind === 'draw' && /draw (chrom|xic|spec)/.test(r.what))"), "panel draws"
         step("api calls and panel draws are measured", rows)
         def nopython():
             assert pg.evaluate("fetch('api/perf').then(r => r.json())") == {"files": []}, "the engine of the site has no Python timings"
@@ -35,7 +35,7 @@ try:
         step("api/perf: the Rust engine reports no Python timings", nopython)
         def text():
             pg.wait_for_timeout(600)
-            t = pg.inner_text("#perf-out"); assert "api" in t and "summary" in t and "disegno" in t, t[:400]
+            t = pg.inner_text("#perf-out"); assert "api" in t and "summary" in t and "draw" in t, t[:400]
         step("the box shows rows and a summary", text)
         def copy():
             pg.click("#perf-copy"); pg.wait_for_timeout(300)

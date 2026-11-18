@@ -59,9 +59,9 @@ def main():
             pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.goto(f"http://127.0.0.1:{r.port}/?perf=1"); wait_for_js(pg, "window.qqReady === true"); ready(pg)
             stage(pg, files); pg.click("#opbtn")
-            wait_for_js(pg, "!document.querySelector('#v-data').hidden && PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw chrom')", 90000); ready(pg)
+            wait_for_js(pg, "!document.querySelector('#v-data').hidden && PERF.rows.some(x => x.kind === 'draw' && x.what === 'draw chrom')", 90000); ready(pg)
             pg.evaluate("document.querySelector('#np-map').click()")
-            wait_for_js(pg, "PERF.rows.some(x => x.kind === 'disegno' && x.what === 'draw map')", 60000); ready(pg)
+            wait_for_js(pg, "PERF.rows.some(x => x.kind === 'draw' && x.what === 'draw map')", 60000); ready(pg)
 
             def panels_release():
                 n = pg.evaluate("""() => { window.__held = [...document.querySelectorAll('#dpanels canvas')]; return window.__held.map(c => c.width * c.height).filter(a => a > 1).length; }""")
