@@ -839,8 +839,10 @@ function hdRestore(/** @type {Pannello} */ p) {
 }
 // over-full header: the row, .ctl or a group whose in-flow children spill (not an open absolute pop-up)
 const hdSp = (/** @type {Element} */ e) => e.scrollWidth > e.clientWidth + 1;
+// the MS² spectrum header wraps so that .ctl sits on its own line (app.css): a wrapped title or button row counts as over-full
+const hdWrapped = (/** @type {Element} */ hd) => { /** @type {HTMLElement[]} */ const t = !hd.closest(".pnl.spec") ? [] : /** @type {HTMLElement[]} */ ([...hd.children]).filter(e => !e.matches(".ctl, .hmore") && !!e.offsetParent && e.offsetWidth > 0); return t.some(e => e.offsetTop > t[0].offsetTop + 4); };
 function hdOver(/** @type {Element} */ hd, /** @type {Element | null} */ c) {
-  return hdSp(hd) || !!c && (hdSp(c) || [...c.children].some(g => { const r = g.getBoundingClientRect().right + 1; return [...g.children].some(k => k instanceof HTMLElement && k.offsetWidth > 0 && k.getBoundingClientRect().right > r && getComputedStyle(k).position !== "absolute"); }));
+  return hdSp(hd) || hdWrapped(hd) || !!c && (hdSp(c) || [...c.children].some(g => { const r = g.getBoundingClientRect().right + 1; return [...g.children].some(k => k instanceof HTMLElement && k.offsetWidth > 0 && k.getBoundingClientRect().right > r && getComputedStyle(k).position !== "absolute"); }));
 }
 function fitHd(/** @type {Pannello} */ p) {
   const el = p.el; if (!el || !el.isConnected || p._fitBusy) return;
