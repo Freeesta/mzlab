@@ -250,14 +250,14 @@ pub(crate) fn area_warning(batch: &[IstdBatch], p: &Params) -> bool {
         .any(|b| b.rsd.is_some_and(|x| x > p.warn_is_area_rsd))
 }
 
-/// The `istd` flag of each file of `names` (name, SHA-256) from the samples document (`campioni/1`, `/2` or `/3`): matched by file name, else by SHA-256; no document means every file may hold standards; a document without the file means none.
+/// The `istd` flag of each file of `names` (name, SHA-256) from the samples document (`sample-meta/1`, `/2` or `/3`): matched by file name, else by SHA-256; no document means every file may hold standards; a document without the file means none.
 pub fn istd_flags(samples: Option<&[u8]>, names: &[(String, String)]) -> Result<Vec<bool>> {
     let Some(bytes) = samples else {
         return Ok(vec![true; names.len()]);
     };
     let doc = mzlab_core::json::parse(bytes)?;
     let rows: Vec<(String, String, bool)> =
-        if doc.get("schema").and_then(Value::str) == Some("campioni/1") {
+        if doc.get("schema").and_then(Value::str) == Some("sample-meta/1") {
             crate::samples::from_json(bytes)?
                 .into_iter()
                 .map(|s| (s.file, s.sha256, s.istd))

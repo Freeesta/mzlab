@@ -1,7 +1,7 @@
 //! Statistics of the feature table as steps (`table.stats`, `table.pca`, `table.kmd`): Welch/ANOVA with BH, the exploratory PCA and the Kendrick mass defect.
 //! The PCA is `mzlab_core::pca` (the route `api/stat/pca`, already in every .wasm); `pca_json` is its entry for the step.
 //! Plain matrices in, `stat/1` text out; nothing here changes the table. The p-values and q-values live only in this output (the admin/HR side): no view
-//! of the page shows them. A condition with fewer than `MIN_REPLICHE` files refuses the comparison with a reason and no number. Reference of the PCA:
+//! of the page shows them. A condition with fewer than `MIN_REPLICATES` files refuses the comparison with a reason and no number. Reference of the PCA:
 //! `mzlab/statistica.py`; of the KMD: `mzlab/web/kmd-calc.js`. Docs: `docs/agenti/stat.md`.
 
 mod compare;
@@ -19,7 +19,7 @@ pub use kmd::{
 };
 
 use crate::samples::Sample;
-use mzlab_core::drawing::{Confronto, Design};
+use mzlab_core::design::{Design, DesignComparison};
 use mzlab_core::error::{Error, Result};
 
 pub const SCHEMA: &str = "stat/1";
@@ -77,8 +77,8 @@ pub fn comparisons_from_design(d: &Design, lay: &Layout) -> Result<Vec<(usize, u
     let mut out = Vec::new();
     for c in &d.comparisons {
         match c {
-            Confronto::Pair(a, b) => out.push((find(a)?, find(b)?)),
-            Confronto::VsReference => {
+            DesignComparison::Pair(a, b) => out.push((find(a)?, find(b)?)),
+            DesignComparison::VsReference => {
                 let r = lay
                     .reference
                     .ok_or_else(|| Error::new("error.stats.noReference"))?;

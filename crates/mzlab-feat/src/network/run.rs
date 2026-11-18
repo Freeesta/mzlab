@@ -64,7 +64,7 @@ fn row_of(table: &Aligned, tmax: &[Option<f64>], row: usize) -> NetworkRow {
 }
 
 /// `rete/1` of the products of `table` (a `.mzfeat` with the block `tp`; the areas give the times) interpreted in `tp_file` (a `.mzfeat` with the block
-/// `interp`; the same file when one carries both). `campioni` is the `campioni/2` document of the series ("" = no roles, no time course).
+/// `interp`; the same file when one carries both). `campioni` is the `samples/1` document of the series ("" = no roles, no time course).
 pub fn network_text<T: ReadAt, P: ReadAt>(
     table: (&mut T, u64),
     tp_file: (&mut P, u64),

@@ -1,0 +1,72 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "samples/2",
+ "title": "samples/2: metadata of the files of a series",
+ "description": "samples/1 plus the physical sample, polarity, matrix, batch, date and time, group and free typed columns: one entry per file (a physical sample measured in both polarities is two files with the same sample_id). Read from the CSV or the names by `csv_read` and `modello`, completed from the files by `from_file`, checked by `validate`. A samples/1 document is read and migrated (the new fields empty). Canonical JSON: keys in alphabetical order, files sorted by injection_order, columns and free values by name: the same metadata give the same bytes and the same SHA-256 whatever the order they were written in.",
+ "type": "object",
+ "required": ["samples", "columns", "schema"],
+ "properties": {
+  "schema": {"const": "samples/2"},
+  "columns": {
+   "type": "array",
+   "description": "the declared free columns; the values of the files are in `extra`",
+   "items": {
+    "type": "object",
+    "required": ["name", "kind"],
+    "properties": {
+     "name": {"type": "string"},
+     "kind": {"enum": ["text", "number", "category"]},
+     "values": {"type": "array", "items": {"type": "string"}, "description": "the allowed values of a category (sorted)"},
+     "required": {"type": "boolean", "description": "every file must have a value (missingValue); absent = false"}
+    }
+   }
+  },
+  "samples": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["acquired", "sub_sample", "sample_id", "compound", "concentration", "extra", "file", "group", "istd", "batch", "matrix", "note", "injection_order", "polarity", "reinjection", "replicate", "series", "sha256", "time", "time_confirmed", "time_min", "kind", "blank_kind", "concentration_unit", "time_unit"],
+    "properties": {
+     "file": {"type": "string"},
+     "sha256": {"type": "string", "description": "SHA-256 of the raw file: the key (the name can change); empty when not known yet"},
+     "sub_sample": {"type": "string", "description": "the sample inside a file that holds several (index or inner name); empty when the file is one sample"},
+     "sample_id": {"type": "string", "description": "the physical sample; the two polarities of one sample share it"},
+     "polarity": {"enum": [1, -1, null], "description": "from the file (from_file) or proposed by a name model"},
+     "matrix": {"type": "string"},
+     "batch": {"type": "string", "description": "the batch of design/1; empty = the default batch"},
+     "acquired": {"type": ["string", "null"], "description": "ISO YYYY-MM-DDTHH:MM[:SS], local time of the instrument PC, from the file"},
+     "group": {"type": "string"},
+     "extra": {"type": "object", "description": "free columns: name -> text or number, typed by `columns`"},
+     "file_data": {
+      "type": "object",
+      "description": "what the file says about itself (from_file), never edited by the user; present only when read from the file",
+      "properties": {
+       "modello": {"type": "string"},
+       "method": {"type": "string"},
+       "mz_min": {"type": ["number", "null"]},
+       "mz_max": {"type": ["number", "null"]},
+       "rt_min": {"type": ["number", "null"]},
+       "rt_max": {"type": ["number", "null"]},
+       "scans": {"type": ["number", "null"]}
+      }
+     },
+     "kind": {"enum": ["sample", "t0", "blank", "dark", "infusion", "std", "calibration", "qc", "pool"]},
+     "blank_kind": {"enum": ["solvent", "procedure", "wash", null]},
+     "time": {"type": ["number", "null"]},
+     "time_unit": {"enum": ["s", "min", "h", "d"]},
+     "time_min": {"type": ["number", "null"]},
+     "time_confirmed": {"type": "boolean"},
+     "series": {"type": "string"},
+     "reinjection": {"type": "boolean", "description": "a re-injection (ID suffix -R): a distinct injection, left out of the kinetics by the pages"},
+     "replicate": {"type": "integer", "minimum": 1},
+     "concentration": {"type": ["number", "null"]},
+     "concentration_unit": {"type": ["string", "null"]},
+     "injection_order": {"type": "integer", "minimum": 1},
+     "istd": {"type": "boolean"},
+     "note": {"type": "string"},
+     "compound": {"type": "string"}
+    }
+   }
+  }
+ }
+}

@@ -17,7 +17,7 @@ fn file(name: &str, kind: &str, series: &str, minutes: Option<f64>, order: u32) 
     c
 }
 
-/// The `campioni/1` of the same files (the table reads the roles from it).
+/// The `sample-meta/1` of the same files (the table reads the roles from it).
 fn samples_of(cs: &[samples::Sample]) -> Vec<Sample> {
     cs.iter()
         .map(|c| Sample {

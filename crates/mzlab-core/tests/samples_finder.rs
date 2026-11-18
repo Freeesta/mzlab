@@ -5,15 +5,15 @@ use mzlab_core::samples;
 #[test]
 fn route_finder_same_bytes_as_route() {
     let files = r#"{"files":[{"name":"blank_01.mzML","sha256":"","kind":""},{"name":"qc_pool_02.mzML","sha256":"","kind":""}]}"#;
-    let doc = samples::route("proponi", files).unwrap();
-    let doc3 = samples::route("proponi3", files).unwrap();
+    let doc = samples::route("propose", files).unwrap();
+    let doc3 = samples::route("propose2", files).unwrap();
     for (op, input) in [
-        ("proponi", files),
-        ("valida", doc.as_str()),
+        ("propose", files),
+        ("validate", doc.as_str()),
         ("per_tp", doc.as_str()),
-        ("canonico", doc.as_str()),
+        ("canonical", doc.as_str()),
         ("digest", doc.as_str()),
-        ("canonico", doc3.as_str()),
+        ("canonical", doc3.as_str()),
         ("digest", doc3.as_str()),
     ] {
         assert_eq!(
@@ -22,11 +22,11 @@ fn route_finder_same_bytes_as_route() {
             "{op}"
         );
     }
-    assert!(samples::route("migra", &doc).is_ok());
-    for op in ["proponi_spiegato", "proponi3", "ricollega", "migra"] {
+    assert!(samples::route("migrate", &doc).is_ok());
+    for op in ["propose_explained", "propose2", "relink", "migrate"] {
         assert_eq!(
             samples::route_finder(op, files).unwrap_err().key,
-            "error.badCampioni",
+            "error.badSamples",
             "{op}"
         );
     }

@@ -225,7 +225,7 @@ pub mod tracestat;
 pub mod subformulas;
 pub mod samples;
 pub mod molecules;
-pub mod drawing;
+pub mod design;
 pub mod tpmine_irls;
 
 pub use error::{Error, Result};

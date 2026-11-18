@@ -112,7 +112,7 @@ pub fn view_json_origin<R: ReadAt>(
     let mut o = Out::default();
     o.raw(&text).raw(",\"origine\":{\"tabella\":").str(&sha);
     o.raw(",\"spec\":").str(spec);
-    o.raw(",\"campioni\":").str(samples_json).raw("}}");
+    o.raw(",\"samples\":").str(samples_json).raw("}}");
     Ok(o.0)
 }
 
@@ -154,7 +154,7 @@ pub fn tp_table_json<R: ReadAt>(
     mzlab_feat::tp::table_json(&t, &s, rows.as_deref())
 }
 
-/// `tp_table_json` with the conditions: `series_json` is the `campioni/2` of the files and `infos_json` the list `[{"row","neutral_formula","ion_formula","ppm"}]` of
+/// `tp_table_json` with the conditions: `series_json` is the `samples/1` of the files and `infos_json` the list `[{"row","neutral_formula","ion_formula","ppm"}]` of
 /// what the caller knows of the best hypothesis of each row. With fewer than two conditions the text is the one of `tp_table_json`; with more it carries `gruppi`.
 pub fn tp_table_cond_json<R: ReadAt>(
     r: &mut R,
@@ -184,7 +184,7 @@ pub fn tp_table_cond_json<R: ReadAt>(
     mzlab_feat::tp::table_json_cond(&t, &s, rows.as_deref(), Some((&cs, &infos)))
 }
 
-/// The `campioni/1` that `propose` makes from the names of the files: `{"files":[{"name":..,"sha256":..}, ...]}` (type, time, replicate and group are read from the names).
+/// The `sample-meta/1` that `propose` makes from the names of the files: `{"files":[{"name":..,"sha256":..}, ...]}` (type, time, replicate and group are read from the names).
 pub fn samples_json(files_json: &str) -> Result<String> {
     let v = mzlab_core::json::parse(files_json.as_bytes())?;
     let files: Vec<(String, String)> = v
@@ -362,7 +362,7 @@ pub fn row_traces_json<R: ReadAt, I: ReadAt>(
     row::traces(&t, &s, id, open, ppm)
 }
 
-/// `campioni/2`: `op` is `proponi`, `valida`, `da_legacy`, `per_tp`, `canonico` or `digest` (`mzlab_core::samples::route_finder`: the rest is over the cap of this .wasm, `rotte` serves it).
+/// `samples/1`: `op` is `propose`, `validate`, `per_tp`, `canonical` or `digest` (`mzlab_core::samples::route_finder`: the rest is over the cap of this .wasm, `rotte` serves it).
 pub fn samples_route(op: &str, input: &str) -> Result<String> {
     mzlab_core::samples::route_finder(op, input)
 }

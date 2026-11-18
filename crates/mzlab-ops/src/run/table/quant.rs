@@ -183,7 +183,7 @@ fn flag_of(measured: f64, c: &Curve) -> &'static str {
     }
 }
 
-/// The sample types to quantify, each one a type of `campioni/1`.
+/// The sample types to quantify, each one a type of `sample-meta/1`.
 fn kinds_of(params: &[(String, Value)]) -> Result<Vec<String>> {
     let kinds: Vec<String> = param(params, "kinds")
         .and_then(|v| v.str())

@@ -1,4 +1,4 @@
-//! What a table file is written with, one rule for `flow run` and the browser: the samples as `campioni/1` and the polarity, the recipe of the table when it names one, else the sign of the
+//! What a table file is written with, one rule for `flow run` and the browser: the samples as `sample-meta/1` and the polarity, the recipe of the table when it names one, else the sign of the
 //! polarities of the files of its lineage, positive when neither says.
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
@@ -32,19 +32,19 @@ pub fn samples_like<R: ReadAt>(r: &mut R, size: u64, bytes: &[u8]) -> Result<Str
     core_samples::order_like(&String::from_utf8_lossy(bytes), &names)
 }
 
-/// The samples as `campioni/1` text, whichever of the schemas the file has (`campioni/3` too: its batch and matrix are read by `filterspec`).
+/// The samples as `sample-meta/1` text, whichever of the schemas the file has (`samples/2` too: its batch and matrix are read by `filterspec`).
 pub fn samples_v1(bytes: &[u8]) -> Result<String> {
     let doc = parse(bytes)?;
     if !matches!(
         doc.get("schema").and_then(|v| v.str()),
-        Some("campioni/2") | Some(core_samples::SCHEMA3)
+        Some("samples/1") | Some(core_samples::SCHEMA3)
     ) {
         return Ok(String::from_utf8_lossy(bytes).into_owned());
     }
     let mut out: Vec<Sample> = Vec::new();
     for c in core_samples::from_json(bytes)? {
         let kind = match c.kind.as_str() {
-            "infusion" => core_samples::tipo_v1(&c.file).to_string(),
+            "infusion" => core_samples::kind_v1(&c.file).to_string(),
             k => k.to_string(),
         };
         let group = if matches!(kind.as_str(), "sample" | "std" | "calibration") {

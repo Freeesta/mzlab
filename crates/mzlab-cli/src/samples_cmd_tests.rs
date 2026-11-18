@@ -22,13 +22,13 @@ fn names_file(tag: &str) -> std::path::PathBuf {
 const BODY: &str = r#"{"files":[{"name":"MQ_H2O2_T00"},{"name":"MQ_H2O2_T05"},{"name":"TW_H2O2_T00"},{"name":"TW_H2O2_T05"}]"#;
 
 #[test]
-fn variabili_is_the_route_answer() {
+fn variables_is_the_route_answer() {
     let f = names_file("a");
     let (code, out, err) = run(&["samples", "vars", "--names", f.to_str().unwrap()]);
     assert_eq!(code, 0, "{err}");
     assert_eq!(
         out,
-        route("variabili", &format!("{BODY}}}")).unwrap() + "\n"
+        route("variables", &format!("{BODY}}}")).unwrap() + "\n"
     );
     assert!(out.contains("\"id\":\"matrix\""));
     let (_, out, _) = run(&[
@@ -42,7 +42,7 @@ fn variabili_is_the_route_answer() {
         "_",
     ]);
     let want = route(
-        "variabili",
+        "variables",
         &format!("{BODY},\"manuale\":{{\"pos\":-1,\"sep\":\"_\"}}}}"),
     )
     .unwrap();
@@ -57,7 +57,7 @@ fn variabili_is_the_route_answer() {
         "--substring",
     ]);
     let want = route(
-        "variabili",
+        "variables",
         &format!("{BODY},\"manuale\":{{\"has\":[\"O2\",\"N2\"],\"substring\":true}}}}"),
     )
     .unwrap();
@@ -80,7 +80,7 @@ const TIME_NAMES: [&str; 9] = [
 
 #[test]
 fn table_is_the_route_answer_with_the_time_points() {
-    let p = std::env::temp_dir().join(format!("mzlab-cli-{}-nomi-tempo.txt", std::process::id()));
+    let p = std::env::temp_dir().join(format!("mzlab-cli-{}-names-time.txt", std::process::id()));
     std::fs::write(&p, TIME_NAMES.join("\n")).unwrap();
     let (code, out, err) = run(&["samples", "table", "--names", p.to_str().unwrap()]);
     assert_eq!(code, 0, "{err}");
@@ -88,11 +88,11 @@ fn table_is_the_route_answer_with_the_time_points() {
         .iter()
         .map(|n| format!("{{\"name\":\"{n}\",\"sha256\":\"\",\"kind\":\"\"}}"))
         .collect();
-    let want = route("proponi", &format!("{{\"files\":[{}]}}", files.join(","))).unwrap();
+    let want = route("propose", &format!("{{\"files\":[{}]}}", files.join(","))).unwrap();
     assert_eq!(out, want + "\n");
     // the minutes of every name, in the order of the names (null: no time point)
     let minutes: Vec<String> = out
-        .split("\"tempo_min\":")
+        .split("\"time_min\":")
         .skip(1)
         .map(|r| r.split([',', '}']).next().unwrap().to_string())
         .collect();
@@ -104,11 +104,11 @@ fn table_is_the_route_answer_with_the_time_points() {
 }
 
 #[test]
-fn nome_gruppo_is_the_route_answer() {
+fn group_name_is_the_route_answer() {
     let (code, out, _) = run(&["samples", "group", "MQ_H2O2_T00", "MQ_H2O2_T01"]);
-    assert_eq!((code, out.as_str()), (0, "{\"nome\":\"MQ_H2O2\"}\n"));
+    assert_eq!((code, out.as_str()), (0, "{\"name\":\"MQ_H2O2\"}\n"));
     let (_, out, _) = run(&["samples", "group"]);
-    assert_eq!(out, "{\"nome\":\"\"}\n");
+    assert_eq!(out, "{\"name\":\"\"}\n");
 }
 
 #[test]
@@ -196,4 +196,63 @@ fn list_gives_data_on_stdout_progress_on_stderr_and_exit_codes() {
     assert_eq!(run(&["samples", "list", "--json"]).0, 2);
     assert_eq!(run(&["samples", "list", &at("totale"), "--bogus"]).0, 2);
     let _ = std::fs::remove_dir_all(&d);
+}
+
+/// The JSON of `vars`, `table` and `group` has no key of the old Italian formats (the saved formats are English only).
+#[test]
+fn the_json_has_no_italian_key() {
+    const OLD: &[&str] = &[
+        "campioni",
+        "composto",
+        "concentrazione",
+        "ordine_iniezione",
+        "replica",
+        "serie",
+        "tempo",
+        "tempo_min",
+        "tempo_confermato",
+        "tipo",
+        "tipo_bianco",
+        "unita",
+        "unita_tempo",
+        "comune",
+        "variabili",
+        "copertura",
+        "punteggio",
+        "senza",
+        "valori",
+        "chiave",
+        "etichetta",
+        "classe",
+        "fine",
+        "inizio",
+        "testo",
+        "nome",
+        "manuale",
+        "multipli",
+        "campione_id",
+        "polarita",
+        "matrice",
+        "lotto",
+        "gruppo",
+        "colonne",
+    ];
+    let f = names_file("it");
+    let names = f.to_str().unwrap();
+    for args in [
+        vec!["samples", "vars", "--names", names],
+        vec!["samples", "vars", "--names", names, "--pos", "1"],
+        vec!["samples", "table", "--names", names],
+        vec!["samples", "group", "MQ_H2O2_T00", "MQ_H2O2_T01"],
+    ] {
+        let (code, out, err) = run(&args);
+        assert_eq!(code, 0, "{err}");
+        for w in OLD {
+            assert!(
+                !out.contains(&format!("\"{w}\"")),
+                "{args:?}: `{w}` in the output"
+            );
+        }
+    }
+    std::fs::remove_file(f).unwrap();
 }

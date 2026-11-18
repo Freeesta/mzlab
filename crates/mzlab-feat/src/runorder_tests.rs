@@ -37,8 +37,8 @@ fn v2(cs: &[Sample]) -> Vec<u8> {
 
 fn v3(cs: &[Sample]) -> Vec<u8> {
     samples::to_json3(&Table {
-        campioni: cs.to_vec(),
-        colonne: Vec::new(),
+        samples: cs.to_vec(),
+        columns: Vec::new(),
     })
     .into_bytes()
 }
@@ -147,16 +147,16 @@ fn a_table_without_order_and_one_with_repeated_orders_are_reported() {
     let cs = batch("A", 1, 10, 5, true, &[1.0, 2.0]);
     let mut doc = parse(&v2(&cs)).unwrap();
     if let Value::Obj(fields) = &mut doc
-        && let Some((_, Value::Arr(items))) = fields.iter_mut().find(|(k, _)| k == "campioni")
+        && let Some((_, Value::Arr(items))) = fields.iter_mut().find(|(k, _)| k == "samples")
     {
         for (k, item) in items.iter_mut().enumerate() {
             if let Value::Obj(f) = item {
                 if k == 3 {
-                    f.retain(|(key, _)| key != "ordine_iniezione");
+                    f.retain(|(key, _)| key != "injection_order");
                 }
                 if k == 5 || k == 6 {
                     f.iter_mut()
-                        .find(|(key, _)| key == "ordine_iniezione")
+                        .find(|(key, _)| key == "injection_order")
                         .unwrap()
                         .1 = Value::Num(8.0);
                 }
@@ -197,13 +197,13 @@ fn campioni_2_and_3_give_the_same_result_and_a_design_overrides_the_batch_field(
             .iter()
             .map(|c| {
                 format!(
-                    "{{\"file\":\"{}\",\"lotto\":\"{}\",\"sha256\":\"\"}}",
-                    c.file,
-                    if c.order <= split { "X" } else { "Y" }
+                    "{{\"batch\":\"{}\",\"file\":\"{}\",\"sha256\":\"\"}}",
+                    if c.order <= split { "X" } else { "Y" },
+                    c.file
                 )
             })
             .collect();
-        format!("{{\"condizioni\":[{{\"livelli\":{{}},\"nome\":\"\",\"repliche\":1}}],\"confronti\":[],\"fattori\":[],\"lotti\":[{}],\"riferimento\":null,\"schema\":\"disegno/1\"}}", lots.join(",")).into_bytes()
+        format!("{{\"schema\":\"design/1\",\"batches\":[{}],\"comparisons\":[],\"conditions\":[{{\"levels\":{{}},\"name\":\"\",\"replicates\":1}}],\"factors\":[],\"reference\":null}}", lots.join(",")).into_bytes()
     };
     let one = runorder_text(&[], &v2(&cs), None).unwrap();
     assert_eq!(one, runorder_text(&[], &v3(&cs), None).unwrap());

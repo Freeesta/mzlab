@@ -1,5 +1,5 @@
-//! Metadata of the samples of a series, `campioni/1` (`docs/schemi/campioni-1.json`): a type, a time, a replicate, a group and a concentration for every file.
-//! It is proposed from the file names by `mzlab_core::samples::proponi` (the one parser of `campioni/2`) and edited by the user; the SHA-256 of its canonical JSON goes in the `.mzflow`.
+//! Metadata of the samples of a series, `sample-meta/1` (`docs/schemi/sample-meta-1.json`): a type, a time, a replicate, a group and a concentration for every file.
+//! It is proposed from the file names by `mzlab_core::samples::propose` (the one parser of `samples/1`) and edited by the user; the SHA-256 of its canonical JSON goes in the `.mzflow`.
 //! Changing a metadatum does not change the detection (the `.mzfeat` is the same): only the views and the identities read it.
 
 use mzlab_core::budget::sha256_hex;
@@ -8,7 +8,7 @@ use mzlab_core::json::{parse, Out, Value};
 use mzlab_core::samples;
 use mzlab_core::project::guess_sample;
 
-pub const SCHEMA: &str = "campioni/1";
+pub const SCHEMA: &str = "sample-meta/1";
 /// Types of a sample, in the order of the schema.
 pub const KINDS: [&str; 7] = ["sample", "blank", "dark", "t0", "qc", "std", "calibration"];
 
@@ -33,13 +33,13 @@ pub struct Sample {
 }
 
 /// The metadata proposed for `files` (`(name, SHA-256)` in the order of injection, as in the table): the roles and times of
-/// `mzlab_core::samples::proponi` in the vocabulary of `campioni/1` (an infusion takes the type and time of the old rules, a QC its time; no series; replicates by type, time and concentration).
+/// `mzlab_core::samples::propose` in the vocabulary of `sample-meta/1` (an infusion takes the type and time of the old rules, a QC its time; no series; replicates by type, time and concentration).
 pub fn propose(files: &[(String, String)]) -> Vec<Sample> {
     let named: Vec<(String, String, String)> = files.iter().map(|(n, s)| (n.clone(), s.clone(), String::new())).collect();
     let mut out: Vec<Sample> = Vec::with_capacity(files.len());
-    for c in samples::proponi(&named) {
+    for c in samples::propose(&named) {
         let (kind, time_min) = match c.kind.as_str() {
-            "infusion" => (samples::tipo_v1(&c.file), guess_sample(&c.file).1),
+            "infusion" => (samples::kind_v1(&c.file), guess_sample(&c.file).1),
             "qc" => ("qc", guess_sample(&c.file).1),
             k => (k, c.time_min),
         };
@@ -72,22 +72,25 @@ fn opt_str(j: &mut Out, v: Option<&str>) {
     };
 }
 
-/// The canonical JSON of `campioni/1`: fixed order of the keys, so the same metadata give the same bytes (and the same SHA-256).
+/// The canonical JSON of `sample-meta/1`: fixed order of the keys, so the same metadata give the same bytes (and the same SHA-256).
 pub fn to_json(samples: &[Sample]) -> String {
     let mut j = Out::default();
-    j.raw("{\"schema\":").str(SCHEMA).raw(",\"campioni\":[");
+    j.raw("{\"samples\":[");
     for (i, s) in samples.iter().enumerate() {
-        j.raw(if i > 0 { ",{\"file\":" } else { "{\"file\":" }).str(&s.file);
-        j.raw(",\"sha256\":").str(&s.sha256).raw(",\"tipo\":").str(&s.kind);
-        j.raw(",\"tempo_min\":").opt(s.time_min);
-        j.raw(",\"replica\":").int(s.replicate as i64).raw(",\"gruppo\":").str(&s.group);
-        j.raw(",\"concentrazione\":").opt(s.conc).raw(",\"unita\":");
+        j.raw(if i > 0 { ",{\"concentration\":" } else { "{\"concentration\":" }).opt(s.conc);
+        j.raw(",\"concentration_unit\":");
         opt_str(&mut j, s.unit.as_deref());
-        j.raw(",\"ordine_iniezione\":").int(s.order as i64);
+        j.raw(",\"file\":").str(&s.file);
+        j.raw(",\"group\":").str(&s.group);
+        j.raw(",\"injection_order\":").int(s.order as i64);
         j.raw(",\"istd\":").raw(if s.istd { "true" } else { "false" });
-        j.raw(",\"note\":").str(&s.note).raw("}");
+        j.raw(",\"kind\":").str(&s.kind);
+        j.raw(",\"note\":").str(&s.note);
+        j.raw(",\"replicate\":").int(s.replicate as i64);
+        j.raw(",\"sha256\":").str(&s.sha256);
+        j.raw(",\"time_min\":").opt(s.time_min).raw("}");
     }
-    j.raw("]}");
+    j.raw("],\"schema\":").str(SCHEMA).raw("}");
     j.0
 }
 
@@ -96,9 +99,9 @@ pub fn digest(samples: &[Sample]) -> String {
     sha256_hex(to_json(samples).as_bytes())
 }
 
-/// The TSV with the columns of the metadata table of mzmine (`filename`, then the same fields as `campioni/1`): one line per file, tab-separated.
+/// The TSV with the columns of the metadata table of mzmine (`filename`, then the same fields as `sample-meta/1`): one line per file, tab-separated.
 pub fn to_tsv(samples: &[Sample]) -> String {
-    let mut t = String::from("file\tsha256\ttipo\ttempo_min\treplica\tgruppo\tconcentrazione\tunita\tordine_iniezione\tistd\tnote\n");
+    let mut t = String::from("file\tsha256\tkind\ttime_min\treplicate\tgroup\tconcentration\tconcentration_unit\tinjection_order\tistd\tnote\n");
     let num = |v: Option<f64>| v.map_or(String::new(), |x| format!("{x}"));
     for s in samples {
         let clean = |x: &str| x.replace(['\t', '\n', '\r'], " ");
@@ -121,7 +124,7 @@ pub fn to_tsv(samples: &[Sample]) -> String {
 }
 
 fn bad() -> Error {
-    Error::new("error.badCampioni")
+    Error::new("error.badSamples")
 }
 
 fn text(v: &Value, k: &str) -> Result<String> {
@@ -136,15 +139,15 @@ fn number(v: &Value, k: &str) -> Result<Option<f64>> {
     }
 }
 
-/// Reads a `campioni/1` document; the type must be one of `KINDS`, the order and the replicate whole numbers from 1.
+/// Reads a `sample-meta/1` document; the type must be one of `KINDS`, the order and the replicate whole numbers from 1.
 pub fn from_json(bytes: &[u8]) -> Result<Vec<Sample>> {
     let doc = parse(bytes)?;
     if doc.get("schema").and_then(|v| v.str()) != Some(SCHEMA) {
         return Err(bad());
     }
     let mut out = Vec::new();
-    for v in doc.get("campioni").map(|a| a.arr()).unwrap_or(&[]) {
-        let kind = text(v, "tipo")?;
+    for v in doc.get("samples").map(|a| a.arr()).unwrap_or(&[]) {
+        let kind = text(v, "kind")?;
         let whole = |k: &str| -> Result<u32> {
             let x = number(v, k)?.ok_or_else(bad)?;
             (x >= 1.0 && x.fract() == 0.0 && x < 4e9).then_some(x as u32).ok_or_else(bad)
@@ -156,12 +159,12 @@ pub fn from_json(bytes: &[u8]) -> Result<Vec<Sample>> {
             file: text(v, "file")?,
             sha256: text(v, "sha256")?,
             kind,
-            time_min: number(v, "tempo_min")?,
-            replicate: whole("replica")?,
-            group: text(v, "gruppo")?,
-            conc: number(v, "concentrazione")?,
-            unit: v.get("unita").and_then(|x| x.str()).map(str::to_string),
-            order: whole("ordine_iniezione")?,
+            time_min: number(v, "time_min")?,
+            replicate: whole("replicate")?,
+            group: text(v, "group")?,
+            conc: number(v, "concentration")?,
+            unit: v.get("concentration_unit").and_then(|x| x.str()).map(str::to_string),
+            order: whole("injection_order")?,
             istd: v.get("istd").and_then(|x| x.bool()).ok_or_else(bad)?,
             note: text(v, "note")?,
         });
@@ -172,7 +175,7 @@ pub fn from_json(bytes: &[u8]) -> Result<Vec<Sample>> {
 /// The samples of the file in whichever schema it has, as the engine of the statistics reads them: the role in `kind`, the condition (`serie`) in `group`.
 pub fn samples_of(bytes: &[u8]) -> Result<Vec<Sample>> {
     let doc = parse(bytes)?;
-    if doc.get("schema").and_then(|v| v.str()) != Some("campioni/2") {
+    if doc.get("schema").and_then(|v| v.str()) != Some("samples/1") {
         return from_json(bytes);
     }
     Ok(samples::from_json(bytes)?

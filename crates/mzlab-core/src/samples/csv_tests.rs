@@ -167,7 +167,7 @@ fn records_of_the_awkward_cases() {
 #[test]
 #[ignore = "timing"]
 fn timing_of_the_parsers() {
-    let mut t = String::from("file,sha256,campione_id,polarita,gruppo,tipo,tempo,unita_tempo,replica,concentrazione,unita,note\n");
+    let mut t = String::from("file,sha256,sample_id,polarity,group,kind,time,time_unit,replicate,concentration,concentration_unit,note\n");
     for i in 0..100_000 {
         t += &format!(
             "run_{i:06}.mzML,{:064x},S{i},pos,g{},sample,{}.5,min,{},{}.25,ppm,\"note, {i}\"\n",
@@ -190,6 +190,6 @@ fn timing_of_the_parsers() {
     };
     let old = best(&|| records_ref(&t, ',').unwrap().len());
     let new = best(&|| records(&t, ',').unwrap().len());
-    let all = best(&|| read(&t, None, &[]).unwrap().campioni.len() + 1);
+    let all = best(&|| read(&t, None, &[]).unwrap().samples.len() + 1);
     eprintln!("records old {old:.2} ms · new {new:.2} ms · leggi (whole) {all:.2} ms");
 }

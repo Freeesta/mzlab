@@ -1,0 +1,31 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "sample-meta/1",
+ "title": "sample-meta/1: metadata of the samples of a series",
+ "description": "One entry per file of the series, in the order of injection. Proposed from the file names by mzlab-feat (samples.rs, the rules of mzlab-core::project) and edited by the user. The SHA-256 of the canonical JSON (fixed order of the keys) is recorded by the `samples` operation of the .mzflow. Changing a metadatum does not change the detection: only the views and the identities are recomputed.",
+ "type": "object",
+ "required": ["schema", "samples"],
+ "properties": {
+  "schema": {"const": "sample-meta/1"},
+  "samples": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["file", "sha256", "kind", "time_min", "replicate", "group", "concentration", "concentration_unit", "injection_order", "istd", "note"],
+    "properties": {
+     "file": {"type": "string"},
+     "sha256": {"type": "string", "description": "SHA-256 of the raw file (the one of its .mzidx)"},
+     "kind": {"enum": ["sample", "blank", "dark", "t0", "qc", "std", "calibration"]},
+     "time_min": {"type": ["number", "null"], "description": "treatment time in minutes"},
+     "replicate": {"type": "integer", "minimum": 1},
+     "group": {"type": "string"},
+     "concentration": {"type": ["number", "null"]},
+     "concentration_unit": {"type": ["string", "null"]},
+     "injection_order": {"type": "integer", "minimum": 1},
+     "istd": {"type": "boolean", "description": "the file is an internal standard"},
+     "note": {"type": "string"}
+    }
+   }
+  }
+ }
+}

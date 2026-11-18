@@ -1,7 +1,7 @@
-//! The metadata of `campioni/3` as a CSV table (`,` `;` or tab): one row per file, the header the names of the fields (`file`, `sha256`, `campione_id`,
-//! `polarita`, ..., then one column per free column); `condition`, `replicate`, `injection_order`, `role` (`control` = dark, `standard` = std),
+//! The metadata of `samples/2` as a CSV table (`,` `;` or tab): one row per file, the header the names of the fields (`file`, `sha256`, `sample_id`,
+//! `polarity`, ..., then one column per free column); `condition`, `replicate`, `injection_order`, `role` (`control` = dark, `standard` = std),
 //! `time` (minutes), `dose` (`25 ppm`) and the like are read too, and an unknown column becomes a free column (a number when every value is one).
-//! What `csv_scrivi` writes `csv_leggi` reads back unchanged (`tempo_min` is derived, `dati_file` is not in the table).
+//! What `csv_write` writes `csv_read` reads back unchanged (`time_min` is derived, `file_data` is not in the table).
 
 use std::borrow::Cow;
 
@@ -17,34 +17,34 @@ use crate::json::{parse, Out};
 /// The fixed columns, in the order written.
 const FIXED: [&str; 23] = [
     "file",
-    "campione",
+    "sub_sample",
     "sha256",
-    "campione_id",
-    "polarita",
-    "matrice",
-    "lotto",
-    "acquisito",
-    "gruppo",
-    "tipo",
-    "tipo_bianco",
-    "tempo",
-    "unita_tempo",
-    "tempo_confermato",
-    "serie",
-    "reiniezione",
-    "replica",
-    "concentrazione",
-    "unita",
-    "ordine_iniezione",
+    "sample_id",
+    "polarity",
+    "matrix",
+    "batch",
+    "acquired",
+    "group",
+    "kind",
+    "blank_kind",
+    "time",
+    "time_unit",
+    "time_confirmed",
+    "series",
+    "reinjection",
+    "replicate",
+    "concentration",
+    "concentration_unit",
+    "injection_order",
     "istd",
     "note",
-    "composto",
+    "compound",
 ];
 
 pub(super) fn bad(row: usize, col: &str) -> Error {
     Error::new("error.badCsv")
-        .with("riga", row)
-        .with("colonna", col)
+        .with("row", row)
+        .with("column", col)
 }
 
 /// `v.to_lowercase()`, without a copy when `v` is already lower-case ASCII (the usual cell).
@@ -63,18 +63,18 @@ fn field_of(h: &str) -> Option<&'static str> {
         return Some(f);
     }
     Some(match l.as_str() {
-        "name" | "nome" | "filename" => "file",
-        "sample_id" | "sample" => "campione_id",
-        "polarity" => "polarita",
-        "matrix" => "matrice",
-        "batch" => "lotto",
-        "acquired" => "acquisito",
-        "group" => "gruppo",
-        "role" | "type" => "tipo",
-        "condition" => "serie",
-        "replicate" => "replica",
-        "injection_order" => "ordine_iniezione",
-        "tempo_min" | "time" => "tempo_min",
+        "name" | "filename" => "file",
+        "sample_id" | "sample" => "sample_id",
+        "polarity" => "polarity",
+        "matrix" => "matrix",
+        "batch" => "batch",
+        "acquired" => "acquired",
+        "group" => "group",
+        "role" | "type" => "kind",
+        "condition" => "series",
+        "replicate" => "replicate",
+        "injection_order" => "injection_order",
+        "time_min" | "time" => "time_min",
         "dose" => "dose",
         _ => return None,
     })
@@ -146,21 +146,21 @@ fn put(c: &mut Sample, f: &str, v: &str) -> bool {
     match f {
         "file" => c.file = v.into(),
         "sha256" => c.sha256 = v.into(),
-        "campione" => c.sub = v.into(),
-        "campione_id" => c.sample_id = v.into(),
-        "matrice" => c.matrix = v.into(),
-        "lotto" => c.batch = v.into(),
-        "gruppo" => c.group = v.into(),
-        "serie" => c.series = v.into(),
+        "sub_sample" => c.sub = v.into(),
+        "sample_id" => c.sample_id = v.into(),
+        "matrix" => c.matrix = v.into(),
+        "batch" => c.batch = v.into(),
+        "group" => c.group = v.into(),
+        "series" => c.series = v.into(),
         "note" => c.note = v.into(),
-        "composto" => c.compound = v.into(),
-        "acquisito" => c.acquired = (!v.is_empty()).then(|| v.into()),
-        "unita" => c.unit = (!v.is_empty()).then(|| v.into()),
-        "polarita" => return v.is_empty() || pol(v).map(|p| c.polarity = Some(p)).is_some(),
-        "tipo" => {
+        "compound" => c.compound = v.into(),
+        "acquired" => c.acquired = (!v.is_empty()).then(|| v.into()),
+        "concentration_unit" => c.unit = (!v.is_empty()).then(|| v.into()),
+        "polarity" => return v.is_empty() || pol(v).map(|p| c.polarity = Some(p)).is_some(),
+        "kind" => {
             return v.is_empty() || legacy_kind(&lower(v)).map(|k| c.kind = k.into()).is_some()
         }
-        "tipo_bianco" => {
+        "blank_kind" => {
             return v.is_empty()
                 || super::BLANK_TYPES
                     .contains(&v)
@@ -168,10 +168,10 @@ fn put(c: &mut Sample, f: &str, v: &str) -> bool {
                     .is_some()
         }
         "istd" => return v.is_empty() || flag(v).map(|b| c.istd = b).is_some(),
-        "reiniezione" => return v.is_empty() || flag(v).map(|b| c.reinjection = b).is_some(),
-        "replica" => return v.is_empty() || whole(v).map(|n| c.replicate = n).is_some(),
-        "ordine_iniezione" => return v.is_empty() || whole(v).map(|n| c.order = n).is_some(),
-        "concentrazione" => return v.is_empty() || num(v).map(|x| c.conc = Some(x)).is_some(),
+        "reinjection" => return v.is_empty() || flag(v).map(|b| c.reinjection = b).is_some(),
+        "replicate" => return v.is_empty() || whole(v).map(|n| c.replicate = n).is_some(),
+        "injection_order" => return v.is_empty() || whole(v).map(|n| c.order = n).is_some(),
+        "concentration" => return v.is_empty() || num(v).map(|x| c.conc = Some(x)).is_some(),
         "dose" => {
             return v.is_empty()
                 || dose(v)
@@ -194,7 +194,7 @@ struct TimeCols {
     confirmed: Option<usize>,
 }
 
-/// The times of one row: `tempo` + `unita_tempo`, else `tempo_min`; confirmed as written, else when there is one.
+/// The times of one row: `time` + `time_unit`, else `time_min`; confirmed as written, else when there is one.
 fn time_of<'a>(
     c: &mut Sample,
     row: usize,
@@ -203,13 +203,13 @@ fn time_of<'a>(
 ) -> Result<()> {
     let get = |i: Option<usize>| i.map(cell).filter(|v| !v.is_empty());
     let unit = match get(tc.unit) {
-        Some(u) => unit_of(u).ok_or_else(|| bad(row, "unita_tempo"))?,
+        Some(u) => unit_of(u).ok_or_else(|| bad(row, "time_unit"))?,
         None => "min",
     };
     let (t, u, col) = match (get(tc.time), get(tc.minutes)) {
-        (Some(t), _) => (Some(t), unit, "tempo"),
-        (None, Some(t)) => (Some(t), "min", "tempo_min"),
-        _ => (None, unit, "tempo"),
+        (Some(t), _) => (Some(t), unit, "time"),
+        (None, Some(t)) => (Some(t), "min", "time_min"),
+        _ => (None, unit, "time"),
     };
     let t = t.map(|t| num(t).ok_or_else(|| bad(row, col))).transpose()?;
     c.set_time(t, u);
@@ -217,7 +217,7 @@ fn time_of<'a>(
         c.time_min = Some(0.0);
     }
     c.time_confirmed = match get(tc.confirmed) {
-        Some(v) => flag(v).ok_or_else(|| bad(row, "tempo_confermato"))?,
+        Some(v) => flag(v).ok_or_else(|| bad(row, "time_confirmed"))?,
         None => t.is_some(),
     };
     Ok(())
@@ -241,8 +241,8 @@ pub fn read(text: &str, sep: Option<char>, declared: &[Column]) -> Result<Table>
     let recs = records(text, sep.unwrap_or_else(|| detect(text)))?;
     let Some((head, rows)) = recs.split_first() else {
         return Ok(Table {
-            campioni: Vec::new(),
-            colonne: declared.to_vec(),
+            samples: Vec::new(),
+            columns: declared.to_vec(),
         });
     };
     let heads = heads_of(head)?;
@@ -254,12 +254,12 @@ pub fn read(text: &str, sep: Option<char>, declared: &[Column]) -> Result<Table>
     let mut written: Vec<Option<u32>> = Vec::with_capacity(rows.len());
     let at = |f: &str| heads.iter().position(|h| h.as_ref().ok() == Some(&f));
     let tc = TimeCols {
-        unit: at("unita_tempo"),
-        time: at("tempo"),
-        minutes: at("tempo_min"),
-        confirmed: at("tempo_confermato"),
+        unit: at("time_unit"),
+        time: at("time"),
+        minutes: at("time_min"),
+        confirmed: at("time_confirmed"),
     };
-    let replicate = at("replica");
+    let replicate = at("replicate");
     // the free column of each header position (the names are distinct, in header order)
     let free_at: Vec<usize> = heads
         .iter()
@@ -278,12 +278,7 @@ pub fn read(text: &str, sep: Option<char>, declared: &[Column]) -> Result<Table>
         let mut c = Sample::new("", "", r as u32 + 1);
         for (i, h) in heads.iter().enumerate() {
             match h {
-                Ok(f)
-                    if !matches!(
-                        *f,
-                        "tempo" | "unita_tempo" | "tempo_confermato" | "tempo_min"
-                    ) =>
-                {
+                Ok(f) if !matches!(*f, "time" | "time_unit" | "time_confirmed" | "time_min") => {
                     if !put(&mut c, f, cell(i)) {
                         return Err(bad(row, f));
                     }
@@ -309,8 +304,8 @@ pub fn read(text: &str, sep: Option<char>, declared: &[Column]) -> Result<Table>
     }
     let columns = place_free(&mut cs, &free, declared);
     Ok(Table {
-        campioni: cs,
-        colonne: columns,
+        samples: cs,
+        columns: columns,
     })
 }
 
@@ -333,8 +328,8 @@ fn place_free(
         for (c, v) in cs.iter_mut().zip(values) {
             if let Some(v) = v {
                 let cell = match (col.kind, num(v)) {
-                    (ColumnType::Numero, Some(x)) => Cell::Numero(x),
-                    _ => Cell::Testo((*v).to_string()),
+                    (ColumnType::Number, Some(x)) => Cell::Number(x),
+                    _ => Cell::Text((*v).to_string()),
                 };
                 c.set_extra(name, cell);
             }
@@ -357,24 +352,24 @@ fn fixed(c: &Sample, f: &str) -> String {
     match f {
         "file" => c.file.clone(),
         "sha256" => c.sha256.clone(),
-        "campione" => c.sub.clone(),
-        "campione_id" => c.sample_id.clone(),
-        "polarita" => c.polarity.map(|p| p.to_string()).unwrap_or_default(),
-        "matrice" => c.matrix.clone(),
-        "lotto" => c.batch.clone(),
-        "acquisito" => c.acquired.clone().unwrap_or_default(),
-        "gruppo" => c.group.clone(),
-        "tipo" => c.kind.clone(),
-        "tipo_bianco" => c.blank_kind.clone().unwrap_or_default(),
-        "tempo" => n(c.time),
-        "unita_tempo" => c.time_unit.clone(),
-        "tempo_confermato" => c.time_confirmed.to_string(),
-        "serie" => c.series.clone(),
-        "reiniezione" => c.reinjection.to_string(),
-        "replica" => c.replicate.to_string(),
-        "concentrazione" => n(c.conc),
-        "unita" => c.unit.clone().unwrap_or_default(),
-        "ordine_iniezione" => c.order.to_string(),
+        "sub_sample" => c.sub.clone(),
+        "sample_id" => c.sample_id.clone(),
+        "polarity" => c.polarity.map(|p| p.to_string()).unwrap_or_default(),
+        "matrix" => c.matrix.clone(),
+        "batch" => c.batch.clone(),
+        "acquired" => c.acquired.clone().unwrap_or_default(),
+        "group" => c.group.clone(),
+        "kind" => c.kind.clone(),
+        "blank_kind" => c.blank_kind.clone().unwrap_or_default(),
+        "time" => n(c.time),
+        "time_unit" => c.time_unit.clone(),
+        "time_confirmed" => c.time_confirmed.to_string(),
+        "series" => c.series.clone(),
+        "reinjection" => c.reinjection.to_string(),
+        "replicate" => c.replicate.to_string(),
+        "concentration" => n(c.conc),
+        "concentration_unit" => c.unit.clone().unwrap_or_default(),
+        "injection_order" => c.order.to_string(),
         "istd" => c.istd.to_string(),
         "note" => c.note.clone(),
         _ => c.compound.clone(),
@@ -383,9 +378,9 @@ fn fixed(c: &Sample, f: &str) -> String {
 
 /// The table as CSV, the files in the order given, the free columns sorted by name after the fixed ones; `\n` ends every line.
 pub fn write(t: &Table, sep: char) -> String {
-    let mut names: Vec<&str> = t.colonne.iter().map(|c| c.name.as_str()).collect();
+    let mut names: Vec<&str> = t.columns.iter().map(|c| c.name.as_str()).collect();
     names.extend(
-        t.campioni
+        t.samples
             .iter()
             .flat_map(|c| c.extra.iter().map(|(k, _)| k.as_str())),
     );
@@ -398,7 +393,7 @@ pub fn write(t: &Table, sep: char) -> String {
         .map(|h| quote(h, sep, false))
         .collect();
     let mut out = head.join(&sep_s);
-    for c in &t.campioni {
+    for c in &t.samples {
         let mut cells: Vec<String> = FIXED
             .iter()
             .map(|f| quote(&fixed(c, f), sep, false))
@@ -406,8 +401,8 @@ pub fn write(t: &Table, sep: char) -> String {
         for n in &names {
             cells.push(match c.extra_of(n) {
                 None => String::new(),
-                Some(Cell::Numero(x)) => format!("{x}"),
-                Some(Cell::Testo(s)) => quote(s, sep, s.is_empty()),
+                Some(Cell::Number(x)) => format!("{x}"),
+                Some(Cell::Text(s)) => quote(s, sep, s.is_empty()),
             });
         }
         out.push('\n');
@@ -418,7 +413,7 @@ pub fn write(t: &Table, sep: char) -> String {
 }
 
 fn sep_of(v: &crate::json::Value) -> Result<Option<char>> {
-    match v.get("separatore").and_then(|s| s.str()) {
+    match v.get("separator").and_then(|s| s.str()) {
         None | Some("") => Ok(None),
         Some(",") => Ok(Some(',')),
         Some(";") => Ok(Some(';')),
@@ -427,37 +422,37 @@ fn sep_of(v: &crate::json::Value) -> Result<Option<char>> {
     }
 }
 
-/// `{"testo", "separatore"?, "colonne"?: [declared columns]}` → a `campioni/3`.
+/// `{"text", "separator"?, "columns"?: [declared columns]}` → a `samples/2`.
 pub fn csv_read(input: &str) -> Result<String> {
     let v = parse(input.as_bytes())?;
     let text = v
-        .get("testo")
+        .get("text")
         .and_then(|x| x.str())
         .ok_or_else(|| Error::new("error.badRequest"))?;
-    let declared = match v.get("colonne") {
+    let declared = match v.get("columns") {
         Some(c) => {
             let mut o = Out::default();
             crate::json::write_value(&mut o, c);
             let doc = format!(
-                "{{\"campioni\":[],\"colonne\":{},\"schema\":\"campioni/3\"}}",
+                "{{\"samples\":[],\"columns\":{},\"schema\":\"samples/2\"}}",
                 o.0
             );
-            table_from_value(&parse(doc.as_bytes())?)?.colonne
+            table_from_value(&parse(doc.as_bytes())?)?.columns
         }
         None => Vec::new(),
     };
     Ok(to_json3(&read(text, sep_of(&v)?, &declared)?))
 }
 
-/// `{"campioni": <campioni/2 or /3>, "separatore"?}` → `{"testo": "..."}`.
+/// `{"samples": <samples/1 or /2>, "separator"?}` → `{"text": "..."}`.
 pub fn csv_write(input: &str) -> Result<String> {
     let v = parse(input.as_bytes())?;
     let doc = v
-        .get("campioni")
+        .get("samples")
         .ok_or_else(|| Error::new("error.badRequest"))?;
     let t = table_from_value(doc)?;
     let text = write(&t, sep_of(&v)?.unwrap_or(','));
     let mut j = Out::default();
-    j.raw("{\"testo\":").str(&text).raw("}");
+    j.raw("{\"text\":").str(&text).raw("}");
     Ok(j.0)
 }

@@ -1,4 +1,4 @@
-//! The name model of `campioni/3`: template and regex, the spans, a model that does not match, the free columns, the 30 000 generated names.
+//! The name model of `samples/2`: template and regex, the spans, a model that does not match, the free columns, the 30 000 generated names.
 
 use super::many;
 use mzlab_core::samples::{self, table_from_json, Cell};
@@ -11,8 +11,8 @@ pub(super) fn run(model: &str, names: &[&str]) -> Value {
         .collect();
     serde_json::from_str(
         &samples::route_all(
-            "modello",
-            &json!({"modello": model, "files": files}).to_string(),
+            "model",
+            &json!({"model": model, "files": files}).to_string(),
         )
         .unwrap(),
     )
@@ -22,71 +22,71 @@ pub(super) fn run(model: &str, names: &[&str]) -> Value {
 #[test]
 fn a_template_gives_the_fields_and_where_they_are() {
     let name = "plates/S12_neg_30min_r3.mzML";
-    let out = run("{campione_id}_{polarita}_{tempo}min_r{replica}", &[name]);
-    let c = &out["campioni"]["campioni"][0];
-    assert_eq!(c["campione_id"], "S12");
-    assert_eq!(c["polarita"], -1);
+    let out = run("{sample_id}_{polarity}_{time}min_r{replicate}", &[name]);
+    let c = &out["samples"]["samples"][0];
+    assert_eq!(c["sample_id"], "S12");
+    assert_eq!(c["polarity"], -1);
     assert_eq!(
         (
-            c["tempo"].clone(),
-            c["tempo_min"].clone(),
-            c["replica"].clone()
+            c["time"].clone(),
+            c["time_min"].clone(),
+            c["replicate"].clone()
         ),
         (30.into(), 30.into(), 3.into())
     );
-    assert_eq!(c["tempo_confermato"], false);
+    assert_eq!(c["time_confirmed"], false);
     let chars: Vec<char> = name.chars().collect();
-    for p in out["posizioni"][0].as_array().unwrap() {
+    for p in out["positions"][0].as_array().unwrap() {
         let (a, b) = (
-            p["inizio"].as_u64().unwrap() as usize,
-            p["fine"].as_u64().unwrap() as usize,
+            p["start"].as_u64().unwrap() as usize,
+            p["end"].as_u64().unwrap() as usize,
         );
         let got: String = chars[a..b].iter().collect();
-        let want = match p["campo"].as_str().unwrap() {
-            "campione_id" => "S12",
-            "polarita" => "neg",
-            "tempo" => "30",
-            "replica" => "3",
+        let want = match p["field"].as_str().unwrap() {
+            "sample_id" => "S12",
+            "polarity" => "neg",
+            "time" => "30",
+            "replicate" => "3",
             f => panic!("{f}"),
         };
         assert_eq!(got, want);
     }
-    assert_eq!(out["posizioni"][0].as_array().unwrap().len(), 4);
+    assert_eq!(out["positions"][0].as_array().unwrap().len(), 4);
 }
 
 #[test]
 fn a_regex_with_named_groups_and_free_columns() {
     let names = ["P7_POS_t5.raw", "P7_NEG_t5.raw", "other.raw"];
     let out = run(
-        r"(?P<campione_id>[A-Z]\d+)_(?P<polarita>POS|NEG)_t(?P<tempo>\d+)(?:\.raw)?",
+        r"(?P<sample_id>[A-Z]\d+)_(?P<polarity>POS|NEG)_t(?P<time>\d+)(?:\.raw)?",
         &names,
     );
-    let cs = &out["campioni"]["campioni"];
+    let cs = &out["samples"]["samples"];
     assert_eq!(
-        (cs[0]["polarita"].clone(), cs[1]["polarita"].clone()),
+        (cs[0]["polarity"].clone(), cs[1]["polarity"].clone()),
         (1.into(), (-1).into())
     );
-    assert_eq!(out["senza_corrispondenza"], json!([2]));
-    assert_eq!(out["posizioni"][2], json!([]));
-    // not matched: left as proponi gave it
-    assert_eq!(cs[2]["campione_id"], "");
+    assert_eq!(out["unmatched"], json!([2]));
+    assert_eq!(out["positions"][2], json!([]));
+    // not matched: left as propose gave it
+    assert_eq!(cs[2]["sample_id"], "");
     let out = run(
-        r"(?P<campione_id>\w+)_(?P<lotto>b\d)_(?P<operatore>[a-z]+)",
+        r"(?P<sample_id>\w+)_(?P<batch>b\d)_(?P<operatore>[a-z]+)",
         &["S1_b2_ana"],
     );
-    let t = table_from_json(out["campioni"].to_string().as_bytes()).unwrap();
-    assert_eq!(t.campioni[0].batch, "b2");
+    let t = table_from_json(out["samples"].to_string().as_bytes()).unwrap();
+    assert_eq!(t.samples[0].batch, "b2");
     assert_eq!(
-        t.campioni[0].extra_of("operatore"),
-        Some(&Cell::Testo("ana".into()))
+        t.samples[0].extra_of("operatore"),
+        Some(&Cell::Text("ana".into()))
     );
     // lazy and alternatives, anchors, classes, repeats
     let out = run(
-        r"(?i)^(?P<serie>.+?)_(?P<replica>\d{1,2})$",
+        r"(?i)^(?P<series>.+?)_(?P<replicate>\d{1,2})$",
         &["Run_A_B_12", "x_123"],
     );
-    assert_eq!(out["campioni"]["campioni"][0]["serie"], "Run_A_B");
-    assert_eq!(out["senza_corrispondenza"], json!([1]));
+    assert_eq!(out["samples"]["samples"][0]["series"], "Run_A_B");
+    assert_eq!(out["unmatched"], json!([1]));
 }
 
 #[test]
@@ -101,20 +101,17 @@ fn bad_models_and_runaway_models_are_safe() {
         "(?P<a>x))",
         "(?P<a>\\",
     ] {
-        let e = samples::route_all("modello", &json!({"modello": m, "files": []}).to_string())
-            .unwrap_err();
-        assert_eq!(e.key, "error.badModello", "{m}");
+        let e =
+            samples::route_all("model", &json!({"model": m, "files": []}).to_string()).unwrap_err();
+        assert_eq!(e.key, "error.badModel", "{m}");
     }
     // nested repeats that explode in a naive matcher end in "no match", quickly
     let long = "a".repeat(200) + "b";
-    let out = run(r"(?P<campione_id>(a*)*)c", &[&long]);
-    assert_eq!(out["senza_corrispondenza"], json!([0]));
+    let out = run(r"(?P<sample_id>(a*)*)c", &[&long]);
+    assert_eq!(out["unmatched"], json!([0]));
     // a name longer than the limit is just not matched
     let huge = "a".repeat(5000);
-    assert_eq!(
-        run("{campione_id}", &[&huge])["senza_corrispondenza"],
-        json!([0])
-    );
+    assert_eq!(run("{sample_id}", &[&huge])["unmatched"], json!([0]));
     let _ = many;
 }
 
@@ -166,25 +163,25 @@ fn the_generated_names_never_panic_and_models_keep_the_rest() {
     let many_names = names;
     let refs: Vec<&str> = many_names.iter().map(String::as_str).collect();
     for model in [
-        "{campione_id}_{polarita}_{tempo}min_r{replica}",
-        "{campione_id}_{tempo}{unita_tempo}",
-        r"(?i)(?P<campione_id>[a-z]+\d*)[-_ ]?(?P<polarita>pos|neg)?.*",
-        r"(?P<serie>.*?)(?P<tempo>\d+)(?P<unita>mgL|ppm)?",
+        "{sample_id}_{polarity}_{time}min_r{replicate}",
+        "{sample_id}_{time}{time_unit}",
+        r"(?i)(?P<sample_id>[a-z]+\d*)[-_ ]?(?P<polarity>pos|neg)?.*",
+        r"(?P<series>.*?)(?P<time>\d+)(?P<concentration_unit>mgL|ppm)?",
     ] {
         let out = run(model, &refs);
-        let cs = &out["campioni"]["campioni"];
+        let cs = &out["samples"]["samples"];
         assert_eq!(cs.as_array().unwrap().len(), refs.len());
-        let un = out["senza_corrispondenza"].as_array().unwrap().len();
+        let un = out["unmatched"].as_array().unwrap().len();
         assert!(un < refs.len(), "{model}");
         // the spans stay inside the name
-        for (n, ps) in refs.iter().zip(out["posizioni"].as_array().unwrap()) {
+        for (n, ps) in refs.iter().zip(out["positions"].as_array().unwrap()) {
             let len = n.chars().count() as u64;
             assert!(ps
                 .as_array()
                 .unwrap()
                 .iter()
-                .all(|p| p["inizio"].as_u64() <= p["fine"].as_u64()
-                    && p["fine"].as_u64().unwrap() <= len));
+                .all(|p| p["start"].as_u64() <= p["end"].as_u64()
+                    && p["end"].as_u64().unwrap() <= len));
         }
     }
 }

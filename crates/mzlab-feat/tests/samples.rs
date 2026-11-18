@@ -1,4 +1,4 @@
-//! `campioni/1`: the metadata proposed from the file names, the canonical JSON and its digest, the TSV, and the reader.
+//! `sample-meta/1`: the metadata proposed from the file names, the canonical JSON and its digest, the TSV, and the reader.
 
 use mzlab_feat::samples::{digest, from_json, propose, to_json, to_tsv, KINDS};
 
@@ -47,9 +47,9 @@ fn json_roundtrip_digest_and_edits() {
 #[test]
 fn reader_refuses_wrong_documents() {
     let ok = to_json(&propose(&files(&SERIES[..2])));
-    assert!(from_json(ok.replace("campioni/1", "campioni/9").as_bytes()).is_err());
-    assert!(from_json(ok.replace("\"tipo\":\"t0\"", "\"tipo\":\"unknown\"").as_bytes()).is_err());
-    assert!(from_json(ok.replace("\"replica\":1", "\"replica\":0").as_bytes()).is_err());
+    assert!(from_json(ok.replace("sample-meta/1", "samples/9").as_bytes()).is_err());
+    assert!(from_json(ok.replace("\"kind\":\"t0\"", "\"kind\":\"unknown\"").as_bytes()).is_err());
+    assert!(from_json(ok.replace("\"replicate\":1", "\"replicate\":0").as_bytes()).is_err());
     assert!(from_json(b"not json").is_err());
 }
 
@@ -58,5 +58,5 @@ fn tsv_has_a_line_per_file() {
     let t = to_tsv(&propose(&files(&SERIES)));
     assert_eq!(t.lines().count(), SERIES.len() + 1);
     assert!(t.lines().all(|l| l.split('\t').count() == 11));
-    assert!(t.starts_with("file\tsha256\ttipo\t"));
+    assert!(t.starts_with("file\tsha256\tkind\t"));
 }

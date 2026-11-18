@@ -1,4 +1,4 @@
-//! The one parser of the file names: role, time as written, replicate, series and concentration proposed from a name (`tempo_confermato` false).
+//! The one parser of the file names: role, time as written, replicate, series and concentration proposed from a name (`time_confirmed` false).
 //! The role and the minutes follow `project::guess_sample` (the same names give the same minutes), plus seconds (`90 s`), the replicate `(2)`,
 //! the infusion (`infusion`, `infusione`, `direct-infusion`, `FIA` or an MSn file), the dark control (`dark`, `buio`, `adsorption`) and the series.
 //!
@@ -14,8 +14,8 @@ use super::time_token::{is_sep, time_of};
 use super::{minutes_per, number_replicates, Sample};
 use crate::project::{guess_conc, guess_sample as guess_stem, guess_type};
 
-/// `project::guess_sample` plus the blank words of `data/nomi-bianco.json` (`MQ_Wash_1`), which the parity with `project.py` does not carry.
-/// The stem and the type of a name (`blank`, `standard`, `sample`) without reading its time, with the blank words of `nomi-bianco.json`.
+/// `project::guess_sample` plus the blank words of `data/blank-names.json` (`MQ_Wash_1`), which the parity with `project.py` does not carry.
+/// The stem and the type of a name (`blank`, `standard`, `sample`) without reading its time, with the blank words of `blank-names.json`.
 fn guess_kind(name: &str) -> (String, &'static str) {
     let (stem, guess) = guess_type(name);
     if guess == "sample" && is_blank_name(&stem.to_lowercase()) {
@@ -53,7 +53,7 @@ fn has_any(low: &str, words: &[&str]) -> bool {
     })
 }
 
-/// The role without the infusion, as `campioni/1` gives it: blank, standard or calibration, dark, QC, time zero, sample.
+/// The role without the infusion, as `samples/1` gives it: blank, standard or calibration, dark, QC, time zero, sample.
 fn base_kind(low: &str, guess: &str, time_min: Option<f64>) -> &'static str {
     match guess {
         "blank" => "blank",
@@ -66,8 +66,8 @@ fn base_kind(low: &str, guess: &str, time_min: Option<f64>) -> &'static str {
     }
 }
 
-/// The role of `campioni/1` for a name (no infusion there): what `samples.rs` writes.
-pub fn tipo_v1(name: &str) -> &'static str {
+/// The role of `samples/1` for a name (no infusion there): what `samples.rs` writes.
+pub fn kind_v1(name: &str) -> &'static str {
     let (_, time, guess) = guess_sample(name);
     base_kind(&name.to_lowercase(), guess, time)
 }
@@ -195,7 +195,7 @@ fn assign_matrix(out: &mut [Sample]) {
     }
 }
 
-/// The role (`proponi` names) and the time of one name as `(minutes, start, end)`, the span in characters of the file stem: what `variabili` needs.
+/// The role (`propose` names) and the time of one name as `(minutes, start, end)`, the span in characters of the file stem: what `variables` needs.
 pub(crate) fn role_and_time(name: &str) -> (&'static str, Option<(f64, usize, usize)>) {
     let (stem, guess) = guess_kind(name);
     let lowc: Vec<char> = stem.to_lowercase().chars().collect();
@@ -207,21 +207,21 @@ pub(crate) fn role_and_time(name: &str) -> (&'static str, Option<(f64, usize, us
     (kind, span.map(|(t, m)| (m, t.start, t.end)))
 }
 
-/// The role (`proponi` names) and the minutes of one name, without the series, replicates and positions: what a caller that only classifies a name needs.
+/// The role (`propose` names) and the minutes of one name, without the series, replicates and positions: what a caller that only classifies a name needs.
 pub fn role_and_minutes(name: &str) -> (&'static str, Option<f64>) {
     let (kind, time) = role_and_time(name);
     (kind, time.map(|t| t.0))
 }
 
 /// The metadata proposed for `files` (`(name, SHA-256, kind of the file)`, in the order of injection; kind `msn` = an infusion); an infusion and a QC have no time.
-pub fn proponi(files: &[(String, String, String)]) -> Vec<Sample> {
+pub fn propose(files: &[(String, String, String)]) -> Vec<Sample> {
     propose_explained(files)
         .into_iter()
         .map(|p| p.sample)
         .collect()
 }
 
-/// The same as `proponi`, each file with the parts of its name that decided its fields (`positions.rs`); the values are the ones of `proponi`.
+/// The same as `propose`, each file with the parts of its name that decided its fields (`positions.rs`); the values are the ones of `propose`.
 pub fn propose_explained(files: &[(String, String, String)]) -> Vec<Proposal> {
     let mut out = Vec::with_capacity(files.len());
     let mut prefixes = Vec::with_capacity(files.len());

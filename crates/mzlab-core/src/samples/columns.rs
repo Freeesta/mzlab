@@ -1,36 +1,36 @@
-//! The parts of `campioni/3` that `campioni/2` does not have: free typed columns (`Colonna`, `Cell`), the document that carries them
-//! (`Tabella`) and what the file says about itself (`FileData`). Used by `json3`, `csv`, `modello` and `valida3`.
+//! The parts of `samples/2` that `samples/1` does not have: free typed columns (`Column`, `Cell`), the document that carries them
+//! (`Table`) and what the file says about itself (`FileData`). Used by `json3`, `csv`, `model` and `validate3`.
 
 use super::Sample;
 
 /// The value of a free column.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Cell {
-    Testo(String),
-    Numero(f64),
+    Text(String),
+    Number(f64),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColumnType {
-    Testo,
-    Numero,
-    Categoria,
+    Text,
+    Number,
+    Category,
 }
 
 impl ColumnType {
     pub fn name(self) -> &'static str {
         match self {
-            ColumnType::Testo => "testo",
-            ColumnType::Numero => "numero",
-            ColumnType::Categoria => "categoria",
+            ColumnType::Text => "text",
+            ColumnType::Number => "number",
+            ColumnType::Category => "category",
         }
     }
 
     pub fn from_name(s: &str) -> Option<Self> {
         Some(match s {
-            "testo" => ColumnType::Testo,
-            "numero" => ColumnType::Numero,
-            "categoria" => ColumnType::Categoria,
+            "text" => ColumnType::Text,
+            "number" => ColumnType::Number,
+            "category" => ColumnType::Category,
             _ => return None,
         })
     }
@@ -58,8 +58,8 @@ impl Column {
     /// Whether `c` is a value this column accepts (a number for a number, a listed text for a category when the list is given).
     pub fn accepts(&self, c: &Cell) -> bool {
         match (self.kind, c) {
-            (ColumnType::Numero, Cell::Numero(_)) | (ColumnType::Testo, Cell::Testo(_)) => true,
-            (ColumnType::Categoria, Cell::Testo(t)) => {
+            (ColumnType::Number, Cell::Number(_)) | (ColumnType::Text, Cell::Text(_)) => true,
+            (ColumnType::Category, Cell::Text(t)) => {
                 self.values.as_ref().is_none_or(|v| v.contains(t))
             }
             _ => false,
@@ -67,7 +67,7 @@ impl Column {
     }
 }
 
-/// What a file says about itself (`dal_file`): the user never edits it.
+/// What a file says about itself (`from_file`): the user never edits it.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct FileData {
     pub instrument: String,
@@ -77,16 +77,16 @@ pub struct FileData {
     pub scans: Option<u32>,
 }
 
-/// A `campioni/3` document: the files and the declared free columns.
+/// A `samples/2` document: the files and the declared free columns.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Table {
-    pub campioni: Vec<Sample>,
-    pub colonne: Vec<Column>,
+    pub samples: Vec<Sample>,
+    pub columns: Vec<Column>,
 }
 
 impl Table {
     pub fn column(&self, name: &str) -> Option<&Column> {
-        self.colonne.iter().find(|c| c.name == name)
+        self.columns.iter().find(|c| c.name == name)
     }
 }
 
@@ -118,8 +118,8 @@ pub(super) fn infer(values: &[Option<&str>]) -> ColumnType {
             .is_ok_and(|x| x.is_finite() && format!("{x}") == **v)
     };
     if !filled.is_empty() && filled.iter().all(canon) {
-        ColumnType::Numero
+        ColumnType::Number
     } else {
-        ColumnType::Testo
+        ColumnType::Text
     }
 }

@@ -1,6 +1,6 @@
 //! `mzlab-cli llm inspect DIR` and `mzlab-cli llm params DIR`: the `ispezione/1` and the `proposta-param/1` of the mzML files of a folder, without any
 //! model. The sources are the answers of the engine routes the page asks for the same files (items of `Item.info()`, `/api/scan_stats`, `/api/mrm`,
-//! `/api/metodo`, `campioni/2 proponi`), assembled in the same order as `flow/lazy/flow-llm-facts.js`, so the page and the CLI give the same bytes.
+//! `/api/metodo`, `samples/1 propose`), assembled in the same order as `flow/lazy/flow-llm-facts.js`, so the page and the CLI give the same bytes.
 
 use std::path::{Path, PathBuf};
 
@@ -89,7 +89,7 @@ fn file_source(path: &Path, sample: &Value, order: usize) -> String {
         }
         Ok(o)
     };
-    let kind = sample.get("tipo").and_then(Value::str).unwrap_or("sample");
+    let kind = sample.get("kind").and_then(Value::str).unwrap_or("sample");
     let tail = format!(
         ",\"sample\":{{\"tipo\":{},\"ordine_iniezione\":{order}}}}}",
         quoted(kind)
@@ -116,10 +116,10 @@ pub(crate) fn sources(dir: &Path, hide: bool) -> Result<String, String> {
             )
         })
         .collect();
-    let proposed = samples::route("proponi", &format!("{{\"files\":[{}]}}", names.join(",")))
+    let proposed = samples::route("propose", &format!("{{\"files\":[{}]}}", names.join(",")))
         .map_err(|e| e.to_string())?;
     let proposed = parse(proposed.as_bytes()).map_err(|e| e.to_string())?;
-    let samples = proposed.get("campioni").map_or(&[][..], Value::arr);
+    let samples = proposed.get("samples").map_or(&[][..], Value::arr);
     let parts: Vec<String> = files
         .iter()
         .enumerate()

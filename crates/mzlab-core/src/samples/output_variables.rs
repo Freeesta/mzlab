@@ -1,4 +1,4 @@
-//! The manual variables of `variabili` (token position, terms), the `nomivar/1` writer of a variable and the part every name shares.
+//! The manual variables of `variables` (token position, terms), the `sample-vars/1` writer of a variable and the part every name shares.
 
 use super::variable_classes::{fold, split};
 use super::variables::{build, names_of, read_file, text, val, Fl, Var};
@@ -58,30 +58,28 @@ pub(super) fn write_var(o: &mut Out, v: &Var, n: usize) {
         }
         o.raw("]");
     };
-    o.raw("{\"copertura\":").raw(&format!(
+    o.raw("{\"coverage\":").raw(&format!(
         "{:.4}",
         (n - v.without.len()) as f64 / n.max(1) as f64
     ));
     o.raw(",\"id\":").str(&v.id);
     if let Some(m) = &v.multiple {
-        o.raw(",\"multipli\":");
+        o.raw(",\"multiple\":");
         idx(o, m);
     }
-    o.raw(",\"punteggio\":").raw(&format!("{:.4}", v.score));
-    o.raw(",\"senza\":");
-    idx(o, &v.without);
-    o.raw(",\"tipo\":")
+    o.raw(",\"kind\":")
         .str(if v.ordered { "ordered" } else { "categorical" });
-    o.raw(",\"valori\":[");
+    o.raw(",\"score\":").raw(&format!("{:.4}", v.score));
+    o.raw(",\"values\":[");
     for (i, x) in v.vals.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"chiave\":")
-            .str(&x.key);
-        o.raw(",\"etichetta\":").str(&x.label).raw(",\"file\":");
+        o.raw(if i > 0 { "," } else { "" }).raw("{\"files\":");
         idx(o, &x.files);
-        o.raw("}");
+        o.raw(",\"key\":").str(&x.key);
+        o.raw(",\"label\":").str(&x.label).raw("}");
     }
-    o.raw("]}");
+    o.raw("],\"without\":");
+    idx(o, &v.without);
+    o.raw("}");
 }
 
 /// The characters shared by every name at the start and at the end, whole tokens (`MQ_*_T00`); the whole stem when the names are the same.
@@ -129,10 +127,10 @@ pub(super) fn common(fs: &[Fl]) -> String {
     format!("{head}*{tail}")
 }
 
-/// `campioni(op="nome_gruppo", {"names":[...]})` → `{"nome"}`: the tokens every name has, in the order of the first, joined with the commonest separator.
+/// `samples(op="group_name", {"names":[...]})` → `{"name"}`: the tokens every name has, in the order of the first, joined with the commonest separator.
 pub(super) fn route_group_name(input: &str) -> Result<String> {
     let v = parse(input.as_bytes())?;
-    let names = names_of(&v, "names", "nome_gruppo")?;
+    let names = names_of(&v, "names", "group_name")?;
     let fs: Vec<Fl> = names.iter().map(|n| read_file(n)).collect();
     let keys: Vec<Vec<String>> = fs
         .iter()
@@ -171,7 +169,7 @@ pub(super) fn route_group_name(input: &str) -> Result<String> {
     }
     let best = (0..5).fold(0, |b, i| if count[i] > count[b] { i } else { b });
     let mut o = Out::default();
-    o.raw("{\"nome\":")
+    o.raw("{\"name\":")
         .str(&pick.join(&seps[best].to_string()))
         .raw("}");
     Ok(o.0)

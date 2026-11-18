@@ -1,6 +1,6 @@
-//! `samples::proponi_spiegato`: the parts of the name that decided each field, and the check that the values are the ones of `proponi`.
+//! `samples::propose_explained`: the parts of the name that decided each field, and the check that the values are the ones of `propose`.
 
-use mzlab_core::samples::{self, from_json, proponi};
+use mzlab_core::samples::{self, from_json, propose};
 use serde_json::Value;
 
 /// The names of `tools/project_reference.py` (the parity table of `guess_sample`), all of them.
@@ -85,9 +85,9 @@ fn spans_say_which_part_of_the_name_decided() {
     assert_eq!(
         got[0],
         pairs(&[
-            ("tipo", "t005min"),
-            ("tempo", "t005min"),
-            ("serie", "X_TiO2")
+            ("kind", "t005min"),
+            ("time", "t005min"),
+            ("series", "X_TiO2")
         ])
         .into_iter()
         .skip(1)
@@ -95,21 +95,18 @@ fn spans_say_which_part_of_the_name_decided() {
     );
     assert_eq!(
         got[1],
-        pairs(&[("tempo", "90 s"), ("serie", "Y_TiO2"), ("replica", "(2)")])
+        pairs(&[("time", "90 s"), ("series", "Y_TiO2"), ("replicate", "(2)")])
     );
-    assert_eq!(got[2], pairs(&[("tempo", "t010min"), ("serie", "X_TiO2")]));
-    assert_eq!(
-        got[3],
-        pairs(&[("tipo", "bianco"), ("tipo_bianco", "solv")])
-    );
+    assert_eq!(got[2], pairs(&[("time", "t010min"), ("series", "X_TiO2")]));
+    assert_eq!(got[3], pairs(&[("kind", "bianco"), ("blank_kind", "solv")]));
     assert_eq!(
         got[4],
-        pairs(&[("tipo", "std"), ("concentrazione", "7_2ppm")])
+        pairs(&[("kind", "std"), ("concentration", "7_2ppm")])
     );
-    assert_eq!(got[5], pairs(&[("tipo", "std"), ("concentrazione", "5")]));
-    assert_eq!(got[6], pairs(&[("tipo", "QC")]));
-    assert_eq!(got[7], pairs(&[("tipo", "dark")]));
-    assert_eq!(got[8], pairs(&[("tipo", "infusion")]));
+    assert_eq!(got[5], pairs(&[("kind", "std"), ("concentration", "5")]));
+    assert_eq!(got[6], pairs(&[("kind", "QC")]));
+    assert_eq!(got[7], pairs(&[("kind", "dark")]));
+    assert_eq!(got[8], pairs(&[("kind", "infusion")]));
     assert_eq!(got[9], pairs(&[]));
 }
 
@@ -121,7 +118,7 @@ fn spans_never_change_the_values_and_stay_inside_the_name() {
         .iter()
         .map(|n| (n.clone(), "ab".to_string(), String::new()))
         .collect();
-    let plain = proponi(&v);
+    let plain = propose(&v);
     let explained = samples::propose_explained(&v);
     assert_eq!(plain.len(), explained.len());
     for ((p, e), n) in plain.iter().zip(&explained).zip(&names) {
@@ -136,15 +133,18 @@ fn spans_never_change_the_values_and_stay_inside_the_name() {
 #[test]
 fn route_with_spans() {
     let input = r#"{"files":[{"name":"X_t5.mzML","sha256":"ab"}]}"#;
-    let out = samples::route("proponi_spiegato", input).unwrap();
-    assert!(out.starts_with("{\"campioni\":{\"campioni\":["), "{out}");
+    let out = samples::route("propose_explained", input).unwrap();
     assert!(
-        out.ends_with(",\"posizioni\":[[{\"campo\":\"tempo\",\"fine\":4,\"inizio\":2}]]}"),
+        out.starts_with("{\"samples\":{\"schema\":\"samples/1\",\"samples\":["),
+        "{out}"
+    );
+    assert!(
+        out.ends_with(",\"positions\":[[{\"field\":\"time\",\"end\":4,\"start\":2}]]}"),
         "{out}"
     );
     let doc: Value = serde_json::from_str(&out).unwrap();
     assert_eq!(
-        samples::to_json(&from_json(doc["campioni"].to_string().as_bytes()).unwrap()),
-        samples::route("proponi", input).unwrap()
+        samples::to_json(&from_json(doc["samples"].to_string().as_bytes()).unwrap()),
+        samples::route("propose", input).unwrap()
     );
 }

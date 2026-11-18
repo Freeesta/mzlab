@@ -1,4 +1,4 @@
-//! The canonical JSON of `campioni/3` (`docs/schemi/campioni-3.json`) and its reader, which also migrates a `campioni/2`: keys in alphabetical
+//! The canonical JSON of `samples/2` (`docs/schemi/samples-2.json`) and its reader, which also migrates a `samples/1`: keys in alphabetical
 //! order, files sorted by injection order (then by their own bytes), columns and free values by name, so equal metadata give the same bytes
 //! and the same SHA-256 whatever the order they were written in.
 
@@ -8,7 +8,7 @@ use crate::budget::sha256_hex;
 use crate::error::Result;
 use crate::json::{parse, Out, Value};
 
-pub const SCHEMA3: &str = "campioni/3";
+pub const SCHEMA3: &str = "samples/2";
 
 fn opt_str(j: &mut Out, v: Option<&str>) {
     match v {
@@ -19,8 +19,8 @@ fn opt_str(j: &mut Out, v: Option<&str>) {
 
 fn cell(j: &mut Out, c: &Cell) {
     match c {
-        Cell::Testo(t) => j.str(t),
-        Cell::Numero(x) => j.num(*x),
+        Cell::Text(t) => j.str(t),
+        Cell::Number(x) => j.num(*x),
     };
 }
 
@@ -30,28 +30,25 @@ fn range(j: &mut Out, a: &str, b: &str, v: Option<(f64, f64)>) {
 }
 
 fn file_data(j: &mut Out, d: &FileData) {
-    j.raw("{\"metodo\":").str(&d.method);
-    j.raw(",\"modello\":").str(&d.instrument);
+    j.raw("{\"instrument\":").str(&d.instrument);
+    j.raw(",\"method\":").str(&d.method);
     range(j, "mz_max", "mz_min", d.mz);
     range(j, "rt_max", "rt_min", d.rt);
-    j.raw(",\"scansioni\":")
-        .opt(d.scans.map(f64::from))
-        .raw("}");
+    j.raw(",\"scans\":").opt(d.scans.map(f64::from)).raw("}");
 }
 
 /// One file, keys in alphabetical order.
 fn one(c: &Sample) -> String {
     let mut j = Out::default();
-    j.raw("{\"acquisito\":");
+    j.raw("{\"acquired\":");
     opt_str(&mut j, c.acquired.as_deref());
-    j.raw(",\"campione\":").str(&c.sub);
-    j.raw(",\"campione_id\":").str(&c.sample_id);
-    j.raw(",\"composto\":").str(&c.compound);
-    j.raw(",\"concentrazione\":").opt(c.conc);
-    if let Some(d) = &c.file_data {
-        j.raw(",\"dati_file\":");
-        file_data(&mut j, d);
-    }
+    j.raw(",\"batch\":").str(&c.batch);
+    j.raw(",\"blank_kind\":");
+    opt_str(&mut j, c.blank_kind.as_deref());
+    j.raw(",\"compound\":").str(&c.compound);
+    j.raw(",\"concentration\":").opt(c.conc);
+    j.raw(",\"concentration_unit\":");
+    opt_str(&mut j, c.unit.as_deref());
     j.raw(",\"extra\":{");
     let mut x: Vec<&(String, Cell)> = c.extra.iter().collect();
     crate::sortc::slice_by(&mut x, |a, b| a.0.cmp(&b.0));
@@ -60,42 +57,44 @@ fn one(c: &Sample) -> String {
         cell(&mut j, v);
     }
     j.raw("},\"file\":").str(&c.file);
-    j.raw(",\"gruppo\":").str(&c.group);
+    if let Some(d) = &c.file_data {
+        j.raw(",\"file_data\":");
+        file_data(&mut j, d);
+    }
+    j.raw(",\"group\":").str(&c.group);
+    j.raw(",\"injection_order\":").int(c.order as i64);
     j.raw(",\"istd\":")
         .raw(if c.istd { "true" } else { "false" });
-    j.raw(",\"lotto\":").str(&c.batch);
-    j.raw(",\"matrice\":").str(&c.matrix);
+    j.raw(",\"kind\":").str(&c.kind);
+    j.raw(",\"matrix\":").str(&c.matrix);
     j.raw(",\"note\":").str(&c.note);
-    j.raw(",\"ordine_iniezione\":").int(c.order as i64);
-    j.raw(",\"polarita\":").opt(c.polarity.map(f64::from));
-    j.raw(",\"reiniezione\":")
+    j.raw(",\"polarity\":").opt(c.polarity.map(f64::from));
+    j.raw(",\"reinjection\":")
         .raw(if c.reinjection { "true" } else { "false" });
-    j.raw(",\"replica\":").int(c.replicate as i64);
-    j.raw(",\"serie\":").str(&c.series);
+    j.raw(",\"replicate\":").int(c.replicate as i64);
+    j.raw(",\"sample_id\":").str(&c.sample_id);
+    j.raw(",\"series\":").str(&c.series);
     j.raw(",\"sha256\":").str(&c.sha256);
-    j.raw(",\"tempo\":").opt(c.time);
-    j.raw(",\"tempo_confermato\":")
+    j.raw(",\"sub_sample\":").str(&c.sub);
+    j.raw(",\"time\":").opt(c.time);
+    j.raw(",\"time_confirmed\":")
         .raw(if c.time_confirmed { "true" } else { "false" });
-    j.raw(",\"tempo_min\":").opt(c.time_min);
-    j.raw(",\"tipo\":").str(&c.kind).raw(",\"tipo_bianco\":");
-    opt_str(&mut j, c.blank_kind.as_deref());
-    j.raw(",\"unita\":");
-    opt_str(&mut j, c.unit.as_deref());
-    j.raw(",\"unita_tempo\":").str(&c.time_unit).raw("}");
+    j.raw(",\"time_min\":").opt(c.time_min);
+    j.raw(",\"time_unit\":").str(&c.time_unit).raw("}");
     j.0
 }
 
 fn column(j: &mut Out, c: &Column) {
-    j.raw("{\"nome\":").str(&c.name);
+    j.raw("{\"kind\":").str(c.kind.name());
+    j.raw(",\"name\":").str(&c.name);
     if c.required {
-        j.raw(",\"obbligatoria\":true");
+        j.raw(",\"required\":true");
     }
-    j.raw(",\"tipo\":").str(c.kind.name());
     if let Some(v) = &c.values {
         let mut v = v.clone();
         crate::sortc::slice_ord(&mut v);
         v.dedup();
-        j.raw(",\"valori\":[");
+        j.raw(",\"values\":[");
         for (i, x) in v.iter().enumerate() {
             j.raw(if i > 0 { "," } else { "" }).str(x);
         }
@@ -104,23 +103,23 @@ fn column(j: &mut Out, c: &Column) {
     j.raw("}");
 }
 
-/// `{"campioni":[...],"colonne":[...],"schema":"campioni/3"}`; the files are sorted by `ordine_iniezione`, then by their own bytes.
+/// `{"schema":"samples/2","columns":[...],"samples":[...]}`; the files are sorted by `injection_order`, then by their own bytes.
 pub fn to_json3(t: &Table) -> String {
-    let mut files: Vec<(u32, String)> = t.campioni.iter().map(|c| (c.order, one(c))).collect();
+    let mut files: Vec<(u32, String)> = t.samples.iter().map(|c| (c.order, one(c))).collect();
     crate::sortc::slice_ord(&mut files);
-    let mut cols: Vec<&Column> = t.colonne.iter().collect();
+    let mut cols: Vec<&Column> = t.columns.iter().collect();
     crate::sortc::slice_by(&mut cols, |a, b| a.name.cmp(&b.name));
     let mut j = Out::default();
-    j.raw("{\"campioni\":[");
-    for (i, (_, f)) in files.iter().enumerate() {
-        j.raw(if i > 0 { "," } else { "" }).raw(f);
-    }
-    j.raw("],\"colonne\":[");
+    j.raw("{\"schema\":").str(SCHEMA3).raw(",\"columns\":[");
     for (i, c) in cols.into_iter().enumerate() {
         j.raw(if i > 0 { "," } else { "" });
         column(&mut j, c);
     }
-    j.raw("],\"schema\":").str(SCHEMA3).raw("}");
+    j.raw("],\"samples\":[");
+    for (i, (_, f)) in files.iter().enumerate() {
+        j.raw(if i > 0 { "," } else { "" }).raw(f);
+    }
+    j.raw("]}");
     j.0
 }
 
@@ -130,7 +129,7 @@ pub fn digest3(t: &Table) -> String {
 }
 
 fn polarity(v: &Value) -> Result<Option<i8>> {
-    match number(v, "polarita")? {
+    match number(v, "polarity")? {
         None => Ok(None),
         Some(x) if x == 1.0 || x == -1.0 => Ok(Some(x as i8)),
         _ => Err(bad()),
@@ -139,8 +138,8 @@ fn polarity(v: &Value) -> Result<Option<i8>> {
 
 fn cell_of(v: &Value) -> Result<Cell> {
     match v {
-        Value::Num(x) if x.is_finite() => Ok(Cell::Numero(*x)),
-        Value::Str(s) => Ok(Cell::Testo(s.clone())),
+        Value::Num(x) if x.is_finite() => Ok(Cell::Number(*x)),
+        Value::Str(s) => Ok(Cell::Text(s.clone())),
         _ => Err(bad()),
     }
 }
@@ -149,42 +148,39 @@ fn range_of(d: &Value, hi: &str, lo: &str) -> Result<Option<(f64, f64)>> {
     Ok(number(d, lo)?.zip(number(d, hi)?))
 }
 
-/// The fields `campioni/3` adds, all optional (a `campioni/2` has none): read into `c`.
+/// The fields `samples/2` adds, all optional (a `samples/1` has none): read into `c`.
 pub(super) fn read_new(v: &Value, c: &mut Sample) -> Result<()> {
     let s = |k: &str| -> Result<String> { Ok(opt_text(v, k, &[])?.unwrap_or_default()) };
-    c.sub = s("campione")?;
-    c.reinjection = v.get("reiniezione").and_then(|x| x.bool()).unwrap_or(false);
-    c.sample_id = s("campione_id")?;
-    c.matrix = s("matrice")?;
-    c.batch = s("lotto")?;
-    c.group = s("gruppo")?;
-    c.acquired = opt_text(v, "acquisito", &[])?;
+    c.sub = s("sub_sample")?;
+    c.reinjection = v.get("reinjection").and_then(|x| x.bool()).unwrap_or(false);
+    c.sample_id = s("sample_id")?;
+    c.matrix = s("matrix")?;
+    c.batch = s("batch")?;
+    c.group = s("group")?;
+    c.acquired = opt_text(v, "acquired", &[])?;
     c.polarity = polarity(v)?;
     if let Some(Value::Obj(o)) = v.get("extra") {
         for (k, x) in o {
             c.set_extra(k, cell_of(x)?);
         }
     }
-    if let Some(d @ Value::Obj(_)) = v.get("dati_file") {
+    if let Some(d @ Value::Obj(_)) = v.get("file_data") {
         c.file_data = Some(FileData {
-            instrument: opt_text(d, "modello", &[])?.unwrap_or_default(),
-            method: opt_text(d, "metodo", &[])?.unwrap_or_default(),
+            instrument: opt_text(d, "instrument", &[])?.unwrap_or_default(),
+            method: opt_text(d, "method", &[])?.unwrap_or_default(),
             mz: range_of(d, "mz_max", "mz_min")?,
             rt: range_of(d, "rt_max", "rt_min")?,
-            scans: number(d, "scansioni")?.map(|x| x as u32),
+            scans: number(d, "scans")?.map(|x| x as u32),
         });
     }
     Ok(())
 }
 
 fn read_column(v: &Value) -> Result<Column> {
-    let kind = ColumnType::from_name(&text(v, "tipo")?).ok_or_else(bad)?;
-    let mut c = Column::new(&text(v, "nome")?, kind);
-    c.required = v
-        .get("obbligatoria")
-        .and_then(|x| x.bool())
-        .unwrap_or(false);
-    if let Some(a) = v.get("valori") {
+    let kind = ColumnType::from_name(&text(v, "kind")?).ok_or_else(bad)?;
+    let mut c = Column::new(&text(v, "name")?, kind);
+    c.required = v.get("required").and_then(|x| x.bool()).unwrap_or(false);
+    if let Some(a) = v.get("values") {
         c.values = Some(
             a.arr()
                 .iter()
@@ -195,17 +191,17 @@ fn read_column(v: &Value) -> Result<Column> {
     Ok(c)
 }
 
-/// Reads a `campioni/3` document or migrates a `campioni/2` one (the new fields empty, no columns): files in the order written.
+/// Reads a `samples/2` document or migrates a `samples/1` one (the new fields empty, no columns): files in the order written.
 pub fn table_from_value(doc: &Value) -> Result<Table> {
     let samples = super::from_value(doc)?;
     let columns = doc
-        .get("colonne")
+        .get("columns")
         .map(|a| a.arr().iter().map(read_column).collect::<Result<_>>())
         .transpose()?
         .unwrap_or_default();
     Ok(Table {
-        campioni: samples,
-        colonne: columns,
+        samples: samples,
+        columns: columns,
     })
 }
 

@@ -1,6 +1,6 @@
 //! wasm-bindgen bridge of the table of `mzlab-feat`: the view (normalisation and filters), the report and the files that leave the table (CSV full,
 //! FBMN quantification table, MGF, SIRIUS `.ms`). A `.wasm` of its own, so the engine of the pipeline (`mzlab-feat-wasm`) does not carry it: the page loads
-//! it when a table is shown or exported. The `.mzfeat` is read by offsets (`read(0, offset, length) -> Uint8Array`), the `campioni/1` and the parameters of the view
+//! it when a table is shown or exported. The `.mzfeat` is read by offsets (`read(0, offset, length) -> Uint8Array`), the `sample-meta/1` and the parameters of the view
 //! come as JSON text, the `.mzidx` of the files (only for MGF and `.ms`) as `read(k, offset, length)`. Errors are JSON `{"error_key", "params"}` strings.
 #![forbid(unsafe_code)]
 use js_sys::{Function, Uint8Array};
@@ -114,7 +114,7 @@ pub fn tp_table(
 }
 
 /// The network of the products (`rete/1`): `table_read` is the `.mzfeat` with the block `tp/1` (`size` bytes), `interp_read` the one with the block `interp/1`
-/// (`interp_size` bytes; the same file when it carries both), `campioni_json` the `campioni/2` of the series ("" = no time course) and `rules` the table
+/// (`interp_size` bytes; the same file when it carries both), `samples_json` the `samples/1` of the series ("" = no time course) and `rules` the table
 /// of transformations (`regole_tp`).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
@@ -123,7 +123,7 @@ pub fn rete_build(
     size: f64,
     interp_read: Function,
     interp_size: f64,
-    campioni_json: &str,
+    samples_json: &str,
     rules: &[u8],
     ppm: f64,
     min_fragments: u32,
@@ -135,14 +135,14 @@ pub fn rete_build(
     mzlab_feat::network::network_text(
         (&mut table_reader(table_read), size as u64),
         (&mut table_reader(interp_read), interp_size as u64),
-        campioni_json,
+        samples_json,
         rules,
         &params,
     )
     .map_err(js_err)
 }
 
-/// The `campioni/1` proposed from the names of the files (`{"files":[{"name","sha256"}]}`).
+/// The `sample-meta/1` proposed from the names of the files (`{"files":[{"name","sha256"}]}`).
 #[wasm_bindgen]
 pub fn table_samples(files_json: &str) -> std::result::Result<String, JsValue> {
     core::samples_json(files_json).map_err(js_err)
@@ -272,7 +272,7 @@ pub fn export_table_auto(
     .map_err(js_err)
 }
 
-/// The `view/1` of the whole table under the rules a `table.filter` step spells in `params_json` (`filterspec::spec_from_json`), the one `flow run` writes; `samples_json` may be `campioni/2`.
+/// The `view/1` of the whole table under the rules a `table.filter` step spells in `params_json` (`filterspec::spec_from_json`), the one `flow run` writes; `samples_json` may be `samples/1`.
 #[wasm_bindgen]
 pub fn table_view_auto(
     table_read: Function,
@@ -451,7 +451,7 @@ pub fn table_row_traces(
     .map_err(js_err)
 }
 
-/// `campioni/2`: `op` is `proponi`, `valida`, `da_legacy`, `per_tp`, `canonico` or `digest` (the ones mzFinder calls); JSON in, JSON out.
+/// `samples/1`: `op` is `propose`, `validate`, `per_tp`, `canonical` or `digest` (the ones mzFinder calls); JSON in, JSON out.
 #[wasm_bindgen]
 pub fn samples(op: &str, input: &str) -> std::result::Result<String, JsValue> {
     core::samples_route(op, input).map_err(js_err)

@@ -1,9 +1,9 @@
 //! `table.stats@1` in a plan: a `.mzfeat` written by the real store on invented areas (a blank, a reference of three files, a treatment of three) with
-//! its samples (`campioni/2` and `campioni/1`) and design gives the `stat/1` of the engine called by hand and of its JSON entry (`stats_json`).
+//! its samples (`samples/1` and `sample-meta/1`) and design gives the `stat/1` of the engine called by hand and of its JSON entry (`stats_json`).
 
 use std::path::Path;
 
-use mzlab_core::drawing::{self, Condition, Confronto, Design};
+use mzlab_core::design::{self, Condition, Design, DesignComparison};
 use mzlab_core::samples::{self as core_samples, Sample};
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::samples;
@@ -82,7 +82,7 @@ pub(crate) fn design() -> Design {
     Design {
         conditions: vec![condition("ref"), condition("trt")],
         reference: Some("ref".into()),
-        comparisons: vec![Confronto::VsReference],
+        comparisons: vec![DesignComparison::VsReference],
         factors: Vec::new(),
         batches: Vec::new(),
     }
@@ -93,7 +93,7 @@ fn dir(tag: &str) -> std::path::PathBuf {
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(d.join("work")).unwrap();
     std::fs::write(d.join("table.mzfeat"), table()).unwrap();
-    std::fs::write(d.join("design.json"), drawing::to_json(&design())).unwrap();
+    std::fs::write(d.join("design.json"), design::to_json(&design())).unwrap();
     std::fs::write(d.join("samples.json"), core_samples::to_json(&campioni_2())).unwrap();
     d
 }
@@ -182,8 +182,8 @@ fn campioni_1_gives_the_same_statistics() {
 fn a_design_with_a_condition_that_is_not_there_fails() {
     let d = dir("bad");
     let mut bad = design();
-    bad.comparisons = vec![Confronto::Pair("ref".into(), "nope".into())];
-    std::fs::write(d.join("design.json"), drawing::to_json(&bad)).unwrap();
+    bad.comparisons = vec![DesignComparison::Pair("ref".into(), "nope".into())];
+    std::fs::write(d.join("design.json"), design::to_json(&bad)).unwrap();
     let plan = r#"{"format":"mzflow/2","inputs":[{"name":"table.mzfeat","type":"table"},{"name":"samples.json","type":"samples"},{"name":"design.json","type":"design"}],"steps":[
     {"id":"s","step":"table.stats@1","in":{"table":"file:table.mzfeat","samples":"file:samples.json","design":"file:design.json"}}]}"#;
     let (_, prov) = crate::flow::run_plan(plan.as_bytes(), &d, &d.join("work"), 1, None).unwrap();
@@ -196,7 +196,7 @@ fn browser_stats_text_matches_cli_flow_run_with_heat_orders() {
     let d = dir("parity_order");
     let cli = run(&d, "{}");
     let samples = core_samples::to_json(&campioni_2());
-    let design = drawing::to_json(&design());
+    let design = design::to_json(&design());
     let browser =
         mzlab_feat::flow_stat::stats_text(&[], &table(), samples.as_bytes(), design.as_bytes())
             .unwrap();

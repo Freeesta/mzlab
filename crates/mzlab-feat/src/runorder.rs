@@ -1,11 +1,11 @@
-//! The text of `qc.run_order@1`: the facts of the injection sequence of the sample table (`campioni/2` or `/3`) per batch: the count of each role, the largest gap between two QC injections,
+//! The text of `qc.run_order@1`: the facts of the injection sequence of the sample table (`samples/1` or `/3`) per batch: the count of each role, the largest gap between two QC injections,
 //! the blanks and the distinct standard levels, plus `warn.qc.runorder.*` keys. It reports facts and never a verdict. Bytes in, text out: `flow run` (`mzlab-cli`) and the browser module
 //! `flowtab` (`mzlab-feat-wasm`) both call it, so they write the same `runorder/1` bytes.
 
 use crate::drift::batches_of;
 use crate::samples::Sample;
 use crate::sortc::SortC;
-use mzlab_core::drawing::{self, DEFAULT_BATCH};
+use mzlab_core::design::{self, DEFAULT_BATCH};
 use mzlab_core::error::Result;
 use mzlab_core::json::{parse, Out, Value};
 use mzlab_core::samples;
@@ -63,7 +63,7 @@ fn read_samples(bytes: &[u8]) -> Result<(Vec<samples::Sample>, Vec<bool>)> {
     let mut doc = parse(bytes)?;
     let mut missing = Vec::new();
     if let Value::Obj(fields) = &mut doc
-        && let Some((_, Value::Arr(items))) = fields.iter_mut().find(|(k, _)| k == "campioni")
+        && let Some((_, Value::Arr(items))) = fields.iter_mut().find(|(k, _)| k == "samples")
     {
         for item in items {
             let Value::Obj(f) = item else {
@@ -72,12 +72,12 @@ fn read_samples(bytes: &[u8]) -> Result<(Vec<samples::Sample>, Vec<bool>)> {
             };
             let usable = f
                 .iter()
-                .find(|(k, _)| k == "ordine_iniezione")
+                .find(|(k, _)| k == "injection_order")
                 .and_then(|(_, v)| v.f64())
                 .is_some_and(|x| x >= 1.0 && x.fract() == 0.0 && x < 4e9);
             if !usable {
-                f.retain(|(k, _)| k != "ordine_iniezione");
-                f.push(("ordine_iniezione".into(), Value::Num(1.0)));
+                f.retain(|(k, _)| k != "injection_order");
+                f.push(("injection_order".into(), Value::Num(1.0)));
             }
             missing.push(!usable);
         }
@@ -287,7 +287,7 @@ fn batches_for(cs: &[samples::Sample], design: Option<&[u8]>) -> Result<Vec<Stri
     Ok(match design {
         Some(d) => {
             let named: Vec<Sample> = cs.iter().map(sample_of).collect();
-            batches_of(&named, &drawing::from_json(d)?)
+            batches_of(&named, &design::from_json(d)?)
         }
         None => cs
             .iter()
@@ -302,7 +302,7 @@ fn batches_for(cs: &[samples::Sample], design: Option<&[u8]>) -> Result<Vec<Stri
     })
 }
 
-/// The `runorder/1` text for the sample table `samples` (`campioni/2` or `/3`); the batches come from `design` (`disegno/1`) when it is given, else from the batch of each file, else one batch.
+/// The `runorder/1` text for the sample table `samples` (`samples/1` or `/3`); the batches come from `design` (`design/1`) when it is given, else from the batch of each file, else one batch.
 /// `params` are the parameters of the step.
 pub fn runorder_text(
     params: &[(String, Value)],

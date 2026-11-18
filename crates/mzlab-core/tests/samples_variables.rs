@@ -1,4 +1,4 @@
-//! `variabili` and `nome_gruppo` of `samples::route` (`nomivar/1`, `docs/agenti/samples.md` «Variables in the names»): a worked list,
+//! `variables` and `group_name` of `samples::route` (`sample-vars/1`, `docs/agenti/samples.md` «Variables in the names»): a worked list,
 //! permutations, noise, spellings, manual variables, the limits and the speed.
 use mzlab_core::samples::route_all as route;
 use serde_json::Value;
@@ -38,7 +38,7 @@ fn body(names: &[String], manual: &str) -> String {
 }
 
 fn ask(names: &[String]) -> Value {
-    serde_json::from_str(&route("variabili", &body(names, "")).unwrap()).unwrap()
+    serde_json::from_str(&route("variables", &body(names, "")).unwrap()).unwrap()
 }
 
 fn strs(v: &[&str]) -> Vec<String> {
@@ -58,20 +58,20 @@ fn view(r: &Value, names: &[String]) -> BTreeMap<String, String> {
         x
     };
     let mut out = BTreeMap::new();
-    for (i, v) in r["variabili"].as_array().unwrap().iter().enumerate() {
-        let vals: Vec<String> = v["valori"]
+    for (i, v) in r["variables"].as_array().unwrap().iter().enumerate() {
+        let vals: Vec<String> = v["values"]
             .as_array()
             .unwrap()
             .iter()
-            .map(|x| format!("{}={}:{:?}", x["chiave"], x["etichetta"], nm(&x["file"])))
+            .map(|x| format!("{}={}:{:?}", x["key"], x["label"], nm(&x["files"])))
             .collect();
         out.insert(
             format!("{i}:{}", v["id"]),
             format!(
                 "{} {} {:?} | {}",
-                v["punteggio"],
-                v["tipo"],
-                nm(&v["senza"]),
+                v["score"],
+                v["kind"],
+                nm(&v["without"]),
                 vals.join(" ")
             ),
         );
@@ -80,7 +80,7 @@ fn view(r: &Value, names: &[String]) -> BTreeMap<String, String> {
 }
 
 fn ids(r: &Value) -> Vec<String> {
-    r["variabili"]
+    r["variables"]
         .as_array()
         .unwrap()
         .iter()
@@ -89,20 +89,20 @@ fn ids(r: &Value) -> Vec<String> {
 }
 
 fn counts(r: &Value, id: &str) -> Vec<(String, usize)> {
-    let v = r["variabili"]
+    let v = r["variables"]
         .as_array()
         .unwrap()
         .iter()
         .find(|v| v["id"] == id)
         .unwrap_or_else(|| panic!("no variable {id}"));
-    v["valori"]
+    v["values"]
         .as_array()
         .unwrap()
         .iter()
         .map(|x| {
             (
-                x["etichetta"].as_str().unwrap().to_string(),
-                x["file"].as_array().unwrap().len(),
+                x["label"].as_str().unwrap().to_string(),
+                x["files"].as_array().unwrap().len(),
             )
         })
         .collect()
@@ -114,14 +114,14 @@ fn c(a: &[(&str, usize)]) -> Vec<(String, usize)> {
 
 #[test]
 fn the_list_of_the_study() {
-    let got = route("variabili", &body(&federico(), "")).unwrap();
+    let got = route("variables", &body(&federico(), "")).unwrap();
     assert_eq!(
         got,
         include_str!("samples_variables/federico.json").trim_end()
     );
     let r: Value = serde_json::from_str(&got).unwrap();
-    assert_eq!(r["schema"], "nomivar/1");
-    assert_eq!(r["comune"], "");
+    assert_eq!(r["schema"], "sample-vars/1");
+    assert_eq!(r["common"], "");
     assert_eq!(
         ids(&r),
         ["matrix", "cond", "time", "role", "matcond", "conc", "rep"]
@@ -154,9 +154,9 @@ fn the_list_of_the_study() {
     assert_eq!(counts(&r, "conc"), c(&[("1 ppm", 1), ("5 ppm", 1)]));
     assert_eq!(counts(&r, "rep"), c(&[("1", 1), ("2", 1)]));
     // BTZ, mid and Wash are no conditions: the six files without a time have no condition
-    let cond = &r["variabili"][1];
-    assert_eq!(cond["senza"], serde_json::json!([0, 1, 2, 3, 4, 5]));
-    assert_eq!(r["variabili"][0]["senza"], serde_json::json!([5]));
+    let cond = &r["variables"][1];
+    assert_eq!(cond["without"], serde_json::json!([0, 1, 2, 3, 4, 5]));
+    assert_eq!(r["variables"][0]["without"], serde_json::json!([5]));
 }
 
 #[test]
@@ -204,7 +204,7 @@ fn case_and_zeros_are_one_value() {
     assert_eq!(counts(&r, "role"), c(&[("blank", 4), ("sample", 4)]));
     // one time for the four timed files, so no variable
     assert!(!ids(&r).contains(&"time".to_string()));
-    let m = &r["variabili"][0];
+    let m = &r["variables"][0];
     assert_eq!(m["id"], "matrix");
 }
 
@@ -212,43 +212,43 @@ fn case_and_zeros_are_one_value() {
 fn terms_whole_token_or_inside() {
     let names = federico();
     let m = |terms: &str, sub: bool| {
-        let man = format!(",\"manuale\":{{\"has\":{terms},\"substring\":{sub}}}");
+        let man = format!(",\"manual\":{{\"has\":{terms},\"substring\":{sub}}}");
         let r: Value =
-            serde_json::from_str(&route("variabili", &body(&names, &man)).unwrap()).unwrap();
-        r["manuale"].clone()
+            serde_json::from_str(&route("variables", &body(&names, &man)).unwrap()).unwrap();
+        r["manual"].clone()
     };
     let whole = m("[\"O2\"]", false);
     assert_eq!(whole["id"], "has");
-    assert_eq!(whole["valori"][0]["file"].as_array().unwrap().len(), 4);
-    assert_eq!(whole["multipli"], serde_json::json!([]));
+    assert_eq!(whole["values"][0]["files"].as_array().unwrap().len(), 4);
+    assert_eq!(whole["multiple"], serde_json::json!([]));
     let inside = m("[\"O2\"]", true);
-    assert_eq!(inside["valori"][0]["file"].as_array().unwrap().len(), 12);
+    assert_eq!(inside["values"][0]["files"].as_array().unwrap().len(), 12);
     let two = m("[\"O2\",\"H2O2\"]", true);
     // the eight H2O2 files hold both terms; each goes to the first term
-    assert_eq!(two["multipli"].as_array().unwrap().len(), 8);
-    assert_eq!(two["valori"][0]["file"].as_array().unwrap().len(), 12);
-    assert_eq!(two["senza"].as_array().unwrap().len(), 18);
+    assert_eq!(two["multiple"].as_array().unwrap().len(), 8);
+    assert_eq!(two["values"][0]["files"].as_array().unwrap().len(), 12);
+    assert_eq!(two["without"].as_array().unwrap().len(), 18);
 }
 
 #[test]
 fn a_position_with_chosen_separators() {
     let names = federico();
     let pos = |n: i64, sep: &str| {
-        let man = format!(",\"manuale\":{{\"pos\":{n},\"sep\":{sep:?}}}");
+        let man = format!(",\"manual\":{{\"pos\":{n},\"sep\":{sep:?}}}");
         let r: Value =
-            serde_json::from_str(&route("variabili", &body(&names, &man)).unwrap()).unwrap();
-        r["manuale"].clone()
+            serde_json::from_str(&route("variables", &body(&names, &man)).unwrap()).unwrap();
+        r["manual"].clone()
     };
     let first = pos(1, "_");
     assert_eq!(first["id"], "pos:1");
-    assert_eq!(first["valori"][0]["etichetta"], "MQ");
-    assert_eq!(first["valori"][0]["file"].as_array().unwrap().len(), 20);
+    assert_eq!(first["values"][0]["label"], "MQ");
+    assert_eq!(first["values"][0]["files"].as_array().unwrap().len(), 20);
     let last = pos(-1, "_-. ");
     assert_eq!(last["id"], "pos:-1");
-    assert_eq!(last["valori"][0]["etichetta"], "T00");
+    assert_eq!(last["values"][0]["label"], "T00");
     // the second token with an underscore only: `MQ_blk` and `TW_blk` share `blk`
     let second = pos(2, "_");
-    assert_eq!(second["valori"][0]["file"].as_array().unwrap().len(), 8);
+    assert_eq!(second["values"][0]["files"].as_array().unwrap().len(), 8);
 }
 
 #[test]
@@ -264,13 +264,13 @@ fn names_without_separators_read_like_the_separated_ones() {
         .as_array()
         .unwrap()
         .iter()
-        .map(|t| t["testo"].as_str().unwrap())
+        .map(|t| t["text"].as_str().unwrap())
         .collect();
     assert_eq!(tokens, ["MQ", "H2O2", "T00"]);
     // a chemical piece is never cut
     let chem = ask(&strs(&["Na2SO4_T00", "Na2SO4_T05", "TiO2_T00", "TiO2_T05"]));
-    assert_eq!(chem["files"][0]["tokens"][0]["testo"], "Na2SO4");
-    assert_eq!(chem["files"][2]["tokens"][0]["testo"], "TiO2");
+    assert_eq!(chem["files"][0]["tokens"][0]["text"], "Na2SO4");
+    assert_eq!(chem["files"][2]["tokens"][0]["text"], "TiO2");
 }
 
 #[test]
@@ -283,11 +283,11 @@ fn folders_are_a_variable_when_they_differ() {
     ]);
     let r = ask(&names);
     assert_eq!(counts(&r, "folder"), c(&[("N2", 2), ("PMS", 2)]));
-    assert_eq!(r["files"][0]["tokens"][0]["classe"], "folder");
-    assert_eq!(r["files"][0]["tokens"][0]["testo"], "PMS");
+    assert_eq!(r["files"][0]["tokens"][0]["class"], "folder");
+    assert_eq!(r["files"][0]["tokens"][0]["text"], "PMS");
     let same = ask(&strs(&["PMS/a_T00.mzML", "PMS/a_T05.mzML"]));
     assert!(!ids(&same).contains(&"folder".to_string()));
-    assert_eq!(same["files"][0]["tokens"][0]["testo"], "a");
+    assert_eq!(same["files"][0]["tokens"][0]["text"], "a");
 }
 
 #[test]
@@ -299,12 +299,12 @@ fn degenerate_inputs() {
         strs(&["", "x"]),
     ] {
         let r = ask(&names);
-        assert!(r["variabili"].as_array().unwrap().is_empty() || names.len() > 1);
+        assert!(r["variables"].as_array().unwrap().is_empty() || names.len() > 1);
         assert_eq!(r["files"].as_array().unwrap().len(), names.len());
     }
-    assert_eq!(ask(&strs(&["same", "same"]))["comune"], "same");
-    assert_eq!(ask(&strs(&["MQ_a_T00", "MQ_b_T00"]))["comune"], "MQ*T00");
-    assert_eq!(ask(&strs(&["MQ_a_T00", "MQ_b_T05"]))["comune"], "MQ*");
+    assert_eq!(ask(&strs(&["same", "same"]))["common"], "same");
+    assert_eq!(ask(&strs(&["MQ_a_T00", "MQ_b_T00"]))["common"], "MQ*T00");
+    assert_eq!(ask(&strs(&["MQ_a_T00", "MQ_b_T05"]))["common"], "MQ*");
 }
 
 #[test]
@@ -312,8 +312,8 @@ fn group_name_cases() {
     let g = |names: &[&str]| {
         let v: Vec<String> = strs(names);
         let b = format!("{{\"names\":{}}}", serde_json::to_string(&v).unwrap());
-        let r: Value = serde_json::from_str(&route("nome_gruppo", &b).unwrap()).unwrap();
-        r["nome"].as_str().unwrap().to_string()
+        let r: Value = serde_json::from_str(&route("group_name", &b).unwrap()).unwrap();
+        r["name"].as_str().unwrap().to_string()
     };
     assert_eq!(g(&["MQ_H2O2_T00", "MQ_H2O2_T01"]), "MQ_H2O2");
     assert_eq!(
@@ -331,23 +331,20 @@ fn group_name_cases() {
 #[test]
 fn errors() {
     assert!(route("nope", "{}").is_err());
-    assert!(route("variabili", "{").is_err());
+    assert!(route("variables", "{").is_err());
     let over = body(&vec!["a".to_string(); 5001], "");
-    let e = route("variabili", &over).unwrap_err();
+    let e = route("variables", &over).unwrap_err();
     assert_eq!(
         (e.key, e.params[0].1.as_str()),
-        ("error.badCampioni", "5000")
+        ("error.badSamples", "5000")
     );
     let long = body(&["x".repeat(257)], "");
-    let e = route("variabili", &long).unwrap_err();
-    assert_eq!(
-        (e.key, e.params[0].1.as_str()),
-        ("error.badCampioni", "256")
-    );
-    let e = route("nome_gruppo", "{\"names\":[1]}").unwrap_err();
-    assert_eq!((e.key, e.params[0].0), ("error.badCampioni", "op"));
-    let man = body(&federico(), ",\"manuale\":{\"pos\":0}");
-    assert!(route("variabili", &man).is_err());
+    let e = route("variables", &long).unwrap_err();
+    assert_eq!((e.key, e.params[0].1.as_str()), ("error.badSamples", "256"));
+    let e = route("group_name", "{\"names\":[1]}").unwrap_err();
+    assert_eq!((e.key, e.params[0].0), ("error.badSamples", "op"));
+    let man = body(&federico(), ",\"manual\":{\"pos\":0}");
+    assert!(route("variables", &man).is_err());
 }
 
 #[test]
@@ -371,8 +368,8 @@ fn ten_thousand_names_stay_linear() {
     for _ in 0..3 {
         let t0 = std::time::Instant::now();
         (ra, rb) = (
-            route("variabili", &a).unwrap(),
-            route("variabili", &b).unwrap(),
+            route("variables", &a).unwrap(),
+            route("variables", &b).unwrap(),
         );
         ms = ms.min(t0.elapsed().as_millis());
     }

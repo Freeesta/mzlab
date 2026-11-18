@@ -1,4 +1,4 @@
-//! A small backtracking regular expression for the name models of `campioni/3` (no dependency: the size of the .wasm). Supports literals, `.`,
+//! A small backtracking regular expression for the name models of `samples/2` (no dependency: the size of the .wasm). Supports literals, `.`,
 //! classes (`[a-z]`, `[^_]`, `\d \w \s` and their negations), groups (`(...)`, `(?:...)`, `(?P<name>...)`, `(?<name>...)`), `|`, `* + ? {n} {n,} {n,m}`
 //! (lazy with a trailing `?`), `^`, `$` and a leading `(?i)`. A match is always of the whole text; a step budget and a length limit stop any blow-up.
 
@@ -189,7 +189,7 @@ impl Parser {
 }
 
 fn bad(pos: usize) -> Error {
-    Error::new("error.badModello").with("pos", pos)
+    Error::new("error.badModel").with("pos", pos)
 }
 
 impl Parser {
@@ -300,7 +300,7 @@ pub struct Regex {
 }
 
 impl Regex {
-    /// Compiles `pattern`; an error is `error.badModello` with the position.
+    /// Compiles `pattern`; an error is `error.badModel` with the position.
     pub fn new(pattern: &str) -> Result<Regex> {
         if pattern.chars().count() > MAX_PATTERN {
             return Err(bad(MAX_PATTERN));

@@ -1,0 +1,36 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "samples/1",
+ "title": "samples/1: roles and times of the files of a series",
+ "description": "One entry per file, in the order of injection: the one model of the roles and times of the Data view and of mzFinder (mzlab-core samples). Proposed from the names by `propose` (times never confirmed), checked by `validate`, read by the TP path through `per_tp`. Canonical JSON: keys in alphabetical order, so the same metadata give the same bytes and the same SHA-256.",
+ "type": "object",
+ "required": ["samples", "schema"],
+ "properties": {
+  "schema": {"const": "samples/1"},
+  "samples": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["compound", "concentration", "file", "istd", "note", "injection_order", "replicate", "series", "sha256", "time", "time_confirmed", "time_min", "kind", "blank_kind", "concentration_unit", "time_unit"],
+    "properties": {
+     "file": {"type": "string"},
+     "sha256": {"type": "string", "description": "SHA-256 of the raw file: the key (the name can change); empty when not known yet"},
+     "kind": {"enum": ["sample", "t0", "blank", "dark", "infusion", "std", "calibration", "qc"]},
+     "blank_kind": {"enum": ["solvent", "procedure", "wash", null], "description": "optional, only for a blank: solvent and procedure blanks are subtracted the same way; a wash is no reference"},
+     "time": {"type": ["number", "null"], "description": "the time as written or confirmed, in time_unit"},
+     "time_unit": {"enum": ["s", "min", "h", "d"]},
+     "time_min": {"type": ["number", "null"], "description": "derived from time and time_unit: the only time used in the computations; 0 for a t0"},
+     "time_confirmed": {"type": "boolean", "description": "false for a time proposed from the name: never used before the user confirms it"},
+     "series": {"type": "string", "description": "the experiment the file belongs to; empty = the only one, or shared by all"},
+     "replicate": {"type": "integer", "minimum": 1},
+     "concentration": {"type": ["number", "null"]},
+     "concentration_unit": {"type": ["string", "null"]},
+     "injection_order": {"type": "integer", "minimum": 1},
+     "istd": {"type": "boolean", "description": "the file is an internal standard"},
+     "note": {"type": "string"},
+     "compound": {"type": "string", "description": "for an infusion: formula or name of the parent"}
+    }
+   }
+  }
+ }
+}

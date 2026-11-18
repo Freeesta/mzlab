@@ -1,5 +1,5 @@
 //! The native executor of `table.filter@2`: the view (`view_json_origin`, the one the page asks of the table `.wasm`) of a `.mzfeat` under the rules the
-//! parameters of the step spell, in the language of the engine (`filtra`/`normalizza`). The roles come from the samples file, `campioni/1` or `campioni/2`.
+//! parameters of the step spell, in the language of the engine (`filtra`/`normalizza`). The roles come from the samples file, `sample-meta/1` or `samples/1`.
 
 use crate::flow::{read_one, write_made, FileRunner};
 use mzlab_core::error::Result;
@@ -10,7 +10,7 @@ use mzlab_feat::store::Slice;
 use mzlab_ops::run::table::core::view_json_origin;
 use mzlab_ops::run::table::filterspec;
 
-/// The samples as `campioni/1` text, whichever of the two schemas the file has (the rule is shared with the browser).
+/// The samples as `sample-meta/1` text, whichever of the two schemas the file has (the rule is shared with the browser).
 pub(crate) fn samples_text(bytes: &[u8]) -> Result<String> {
     mzlab_ops::run::table::pol::samples_v1(bytes)
 }

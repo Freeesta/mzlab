@@ -19,9 +19,9 @@ def run(*a):
 
 
 def samples_json(idx):
-    rows = [{"file": Path(p).stem + ".mzML", "sha256": "00" * 32, "tipo": "sample", "tempo_min": None, "replica": 1, "gruppo": "", "concentrazione": None,
-             "unita": None, "ordine_iniezione": i + 1, "istd": False, "note": ""} for i, p in enumerate(idx)]
-    return json.dumps({"schema": "campioni/1", "campioni": rows})
+    rows = [{"file": Path(p).stem + ".mzML", "sha256": "00" * 32, "kind": "sample", "time_min": None, "replicate": 1, "group": "", "concentration": None,
+             "concentration_unit": None, "injection_order": i + 1, "istd": False, "note": ""} for i, p in enumerate(idx)]
+    return json.dumps({"schema": "sample-meta/1", "samples": rows})
 
 
 @pytest.fixture(scope="module")

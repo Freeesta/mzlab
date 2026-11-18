@@ -1,4 +1,4 @@
-//! Finds again the files of a `campioni/2` that were moved or renamed: by SHA-256 first and, only when a side does not know its SHA-256, by the
+//! Finds again the files of a `samples/1` that were moved or renamed: by SHA-256 first and, only when a side does not know its SHA-256, by the
 //! same file name (flagged `by_name`, so the page can ask the user). A known SHA-256 that differs is a replaced file: never matched by name.
 
 use super::Sample;
@@ -6,7 +6,7 @@ use crate::json::Out;
 
 /// A file of the series found again at `path`; `by_name` when the SHA-256 could not decide.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Abbinamento {
+pub struct RelinkMatch {
     pub index: usize,
     pub path: String,
     pub by_name: bool,
@@ -20,11 +20,11 @@ fn base(path: &str) -> &str {
 /// `candidates` are (path, sha256 or "" when unknown). One candidate serves one file; the candidates are taken in the order of their path, so the
 /// same input gives the same answer. Among copies with the same SHA-256 the one with the same name is preferred. A name shared by several free
 /// candidates is not guessed. The answer is in the order of the files.
-pub fn relink(cs: &[Sample], candidates: &[(String, String)]) -> Vec<Abbinamento> {
+pub fn relink(cs: &[Sample], candidates: &[(String, String)]) -> Vec<RelinkMatch> {
     let mut cand: Vec<&(String, String)> = candidates.iter().collect();
     crate::sortc::slice_by(&mut cand, |a, b| a.0.cmp(&b.0));
     let mut used = vec![false; cand.len()];
-    let mut out: Vec<Abbinamento> = Vec::new();
+    let mut out: Vec<RelinkMatch> = Vec::new();
     for (i, c) in cs.iter().enumerate() {
         if c.sha256.is_empty() {
             continue;
@@ -36,7 +36,7 @@ pub fn relink(cs: &[Sample], candidates: &[(String, String)]) -> Vec<Abbinamento
             .or_else(|| (0..cand.len()).find(same));
         if let Some(k) = pick {
             used[k] = true;
-            out.push(Abbinamento {
+            out.push(RelinkMatch {
                 index: i,
                 path: cand[k].0.clone(),
                 by_name: false,
@@ -56,7 +56,7 @@ pub fn relink(cs: &[Sample], candidates: &[(String, String)]) -> Vec<Abbinamento
             .collect();
         if let [k] = free[..] {
             used[k] = true;
-            out.push(Abbinamento {
+            out.push(RelinkMatch {
                 index: i,
                 path: cand[k].0.clone(),
                 by_name: true,
@@ -67,22 +67,18 @@ pub fn relink(cs: &[Sample], candidates: &[(String, String)]) -> Vec<Abbinamento
     out
 }
 
-/// `{"abbinati":[{"indice","percorso","per_nome"}]}`.
-pub fn relink_json(a: &[Abbinamento]) -> String {
+/// `{"matches":[{"index","path","by_name"}]}`.
+pub fn relink_json(a: &[RelinkMatch]) -> String {
     let mut j = Out::default();
-    j.raw("{\"abbinati\":[");
+    j.raw("{\"matches\":[");
     for (i, x) in a.iter().enumerate() {
-        j.raw(if i > 0 {
-            ",{\"indice\":"
-        } else {
-            "{\"indice\":"
-        })
-        .int(x.index as i64)
-        .raw(",\"per_nome\":")
-        .raw(if x.by_name { "true" } else { "false" })
-        .raw(",\"percorso\":")
-        .str(&x.path)
-        .raw("}");
+        j.raw(if i > 0 { ",{\"index\":" } else { "{\"index\":" })
+            .int(x.index as i64)
+            .raw(",\"by_name\":")
+            .raw(if x.by_name { "true" } else { "false" })
+            .raw(",\"path\":")
+            .str(&x.path)
+            .raw("}");
     }
     j.raw("]}");
     j.0

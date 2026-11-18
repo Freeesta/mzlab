@@ -2,7 +2,7 @@
 //! a series without t0 noted on every row, the counts in the meta and back; the minutes alone keep the old gate.
 
 use mzlab_core::json::parse;
-use mzlab_core::samples::proponi;
+use mzlab_core::samples::propose;
 use mzlab_feat::evid::rowproofs::{Signs, NONE};
 use mzlab_feat::hypo::{Dir, Hypothesis, SRC_RULE};
 use mzlab_feat::table::{Aligned, CELL_ABSENT, CELL_DETECTED};
@@ -73,7 +73,7 @@ fn roles(names: &[&str]) -> TpRoles {
         .iter()
         .map(|n| (n.to_string(), String::new(), String::new()))
         .collect();
-    TpRoles::of(&proponi(&files))
+    TpRoles::of(&propose(&files))
 }
 
 /// The view with the roles (`Some`) or with the minutes alone (`None`: NaN for every file that is not timed, as the old pages send).

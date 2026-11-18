@@ -7,7 +7,7 @@ fn cli(args: &[&str]) -> crate::Outcome {
     crate::execute(&args.iter().map(|s| s.to_string()).collect::<Vec<_>>())
 }
 
-/// A run folder whose `prov.json` names a commit (a test build has none) and the `campioni/2` that gives every file its role.
+/// A run folder whose `prov.json` names a commit (a test build has none) and the `samples/1` that gives every file its role.
 fn run_folder(tag: &str) -> (std::path::PathBuf, std::path::PathBuf) {
     let (dir, files) = fixture(tag);
     let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
