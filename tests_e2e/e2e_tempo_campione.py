@@ -98,6 +98,31 @@ try:
             pg.locator("#cmp-tab input[data-m=time][data-f='H20 demi.mzML']").fill("30"); pg.keyboard.press("Tab")
             wait_for_js(pg, "[...document.querySelectorAll('#manint tbody tr[data-org=manual]')].some(r => r.children[1].textContent === 'H20 demi' && r.children[2].textContent === '30min')", 30000)
         step("the Manual-integrations table shows the time of each sample, in minutes in the CSV, and follows an edit of the sample table", manint)
+        def views():
+            # the Files panel, the sample table and the loading table are painted from the same state: every edit shows in all of them at once
+            pg.evaluate("document.activeElement && document.activeElement.blur()")
+            drawer(pg, "stat"); wait_for_js(pg, "!!document.querySelector('#cmp-tab')", 8000)
+            cmp_names = "[...document.querySelectorAll('#cmp-tab tbody tr td:first-child')].map(td => td.textContent.replace(/^\\s*\\d+\\s*/, '').trim())"
+            side = "[...document.querySelectorAll('#flst .fl .nm')].map(e => e.textContent)"
+            # role: set in the sample table -> tag in the panel and role in the loading table
+            pg.select_option("#cmp-tab select[data-m=type][data-f='PERM 3h.mzML']", "blank")
+            wait_for_js(pg, "[...document.querySelectorAll('#flst .fl')].some(e => e.querySelector('.nm').textContent === 'PERM 3h' && [...e.querySelectorAll('small abbr.ftag')].some(a => a.textContent === 'blk'))", 8000)
+            need(pg.evaluate("RUOLI.roleOf(ST.files.find(f => f.name === 'PERM 3h.mzML'))") == "blank", "the loading table did not take the role")
+            # rename: from the panel -> sample table
+            pg.locator("#flst .fl .nm", has_text="RET t0 (2)").click(button="right"); pg.locator("#ctx div", has_text="Rename").click(); pg.wait_for_selector("#askin")
+            pg.fill("#askin", "Renamed sample"); pg.keyboard.press("Enter")
+            wait_for_js(pg, "%s.includes('Renamed sample')" % cmp_names, 8000)
+            need("Renamed sample" in pg.evaluate(side), pg.evaluate(side))
+            # group: Group by time in the panel -> the sample table shows the group tag at once
+            pg.evaluate("GRUPPI.by({by: 'time'})")
+            wait_for_js(pg, "[...document.querySelectorAll('#cmp-tab .ftag')].length > 0", 8000)
+            need(pg.evaluate("[...document.querySelectorAll('#cmp-tab .ftag')].map(e => e.textContent).every(t => E.files.some(f => f.ugrp === t))"), "the group tags of the table differ from the panel")
+            # delete: the x of the panel -> gone from the sample table and the loading table
+            n0 = len(pg.evaluate(cmp_names)); pg.locator("#flst .fl", has_text="RET 8h (2)").locator(".fl-x").click()
+            wait_for_js(pg, "!%s.includes('RET 8h (2)')" % cmp_names, 8000)
+            need(len(pg.evaluate(cmp_names)) == n0 - 1 and "RET 8h (2)" not in pg.evaluate(side), pg.evaluate(cmp_names))
+            need(pg.evaluate("![...document.querySelectorAll('#flist tbody tr')].some(r => r.textContent.includes('RET 8h (2)') && r.querySelector('input[data-k=use]').checked)"), "the loading table still lists the deleted file as open")
+        step("role, rename, group, delete and time unit show at once in the Files panel, the sample table and the loading table", views)
         step("no page error", lambda: (lambda e: e and (_ for _ in ()).throw(AssertionError(e)))([x for x in r.errs if x[0] == "pageerror"]))
     r.close()
 except Exception as e:
