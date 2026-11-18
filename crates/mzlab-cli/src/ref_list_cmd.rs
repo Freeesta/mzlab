@@ -72,45 +72,9 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     let mut answer = list.clone();
     if let Some(x) = x {
-        let Some(x) = x
-            .replace(',', ".")
-            .parse::<f64>()
-            .ok()
-            .filter(|n| n.is_finite())
-        else {
-            return Outcome::fail("the number must be finite");
-        };
-        let v = parse(list.as_bytes()).unwrap_or(Value::Null);
-        let contam: Vec<Value> = v
-            .get("items")
-            .map_or(&[][..], Value::arr)
-            .iter()
-            .map(|i| {
-                Obj::new()
-                    .put("id", text(i.get("name").and_then(Value::str).unwrap_or("")))
-                    .put("mz", i.get("mz").cloned().unwrap_or(Value::Null))
-                    .put("pol", i.get("pol").cloned().unwrap_or(Value::Null))
-                    .done()
-            })
-            .collect();
-        let mut req = Obj::new().n("x", x).b("hr", true).put("pol", text(&pol));
-        if let (false, Some(t)) = (unit.is_empty(), tol) {
-            req = req.put("tol_unit", text(&unit)).n("tol", t);
-        }
-        let req = req
-            .put("losses", Value::Arr(vec![]))
-            .put("adducts", Value::Arr(vec![]))
-            .put("contam", Value::Arr(contam))
-            .done();
-        match mzlab_core::search::match_number(&write(&req)) {
-            Ok(m) => {
-                answer = format!(
-                    "{}{}",
-                    answer.trim_end_matches('}'),
-                    format_args!(",\"match\":{m}}}")
-                )
-            }
-            Err(e) => return Outcome::fail_error(&e),
+        match with_match(&list, &x, &unit, tol, &pol) {
+            Ok(a) => answer = a,
+            Err(o) => return o,
         }
     }
     let bad = list.contains("\"errors\":[{");
@@ -120,6 +84,52 @@ pub fn run(args: Vec<String>) -> Outcome {
         o.stderr = "some rows have errors (see \"errors\")\n".into();
     }
     o
+}
+
+/// The list answer with the `ricerca/1` of the number `x` against its items added under "match".
+fn with_match(
+    list: &str,
+    x: &str,
+    unit: &str,
+    tol: Option<f64>,
+    pol: &str,
+) -> Result<String, Outcome> {
+    let Some(x) = x
+        .replace(',', ".")
+        .parse::<f64>()
+        .ok()
+        .filter(|n| n.is_finite())
+    else {
+        return Err(Outcome::fail("the number must be finite"));
+    };
+    let v = parse(list.as_bytes()).unwrap_or(Value::Null);
+    let contam: Vec<Value> = v
+        .get("items")
+        .map_or(&[][..], Value::arr)
+        .iter()
+        .map(|i| {
+            Obj::new()
+                .put("id", text(i.get("name").and_then(Value::str).unwrap_or("")))
+                .put("mz", i.get("mz").cloned().unwrap_or(Value::Null))
+                .put("pol", i.get("pol").cloned().unwrap_or(Value::Null))
+                .done()
+        })
+        .collect();
+    let mut req = Obj::new().n("x", x).b("hr", true).put("pol", text(pol));
+    if let (false, Some(t)) = (unit.is_empty(), tol) {
+        req = req.put("tol_unit", text(unit)).n("tol", t);
+    }
+    let req = req
+        .put("losses", Value::Arr(vec![]))
+        .put("adducts", Value::Arr(vec![]))
+        .put("contam", Value::Arr(contam))
+        .done();
+    let m = mzlab_core::search::match_number(&write(&req)).map_err(|e| Outcome::fail_error(&e))?;
+    Ok(format!(
+        "{}{}",
+        list.trim_end_matches('}'),
+        format_args!(",\"match\":{m}}}")
+    ))
 }
 
 fn fail4(m: &str) -> Outcome {
