@@ -35,7 +35,7 @@ try:
         def defaults():
             want = {"K_MIRATO-t0": ("ms", 2), "K_BLOCCHI-t0": ("ms", 3), "B_MRM-t0": ("srm", 2), "B_FullMass-t0": ("tic", 0)}
             for lab, (fam, liv) in want.items():
-                c = pg.evaluate(f"CANALI.iniziale(E.files.find(f => (f.label || f.name || '').includes({lab!r}))).then(c => c && [c.fam, c.liv])")
+                c = pg.evaluate(f"CANALI.iniziale(E.files.find(f => (f.label || f.name || '').includes({lab!r}))).then(c => c && [c.family, c.ms_level])")
                 assert c == [fam, liv], (lab, c)
         step("default channel by type (table in esperimenti.js)", defaults)
         def ida():
