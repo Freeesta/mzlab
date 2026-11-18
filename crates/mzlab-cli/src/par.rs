@@ -1,6 +1,6 @@
 //! `par_map`: the independent per-file passes of `features` on a pool of threads and the index + detect stage of `features` built on it.
 
-use crate::{build_index, open};
+use crate::open;
 use mzlab_core::error::Result;
 use mzlab_ops::run::feat::run;
 use std::path::PathBuf;
@@ -45,18 +45,19 @@ pub(crate) type Detected = (mzlab_feat::recipe::Recipe, Vec<Vec<u8>>, Vec<Vec<u8
 /// recipe, the `.mzfeatf` bytes and the weak candidates of each file.
 pub(crate) fn index_and_detect(
     files: &[PathBuf],
+    labels: &[String],
     idxs: &[PathBuf],
     params: &str,
 ) -> Result<Detected> {
     #[cfg(not(target_family = "wasm"))]
-    if let Some(r) = pooled(files, idxs, params) {
+    if let Some(r) = pooled(files, labels, idxs, params) {
         return r;
     }
-    par_map(files.len(), |k| index_one(files, idxs, k))
+    par_map(files.len(), |k| index_one(files, labels, idxs, k))
         .into_iter()
         .collect::<Result<Vec<()>>>()?;
     let recipe = run::recipe_for(params, &mut open(&idxs[0])?)?;
-    let detected = par_map(files.len(), |k| detect_one(files, idxs, k, &recipe))
+    let detected = par_map(files.len(), |k| detect_one(files, labels, idxs, k, &recipe))
         .into_iter()
         .collect::<Result<Vec<_>>>()?;
     let (peaks, weak) = detected.into_iter().unzip();
@@ -64,11 +65,20 @@ pub(crate) fn index_and_detect(
     Ok((recipe, peaks, weak))
 }
 
-fn index_one(files: &[PathBuf], idxs: &[PathBuf], k: usize) -> Result<()> {
-    eprintln!("index {}", files[k].display());
+/// File `k` as the progress lines name it: `PATH`, or `PATH@ID` for a sample chosen with `--sample`.
+fn shown(files: &[PathBuf], labels: &[String], k: usize) -> String {
+    let id = crate::flow_set::split_sample(&labels[k]).1;
+    id.map_or(files[k].display().to_string(), |i| {
+        format!("{}@{i}", files[k].display())
+    })
+}
+
+fn index_one(files: &[PathBuf], labels: &[String], idxs: &[PathBuf], k: usize) -> Result<()> {
+    eprintln!("index {}", shown(files, labels, k));
     mzlab_feat::prof::time("index", || {
-        build_index(
+        crate::build_index_of(
             &files[k],
+            &labels[k],
             &idxs[k],
             mzlab_core::budget_auto::native_index_budget(),
         )
@@ -77,12 +87,13 @@ fn index_one(files: &[PathBuf], idxs: &[PathBuf], k: usize) -> Result<()> {
 
 fn detect_one(
     files: &[PathBuf],
+    labels: &[String],
     idxs: &[PathBuf],
     k: usize,
     recipe: &mzlab_feat::recipe::Recipe,
 ) -> Result<Pair> {
     Ok((
-        detect_strong(files, idxs, k, recipe)?,
+        detect_strong(files, labels, idxs, k, recipe)?,
         detect_weak_one(idxs, k, recipe)?,
     ))
 }
@@ -90,14 +101,20 @@ fn detect_one(
 /// The `.mzfeatf` bytes of file `k`.
 fn detect_strong(
     files: &[PathBuf],
+    labels: &[String],
     idxs: &[PathBuf],
     k: usize,
     recipe: &mzlab_feat::recipe::Recipe,
 ) -> Result<Vec<u8>> {
-    eprintln!("detect {}", files[k].display());
+    eprintln!("detect {}", shown(files, labels, k));
     let name = files[k]
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
+    let name = if labels[k].is_empty() {
+        name
+    } else {
+        labels[k].clone()
+    };
     let mut ix = open(&idxs[k])?;
     let cap = mzlab_core::budget::MemBudget::mb(mzlab_core::budget_auto::native_auto_mb()).cap();
     mzlab_ops::run::feat::estimate::detect_fits(&mut ix, recipe, cap)?;
@@ -197,7 +214,12 @@ fn collect(mut st: Pool) -> Result<Detected> {
 
 /// `index_and_detect` on a pool of threads; `None` when there is only one thread (then the plain passes run).
 #[cfg(not(target_family = "wasm"))]
-fn pooled(files: &[PathBuf], idxs: &[PathBuf], params: &str) -> Option<Result<Detected>> {
+fn pooled(
+    files: &[PathBuf],
+    labels: &[String],
+    idxs: &[PathBuf],
+    params: &str,
+) -> Option<Result<Detected>> {
     use std::sync::{Condvar, Mutex};
     let n = files.len();
     let workers = std::thread::available_parallelism().map_or(1, |w| w.get());
@@ -230,7 +252,7 @@ fn pooled(files: &[PathBuf], idxs: &[PathBuf], params: &str) -> Option<Result<De
                     Job::Index(k) => {
                         // a core in use: the passes that split in two use the others
                         let _core = mzlab_core::spare::busy(1);
-                        let r = index_one(files, idxs, k);
+                        let r = index_one(files, labels, idxs, k);
                         let ok = r.is_ok();
                         lock().indexed[k] = Some(r);
                         if k == 0 {
@@ -252,7 +274,7 @@ fn pooled(files: &[PathBuf], idxs: &[PathBuf], params: &str) -> Option<Result<De
                         if let (Some(recipe), true) = (recipe, indexed) {
                             let _core = mzlab_core::spare::busy(1);
                             if matches!(job, Job::Strong(_)) {
-                                let r = detect_strong(files, idxs, k, &recipe);
+                                let r = detect_strong(files, labels, idxs, k, &recipe);
                                 lock().detected[k] = Some(r);
                             } else {
                                 let r = detect_weak_one(idxs, k, &recipe);
