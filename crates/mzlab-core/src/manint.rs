@@ -488,6 +488,9 @@ mod auto_tests;
 #[path = "manint_ext_tests.rs"]
 mod ext_tests;
 #[cfg(test)]
+#[path = "manint_nopeak_tests.rs"]
+mod nopeak_tests;
+#[cfg(test)]
 #[path = "manint_tests.rs"]
 mod tests;
 #[cfg(test)]

@@ -112,13 +112,11 @@ const COPY = ["apex_rt_min", "area", "height"];
 const KEY = ["apex_rt_min", "area"];
 /** The colour of a sample as the Files list and the chart draw it (`f.color`), by the sample name the engine writes; "" when no file has that name. @param {string} name */
 const colorOfSample = name => { const f = (typeof E !== "undefined" ? E.files : []).find((/** @type {any} */ x) => x && !x.gone && sampleOf(x.file || "") === name); return f && f.color ? String(f.color) : ""; };
-/** A cell: its value as shown; apex, area and height are buttons that copy the CSV value (full precision); the name is an input. Where the engine found no peak (`np`) the area and height of the unmoved window are not a result: «–», dimmed. @param {string} v @param {string} col @param {number} i @param {boolean} [np] */
-const cell = (v, col, i, np = false) => col === "sn_zone" && v === ""
+/** A cell: its value as shown; apex, area and height are buttons that copy the CSV value (full precision); the name is an input. @param {string} v @param {string} col @param {number} i */
+const cell = (v, col, i) => col === "sn_zone" && v === ""
   ? h`<button type="button" class="manint-nz" data-nz="${i}" title="${t("int.tbl.pickNoise.title")}">${t("int.tbl.pickNoise")}</button>`
   : col === "sample" && colorOfSample(v)
   ? h`<span class="manint-sw" aria-hidden="true" style="background:${colorOfSample(v)}"></span>${v}`
-  : np && (col === "area" || col === "height")
-  ? h`<span class="manint-np" title="${t("canali.manint.nopeak.tip")}">–</span>`
   : col === "label"
   ? h`<input type="text" class="manint-nm" maxlength="${NM_MAX}" data-nm="${i}" value="${v}" aria-label="${t("canali.manint.nm.aria")}" autocomplete="off" spellcheck="false">`
   : COPY.includes(col) && v !== ""
@@ -194,7 +192,7 @@ function draw() {
   const trs = body.map((r, i) => {
     const rec = recOf(r, head), who = { ch: chShown(r[0]), s: r[iS] };
     const act = rec && !rec.fol ? h`<button type="button" class="manint-x" data-del="${i}" aria-label="${t("canali.manint.del.aria", who)}" title="${t("canali.manint.del")}">×</button>` : "";
-    const tds = cols.slice(1).map(c => h`<td${raw(clsAttr(head[c]))}${raw(head[c] === "origin" && r[c] === "unmatched" ? h` title="${t("canali.manint.unmatched.tip")}"` : "")}>${raw(head[c] === "label" && !rec ? h`${r[c]}` : cell(r[c], head[c], i, r[iO] === "no_peak"))}</td>`).join("");
+    const tds = cols.slice(1).map(c => h`<td${raw(clsAttr(head[c]))}${raw(head[c] === "origin" && r[c] === "unmatched" ? h` title="${t("canali.manint.unmatched.tip")}"` : "")}>${raw(head[c] === "label" && !rec ? h`${r[c]}` : cell(r[c], head[c], i))}</td>`).join("");
     return h`<tr data-org="${r[iO]}"${raw(rec ? h` class="manint-go" data-go="${i}" tabindex="0" aria-label="${t("canali.manint.show.aria", who)}"` : "")}><th scope="row">${chShown(r[cols[0]])}</th>${raw(tds)}<td>${raw(act)}</td></tr>`;
   }).join("");
   el.innerHTML = h`<div class="manint-head"><h3><button type="button" class="manint-tg" id="manint-h" aria-expanded="${open ? "true" : "false"}" aria-controls="manint-b" aria-describedby="manint-d" title="${t("canali.manint.note")}"><svg class="manint-chev" width="12" height="12" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true" focusable="false"><path d="M1.5 3.5h7L5 7.5z"/></svg>${t("canali.manint.title", { n: total })}</button></h3>
@@ -303,22 +301,6 @@ function parts(it) {
   return mine.length > 1 && mine.length === cuts + 1 ? mine.map(r => ({ rt: +r[c("apex_rt_min")], area: +r[c("area")], height: +r[c("height")], wait: false })) : null;
 }
 
-/** @type {WeakMap<any, { v: string | undefined }>} */ const SN = new WeakMap();
-/** The S/N of a window that follows the sample (integra-segue.js), by the engine as a table row would have it, without adding a row; undefined until it
- * answers (the panel is then drawn again), "" when there is no peak. @param {any} p @param {any} f */
-function snr(p, f) {
-  const c = SN.get(f); if (c) return c.v;
-  const e = { v: /** @type {string | undefined} */ (undefined) }, m = /^m\|(\d+)\|(.+)$/.exec(f.key || ""), b = baseOf(f); SN.set(f, e);
-  if (!m || !b) { e.v = ""; return e.v; }
-  getMrm(+m[1]).then(async (/** @type {any[]} */ list) => {
-    const tr = list.findIndex(x => String(x.id) === m[2]); if (tr < 0) { e.v = ""; return; }
-    const w = JSON.stringify([{ file: 0, tr, a: f.a, b: f.b, ...b }]), r = await fetch(`api/manint?k=${m[1]}&sums=0&w=${encodeURIComponent(w)}`);
-    const all = r.ok ? rows(await r.text()) : [], i = (all[0] || []).indexOf("snr");
-    e.v = i >= 0 && all[1] ? all[1][i] : ""; G.draw(p);
-  }).catch(() => { e.v = ""; });
-  return undefined;
-}
-
 /** @type {WeakMap<any, { sig: string, by: Map<number, { a: number, b: number, origin: string, shift: number }>, ask: Set<number> }>} */ const FW = new WeakMap();
 /** Where a window drawn on one sample lands on sample `k` (api/manfollow, manint::follow_text: the apex searched within the window's width on each side),
  * undefined until the engine answers (the panel is then drawn again); asked for the samples shown, and again only for one that comes later.
@@ -350,6 +332,6 @@ const soon = () => { clearTimeout(timer); timer = setTimeout(sync, 150); };
 /** The notice and the per-file log of an automatic integration, shown at the next draw of the card. @param {string} say @param {string[]} log */
 const report = (say, log) => { st.say = say; st.log = log; st.sig = ""; };
 
-G.MANINT = { rows, report, opts: optCols, wrap: withCols, sync: soon, now: sync, snr, valleys, parts, follow, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file), times: Object.fromEntries(st.ks.map(k => [E.files[k].label, E.files[k].time ?? null])) }) };
+G.MANINT = { rows, report, opts: optCols, wrap: withCols, sync: soon, now: sync, valleys, parts, follow, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file), times: Object.fromEntries(st.ks.map(k => [E.files[k].label, E.files[k].time ?? null])) }) };
 document.addEventListener("campioni", soon);      // a time point typed in the sample table changes the column
 soon();
