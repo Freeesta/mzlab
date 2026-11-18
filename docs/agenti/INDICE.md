@@ -190,6 +190,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | WebAssembly potential (`opt-level` profiles, SIMD128, binaryen, zlib-rs, threads, memory64, minimum browsers; measurements) | `docs/agenti/wasm-potential.md` |
 | Waters MassLynx `.raw` folder reader (`crates/mzlab-lettori/src/waters/`, `waters` module, grouping in `waters-raw.js`) | `docs/agenti/waters.md` |
 | full binary specification (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-full-spec.md` |
+| a `.wiff` or `.wiff.scan` loaded alone: which file is its companion (shared Rust rule, `mzlab-cli pair`), the folder prompt of the page (`wiff-pair.js`), what each browser does | `docs/agenti/wiff-pair.md` |
 | choosing which samples of a `.wiff` (or other multi-sample file) to open: how Analyst does it, cost of listing (measured), #3398 reuse, dialog mockup, `samples list` CLI, cap estimate, PR split, questions (study, no feature code) | `docs/agenti/wiff-sample-choice.md` |
 | other SCIEX instruments, sMRM, PIS/NL, feature `estesi` (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-variants.md` |
 | writing a `.wiff` + `.wiff.scan`: create, add or remove samples (feasibility and design study, no writer code yet: streams per sample, lossless copy, verification, CLI `wiff`, wasm cap) | `docs/agenti/wiff-writer.md` |

@@ -53,6 +53,7 @@
     "../../mzlab/web/cartella-carica.js",
     "../../mzlab/web/cartella-puntata.js",
     "../../mzlab/web/cartella-puntata-desktop.js",
+    "../../mzlab/web/wiff-pair.js",
     "../../mzlab/web/agilent-d.js",
     "../../mzlab/web/waters-raw.js",
     "../../mzlab/web/metodo-m.js",

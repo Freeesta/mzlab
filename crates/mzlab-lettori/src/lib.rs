@@ -13,6 +13,7 @@ pub mod json;
 pub mod not_carried;
 #[cfg(any(feature = "aperti", feature = "tutte"))]
 pub mod open;
+pub mod pair;
 #[cfg(any(feature = "shimadzu", feature = "tutte"))]
 pub mod shimadzu;
 pub mod srm;

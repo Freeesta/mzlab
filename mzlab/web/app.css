@@ -700,3 +700,6 @@ header>:not(#stbar){flex-shrink:0}header .hq{width:24px;height:24px}
 .manint .qq-tab th.manint-key,.manint .qq-tab td.manint-key{font-weight:600;background:color-mix(in srgb,var(--accent) 12%,var(--panel))}.manint-go:hover td.manint-key{background:color-mix(in srgb,var(--accent) 20%,var(--panel))}.manint-sw{display:inline-block;width:10px;height:10px;margin-right:6px;border-radius:2px;vertical-align:baseline;box-shadow:0 0 0 1px var(--line)}
 /* Tabui is hidden from the navigation (TABUI_VISIBLE in first-paint.js); the tool stays and opens on #/tpmine */
 #nav[data-hide-tabui] button[data-v="tpmine"]{display:none!important}
+
+.wiffpair{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:7000;max-width:min(560px,calc(100vw - 24px));background:var(--panel);color:var(--ink);border:1px solid var(--accent);border-radius:6px;padding:8px 12px;box-shadow:0 2px 10px color-mix(in srgb,var(--ink) 25%,transparent)}
+.wiffpair[hidden]{display:none}.wiffpair .wp-msg{margin:0 0 6px}.wiffpair .wp-act{display:flex;gap:8px;flex-wrap:wrap}.wiffpair button{min-height:28px;min-width:28px}

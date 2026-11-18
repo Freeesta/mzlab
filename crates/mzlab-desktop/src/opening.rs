@@ -103,15 +103,6 @@ pub struct Plan {
     pub refused: Vec<String>,
 }
 
-/// The file of `dir` whose name equals `name` ignoring case (the OS may hand over `X.WIFF.SCAN` while the folder holds `X.wiff`).
-fn sibling(dir: &Path, name: &str) -> Option<PathBuf> {
-    let want = name.to_lowercase();
-    std::fs::read_dir(dir).ok()?.flatten().find_map(|e| {
-        let p = e.path();
-        (e.file_name().to_string_lossy().to_lowercase() == want && p.is_file()).then_some(p)
-    })
-}
-
 /// What the system asked to open: `X.wiff.scan` is opened as the `.wiff` beside it (same folder, case-insensitive) together with itself, a `.wiff` takes its
 /// `.wiff.scan` along, a `.wiff.scan` without its `.wiff` and a `.scan` of another maker are refused with a message and nothing is opened for them.
 pub fn plan_from_paths(paths: impl IntoIterator<Item = PathBuf>) -> Plan {
@@ -127,14 +118,13 @@ pub fn plan_from_paths(paths: impl IntoIterator<Item = PathBuf>) -> Plan {
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default();
         let low = name.to_lowercase();
-        let dir = p.parent().map(Path::to_path_buf).unwrap_or_default();
         if low.ends_with(".scan") && p.is_file() {
             if !low.ends_with(WIFF_SCAN) {
                 plan.refused.push(name);
                 continue;
             }
-            let stem = &name[..name.len() - ".scan".len()];
-            match sibling(&dir, stem) {
+            // the pairing rule is the engine's (`mzlab_lettori::pair`), the same the CLI and the site follow
+            match mzlab_lettori::pair::companion_in_dir(&p).and_then(|c| c.found) {
                 Some(w) => {
                     add(&mut plan, w);
                     add(&mut plan, p);
@@ -142,7 +132,7 @@ pub fn plan_from_paths(paths: impl IntoIterator<Item = PathBuf>) -> Plan {
                 None => plan.refused.push(name),
             }
         } else if low.ends_with(".wiff") && p.is_file() {
-            let scan = sibling(&dir, &format!("{name}.scan"));
+            let scan = mzlab_lettori::pair::companion_in_dir(&p).and_then(|c| c.found);
             add(&mut plan, p);
             if let Some(s) = scan {
                 add(&mut plan, s);

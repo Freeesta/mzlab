@@ -161,6 +161,7 @@ mod mzml_variants_tests;
 mod name_rule_tests;
 #[cfg(not(target_family = "wasm"))]
 pub mod normative;
+mod pair_cmd;
 mod par;
 mod peaks_auto_cmd;
 mod peaks_auto_lr_cmd;
