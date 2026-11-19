@@ -13,6 +13,37 @@ use crate::engine::{CountWrite, Picked, Progress, State};
 use crate::natives;
 use crate::rpc::{io_error, text, Answer, Eng};
 
+/// `natdefault {ids, sizes, budget_mb?}` / `natselect {present, text}`: the answers the page's sample chooser asks of the engine (`readers::selection`, the twins of the
+/// site worker's ops; the same bytes as `sample_default`, `sample_selection` and `mzlab-cli samples select`). The budget is the engine's own on each side (the site worker's `BUDGET_MB`, the app's `ram::native_budget_mb`), as the page has no number for it; `budget_mb` overrides it.
+pub(crate) fn nat_choose(op: &str, p: &Value) -> Result<Answer> {
+    use mzlab_core::readers::selection;
+    let nums = |k: &str| -> Vec<f64> {
+        p[k].as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_f64)
+            .collect()
+    };
+    if op == "natselect" {
+        let present: Vec<u32> = nums("present").iter().map(|x| *x as u32).collect();
+        return text(selection::selection_json(
+            &present,
+            p["text"].as_str().unwrap_or(""),
+        )?);
+    }
+    let ids: Vec<u32> = nums("ids").iter().map(|x| *x as u32).collect();
+    let sizes: Vec<u64> = nums("sizes").iter().map(|x| x.max(0.0) as u64).collect();
+    text(selection::suggest_json(
+        &ids,
+        &sizes,
+        selection::budget_bytes(
+            p["budget_mb"]
+                .as_f64()
+                .unwrap_or_else(crate::ram::native_budget_mb),
+        ),
+    ))
+}
+
 impl State {
     /// Closes the slot the file `name` is open in (its index and its reader): the file changed or was replaced.
     pub(crate) fn drop_slot(eng: &mut Eng, name: &str) {
