@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "msn-figures/1",
+  "title": "msn-figures/1: the figure files an msn command wrote",
+  "description": "The files `msn graph --out ... --figure` and `msn figure` wrote (svg, html, png), in the order asked. Code: crates/mzlab-cli/src/msn_outputs.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "files"
+  ],
+  "properties": {
+    "schema": {
+      "const": "msn-figures/1"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

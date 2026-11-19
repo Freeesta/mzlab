@@ -22,11 +22,11 @@ fn insilico(_: Vec<String>) -> Outcome {
 }
 
 pub(crate) static TABLE: &[Entry] = &[
-    Entry::new("db normative build", "mzlab-cli db normative build --cache DIR --out DIR   build the EU and US regulatory lists from the official sources (native only)", |a| normative(pre("build", a))),
-    Entry::new("db normative pack", "mzlab-cli db normative pack ...   pack the regulatory lists (native only)", |a| normative(pre("pack", a))),
-    Entry::new("db normative listings", "mzlab-cli db normative listings ...   the regulatory lists built (native only)", |a| normative(pre("listings", a))),
-    Entry::new("db normative import-official", "mzlab-cli db normative import-official ...   import the official lists the user owns (native only)", |a| normative(pre("import-official", a))),
-    Entry::new("db insilico pack", "mzlab-cli db insilico pack CSV OUT   the spectra.insilico candidate package (native only)", insilico),
+    Entry::new("db normative build", "mzlab-cli db normative build --cache DIR --out DIR   build the EU and US regulatory lists from the official sources (native only)", |a| normative(pre("build", a))).schema("normative-build/1").exits(&[0, 1, 2, 3, 4, 6]),
+    Entry::new("db normative pack", "mzlab-cli db normative pack ...   pack the regulatory lists (native only)", |a| normative(pre("pack", a))).exits(&[0, 2, 4, 6]),
+    Entry::new("db normative listings", "mzlab-cli db normative listings ...   the regulatory lists built (native only)", |a| normative(pre("listings", a))).exits(&[0, 2, 4]),
+    Entry::new("db normative import-official", "mzlab-cli db normative import-official ...   import the official lists the user owns (native only)", |a| normative(pre("import-official", a))).exits(&[0, 2, 3, 4, 6]),
+    Entry::new("db insilico pack", "mzlab-cli db insilico pack CSV OUT   the spectra.insilico candidate package (native only)", insilico).schema("insilico/1").exits(&[0, 1, 2, 4, 6]),
     Entry::new("db ref-list", "mzlab-cli db ref-list FILE.csv [--name N] [--match X]   read a CSV list of reference ions as JSON (reflist/1) with line-numbered row errors; exit 1 if rows are wrong", crate::plain::ref_list_cmd::run).schema("reflist/1"),
     Entry::new("llm tools", "mzlab-cli llm tools [--out FILE] [--demo] [--compact]   the catalog tools/1 of the assistant tools", |a| crate::llm::run(pre("tools", a))).examples(&["mzlab-cli llm tools --compact"]).schema("tools/1"),
     Entry::new("llm inspect", "mzlab-cli llm inspect FILE|DIR... [--budget N] [--hide-names]   inspect mzML files", |a| crate::llm::run(pre("inspect", a))).schema("inspection/1").exits(&[0, 2, 4]),

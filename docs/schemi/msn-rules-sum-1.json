@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "msn-rules-sum/1",
+  "title": "msn-rules-sum/1: msn-rules/1 documents added up",
+  "description": "What `mzlab-cli msn rules sum` prints: the thresholds of the protocol, the records skipped by reason and the strata (instrument and activation, polarity) with coverage, peaks per rule and decoy rate per rule. Code: crates/mzlab-cli/src/msn_rules/sum.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "thresholds",
+    "skipped",
+    "layers"
+  ],
+  "properties": {
+    "schema": {
+      "const": "msn-rules-sum/1"
+    },
+    "thresholds": {
+      "type": "object"
+    },
+    "skipped": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer"
+      }
+    },
+    "layers": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}

@@ -31,7 +31,7 @@ fn message_of(stderr: &str) -> (String, String) {
 }
 
 /// The verdict commands, by command path: their exit 1 or 3 is a verdict of the answer they print (the listing has refused samples, the pair lacks
-/// its companion, the file has errors, some rows of the list are wrong), the same document the site computes byte for byte. It stays on stdout and
+/// its companion, the file has errors, some rows of the list are wrong, a regulatory list stayed stale), the same document the site computes byte for byte. It stays on stdout and
 /// carries its own verdict; every other exit of these, and every other command's non-zero exit, is one `error/1`.
 pub(crate) const VERDICT: &[&str] = &[
     "file validate",
@@ -41,6 +41,7 @@ pub(crate) const VERDICT: &[&str] = &[
     "sample list",
     "db ref-list",
     "llm eval",
+    "db normative build",
 ];
 
 /// Whether the arguments start with the path of a verdict command (`sample list ...`, `file verify ...`).

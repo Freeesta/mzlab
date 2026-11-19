@@ -25,6 +25,7 @@ const INPUT_KEYS: &[&str] = &[
     "err.flow.input.sha",
     "err.session.fileNotFound",
     "err.normative.input",
+    "err.msn.rules.document",
     "error.badIndex",
 ];
 const OUTPUT_KEYS: &[&str] = &[

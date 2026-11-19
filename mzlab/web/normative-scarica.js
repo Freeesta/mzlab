@@ -15,11 +15,11 @@ const err = (/** @type {string} */ key, /** @type {Record<string, unknown>} */ p
 const hex = (/** @type {ArrayBuffer} */ b) => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
 export const sha256 = async (/** @type {Uint8Array<ArrayBuffer>} */ u8) => hex(await crypto.subtle.digest("SHA-256", u8));
 
-/** The catalogue text checked the way the Rust packer writes it: format (`normative/1` unless another package, such as `insilico/1`, asks for its own), plain piece names, sizes that add up. */
-export function parseCatalog(/** @type {string} */ text, /** @type {string} */ format = FORMAT) {
+/** The catalogue text checked the way the Rust packer writes it: format (`normative/1` unless another package, such as `insilico/1`, asks for its own, read from `key`), plain piece names, sizes that add up. */
+export function parseCatalog(/** @type {string} */ text, /** @type {string} */ format = FORMAT, /** @type {string} */ key = "format") {
   /** @type {Catalog} */ let c;
   try { c = JSON.parse(text); } catch (_) { throw err("normative.dl.err.catalog", { detail: "json" }); }
-  if (!c || c.format !== format || !Array.isArray(c.pieces) || !/^[0-9a-f]{64}$/.test(c.sha256 || "")) throw err("normative.dl.err.catalog", { detail: String(c && c.format) });
+  if (!c || /** @type {any} */ (c)[key] !== format || !Array.isArray(c.pieces) || !/^[0-9a-f]{64}$/.test(c.sha256 || "")) throw err("normative.dl.err.catalog", { detail: String(c && /** @type {any} */ (c)[key]) });
   for (const p of c.pieces) if (!/^\d{3}\.bin$/.test(p.file) || !/^[0-9a-f]{64}$/.test(p.sha256) || !(p.size > 0)) throw err("normative.dl.err.catalog", { detail: String(p.file) });
   if (c.pieces.reduce((s, p) => s + p.size, 0) !== c.size_compressed) throw err("normative.dl.err.catalog", { detail: "size" });
   return c;

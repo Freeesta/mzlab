@@ -34,6 +34,8 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--turn", "turn"),
     ("--tables", "JSON tables"),
     ("--sub", "substructure query"),
+    ("--dry-run", "check only, write nothing"),
+    ("--summary", "numbers only, msn-summary/1"),
     ("--strict", "also check hashes"),
     ("--rules", "use the rules"),
     ("--roles", "JSON file roles"),

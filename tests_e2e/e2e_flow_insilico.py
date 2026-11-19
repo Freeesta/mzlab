@@ -74,6 +74,7 @@ subprocess.run(["cargo", "build", "--locked", "--release", "-q", "-p", "mzlab-cl
 subprocess.run([str(cli), "db", "insilico", "pack", str(csv), str(pack), "--version", "test", "--doi", "10.0/test", "--piece-raw", "16000"], check=True, capture_output=True)
 CAT = json.loads((pack / "catalogo.json").read_text())
 assert len(CAT["pieces"]) >= 3, "the test package needs several pieces"
+assert CAT["schema"] == "insilico/1", CAT.get("schema")  # the packer names the format with the first key `schema`
 CATTEXT = (pack / "catalogo.json").read_text()
 # 2. native: the catalogue is the suspects file, its pieces are next to it
 for f in pack.iterdir(): shutil.copy2(f, run / f.name)
