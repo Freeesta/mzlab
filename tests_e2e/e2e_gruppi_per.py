@@ -76,7 +76,7 @@ try:
             wait_for_js(pg, "document.querySelector('dialog.gby-dlg .gby-prev li') && !document.querySelector('dialog.gby-dlg button:not(.sec)').disabled", 10000)
             prev = pg.evaluate("[...document.querySelectorAll('dialog.gby-dlg .gby-prev li')].map(l => l.textContent)")
             assert prev == ["O2 · 4", "Other · 26"], prev
-            pg.locator("dialog.gby-dlg button:not(.sec)").click(); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'manuale'", 10000); wait_still(pg, "#flst")
+            pg.locator("dialog.gby-dlg button:not(.sec)").click(); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'manual'", 10000); wait_still(pg, "#flst")
             assert count(pg, "O2") == 4 and count(pg, "Other") == 26, pg.evaluate(LABELS)
         step("Contains «O2» matches the whole word only (4 files), the rest is «Other»", contains)
         def reload():
