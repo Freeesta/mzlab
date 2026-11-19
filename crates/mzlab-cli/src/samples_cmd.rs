@@ -276,7 +276,7 @@ usage: mzlab-cli sample select FILE (--sample LIST | --default [--budget-mb N]) 
   --sample LIST  sample ids and ranges: 1,3,5 or 2-4 (the ids of `sample list`, not positions)
   --default    the samples the site's chooser ticks at the start (`sample_default`): all when their section bytes are small against the budget, none otherwise
   --budget-mb N  the memory budget for --default in MB (default 1024; 0 = the default)
-  --json       {\"samples\":[ids]} on stdout, the ids in the order of the file: the same bytes as the site's `sample_selection` / `sample_default`
+  --json       {\"schema\":\"sample-select/1\",\"samples\":[ids]} on stdout, the ids in the order of the file: the same bytes as the site's `sample_selection` / `sample_default`
 The same LIST is taken by `convert`, `channels` and `features`.
 Exit codes: 0 selected; 2 usage (LIST is not a list, both or neither of --sample and --default, a --budget-mb that is not a number of MB); 4 the file is missing or unreadable; 5 an id the file does not have (the ids present are named).";
 

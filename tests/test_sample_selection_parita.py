@@ -49,7 +49,7 @@ def test_the_site_and_the_cli_select_the_same_samples(work):
             a, b = json.loads(out), json.loads(line)
             assert rc in (2, 5) and (b["error_key"], b["params"]) == (a["error_key"], a["params"]), (text, out, line)
             assert rc == (5 if a["error_key"] == "err.sample.unknown" else 2), (text, rc)
-    assert site(work, [1, 2, 3], "3,1") == (0, '{"samples":[1,3]}')
+    assert site(work, [1, 2, 3], "3,1") == (0, '{"schema":"sample-select/1","samples":[1,3]}')
     assert app(work, "1,9")[0] == 5
 
 
