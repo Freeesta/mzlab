@@ -1,6 +1,6 @@
 //! `mzlab-cli llm tools [--out FILE]`: the catalog `tools/1` of the assistant tools, generated from the step registry `flow::steps()` and the
 //! table of native executors. `mzlab-cli llm replay REG.jsonl --conv CONV.json`: the events a recording `llmreg/1` gives for a conversation. The
-//! catalog and the providers live in `mzlab-llm`. `llm inspect|params DIR`: the facts without a model (`llm_facts.rs`).
+//! catalog and the providers live in `mzlab-llm`. `llm inspect|params FILE|DIR...`: the facts without a model (`llm_facts.rs`).
 
 use std::path::PathBuf;
 
@@ -20,12 +20,13 @@ pub(crate) mod facts;
 
 const HELP: &str = "mzlab-cli llm tools [--demo] [--compact] [--out FILE]   the catalog tools/1 of the assistant tools (stdout, or FILE); --demo: the subset of the public demo;
   --compact: tools-compact/1, per tool the name, class and the names of its inputs, no prose
-mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the normalized events of a recording, one JSON line per event (stdout);
+mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   replay/1: the normalized events of a recording (stdout);
   the turn defaults to the number of assistant messages of the conversation; --strict also compares the SHA-256 of the request
 mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the context/1 the assistant gets from a run folder (stdout)
-mzlab-cli llm eval CASES_DIR --replay DIR   score the evaluation cases against their recordings DIR/<id>.jsonl (exit 1 if one fails)
-mzlab-cli llm inspect DIR [--budget N] [--hide-names]   the inspection/1 of the mzML files of a folder, without a model (stdout)
-mzlab-cli llm params DIR [--answers FILE] [--budget N] [--hide-names]   the param-proposal/1 of the rules for the same files (stdout)";
+mzlab-cli llm eval CASES_DIR --replay DIR   evalrun/1: score the evaluation cases against their recordings DIR/<id>.jsonl (exit 1 if one fails)
+mzlab-cli llm inspect FILE|DIR... [--budget N] [--hide-names]   the inspection/1 of mzML files (a folder gives its files by name), indexed in parallel, without a model
+mzlab-cli llm params FILE|DIR... [--answers FILE] [--budget N] [--hide-names]   the param-proposal/1 of the rules for the same files; or
+  --inspection FILE|- [--answers FILE]: the rules on an inspection you already have (no indexing; `llm inspect A B | llm params --inspection -`)";
 
 /// The catalog text, the one `docs/schemi/tools-1.json` holds.
 pub fn tools_json() -> String {
@@ -157,7 +158,11 @@ fn replay(args: Vec<String>) -> Outcome {
                 .count()
         });
         let events = replay.at(turn, &req).map_err(|e| e.to_string())?;
-        Ok(events.iter().map(|e| e.to_json() + "\n").collect())
+        let events: Vec<String> = events.iter().map(|e| e.to_json()).collect();
+        Ok(format!(
+            "{{\"schema\":\"replay/1\",\"turn\":{turn},\"events\":[{}]}}\n",
+            events.join(",")
+        ))
     };
     go().map_or_else(|e| Outcome::fail(&e), |t| Outcome::ok(t.into_bytes()))
 }

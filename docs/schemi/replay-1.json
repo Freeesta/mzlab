@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "replay/1",
+  "title": "replay/1: the answer of `mzlab-cli llm replay`",
+  "description": "The normalized events a recording `llmreg/1` gives for one turn of a conversation, in order. Code: crates/mzlab-cli/src/llm.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "turn",
+    "events"
+  ],
+  "properties": {
+    "schema": {
+      "const": "replay/1"
+    },
+    "turn": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "ev"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false
+}

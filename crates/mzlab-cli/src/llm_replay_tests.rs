@@ -33,17 +33,14 @@ fn the_turn_follows_the_conversation() {
     let o = replay(&[], "conv_turn0.json");
     assert_eq!(o.code, 0, "{}", o.stderr);
     let t = String::from_utf8(o.stdout).unwrap();
-    assert_eq!(t.lines().count(), 7);
-    assert_eq!(
-        t.lines().next().unwrap(),
-        "{\"ev\":\"text_delta\",\"text\":\"Let me check the plan.\"}"
-    );
-    assert_eq!(
-        t.lines().last().unwrap(),
-        "{\"ev\":\"stop\",\"reason\":\"tool\"}"
-    );
+    let doc: serde_json::Value = serde_json::from_str(&t).unwrap();
+    assert!(t.starts_with("{\"schema\":\"replay/1\",\"turn\":0"), "{t}");
+    let ev = doc["events"].as_array().unwrap();
+    assert_eq!(ev.len(), 7);
+    assert_eq!(ev[0]["text"], "Let me check the plan.");
+    assert_eq!(ev[6]["reason"], "tool");
     let t1 = String::from_utf8(replay(&[], "conv_turn1.json").stdout).unwrap();
-    assert!(t1.contains("The plan is valid.") && t1.lines().count() == 3);
+    assert!(t1.contains("The plan is valid.") && t1.contains("\"turn\":1"));
     // the same call twice gives the same bytes
     assert_eq!(replay(&[], "conv_turn0.json").stdout, t.into_bytes());
     assert!(
@@ -54,12 +51,13 @@ fn the_turn_follows_the_conversation() {
 }
 
 #[test]
-fn strict_wants_a_recorded_request_and_errors_exit_with_2() {
+fn strict_wants_a_recorded_request_and_errors_take_the_codes_of_the_contract() {
+    // a recording in the wrong format is integrity (3), one with no turn left is data (1), no arguments is usage (2)
     let o = replay(&["--strict"], "conv_turn0.json");
-    assert_eq!(o.code, 2);
+    assert_eq!(o.code, 3);
     assert!(o.stderr.contains("err.llm.replay.format"), "{}", o.stderr);
     let o = replay(&["--turn", "9"], "conv_turn0.json");
-    assert_eq!(o.code, 2);
+    assert_eq!(o.code, 1);
     assert!(
         o.stderr.contains("err.llm.replay.exhausted"),
         "{}",

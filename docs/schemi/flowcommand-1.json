@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "flowcommand/1",
+  "title": "flowcommand/1: the answer of `mzlab-cli flow command PLAN.json --json`",
+  "description": "The shell script that reruns the plan, as text in `script`. Code: crates/mzlab-cli/src/cmd/flow.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "script"
+  ],
+  "properties": {
+    "schema": {
+      "const": "flowcommand/1"
+    },
+    "script": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

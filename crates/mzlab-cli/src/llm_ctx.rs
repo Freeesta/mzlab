@@ -6,7 +6,8 @@ use std::path::Path;
 
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::flow::Platform;
-use mzlab_core::json::{parse, Value};
+use mzlab_core::json::{parse, Out, Value};
+use mzlab_core::Error;
 use mzlab_llm::context::build;
 use mzlab_llm::eval::{run, score, Case};
 use mzlab_llm::fake::Replay;
@@ -97,7 +98,7 @@ fn sources(dir: &Path, hide: bool) -> Value {
                 );
             }
             ("json", Some("annot/1"), Some(v)) => o.push(("annot".into(), v)),
-            ("json", Some("msn-graph/1" | "msn-graph/1"), Some(v)) => o.push(("msn".into(), v)),
+            ("json", Some("msn-graph/1"), Some(v)) => o.push(("msn".into(), v)),
             _ => {}
         }
     }
@@ -130,38 +131,94 @@ pub(crate) fn context(args: Vec<String>) -> Outcome {
     }
 }
 
-fn cases(dir: &str) -> Result<Vec<Case>, String> {
+fn cases(dir: &str) -> Result<Vec<Case>, Error> {
+    let io = |p: &Path| {
+        let p = p.display().to_string();
+        move |e: std::io::Error| Error::new("err.cli.file").with("path", format!("{p}: {e}"))
+    };
     let mut files: Vec<_> = std::fs::read_dir(dir)
-        .map_err(|e| format!("{dir}: {e}"))?
+        .map_err(io(Path::new(dir)))?
         .flatten()
         .map(|e| e.path())
         .collect();
     files.retain(|p| p.extension().is_some_and(|e| e == "json"));
     files.sort();
-    let read = |p: &Path| std::fs::read_to_string(p).map_err(|e| format!("{}: {e}", p.display()));
+    let read = |p: &Path| std::fs::read_to_string(p).map_err(io(p));
     files
         .iter()
-        .map(|p| Case::parse(&read(p)?).map_err(|e| format!("{}: {e}", p.display())))
+        .map(|p| Case::parse(&read(p)?).map_err(|e| e.with("file", p.display().to_string())))
         .collect()
 }
 
-fn evaluate(dir: &str, replay: &str) -> Result<(usize, usize, String), String> {
-    let (mut passed, mut total, mut text) = (0, 0, String::new());
+/// One case of `evalrun/1`: its id, the checks passed and the total, and the names of those that failed.
+struct Scored {
+    id: String,
+    passed: usize,
+    total: usize,
+    failed: Vec<String>,
+}
+
+/// Every case against its recording: a file that cannot be read is an input error (4), a case or recording of the wrong format an integrity
+/// error (3), a recording that does not answer its case a data error (1, as an `error/1`: the verdict document is only for scored cases).
+fn evaluate(dir: &str, replay: &str) -> Result<Vec<Scored>, Error> {
+    let mut v = Vec::new();
     for case in cases(dir)? {
         let path = Path::new(replay).join(format!("{}.jsonl", case.id));
-        let reg = std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-        let mut rep = Replay::parse(&reg, false).map_err(|e| e.to_string())?;
+        let reg = std::fs::read_to_string(&path).map_err(|e| {
+            Error::new("err.cli.file").with("path", format!("{}: {e}", path.display()))
+        })?;
+        let mut rep =
+            Replay::parse(&reg, false).map_err(|e| e.with("file", path.display().to_string()))?;
         let tools = catalog(&steps(), UI_TOOLS, &executable);
-        let plan = run(&case, &mut rep, tools, steps()).map_err(|e| format!("{}: {e}", case.id))?;
+        let plan =
+            run(&case, &mut rep, tools, steps()).map_err(|e| e.with("case", case.id.clone()))?;
         let s = score(&plan, &case);
-        text += &format!("{} {}/{}\n", case.id, s.passed(), s.checks.len());
-        for (name, ok) in s.checks.iter().filter(|(_, ok)| !ok) {
-            text += &format!("  FAIL {name} ({ok})\n");
-        }
-        passed += s.passed();
-        total += s.checks.len();
+        v.push(Scored {
+            id: case.id.clone(),
+            passed: s.passed(),
+            total: s.checks.len(),
+            failed: s
+                .checks
+                .iter()
+                .filter(|(_, ok)| !ok)
+                .map(|(n, _)| n.to_string())
+                .collect(),
+        });
     }
-    Ok((passed, total, text))
+    Ok(v)
+}
+
+/// `evalrun/1`: the score of every case and the total; exit 1 when a check fails (the document stays on stdout, it is the verdict).
+fn evalrun_json(cases: &[Scored]) -> String {
+    let (p, t) = cases
+        .iter()
+        .fold((0, 0), |a, c| (a.0 + c.passed, a.1 + c.total));
+    let mut o = Out::default();
+    o.raw("{\"schema\":\"evalrun/1\",\"passed\":")
+        .int(p as i64)
+        .raw(",\"total\":")
+        .int(t as i64)
+        .raw(",\"percent\":")
+        .int((100 * p).checked_div(t).unwrap_or(0) as i64)
+        .raw(",\"cases\":[");
+    for (k, c) in cases.iter().enumerate() {
+        if k > 0 {
+            o.raw(",");
+        }
+        o.raw("{\"id\":").str(&c.id);
+        o.raw(",\"passed\":").int(c.passed as i64);
+        o.raw(",\"total\":").int(c.total as i64);
+        o.raw(",\"failed\":[");
+        for (j, f) in c.failed.iter().enumerate() {
+            if j > 0 {
+                o.raw(",");
+            }
+            o.str(f);
+        }
+        o.raw("]}");
+    }
+    o.raw("]}\n");
+    o.0
 }
 
 pub(crate) fn eval(args: Vec<String>) -> Outcome {
@@ -182,14 +239,10 @@ pub(crate) fn eval(args: Vec<String>) -> Outcome {
         return Outcome::fail("usage: mzlab-cli llm eval CASES_DIR --replay DIR");
     };
     match evaluate(&dir, &replay) {
-        Err(e) => Outcome::fail(&e),
-        Ok((p, t, text)) => Outcome {
-            code: u8::from(p != t),
-            stdout: format!(
-                "{text}total {p}/{t} ({}%)\n",
-                (100 * p).checked_div(t).unwrap_or(0)
-            )
-            .into_bytes(),
+        Err(e) => Outcome::fail_error(&e),
+        Ok(cases) => Outcome {
+            code: u8::from(cases.iter().any(|c| !c.failed.is_empty())),
+            stdout: evalrun_json(&cases).into_bytes(),
             stderr: String::new(),
             error: None,
         },

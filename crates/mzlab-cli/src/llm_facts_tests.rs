@@ -62,10 +62,18 @@ fn cli(args: &[&str]) -> String {
 
 #[test]
 fn llm_inspect_and_params_give_the_golden_bytes() {
-    let Some(dir) = folder() else { return };
+    let dir = strict_folder();
     let d = dir.to_str().unwrap();
     let insp = cli(&["llm", "inspect", d]);
-    assert_eq!(insp.trim_end(), inspection(&dir, false, BUDGET).unwrap());
+    assert_eq!(
+        insp.trim_end(),
+        inspection(
+            &crate::llm::facts::inputs(&[d.to_string()]).ok().unwrap(),
+            false,
+            BUDGET
+        )
+        .unwrap()
+    );
     assert!(insp.starts_with("{\"schema\":\"inspection/1\""), "{insp}");
     golden("tests/data/llm/fatti/inspection.json", &insp);
     let prop = cli(&["llm", "params", d]);
@@ -105,4 +113,183 @@ fn the_proposal_of_g01_is_the_one_the_wasm_export_checks() {
         "crates/mzlab-llm/tests/data/proposal_g01.json",
         &(out + "\n"),
     );
+}
+
+fn args(a: &[&str]) -> Vec<String> {
+    a.iter().map(|s| s.to_string()).collect()
+}
+
+/// The synthetic folder; these tests never skip: without python3 and numpy they fail, so a green run always compared the bytes.
+fn strict_folder() -> PathBuf {
+    folder().expect("these tests need python3 and numpy (tools/dati_sintetici.py)")
+}
+
+fn files(dir: &Path) -> Vec<PathBuf> {
+    DONE.iter().map(|f| dir.join(f)).collect()
+}
+
+#[test]
+fn files_and_a_folder_give_the_same_bytes_with_one_worker_or_many() {
+    let dir = strict_folder();
+    let files = files(&dir);
+    let by_dir = crate::llm::facts::inputs(&[dir.to_str().unwrap().to_string()])
+        .ok()
+        .unwrap();
+    let one = crate::llm::facts::inspection_with(&files, false, BUDGET, 1).unwrap();
+    assert!(one.starts_with("{\"schema\":\"inspection/1\""));
+    for workers in [2, 4, 8] {
+        let n = crate::llm::facts::inspection_with(&files, false, BUDGET, workers).unwrap();
+        assert_eq!(one, n, "{workers} workers");
+    }
+    assert_eq!(
+        one,
+        crate::llm::facts::inspection_with(&by_dir, false, BUDGET, 4).unwrap()
+    );
+}
+
+fn saved_inspection(dir: &Path) -> PathBuf {
+    let mut a = args(&["llm", "inspect"]);
+    a.extend(files(dir).iter().map(|f| f.to_str().unwrap().to_string()));
+    let o = execute(&a);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let saved = dir.join("inspection.json");
+    std::fs::write(&saved, &o.stdout).unwrap();
+    saved
+}
+
+#[test]
+fn params_on_an_inspection_from_a_file_or_stdin_is_params_on_the_files() {
+    let dir = strict_folder();
+    let saved = saved_inspection(&dir);
+    let want = cli(&["llm", "params", dir.to_str().unwrap()]);
+    let reuse = cli(&["llm", "params", "--inspection", saved.to_str().unwrap()]);
+    assert_eq!(reuse, want);
+    // standard input: the bytes of `llm inspect A B` piped in
+    let mut piped = std::io::Cursor::new(std::fs::read(&saved).unwrap());
+    let o = crate::llm::facts::params_with(args(&["--inspection", "-"]), &mut piped);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert_eq!(String::from_utf8(o.stdout).unwrap(), want);
+    // the proposal logs its automatic choices with their reasons
+    let doc: serde_json::Value = serde_json::from_str(&want).unwrap();
+    let choices = doc["choices"].as_array().unwrap();
+    let keys: Vec<&str> = choices.iter().map(|c| c["key"].as_str().unwrap()).collect();
+    assert_eq!(keys, ["reference_file", "resolution_class", "answers"]);
+    assert!(choices
+        .iter()
+        .all(|c| !c["reason"].as_str().unwrap().is_empty()));
+    // a budget, hidden names or files belong elsewhere
+    for extra in [vec!["--budget", "5"], vec!["--hide-names"], vec!["x.mzML"]] {
+        let mut a = args(&["llm", "params", "--inspection", saved.to_str().unwrap()]);
+        a.extend(extra.iter().map(|s| s.to_string()));
+        let o = execute(&a);
+        assert_eq!(o.code, 2, "{extra:?}: {}", o.stderr);
+    }
+    std::fs::remove_file(saved).ok();
+}
+
+#[test]
+fn a_file_named_twice_is_refused_even_through_its_folder() {
+    let dir = strict_folder();
+    let d = dir.to_str().unwrap();
+    let again = files(&dir)[0].to_str().unwrap().to_string();
+    for a in [
+        vec!["llm", "inspect", d, again.as_str()],
+        vec!["llm", "params", again.as_str(), again.as_str(), "--json"],
+    ] {
+        let o = execute(&args(&a));
+        assert_eq!(o.code, 2, "{a:?}: {}", o.stderr);
+        assert!(o.stderr.contains("more than once"), "{}", o.stderr);
+    }
+}
+
+#[test]
+fn params_on_a_bad_or_missing_inspection_fails_with_the_contract_codes() {
+    let o = execute(&args(&[
+        "llm",
+        "params",
+        "--inspection",
+        "/nonexistent/i.json",
+    ]));
+    assert_eq!(o.code, 4, "{}", o.stderr);
+    let bad = std::env::temp_dir().join(format!("mzlab-badinsp-{}.json", std::process::id()));
+    std::fs::write(&bad, "{\"schema\":\"other/1\"}").unwrap();
+    let o = execute(&args(&[
+        "llm",
+        "params",
+        "--inspection",
+        bad.to_str().unwrap(),
+        "--json",
+    ]));
+    assert_eq!(o.code, 2);
+    assert!(String::from_utf8(o.stdout)
+        .unwrap()
+        .contains("\"schema\":\"error/1\""));
+    std::fs::remove_file(bad).ok();
+    // nothing to read, and a file that is not there
+    assert_eq!(execute(&args(&["llm", "params"])).code, 2);
+    let o = execute(&args(&["llm", "inspect", "/nonexistent/a.mzML", "--json"]));
+    assert_eq!(o.code, 4);
+    assert!(String::from_utf8(o.stdout)
+        .unwrap()
+        .contains("\"schema\":\"error/1\""));
+}
+
+#[test]
+fn a_bad_answers_file_takes_the_declared_codes_with_one_error_document() {
+    let dir = strict_folder();
+    let d = dir.to_str().unwrap();
+    // beside the folder, not in it: a folder is read whole
+    let bad = dir.with_file_name("answers-bad.json");
+    std::fs::write(&bad, "not json").unwrap();
+    let missing = dir.with_file_name("answers-missing.json");
+    for (answers, code) in [(&bad, 2), (&missing, 4)] {
+        let o = execute(&args(&[
+            "llm",
+            "params",
+            d,
+            "--answers",
+            answers.to_str().unwrap(),
+            "--json",
+        ]));
+        assert_eq!(o.code, code, "{answers:?}: {}", o.stderr);
+        let out = String::from_utf8(o.stdout).unwrap();
+        assert!(out.contains("\"schema\":\"error/1\""), "{out}");
+        assert!(declared("llm params").contains(&o.code));
+    }
+    std::fs::remove_file(bad).ok();
+}
+
+/// The exit codes a command declares in its table row.
+fn declared(name: &str) -> &'static [u8] {
+    crate::cmd::entries()
+        .find(|e| e.name == name)
+        .unwrap()
+        .exits
+}
+
+#[test]
+fn flow_command_and_llm_context_errors_stay_among_their_declared_codes() {
+    let tmp = std::env::temp_dir().join(format!("mzlab-exits-{}", std::process::id()));
+    std::fs::create_dir_all(&tmp).unwrap();
+    let bad = tmp.join("plan-bad.json");
+    std::fs::write(&bad, "not json").unwrap();
+    let bad = bad.to_str().unwrap();
+    for (a, code) in [
+        (vec!["flow", "command", bad, "--json"], 3),
+        (
+            vec!["flow", "command", "/nonexistent/plan.json", "--json"],
+            4,
+        ),
+        (vec!["flow", "command", "--json"], 2),
+        (vec!["llm", "context", "/nonexistent/run", "--json"], 4),
+        (vec!["llm", "context", "--json"], 2),
+    ] {
+        let o = execute(&args(&a));
+        assert_eq!(o.code, code, "{a:?}: {}", o.stderr);
+        let name = format!("{} {}", a[0], a[1]);
+        assert!(declared(&name).contains(&o.code), "{name}: {}", o.code);
+        let out = String::from_utf8(o.stdout).unwrap();
+        assert!(out.contains("\"schema\":\"error/1\""), "{a:?}: {out}");
+    }
+    std::fs::remove_dir_all(tmp).ok();
 }
