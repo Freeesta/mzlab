@@ -17,6 +17,8 @@ mod cmd;
 mod contract;
 #[cfg(test)]
 mod contract_tests;
+#[cfg(test)]
+mod contract_verdict_tests;
 pub mod convert;
 mod convert_entries;
 mod convert_help;
