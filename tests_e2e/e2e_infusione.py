@@ -29,8 +29,8 @@ try:
         step("the file is one item of kind «MSn infusion»", one)
         def tree():
             j = pg.evaluate("fetch('api/msn_albero?k=0').then(r=>r.json())")
-            assert j["formato"] == "msn_albero/1" and len(j["nodi"]) == NODES, (j["formato"], len(j["nodi"]))
-            assert sorted(set(n["livello"] for n in j["nodi"])) == [2, 3, 4, 5], j["livelli"]
+            assert j["format"] == "msn_albero/1" and len(j["nodes"]) == NODES, (j["format"], len(j["nodes"]))
+            assert sorted(set(n["level"] for n in j["nodes"])) == [2, 3, 4, 5], j["levels"]
         step("the tree has the nodes of the synthetic file", tree)
         def start():
             st = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'),s=E.panels.find(p=>p.type==='spec');return {c:c.filt,s:s.filt,n:s._a&&s._a.data&&s._a.data[0]?s._a.data[0].d.y.length:0,tic:c._a&&c._a.sr?c._a.sr.reduce((a,x)=>a+x.x.length,0):0}})()")
@@ -56,18 +56,18 @@ try:
         def frag():
             r0 = pg.evaluate("""(async()=>{const till=async f=>{for(let i=0;i<600&&!f();i++) await new Promise(r=>requestAnimationFrame(r))};
               const spec=()=>E.panels.find(p=>p.type==='spec'),shown=(id)=>()=>{const s=spec();return s.filt==='msn:'+id&&s._a&&s._a.data&&s._a.data[0]&&s._a.data[0].d.y.length>0};
-              const j=await fetch('api/msn_albero?k=0').then(r=>r.json());const root=j.nodi.find(n=>n.livello===2);
+              const j=await fetch('api/msn_albero?k=0').then(r=>r.json());const root=j.nodes.find(n=>n.level===2);
               await INF.pick(E.panels.find(p=>p.type==='chrom'), root.id); await till(shown(root.id));
-              const kid=j.nodi.find(n=>n.genitore===root.id);
-              const it=INF.menuPeak(spec(), kid.prec).find(x=>x.label===I18N.t('inf.frag')); await it.fn(); await till(shown(kid.id));
+              const kid=j.nodes.find(n=>n.parent===root.id);
+              const it=INF.menuPeak(spec(), kid.precursor).find(x=>x.label===I18N.t('inf.frag')); await it.fn(); await till(shown(kid.id));
               const after=spec().filt; const back=INF.menuPeak(spec(), 1).find(x=>x.label===I18N.t('inf.up')); await back.fn(); await till(shown(root.id));
-              return {root:root.id, kid:j.nodi.filter(n=>n.genitore===root.id).map(n=>n.id), after, again:spec().filt}})()""")
+              return {root:root.id, kid:j.nodes.filter(n=>n.parent===root.id).map(n=>n.id), after, again:spec().filt}})()""")
             assert r0["after"][4:] in r0["kid"], r0
             assert r0["again"] == "msn:" + r0["root"], r0
         step("«Fragment this ion» goes to the child node, «Back to the precursor» returns", frag)
         def total():
-            q = pg.evaluate("""(async()=>{const j=await fetch('api/msn_albero?k=0').then(r=>r.json());const n=j.nodi.find(x=>x.livello===2);
-              const u=`api/spectrum?k=0&rt0=${n.rt0-1e-4}&rt1=${n.rt1+1e-4}&level=${n.livello}&precursor=&filt=${encodeURIComponent('msn:'+n.id)}`;
+            q = pg.evaluate("""(async()=>{const j=await fetch('api/msn_albero?k=0').then(r=>r.json());const n=j.nodes.find(x=>x.level===2);
+              const u=`api/spectrum?k=0&rt0=${n.rt0-1e-4}&rt1=${n.rt1+1e-4}&level=${n.level}&precursor=&filt=${encodeURIComponent('msn:'+n.id)}`;
               const a=await fetch(u).then(r=>r.json()),b=await fetch(u+'&modo=somma').then(r=>r.json());
               return {n:a.scans,ma:Math.max(...a.y),mb:Math.max(...b.y),nb:b.scans}})()""")
             assert q["n"] >= 10 and abs(q["mb"] - q["ma"] * q["n"]) <= 1e-6 * q["mb"], q

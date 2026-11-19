@@ -59,7 +59,7 @@ try:
         load(pg, [F], 6000, 1)
         wait_for_js(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
         tree = pg.evaluate("fetch('api/msn_albero?k=0').then(r=>r.json())")
-        ids = [n["id"] for n in tree["nodi"]]
+        ids = [n["id"] for n in tree["nodes"]]
         fx = json.loads(json.dumps(FX))
         for n, tid in zip([n for n in fx["nodes"] if n["isolated"]], ids): n["tree"] = [tid]
         pg.context.grant_permissions(["clipboard-read", "clipboard-write"])
@@ -77,7 +77,7 @@ try:
         def formula():
             pg.fill("#ig-ion", "C14H15N3O5+"); pg.click("#ig-go"); pg.wait_for_function("document.querySelector('.ig-cand')", timeout=15000)
             last = pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msn_grafo').slice(-1)[0][1]")
-            assert "formula=C14H15N3O5%2B" in last and "ppm_formula=10" in last and "mz_basso=150" in last and "ppm_basso=20" in last and "prove_min=1" in last, last
+            assert "formula=C14H15N3O5%2B" in last and "ppm_formula=10" in last and "low_mz=150" in last and "low_ppm=20" in last and "min_evidence=1" in last, last
             txt = pg.inner_text("#ig-wrap")
             assert "ppm" in txt and "C12H15N3O" in txt, txt[:300]
             assert "ppm" in pg.inner_text("#ig-sum") or "ppm" in pg.inner_text("#ig-msg")

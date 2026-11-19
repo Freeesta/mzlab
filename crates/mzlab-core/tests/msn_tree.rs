@@ -97,17 +97,17 @@ fn get(r: &mut Routes<std::fs::File>, path: &str, q: &str) -> Value {
 fn tree_route_and_node_filter() {
     let mut r = routes();
     let t = get(&mut r, "/api/msn_albero", "k=0");
-    assert_eq!(t["formato"], "msn_albero/1");
-    let nodes = t["nodi"].as_array().unwrap();
+    assert_eq!(t["format"], "msn_albero/1");
+    let nodes = t["nodes"].as_array().unwrap();
     assert!(nodes.len() >= 3, "{t}");
-    assert_eq!(t["livelli"], serde_json::json!([2, 3]));
+    assert_eq!(t["levels"], serde_json::json!([2, 3]));
     let tree = mzlab_core::msntree_build::albero(&r.idx.scans, &Grouping::default());
     for (n, want) in nodes.iter().zip(&tree.nodi) {
-        let (id, level) = (n["id"].as_str().unwrap(), n["livello"].as_u64().unwrap());
+        let (id, level) = (n["id"].as_str().unwrap(), n["level"].as_u64().unwrap());
         assert_eq!(id, want.id);
         assert_eq!(n["n"].as_u64().unwrap() as usize, want.scansioni.len());
         // a cycled method: one block per scan
-        assert_eq!(n["blocchi"].as_array().unwrap().len(), want.scansioni.len());
+        assert_eq!(n["blocks"].as_array().unwrap().len(), want.scansioni.len());
         let q = format!("k=0&level={level}&filt=msn:{id}");
         let list = get(&mut r, "/api/scanlist", &q);
         let sids: Vec<usize> = list["sid"]
@@ -152,7 +152,7 @@ fn tree_route_and_node_filter() {
     }
     // energies merged: the ids lose the energy; an unknown node and a bad tolerance are keyed errors
     let merged = get(&mut r, "/api/msn_albero", "k=0&tol=0.01&ce=0");
-    assert!(merged["nodi"][0]["ce"].is_null(), "{merged}");
+    assert!(merged["nodes"][0]["ce"].is_null(), "{merged}");
     let err = |r: &mut Routes<std::fs::File>, q: &str| {
         r.handle("/api/scanlist", &Query::parse(q)).unwrap_err().key
     };
@@ -211,7 +211,7 @@ fn nodes_carry_the_mean_tic_per_scan() {
     let mut r = routes();
     let t = get(&mut r, "/api/msn_albero", "k=0");
     let tree = mzlab_core::msntree_build::albero(&r.idx.scans, &Grouping::default());
-    for (n, want) in t["nodi"].as_array().unwrap().iter().zip(&tree.nodi) {
+    for (n, want) in t["nodes"].as_array().unwrap().iter().zip(&tree.nodi) {
         let mean = want
             .scansioni
             .iter()
