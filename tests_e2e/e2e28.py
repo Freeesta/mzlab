@@ -20,7 +20,7 @@ try:
             pg.evaluate("LISTE.open({})"); pg.wait_for_timeout(1500)
             # two built-in lists (known contaminants, pesticides): one switch each, titles without the reference
             n = pg.evaluate("document.querySelectorAll('#lst-src-checks input[type=checkbox]').length"); assert n == 2, n
-            t = pg.inner_text("#lst-src-checks"); assert "Keller" not in t and "Anal. Chim" not in t and "contaminants" in t.lower() and "pesticides" in t.lower(), t
+            t = pg.inner_text("#lst-src-checks"); assert "Known contaminants (Keller et al.)" in t and "Anal. Chim" not in t and "contaminants" in t.lower() and "pesticides" in t.lower(), t
             assert pg.locator("#lst-mode-seg").count() == 0 and pg.locator("#lst-view-seg").count() == 0, "no files: HR version, no mode switch, no tab bar (target screening is behind its flag)"
             assert pg.is_visible("#lst-q") and pg.is_visible("#lst-tol") and pg.is_visible("#lst-unit") and pg.locator("#lst-pol").count() == 0, "one search field, the shared tolerance (no polarity buttons)"
             assert pg.is_visible("#lst-count") and "matches" in pg.inner_text("#lst-count"), pg.inner_text("#lst-count")
@@ -30,6 +30,28 @@ try:
             pg.evaluate("LISTE.open({})"); pg.wait_for_timeout(800)
             n = pg.evaluate("document.querySelectorAll('#lst-src-checks input[type=checkbox]').length"); assert n == 3, n
         step("Reference lists: one switch per list, the user list adds one", reflists)
+        def add_list():
+            pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())")
+            pg.evaluate("LISTE.open({})"); wait_for_js(pg, "!!document.querySelector('#lst-lists')")
+            # what each list is: link with the DOI, count, date, and «Source unknown» for the pesticides
+            pg.evaluate("document.querySelector('#lst-about').open=true")
+            t = pg.inner_text("#lst-lists")
+            assert "Known contaminants (Keller et al.)" in t and "ions from" in t and "2026-10-09" in t and "Source unknown" in t, t
+            assert pg.locator("#lst-lists a[href='https://doi.org/10.1016/j.aca.2008.04.043']").count() >= 1
+            # a CSV with a wrong row: its line number is shown, nothing is added until the valid rows are accepted
+            csv = "mz,name,formula,polarity\n100.1,Good,,+\nbad,Bad row,,\n"
+            pg.set_input_files("#lst-add-file", files=[{"name": "mine.csv", "mimeType": "text/csv", "buffer": csv.encode()}]); wait_for_js(pg, "!!document.querySelector('#lst-add-valid')")
+            assert "Line 3" in pg.inner_text("#lst-add-err") and pg.locator("#lst-src-checks input[type=checkbox]").count() == 3
+            pg.click("#lst-add-valid"); wait_for_js(pg, "document.querySelectorAll('#lst-src-checks input[type=checkbox]').length==4")
+            n = pg.locator("#lst-src-checks input[type=checkbox]").count(); assert n == 4, n
+            # rename, then remove
+            pg.evaluate("document.querySelector('#lst-about').open=true")
+            pg.click("[data-ren]"); pg.fill(".lst-ren", "Renamed list"); pg.keyboard.press("Enter"); wait_for_js(pg, "document.querySelector('#lst-src-checks').innerText.includes('Renamed list')")
+            assert "Renamed list" in pg.inner_text("#lst-src-checks")
+            pg.evaluate("document.querySelector('#lst-about').open=true")
+            pg.locator(".lst-info:has-text(\"Renamed list\") [data-del-ul]").click(); wait_for_js(pg, "!document.querySelector('#lst-src-checks').innerText.includes('Renamed list')")
+            assert "Renamed list" not in pg.inner_text("#lst-src-checks")
+        step("Reference lists: add a CSV with a wrong row, rename, remove; provenance of the lists", add_list)
         def lists_lr():
             pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())")
             pg.evaluate("window.__fake={gone:false,polarity:'positive',name:'x'}; E.files.push(window.__fake); HR.__ish=HR.isHr; HR.isHr=()=>false")

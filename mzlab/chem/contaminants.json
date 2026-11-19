@@ -1,9 +1,13 @@
 {
  "_nota": "List of the known contaminants, only from Keller et al., Anal. Chim. Acta 627 (2008) 71-81, doi:10.1016/j.aca.2008.04.043. The m/z values are NOT written here: they are computed from the formulas with mzlab/chem/elements.py (mzlab/chem/contaminants.py). Entry-by-entry comparison with the supplementary table of Keller made on 2026-10-09 (tolerance 0.002 Da, same ion type): of the 82 previous entries 36 consistent, 5 corrected (names; 3 entries with only an m/z replaced by entries with a formula), 41 not present in Keller and therefore removed. Added the missing Keller entries (ESI, positive and negative), with the formula reconstructed and the m/z computed within 0.002 Da of the table. Not included: MALDI matrix clusters, complexes with Fe and Cu, compounds with deuterium, Cs, Sn, the 37Cl ion, modified peptides or peptides with S-S bridges, rows whose m/z does not match.",
  "id": "keller",
- "name": "Known contaminants and LC-MS background (Keller 2008)",
+ "name": "Known contaminants (Keller et al.)",
  "source": "Keller et al., Anal. Chim. Acta 627 (2008) 71-81",
  "license": "chemical data (formulas): no restriction; list compiled for this program",
+ "doi": "10.1016/j.aca.2008.04.043",
+ "url": "https://doi.org/10.1016/j.aca.2008.04.043",
+ "version": "Keller 2008, supplementary table",
+ "date": "2026-10-09",
  "entries": [
   {
    "id": "peg",
