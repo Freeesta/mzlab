@@ -3,7 +3,7 @@
 use super::Entry;
 
 pub(crate) static TABLE: &[Entry] = &[
-    Entry::new("ion mz", "mzlab-cli ion mz TEXT [--adduct A]   the m/z of an ion with a signed shift", crate::plain::ion_mz_cmd::run),
+    Entry::new("ion mz", "mzlab-cli ion mz TEXT [--adduct A]   the m/z of an ion with a signed shift", crate::plain::ion_mz_cmd::run).examples(&["mzlab-cli ion mz \"C6H12O6\" --adduct +H"]),
     Entry::new("ion pattern", "mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON", crate::ion_pattern_cmd::run),
     Entry::new("ion match", "mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adduct shifts, known contaminants, as candidates", crate::plain::match_mz_cmd::run),
     Entry::new("ion elements", "mzlab-cli ion elements [--json]   the periodic table (elements/1)", crate::plain::elements_cmd::run),

@@ -231,6 +231,8 @@ const NO_FILE: &[&str] = &[
     "ion mz",
     "mol search",
     "help-md",
+    "commands",
+    "schema",
     "completions bash",
     "completions zsh",
     "completions fish",
@@ -367,6 +369,10 @@ fn a_missing_input_is_exit_4_for_every_command_that_reads_one() {
     for a in MISSING {
         let o = run(a);
         assert_eq!(o.code, 4, "{a:?}: {}", o.stderr);
+        let args: Vec<String> = a.iter().map(|w| w.to_string()).collect();
+        let (e, _) = crate::cmd::find(&args).unwrap();
+        let listed = crate::catalog::exits_of(e, &crate::catalog::usage_of(e));
+        assert!(listed.contains(&4), "{}: the catalog lacks exit 4", e.name);
         let mut j: Vec<&str> = a.to_vec();
         j.push("--json");
         let o = run(&j);

@@ -23,6 +23,11 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - `--json` is accepted by every command: a no-op where stdout is JSON already; a command with no JSON form fails with `err.cli.json.unsupported` (exit 2). `--help`/`-h` anywhere in the arguments of a command prints its help on stdout, exit 0. Every stdout document ends with `\n`.
 - Exit codes (`crates/mzlab-cli/src/exit.rs`, one table for every command): 0 done; 1 data or domain error (a step or file failed, the other outputs are written); 2 usage (unknown command or option, bad value); 3 plan, schema or integrity (invalid plan, fingerprint mismatch, `sources.json` not valid); 4 input missing or unreadable; 5 selector not found (`--sample` id, channel, node, step id); 6 output cannot be written, or an external source failed.
 
+## Learn the CLI in one call
+- `mzlab-cli commands [--json] [PATH...]`: the `commands/1` catalog (about 35 KB for all): per command its `synopsis` (the usage line of `--help`, from which `args` and `flags` are read, so help and catalog cannot differ), flags with type, unit, default and enum, `stdin`, `stdout` (`format` json|csv|text, `schema`), `exit_codes` (meanings once at the top) and examples; `PATH...` narrows it (`commands --json flow`). Unknown path: exit 5.
+- `mzlab-cli schema [--list | NAME]`: the JSON Schemas of `docs/schemi/` embedded in the binary (`error/1`, `mzflow/2`, `prov/1`, `samples/1`, `design/1`, ...); `--list` is `schemas/1`. `mzflow/2` is the plan the engine reads: `program` and input fingerprints are optional. Unknown name: exit 5.
+- `flow steps --compact` (`steps-compact/1`, under 20 KB: ids, versions, titles, ports, parameter and algorithm names, `executable_native`) and `llm tools --compact` (`tools-compact/1`) are the small forms; `llm tools` names the catalog in `cli_catalog`.
+
 ## Sequence
 1. `mzlab-cli flow steps --json [--id ID[@V]]`: the `step/1` descriptors of this very binary (`params` is a JSON Schema; `executable_native` says whether `flow run` runs it). Plain `flow steps` gives one line per step.
 2. Write an `mzflow/2` plan with the differences from the defaults only.

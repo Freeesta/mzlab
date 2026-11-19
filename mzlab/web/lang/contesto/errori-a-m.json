@@ -89,5 +89,7 @@
   "err.cli.file": "CLI error: a file cannot be read; {path} = the file.",
   "err.cli.out": "CLI error: an output cannot be written; {path} = the path.",
   "err.cli.input.missing": "CLI error of flow run: an input of the plan was not found; {input} = its name.",
+  "err.cli.command.unknown": "CLI error of commands: no command has this path; {path} = the words given.",
+  "err.cli.schema.unknown": "CLI error of schema: no embedded schema has this name; {name} = the name given.",
   "err.cli.input.twice": "CLI error of flow run: an input was given more than once; {input} = its name."
 }

@@ -3,7 +3,7 @@
 
 use mzlab_core::step::Step;
 
-use super::{catalog, tools_file, Tool, UiTool};
+use super::{catalog, tools_file_with, Tool, UiTool};
 
 /// The tools of the demo of the public site (`docs/agenti/llm-subagents.md`, «Demo pubblica»): read, propose and set a parameter,
 /// nothing that runs, removes or exports; the proxy accepts only this catalog (SHA-256 in its allow-list).
@@ -35,5 +35,15 @@ pub fn demo_catalog_json(
     ui: &[UiTool],
     executable: &dyn Fn(&str) -> bool,
 ) -> String {
-    tools_file(&demo_catalog(steps, ui, executable))
+    demo_catalog_json_with(steps, ui, executable, "")
+}
+
+/// `demo_catalog_json` with the CLI-only members `extra` after `schema` (see `catalog_json_with`).
+pub fn demo_catalog_json_with(
+    steps: &[Step],
+    ui: &[UiTool],
+    executable: &dyn Fn(&str) -> bool,
+    extra: &str,
+) -> String {
+    tools_file_with(&demo_catalog(steps, ui, executable), extra)
 }
