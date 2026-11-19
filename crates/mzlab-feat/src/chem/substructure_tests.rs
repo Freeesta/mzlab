@@ -1,4 +1,4 @@
-//! Tests of `sub/1` and `subdb/1` (`substructure.rs`): hits and errors, and the three kinds of structure list (SMILES list, table, SDF).
+//! Tests of `substructure/1` and `substructure_db/1` (`substructure.rs`): hits and errors, and the three kinds of structure list (SMILES list, table, SDF).
 
 use super::*;
 
@@ -10,7 +10,7 @@ fn hits_and_errors() {
     .unwrap();
     assert_eq!(
         r,
-        r#"{"format":"sub/1","atoms":4,"stereo":false,"hits":[{"i":0,"n":1,"maps":[[1,2,3,4]]},{"i":3,"n":2,"maps":[[1,3,4,0],[1,3,4,2]]}],"errors":[{"i":2,"error":"SMILES: ring closure 1 is never closed"}]}"#
+        r#"{"schema":"substructure/1","atoms":4,"stereo":false,"hits":[{"i":0,"n":1,"maps":[[1,2,3,4]]},{"i":3,"n":2,"maps":[[1,3,4,0],[1,3,4,2]]}],"errors":[{"i":2,"error":"SMILES: ring closure 1 is never closed"}]}"#
     );
     assert_eq!(search_json("{}").unwrap_err().key, "error.sub.request");
     assert_eq!(
@@ -27,7 +27,7 @@ fn a_structure_list_of_each_kind() {
         search_json(r##"{"query":"O","db":"# list\nOc1ccccc1 phenol\n\nCC\nC1C bad\n"}"##).unwrap();
     assert_eq!(
         smi,
-        r#"{"format":"subdb/1","atoms":1,"stereo":false,"source":"smiles","total":3,"skipped":0,"hits":[{"i":0,"name":"phenol","id":"","structure":"Oc1ccccc1","n":1,"maps":[[0]]}],"errors":[{"i":2,"name":"bad","error":"SMILES: ring closure 1 is never closed"}]}"#
+        r#"{"schema":"substructure_db/1","atoms":1,"stereo":false,"source":"smiles","total":3,"skipped":0,"hits":[{"i":0,"name":"phenol","id":"","structure":"Oc1ccccc1","n":1,"maps":[[0]]}],"errors":[{"i":2,"name":"bad","error":"SMILES: ring closure 1 is never closed"}]}"#
     );
     let csv = "id;name;smiles\r\nk:1;\"a;b\";CO\r\nk:2;no structure;\r\n";
     let (kind, list, skipped) = entries(csv);

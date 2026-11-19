@@ -1,4 +1,4 @@
-//! `anal/1`: the numbers of one drawn structure beyond `etich/1` (whose formula, charge and masses it repeats): average molecular weight, mass % of
+//! `analysis/1`: the numbers of one drawn structure beyond `label/1` (whose formula, charge and masses it repeats): average molecular weight, mass % of
 //! every element and the theoretical isotope pattern of the formula, grouped by nominal mass (centroided sticks M, M+1, ...). A drawn isotope (`[13C]`, D)
 //! counts with its own mass and abundance 1; the other atoms with the natural abundances of `mzlab_core::isoscore` and the masses of `elements::nuclide`.
 
@@ -93,7 +93,7 @@ fn tally(n: &Counts) -> Result<(f64, Per, Dist)> {
     Ok((mzlab_core::pysum::pysum(per.iter().map(|x| x.2)), per, dist))
 }
 
-/// `anal/1` of a request `{"atoms": [{el, iso, h, q, r}, ...]}` (the atoms of one structure as `etich/1` reads them): the `etich/1` fields, then
+/// `analysis/1` of a request `{"atoms": [{el, iso, h, q, r}, ...]}` (the atoms of one structure as `label/1` reads them): the `label/1` fields, then
 /// `average`, `composition` `[{el, count, pct}]` (mass %), `ions` `[{ion, mz}]` (the drawn ion, or [M+H]+ and [M-H]- of a neutral: what the HR link
 /// gives Composition) and `pattern` `[{off, mz, rel, abund}]` (offset from the lightest stick, m/z of the ion or
 /// mass of a neutral, % of the tallest, % of the total). Theory for the drawn formula: nothing is compared with a spectrum.
@@ -111,7 +111,7 @@ pub fn analysis_json(request: &str) -> Result<String> {
     let s = shape(&atoms)?;
     let (avg, per, dist) = tally(&s.n)?;
     let mut o = Out::default();
-    o.raw("{\"format\":\"anal/1\",\"structure\":");
+    o.raw("{\"schema\":\"analysis/1\",\"structure\":");
     shape_json(&mut o, &s);
     o.raw(",\"average\":")
         .num(round(avg, 6))

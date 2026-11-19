@@ -12,7 +12,7 @@ usage: mzlab-cli mol cip REQUEST.json|- [--out PATH]
   REQUEST.json  {\"molfile\": \"...\"}: the V2000 or V3000 molfile of the drawing; - reads the standard input
   --out PATH    write there instead of the standard output
 
-The answer is {\"format\": \"cip/1\", \"atoms\": [{atom, label}], \"bonds\": [{a, b, label}]} with atoms 0-based in the order of the
+The answer is {\"schema\": \"cip/1\", \"atoms\": [{atom, label}], \"bonds\": [{a, b, label}]} with atoms 0-based in the order of the
 molfile; only stereo the drawing defines gets a label, and a unit whose ligands the rules cannot tell apart gets none. \"skip\" (query, kekule,
 tooBig) says why no label was given. Mass spectrometry cannot tell stereoisomers apart: the labels describe the drawing, not a sample.";
 

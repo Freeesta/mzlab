@@ -137,8 +137,8 @@ try:
             pg.wait_for_function("S.view==='draw'", timeout=15000)
             pg.wait_for_function("window.TPDraw && TPDraw.ready()", timeout=90000)
             wait_for_js(pg, "TPDraw.smiles().then(s => s.length > 5)", 30000)
-            # the cut is coloured too (evidence colours, hilite/1): one bond in the colour of the cuts, listed in the legend with its label
-            if MOLKIT:                                                   # without the molkit .wasm (a site built by verifica.py) hilite/1 cannot run
+            # the cut is coloured too (evidence colours, highlight/1): one bond in the colour of the cuts, listed in the legend with its label
+            if MOLKIT:                                                   # without the molkit .wasm (a site built by verifica.py) highlight/1 cannot run
                 pg.wait_for_function("(() => { const c = document.querySelector('#ev-card'); return c && !c.hidden && document.querySelectorAll('#ev-legend li').length === 1; })()", timeout=30000)
             assert pg.evaluate("TPDraw.mark([[1, 2]])") == 1 and pg.evaluate("TPDraw.mark([[0, 9]])") == 0
             pg.evaluate("setView('data')"); drawer(pg, "gra"); pg.wait_for_selector(".ig-node", timeout=15000)

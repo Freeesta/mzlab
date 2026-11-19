@@ -315,7 +315,7 @@ async function drawSpec(p, snapped) {
   if (tok !== p._tok) return false;                      // a newer request is on its way: this one is dropped
   if (p.iso && p.iso.only && hrp && window.QQQRef) for (const x of data) { try { x.d = await HR.isoAsSpectrum(p, x.f, x.d); } catch (e) { /* the observed spectrum stays */ } }      // «Sostituisci»: the simulation takes the place of the spectrum
   /** @type {Bag[] | null} */ let isoSim = null, isoErr = null;      // the pattern drawn over the spectrum (fine structure, or the unit-resolution groups of api/ion_pattern), asked of the engine before the (synchronous) painting
-  if (p.iso && !p.iso.only && window.QQQRef) { try { isoSim = hrp ? await HR.isoPat(p.iso, HR.fwhmFn(p.iso, files[0], p.level)) : (await QQQRef.unitIon(p.iso.formula, p.iso.ad)).peaks; } catch (e) { isoErr = e; } if (tok !== p._tok) return false; }
+  if (p.iso && !p.iso.only && window.QQQRef) { try { isoSim = hrp ? await HR.isoPat(p.iso, HR.fwhmFn(p.iso, files[0], p.level)) : (await QQQRef.unitIon(p.iso.formula, p.iso.ad)).peaks.map((/** @type {Bag} */ q) => ({ ...q, rel: q.abundance_pct })); } catch (e) { isoErr = e; } if (tok !== p._tok) return false; }
   p._nCont = 0;
   if (p.noCont && hrp && window.LISTE) {                  // «remove contaminants»: centroids compatible with the Keller list leave the peaks shown (tolerance = ppm of the Banco)
     const km = LISTE.keller(files[0].polarity, UIP.hrPpm);

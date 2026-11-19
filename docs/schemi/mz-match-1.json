@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mz-match/1",
+  "title": "mz-match/1: what a number is compatible with",
+  "description": "The answer of `mzlab-cli ion match`: candidates with their error, never an identification. `error_mda` (mDa) and `error_ppm` are null at low resolution. Code: crates/mzlab-core/src/search.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "x",
+    "hr",
+    "hits",
+    "more",
+    "tol",
+    "contam"
+  ],
+  "properties": {
+    "schema": {
+      "const": "mz-match/1"
+    },
+    "x": {
+      "type": "number"
+    },
+    "hr": {
+      "type": "boolean"
+    },
+    "hits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "id",
+          "error_mda",
+          "error_ppm"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "loss",
+              "adduct",
+              "contaminant"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "error_mda": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "error_ppm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "more": {
+      "type": "integer"
+    },
+    "tol": {
+      "type": "number"
+    },
+    "contam": {
+      "type": "object",
+      "properties": {
+        "unit": {
+          "enum": [
+            "da",
+            "ppm"
+          ]
+        },
+        "tol": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

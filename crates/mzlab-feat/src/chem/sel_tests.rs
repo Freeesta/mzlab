@@ -1,4 +1,4 @@
-//! Unit tests of `sel/1` (`sel.rs`): Kekulé and aromatic-typed benzene, fused and saturated rings, charge, radical and pieces, request errors.
+//! Unit tests of `selection/1` (`sel.rs`): Kekulé and aromatic-typed benzene, fused and saturated rings, charge, radical and pieces, request errors.
 
 use super::*;
 
@@ -37,7 +37,7 @@ const BENZENE: [(usize, usize, u8); 6] = [
 #[test]
 fn kekule_benzene_is_one_aromatic_ring() {
     let v = sel(&mf(&["C"; 6], &BENZENE, &[]), false);
-    assert_eq!(v["format"], "sel/1");
+    assert_eq!(v["schema"], "selection/1");
     assert_eq!(v["label"]["formula"], "C6H6");
     assert!((v["label"]["mass"].as_f64().unwrap() - 78.04695).abs() < 1e-5);
     assert!((v["average"].as_f64().unwrap() - 78.114).abs() < 1e-3);

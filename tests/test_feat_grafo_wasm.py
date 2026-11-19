@@ -1,5 +1,5 @@
 """The structure bridge of mzFinder in WebAssembly (crates/mzlab-feat-grafo-wasm) answers a SMILES with the formula, the groups and the cleavage products that
-the Rust library gives natively, the piece labels (also with the delta of a bracket), the bond cuts and the analysis card (`anal/1`, every golden molecule) the selection info (`sel/1`) and the lookup URLs (`link/1`, every golden case) of the Drawing byte for byte like the CLI (checked by the formula and the sets), and a bad SMILES with a JSON error. Skipped without cargo, the wasm32 target,
+the Rust library gives natively, the piece labels (also with the delta of a bracket), the bond cuts and the analysis card (`analysis/1`, every golden molecule) the selection info (`selection/1`) and the lookup URLs (`link/1`, every golden case) of the Drawing byte for byte like the CLI (checked by the formula and the sets), and a bad SMILES with a JSON error. Skipped without cargo, the wasm32 target,
 wasm-bindgen or node."""
 import json
 import shutil
@@ -70,11 +70,11 @@ def test_fragments_of_a_radical_equal_the_app_fixture(pkg):
 
 
 def test_mechanism_check_through_wasm_equals_the_app_fixture_and_the_cli(pkg, tmp_path):
-    fx = json.loads((Path(__file__).parent / "dati" / "mecc_mclafferty.json").read_text(encoding="utf-8"))
+    fx = json.loads((Path(__file__).parent / "dati" / "mechanism_mclafferty.json").read_text(encoding="utf-8"))
     req = tmp_path / "req.json"
     req.write_text(json.dumps(fx["request"]), encoding="utf-8")
     site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "mech")
-    assert site.strip() == fx["mecc"]   # crates/mzlab-desktop/tests/labels.rs reads the same bytes
+    assert site.strip() == fx["mechanism"]   # crates/mzlab-desktop/tests/labels.rs reads the same bytes
     assert site == cli("mol", "mech", str(req), runner=run)
     r = json.loads(site)
     assert [a["ok"] for a in r["arrows"]] == [True] * 5 + [False] and r["arrows"][5]["problem"] == "pairFromRadical"
@@ -149,7 +149,7 @@ def test_sel_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path, part):
     site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "sel")
     assert site == cli("mol", "sel", str(req), runner=run)
     r = json.loads(site)
-    assert (r["format"], r["part"], r["label"]["formula"], r["heavy"], r["rings"], r["aromaticRings"], r["aromaticAtoms"]) == ("sel/1", part, "C8H8FNO", 11, 1, 1, 6)
+    assert (r["schema"], r["part"], r["label"]["formula"], r["heavy"], r["rings"], r["aromaticRings"], r["aromaticAtoms"]) == ("selection/1", part, "C8H8FNO", 11, 1, 1, 6)
     assert round(r["label"]["mass"], 4) == 153.0590
 
 

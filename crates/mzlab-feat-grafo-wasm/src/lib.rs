@@ -36,14 +36,14 @@ pub fn partial(molfile: &str, delta: &str) -> std::result::Result<String, JsValu
     mzlab_feat::chem::fragments::partial_json(molfile, delta).map_err(js_err)
 }
 
-/// `etich/1` of the structures and arrows of a drawing: formula with isotopes, charge, monoisotopic and nominal mass, m/z, and the change
+/// `label/1` of the structures and arrows of a drawing: formula with isotopes, charge, monoisotopic and nominal mass, m/z, and the change
 /// across each arrow (see `mzlab_feat::chem::labels::labels_json`; the same as `mzlab-cli mol label`).
 #[wasm_bindgen]
 pub fn labels(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::labels::labels_json(request).map_err(js_err)
 }
 
-/// `sel/1` of a request `{"molfile", "part"}`: formula, charge, monoisotopic and average mass, m/z, heavy atoms, rings and aromatic rings of a selection
+/// `selection/1` of a request `{"molfile", "part"}`: formula, charge, monoisotopic and average mass, m/z, heavy atoms, rings and aromatic rings of a selection
 /// or of the whole drawing (see `mzlab_feat::chem::sel::sel_json`; the same as `mzlab-cli mol sel`).
 #[wasm_bindgen]
 pub fn sel(request: &str) -> std::result::Result<String, JsValue> {
@@ -57,7 +57,7 @@ pub fn link(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::link::link_json(request).map_err(js_err)
 }
 
-/// `anal/1` of one drawn structure `{"atoms": [...]}`: the `etich/1` numbers plus average mass, mass % per element and the theoretical isotope pattern
+/// `analysis/1` of one drawn structure `{"atoms": [...]}`: the `label/1` numbers plus average mass, mass % per element and the theoretical isotope pattern
 /// (see `mzlab_feat::chem::analysis::analysis_json`; the same as `mzlab-cli mol anal`).
 #[wasm_bindgen]
 pub fn analysis(request: &str) -> std::result::Result<String, JsValue> {
@@ -71,7 +71,7 @@ pub fn cut(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::cut::cut_json(request).map_err(js_err)
 }
 
-/// `mecc/1` of a request `{"molfile", "arrows", "lone"}`: whether each curved arrow of a mechanism starts at a lone pair, a bond or a radical and ends at
+/// `mechanism/1` of a request `{"molfile", "arrows", "lone"}`: whether each curved arrow of a mechanism starts at a lone pair, a bond or a radical and ends at
 /// an atom or a bond, and whether the drawn lone pairs fit (see `mzlab_feat::chem::mech::mech_json`; the same as `mzlab-cli mol mech`). Form only.
 #[wasm_bindgen]
 pub fn mech(request: &str) -> std::result::Result<String, JsValue> {

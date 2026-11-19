@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "selection/1",
+  "title": "selection/1: masses, heavy atoms and rings of a selection",
+  "description": "The answer of `mzlab-cli mol sel`: the label of the selection (as `label/1`) and its counts. Code: crates/mzlab-feat/src/chem/sel.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "part",
+    "label",
+    "average",
+    "heavy",
+    "atoms",
+    "pieces",
+    "rings",
+    "aromaticAtoms",
+    "aromaticRings"
+  ],
+  "properties": {
+    "schema": {
+      "const": "selection/1"
+    },
+    "part": {
+      "type": "boolean"
+    },
+    "label": {
+      "type": "object",
+      "required": [
+        "formula",
+        "text",
+        "charge",
+        "mass",
+        "nominal"
+      ],
+      "properties": {
+        "formula": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "charge": {
+          "type": "integer"
+        },
+        "mass": {
+          "type": "number"
+        },
+        "nominal": {
+          "type": "integer"
+        },
+        "mz": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unpaired": {
+          "type": "integer"
+        },
+        "electrons": {
+          "type": "integer"
+        },
+        "odd": {
+          "type": "boolean"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "delta": {
+          "type": "string"
+        }
+      }
+    },
+    "average": {
+      "type": "number"
+    },
+    "heavy": {
+      "type": "integer"
+    },
+    "atoms": {
+      "type": "integer"
+    },
+    "pieces": {
+      "type": "integer"
+    },
+    "rings": {
+      "type": "integer"
+    },
+    "aromaticAtoms": {
+      "type": "integer"
+    },
+    "aromaticRings": {
+      "type": "integer"
+    }
+  }
+}

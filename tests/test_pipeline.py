@@ -165,7 +165,7 @@ def test_formula_mz_nominal_is_the_sum_of_the_mass_numbers():
 
 def test_formula_mz_one_decimal_and_nominal():
     r = E.formula_mz("C9H10N2O", "[M+H]+")            # neutral 162.0793
-    assert r["neutral"] == pytest.approx(162.0793, abs=1e-3)
+    assert r["neutral_da"] == pytest.approx(162.0793, abs=1e-3)
     assert r["mz"] == pytest.approx(163.0866, abs=1e-3)
     assert r["mz1"] == 163.1 and r["nominal"] == 163
     assert E.formula_mz("C2H6O", "[M-H]-")["mz1"] == 45.0   # 45.0340 -> 45.0

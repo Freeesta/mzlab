@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ion_mz/1",
+  "title": "ion_mz/1: m/z of an ion text",
+  "description": "The answer of `mzlab-cli ion mz`: neutral mass in Da (`neutral_da`), nominal masses, every adduct of the catalogue and, with an adduct or a shift, the m/z of the ion (`mz` ...); `offset_da` is the signed shift added after the adduct. A candidate to extract, never an identification. A bare m/z gives `formula` empty and no `adducts`; a text like 250.8-251.5 gives `range` instead. Code: crates/mzlab-core/src/elements.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "formula"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ion_mz/1"
+    },
+    "formula": {
+      "type": "string"
+    },
+    "neutral_da": {
+      "type": "number"
+    },
+    "nominal_neutral": {
+      "type": "integer"
+    },
+    "neutral0": {
+      "type": "integer"
+    },
+    "adducts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "mz",
+          "mz5",
+          "mz1",
+          "nominal",
+          "mz0"
+        ],
+        "properties": {
+          "mz": {
+            "type": "number"
+          },
+          "mz5": {
+            "type": "number"
+          },
+          "mz1": {
+            "type": "number"
+          },
+          "nominal": {
+            "type": "integer"
+          },
+          "mz0": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "adduct": {
+      "type": "string"
+    },
+    "offset_da": {
+      "type": "number"
+    },
+    "mz": {
+      "type": "number"
+    },
+    "mz5": {
+      "type": "number"
+    },
+    "mz1": {
+      "type": "number"
+    },
+    "nominal": {
+      "type": "integer"
+    },
+    "mz0": {
+      "type": "integer"
+    },
+    "range": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "two m/z, lower edge first, when the text was a range such as 250.8-251.5"
+    }
+  }
+}

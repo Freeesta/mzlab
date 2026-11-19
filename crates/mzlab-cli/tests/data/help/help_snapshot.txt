@@ -68,18 +68,18 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   the fragmentation rules judged on library spectra
        mzlab-cli msn rules sum LINES...   the rule lines of several runs summed
        mzlab-cli ion mz TEXT [--adduct A]   the m/z of an ion with a signed shift
-       mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON
-       mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adduct shifts, known contaminants, as candidates
+       mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion
+       mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adducts, contaminants
        mzlab-cli ion elements [--json]   the periodic table (elements/1)
-       mzlab-cli mol label REQUEST.json|- [--out PATH]   formula, charge and masses of drawn structures and arrows as JSON
-       mzlab-cli mol anal REQUEST.json|-   average mass, mass % and theoretical isotope pattern of one structure
-       mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges) as JSON
+       mzlab-cli mol label REQUEST.json|- [--out PATH]   formula, charge and masses of drawn structures and arrows
+       mzlab-cli mol anal REQUEST.json|-   average mass, mass % and isotope pattern of one structure
+       mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges)
        mzlab-cli mol cip REQUEST.json|-   the R/S and E/Z of a drawing
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
-       mzlab-cli mol link REQUEST.json|-   the PubChem, ChEBI and BioTransformer URLs of a structure
+       mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs of a structure
        mzlab-cli mol export MOLFILE|-   the drawing as .mol or .sdf
-       mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut as JSON
+       mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut
        mzlab-cli mol mech REQUEST.json|-   whether the curved arrows of a drawn mechanism are well formed
        mzlab-cli mol search --sub QUERY TARGET...   where a substructure occurs in structures
        mzlab-cli db normative build --cache DIR --out DIR   build the EU and US regulatory lists from the official sources (native only)
@@ -173,18 +173,18 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   the fragmentation rules judged on library spectra
        mzlab-cli msn rules sum LINES...   the rule lines of several runs summed
        mzlab-cli ion mz TEXT [--adduct A]   the m/z of an ion with a signed shift
-       mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON
-       mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adduct shifts, known contaminants, as candidates
+       mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion
+       mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adducts, contaminants
        mzlab-cli ion elements [--json]   the periodic table (elements/1)
-       mzlab-cli mol label REQUEST.json|- [--out PATH]   formula, charge and masses of drawn structures and arrows as JSON
-       mzlab-cli mol anal REQUEST.json|-   average mass, mass % and theoretical isotope pattern of one structure
-       mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges) as JSON
+       mzlab-cli mol label REQUEST.json|- [--out PATH]   formula, charge and masses of drawn structures and arrows
+       mzlab-cli mol anal REQUEST.json|-   average mass, mass % and isotope pattern of one structure
+       mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges)
        mzlab-cli mol cip REQUEST.json|-   the R/S and E/Z of a drawing
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
-       mzlab-cli mol link REQUEST.json|-   the PubChem, ChEBI and BioTransformer URLs of a structure
+       mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs of a structure
        mzlab-cli mol export MOLFILE|-   the drawing as .mol or .sdf
-       mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut as JSON
+       mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut
        mzlab-cli mol mech REQUEST.json|-   whether the curved arrows of a drawn mechanism are well formed
        mzlab-cli mol search --sub QUERY TARGET...   where a substructure occurs in structures
        mzlab-cli db normative build --cache DIR --out DIR   build the EU and US regulatory lists from the official sources (native only)
@@ -278,18 +278,18 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli msn rules RECORD... [--rules] [--decoy SEED]   the fragmentation rules judged on library spectra
        mzlab-cli msn rules sum LINES...   the rule lines of several runs summed
        mzlab-cli ion mz TEXT [--adduct A]   the m/z of an ion with a signed shift
-       mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON
-       mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adduct shifts, known contaminants, as candidates
+       mzlab-cli ion pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion
+       mzlab-cli ion match X --tables FILE.json [--set hr=1 ppm=N]   what a number is compatible with: losses, adducts, contaminants
        mzlab-cli ion elements [--json]   the periodic table (elements/1)
-       mzlab-cli mol label REQUEST.json|- [--out PATH]   formula, charge and masses of drawn structures and arrows as JSON
-       mzlab-cli mol anal REQUEST.json|-   average mass, mass % and theoretical isotope pattern of one structure
-       mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges) as JSON
+       mzlab-cli mol label REQUEST.json|- [--out PATH]   formula, charge and masses of drawn structures and arrows
+       mzlab-cli mol anal REQUEST.json|-   average mass, mass % and isotope pattern of one structure
+       mzlab-cli mol check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges)
        mzlab-cli mol cip REQUEST.json|-   the R/S and E/Z of a drawing
        mzlab-cli mol hilite REQUEST.json|-   the atoms an evidence colours
        mzlab-cli mol sel REQUEST.json|-   masses, heavy atoms and rings of a selection
-       mzlab-cli mol link REQUEST.json|-   the PubChem, ChEBI and BioTransformer URLs of a structure
+       mzlab-cli mol link REQUEST.json|-   PubChem, ChEBI and BioTransformer URLs of a structure
        mzlab-cli mol export MOLFILE|-   the drawing as .mol or .sdf
-       mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut as JSON
+       mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut
        mzlab-cli mol mech REQUEST.json|-   whether the curved arrows of a drawn mechanism are well formed
        mzlab-cli mol search --sub QUERY TARGET...   where a substructure occurs in structures
        mzlab-cli db normative build --cache DIR --out DIR   build the EU and US regulatory lists from the official sources (native only)
@@ -553,7 +553,7 @@ usage: mzlab-cli trace background FILE [--blank FILE] [--set NAME=VALUE...] [--o
 === mzlab-cli mol label --help
 exit 0
 --- stdout
-mzlab-cli mol label: formula, charge and masses of drawn structures and the change across reaction arrows, as JSON (etich/1).
+mzlab-cli mol label: formula, charge and masses of drawn structures and the change across reaction arrows, as JSON (label/1).
 
 usage: mzlab-cli mol label REQUEST.json|- [--out PATH]
 
@@ -562,21 +562,21 @@ usage: mzlab-cli mol label REQUEST.json|- [--out PATH]
                 optional "deltas": ["+O", ...] by structure: the delta of its brackets, added to formula and masses
   --out PATH    write there instead of the standard output
 
-The answer is {"format": "etich/1", "structures": [{formula, text, charge, mass, nominal, mz, delta?} or {error, label}],
+The answer is {"schema": "label/1", "structures": [{formula, text, charge, mass, nominal, mz, delta?} or {error, label}],
 "arrows": [{gain, loss, isotopologue, dm, dnominal} or null]}.
 --- stderr
 
 === mzlab-cli mol anal --help
 exit 0
 --- stdout
-mzlab-cli mol anal: average mass, mass % per element and the theoretical isotope pattern of one drawn structure, as JSON (anal/1).
+mzlab-cli mol anal: average mass, mass % per element and the theoretical isotope pattern of one drawn structure, as JSON (analysis/1).
 
 usage: mzlab-cli mol anal REQUEST.json|- [--out PATH]
 
   REQUEST.json  {"atoms": [{"el", "iso", "h", "q", "r"}, ...]}: the atoms of one structure as mol label reads them; - reads the standard input
   --out PATH    write there instead of the standard output
 
-The answer is {"format": "anal/1", "structure": {the etich/1 fields}, "average", "composition": [{el, count, pct}],
+The answer is {"schema": "analysis/1", "structure": {the label/1 fields}, "average", "composition": [{el, count, pct}],
 "pattern": [{off, mz, rel, abund}]}: sticks grouped by nominal mass, m/z of the ion (mass of a neutral), % of the tallest and of the total.
 Theory for the drawn formula: nothing is compared with a spectrum.
 --- stderr
@@ -591,7 +591,7 @@ usage: mzlab-cli mol check REQUEST.json|- [--out PATH]
   REQUEST.json  {"molfile": "..."}: the V2000 or V3000 molfile of the drawing; - reads the standard input
   --out PATH    write there instead of the standard output
 
-The answer is {"format": "check/1", "atoms", "pieces", "warnings": [{code, level, atoms, bonds, ...}]}: codes valence,
+The answer is {"schema": "check/1", "atoms", "pieces", "warnings": [{code, level, atoms, bonds, ...}]}: codes valence,
 valenceCharge, charge, isotope, kekule, wedgeMultiple, wedgeNoCentre, wedgeUndecided (level warn) and query, queryBond, pieces (level note);
 atoms are 0-based in the order of the molfile. The check speaks of the drawing only, never of data.
 --- stderr
@@ -606,7 +606,7 @@ usage: mzlab-cli mol cip REQUEST.json|- [--out PATH]
   REQUEST.json  {"molfile": "..."}: the V2000 or V3000 molfile of the drawing; - reads the standard input
   --out PATH    write there instead of the standard output
 
-The answer is {"format": "cip/1", "atoms": [{atom, label}], "bonds": [{a, b, label}]} with atoms 0-based in the order of the
+The answer is {"schema": "cip/1", "atoms": [{atom, label}], "bonds": [{a, b, label}]} with atoms 0-based in the order of the
 molfile; only stereo the drawing defines gets a label, and a unit whose ligands the rules cannot tell apart gets none. "skip" (query, kekule,
 tooBig) says why no label was given. Mass spectrometry cannot tell stereoisomers apart: the labels describe the drawing, not a sample.
 --- stderr
@@ -614,7 +614,7 @@ tooBig) says why no label was given. Mass spectrometry cannot tell stereoisomers
 === mzlab-cli mol hilite --help
 exit 0
 --- stdout
-mzlab-cli mol hilite: the atoms and bonds of a drawing that a piece of evidence points at, as JSON (hilite/1).
+mzlab-cli mol hilite: the atoms and bonds of a drawing that a piece of evidence points at, as JSON (highlight/1).
 
 usage: mzlab-cli mol hilite REQUEST.json|- [--out PATH]
 
@@ -623,14 +623,14 @@ usage: mzlab-cli mol hilite REQUEST.json|- [--out PATH]
 
 A layer is {kind: "moiety", query} (a SMILES or molfile found in the drawing), {kind: "sites", smiles, atoms} or {kind: "cuts", smiles,
 bonds: [[a, b]]} (numbered from 0 on that SMILES, carried onto the drawing through a match of it), each with an optional label. The answer is
-{"format": "hilite/1", "layers": [{kind, label, atoms, bonds}]} with atoms 0-based in the order of the molfile; "skip" (noMatch, lr,
+{"schema": "highlight/1", "layers": [{kind, label, atoms, bonds}]} with atoms 0-based in the order of the molfile; "skip" (noMatch, lr,
 tooBig) says why a layer is empty. In the LR world only the selected atoms are kept. A coloured atom is where the evidence points, not a proof.
 --- stderr
 
 === mzlab-cli mol sel --help
 exit 0
 --- stdout
-mzlab-cli mol sel: formula, charge, masses, heavy atoms, rings and aromatic rings of a drawn structure, as JSON (sel/1).
+mzlab-cli mol sel: formula, charge, masses, heavy atoms, rings and aromatic rings of a drawn structure, as JSON (selection/1).
 
 usage: mzlab-cli mol sel REQUEST.json|- [--out PATH]
 
@@ -638,7 +638,7 @@ usage: mzlab-cli mol sel REQUEST.json|- [--out PATH]
                 - reads the standard input
   --out PATH    write there instead of the standard output
 
-The answer is {"format": "sel/1", "part", "label": {formula, text, charge, mass, nominal, mz, ...} (as etich/1), "average",
+The answer is {"schema": "selection/1", "part", "label": {formula, text, charge, mass, nominal, mz, ...} (as label/1), "average",
 "heavy", "atoms", "pieces", "rings", "aromaticAtoms", "aromaticRings"}.
 --- stderr
 
@@ -653,7 +653,7 @@ usage: mzlab-cli mol link REQUEST.json|- [--out PATH]
                 - reads the standard input
   --out PATH    write there instead of the standard output
 
-The answer is {"format": "link/1", "part", "preferred": the PubChem row to put first, "links": [{"id", "url", "copy"}]};
+The answer is {"schema": "link/1", "part", "preferred": the PubChem row to put first, "links": [{"id", "url", "copy"}]};
 copy is the text to put on the clipboard before opening url (null when the URL carries the structure). Nothing is fetched.
 --- stderr
 
@@ -690,7 +690,7 @@ usage: mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,C-D...] [--set NAME=VALUE...
   --set gap       how far the pieces move apart, in bond lengths (default 1)
   --out PATH      write there instead of the standard output
 
-The answer is {"format": "cut/1", "mode", "atoms": [{i, charge, radical, h, pin}], "pieces": [{atoms, shift, label}]}:
+The answer is {"schema": "cut/1", "mode", "atoms": [{i, charge, radical, h, pin}], "pieces": [{atoms, shift, label}]}:
 every piece with formula, charge, exact mass, m/z (charged pieces only), unpaired electrons, electron count and kind. The pieces are
 candidates to judge; no cut is ranked.
 --- stderr
@@ -698,7 +698,7 @@ candidates to judge; no cut is ranked.
 === mzlab-cli mol mech --help
 exit 0
 --- stdout
-mzlab-cli mol mech: whether the curved arrows of a mechanism are well formed, as JSON (mecc/1). Form only: it never says
+mzlab-cli mol mech: whether the curved arrows of a mechanism are well formed, as JSON (mechanism/1). Form only: it never says
 which mechanism is right.
 
 usage: mzlab-cli mol mech REQUEST.json|- [--out PATH]
@@ -708,14 +708,14 @@ usage: mzlab-cli mol mech REQUEST.json|- [--out PATH]
                 molfile; pair = full head (two electrons), single = half head (one); - reads the standard input
   --out PATH    write there instead of the standard output
 
-The answer is {"format": "mecc/1", "arrows": [{kind, from, to, electrons, ok, problem?}], "lone": [{atom, pairs, max?, ok}],
+The answer is {"schema": "mechanism/1", "arrows": [{kind, from, to, electrons, ok, problem?}], "lone": [{atom, pairs, max?, ok}],
 "ok"}; problem is noLonePair, noRadical, pairFromRadical, noBond or same.
 --- stderr
 
 === mzlab-cli mol search --help
 exit 0
 --- stdout
-mzlab-cli mol search: where a substructure occurs in structures, as JSON (sub/1).
+mzlab-cli mol search: where a substructure occurs in structures, as JSON (substructure/1).
 
 usage: mzlab-cli mol search --sub QUERY TARGET... [--set NAME=VALUE...] [--out PATH]
        mzlab-cli mol search --sub QUERY --db LIST [--set NAME=VALUE...] [--out PATH]
@@ -729,9 +729,9 @@ usage: mzlab-cli mol search --sub QUERY TARGET... [--set NAME=VALUE...] [--out P
   --set max       at most this many matches per target (1-1000, default 1000)
   --out PATH      write there instead of the standard output
 
-The answer is {"format": "sub/1", "atoms", "stereo", "hits": [{i, n, maps}], "errors": [{i, error}]}: for every target that
+The answer is {"schema": "substructure/1", "atoms", "stereo", "hits": [{i, n, maps}], "errors": [{i, error}]}: for every target that
 contains the query, its distinct matches as the target atoms (from 0) of each query atom; explicit query hydrogens ask for at least that
-many hydrogens and have no column. With --db the answer is {"format": "subdb/1", "atoms", "stereo", "source", "total", "skipped",
+many hydrogens and have no column. With --db the answer is {"schema": "substructure_db/1", "atoms", "stereo", "source", "total", "skipped",
 "hits": [{i, name, id, structure, n, maps}], "errors": [{i, name, error}]}. A hit is a suspect to check, never an identification.
 --- stderr
 

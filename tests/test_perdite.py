@@ -24,7 +24,7 @@ def run(code):
 
 
 def neutral_mass(formula):
-    return formula_mz(formula, "[M+H]+")["neutral"]
+    return formula_mz(formula, "[M+H]+")["neutral_da"]
 
 
 def test_masses_of_the_table_are_the_computed_ones():

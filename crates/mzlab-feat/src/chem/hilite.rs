@@ -1,4 +1,4 @@
-//! `hilite/1`: the atoms and bonds of the canvas that a piece of evidence points at, layer by layer, for the colours of Draw. A `moiety` layer is a
+//! `highlight/1`: the atoms and bonds of the canvas that a piece of evidence points at, layer by layer, for the colours of Draw. A `moiety` layer is a
 //! substructure found in the drawing; `sites` (atoms) and `cuts` (bonds) come numbered on the SMILES the evidence was computed on (`reatt/1`, a cut of
 //! the MSn graph) and are carried onto the drawing through a match of that SMILES. In the LR world only what the student selected is kept. The colours
 //! show where the evidence is, never that it is true. Same bytes in the molkit `.wasm`, the app (`feat/grafo`, `kind: "hilite"`) and `mzlab-cli mol hilite`.
@@ -154,7 +154,7 @@ fn layer<'a>(v: &'a Value, canvas: &Mol) -> Result<Layer<'a>> {
     Ok(l)
 }
 
-/// The `hilite/1` of a request `{"molfile", "world": "hr"|"lr", "selected": [atom], "layers": [{"kind", "label", ...}]}`: `moiety` takes `query`
+/// The `highlight/1` of a request `{"molfile", "world": "hr"|"lr", "selected": [atom], "layers": [{"kind", "label", ...}]}`: `moiety` takes `query`
 /// (SMILES or molfile), `sites` takes `smiles` and `atoms`, `cuts` takes `smiles` and `bonds` (`[a, b]`), numbered from 0 on that SMILES. Atoms of the
 /// answer are numbered from 0 as in the molfile; a layer with nothing on the canvas says why in `skip` (`noMatch`, `lr`, `tooBig`).
 pub fn hilite_json(request: &str) -> Result<String> {
@@ -201,7 +201,7 @@ pub fn hilite_json(request: &str) -> Result<String> {
         layers.push(l);
     }
     let mut o = Out::default();
-    o.raw("{\"format\":\"hilite/1\",\"layers\":[");
+    o.raw("{\"schema\":\"highlight/1\",\"layers\":[");
     for (i, l) in layers.iter().enumerate() {
         o.raw(if i > 0 { ",{\"kind\":" } else { "{\"kind\":" });
         o.str(l.kind)

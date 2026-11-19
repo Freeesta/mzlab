@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ion_pattern/1",
+  "title": "ion_pattern/1: unit-resolution isotope pattern of an ion",
+  "description": "The answer of `mzlab-cli ion pattern`: element counts of the ion, its charge and the sticks grouped by nominal mass offset. Code: crates/mzlab-core/src/ionpattern.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "n",
+    "z",
+    "peaks"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ion_pattern/1"
+    },
+    "n": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer"
+      }
+    },
+    "z": {
+      "type": "integer"
+    },
+    "peaks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "off",
+          "mz",
+          "abundance_pct"
+        ],
+        "properties": {
+          "off": {
+            "type": "integer"
+          },
+          "mz": {
+            "type": "number"
+          },
+          "abundance_pct": {
+            "type": "number",
+            "description": "% of the highest peak"
+          }
+        }
+      }
+    }
+  }
+}
