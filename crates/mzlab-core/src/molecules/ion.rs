@@ -10,8 +10,8 @@ use crate::json::{round, Out};
 pub const NEUTRAL: &str = "neutral";
 
 /// `q` is a formula (an ion with the atoms of `adduct` inside it) or an m/z, `adduct` is `neutral` or a name of the adduct table. JSON: `kind` (`formula` or
-/// `mass`), `adduct`, `formula` (neutral, Hill order; empty for an m/z), `massa` (neutral monoisotopic, 6 decimals) and `mz` (the ion m/z; null for neutral).
-pub fn ione(q: &str, adduct: &str) -> Result<String> {
+/// `mass`), `adduct`, `formula` (neutral, Hill order; empty for an m/z), `mass` (neutral monoisotopic, 6 decimals) and `mz` (the ion m/z; null for neutral).
+pub fn ion_of(q: &str, adduct: &str) -> Result<String> {
     let q = q.trim();
     let shift = if adduct == NEUTRAL {
         None
@@ -31,7 +31,7 @@ pub fn ione(q: &str, adduct: &str) -> Result<String> {
         if neutral <= 0.0 {
             return Err(Error::new("err.comp.mz"));
         }
-        o.raw(",\"formula\":\"\",\"kind\":\"mass\",\"massa\":")
+        o.raw(",\"formula\":\"\",\"kind\":\"mass\",\"mass\":")
             .num(round(neutral, 6));
         o.raw(",\"mz\":").opt(shift.map(|_| round(mz, 6)));
     } else {
@@ -42,7 +42,7 @@ pub fn ione(q: &str, adduct: &str) -> Result<String> {
         };
         let m = mass(&neutral);
         o.raw(",\"formula\":").str(&fmt(&neutral));
-        o.raw(",\"kind\":\"formula\",\"massa\":").num(round(m, 6));
+        o.raw(",\"kind\":\"formula\",\"mass\":").num(round(m, 6));
         o.raw(",\"mz\":").opt(shift.map(|s| round(m + s, 6)));
     }
     o.raw("}");

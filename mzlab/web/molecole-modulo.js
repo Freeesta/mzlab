@@ -45,16 +45,16 @@ const campoDi = (/** @type {HTMLElement} */ form, /** @type {string} */ k) => /*
 /** Fills the form from a record (an empty form for a new molecule). */
 export function riempi(/** @type {HTMLElement} */ form, /** @type {Molecola | null} */ m) {
   const v = (/** @type {string} */ k, /** @type {string} */ x) => { campoDi(form, k).value = x; };
-  v("nome", m ? m.nome : "");
-  v("sinonimi", m ? (m.sinonimi || []).join("\n") : "");
+  v("nome", m ? m.name : "");
+  v("sinonimi", m ? (m.synonyms || []).join("\n") : "");
   v("formula", m ? m.formula : "");
-  v("carica", m && m.carica ? String(m.carica) : "");
+  v("carica", m && m.charge ? String(m.charge) : "");
   v("smiles", (m && m.smiles) || "");
   v("inchikey", (m && m.inchikey) || "");
-  v("cas", (m && m.esterni && m.esterni.cas) || "");
-  v("addotti", m ? (m.addotti || []).join(" ") : "");
-  v("raccolte", m ? (m.raccolte || []).join("\n") : "");
-  v("note", (m && m.note) || "");
+  v("cas", (m && m.external && m.external.cas) || "");
+  v("addotti", m ? (m.adducts || []).join(" ") : "");
+  v("raccolte", m ? (m.collections || []).join("\n") : "");
+  v("note", (m && m.notes) || "");
 }
 
 /**
@@ -66,14 +66,14 @@ export function leggi(/** @type {HTMLElement} */ form, /** @type {Molecola | nul
   const v = (/** @type {string} */ k) => campoDi(form, k).value.trim();
   const righe = (/** @type {string} */ k) => v(k).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   const carica = v("carica") === "" ? 0 : Number(v("carica"));
-  if (!Number.isInteger(carica)) return { errori: [{ riga: 0, chiave: "error.molecules.badCharge", testo: v("carica") }] };
+  if (!Number.isInteger(carica)) return { errori: [{ line: 0, key: "error.molecules.badCharge", text: v("carica") }] };
   const oggi = new Date().toISOString().slice(0, 10);
-  const esterni = { ...(base && base.esterni), cas: v("cas") || undefined };
+  const external = { ...(base && base.external), cas: v("cas") || undefined };
   return {
     rec: {
-      ...(base || {}), nome: v("nome"), sinonimi: righe("sinonimi"), formula: v("formula"), carica, smiles: v("smiles") || null, inchikey: v("inchikey") || null,
-      addotti: v("addotti").split(/[\s,]+/).filter(Boolean), raccolte: righe("raccolte"), esterni, note: v("note"),
-      origine: { tipo: "utente", creato: (base && base.origine.tipo === "utente" && base.origine.creato) || oggi, modificato: oggi },
+      ...(base || {}), name: v("nome"), synonyms: righe("sinonimi"), formula: v("formula"), charge: carica, smiles: v("smiles") || null, inchikey: v("inchikey") || null,
+      adducts: v("addotti").split(/[\s,]+/).filter(Boolean), collections: righe("raccolte"), external, notes: v("note"),
+      origin: { type: "user", created: (base && base.origin.type === "user" && base.origin.created) || oggi, modified: oggi },
     },
   };
 }

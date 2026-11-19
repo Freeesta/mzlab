@@ -4,10 +4,10 @@
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 use mzlab_core::json::{parse, Value};
-use mzlab_core::molecules::{cerca, from_csv, route, Molecule};
+use mzlab_core::molecules::{from_csv, route, search, Molecule};
 
 fn ms(csv: &str) -> Vec<Molecule> {
-    from_csv(csv, "utente", None).unwrap_or_else(|e| panic!("{e:?}"))
+    from_csv(csv, "user", None).unwrap_or_else(|e| panic!("{e:?}"))
 }
 
 const PARENTS: &str = "\
@@ -20,7 +20,7 @@ Atrazina;;C8H14ClN5;MXWJVTOOROXGIU-UHFFFAOYSA-N
 fn first_names(ms: &[Molecule], q: &str) -> Vec<String> {
     mzlab_core::molecules::search_wide(ms, q, 8, 10.0)
         .iter()
-        .map(|h| ms[h.0].nome.clone())
+        .map(|h| ms[h.0].name.clone())
         .collect()
 }
 
@@ -28,7 +28,7 @@ fn first_names(ms: &[Molecule], q: &str) -> Vec<String> {
 fn wide_search_finds_inchikeys_and_one_letter_slips() {
     let v = ms(PARENTS);
     // the plain search is unchanged: a name that is not written right finds nothing
-    assert!(cerca(&v, "bentazan", 8, 10.0).is_empty());
+    assert!(search(&v, "bentazan", 8, 10.0).is_empty());
     // a slip of one letter (replaced, dropped, added), in the name or in a synonym
     for q in ["bentazan", "bentazne", "bentazzon", "Bentazonee"] {
         assert_eq!(first_names(&v, q)[0], "Bentazon", "{q}");
@@ -48,12 +48,9 @@ fn wide_search_finds_inchikeys_and_one_letter_slips() {
 
 fn ion(q: &str, adduct: &str) -> Value {
     parse(
-        route(
-            "ione",
-            &format!("{{\"q\":\"{q}\",\"adduct\":\"{adduct}\"}}"),
-        )
-        .unwrap()
-        .as_bytes(),
+        route("ion", &format!("{{\"q\":\"{q}\",\"adduct\":\"{adduct}\"}}"))
+            .unwrap()
+            .as_bytes(),
     )
     .unwrap()
 }
@@ -65,14 +62,14 @@ fn a_typed_formula_or_mz_is_read_as_the_neutral_or_as_an_ion() {
     // bentazone C10H12N2O3S, 240.0569: M itself
     let n = ion("C10H12N2O3S", "neutral");
     assert_eq!(
-        (s(&n, "formula"), f(&n, "massa")),
+        (s(&n, "formula"), f(&n, "mass")),
         ("C10H12N2O3S".into(), 240.056863)
     );
     assert!(n.get("mz").and_then(|x| x.f64()).is_none());
     // the ion formulas of the same molecule give the same M, and the m/z of the table
     let h = ion("C10H13N2O3S", "[M+H]+");
     assert_eq!(s(&h, "formula"), "C10H12N2O3S");
-    assert_eq!(f(&h, "massa"), 240.056863);
+    assert_eq!(f(&h, "mass"), 240.056863);
     assert!((f(&h, "mz") - 241.064139).abs() < 2e-6);
     let d = ion("C10H11N2O3S", "[M-H]-");
     assert_eq!(s(&d, "formula"), "C10H12N2O3S");
@@ -87,18 +84,18 @@ fn a_typed_formula_or_mz_is_read_as_the_neutral_or_as_an_ion() {
         (s(&m, "kind"), s(&m, "formula")),
         ("mass".into(), "".into())
     );
-    assert!((f(&m, "massa") - 240.056863).abs() < 2e-6);
-    assert_eq!(f(&ion("240.0569", "neutral"), "massa"), 240.0569);
+    assert!((f(&m, "mass") - 240.056863).abs() < 2e-6);
+    assert_eq!(f(&ion("240.0569", "neutral"), "mass"), 240.0569);
     // an adduct the formula does not hold, or one that is not in the table, is an error
-    assert!(route("ione", r#"{"q":"C10H12N2O3S","adduct":"[M+Na]+"}"#).is_err());
-    assert!(route("ione", r#"{"q":"C10H12N2O3S","adduct":"[M+X]+"}"#).is_err());
-    assert!(route("ione", r#"{"q":"-5","adduct":"neutral"}"#).is_err());
+    assert!(route("ion", r#"{"q":"C10H12N2O3S","adduct":"[M+Na]+"}"#).is_err());
+    assert!(route("ion", r#"{"q":"C10H12N2O3S","adduct":"[M+X]+"}"#).is_err());
+    assert!(route("ion", r#"{"q":"-5","adduct":"neutral"}"#).is_err());
 }
 
 #[test]
 fn the_adduct_list_is_the_table_of_the_engine() {
     assert_eq!(
-        route("addotti", "{}").unwrap(),
+        route("adducts", "{}").unwrap(),
         r#"["[M+H]+","[M+NH4]+","[M+Na]+","[M+K]+","[M-H]-","[M+Cl]-","[M+HCOO]-"]"#
     );
 }
