@@ -3,7 +3,7 @@
 use super::{pre, Entry};
 
 pub(crate) static TABLE: &[Entry] = &[
-    Entry::new("msn graph", "mzlab-cli msn graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion", |a| crate::msn_graph::cmd(a.into_iter())),
+    Entry::new("msn graph", "mzlab-cli msn graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion", |a| crate::msn_graph::cmd(a.into_iter())).schema("msn-graph/1"),
     Entry::new("msn complete", "mzlab-cli msn complete GRAPH.json ...   the graph completed with the missing nodes", |a| crate::msn_graph::cmd(pre("complete", a).into_iter())),
     Entry::new("msn compare", "mzlab-cli msn compare GRAPH.json GRAPH.json ...   two graphs side by side", |a| crate::msn_graph::cmd(pre("compare", a).into_iter())),
     Entry::new("msn figure", "mzlab-cli msn figure GRAPH.json ...   the figure of a graph", |a| crate::msn_graph::cmd(pre("figure", a).into_iter())),

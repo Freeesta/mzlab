@@ -19,15 +19,12 @@ pub(crate) struct Entry {
     /// The usage line after `mzlab-cli `, as printed by `--help`; empty for a hidden command.
     pub help: &'static str,
     pub run: fn(Vec<String>) -> Outcome,
-    /// One sentence for the command catalog; empty until the catalog fills it.
-    #[allow(dead_code)]
-    pub synopsis: &'static str,
-    /// The `schema` of the JSON document the command prints, `""` when it has none or several.
-    #[allow(dead_code)]
+    /// The `schema` of the JSON document the command prints, `""` when it has none or several (`mzlab-cli schema NAME` prints it).
     pub schema: &'static str,
     /// The exit codes the command can give (`exit.rs`).
-    #[allow(dead_code)]
     pub exits: &'static [u8],
+    /// Command lines for the catalog (`commands --json`).
+    pub examples: &'static [&'static str],
 }
 
 impl Entry {
@@ -40,10 +37,20 @@ impl Entry {
             name,
             help,
             run,
-            synopsis: "",
             schema: "",
             exits: &[0, 1, 2, 3, 4, 5, 6],
+            examples: &[],
         }
+    }
+
+    pub(crate) const fn exits(mut self, exits: &'static [u8]) -> Self {
+        self.exits = exits;
+        self
+    }
+
+    pub(crate) const fn examples(mut self, examples: &'static [&'static str]) -> Self {
+        self.examples = examples;
+        self
     }
 
     pub(crate) const fn schema(mut self, schema: &'static str) -> Self {
@@ -81,6 +88,7 @@ const JSON_FLAG: &[&str] = &[
     "flow check",
     "flow verify",
     "flow steps",
+    "commands",
     "file validate",
     "file pair",
     "file list",
@@ -127,6 +135,7 @@ const JSON_DEFAULT: &[&str] = &[
     "peak auto-lr",
     "peak area",
     "peak window",
+    "schema",
     "llm tools",
     "llm inspect",
     "llm params",

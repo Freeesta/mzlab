@@ -11,6 +11,9 @@ use mzlab_ops::run::feat::run;
 use mzlab_ops::run::table::core::{samples_json, table_file};
 
 mod argv;
+mod catalog;
+#[cfg(test)]
+mod catalog_tests;
 mod channels_cmd;
 pub mod citation;
 mod cmd;
@@ -177,6 +180,7 @@ mod peaks_edges_cmd;
 mod plain;
 mod sample_select;
 mod samples_cmd;
+mod schema_cmd;
 mod steps_cmd;
 #[cfg(not(target_family = "wasm"))]
 mod validate;

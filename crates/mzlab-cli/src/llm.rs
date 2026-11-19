@@ -16,7 +16,8 @@ use crate::{emit, Outcome};
 #[path = "llm_facts.rs"]
 pub(crate) mod facts;
 
-const HELP: &str = "mzlab-cli llm tools [--demo] [--out FILE]   the catalog tools/1 of the assistant tools (stdout, or FILE); --demo: the subset of the public demo
+const HELP: &str = "mzlab-cli llm tools [--demo] [--compact] [--out FILE]   the catalog tools/1 of the assistant tools (stdout, or FILE); --demo: the subset of the public demo;
+  --compact: tools-compact/1, per tool the name, class and the names of its inputs, no prose
 mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the normalized events of a recording, one JSON line per event (stdout);
   the turn defaults to the number of assistant messages of the conversation; --strict also compares the SHA-256 of the request
 mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the context/1 the assistant gets from a run folder (stdout)
@@ -47,10 +48,12 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
     }
     let mut out: Option<PathBuf> = None;
     let mut demo = false;
+    let mut compact = false;
     while let Some(a) = it.next() {
         match a.as_str() {
             "--help" | "-h" => return Outcome::ok(format!("{HELP}\n").into_bytes()),
             "--demo" => demo = true,
+            "--compact" => compact = true,
             "--out" => match it.next() {
                 Some(p) => out = Some(p.into()),
                 None => return Outcome::fail("--out needs a path"),
@@ -58,16 +61,61 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
             x => return Outcome::fail(&format!("unknown option {x}")),
         }
     }
+    if compact {
+        return emit(compact_json(demo), &out);
+    }
     // the citation is a CLI-only key: the files of docs/schemi and the catalog of the site stay as they are
     let text = if demo {
         demo_tools_json()
     } else {
         tools_json()
     };
-    emit(
-        crate::citation::after(&text, "\"schema\":\"tools/1\",", "\n  "),
-        &out,
-    )
+    // `cli_catalog` is CLI-only too: the catalog of the commands beside the catalog of the tools, so the agent catalogs agree
+    let text = crate::citation::after(&text, "\"schema\":\"tools/1\",", "\n  ");
+    let text = text.replacen(
+        "\"schema\":\"tools/1\",",
+        "\"schema\":\"tools/1\",\n  \"cli_catalog\":\"mzlab-cli commands --json\",",
+        1,
+    );
+    emit(text, &out)
+}
+
+/// `tools-compact/1`: the tools of the catalog by name and class with the names of their inputs; the full text stays one call away.
+fn compact_json(demo: bool) -> String {
+    use mzlab_core::json::{parse, Value};
+    use mzlab_core::jsonb::{text, write, Obj};
+    let src = if demo {
+        demo_tools_json()
+    } else {
+        tools_json()
+    };
+    let doc = parse(src.as_bytes()).unwrap_or(Value::Null);
+    let tools = doc
+        .get("tools")
+        .map(|t| t.arr().to_vec())
+        .unwrap_or_default();
+    let items = tools
+        .iter()
+        .map(|t| {
+            let s = |k: &str| text(t.get(k).and_then(Value::str).unwrap_or(""));
+            let inputs = match t.get("input_schema").and_then(|i| i.get("properties")) {
+                Some(Value::Obj(o)) => o.iter().map(|(k, _)| text(k)).collect(),
+                _ => Vec::new(),
+            };
+            Obj::new()
+                .put("name", s("name"))
+                .put("class", s("class"))
+                .put("inputs", Value::Arr(inputs))
+                .done()
+        })
+        .collect();
+    let doc = Obj::new()
+        .put("schema", text("tools-compact/1"))
+        .put("citation", text(&crate::citation::text()))
+        .put("catalog", text("mzlab-cli llm tools"))
+        .put("tools", Value::Arr(items))
+        .done();
+    write(&doc) + "\n"
 }
 
 /// The events of one turn of a recording; errors (a mismatch, a missing turn, a bad file) are the exit code 2 with the key on stderr.

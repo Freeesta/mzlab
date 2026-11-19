@@ -16,7 +16,7 @@ integrity; 4 input missing or unreadable; 5 selector not found (sample, channel,
 usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|pos|neg | --params FILE.json]
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
-       mzlab-cli flow steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only
+       mzlab-cli flow steps [--json] [--compact] [--id ID[@V]]   the Flow steps of this program, native or page only
        mzlab-cli flow report RUNDIR [--out FILE]   the run-report/1 report of a run folder (prov.json and the files beside it)
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run (a role without sha256 takes it from the run inputs)
        mzlab-cli flow verify RECORD   whether the fingerprints of an mzrun/1 record match its files
@@ -80,7 +80,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli db normative import-official ...   import the official lists the user owns (native only)
        mzlab-cli db insilico pack CSV OUT   the spectra.insilico candidate package (native only)
        mzlab-cli db ref-list FILE.csv [--name N] [--match X]   read a CSV list of reference ions as JSON (reflist/1) with line-numbered row errors; exit 1 if rows are wrong
-       mzlab-cli llm tools [--out FILE] [--demo]   the catalog tools/1 of the assistant tools
+       mzlab-cli llm tools [--out FILE] [--demo] [--compact]   the catalog tools/1 of the assistant tools
        mzlab-cli llm inspect FILE...   the facts of a file the assistant reads
        mzlab-cli llm params ...   the parameters the assistant proposes
        mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the context/1 of a run folder
@@ -89,6 +89,8 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli completions bash   the bash completion script, on stdout
        mzlab-cli completions zsh   the zsh completion script, on stdout
        mzlab-cli completions fish   the fish completion script, on stdout
+       mzlab-cli commands [--json] [PATH...]   every command with its arguments, flags, output schema and exit codes (commands/1)
+       mzlab-cli schema [--list | NAME]   the JSON Schema NAME (error/1, mzflow/2, ...) or the list of them (schemas/1)
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
@@ -111,7 +113,7 @@ integrity; 4 input missing or unreadable; 5 selector not found (sample, channel,
 usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|pos|neg | --params FILE.json]
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
-       mzlab-cli flow steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only
+       mzlab-cli flow steps [--json] [--compact] [--id ID[@V]]   the Flow steps of this program, native or page only
        mzlab-cli flow report RUNDIR [--out FILE]   the run-report/1 report of a run folder (prov.json and the files beside it)
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run (a role without sha256 takes it from the run inputs)
        mzlab-cli flow verify RECORD   whether the fingerprints of an mzrun/1 record match its files
@@ -175,7 +177,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli db normative import-official ...   import the official lists the user owns (native only)
        mzlab-cli db insilico pack CSV OUT   the spectra.insilico candidate package (native only)
        mzlab-cli db ref-list FILE.csv [--name N] [--match X]   read a CSV list of reference ions as JSON (reflist/1) with line-numbered row errors; exit 1 if rows are wrong
-       mzlab-cli llm tools [--out FILE] [--demo]   the catalog tools/1 of the assistant tools
+       mzlab-cli llm tools [--out FILE] [--demo] [--compact]   the catalog tools/1 of the assistant tools
        mzlab-cli llm inspect FILE...   the facts of a file the assistant reads
        mzlab-cli llm params ...   the parameters the assistant proposes
        mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the context/1 of a run folder
@@ -184,6 +186,8 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli completions bash   the bash completion script, on stdout
        mzlab-cli completions zsh   the zsh completion script, on stdout
        mzlab-cli completions fish   the fish completion script, on stdout
+       mzlab-cli commands [--json] [PATH...]   every command with its arguments, flags, output schema and exit codes (commands/1)
+       mzlab-cli schema [--list | NAME]   the JSON Schema NAME (error/1, mzflow/2, ...) or the list of them (schemas/1)
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
@@ -206,7 +210,7 @@ integrity; 4 input missing or unreadable; 5 selector not found (sample, channel,
 usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|pos|neg | --params FILE.json]
        mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
-       mzlab-cli flow steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only
+       mzlab-cli flow steps [--json] [--compact] [--id ID[@V]]   the Flow steps of this program, native or page only
        mzlab-cli flow report RUNDIR [--out FILE]   the run-report/1 report of a run folder (prov.json and the files beside it)
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run (a role without sha256 takes it from the run inputs)
        mzlab-cli flow verify RECORD   whether the fingerprints of an mzrun/1 record match its files
@@ -270,7 +274,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli db normative import-official ...   import the official lists the user owns (native only)
        mzlab-cli db insilico pack CSV OUT   the spectra.insilico candidate package (native only)
        mzlab-cli db ref-list FILE.csv [--name N] [--match X]   read a CSV list of reference ions as JSON (reflist/1) with line-numbered row errors; exit 1 if rows are wrong
-       mzlab-cli llm tools [--out FILE] [--demo]   the catalog tools/1 of the assistant tools
+       mzlab-cli llm tools [--out FILE] [--demo] [--compact]   the catalog tools/1 of the assistant tools
        mzlab-cli llm inspect FILE...   the facts of a file the assistant reads
        mzlab-cli llm params ...   the parameters the assistant proposes
        mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the context/1 of a run folder
@@ -279,6 +283,8 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli completions bash   the bash completion script, on stdout
        mzlab-cli completions zsh   the zsh completion script, on stdout
        mzlab-cli completions fish   the fish completion script, on stdout
+       mzlab-cli commands [--json] [PATH...]   every command with its arguments, flags, output schema and exit codes (commands/1)
+       mzlab-cli schema [--list | NAME]   the JSON Schema NAME (error/1, mzflow/2, ...) or the list of them (schemas/1)
 
 If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/mzlab, DOI: to be added
 --- stderr
@@ -295,7 +301,7 @@ exit 0
 --- stdout
 usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
-       mzlab-cli flow steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only
+       mzlab-cli flow steps [--json] [--compact] [--id ID[@V]]   the Flow steps of this program, native or page only
        mzlab-cli flow report RUNDIR [--out FILE]   the run-report/1 report of a run folder (prov.json and the files beside it)
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run (a role without sha256 takes it from the run inputs)
        mzlab-cli flow verify RECORD   whether the fingerprints of an mzrun/1 record match its files
@@ -309,7 +315,7 @@ exit 0
 --- stdout
 usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan
        mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files
-       mzlab-cli flow steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only
+       mzlab-cli flow steps [--json] [--compact] [--id ID[@V]]   the Flow steps of this program, native or page only
        mzlab-cli flow report RUNDIR [--out FILE]   the run-report/1 report of a run folder (prov.json and the files beside it)
        mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run (a role without sha256 takes it from the run inputs)
        mzlab-cli flow verify RECORD   whether the fingerprints of an mzrun/1 record match its files
@@ -348,10 +354,12 @@ exit 0
 --- stdout
 mzlab-cli flow steps: the steps a Flow plan can use, from the registry of this program.
 
-usage: mzlab-cli flow steps [--json] [--id ID[@VERSION]]
+usage: mzlab-cli flow steps [--json] [--compact] [--id ID[@VERSION]]
 
   (no option)       one line per step: id@version, `native` when `flow run` executes it (else `page`: only the Flow page does), title
   --json            the step/1 descriptors as a JSON array, each with "executable_native" and "citation" at the end
+  --compact         steps-compact/1: per step the id, version, title, ports with their types, parameter names, algorithm ids and
+                    executable_native, no prose (a few KB; --json is the full descriptors)
   --id ID[@V]       one step only (with --json one step/1 object); without @V the highest version
   --help            this text
 
@@ -361,7 +369,7 @@ exit codes: 0 done, 2 usage or an unknown step (err.flow.step.unknown)
 === mzlab-cli llm --help
 exit 0
 --- stdout
-usage: mzlab-cli llm tools [--out FILE] [--demo]   the catalog tools/1 of the assistant tools
+usage: mzlab-cli llm tools [--out FILE] [--demo] [--compact]   the catalog tools/1 of the assistant tools
        mzlab-cli llm inspect FILE...   the facts of a file the assistant reads
        mzlab-cli llm params ...   the parameters the assistant proposes
        mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the context/1 of a run folder
@@ -1053,7 +1061,8 @@ If you use mzLab, please cite it: mzLab {VERSION}, https://github.com/Freeesta/m
 === mzlab-cli llm tools --help
 exit 0
 --- stdout
-mzlab-cli llm tools [--demo] [--out FILE]   the catalog tools/1 of the assistant tools (stdout, or FILE); --demo: the subset of the public demo
+mzlab-cli llm tools [--demo] [--compact] [--out FILE]   the catalog tools/1 of the assistant tools (stdout, or FILE); --demo: the subset of the public demo;
+  --compact: tools-compact/1, per tool the name, class and the names of its inputs, no prose
 mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the normalized events of a recording, one JSON line per event (stdout);
   the turn defaults to the number of assistant messages of the conversation; --strict also compares the SHA-256 of the request
 mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the context/1 the assistant gets from a run folder (stdout)
@@ -1065,7 +1074,8 @@ mzlab-cli llm params DIR [--answers FILE] [--budget N] [--hide-names]   the para
 === mzlab-cli llm replay --help
 exit 0
 --- stdout
-mzlab-cli llm tools [--demo] [--out FILE]   the catalog tools/1 of the assistant tools (stdout, or FILE); --demo: the subset of the public demo
+mzlab-cli llm tools [--demo] [--compact] [--out FILE]   the catalog tools/1 of the assistant tools (stdout, or FILE); --demo: the subset of the public demo;
+  --compact: tools-compact/1, per tool the name, class and the names of its inputs, no prose
 mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the normalized events of a recording, one JSON line per event (stdout);
   the turn defaults to the number of assistant messages of the conversation; --strict also compares the SHA-256 of the request
 mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the context/1 the assistant gets from a run folder (stdout)

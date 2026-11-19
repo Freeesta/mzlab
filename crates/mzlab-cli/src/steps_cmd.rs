@@ -2,6 +2,8 @@
 //! The JSON is the `step/1` array of the exported `docs/schemi/steps-*-1.json`, each step with `executable_native` and `citation` added at the end.
 
 use mzlab_core::error::Error;
+use mzlab_core::json::Value;
+use mzlab_core::jsonb::{text, write, Obj};
 use mzlab_core::step::json::step_json;
 use mzlab_core::step::Step;
 
@@ -11,10 +13,12 @@ use crate::Outcome;
 
 const HELP: &str = "mzlab-cli flow steps: the steps a Flow plan can use, from the registry of this program.
 
-usage: mzlab-cli flow steps [--json] [--id ID[@VERSION]]
+usage: mzlab-cli flow steps [--json] [--compact] [--id ID[@VERSION]]
 
   (no option)       one line per step: id@version, `native` when `flow run` executes it (else `page`: only the Flow page does), title
   --json            the step/1 descriptors as a JSON array, each with \"executable_native\" and \"citation\" at the end
+  --compact         steps-compact/1: per step the id, version, title, ports with their types, parameter names, algorithm ids and
+                    executable_native, no prose (a few KB; --json is the full descriptors)
   --id ID[@V]       one step only (with --json one step/1 object); without @V the highest version
   --help            this text
 
@@ -31,6 +35,50 @@ fn with_native(s: &Step) -> String {
     )
 }
 
+/// The `steps-compact/1` document: what an agent needs to wire a plan, without the parameter prose.
+fn compact_json(list: &[&Step]) -> String {
+    let ports = |ps: &[mzlab_core::step::Port]| {
+        Value::Arr(
+            ps.iter()
+                .map(|p| {
+                    let o = Obj::new()
+                        .put("name", text(p.name))
+                        .put("type", text(p.ty.name()));
+                    let o = if p.many { o.b("many", true) } else { o };
+                    (if p.optional { o.b("optional", true) } else { o }).done()
+                })
+                .collect(),
+        )
+    };
+    let steps = list
+        .iter()
+        .map(|s| {
+            Obj::new()
+                .put("id", text(s.id))
+                .i("version", i64::from(s.version))
+                .put("title", text(s.title))
+                .put("in", ports(&s.ins))
+                .put("out", ports(&s.outs))
+                .put(
+                    "params",
+                    Value::Arr(s.params.iter().map(|p| text(p.name)).collect()),
+                )
+                .put(
+                    "algorithms",
+                    Value::Arr(s.algorithms.iter().map(|a| text(a.id)).collect()),
+                )
+                .b("executable_native", executable(s.id))
+                .done()
+        })
+        .collect();
+    let doc = Obj::new()
+        .put("schema", text("steps-compact/1"))
+        .put("citation", text(&crate::citation::text()))
+        .put("steps", Value::Arr(steps))
+        .done();
+    write(&doc) + "\n"
+}
+
 /// `mzlab-cli flow steps ARGS...` (the arguments after `steps`).
 pub(crate) fn run(args: Vec<String>) -> Outcome {
     let st = Style {
@@ -42,11 +90,13 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
         fail(&err, msg, "mzlab-cli flow steps --help")
     };
     let mut id = None;
+    let mut compact = false;
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
         match x.as_str() {
             "--help" | "-h" => return Outcome::ok(format!("{HELP}\n").into_bytes()),
             "--json" => {}
+            "--compact" => compact = true,
             "--id" => match it.next() {
                 Some(v) => id = Some(v),
                 None => return usage("--id needs a step id"),
@@ -72,7 +122,9 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
         };
         list = vec![last];
     }
-    let stdout = if st.json {
+    let stdout = if compact {
+        compact_json(&list)
+    } else if st.json {
         match (&id, list.as_slice()) {
             (Some(_), [one]) => format!("{}\n", with_native(one)),
             _ => format!(

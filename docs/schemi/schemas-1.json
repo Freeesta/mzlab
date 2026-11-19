@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/1",
+  "title": "schemas/1: the schemas `mzlab-cli schema` serves",
+  "description": "The answer of `mzlab-cli schema --list`: every embedded JSON Schema by name (its `$id`), with its title and size. `mzlab-cli schema NAME` prints one. Code: crates/mzlab-cli/src/schema_cmd.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "schemas"
+  ],
+  "properties": {
+    "schema": {
+      "const": "schemas/1"
+    },
+    "schemas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "title",
+          "bytes"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "bytes": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  }
+}
