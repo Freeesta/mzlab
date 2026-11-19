@@ -93,7 +93,7 @@ fn an_index_of_an_older_version_or_without_the_list_is_refused_not_scanned() {
     assert_eq!(open(idx.clone()), None);
     for old in [1, 2] {
         assert_eq!(
-            open(damaged(&idx, Some(old), None)).as_deref(),
+            open(damaged(&idx, Some(old), None)),
             Some("error.badIndex"),
             "version {old}"
         );
@@ -104,13 +104,12 @@ fn an_index_of_an_older_version_or_without_the_list_is_refused_not_scanned() {
             &idx,
             None,
             Some((b"\"chromatograms\"", b"\"chromatogramz\""))
-        ))
-        .as_deref(),
+        )),
         Some("error.badIndex")
     );
     // a newer one is still `error.newerFormat`
     assert_eq!(
-        open(damaged(&idx, Some(4), None)).as_deref(),
+        open(damaged(&idx, Some(4), None)),
         Some("error.newerFormat")
     );
 }
