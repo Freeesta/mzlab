@@ -1,8 +1,8 @@
 //! The mzML layout the open routes share: the chromatogram list and the facts of the file, read once per index
 //! (`lr_entry`, `lr_items` and `canali` each scanned the whole tail of the file for them). The slots of one file share one cache.
+use crate::idxread::ReadAt;
 use crate::iteminfo::{add_mrm, facts_with, Facts};
 use crate::mzmlhead::{Chrom, Mzml};
-use crate::idxread::ReadAt;
 use crate::Result;
 use std::sync::{Arc, Mutex};
 
@@ -24,7 +24,11 @@ impl Layout {
     }
 
     /// `Mzml::chromatograms(scans_end)`, scanned the first time only (`scans_end` is a property of the file).
-    pub fn chromatograms<R: ReadAt>(&self, m: &mut Mzml<R>, scans_end: u64) -> Result<Arc<Vec<Chrom>>> {
+    pub fn chromatograms<R: ReadAt>(
+        &self,
+        m: &mut Mzml<R>,
+        scans_end: u64,
+    ) -> Result<Arc<Vec<Chrom>>> {
         if let Some(c) = &self.lock().chroms {
             return Ok(c.clone());
         }
@@ -34,7 +38,13 @@ impl Layout {
     }
 
     /// `facts_from`: the base is worked out the first time, the part `need_mrm` adds the first time it is asked.
-    pub fn facts<R: ReadAt>(&self, m: &mut Mzml<R>, scans_end: u64, n_chrom: i64, need_mrm: bool) -> Result<Facts> {
+    pub fn facts<R: ReadAt>(
+        &self,
+        m: &mut Mzml<R>,
+        scans_end: u64,
+        n_chrom: i64,
+        need_mrm: bool,
+    ) -> Result<Facts> {
         let cached = self.lock().base.clone();
         let mut f = match cached {
             Some(f) => f,
@@ -83,7 +93,9 @@ mod tests {
     }
 
     fn file() -> Vec<u8> {
-        let mut s = String::from("<?xml version=\"1.0\"?><mzML><run id=\"r\"><chromatogramList count=\"2\">\n");
+        let mut s = String::from(
+            "<?xml version=\"1.0\"?><mzML><run id=\"r\"><chromatogramList count=\"2\">\n",
+        );
         for i in 0..2 {
             s.push_str(&format!("<chromatogram index=\"{i}\" id=\"SRM SIC Q1=100.0 Q3={}.0\" defaultArrayLength=\"0\"></chromatogram>\n", 50 + i));
         }
@@ -103,10 +115,17 @@ mod tests {
         assert!(after_first > 0);
         let b = lay.clone().chromatograms(&mut m, 0).unwrap();
         let fb = lay.facts(&mut m, 0, b.len() as i64, true).unwrap();
-        assert_eq!(m.r.bytes, after_first, "the cached layout is not read again");
+        assert_eq!(
+            m.r.bytes, after_first,
+            "the cached layout is not read again"
+        );
         assert_eq!(format!("{fa:?}"), format!("{fb:?}"));
         let plain = crate::iteminfo::facts_from(&mut m, 0, a.len() as i64, true).unwrap();
-        assert_eq!(format!("{plain:?}"), format!("{fa:?}"), "the cache gives what facts_from gives");
+        assert_eq!(
+            format!("{plain:?}"),
+            format!("{fa:?}"),
+            "the cache gives what facts_from gives"
+        );
         assert_eq!(a.len(), 2);
     }
 }
