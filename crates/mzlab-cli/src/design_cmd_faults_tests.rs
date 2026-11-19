@@ -144,3 +144,93 @@ fn validate_and_propose_with_samples_answer_json_documents() {
     assert!(pr.starts_with("{\"schema\":\"design_proposal/1\""), "{pr}");
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn json_that_is_not_samples_is_exit_3_under_validate_and_propose() {
+    let d = dir("notsamples");
+    let (_, _) = propose(&d);
+    std::fs::write(d.join("other.json"), r#"{"files":1}"#).unwrap();
+    let (design, other) = (p(&d, "design.json"), p(&d, "other.json"));
+    for args in [
+        vec!["sample", "design", "validate", &design, "--samples", &other],
+        vec!["sample", "design", "propose", "--samples", &other],
+    ] {
+        let o = run(&args);
+        assert_eq!(o.code, 3, "{args:?}: {}", o.stderr);
+        assert!(o.stderr.contains("error.badSamples"), "{}", o.stderr);
+    }
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// Every rule of `reference_rule` has its own reason text, and no two share one.
+#[test]
+fn every_reference_rule_has_its_own_lang_key() {
+    let mut keys = Vec::new();
+    for code in mzlab_core::design::REFERENCE_RULES {
+        let key = super::reference_key(code);
+        assert!(key.ends_with(code), "{code}: {key}");
+        assert!(crate::error_text::catalog_text(key).is_some(), "{key}");
+        keys.push(key);
+    }
+    keys.sort_unstable();
+    keys.dedup();
+    assert_eq!(keys.len(), mzlab_core::design::REFERENCE_RULES.len());
+    // a name for each rule: the code it gives is a known one, and every known code is reached
+    let mut seen = Vec::new();
+    for name in ["ref_a", "my_reference", "the control", "x_no_gas"] {
+        let code = mzlab_core::design::reference_rule(name).unwrap();
+        assert!(
+            mzlab_core::design::REFERENCE_RULES.contains(&code),
+            "{name}: {code}"
+        );
+        seen.push(code);
+    }
+    seen.sort_unstable();
+    let mut all = mzlab_core::design::REFERENCE_RULES.to_vec();
+    all.sort_unstable();
+    assert_eq!(seen, all);
+    assert!(mzlab_core::design::reference_rule("trt").is_none());
+    // a reference no rule matches (the file was edited) has its own text
+    assert!(crate::error_text::catalog_text("err.design.why.given").is_some());
+}
+
+/// Every proposal says its `why` in a code the schema lists, also one whose reference was edited to a name no rule matches.
+#[test]
+fn every_proposal_validates_against_its_schema_even_with_an_edited_reference() {
+    let schema: serde_json::Value =
+        serde_json::from_str(include_str!("../../../docs/schemi/design_proposal-1.json")).unwrap();
+    let item = &schema["properties"]["choices"]["items"];
+    let whys: Vec<&str> = item["properties"]["why"]["enum"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|w| w.as_str().unwrap())
+        .collect();
+    let names: Vec<&str> = item["properties"]["choice"]["enum"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|w| w.as_str().unwrap())
+        .collect();
+    let d = dir("schema");
+    let (s, _) = propose(&d);
+    let design = std::fs::read_to_string(d.join("design.json"))
+        .unwrap()
+        .trim_end()
+        .to_string();
+    let text = std::fs::read_to_string(&s).unwrap();
+    let cs = mzlab_core::samples::from_json(text.as_bytes()).unwrap();
+    let edited = design.replace("\"reference\":\"ref\"", "\"reference\":\"trt\"");
+    assert_ne!(edited, design, "the design has a reference to edit");
+    for one in [design.as_str(), edited.as_str()] {
+        let doc: serde_json::Value =
+            serde_json::from_str(&super::proposal(&cs, one).ok().expect("a proposal")).unwrap();
+        for c in doc["choices"].as_array().unwrap() {
+            let why = c["why"].as_str().unwrap();
+            assert!(whys.contains(&why), "{why} is not in the schema");
+            assert!(names.contains(&c["choice"].as_str().unwrap()));
+            assert!(!c["reason"].as_str().unwrap().is_empty());
+        }
+    }
+    let _ = std::fs::remove_dir_all(&d);
+}

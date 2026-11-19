@@ -17,7 +17,7 @@
     "properties": {
      "choice": {"enum": ["conditions", "reference", "comparisons", "batches"]},
      "value": {"description": "conditions: the names; reference: a name or null; comparisons: vs_reference or none; batches: the default batch"},
-     "why": {"enum": ["series", "prefixRef", "containsReference", "containsControl", "containsNoGas", "noReference", "nothingToCompare", "allAgainstReference", "defaultBatch"], "description": "the stable code of the reason"},
+     "why": {"enum": ["series", "prefixRef", "containsReference", "containsControl", "containsNoGas", "given", "noReference", "nothingToCompare", "allAgainstReference", "defaultBatch"], "description": "the stable code of the reason"},
      "reason": {"type": "string", "description": "the sentence of that code (lang/en err.design.why.<code>)"}
     }
    }
