@@ -115,15 +115,9 @@ fn upload_like_python() {
         for k in ["name", "size", "probe", "sha256"] {
             assert_eq!(src[k], want["source"][k], "{stem}: source.{k}");
         }
-        // `run.chromatograms` is the Rust index's own (the open routes read it); the Python reference does not write it, so the rest is compared
-        let mut run: Value = serde_json::from_str(&t.run_json).unwrap();
-        let list = run.as_object_mut().unwrap().remove("chromatograms");
-        assert_eq!(run, want["run"], "{stem}: run");
-        assert_eq!(
-            list.map_or(0, |l| l.as_array().unwrap().len()),
-            want["run"]["n_chromatograms"].as_u64().unwrap() as usize,
-            "{stem}: one list row per chromatogram"
-        );
+        // the whole `run`, the chromatogram list included: the Python reference writes the rows of `chromlist.rs`
+        let run: Value = serde_json::from_str(&t.run_json).unwrap();
+        same(&format!("{stem} run"), &run, &want["run"]);
         assert_eq!(t.hr1, want["hr1"].as_bool().unwrap(), "{stem}: hr1");
         files += 1;
     }
