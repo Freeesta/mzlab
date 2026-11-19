@@ -2,6 +2,8 @@
 //! goes to the desktop engine and to the engine `.wasm` (`mzlab-wasm`, wasm-bindgen `--target nodejs`, run by `tests/rotte_wasm_node.js`) on the same example and the
 //! same `.mzidx`, and every answer must be the same: the text, the numbers or the bytes, or the key of the error. `MZLAB_WASM_PKG` names the folder of the built module;
 //! `tests/test_parita_rotte_app.py` builds it and runs this test. Without it (or without node) the test does nothing.
+#[path = "parity_routes/route_steps.rs"]
+mod route_steps;
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
 use serde_json::{json, Value};
@@ -133,7 +135,7 @@ fn plan() -> Vec<Value> {
         json!({"op": "spectra", "slot": 7, "level": 1, "i0": 0, "i1": 5, "bin": 0.0}),
         json!({"op": "spectra", "slot": 7, "level": 1, "i0": 0, "i1": 5, "bin": 1.0}),
     ];
-    steps.extend(stat_steps());
+    steps.extend(route_steps::stat_steps());
     steps.extend(name_steps());
     // the signed shift of an ion text (`288.2+16`, `C9H8O4-18`) of the dialog «Extract ions»; a malformed shift is `err.formula.offset`;
     // two numbers with the larger second are a range (`250.8-251.5`), a shift that leaves m/z < 1 is `err.formula.mzLow`
@@ -161,6 +163,7 @@ fn plan() -> Vec<Value> {
     ] {
         steps.push(json!({"op": "lr_ricerca", "body": format!("{head}{tables}}}")}));
     }
+    steps.extend(route_steps::design_steps());
     steps.extend([
         json!({"op": "tic", "slot": 8, "level": 1, "px": 0}),
         json!({"op": "xic", "slot": 8, "level": 1, "mz": 300.0, "tol": 0.5, "px": 0}),
@@ -213,22 +216,6 @@ fn name_steps() -> Vec<Value> {
         step("group_name", json!({"names": [1]})),
         step("nope", json!({})),
     ]
-}
-
-/// The first case of each statistics route of the committed reference (`tests/golden/ref/statistica.json`, invented tables): profile, blank, reference, PCA.
-fn stat_steps() -> Vec<Value> {
-    let file = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/ref/statistica.json");
-    let cases: Vec<Value> = serde_json::from_slice(&std::fs::read(file).unwrap()).unwrap();
-    let mut seen = Vec::new();
-    let mut out = Vec::new();
-    for c in &cases {
-        let path = c["path"].as_str().unwrap().to_string();
-        if !seen.contains(&path) {
-            out.push(json!({"op": "lr_stat", "path": path, "body": c["body"].to_string()}));
-            seen.push(path);
-        }
-    }
-    out
 }
 
 /// Runs the plan on the built `.wasm` (Node) over the same `.mzidx` and example.

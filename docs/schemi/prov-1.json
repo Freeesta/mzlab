@@ -151,6 +151,10 @@
         "type": {
           "$ref": "#/$defs/dataType"
         },
+        "schema": {
+          "type": "string",
+          "description": "the JSON Schema of a datum of this type when it is a document of its own (samples: samples/1, design: design/1; `mzlab-cli schema NAME` prints it)"
+        },
         "many": {
           "type": "boolean",
           "default": false,

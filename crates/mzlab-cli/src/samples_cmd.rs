@@ -18,6 +18,7 @@ usage: mzlab-cli sample vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b
        mzlab-cli sample table [--names FILE|- | FILE...]
        mzlab-cli sample list FILE... [--json] [--probe]   (sample list --help)
        mzlab-cli sample select FILE (--sample LIST | --default [--budget-mb N]) [--json]   (sample select --help)
+       mzlab-cli sample design propose|validate|canonical ...   the experimental design (design/1)   (sample design --help)
 
   --names FILE|-  one file name per line (default: the standard input)
   --pos N         also the manual variable of the N-th token (1 = first, -1 = last), cut at --sep (default \"_-. \")
@@ -105,7 +106,7 @@ fn variables_args(args: Vec<String>) -> Result<String, String> {
 
 /// The body of `table`: the names, in the order given, as the files of `propose` (no file kind). The SHA-256 is empty for a name and the real one for a
 /// FILE path (hashed here, in the order given), which is what `flow record` matches a role by.
-fn table(args: Vec<String>) -> Result<String, String> {
+pub(crate) fn table(args: Vec<String>) -> Result<String, String> {
     let mut src = None;
     let mut paths = Vec::new();
     let mut it = args.into_iter();
@@ -442,6 +443,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
         Some("list") => return list_run(it.collect()),
         Some("select") => return select_run(it.collect()),
+        Some("design") => return crate::design_cmd::run(it.collect()),
         Some("--help" | "-h") | None => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Some(c) => return Outcome::fail(&format!("unknown samples operation {c}")),
     };

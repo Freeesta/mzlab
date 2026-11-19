@@ -21,12 +21,16 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--out", "write to this file, not stdout"),
     ("--set", "one NAME=VALUE setting; repeat the flag for more"),
     ("--sample", "sample ids: 1,3,5 or 2-4"),
-    ("--no-points", "leave out the MS2 points of each item"),
+    ("--no-points", "omit MS2 points"),
+    ("--samples", "samples/1 file"),
     ("--from", "start of the window, minutes"),
     ("--to", "end of the window, minutes"),
     ("--at", "retention time, minutes"),
     ("--in", "input files, or folders that hold them"),
-    ("--id", "a flow step or a channel id"),
+    (
+        "--id",
+        "a flow step (without @V the highest version) or a channel id",
+    ),
     (
         "--budget",
         "the size budget of the document the assistant reads",

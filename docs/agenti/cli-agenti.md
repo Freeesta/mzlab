@@ -29,6 +29,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - `flow steps --compact` (`steps-compact/1`, under 20 KB: ids, versions, titles, ports, parameter and algorithm names, `executable_native`) and `llm tools --compact` (`tools-compact/1`) are the small forms; `llm tools` names the catalog in `cli_catalog`.
 
 ## Sequence
+0. A plan with `table.stats@1` or `table.drift@1` needs `samples` and `design` inputs: `sample table FILE... > samples.json`, `sample design propose --samples samples.json --out design.json`, `sample design validate design.json --samples samples.json` (exit 3 names each bad key); `design-cli.md`.
 1. `mzlab-cli flow steps --json [--id ID[@V]]`: the `step/1` descriptors of this very binary (`params` is a JSON Schema; `executable_native` says whether `flow run` runs it). Plain `flow steps` gives one line per step.
 2. Write an `mzflow/2` plan with the differences from the defaults only.
 3. `mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE] --json`: validates without the input files (`flowcheck/1`; exit 3 with the problems listed).

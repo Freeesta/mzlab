@@ -183,6 +183,7 @@
     "../../mzlab/web/rust-sonda.js",
     "../../mzlab/web/memoria-avviso.js",
     "../../mzlab/web/rust-supervisor.js",
+    "../../mzlab/web/engine-recupera.js",
     "../../mzlab/web/rust-budget.js",
     "../../mzlab/web/rust-scans.js",
     "../../mzlab/web/metodo-registro.js",
