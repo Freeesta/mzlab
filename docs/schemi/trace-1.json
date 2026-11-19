@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "trace/1",
+  "title": "trace/1: a chromatogram or XIC, `mzlab-cli trace chrom|xic`",
+  "description": "One trace of a file. x is the retention time in minutes. The same points as CSV (`--format csv`) have the header rt_min,intensity. Code: crates/mzlab-cli/src/trace_cmd.rs.",
+  "type": "object",
+  "required": [
+    "id",
+    "file",
+    "sample",
+    "x_unit",
+    "y_unit",
+    "n_points",
+    "points",
+    "evidence"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "trace/1"
+    },
+    "id": {
+      "type": "string",
+      "description": "The channel id (tic, bpc, srm:..., uv:..., an:..., dd:..., ms:...) or xic:<mz>."
+    },
+    "file": {
+      "type": "string"
+    },
+    "sample": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Sample id of a multi-sample file (.wiff); null for an mzML."
+    },
+    "x_unit": {
+      "const": "min"
+    },
+    "y_unit": {
+      "type": "string",
+      "description": "counts, mAU, bar, ... as the channel reports it."
+    },
+    "n_points": {
+      "type": "integer"
+    },
+    "points": {
+      "type": "array",
+      "description": "[x, y] pairs; the number tokens are the page route's own bytes.",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        },
+        "minItems": 2,
+        "maxItems": 2
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "description": "Where the points come from: source or route, channel, tolerance (tolerance_da, tolerance_ppm), scans_in_section, points_in_source, rt_window_min."
+    }
+  }
+}

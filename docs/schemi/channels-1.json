@@ -63,7 +63,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "Channel id, the value of `--channel` and of `channel=` in the routes."
+            "description": "Channel id, the value of `trace chrom --id` and of `channel=` in the routes."
           },
           "family": {
             "type": "string",

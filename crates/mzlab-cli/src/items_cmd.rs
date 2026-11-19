@@ -65,14 +65,16 @@ fn read(file: &PathBuf, tmp: &std::path::Path) -> Result<String> {
         let size = shell.len() as u64;
         mzlab_core::lr::open_items(&mut r.idx, &mut Mzml::new(shell, size), &name, &sample)?
     };
+    Ok(document(&items))
+}
+
+/// The `items/1` document of the items a file opens as (`file items`, and the `items` member of `file info`).
+pub(crate) fn document(items: &[mzlab_core::lr::OpenItem]) -> String {
     let body: Vec<String> = items
         .iter()
         .map(|i| format!("{{\"info\":{},\"hr\":{}}}", i.info, i.hr))
         .collect();
-    Ok(format!(
-        "{{\"schema\":\"items/1\",\"items\":[{}]}}",
-        body.join(",")
-    ))
+    format!("{{\"schema\":\"items/1\",\"items\":[{}]}}", body.join(","))
 }
 
 pub fn run(args: Vec<String>) -> Outcome {

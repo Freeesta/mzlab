@@ -1,4 +1,4 @@
-"""The module `wiffwrite` (crates/mzlab-lettori-wasm, feature `wiffwrite`) gives through Node the same bytes as `mzlab-cli file info|verify` on the synthetic pairs of
+"""The module `wiffwrite` (crates/mzlab-lettori-wasm, feature `wiffwrite`) gives through Node the same bytes as `mzlab-cli file inventory|verify` on the synthetic pairs of
 tools/wiff_riferimento.py: a clean file, one with an empty injection, refused ones, an unindexed section, the full inventory and a verify of equal and of different files.
 Skipped without cargo, wasm-bindgen or node only outside CI (CI has them all, so there a missing tool fails the test)."""
 import os
@@ -39,7 +39,7 @@ def node(pkg, *a, ok=(0,)):
 def test_list_same_bytes_as_the_command_line(built, stem, codes):
     pkg, files = built
     f = str(files / f"{stem}.wiff")
-    cli = run("target/release/mzlab-cli", "file", "info", f, "--json", ok=codes)
+    cli = run("target/release/mzlab-cli", "file", "inventory", f, "--json", ok=codes)
     assert cli.startswith('{"schema":"wiff.list/1"')
     assert node(pkg, "list", f) == cli
 
@@ -47,9 +47,9 @@ def test_list_same_bytes_as_the_command_line(built, stem, codes):
 def test_inventory_same_bytes_as_the_command_line(built):
     pkg, files = built
     f = str(files / "two.wiff")
-    cli = run("target/release/mzlab-cli", "file", "info", f, "--inventory")
+    cli = run("target/release/mzlab-cli", "file", "inventory", f, "--full")
     assert '"directory"' in cli
-    assert node(pkg, "list", "--inventory", f) == cli
+    assert node(pkg, "list", "--full", f) == cli
 
 
 def test_verify_same_bytes_as_the_command_line(built):

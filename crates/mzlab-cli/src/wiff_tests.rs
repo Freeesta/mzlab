@@ -1,4 +1,4 @@
-//! `mzlab-cli file info` on a pair written by `tools/wiff_riferimento.py` (skipped without python3): the JSON, the exit codes and the usage errors.
+//! `mzlab-cli file inventory` on a pair written by `tools/wiff_riferimento.py` (skipped without python3): the JSON, the exit codes and the usage errors.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -30,7 +30,7 @@ fn run(args: &[&str]) -> crate::Outcome {
 fn list_gives_the_schema_and_exit_0_for_a_clean_file() {
     let Some(d) = fixtures() else { return };
     let f = d.join("two.wiff");
-    let o = run(&["file", "info", f.to_str().unwrap(), "--json"]);
+    let o = run(&["file", "inventory", f.to_str().unwrap(), "--json"]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
     assert_eq!(v["schema"], "wiff.list/1");
@@ -41,7 +41,7 @@ fn list_gives_the_schema_and_exit_0_for_a_clean_file() {
 fn list_exits_3_when_a_sample_is_refused() {
     let Some(d) = fixtures() else { return };
     let f = d.join("periods.wiff");
-    let o = run(&["file", "info", f.to_str().unwrap()]);
+    let o = run(&["file", "inventory", f.to_str().unwrap()]);
     assert_eq!(o.code, 3, "{}", o.stderr);
     assert!(String::from_utf8_lossy(&o.stdout).contains("\"refused\""));
 }
@@ -58,7 +58,7 @@ fn verify_exits_0_for_equal_and_1_for_different() {
 #[test]
 fn usage_errors_exit_2() {
     assert_eq!(run(&["wiff"]).code, 2);
-    assert_eq!(run(&["file", "info"]).code, 2);
+    assert_eq!(run(&["file", "inventory"]).code, 2);
     assert_eq!(run(&["file", "verify", "a.wiff"]).code, 2);
-    assert_eq!(run(&["file", "info", "/nonexistent/x.wiff"]).code, 4);
+    assert_eq!(run(&["file", "inventory", "/nonexistent/x.wiff"]).code, 4);
 }

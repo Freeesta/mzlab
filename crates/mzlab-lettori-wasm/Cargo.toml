@@ -22,7 +22,7 @@ bruker = ["lettura", "mzlab-lettori/bruker"]
 lettura = []
 # the mzML validator alone: the module `valida` of the page (`mzlab-cli file validate` in a .wasm)
 valida = ["mzlab-core/valida"]
-# the read-only .wiff inventory and verify (`mzlab-cli file info|verify`) alone: the module `wiffwrite` of the page
+# the read-only .wiff inventory and verify (`mzlab-cli file inventory|verify`) alone: the module `wiffwrite` of the page
 wiffwrite = ["mzlab-core/wiffwrite"]
 tutte = ["lettura", "mzlab-lettori/tutte"]
 

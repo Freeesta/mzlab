@@ -18,17 +18,14 @@ const GLOBAL: &[(&str, &str)] = &[
 
 /// What a flag means, by name; the usage line says only its value.
 const FLAG_HELP: &[(&str, &str)] = &[
-    ("--out", "write there instead of the standard output"),
+    ("--out", "write to this file, not stdout"),
     ("--set", "one NAME=VALUE setting; repeat the flag for more"),
-    (
-        "--sample",
-        "samples of a file with several, by id: 1,3,5 or 2-4",
-    ),
+    ("--sample", "sample ids: 1,3,5 or 2-4"),
     ("--from", "start of the window, minutes"),
     ("--to", "end of the window, minutes"),
     ("--at", "retention time, minutes"),
     ("--in", "input files, or folders that hold them"),
-    ("--id", "one step by id, without @V the highest version"),
+    ("--id", "a flow step or a channel id"),
     (
         "--budget",
         "the size budget of the document the assistant reads",
@@ -50,10 +47,16 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--roles", "the JSON file that names the role of each file"),
     ("--name", "the name the answer carries"),
     ("--match", "also answer what this number is compatible with"),
-    (
-        "--inventory",
-        "list every part of the file with its SHA-256",
-    ),
+    ("--full", "every part, with SHA-256"),
+    ("--rt", "window in min: A or A,B"),
+    ("--ms-level", "MS level, default 1"),
+    ("--polarity", "keep one polarity: + or -"),
+    ("--mz", "m/z"),
+    ("--ppm", "tolerance, ppm"),
+    ("--da", "tolerance, Da"),
+    ("--n", "points kept per extreme"),
+    ("--scan", "scan number"),
+    ("--format", "json (default) or csv"),
     ("--formula", "the ion formula the graph starts from"),
     ("--decoy", "the seed of the decoy spectra"),
     ("--conv", "the conversation file"),
@@ -288,28 +291,28 @@ fn flag_json(f: &Flag, with_required: bool) -> Value {
         .chain(GLOBAL)
         .find(|(n, _)| *n == f.name)
         .map_or("", |(_, h)| *h);
-    let default = match (&f.default, f.kind) {
-        (Some(d), _) => text(d),
-        (None, "bool") => Value::Bool(false),
-        _ => Value::Null,
-    };
+    // Members that are null or false are left out: `commands --json` stays small.
     let mut o = Obj::new()
         .put("name", text(&f.name))
-        .put("type", text(f.kind))
-        .put("unit", f.unit.map_or(Value::Null, text))
-        .put("default", default)
-        .put(
+        .put("type", text(f.kind));
+    if let Some(u) = f.unit {
+        o = o.put("unit", text(u));
+    }
+    if let Some(d) = &f.default {
+        o = o.put("default", text(d));
+    }
+    if !f.values.is_empty() {
+        o = o.put(
             "enum",
-            if f.values.is_empty() {
-                Value::Null
-            } else {
-                Value::Arr(f.values.iter().map(|v| text(v)).collect())
-            },
-        )
-        .put("help", text(help))
-        .b("repeat", f.repeat);
-    if with_required {
-        o = o.b("required", f.required);
+            Value::Arr(f.values.iter().map(|v| text(v)).collect()),
+        );
+    }
+    o = o.put("help", text(help));
+    if f.repeat {
+        o = o.b("repeat", true);
+    }
+    if with_required && f.required {
+        o = o.b("required", true);
     }
     o.done()
 }

@@ -58,6 +58,7 @@ I18N.add("en", {
   "err.session.none": "No session open.",
   "err.origin.needFullScan": "Full scan files are needed.",
   "err.scan.none": "No scan in this file.",
+  "err.scan.unknown": "Scan {id} does not exist in this file.",
   "err.scan.mrm": "This file is MRM: it contains only transition chromatograms, no scans.",
   "err.scan.range": "Invalid scan range: i0 is greater than i1.",
   "err.scan.maxRequest": "At most {n} scans per request.",

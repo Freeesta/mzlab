@@ -72,7 +72,7 @@ fn flags_have_type_unit_and_default() {
             from["unit"].as_str(),
             from["required"].as_bool()
         ),
-        (Some("number"), Some("min"), Some(false))
+        (Some("number"), Some("min"), None)
     );
     let doc = json(&out(&["commands", "--json", "features"]));
     let preset = doc["commands"][0]["flags"]
@@ -132,6 +132,25 @@ fn every_named_schema_is_listed_and_the_folder_is_embedded() {
         }
     }
     assert_eq!(files, names.len());
+}
+
+#[test]
+fn flag_objects_never_carry_null_or_false_members() {
+    let doc = json(&out(&["commands", "--json"]));
+    let mut flags: Vec<&serde_json::Value> =
+        doc["global_flags"].as_array().unwrap().iter().collect();
+    for c in doc["commands"].as_array().unwrap() {
+        flags.extend(c["flags"].as_array().unwrap());
+    }
+    assert!(flags.len() > 20);
+    for f in flags {
+        for (k, v) in f.as_object().unwrap() {
+            assert!(
+                !v.is_null() && v != &serde_json::Value::Bool(false),
+                "{f}: {k}"
+            );
+        }
+    }
 }
 
 #[test]

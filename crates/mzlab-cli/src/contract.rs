@@ -36,7 +36,7 @@ fn message_of(stderr: &str) -> (String, String) {
 pub(crate) const VERDICT: &[&str] = &[
     "file validate",
     "file pair",
-    "file info",
+    "file inventory",
     "file verify",
     "sample list",
     "db ref-list",

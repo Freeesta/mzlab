@@ -1,4 +1,4 @@
-# `.wiff` writer: design study and the read-only inventory (`file info`, `file verify`); the writer itself is not built
+# `.wiff` writer: design study and the read-only inventory (`file inventory`, `file verify`); the writer itself is not built
 
 Goal of the owner: create a `.wiff` + `.wiff.scan` pair, add or remove samples (recombine samples of different pairs), lose nothing the reader sees (or anything else in the samples), and have Analyst 1.6.3 still open the result.
 Source of every statement below: the reader (`crates/mzlab-core/src/wiff/`, `ole.rs`), `wiff.md`, `wiff-full-spec.md`, `wiff-variants.md` and the synthetic fixtures of `tools/wiff_riferimento.py`. Nothing here was checked on a real file or in Analyst: no lab data is reachable from a cloud chat (`MZLAB_DATI` empty). Where the repo does not show something it says UNKNOWN and names the experiment (E1..E8, last section).
@@ -55,12 +55,12 @@ Automatic (a Rust integration test, later phase, synthetic data only):
 - evidence for real files, usable by the owner without Analyst: `mzlab-cli file verify` (below) re-reads the output and each source and compares stream and section SHA-256 per sample; the JSON is the proof that every byte of every kept sample is present.
 Cannot be verified here: that Analyst 1.6.3 opens the file, and everything depending on real-file layout not present in the fixtures (E1-E5). A green synthetic round trip says the writer is lossless for what our fixtures contain, not that Analyst accepts it.
 Checklist for the owner (do it on copies, never on the originals; Analyst 1.6.3 is Windows software: the machine that has it):
-1. Identity: `mzlab-cli file info write --out copy.wiff one.wiff` (all samples, same order). Open `copy.wiff` in Analyst (Explore). Note any dialog text and send it exactly.
+1. Identity: `mzlab-cli file inventory write --out copy.wiff one.wiff` (all samples, same order). Open `copy.wiff` in Analyst (Explore). Note any dialog text and send it exactly.
 2. Compare with the original, per sample: sample name and order in the list; the TIC overlaid on the original's (same shape and intensity); a spectrum at one fixed RT; for an MS/MS sample the CE in the spectrum properties; the acquisition method view (transitions, CE, dwell); the instrument calibration/properties; the acquisition date and time shown.
 3. Removal: write a pair without one sample; repeat 1-2; check the samples left are untouched.
 4. Merge: two samples from two different files in one pair; repeat 1-2 for both; open them in Quantitation (peak areas of one transition equal the original's).
 5. In Analyst, save the opened result under another name and reopen it (Analyst can rewrite it).
-6. If any step fails: stop, send the dialog text, the output of `mzlab-cli file info --json` of the input and `python3 tools/wiff_dump.py FILE.wiff --all` (without `--log`, which may hold the operator's name). Do not go on to the next stage.
+6. If any step fails: stop, send the dialog text, the output of `mzlab-cli file inventory --json` of the input and `python3 tools/wiff_dump.py FILE.wiff --all` (without `--log`, which may hold the operator's name). Do not go on to the next stage.
 
 ## (e) Risks and decision points for the owner
 Risks:
@@ -79,15 +79,15 @@ Decisions asked (recommendation first):
 - D6 Damaged, truncated or unindexed samples: refuse (recommended) or copy with a warning.
 - D7 New wasm module (see below).
 
-## CLI shape (`mzlab-cli file info`, same logic as site and app; usable by agents)
-- Built (read only, feature `wiffwrite`, `crates/mzlab-core/src/wiff/inventory.rs`, `ole/inventory.rs`, `crates/mzlab-cli/src/wiff_cmd.rs`): `mzlab-cli file info IN.wiff... [--inventory] [--json]`, schema `wiff.list/1`. Per file: name, SHA-256 of the `.wiff`, `container` (OLE version, sector sizes, bytes), `scan` (bytes, `head_bytes` before the first section, `unindexed_skipped`), `global_streams`.
+## CLI shape (`mzlab-cli file inventory`, same logic as site and app; usable by agents)
+- Built (read only, feature `wiffwrite`, `crates/mzlab-core/src/wiff/inventory.rs`, `ole/inventory.rs`, `crates/mzlab-cli/src/wiff_cmd.rs`): `mzlab-cli file inventory IN.wiff... [--full] [--json]`, schema `wiff.list/1`. Per file: name, SHA-256 of the `.wiff`, `container` (OLE version, sector sizes, bytes), `scan` (bytes, `head_bytes` before the first section, `unindexed_skipped`), `global_streams`.
   Per sample: `number`, `name`, `method`, `scans`, `status` (`ok|refused|truncated|damaged|unindexed`), `reason`, `section` (start, bytes, `slack` after the last block, SHA-256, `lead_hex` of the first 44 bytes), `idx` (rows, zero rows), `streams` (path, bytes, SHA-256).
-- `--inventory` adds the SHA-256 of the whole `.wiff.scan` and `directory` (every entry: kind, bytes, CLSID, state bits, creation and modification FILETIME as hex). A refused sample is listed with its reason, never hidden: a code the reader refuses, a TOF experiment or block, periods, an unknown block version. Exit 3 when any sample is not `ok`.
+- `--full` adds the SHA-256 of the whole `.wiff.scan` and `directory` (every entry: kind, bytes, CLSID, state bits, creation and modification FILETIME as hex). A refused sample is listed with its reason, never hidden: a code the reader refuses, a TOF experiment or block, periods, an unknown block version. Exit 3 when any sample is not `ok`.
 - Built: `mzlab-cli file verify OUT.wiff --against SRC.wiff...`, schema `wiff.verify/1`. Each output sample is matched to the source sample with the same section SHA-256 (an empty injection: the same name) and compared stream by stream (path without the sample and method numbers) and on the directory metadata; the streams shared by all samples must equal those of the first source; `equal` is the answer and `differences` the evidence. Exit 0 equal, 1 any difference or a sample that is not `ok`.
 - The site serves the same two functions from the lazily loaded module `wiffwrite` (`wiff_list`, `wiff_verify`, `crates/mzlab-lettori-wasm/src/wiffwrite.rs`); `tests/test_wiff_inventory_wasm.py` compares its text with the CLI's byte for byte.
 - Planned, not built:
-- `mzlab-cli file info write --out OUT.wiff SRC.wiff[#N[,M..]]... [--exclude SRC.wiff#N]... [--renumber keep|sequential] [--dry-run] [--force] [--json]`: positional sources in output order (no `#`: every sample of that file); `--dry-run` prints the plan (`wiff.plan/1`: output number, source, bytes copied, method, collisions, refusals, projected sizes) and writes nothing; a real run prints `wiff.write/1` (the plan plus SHA-256 of both outputs, `verified`).
-- `mzlab-cli file info split IN.wiff --out DIR` (one pair per sample; sugar over `write`).
+- `mzlab-cli file inventory write --out OUT.wiff SRC.wiff[#N[,M..]]... [--exclude SRC.wiff#N]... [--renumber keep|sequential] [--dry-run] [--force] [--json]`: positional sources in output order (no `#`: every sample of that file); `--dry-run` prints the plan (`wiff.plan/1`: output number, source, bytes copied, method, collisions, refusals, projected sizes) and writes nothing; a real run prints `wiff.write/1` (the plan plus SHA-256 of both outputs, `verified`).
+- `mzlab-cli file inventory split IN.wiff --out DIR` (one pair per sample; sugar over `write`).
 - Streams: stdout one JSON document with `--json`, progress and warnings on stderr, texts through `lang/` keys (`err.wiff.*`, `warn.wiff.*`).
 - Exit codes (the pattern of `validate` and `flow`): 0 done and verified; 1 done but `verify` found a difference (the output is removed, nothing is left behind); 2 usage, read or write error; 3 plan refused (unsupported variant, damaged section, unresolved collision): nothing written.
 - Writes are atomic (temp name then rename), refuse an output equal to an input, refuse to overwrite without `--force`.
@@ -102,7 +102,7 @@ Decisions asked (recommendation first):
   - No existing cap or limit is changed.
 
 ## Unknowns and experiments
-- E1 `.wiff.scan` coverage map of real files: bytes before the first section, between sections, after the last, and what the 44-byte section lead and the 12 bytes after the marker hold. Read-only tool in the first implementation PR (`file info --inventory`), run by the owner on his files (or in the private data chat).
+- E1 `.wiff.scan` coverage map of real files: bytes before the first section, between sections, after the last, and what the 44-byte section lead and the 12 bytes after the marker hold. Read-only tool in the first implementation PR (`file inventory --full`), run by the owner on his files (or in the private data chat).
 - E2 Directory entry metadata (CLSID, times, state bits) of a real file, and whether per-stream times differ between samples.
 - E3 Every place the sample number (u32 and as text) appears in a real file, beyond the four known.
 - E4 Whether `Idx` row 0 always has offset 0, and whether any block is referenced from outside `Idx`.
@@ -112,7 +112,7 @@ Decisions asked (recommendation first):
 - E8 How often real files hold unindexed sections or truncated `.scan` tails (the reader's `losses` already counts them).
 
 ## Next steps (each one PR, after the owner answers D1-D7)
-1. Done: `file info --json --inventory` and `file verify`, read only, no OLE writer; the owner runs them on real files to settle E1-E5 (E3, every place a sample number occurs, is not searched by the tool).
+1. Done: `file inventory --json --full` and `file verify`, read only, no OLE writer; the owner runs them on real files to settle E1-E5 (E3, every place a sample number occurs, is not searched by the tool).
 2. OLE writer in core with an identity copy of one sample file and its round-trip test; owner checklist step 1.
 3. Remove and add, CLI first; owner checklist steps 3-5.
 4. Site and app surfaces with the parity tests.

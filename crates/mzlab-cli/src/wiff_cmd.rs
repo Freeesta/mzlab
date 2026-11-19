@@ -1,4 +1,4 @@
-//! `mzlab-cli file info|verify`: what a SCIEX `.wiff` + `.wiff.scan` pair holds (every sample with its section of the `.scan`, its streams, a status and SHA-256) and whether
+//! `mzlab-cli file inventory|verify`: what a SCIEX `.wiff` + `.wiff.scan` pair holds (every sample with its section of the `.scan`, its streams, a status and SHA-256) and whether
 //! an output pair equals the sources it was assembled from. Read only; the same engine code (`wiff::inventory`) as the site's `wiffwrite` module, so the JSON is byte-identical.
 //! Exit codes: 0 done, 1 verify found a difference, 2 usage or read error, 3 list found a sample that is not `ok`.
 
@@ -9,15 +9,15 @@ use mzlab_core::wiff::inventory;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli file info: inspect and compare SCIEX .wiff + .wiff.scan pairs (read only), JSON on stdout for agents.
+pub const HELP: &str = "mzlab-cli file inventory: inspect and compare SCIEX .wiff + .wiff.scan pairs (read only), JSON on stdout for agents.
 
-usage: mzlab-cli file info FILE.wiff... [--inventory] [--out PATH]
+usage: mzlab-cli file inventory FILE.wiff... [--full] [--out PATH]
        mzlab-cli file verify OUT.wiff --against SRC.wiff... [--out PATH]
 
   list        wiff.list/1: per file the SHA-256, the container (version, sector sizes), the .scan size and the streams shared by all samples; per sample its number,
               name, method, scans, status (ok, refused, truncated, damaged, unindexed) with the reason, its section of the .scan (start, bytes, slack, SHA-256, first
               44 bytes) and every stream with bytes and SHA-256. A refused or damaged sample is listed, never hidden
-  --inventory also the whole .wiff.scan SHA-256 and the directory metadata of every entry (CLSID, state bits, creation and modification times)
+  --full also the whole .wiff.scan SHA-256 and the directory metadata of every entry (CLSID, state bits, creation and modification times)
   verify      wiff.verify/1: each sample of OUT is matched to the source sample with the same section (SHA-256) and compared stream by stream and on the directory
               metadata; the streams shared by all samples must equal those of the first source; `equal` is the answer, `differences` the evidence
   --json      accepted (the output is always JSON)
@@ -50,7 +50,7 @@ fn parse(args: Vec<String>) -> Result<Option<Req>, String> {
         match a.as_str() {
             "--help" | "-h" => return Ok(None),
             "--json" => {}
-            "--inventory" => r.inventory = true,
+            "--full" => r.inventory = true,
             "--out" => r.out = Some(PathBuf::from(it.next().ok_or("--out needs a value")?)),
             "--against" => {
                 after_against = true;
@@ -63,12 +63,14 @@ fn parse(args: Vec<String>) -> Result<Option<Req>, String> {
         }
     }
     match r.verb.as_str() {
-        "list" if r.files.is_empty() => return Err("file info needs at least one .wiff".into()),
+        "list" if r.files.is_empty() => {
+            return Err("file inventory needs at least one .wiff".into())
+        }
         "list" if !r.against.is_empty() => return Err("--against is for file verify".into()),
         "verify" if r.files.len() != 1 || r.against.is_empty() => {
             return Err("file verify takes OUT.wiff --against SRC.wiff...".into())
         }
-        "verify" if r.inventory => return Err("--inventory is for file info".into()),
+        "verify" if r.inventory => return Err("--full is for file inventory".into()),
         "list" | "verify" => {}
         v => return Err(format!("unknown wiff verb {v}")),
     }

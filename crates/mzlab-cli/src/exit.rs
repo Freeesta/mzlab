@@ -41,6 +41,7 @@ pub fn code_of_key(key: &str) -> u8 {
     const SELECTOR_KEYS: &[&str] = &[
         "err.sample.unknown",
         "err.canali.unknown",
+        "err.scan.unknown",
         "err.msn.node",
         "err.flow.step.unknown",
         "err.cli.command.unknown",
