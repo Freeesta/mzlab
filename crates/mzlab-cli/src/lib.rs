@@ -485,6 +485,9 @@ fn executed(args: &[String]) -> (&'static str, Outcome) {
     let notes = idx_cache::take_notes();
     if o.code == 0 {
         o.stderr += &notes;
+    } else {
+        // the message of a failure stays alone in the outcome (`error/1` reads it); the cache's lines still reach the terminal
+        eprint!("{notes}");
     }
     (e.name, o)
 }

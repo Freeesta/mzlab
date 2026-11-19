@@ -106,66 +106,66 @@ fn cache_error(what: &str, dir: &Path, e: impl std::fmt::Display) -> Error {
     Error::new("err.run.output").with("detail", format!("cache {}: {what}: {e}", dir.display()))
 }
 
-/// The SHA-256 of the dataset at `path`. A stamp (path, member names, sizes, modification times) found in `dir` gives it without reading the
-/// file; any change of those makes a new stamp and the file is read again, so an entry is only ever named by a hash that was taken.
-fn sha_of(dir: &Path, path: &Path) -> Result<String> {
-    let members = crate::flow_set::members(path)?;
-    let mut text = std::fs::canonicalize(path)
-        .unwrap_or_else(|_| path.to_path_buf())
-        .display()
-        .to_string();
-    for (name, p) in &members {
-        let m = std::fs::metadata(p).map_err(crate::io)?;
-        let ns = m
-            .modified()
-            .ok()
-            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-            .map_or(0, |d| d.as_nanos());
-        text += &format!("\n{name}\0{}\0{ns}", m.len());
-    }
-    let stamp = dir.join(format!("stamp-{}", &sha256_hex(text.as_bytes())[..32]));
-    if let Ok(s) = std::fs::read_to_string(&stamp)
-        && s.len() == 64
-        && s.bytes().all(|b| b.is_ascii_hexdigit())
-    {
-        return Ok(s);
-    }
-    let (_, sha) = crate::flow_set::digest_for(path, false)?;
-    // a stamp that cannot be written only costs the next call a hash
-    let _ = write_atomic(dir, &stamp, sha.as_bytes());
-    Ok(sha)
+/// The SHA-256 of the dataset at `path`, always read from the file: an entry is only ever named by a hash that was taken now.
+fn sha_of(path: &Path) -> Result<String> {
+    crate::flow_set::digest_for(path, false).map(|(_, sha)| sha)
 }
 
-fn write_atomic(dir: &Path, to: &Path, bytes: &[u8]) -> std::io::Result<()> {
-    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let tmp = dir.join(format!(".tmp-{}-{k}", std::process::id()));
-    std::fs::write(&tmp, bytes)?;
-    std::fs::rename(&tmp, to).inspect_err(|_| {
-        let _ = std::fs::remove_file(&tmp);
-    })
+static TMP_N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// A scratch name in `dir` that no other thread or process uses.
+fn tmp_in(dir: &Path) -> PathBuf {
+    let k = TMP_N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    dir.join(format!(".tmp-{}-{k}", std::process::id()))
 }
 
-/// `idx` copied to `entry` so that no reader ever sees half of it.
+/// Removes the `.tmp-*` files a crashed call left (older than an hour: a live writer's file is younger).
+fn sweep(dir: &Path) {
+    let old = std::time::Duration::from_secs(3600);
+    for e in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+        let stale = e.file_name().to_string_lossy().starts_with(".tmp-")
+            && e.metadata()
+                .and_then(|m| m.modified())
+                .is_ok_and(|t| t.elapsed().is_ok_and(|age| age > old));
+        if stale {
+            let _ = std::fs::remove_file(e.path());
+        }
+    }
+}
+
+/// The checksum file of an entry: the SHA-256 of the entry's bytes, so a body damaged without changing its length is found before use.
+fn sum_of(entry: &Path) -> PathBuf {
+    entry.with_extension("mzidx.sum")
+}
+
+/// `idx` copied to `entry` with its checksum, each renamed into place whole so that no reader sees half of either.
 fn keep(dir: &Path, idx: &Path, entry: &Path) -> std::io::Result<()> {
-    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let tmp = dir.join(format!(".tmp-{}-{k}", std::process::id()));
-    std::fs::copy(idx, &tmp)?;
-    std::fs::rename(&tmp, entry).inspect_err(|_| {
-        let _ = std::fs::remove_file(&tmp);
-    })
+    sweep(dir);
+    let (tmp, tmp_sum) = (tmp_in(dir), tmp_in(dir));
+    let made = std::fs::copy(idx, &tmp)
+        .and_then(|_| mzlab_core::budget::sha256_hex_read(File::open(&tmp)?))
+        .and_then(|sum| std::fs::write(&tmp_sum, sum))
+        .and_then(|_| std::fs::rename(&tmp_sum, sum_of(entry)))
+        .and_then(|_| std::fs::rename(&tmp, entry));
+    if made.is_err() {
+        let _ = (std::fs::remove_file(&tmp), std::fs::remove_file(&tmp_sum));
+    }
+    made
 }
 
-/// Is `entry` a whole index of this program: its header reads and the length it declares is the length of the file?
+/// Is `entry` a whole index of this program: its bytes are the ones its checksum file recorded and its header reads?
 fn is_sound(entry: &Path) -> bool {
+    let Ok(want) = std::fs::read_to_string(sum_of(entry)) else {
+        return false;
+    };
     let Ok(mut f) = File::open(entry) else {
         return false;
     };
     let Ok(size) = f.metadata().map(|m| m.len()) else {
         return false;
     };
-    Head::read(&mut f, size).is_ok()
+    mzlab_core::budget::sha256_hex_read(&mut f).is_ok_and(|got| got == want.trim())
+        && Head::read(&mut f, size).is_ok()
 }
 
 /// Puts the index of (`path`, `label`) at `idx`: the entry of `dir` when there is a sound one, else what `build` writes there, which is then kept.
@@ -187,7 +187,7 @@ pub(crate) fn make(
     })?;
     let prepared = std::fs::create_dir_all(dir)
         .map_err(|e| cache_error("cannot create", dir, e))
-        .and_then(|_| sha_of(dir, path));
+        .and_then(|_| sha_of(path));
     let sha = match prepared {
         Ok(s) => s,
         Err(e) if strict => return Err(e),
@@ -214,8 +214,8 @@ pub(crate) fn make(
     if entry.exists() {
         if is_sound(&entry) {
             let _ = std::fs::remove_file(idx);
-            // a link costs nothing; a folder on another volume gets a copy
-            if std::fs::hard_link(&entry, idx).is_ok() || std::fs::copy(&entry, idx).is_ok() {
+            // a copy, never a link: whatever writes `idx` must not reach the entry
+            if std::fs::copy(&entry, idx).is_ok() {
                 note(format!("index reused: {name}"));
                 return Ok(Entry {
                     reused: true,
@@ -232,7 +232,8 @@ pub(crate) fn make(
     let kept = keep(dir, idx, &entry).map_err(|e| cache_error("cannot keep the index", dir, e));
     match kept {
         Ok(()) => note(format!("index built: {name}")),
-        Err(e) if strict => return Err(e),
+        // an entry that cannot be replaced (another process has it open) costs only this call's keeping
+        Err(e) if strict && !entry.exists() => return Err(e),
         Err(e) => note(format!(
             "warn.cache.unusable: {name}: {}; index built, not kept",
             crate::error_text::human_error(&e)
