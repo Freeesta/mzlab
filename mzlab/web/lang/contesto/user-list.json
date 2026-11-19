@@ -1,0 +1,11 @@
+{
+  "lst.err.line": "One row error of a CSV list: the line number in the file and the reason; {line} = line, {text} = the reason.",
+  "lst.user.added": "Message after a CSV was added as a list; {name} = the list name, {n} = number of ions.",
+  "lst.user.skipped": "Message after importing a CSV with wrong rows; {n} = number of rows left out.",
+  "lst.add.errs": "Heading of the list of row errors found in a CSV the person added as a list; {n} = number of rows with errors.",
+  "lst.add.importValid": "Button that adds the valid rows of a CSV that also has wrong rows; {n} = number of valid rows.",
+  "lst.info.count": "Coverage of a reference list: {n} = number of ions (rows of the table), {m} = number of compounds they come from.",
+  "lst.info.classes": "Coverage of a reference list: number of chemical classes; {n} = number.",
+  "lst.info.source": "Source line of a built-in list; {source} = the bibliographic reference.",
+  "lst.info.file": "Name of the file a user list was read from; {file} = file name."
+}

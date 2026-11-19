@@ -160,6 +160,7 @@ I18N.add("en", {
   "error.sdf.molfile": "The drawing could not be read as a molfile: {message}",
   "error.sdf.tooBig": "The drawing has more than {max} atoms: the export is for drawings, not libraries.",
   "draw.import.unsupported": "Unsupported or invalid format.",
+  "draw.import.unreadable": "Could not read “{name}”: the editor does not recognise it as a structure file (molfile, SDF, SMILES, CDXML, CDX ...).",
   "draw.tap.atom": "Tap an atom to charge it",
   "draw.import.done": "Structure imported",
   "draw.import.failed": "Could not import: {message}",
