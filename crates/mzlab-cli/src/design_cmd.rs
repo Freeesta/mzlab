@@ -61,7 +61,7 @@ fn invalid(faults: &[Fault]) -> Outcome {
         let key = problem_key(f.code);
         let mut e = Error::new(key).with("key", &f.key);
         for (k, v) in &f.params {
-            e = e.with(*k, v);
+            e = e.with(k, v);
         }
         lines += &format!("  {}\n", crate::error_text::human_error(&e));
         let mut o = Out::default();
