@@ -23,4 +23,10 @@ The core is in CLAUDE.md; the rest of the Drawing area is in `drawing.md`.
 
 ## What is not copied from ChemDraw
 - No resource (icons, cursors, templates, style sheets, example documents) and no text (help, tooltips, menus, notices): the words are ours, in `lang/`. No trademark as a feature name ("ChemDraw-style", "ChemDraw-compatible"). No proprietary algorithm rebuilt from the documentation (NMR rules, ClogP, commercial pKa): estimates come from published methods (Crippen) and say "estimate"; journal formats are described with their numbers.
+- **ChemDraw-format files** (`.cdxml` text, binary `.cdx`) open in the Drawing tab through Ketcher's own reader (Indigo), by three routes:
+  - Ketcher's Open dialog (its file chooser has no `accept` filter).
+  - A drop on the canvas (`draw.js`): `structureText` of `disegno-file.js` reads the file; one starting with `VjCD` goes in as base64, as the Open dialog does. No format is parsed in JS.
+  - Pasted text.
+  A file Indigo cannot read leaves the canvas as it was and shows `draw.import.unreadable` with the file name.
+  Page only (the editor is Ketcher in an iframe): no Rust or CLI route. Synthetic fixture `tests/dati/benzene_label.cdxml`, test `e2e_disegno_cdxml`.
 - CDX and CDXML come from Indigo inside Ketcher: never claim fidelity or compatibility with ChemDraw files and no `.cdx` rebuilt in Rust. mzLab writes and documents only open formats: molfile V2000/V3000, SDF, SMILES, InChI, `mol/1`.
