@@ -18,7 +18,7 @@ READING = {"schema": "reading/1", "kind": "table", "findings": [FINDING],
 
 
 def test_reading_valid_and_defects():
-    v = validator("lettura-1")
+    v = validator("reading-1")
     assert not list(v.iter_errors(READING))
     assert list(v.iter_errors({**READING, "findings": [{**FINDING, "action": {"type": "delete_everything"}}]}))
     assert list(v.iter_errors({**READING, "findings": [FINDING] * 9}))
@@ -27,7 +27,7 @@ def test_reading_valid_and_defects():
 
 
 def test_choices_valid_and_defects():
-    v = validator("param-scelte-1")
+    v = validator("param-choices-1")
     choice = {"step": "tp.dig_lr@1", "name": "tol_da", "value": 0.4, "source": "rule:R-da-1", "reason": "Half of the width."}
     doc = {"schema": "param-choices/1", "choices": [choice], "questions": [], "skipped": [], "numbers": ["0.4"]}
     assert not list(v.iter_errors(doc))
