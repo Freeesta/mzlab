@@ -589,6 +589,9 @@ const LISTE = (() => {
     const elCtl = /** @type {HTMLElement | null} */ (container.querySelector("#lst-ctl"));
     const tolView = elCtl && typeof CALCQUI !== "undefined" && CALCQUI.mount ? CALCQUI.mount({ ctl: elCtl, out: document.createElement("div"), idp: "lst-", controls: true, noPol: true, arg: () => ({ text: state.q, ans: 0 }), change: () => render() }) : null;
     const elTbody = container.querySelector("#lst-tbody");
+    const elWrap = /** @type {HTMLElement} */ (container.querySelector("#lst-table-wrap"));
+    /** @type {IntersectionObserver | null} */ let moreObs = null;
+    const CHUNK = 100;
     const elCount = container.querySelector("#lst-count");
     const elChecks = container.querySelector("#lst-src-checks");
     const elChecksLbl = container.querySelector("#lst-src-lbl");
@@ -711,16 +714,14 @@ const LISTE = (() => {
         });
       }
 
-      const limit = 400;
-      const shown = items.slice(0, limit);
-      if (elCount) elCount.textContent = items.length > limit ? I18N.t("lst.count.cut", { n: limit, m: items.length }) : I18N.t("lst.count", { n: items.length });     // always says how many, and when the table is cut
-
-      if (!shown.length) {
+      if (!items.length) {
+        if (elCount) elCount.textContent = I18N.t("lst.count", { n: 0 });
         elTbody.innerHTML = `<tr><td colspan="${compact ? 4 : 9}" class="muted">${/** @type {any} */ (window).EMPTYLEAF("empty.lists")}</td></tr>`;
         return;
       }
 
-      elTbody.innerHTML = shown.map(it => {
+      // infinite scroll: a chunk of rows at a time, the next one when the end of the table comes into view; the count follows what is on screen
+      const rowHtml = (/** @type {Bag} */ it) => {
         const delta = hasMz ? (byDa ? (it.diffDa != null ? (it.diffDa >= 0 ? "+" : "") + it.diffDa.toFixed(3) + " Da" : "")
                                     : (it.err != null ? (it.err >= 0 ? "+" : "") + it.err.toFixed(1) + " ppm" : "")) : "";
         const polBadge = it.pol === 1 ? `<span class="pol pos" title="${I18N.t("lst.pol.pos")}" style="font-size:12px">+</span>` : it.pol === -1 ? `<span class="pol neg" title="${I18N.t("lst.pol.neg")}" style="font-size:12px">&minus;</span>` : `<span class="pol both" title="${I18N.t("lst.pol.both")}" style="font-size:12px">&plusmn;</span>`;
@@ -742,7 +743,19 @@ const LISTE = (() => {
           <td class="sm muted">${EH(it.cls || "")}</td>
           <td class="sm lst-src-col">${EH(srcName(it.list, it.listName || it.list))}</td>
         </tr>`;
-      }).join("");
+      };
+      let n = 0;
+      const more = () => {
+        const next = items.slice(n, n + CHUNK);
+        n += next.length;
+        elTbody.querySelector("#lst-more")?.remove();
+        elTbody.insertAdjacentHTML("beforeend", next.map(rowHtml).join("") + (n < items.length ? `<tr id="lst-more"><td colspan="${compact ? 4 : 9}" class="sm muted">&hellip;</td></tr>` : ""));
+        if (elCount) elCount.textContent = n < items.length ? I18N.t("lst.count.cut", { n, m: items.length }) : I18N.t("lst.count", { n: items.length });
+        const sentinel = elTbody.querySelector("#lst-more");
+        if (sentinel) { moreObs?.disconnect(); moreObs = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) more(); }, { root: elWrap }); moreObs.observe(sentinel); }
+      };
+      moreObs?.disconnect(); elTbody.innerHTML = ""; elWrap.scrollTop = 0;
+      more();
     }
 
     // Bind event listeners
@@ -756,29 +769,15 @@ const LISTE = (() => {
     return { render, state };
   }
 
-  // Opens the reference lists: the Liste panel of the drawer in the Dati view, the modal dialog #listedlg elsewhere
+  // Opens the reference lists: the Liste panel of the drawer in the Dati view, the large reference dialog #refdlg elsewhere
   function open(/** @type {Bag} */ opt = {}) {
     ensure();
     if (window.BARRA && BARRA.isDataView()) {
       BARRA.setTab("lists", opt);
       return;
     }
-    // outside the Dati view the lists open in a dedicated modal dialog
-    let dlg = document.querySelector("#listedlg");
-    if (!dlg) {
-      dlg = document.createElement("dialog");
-      dlg.id = "listedlg";
-      dlg.style.cssText = "max-width:min(1100px,96vw);width:96vw;max-height:92vh;border:1px solid var(--line,#cbd5e1);border-radius:10px;padding:12px;background:var(--panel,#fff);box-shadow:0 12px 36px rgba(0,0,0,.28);box-sizing:border-box";
-      dlg.innerHTML = `<div class="top" style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <h3 style="margin:0;flex:1">${I18N.t("lst.title")}</h3>
-        <button id="listex" class="x" title="${I18N.t("common.close")}">&times;</button>
-      </div><div id="listebody" style="max-height:80vh;overflow:auto"></div>`;
-      document.body.appendChild(dlg);
-      dlg.querySelector("#listex").onclick = () => dlg.close();
-    }
-    const body = dlg.querySelector("#listebody");
-    mount(body, opt);
-    if (!dlg.open) dlg.showModal();
+    // outside the Dati view the lists open in the large reference dialog (tables.js), like the Periodic table
+    QQQRef.open("lists", opt);
   }
 
   // the actions of the spectrum menu (registry azioni/1): the lists of contaminants, the known ones at this m/z (high resolution), add a laboratory contaminant

@@ -131,7 +131,10 @@
     return { n, z: a.z, ad: a.n };
   }
   // ---------------------------------------------------------------- dialog #refdlg: one content at a time (Tavola periodica; Perdite neutre outside the Dati view), titled with its name, no tab bar
-  const TABS = [["pt", I18N.t("icon.pt"), periodic, bindPeriodic], ["ls", I18N.t("icon.nl"), lossTab, bindLoss]];
+  const TABS = [["pt", I18N.t("icon.pt"), periodic, bindPeriodic], ["ls", I18N.t("icon.nl"), lossTab, bindLoss],
+    // the reference lists (liste.js) mount into the same large dialog; `opt` is what LISTE.open was given
+    ["lists", I18N.t("lst.title"), () => "", (/** @type {HTMLElement} */ root) => LISTE.mount(root, listsOpt)]];
+  let /** @type {Bag} */ listsOpt = {};
   /** @param {string} which @param {{ q?: string | number | null }} [opt] */
   async function open(which, opt = {}) {
     // the adducts are the calculator's: the old request opens it
@@ -140,6 +143,7 @@
     // the Neutral losses live in the side panel page (from another view it goes back to Dati); the window stays only for a page without the drawer
     if (which === "ls" && window.BARRA) { BARRA.setTab("losses", opt.q != null ? { q: String(opt.q) } : {}); return; }
     if (which === "pt") await ptLoad();
+    if (which === "lists") listsOpt = opt;
     const d = Qs("#refdlg"), body = Qs("#refbody");
     if (which === "ls" && opt.q != null) NL.q = String(opt.q);
     const show = (/** @type {string} */ id) => {

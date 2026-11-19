@@ -60,7 +60,7 @@ try:
         step("default off: unchecked in Reference lists, no diamonds; checked adds diamonds; persists on reload", default_off)
 
         def known():
-            h = hov(pg, 279.1591); assert h and "Compatible with a known contaminant" in h and "dibutyl phthalate" in h and "Known contaminants and LC-MS background" in h and "Keller" not in h, h
+            h = hov(pg, 279.1591); assert h and "Compatible with a known contaminant" in h and "dibutyl phthalate" in h and "Known contaminants (Keller et al.)" in h, h[-160:]
             h2 = hov(pg, 391.2843); assert h2 and "DEHP" in h2, h2
         step("279.1591 and 391.2843: the line of the contaminant in the box of the peak", known)
 
@@ -202,7 +202,7 @@ try:
             assert pg.is_visible("#sb-panel-lists") and pg.evaluate("BARRA.curTab") == "lists"
             assert not pg.is_visible("#sb-help"), "no question mark on the Lists panel"
             # Close dialog
-            pg.evaluate("BARRA.close(false)"); shut(pg, "#listex"); frames(pg, 2)
+            pg.evaluate("BARRA.close(false)"); shut(pg, "#refx"); frames(pg, 2)
         step("header button: #np-liste opens the Lists tab of the sidebar", header_btn)
 
         def user_csv():
@@ -217,7 +217,7 @@ try:
             pg.click("#np-liste"); pg.wait_for_selector("#sb-panel-lists", timeout=5000)
             txt = pg.inner_text("#sb-panel-lists")
             assert "sospetti_acque" in txt or "Sospetto Acque" in txt
-            shut(pg, "#listex"); frames(pg, 2)
+            shut(pg, "#refx"); frames(pg, 2)
         step("user CSV suspect list: uploaded, visible in dialog, matched in HR hover tip", user_csv)
 
         pg.evaluate("localStorage.removeItem('mzlab.contaminanti')")
@@ -260,8 +260,26 @@ try:
             assert pg.locator("#lst-pol-seg").count() == 0
             bad = pg.evaluate("[...document.querySelectorAll('#lst-tbody td.lst-name')].filter(t=>t.scrollWidth>t.clientWidth+1||!t.title).length")
             assert bad == 0, bad
-            shut(pg, "#listex")
+            shut(pg, "#refx")
         step("low resolution: context menu search opens nominal ±0.5 Da search", lr_context_menu_search)
+
+        def large_dialog_infinite_scroll():
+            # outside the Data view (here the dialog is called directly) the lists open in the Periodic table dialog: same large box, no 400-row cut, rows are added while scrolling, live count
+            pg.evaluate("QQQRef.open(\"lists\", {})"); pg.wait_for_selector("#refdlg[open] #lst-tbody tr", timeout=5000)
+            w = pg.evaluate("document.querySelector('#refdlg').getBoundingClientRect().width")
+            assert w > 900, f"dialog is large like the Periodic table one: {w}"
+            first = pg.locator("#refdlg #lst-tbody tr:not(#lst-more)").count()
+            assert first <= 100, f"first chunk only: {first}"
+            assert pg.locator("#refdlg #lst-more").count() == 1, "more rows are announced"
+            pg.evaluate("(()=>{const w=document.querySelector('#refdlg #lst-table-wrap');w.scrollTop=w.scrollHeight})()")
+            pg.wait_for_function(f"document.querySelectorAll('#refdlg #lst-tbody tr:not(#lst-more)').length>{first}", timeout=5000)
+            pg.evaluate("(async()=>{const w=document.querySelector('#refdlg #lst-table-wrap');for(let i=0;i<80&&document.querySelector('#refdlg #lst-more');i++){w.scrollTop=w.scrollHeight;await new Promise(r=>setTimeout(r,50))}})()")
+            pg.wait_for_function("!document.querySelector('#refdlg #lst-more')", timeout=15000)
+            rows = pg.locator("#refdlg #lst-tbody tr").count()
+            assert rows > 400, f"the whole list is reachable, not cut at 400: {rows}"
+            assert str(rows) in pg.inner_text("#refdlg #lst-count"), pg.inner_text("#refdlg #lst-count")
+            shut(pg, "#refx")
+        step("lists dialog is the large Periodic table dialog; rows load while scrolling with a live count", large_dialog_infinite_scroll)
 
     r2.close()
 except Exception as e:
