@@ -26,25 +26,13 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--to", "end of the window, minutes"),
     ("--at", "retention time, minutes"),
     ("--in", "input files or folders"),
-    (
-        "--id",
-        "flow step (no @V: highest) or channel id",
-    ),
-    (
-        "--budget",
-        "document size budget",
-    ),
-    (
-        "--hide-names",
-        "neutral file and sample names",
-    ),
+    ("--id", "flow step (no @V: highest) or channel id"),
+    ("--budget", "document size budget"),
+    ("--hide-names", "neutral file and sample names"),
     ("--demo", "public demo subset"),
     ("--preset", "Pipeline polarity preset"),
     ("--turn", "turn to replay"),
-    (
-        "--tables",
-        "JSON tables (losses, shifts, contaminants)",
-    ),
+    ("--tables", "JSON tables (losses, shifts, contaminants)"),
     ("--sub", "the substructure query"),
     ("--strict", "also check request SHA-256"),
     ("--rules", "use fragmentation rules"),
@@ -71,15 +59,9 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--adduct", "adduct with signed shift"),
     ("--compact", "small form, no prose"),
     ("--list", "list names, print none"),
-    (
-        "--replay",
-        "recordings folder",
-    ),
+    ("--replay", "recordings folder"),
     ("--against", "sources to compare with"),
-    (
-        "--params",
-        "Pipeline panel numbers, JSON",
-    ),
+    ("--params", "Pipeline panel numbers, JSON"),
 ];
 
 /// A value placeholder that gives its flag a type the placeholder alone cannot (`N` is a number or a name).
