@@ -160,6 +160,10 @@ pub(crate) fn make(
     let name = path
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
+    // a file that is not there is the caller's input error, whatever the cache folder is, and no folder is made for it
+    std::fs::metadata(path).map_err(|e| {
+        Error::new("err.flow.io").with("detail", format!("{}: {e}", path.display()))
+    })?;
     let prepared = std::fs::create_dir_all(dir)
         .map_err(|e| cache_error("cannot create", dir, e))
         .and_then(|_| sha_of(dir, path));

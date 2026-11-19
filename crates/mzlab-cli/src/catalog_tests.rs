@@ -31,7 +31,7 @@ fn every_entry_is_in_the_catalog_with_its_usage_line() {
             .unwrap()
             .trim_start_matches("mzlab-cli ");
         assert_eq!(c["synopsis"], if e.help.is_empty() { e.name } else { want });
-        assert_eq!(c["stdout"]["schema"], e.schema);
+        assert_eq!(c["stdout"]["schema"].as_str().unwrap_or(""), e.schema);
     }
 }
 

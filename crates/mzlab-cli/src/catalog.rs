@@ -13,10 +13,7 @@ use crate::{exit, Outcome};
 /// Flags every command accepts, listed once instead of on every command.
 const GLOBAL: &[(&str, &str)] = &[
     ("--json", "JSON on stdout"),
-    (
-        "--cache",
-        "DIR or MZLAB_CACHE: keep and reuse the file indexes there",
-    ),
+    ("--cache", "index cache folder, or MZLAB_CACHE"),
     ("--help", "the usage of the command on stdout, exit 0"),
 ];
 

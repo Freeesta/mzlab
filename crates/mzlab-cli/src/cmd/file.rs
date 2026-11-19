@@ -18,7 +18,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("file info", "mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds in one call: container, samples, items, channels, proposed kind as JSON", crate::file_info_cmd::run)
         .schema("file_info/1")
         .exits(&[0, 2, 4, 5]),
-    Entry::new("file index", "mzlab-cli file index FILE... [--sample ID] [--out PATH]   build the index of each file into the cache (--cache DIR or MZLAB_CACHE) as JSON", crate::file_index_cmd::run)
+    Entry::new("file index", "mzlab-cli file index FILE... [--sample ID] [--out PATH]   pre-build the index cache as JSON", crate::file_index_cmd::run)
         .schema("index-build/1")
         .exits(&[0, 2, 4, 5, 6]),
     Entry::new("file inventory", "mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds, sample by sample, with SHA-256 and a status as JSON", |a| crate::wiff_cmd::run(pre("list", a))),
