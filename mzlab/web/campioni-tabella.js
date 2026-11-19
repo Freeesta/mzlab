@@ -41,8 +41,10 @@ function campioniEdit(entries) { return COMANDI.fai("samples.meta", COMANDI.GLOB
   }
   function msg(box, text, bad) { const m = box.querySelector("#cmp-msg"); if (m) { m.textContent = text; m.classList.toggle("bad", !!bad); } }
   function tsvText() { const x = toTsv(rows(), tunitGet()); return window.COLS ? COLS.tsv(x) : x; }
+  let live = null;
+  document.addEventListener("filelist", () => { if (live && live.isConnected && !live.contains(document.activeElement)) paint(live); });
   function mount(box) {
-    paint(box);
+    paint(live = box);
     box.onchange = e => {
       const el = e.target, f = el.dataset && el.dataset.f;
       if (el.id === "cmp-tu") { tunitSet(el.value); paint(box); if (typeof renderFileList === "function") renderFileList(); return; }

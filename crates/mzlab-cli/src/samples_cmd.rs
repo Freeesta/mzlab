@@ -17,7 +17,7 @@ usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,
        mzlab-cli samples group NAME...
        mzlab-cli samples table [--names FILE|- | FILE...]
        mzlab-cli samples list FILE... [--json] [--probe]   (samples list --help)
-       mzlab-cli samples select FILE --sample LIST [--json]   (samples select --help)
+       mzlab-cli samples select FILE (--sample LIST | --default [--budget-mb N]) [--json]   (samples select --help)
 
   --names FILE|-  one file name per line (default: the standard input)
   --pos N         also the manual variable of the N-th token (1 = first, -1 = last), cut at --sep (default \"_-. \")
@@ -267,24 +267,32 @@ fn list_table(json: &str, file: &str) -> String {
     t
 }
 
-const SELECT_HELP: &str = "mzlab-cli samples select: which samples of a file `--sample LIST` would open, checked against its container and index (nothing is read beyond them, nothing is written).
+const SELECT_HELP: &str = "mzlab-cli samples select: which samples of a file `--sample LIST` would open, or which ones the chooser of the site ticks first (`--default`), checked against its container and index (nothing is read beyond them, nothing is written).
 
-usage: mzlab-cli samples select FILE --sample LIST [--json]
+usage: mzlab-cli samples select FILE (--sample LIST | --default [--budget-mb N]) [--json]
 
   FILE         a .wiff (its .wiff.scan is not read), another vendor file or a .D / .raw folder
   --sample LIST  sample ids and ranges: 1,3,5 or 2-4 (the ids of `samples list`, not positions)
-  --json       {\"samples\":[ids]} on stdout, the ids in the order of the file: the same bytes as the site's `sample_selection`
+  --default    the samples the site's chooser ticks at the start (`sample_default`): all when their section bytes are small against the budget, none otherwise
+  --budget-mb N  the memory budget for --default in MB (default 1024; 0 = the default)
+  --json       {\"samples\":[ids]} on stdout, the ids in the order of the file: the same bytes as the site's `sample_selection` / `sample_default`
 The same LIST is taken by `convert`, `channels` and `features`.
-Exit codes: 0 selected; 2 usage (LIST is not a list); 4 the file is missing or unreadable; 5 an id the file does not have (the ids present are named).";
+Exit codes: 0 selected; 2 usage (LIST is not a list, both or neither of --sample and --default, a --budget-mb that is not a number of MB); 4 the file is missing or unreadable; 5 an id the file does not have (the ids present are named).";
 
-/// `samples select FILE --sample LIST [--json]`: the dry run of `--sample`.
+/// `samples select FILE (--sample LIST | --default [--budget-mb N]) [--json]`: the dry run of `--sample`, or the first ticks of the page chooser.
 fn select_run(args: Vec<String>) -> Outcome {
     let (mut file, mut text, mut json) = (None::<PathBuf>, None::<String>, false);
+    let (mut default, mut budget) = (false, 0.0f64);
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
             "--help" | "-h" => return Outcome::ok(format!("{SELECT_HELP}\n").into_bytes()),
             "--json" => json = true,
+            "--default" => default = true,
+            "--budget-mb" => match it.next().and_then(|v| v.parse::<f64>().ok()) {
+                Some(v) if v >= 0.0 => budget = v,
+                _ => return Outcome::fail("--budget-mb needs a number of MB"),
+            },
             "--sample" => match it.next() {
                 Some(v) => text = Some(v),
                 None => return Outcome::fail("--sample needs a list such as 1,3,5"),
@@ -296,15 +304,28 @@ fn select_run(args: Vec<String>) -> Outcome {
             _ => return Outcome::fail("samples select takes one FILE"),
         }
     }
-    let (Some(file), Some(text)) = (file, text) else {
-        return Outcome::fail("samples select needs a FILE and --sample LIST");
+    let (Some(file), text) = (file, text) else {
+        return Outcome::fail("samples select needs a FILE and --sample LIST or --default");
     };
+    if text.is_some() == default {
+        return Outcome::fail("samples select needs exactly one of --sample LIST and --default");
+    }
     if !file.exists() {
         let e = Error::new("err.session.fileNotFound").with("name", file.display());
         return Outcome::fail_error(&e).with_hint("check the path");
     }
-    let chosen =
-        crate::sample_select::parse(&text).and_then(|w| crate::sample_select::resolve(&file, &w));
+    let chosen = match &text {
+        Some(t) => {
+            crate::sample_select::parse(t).and_then(|w| crate::sample_select::resolve(&file, &w))
+        }
+        None => crate::sample_select::sized(&file).map(|(ids, sizes)| {
+            mzlab_core::readers::selection::suggest(
+                &ids,
+                &sizes,
+                mzlab_core::readers::selection::budget_bytes(budget),
+            )
+        }),
+    };
     match chosen {
         Err(e) => crate::sample_select::fail(&e),
         Ok(ids) => {

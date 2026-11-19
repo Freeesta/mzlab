@@ -48,6 +48,7 @@ pub fn code_of_key(key: &str) -> u8 {
     ];
     const INTEGRITY_PREFIXES: &[&str] = &[
         "err.flow.format",
+        "err.flow.json",
         "err.flow.check",
         "err.flow.lineage",
         "err.flow.port.",

@@ -122,6 +122,7 @@ const MISSING: &[&[&str]] = &[
     &["mol-cut", "/nonexistent/m.mol", "--set", "bonds=1-2"],
     &["mol-mech", "/nonexistent/r.json"],
     &["wiff", "list", "/nonexistent/x.wiff"],
+    &["ref-list", "/nonexistent/l.csv"],
 ];
 
 /// The commands that read no input file: a formula, a number, a query, or nothing.
@@ -375,5 +376,78 @@ fn the_json_of_the_catalogs_starts_with_its_schema_and_every_stdout_ends_with_a_
     ] {
         let flat: String = text(&run(&a)).split_whitespace().collect();
         assert!(flat.starts_with("{\"schema\":"), "{a:?}");
+    }
+}
+
+/// A file written into a fresh folder of its own.
+fn scratch(name: &str, file: &str, bytes: &[u8]) -> (PathBuf, String) {
+    let dir =
+        std::env::temp_dir().join(format!("mzlab_cli_contract_{name}_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join(file), bytes).unwrap();
+    let path = dir.join(file).to_string_lossy().into_owned();
+    (dir, path)
+}
+
+#[test]
+fn the_table_of_verdict_commands_names_entries_and_each_keeps_its_document_at_exit_1() {
+    for v in crate::contract::VERDICT {
+        assert!(entries().any(|e| e.name == *v), "{v} is not a command");
+    }
+    // a pair with no companion, an mzML with an error, a list with a wrong row: exit 1 is the answer, the document stays on stdout
+    let (d1, lone) = scratch("verdict_pair", "lone.wiff", b"x");
+    let (d2, bad) = scratch("verdict_validate", "bad.mzML", b"<mzML>");
+    let (d3, list) = scratch(
+        "verdict_reflist",
+        "l.csv",
+        b"name,formula,adduct\nx,NOTAFORMULA,[M+H]+\n",
+    );
+    for (a, key) in [
+        (vec!["pair", &lone, "--json"], "\"wiffpair/1\""),
+        (vec!["validate", &bad, "--json"], "\"valid\":false"),
+        (vec!["ref-list", &list], "\"reflist/1\""),
+    ] {
+        let o = run(&a);
+        assert_eq!(o.code, 1, "{a:?}: {}", o.stderr);
+        let out = text(&o);
+        assert!(
+            out.contains(key) && !out.contains("\"schema\":\"error/1\""),
+            "{a:?}: {out}"
+        );
+        assert!(out.ends_with('\n'), "{a:?}");
+    }
+    for d in [d1, d2, d3] {
+        let _ = std::fs::remove_dir_all(d);
+    }
+}
+
+#[test]
+fn every_failure_code_is_one_error_document_under_json() {
+    let (dir, junk) = scratch("codes", "plan.json", b"not json");
+    let example =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../mzlab/web/esempi/HRMS_t000.mzML");
+    let example = example.to_string_lossy().into_owned();
+    let (wdir, wiff_file) = wiff("codes_wiff");
+    for (code, a) in [
+        (1, vec!["dad", "spectrum", &example, "--rt", "1", "--json"]),
+        (2, vec!["steps", "--bogus", "--json"]),
+        (3, vec!["flow", "check", &junk, "--json"]),
+        (4, vec!["channels", "/nonexistent/x.mzML", "--json"]),
+        (5, vec!["channels", &wiff_file, "--sample", "9", "--json"]),
+        (
+            6,
+            vec!["elements", "--out", "/nonexistent/dir/e.json", "--json"],
+        ),
+    ] {
+        let v = one_error(&run(&a), code, &format!("{a:?}"));
+        assert_eq!(
+            crate::exit::code_of_key(v["error_key"].as_str().unwrap()),
+            code,
+            "{a:?}: the key and the code agree"
+        );
+    }
+    for d in [dir, wdir] {
+        let _ = std::fs::remove_dir_all(d);
     }
 }

@@ -32,7 +32,7 @@ fn message_of(stderr: &str) -> (String, String) {
 
 /// Commands whose exit 1 or 3 is a verdict of the answer they print (the listing has refused samples, the pair lacks its companion, the file has
 /// errors): the document is the answer, byte for byte what the site computes, so it stays on stdout and carries its own evidence.
-const VERDICT: &[&str] = &["validate", "pair", "wiff", "samples"];
+pub(crate) const VERDICT: &[&str] = &["validate", "pair", "wiff", "samples", "ref-list"];
 
 /// `o` with the contract applied; `command` is the name of the entry that ran (`""` when none matched).
 pub(crate) fn finish(args: &[String], command: &str, mut o: Outcome) -> Outcome {

@@ -79,6 +79,7 @@ const JSON_DEFAULT: &[&str] = &[
     "match-mz",
     "background",
     "wiff",
+    "ref-list",
     "peak-edges",
     "peak-auto",
     "peak-auto-lr",
