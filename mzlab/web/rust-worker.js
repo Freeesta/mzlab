@@ -143,10 +143,10 @@ const tx = async (store, mode, fn) => {
 };
 const safe = async f => { try { return await f(); } catch (_) { return undefined; } };
 const kvGet = key => safe(() => tx("kv", "readonly", s => s.get(key)));
-// the molecules of the user (store "molecole"): "leggi" gives a molecules/1 document, "scrivi" replaces every record with the ones of the document
+// the molecules of the user (store "molecole"): "read" gives a molecules/1 document, "write" replaces every record with the ones of the document
 const molecole = async (op, body) => {
-  if (op === "scrivi") { const ms = JSON.parse(body).molecole || []; await tx("molecole", "readwrite", s => { s.clear(); ms.forEach(r => s.put(r)); }); return "{}"; }
-  return JSON.stringify({ schema: "molecules/1", molecole: (await safe(() => tx("molecole", "readonly", s => s.getAll()))) || [] });
+  if (op === "write") { const ms = JSON.parse(body).molecules || []; await tx("molecole", "readwrite", s => { s.clear(); ms.forEach(r => s.put(r)); }); return "{}"; }
+  return JSON.stringify({ schema: "molecules/1", molecules: (await safe(() => tx("molecole", "readonly", s => s.getAll()))) || [] });
 };
 // the archive: its schema is brought up to date before any file is opened, and the manifest follows every change of the folders of OPFS
 const infoOf = async (kind, name, fresh) => {
@@ -343,8 +343,8 @@ async function lrOp(m) {
     case "lr_flow_line": { const r = await rotte(); try { return { info: r.flow_line(m.body || "") }; } catch (e) { return { info: "E" + String(e) }; } }   // the short line of a plan, or the plan with a line's --set applied; "E" + JSON = an error
     case "lr_flow_sched": return { info: (await rotte()).flow_sched(m.sop || "", m.body || "") };                   // the live scheduler of the Flow (sched_route): JSON in, JSON out
     case "lr_samples": return { info: (await rotte()).samples(m.cop || "", m.body || "") };                       // samples/1 (propose, validate, ...): JSON in, JSON out
-    case "lr_molecules": return { info: (await rotte()).molecules(m.mop || "", m.body || "") };                     // molecules/1 (carica, cerca, get, da_csv, ...): JSON in, JSON out
-    case "lr_molecole_archivio": return { info: await molecole(m.mop || "", m.body || "") };     // the molecules of the user, kept in the browser (IndexedDB) or, in the app, in a file
+    case "lr_molecules": return { info: (await rotte()).molecules(m.mop || "", m.body || "") };                     // molecules/1 (load, search, get, from_csv, ...): JSON in, JSON out
+    case "lr_molecules_archive": return { info: await molecole(m.mop || "", m.body || "") };     // the molecules of the user, kept in the browser (IndexedDB) or, in the app, in a file
     case "lr_ricerca": return { info: search_number(m.body || "") }; case "lr_reflist": return { info: reflist_parse(m.body || "") }; case "lr_reflist_match": return { info: reflist_match(m.body || "") };
     case "lr_adduct_table": return { info: adduct_table(m.f || "", m.obs || "", m.tol || "", m.delta || "") };
     case "lr_elements": return { info: elements() };

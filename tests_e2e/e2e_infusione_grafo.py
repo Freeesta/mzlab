@@ -43,8 +43,8 @@ STAND_IN = """(fx) => {
       if (q.get("formula") === "C99H99+") j.warnings.push({ key: "warn.msngrafo.mostUnexplained", tree: "", node: null });
       return Promise.resolve(jr(j));
     }
-    if (path === "api/molecules/cerca") return Promise.resolve(jr([{ id: "ik:TESTONLY", name: "exampline", formula: "C14H15N3O5", mass: 305.1, smiles: "CCOC(=O)c1ccccc1N", addotti: ["[M+H]+"], punteggio: 1 }]));
-    if (path === "api/molecules/get") return Promise.resolve(jr({ id: "ik:TESTONLY", name: "exampline", formula: "C14H15N3O5", mass: 305.1, smiles: "CCOC(=O)c1ccccc1N", addotti: ["[M+H]+"] }));
+    if (path === "api/molecules/search") return Promise.resolve(jr([{ id: "ik:TESTONLY", name: "exampline", formula: "C14H15N3O5", mass: 305.1, smiles: "CCOC(=O)c1ccccc1N", adducts: ["[M+H]+"], score: 1 }]));
+    if (path === "api/molecules/get") return Promise.resolve(jr({ id: "ik:TESTONLY", name: "exampline", formula: "C14H15N3O5", mass: 305.1, smiles: "CCOC(=O)c1ccccc1N", adducts: ["[M+H]+"] }));
     if (path === "api/msnlib/add") { const b = JSON.parse(init.body), tag = "entry:" + b.molecule_id + "\\n"; const dup = (b.library || "").includes(tag); return Promise.resolve(jr({ library: dup ? b.library : (b.library || "") + tag, duplicate: dup })); }
     if (path === "api/msnlib/search") return Promise.resolve(jr({ schema: "msn-search/1", options: {}, candidates: [
       { id: "STD-1", ion: "C14H15N3O5 [M+H]+", activation: [], delta_ppm: 0.4, scores: { ms2: 0.91, tree: 0.8, losses: null }, proofs: { common_peaks: 5, aligned_nodes: 3, unknown_nodes: 4, common_losses: 2, unknown_losses: 3 }, analog: null },

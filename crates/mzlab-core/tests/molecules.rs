@@ -6,7 +6,7 @@
 
 use mzlab_core::json::{parse, Value};
 use mzlab_core::molecules::{
-    cerca, digest, from_csv, from_json, merge, route, to_csv, to_json, Molecule,
+    digest, from_csv, from_json, merge, route, search, to_csv, to_json, Molecule,
 };
 
 const LOOSE: &str = "\
@@ -17,7 +17,7 @@ Cationina;C8H12N;AAAAAAAAAAAAAA-BBBBBBBBBB-C;;1;;;;
 ";
 
 fn ms(csv: &str) -> Vec<Molecule> {
-    from_csv(csv, "utente", None).unwrap_or_else(|e| panic!("{e:?}"))
+    from_csv(csv, "user", None).unwrap_or_else(|e| panic!("{e:?}"))
 }
 
 fn sorted_by_id(mut v: Vec<Molecule>) -> Vec<Molecule> {
@@ -35,7 +35,7 @@ fn root() -> std::path::PathBuf {
 fn catalogue() -> (String, Vec<Molecule>) {
     let text = std::fs::read_to_string(root().join("mzlab/web/molecole/catalogo.csv")).unwrap();
     let all =
-        from_csv(&text, "catalogo", None).unwrap_or_else(|e| panic!("{:?}", &e[..e.len().min(3)]));
+        from_csv(&text, "catalog", None).unwrap_or_else(|e| panic!("{:?}", &e[..e.len().min(3)]));
     (text, all)
 }
 
@@ -54,7 +54,7 @@ fn csv_json_csv_is_the_same_bytes() {
     assert_eq!(ids[0], "ik:AAAAAAAAAAAAAA-BBBBBBBBBB-C");
     assert!(ids[2].starts_with("u:") && ids[2].len() == 14, "{ids:?}");
     let mut renamed = back.clone();
-    renamed[2].nome = "Provolone C".into();
+    renamed[2].name = "Provolone C".into();
     assert_eq!(
         from_json(to_json(&renamed).as_bytes()).unwrap()[2].id,
         ids[2]
@@ -80,14 +80,10 @@ AAAAAAAAAAAAAA-BBBBBBBBBB-C;;Cationina;;1;;;C8H12N;
 fn mass_is_computed_with_the_electron() {
     let v = ms(LOOSE);
     let (neutral, cation) = (&v[0], &v[2]);
-    assert!(
-        (neutral.massa - 165.115364).abs() < 1e-5,
-        "{}",
-        neutral.massa
-    );
+    assert!((neutral.mass - 165.115364).abs() < 1e-5, "{}", neutral.mass);
     // C8H12N: 12 C, 12 H, 1 N, less one electron
     let m = 8.0 * 12.0 + 12.0 * 1.00782503223 + 14.00307400443 - 0.000548579909;
-    assert!((cation.massa - m).abs() < 1e-6);
+    assert!((cation.mass - m).abs() < 1e-6);
 }
 
 #[test]
@@ -104,7 +100,7 @@ Same id too;C3H8O;;;u:0123456789ab;;;
 Charge;C2H6O;;;;1.5;;
 Source;C2H6O;;;;;3.5;
 ";
-    let errs = from_csv(bad, "utente", None).unwrap_err();
+    let errs = from_csv(bad, "user", None).unwrap_err();
     let got: Vec<(usize, &str)> = errs.iter().map(|e| (e.line, e.key)).collect();
     assert_eq!(
         got,
@@ -118,14 +114,14 @@ Source;C2H6O;;;;;3.5;
             (10, "error.molecules.badProperty"),
         ]
     );
-    let json = route("valida", &format!("{{\"csv\":{}}}", quoted(bad))).unwrap();
+    let json = route("validate", &format!("{{\"csv\":{}}}", quoted(bad))).unwrap();
     assert!(json.contains("error.molecules.noName"));
     assert_eq!(
-        from_csv("name;nope\nx;y\n", "utente", None).unwrap_err()[0].key,
+        from_csv("name;nope\nx;y\n", "user", None).unwrap_err()[0].key,
         "error.molecules.badColumn"
     );
     assert_eq!(
-        from_csv("name\nx\n", "utente", None).unwrap_err()[0].key,
+        from_csv("name\nx\n", "user", None).unwrap_err()[0].key,
         "error.molecules.noColumn"
     );
 }
@@ -150,14 +146,14 @@ Lattosio;;C12H22O11;AAAAAAAAAAAAAA-AAAAAAAAAA-F
 ";
 
 fn names(ms: &[Molecule], hits: &[(usize, f64)]) -> Vec<String> {
-    hits.iter().map(|h| ms[h.0].nome.clone()).collect()
+    hits.iter().map(|h| ms[h.0].name.clone()).collect()
 }
 
 #[test]
 fn search_by_text_formula_and_mass() {
     let v = ms(SEARCH);
     // equal, starts with, starts a word (after a space or a hyphen), contains
-    let t = cerca(&v, "esempina", 8, 10.0);
+    let t = search(&v, "esempina", 8, 10.0);
     assert_eq!(
         names(&v, &t),
         ["Esempina", "Alfa Esempina", "Anti-esempina", "Paresempina"]
@@ -167,27 +163,27 @@ fn search_by_text_formula_and_mass() {
         [0.0, 2.0, 2.0, 3.0]
     );
     // a synonym counts, a prefix of "Esempina" also matches "Esempinolo" (same score, the shorter name first)
-    assert_eq!(names(&v, &cerca(&v, "ex-1", 8, 10.0)), ["Esempina"]);
+    assert_eq!(names(&v, &search(&v, "ex-1", 8, 10.0)), ["Esempina"]);
     assert_eq!(
-        names(&v, &cerca(&v, "esempin", 2, 10.0)),
+        names(&v, &search(&v, "esempin", 2, 10.0)),
         ["Esempina", "Esempinolo"]
     );
-    assert!(cerca(&v, "e", 8, 10.0).is_empty());
+    assert!(search(&v, "e", 8, 10.0).is_empty());
     // a formula (any order of writing) comes first
-    assert_eq!(names(&v, &cerca(&v, "c12h22o11", 8, 10.0)), ["Lattosio"]);
+    assert_eq!(names(&v, &search(&v, "c12h22o11", 8, 10.0)), ["Lattosio"]);
     assert_eq!(
-        names(&v, &cerca(&v, "H19NOC12", 8, 10.0)),
+        names(&v, &search(&v, "H19NOC12", 8, 10.0)),
         ["Anti-esempina"]
     );
     // the mass: 9.99 ppm in, 10.01 ppm out, nearest first
-    let m = v[0].massa;
+    let m = v[0].mass;
     assert_eq!(
-        cerca(&v, &format!("{}", m * (1.0 + 9.99e-6)), 8, 10.0).len(),
+        search(&v, &format!("{}", m * (1.0 + 9.99e-6)), 8, 10.0).len(),
         1
     );
-    assert!(cerca(&v, &format!("{}", m * (1.0 + 10.01e-6)), 8, 10.0).is_empty());
+    assert!(search(&v, &format!("{}", m * (1.0 + 10.01e-6)), 8, 10.0).is_empty());
     assert_eq!(
-        cerca(&v, &format!("{}", m * (1.0 + 10.01e-6)), 8, 20.0)[0].0,
+        search(&v, &format!("{}", m * (1.0 + 10.01e-6)), 8, 20.0)[0].0,
         0
     );
 }
@@ -195,47 +191,47 @@ fn search_by_text_formula_and_mass() {
 #[test]
 fn levels_replace_by_id_and_come_back() {
     let _g = ARCHIVE.lock().unwrap_or_else(|e| e.into_inner());
-    let cat = from_csv(SEARCH, "catalogo", None).unwrap();
+    let cat = from_csv(SEARCH, "catalog", None).unwrap();
     let mut mine = cat[1].clone();
-    mine.nome = "Esempinolo mio".into();
-    mine.origine.tipo = "utente".into();
+    mine.name = "Esempinolo mio".into();
+    mine.origin.kind = "user".into();
     let all = merge(&cat, &[mine.clone()]);
     assert_eq!(all.len(), cat.len());
-    assert_eq!(all[1].nome, "Esempinolo mio");
+    assert_eq!(all[1].name, "Esempinolo mio");
     // an imported copy does not beat the user one, in any order
     let mut imported = mine.clone();
-    imported.nome = "Esempinolo importato".into();
-    imported.origine.tipo = "importata".into();
+    imported.name = "Esempinolo importato".into();
+    imported.origin.kind = "imported".into();
     assert_eq!(
-        merge(&cat, &[mine.clone(), imported.clone()])[1].nome,
+        merge(&cat, &[mine.clone(), imported.clone()])[1].name,
         "Esempinolo mio"
     );
-    assert_eq!(merge(&cat, &[imported, mine])[1].nome, "Esempinolo mio");
+    assert_eq!(merge(&cat, &[imported, mine])[1].name, "Esempinolo mio");
     // taking the copy away brings the catalogue record back
-    assert_eq!(merge(&cat, &[])[1].nome, "Esempinolo");
+    assert_eq!(merge(&cat, &[])[1].name, "Esempinolo");
     // the same through the bindings
     let doc = route(
-        "a_json",
-        "{\"molecole\":[{\"nome\":\"Nuova\",\"formula\":\"CH4\"}],\"schema\":\"molecules/1\"}",
+        "to_json",
+        "{\"schema\":\"molecules/1\",\"molecules\":[{\"name\":\"Nuova\",\"formula\":\"CH4\"}]}",
     )
     .unwrap();
     let loaded = route(
-        "carica",
+        "load",
         &format!(
-            "{{\"catalogo\":{},\"utente\":{}}}",
+            "{{\"catalog\":{},\"user\":{}}}",
             quoted(SEARCH),
             quoted(&doc)
         ),
     )
     .unwrap();
     assert!(
-        loaded.contains("\"totale\":7") && loaded.contains("\"altri\":1"),
+        loaded.contains("\"total\":7") && loaded.contains("\"others\":1"),
         "{loaded}"
     );
-    assert!(route("cerca", "{\"q\":\"nuova\"}")
+    assert!(route("search", "{\"q\":\"nuova\"}")
         .unwrap()
-        .contains("\"nome\":\"Nuova\""));
-    let id = route("cerca", "{\"q\":\"lattosio\"}").unwrap();
+        .contains("\"name\":\"Nuova\""));
+    let id = route("search", "{\"q\":\"lattosio\"}").unwrap();
     let id = parse(id.as_bytes())
         .unwrap()
         .at(0)
@@ -247,8 +243,8 @@ fn levels_replace_by_id_and_come_back() {
         .unwrap()
         .contains("\"formula\":\"C12H22O11\""));
     assert_eq!(route("get", "{\"id\":\"ik:none\"}").unwrap(), "null");
-    route("carica", "{\"utente\":null}").unwrap();
-    assert!(route("cerca", "{\"q\":\"nuova\"}").unwrap() == "[]");
+    route("load", "{\"user\":null}").unwrap();
+    assert!(route("search", "{\"q\":\"nuova\"}").unwrap() == "[]");
 }
 
 #[test]
@@ -257,11 +253,11 @@ fn the_catalogue_is_canonical_and_complete() {
     // the last record (timolol) was added after the two old lists
     assert_eq!(all.len(), 625 + 645 - 43 + 1);
     assert_eq!(to_csv(&all), text, "mzlab/web/molecole/catalogo.csv is not in the canonical form: run tools/generate_molecules.py");
-    let both = all.iter().filter(|m| m.origine.catalog.len() == 2).count();
+    let both = all.iter().filter(|m| m.origin.catalog.len() == 2).count();
     assert_eq!(both, 43 + 1);
     assert_eq!(
         all.iter()
-            .filter(|m| m.origine.catalog.contains(&"tabui".to_string()))
+            .filter(|m| m.origin.catalog.contains(&"tabui".to_string()))
             .count(),
         625 + 1
     );
@@ -271,8 +267,8 @@ fn the_catalogue_is_canonical_and_complete() {
 fn queries(tabui: &[&Molecule]) -> Vec<String> {
     let mut names: Vec<&str> = Vec::new();
     for m in tabui {
-        names.push(&m.nome);
-        if m.origine.catalog.len() == 1 {
+        names.push(&m.name);
+        if m.origin.catalog.len() == 1 {
             names.extend(m.synonyms.iter().map(String::as_str));
         }
     }
@@ -303,7 +299,7 @@ fn old_tabui_compounds() -> Vec<Molecule> {
     let (_, all) = catalogue();
     let mut tabui: Vec<Molecule> = all
         .into_iter()
-        .filter(|m| m.origine.catalog.contains(&"tabui".to_string()))
+        .filter(|m| m.origin.catalog.contains(&"tabui".to_string()))
         .collect();
     tabui.truncate(625);
     tabui
@@ -313,7 +309,7 @@ fn old_tabui_compounds() -> Vec<Molecule> {
 fn search_gives_what_the_name_box_of_tabui_gave() {
     let tabui = old_tabui_compounds();
     let common: Vec<usize> = (0..tabui.len())
-        .filter(|&k| tabui[k].origine.catalog.len() == 2)
+        .filter(|&k| tabui[k].origin.catalog.len() == 2)
         .collect();
     let oro = std::fs::read_to_string(root().join("tests/data/molecole_tabui_oro.json")).unwrap();
     let oro = parse(oro.as_bytes()).unwrap();
@@ -337,7 +333,7 @@ fn search_gives_what_the_name_box_of_tabui_gave() {
             .filter_map(|x| x.f64())
             .map(|x| x as usize)
             .collect();
-        let whole: Vec<usize> = cerca(&tabui, q, usize::MAX, 10.0)
+        let whole: Vec<usize> = search(&tabui, q, usize::MAX, 10.0)
             .iter()
             .map(|h| h.0)
             .collect();
@@ -363,7 +359,7 @@ fn search_gives_what_the_name_box_of_tabui_gave() {
             .count();
         // without a molecule of the two lists in the way, the box gave these 8 and so does the search
         if !whole.iter().any(|k| common.contains(k)) {
-            let top: Vec<usize> = cerca(&tabui, q, 8, 10.0).iter().map(|h| h.0).collect();
+            let top: Vec<usize> = search(&tabui, q, 8, 10.0).iter().map(|h| h.0).collect();
             assert_eq!(top, want[..want.len().min(8)], "{q:?}");
         }
         if old_rest != new_rest || !lost.is_empty() {
@@ -394,48 +390,48 @@ fn a_suspect_list_becomes_a_collection() {
     let dir = root().join("tests/dati");
     let csv = std::fs::read_to_string(dir.join("sospetti_sintetici.csv")).unwrap();
     let want = parse(&std::fs::read(dir.join("sospetti_sintetici_attesi.json")).unwrap()).unwrap();
-    let coll = want.get("raccolta").unwrap().str().unwrap();
+    let coll = want.get("collection").unwrap().str().unwrap();
     let ask = |csv: &str| {
         let body = format!(
-            "{{\"csv\":{},\"file\":\"x.csv\",\"raccolta\":\"{coll}\"}}",
+            "{{\"csv\":{},\"file\":\"x.csv\",\"collection\":\"{coll}\"}}",
             quoted(csv)
         );
-        parse(route("da_csv", &body).unwrap().as_bytes()).unwrap()
+        parse(route("from_csv", &body).unwrap().as_bytes()).unwrap()
     };
     let ok = ask(&csv);
-    let got = ok.get("molecole").unwrap().arr();
-    let exp = want.get("molecole").unwrap().arr();
+    let got = ok.get("molecules").unwrap().arr();
+    let exp = want.get("molecules").unwrap().arr();
     assert_eq!(got.len(), exp.len());
     // the answer is ordered by id, so every expected record is looked up by name
     for x in exp {
-        let name = x.get("nome").unwrap().str();
+        let name = x.get("name").unwrap().str();
         let g = got
             .iter()
-            .find(|g| g.get("nome").unwrap().str() == name)
+            .find(|g| g.get("name").unwrap().str() == name)
             .unwrap();
-        for k in ["formula", "note"] {
+        for k in ["formula", "notes"] {
             assert_eq!(g.get(k).unwrap().str(), x.get(k).unwrap().str(), "{k}");
         }
-        assert_eq!(g.get("raccolte").unwrap().arr()[0].str(), Some(coll));
+        assert_eq!(g.get("collections").unwrap().arr()[0].str(), Some(coll));
         // the mass of a mass-only entry is the one of the file; with a formula it is computed
         if x.get("formula").unwrap().str() == Some("") {
-            assert_eq!(g.get("massa").unwrap().f64(), x.get("massa").unwrap().f64());
+            assert_eq!(g.get("mass").unwrap().f64(), x.get("mass").unwrap().f64());
         }
     }
     let none = ask(&format!("{csv}Senzanulla;;;no formula\n"));
-    let e = &none.get("errori").unwrap().arr()[0];
-    assert_eq!(e.get("riga").unwrap().f64(), Some(6.0));
+    let e = &none.get("errors").unwrap().arr()[0];
+    assert_eq!(e.get("line").unwrap().f64(), Some(6.0));
     assert_eq!(
-        e.get("chiave").unwrap().str(),
+        e.get("key").unwrap().str(),
         Some("error.molecules.badFormula")
     );
     // a mass-only entry goes through the canonical JSON and the search by mass
     let _g = ARCHIVE.lock().unwrap_or_else(|e| e.into_inner());
-    let json = to_json(&from_csv(&csv, "utente", None).unwrap());
+    let json = to_json(&from_csv(&csv, "user", None).unwrap());
     let back = from_json(json.as_bytes()).unwrap();
     assert_eq!(to_json(&back), json);
-    let hits = cerca(&back, "234.1012", 8, 5.0);
-    assert_eq!(back[hits[0].0].nome, "Provolone B");
+    let hits = search(&back, "234.1012", 8, 5.0);
+    assert_eq!(back[hits[0].0].name, "Provolone B");
 }
 
 /// The screening list (`elenca` on the `hrms` catalogue) has, for every row of the gold file made from the old CSV, a molecule with the same m/z (<= 1e-5).
@@ -443,7 +439,7 @@ fn a_suspect_list_becomes_a_collection() {
 fn hrms_list_keeps_the_mz_of_the_old_csv() {
     let (text, _) = catalogue();
     let _g = ARCHIVE.lock().unwrap_or_else(|e| e.into_inner());
-    route("carica", &format!("{{\"catalogo\":{}}}", quoted(&text))).unwrap();
+    route("load", &format!("{{\"catalog\":{}}}", quoted(&text))).unwrap();
     let gold =
         parse(&std::fs::read(root().join("tests/dati/molecole_hrms_oro.json")).unwrap()).unwrap();
     let ads: Vec<String> = gold
@@ -454,8 +450,8 @@ fn hrms_list_keeps_the_mz_of_the_old_csv() {
         .map(|a| format!("{:?}", a.str().unwrap()))
         .collect();
     let out = route(
-        "elenca",
-        &format!("{{\"catalogo\":\"hrms\",\"addotti\":[{}]}}", ads.join(",")),
+        "list",
+        &format!("{{\"catalog\":\"hrms\",\"adducts\":[{}]}}", ads.join(",")),
     )
     .unwrap();
     let list = parse(out.as_bytes()).unwrap();

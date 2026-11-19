@@ -8,16 +8,16 @@ use super::Molecule;
 fn rank(m: &Molecule) -> usize {
     super::LEVELS
         .iter()
-        .position(|l| *l == m.origine.tipo)
+        .position(|l| *l == m.origin.kind)
         .unwrap_or(2)
 }
 
 /// The catalogue first, in its order, then the others; for an `id` that is in more places the highest level wins (the later of two equal ones), keeping the
 /// place of the first.
-pub fn merge(catalog: &[Molecule], altri: &[Molecule]) -> Vec<Molecule> {
-    let mut out: Vec<Molecule> = Vec::with_capacity(catalog.len() + altri.len());
+pub fn merge(catalog: &[Molecule], others: &[Molecule]) -> Vec<Molecule> {
+    let mut out: Vec<Molecule> = Vec::with_capacity(catalog.len() + others.len());
     let mut at = std::collections::HashMap::new();
-    for m in catalog.iter().chain(altri) {
+    for m in catalog.iter().chain(others) {
         match at.get(&m.id) {
             Some(&k) if rank(m) >= rank(&out[k]) => out[k] = m.clone(),
             Some(_) => {}
@@ -34,15 +34,15 @@ pub fn merge(catalog: &[Molecule], altri: &[Molecule]) -> Vec<Molecule> {
 #[derive(Default)]
 pub struct Archive {
     pub catalog: Vec<Molecule>,
-    pub altri: Vec<Molecule>,
-    /// `unisci(catalogo, altri)`.
-    pub tutte: Vec<Molecule>,
+    pub others: Vec<Molecule>,
+    /// `merge(catalog, others)`.
+    pub all: Vec<Molecule>,
 }
 
 pub static ARCHIVE: Mutex<Archive> = Mutex::new(Archive {
     catalog: Vec::new(),
-    altri: Vec::new(),
-    tutte: Vec::new(),
+    others: Vec::new(),
+    all: Vec::new(),
 });
 
 /// Runs `f` on the archive (a lock left by a panic is not an error).
@@ -52,6 +52,6 @@ pub fn con<R>(f: impl FnOnce(&mut Archive) -> R) -> R {
 
 impl Archive {
     pub fn update(&mut self) {
-        self.tutte = merge(&self.catalog, &self.altri);
+        self.all = merge(&self.catalog, &self.others);
     }
 }

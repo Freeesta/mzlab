@@ -90,7 +90,7 @@ export function campo(host, opz) {
   const sceglie = (/** @type {number} */ i) => {
     const m = trovate[i];
     if (!m) return;
-    input.value = etichetta(m.nome);
+    input.value = etichetta(m.name);
     apre(false);
     stato.textContent = "";
     opz.onScegli(m);
@@ -100,7 +100,7 @@ export function campo(host, opz) {
       const li = document.createElement("li");
       li.id = `${id}-o${i}`; li.setAttribute("role", "option"); li.setAttribute("aria-selected", "false");
       const n = document.createElement("span"), f = document.createElement("span"), z = document.createElement("span");
-      n.textContent = etichetta(m.nome); f.className = "molc-f"; f.textContent = m.formula; z.className = "molc-m"; z.textContent = m.massa.toFixed(4);
+      n.textContent = etichetta(m.name); f.className = "molc-f"; f.textContent = m.formula; z.className = "molc-m"; z.textContent = m.mass.toFixed(4);
       li.append(n, f, z);
       li.onmousedown = ev => ev.preventDefault();
       li.onclick = () => sceglie(i);

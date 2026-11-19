@@ -21,20 +21,20 @@ try:
         # a failed fetch is an error, and the next request fetches it again
         pg.route("**/wasm-feat/rotte/*", lambda route: route.abort())
         try:
-            st, txt = call("api/molecules/cerca", json.dumps({"q": "paracetamol"}))
+            st, txt = call("api/molecules/search", json.dumps({"q": "paracetamol"}))
             assert st >= 400, (st, txt[:200])
         except Exception:
             pass                                             # the request itself may be rejected: also an error
         pg.unroute("**/wasm-feat/rotte/*")
         print("OK  a failed fetch of the module is an error")
 
-        st, txt = call("api/molecules/carica", json.dumps({"catalogo": pg.evaluate("fetch('static/molecole/catalogo.csv').then(r => r.text())")}))
-        assert st == 200 and json.loads(txt)["totale"] == 1228, (st, txt[:200])
+        st, txt = call("api/molecules/load", json.dumps({"catalog": pg.evaluate("fetch('static/molecole/catalogo.csv').then(r => r.text())")}))
+        assert st == 200 and json.loads(txt)["total"] == 1228, (st, txt[:200])
         assert len(routes()) >= 1
         n = len(routes())
         # a second use of every kind of route: no new fetch of the module
-        st, txt = call("api/molecules/cerca", json.dumps({"q": "paracetamol"}))
-        assert st == 200 and json.loads(txt)[0]["nome"] == "acetaminophen", txt[:200]
+        st, txt = call("api/molecules/search", json.dumps({"q": "paracetamol"}))
+        assert st == 200 and json.loads(txt)[0]["name"] == "acetaminophen", txt[:200]
         st, txt = call("api/samples/propose", json.dumps({"files": [{"name": "a_t01.mzML", "sha256": "", "kind": "sample"}]}))
         assert st == 200 and '"samples' in txt, (st, txt[:200])
         st, txt = call("api/stat/profile", "{}")

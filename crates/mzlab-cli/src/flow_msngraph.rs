@@ -6,7 +6,7 @@ use std::path::Path;
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
-use mzlab_core::molecules::{cerca, from_csv};
+use mzlab_core::molecules::{from_csv, search};
 use mzlab_core::msngraph::{Options, RuleParams};
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
@@ -217,14 +217,14 @@ fn molecule(
             .with("param", "molecule")
             .with("detail", detail)
     };
-    let ms = from_csv(list, "importata", None).map_err(|e| {
+    let ms = from_csv(list, "imported", None).map_err(|e| {
         bad(format!(
             "molecules list: row {}: {}",
             e[0].line, e[0].detail
         ))
     })?;
     let by_id = ms.iter().position(|m| m.id == name).map(|k| (k, 0.0));
-    let hits = by_id.map_or_else(|| cerca(&ms, name, 8, 5.0), |h| vec![h]);
+    let hits = by_id.map_or_else(|| search(&ms, name, 8, 5.0), |h| vec![h]);
     let Some(&(k, best)) = hits.first() else {
         return Err(bad(format!("{name} is not in the molecules list")));
     };
