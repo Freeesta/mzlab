@@ -1,4 +1,4 @@
-//! `mzlab-cli channels`: the channels of synthetic files. The files of `tools/dati_sintetici.py` (skipped without python3 and numpy, `MZLAB_GOLDEN_STRICT=1`
+//! `mzlab-cli file channels`: the channels of synthetic files. The files of `tools/dati_sintetici.py` (skipped without python3 and numpy, `MZLAB_GOLDEN_STRICT=1`
 //! fails instead) give the lists written below by hand; an mzML made here gives the same JSON as the engine of the page (`Routes::canali`).
 
 use std::path::{Path, PathBuf};
@@ -8,8 +8,15 @@ use mzlab_core::json::{parse, Value};
 
 use crate::execute;
 
+/// `mzlab-cli file VERB ARGS...`.
+fn fch(verb: &str, rest: &[&str]) -> crate::Outcome {
+    let mut a = vec!["file".to_string(), verb.to_string()];
+    a.extend(rest.iter().map(|x| x.to_string()));
+    execute(&a)
+}
+
 fn channels_of(file: &Path) -> Value {
-    let o = execute(&["channels".to_string(), file.to_string_lossy().into_owned()]);
+    let o = fch("channels", &[&file.to_string_lossy()]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     parse(&o.stdout).unwrap()
 }
@@ -23,9 +30,9 @@ fn ids(v: &Value) -> Vec<String> {
         .collect()
 }
 
-/// `mzlab-cli channels FILE extra...`.
+/// `mzlab-cli file channels FILE extra...`.
 fn run_new(p: &str, extra: &[&str]) -> crate::Outcome {
-    let mut a = vec!["channels".to_string(), p.to_string()];
+    let mut a = vec!["file".to_string(), "channels".to_string(), p.to_string()];
     a.extend(extra.iter().map(|s| s.to_string()));
     execute(&a)
 }
@@ -61,7 +68,7 @@ fn cli_gives_the_json_of_the_engine() {
     std::fs::create_dir_all(&dir).unwrap();
     let f = dir.join("a.mzML");
     std::fs::write(&f, crate::tests::mzml(10.0)).unwrap();
-    let o = execute(&["channels".into(), f.to_string_lossy().into_owned()]);
+    let o = fch("channels", &[&f.to_string_lossy()]);
     let b = std::fs::read(&f).unwrap();
     let mut src = b.clone();
     let p = mzlab_core::upload::prepare(&mut src, b.len() as u64, "a.mzML").unwrap();
@@ -82,11 +89,11 @@ fn cli_gives_the_json_of_the_engine() {
 #[test]
 fn usage_errors_exit_with_2() {
     for a in [
-        vec!["channels"],
-        vec!["channels", "a", "b"],
-        vec!["channels", "--nope"],
-        vec!["channels", "a.mzML", "--sample", "1"],
-        vec!["channels", "a.wiff", "--sample", "x"],
+        vec!["file", "channels"],
+        vec!["file", "channels", "a", "b"],
+        vec!["file", "channels", "--nope"],
+        vec!["file", "channels", "a.mzML", "--sample", "1"],
+        vec!["file", "channels", "a.wiff", "--sample", "x"],
     ] {
         assert_eq!(
             execute(&a.iter().map(|s| s.to_string()).collect::<Vec<_>>()).code,
@@ -94,7 +101,7 @@ fn usage_errors_exit_with_2() {
             "{a:?}"
         );
     }
-    assert_eq!(execute(&["channels".into(), "--help".into()]).code, 0);
+    assert_eq!(fch("channels", &["--help"]).code, 0);
     assert_eq!(run_new("/nonexistent/x.mzML", &[]).code, 4);
 }
 
@@ -255,12 +262,7 @@ fn an_unknown_sim_id_is_named_whole() {
     )
     .unwrap();
     let id = "sim:SIM SIC Q1=237.1 sample=1 polarity=positive name=ionA";
-    let o = execute(&[
-        "channels".into(),
-        f.to_string_lossy().into_owned(),
-        "--channel".into(),
-        id.into(),
-    ]);
+    let o = fch("channels", &[&f.to_string_lossy(), "--channel", id]);
     assert_eq!(o.code, 5);
     let want = format!("error: Channel {id} does not exist in this file. (err.canali.unknown)\n");
     assert!(o.stderr.starts_with(&want), "{}", o.stderr);
@@ -287,52 +289,32 @@ fn each_sample_of_a_wiff_has_the_channels_of_its_mzml() {
         return;
     }
     let s = |p: PathBuf| p.to_string_lossy().into_owned();
-    let run = |a: &[String]| execute(a);
     let wiff = s(dir.join("in/two.wiff"));
-    let conv = run(&[
-        "convert".into(),
-        wiff.clone(),
-        "--out".into(),
-        s(dir.join("out")),
-    ]);
+    let conv = fch("convert", &[&wiff, "--out", &s(dir.join("out"))]);
     assert_eq!(conv.code, 0, "{}", conv.stderr);
     for k in ["1", "2"] {
-        let o = run(&["channels".into(), wiff.clone(), "--sample".into(), k.into()]);
-        let want = run(&["channels".into(), s(dir.join(format!("out/two-{k}.mzML")))]);
+        let o = fch("channels", &[&wiff, "--sample", k]);
+        let want = fch("channels", &[&s(dir.join(format!("out/two-{k}.mzML")))]);
         assert_eq!(
             (o.code, &o.stdout, o.stderr.as_str()),
             (0, &want.stdout, ""),
             "sample {k}"
         );
     }
-    let mrm = String::from_utf8(
-        run(&[
-            "channels".into(),
-            wiff.clone(),
-            "--sample".into(),
-            "2".into(),
-        ])
-        .stdout,
-    )
-    .unwrap();
+    let mrm = String::from_utf8(fch("channels", &[&wiff, "--sample", "2"]).stdout).unwrap();
     assert!(
         mrm.contains("\"proposed\":\"lc-mrm\"") && mrm.contains("\"id\":\"srm:"),
         "{mrm}"
     );
-    let first = run(&["channels".into(), wiff.clone()]);
-    let one = run(&[
-        "channels".into(),
-        wiff.clone(),
-        "--sample".into(),
-        "1".into(),
-    ]);
+    let first = fch("channels", &[&wiff]);
+    let one = fch("channels", &[&wiff, "--sample", "1"]);
     assert_eq!(first.stdout, one.stdout);
     assert!(
         first.stderr.contains("2 samples (ids 1, 2)"),
         "{}",
         first.stderr
     );
-    let bad = run(&["channels".into(), wiff, "--sample".into(), "9".into()]);
+    let bad = fch("channels", &[&wiff, "--sample", "9"]);
     assert_eq!(bad.code, 5);
     assert!(
         bad.stderr.starts_with(
@@ -365,16 +347,11 @@ fn the_device_traces_of_a_wiff_are_the_analog_channels_of_its_mzml() {
     }
     let s = |p: PathBuf| p.to_string_lossy().into_owned();
     let wiff = s(dir.join("in/dispositivi.wiff"));
-    let conv = execute(&[
-        "convert".into(),
-        wiff.clone(),
-        "--out".into(),
-        s(dir.join("out")),
-    ]);
+    let conv = fch("convert", &[&wiff, "--out", &s(dir.join("out"))]);
     assert_eq!(conv.code, 0, "{}", conv.stderr);
     let mzml = s(dir.join("out/dispositivi.mzML"));
-    let o = execute(&["channels".into(), wiff.clone()]);
-    assert_eq!(o.stdout, execute(&["channels".into(), mzml.clone()]).stdout);
+    let o = fch("channels", &[&wiff]);
+    assert_eq!(o.stdout, fch("channels", &[&mzml]).stdout);
     let list = String::from_utf8(o.stdout).unwrap();
     for et in [
         "Column Pressure (pascal)",
@@ -388,7 +365,7 @@ fn the_device_traces_of_a_wiff_are_the_analog_channels_of_its_mzml() {
         );
     }
     assert!(!list.contains("Empty"), "{list}");
-    let one = execute(&["channels".into(), mzml, "--channel".into(), "an:1".into()]);
+    let one = fch("channels", &[&mzml, "--channel", "an:1"]);
     assert_eq!(one.code, 0, "{}", one.stderr);
     let one = String::from_utf8(one.stdout).unwrap();
     assert!(
@@ -436,7 +413,7 @@ fn canale_reads_a_uv_and_an_analog_trace() {
     std::fs::write(&f, xml).unwrap();
     let p = f.to_string_lossy().into_owned();
     let run = |extra: &[&str]| {
-        let mut a = vec!["channels".to_string(), p.clone()];
+        let mut a = vec!["file".to_string(), "channels".to_string(), p.clone()];
         a.extend(extra.iter().map(|s| s.to_string()));
         execute(&a)
     };

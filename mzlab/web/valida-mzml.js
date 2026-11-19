@@ -1,5 +1,5 @@
 // @ts-check
-// Action «Validate mzML» of the menu of a file in Dati: the report of `mzlab-cli validate --json` for an opened mzML, shown in a dialog with a table (severity, message, location).
+// Action «Validate mzML» of the menu of a file in Dati: the report of `mzlab-cli file validate --json` for an opened mzML, shown in a dialog with a table (severity, message, location).
 // Browser: the `valida` module (wasm-lettori/valida/, loaded only now) reads the file from OPFS; desktop app: the native engine (`lr_valida`, the same core function). Same JSON bytes either way.
 // `validaMzml` is the route api/mzml_valida (lr.js); `VALIDA_MZML.show(name)` opens the dialog (lista-file-menu.js). Module loaded by carica.js.
 import { get } from "./archivio.js";
@@ -8,7 +8,7 @@ const W = /** @type {any} */ (globalThis);
 /** rows shown at most: a broken file can have one finding per spectrum */
 const MAX_ROWS = 500;
 
-/** the JSON text of `mzlab-cli validate --json` for the mzML `name` of the session, or null when the file is not there; `rpc` is the one of lr.js */
+/** the JSON text of `mzlab-cli file validate --json` for the mzML `name` of the session, or null when the file is not there; `rpc` is the one of lr.js */
 export async function validaMzml(/** @type {string} */ name, /** @type {(m: any) => Promise<any>} */ rpc) {
   if (W.MZLAB_DESKTOP) return (await rpc({ op: "lr_valida", name })).info;
   const file = await get("files", name);

@@ -1,4 +1,4 @@
-"""The chromatograms of a .wiff sample on the site equal those of `mzlab-cli convert`, byte for byte (synthetic pairs of tools/wiff_cromatogrammi.py: Full Scan
+"""The chromatograms of a .wiff sample on the site equal those of `mzlab-cli file convert`, byte for byte (synthetic pairs of tools/wiff_cromatogrammi.py: Full Scan
 and MRM experiments in one sample, two MRM experiments, Full Scan alone): one TIC per experiment with data (`TIC sample=N period=1 experiment=E` when
 there are several), after an MRM TIC its BPC and SRM chromatograms, the BPC of each Full Scan experiment last. The engine (mzlab-wasm, `native_to_mzml`)
 against the CLI, with the same compression; their data arrays (time, intensity) byte for byte. The readers module (`sciex`) against the CLI, whole mzML:
@@ -29,7 +29,7 @@ def work(tmp_path_factory):
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "eng"), str(WASM / "mzlab_wasm.wasm"))
     subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_cromatogrammi.py"), str(d / "in")], check=True, capture_output=True)
     for n in PAIRS:
-        run(str(ROOT / "target/release/mzlab-cli"), "convert", str(d / "in" / f"{n}.wiff"), "--out", str(d / "cli"))
+        run(str(ROOT / "target/release/mzlab-cli"), "file", "convert", str(d / "in" / f"{n}.wiff"), "--out", str(d / "cli"))
         run("node", str(ROOT / "tests" / "mzml_nativo_node.js"), str(d / "eng"), str(d / f"{n}.mzML"), "0", str(d / "in" / f"{n}.wiff"), str(d / "in" / f"{n}.wiff.scan"))
     return d
 
@@ -84,7 +84,7 @@ def test_the_module_writes_the_mzml_of_convert(module, name):
     plan = module / f"plan-{name}.json"
     plan.write_text(json.dumps({"members": [{"name": p.name, "path": str(p)} for p in pair], "out": str(module / f"mod-{name}.mzML")}))
     run("node", str(ROOT / "tests" / "lettori_parita_node.js"), str(module / "mod"), str(plan))
-    run(str(ROOT / "target/release/mzlab-cli"), "convert", str(pair[0]), "--out", str(module / f"cli-{name}"), "--fresh", "--workers", "1")
+    run(str(ROOT / "target/release/mzlab-cli"), "file", "convert", str(pair[0]), "--out", str(module / f"cli-{name}"), "--fresh", "--workers", "1")
     mod, cli = (module / f"mod-{name}.mzML").read_bytes(), (module / f"cli-{name}" / f"{name}.mzML").read_bytes()
     assert mod == cli
     got = [g.split(" ")[0] for g in ids(chroms(module / f"mod-{name}.mzML"))]

@@ -1,4 +1,4 @@
-"""Every mzML `mzlab-cli convert` writes from the synthetic dataset of each reader family is well-formed XML for a second, independent parser
+"""Every mzML `mzlab-cli file convert` writes from the synthetic dataset of each reader family is well-formed XML for a second, independent parser
 (lxml/libxml2, strict: no recovery), in both compressions. The readers modules write the same bytes (`test_lettori_parita.py`), so this covers the
 site too. A vendor model text that is not a CV term name (angle brackets, quotes) stays in a userParam, and MS:1000031 keeps its CV name.
 lxml is a test-only dependency (`.[test]`); without it the test is skipped (MZLAB_GOLDEN_STRICT=1: fails)."""
@@ -34,7 +34,7 @@ def cli(tmp_path_factory):
 
 def convert(t, ds: Path, tag: str, *extra: str) -> Path:
     out = t["tmp"] / f"out_{tag}"
-    r = run([str(t["cli"]), "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1", *extra])
+    r = run([str(t["cli"]), "file", "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1", *extra])
     assert r.returncode == 0, r.stdout[-1500:] + r.stderr[-1500:]
     files = sorted(out.glob("*.mzML"))
     assert len(files) == 1, files

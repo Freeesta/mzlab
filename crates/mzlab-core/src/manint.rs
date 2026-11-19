@@ -1,7 +1,7 @@
 //! The table of the integrations the user drew by hand on transition / SIM traces: one row per integration window (sample × channel × peak), grouped
 //! by channel so a column of areas pastes into a sheet, an optional `sum` row of the areas per channel. The columns are the ones on screen (the method's
 //! name of the channel is not written: the channel is its m/z); the apex RT and the area sit right after the name the user gave (apex first). The engine measures every window again from
-//! the traces, so the site (`mzlab-wasm` `manual_table`), the app (`rpc.rs` op `manint`) and `mzlab-cli manual-table` write the same bytes.
+//! the traces, so the site (`mzlab-wasm` `manual_table`), the app (`rpc.rs` op `manint`) and `mzlab-cli peak table` write the same bytes.
 //! Baselines as the Data view draws them: `zero`, `line` (`baseline::peak_area`) and `edges` (the page's line between the 3-point means of the edges).
 //! `time_min` (right after the sample) is the time point of the sample in minutes: the file's `time` when the list gives one (`null` = none, as a user
 //! who emptied the cell), else the one the name carries (`samples::role_and_minutes`, none for a blank); empty when unknown.

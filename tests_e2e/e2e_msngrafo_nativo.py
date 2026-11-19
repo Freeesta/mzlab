@@ -1,6 +1,6 @@
 """api/msn_grafo of a sample of a maker's file (an Agilent .D folder of single-quadrupole scans, read by the core: the same path as a Thermo .raw, a stub in OPFS and an index of version 2): the .wasm msngrafo only decodes an mzML, so the
 worker writes the sample as mzML once, indexes it and tells the page how far it is (events «mzlab-msngrafo»: convert, index, graph, the bar rising); the answer is the one of
-`mzlab-cli msn-graph` on the same folder (only the SHA-256 of the index may differ), the second request does not convert again, and a request with no news for the stall time is an
+`mzlab-cli msn graph` on the same folder (only the SHA-256 of the index may differ), the second request does not convert again, and a request with no news for the stall time is an
 error with «Copy diagnosis» (guarda, mostraErrore). MZLAB_LR_MISS stays empty. Needs the site (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_msngrafo_nativo.py"""
 import json, re, subprocess, sys, tempfile
 from pathlib import Path
@@ -19,7 +19,7 @@ lib_msngrafo.prepare()
 tmp = Path(tempfile.mkdtemp(prefix="msnnat_"))
 folder = agilent_sintetico.write(tmp / "serie", "uno.D", 60)
 mask = lambda t: re.sub(r'"name":"[^"]*","sha256_idx":"[0-9a-f]*"', '"name":"","sha256_idx":""', t)      # the name of the sample (uno.mzML in the page, uno.D for the command line) and the index may differ
-cli = subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(folder)], cwd=ROOT, capture_output=True, encoding="utf-8")
+cli = subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn", "graph", str(folder)], cwd=ROOT, capture_output=True, encoding="utf-8")
 want = cli.stdout.strip() if cli.returncode == 0 else None
 r = Run(port=8979, wd="/tmp/wd_msngrafo_nativo")
 try:

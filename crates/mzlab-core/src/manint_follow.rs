@@ -1,6 +1,6 @@
 //! The windows of `manint` applied to the other samples: where a window drawn on one sample lands on the same channel of the others (the apex searched
 //! within the window's width on each side, an apex outside moves the window, none leaves it), the items of the table (drawn + applied, grouped by peak)
-//! and `follow_text`, the page's `api/manfollow` and `mzlab-cli manual-table --set shifts=true`.
+//! and `follow_text`, the page's `api/manfollow` and `mzlab-cli peak table --set shifts=true`.
 
 use super::{
     channel_of, key_of, parse, samples_and_keys, Item, Key, Result, Sample, Trace, Value,

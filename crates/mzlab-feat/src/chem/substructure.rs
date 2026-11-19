@@ -3,7 +3,7 @@
 //! contains the query, its distinct matches (target atoms of every query atom, merged query hydrogens left out). A hit is a suspect to
 //! check, never an identification. With `"db"` (the text of an SDF, a SMILES list or a molecules CSV such as the catalogue) instead of `targets` the
 //! answer is `subdb/1`: the same hits with the name, id and structure of each entry. The same bytes from the desktop route `feat/grafo`, the `molkit`
-//! `.wasm` and `mzlab-cli mol-search --sub`.
+//! `.wasm` and `mzlab-cli mol search --sub`.
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, Out};

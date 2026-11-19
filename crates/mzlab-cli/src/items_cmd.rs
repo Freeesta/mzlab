@@ -1,4 +1,4 @@
-//! `mzlab-cli items FILE [--out PATH]`: the items of a file as the page and the app list them (`Item.info()`, `lr::open_items`): counts, ranges,
+//! `mzlab-cli file items FILE [--out PATH]`: the items of a file as the page and the app list them (`Item.info()`, `lr::open_items`): counts, ranges,
 //! polarity and `ms2_exps` (precursor, CE, and for a stepped CE its centre `ce_mid` and half width `ce_spread`). Stable keys, JSON only (units: `docs/schemi/items-1.json`).
 
 use std::fs::File;
@@ -10,9 +10,9 @@ use mzlab_core::routes::Routes;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli items: what the page learns about a file (one item, or one per part of a mixed file) as {\"schema\":\"items/1\",\"items\":[{info, hr}]}.
+pub const HELP: &str = "mzlab-cli file items: what the page learns about a file (one item, or one per part of a mixed file) as {\"schema\":\"items/1\",\"items\":[{info, hr}]}.
 
-usage: mzlab-cli items FILE [--out PATH]
+usage: mzlab-cli file items FILE [--out PATH]
 
   FILE        an mzML, or any single file the app reads (.raw, mzXML, ...); a file of several samples gives its first
   --out PATH  write there instead of the standard output

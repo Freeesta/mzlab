@@ -21,7 +21,7 @@ const baseAt = (/** @type {number[]} */ b, /** @type {number} */ t) => b[1] + (b
 // the colour of a spectrum of the panel: the one of its file, or of its precursor when one file gives several (the bars and the legend entry use this one)
 const specColor = (/** @type {any} */ x) => (x.multi ? PAL[(x.idx + 3) % PAL.length] : x.f.color);
 // Settings of the automatic integration (dialog «Rilevamento dei picchi»), saved in this browser; any other stored key is dropped. The defaults are
-// those of the Rust engine (LrParams, AutoParams), where the other detector numbers stay fixed (mzlab-cli peak-edges / peak-auto --set only).
+// those of the Rust engine (LrParams, AutoParams), where the other detector numbers stay fixed (mzlab-cli peak edges / peak auto --set only).
 // hr* = the one-click integration of every peak of a high-resolution trace (autoAll).
 /** @type {Record<string, number>} */
 // bmode = the baseline of new integrations: 0 zero (the default, as mzlab_core::baseline::DEFAULT), 1 edges, 2 line. The older key `base` (0 edges, 1 zero,

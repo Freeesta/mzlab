@@ -1,4 +1,4 @@
-//! The chromatogram list of a sample, the same for the engine (`run.rs`) and the readers module (`run_extended.rs`, `mzlab-cli convert`): one TIC per experiment
+//! The chromatogram list of a sample, the same for the engine (`run.rs`) and the readers module (`run_extended.rs`, `mzlab-cli file convert`): one TIC per experiment
 //! with data (full scan, precursor-ion, neutral-loss and MS3: the TIC of the index; MRM: the TIC of the blocks), `TIC sample=N period=1 experiment=E` when
 //! there are several; after an MRM TIC its BPC (the largest transition of each block) and its SRM / SIM chromatograms; the device traces (`devices.rs`),
 //! the BPC of each full scan, precursor-ion and neutral-loss experiment (only when its scans were decoded) and the DAD TWC last, as ProteoWizard lists them.

@@ -1,17 +1,17 @@
 # MSn user manual: from the `.raw` infusion to the tree, the library and the table
 
-For whoever launches the work from the shell or from a Flow plan; the graph design is in `msn-graph.md`, the library in `msnlib.md`. The program gives no verdicts: sub-formulas are candidates with ppm and evidence.
+For whoever launches the work from the shell or from a Flow plan; the graph design is in `msn graph.md`, the library in `msnlib.md`. The program gives no verdicts: sub-formulas are candidates with ppm and evidence.
 
 ## 1. Command line (`mzlab-cli`)
-- **Graph**: `mzlab-cli msn-graph INFUSIONE.raw --formula "C13H24N4O3S [M+H]+" --out graph.json`. The file can be a Thermo `.raw` or an mzML; `--formula` accepts the ion (`C13H25N4O3S+`, `C13H24N4O3S+H`, `"FORMULA [M+H]+"`); without it, the graph has only the masses. Useful options: `--activation cid|hcd` (one type only), `--ppm-formula 10`, `--isotopes`, `--pick MZ=ION` (fixes the formula of a node), `--smiles` (written into the JSON). `--summary` prints one line of numbers.
-- **Library**: `mzlab-cli msn-lib add lib.json INFUSIONE.raw --id ID --formula ION` adds the entry (the same entry twice stays as it is); `msn-lib build MANIFEST.tsv` writes one per row (`id`, `neutral_formula`, `expected_adduct`, `file`).
-- **Export as a library**: `mzlab-cli msn-lib export lib.json --format msp|massbank [--clean] [--all] [--annotate]` (`--clean` keeps the peaks explained by a node; `--all` every MS level; `--annotate` writes formula and neutral loss of each peak).
-- **Export as a table**: `mzlab-cli msn-graph INFUSIONE.raw --formula ION --export csv|mgf|msp [--clean] [--node nK|all]`.
-- **Search**: `mzlab-cli msn-lib search lib.json graph.json [--ppm 10] [--tol 0.01] [--min-evidence 1] [--top 10] [--delta Da]` gives `msn-search/1`: three separate scores (MS2 entropy, tree, shared losses) with the evidence, without a verdict.
+- **Graph**: `mzlab-cli msn graph INFUSIONE.raw --formula "C13H24N4O3S [M+H]+" --out graph.json`. The file can be a Thermo `.raw` or an mzML; `--formula` accepts the ion (`C13H25N4O3S+`, `C13H24N4O3S+H`, `"FORMULA [M+H]+"`); without it, the graph has only the masses. Useful options: `--activation cid|hcd` (one type only), `--ppm-formula 10`, `--isotopes`, `--pick MZ=ION` (fixes the formula of a node), `--smiles` (written into the JSON). `--summary` prints one line of numbers.
+- **Library**: `mzlab-cli msn lib add lib.json INFUSIONE.raw --id ID --formula ION` adds the entry (the same entry twice stays as it is); `msn lib build MANIFEST.tsv` writes one per row (`id`, `neutral_formula`, `expected_adduct`, `file`).
+- **Export as a library**: `mzlab-cli msn lib export lib.json --format msp|massbank [--clean] [--all] [--annotate]` (`--clean` keeps the peaks explained by a node; `--all` every MS level; `--annotate` writes formula and neutral loss of each peak).
+- **Export as a table**: `mzlab-cli msn graph INFUSIONE.raw --formula ION --export csv|mgf|msp [--clean] [--node nK|all]`.
+- **Search**: `mzlab-cli msn lib search lib.json graph.json [--ppm 10] [--tol 0.01] [--min-evidence 1] [--top 10] [--delta Da]` gives `msn-search/1`: three separate scores (MS2 entropy, tree, shared losses) with the evidence, without a verdict.
 
 ## 2. Flow steps
 Plan `mzflow/2` with the `.raw` (or mzML) input and, in order:
-- `spectra.msn_graph@2`: has the port `source` (the infusion), output `graph` (`msn-graph/1`). The compound is given with `formula` + `adduct`, or with `molecule` (name) and the port `molecules` (CSV list of molecules); the other parameters have the names of the `msn-graph` flags (`ppm_formula`, `activation`, `isotopes`, `pick`, `smiles`, …); a plan saved at `@1` with the Italian names opens and runs the same.
+- `spectra.msn_graph@2`: has the port `source` (the infusion), output `graph` (`msn-graph/1`). The compound is given with `formula` + `adduct`, or with `molecule` (name) and the port `molecules` (CSV list of molecules); the other parameters have the names of the `msn graph` flags (`ppm_formula`, `activation`, `isotopes`, `pick`, `smiles`, …); a plan saved at `@1` with the Italian names opens and runs the same.
 - `msn.library_export@1` (`graph` → library): `format` msp|massbank, `levels` all|ms2, `clean`, `annotate`, `id` (record name).
 - `msn.table_export@1` (`graph` → CSV table): `view` modifications|nodes|peaks, `clean`.
 The neutral losses are in the `modifications` table, the sub-formulas in `nodes`, the peaks in `peaks`; the run's "MSn graph" view shows them without opening the CSV. Each parameter has its own `--set INSTANCE.NAME=VALUE` in `mzlab-cli flow run`.
@@ -54,12 +54,12 @@ Code: `iteminfo.rs` (`msn_level`), `axisroutes.rs` (`ms2_transitions(level)`), `
 - **Root**: if the graph has a molfile with 2D coordinates the root box draws the molecule (`molecule`, from `mzlab-mol`); with SMILES or molfile but without coordinates it writes "no 2D coordinates"; without a structure, nothing.
 - **HTML**: a single file, no external resources, no network requests (CSP in the meta); it contains the JSON, the drawer `msngrafo-vista.js` (without `export`), the Rust SVGs of the two views for the downloads, the data table with "Copy data", Tree/Radial view, zoom, keyboard (Tab on the ions, Enter for the candidates), axe 0 violations; 80 ions ≈ 390 KB (limit 2 MB).
 - **PNG**: cargo feature `png` (not default, never in the `.wasm`; `resvg`, MPL-2.0, allowed by `deny.toml`) at scale 2 with the system fonts, so the PNG depends on the installed fonts; without the feature the error is `err.msnfigura.png` with `build=cargo build -p mzlab-cli --features png`. In the browser the PNG is made from the SVG with a canvas (`msngrafo-immagine.js`; the HTML also has "Download PNG").
-- **Command line**: `mzlab-cli msn-graph FILE --out STEM --figure svg,html[,png] [--view tree|radial]` (not with `--summary`, `--export`, `--structures`) writes `STEM.svg|html|png` next to the JSON; `msn-graph figure IN.json [--figure …] [--view …] [--out STEM]` starts from an already made graph (default svg,html).
+- **Command line**: `mzlab-cli msn graph FILE --out STEM --figure svg,html[,png] [--view tree|radial]` (not with `--summary`, `--export`, `--structures`) writes `STEM.svg|html|png` next to the JSON; `msn graph figure IN.json [--figure …] [--view …] [--out STEM]` starts from an already made graph (default svg,html).
 - **Flow**: step `msn.figure@1` (`graph` report → `figure` report; parameters `format` svg|html|png, `view` tree|radial), SEPARATE from `spectra.msn_graph` because a run gives a single artifact and each format is its own run; the same bytes as the command (test in `msn_figure_tests.rs`); each parameter has its own `--set`; descriptor in `docs/schemi/steps-cli-1.json`.
 - **Flow in the browser**: svg and html from the `.wasm` `msnfigura` (`figure_text`, `flow-web-struct.js`), same bytes as `flow run` (`e2e_flow_web_struct.py`); the PNG stays on the computer.
 - **Tests**: `msn_figure_tests.rs` (golden files in `tests/msn_figura/`, rewritten with `MZLAB_UPDATE_FIGURE=1`), `tests/msn_figura_parita.js` (the Rust texts = those of the drawer, also on the 80-ion graph of `msngrafo_80.json`), `tests_e2e/e2e_msn_figura.py` (file://, network, keyboard, download, axe).
 
-## 7. Tests of the fragmentation rules (`mzlab-cli msn-rules`)
+## 7. Tests of the fragmentation rules (`mzlab-cli msn rules`)
 
 Numbers and criteria only; no spectra. Command: `python3 tools/validate_rules.py` (MassBank 2026.03, Zenodo 19590880, CC0/CC BY records with SMILES; details in `msn-interpret.md`). Each record becomes a one-level graph (`graph_from_peaks`) with its formula and its SMILES; the fragment peaks exclude the precursor's.
 

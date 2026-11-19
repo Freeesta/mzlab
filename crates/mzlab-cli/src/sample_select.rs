@@ -1,4 +1,4 @@
-//! `--sample 1,3,5` / `2-4` of the commands that open a multi-sample file (`convert`, `channels`, `features`, `samples select`): the text is parsed and
+//! `--sample 1,3,5` / `2-4` of the commands that open a multi-sample file (`convert`, `channels`, `features`, `sample select`): the text is parsed and
 //! checked against the ids the file lists by `mzlab_core::readers::selection` (the very code of the site's `sample_selection`). Only the container and the
 //! index are read to check it. Exit codes: 2 for a text that is not a list, 5 for an id the file does not have (the ids present are named).
 
@@ -46,7 +46,7 @@ pub(crate) fn code_of(e: &Error) -> u8 {
 pub(crate) fn fail(e: &Error) -> Outcome {
     let o = Outcome::fail_error(e);
     if e.key.starts_with("err.sample.") {
-        o.with_hint("list the samples with `mzlab-cli samples list FILE --json`")
+        o.with_hint("list the samples with `mzlab-cli sample list FILE --json`")
     } else {
         o
     }

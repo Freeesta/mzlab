@@ -1,5 +1,5 @@
 # Data channels: one file = a set of channels
-The "experiment type" is a label and a heuristic for the defaults; the tools work on the selected channel. The engine (§2: `channels.rs`, `channels_uv.rs`, `api/canali`, `canale=`, `mzlab-cli channels`) and the page selector (§5) exist; §1 says where the kind still decides, §4 the open work.
+The "experiment type" is a label and a heuristic for the defaults; the tools work on the selected channel. The engine (§2: `channels.rs`, `channels_uv.rs`, `api/canali`, `canale=`, `mzlab-cli file channels`) and the page selector (§5) exist; §1 says where the kind still decides, §4 the open work.
 
 ## 1. Where the kind still decides (evidence in the code)
 **Classification (Rust).** `item_info` (`crates/mzlab-core/src/iteminfo.rs:459-530`) gives every item a `kind` ∈ `full|ms2|mrm|infusion|empty`: `infusion` if `infusion::infusione` (`infusion.rs:110`) recognizes fixed precursors (B: ≤64 MSn keys, median ≥10 scans) and long blocks (C) or a `.raw` method without LC or a name `infus|fia|direct|syringe`; then `ms2` (MSn), `full` (MS1 only), `mrm` (SRM only). A "mixed" file is split into items (`file_parts`, `iteminfo.rs:92`: level × scan type PREC/NL/NG/EMC/TDF/ER × polarity + "MRM"), each with its own `kind`.
@@ -68,7 +68,7 @@ pub struct Channels { pub v: Vec<Channel>, pub scan_ids: Vec<u32>, pub experimen
 - `GET api/chrom?k&canale=<id>&kind=tic|bpc&mz0&mz1` → channel trace (for `srm:`/`uv:`/`an:` it redirects to the current reader: `api/mrm`, `pda_trace`, `analog`).
 - `GET api/xic?k&mz&tol&canale=<id>` → XIC inside the scans of the channel (without `canale=`: per level).
 - `GET api/scanlist?k&canale=<id>`, `api/spectrum?k&canale=<id>&rt|scan&modo=somma`.
-Adapter: `canale=ms:<k>` ≡ `filt=<k>`, `canale=msn:<node>` stays, `level`/`prec` stay accepted and translated; no old route disappears while a test uses it. In JS a single module `canali.js`: `canali(k)` (cache), `traccia(k, id, opz)`, `byGroup(files, group)`. CLI: `mzlab-cli channels FILE` (`cli.md`).
+Adapter: `canale=ms:<k>` ≡ `filt=<k>`, `canale=msn:<node>` stays, `level`/`prec` stay accepted and translated; no old route disappears while a test uses it. In JS a single module `canali.js`: `canali(k)` (cache), `traccia(k, id, opz)`, `byGroup(files, group)`. CLI: `mzlab-cli file channels FILE` (`cli.md`).
 
 **Construction per format.**
 - mzML/mzXML and Thermo `.raw`: keys from `Scan::key()`; SIM = MS1 key with "SIM"; `srm`/`pda`/`pressure` chromatograms from the tail (`mzmlhead`).

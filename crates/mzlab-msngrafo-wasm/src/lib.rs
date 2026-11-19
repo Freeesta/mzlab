@@ -1,5 +1,5 @@
 //! wasm-bindgen bridge of `mzlab_core::msngraph`: the `.mzidx` of an infusion and its mzML (both read through `read(offset, length)`) give the
-//! `msn-graph/1` of a request, with the same functions as `mzlab-cli msn-graph` (same bytes). A `.wasm` of its own, loaded by the worker of the
+//! `msn-graph/1` of a request, with the same functions as `mzlab-cli msn graph` (same bytes). A `.wasm` of its own, loaded by the worker of the
 //! engine on the first request of the graph; `strutture=<id>` (and `struct_ppm`) adds the cleavages of the SMILES that explain a node; `interpret=1` adds the interpretation of the losses. Memory: the index is read once for its SHA-256 and once to open it; the output is one JSON string,
 //! no offsets (`docs/agenti/memory.md`). Errors are JSON `{"error_key", "params"}` strings.
 use js_sys::{Function, Uint8Array};
@@ -52,7 +52,7 @@ pub fn version() -> String {
     format!("mzlab-msngrafo/1 {}", env!("CARGO_PKG_VERSION"))
 }
 
-/// `complete`: the text of an `msn-graph/1` with the key `view` (the bytes `mzlab-cli msn-graph complete` writes); a keyed error for what is not one.
+/// `complete`: the text of an `msn-graph/1` with the key `view` (the bytes `mzlab-cli msn complete` writes); a keyed error for what is not one.
 #[wasm_bindgen]
 pub fn complete(json: &str) -> Result<String, JsValue> {
     mzlab_core::msngraph::completa(json).map_err(js_err)
@@ -104,7 +104,7 @@ fn compute_with(
 
 /// The optional keys of the query on the graph text `j`: `interpret=1` and `breaks=1`, shared by the graph and its exports.
 fn with_query_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> mzlab_core::Result<String> {
-    // `interpret=1` (and `loss_ppm`) adds the key `interpretation`, as `mzlab-cli msn-graph --interpret` does
+    // `interpret=1` (and `loss_ppm`) adds the key `interpretation`, as `mzlab-cli msn graph --interpret` does
     if q.get("interpret").is_some_and(|v| v == "1") {
         let ppm = match q.get("loss_ppm").filter(|v| !v.is_empty()) {
             None => PPM_PERDITA,
@@ -116,7 +116,7 @@ fn with_query_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> mzlab_co
         };
         j = with_interpretation(&j, g, ppm);
     }
-    // `rotture=1` (with `h_max`, `max_legami` and the window `struct_ppm`) adds the key `breaks`, as `mzlab-cli msn-graph --breaks` does
+    // `rotture=1` (with `h_max`, `max_legami` and the window `struct_ppm`) adds the key `breaks`, as `mzlab-cli msn graph --breaks` does
     if q.get("breaks").is_some_and(|v| v == "1") {
         let num = |k: &str, d: f64| -> mzlab_core::Result<f64> {
             match q.get(k).filter(|v| !v.is_empty()) {
@@ -138,7 +138,7 @@ fn with_query_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> mzlab_co
     Ok(j)
 }
 
-/// Default window of the cleavages (`struct_ppm`), ppm; the same as `mzlab-cli msn-graph --structures`.
+/// Default window of the cleavages (`struct_ppm`), ppm; the same as `mzlab-cli msn graph --structures`.
 const PPM_STRUCTURE: f64 = 10.0;
 
 /// The `msn-graph/1` of the file `nome` for the query string `query` (`formula`, `tol`, `ce`, `ppm_formula`, ..., `pick`; `api/msn_grafo`).

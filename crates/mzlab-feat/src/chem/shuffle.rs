@@ -1,5 +1,5 @@
 //! A decoy structure for the validation of the fragmentation rules: the same atoms (so the same formula) with the bonds rewired by swaps that keep
-//! the order and the number of bonds of every atom, with a fixed seed. Used by `mzlab-cli msn-rules`; a decoy is not a molecule anyone drew.
+//! the order and the number of bonds of every atom, with a fixed seed. Used by `mzlab-cli msn rules`; a decoy is not a molecule anyone drew.
 
 use super::graph::{Bond, Mol};
 

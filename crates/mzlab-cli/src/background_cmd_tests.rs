@@ -1,4 +1,4 @@
-//! `mzlab-cli background` on the synthetic run of `ticbg_synth`: the six lines found, the peak kept, the options, a blank, the errors.
+//! `mzlab-cli trace background` on the synthetic run of `ticbg_synth`: the six lines found, the peak kept, the options, a blank, the errors.
 use crate::execute;
 
 fn write(dir: &std::path::Path, name: &str, blank: bool) -> String {
@@ -25,7 +25,7 @@ fn background_of_a_synthetic_run() {
         write(&dir, "run.mzML", false),
         write(&dir, "blank.mzML", true),
     );
-    let v = json(&["background", &run]);
+    let v = json(&["trace", "background", &run]);
     let mut ions: Vec<i64> = v
         .get("ions")
         .unwrap()
@@ -46,6 +46,7 @@ fn background_of_a_synthetic_run() {
     );
     // options by --set, with or without an instance prefix
     let q = json(&[
+        "trace",
         "background",
         &run,
         "--set",
@@ -62,13 +63,24 @@ fn background_of_a_synthetic_run() {
         q.get("params").unwrap().get("quiet").unwrap().arr().len(),
         2
     );
-    let b = json(&["background", &run, "--blank", &blank, "--set", "mode=blank"]);
+    let b = json(&[
+        "trace",
+        "background",
+        &run,
+        "--blank",
+        &blank,
+        "--set",
+        "mode=blank",
+    ]);
     assert_eq!(b.get("ions").unwrap().arr().len(), 6);
     // errors: an unknown name, a bad value, a missing blank
     let bad = |a: &[&str]| execute(&a.iter().map(|s| s.to_string()).collect::<Vec<_>>()).code;
-    assert_eq!(bad(&["background", &run, "--set", "nope=1"]), 2);
-    assert_ne!(bad(&["background", &run, "--set", "mode=nope"]), 0);
-    assert_ne!(bad(&["background", &run, "--set", "mode=blank"]), 0);
-    assert_eq!(bad(&["background", "--help"]), 0);
+    assert_eq!(bad(&["trace", "background", &run, "--set", "nope=1"]), 2);
+    assert_ne!(bad(&["trace", "background", &run, "--set", "mode=nope"]), 0);
+    assert_ne!(
+        bad(&["trace", "background", &run, "--set", "mode=blank"]),
+        0
+    );
+    assert_eq!(bad(&["trace", "background", "--help"]), 0);
     let _ = std::fs::remove_dir_all(&dir);
 }

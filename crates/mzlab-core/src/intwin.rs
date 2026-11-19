@@ -1,6 +1,6 @@
 //! Where one end of an integration window goes when the user drags it along the trace (the points where the area meets its baseline):
 //! always onto a point of the trace, never past the other end (the window keeps at least two points) nor past a neighbouring integration.
-//! The page (`window_end` of `mzlab-wasm`, `QUALITA.windowEnd`) and `mzlab-cli peak-window` print the same JSON.
+//! The page (`window_end` of `mzlab-wasm`, `QUALITA.windowEnd`) and `mzlab-cli peak window` print the same JSON.
 
 use crate::peakq_lr::near_idx;
 
@@ -40,7 +40,7 @@ pub fn move_end(
     (min <= max).then(|| want.clamp(min, max) as usize)
 }
 
-/// `move_end` as the JSON of the page and `mzlab-cli peak-window`: `{"t":MIN,"i":INDEX}`.
+/// `move_end` as the JSON of the page and `mzlab-cli peak window`: `{"t":MIN,"i":INDEX}`.
 pub fn move_end_json(
     rt: &[f64],
     cur: f64,

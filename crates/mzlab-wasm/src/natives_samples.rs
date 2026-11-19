@@ -1,4 +1,4 @@
-//! `native_samples`: the samples of a dataset, each with why it has nothing to show (`readers::list_samples`, the listing the app and `mzlab-cli samples list` give too).
+//! `native_samples`: the samples of a dataset, each with why it has nothing to show (`readers::list_samples`, the listing the app and `mzlab-cli sample list` give too).
 
 use js_sys::Function;
 use wasm_bindgen::prelude::*;

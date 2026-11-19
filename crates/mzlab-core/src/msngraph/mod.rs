@@ -62,7 +62,7 @@ use crate::msntree_build::Albero;
 /// The newest `msn-graph/N` this engine reads.
 pub const MAX_VERSION: u32 = 1;
 
-/// The version of the graph `v`: 1. A newer one is `error.newerFormat {kind: msn-graph, version}` (opened by a newer program, never rewritten),
+/// The version of the graph `v`: 1. A newer one is `error.newerFormat {kind: msn graph, version}` (opened by a newer program, never rewritten),
 /// anything else `err.msngrafo.badGraph`.
 pub fn version(v: &Value) -> Result<u32> {
     let f = v.get("schema").and_then(Value::str).unwrap_or_default();

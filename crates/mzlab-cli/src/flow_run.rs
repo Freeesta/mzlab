@@ -42,9 +42,7 @@ usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] [--out FOLDER] [--set 
   --events                 the flowlive/1 events of the run on stdout, one JSON line each, as they happen (not with --json); the files and prov.json are the same
   --help                   this text
 
-exit codes: 0 done, 1 a step failed (the others are written), 2 usage, 3 the plan is not valid, 4 an input is missing or does not match
-
-old names still accepted: --jsonl";
+exit codes: 0 done, 1 a step failed (the others are written), 2 usage, 3 the plan is not valid, 4 an input is missing or does not match";
 
 /// Arguments of `flow run`.
 #[derive(Default)]
@@ -97,7 +95,7 @@ pub(crate) fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
                 p => return Err(format!("--progress {p}: expected text or jsonl")),
             },
             "--fresh" => a.fresh = true,
-            "--events" | "--jsonl" => a.style.events = true,
+            "--events" => a.style.events = true,
             "--in" => {
                 a.ins.push(value("a file or a folder")?.into());
                 while let Some(more) = it.next_if(|n| !n.starts_with("--")) {

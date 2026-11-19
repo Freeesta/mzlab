@@ -1,4 +1,4 @@
-//! Every peak of a jagged low-resolution SIM/MRM trace in one step (`lr_auto_integrate` of mzlab-wasm, `lrAll` of picchi.js, `mzlab-cli peak-auto-lr`).
+//! Every peak of a jagged low-resolution SIM/MRM trace in one step (`lr_auto_integrate` of mzlab-wasm, `lrAll` of picchi.js, `mzlab-cli peak auto-lr`).
 //! Detection runs on a smoothed copy (median of 3 against single-point spikes, then the quadratic Savitzky-Golay of `peaks::savgol`); neighbouring
 //! maxima merge unless the valley between them is deep enough; the area is the trapezoid of the RAW trace above a straight baseline drawn between
 //! the two ends only (never extrapolated, so never raised to zero) and never set above the signal; the part of the trace under that line is cut

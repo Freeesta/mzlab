@@ -28,7 +28,7 @@ Confirmed findings B1-B7 (area 2). Part of the scientific-correctness study; met
 ### B4 - precision loss - S/N of the line-residual route is biased high
 - Place: `crates/mzlab-core/src/peakq_lr.rs:234-251,316-318` (noise = SD of the Savitzky-Golay residual).
 - Expected: the residual SD is sigma x sqrt(1 - c0), c0 the central coefficient, so the estimate must be divided by sqrt(1 - c0), as `crates/mzlab-core/src/peakq_auto.rs:206-209` does.
-- Observed: true S/N 100 -> 114 (sigma 1 point), 128 (3 points), 109 (10), 101.5 (25), read through `mzlab-cli peak-edges --set sn_min=`.
+- Observed: true S/N 100 -> 114 (sigma 1 point), 128 (3 points), 109 (10), 101.5 (25), read through `mzlab-cli peak edges --set sn_min=`.
 - Fix: divide the residual SD by sqrt(1 - c0(m)).
 - Status: FIXED: the `sn_min` gate divides the residual noise by sqrt(1 - c0(m)) (`residual_shrink`); median S/N of 20 draws at true 100: 103, 98, 98 at sigma 3, 10, 25 points (before 144, 105, 101); test `crates/mzlab-core/tests/peak_width_noise.rs`. Under 3 points per sigma the smoothed apex is low (86 at 1 point): height convention. OPEN (owner decision): the edge limits (`area_noise` x noise, the 800 ratio, the valley slope) keep the residual scale they are tuned on.
 
@@ -49,6 +49,6 @@ Confirmed findings B1-B7 (area 2). Part of the scientific-correctness study; met
 ### B7 - convention unclear - areas in counts x s and counts x min
 - Place: `crates/mzlab-core/src/baseline.rs` and `peakq.rs` (minutes) against the manual and feature areas (seconds); stated in `docs/agenti/data-integration.md`.
 - Expected: one unit for the same quantity (H sigma sqrt(2 pi) = 125.331 counts x min = 7519.88 counts x s for the test Gaussian).
-- Observed: `mzlab-cli peak-area g1.csv --from 0.6 --to 1.4` -> 7519.8848; `mzlab-cli peak-auto g1.csv` -> 125.291.
+- Observed: `mzlab-cli peak area g1.csv --from 0.6 --to 1.4` -> 7519.8848; `mzlab-cli peak auto g1.csv` -> 125.291.
 - Fix: counts x s everywhere, with the unit in the field name.
-- Status: FIXED (owner decision: yes, at the export boundary): `peak-auto-lr`, `peak-auto` and the page's `lr_auto_integrate` export counts x s by default; `area_unit=min` (wasm params slot 6 = 1) keeps counts x min byte for byte. Engines keep minutes inside; JSON keys unchanged.
+- Status: FIXED (owner decision: yes, at the export boundary): `peak auto-lr`, `peak auto` and the page's `lr_auto_integrate` export counts x s by default; `area_unit=min` (wasm params slot 6 = 1) keeps counts x min byte for byte. Engines keep minutes inside; JSON keys unchanged.

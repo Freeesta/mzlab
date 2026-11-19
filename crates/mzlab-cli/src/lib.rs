@@ -433,10 +433,20 @@ fn executed(args: &[String]) -> (&'static str, Outcome) {
         return ("", o);
     }
     let Some((e, n)) = cmd::find(args) else {
-        let o = Outcome::fail_error(&Error::new("err.cli.usage").with(
-            "message",
-            format!("unknown command {}", plain::canonical(&args[0])),
-        ));
+        if let Some((path, inside)) = cmd::group_of(args) {
+            let n = path.split(' ').count();
+            if args.len() == n || cmd::wants_help(&args[n..]) {
+                return ("", Outcome::ok(cmd::group_help(&inside).into_bytes()));
+            }
+            let o = Outcome::fail_error(&Error::new("err.cli.usage").with(
+                "message",
+                format!("unknown subcommand {} of {path}", args[n]),
+            ));
+            return ("", o);
+        }
+        let o = Outcome::fail_error(
+            &Error::new("err.cli.usage").with("message", format!("unknown command {}", args[0])),
+        );
         return ("", o);
     };
     let mut rest = args[n..].to_vec();

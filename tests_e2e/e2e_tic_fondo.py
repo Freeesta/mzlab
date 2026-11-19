@@ -1,7 +1,7 @@
 # covers: mzlab/web/tic-fondo-ui.js, mzlab/web/rust-ticfondo.js
 """The TIC without the chemical background (api/tic_background, docs/agenti/tic-background.md) on the built site: the module `ticfondo`
 (crates/mzlab-ticfondo-wasm) is fetched on the first request, never at start-up; the answer finds the six background lines of the synthetic run
-(tools/tic_fondo_sintetico.py) and equals `mzlab-cli background` byte for byte, alone and with a blank sample (mode=blank).
+(tools/tic_fondo_sintetico.py) and equals `mzlab-cli trace background` byte for byte, alone and with a blank sample (mode=blank).
 The button of the TIC/BPC panel (tic-fondo-ui.js): one click draws the cleaned trace (the same bytes as the CLI), a second the raw one; right click
 or ↓ opens the options (no text on screen), a blank sample there gives the CLI answer with --blank, Esc closes them, the ions table opens. Needs the built site (tools/prepara_sito.py) and cargo. Run from the repo root."""
 import json, os, subprocess, sys, tempfile
@@ -14,7 +14,7 @@ for extra in ([], ["--blank"]):
 RUN, BLANK = D / "tic_fondo-s1.mzML", D / "tic_fondo_bianco-s1.mzML"
 subprocess.run(["cargo", "build", "-q", "--locked", "--release", "-p", "mzlab-cli"], cwd=ROOT, check=True)
 CLI = ROOT / "target" / "release" / "mzlab-cli"
-cli = lambda *a: subprocess.run([str(CLI), "background", str(RUN), *a], cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip()
+cli = lambda *a: subprocess.run([str(CLI), "trace", "background", str(RUN), *a], cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip()
 
 r = Run(port=8987, wd="/tmp/wd_tic_fondo")
 try:

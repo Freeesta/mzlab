@@ -1,5 +1,5 @@
 //! The interpretation of the arcs of the graph `msn-graph/1`: each neutral loss gets its common name, formula, exact mass and error, with the reason
-//! and a confidence, and the activations that observed it. Evidence, never a verdict: the user can always override it. Used by `mzlab-cli msn-graph`.
+//! and a confidence, and the activations that observed it. Evidence, never a verdict: the user can always override it. Used by `mzlab-cli msn graph`.
 
 use super::Graph;
 use crate::elements::{fmt, mass, parse_formula};

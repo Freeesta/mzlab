@@ -1,7 +1,7 @@
 // @ts-check
 // The card «Manual integrations» of the Data view (#manint, under the panels): every window drawn by hand on an ion or transition trace (the `p.ints`
 // of the transition panels, kept in the session), measured again by the engine (`api/manint`, mzlab_core::manint) as one row per window grouped by
-// channel, with the name the user gives it; the CSV export is the engine's bytes, as `mzlab-cli manual-table`. Loaded by grafici.js on the first integration.
+// channel, with the name the user gives it; the CSV export is the engine's bytes, as `mzlab-cli peak table`. Loaded by grafici.js on the first integration.
 const G = /** @type {any} */ (window);
 const t = (/** @type {string} */ k, /** @type {Record<string, any>} */ p = {}) => G.I18N.t(k, p);
 

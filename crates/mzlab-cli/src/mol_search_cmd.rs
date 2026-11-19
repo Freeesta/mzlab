@@ -1,4 +1,4 @@
-//! `mzlab-cli mol-search --sub QUERY TARGET... | --db LIST [--set stereo=1] [--set max=N] [--out PATH]`: where a drawn moiety occurs in the
+//! `mzlab-cli mol search --sub QUERY TARGET... | --db LIST [--set stereo=1] [--set max=N] [--out PATH]`: where a drawn moiety occurs in the
 //! given structures (`sub/1`) or in a structure list (`subdb/1`), byte for byte what the desktop route `feat/grafo` (`kind: "sub"`) and the
 //! `molkit` `.wasm` answer.
 
@@ -8,10 +8,10 @@ use mzlab_core::json::Out;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli mol-search: where a substructure occurs in structures, as JSON (sub/1).
+pub const HELP: &str = "mzlab-cli mol search: where a substructure occurs in structures, as JSON (sub/1).
 
-usage: mzlab-cli mol-search --sub QUERY TARGET... [--set NAME=VALUE...] [--out PATH]
-       mzlab-cli mol-search --sub QUERY --db LIST [--set NAME=VALUE...] [--out PATH]
+usage: mzlab-cli mol search --sub QUERY TARGET... [--set NAME=VALUE...] [--out PATH]
+       mzlab-cli mol search --sub QUERY --db LIST [--set NAME=VALUE...] [--out PATH]
 
   QUERY           the substructure: a molfile (V2000/V3000, with atom lists, generic atoms A Q X * and query bonds) or a
                   SMILES; a path to a file or the text itself (- reads the standard input)
@@ -106,16 +106,16 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     }
     if !sub {
-        return Outcome::fail("mol-search needs --sub (the substructure search)");
+        return Outcome::fail("mol search needs --sub (the substructure search)");
     }
     let Some((query, targets)) = pos.split_first() else {
-        return Outcome::fail("mol-search --sub needs a query");
+        return Outcome::fail("mol search --sub needs a query");
     };
     if db.is_some() && !targets.is_empty() {
-        return Outcome::fail("mol-search --sub: give targets or --db, not both");
+        return Outcome::fail("mol search --sub: give targets or --db, not both");
     }
     if db.is_none() && targets.is_empty() {
-        return Outcome::fail("mol-search --sub needs at least one target or --db LIST");
+        return Outcome::fail("mol search --sub needs at least one target or --db LIST");
     }
     let req = match request(query, targets, db.as_deref(), &sets) {
         Ok(r) => r,

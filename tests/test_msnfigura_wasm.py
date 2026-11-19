@@ -1,4 +1,4 @@
-"""The msn.figure of the native side (`mzlab-cli msn-graph figure`, Rust SVG) and of the browser (the page drawer on the graph the .wasm gives) show the same
+"""The msn.figure of the native side (`mzlab-cli msn figure`, Rust SVG) and of the browser (the page drawer on the graph the .wasm gives) show the same
 ion and loss texts on the public synthetic infusion. The page draws its figure in JS (the Flow step msn.figure has the .wasm msnfigura, tests_e2e/e2e_flow_web_struct.py), so here the parity is on the
 labels, not on the bytes of the SVG; the graph itself is byte-equal in both sides (tests/test_msngrafo_wasm.py). Skipped without cargo, wasm-bindgen or node."""
 import collections
@@ -32,7 +32,7 @@ def graph(tmp_path_factory):
 
 @pytest.mark.parametrize("mode", ["tree", "radial"])
 def test_the_native_figure_and_the_page_drawer_show_the_same_texts(graph, mode):
-    cli("msn-graph", "figure", str(graph / "g.json"), "--view", mode, "--out", str(graph / mode))
+    cli("msn", "figure", str(graph / "g.json"), "--view", mode, "--out", str(graph / mode))
     svg = (graph / (mode + ".svg")).read_text(encoding="utf-8")
     rust = collections.Counter(html.unescape(re.sub(r"<[^>]+>", "", t)) for t in re.findall(r"<text[^>]*>(.*?)</text>", svg))  # the subscripts are tspans
     page = collections.Counter(json.loads(run("node", str(ROOT / "tests" / "msn_figura_wasm_node.js"), str(graph / "g.json"), mode).stdout))

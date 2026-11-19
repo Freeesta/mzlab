@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "channels/1",
-  "title": "channels/1: the channels of a file, `mzlab-cli channels` and `api/canali`",
+  "title": "channels/1: the channels of a file, `mzlab-cli file channels` and `api/canali`",
   "description": "What an agent reads first about a file: TIC, BPC, one channel per scan type or precursor, one per SRM transition, UV and detector traces. All times are in minutes. Code: crates/mzlab-core/src/channels/output.rs.",
   "type": "object",
   "required": [

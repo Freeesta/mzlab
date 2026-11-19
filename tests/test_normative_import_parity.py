@@ -1,4 +1,4 @@
-"""Importing your own official list gives the same bytes in the browser (`mzlab-normative-wasm`, run under node) as in `mzlab-cli normative import-official` (the engine
+"""Importing your own official list gives the same bytes in the browser (`mzlab-normative-wasm`, run under node) as in `mzlab-cli db normative import-official` (the engine
 of the app route too): the `.mzsus`, the summary and the lists read back by `lists_of`. Invented fixtures only. Skipped without cargo, wasm-bindgen or node."""
 import json
 import shutil
@@ -45,7 +45,7 @@ def test_import_is_the_same_in_wasm_and_native(built):
     root, wasm = built
     csv, side = DATA / "candidate-list.csv", DATA / "cas.tsv"
     out = root / "native.mzsus"
-    summary = run("target/release/mzlab-cli", "normative", "import-official", "svhc", str(csv), str(side), str(out), "--file", "candidate-list.csv", "--date", "2026-10-30").stdout
+    summary = run("target/release/mzlab-cli", "db", "normative", "import-official", "svhc", str(csv), str(side), str(out), "--file", "candidate-list.csv", "--date", "2026-10-30").stdout
     label = json.dumps({"file": "candidate-list.csv", "date": "2026-10-30"})
     env_f, lists_f = root / "wasm.env", root / "wasm.lists"
     run("node", str(root / "run.js"), str(wasm), "svhc", str(csv), str(side), label, str(env_f), str(lists_f))

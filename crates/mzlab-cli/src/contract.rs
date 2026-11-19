@@ -33,9 +33,16 @@ fn message_of(stderr: &str) -> (String, String) {
 /// The verdict commands, by command path: their exit 1 or 3 is a verdict of the answer they print (the listing has refused samples, the pair lacks
 /// its companion, the file has errors, some rows of the list are wrong), the same document the site computes byte for byte. It stays on stdout and
 /// carries its own verdict; every other exit of these, and every other command's non-zero exit, is one `error/1`.
-pub(crate) const VERDICT: &[&str] = &["validate", "pair", "wiff", "samples list", "ref-list"];
+pub(crate) const VERDICT: &[&str] = &[
+    "file validate",
+    "file pair",
+    "file info",
+    "file verify",
+    "sample list",
+    "db ref-list",
+];
 
-/// Whether the arguments start with the path of a verdict command (`samples list ...`, `wiff verify ...`).
+/// Whether the arguments start with the path of a verdict command (`sample list ...`, `file verify ...`).
 fn is_verdict(args: &[String]) -> bool {
     VERDICT.iter().any(|v| {
         let words: Vec<&str> = v.split(' ').collect();

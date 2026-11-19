@@ -52,7 +52,7 @@ Synthetic pairs from `tools/wiff_grande.py` (3000 scans × 3333 profile points p
 - **Reopening**: 0.15 s per saved sample (240 samples: 36 s); the limit of the start screen (`?ripresa=ms`) is 30 s plus 1 s per saved file, counted from when the worker has the engine (`api.up` of `rust-bridge.js`; a failed download or one over 5 min makes it start at once, and a failed download always ends in the error).
 - **List**: the order is that of `ordine.js` (time, concentration or natural order of the names) applied to the whole list, not the arrival order: the same with the files left in reverse order.
 
-| load (`mzlab-cli convert --peaks mzlab`) | `--workers` | s | s/file (median) | max RSS MB |
+| load (`mzlab-cli file convert --peaks mzlab`) | `--workers` | s | s/file (median) | max RSS MB |
 |---|---|---|---|---|
 | 240 pairs of 1 sample (1200 × 3333) | 1 / 2 / 4 | 498 / 249 / 133.5 | 2.05 / 2.04 / 2.15 | 23 / 37 / 53 |
 | 1 file × 11 samples | 1 / 4 | 58.5 / 18.8 | — | 31 / 102 |

@@ -1,5 +1,5 @@
 //! The ops `msngrafo`, `mzml2cen`, `lr_index_cen` and `natsrm` of the desktop engine give the bytes the site's `.wasm` gives: the graph and its exports are those of
-//! `mzlab-cli msn-graph` (which `tests/test_msngrafo_wasm.py` holds equal to the `.wasm`), the centroid copy that of `mzlab_core::centroids` (what `mzml2cen` of
+//! `mzlab-cli msn graph` (which `tests/test_msngrafo_wasm.py` holds equal to the `.wasm`), the centroid copy that of `mzlab_core::centroids` (what `mzml2cen` of
 //! `rust-worker.js` runs), the SRM bytes `srm::impacchetta` of the reader. Public synthetic files only.
 #[path = "../../mzlab-core/tests/agilent_synth/mod.rs"]
 mod agilent_synth;
@@ -27,7 +27,7 @@ fn mzml() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/ref/msntree_rotta/msn.mzML")
 }
 
-/// What `mzlab-cli msn-graph <msn.mzML> <args>` prints (the line end included).
+/// What `mzlab-cli msn graph <msn.mzML> <args>` prints (the line end included).
 fn cli(args: &[&str]) -> String {
     let mut v = vec![mzml().to_string_lossy().into_owned()];
     v.extend(args.iter().map(|s| s.to_string()));

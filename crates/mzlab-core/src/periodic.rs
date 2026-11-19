@@ -1,6 +1,6 @@
 //! The periodic table for mass spectrometry (`elements/1`): per element name, class, monoisotopic and average mass and the natural
 //! isotopes, from the nuclide and abundance tables. ONE place for the classes; the dialog «Periodic table», the `.wasm`, the app and
-//! `mzlab-cli elements --json` print the same bytes. Only what MS needs: no density, melting point or electronegativity.
+//! `mzlab-cli ion elements --json` print the same bytes. Only what MS needs: no density, melting point or electronegativity.
 
 use crate::json::Out;
 

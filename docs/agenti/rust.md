@@ -18,7 +18,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - `mzlab-lettori` + `mzlab-lettori-wasm`: vendor-format readers, one `.wasm` per family (`aperti`, `andi`, `thermo`, `agilent`, `sciex`, `waters`, `shimadzu`, `bruker`, `valida`), loaded on demand; never in the engine `.wasm` (`tests/test_lettori_wasm.py`). See `readers-module.md`.
 - `mzlab-lib` + `mzlab-lib-wasm`: spectral libraries (MSP/MGF/MassBank/JSON parsers, `.mzlib`, Flash indexes, scores); used only by `libreria-worker.js` (`libraries.md`).
 - `mzlab-feat` + `mzlab-feat-wasm`, `-table-wasm`, `-grafo-wasm`, `-import-wasm`, `mzlab-attributio-wasm`, `mzlab-finder-lr-wasm`: feature detection, tables, mzFinder and Attributio (`mzfeat.md`, `attributio*.md`, `wasm-caps.md`).
-- `mzlab-msngrafo-wasm`, `mzlab-msnregole-wasm`: the MSn fragmentation graph and its structure rules, separate `.wasm` loaded on first use (`msn-graph.md`).
+- `mzlab-msngrafo-wasm`, `mzlab-msnregole-wasm`: the MSn fragmentation graph and its structure rules, separate `.wasm` loaded on first use (`msn graph.md`).
 - `mzlab-chem` + `mzlab-chem-wasm`: 3D geometry from SMILES and reactivity (`reatt/1`), administrator mode only.
 - `mzlab-mol`: the `mol/1` structure record (SMILES/CXSMILES, molfile, deterministic JSON, core hash); in no `.wasm` (`mol.md`).
 - `mzlab-target`: target and suspect lists (RFC 4180 CSV). `mzlab-llm` + `-wasm`: the assistant's tool catalog and streams.
@@ -73,7 +73,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - Engine in the page, `api/...` routes, Thermo `.raw`: `rust-routes.md`. `.mzidx` builder and the site's worker pool: `rust-mzidx.md`, format in `mzidx.md`.
 - Readers modules: `readers-module.md`. Memory and budget: `memory.md`. `.wasm` caps: `wasm-caps.md`. Measures: `measurements-rust.md`, `measurements-speed.md`.
 - Desktop app: `rust-desktop.md` (mzFinder native: `rust-desktop-finder.md`). Flow: `rust-flow.md` (`mzflow/2`, `prov/1`), `rust-step.md` (`step/1`), `cli.md`.
-- `mol/1`: `mol.md`. Libraries: `libraries.md`. Features: `mzfeat.md`. MSn graph: `msn-graph.md`.
+- `mol/1`: `mol.md`. Libraries: `libraries.md`. Features: `mzfeat.md`. MSn graph: `msn graph.md`.
 
 ## Code written twice (rules)
 - **Consolidate without growing**: a shared JS helper goes into a startup file that everyone already loads (`numeri.js`, `html-sicuro.js`, `i18n.js`), never into a new startup file. A function moved into `mzlab-core` is free in the modules that already link it, but brings JSON and formatting into those that did not use it: run `tools/ci_wasm_dimensioni.py` before and after, the caps do not rise. Every replacement in Rust keeps the bytes wherever a golden datum or a parity test pins them.

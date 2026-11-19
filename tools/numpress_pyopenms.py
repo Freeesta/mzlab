@@ -1,4 +1,4 @@
-"""Optional cross-check, not run in CI: the MS-Numpress arrays `mzlab-cli convert --compression smallest` writes for the synthetic dataset of every reader family,
+"""Optional cross-check, not run in CI: the MS-Numpress arrays `mzlab-cli file convert --compression smallest` writes for the synthetic dataset of every reader family,
 decoded by a second, independent implementation, the reference C++ as built in pyopenms. Every array gives back exactly `defaultArrayLength` values (an encoder
 pad the reference does not expect reads back as one value more) and the same numbers as the zlib conversion, within the codec's precision.
 Run: `pip install pyopenms` (test-only, never in the site), then `python3 -m pytest -q tools/numpress_pyopenms.py`; without pyopenms it fails, it is never skipped.
@@ -38,7 +38,7 @@ def cli(tmp_path_factory):
 
 def convert(t, ds: Path, tag: str, compression: str) -> Path:
     out = t["tmp"] / f"out_{tag}_{compression}"
-    r = run([str(t["cli"]), "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1", "--compression", compression])
+    r = run([str(t["cli"]), "file", "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1", "--compression", compression])
     assert r.returncode == 0, r.stdout[-1500:] + r.stderr[-1500:]
     files = sorted(out.glob("*.mzML"))
     assert len(files) == 1, files

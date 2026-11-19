@@ -1,4 +1,4 @@
-//! `mzlab-cli peak-split FILE... --set tr=J --set a=MIN --set b=MIN [--set NAME=VALUE...]`: one integration drawn by hand on a transition / SIM
+//! `mzlab-cli peak split FILE... --set tr=J --set a=MIN --set b=MIN [--set NAME=VALUE...]`: one integration drawn by hand on a transition / SIM
 //! trace and its valleys (`mzlab_core::manint`). Without `split` it prints where the window splits at `depth` (the bytes of the page's
 //! `api/manvalley`); with `split` it prints the table of the window cut there, a row per part (the bytes of `api/manint` for that window).
 
@@ -10,11 +10,11 @@ use mzlab_core::valley::DEPTH;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli peak-split: one integration drawn by hand on a transition / SIM trace, split at its valleys.
+pub const HELP: &str = "mzlab-cli peak split: one integration drawn by hand on a transition / SIM trace, split at its valleys.
 
-usage: mzlab-cli peak-split FILE... --set tr=J --set a=MIN --set b=MIN [--set NAME=VALUE...] [--out PATH]
+usage: mzlab-cli peak split FILE... --set tr=J --set a=MIN --set b=MIN [--set NAME=VALUE...] [--out PATH]
 
-  FILE        an mzML, or a vendor file the app reads, in the order of the page (as manual-table)
+  FILE        an mzML, or a vendor file the app reads, in the order of the page (as peak table)
   --set file=I        the sample (from 0, default 0) and --set tr=J its transition in the list of the file
   --set a=MIN --set b=MIN   the edges of the window
   --set baseline=zero|edges|line   default zero; line needs --set line=t0,y0,t1,y1
@@ -24,7 +24,7 @@ usage: mzlab-cli peak-split FILE... --set tr=J --set a=MIN --set b=MIN [--set NA
   --set label=NAME    the name of the window (the last column of the table)
   --out PATH  write there instead of the standard output
 
-Without split: {\"splits\":[MIN,...]}, the times of the valleys. With split: the CSV of manual-table for this window, a row per part between drop
+Without split: {\"splits\":[MIN,...]}, the times of the valleys. With split: the CSV of peak table for this window, a row per part between drop
 lines on the window's baseline (overlap = drop, pv = Hp/Hv: the height of the part over the higher valley next to it; Ph. Eur. 2.2.46 takes the
 value of the smaller peak). The areas of the parts add up to the area of the whole window.";
 
@@ -91,10 +91,10 @@ fn parse(args: Vec<String>) -> Result<Option<Request>, String> {
         }
     }
     if c.files.is_empty() {
-        return Err("peak-split needs at least one file".into());
+        return Err("peak split needs at least one file".into());
     }
     let (Some(tr), Some(a), Some(b)) = (tr, a, b) else {
-        return Err("peak-split needs --set tr=J --set a=MIN --set b=MIN".into());
+        return Err("peak split needs --set tr=J --set a=MIN --set b=MIN".into());
     };
     let w = &mut c.window;
     w.raw("{\"file\":")

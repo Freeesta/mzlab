@@ -56,7 +56,7 @@ fn every_variant_opens_or_fails_with_its_key() {
     }
     let p = |n: &str| -> PathBuf { dir.join(n) };
     for n in OPEN {
-        let o = cli(&["channels", p(n).to_str().unwrap()]);
+        let o = cli(&["file", "channels", p(n).to_str().unwrap()]);
         assert_eq!(o.code, 0, "{n}: {}", o.stderr);
         let tmp = dir.join(format!("t_{n}"));
         std::fs::create_dir_all(&tmp).unwrap();
@@ -64,11 +64,11 @@ fn every_variant_opens_or_fails_with_its_key() {
         assert!(csv.starts_with("id,mz,rt"), "{n}: {csv}");
     }
     for (n, key) in REFUSED {
-        let o = cli(&["channels", p(n).to_str().unwrap()]);
+        let o = cli(&["file", "channels", p(n).to_str().unwrap()]);
         assert_ne!(o.code, 0, "{n}");
         assert!(o.stderr.contains(key), "{n}: {}", o.stderr);
     }
-    let o = cli(&["channels", p("truncated.mzML").to_str().unwrap()]);
+    let o = cli(&["file", "channels", p("truncated.mzML").to_str().unwrap()]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     assert_eq!(PARTIAL.len() + OPEN.len() + REFUSED.len(), 20);
     let _ = std::fs::remove_dir_all(&dir);
@@ -82,7 +82,7 @@ fn validate_flags_the_truncated_file_and_the_garbage() {
         return;
     }
     for n in ["truncated.mzML", "empty.mzML", "notxml.mzML", "badb64.mzML"] {
-        let o = cli(&["validate", dir.join(n).to_str().unwrap()]);
+        let o = cli(&["file", "validate", dir.join(n).to_str().unwrap()]);
         let all = format!("{}{}", String::from_utf8_lossy(&o.stdout), o.stderr);
         assert!(all.contains("INVALID"), "{n}: {all}");
     }

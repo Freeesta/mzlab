@@ -1,4 +1,4 @@
-# e2e_valida_mzml: the menu of an mzML file in Dati has «Validate mzML»; it opens a dialog with the findings of `mzlab-cli validate` (severity, message, location), loads only the
+# e2e_valida_mzml: the menu of an mzML file in Dati has «Validate mzML»; it opens a dialog with the findings of `mzlab-cli file validate` (severity, message, location), loads only the
 # `valida` module (never the readers), misses no engine route and has no accessibility violation. Needs the site and the module: tools/prepara_sito.py, tools/build_lettori_wasm.sh site/static
 import os, re, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

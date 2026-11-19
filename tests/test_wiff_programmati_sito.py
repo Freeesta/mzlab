@@ -1,5 +1,5 @@
 """A scheduled-MRM .wiff with no Log (`programmati` of tools/wiff_riferimento.py, synthetic, no laboratory data) on the site: the `probe` of the `sciex` module says
-«variante», so shell.js hands the pair to the module, whose mzML is byte for byte the one `mzlab-cli convert` writes (one TIC per experiment, the scheduled
+«variante», so shell.js hands the pair to the module, whose mzML is byte for byte the one `mzlab-cli file convert` writes (one TIC per experiment, the scheduled
 transitions without their skip markers, the generic instrument term: no Log names no model). The engine (mzlab-wasm, `build_mzidx_native`) refuses the sparse
 blocks (`err.file.wiff`, `sparse MRM block`) instead of reading the markers as intensities. `mrmrado` (tools/wiff_mrm_sparse.py) has sparse blocks but no `sMRM`
 stream in its method: the probe still says «variante» from the blocks themselves. Skipped without cargo, wasm-bindgen or node."""
@@ -45,7 +45,7 @@ def module_and_cli(work, name):
     plan = work / f"plan-{name}.json"
     plan.write_text(json.dumps({"members": [{"name": p.name, "path": str(p)} for p in pair(work, name)], "out": str(work / f"mod-{name}.mzML")}))
     run("node", str(ROOT / "tests" / "lettori_parita_node.js"), str(work / "mod"), str(plan))
-    run(str(ROOT / "target/release/mzlab-cli"), "convert", str(pair(work, name)[0]), "--out", str(work / f"cli-{name}"), "--fresh", "--workers", "1")
+    run(str(ROOT / "target/release/mzlab-cli"), "file", "convert", str(pair(work, name)[0]), "--out", str(work / f"cli-{name}"), "--fresh", "--workers", "1")
     return (work / f"mod-{name}.mzML").read_bytes(), (work / f"cli-{name}" / f"{name}.mzML").read_bytes()
 
 

@@ -16,7 +16,7 @@ fn cli(args: &[&str]) -> crate::Outcome {
 }
 
 /// A run folder as `flow run` leaves it (the commit is the one of this build, never patched in) and the `samples/1` that gives every file its role;
-/// `hashed` false leaves each SHA-256 empty, as `samples table --names` does.
+/// `hashed` false leaves each SHA-256 empty, as `sample table --names` does.
 fn run_folder(tag: &str, hashed: bool) -> (std::path::PathBuf, std::path::PathBuf) {
     let (dir, files) = fixture(tag);
     let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
@@ -136,7 +136,7 @@ fn samples_table_on_real_files_gives_roles_that_record_accepts() {
         .map(|e| e.unwrap().path().to_string_lossy().into_owned())
         .collect();
     paths.sort();
-    let mut args = vec!["samples", "table"];
+    let mut args = vec!["sample", "table"];
     args.extend(paths.iter().map(String::as_str));
     let t = cli(&args);
     assert_eq!(t.code, 0, "{}", t.stderr);

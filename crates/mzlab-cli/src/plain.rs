@@ -1,4 +1,4 @@
-//! The subcommands of `mzlab-cli` that take their arguments as a plain list, and the old command names still accepted for them.
+//! The subcommands of `mzlab-cli` that take their arguments as a plain list.
 
 #[path = "background_cmd.rs"]
 pub(crate) mod background_cmd;
@@ -32,10 +32,6 @@ pub(crate) mod peak_split_cmd;
 pub(crate) mod peak_window_cmd;
 #[path = "ref_list_cmd.rs"]
 pub(crate) mod ref_list_cmd;
-
-pub(crate) fn canonical(command: &str) -> &str {
-    crate::cmd::canonical(command)
-}
 
 #[cfg(test)]
 #[path = "plain_tests.rs"]

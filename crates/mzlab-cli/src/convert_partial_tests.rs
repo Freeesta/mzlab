@@ -1,4 +1,4 @@
-//! `mzlab-cli convert` on a cut file: it is written with the scans it holds, with exit code 3, a warning line naming the counts,
+//! `mzlab-cli file convert` on a cut file: it is written with the scans it holds, with exit code 3, a warning line naming the counts,
 //! and `conversion/1` of the report saying them; the whole file is not partial.
 use mzlab_core::json::parse;
 

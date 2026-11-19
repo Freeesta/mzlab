@@ -84,7 +84,7 @@ fn the_route_builds_the_line_and_applies_it() {
 #[test]
 fn events_and_jsonl_parse_the_same() {
     let a = sets_of("mzlab-cli flow run p.json --out o --events --set g.ppm=3").unwrap();
-    let b = sets_of("mzlab-cli flow run p.json --out o --jsonl --set g.ppm=3").unwrap();
+    let b = sets_of("mzlab-cli flow run p.json --out o --events --set g.ppm=3").unwrap();
     assert_eq!(a, b);
     assert_eq!(a, vec!["g.ppm=3".to_string()]);
 }

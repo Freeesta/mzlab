@@ -1,4 +1,4 @@
-//! Tests of `match-mz` on synthetic tables.
+//! Tests of `ion match` on synthetic tables.
 
 use crate::execute;
 
@@ -24,7 +24,7 @@ fn tables_file() -> ((), String) {
 fn the_output_is_the_core_answer_byte_for_byte() {
     let (_d, t) = tables_file();
     let o = run(&[
-        "match-mz", "18.0106", "--tables", &t, "--set", "hr=1", "--set", "mda=3",
+        "ion", "match", "18.0106", "--tables", &t, "--set", "hr=1", "--set", "mda=3",
     ]);
     assert_eq!(o.code, 0);
     let req = format!(
@@ -39,7 +39,8 @@ fn the_output_is_the_core_answer_byte_for_byte() {
 fn a_contaminant_is_a_hit_with_its_error_and_never_a_verdict() {
     let (_d, t) = tables_file();
     let o = run(&[
-        "match-mz", "63.0441", "--tables", &t, "--set", "hr=1", "--set", "ppm=10", "--set", "pol=+",
+        "ion", "match", "63.0441", "--tables", &t, "--set", "hr=1", "--set", "ppm=10", "--set",
+        "pol=+",
     ]);
     let s = String::from_utf8(o.stdout).unwrap();
     assert!(s.contains("peg1") && s.contains("contaminant"), "{s}");
@@ -51,7 +52,8 @@ fn the_contaminant_window_takes_da_or_ppm_and_is_reported() {
     // 63.2 is 0.156 Da from peg1: inside 0.2 Da, outside 0.1 Da, at unit resolution
     let hit = |tol: &str| {
         let o = run(&[
-            "match-mz",
+            "ion",
+            "match",
             "63.2",
             "--tables",
             &t,
@@ -79,7 +81,7 @@ fn the_contaminant_window_takes_da_or_ppm_and_is_reported() {
         format!("{}\n", mzlab_core::search::match_number(&req).unwrap())
     );
     assert_eq!(
-        run(&["match-mz", "63.2", "--tables", &t, "--set", "unit=da", "--set", "tol=0"]).code,
+        run(&["ion", "match", "63.2", "--tables", &t, "--set", "unit=da", "--set", "tol=0"]).code,
         2
     );
 }
@@ -88,14 +90,14 @@ fn the_contaminant_window_takes_da_or_ppm_and_is_reported() {
 fn usage_errors_exit_2() {
     let (_d, t) = tables_file();
     for a in [
-        vec!["match-mz"],
-        vec!["match-mz", "18"],
-        vec!["match-mz", "18", "--tables", "/nonexistent.json"],
-        vec!["match-mz", "18", "--tables", &t, "--set", "ppm=abc"],
-        vec!["match-mz", "18", "--tables", &t, "--set", "nope=1"],
-        vec!["match-mz", "18", "--tables", &t, "--nope"],
+        vec!["ion", "match"],
+        vec!["ion", "match", "18"],
+        vec!["ion", "match", "18", "--tables", "/nonexistent.json"],
+        vec!["ion", "match", "18", "--tables", &t, "--set", "ppm=abc"],
+        vec!["ion", "match", "18", "--tables", &t, "--set", "nope=1"],
+        vec!["ion", "match", "18", "--tables", &t, "--nope"],
     ] {
         assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
     }
-    assert_eq!(run(&["match-mz", "--help"]).code, 0);
+    assert_eq!(run(&["ion", "match", "--help"]).code, 0);
 }

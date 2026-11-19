@@ -1,4 +1,4 @@
-//! `mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--out PATH]`: the table of the integrations drawn by hand in the Data view
+//! `mzlab-cli peak table FILE... --set windows=PATH [--set sums=true] [--out PATH]`: the table of the integrations drawn by hand in the Data view
 //! (`mzlab_core::manint`), one row per window grouped by channel. Each file gives the `/api/mrm` transitions the engine gives the page (an mzML read as
 //! it is, a vendor file through the chromatograms of `readers_mzml::guscio`, as the site reads it), so the CSV is the bytes of the page's export. A
 //! `.wiff` gives one sample per sample of the file, named as the site names its mzML (`conversione.js::wiffName`).
@@ -14,9 +14,9 @@ use mzlab_core::readers::Limits;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli manual-table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
+pub const HELP: &str = "mzlab-cli peak table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
 
-usage: mzlab-cli manual-table (FILE... | --set traces=PATH) --set windows=PATH [--set sums=true] [--set times=PATH] [--set columns=sn,fig,quality] [--json] [--out PATH]
+usage: mzlab-cli peak table (FILE... | --set traces=PATH) --set windows=PATH [--set sums=true] [--set times=PATH] [--set columns=sn,fig,quality] [--json] [--out PATH]
 
   FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in the order of the page
   --set windows=PATH  a JSON list of windows [{\"file\": I, \"tr\": J, \"a\": MIN, \"b\": MIN, \"baseline\": \"zero\"|\"edges\"|\"line\", \"line\": [t0, y0, t1, y1], \"label\": NAME,
@@ -94,7 +94,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
         }
     }
     if files.is_empty() == traces.is_none() {
-        return Err("manual-table needs at least one file, or --set traces=PATH (not both)".into());
+        return Err("peak table needs at least one file, or --set traces=PATH (not both)".into());
     }
     if params.is_some() && !auto {
         return Err("--set params=PATH goes with --set auto=true".into());
@@ -105,7 +105,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
     let windows = match (windows, auto) {
         (Some(w), _) => w,
         (None, true) => PathBuf::new(),
-        (None, false) => return Err("manual-table needs --set windows=PATH".into()),
+        (None, false) => return Err("peak table needs --set windows=PATH".into()),
     };
     Ok(Some(Request {
         files,

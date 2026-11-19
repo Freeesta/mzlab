@@ -3,7 +3,7 @@
 // @ts-noany
 "use strict";
 // Periodic table for mass spectrometry: ONE place for the markup, the layout and the behaviour, used by the program (tables.js, dialog
-// "Tavola periodica"). The data is the Rust `elements/1` (route api/elements = `mzlab-cli elements --json`): names, classes, masses, isotopes.
+// "Tavola periodica"). The data is the Rust `elements/1` (route api/elements = `mzlab-cli ion elements --json`): names, classes, masses, isotopes.
 // Classic script (not an ES module).
 // TAVOLA.create({ data, t }) -> { periodic(), bindPeriodic(root), info(element) }
 //   data: the parsed elements/1 document; t(key, params): the texts (keys tbl.pt.*, tbl.na; the program passes I18N.t).

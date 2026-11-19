@@ -1,8 +1,8 @@
-"""The molkit .wasm (crates/mzlab-mol-wasm) gives the `check/1` and the `cip/1` of a drawing byte for byte like `mzlab-cli mol-check` and
-`mol-cip` and the app fixtures (tests/dati/check_disegno.json and cip_disegno.json, read by crates/mzlab-desktop/tests/labels.rs too), and a bad
-molfile as a keyed JSON error; the `subdb/1` of a structure list like `mzlab-cli mol-search --db` and the app (tests/dati/sub_db.json); the Flow
+"""The molkit .wasm (crates/mzlab-mol-wasm) gives the `check/1` and the `cip/1` of a drawing byte for byte like `mzlab-cli mol check` and
+`mol cip` and the app fixtures (tests/dati/check_disegno.json and cip_disegno.json, read by crates/mzlab-desktop/tests/labels.rs too), and a bad
+molfile as a keyed JSON error; the `subdb/1` of a structure list like `mzlab-cli mol search --db` and the app (tests/dati/sub_db.json); the Flow
 step `structure.moiety` (`flow_moiety`) like `mzlab-cli flow run --set` (tests/dati/moiety.json); the `hilite/1` of the evidence colours like
-`mzlab-cli mol-hilite` and the app (tests/dati/hilite_disegno.json). Skipped without cargo, wasm-bindgen or node."""
+`mzlab-cli mol hilite` and the app (tests/dati/hilite_disegno.json). Skipped without cargo, wasm-bindgen or node."""
 import json
 import shutil
 import subprocess
@@ -32,7 +32,7 @@ def test_check_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
     req = tmp_path / "req.json"
     req.write_text(json.dumps(fx["request"]), encoding="utf-8")
     site = run("node", "tests/molkit_wasm_node.js", str(pkg), req.read_text(encoding="utf-8"))
-    assert site == cli("mol-check", str(req), runner=run)
+    assert site == cli("mol", "check", str(req), runner=run)
     assert site.strip() == fx["check"]
     assert [w["code"] for w in json.loads(site)["warnings"]] == ["valence", "valenceCharge", "isotope", "wedgeNoCentre", "pieces"]
 
@@ -47,7 +47,7 @@ def test_cip_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
     req = tmp_path / "req.json"
     req.write_text(json.dumps(fx["request"]), encoding="utf-8")
     site = run("node", "tests/molkit_wasm_node.js", str(pkg), req.read_text(encoding="utf-8"), "cip")
-    assert site == cli("mol-cip", str(req), runner=run)
+    assert site == cli("mol", "cip", str(req), runner=run)
     assert site.strip() == fx["cip"]
     assert json.loads(site) == {"format": "cip/1", "atoms": [{"atom": 1, "label": "R"}], "bonds": [{"a": 3, "b": 4, "label": "E"}]}
     r = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), json.dumps({"molfile": "nonsense"}), "cip"], cwd=ROOT, capture_output=True, encoding="utf-8")
@@ -63,7 +63,7 @@ def test_substructure_over_a_list_through_wasm_equals_the_cli_and_the_fixture(pk
         db = tmp_path / f"list{k}.txt"
         db.write_text(r["db"], encoding="utf-8")
         sets = (["--set", "max=1"] if "max" in r else []) + (["--set", "stereo=1"] if r.get("stereo") else [])
-        assert site == cli("mol-search", "--sub", r["query"], "--db", str(db), *sets, runner=run)
+        assert site == cli("mol", "search", "--sub", r["query"], "--db", str(db), *sets, runner=run)
     bad = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), json.dumps({"query": "C", "db": "# none\n"}), "sub"], cwd=ROOT, capture_output=True, encoding="utf-8")
     assert bad.returncode == 1 and json.loads(bad.stderr)["error_key"] == "error.sub.db"
 
@@ -95,7 +95,7 @@ def test_hilite_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
         req = tmp_path / (req_key + ".json")
         req.write_text(json.dumps(fx[req_key]), encoding="utf-8")
         site = run("node", "tests/molkit_wasm_node.js", str(pkg), req.read_text(encoding="utf-8"), "hilite")
-        assert site == cli("mol-hilite", str(req), runner=run)
+        assert site == cli("mol", "hilite", str(req), runner=run)
         assert site.strip() == fx[want]
     for bad, key in fx["errors"]:
         r = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), json.dumps(bad), "hilite"], cwd=ROOT, capture_output=True, encoding="utf-8")

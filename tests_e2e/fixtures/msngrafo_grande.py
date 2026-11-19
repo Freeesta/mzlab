@@ -1,6 +1,6 @@
 """Builds tests_e2e/fixtures/msngrafo_grande.json: a synthetic msn-graph/1 of 80 ions in 5 levels (no real data, no real compound) for the layout tests of the
 «Fragmentation graph» (0 overlapping boxes, fewer arc crossings than the barycentre layout). The graph has no `vista`; add it with the engine:
-    python3 tests_e2e/fixtures/msngrafo_grande.py > /tmp/g.json && mzlab-cli msn-graph complete /tmp/g.json --out tests_e2e/fixtures/msngrafo_grande.json
+    python3 tests_e2e/fixtures/msngrafo_grande.py > /tmp/g.json && mzlab-cli msn complete /tmp/g.json --out tests_e2e/fixtures/msngrafo_grande.json
 The rows `pos` are the barycentre layout of the engine (two passes over the columns, ions by decreasing m/z at the start), the baseline of the crossings."""
 import json, random
 

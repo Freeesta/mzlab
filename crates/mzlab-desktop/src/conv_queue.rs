@@ -1,5 +1,5 @@
 //! The background conversion queue of the desktop app: each maker's file the page holds is converted to indexed mzML in the cache folder by the very
-//! entry of `mzlab-cli convert` (same bytes), on the threads of `convert` (cores - 1, 1 to 4, fewer when the memory budget does not give each its share:
+//! entry of `mzlab-cli file convert` (same bytes), on the threads of `convert` (cores - 1, 1 to 4, fewer when the memory budget does not give each its share:
 //! `conv_list` then carries the same notice the CLI prints) and never while an index of Data is being built. The page reads it with
 //! `conv_list`, stops it with `conv_cancel`, saves the ready files with `conv_save`; `flow/run` takes a ready mzML instead of converting again.
 
@@ -319,7 +319,7 @@ impl State {
     }
 }
 
-/// What `mzlab-cli convert` does with one dataset: its mzML files in `out` (the cache of its folder makes a second run free).
+/// What `mzlab-cli file convert` does with one dataset: its mzML files in `out` (the cache of its folder makes a second run free).
 fn convert(root: &Path, out: &Path) -> std::result::Result<Vec<PathBuf>, String> {
     let args = vec![
         root.to_string_lossy().into_owned(),

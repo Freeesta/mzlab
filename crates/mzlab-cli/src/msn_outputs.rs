@@ -1,5 +1,5 @@
 //! The files of a figure of the graph `msn-graph/1`: SVG, stand-alone HTML and PNG, by name (`svg,html,png`), written next to a stem; the command line
-//! (`msn-graph --figure`, `msn-graph figure`) and the step `msn.figure@1` both go through here, so they write the same bytes.
+//! (`msn graph --figure`, `msn graph figure`) and the step `msn.figure@1` both go through here, so they write the same bytes.
 
 use std::path::{Path, PathBuf};
 
@@ -69,7 +69,7 @@ pub fn write_outputs(graph: &str, fs: &[Format], view: View, stem: &Path) -> Res
     Ok(out)
 }
 
-/// `msn-graph figure IN.json [--figure svg,html,png] [--view tree|radial] [--out STEM]`: the figures of a graph already made; the stem defaults to the file
+/// `msn graph figure IN.json [--figure svg,html,png] [--view tree|radial] [--out STEM]`: the figures of a graph already made; the stem defaults to the file
 /// without its extension. Returns the message for the standard output.
 pub fn figure_cmd(mut a: impl Iterator<Item = String>) -> std::result::Result<String, String> {
     let (mut file, mut out, mut fs, mut view) =

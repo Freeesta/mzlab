@@ -44,14 +44,12 @@ fn every_help_and_usage_error_is_unchanged() {
 }
 
 #[test]
-fn names_are_unique_and_aliases_point_to_a_command() {
+fn names_are_unique_and_found() {
     let mut seen = std::collections::HashSet::new();
     for e in super::entries() {
         assert!(seen.insert(e.name), "{} twice", e.name);
-        for a in e.aliases {
-            assert_eq!(super::canonical(a), e.name);
-            assert!(!seen.contains(a), "alias {a} is also a name");
-        }
+        let args: Vec<String> = e.name.split(' ').map(String::from).collect();
+        assert_eq!(super::find(&args).unwrap().0.name, e.name);
     }
 }
 
@@ -87,15 +85,22 @@ fn the_citation_is_in_help_version_catalogs_and_the_run_record() {
     let tools: serde_json::Value = serde_json::from_str(&out(&["llm", "tools"])).unwrap();
     assert_eq!(tools["citation"], text);
     assert_eq!(tools["schema"], "tools/1");
-    let steps: serde_json::Value = serde_json::from_str(&out(&["steps", "--json"])).unwrap();
+    let steps: serde_json::Value =
+        serde_json::from_str(&out(&["flow", "steps", "--json"])).unwrap();
     assert!(steps
         .as_array()
         .unwrap()
         .iter()
         .all(|s| s["citation"] == text));
-    let one: serde_json::Value =
-        serde_json::from_str(&out(&["steps", "--json", "--id", "features.detect"])).unwrap();
+    let one: serde_json::Value = serde_json::from_str(&out(&[
+        "flow",
+        "steps",
+        "--json",
+        "--id",
+        "features.detect",
+    ]))
+    .unwrap();
     assert_eq!(one["citation"], text);
     // data stays untouched: plain `steps` has no citation line
-    assert!(!out(&["steps"]).contains("cite"));
+    assert!(!out(&["flow", "steps"]).contains("cite"));
 }

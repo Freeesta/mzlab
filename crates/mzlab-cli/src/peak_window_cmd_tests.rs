@@ -72,6 +72,6 @@ fn it_needs_one_of_at_or_step() {
     ] {
         assert_ne!(run(args(bad)).code, 0, "{bad:?}");
     }
-    assert!(out(run(args(&["--help"]))).contains("peak-window"));
+    assert!(out(run(args(&["--help"]))).contains("peak window"));
     let _ = std::fs::remove_file(&p);
 }

@@ -1,4 +1,4 @@
-//! Bench of the Thermo `.raw` → mzML conversion: phases, scaling over threads, micro-benchmarks, why threads slow it down (D8), what `mzlab-cli convert`
+//! Bench of the Thermo `.raw` → mzML conversion: phases, scaling over threads, micro-benchmarks, why threads slow it down (D8), what `mzlab-cli file convert`
 //! adds to the writer (D11) and the floor `T_min` of the roofline. It changes no byte of the output. One JSON object on stdout (or `--json FILE`).
 //!
 //! `cargo run --profile cli -p mzlab-core --example raw_mzml_bench -- --file X.raw --etichetta LAB-B --giri 5`
@@ -223,7 +223,7 @@ fn file_sha256(p: &Path) -> String {
     h.finish().2
 }
 
-/// D11: the pieces of `mzlab-cli convert` that are not the writer, each timed alone with the code the CLI calls, to be added up against the whole.
+/// D11: the pieces of `mzlab-cli file convert` that are not the writer, each timed alone with the code the CLI calls, to be added up against the whole.
 fn cli(src: &Source, a: &Args, header_s: f64) -> Value {
     let Origin::Raw(p) = &src.origin else {
         return json!({"saltato": "only for a real file"});

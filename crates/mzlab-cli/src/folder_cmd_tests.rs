@@ -70,16 +70,16 @@ fn the_command_prints_folder_1_and_has_exit_codes() {
     let d = tree(&["a.mzML", "r.D/data.ms"]);
     let a = |v: &[&str]| crate::execute(&v.iter().map(|s| s.to_string()).collect::<Vec<_>>());
     let p = d.path().to_str().unwrap();
-    let o = a(&["folder", "list", p, "--json"]);
+    let o = a(&["file", "list", p, "--json"]);
     assert_eq!(o.code, 0);
     let v: Value = serde_json::from_slice(&o.stdout).unwrap();
     assert_eq!(v["schema"], "folder/1");
     assert_eq!(v["items"][1]["bundle"], "d");
     assert_eq!(v["items"][0]["bundle"], Value::Null);
-    assert_eq!(a(&["folder", "list", "/nonexistent-mzlab"]).code, 4);
-    assert_eq!(a(&["folder", "list"]).code, 2);
-    assert_eq!(a(&["folder", "nope", p]).code, 2);
-    assert_eq!(a(&["folder", "--help"]).code, 0);
+    assert_eq!(a(&["file", "list", "/nonexistent-mzlab"]).code, 4);
+    assert_eq!(a(&["file", "list"]).code, 2);
+    assert_eq!(a(&["file", "list", "nope", p]).code, 2);
+    assert_eq!(a(&["file", "list", "--help"]).code, 0);
 }
 
 #[test]

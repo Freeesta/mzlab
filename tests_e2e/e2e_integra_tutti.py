@@ -1,6 +1,6 @@
 """«Integrate every peak shown» (the ▾ next to the automatic tool, integra-tutti.js) on a jagged 3200 QTRAP-like MRM file (tools/synthetic_data_jagged.py):
 every peak of the transition shown (three touching peaks, two valleys) in one undoable step, split at the valleys, the page area equal to the engine's, the JSON of the page
-engine (QUALITA.lrAuto, the .wasm) byte for byte the one of `mzlab-cli peak-auto-lr` on the same trace, the settings of the dialog reach the engine."""
+engine (QUALITA.lrAuto, the .wasm) byte for byte the one of `mzlab-cli peak auto-lr` on the same trace, the settings of the dialog reach the engine."""
 import sys, os, json, subprocess; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import load
@@ -61,11 +61,11 @@ try:
                 pg.evaluate(f"(async()=>{{const s={M}._a.sr[0];window.__csv=s.x.map((t,i)=>t+','+s.y[i]).join('\\n');window.__lr=await QUALITA.lrAuto(s.x,s.y,0,1e9,INTTUTTI.engineParams({{...PK,...{pk}}}))}})()")
                 wait_for_js(pg, "typeof window.__lr==='string'")
                 site, csv = pg.evaluate("window.__lr"), pg.evaluate("window.__csv")
-                out = subprocess.run(cli_argv("peak-auto-lr", "-", *[a for x in sets for a in ("--set", x)]), input=csv, capture_output=True, text=True, cwd=ROOT, check=True).stdout
+                out = subprocess.run(cli_argv("peak", "auto-lr", "-", *[a for x in sets for a in ("--set", x)]), input=csv, capture_output=True, text=True, cwd=ROOT, check=True).stdout
                 assert out == site + "\n", (out[:300], site[:300])
                 assert json.loads(site)["params"]["split"] == ("valley" if sets else "drop") and len(json.loads(site)["peaks"]) == 3
                 pg.evaluate("window.__lr=null")
-        step("the page engine and mzlab-cli peak-auto-lr give the same bytes", parity)
+        step("the page engine and mzlab-cli peak auto-lr give the same bytes", parity)
         def undo_again():
             n = pg.evaluate(f"{M}.ints.length")
             pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"{M}.ints.length===0")

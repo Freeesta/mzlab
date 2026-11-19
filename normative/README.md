@@ -1,6 +1,6 @@
 # Regulatory lists (`normative/`)
 
-One CSV per list in `lists/` (schema A1 plus `entry_ref;ec;dtxsid;form;status`, separator `;`), the provenance of every input in `provenance.json`, the entries that could not be tied to a structure in `unresolved.tsv`, and the pins and hand-checked overrides in `sources.json` and `overrides.tsv`. The package the site and the app download is built from this text: `mzlab-cli normative pack normative/ OUT/`.
+One CSV per list in `lists/` (schema A1 plus `entry_ref;ec;dtxsid;form;status`, separator `;`), the provenance of every input in `provenance.json`, the entries that could not be tied to a structure in `unresolved.tsv`, and the pins and hand-checked overrides in `sources.json` and `overrides.tsv`. The package the site and the app download is built from this text: `mzlab-cli db normative pack normative/ OUT/`.
 
 **Only the official publications are authentic.** These files are a working copy for screening: a list match is a candidate with its evidence, never a verdict. Entries without a CAS number in the law's text, groups, UVCB substances and inorganic compounds are listed with their `status` and are not screenable by mass.
 
@@ -21,7 +21,7 @@ The ECHA Candidate List (ECHA's terms forbid replicating its databases in whole 
 
 ## Rebuild
 ```
-mzlab-cli normative build --cache DIR --out normative/ [--allow-large]
-mzlab-cli normative pack normative/ OUT/
+mzlab-cli db normative build --cache DIR --out normative/ [--allow-large]
+mzlab-cli db normative pack normative/ OUT/
 ```
 `build` needs the network the first time (every URL goes into `--cache` with its SHA-256 and date; a changed source stops the build until `--update-pins`); with a warm cache it is offline and byte-identical. `pack` never uses the network. Details: `docs/agenti/normative.md`.

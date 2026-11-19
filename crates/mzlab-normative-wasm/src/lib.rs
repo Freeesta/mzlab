@@ -1,5 +1,5 @@
 //! wasm-bindgen bridge of `mzlab_feat::normative::official`: the user's own CSV of the ECHA Candidate List (`svhc`) or of OEHHA's Proposition 65 list (`ca_prop65`) and the
-//! CAS sidecar of the site become a private `.mzsus` with the same bytes as `mzlab-cli normative import-official`. A `.wasm` of its own, loaded only by the Library window.
+//! CAS sidecar of the site become a private `.mzsus` with the same bytes as `mzlab-cli db normative import-official`. A `.wasm` of its own, loaded only by the Library window.
 //! Errors are JSON `{"error_key", "params"}` strings.
 use mzlab_core::json::Out;
 use wasm_bindgen::prelude::*;

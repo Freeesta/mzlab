@@ -1,4 +1,4 @@
-//! `mzlab-cli manual-table --set traces=PATH`: traces the caller supplies (a chromatogram, an XIC) give the five extra columns, the same bytes as the engine
+//! `mzlab-cli peak table --set traces=PATH`: traces the caller supplies (a chromatogram, an XIC) give the five extra columns, the same bytes as the engine
 //! on the same text, and a request with both files and traces is refused.
 
 use crate::execute;
@@ -21,7 +21,7 @@ fn trace(panel: &str, label: &str) -> String {
 }
 
 fn run(args: &[&str]) -> crate::Outcome {
-    let mut a = vec!["manual-table".to_string()];
+    let mut a = vec!["peak".to_string(), "table".to_string()];
     a.extend(args.iter().map(|s| s.to_string()));
     execute(&a)
 }

@@ -73,7 +73,8 @@ fn run(d: &Path, params: &str, molecules: bool) -> mzlab_core::Result<String> {
 
 fn cli(d: &Path, args: &[&str]) -> String {
     let mut a = vec![
-        "msn-graph".to_string(),
+        "msn".to_string(),
+        "graph".to_string(),
         d.join("inf.mzXML").to_str().unwrap().to_string(),
     ];
     a.extend(args.iter().map(|s| s.to_string()));

@@ -1,7 +1,7 @@
 //! `check/1`: what is wrong in a drawing, never in data. The page sends the molfile of the canvas; the answer lists warnings (valence, charge,
 //! isotope, wedges, aromatic rings that cannot alternate, query atoms, separate pieces), each with a code that names its `draw.check.*` texts
 //! and the atoms (0-based, molfile order) to highlight. Valence rules come from `mzlab-mol` (the ones of its SMILES reader), isotopes from the
-//! nuclide table of `mzlab-core`. Same bytes in the grafo `.wasm`, the app (`feat/grafo`, `kind: "check"`) and `mzlab-cli mol-check`.
+//! nuclide table of `mzlab-core`. Same bytes in the grafo `.wasm`, the app (`feat/grafo`, `kind: "check"`) and `mzlab-cli mol check`.
 
 use mzlab_core::elements;
 use mzlab_core::error::{Error, Result};
