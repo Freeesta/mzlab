@@ -11,6 +11,7 @@ import json, shutil, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+from cli_cmd import cli_command
 
 steps = []
 def step(name, fn):
@@ -23,7 +24,7 @@ D = Path(tempfile.mkdtemp(prefix="sim_wiff_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_sim.py"), str(D)], check=True, capture_output=True)
 (D / "sim3.wiff.log").write_text("msconvert log (synthetic)\n")
 TRUE = json.loads((D / "sim3.json").read_text())
-CLI = ["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--"]      # the release binary tools/verifica.py builds once before the tests: a debug build inside the 150 s of the CI job is too slow
+CLI = cli_command()      # the release binary tools/verifica.py builds once before the tests: a debug build inside the 150 s of the CI job is too slow
 cli = lambda *a: subprocess.run(CLI + [str(x) for x in a], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout
 CHANNELS = json.loads(cli("channels", D / "sim3.wiff"))
 throw = lambda m: (_ for _ in ()).throw(AssertionError(m))

@@ -4,6 +4,7 @@ from zero the area is the trapezoid of the trace. The trace is an XIC of the syn
 # covers: mzlab/web/integra-base.js
 import sys, os, subprocess, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+from cli_cmd import cli_command
 from lib_hr import load
 import numpy as np
 import dati_sintetici as ds
@@ -16,7 +17,7 @@ def step(name, fn):
 D = HERE / "shots" / "integra_base_tmp"; D.mkdir(parents=True, exist_ok=True)
 LRF = D / "B_FullMass-t30.mzML"
 ds.full_scan(LRF, 30, np.random.default_rng(2026))
-CLI = ["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--"]
+CLI = cli_command()
 TRACE = """(()=>{const p=E.panels.find(q=>q.type==='xic'),s=p._a.sr[0];let k=0;s.y.forEach((v,i)=>{if(v>s.y[k])k=i});return {x:Array.from(s.x),y:Array.from(s.y),apex:s.x[k],top:s.y[k]}})()"""
 
 r = Run(port=8983, wd="/tmp/wd_integra_base")

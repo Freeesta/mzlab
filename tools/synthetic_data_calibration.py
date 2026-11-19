@@ -36,8 +36,9 @@ def calibration_series(out: Path, seed: int = 11) -> tuple[Path, Path]:
         conc = "" if role in ("sample", "blank") else f"{x:g}".replace(".", ",")
         stds.append(f"{sample};{level};{conc};{'ng/mL' if conc else ''};{role}")
     r, s = out / "responses.csv", out / "standards.csv"
-    r.write_text("\n".join(resp) + "\n", encoding="utf-8")
-    s.write_text("\n".join(stds) + "\n", encoding="utf-8")
+    # bytes, not write_text: on Windows text mode would turn every \n into \r\n and the files would differ from the committed ones
+    r.write_bytes(("\n".join(resp) + "\n").encode("utf-8"))
+    s.write_bytes(("\n".join(stds) + "\n").encode("utf-8"))
     return r, s
 
 

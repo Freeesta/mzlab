@@ -369,8 +369,12 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
     if shutil.which("cargo") and any("cargo" in (E2E / f"{n}.py").read_text(encoding="utf-8") for n in todo):      # the tests that call `cargo run` would each wait on cargo's build-folder lock, or rebuild a stale tree, inside the timeout of their own: build the two binaries once
         for pkg in (["-p", "mzlab-cli"], ["-p", "mzlab-feat-wasm", "--example", "native"]):
             rc, _out, dt = sh(["cargo", "build", "--release", "-q", *pkg], LOG / "precompila.log", 3000, env=env)
+            print(f"[{time.time() - T0:5.0f} s] cargo build {' '.join(pkg)} before the e2e: rc {rc}, {dt:.0f} s", file=sys.stderr, flush=True)      # the CI log shows what the build cost
             if rc:
                 results.append((f"cargo build {' '.join(pkg)} (before the e2e)", "FAIL", dt, ["see .verifica/log/precompila.log"])); return
+        exe = ROOT / "target" / "release" / ("mzlab-cli.exe" if os.name == "nt" else "mzlab-cli")
+        if exe.is_file():      # the tests start this binary (tests_e2e/lib.py cli_command) instead of a `cargo run` each
+            env["MZLAB_CLI"] = env_sint["MZLAB_CLI"] = str(exe)
     # every test takes a free port and its own work folder (tests_e2e/lib.py), the site tests too: they all run in the same pool, the slowest first
     from concurrent.futures import ThreadPoolExecutor
     slow = [n for n in SLOW if n in todo]

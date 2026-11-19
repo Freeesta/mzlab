@@ -5,6 +5,7 @@ give the same bytes; the default baseline stays zero; light and dark theme on a 
 # covers: mzlab/web/integra-base.js, mzlab/web/integra-estremi.js
 import sys, os, subprocess, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+from cli_cmd import cli_command
 from lib_hr import load
 import numpy as np
 import dati_sintetici as ds
@@ -17,7 +18,7 @@ def step(name, fn):
 D = HERE / "shots" / "integra_estremi_tmp"; D.mkdir(parents=True, exist_ok=True)
 LRF = D / "B_FullMass-t30.mzML"
 ds.full_scan(LRF, 30, np.random.default_rng(2026))
-CLI = ["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--"]
+CLI = cli_command()
 PN = "E.panels.find(q=>q.type==='xic')"
 IT = PN + ".ints[0]"
 SKIP = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
