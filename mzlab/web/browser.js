@@ -112,7 +112,7 @@
       if (window.ERRORI && window.ERRORI.segnala) window.ERRORI.segnala(e, "engine");
       // the technical text stays in MZLAB_LR_ERR and the console: the screen speaks the language of the page
       if (e && e.key) fail(e.key);
-      else if (e && e.dead && !(window.MZLAB_RUST && window.MZLAB_RUST.offKey === "error.engineOffMemory")) {
+      else if (e && e.dead && !(window.MZLAB_RUST && window.MZLAB_RUST.offKey === "error.engineOffMemory") && await (window.MZLAB_RUST && window.MZLAB_RUST.up) !== false) {       // up false: the .wasm itself is missing or does not compile (a build without it): clearing the cache cannot help
         // the engine died at start (and its restart too): a stored copy of the site of two deploys is the usual cause. Clear it and reload once; a second failure says so
         console.error("[mzLab] engine start failed", e);
         phase({ key: "load.engine.refreshing", pct: null });
