@@ -39,7 +39,7 @@
 | larghezza dei picchi | FWHM delle tracce più forti, P10–P90 | in secondi |
 | deriva RT | RT delle tracce presenti in tutti i QC (o in tutti i file) contro l'ordine di iniezione | serve ≥ 3 file |
 | deriva di intensità | mediana delle aree delle tracce comuni nei QC | |
-| ruoli | `campioni/2` (proposte dai nomi), risposte dell'utente | i nomi sono una proposta, mai una prova |
+| ruoli | `samples/1` (proposte dai nomi), risposte dell'utente | i nomi sono una proposta, mai una prova |
 | ordine di iniezione | data di creazione del campione (`metodo/1` `file_creato`) | ora locale dello strumento, senza fuso |
 
 ## 4. Dal tipo di acquisizione al modello di piano
@@ -90,7 +90,7 @@ Valori tipici di riferimento: impostazioni documentate di XCMS centWave (`ppm`, 
 ## 6. Domande che l'assistente fa quando un segnale manca
 
 - Matrice (acqua, suolo, tessuto, soluzione standard): cambia rumore atteso e filtri sui bianchi.
-- Bianchi e QC: quali file, se `campioni/2` non li ha riconosciuti o ne ha proposti con confidenza bassa.
+- Bianchi e QC: quali file, se `samples/1` non li ha riconosciuti o ne ha proposti con confidenza bassa.
 - Composti attesi: genitore (formula o m/z, mai obbligatoria la struttura), standard interni (per la deriva RT).
 - Obiettivo: screening non mirato, prodotti di trasformazione, quantificazione, solo controllo qualità.
 - Gruppi o condizioni (tempi, trattamenti): per `table.stats` e `min_detected`.

@@ -61,7 +61,7 @@
       const bytes = new Uint8Array(await item.file.arrayBuffer()), data = G.PIPEV.readFeat(bytes), { inputs, names, pol } = F.featMeta(data.meta);
       // the roles of the files come from the sample list of the plan; without it the table opens as before and the line says why
       const { cs, note } = F.samplesFor(F.current, names);
-      const session = await G.PIPEQC.open({ base: G.QTOOLS.ctx.base, bytes, names, inputs, campioni: cs, pol, pool: G.ATTRIBUTIO_CORE.pool });
+      const session = await G.PIPEQC.open({ base: G.QTOOLS.ctx.base, bytes, names, inputs, samples: cs, pol, pool: G.ATTRIBUTIO_CORE.pool });
       say.textContent = `${data.rows.toLocaleString("en")} rows in ${data.files} files.${note ? " " + note : ""}`;
       /** @type {any} */ let table = null;
       const fam = F.familyLoader(session, () => { if (table) table.redraw(); }), hooks = F.familyHooks(fam, { names, pol });

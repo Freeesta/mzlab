@@ -2,8 +2,8 @@
 // @ts-strict
 // Worker of the assistant (module worker): loads the Rust module `wasm-feat/llm/` (manifest, SHA-256 checked) on the first message and only then. Builds each request and decodes
 // each answer with it; the bytes travel over a MessagePort to/from the iframe `llm/trasporto.html`, which owns the key. The transport `replay` answers from a recording and never uses the iframe.
-// Page -> worker: init, port, request, send (a conversation, or a ready `request` of a subagent), abort, assist.files, assist.on, assist.request, assist.check, assist.readers, assist.state, assist.reading, sub.replay, replay.load, replay.reset, chart.views, chart.make, chart.presets (charts: grafico/1, docs/agenti/llm.md), inspect.build, params.propose (the facts without a model: ispezione/1, proposta-param/1), agent.new, agent.in (the loop of the assistant: llm-agente.js). Worker -> page: {id, ok, ...} per call and {id, event} per normalized event.
-// The provider of the public demo (`mzlab-demo`): its conversations use the demo catalog `strumenti-demo-1.json`, and each of its requests leaves through `demo_send` of Rust (the host of
+// Page -> worker: init, port, request, send (a conversation, or a ready `request` of a subagent), abort, assist.files, assist.on, assist.request, assist.check, assist.readers, assist.state, assist.reading, sub.replay, replay.load, replay.reset, chart.views, chart.make, chart.presets (charts: grafico/1, docs/agenti/llm.md), inspect.build, params.propose (the facts without a model: inspection/1, param-proposal/1), agent.new, agent.in (the loop of the assistant: llm-agente.js). Worker -> page: {id, ok, ...} per call and {id, event} per normalized event.
+// The provider of the public demo (`mzlab-demo`): its conversations use the demo catalog `tools-demo-1.json`, and each of its requests leaves through `demo_send` of Rust (the host of
 // proxy-host.js in place of the placeholder, the session header); with an empty host nothing leaves. The spend headers of the proxy reach the page as {id, spend}.
 import { PROXY_HOST } from "./proxy-host.js";
 /** @typedef {{request: (conv: string) => string, replay_load: (text: string, strict: boolean) => number, replay_respond: (conv: string) => string, replay_reset: () => void}} Llm */
@@ -16,7 +16,7 @@ const DEMO = "mzlab-demo";
 /** the demo catalog and its builder, fetched on the first conversation of the demo @type {Promise<{text: string, llm: Llm}> | null} */
 let demoTools = null;
 const loadDemo = () => demoTools || (demoTools = (async () => {
-  const r = await fetch(new URL("strumenti-demo-1.json", import.meta.url));
+  const r = await fetch(new URL("tools-demo-1.json", import.meta.url));
   if (!r.ok) throw { key: "err.llm.module", params: { reason: "tools" } };
   const text = await r.text();
   return { text, llm: new mod.Llm(text) };
@@ -40,7 +40,7 @@ const load = async () => {
   if ((await sha256(bytes)) !== entry.sha256) throw { key: "err.llm.module", params: { reason: "sha256" } };
   mod = await import(/* @vite-ignore */ new URL(entry.js, root).href);
   await mod.default({ module_or_path: bytes });
-  const tools = await fetch(new URL("strumenti-1.json", import.meta.url));
+  const tools = await fetch(new URL("tools-1.json", import.meta.url));
   if (!tools.ok) throw { key: "err.llm.module", params: { reason: "tools" } };
   toolsText = await tools.text();
   llm = new mod.Llm(toolsText);
@@ -54,7 +54,7 @@ const loadAssist = () => assistFiles || (assistFiles = (async () => {
     if (!r.ok) throw { key: "err.llm.module", params: { reason: "assist" } };
     return r.text();
   };
-  const roles = await get("assist-ruoli-1.json");
+  const roles = await get("assist-roles-1.json");
   const j = JSON.parse(roles), phase = j.orchestrator && j.orchestrator.phase_prompt;
   const names = [...new Set([...j.roles.map((/** @type {{prompt: string}} */ r) => r.prompt), ...(phase ? [phase] : [])])];
   return { roles, files: await Promise.all(names.map(async n => /** @type {[string, string]} */ ([n, await get(String(n))]))) };

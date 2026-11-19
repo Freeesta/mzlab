@@ -283,7 +283,7 @@ fn field(name: &str, value: impl ToString) -> Field {
     }
 }
 
-/// The header of the mzML with the `metodo/1` document in the run: the method (pumps, gradient, detectors) travels in the mzML, as for `.raw` and `.D`,
+/// The header of the mzML with the `method/1` document in the run: the method (pumps, gradient, detectors) travels in the mzML, as for `.raw` and `.D`,
 /// so the page reads it back from a converted file.
 fn with_method(l: &mut WiffReader, c: usize) -> Result<Header> {
     let mut h = file_header(l, c)?;

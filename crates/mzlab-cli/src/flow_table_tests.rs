@@ -102,7 +102,7 @@ fn the_plan_gives_the_view_of_the_page() {
 }
 
 #[test]
-fn campioni_2_gives_the_same_view_and_a_rule_that_cannot_be_read_fails() {
+fn the_view_of_a_samples_document_is_the_pages_and_a_rule_that_cannot_be_read_fails() {
     let d = dir("c2");
     let t = table();
     std::fs::write(d.join("table.mzfeat"), &t).unwrap();
@@ -112,11 +112,11 @@ fn campioni_2_gives_the_same_view_and_a_rule_that_cannot_be_read_fails() {
         .collect();
     std::fs::write(
         d.join("samples.json"),
-        core_samples::to_json(&core_samples::proponi(&named)),
+        core_samples::to_json(&core_samples::propose(&named)),
     )
     .unwrap();
     let got = run(&d, r#"{"blank_ratio":3}"#).unwrap();
-    let s1 = samples::to_json(&propose(&files()));
+    let s1 = core_samples::to_json(&core_samples::propose(&named));
     assert_eq!(
         got,
         page(
@@ -155,18 +155,18 @@ fn the_nts_rules_read_the_batches_of_campioni_3_and_match_the_page() {
     let d = dir("nts");
     let t = table();
     std::fs::write(d.join("table.mzfeat"), &t).unwrap();
-    // two blanks (one per batch) and three samples; the samples file is campioni/3 with the batch of each file
+    // two blanks (one per batch) and three samples; the samples file is samples/1 with the batch of each file
     let named: Vec<_> = files()
         .into_iter()
         .map(|(n, s)| (n, s, String::new()))
         .collect();
-    let mut cs = core_samples::proponi(&named);
+    let mut cs = core_samples::propose(&named);
     for (c, b) in cs.iter_mut().zip(["B1", "B1", "B2", "B2"]) {
         c.batch = b.into();
     }
-    let samples = core_samples::to_json3(&core_samples::Table {
-        campioni: cs,
-        colonne: Vec::new(),
+    let samples = core_samples::table_to_json(&core_samples::Table {
+        samples: cs,
+        columns: Vec::new(),
     });
     std::fs::write(d.join("samples.json"), &samples).unwrap();
     let params = r#"{"blank_ratio":3,"blank_stat":"max","blank_match":"batch","min_replicate_fraction":0.5,"normalize":"istd","istd_id":1,"blank_keep_istd":true}"#;
@@ -194,7 +194,7 @@ fn the_nts_rules_read_the_batches_of_campioni_3_and_match_the_page() {
 }
 
 fn samples_text_v1(doc: &str) -> String {
-    mzlab_ops::run::table::pol::samples_v1(doc.as_bytes()).unwrap()
+    doc.to_string()
 }
 
 /// Two rows with the same blank area (1e6) and a sample area of 2e6: the blank cell of the first was filled by the gap filling, the one of the second was detected.

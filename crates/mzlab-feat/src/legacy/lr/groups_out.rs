@@ -1,5 +1,5 @@
 //! The block `gruppi` of the summary (`gruppi/1`, `docs/agenti/groups.md`) for a series that compares conditions: the rows of the Dig on the cells of
-//! the ONE table of the pipeline (no second peak search, no new alignment), the roles of the columns as `campioni/2` and the options of the settings.
+//! the ONE table of the pipeline (no second peak search, no new alignment), the roles of the columns as `samples/1` and the options of the settings.
 //! A series with fewer than two conditions has no block.
 
 use crate::sortc::SortC;
@@ -13,7 +13,7 @@ use crate::table::CELL_ABSENT;
 /// Mass of the proton (u): the neutral mass of a row is its m/z minus it in ESI+ and plus it in ESI-.
 const PROTON: f64 = mzlab_core::elements::PROTON_6DP;
 
-/// A column of the Dig as a sample of `campioni/2` (role from the kind and the time, condition and replicate as the page gave them).
+/// A column of the Dig as a sample of `samples/1` (role from the kind and the time, condition and replicate as the page gave them).
 pub fn sample(f: &FileIn, rank: usize) -> Sample {
     let kind = match f.kind.as_str() {
         "blank" => "blank",

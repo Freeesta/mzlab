@@ -19,6 +19,6 @@ export function drawGraph(/** @type {HTMLElement} */ host, /** @type {any} */ j,
   const dr = own ? drawingsOf() : { root: null, byId: new Map() };
   return drawVista(host, j, cb, {
     t, sel, mode: opts.mode || (own ? G.view : "tree"), minRel: own ? G.minRel : 0, maxLevel: own ? G.maxLevel : 0, bestOnly: own && G.bestOnly, collapsed: own ? G.collapsed : new Set(),
-    chosen, proveText: p => t(/** @type {any} */ (TXT.prove)[p]), ruleLabel: a => arcLabel(j, a, t), drawing: id => dr.byId.get(id) || null, root: dr.root,
+    chosen, proveText: p => t(/** @type {any} */ (TXT.proofs)[p]), ruleLabel: a => arcLabel(j, a, t), drawing: id => dr.byId.get(id) || null, root: dr.root,
   }).svg;
 }

@@ -217,7 +217,7 @@
   },
   "mzml:instrument:instrument serial number": {
    "valore": "INVENTED1",
-   "metodo": "strumento.serie"
+   "metodo": "instrument.series"
   },
   "mzml:sourceFile:nome": {
    "valore": "sintetico.raw"
@@ -233,7 +233,7 @@
   },
   "mzml:run@startTimeStamp": {
    "valore": "2026-01-01T00:00:00Z",
-   "metodo": "origine.file_creato"
+   "metodo": "origin.file_created"
   },
   "mzml:run@id": {
    "valore": "Run_sintetico_ddaPOS"

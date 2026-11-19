@@ -12,10 +12,11 @@ use mzlab_core::json::Out;
 
 use crate::convert_entries::{entries, Entry};
 pub(crate) use crate::convert_help::HELP;
+use crate::convert_report::fail;
 use crate::convert_report::{compression_sets, head_of, partial_lines, report, Item};
 use crate::flow::{steps, DoneFn, FileRunner};
 use crate::flow_base::convert_file;
-use crate::flow_run::{apply_set, fail, fill_inputs, prepare, problem_text, run_checked};
+use crate::flow_run::{apply_set, fill_inputs, prepare, problem_text, run_checked};
 use crate::flow_set::{digest_known, is_set_folder, known_sha};
 use crate::Outcome;
 
@@ -299,7 +300,7 @@ fn summary(items: &[Item], out: &Path) -> Outcome {
             Item::Failed { .. } => None,
         })
         .collect();
-    // what the readers could not read (`metodo/1.avvisi`), one note per entry, as the Method window lists it
+    // what the readers could not read (`method/1.warnings`), one note per entry, as the Method window lists it
     let notes: String = items
         .iter()
         .flat_map(|i| match i {
@@ -338,6 +339,7 @@ fn summary(items: &[Item], out: &Path) -> Outcome {
         code,
         stdout: stdout.into_bytes(),
         stderr,
+        error: None,
     }
 }
 
@@ -418,13 +420,7 @@ fn make_work(work: &Path, out: &Path) -> Result<(), Outcome> {
 pub fn run(args: Vec<String>) -> Outcome {
     let a = match parse_args(args) {
         Ok(Some(a)) => a,
-        Ok(None) => {
-            return Outcome {
-                code: 0,
-                stdout: format!("{HELP}\n").into_bytes(),
-                stderr: String::new(),
-            }
-        }
+        Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => return fail(2, &e, "mzlab-cli convert --help"),
     };
     let Some(out) = a.out.clone() else {
@@ -447,7 +443,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     let list = match entries(&units, a.sample.as_deref()) {
         Ok(l) => l,
-        Err(e) => return crate::sample_select::fail(&e, false),
+        Err(e) => return crate::sample_select::fail(&e),
     };
     if let Some(to) = overwrites(&list, &out) {
         return fail(

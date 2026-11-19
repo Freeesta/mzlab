@@ -115,28 +115,28 @@ fn the_tables_read_like_the_graph() {
     let rows = |t: &str| t.lines().count() - 1;
 
     let nodes = run(&d, "msn.table_export", r#"{"view":"nodes"}"#, "csv");
-    assert_eq!(rows(&nodes), count("nodi"));
-    assert!(nodes.contains("n1,2,217.11998,0.00,1,23.40,C12H15N3O,-4.55,unica,1,false,"));
+    assert_eq!(rows(&nodes), count("nodes"));
+    assert!(nodes.contains("n1,2,217.11998,0.00,1,23.40,C12H15N3O,-4.55,single,1,false,"));
 
     // the default table: one row per measure of every arc, with the loss and its formula
     let mods = run(&d, "msn.table_export", "{}", "csv");
     let measures: usize = g
-        .get("archi")
+        .get("edges")
         .unwrap()
         .arr()
         .iter()
-        .map(|a| a.get("misure").unwrap().arr().len().max(1))
+        .map(|a| a.get("measurements").unwrap().arr().len().max(1))
         .sum();
     assert_eq!(rows(&mods), measures);
     assert!(mods.contains("n0,305.10000,C14H15N3O5,n1,217.11998,C12H15N3O,87.98002,C2O4,1.18,false,305@cid35,2,cid,35.0,14,23.40"));
 
     let peaks = run(&d, "msn.table_export", r#"{"view":"peaks"}"#, "csv");
     let all: usize = g
-        .get("spettri")
+        .get("spectra")
         .unwrap()
         .arr()
         .iter()
-        .map(|s| s.get("picchi").unwrap().arr().len())
+        .map(|s| s.get("peaks").unwrap().arr().len())
         .sum();
     assert_eq!(rows(&peaks), all);
     let clean = run(
@@ -152,7 +152,7 @@ fn the_tables_read_like_the_graph() {
 #[test]
 fn a_file_that_is_not_a_graph_stops_the_step() {
     let d = dir("d");
-    std::fs::write(d.join("x.json"), r#"{"formato":"other"}"#).unwrap();
+    std::fs::write(d.join("x.json"), r#"{"schema":"other"}"#).unwrap();
     let plan = r#"{"format":"mzflow/2","inputs":[{"name":"x.json","type":"report"}],"steps":[
         {"id":"x","step":"msn.table_export@1","in":{"graph":"file:x.json"}}]}"#;
     let (_, prov) = crate::flow::run_plan(plan.as_bytes(), &d, &d.join("work"), 1, None).unwrap();

@@ -17,11 +17,11 @@ fn synthetic_json(order: &[usize]) -> String {
 }
 
 fn view_of(j: &str) -> Value {
-    parse(j.as_bytes()).unwrap().get("vista").unwrap().clone()
+    parse(j.as_bytes()).unwrap().get("view").unwrap().clone()
 }
 
 fn node<'a>(v: &'a Value, id: &str) -> &'a Value {
-    v.get("nodi")
+    v.get("nodes")
         .unwrap()
         .arr()
         .iter()
@@ -33,48 +33,48 @@ fn node<'a>(v: &'a Value, id: &str) -> &'a Value {
 fn the_view_says_levels_intensities_and_the_best_path_of_each_ion() {
     let v = view_of(&synthetic_json(&[0, 1, 2, 3]));
     assert_eq!(
-        v.get("algoritmo").and_then(|x| x.str()),
+        v.get("algorithm").and_then(|x| x.str()),
         Some("best-path/1")
     );
     let n = |id: &str, k: &str| node(&v, id).get(k).unwrap().clone();
     // the root: MS1 only, no parent
-    assert_eq!(n("n0", "livelli").arr().len(), 1);
+    assert_eq!(n("n0", "levels").arr().len(), 1);
     assert!(node(&v, "n0")
         .get("best")
         .unwrap()
-        .get("da")
+        .get("from")
         .unwrap()
         .is_null());
     // n1 is seen in the MS2 of the root and in the MS3 of n3: two levels, two precursors, the nearest path wins
     let n1 = node(&v, "n1");
     let l: Vec<f64> = n1
-        .get("livelli")
+        .get("levels")
         .unwrap()
         .arr()
         .iter()
         .filter_map(|x| x.f64())
         .collect();
     assert_eq!(l, [2.0, 3.0]);
-    assert_eq!(n1.get("entranti").and_then(|x| x.f64()), Some(2.0));
-    assert_eq!(n1.get("comune").and_then(|x| x.bool()), Some(true));
+    assert_eq!(n1.get("incoming").and_then(|x| x.f64()), Some(2.0));
+    assert_eq!(n1.get("common").and_then(|x| x.bool()), Some(true));
     assert_eq!(
-        n1.get("best").unwrap().get("da").and_then(|x| x.str()),
+        n1.get("best").unwrap().get("from").and_then(|x| x.str()),
         Some("n0")
     );
     // rel = the most intense measure on the arc of its best path (the same number as `misure[].rel`)
     let g = parse(synthetic_json(&[0, 1, 2, 3]).as_bytes()).unwrap();
     let edge = g
-        .get("archi")
+        .get("edges")
         .unwrap()
         .arr()
         .iter()
         .find(|a| {
-            a.get("da").and_then(|x| x.str()) == Some("n0")
-                && a.get("a").and_then(|x| x.str()) == Some("n1")
+            a.get("from").and_then(|x| x.str()) == Some("n0")
+                && a.get("to").and_then(|x| x.str()) == Some("n1")
         })
         .unwrap();
     let rel = edge
-        .get("misure")
+        .get("measurements")
         .unwrap()
         .arr()
         .iter()
@@ -89,16 +89,16 @@ fn the_same_inputs_give_the_same_bytes_and_the_view_completes_an_old_graph() {
     assert_eq!(a, synthetic_json(&[0, 1, 2, 3]));
     assert_eq!(a, synthetic_json(&[3, 2, 1, 0]));
     assert_eq!(a, synthetic_json(&[2, 0, 3, 1]));
-    let without = &a[..a.find(",\"vista\":").unwrap()];
+    let without = &a[..a.find(",\"view\":").unwrap()];
     let senza = format!("{without}}}");
     assert_eq!(completa(&senza).unwrap(), a);
-    // a graph that has the view is returned as it is; a keyed error for what is not an msngrafo/1
+    // a graph that has the view is returned as it is; a keyed error for what is not an msn-graph/1
     assert_eq!(completa(&a).unwrap(), a);
     for brutto in [
         "",
         "[]",
-        "{\"formato\":\"msntree/1\"}",
-        "{\"formato\":\"msngrafo/1\"}",
+        "{\"schema\":\"msntree/1\"}",
+        "{\"schema\":\"msn-graph/1\"}",
     ] {
         assert_eq!(
             completa(brutto).err().unwrap().key,
@@ -113,7 +113,7 @@ fn keys_added_later_stay_before_the_view() {
     let o = con(Some("C8H10N4O2+H"));
     let (g, j) = shifted_graph(&o, &[0, 1, 2, 3], false, 0.0);
     let k = with_interpretation(&j, &g, PPM_PERDITA);
-    assert!(k.ends_with(&j[j.find(",\"vista\":").unwrap()..]));
+    assert!(k.ends_with(&j[j.find(",\"view\":").unwrap()..]));
     assert_eq!(completa(&k).unwrap(), k);
 }
 

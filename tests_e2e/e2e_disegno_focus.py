@@ -1,4 +1,4 @@
-"""Draw: Ketcher's clipboard textarea is not focused before the first gesture in the frame (Chromium reports that as a policy violation), and is after it."""
+"""Draw: Ketcher's clipboard textarea is not focused before the first gesture in the frame (Chromium reports that as a policy violation), and is after it. A direct #/draw address starts the frame before draw.js exists: the guard must already be there (first-paint.js)."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 r = Run(port=8997, wd="/tmp/wd_disegno_focus")
@@ -6,6 +6,9 @@ fail = []
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
+        # every focus() that reaches the browser inside the Ketcher frame is logged with the activation state of the frame (the guard returns before this wrapper)
+        pg.context.add_init_script("(() => { if (!location.href.includes('ketcher/index.html')) return; window.__fk = []; const o = HTMLElement.prototype.focus;"
+                                   " HTMLElement.prototype.focus = function (x) { __fk.push([String(this.className), navigator.userActivation.hasBeenActive]); return o.call(this, x); }; })()")
         pg.goto(f"http://127.0.0.1:{r.port}/#/draw")
         pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
         T = ("(() => { const d = document.querySelector('#kframe').contentDocument; let t = d.querySelector('textarea.cliparea');"
@@ -16,6 +19,8 @@ try:
         pg.reload()        # a new document starts without user activation (the first visit's evaluate calls of the harness gave it)
         ev("new Promise(r => { const i = setInterval(() => { if (window.TPDraw && TPDraw.ready()) { clearInterval(i); r(1); } }, 100); })")       # in the page: no gesture, no pause here
         if ev(T): fail.append("the clipboard textarea took focus before any gesture")
+        early = ev("JSON.stringify(document.querySelector('#kframe').contentWindow.__fk.filter(e => e[0].includes('cliparea') && !e[1]))")
+        if early != "[]": fail.append(f"Ketcher focused its clipboard textarea in the frame before any gesture (the cold start of a direct #/draw address): {early}")
         box = pg.locator("#kframe").bounding_box(); pg.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
         if not pg.evaluate(T): fail.append("the clipboard textarea cannot be focused after a click in the frame")
 finally:

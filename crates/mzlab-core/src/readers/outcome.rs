@@ -1,5 +1,5 @@
 //! The account of a read (`Losses`): how many scans, points or chromatograms the file declares and how many were read, with the key of the cause, so
-//! that a partial result is never silent: the conversion writes the counts in `conv/1`, the CLI exits with 3, the page shows them.
+//! that a partial result is never silent: the conversion writes the counts in `conversion/1`, the CLI exits with 3, the page shows them.
 
 use super::{ChromatogramEntry, Reader, ScanEntry};
 use crate::error::Result;

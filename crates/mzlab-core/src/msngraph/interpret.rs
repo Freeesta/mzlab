@@ -1,11 +1,11 @@
-//! The interpretation of the arcs of the graph `msngrafo/1`: each neutral loss gets its common name, formula, exact mass and error, with the reason
+//! The interpretation of the arcs of the graph `msn-graph/1`: each neutral loss gets its common name, formula, exact mass and error, with the reason
 //! and a confidence, and the activations that observed it. Evidence, never a verdict: the user can always override it. Used by `mzlab-cli msn-graph`.
 
 use super::Graph;
 use crate::elements::{fmt, mass, parse_formula};
 use crate::json::{round, Out};
 
-/// Version of the `interpretazione` key.
+/// Version of the `interpretation` key.
 pub const VERSION: u32 = 1;
 /// Default window of the loss match by mass, ppm of the m/z of the precursor.
 pub const PPM: f64 = 10.0;
@@ -167,7 +167,7 @@ fn edge_loss(
 }
 
 fn loss_json(o: &mut Out, p: &EdgeLoss) {
-    o.raw("{\"nome\":");
+    o.raw("{\"name\":");
     match p.name {
         Some(n) => o.str(n),
         None => o.raw("null"),
@@ -177,13 +177,13 @@ fn loss_json(o: &mut Out, p: &EdgeLoss) {
         Some(f) => o.str(f),
         None => o.raw("null"),
     };
-    o.raw(",\"massa\":")
+    o.raw(",\"mass\":")
         .num(round(p.mass, 5))
-        .raw(",\"errore_ppm\":")
+        .raw(",\"error_ppm\":")
         .num(round(p.ppm_error, 2))
-        .raw(",\"fonte\":")
+        .raw(",\"source\":")
         .str(p.provenance)
-        .raw(",\"confidenza\":")
+        .raw(",\"confidence\":")
         .str(p.confidence)
         .raw(",\"alternative\":[");
     for (i, f) in p.alternative.iter().enumerate() {
@@ -192,25 +192,25 @@ fn loss_json(o: &mut Out, p: &EdgeLoss) {
     o.raw("]}");
 }
 
-/// The value of the key `interpretazione` (see `docs/schemi/msngrafo-1.json`): keys in a fixed order, rounded numbers.
+/// The value of the key `interpretation` (see `docs/schemi/msn-graph-1.json`): keys in a fixed order, rounded numbers.
 pub fn interpretation_json(v: &[EdgeInterp], ppm: f64) -> String {
     let mut o = Out::default();
-    o.raw("{\"versione\":")
+    o.raw("{\"version\":")
         .int(VERSION as i64)
         .raw(",\"ppm\":")
         .num(ppm)
-        .raw(",\"archi\":[");
+        .raw(",\"edges\":[");
     for (i, a) in v.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"da\":")
+            .raw("{\"from\":")
             .str(&format!("n{}", a.da))
-            .raw(",\"a\":")
+            .raw(",\"to\":")
             .str(&format!("n{}", a.a))
-            .raw(",\"attivazioni\":[");
+            .raw(",\"activations\":[");
         for (j, t) in a.attivazioni.iter().enumerate() {
             o.raw(if j > 0 { "," } else { "" }).str(t);
         }
-        o.raw("],\"perdita\":");
+        o.raw("],\"loss\":");
         match &a.loss {
             Some(p) => loss_json(&mut o, p),
             None => {
@@ -223,11 +223,11 @@ pub fn interpretation_json(v: &[EdgeInterp], ppm: f64) -> String {
     o.0
 }
 
-/// `grafo` (the text of an `msngrafo/1`) with the key `interpretazione` added at the end; the text of a graph without it does not change.
+/// `grafo` (the text of an `msn-graph/1`) with the key `interpretation` added at the end; the text of a graph without it does not change.
 pub fn with_interpretation(graph: &str, g: &Graph, ppm: f64) -> String {
     super::view::with_key(
         graph,
-        "interpretazione",
+        "interpretation",
         &interpretation_json(&interpreta(g, ppm), ppm),
     )
 }

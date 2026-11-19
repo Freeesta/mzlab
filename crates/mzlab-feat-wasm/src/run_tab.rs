@@ -52,7 +52,7 @@ impl Grouped {
     }
 }
 
-/// The `runorder/1` text of the sample table `samples`; `design` holds the batches (`disegno/1`), empty for none (the batch of the sample table). `params_json` is the step's parameters merged with its defaults.
+/// The `runorder/1` text of the sample table `samples`; `design` holds the batches (`design/1`), empty for none (the batch of the sample table). `params_json` is the step's parameters merged with its defaults.
 /// Errors are JSON `{"error_key","params"}` texts.
 #[wasm_bindgen]
 pub fn flow_runorder(
@@ -65,7 +65,7 @@ pub fn flow_runorder(
     mzlab_feat::runorder::runorder_text(&params, samples, design).map_err(crate::js_err)
 }
 
-/// The Markdown methods text of `run`, a `corsa/1` text.
+/// The Markdown methods text of `run`, a `run-report/1` text.
 #[wasm_bindgen]
 pub fn flow_methods(params_json: &str, run: &[u8]) -> std::result::Result<String, JsValue> {
     let params = json_params(params_json).map_err(crate::js_err)?;

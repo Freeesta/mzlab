@@ -1,4 +1,4 @@
-//! The UV detector of a Thermo `.raw` acquired through Chromeleon, for `metodo/1.rivelatori`: the lines of the instrument script that give the channels
+//! The UV detector of a Thermo `.raw` acquired through Chromeleon, for `method/1.detectors`: the lines of the instrument script that give the channels
 //! (`UV_VIS_1.Wavelength = 260.0 [nm]`, `.Bandwidth`, `.RefWavelength`, `.RefBandwidth`), the 3D field (`3DFIELD.MinWavelength`, `.MaxWavelength`, `.BunchWidth`) and the
 //! sampling rate (`Data_Collection_Rate = 2 [Hz]`). The first line of each key wins (later lines change the value during the run).
 
@@ -19,7 +19,7 @@ fn first(blocks: &[String], key: &str) -> Option<f64> {
         .find_map(|l| number_of(l, key))
 }
 
-/// The `rivelatori` array (`None`: the method has no UV lines).
+/// The `detectors` array (`None`: the method has no UV lines).
 pub fn section(blocks: &[String]) -> Option<V> {
     let channels: Vec<V> = (1..=8)
         .filter_map(|k| {
@@ -27,15 +27,15 @@ pub fn section(blocks: &[String]) -> Option<V> {
             obj(vec![
                 ("nm", num(Some(nm))),
                 (
-                    "banda_nm",
+                    "bandwidth_nm",
                     num(first(blocks, &format!("UV_VIS_{k}.Bandwidth"))),
                 ),
                 (
-                    "riferimento_nm",
+                    "reference_nm",
                     num(first(blocks, &format!("UV_VIS_{k}.RefWavelength"))),
                 ),
                 (
-                    "banda_riferimento_nm",
+                    "reference_bandwidth_nm",
                     num(first(blocks, &format!("UV_VIS_{k}.RefBandwidth"))),
                 ),
             ])
@@ -44,9 +44,9 @@ pub fn section(blocks: &[String]) -> Option<V> {
     let rate = first(blocks, "Data_Collection_Rate");
     let uv = (!channels.is_empty()).then(|| {
         obj(vec![
-            ("tipo", text("UV_VIS")),
-            ("frequenza_Hz", num(rate)),
-            ("canali", Some(V::Arr(channels))),
+            ("type", text("UV_VIS")),
+            ("frequency_Hz", num(rate)),
+            ("channels", Some(V::Arr(channels))),
         ])
     });
     let (lo, hi) = (
@@ -55,10 +55,10 @@ pub fn section(blocks: &[String]) -> Option<V> {
     );
     let field = lo.zip(hi).and_then(|(lo, hi)| {
         obj(vec![
-            ("tipo", text("PDA")),
+            ("type", text("PDA")),
             ("nm", Some(V::Arr(vec![V::Num(lo), V::Num(hi)]))),
-            ("passo_nm", num(first(blocks, "3DFIELD.BunchWidth"))),
-            ("frequenza_Hz", num(rate)),
+            ("step_nm", num(first(blocks, "3DFIELD.BunchWidth"))),
+            ("frequency_Hz", num(rate)),
         ])
     });
     let all: Vec<V> = uv.flatten().into_iter().chain(field).collect();
@@ -80,7 +80,7 @@ mod tests {
     fn channels_field_and_rate_are_read() {
         let v = section(&[SCRIPT.to_string()]).unwrap().json();
         assert!(
-            v.contains(r#""tipo": "UV_VIS""#) || v.contains(r#""tipo":"UV_VIS""#),
+            v.contains(r#""type": "UV_VIS""#) || v.contains(r#""type":"UV_VIS""#),
             "{v}"
         );
         assert!(v.contains("260"), "{v}");

@@ -12,7 +12,7 @@ pub struct Ms2Hit {
     pub shared: usize,
 }
 
-/// The entries of an `msnlib/1` text whose precursor is within `ppm` of `mz` (same polarity) and whose best MS2, at any activation or energy, shares
+/// The entries of an `msn-lib/1` text whose precursor is within `ppm` of `mz` (same polarity) and whose best MS2, at any activation or energy, shares
 /// at least `min_shared` peaks with `peaks` `(m/z, intensity)`; most similar first. A feature has no activation label, so every MS2 of the entry counts.
 pub fn search_ms2(
     library: &str,
@@ -33,8 +33,8 @@ pub fn search_ms2(
         peaks: peaks.iter().map(|p| (p.0, p.1, None)).collect(),
     };
     let mut out = Vec::new();
-    for v in lib.get("voci").map_or(&[][..], |x| x.arr()) {
-        let e = read_graph(v.get("grafo").ok_or_else(bad)?)?;
+    for v in lib.get("entries").map_or(&[][..], |x| x.arr()) {
+        let e = read_graph(v.get("graph").ok_or_else(bad)?)?;
         if (e.pol >= 0.0) != positive || ((e.mz - mz) / mz * 1e6).abs() > ppm {
             continue;
         }
@@ -47,7 +47,7 @@ pub fn search_ms2(
         if let Some((entropy, shared)) = best.filter(|b| b.1 >= min_shared) {
             out.push(Ms2Hit {
                 id: text(v.get("id")),
-                ion: text(v.get("ione").and_then(|i| i.get("formula"))),
+                ion: text(v.get("ion").and_then(|i| i.get("formula"))),
                 entropy,
                 shared,
             });

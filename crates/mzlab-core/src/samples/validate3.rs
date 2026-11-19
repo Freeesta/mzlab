@@ -1,4 +1,4 @@
-//! The checks `campioni/3` adds to `valida`: free columns (`missingValue`, `typeMismatch`), the key of a file (`duplicateKey`) and the two
+//! The checks `samples/1` adds to `validate`: free columns (`missingValue`, `typeMismatch`), the key of a file (`duplicateKey`) and the two
 //! polarities of a physical sample (`pairMissing`, `pairMismatch`). Stable codes; the pages put the words.
 
 use super::{sample_id, validate, Sample, Table, Warning};
@@ -20,16 +20,16 @@ fn push(
     });
 }
 
-/// `typeMismatch` on `tempo` (error) when the ID has a time part that is not a number, `unknownCondition` (warning, column `serie`) when
+/// `typeMismatch` on `time` (error) when the ID has a time part that is not a number, `unknownCondition` (warning, column `series`) when
 /// the ID has the shape `MAT-COND-Ttt` with a condition the series does not use.
 fn ids(out: &mut Vec<Warning>, cs: &[Sample]) {
     for (i, c) in cs.iter().enumerate() {
         let info = sample_id::read(&c.sample_id);
         if info.bad_time {
-            push(out, "typeMismatch", "error", i, c, "tempo");
+            push(out, "typeMismatch", "error", i, c, "time");
         }
         if info.unknown_cond {
-            push(out, "unknownCondition", "warning", i, c, "serie");
+            push(out, "unknownCondition", "warning", i, c, "series");
         }
     }
 }
@@ -52,8 +52,8 @@ fn duplicates(out: &mut Vec<Warning>, cs: &[Sample]) {
 }
 
 fn columns(out: &mut Vec<Warning>, t: &Table) {
-    for col in &t.colonne {
-        for (i, c) in t.campioni.iter().enumerate() {
+    for col in &t.columns {
+        for (i, c) in t.samples.iter().enumerate() {
             match c.extra_of(&col.name) {
                 None if col.required => push(out, "missingValue", "error", i, c, &col.name),
                 Some(v) if !col.accepts(v) => push(out, "typeMismatch", "error", i, c, &col.name),
@@ -63,7 +63,7 @@ fn columns(out: &mut Vec<Warning>, t: &Table) {
     }
 }
 
-/// The files of one `campione_id` with a polarity: `pairMissing` (warning, on the first) when only one polarity is there, `pairMismatch`
+/// The files of one `sample_id` with a polarity: `pairMissing` (warning, on the first) when only one polarity is there, `pairMismatch`
 /// (warning, on the first file of the other polarity) when positive and negative differ in time, role or condition.
 fn pairs(out: &mut Vec<Warning>, cs: &[Sample]) {
     let mut ids: Vec<&str> = Vec::new();
@@ -94,12 +94,12 @@ fn pairs(out: &mut Vec<Warning>, cs: &[Sample]) {
     }
 }
 
-/// The findings of `valida` plus the ones of `campioni/3`, in that order.
-pub fn valida3(t: &Table) -> Vec<Warning> {
-    let mut out = validate(&t.campioni);
-    duplicates(&mut out, &t.campioni);
+/// The findings of `validate` plus the ones of `samples/1`, in that order.
+pub fn validate3(t: &Table) -> Vec<Warning> {
+    let mut out = validate(&t.samples);
+    duplicates(&mut out, &t.samples);
     columns(&mut out, t);
-    ids(&mut out, &t.campioni);
-    pairs(&mut out, &t.campioni);
+    ids(&mut out, &t.samples);
+    pairs(&mut out, &t.samples);
     out
 }

@@ -139,6 +139,6 @@ All intentional; no action:
 
 ## Checked and clean
 - i18n: `python3 tools/controlla_i18n.py` → OK; it already fails on an orphan key, so there are no unused keys.
-- Every `docs/agenti/*.md` has its INDICE row (`tools/gate_release.py` enforces it); backticked paths that no longer exist in those docs are run outputs (`corsa.json`, `plan.json`, …), not removed features.
+- Every `docs/agenti/*.md` has its INDICE row (`tools/gate_release.py` enforces it); backticked paths that no longer exist in those docs are run outputs (`report.json`, `plan.json`, …), not removed features.
 - All 31 crates are workspace members with a dependent or a `tools/moduli/*.toml`; no dead `[features]` key; `TP_Mine/{js,files,lazy}` and `flow/{js,lazy}` are globbed by `build_site.py`; all `tests/test_*.py` are collected and all `tests_e2e/e2e*.py` run (`NOT_TESTS = {"lib", "synth"}`).
 - Python reference modules in `mzlab/`, helpers in `tests/` and `tests_e2e/`: all imported by a test or a tool.

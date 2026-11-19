@@ -94,7 +94,7 @@ window.GDND = (() => {
   function release() {
     const was = pending; drag = null; pending = false; stopScroll();
     if (cfg) mark(null);
-    if (was) { renderFileList(); if (typeof renderFiles === "function") renderFiles(); }
+    if (was) renderFileList();
   }
   /** @param {{ kind: string, key: string }} t */
   async function finish(t) {

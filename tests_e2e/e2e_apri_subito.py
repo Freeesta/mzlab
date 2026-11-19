@@ -25,7 +25,7 @@ MANY = tmp / "many"; MANY.mkdir()
 for k in range(51): shutil.copy(LR[0], MANY / f"M_{k:02d}.mzML")
 KINDS = [tmp / "K_mrm.mzML", tmp / "K_ms2.mzML"]; ds.mrm(KINDS[0], 1.0, np.random.default_rng(5), 1); ds.ms2(KINDS[1], np.random.default_rng(6))
 # the proposals of roles and times answer 1 s late; the time of the first progress row is taken at the change of #pick
-HOLD = """(() => { const f = window.fetch; window.fetch = function (u, o) { if (typeof u === 'string' && u.includes('api/campioni/proponi')) return new Promise(r => setTimeout(r, 1000)).then(() => f.call(this, u, o)); return f.call(this, u, o); };
+HOLD = """(() => { const f = window.fetch; window.fetch = function (u, o) { if (typeof u === 'string' && u.includes('api/samples/propose')) return new Promise(r => setTimeout(r, 1000)).then(() => f.call(this, u, o)); return f.call(this, u, o); };
   window.__up = null; window.__pick = null; window.__moved = []; window.__early = []; const d0 = document.querySelector('#drop').getBoundingClientRect().top;
   document.querySelector('#pick').addEventListener('change', () => { window.__pick = performance.now(); }, true);
   // while the files are read and before the first one opens: the drop area never moves; no card shows

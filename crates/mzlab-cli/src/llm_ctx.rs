@@ -1,4 +1,4 @@
-//! `mzlab-cli llm context RUNDIR` writes the `contesto/1` the assistant would get from a run folder; `mzlab-cli llm eval CASES_DIR --replay DIR` scores
+//! `mzlab-cli llm context RUNDIR` writes the `context/1` the assistant would get from a run folder; `mzlab-cli llm eval CASES_DIR --replay DIR` scores
 //! the evaluation cases against their recordings (CI), `--provider ID --key-file F` is for trying a real model by hand (no transport yet).
 //! The logic lives in `mzlab-llm`; this file only reads folders and prints.
 
@@ -58,10 +58,10 @@ fn plan_source(dir: &Path) -> Option<Value> {
 
 fn sources(dir: &Path, hide: bool) -> Value {
     let mut o: Vec<(String, Value)> = vec![
-        ("profile".into(), Value::Str("ricerca".into())),
+        ("profile".into(), Value::Str("research".into())),
         ("hide_names".into(), Value::Bool(hide)),
     ];
-    let run = json(&dir.join("corsa.json"));
+    let run = json(&dir.join("report.json"));
     if let Some(c) = &run {
         let files = c.get("inputs").map_or(&[][..], Value::arr).iter().map(|i| {
             Value::Obj(vec![(
@@ -85,7 +85,7 @@ fn sources(dir: &Path, hide: bool) -> Value {
         let v = if ext == "json" { json(&p) } else { None };
         let format = v
             .as_ref()
-            .and_then(|v| v.get("format").or_else(|| v.get("formato")))
+            .and_then(|v| v.get("format").or_else(|| v.get("schema")))
             .and_then(Value::str)
             .map(String::from);
         match (ext, format.as_deref(), v) {
@@ -97,7 +97,7 @@ fn sources(dir: &Path, hide: bool) -> Value {
                 );
             }
             ("json", Some("annot/1"), Some(v)) => o.push(("annot".into(), v)),
-            ("json", Some("msngrafo/1" | "msngrafo/2"), Some(v)) => o.push(("msn".into(), v)),
+            ("json", Some("msn-graph/1" | "msn-graph/1"), Some(v)) => o.push(("msn".into(), v)),
             _ => {}
         }
     }
@@ -121,6 +121,9 @@ pub(crate) fn context(args: Vec<String>) -> Outcome {
     let Some(dir) = dir else {
         return Outcome::fail("usage: mzlab-cli llm context RUNDIR [--budget N] [--hide-names]");
     };
+    if !Path::new(&dir).is_dir() {
+        return Outcome::fail_error(&mzlab_core::Error::new("err.cli.file").with("path", &dir));
+    }
     match build(&sources(Path::new(&dir), hide), budget) {
         Ok(t) => Outcome::ok((t + "\n").into_bytes()),
         Err(e) => Outcome::fail_error(&e),
@@ -188,6 +191,7 @@ pub(crate) fn eval(args: Vec<String>) -> Outcome {
             )
             .into_bytes(),
             stderr: String::new(),
+            error: None,
         },
     }
 }

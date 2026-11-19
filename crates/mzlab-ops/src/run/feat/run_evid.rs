@@ -25,7 +25,7 @@ use mzlab_feat::tp::{build as build_tp, build_by_role, TpBlock, TpInputs, TpPara
 use super::run::{is_unit, points_and_identity, HypoRun, IDENTITY_BYTES};
 use mzlab_feat::sortc::SortC;
 
-/// `evidence_to` with the roles of the files (`campioni/2`): gate 1 of the view of the products reads them (`tp::build_by_role`).
+/// `evidence_to` with the roles of the files (`samples/1`): gate 1 of the view of the products reads them (`tp::build_by_role`).
 #[allow(clippy::too_many_arguments)]
 pub fn evidence_roles_to<R: ReadAt, W: WriteAt>(
     table: &mut R,

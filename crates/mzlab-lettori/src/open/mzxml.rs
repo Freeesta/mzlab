@@ -1,5 +1,5 @@
 //! An mzXML file (ISB, versions 2.x and 3.x) as a `Lettore`: spectra with level, precursor, polarity and retention time, TIC and BPC chromatograms computed from the scans, the header of the file
-//! as `metodo/1`. The index comes from `<index name="scan">` or from one pass over the bytes (`mzxml_index.rs`); `scansione(c, k)` reads only the bytes of scan `k` (`mzxml_scan.rs`).
+//! as `method/1`. The index comes from `<index name="scan">` or from one pass over the bytes (`mzxml_index.rs`); `scansione(c, k)` reads only the bytes of scan `k` (`mzxml_scan.rs`).
 //! SRM/MRM scans become chromatograms through `mzlab_lettori::srm::SrmFromScans`, which wraps every reader of this crate. Written from the mzXML schema (ISB); not from any program's code.
 
 use std::cell::RefCell;

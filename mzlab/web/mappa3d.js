@@ -166,11 +166,11 @@ function dialogHtml({ f, lv, hr, files, others, V, P, prefs, opt }) {
 <button class="m3d-tog" data-m="tog" aria-label="${T("m3d.side.toggle")}" title="${T("m3d.side.toggle")}">&#9776;</button></div>
 <aside class="m3d-side" aria-label="${T("m3d.side.aria")}"><div class="m3d-top"><b>${T("m3d.title")}</b><button data-m="close" aria-label="${T("m3d.close")}">${T("m3d.close")} (Esc)</button></div>
 <details open><summary>${T("m3d.g.data")}</summary>
-<div class="rw"><label>${T("m3d.file")} <select data-m="file" aria-label="${T("m3d.file")}">${files.map((/** @type {MzFile} */ x) => opt(x.k, f.k, x.label)).join("")}</select></label><span class="muted">MS<sup>${lv}</sup></span></div>
+<div class="rw"><label>${T("m3d.file")} <select data-m="file" aria-label="${T("m3d.file")}">${files.map((/** @type {MzFile} */ x) => opt(x.k, f.k, x.label)).join("")}</select></label><span class="muted">${V.pda ? "DAD" : `MS<sup>${lv}</sup>`}</span></div>
 <div class="rw"><label>${T("m3d.diff")} <select data-m="ref" aria-label="${T("m3d.diff")}"><option value="">${T("ctl.map.diff.none")}</option>${others.map((/** @type {MzFile} */ x) => opt(x.k, V.ref, x.label)).join("")}</select></label>
 <select data-m="norm" aria-label="${T("ctl.map.norm.title")}">${opt("abs", V.norm, T("ctl.map.norm.abs"))}${opt("max", V.norm, T("ctl.map.norm.max"))}${opt("tic", V.norm, T("ctl.map.norm.tic"))}</select></div>
 <div class="rw"><label>RT <input class="mzf" data-m="rt0" inputmode="decimal" aria-label="RT ${T("ctl.range.from")}"> ${T("ctl.range.to")} <input class="mzf" data-m="rt1" inputmode="decimal" aria-label="RT ${T("ctl.range.to")}"> min</label></div>
-<div class="rw"><label><i>m/z</i> <input class="mzf" data-m="mz0" inputmode="decimal" aria-label="m/z ${T("ctl.range.from")}"> ${T("ctl.range.to")} <input class="mzf" data-m="mz1" inputmode="decimal" aria-label="m/z ${T("ctl.range.to")}"></label></div>
+<div class="rw"><label><i>${V.pda ? "nm" : "m/z"}</i> <input class="mzf" data-m="mz0" inputmode="decimal" aria-label="m/z ${T("ctl.range.from")}"> ${T("ctl.range.to")} <input class="mzf" data-m="mz1" inputmode="decimal" aria-label="m/z ${T("ctl.range.to")}"></label></div>
 <div class="rw"><button data-m="apply">${T("m3d.apply")}</button><button data-m="sync" title="${T("m3d.sync.title")}">${T("m3d.sync")}</button></div>
 <div class="rw muted" data-m="res" aria-live="polite"></div></details>
 <details open><summary>${T("m3d.g.rep")}</summary>
@@ -222,10 +222,10 @@ export function open(p, opener) {
   // the 3D takes the background of the 2D panel it was opened from (its own switch stays in the sidebar)
   prefs.bg = p.corr === "auto";
   const savePrefs = () => { prefs[PREF_KEY] = { mode: P.mode, hs: P.hs, ex: P.ex, asp: P.asp, lt: P.lt, fl: P.fl, sig: P.sig, side: P.side }; MAPPA.prefSave(); };
-  const f = a.f, lv = f.lv || 1, hr = !!(window.HR && HR.isHr(f, lv));
+  const f = a.f, lv = f.lv || 1, hr = !a.pda && !!(window.HR && HR.isHr(f, lv));      // a DAD map is optical: axes in nm, no high-resolution mode
   /** @type {any} */
   const V = {                                               // the state of the viewer
-    k: f.k, ref: a.ref ? a.ref.k : null, norm: p.norm || "abs", lv, hr, rt: [a.x0, a.x1], mz: [a.y0, a.y1],
+    pda: !!a.pda, k: f.k, ref: a.ref ? a.ref.k : null, norm: p.norm || "abs", lv, hr, rt: [a.x0, a.x1], mz: [a.y0, a.y1],
     g: null, raw: null, Z: null, zmin: 0, zmax: 1, refv: 1, signed: false, pts: null, cur: null, hover: false, plane: false, playing: 0,
     cam: { az: 35, el: 32, d: 3, t: [0, 0, 0] }, dirty: true, W: 1, H: 1, gen: 0
   };
@@ -233,7 +233,7 @@ export function open(p, opener) {
   const dlg = document.createElement("dialog"); dlg.className = "m3d" + (P.side ? "" : " hid"); dlg.setAttribute("aria-label", T("m3d.title"));
   /** @param {string | number} v @param {unknown} cur @param {string} lab @param {boolean} [dis] */
   const opt = (v, cur, lab, dis) => `<option value="${v}"${String(cur) === String(v) ? " selected" : ""}${dis ? " disabled" : ""}>${EH(lab)}</option>`;
-  const files = scanFiles(tabFiles(p.tab)).filter((/** @type {MzFile} */ x) => x.lv === lv);
+  const files = a.pda ? tabFiles(p.tab).filter((/** @type {MzFile} */ x) => x.pda) : scanFiles(tabFiles(p.tab)).filter((/** @type {MzFile} */ x) => x.lv === lv);
   const others = files.filter((/** @type {MzFile} */ x) => x.k !== f.k);
   dlg.innerHTML = dialogHtml({ f, lv, hr, files, others, V, P, prefs, opt });
   document.body.appendChild(dlg);
@@ -247,7 +247,7 @@ export function open(p, opener) {
   if (window.TDATI) TDATI.addButton(glc, () => {
     if (!V.g || !V.raw) return null;
     const { nrt, nmz } = V.g, cells = /** @type {number[][]} */ (TDATI.topCells(V.raw, nrt, nmz, 100));
-    return { title: T("m3d.canvas"), head: [T("tdati.col.rt"), "m/z", T("tdati.col.int")], rows: cells.map(c => [TDATI.num(V.rt[0] + (c[0] + 0.5) * (V.rt[1] - V.rt[0]) / nrt, 3), TDATI.num(V.g.log ? V.g.mz0 * Math.exp((c[1] + 0.5) * V.g.dlog) : V.g.mz0 + (c[1] + 0.5) * V.g.dmz, 3), TDATI.num(c[2], 1)]), note: T("tdati.note.map", { n: cells.length }) };
+    return { title: T("m3d.canvas"), head: [T("tdati.col.rt"), V.pda ? "nm" : "m/z", T("tdati.col.int")], rows: cells.map(c => [TDATI.num(V.rt[0] + (c[0] + 0.5) * (V.rt[1] - V.rt[0]) / nrt, 3), TDATI.num(V.g.log ? V.g.mz0 * Math.exp((c[1] + 0.5) * V.g.dlog) : V.g.mz0 + (c[1] + 0.5) * V.g.dmz, 3), TDATI.num(c[2], 1)]), note: T("tdati.note.map", { n: cells.length }) };
   });
   // ---- WebGL
   const cx = makeContext(glc);
@@ -297,7 +297,7 @@ export function open(p, opener) {
     const nrt = Math.min(N, Math.max(2, Math.ceil((rt1 - rt0) / Math.max(scanStep(), 1e-4))));
     const q = `api/map?k=${V.k}&level=${V.lv}&rt0=${rt0}&rt1=${rt1}&mz0=${mz0}&mz1=${mz1}&nrt=${nrt}&nmz=${hr ? N : Math.min(N, Math.max(2, Math.ceil(mz1 - mz0)))}&mzscale=${hr ? "log" : "lin"}${prefs.bg ? "&bg=1" : ""}` +
       (V.ref != null ? `&ref=${V.ref}&norm=${V.norm}&rttol=${MAPPA.diffOpt().rttol}` : "&agg=max");
-    let j; try { j = decode(await J(q)); } catch (e_) { const e = /** @type {Lanciato} */ (e_); msg(e && e.message ? e.message : T("m3d.err.load")); return; }
+    let j; try { j = V.pda ? await (await import("./mappa-dad.js")).grid(V, p) : decode(await J(q)); } catch (e_) { const e = /** @type {Lanciato} */ (e_); msg(e && e.message ? e.message : T("m3d.err.load")); return; }
     if (gen !== V.gen) return;
     if (j.nrt < 2 || j.nmz < 2) { msg(T("m3d.err.small")); return; }
     V.g = j; V.raw = j.m; V.signed = V.ref != null; V.pts = null;
@@ -468,7 +468,7 @@ export function open(p, opener) {
     const mzT = /** @type {number[]} */ (nice(mzAt(0), mzAt(g.nmz - 1), 6)).filter((/** @type {number} */ t) => t >= mzAt(0) && t <= mzAt(g.nmz - 1)).map((/** @type {number} */ t) => { const j = jOf(t), q = project(xn, 0, pz(j)); return { t, j, q, s: q[1] }; });
     mzT.sort((u, v) => u.s - v.s);
     for (const o of place(mzT)) { const q2 = project(xn * 1.06, 0, pz(o.j)); c.beginPath(); c.moveTo(o.q[0], o.q[1]); c.lineTo(q2[0], q2[1]); c.stroke(); lab(hr ? String(+o.t.toFixed(o.t > 1000 ? 1 : 2)) : String(Math.round(o.t)), q2, xn > 0 ? 4 : -4, 4, xn > 0 ? "left" : "right"); }
-    const tz = project(xn * 1.22, 0, 0); lab("m/z", tz, 0, 4, "center");
+    const tz = project(xn * 1.22, 0, 0); lab(V.pda ? "nm" : "m/z", tz, 0, 4, "center");
     // the vertical axis, with the intensity of a few heights
     const cx = e[0] > 0 ? -b.x / 2 : b.x / 2, cz = e[2] > 0 ? -b.z / 2 : b.z / 2, top = V.zmax;
     const a0 = project(cx, 0, cz), a1 = project(cx, b.y * top, cz); c.beginPath(); c.moveTo(a0[0], a0[1]); c.lineTo(a1[0], a1[1]); c.stroke();
@@ -524,16 +524,16 @@ export function open(p, opener) {
   function readout() {
     if (!V.cur || !V.g) { rd.textContent = ""; return; }
     const g = V.g, { i, j } = V.cur, v = V.raw[i * g.nmz + j], rt = rtAt(i), mz = mzAt(j);
-    const cell = !hr && g.dmz >= 0.9 ? T("m3d.read.nom", { n: Math.round(g.mz0 + j * g.dmz + 0.2) }) : "";
-    rd.textContent = (V.lock ? T("mappa.read.locked") + " · " : "") + `${f.label}${V.ref != null ? " − " + (E.files[V.ref] || {}).label : ""} · RT ${rt.toFixed(2)} min · m/z ${fmtMz(mz)}${cell ? " (" + cell + ")" : ""} · ${T("mappa.read.int")} ${(V.signed && v > 0 ? "+" : "") + fmt(v)}` + ASSE.tag();
+    const cell = !hr && !V.pda && g.dmz >= 0.9 ? T("m3d.read.nom", { n: Math.round(g.mz0 + j * g.dmz + 0.2) }) : "";
+    rd.textContent = (V.lock ? T("mappa.read.locked") + " · " : "") + `${f.label}${V.ref != null ? " − " + (E.files[V.ref] || {}).label : ""} · RT ${rt.toFixed(2)} min · ${V.pda ? "nm" : "m/z"} ${fmtMz(mz)}${cell ? " (" + cell + ")" : ""} · ${T("mappa.read.int")} ${(V.signed && v > 0 ? "+" : "") + fmt(v)}` + ASSE.tag();
     Q("ti").value = String(i); Q("tt").textContent = `RT ${rt.toFixed(2)}`;
     mini();
   }
   function mini() {
     const g = V.g, { i, j } = V.cur, col = new Float32Array(g.nrt), row = V.raw.subarray(i * g.nmz, (i + 1) * g.nmz);
     for (let a = 0; a < g.nrt; a++) col[a] = V.raw[a * g.nmz + j];
-    plot(xicc, null, col, i, T("m3d.xic", { mz: fmtMz(mzAt(j)) }), [rtAt(0).toFixed(1), rtAt(g.nrt - 1).toFixed(1)]);
-    plot(spcc, null, row, j, T("m3d.spc", { rt: rtAt(i).toFixed(2) }), [fmtMz(mzAt(0)), fmtMz(mzAt(g.nmz - 1))]);
+    plot(xicc, null, col, i, T(V.pda ? "m3d.xic.uv" : "m3d.xic", { mz: fmtMz(mzAt(j)) }), [rtAt(0).toFixed(1), rtAt(g.nrt - 1).toFixed(1)]);
+    plot(spcc, null, row, j, T(V.pda ? "m3d.spc.uv" : "m3d.spc", { rt: rtAt(i).toFixed(2) }), [fmtMz(mzAt(0)), fmtMz(mzAt(g.nmz - 1))]);
   }
 
   // ---- interaction

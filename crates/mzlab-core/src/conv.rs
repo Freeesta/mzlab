@@ -1,6 +1,6 @@
-//! `conv/1`: what a conversion carried into the mzML and what it left out (and the zlib implementation that wrote the arrays), written in the `<run>` by `readers_mzml::Conversione`.
+//! `conversion/1`: what a conversion carried into the mzML and what it left out (and the zlib implementation that wrote the arrays), written in the `<run>` by `readers_mzml::Conversione`.
 //! Each reader declares what its format holds and the mzML does not (`Lettore::not_carried`), always with the reason, and the scans it could not read
-//! (`Reader::losses`): `dichiarate`, `lette`, `parziale` and the key `perdita` of the cause, so a partial result is never silent.
+//! (`Reader::losses`): `declared`, `read`, `partial` and the key `loss` of the cause, so a partial result is never silent.
 
 use crate::error::Result;
 use crate::readers::{Field, Reader};
@@ -9,7 +9,7 @@ use crate::readers::{Field, Reader};
 pub const NOT_DECODED: &str = "layout not decoded";
 pub const WITHOUT_TERM: &str = "no mzML term";
 pub const IDENTITY: &str = "identity, kept out of the mzML";
-pub const IN_METHOD: &str = "kept in metodo/1, not in the mzML";
+pub const IN_METHOD: &str = "kept in method/1, not in the mzML";
 pub const UNTRIED: &str = "no file at hand to validate";
 pub const OUT_OF_MODEL: &str = "outside the mzML model";
 
@@ -44,7 +44,7 @@ pub const AGILENT_EXT: &[(&str, &str)] = &[
 /// Scans looked at to count the fields: the first MS1 and the first MSn among the first rows.
 const ROWS: usize = 64;
 
-/// The `conv/1` document of sample `c`: reader, version, how many header fields of a scan have a CV term and how many only a name, the scans declared
+/// The `conversion/1` document of sample `c`: reader, version, how many header fields of a scan have a CV term and how many only a name, the scans declared
 /// and read, and the declared gaps.
 pub(crate) fn resoconto(l: &mut dyn Reader, c: usize) -> Result<String> {
     let mut seen = [false; 2];
@@ -68,23 +68,23 @@ pub(crate) fn resoconto(l: &mut dyn Reader, c: usize) -> Result<String> {
     }
     let with_cv = |n: &str| fields.iter().any(|f| f.nome == n && f.cv.is_some());
     let cv = names.iter().filter(|n| with_cv(n)).count();
-    let mut s = String::from("{\"schema\":\"conv/1\",\"lettore\":\"");
+    let mut s = String::from("{\"schema\":\"conversion/1\",\"reader\":\"");
     s += l.format().id();
-    s += "\",\"versione\":\"";
+    s += "\",\"version\":\"";
     s += env!("CARGO_PKG_VERSION");
-    s += "\",\"compressore\":\"zlib-rs\",\"campi_cv\":";
+    s += "\",\"compressor\":\"zlib-rs\",\"cv_fields\":";
     s += &cv.to_string();
-    s += ",\"campi_user\":";
+    s += ",\"user_fields\":";
     s += &(names.len() - cv).to_string();
     let lost = l.losses(c)?;
-    s += ",\"dichiarate\":";
+    s += ",\"declared\":";
     s += &lost.declared.to_string();
-    s += ",\"lette\":";
+    s += ",\"read\":";
     s += &lost.read.to_string();
     s += if lost.partial() {
-        ",\"parziale\":true,\"perdita\":\""
+        ",\"partial\":true,\"loss\":\""
     } else {
-        ",\"parziale\":false"
+        ",\"partial\":false"
     };
     if lost.partial() {
         // a catalogue key: letters, dots and digits only
@@ -92,18 +92,18 @@ pub(crate) fn resoconto(l: &mut dyn Reader, c: usize) -> Result<String> {
         s.push('"');
         // an MRM sample counts its cycles: the key is there only then, so every other record is as it was
         if !lost.unit.is_empty() {
-            s += ",\"unita\":\"cicli\"";
+            s += ",\"unit\":\"cycles\"";
         }
     }
-    s += ",\"non_portati\":[";
+    s += ",\"not_carried\":[";
     for (i, (campo, motivo)) in l.not_carried().iter().enumerate() {
         if i > 0 {
             s.push(',');
         }
         // The texts are static and carry no quote or backslash.
-        s += "{\"campo\":\"";
+        s += "{\"field\":\"";
         s += campo;
-        s += "\",\"motivo\":\"";
+        s += "\",\"reason\":\"";
         s += motivo;
         s += "\"}";
     }

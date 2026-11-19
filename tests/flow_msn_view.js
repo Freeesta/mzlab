@@ -1,4 +1,4 @@
-// The MSn graph view of Flow (flow/lazy/flow-views-msn.js without the DOM): the modifications and the ions read from a msngrafo/1 graph. Exit code 1 on the first failure
+// The MSn graph view of Flow (flow/lazy/flow-views-msn.js without the DOM): the modifications and the ions read from a msn-graph/1 graph. Exit code 1 on the first failure
 const fs = require("fs"), vm = require("vm"), path = require("path"), assert = require("assert");
 const eq = (a, b) => assert.strictEqual(JSON.stringify(a), JSON.stringify(b));
 const ctx = vm.createContext({ window: {}, document: {} });
@@ -8,14 +8,14 @@ vm.runInContext(fs.readFileSync(path.resolve(__dirname, "../flow/lazy/flow-views
 vm.runInContext(fs.readFileSync(path.resolve(__dirname, "../flow/lazy/flow-msn-graph.js"), "utf8"), ctx);
 const F = ctx.FLOW;
 const g = {
-  formato: "msngrafo/1",
-  nodi: [
-    { id: "n0", mz: 305.1, livello: 1, formula: { scelta: "C10H20N2O5S", candidati: [{ formula: "C10H20N2O5S", ppm: 0.4 }] } },
-    { id: "n1", mz: 261.1, livello: 2, formula: { scelta: null, candidati: [{ formula: "C9H16N2O3S", ppm: 1.2 }, { formula: "C8H12N4O3S", ppm: 2 }], fonte: "mass" } },
+  schema: "msn-graph/1",
+  nodes: [
+    { id: "n0", mz: 305.1, level: 1, formula: { choice: "C10H20N2O5S", candidates: [{ formula: "C10H20N2O5S", ppm: 0.4 }] } },
+    { id: "n1", mz: 261.1, level: 2, formula: { choice: null, candidates: [{ formula: "C9H16N2O3S", ppm: 1.2 }, { formula: "C8H12N4O3S", ppm: 2 }], source: "mass" } },
   ],
-  archi: [
-    { da: "n0", a: "n1", isolamento: true, perdita: { da_massa: 43.98983, formula: "CO2", ppm: 0.8 }, misure: [{ albero: "305@cid35", livello: 2, att: "cid", ce: 35, n_scansioni: 12, rel: 0.5 }, { albero: "305@hcd30", livello: 2, att: "hcd", ce: 30, n_scansioni: 8, rel: 0.25 }] },
-    { da: "n1", a: "n9", perdita: {} },
+  edges: [
+    { from: "n0", to: "n1", isolation: true, loss: { da_mass: 43.98983, formula: "CO2", ppm: 0.8 }, measurements: [{ tree: "305@cid35", level: 2, activation: "cid", ce: 35, n_scans: 12, rel: 0.5 }, { tree: "305@hcd30", level: 2, activation: "hcd", ce: 30, n_scans: 8, rel: 0.25 }] },
+    { from: "n1", to: "n9", loss: {} },
   ],
 };
 const t = F.readMsnGraph(g);

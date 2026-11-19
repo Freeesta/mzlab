@@ -8,6 +8,10 @@ I18N.add("en", {
   "mappa.read.int": "intensity",
   "mappa.read.locked": "locked",
   "mappa.preview": "preview",
+  "mappa.uv.side": "UV spectrum · RT {rt}",
+  "mappa.uv.sideDiff": "UV spectrum A − B · RT {rt}",
+  "mappa.uv.bot": "UV trace {lo}–{hi} nm · max {max}",
+  "mappa.uv.botDiff": "UV trace A − B {lo}–{hi} nm · max {max}",
   "mappa.side.title": "spectrum of the scan",
   "mappa.side.empty": "no peak in this m/z range",
   "mappa.bot.title": "XIC of the m/z under the sight",
@@ -166,5 +170,13 @@ I18N.add("en", {
   "mappa.rz.top": "Top edge grip of the panel: drag or use the up and down arrows (double click: default height)",
   "mappa.rz.bot": "Bottom edge grip of the panel: drag or use the up and down arrows (double click: default height)",
   "mappa.rz.title": "Drag to change the height",
-  "mappa.meta.date": "Date"
+  "mappa.meta.date": "Date",
+  "mappa.ms.side": "MS1 · {file} · RT {rt} (DAD {dad} {off})",
+  "mappa.ms.sideNone": "No MS scan at RT {rt} in {file}",
+  "mappa.ms.bot": "{kind} · {file} · time axis = MS RT − {off} min",
+  "mappa.ms.mz": "m/z",
+  "mappa.ms.wait": "Reading the MS…",
+  "mappa.ms.fail": "Cannot read the MS of {file}",
+  "mappa.ms.noAxis": "No MS scan list for {file}",
+  "mappa.ms.noMz": "Type an m/z for the EIC"
 });

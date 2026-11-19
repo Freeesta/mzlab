@@ -1,7 +1,7 @@
 // @ts-strict
 // TPMINE-PRIVATE  «Run» section of the panel Pipeline (window.PIPER): runs L1-L9 (feat-run.js, pool of PIPE) on every .mzidx in OPFS, shows the result with PIPEV (list of identities or, without the
 // gate of quality, of rows), the detail of a row (proofs, cells per file, XIC and MS2 of the file chosen, from the routes api/xic and api/spectrum of the file open in Data) and sends the table to
-// the window of the feature tables (UNT, model «mzlab»). Above the run: the roles and times of the files (campioni/2, TP_Mine/files/finder-ruoli.js; the Rust proposes and checks). Texts in English (mzFinder convention).
+// the window of the feature tables (UNT, model «mzlab»). Above the run: the roles and times of the files (samples/1, TP_Mine/files/finder-ruoli.js; the Rust proposes and checks). Texts in English (mzFinder convention).
 (() => {
   "use strict";
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -56,8 +56,8 @@
     if (!st.gated || !f || !rules) return null;
     const num = id => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : NaN; };
     const smiles = $("#pipe-psmi").value.trim();
-    return { rules: typeof rules === "string" ? new TextEncoder().encode(rules) : rules, parent: f, parentMz: num("#pipe-pmz"), parentRt: num("#pipe-prt"), minutes: files.map((_, i) => { const m = st.tp ? st.tp.minuti[i] : null; return m == null ? NaN : m; }),
-      smiles, structure: await structureOf(smiles), campioni: st.cs ? (await st.R.canonical(st.call, st.cs)).json : "" };
+    return { rules: typeof rules === "string" ? new TextEncoder().encode(rules) : rules, parent: f, parentMz: num("#pipe-pmz"), parentRt: num("#pipe-prt"), minutes: files.map((_, i) => { const m = st.tp ? st.tp.minutes[i] : null; return m == null ? NaN : m; }),
+      smiles, structure: await structureOf(smiles), samples: st.cs ? (await st.R.canonical(st.call, st.cs)).json : "" };
   }
   /** the run of the other polarity (same files, same recipe, no proofs) and the pairs of neutral masses between the two tables (`polpair/1`): kept for the rows of the table of this run */
   async function otherPolarity(pool, mod, files, recipe, out) {
@@ -97,17 +97,16 @@
     st.busy = false; $("#pipe-run-go").disabled = !!st.block; armAgain();
   }
 
-  // ------------------------------------------------------------ roles and times (campioni/2): the Rust proposes and checks, the page packs and shows
+  // ------------------------------------------------------------ roles and times (samples/1): the Rust proposes and checks, the page packs and shows
   const WARN = { noT0: "No t0: more false positives", noBlank: "No blank: background stays", onePoint: "One time point: no kinetics", timeUnconfirmed: "Times not confirmed", timeMissing: "Time missing",
     t0WithTime: "A t0 has a time other than 0", noControls: "No t0, blank or dark control", noTreated: "No treated sample" };
-  const qaqcRoles = () => { try { return JSON.parse(localStorage.getItem(NOMI.KEY("qaqc")) || "{}").roles || null; } catch (_) { return null; } };
   const fail = e => { let j = null; try { j = JSON.parse(String(e)); } catch (_) { /* not JSON */ } return Object.assign(new Error(j ? j.error_key : String(e && e.message || e)), j ? { key: j.error_key, params: j.params } : {}); };
   async function loadRoles() {
     try {
       if (!st.R) { const url = URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["finder-ruoli.js"]], { type: "text/javascript" })); st.R = await import(url); }
-      if (window.MZLAB_DESKTOP) { const pool = await st.ctx.pool(); st.call = (op, j) => pool.campioni(op, j); }     // the app: the native route finder/campioni
+      if (window.MZLAB_DESKTOP) { const pool = await st.ctx.pool(); st.call = (op, j) => pool.samples(op, j); }     // the app: the native route finder/samples
       else { const m = await /** @type {any} */ (window).PIPEQC.engine(window.QTOOLS.ctx.base); st.call = (op, j) => { try { return m.samples(op, j); } catch (e) { throw fail(e); } }; }
-      st.cs = await st.R.build(st.call, st.files, typeof NB !== "undefined" ? NB : null, qaqcRoles());
+      st.cs = await st.R.build(st.call, st.files, typeof NB !== "undefined" ? NB : null);
       await drawRoles();
     } catch (e) { st.cs = null; st.block = "The roles of the files could not be read."; await drawRoles(); msg(st.ctx.msg(e.key || "error.featFailed", e.params), true); }
   }
@@ -121,19 +120,19 @@
     const tab = $("#pr-tab"), warn = $("#pr-warn"), go = $("#pipe-run-go"); if (!tab) return;
     const cs = st.cs || [], R = st.R;
     tab.innerHTML = tab.querySelector("caption").outerHTML + (cs.length ? `<tr><th scope="col">File</th><th scope="col">Role</th><th scope="col">Time</th></tr>` : "")
-      + cs.map((c, i) => { const timed = ["sample", "t0", "dark"].includes(c.tipo), prop = timed && c.tempo != null && !c.tempo_confermato, n = esc(st.files[i]);
-        return `<tr${prop ? ' class="pr-prop"' : ""}><td>${n}</td><td><select class="pr-role" data-i="${i}" id="pr-r${i}" aria-label="Role of ${n}">${R.ROLES.map(r => `<option${r === c.tipo ? " selected" : ""}>${r}</option>`).join("")}</select></td>`
-          + `<td><input class="pr-time" data-i="${i}" id="pr-t${i}" type="text" inputmode="decimal" autocomplete="off" aria-label="Time of ${n}"${timed ? "" : " disabled"} value="${c.tempo == null ? "" : c.tempo}"${prop ? ' title="Proposed from the name: Enter confirms"' : ""}></td></tr>`; }).join("");
-    const u = cs.find(c => c.tempo != null); if (u) $("#pr-unit").value = u.unita_tempo;
+      + cs.map((c, i) => { const timed = ["sample", "t0", "dark"].includes(c.kind), prop = timed && c.time != null && !c.time_confirmed, n = esc(st.files[i]);
+        return `<tr${prop ? ' class="pr-prop"' : ""}><td>${n}</td><td><select class="pr-role" data-i="${i}" id="pr-r${i}" aria-label="Role of ${n}">${R.ROLES.map(r => `<option${r === c.kind ? " selected" : ""}>${r}</option>`).join("")}</select></td>`
+          + `<td><input class="pr-time" data-i="${i}" id="pr-t${i}" type="text" inputmode="decimal" autocomplete="off" aria-label="Time of ${n}"${timed ? "" : " disabled"} value="${c.time == null ? "" : c.time}"${prop ? ' title="Proposed from the name: Enter confirms"' : ""}></td></tr>`; }).join("");
+    const u = cs.find(c => c.time != null); if (u) $("#pr-unit").value = u.time_unit;
     tab.querySelectorAll(".pr-role").forEach(e => { e.onchange = () => edit(() => R.setRole(st.cs, +e.dataset.i, e.value), e.id); });
     tab.querySelectorAll(".pr-time").forEach(e => { e.onkeydown = ev => { if (ev.key === "Enter") { ev.preventDefault(); edit(() => R.setTime(st.cs, +e.dataset.i, e.value.trim() === "" ? null : parseFloat(e.value.replace(",", ".")), $("#pr-unit").value), e.id); } }; });
     let list = [], block = "";
     if (st.cs) {
       try {
         const v = await R.check(st.call, cs); st.tp = await R.forTp(st.call, cs);
-        const by = new Map(); v.avvisi.filter(a => WARN[a.codice]).forEach(a => { const k = a.codice; by.set(k, { sev: a.gravita, n: (by.get(k) || { n: 0 }).n + 1 }); });
+        const by = new Map(); v.warnings.filter(a => WARN[a.code]).forEach(a => { const k = a.code; by.set(k, { sev: a.severity, n: (by.get(k) || { n: 0 }).n + 1 }); });
         list = [...by].map(([k, o]) => `<span class="${o.sev === "error" ? "e" : "w"}">${esc(WARN[k])}${o.n > 1 ? " (" + o.n + ")" : ""}</span>`);
-        if (v.bloccante) block = [...by].filter(([, o]) => o.sev === "error").map(([k]) => WARN[k]).join("; ");
+        if (v.blocking) block = [...by].filter(([, o]) => o.sev === "error").map(([k]) => WARN[k]).join("; ");
       } catch (e) { block = st.ctx.msg(e.key || "error.featFailed", e.params); }
     } else block = st.block || "The roles of the files are not ready.";
     st.block = block; warn.innerHTML = list.join(" · "); if (go) { go.disabled = !!st.busy || !!block; go.title = block ? "Run is off: " + block : ""; }
@@ -144,9 +143,9 @@
   const levelsText = async () => { const s = document.querySelector('script[src*="livelli-1.js"]'); try { return s ? await (await fetch(s.src)).text() : null; } catch (_) { return null; } };
   async function recordRun(recipe, parent, op) {
     const rec = await /** @type {any} */ (window).PIPEREC.record({ recipe, proofs: st.ctx.proofs(), crate: st.ctx.crate(), out: st.out, data: st.data, rules: window.QTOOLS.ctx.files["regole_tp_2.json"] || null, levels: await levelsText(),
-      parent: parent ? { formula: parent.parent, mz: parent.parentMz, rt: parent.parentRt, minuti: parent.minutes, smiles: parent.smiles } : null });
+      parent: parent ? { formula: parent.parent, mz: parent.parentMz, rt: parent.parentRt, minutes: parent.minutes, smiles: parent.smiles } : null });
     if (op) { const c = /** @type {any} */ (window).PIPEREC.compare(op, rec); msg(c.same ? `Re-applied: the .mzfeat is identical to the recorded one (SHA-256 ${rec.tabella_sha256.slice(0, 12)}...).` : "Re-applied, but " + c.lines.join("; ") + ".", !c.same); return; }
-    if (window.WORKFLOW) { const { op: _o, t: _t, ...rest } = rec; window.WORKFLOW.logOp("feature_pipeline", rest); if (st.cs) window.WORKFLOW.logOp("campioni", /** @type {any} */ (window).PIPEREC.campioniOp(await st.R.canonical(st.call, st.cs))); }
+    if (window.WORKFLOW) { const { op: _o, t: _t, ...rest } = rec; window.WORKFLOW.logOp("feature_pipeline", rest); if (st.cs) window.WORKFLOW.logOp("samples", /** @type {any} */ (window).PIPEREC.campioniOp(await st.R.canonical(st.call, st.cs))); }
     st.last = rec; armAgain();
   }
   const lastOp = () => (typeof NB !== "undefined" && window.WORKFLOW ? /** @type {any} */ (window).PIPEREC.lastOp(NB.ops, window.WORKFLOW.checkFeatureOp) : null);
@@ -155,7 +154,7 @@
     const op = lastOp(); if (!op) return;
     st.ctx.apply(op.parametri);
     const g = op.genitore; $("#pipe-pf").value = g ? g.formula : ""; $("#pipe-pmz").value = g && g.mz != null ? g.mz : ""; $("#pipe-prt").value = g && g.rt != null ? g.rt : ""; $("#pipe-psmi").value = g && g.smiles ? g.smiles : "";
-    if (g && st.cs) edit(() => g.minuti.forEach((m, i) => { if (m != null && st.cs[i]) { st.R.setRole(st.cs, i, m === 0 ? "t0" : "sample"); st.R.setTime(st.cs, i, m, "min"); } })); run(op);
+    if (g && st.cs) edit(() => g.minutes.forEach((m, i) => { if (m != null && st.cs[i]) { st.R.setRole(st.cs, i, m === 0 ? "t0" : "sample"); st.R.setTime(st.cs, i, m, "min"); } })); run(op);
   }
 
   // ------------------------------------------------------------ result: toolbar, list, detail
@@ -174,7 +173,7 @@
   async function tableSteps() {
     const gate = st.ctx.gate(), chart = st.ctx.chart, say = e => st.ctx.msg(e.key || "error.featFailed", e.params) + (e.key ? "" : " " + (e.message || ""));
     try {
-      const out = st.out, session = await /** @type {any} */ (window).PIPEQC.open({ base: window.QTOOLS.ctx.base, bytes: out.evid || out.table, names: st.names, inputs: st.data.meta.inputs || [], campioni: st.cs, pol: st.ctx.values().polarity, pool: st.ctx.pool, interp: interpInput(out) });
+      const out = st.out, session = await /** @type {any} */ (window).PIPEQC.open({ base: window.QTOOLS.ctx.base, bytes: out.evid || out.table, names: st.names, inputs: st.data.meta.inputs || [], samples: st.cs, pol: st.ctx.values().polarity, pool: st.ctx.pool, interp: interpInput(out) });
       st.session = session; const g = { ...gate, table: gate.table === true };
       await /** @type {any} */ (window).PIPEQC.render($("#pipe-qc"), { session, gate: g, chart });
       const tab = /** @type {any} */ (window).PIPET.mount($("#pipe-tab"), { session, names: st.names, gate: g, say, cs: st.cs, ppm: () => st.ctx.values().ppm, pol: () => st.ctx.values().polarity, formula: ($("#pipe-pf").value || "").trim(), levels: levelMap(), identsOf: id => (st.cand ? st.all.filter(x => x.row === id - 1) : []), interpText: id => { const T = /** @type {any} */ (window).TPSTRUCT; return T && session.interpCached ? T.identText(session.interpCached(id)) : ""; } });
@@ -193,7 +192,7 @@
     const smi = ($("#pipe-psmi").value || "").trim(), neutral = ($("#pipe-pf").value || "").trim(), pol = st.ctx.values().polarity;
     if (!out.evid || !(smi || neutral)) return null;
     const rt = parseFloat($("#pipe-prt").value);
-    return { parent: JSON.stringify({ ...(smi ? { smiles: smi } : { neutral }), adduct: pol < 0 ? "[M-H]-" : "[M+H]+", ...(Number.isFinite(rt) ? { rt } : {}) }), registry: out.registry || "", pol, infusion: st.cs ? st.cs.findIndex(c => c.tipo === "infusion") : -1 };
+    return { parent: JSON.stringify({ ...(smi ? { smiles: smi } : { neutral }), adduct: pol < 0 ? "[M-H]-" : "[M+H]+", ...(Number.isFinite(rt) ? { rt } : {}) }), registry: out.registry || "", pol, infusion: st.cs ? st.cs.findIndex(c => c.kind === "infusion") : -1 };
   }
   /** level of the best identity of each row of the table (row id = position + 1), none without the gate */
   function levelMap() {

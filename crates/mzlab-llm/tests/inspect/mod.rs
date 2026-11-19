@@ -1,4 +1,4 @@
-//! Helpers shared by the `ispezione` tests: build the sources from the synthetic files with the engine of `mzlab-core`.
+//! Helpers shared by the `inspection` tests: build the sources from the synthetic files with the engine of `mzlab-core`.
 #![allow(dead_code)]
 
 use std::path::{Path, PathBuf};
@@ -21,7 +21,7 @@ pub fn root() -> PathBuf {
 pub fn synthetic() -> Option<&'static Path> {
     static DIR: std::sync::OnceLock<Option<PathBuf>> = std::sync::OnceLock::new();
     DIR.get_or_init(|| {
-        let out = std::env::temp_dir().join(format!("mzlab-ispezione-{}", std::process::id()));
+        let out = std::env::temp_dir().join(format!("mzlab-inspection-{}", std::process::id()));
         let run = Command::new("python3")
             .current_dir(root())
             .arg("tools/dati_sintetici.py")
@@ -171,14 +171,14 @@ pub fn proposals(names: &[&str]) -> Vec<Value> {
         .iter()
         .map(|n| format!("{{\"name\":{}}}", quoted(n)))
         .collect();
-    let out = samples::route("proponi", &format!("{{\"files\":[{}]}}", files.join(","))).unwrap();
-    j(&out).get("campioni").unwrap().arr().to_vec()
+    let out = samples::route("propose", &format!("{{\"files\":[{}]}}", files.join(","))).unwrap();
+    j(&out).get("samples").unwrap().arr().to_vec()
 }
 
 pub fn sample_text(c: &Value, order: usize) -> String {
     format!(
         "{{\"tipo\":{},\"ordine_iniezione\":{order}}}",
-        quoted(c.get("tipo").unwrap().str().unwrap())
+        quoted(c.get("kind").unwrap().str().unwrap())
     )
 }
 
@@ -214,7 +214,7 @@ pub fn sources(
         })
         .collect();
     j(&format!(
-        "{{\"profile\":\"ricerca\",\"hide_names\":false,\"files\":[{}]}}",
+        "{{\"profile\":\"research\",\"hide_names\":false,\"files\":[{}]}}",
         files.join(",")
     ))
 }

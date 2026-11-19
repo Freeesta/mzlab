@@ -23,17 +23,22 @@ for a in "$@"; do
 done
 set -- ${args[@]+"${args[@]}"}
 RUNNER_TEMP="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"   # unbound outside GitHub Actions
+exe=
+command -v cygpath >/dev/null && RUNNER_TEMP=$(cygpath -u "$RUNNER_TEMP")   # Git Bash: D:\a\_temp would read as a remote host in `tar`
+# Git for Windows has no flock: the same lock with mkdir (the subshells below only call `flock 9`)
+command -v flock >/dev/null || flock() { until mkdir "$RUNNER_TEMP/wo.lockd" 2>/dev/null; do sleep 1; done; trap 'rmdir "$RUNNER_TEMP/wo.lockd"' EXIT; }
 mkdir -p "$RUNNER_TEMP"
 base="https://github.com/WebAssembly/binaryen/releases/download/version_133"
 case "$(uname -s)-$(uname -m)" in
   Linux-x86_64)  tarball=binaryen-version_133-x86_64-linux.tar.gz;  sha=2dc9c7813f5375db93d96ead4b78222fcc3e2677bbb832297af4797782a37489; only=binaryen-version_133/bin/wasm-opt ;;
   Darwin-arm64)  tarball=binaryen-version_133-arm64-macos.tar.gz;   sha=ad66da82ac13f163e424b1643f16c6dfcccc98b5966296b43e52d3cab04f84a8; only= ;;
   Darwin-x86_64) tarball=binaryen-version_133-x86_64-macos.tar.gz;  sha=13a9b90be775c6389ce3d1f879cb8627bea56708ba8c122983941d53a8199b95; only= ;;
+  MINGW*-x86_64|MSYS*-x86_64) tarball=binaryen-version_133-x86_64-windows.tar.gz; sha=17a2cbeac6b5693c5fbafab3838d3c65fd9c1eb38b05f5baec6c657e8c84995b; only=binaryen-version_133/bin/wasm-opt.exe; exe=.exe ;;      # Git Bash on a Windows runner
   *) tarball=; sha=; only= ;;
 esac
 sha256_of() { if command -v sha256sum >/dev/null; then sha256sum "$1"; else shasum -a 256 "$1"; fi | cut -d' ' -f1; }
 
-wo="$RUNNER_TEMP/binaryen-133/bin/wasm-opt"
+wo="$RUNNER_TEMP/binaryen-133/bin/wasm-opt$exe"
 ok="$RUNNER_TEMP/binaryen-133/installato"   # written when the install has finished, so a half-extracted binary is never used
 if [ -n "$tarball" ]; then
   (
@@ -64,7 +69,11 @@ if [ -e "$ok" ]; then
   # fail closed: an empty or non-numeric size must never pass the gate
   case "$size" in ''|*[!0-9]*) echo "::error::the $label .wasm size could not be read (got '$size')"; exit 1 ;; esac
   echo "$label .wasm (optimised): $size bytes"
-  if [ "$size" -ge "$limit" ]; then echo "::error::the $label .wasm is $size bytes (limit $limit)"; exit 1; fi
+  if [ "$size" -ge "$limit" ]; then
+    # the caps are measured on Linux and gated there (pages, release, sito-rust); the Windows e2e build of the same commit is ~1% larger, so there it is only reported
+    case "$(uname -s)" in MINGW*|MSYS*) echo "::warning::the $label .wasm is $size bytes (Linux cap $limit): not gated on Windows"; exit 0 ;; esac
+    echo "::error::the $label .wasm is $size bytes (limit $limit)"; exit 1
+  fi
 elif [ "${MZLAB_WASM_OPT_STRICT:-}" = 1 ]; then
   # production builds (pages.yml, sito-rust.yml, release.yml) fail closed: an unoptimised .wasm would skip the size gate
   echo "::error::wasm-opt could not be installed: the $label .wasm is not optimised and the size gate cannot run"; exit 1

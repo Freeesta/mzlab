@@ -35,7 +35,7 @@ pub use run::{
     execute, file_roots, record, record_jobs, record_route, work, Artifact, Core, Ctx, Hooks, Job,
     Outcome, Results, Run, Runner,
 };
-pub use run_report::{build as corsa_build, Output, RunReport};
+pub use run_report::{build as run_report_build, Output, RunReport};
 pub use sched_route::{
     act as sched_act, ask as sched_ask, cancels as sched_cancels, route as sched_route,
 };

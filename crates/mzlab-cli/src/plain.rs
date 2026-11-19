@@ -30,6 +30,8 @@ pub(crate) mod peak_area_cmd;
 pub(crate) mod peak_split_cmd;
 #[path = "peak_window_cmd.rs"]
 pub(crate) mod peak_window_cmd;
+#[path = "ref_list_cmd.rs"]
+pub(crate) mod ref_list_cmd;
 
 pub(crate) fn canonical(command: &str) -> &str {
     crate::cmd::canonical(command)

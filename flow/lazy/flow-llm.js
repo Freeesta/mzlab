@@ -1,7 +1,7 @@
 // @ts-check
 // Flow (administrator mode): the panel of the assistant, to the right of the canvas. It shows the conversation, the level, the estimated cost, what will be sent, and the cards where the user
 // decides (L0 «Apply»/«Discard» of a proposed plan, L1 «Allow»/«Deny», L2 a register of the edits with «Undo»). The loop is llm/llm-agente.js (the state machine is Rust); the tools are flow-llm-tools.js.
-// Loaded by flow-shell.js when the assistant is on (profile «ricerca», switched on in the settings, consent given), or after «Try the assistant» in the profile «demo» (fixed settings
+// Loaded by flow-shell.js when the assistant is on (profile «research», switched on in the settings, consent given), or after «Try the assistant» in the profile «demo» (fixed settings
 // of llm/llm-demo.js, two script chips whose sent text is fixed so that a strict recording replays it in any language). English only, but for the chip labels (lang/ keys).
 (() => {
   "use strict";
@@ -109,7 +109,7 @@
   /** what the model may know of the page, the reference of a run in `prov/1` and the estimated cost @param {any} S @param {any} runs @param {any} st @param {HTMLElement} cost */
   const dataKit = (S, runs, st, cost) => {
     const sources = () => ({
-      profile: "ricerca", hide_names: !!(st.agent && st.agent.hideNames),
+      profile: "research", hide_names: !!(st.agent && st.agent.hideNames),
       plan: { sha256: S.snap || "", instances: S.plan.steps.map((/** @type {any} */ i) => ({ id: i.id, step: i.step, params: i.params })), problems: S.problems.map((/** @type {any} */ p) => ({ error_key: p.key, instance: p.instance, port: p.port })) },
       run: { steps: S.plan.steps.filter((/** @type {any} */ i) => runs.states[i.id]).map((/** @type {any} */ i) => ({ instance: i.id, step: i.step, status: runs.states[i.id] })) },
     });

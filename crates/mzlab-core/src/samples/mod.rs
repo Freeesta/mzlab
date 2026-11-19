@@ -1,8 +1,7 @@
-//! Roles and times of the files of a series, `campioni/2` (`docs/schemi/campioni-2.json`): the one model of the Data view and of mzFinder.
-//! `proponi` reads the names (one parser, times never confirmed), `valida` gives stable codes (the pages put the words), `da_legacy` migrates the
-//! notebook v1, the QA/QC roles, `campioni/1` and the files of a `.mzflow`, `per_tp` gives the indices by role and the minutes of `feature_pipeline/1`.
-//! `campioni/3` (`docs/schemi/campioni-3.json`) adds the physical sample, polarity, matrix, batch, date, group and free typed columns: `colonne`, `json3`
-//! (canonical form, migration of a `/2`), `valida3`, `csv`, `modello` (name models, `regex`) and `dal_file` (what the file says about itself).
+//! Roles and times of the files of a series, `samples/1` (`docs/schemi/samples-1.json`): the one model of the Data view and of mzFinder, with the physical
+//! sample, polarity, matrix, batch, date, group and the free typed columns. `propose` reads the names (one parser, times never confirmed), `validate` gives stable
+//! codes (the pages put the words), `per_tp` gives the indices by role and the minutes of `feature_pipeline/1`; `json3` is the canonical form (`table_to_json`),
+//! `csv`, `model` (name models, `regex`) and `from_file` (what the file says about itself) read and fill it.
 
 mod blank_words;
 mod columns;
@@ -32,19 +31,19 @@ mod variables;
 pub use columns::{Cell, Column, ColumnType, FileData, Table};
 pub use csv::{csv_read, csv_write};
 pub use from_file::{from_file, summary_from_scans, FileSummary};
-pub use json::{da_legacy, digest, from_json, from_value, to_json};
-pub use json3::{digest3, table_from_json, table_from_value, to_json3, SCHEMA3};
+pub use json::{digest, from_json, from_value, to_json};
+pub use json3::{table_digest, table_from_json, table_from_value, table_to_json};
 pub use model::{apply_model, Applied};
-pub use names::{proponi, propose_explained, role_and_minutes, tipo_v1};
+pub use names::{propose, propose_explained, role_and_minutes, table_kind_of_name};
 pub use order::order_like;
 pub use positions::{proposals_json, Position, Proposal};
-pub use relink::{relink, relink_json, Abbinamento};
+pub use relink::{relink, relink_json, RelinkMatch};
 pub use validate::{per_tp, per_tp_json, validate, validate_json, PerTp, Warning};
-pub use validate3::valida3;
+pub use validate3::validate3;
 
 use crate::error::{Error, Result};
 
-pub const SCHEMA: &str = "campioni/2";
+pub const SCHEMA: &str = "samples/1";
 /// Roles of a file, in the order of the schema.
 pub const TYPES: [&str; 9] = [
     "sample",
@@ -96,7 +95,7 @@ pub struct Sample {
     pub note: String,
     /// For an infusion: formula or name of the parent (filled by mzFinder).
     pub compound: String,
-    // `campioni/3` (docs/agenti/samples.md): sample, +1/-1 polarity, matrix, batch (disegno/1), ISO date and time, group, free columns (sorted by name), what the file says
+    // `samples/1` (docs/agenti/samples.md): sample, +1/-1 polarity, matrix, batch (design/1), ISO date and time, group, free columns (sorted by name), what the file says
     pub sample_id: String,
     pub polarity: Option<i8>,
     pub matrix: String,
@@ -222,26 +221,19 @@ fn number_replicates_pairwise(cs: &mut [Sample]) {
     }
 }
 
-/// The bindings (a `campioni/2` or `/3` document is read by every operation that takes one; `canonico` and `digest` keep its schema, `migra` makes a `/3`;
-/// `valida` also gives the findings of `/3`; `route_all` adds `modello`, `dal_file`, `csv_leggi` and `csv_scrivi`): `op` is `proponi` or `proponi_spiegato` (`{"files":[{"name","sha256","kind"}]}`; the second adds the spans of the name), `proponi3`, `valida`, `per_tp`, `canonico` or `digest` (a `campioni/2`), `ricollega` (`{"campioni","file":[{"percorso","sha256"}]}`), `migra` or `da_legacy`
-/// (`{"session","qaqc","campioni1","mzflow"}`, see `json::da_legacy`); JSON in, JSON out. The desktop app serves all of them; the `table` .wasm links only `route_finder`.
+/// The bindings (a `samples/1` document is read by every operation that takes one; `route_all` adds `model`, `from_file`, `csv_read` and `csv_write`): `op` is
+/// `propose` or `propose_explained` (`{"files":[{"name","sha256","kind"}]}`; the second adds the spans of the name), `validate`, `per_tp`, `canonical` or `digest`
+/// (a `samples/1`) or `relink` (`{"samples","file":[{"path","sha256"}]}`); JSON in, JSON out. The desktop app serves all of them; the `table` .wasm links only `route_finder`.
 pub fn route(op: &str, input: &str) -> Result<String> {
     match op {
-        "proponi_spiegato" => {
+        "propose_explained" => {
             let files = files_of(input)?;
             Ok(proposals_json(&propose_explained(&files)))
         }
-        "proponi3" => {
-            let table = Table {
-                campioni: proponi(&files_of(input)?),
-                colonne: Vec::new(),
-            };
-            Ok(to_json3(&table))
-        }
-        "ricollega" => {
+        "relink" => {
             let v = crate::json::parse(input.as_bytes())?;
-            let bad = || Error::new("error.badCampioni");
-            let cs = from_value(v.get("campioni").ok_or_else(bad)?)?;
+            let bad = || Error::new("error.badSamples");
+            let cs = from_value(v.get("samples").ok_or_else(bad)?)?;
             let cand: Vec<(String, String)> = v
                 .get("file")
                 .map(|a| a.arr())
@@ -249,17 +241,16 @@ pub fn route(op: &str, input: &str) -> Result<String> {
                 .iter()
                 .map(|f| {
                     let t = |k: &str| f.get(k).and_then(|x| x.str()).unwrap_or("").to_string();
-                    (t("percorso"), t("sha256"))
+                    (t("path"), t("sha256"))
                 })
                 .collect();
             Ok(relink_json(&relink(&cs, &cand)))
         }
-        "migra" => canonical(op, input),
         _ => route_finder(op, input),
     }
 }
 
-/// The `{"files":[{"name","sha256","kind"}]}` of `proponi` and its variants.
+/// The `{"files":[{"name","sha256","kind"}]}` of `propose` and its variants.
 fn files_of(input: &str) -> Result<Vec<(String, String, String)>> {
     let v = crate::json::parse(input.as_bytes())?;
     let s =
@@ -272,42 +263,40 @@ fn files_of(input: &str) -> Result<Vec<(String, String, String)>> {
         .collect())
 }
 
-/// `canonico`, `digest` and `migra`: the table read from the document, written back (or hashed) in its own schema; `migra` always gives a `/3`.
+/// `canonical` and `digest`: the table read from the document, written back (or hashed) in its canonical form.
 fn canonical(op: &str, input: &str) -> Result<String> {
-    let doc = crate::json::parse(input.as_bytes())?;
-    let t = table_from_value(&doc)?;
-    let v3 = op == "migra" || doc.get("schema").and_then(|v| v.str()) == Some(SCHEMA3);
-    Ok(match (op, v3) {
-        ("digest", true) => digest3(&t),
-        ("digest", false) => digest(&t.campioni),
-        (_, true) => to_json3(&t),
-        _ => to_json(&t.campioni),
+    let t = table_from_value(&crate::json::parse(input.as_bytes())?)?;
+    Ok(if op == "digest" {
+        table_digest(&t)
+    } else {
+        table_to_json(&t)
     })
 }
 
-/// The operations mzFinder calls through the `table` .wasm (`TP_Mine/files/finder-ruoli.js`): `proponi`, `valida`, `per_tp`, `canonico`, `digest`, `da_legacy`.
-/// Its .wasm has a cap, so the rest of `route` (`proponi_spiegato`, `proponi3`, `ricollega`, `migra`) is served by `rotte` in the browser; same bytes, same code.
+/// The operations mzFinder calls through the `table` .wasm (`TP_Mine/files/finder-ruoli.js`): `propose`, `validate`, `per_tp`, `canonical`, `digest`.
+/// Its .wasm has a cap, so the rest of `route` (`propose_explained`, `relink`) is served by `rotte` in the browser; same bytes, same code.
 pub fn route_finder(op: &str, input: &str) -> Result<String> {
     match op {
-        "proponi" => Ok(to_json(&proponi(&files_of(input)?))),
-        "valida" => Ok(validate_json(&valida3(&table_from_json(input.as_bytes())?))),
+        "propose" => Ok(to_json(&propose(&files_of(input)?))),
+        "validate" => Ok(validate_json(&validate3(&table_from_json(
+            input.as_bytes(),
+        )?))),
         "per_tp" => Ok(per_tp_json(&per_tp(&from_json(input.as_bytes())?))),
-        "da_legacy" => Ok(to_json(&da_legacy(input.as_bytes())?)),
-        "canonico" | "digest" => canonical(op, input),
-        _ => Err(Error::new("error.badCampioni").with("op", op)),
+        "canonical" | "digest" => canonical(op, input),
+        _ => Err(Error::new("error.badSamples").with("op", op)),
     }
 }
 
-/// The operations that read the names and the files (`modello`, `dal_file`, `csv_leggi`, `csv_scrivi`) and everything `route` does: the engine of the Data view
+/// The operations that read the names and the files (`model`, `from_file`, `csv_read`, `csv_write`) and everything `route` does: the engine of the Data view
 /// serves this one. `route_finder` is what mzFinder links (its .wasm has a cap: the name models, the CSV and the rarer operations are not its business).
 pub fn route_all(op: &str, input: &str) -> Result<String> {
     match op {
-        "dal_file" => from_file(input),
-        "modello" => apply_model(input),
-        "csv_leggi" => csv_read(input),
-        "csv_scrivi" => csv_write(input),
-        "variabili" => variables::route_variabili(input),
-        "nome_gruppo" => variables::route_group_name(input),
+        "from_file" => from_file(input),
+        "model" => apply_model(input),
+        "csv_read" => csv_read(input),
+        "csv_write" => csv_write(input),
+        "variables" => variables::route_variables(input),
+        "group_name" => variables::route_group_name(input),
         _ => route(op, input),
     }
 }

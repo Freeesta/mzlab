@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "liste/1",
  "title": "liste/1: a list of the user (transformations or adducts)",
- "description": "Written by mzlab-feat `liste` from a CSV with an error for every wrong row. Canonical JSON: keys in alphabetical order, items sorted by name and change; its SHA-256 enters prov/1. Field names in Italian, values in English, as disegno/1.",
+ "description": "Written by mzlab-feat `liste` from a CSV with an error for every wrong row. Canonical JSON: keys in alphabetical order, items sorted by name and change; its SHA-256 enters prov/1. Field names in Italian, values in English, as design/1.",
  "type": "object",
  "required": ["elementi", "schema", "tipo"],
  "properties": {

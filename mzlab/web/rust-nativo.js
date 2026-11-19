@@ -101,10 +101,10 @@ async function srmDi(st, memberFiles, native_srm, ext) {
 }
 
 /** the samples of the dataset a page describes: JSON `{format, samples: [{id, name, scans}]}` @param {Function} native_samples @param {{ prepara: (names: string[], known?: StubMember[]) => Promise<void> }} ext @param {{ name: string, blob: Blob }[]} members */
-async function samplesDi(native_samples, ext, members) {
+async function samplesDi(native_samples, ext, members, listing) {
   await ext.prepara(members.map(x => x.name));
   const rd = reader(members.map(x => x.blob), undefined);
-  return native_samples(members.map(x => x.name), Float64Array.from(members.map(x => x.blob.size)), rd);
+  return native_samples(members.map(x => x.name), Float64Array.from(members.map(x => x.blob.size)), rd, !!listing);
 }
 
 /** The series of the instrument log (`status:…`, `trailer:…`) of a sample of a maker's file: one session of the module is kept for them and closed when idle (a second copy of a big file is not held longer than it is used). */
@@ -345,7 +345,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
     return sink.finish();
   }
 
-  const samples = (/** @type {{ name: string, blob: Blob }[]} */ members) => samplesDi(native_samples, ext, members);
+  const samples = (/** @type {{ name: string, blob: Blob }[]} */ members, /** @type {boolean | undefined} */ listing) => samplesDi(native_samples, ext, members, listing);
   const log = registroDi(stubOf, memberFiles, ext, jerr);
   return { stubOf, attach, put: (/** @type {any} */ m, /** @type {(f: number) => void} */ tell) => { early.start(m); return held(m.nat.key, () => putHeld(m, f => { early.tell(m.name, m.id, { frac: f, phase: "read" }); tell(f); })); }, early, same: (/** @type {{ name: string, size: number, mtime: number }[]} */ ms, /** @type {string[]} */ ns) => sameDi(stubOf, ARCH, ms, ns), indexJob, lateJob: (/** @type {{ st: Stub, files: Blob[] } | null} */ job, /** @type {boolean} */ isolated) => lateJobDi(hashing, taken, job, isolated), toMzml, samples, sweep, orphans: () => orphansDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), lost: () => lostDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); early.drop(n); }, forgetAll: () => { stubs.clear(); posto.clear(); log.forgetAll(); }, registro: log.registro };
 }

@@ -1,10 +1,11 @@
-//! What `mzlab-cli convert` says of each file it converted: spectra and `conv/1` read back from the head of the mzML (so a file taken from the cache is
+//! What `mzlab-cli convert` says of each file it converted: spectra and `conversion/1` read back from the head of the mzML (so a file taken from the cache is
 //! described the same way) and the `--report` JSON, one object per input.
 
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
+use crate::Outcome;
 use mzlab_core::json::Out;
 
 /// One input of the conversion as `--report` writes it.
@@ -17,7 +18,7 @@ pub(crate) enum Item {
         seconds: f64,
         skipped: bool,
         conv: Option<String>,
-        /// `metodo/1.avvisi`: key and place of what the reader could not read.
+        /// `method/1.warnings`: key and place of what the reader could not read.
         notes: Vec<(String, String)>,
         /// With `--peaks mzlab`: the centroids flagged (merged, saturated).
         flagged: Option<(usize, usize)>,
@@ -43,7 +44,7 @@ pub(crate) fn flagged_of(run: &mzlab_core::flow::Run, label: &str) -> Option<(us
 }
 
 /// The partial read (declared, read, cause) of the input `label`, from the note of its file in the record of the run: counted once the scans were read,
-/// so it holds the scans left out because their data do not decode, which the `conv/1` of the header, written before them, cannot.
+/// so it holds the scans left out because their data do not decode, which the `conversion/1` of the header, written before them, cannot.
 pub(crate) fn lost_of(run: &mzlab_core::flow::Run, label: &str) -> Option<(usize, usize, String)> {
     let note = run
         .activities
@@ -58,7 +59,7 @@ pub(crate) fn lost_of(run: &mzlab_core::flow::Run, label: &str) -> Option<(usize
 /// The read step through the head of an mzML.
 const CHUNK: u64 = 1 << 20;
 
-/// Number of spectra, the `conv/1` document and the `metodo/1.avvisi` entries of the mzML at `path`. Both sit in the header before the first spectrum, after the `metodo/1`
+/// Number of spectra, the `conversion/1` document and the `method/1.warnings` entries of the mzML at `path`. Both sit in the header before the first spectrum, after the `method/1`
 /// document, which can be many MiB: the head is read until the `spectrumList` opening (or the `chromatogramList`, or the end), not a fixed size.
 pub(crate) fn head_of(path: &Path) -> (usize, Option<String>, Vec<(String, String)>) {
     let mut bytes = Vec::new();
@@ -88,16 +89,16 @@ pub(crate) fn head_of(path: &Path) -> (usize, Option<String>, Vec<(String, Strin
         .and_then(|(n, _)| n.parse().ok())
         .unwrap_or(0);
     let conv = text
-        .split_once("name=\"mzLab conv/1\" value=\"")
+        .split_once("name=\"mzLab conversion/1\" value=\"")
         .and_then(|(_, r)| r.split_once('"'))
         .map(|(v, _)| mzlab_core::method::xml_unescape(v));
     (spectra, conv, notes_of(&text))
 }
 
-/// The `avvisi` of the `metodo/1` document in the head `text` of an mzML, as (key, place).
+/// The `warnings` of the `method/1` document in the head `text` of an mzML, as (key, place).
 fn notes_of(text: &str) -> Vec<(String, String)> {
     let Some(doc) = text
-        .split_once("name=\"mzLab metodo/1\" value=\"")
+        .split_once("name=\"mzLab method/1\" value=\"")
         .and_then(|(_, r)| r.split_once('"'))
         .map(|(v, _)| mzlab_core::method::xml_unescape(v))
         .and_then(|v| mzlab_core::json::parse(v.as_bytes()).ok())
@@ -110,11 +111,11 @@ fn notes_of(text: &str) -> Vec<(String, String)> {
             .unwrap_or_default()
             .to_string()
     };
-    doc.get("avvisi")
+    doc.get("warnings")
         .map(|a| a.arr())
         .unwrap_or_default()
         .iter()
-        .map(|a| (s(a, "chiave"), s(a, "dove")))
+        .map(|a| (s(a, "key"), s(a, "place")))
         .filter(|(k, _)| !k.is_empty())
         .collect()
 }
@@ -130,13 +131,13 @@ pub(crate) fn partial_lines(items: &[Item]) -> String {
                 .clone()
                 .or_else(|| conv.as_deref().and_then(partial_of))
                 .map(|(declared, read, cause)| {
-                    // an MRM sample counts its cycles (`unita` of its `conv/1`), every other its scans
+                    // an MRM sample counts its cycles (`unit` of its `conversion/1`), every other its scans
                     let unit = match conv
                         .as_deref()
                         .and_then(|c| mzlab_core::json::parse(c.as_bytes()).ok())
-                        .and_then(|d| d.get("unita").and_then(|u| u.str().map(str::to_string)))
+                        .and_then(|d| d.get("unit").and_then(|u| u.str().map(str::to_string)))
                     {
-                        Some(u) if u == "cicli" => "MRM cycles",
+                        Some(u) if u == "cycles" => "MRM cycles",
                         _ => "scans",
                     };
                     format!(
@@ -166,18 +167,18 @@ pub(crate) fn merged_lines(items: &[Item]) -> String {
         .collect()
 }
 
-/// The scans declared and read and the cause key when the `conv/1` document `conv` says the read was partial.
+/// The scans declared and read and the cause key when the `conversion/1` document `conv` says the read was partial.
 pub(crate) fn partial_of(conv: &str) -> Option<(usize, usize, String)> {
     let doc = mzlab_core::json::parse(conv.as_bytes()).ok()?;
-    if doc.get("parziale").and_then(|p| p.bool()) != Some(true) {
+    if doc.get("partial").and_then(|p| p.bool()) != Some(true) {
         return None;
     }
     let n = |k: &str| doc.get(k).and_then(|v| v.f64()).unwrap_or(0.0) as usize;
-    let cause = doc.get("perdita").and_then(|s| s.str()).unwrap_or_default();
-    Some((n("dichiarate"), n("lette"), cause.to_string()))
+    let cause = doc.get("loss").and_then(|s| s.str()).unwrap_or_default();
+    Some((n("declared"), n("read"), cause.to_string()))
 }
 
-/// The `--report` document: a JSON array with `{input, output, sha256, spectra, seconds, skipped, conv/1, warnings}` (and `centroids` {merged, saturated}
+/// The `--report` document: a JSON array with `{input, output, sha256, spectra, seconds, skipped, conversion, warnings}` (and `centroids` {merged, saturated}
 /// with `--peaks mzlab`) or `{input, error, cause}` per input.
 pub(crate) fn report(items: &[Item]) -> String {
     let mut o = Out::default();
@@ -208,7 +209,7 @@ pub(crate) fn report(items: &[Item]) -> String {
                     ",\"skipped\":false"
                 });
                 if let Some(c) = conv {
-                    o.raw(",\"conv/1\":").raw(c);
+                    o.raw(",\"conversion\":").raw(c);
                 }
                 o.raw(",\"warnings\":[");
                 for (i, (k, d)) in notes.iter().enumerate() {
@@ -247,4 +248,14 @@ pub(crate) fn sans_gz(name: &str) -> &str {
     name.strip_suffix(".gz")
         .filter(|n| n.to_lowercase().ends_with(".mzml"))
         .unwrap_or(name)
+}
+
+/// A failure of `convert` with its own code and a hint (its `error/1` key is the generic one of the code).
+pub(crate) fn fail(code: u8, msg: &str, hint: &str) -> Outcome {
+    Outcome {
+        code,
+        stdout: Vec::new(),
+        stderr: format!("error: {msg}\nhint: {hint}\n"),
+        error: None,
+    }
 }

@@ -1,11 +1,11 @@
-// RUOLI.coalesce (ruoli-carica.js): the table of a loading repaints once per frame (a costly repaint spaces the next ones) and asks the proposals (`campioni/2 proponi`) once per batch; argv[2] = folder with the copied module.
+// RUOLI.coalesce (ruoli-carica.js): the table of a loading repaints once per frame (a costly repaint spaces the next ones) and asks the proposals (`samples/1 propose`) once per batch; argv[2] = folder with the copied module.
 import assert from "assert";
 import fs from "fs";
 import vm from "vm";
 const posts = [];
 const ctx = {
   I18N: { t: k => k }, EH: s => s, darkTime: x => x, CAMPIONI: { apply() {} }, performance: { now: () => 0 }, setTimeout, clearTimeout,
-  fetch: async (u, o) => ({ json: async () => { const b = JSON.parse(o.body); posts.push(b.files.map(f => f.name)); return { campioni: b.files.map(f => ({ file: f.name, tipo: "sample", tempo_min: 5 })) }; } }),
+  fetch: async (u, o) => ({ json: async () => { const b = JSON.parse(o.body); posts.push(b.files.map(f => f.name)); return { samples: b.files.map(f => ({ file: f.name, kind: "sample", time_min: 5 })) }; } }),
 };
 vm.createContext(ctx);
 const RUOLI = vm.runInContext(fs.readFileSync(process.argv[2] + "/ruoli-carica.js", "utf8") + "\n;RUOLI", ctx);

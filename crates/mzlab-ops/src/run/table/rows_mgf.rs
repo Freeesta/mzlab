@@ -35,7 +35,7 @@ pub fn rows_mgf<R: ReadAt, I: ReadAt>(
     table_sha256: &str,
     mut open: impl FnMut(usize) -> Result<Index<I>>,
 ) -> Result<String> {
-    let samples = pol::samples_v1(samples)?;
+    let samples = String::from_utf8_lossy(samples).into_owned();
     // the recipe, else the sign of the files (`pol::of_table`, the rule of the exports): a negative series is searched as negative
     let files: Vec<_> = (0..MAX_FILES).map_while(|k| open(k).ok()).collect();
     // unit-resolution files: the MGF carries the note that tells the matcher to use its Da windows

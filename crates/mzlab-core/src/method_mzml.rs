@@ -1,6 +1,6 @@
-//! `metodo/1` of an mzML that mzLab did not write (`from_mzml_head`): what the header of the file says (instrument, serial, software, source files
+//! `method/1` of an mzML that mzLab did not write (`from_mzml_head`): what the header of the file says (instrument, serial, software, source files
 //! with SHA-1, `run@startTimeStamp`, sample, scan settings, data processing) and the scan parameters that are the same in the first scans.
-//! Only the start of the file is read: the header up to `<spectrumList` and at most `SCANS` spectra. Every field carries `origine = "mzml:<element>"`.
+//! Only the start of the file is read: the header up to `<spectrumList` and at most `SCANS` spectra. Every field carries `origin = "mzml:<element>"`.
 //! Spec: `docs/agenti/method.md`. The reference is the mzML 1.1 schema and the PSI-MS CV; nothing is copied from another program.
 
 use crate::error::Result;
@@ -111,11 +111,11 @@ fn run_attr(head: &str, k: &str) -> Option<String> {
         .and_then(|t| attr(t, k))
 }
 
-/// `strumento`: model, serial number and software the header names.
+/// `instrument`: model, serial number and software the header names.
 fn instrument(meta: &Metadata) -> Option<V> {
     obj(vec![
-        ("modello", text(&meta.instrument)),
-        ("serie", text(&meta.serial)),
+        ("model", text(&meta.instrument)),
+        ("series", text(&meta.serial)),
         ("software", Some(V::Arr(software(meta)))),
     ])
 }
@@ -125,12 +125,12 @@ fn software(meta: &Metadata) -> Vec<V> {
         .iter()
         .filter_map(|s| {
             let (n, v) = s.rsplit_once(' ').unwrap_or((s.as_str(), ""));
-            obj(vec![("nome", text(n)), ("versione", text(v))])
+            obj(vec![("name", text(n)), ("version", text(v))])
         })
         .collect()
 }
 
-/// `campi` from the header: the scan settings, the sample, the processing steps and the instrument components, each with its own element as origin.
+/// `fields` from the header: the scan settings, the sample, the processing steps and the instrument components, each with its own element as origin.
 fn header_fields(head: &str) -> Vec<Field> {
     let mut out = vec![];
     let mut add = |origin: &str, b: &str| {
@@ -165,7 +165,7 @@ fn header_fields(head: &str) -> Vec<Field> {
     out
 }
 
-/// The parameters of the sampled scans: for each MS level, the ones that never change go to `ms` and the ones that change become an interval in `campi`.
+/// The parameters of the sampled scans: for each MS level, the ones that never change go to `ms` and the ones that change become an interval in `fields`.
 fn scan_part(scans: &str, fields: &mut Vec<Field>) -> Option<V> {
     let mut levels: Vec<(u32, Vec<Vec<f64>>)> = vec![];
     for sp in blocks(scans, "spectrum") {
@@ -203,9 +203,9 @@ fn scan_part(scans: &str, fields: &mut Vec<Field>) -> Option<V> {
                 if lo == hi {
                     ps.push(obj(vec![
                         ("id", text(pr.1)),
-                        ("etichetta", text(pr.2)),
-                        ("valore", Some(V::Num(lo))),
-                        ("unita", text(pr.3)),
+                        ("label", text(pr.2)),
+                        ("value", Some(V::Num(lo))),
+                        ("unit", text(pr.3)),
                     ]));
                 } else {
                     let key = format!("MS{level} {}", pr.2);
@@ -214,21 +214,21 @@ fn scan_part(scans: &str, fields: &mut Vec<Field>) -> Option<V> {
                 }
             }
             obj(vec![
-                ("indice", Some(V::Num(f64::from(*level)))),
+                ("index", Some(V::Num(f64::from(*level)))),
                 (
-                    "parametri",
+                    "parameters",
                     Some(V::Arr(ps.into_iter().flatten().collect())),
                 ),
             ])
         })
         .collect();
     obj(vec![(
-        "periodi",
-        obj(vec![("esperimenti", Some(V::Arr(exps)))]).map(|p| V::Arr(vec![p])),
+        "periods",
+        obj(vec![("experiments", Some(V::Arr(exps)))]).map(|p| V::Arr(vec![p])),
     )])
 }
 
-/// The `metodo/1` document an mzML header describes. `head` = the file up to `<spectrumList`; `scans` = the first spectra (their text);
+/// The `method/1` document an mzML header describes. `head` = the file up to `<spectrumList`; `scans` = the first spectra (their text);
 /// `name`/`bytes` = the file itself; `meta` = `Mzml::metadata`.
 pub fn from_mzml_head(head: &str, scans: &str, name: &str, bytes: u64, meta: &Metadata) -> String {
     let mut files = vec![SrcFile {
@@ -260,15 +260,15 @@ pub fn from_mzml_head(head: &str, scans: &str, name: &str, bytes: u64, meta: &Me
     });
     let doc = obj(vec![
         ("schema", Some(V::s(SCHEMA))),
-        ("origine", origin(&src, created.as_deref())),
+        ("origin", origin(&src, created.as_deref())),
         (
-            "campione",
-            obj(vec![("nome", sample_name.as_deref().and_then(text))]),
+            "sample",
+            obj(vec![("name", sample_name.as_deref().and_then(text))]),
         ),
-        ("strumento", instrument(meta)),
+        ("instrument", instrument(meta)),
         ("ms", ms),
         (
-            "campi",
+            "fields",
             Some(V::Arr(fields.iter().filter_map(Field::json).collect())),
         ),
     ]);
@@ -276,7 +276,7 @@ pub fn from_mzml_head(head: &str, scans: &str, name: &str, bytes: u64, meta: &Me
 }
 
 impl<R: ReadAt> Mzml<R> {
-    /// The `metodo/1` of an mzML: the document it carries (`userParam mzLab metodo/1`) or, when it has none, what its header and first scans say.
+    /// The `method/1` of an mzML: the document it carries (`userParam mzLab method/1`) or, when it has none, what its header and first scans say.
     /// `name` is the name of the file; `None` when the file has no header to read.
     pub fn method(&mut self, name: &str, doc_max: u64) -> Result<Option<String>> {
         let run = self.run_head(doc_max)?;

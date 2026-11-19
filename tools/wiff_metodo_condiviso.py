@@ -8,7 +8,7 @@ from wiff_riferimento import Writer, header, ion_spray, mrm_method
 
 def shared_method(out: Path):
     """`metodocond.wiff`: a batch of three samples that keep one `Method1` (a dense and a scheduled MRM experiment, its `GLPTables`) as Analyst writes it when the
-    samples share their method; sample 2 has an optical detector. What `metodo/1` says beyond the 3200 (`estesi`): the borrowed method, the scheduled window, the GLP table, the DAD header."""
+    samples share their method; sample 2 has an optical detector. What `method/1` says beyond the 3200 (`estesi`): the borrowed method, the scheduled window, the GLP table, the DAD header."""
     dense = [(300.0, 100.0, 50.0, "d0", 30.0, 9.0, 15.0, 4.0), (301.0, 101.0, 50.0, "d1", 30.0, 9.0, 16.0, 4.0)]
     sched = [(364.5, 176.0, 0.5, "s0", 40.0, 10.0, 25.0, 5.0), (250.25, 100.5, 2.5, "s2", 30.0, 9.0, 15.0, 4.0)]
     method = {"Experiment0/ExperimentHeader": header(4, 0.0), "Experiment0/MassRangeEx/MassRangeEx": mrm_method(dense), "Experiment1/ExperimentHeader": header(4, 0.0),

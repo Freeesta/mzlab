@@ -2,5 +2,7 @@
   "m3d.res": "Grid of the 3D viewer; {nrt} = cells along RT, {nmz} = cells along m/z.",
   "m3d.read.nom": "3D cursor readout; {n} = nominal mass of the cell (integer).",
   "m3d.xic": "Title of the small XIC plot of the 3D viewer; {mz} = m/z value under the cursor.",
-  "m3d.spc": "Title of the small spectrum of the 3D viewer; {rt} = retention time in minutes."
+  "m3d.spc": "Title of the small spectrum of the 3D viewer; {rt} = retention time in minutes.",
+  "m3d.xic.uv": "Title of the small plot of the 3D view of a DAD map: absorbance against time at the wavelength under the cursor; {mz} = nm.",
+  "m3d.spc.uv": "Title of the small plot of the 3D view of a DAD map; {rt} = time in min."
 }

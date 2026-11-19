@@ -77,8 +77,8 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | `.mzlib` format, library parsers, indexes and scores (`crates/mzlab-lib`) | `docs/agenti/libraries.md` |
 | user lists (transformations, adducts, suspects: CSV with per-row errors, `liste/1`, SHA-256 for `prov/1`) | `docs/agenti/lists.md` |
 | LLM assistant and external agents: principles, choices, risks, unrealized proposals | `docs/agenti/llm-choices.md` |
-| subagents, reads and reader runner on the `llm-agente.js` page (area: LLM assistant: `strumenti/1` catalog) | `docs/agenti/llm-subagents.md` |
-| LLM assistant: `strumenti/1` catalog | `docs/agenti/llm.md` |
+| subagents, reads and reader runner on the `llm-agente.js` page (area: LLM assistant: `tools/1` catalog) | `docs/agenti/llm-subagents.md` |
+| LLM assistant: `tools/1` catalog | `docs/agenti/llm.md` |
 | map of the open path of every file (click → screen, site and app, by format), strategies present/absent, file batches for external assistants (`tools/batch_gemini.py`) | `docs/agenti/map-loading.md` |
 | chromatogram drawing cost on dense traces (`tools/bench_charts.py`: 10^6 points, 20 files, wheel, drag, resize, line); 100,000-row HR table in "Statistics" (`tools/bench_table_hr.py`: KMD, click, "Data") | `docs/agenti/measurements-charts.md` |
 | V8 and wasm code cache of the site's scripts under the service worker: trace of main (0 hits), control page (which SW answers Chromium code-caches), S3 (headers stored with the copy, adopted, remeasured) and upper bound (`tests_e2e/misura_avvio_sw.py`) | `docs/agenti/measurements-code-cache.md` |
@@ -97,14 +97,14 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | memory: budget choice rules, notice user experience, open proposals (`memoria-avviso.js`) | `docs/agenti/memory-choices.md` |
 | "file too large" in the browser: when it appears (files opened together, formats read whole), measurements by size and file count, `openFiles`, `whole`, scans shared between slots | `docs/agenti/memory-limits.md` |
 | memory contract of the WASM modules (`mzlab-core::budget`, offset outputs, slabs, test flow) | `docs/agenti/memory.md` |
-| acquisition method (`metodo/1`, `method.rs`, `method_wiff`, `method_raw`, schema) | `docs/agenti/method.md` |
+| acquisition method (`method/1`, `method.rs`, `method_wiff`, `method_raw`, schema) | `docs/agenti/method.md` |
 | main metrics over time (`tools/metriche.py`, `stat-ci` branch, trends) | `docs/agenti/metrics.md` |
 | chemical structure record `mol/1` (`crates/mzlab-mol`: types, JSON, core hash; SMILES/molfile readers; CIP R/S and E/Z descriptors, `cip/1`, `disegno-cip.js`) | `docs/agenti/mol.md` |
 | molecule database (`crates/mzlab-core/src/molecules/`, `molecules/1`: record, CSV and canonical JSON, search, catalog/imported/user levels, catalog `mzlab/web/molecole/catalogo.csv`, `api/molecules/*` routes) | `docs/agenti/molecules.md` |
-| infusion MSn fragmentation graph (`msngrafo/1`: ions merged across levels and energies, proposed fragment formulas, "Fragmentation graph" tab) and standards' MSn tree library (`msnlib/1`, acquisition protocol) | `docs/agenti/msn-graph.md` |
+| infusion MSn fragmentation graph (`msn-graph/1`: ions merged across levels and energies, proposed fragment formulas, "Fragmentation graph" tab) and standards' MSn tree library (`msn-lib/1`, acquisition protocol) | `docs/agenti/msn-graph.md` |
 | MSn fragment interpretation (losses, rules, cleavages), fragment formulas (`msngraph/formulas.rs`, `candidates.rs`, `annotate.rs`: DAG constraint), cuts for a node (`strutture`), `vista` key (best path, layouts, `completa`) | `docs/agenti/msn-interpret.md` |
 | list of MSn experiments of a DDA file, "MSn tree" window (Experiments/Tree tabs, `msn-elenco.js`, `lev`/`z` columns of `/api/dda`); MS3-only files (`msn_level`, level, `/api/ms2tr`, titles); MSn graph figure; rule tests (`msn-rules`) | `docs/agenti/msn-manual.md` |
-| library (area: infusion MSn fragmentation graph (`msngrafo/1`: ions…) | `docs/agenti/msnlib.md` |
+| library (area: infusion MSn fragmentation graph (`msn-graph/1`: ions…) | `docs/agenti/msnlib.md` |
 | mutation tests (`cargo-mutants`) of `mzlab-lettori` and the wiff module: commands, samples, survivors and why they stay | `docs/agenti/mutants.md` |
 | broad bands (`broad.rs`), targeted pass options (`target.rs`: estimated peaks, /\ shape check, merging overlapping rows), RT correction and alignment (`rtmap.rs`, `rtwarp.rs`), kinetics as evidence (`kinetic.rs`, `kinetic/`) | `docs/agenti/mzfeat-broad.md` |
 | dependencies between `crates/mzlab-feat` modules (big cycle, back edges, cuts, splitting the attribution engine into a crate) | `docs/agenti/mzfeat-cycles.md` |
@@ -152,6 +152,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | reader modules, one per family (`crates/mzlab-lettori*`, separate `.wasm` in `wasm-lettori/<famiglia>/`, feature `estesi`, `LETTORI_FAM`, rule R in `shell.js`, `LETTORI_MOD`, `?lettori=modulo`, ceilings) | `docs/agenti/readers-module.md` |
 | "aperti" module (mzML with numpress, mzXML: `crates/mzlab-lettori/src/open/`, `numpress.rs`) | `docs/agenti/readers-open.md` |
 | Thermo `.raw`: activation, "unknown", rejected event table, damaged scans and controllers (`warn.raw.damaged`), precursors (target, selected ion, MSn chains, SPS, MSX, SRM from the event) | `docs/agenti/readers-thermo-precursors.md` |
+| Known contaminants panel: Add list (CSV, template, row errors), provenance of the lists, `reflist/1`, `mzlab-cli ref-list` | `docs/agenti/reference-lists.md` |
 | release: tag `vX.Y.Z`, `release.yml`, `CHANGELOG.md`, single version, SBOM, gate (`gate_release.py`); Dependabot, CodeQL, security settings to turn on by hand | `docs/agenti/release.md` |
 | browser reset measurements (full reset, Files, `qqHardReset`; `tests_e2e/misura_reset.py`, probe `lib_reset.py`), MISURA reset_* rows | `docs/agenti/reset-measurements.md` |
 | native mzFinder (area: Rust engine (`crates/`, golden data `tools/golden.py`)) | `docs/agenti/rust-desktop-finder.md` |
@@ -162,7 +163,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | `step/1` descriptors (area: Rust engine (`crates/`, golden data `tools/golden.py`)) | `docs/agenti/rust-step.md` |
 | Rust engine (`crates/`, golden data `tools/golden.py`) | `docs/agenti/rust.md` |
 | `--sample 1,3,5` / `2-4` on `convert`, `channels`, `features`, `samples select` (dry run): semantics, exit 5, `readers::selection`, wasm `sample_selection` | `docs/agenti/sample-flag.md` |
-| sample file roles, times and metadata (`campioni/2` and `/3`, `mzlab-core/src/samples/`: proposals from names, name patterns, CSV, free columns, data from file, warnings, migration, indexes for the TP path) | `docs/agenti/samples.md` |
+| sample file roles, times and metadata (`samples/1`, `mzlab-core/src/samples/`: proposals from names, name patterns, CSV, free columns, data from file, warnings, indexes for the TP path) | `docs/agenti/samples.md` |
 | scandump, RFR oracle | `docs/agenti/scandump.md` |
 | service worker, per-version site cache, `sw-manifest.json`, updates | `docs/agenti/service-worker.md` |
 | Shimadzu `.qgd` and `.lcd` reader (`crates/mzlab-lettori/src/shimadzu/`, `shimadzu` module) | `docs/agenti/shimadzu.md` |
@@ -193,6 +194,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | full binary specification (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-full-spec.md` |
 | a `.wiff` or `.wiff.scan` loaded alone: which file is its companion (shared Rust rule, `mzlab-cli pair`), the folder prompt of the page (`wiff-pair.js`), what each browser does | `docs/agenti/wiff-pair.md` |
 | choosing which samples of a `.wiff` (or other multi-sample file) to open: how Analyst does it, cost of listing (measured), #3398 reuse, dialog mockup, `samples list` CLI, cap estimate, PR split, questions (study, no feature code) | `docs/agenti/wiff-sample-choice.md` |
+| the page dialog «Choose samples» of a .wiff with several samples (`wiff-choose.js`, setting, `sample_default`, decisions, what is not done) | `docs/agenti/wiff-sample-dialog.md` |
 | other SCIEX instruments, sMRM, PIS/NL, feature `estesi` (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-variants.md` |
 | writing a `.wiff` + `.wiff.scan`: create, add or remove samples (design study, and the built read-only `mzlab-cli wiff list|verify` with the `wiffwrite` module: streams per sample, lossless copy, verification, wasm cap) | `docs/agenti/wiff-writer.md` |
 | `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` |

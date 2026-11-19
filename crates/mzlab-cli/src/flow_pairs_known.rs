@@ -33,24 +33,24 @@ const BY_FORMAT: &[&str] = &[
     "tp.link.table <- tp.filter.table",
 ];
 
-/// The pairs refused by their data, not by the plan: a table of one file with the samples of six (`error.badCampioni`). The check reads the plan
+/// The pairs refused by their data, not by the plan: a table of one file with the samples of six (`error.badSamples`). The check reads the plan
 /// only, never the rows of a table, so these stay check-OK and must fail at run with that key: the run, not the check, is where they are caught.
 const BY_DATA: &[(&str, &str)] = &[
     (
         "export.mztab.table <- table of one sample",
-        "error.badCampioni",
+        "error.badSamples",
     ),
     (
         "export.table_csv.table <- table of one sample",
-        "error.badCampioni",
+        "error.badSamples",
     ),
     (
         "table.filter.table <- table of one sample",
-        "error.badCampioni",
+        "error.badSamples",
     ),
     (
         "table.match.table <- table of one sample",
-        "error.badCampioni",
+        "error.badSamples",
     ),
 ];
 

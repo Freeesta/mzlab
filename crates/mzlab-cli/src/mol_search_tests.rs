@@ -48,7 +48,7 @@ fn usage_errors_exit_2() {
         vec!["mol-search", "--sub", "C", "--db"],
         vec!["mol-search", "--sub", "C", "--db", "/no/such/list.sdf"],
     ] {
-        assert_eq!(run(&a).code, 2, "{a:?}");
+        assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
     }
     assert_eq!(run(&["mol-search", "--help"]).code, 0);
 }

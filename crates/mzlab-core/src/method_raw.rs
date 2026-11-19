@@ -1,7 +1,7 @@
-//! The Thermo `.raw` adapter of `metodo/1` (`method.rs`): the sequence row (vial, volume, id, comment, method), the instrument (model, serial number, versions of
-//! the InstID block), the people and the computer, the LC and the mass spectrometer methods embedded in the file (`method_raw/script.rs`) and, in `campi`,
+//! The Thermo `.raw` adapter of `method/1` (`method.rs`): the sequence row (vial, volume, id, comment, method), the instrument (model, serial number, versions of
+//! the InstID block), the people and the computer, the LC and the mass spectrometer methods embedded in the file (`method_raw/script.rs`) and, in `fields`,
 //! every other field of the container, of the scan trailer and of the method (`method_raw/fields.rs`). What is only guessed from position is marked in `docs/agenti/method.md`.
-//! The status log is in `campi` (`campi/status.rs`); when its schema is not found `avvisi` says so.
+//! The status log is in `fields` (`fields/status.rs`); when its schema is not found `warnings` says so.
 
 mod detectors;
 pub(crate) mod fields;
@@ -52,12 +52,12 @@ fn sample(raw: &RawFileReader) -> Option<V> {
     };
     obj(vec![
         ("vial", text(vial)),
-        ("iniezione_uL", num(positive(i.injection_volume))),
-        ("metodo_file", text(leaf(&s.inst_method))),
+        ("injection_uL", num(positive(i.injection_volume))),
+        ("method_file", text(leaf(&s.inst_method))),
         ("id", text(&s.id)),
-        ("commento", text(&s.comment)),
-        ("diluizione", num(positive(i.dilution_factor))),
-        ("peso", num(positive(i.sample_weight))),
+        ("comment", text(&s.comment)),
+        ("dilution", num(positive(i.dilution_factor))),
+        ("weight", num(positive(i.sample_weight))),
         ("volume", num(positive(i.sample_volume))),
         ("istd", num(positive(i.istd_amount))),
     ])
@@ -76,13 +76,13 @@ fn strumento(raw: &RawFileReader) -> Option<V> {
         .or_else(|| id(1))
         .or_else(|| id(0));
     obj(vec![
-        ("produttore", Some(V::s("Thermo Fisher Scientific"))),
-        ("modello", model),
-        ("serie", id(2)),
+        ("manufacturer", Some(V::s("Thermo Fisher Scientific"))),
+        ("model", model),
+        ("series", id(2)),
         ("hardware", id(4)),
         (
             "software",
-            obj(vec![("nome", Some(V::s("Xcalibur"))), ("versione", id(3))])
+            obj(vec![("name", Some(V::s("Xcalibur"))), ("version", id(3))])
                 .map(|s| V::Arr(vec![s])),
         ),
     ])
@@ -98,14 +98,14 @@ fn ms<R: Read + Seek>(
 ) -> Option<V> {
     obj(vec![
         (
-            "sorgente",
-            obj(vec![("tipo", source_type(raw, source).map(V::s))]),
+            "source",
+            obj(vec![("type", source_type(raw, source).map(V::s))]),
         ),
-        ("calibrazione", obj(vec![("lock_mass", lock)])),
-        ("impostazioni", settings),
+        ("calibration", obj(vec![("lock_mass", lock)])),
+        ("settings", settings),
         (
-            "periodi",
-            obj(vec![("esperimenti", Some(V::Arr(exps)))]).map(|p| V::Arr(vec![p])),
+            "periods",
+            obj(vec![("experiments", Some(V::Arr(exps)))]).map(|p| V::Arr(vec![p])),
         ),
     ])
 }
@@ -113,8 +113,8 @@ fn ms<R: Read + Seek>(
 fn pressure(pairs: &[script::Pair]) -> Option<V> {
     let (v, u) = script::setting(pairs, "PumpModule.Pump.Pressure.UpperLimit")?;
     obj(vec![
-        ("valore", num(Some(v))),
-        ("unita", u.as_deref().and_then(text)),
+        ("value", num(Some(v))),
+        ("unit", u.as_deref().and_then(text)),
     ])
 }
 
@@ -127,15 +127,15 @@ fn sampler(pairs: &[script::Pair]) -> Option<V> {
             let n = v.replace(',', ".").parse::<f64>().ok()?;
             obj(vec![
                 ("id", text(k)),
-                ("valore", num(Some(n))),
-                ("unita", u.as_deref().and_then(text)),
+                ("value", num(Some(n))),
+                ("unit", u.as_deref().and_then(text)),
             ])
         })
         .collect();
-    obj(vec![("parametri", Some(V::Arr(params)))])
+    obj(vec![("parameters", Some(V::Arr(params)))])
 }
 
-/// The texts of the method as they are (`grezzo`), cut to `GRAW_MAX` in all, the shortest given their room first (the LC script and the MS text are
+/// The texts of the method as they are (`raw`), cut to `GRAW_MAX` in all, the shortest given their room first (the LC script and the MS text are
 /// never pushed out by a long XML), without the characters outside the XML `Char` production.
 fn raw_texts(blocks: &[String]) -> Vec<V> {
     let mut order: Vec<usize> = (0..blocks.len()).collect();
@@ -168,8 +168,8 @@ fn raw_texts(blocks: &[String]) -> Vec<V> {
             Block::Text => "Method MS",
         };
         out.extend(obj(vec![
-            ("sezione", Some(V::s(name))),
-            ("testo", text(part)),
+            ("section", Some(V::s(name))),
+            ("text", text(part)),
         ]));
     }
     out
@@ -181,8 +181,8 @@ fn trailer_warning(raw: &RawFileReader) -> Vec<Option<V>> {
     missing
         .then(|| {
             obj(vec![
-                ("chiave", Some(V::s("meta.nonDecodificato"))),
-                ("dove", Some(V::s("Scan trailer: records not found"))),
+                ("key", Some(V::s("meta.nonDecodificato"))),
+                ("place", Some(V::s("Scan trailer: records not found"))),
             ])
         })
         .into_iter()
@@ -194,7 +194,7 @@ fn open_warnings(raw: &RawFileReader) -> Vec<Option<V>> {
     skipped_warnings(&raw.warnings)
 }
 
-/// One `avvisi` entry per warning of the reader (`RawFileReader::warnings`, the analog controllers left out by `analog_traces_counted`).
+/// One `warnings` entry per warning of the reader (`RawFileReader::warnings`, the analog controllers left out by `analog_traces_counted`).
 fn skipped_warnings(warnings: &[opentfraw::Warning]) -> Vec<Option<V>> {
     warnings
         .iter()
@@ -204,8 +204,8 @@ fn skipped_warnings(warnings: &[opentfraw::Warning]) -> Vec<Option<V>> {
                 opentfraw::Warning::Skipped { .. } => "meta.nonDecodificato",
             };
             obj(vec![
-                ("chiave", Some(V::s(key))),
-                ("dove", Some(V::s(w.text()))),
+                ("key", Some(V::s(key))),
+                ("place", Some(V::s(w.text()))),
             ])
         })
         .collect()
@@ -214,12 +214,8 @@ fn skipped_warnings(warnings: &[opentfraw::Warning]) -> Vec<Option<V>> {
 /// What the scans themselves leave to a notice: trailer ions put aside for the isolation target, SRM transitions taken from the method's table, and what
 /// the reader passes on unverified (an MS order it does not decode, an event found by number in a cut table) or refuses (a profile it cannot calibrate).
 fn scan_warnings(n: &crate::raw::ScanNotes) -> Vec<Option<V>> {
-    let note = |key: &str, text: String| {
-        obj(vec![
-            ("chiave", Some(V::s(key))),
-            ("dove", Some(V::s(text))),
-        ])
-    };
+    let note =
+        |key: &str, text: String| obj(vec![("key", Some(V::s(key))), ("place", Some(V::s(text)))]);
     let mut out = Vec::new();
     if n.order_unknown > 0 {
         out.push(note("meta.nonDecodificato", format!(
@@ -241,9 +237,9 @@ fn scan_warnings(n: &crate::raw::ScanNotes) -> Vec<Option<V>> {
     }
     if n.ion_rejected > 0 {
         out.push(obj(vec![
-            ("chiave", Some(V::s("meta.ioneScartata"))),
+            ("key", Some(V::s("meta.ioneScartata"))),
             (
-                "dove",
+                "place",
                 Some(V::s(format!(
                     "the trailer's monoisotopic m/z lies outside the isolation window in {} of {} scans",
                     n.ion_rejected, n.scans
@@ -253,9 +249,9 @@ fn scan_warnings(n: &crate::raw::ScanNotes) -> Vec<Option<V>> {
     }
     if n.srm_from_table > 0 {
         out.push(obj(vec![
-            ("chiave", Some(V::s("meta.daTabella"))),
+            ("key", Some(V::s("meta.daTabella"))),
             (
-                "dove",
+                "place",
                 Some(V::s(format!(
                     "SRM Q1 and collision energy of {} of {} scans (the transition table; the scans have no scan event)",
                     n.srm_from_table, n.scans
@@ -280,14 +276,14 @@ fn block_warnings(blocks: &[String]) -> Vec<Option<V>> {
     let mut w = Vec::new();
     if detectors::has_3d_field(blocks) {
         w.push(obj(vec![
-            ("chiave", Some(V::s("meta.nonDecodificato"))),
-            ("dove", Some(V::s("UV 3D field (PDA spectra)"))),
+            ("key", Some(V::s("meta.nonDecodificato"))),
+            ("place", Some(V::s("UV 3D field (PDA spectra)"))),
         ]));
     }
     if blocks.is_empty() {
         w.push(obj(vec![
-            ("chiave", Some(V::s("meta.mancante"))),
-            ("dove", Some(V::s("Method"))),
+            ("key", Some(V::s("meta.mancante"))),
+            ("place", Some(V::s("Method"))),
         ]));
     }
     w
@@ -299,8 +295,8 @@ fn status_warning(raw: &RawFileReader) -> Vec<Option<V>> {
     missing
         .then(|| {
             obj(vec![
-                ("chiave", Some(V::s("meta.nonDecodificato"))),
-                ("dove", Some(V::s("Status log"))),
+                ("key", Some(V::s("meta.nonDecodificato"))),
+                ("place", Some(V::s("Status log"))),
             ])
         })
         .into_iter()
@@ -311,8 +307,8 @@ fn status_warning(raw: &RawFileReader) -> Vec<Option<V>> {
 fn tsq_experiment(blocks: &[String], exps: &mut Vec<V>, warn: &mut Vec<Option<V>>) {
     let not_decoded = |at: &str| {
         obj(vec![
-            ("chiave", Some(V::s("meta.nonDecodificato"))),
-            ("dove", Some(V::s(at))),
+            ("key", Some(V::s("meta.nonDecodificato"))),
+            ("place", Some(V::s(at))),
         ])
     };
     match blocks.iter().find_map(|b| tsq::parse(b)) {
@@ -322,7 +318,7 @@ fn tsq_experiment(blocks: &[String], exps: &mut Vec<V>, warn: &mut Vec<Option<V>
             }
             exps.extend(tsq::experiment(&t, exps.len() + 1));
         }
-        // a method that announces SRM transitions and gives no table that parses: the transitions stay in `grezzo`
+        // a method that announces SRM transitions and gives no table that parses: the transitions stay in `raw`
         None if blocks.iter().any(|b| tsq::announces_transitions(b)) => {
             warn.push(not_decoded("Method MS: transitions"));
         }
@@ -337,10 +333,10 @@ fn inclusion_list(texts: &[&str], exps: &mut Vec<V>) {
     };
     let section = inclusion::section(&list);
     match exps.last_mut() {
-        Some(V::Obj(f)) => f.push(("inclusione", section)),
+        Some(V::Obj(f)) => f.push(("inclusion", section)),
         _ => exps.extend(obj(vec![
-            ("indice", num(Some(1.0))),
-            ("inclusione", Some(section)),
+            ("index", num(Some(1.0))),
+            ("inclusion", Some(section)),
         ])),
     }
 }
@@ -356,9 +352,9 @@ fn method_blocks<R: Read + Seek>(
         let lost = raw.raw_file_info.preamble.method_file_present && !scanned.is_empty();
         let w = lost.then(|| {
             obj(vec![
-                ("chiave", Some(V::s("meta.nonDecodificato"))),
+                ("key", Some(V::s("meta.nonDecodificato"))),
                 (
-                    "dove",
+                    "place",
                     Some(V::s(
                         "Method: OLE container not found (texts found by scanning)",
                     )),
@@ -388,7 +384,7 @@ fn experiments_of(
     (exps, settings)
 }
 
-/// The scan trailer read once, each record decoded once: its fields for `campi` and its series for `serie_registro`.
+/// The scan trailer read once, each record decoded once: its fields for `fields` and its series for `log_series`.
 fn trailer_pass<R: Read + Seek>(
     raw: &RawFileReader,
     source: &mut R,
@@ -407,7 +403,7 @@ fn trailer_pass<R: Read + Seek>(
     (t.finish(raw), entries)
 }
 
-/// The `metodo/1` document of a `.raw` already opened as `raw` (`source` is the same file, read again for the texts of the method). Never an error: what is missing is absent.
+/// The `method/1` document of a `.raw` already opened as `raw` (`source` is the same file, read again for the texts of the method). Never an error: what is missing is absent.
 pub fn from_raw<R: Read + Seek>(
     raw: &RawFileReader,
     source: &mut R,
@@ -435,8 +431,8 @@ pub fn from_raw<R: Read + Seek>(
     let (lc, _) = script::lc_of(script_text).map_or((None, None), |l| lc_sections(&l));
     let lc = lc.map(|mut v| {
         if let V::Obj(f) = &mut v {
-            f.extend(pressure(&pairs).map(|p| ("pressione_max", p)));
-            f.extend(settings::solvents(&pairs).map(|s| ("solventi", s)));
+            f.extend(pressure(&pairs).map(|p| ("pressure_max", p)));
+            f.extend(settings::solvents(&pairs).map(|s| ("solvents", s)));
         }
         v
     });
@@ -448,15 +444,15 @@ pub fn from_raw<R: Read + Seek>(
     let doc = obj(vec![
         ("schema", Some(V::s(method::SCHEMA))),
         (
-            "origine",
+            "origin",
             method::origin(src, fields::clock(raw.header.audit_start.time).as_deref()),
         ),
-        ("campione", sample(raw)),
-        ("strumento", strumento(raw)),
+        ("sample", sample(raw)),
+        ("instrument", strumento(raw)),
         (
-            "operatore",
+            "operator",
             obj(vec![
-                ("utente", text(&raw.header.audit_start.tag2)),
+                ("user", text(&raw.header.audit_start.tag2)),
                 ("computer", text(&raw.raw_file_info.computer_name)),
             ]),
         ),
@@ -465,18 +461,21 @@ pub fn from_raw<R: Read + Seek>(
             ms(raw, source, exps, lock, settings::section(&settings)),
         ),
         ("lc", lc),
-        ("rivelatori", detectors::section(&blocks)),
-        ("campionatore", sampler(&pairs)),
+        ("detectors", detectors::section(&blocks)),
+        ("autosampler", sampler(&pairs)),
         (
-            "campi",
+            "fields",
             Some(V::Arr(fields::fields(
                 raw, trailer, &traces, &pairs, &items, &ident,
             ))),
         ),
-        ("registro", Some(V::Arr(registry::entries(&raw.error_log)))),
-        ("serie_registro", Some(V::Arr(series::sezione(&voci)))),
-        ("grezzo", Some(V::Arr(raw_texts(&blocks)))),
-        ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),
+        ("log", Some(V::Arr(registry::entries(&raw.error_log)))),
+        ("log_series", Some(V::Arr(series::sezione(&voci)))),
+        ("raw", Some(V::Arr(raw_texts(&blocks)))),
+        (
+            "warnings",
+            Some(V::Arr(warn.into_iter().flatten().collect())),
+        ),
     ]);
     doc.map_or_else(String::new, |d| d.json())
 }

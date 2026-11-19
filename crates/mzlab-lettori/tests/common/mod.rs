@@ -113,12 +113,12 @@ pub const HEADER: &str = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<indexedmz
 <instrumentConfigurationList count=\"1\"><instrumentConfiguration id=\"IC1\"><referenceableParamGroupRef ref=\"CommonInstrumentParams\"/><componentList count=\"3\"><source order=\"1\"><cvParam cvRef=\"MS\" accession=\"MS:1000073\" name=\"electrospray ionization\"/></source><analyzer order=\"2\"><cvParam cvRef=\"MS\" accession=\"MS:1000484\" name=\"orbitrap\"/></analyzer><detector order=\"3\"><cvParam cvRef=\"MS\" accession=\"MS:1000624\" name=\"inductive detector\"/></detector></componentList></instrumentConfiguration></instrumentConfigurationList>\n\
 <run id=\"campione\" defaultInstrumentConfigurationRef=\"IC1\" startTimeStamp=\"2024-03-05T10:11:12Z\">\n";
 
-/// The mzML: spectra, then a TIC chromatogram whose arrays are written as the spectra's. `metodo`: the userParam that carries a `metodo/1` document.
+/// The mzML: spectra, then a TIC chromatogram whose arrays are written as the spectra's. `metodo`: the userParam that carries a `method/1` document.
 pub fn mzml_di(scan: &[Scan], cod: Cod, method: Option<&str>) -> Vec<u8> {
     let mut s = String::from(HEADER);
     if let Some(m) = method {
         s += &format!(
-            "<userParam name=\"mzLab metodo/1\" value=\"{}\"/>\n",
+            "<userParam name=\"mzLab method/1\" value=\"{}\"/>\n",
             m.replace('"', "&quot;")
         );
     }

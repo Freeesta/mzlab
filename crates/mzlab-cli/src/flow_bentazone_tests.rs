@@ -5,7 +5,7 @@
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use mzlab_core::samples::{proponi, to_json};
+use mzlab_core::samples::{propose, to_json};
 use mzlab_feat::tp::{ST_PARENT, ST_TP};
 
 pub(crate) const FORMULA: &str = "C10H12N2O3S";
@@ -132,7 +132,7 @@ pub(crate) fn fixture(tag: &str, pol: i8, hr: bool) -> PathBuf {
         .iter()
         .map(|n| (format!("{n}.mzML"), String::new(), String::new()))
         .collect();
-    std::fs::write(d.join("samples.json"), to_json(&proponi(&files))).unwrap();
+    std::fs::write(d.join("samples.json"), to_json(&propose(&files))).unwrap();
     std::fs::write(
         d.join("parent.json"),
         format!(r#"{{"name":"bentazone","formula":"{FORMULA}","smiles":"{SMILES}"}}"#),

@@ -1,4 +1,4 @@
-//! The scan statistics of a file (`/api/scan_stats`, a source of `ispezione/1`): what `Item.info()` does not carry about the scans (MS1 cycle time,
+//! The scan statistics of a file (`/api/scan_stats`, a source of `inspection/1`): what `Item.info()` does not carry about the scans (MS1 cycle time,
 //! product-ion scans per cycle, isolation windows, distinct precursors). Read from the scan table of the index, never from the peaks. Used by `routes`
 //! (site and app) and re-exported by `mzlab_llm::inspect`.
 
@@ -6,7 +6,7 @@ use crate::idxread::Scan;
 use crate::json::{Out, Value};
 use crate::sortc;
 
-/// Four significant digits (the rounding of `ispezione/1`).
+/// Four significant digits (the rounding of `inspection/1`).
 fn n(x: f64) -> Value {
     if x == 0.0 || x.fract() == 0.0 || !x.is_finite() {
         return Value::Num(x);

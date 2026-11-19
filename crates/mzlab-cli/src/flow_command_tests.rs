@@ -72,7 +72,7 @@ fn the_copied_command_reruns_the_plan_with_the_same_bytes() {
 #[test]
 fn a_missing_plan_is_an_orderly_error() {
     let o = execute(&["flow", "command", "/no/such/plan.json"]);
-    assert_eq!(o.code, 2);
+    assert_eq!(o.code, 4);
     assert!(o.stderr.contains("plan.json"));
     assert_eq!(execute(&["flow", "command"]).code, 2);
 }

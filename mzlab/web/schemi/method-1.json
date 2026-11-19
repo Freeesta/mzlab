@@ -1,0 +1,786 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "method/1",
+  "description": "Metodo di acquisizione di UN campione (o, per una cartella di metodo `.m` senza corsa, il metodo di analisi dei dati). Un valore sconosciuto è ASSENTE (mai null, mai 0); le sezioni vuote sono omesse; le unità stanno nel nome del campo.",
+  "type": "object",
+  "required": [
+    "schema"
+  ],
+  "properties": {
+    "schema": {
+      "const": "method/1"
+    },
+    "origin": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "type": "string"
+        },
+        "file": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "sha1": {
+                "type": "string"
+              },
+              "byte": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "sample": {
+          "type": "number"
+        },
+        "file_created": {
+          "type": "string"
+        },
+        "reader": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "sample": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "vial": {
+          "type": "string"
+        },
+        "injection_uL": {
+          "type": "number"
+        },
+        "method_file": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "comment": {
+          "type": "string"
+        },
+        "dilution": {
+          "type": "number"
+        },
+        "weight": {
+          "type": "number"
+        },
+        "volume": {
+          "type": "number"
+        },
+        "istd": {
+          "type": "number"
+        }
+      }
+    },
+    "instrument": {
+      "type": "object",
+      "properties": {
+        "manufacturer": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "series": {
+          "type": "string"
+        },
+        "software": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "computer": {
+          "type": "string"
+        },
+        "firmware": {
+          "type": "string"
+        },
+        "hardware": {
+          "type": "string"
+        }
+      }
+    },
+    "operator": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "string"
+        },
+        "computer": {
+          "type": "string"
+        }
+      }
+    },
+    "ms": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "parameters": {
+              "$ref": "#/$defs/parametri"
+            }
+          }
+        },
+        "periods": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "experiments": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "index": {
+                      "type": "number"
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "mz": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "minItems": 2,
+                      "maxItems": 2
+                    },
+                    "ce_eV": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "parameters": {
+                      "$ref": "#/$defs/parametri"
+                    },
+                    "transitions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "q1": {
+                            "type": "number"
+                          },
+                          "q3": {
+                            "type": "number"
+                          },
+                          "dwell_ms": {
+                            "type": "number"
+                          },
+                          "ce_eV": {
+                            "type": "number"
+                          },
+                          "dp_V": {
+                            "type": "number"
+                          },
+                          "ep_V": {
+                            "type": "number"
+                          },
+                          "cep_V": {
+                            "type": "number"
+                          },
+                          "cxp_V": {
+                            "type": "number"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "rf_lens_V": {
+                            "type": "number"
+                          },
+                          "polarity": {
+                            "type": "string",
+                            "enum": [
+                              "positive",
+                              "negative"
+                            ]
+                          },
+                          "t_start_min": {
+                            "type": "number"
+                          },
+                          "t_end_min": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    },
+                    "nce": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "isolation_mz": {
+                      "type": "number"
+                    },
+                    "inclusion": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "mz": {
+                            "type": "number"
+                          },
+                          "formula": {
+                            "type": "string"
+                          },
+                          "species": {
+                            "type": "string"
+                          },
+                          "charge": {
+                            "type": "number"
+                          },
+                          "polarity": {
+                            "type": "string",
+                            "enum": [
+                              "positive",
+                              "negative"
+                            ]
+                          },
+                          "t_start_min": {
+                            "type": "number"
+                          },
+                          "t_end_min": {
+                            "type": "number"
+                          },
+                          "nce": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            }
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mz"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "calibration": {
+          "type": "object",
+          "properties": {
+            "lock_mass": {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "type": "string"
+                },
+                "lists": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "polarity": {
+                        "type": "string",
+                        "enum": [
+                          "positive",
+                          "negative"
+                        ]
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "masses_mz": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                },
+                "number_in_trailer": {
+                  "type": "number"
+                },
+                "correction_ppm": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              }
+            }
+          }
+        },
+        "settings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              },
+              "value": {
+                "type": "string"
+              },
+              "unit": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "lc": {
+      "type": "object",
+      "properties": {
+        "gradient": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "t_min": {
+                "type": "number"
+              },
+              "B_pct": {
+                "type": "number"
+              },
+              "flow_mL_min": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "t_min"
+            ]
+          }
+        },
+        "flow_mL_min": {
+          "type": "number"
+        },
+        "B_start_pct": {
+          "type": "number"
+        },
+        "oven_C": {
+          "type": "number"
+        },
+        "duration_min": {
+          "type": "number"
+        },
+        "pressure_max": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number"
+            },
+            "unit": {
+              "type": "string"
+            }
+          }
+        },
+        "solvents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "channel": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "autosampler": {
+      "type": "object",
+      "properties": {
+        "parameters": {
+          "$ref": "#/$defs/parametri"
+        }
+      }
+    },
+    "detectors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "nm": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "step_nm": {
+            "type": "number"
+          },
+          "frequency_Hz": {
+            "type": "number"
+          },
+          "lamp": {
+            "type": "string"
+          },
+          "cell_C": {
+            "type": "number"
+          },
+          "slit_nm": {
+            "type": "number"
+          },
+          "channels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "nm": {
+                  "type": "number"
+                },
+                "bandwidth_nm": {
+                  "type": "number"
+                },
+                "reference_nm": {
+                  "type": "number"
+                },
+                "reference_bandwidth_nm": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "log": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "when": {
+            "enum": [
+              "inizio",
+              "fine"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "t_min": {
+            "type": "number"
+          },
+          "level": {
+            "enum": [
+              "Info",
+              "Warning",
+              "Error"
+            ]
+          }
+        }
+      }
+    },
+    "log_series": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "group": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "n": {
+            "type": "number"
+          },
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "quantification": {
+      "type": "object",
+      "properties": {
+        "data_version": {
+          "type": "number"
+        },
+        "windows": {
+          "type": "object",
+          "properties": {
+            "reference": {
+              "type": "number"
+            },
+            "non_reference": {
+              "type": "number"
+            },
+            "unit": {
+              "type": "string"
+            },
+            "correlation": {
+              "type": "number"
+            }
+          }
+        },
+        "compounds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "number"
+              },
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "istd": {
+                "type": "boolean"
+              },
+              "rt_min": {
+                "type": "number"
+              },
+              "window_rt": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "number"
+                  },
+                  "unit": {
+                    "type": "string"
+                  }
+                }
+              },
+              "time_segment": {
+                "type": "number"
+              },
+              "polarity": {
+                "type": "string"
+              },
+              "scan_type": {
+                "type": "string"
+              },
+              "mz": {
+                "type": "number"
+              },
+              "window_mz": {
+                "type": "object",
+                "properties": {
+                  "left": {
+                    "type": "number"
+                  },
+                  "right": {
+                    "type": "number"
+                  },
+                  "unit": {
+                    "type": "string"
+                  }
+                }
+              },
+              "integrator": {
+                "type": "string"
+              },
+              "curve": {
+                "type": "object",
+                "properties": {
+                  "model": {
+                    "type": "string"
+                  },
+                  "origin": {
+                    "type": "string"
+                  },
+                  "weight": {
+                    "type": "string"
+                  }
+                }
+              },
+              "conc_unit": {
+                "type": "string"
+              },
+              "ions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "index": {
+                      "type": "number"
+                    },
+                    "mz": {
+                      "type": "number"
+                    },
+                    "relative_response_pct": {
+                      "type": "number"
+                    },
+                    "min_pct": {
+                      "type": "number"
+                    },
+                    "max_pct": {
+                      "type": "number"
+                    },
+                    "uncertainty_pct": {
+                      "type": "number"
+                    }
+                  }
+                }
+              },
+              "levels": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "conc": {
+                      "type": "number"
+                    },
+                    "active": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "description": "Metodo di quantificazione (cartella .m di Agilent): ciò che il metodo cerca, per composto. Un m/z di 0 nel file è «non impostato»: assente."
+    },
+    "raw": {
+      "type": "array",
+      "description": "Testo del registro dello strumento così com'è (al massimo 256 KB).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "place": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "fields": {
+      "type": "array",
+      "description": "Ogni campo del file che le sezioni non portano, con il posto da cui viene (nessuna perdita). Ordinati per (origine, chiave).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "origin": {
+            "type": "string",
+            "description": "<formato>:<flusso o file>[#chiave]"
+          },
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "mapped": {
+            "type": "string",
+            "description": "Dove il valore è anche nel documento (es. campione.vial)."
+          },
+          "identity": {
+            "type": "boolean",
+            "description": "true: identifica una persona, un computer, un seriale o un percorso."
+          }
+        },
+        "required": [
+          "origin",
+          "key",
+          "value"
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "parametri": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

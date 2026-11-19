@@ -23,8 +23,8 @@ fn a_parameter_keeps_its_value_only_when_it_is_a_number_besides_zero() {
             .map(|p| p.json())
             .unwrap_or_default()
     };
-    assert!(json(20.0).contains("\"valore\":20"), "{}", json(20.0));
-    assert!(json(20.0).contains("\"unita\":\"eV\""));
-    assert!(!json(0.0).contains("valore"));
-    assert!(!json(f64::NAN).contains("valore"));
+    assert!(json(20.0).contains("\"value\":20"), "{}", json(20.0));
+    assert!(json(20.0).contains("\"unit\":\"eV\""));
+    assert!(!json(0.0).contains("value"));
+    assert!(!json(f64::NAN).contains("value"));
 }

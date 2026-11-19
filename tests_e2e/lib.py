@@ -168,8 +168,8 @@ def _site():
 # would; e2e_disegno_riquadri asks for the real first visit (draw_cards=True).
 _CARDS_OPEN = ("try{if(!localStorage.getItem('mzlab.disegno.schede'))localStorage.setItem('mzlab.disegno.schede',JSON.stringify(Object.fromEntries("
                "['sel-card','lb-card','cut-card','mech-card','chk-card','cip-card','sub-card'].map(k=>[k,1]))))}catch(e){}")
-def _extra(c, cards=False):
-    if not cards: c.add_init_script(_CARDS_OPEN)
+_PICK_NEVER = "try{if(!localStorage.getItem('mzlab.pick'))localStorage.setItem('mzlab.pick','never')}catch(e){}"          # the modal «Choose samples» dialog would block a mere stage(); e2e_wiff_choose asks for the default (pick_dialog=True)
+def _extra(c, cards=False, pick=False): [c.add_init_script(js) for off, js in ((cards, _CARDS_OPEN), (pick, _PICK_NEVER)) if not off]
 def _start_prefs(k):
     """The site starts in English with the light theme whatever the browser says. A test that asks for a dark system scheme wants that UI,
     so the stored choice it would have made is set for it (only if the page has none yet). `lang_auto=True` (kept for old callers) leaves the real defaults."""
@@ -180,15 +180,15 @@ def _start_prefs(k):
     return ("try{if(window.name.indexOf('|mzseed')<0){window.name+='|mzseed';" + js + "}}catch(e){}") if js else None
 def _new_page(self, *a, **k):
     k.setdefault("locale", "en-US")
-    sp, dc = _start_prefs(k), k.pop("draw_cards", False)
-    pg = _np(self, *a, **k); pg.add_init_script(_TRACK); _extra(pg, dc)
+    sp, dc, pd = _start_prefs(k), k.pop("draw_cards", False), k.pop("pick_dialog", False)
+    pg = _np(self, *a, **k); pg.add_init_script(_TRACK); _extra(pg, dc, pd)
     if sp: pg.add_init_script(sp)
     if _site(): pg.add_init_script(_site())
     return pg
 def _new_context(self, *a, **k):
     k.setdefault("locale", "en-US")
-    sp, dc = _start_prefs(k), k.pop("draw_cards", False)
-    c = _nc(self, *a, **k); c.add_init_script(_TRACK); _extra(c, dc)
+    sp, dc, pd = _start_prefs(k), k.pop("draw_cards", False), k.pop("pick_dialog", False)
+    c = _nc(self, *a, **k); c.add_init_script(_TRACK); _extra(c, dc, pd)
     if sp: c.add_init_script(sp)
     if _site(): c.add_init_script(_site())
     return c
@@ -203,10 +203,10 @@ class _PersistentWebKit:
     def new_context(self, **k):
         import tempfile
         k.setdefault("locale", "en-US")
-        sp, dc = _start_prefs(k), k.pop("draw_cards", False)
+        sp, dc, pd = _start_prefs(k), k.pop("draw_cards", False), k.pop("pick_dialog", False)
         d = tempfile.mkdtemp(prefix="mzlab-wkprofile-")
         c = self._bt.launch_persistent_context(d, **self._kw, **k)
-        self._open.append((c, d)); c.add_init_script(_TRACK); _extra(c, dc)
+        self._open.append((c, d)); c.add_init_script(_TRACK); _extra(c, dc, pd)
         if sp: c.add_init_script(sp)
         if _site(): c.add_init_script(_site())
         return c

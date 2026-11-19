@@ -1,5 +1,5 @@
 //! Reading a few top-level members of a large JSON text: the other values are checked exactly as `json::parse` checks them, but never built.
-//! `corsa/1` reads two or three keys of every output file of a run; a group step's `ionnet/1` can be hundreds of MB.
+//! `run-report/1` reads two or three keys of every output file of a run; a group step's `ionnet/1` can be hundreds of MB.
 
 use crate::error::Result;
 use crate::json::{bad, Value, P};

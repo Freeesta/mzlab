@@ -124,7 +124,7 @@ def test_set_meta_without_session_is_an_error(tmp_path):
 
 
 def test_finder_ops_are_in_route_finder():
-    """Every `campioni` op mzFinder's roles page calls is linked into the `table` .wasm (`samples::route_finder`)."""
+    """Every `samples` op mzFinder's roles page calls is linked into the `table` .wasm (`samples::route_finder`)."""
     from pathlib import Path
     import re
     root = Path(__file__).resolve().parents[1]

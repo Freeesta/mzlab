@@ -51,11 +51,11 @@ fn experiments_past_the_sixteenth_keep_their_collision_energy() {
         .map(Value::as_f64)
         .collect();
     let bytes = std::fs::read(dir.join("esperimenti.wiff")).unwrap();
-    let ole = container(bytes, "esperimenti").unwrap();
+    let ole = container(bytes, "experiments").unwrap();
     let scan_len = std::fs::metadata(dir.join("esperimenti.wiff.scan"))
         .unwrap()
         .len();
-    let w = Wiff::open(&ole, "esperimenti", Some(scan_len), samples(&ole)[0]).unwrap();
+    let w = Wiff::open(&ole, "experiments", Some(scan_len), samples(&ole)[0]).unwrap();
     let got: Vec<Option<f64>> = w.experiments.iter().map(|e| e.ce).collect();
     assert_eq!(got, ces);
 
@@ -75,13 +75,13 @@ fn experiments_past_the_sixteenth_keep_their_collision_energy() {
 fn the_method_names_sciex_os_when_its_log_does() {
     let (dir, _) = reference();
     let bytes = std::fs::read(dir.join("esperimenti.wiff")).unwrap();
-    let ole = container(bytes, "esperimenti").unwrap();
+    let ole = container(bytes, "experiments").unwrap();
     let src = mzlab_core::method::Source::default();
     let doc = |n| -> Value {
         serde_json::from_str(&mzlab_core::method_wiff::from_wiff(&ole, n, &src)).unwrap()
     };
     let name = |d: &Value| {
-        d["strumento"]["software"][0]["nome"]
+        d["instrument"]["software"][0]["name"]
             .as_str()
             .map(String::from)
     };
@@ -89,7 +89,7 @@ fn the_method_names_sciex_os_when_its_log_does() {
     let os = doc(2);
     assert_eq!(name(&os).as_deref(), Some("SCIEX OS"), "{os}");
     assert_eq!(
-        os["strumento"]["modello"].as_str(),
+        os["instrument"]["model"].as_str(),
         Some("QTRAP 6500+"),
         "{os}"
     );
@@ -109,11 +109,11 @@ fn energies(want: &Value, key: &str) -> Vec<Option<f64>> {
 fn a_cut_experiment_stream_is_counted_without_its_energy() {
     let (dir, want) = reference();
     let bytes = std::fs::read(dir.join("esperimenti.wiff")).unwrap();
-    let ole = container(bytes.clone(), "esperimenti").unwrap();
+    let ole = container(bytes.clone(), "experiments").unwrap();
     let scan_len = std::fs::metadata(dir.join("esperimenti.wiff.scan"))
         .unwrap()
         .len();
-    let w = Wiff::open(&ole, "esperimenti", Some(scan_len), samples(&ole)[2]).unwrap();
+    let w = Wiff::open(&ole, "experiments", Some(scan_len), samples(&ole)[2]).unwrap();
     let got: Vec<Option<f64>> = w.experiments.iter().map(|e| e.ce).collect();
     assert_eq!(got, energies(&want, "ce_cut"));
     let methods = mzlab_core::methodinfo::read_methods(bytes, "esperimenti.wiff").unwrap();

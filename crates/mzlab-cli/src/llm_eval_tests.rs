@@ -35,7 +35,7 @@ fn a_missing_recording_or_a_provider_is_an_error() {
         "--replay",
         dir.to_str().unwrap(),
     ]);
-    assert_eq!(o.code, 2);
+    assert_eq!(o.code, 4);
     let o = run(&[
         "llm",
         "eval",
@@ -58,7 +58,7 @@ fn context_reads_a_run_folder_and_can_hide_names() {
     let dir = std::env::temp_dir().join(format!("mzlab-ctx-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(
-        dir.join("corsa.json"),
+        dir.join("report.json"),
         "{\"inputs\":[{\"name\":\"secret_sample.mzML\"}],\"steps\":[]}",
     )
     .unwrap();

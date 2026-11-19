@@ -63,7 +63,7 @@ fn an_entry_past_the_end_loses_its_scan_only() {
         let mut r = Raw::tsq(63, SCANS);
         r.entry_past_the_end = Some(k);
         let mut l = reader(r.bytes());
-        // known when the file opens: the count is whole before any scan is read (conv/1 of a conversion)
+        // known when the file opens: the count is whole before any scan is read (conversion/1 of a conversion)
         let want = Losses::of(SCANS as usize, SCANS as usize - 1, RAW_DAMAGED);
         assert_eq!(l.losses(0).unwrap(), want, "scan {k}");
         let p = points(&mut *l);
@@ -116,8 +116,11 @@ fn a_conversion_writes_every_scan_and_counts_the_damaged_one() {
         .expect("one damaged scan never stops the conversion");
     let t = String::from_utf8_lossy(&xml);
     assert_eq!(t.matches("<spectrum ").count(), SCANS as usize);
-    assert!(t.contains("warn.raw.damaged"), "conv/1 names the cause");
-    assert!(t.contains("&quot;lette&quot;:11"), "conv/1 counts it");
+    assert!(
+        t.contains("warn.raw.damaged"),
+        "conversion/1 names the cause"
+    );
+    assert!(t.contains("&quot;read&quot;:11"), "conversion/1 counts it");
 }
 
 #[test]

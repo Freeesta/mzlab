@@ -51,7 +51,7 @@
   function columns(/** @type {any} */ o, /** @type {number} */ n, /** @type {(s: any) => string} */ esc) {
     const TT = G.TPTAB;
     // the order of the timed samples for the trend: t0 and the treated ones, by minutes
-    const timed = o.cs ? o.cs.map((/** @type {any} */ c, /** @type {number} */ i) => ({ i, t: c.tipo === "t0" ? 0 : c.tipo === "sample" ? c.tempo_min : null })).filter((/** @type {any} */ x) => x.t != null).sort((/** @type {any} */ a, /** @type {any} */ b) => a.t - b.t) : [];
+    const timed = o.cs ? o.cs.map((/** @type {any} */ c, /** @type {number} */ i) => ({ i, t: c.kind === "t0" ? 0 : c.kind === "sample" ? c.time_min : null })).filter((/** @type {any} */ x) => x.t != null).sort((/** @type {any} */ a, /** @type {any} */ b) => a.t - b.t) : [];
     const levelOf = (/** @type {FtRow} */ r) => (o.levels ? o.levels.get(r.id) : null);
     const best = (/** @type {FtRow} */ r) => Math.max(0, ...r.areas);
     const identText = (/** @type {FtRow} */ r) => { const iv = o.interpText ? o.interpText(r.id) : ""; if (iv) return iv; const x = (o.identsOf(r.id) || [])[0]; return x && x.formula ? x.formula : `m/z ${r.mz.toFixed(4)}`; };
@@ -90,7 +90,7 @@
     const loadInterp = (/** @type {any} */ e, /** @type {number} */ id) => (o.session.interp ? Promise.resolve(o.session.interp(id)).then((/** @type {any} */ v) => { e.interp = v; }, (/** @type {any} */ x) => { e.interpErr = msg(x); }) : Promise.resolve());
     const loadTr = (/** @type {number} */ id) => { const e = entry(id); return e.trP || (e.trP = Promise.resolve(o.session.traces(id, o.ppm())).then((/** @type {any} */ v) => { e.tr = v; }, (/** @type {any} */ x) => { e.trErr = msg(x); })); };
     /** the cells of the row (typed and timed) by file @param {FtRow} r @param {any} e */
-    const sampleOf = (r, e, j) => { const c = e.row && e.row.cells && e.row.cells[j]; return { file: o.names[j], type: c ? c.type : (o.cs && o.cs[j] ? o.cs[j].tipo : undefined), time: c ? c.time : (o.cs && o.cs[j] ? o.cs[j].tempo_min : null), area: c ? c.area : r.areas[j] || null, state: c ? c.state : r.states[j],
+    const sampleOf = (r, e, j) => { const c = e.row && e.row.cells && e.row.cells[j]; return { file: o.names[j], type: c ? c.type : (o.cs && o.cs[j] ? o.cs[j].kind : undefined), time: c ? c.time : (o.cs && o.cs[j] ? o.cs[j].time_min : null), area: c ? c.area : r.areas[j] || null, state: c ? c.state : r.states[j],
       apexRt: c ? c.apex_rt : null, lo: null, hi: null }; };
     const dec = decisions(o, levelOf);
     const model = (/** @type {FtRow} */ r) => {
@@ -188,12 +188,12 @@
     Promise.resolve(L.call("list")).then((/** @type {any} */ l) => { if (l && l.libs && l.libs.length) { go.hidden = false; if (st.res) paint(); } }, () => { /* no library module: no button */ });
   }
 
-  /** mounts the step in `box`. o = { extraCols (columns added after the built-in ones), extraTabs ([{key, label, fill(panel, row)}] tabs added to the open row; `redraw()` of the result draws the rows again), session (PIPEQC.open), names, gate, say, cs (campioni/2 or null), ppm(), levels (Map id → level, or null), identsOf(id) → [identity of evid/1] } */
+  /** mounts the step in `box`. o = { extraCols (columns added after the built-in ones), extraTabs ([{key, label, fill(panel, row)}] tabs added to the open row; `redraw()` of the result draws the rows again), session (PIPEQC.open), names, gate, say, cs (samples/1 or null), ppm(), levels (Map id → level, or null), identsOf(id) → [identity of evid/1] } */
   function mount(/** @type {HTMLElement} */ box, /** @type {any} */ o) {
     box.innerHTML = html();
     const q = (/** @type {string} */ s) => /** @type {any} */ (box.querySelector(s)), chips = /** @type {Set<string>} */ (new Set()), n = o.names.length;
     const esc = (/** @type {any} */ s) => String(s ?? "").replace(/[&<>"]/g, c => /** @type {any} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-    const hasBlank = !!(o.cs && o.cs.some((/** @type {any} */ c) => c.tipo === "blank" || c.tipo === "dark"));
+    const hasBlank = !!(o.cs && o.cs.some((/** @type {any} */ c) => c.kind === "blank" || c.kind === "dark"));
     if (!hasBlank) { const b = q('[data-fc="blank"]'); b.disabled = true; b.setAttribute("aria-disabled", "true"); }
     const TT = G.TPTAB, { cols, identText, levelOf } = columns(o, n, esc);
     const { model, loadRow, loadTr } = rowModels(o, cols, identText, levelOf, t => { q("#ft-why").textContent = t; });

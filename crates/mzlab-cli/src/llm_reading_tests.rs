@@ -1,4 +1,4 @@
-//! `mzlab_llm::reading::validate` against the real registry: a good `lettura/1` and `param-scelte/1` pass, and every defect (an evidence key the input does not
+//! `mzlab_llm::reading::validate` against the real registry: a good `reading/1` and `param-choices/1` pass, and every defect (an evidence key the input does not
 //! have, a number it does not have, a question that is not closed, a parameter outside its limits, a source that does not match) gives its own problem.
 
 use mzlab_core::json::{parse, Value};
@@ -13,7 +13,7 @@ const INPUT: &str = r#"{"tabcheck/1":{"checks":[
  {"id":"blank","value":0.12,"threshold":3,"flag":"warn","rows":[],"proof":{"rows":412,"below":23}}]},
  "answers":{"goal":"transformation products"}}"#;
 
-const GOOD: &str = r#"{"schema":"lettura/1","kind":"table","findings":[
+const GOOD: &str = r#"{"schema":"reading/1","kind":"table","findings":[
  {"id":"F1","topic":"blank","statement":"23 of 412 rows are below the blank ratio of 3","evidence":["tabcheck.blank.proof","tabcheck.blank.value"],
   "confidence":"high","action":{"type":"set_param","step":"tp.dig_lr@1","name":"tol_da","value":0.4}},
  {"id":"F2","topic":"adducts","statement":"The difference 22 is consistent with the expected 21.98","evidence":["tabcheck.adducts.rows"],
@@ -89,13 +89,13 @@ fn questions_are_closed_few_and_the_ask_action_points_at_one() {
 fn at_most_eight_findings_and_a_known_kind_and_confidence() {
     let one = r#"{"id":"F","topic":"t","statement":"ok","evidence":["answers.goal"],"confidence":"low","action":{"type":"none"}}"#;
     let nine = [one; 9].join(",");
-    let r = format!(r#"{{"schema":"lettura/1","kind":"table","findings":[{nine}]}}"#);
+    let r = format!(r#"{{"schema":"reading/1","kind":"table","findings":[{nine}]}}"#);
     assert_eq!(bad(&r), ["too_many"]);
     let r = GOOD.replace(r#""kind":"table""#, r#""kind":"verdict""#);
     assert_eq!(bad(&r), ["kind"]);
     let r = GOOD.replace(r#""confidence":"high""#, r#""confidence":"sure""#);
     assert_eq!(bad(&r), ["confidence"]);
-    assert_eq!(bad(r#"{"schema":"lettura/2"}"#), ["schema"]);
+    assert_eq!(bad(r#"{"schema":"reading/2"}"#), ["schema"]);
 }
 
 #[test]
@@ -119,20 +119,20 @@ fn text(v: &Value) -> String {
     o.0
 }
 
-/// The input of `param-scelte/1`: the proposals of the rules for the unit-resolution series G01 and the answers of the user.
+/// The input of `param-choices/1`: the proposals of the rules for the unit-resolution series G01 and the answers of the user.
 fn proposals_input() -> String {
     let out = run(G01, "{}");
-    let mut o = String::from(r#"{"proposta-param/1":"#);
+    let mut o = String::from(r#"{"param-proposal/1":"#);
     o.push_str(&text(&out));
     o.push_str(r#","answers":{"goal":"transformation products"}}"#);
     o
 }
 
-/// A `param-scelte/1` that keeps every proposal, with `edit` applied to the choice of `name`.
+/// A `param-choices/1` that keeps every proposal, with `edit` applied to the choice of `name`.
 fn choices_doc(input: &str, edit: &dyn Fn(&str, &Value) -> Option<String>) -> String {
     let doc = json(input);
     let props = doc
-        .get("proposta-param/1")
+        .get("param-proposal/1")
         .unwrap()
         .get("proposals")
         .unwrap();
@@ -153,7 +153,7 @@ fn choices_doc(input: &str, edit: &dyn Fn(&str, &Value) -> Option<String>) -> St
         choices.push(edit(name, p).unwrap_or(kept));
     }
     format!(
-        r#"{{"schema":"param-scelte/1","choices":[{}],"questions":[],"skipped":[],"numbers":[]}}"#,
+        r#"{{"schema":"param-choices/1","choices":[{}],"questions":[],"skipped":[],"numbers":[]}}"#,
         choices.join(",")
     )
 }
@@ -172,7 +172,7 @@ fn a_changed_value_says_model_a_kept_one_names_its_rule() {
     let input = proposals_input();
     let doc = json(&input);
     let props = doc
-        .get("proposta-param/1")
+        .get("param-proposal/1")
         .unwrap()
         .get("proposals")
         .unwrap();
@@ -231,7 +231,7 @@ fn a_missing_unknown_or_invented_choice_is_refused() {
         .map(text)
         .collect();
     let short = format!(
-        r#"{{"schema":"param-scelte/1","choices":[{}],"questions":[],"skipped":[],"numbers":[]}}"#,
+        r#"{{"schema":"param-choices/1","choices":[{}],"questions":[],"skipped":[],"numbers":[]}}"#,
         kept.join(",")
     );
     assert_eq!(reasons(&short, &input), ["missing_choice"]);

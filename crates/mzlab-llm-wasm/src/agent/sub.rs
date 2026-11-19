@@ -11,7 +11,7 @@ use crate::fail;
 
 #[wasm_bindgen]
 impl Agent {
-    /// Turns the subagents on: `roles_json` (`assist-ruoli/1`), `prompts_json` (`[["file","text"],...]`) and the file of the phase prompt (`orchestrator.phase_prompt`, may be empty).
+    /// Turns the subagents on: `roles_json` (`assist-roles/1`), `prompts_json` (`[["file","text"],...]`) and the file of the phase prompt (`orchestrator.phase_prompt`, may be empty).
     /// With the demo provider every limit is the `demo_*` one of the file, the orchestrator's included.
     pub fn enable_assist(
         &mut self,

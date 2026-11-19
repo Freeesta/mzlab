@@ -1,10 +1,10 @@
-"""Every key a reader writes in `metodo/1.avvisi` has a text (lang/en/errori-*.js, the catalogue the CLI reads too) and is in the
+"""Every key a reader writes in `method/1.warnings` has a text (lang/en/errori-*.js, the catalogue the CLI reads too) and is in the
 list the Method window translates (`NOTE_KEYS` of metodo-doc.js): a warning nobody can read is a silent loss."""
 import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-# a `chiave` of `avvisi` is a `meta.<word>` literal; `meta.compare` is the id of a Flow step, not a warning
+# a `key` of `warnings` is a `meta.<word>` literal; `meta.compare` is the id of a Flow step, not a warning
 NOT_WARNINGS = {"meta.compare"}
 
 

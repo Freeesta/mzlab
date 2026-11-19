@@ -1,5 +1,5 @@
-//! The header of an mzXML (everything before the first `<scan`): the instrument, the files the data come from, the processing, the operator. It becomes the `metodo/1` document and the
-//! header of the mzML we write; every attribute of every element goes into `campi` (nothing is lost), the identifying ones (operator, paths) marked `identita`.
+//! The header of an mzXML (everything before the first `<scan`): the instrument, the files the data come from, the processing, the operator. It becomes the `method/1` document and the
+//! header of the mzML we write; every attribute of every element goes into `fields` (nothing is lost), the identifying ones (operator, paths) marked `identity`.
 
 use mzlab_core::error::Result;
 use mzlab_core::method::{self, obj, text, Source, SrcFile, V};
@@ -31,9 +31,9 @@ pub(super) struct Cabin {
 
 fn map(key: &str) -> Option<&'static str> {
     match key {
-        "msManufacturer" => Some("strumento.produttore"),
-        "msModel" => Some("strumento.modello"),
-        "msIonisation" => Some("ms.sorgente.tipo"),
+        "msManufacturer" => Some("instrument.manufacturer"),
+        "msModel" => Some("instrument.model"),
+        "msIonisation" => Some("ms.source.type"),
         _ => None,
     }
 }
@@ -127,7 +127,7 @@ pub(super) fn read(head: &str, limits: &Limits) -> Result<Cabin> {
     error.map_or(Ok(c), Err)
 }
 
-/// The `metodo/1` document of the file `nome` (`dim` bytes, `sha1` when read).
+/// The `method/1` document of the file `nome` (`dim` bytes, `sha1` when read).
 pub(super) fn document(c: &Cabin, nome: &str, dim: u64, sha1: Option<String>) -> String {
     let src = Source {
         format: "mzxml",
@@ -141,27 +141,27 @@ pub(super) fn document(c: &Cabin, nome: &str, dim: u64, sha1: Option<String>) ->
     let software = c
         .software
         .iter()
-        .filter_map(|(n, v)| obj(vec![("nome", text(n)), ("versione", text(v))]))
+        .filter_map(|(n, v)| obj(vec![("name", text(n)), ("version", text(v))]))
         .collect();
     let s = |t: &Option<String>| t.as_deref().and_then(text);
     let doc = obj(vec![
         ("schema", Some(V::s(method::SCHEMA))),
-        ("origine", method::origin(&src, None)),
+        ("origin", method::origin(&src, None)),
         (
-            "strumento",
+            "instrument",
             obj(vec![
-                ("produttore", s(&c.maker)),
-                ("modello", s(&c.model)),
+                ("manufacturer", s(&c.maker)),
+                ("model", s(&c.model)),
                 ("software", Some(V::Arr(software))),
             ]),
         ),
-        ("operatore", obj(vec![("utente", s(&c.user))])),
+        ("operator", obj(vec![("user", s(&c.user))])),
         (
             "ms",
-            obj(vec![("sorgente", obj(vec![("tipo", s(&c.ionizzazione))]))]),
+            obj(vec![("source", obj(vec![("type", s(&c.ionizzazione))]))]),
         ),
         (
-            "campi",
+            "fields",
             Some(V::Arr(c.fields.iter().filter_map(Field::json).collect())),
         ),
     ]);

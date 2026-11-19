@@ -21,7 +21,7 @@ fn io(p: &Path, e: &std::io::Error) -> NormError {
 }
 
 fn read(p: &Path) -> Result<Vec<u8>, NormError> {
-    std::fs::read(p).map_err(|e| io(p, &e))
+    std::fs::read(p).map_err(|e| NormError::input(p, &e))
 }
 
 /// zlib (level 9) of `raw`.

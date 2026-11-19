@@ -85,7 +85,7 @@ impl State {
         text(json!({ "prov": prov, "dir": work.to_string_lossy() }).to_string())
     }
 
-    /// `{}` -> the `corsa/1` report (`mzlab-cli flow report`) of the last run of `flow/run`, for the report page of the Flow.
+    /// `{}` -> the `run-report/1` report (`mzlab-cli flow report`) of the last run of `flow/run`, for the report page of the Flow.
     pub(crate) fn flow_report(&self, _p: &Value) -> Result<Answer> {
         let dir = self.flow_root().join("out");
         text(mzlab_cli::flow_report::report(&dir)?)
@@ -153,7 +153,7 @@ mod tests {
         let (_, prov) = mzlab_cli::flow::run_plan(plan.as_bytes(), &dir, &work, 1, None).unwrap();
         std::fs::write(work.join("prov.json"), prov).unwrap();
         let text = mzlab_cli::flow_report::report(&work).unwrap();
-        assert!(text.contains("\"corsa/1\""), "{text}");
+        assert!(text.contains("\"run-report/1\""), "{text}");
         let _ = std::fs::remove_dir_all(&dir);
     }
 

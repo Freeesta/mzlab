@@ -1,4 +1,4 @@
-"""A SCIEX .wiff dropped without its .scan: the `metodo/1` of a sample on the site (the `sciex` readers module, `wiff_metodo`) is the one `mzlab-cli convert` writes into the mzML of
+"""A SCIEX .wiff dropped without its .scan: the `method/1` of a sample on the site (the `sciex` readers module, `wiff_metodo`) is the one `mzlab-cli convert` writes into the mzML of
 that sample, byte for byte, apart from `origine` (the site lists the .wiff only, the CLI the .wiff and its .scan). The file is synthetic (`metodocond` of tools/wiff_metodo_condiviso.py):
 three samples that share `Method1` (a scheduled MRM experiment, its GLPTables) and a DAD on sample 2, so the extended metadata (`campi`, feature `estesi`) must be there.
 The engine .wasm is built without `estesi` (its cap has no room): serving the call from it left `campi` out, which this test would catch. Skipped without cargo, wasm-bindgen or node."""
@@ -32,7 +32,7 @@ def work(tmp_path_factory):
 
 def doc_of_cli(work, sample):
     head = (work / "cli" / f"metodocond-{sample}.mzML").read_bytes()[:400000].decode("utf-8")
-    return html.unescape(re.search(r'name="mzLab metodo/1" value="([^"]*)"', head).group(1))
+    return html.unescape(re.search(r'name="mzLab method/1" value="([^"]*)"', head).group(1))
 
 
 def doc_of_site(work, sample):
@@ -41,7 +41,7 @@ def doc_of_site(work, sample):
 
 def without_origin(text):
     d = json.loads(text)
-    d.pop("origine")
+    d.pop("origin")
     return json.dumps(d, ensure_ascii=False, separators=(",", ":"))
 
 
@@ -52,5 +52,5 @@ def test_the_site_document_of_a_sample_is_the_one_of_the_cli(work, sample):
 
 def test_the_samples_that_share_a_method_carry_the_extended_metadata(work):
     site, cli = json.loads(doc_of_site(work, 2)), json.loads(doc_of_cli(work, 2))
-    assert site["ms"] and len(site["campi"]) >= 7, list(site)
-    assert site["campi"] == cli["campi"]
+    assert site["ms"] and len(site["fields"]) >= 7, list(site)
+    assert site["fields"] == cli["fields"]

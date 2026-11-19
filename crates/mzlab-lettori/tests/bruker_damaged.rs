@@ -1,5 +1,5 @@
 //! Bruker `.d` damage that is left out and counted, not refused: a frame without a usable m/z calibration, a frame whose block does not decode (0 in the
-//! BPC), and a damaged side table (named in `metodo/1.avvisi`). Synthetic SQLite + `tdf_bin` built in the test, no laboratory data.
+//! BPC), and a damaged side table (named in `method/1.warnings`). Synthetic SQLite + `tdf_bin` built in the test, no laboratory data.
 #![cfg(feature = "bruker")]
 
 use mzlab_core::readers::{FileSet, Losses, Member};

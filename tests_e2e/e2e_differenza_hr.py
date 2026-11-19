@@ -115,7 +115,7 @@ try:
         def user_list():
             assert pg.evaluate("LISTE.hasUser()") is False
             pg.evaluate("LISTE.addUserListFromCsv('mine.csv','name,mz\\nTest-A,305.1235\\nTest-B,350.9\\n','Mine')")
-            pg.evaluate("document.dispatchEvent(new CustomEvent('campioni'))")
+            pg.evaluate("document.dispatchEvent(new CustomEvent('samples'))")
             pg.wait_for_function("document.querySelectorAll('#ref-tab thead th').length===17", timeout=30000)
             txt = pg.inner_text("#ref-tab tbody tr")
             assert "Test-A" in txt and "ppm" in txt and "Test-B" not in txt, txt

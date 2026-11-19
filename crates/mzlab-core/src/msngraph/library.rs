@@ -1,12 +1,12 @@
-//! The library file `msnlib/1` of the user (`docs/agenti/msnlib.md`): `aggiungi` appends the entry of one standard in one condition (ion,
+//! The library file `msn-lib/1` of the user (`docs/agenti/msnlib.md`): `aggiungi` appends the entry of one standard in one condition (ion,
 //! polarity, activations) to the text of the library and answers whether the same entry was already there. One entry per line, sorted by
-//! (id, ion, activations), so the same entries give the same bytes. Used by the `.wasm` module of the page (`api/msnlib/aggiungi`).
+//! (id, ion, activations), so the same entries give the same bytes. Used by the `.wasm` module of the page (`api/msnlib/add`).
 
 use super::{Graph, SpettroG};
 use crate::error::{Error, Result};
 use crate::json::{parse, Out};
 
-const TESTA: &str = "{\"formato\":\"msnlib/1\",\"voci\":[";
+const TESTA: &str = "{\"schema\":\"msn-lib/1\",\"entries\":[";
 const TAIL: &str = "]}";
 
 /// The activations of the spectra of the graph, sorted and without repeats.
@@ -30,17 +30,17 @@ fn entry(id: &str, g: &Graph, graph: &str) -> Result<(String, String)> {
         .ok_or_else(|| Error::new("err.msnlib.noIon"))?;
     let att = attivazioni(&g.spettri);
     let mut o = Out::default();
-    o.raw("{\"id\":").str(id).raw(",\"ione\":{\"formula\":");
+    o.raw("{\"id\":").str(id).raw(",\"ion\":{\"formula\":");
     o.str(&ione.formula)
-        .raw(",\"mz_teorico\":")
+        .raw(",\"theoretical_mz\":")
         .num(ione.theoretical_mz);
-    o.raw(",\"polarita\":")
+    o.raw(",\"polarity\":")
         .int(g.polarita as i64)
-        .raw("},\"attivazione\":[");
+        .raw("},\"activation\":[");
     for (i, a) in att.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(a);
     }
-    o.raw("],\"grafo\":").raw(graph).raw("}");
+    o.raw("],\"graph\":").raw(graph).raw("}");
     Ok((o.0, key(id, &ione.formula, g.polarita as i64, &att)))
 }
 
@@ -49,11 +49,11 @@ fn key_of(row: &str) -> Result<String> {
     let bad = || Error::new("err.msnlib.bad");
     let v = parse(row.as_bytes()).map_err(|_| bad())?;
     let id = v.get("id").and_then(|x| x.str()).ok_or_else(bad)?;
-    let i = v.get("ione").ok_or_else(bad)?;
+    let i = v.get("ion").ok_or_else(bad)?;
     let f = i.get("formula").and_then(|x| x.str()).ok_or_else(bad)?;
-    let p = i.get("polarita").and_then(|x| x.f64()).ok_or_else(bad)?;
+    let p = i.get("polarity").and_then(|x| x.f64()).ok_or_else(bad)?;
     let att: Vec<&str> = v
-        .get("attivazione")
+        .get("activation")
         .map(|a| a.arr().iter().filter_map(|x| x.str()).collect())
         .unwrap_or_default();
     Ok(key(id, f, p as i64, &att))
@@ -79,7 +79,7 @@ fn rows(library: &str) -> Result<Vec<(String, String)>> {
 }
 
 /// The library with the entry of `id` and the graph added, and `false`; the same text and `true` (a duplicate) when the library already has
-/// an entry for the same standard, ion, polarity and activations. `grafo` is the `msngrafo/1` text of `g`.
+/// an entry for the same standard, ion, polarity and activations. `grafo` is the `msn-graph/1` text of `g`.
 pub fn aggiungi(library: &str, id: &str, g: &Graph, graph: &str) -> Result<(String, bool)> {
     let mut v = rows(library)?;
     let (row, k) = entry(id, g, graph)?;

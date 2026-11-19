@@ -1,4 +1,4 @@
-//! The native executors of `msn.library_export@1` and `msn.table_export@1`: the fragmentation graph `msngrafo/1` of an infusion (`spectra.msn_graph`) written
+//! The native executors of `msn.library_export@1` and `msn.table_export@1`: the fragmentation graph `msn-graph/1` of an infusion (`spectra.msn_graph`) written
 //! as a spectral library (MSP or MassBank, every MS level, with the formula and the neutral loss of each explained peak) or as a CSV table of its nodes,
 //! its modifications (the neutral losses between ions) or its peaks. Both read the graph text, so the plan and `mzlab-cli msn-lib export` write the same bytes.
 
@@ -20,7 +20,7 @@ fn graph_port() -> Port {
     Port::new(
         "graph",
         DataType::Report,
-        "Fragmentation graph (msngrafo/1)",
+        "Fragmentation graph (msn-graph/1)",
     )
 }
 
@@ -103,7 +103,7 @@ fn graph_of(r: &FileRunner, job: &Job) -> Result<(Value, String)> {
     let text = String::from_utf8(read_one(r, job, "graph")?.1)
         .map_err(|_| Error::new("err.msnlib.bad"))?;
     let g = parse(text.as_bytes())?;
-    if g.get("nodi").is_none() || g.get("spettri").is_none() {
+    if g.get("nodes").is_none() || g.get("spectra").is_none() {
         return Err(Error::new("err.msnlib.bad"));
     }
     Ok((g, text))

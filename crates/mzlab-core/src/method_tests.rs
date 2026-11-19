@@ -19,7 +19,7 @@ fn empty_sections_do_not_exist_and_unknown_is_absent() {
 
 #[test]
 fn userparam_round_trips_any_text() {
-    let doc = "{\"schema\":\"metodo/1\",\"x\":\"a \\\"q\\\" <b> & c\\nline\"}";
+    let doc = "{\"schema\":\"method/1\",\"x\":\"a \\\"q\\\" <b> & c\\nline\"}";
     let x = format!("<run id=\"r\">{}</run>", userparam_xml(doc));
     assert!(!x.contains("<b>"));
     assert_eq!(from_userparam(&x).as_deref(), Some(doc));

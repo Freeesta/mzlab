@@ -1,6 +1,6 @@
 //! Charts as a specification (`grafico/1`, docs/schemi/grafico-1.json). The model never writes data: it names a view that Rust builds from what the page
 //! collected (`views`) and picks its fields; `validate` checks the specification and `resolve` fills `data.rows` (at most 5 000, reduced by the maximum of
-//! each interval like the TIC of `contesto/1`, same bytes for the same input). Colours and styles belong to the page. Used by the `chart_validate`
+//! each interval like the TIC of `context/1`, same bytes for the same input). Colours and styles belong to the page. Used by the `chart_validate`
 //! family of the `llm` module and by `chart_preset` (the charts offered without a model).
 
 use mzlab_core::error::{Error, Result};

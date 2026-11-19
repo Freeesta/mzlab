@@ -44,10 +44,30 @@ if (!fp.MZLAB_PHONE) {
     }).catch(() => { warmed = false; /* a failed hint changes nothing: the editor loads its own files; the next trigger may retry */ });
   };
   fp.MZLAB_WARM_KETCHER = warm;
+  // Ketcher focuses its clipboard textarea while it mounts; in a sandboxed frame Chromium reports that without a gesture as a policy violation
+  // (console.error). Until the first gesture in the frame that call is skipped (Ketcher focuses it again on the gesture). It must be in place before
+  // the bundle runs: a direct #/draw address starts the frame here, before draw.js exists, so whoever starts the frame calls this on the frame window.
+  fp.MZLAB_FOCUS_GUARD = (/** @type {any} */ w) => {
+    const P = w && w.HTMLElement && w.HTMLElement.prototype, orig = P && P.focus;
+    if (!orig || orig.mzGuard) return;
+    const guarded = /** @this {Element} */ function (/** @type {any} */ o) {
+      const ua = w.navigator.userActivation;
+      if (ua && !ua.hasBeenActive && this.matches(".cliparea,[data-cliparea]")) return;
+      return orig.call(this, o);
+    };
+    guarded.mzGuard = true; P.focus = guarded;
+  };
   if (/^#\/draw(\/|$)/.test(location.hash) && fr && !fr.getAttribute("src")) {
     warmed = true;
     fr.removeAttribute("loading");
     fr.src = base + "index.html";
+    const t0 = Date.now(), iv = setInterval(() => {      // 4 ms polling, as disegno-storage.js: the frame document exists before its deferred bundle runs
+      try {
+        const w = /** @type {any} */ (fr.contentWindow);
+        if (!w || w.ketcher || Date.now() - t0 > 90000) clearInterval(iv);
+        else if (w.location.href.includes("ketcher/index.html")) fp.MZLAB_FOCUS_GUARD(w);
+      } catch (_) { /* frame being replaced: next tick */ }
+    }, 4);
     addEventListener("message", e => { if (e.source === fr.contentWindow && e.data && e.data.type === "ketcher-ready") fp.MZLAB_KETCHER_READY = true; });
   } else {
     const nav = /** @type {any} */ (navigator).connection;

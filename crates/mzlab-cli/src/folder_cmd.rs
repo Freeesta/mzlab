@@ -244,6 +244,7 @@ pub fn run(args: Vec<String>) -> Outcome {
             code: 4,
             stdout: Vec::new(),
             stderr: format!("error: {} is not a folder\n", dir.display()),
+            error: None,
         };
     }
     crate::emit(to_json(&dir, &list(&dir)), &out)

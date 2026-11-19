@@ -3,7 +3,7 @@ use crate::itemroutes::{pda_map, pda_spectrum, pda_wavelength};
 use base64::Engine;
 use std::io::Write;
 
-fn b64(vals: &[f64], f64s: bool, zlib: bool) -> String {
+pub(super) fn b64(vals: &[f64], f64s: bool, zlib: bool) -> String {
     let raw: Vec<u8> = vals
         .iter()
         .flat_map(|&v| {
@@ -80,7 +80,7 @@ fn spectra_with_twc(n: usize) -> Vec<u8> {
         .into_bytes()
 }
 
-fn mz(bytes: Vec<u8>) -> Mzml<Vec<u8>> {
+pub(super) fn mz(bytes: Vec<u8>) -> Mzml<Vec<u8>> {
     let n = bytes.len() as u64;
     Mzml::new(bytes, n)
 }
@@ -359,7 +359,12 @@ fn uv_row_time_in_seconds_by_unit_name_or_accession() {
             format!("<binaryDataArray encodedLength=\"0\"><cvParam accession=\"MS:1000523\"/><cvParam accession=\"{acc}\"/><binary>{}</binary></binaryDataArray>", b64(v, true, false))
         };
         let b = format!("<spectrum><cvParam accession=\"MS:1000804\"/><cvParam accession=\"MS:1000016\" name=\"scan start time\" value=\"30\" {u}/><binaryDataArrayList count=\"2\">{}{}</binaryDataArrayList></spectrum>", arr("MS:1000617", &[200.0, 210.0]), arr("MS:1000515", &[1.0, 2.0]));
-        super::uv_row(b.as_bytes()).map(|r| r.0)
+        super::uv_row(
+            b.as_bytes(),
+            &mut crate::mzmlarray::Inflate::new(),
+            &super::Grid::default(),
+        )
+        .map(|r| r.0)
     };
     assert_eq!(full("unitName=\"second\""), Some(0.5));
     assert_eq!(full("unitAccession=\"UO:0000010\""), Some(0.5));

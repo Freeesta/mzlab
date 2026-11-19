@@ -1,5 +1,5 @@
 //! `gruppi/1` as text (keys in English, fixed order) and the input of the module as a JSON document:
-//! `{"table": {n_rows, n_files, rows, area, height, state, apex_rt}, "campioni": campioni/2, "opts": {...}}` (the matrices as lists of rows).
+//! `{"table": {n_rows, n_files, rows, area, height, state, apex_rt}, "samples": samples/1, "opts": {...}}` (the matrices as lists of rows).
 
 use super::{build, CondOut, GroupOpts, GroupTable, GroupsOut, RowMeta, RowOut};
 use mzlab_core::error::{Error, Result};
@@ -390,7 +390,7 @@ pub fn opts_from_value(v: &Value) -> Result<GroupOpts> {
     parse_opts(v)
 }
 
-/// A parsed `campioni/2` document as the list of samples.
+/// A parsed `samples/1` document as the list of samples.
 pub fn samples_from_value(v: &Value) -> Result<Vec<Sample>> {
     let mut text = Out::default();
     dump(&mut text, v);
@@ -404,7 +404,7 @@ pub fn parse_input(input: &[u8]) -> Result<(GroupTable, Vec<Sample>, GroupOpts)>
     let mut cs_text = Out::default();
     dump(
         &mut cs_text,
-        doc.get("campioni").ok_or_else(|| size("campioni"))?,
+        doc.get("samples").ok_or_else(|| size("samples"))?,
     );
     let cs = samples::from_json(cs_text.0.as_bytes())?;
     let opts = match doc.get("opts") {
@@ -414,7 +414,7 @@ pub fn parse_input(input: &[u8]) -> Result<(GroupTable, Vec<Sample>, GroupOpts)>
     Ok((tb, cs, opts))
 }
 
-/// A parsed value back to compact text (to hand `campioni/2` to its own reader).
+/// A parsed value back to compact text (to hand `samples/1` to its own reader).
 fn dump(o: &mut Out, v: &Value) {
     match v {
         Value::Null => {

@@ -112,7 +112,7 @@ impl LinkEvidence {
 }
 
 /// `tp.link@2` up to the proofs, in the browser: the parent file text and the structure text of its SMILES, the `ipotesi/1` of `tp.generate`, the `.mzfeat` of
-/// the series (`table`), the `campioni/2` `samples`, the recipe text of the run, the polarity the plan sets (NaN = not set), the memory budget (MB; 0/NaN = the default),
+/// the series (`table`), the `samples/1` `samples`, the recipe text of the run, the polarity the plan sets (NaN = not set), the memory budget (MB; 0/NaN = the default),
 /// the stored peaks of each file (Uint8Arrays in the order of the indexes) and the `.mzidx` read as `index_read(k, offset, length)` with `index_sizes[k]` bytes.
 #[cfg(feature = "proofs")]
 #[wasm_bindgen::prelude::wasm_bindgen]

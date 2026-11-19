@@ -73,7 +73,7 @@ function mergeFiles(/** @type {FileRiga[]} */ list,/** @type {boolean} */ defer=
     gC:o?o.gC:conc!=null,role:o&&o.role,prop:o&&o.prop,ed:o&&o.ed,ugrp:o&&o.ugrp}});
   if(typeof CONV!=="undefined")CONV.forget(Object.keys(old).filter(n=>!ST.files.some((/** @type {FileRiga} */ f)=>f.name===n)));
   if(list.some(f=>!old[f.name]))hrMixPreselect();
-  // roles and times proposed from the names by the engine (campioni/2)
+  // roles and times proposed from the names by the engine (samples/1)
   if(defer)FILETAB.soon();else FILETAB.flush(true)}
 // low- and high-resolution files cannot be opened together: the world of the session is the world of the first file read (OPENNOW); before it, the most numerous world is preselected
 const hrMixCount=()=>{const l=ST.files.filter((/** @type {FileRiga} */ f)=>f.kind in GORD);return {lr:l.filter((/** @type {FileRiga} */ f)=>!f.hr).length,hr:l.filter((/** @type {FileRiga} */ f)=>f.hr).length,onLr:l.filter((/** @type {FileRiga} */ f)=>f.use&&!f.hr).length,onHr:l.filter((/** @type {FileRiga} */ f)=>f.use&&f.hr).length}};
@@ -104,6 +104,10 @@ const expSel=(/** @type {FileRiga} */ f,/** @type {string} */ attr,/** @type {st
 const expCell0=(/** @type {FileRiga} */ f)=>f.kind&&f.mixed&&f.mixed.length?`<b>${esc(mixedText(f.mixed))}</b>`:f.kind in GORD?expSel(f,`data-exp="${esc(f.name)}"`,TIPOF.manual(f.name),f.kindAuto||f.kind,TIPOF.why(f))+(f.polarity==="mixed"?` <span class="muted sm">${I18N.t("load.exp.polMixed")}</span>`:""):f.kind?`<b>${expn(f.kind,f)}</b>`:`<span class="muted">${I18N.t("load.exp.unread")}</span>`;
 const expCell=(/** @type {FileRiga} */ f)=>expWhy(f,expCell0(f));
 // the types of the files change in place (table, viewer, XIC button) and the table is sorted again
+// the loading table follows the Files panel (rename, delete, group, role, experiment), repainted unless the student is typing in it; roles, times and concentrations of the open files go into the rows first: one source of truth
+function pullOpen(){const open=new Map(CAMPIONI.files().map((/** @type {any} */ g)=>[g.file,g]));for(const f of ST.files){const g=open.get(f.name);if(!g)continue;RUOLI.setRole(f,CAMPIONI.kindOf(g));if(RUOLI.timed(f))f.time=g.time??null;
+    if(isCal(f)&&g.conc!=null){const a=Object.keys(CU).find(k=>CU[k][0]===g.cunit);f.conc=a?roundc(g.conc*CU[a][1]/CU[ST.unit][1]):g.conc}}}
+document.addEventListener("filelist",()=>{const el=$("#flist");if(!el||el.contains(document.activeElement))return;pullOpen();renderFiles()});
 function expSet(/** @type {string[]} */ names,/** @type {string | null | undefined} */ kind){names.forEach(n=>TIPOF.set(n,kind||null));ST.files.forEach((/** @type {FileRiga} */ f)=>{if(names.includes(f.name))Object.assign(f,TIPOF.apply(f,f.name))});TIPOF.viewer(names);CONVROWS.thaw();sortFiles();renderFiles()}
 function renderFiles(){if(window.GRUTAB&&GRUTAB.pre())return;const F=ST.files,el=$("#flist");
   const xh=(/** @type {string} */ h)=>window.COLS?COLS.head(h):h,xr=(/** @type {FileRiga} */ f,/** @type {string} */ h)=>window.COLS?COLS.row(f,h):h,hasCal=F.some((/** @type {FileRiga} */ f)=>f.use&&(isCal(f)||(f.conc!=null&&f.conc!==""))),tu=tunitGet(),tuSel=`<select id="tunit" title="${I18N.t("load.table.tunit.title")}" aria-label="${I18N.t("load.table.tunit.title")}">${Object.keys(TIME_UNITS).map(k=>`<option value="${k}" ${k===tu?"selected":""}>${tunitLabel(k)}</option>`).join("")}</select>`,unitSel=`<select id="cunit" title="${I18N.t("load.table.unit.title")}">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
@@ -145,7 +149,7 @@ function wireFiles(/** @type {HTMLElement} */ el,/** @type {FileRiga[]} */ F){
       if(keep)go();else setTimeout(go,0)};
     if(x.dataset.k==="conc")x.addEventListener("keydown",(/** @type {KeyboardEvent} */ e)=>{if(e.key==="Enter"){F[+x.dataset.i].gC=false;x.classList.remove("guess");x.title="";modeNote()}})});
   el.querySelectorAll("[data-dl]").forEach((/** @type {ElementoDati} */ b)=>b.onclick=()=>CONV.menu(b,b.dataset.dl||null));const npc=$("#cvcomp");if(npc)npc.onchange=()=>{CONV.compression=npc.value;CONV.paintSizes();const e=$("#cvest");if(e)e.textContent=CONV.estimate()};const dla=$("#dlall");if(dla)dla.onclick=()=>CONV.menu(dla,null);const rma=$("#rmall");if(rma)rma.onclick=confirmRemoveAll;const sva=$("#saveall");if(sva)sva.onclick=()=>CONVQ.saveAll();
-  const tuEl=$("#tunit");if(tuEl)tuEl.onchange=()=>{tunitSet(tuEl.value);renderFiles()};
+  const tuEl=$("#tunit");if(tuEl)tuEl.onchange=()=>{tunitSet(tuEl.value);renderFiles();if(typeof renderFileList==="function"&&E.files.length)renderFileList()};
   const cu=$("#cunit");if(cu)cu.onchange=()=>{const k=cu.value,r=CU[ST.unit][1]/CU[k][1];F.forEach((/** @type {FileRiga} */ f)=>{if(f.conc!=null)f.conc=roundc(f.conc*r)});ST.unit=k;renderFiles()};
   el.querySelectorAll("[data-rm]").forEach((/** @type {ElementoDati} */ b)=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];
     // in the browser the table × is the side panel ×: same take / Undo / free and the same re-indexing of the panels
@@ -218,20 +222,25 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
     // a .wiff alone: after the loading it may turn out to be the method of an mzML (loneWiffs)
     if(!(e.wiff&&e.scan)){if(dropped.has(k)){if(e.wiff)(res.lone=res.lone||[]).push({e,rb});else res.errs.push([T("load.wiffWait"),e.scan.name])}continue}
     WIFF_WAIT.delete(k);e.row=e.stem+".wiff";pairs.push(e);CONVROWS.add(e.row,"open",memDesc([e.wiff,e.scan]))}
+  // a file with several samples: the user ticks which to open (wiff-choose.js; the engine lists them from the index, the setting is in Settings); null = nothing to ask
+  let pick=/** @type {any} */ (null);const pickMode=typeof uipPickMode==="function"?uipPickMode():"several";
+  if(pairs.length&&!(signal&&signal.aborted)&&pickMode!=="never"){try{await carica("wiff-choose.js");pick=await WIFFCHOOSE.ask(pairs.map(e=>({key:e.row,name:e.wiff.name,mem:[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}]})),rb,pickMode)}catch(x){pick=null;(res.notes=res.notes||[]).push(T("pick.failed",{reason:String(x&&/** @type {any} */ (x).message||x)}))}}
   // each sample (injection) is a file of the list: the .wiff and the .wiff.scan are read as they are
   for(const e of pairs){
     if(signal&&signal.aborted){CONVROWS.finish(e.row,"cancel");continue}
+    const want=/** @type {number[] | null} */ (pick&&pick.picks?pick.picks.get(e.row)||null:null),partial=!!want&&want.length<(pick.total.get(e.row)||0);
+    if(pick&&(pick.cancelled||(want&&!want.length))){CONVROWS.finish(e.row,"cancel");(res.notes=res.notes||[]).push(T("pick.cancelled",{name:e.wiff.name}));continue}
     // a cache hit comes before anything is read; else the engine parses the pair while the module probes it (two workers), and a «variante» pair drops the parse
     try{const mem=[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],M0=window.LETTORI_MOD;let sp=/** @type {Promise<{ samples: any[] }> | null} */ (null);const parsed=()=>sp||(sp=rb.nativeSamples(mem));
-      const hit=await NATIVO.cached(rb,mem,ST.files||[],parsed);if(hit){for(const x of hit){CONVROWS.add(x.name,"open");CONVROWS.finish(x.name,"done",{scans:x.n_spectra||x.scans||0,kind:(x.mixed||[]).length>1?"mixed":x.kind,missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(x.name))||0,note:(/** @type {any} */ (window).MZLAB_LR?.noteKey?.(x.name))||"",cached:true})}CONVROWS.drop(e.row);continue}      // the same pair again: its samples are in the list with their index, nothing is copied or read again
+      const hit=partial?null:await NATIVO.cached(rb,mem,ST.files||[],parsed);if(hit){for(const x of hit){CONVROWS.add(x.name,"open");CONVROWS.finish(x.name,"done",{scans:x.n_spectra||x.scans||0,kind:(x.mixed||[]).length>1?"mixed":x.kind,missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(x.name))||0,note:(/** @type {any} */ (window).MZLAB_LR?.noteKey?.(x.name))||"",cached:true})}CONVROWS.drop(e.row);continue}      // the same pair again: its samples are in the list with their index, nothing is copied or read again
       const probing=M0&&window.LETTORI_FAM.sciex.sonda;if(probing)parsed().catch(()=>{});const pr=probing?await M0.probe("sciex",mem).catch(()=>null):null;      // an engine error counts only when the module does not take the pair
-      if(pr&&pr.motivi.includes("variante")){const cs=pr.campioni.length?pr.campioni:[{id:1}];cs.forEach((/** @type {{ id: number, name?: string, size?: number }} */ x,/** @type {number} */ i)=>{const nm=wiffName(e.stem,i+1,cs.length>1,taken,x.name);taken.push(nm);res.files.push(M0.stand(nm,mem,i,"sciex",x.size,pr.campioni.length?undefined:e.wiff.name))});CONVROWS.drop(e.row);continue}
+      if(pr&&pr.motivi.includes("variante")){const cs=pr.campioni.length?pr.campioni:[{id:1}];cs.forEach((/** @type {{ id: number, name?: string, size?: number }} */ x,/** @type {number} */ i)=>{if(want&&pr.campioni.length&&!want.includes(x.id))return;const nm=wiffName(e.stem,i+1,cs.length>1,taken,x.name);taken.push(nm);res.files.push(M0.stand(nm,mem,i,"sciex",x.size,pr.campioni.length?undefined:e.wiff.name))});CONVROWS.drop(e.row);continue}
       const pj=await parsed(),s=pj.samples,key=NATIVO.key(e.stem);
       // the .wiff.scan holds sections the .wiff index does not list (copied during the acquisition): ONE calm note for the pair, the sections are samples of the list
       if(pj.unindexed)(res.notes=res.notes||[]).push(e.wiff.name+": "+T("warn.wiff.unindexed",{n:pj.unindexed.recovered+pj.unindexed.skipped,recovered:pj.unindexed.recovered,skipped:pj.unindexed.skipped}));
       // × on the row of the pair while it was parsed: its samples are not made (they would open by themselves)
       if(OPENNOW.held(e.row)){CONVROWS.finish(e.row,"cancel");continue}
-      s.forEach((/** @type {{ id: number, name?: string, size?: number, why?: string }} */ x,/** @type {number} */ i)=>{const nm=wiffName(e.stem,i+1,s.length>1,taken,x.name),f=NATIVO.sample(nm,key,mem,i,x.id,false,x.size);taken.push(nm);if(x.why)WHY.set(nm,x.why);if(pr)f.mzlabNat.probed=pr;res.files.push(f)})}      // the module's answer for the pair holds for its samples (moduloWants)
+      s.forEach((/** @type {{ id: number, name?: string, size?: number, why?: string }} */ x,/** @type {number} */ i)=>{if(want&&!want.includes(x.id))return;const nm=wiffName(e.stem,i+1,s.length>1,taken,x.name),f=NATIVO.sample(nm,key,mem,i,x.id,false,x.size);taken.push(nm);if(x.why)WHY.set(nm,x.why);if(pr)f.mzlabNat.probed=pr;res.files.push(f)})}      // the module's answer for the pair holds for its samples (moduloWants)
     catch(x_){const x=/** @type {Lanciato} */(x_);const M=window.LETTORI_MOD,fam=M&&x.json?M.retriable(x.json.error||x.json.error_key):"";if(fam)res.files.push(M.stand(wiffName(e.stem,1,false,taken),[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],0,fam,undefined,e.wiff.name));
       // the pair cannot be read: the error stays on its row, with «Details» and the trace
       else{const er=x.json?I18N.err(x.json):x;CONVROWS.finish(e.row,"fail",{msg:er.message,diag:DIAG.da(er,{name:e.scan.name,size:e.wiff.size+e.scan.size})});continue}}
@@ -276,17 +285,6 @@ async function moduloToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown
   out.panel=g;return out}
 // true where the engine converts .raw itself (desktop): the guide then appears only for the formats it cannot convert
 let CONVERT_RAW=false;
-function fileKind(/** @type {string} */ name){const n=name.toLowerCase();if(/\.(mzml|dam)$/.test(n))return null;const M=window.LETTORI_MOD;if(M&&M.extensions().some((/** @type {string} */ e)=>n.endsWith(e)))return null;return window.FORMATI_NOTI.classify(n)||"other"}
-function ssGet(/** @type {string} */ k){try{return sessionStorage.getItem(k)}catch(e){return null}}
-function ssSet(/** @type {string} */ k,/** @type {string} */ v){try{sessionStorage.setItem(k,v)}catch(e){}}
-const SEEN_GROUPS=new Set();
-function groupHash(/** @type {{ name: string, size: number }[]} */ files){const s=files.map(f=>f.name+":"+f.size).sort().join("|");let h=5381;for(let i=0;i<s.length;i++)h=(h*33^s.charCodeAt(i))>>>0;return h+"."+files.length}
-function groupSeen(/** @type {string} */ h){let a=[];try{a=JSON.parse(ssGet(NOMI.KEY("unopen"))||"[]")}catch(e){}return SEEN_GROUPS.has(h)||a.includes(h)}
-function groupMark(/** @type {string} */ h){SEEN_GROUPS.add(h);try{const a=JSON.parse(ssGet(NOMI.KEY("unopen"))||"[]");a.push(h);ssSet(NOMI.KEY("unopen"),JSON.stringify(a.slice(-50)))}catch(e){}}
-function namesCut(/** @type {string[]} */ a,/** @type {number} */ max){return a.slice(0,max).map(esc).join(", ")+(a.length>max?"…":"")}
-// ONE notice for the whole loading: files that cannot be opened in the browser (count + collapsible list), unknown formats and read errors, one line per kind
-function closeUnopen(){const u=$("#unopen");u.hidden=true;u.textContent=""}
-function openConvHelp(/** @type {boolean} */ focus){const d=$("#convhelp");d.hidden=false;d.open=true;if(focus){d.scrollIntoView({block:"nearest"});d.querySelector("summary").focus()}}
 function reportLoad(/** @type {CaricaRep} */ rep){
   const u=$("#unopen"),L=/** @type {string[]} */ ([]),T=/** @type {(k: string, p?: unknown) => string} */ ((k,p)=>I18N.t(k,p));let conv=/** @type {string[]} */ ([]);
   if(rep.unopen.length){
@@ -323,18 +321,8 @@ async function loneWiffs(/** @type {{ lone?: { e: { stem: string, wiff: File }, 
     const m=I18N.t("err.file.wiffNoScan",{name:e.wiff.name});(rep.errs[m]=rep.errs[m]||[]).push(e.wiff.name)}}
 const INFLIGHT=new Set(),fkey=(/** @type {FileRiga} */ f)=>f.name+"|"+f.size;
 // the same file (name and size) already in the list, or being read now, is not loaded again: a short notice and its row lights up for a moment
-function dropDups(/** @type {FileCarica[]} */ files){
-  // a file of the table that is not open (removed, set aside) is not a duplicate: picking it again ticks it, as its box in the table would
-  const row=(/** @type {FileCarica} */ f)=>ST.files.find((/** @type {FileRiga} */ g)=>g.name===f.name&&g.size===f.size),again=files.filter(f=>{const g=row(f);return !INFLIGHT.has(fkey(f))&&g&&g.kind in GORD&&!OPENNOW.isOpen(g.name)});
-  if(again.length){again.forEach(f=>OPENNOW.tick(row(f),true));renderFiles();files=files.filter(f=>!again.includes(f))}
-  const dups=files.filter(f=>INFLIGHT.has(fkey(f))||ST.files.some((/** @type {FileRiga} */ g)=>g.name===f.name&&g.size===f.size));if(!dups.length)return files;
-  const msg=dups.length===1?I18N.t("load.dup.one",{name:dups[0].name}):I18N.t("load.dup.many",{n:dups.length});CartCarica.note(msg);setTimeout(()=>{const n=$("#cartinfo");if(n&&n.textContent===msg)CartCarica.note("")},5000);
-  dups.forEach(f=>{const tr=[...document.querySelectorAll("#flist tr")].find(r=>r.querySelector(".ldname")?.getAttribute("title")===f.name);if(tr){tr.classList.add("dupflash");tr.scrollIntoView({block:"nearest"});setTimeout(()=>tr.classList.remove("dupflash"),1800)}});
-  return files.filter(f=>!dups.includes(f))}
 // the AbortControllers of the loadings under way: «Cancel» (rows of the list, overlay of «Load data») stops them all
 const LOADS=new Set();
-// the members of a file without their names, for the diagnosis: ".wiff 1.2 MB + .wiff.scan 57.0 MB"
-const memDesc=(/** @type {{ name: string, size: number }[]} */ fs)=>fs.map(b=>`${(String(b.name).match(/\.[^./\\]+(\.scan)?$/i)||["?"])[0]} ${(b.size/1048576).toFixed(1)} MB`).join(" + ");
 // «Cancel»: the files not started are not read, the engine stops the copies and the indexes running (lr_cancel), the module its conversions; the files already loaded stay
 async function cancelLoads(){for(const c of LOADS)c.abort();if(CONVQ.on())CONVQ.stop();const rb=window.MZLAB_RUST,names=CONVROWS.running().map((/** @type {{ name: string }} */ r)=>r.name);if(rb&&rb.rpc&&names.length)try{await rb.rpc({op:"lr_cancel",names})}catch(_){}}
 // downloads the example files in order: the bytes are the first 40 % of the bar of each row (Content-Length); a cancel stops the rows, an error drops them and says why
@@ -434,8 +422,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   FILETAB.flush();await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
 // a reloaded session: its files are already open, but the rows of the sample table (ST.files) are rebuilt from the engine's state, as for a first load;
 // they take the roles and times of the open files and ask no proposal from the names, which OPENNOW.sync would write over the saved ones
-function restoreRows(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){mergeFiles(d.files||[],true);const open=new Map(CAMPIONI.files().map((/** @type {any} */ g)=>[g.file,g]));
-  for(const f of ST.files){f.prop=1;const g=open.get(f.name);if(g){RUOLI.setRole(f,CAMPIONI.kindOf(g));if(RUOLI.timed(f))f.time=g.time??null}}
+function restoreRows(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){mergeFiles(d.files||[],true);const open=new Map(CAMPIONI.files().map((/** @type {any} */ g)=>[g.file,g]));for(const f of ST.files){f.prop=1;const g=open.get(f.name);if(g){RUOLI.setRole(f,CAMPIONI.kindOf(g));if(RUOLI.timed(f))f.time=g.time??null}}
   // a file the notebook does not name was still loading when the page went away: it opens as on a first load (more than 50: a large folder, unticked as after «Choose»); one the student removed stays unticked
   const late=ST.files.filter((/** @type {FileRiga} */ f)=>f.kind in GORD&&!OPENNOW.isOpen(f.name));late.forEach((/** @type {FileRiga} */ f)=>{if(nbNamed.has(f.name))f.use=false});
   const back=late.filter((/** @type {FileRiga} */ f)=>!nbNamed.has(f.name));if(back.length>50)back.forEach((/** @type {FileRiga} */ f)=>{f.use=false});else back.forEach((/** @type {FileRiga} */ f)=>OPENNOW.add(f.name));

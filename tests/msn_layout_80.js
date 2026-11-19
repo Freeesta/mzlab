@@ -4,7 +4,7 @@ const fs = require("fs"), path = require("path"), vm = require("vm"), assert = r
 const src = fs.readFileSync(path.resolve(__dirname, "../mzlab/web/msngrafo-vista.js"), "utf8").split("\n").map(l => l.replace(/^export /, "")).join("\n");
 const mk = vm.runInContext(`(() => { ${src}\nreturn { layout, visible }; })()`, vm.createContext({ document: {}, DOMParser: class {} }));
 const j = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../tests_e2e/fixtures/msngrafo_80.json"), "utf8"));
-assert.strictEqual(j.nodi.length, 80);
+assert.strictEqual(j.nodes.length, 80);
 const o = { t: k => k };
 const vis = mk.visible(j, o);
 assert.strictEqual(vis.ids.size, 80, "all the ions are visible");

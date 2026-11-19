@@ -1,4 +1,4 @@
-// Runs msn_graph of the msngrafo .wasm (wasm-bindgen --target nodejs) and prints the msngrafo/1; see tests/test_msngrafo_wasm.py.
+// Runs msn_graph of the msngrafo .wasm (wasm-bindgen --target nodejs) and prints the msn-graph/1; see tests/test_msngrafo_wasm.py.
 // usage: node msngrafo_wasm_node.js <pkg dir> <file.mzidx> <file.mzML> <query string> [export|lib <library file>|completa]   (completa: the query argument is a graph file, complete adds its `vista`; export: msn_graph_export, the spectra as text; lib: msnlib_add with the library file given, "-" = none; prints the JSON answer)
 const fs = require("fs");
 const path = require("path");

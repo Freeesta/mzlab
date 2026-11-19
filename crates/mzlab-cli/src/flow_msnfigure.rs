@@ -1,4 +1,4 @@
-//! The native executor of `msn.figure@1`: the figure of the fragmentation graph `msngrafo/1` of `spectra.msn_graph` as an SVG, a stand-alone HTML or a PNG,
+//! The native executor of `msn.figure@1`: the figure of the fragmentation graph `msn-graph/1` of `spectra.msn_graph` as an SVG, a stand-alone HTML or a PNG,
 //! the same bytes as `mzlab-cli msn-graph figure` and, for svg and html, as the `.wasm` `msnfigura` of the browser. It is a step of its own, after the
 //! graph: the figure needs only the graph (the raw file is not read again), and a Flow output holds one file, so each format is one run of the step
 //! (`--set figure.format=html`).
@@ -18,7 +18,7 @@ pub(crate) const EXECUTORS: &[(&str, Exec)] = &[("msn.figure", Exec::File("figur
 /// `msn.figure@1`: one figure of the graph.
 pub fn figure_step() -> Step {
     Step {
-        ins: vec![Port::new("graph", DataType::Report, "Fragmentation graph (msngrafo/1)")],
+        ins: vec![Port::new("graph", DataType::Report, "Fragmentation graph (msn-graph/1)")],
         outs: vec![Port::new("figure", DataType::Report, "Figure of the graph (SVG, HTML or PNG)")],
         params: vec![
             Param::choice("format", "Format", &["svg", "html", "png"])

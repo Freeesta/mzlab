@@ -34,7 +34,7 @@ const QAQC = (() => {
     if (/(^|[_\-\s.])(dark|buio)([_\-\s.\d]|$)/i.test(n)) return "dark";
     return f.type === "blank" ? "blank" : f.type === "standard" ? "standard" : "sample";
   }
-  // role of campioni/2 -> role of the QA/QC
+  // role of samples/1 -> role of the QA/QC
   const FROM_CAMPIONI = { sample: "sample", t0: "sample", infusion: "sample", blank: "blank", dark: "dark", qc: "qc", std: "standard", calibration: "standard" };
   // st.roles only holds the old roles read at loading (migration of the notebook v1)
   const roleOf = f => (f.role && FROM_CAMPIONI[f.role]) || (ROLES.includes(st.roles[f.file]) ? st.roles[f.file] : guessRole(f));

@@ -170,7 +170,7 @@ fn an_engine_error_is_english_text_and_the_hint_is_this_command() {
     std::fs::write(&f, b"not a wiff at all").unwrap();
     let o = crate::execute(&["channels".to_string(), f.to_string_lossy().into_owned()]);
     let _ = std::fs::remove_dir_all(&dir);
-    assert_eq!(o.code, 2, "{}", o.stderr);
+    assert_eq!(o.code, 4, "{}", o.stderr);
     assert!(o.stderr.starts_with("error: "), "{}", o.stderr);
     assert!(!o.stderr.contains("[(\""), "{}", o.stderr);
     assert!(o.stderr.contains(" (err.file."), "{}", o.stderr);
@@ -185,7 +185,7 @@ fn an_engine_error_is_english_text_and_the_hint_is_this_command() {
 fn a_missing_input_names_its_path_in_english() {
     let p = std::env::temp_dir().join(format!("mzlab-absent-{} dir/x.mzML", std::process::id()));
     let o = crate::execute(&["channels".to_string(), p.to_string_lossy().into_owned()]);
-    assert_eq!(o.code, 2, "{}", o.stderr);
+    assert_eq!(o.code, 4, "{}", o.stderr);
     assert!(
         o.stderr
             .starts_with("error: A file or folder could not be read or written ("),

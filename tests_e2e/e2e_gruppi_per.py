@@ -76,12 +76,12 @@ try:
             wait_for_js(pg, "document.querySelector('dialog.gby-dlg .gby-prev li') && !document.querySelector('dialog.gby-dlg button:not(.sec)').disabled", 10000)
             prev = pg.evaluate("[...document.querySelectorAll('dialog.gby-dlg .gby-prev li')].map(l => l.textContent)")
             assert prev == ["O2 · 4", "Other · 26"], prev
-            pg.locator("dialog.gby-dlg button:not(.sec)").click(); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'manuale'", 10000); wait_still(pg, "#flst")
+            pg.locator("dialog.gby-dlg button:not(.sec)").click(); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'manual'", 10000); wait_still(pg, "#flst")
             assert count(pg, "O2") == 4 and count(pg, "Other") == 26, pg.evaluate(LABELS)
         step("Contains «O2» matches the whole word only (4 files), the rest is «Other»", contains)
         def reload():
             saved(pg); pg.reload(); wait_for_js(pg, "typeof E !== 'undefined' && E.files.some(f => f.ugrp)", 120000); ready(pg)
-            assert pg.evaluate("E.ugBy && E.ugBy.by") == "manuale" and count(pg, "O2") == 4, pg.evaluate("E.ugBy")
+            assert pg.evaluate("E.ugBy && E.ugBy.by") == "manual" and count(pg, "O2") == 4, pg.evaluate("E.ugBy")
         step("a reload keeps the groups and the key", reload)
         def keyboard():
             drawer(pg); watch(); wait_still(pg, "#flst"); global box0; box0 = pg.evaluate(BOX); pg.locator("#sb-by").focus(); pg.keyboard.press("Enter"); wait_for_js(pg, f"{ITEM}.length > 3", 10000)

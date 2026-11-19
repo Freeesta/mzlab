@@ -49,7 +49,7 @@ Design (all logic in Rust, `crates/mzlab-core/src/wiffwrite/`, streaming through
 Automatic (a Rust integration test, later phase, synthetic data only):
 - split: every sample of a multi-sample fixture (`nomi`, `gaps`, `two`, `prodotto`, `dadmetodo`, `dispositivi`, `variante`, `ida`) into its own pair; merge them back in the original order; compare with the source.
 - raw level, per sample: every stream under `SampleN` and its method byte-equal (after the number mapping); the `.scan` section byte range equal (SHA-256); directory metadata of every kept entry equal; free-form extra streams injected into a fixture (random names and bytes) must survive (the canary for "unparsed stream").
-- decoded level: `Wiff::run` of each sample gives equal spectra, chromatograms, polarity, CE, precursors, `metodo/1`, names, `losses` zero; also the DAD and device traces.
+- decoded level: `Wiff::run` of each sample gives equal spectra, chromatograms, polarity, CE, precursors, `method/1`, names, `losses` zero; also the DAD and device traces.
 - operations: remove one sample (the rest equal, `.scan` smaller by exactly that section); add (the new sample equal to its source); every permutation and subset of 3 samples; the same plan twice gives identical bytes (determinism); an empty injection survives.
 - parity: site wasm (in Node), app native and CLI write the same SHA-256 for the same plan (the `test_wiff_*_parita.py` style).
 - evidence for real files, usable by the owner without Analyst: `mzlab-cli wiff verify` (below) re-reads the output and each source and compares stream and section SHA-256 per sample; the JSON is the proof that every byte of every kept sample is present.

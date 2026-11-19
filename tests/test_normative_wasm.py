@@ -40,7 +40,8 @@ def test_listings_json_is_the_same_in_wasm_and_native(built):
     root, wasm, out = built
     native = run("target/release/mzlab-cli", "normative", "listings", str(out)).stdout
     got = run("node", str(root / "run.js"), str(wasm), str(out / "normative.mzsus")).stdout
-    assert len(native) > 100_000 and got == native
+    # the CLI ends every stdout document with a newline; the wasm returns the value without it: the same JSON bytes otherwise
+    assert len(native) > 100_000 and native.endswith(b"\n") and got + b"\n" == native
 
 
 def test_file_without_listings_is_refused_by_both(built, tmp_path):

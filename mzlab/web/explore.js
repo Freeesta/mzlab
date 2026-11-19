@@ -230,7 +230,7 @@ let ldSlow = 0;
 
 // ------------------------------------------------------------------ notebook (saved next to the data)
 let nbTimer = /** @type {ReturnType<typeof setTimeout> | null} */ (null), nbLast = "", nbBase = /** @type {Bag} */ ({}), nbRemote = /** @type {Bag | null} */ (null), nbGen = 0, nbQueue = /** @type {Promise<unknown>} */ (Promise.resolve());      // one save at a time; a save overtaken by a newer one is dropped (its stale read of the stored copy, merged after the newer save moved nbBase, would write the old notebook back)
-// schema of the notebook: bump it when a field changes meaning and migrate in nbLoad (2: NB.session in the format campioni/2)
+// schema of the notebook: bump it when a field changes meaning and migrate in nbLoad (2: NB.session in the format samples/1)
 const NB_V = 2;
 const nbPlain = (/** @type {unknown} */ v) => !!v && typeof v === "object" && !Array.isArray(v);
 // what comes back from the storage can be old, empty or damaged: only a plain object is accepted and the fields the program iterates over must have the right type
@@ -273,10 +273,6 @@ async function nbLoad() {
   const again = NBP.take(j, nbClean); if (again) j = again; Object.assign(NB, j); const snap = JSON.stringify(NB); nbBase = JSON.parse(snap); nbRemote = j; nbLast = snap;
   nbEverLoaded = true; nbNamed = new Set([...(NB.session || []), ...((NB.ui && NB.ui.files) || [])].map((/** @type {Bag} */ f) => String(f.file).split("#")[0]));
   if (again) { nbLast = ""; nbSave(true); }
-  // notebook v1: roles of the Data view, QC and dark roles of qqq.qaqc -> campioni/2, without loss
-  if (CDOC.isOld(NB.session)) {
-    try { NB.session = await CDOC.migrate(NB.session, (window.QAQC && QAQC.state.roles) || {}); NB._v = NB_V; nbSave(); } catch (_) { /* the notebook stays as it is */ }
-  }
   document.dispatchEvent(new Event("nbloaded"));
 }
 // back in the tab (after another tab or the browser was closed) the fields it did not change are refreshed from the stored notebook: the next save never undoes the other tab
@@ -854,6 +850,7 @@ function renderFileList() {
   bindFileReorder(); syncGroupBy();
   renderNav();
   syncWorkEmpty();
+  document.dispatchEvent(new CustomEvent("filelist"));
 }
 const vis = () => tabFiles().filter((/** @type {FileAperto} */ f) => f.vis);
 // "Solo il selezionato": every graph follows the file chosen in the toolbar, so the controls that choose a file inside a graph are switched off

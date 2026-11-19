@@ -1,6 +1,6 @@
 """INFG rules: the arcs of the «Fragmentation graph» carry the id of the rule that explains the loss (weak ones tagged), the panel of an ion lists the rules of the losses
 that reach it with their reason and their sources as DOI links, the filter «only losses with a rule» works with the keyboard, the data table has the columns rule, source and
-priority, the thresholds say «to be calibrated», axe. The engine answer is the one of tests_e2e/fixtures/msngrafo_esempio.json plus the key `regole` of
+priority, the thresholds say «to be calibrated», axe. The engine answer is the one of tests_e2e/fixtures/msngrafo_esempio.json plus the key `rules` of
 fixtures/msngrafo_regole.json (synthetic: no real data, no real compounds)."""
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -14,7 +14,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_infusione_regole.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 FIX = Path(__file__).parent / "fixtures"
-FX = json.loads((FIX / "msngrafo_esempio.json").read_text()); RX = json.loads((FIX / "msngrafo_regole.json").read_text())["regole"]
+FX = json.loads((FIX / "msngrafo_esempio.json").read_text()); RX = json.loads((FIX / "msngrafo_regole.json").read_text())["rules"]
 D = synth("infregole")
 F = write_msn(D / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)
 STAND_IN = """([fx, rx]) => {
@@ -23,8 +23,8 @@ STAND_IN = """([fx, rx]) => {
     const s = String(u), url = new URL(s, location.href), q = url.searchParams, path = url.pathname.replace(/^.*\\/api\\//, "api/");
     if (path === "api/msn_grafo") {
       window.__REQ.push([path, s]);
-      const j = JSON.parse(JSON.stringify(fx)); j.avvisi = [];
-      if (q.get("regole") === "1") j.regole = JSON.parse(JSON.stringify(rx));
+      const j = JSON.parse(JSON.stringify(fx)); j.warnings = [];
+      if (q.get("rules") === "1") j.rules = JSON.parse(JSON.stringify(rx));
       return Promise.resolve(new Response(JSON.stringify(j), { headers: { "content-type": "application/json" } }));
     }
     return orig(u, init);
@@ -41,7 +41,7 @@ try:
         pg.context.grant_permissions(["clipboard-read", "clipboard-write"])
         pg.evaluate(STAND_IN, [FX, RX]); drawer(pg, "gra"); pg.wait_for_selector(".ig-node", timeout=30000)
         def labels():
-            assert "regole=1" in pg.evaluate("window.__REQ[0][1]"), pg.evaluate("window.__REQ[0][1]")
+            assert "rules=1" in pg.evaluate("window.__REQ[0][1]"), pg.evaluate("window.__REQ[0][1]")
             t = pg.evaluate("[...document.querySelectorAll('.ig-rule')].map(e=>e.textContent)")
             assert "loss_co2" in t and any(x.startswith("loss_nh3_amide") and "weak" in x for x in t), t
             assert any("loss_co2 + loss_nh3_amide" in x for x in t), t

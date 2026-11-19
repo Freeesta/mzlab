@@ -20,11 +20,11 @@ pub struct FileIn {
     pub time: Option<f64>,
     /// `-1` for a reference (dark, t0, blank, control), the time in minutes, NaN when unknown.
     pub t: f64,
-    /// The experimental condition (`serie` of `campioni/2`); empty = shared by all (a control of every condition, or the only condition).
+    /// The experimental condition (`series` of `samples/1`); empty = shared by all (a control of every condition, or the only condition).
     pub cond: String,
     /// The replicate of the file within its condition and time, when the page gave it.
     pub replicate: Option<u32>,
-    /// 1-based position of the injection when `campioni/2` gave it, 0 when unknown.
+    /// 1-based position of the injection when `samples/1` gave it, 0 when unknown.
     pub order: u32,
 }
 

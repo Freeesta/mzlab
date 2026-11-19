@@ -1,6 +1,6 @@
-//! `mzlab-cli msn-lib add|build|export`: the library of MSn trees `msnlib/1` of the standards (`docs/agenti/msnlib.md`). `add` puts the graph of one infusion
+//! `mzlab-cli msn-lib add|build|export`: the library of MSn trees `msn-lib/1` of the standards (`docs/agenti/msnlib.md`). `add` puts the graph of one infusion
 //! into a library file, `build` does it for every row of a manifest, `export` writes the MS2 spectra of the entries as MSP or MassBank. The library is always written by the
-//! same function as the route `api/msnlib/aggiungi` (`mzlab_core::msngraph::aggiungi`).
+//! same function as the route `api/msnlib/add` (`mzlab_core::msngraph::aggiungi`).
 
 use std::path::{Path, PathBuf};
 
@@ -9,7 +9,7 @@ use mzlab_core::msngraph::{aggiungi, cerca, Options, OpzioniCerca};
 
 use mzlab_core::msngraph::{export_text, LibFormato as Format};
 
-pub const HELP: &str = "mzlab-cli msn-lib: the library of MSn trees (msnlib/1).
+pub const HELP: &str = "mzlab-cli msn-lib: the library of MSn trees (msn-lib/1).
 
 usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
        mzlab-cli msn-lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
@@ -24,7 +24,7 @@ usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
   search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
-          msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
+          msn-search/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
           --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not";
 
@@ -166,7 +166,7 @@ fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
     ))
 }
 
-/// `search LIB GRAPH [options]`: the text of `msncerca/1` and the file it goes to, if any.
+/// `search LIB GRAPH [options]`: the text of `msn-search/1` and the file it goes to, if any.
 fn search(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
     let bad = |m: &str| Error::new("err.cli.line").with("message", m);
     let (mut files, mut out, mut o) = (Vec::new(), None, OpzioniCerca::default());
@@ -246,6 +246,7 @@ pub(crate) fn cmd(args: Vec<String>) -> crate::Outcome {
             code: 0,
             stdout: data,
             stderr: note,
+            error: None,
         },
         Err(e) => crate::Outcome::fail_error(&e),
     }

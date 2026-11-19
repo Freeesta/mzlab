@@ -1,5 +1,5 @@
 //! The named views a chart can point to (`tic:f1`, `tic:*`, `bpc:*`, `features:area`, `features:mzrt`, `qc:cv`, `drift:rt`, `blank:ratio`, `peaks:width`) and the
-//! charts offered without a model. The page hands over what the engine already produced (same sources as `contesto/1`, plus `qc`); only the views that
+//! charts offered without a model. The page hands over what the engine already produced (same sources as `context/1`, plus `qc`); only the views that
 //! can be built now are listed. Used by `chart` (validation) and by the transport, which gives the list to the chart-drawing prompt.
 
 use mzlab_core::error::Result;

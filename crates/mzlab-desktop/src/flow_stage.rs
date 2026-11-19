@@ -84,11 +84,11 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("mzlab-flow-in-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let none = |_: &str| None;
-        let texts = json!({ "campioni.json": "{\"schema\":\"campioni/2\"}" });
-        stage_inputs(&["campioni.json"], &texts, &none, &dir).unwrap();
+        let texts = json!({ "samples.json": "{\"schema\":\"samples/1\"}" });
+        stage_inputs(&["samples.json"], &texts, &none, &dir).unwrap();
         assert_eq!(
-            std::fs::read_to_string(dir.join("campioni.json")).unwrap(),
-            "{\"schema\":\"campioni/2\"}"
+            std::fs::read_to_string(dir.join("samples.json")).unwrap(),
+            "{\"schema\":\"samples/1\"}"
         );
         let e = stage_inputs(&["a.mzML"], &texts, &none, &dir).unwrap_err();
         assert_eq!(e.key, "err.flow.input.missing");

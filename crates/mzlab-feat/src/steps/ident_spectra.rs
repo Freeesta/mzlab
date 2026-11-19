@@ -241,27 +241,27 @@ pub(super) fn match_spectra() -> Step {
     }
 }
 
-/// `tree`: the fragmentation graph of an infusion (`msngrafo/1`, `spectra.msn_graph`) against an MSn library (`msnlib/1`), `msngraph::cerca`.
+/// `tree`: the fragmentation graph of an infusion (`msn-graph/1`, `spectra.msn_graph`) against an MSn library (`msn-lib/1`), `msngraph::cerca`.
 fn tree() -> Algorithm {
     Algorithm {
         applicability: Applicability {
             ms_levels: vec![2, 3, 4],
-            note: "The query port takes the msngrafo/1 graph and the library port an msnlib/1 file declared as a library; precursor_ppm (or precursor_da), tol_da and top_n are the windows and the cut of the search; name_contains keeps the entries whose id or private name has the text. decoys do not apply",
+            note: "The query port takes the msn-graph/1 graph and the library port an msn-lib/1 file declared as a library; precursor_ppm (or precursor_da), tol_da and top_n are the windows and the cut of the search; name_contains keeps the entries whose id or private name has the text. decoys do not apply",
             ..Applicability::default()
         },
         params: vec![
-            Param::integer("min_prove", "Minimum shared peaks")
+            Param::integer("min_evidence", "Minimum shared peaks")
                 .min(0.0)
                 .default_num(1.0)
                 .doc("A candidate needs this many peaks shared with the unknown in its best MS2 pair"),
-            Param::choice("tree_output", "Output", &["msncerca", "candidates"])
-                .default_str("msncerca")
-                .doc("msncerca: the msncerca/1 text of msn-lib search. candidates: the candidates/1 of the other algorithms (score = MS2 entropy similarity; the tree and loss scores and the proofs in the tree block), which annot.level reads"),
+            Param::choice("tree_output", "Output", &["msn-search", "candidates"])
+                .default_str("msn-search")
+                .doc("msn-search: the msn-search/1 text of msn-lib search. candidates: the candidates/1 of the other algorithms (score = MS2 entropy similarity; the tree and loss scores and the proofs in the tree block), which annot.level reads"),
         ],
         ..algorithm(
             "tree",
             "MSn tree",
-            "Compares an unknown MSn graph with the entries of an MSn library whose precursor is inside the window; the MS2 entropy, the tree and the shared losses stay apart as three scores with their proofs (msngrafo/cerca.rs). The output is msncerca/1 or, with tree_output, candidates/1: nothing is called a match.",
+            "Compares an unknown MSn graph with the entries of an MSn library whose precursor is inside the window; the MS2 entropy, the tree and the shared losses stay apart as three scores with their proofs (msngrafo/cerca.rs). The output is msn-search/1 or, with tree_output, candidates/1: nothing is called a match.",
             Status::Available,
         )
     }

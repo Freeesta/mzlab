@@ -1,4 +1,4 @@
-//! The proof "MSn tree of a reference": the MS2 of a row against the entries of an `msnlib/1` library (`docs/agenti/msnlib.md`). It becomes an
+//! The proof "MSn tree of a reference": the MS2 of a row against the entries of an `msn-lib/1` library (`docs/agenti/msnlib.md`). It becomes an
 //! `ExternalHit` whose score is the entropy similarity of the best MS2 of the entry; it moves the order of the candidates and never gives a level.
 
 use super::ExternalHit;
@@ -38,9 +38,9 @@ pub fn msn_tree_hits(library: &str, rows: &[RowMs2]) -> Result<Vec<ExternalHit>>
 mod tests {
     use super::*;
 
-    const LIB: &str = r#"{"formato":"msnlib/1","voci":[{"id":"STD","ione":{"formula":"C1"},"grafo":{"polarita":1,"radici":["n0"],
-        "nodi":[{"id":"n0","mz":305.1}],"archi":[],"spettri":[{"albero":"305@cid35","livello":2,"att":"cid","ce":35,"precursore":"n0",
-        "picchi":[{"mz":261.1,"rel":100},{"mz":244.1,"rel":50},{"mz":217.1,"rel":20}]}]}}]}"#;
+    const LIB: &str = r#"{"schema":"msn-lib/1","entries":[{"id":"STD","ion":{"formula":"C1"},"graph":{"polarity":1,"roots":["n0"],
+        "nodes":[{"id":"n0","mz":305.1}],"edges":[],"spectra":[{"tree":"305@cid35","level":2,"activation":"cid","ce":35,"precursor":"n0",
+        "peaks":[{"mz":261.1,"rel":100},{"mz":244.1,"rel":50},{"mz":217.1,"rel":20}]}]}}]}"#;
 
     #[test]
     fn a_row_with_the_ms2_of_a_reference_gets_a_hit_and_the_others_none() {

@@ -496,7 +496,7 @@ async function showMethod(sel) {
   const gradHere = !!(lab && lab.lc && lab.lc.gradient && lab.lc.gradient.length > 1);
   if (!gradHere && window.GRADIENTE) h += await GRADIENTE.html(f);       // no gradient in the .dam: the one of the file's own method, read-only
   if (held) h += await METODO_M.html();
-  h += await METODO_DOC.html(f);       // what the file itself says (metodo/1)
+  h += await METODO_DOC.html(f);       // what the file itself says (method/1)
   h = h.replace(/m\/z/g, "<i>m/z</i>");   // m/z is always in italics
   const d = Q("#bigdlg"); if (d.open) d.close();
   big(I18N.t("method.dialog.title"), h, () => {

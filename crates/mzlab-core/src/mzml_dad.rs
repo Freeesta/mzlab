@@ -8,7 +8,8 @@ use std::sync::{Arc, Mutex};
 
 use crate::error::Result;
 use crate::idxread::ReadAt;
-use crate::mzmlhead::{arrays, attr, decode, find, text, Mzml};
+use crate::mzmlarray::{Inflate, Want};
+use crate::mzmlhead::{arrays, attr, decode, decode_with, find, text, Mzml};
 use crate::wiff::dad::DadData;
 
 /// Bytes read per step when walking the file for UV spectra.
@@ -102,7 +103,9 @@ impl<R: ReadAt> Mzml<R> {
     /// The `MS:1000804` spectra, walking the file in steps (a spectrum that does not fit grows the step).
     fn dad_spectra(&mut self) -> Result<Option<DadData>> {
         let (mut pos, mut step) = (0u64, STEP);
-        let (mut times, mut wl, mut mat): (Vec<f64>, Vec<f64>, Vec<f32>) = (vec![], vec![], vec![]);
+        let (mut times, mut mat): (Vec<f64>, Vec<f32>) = (vec![], vec![]);
+        // one inflater and the wavelength axis of the first row: the other rows carry the same text, which is compared, not decoded again
+        let (mut inf, mut grid) = (Inflate::new(), Grid::default());
         while pos < self.size {
             let chunk = self.read(pos, (pos + step).min(self.size))?;
             let last = pos + step >= self.size;
@@ -115,15 +118,17 @@ impl<R: ReadAt> Mzml<R> {
                 };
                 let block = &chunk[a..b + 11];
                 if find(block, b"MS:1000804", 0).is_some()
-                    && let Some((t, w, y)) = uv_row(block)
+                    && let Some((t, w, y)) = uv_row(block, &mut inf, &grid)
                 {
-                    if wl.is_empty() {
-                        wl = w;
+                    if let Some((w, head, data)) = w
+                        && grid.wl.is_empty()
+                    {
+                        grid = Grid { wl: w, head, data };
                     }
                     // a row on another wavelength grid cannot join the matrix
-                    if y.len() == wl.len() {
+                    if y.len() == grid.wl.len() {
                         times.push(t);
-                        mat.extend(y.iter().map(|&v| v as f32));
+                        mat.extend_from_slice(&y);
                     }
                 }
                 at = b + 11;
@@ -137,7 +142,7 @@ impl<R: ReadAt> Mzml<R> {
                 None => pos += (chunk.len() as u64).saturating_sub(10).max(1),
             }
         }
-        Ok(build(times, wl, mat))
+        Ok(build(times, grid.wl, mat))
     }
 }
 
@@ -211,8 +216,22 @@ fn from_array(head: &str, data: &[u8]) -> Option<DadData> {
     build(at(nt, t0, dt), at(nl, w0, step), mat)
 }
 
-/// One `<spectrum>` with `MS:1000804`: (time in minutes, wavelengths, absorbance).
-fn uv_row(block: &[u8]) -> Option<(f64, Vec<f64>, Vec<f64>)> {
+/// The wavelength axis of the first row and the text it was decoded from.
+#[derive(Default)]
+struct Grid {
+    wl: Vec<f64>,
+    head: String,
+    data: Vec<u8>,
+}
+
+/// One `<spectrum>` with `MS:1000804`: (time in minutes, the wavelengths with the text they come from when they are not those of `grid`, absorbance).
+/// A row whose wavelength text is the one of `grid` is not decoded again; its length is the one of `grid`.
+#[allow(clippy::type_complexity)]
+fn uv_row(
+    block: &[u8],
+    inf: &mut Inflate,
+    grid: &Grid,
+) -> Option<(f64, Option<(Vec<f64>, String, Vec<u8>)>, Vec<f32>)> {
     let list = find(block, b"<binaryDataArrayList", 0)?;
     let h = text(&block[..list]);
     let p = h.find("accession=\"MS:1000016\"")?;
@@ -221,19 +240,32 @@ fn uv_row(block: &[u8]) -> Option<(f64, Vec<f64>, Vec<f64>)> {
     if crate::mzml::is_seconds(attr(tag, "unitName"), attr(tag, "unitAccession")) {
         rt /= 60.0;
     }
-    let (mut wl, mut ab) = (None, None);
+    let (mut wl, mut same, mut ab) = (None, false, None);
     for (head, data) in arrays(block) {
-        let a = decode(&head, data, 0).ok()?;
         if head.contains("MS:1000617") {
-            wl = Some(a);
+            if !grid.wl.is_empty() && head == grid.head && data == grid.data.as_slice() {
+                same = true;
+            } else {
+                let a = decode_with(&head, data, 0, inf, Want::F64).ok()?.0;
+                wl = Some((a, head, data.to_vec()));
+            }
         } else if head.contains("MS:1000515") {
-            ab = Some(a);
+            ab = Some(decode_with(&head, data, 0, inf, Want::F32).ok()?.1);
         }
     }
-    let (wl, ab) = (wl?, ab?);
-    (wl.len() == ab.len() && !wl.is_empty()).then_some((rt, wl, ab))
+    let ab = ab?;
+    let n = match (&wl, same) {
+        (Some((a, _, _)), _) => a.len(),
+        (None, true) => grid.wl.len(),
+        _ => return None,
+    };
+    (n == ab.len() && n > 0).then_some((rt, wl, ab))
 }
 
 #[cfg(test)]
 #[path = "mzml_dad_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "mzml_dad_grid_tests.rs"]
+mod grid_tests;

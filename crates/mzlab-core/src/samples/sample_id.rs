@@ -1,5 +1,5 @@
-//! The sample-ID convention of the lab series (`MAT-COND-Ttt`, `MAT-STD<cc>`, `QC-MAT`, `P-<name>`, blanks), read from a `campione_id`.
-//! Used by `modello` to fill the fields the name model did not capture and by `valida3` to warn about an unknown condition or a bad time.
+//! The sample-ID convention of the lab series (`MAT-COND-Ttt`, `MAT-STD<cc>`, `QC-MAT`, `P-<name>`, blanks), read from a `sample_id`.
+//! Used by `model` to fill the fields the name model did not capture and by `validate3` to warn about an unknown condition or a bad time.
 
 use super::Sample;
 
@@ -89,32 +89,32 @@ pub fn read(id: &str) -> IdInfo {
     r
 }
 
-/// Fills the fields of `c` from its `campione_id`, except the ones named in `skip` (captured by the model): matrix, condition (`serie`), group
+/// Fills the fields of `c` from its `sample_id`, except the ones named in `skip` (captured by the model): matrix, condition (`series`), group
 /// (`MAT-COND`), time, role and the concentration of a standard (mg/L).
 pub fn apply(c: &mut Sample, skip: &[&str]) {
     let i = read(&c.sample_id);
     let free = |f: &str| !skip.contains(&f);
     c.reinjection = i.reinjection;
-    if let (true, Some(m)) = (free("matrice"), i.matrix) {
+    if let (true, Some(m)) = (free("matrix"), i.matrix) {
         c.matrix = m.into();
     }
-    if let (true, Some(k)) = (free("tipo"), i.kind) {
+    if let (true, Some(k)) = (free("kind"), i.kind) {
         c.kind = k.into();
     }
-    if let (true, Some(cond)) = (free("serie"), &i.cond) {
+    if let (true, Some(cond)) = (free("series"), &i.cond) {
         c.series = cond.clone();
     }
-    if let (true, Some(m), Some(cond)) = (free("gruppo"), i.matrix, &i.cond) {
+    if let (true, Some(m), Some(cond)) = (free("group"), i.matrix, &i.cond) {
         c.group = format!("{m}-{cond}");
     }
-    if free("tempo")
-        && free("unita_tempo")
+    if free("time")
+        && free("time_unit")
         && let Some(t) = i.time_min
     {
         c.set_time(Some(t), "min");
         c.time_confirmed = false;
     }
-    if let (true, Some(x)) = (free("concentrazione"), i.conc) {
+    if let (true, Some(x)) = (free("concentration"), i.conc) {
         c.conc = Some(x);
         c.unit = Some("mg/L".into());
     }

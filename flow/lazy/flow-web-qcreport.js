@@ -1,7 +1,7 @@
 // @ts-check
 // Flow (administrator mode): qc.run_order and report.methods in this browser. Both texts come from the `flowtab` .wasm (module loaded here only, when one of these steps runs): `flow_runorder` is
 // `mzlab_feat::runorder::runorder_text` and `flow_methods` is `mzlab_feat::methods::methods_text`, the functions `flow run` calls, so the runorder/1 JSON and the Markdown are the same bytes. The sample
-// table (and the batches) are files of the plan (their text in S.samplesJson); the run record of report.methods is a file of the plan too, else the corsa/1 this browser kept for the last run of the
+// table (and the batches) are files of the plan (their text in S.samplesJson); the run record of report.methods is a file of the plan too, else the run-report/1 this browser kept for the last run of the
 // plan, else the step is blocked by `input.run`. The text is kept like the other results, under the key of the job. English only.
 (() => {
   "use strict";
@@ -49,7 +49,7 @@
 
   /** report.methods @param {any} x @param {any} spec @param {any} inst */
   const methods = async (x, spec, inst) => {
-    const given = fileText(x, inst, "run"), last = F.webProv && F.webProv.last && F.webProv.last.corsa, run = given !== null ? given : typeof last === "string" ? last : null;
+    const given = fileText(x, inst, "run"), last = F.webProv && F.webProv.last && F.webProv.last.run_report, run = given !== null ? given : typeof last === "string" ? last : null;
     if (run === null) { await x.call("block", { job: J().job(spec), by: "input.run" }); return {}; }
     const key = await J().sha(spec.key + "\n" + await J().sha(run));
     return make(x, spec, inst, key, inst.id + ".md", async () => (await kit().getPool()).ident("flowtab", "flow_methods", { params: paramsOf(x, inst), run: enc(run) }));

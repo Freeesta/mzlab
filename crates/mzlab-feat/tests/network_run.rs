@@ -3,7 +3,7 @@
 //! without a block.
 
 use mzlab_core::json::parse;
-use mzlab_core::samples::{proponi, to_json};
+use mzlab_core::samples::{propose, to_json};
 use mzlab_feat::interp::store::append;
 use mzlab_feat::network::{network_text, NetworkParams};
 use mzlab_feat::recipe::Recipe;
@@ -40,7 +40,7 @@ fn samples() -> String {
         .iter()
         .map(|n| (n.to_string(), String::new(), String::new()))
         .collect();
-    to_json(&proponi(&files))
+    to_json(&propose(&files))
 }
 
 /// A `.mzfeat` with the block `tp` (the parent and two accepted products).

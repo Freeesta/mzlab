@@ -1,5 +1,5 @@
 //! `mzlab-cli match-mz X --tables FILE.json [--set NAME=VALUE...] [--out PATH]`: what a number is compatible with (neutral loss, adduct shift,
-//! known contaminant), the `ricerca/1` JSON of `mzlab_core::search::match_number`, byte for byte what the page and the app answer.
+//! known contaminant), the `mz-match/1` JSON of `mzlab_core::search::match_number`, byte for byte what the page and the app answer.
 
 use std::path::PathBuf;
 

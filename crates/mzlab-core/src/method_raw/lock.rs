@@ -1,4 +1,4 @@
-//! The lock mass (internal calibrant) of a Thermo Orbitrap `.raw`, for `metodo/1.ms.calibrazione.lock_mass`: what the readable method says (`Use lock masses best`, the
+//! The lock mass (internal calibrant) of a Thermo Orbitrap `.raw`, for `method/1.ms.calibrazione.lock_mass`: what the readable method says (`Use lock masses best`, the
 //! `Lock Masses:` block with the `Pos`/`Neg List Name` and `Mass List`) and what the scan trailer records (`Number of Lock Masses`, `LM m/z-Correction (ppm)`). It only describes: the data are never corrected here.
 
 use crate::method::{num, obj, text, V};
@@ -113,7 +113,7 @@ fn pair(r: Option<(f64, f64)>) -> Option<V> {
 }
 
 /// The `lock_mass` object of `ms.calibrazione`: the mode and the lists of the method, how many lock masses the trailer says and the range of the correction. The masses
-/// and the search window of the trailer stay in `campi` (`Lock Mass #n (m/z)`, `LM Search Window (ppm)`).
+/// and the search window of the trailer stay in `fields` (`Lock Mass #n (m/z)`, `LM Search Window (ppm)`).
 pub fn section<R: Read + Seek>(
     raw: &RawFileReader,
     source: &mut R,
@@ -130,10 +130,10 @@ pub fn section<R: Read + Seek>(
         .flat_map(|m| m.lists.iter())
         .filter_map(|l| {
             obj(vec![
-                ("polarita", Some(V::s(l.polarity))),
-                ("nome", text(&l.name).filter(|_| l.name != "N/A")),
+                ("polarity", Some(V::s(l.polarity))),
+                ("name", text(&l.name).filter(|_| l.name != "N/A")),
                 (
-                    "masse_mz",
+                    "masses_mz",
                     Some(V::Arr(l.masses.iter().map(|x| V::Num(*x)).collect())),
                 ),
             ])
@@ -141,12 +141,12 @@ pub fn section<R: Read + Seek>(
         .collect();
     obj(vec![
         (
-            "modo",
+            "mode",
             m.as_ref().and_then(|m| m.mode.as_deref()).and_then(text),
         ),
-        ("elenchi", (!lists.is_empty()).then_some(V::Arr(lists))),
-        ("numero_nel_trailer", num(number.map(|r| r.1))),
-        ("correzione_ppm", pair(correction)),
+        ("lists", (!lists.is_empty()).then_some(V::Arr(lists))),
+        ("number_in_trailer", num(number.map(|r| r.1))),
+        ("correction_ppm", pair(correction)),
     ])
 }
 

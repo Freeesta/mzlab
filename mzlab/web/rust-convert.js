@@ -16,7 +16,7 @@ export function wiffApi(rpc, base) {
       if (r.dead || r.error) throw fail(r, "err.file.notWiff");
       return JSON.parse(r.info);
     },
-    // an Agilent *.m method folder (files = [File] with the folder they came from): its metodo/1 document, the files read whole (those above 4 MB are left out) and sent in one buffer
+    // an Agilent *.m method folder (files = [File] with the folder they came from): its method/1 document, the files read whole (those above 4 MB are left out) and sent in one buffer
     async metodoM(name, files) {
       const parts = [], names = [];
       for (const f of files) if (f.size <= 4 << 20) { parts.push(new Uint8Array(await f.arrayBuffer())); names.push(f.rel); }

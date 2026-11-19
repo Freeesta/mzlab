@@ -80,7 +80,8 @@ fn run_order_in_a_plan_is_the_text_of_the_engine_and_its_parameters_reach_it() {
 fn methods_in_a_plan_is_the_text_of_the_engine_in_both_styles() {
     let d = dir("methods");
     let run_report = std::fs::read(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/feat/methods-corsa.json"),
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/golden/feat/methods-run-report.json"),
     )
     .unwrap();
     std::fs::write(d.join("run.json"), &run_report).unwrap();

@@ -317,20 +317,20 @@ try:
             pg.evaluate("""async () => {
               PIPET.mount = (box, o) => { window.__fo = o; box.innerHTML = '<button data-fc="blank" aria-pressed="false">Not in blank</button>'; box.firstChild.onclick = e => e.target.setAttribute("aria-pressed", "true"); };
               const S = FLOW.current, inp = FLOW.addInput(S.plan, "samples");
-              S.samples = { [inp.name]: { schema: "campioni/2", campioni: [{ file: "a.mzML", tipo: "blank", tempo_min: null }, { file: "b.mzML", tipo: "sample", tempo_min: 5 }] } };
+              S.samples = { [inp.name]: { schema: "samples/1", samples: [{ file: "a.mzML", kind: "blank", time_min: null }, { file: "b.mzML", kind: "sample", time_min: 5 }] } };
               const meta = new TextEncoder().encode(JSON.stringify({ rows: 3, files: 2, inputs: [{ name: "a.mzidx" }, { name: "b.mzidx" }], arrays: [] }));
               const head = new Uint8Array(16); head.set(new TextEncoder().encode("MZFEAT01")); new DataView(head.buffer).setBigUint64(8, BigInt(meta.length), true);
               S.results = { s1: [{ type: "table", label: "run.mzfeat", text: async () => "", load: async () => new File([head, meta], "run.mzfeat") }] };
               window.__fo = null; window.__fa = null; await FLOW.afterRun(S);
             }""")
             wait_for_js(pg, "window.__fo && /3 rows in 2 files/.test(document.querySelector('.flx-res-body').textContent)")
-            assert pg.evaluate("window.__fa.campioni.map(c => c.tipo).join()") == "blank,sample", pg.evaluate("window.__fa.campioni")
+            assert pg.evaluate("window.__fa.samples.map(c => c.kind).join()") == "blank,sample", pg.evaluate("window.__fa.samples")
             assert pg.evaluate("document.querySelector('.flx-res [data-fc=blank]').getAttribute('aria-pressed')") == "true"
             assert pg.locator(".flx-res .flx-leg .flx-auto").count() == 1
             print("MISURA clic_risultato: 0 clicks from the end of the run to the Feature table")
             pg.evaluate("""async () => { const S = FLOW.current; S.samples = {}; window.__fo = null; await FLOW.afterRun(S); }""")
             wait_for_js(pg, "window.__fo && /does not|no content yet/.test(document.querySelector('.flx-res-body').textContent)")
-            assert pg.evaluate("window.__fa.campioni") is None
+            assert pg.evaluate("window.__fa.samples") is None
             pg.click('.flx-res button[aria-label="Close the results"]')
         step("a finished run opens the Feature table by itself, with the sample roles of the plan", end_of_run)
         def samples_in_place():   # the sample list is filled in place: «From Data» takes the open files, «Edit» changes a row, the input keeps the SHA-256 of the canonical document
@@ -345,7 +345,7 @@ try:
             c = pg.evaluate("+document.querySelector('.fl-insp [role=columnheader]:has(button[aria-label=\\'Sort by Time\\'])').getAttribute('aria-colindex') - 1")
             pg.click(f".fl-insp .mg-sc [data-r='1'][data-c='{c}']"); pg.keyboard.press("Enter"); pg.keyboard.press("Control+a"); pg.keyboard.type("10"); pg.keyboard.press("Tab")
             wait_for_js(pg, "FLOW.current.plan.inputs.find(i => i.type === 'samples').sha256 !== '%s'" % sha)
-            assert pg.evaluate("Object.values(FLOW.current.samples)[0].campioni[1].tempo_min") == 10
+            assert pg.evaluate("Object.values(FLOW.current.samples)[0].samples[1].time_min") == 10
             assert "No t0" in pg.inner_text('.fl-insp'); pg.evaluate("() => { E.files = window.__e; }")
         step("the sample list is filled from Data or edited in place, and the input keeps its SHA-256", samples_in_place)
 
@@ -356,7 +356,7 @@ try:
             label = pg.evaluate("""() => { const S = FLOW.current, inst = S.plan.steps.find(s => s.step.startsWith('table.filter')); window.__fix = FLOW.friendly(S, { key: 'err.flow.port.missing', instance: inst.id, port: 'samples' }).fix; return window.__fix.label; }""")
             assert label == "Add sample list from Data", label
             pg.evaluate("() => window.__fix.run()")
-            wait_for_js(pg, "FLOW.current.plan.inputs.some(i => i.type === 'samples' && i.sha256.length === 64) && Object.values(FLOW.current.samples)[0].campioni.length === 2")
+            wait_for_js(pg, "FLOW.current.plan.inputs.some(i => i.type === 'samples' && i.sha256.length === 64) && Object.values(FLOW.current.samples)[0].samples.length === 2")
             print("MISURA clic_campioni: 1 click (the remedy) from a step that asks for the list to the list filled from Data")
             pg.evaluate("() => { E.files = window.__e; }")
         step("the remedy of a step that needs the sample list fills it from Data in one click", samples_fix)
@@ -395,10 +395,10 @@ try:
         step("the Feature table has the column and the tab «Family»", family_hooks)
 
         def report_and_network():
-            # a run report (corsa/1) opens in the Run report view; a product network (rete/1) opens with the network view and shares the one selection
+            # a run report (run-report/1) opens in the Run report view; a product network (rete/1) opens with the network view and shares the one selection
             pg.evaluate("""async () => {
-              const corsa = { schema: "corsa/1", engine: { name: "mzLab", version: "1.0", platform: "native" }, inputs: [], lists: [], steps: [], total_ms: 0, levels: { files: 0, rows: 0, auto: {}, other: {} } };
-              await FLOW.openResult({ type: "report", label: "corsa.json", text: async () => JSON.stringify(corsa) });
+              const corsa = { schema: "run-report/1", engine: { name: "mzLab", version: "1.0", platform: "native" }, inputs: [], lists: [], steps: [], total_ms: 0, levels: { files: 0, rows: 0, auto: {}, other: {} } };
+              await FLOW.openResult({ type: "report", label: "report.json", text: async () => JSON.stringify(corsa) });
             }""")
             try: wait_for_js(pg, "document.querySelector('.flx-res .rf h1') && /Flow run report/.test(document.querySelector('.flx-res .rf h1').textContent)", 15000)
             except Exception: raise AssertionError("report view: " + pg.inner_text(".flx-res-body")[:300] + " base=" + str(pg.evaluate("String(QTOOLS.ctx.base)")))

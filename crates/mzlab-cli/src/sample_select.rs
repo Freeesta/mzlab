@@ -9,9 +9,6 @@ use mzlab_core::readers::{selection, Limits};
 
 use crate::Outcome;
 
-/// The exit code of an id the file does not have.
-pub(crate) const UNKNOWN: u8 = 5;
-
 /// The ids of `text`, ascending; `err.sample.list` when it is not a list.
 pub(crate) fn parse(text: &str) -> Result<Vec<u32>> {
     selection::parse(text)
@@ -24,6 +21,17 @@ pub(crate) fn present(path: &Path) -> Result<Vec<u32>> {
     Ok(l.samples().iter().map(|s| s.id).collect())
 }
 
+/// The ids and section bytes (0 when the reader gives none) of the samples of `path`, from the container and index alone.
+pub(crate) fn sized(path: &Path) -> Result<(Vec<u32>, Vec<u64>)> {
+    let fs = crate::flow_set::file_set(path)?;
+    let l = mzlab_lettori::apri_listing(fs, &Limits::desktop())?;
+    let s = l.samples();
+    Ok((
+        s.iter().map(|x| x.id).collect(),
+        s.iter().map(|x| x.size.unwrap_or(0)).collect(),
+    ))
+}
+
 /// `wanted` among the samples of `path`, in the order of the file; `err.sample.unknown` when one is missing.
 pub(crate) fn resolve(path: &Path, wanted: &[u32]) -> Result<Vec<u32>> {
     selection::resolve(&present(path)?, wanted)
@@ -31,32 +39,16 @@ pub(crate) fn resolve(path: &Path, wanted: &[u32]) -> Result<Vec<u32>> {
 
 /// The exit code of a selection error: 5 for an unknown id, else 2 (usage).
 pub(crate) fn code_of(e: &Error) -> u8 {
-    if e.key == "err.sample.unknown" {
-        UNKNOWN
-    } else {
-        2
-    }
+    crate::exit::code_of(e)
 }
 
-/// The failed `Outcome` of a selection error: the text on stderr and, with `json`, an `errore/1` on stdout.
-pub(crate) fn fail(e: &Error, json: bool) -> Outcome {
-    let (code, msg) = (code_of(e), crate::error_text::human_error(e));
-    let stdout = if json {
-        crate::flow_json::error_json(
-            code,
-            e,
-            &msg,
-            "list the samples with `mzlab-cli samples list FILE --json`",
-            &[],
-        )
-        .into_bytes()
+/// The failed `Outcome` of a selection error: the text on stderr, the key for `error/1` and the way out.
+pub(crate) fn fail(e: &Error) -> Outcome {
+    let o = Outcome::fail_error(e);
+    if e.key.starts_with("err.sample.") {
+        o.with_hint("list the samples with `mzlab-cli samples list FILE --json`")
     } else {
-        Vec::new()
-    };
-    Outcome {
-        code,
-        stdout,
-        stderr: format!("error: {msg}\n"),
+        o
     }
 }
 

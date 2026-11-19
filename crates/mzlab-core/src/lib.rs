@@ -178,6 +178,7 @@ pub mod rng;
 pub mod rois;
 pub mod roi_cluster;
 pub mod roles;
+pub mod reflist;
 pub mod search;
 pub mod jsonround;
 pub mod channels;
@@ -225,7 +226,7 @@ pub mod tracestat;
 pub mod subformulas;
 pub mod samples;
 pub mod molecules;
-pub mod drawing;
+pub mod design;
 pub mod tpmine_irls;
 
 pub use error::{Error, Result};

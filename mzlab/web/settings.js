@@ -108,18 +108,21 @@ function uipReset(d) {
 // Administrator mode (5 clicks on the logo): the exit row shows only while it is on; 
 function uipAdminOn() { try { return localStorage.getItem(NOMI.KEY("admin")) === "1"; } catch (_) { return false; } }
 
-// Profile of the program, never a setting: «ricerca» (the assistant can be turned on) when the administrator mode is on or in the desktop app; else «demo» while UIP_DEMO is true (only the
-// Flow page offers «Try the assistant» of the public demo, fixed settings in llm/llm-demo.js; Theory, Practice and Data have no element of it), else «corso» (no element, nothing downloaded).
-// The old explicit choice `mzlab.profilo` ("corso"/"ricerca", a plain string) is dropped; the same key now also holds the JSON state of the time profile (profilo.js), which is left alone.
+// Profile of the program, never a setting: «research» (the assistant can be turned on) when the administrator mode is on or in the desktop app; else «demo» while UIP_DEMO is true (only the
+// Flow page offers «Try the assistant» of the public demo, fixed settings in llm/llm-demo.js; Theory, Practice and Data have no element of it), else «course» (no element, nothing downloaded).
+// A plain string left under `mzlab.profilo` by an old explicit profile choice is dropped; the key holds the JSON state of the time profile (profilo.js), which is left alone.
 const UIP_DEMO = true;      // D2: false switches the public demo of the assistant off for every visitor
-function uipProfile() { return uipAdminOn() || window.MZLAB_DESKTOP ? "ricerca" : UIP_DEMO ? "demo" : "corso"; }
-try { const v = localStorage.getItem(NOMI.KEY("profilo")); if (v === "corso" || v === "ricerca") localStorage.removeItem(NOMI.KEY("profilo")); } catch (_) { /* blocked */ }
+function uipProfile() { return uipAdminOn() || window.MZLAB_DESKTOP ? "research" : UIP_DEMO ? "demo" : "course"; }
+try { const v = localStorage.getItem(NOMI.KEY("profilo")); if (v && v[0] !== "{") localStorage.removeItem(NOMI.KEY("profilo")); } catch (_) { /* blocked */ }
 
 // known contaminants on HR spectra: off by default; on only if explicitly turned on (read from the same key as liste.js, which may not be loaded yet)
 function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminanti.on")) === "true"; } catch (_) { return false; } }
 
 // --- settings panel (shared pieces in impostazioni-comp.js)
 const UIP_GROUP_KEY = id => NOMI.KEY("set." + id);
+// «Choose samples of a file» (wiff-choose.js): ask when a file has several (default), always, or never (every sample opens, as before)
+const PICK_KEY = NOMI.KEY("pick");
+function uipPickMode() { const v = uipRead(PICK_KEY); return v === "always" || v === "never" ? v : "several"; }
 function uipGroupOpen(id, dflt) { try { const v = localStorage.getItem(UIP_GROUP_KEY(id)); return v === null ? dflt : v === "1"; } catch (_) { return dflt; } }
 function uipRestore() {            // theme, colours, reading and high-resolution options go back to the factory values; files and sessions are never touched
   uipDo(() => { Object.assign(UIP, { theme: "light", pal: "file", hrPpm: 5, hrDec: 4, xicLens: true }); QA11Y.write({}); });
@@ -142,7 +145,9 @@ function uipOpen(btn) {
   const list = `<div class="imp-list" id="uip-list">${theme}${font}<div class="imp-rows">${rows}</div></div>`;
   const cen = window.MZLAB_BROWSER && typeof centroidTargets === "function" && centroidTargets().length
     ? `<div class="imp-fld"><button id="uip-cen" type="button" title="${esc(T("settings.cen.title"))}">${T("settings.cen.btn")}</button><button id="uip-cen-x" type="button" title="${esc(T("settings.cen.stop.tip"))}" hidden>${T("settings.cen.stop")}</button></div><div class="hint" id="uip-cen-st" role="status" aria-live="polite"></div>` : "";
+  const pickSel = `<select id="uip-pick" aria-label="${esc(T("settings.pick"))}">${[["several", "settings.pick.several"], ["always", "settings.pick.always"], ["never", "settings.pick.never"]].map(([k, key]) => `<option value="${k}">${esc(T(key))}</option>`).join("")}</select>`;
   const dataItems = [
+    fld(T("settings.pick"), T("settings.pick.title"), pickSel),
     ...(hr ? [fld(`<span class="ic">${C.GICON.lib}</span>${T("settings.libs.label")}`, T("settings.libs.title"), `<button id="uip-lib" type="button">${T("settings.libs.button")}</button>`),
       fld(T("settings.hrPpm"), T("settings.hrPpm.title"), `<input id="uip-ppm" data-num="1:50" value="${UIP.hrPpm}" style="width:64px" aria-label="${esc(T("settings.hrPpm"))}">`),
       fld(T("settings.hrDec"), T("settings.hrDec.title"), `<input id="uip-hdec" data-num="3:5 i" value="${UIP.hrDec}" style="width:56px" aria-label="${esc(T("settings.hrDec"))}">`)] : []), cen];
@@ -155,7 +160,7 @@ function uipOpen(btn) {
   d.innerHTML = `<div class="a-hd"><h2>${T("settings.title")}</h2><button type="button" class="x" id="uip-x" aria-label="${esc(T("settings.close"))}" title="${esc(T("settings.close.tip"))}"></button></div>`
     + list + flat("uip-g-data", "data", "settings.g.data", dataItems) + flat("uip-g-app", "app", "settings.g.app", appItems)
     + tour + C.bugRow(T("settings.g.bug"), T("settings.g.bug.tip")) + C.bugRow(T("settings.g.sug"), T("settings.g.sug.tip"), "sug")
-    + (prof === "ricerca" ? grp("uip-g-llm", "app", "llm.g", '<div id="uip-llm"></div>', false, "llm.g.tip") : "") + grp("uip-g-diag", "cont", "settings.g.diag", mem ? mem.html : "", false, "settings.g.diag.tip")
+    + (prof === "research" ? grp("uip-g-llm", "app", "llm.g", '<div id="uip-llm"></div>', false, "llm.g.tip") : "") + grp("uip-g-diag", "cont", "settings.g.diag", mem ? mem.html : "", false, "settings.g.diag.tip")
     + `<div class="row"><button type="button" id="uip-reset" title="${esc(T("settings.reset.title"))}">${T("settings.reset")}</button></div>`;
   document.body.appendChild(d);
   d.querySelectorAll("details.imp-g").forEach(g => g.addEventListener("toggle", () => { try { localStorage.setItem(UIP_GROUP_KEY(g.id), /** @type {HTMLDetailsElement} */ (g).open ? "1" : "0"); } catch (_) { /* not remembered */ } }));
@@ -181,6 +186,8 @@ function uipOpen(btn) {
   on("#uip-motion", "change", e => { const c = QA11Y.read(); c.motion = e.target.checked ? "always" : "auto"; uipDo(() => QA11Y.write(c)); });
   const pal = /** @type {HTMLSelectElement} */ (d.querySelector("#uip-pal")); pal.value = UIP.pal;
   pal.onchange = () => { uipDo(() => setPal(pal.value)); uipSave(); uipApply(); };              // applied at once: file colours, lists, legends, every graph
+  const pickBox = /** @type {HTMLSelectElement | null} */ (d.querySelector("#uip-pick"));
+  if (pickBox) { pickBox.value = uipPickMode(); pickBox.onchange = () => { if (pickBox.value === "several") { try { localStorage.removeItem(PICK_KEY); } catch (_) { /* not remembered */ } } else uipWrite(PICK_KEY, pickBox.value); }; }
   on("#uip-xiclens", "change", e => { uipDo(() => { UIP.xicLens = e.target.checked; }); uipSave(); if (window.XICBTN) XICBTN.setLens(UIP.xicLens); });
   on("#uip-tour", "click", () => {      // the tour of Dati lives in Dati; in Disegno the button starts the tour of Disegno
     d.remove();

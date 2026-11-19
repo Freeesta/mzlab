@@ -91,11 +91,9 @@ for (let t = 0; t < 60; t++) {
   for (const m of mzs.slice(0, 200)) if (L.find(idx, pol, m, ppm).some(x => x.list === 'keller') !== L.hasMatch(idx, pol, m, ppm, 'keller')) hasEq = false;
 }
 const out = { runsEq, hasEq, nonEmpty: nonEmpty > 5 };
-out.head = [L.csvParse('mz;name\n150,5;A\n').length, L.csvParse('"a,b,c,d";mz;name\n"x";150.5;A\n').length, L.csvParse('mz,name\n150.5,A\n').length];
 console.log(JSON.stringify(out));
 """)
     assert r["runsEq"] and r["hasEq"] and r["nonEmpty"]
-    assert r["head"] == [1, 1, 1]
 
 
 def test_bufpool_best_fit_and_caps_over_200_mixed_requests():

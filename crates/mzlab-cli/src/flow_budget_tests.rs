@@ -42,7 +42,7 @@ fn cached_rerun(tag: &str, mode: &str, extra: &[&str]) -> (Files, Files, crate::
 /// The files of a run folder but the two records, which say which way the alignment took.
 fn data(run: &[(String, Vec<u8>)]) -> Vec<&(String, Vec<u8>)> {
     run.iter()
-        .filter(|(n, _)| n != "prov.json" && n != "corsa.json")
+        .filter(|(n, _)| n != "prov.json" && n != "report.json")
         .collect()
 }
 
@@ -64,8 +64,8 @@ fn a_small_budget_aligns_in_slabs_and_writes_the_same_bytes() {
         "{}",
         text(&small, "prov.json")
     );
-    assert!(text(&small, "corsa.json").contains("\"via\":\"slabs\""));
-    assert!(text(&small, "corsa.json").contains("\"mem_mb\":"));
+    assert!(text(&small, "report.json").contains("\"via\":\"slabs\""));
+    assert!(text(&small, "report.json").contains("\"mem_mb\":"));
 }
 
 #[test]

@@ -1,5 +1,5 @@
-//! `convert.mzml` on a cut file (H6-8): the run record says what the read lost. `prov.json`, `corsa.json` and `flowrun/1` carry the cause among the
-//! warnings and the counts as the note of the file, the same counts `mzlab-cli convert` writes in `conv/1`, also when the step comes from the cache;
+//! `convert.mzml` on a cut file (H6-8): the run record says what the read lost. `prov.json`, `report.json` and `flowrun/1` carry the cause among the
+//! warnings and the counts as the note of the file, the same counts `mzlab-cli convert` writes in `conversion/1`, also when the step comes from the cache;
 //! the whole file says nothing.
 use mzlab_core::json::{parse, Value};
 
@@ -40,7 +40,7 @@ fn step_c(doc: &Value) -> &Value {
         .unwrap()
 }
 
-/// (warnings, declared, read, cause) of the instance `c` in a record (`prov.json`, `corsa.json` activity or `flowrun/1` step).
+/// (warnings, declared, read, cause) of the instance `c` in a record (`prov.json`, `report.json` activity or `flowrun/1` step).
 fn said(c: &Value) -> (Vec<String>, f64, f64, String) {
     let w = c.get("warnings").map_or(vec![], |w| {
         w.arr()
@@ -62,7 +62,7 @@ fn said(c: &Value) -> (Vec<String>, f64, f64, String) {
     (w, n("declared"), n("read"), cause.to_string())
 }
 
-/// The activity of `c` in the `prov.json` (keyed by instance) or the step of `c` in the `corsa.json` (a list) of `out`.
+/// The activity of `c` in the `prov.json` (keyed by instance) or the step of `c` in the `report.json` (a list) of `out`.
 fn activity(out: &std::path::Path, file: &str) -> Value {
     let t = std::fs::read_to_string(out.join(file)).unwrap();
     let v = parse(t.as_bytes()).unwrap();
@@ -88,19 +88,19 @@ fn a_cut_file_is_in_the_record_of_the_run_with_its_counts() {
     let conv = crate::execute(&a);
     assert_eq!(conv.code, 3, "{}", conv.stderr);
     let r = parse(&std::fs::read(&report).unwrap()).unwrap();
-    let c1 = r.arr()[0].get("conv/1").unwrap();
+    let c1 = r.arr()[0].get("conversion").unwrap();
     let n = |k: &str| c1.get(k).and_then(Value::f64).unwrap();
     let want = (
         vec!["warn.file.truncated".to_string()],
-        n("dichiarate"),
-        n("lette"),
+        n("declared"),
+        n("read"),
         "warn.file.truncated".to_string(),
     );
     assert!(want.2 < want.1, "{want:?}");
 
     let doc = run(&dir, "out");
     assert_eq!(said(step_c(&doc)), want, "flowrun/1");
-    for f in ["prov.json", "corsa.json"] {
+    for f in ["prov.json", "report.json"] {
         assert_eq!(said(&activity(&dir.join("out"), f)), want, "{f}");
     }
     // the same folder again: the step comes from the cache and says the same

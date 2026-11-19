@@ -1,5 +1,5 @@
 //! The public demo: the provider `mzlab-demo` (mzLab's proxy, no key, placeholder host), the request as it leaves (`provider::demo::for_send`: host,
-//! session and owner headers, body untouched) and the `demo_*` output limits of `assist-ruoli-1.json` the proxy enforces per role.
+//! session and owner headers, body untouched) and the `demo_*` output limits of `assist-roles-1.json` the proxy enforces per role.
 mod common;
 
 use mzlab_core::json::parse;
@@ -9,7 +9,7 @@ use mzlab_llm::policy::{Level, Profile};
 use mzlab_llm::provider::demo::{for_send, host_ok, session_ok, url_belongs, PLACEHOLDER};
 use mzlab_llm::provider::{request, Request};
 
-const ROLES: &str = include_str!("../data/assist/assist-ruoli-1.json");
+const ROLES: &str = include_str!("../data/assist/assist-roles-1.json");
 const ROUTER: &str = include_str!("../data/assist/02_router.md");
 const PLAN: &str = include_str!("../data/assist/06_piano.md");
 const HOST: &str = "https://assist.example.org";

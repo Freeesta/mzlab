@@ -274,7 +274,7 @@ impl State {
         })
     }
 
-    /// `finder/tp_table`: the `tptab/1` of the rows `rows` of the table of the last `finder/dig` of a high-resolution series (`samples` = its `campioni/1`), as the `.wasm` `table` writes it.
+    /// `finder/tp_table`: the `tptab/1` of the rows `rows` of the table of the last `finder/dig` of a high-resolution series (`samples` = its `samples/1`), as the `.wasm` `table` writes it.
     fn finder_tp_table(&self, p: &Value) -> Result<Answer> {
         let g = self.feat.lock().unwrap_or_else(|e| e.into_inner());
         let table = match (g.dig.as_ref(), g.table.as_deref()) {
@@ -282,14 +282,14 @@ impl State {
             _ => return text("null".to_string()),
         };
         let s = |k: &str| p[k].as_str().unwrap_or("");
-        // with `campioni` (the `campioni/2` of the files) the answer carries `gruppi` for two or more conditions; `infos` = the rows' best hypothesis
-        if !s("campioni").is_empty() {
+        // with `samples_doc` (the `samples/1` of the files) the answer carries `gruppi` for two or more conditions; `infos` = the rows' best hypothesis
+        if !s("samples_doc").is_empty() {
             return text(mzlab_ops::run::table::core::tp_table_cond_json(
                 &mut Slice(table),
                 table.len() as u64,
                 s("samples"),
                 s("rows"),
-                s("campioni"),
+                s("samples_doc"),
                 s("infos"),
             )?);
         }
@@ -320,7 +320,7 @@ impl State {
             }
             "finder/plan" => self.finder_plan(p),
             "finder/tp_table" => self.finder_tp_table(p),
-            "finder/campioni" => text(mzlab_core::samples::route(s("cop"), s("input"))?),
+            "finder/samples" => text(mzlab_core::samples::route(s("cop"), s("input"))?),
             "finder/transf_rows" => text(legacy::transf::describe(s("text"))),
             "finder/transformations" => {
                 let merged =

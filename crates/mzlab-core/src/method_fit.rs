@@ -1,6 +1,6 @@
-//! A `metodo/1` document cut to the room the readers of an mzML give it: every reader of the document (site, assistant, the mzML reader of the
+//! A `method/1` document cut to the room the readers of an mzML give it: every reader of the document (site, assistant, the mzML reader of the
 //! readers module, infusion) reads at most `DOC_MAX` bytes after `<run`, so a longer document would be lost whole. A document that fits is never
-//! touched; one that does not loses the last entries of `campi`, then the last texts of `grezzo`, each cut named by a `meta.troncato` warning.
+//! touched; one that does not loses the last entries of `fields`, then the last texts of `raw`, each cut named by a `meta.troncato` warning.
 
 use crate::json::{self, Out, Value};
 
@@ -29,16 +29,16 @@ pub fn fit(doc: &str, room: usize, size: &dyn Fn(&str) -> usize) -> String {
     let fits = |top: &Top| size(&text(top)) + WARN_ROOM <= room;
     // a later step starts only when the document, warnings and all, is still too long
     let over = |top: &Top| size(&text(top)) > room;
-    // `campi` first: they repeat what the file says, while `grezzo` is the text of the file itself
-    for key in ["campi", "grezzo"] {
+    // `fields` first: they repeat what the file says, while `raw` is the text of the file itself
+    for key in ["fields", "raw"] {
         if over(&top) && keep_head(&mut top, key, &fits) {
             warn(&mut top, key);
         }
     }
     if over(&top) {
         // what is left is too long by itself: the document keeps only where it comes from and why it is empty
-        top.retain(|(k, _)| k == "schema" || k == "origine");
-        warn(&mut top, "metodo/1");
+        top.retain(|(k, _)| k == "schema" || k == "origin");
+        warn(&mut top, "method/1");
     }
     text(&top)
 }
@@ -68,15 +68,15 @@ fn keep_head(top: &mut Top, key: &str, fits: &dyn Fn(&Top) -> bool) -> bool {
     lo < all.len()
 }
 
-/// A `meta.troncato` warning whose `dove` is the part that was cut.
+/// A `meta.troncato` warning whose `place` is the part that was cut.
 fn warn(top: &mut Vec<(String, Value)>, part: &str) {
     let w = Value::Obj(vec![
-        ("chiave".into(), Value::Str("meta.troncato".into())),
-        ("dove".into(), Value::Str(part.into())),
+        ("key".into(), Value::Str("meta.troncato".into())),
+        ("place".into(), Value::Str(part.into())),
     ]);
-    match top.iter_mut().find(|(k, _)| k == "avvisi") {
+    match top.iter_mut().find(|(k, _)| k == "warnings") {
         Some((_, Value::Arr(a))) => a.push(w),
-        _ => top.push(("avvisi".into(), Value::Arr(vec![w]))),
+        _ => top.push(("warnings".into(), Value::Arr(vec![w]))),
     }
 }
 

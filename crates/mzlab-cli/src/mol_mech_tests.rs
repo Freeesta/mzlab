@@ -27,7 +27,7 @@ fn usage_errors_exit_2() {
         vec!["mol-mech", "--nope"],
         vec!["mol-mech", "/no/such/file.json"],
     ] {
-        assert_eq!(run(&a).code, 2, "{a:?}");
+        assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
     }
     assert_eq!(run(&["mol-mech", "--help"]).code, 0);
 }

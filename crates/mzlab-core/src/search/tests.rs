@@ -102,3 +102,9 @@ fn bad_request_is_an_error_with_a_key() {
         "err.search.request"
     );
 }
+
+#[test]
+fn the_answer_starts_with_its_schema_tag() {
+    let out = match_number(&format!(r#"{{"x":18,{TABLES}}}"#)).unwrap();
+    assert!(out.starts_with(r#"{"schema":"mz-match/1","#), "{out}");
+}

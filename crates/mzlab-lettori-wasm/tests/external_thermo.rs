@@ -1,6 +1,6 @@
 #![cfg(feature = "thermo")]
 //! The external reader of the engine (`mzlab_wasm::external::ExternalReader`) over the session of the `thermo` module gives, for a real `.raw`, exactly what the Thermo reader gives when it is linked
-//! in the engine: the index, the scans, the headers, the TIC, the `metodo/1` document, the header of the mzML and the whole mzML byte for byte. Needs the private data repository
+//! in the engine: the index, the scans, the headers, the TIC, the `method/1` document, the header of the mzML and the whole mzML byte for byte. Needs the private data repository
 //! (MZLAB_DATI, or `mzlab-dati` beside this one); skipped without it. Run in release: `cargo test --release -p mzlab-lettori-wasm --features thermo --test external_thermo`.
 #![allow(clippy::indexing_slicing)]
 
@@ -180,7 +180,7 @@ fn the_external_reader_gives_what_the_linked_one_gives() {
         assert_eq!(
             ext.method(0).unwrap(),
             direct.method(0).unwrap(),
-            "{name}: metodo/1"
+            "{name}: method/1"
         );
         assert_eq!(
             format!("{:?}", ext.mzml_header(0).unwrap()),

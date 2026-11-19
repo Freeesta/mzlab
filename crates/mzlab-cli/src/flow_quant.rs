@@ -15,7 +15,7 @@ pub fn quant_step() -> Step {
         ins: vec![
             Port::new("table", DataType::Table, "Feature table (.mzfeat)"),
             Port::new("curves", DataType::Report, "Calibration curves imported as CSV: name, mz, rt, slope, intercept, unit, range_min, range_max, dilution"),
-            Port::new("samples", DataType::Samples, "Roles of the files (campioni/1 or campioni/2)"),
+            Port::new("samples", DataType::Samples, "Roles of the files (a samples/1 document)"),
         ],
         outs: vec![Port::new("concentrations", DataType::Report, "Concentration of each compound in each sample as CSV")],
         params: vec![

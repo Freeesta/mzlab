@@ -8,7 +8,7 @@
 //! the synthetic series: `ioni`), `probes`? [{`mz`, `rt`}] (status of the rows around a point). Prints one JSON document with a line per configuration.
 //! The configurations: `completa` (every file as given: the infusion counts as a control, as the Pipeline panel does), `senza_t0`, `senza_bianco`,
 //! `senza_buio`, `senza_infusione`, `solo_tempi` (t0 and treated only); one whose role is absent from the files is `assente`.
-//! `--ruoli`: the run gets the roles of the files (`campioni/2`, confirmed times) instead of the minutes alone: gate 1 reads each reference with its
+//! `--ruoli`: the run gets the roles of the files (`samples/1`, confirmed times) instead of the minutes alone: gate 1 reads each reference with its
 //! reason (`tp::build_by_role`) and the infusion is never a control; each line also gives the rows taken out by the blank, the t0 and the dark.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -302,7 +302,7 @@ fn run_config(ctx: &Ctx, keep: &[usize]) -> Result<mzlab_feat::table::Aligned, S
     Ok(t)
 }
 
-/// The roles of the files of the run as `campioni/2` gives them to the TP path (times confirmed, as after the loading table).
+/// The roles of the files of the run as `samples/1` gives them to the TP path (times confirmed, as after the loading table).
 fn roles_of(ctx: &Ctx, keep: &[usize]) -> TpRoles {
     let cs: Vec<Sample> = keep
         .iter()

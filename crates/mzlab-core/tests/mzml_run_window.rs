@@ -1,4 +1,4 @@
-//! A truncated mzML whose run userParams (mzLab's own `metodo/1`) push `<spectrumList count>` far past the `<run ` tag still tells how many
+//! A truncated mzML whose run userParams (mzLab's own `method/1`) push `<spectrumList count>` far past the `<run ` tag still tells how many
 //! spectra it declares, so the scan table reports the missing ones as for any other cut mzML (H6-3).
 
 use mzlab_core::mzml::Spectrum;
@@ -7,7 +7,7 @@ use mzlab_core::mzmlwrite::{Header, MzmlWriter};
 fn written(method: usize, n: usize) -> Vec<u8> {
     let h = Header {
         run: "r".into(),
-        run_params: vec![("mzLab metodo/1".into(), "m".repeat(method))],
+        run_params: vec![("mzLab method/1".into(), "m".repeat(method))],
         ..Default::default()
     };
     let mut w = MzmlWriter::new(Vec::new(), &h).unwrap();

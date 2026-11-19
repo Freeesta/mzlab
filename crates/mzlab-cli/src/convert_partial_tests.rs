@@ -1,12 +1,12 @@
 //! `mzlab-cli convert` on a cut file: it is written with the scans it holds, with exit code 3, a warning line naming the counts,
-//! and `conv/1` of the report saying them; the whole file is not partial.
+//! and `conversion/1` of the report saying them; the whole file is not partial.
 use mzlab_core::json::parse;
 
 use super::convert;
 use crate::convert_fixtures::folder;
 use crate::flow_run_tests::p;
 
-/// An mzXML cut in half is written with the scans it holds: code 3, a warning line with the counts, and `conv/1` of the report says them.
+/// An mzXML cut in half is written with the scans it holds: code 3, a warning line with the counts, and `conversion/1` of the report says them.
 #[test]
 fn a_cut_file_is_written_with_code_3_and_its_counts() {
     use crate::convert_fixtures::mzxml;
@@ -24,14 +24,14 @@ fn a_cut_file_is_written_with_code_3_and_its_counts() {
     assert_eq!(o.code, 3, "{}", o.stderr);
     assert!(o.stderr.contains("warning: ") && o.stderr.contains("partial read, "));
     let r = parse(&std::fs::read(&report).unwrap()).unwrap();
-    let conv = r.arr()[0].get("conv/1").expect("conv/1");
+    let conv = r.arr()[0].get("conversion").expect("conversion");
     let n = |k: &str| conv.get(k).and_then(|v| v.f64()).unwrap();
-    assert_eq!(conv.get("parziale").and_then(|v| v.bool()), Some(true));
-    assert!(n("lette") < n("dichiarate"), "{}", o.stderr);
+    assert_eq!(conv.get("partial").and_then(|v| v.bool()), Some(true));
+    assert!(n("read") < n("declared"), "{}", o.stderr);
     assert!(o.stderr.contains(&format!(
         "partial read, {} of {} scans (warn.file.truncated)",
-        n("lette"),
-        n("dichiarate")
+        n("read"),
+        n("declared")
     )));
     // the whole file is not partial
     std::fs::write(src.join("t.mzXML"), &whole).unwrap();
@@ -41,7 +41,7 @@ fn a_cut_file_is_written_with_code_3_and_its_counts() {
 }
 
 /// A `.wiff.scan` with the marker of one scan block damaged (the synthetic `one` of `tools/wiff_riferimento.py`): the pair is written with the
-/// other scans, code 3, and `conv/1` names the cause `warn.wiff.damaged`. Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
+/// other scans, code 3, and `conversion/1` names the cause `warn.wiff.damaged`. Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 #[test]
 fn a_damaged_scan_block_of_a_wiff_is_written_with_code_3_and_its_cause() {
     use std::path::Path;
@@ -76,16 +76,16 @@ fn a_damaged_scan_block_of_a_wiff_is_written_with_code_3_and_its_cause() {
     ]);
     assert_eq!(o.code, 3, "{}", o.stderr);
     let r = parse(&std::fs::read(&report).unwrap()).unwrap();
-    let conv = r.arr()[0].get("conv/1").expect("conv/1");
+    let conv = r.arr()[0].get("conversion").expect("conversion");
     let n = |k: &str| conv.get(k).and_then(|v| v.f64()).unwrap();
     assert_eq!(
         (
-            conv.get("parziale").and_then(|v| v.bool()),
-            conv.get("perdita").and_then(|v| v.str())
+            conv.get("partial").and_then(|v| v.bool()),
+            conv.get("loss").and_then(|v| v.str())
         ),
         (Some(true), Some("warn.wiff.damaged"))
     );
-    assert_eq!(n("dichiarate") - n("lette"), 1.0, "{}", o.stderr);
+    assert_eq!(n("declared") - n("read"), 1.0, "{}", o.stderr);
     assert!(o.stderr.contains("(warn.wiff.damaged)"), "{}", o.stderr);
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -119,10 +119,10 @@ fn an_ida_wiff_is_written_whole_with_code_0() {
     assert_eq!(o.code, 0, "{}", o.stderr);
     let r = parse(&std::fs::read(&report).unwrap()).unwrap();
     for row in r.arr() {
-        let conv = row.get("conv/1").expect("conv/1");
+        let conv = row.get("conversion").expect("conversion");
         let n = |k: &str| conv.get(k).and_then(|v| v.f64()).unwrap();
         assert_eq!(
-            (conv.get("parziale").and_then(|v| v.bool()), n("lette")),
+            (conv.get("partial").and_then(|v| v.bool()), n("read")),
             (Some(false), 9.0),
             "{}",
             o.stderr

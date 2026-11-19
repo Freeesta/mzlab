@@ -89,7 +89,7 @@ export function orchestratorBody(over = {}) {
     thinking: { type: "adaptive" },
     output_config: { effort: "medium" },
     system: [{ type: "text", text: prompt("01_sistema.md"), cache_control: { type: "ephemeral", ttl: "1h" } }],
-    messages: [{ role: "user", content: [{ type: "text", text: "Which steps fit my files?" }, { type: "text", text: '{"schema":"contesto/1","files":2}' }] }],
+    messages: [{ role: "user", content: [{ type: "text", text: "Which steps fit my files?" }, { type: "text", text: '{"schema":"context/1","files":2}' }] }],
     ...over,
   };
 }

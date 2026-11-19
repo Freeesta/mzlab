@@ -56,7 +56,7 @@ fn demo_state() -> State {
         Profile::Research,
     );
     let dir = root("crates/mzlab-llm/data/assist");
-    let json = std::fs::read_to_string(dir.join("assist-ruoli-1.json")).unwrap();
+    let json = std::fs::read_to_string(dir.join("assist-roles-1.json")).unwrap();
     let rs = roles_for(&json, DEMO_PROVIDER).unwrap();
     let files: Vec<(String, String)> = rs
         .iter()

@@ -33,6 +33,17 @@ def build_env(target: str, commit: bool) -> dict[str, str]:
     return env
 
 
+def bash_exe() -> str:
+    """`bash` on a Windows runner can be C:\\Windows\\System32\\bash.exe, the WSL launcher, which exits 1 without a distribution: use the bash of Git for Windows."""
+    if os.name != "nt":
+        return "bash"
+    git = shutil.which("git")
+    near = [Path(git).resolve().parents[i] / "bin" / "bash.exe" for i in (1, 2)] if git else []      # Git\\cmd\\git.exe or Git\\mingw64\\bin\\git.exe
+    on_path = [Path(d) / "bash.exe" for d in os.environ.get("PATH", "").split(os.pathsep) if d and "system32" not in d.lower()]
+    pf = [Path(os.environ.get(v, "")) / "Git" / "bin" / "bash.exe" for v in ("ProgramFiles", "ProgramW6432")]
+    return next((str(c) for c in near + pf + on_path if c.is_file()), "bash")
+
+
 def run(cmd: list[str], env: dict[str, str] | None = None) -> None:
     subprocess.run(cmd, cwd=ROOT, check=True, env={**os.environ, **env} if env else None)
 
@@ -89,7 +100,7 @@ def main() -> int:
     run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-lib-wasm"], build_env("wasm32-unknown-unknown", commit=False))
     run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", "site/static/wasm-lib", str(WASM.with_name("mzlab_lib_wasm.wasm"))])
     # the readers (one .wasm per family of formats) and their manifest: without them a .wiff, .raw or .d asks the page for a file the site does not have
-    run(["bash", "tools/build_lettori_wasm.sh", "site/static"], build_env("wasm32-unknown-unknown", commit=False))
+    run([bash_exe(), "tools/build_lettori_wasm.sh", "site/static"], build_env("wasm32-unknown-unknown", commit=False))
     run([sys.executable, "tools/build_site.py", "--build-json"])      # the .wasm is in place now: build.json names its SHA-256
     return 0
 

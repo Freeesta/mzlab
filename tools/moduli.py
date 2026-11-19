@@ -122,6 +122,7 @@ def main() -> int:
     g.add_argument("--controlla", action="store_true")
     ap.add_argument("--base", metavar="REF")
     a = ap.parse_args()
+    sys.stdout.reconfigure(newline="\n")      # the shell scripts read the output: no CR from a Windows stdout
     mod = carica()
     if a.elenco:
         print("\n".join(n for n, r in mod.items() if r["parte"] == a.elenco))
