@@ -26,7 +26,7 @@ try:
             assert re.search(r"Spectra 1110", t), t[:300]
             assert re.search(r"Error", t) and pg.locator("#bigbody th[scope=col]").count() == 3, t[:300]
             rows = pg.locator("#bigbody tbody tr").count()
-            n = pg.evaluate("fetch('api/mzml_valida?name=FullScan_t10.mzML').then(r=>r.json()).then(j=>j[0].problems.length)")
+            n = pg.evaluate("fetch('api/mzml_valida?name=FullScan_t10.mzML').then(r=>r.json()).then(j=>j.files[0].problems.length)")
             assert rows == n and rows > 0, (rows, n)
         step("the dialog lists the findings of the report", report)
         def only_validate_module():

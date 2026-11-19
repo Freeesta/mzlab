@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mzml-validation/1",
+  "title": "mzml-validation/1: the validation of one or more mzML files",
+  "description": "The answer of `mzlab-cli file validate --json` and of the page's «Validate mzML»: one object per file, in the order given. `valid` is false when `problems` holds an error; warnings never change it. Code: crates/mzlab-core/src/mzml_validate.rs, crates/mzlab-cli/src/validate.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "files"
+  ],
+  "properties": {
+    "schema": {
+      "const": "mzml-validation/1"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "valid",
+          "indexed",
+          "spectra",
+          "chromatograms",
+          "problems"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "The file name, without its folder."
+          },
+          "valid": {
+            "type": "boolean"
+          },
+          "indexed": {
+            "type": "boolean",
+            "description": "True for an indexedmzML."
+          },
+          "spectra": {
+            "type": "integer"
+          },
+          "chromatograms": {
+            "type": "integer"
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "severity",
+                "path",
+                "code",
+                "message"
+              ],
+              "properties": {
+                "severity": {
+                  "enum": [
+                    "error",
+                    "warning"
+                  ]
+                },
+                "path": {
+                  "type": "string",
+                  "description": "The XML path; empty for the file as a whole."
+                },
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

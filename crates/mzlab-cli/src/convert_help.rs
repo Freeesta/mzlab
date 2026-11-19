@@ -2,7 +2,7 @@
 
 pub(crate) const HELP: &str = "mzlab-cli file convert: vendor files to indexed mzML, the step convert.mzml of the Flow page.
 
-usage: mzlab-cli file convert INPUT... --out FOLDER [--sample LIST] [--compression KIND] [--zlib N] [--numpress] [--peaks WHICH] [--workers N] [--report FILE.json] [--fresh] [--set conv.NAME=VALUE...]
+usage: mzlab-cli file convert INPUT... --out FOLDER [--sample LIST] [--compression KIND] [--zlib N] [--numpress] [--peaks WHICH] [--workers N] [--report FILE.json] [--json] [--dry-run] [--fresh] [--set conv.NAME=VALUE...]
 
   INPUT...             a file, a maker's folder (.D, .d, .raw) or a folder to look through; a .wiff is taken with its .wiff.scan, and a dataset
                        with several samples gives one mzML per sample
@@ -17,11 +17,15 @@ usage: mzlab-cli file convert INPUT... --out FOLDER [--sample LIST] [--compressi
                        points of the profile) or mzlab (centroids of mzLab)
   --workers N          files converted at once (default: the cores but one, 1 to 4, fewer when the memory budget of the computer does not give
                        each its share, with a note; the bytes written do not depend on it)
-  --report FILE.json   one object per input: input, output, sha256, spectra, seconds, skipped, conversion, warnings (centroids with --peaks mzlab); or input, error, cause
+  --report FILE.json   the convert/1 document in a file: {schema, dry_run, out, items}, one item per input: input, output, sha256, spectra, seconds, skipped,
+                       conversion, warnings (centroids with --peaks mzlab); or input, error, cause
+  --json               the same convert/1 document on stdout instead of the list of mzML files; a non-zero exit gives one error/1 that carries it as `report`
+  --dry-run            checks the inputs, the samples and the settings and says what would be converted (input, output, sample_id, reader, input_bytes)
+                       without writing anything
   --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
                        program is not converted again
   --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
   --help               this text
 
 progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 3 a file was written with scans missing (conversion/1 partial; a
-warning line names it), 4 an input is missing or holds nothing to convert, 5 a --sample id the dataset does not have";
+warning line names it), 4 an input is missing or holds nothing to convert, 5 a --sample id the dataset does not have; an input that is an mzML already is exit 4";

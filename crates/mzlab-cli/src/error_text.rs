@@ -47,8 +47,17 @@ fn returned_key(key: &str, phase: Option<&str>) -> String {
         _ => key.to_string(),
     };
     let native = format!("{base}.native");
-    // only the memory sentences have a native variant (`err.flow.step.native` is a key of its own)
-    if base.starts_with("error.memory") && text_of(&native).is_some() {
+    // only these have a native variant (`err.flow.step.native` is a key of its own): the memory sentences and the browser-only wording
+    // ("reload the page", "the browser ran short of space"); the list is the one of `NATIVE` in `mzlab/web/i18n.js`
+    const NATIVE_KEYS: &[&str] = &[
+        "error.badIndex",
+        "error.generic",
+        "err.engine.indexCrash",
+        "err.file.nativeStopped",
+    ];
+    if (base.starts_with("error.memory") || NATIVE_KEYS.contains(&base.as_str()))
+        && text_of(&native).is_some()
+    {
         native
     } else {
         base

@@ -1,4 +1,4 @@
-"""Window «Molecules» (molecules-ui.js, opened by the «Manage» link) and the search box (molecules-field.js), on INVENTED molecules only (Esempina, Provolone B): lazy loading, open and close
+"""Window «Molecules» (molecules-ui.js, opened by the «Manage» link) and the search box (molecules-field.js), on INVENTED molecules only (Exampline, Provolone B): lazy loading, open and close
 with the keyboard, add / edit / delete, a catalogue molecule edited as a copy of the user, import of CSV and JSON with one error per wrong row, export CSV and JSON, the molecules
 surviving a reload (IndexedDB store «molecules»), the migration of the database 3 -> 5 without losing files / kv / liste_utente / manifest, the ARIA combobox with the keyboard, axe.
 Needs the built site (tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_molecules_ui.py"""
@@ -60,13 +60,13 @@ try:
         step("Tab and Shift+Tab stay inside the window", tab_trap)
 
         def adds():
-            add(name="Esempina", synonyms="Ex-1\nEsempinum", formula="C10H15NO", smiles="CC(N)Cc1ccccc1O", notes="invented")
-            assert names() == ["Esempina"], names()
+            add(name="Exampline", synonyms="Ex-1\nExampleum", formula="C10H15NO", smiles="CC(N)Cc1ccccc1O", notes="invented")
+            assert names() == ["Exampline"], names()
             row = pg.locator(ROWS).first
             assert "C10H15NO" in row.inner_text() and "165.1154" in row.inner_text() and "Yours" in row.inner_text(), row.inner_text()
-            assert "Saved: Esempina" in pg.inner_text("#mol-st")
+            assert "Saved: Exampline" in pg.inner_text("#mol-st")
             add(name="Provolone B", formula="c12h17no2", charge="0", adducts="[M+H]+ [M+Na]+", collections="corso")
-            assert names() == ["Esempina", "Provolone B"], names()
+            assert names() == ["Exampline", "Provolone B"], names()
             assert "C12H17NO2" in pg.locator(ROWS).nth(1).inner_text(), "the formula is written in Hill order by the engine"
         step("add two molecules: the engine writes the formula and the mass, the level is «Yours»", adds)
 
@@ -82,16 +82,16 @@ try:
         step("a wrong form shows the error of the engine and keeps the data; Esc goes back to the list", wrong_form)
 
         def duplicate_key():
-            add(name="Esempina bis", formula="C10H15NO", inchikey="AAAAAAAAAAAAAA-BBBBBBBBBB-C")
+            add(name="Exampline bis", formula="C10H15NO", inchikey="AAAAAAAAAAAAAA-BBBBBBBBBB-C")
             pg.click("#mol-add"); fill(name="Copia", formula="C10H15NO", inchikey="AAAAAAAAAAAAAA-BBBBBBBBBB-C"); pg.click("#mol-save")
             form_error("same id")
             pg.keyboard.press("Escape")
-            assert "Esempina bis" in names()
+            assert "Exampline bis" in names()
         step("the same InChIKey twice is refused with a message", duplicate_key)
 
         def searches():
             search("provolone"); assert names() == ["Provolone B"], names()
-            search("C10H15NO"); assert "Esempina" in names(), names()
+            search("C10H15NO"); assert "Exampline" in names(), names()
             search("207.1259"); assert "Provolone B" in names(), names()
             search(""); assert len(names()) == 3
         step("search by name, formula and mass finds the molecules of the user", searches)
@@ -126,18 +126,18 @@ try:
         step("a catalogue molecule is edited as a copy of the user; deleting the copy brings the catalogue one back", edit_catalogue)
 
         def deletes():
-            pg.locator(ROWS, has_text="Esempina bis").get_by_role("button", name="Delete Esempina bis").click()
+            pg.locator(ROWS, has_text="Exampline bis").get_by_role("button", name="Delete Exampline bis").click()
             pg.keyboard.press("Escape"); assert pg.is_visible("#moldlg") and not pg.is_visible("#mol-conf"), "Esc cancels the question only"
-            assert "Esempina bis" in names()
-            pg.locator(ROWS, has_text="Esempina bis").get_by_role("button", name="Delete Esempina bis").click()
+            assert "Exampline bis" in names()
+            pg.locator(ROWS, has_text="Exampline bis").get_by_role("button", name="Delete Exampline bis").click()
             pg.click("#mol-conf-ok"); pg.wait_for_selector("#mol-conf", state="hidden")
-            assert "Esempina bis" not in names() and "Deleted: Esempina bis" in pg.inner_text("#mol-st")
+            assert "Exampline bis" not in names() and "Deleted: Exampline bis" in pg.inner_text("#mol-st")
         step("delete asks first; Esc cancels the question", deletes)
 
         def persists():
             pg.keyboard.press("Escape"); pg.reload(); pg.wait_for_function('window.qqReady===true', timeout=60000)
             pg.evaluate(OPEN); pg.wait_for_selector("#mol-body tr")
-            assert sorted(names()) == ["Esempina", "Provolone C"], names()
+            assert sorted(names()) == ["Exampline", "Provolone C"], names()
             v = pg.evaluate("""async () => { const dbs = await indexedDB.databases(); const d = dbs.find(x => x.name === 'mzlab_lab');
               const db = await new Promise(ok => { const q = indexedDB.open('mzlab_lab'); q.onsuccess = () => ok(q.result); });
               const out = { v: d.version, stores: [...db.objectStoreNames].sort(), n: await new Promise(ok => { const c = db.transaction('molecules').objectStore('molecules').count(); c.onsuccess = () => ok(c.result); }) }; db.close(); return out; }""")
@@ -147,10 +147,10 @@ try:
         def exports():
             with pg.expect_download() as d: pg.click("#mol-csv")
             path = d.value.path(); text = open(path, encoding="utf-8").read()
-            assert d.value.suggested_filename == "mzlab-molecules.csv" and text.splitlines()[0].startswith("id;name;synonyms;molecular_formula") and "Esempina" in text and "Provolone C" in text, text[:300]
+            assert d.value.suggested_filename == "mzlab-molecules.csv" and text.splitlines()[0].startswith("id;name;synonyms;molecular_formula") and "Exampline" in text and "Provolone C" in text, text[:300]
             with pg.expect_download() as d: pg.click("#mol-json")
             doc = json.load(open(d.value.path(), encoding="utf-8"))
-            assert doc["schema"] == "molecules/1" and [m["name"] for m in doc["molecules"]].count("Esempina") == 1 and len(doc["molecules"]) == 2, doc
+            assert doc["schema"] == "molecules/1" and [m["name"] for m in doc["molecules"]].count("Exampline") == 1 and len(doc["molecules"]) == 2, doc
             r.csv_text, r.json_text = text, json.dumps(doc)
         step("export CSV and JSON: the files of the engine (canonical)", exports)
 
@@ -184,11 +184,11 @@ try:
         step("import of a CSV and of a JSON: level «Imported»; a molecule edited by the user is kept when the file comes again", import_good)
 
         def round_trip():
-            for n in ["Ok uno", "Json uno", "Importina X", "Esempina", "Provolone C"]:
+            for n in ["Ok uno", "Json uno", "Importina X", "Exampline", "Provolone C"]:
                 pg.locator(ROWS, has_text=n).first.get_by_role("button", name="Delete " + n).click(); pg.click("#mol-conf-ok"); pg.wait_for_selector("#mol-conf", state="hidden")
             assert pg.locator(ROWS).count() == 0
             pg.set_input_files("#mol-file", files=[{"name": "back.csv", "mimeType": "text/csv", "buffer": r.csv_text.encode()}])
-            pg.wait_for_function("document.querySelector('#mol-body').textContent.includes('Esempina')", timeout=10000)
+            pg.wait_for_function("document.querySelector('#mol-body').textContent.includes('Exampline')", timeout=10000)
             with pg.expect_download() as d: pg.click("#mol-json")
             back = json.load(open(d.value.path(), encoding="utf-8")); was = json.loads(r.json_text)
             strip = lambda ms: sorted((m["id"], m["name"], m["formula"], round(m["mass"], 4)) for m in ms)
@@ -211,7 +211,7 @@ try:
             i = "#molc-host input"
             assert pg.get_attribute(i, "role") == "combobox" and pg.get_attribute(i, "aria-expanded") == "false" and pg.get_attribute(i, "aria-autocomplete") == "list"
             assert pg.inner_text("#molc-host label") == "Molecule" and pg.get_attribute(i, "placeholder") == "Name, formula or mass"
-            pg.click(i); pg.keyboard.type("esemp")
+            pg.click(i); pg.keyboard.type("examp")
             pg.wait_for_selector("#molc-host [role=listbox]", state="visible")
             assert pg.get_attribute(i, "aria-expanded") == "true" and pg.get_attribute(i, "aria-controls") == pg.get_attribute("#molc-host [role=listbox]", "id")
             assert pg.locator("#molc-host [role=option]").count() == 1 and pg.inner_text("#molc-host [role=status]") == "1 found", pg.locator("#molc-host [role=option]").all_inner_texts()
@@ -221,11 +221,11 @@ try:
             pg.keyboard.press("Escape"); assert pg.get_attribute(i, "aria-expanded") == "false" and pg.evaluate("document.activeElement.closest('#molc-host') !== null")
             pg.keyboard.press("ArrowDown"); pg.wait_for_selector("#molc-host [role=listbox]", state="visible")
             pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter")
-            assert pg.evaluate("window.__picked") == ["Esempina"] and pg.input_value(i) == "Esempina" and pg.get_attribute(i, "aria-expanded") == "false"
+            assert pg.evaluate("window.__picked") == ["Exampline"] and pg.input_value(i) == "Exampline" and pg.get_attribute(i, "aria-expanded") == "false"
             pg.fill(i, "zzzzqqqq"); pg.wait_for_function("document.querySelector('#molc-host [role=status]').textContent === 'No molecule found'", timeout=10000)
             assert pg.get_attribute(i, "aria-expanded") == "false"
             pg.fill(i, "165.1154"); pg.wait_for_selector("#molc-host [role=option]", timeout=10000)
-            pg.locator("#molc-host [role=option]", has_text="Esempina").first.click(); assert pg.evaluate("window.__picked").count("Esempina") == 2, pg.evaluate("window.__picked")
+            pg.locator("#molc-host [role=option]", has_text="Exampline").first.click(); assert pg.evaluate("window.__picked").count("Exampline") == 2, pg.evaluate("window.__picked")
         step("search box: ARIA combobox, texts from the caller, ArrowDown / Enter / Esc, name and mass", combobox)
 
         def combobox_manage():
@@ -257,18 +257,18 @@ try:
         def old_rows():
             # a record saved before the keys were English (`nome`): the window says so, the catalogue still works, the next save drops the old row
             pg.evaluate("""new Promise((ok, no) => { const q = indexedDB.open('mzlab_lab'); q.onerror = () => no(q.error);
-              q.onsuccess = () => { const x = q.result.transaction('molecules', 'readwrite'), s = x.objectStore('molecules'); s.clear(); s.put({ id: 'u:000000000001', nome: 'Vecchia', formula: 'CH4' });
+              q.onsuccess = () => { const x = q.result.transaction('molecules', 'readwrite'), s = x.objectStore('molecules'); s.clear(); s.put({ id: 'u:000000000001', nome: 'Legacy', formula: 'CH4' });
                 x.oncomplete = () => { q.result.close(); ok(); }; }; })""")
             pg.reload(); pg.wait_for_function('window.qqReady===true', timeout=60000)
             pg.evaluate(OPEN); pg.wait_for_selector("#moldlg .mol-box", state="visible")
             pg.wait_for_selector("#mol-errs", state="visible")
             txt = pg.inner_text("#mol-errs"); assert "older version" in txt and "Row 1:" in txt, txt
             search("paracetamol"); assert names(), "the catalogue still works"
-            add(name="New", formula="CH4")
+            add(name="Fresh", formula="CH4")
             assert not pg.is_visible("#mol-errs"), "the old row is gone with the next save"
             left = pg.evaluate("""new Promise(ok => { const q = indexedDB.open('mzlab_lab'); q.onsuccess = () => { const g = q.result.transaction('molecules').objectStore('molecules').getAll();
               g.onsuccess = () => { q.result.close(); ok(g.result.map(r => ("nome" in r ? "OLD:" : "") + r.name)); }; }; })""")
-            assert left == ["New"], left   # an `OLD:` entry would be a record of the old format that the save did not clear
+            assert left == ["Fresh"], left   # an `OLD:` entry would be a record of the old format that the save did not clear
             pg.keyboard.press("Escape")
         step("an old-format record is refused with a clear message; the catalogue works; the next save clears it", old_rows)
 

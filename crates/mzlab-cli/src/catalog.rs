@@ -21,6 +21,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--out", "output file, not stdout"),
     ("--set", "NAME=VALUE; repeatable"),
     ("--sample", "ids: 1,3,5 or 2-4"),
+    ("--no-points", "omit the MS2 points"),
     ("--samples", "samples/1 file"),
     ("--from", "window start, min"),
     ("--to", "window end, min"),

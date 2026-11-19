@@ -240,12 +240,13 @@ pub fn run(args: Vec<String>) -> Outcome {
         return Outcome::fail("file list needs a DIR");
     };
     if !dir.is_dir() {
-        return Outcome {
-            code: 4,
-            stdout: Vec::new(),
-            stderr: format!("error: {} is not a folder\n", dir.display()),
-            error: None,
+        let name = dir.display().to_string();
+        let e = if dir.exists() {
+            mzlab_core::error::Error::new("err.cli.file").with("path", name)
+        } else {
+            mzlab_core::error::Error::new("err.session.fileNotFound").with("name", name)
         };
+        return Outcome::fail_error(&e).with_hint("pass the folder to list");
     }
     crate::emit(to_json(&dir, &list(&dir)), &out)
 }

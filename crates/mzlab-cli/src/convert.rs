@@ -13,7 +13,7 @@ use mzlab_core::json::Out;
 use crate::convert_entries::{entries, Entry};
 pub(crate) use crate::convert_help::HELP;
 use crate::convert_report::fail;
-use crate::convert_report::{compression_sets, head_of, partial_lines, report, Item};
+use crate::convert_report::{compression_sets, head_of, summary, write_report, Item};
 use crate::flow::{steps, DoneFn, FileRunner};
 use crate::flow_base::convert_file;
 use crate::flow_run::{apply_set, fill_inputs, prepare, problem_text, run_checked};
@@ -31,6 +31,10 @@ pub(crate) struct Args {
     fresh: bool,
     /// `--sample`: the ids to convert of a dataset with several samples
     sample: Option<Vec<u32>>,
+    /// `--json`: the `convert/1` document on stdout instead of the list of files
+    json: bool,
+    /// `--dry-run`: say what would be converted, write nothing
+    dry_run: bool,
 }
 
 fn value(it: &mut impl Iterator<Item = String>, name: &str) -> Result<String, String> {
@@ -59,6 +63,8 @@ pub(crate) fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
             }
             "--set" => a.sets.push(value(&mut it, &x)?),
             "--fresh" => a.fresh = true,
+            "--json" => a.json = true,
+            "--dry-run" => a.dry_run = true,
             "--sample" => {
                 a.sample = Some(
                     crate::sample_select::parse(&value(&mut it, &x)?)
@@ -282,67 +288,6 @@ fn item(
     }
 }
 
-/// The last lines on stderr and the code: every file written, or the number that failed.
-fn summary(items: &[Item], out: &Path) -> Outcome {
-    let skipped = items
-        .iter()
-        .filter(|i| matches!(i, Item::Done { skipped: true, .. }))
-        .count();
-    let failed = items
-        .iter()
-        .filter(|i| matches!(i, Item::Failed { .. }))
-        .count();
-    let converted = items.len() - skipped - failed;
-    let stdout: String = items
-        .iter()
-        .filter_map(|i| match i {
-            Item::Done { output, .. } => Some(format!("{output}\n")),
-            Item::Failed { .. } => None,
-        })
-        .collect();
-    // what the readers could not read (`method/1.warnings`), one note per entry, as the Method window lists it
-    let notes: String = items
-        .iter()
-        .flat_map(|i| match i {
-            Item::Done { input, notes, .. } => notes
-                .iter()
-                .map(|(k, d)| format!("note: {input}: {}\n", crate::error_text::method_note(k, d)))
-                .collect(),
-            Item::Failed { .. } => Vec::new(),
-        })
-        .collect();
-    let partial = partial_lines(items);
-    let notes = notes + &crate::convert_report::merged_lines(items);
-    let (code, stderr) = if failed == 0 {
-        (
-            if partial.is_empty() { 0 } else { 3 },
-            format!(
-                "{notes}{partial}done: {converted} converted, {skipped} skipped; outputs in {}\n",
-                out.display()
-            ),
-        )
-    } else {
-        let causes: String = items
-            .iter()
-            .filter_map(|i| match i {
-                Item::Failed { input, cause } => Some(format!("error: {input}: {cause}\n")),
-                Item::Done { .. } => None,
-            })
-            .collect();
-        let line = format!(
-            "error: {failed} of {} failed ({converted} converted, {skipped} skipped)\n",
-            items.len()
-        );
-        (1, notes + &partial + &causes + &line + "hint: the other files are written; run again to retry the failed ones, the converted ones are skipped\n")
-    };
-    Outcome {
-        code,
-        stdout: stdout.into_bytes(),
-        stderr,
-        error: None,
-    }
-}
-
 /// The plan of `entries` with the settings of `sets`, checked and ready to run.
 fn prepared(
     entries: &[Entry],
@@ -432,7 +377,10 @@ pub fn run(args: Vec<String>) -> Outcome {
         );
     };
     let work = out.join(".convert");
-    if let Err(o) = make_work(&work, &out) {
+    // a dry run writes nothing: not even the work folder
+    if !a.dry_run
+        && let Err(o) = make_work(&work, &out)
+    {
         return o;
     }
     let out = out.canonicalize().unwrap_or(out);
@@ -446,6 +394,10 @@ pub fn run(args: Vec<String>) -> Outcome {
             )
         }
     };
+    // only a file named on the command line: an mzML met inside a folder is still handled (re-picked with `--peaks`)
+    if let Some(o) = crate::convert_dry::refuse_mzml(&a.inputs) {
+        return o;
+    }
     let list = match entries(&units, a.sample.as_deref()) {
         Ok(l) => l,
         Err(e) => return crate::sample_select::fail(&e),
@@ -461,6 +413,9 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(p) => p,
         Err(o) => return o,
     };
+    if a.dry_run {
+        return crate::convert_dry::outcome(&list, &out, a.json);
+    }
     let ended = Arc::new(Mutex::new(vec![None; list.len()]));
     let names = list.iter().map(Entry::shown).collect();
     let mut runner = FileRunner::located(&work, found, Vec::new(), None, a.fresh);
@@ -483,14 +438,8 @@ pub fn run(args: Vec<String>) -> Outcome {
         .enumerate()
         .map(|(k, e)| item(&roots[k], e, (ended[k].as_ref(), &run), (&work, &out)))
         .collect();
-    if let Some(path) = &a.report
-        && let Err(e) = std::fs::write(path, report(&items))
-    {
-        return fail(
-            2,
-            &format!("{}: {e}", path.display()),
-            "--report must be a file that can be written",
-        );
+    if let Some(o) = write_report(a.report.as_deref(), &items, &out) {
+        return o;
     }
-    summary(&items, &out)
+    summary(&items, &out, a.json)
 }

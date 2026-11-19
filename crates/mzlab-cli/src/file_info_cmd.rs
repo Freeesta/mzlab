@@ -49,7 +49,7 @@ fn file_doc(file: &Path, want: &Option<Vec<u32>>) -> Result<(String, String)> {
             let kind = s.routes.canali().experiment.clone();
             let doc = format!(
                 "\"items\":{},\"channels\":{},\"kind\":{{\"proposed\":{},\"reason\":{}}}",
-                crate::items_cmd::document(&items),
+                crate::items_cmd::document(&items, false)?,
                 s.routes.canali().json(),
                 extract::jstr(kind.proposed),
                 extract::jstr(kind.reason),
