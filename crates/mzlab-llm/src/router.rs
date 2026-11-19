@@ -1,5 +1,5 @@
 //! The router of the data assistant: a small model that, before every user message, picks the subagent and the program data to attach (`need_data`). It never
-//! answers the user and never acts; a wrong route costs one call too many. `request` builds its call from the role of `assist-ruoli-1.json`, `parse` reads
+//! answers the user and never acts; a wrong route costs one call too many. `request` builds its call from the role of `assist-roles-1.json`, `parse` reads
 //! its answer against the closed schema. Used by `agent`.
 
 use mzlab_core::error::{Error, Result};
@@ -48,7 +48,7 @@ impl Route {
     }
 }
 
-/// The reader (role of `assist-ruoli-1.json`) that serves one `need_data` of the router.
+/// The reader (role of `assist-roles-1.json`) that serves one `need_data` of the router.
 pub fn reader_of(need: &str) -> Option<&'static str> {
     Some(match need {
         "inspection" => "metadati",

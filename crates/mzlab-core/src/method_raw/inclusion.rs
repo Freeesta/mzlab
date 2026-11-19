@@ -143,7 +143,7 @@ pub fn parse(t: &str) -> Option<Vec<Entry>> {
     (!out.is_empty()).then_some(out)
 }
 
-/// The list as `inclusione` of an experiment.
+/// The list as `inclusion` of an experiment.
 pub fn section(list: &[Entry]) -> V {
     V::Arr(
         list.iter()
@@ -151,16 +151,16 @@ pub fn section(list: &[Entry]) -> V {
                 obj(vec![
                     ("mz", num(Some(e.mz))),
                     ("formula", text(&e.formula)),
-                    ("specie", text(&e.species)),
-                    ("carica", num(e.charge)),
-                    ("polarita", e.polarity.map(V::s)),
-                    ("t_inizio_min", num(e.start_min)),
-                    ("t_fine_min", num(e.end_min)),
+                    ("species", text(&e.species)),
+                    ("charge", num(e.charge)),
+                    ("polarity", e.polarity.map(V::s)),
+                    ("t_start_min", num(e.start_min)),
+                    ("t_end_min", num(e.end_min)),
                     (
                         "nce",
                         Some(V::Arr(e.nce.iter().map(|x| V::Num(*x)).collect())),
                     ),
-                    ("nome", text(&e.name)),
+                    ("name", text(&e.name)),
                 ])
             })
             .collect(),

@@ -1,4 +1,4 @@
-//! The `.wiff` adapter of `metodo/1` (`method.rs`): the method of the sample (`methodinfo.rs`) plus what the container says about the sample and the run:
+//! The `.wiff` adapter of `method/1` (`method.rs`): the method of the sample (`methodinfo.rs`) plus what the container says about the sample and the run:
 //! `SampleN/Log` (instrument, run status, LC modules in text), `SampleN/SampleDABE/DATA` (sample name, method file, vial), `CFR_INFO` (Analyst version, user, computer)
 //! and the OLE property set `SummaryInformation`. Layouts measured on the 3200 QTRAP files; what is only guessed from position is marked in `docs/agenti/method.md`.
 
@@ -121,10 +121,10 @@ fn kv(k: &str, v: &str) -> Option<V> {
     };
     obj(vec![
         ("id", text(k)),
-        ("etichetta", text(k)),
-        ("valore", value.clone()),
-        ("testo", if value.is_none() { text(v) } else { None }),
-        ("unita", unita),
+        ("label", text(k)),
+        ("value", value.clone()),
+        ("text", if value.is_none() { text(v) } else { None }),
+        ("unit", unita),
     ])
 }
 
@@ -225,10 +225,10 @@ fn user_and_computer<'a>(
 fn ms_sec(method: Option<&crate::methodinfo::Method>, st: Option<&str>) -> Option<V> {
     method
         .and_then(|m| ms_section(m, st))
-        .or_else(|| st.and_then(|s| obj(vec![("sorgente", obj(vec![("tipo", text(s))]))])))
+        .or_else(|| st.and_then(|s| obj(vec![("source", obj(vec![("type", text(s))]))])))
 }
 
-/// The document of sample `n` of the `.wiff` in `ole`; never an error: what is missing is absent, what cannot be read is in `avvisi`.
+/// The document of sample `n` of the `.wiff` in `ole`; never an error: what is missing is absent, what cannot be read is in `warnings`.
 pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
     let method = method_of_sample(ole, crate::wiff::method_no(ole, n))
         .or_else(|| or_fallback(method_of_sample(ole, n), ole, n));
@@ -274,24 +274,27 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
 
     let doc = obj(vec![
         ("schema", Some(V::s(crate::method::SCHEMA))),
-        ("origine", crate::method::origin(src, prop(12))),
-        ("campione", campione(&data, get("", "Injection Volume"))),
-        ("strumento", strumento(cfg, software, version)),
-        ("operatore", operator(user, computer)),
+        ("origin", crate::method::origin(src, prop(12))),
+        ("sample", campione(&data, get("", "Injection Volume"))),
+        ("instrument", strumento(cfg, software, version)),
+        ("operator", operator(user, computer)),
         ("ms", ms_sec(method.as_ref(), source_type.as_deref())),
         ("lc", lc),
         (
-            "campionatore",
-            obj(vec![("parametri", Some(V::Arr(autosampler)))]),
+            "autosampler",
+            obj(vec![("parameters", Some(V::Arr(autosampler)))]),
         ),
-        ("rivelatori", det),
-        ("registro", Some(V::Arr(registry))),
+        ("detectors", det),
+        ("log", Some(V::Arr(registry))),
         (
-            "grezzo",
-            obj(vec![("sezione", Some(V::s("Log"))), ("testo", text(&raw))])
+            "raw",
+            obj(vec![("section", Some(V::s("Log"))), ("text", text(&raw))])
                 .map(|g| V::Arr(vec![g])),
         ),
-        ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),
+        (
+            "warnings",
+            Some(V::Arr(warn.into_iter().flatten().collect())),
+        ),
     ]);
     let doc = extended(doc, ole, n, &sample);
     doc.map_or_else(String::new, |d| d.json())
@@ -334,28 +337,25 @@ fn lc_with_pressure(
         .map_or((None, None), lc_sections);
     if let (Some(pmax), Some(V::Obj(f))) = (pmax.and_then(value_unit), lc.as_mut()) {
         f.extend(
-            obj(vec![
-                ("valore", num(Some(pmax.0))),
-                ("unita", text(&pmax.1)),
-            ])
-            .map(|p| ("pressione_max", p)),
+            obj(vec![("value", num(Some(pmax.0))), ("unit", text(&pmax.1))])
+                .map(|p| ("pressure_max", p)),
         );
     }
     (lc, det)
 }
 
-/// The `campione` section: name and vial from the `DATA` strings (four or more), the method file, the injection volume.
+/// The `sample` section: name and vial from the `DATA` strings (four or more), the method file, the injection volume.
 fn campione(data: &[String], injection: Option<&str>) -> Option<V> {
     let named = data.len() >= 4;
     obj(vec![
-        ("nome", data.first().filter(|_| named).and_then(|s| text(s))),
+        ("name", data.first().filter(|_| named).and_then(|s| text(s))),
         ("vial", data.last().filter(|_| named).and_then(|s| text(s))),
         (
-            "iniezione_uL",
+            "injection_uL",
             injection.and_then(value_unit).and_then(|v| num(Some(v.0))),
         ),
         (
-            "metodo_file",
+            "method_file",
             data.iter()
                 .find(|s| s.to_lowercase().ends_with(".dam"))
                 .and_then(|s| text(s)),
@@ -379,27 +379,27 @@ fn source_type(log: &[String]) -> Option<String> {
         .map(String::from)
 }
 
-/// The `strumento` section from the "Config Table" record of the log, the acquisition software and its version (`CFR_INFO`).
+/// The `instrument` section from the "Config Table" record of the log, the acquisition software and its version (`CFR_INFO`).
 fn strumento(cfg: Option<&String>, software: &str, version: Option<&String>) -> Option<V> {
     let f = |k| cfg.and_then(|r| field(r, k)).and_then(text);
     let sw = obj(vec![
-        ("nome", Some(V::s(software))),
-        ("versione", version.and_then(|v| text(v))),
+        ("name", Some(V::s(software))),
+        ("version", version.and_then(|v| text(v))),
     ])
     .map(|s| V::Arr(vec![s]));
     obj(vec![
-        ("produttore", f("Manufacturer:")),
-        ("modello", f("Component ID:")),
-        ("serie", f("Serial Number:")),
+        ("manufacturer", f("Manufacturer:")),
+        ("model", f("Component ID:")),
+        ("series", f("Serial Number:")),
         ("firmware", f("Firmware Version:")),
         ("software", sw),
     ])
 }
 
-/// The `operatore` section.
+/// The `operator` section.
 fn operator(user: Option<&str>, computer: Option<&str>) -> Option<V> {
     obj(vec![
-        ("utente", user.and_then(text)),
+        ("user", user.and_then(text)),
         ("computer", computer.and_then(text)),
     ])
 }
@@ -409,14 +409,14 @@ fn run_records<'a>(ms_rec: &impl Fn(&str) -> Option<&'a String>) -> Vec<V> {
     let record = |when: &str, r: Option<&String>| {
         r.and_then(|r| {
             obj(vec![
-                ("quando", Some(V::s(when))),
-                ("testo", text(r.split_once(":,").map_or(r, |x| x.1))),
+                ("when", Some(V::s(when))),
+                ("text", text(r.split_once(":,").map_or(r, |x| x.1))),
             ])
         })
     };
     [
-        record("inizio", ms_rec("Start of Run")),
-        record("fine", ms_rec("End of Run")),
+        record("start", ms_rec("Start of Run")),
+        record("end", ms_rec("End of Run")),
     ]
     .into_iter()
     .flatten()
@@ -436,13 +436,13 @@ fn raw_log(log: &[String]) -> String {
     raw
 }
 
-/// What is missing or not decoded, for `avvisi`.
+/// What is missing or not decoded, for `warnings`.
 fn warnings(_ole: &Ole, _sample: &str, no_log: bool) -> Vec<Option<V>> {
     let mut warn = vec![];
     if no_log {
         warn.push(obj(vec![
-            ("chiave", Some(V::s("meta.mancante"))),
-            ("dove", Some(V::s("Log"))),
+            ("key", Some(V::s("meta.mancante"))),
+            ("place", Some(V::s("Log"))),
         ]));
     }
     warn

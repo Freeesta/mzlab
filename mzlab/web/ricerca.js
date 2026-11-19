@@ -2,7 +2,7 @@
 // @ts-strict
 "use strict";
 // Search box, results part (the palette is paletta.js): reads what was typed and says what it is compatible with, never a verdict.
-// A number -> neutral loss, adduct shift or contaminant (Rust, ricerca/1); a formula -> its mass and m/z of the common adducts (Rust, formula);
+// A number -> neutral loss, adduct shift or contaminant (Rust, mz-match/1); a formula -> its mass and m/z of the common adducts (Rust, formula);
 // a word -> nothing (the commands of the palette answer). The tables are the ones of the panels (LOSSES, QADD, QADD_VIEW, api/contaminants): nothing is copied here.
 
 /** @typedef {{ic: string, chip: string, html: string, detail: string, aria: string, run: () => void}} RicRow */

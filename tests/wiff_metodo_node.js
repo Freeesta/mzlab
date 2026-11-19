@@ -1,4 +1,4 @@
-// The metodo/1 of one sample of a .wiff alone, as the page asks for it: wiff_metodo of the `sciex` readers module (read(member, offset, length));
+// The method/1 of one sample of a .wiff alone, as the page asks for it: wiff_metodo of the `sciex` readers module (read(member, offset, length));
 // see tests/test_wiff_metodo_sito.py. usage: node wiff_metodo_node.js <pkg dir> module <file.wiff> <sample>
 const fs = require("fs");
 const path = require("path");

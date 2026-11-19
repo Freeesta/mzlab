@@ -1,7 +1,7 @@
 //! SRM/MRM stored as scans: a level-2 scan with an SRM (or CRM) filter whose points are the products of one precursor becomes, per transition, a chromatogram
 //! with the id `SRM SIC Q1=<q1> Q3=<q3>` (`mzmlhead::srm_id` reads it), followed by ` ce=<eV>` when the collision energy is known and ` polarity=negative`
 //! for the negative ones. The Q3 of a point is its m/z (the centre of the product window; ProteoWizard writes the same), the collision energy comes from the
-//! `@cid25.0` of the filter or, when the filter has none (the TSQ filters never have), from the transition table of `metodo/1` (`ms…transizioni`), which also
+//! `@cid25.0` of the filter or, when the filter has none (the TSQ filters never have), from the transition table of `method/1` (`ms…transitions`), which also
 //! gives the polarity of the transition (a TSQ scan carries a fixed polarity).
 use mzlab_core::error::Result;
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
@@ -45,10 +45,10 @@ fn number_of(seg: &str, key: &str) -> Option<f64> {
         .filter(|v: &f64| v.is_finite())
 }
 
-/// The transitions of the `metodo/1` document `m` (`ms.periodi[].esperimenti[].transizioni[]`), read without a JSON parser (the module is size-capped): every
+/// The transitions of the `method/1` document `m` (`ms.periods[].experiments[].transitions[]`), read without a JSON parser (the module is size-capped): every
 /// `"q1":` opens a transition that goes on to the next one. Nothing when `m` has none or cannot be read.
 fn transitions_of_the_method(m: &str) -> Vec<FromMethod> {
-    let Some(from) = m.find("\"transizioni\"") else {
+    let Some(from) = m.find("\"transitions\"") else {
         return Vec::new();
     };
     let mut out = Vec::new();
@@ -65,7 +65,7 @@ fn transitions_of_the_method(m: &str) -> Vec<FromMethod> {
         let (Some(q1), Some(q3)) = (number_of(seg, "\"q1\":"), number_of(seg, "\"q3\":")) else {
             continue;
         };
-        let pol = match seg.find("\"polarita\":").and_then(|k| seg.get(k + 11..)) {
+        let pol = match seg.find("\"polarity\":").and_then(|k| seg.get(k + 11..)) {
             Some(r) if r.trim_start().starts_with("\"positive\"") => 1,
             Some(r) if r.trim_start().starts_with("\"negative\"") => -1,
             _ => 0,
@@ -236,7 +236,7 @@ impl Reader for SrmFromScans {
     fn losses(&mut self, c: usize) -> Result<Losses> {
         self.inner.losses(c)
     }
-    // The account `conv/1` gives of the mzML is the reader's own: the wrapper adds traces, not gaps.
+    // The account `conversion/1` gives of the mzML is the reader's own: the wrapper adds traces, not gaps.
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         self.inner.not_carried()
     }

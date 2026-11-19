@@ -69,7 +69,7 @@ fn polarity_comes_from_the_method_table() {
         .iter()
         .any(|i| i.starts_with("SRM") && !i.ends_with("polarity=negative")));
     let m = l.method(0).unwrap();
-    assert!(m.contains(r#""transizioni""#) && m.contains("negative"));
+    assert!(m.contains(r#""transitions""#) && m.contains("negative"));
 }
 
 #[test]
@@ -88,7 +88,7 @@ fn uv_channels_are_pda_traces_and_the_3d_field_is_a_warning() {
     }
     assert!(v.iter().any(|c| c.tipo == ChromKind::Pressure));
     let m = l.method(0).unwrap();
-    assert!(m.contains("rivelatori") && m.contains("UV 3D field"));
+    assert!(m.contains("detectors") && m.contains("UV 3D field"));
     // UV never shows up as a mass spectrum
     let idx = l.index(0).unwrap();
     assert!(idx
@@ -103,7 +103,7 @@ fn lock_mass_is_in_the_method() {
     };
     let m = apri(&p).method(0).unwrap();
     assert!(
-        m.contains("lock_mass") && m.contains("214.08943") && m.contains("correzione_ppm"),
+        m.contains("lock_mass") && m.contains("214.08943") && m.contains("correction_ppm"),
         "{m:.200}"
     );
 }

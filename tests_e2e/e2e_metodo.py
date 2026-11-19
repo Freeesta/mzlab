@@ -1,4 +1,4 @@
-"""metodo/1 on the built site with the Rust engine: an mzML that names a .wiff by SHA-1 (as ProteoWizard writes it) is opened, then that .wiff arrives ALONE
+"""method/1 on the built site with the Rust engine: an mzML that names a .wiff by SHA-1 (as ProteoWizard writes it) is opened, then that .wiff arrives ALONE
 (no .wiff.scan): it is not an error, the mzML gets the method of its sample (notice + /api/metodo source "wiff"); a .wiff nobody names still gets the usual notice. Synthetic files only
 (tools/wiff_riferimento.py, tools/dati_sintetici.py). Needs the site and the .wasm like e2e_wiff.py (python tools/build_site.py)."""
 # covers: mzlab/web/metodo-doc.js, mzlab/web/metodo-incl.js, mzlab/web/metodo-registro.js
@@ -47,8 +47,8 @@ try:
             r = pg.evaluate(JSON, "api/metodo?k=0")
             assert r["status"] == 200 and r["j"]["source"] == "mzml", r
             m = r["j"]["metodo"]
-            assert m["schema"] == "metodo/1" and m["origine"]["formato"] == "mzml", r
-        step("an mzML without method: /api/metodo builds metodo/1 from its header", none_yet)
+            assert m["schema"] == "method/1" and m["origin"]["format"] == "mzml", r
+        step("an mzML without method: /api/metodo builds method/1 from its header", none_yet)
         def lone_with_match():
             pg.set_input_files("#pick", [str(D / "one.wiff")])
             pg.wait_for_function("fetch('api/metodo?k=0').then(r => r.json()).then(j => j.source === 'wiff')", timeout=60000)
@@ -60,16 +60,16 @@ try:
             r = pg.evaluate(JSON, "api/metodo?k=0")
             assert r["status"] == 200 and r["j"]["source"] == "wiff", r
             m = r["j"]["metodo"]
-            assert m["schema"] == "metodo/1" and m["origine"]["formato"] == "sciex-wiff" and m["origine"]["file"][0]["sha1"] == sha, m["origine"]
-            assert m["origine"]["campione"] == 1, m["origine"]
-        step("/api/metodo gives the metodo/1 of the .wiff sample", route)
+            assert m["schema"] == "method/1" and m["origin"]["format"] == "sciex-wiff" and m["origin"]["file"][0]["sha1"] == sha, m["origin"]
+            assert m["origin"]["sample"] == 1, m["origin"]
+        step("/api/metodo gives the method/1 of the .wiff sample", route)
         def window():
             pg.click("#np-method")
             pg.wait_for_function("document.querySelector('#bigdlg').innerText.includes('Method stored in the file')", timeout=60000)
             t = pg.inner_text("#bigdlg")
             assert "sciex-wiff" in t and "SHA-1 " + sha in t, t
             pg.keyboard.press("Escape")
-        step("the Method window shows the method stored in the file (metodo/1)", window)
+        step("the Method window shows the method stored in the file (method/1)", window)
         def lone_unnamed():
             pg.set_input_files("#pick", [str(D / "lonely.wiff")])
             pg.wait_for_function("document.querySelector('#unopen') && document.querySelector('#unopen').innerText.includes('lonely')", timeout=60000)

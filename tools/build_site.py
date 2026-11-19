@@ -333,9 +333,9 @@ def main() -> None:
     (static / "version.js").write_text(f'window.MZLAB_VERSION = "{ver}";\nwindow.MZLAB_COMMIT = "{commit}";\n', encoding="utf-8")
     pack_mzfinder(static)
     # the catalog of assistant tools beside its page (the module `llm/` reads it on first use)
-    shutil.copy2(ROOT / "docs" / "schemi" / "strumenti-1.json", static / "llm" / "strumenti-1.json")
+    shutil.copy2(ROOT / "docs" / "schemi" / "tools-1.json", static / "llm" / "tools-1.json")
     # the subset of the public demo (provider `mzlab-demo`), the catalog the proxy allows; and the one constant of its host
-    shutil.copy2(ROOT / "docs" / "schemi" / "strumenti-demo-1.json", static / "llm" / "strumenti-demo-1.json")
+    shutil.copy2(ROOT / "docs" / "schemi" / "tools-demo-1.json", static / "llm" / "tools-demo-1.json")
     check_proxy_host(static)
     # the provider registry beside the transport: its iframe derives the origin each key may reach from it, never from the page
     shutil.copy2(ROOT / "crates" / "mzlab-llm" / "data" / "fornitori-1.json", static / "llm" / "fornitori-1.json")

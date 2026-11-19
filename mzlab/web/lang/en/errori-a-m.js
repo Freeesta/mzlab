@@ -60,7 +60,7 @@ I18N.add("en", {
   "err.cli.json.unsupported": "This command has no JSON form: run it without --json.",
   "err.conv.noProfile": "This file has only centroided peaks and no profile data, so it cannot be converted to a profile mzML. Use the centroid mzML as it is.",
   "err.conv.mzlabNoProfile": "This file has only the instrument's centroids and no profile data, so mzLab cannot compute its own centroids. Convert with peaks = file to keep the instrument's centroids.",
-  "err.corsa.prov": "The provenance record of this run is missing or has an unknown format: run the analysis again.",
+  "err.run_report.prov": "The provenance record of this run is missing or has an unknown format: run the analysis again.",
   "meta.mancante": "Not in the file: {dove}.",
   "meta.danneggiato": "Damaged in the file and left out: {dove}. What was read before the damage is kept, the rest of the file is read.",
   "meta.ioneScartata": "Selected ion not taken from the trailer: {dove}. The isolation target is the selected ion of those scans.",

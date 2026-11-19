@@ -200,7 +200,7 @@ fn from_file_fills_what_the_file_says() {
     let input = format!(
         r#"{{"samples":{},"file":[
         {{"sha256":"aa","polarity":[1,1],"rt_min":0.1,"rt_max":9.9,"mz_min":50,"mz_max":600,"scans":420,"acquired":"2025-04-01 08:30:15.123","instrument":"QTRAP 3200","method":"m1.dam"}},
-        {{"name":"{}","polarity":[-1],"method_json":{{"origine":{{"file_creato":"2025-04-01T09:00:00"}},"strumento":{{"modello":"3200 QTRAP"}},"campione":{{"metodo_file":"neg.dam"}},"ms":{{"periodi":[{{"esperimenti":[{{"mz":[100,900]}},{{"mz":[80,400]}}]}}]}}}}}},
+        {{"name":"{}","polarity":[-1],"method_json":{{"origin":{{"file_created":"2025-04-01T09:00:00"}},"instrument":{{"model":"3200 QTRAP"}},"sample":{{"method_file":"neg.dam"}},"ms":{{"periods":[{{"experiments":[{{"mz":[100,900]}},{{"mz":[80,400]}}]}}]}}}}}},
         {{"name":"unknown.mzML","polarity":[1]}}]}}"#,
         table_to_json(&t),
         t.samples[1].file

@@ -1,4 +1,4 @@
-//! The `metodo/1` document of the real Agilent runs (skipped without the data repository): what the sections say, that no field of the side files is
+//! The `method/1` document of the real Agilent runs (skipped without the data repository): what the sections say, that no field of the side files is
 //! left out of `campi`, and that the mzML carries the same document.
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
@@ -32,11 +32,11 @@ fn the_document_of_a_real_run_says_what_the_files_say() {
         let d = Folder::load(&f).open();
         let label = d.name.clone();
         let doc = parse(&d.method(&source(&d)));
-        assert_eq!(doc["schema"], "metodo/1", "{label}");
-        assert_eq!(doc["origine"]["formato"], "agilent-d", "{label}");
+        assert_eq!(doc["schema"], "method/1", "{label}");
+        assert_eq!(doc["origin"]["format"], "agilent-d", "{label}");
         // every key of the document and of its sections is one the schema knows
         let schema: Value =
-            serde_json::from_str(include_str!("../../../mzlab/web/schemi/metodo-1.json")).unwrap();
+            serde_json::from_str(include_str!("../../../mzlab/web/schemi/method-1.json")).unwrap();
         for (key, value) in doc.as_object().unwrap() {
             let section = &schema["properties"][key.as_str()];
             assert!(!section.is_null(), "{label}: {key} is not in the schema");
@@ -52,17 +52,17 @@ fn the_document_of_a_real_run_says_what_the_files_say() {
             }
         }
         let dev = d.device.as_ref().unwrap();
-        assert_eq!(doc["strumento"]["serie"], dev.serial.as_str(), "{label}");
+        assert_eq!(doc["instrument"]["series"], dev.serial.as_str(), "{label}");
         assert!(
-            doc["strumento"]["modello"]
+            doc["instrument"]["model"]
                 .as_str()
                 .unwrap()
                 .contains(&dev.model),
             "{label}"
         );
-        assert_eq!(doc["campione"]["nome"], d.sample_name().unwrap(), "{label}");
-        assert_eq!(doc["ms"]["sorgente"]["tipo"], "EI", "{label}");
-        let exps = doc["ms"]["periodi"][0]["esperimenti"].as_array().unwrap();
+        assert_eq!(doc["sample"]["name"], d.sample_name().unwrap(), "{label}");
+        assert_eq!(doc["ms"]["source"]["type"], "EI", "{label}");
+        let exps = doc["ms"]["periods"][0]["experiments"].as_array().unwrap();
         let m = d.method.as_ref().unwrap();
         if m.mode == "SIM" {
             assert_eq!(
@@ -74,11 +74,11 @@ fn the_document_of_a_real_run_says_what_the_files_say() {
             let listed: usize = exps
                 .iter()
                 .map(|e| {
-                    e["parametri"]
+                    e["parameters"]
                         .as_array()
                         .unwrap()
                         .iter()
-                        .filter(|p| p["unita"] == "m/z")
+                        .filter(|p| p["unit"] == "m/z")
                         .count()
                 })
                 .sum();
@@ -92,7 +92,7 @@ fn the_document_of_a_real_run_says_what_the_files_say() {
             );
         }
         assert!(
-            doc["grezzo"].as_array().unwrap().len() >= 2,
+            doc["raw"].as_array().unwrap().len() >= 2,
             "{label}: the texts"
         );
     }
@@ -104,7 +104,7 @@ fn no_field_of_the_side_files_is_left_out_of_campi() {
     for f in all {
         let d = Folder::load(&f).open();
         let doc = parse(&d.method(&source(&d)));
-        let fields = doc["campi"].as_array().unwrap();
+        let fields = doc["fields"].as_array().unwrap();
         let in_fields = |i: &&mzlab_core::agilent::meta::Item| {
             !(i.name == "text" && TEXTS.contains(&i.origin.as_str())) && !i.value.is_empty()
         };
@@ -112,9 +112,9 @@ fn no_field_of_the_side_files_is_left_out_of_campi() {
         assert_eq!(fields.len(), wanted, "{}: fields in campi", d.name);
         for i in d.metadata.iter().filter(in_fields) {
             assert!(
-                fields.iter().any(|c| c["origine"] == i.origin.as_str()
-                    && c["chiave"] == i.name.as_str()
-                    && c["valore"] == i.value.as_str()),
+                fields.iter().any(|c| c["origin"] == i.origin.as_str()
+                    && c["key"] == i.name.as_str()
+                    && c["value"] == i.value.as_str()),
                 "{}: {} {} is missing",
                 d.name,
                 i.origin,
@@ -127,8 +127,8 @@ fn no_field_of_the_side_files_is_left_out_of_campi() {
             .iter()
             .filter(|i| i.name == "text" && TEXTS.contains(&i.origin.as_str()))
         {
-            let found = doc["grezzo"].as_array().unwrap().iter().any(|g| {
-                g["testo"].as_str().is_some_and(|x| {
+            let found = doc["raw"].as_array().unwrap().iter().any(|g| {
+                g["text"].as_str().is_some_and(|x| {
                     t.value
                         .trim()
                         .starts_with(x.chars().take(40).collect::<String>().as_str())
@@ -147,10 +147,10 @@ fn the_mzml_carries_the_same_document() {
     let head = &text[text.find("<run ").unwrap()..];
     let doc = from_userparam(head).expect("the mzML has the document");
     let json = parse(&doc);
-    assert_eq!(json["schema"], "metodo/1");
-    let sha = json["origine"]["file"].as_array().unwrap();
+    assert_eq!(json["schema"], "method/1");
+    let sha = json["origin"]["file"].as_array().unwrap();
     assert!(sha
         .iter()
-        .any(|f| f["nome"] == "AcqData/MSPeak.bin"
+        .any(|f| f["name"] == "AcqData/MSPeak.bin"
             && f["sha1"].as_str().is_some_and(|h| h.len() == 40)));
 }

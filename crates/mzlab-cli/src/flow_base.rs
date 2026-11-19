@@ -383,7 +383,7 @@ fn note_flagged(made: &mut Made, (merged, saturated): (usize, usize)) {
     }
 }
 
-/// A partial read in the record of the run (prov.json, corsa.json, flowrun/1): its cause among the warnings, its counts as the note of the file.
+/// A partial read in the record of the run (prov.json, report.json, flowrun/1): its cause among the warnings, its counts as the note of the file.
 fn note_losses(made: &mut Made, lost: &Losses) {
     if lost.partial() {
         made.warnings.push(lost.cause.into());

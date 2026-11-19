@@ -12,7 +12,7 @@ tests/test_wiff_cromatogrammi.py	203.3
 tests/test_wiff_sonda_leggera.py	168.5
 tests/test_cli_json.py	158.3
 tests/test_normative_import_parity.py	154.3
-tests/test_corsa_schema.py	152.5
+tests/test_run_report_schema.py	152.5
 tests/test_feat_wasm.py	149.2
 tests/test_parita_rotte_app.py	137.1
 tests/test_cancello.py	128.4

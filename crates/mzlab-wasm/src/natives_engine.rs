@@ -128,7 +128,7 @@ impl Engine {
         Ok(())
     }
 
-    /// `metodo/1` of the sample of `slot` from its reader; `""` when `slot` is not native.
+    /// `method/1` of the sample of `slot` from its reader; `""` when `slot` is not native.
     pub fn native_metodo(&mut self, slot: u32) -> Result<String, JsValue> {
         let Some((ds, c)) = self.nat.slots.get(&slot).cloned() else {
             return Ok(String::new());

@@ -83,18 +83,12 @@ function snapCharge(d) {
   };
 }
 
-/** Ketcher focuses its clipboard textarea while it mounts; in a sandboxed frame Chromium reports that as a policy violation
- * (console.error) until the user has touched the frame. Before the first gesture the call is skipped; Ketcher focuses it again on the gesture.
+/** Ketcher focuses its clipboard textarea while it mounts; in a sandboxed frame Chromium reports that as a policy violation (console.error) until the user
+ * has touched the frame. The guard itself (first paint, first-paint.js) skips the call before the first gesture; Ketcher focuses it again on the gesture.
+ * Called here and by disegno-storage.js as soon as the frame document exists; idempotent.
  * @param {Document} d */
-function guardFocus(d) {
-  const w = /** @type {any} */ (d.defaultView); if (!w || !w.HTMLElement || w.HTMLElement.prototype.focus.mzGuard) return;
-  const orig = w.HTMLElement.prototype.focus;
-  const guarded = /** @this {Element} */ function (/** @type {any} */ o) {
-    const ua = w.navigator.userActivation;
-    if (ua && !ua.hasBeenActive && this.matches(".cliparea,[data-cliparea]")) return;
-    return orig.call(this, o);
-  };
-  guarded.mzGuard = true; w.HTMLElement.prototype.focus = guarded;
+export function guardFocus(d) {
+  const g = /** @type {any} */ (window).MZLAB_FOCUS_GUARD; if (g && d.defaultView) g(d.defaultView);
 }
 
 /** @param {Document} d  the document of the Ketcher iframe */

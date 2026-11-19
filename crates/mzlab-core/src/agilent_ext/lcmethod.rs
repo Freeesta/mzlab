@@ -1,7 +1,7 @@
 //! The method of an Agilent LC/MS run (feature `estesi`): `AcqData/AcqMethod.xml` is a report that holds two XML documents as escaped text, `RCDevicesXml` (one
 //! `Section` per parameter of each LC module: sampler, pump, column compartment, detector) and `SCICDevicesXml` (the mass spectrometer: `SectionInfo` rows that
-//! are repeaters, sections, tables, columns and parameters in document order). Both are read as lists of rows; `lcdoc` turns them into the `metodo/1` sections.
-//! Nothing is guessed: a table is what its column names say, and a cell that is not a number stays a text in `campi`.
+//! are repeaters, sections, tables, columns and parameters in document order). Both are read as lists of rows; `lcdoc` turns them into the `method/1` sections.
+//! Nothing is guessed: a table is what its column names say, and a cell that is not a number stays a text in `fields`.
 
 use std::collections::BTreeMap;
 impl LcMethod {

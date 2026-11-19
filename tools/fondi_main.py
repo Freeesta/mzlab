@@ -18,7 +18,7 @@ PY = sys.executable
 
 # generated file -> regeneration command (several files may share one command: it runs once)
 GENERATI: dict[str, list[str]] = {
-    "docs/schemi/strumenti-1.json": ["env", "MZLAB_UPDATE_STEPS=1", "cargo", "test", "-p", "mzlab-cli", "--lib", "llm_tools"],
+    "docs/schemi/tools-1.json": ["env", "MZLAB_UPDATE_STEPS=1", "cargo", "test", "-p", "mzlab-cli", "--lib", "llm_tools"],
     "docs/schemi/steps-cli-1.json": ["env", "MZLAB_UPDATE_STEPS=1", "cargo", "test", "-p", "mzlab-cli", "--lib", "flow_ms2"],
     "docs/schemi/steps-1.json": ["env", "MZLAB_UPDATE_STEPS=1", "cargo", "test", "-p", "mzlab-feat", "--test", "steps"],
     "docs/schemi/steps-attributio-1.json": ["env", "MZLAB_UPDATE_STEPS=1", "cargo", "test", "-p", "mzlab-feat", "--test", "steps_attributio"],

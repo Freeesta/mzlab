@@ -1,4 +1,4 @@
-//! Checks of what a subagent of the assistant wrote: `lettura/1` (findings, questions, actions) and `param-scelte/1` (the choices on the parameters
+//! Checks of what a subagent of the assistant wrote: `reading/1` (findings, questions, actions) and `param-choices/1` (the choices on the parameters
 //! proposed by the rules). Every `evidence` key must exist in the input the subagent was given, every number of a sentence must be in the input, actions
 //! must name real parameters inside the `step/1` limits. The problems go back to the subagent once; then the reading is dropped. Used by the agent.
 
@@ -182,7 +182,7 @@ impl Cx<'_> {
     /// The proposals of the rules that the subagent was given.
     fn proposals(&self) -> &[Value] {
         self.input
-            .get("proposta-param/1")
+            .get("param-proposal/1")
             .and_then(|p| p.get("proposals"))
             .map_or(&[][..], Value::arr)
     }
@@ -269,8 +269,8 @@ pub fn problems_json(problems: &[Problem]) -> String {
     o.0
 }
 
-/// Checks `reading` (a `lettura/1` or a `param-scelte/1`) against `input`, the data blocks the subagent saw as one object keyed by source
-/// (`{"ispezione/1": ..., "answers": ...}`); `registry` gives the limits of the parameters.
+/// Checks `reading` (a `reading/1` or a `param-choices/1`) against `input`, the data blocks the subagent saw as one object keyed by source
+/// (`{"inspection/1": ..., "answers": ...}`); `registry` gives the limits of the parameters.
 pub fn validate(reading: &Value, input: &Value, registry: &[Step]) -> Result<(), Found> {
     let mut found = Found::new();
     let known = known_numbers(input);
@@ -280,8 +280,8 @@ pub fn validate(reading: &Value, input: &Value, registry: &[Step]) -> Result<(),
         known: &known,
     };
     match reading.get("schema").and_then(Value::str) {
-        Some("lettura/1") => cx.reading(reading, &mut found),
-        Some("param-scelte/1") => cx.choices(reading, &mut found),
+        Some("reading/1") => cx.reading(reading, &mut found),
+        Some("param-choices/1") => cx.choices(reading, &mut found),
         _ => flag(&mut found, "schema", "schema"),
     }
     if found.is_empty() {
@@ -310,7 +310,7 @@ fn known_numbers(v: &Value) -> BTreeSet<String> {
 }
 
 /// One step of an evidence path: a key of an object, or the element of an array whose `id`, `alias`, `name` or `step` is `seg` (else its position).
-/// An object without the key lends its arrays (`tabcheck.blank` is the check `blank` of `checks`, `ispezione.f1` the file `f1` of `files`).
+/// An object without the key lends its arrays (`tabcheck.blank` is the check `blank` of `checks`, `inspection.f1` the file `f1` of `files`).
 fn step_in<'a>(v: &'a Value, seg: &str) -> Option<&'a Value> {
     match v {
         Value::Arr(a) => a

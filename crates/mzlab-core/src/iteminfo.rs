@@ -21,7 +21,7 @@ pub struct Facts {
     pub srm_rt: Option<(f64, f64)>,
     /// The non-MS traces that are not the PDA (pressure, flow...): chromatogram index, kind, id, unit, first and last time, points.
     pub analog: Vec<Analog>,
-    /// The `.raw` method the file carries (`metodo/1` in the `<run>` of a converted `.raw`) has an LC part (`None`: no `.raw` method).
+    /// The `.raw` method the file carries (`method/1` in the `<run>` of a converted `.raw`) has an LC part (`None`: no `.raw` method).
     pub lc: Option<bool>,
     /// The unit (`k0`, `ms` or ``) of the ion mobility arrays of the first spectrum, when it has any (`Mzml::mobility_kind`).
     pub ims: Option<&'static str>,

@@ -1,5 +1,5 @@
-//! `ispezione/1`: what the assistant is told about each open file and about the series, assembled from answers the engine already gives (`Item.info()`,
-//! `metodo/1`, the estimate of `features.estimate`, `samples/1`, TIC and BPC, the scan statistics of `scan_stats`). This module reads no file and
+//! `inspection/1`: what the assistant is told about each open file and about the series, assembled from answers the engine already gives (`Item.info()`,
+//! `method/1`, the estimate of `features.estimate`, `samples/1`, TIC and BPC, the scan statistics of `scan_stats`). This module reads no file and
 //! computes no spectrum: it names the kind of acquisition, the resolution class, the polarity and the cycle from facts, never from a file name, and it
 //! lets through only the keys listed here (a whitelist, so a field added to a source later cannot leak). Used by `mzlab-cli llm` and the `llm` module.
 
@@ -212,9 +212,9 @@ fn file(
     o.put("gradient", gradient(method));
     o.put(
         "flow_uL_min",
-        num(path(method, &["lc", "flusso_mL_min"])).map(|f| n(f * 1000.0)),
+        num(path(method, &["lc", "flow_mL_min"])).map(|f| n(f * 1000.0)),
     );
-    o.put("oven_C", num(path(method, &["lc", "forno_C"])).map(n));
+    o.put("oven_C", num(path(method, &["lc", "oven_C"])).map(n));
     estimate_fields(&mut o, est, class == "unit");
     let (role, order) = put_role(&mut o, sample, rank, confirmed);
     let mut warn: Vec<String> = Vec::new();
@@ -243,7 +243,7 @@ fn file(
 fn ranks(files: &[Value]) -> Vec<Option<usize>> {
     let dates: Vec<Option<&str>> = files
         .iter()
-        .map(|f| path(f, &["method", "origine", "file_creato"]).and_then(Value::str))
+        .map(|f| path(f, &["method", "origin", "file_created"]).and_then(Value::str))
         .collect();
     dates
         .iter()
@@ -293,7 +293,7 @@ fn series(facts: &[Option<Facts>], total: usize) -> Value {
 
 fn render(budget: u64, cut: &[&str], files: &[Value], series: &Value) -> String {
     let mut o = Out::default();
-    o.raw("{\"schema\":\"ispezione/1\",\"profile\":\"ricerca\",\"budget_tokens\":")
+    o.raw("{\"schema\":\"inspection/1\",\"profile\":\"research\",\"budget_tokens\":")
         .int(budget as i64);
     o.raw(",\"truncated\":[");
     for (k, c) in cut.iter().enumerate() {
@@ -315,12 +315,12 @@ fn drop_keys(files: &mut [Value], keys: &[&str]) {
     }
 }
 
-/// The `ispezione/1` text for `sources` within `budget_tokens` (`ceil(bytes / 3)`, as `contesto/1`). `sources` is
+/// The `inspection/1` text for `sources` within `budget_tokens` (`ceil(bytes / 3)`, as `context/1`). `sources` is
 /// `{profile, hide_names, roles_confirmed?, files:[{name, error?, items:[Item.info], scan_stats?, mrm?, method?, estimate?, sample?, tic?, bpc?, signals?}]}`.
 /// Sections that do not fit are dropped, least useful first, and named in `truncated`; the same input gives the same bytes. The `corso` profile gets
 /// `err.llm.profile.course`.
 pub fn build(sources: &Value, budget_tokens: u64) -> Result<String> {
-    if sources.get("profile").and_then(Value::str) != Some("ricerca") {
+    if sources.get("profile").and_then(Value::str) != Some("research") {
         return Err(Error::new("err.llm.profile.course"));
     }
     let hide = sources.get("hide_names").and_then(Value::bool) == Some(true);

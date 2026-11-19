@@ -135,7 +135,7 @@ pub fn truths_in(dir: &Path) -> Vec<PathBuf> {
     out
 }
 
-/// F1 to F4 over sample `c` of an open reader; F0 is the caller's (it opened the file); F5 reads the `metodo/1` document.
+/// F1 to F4 over sample `c` of an open reader; F0 is the caller's (it opened the file); F5 reads the `method/1` document.
 pub fn compare(l: &mut dyn Reader, v: &Value, c: usize, tol: Tol, name: &str) -> Ratio {
     let mut livelli: Vec<(&'static str, Outcome)> = vec![("F0", Outcome::Ok)];
     let index: Vec<ScanEntry> = match l.index(c) {

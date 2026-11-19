@@ -1,4 +1,4 @@
-//! `metodo/1` of one sample of a `.wiff` dropped without its `.scan` (module `sciex`): the same `from_wiff` the CLI and the app run, with the extended metadata (`estesi`), because the
+//! `method/1` of one sample of a `.wiff` dropped without its `.scan` (module `sciex`): the same `from_wiff` the CLI and the app run, with the extended metadata (`estesi`), because the
 //! engine's .wasm is built without it (its cap has no room). `read(0, offset, length) -> Uint8Array`, the callback of the module (`rust-metodo.js` wraps the engine's reader).
 use js_sys::Function;
 use mzlab_core::method::{Source, SrcFile};
@@ -12,7 +12,7 @@ fn fail(e: &mzlab_core::Error) -> JsValue {
     JsValue::from_str(&e.to_json())
 }
 
-/// `metodo/1` of `sample` of the `.wiff` of `size` bytes (`sha1` = its SHA-1 when known, `""` otherwise).
+/// `method/1` of `sample` of the `.wiff` of `size` bytes (`sha1` = its SHA-1 when known, `""` otherwise).
 #[wasm_bindgen]
 pub fn wiff_metodo(
     name: &str,

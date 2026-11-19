@@ -60,7 +60,7 @@ pub struct Assist {
 
 #[wasm_bindgen]
 impl Assist {
-    /// `roles_json`: `assist-ruoli/1`; `prompts_json`: `[["02_router.md","..."],...]`; `steps_json`: the `step/1` descriptors (the page has them).
+    /// `roles_json`: `assist-roles/1`; `prompts_json`: `[["02_router.md","..."],...]`; `steps_json`: the `step/1` descriptors (the page has them).
     #[wasm_bindgen(constructor)]
     pub fn new(
         provider_id: &str,

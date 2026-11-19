@@ -27,11 +27,11 @@ fn the_known_labels_give_numbers_or_text_as_written() {
 fn exp(pairs: &[(&str, f64)]) -> V {
     let p: Vec<V> = pairs
         .iter()
-        .filter_map(|(i, v)| obj(vec![("id", text(i)), ("valore", Some(V::Num(*v)))]))
+        .filter_map(|(i, v)| obj(vec![("id", text(i)), ("value", Some(V::Num(*v)))]))
         .collect();
     obj(vec![
-        ("indice", Some(V::Num(2.0))),
-        ("parametri", Some(V::Arr(p))),
+        ("index", Some(V::Num(2.0))),
+        ("parameters", Some(V::Arr(p))),
     ])
     .unwrap()
 }
@@ -53,8 +53,8 @@ fn a_stepped_energy_is_the_list_of_its_steps_and_the_window_is_a_width() {
         e.get("nce"),
         Some(&V::Arr(vec![V::Num(20.0), V::Num(35.0), V::Num(60.0)]))
     );
-    assert_eq!(e.get("isolamento_mz"), Some(&V::Num(1.5)));
-    let ids: Vec<String> = match e.get("parametri") {
+    assert_eq!(e.get("isolation_mz"), Some(&V::Num(1.5)));
+    let ids: Vec<String> = match e.get("parameters") {
         Some(V::Arr(a)) => a
             .iter()
             .filter_map(|p| match p.get("id") {
@@ -71,7 +71,7 @@ fn a_stepped_energy_is_the_list_of_its_steps_and_the_window_is_a_width() {
 fn a_mean_that_is_not_the_mean_of_the_steps_is_left_alone() {
     let s = parse(&[TEXT]);
     let out = refine(vec![exp(&[("NCE", 30.0), ("Resolution", 17500.0)])], &s);
-    assert!(out[0].get("nce").is_none() && out[0].get("isolamento_mz").is_none());
+    assert!(out[0].get("nce").is_none() && out[0].get("isolation_mz").is_none());
     assert_eq!(out[0], exp(&[("NCE", 30.0), ("Resolution", 17500.0)]));
 }
 
@@ -81,6 +81,6 @@ fn solvents_come_from_the_equate_lines_before_the_first_timed_row() {
     let v = solvents(&script_pairs(sc)).expect("solvents");
     let V::Arr(a) = v else { panic!() };
     assert_eq!(a.len(), 2);
-    assert_eq!(a[0].get("canale"), Some(&V::s("A")));
-    assert_eq!(a[0].get("nome"), Some(&V::s("Water + 0.1% FA")));
+    assert_eq!(a[0].get("channel"), Some(&V::s("A")));
+    assert_eq!(a[0].get("name"), Some(&V::s("Water + 0.1% FA")));
 }

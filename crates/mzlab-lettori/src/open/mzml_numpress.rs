@@ -345,7 +345,7 @@ impl Reader for NumpressReader {
         self.trace(id)
     }
 
-    /// The `metodo/1` document the mzML carries (written by mzLab); an mzML of another program has none (`{}`: no section).
+    /// The `method/1` document the mzML carries (written by mzLab); an mzML of another program has none (`{}`: no section).
     fn method(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
         let head = self.head_xml()?;

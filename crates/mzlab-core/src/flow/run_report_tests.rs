@@ -1,4 +1,4 @@
-//! `corsa/1` on a hand-written `prov/1`: files and lists apart, estimated against fixed parameters, level counts and the included `report/1`.
+//! `run-report/1` on a hand-written `prov/1`: files and lists apart, estimated against fixed parameters, level counts and the included `report/1`.
 
 use super::*;
 use crate::json::parse;
@@ -61,7 +61,7 @@ fn json_is_stable_and_valid() {
     let a = run().json();
     assert_eq!(a, run().json());
     let v = parse(a.as_bytes()).unwrap();
-    assert_eq!(v.get("schema").unwrap().str(), Some("corsa/1"));
+    assert_eq!(v.get("schema").unwrap().str(), Some("run-report/1"));
     assert_eq!(v.get("total_ms").unwrap().f64(), Some(15.5));
     assert_eq!(
         v.get("report").unwrap().get("rows").unwrap().f64(),
@@ -72,6 +72,12 @@ fn json_is_stable_and_valid() {
         .unwrap()
         .arr()[0];
     assert_eq!(p.get("state").unwrap().str(), Some("estimated"));
+    for old in ["corsa", "uscite", "stato", "ingresso"] {
+        assert!(
+            !a.contains(&format!("\"{old}")),
+            "Italian word {old} in the run report"
+        );
+    }
 }
 
 #[test]
@@ -80,7 +86,7 @@ fn refuses_what_is_not_prov() {
     assert!(build(&v, &[])
         .unwrap_err()
         .to_string()
-        .contains("err.corsa.prov"));
+        .contains("err.run_report.prov"));
 }
 
 #[test]

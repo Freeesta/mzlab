@@ -164,7 +164,7 @@ fn build_index(d: &AgilentD, scans: &[usize], peak_member: u16) -> Vec<ScanEntry
         .collect()
 }
 
-/// The `metodo/1` document; `MSPeak.bin` is listed without a SHA-1 (hashing it would read the whole file).
+/// The `method/1` document; `MSPeak.bin` is listed without a SHA-1 (hashing it would read the whole file).
 fn document(l: &AgilentReader) -> String {
     let mut files: Vec<SrcFile> =
         l.d.file_sha1

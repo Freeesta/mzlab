@@ -90,12 +90,12 @@ try:
             assert res["mod"]["tic"] == res["eng"]["tic"] and len(res["mod"]["tic"].get("t", res["mod"]["tic"].get("rt", [1] * N))) > 0, (res["mod"]["tic"], res["eng"]["tic"])
         step("the TIC is the one of the engine's path", same_tic)
         def same_bytes():
-            # the module (feature `estesi`) writes the indexed form of `mzlab-cli convert` and the account `conv/1` of its extended reader; the engine's wasm leaves both out for its size.
+            # the module (feature `estesi`) writes the indexed form of `mzlab-cli convert` and the account `conversion/1` of its extended reader; the engine's wasm leaves both out for its size.
             # So compare the <mzML> element they share, without that one userParam (the spectra, the header and every other byte must match)
             import base64, re
             def core(b64):
                 x = base64.b64decode(b64).decode("utf-8"); x = x[x.index("<mzML"):x.index("</mzML>")]
-                return re.sub(r'<userParam name="mzLab conv/1"[^>]*/>', "", x)
+                return re.sub(r'<userParam name="mzLab conversion/1"[^>]*/>', "", x)
             assert core(res["mod_mzml"]) == core(res["eng_mzml"]) and len(res["mod_mzml"]) > 1000, (len(res["mod_mzml"]), len(res["eng_mzml"]))
         step("«Download .mzML» is the engine's mzML byte for byte, without converting again", same_bytes)
         def no_miss():

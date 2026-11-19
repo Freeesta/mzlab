@@ -126,7 +126,7 @@ fn every_real_run_opens_and_gives_its_scans_and_traces() {
         let tic = l.chromatogram(0, "TIC").unwrap();
         assert!(!tic.time.is_empty(), "{label}: TIC");
         let m = l.method(0).unwrap();
-        assert!(m.contains("\"schema\":\"metodo/1\""), "{label}: method");
+        assert!(m.contains("\"schema\":\"method/1\""), "{label}: method");
         eprintln!(
             "{label}: {n} spectra, {srm} SRM, TIC {} points",
             tic.time.len()
@@ -326,24 +326,24 @@ fn the_method_carries_the_lc_ms_sections() {
         eprintln!(
             "{label}: lc {} gradient {} modules {} sample {}",
             m.contains("\"lc\":{"),
-            m.contains("\"gradiente\":["),
-            m.contains("\"moduli\":["),
-            m.contains("\"campione\":{\"nome\"")
+            m.contains("\"gradient\":["),
+            m.contains("\"modules\":["),
+            m.contains("\"sample\":{\"name\"")
         );
-        with_lc += m.contains("\"gradiente\":[") as usize;
+        with_lc += m.contains("\"gradient\":[") as usize;
         if whole.contains("qqq_6470") {
             // a dMRM method: the retention windows of each transition
-            assert!(m.contains("\"tipo\":\"MRM\""), "{label}");
-            assert!(m.contains("\"rt_min\":") && m.contains("\"finestra_rt_min\":"));
-            assert!(m.contains("\"frammentatore_V\":") && m.contains("\"polarita\":\"Negative\""));
+            assert!(m.contains("\"type\":\"MRM\""), "{label}");
+            assert!(m.contains("\"rt_min\":") && m.contains("\"window_rt_min\":"));
+            assert!(m.contains("\"fragmentor_V\":") && m.contains("\"polarity\":\"Negative\""));
             qqq += 1;
         }
         if whole.contains("MTBLS599") {
-            assert!(m.contains("\"rivelatori\":[{\"tipo\":\"DAD\""), "{label}");
+            assert!(m.contains("\"detectors\":[{\"type\":\"DAD\""), "{label}");
             assert!(m.contains("\"nm\":254"), "{label}");
-            assert!(m.contains("\"liste_precursori\":["), "{label}");
+            assert!(m.contains("\"precursor_lists\":["), "{label}");
             assert!(
-                m.contains("\"dove\":\"AcqData/DAD1.sd\""),
+                m.contains("\"place\":\"AcqData/DAD1.sd\""),
                 "{label}: DAD not decoded"
             );
             qtof += 1;

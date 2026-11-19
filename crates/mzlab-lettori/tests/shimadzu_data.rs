@@ -73,9 +73,9 @@ fn lcms2020_scans_add_up_to_the_tic() {
     eprintln!(
         "LEN {} {}",
         m.len(),
-        &m[m.find("\"strumento\"").unwrap()..][..160]
+        &m[m.find("\"instrument\"").unwrap()..][..160]
     );
-    eprintln!("{}", &m[m.find("\"avvisi\"").unwrap_or(0)..]);
+    eprintln!("{}", &m[m.find("\"warnings\"").unwrap_or(0)..]);
     eprintln!(
         "{}",
         m.split("GUM")
@@ -116,10 +116,12 @@ fn the_method_names_the_maker_and_the_mzml_header_has_no_operator() {
     ]) {
         let Some(mut l) = open(f) else { return };
         assert!(
-            l.method(0).unwrap().contains("\"produttore\":\"Shimadzu\""),
+            l.method(0)
+                .unwrap()
+                .contains("\"manufacturer\":\"Shimadzu\""),
             "{f}"
         );
         let h = l.mzml_header(0).unwrap().unwrap();
-        assert!(!h.run_params[0].1.contains("operatore"), "{f}");
+        assert!(!h.run_params[0].1.contains("\"operator\":"), "{f}");
     }
 }

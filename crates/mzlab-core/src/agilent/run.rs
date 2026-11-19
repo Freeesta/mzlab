@@ -119,7 +119,7 @@ impl AgilentD {
         self.records.iter().filter(|r| r.points > 0).count()
     }
 
-    /// The `metodo/1` document for the files read (name, SHA-1).
+    /// The `method/1` document for the files read (name, SHA-1).
     fn document(&self, sources: &[(String, String)]) -> String {
         self.method(&Source {
             format: "agilent-d",

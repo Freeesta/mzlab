@@ -52,14 +52,14 @@ fn same(file: &str, a: &[u8], b: &[u8], what: &str) {
     }
 }
 
-/// The files of a run folder without the clocks of `prov.json` and `corsa.json`.
+/// The files of a run folder without the clocks of `prov.json` and `report.json`.
 fn folder(dir: &Path) -> Vec<(String, Vec<u8>)> {
     let mut v: Vec<(String, Vec<u8>)> = std::fs::read_dir(dir)
         .unwrap()
         .map(|e| e.unwrap().path())
         .filter(|f| f.is_file())
         .map(|f| (name(&f), std::fs::read(&f).unwrap()))
-        .filter(|(n, _)| n != "prov.json" && n != "corsa.json")
+        .filter(|(n, _)| n != "prov.json" && n != "report.json")
         .collect();
     v.sort();
     v

@@ -329,7 +329,7 @@ fn convert(root: &Path, out: &Path) -> std::result::Result<Vec<PathBuf>, String>
         "1".into(),
     ];
     let o = mzlab_cli::convert::run(args);
-    // 3 is a file written with scans missing: its conv/1 says so, the page shows the counts
+    // 3 is a file written with scans missing: its conversion/1 says so, the page shows the counts
     if o.code != 0 && o.code != 3 {
         // the line of the failed file: «[1/1] name ... failed: CAUSE»
         let why: String = o

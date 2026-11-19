@@ -1,4 +1,4 @@
-//! What the assistant sees (`contesto/1`): a few summaries of what the engine already produced (file info, TIC, the plan, a run, a table, the MSn
+//! What the assistant sees (`context/1`): a few summaries of what the engine already produced (file info, TIC, the plan, a run, a table, the MSn
 //! graph, the annotation levels), reduced and rounded here so the same input gives the same bytes. Never spectra, profile points, file bytes or paths.
 //! The page collects the sources; this module cuts them to a token budget and says what it cut. Used by the transport and `mzlab-cli llm context`.
 
@@ -272,7 +272,7 @@ fn sections(src: &Value, hide: bool) -> Vec<(&'static str, Value)> {
 
 fn render(budget: u64, cut: &[&str], parts: &[(&'static str, Value)]) -> String {
     let mut o = Out::default();
-    o.raw("{\"schema\":\"contesto/1\",\"profile\":\"ricerca\",\"budget_tokens\":")
+    o.raw("{\"schema\":\"context/1\",\"profile\":\"research\",\"budget_tokens\":")
         .int(budget as i64);
     o.raw(",\"truncated\":[");
     for (k, c) in cut.iter().enumerate() {
@@ -299,10 +299,10 @@ fn without_tic(parts: &mut [(&'static str, Value)]) {
     }
 }
 
-/// The `contesto/1` text for `sources` within `budget_tokens` (`ceil(bytes / 3)`); sections that do not fit are dropped, last-useful first, and named
+/// The `context/1` text for `sources` within `budget_tokens` (`ceil(bytes / 3)`); sections that do not fit are dropped, last-useful first, and named
 /// in `truncated`. The `corso` profile gets `err.llm.profile.course`: the assistant does not exist there.
 pub fn build(sources: &Value, budget_tokens: u64) -> Result<String> {
-    if sources.get("profile").and_then(Value::str) != Some("ricerca") {
+    if sources.get("profile").and_then(Value::str) != Some("research") {
         return Err(Error::new("err.llm.profile.course"));
     }
     let hide = sources.get("hide_names").and_then(Value::bool) == Some(true);

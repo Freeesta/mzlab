@@ -1,4 +1,4 @@
-//! `metodo/1` of the `.wiff` files of the 3200 QTRAP against what is known of them: the `.dam` that the file names, the SHA-1 that ProteoWizard wrote in its mzML.
+//! `method/1` of the `.wiff` files of the 3200 QTRAP against what is known of them: the `.dam` that the file names, the SHA-1 that ProteoWizard wrote in its mzML.
 //! Needs the private data repository (`MZLAB_DATI`, or `mzlab-dati` beside this one); without it the test is skipped (no data of the laboratory lives here).
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
@@ -34,10 +34,10 @@ fn ms_of(doc: &str) -> String {
             Value::Obj(f) => {
                 o.raw("{");
                 // the kind of source (`tipo` of the source, which has only it and `parametri`) is said by the log of a .wiff, not by a .dam
-                let is_source = f.len() == 2 && f.iter().any(|(k, _)| k == "parametri");
+                let is_source = f.len() == 2 && f.iter().any(|(k, _)| k == "parameters");
                 let f: Vec<_> = f
                     .iter()
-                    .filter(|(k, _)| !(is_source && k == "tipo"))
+                    .filter(|(k, _)| !(is_source && k == "type"))
                     .collect();
                 for (i, (k, x)) in f.into_iter().enumerate() {
                     o.raw(if i > 0 { "," } else { "" }).str(k).raw(":");
@@ -69,10 +69,10 @@ fn check_sample(ole: &Ole, wiff: &str, bytes: &[u8], sample: u32) -> usize {
         json::parse(doc.as_bytes()).unwrap_or_else(|e| panic!("{wiff} {sample}: not JSON: {e:?}"));
     assert_eq!(
         v.get("schema").and_then(|s| s.str()),
-        Some("metodo/1"),
+        Some("method/1"),
         "{wiff} {sample}"
     );
-    for k in ["origine", "campione", "strumento", "registro", "grezzo"] {
+    for k in ["origin", "sample", "instrument", "log", "raw"] {
         assert!(
             v.get(k).is_some(),
             "{wiff} {sample}: section {k} is missing"
@@ -85,13 +85,13 @@ fn check_sample(ole: &Ole, wiff: &str, bytes: &[u8], sample: u32) -> usize {
             .map(String::from)
     };
     assert_eq!(
-        text("strumento", "modello").as_deref(),
+        text("instrument", "model").as_deref(),
         Some("3200 Q TRAP"),
         "{wiff} {sample}"
     );
     let mut checked = 0;
     // the .dam named by the sample, when the repository has it: every parameter of the method the same
-    if let (Some(name), true) = (text("campione", "metodo_file"), v.get("ms").is_some())
+    if let (Some(name), true) = (text("sample", "method_file"), v.get("ms").is_some())
         && let Some(dam) = dati_percorsi::percorso(&format!("dati/3200 qtrap/dam/{name}"))
             .and_then(|p| std::fs::read(p).ok())
     {

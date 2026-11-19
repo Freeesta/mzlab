@@ -98,10 +98,10 @@ fn a_folder_gives_valid_mzml_and_the_broken_file_is_named_with_its_cause() {
         assert!(r.get("spectra").and_then(Value::f64).unwrap() > 0.0);
         assert_eq!(r.get("sha256").and_then(Value::str).unwrap().len(), 64);
         assert_eq!(
-            r.get("conv/1")
+            r.get("conversion")
                 .and_then(|c| c.get("schema"))
                 .and_then(Value::str),
-            Some("conv/1")
+            Some("conversion/1")
         );
         assert_eq!(r.get("skipped").and_then(Value::bool), Some(false));
     }
@@ -416,7 +416,7 @@ fn the_compression_kinds_are_the_short_forms_of_zlib_and_numpress() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// A method blob over the old 1 MiB head pushes `spectrumList` and `conv/1` far into the file: the report still reads both.
+/// A method blob over the old 1 MiB head pushes `spectrumList` and `conversion/1` far into the file: the report still reads both.
 #[test]
 fn the_report_reads_spectra_and_conv_past_a_large_method_blob() {
     let dir = std::env::temp_dir().join(format!("mzlab-head-{}", std::process::id()));
@@ -424,8 +424,8 @@ fn the_report_reads_spectra_and_conv_past_a_large_method_blob() {
     for blob in [0usize, 3 << 20] {
         let file = dir.join(format!("h{blob}.mzML"));
         let text = format!(
-            "<?xml version=\"1.0\"?>\n<mzML><run id=\"r\"><userParam name=\"mzLab metodo/1\" value=\"{}\"/>\
-             <userParam name=\"mzLab conv/1\" value=\"{{&quot;a&quot;:1}}\"/>\n<spectrumList count=\"7\" defaultDataProcessingRef=\"c\">\n\
+            "<?xml version=\"1.0\"?>\n<mzML><run id=\"r\"><userParam name=\"mzLab method/1\" value=\"{}\"/>\
+             <userParam name=\"mzLab conversion/1\" value=\"{{&quot;a&quot;:1}}\"/>\n<spectrumList count=\"7\" defaultDataProcessingRef=\"c\">\n\
              <spectrum index=\"0\"/></spectrumList></run></mzML>\n",
             "x".repeat(blob)
         );
@@ -470,14 +470,14 @@ fn a_budget_too_small_for_the_default_converts_fewer_files_at_once_and_says_so()
     );
 }
 
-/// Each entry of `metodo/1.avvisi` in the head of an mzML is a note with its catalogue text and place, and a key without a text keeps its place.
+/// Each entry of `method/1.warnings` in the head of an mzML is a note with its catalogue text and place, and a key without a text keeps its place.
 #[test]
 fn the_method_warnings_are_notes_with_their_text() {
     let dir = folder("notes");
     let file = dir.join("n.mzML");
-    let doc = "{&quot;schema&quot;:&quot;metodo/1&quot;,&quot;avvisi&quot;:[{&quot;chiave&quot;:&quot;meta.troncato&quot;,&quot;dove&quot;:&quot;scan 7&quot;},{&quot;chiave&quot;:&quot;meta.nuovo&quot;,&quot;dove&quot;:&quot;x&quot;}]}";
+    let doc = "{&quot;schema&quot;:&quot;method/1&quot;,&quot;warnings&quot;:[{&quot;key&quot;:&quot;meta.troncato&quot;,&quot;place&quot;:&quot;scan 7&quot;},{&quot;key&quot;:&quot;meta.nuovo&quot;,&quot;place&quot;:&quot;x&quot;}]}";
     let text = format!(
-        "<?xml version=\"1.0\"?>\n<mzML><run id=\"r\"><userParam name=\"mzLab metodo/1\" value=\"{doc}\"/>\n<spectrumList count=\"0\" defaultDataProcessingRef=\"c\">\n</spectrumList></run></mzML>\n"
+        "<?xml version=\"1.0\"?>\n<mzML><run id=\"r\"><userParam name=\"mzLab method/1\" value=\"{doc}\"/>\n<spectrumList count=\"0\" defaultDataProcessingRef=\"c\">\n</spectrumList></run></mzML>\n"
     );
     std::fs::write(&file, text).unwrap();
     let (_, _, notes) = crate::convert_report::head_of(&file);

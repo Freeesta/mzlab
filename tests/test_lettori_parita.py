@@ -182,7 +182,7 @@ def test_waters_index_marks_equal_the_cli(tools):
 
 
 def test_waters_function_without_its_dat_equals_the_cli(tools):
-    """The folder of the index marks without `_FUNC002.DAT`: both faces write the 20 scans of function 1, byte for byte, and `conv/1` counts 20 of 40 with the
+    """The folder of the index marks without `_FUNC002.DAT`: both faces write the 20 scans of function 1, byte for byte, and `conversion/1` counts 20 of 40 with the
     key of the missing member (`Reader::losses` of the Waters reader)."""
     import waters_sintetico
     ds = waters_sintetico.write_flags(tools["tmp"] / "in_waters_senza_dat")
@@ -215,7 +215,7 @@ def _waters_damaged(ds, part):
 @pytest.mark.parametrize("part", ["record", "index", "list", "calibration"])
 def test_waters_damaged_part_equals_the_cli(tools, part):
     """The folder of the index marks with one part damaged (a record, an index cut inside a row, a function list cut at a whole record, a calibration line
-    cut): both faces leave that part out, write the rest byte for byte, and `conv/1` names `warn.waters.damaged`."""
+    cut): both faces leave that part out, write the rest byte for byte, and `conversion/1` names `warn.waters.damaged`."""
     import waters_sintetico
     ds = waters_sintetico.write_flags(tools["tmp"] / f"in_waters_{part}")
     n = _waters_damaged(ds, part)
@@ -227,7 +227,7 @@ def test_waters_damaged_part_equals_the_cli(tools, part):
 
 
 def test_bruker_with_one_frame_without_calibration_equals_cli(tools):
-    """A `.d` of three frames whose middle one names an absent m/z calibration: both faces write the two whole frames, byte for byte, and the conv/1 of both
+    """A `.d` of three frames whose middle one names an absent m/z calibration: both faces write the two whole frames, byte for byte, and the conversion/1 of both
     names `warn.bruker.noCalibration` as the cause of the partial read."""
     ds = create("bruker_danneggiato", tools["tmp"] / "in_bruker_danneggiato")
     cli = da_cli(tools, "bruker_danneggiato", ds, code=3)
@@ -238,7 +238,7 @@ def test_bruker_with_one_frame_without_calibration_equals_cli(tools):
 
 
 def test_bruker_with_truncated_tdf_bin_equals_cli(tools):
-    """A `.d` whose `analysis.tdf_bin` ends inside the fourth of five frames: both faces write the three whole frames, byte for byte, and the conv/1 of both
+    """A `.d` whose `analysis.tdf_bin` ends inside the fourth of five frames: both faces write the three whole frames, byte for byte, and the conversion/1 of both
     names the cut `_bin` as the cause of the partial read."""
     ds = create("bruker_tagliato", tools["tmp"] / "in_bruker_tagliato")
     cli = da_cli(tools, "bruker_tagliato", ds, code=3)
@@ -250,7 +250,7 @@ def test_bruker_with_truncated_tdf_bin_equals_cli(tools):
 
 def test_thermo_damaged_units_equal_the_cli(tools):
     """A `.raw` with one of every damaged unit (an unreadable controller before the MS one, an unreadable analog controller, a scan pointing past the end,
-    a record that does not decode): both faces write the 12 scans, the damaged two without points, byte for byte, and conv/1 names `warn.raw.damaged`."""
+    a record that does not decode): both faces write the 12 scans, the damaged two without points, byte for byte, and conversion/1 names `warn.raw.damaged`."""
     ds = create("thermo_danneggiato", tools["tmp"] / "in_thermo_danneggiato")
     cli = da_cli(tools, "thermo_danneggiato", ds, code=3)
     wasm = da_wasm(tools, "thermo", ds)
@@ -338,14 +338,14 @@ def test_a_gc_run_with_data_ms_on_top_and_only_contents_in_acqdata_reads_on_both
 
 def test_wiff_with_dad_and_method_equals_cli_with_dad(tools):
     """A 3200 QTRAP variant (version-1 blocks) with an optical detector and an LC method: the module writes the matrix (`MS:1000804` spectra) and the method
-    (`mzLab metodo/1`), byte for byte what `mzlab-cli convert --set conv.dad=true` writes."""
+    (`mzLab method/1`), byte for byte what `mzlab-cli convert --set conv.dad=true` writes."""
     d = tools["tmp"] / "in_dadmetodo"
     r = run([sys.executable, str(ROOT / "tools/wiff_riferimento.py"), str(d)])
     assert r.returncode == 0, r.stderr[-1500:]
     ds = d / "dadmetodo.wiff"
     cli = da_cli(tools, "sciex_dad", ds, "--set", "conv.dad=true")
     wasm = da_wasm(tools, "sciex", ds)
-    assert b"MS:1000804" in cli and b"mzLab metodo/1" in cli
+    assert b"MS:1000804" in cli and b"mzLab method/1" in cli
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 

@@ -1,5 +1,5 @@
-//! `proposta-param/1`: the parameters of mzFlow proposed by deterministic rules (`R-*` of `docs/studi/assistente-dati/03-parametri.md` §5) from an
-//! `ispezione/1` and the answers of the user. Every proposal carries its rule, signals, confidence, `range_ok` against the real `step/1` limits and the
+//! `param-proposal/1`: the parameters of mzFlow proposed by deterministic rules (`R-*` of `docs/studi/assistente-dati/03-parametri.md` §5) from an
+//! `inspection/1` and the answers of the user. Every proposal carries its rule, signals, confidence, `range_ok` against the real `step/1` limits and the
 //! place of its proof; a signal that is absent gives a `missing` question, never an invented value. Used by `mzlab-cli llm` and the `llm` module.
 
 use mzlab_core::error::{Error, Result};
@@ -137,7 +137,7 @@ impl Conf {
     }
 }
 
-/// The signals of the series, read from the `ispezione/1` of the reference file (the first readable file that is not a blank) and its `series`.
+/// The signals of the series, read from the `inspection/1` of the reference file (the first readable file that is not a blank) and its `series`.
 pub(crate) struct Sig<'a> {
     pub file: &'a Value,
     pub series: &'a Value,
@@ -236,7 +236,7 @@ impl Acc<'_> {
                 ("range_ok", Value::Bool(range_ok)),
                 (
                     "proof",
-                    Value::Str(format!("ispezione:{}:{}", self.alias, proof)),
+                    Value::Str(format!("inspection:{}:{}", self.alias, proof)),
                 ),
             ]);
             self.proposals.push(obj(items));
@@ -260,9 +260,9 @@ pub(crate) fn sg(name: &str, x: f64) -> String {
     format!("{name}={}", crate::context::sig4(x))
 }
 
-/// The ispezione/1 of the sources → the proposals; `answers` is `{objective?, identify?, weak_signals?, elements?, groups?}`, `registry` is `flow::steps()`.
+/// The inspection/1 of the sources → the proposals; `answers` is `{objective?, identify?, weak_signals?, elements?, groups?}`, `registry` is `flow::steps()`.
 pub fn propose(inspection: &Value, answers: &Value, registry: &[Step]) -> Result<String> {
-    if inspection.get("schema").and_then(Value::str) != Some("ispezione/1") {
+    if inspection.get("schema").and_then(Value::str) != Some("inspection/1") {
         return Err(Error::new("err.llm.params.input"));
     }
     let files = inspection.get("files").map_or(&[][..], Value::arr);
@@ -304,7 +304,7 @@ pub fn propose(inspection: &Value, answers: &Value, registry: &[Step]) -> Result
         acc.ask("files", "Q-files");
     }
     let mut o = Out::default();
-    o.raw("{\"schema\":\"proposta-param/1\",\"series\":\"s1\",\"proposals\":");
+    o.raw("{\"schema\":\"param-proposal/1\",\"series\":\"s1\",\"proposals\":");
     value(&mut o, &Value::Arr(acc.proposals));
     o.raw(",\"missing\":");
     value(&mut o, &Value::Arr(acc.missing));

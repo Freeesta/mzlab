@@ -3,6 +3,8 @@
 // Ketcher's frame gets a localStorage that never throws. Ketcher saves its settings with no try/catch, so a full or blocked storage
 // (QuotaExceededError) would stop its start: blank canvas and an English error. The vendor page is not edited: this module wraps the
 // frame's Storage methods from the parent as soon as the Ketcher document exists, before its deferred bundle runs. What could not be saved lives in memory.
+// The same moment installs the focus guard (disegno-tablet.js): at the frame's load event Ketcher may already have focused its clipboard textarea (a policy violation).
+import { guardFocus } from "./disegno-tablet.js";
 const FRAME_PAGE = "ketcher/index.html";
 const done = new WeakSet();
 
@@ -29,7 +31,7 @@ export function guardStorage() {
     try {
       const w = /** @type {any} */ (fr.contentWindow);
       if (w && w.ketcher) { clearInterval(iv); return; }
-      if (w && w.location.href.includes(FRAME_PAGE) && w.document && !done.has(w.document)) { done.add(w.document); guard(w); }
+      if (w && w.location.href.includes(FRAME_PAGE) && w.document && !done.has(w.document)) { done.add(w.document); guard(w); guardFocus(w.document); }
     } catch (_) { /* frame being replaced: next tick */ }
     if (Date.now() - t0 > 90000) clearInterval(iv);
   }, 4);

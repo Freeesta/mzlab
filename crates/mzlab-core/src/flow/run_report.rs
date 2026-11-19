@@ -1,4 +1,4 @@
-//! The `corsa/1` record: one run of a workflow plan as a report that can be printed and checked. It is built from the `prov/1` record of the run (read, never
+//! The `run-report/1` record: one run of a workflow plan as a report that can be printed and checked. It is built from the `prov/1` record of the run (read, never
 //! changed) and the named output files of the run folder (`annot/1` for the level counts, `report/1` of the table, included as it is). Every number of the report
 //! is made here; the page only lays them out. No verdicts: levels from `annot.level` are counted as `auto`, apart from the others.
 
@@ -199,7 +199,7 @@ const OUTPUT_KEYS: &[&str] = &[
 /// Builds the report from the `prov/1` of a run and the output files that go with it; a file that is not JSON of a known format is ignored.
 pub fn build(prov: &Value, uscite: &[Output]) -> Result<RunReport> {
     if prov.get("schema").and_then(|s| s.str()) != Some("prov/1") {
-        return Err(Error::new("err.corsa.prov"));
+        return Err(Error::new("err.run_report.prov"));
     }
     let agent = prov.get("agent");
     let mut engine = Vec::new();
@@ -373,10 +373,10 @@ fn step(o: &mut Out, s: &Step) {
 }
 
 impl RunReport {
-    /// The `corsa/1` text: fixed key order, shortest numbers, one line and a newline; the same run gives the same bytes.
+    /// The `run-report/1` text: fixed key order, shortest numbers, one line and a newline; the same run gives the same bytes.
     pub fn json(&self) -> String {
         let mut o = Out::default();
-        o.raw("{\"schema\":\"corsa/1\",\"engine\":{");
+        o.raw("{\"schema\":\"run-report/1\",\"engine\":{");
         for (k, (name, v)) in self.engine.iter().enumerate() {
             o.raw(if k > 0 { "," } else { "" })
                 .str(name)

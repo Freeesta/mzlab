@@ -162,7 +162,7 @@ fn the_original_header_stays_and_mzlab_writes() {
         "mzLab as the converter"
     );
     assert!(
-        !t.contains("mzLab metodo/1"),
+        !t.contains("mzLab method/1"),
         "no document when the original had none"
     );
 }
@@ -170,7 +170,7 @@ fn the_original_header_stays_and_mzlab_writes() {
 #[test]
 fn the_method_repeats_only_if_the_mzml_carries_it() {
     let scan = scans();
-    let doc = "{\"schema\":\"metodo/1\",\"strumento\":{\"modello\":\"x\"}}";
+    let doc = "{\"schema\":\"method/1\",\"instrument\":{\"model\":\"x\"}}";
     let mut con = open(mzml_di(
         &scan,
         Cod::Np {
@@ -181,7 +181,7 @@ fn the_method_repeats_only_if_the_mzml_carries_it() {
     ));
     assert_eq!(con.method(0).unwrap(), doc);
     let t = String::from_utf8_lossy(&written_mzml(&mut con)).to_string();
-    assert!(t.contains("mzLab metodo/1"));
+    assert!(t.contains("mzLab method/1"));
     let mut without = open(mzml_di(
         &scan,
         Cod::Np {

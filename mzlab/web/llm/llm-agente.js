@@ -16,7 +16,7 @@ import { conv, ownerLabels, pretty } from "./llm-sezione.js";
 /** @typedef {{show: (text: string) => void, log: (line: any) => void, sending: (request: any) => void, call: (id: string, name: string, args: any) => Promise<{ok: boolean, content: any}>,
  *   ask: (id: string, summary: string, name: string, args: any) => Promise<boolean>, done: (outcome: string) => void,
  *   readerInput?: (role: string) => Promise<object | null> | object | null, reader?: (info: {role: string, status: "accepted" | "dropped" | "failed" | "skipped", problems?: any[], summary?: any}) => void, readerStage?: (role: string, stage: "queued" | "running" | "cancelled") => void}} Host
- * `readerInput(role)` gives the sources a reader may see, keyed by source (`{"ispezione/1": ...}`), or null when the page has none (the reader is skipped); `reader` hears how each one ended and `readerStage` where it is (queued, running, cancelled by a Stop). */
+ * `readerInput(role)` gives the sources a reader may see, keyed by source (`{"inspection/1": ...}`), or null when the page has none (the reader is skipped); `reader` hears how each one ended and `readerStage` where it is (queued, running, cancelled by a Stop). */
 
 /** a recording for tests: `MZLAB_LLM_AGENT.replay(text, strict)` answers the requests of the next conversation */
 /** @type {{text: string, strict: boolean} | null} */ let recording = null;
@@ -59,7 +59,7 @@ export class AgentRun {
   /** @param {any} msg @returns {Promise<any>} */
   rpc(msg) { return new Promise((ok, no) => { const id = "a" + (++this.n); this.calls.set(id, { ok, no }); this.worker.postMessage({ ...msg, id }); }); }
 
-  /** starts the conversation with the level and model of the settings; `research` = the profile is «ricerca» (the machine refuses the course profile) */
+  /** starts the conversation with the level and model of the settings; `research` = the profile is «research» (the machine refuses the course profile) */
   async open(research = true) {
     const rec = recording;
     this.replaying = !!rec;
@@ -73,7 +73,7 @@ export class AgentRun {
   /** tokens [in, out] of the machine and of the subagents together */
   totalUsage() { return [this.usage[0] + this.subUsage[0], this.usage[1] + this.subUsage[1]]; }
 
-  /** @param {string} text the user's message @param {string} [context] a contesto/1 text that goes with it @returns {Promise<string>} how the turn ended */
+  /** @param {string} text the user's message @param {string} [context] a context/1 text that goes with it @returns {Promise<string>} how the turn ended */
   async user(text, context = "") {
     this.running = true; this.turns++; this.stopped = false;
     this.done = new Promise(ok => { this.finish = ok; });
@@ -221,11 +221,11 @@ export class AgentRun {
 
   /** the log of the conversation (`llmlog/1` text) */
   async log() { return (await this.rpc({ op: "agent.in", kind: "log" })).log; }
-  /** @param {string} sources JSON of the sources of the page @param {number} [budget] @returns {Promise<string>} a contesto/1 text */
+  /** @param {string} sources JSON of the sources of the page @param {number} [budget] @returns {Promise<string>} a context/1 text */
   async context(sources, budget = 4000) { return (await this.rpc({ op: "context", sources, budget })).context; }
-  /** the `ispezione/1` of the sources the page collected (Rust, no model), as Rust wrote it @param {string} sources JSON @param {number} [budget] tokens @returns {Promise<string>} */
+  /** the `inspection/1` of the sources the page collected (Rust, no model), as Rust wrote it @param {string} sources JSON @param {number} [budget] tokens @returns {Promise<string>} */
   async inspectText(sources, budget = 30000) { return (await this.rpc({ op: "inspect.build", sources, budget })).inspection; }
-  /** the `proposta-param/1` of the rules for an inspection and the user's answers (Rust, no model), as Rust wrote it @param {string} inspection JSON @param {string} answers JSON or "" @param {string} steps JSON of the `step/1` descriptors of the page @returns {Promise<string>} */
+  /** the `param-proposal/1` of the rules for an inspection and the user's answers (Rust, no model), as Rust wrote it @param {string} inspection JSON @param {string} answers JSON or "" @param {string} steps JSON of the `step/1` descriptors of the page @returns {Promise<string>} */
   async paramsProposeText(inspection, answers, steps) { return (await this.rpc({ op: "params.propose", inspection, answers, steps })).proposal; }
   /** @param {string} sources JSON of the sources of the charts @returns {Promise<any[]>} the views that exist now: {ref, description, fields, rows} */
   async chartViews(sources) { return JSON.parse((await this.rpc({ op: "chart.views", sources })).views); }
@@ -236,7 +236,7 @@ export class AgentRun {
   close() { this.worker.terminate(); if (this.client && this.client.close) this.client.close(); }
 }
 
-/** whether the assistant is on for this page: profile «ricerca», switched on in the settings and a consent for the provider (no conversation is opened before this is true; the facts of `factsRun` need none) */
+/** whether the assistant is on for this page: profile «research», switched on in the settings and a consent for the provider (no conversation is opened before this is true; the facts of `factsRun` need none) */
 export function assistantOn() {
   const s = readSettings();
   return s.on && !!s.provider && hasConsent(s.provider);

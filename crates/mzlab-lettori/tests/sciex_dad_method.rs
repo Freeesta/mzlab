@@ -1,5 +1,5 @@
 //! A `.wiff` the site sends to the `sciex` module (3200 QTRAP, version-1 blocks) keeps its optical detector and its LC method in the converted mzML:
-//! the engine answers `/api/uvspec` and `/api/chrom?kind=pda` from the file and the method (with the gradient) comes back from `mzLab metodo/1`.
+//! the engine answers `/api/uvspec` and `/api/chrom?kind=pda` from the file and the method (with the gradient) comes back from `mzLab method/1`.
 //! Synthetic pair of `tools/wiff_riferimento.py` (`dadmetodo`); skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 #![cfg(feature = "sciex")]
 
@@ -101,11 +101,11 @@ fn the_variant_mzml_carries_the_matrix_and_the_method() {
     let doc: Value = serde_json::from_str(
         &m.method("dadmetodo.mzML", 1 << 20)
             .unwrap()
-            .expect("metodo/1 in the run"),
+            .expect("method/1 in the run"),
     )
     .unwrap();
-    assert_eq!(doc["schema"], "metodo/1");
-    let grad = doc["lc"]["gradiente"]
+    assert_eq!(doc["schema"], "method/1");
+    let grad = doc["lc"]["gradient"]
         .as_array()
         .expect("the gradient of the time program");
     let got: Vec<(f64, f64)> = grad
@@ -127,5 +127,5 @@ fn without_the_option_the_mzml_has_no_matrix_but_keeps_the_method() {
     let bytes = convert(&dir, false);
     let text = String::from_utf8_lossy(&bytes);
     assert!(!text.contains("MS:1000804"));
-    assert!(text.contains("name=\"mzLab metodo/1\""));
+    assert!(text.contains("name=\"mzLab method/1\""));
 }

@@ -8,7 +8,7 @@ use std::io::{self, Write};
 pub struct MzmlFilter<W: Write> {
     inner: W,
     line: Vec<u8>,
-    /// Lines written right after the `<run ...>` tag (the `metodo/1` document as a `userParam`).
+    /// Lines written right after the `<run ...>` tag (the `method/1` document as a `userParam`).
     run_extra: Option<String>,
     /// Inside a `pressure chromatogram` (MS:1003019): its intensity array gets the unit.
     pressure: bool,

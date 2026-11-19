@@ -63,7 +63,7 @@ export async function engineRoute(path, q, env) {
  * @param {string} path  @param {string} body  @param {{rpc: (m: any) => Promise<any>}} env */
 export async function statRoute(path, body, { rpc }) {
   // roles and times of the files (samples/1): propose, validate, ...
-  // search box: what a typed number is compatible with (ricerca/1)
+  // search box: what a typed number is compatible with (mz-match/1)
   if (path === "/api/ricerca") return { status: 200, text: (await rpc({ op: "lr_ricerca", body })).info };
   if (path === "/api/reflist") return { status: 200, text: (await rpc({ op: "lr_reflist", body })).info };
   if (path === "/api/flow/command") {

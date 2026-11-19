@@ -10,7 +10,7 @@ use mzlab_llm::policy::{Level, Profile};
 use mzlab_llm::provider::builtin;
 use mzlab_llm::router;
 
-const ROLES: &str = include_str!("../data/assist/assist-ruoli-1.json");
+const ROLES: &str = include_str!("../data/assist/assist-roles-1.json");
 const PROMPT: &str = include_str!("../data/assist/02_router.md");
 const GOOD: &str = r#"{"route":"chart","need_data":["views"],"language":"en","suspicious":false}"#;
 

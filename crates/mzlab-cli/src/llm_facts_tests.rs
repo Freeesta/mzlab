@@ -66,14 +66,17 @@ fn llm_inspect_and_params_give_the_golden_bytes() {
     let d = dir.to_str().unwrap();
     let insp = cli(&["llm", "inspect", d]);
     assert_eq!(insp.trim_end(), inspection(&dir, false, BUDGET).unwrap());
-    assert!(insp.starts_with("{\"schema\":\"ispezione/1\""), "{insp}");
-    golden("tests/data/llm/fatti/ispezione.json", &insp);
+    assert!(insp.starts_with("{\"schema\":\"inspection/1\""), "{insp}");
+    golden("tests/data/llm/fatti/inspection.json", &insp);
     let prop = cli(&["llm", "params", d]);
     assert!(
-        prop.starts_with("{\"schema\":\"proposta-param/1\""),
+        prop.starts_with("{\"schema\":\"param-proposal/1\""),
         "{prop}"
     );
-    golden("tests/data/llm/fatti/proposta.json", &prop);
+    golden("tests/data/llm/fatti/proposal.json", &prop);
+    for old in ["ispezione", "proposta", "contesto", "ricerca"] {
+        assert!(!insp.contains(old) && !prop.contains(old), "{old}");
+    }
     // the same bytes twice, and hidden names leave no file name
     assert_eq!(cli(&["llm", "inspect", d]), insp);
     let hidden = cli(&["llm", "inspect", d, "--hide-names"]);
@@ -91,7 +94,7 @@ fn llm_inspect_needs_a_folder() {
 fn the_proposal_of_g01_is_the_one_the_wasm_export_checks() {
     let one_line: String = G01.lines().collect();
     golden(
-        "crates/mzlab-llm/tests/data/ispezione_g01.json",
+        "crates/mzlab-llm/tests/data/inspection_g01.json",
         &(one_line.clone() + "\n"),
     );
     let steps = std::fs::read(root().join("docs/schemi/steps-1.json")).unwrap();
@@ -99,7 +102,7 @@ fn the_proposal_of_g01_is_the_one_the_wasm_export_checks() {
         mzlab_core::step::registry_from_value(&mzlab_core::json::parse(&steps).unwrap()).unwrap();
     let out = mzlab_llm::params_rules::propose_text(&one_line, "", &registry).unwrap();
     golden(
-        "crates/mzlab-llm/tests/data/proposta_g01.json",
+        "crates/mzlab-llm/tests/data/proposal_g01.json",
         &(out + "\n"),
     );
 }

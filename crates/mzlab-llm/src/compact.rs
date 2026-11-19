@@ -112,8 +112,8 @@ fn drop_old_context(c: &mut Conversation) -> bool {
     false
 }
 
-/// Above 70 % of the context the oldest results of tools become one line each, then older `contesto/1` blocks; the current plan and the last
-/// `contesto/1` stay whole. Returns how many parts were replaced.
+/// Above 70 % of the context the oldest results of tools become one line each, then older `context/1` blocks; the current plan and the last
+/// `context/1` stay whole. Returns how many parts were replaced.
 pub fn compact(c: &mut Conversation, tools: &[Tool], context_tokens: u64) -> usize {
     let mut n = 0;
     if context_tokens == 0 {

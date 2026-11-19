@@ -282,7 +282,7 @@ impl<R: ReadAt> Mzml<R> {
         self.run_head(3000)
     }
 
-    /// The start of the file up to `<run ` plus `extra` bytes, as text (`metodo/1` needs the whole `userParam` that follows the tag).
+    /// The start of the file up to `<run ` plus `extra` bytes, as text (`method/1` needs the whole `userParam` that follows the tag).
     pub fn run_head(&mut self, extra: u64) -> Result<String> {
         let probe = self.until_run(extra)?;
         let run = find_tag(&probe, b"<run", 0);

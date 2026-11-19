@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "metodo/1",
+  "title": "method/1",
   "description": "Metodo di acquisizione di UN campione (o, per una cartella di metodo `.m` senza corsa, il metodo di analisi dei dati). Un valore sconosciuto è ASSENTE (mai null, mai 0); le sezioni vuote sono omesse; le unità stanno nel nome del campo.",
   "type": "object",
   "required": [
@@ -8,12 +8,12 @@
   ],
   "properties": {
     "schema": {
-      "const": "metodo/1"
+      "const": "method/1"
     },
-    "origine": {
+    "origin": {
       "type": "object",
       "properties": {
-        "formato": {
+        "format": {
           "type": "string"
         },
         "file": {
@@ -21,7 +21,7 @@
           "items": {
             "type": "object",
             "properties": {
-              "nome": {
+              "name": {
                 "type": "string"
               },
               "sha1": {
@@ -33,50 +33,50 @@
             }
           }
         },
-        "campione": {
+        "sample": {
           "type": "number"
         },
-        "file_creato": {
+        "file_created": {
           "type": "string"
         },
-        "lettore": {
+        "reader": {
           "type": "object",
           "properties": {
-            "nome": {
+            "name": {
               "type": "string"
             },
-            "versione": {
+            "version": {
               "type": "string"
             }
           }
         }
       }
     },
-    "campione": {
+    "sample": {
       "type": "object",
       "properties": {
-        "nome": {
+        "name": {
           "type": "string"
         },
         "vial": {
           "type": "string"
         },
-        "iniezione_uL": {
+        "injection_uL": {
           "type": "number"
         },
-        "metodo_file": {
+        "method_file": {
           "type": "string"
         },
         "id": {
           "type": "string"
         },
-        "commento": {
+        "comment": {
           "type": "string"
         },
-        "diluizione": {
+        "dilution": {
           "type": "number"
         },
-        "peso": {
+        "weight": {
           "type": "number"
         },
         "volume": {
@@ -87,16 +87,16 @@
         }
       }
     },
-    "strumento": {
+    "instrument": {
       "type": "object",
       "properties": {
-        "produttore": {
+        "manufacturer": {
           "type": "string"
         },
-        "modello": {
+        "model": {
           "type": "string"
         },
-        "serie": {
+        "series": {
           "type": "string"
         },
         "software": {
@@ -104,10 +104,10 @@
           "items": {
             "type": "object",
             "properties": {
-              "nome": {
+              "name": {
                 "type": "string"
               },
-              "versione": {
+              "version": {
                 "type": "string"
               }
             }
@@ -124,10 +124,10 @@
         }
       }
     },
-    "operatore": {
+    "operator": {
       "type": "object",
       "properties": {
-        "utente": {
+        "user": {
           "type": "string"
         },
         "computer": {
@@ -138,31 +138,31 @@
     "ms": {
       "type": "object",
       "properties": {
-        "sorgente": {
+        "source": {
           "type": "object",
           "properties": {
-            "tipo": {
+            "type": {
               "type": "string"
             },
-            "parametri": {
+            "parameters": {
               "$ref": "#/$defs/parametri"
             }
           }
         },
-        "periodi": {
+        "periods": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "esperimenti": {
+              "experiments": {
                 "type": "array",
                 "items": {
                   "type": "object",
                   "properties": {
-                    "indice": {
+                    "index": {
                       "type": "number"
                     },
-                    "tipo": {
+                    "type": {
                       "type": "string"
                     },
                     "mz": {
@@ -179,10 +179,10 @@
                         "type": "number"
                       }
                     },
-                    "parametri": {
+                    "parameters": {
                       "$ref": "#/$defs/parametri"
                     },
-                    "transizioni": {
+                    "transitions": {
                       "type": "array",
                       "items": {
                         "type": "object",
@@ -211,23 +211,23 @@
                           "cxp_V": {
                             "type": "number"
                           },
-                          "nome": {
+                          "name": {
                             "type": "string"
                           },
                           "rf_lens_V": {
                             "type": "number"
                           },
-                          "polarita": {
+                          "polarity": {
                             "type": "string",
                             "enum": [
                               "positive",
                               "negative"
                             ]
                           },
-                          "t_inizio_min": {
+                          "t_start_min": {
                             "type": "number"
                           },
-                          "t_fine_min": {
+                          "t_end_min": {
                             "type": "number"
                           }
                         }
@@ -239,10 +239,10 @@
                         "type": "number"
                       }
                     },
-                    "isolamento_mz": {
+                    "isolation_mz": {
                       "type": "number"
                     },
-                    "inclusione": {
+                    "inclusion": {
                       "type": "array",
                       "items": {
                         "type": "object",
@@ -253,23 +253,23 @@
                           "formula": {
                             "type": "string"
                           },
-                          "specie": {
+                          "species": {
                             "type": "string"
                           },
-                          "carica": {
+                          "charge": {
                             "type": "number"
                           },
-                          "polarita": {
+                          "polarity": {
                             "type": "string",
                             "enum": [
                               "positive",
                               "negative"
                             ]
                           },
-                          "t_inizio_min": {
+                          "t_start_min": {
                             "type": "number"
                           },
-                          "t_fine_min": {
+                          "t_end_min": {
                             "type": "number"
                           },
                           "nce": {
@@ -278,7 +278,7 @@
                               "type": "number"
                             }
                           },
-                          "nome": {
+                          "name": {
                             "type": "string"
                           }
                         },
@@ -293,31 +293,31 @@
             }
           }
         },
-        "calibrazione": {
+        "calibration": {
           "type": "object",
           "properties": {
             "lock_mass": {
               "type": "object",
               "properties": {
-                "modo": {
+                "mode": {
                   "type": "string"
                 },
-                "elenchi": {
+                "lists": {
                   "type": "array",
                   "items": {
                     "type": "object",
                     "properties": {
-                      "polarita": {
+                      "polarity": {
                         "type": "string",
                         "enum": [
                           "positive",
                           "negative"
                         ]
                       },
-                      "nome": {
+                      "name": {
                         "type": "string"
                       },
-                      "masse_mz": {
+                      "masses_mz": {
                         "type": "array",
                         "items": {
                           "type": "number"
@@ -326,10 +326,10 @@
                     }
                   }
                 },
-                "numero_nel_trailer": {
+                "number_in_trailer": {
                   "type": "number"
                 },
-                "correzione_ppm": {
+                "correction_ppm": {
                   "type": "array",
                   "items": {
                     "type": "number"
@@ -341,7 +341,7 @@
             }
           }
         },
-        "impostazioni": {
+        "settings": {
           "type": "array",
           "items": {
             "type": "object",
@@ -349,19 +349,19 @@
               "id": {
                 "type": "string"
               },
-              "etichetta": {
+              "label": {
                 "type": "string"
               },
-              "valori": {
+              "values": {
                 "type": "array",
                 "items": {
                   "type": "number"
                 }
               },
-              "valore": {
+              "value": {
                 "type": "string"
               },
-              "unita": {
+              "unit": {
                 "type": "string"
               }
             }
@@ -372,7 +372,7 @@
     "lc": {
       "type": "object",
       "properties": {
-        "gradiente": {
+        "gradient": {
           "type": "array",
           "items": {
             "type": "object",
@@ -383,7 +383,7 @@
               "B_pct": {
                 "type": "number"
               },
-              "flusso_mL_min": {
+              "flow_mL_min": {
                 "type": "number"
               }
             },
@@ -392,38 +392,38 @@
             ]
           }
         },
-        "flusso_mL_min": {
+        "flow_mL_min": {
           "type": "number"
         },
-        "B_iniziale_pct": {
+        "B_start_pct": {
           "type": "number"
         },
-        "forno_C": {
+        "oven_C": {
           "type": "number"
         },
-        "durata_min": {
+        "duration_min": {
           "type": "number"
         },
-        "pressione_max": {
+        "pressure_max": {
           "type": "object",
           "properties": {
-            "valore": {
+            "value": {
               "type": "number"
             },
-            "unita": {
+            "unit": {
               "type": "string"
             }
           }
         },
-        "solventi": {
+        "solvents": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "canale": {
+              "channel": {
                 "type": "string"
               },
-              "nome": {
+              "name": {
                 "type": "string"
               }
             }
@@ -431,20 +431,20 @@
         }
       }
     },
-    "campionatore": {
+    "autosampler": {
       "type": "object",
       "properties": {
-        "parametri": {
+        "parameters": {
           "$ref": "#/$defs/parametri"
         }
       }
     },
-    "rivelatori": {
+    "detectors": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "tipo": {
+          "type": {
             "type": "string"
           },
           "nm": {
@@ -453,22 +453,22 @@
               "type": "number"
             }
           },
-          "passo_nm": {
+          "step_nm": {
             "type": "number"
           },
-          "frequenza_Hz": {
+          "frequency_Hz": {
             "type": "number"
           },
-          "lampada": {
+          "lamp": {
             "type": "string"
           },
-          "cella_C": {
+          "cell_C": {
             "type": "number"
           },
-          "fenditura_nm": {
+          "slit_nm": {
             "type": "number"
           },
-          "canali": {
+          "channels": {
             "type": "array",
             "items": {
               "type": "object",
@@ -476,13 +476,13 @@
                 "nm": {
                   "type": "number"
                 },
-                "banda_nm": {
+                "bandwidth_nm": {
                   "type": "number"
                 },
-                "riferimento_nm": {
+                "reference_nm": {
                   "type": "number"
                 },
-                "banda_riferimento_nm": {
+                "reference_bandwidth_nm": {
                   "type": "number"
                 }
               }
@@ -491,24 +491,24 @@
         }
       }
     },
-    "registro": {
+    "log": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "quando": {
+          "when": {
             "enum": [
               "inizio",
               "fine"
             ]
           },
-          "testo": {
+          "text": {
             "type": "string"
           },
           "t_min": {
             "type": "number"
           },
-          "livello": {
+          "level": {
             "enum": [
               "Info",
               "Warning",
@@ -518,7 +518,7 @@
         }
       }
     },
-    "serie_registro": {
+    "log_series": {
       "type": "array",
       "items": {
         "type": "object",
@@ -526,13 +526,13 @@
           "id": {
             "type": "string"
           },
-          "gruppo": {
+          "group": {
             "type": "string"
           },
-          "nome": {
+          "name": {
             "type": "string"
           },
-          "unita": {
+          "unit": {
             "type": "string"
           },
           "n": {
@@ -547,30 +547,30 @@
         }
       }
     },
-    "quantificazione": {
+    "quantification": {
       "type": "object",
       "properties": {
-        "versione_dati": {
+        "data_version": {
           "type": "number"
         },
-        "finestre": {
+        "windows": {
           "type": "object",
           "properties": {
-            "riferimento": {
+            "reference": {
               "type": "number"
             },
-            "non_riferimento": {
+            "non_reference": {
               "type": "number"
             },
-            "unita": {
+            "unit": {
               "type": "string"
             },
-            "correlazione": {
+            "correlation": {
               "type": "number"
             }
           }
         },
-        "composti": {
+        "compounds": {
           "type": "array",
           "items": {
             "type": "object",
@@ -578,10 +578,10 @@
               "id": {
                 "type": "number"
               },
-              "nome": {
+              "name": {
                 "type": "string"
               },
-              "tipo": {
+              "type": {
                 "type": "string"
               },
               "istd": {
@@ -590,75 +590,75 @@
               "rt_min": {
                 "type": "number"
               },
-              "finestra_rt": {
+              "window_rt": {
                 "type": "object",
                 "properties": {
-                  "valore": {
+                  "value": {
                     "type": "number"
                   },
-                  "unita": {
+                  "unit": {
                     "type": "string"
                   }
                 }
               },
-              "segmento_tempo": {
+              "time_segment": {
                 "type": "number"
               },
-              "polarita": {
+              "polarity": {
                 "type": "string"
               },
-              "tipo_scansione": {
+              "scan_type": {
                 "type": "string"
               },
               "mz": {
                 "type": "number"
               },
-              "finestra_mz": {
+              "window_mz": {
                 "type": "object",
                 "properties": {
-                  "sinistra": {
+                  "left": {
                     "type": "number"
                   },
-                  "destra": {
+                  "right": {
                     "type": "number"
                   },
-                  "unita": {
+                  "unit": {
                     "type": "string"
                   }
                 }
               },
-              "integratore": {
+              "integrator": {
                 "type": "string"
               },
-              "curva": {
+              "curve": {
                 "type": "object",
                 "properties": {
-                  "modello": {
+                  "model": {
                     "type": "string"
                   },
-                  "origine": {
+                  "origin": {
                     "type": "string"
                   },
-                  "peso": {
+                  "weight": {
                     "type": "string"
                   }
                 }
               },
-              "unita_conc": {
+              "conc_unit": {
                 "type": "string"
               },
-              "ioni": {
+              "ions": {
                 "type": "array",
                 "items": {
                   "type": "object",
                   "properties": {
-                    "indice": {
+                    "index": {
                       "type": "number"
                     },
                     "mz": {
                       "type": "number"
                     },
-                    "risposta_relativa_pct": {
+                    "relative_response_pct": {
                       "type": "number"
                     },
                     "min_pct": {
@@ -667,24 +667,24 @@
                     "max_pct": {
                       "type": "number"
                     },
-                    "incertezza_pct": {
+                    "uncertainty_pct": {
                       "type": "number"
                     }
                   }
                 }
               },
-              "livelli": {
+              "levels": {
                 "type": "array",
                 "items": {
                   "type": "object",
                   "properties": {
-                    "nome": {
+                    "name": {
                       "type": "string"
                     },
                     "conc": {
                       "type": "number"
                     },
-                    "attivo": {
+                    "active": {
                       "type": "boolean"
                     }
                   }
@@ -696,67 +696,67 @@
       },
       "description": "Metodo di quantificazione (cartella .m di Agilent): ciò che il metodo cerca, per composto. Un m/z di 0 nel file è «non impostato»: assente."
     },
-    "grezzo": {
+    "raw": {
       "type": "array",
       "description": "Testo del registro dello strumento così com'è (al massimo 256 KB).",
       "items": {
         "type": "object",
         "properties": {
-          "sezione": {
+          "section": {
             "type": "string"
           },
-          "testo": {
+          "text": {
             "type": "string"
           }
         }
       }
     },
-    "avvisi": {
+    "warnings": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "chiave": {
+          "key": {
             "type": "string"
           },
-          "dove": {
+          "place": {
             "type": "string"
           }
         }
       }
     },
-    "campi": {
+    "fields": {
       "type": "array",
       "description": "Ogni campo del file che le sezioni non portano, con il posto da cui viene (nessuna perdita). Ordinati per (origine, chiave).",
       "items": {
         "type": "object",
         "properties": {
-          "origine": {
+          "origin": {
             "type": "string",
             "description": "<formato>:<flusso o file>[#chiave]"
           },
-          "chiave": {
+          "key": {
             "type": "string"
           },
-          "valore": {
+          "value": {
             "type": "string"
           },
-          "unita": {
+          "unit": {
             "type": "string"
           },
-          "mappato": {
+          "mapped": {
             "type": "string",
             "description": "Dove il valore è anche nel documento (es. campione.vial)."
           },
-          "identita": {
+          "identity": {
             "type": "boolean",
             "description": "true: identifica una persona, un computer, un seriale o un percorso."
           }
         },
         "required": [
-          "origine",
-          "chiave",
-          "valore"
+          "origin",
+          "key",
+          "value"
         ]
       }
     }
@@ -770,13 +770,13 @@
           "id": {
             "type": "string"
           },
-          "etichetta": {
+          "label": {
             "type": "string"
           },
-          "valore": {
+          "value": {
             "type": "number"
           },
-          "unita": {
+          "unit": {
             "type": "string"
           }
         }

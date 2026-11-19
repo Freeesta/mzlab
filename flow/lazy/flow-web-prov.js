@@ -1,7 +1,7 @@
 // @ts-check
 // Flow (administrator mode): the record of a run of «This browser». When the live run has made every step of the base chain (index, detection, alignment, gap filling) the facts the record asks of
-// the files in OPFS (size and SHA-256, the source of each index, the estimates and the memory of a job: worker-flow-web.js) go to the engine (api/flow/sched/record_prov, record_corsa), which writes
-// `prov/1` and `corsa/1` with the same Rust as `flow run`. The two texts are kept in OPFS (mzlab/flow/prov.json, corsa.json) and in `F.webProv.last`. Used by flow-live.js at the end of a run.
+// the files in OPFS (size and SHA-256, the source of each index, the estimates and the memory of a job: worker-flow-web.js) go to the engine (api/flow/sched/record_prov, record_run_report), which writes
+// `prov/1` and `run-report/1` with the same Rust as `flow run`. The two texts are kept in OPFS (mzlab/flow/prov.json, report.json) and in `F.webProv.last`. Used by flow-live.js at the end of a run.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
@@ -34,7 +34,7 @@
 
   /** the record of the run of the live session `x`, or null when the plan has a step outside the base chain, a job has not finished or an input has no hash.
    * A job that failed is recorded with its error and parameters (the steps after it are not started), as `flow run` records it.
-   * Resolves with { prov, corsa } (the texts) @param {any} x @param {any[]} jobs the jobs the scheduler reports (`jobs`) */
+   * Resolves with { prov, run_report } (the texts) @param {any} x @param {any[]} jobs the jobs the scheduler reports (`jobs`) */
   const record = async (x, jobs) => {
     const plan = x.plan;
     if (!plan.steps.every((/** @type {any} */ i) => CHAIN.includes(base(i))) || !x.items.length || !x.registry) return null;
@@ -97,14 +97,14 @@
         reports.push({ ...at, ms: 0, cached, ...r });
       }
       const prov = await post("record_prov", { plan: planText, registry: x.registry, jobs: reports });
-      const corsa = await post("record_corsa", { prov, uscite: [] });
+      const runReport = await post("record_run_report", { prov, outputs: [] });
       await p.fs.write(OUT + "prov.json", new TextEncoder().encode(prov));
-      await p.fs.write(OUT + "corsa.json", new TextEncoder().encode(corsa));
-      F.webProv.last = { prov, corsa };
+      await p.fs.write(OUT + "report.json", new TextEncoder().encode(runReport));
+      F.webProv.last = { prov, run_report: runReport };
       return F.webProv.last;
     } finally { w.terminate(); if (alone) await p.fs.remove(alone).catch(() => {}); }
   };
 
-  /** @type {{ last: { prov: string, corsa: string } | null, record: (x: any, jobs: any[]) => Promise<{ prov: string, corsa: string } | null> }} */
+  /** @type {{ last: { prov: string, run_report: string } | null, record: (x: any, jobs: any[]) => Promise<{ prov: string, run_report: string } | null> }} */
   F.webProv = { last: null, record };
 })();

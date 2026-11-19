@@ -270,7 +270,7 @@
       }
     },
     "metadati": {
-      "description": "Field as the oracle writes it -> {valore, produttore?, metodo?}. `metodo` is the path in metodo/1 from tools/rosina/mappa_metadati.tsv.",
+      "description": "Field as the oracle writes it -> {valore, produttore?, metodo?}. `metodo` is the path in method/1 from tools/rosina/mappa_metadati.tsv.",
       "type": "object",
       "additionalProperties": {
         "type": "object",

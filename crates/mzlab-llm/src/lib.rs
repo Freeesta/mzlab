@@ -1,7 +1,7 @@
 //! The LLM side of mzLab, kept apart from the engine: `tools` builds the catalog `tools/1` from the step registry; `provider` turns a conversation
 //! into a request and a byte stream into events for each vendor; `fake`, `log`, `cost` and `spend` (micro-dollar prices, cap and meter) serve the tests and the transport. `agent` is the loop as a
-//! pure state machine, `policy` decides every call by level, `schema` checks the arguments, `plan` checks a proposed plan, `context` builds `contesto/1`,
-//! `inspect` builds `ispezione/1` (what each file is, and the QC and blank checks of the series) and `eval` scores the evaluation cases. Used by `mzlab-cli llm`.
+//! pure state machine, `policy` decides every call by level, `schema` checks the arguments, `plan` checks a proposed plan, `context` builds `context/1`,
+//! `inspect` builds `inspection/1` (what each file is, and the QC and blank checks of the series) and `eval` scores the evaluation cases. Used by `mzlab-cli llm`.
 //! No network, no key, no dependency beyond `mzlab-core`.
 
 pub mod agent;

@@ -18,7 +18,7 @@ def run_doc(n_steps=3, n_params=2, rows=4):
            "params_sha256": hx(i), "params": [{"name": f"p{j}", "value": j * 1.5, "state": "estimated" if j == 0 else "fixed", **({"proof": {"hist": [1, 2]}} if j == 0 else {})} for j in range(n_params)]}
           for i in range(n_steps)]
     if n_steps > 2: st[2]["error_key"] = "err.x"
-    return {"schema": "corsa/1", "engine": {"name": "mzLab", "version": "1.0", "platform": "native"}, "plan_sha256": hx(99),
+    return {"schema": "run-report/1", "engine": {"name": "mzLab", "version": "1.0", "platform": "native"}, "plan_sha256": hx(99),
             "inputs": [{"name": "<img src=x onerror=window.PWNED=1>.mzML", "bytes": 2048, "sha256": hx(1), "type": "mzml"}], "lists": [{"name": "lib.msp", "bytes": 10, "sha256": hx(2), "type": "library"}],
             "steps": st, "total_ms": round(sum(s["ms"] for s in st), 1), "levels": {"files": 1, "rows": 4, "auto": {"2a": 2, "3a": 1}, "other": {"1": 1}},
             "report": {"schema": "report/1", "righe": rows, "file": 2, "celle": {"rilevate": 5, "mirate": 0, "riempite": 1, "assenti": 2},
@@ -77,7 +77,7 @@ try:
         step("each section can be turned off and on", toggle)
         def download():
             with pg.expect_download() as d: pg.click("button[data-rf=json]")
-            f = d.value; data = json.loads(Path(f.path()).read_text()); assert f.suggested_filename == "corsa.json" and data["schema"] == "corsa/1"
+            f = d.value; data = json.loads(Path(f.path()).read_text()); assert f.suggested_filename == "report.json" and data["schema"] == "run-report/1"
         step("Download JSON gives the run as it was given", download)
         def pdf():
             out = tmp / "r.pdf"; pg.pdf(path=str(out)); assert out.stat().st_size > 2000

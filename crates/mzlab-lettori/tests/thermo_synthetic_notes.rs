@@ -30,7 +30,7 @@ fn a_trailer_ion_outside_its_window_is_named_in_the_method_and_the_target_kept()
     assert_eq!(l.losses(0).expect("losses"), Losses::complete(9));
     let doc = l.method(0).expect("method");
     assert!(
-        doc.contains(r#""chiave":"meta.ioneScartata","dove":"the trailer's monoisotopic m/z lies outside the isolation window in 1 of 9 scans""#),
+        doc.contains(r#""key":"meta.ioneScartata","place":"the trailer's monoisotopic m/z lies outside the isolation window in 1 of 9 scans""#),
         "{doc}"
     );
     // the document of the method alone (`raw::method`, no index built) counts the same scans
@@ -68,7 +68,7 @@ fn an_ms_order_not_decoded_leaves_the_level_unknown_and_is_named() {
     assert_eq!((s.level, s.mz), (0, points));
     let doc = l.method(0).expect("method");
     assert!(
-        doc.contains(r#""chiave":"meta.nonDecodificato","dove":"MS order of 1 of 9 scans"#),
+        doc.contains(r#""key":"meta.nonDecodificato","place":"MS order of 1 of 9 scans"#),
         "{doc}"
     );
     assert_eq!(

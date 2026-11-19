@@ -40,7 +40,7 @@ pub(crate) fn p(path: &Path) -> &str {
     path.to_str().unwrap()
 }
 
-/// The files of a run folder, `prov.json` and `corsa.json` without the times and the heap.
+/// The files of a run folder, `prov.json` and `report.json` without the times and the heap.
 pub(crate) fn folder(dir: &Path) -> Vec<(String, Vec<u8>)> {
     let mut v: Vec<(String, Vec<u8>)> = std::fs::read_dir(dir)
         .unwrap()
@@ -49,7 +49,7 @@ pub(crate) fn folder(dir: &Path) -> Vec<(String, Vec<u8>)> {
         .map(|f| {
             let name = f.file_name().unwrap().to_string_lossy().into_owned();
             let mut bytes = std::fs::read(&f).unwrap();
-            if name == "prov.json" || name == "corsa.json" {
+            if name == "prov.json" || name == "report.json" {
                 bytes = untimed(&String::from_utf8(bytes).unwrap()).into_bytes();
             }
             (name, bytes)
@@ -91,7 +91,7 @@ fn the_base_chain_of_the_canvas_gives_the_table_of_the_page() {
     for n in [
         "plan.json",
         "prov.json",
-        "corsa.json",
+        "report.json",
         "idx-s_t030.mzidx",
         "det-s_t000.mzfeatf",
         "ali.mzfeat",

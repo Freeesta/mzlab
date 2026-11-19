@@ -23,7 +23,7 @@ pub(crate) use num::median;
 use num::{cv, mean, pearson, rank, slope};
 
 pub const SCHEMA: &str = "tabcheck/1";
-/// Estimated tokens of the whole text (`ceil(bytes / 3)`, as `contesto/1`).
+/// Estimated tokens of the whole text (`ceil(bytes / 3)`, as `context/1`).
 pub const MAX_TOKENS: usize = 6000;
 /// Example rows of a check in the full text.
 pub const ROWS_CAP: usize = 20;
@@ -41,7 +41,7 @@ const UNIT_TOL_DA: f64 = 0.1;
 pub struct Options {
     /// Polarity the table was made with: negative for ESI-, otherwise ESI+ (it picks the adduct differences).
     pub polarity: i32,
-    /// Polarity found by the inspection of the files (`ispezione/1`), when there is one.
+    /// Polarity found by the inspection of the files (`inspection/1`), when there is one.
     pub expected_polarity: Option<i32>,
     /// m/z tolerance of the alignment, Da (0.005 in HR; 0.3 for unit resolution).
     pub mz_tol_da: f64,

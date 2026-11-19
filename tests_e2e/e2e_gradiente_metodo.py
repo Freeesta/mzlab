@@ -1,4 +1,4 @@
-"""Gradient of a file whose own method document (metodo/1) carries the pump program (.raw, .wiff, .D, Waters): the Gradient section shows it, as read from the file,
+"""Gradient of a file whose own method document (method/1) carries the pump program (.raw, .wiff, .D, Waters): the Gradient section shows it, as read from the file,
 and the section is read-only (no insert / edit / import / course buttons); a document without a pump program shows no gradient section (the answer of api/metodo is replaced in the page: the engine's readers
 have their own parity tests)."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

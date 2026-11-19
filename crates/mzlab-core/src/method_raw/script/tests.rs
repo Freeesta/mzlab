@@ -47,13 +47,13 @@ fn the_scan_events_of_the_xml_keep_their_numbers_and_units() {
     let xml = "<?xml version=\"1.0\" encoding=\"utf-16\"?><M><ScanEvent id=\"1\"><First_mass unit=\"m/z\">100</First_mass><Last_mass unit=\"m/z\">1000</Last_mass><Resolution>35000</Resolution></ScanEvent><ScanEvent id=\"2\"><Resolution>17500</Resolution><Name>x</Name></ScanEvent></M>";
     let e = experiments(&xml_items(xml));
     assert_eq!(e.len(), 2);
-    assert_eq!(e[0].get("indice"), Some(&V::Num(1.0)));
+    assert_eq!(e[0].get("index"), Some(&V::Num(1.0)));
     assert_eq!(
         e[0].get("mz"),
         Some(&V::Arr(vec![V::Num(100.0), V::Num(1000.0)]))
     );
     assert!(e[1].get("mz").is_none());
-    let n = |e: &V| match e.get("parametri") {
+    let n = |e: &V| match e.get("parameters") {
         Some(V::Arr(a)) => a.len(),
         _ => 0,
     };

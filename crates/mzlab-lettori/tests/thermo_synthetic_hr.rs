@@ -232,7 +232,7 @@ fn the_decoded_scans_of_a_profile_file_keep_their_pinned_hash() {
 }
 
 const FILE_SHA256: &str = "e2d77e897f6c86a56a78d0f149acaf0026904a250e9d5e23f49b554c5482099f";
-const METHOD_SHA256: &str = "abad0fdfdb1af251aaf3a5debee54f29fa4712bb7eb772a0d6bf032a0bdced8d";
+const METHOD_SHA256: &str = "27893bf761d5035483315b10c4905003500473e803ee3e31d576cf5c109efebc";
 const DECODED_SHA256: &str = "e261d343d99bf77b0137844eb261914460852073efd3f7a4efac23b241666ddb";
 
 #[test]

@@ -99,7 +99,7 @@ pub(super) struct LcRead {
     method: Option<Vec<u8>>,
     files: Vec<(String, Vec<u8>)>,
     sizes: Vec<(String, u64)>,
-    /// Side members that could not be read (`side`): left out and named in `avvisi`.
+    /// Side members that could not be read (`side`): left out and named in `warnings`.
     pub(super) unread: Vec<String>,
 }
 
