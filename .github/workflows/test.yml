@@ -349,6 +349,30 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.pwcache.outputs.cache-primary-key }}
+      # the site and its .wasm are built here, apart from the tests (verifica.py finds it up to date), so the cache below is saved before a slow test can use up the time limit
+      - id: site
+        name: Build the site
+        if: steps.solo.outputs.solo != 'true'
+        env:
+          RUSTUP_AUTO_INSTALL: "0"
+        run: python3 tools/prepara_sito.py
+      # incremental data only bloats the cache; the record vouches for the sources of the crates this run compiled, so the next run reuses them
+      - name: Record the tree of the cache
+        if: ${{ !cancelled() && steps.site.outcome == 'success' && steps.solo.outputs.solo != 'true' && github.ref == 'refs/heads/main' && matrix.parte == 1 && steps.rcache.outputs.cache-hit != 'true' }}
+        run: |
+          find target -maxdepth 4 -type d -name incremental -prune -exec rm -rf {} + || true
+          python3 tools/ci_cargo_mtime.py record
+      # saved right after the build, before the tests: a shard cut at its time limit is cancelled and used to lose the cache, so every run built cold
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: ${{ !cancelled() && steps.site.outcome == 'success' && github.ref == 'refs/heads/main' && matrix.parte == 1 && steps.rcache.outputs.cache-hit != 'true' }}
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            ~/.cargo/bin/wasm-bindgen.exe
+            target
+          key: ${{ steps.rcache.outputs.cache-primary-key }}
       - name: Smoke tests
         if: steps.solo.outputs.solo != 'true'
         run: python tools/verifica.py --browser chromium --fumo --parte ${{ matrix.parte }}/2
@@ -363,23 +387,6 @@ jobs:
           name: wasm-dimensioni
           path: wasm-dimensioni.json
           retention-days: 3
-      # incremental data only bloats the cache; the record vouches for the sources of the crates this run compiled, so the next run reuses them
-      - name: Record the tree of the cache
-        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && github.ref == 'refs/heads/main' && matrix.parte == 1 && steps.rcache.outputs.cache-hit != 'true' }}
-        run: |
-          find target -maxdepth 4 -type d -name incremental -prune -exec rm -rf {} + || true
-          python3 tools/ci_cargo_mtime.py record
-      # saved after the smoke tests have built the site and its .wasm (main only; a red test does not lose it)
-      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && matrix.parte == 1 && steps.rcache.outputs.cache-hit != 'true' }}
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.cargo/bin/wasm-bindgen
-            ~/.cargo/bin/wasm-bindgen.exe
-            target
-          key: ${{ steps.rcache.outputs.cache-primary-key }}
       - name: Print the logs of the failed tests (readable in the job log)
         if: failure()
         shell: bash
