@@ -24,7 +24,7 @@ def main() -> int:
     except (OSError, RuntimeError) as e:
         print(f"::warning::PubChemLite not downloaded ({e}): the site is published without the in-silico candidate package")
         return 0
-    r = subprocess.run([str(a.cli), "insilico", "pack", str(csv), str(a.out), "--version", src["versione"], "--doi", src["doi"]], check=False)
+    r = subprocess.run([str(a.cli), "db", "insilico", "pack", str(csv), str(a.out), "--version", src["versione"], "--doi", src["doi"]], check=False)
     return r.returncode
 
 

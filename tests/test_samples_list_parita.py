@@ -36,7 +36,7 @@ def site(work, wiff: Path):
 
 def app(wiff: Path):
     """(exit code, stdout, stderr) of `mzlab-cli sample list --json`."""
-    p = subprocess.run(cli_argv("samples", "list", str(wiff), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
+    p = subprocess.run(cli_argv("sample", "list", str(wiff), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
     return p.returncode, p.stdout.strip(), p.stderr
 
 
@@ -74,16 +74,16 @@ def test_the_site_and_the_app_list_every_synthetic_pair_with_the_same_bytes(work
 def test_the_probe_adds_the_size_of_the_scan_file_and_a_cut_copy_exits_1(work):
     rc, text, _ = app(work / "big" / "grande.wiff")
     assert rc == 0 and "probe" not in json.loads(text)
-    p = subprocess.run(cli_argv("samples", "list", str(work / "big" / "grande.wiff"), "--json", "--probe"), cwd=ROOT, capture_output=True, encoding="utf-8")
+    p = subprocess.run(cli_argv("sample", "list", str(work / "big" / "grande.wiff"), "--json", "--probe"), cwd=ROOT, capture_output=True, encoding="utf-8")
     assert p.returncode == 0 and json.loads(p.stdout)["probe"]["status"] == "ok", p.stdout
     cut = work / "cut"
     cut.mkdir()
     shutil.copy(work / "big" / "grande.wiff", cut / "grande.wiff")
     data = (work / "big" / "grande.wiff.scan").read_bytes()
     (cut / "grande.wiff.scan").write_bytes(data[:-500])
-    p = subprocess.run(cli_argv("samples", "list", str(cut / "grande.wiff"), "--json", "--probe"), cwd=ROOT, capture_output=True, encoding="utf-8")
+    p = subprocess.run(cli_argv("sample", "list", str(cut / "grande.wiff"), "--json", "--probe"), cwd=ROOT, capture_output=True, encoding="utf-8")
     assert p.returncode == 1 and json.loads(p.stdout)["probe"]["status"] == "short", (p.returncode, p.stdout)
-    missing = subprocess.run(cli_argv("samples", "list", str(work / "nothing.wiff"), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
+    missing = subprocess.run(cli_argv("sample", "list", str(work / "nothing.wiff"), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
     assert missing.returncode == 4 and "error/1" in missing.stdout
-    usage = subprocess.run(cli_argv("samples", "list", "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
+    usage = subprocess.run(cli_argv("sample", "list", "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
     assert usage.returncode == 2

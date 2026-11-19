@@ -34,7 +34,7 @@ def cli(tmp_path_factory):
 
 def convert(t, ds: Path, tag: str, *extra: str) -> Path:
     out = t["tmp"] / f"out_{tag}"
-    r = run([str(t["cli"]), "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1", *extra])
+    r = run([str(t["cli"]), "file", "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1", *extra])
     assert r.returncode == 0, r.stdout[-1500:] + r.stderr[-1500:]
     files = sorted(out.glob("*.mzML"))
     assert len(files) == 1, files

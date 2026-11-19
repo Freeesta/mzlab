@@ -349,7 +349,7 @@ def find_cli(given: str | None) -> Path:
 def convert(cli: Path, src: Path, sample: str | None, peaks: str, out: Path) -> Path:
     arg = f"{src}@{sample}" if sample else str(src)
     rep = out / "report.json"
-    p = subprocess.run([str(cli), "convert", arg, "--out", str(out), "--compression", "none", "--peaks", peaks,
+    p = subprocess.run([str(cli), "file", "convert", arg, "--out", str(out), "--compression", "none", "--peaks", peaks,
                         "--fresh", "--workers", "1", "--report", str(rep)], capture_output=True, text=True, timeout=1800)
     rows = json.loads(rep.read_text()) if rep.exists() else []
     good = [r for r in rows if r.get("uscita")]

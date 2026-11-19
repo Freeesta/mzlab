@@ -30,7 +30,7 @@ def step_ids(root: Path) -> list[str]:
     """Ids of every step/1 descriptor: `mzlab-cli flow steps --json` when the real tree has the binary, else the exported docs/schemi/steps-*-1.json."""
     exe = shutil.which("mzlab-cli") if root == ROOT else None
     if exe:
-        r = subprocess.run([exe, "steps", "--json"], capture_output=True, text=True)
+        r = subprocess.run([exe, "flow", "steps", "--json"], capture_output=True, text=True)
         if r.returncode == 0:
             try:
                 return [s["id"] for s in json.loads(r.stdout)]

@@ -71,7 +71,7 @@ csv = tmp / "list.csv"; csv.write_text("\n".join(rows) + "\n")
 pack = tmp / "pack"
 cli = ROOT / "target" / "release" / "mzlab-cli"
 subprocess.run(["cargo", "build", "--locked", "--release", "-q", "-p", "mzlab-cli"], cwd=ROOT, check=True)
-subprocess.run([str(cli), "insilico", "pack", str(csv), str(pack), "--version", "test", "--doi", "10.0/test", "--piece-raw", "16000"], check=True, capture_output=True)
+subprocess.run([str(cli), "db", "insilico", "pack", str(csv), str(pack), "--version", "test", "--doi", "10.0/test", "--piece-raw", "16000"], check=True, capture_output=True)
 CAT = json.loads((pack / "catalogo.json").read_text())
 assert len(CAT["pieces"]) >= 3, "the test package needs several pieces"
 CATTEXT = (pack / "catalogo.json").read_text()

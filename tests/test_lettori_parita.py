@@ -92,7 +92,7 @@ def da_wasm(tools, fam, ds: Path) -> bytes:
 def da_cli(tools, fam, ds: Path, *extra: str, code: int = 0) -> bytes:
     """The mzML the CLI writes; `code` 3 for a cut dataset (written, with the scans missing named on stderr)."""
     out = tools["tmp"] / f"cli_{fam}"
-    r = run([str(tools["cli"]), "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1", *extra])
+    r = run([str(tools["cli"]), "file", "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1", *extra])
     assert r.returncode == code, r.stdout[-1500:] + r.stderr[-1500:]
     if code == 3:
         assert "partial read, " in r.stderr, r.stderr[-1500:]
@@ -284,7 +284,7 @@ def test_one_undecodable_agilent_scan_is_left_out_on_both_faces(tools):
     b[at:at + 8] = struct.pack("<d", float("nan"))
     f.write_bytes(bytes(b))
     out = tools["tmp"] / "cli_damaged"
-    r = run([str(tools["cli"]), "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1"])
+    r = run([str(tools["cli"]), "file", "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1"])
     assert r.returncode == 3, r.stderr[-1500:]
     assert "partial read, 59 of 60 scans (warn.file.damaged)" in r.stderr, r.stderr[-1500:]
     cli = next(out.glob("*.mzML")).read_bytes()
@@ -314,7 +314,7 @@ def test_one_damaged_agilent_index_record_is_left_out_on_both_faces(tools):
     g.write_bytes(bytes(m))
     for d, read in ((ds, 59), (old, 30)):
         out = tools["tmp"] / f"cli_badrec_{d.name}"
-        r = run([str(tools["cli"]), "convert", str(d), "--out", str(out), "--fresh", "--workers", "1"])
+        r = run([str(tools["cli"]), "file", "convert", str(d), "--out", str(out), "--fresh", "--workers", "1"])
         assert r.returncode == 3, r.stderr[-1500:]
         assert f"partial read, {read} of 60 scans (warn.agilent.damaged)" in r.stderr, r.stderr[-1500:]
         cli = next(out.glob("*.mzML")).read_bytes()

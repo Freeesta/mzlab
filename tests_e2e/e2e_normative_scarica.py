@@ -24,7 +24,7 @@ if not cli.exists():
     subprocess.run(["cargo", "build", "--locked", "--release", "-p", "mzlab-cli"], cwd=ROOT, check=True)
 OUT = ROOT / "site" / "static" / "normative"
 shutil.rmtree(OUT, ignore_errors=True)
-subprocess.run([str(cli), "normative", "pack", str(ROOT / "normative"), str(OUT)], check=True, capture_output=True)
+subprocess.run([str(cli), "db", "normative", "pack", str(ROOT / "normative"), str(OUT)], check=True, capture_output=True)
 lib_copy_file(ROOT / "mzlab" / "web" / "normative-scarica.js", ROOT / "site" / "static" / "normative-scarica.js")
 RAW = (OUT / "normative.mzsus").read_bytes()
 CAT = json.loads((OUT / "catalogo.json").read_text(encoding="utf-8"))
