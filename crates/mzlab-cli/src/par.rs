@@ -27,21 +27,17 @@ pub(crate) fn par_map_with<T: Send>(
         use std::sync::Mutex;
         if workers > 1 && n > 1 {
             let next = AtomicUsize::new(0);
-            let cache = crate::idx_cache::ctx();
             let slots: Mutex<Vec<Option<T>>> = Mutex::new((0..n).map(|_| None).collect());
             std::thread::scope(|s| {
                 for _ in 0..workers.min(n) {
-                    s.spawn(|| {
-                        crate::idx_cache::set(cache.clone());
-                        loop {
-                            let k = next.fetch_add(1, Ordering::Relaxed);
-                            if k >= n {
-                                break;
-                            }
-                            let r = f(k);
-                            slots.lock().unwrap_or_else(|e| e.into_inner())[k] = Some(r);
+                    s.spawn(crate::idx_cache::carry(|| loop {
+                        let k = next.fetch_add(1, Ordering::Relaxed);
+                        if k >= n {
+                            break;
                         }
-                    });
+                        let r = f(k);
+                        slots.lock().unwrap_or_else(|e| e.into_inner())[k] = Some(r);
+                    }));
                 }
             });
             let slots = slots.into_inner().unwrap_or_else(|e| e.into_inner());
@@ -254,58 +250,53 @@ fn pooled(
         weak: (0..n).map(|_| None).collect(),
     });
     let ready = Condvar::new();
-    let cache = crate::idx_cache::ctx();
     let lock = || pool.lock().unwrap_or_else(|e| e.into_inner());
     std::thread::scope(|s| {
         for _ in 0..workers.min(jobs.len()) {
-            s.spawn(|| {
-                crate::idx_cache::set(cache.clone());
-                loop {
-                    let j = {
-                        let mut st = lock();
-                        let j = st.next;
-                        st.next += 1;
-                        j
-                    };
-                    let Some(job) = jobs.get(j) else { break };
-                    match *job {
-                        Job::Index(k) => {
-                            // a core in use: the passes that split in two use the others
-                            let _core = mzlab_core::spare::busy(1);
-                            let r = index_one(files, labels, idxs, k);
-                            let ok = r.is_ok();
-                            lock().indexed[k] = Some(r);
-                            if k == 0 {
-                                let made = ok.then(|| {
-                                    open(&idxs[0])
-                                        .and_then(|mut ix| run::recipe_for(params, &mut ix))
-                                });
-                                set_recipe(&mut lock(), made);
-                            }
-                            ready.notify_all();
+            s.spawn(crate::idx_cache::carry(|| loop {
+                let j = {
+                    let mut st = lock();
+                    let j = st.next;
+                    st.next += 1;
+                    j
+                };
+                let Some(job) = jobs.get(j) else { break };
+                match *job {
+                    Job::Index(k) => {
+                        // a core in use: the passes that split in two use the others
+                        let _core = mzlab_core::spare::busy(1);
+                        let r = index_one(files, labels, idxs, k);
+                        let ok = r.is_ok();
+                        lock().indexed[k] = Some(r);
+                        if k == 0 {
+                            let made = ok.then(|| {
+                                open(&idxs[0]).and_then(|mut ix| run::recipe_for(params, &mut ix))
+                            });
+                            set_recipe(&mut lock(), made);
                         }
-                        Job::Strong(k) | Job::Weak(k) => {
-                            let mut st = lock();
-                            while st.recipe_state == 0 || st.indexed[k].is_none() {
-                                st = ready.wait(st).unwrap_or_else(|e| e.into_inner());
-                            }
-                            let recipe = st.recipe.clone();
-                            let indexed = matches!(st.indexed[k], Some(Ok(())));
-                            drop(st);
-                            if let (Some(recipe), true) = (recipe, indexed) {
-                                let _core = mzlab_core::spare::busy(1);
-                                if matches!(job, Job::Strong(_)) {
-                                    let r = detect_strong(files, labels, idxs, k, &recipe);
-                                    lock().detected[k] = Some(r);
-                                } else {
-                                    let r = detect_weak_one(idxs, k, &recipe);
-                                    lock().weak[k] = Some(r);
-                                }
+                        ready.notify_all();
+                    }
+                    Job::Strong(k) | Job::Weak(k) => {
+                        let mut st = lock();
+                        while st.recipe_state == 0 || st.indexed[k].is_none() {
+                            st = ready.wait(st).unwrap_or_else(|e| e.into_inner());
+                        }
+                        let recipe = st.recipe.clone();
+                        let indexed = matches!(st.indexed[k], Some(Ok(())));
+                        drop(st);
+                        if let (Some(recipe), true) = (recipe, indexed) {
+                            let _core = mzlab_core::spare::busy(1);
+                            if matches!(job, Job::Strong(_)) {
+                                let r = detect_strong(files, labels, idxs, k, &recipe);
+                                lock().detected[k] = Some(r);
+                            } else {
+                                let r = detect_weak_one(idxs, k, &recipe);
+                                lock().weak[k] = Some(r);
                             }
                         }
                     }
                 }
-            });
+            }));
         }
     });
     let out = collect(pool.into_inner().unwrap_or_else(|e| e.into_inner()));

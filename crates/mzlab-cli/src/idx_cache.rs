@@ -35,6 +35,27 @@ pub(crate) fn dir() -> Option<PathBuf> {
     ctx().map(|c| c.dir)
 }
 
+/// `f` for a thread of a pool: it runs there with the cache of the thread that called `carry`.
+pub(crate) fn carry<T>(f: impl FnOnce() -> T) -> impl FnOnce() -> T {
+    let c = ctx();
+    move || {
+        set(c);
+        f()
+    }
+}
+
+/// The index of (`path`, `label`) at `idx`, through the cache when there is one; a cache that cannot be used is reported and skipped.
+pub(crate) fn through(path: &Path, label: &str, idx: &Path, budget: usize) -> Result<()> {
+    let build = || {
+        crate::flow_pace::build_index_with(path, label, idx, budget, &mut |_, _| {}, &None)
+            .map(|_| ())
+    };
+    match dir() {
+        Some(d) => make(&d, path, label, idx, false, build).map(|_| ()),
+        None => build(),
+    }
+}
+
 fn note(line: String) {
     match ctx() {
         Some(c) => c.notes.lock().unwrap_or_else(|e| e.into_inner()).push(line),
