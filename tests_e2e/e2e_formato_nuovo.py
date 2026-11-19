@@ -16,7 +16,7 @@ D = Path("/tmp/nuovo_e2e"); D.mkdir(exist_ok=True)
 F = D / "C_FullMass-t0.mzML"; ds.full_scan(F, 0, np.random.default_rng(10))
 IDX = "C_FullMass-t0.mzML.mzidx"
 HASH = """async () => { const r = await navigator.storage.getDirectory(); const h = await (await (await r.getDirectoryHandle('mzlab')).getDirectoryHandle('idx')).getFileHandle('%s'); const b = new Uint8Array(await (await h.getFile()).arrayBuffer()); const x = await crypto.subtle.digest('SHA-256', b); return Array.from(new Uint8Array(x)).map(v => v.toString(16).padStart(2, '0')).join(''); }""" % IDX
-VERSION = """async v => { const r = await navigator.storage.getDirectory(); const h = await (await (await r.getDirectoryHandle('mzlab')).getDirectoryHandle('idx')).getFileHandle('%s'); const w = await h.createWritable({ keepExistingData: true }); await w.write({ type: 'write', position: 8, data: new Uint8Array([v, 0, 0, 0]) }); await w.close(); }""" % IDX
+VERSION = """async v => { const r = await navigator.storage.getDirectory(); const h = await (await (await r.getDirectoryHandle('mzlab')).getDirectoryHandle('idx')).getFileHandle('%s'); let w; for (let i = 0; !w; i++) { try { w = await h.createWritable({ keepExistingData: true }); } catch (e) { if (i > 100) throw e; await new Promise(ok => setTimeout(ok, 100)); } } await w.write({ type: 'write', position: 8, data: new Uint8Array([v, 0, 0, 0]) }); await w.close(); }""" % IDX
 HEADER = """async () => { const r = await navigator.storage.getDirectory(); const h = await (await (await r.getDirectoryHandle('mzlab')).getDirectoryHandle('idx')).getFileHandle('%s'); const b = new DataView(await (await h.getFile()).arrayBuffer()); return b.getUint32(8, true); }""" % IDX
 r = Run(port=8995, wd="/tmp/wdnuovo")
 try:
@@ -42,6 +42,8 @@ try:
         step("a known version: no warning", known)
         def older():
             for old in (1, 2):
+                # the page of the step before still has the index open: a fresh load lets go of it before the header is patched
+                pg.goto(pg.url); wait_for_js(pg, "document.querySelector('#pick')")
                 pg.evaluate(VERSION, old); again()
                 wait_for_js(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone)", timeout=60000)
                 assert not pg.evaluate("/format \\d/.test(document.body.innerText)"), f"no warning for version {old}"
