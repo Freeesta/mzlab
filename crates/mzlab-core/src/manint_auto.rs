@@ -1,5 +1,5 @@
 //! «Integrate peaks in all selected files»: the engine finds every peak of every SIM/MRM channel of every file (`peakq_lrauto::lr_auto_integrate`), puts the
-//! peaks of one channel that fall at the same time in different files into one group (apex within `rt_tol` of the group's mean) and returns them as the windows
+//! peaks of one channel that fall at the same time in different files into one group (apex within `rt_tol_min` of the group's mean) and returns them as the windows
 //! `manint::table_text` reads, plus a log per file. A peak alone in its group, while another file holds the channel, is marked `unmatched`. The page's
 //! `api/manauto`, the app op `auto` and `mzlab-cli peak table --set auto=true` (plus `--set params=PATH`) are these bytes.
 
@@ -22,14 +22,14 @@ struct Found {
     group: usize,
 }
 
-/// The engine's numbers from the request `{"rt_tol", "half", "valley" (%), "sn", "min_pts", "despike", "split": "drop"|"valley"}`; a missing one keeps its default.
+/// The engine's numbers from the request `{"rt_tol_min", "half", "valley" (%), "sn", "min_pts", "despike", "split": "drop"|"valley"}`; a missing one keeps its default.
 fn params_of(p: &Value) -> (LrAutoParams, f64) {
     let num = |k: &str| p.get(k).and_then(Value::f64).unwrap_or(-1.0);
     let split = match p.get("split").and_then(Value::str) {
         Some("valley") => 1.0,
         _ => 0.0,
     };
-    let tol = num("rt_tol");
+    let tol = num("rt_tol_min");
     let despike = p
         .get("despike")
         .and_then(Value::bool)

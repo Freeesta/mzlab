@@ -9,27 +9,20 @@ use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli peak auto-lr: every peak of a low-resolution trace (SIM, MRM), found on a smoothed copy and integrated on the raw points, as JSON.
 
-usage: mzlab-cli peak auto-lr TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VALUE...]
+usage: mzlab-cli peak auto-lr TRACE.csv|- [--from MIN] [--to MIN] [--split drop|valley] [--area-unit s|min] [--set NAME=VALUE...]
 
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --from/--to  the stretch whose apexes count (default: the whole trace)
   --set        lr_half (Savitzky-Golay half window of the detection copy, points; 0 = 40 % of the FWHM of the tallest peak), lr_valley (% of the
                smaller peak the valley must go down to keep two peaks), lr_sn (smallest height over the noise), lr_min_pts, lr_despike (1/0:
-               median of 3 against spikes), lr_split (drop = one baseline under touching peaks, valley = each baseline ends at the valley),
-               area_unit (s = counts x s, default, as peak area; min = counts x min, the old unit)
-  output       {\"params\":{half, half_auto, valley, sn, min_pts, despike, split, noise}, \"peaks\":[{lo, hi, t0, t1, rt, b0, b1, area, below,
+               median of 3 against spikes); numbers only
+  --split MODE drop (default) = one baseline under touching peaks, valley = each baseline ends at the valley
+  --area-unit  s = counts x s (default, as peak area), min = counts x min
+  output       {\"params\":{half, half_auto, valley, sn, min_pts, despike, split, noise, baseline (always \"engine\")}, \"peaks\":[{lo, hi, t0, t1, rt, b0, b1, area, below,
                area_zero, height, sn, end0, end1}...]}: indices, min, counts; areas in counts x s (area_unit) of the raw trace against the straight line
                b0-b1 (signed; below = the part under it) and from zero; end = background | valley | cap (5 FWHM)";
 
 fn set(p: &mut LrAutoParams, name: &str, v: &str) -> Result<(), String> {
-    if name == "lr_split" {
-        p.split = match v {
-            "drop" => Split::Drop,
-            "valley" => Split::Valley,
-            _ => return Err("lr_split is drop or valley".into()),
-        };
-        return Ok(());
-    }
     let n: f64 = v.parse().map_err(|_| format!("{name} needs a number"))?;
     if n.is_nan() || n < 0.0 {
         return Err(format!("{name} must not be negative"));
@@ -59,14 +52,20 @@ pub fn run(args: Vec<String>) -> Outcome {
             match a.as_str() {
                 "--from" => from = Some(num(it.next(), "--from")?),
                 "--to" => to = Some(num(it.next(), "--to")?),
+                "--area-unit" => {
+                    unit = AreaUnit::parse(&it.next().ok_or("--area-unit needs s or min")?)?
+                }
+                "--split" => {
+                    p.split = match it.next().ok_or("--split needs drop or valley")?.as_str() {
+                        "drop" => Split::Drop,
+                        "valley" => Split::Valley,
+                        _ => return Err("--split is drop or valley".into()),
+                    }
+                }
                 "--set" => {
                     let kv = it.next().ok_or("--set needs NAME=VALUE")?;
                     let (k, v) = kv.split_once('=').ok_or("--set needs NAME=VALUE")?;
-                    if k == "area_unit" {
-                        unit = AreaUnit::parse(v)?;
-                    } else {
-                        set(&mut p, k, v)?;
-                    }
+                    set(&mut p, k, v)?;
                 }
                 "--help" | "-h" => return Err(String::new()),
                 o if o.starts_with("--") => return Err(format!("unknown option {o}")),

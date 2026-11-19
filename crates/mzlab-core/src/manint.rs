@@ -471,6 +471,7 @@ pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
 mod csv;
 use csv::csv_text;
 pub use csv::EXT_HEAD;
+pub use fig::{FIG_HEAD, QUALITY_HEAD, SN_HEAD};
 #[path = "manint_fig.rs"]
 mod fig;
 use fig::Cols;

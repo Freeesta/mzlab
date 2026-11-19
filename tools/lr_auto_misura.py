@@ -46,11 +46,18 @@ def files(tmp: Path, name: str) -> list:
     return out
 
 
+def flag(kv: str) -> list:
+    """A `NAME=VALUE` setting as CLI arguments: modes and the unit are typed flags, numbers stay `--set`."""
+    k, v = kv.split("=", 1)
+    typed = {"area_unit": "--area-unit", "baseline": "--baseline", "lr_split": "--split"}
+    return [typed[k], v] if k in typed else ["--set", kv]
+
+
 def score(fs: list, cmd: str, sets: list) -> str:
     """One line: the windows of `mzlab-cli CMD --set ...` on every file against the true apexes and areas."""
     def one(x):
         f, tr = x
-        r = json.loads(subprocess.run([str(CLI), *cmd.split(), str(f), *[a for s in ["area_unit=min", *sets] for a in ("--set", s)]], capture_output=True, text=True, check=True).stdout)
+        r = json.loads(subprocess.run([str(CLI), *cmd.split(), str(f), *[a for s in ["area_unit=min", *sets] for a in flag(s)]], capture_output=True, text=True, check=True).stdout)
         ap, w = tr["apex"], [(p["t0"], p["t1"], p["area"]) for p in r["peaks"]]
         inside = [[a for a in ap if lo <= a <= hi] for lo, hi, _ in w]
         err = [abs(k[0][2] / ar - 1) for a, ar in zip(ap, tr["area"]) for k in [[x for x in w if x[0] <= a <= x[1]]] if len(k) == 1]

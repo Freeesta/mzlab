@@ -3,7 +3,7 @@ tools/wiff_sim.py, `sim3`: a blank and three samples whose peaks drift 0.04 min 
 data), groups the peaks at the same time, and the page adds them in one undoable step: one row of the card «Manual integrations» per peak, grouped by ion then by
 peak (Origin «Automatic», or «No counterpart» for the peak no other file has), the area labels the usual ones, a live status with every number the engine used, the
 per-file log of the peaks found under the card, no layout shift. The card is the bytes of `mzlab-cli peak table` for the same windows and `api/manauto` is the
-bytes of `mzlab-cli peak table --set auto=true`. Needs the site and the .wasm (python3 tools/prepara_sito.py) and cargo for the CLI.
+bytes of `mzlab-cli peak table --auto`. Needs the site and the .wasm (python3 tools/prepara_sito.py) and cargo for the CLI.
 Run from the repo root: python3 tests_e2e/e2e_integrazione_auto.py"""
 # covers: mzlab/web/integra-tutti.js, mzlab/web/integrazioni-manuali.js, mzlab/web/integra-segue.js, crates/mzlab-core/src/manint_auto.rs, tools/wiff_sim.py
 import json, shutil, subprocess, sys, os, tempfile
@@ -40,7 +40,7 @@ def cli_table(st):
     ws = [{**x, "file": SAMPLES.index(order[x["file"]])} for x in json.loads(st["windows"])]
     w = D / "windows.json"; w.write_text(json.dumps(ws))
     t = D / "times.json"; t.write_text(json.dumps(st["times"]))      # the time points the page shows (the helper fills the ones the names lack)
-    return cli("peak", "table", D / "sim3.wiff", "--set", f"windows={w}", "--set", f"times={t}")
+    return cli("peak", "table", D / "sim3.wiff", "--windows", str(w), "--times", str(t))
 
 r = Run(port=8879, wd="/tmp/wd_integrazione_auto")
 try:
@@ -92,7 +92,7 @@ try:
             q = json.dumps({"half": 0, "valley": 10, "sn": 5, "split": "drop"})
             site = pg.evaluate("([ks, q]) => fetch(`api/manauto?k=${ks.join(',')}&p=${encodeURIComponent(q)}`).then(r => r.text())", [ks, q])
             pf = D / "params.json"; pf.write_text(q)
-            need(site == cli("peak", "table", D / "sim3.wiff", "--set", "auto=true", "--set", f"params={pf}").strip(), "api/manauto is the bytes of the CLI")
+            need(site == cli("peak", "table", D / "sim3.wiff", "--auto", "--params", str(pf)).strip(), "api/manauto is the bytes of the CLI")
         step("the card is the CLI's table and api/manauto is the CLI's auto=true", parity)
         def once():
             n = len(pg.evaluate(ROWS))
@@ -106,7 +106,7 @@ try:
             pg.evaluate("STORIA.rifai && STORIA.rifai()"); frames(pg, 3)
         step("one undo removes them all", undo)
         def unmatched():
-            pg.evaluate("carica('m:integra-tutti.js').then(() => INTTUTTI.runFiles(E.panels.find(q => q.type === 'mrm' && q._a), { rt_tol: 0.01 }))")
+            pg.evaluate("carica('m:integra-tutti.js').then(() => INTTUTTI.runFiles(E.panels.find(q => q.type === 'mrm' && q._a), { rt_tol_min: 0.01 }))")
             wait_for_js(pg, "document.querySelectorAll('#manint tbody tr').length >= 4", timeout=90000)
             rows = pg.evaluate(ROWS); T = pg.evaluate("I18N.t('canali.manint.org.unmatched')")
             need(len(rows) >= 12 and all(x[-2] == T for x in rows), ("a tolerance of 0.01 min leaves every drifted peak alone", [x[-2] for x in rows][:4]))

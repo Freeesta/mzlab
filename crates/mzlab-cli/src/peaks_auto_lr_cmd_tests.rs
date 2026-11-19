@@ -57,8 +57,8 @@ fn the_output_is_the_core_json_byte_for_byte() {
         "lr_min_pts=6",
         "--set",
         "lr_despike=0",
-        "--set",
-        "lr_split=valley",
+        "--split",
+        "valley",
         "--from",
         "4",
         "--to",
@@ -84,20 +84,20 @@ fn the_output_is_the_core_json_byte_for_byte() {
         )
     );
     // the old unit stays selectable and is the old bytes
-    let o = run(args(&[p, "--set", "area_unit=min"]));
+    let o = run(args(&[p, "--area-unit", "min"]));
     let core = lr_auto_integrate(&rt, &y, rt[0], rt[rt.len() - 1], LrAutoParams::default());
     assert_eq!(
         String::from_utf8(o.stdout).unwrap(),
         format!("{}\n", lr_auto_json(&rt, &core))
     );
-    assert_ne!(run(args(&[p, "--set", "area_unit=h"])).code, 0);
+    assert_eq!(run(args(&[p, "--area-unit", "h"])).code, 2);
     let _ = std::fs::remove_file(&f);
 }
 
 #[test]
 fn bad_arguments_are_refused() {
     assert_ne!(run(args(&[])).code, 0);
-    assert_ne!(run(args(&["x.csv", "--set", "lr_split=tangent"])).code, 0);
+    assert_eq!(run(args(&["x.csv", "--split", "tangent"])).code, 2);
     assert_ne!(run(args(&["x.csv", "--set", "lr_half=-1"])).code, 0);
     assert_ne!(run(args(&["x.csv", "--set", "hr_sn=3"])).code, 0);
     assert_eq!(run(args(&["--help"])).code, 0);

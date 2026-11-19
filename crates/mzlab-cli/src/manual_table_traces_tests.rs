@@ -1,4 +1,4 @@
-//! `mzlab-cli peak table --set traces=PATH`: traces the caller supplies (a chromatogram, an XIC) give the five extra columns, the same bytes as the engine
+//! `mzlab-cli peak table --traces PATH`: traces the caller supplies (a chromatogram, an XIC) give the five extra columns, the same bytes as the engine
 //! on the same text, and a request with both files and traces is refused.
 
 use crate::execute;
@@ -39,10 +39,10 @@ fn traces_give_the_columns_of_the_engine_byte_for_byte() {
     std::fs::write(&tp, &files).unwrap();
     std::fs::write(&wp, windows).unwrap();
     let o = run(&[
-        "--set",
-        &format!("traces={}", tp.display()),
-        "--set",
-        &format!("windows={}", wp.display()),
+        "--traces",
+        &tp.display().to_string(),
+        "--windows",
+        &wp.display().to_string(),
     ]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let want = mzlab_core::manint::table_text(&files, windows, false).unwrap();
@@ -54,12 +54,38 @@ fn traces_give_the_columns_of_the_engine_byte_for_byte() {
         .ends_with(mzlab_core::manint::EXT_HEAD.trim_start_matches(',')));
     let bad = run(&[
         "x.mzML",
-        "--set",
-        &format!("traces={}", tp.display()),
-        "--set",
-        &format!("windows={}", wp.display()),
+        "--traces",
+        &tp.display().to_string(),
+        "--windows",
+        &wp.display().to_string(),
     ]);
     assert_ne!(bad.code, 0);
+}
+
+/// The help names the optional columns exactly as the real header ends: the lists come from the same constants.
+fn header_and_help_agree(want: &str) {
+    let header = want.lines().next().unwrap();
+    let ext = format!(
+        "{}{}{}{}",
+        mzlab_core::manint::EXT_HEAD,
+        mzlab_core::manint::SN_HEAD,
+        mzlab_core::manint::FIG_HEAD,
+        mzlab_core::manint::QUALITY_HEAD
+    );
+    assert_eq!(
+        header,
+        format!("{}{ext}", mzlab_core::manint::HEAD.trim_end())
+    );
+    let h = crate::manual_table_cmd::help();
+    for e in [
+        mzlab_core::manint::SN_HEAD,
+        mzlab_core::manint::FIG_HEAD,
+        mzlab_core::manint::QUALITY_HEAD,
+    ] {
+        assert!(
+            header.contains(e.trim_start_matches(',')) && h.contains(e.trim_start_matches(','))
+        );
+    }
 }
 
 #[test]
@@ -75,12 +101,12 @@ fn columns_and_json_are_the_engine_table_in_two_shapes() {
     std::fs::write(&tp, &files).unwrap();
     std::fs::write(&wp, windows).unwrap();
     let base = [
-        "--set".to_string(),
-        format!("traces={}", tp.display()),
-        "--set".to_string(),
-        format!("windows={}", wp.display()),
-        "--set".to_string(),
-        "columns=sn,fig,quality".to_string(),
+        "--traces".to_string(),
+        tp.display().to_string(),
+        "--windows".to_string(),
+        wp.display().to_string(),
+        "--columns".to_string(),
+        "sn,fig,quality".to_string(),
     ];
     let go = |extra: &[&str]| {
         let mut a: Vec<&str> = base.iter().map(String::as_str).collect();
@@ -92,6 +118,7 @@ fn columns_and_json_are_the_engine_table_in_two_shapes() {
     let doc = format!("{{\"windows\":{windows},\"columns\":[\"sn\",\"fig\",\"quality\"]}}");
     let want = mzlab_core::manint::table_text(&files, &doc, false).unwrap();
     assert_eq!(String::from_utf8(o.stdout).unwrap(), want);
+    header_and_help_agree(&want);
     // the JSON keeps the header's names as keys and the CSV's text in each cell
     let j = go(&["--json"]);
     assert_eq!(j.code, 0, "{}", j.stderr);
@@ -111,15 +138,28 @@ fn columns_and_json_are_the_engine_table_in_two_shapes() {
         v["rows"][0]["tailing"],
         row[cols.iter().position(|c| *c == "tailing").unwrap()]
     );
-    // an unknown group is refused with the engine's message, and --json is not for auto
+    // an unknown group is refused with the engine's message, and --json goes with auto
     let bad = run(&[
-        "--set",
-        &format!("traces={}", tp.display()),
-        "--set",
-        &format!("windows={}", wp.display()),
-        "--set",
-        "columns=nope",
+        "--traces",
+        &tp.display().to_string(),
+        "--windows",
+        &wp.display().to_string(),
+        "--columns",
+        "nope",
     ]);
     assert_eq!(bad.code, 2);
-    assert_ne!(go(&["--set", "auto=true", "--json"]).code, 0);
+    // --json with --auto is accepted: the answer is JSON already
+    let auto = go(&["--auto", "--json"]);
+    assert_eq!(auto.code, 0, "{}", auto.stderr);
+    assert!(String::from_utf8(auto.stdout)
+        .unwrap()
+        .starts_with("{\"tol\":"));
+}
+
+/// An empty `--columns ""` is a usage error, like an empty `--split ""`, not an empty list that silently adds nothing.
+#[test]
+fn an_empty_columns_list_is_refused() {
+    let o = run(&["--traces", "x.json", "--windows", "w.json", "--columns", ""]);
+    assert_eq!(o.code, 2, "{}", o.stderr);
+    assert!(o.stderr.contains("--columns needs a list"), "{}", o.stderr);
 }

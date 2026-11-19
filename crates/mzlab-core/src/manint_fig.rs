@@ -16,9 +16,9 @@ pub(super) struct Cols {
 }
 
 /// The header cells of each group, in the order the groups are written.
-const SN_HEAD: &str = ",sn_zone";
-const FIG_HEAD: &str = ",w_half_min,plates,tailing";
-const QUALITY_HEAD: &str = ",gaussian,asymmetry,noise_score";
+pub const SN_HEAD: &str = ",sn_zone";
+pub const FIG_HEAD: &str = ",w_half_min,plates,tailing";
+pub const QUALITY_HEAD: &str = ",gaussian,asymmetry,noise_score";
 
 /// The windows alone (an array), or `{"windows": [...], "columns": ["sn", "fig", "quality"]}` to add the optional figure columns.
 pub(super) fn split(doc: &Value) -> Result<(&Value, Cols)> {

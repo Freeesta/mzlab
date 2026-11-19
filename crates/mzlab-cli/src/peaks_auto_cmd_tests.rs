@@ -30,7 +30,7 @@ fn peaks_are_the_core_result_and_set_names_are_accepted() {
     let body: Vec<String> = rt.iter().zip(&y).map(|(a, b)| format!("{a},{b}")).collect();
     std::fs::write(&f, format!("rt,y\n{}", body.join("\n"))).unwrap();
     let p = f.to_str().unwrap();
-    let o = run(args(&[p, "--set", "baseline=edges"]));
+    let o = run(args(&[p, "--baseline", "edges"]));
     assert_eq!(o.code, 0);
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
     let core = auto_integrate(&rt, &y, rt[0], rt[rt.len() - 1], AutoParams::default());
@@ -54,7 +54,7 @@ fn peaks_are_the_core_result_and_set_names_are_accepted() {
     ]));
     assert_eq!(
         String::from_utf8(o.stdout).unwrap().trim(),
-        "{\"peaks\":[]}"
+        "{\"schema\":\"peak-auto/1\",\"peaks\":[],\"choices\":[{\"key\":\"b0_b1\",\"choice\":\"omitted\",\"reason\":\"baseline=zero: the area is measured from 0, so the detection baseline ends are not used\"}]}"
     );
     let o = run(args(&[
         p,
@@ -69,8 +69,8 @@ fn peaks_are_the_core_result_and_set_names_are_accepted() {
     ]));
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
     assert_eq!(v["peaks"].as_array().unwrap().len(), 1);
-    assert_ne!(run(args(&[p, "--set", "bogus=1"])).code, 0);
-    assert_ne!(run(args(&[p, "--set", "hr_sn=-1"])).code, 0);
+    assert_eq!(run(args(&[p, "--set", "bogus=1"])).code, 2);
+    assert_eq!(run(args(&[p, "--set", "hr_sn=-1"])).code, 2);
     let _ = std::fs::remove_file(f);
 }
 
@@ -119,7 +119,7 @@ fn the_baseline_mode_applies_to_every_peak() {
     let p = f.to_str().unwrap();
     // no mode named = zero
     assert_eq!(
-        run(args(&[p, "--set", "baseline=zero"])).stdout,
+        run(args(&[p, "--baseline", "zero"])).stdout,
         run(args(&[p])).stdout
     );
     let core = auto_integrate(&rt, &y, rt[0], rt[rt.len() - 1], AutoParams::default());
@@ -128,11 +128,10 @@ fn the_baseline_mode_applies_to_every_peak() {
     let got = v["peaks"].as_array().unwrap();
     assert_eq!(got.len(), core.len());
     for (g, k) in got.iter().zip(&core) {
-        // same boundaries and baseline ends, the area now from zero (the background of about 560 counts inside it)
-        assert_eq!(
-            (g["t0"].as_f64().unwrap(), g["b0"].as_f64().unwrap()),
-            (rt[k.lo], k.base_lo)
-        );
+        // same boundaries, the area now from zero (the background of about 560 counts inside it); the detection
+        // baseline ends are not what that area is measured from, so b0/b1 are left out
+        assert_eq!(g["t0"].as_f64().unwrap(), rt[k.lo]);
+        assert!(g.get("b0").is_none() && g.get("b1").is_none(), "{g}");
         let z = integrate(&rt, &y, k.lo, k.hi, |_| 0.0);
         assert_eq!(
             (g["area"].as_f64().unwrap(), g["below"].as_f64().unwrap()),
@@ -143,8 +142,8 @@ fn the_baseline_mode_applies_to_every_peak() {
     }
     let o = run(args(&[
         p,
-        "--set",
-        "baseline=line",
+        "--baseline",
+        "line",
         "--set",
         "base_y0=1000",
         "--set",
@@ -158,7 +157,20 @@ fn the_baseline_mode_applies_to_every_peak() {
         .unwrap()
         .iter()
         .all(|g| g["baseline"] == "line" && g["below"].as_f64().unwrap() > 0.0));
-    assert_ne!(run(args(&[p, "--set", "baseline=valley"])).code, 0);
+    // the line's own ends are written with a line, the omission is logged with zero, and base_* without a line contradict the mode
+    assert!(v["choices"].as_array().unwrap().is_empty());
+    assert!(v["peaks"][0]["b0"].as_f64().unwrap() > 0.0, "{v}");
+    let z: serde_json::Value = serde_json::from_slice(&run(args(&[p])).stdout).unwrap();
+    assert_eq!(z["choices"][0]["key"], "b0_b1", "{z}");
+    assert_eq!(run(args(&[p])).stderr, "baseline=zero: b0/b1 omitted\n");
+    assert!(run(args(&[p, "--baseline", "edges"])).stderr.is_empty());
+    let bad = run(args(&[p, "--set", "base_y0=5"]));
+    assert_eq!(bad.code, 2, "{}", bad.stderr);
+    assert_eq!(
+        run(args(&[p, "--baseline", "edges", "--set", "base_y0=5"])).code,
+        2
+    );
+    assert_eq!(run(args(&[p, "--baseline", "valley"])).code, 2);
 }
 
 #[test]
@@ -169,17 +181,65 @@ fn area_unit_min_keeps_the_old_counts_x_min() {
     std::fs::write(&f, format!("rt,y\n{}", body.join("\n"))).unwrap();
     let p = f.to_str().unwrap();
     let core = auto_integrate(&rt, &y, rt[0], rt[rt.len() - 1], AutoParams::default());
-    let o = run(args(&[
-        p,
-        "--set",
-        "baseline=edges",
-        "--set",
-        "area_unit=min",
-    ]));
+    let o = run(args(&[p, "--baseline", "edges", "--area-unit", "min"]));
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
     for (g, k) in v["peaks"].as_array().unwrap().iter().zip(&core) {
         assert_eq!(g["area"].as_f64().unwrap(), k.area);
     }
-    assert_eq!(run(args(&[p, "--set", "area_unit=s"])).code, 0);
-    assert_ne!(run(args(&[p, "--set", "area_unit=h"])).code, 0);
+    assert_eq!(run(args(&[p, "--area-unit", "s"])).code, 0);
+    assert_eq!(run(args(&[p, "--area-unit", "h"])).code, 2);
+}
+
+/// The keys of the output are exactly those `docs/schemi/peak-auto-1.json` documents, for each baseline mode.
+#[test]
+fn the_output_keys_are_the_schemas() {
+    let schema: serde_json::Value =
+        serde_json::from_str(include_str!("../../../docs/schemi/peak-auto-1.json")).unwrap();
+    let props = |v: &serde_json::Value| -> Vec<String> {
+        v["properties"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .cloned()
+            .collect()
+    };
+    let (rt, y) = trace();
+    let f = std::env::temp_dir().join("mzlab_peaks_auto_schema.csv");
+    let body: Vec<String> = rt.iter().zip(&y).map(|(a, b)| format!("{a},{b}")).collect();
+    std::fs::write(&f, body.join("\n")).unwrap();
+    let p = f.to_str().unwrap();
+    let item = &schema["properties"]["peaks"]["items"];
+    for mode in ["zero", "edges", "line"] {
+        let mut a = vec![p, "--baseline", mode];
+        if mode == "line" {
+            a.extend([
+                "--set",
+                "base_y0=1000",
+                "--set",
+                "base_t1=6",
+                "--set",
+                "base_y1=1000",
+            ]);
+        }
+        let v: serde_json::Value = serde_json::from_slice(&run(args(&a)).stdout).unwrap();
+        let text = String::from_utf8(run(args(&a)).stdout).unwrap();
+        assert!(
+            text.starts_with("{\"schema\":\"peak-auto/1\","),
+            "schema is the first key"
+        );
+        let top: Vec<&String> = v.as_object().unwrap().keys().collect();
+        assert_eq!(v["schema"], schema["properties"]["schema"]["const"]);
+        for k in top {
+            assert!(props(&schema).contains(k), "{k}");
+        }
+        for pk in v["peaks"].as_array().unwrap() {
+            for k in pk.as_object().unwrap().keys() {
+                assert!(props(item).contains(k), "{mode}: {k}");
+            }
+            for r in item["required"].as_array().unwrap() {
+                assert!(pk.get(r.as_str().unwrap()).is_some(), "{mode}: {r}");
+            }
+        }
+    }
+    let _ = std::fs::remove_file(f);
 }
