@@ -5,8 +5,8 @@
 use std::fs::File;
 use std::path::PathBuf;
 
-use mzlab_core::json::Out;
-use mzlab_core::mzml_validate::{json_file, validate, Problem, Report, Severity};
+use mzlab_core::error::Error;
+use mzlab_core::mzml_validate::{json_files, validate, Problem, Report, Severity};
 
 use crate::Outcome;
 
@@ -15,11 +15,11 @@ pub const HELP: &str = "mzlab-cli file validate: is the mzML valid (structure, P
 usage: mzlab-cli file validate FILE.mzML... [--json] [--help]
 
   FILE...   one or more mzML (plain or indexedmzML)
-  --json    one JSON array on the standard output, an object per file: {file, valid, indexed, spectra, chromatograms, problems: [{severity, path, code, message}]}
+  --json    one document on the standard output: {\"schema\":\"mzml-validation/1\",\"files\":[{file, valid, indexed, spectra, chromatograms, problems: [{severity, path, code, message}]}]}
 
 Without --json each finding is a line `error|warning PATH MESSAGE` (PATH is the XML path, MESSAGE starts with the code of the check); with
 several files each line starts with `FILE: `. The summary of every file goes to the standard error. Exit code: 0 no error in any file,
-1 at least one error, 2 usage, 4 a file that cannot be read. Warnings (obsolete terms, a value without its unit) never change the code.";
+1 at least one error (the document stays on the standard output), 2 usage, 4 a file that cannot be read (one error/1 under --json). Warnings (obsolete terms, a value without its unit) never change the code.";
 
 struct Args {
     files: Vec<PathBuf>,
@@ -78,10 +78,10 @@ pub fn run(args: impl Iterator<Item = String>) -> Outcome {
         Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => return Outcome::fail(&e),
     };
-    let (mut text, mut json, mut err) = (String::new(), Out::default(), String::new());
-    let (mut bad, mut unreadable) = (false, false);
-    json.raw("[");
-    for (k, f) in a.files.iter().enumerate() {
+    let (mut text, mut err) = (String::new(), String::new());
+    let (mut done, mut bad) = (Vec::new(), false);
+    let mut unreadable: Option<String> = None;
+    for f in &a.files {
         let name = f.file_name().map_or(f.display().to_string(), |n| {
             n.to_string_lossy().into_owned()
         });
@@ -91,19 +91,15 @@ pub fn run(args: impl Iterator<Item = String>) -> Outcome {
             File::open(f).map_err(|e| e.to_string())
         })
         .and_then(|h| validate(h).map_err(|e| e.to_string()));
-        let Ok(r) = read else {
-            err += &format!(
-                "{name}: cannot be read: {}\n",
-                read.err().unwrap_or_default()
-            );
-            unreadable = true;
-            continue;
+        let r = match read {
+            Ok(r) => r,
+            Err(cause) => {
+                err += &format!("{name}: cannot be read: {cause}\n");
+                unreadable.get_or_insert_with(|| f.display().to_string());
+                continue;
+            }
         };
         bad |= !r.is_valid();
-        if k > 0 && json.0.len() > 1 {
-            json.raw(",");
-        }
-        json_file(&mut json, &name, &r);
         let prefix = (a.files.len() > 1).then_some(name.as_str());
         text += &r
             .problems
@@ -111,15 +107,20 @@ pub fn run(args: impl Iterator<Item = String>) -> Outcome {
             .map(|p| line(prefix, p))
             .collect::<String>();
         err += &summary(&name, &r);
+        done.push((name, r));
     }
-    json.raw("]\n");
+    let stdout = if a.json { json_files(&done) } else { text };
+    if let Some(path) = unreadable {
+        // the files that could be read still ride along: under --json they become the `report` of the error/1
+        let mut o = Outcome::fail_error(&Error::new("err.cli.file").with("path", path))
+            .with_hint("check the path; validate reads mzML files, not folders");
+        o.stderr += &err;
+        o.stdout = stdout.into_bytes();
+        return o;
+    }
     Outcome {
-        code: if unreadable {
-            crate::exit::INPUT
-        } else {
-            u8::from(bad)
-        },
-        stdout: if a.json { json.0 } else { text }.into_bytes(),
+        code: u8::from(bad),
+        stdout: stdout.into_bytes(),
         stderr: err,
         error: None,
     }

@@ -179,9 +179,16 @@ fn list_gives_data_on_stdout_progress_on_stderr_and_exit_codes() {
     let (code, out, err) = run(&["sample", "list", &at("totale"), "--json"]);
     assert_eq!((code, out.lines().count()), (0, 1), "{err}");
     assert!(
-        out.starts_with(r#"{"schema":"samples_list/1","format":"SciexWiff""#),
+        out.starts_with(
+            r#"{"schema":"sample-list/1","files":[{"schema":"samples_list/1","format":"SciexWiff""#
+        ),
         "{out}"
     );
+    // several files are ONE document, in the order given, never one document per line
+    let (code, out, _) = run(&["sample", "list", &at("totale"), &at("rifiutato"), "--json"]);
+    assert_eq!((code, out.lines().count()), (1, 1), "{out}");
+    let doc = mzlab_core::json::parse(out.as_bytes()).unwrap();
+    assert_eq!(doc.get("files").unwrap().arr().len(), 2);
     assert!(err.contains("listing "), "{err}");
     // a refused sample is listed with its reason and the exit code says it
     let (code, out, _) = run(&["sample", "list", &at("rifiutato"), "--json"]);
@@ -197,7 +204,24 @@ fn list_gives_data_on_stdout_progress_on_stderr_and_exit_codes() {
     // a missing file is 4 and an error line, no usage is 2
     let (code, out, _) = run(&["sample", "list", &at("nothing"), "--json"]);
     assert_eq!(code, 4);
-    assert!(out.contains(r#""schema":"error/1""#), "{out}");
+    assert!(out.starts_with(r#"{"schema":"error/1""#), "{out}");
+    assert!(
+        out.contains(r#""error_key":"err.session.fileNotFound""#),
+        "{out}"
+    );
+    // an mzML has its own key, not "type not accepted"; the refusal is a verdict: the listing stays, the error takes the file's place
+    let mzml = d.join("x.mzML");
+    std::fs::write(&mzml, b"<mzML/>").unwrap();
+    let (code, out, _) = run(&["sample", "list", mzml.to_str().unwrap(), "--json"]);
+    assert_eq!(code, 1, "{out}");
+    assert!(
+        out.starts_with(r#"{"schema":"sample-list/1","files":[{"schema":"error/1""#),
+        "{out}"
+    );
+    assert!(
+        out.contains("err.file.alreadyMzml") && !out.contains("notAccepted"),
+        "{out}"
+    );
     assert_eq!(run(&["sample", "list", "--json"]).0, 2);
     assert_eq!(run(&["sample", "list", &at("totale"), "--bogus"]).0, 2);
     let _ = std::fs::remove_dir_all(&d);

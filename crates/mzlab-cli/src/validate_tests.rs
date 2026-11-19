@@ -87,7 +87,7 @@ fn a_broken_file_exits_1_with_one_line_per_problem() {
 }
 
 #[test]
-fn several_files_prefix_each_line_and_json_is_an_array() {
+fn several_files_prefix_each_line_and_json_is_one_document() {
     let dir = folder("many");
     let (g, b) = (dir.join("good.mzML"), dir.join("bad.mzML"));
     let (g, b) = (g.to_str().unwrap(), b.to_str().unwrap());
@@ -98,7 +98,11 @@ fn several_files_prefix_each_line_and_json_is_an_array() {
         .lines()
         .all(|l| l.starts_with("bad.mzML: error ")));
     let o = run(&["file", "validate", "--json", g, b]);
-    let v = mzlab_core::json::parse(&o.stdout).unwrap();
+    let doc = mzlab_core::json::parse(&o.stdout).unwrap();
+    assert!(o
+        .stdout
+        .starts_with(b"{\"schema\":\"mzml-validation/1\",\"files\":["));
+    let v = doc.get("files").unwrap();
     assert_eq!(v.arr().len(), 2);
     assert_eq!(
         v.at(0).and_then(|f| f.get("valid")).and_then(|x| x.bool()),

@@ -1,6 +1,6 @@
 //! `mzlab-cli dad subtract|spectrum|trace|ms-at|delay`: the DAD / PDA matrix of a file for agents, the same engine routes as the site and the app (`itemroutes`,
 //! `wiff::dad_ops`). Every answer is JSON on stdout with stable keys; progress and errors go to stderr; with `--json` an error is also an `error/1` on stdout.
-//! Exit codes: 0 done, 1 data error (no DAD, nothing overlaps), 2 usage.
+//! Exit codes: 0 done, 1 data error (no DAD, nothing overlaps), 2 usage, 4 a file that is missing, 5 a `--sample` the file does not have.
 
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -32,7 +32,7 @@ usage: mzlab-cli dad subtract A B [--view report|map|spectrum|trace] [--scale no
   --sample ID the sample of a file with several (.wiff); --minus-sample ID the same for B
   --json      accepted; every answer is JSON, and an error is also an error/1 document on stdout
   --out PATH  write there instead of the standard output
-exit codes: 0 done, 1 data error (no DAD, nothing overlaps), 2 usage";
+exit codes: 0 done, 1 data error (no DAD, nothing overlaps), 2 usage, 4 a file missing or unreadable, 5 a sample id the file does not have";
 
 struct Req {
     verb: String,
@@ -167,6 +167,21 @@ fn idx_err(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
 }
 
+/// The position of the sample `sample` (none: the first) among `ids`; `err.sample.unknown` (exit 5) naming the ids the file has when it is not there.
+fn sample_at(ids: &[u32], sample: Option<u32>) -> Result<usize> {
+    let Some(id) = sample else { return Ok(0) };
+    mzlab_core::readers::selection::resolve(ids, &[id])?;
+    Ok(ids.iter().position(|&s| s == id).unwrap_or(0))
+}
+
+/// `err.session.fileNotFound` (exit 4) for an input that is not there, before any reader tries to open it.
+fn exists(file: &Path) -> Result<()> {
+    if file.exists() {
+        return Ok(());
+    }
+    Err(Error::new("err.session.fileNotFound").with("name", file.display()))
+}
+
 /// The DAD matrix of `file`: an mzML through the engine's own route (`pda_dad`), any other file through its reader, the same matrix the site and the app serve.
 fn dad_of(file: &Path, sample: Option<u32>) -> Result<Arc<DadData>> {
     if file.to_string_lossy().to_lowercase().ends_with(".mzml") {
@@ -174,16 +189,12 @@ fn dad_of(file: &Path, sample: Option<u32>) -> Result<Arc<DadData>> {
         let size = f.metadata().map_err(idx_err)?.len();
         return pda_dad(&mut Mzml::new(f, size));
     }
-    let name = file
-        .file_name()
-        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    let label = sample.map_or(String::new(), |id| format!("{name}@{id}"));
     let mut l = mzlab_lettori::apri(
         crate::flow_set::file_set(file)?,
         &mzlab_core::readers::Limits::desktop(),
     )?;
     let ids: Vec<u32> = l.samples().iter().map(|s| s.id).collect();
-    let k = crate::flow_set::sample_index(&label, &ids)?;
+    let k = sample_at(&ids, sample)?;
     l.dad_data(k)?
         .map(Arc::new)
         .ok_or_else(|| Error::new("err.pda.none"))
@@ -270,7 +281,7 @@ fn ms_inner<T>(
         &mzlab_core::readers::Limits::desktop(),
     )?;
     let ids: Vec<u32> = l.samples().iter().map(|s| s.id).collect();
-    let k = crate::flow_set::sample_index(&label, &ids)?;
+    let k = sample_at(&ids, sample)?;
     let shell = mzlab_core::readers_mzml::guscio(l.as_mut(), k)?;
     let size = shell.len() as u64;
     let mut m = Mzml::new(shell, size);
@@ -284,6 +295,9 @@ fn ms_inner<T>(
 
 fn run_req(c: &Req) -> Result<String> {
     let a = &c.files[0];
+    for f in c.files.iter().chain(c.minus.iter()) {
+        exists(f)?;
+    }
     let window = |p: Option<(f64, f64)>, what: &str| {
         p.ok_or_else(|| Error::new("err.pda.window").with("need", what))
     };
@@ -361,7 +375,11 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     match run_req(&c) {
         Ok(t) => crate::emit(t + "\n", &c.out),
-        Err(e) => Outcome::fail_error(&e).with_hint("see mzlab-cli dad --help"),
+        Err(e) => Outcome::fail_error(&e).with_hint(match e.key {
+            "err.sample.unknown" => "list the samples with `mzlab-cli sample list FILE --json`",
+            "err.session.fileNotFound" => "check the path",
+            _ => "see mzlab-cli dad --help",
+        }),
     }
 }
 

@@ -83,7 +83,7 @@ fn the_report_counts_the_merged_centroids_of_our_own_peak_picking() {
             o.stderr
         );
         let r = parse(&std::fs::read(&report).unwrap()).unwrap();
-        let c = r.arr()[0]
+        let c = r.get("items").unwrap().arr()[0]
             .get("centroids")
             .expect("the counts of our centroids");
         assert_eq!(c.get("merged").and_then(|v| v.f64()), Some(30.0), "{round}");
@@ -103,7 +103,11 @@ fn the_report_counts_the_merged_centroids_of_our_own_peak_picking() {
     ]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     assert!(!o.stderr.contains("warn.centroid.merged"), "{}", o.stderr);
-    assert!(parse(&std::fs::read(&report).unwrap()).unwrap().arr()[0]
+    assert!(parse(&std::fs::read(&report).unwrap())
+        .unwrap()
+        .get("items")
+        .unwrap()
+        .arr()[0]
         .get("centroids")
         .is_none());
     let _ = std::fs::remove_dir_all(&dir);

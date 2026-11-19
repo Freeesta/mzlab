@@ -14,6 +14,19 @@ pub(crate) fn parse(text: &str) -> Result<Vec<u32>> {
     selection::parse(text)
 }
 
+/// `err.file.alreadyMzml` for a file that is an mzML already (plain or gzip): it has no vendor container to convert, list or choose samples from.
+/// A distinct key, so the answer is not "type not accepted" with `.mzML` among the accepted ones.
+pub(crate) fn refuse_mzml(path: &Path) -> Result<()> {
+    let name = path
+        .file_name()
+        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
+    let low = name.to_lowercase();
+    if path.is_file() && (low.ends_with(".mzml") || low.ends_with(".mzml.gz")) {
+        return Err(Error::new("err.file.alreadyMzml").with("name", name));
+    }
+    Ok(())
+}
+
 /// The sample ids of the dataset at `path`, from its container and index alone.
 pub(crate) fn present(path: &Path) -> Result<Vec<u32>> {
     let fs = crate::flow_set::file_set(path)?;
