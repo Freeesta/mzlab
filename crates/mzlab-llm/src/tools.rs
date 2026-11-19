@@ -9,7 +9,10 @@ use mzlab_core::json::{parse, Out, Value};
 use mzlab_core::step::{Kind, Param, Step};
 #[path = "tools_demo.rs"]
 mod demo;
+#[path = "tools_pretty.rs"]
+mod pretty;
 pub use demo::{demo_catalog, demo_catalog_json, demo_catalog_json_with, DEMO_TOOLS};
+use pretty::spread;
 
 /// What a tool may do, read by the policy of the autonomy level.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -365,72 +368,6 @@ pub fn catalog(steps: &[Step], ui: &[UiTool], executable: &dyn Fn(&str) -> bool)
         .map_or(all.len(), |i| i + 1);
     all.splice(at..at, crate::tools_assist::tools(steps));
     all
-}
-
-/// Containers whose compact form is at most this long stay on one line in the exported file.
-const INLINE: usize = 100;
-
-/// End of the JSON value that starts at `i` in `s` (compact, no whitespace).
-fn value_end(s: &[u8], mut i: usize) -> usize {
-    match s[i] {
-        b'"' => {
-            i += 1;
-            while s[i] != b'"' {
-                i += if s[i] == b'\\' { 2 } else { 1 };
-            }
-            i + 1
-        }
-        b'[' | b'{' => {
-            let close = if s[i] == b'[' { b']' } else { b'}' };
-            i += 1;
-            while s[i] != close {
-                if s[i] == b',' || s[i] == b':' {
-                    i += 1;
-                } else {
-                    i = value_end(s, i);
-                }
-            }
-            i + 1
-        }
-        _ => {
-            while !matches!(s[i], b',' | b']' | b'}') {
-                i += 1;
-            }
-            i
-        }
-    }
-}
-
-/// Writes the value at `i` with one element or member per line, except short containers; returns the end of the value.
-fn spread(s: &[u8], i: usize, depth: usize, out: &mut String) -> usize {
-    let end = value_end(s, i);
-    let text = std::str::from_utf8(&s[i..end]).expect("UTF-8");
-    if !matches!(s[i], b'[' | b'{') || end - i <= INLINE {
-        out.push_str(text);
-        return end;
-    }
-    let close = if s[i] == b'[' { ']' } else { '}' };
-    out.push(s[i] as char);
-    let mut at = i + 1;
-    let pad = "  ".repeat(depth + 1);
-    while s[at] != close as u8 {
-        out.push('\n');
-        out.push_str(&pad);
-        if s[at] == b'"' && s[i] == b'{' {
-            let key_end = value_end(s, at);
-            out.push_str(std::str::from_utf8(&s[at..=key_end]).expect("UTF-8"));
-            at = key_end + 1;
-        }
-        at = spread(s, at, depth + 1, out);
-        if s[at] == b',' {
-            out.push(',');
-            at += 1;
-        }
-    }
-    out.push('\n');
-    out.push_str(&"  ".repeat(depth));
-    out.push(close);
-    at + 1
 }
 
 /// The catalog as the file `tools/1`: one element per line in every long list, so the diff of a new step touches only its own lines, and without

@@ -242,8 +242,8 @@ fn read(toks: &[String], optional: bool, u: &mut Usage) {
             }
             let path = [
                 "FILE", "PATH", "DIR", "TRACE", "RECORD", "PLAN", "GRAPH", "MOLFILE", "REQUEST",
-                "CSV", "INPUT", "OUT", "RUNDIR", "TABLE", "REG", "CASES", "LINES", ".json", ".csv", ".mzML",
-                ".wiff",
+                "CSV", "INPUT", "OUT", "RUNDIR", "TABLE", "REG", "CASES", "LINES", ".json", ".csv",
+                ".mzML", ".wiff",
             ]
             .iter()
             .any(|k| name.contains(k));

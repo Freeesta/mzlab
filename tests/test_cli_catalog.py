@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator
+from cargo_util import cli_argv
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = {"format": "mzflow/2", "inputs": [{"name": "s_t000.mzML", "type": "raw"}, {"name": "s_t010.mzML", "type": "raw"}], "steps": [
@@ -17,11 +18,8 @@ BASE = {"format": "mzflow/2", "inputs": [{"name": "s_t000.mzML", "type": "raw"},
 
 @pytest.fixture(scope="module")
 def cli():
-    subprocess.run(["cargo", "build", "-q", "-p", "mzlab-cli"], cwd=ROOT, check=True)
-    exe = ROOT / "target/debug/mzlab-cli"
-
     def run(*args):
-        r = subprocess.run([str(exe), *args], capture_output=True, text=True, check=True)
+        r = subprocess.run(cli_argv(*args), cwd=ROOT, capture_output=True, text=True, check=True)
         assert r.stdout.endswith("\n")
         return json.loads(r.stdout)
 
@@ -50,8 +48,7 @@ def test_the_contract_schemas_are_current():
 def test_ref_list_and_tools_validate_against_their_schemas(cli, tmp_path):
     csv = tmp_path / "list.csv"
     csv.write_text("mz,name,formula,polarity,adduct,note\n149.0233,phthalate,C8H5O3,+,[M+H]+,x\nbad,,,,,\n")
-    exe = ROOT / "target/debug/mzlab-cli"
-    r = subprocess.run([str(exe), "db", "ref-list", str(csv)], capture_output=True, text=True)
+    r = subprocess.run(cli_argv("db", "ref-list", str(csv)), cwd=ROOT, capture_output=True, text=True)
     assert r.returncode in (0, 1)
     doc = json.loads(r.stdout)
     assert list(doc)[0] == "schema" and doc["schema"] == "reflist/1"
