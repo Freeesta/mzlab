@@ -136,10 +136,12 @@ try:
             need(pg.evaluate("!document.querySelector('.mrm-all')") and not pg.evaluate("[...document.querySelectorAll('#dpanels *')].some(e => /primi 12|first 12/.test(e.textContent) && e.children.length === 0)"), "no «first 12 of N files» notice")
         step("no notice about a cap of files", no_notice)
         def delete_group():
+            # what an undo leaves behind until the next sync: p.ints rebuilt from JSON (new objects, same ids) while the card still holds the records of the old ones
+            pg.evaluate("(() => { const p = E.panels.find(q => q.type === 'mrm'); p.ints = JSON.parse(JSON.stringify(p.ints)); })()")
             pg.click("#manint tbody tr:nth-child(2) [data-del]")
             wait_for_js(pg, COUNT % 4, timeout=60000)
             need(pg.evaluate("E.panels.find(q => q.type === 'mrm').ints.length") == 1, "deleting the window drawn takes its applied rows with it")
-        step("deleting the window drawn removes the rows applied from it", delete_group)
+        step("deleting the window drawn removes the rows applied from it, also right after an undo", delete_group)
         def only_selected():
             pg.evaluate("(() => { E.files.forEach(f => { f.vis = f.file.startsWith('Sample_A') || f.file.startsWith('Sample_B'); }); draw(E.panels.find(q => q.type === 'mrm')); })()")
             wait_for_js(pg, "(() => { const p = E.panels.find(q => q.type === 'mrm' && q._a); return !!p && new Set(p._a.sr.map(s => s.k)).size === 2; })()", timeout=60000)
