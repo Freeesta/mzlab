@@ -70,3 +70,82 @@ fn a_header_with_monoisotopicmass_and_a_quoted_decimal_comma_gives_the_number() 
     let it = &v.get("items").unwrap().arr()[0];
     assert_eq!(it.get("mz").and_then(Value::f64), Some(150.5));
 }
+
+fn look(extra: &str, mz: &[f64], pol: &[i64], group: &[i64]) -> Vec<(usize, f64)> {
+    let j = |a: &[String]| a.join(",");
+    let body = format!(
+        "{{{extra},\"items\":{{\"mz\":[{}],\"pol\":[{}],\"group\":[{}]}}}}",
+        j(&mz.iter().map(|v| v.to_string()).collect::<Vec<_>>()),
+        j(&pol.iter().map(|v| v.to_string()).collect::<Vec<_>>()),
+        j(&group.iter().map(|v| v.to_string()).collect::<Vec<_>>())
+    );
+    let v = parse(lookup::route(&body).unwrap().as_bytes()).unwrap();
+    v.get("hits")
+        .unwrap()
+        .arr()
+        .iter()
+        .map(|h| {
+            (
+                h.get("i").and_then(Value::f64).unwrap() as usize,
+                h.get("diff").and_then(Value::f64).unwrap(),
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn ppm_window_orders_by_error_and_reports_a_both_polarity_ion_once() {
+    // 300 ppm... 5 ppm at 500 is 2.5 mDa: 500.001 (2nd), 500.0005 (1st), 500.004 out of the window
+    let h = look(
+        "\"mz\":500,\"unit\":\"ppm\",\"tol\":5",
+        &[500.001, 500.0005, 500.004],
+        &[0, 0, 0],
+        &[0, 1, 2],
+    );
+    assert_eq!(h.iter().map(|x| x.0).collect::<Vec<_>>(), vec![1, 0]);
+}
+
+#[test]
+fn da_window_and_polarity_filter() {
+    let mz = [100.2, 99.9, 100.4, 100.7];
+    let all = look(
+        "\"mz\":100,\"unit\":\"da\",\"tol\":0.5",
+        &mz,
+        &[1, -1, 1, 1],
+        &[0, 1, 2, 3],
+    );
+    assert_eq!(all.iter().map(|x| x.0).collect::<Vec<_>>(), vec![1, 0, 2]);
+    let neg = look(
+        "\"mz\":100,\"pol\":\"-\",\"unit\":\"da\"",
+        &mz,
+        &[1, -1, 1, 1],
+        &[0, 1, 2, 3],
+    );
+    assert_eq!(neg.iter().map(|x| x.0).collect::<Vec<_>>(), vec![1]);
+}
+
+#[test]
+fn same_group_is_one_hit_and_a_low_mass_keeps_one_milli_dalton() {
+    let h = look(
+        "\"mz\":50,\"unit\":\"ppm\",\"tol\":5",
+        &[50.0009, 50.0009],
+        &[1, 1],
+        &[7, 7],
+    );
+    assert_eq!(h.len(), 1); // 5 ppm of 50 is 0.25 mDa, the floor is 1 mDa
+}
+
+#[test]
+fn a_broken_request_gives_the_request_error() {
+    for b in [
+        "{}",
+        "{\"mz\":1,\"items\":{\"mz\":[1],\"pol\":[],\"group\":[]}}",
+        "{\"mz\":1,\"unit\":\"x\",\"items\":{}}",
+    ] {
+        assert_eq!(
+            lookup::route(b).unwrap_err().key,
+            "err.reflist.request",
+            "{b}"
+        );
+    }
+}

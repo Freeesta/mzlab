@@ -27,6 +27,7 @@ mod convert_entries;
 mod convert_help;
 mod convert_report;
 mod dad_cmd;
+mod design_cmd;
 pub mod error_text;
 pub mod exit;
 mod extract;
@@ -372,6 +373,8 @@ pub fn execute(args: &[String]) -> Outcome {
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod chem_contract_tests;
 #[cfg(test)]
 mod convert_fixtures;
 #[cfg(test)]

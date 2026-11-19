@@ -66,6 +66,7 @@ export async function statRoute(path, body, { rpc }) {
   // search box: what a typed number is compatible with (mz-match/1)
   if (path === "/api/ricerca") return { status: 200, text: (await rpc({ op: "lr_ricerca", body })).info };
   if (path === "/api/reflist") return { status: 200, text: (await rpc({ op: "lr_reflist", body })).info };
+  if (path === "/api/reflist_match") return { status: 200, text: (await rpc({ op: "lr_reflist_match", body })).info };
   if (path === "/api/flow/command") {
     let r;
     try { r = (await rpc({ op: "lr_flow_command", body })).info; } catch (e_) { const e = /** @type {Lanciato} */ (e_); r = "E" + JSON.stringify({ error: String(e && e.message || e) }); }

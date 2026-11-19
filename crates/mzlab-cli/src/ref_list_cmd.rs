@@ -1,10 +1,10 @@
 //! `mzlab-cli db ref-list FILE.csv [--name N] [--match X [--set unit=da|ppm tol=N pol=+|-]] [--out PATH]`: reads a CSV of reference ions (`reflist/1`,
-//! `mzlab_core::reflist`, the same bytes as the page and the app) and, with `--match`, what a number is compatible with in that list (`mz-match/1`).
+//! `mzlab_core::reflist`, the same bytes as the page and the app) and, with `--match`, what a number is compatible with in that list (`reflist-match/1`).
 
 use std::path::PathBuf;
 
 use mzlab_core::json::{parse, Value};
-use mzlab_core::jsonb::{text, write, Obj};
+use mzlab_core::jsonb::{int, text, write, Obj};
 
 use crate::Outcome;
 
@@ -15,7 +15,7 @@ usage: mzlab-cli db ref-list FILE.csv [--name N] [--match X] [--set unit=da|ppm]
   FILE.csv        columns mz, name, formula, polarity, adduct, note (a header line is required; ; , or tab; # lines skipped);
                   a row needs an m/z or a formula
   --name N        the list name carried in the answer
-  --match X       also answer what the number X is compatible with in the list (mz-match/1 under \"match\")
+  --match X       also answer what the number X is compatible with in the list (reflist-match/1 under \"match\": the position of each hit in items, diff in Da, err in ppm)
   --out PATH      write there instead of the standard output
 
 The answer is {\"schema\":\"reflist/1\",\"name\",\"compounds\",\"items\":[{line,name,formula,adduct,mz,pol,note}],\"errors\":[{line,key,field,value}]}.
@@ -93,7 +93,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     o
 }
 
-/// The list answer with the `mz-match/1` of the number `x` against its items added under "match".
+/// The list answer with the `reflist-match/1` of the number `x` against its items added under "match".
 fn with_match(
     list: &str,
     x: &str,
@@ -110,28 +110,46 @@ fn with_match(
         return Err(Outcome::fail("the number must be finite"));
     };
     let v = parse(list.as_bytes()).unwrap_or(Value::Null);
-    let contam: Vec<Value> = v
-        .get("items")
-        .map_or(&[][..], Value::arr)
+    // the columns the page sends for its table: one group per distinct (name, adduct, m/z), so a repeated row is one hit
+    let items = v.get("items").map_or(&[][..], Value::arr);
+    let col = |k: &str| {
+        Value::Arr(
+            items
+                .iter()
+                .map(|i| i.get(k).cloned().unwrap_or(Value::Null))
+                .collect(),
+        )
+    };
+    let mut seen = std::collections::HashMap::new();
+    let group: Vec<Value> = items
         .iter()
         .map(|i| {
-            Obj::new()
-                .put("id", text(i.get("name").and_then(Value::str).unwrap_or("")))
-                .put("mz", i.get("mz").cloned().unwrap_or(Value::Null))
-                .put("pol", i.get("pol").cloned().unwrap_or(Value::Null))
-                .done()
+            let key = format!(
+                "{}|{}|{}",
+                i.get("name").and_then(Value::str).unwrap_or(""),
+                i.get("adduct").and_then(Value::str).unwrap_or(""),
+                i.get("mz").and_then(Value::f64).unwrap_or(0.0)
+            );
+            let n = seen.len();
+            int(*seen.entry(key).or_insert(n) as i64)
         })
         .collect();
-    let mut req = Obj::new().n("x", x).b("hr", true).put("pol", text(pol));
+    let mut req = Obj::new().n("mz", x).put("pol", text(pol));
     if let (false, Some(t)) = (unit.is_empty(), tol) {
-        req = req.put("tol_unit", text(unit)).n("tol", t);
+        req = req.put("unit", text(unit)).n("tol", t);
     }
     let req = req
-        .put("losses", Value::Arr(vec![]))
-        .put("adducts", Value::Arr(vec![]))
-        .put("contam", Value::Arr(contam))
+        .put(
+            "items",
+            Obj::new()
+                .put("mz", col("mz"))
+                .put("pol", col("pol"))
+                .put("group", Value::Arr(group))
+                .done(),
+        )
         .done();
-    let m = mzlab_core::search::match_number(&write(&req)).map_err(|e| Outcome::fail_error(&e))?;
+    let m =
+        mzlab_core::reflist::lookup::route(&write(&req)).map_err(|e| Outcome::fail_error(&e))?;
     Ok(format!(
         "{}{}",
         list.trim_end_matches('}'),

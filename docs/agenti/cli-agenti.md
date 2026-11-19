@@ -24,11 +24,15 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - Exit codes (`crates/mzlab-cli/src/exit.rs`, one table for every command): 0 done; 1 data or domain error (a step or file failed, the other outputs are written); 2 usage (unknown command or option, bad value); 3 plan, schema or integrity (invalid plan, fingerprint mismatch, `sources.json` not valid); 4 input missing or unreadable; 5 selector not found (`--sample` id, channel, node, step id); 6 output cannot be written, or an external source failed.
 
 ## Learn the CLI in one call
-- `mzlab-cli commands [--json] [PATH...]`: the `commands/1` catalog (about 35 KB for all): per command its `synopsis` (the usage line of `--help`, from which `args` and `flags` are read, so help and catalog cannot differ), flags with type, unit, default and enum (a flag object leaves out `unit`, `default`, `enum` when null and `repeat`, `required` when false), `stdin`, `stdout` (`format` json|csv|text, `schema`), `exit_codes` (meanings once at the top) and examples; `PATH...` narrows it (`commands --json flow`). Unknown path: exit 5.
+- `mzlab-cli commands [--json] [PATH...]`: the `commands/1` catalog: per command its `synopsis` (the usage line of `--help`, from which `args` and `flags` are read, so help and catalog cannot differ), flags with type, unit, default and enum (a flag object leaves out `unit`, `default`, `enum` when null and `repeat`, `required` when false), `stdin`, `stdout` (`format` json|csv|text, `schema`), `exit_codes` (meanings once at the top) and examples. `PATH...` narrows it (`commands --json flow`); unknown path: exit 5.
+  - The whole listing (no PATH) is compact, about 32 KB against the 40,000-byte cap: a flag used by two or more commands has its `help` once in the top-level `flag_help` (so a new command with `--out` or `--sample` costs nothing for them), `exit_codes` is left out when it is the one derived from the usage line (`derived_exits` in `catalog/doc.rs`), and `examples` when it is only the usage line without its `[optional]` parts.
+  - The derived exit codes: 0, 1, 2 always; +3 when the path starts with `flow ` or is a verdict command (`VERDICT` in `crates/mzlab-cli/src/contract.rs`); +4 when it has a path or rest argument or a path flag other than `--out`; +5 when it has `--sample` or `--id` or its path starts with `sample ` or `msn graph`; +6 when it has `--out`. The derived example is `mzlab-cli ` + the synopsis without its `[optional]` groups (a word with a bracket inside stays) and without `...` tokens. Both rules are also in the `exit_codes_note` / `examples_note` of the listing.
+  - `commands --json PATH...` gives each command in full. To add a command: write its row and `FLAG_HELP` text as before; do not add members to the compact listing without moving something out (the test `the_whole_listing_is_compact_and_the_path_listing_is_full` holds the 33 KB line).
 - `mzlab-cli schema [--list | NAME]`: the JSON Schemas of `docs/schemi/` embedded in the binary (`error/1`, `mzflow/2`, `prov/1`, `samples/1`, `design/1`, ...); `--list` is `schemas/1`. `mzflow/2` is the plan the engine reads: `program` and input fingerprints are optional. Unknown name: exit 5.
 - `flow steps --compact` (`steps-compact/1`, under 20 KB: ids, versions, titles, ports, parameter and algorithm names, `executable_native`) and `llm tools --compact` (`tools-compact/1`) are the small forms; `llm tools` names the catalog in `cli_catalog`.
 
 ## Sequence
+0. A plan with `table.stats@1` or `table.drift@1` needs `samples` and `design` inputs: `sample table FILE... > samples.json`, `sample design propose --samples samples.json --out design.json`, `sample design validate design.json --samples samples.json` (exit 3 names each bad key); `design-cli.md`.
 1. `mzlab-cli flow steps --json [--id ID[@V]]`: the `step/1` descriptors of this very binary (`params` is a JSON Schema; `executable_native` says whether `flow run` runs it). Plain `flow steps` gives one line per step.
 2. Write an `mzflow/2` plan with the differences from the defaults only.
 3. `mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE] --json`: validates without the input files (`flowcheck/1`; exit 3 with the problems listed).
@@ -47,9 +51,13 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
   `--set traces=PATH` takes the traces (chromatogram, XIC, DAD) as JSON instead of files; with a `panel` on a trace the header ends with `panel,conc,conc_unit,correction,below,area_unit`.
   `--set shifts=true` and `--set auto=true` answer JSON.
 
-- `db ref-list FILE.csv` (JSON `reflist/1`: items and line-numbered row errors; exit 1 = some rows wrong, 2 usage, 4 unreadable file; `--match X` adds `mz-match/1`): `reference-lists.md`.
+- `db ref-list FILE.csv` (JSON `reflist/1`: items and line-numbered row errors; exit 1 = some rows wrong, 2 usage, 4 unreadable file; `--match X` adds `reflist-match/1`): `reference-lists.md`.
 
 - `peak auto` and `peak auto-lr`: areas in counts x s; `--set area_unit=s|min` (`min` = the old counts x min).
+
+## Chemistry commands (`mol *`, `ion *`)
+- Every answer opens with `"schema"` (`label/1`, `analysis/1`, `check/1`, `cip/1`, `highlight/1`, `selection/1`, `link/1`, `cut/1`, `mechanism/1`, `substructure/1`, `substructure_db/1`, `ion_mz/1`, `ion_pattern/1`, `mz-match/1`, `elements/1`; `mzlab-cli schema NAME`), never `"format"`. Units sit in the key: `neutral_da`, `offset_da`, `abundance_pct`, `error_mda`, `error_ppm`.
+- Exit codes: 2 for a formula, adduct or SMILES that does not parse or a bad option value; 1 for a valid request the chemistry cannot satisfy (adduct removes more atoms than exist, m/z below 1, cut of an aromatic bond, bond that is not in the molfile); 4 for a missing file or a request/molfile that cannot be read. 6 for an unwritable `--out`. Failures are one `error/1`. `mol export` prints text (no schema, no `--json`); `mol search` answers `substructure/1`, or `substructure_db/1` with `--db`. `error_mda` is in mDa. Schemas: `docs/schemi/*-1.json`.
 
 ## Rules for the agent
 - The CLI uses no network (except `normative build` and `insilico pack`, which say so) and reads/writes only the paths it is given; never delete user files.

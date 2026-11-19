@@ -1,5 +1,5 @@
 //! `mzlab-cli mol search --sub QUERY TARGET... | --db LIST [--set stereo=1] [--set max=N] [--out PATH]`: where a drawn moiety occurs in the
-//! given structures (`sub/1`) or in a structure list (`subdb/1`), byte for byte what the desktop route `feat/grafo` (`kind: "sub"`) and the
+//! given structures (`substructure/1`) or in a structure list (`substructure_db/1`), byte for byte what the desktop route `feat/grafo` (`kind: "sub"`) and the
 //! `molkit` `.wasm` answer.
 
 use std::path::PathBuf;
@@ -8,7 +8,7 @@ use mzlab_core::json::Out;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli mol search: where a substructure occurs in structures, as JSON (sub/1).
+pub const HELP: &str = "mzlab-cli mol search: where a substructure occurs in structures, as JSON (substructure/1).
 
 usage: mzlab-cli mol search --sub QUERY TARGET... [--set NAME=VALUE...] [--out PATH]
        mzlab-cli mol search --sub QUERY --db LIST [--set NAME=VALUE...] [--out PATH]
@@ -22,9 +22,9 @@ usage: mzlab-cli mol search --sub QUERY TARGET... [--set NAME=VALUE...] [--out P
   --set max       at most this many matches per target (1-1000, default 1000)
   --out PATH      write there instead of the standard output
 
-The answer is {\"format\": \"sub/1\", \"atoms\", \"stereo\", \"hits\": [{i, n, maps}], \"errors\": [{i, error}]}: for every target that
+The answer is {\"schema\": \"substructure/1\", \"atoms\", \"stereo\", \"hits\": [{i, n, maps}], \"errors\": [{i, error}]}: for every target that
 contains the query, its distinct matches as the target atoms (from 0) of each query atom; explicit query hydrogens ask for at least that
-many hydrogens and have no column. With --db the answer is {\"format\": \"subdb/1\", \"atoms\", \"stereo\", \"source\", \"total\", \"skipped\",
+many hydrogens and have no column. With --db the answer is {\"schema\": \"substructure_db/1\", \"atoms\", \"stereo\", \"source\", \"total\", \"skipped\",
 \"hits\": [{i, name, id, structure, n, maps}], \"errors\": [{i, name, error}]}. A hit is a suspect to check, never an identification.";
 
 /// The text of an argument: a file when one exists at that path, the standard input for -, else the argument itself.

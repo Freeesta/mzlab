@@ -13,3 +13,9 @@ pub fn search_number(req: &str) -> Result<String, JsValue> {
 pub fn reflist_parse(req: &str) -> Result<String, JsValue> {
     mzlab_core::reflist::route(req).map_err(|e| error_json(&e))
 }
+
+/// `reflist-match/1`: the entries of a set of reference ions inside a window of an m/z (`mzlab_core::reflist::lookup`).
+#[wasm_bindgen]
+pub fn reflist_match(req: &str) -> Result<String, JsValue> {
+    mzlab_core::reflist::lookup::route(req).map_err(|e| error_json(&e))
+}

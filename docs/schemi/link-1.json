@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "link/1",
+  "title": "link/1: outside lookups of a structure",
+  "description": "The answer of `mzlab-cli mol link`: the PubChem, ChEBI and BioTransformer URLs; `preferred` is the id of the row to put first. Code: crates/mzlab-feat/src/chem/link.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "part",
+    "preferred",
+    "links"
+  ],
+  "properties": {
+    "schema": {
+      "const": "link/1"
+    },
+    "part": {
+      "type": "boolean"
+    },
+    "preferred": {
+      "type": "string"
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "url",
+          "copy"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "copy": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

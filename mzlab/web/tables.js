@@ -110,7 +110,7 @@
   // Unit resolution: isotopologues are grouped by nominal mass offset (M, M+1, M+2...); in each group we keep the total
   // probability and the probability-weighted exact mass. Elements are combined by convolution (n atoms: by squaring).
   const counts = (/** @type {string} */ f) => { const /** @type {Record<string, number>} */ n = {}; for (const [, s, k] of f.matchAll(/([A-Z][a-z]?)(\d*)/g)) n[s] = (n[s] || 0) + (k ? +k : 1); return n; };
-  // Unit-resolution pattern of an ion (formula + adduct name) -> {n, z, peaks: [{off, mz, rel}]} (rel: % of the highest): the Rust engine
+  // Unit-resolution pattern of an ion (formula + adduct name) -> {schema, n, z, peaks: [{off, mz, abundance_pct}]} (% of the highest): the Rust engine
   // (api/ion_pattern), asked once per request.
   const unitCache = /** @type {Map<string, Promise<Bag>>} */ (new Map());
   function unitIon(/** @type {string} */ formula, /** @type {string} */ adName) {

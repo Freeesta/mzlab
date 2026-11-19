@@ -203,7 +203,7 @@ pub fn check_json(request: &str) -> Result<String> {
 
 fn write(d: &Drawing, parts: &[Vec<u32>], ws: &[Warning]) -> String {
     let mut o = Out::default();
-    o.raw("{\"format\":\"check/1\",\"atoms\":")
+    o.raw("{\"schema\":\"check/1\",\"atoms\":")
         .int(d.mol.atoms.len() as i64)
         .raw(",\"pieces\":")
         .int(parts.len() as i64)
