@@ -27,42 +27,42 @@ def pkg(tmp_path_factory):
 @pytest.mark.parametrize("query,args", [
     ("", []),
     ("formula=C14H15N3O5%2B&ppm_formula=10", ["--formula", "C14H15N3O5+"]),
-    ("formula=C14H15N3O5%2B&scelte=%5B%7B%22mz%22%3A177.0546%2C%22formula%22%3A%22C9H8NO2%2B%22%7D%5D", ["--formula", "C14H15N3O5+", "--pick", "177.0546=C9H8NO2+"]),
-    ("formula=C14H15N3O5%2B&smiles=CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12&strutture=n3", ["--formula", "C14H15N3O5+", "--smiles", "CCOC(=O)c1c[nH]c2ccccc12", "--structures", "n3"]),
-    ("formula=C14H15N3O5%2B&smiles=CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12&strutture=3&ppm_struttura=5", ["--formula", "C14H15N3O5+", "--smiles", "CCOC(=O)c1c[nH]c2ccccc12", "--structures", "3", "--struct-ppm", "5"]),
+    ("formula=C14H15N3O5%2B&choices=%5B%7B%22mz%22%3A177.0546%2C%22formula%22%3A%22C9H8NO2%2B%22%7D%5D", ["--formula", "C14H15N3O5+", "--pick", "177.0546=C9H8NO2+"]),
+    ("formula=C14H15N3O5%2B&smiles=CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12&structures=n3", ["--formula", "C14H15N3O5+", "--smiles", "CCOC(=O)c1c[nH]c2ccccc12", "--structures", "n3"]),
+    ("formula=C14H15N3O5%2B&smiles=CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12&structures=3&struct_ppm=5", ["--formula", "C14H15N3O5+", "--smiles", "CCOC(=O)c1c[nH]c2ccccc12", "--structures", "3", "--struct-ppm", "5"]),
 ])
 def test_wasm_and_cli_give_the_same_graph(pkg, query, args):
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), query).stdout
     want = cli("msn-graph", str(MZML), *args).stdout
     assert got + "\n" == want  # the command line ends its output with a newline
-    assert '"formato":"msngrafo/2"' in got
-    assert ('"strutture":{' in got) == ("strutture=" in query)
+    assert '"schema":"msn-graph/1"' in got
+    assert ('"structures":{' in got) == ("structures=" in query)
 
 
 def test_the_whole_structure_and_the_molfile_are_the_same_in_cli_and_wasm(pkg, tmp_path):
     mol = tmp_path / "x.mol"
     mol.write_text("\n  mzlab\n\n  1  0  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0\nM  END\n", encoding="utf-8")
     smiles = "CCOC(=O)c1c[nH]c2ccccc12"
-    q = "formula=C14H15N3O5%2B&smiles=" + "CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12" + "&strutture=tutti&molfile=" + urllib.parse.quote(mol.read_text(encoding="utf-8"))
+    q = "formula=C14H15N3O5%2B&smiles=" + "CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12" + "&structures=all&molfile=" + urllib.parse.quote(mol.read_text(encoding="utf-8"))
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), q).stdout
     want = cli("msn-graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", smiles, "--structures", "all", "--molfile", str(mol)).stdout
     assert got + "\n" == want
     doc = json.loads(got)
-    assert doc["opzioni"]["molfile"].startswith("\n  mzlab")
-    assert isinstance(doc["strutture_tutti"], list) and list(doc)[-1] == "vista" and list(doc)[-2] == "strutture_tutti"
+    assert doc["options"]["molfile"].startswith("\n  mzlab")
+    assert isinstance(doc["structures_all"], list) and list(doc)[-1] == "view" and list(doc)[-2] == "structures_all"
 
 
 def test_complete_adds_the_view_with_the_same_bytes_in_cli_and_wasm(pkg, tmp_path):
     full = cli("msn-graph", str(MZML), "--formula", "C14H15N3O5+").stdout
     doc = json.loads(full)
-    assert list(doc)[-1] == "vista" and doc["vista"]["algoritmo"] == "best-path/1"
+    assert list(doc)[-1] == "view" and doc["view"]["algorithm"] == "best-path/1"
     old = tmp_path / "old.json"
-    old.write_text(full[:full.index(',"vista":')] + "}", encoding="utf-8")
+    old.write_text(full[:full.index(',"view":')] + "}", encoding="utf-8")
     via_cli = cli("msn-graph", "complete", str(old)).stdout
     via_wasm = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), str(old), "completa").stdout
     assert via_cli == full and via_wasm + "\n" == full
     notgraph = tmp_path / "x.json"
-    notgraph.write_text('{"formato":"msnlib/1"}', encoding="utf-8")
+    notgraph.write_text('{"schema":"msn-lib/1"}', encoding="utf-8")
     r = subprocess.run(["node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), str(notgraph), "completa"], capture_output=True, encoding="utf-8")
     assert r.returncode != 0 and "err.msngrafo.badGraph" in r.stderr
 
@@ -74,7 +74,7 @@ def test_a_bad_number_is_a_keyed_error(pkg):
 
 @pytest.mark.parametrize("fmt,clean", [("csv", False), ("mgf", False), ("msp", True), ("csv", True)])
 def test_wasm_and_cli_give_the_same_export(pkg, fmt, clean):
-    q = f"formato={fmt}" + ("&pulito=1" if clean else "")
+    q = f"format={fmt}" + ("&clean=1" if clean else "")
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), q, "export").stdout
     want = cli("msn-graph", str(MZML), "--export", fmt, *(["--clean"] if clean else [])).stdout
     assert got == want and got.strip()
@@ -89,15 +89,15 @@ def test_the_library_gets_an_entry_once(pkg, tmp_path):
     import json as _j
     q = "formula=C14H15N3O5%2B&ppm_formula=10"
     a = lib_call(pkg, q, "-")
-    assert a["doppione"] is False and a["libreria"].startswith('{"formato":"msnlib/1"')
+    assert a["duplicate"] is False and a["library"].startswith('{"schema":"msn-lib/1"')
     f = tmp_path / "msnlib.json"
-    f.write_text(a["libreria"], encoding="utf-8")
+    f.write_text(a["library"], encoding="utf-8")
     again = lib_call(pkg, q, str(f))
-    assert again["doppione"] is True and again["libreria"] == a["libreria"]
+    assert again["duplicate"] is True and again["library"] == a["library"]
     # the file is valid JSON and its entry holds the graph the route gives
-    doc = _j.loads(a["libreria"])
+    doc = _j.loads(a["library"])
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), q).stdout
-    assert doc["voci"][0]["grafo"] == _j.loads(got) and doc["voci"][0]["id"] == "STD-0001"
+    assert doc["entries"][0]["graph"] == _j.loads(got) and doc["entries"][0]["id"] == "STD-0001"
 
 
 def test_a_graph_without_an_ion_or_a_foreign_file_is_a_keyed_error(pkg, tmp_path):
@@ -111,10 +111,10 @@ def test_a_graph_without_an_ion_or_a_foreign_file_is_a_keyed_error(pkg, tmp_path
 
 
 @pytest.mark.parametrize("query,key", [
-    ("strutture=n3", "err.msngrafo.noSmiles"),
-    ("smiles=CCO&strutture=n99", "err.msngrafo.badNode"),
-    ("smiles=C%28%28&strutture=n3", "err.msngrafo.badSmiles"),
-    ("smiles=CCO&strutture=n3&ppm_struttura=abc", "err.request.badNumber"),
+    ("structures=n3", "err.msngrafo.noSmiles"),
+    ("smiles=CCO&structures=n99", "err.msngrafo.badNode"),
+    ("smiles=C%28%28&structures=n3", "err.msngrafo.badSmiles"),
+    ("smiles=CCO&structures=n3&struct_ppm=abc", "err.request.badNumber"),
 ])
 def test_the_cleavages_errors_are_keyed(pkg, query, key):
     r = subprocess.run(["node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), query], capture_output=True, encoding="utf-8")

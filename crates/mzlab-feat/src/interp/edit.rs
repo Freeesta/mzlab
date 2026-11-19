@@ -74,7 +74,7 @@ pub struct Candidate {
 /// The `source` of a hypothesis from the names the registry gives its sources.
 fn source_of(h: &Hyp) -> &'static str {
     let has = |s: &str| h.sources.iter().any(|x| x == s);
-    if has("regola") {
+    if has("rule") {
         "rule"
     } else if has("rottura") {
         "cleavage"

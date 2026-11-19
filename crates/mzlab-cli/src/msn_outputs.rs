@@ -1,4 +1,4 @@
-//! The files of a figure of the graph `msngrafo/1`: SVG, stand-alone HTML and PNG, by name (`svg,html,png`), written next to a stem; the command line
+//! The files of a figure of the graph `msn-graph/1`: SVG, stand-alone HTML and PNG, by name (`svg,html,png`), written next to a stem; the command line
 //! (`msn-graph --figure`, `msn-graph figure`) and the step `msn.figure@1` both go through here, so they write the same bytes.
 
 use std::path::{Path, PathBuf};
@@ -86,7 +86,7 @@ pub fn figure_cmd(mut a: impl Iterator<Item = String>) -> std::result::Result<St
             f => return Err(format!("unknown argument {f}")),
         }
     }
-    let file = file.ok_or("figure needs an msngrafo/1 file")?;
+    let file = file.ok_or("figure needs an msn-graph/1 file")?;
     let json = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
     let stem = out.unwrap_or_else(|| file.with_extension(""));
     let made = write_outputs(&json, &fs, view, &stem).map_err(|e| e.to_string())?;

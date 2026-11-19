@@ -1,4 +1,4 @@
-//! The stand-alone HTML of a fragmentation graph `msngrafo/1`: one file, no external resource. It holds the graph (JSON), the drawer `msngrafo-vista.js` of the
+//! The stand-alone HTML of a fragmentation graph `msn-graph/1`: one file, no external resource. It holds the graph (JSON), the drawer `msngrafo-vista.js` of the
 //! page (the same code, `include_str!`), the page script `page.js`, and both static figures (the SVG of `super::svg`, for the downloads).
 
 use mzlab_core::error::{Error, Result};
@@ -26,7 +26,7 @@ fn in_script(t: &str) -> String {
         .replace("<!--", "<\\u0021--")
 }
 
-/// The HTML of the graph `graph` (the key `vista` is added when missing), opened on the view `vista`.
+/// The HTML of the graph `graph` (the key `view` is added when missing), opened on the view `view`.
 pub fn html(graph: &str, view: View) -> Result<String> {
     let done =
         mzlab_core::msngraph::completa(graph).map_err(|_| Error::new("err.msnfigura.bad"))?;

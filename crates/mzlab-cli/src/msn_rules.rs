@@ -17,15 +17,15 @@ mod trial;
 
 pub const HELP: &str = "mzlab-cli msn-rules: the fragmentation rules judged on library spectra with a known structure.
 
-usage: mzlab-cli msn-rules RECORD... [--list FILE] [--smiles S] [--activation A] [--rules] [--decoy SEME] [--out PATH]
+usage: mzlab-cli msn-rules RECORD... [--list FILE] [--smiles S] [--activation A] [--rules] [--decoy SEED] [--out PATH]
        mzlab-cli msn-rules sum LINES... [--out PATH]
 
   RECORD...         MassBank records (one spectrum each) or MSP files; --list: a file with one path per line
   --smiles S        the structure, when the record has none (one record)
   --activation A    cid (trap type) or hcd (beam type), for a file that does not say (MSP)
   --rules           also the peaks explained with the rules of the formula and of the structure, and the peaks per rule id
-  --decoy SEME      the same numbers on three decoys: the structure rewired (same formula), the spectrum of another record with the same nominal
-                    precursor, the losses shifted by 0.0137 Da; SEME fixes the choice, the same seed gives the same lines
+  --decoy SEED      the same numbers on three decoys: the structure rewired (same formula), the spectrum of another record with the same nominal
+                    precursor, the losses shifted by 0.0137 Da; SEED fixes the choice, the same seed gives the same lines
   sum               the lines of the records added up per stratum (trap CID, HCD, Q-TOF, other beam) and polarity: coverage of (c) against the decoys,
                     peaks per rule, decoy rate per rule and the thresholds of the protocol (a rule with fewer than 20 applications is not measured)
 
@@ -121,7 +121,7 @@ fn read_registry(p: &PathBuf, a: &Args) -> Result<Registry, Skip> {
     let name = p
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into());
-    let fmt = detect(&name, &data).map_err(|_| "formato")?;
+    let fmt = detect(&name, &data).map_err(|_| "schema")?;
     let text = String::from_utf8_lossy(&data);
     let s = parse_all(fmt, &data)
         .0
@@ -133,8 +133,8 @@ fn read_registry(p: &PathBuf, a: &Args) -> Result<Registry, Skip> {
     }
     let mode = field(&text, "FRAGMENTATION_MODE")
         .or(a.att.clone())
-        .ok_or("attivazione")?;
-    let (layer_name, att) = layer(&s.meta.instrument, &mode).ok_or("attivazione")?;
+        .ok_or("activation")?;
+    let (layer_name, att) = layer(&s.meta.instrument, &mode).ok_or("activation")?;
     let smiles = a.smiles.clone().unwrap_or(s.meta.smiles.clone());
     if smiles.is_empty() || smiles == "N/A" {
         return Err("smiles");
@@ -144,7 +144,7 @@ fn read_registry(p: &PathBuf, a: &Args) -> Result<Registry, Skip> {
         || s.meta.formula.is_empty()
         || !ADDOTTI.contains(&&s.meta.adduct[..])
     {
-        return Err("ione");
+        return Err("ion");
     }
     Ok(Registry {
         id: if s.meta.accession.is_empty() {
@@ -193,7 +193,7 @@ fn row(r: &Registry, all: &[Registry], a: &Args) -> String {
     let mut o = Out::default();
     o.raw("{\"id\":")
         .str(&r.id)
-        .raw(",\"strato\":")
+        .raw(",\"layer\":")
         .str(r.layer_name);
     o.raw(",\"pol\":").int(r.pol as i64).raw(",\"v\":");
     measure(r, &r.peaks, &expected, a.rules).json(&mut o, a.rules);

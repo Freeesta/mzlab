@@ -1,4 +1,4 @@
-//! `mzlab-cli msn-rules somma LINES...`: the lines of `msn-rules` added up per stratum (instrument and activation) and polarity: the coverage of the
+//! `mzlab-cli msn-rules sum LINES...`: the lines of `msn-rules` added up per stratum (instrument and activation) and polarity: the coverage of the
 //! rules of the structure against each decoy, the decoy rate of every rule and the thresholds of the protocol. All the arithmetic of the validation is here.
 
 use std::collections::BTreeMap;
@@ -96,9 +96,9 @@ fn tasso(id: &str, n: &[usize; 4]) -> f64 {
 
 fn outcome(n: &[usize; 4], t: f64) -> &'static str {
     if n[0] < MIN_COUNT {
-        "non_misurata"
+        "not_measured"
     } else if t > MAX_RATE {
-        "priorita_3"
+        "priority_3"
     } else {
         "ok"
     }
@@ -107,13 +107,13 @@ fn outcome(n: &[usize; 4], t: f64) -> &'static str {
 fn write_layer(o: &mut Out, (layer_name, pol): &(String, i64), s: &Layer) {
     let r3 = |x: f64| round(x, 3);
     let col = |i: usize| mean(s.fractions.iter().map(|f| f[i]));
-    o.raw("{\"strato\":")
+    o.raw("{\"layer\":")
         .str(layer_name)
         .raw(",\"pol\":")
         .int(*pol);
-    o.raw(",\"registri\":").int(s.registries as i64);
-    o.raw(",\"nominali\":").int(s.nominal as i64);
-    o.raw(",\"copertura\":{\"a\":").num(r3(col(0)));
+    o.raw(",\"records\":").int(s.registries as i64);
+    o.raw(",\"nominal\":").int(s.nominal as i64);
+    o.raw(",\"coverage\":{\"a\":").num(r3(col(0)));
     o.raw(",\"b\":")
         .num(r3(col(1)))
         .raw(",\"c\":")
@@ -124,24 +124,24 @@ fn write_layer(o: &mut Out, (layer_name, pol): &(String, i64), s: &Layer) {
         let c = &s.pairs[k];
         let (v, d) = (mean(c.iter().map(|p| p.0)), mean(c.iter().map(|p| p.1)));
         o.raw(if k > 0 { "," } else { "" }).str(name);
-        o.raw(":{\"registri\":").int(c.len() as i64);
-        o.raw(",\"vero\":").num(r3(v)).raw(",\"decoy\":").num(r3(d));
-        o.raw(",\"differenza\":").num(r3(v - d)).raw("}");
+        o.raw(":{\"records\":").int(c.len() as i64);
+        o.raw(",\"real\":").num(r3(v)).raw(",\"decoy\":").num(r3(d));
+        o.raw(",\"difference\":").num(r3(v - d)).raw("}");
         if !c.is_empty() {
             passes = Some(passes.unwrap_or(true) && v - d >= MIN_DIFFERENCE * v);
         }
     }
-    o.raw("},\"soglia_copertura\":");
+    o.raw("},\"coverage_threshold\":");
     o.raw(match passes {
         Some(true) => "true",
         Some(false) => "false",
         None => "null",
     });
-    o.raw(",\"regole\":[");
+    o.raw(",\"rules\":[");
     for (i, (id, n)) in s.rules.iter().enumerate() {
         let t = tasso(id, n);
         o.raw(if i > 0 { "," } else { "" }).raw("{\"id\":").str(id);
-        o.raw(",\"vero\":")
+        o.raw(",\"real\":")
             .int(n[0] as i64)
             .raw(",\"ds\":")
             .int(n[1] as i64);
@@ -149,9 +149,9 @@ fn write_layer(o: &mut Out, (layer_name, pol): &(String, i64), s: &Layer) {
             .int(n[2] as i64)
             .raw(",\"dl\":")
             .int(n[3] as i64);
-        o.raw(",\"tasso\":")
+        o.raw(",\"rate\":")
             .num(r3(t))
-            .raw(",\"esito\":")
+            .raw(",\"outcome\":")
             .str(outcome(n, t))
             .raw("}");
     }
@@ -169,7 +169,7 @@ pub fn summed(text: &str) -> Result<String, String> {
             continue;
         }
         let key = (
-            v.get("strato")
+            v.get("layer")
                 .and_then(Value::str)
                 .unwrap_or("")
                 .to_string(),
@@ -178,17 +178,18 @@ pub fn summed(text: &str) -> Result<String, String> {
         read_line(layers.entry(key).or_default(), &v);
     }
     let mut o = Out::default();
-    o.raw("{\"soglie\":{\"minime\":").int(MIN_COUNT as i64);
-    o.raw(",\"tasso_max\":").num(MAX_RATE);
-    o.raw(",\"differenza_min\":").num(MIN_DIFFERENCE);
-    o.raw("},\"saltati\":{");
+    o.raw("{\"thresholds\":{\"min_count\":")
+        .int(MIN_COUNT as i64);
+    o.raw(",\"max_rate\":").num(MAX_RATE);
+    o.raw(",\"min_difference\":").num(MIN_DIFFERENCE);
+    o.raw("},\"skipped\":{");
     for (i, (k, n)) in skipped.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .str(k)
             .raw(":")
             .int(*n as i64);
     }
-    o.raw("},\"strati\":[");
+    o.raw("},\"layers\":[");
     for (i, (k, s)) in layers.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" });
         write_layer(&mut o, k, s);

@@ -1,4 +1,4 @@
-//! The JSON `msngrafo/2` of a graph (`docs/schemi/msngrafo-2.json`; `/1` had the Italian `opzioni` keys): keys in a fixed order, rounded numbers, the same bytes for the same
+//! The JSON `msn-graph/1` of a graph (`docs/schemi/msn-graph-1.json`): keys in a fixed order, rounded numbers, the same bytes for the same
 //! input. `ione` and the formulas are `null` without the formula of the ion of the root.
 
 use super::{Candidate, Edge, GNode, Graph, NodeFormula, Options, SpettroG, NARROW};
@@ -30,7 +30,7 @@ fn id(o: &mut Out, i: Option<usize>) {
 }
 
 fn options(o: &mut Out, op: &Options) {
-    o.raw(",\"opzioni\":{\"ppm\":")
+    o.raw(",\"options\":{\"ppm\":")
         .num(op.ppm)
         .raw(",\"da_min\":")
         .num(op.da_min);
@@ -74,14 +74,14 @@ fn options(o: &mut Out, op: &Options) {
 }
 
 fn ione(o: &mut Out, g: &Graph) {
-    o.raw(",\"ione\":");
+    o.raw(",\"ion\":");
     match &g.ione {
         Some(i) => o
             .raw("{\"formula\":")
             .str(&i.formula)
-            .raw(",\"mz_teorico\":")
+            .raw(",\"theoretical_mz\":")
             .num(round(i.theoretical_mz, 5))
-            .raw(",\"mz_osservato\":")
+            .raw(",\"observed_mz\":")
             .num(round(i.mz_observed, 5))
             .raw(",\"ppm\":")
             .num(round(i.ppm, 2))
@@ -91,12 +91,12 @@ fn ione(o: &mut Out, g: &Graph) {
 }
 
 fn candidates(o: &mut Out, g: &Graph) {
-    o.raw(",\"candidati_radice\":[");
+    o.raw(",\"root_candidates\":[");
     for (i, c) in g.candidati_radice.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"formula\":")
             .str(&c.formula)
-            .raw(",\"mz_teorico\":")
+            .raw(",\"theoretical_mz\":")
             .num(round(c.theoretical_mz, 5))
             .raw(",\"ppm\":")
             .num(round(c.ppm, 2))
@@ -106,12 +106,12 @@ fn candidates(o: &mut Out, g: &Graph) {
 }
 
 fn testa(o: &mut Out, g: &Graph, op: &Options, source: Option<(&str, &str)>) {
-    o.raw("{\"formato\":\"msngrafo/2\",\"motore\":")
+    o.raw("{\"schema\":\"msn-graph/1\",\"engine\":")
         .str(env!("CARGO_PKG_VERSION"))
-        .raw(",\"sorgente\":");
+        .raw(",\"source\":");
     match source {
         Some((nome, sha)) => o
-            .raw("{\"nome\":")
+            .raw("{\"name\":")
             .str(nome)
             .raw(",\"sha256_idx\":")
             .str(sha)
@@ -119,34 +119,34 @@ fn testa(o: &mut Out, g: &Graph, op: &Options, source: Option<(&str, &str)>) {
         None => o.raw("null"),
     };
     options(o, op);
-    o.raw(",\"polarita\":")
+    o.raw(",\"polarity\":")
         .int(g.polarita as i64)
-        .raw(",\"radici\":[");
+        .raw(",\"roots\":[");
     for (i, r) in g.radici.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(&format!("n{r}"));
     }
     o.raw("]");
     ione(o, g);
     candidates(o, g);
-    o.raw(",\"conteggi\":{\"nodi\":").int(g.nodi.len() as i64);
-    o.raw(",\"archi\":")
+    o.raw(",\"counts\":{\"nodes\":").int(g.nodi.len() as i64);
+    o.raw(",\"edges\":")
         .int(g.archi.len() as i64)
-        .raw(",\"scartati_pesanti\":")
+        .raw(",\"discarded_heavy\":")
         .int(g.scartati.pesanti as i64);
-    o.raw(",\"scartati_isotopi\":")
+    o.raw(",\"discarded_isotopes\":")
         .int(g.scartati.isotopi as i64)
-        .raw(",\"scartati_deboli\":")
+        .raw(",\"discarded_weak\":")
         .int(g.scartati.deboli as i64)
-        .raw(",\"scartati_formula\":")
+        .raw(",\"discarded_formula\":")
         .int(g.scartati.formula as i64);
-    o.raw("},\"avvisi\":[");
+    o.raw("},\"warnings\":[");
     for (i, a) in g.avvisi.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"chiave\":")
+            .raw("{\"key\":")
             .str(a.chiave)
-            .raw(",\"albero\":")
+            .raw(",\"tree\":")
             .str(&a.albero)
-            .raw(",\"nodo\":");
+            .raw(",\"node\":");
         id(o, a.nodo);
         o.raw("}");
     }
@@ -160,32 +160,32 @@ fn node(o: &mut Out, i: usize, n: &GNode) {
         .num(round(n.mz, 5));
     o.raw(",\"dev_ppm\":")
         .num(round(n.dev_ppm, 2))
-        .raw(",\"livello\":")
+        .raw(",\"level\":")
         .int(n.livello as i64)
-        .raw(",\"isolato\":");
+        .raw(",\"isolated\":");
     bool_(o, !n.albero.is_empty());
-    o.raw(",\"albero\":[");
+    o.raw(",\"tree\":[");
     for (j, t) in n.albero.iter().enumerate() {
         o.raw(if j > 0 { "," } else { "" }).str(t);
     }
-    o.raw("],\"osservazioni\":")
+    o.raw("],\"observations\":")
         .int(n.observations as i64)
         .raw(",\"rel_max\":")
         .num(round(n.rel_max, 1));
-    o.raw(",\"isotopo_di\":");
+    o.raw(",\"isotope_of\":");
     id(o, n.isotope_of);
     o.raw(",\"m1\":");
     opt_num(o, n.m1, 1);
-    o.raw(",\"isolamento\":{\"larghezza\":");
+    o.raw(",\"isolation\":{\"width_da\":");
     opt_num(o, n.width, 3);
-    o.raw(",\"a_monte\":");
+    o.raw(",\"upstream_da\":");
     opt_num(o, n.upstream, 3);
-    o.raw(",\"stretto\":");
+    o.raw(",\"narrow\":");
     bool_(o, n.upstream.is_some_and(|w| w < NARROW));
-    o.raw("},\"non_spiegati\":");
+    o.raw("},\"unexplained\":");
     match &n.unexplained {
         Some(x) => {
-            o.raw("{\"n\":").int(x.n as i64).raw(",\"picchi\":[");
+            o.raw("{\"n\":").int(x.n as i64).raw(",\"peaks\":[");
             for (i, (mz, rel)) in x.peaks.iter().enumerate() {
                 o.raw(if i > 0 { "," } else { "" })
                     .raw("{\"mz\":")
@@ -202,7 +202,7 @@ fn node(o: &mut Out, i: usize, n: &GNode) {
     }
     o.raw(",\"pos\":{\"col\":")
         .int(n.pos.0 as i64)
-        .raw(",\"riga\":")
+        .raw(",\"row\":")
         .int(n.pos.1 as i64)
         .raw("},\"formula\":");
     match &n.formula {
@@ -217,15 +217,15 @@ fn node(o: &mut Out, i: usize, n: &GNode) {
 fn candidate(o: &mut Out, c: &Candidate) {
     o.raw("{\"formula\":")
         .str(&c.formula)
-        .raw(",\"mz_teorico\":")
+        .raw(",\"theoretical_mz\":")
         .num(round(c.theoretical_mz, 5));
     o.raw(",\"ppm\":")
         .num(round(c.ppm, 2))
         .raw(",\"dbe\":")
         .num(c.dbe)
-        .raw(",\"elettroni\":")
-        .str(if c.even { "pari" } else { "dispari" });
-    o.raw(",\"finestra\":").num(c.window).raw(",\"prove\":[");
+        .raw(",\"electrons\":")
+        .str(if c.even { "even" } else { "odd" });
+    o.raw(",\"window\":").num(c.window).raw(",\"proofs\":[");
     for (i, p) in c.prove.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(p);
     }
@@ -233,26 +233,26 @@ fn candidate(o: &mut Out, c: &Candidate) {
 }
 
 fn formula(o: &mut Out, f: &NodeFormula) {
-    o.raw("{\"candidati\":[");
+    o.raw("{\"candidates\":[");
     for (i, c) in f.candidates.iter().enumerate() {
         if i > 0 {
             o.raw(",");
         }
         candidate(o, c);
     }
-    o.raw("],\"scelta\":");
+    o.raw("],\"choice\":");
     opt_str(o, f.choice.as_deref());
-    o.raw(",\"fonte\":");
+    o.raw(",\"source\":");
     opt_str(o, f.provenance);
     o.raw("}");
 }
 
 fn edge(o: &mut Out, a: &Edge) {
-    o.raw("{\"da\":")
+    o.raw("{\"from\":")
         .str(&format!("n{}", a.da))
-        .raw(",\"a\":")
+        .raw(",\"to\":")
         .str(&format!("n{}", a.a));
-    o.raw(",\"perdita\":{\"da_massa\":")
+    o.raw(",\"loss\":{\"da_mass\":")
         .num(round(a.perdita, 5))
         .raw(",\"formula\":");
     opt_str(o, a.formula.as_ref().map(|f| f.0.as_str()));
@@ -261,24 +261,24 @@ fn edge(o: &mut Out, a: &Edge) {
         Some((_, p)) => o.num(round(*p, 2)),
         None => o.raw("null"),
     };
-    o.raw(",\"compatibile\":[");
+    o.raw(",\"compatible\":[");
     for (j, f) in a.compatibili.iter().enumerate() {
         o.raw(if j > 0 { "," } else { "" }).str(f);
     }
-    o.raw("]},\"isolamento\":");
+    o.raw("]},\"isolation\":");
     bool_(o, a.isolamento);
-    o.raw(",\"misure\":[");
+    o.raw(",\"measurements\":[");
     for (j, m) in a.misure.iter().enumerate() {
         o.raw(if j > 0 { "," } else { "" })
-            .raw("{\"albero\":")
+            .raw("{\"tree\":")
             .str(&m.albero)
-            .raw(",\"livello\":")
+            .raw(",\"level\":")
             .int(m.level as i64);
-        o.raw(",\"att\":")
+        o.raw(",\"activation\":")
             .str(&m.att.to_lowercase())
             .raw(",\"ce\":")
             .num(m.ce);
-        o.raw(",\"n_scansioni\":")
+        o.raw(",\"n_scans\":")
             .int(m.n_scansioni as i64)
             .raw(",\"rel\":")
             .num(round(m.rel, 1))
@@ -288,51 +288,51 @@ fn edge(o: &mut Out, a: &Edge) {
 }
 
 fn spettro(o: &mut Out, s: &SpettroG) {
-    o.raw("{\"albero\":")
+    o.raw("{\"tree\":")
         .str(&s.albero)
-        .raw(",\"livello\":")
+        .raw(",\"level\":")
         .int(s.level as i64);
-    o.raw(",\"att\":")
+    o.raw(",\"activation\":")
         .str(&s.att.to_lowercase())
         .raw(",\"ce\":")
         .num(s.ce)
-        .raw(",\"precursore\":");
+        .raw(",\"precursor\":");
     id(o, s.precursore);
-    o.raw(",\"larghezza\":");
+    o.raw(",\"width_da\":");
     opt_num(o, s.width, 3);
-    o.raw(",\"picchi\":[");
+    o.raw(",\"peaks\":[");
     for (i, (mz, rel, n)) in s.picchi.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"mz\":")
             .num(round(*mz, 5))
             .raw(",\"rel\":")
             .num(round(*rel, 1))
-            .raw(",\"nodo\":");
+            .raw(",\"node\":");
         id(o, *n);
         o.raw("}");
     }
     o.raw("]}");
 }
 
-/// The graph as `msngrafo/2`; `sorgente` = (name of the file, SHA-256 of its `.mzidx`) when the caller knows them.
+/// The graph as `msn-graph/1`; `source` = (name of the file, SHA-256 of its `.mzidx`) when the caller knows them.
 pub fn json(g: &Graph, op: &Options, source: Option<(&str, &str)>) -> String {
     let mut o = Out::default();
     testa(&mut o, g, op, source);
-    o.raw(",\"nodi\":[");
+    o.raw(",\"nodes\":[");
     for (i, n) in g.nodi.iter().enumerate() {
         if i > 0 {
             o.raw(",");
         }
         node(&mut o, i, n);
     }
-    o.raw("],\"archi\":[");
+    o.raw("],\"edges\":[");
     for (i, a) in g.archi.iter().enumerate() {
         if i > 0 {
             o.raw(",");
         }
         edge(&mut o, a);
     }
-    o.raw("],\"spettri\":[");
+    o.raw("],\"spectra\":[");
     for (i, s) in g.spettri.iter().enumerate() {
         if i > 0 {
             o.raw(",");

@@ -1,4 +1,4 @@
-// Draws a msngrafo/1 file with the page drawer (mzlab/web/msngrafo-vista.js on a minimal DOM) and prints the texts of its ions and losses as a JSON list;
+// Draws a msn-graph/1 file with the page drawer (mzlab/web/msngrafo-vista.js on a minimal DOM) and prints the texts of its ions and losses as a JSON list;
 // see tests/test_msnfigura_wasm.py. usage: node msn_figura_wasm_node.js <graph.json> <tree|radial>
 const fs = require("fs"), path = require("path"), vm = require("vm");
 const src = fs.readFileSync(path.resolve(__dirname, "../mzlab/web/msngrafo-vista.js"), "utf8").split("\n").map(l => l.replace(/^export /, "")).join("\n");
@@ -28,13 +28,13 @@ const EN = {
   "msngrafo.v.aria.common": "reached from {n} precursors", "msngrafo.v.aria.collapsed": "{n} ions closed below", "msngrafo.v.common": "Reached from {n} different precursors",
   "msngrafo.v.compat": "compatible with {f}", "msngrafo.v.hidden": "{n} closed", "msngrafo.v.hyp": "hypothesis",
 };
-const PROVE = { perdita: "known loss", isotopi: "isotopes", msn: "MSn" };
+const PROVE = { loss: "known loss", isotopes: "isotopes", msn: "MSn" };
 const t = (k, p) => (EN[k] || k).replace(/\{(\w+)\}/g, (_, a) => String(p && p[a] !== undefined ? p[a] : ""));
 // the rule label of the tab (infusione-grafo-regole.js `arcLabel`), which the drawer takes as an option
 const ruleLabel = (j, a) => {
-  const r = j.regole && j.regole.archi.find(x => x.da === a.da && x.a === a.a);
-  if (!r || !(r.regole.length || r.composta.length)) return "";
-  const ids = r.regole.length ? r.regole.map(x => x.id + (x.priorita === 3 ? " (weak)" : "")) : r.composta.map(c => c.join(" + "));
+  const r = j.rules && j.rules.edges.find(x => x.from === a.from && x.to === a.to);
+  if (!r || !(r.rules.length || r.composite.length)) return "";
+  const ids = r.rules.length ? r.rules.map(x => x.id + (x.priority === 3 ? " (weak)" : "")) : r.composite.map(c => c.join(" + "));
   return ids.slice(0, 2).join(", ") + (ids.length > 2 ? ` +${ids.length - 2}` : "");
 };
 

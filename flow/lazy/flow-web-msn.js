@@ -1,13 +1,13 @@
 // @ts-check
 // Flow (administrator mode): the functions of the MSn steps (spectra.msn_graph, msn.library_export, msn.table_export, and spectra.match with the `tree` algorithm). The infusion is the file the plan names that is open in the Data tab;
 // the graph, the library and the tables come from the routes of the engine of the page (`api/msn_grafo`, `api/msn_grafo/export`: the .wasm msngrafo, the same functions as `mzlab-cli msn-graph`
-// and `msn-lib export`; the library search posts the library of the user, the one the Fragmentation graph card keeps, to `api/msnlib/cerca`), so the bytes are the ones of the command. Reports the same events as flow-web-run.js, keeps each result in OPFS (mzlab/flow/) and resolves with the texts. Docs: docs/agenti/flow-web.md.
+// and `msn-lib export`; the library search posts the library of the user, the one the Fragmentation graph card keeps, to `api/msnlib/search`), so the bytes are the ones of the command. Reports the same events as flow-web-run.js, keeps each result in OPFS (mzlab/flow/) and resolves with the texts. Docs: docs/agenti/flow-web.md.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
   const STEPS = ["spectra.msn_graph", "msn.library_export", "msn.table_export", "spectra.match"], DIR = "mzlab/flow/";
-  // the library the Fragmentation graph card keeps in OPFS (msnlib/1), and the defaults of spectra.match that the command applies
-  const LIB_FILE = "msnlib.json", MATCH = { precursor_ppm: 10, tol_da: 0.02, top_n: 5, min_prove: 3 };
+  // the library the Fragmentation graph card keeps in OPFS (msn-lib/1), and the defaults of spectra.match that the command applies
+  const LIB_FILE = "msnlib.json", MATCH = { precursor_ppm: 10, tol_da: 0.02, top_n: 5, min_evidence: 3 };
   const base = (/** @type {any} */ inst) => String(inst.step).split("@")[0];
   const fail = (/** @type {string} */ key, params = {}) => Object.assign(new Error(key), { key, params });
   /** @param {any} o @param {any} ev */
@@ -23,12 +23,12 @@
     if (ion) q.set("formula", ion);
     if (ion && text("smiles")) q.set("smiles", text("smiles"));
     // step parameter (spectra.msn_graph@2) → query key of the route
-    if (text("activation")) q.set("attivazione", text("activation"));
-    for (const [n, key] of [["ppm_formula", "ppm_formula"], ["low_mz", "mz_basso"], ["wide_ppm", "ppm_basso"], ["min_evidence", "prove_min"]]) if (typeof p[n] === "number") q.set(key, String(p[n]));
-    if (p.isotopes === true) q.set("isotopi", "1");
-    if (text("pick")) q.set("scelte", JSON.stringify(text("pick").split(",").map(s => { const [m, f] = s.split("="); return { mz: Number(m), formula: (f || "").trim() }; })));
-    if (p.interpret === true) { q.set("interpreta", "1"); if (typeof p.loss_ppm === "number") q.set("ppm_perdita", String(p.loss_ppm)); }
-    if (text("structures")) { q.set("strutture", text("structures")); if (typeof p.struct_ppm === "number") q.set("ppm_struttura", String(p.struct_ppm)); }
+    if (text("activation")) q.set("activation", text("activation"));
+    for (const [n, key] of [["ppm_formula", "ppm_formula"], ["low_mz", "low_mz"], ["wide_ppm", "low_ppm"], ["min_evidence", "min_evidence"]]) if (typeof p[n] === "number") q.set(key, String(p[n]));
+    if (p.isotopes === true) q.set("isotopes", "1");
+    if (text("pick")) q.set("choices", JSON.stringify(text("pick").split(",").map(s => { const [m, f] = s.split("="); return { mz: Number(m), formula: (f || "").trim() }; })));
+    if (p.interpret === true) { q.set("interpret", "1"); if (typeof p.loss_ppm === "number") q.set("loss_ppm", String(p.loss_ppm)); }
+    if (text("structures")) { q.set("structures", text("structures")); if (typeof p.struct_ppm === "number") q.set("struct_ppm", String(p.struct_ppm)); }
     return q;
   };
 
@@ -45,22 +45,22 @@
     return t;
   };
 
-  /** the library of the user (msnlib/1), "" when there is none yet */
+  /** the library of the user (msn-lib/1), "" when there is none yet */
   const library = async () => {
     try { return await (await (await (await navigator.storage.getDirectory()).getFileHandle(LIB_FILE)).getFile()).text(); } catch (_) { return ""; }
   };
 
-  /** the candidates (msncerca/1) of the library for the graph of `q`, with the options of the step; `phase` hears the part of the job done once the library is read @param {URLSearchParams} q @param {any} p @param {((frac: number) => void) | undefined} [phase] */
+  /** the candidates (msn-search/1) of the library for the graph of `q`, with the options of the step; `phase` hears the part of the job done once the library is read @param {URLSearchParams} q @param {any} p @param {((frac: number) => void) | undefined} [phase] */
   const search = async (q, p, phase) => {
     const lib = await library();
     if (!lib) throw fail("err.flow.msn.library");
     phase?.(0.2);
-    const body = /** @type {Record<string, any>} */ ({ libreria: lib });
-    for (const [n, v] of q) if (!["interpreta", "ppm_perdita", "strutture", "ppm_struttura"].includes(n)) body[n] = n === "k" ? Number(v) : v;
+    const body = /** @type {Record<string, any>} */ ({ library: lib });
+    for (const [n, v] of q) if (!["interpret", "loss_ppm", "structures", "struct_ppm"].includes(n)) body[n] = n === "k" ? Number(v) : v;
     const o = (/** @type {string} */ n) => (typeof p[n] === "number" ? p[n] : /** @type {Record<string, number>} */ (MATCH)[n]);
-    Object.assign(body, { ppm_prec: o("precursor_ppm"), tol_mz: o("tol_da"), top: o("top_n"), min_prove: o("min_prove") });
+    Object.assign(body, { precursor_ppm: o("precursor_ppm"), tol_mz: o("tol_da"), top: o("top_n"), min_evidence: o("min_evidence") });
     let t;
-    try { t = await (await fetch("api/msnlib/cerca", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })).text(); } catch (_) { throw fail("error.engineFallback"); }
+    try { t = await (await fetch("api/msnlib/search", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })).text(); } catch (_) { throw fail("error.engineFallback"); }
     if (/^\s*\{\s*"error/.test(t)) { const j = JSON.parse(t), key = j.error_key || "err.flow.run"; throw /memory/i.test(key) ? fail("err.flow.msn.desktop") : fail(key, j.params || {}); }
     return t;
   };
@@ -93,7 +93,7 @@
       name = inst.id + ".json"; text = (await ask("api/msn_grafo?" + st.graph)) + "\n";
       st.phase?.(0.8);
       const j = JSON.parse(text);
-      if (!Array.isArray(j.nodi) || !j.nodi.length) throw fail("err.flow.msn.empty");
+      if (!Array.isArray(j.nodes) || !j.nodes.length) throw fail("err.flow.msn.empty");
     } else if (id === "spectra.match") {
       const first = plan.steps.find((/** @type {any} */ i) => base(i) === "spectra.msn_graph");
       name = inst.id + ".json"; text = await search(st.graph || graphQuery(first || { params: {} }, k), p, st.phase);
@@ -101,15 +101,15 @@
     } else {
       // the graph of the first spectra.msn_graph of the plan (a plan without one asks for the graph with the defaults)
       const first = plan.steps.find((/** @type {any} */ i) => base(i) === "spectra.msn_graph"), q = new URLSearchParams(st.graph || graphQuery(first || { params: {} }, k));
-      q.delete("interpreta"); q.delete("ppm_perdita"); q.delete("strutture"); q.delete("ppm_struttura");
-      if (p.clean === true) q.set("pulito", "1");
+      q.delete("interpret"); q.delete("loss_ppm"); q.delete("structures"); q.delete("struct_ppm");
+      if (p.clean === true) q.set("clean", "1");
       if (id === "msn.library_export") {
-        q.set("libreria", "1"); q.set("formato", p.format === "massbank" ? "massbank" : "msp");
-        if (p.levels === "ms2") q.set("livelli", "ms2");
-        if (p.annotate === false) q.set("annota", "0");
+        q.set("library", "1"); q.set("schema", p.format === "massbank" ? "massbank" : "msp");
+        if (p.levels === "ms2") q.set("levels", "ms2");
+        if (p.annotate === false) q.set("annotate", "0");
         if (typeof p.id === "string" && p.id) q.set("id", p.id);
         name = inst.id + (p.format === "massbank" ? ".txt" : ".msp");
-      } else { q.set("vista", p.view || "modifications"); name = inst.id + ".csv"; }
+      } else { q.set("view", p.view || "modifications"); name = inst.id + ".csv"; }
       text = await ask("api/msn_grafo/export?" + q);
       st.phase?.(0.8);
     }

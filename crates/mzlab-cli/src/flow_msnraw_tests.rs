@@ -94,7 +94,7 @@ fn a_file_that_is_not_mzml_gives_the_graph_of_the_command() {
             "{mz} is not a node: {got}"
         );
     }
-    assert!(got.contains("\"sorgente\":{\"nome\":\"inf.mzXML\""));
+    assert!(got.contains("\"source\":{\"name\":\"inf.mzXML\""));
     let _ = std::fs::remove_dir_all(&d);
 }
 

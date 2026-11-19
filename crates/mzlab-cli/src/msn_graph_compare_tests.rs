@@ -1,19 +1,19 @@
 use crate::msn_graph_compare::compare;
 
-/// A minimal `msngrafo/1`: a root (m/z 305.1) isolated at MS1, a fragment (244.06) isolated at MS2 and an arc between them; `shift` moves the fragment in ppm,
+/// A minimal `msn-graph/1`: a root (m/z 305.1) isolated at MS1, a fragment (244.06) isolated at MS2 and an arc between them; `shift` moves the fragment in ppm,
 /// `formula` is the one chosen for it and `peaks` the MS2 spectrum of the root.
 fn graph(shift: f64, formula: &str, peaks: &[(f64, f64)]) -> String {
     let frag = 244.06 * (1.0 + shift * 1e-6);
     let p: Vec<String> = peaks
         .iter()
-        .map(|(m, r)| format!("{{\"mz\":{m},\"rel\":{r},\"nodo\":null}}"))
+        .map(|(m, r)| format!("{{\"mz\":{m},\"rel\":{r},\"node\":null}}"))
         .collect();
     format!(
-        "{{\"formato\":\"msngrafo/1\",\"nodi\":[\
-         {{\"id\":\"n0\",\"mz\":305.1,\"isolato\":true,\"albero\":[\"305@cid35\"],\"formula\":{{\"scelta\":\"C14H15N3O5\"}}}},\
-         {{\"id\":\"n1\",\"mz\":{frag},\"isolato\":true,\"albero\":[\"305@cid35>244@cid35\"],\"formula\":{{\"scelta\":\"{formula}\"}}}}],\
-         \"archi\":[{{\"da\":\"n0\",\"a\":\"n1\",\"misure\":[{{\"rel\":51.4}}]}}],\
-         \"spettri\":[{{\"albero\":\"305@cid35\",\"livello\":2,\"att\":\"cid\",\"ce\":35,\"picchi\":[{}]}}]}}",
+        "{{\"schema\":\"msn-graph/1\",\"nodes\":[\
+         {{\"id\":\"n0\",\"mz\":305.1,\"isolated\":true,\"tree\":[\"305@cid35\"],\"formula\":{{\"choice\":\"C14H15N3O5\"}}}},\
+         {{\"id\":\"n1\",\"mz\":{frag},\"isolated\":true,\"tree\":[\"305@cid35>244@cid35\"],\"formula\":{{\"choice\":\"{formula}\"}}}}],\
+         \"edges\":[{{\"from\":\"n0\",\"to\":\"n1\",\"measurements\":[{{\"rel\":51.4}}]}}],\
+         \"spectra\":[{{\"tree\":\"305@cid35\",\"level\":2,\"activation\":\"cid\",\"ce\":35,\"peaks\":[{}]}}]}}",
         p.join(",")
     )
 }
@@ -33,10 +33,10 @@ fn ok_of(report: &str, criterion: &str) -> bool {
 fn the_same_tree_twice_is_validated_with_its_numbers() {
     let g = graph(0.0, "C13H10NO4", &PEAKS);
     let r = compare(&g, &g).unwrap();
-    assert!(r.starts_with("{\"formato\":\"msnconfronto/1\""), "{r}");
-    assert!(r.contains("\"convalidata\":true"), "{r}");
+    assert!(r.starts_with("{\"schema\":\"msn-compare/1\""), "{r}");
+    assert!(r.contains("\"validated\":true"), "{r}");
     assert!(
-        r.contains("\"comuni\":2") && r.contains("\"minimo\":1") && r.contains("\"massimo\":0"),
+        r.contains("\"common\":2") && r.contains("\"min\":1") && r.contains("\"max\":0"),
         "{r}"
     );
 }
@@ -47,30 +47,33 @@ fn a_shift_a_formula_or_a_spectrum_that_differ_fail_their_own_criterion() {
     // 4 ppm: still the same node, but past the 3 ppm limit
     let r = compare(&a, &graph(4.0, "C13H10NO4", &PEAKS)).unwrap();
     assert!(
-        !ok_of(&r, "scarto_ppm")
-            && ok_of(&r, "nodi_isolati")
-            && r.contains("\"convalidata\":false"),
+        !ok_of(&r, "deviation_ppm")
+            && ok_of(&r, "isolated_nodes")
+            && r.contains("\"validated\":false"),
         "{r}"
     );
     // 10 ppm: the isolated node is not found in the other graph
     let r = compare(&a, &graph(10.0, "C13H10NO4", &PEAKS)).unwrap();
-    assert!(!ok_of(&r, "nodi_isolati") && !ok_of(&r, "archi"), "{r}");
+    assert!(!ok_of(&r, "isolated_nodes") && !ok_of(&r, "edges"), "{r}");
     // another formula for the same node
     let r = compare(&a, &graph(0.0, "C12H8N2O4", &PEAKS)).unwrap();
-    assert!(!ok_of(&r, "formule") && r.contains("\"diversi\":1"), "{r}");
+    assert!(
+        !ok_of(&r, "formulas") && r.contains("\"different\":1"),
+        "{r}"
+    );
     // an MS2 spectrum with other peaks
     let r = compare(
         &a,
         &graph(0.0, "C13H10NO4", &[(150.0, 100.0), (200.0, 30.0)]),
     )
     .unwrap();
-    assert!(!ok_of(&r, "entropia_ms2") && ok_of(&r, "formule"), "{r}");
+    assert!(!ok_of(&r, "ms2_entropy") && ok_of(&r, "formulas"), "{r}");
 }
 
 #[test]
 fn a_file_that_is_not_a_graph_is_a_keyed_error() {
     assert_eq!(
-        compare("{\"formato\":\"msnlib/1\"}", "{}")
+        compare("{\"schema\":\"msn-lib/1\"}", "{}")
             .err()
             .unwrap()
             .key,
@@ -107,7 +110,7 @@ fn the_command_compares_two_graphs_of_the_same_infusion() {
     let r = String::from_utf8(o.stdout).unwrap();
     assert_eq!(o.code, 0, "{}", o.stderr);
     assert!(
-        r.contains("\"convalidata\":true") && r.contains("\"minimo\":1"),
+        r.contains("\"validated\":true") && r.contains("\"min\":1"),
         "{r}"
     );
     assert_eq!(go(&["msn-graph", "compare", g.to_str().unwrap()]).code, 2);

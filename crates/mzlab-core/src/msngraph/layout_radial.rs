@@ -1,4 +1,4 @@
-//! The radial drawing of `vista`: ring = steps of the best path, angle = the middle of the sector of the node, a sector being as wide as the
+//! The radial drawing of `view`: ring = steps of the best path, angle = the middle of the sector of the node, a sector being as wide as the
 //! leaves of its subtree in the best-path tree. Degrees from the leaf counts, no trigonometry: the drawer turns them into x and y.
 
 /// (ring, angle in degrees) of every node, given the parent of each on its best path (`None` = a root). A single root sits at the centre

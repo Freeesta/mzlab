@@ -1,5 +1,5 @@
 """Run on the Fragmentation tree template of Flow (the Run button opens the box, one click in it runs): the infusion is open in Data, the molecule is typed in the box of the first step (ion, adduct and SMILES arrive by themselves) and a single click
-on «Run the plan in this browser» gives the graph with the interpretation, the library as MSP, the table of the modifications and, with the library of the user in OPFS, the library search (msncerca/1);
+on «Run the plan in this browser» gives the graph with the interpretation, the library as MSP, the table of the modifications and, with the library of the user in OPFS, the library search (msn-search/1);
 the texts are saved as links. File of TP_Mine/tests/msn_synth.py (no real data). Needs the site with the .wasm msngrafo. Run from the repo root: python3 tests_e2e/e2e_msn_un_clic.py"""
 import json, sys
 sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
@@ -35,7 +35,7 @@ try:
             pg.wait_for_selector("#tmpform .molc input", timeout=30000)
             pg.fill("#tmpform .molc input", "caffeine"); pg.wait_for_selector("#tmpform .molc li", timeout=30000)
             # a job that ends while the box is being used keeps the focus and the list
-            pg.evaluate(f"""() => {{ const S = {FLOWS}; FLOW.webMsnAfterRun(S, [{{ id: S.plan.steps[0].id, name: 'typing.json', text: '{{"formato":"msngrafo/1","nodi":[],"archi":[],"spettri":[]}}' }}]); }}""")
+            pg.evaluate(f"""() => {{ const S = {FLOWS}; FLOW.webMsnAfterRun(S, [{{ id: S.plan.steps[0].id, name: 'typing.json', text: '{{"schema":"msn-graph/1","nodes":[],"edges":[],"spectra":[]}}' }}]); }}""")
             assert pg.evaluate("document.activeElement.matches('#tmpform .molc input')") and pg.locator("#tmpform .molc li").first.is_visible(), "the graph took the focus from the box"
             pg.evaluate(f"{FLOWS}.results = {{}}")
             pg.click("#tmpform .molc li >> nth=0")
@@ -56,13 +56,13 @@ try:
             by = pg.evaluate(f"""(async () => {{ const o = {{}}; for (const r of Object.values({FLOWS}.results).flat()) o[r.label.split('.').pop()] = await r.text(); return o }})()""")
             g, msp, csv = by["json"], by["msp"], by["csv"]
             j = json.loads(g)
-            assert j["formato"] == "msngrafo/2" and j.get("interpretazione"), list(j)[:12]
+            assert j["schema"] == "msn-graph/1" and j.get("interpretation"), list(j)[:12]
             assert "Name:" in msp and "Num Peaks:" in msp
             assert csv.startswith("from,from_mz,from_formula,to,to_mz,to_formula,loss_mass,loss_formula,loss_ppm") and len(csv.splitlines()) > 1
         step("the three texts are the graph with the interpretation, MSP and the CSV of the modifications", texts)
         def search():
             ion = pg.evaluate(f"{FLOWS}.plan.steps[0].params.formula")
-            added = pg.evaluate("""(async f => { const r = await fetch('api/msnlib/aggiungi', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ libreria: '', molecola_id: 'STD', k: 0, formula: f }) }); const j = await r.json(); return j.error ? j : j.libreria })""", ion)
+            added = pg.evaluate("""(async f => { const r = await fetch('api/msnlib/add', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ library: '', molecule_id: 'STD', k: 0, formula: f }) }); const j = await r.json(); return j.error ? j : j.library })""", ion)
             assert isinstance(added, str), added
             pg.evaluate(PUT, added)
             # the scheduler runs only a plan that checks: a query file of the plan and the library of the tree
@@ -72,8 +72,8 @@ try:
             except Exception: raise AssertionError("note: " + pg.inner_text(".fl-note[role=status]") + " | " + pg.inner_text(".fl-slots"))
             hit = pg.evaluate("fetch(document.querySelectorAll('.fl-slots a[download]')[0].href).then(r => r.text())")
             h = json.loads(hit)
-            assert h["formato"] == "msncerca/1" and h["candidati"], hit[:200]
-        step("with the library of the user in OPFS the same click adds the search: msncerca/1", search)
+            assert h["schema"] == "msn-search/1" and h["candidates"], hit[:200]
+        step("with the library of the user in OPFS the same click adds the search: msn-search/1", search)
         errs = [e for e in r.errs if e[0] in ("pageerror",)]
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
         miss = pg.evaluate("(window.MZLAB_LR_MISS||[]).slice()")
