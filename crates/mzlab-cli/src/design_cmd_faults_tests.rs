@@ -175,4 +175,62 @@ fn every_reference_rule_has_its_own_lang_key() {
     keys.sort_unstable();
     keys.dedup();
     assert_eq!(keys.len(), mzlab_core::design::REFERENCE_RULES.len());
+    // a name for each rule: the code it gives is a known one, and every known code is reached
+    let mut seen = Vec::new();
+    for name in ["ref_a", "my_reference", "the control", "x_no_gas"] {
+        let code = mzlab_core::design::reference_rule(name).unwrap();
+        assert!(
+            mzlab_core::design::REFERENCE_RULES.contains(&code),
+            "{name}: {code}"
+        );
+        seen.push(code);
+    }
+    seen.sort_unstable();
+    let mut all = mzlab_core::design::REFERENCE_RULES.to_vec();
+    all.sort_unstable();
+    assert_eq!(seen, all);
+    assert!(mzlab_core::design::reference_rule("trt").is_none());
+    // a reference no rule matches (the file was edited) has its own text
+    assert!(crate::error_text::catalog_text("err.design.why.given").is_some());
+}
+
+/// Every proposal says its `why` in a code the schema lists, also one whose reference was edited to a name no rule matches.
+#[test]
+fn every_proposal_validates_against_its_schema_even_with_an_edited_reference() {
+    let schema: serde_json::Value =
+        serde_json::from_str(include_str!("../../../docs/schemi/design_proposal-1.json")).unwrap();
+    let item = &schema["properties"]["choices"]["items"];
+    let whys: Vec<&str> = item["properties"]["why"]["enum"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|w| w.as_str().unwrap())
+        .collect();
+    let names: Vec<&str> = item["properties"]["choice"]["enum"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|w| w.as_str().unwrap())
+        .collect();
+    let d = dir("schema");
+    let (s, _) = propose(&d);
+    let design = std::fs::read_to_string(d.join("design.json"))
+        .unwrap()
+        .trim_end()
+        .to_string();
+    let text = std::fs::read_to_string(&s).unwrap();
+    let cs = mzlab_core::samples::from_json(text.as_bytes()).unwrap();
+    let edited = design.replace("\"reference\":\"ref\"", "\"reference\":\"trt\"");
+    assert_ne!(edited, design, "the design has a reference to edit");
+    for one in [design.as_str(), edited.as_str()] {
+        let doc: serde_json::Value =
+            serde_json::from_str(&super::proposal(&cs, one).ok().expect("a proposal")).unwrap();
+        for c in doc["choices"].as_array().unwrap() {
+            let why = c["why"].as_str().unwrap();
+            assert!(whys.contains(&why), "{why} is not in the schema");
+            assert!(names.contains(&c["choice"].as_str().unwrap()));
+            assert!(!c["reason"].as_str().unwrap().is_empty());
+        }
+    }
+    let _ = std::fs::remove_dir_all(&d);
 }

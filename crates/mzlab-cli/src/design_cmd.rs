@@ -277,7 +277,7 @@ fn choices_of(d: &mzlab_core::design::Design) -> Vec<String> {
 }
 
 /// `propose`'s answer: the design, its automatic choices with the reason of each, and the files of every condition.
-fn proposal(cs: &[Sample], design: &str) -> Result<String, Outcome> {
+pub(super) fn proposal(cs: &[Sample], design: &str) -> Result<String, Outcome> {
     let d = mzlab_core::design::from_json(design.as_bytes()).map_err(|e| engine(&e))?;
     let choices = choices_of(&d);
     let mut ordered: Vec<&Sample> = cs.iter().filter(|c| c.role() == "sample").collect();

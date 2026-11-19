@@ -268,6 +268,59 @@ fn the_documents_have_schema_first_and_a_newline() {
     assert!(out(&["schema", "error/1"]).ends_with('\n'));
 }
 
+/// The exit codes `exit_codes_note` states, from the compact listing of command `c` alone (written out again here, not taken from `exits_of`).
+fn derived_exits(name: &str, c: &serde_json::Value) -> Vec<u8> {
+    let flags = c["flags"].as_array().unwrap();
+    let has = |f: &str| flags.iter().any(|x| x["name"] == f);
+    let reads = c["args"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|a| a["kind"] == "path" || a["kind"] == "rest")
+        || flags
+            .iter()
+            .any(|f| f["type"] == "path" && f["name"] != "--out");
+    let mut v = vec![0, 1, 2];
+    if name.starts_with("flow ") || crate::contract::VERDICT.contains(&name) {
+        v.push(3);
+    }
+    if reads {
+        v.push(4);
+    }
+    if has("--sample")
+        || has("--id")
+        || name.starts_with("sample ")
+        || name.starts_with("msn graph")
+    {
+        v.push(5);
+    }
+    if has("--out") {
+        v.push(6);
+    }
+    v
+}
+
+/// The words of a usage line outside its `[...]` groups, without the `...` tokens: what `examples_note` says an example is made of.
+fn top_level_words(synopsis: &str) -> String {
+    let (mut depth, mut cur, mut words) = (0, String::new(), Vec::new());
+    for ch in synopsis.chars().chain(std::iter::once(' ')) {
+        match ch {
+            // a `[` that opens a word starts an optional group; one inside a word (`bonds=A-B[,...]`) stays in it
+            '[' if depth > 0 || cur.is_empty() => depth += 1,
+            ']' if depth > 0 => depth -= 1,
+            ' ' if depth == 0 => {
+                if !cur.is_empty() && cur != "..." {
+                    words.push(std::mem::take(&mut cur));
+                }
+                cur.clear();
+            }
+            _ if depth == 0 => cur.push(ch),
+            _ => {}
+        }
+    }
+    words.join(" ")
+}
+
 /// The whole listing says what is shared or derivable once, and gives each command in full under its path: nothing is lost, only moved.
 #[test]
 fn the_whole_listing_is_compact_and_the_path_listing_is_full() {
@@ -289,19 +342,36 @@ fn the_whole_listing_is_compact_and_the_path_listing_is_full() {
             let help = f.get("help").or_else(|| shared.get(name)).unwrap();
             assert_eq!(help, &g["help"], "{}: {name}", e.name);
         }
-        // a member left out is the derived one: the full listing of the command has it, equal to what the rule says
+        // a member left out is the derived one: the rule of `exit_codes_note`, applied here to what the compact listing shows
+        let derived = derived_exits(e.name, c);
         if c.get("exit_codes").is_none() {
-            assert!(!whole["exit_codes"].as_array().unwrap().is_empty());
             assert_eq!(
                 whole["exit_codes"],
-                serde_json::json!(crate::catalog::exits_of(e, &crate::catalog::usage_of(e)))
+                serde_json::json!(derived),
+                "{}",
+                e.name
             );
+        } else {
+            // a command that lists its codes lists others than the derived ones (the rest leave the member out)
+            assert_ne!(c["exit_codes"], serde_json::json!(derived), "{}", e.name);
+            assert_eq!(c["exit_codes"], whole["exit_codes"]);
         }
         if c.get("examples").is_none() {
-            let line = whole["examples"][0].as_str().unwrap();
-            assert!(line.starts_with(&format!("mzlab-cli {}", e.name)), "{line}");
+            let want = format!(
+                "mzlab-cli {}",
+                top_level_words(c["synopsis"].as_str().unwrap())
+            );
+            assert_eq!(whole["examples"], serde_json::json!([want]), "{}", e.name);
         }
     }
+    assert!(
+        doc["commands"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|c| c.get("exit_codes").is_some()),
+        "some command lists its own codes"
+    );
     let n = out(&["commands", "--json"]).len();
     assert!(n < 33_000, "the compact listing is {n} bytes");
 }
