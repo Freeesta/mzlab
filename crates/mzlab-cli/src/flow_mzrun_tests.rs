@@ -96,7 +96,7 @@ fn usage_mistakes_exit_2() {
         &["flow", "verify"],
         &["flow", "verify", "/nope.json"],
     ] {
-        assert_eq!(cli(a).code, crate::exit::usage_or_missing(&a), "{a:?}");
+        assert_eq!(cli(a).code, crate::exit::usage_or_missing(a), "{a:?}");
     }
 }
 
