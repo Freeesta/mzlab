@@ -305,7 +305,7 @@ function uiSave(now = false) {
   const run = () => {
     if (!E.files.length) return;
     if (typeof AVVIO !== "undefined" && AVVIO.segnaSessione) AVVIO.segnaSessione(true);
-    NB.session = CDOC.session(E.files.filter((/** @type {FileAperto} */ f) => !f.gone));
+    NB.session = SAMPLES_DOC.session(E.files.filter((/** @type {FileAperto} */ f) => !f.gone));
     NB.ui = {
       contEx: window.LISTE ? LISTE.exclExport() : undefined,
       ref: { ...S.ref, k: S.ref.k === "auto" ? "auto" : E.files[S.ref.k]?.file ?? "auto" },
@@ -455,7 +455,7 @@ async function bootSession0() {
   E.files = j.session.map((/** @type {Bag} */ s, /** @type {number} */ k) => {
     // a file new to the session starts hidden, LR and HR alike (first load and additions): until a click the work area shows the sample table; a restore gives the saved visibility back (restoreUi)
     const vis = oldVis[s.file] ? oldVis[s.file].vis && !(isFirstLoad && isBlankFile(s) && fileBase(s.file) !== fileBase(j.session[first].file)) : false;
-    const t = TIPOF.apply(s, s.file), o = oldVis[s.file], e = { ...t, ...CAMPIONI.keep(o), k, vis, label: noExt(noFullScan(o ? o.label : s.label, s.dda)), lv: t.kind === "ms2" ? t.msn_level || 2 : 1 };
+    const t = TIPOF.apply(s, s.file), o = oldVis[s.file], e = { ...t, ...SAMPLES.keep(o), k, vis, label: noExt(noFullScan(o ? o.label : s.label, s.dda)), lv: t.kind === "ms2" ? t.msn_level || 2 : 1 };
     return o && o.gone ? Object.assign(o, e, { vis: false }) : e;      // a removed file stays removed, the same object as in its «Removed · Undo» entry (lista-file.js fileRemoval)
   }); uniqueLabels(E.files);
   paintFiles(); if (window.SIMUI) SIMUI.mark(E.files);
@@ -478,7 +478,7 @@ async function bootSession0() {
   if (first > 0 && isFirstLoad) STATO.file(first, "first"); renderFileList();
   STATO.pannelli([], "clear"); Q("#dpanels").innerHTML = ""; syncWorkEmpty();
   await nbLoad();
-  CAMPIONI.restore(NB.session);
+  SAMPLES.restore(NB.session);
   if (!restoreUi()) STATO.scheda(pickTab(E.tab), "reload");
   ensureLayout();
   // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom
@@ -556,7 +556,7 @@ function paintFiles() {
   const P = PALS[UIP.pal], dark = isDark();
   const blankCol = dark && P.blankDark ? P.blankDark : P.blank;
   const stdCol = dark && P.stdDark ? P.stdDark : P.std;
-  const byTime = (/** @type {string} */ kind) => E.files.filter((/** @type {FileAperto} */ f) => !f.gone && f.kind === kind && f.type === "sample" && f.time != null && !(window.CDOC && CDOC.kindOf(f) === "dark")).sort((/** @type {FileAperto} */ a, /** @type {FileAperto} */ b) => a.time - b.time || a.k - b.k);
+  const byTime = (/** @type {string} */ kind) => E.files.filter((/** @type {FileAperto} */ f) => !f.gone && f.kind === kind && f.type === "sample" && f.time != null && !(window.SAMPLES_DOC && SAMPLES_DOC.kindOf(f) === "dark")).sort((/** @type {FileAperto} */ a, /** @type {FileAperto} */ b) => a.time - b.time || a.k - b.k);
   const scales = [byTime("full"), byTime("mrm")], inScale = new Set(scales.flat());
   E.files.forEach((/** @type {FileAperto} */ f) => { f.rank = null; });
   const cal = E.files.filter((/** @type {FileAperto} */ f) => !f.gone && f.kind === "mrm" && f.type === "standard" && f.conc != null).sort((/** @type {FileAperto} */ a, /** @type {FileAperto} */ b) => a.conc - b.conc || a.k - b.k), inCal = new Set(cal);

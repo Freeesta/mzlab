@@ -123,7 +123,7 @@ with sync_playwright() as p:
             if how == "Escape": pg.keyboard.press("Escape")
             else: pg.click("#tour-btn-skip")
             asked(pg)
-            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr')).stato") == "saltato"
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr')).state") == "skipped"
             pg.keyboard.press("Escape")      # Esc on the question is «Keep exploring»: nothing is destroyed
             pg.wait_for_selector("#tour-scelta", state="detached", timeout=5000)
             assert pg.evaluate("E.files.filter(f => !f.gone).length") == 1 and pg.evaluate(NOTHING_LEFT)
@@ -141,7 +141,7 @@ with sync_playwright() as p:
     def own_files():
         fresh_start(pg)
         stage(pg, [OWN]); ready(pg)
-        pg.evaluate("localStorage.setItem('mzlab.tour.lr', JSON.stringify({stato:'saltato'}))")
+        pg.evaluate("localStorage.setItem('mzlab.tour.lr', JSON.stringify({state:'skipped'}))")
         pg.click("#np-set"); pg.wait_for_selector("#uip-tour", timeout=5000)
         assert "Replay the tour" in pg.inner_text("#uip-tour")
         pg.click("#uip-tour"); pg.wait_for_selector("#tour-dialog", timeout=10000)

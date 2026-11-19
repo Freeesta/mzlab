@@ -76,7 +76,7 @@ def _timings(self):
         if not self.evaluate("typeof RUOLI !== 'undefined' && typeof ST !== 'undefined' && ST.files.length >= 2"): return
         self.wait_for_function("RUOLI.busy() === 0 && ST.files.every(f => f.prop)", timeout=20000)
         self.evaluate("""() => { let t = 0; const e = []; ST.files.forEach(f => { if (RUOLI.timed(f) && f.time == null) { t += 10; f.time = t; if (OPENNOW.isOpen(f.name)) e.push({ file: f.name, role: RUOLI.roleOf(f), time: t, tconf: true }); } });
-          if (e.length) CAMPIONI.apply(e, true); renderFiles(); }""")
+          if (e.length) SAMPLES.apply(e, true); renderFiles(); }""")
     except Exception: pass
 LOADED = "typeof UPBUSY !== 'undefined' && UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#flst .fl.up')"
 def loaded(pg, timeout=120000):
@@ -429,7 +429,7 @@ class Run:
         pg = s.b.new_page(**{"viewport": {"width": 1500, "height": 2200}, "reduced_motion": "no-preference" if motion else "reduce", "draw_cards": draw_cards, **({"has_touch": True} if touch else {}), **ctx})
         pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload',new URLSearchParams(location.search).get('ripn')||'1');}catch(_){}")          # the one reload of the first visit (browser.js isolateOnce) would cut a test short: e2e_isolamento is the one that wants it
         if not tour:
-            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         else:          # the tour tests want the invitation of the tour, but not the hint of the side-by-side panels: it shows up after a few seconds (later under load) over the spectrum and takes the clicks of the test
             pg.add_init_script("try{localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         if qaqc:       # QA/QC is dormant: only this switch (as ?qaqc=1) makes it visible

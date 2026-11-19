@@ -1,6 +1,6 @@
 """Statistics panel: sample metadata (low and high resolution), time profile, blank subtraction, exploratory PCA (high resolution only)."""
 # covers: mzlab/web/profilo.js, mzlab/web/tabella.js, mzlab/web/bianco.js, mzlab/web/pca.js, mzlab/statistica.py, tools/dati_sintetici.py
-# covers: mzlab/web/stat.js, mzlab/web/campioni.js, mzlab/web/campioni-doc.js, mzlab/web/campioni-tabella.js
+# covers: mzlab/web/stat.js, mzlab/web/samples.js, mzlab/web/samples-doc.js, mzlab/web/samples-table.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import numpy as np
@@ -82,17 +82,17 @@ try:
             assert pg.evaluate("E.files.find(f=>f.file==='S_t60.mzML').time") == 1.5
         step("type, time (decimal comma), replicate edit the files, QAQC roles and the server copy; a non-number is refused", edit)
         def tsv():
-            t = pg.evaluate("CAMPIONI.toTsv(CAMPIONI.rows(), tunitGet())").splitlines()
+            t = pg.evaluate("SAMPLES.toTsv(SAMPLES.rows(), tunitGet())").splitlines()
             assert t[0] == "filename\tsample_type\ttime\ttime_unit\tconcentration\tconcentration_unit\treplicate\ttime_confirmed" and len(t) == 5, t
             body = "\n".join(l.replace("S_t30.mzML\tsample\t30\tmin", "S_t30.mzML\tblank\t2\th") for l in t) + "\n"
-            n = pg.evaluate("(tx)=>CAMPIONI.importTsv(tx).changed", body)
+            n = pg.evaluate("(tx)=>SAMPLES.importTsv(tx).changed", body)
             assert n == 4
             f = pg.evaluate("(()=>{const f=E.files.find(f=>f.file==='S_t30.mzML');return [f.type,f.time]})()")
             assert f == ["blank", 120], f
-            assert pg.evaluate("CAMPIONI.importTsv('filename\\tsample_type\\nnofile.mzML\\tblank\\n').unknown.length") == 1
+            assert pg.evaluate("SAMPLES.importTsv('filename\\tsample_type\\nnofile.mzML\\tblank\\n').unknown.length") == 1
         step("TSV export in the mzmine columns; import converts the unit and reports unknown files", tsv)
         def gradient():
-            pg.evaluate("CAMPIONI.apply([{file:'S_t30.mzML',type:'sample',time:30}])"); ready(pg)
+            pg.evaluate("SAMPLES.apply([{file:'S_t30.mzML',type:'sample',time:30}])"); ready(pg)
             drawer(pg, "stat"); pg.wait_for_selector("#sb-panel-stat .cmp-grad")
             assert pg.get_attribute("#sb-panel-stat .cmp-grad", "aria-label")
             cols = pg.evaluate("E.files.filter(f=>f.type==='sample'&&f.time!=null).sort((a,b)=>a.time-b.time).map(f=>f.color)")
@@ -106,7 +106,7 @@ try:
         def lr_profile():
             assert sections(pg) == ["meta", "profile"], sections(pg)           # low resolution: only the metadata and the profile
             assert pg.locator("#prof-istd").count() == 0, "no normalization in low resolution"
-            pg.evaluate("CAMPIONI.apply([{file:'S_t60.mzML',type:'sample',time:60}])")
+            pg.evaluate("SAMPLES.apply([{file:'S_t60.mzML',type:'sample',time:60}])")
             pg.fill("#prof-mz", "391.3"); pg.fill("#prof-rt", "18.3"); pg.click("#prof-go")
             pg.wait_for_selector("#prof-res svg.prof-chart", timeout=60000)
             res = pg.evaluate("PROFILO.result")
@@ -148,7 +148,7 @@ try:
             pg.fill("#feat-list", "305.1234; 6.0\n250.0000; 4.0"); pg.click("#feat-go")
             pg.wait_for_selector("#feat-tab tbody tr", timeout=60000)
             tb = pg.evaluate("TABELLA.table")
-            assert len(tb["features"]) == 2 and tb["files"] == pg.evaluate("CAMPIONI.files().map(f=>f.file)")
+            assert len(tb["features"]) == 2 and tb["files"] == pg.evaluate("SAMPLES.files().map(f=>f.file)")
             a = tb["features"][0]["areas"]
             assert a["HR_t60.mzML"] > a["HR_t30.mzML"] > a["HR_t0.mzML"] > 0 and a["HR_Blank_1.mzML"] == 0, a
             assert tb["features"][1]["areas"]["HR_Blank_1.mzML"] > 1e3, "the internal standard is also in the blank"
@@ -166,7 +166,7 @@ try:
             pg.click("#blank-disc tbody tr, #blank-kept tbody tr") if pg.locator("#blank-disc tbody tr").count() else None
         step("HR: blank subtraction with the factor, the level and the minimum chosen by the user; two lists", hr_blank)
         def hr_import():
-            names = pg.evaluate("CAMPIONI.files().map(f=>f.file)")
+            names = pg.evaluate("SAMPLES.files().map(f=>f.file)")
             val = {"HR_t0.mzML": 10, "HR_t30.mzML": 20, "HR_t60.mzML": 30, "HR_Blank_1.mzML": 0}
             csv = "row ID,row m/z,row retention time," + ",".join(n + " Peak area" for n in names) + "\n1,305.1234,6.0," + ",".join(str(val[n]) for n in names) + "\n"
             n = pg.evaluate("(tx)=>{TABELLA.fromText(tx);return TABELLA.table.features.length}", csv)

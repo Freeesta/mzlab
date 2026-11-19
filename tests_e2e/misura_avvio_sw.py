@@ -59,7 +59,7 @@ PROBE = r"""(() => {
     v.nav = { type: n.type, workerStart: n.workerStart, fetchStart: n.fetchStart, requestStart: n.requestStart, responseStart: n.responseStart, responseEnd: n.responseEnd };
     v.res = performance.getEntriesByType("resource").map(e => [e.name.replace(location.origin, ""), Math.round(e.startTime), Math.round(e.responseEnd), e.transferSize, e.encodedBodySize]);
     v.coi = !!window.crossOriginIsolated; return JSON.parse(JSON.stringify(v)); };
-  try { localStorage.setItem("mzlab.tour.lr", JSON.stringify({ stato: "saltato" })); localStorage.setItem("mzlab.barra.hint", "1"); localStorage.setItem("mzlab.pannelli.affianca.hint", "1"); } catch (_) {}
+  try { localStorage.setItem("mzlab.tour.lr", JSON.stringify({ state:"skipped" })); localStorage.setItem("mzlab.barra.hint", "1"); localStorage.setItem("mzlab.pannelli.affianca.hint", "1"); } catch (_) {}
 })();"""
 USABLE = "!!(window.__a && __a.m.ready && __a.m.drop && window.crossOriginIsolated)"
 

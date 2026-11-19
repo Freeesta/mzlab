@@ -25,7 +25,7 @@ try:
         for loc, tag in (("en-US", "MS Analysis"),):
             c = b.new_context(viewport={"width": 1400, "height": 900}, locale=loc); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e)))
-            pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));}catch(_){}")
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000)
             def landing(tag=tag): wait_for_js(pg, f"document.title === '{tag} · mzLab'")
             step(f"{loc}: landing/Dati title is «{tag} · mzLab»", landing)

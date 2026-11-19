@@ -6,7 +6,7 @@
 //   lists: the reference-lists panel (button, palette, «Altro», context action); off only in the lab build (window.MZLAB_LAB, tools/lab/lab.js).
 //   targetScreening: the HRMS Target Screening tab of the Known contaminants panel (liste.js, liste-target.js; hidden since the panel shows the lists directly): «?targetscreening=1» or «qqq.dev.targetscreening» = «1».
 //   qaqc: the QA/QC panel and everything that points to it (button, «Altro», palette, normalising on an internal standard, section 4 of the report).
-// Read by barra.js (commands: `feature: "qaqc"`), profilo.js, rapporto.js. The roles (QC, dark) of CAMPIONI and the workflow file keep working.
+// Read by barra.js (commands: `feature: "qaqc"`), profilo.js, rapporto.js. The roles (QC, dark) of SAMPLES and the workflow file keep working.
 const FEATURES = (() => {
   const on = name => {
     try {

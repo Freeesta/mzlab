@@ -1,5 +1,5 @@
 """IndexedDB version 4 (mzlab/web/qqq-db.js): the store `molecole` of the molecules of the user is added to a database that has the four stores of version 3, nothing else changes,
-and nomi.js names the same version. The real-browser migration with rows in every store is a step of tests_e2e/e2e_molecole_ui.py."""
+and nomi.js names the same version. The real-browser migration with rows in every store is a step of tests_e2e/e2e_molecules_ui.py."""
 import json
 import re
 import subprocess

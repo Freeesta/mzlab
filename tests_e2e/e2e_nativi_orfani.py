@@ -18,7 +18,7 @@ D = Path(tempfile.mkdtemp(prefix="nat_orfani_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_mixed.py"), str(D)], check=True, capture_output=True)
 PAIR = [str(D / "misto.wiff"), str(D / "misto.wiff.scan")]
 N = len(json.loads((D / "tipi.json").read_text()))
-INIT = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+INIT = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 # every short notice of the page, kept (the element hides itself after a few seconds)
 NOTES = "new MutationObserver(() => { const e = document.getElementById('rust-note'); if (e && !e.hidden) (window.__notes = window.__notes || []).includes(e.textContent) || window.__notes.push(e.textContent); }).observe(document.documentElement, { subtree: true, childList: true, characterData: true, attributes: true })"
 DONE = f"ST.files.length === {N} && ST.files.every(f => f.kind) && UPBUSY === 0 && OPENNOW.busy() === 0"

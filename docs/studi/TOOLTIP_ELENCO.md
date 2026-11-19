@@ -371,8 +371,8 @@ Check: scanner sites 660 = 650 listed + 10 excluded (appendix A); nothing is ski
 | 314 |  | bug.dl.tip | mzlab/web/bug-report.js:72 | Saves the same content as a .json file | 38 |  |
 | 315 |  | bug.mail.tip | mzlab/web/bug-report.js:72 | Opens your mail with the report | 31 |  |
 | 316 |  | bug.open.tip | mzlab/web/bug-report.js:72 | New GitHub issue with this text | 31 |  |
-| 317 |  | load.cols.bad | mzlab/web/colonne-campioni.js:138 | Enter a number | 14 |  |
-| 318 | + | load.cols.plus | mzlab/web/colonne-campioni.js:33 | Add column | 10 |  |
+| 317 |  | load.cols.bad | mzlab/web/columns-samples.js:138 | Enter a number | 14 |  |
+| 318 | + | load.cols.plus | mzlab/web/columns-samples.js:33 | Add column | 10 |  |
 | 319 |  | conv.cancel.title | mzlab/web/conversione-carta.js:18 | Cancel the conversion of the .raw files | 39 |  |
 | 320 |  | conv.dl.title | mzlab/web/conversione.js:22 | Save the converted mzML | 23 |  |
 | 321 | ? | common.help | mzlab/web/conversione.js:326 | Help | 4 |  |
@@ -1350,8 +1350,8 @@ Check: scanner sites 660 = 650 listed + 10 excluded (appendix A); nothing is ski
 
 | file:line | icon | aria-label |
 |---|---|---|
-| mzlab/web/colonne-campioni.js:66 | ↑ | ${EH(t( |
-| mzlab/web/colonne-campioni.js:68 | &times; | ${EH(t( |
+| mzlab/web/columns-samples.js:66 | ↑ | ${EH(t( |
+| mzlab/web/columns-samples.js:68 | &times; | ${EH(t( |
 | mzlab/web/libreria-finestra.js:93 | ⤢ |  |
 | mzlab/web/index.html:119 | ( |  |
 | mzlab/web/index.html:119 | ) |  |

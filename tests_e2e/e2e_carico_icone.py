@@ -6,7 +6,7 @@ steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:300]))
-HINTS = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1')}catch(_){}"
+HINTS = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1')}catch(_){}"
 r = Run(port=8972, wd="/tmp/wd_ci")
 def opened(b, motion):
     c = b.new_context(viewport={"width": 1280, "height": 800}, reduced_motion=motion)

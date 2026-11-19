@@ -26,7 +26,7 @@ def main():
             if a.profilo:
                 d = tempfile.mkdtemp(prefix="mzlab-profilo-"); dirs.append(d)
                 pg = p.chromium.launch_persistent_context(d, viewport={"width": 1500, "height": 2200}, reduced_motion="reduce", **CHROME).new_page()
-                pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+                pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));}catch(_){}")
                 pg.goto(f"http://127.0.0.1:{r.port}/")
             else:
                 pg = r.page(p)

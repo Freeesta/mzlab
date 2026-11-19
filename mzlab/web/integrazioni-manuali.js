@@ -158,7 +158,7 @@ function rename(rec, v, only = false) {
 const optsHtml = () => typeof INTOPT === "undefined" ? "" : h`<span class="manint-opt" role="group" aria-label="${t("canali.manint.opt")}">${raw([["sn", "S/N", "int.tbl.sn.title"], ["par", t("int.tbl.par"), "int.tbl.par.title"], ["q", t("int.tbl.q"), "int.tbl.q.title"]]
   .map(([k, l, tip]) => h`<label title="${t(tip)}"><input type="checkbox" data-opt="${k}"${raw(INTOPT[k] ? " checked" : "")}> ${l}</label>`).join(""))}</span>`;
 /** The role of a sample's file (sample, blank, standard...) as the sheets of the Excel file write it. @param {string} name */
-const roleOf = name => { const f = (typeof E !== "undefined" ? E.files : []).find((/** @type {any} */ x) => x && !x.gone && sampleOf(x.file || "") === name), k = f ? CAMPIONI.kindOf(f) : "sample";
+const roleOf = name => { const f = (typeof E !== "undefined" ? E.files : []).find((/** @type {any} */ x) => x && !x.gone && sampleOf(x.file || "") === name), k = f ? SAMPLES.kindOf(f) : "sample";
   return t(`export.int.role.${k === "calibration" ? "std" : ["sample", "blank", "dark", "infusion", "std", "qc"].includes(k) ? k : "sample"}`); };
 const TEXT_COLS = ["channel", "sample", "label", "baseline", "origin", "overlap", "panel", "correction", "conc_unit", "area_unit"];
 /** One sheet of the Excel file from a table of the engine: its header as shown, the numbers as numbers, the role of the file last. @param {string} text @param {string} name @param {Record<string, string>} labels */

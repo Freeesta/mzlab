@@ -61,10 +61,10 @@ const TABELLA = (() => {
   // ---------------------------------------------------------------- the table of the page
   /** @type {Bag | null} */
   let tb = null;                                               // {source, features, files}
-  const files = () => (window.CAMPIONI ? CAMPIONI.files() : []).filter((/** @type {Bag} */ f) => f.kind !== "mrm");
+  const files = () => (window.SAMPLES ? SAMPLES.files() : []).filter((/** @type {Bag} */ f) => f.kind !== "mrm");
   // the files of the columns of the table, in its order
   const fileObjs = () => (tb ? tb.files : files().map((/** @type {Bag} */ f) => f.file)).map((/** @type {string} */ n) => files().find((/** @type {Bag} */ f) => f.file === n) || { file: n, type: "sample" });
-  const roles = () => fileObjs().map((/** @type {Bag} */ f) => CAMPIONI.roleOf(f));
+  const roles = () => fileObjs().map((/** @type {Bag} */ f) => SAMPLES.roleOf(f));
   function setTable(/** @type {string} */ source, /** @type {Bag[]} */ features) {
     tb = { source, features, files: files().map((/** @type {Bag} */ f) => f.file) };
     document.dispatchEvent(new CustomEvent("tabella"));

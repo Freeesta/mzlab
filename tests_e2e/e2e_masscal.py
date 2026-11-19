@@ -53,7 +53,7 @@ def num(s): return float(s.replace("−", "-"))
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); ctx = b.new_context(viewport={"width": 1400, "height": 1100}, reduced_motion="reduce", locale="en-US", accept_downloads=True); pg = ctx.new_page()
-        pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
+        pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
         pg.on("console", lambda m: errs.append(("console." + m.type, m.text)) if m.type in ("error", "warning") and "GL Driver Message" not in m.text and "allow-same-origin" not in m.text else None)
         pg.on("response", lambda r: errs.append(("http%d" % r.status, r.url)) if r.status >= 400 else None)
@@ -105,7 +105,7 @@ try:
             assert pg.evaluate("(window.MZLAB_LR_MISS || []).length") == 0, pg.evaluate("window.MZLAB_LR_MISS")
         step("Esc closes the panel and no route was missed", closes)
         pg2 = b.new_context(viewport={"width": 1400, "height": 1100}, locale="en-US").new_page(); pg2.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
-        pg2.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
+        pg2.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));}catch(_){}")
         open_file(pg2, LR)
         step("a low-resolution file has no such entry", lambda: (lambda c: None if c == 0 else (_ for _ in ()).throw(AssertionError("entry on a LR file")))(menu(pg2).count()))
         b.close()

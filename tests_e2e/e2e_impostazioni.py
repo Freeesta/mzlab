@@ -17,7 +17,7 @@ try:
         def invite():
             pg.wait_for_selector("#tour-invito", timeout=8000); pg.mouse.move(700, 100)
             t = pg.inner_text("#tour-invito"); assert "First time?" in t and "minut" not in t, t
-            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr')).stato") == "invitato"
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr')).state") == "invited"
             pg.reload(); ready(pg); pg.wait_for_timeout(1500); assert not pg.is_visible("#tour-invito"), "does not come back on reload"
             # fake timers (still running in real time) only now: installed earlier they stall the loading, and a reload on them breaks the page; the invitation opens again on them
             pg.evaluate("TOUR.chiudiInvito()"); pg.clock.install(); pg.evaluate("TOUR.mostraInvito()")

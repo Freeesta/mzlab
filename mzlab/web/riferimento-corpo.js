@@ -28,7 +28,7 @@ const RIFERIMENTO_CORPO = (() => {
     const pseudo = String(st.pseudo).trim().toLowerCase() === "auto" ? null : numIt(st.pseudo);
     if (pseudo != null && !(pseudo >= 0)) throw new Error(t("blank.err.param"));
     const chosen = Array.isArray(st.ref) ? st.ref.map(n => names.indexOf(n)).filter(i => i >= 0) : null;
-    const body = { matrix: TABELLA.matrix(), roles: TABELLA.roles(), times: fo.map(f => (f.time == null ? null : +f.time)), groups: fo.map(f => CAMPIONI.repOf(f)),
+    const body = { matrix: TABELLA.matrix(), roles: TABELLA.roles(), times: fo.map(f => (f.time == null ? null : +f.time)), groups: fo.map(f => SAMPLES.repOf(f)),
       reference: chosen && chosen.length ? chosen : null, factor: st.factor, stat: st.stat, min_detect: st.min, pseudo, floor: +st.floor || 1000,
       mz: tb.features.map(f => f.mz), rt: tb.features.map(f => f.rt) };
     const j = await fetch("api/stat/reference", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).then(r => r.json());

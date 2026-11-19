@@ -12,7 +12,7 @@ import argparse, json, statistics, time
 
 EX = ROOT / "mzlab" / "web" / "esempi"
 GUARD = "try{sessionStorage.setItem('mzlab.coiReload',new URLSearchParams(location.search).get('ripn')||'1');}catch(_){}"
-HINTS = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+HINTS = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 BUSY = "(typeof UPBUSY !== 'undefined' && UPBUSY > 0) || (typeof OPENNOW !== 'undefined' && OPENNOW.busy() > 0) || (typeof PROGRESSO !== 'undefined' && PROGRESSO.busy())"
 READY = "typeof S !== 'undefined' && window.qqReady === true"
 QUIET = "window.qqReady === true && (window.__qqF || 0) === 0 && Date.now() - (window.__qqT || 0) > 1000"

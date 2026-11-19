@@ -54,7 +54,7 @@ def main():
         with sync_playwright() as p:
             b = p.chromium.launch()
             ctx = b.new_context(viewport={"width": 1400, "height": 900}, reduced_motion="reduce", locale="en-US")
-            ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
+            ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
             pg = ctx.new_page(); errs = []
             pg.on("pageerror", lambda e: errs.append(str(e)))
             pg.goto(f"http://127.0.0.1:{r.port}/?perf=1"); wait_for_js(pg, "window.qqReady === true"); ready(pg)

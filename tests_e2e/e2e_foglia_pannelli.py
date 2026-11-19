@@ -50,7 +50,7 @@ if __name__ == "__main__":
             # motion allowed: the leaf falls and nothing around it moves (transform and opacity only)
             ctx = pg.context.browser.new_context(viewport={"width": 1100, "height": 800}, reduced_motion="no-preference")
             pm = ctx.new_page()
-            pm.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
+            pm.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
             pm.goto(f"http://127.0.0.1:{r.port}/?telefono=0"); wait_for_js(pm, "window.qqReady && document.querySelector('#fl-hint')"); frames(pm, 5)
             pm.evaluate("document.getElementById('fl-hint').hidden = false; document.getElementById('dfiles').style.width = '280px'")      # the narrowest side panel (below 900 px the panel is not shown at all)
             samples = []

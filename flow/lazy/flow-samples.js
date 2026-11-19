@@ -9,7 +9,7 @@
   /** the document of the files open in the Data tab, or null when none is open */
   F.samplesFromData = () => {
     const files = typeof E !== "undefined" && Array.isArray(E.files) ? E.files : [];
-    return files.length && G.CDOC ? G.CDOC.doc(files) : null;
+    return files.length && G.SAMPLES_DOC ? G.SAMPLES_DOC.doc(files) : null;
   };
 
   /** what the files open in Data say of themselves: the polarity of all of them (±1, null for a mix or none) and the resolution of their MS1 scans ("hr", "lr", null for a mix or when unknown)
@@ -81,7 +81,7 @@
   /** keeps `doc` as the content of the sample list `input` and its SHA-256 on the input; resolves when the hash is set @param {any} S @param {any} input @param {any} doc */
   F.samplesSet = async (S, input, doc) => {
     S.samples = S.samples || {}; S.samples[input.name] = doc;
-    const c = G.CDOC ? await G.CDOC.canonical(doc) : null;
+    const c = G.SAMPLES_DOC ? await G.SAMPLES_DOC.canonical(doc) : null;
     if (c && /^[0-9a-f]{64}$/.test(c.sha256)) { input.sha256 = c.sha256; S.samplesJson = S.samplesJson || {}; S.samplesJson[input.name] = c.json; }
     else input.sha256 = "";
   };

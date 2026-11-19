@@ -315,8 +315,8 @@ id,area,label,key,file_line,text,chars,flags,source
 314,liste,,bug.dl.tip,mzlab/web/bug-report.js:72,Saves the same content as a .json file,38,,i18n-title
 315,liste,,bug.mail.tip,mzlab/web/bug-report.js:72,Opens your mail with the report,31,,i18n-title
 316,liste,,bug.open.tip,mzlab/web/bug-report.js:72,New GitHub issue with this text,31,,i18n-title
-317,liste,,load.cols.bad,mzlab/web/colonne-campioni.js:138,Enter a number,14,,site
-318,liste,+,load.cols.plus,mzlab/web/colonne-campioni.js:33,Add column,10,,site
+317,liste,,load.cols.bad,mzlab/web/columns-samples.js:138,Enter a number,14,,site
+318,liste,+,load.cols.plus,mzlab/web/columns-samples.js:33,Add column,10,,site
 319,liste,,conv.cancel.title,mzlab/web/conversione-carta.js:18,Cancel the conversion of the .raw files,39,,site
 320,liste,,conv.dl.title,mzlab/web/conversione.js:22,Save the converted mzML,23,,site
 321,liste,?,common.help,mzlab/web/conversione.js:326,Help,4,,site

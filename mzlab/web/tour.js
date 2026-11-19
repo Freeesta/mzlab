@@ -216,7 +216,7 @@ const TOUR = (() => {
   const saveState = status => {
     memState = status;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ stato: status, data: new Date().toISOString() }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ state: status, date: new Date().toISOString() }));
     } catch (_) { /* storage blocked: the tour state is simply not saved */ }
   };
 
@@ -598,7 +598,7 @@ const TOUR = (() => {
       if (window.TPMINE && TPMINE.on) return;
       if (typeof E === "undefined" || !E.files || !E.files.length) return;
       if (readState()) return;
-      saveState("invitato");   // the invitation appears once per browser, whatever the answer
+      saveState("invited");   // the invitation appears once per browser, whatever the answer
       TOUR.mostraInvito();
     },
 
@@ -677,13 +677,13 @@ const TOUR = (() => {
     disegno: () => TOUR.inizia(3, 0),
 
     fine: () => {
-      if (curCap !== 3) saveState("fatto");
+      if (curCap !== 3) saveState("done");
       TOUR.chiudiEScegli();
     },
 
     // Esc, «Skip tour» and «Finish» all end the same way: a tour that loaded its own example file asks what to do with it
     salta: () => {
-      if (curCap !== 3) saveState("saltato");
+      if (curCap !== 3) saveState("skipped");
       TOUR.chiudiEScegli();
     },
 

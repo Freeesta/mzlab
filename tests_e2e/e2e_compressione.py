@@ -22,7 +22,7 @@ srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("
 for _ in range(300000):      # wait for the server to listen (connection attempts, not a fixed pause)
     try: socket.create_connection(("127.0.0.1", PORT), timeout=0.2).close(); break
     except OSError: pass
-INIT = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+INIT = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 JSON = """async u => { const r = await fetch(u); return { status: r.status, j: await r.json() }; }"""
 
 def fresh(b):

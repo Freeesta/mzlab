@@ -2,7 +2,7 @@
 // Extra columns of the loading table (renderFiles in shell.js): a «Columns» button opens a dialog with the preset columns (dilution factor, injection volume, batch, vial, matrix, operator, acquisition,
 // instrument, polarity, comment, replicate), and the custom ones (name, text or number, optional unit; renamed, moved, removed there). The definitions live in `NB.sampleCols`
 // ({on: [ids in order], custom: [{id, name, type, unit}]}), the values in `NB.sampleEx` ({file: {id: value}}): the notebook keeps both, so a reload finds them and the TSV export of the sample table gets them.
-// Lazy (carica("colonne-campioni.js")): shell.js asks `window.COLS` for the header, the cells and the wiring of the table.
+// Lazy (carica("columns-samples.js")): shell.js asks `window.COLS` for the header, the cells and the wiring of the table.
 window.COLS = (() => {
   const t = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p);
   /** @type {[string, string, string][]} id, type, unit of the preset columns */
