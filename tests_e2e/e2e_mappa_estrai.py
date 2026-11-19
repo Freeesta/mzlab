@@ -41,8 +41,12 @@ try:
             assert not pg.evaluate(M + "._mz.ex")
         step("off at the start; the bar has the button", nothing_before)
         def on():
-            # the pointer goes on the brightest cell of the map, so the window of the box always holds data (a fixed fraction of the canvas lands on empty m/z on another layout)
-            px, py, cw, ch = pg.evaluate("(() => { const a = " + M + "._a, m = a.mat; let b = 0; for (let k = 1; k < m.v.length; k++) if (m.v[k] > m.v[b]) b = k; const i = Math.floor(b / m.nmz), j = b % m.nmz; return [a.X(m.rt0 + (i + .5) * (m.rt1 - m.rt0) / m.nrt), a.Y(m.mz0 + (j + .5) * m.dmz), a.W, a.H]; })()")
+            # the pointer goes on a real peak of the spectrum at the brightest cell of the map, so the 0.5 Da window of the box always holds data (a fixed fraction of the canvas, or a bin centre, can fall between peaks)
+            px, py, cw, ch = pg.evaluate("""(async () => { const a = %s._a, m = a.mat, f = a.f; let b = 0; for (let k = 1; k < m.v.length; k++) if (m.v[k] > m.v[b]) b = k;
+              const i = Math.floor(b / m.nmz), j = b - i * m.nmz, rt = m.rt0 + (i + .5) * (m.rt1 - m.rt0) / m.nrt, mz = m.mz0 + (j + .5) * m.dmz, h = (a.x1 - a.x0) / 40;
+              const sj = await (await fetch(`api/spectrum?k=${f.k}&rt0=${rt - h}&rt1=${rt + h}&level=${f.lv || 1}&precursor=&bin=0.1`)).json();
+              let best = -1, at = mz; for (let q = 0; q < sj.mz.length; q++) if (Math.abs(sj.mz[q] - mz) <= m.dmz && sj.y[q] > best) { best = sj.y[q]; at = sj.mz[q]; }
+              return [a.X(rt), a.Y(at), a.W, a.H]; })()""" % M)
             c = box(); pg.mouse.move(c[0] + px * c[2] / cw, c[1] + py * c[3] / ch); ready(pg)
             pg.evaluate("MAPPA.explain(" + M + ", true)"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000); ready(pg)
             assert pg.evaluate("!!" + M + "._mz.ex")

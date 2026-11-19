@@ -104,8 +104,8 @@ try:
         step("«?» and the ? key: the table of the gestures", sheet)
         def keys():
             pg.evaluate(M + ".cv.focus()"); x, y = at(.5, .5); pg.mouse.move(x, y)
-            pg.keyboard.press("+"); wait_for_js(pg, ZSET); z1 = z(); assert z1[0] and z1[1]
-            pg.keyboard.press("+"); changed(z1); z2 = z(); assert (z2[0][1] - z2[0][0]) < (z1[0][1] - z1[0][0])
+            pg.keyboard.press("+"); wait_for_js(pg, ZSET); settled(); z1 = z(); assert z1[0] and z1[1]          # the first zoom has finished easing before the next key
+            pg.keyboard.press("+"); changed(z1); settled(); z2 = z(); assert (z2[0][1] - z2[0][0]) < (z1[0][1] - z1[0][0])
             pg.keyboard.press("Escape"); frames(pg, 8); assert z() == z2, (z(), z2)                  # Esc only unlocks the mirror: the zoom stays (Ctrl/Cmd+Z takes it back)
             pg.keyboard.press("-"); changed(z2)
             pg.keyboard.press("Home"); wait_for_js(pg, ZNULL); assert z() == [None, None]
