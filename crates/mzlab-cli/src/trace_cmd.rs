@@ -143,7 +143,7 @@ fn uv_answer(s: &mut Sample, id: &str, n: i64, win: Option<(f64, f64)>) -> Resul
             &format!(",\"max_points_per_extreme\":{n}"),
         ),
         schema: "trace/1",
-    });
+    })
 }
 
 /// The sum of the SRM traces by time (what `file channels` calls `tic` for a file with no TIC of its own).
