@@ -6,22 +6,26 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{run_report_build, Output};
 use mzlab_core::json::parse;
 
-fn io(e: std::io::Error) -> Error {
-    Error::new("err.file.index").with("detail", e)
+use crate::Outcome;
+
+/// A file or folder that cannot be read: the input failure of the contract (`err.cli.file`, exit 4) naming the path.
+fn io(path: &Path) -> impl Fn(std::io::Error) -> Error + '_ {
+    move |e| Error::new("err.cli.file").with("path", format!("{}: {e}", path.display()))
 }
 
 /// The `run-report/1` text of the folder: `prov.json` and every `.json` file beside it.
 pub fn report(dir: &Path) -> Result<String> {
-    let prov = std::fs::read(dir.join("prov.json")).map_err(io)?;
+    let prov_path = dir.join("prov.json");
+    let prov = std::fs::read(&prov_path).map_err(io(&prov_path))?;
     let mut names: Vec<PathBuf> = std::fs::read_dir(dir)
-        .map_err(io)?
+        .map_err(io(dir))?
         .filter_map(|e| e.ok().map(|e| e.path()))
         .filter(|p| p.extension().is_some_and(|x| x == "json") && !p.ends_with("prov.json"))
         .collect();
     names.sort();
     let mut kept = Vec::new();
     for p in &names {
-        let bytes = std::fs::read(p).map_err(io)?;
+        let bytes = std::fs::read(p).map_err(io(p))?;
         kept.push((
             p.file_name()
                 .map_or(String::new(), |n| n.to_string_lossy().into_owned()),
@@ -35,24 +39,32 @@ pub fn report(dir: &Path) -> Result<String> {
     Ok(run_report_build(&parse(&prov)?, &outputs)?.json())
 }
 
-/// The arguments after `flow report`.
-pub fn run(mut args: impl Iterator<Item = String>) -> std::result::Result<Vec<u8>, String> {
-    let mut dir = None;
-    let mut out = None;
-    while let Some(a) = args.next() {
+/// `flow report RUNDIR [--out FILE]`: the report on stdout or in FILE; `--json` is the same document (it is JSON already).
+pub fn run(args: Vec<String>) -> Outcome {
+    let mut it = args.into_iter();
+    let (mut dir, mut out) = (None, None);
+    while let Some(a) = it.next() {
         match a.as_str() {
-            "--out" => out = Some(args.next().ok_or("--out needs a path")?),
-            s if s.starts_with("--") => return Err(format!("unknown option {s}")),
+            "--out" => match it.next() {
+                Some(p) => out = Some(PathBuf::from(p)),
+                None => return Outcome::fail("--out needs a path"),
+            },
+            s if s.starts_with("--") => return Outcome::fail(&format!("unknown option {s}")),
             _ if dir.is_none() => dir = Some(a),
-            _ => return Err("one run folder only".into()),
+            _ => return Outcome::fail("one run folder only"),
         }
     }
-    let dir = dir.ok_or("no run folder")?;
-    let text = report(Path::new(&dir)).map_err(|e| e.to_string())?;
-    match out {
-        None => Ok(text.into_bytes()),
-        Some(p) => std::fs::write(&p, text)
-            .map(|_| Vec::new())
-            .map_err(|e| format!("{p}: {e}")),
+    let Some(dir) = dir else {
+        return Outcome::fail("usage: mzlab-cli flow report RUNDIR [--out FILE]");
+    };
+    match report(Path::new(&dir)) {
+        Ok(mut text) => {
+            // one trailing newline, whether or not the document already ends with one
+            if !text.ends_with('\n') {
+                text.push('\n');
+            }
+            crate::emit(text, &out)
+        }
+        Err(e) => Outcome::fail_error(&e),
     }
 }

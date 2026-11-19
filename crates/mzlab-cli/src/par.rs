@@ -6,12 +6,25 @@ use mzlab_ops::run::feat::run;
 use std::path::PathBuf;
 
 /// `f(0..n)` on up to one thread per core (the order of the results is the order of the indices); in sequence on WASI, which has no threads.
-fn par_map<T: Send>(n: usize, f: impl Fn(usize) -> T + Sync) -> Vec<T> {
+pub(crate) fn par_map<T: Send>(n: usize, f: impl Fn(usize) -> T + Sync) -> Vec<T> {
+    par_map_with(
+        std::thread::available_parallelism().map_or(1, |w| w.get()),
+        n,
+        f,
+    )
+}
+
+/// `par_map` on exactly `workers` threads (1 is the sequential pass): lets a test compare the bytes of one worker and of many.
+#[cfg_attr(target_family = "wasm", allow(unused_variables))]
+pub(crate) fn par_map_with<T: Send>(
+    workers: usize,
+    n: usize,
+    f: impl Fn(usize) -> T + Sync,
+) -> Vec<T> {
     #[cfg(not(target_family = "wasm"))]
     {
         use std::sync::atomic::{AtomicUsize, Ordering};
         use std::sync::Mutex;
-        let workers = std::thread::available_parallelism().map_or(1, |w| w.get());
         if workers > 1 && n > 1 {
             let next = AtomicUsize::new(0);
             let slots: Mutex<Vec<Option<T>>> = Mutex::new((0..n).map(|_| None).collect());

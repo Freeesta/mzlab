@@ -260,6 +260,52 @@ pub(crate) fn sg(name: &str, x: f64) -> String {
     format!("{name}={}", crate::context::sig4(x))
 }
 
+/// The automatic choices behind the proposals, each with its reason: the file the rules read, its resolution class, whether answers were given.
+fn choices(reference: Option<&Value>, answers: &Value) -> Vec<Value> {
+    let one = |key: &str, value: Value, reason: &str| {
+        Value::Obj(vec![
+            ("key".into(), text(key)),
+            ("value".into(), value),
+            ("reason".into(), text(reason)),
+        ])
+    };
+    let mut v = Vec::new();
+    if let Some(f) = reference {
+        let alias = f.get("alias").and_then(Value::str).unwrap_or("f1");
+        let blank = f.get("role").and_then(Value::str) == Some("blank");
+        v.push(one(
+            "reference_file",
+            text(alias),
+            if blank {
+                "no ok file is a sample: the first file that opened"
+            } else {
+                "the first file that opened and is not a blank"
+            },
+        ));
+        let class = f.get("class").and_then(Value::str);
+        v.push(one(
+            "resolution_class",
+            class.map_or(Value::Null, text),
+            match class {
+                Some("high") => "high-resolution rules: class of the reference file",
+                Some("unit") => "unit-resolution rules: class of the reference file",
+                _ => "the class of the reference file is not known: rules that need it ask",
+            },
+        ));
+    }
+    let given = !matches!(answers, Value::Null);
+    v.push(one(
+        "answers",
+        Value::Bool(given),
+        if given {
+            "answers given: they steer the rules that ask"
+        } else {
+            "none given: the rules that need an answer list it in missing"
+        },
+    ));
+    v
+}
+
 /// The inspection/1 of the sources → the proposals; `answers` is `{objective?, identify?, weak_signals?, elements?, groups?}`, `registry` is `flow::steps()`.
 pub fn propose(inspection: &Value, answers: &Value, registry: &[Step]) -> Result<String> {
     if inspection.get("schema").and_then(Value::str) != Some("inspection/1") {
@@ -304,7 +350,9 @@ pub fn propose(inspection: &Value, answers: &Value, registry: &[Step]) -> Result
         acc.ask("files", "Q-files");
     }
     let mut o = Out::default();
-    o.raw("{\"schema\":\"param-proposal/1\",\"series\":\"s1\",\"proposals\":");
+    o.raw("{\"schema\":\"param-proposal/1\",\"series\":\"s1\",\"choices\":");
+    value(&mut o, &Value::Arr(choices(reference, answers)));
+    o.raw(",\"proposals\":");
     value(&mut o, &Value::Arr(acc.proposals));
     o.raw(",\"missing\":");
     value(&mut o, &Value::Arr(acc.missing));
