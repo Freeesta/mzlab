@@ -89,19 +89,8 @@ out.hrMiss = L.find(idx, "positive", 445.0, 5).length;
 // But at 445.1200 with 5 ppm it MUST be found
 out.hrHit = L.find(idx, "positive", 445.1200, 5).length;
 
-// 2. CSV parsing with semicolon and Italian decimal comma
-const csvIta = "mz;name;formula;polarity;note\n150,5;Composto A;C6H6O4;+;fondo HPLC\n223,02;Acetato cluster;;-;\n";
-out.parsedIta = L.csvParse(csvIta);
-
-// 3. NORMAN Suspect List Exchange format parsing
-const normanCsv = `Compound_Name,Molecular_Formula,Monoisotopic_Mass,Polarity,SMILES,Note
-Atrazine,C8H14ClN5,215.0938,positive,CCNC1=NC(=NC(=N1)Cl)NC(C)C,pesticide
-Bisphenol A,C15H16O2,228.1150,both,CC(C)(C1=CC=C(C=C1)O)C2=CC=C(C=C2)O,additive
-`;
-out.parsedNorman = L.csvParse(normanCsv);
-
-// 4. User list generation
-const uList = L.userList("usr1", "Mia Lista", "sospetti.csv", out.parsedNorman);
+// 2. user list generation from rows already read by the Rust parser (reflist/1)
+const uList = L.userList("usr1", "My list", "suspects.csv", [{ mz: 215.0938, name: "Atrazine", formula: "C8H14ClN5", polarity: 1, note: "pesticide" }, { mz: 229.1, name: "Bisphenol A", formula: "", polarity: 0, note: "" }]);
 out.uListCount = uList.items.length;
 out.uListMz0 = uList.items[0].mz;
 out.uListName0 = uList.items[0].name;
@@ -120,21 +109,6 @@ console.log(JSON.stringify(out));
     # HR search at 445.0 is 0 hits, but at 445.1200 is >= 1 hit
     assert o["hrMiss"] == 0
     assert o["hrHit"] >= 1
-
-    # Italian CSV parsing
-    assert len(o["parsedIta"]) == 2
-    assert o["parsedIta"][0]["mz"] == 150.5
-    assert o["parsedIta"][0]["name"] == "Composto A"
-    assert o["parsedIta"][0]["polarity"] == 1
-    assert o["parsedIta"][1]["mz"] == 223.02
-    assert o["parsedIta"][1]["polarity"] == -1
-
-    # NORMAN CSV parsing
-    assert len(o["parsedNorman"]) == 2
-    assert o["parsedNorman"][0]["name"] == "Atrazine"
-    assert o["parsedNorman"][0]["mz"] == pytest.approx(215.0938, abs=1e-4)
-    assert o["parsedNorman"][0]["formula"] == "C8H14ClN5"
-    assert o["parsedNorman"][0]["smiles"] == "CCNC1=NC(=NC(=N1)Cl)NC(C)C"
 
     # User list structure
     assert o["uListCount"] == 2

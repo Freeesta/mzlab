@@ -152,6 +152,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | reader modules, one per family (`crates/mzlab-lettori*`, separate `.wasm` in `wasm-lettori/<famiglia>/`, feature `estesi`, `LETTORI_FAM`, rule R in `shell.js`, `LETTORI_MOD`, `?lettori=modulo`, ceilings) | `docs/agenti/readers-module.md` |
 | "aperti" module (mzML with numpress, mzXML: `crates/mzlab-lettori/src/open/`, `numpress.rs`) | `docs/agenti/readers-open.md` |
 | Thermo `.raw`: activation, "unknown", rejected event table, damaged scans and controllers (`warn.raw.damaged`), precursors (target, selected ion, MSn chains, SPS, MSX, SRM from the event) | `docs/agenti/readers-thermo-precursors.md` |
+| Known contaminants panel: Add list (CSV, template, row errors), provenance of the lists, `reflist/1`, `mzlab-cli ref-list` | `docs/agenti/reference-lists.md` |
 | release: tag `vX.Y.Z`, `release.yml`, `CHANGELOG.md`, single version, SBOM, gate (`gate_release.py`); Dependabot, CodeQL, security settings to turn on by hand | `docs/agenti/release.md` |
 | browser reset measurements (full reset, Files, `qqHardReset`; `tests_e2e/misura_reset.py`, probe `lib_reset.py`), MISURA reset_* rows | `docs/agenti/reset-measurements.md` |
 | native mzFinder (area: Rust engine (`crates/`, golden data `tools/golden.py`)) | `docs/agenti/rust-desktop-finder.md` |
@@ -193,6 +194,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | full binary specification (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-full-spec.md` |
 | a `.wiff` or `.wiff.scan` loaded alone: which file is its companion (shared Rust rule, `mzlab-cli pair`), the folder prompt of the page (`wiff-pair.js`), what each browser does | `docs/agenti/wiff-pair.md` |
 | choosing which samples of a `.wiff` (or other multi-sample file) to open: how Analyst does it, cost of listing (measured), #3398 reuse, dialog mockup, `samples list` CLI, cap estimate, PR split, questions (study, no feature code) | `docs/agenti/wiff-sample-choice.md` |
+| the page dialog «Choose samples» of a .wiff with several samples (`wiff-choose.js`, setting, `sample_default`, decisions, what is not done) | `docs/agenti/wiff-sample-dialog.md` |
 | other SCIEX instruments, sMRM, PIS/NL, feature `estesi` (area: `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff-variants.md` |
 | writing a `.wiff` + `.wiff.scan`: create, add or remove samples (design study, and the built read-only `mzlab-cli wiff list|verify` with the `wiffwrite` module: streams per sample, lossless copy, verification, wasm cap) | `docs/agenti/wiff-writer.md` |
 | `.wiff` + `.wiff.scan` reader (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` |

@@ -45,6 +45,7 @@
     "../../mzlab/web/molecole-ui.js",
     "../../mzlab/web/disegno-font.js",
     "../../mzlab/web/disegno-nuovo.js",
+    "../../mzlab/web/disegno-file.js",
     "../../mzlab/web/disegno-pulito.js",
     "../../mzlab/web/disegno-storage.js",
     "../../mzlab/web/disegno-cerca.js",

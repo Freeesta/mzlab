@@ -64,7 +64,7 @@
   if (window.MZLAB_PHONE) { add("telefono-scheda.js"); return; }
   var classic = L.filter(function (n) { return n.slice(0, 2) !== "m:"; });
   var modules = L.filter(function (n) { return n.slice(0, 2) === "m:"; });
-  var rest = classic.concat(["shell.js"], modules);
+  var rest = classic.concat(["upload-helpers.js","shell.js"], modules);
   // the tags go in by slices of 48 with a yield between them: all ~170 in one task were a 110-180 ms long task at CPU x4 (each insertion starts
   // its fetch); async=false keeps the run order across slices, and no carica(n) call names a script of L, so none can jump the queue
   var i = 0, all = [];
