@@ -16,11 +16,20 @@ fn root() -> PathBuf {
 }
 
 /// The answer of Rust to one case: the single scans from the mzML, the rest from the index.
-fn ask(r: &mut Routes<std::fs::File>, mzml: &Path, path: &str, query: &str) -> mzlab_core::error::Result<Option<String>> {
+fn ask(
+    r: &mut Routes<std::fs::File>,
+    mzml: &Path,
+    path: &str,
+    query: &str,
+) -> mzlab_core::error::Result<Option<String>> {
     let q = Query::parse(query);
     match path {
-        "/api/scanbin" => r.scanbin_route(&q, &mut std::fs::File::open(mzml).unwrap()).map(|o| o.map(|b| decode_bin(&b))),
-        "/api/spectra" | "/api/scan" | "/api/scanavg" => r.mzml_route(path, &q, &mut std::fs::File::open(mzml).unwrap()),
+        "/api/scanbin" => r
+            .scanbin_route(&q, &mut std::fs::File::open(mzml).unwrap())
+            .map(|o| o.map(|b| decode_bin(&b))),
+        "/api/spectra" | "/api/scan" | "/api/scanavg" => {
+            r.mzml_route(path, &q, &mut std::fs::File::open(mzml).unwrap())
+        }
         _ => Ok(r.handle(path, &q).unwrap()),
     }
 }
@@ -34,11 +43,23 @@ fn same(path: &str, got: &Value, want: &Value, bad: &mut Vec<String>) -> usize {
             }
             1
         }
-        (Value::Array(a), Value::Array(b)) if a.len() == b.len() => a.iter().zip(b).enumerate().map(|(i, (x, y))| same(&format!("{path}[{i}]"), x, y, bad)).sum(),
-        (Value::Object(a), Value::Object(b)) if a.keys().eq(b.keys()) => b.iter().map(|(k, y)| same(&format!("{path}.{k}"), &a[k], y, bad)).sum(),
+        (Value::Array(a), Value::Array(b)) if a.len() == b.len() => a
+            .iter()
+            .zip(b)
+            .enumerate()
+            .map(|(i, (x, y))| same(&format!("{path}[{i}]"), x, y, bad))
+            .sum(),
+        (Value::Object(a), Value::Object(b)) if a.keys().eq(b.keys()) => b
+            .iter()
+            .map(|(k, y)| same(&format!("{path}.{k}"), &a[k], y, bad))
+            .sum(),
         (a, b) => {
             if a != b {
-                bad.push(format!("{path}: {} against {}", a.to_string().chars().take(70).collect::<String>(), b.to_string().chars().take(70).collect::<String>()));
+                bad.push(format!(
+                    "{path}: {} against {}",
+                    a.to_string().chars().take(70).collect::<String>(),
+                    b.to_string().chars().take(70).collect::<String>()
+                ));
             }
             1
         }
@@ -56,9 +77,15 @@ fn decode_bin(b: &[u8]) -> String {
         .iter()
         .map(|m| {
             let n = m["n"].as_u64().unwrap() as usize;
-            let mz: Vec<f64> = (0..n).map(|i| f64::from_le_bytes(b[off + 8 * i..off + 8 * i + 8].try_into().unwrap())).collect();
+            let mz: Vec<f64> = (0..n)
+                .map(|i| f64::from_le_bytes(b[off + 8 * i..off + 8 * i + 8].try_into().unwrap()))
+                .collect();
             off += 8 * n;
-            let y: Vec<f64> = (0..n).map(|i| f32::from_le_bytes(b[off + 4 * i..off + 4 * i + 4].try_into().unwrap()) as f64).collect();
+            let y: Vec<f64> = (0..n)
+                .map(|i| {
+                    f32::from_le_bytes(b[off + 4 * i..off + 4 * i + 4].try_into().unwrap()) as f64
+                })
+                .collect();
             off += 4 * n;
             serde_json::json!({"mz": mz, "y": y})
         })
@@ -69,63 +96,104 @@ fn decode_bin(b: &[u8]) -> String {
 #[test]
 fn hr_routes_like_python() {
     let ready = std::env::var("MZLAB_HR_DIR").ok().map(PathBuf::from);
-    let out = ready.clone().unwrap_or_else(|| std::env::temp_dir().join(format!("mzlab-hr-{}", std::process::id())));
+    let out = ready
+        .clone()
+        .unwrap_or_else(|| std::env::temp_dir().join(format!("mzlab-hr-{}", std::process::id())));
     let run = match ready {
         Some(_) => Command::new("true").output(),
-        None => Command::new("python3").current_dir(root()).arg("tools/hr_reference.py").arg(&out).output(),
+        None => Command::new("python3")
+            .current_dir(root())
+            .arg("tools/hr_reference.py")
+            .arg(&out)
+            .output(),
     };
     if !matches!(&run, Ok(o) if o.status.success()) {
-        assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "the reference did not run: {run:?}");
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "the reference did not run: {run:?}"
+        );
         eprintln!("python3/numpy not available: test skipped");
         return;
     }
-    let cases: Vec<Value> = serde_json::from_slice(&std::fs::read(out.join("hr.json")).unwrap()).unwrap();
+    let cases: Vec<Value> =
+        serde_json::from_slice(&std::fs::read(out.join("hr.json")).unwrap()).unwrap();
     let mut routes: Vec<Routes<std::fs::File>> = (0..3)
         .map(|i| {
             let p = out.join(format!("h{i}.mzidx"));
-            Routes::new(Index::open(std::fs::File::open(&p).unwrap(), std::fs::metadata(&p).unwrap().len()).unwrap())
+            Routes::new(
+                Index::open(
+                    std::fs::File::open(&p).unwrap(),
+                    std::fs::metadata(&p).unwrap().len(),
+                )
+                .unwrap(),
+            )
         })
         .collect();
     let (mut bad, mut compared) = (Vec::new(), 0);
     for c in &cases {
-        let (k, path, query) = (c["k"].as_u64().unwrap() as usize, c["path"].as_str().unwrap(), c["query"].as_str().unwrap());
+        let (k, path, query) = (
+            c["k"].as_u64().unwrap() as usize,
+            c["path"].as_str().unwrap(),
+            c["query"].as_str().unwrap(),
+        );
         if path == "/api/scanbin" && k == 2 {
-            continue;                                          // the profile file: Python's
+            continue; // the profile file: Python's
         }
         // a refusal of Rust is Python's refusal, with the same key
         let got = match ask(&mut routes[k], &out.join(format!("h{k}.mzML")), path, query) {
             Ok(g) => g,
             Err(e) => {
                 if c["status"] == 200 || c["result"]["error_key"] != e.key {
-                    bad.push(format!("k={k} {path}?{query}: Rust refuses with {}, Python gives {} {}", e.key, c["status"], c["result"]["error_key"]));
+                    bad.push(format!(
+                        "k={k} {path}?{query}: Rust refuses with {}, Python gives {} {}",
+                        e.key, c["status"], c["result"]["error_key"]
+                    ));
                 }
                 continue;
             }
         };
         if c["single"] == true {
             if got.is_some() {
-                bad.push(format!("k={k} {path}?{query}: a window of one scan needs the mzML"));
+                bad.push(format!(
+                    "k={k} {path}?{query}: a window of one scan needs the mzML"
+                ));
             }
             let mut mzml = std::fs::File::open(out.join(format!("h{k}.mzML"))).unwrap();
-            let Some(got) = routes[k].spectrum_exact(&Query::parse(query), &mut mzml).unwrap() else {
-                bad.push(format!("k={k} {path}?{query}: spectrum_exact gave it to Python"));
+            let Some(got) = routes[k]
+                .spectrum_exact(&Query::parse(query), &mut mzml)
+                .unwrap()
+            else {
+                bad.push(format!(
+                    "k={k} {path}?{query}: spectrum_exact gave it to Python"
+                ));
                 continue;
             };
             let before = bad.len();
-            compared += same("", &serde_json::from_str(&got).unwrap(), &c["result"], &mut bad);
-            bad[before..].iter_mut().for_each(|b| *b = format!("k={k} {path}?{query}: {b}"));
+            compared += same(
+                "",
+                &serde_json::from_str(&got).unwrap(),
+                &c["result"],
+                &mut bad,
+            );
+            bad[before..]
+                .iter_mut()
+                .for_each(|b| *b = format!("k={k} {path}?{query}: {b}"));
             continue;
         }
         let got = match got {
             None if c["status"] == 200 && (path == "/api/spectrum" || path == "/api/spectra") => {
                 let mut mzml = std::fs::File::open(out.join(format!("h{k}.mzML"))).unwrap();
-                routes[k].mzml_route(path, &Query::parse(query), &mut mzml).unwrap()       // a profile level of single-precision peaks: its spacing comes from the mzML
+                routes[k]
+                    .mzml_route(path, &Query::parse(query), &mut mzml)
+                    .unwrap() // a profile level of single-precision peaks: its spacing comes from the mzML
             }
             g => g,
         };
         if c["status"] != 200 {
             if got.is_some() {
-                bad.push(format!("k={k} {path}?{query}: Python refuses, Rust answers"));
+                bad.push(format!(
+                    "k={k} {path}?{query}: Python refuses, Rust answers"
+                ));
             }
             continue;
         }
@@ -134,16 +202,36 @@ fn hr_routes_like_python() {
             continue;
         };
         let before = bad.len();
-        compared += same("", &serde_json::from_str(&got).unwrap(), &c["result"], &mut bad);
-        bad[before..].iter_mut().for_each(|b| *b = format!("k={k} {path}?{query}: {b}"));
+        compared += same(
+            "",
+            &serde_json::from_str(&got).unwrap(),
+            &c["result"],
+            &mut bad,
+        );
+        bad[before..]
+            .iter_mut()
+            .for_each(|b| *b = format!("k={k} {path}?{query}: {b}"));
     }
     assert!(compared > 20_000, "only {compared} values compared");
     // `ptol` narrows the precursor TIC to the file's tolerance: 305.0702 and 305.1066 lie within the default 0.6 Da, not within 2 mDa
     let n_rt = |r: &mut Routes<std::fs::File>, q: &str| -> usize {
-        let v: Value = serde_json::from_str(&r.handle("/api/chrom", &Query::parse(q)).unwrap().unwrap()).unwrap();
+        let v: Value =
+            serde_json::from_str(&r.handle("/api/chrom", &Query::parse(q)).unwrap().unwrap())
+                .unwrap();
         v["rt"].as_array().map_or(0, |a| a.len())
     };
-    let (wide, narrow) = (n_rt(&mut routes[0], "kind=tic&level=2&prec=305.0702"), n_rt(&mut routes[0], "kind=tic&level=2&prec=305.0702&ptol=0.002"));
-    assert!(narrow > 0 && narrow < wide, "ptol: {narrow} scans against {wide}");
-    assert!(bad.is_empty(), "{} differences:\n{}", bad.len(), bad.iter().take(20).cloned().collect::<Vec<_>>().join("\n"));
+    let (wide, narrow) = (
+        n_rt(&mut routes[0], "kind=tic&level=2&prec=305.0702"),
+        n_rt(&mut routes[0], "kind=tic&level=2&prec=305.0702&ptol=0.002"),
+    );
+    assert!(
+        narrow > 0 && narrow < wide,
+        "ptol: {narrow} scans against {wide}"
+    );
+    assert!(
+        bad.is_empty(),
+        "{} differences:\n{}",
+        bad.len(),
+        bad.iter().take(20).cloned().collect::<Vec<_>>().join("\n")
+    );
 }

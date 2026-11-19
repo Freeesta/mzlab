@@ -51,7 +51,7 @@ def main():
             prof = wd / "profile"; shutil.rmtree(prof, ignore_errors=True)
             ctx = p.chromium.launch_persistent_context(str(prof), executable_path=os.environ.get("MZLAB_CHROMIUM") or None, viewport={"width": 1440, "height": 950})
             ctx.set_default_timeout(600000)
-            ctx.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}" + bm.INIT)
+            ctx.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({status:'skipped'}));}catch(_){}" + bm.INIT)
             pg = ctx.pages[0] if ctx.pages else ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
             try:
                 o = run(pg, a.port, a.file); o["page_errors"] = errs[:3]
