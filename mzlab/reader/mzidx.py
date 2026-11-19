@@ -25,7 +25,7 @@ import numpy as np
 from .mzml import PeakTable, Scan
 
 MAGIC = b"MZIDX001"
-VERSION = 1
+VERSION = 3
 HEADER = struct.Struct("<8sIIQQQQQ8x")          # magic, version, flags, meta_off, meta_len, scans_off, scans_len, total_size  (64 bytes)
 BLOCK = 16384                                   # elements per block (also the spacing of the fence values)
 ALIGN = 64
@@ -435,6 +435,9 @@ def source_and_run(run, sha256: str | None = None) -> tuple[dict, dict]:
     win = run.scan_window_ms1() if hasattr(run, "scan_window_ms1") else None
     if win:
         meta["scan_window"] = [win[0], win[1]]
+    # the chromatogram list the open routes read from the index (the Rust builder writes the same rows: `chromlist.rs`)
+    meta["chromatograms"] = [[d["id"], d["start"], d["end"], d["kind"], d.get("q1"), d.get("q3"), d.get("ce"), d.get("name", ""), d.get("dwell"), d.get("n")]
+                             for d in run.chromatograms()]
     return source, meta
 
 

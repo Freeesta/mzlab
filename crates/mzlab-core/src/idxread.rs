@@ -7,7 +7,7 @@ use crate::readers::Position;
 
 pub const BLOCK: u64 = 16384;
 const HEADER: usize = 64;
-/// Bit 0 of `flags` (version 2): the rows locate the scans in the members of a vendor file set, not in an mzML.
+/// Bit 0 of `flags` (version 3): the rows locate the scans in the members of a vendor file set, not in an mzML.
 pub const READER_FLAG: u32 = 1;
 
 /// Bytes at an offset. `&mut self` so that a JS callback or a cache can keep state.
@@ -235,7 +235,7 @@ pub struct Index<R: ReadAt> {
     pub layout: crate::layout::Layout,
 }
 
-/// Whether the header is of an index of a vendor file (version 2 with `READER_FLAG`) or of an mzML (version 1); `None` for any other.
+/// Whether the header is of an index of a vendor file (version 3 with `READER_FLAG`) or of an mzML (version 3); `None` for any other, older versions included.
 fn nativo(h: &[u8]) -> Option<bool> {
     let w = |a: usize| {
         h.get(a..a + 4)
@@ -243,8 +243,8 @@ fn nativo(h: &[u8]) -> Option<bool> {
             .map(u32::from_le_bytes)
     };
     match (w(8)?, w(12)?) {
-        (1, 0) => Some(false),
-        (2, READER_FLAG) => Some(true),
+        (3, 0) => Some(false),
+        (3, READER_FLAG) => Some(true),
         _ => None,
     }
 }
@@ -384,7 +384,7 @@ impl<R: ReadAt> Index<R> {
         let source: Value = meta.get("source").cloned().unwrap_or(Value::Null);
         let layout = crate::layout::Layout::of_index(&source, &scans);
         let run = meta.get("run").cloned().unwrap_or(Value::Null);
-        layout.seed(&run);
+        layout.seed(&run, nativo).ok_or_else(bad)?;
         Ok(Index {
             r,
             scans: std::sync::Arc::new(scans),

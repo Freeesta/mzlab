@@ -52,12 +52,18 @@ impl Layout {
         l
     }
 
-    /// The chromatogram list an index kept in its `run` (`chromlist`), unless this layout already has one.
-    pub fn seed(&self, run: &crate::json::Value) {
+    /// The chromatogram list an index of an mzML keeps in its `run` (`chromlist`), unless this layout already has one; `None` when an mzML index has no
+    /// valid list (it is damaged: there is no fallback that scans the file). The index of a vendor file has none and seeds nothing.
+    pub fn seed(&self, run: &crate::json::Value, vendor: bool) -> Option<()> {
+        if vendor {
+            return Some(());
+        }
+        let list = crate::chromlist::of_run(run)?;
         let mut h = self.lock();
         if h.chroms.is_none() {
-            h.chroms = crate::chromlist::of_run(run).map(Arc::new);
+            h.chroms = Some(Arc::new(list));
         }
+        Some(())
     }
 
     fn lock(&self) -> std::sync::MutexGuard<'_, Held> {

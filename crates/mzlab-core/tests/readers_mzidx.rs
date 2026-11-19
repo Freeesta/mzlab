@@ -125,7 +125,7 @@ fn same(label: &str, make: &dyn Fn() -> FileSet, c: usize) -> usize {
 fn compare(label: &str, a: &[u8], b: &[u8], sha256: &str, n_members: usize, id: u32) {
     // header: version and flags, the same layout of the sections
     assert_eq!((u32_at(a, 8), u32_at(a, 12)), (1, 0), "{label}");
-    assert_eq!((u32_at(b, 8), u32_at(b, 12)), (2, READER_FLAG), "{label}");
+    assert_eq!((u32_at(b, 8), u32_at(b, 12)), (3, READER_FLAG), "{label}");
     assert_eq!(u64_at(b, 48), b.len() as u64);
     let scans_off = u64_at(a, 32) as usize;
     assert_eq!(u64_at(b, 32) as usize, scans_off, "{label}: sections");

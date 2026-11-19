@@ -4,11 +4,11 @@
 use crate::json::{Out, Value};
 use crate::mzmlhead::Chrom;
 
-/// `,"chromatograms":[...]` for the `run` object; nothing for a file with none.
-pub fn run_part(chroms: &[Chrom]) -> String {
-    if chroms.is_empty() {
+/// `,"chromatograms":[...]` for the `run` object of an mzML (an empty list for a file with none); nothing for a vendor file (`None`).
+pub fn run_part(chroms: Option<&[Chrom]>) -> String {
+    let Some(chroms) = chroms else {
         return String::new();
-    }
+    };
     let mut o = Out::default();
     o.raw(",\"chromatograms\":[");
     for (i, c) in chroms.iter().enumerate() {
@@ -41,9 +41,13 @@ pub fn run_part(chroms: &[Chrom]) -> String {
     o.0
 }
 
-/// The list in `run`, `None` when the index has none (written before the list was kept, or a file with no chromatograms) or a row is not one.
+/// The list in `run` (empty for a file with no chromatograms), `None` when the key is missing or a row is not one.
 pub fn of_run(run: &Value) -> Option<Vec<Chrom>> {
-    let rows = run.get("chromatograms")?.arr();
+    let list = run.get("chromatograms")?;
+    let rows = list.arr();
+    if !matches!(list, Value::Arr(_)) {
+        return None;
+    }
     let mut out = Vec::with_capacity(rows.len());
     for (index, r) in rows.iter().enumerate() {
         let num = |k: usize| r.at(k).and_then(Value::f64);
@@ -61,5 +65,5 @@ pub fn of_run(run: &Value) -> Option<Vec<Chrom>> {
             n: num(9).map(|v| v as i64),
         });
     }
-    (!out.is_empty()).then_some(out)
+    Some(out)
 }

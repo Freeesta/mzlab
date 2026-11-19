@@ -129,8 +129,8 @@ pub struct Table {
     pub nce: bool,
     pub hr1: bool,
     pub n_chromatograms: usize,
-    /// The header of each chromatogram of an mzML, in file order (`chromlist`): the index keeps it in `run`, so that opening the file does not scan the tail.
-    pub chromatograms: Vec<crate::mzmlhead::Chrom>,
+    /// The header of each chromatogram of an mzML, in file order (`chromlist`): the index keeps it in `run`, so that opening the file does not scan the tail; `None` for a vendor file.
+    pub chromatograms: Option<Vec<crate::mzmlhead::Chrom>>,
     /// Lowest and highest m/z of the scan windows the method declares for the first 50 survey scans (`Run.scan_window_ms1`).
     pub window: Option<(f64, f64)>,
     /// Scans the file declares in `<spectrumList count>` less the optical (DAD) spectra it holds (0 when it does not say); more than `rows.len()` means the file is truncated.
@@ -163,7 +163,7 @@ impl Table {
         let w = self.window.map_or(String::new(), |(a, b)| {
             format!(",\"scan_window\":[{a:?},{b:?}]")
         });
-        let list = crate::chromlist::run_part(&self.chromatograms);
+        let list = crate::chromlist::run_part(self.chromatograms.as_deref());
         format!(
             "{{\"nce\":{},\"hr1\":{},\"n_chromatograms\":{}{w}{list}}}",
             self.nce, self.hr1, self.n_chromatograms
@@ -662,7 +662,7 @@ pub fn read_in<R: ReadAt>(r: &mut R, size: u64, budget: Option<&MemBudget>) -> R
     // the tail is read once, here: the headers it holds go to the index (`chromlist`), and the table counts them
     let chroms = crate::mzmlhead::Mzml::new(&mut *src.r, size).chromatograms(last_end)?;
     let mut t = rows.finish(chroms.len());
-    t.chromatograms = chroms;
+    t.chromatograms = Some(chroms);
     finished(t)
 }
 

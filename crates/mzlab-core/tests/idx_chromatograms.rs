@@ -71,38 +71,64 @@ fn the_list_of_the_index_is_the_list_of_the_file_and_costs_no_read() {
     }
 }
 
+/// The header and the meta of `idx` with the version changed (`from` -> `to` in the header) or a key of the `run` object renamed.
+fn damaged(idx: &[u8], version: Option<u32>, rename: Option<(&[u8], &[u8])>) -> Vec<u8> {
+    let mut out = idx.to_vec();
+    if let Some(v) = version {
+        out[8..12].copy_from_slice(&v.to_le_bytes());
+    }
+    if let Some((from, to)) = rename {
+        assert_eq!(from.len(), to.len());
+        let at = out.windows(from.len()).position(|w| w == from).unwrap();
+        out[at..at + from.len()].copy_from_slice(to);
+    }
+    out
+}
+
 #[test]
-fn an_index_without_the_list_scans_the_tail_as_before() {
-    let (data, idx, size) = index_of(srm_like(4), "srm_old.mzML");
-    // the meta of an index written before the list was kept: the key cut out of the `run` object, the lengths in the header moved with it
-    let find = |from: usize, pat: &[u8]| {
-        from + idx[from..]
-            .windows(pat.len())
-            .position(|w| w == pat)
-            .unwrap()
-    };
-    let from = find(0, b",\"chromatograms\":[");
-    let to = find(from, b"]]},\"keys\"") + 2;
-    let cut = to - from;
-    let mut old = [&idx[..from], &idx[to..]].concat();
-    let total = old.len() as u64;
-    old[24..32].copy_from_slice(
-        &(u64::from_le_bytes(idx[24..32].try_into().unwrap()) - cut as u64).to_le_bytes(),
+fn an_index_of_an_older_version_or_without_the_list_is_refused_not_scanned() {
+    let (_, idx, _) = index_of(srm_like(4), "srm_old.mzML");
+    assert_eq!(u32::from_le_bytes(idx[8..12].try_into().unwrap()), 3);
+    let open = |b: Vec<u8>| Index::open(b.clone(), b.len() as u64).err().map(|e| e.key);
+    assert_eq!(open(idx.clone()), None);
+    for old in [1, 2] {
+        assert_eq!(
+            open(damaged(&idx, Some(old), None)).as_deref(),
+            Some("error.badIndex"),
+            "version {old}"
+        );
+    }
+    // a version 3 mzML index whose `run` has no list is damaged: nothing falls back to the tail
+    assert_eq!(
+        open(damaged(
+            &idx,
+            None,
+            Some((b"\"chromatograms\"", b"\"chromatogramz\""))
+        ))
+        .as_deref(),
+        Some("error.badIndex")
     );
-    old[48..56].copy_from_slice(&total.to_le_bytes());
-    let index = Index::open(old.clone(), total).unwrap();
+    // a newer one is still `error.newerFormat`
+    assert_eq!(
+        open(damaged(&idx, Some(4), None)).as_deref(),
+        Some("error.newerFormat")
+    );
+}
+
+#[test]
+fn a_file_with_no_chromatograms_keeps_an_empty_list() {
+    let (data, idx, size) = index_of(srm_like(0), "srm_none.mzML");
+    let _ = (data, size);
+    let index = Index::open(idx.clone(), idx.len() as u64).unwrap();
     let end = index.scans.last().map_or(0, |s| s.end);
     let mut m = Mzml::new(
         Counting {
-            data: data.clone(),
+            data: vec![],
             bytes: 0,
         },
-        size,
+        0,
     );
-    let got = index.layout.chromatograms(&mut m, end).unwrap();
-    assert!(m.r.bytes > 0, "no list in the index: the file is read");
-    assert_eq!(
-        format!("{:?}", *got),
-        format!("{:?}", Mzml::new(data, size).chromatograms(end).unwrap())
-    );
+    // the two fixed traces (TIC, pump pressure) are there: the list is the file's, whatever it holds
+    assert_eq!(index.layout.chromatograms(&mut m, end).unwrap().len(), 2);
+    assert_eq!(m.r.bytes, 0);
 }
