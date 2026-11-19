@@ -62,6 +62,32 @@ fn traces_give_the_columns_of_the_engine_byte_for_byte() {
     assert_ne!(bad.code, 0);
 }
 
+/// The help names the optional columns exactly as the real header ends: the lists come from the same constants.
+fn header_and_help_agree(want: &str) {
+    let header = want.lines().next().unwrap();
+    let ext = format!(
+        "{}{}{}{}",
+        mzlab_core::manint::EXT_HEAD,
+        mzlab_core::manint::SN_HEAD,
+        mzlab_core::manint::FIG_HEAD,
+        mzlab_core::manint::QUALITY_HEAD
+    );
+    assert_eq!(
+        header,
+        format!("{}{ext}", mzlab_core::manint::HEAD.trim_end())
+    );
+    let h = crate::manual_table_cmd::help();
+    for e in [
+        mzlab_core::manint::SN_HEAD,
+        mzlab_core::manint::FIG_HEAD,
+        mzlab_core::manint::QUALITY_HEAD,
+    ] {
+        assert!(
+            header.contains(e.trim_start_matches(',')) && h.contains(e.trim_start_matches(','))
+        );
+    }
+}
+
 #[test]
 fn columns_and_json_are_the_engine_table_in_two_shapes() {
     let d = std::env::temp_dir().join(format!("mzlab_cli_cols_{}", std::process::id()));
@@ -92,6 +118,7 @@ fn columns_and_json_are_the_engine_table_in_two_shapes() {
     let doc = format!("{{\"windows\":{windows},\"columns\":[\"sn\",\"fig\",\"quality\"]}}");
     let want = mzlab_core::manint::table_text(&files, &doc, false).unwrap();
     assert_eq!(String::from_utf8(o.stdout).unwrap(), want);
+    header_and_help_agree(&want);
     // the JSON keeps the header's names as keys and the CSV's text in each cell
     let j = go(&["--json"]);
     assert_eq!(j.code, 0, "{}", j.stderr);

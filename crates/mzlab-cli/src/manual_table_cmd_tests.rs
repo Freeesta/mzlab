@@ -64,6 +64,14 @@ fn one_row_per_window_grouped_by_channel_at_the_peaks_written() {
     let t = text(&table(&[&d.join("sim3.wiff")], &["--windows", &set]));
     let r: Vec<Vec<&str>> = t.lines().map(|l| l.split(',').collect()).collect();
     assert_eq!(r[0].join(","), mzlab_core::manint::HEAD.trim_end());
+    // the list the help prints after "Columns, in this order:" is the first line of the real output
+    let h = super::help();
+    let listed = h
+        .split("Columns, in this order: ")
+        .nth(1)
+        .and_then(|x| x.split(".\n").next())
+        .unwrap();
+    assert_eq!(listed, t.lines().next().unwrap());
     assert_eq!(r.len(), 5, "{t}");
     let key: Vec<String> = r[1..].iter().map(|x| x[..2].join(",")).collect();
     assert_eq!(

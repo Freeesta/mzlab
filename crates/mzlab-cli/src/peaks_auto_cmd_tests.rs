@@ -162,6 +162,8 @@ fn the_baseline_mode_applies_to_every_peak() {
     assert!(v["peaks"][0]["b0"].as_f64().unwrap() > 0.0, "{v}");
     let z: serde_json::Value = serde_json::from_slice(&run(args(&[p])).stdout).unwrap();
     assert_eq!(z["choices"][0]["key"], "b0_b1", "{z}");
+    assert_eq!(run(args(&[p])).stderr, "baseline=zero: b0/b1 omitted\n");
+    assert!(run(args(&[p, "--baseline", "edges"])).stderr.is_empty());
     let bad = run(args(&[p, "--set", "base_y0=5"]));
     assert_eq!(bad.code, 2, "{}", bad.stderr);
     assert_ne!(

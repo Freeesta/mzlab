@@ -76,6 +76,18 @@ fn peak_json(x: &[f64], y: &[f64], k: &AutoPeak, base: &Baseline, f: f64) -> Str
     )
 }
 
+// The one automatic choice, in the JSON and (for people) on stderr.
+fn choices_of(zero: bool) -> (&'static str, String) {
+    if zero {
+        (
+            "[{\"key\":\"b0_b1\",\"choice\":\"omitted\",\"reason\":\"baseline=zero: the area is measured from 0, so the detection baseline ends are not used\"}]",
+            "baseline=zero: b0/b1 omitted\n".to_string(),
+        )
+    } else {
+        ("[]", String::new())
+    }
+}
+
 pub fn run(args: Vec<String>) -> Outcome {
     let mut it = args.into_iter();
     let (mut src, mut from, mut to, mut p) = (None, None, None, AutoParams::default());
@@ -131,14 +143,12 @@ pub fn run(args: Vec<String>) -> Outcome {
                 .iter()
                 .map(|k| peak_json(&x, &y, k, &base, f))
                 .collect();
-            let choices = if zero {
-                "[{\"key\":\"b0_b1\",\"choice\":\"omitted\",\"reason\":\"baseline=zero: the area is measured from 0, so the detection baseline ends are not used\"}]"
-            } else {
-                "[]"
-            };
-            Outcome::ok(
+            let (choices, note) = choices_of(zero);
+            let mut o = Outcome::ok(
                 format!("{{\"peaks\":[{}],\"choices\":{choices}}}\n", rows.join(",")).into_bytes(),
-            )
+            );
+            o.stderr = note;
+            o
         }
     }
 }

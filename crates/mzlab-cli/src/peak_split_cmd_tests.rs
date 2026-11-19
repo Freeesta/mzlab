@@ -147,3 +147,15 @@ fn full_depth_finds_no_valley_and_bad_settings_fail() {
     }
     let _ = std::fs::remove_dir_all(&d);
 }
+
+/// The help says `label` is column 4, as in the header of the table.
+#[test]
+fn help_names_label_as_column_four() {
+    let index = mzlab_core::manint::HEAD
+        .trim_end()
+        .split(',')
+        .position(|c| c == "label")
+        .unwrap();
+    let h = String::from_utf8(run(Path::new("--help"), &[]).stdout).unwrap();
+    assert!(h.contains(&format!("column {}, label", index + 1)), "{h}");
+}
