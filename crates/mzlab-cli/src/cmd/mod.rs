@@ -95,6 +95,9 @@ const JSON_FLAG: &[&str] = &[
     "file list",
     "ion elements",
     "peak table",
+    "msn lib export",
+    "db normative build",
+    "db insilico pack",
 ];
 
 /// Commands whose stdout is JSON anyway: `--json` changes nothing, except that a failure is an `error/1` as well.
@@ -103,7 +106,6 @@ const JSON_DEFAULT: &[&str] = &[
     "flow record",
     "msn lib add",
     "msn lib build",
-    "msn lib export",
     "msn lib search",
     "msn rules",
     "msn rules sum",

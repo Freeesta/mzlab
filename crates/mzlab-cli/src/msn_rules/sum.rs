@@ -1,4 +1,4 @@
-//! `mzlab-cli msn rules sum LINES...`: the lines of `msn rules` added up per stratum (instrument and activation) and polarity: the coverage of the
+//! `mzlab-cli msn rules sum DOC...`: the documents (`msn-rules/1`) of `msn rules` added up per stratum (instrument and activation) and polarity: the coverage of the
 //! rules of the structure against each decoy, the decoy rate of every rule and the thresholds of the protocol. All the arithmetic of the validation is here.
 
 use std::collections::BTreeMap;
@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 use mzlab_core::json::{parse, round, Out, Value};
 use mzlab_core::msngraph::{tabella_regole, Tipo};
+use mzlab_core::Error;
 
 use crate::Outcome;
 
@@ -158,12 +159,21 @@ fn write_layer(o: &mut Out, (layer_name, pol): &(String, i64), s: &Layer) {
     o.raw("]}");
 }
 
-/// The summary of the lines `testo`: one JSON object, the strata ordered by name and polarity.
-pub fn summed(text: &str) -> Result<String, String> {
+/// The summary of the `msn-rules/1` documents `docs` (name, text): one JSON object, the strata ordered by name and polarity.
+/// A text that is not an `msn-rules/1` document is `err.msn.rules.document`, named by its file.
+pub fn summed(docs: &[(String, String)]) -> Result<String, Error> {
     let mut layers: BTreeMap<(String, i64), Layer> = BTreeMap::new();
     let mut skipped: BTreeMap<String, usize> = BTreeMap::new();
-    for l in text.lines().filter(|l| !l.trim().is_empty()) {
-        let v = parse(l.as_bytes()).map_err(|_| format!("not a JSON line: {l}"))?;
+    let mut records = Vec::new();
+    for (name, text) in docs {
+        let bad = || Error::new("err.msn.rules.document").with("path", name);
+        let doc = parse(text.as_bytes()).map_err(|_| bad())?;
+        if doc.get("schema").and_then(Value::str) != Some("msn-rules/1") {
+            return Err(bad());
+        }
+        records.extend(doc.get("records").map_or(&[][..], Value::arr).to_vec());
+    }
+    for v in records {
         if let Some(s) = v.get("skipped").and_then(Value::str) {
             *skipped.entry(s.to_string()).or_default() += 1;
             continue;
@@ -178,7 +188,7 @@ pub fn summed(text: &str) -> Result<String, String> {
         read_line(layers.entry(key).or_default(), &v);
     }
     let mut o = Out::default();
-    o.raw("{\"thresholds\":{\"min_count\":")
+    o.raw("{\"schema\":\"msn-rules-sum/1\",\"thresholds\":{\"min_count\":")
         .int(MIN_COUNT as i64);
     o.raw(",\"max_rate\":").num(MAX_RATE);
     o.raw(",\"min_difference\":").num(MIN_DIFFERENCE);
@@ -224,18 +234,24 @@ fn failed(m: String) -> Outcome {
 }
 
 pub fn run(args: Vec<String>) -> Outcome {
-    let (mut text, mut out, mut a) = (String::new(), None, args.into_iter());
+    let (mut docs, mut out, mut a) = (Vec::new(), None, args.into_iter());
     while let Some(x) = a.next() {
         if x == "--out" {
             out = a.next().map(PathBuf::from);
         } else if x.starts_with("--") {
             return Outcome::fail(&format!("unknown option {x}"));
-        } else if let Err(e) = std::fs::read_to_string(&x).map(|t| text.push_str(&t)) {
-            return failed(format!("{x}: {e}"));
+        } else {
+            match std::fs::read_to_string(&x) {
+                Ok(t) => docs.push((x, t)),
+                Err(e) => return failed(format!("{x}: {e}")),
+            }
         }
     }
-    match summed(&text) {
+    if docs.is_empty() {
+        return failed("a msn-rules/1 document is needed".to_string());
+    }
+    match summed(&docs) {
         Ok(t) => emit(t, &out),
-        Err(e) => failed(e),
+        Err(e) => Outcome::fail_error(&e),
     }
 }

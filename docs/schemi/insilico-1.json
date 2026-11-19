@@ -6,7 +6,7 @@
  "type": "object",
  "additionalProperties": false,
  "required": [
-  "format",
+  "schema",
   "compression",
   "piece_raw",
   "columns",
@@ -23,7 +23,7 @@
   "pieces"
  ],
  "properties": {
-  "format": {
+  "schema": {
    "const": "insilico/1"
   },
   "compression": {

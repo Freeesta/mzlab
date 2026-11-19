@@ -18,7 +18,7 @@
   /** the text of a failed download or read @param {any} e */
   const oops = e => (e && e.key ? F.message({ key: e.key, params: e.params }) : String(e && e.message || e));
   /** true when the text is the catalogue of a package @param {string} t */
-  const isCatalogue = t => t.trimStart().startsWith("{") && /"format"\s*:\s*"insilico\/1"/.test(t.slice(0, 200));
+  const isCatalogue = t => t.trimStart().startsWith("{") && /"schema"\s*:\s*"insilico\/1"/.test(t.slice(0, 200));
   /** the jobs this module blocked for want of candidates, by instance: keeping a package or a list releases them (the scheduler holds a block until it is told) @type {Map<string, any>} */
   const waiting = new Map();
   const wait = async (/** @type {any} */ x, /** @type {any} */ j, /** @type {any} */ inst) => { waiting.set(inst.id, { x, j }); await x.call("block", { job: j, by: "input.insilico" }); };

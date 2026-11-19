@@ -27,10 +27,24 @@ fn write_outputs(name: &str, text: &str) -> String {
 }
 
 fn rows(o: &crate::Outcome) -> Vec<mzlab_core::json::Value> {
-    String::from_utf8_lossy(&o.stdout)
-        .lines()
-        .map(|l| parse(l.as_bytes()).unwrap())
-        .collect()
+    // the contract: `schema` is the first key and the document ends with exactly one newline (the `skipped` records included)
+    assert!(o.stdout.starts_with(b"{\"schema\":\"msn-rules/1\","));
+    assert!(o.stdout.ends_with(b"}\n") && !o.stdout.ends_with(b"\n\n"));
+    let doc = parse(&o.stdout).unwrap();
+    assert_eq!(doc.get("schema").and_then(|s| s.str()), Some("msn-rules/1"));
+    doc.get("records").unwrap().arr().to_vec()
+}
+
+/// The record lines of a test as one `msn-rules/1` document.
+fn doc(lines: &str) -> Vec<(String, String)> {
+    let records: Vec<&str> = lines.lines().filter(|l| !l.is_empty()).collect();
+    vec![(
+        "test.json".to_string(),
+        format!(
+            "{{\"schema\":\"msn-rules/1\",\"records\":[{}]}}",
+            records.join(",")
+        ),
+    )]
 }
 
 #[test]
@@ -147,7 +161,7 @@ fn a_nominal_mass_record_is_counted_apart() {
         m(20.0),
         m(90.0)
     );
-    let s = parse(summed(&t).unwrap().as_bytes()).unwrap();
+    let s = parse(summed(&doc(&t)).unwrap().as_bytes()).unwrap();
     let st = &s.get("layers").unwrap().arr()[0];
     assert_eq!(st.get("nominal").unwrap().f64(), Some(1.0));
     assert_eq!(st.get("records").unwrap().f64(), Some(1.0));
@@ -173,7 +187,7 @@ fn the_sum_applies_the_thresholds_of_the_protocol() {
         );
     }
     t += "{\"id\":\"X\",\"skipped\":\"smiles\"}\n";
-    let s = parse(summed(&t).unwrap().as_bytes()).unwrap();
+    let s = parse(summed(&doc(&t)).unwrap().as_bytes()).unwrap();
     assert_eq!(
         s.get("skipped").unwrap().get("smiles").unwrap().f64(),
         Some(1.0)
@@ -203,7 +217,7 @@ fn a_rule_with_fewer_than_twenty_applications_is_not_measured() {
     let m = "{\"n\":1,\"it\":10,\"a\":1,\"ia\":10,\"b\":0,\"ib\":0,\"c\":1,\"ic\":10,\"r\":{\"loss_c2h2o_acetyl\":1}}";
     let t =
         format!("{{\"id\":\"R\",\"layer\":\"cid_trappola\",\"pol\":-1,\"v\":{m},\"dl\":{m}}}\n");
-    let s = parse(summed(&t).unwrap().as_bytes()).unwrap();
+    let s = parse(summed(&doc(&t)).unwrap().as_bytes()).unwrap();
     let st = &s.get("layers").unwrap().arr()[0];
     assert_eq!(
         st.get("rules").unwrap().arr()[0]
@@ -253,4 +267,34 @@ fn the_italian_names_are_refused() {
     let h = String::from_utf8(run(&["msn", "rules", "--help"]).stdout).unwrap();
     assert!(h.contains("--activation A") && h.contains("msn rules sum"));
     assert!(!h.contains("old names still accepted"));
+}
+
+/// A file that is not an `msn-rules/1` document (not JSON, or JSON of another schema) is one input error that names the file (exit 4).
+#[test]
+fn the_sum_names_the_file_that_is_not_a_rules_document() {
+    for (name, text) in [
+        ("not-json.txt", "records\n"),
+        (
+            "other.json",
+            "{\"schema\":\"msn-summary/1\",\"records\":[]}",
+        ),
+    ] {
+        let f = write_outputs(name, text);
+        let o = run(&["msn", "rules", "sum", &f]);
+        assert_eq!(o.code, 4, "{name}: {}", o.stderr);
+        let e = parse(&o.stdout).unwrap();
+        assert_eq!(e.get("schema").and_then(|x| x.str()), Some("error/1"));
+        assert_eq!(
+            e.get("error_key").and_then(|x| x.str()),
+            Some("err.msn.rules.document"),
+            "{name}"
+        );
+        assert_eq!(
+            e.get("params")
+                .and_then(|p| p.get("path"))
+                .and_then(|x| x.str()),
+            Some(f.as_str())
+        );
+        assert!(o.stderr.contains(&f), "{}", o.stderr);
+    }
 }

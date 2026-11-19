@@ -11,7 +11,7 @@ export const FORMAT = "insilico/1";
 export const BASE = new URL("insilico/", import.meta.url).href;
 
 /** @typedef {{ file: string, size: number, sha256: string, mass_min: number, mass_max: number, rows: number, size_raw: number, sha256_raw: string }} Piece */
-/** @typedef {{ format: string, size: number, size_compressed: number, sha256: string, rows: number, licence: string, attribution: string, source: { name: string, version: string, doi: string }, pieces: Piece[] }} Catalog */
+/** @typedef {{ schema: string, size: number, size_compressed: number, sha256: string, rows: number, licence: string, attribution: string, source: { name: string, version: string, doi: string }, pieces: Piece[] }} Catalog */
 /** @typedef {{ base?: string, fetchFn?: typeof fetch, caches?: CacheStorage, signal?: AbortSignal, onProgress?: (p: { piece: number, pieces: number, bytes: number, total: number }) => void }} Options */
 
 const err = (/** @type {string} */ key, /** @type {Record<string, unknown>} */ params = {}) => Object.assign(new Error(key), { key, params });
@@ -19,7 +19,7 @@ const where = (/** @type {Options} */ o) => ({ base: o.base ?? BASE, fetchFn: o.
 
 /** The catalogue text checked: the common checks of the packages, then what the windowed reading needs (mass range, raw size and SHA-256 of every piece). */
 export function parseCatalog(/** @type {string} */ text) {
-  /** @type {Catalog} */ const c = /** @type {any} */ (parseBase(text, FORMAT));
+  /** @type {Catalog} */ const c = /** @type {any} */ (parseBase(text, FORMAT, "schema"));
   for (const p of c.pieces) {
     if (!(p.mass_min <= p.mass_max) || !(p.size_raw > 0) || !/^[0-9a-f]{64}$/.test(p.sha256_raw || "")) throw err("normative.dl.err.catalog", { detail: String(p.file) });
   }
