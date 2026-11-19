@@ -314,7 +314,7 @@ try:
             pg.keyboard.press("v")
             wait_for_js(pg, f"{P}.el.querySelectorAll('.ivl-mk').length === 1 && !!{P}.el.querySelector('.ivl-bar')", timeout=60000)
             got = pg.evaluate("([k, w]) => fetch(`api/manvalley?k=${k}&depth=0.1&w=${encodeURIComponent(JSON.stringify(w))}`).then(r => r.text())", [kb, one])
-            need(got == peak_split(), ("api/manvalley = peak-split", got, peak_split()))
+            need(got + "\n" == peak_split(), ("api/manvalley = peak-split", got, peak_split()))   # the CLI ends every output with one newline (contract.rs)
             t0 = json.loads(got)["splits"][0]
             need(p0 < t0 < p1 and pg.evaluate(f"{P}._split.ts[0]") == t0, (t0, p0, p1))
             bar = pg.evaluate(f"(() => {{ const b = {P}.el.querySelector('.ivl-bar'), i = b.querySelector('input'); return [i.value, i.title === I18N.t('int.split.depth.tip'), i.getAttribute('aria-describedby'), [...b.querySelectorAll('button')].every(x => x.getBoundingClientRect().height >= 24), b.querySelector('.ivl-none').textContent]; }})()")
