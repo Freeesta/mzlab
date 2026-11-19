@@ -193,17 +193,17 @@ fn name_steps() -> Vec<Value> {
     }
     let files: Vec<Value> = names.iter().map(|n| json!({"name": n})).collect();
     let step =
-        |cop: &str, body: Value| json!({"op": "lr_campioni", "cop": cop, "body": body.to_string()});
+        |cop: &str, body: Value| json!({"op": "lr_samples", "cop": cop, "body": body.to_string()});
     vec![
         step("propose", json!({"files": files})), // the time points of the names, `3h` and `1 h 30` included
         step("variables", json!({"files": files})),
         step(
             "variables",
-            json!({"files": files, "manuale": {"pos": -1, "sep": "_"}}),
+            json!({"files": files, "manual": {"pos": -1, "sep": "_"}}),
         ),
         step(
             "variables",
-            json!({"files": files, "manuale": {"has": ["O2", "H2O2"], "substring": true}}),
+            json!({"files": files, "manual": {"has": ["O2", "H2O2"], "substring": true}}),
         ),
         step(
             "group_name",
