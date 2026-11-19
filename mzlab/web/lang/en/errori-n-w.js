@@ -93,6 +93,7 @@ I18N.add("en", {
   "err.stat.pca.few": "The PCA needs at least {min} samples (not blank or dark): there are {n}.",
   "err.stat.pca.nofeatures": "After the filters fewer than two features that vary between the samples are left.",
   "err.msnlib.noIon": "An ion (formula and adduct) is needed to add to the library",
+  "err.msnlib.badIon": "The ion “{ion}” in the manifest is not valid: write the neutral formula and an adduct such as [M+H]+.",
   "err.msnlib.bad": "The user library is not valid",
   "err.msngrafo.noMzml": "The maker's file produced no mzML: the graph cannot be built.",
   "error.molecules.noName": "The name is missing",

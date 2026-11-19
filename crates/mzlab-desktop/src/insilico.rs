@@ -55,7 +55,7 @@ pub struct Piece {
 /// The fields of `catalogo.json` (`insilico/1`) the app needs.
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct Catalog {
-    pub format: String,
+    pub schema: String,
     pub size_compressed: u64,
     pub sha256: String,
     #[serde(default)]
@@ -91,8 +91,8 @@ pub fn parse_catalog(bytes: &[u8]) -> Result<Catalog, InsilicoError> {
     let c: Catalog = serde_json::from_slice(bytes).map_err(|e| bad(&e.to_string()))?;
     let plain =
         |f: &str| f.len() == 7 && f.ends_with(".bin") && f[..3].bytes().all(|b| b.is_ascii_digit());
-    if c.format != FORMAT || c.sha256.len() != 64 || c.pieces.is_empty() {
-        return Err(bad(&c.format));
+    if c.schema != FORMAT || c.sha256.len() != 64 || c.pieces.is_empty() {
+        return Err(bad(&c.schema));
     }
     let hash = |h: &str| h.len() == 64;
     if c.pieces.iter().any(|p| {

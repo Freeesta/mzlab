@@ -10,7 +10,7 @@ use crate::normative::fetch::Fetch;
 use crate::normative::{run_with, NormError};
 use mzlab_feat::attributio::reglists::schema::read_list;
 
-fn data(name: &str) -> Vec<u8> {
+pub(super) fn data(name: &str) -> Vec<u8> {
     std::fs::read(
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("tests/data/normative")
@@ -27,13 +27,13 @@ fn gz(b: &[u8]) -> Vec<u8> {
 
 /// The fake network: URL → body, with the count of requests.
 #[derive(Clone, Default)]
-struct Fake {
+pub(super) struct Fake {
     pages: Arc<Mutex<HashMap<String, Vec<u8>>>>,
     calls: Arc<Mutex<Vec<String>>>,
 }
 
 impl Fake {
-    fn standard() -> Fake {
+    pub(super) fn standard() -> Fake {
         let f = Fake::default();
         for (u, n) in [
             ("cellar", "cellar.xhtml"),
@@ -52,13 +52,19 @@ impl Fake {
         f.set("parent", gz(&data("cid_parent.tsv")));
         f
     }
-    fn set(&self, u: &str, b: Vec<u8>) {
+    pub(super) fn set(&self, u: &str, b: Vec<u8>) {
         self.pages
             .lock()
             .expect("lock")
             .insert(format!("https://fixture.test/{u}"), b);
     }
-    fn empty() -> Fake {
+    pub(super) fn drop_page(&self, u: &str) {
+        self.pages
+            .lock()
+            .expect("lock")
+            .remove(&format!("https://fixture.test/{u}"));
+    }
+    pub(super) fn empty() -> Fake {
         Fake::default()
     }
     fn count(&self) -> usize {
@@ -76,12 +82,15 @@ impl Fetch for Fake {
     }
 }
 
-struct Work {
+pub(super) struct Work {
     dir: PathBuf,
 }
 
 impl Work {
-    fn new(name: &str) -> Work {
+    pub(super) fn dir(&self) -> &Path {
+        &self.dir
+    }
+    pub(super) fn new(name: &str) -> Work {
         let dir = std::env::temp_dir().join(format!("mzlab_norm_{name}_{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("out")).expect("dir");
@@ -98,7 +107,7 @@ impl Work {
         .expect("overrides");
         Work { dir }
     }
-    fn args(&self, extra: &[&str]) -> Vec<String> {
+    pub(super) fn args(&self, extra: &[&str]) -> Vec<String> {
         let mut a: Vec<String> = ["build", "--cache"].iter().map(|s| s.to_string()).collect();
         a.push(self.dir.join("cache").display().to_string());
         a.push("--out".into());
@@ -197,7 +206,9 @@ fn normative_canonical_bytes_of_a_list() {
     assert_eq!(r.code, 0, "{}", r.stderr);
     let golden = String::from_utf8(data("golden_T_EU_WATER.csv")).expect("utf8");
     assert_eq!(undated(&w, "T_EU_WATER"), golden);
-    let text = String::from_utf8_lossy(&r.stdout).to_string();
+    // the per-list lines are progress: stderr, and stdout stays empty without --json
+    assert!(r.stdout.is_empty());
+    let text = r.stderr.clone();
     assert!(
         text.contains("T_EU_WATER entries=4 screenable=2 groups=1 uvcb=0 inorganic=0 unresolved=1"),
         "{text}"
@@ -402,7 +413,7 @@ fn normative_a_failing_source_keeps_the_last_good_file_and_marks_it_stale() {
         prov.contains("\"stale\":true") && prov.contains("\"error\""),
         "{prov}"
     );
-    assert!(String::from_utf8_lossy(&r.stdout).contains("T_EU_PPP stale"));
+    assert!(r.stderr.contains("T_EU_PPP stale"));
 }
 
 #[test]
@@ -415,18 +426,6 @@ fn normative_only_builds_the_named_lists() {
     assert_eq!(r.code, 0, "{}", r.stderr);
     assert!(!w.out("lists/T_US_EPA.csv").is_empty());
     assert!(w.out("lists/T_EU_WATER.csv").is_empty());
-}
-
-#[test]
-fn normative_usage_errors_have_exit_code_2() {
-    let r = run_with(
-        vec!["build".into(), "--cache".into(), "x".into()],
-        Fake::empty(),
-    );
-    assert_eq!(r.code, 2);
-    assert!(r.stderr.contains("err.normative.usage"));
-    let r = run_with(vec!["build".into(), "--bogus".into()], Fake::empty());
-    assert_eq!(r.code, 2);
 }
 
 #[test]

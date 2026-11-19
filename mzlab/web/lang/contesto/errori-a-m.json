@@ -87,6 +87,7 @@
   "error.generic": "Error without its own text; {detail} = technical message from the engine.",
   "err.cli.usage": "Engine error message of a command line the CLI cannot use; {message} = what is wrong.",
   "err.cli.file": "CLI error: a file cannot be read; {path} = the file.",
+  "err.msn.rules.document": "CLI error: a file given to msn rules sum is not an msn-rules/1 document; {path} = the file.",
   "err.cli.design.samplesAndFiles": "CLI usage error of sample design propose: both --samples and FILE paths were given.",
   "err.cli.design.needsInput": "CLI usage error of sample design; {op} = the operation (propose).",
   "err.cli.design.oneFile": "CLI usage error of sample design; {op} = the operation (validate or canonical).",
