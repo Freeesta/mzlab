@@ -343,7 +343,7 @@ fn tree_candidates_carry_the_scores_apart_and_obey_the_filters() {
     // the entry is the unknown itself, so a window in Da cannot drop it: the window echoed by msn-search/1 shows the conversion
     let narrow = run(r#"{"precursor_da":0.5}"#);
     assert!(
-        narrow.contains("STD-1") && !narrow.contains("\"ppm_prec\":10,"),
+        narrow.contains("STD-1") && !narrow.contains("\"precursor_ppm\":10,"),
         "{narrow}"
     );
     let _ = std::fs::remove_dir_all(&dir);
