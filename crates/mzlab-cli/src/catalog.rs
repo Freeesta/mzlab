@@ -24,7 +24,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--out", "write to this file, not stdout"),
     ("--set", "one NAME=VALUE setting; repeat the flag for more"),
     ("--sample", "sample ids: 1,3,5 or 2-4"),
-    ("--no-points", "omit MS2 points"),
+    ("--no-points", "leave out the MS2 points of each item"),
     ("--samples", "samples/1 file"),
     ("--from", "start of the window, minutes"),
     ("--to", "end of the window, minutes"),
