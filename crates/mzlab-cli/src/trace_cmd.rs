@@ -108,44 +108,67 @@ fn family_ev(source: &str, id: &str, extra: &str) -> String {
     )
 }
 
+/// A UV or analog channel (`uv:*`, `an:*`): its trace from the mzML, or the band `uv:auto` proposes.
+fn uv_answer(s: &mut Sample, id: &str, n: i64, win: Option<(f64, f64)>) -> Result<Answer> {
+    if id == "uv:auto" {
+        let text = match win {
+            Some((a, b)) => mzlab_core::channels_uv::spettro(&mut s.mzml, id, a, b)?,
+            None => mzlab_core::channels_uv::trace(&mut s.mzml, &s.chroms, id, n)?,
+        };
+        return Ok(Answer {
+            text,
+            y_unit: String::new(),
+            evidence: family_ev("mzml:uv", id, ""),
+            schema: "uvband/1",
+        });
+    }
+    let text = mzlab_core::channels_uv::trace(&mut s.mzml, &s.chroms, id, n)?;
+    // the analog route names its unit (bar, psi, ...); a UV trace is in mAU
+    let y_unit = mzlab_core::json::parse(text.as_bytes())
+        .ok()
+        .and_then(|v| v.get("unit").and_then(|u| u.str().map(String::from)))
+        .unwrap_or_else(|| {
+            if id.starts_with("an:") {
+                "counts".into()
+            } else {
+                "mAU".into()
+            }
+        });
+    return Ok(Answer {
+        text,
+        y_unit,
+        evidence: family_ev(
+            "mzml:uv-analog",
+            id,
+            &format!(",\"max_points_per_extreme\":{n}"),
+        ),
+        schema: "trace/1",
+    });
+}
+
+/// The sum of the SRM traces by time (what `file channels` calls `tic` for a file with no TIC of its own).
+fn srm_sum(s: &mut Sample) -> Result<(Vec<f64>, Vec<f64>)> {
+    let mut pts: Vec<(f64, f64)> = Vec::new();
+    for ch in s.chroms.clone().iter().filter(|x| x.kind == "srm") {
+        let (t, y) = s.mzml.chromatogram(ch)?;
+        pts.extend(t.into_iter().zip(y));
+    }
+    pts.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let mut sum: Vec<(f64, f64)> = Vec::new();
+    for (t, y) in pts {
+        match sum.last_mut() {
+            Some(l) if l.0 == t => l.1 += y,
+            _ => sum.push((t, y)),
+        }
+    }
+    Ok(sum.into_iter().unzip())
+}
+
 /// The trace of channel `id`: the route of the page for scan channels, the chromatogram of the mzML for transitions, UV and analog channels.
 fn chrom_answer(s: &mut Sample, id: &str, n: i64, win: Option<(f64, f64)>) -> Result<Answer> {
     let unknown = || Error::new("err.canali.unknown").with("id", id);
     if mzlab_core::channels_uv::read_id(id).is_some() {
-        if id == "uv:auto" {
-            let text = match win {
-                Some((a, b)) => mzlab_core::channels_uv::spettro(&mut s.mzml, id, a, b)?,
-                None => mzlab_core::channels_uv::trace(&mut s.mzml, &s.chroms, id, n)?,
-            };
-            return Ok(Answer {
-                text,
-                y_unit: String::new(),
-                evidence: family_ev("mzml:uv", id, ""),
-                schema: "uvband/1",
-            });
-        }
-        let text = mzlab_core::channels_uv::trace(&mut s.mzml, &s.chroms, id, n)?;
-        // the analog route names its unit (bar, psi, ...); a UV trace is in mAU
-        let y_unit = mzlab_core::json::parse(text.as_bytes())
-            .ok()
-            .and_then(|v| v.get("unit").and_then(|u| u.str().map(String::from)))
-            .unwrap_or_else(|| {
-                if id.starts_with("an:") {
-                    "counts".into()
-                } else {
-                    "mAU".into()
-                }
-            });
-        return Ok(Answer {
-            text,
-            y_unit,
-            evidence: family_ev(
-                "mzml:uv-analog",
-                id,
-                &format!(",\"max_points_per_extreme\":{n}"),
-            ),
-            schema: "trace/1",
-        });
+        return uv_answer(s, id, n, win);
     }
     let channels = s.routes.canali();
     let c = channels.v[channels.find(id).ok_or_else(unknown)?].clone();
@@ -174,21 +197,7 @@ fn chrom_answer(s: &mut Sample, id: &str, n: i64, win: Option<(f64, f64)>) -> Re
             })
         }
         (_, Source::Somma) => {
-            // a file with no TIC of its own: the sum of its SRM traces by time (what `file channels` calls `tic` there)
-            let mut pts: Vec<(f64, f64)> = Vec::new();
-            for ch in s.chroms.clone().iter().filter(|x| x.kind == "srm") {
-                let (t, y) = s.mzml.chromatogram(ch)?;
-                pts.extend(t.into_iter().zip(y));
-            }
-            pts.sort_by(|a, b| a.0.total_cmp(&b.0));
-            let mut sum: Vec<(f64, f64)> = Vec::new();
-            for (t, y) in pts {
-                match sum.last_mut() {
-                    Some(l) if l.0 == t => l.1 += y,
-                    _ => sum.push((t, y)),
-                }
-            }
-            let (t, y): (Vec<f64>, Vec<f64>) = sum.into_iter().unzip();
+            let (t, y) = srm_sum(s)?;
             Ok(Answer {
                 text: rounded_trace(&t, &y),
                 y_unit: counts,

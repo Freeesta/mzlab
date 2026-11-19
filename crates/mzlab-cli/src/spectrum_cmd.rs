@@ -70,17 +70,9 @@ enum At {
     Window(f64, f64),
 }
 
-fn get_one(
-    s: &mut Sample,
-    at: &At,
-    level: Option<u8>,
-    chan: Option<&str>,
-    csv: bool,
-) -> Result<String> {
-    let mut level = level.unwrap_or(1);
-    let mut resolved = "null".to_string();
-    let mut pairs: Vec<(&str, String)> = Vec::new();
-    let sid = match at {
+/// The index of the scan `at` names, `None` for a window.
+fn scan_index(s: &mut Sample, at: &At, level: u8, chan: Option<&str>) -> Result<Option<usize>> {
+    Ok(match at {
         At::Scan(no) => {
             let scans = &s.routes.idx.scans;
             let i = (0..scans.len())
@@ -105,7 +97,37 @@ fn get_one(
             Some(v.get("sid").and_then(Value::f64).ok_or_else(none)? as usize)
         }
         At::Window(..) => None,
-    };
+    })
+}
+
+/// The members of the route answer that are not arrays, as JSON members.
+fn scalar_members(text: &str) -> Result<String> {
+    let mut ans = Out::default();
+    let v = parse(text.as_bytes())?;
+    for (k, x) in v
+        .entries()
+        .iter()
+        .filter(|(_, x)| !matches!(x, Value::Arr(_)))
+    {
+        ans.raw(if ans.0.is_empty() { "" } else { "," })
+            .str(k)
+            .raw(":");
+        write_value(&mut ans, x);
+    }
+    Ok(ans.0)
+}
+
+fn get_one(
+    s: &mut Sample,
+    at: &At,
+    level: Option<u8>,
+    chan: Option<&str>,
+    csv: bool,
+) -> Result<String> {
+    let mut level = level.unwrap_or(1);
+    let mut resolved = "null".to_string();
+    let mut pairs: Vec<(&str, String)> = Vec::new();
+    let sid = scan_index(s, at, level, chan)?;
     let (lo, hi) = match (sid, at) {
         (Some(i), _) => {
             let sc = &s.routes.idx.scans[i];
@@ -150,18 +172,7 @@ fn get_one(
         return Ok(extract::points_csv("mz", "intensity", &pts));
     }
     // the rest of the route's answer (mode, scans averaged, first and last scan, merge) is the evidence
-    let mut ans = Out::default();
-    let v = parse(text.as_bytes())?;
-    for (k, x) in v
-        .entries()
-        .iter()
-        .filter(|(_, x)| !matches!(x, Value::Arr(_)))
-    {
-        ans.raw(if ans.0.is_empty() { "" } else { "," })
-            .str(k)
-            .raw(":");
-        write_value(&mut ans, x);
-    }
+    let ans = scalar_members(&text)?;
     let head = format!(
         "\"file\":{},\"sample\":{},\"x_unit\":\"m/z\",\"y_unit\":\"counts\",\"ms_level\":{level}",
         extract::jstr(&s.name),
@@ -170,7 +181,7 @@ fn get_one(
     let ev = format!(
         "\"evidence\":{{\"route\":\"/api/spectrum\",\"query\":{},\"scan\":{resolved},\"answer\":{{{}}}}}",
         extract::jstr(&text_of(&pairs)),
-        ans.0
+        ans
     );
     Ok(extract::points_doc("spectrum/1", &head, &pts, &ev))
 }

@@ -47,6 +47,42 @@ pub(crate) fn with_tmp<T>(tag: &str, f: impl FnOnce(&Path) -> Result<T>) -> Resu
     r
 }
 
+/// The mzML of the sample read (the file itself, or the shell the reader builds for a vendor sample) and the position of that sample in `ids`.
+fn open_mzml(
+    file: &Path,
+    l: Option<&mut Box<dyn mzlab_core::readers::Reader>>,
+    label: &str,
+    ids: &[u32],
+) -> Result<(Mzml<Box<dyn ReadAt>>, usize)> {
+    let Some(l) = l else {
+        let f = File::open(file).map_err(io)?;
+        let size = f.metadata().map_err(io)?.len();
+        return Ok((Mzml::new(Box::new(f), size), 0));
+    };
+    let k = crate::flow_set::sample_index(label, ids)?;
+    // the chromatograms (SIM, SRM, UV) come from the mzML shell the site reads (`readers_mzml::guscio`)
+    let shell = mzlab_core::readers_mzml::guscio(l.as_mut(), k)?;
+    let size = shell.len() as u64;
+    Ok((Mzml::new(Box::new(shell), size), k))
+}
+
+/// The stderr line of a file with several samples when none was asked for.
+fn several_note(name: &str, ids: &[u32], k: usize) -> String {
+    if ids.len() < 2 {
+        return String::new();
+    }
+    let list = ids
+        .iter()
+        .map(|i| i.to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "note: {name} has {} samples (ids {list}): this is sample {}; --sample ID for another\n",
+        ids.len(),
+        ids[k]
+    )
+}
+
 /// Sample `sample` of `file` (the first when `None`), its index built in `tmp`. An id the file does not have is `err.sample.unknown` (exit 5).
 pub(crate) fn open_sample(file: &Path, sample: Option<u32>, tmp: &Path) -> Result<Sample> {
     let name = file
@@ -87,35 +123,12 @@ pub(crate) fn open_sample(file: &Path, sample: Option<u32>, tmp: &Path) -> Resul
     )?;
     let mut routes = Routes::new(crate::open(&idx)?);
     let end = routes.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
-    let (mut m, k): (Mzml<Box<dyn ReadAt>>, usize) = match l.as_mut() {
-        None => {
-            let f = File::open(file).map_err(io)?;
-            let size = f.metadata().map_err(io)?.len();
-            (Mzml::new(Box::new(f), size), 0)
-        }
-        Some(l) => {
-            let k = crate::flow_set::sample_index(&label, &ids)?;
-            // the chromatograms (SIM, SRM, UV) come from the mzML shell the site reads (`readers_mzml::guscio`)
-            let shell = mzlab_core::readers_mzml::guscio(l.as_mut(), k)?;
-            let size = shell.len() as u64;
-            (Mzml::new(Box::new(shell), size), k)
-        }
-    };
+    let (mut m, k) = open_mzml(file, l.as_mut(), &label, &ids)?;
     let chroms = m.chromatograms(end)?;
     let facts: Facts = mzlab_core::iteminfo::facts_from(&mut m, end, chroms.len() as i64, true)?;
     routes.pon_cromatogrammi(&name, &chroms, &facts);
-    let note = if !mzml && sample.is_none() && ids.len() > 1 {
-        let list = ids
-            .iter()
-            .map(|i| i.to_string())
-            .collect::<Vec<_>>()
-            .join(", ");
-        format!(
-            "note: {name} has {} samples (ids {}): this is sample {}; --sample ID for another\n",
-            ids.len(),
-            list,
-            ids[k]
-        )
+    let note = if !mzml && sample.is_none() {
+        several_note(&name, &ids, k)
     } else {
         String::new()
     };
