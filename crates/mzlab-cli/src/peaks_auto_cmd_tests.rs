@@ -209,10 +209,20 @@ fn the_output_keys_are_the_schemas() {
     std::fs::write(&f, body.join("\n")).unwrap();
     let p = f.to_str().unwrap();
     let item = &schema["properties"]["peaks"]["items"];
-    for mode in ["zero", "edges"] {
-        let v: serde_json::Value =
-            serde_json::from_slice(&run(args(&[p, "--baseline", mode])).stdout).unwrap();
-        let text = String::from_utf8(run(args(&[p, "--baseline", mode])).stdout).unwrap();
+    for mode in ["zero", "edges", "line"] {
+        let mut a = vec![p, "--baseline", mode];
+        if mode == "line" {
+            a.extend([
+                "--set",
+                "base_y0=1000",
+                "--set",
+                "base_t1=6",
+                "--set",
+                "base_y1=1000",
+            ]);
+        }
+        let v: serde_json::Value = serde_json::from_slice(&run(args(&a)).stdout).unwrap();
+        let text = String::from_utf8(run(args(&a)).stdout).unwrap();
         assert!(
             text.starts_with("{\"schema\":\"peak-auto/1\","),
             "schema is the first key"

@@ -184,12 +184,12 @@ fn auto_finds_the_peaks_of_every_sample_and_its_windows_are_the_table_rows() {
 fn settings_and_windows_that_name_nothing_fail() {
     let Some(d) = fixture("bad") else { return };
     let w = d.join("sim3.wiff");
-    assert_ne!(table(&[&w], &[]).code, 0, "no windows");
+    assert_eq!(table(&[&w], &[]).code, 2, "no windows");
     let ok = windows(&d, WINDOWS);
-    assert_ne!(table(&[&w], &["--windows", &ok, "--sums=yes"]).code, 0);
-    assert_ne!(
+    assert_eq!(table(&[&w], &["--windows", &ok, "--sums=yes"]).code, 2);
+    assert_eq!(
         table(&[&w], &["--windows", &ok, "--set", "baseline=zero"]).code,
-        0
+        2
     );
     for bad in [
         r#"[{"file":4,"tr":0,"a":1,"b":2}]"#,
@@ -197,7 +197,7 @@ fn settings_and_windows_that_name_nothing_fail() {
         r#"[{"file":1,"tr":0,"a":1,"b":2,"baseline":"line"}]"#,
     ] {
         let set = windows(&d, bad);
-        assert_ne!(table(&[&w], &["--windows", &set]).code, 0, "{bad}");
+        assert_eq!(table(&[&w], &["--windows", &set]).code, 2, "{bad}");
     }
     let empty = windows(&d, "[]");
     assert_eq!(
