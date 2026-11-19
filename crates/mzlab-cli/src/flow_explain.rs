@@ -9,11 +9,12 @@ use mzlab_feat::table::{Aligned, CELL_DETECTED, CELL_FILLED};
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv [--ppm N] [--rt-tol MIN] [--out FILE]
+pub const HELP: &str = "mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv [--ppm N] [--rt-tol MIN] [--out FILE] [--json]
   TABLE.mzfeat   the table of a run (the output of tp.link or later)
   EXPECTED.csv   one expected product per line: id,mz,rt (a header line is skipped)
   --ppm N        mass window of a row for an expected m/z (default 5)
   --rt-tol MIN   RT window in minutes (default 0.3)
+  --json         explain-missing/1: the same columns and rows as one JSON document
 output: one CSV line per expected product: id, mz, rt, rows_mz (rows within the mass window), rows_in (also within the RT window), best_ppm, best_drt,
   detected, filled (cells of the best row), max_height, max_area, tp_status, stage (view | F1..F5 | absorbed | no_row_mz | rt_off), nearest_ppm, nearest_drt,
   kinship (0-4), q_shape, q_snr (peak quality of the best row), rank_now (place of the best row in the view: kinship, then largest area), view_size, q_reason (bits 1 shape, 2 S/N, 4 points: why F1 hides the row), rank_k1..k3 (other orderings of the view: k1 kinship, peaks detected, area; k2 kinship, sources agreeing (`via`), peaks detected; k3 kinship, then log10 area + 1.5 x share of files detected + 0.5 x sources + peak shape), kin_rank / kin_size (place of the best row among the view rows of its own kinship, in view order, and the size of that group), singles_above (rows above it in the view seen in one file only), view_single_pct (percent of the whole view seen in one file only), absorbed_row / absorbed_mz / absorbed_rt (stage absorbed: the family row that holds the expected ion as a member although its own m/z or RT is outside the windows; empty otherwise)";
@@ -285,13 +286,18 @@ pub fn run(args: Vec<String>) -> Outcome {
     if args.iter().any(|a| a == "--help") {
         return Outcome::ok(format!("{HELP}\n").into_bytes());
     }
+    let json = args.iter().any(|a| a == "--json");
+    let args: Vec<String> = args.into_iter().filter(|a| a != "--json").collect();
     let go = || -> Result<Outcome, String> {
         let a = parse(args)?;
         let bytes = std::fs::read(&a.table).map_err(|e| format!("{}: {e}", a.table))?;
         let (t, _) = mzlab_feat::store::read_table(&bytes).map_err(|e| e.to_string())?;
         let text =
             std::fs::read_to_string(&a.expected).map_err(|e| format!("{}: {e}", a.expected))?;
-        let r = report(&t, &read_expected(&text), a.ppm, a.rt_tol);
+        let mut r = report(&t, &read_expected(&text), a.ppm, a.rt_tol);
+        if json {
+            r = json_of(&r);
+        }
         match &a.out {
             None => Ok(Outcome::ok(r.into_bytes())),
             Some(p) => Ok(std::fs::write(p, r).map_or_else(
@@ -305,6 +311,27 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     };
     go().unwrap_or_else(|e| Outcome::fail(&e))
+}
+
+/// `explain-missing/1`: the CSV report as `columns` and `rows` (every cell as text, the empty ones empty), one document.
+fn json_of(csv: &str) -> String {
+    let mut lines = csv.lines();
+    let cells = |l: &str| {
+        l.split(',')
+            .map(|c| mzlab_core::jsonb::text(c))
+            .collect::<Vec<_>>()
+    };
+    let columns = cells(lines.next().unwrap_or(""));
+    let rows = lines
+        .map(|l| mzlab_core::json::Value::Arr(cells(l)))
+        .collect();
+    mzlab_core::jsonb::write(
+        &mzlab_core::jsonb::Obj::new()
+            .put("schema", mzlab_core::jsonb::text("explain-missing/1"))
+            .put("columns", mzlab_core::json::Value::Arr(columns))
+            .put("rows", mzlab_core::json::Value::Arr(rows))
+            .done(),
+    ) + "\n"
 }
 
 /// The whole report (header and one line per expected product).

@@ -21,7 +21,15 @@ fn the_ten_cases_pass_on_their_recordings() {
     let o = run(&["llm", "eval", &data("eval"), "--replay", &data("")]);
     let t = String::from_utf8(o.stdout).unwrap();
     assert_eq!(o.code, 0, "{t}");
-    assert!(t.contains("(100%)") && t.lines().count() == 11, "{t}");
+    let v: serde_json::Value = serde_json::from_str(&t).unwrap();
+    assert!(t.starts_with("{\"schema\":\"evalrun/1\""), "{t}");
+    assert_eq!(v["percent"], 100);
+    assert_eq!(v["cases"].as_array().unwrap().len(), 10);
+    assert!(v["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|c| c["failed"].as_array().unwrap().is_empty()));
 }
 
 #[test]

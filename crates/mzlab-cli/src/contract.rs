@@ -40,6 +40,7 @@ pub(crate) const VERDICT: &[&str] = &[
     "file verify",
     "sample list",
     "db ref-list",
+    "llm eval",
 ];
 
 /// Whether the arguments start with the path of a verdict command (`sample list ...`, `file verify ...`).

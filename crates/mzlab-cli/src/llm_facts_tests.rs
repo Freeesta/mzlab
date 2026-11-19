@@ -65,7 +65,15 @@ fn llm_inspect_and_params_give_the_golden_bytes() {
     let Some(dir) = folder() else { return };
     let d = dir.to_str().unwrap();
     let insp = cli(&["llm", "inspect", d]);
-    assert_eq!(insp.trim_end(), inspection(&dir, false, BUDGET).unwrap());
+    assert_eq!(
+        insp.trim_end(),
+        inspection(
+            &crate::llm::facts::inputs(&[d.to_string()]).unwrap(),
+            false,
+            BUDGET
+        )
+        .unwrap()
+    );
     assert!(insp.starts_with("{\"schema\":\"inspection/1\""), "{insp}");
     golden("tests/data/llm/fatti/inspection.json", &insp);
     let prop = cli(&["llm", "params", d]);
@@ -104,5 +112,86 @@ fn the_proposal_of_g01_is_the_one_the_wasm_export_checks() {
     golden(
         "crates/mzlab-llm/tests/data/proposal_g01.json",
         &(out + "\n"),
+    );
+}
+
+fn args(a: &[&str]) -> Vec<String> {
+    a.iter().map(|s| s.to_string()).collect()
+}
+
+#[test]
+fn files_and_a_folder_give_the_same_bytes_with_one_worker_or_many() {
+    let Some(dir) = folder() else { return };
+    let files: Vec<PathBuf> = DONE.iter().map(|f| dir.join(f)).collect();
+    let by_dir = crate::llm::facts::inputs(&[dir.to_str().unwrap().to_string()]).unwrap();
+    let one = crate::llm::facts::inspection_with(&files, false, BUDGET, 1).unwrap();
+    for workers in [2, 4, 8] {
+        let n = crate::llm::facts::inspection_with(&files, false, BUDGET, workers).unwrap();
+        assert_eq!(one, n, "{workers} workers");
+    }
+    assert_eq!(
+        one,
+        crate::llm::facts::inspection_with(&by_dir, false, BUDGET, 4).unwrap()
+    );
+}
+
+#[test]
+fn params_on_a_saved_inspection_is_params_on_the_files() {
+    let Some(dir) = folder() else { return };
+    let d = dir.to_str().unwrap();
+    let mut a = args(&["llm", "inspect"]);
+    a.extend(
+        DONE.iter()
+            .map(|f| dir.join(f).to_str().unwrap().to_string()),
+    );
+    let o = execute(&a);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let saved = dir.join("inspection.json");
+    std::fs::write(&saved, &o.stdout).unwrap();
+    let reuse = cli(&["llm", "params", "--inspection", saved.to_str().unwrap()]);
+    assert_eq!(reuse, cli(&["llm", "params", d]));
+    // a budget or hidden names belong to the inspection
+    for extra in [["--budget", "5"], ["--hide-names", "x"]] {
+        let o = execute(&args(&[
+            "llm",
+            "params",
+            "--inspection",
+            saved.to_str().unwrap(),
+            extra[0],
+            extra[1],
+        ]));
+        assert_eq!(o.code, 2, "{extra:?}: {}", o.stderr);
+    }
+    std::fs::remove_file(saved).ok();
+}
+
+#[test]
+fn params_on_a_bad_or_missing_inspection_fails_with_the_contract_codes() {
+    let o = execute(&args(&[
+        "llm",
+        "params",
+        "--inspection",
+        "/nonexistent/i.json",
+    ]));
+    assert_eq!(o.code, 4, "{}", o.stderr);
+    let bad = std::env::temp_dir().join(format!("mzlab-badinsp-{}.json", std::process::id()));
+    std::fs::write(&bad, "{\"schema\":\"other/1\"}").unwrap();
+    let o = execute(&args(&[
+        "llm",
+        "params",
+        "--inspection",
+        bad.to_str().unwrap(),
+        "--json",
+    ]));
+    assert_eq!(o.code, 2);
+    assert!(String::from_utf8(o.stdout)
+        .unwrap()
+        .contains("\"schema\":\"error/1\""));
+    std::fs::remove_file(bad).ok();
+    // files and an inspection together, or neither
+    assert_eq!(execute(&args(&["llm", "params"])).code, 2);
+    assert_eq!(
+        execute(&args(&["llm", "inspect", "/nonexistent/a.mzML"])).code,
+        4
     );
 }

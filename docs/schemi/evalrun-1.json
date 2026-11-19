@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "evalrun/1",
+  "title": "evalrun/1: the answer of `mzlab-cli llm eval`",
+  "description": "The score of every evaluation case against its recording and the total; exit 1 when a check fails (the document stays on stdout). Code: crates/mzlab-cli/src/llm_ctx.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "passed",
+    "total",
+    "percent",
+    "cases"
+  ],
+  "properties": {
+    "schema": {
+      "const": "evalrun/1"
+    },
+    "passed": {
+      "type": "integer"
+    },
+    "total": {
+      "type": "integer"
+    },
+    "percent": {
+      "type": "integer"
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "passed",
+          "total",
+          "failed"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "passed": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "failed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
