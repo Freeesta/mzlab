@@ -90,12 +90,12 @@ fn variables_args(args: Vec<String>) -> Result<String, String> {
     if let Some(p) = pos {
         let mut o = Out::default();
         o.str(sep.as_deref().unwrap_or("_-. "));
-        body += &format!(",\"manuale\":{{\"pos\":{p},\"sep\":{}}}", o.0);
+        body += &format!(",\"manual\":{{\"pos\":{p},\"sep\":{}}}", o.0);
     }
     if let Some(h) = has {
         let terms: Vec<String> = h.split(',').map(|t| t.trim().to_string()).collect();
         body += &format!(
-            ",\"manuale\":{{\"has\":{},\"substring\":{substring}}}",
+            ",\"manual\":{{\"has\":{},\"substring\":{substring}}}",
             list(&terms)
         );
     }

@@ -43,7 +43,7 @@ fn variables_is_the_route_answer() {
     ]);
     let want = route(
         "variables",
-        &format!("{BODY},\"manuale\":{{\"pos\":-1,\"sep\":\"_\"}}}}"),
+        &format!("{BODY},\"manual\":{{\"pos\":-1,\"sep\":\"_\"}}}}"),
     )
     .unwrap();
     assert_eq!(out, want + "\n");
@@ -58,10 +58,12 @@ fn variables_is_the_route_answer() {
     ]);
     let want = route(
         "variables",
-        &format!("{BODY},\"manuale\":{{\"has\":[\"O2\",\"N2\"],\"substring\":true}}}}"),
+        &format!("{BODY},\"manual\":{{\"has\":[\"O2\",\"N2\"],\"substring\":true}}}}"),
     )
     .unwrap();
     assert_eq!(out, want + "\n");
+    // the manual variable really is in the answer (a rule the engine ignored would give the same bytes on both sides)
+    assert!(out.contains("\"manual\":{"), "{out}");
     std::fs::remove_file(f).unwrap();
 }
 
