@@ -34,12 +34,14 @@ def build_env(target: str, commit: bool) -> dict[str, str]:
 
 
 def bash_exe() -> str:
-    """`bash` on a Windows runner is C:\\Windows\\System32\\bash.exe, the WSL launcher, which exits 1 without a distribution: use the bash of Git for Windows."""
+    """`bash` on a Windows runner can be C:\\Windows\\System32\\bash.exe, the WSL launcher, which exits 1 without a distribution: use the bash of Git for Windows."""
     if os.name != "nt":
         return "bash"
     git = shutil.which("git")
-    own = Path(git).resolve().parent.parent / "bin" / "bash.exe" if git else None
-    return str(own) if own and own.is_file() else "bash"
+    near = [Path(git).resolve().parents[i] / "bin" / "bash.exe" for i in (1, 2)] if git else []      # Git\\cmd\\git.exe or Git\\mingw64\\bin\\git.exe
+    on_path = [Path(d) / "bash.exe" for d in os.environ.get("PATH", "").split(os.pathsep) if d and "system32" not in d.lower()]
+    pf = [Path(os.environ.get(v, "")) / "Git" / "bin" / "bash.exe" for v in ("ProgramFiles", "ProgramW6432")]
+    return next((str(c) for c in near + pf + on_path if c.is_file()), "bash")
 
 
 def run(cmd: list[str], env: dict[str, str] | None = None) -> None:
