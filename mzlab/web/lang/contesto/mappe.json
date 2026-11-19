@@ -13,5 +13,9 @@
   "mapfeat.title": "Title of the «How it was found» block; {id} = identifier of the feature in Tabui.",
   "mapfeat.win": "m/z window of a feature's ion; {mz} = m/z, {ppm} = tolerance in ppm, {a} and {b} = ends of the window.",
   "mapfeat.edges.auto": "Peak edges computed by the page; {a} and {b} = RT in minutes.",
-  "mapfeat.edges.rec": "Integration edges recorded by Tabui; {a} and {b} = RT in minutes."
+  "mapfeat.edges.rec": "Integration edges recorded by Tabui; {a} and {b} = RT in minutes.",
+  "mappa.uv.side": "Caption under the right strip of a DAD map: UV spectrum at the cursor time; {rt} = time in min.",
+  "mappa.uv.sideDiff": "Caption under the right strip of a subtracted DAD map; {rt} = time in min.",
+  "mappa.uv.bot": "Title of the bottom strip of a DAD map: absorbance against time at the cursor wavelength; {lo},{hi} = band in nm, {max} = maximum.",
+  "mappa.uv.botDiff": "Title of the bottom strip of a subtracted DAD map; {lo},{hi} = band in nm, {max} = largest absolute value."
 }
