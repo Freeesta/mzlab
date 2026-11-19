@@ -30,10 +30,20 @@ fn message_of(stderr: &str) -> (String, String) {
     (msg.trim_end().to_string(), hint.to_string())
 }
 
+/// Commands whose exit 1 or 3 is a verdict of the answer they print (the listing has refused samples, the pair lacks its companion, the file has
+/// errors): the document is the answer, byte for byte what the site computes, so it stays on stdout and carries its own evidence.
+const VERDICT: &[&str] = &["validate", "pair", "wiff", "samples"];
+
 /// `o` with the contract applied; `command` is the name of the entry that ran (`""` when none matched).
 pub(crate) fn finish(args: &[String], command: &str, mut o: Outcome) -> Outcome {
     let json = args.iter().any(|a| a == "--json") || crate::cmd::json_by_default(command);
-    if o.code != 0 && json && !String::from_utf8_lossy(&o.stdout).contains("\"schema\":\"error/1\"")
+    let verdict = VERDICT.contains(&command)
+        && matches!(o.code, crate::exit::DATA | crate::exit::INTEGRITY)
+        && !o.stdout.is_empty();
+    if o.code != 0
+        && json
+        && !verdict
+        && !String::from_utf8_lossy(&o.stdout).contains("\"schema\":\"error/1\"")
     {
         let (message, hint) = message_of(&o.stderr);
         let mut f = failure_of(&mut o, &message);

@@ -52,9 +52,7 @@ fn a_missing_companion_exits_1_and_says_what_was_looked_for() {
     touch(&d, &["lone.wiff", "plain.mzML"]);
     let o = cli(&["pair", &d.join("lone.wiff").to_string_lossy(), "--json"]);
     assert_eq!(o.code, 1);
-    // the pairing report rides in the error/1 of the exit code 1
     let v = parse(&o.stdout).unwrap();
-    let v = v.get("report").unwrap();
     assert_eq!(v.get("ok").unwrap().bool(), Some(false));
     let p = &v.get("pairs").unwrap().arr()[0];
     assert!(p.get("found").unwrap().is_null());
