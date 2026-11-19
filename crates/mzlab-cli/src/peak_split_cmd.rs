@@ -50,6 +50,26 @@ fn number(name: &str, v: &str) -> Result<f64, String> {
         .ok_or_else(|| format!("{name} needs a number, not {v}"))
 }
 
+/// `--line T0,Y0,T1,Y1`: four numbers.
+fn line_of(x: &str) -> Result<Vec<f64>, String> {
+    let v = x
+        .split(',')
+        .map(|n| number("--line", n))
+        .collect::<Result<Vec<_>, _>>()?;
+    if v.len() != 4 {
+        return Err("--line needs four numbers t0,y0,t1,y1".into());
+    }
+    Ok(v)
+}
+
+/// `--depth X`: between 0 and 1.
+fn depth_of(x: &str) -> Result<f64, String> {
+    match number("--depth", x)? {
+        d if (0.0..=1.0).contains(&d) => Ok(d),
+        _ => Err(format!("depth is between 0 and 1, not {x}")),
+    }
+}
+
 fn parse(args: Vec<String>) -> Result<Option<Request>, String> {
     let mut c = Request::default();
     let (mut file, mut tr, mut a, mut b, mut base, mut line, mut label) =
@@ -67,24 +87,8 @@ fn parse(args: Vec<String>) -> Result<Option<Request>, String> {
                 x @ ("zero" | "edges" | "line") => base = Some(x.to_string()),
                 x => return Err(format!("baseline is zero, edges or line, not {x}")),
             },
-            "--line" => {
-                let x = it.next().ok_or("--line needs t0,y0,t1,y1")?;
-                let v = x
-                    .split(',')
-                    .map(|n| number("--line", n))
-                    .collect::<Result<Vec<_>, _>>()?;
-                if v.len() != 4 {
-                    return Err("--line needs four numbers t0,y0,t1,y1".into());
-                }
-                line = Some(v);
-            }
-            "--depth" => {
-                let x = it.next().ok_or("--depth needs a number")?;
-                match number("--depth", &x)? {
-                    d if (0.0..=1.0).contains(&d) => c.depth = Some(d),
-                    _ => return Err(format!("depth is between 0 and 1, not {x}")),
-                }
-            }
+            "--line" => line = Some(line_of(&it.next().ok_or("--line needs t0,y0,t1,y1")?)?),
+            "--depth" => c.depth = Some(depth_of(&it.next().ok_or("--depth needs a number")?)?),
             "--split" => {
                 let x = it.next().ok_or("--split needs auto or times")?;
                 if x.is_empty() {
