@@ -23,5 +23,5 @@ For each step: (1) register the descriptor in the CLI registry (`flow::steps()`;
 - **No executor, Tabui**: `features.ms2_link` (included in `features.detect`, not separable without changing the bytes); `tp.position` does not redo the MSn tree votes (rows with `source: tree` keep their `site`).
 - **No executor** (`err.flow.step.native`): `spectra.chimeric`, `spectra.insilico`, `annot.regulatory`, `annot.hazard` (the hazard registry is not in Rust).
 - **Low resolution**: the Dig is the step `tp.dig_lr`; the `tp/1` gates use Da when the table is at unit resolution (`TpParams.ppm < 0`), so `tp.link@2` runs; `tp.generate` still uses the HR rules (`regole_tp_2.json`), different from the Dig.
-- **Missing as steps**: MSn tree/graph (`msngrafo/1`), search by compound name, live progress.
+- **Missing as steps**: MSn tree/graph (`msn-graph/1`), search by compound name, live progress.
 - **Site**: the web executor (`F.runners.web`) runs the base chain and the TP and MSn steps (`flow-web.md`); the other steps stay on the computer and the site gives the command to copy.

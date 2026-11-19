@@ -7,23 +7,23 @@ const EN = {
   "msngrafo.v.aria.common": "reached from {n} precursors", "msngrafo.v.aria.collapsed": "{n} ions closed below", "msngrafo.v.common": "Reached from {n} different precursors",
   "msngrafo.v.compat": "compatible with {f}", "msngrafo.v.hidden": "{n} closed", "msngrafo.v.hyp": "hypothesis",
 };
-const PROVE = { perdita: "known loss", isotopi: "isotopes", msn: "MSn" };
+const PROVE = { loss: "known loss", isotopes: "isotopes", msn: "MSn" };
 const t = (key, p) => (EN[key] || key).replace(/\{(\w+)\}/g, (_, k) => String(p && p[k] !== undefined ? p[k] : ""));
 const $ = id => document.getElementById(id);
 const j = JSON.parse($("mzlab-graph").textContent);
 const rootSvg = $("mzlab-root").textContent.trim() || null;
-const v = vistaOf(j), byId = new Map(v.nodi.map(x => [x.id, x]));
-const dflt = j.polarita === -1 ? "-" : "+";
+const v = vistaOf(j), byId = new Map(v.nodes.map(x => [x.id, x]));
+const dflt = j.polarity === -1 ? "-" : "+";
 let mode = "tree", sel = null, zoom = 1;
 
 const ruleLabel = a => {
-  const r = j.regole && j.regole.archi.find(x => x.da === a.da && x.a === a.a);
+  const r = j.rules && j.rules.edges.find(x => x.from === a.from && x.to === a.to);
   if (!r) return "";
-  const ids = r.regole.length ? r.regole.map(x => x.id + (x.priorita === 3 ? " (weak)" : "")) : r.composta.map(c => c.join(" + "));
+  const ids = r.rules.length ? r.rules.map(x => x.id + (x.priority === 3 ? " (weak)" : "")) : r.composite.map(c => c.join(" + "));
   return ids.slice(0, 2).join(", ") + (ids.length > 2 ? ` +${ids.length - 2}` : "");
 };
 const plain = f => { const [b, c] = splitCharge(f, dflt); return plainFormula(b, c); };
-const chosen = n => { const f = n.formula; return f ? f.scelta || (f.candidati.length === 1 ? f.candidati[0].formula : null) : null; };
+const chosen = n => { const f = n.formula; return f ? f.choice || (f.candidates.length === 1 ? f.candidates[0].formula : null) : null; };
 const say = text => { $("status").textContent = text; };
 
 function applyZoom() {
@@ -46,12 +46,12 @@ function cell(tr, text, cls, tag = "td") { const c = document.createElement(tag)
 function detail(id) {
   const box = $("side");
   box.textContent = "";
-  const n = id && j.nodi.find(x => x.id === id);
+  const n = id && j.nodes.find(x => x.id === id);
   if (!n) return;
   const x = byId.get(id), h = document.createElement("h2");
-  h.textContent = `${x.livelli.map(l => "MS" + l).join(", ")} · m/z ${n.mz.toFixed(4)}`;
+  h.textContent = `${x.levels.map(l => "MS" + l).join(", ")} · m/z ${n.mz.toFixed(4)}`;
   box.appendChild(h);
-  const cs = (n.formula && n.formula.candidati) || [];
+  const cs = (n.formula && n.formula.candidates) || [];
   if (!cs.length) { const p = document.createElement("p"); p.className = "note"; p.textContent = "No candidate formula for this ion."; box.appendChild(p); return; }
   const tb = document.createElement("table"), cap = document.createElement("caption"), hd = document.createElement("tr");
   cap.textContent = "Candidate formulas of the ion (proposals, not identifications)";
@@ -60,7 +60,7 @@ function detail(id) {
   tb.appendChild(hd);
   for (const c of cs) {
     const tr = document.createElement("tr");
-    cell(tr, plain(c.formula)); cell(tr, c.ppm.toFixed(2), "num"); cell(tr, chosen(n) === c.formula ? "yes" : ""); cell(tr, (c.prove || []).map(p => PROVE[p] || p).join(", "));
+    cell(tr, plain(c.formula)); cell(tr, c.ppm.toFixed(2), "num"); cell(tr, chosen(n) === c.formula ? "yes" : ""); cell(tr, (c.proofs || []).map(p => PROVE[p] || p).join(", "));
     tb.appendChild(tr);
   }
   box.appendChild(tb);
@@ -69,11 +69,11 @@ function detail(id) {
 /** The rows of the table of the data: one per ion, ASCII formulas (the same as «Copy data»). */
 function rows() {
   const out = [["id", "levels", "mz", "rel_pct", "chosen", "candidates", "loss_from_best_parent", "common"]];
-  for (const n of j.nodi) {
-    const x = byId.get(n.id), ch = chosen(n), cs = (n.formula && n.formula.candidati) || [];
-    const a = j.archi.find(k => k.a === n.id && k.da === x.best.da);
-    const loss = a ? (a.perdita.formula || `${a.perdita.da_massa.toFixed(3)} Da`) : "";
-    out.push([n.id, x.livelli.map(l => "MS" + l).join(","), n.mz.toFixed(5), x.best.da && x.rel != null ? x.rel.toFixed(1) : "", ch ? plain(ch) : "", cs.map(c => `${plain(c.formula)} (${c.ppm.toFixed(2)} ppm)`).join("; "), loss, x.comune ? String(x.entranti) : ""]);
+  for (const n of j.nodes) {
+    const x = byId.get(n.id), ch = chosen(n), cs = (n.formula && n.formula.candidates) || [];
+    const a = j.edges.find(k => k.to === n.id && k.from === x.best.from);
+    const loss = a ? (a.loss.formula || `${a.loss.da_mass.toFixed(3)} Da`) : "";
+    out.push([n.id, x.levels.map(l => "MS" + l).join(","), n.mz.toFixed(5), x.best.from && x.rel != null ? x.rel.toFixed(1) : "", ch ? plain(ch) : "", cs.map(c => `${plain(c.formula)} (${c.ppm.toFixed(2)} ppm)`).join("; "), loss, x.common ? String(x.incoming) : ""]);
   }
   return out;
 }
@@ -94,7 +94,7 @@ function save(name, type, body) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 const figure = () => $(mode === "radial" ? "mzlab-svg-radial" : "mzlab-svg-tree").textContent;
-const stem = ((j.sorgente && j.sorgente.nome) || "msn-graph").replace(/\.[^.]*$/, "");
+const stem = ((j.source && j.source.name) || "msn-graph").replace(/\.[^.]*$/, "");
 
 function setMode(m) {
   mode = m === "radial" && !v.fallback ? "radial" : "tree";

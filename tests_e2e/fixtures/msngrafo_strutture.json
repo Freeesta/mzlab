@@ -1,29 +1,29 @@
 {
-  "nodo": "n2",
+  "node": "n2",
   "smiles": "CCOC(=O)c1ccccc1N",
   "mz": 244.06035,
   "ppm_tol": 10,
-  "atomi": 12,
-  "legami": 3,
-  "avvisi": [],
-  "candidati": [
+  "atoms": 12,
+  "bonds": 3,
+  "warnings": [],
+  "candidates": [
     {
       "formula": "C13H10NO4",
-      "mz_teorico": 244.06043,
+      "theoretical_mz": 244.06043,
       "ppm": -0.35,
-      "tagli": [
+      "cuts": [
         {
-          "legame": {"idx": 1, "atomi": [1, 2], "etichetta": "C2-O3"},
-          "lato": 2,
-          "pezzo": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-          "resto": [0, 1],
+          "bond": {"idx": 1, "atoms": [1, 2], "label": "C2-O3"},
+          "side": 2,
+          "piece": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+          "rest": [0, 1],
           "formula": "C13H9NO4",
-          "variante": "ion",
-          "perdita": "",
-          "mz_teorico": 244.06043,
+          "variant": "ion",
+          "loss": "",
+          "theoretical_mz": 244.06043,
           "ppm": -0.35,
-          "picchi": [
-            {"mz": 226.0499, "rel": 40.0, "ppm": 0.8, "formula": "C13H8NO3", "perdita": "-H2O"}
+          "peaks": [
+            {"mz": 226.0499, "rel": 40.0, "ppm": 0.8, "formula": "C13H8NO3", "loss": "-H2O"}
           ]
         }
       ]

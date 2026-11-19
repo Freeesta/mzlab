@@ -1,5 +1,5 @@
 // @ts-check
-// Flow (administrator mode): the result view of the step spectra.msn_graph, the fragmentation graph msngrafo/1 of an MSn infusion. Its tables are the modifications
+// Flow (administrator mode): the result view of the step spectra.msn_graph, the fragmentation graph msn-graph/1 of an MSn infusion. Its tables are the modifications
 // (neutral losses between ions, with the formulas of both ions) and the ions with their proposed sub-formulas, the same columns as the CSV of msn.table_export.
 // flow-report.js hands a report JSON of this schema to F.openMsnGraph; F.webMsnAfterRun puts the texts an MSn run made in the Results and opens the graph.
 (() => {
@@ -10,24 +10,24 @@
 
   /** the chosen sub-formula of a node and its error in ppm @param {any} n @returns {[string, string]} */
   const chosen = n => {
-    const f = n && n.formula, name = f && f.scelta, c = ((f && f.candidati) || []).find((/** @type {any} */ x) => x.formula === name);
+    const f = n && n.formula, name = f && f.choice, c = ((f && f.candidates) || []).find((/** @type {any} */ x) => x.formula === name);
     return [txt(name), c ? fx(c.ppm, 2) : ""];
   };
 
-  /** msngrafo/1 or /2 → the modifications (one row per arc and measure) and the ions @param {any} g @returns {{modifications: {head: string[], rows: string[][]}, nodes: {head: string[], rows: string[][]}}} */
+  /** msn-graph/1 or /2 → the modifications (one row per arc and measure) and the ions @param {any} g @returns {{modifications: {head: string[], rows: string[][]}, nodes: {head: string[], rows: string[][]}}} */
   F.readMsnGraph = g => {
-    const byId = new Map((g.nodi || []).map((/** @type {any} */ n) => [n.id, n]));
+    const byId = new Map((g.nodes || []).map((/** @type {any} */ n) => [n.id, n]));
     const mods = /** @type {string[][]} */ ([]);
-    for (const a of g.archi || []) {
-      const from = /** @type {any} */ (byId.get(a.da)), to = /** @type {any} */ (byId.get(a.a)), l = a.perdita || {};
-      const head = [txt(a.da), fx(from && from.mz, 5), chosen(from)[0], txt(a.a), fx(to && to.mz, 5), chosen(to)[0], fx(l.da_massa, 5), txt(l.formula), fx(l.ppm, 2), a.isolamento ? "yes" : "no"];
-      const ms = a.misure || [];
+    for (const a of g.edges || []) {
+      const from = /** @type {any} */ (byId.get(a.from)), to = /** @type {any} */ (byId.get(a.to)), l = a.loss || {};
+      const head = [txt(a.from), fx(from && from.mz, 5), chosen(from)[0], txt(a.to), fx(to && to.mz, 5), chosen(to)[0], fx(l.da_mass, 5), txt(l.formula), fx(l.ppm, 2), a.isolation ? "yes" : "no"];
+      const ms = a.measurements || [];
       if (!ms.length) mods.push([...head, "", "", "", "", "", ""]);
-      for (const m of ms) mods.push([...head, txt(m.albero), fx(m.livello, 0), txt(m.att), fx(m.ce, 1), fx(m.n_scansioni, 0), fx(m.rel, 2)]);
+      for (const m of ms) mods.push([...head, txt(m.tree), fx(m.level, 0), txt(m.activation), fx(m.ce, 1), fx(m.n_scans, 0), fx(m.rel, 2)]);
     }
-    const nodes = (g.nodi || []).map((/** @type {any} */ n) => {
+    const nodes = (g.nodes || []).map((/** @type {any} */ n) => {
       const [f, ppm] = chosen(n);
-      return [txt(n.id), fx(n.livello, 0), fx(n.mz, 5), f, ppm, txt(n.formula && n.formula.fonte), String(((n.formula && n.formula.candidati) || []).length)];
+      return [txt(n.id), fx(n.level, 0), fx(n.mz, 5), f, ppm, txt(n.formula && n.formula.source), String(((n.formula && n.formula.candidates) || []).length)];
     });
     return {
       modifications: { head: ["From", "From m/z", "From formula", "To", "To m/z", "To formula", "Loss mass", "Loss formula", "Loss error (ppm)", "Isolation step", "Tree", "Level", "Activation", "CE", "Scans", "Relative"], rows: mods },
@@ -49,9 +49,9 @@
     if (t.nodes.rows.length) F.drawTable(tables, { caption: `${label}, ions`, head: t.nodes.head, rows: t.nodes.rows, label: `Ions of ${label}` });
   };
 
-  /** the texts the MSn steps made join the Results of their step: the graph (msngrafo/1 or /2) as a report, the MSP as a library, the CSV as a table; the graph opens under the canvas. Gives the names now in the Results @param {any} S @param {{id: string, name: string, text: string}[]} files @returns {Set<string>} */
+  /** the texts the MSn steps made join the Results of their step: the graph (msn-graph/1 or /2) as a report, the MSP as a library, the CSV as a table; the graph opens under the canvas. Gives the names now in the Results @param {any} S @param {{id: string, name: string, text: string}[]} files @returns {Set<string>} */
   F.webMsnAfterRun = (S, files) => {
-    const shown = new Set(), type = (/** @type {any} */ f) => /\.msp$/i.test(f.name) ? "library" : /\.csv$/i.test(f.name) ? "table" : /\.json$/i.test(f.name) && /"formato"\s*:\s*"msngrafo\/[12]"/.test(f.text.slice(0, 200)) ? "report" : "";
+    const shown = new Set(), type = (/** @type {any} */ f) => /\.msp$/i.test(f.name) ? "library" : /\.csv$/i.test(f.name) ? "table" : /\.json$/i.test(f.name) && /"schema"\s*:\s*"msn-graph\/1"/.test(f.text.slice(0, 200)) ? "report" : "";
     let graph = null;
     S.results = S.results || {};
     for (const f of files || []) {

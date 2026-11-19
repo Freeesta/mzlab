@@ -1,5 +1,5 @@
 //! The cleavages of a structure (the SMILES of the user) that explain the m/z of ONE node of the graph: the types of the answer, the input taken from
-//! the graph and the `strutture` key of `msngrafo/1`. The cleaving itself is `mzlab_feat::chem::structures` (the fragmenter of mzLab, which this crate
+//! the graph and the `structures` key of `msn-graph/1`. The cleaving itself is `mzlab_feat::chem::structures` (the fragmenter of mzLab, which this crate
 //! cannot depend on). Candidates, never identifications: a broken bond is a hypothesis.
 
 use super::{GNode, Graph};
@@ -112,30 +112,30 @@ fn atoms(o: &mut Out, a: &[usize]) {
 }
 
 fn cut_at(o: &mut Out, t: &Cut) {
-    o.raw("{\"legame\":{\"idx\":").int(t.legame as i64);
-    o.raw(",\"atomi\":[")
+    o.raw("{\"bond\":{\"idx\":").int(t.legame as i64);
+    o.raw(",\"atoms\":[")
         .int(t.atoms.0 as i64)
         .raw(",")
         .int(t.atoms.1 as i64)
-        .raw("],\"etichetta\":")
+        .raw("],\"label\":")
         .str(&t.label)
-        .raw("},\"lato\":")
+        .raw("},\"side\":")
         .int(t.lato as i64)
-        .raw(",\"pezzo\":");
+        .raw(",\"piece\":");
     atoms(o, &t.piece);
-    o.raw(",\"resto\":");
+    o.raw(",\"rest\":");
     atoms(o, &t.rest);
     o.raw(",\"formula\":")
         .str(&t.formula)
-        .raw(",\"variante\":")
+        .raw(",\"variant\":")
         .str(&t.variant)
-        .raw(",\"perdita\":")
+        .raw(",\"loss\":")
         .str(&t.perdita)
-        .raw(",\"mz_teorico\":")
+        .raw(",\"theoretical_mz\":")
         .num(round(t.theoretical_mz, 5))
         .raw(",\"ppm\":")
         .num(round(t.ppm, 2))
-        .raw(",\"picchi\":[");
+        .raw(",\"peaks\":[");
     for (i, p) in t.peaks.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"mz\":")
@@ -146,17 +146,17 @@ fn cut_at(o: &mut Out, t: &Cut) {
             .num(round(p.ppm, 2))
             .raw(",\"formula\":")
             .str(&p.formula)
-            .raw(",\"perdita\":")
+            .raw(",\"loss\":")
             .str(&p.loss)
             .raw("}");
     }
     o.raw("]}");
 }
 
-/// The value of the key `strutture` (see `docs/schemi/msngrafo-1.json`): keys in a fixed order, rounded numbers.
+/// The value of the key `structures` (see `docs/schemi/msn-graph-1.json`): keys in a fixed order, rounded numbers.
 pub fn structures_json(s: &Structures) -> String {
     let mut o = Out::default();
-    o.raw("{\"nodo\":")
+    o.raw("{\"node\":")
         .str(&format!("n{}", s.node))
         .raw(",\"smiles\":")
         .str(&s.smiles)
@@ -164,26 +164,26 @@ pub fn structures_json(s: &Structures) -> String {
         .num(round(s.mz, 5))
         .raw(",\"ppm_tol\":")
         .num(s.ppm_tol)
-        .raw(",\"atomi\":")
+        .raw(",\"atoms\":")
         .int(s.atoms as i64)
-        .raw(",\"legami\":")
+        .raw(",\"bonds\":")
         .int(s.bonds as i64)
-        .raw(",\"avvisi\":[");
+        .raw(",\"warnings\":[");
     for (i, a) in s.warnings.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(a);
     }
-    o.raw("],\"candidati\":[");
+    o.raw("],\"candidates\":[");
     for (i, c) in s.candidates.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).raw("{\"formula\":");
         match &c.formula {
             Some(f) => o.str(f),
             None => o.raw("null"),
         };
-        o.raw(",\"mz_teorico\":")
+        o.raw(",\"theoretical_mz\":")
             .num(round(c.theoretical_mz, 5))
             .raw(",\"ppm\":")
             .num(round(c.ppm, 2))
-            .raw(",\"tagli\":[");
+            .raw(",\"cuts\":[");
         for (k, t) in c.cuts.iter().enumerate() {
             o.raw(if k > 0 { "," } else { "" });
             cut_at(&mut o, t);
@@ -194,13 +194,13 @@ pub fn structures_json(s: &Structures) -> String {
     o.0
 }
 
-/// `grafo` with the key `strutture_tutti`: the cleavages of every node of level 2 or more (`strutture=tutti`), one `strutture` value each, by node.
+/// `grafo` with the key `structures_all`: the cleavages of every node of level 2 or more (`structures=all`), one `structures` value each, by node.
 pub fn with_all_structures(graph: &str, s: &[Structures]) -> String {
     let v: Vec<String> = s.iter().map(structures_json).collect();
-    super::view::with_key(graph, "strutture_tutti", &format!("[{}]", v.join(",")))
+    super::view::with_key(graph, "structures_all", &format!("[{}]", v.join(",")))
 }
 
-/// `grafo` (the text of an `msngrafo/1`) with the key `strutture` added at the end; the text of a graph without it does not change.
+/// `grafo` (the text of an `msn-graph/1`) with the key `structures` added at the end; the text of a graph without it does not change.
 pub fn with_structures(graph: &str, s: &Structures) -> String {
-    super::view::with_key(graph, "strutture", &structures_json(s))
+    super::view::with_key(graph, "structures", &structures_json(s))
 }

@@ -102,8 +102,8 @@ pub(crate) fn level_text(p: &Pos) -> String {
 
 pub(crate) fn trial_text(p: &str) -> String {
     match p {
-        "perdita" => "known loss",
-        "isotopi" => "isotopes",
+        "loss" => "known loss",
+        "isotopes" => "isotopes",
         "msn" => "MSn",
         x => x,
     }

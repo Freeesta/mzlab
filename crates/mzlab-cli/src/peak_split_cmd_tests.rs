@@ -130,7 +130,7 @@ fn full_depth_finds_no_valley_and_bad_settings_fail() {
     let wiff = d.join("sim3.wiff");
     assert_eq!(
         text(&run(&wiff, &[&PAIR[..], &["depth=1"]].concat())),
-        "{\"splits\":[]}"
+        "{\"splits\":[]}\n"
     );
     for bad in [
         &["tr=2", "a=6.33"][..],

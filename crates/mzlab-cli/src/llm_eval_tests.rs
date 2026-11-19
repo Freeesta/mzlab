@@ -35,7 +35,7 @@ fn a_missing_recording_or_a_provider_is_an_error() {
         "--replay",
         dir.to_str().unwrap(),
     ]);
-    assert_eq!(o.code, 2);
+    assert_eq!(o.code, 4);
     let o = run(&[
         "llm",
         "eval",

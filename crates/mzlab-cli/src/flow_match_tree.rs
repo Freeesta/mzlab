@@ -1,5 +1,5 @@
-//! The `tree` algorithm of `spectra.match@1`: the graph `msngrafo/1` in `query` against the library `msnlib/1`, by `msngraph::cerca`. The output is its
-//! `msncerca/1` text, or with `tree_output=candidates` the `candidates/1` of the other algorithms (the three scores and the proofs stay in a `tree` block).
+//! The `tree` algorithm of `spectra.match@1`: the graph `msn-graph/1` in `query` against the library `msn-lib/1`, by `msngraph::cerca`. The output is its
+//! `msn-search/1` text, or with `tree_output=candidates` the `candidates/1` of the other algorithms (the three scores and the proofs stay in a `tree` block).
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
@@ -19,14 +19,14 @@ fn text<'a>(f: Named<'a>) -> Result<&'a str> {
 
 /// The m/z of the root of the graph (its precursor), else the theoretical m/z of its ion.
 fn root_mz(g: &Value) -> Option<f64> {
-    let root = g.get("radici")?.at(0)?.str()?;
+    let root = g.get("roots")?.at(0)?.str()?;
     let node = g
-        .get("nodi")?
+        .get("nodes")?
         .arr()
         .iter()
         .find(|n| n.get("id").and_then(Value::str) == Some(root));
     node.and_then(|n| n.get("mz")?.f64())
-        .or_else(|| g.get("ione")?.get("mz_teorico")?.f64())
+        .or_else(|| g.get("ion")?.get("theoretical_mz")?.f64())
 }
 
 /// Runs the search of the job on the texts in `query` (graph) and `library`.
@@ -41,7 +41,7 @@ pub(crate) fn tree_text(job: &Job, query: Named, library: Named) -> Result<Strin
     let o = Options {
         ppm_prec,
         tol_mz: num(job, "tol_da"),
-        min_evidence: num(job, "min_prove").max(0.0) as usize,
+        min_evidence: num(job, "min_evidence").max(0.0) as usize,
         top: num(job, "top_n").max(1.0) as usize,
         ..Options::default()
     };
@@ -53,7 +53,7 @@ pub(crate) fn tree_text(job: &Job, query: Named, library: Named) -> Result<Strin
     let lib = parse(text(library)?.as_bytes()).map_err(|_| Error::new("err.msnlib.bad"))?;
     let hits = parse(found.as_bytes()).map_err(|_| Error::new("err.msnlib.bad"))?;
     let qid = graph
-        .get("radici")
+        .get("roots")
         .and_then(|r| r.at(0))
         .and_then(Value::str)
         .unwrap_or("q0");
@@ -62,18 +62,18 @@ pub(crate) fn tree_text(job: &Job, query: Named, library: Named) -> Result<Strin
 
 /// The entry of the library with this id and ion formula (an entry is one ion in one condition).
 fn entry<'a>(lib: &'a Value, id: &str, ion: &str) -> Option<&'a Value> {
-    lib.get("voci")
+    lib.get("entries")
         .map_or(&[][..], Value::arr)
         .iter()
         .find(|v| {
             v.get("id").and_then(Value::str) == Some(id)
-                && v.get("ione").and_then(|i| i.get("formula")?.str()) == Some(ion)
+                && v.get("ion").and_then(|i| i.get("formula")?.str()) == Some(ion)
         })
 }
 
 /// What a library entry is called: the private name when there is one, else its id.
 fn label(v: Option<&Value>, id: &str) -> String {
-    let private = v.and_then(|v| v.get("privato")?.get("nome")?.str());
+    let private = v.and_then(|v| v.get("privato")?.get("name")?.str());
     private.unwrap_or(id).to_string()
 }
 
@@ -83,9 +83,9 @@ fn candidates(job: &Job, lib: &Value, hits: &Value, qid: &str, name: &str) -> Re
         .str(&format!("{}@1", job.step.id));
     o.raw(",\"algorithm\":\"tree\",\"hits\":[");
     let mut first = true;
-    for h in hits.get("candidati").map_or(&[][..], Value::arr) {
+    for h in hits.get("candidates").map_or(&[][..], Value::arr) {
         let id = h.get("id").and_then(Value::str).unwrap_or("");
-        let ion = h.get("ione").and_then(Value::str).unwrap_or("");
+        let ion = h.get("ion").and_then(Value::str).unwrap_or("");
         let e = entry(lib, id, ion);
         let label = label(e, id);
         if !name.is_empty()
@@ -110,14 +110,10 @@ fn write_hit(o: &mut Out, qid: &str, label: &str, e: Option<&Value>, h: &Value) 
             .unwrap_or("")
             .to_string()
     };
-    let score = |k: &str| {
-        h.get("punteggi")
-            .and_then(|p| p.get(k))
-            .and_then(Value::f64)
-    };
+    let score = |k: &str| h.get("scores").and_then(|p| p.get(k)).and_then(Value::f64);
     // the score is the MS2 entropy similarity (the scale of spectral_entropy); the tree and the losses are in the block
-    let main = score("ms2").or_else(|| score("albero")).unwrap_or(0.0);
-    let evidence = h.get("prove");
+    let main = score("ms2").or_else(|| score("tree")).unwrap_or(0.0);
+    let evidence = h.get("proofs");
     let proof = |k: &str| {
         evidence
             .and_then(|p| p.get(k))
@@ -130,23 +126,23 @@ fn write_hit(o: &mut Out, qid: &str, label: &str, e: Option<&Value>, h: &Value) 
     o.raw(",\"name\":").str(label);
     o.raw(",\"inchikey\":").str(&std("inchikey"));
     o.raw(",\"smiles\":").str(&std("smiles"));
-    o.raw(",\"formula\":").str(&std("formula_neutra"));
+    o.raw(",\"formula\":").str(&std("neutral_formula"));
     o.raw(",\"score\":").num(round(main, 6));
-    o.raw(",\"shared\":").int(proof("picchi_comuni") as i64);
+    o.raw(",\"shared\":").int(proof("common_peaks") as i64);
     o.raw(",\"mass_ppm\":")
         .num(h.get("delta_ppm").and_then(Value::f64).unwrap_or(0.0));
     o.raw(",\"source\":\"library\",\"algorithm\":\"tree\",\"tree\":{\"ion\":")
-        .str(h.get("ione").and_then(Value::str).unwrap_or(""));
+        .str(h.get("ion").and_then(Value::str).unwrap_or(""));
     o.raw(",\"ms2\":").opt(score("ms2"));
-    o.raw(",\"tree\":").opt(score("albero"));
-    o.raw(",\"losses\":").opt(score("perdite"));
+    o.raw(",\"tree\":").opt(score("tree"));
+    o.raw(",\"losses\":").opt(score("losses"));
     o.raw(",\"aligned_nodes\":")
-        .int(proof("nodi_allineati") as i64);
+        .int(proof("aligned_nodes") as i64);
     o.raw(",\"unknown_nodes\":")
-        .int(proof("nodi_ignoto") as i64);
+        .int(proof("unknown_nodes") as i64);
     o.raw(",\"common_losses\":")
-        .int(proof("perdite_comuni") as i64);
+        .int(proof("common_losses") as i64);
     o.raw(",\"unknown_losses\":")
-        .int(proof("perdite_ignoto") as i64);
+        .int(proof("unknown_losses") as i64);
     o.raw("}}");
 }

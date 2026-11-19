@@ -1,0 +1,43 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "msn-lib/1",
+ "title": "msn-lib/1: the library of MSn trees of standards",
+ "description": "Format «msn-lib/1» (crates/mzlab-core/src/msngraph/library.rs, docs/agenti/msnlib.md): one entry per standard, ion, polarity and set of activations, sorted by that key so the same entries give the same bytes. The graph of an entry is a full msn-graph/1 (docs/schemi/msn-graph-1.json) and is validated against that schema by the tests.",
+ "type": "object",
+ "required": ["schema", "entries"],
+ "additionalProperties": false,
+ "properties": {
+  "schema": { "const": "msn-lib/1" },
+  "entries": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["id", "ion", "activation", "graph"],
+    "additionalProperties": false,
+    "properties": {
+     "id": { "type": "string", "minLength": 1 },
+     "ion": {
+      "type": "object",
+      "required": ["formula", "theoretical_mz", "polarity"],
+      "additionalProperties": false,
+      "properties": {
+       "formula": { "type": "string", "minLength": 1 },
+       "theoretical_mz": { "type": "number" },
+       "polarity": { "type": "integer", "enum": [-1, 1] }
+      }
+     },
+     "activation": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+     },
+     "graph": {
+      "type": "object",
+      "required": ["schema"],
+      "properties": { "schema": { "enum": ["msn-graph/1"] } }
+     }
+    }
+   }
+  }
+ }
+}

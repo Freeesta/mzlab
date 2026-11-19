@@ -38,20 +38,14 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
         ..Style::default()
     };
     let usage = |msg: &str| {
-        let err = Error::new("err.cli.usage").with("detail", msg);
-        fail(st, 2, &err, msg, "mzlab-cli steps --help")
+        let err = Error::new("err.cli.usage").with("message", msg);
+        fail(&err, msg, "mzlab-cli steps --help")
     };
     let mut id = None;
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
         match x.as_str() {
-            "--help" | "-h" => {
-                return Outcome {
-                    code: 0,
-                    stdout: format!("{HELP}\n").into_bytes(),
-                    stderr: String::new(),
-                }
-            }
+            "--help" | "-h" => return Outcome::ok(format!("{HELP}\n").into_bytes()),
             "--json" => {}
             "--id" => match it.next() {
                 Some(v) => id = Some(v),
@@ -71,8 +65,6 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
         let Some(last) = list.pop() else {
             let err = Error::new("err.flow.step.unknown").with("step", want);
             return fail(
-                st,
-                2,
                 &err,
                 &format!("unknown step {want}"),
                 "mzlab-cli steps lists the steps",
@@ -106,9 +98,5 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
             .collect();
         lines.concat()
     };
-    Outcome {
-        code: 0,
-        stdout: stdout.into_bytes(),
-        stderr: String::new(),
-    }
+    Outcome::ok(stdout.into_bytes())
 }

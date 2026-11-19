@@ -88,11 +88,11 @@ fn steps_json_has_the_ids_of_the_exports_and_the_native_flags() {
     );
 
     let unknown = run_cli(&["steps", "--json", "--id", "nope.nothing"]);
-    assert_eq!(unknown.code, 2);
+    assert_eq!(unknown.code, 5);
     let err = json(&unknown.stdout);
     assert_eq!(
         (str_of(&err, "schema"), str_of(&err, "error_key")),
-        ("errore/1", "err.flow.step.unknown")
+        ("error/1", "err.flow.step.unknown")
     );
     assert!(
         unknown
@@ -129,7 +129,9 @@ fn flow_check_says_what_is_wrong_without_the_input_files() {
     ]);
     assert_eq!(bad.code, 3, "{}", bad.stderr);
     let v = json(&bad.stdout);
-    assert_eq!(v.get("valid").and_then(Value::bool), Some(false));
+    assert_eq!(str_of(&v, "schema"), "error/1");
+    let report = v.get("report").unwrap();
+    assert_eq!(report.get("valid").and_then(Value::bool), Some(false));
     let first = v.get("problems").unwrap().at(0).unwrap();
     assert_eq!(str_of(first, "instance"), "det");
     assert_eq!(str_of(first, "error_key"), "err.flow.param.range");
@@ -139,7 +141,15 @@ fn flow_check_says_what_is_wrong_without_the_input_files() {
         "{}",
         bad.stderr
     );
-    sample("flowcheck.json", &bad.stdout);
+    // the flowcheck/1 report of the invalid plan rides in the error/1 as `report`
+    let text = String::from_utf8(bad.stdout.clone()).unwrap();
+    let report = text
+        .split_once("\"report\":")
+        .unwrap()
+        .1
+        .strip_suffix("}\n")
+        .unwrap();
+    sample("flowcheck.json", report.as_bytes());
 
     let set = run_cli(&[
         "flow",
@@ -244,7 +254,7 @@ fn flow_run_json_gives_flowrun_with_the_hashes_of_the_files_and_changes_nothing_
 }
 
 #[test]
-fn dry_run_json_writes_nothing_and_errors_come_as_errore() {
+fn dry_run_json_writes_nothing_and_errors_come_as_error() {
     let (dir, _) = fixture("dry");
     let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
     let dry = flow_run(&[
@@ -270,8 +280,8 @@ fn dry_run_json_writes_nothing_and_errors_come_as_errore() {
 }
 
 #[test]
-fn errors_come_as_errore_with_the_code_and_stderr_of_the_text_form() {
-    let (dir, _) = fixture("errore");
+fn errors_come_as_error_with_the_code_and_stderr_of_the_text_form() {
+    let (dir, _) = fixture("error");
     let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
     // a malformed --set (2) and a missing input (4): the code and stderr of the text form, the document on stdout
     let text = |args: &[&str]| flow_run(args);
@@ -292,11 +302,11 @@ fn errors_come_as_errore_with_the_code_and_stderr_of_the_text_form() {
     let e = json(&bad.stdout);
     assert_eq!(
         (str_of(&e, "schema"), str_of(&e, "error_key")),
-        ("errore/1", "err.cli.set")
+        ("error/1", "err.cli.set")
     );
     assert_eq!(e.get("code").and_then(Value::f64), Some(2.0));
     assert!(!str_of(&e, "hint").is_empty());
-    sample("errore.json", &bad.stdout);
+    sample("error.json", &bad.stdout);
 
     let missing = flow_run(&[p(&plan), "--in", p(&dir), "--out", p(&out), "--json"]);
     assert_eq!(missing.code, 4, "{}", missing.stderr);
@@ -308,7 +318,7 @@ fn errors_come_as_errore_with_the_code_and_stderr_of_the_text_form() {
     assert_eq!(usage.code, 2);
     assert_eq!(str_of(&json(&usage.stdout), "error_key"), "err.cli.usage");
 
-    // a plan that is not valid: the problems ride in errore/1, code 3
+    // a plan that is not valid: the problems ride in error/1, code 3
     let invalid = flow_run(&[
         p(&plan),
         "--in",

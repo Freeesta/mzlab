@@ -62,6 +62,8 @@ I18N.add("en", {
   "m3d.xic": "XIC at m/z {mz}",
   "m3d.xic.aria": "XIC at the m/z under the cursor",
   "m3d.spc": "spectrum at RT {rt}",
+  "m3d.xic.uv": "UV trace at {mz} nm",
+  "m3d.spc.uv": "UV spectrum at RT {rt}",
   "m3d.spc.aria": "Spectrum at the RT under the cursor",
   "m3d.help": "drag: rotate · Shift+drag: pan · wheel: zoom · double click: centre (on a point: spectrum) · click: mark the point · right click: menu · L: lock · ?: gestures · arrows: cursor · 1-4: views · R: reset · Esc: close"
 });

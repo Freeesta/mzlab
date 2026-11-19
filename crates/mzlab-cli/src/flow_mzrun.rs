@@ -201,12 +201,14 @@ pub fn check(args: Vec<String>) -> Outcome {
         return Outcome {
             code,
             stdout: o.0.into_bytes(),
-            stderr: String::new(),
+            stderr: v.problems.iter().map(|p| format!("{p}\n")).collect(),
+            error: None,
         };
     }
     Outcome {
         code,
         stdout: Vec::new(),
         stderr: v.problems.iter().map(|p| format!("{p}\n")).collect(),
+        error: None,
     }
 }

@@ -60,5 +60,5 @@ fn usage_errors_exit_2() {
     assert_eq!(run(&["wiff"]).code, 2);
     assert_eq!(run(&["wiff", "list"]).code, 2);
     assert_eq!(run(&["wiff", "verify", "a.wiff"]).code, 2);
-    assert_eq!(run(&["wiff", "list", "/nonexistent/x.wiff"]).code, 2);
+    assert_eq!(run(&["wiff", "list", "/nonexistent/x.wiff"]).code, 4);
 }

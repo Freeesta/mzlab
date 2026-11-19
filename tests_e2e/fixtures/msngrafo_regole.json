@@ -1,120 +1,120 @@
 {
- "regole": {
-  "versione": 1,
-  "tabella": "fragrules/1",
+ "rules": {
+  "version": 1,
+  "table": "fragrules/1",
   "cutoff_q": 0.25,
-  "toll_perdita_mda": 3,
-  "addotto": "[M+H]+",
-  "archi": [
+  "loss_tolerance_mda": 3,
+  "adduct": "[M+H]+",
+  "edges": [
    {
-    "da": "n0",
+    "from": "n0",
     "a": "n1",
-    "regole": [],
-    "composta": [],
+    "rules": [],
+    "composite": [],
     "stepped": false,
-    "avvisi": []
+    "warnings": []
    },
    {
-    "da": "n0",
+    "from": "n0",
     "a": "n2",
-    "regole": [],
-    "composta": [
+    "rules": [],
+    "composite": [
      [
       "loss_co2",
       "loss_nh3_amide"
      ]
     ],
     "stepped": false,
-    "avvisi": []
+    "warnings": []
    },
    {
-    "da": "n0",
+    "from": "n0",
     "a": "n3",
-    "regole": [
+    "rules": [
      {
       "id": "loss_co2",
       "formula": "CO2",
-      "massa": 43.98983,
-      "errore_mda": 0.16,
-      "radicale": false,
-      "priorita": 1,
-      "energia": "mid",
-      "perche": "A carboxylic acid or an ester can lose carbon dioxide.",
+      "mass": 43.98983,
+      "error_mda": 0.16,
+      "radical": false,
+      "priority": 1,
+      "energy": "mid",
+      "why": "A carboxylic acid or an ester can lose carbon dioxide.",
       "refs": [
        "DEM16"
       ]
      }
     ],
-    "composta": [],
+    "composite": [],
     "stepped": false,
-    "avvisi": []
+    "warnings": []
    },
    {
-    "da": "n2",
+    "from": "n2",
     "a": "n5",
-    "regole": [],
-    "composta": [],
+    "rules": [],
+    "composite": [],
     "stepped": false,
-    "avvisi": []
+    "warnings": []
    },
    {
-    "da": "n2",
+    "from": "n2",
     "a": "n6",
-    "regole": [],
-    "composta": [],
+    "rules": [],
+    "composite": [],
     "stepped": false,
-    "avvisi": []
+    "warnings": []
    },
    {
-    "da": "n3",
+    "from": "n3",
     "a": "n2",
-    "regole": [
+    "rules": [
      {
       "id": "loss_nh3_amide",
       "formula": "NH3",
-      "massa": 17.02655,
-      "errore_mda": -0.5,
-      "radicale": false,
-      "priorita": 3,
-      "energia": "low",
-      "perche": "Weak rule: in the validation on public spectra the decoys explain more than 30 % as many applications.",
+      "mass": 17.02655,
+      "error_mda": -0.5,
+      "radical": false,
+      "priority": 3,
+      "energy": "low",
+      "why": "Weak rule: in the validation on public spectra the decoys explain more than 30 % as many applications.",
       "refs": [
        "MAR97",
        "DEM16"
       ]
      }
     ],
-    "composta": [],
+    "composite": [],
     "stepped": true,
-    "avvisi": []
+    "warnings": []
    },
    {
-    "da": "n3",
+    "from": "n3",
     "a": "n4",
-    "regole": [],
-    "composta": [],
+    "rules": [],
+    "composite": [],
     "stepped": false,
-    "avvisi": []
+    "warnings": []
    },
    {
-    "da": "n3",
+    "from": "n3",
     "a": "n6",
-    "regole": [],
-    "composta": [],
+    "rules": [],
+    "composite": [],
     "stepped": false,
-    "avvisi": [
+    "warnings": [
      "warn.msngrafo.belowCutoff"
     ]
    }
   ],
-  "ioni": [],
-  "non_osservabili": [],
-  "conteggi": {
-   "archi_spiegati": 3,
-   "archi_senza_regola": 5,
-   "intensita_spiegata": 0.4
+  "ions": [],
+  "unobservable": [],
+  "counts": {
+   "explained_edges": 3,
+   "edges_without_rule": 5,
+   "explained_intensity": 0.4
   },
-  "fonti": [
+  "sources": [
    {
     "key": "DEM16",
     "doi": "10.1039/c5np00073d",
@@ -126,23 +126,23 @@
     "pmid": null
    }
   ],
-  "soglie": [
+  "thresholds": [
    {
     "id": "trap_cutoff",
-    "valore": 0.25,
-    "perche": "Trap CID cut-off.",
-    "origine": "q = 0.25 is the usual default of the linear ion trap; to be calibrated on the instrument.",
-    "da_calibrare": true,
+    "value": 0.25,
+    "why": "Trap CID cut-off.",
+    "origin": "q = 0.25 is the usual default of the linear ion trap; to be calibrated on the instrument.",
+    "to_calibrate": true,
     "refs": [
      "MAR97"
     ]
    },
    {
     "id": "loss_tolerance_mda",
-    "valore": 3,
-    "perche": "Absolute tolerance of a loss against a rule, in mDa.",
-    "origine": "Choice of mzLab.",
-    "da_calibrare": true,
+    "value": 3,
+    "why": "Absolute tolerance of a loss against a rule, in mDa.",
+    "origin": "Choice of mzLab.",
+    "to_calibrate": true,
     "refs": []
    }
   ]

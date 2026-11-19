@@ -1,6 +1,6 @@
-//! The rules of `fragrules/1` evaluated on the graph `msngrafo/1` (by the formula alone, or with the products the structure expects): which rule
+//! The rules of `fragrules/1` evaluated on the graph `msn-graph/1` (by the formula alone, or with the products the structure expects): which rule
 //! explains the loss of an arc, the even-electron check, the trap cut-off, composite and stepped losses, `after` chains. Evidence with its reason and source, never a verdict.
-//! Used by `graph_json` (so by the `.wasm` module and the command line) when the option `regole` is on.
+//! Used by `graph_json` (so by the `.wasm` module and the command line) when the option `rules` is on.
 
 use super::candidates::{Elementi, ATOMS};
 use super::formulas::addotto;
@@ -8,7 +8,7 @@ use super::rules::{table, Activation, Globali, Rule, Table, Tipo};
 use super::{Graph, Options};
 use crate::elements::{fmt, mass, parse_formula, ELECTRON};
 
-/// Version of the key `regole`.
+/// Version of the key `rules`.
 pub const VERSION: u32 = 1;
 /// The fragments of a trap CID are stable above q / this factor of the precursor m/z (the Mathieu limit of the stable ions).
 const Q_LIMIT: f64 = 0.908;

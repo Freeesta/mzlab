@@ -10,15 +10,22 @@ use mzlab_core::json::Out;
 use mzlab_ops::run::feat::run;
 use mzlab_ops::run::table::core::{samples_json, table_file};
 
+mod argv;
 mod channels_cmd;
 pub mod citation;
 mod cmd;
+mod contract;
+#[cfg(test)]
+mod contract_tests;
+#[cfg(test)]
+mod contract_verdict_tests;
 pub mod convert;
 mod convert_entries;
 mod convert_help;
 mod convert_report;
 mod dad_cmd;
 pub mod error_text;
+pub mod exit;
 pub mod flow;
 #[cfg(test)]
 mod flow_align_join_tests;
@@ -240,11 +247,22 @@ pub fn features_of(
     )
 }
 
-/// What a run of the command leaves: exit code, standard output, standard error.
+/// Why a run failed, in the words of `error/1`: the key the texts and docs know, its parameters and the hint.
+#[derive(Debug, Clone, Default)]
+pub struct Failure {
+    pub key: String,
+    pub params: Vec<(String, String)>,
+    pub hint: String,
+    /// The `problems` array of a plan that is not valid, already JSON.
+    pub problems: Option<String>,
+}
+
+/// What a run of the command leaves: exit code, standard output, standard error, and for a failure its `error/1` data.
 pub struct Outcome {
     pub code: u8,
     pub stdout: Vec<u8>,
     pub stderr: String,
+    pub error: Option<Box<Failure>>,
 }
 
 impl Outcome {
@@ -253,15 +271,72 @@ impl Outcome {
             code: 0,
             stdout,
             stderr: String::new(),
+            error: None,
         }
     }
 
+    /// A failure with the message as typed: an engine key at its start (`err.x.y k=v`) keeps it and takes its code from the table,
+    /// any other text is a usage error (`err.cli.usage`) that carries the text as its `message` parameter.
     fn fail(msg: &str) -> Self {
+        if let Some(o) = Self::unreadable_input(msg) {
+            return o;
+        }
+        let key = msg.split(' ').next().unwrap_or("");
+        let (code, error) = if key.starts_with("err.") || key.starts_with("error.") {
+            let params = error_text::text_params(&msg[key.len()..]);
+            (
+                exit::code_of_key(key),
+                Failure {
+                    key: key.to_string(),
+                    params,
+                    ..Failure::default()
+                },
+            )
+        } else {
+            (
+                exit::USAGE,
+                Failure {
+                    key: "err.cli.usage".to_string(),
+                    params: vec![("message".to_string(), msg.to_string())],
+                    ..Failure::default()
+                },
+            )
+        };
         Outcome {
-            code: 2,
+            code,
             stdout: Vec::new(),
             stderr: format!("error: {}\n", error_text::human(msg)),
+            error: Some(Box::new(error)),
         }
+    }
+
+    /// A `PATH: reason (os error N)` text of a file that is not there or cannot be opened (not found, permission, a folder where a file was
+    /// expected): an input failure (`err.cli.file`, exit 4), whatever the command that read it.
+    fn unreadable_input(msg: &str) -> Option<Self> {
+        let (path, rest) = msg.split_once(": ")?;
+        let errno: u32 = rest
+            .rsplit_once("(os error ")?
+            .1
+            .strip_suffix(')')?
+            .parse()
+            .ok()?;
+        if !matches!(errno, 2 | 13 | 20 | 21) || path.contains(' ') && path.starts_with("error") {
+            return None;
+        }
+        Some(Self::fail_error(
+            &Error::new("err.cli.file").with("path", path),
+        ))
+    }
+
+    /// The same failure with a hint: a `hint:` line on stderr and the `hint` of `error/1`.
+    pub(crate) fn with_hint(mut self, hint: &str) -> Self {
+        if !hint.is_empty() {
+            self.stderr += &format!("hint: {hint}\n");
+            if let Some(f) = self.error.as_mut() {
+                f.hint = hint.to_string();
+            }
+        }
+        self
     }
 }
 
@@ -270,7 +345,11 @@ fn emit(t: String, out: &Option<PathBuf>) -> Outcome {
     match out {
         None => Outcome::ok(t.into_bytes()),
         Some(p) => std::fs::write(p, t).map_or_else(
-            |e| Outcome::fail(&e.to_string()),
+            |e| {
+                Outcome::fail_error(
+                    &Error::new("err.cli.out").with("path", format!("{}: {e}", p.display())),
+                )
+            },
             |_| Outcome::ok(Vec::new()),
         ),
     }
@@ -278,17 +357,8 @@ fn emit(t: String, out: &Option<PathBuf>) -> Outcome {
 
 /// `mzlab-cli <args>`: `args` without the program name.
 pub fn execute(args: &[String]) -> Outcome {
-    error_text::with_help(args, executed(args))
-}
-
-fn executed(args: &[String]) -> Outcome {
-    if let Some(o) = cmd::top_level(args) {
-        return o;
-    }
-    match cmd::find(args) {
-        Some((e, n)) => (e.run)(args[n..].to_vec()),
-        None => Outcome::fail(&format!("unknown command {}", plain::canonical(&args[0]))),
-    }
+    let (command, o) = executed(args);
+    error_text::with_help(args, contract::finish(args, command, o))
 }
 
 #[cfg(test)]
@@ -357,3 +427,27 @@ mod msn_graph_tests;
 mod msn_lib_tests;
 #[cfg(all(test, not(target_family = "wasm")))]
 mod validate_tests;
+
+fn executed(args: &[String]) -> (&'static str, Outcome) {
+    if let Some(o) = cmd::top_level(args) {
+        return ("", o);
+    }
+    let Some((e, n)) = cmd::find(args) else {
+        let o = Outcome::fail_error(&Error::new("err.cli.usage").with(
+            "message",
+            format!("unknown command {}", plain::canonical(&args[0])),
+        ));
+        return ("", o);
+    };
+    let mut rest = args[n..].to_vec();
+    if cmd::wants_help(&rest) {
+        return (e.name, cmd::help_of(e, &rest));
+    }
+    if rest.iter().any(|a| a == "--json") && !cmd::reads_json(e.name) {
+        if !cmd::json_by_default(e.name) {
+            return (e.name, contract::json_unsupported());
+        }
+        rest.retain(|a| a != "--json");
+    }
+    (e.name, (e.run)(rest))
+}

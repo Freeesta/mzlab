@@ -85,6 +85,7 @@ I18N.add("en", {
   "err.flow.screen.mzsus": "The suspect package {file} cannot be read ({reason}).",
   "err.flow.screen.polarity": "None of the adducts ({adducts}) matches the polarity of the data.",
   "err.flow.step": "The step “{step}” in {instance} must be written as name@version.",
+  "err.flow.step.native": "The step {step} has no native executor in this program: it runs in the page only.",
   "err.flow.step.unknown": "Unknown step: {step}.",
   "err.flow.step.version": "The step {step} version {version} is not available (this program has version {available}).",
   "err.flow.tablematch.files": "A file of the table is not open: open the files of the table again.",

@@ -1,5 +1,5 @@
 //! The native executor of `spectra.match@1`: the file wrapper of the matcher in `mzlab-lib` (`flowmatch`, the one implementation the browser runs too). It reads the
-//! `Job` into the parameters the matcher takes and sends the `tree` algorithm, which reads `msnlib/1` texts, to `flow_match_tree`.
+//! `Job` into the parameters the matcher takes and sends the `tree` algorithm, which reads `msn-lib/1` texts, to `flow_match_tree`.
 
 use mzlab_core::error::Result;
 use mzlab_core::flow::Job;

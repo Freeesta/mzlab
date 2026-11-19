@@ -36,7 +36,7 @@ fn root(g: &Graph) -> usize {
         .position(|n| {
             n.formula
                 .as_ref()
-                .is_some_and(|x| x.provenance == Some("radice"))
+                .is_some_and(|x| x.provenance == Some("root"))
         })
         .unwrap()
 }
@@ -54,14 +54,14 @@ fn every_fragment_gets_its_sub_formula() {
     let r = f(&g, find(&g, "C8H11N4O2"));
     assert_eq!(
         (r.choice.as_deref(), r.provenance),
-        (Some("C8H11N4O2"), Some("radice"))
+        (Some("C8H11N4O2"), Some("root"))
     );
     assert_eq!(r.candidates[0].dbe, 5.5);
     for x in FRAGMENTS {
         let n = f(&g, find(&g, x));
         assert_eq!(
             (n.choice.as_deref(), n.provenance),
-            (Some(x), Some("unica")),
+            (Some(x), Some("single")),
             "{n:?}"
         );
         let c = &n.candidates[0];
@@ -79,11 +79,11 @@ fn every_fragment_gets_its_sub_formula() {
     assert_eq!(loss("C8H11N4O2", "C6H8N3O"), "C2H3NO");
     let v = crate::json::parse(j.as_bytes()).unwrap();
     assert_eq!(
-        v.get("ione").unwrap().get("formula").unwrap().str(),
+        v.get("ion").unwrap().get("formula").unwrap().str(),
         Some("C8H11N4O2")
     );
     assert_eq!(
-        v.get("opzioni").unwrap().get("smiles").unwrap().str(),
+        v.get("options").unwrap().get("smiles").unwrap().str(),
         o.smiles.as_deref()
     );
 }
@@ -131,9 +131,9 @@ fn below_mz_150_a_wider_window_needs_an_evidence() {
         c.prove.clone()
     };
     // the 138 by its M+1, the 110 and the 83 by a known loss (CO, HCN)
-    assert_eq!(evidence("C6H8N3O"), vec!["isotopi"]);
-    assert_eq!(evidence("C5H8N3"), vec!["perdita"]);
-    assert_eq!(evidence("C4H7N2"), vec!["perdita"]);
+    assert_eq!(evidence("C6H8N3O"), vec!["isotopes"]);
+    assert_eq!(evidence("C5H8N3"), vec!["loss"]);
+    assert_eq!(evidence("C4H7N2"), vec!["loss"]);
     // no evidence for the others: they leave the graph...
     for x in ["C5H6N3O", "C5H5N2O", "C3H5N2", "C2H4N"] {
         assert!(node(&g, x).is_none(), "{x}");
@@ -153,7 +153,7 @@ fn below_mz_150_a_wider_window_needs_an_evidence() {
         .nodi
         .iter()
         .filter_map(|n| n.formula.as_ref())
-        .filter(|n| n.provenance != Some("radice"))
+        .filter(|n| n.provenance != Some("root"))
     {
         assert!(
             n.candidates
@@ -254,7 +254,7 @@ fn the_choice_of_the_user_wins_and_conflicts_are_noted() {
         ..con("C8H11N4O2")
     };
     let (g, j) = shifted_graph(&o, &[0, 1, 2, 3], false, 0.0);
-    assert_eq!(f(&g, find(&g, "C5H8N3")).provenance, Some("utente"));
+    assert_eq!(f(&g, find(&g, "C5H8N3")).provenance, Some("user"));
     let k = find(&g, "C4H7N2");
     assert_eq!(f(&g, k).choice.as_deref(), Some("C4H5NO"));
     assert!(edge(&g, "C5H8N3", "C4H7N2").unwrap().formula.is_none());
@@ -268,7 +268,7 @@ fn the_choice_of_the_user_wins_and_conflicts_are_noted() {
     // the choices are in the JSON, so the graph can be rebuilt
     let v = crate::json::parse(j.as_bytes()).unwrap();
     assert_eq!(
-        v.get("opzioni").unwrap().get("pick").unwrap().arr().len(),
+        v.get("options").unwrap().get("pick").unwrap().arr().len(),
         3
     );
 }
@@ -320,10 +320,10 @@ fn behind_a_narrow_window_the_isotopes_are_no_evidence() {
     assert_eq!(n124.upstream, Some(1.0));
     let v = crate::json::parse(j.as_bytes()).unwrap();
     let iso = |i: usize| {
-        v.get("nodi").unwrap().arr()[i]
-            .get("isolamento")
+        v.get("nodes").unwrap().arr()[i]
+            .get("isolation")
             .unwrap()
-            .get("stretto")
+            .get("narrow")
             .unwrap()
             .clone()
     };
@@ -338,7 +338,7 @@ fn behind_a_narrow_window_the_isotopes_are_no_evidence() {
     };
     let (g, _) = graph_with(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0, &wide);
     let n = f(&g, node(&g, "C6H8N3O").unwrap());
-    assert_eq!(n.candidates[0].prove, vec!["isotopi"]);
+    assert_eq!(n.candidates[0].prove, vec!["isotopes"]);
 }
 
 #[test]

@@ -162,32 +162,32 @@ fn the_key_is_added_at_the_end_and_a_graph_without_it_keeps_its_bytes() {
     let o = con(None);
     let (g, j) = shifted_graph(&o, &[0, 1, 2, 3], false, 0.0);
     let k = with_rules(&j, &g, &o, &RuleParams::default());
-    assert!(k.starts_with(j.split(",\"vista\":").next().unwrap()));
-    assert!(k.ends_with(&j[j.find(",\"vista\":").unwrap()..]));
+    assert!(k.starts_with(j.split(",\"view\":").next().unwrap()));
+    assert!(k.ends_with(&j[j.find(",\"view\":").unwrap()..]));
     let v = crate::json::parse(k.as_bytes()).unwrap();
-    let r = v.get("regole").unwrap();
-    assert_eq!(r.get("tabella").and_then(|x| x.str()), Some("fragrules/1"));
-    assert_eq!(r.get("archi").unwrap().arr().len(), g.archi.len());
+    let r = v.get("rules").unwrap();
+    assert_eq!(r.get("table").and_then(|x| x.str()), Some("fragrules/1"));
+    assert_eq!(r.get("edges").unwrap().arr().len(), g.archi.len());
     // the thresholds say where their value comes from and that it is still to be calibrated
-    let thresholds = r.get("soglie").unwrap().arr();
+    let thresholds = r.get("thresholds").unwrap().arr();
     assert!(thresholds
         .iter()
         .any(|s| s.get("id").and_then(|x| x.str()) == Some("trap_cutoff")));
     assert!(thresholds.iter().all(
-        |s| s.get("da_calibrare").and_then(|x| x.bool()) == Some(true)
-            && s.get("origine").and_then(|x| x.str()).is_some()
+        |s| s.get("to_calibrate").and_then(|x| x.bool()) == Some(true)
+            && s.get("origin").and_then(|x| x.str()).is_some()
     ));
     // every reference cited by a rule of an arc has its source
     let sources: Vec<&str> = r
-        .get("fonti")
+        .get("sources")
         .unwrap()
         .arr()
         .iter()
         .filter_map(|f| f.get("key").and_then(|x| x.str()))
         .collect();
-    for a in r.get("archi").unwrap().arr() {
-        for x in a.get("regole").unwrap().arr() {
-            assert!(x.get("perche").and_then(|p| p.str()).is_some());
+    for a in r.get("edges").unwrap().arr() {
+        for x in a.get("rules").unwrap().arr() {
+            assert!(x.get("why").and_then(|p| p.str()).is_some());
             for k in x.get("refs").unwrap().arr() {
                 assert!(sources.contains(&k.str().unwrap()));
             }
@@ -219,10 +219,7 @@ fn the_request_reads_the_rules_and_their_numbers() {
         from_request(&|k| q.get(k).map(String::from))
     };
     assert_eq!(q("").unwrap().0.regole, None);
-    let p = q("regole=1&cutoff_q=0.4&toll_perdita_mda=5")
-        .unwrap()
-        .0
-        .regole;
+    let p = q("rules=1&cutoff_q=0.4&loss_tol_mda=5").unwrap().0.regole;
     assert_eq!(
         p,
         Some(RuleParams {
@@ -230,8 +227,8 @@ fn the_request_reads_the_rules_and_their_numbers() {
             toll_mda: 5.0
         })
     );
-    assert_eq!(q("regole=1").unwrap().0.regole, Some(RuleParams::default()));
-    assert!(q("regole=1&cutoff_q=x").is_err());
+    assert_eq!(q("rules=1").unwrap().0.regole, Some(RuleParams::default()));
+    assert!(q("rules=1&cutoff_q=x").is_err());
 }
 
 #[test]
