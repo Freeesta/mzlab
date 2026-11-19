@@ -30,14 +30,23 @@ fn message_of(stderr: &str) -> (String, String) {
     (msg.trim_end().to_string(), hint.to_string())
 }
 
-/// Commands whose exit 1 or 3 is a verdict of the answer they print (the listing has refused samples, the pair lacks its companion, the file has
-/// errors): the document is the answer, byte for byte what the site computes, so it stays on stdout and carries its own evidence.
-pub(crate) const VERDICT: &[&str] = &["validate", "pair", "wiff", "samples", "ref-list"];
+/// The verdict commands, by command path: their exit 1 or 3 is a verdict of the answer they print (the listing has refused samples, the pair lacks
+/// its companion, the file has errors, some rows of the list are wrong), the same document the site computes byte for byte. It stays on stdout and
+/// carries its own verdict; every other exit of these, and every other command's non-zero exit, is one `error/1`.
+pub(crate) const VERDICT: &[&str] = &["validate", "pair", "wiff", "samples list", "ref-list"];
+
+/// Whether the arguments start with the path of a verdict command (`samples list ...`, `wiff verify ...`).
+fn is_verdict(args: &[String]) -> bool {
+    VERDICT.iter().any(|v| {
+        let words: Vec<&str> = v.split(' ').collect();
+        args.len() >= words.len() && args.iter().zip(&words).all(|(a, w)| a == w)
+    })
+}
 
 /// `o` with the contract applied; `command` is the name of the entry that ran (`""` when none matched).
 pub(crate) fn finish(args: &[String], command: &str, mut o: Outcome) -> Outcome {
     let json = args.iter().any(|a| a == "--json") || crate::cmd::json_by_default(command);
-    let verdict = VERDICT.contains(&command)
+    let verdict = is_verdict(args)
         && matches!(o.code, crate::exit::DATA | crate::exit::INTEGRITY)
         && !o.stdout.is_empty();
     if o.code != 0

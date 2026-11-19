@@ -393,7 +393,8 @@ fn scratch(name: &str, file: &str, bytes: &[u8]) -> (PathBuf, String) {
 #[test]
 fn the_table_of_verdict_commands_names_entries_and_each_keeps_its_document_at_exit_1() {
     for v in crate::contract::VERDICT {
-        assert!(entries().any(|e| e.name == *v), "{v} is not a command");
+        let first = v.split(' ').next().unwrap();
+        assert!(entries().any(|e| e.name == first), "{v} is not a command");
     }
     // a pair with no companion, an mzML with an error, a list with a wrong row: exit 1 is the answer, the document stays on stdout
     let (d1, lone) = scratch("verdict_pair", "lone.wiff", b"x");
@@ -450,4 +451,95 @@ fn every_failure_code_is_one_error_document_under_json() {
     for d in [dir, wdir] {
         let _ = std::fs::remove_dir_all(d);
     }
+}
+
+#[test]
+fn wiff_and_samples_list_keep_their_document_at_exit_1_and_3_and_a_non_verdict_command_wraps_it() {
+    // wiff list exits 3 (a sample refused), wiff verify exits 1 (a difference): the wiff.list/1 and wiff.verify/1 documents stay on stdout
+    let out =
+        std::env::temp_dir().join(format!("mzlab_cli_contract_wiffref_{}", std::process::id()));
+    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_riferimento.py");
+    let made = Command::new("python3")
+        .arg(script)
+        .arg(&out)
+        .output()
+        .expect("python3 is needed by this test");
+    assert!(
+        made.status.success(),
+        "{}",
+        String::from_utf8_lossy(&made.stderr)
+    );
+    let f = |n: &str| out.join(n).to_string_lossy().into_owned();
+    for (a, code, schema) in [
+        (vec!["wiff", "list", &f("periods.wiff")], 3, "wiff.list/1"),
+        (
+            vec![
+                "wiff",
+                "verify",
+                &f("one.wiff"),
+                "--against",
+                &f("two.wiff"),
+            ],
+            1,
+            "wiff.verify/1",
+        ),
+    ] {
+        let o = run(&a);
+        assert_eq!(o.code, code, "{a:?}: {}", o.stderr);
+        let t = text(&o);
+        assert!(
+            t.contains(schema) && !t.contains("\"schema\":\"error/1\""),
+            "{a:?}: {t}"
+        );
+    }
+    let _ = std::fs::remove_dir_all(out);
+    // samples list at exit 1: a .wiff.scan shorter than its index says, asked with --probe
+    let (dir, wiff_file) = wiff("verdict_samples");
+    let cut = dir.join("cut");
+    std::fs::create_dir_all(&cut).unwrap();
+    std::fs::copy(&wiff_file, cut.join("grande.wiff")).unwrap();
+    let data = std::fs::read(format!("{wiff_file}.scan")).unwrap();
+    std::fs::write(cut.join("grande.wiff.scan"), &data[..data.len() - 500]).unwrap();
+    let o = run(&[
+        "samples",
+        "list",
+        cut.join("grande.wiff").to_str().unwrap(),
+        "--json",
+        "--probe",
+    ]);
+    assert_eq!(o.code, 1, "{}", o.stderr);
+    let t = text(&o);
+    assert!(
+        t.contains("\"samples_list/1\"")
+            && t.contains("\"short\"")
+            && !t.contains("\"schema\":\"error/1\""),
+        "{t}"
+    );
+    // the other `samples` words are not verdicts: a failure of `samples select` is one error/1
+    assert_eq!(
+        run(&["samples", "select", &wiff_file, "--sample", "9", "--json"]).code,
+        5
+    );
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn a_non_verdict_command_at_exit_3_is_one_error_with_its_document_as_report() {
+    // flow check of a plan with a value out of range: exit 3; the flowcheck/1 document is not left on stdout beside an error, it rides in `report`
+    let (dir, _) = crate::flow_run_tests::fixture("contract_wrap");
+    let plan = dir.join("plan.json").to_string_lossy().into_owned();
+    let o = run(&[
+        "flow",
+        "check",
+        &plan,
+        "--set",
+        "det.min_height=-5",
+        "--json",
+    ]);
+    let v = one_error(&o, 3, "flow check");
+    assert_eq!(v["report"]["schema"], "flowcheck/1");
+    assert_eq!(v["report"]["valid"], false);
+    assert_eq!(v["error_key"], "err.flow.check");
+    assert!(v["problems"].as_array().is_some_and(|p| !p.is_empty()));
+    let _ = std::fs::remove_dir_all(dir);
 }
