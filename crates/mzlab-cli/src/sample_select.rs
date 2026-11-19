@@ -24,6 +24,17 @@ pub(crate) fn present(path: &Path) -> Result<Vec<u32>> {
     Ok(l.samples().iter().map(|s| s.id).collect())
 }
 
+/// The ids and section bytes (0 when the reader gives none) of the samples of `path`, from the container and index alone.
+pub(crate) fn sized(path: &Path) -> Result<(Vec<u32>, Vec<u64>)> {
+    let fs = crate::flow_set::file_set(path)?;
+    let l = mzlab_lettori::apri_listing(fs, &Limits::desktop())?;
+    let s = l.samples();
+    Ok((
+        s.iter().map(|x| x.id).collect(),
+        s.iter().map(|x| x.size.unwrap_or(0)).collect(),
+    ))
+}
+
 /// `wanted` among the samples of `path`, in the order of the file; `err.sample.unknown` when one is missing.
 pub(crate) fn resolve(path: &Path, wanted: &[u32]) -> Result<Vec<u32>> {
     selection::resolve(&present(path)?, wanted)
