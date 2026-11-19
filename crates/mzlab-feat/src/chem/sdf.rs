@@ -1,5 +1,5 @@
 //! `sdf/1`: the drawing as a plain molfile or SDF, written by `mzlab-mol` from its `mol/1` record. A `.mol` keeps the whole canvas in one
-//! record; an `.sdf` has one record per connected structure with the data items `MZLAB_FORMULA`, `MZLAB_EXACT_MASS` (the etich/1 numbers),
+//! record; an `.sdf` has one record per connected structure with the data items `MZLAB_FORMULA`, `MZLAB_EXACT_MASS` (the label/1 numbers),
 //! `MZLAB_ION` and `MZLAB_MZ` (the chosen adduct of a neutral structure, or the drawn ion) and `MZLAB_HASH` (`mol1:` id of the canonical
 //! record). Same bytes in the molkit `.wasm`, the app (`feat/grafo`, `kind: "sdf"`) and `mzlab-cli mol export`.
 
@@ -67,7 +67,7 @@ pub fn adduct_shift(ion: &str) -> Option<f64> {
     })
 }
 
-/// Formula (Hill order of etich/1: C, H, then alphabetical, isotopes after their element as `[13C]`, `D`, `T`; H3N written NH3), charge and
+/// Formula (Hill order of label/1: C, H, then alphabetical, isotopes after their element as `[13C]`, `D`, `T`; H3N written NH3), charge and
 /// monoisotopic mass of a structure.
 pub fn formula(m: &Mol) -> (String, i64, f64) {
     type Key = (u8, &'static str, u16);

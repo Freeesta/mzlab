@@ -1,6 +1,6 @@
 // @ts-strict
 // @ts-noany
-// «Info…» of the canvas menu: what the selection (or the whole drawing) is, as drawn. The numbers are the `sel/1` of the Rust graph (crates/mzlab-feat
+// «Info…» of the canvas menu: what the selection (or the whole drawing) is, as drawn. The numbers are the `selection/1` of the Rust graph (crates/mzlab-feat
 // chem::sel, through the `.wasm` `grafo` or the app's `feat/grafo`), fed with the V2000 molfile of the piece: open valences are filled with H. InChI and
 // InChIKey come from Indigo (Ketcher). Loaded on the first «Info…» click; the page only lays the values out.
 
@@ -11,7 +11,7 @@ import { copyText } from "./disegno-menu.js";
 /** @typedef {{ format: string, part: boolean, label: Label, average?: number, heavy: number, atoms: number, pieces: number, rings: number, aromaticAtoms: number, aromaticRings: number }} Sel */
 /** @typedef {{ molfile: string, part: boolean, smiles: string, convert: (format: string) => Promise<string>, big: (title: string, html: string, onopen?: () => void) => void, esc: (s: string) => string }} Helpers */
 
-/** `sel/1` of a molfile, or null when the engine cannot answer */
+/** `selection/1` of a molfile, or null when the engine cannot answer */
 export async function selOf(/** @type {string} */ molfile, /** @type {boolean} */ part) {
   try { return /** @type {Sel} */ (JSON.parse(await (await carica()).sel(JSON.stringify({ molfile, part })))); } catch (_) { return null; }
 }

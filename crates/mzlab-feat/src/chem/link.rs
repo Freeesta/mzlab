@@ -66,7 +66,7 @@ fn links(smiles: &str, inchi: Option<&str>, preferred: &'static str) -> Vec<Link
     v
 }
 
-/// `link/1` of a request `{"smiles", "inchi"?, "part"}`: `{"format", "part", "preferred", "links": [{"id", "url", "copy"}]}`, `preferred` the id
+/// `link/1` of a request `{"smiles", "inchi"?, "part"}`: `{"schema", "part", "preferred", "links": [{"id", "url", "copy"}]}`, `preferred` the id
 /// of the PubChem search the rows start with (a part: substructure; the whole drawing: exact). An empty SMILES or a SMILES with a space or control character is `error.link.request`.
 pub fn link_json(request: &str) -> Result<String> {
     let bad = || Error::new("error.link.request");
@@ -79,7 +79,7 @@ pub fn link_json(request: &str) -> Result<String> {
     let part = v.get("part").and_then(Value::bool).unwrap_or(false);
     let preferred = if part { "pubchem-sub" } else { "pubchem-exact" };
     let mut o = Out::default();
-    o.raw("{\"format\":\"link/1\",\"part\":")
+    o.raw("{\"schema\":\"link/1\",\"part\":")
         .raw(if part { "true" } else { "false" })
         .raw(",\"preferred\":")
         .str(preferred)

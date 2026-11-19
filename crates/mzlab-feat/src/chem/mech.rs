@@ -1,4 +1,4 @@
-//! `mecc/1`: the curved arrows of a mechanism drawn on a structure, checked for form only. A full-head arrow moves an electron pair, a half-head arrow
+//! `mechanism/1`: the curved arrows of a mechanism drawn on a structure, checked for form only. A full-head arrow moves an electron pair, a half-head arrow
 //! (fishhook) one electron; each must start at a lone pair, a bond or a radical and end at an atom or a bond, and the drawn lone pairs must fit the
 //! electrons the atom has. The check never says which mechanism is right: the student draws it, this says whether every arrow is well formed.
 
@@ -251,7 +251,7 @@ fn problem(d: &Drawn, a: &Arrow) -> Option<&'static str> {
     }
 }
 
-/// `mecc/1` of a request (see `Request`): `{"format","arrows":[{kind, from, to, electrons, ok, problem?}],"lone":[{atom, pairs, max?, ok}],"ok"}`. `from`
+/// `mechanism/1` of a request (see `Request`): `{"schema","arrows":[{kind, from, to, electrons, ok, problem?}],"lone":[{atom, pairs, max?, ok}],"ok"}`. `from`
 /// and `to` name what the arrow starts and ends at; `problem` is a code (noLonePair, noRadical, pairFromRadical, noBond, same); `max` is the number of
 /// lone pairs the atom can hold, absent for an element that is not checked. Form only: no arrow is said to be the right one.
 pub fn mech_json(text: &str) -> Result<String> {
@@ -272,7 +272,7 @@ pub fn mech_json(text: &str) -> Result<String> {
     }
     let mut ok = true;
     let mut o = Out::default();
-    o.raw("{\"format\":\"mecc/1\",\"arrows\":[");
+    o.raw("{\"schema\":\"mechanism/1\",\"arrows\":[");
     for (k, a) in r.arrows.iter().enumerate() {
         let p = problem(&d, a);
         ok &= p.is_none();
