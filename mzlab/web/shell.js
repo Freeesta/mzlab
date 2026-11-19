@@ -141,10 +141,11 @@ function wireFiles(/** @type {HTMLElement} */ el,/** @type {FileRiga[]} */ F){
       if(k==="type"){f.ed=1;f.gR=false;RUOLI.setRole(f,x.value)}else f[k]=k==="use"?x.checked:v;if(k==="time")f.gT=false;
       if(k==="conc")f.gC=false;
       if(k==="type"){if(isCal(f)&&f.conc==null){f.conc=concFrom(f);f.gC=f.conc!=null}if(!isCal(f)){f.conc=null;f.gC=false}}
-      if(k==="use")OPENNOW.tick(f,x.checked);else OPENNOW.edit(f);
       // the table is sorted again when a value is committed (change/blur/Enter), never while typing. A change caused by leaving the field (click on another field, Tab) is applied
       // once the focus has moved (a browser may fire the change before the mousedown moves it, so this is always deferred), and the focus goes back to the field that received it: the rebuilt table must not swallow the click
-      const go=()=>{const a=/** @type {HTMLElement} */(document.activeElement),ok=a&&el.contains(a),nk=/** @type {{ name: string, k?: string, rm?: number, mv?: number } | null} */ (ok&&a.dataset.k?{name:F[+(a.dataset.i||0)].name,k:a.dataset.k}:ok&&a.dataset.rm?{name:F[+a.dataset.rm].name,rm:1}:ok&&a.dataset.mv?{name:a.dataset.mv,mv:1}:keep);CONVROWS.thaw();sortFiles();renderFiles();
+      const go=()=>{const a=/** @type {HTMLElement} */(document.activeElement),ok=a&&el.contains(a),nk=/** @type {{ name: string, k?: string, rm?: number, mv?: number } | null} */ (ok&&a.dataset.k?{name:F[+(a.dataset.i||0)].name,k:a.dataset.k}:ok&&a.dataset.rm?{name:F[+a.dataset.rm].name,rm:1}:ok&&a.dataset.mv?{name:a.dataset.mv,mv:1}:keep);
+        // the open files take the edit AFTER the focus is read: their refresh rebuilds this table, and a rebuild before the read loses the field under the click
+        if(k==="use")OPENNOW.tick(f,x.checked);else OPENNOW.edit(f);CONVROWS.thaw();sortFiles();renderFiles();
         if(nk){const i=F.findIndex((/** @type {FileRiga} */ q)=>q.name===nk.name),b=el.querySelector(nk.rm?`[data-rm="${i}"]`:nk.mv?`[data-mv="${CSS.escape(nk.name)}"]`:`[data-i="${i}"][data-k="${nk.k}"]`);if(b){b.focus();if(b.type==="text")b.setSelectionRange(b.value.length,b.value.length)}}};
       setTimeout(go,0)};
     if(x.dataset.k==="conc")x.addEventListener("keydown",(/** @type {KeyboardEvent} */ e)=>{if(e.key==="Enter"){F[+x.dataset.i].gC=false;x.classList.remove("guess");x.title="";modeNote()}})});
