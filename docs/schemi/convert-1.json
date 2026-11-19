@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "convert/1",
+  "title": "convert/1: what `file convert` converted, or would convert",
+  "description": "The document of `mzlab-cli file convert --json` and of `--report FILE`. With `--dry-run` (`dry_run` true) nothing is written and each item says what would be converted: `input`, `output`, `sample_id` (null for a dataset with one sample), `reader` (null when no reader takes the dataset), `input_bytes`, `empty`. Otherwise each item is a result: `{input, output, sha256, spectra, seconds, skipped, ...}` or, for a file that failed, `{input, error, cause}`; `conversion` is the conversion/1 record read back from the mzML head. Seconds are wall-clock seconds. Code: crates/mzlab-cli/src/convert.rs, convert_report.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "dry_run",
+    "out",
+    "items"
+  ],
+  "properties": {
+    "schema": {
+      "const": "convert/1"
+    },
+    "dry_run": {
+      "type": "boolean"
+    },
+    "out": {
+      "type": "string"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "input"
+        ],
+        "properties": {
+          "input": {
+            "type": "string"
+          },
+          "output": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "spectra": {
+            "type": "integer"
+          },
+          "seconds": {
+            "type": "number"
+          },
+          "skipped": {
+            "type": "boolean",
+            "description": "True when the file was taken from the cache."
+          },
+          "conversion": {
+            "type": "object"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "key",
+                "place"
+              ],
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "place": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "centroids": {
+            "type": "object",
+            "properties": {
+              "merged": {
+                "type": "integer"
+              },
+              "saturated": {
+                "type": "integer"
+              }
+            }
+          },
+          "error": {
+            "type": "string",
+            "description": "The error key of a file that failed."
+          },
+          "cause": {
+            "type": "string"
+          },
+          "sample_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "reader": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "input_bytes": {
+            "type": "integer"
+          },
+          "empty": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

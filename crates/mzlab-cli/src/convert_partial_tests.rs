@@ -24,7 +24,9 @@ fn a_cut_file_is_written_with_code_3_and_its_counts() {
     assert_eq!(o.code, 3, "{}", o.stderr);
     assert!(o.stderr.contains("warning: ") && o.stderr.contains("partial read, "));
     let r = parse(&std::fs::read(&report).unwrap()).unwrap();
-    let conv = r.arr()[0].get("conversion").expect("conversion");
+    let conv = r.get("items").unwrap().arr()[0]
+        .get("conversion")
+        .expect("conversion");
     let n = |k: &str| conv.get(k).and_then(|v| v.f64()).unwrap();
     assert_eq!(conv.get("partial").and_then(|v| v.bool()), Some(true));
     assert!(n("read") < n("declared"), "{}", o.stderr);
@@ -76,7 +78,9 @@ fn a_damaged_scan_block_of_a_wiff_is_written_with_code_3_and_its_cause() {
     ]);
     assert_eq!(o.code, 3, "{}", o.stderr);
     let r = parse(&std::fs::read(&report).unwrap()).unwrap();
-    let conv = r.arr()[0].get("conversion").expect("conversion");
+    let conv = r.get("items").unwrap().arr()[0]
+        .get("conversion")
+        .expect("conversion");
     let n = |k: &str| conv.get(k).and_then(|v| v.f64()).unwrap();
     assert_eq!(
         (

@@ -90,6 +90,7 @@ const JSON_FLAG: &[&str] = &[
     "flow steps",
     "commands",
     "file validate",
+    "file convert",
     "file pair",
     "file list",
     "ion elements",

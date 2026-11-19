@@ -26,11 +26,11 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds in one call: container, samples, items, channels, proposed kind as JSON
        mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds, sample by sample, with SHA-256 and a status as JSON
        mzlab-cli file verify OUT.wiff --against SRC.wiff...   whether an output equals its sources
-       mzlab-cli file items FILE [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps with CE and its spread
+       mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps with CE and its spread
        mzlab-cli file channels FILE [--sample LIST] [--out PATH]   the channels of a file as JSON
        mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) found by name in the folder of the file; exit 1 when one is missing
        mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1
-       mzlab-cli file convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML
+       mzlab-cli file convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML; --dry-run says what would be converted, --json the convert/1 report
        mzlab-cli sample vars NAME...   how the file names split into variables, as JSON
        mzlab-cli sample group NAME...   the group name the file names share, as JSON
        mzlab-cli sample table NAME...   the sample table proposed for the file names
@@ -128,11 +128,11 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds in one call: container, samples, items, channels, proposed kind as JSON
        mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds, sample by sample, with SHA-256 and a status as JSON
        mzlab-cli file verify OUT.wiff --against SRC.wiff...   whether an output equals its sources
-       mzlab-cli file items FILE [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps with CE and its spread
+       mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps with CE and its spread
        mzlab-cli file channels FILE [--sample LIST] [--out PATH]   the channels of a file as JSON
        mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) found by name in the folder of the file; exit 1 when one is missing
        mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1
-       mzlab-cli file convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML
+       mzlab-cli file convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML; --dry-run says what would be converted, --json the convert/1 report
        mzlab-cli sample vars NAME...   how the file names split into variables, as JSON
        mzlab-cli sample group NAME...   the group name the file names share, as JSON
        mzlab-cli sample table NAME...   the sample table proposed for the file names
@@ -230,11 +230,11 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds in one call: container, samples, items, channels, proposed kind as JSON
        mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds, sample by sample, with SHA-256 and a status as JSON
        mzlab-cli file verify OUT.wiff --against SRC.wiff...   whether an output equals its sources
-       mzlab-cli file items FILE [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps with CE and its spread
+       mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps with CE and its spread
        mzlab-cli file channels FILE [--sample LIST] [--out PATH]   the channels of a file as JSON
        mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) found by name in the folder of the file; exit 1 when one is missing
        mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1
-       mzlab-cli file convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML
+       mzlab-cli file convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML; --dry-run says what would be converted, --json the convert/1 report
        mzlab-cli sample vars NAME...   how the file names split into variables, as JSON
        mzlab-cli sample group NAME...   the group name the file names share, as JSON
        mzlab-cli sample table NAME...   the sample table proposed for the file names
@@ -938,7 +938,7 @@ exit 0
 --- stdout
 mzlab-cli file convert: vendor files to indexed mzML, the step convert.mzml of the Flow page.
 
-usage: mzlab-cli file convert INPUT... --out FOLDER [--sample LIST] [--compression KIND] [--zlib N] [--numpress] [--peaks WHICH] [--workers N] [--report FILE.json] [--fresh] [--set conv.NAME=VALUE...]
+usage: mzlab-cli file convert INPUT... --out FOLDER [--sample LIST] [--compression KIND] [--zlib N] [--numpress] [--peaks WHICH] [--workers N] [--report FILE.json] [--json] [--dry-run] [--fresh] [--set conv.NAME=VALUE...]
 
   INPUT...             a file, a maker's folder (.D, .d, .raw) or a folder to look through; a .wiff is taken with its .wiff.scan, and a dataset
                        with several samples gives one mzML per sample
@@ -953,14 +953,18 @@ usage: mzlab-cli file convert INPUT... --out FOLDER [--sample LIST] [--compressi
                        points of the profile) or mzlab (centroids of mzLab)
   --workers N          files converted at once (default: the cores but one, 1 to 4, fewer when the memory budget of the computer does not give
                        each its share, with a note; the bytes written do not depend on it)
-  --report FILE.json   one object per input: input, output, sha256, spectra, seconds, skipped, conversion, warnings (centroids with --peaks mzlab); or input, error, cause
+  --report FILE.json   the convert/1 document in a file: {schema, dry_run, out, items}, one item per input: input, output, sha256, spectra, seconds, skipped,
+                       conversion, warnings (centroids with --peaks mzlab); or input, error, cause
+  --json               the same convert/1 document on stdout instead of the list of mzML files; a non-zero exit gives one error/1 that carries it as `report`
+  --dry-run            checks the inputs, the samples and the settings and says what would be converted (input, output, sample_id, reader, input_bytes)
+                       without writing anything
   --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
                        program is not converted again
   --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
   --help               this text
 
 progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 3 a file was written with scans missing (conversion/1 partial; a
-warning line names it), 4 an input is missing or holds nothing to convert, 5 a --sample id the dataset does not have
+warning line names it), 4 an input is missing or holds nothing to convert, 5 a --sample id the dataset does not have; an input that is an mzML already is exit 4
 --- stderr
 
 === mzlab-cli file validate --help
@@ -971,11 +975,11 @@ mzlab-cli file validate: is the mzML valid (structure, PSI-MS vocabulary, index 
 usage: mzlab-cli file validate FILE.mzML... [--json] [--help]
 
   FILE...   one or more mzML (plain or indexedmzML)
-  --json    one JSON array on the standard output, an object per file: {file, valid, indexed, spectra, chromatograms, problems: [{severity, path, code, message}]}
+  --json    one document on the standard output: {"schema":"mzml-validation/1","files":[{file, valid, indexed, spectra, chromatograms, problems: [{severity, path, code, message}]}]}
 
 Without --json each finding is a line `error|warning PATH MESSAGE` (PATH is the XML path, MESSAGE starts with the code of the check); with
 several files each line starts with `FILE: `. The summary of every file goes to the standard error. Exit code: 0 no error in any file,
-1 at least one error, 2 usage, 4 a file that cannot be read. Warnings (obsolete terms, a value without its unit) never change the code.
+1 at least one error (the document stays on the standard output), 2 usage, 4 a file that cannot be read (one error/1 under --json). Warnings (obsolete terms, a value without its unit) never change the code.
 --- stderr
 
 === mzlab-cli db normative --help

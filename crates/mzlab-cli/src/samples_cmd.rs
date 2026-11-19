@@ -154,7 +154,7 @@ const LIST_HELP: &str = "mzlab-cli sample list: what each file holds, sample by 
 usage: mzlab-cli sample list FILE... [--json] [--probe]
 
   FILE     a .wiff (its .wiff.scan beside it is not read), another vendor file or a .D / .raw folder
-  --json   one samples_list/1 JSON per line on stdout, in the order of the FILEs (a file that cannot be listed gives an error/1 line); without it, a table
+  --json   one sample-list/1 document on stdout, {\"schema\",\"files\":[samples_list/1 per FILE, in order]}; a file the reader refuses has its error/1 in its place (exit 1); without it, a table
   --probe  also compare the size of the .wiff.scan with where its indexed part ends and add `probe` to the JSON: {scan_bytes, indexed_end, status}
            (ok | short: the copy is cut, exit 1 | longer: bytes after the last indexed section | n/a: no data file)
 Per sample: id, name, scans (as the index counts them), size (bytes of its section), kinds (ms, ms2, sim, mrm, dad), polarity, rt [min, max] and
@@ -191,6 +191,7 @@ fn list_one(path: &Path, probe: bool) -> Result<Listed, (u8, Error)> {
         let name = path.display().to_string();
         return Err((4, Error::new("err.session.fileNotFound").with("name", name)));
     }
+    crate::sample_select::refuse_mzml(path).map_err(|e| (1, e))?;
     let fs = crate::flow_set::file_set(path).map_err(|e| (4, e))?;
     let mut l = mzlab_lettori::apri_listing(fs, &Limits::desktop()).map_err(|e| (1, e))?;
     let refused = (0..l.samples().len()).any(|i| l.refused(i).is_some());
@@ -314,6 +315,9 @@ fn select_run(args: Vec<String>) -> Outcome {
         let e = Error::new("err.session.fileNotFound").with("name", file.display());
         return Outcome::fail_error(&e).with_hint("check the path");
     }
+    if let Err(e) = crate::sample_select::refuse_mzml(&file) {
+        return crate::sample_select::fail(&e);
+    }
     let chosen = match &text {
         Some(t) => {
             crate::sample_select::parse(t).and_then(|w| crate::sample_select::resolve(&file, &w))
@@ -331,7 +335,10 @@ fn select_run(args: Vec<String>) -> Outcome {
         Ok(ids) => {
             let ids: Vec<String> = ids.iter().map(u32::to_string).collect();
             let out = if json {
-                format!("{{\"samples\":[{}]}}\n", ids.join(","))
+                format!(
+                    "{{\"schema\":\"sample-select/1\",\"samples\":[{}]}}\n",
+                    ids.join(",")
+                )
             } else {
                 format!("{}\n", ids.join(" "))
             };
@@ -357,15 +364,16 @@ fn list_run(args: Vec<String>) -> Outcome {
     if files.is_empty() {
         return Outcome::fail("sample list needs at least one FILE");
     }
-    let (mut out, mut err, mut code) = (String::new(), String::new(), 0u8);
+    let (mut docs, mut table, mut err, mut code) =
+        (Vec::<String>::new(), String::new(), String::new(), 0u8);
     for f in &files {
         err += &format!("listing {}\n", f.display());
         match list_one(f, probe) {
             Ok(l) => {
                 if json {
-                    out += &(l.json.clone() + "\n");
+                    docs.push(l.json.clone());
                 } else {
-                    out += &list_table(&l.json, &f.display().to_string());
+                    table += &list_table(&l.json, &f.display().to_string());
                 }
                 if l.refused {
                     err += &format!(
@@ -381,27 +389,41 @@ fn list_run(args: Vec<String>) -> Outcome {
                 }
                 code = code.max(u8::from(l.refused || l.cut));
             }
-            Err((c, e)) => {
-                let msg = crate::error_text::human_error(&e);
-                err += &format!("error: {msg}\n");
-                if json {
-                    out += &crate::contract::error_line(
-                        c,
-                        &e,
-                        "check the path and that the whole pair was copied",
-                        "sample list",
-                    );
-                }
-                code = if c == 4 || code == 4 { 4 } else { code.max(c) };
+            Err((c, e)) if c == crate::exit::DATA => {
+                // a file the reader refuses is part of the answer: its error/1 takes its place among the listings
+                err += &format!("error: {}\n", crate::error_text::human_error(&e));
+                let hint = if e.key == "err.file.alreadyMzml" {
+                    "an mzML has one sample and no container to list; `mzlab-cli file info` describes it"
+                } else {
+                    "check the path and that the whole pair was copied"
+                };
+                docs.push(crate::contract::error_line(c, &e, hint, "sample list"));
+                code = code.max(c);
+            }
+            Err((_, e)) => {
+                // missing or unreadable: no listing is the answer, one error/1 carries the files listed so far
+                let mut o = Outcome::fail_error(&e)
+                    .with_hint("check the path and that the whole pair was copied");
+                o.stderr += &err;
+                o.stdout = list_document(&docs).into_bytes();
+                return o;
             }
         }
     }
     Outcome {
         code,
-        stdout: out.into_bytes(),
+        stdout: if json { list_document(&docs) } else { table }.into_bytes(),
         stderr: err,
         error: None,
     }
+}
+
+/// The `sample-list/1` document: one `samples_list/1` per file, in the order given; a file the reader refuses has its `error/1` in its place.
+fn list_document(docs: &[String]) -> String {
+    format!(
+        "{{\"schema\":\"sample-list/1\",\"files\":[{}]}}\n",
+        docs.join(",")
+    )
 }
 
 pub fn run(args: Vec<String>) -> Outcome {
