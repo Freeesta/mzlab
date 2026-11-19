@@ -1,4 +1,4 @@
-//! The module `wiffwrite` of the page: the read-only `.wiff` inventory and verify of `mzlab-cli file info|verify` (`mzlab_core::wiff::inventory`), reading the pairs through the
+//! The module `wiffwrite` of the page: the read-only `.wiff` inventory and verify of `mzlab-cli file inventory|verify` (`mzlab_core::wiff::inventory`), reading the pairs through the
 //! page's `read(member, offset, length) -> Uint8Array` callback (the pairs lie one after the other: member 2k is the `.wiff`, 2k+1 its `.wiff.scan`). It returns the
 //! JSON text the command prints, byte for byte. A module of its own so that the readers modules and the engine do not carry it.
 use js_sys::Function;
@@ -96,7 +96,7 @@ pub fn family() -> String {
     "wiffwrite".into()
 }
 
-/// `wiff.list/1` of the pairs whose members are `names` and `sizes` (`.wiff`, `.wiff.scan`, ...): the text `mzlab-cli file info` prints. `full` is `--inventory`.
+/// `wiff.list/1` of the pairs whose members are `names` and `sizes` (`.wiff`, `.wiff.scan`, ...): the text `mzlab-cli file inventory` prints. `full` is `--full`.
 #[wasm_bindgen]
 pub fn wiff_list(
     names: Vec<String>,

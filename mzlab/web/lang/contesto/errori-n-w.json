@@ -7,6 +7,7 @@
   "error.workStopped": "Engine error: a worker thread (file fingerprint) stopped without a result. {detail} = which job (hash).",
   "error.newerFormat": "Error when an index (.mzidx) or a pipeline table (.mzfeat, .mzfeatf) is in a newer format than the program; {version} = format version found (the engine also adds {kind}, {file}). The file is not touched.",
   "err.session.fileNotFound": "{name} = file name.",
+  "err.scan.unknown": "CLI error: no scan has the number given to --scan; {id} = that number.",
   "err.scan.maxRequest": "API error; {n} = maximum number of scans per request.",
   "err.scan.outsideN": "API error; {n} = number of scans in the file.",
   "err.scan.maxAverage": "API error; {n} = maximum number of scans for an average.",

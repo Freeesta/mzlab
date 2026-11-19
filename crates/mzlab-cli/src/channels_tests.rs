@@ -30,6 +30,11 @@ fn ids(v: &Value) -> Vec<String> {
         .collect()
 }
 
+/// `mzlab-cli trace chrom FILE --id ID`.
+fn fch_trace(file: &str, id: &str) -> crate::Outcome {
+    execute(&["trace", "chrom", file, "--id", id].map(String::from))
+}
+
 /// `mzlab-cli file channels FILE extra...`.
 fn run_new(p: &str, extra: &[&str]) -> crate::Outcome {
     let mut a = vec!["file".to_string(), "channels".to_string(), p.to_string()];
@@ -103,33 +108,6 @@ fn usage_errors_exit_with_2() {
     }
     assert_eq!(fch("channels", &["--help"]).code, 0);
     assert_eq!(run_new("/nonexistent/x.mzML", &[]).code, 4);
-}
-
-/// `--channel uv:auto` prints the XWC band of `itemroutes::pda_propose` (what `api/uvpropose` answers in the site and the app), with and without `--rt`.
-#[test]
-fn uv_auto_prints_the_band_the_engine_proposes() {
-    let f = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../mzlab/web/esempi/FullScan_t10.mzML");
-    let p = f.to_string_lossy().into_owned();
-    let engine = |a: f64, b: f64| {
-        let file = std::fs::File::open(&f).unwrap();
-        let size = file.metadata().unwrap().len();
-        mzlab_core::itemroutes::pda_propose(&mut mzlab_core::mzmlhead::Mzml::new(file, size), a, b)
-            .unwrap()
-            + "\n"
-    };
-    let all = vec!["--channel", "uv:auto"];
-    let window = vec!["--channel", "uv:auto", "--rt", "1,2"];
-    for (extra, want) in [
-        (all, engine(f64::NAN, f64::NAN)),
-        (window, engine(1.0, 2.0)),
-    ] {
-        let o = run_new(&p, &extra);
-        assert_eq!(o.code, 0, "{}", o.stderr);
-        let got = String::from_utf8(o.stdout).unwrap();
-        assert_eq!(got, want, "{extra:?}");
-        let v = parse(got.trim().as_bytes()).unwrap();
-        assert_eq!(v.get("bw").and_then(|x| x.f64()), Some(4.0), "{got}");
-    }
 }
 
 /// The files of `tools/dati_sintetici.py` the tests need, in a new folder; `None` without python3 and numpy.
@@ -262,7 +240,7 @@ fn an_unknown_sim_id_is_named_whole() {
     )
     .unwrap();
     let id = "sim:SIM SIC Q1=237.1 sample=1 polarity=positive name=ionA";
-    let o = fch("channels", &[&f.to_string_lossy(), "--channel", id]);
+    let o = fch_trace(&f.to_string_lossy(), id);
     assert_eq!(o.code, 5);
     let want = format!("error: Channel {id} does not exist in this file. (err.canali.unknown)\n");
     assert!(o.stderr.starts_with(&want), "{}", o.stderr);
@@ -327,7 +305,7 @@ fn each_sample_of_a_wiff_has_the_channels_of_its_mzml() {
 }
 
 /// The device traces of a `.wiff` (`dispositivi` of `tools/wiff_riferimento.py`: two pressures, a flow, a temperature) are `an:` channels, the same the
-/// converted mzML lists; `--channel an:1` of the mzML gives the column pressure (2000 psi, shown in bar).
+/// converted mzML lists; `trace chrom --id an:1` of the mzML gives the column pressure (2000 psi, shown in bar).
 #[test]
 fn the_device_traces_of_a_wiff_are_the_analog_channels_of_its_mzml() {
     let dir = std::env::temp_dir().join(format!("mzlab_cli_canali_dev_{}", std::process::id()));
@@ -365,79 +343,12 @@ fn the_device_traces_of_a_wiff_are_the_analog_channels_of_its_mzml() {
         );
     }
     assert!(!list.contains("Empty"), "{list}");
-    let one = fch("channels", &[&mzml, "--channel", "an:1"]);
+    let one = fch_trace(&mzml, "an:1");
     assert_eq!(one.code, 0, "{}", one.stderr);
     let one = String::from_utf8(one.stdout).unwrap();
     assert!(
-        one.contains("\"kind\":\"pressure\"") && one.contains("\"y\":[137.895,"),
+        one.contains("\"y_unit\":\"bar\"") && one.contains(",137.895]"),
         "2000 psi in bar: {one}"
     );
-    let _ = std::fs::remove_dir_all(&dir);
-}
-
-/// An mzML with a TWC (a 2 × 2 `dad_matrix` is not needed for the trace) and a pump pressure trace: `--channel` reads them as the old routes do.
-#[test]
-fn canale_reads_a_uv_and_an_analog_trace() {
-    let dir = std::env::temp_dir().join(format!("mzlab_cli_canale_uv_{}", std::process::id()));
-    std::fs::create_dir_all(&dir).unwrap();
-    let arr = |acc: &str, unit: &str, v: &str| {
-        format!("<binaryDataArray encodedLength=\"1\"><cvParam accession=\"MS:1000523\" name=\"64-bit float\"/><cvParam accession=\"{acc}\" name=\"x\"{unit}/><binary>{v}</binary></binaryDataArray>")
-    };
-    let b64 = |v: &[f64]| {
-        const A: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-        let raw: Vec<u8> = v.iter().flat_map(|x| x.to_le_bytes()).collect();
-        let mut o = String::new();
-        for c in raw.chunks(3) {
-            let n = (c[0] as u32) << 16
-                | (*c.get(1).unwrap_or(&0) as u32) << 8
-                | *c.get(2).unwrap_or(&0) as u32;
-            for k in 0..4 {
-                o.push(if k <= c.len() {
-                    A[(n >> (18 - 6 * k) & 63) as usize] as char
-                } else {
-                    '='
-                });
-            }
-        }
-        o
-    };
-    let chrom = |i: usize, id: &str, acc: &str, unit: &str| {
-        format!("<chromatogram index=\"{i}\" id=\"{id}\" defaultArrayLength=\"2\"><cvParam accession=\"{acc}\" name=\"x\"/><binaryDataArrayList count=\"2\">{}{}</binaryDataArrayList></chromatogram>", arr("MS:1000595", "", &b64(&[0.0, 0.03])), arr("MS:1000515", unit, &b64(&[1.0, 2.0])))
-    };
-    let xml = format!(
-        "<mzML><run><chromatogramList count=\"2\">{}{}</chromatogramList></run></mzML>",
-        chrom(0, "TWC", "MS:1000813", ""),
-        chrom(1, "Pump Pressure", "MS:1003019", " unitName=\"bar\"")
-    );
-    let f = dir.join("u.mzML");
-    std::fs::write(&f, xml).unwrap();
-    let p = f.to_string_lossy().into_owned();
-    let run = |extra: &[&str]| {
-        let mut a = vec!["file".to_string(), "channels".to_string(), p.clone()];
-        a.extend(extra.iter().map(|s| s.to_string()));
-        execute(&a)
-    };
-    let ids = ids(&channels_of(&f));
-    assert!(
-        ids.contains(&"uv:twc".to_string()) && ids.contains(&"an:1".to_string()),
-        "{ids:?}"
-    );
-    assert_eq!(proposed(&channels_of(&f)), "uv-only");
-    // The Italian command and flag are gone: refused as usage errors.
-    assert_eq!(execute(&["canali".into(), p.clone()]).code, 2);
-    assert_eq!(run(&["--canale", "uv:twc"]).code, 2);
-    let twc = run(&["--channel", "uv:twc"]);
-    assert_eq!(twc.code, 0, "{}", twc.stderr);
-    assert_eq!(
-        String::from_utf8(twc.stdout).unwrap(),
-        "{\"rt\":[0,0.03],\"y\":[1,2]}\n"
-    );
-    let an = run(&["--channel", "an:1", "--n", "50"]);
-    assert_eq!(an.code, 0, "{}", an.stderr);
-    assert!(String::from_utf8(an.stdout)
-        .unwrap()
-        .contains("\"unit\":\"bar\""));
-    assert_eq!(run(&["--channel", "tic"]).code, 5);
-    assert_eq!(run(&["--rt", "1"]).code, 2);
     let _ = std::fs::remove_dir_all(&dir);
 }

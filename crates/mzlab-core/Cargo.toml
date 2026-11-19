@@ -19,7 +19,7 @@ mappa-dad = []
 valida = []
 # what only the SCIEX readers module needs beyond `estesi` and the other families must not carry (their .wasm is under a size limit): the `variante` method of the `Lettore` trait and the `cv:` parameters of the mzML writer
 sciex = ["estesi"]
-# the read-only `.wiff` inventory and verify (`wiff/inventory.rs`, `ole/inventory.rs`) of `mzlab-cli file info` and of the `wiffwrite` readers module; the engine and the other readers modules leave it off
+# the read-only `.wiff` inventory and verify (`wiff/inventory.rs`, `ole/inventory.rs`) of `mzlab-cli file inventory` and of the `wiffwrite` readers module; the engine and the other readers modules leave it off
 wiffwrite = ["estesi"]
 # the indexed mzML (offsets and SHA-1 checksum) in the `.wasm` build too: only the readers modules turn it on, to write the same mzML as `mzlab-cli file convert`; the engine (mzlab-wasm) leaves it off
 indice = []

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "uvband/1",
+  "title": "uvband/1: the UV band the engine proposes, `mzlab-cli trace chrom --id uv:auto`",
+  "description": "The XWC band proposed from the DAD matrix (what `api/uvpropose` answers) plus the file and sample. Code: crates/mzlab-cli/src/trace_cmd.rs.",
+  "type": "object",
+  "required": [
+    "id",
+    "file",
+    "sample",
+    "evidence"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema": {
+      "const": "uvband/1"
+    },
+    "id": {
+      "const": "uv:auto"
+    },
+    "file": {
+      "type": "string"
+    },
+    "sample": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Sample id of a multi-sample file (.wiff); null for an mzML."
+    },
+    "evidence": {
+      "type": "object"
+    }
+  }
+}

@@ -20,6 +20,19 @@ const MISSING: &[&[&str]] = &[
     &["file", "validate", "/nonexistent/x.mzML"],
     &["file", "channels", "/nonexistent/x.mzML"],
     &["file", "items", "/nonexistent/x.mzML"],
+    &["file", "info", "/nonexistent/x.mzML"],
+    &["trace", "chrom", "/nonexistent/x.mzML", "--id", "tic"],
+    &[
+        "trace",
+        "xic",
+        "/nonexistent/x.mzML",
+        "--mz",
+        "100",
+        "--ppm",
+        "10",
+    ],
+    &["spectrum", "get", "/nonexistent/x.mzML", "--rt", "1"],
+    &["spectrum", "list", "/nonexistent/x.mzML"],
     &["trace", "background", "/nonexistent/x.mzML"],
     &[
         "spectrum",
@@ -128,7 +141,7 @@ const MISSING: &[&[&str]] = &[
     &["mol", "export", "/nonexistent/r.json"],
     &["mol", "cut", "/nonexistent/m.mol", "--set", "bonds=1-2"],
     &["mol", "mech", "/nonexistent/r.json"],
-    &["file", "info", "/nonexistent/x.wiff"],
+    &["file", "inventory", "/nonexistent/x.wiff"],
     &["db", "ref-list", "/nonexistent/l.csv"],
     &[
         "dad",
@@ -416,7 +429,8 @@ fn an_unknown_selector_is_exit_5_with_error_1() {
             "/tmp/mzlab_contract_unused",
         ],
         vec!["sample", "select", &f, "--sample", "9"],
-        vec!["file", "channels", &f, "--channel", "sim:nothing"],
+        vec!["trace", "chrom", &f, "--id", "sim:nothing"],
+        vec!["spectrum", "get", &f, "--scan", "99999"],
         vec!["flow", "steps", "--id", "no.such.step"],
     ] {
         // the node selector of `msn graph` needs a graph file: covered by msn_graph_tests

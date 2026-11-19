@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "file_info/1",
+  "title": "file_info/1: what a file holds, `mzlab-cli file info`",
+  "description": "Per file: container, size and every sample; the samples read also carry the items/1 and channels/1 documents and the proposed experiment kind. Code: crates/mzlab-cli/src/file_info_cmd.rs.",
+  "type": "object",
+  "required": [
+    "files"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "file_info/1"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "container",
+          "size_bytes",
+          "samples"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "container": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "samples": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name"
+              ],
+              "properties": {
+                "id": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "description": "Sample id of a multi-sample file (.wiff); null for an mzML."
+                },
+                "name": {
+                  "type": "string"
+                },
+                "scans": {
+                  "type": "integer"
+                },
+                "items": {
+                  "$ref": "items/1"
+                },
+                "channels": {
+                  "$ref": "channels/1"
+                },
+                "kind": {
+                  "type": "object",
+                  "required": [
+                    "proposed",
+                    "reason"
+                  ],
+                  "properties": {
+                    "proposed": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

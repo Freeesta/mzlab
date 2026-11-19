@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scanlist/1",
+  "title": "scanlist/1: the scans of a file, `mzlab-cli spectrum list`",
+  "description": "One row per scan in time order (all MS levels unless --ms-level). Code: crates/mzlab-cli/src/spectrum_cmd.rs.",
+  "type": "object",
+  "required": [
+    "file",
+    "sample",
+    "x_unit",
+    "n_scans",
+    "scans",
+    "evidence"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "scanlist/1"
+    },
+    "file": {
+      "type": "string"
+    },
+    "sample": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Sample id of a multi-sample file (.wiff); null for an mzML."
+    },
+    "x_unit": {
+      "const": "min"
+    },
+    "n_scans": {
+      "type": "integer"
+    },
+    "scans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "scan_id",
+          "scan_no",
+          "ms_level",
+          "rt_min",
+          "tic",
+          "precursor_mz",
+          "base_peak_mz",
+          "base_peak_intensity"
+        ],
+        "properties": {
+          "scan_id": {
+            "type": "integer"
+          },
+          "scan_no": {
+            "type": "integer"
+          },
+          "ms_level": {
+            "type": "integer"
+          },
+          "rt_min": {
+            "type": "number"
+          },
+          "tic": {
+            "type": "number"
+          },
+          "precursor_mz": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "base_peak_mz": {
+            "type": "number"
+          },
+          "base_peak_intensity": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "description": "route and levels."
+    }
+  }
+}

@@ -148,16 +148,7 @@ fn channels_of_a_list_are_one_line_per_sample_each_the_bytes_of_its_own_run() {
     };
     assert_eq!(text, format!("{}\n{}", one("1").trim_end(), one("3")));
     assert_eq!(
-        run(&[
-            "file",
-            "channels",
-            &wiff,
-            "--sample",
-            "1,2",
-            "--channel",
-            "uv:twc"
-        ])
-        .code,
+        run(&["trace", "chrom", &wiff, "--sample", "1,2", "--id", "uv:twc"]).code,
         2
     );
     let o = run(&["file", "channels", &wiff, "--sample", "1,9"]);

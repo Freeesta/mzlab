@@ -91,7 +91,7 @@ fn every_failure_code_is_one_error_document_under_json() {
 
 #[test]
 fn wiff_and_samples_list_keep_their_document_at_exit_1_and_3_and_a_non_verdict_command_wraps_it() {
-    // file info exits 3 (a sample refused), file verify exits 1 (a difference): the wiff.list/1 and wiff.verify/1 documents stay on stdout
+    // file inventory exits 3 (a sample refused), file verify exits 1 (a difference): the wiff.list/1 and wiff.verify/1 documents stay on stdout
     let out =
         std::env::temp_dir().join(format!("mzlab_cli_contract_wiffref_{}", std::process::id()));
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_riferimento.py");
@@ -107,7 +107,11 @@ fn wiff_and_samples_list_keep_their_document_at_exit_1_and_3_and_a_non_verdict_c
     );
     let f = |n: &str| out.join(n).to_string_lossy().into_owned();
     for (a, code, schema) in [
-        (vec!["file", "info", &f("periods.wiff")], 3, "wiff.list/1"),
+        (
+            vec!["file", "inventory", &f("periods.wiff")],
+            3,
+            "wiff.list/1",
+        ),
         (
             vec![
                 "file",

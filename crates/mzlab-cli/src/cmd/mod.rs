@@ -50,6 +50,16 @@ impl Entry {
         self.schema = schema;
         self
     }
+
+    pub(crate) const fn synopsis(mut self, synopsis: &'static str) -> Self {
+        self.synopsis = synopsis;
+        self
+    }
+
+    pub(crate) const fn exits(mut self, exits: &'static [u8]) -> Self {
+        self.exits = exits;
+        self
+    }
 }
 
 /// `word` first among `rest`: the arguments of a subcommand whose entry sits in the table and whose code still reads its own word.
@@ -115,6 +125,11 @@ const JSON_DEFAULT: &[&str] = &[
     "file channels",
     "file items",
     "file info",
+    "file inventory",
+    "trace chrom",
+    "trace xic",
+    "spectrum get",
+    "spectrum list",
     "file verify",
     "spectrum dda-window",
     "ion pattern",

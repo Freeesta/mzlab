@@ -1,4 +1,4 @@
-//! `wiff::inventory` (the read-only `file info` / `file verify` of the CLI and the `wiffwrite` module) on the synthetic pairs of `tools/wiff_riferimento.py`:
+//! `wiff::inventory` (the read-only `file inventory` / `file verify` of the CLI and the `wiffwrite` module) on the synthetic pairs of `tools/wiff_riferimento.py`:
 //! every sample listed with a status, the refusals named, a file equal to itself and different from another. Skipped without python3.
 #![cfg(feature = "wiffwrite")]
 

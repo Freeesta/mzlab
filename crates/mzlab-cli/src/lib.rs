@@ -26,6 +26,8 @@ mod convert_report;
 mod dad_cmd;
 pub mod error_text;
 pub mod exit;
+mod extract;
+mod file_info_cmd;
 pub mod flow;
 #[cfg(test)]
 mod flow_align_join_tests;
@@ -177,7 +179,9 @@ mod peaks_edges_cmd;
 mod plain;
 mod sample_select;
 mod samples_cmd;
+mod spectrum_cmd;
 mod steps_cmd;
+mod trace_cmd;
 #[cfg(not(target_family = "wasm"))]
 mod validate;
 mod wiff_cmd;
