@@ -29,6 +29,7 @@ pub fn code_of_key(key: &str) -> u8 {
         "err.flow.input.sha",
         "err.session.fileNotFound",
         "err.normative.input",
+        "err.msn.rules.document",
         "error.badIndex",
     ];
     const OUTPUT_KEYS: &[&str] = &[

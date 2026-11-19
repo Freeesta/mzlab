@@ -102,7 +102,7 @@ fn pieces_are_sorted_by_mass_inflate_alone_and_the_catalogue_is_right() {
     let d = packed("sorted");
     let cat_text = std::fs::read(d.join("catalogo.json")).unwrap();
     let cat = json::parse(&cat_text).unwrap();
-    assert_eq!(cat.get("format").and_then(Value::str), Some("insilico/1"));
+    assert_eq!(cat.get("schema").and_then(Value::str), Some("insilico/1"));
     assert_eq!(cat.get("licence").and_then(Value::str), Some("CC-BY-4.0"));
     assert_eq!(
         cat.get("rows").and_then(Value::f64),
@@ -265,7 +265,7 @@ fn the_command_keeps_stdout_for_the_catalogue_only() {
     let j = crate::execute(&["db", "insilico", "pack", c, o, "--json"].map(String::from));
     assert_eq!(j.code, 0, "{}", j.stderr);
     let v = json::parse(&j.stdout).unwrap();
-    assert_eq!(v.get("format").and_then(Value::str), Some(FORMAT));
+    assert_eq!(v.get("schema").and_then(Value::str), Some(FORMAT));
     let written = std::fs::read_to_string(Path::new(o).join("catalogo.json")).unwrap();
     assert_eq!(
         String::from_utf8(j.stdout).unwrap().trim_end(),

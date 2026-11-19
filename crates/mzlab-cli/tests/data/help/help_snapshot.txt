@@ -1134,21 +1134,21 @@ exit 0
 --- stdout
 mzlab-cli msn lib: the library of MSn trees (msn-lib/1).
 
-usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn graph options] [--out PATH] [--dry-run]
-       mzlab-cli msn lib build MANIFEST.tsv [--dir DIR] [--out LIB.json] [--dry-run]
+usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn graph options] [--out PATH] [--dry-run] [--json]
+       mzlab-cli msn lib build MANIFEST.tsv [--dir DIR] [--out LIB.json] [--dry-run] [--json]
        mzlab-cli msn lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH] [--json]
        mzlab-cli msn lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
-          The options are those of `msn graph` (--help of that command). stdout: msn-lib-op/1 (library, id, added); --dry-run only checks the
-          arguments, the infusion file and the library, and writes nothing
+          The options are those of `msn graph` (--help of that command). stdout: msn-lib-op/1 (library, id, added), --json is accepted for symmetry; --dry-run only checks the
+          arguments, the infusion file and the library, and writes nothing (would_write: where it would)
   build   one entry per row of the manifest (tab separated, header): id, neutral_formula, expected_adduct, file (relative to DIR, by default the folder
           of the manifest); optional smiles, activation. The ion is "<neutral_formula> <expected_adduct>". Writes LIB.json next to the manifest unless --out.
-          stdout: msn-lib-op/1 (library, ids, bytes); --dry-run checks the manifest and that every file is there, and writes nothing
+          stdout: msn-lib-op/1 (library, ids, bytes); --dry-run checks the manifest (id, file, formula and adduct of every row) and that every file is there, and writes nothing (would_write: where it would)
   export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment). The text goes to --out or
-          stdout; with --json stdout is msn-lib-export/1 (format, spectra_bytes, out, and the text when there is no --out)
+          stdout; with --json stdout is msn-lib-export/1 (format, text_bytes, out, and the text when there is no --out)
   search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn graph`) and of the same polarity, as the JSON
           msn-search/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
@@ -1160,21 +1160,21 @@ exit 0
 --- stdout
 mzlab-cli msn lib: the library of MSn trees (msn-lib/1).
 
-usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn graph options] [--out PATH] [--dry-run]
-       mzlab-cli msn lib build MANIFEST.tsv [--dir DIR] [--out LIB.json] [--dry-run]
+usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn graph options] [--out PATH] [--dry-run] [--json]
+       mzlab-cli msn lib build MANIFEST.tsv [--dir DIR] [--out LIB.json] [--dry-run] [--json]
        mzlab-cli msn lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH] [--json]
        mzlab-cli msn lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
-          The options are those of `msn graph` (--help of that command). stdout: msn-lib-op/1 (library, id, added); --dry-run only checks the
-          arguments, the infusion file and the library, and writes nothing
+          The options are those of `msn graph` (--help of that command). stdout: msn-lib-op/1 (library, id, added), --json is accepted for symmetry; --dry-run only checks the
+          arguments, the infusion file and the library, and writes nothing (would_write: where it would)
   build   one entry per row of the manifest (tab separated, header): id, neutral_formula, expected_adduct, file (relative to DIR, by default the folder
           of the manifest); optional smiles, activation. The ion is "<neutral_formula> <expected_adduct>". Writes LIB.json next to the manifest unless --out.
-          stdout: msn-lib-op/1 (library, ids, bytes); --dry-run checks the manifest and that every file is there, and writes nothing
+          stdout: msn-lib-op/1 (library, ids, bytes); --dry-run checks the manifest (id, file, formula and adduct of every row) and that every file is there, and writes nothing (would_write: where it would)
   export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment). The text goes to --out or
-          stdout; with --json stdout is msn-lib-export/1 (format, spectra_bytes, out, and the text when there is no --out)
+          stdout; with --json stdout is msn-lib-export/1 (format, text_bytes, out, and the text when there is no --out)
   search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn graph`) and of the same polarity, as the JSON
           msn-search/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
@@ -1186,21 +1186,21 @@ exit 0
 --- stdout
 mzlab-cli msn lib: the library of MSn trees (msn-lib/1).
 
-usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn graph options] [--out PATH] [--dry-run]
-       mzlab-cli msn lib build MANIFEST.tsv [--dir DIR] [--out LIB.json] [--dry-run]
+usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn graph options] [--out PATH] [--dry-run] [--json]
+       mzlab-cli msn lib build MANIFEST.tsv [--dir DIR] [--out LIB.json] [--dry-run] [--json]
        mzlab-cli msn lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH] [--json]
        mzlab-cli msn lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
-          The options are those of `msn graph` (--help of that command). stdout: msn-lib-op/1 (library, id, added); --dry-run only checks the
-          arguments, the infusion file and the library, and writes nothing
+          The options are those of `msn graph` (--help of that command). stdout: msn-lib-op/1 (library, id, added), --json is accepted for symmetry; --dry-run only checks the
+          arguments, the infusion file and the library, and writes nothing (would_write: where it would)
   build   one entry per row of the manifest (tab separated, header): id, neutral_formula, expected_adduct, file (relative to DIR, by default the folder
           of the manifest); optional smiles, activation. The ion is "<neutral_formula> <expected_adduct>". Writes LIB.json next to the manifest unless --out.
-          stdout: msn-lib-op/1 (library, ids, bytes); --dry-run checks the manifest and that every file is there, and writes nothing
+          stdout: msn-lib-op/1 (library, ids, bytes); --dry-run checks the manifest (id, file, formula and adduct of every row) and that every file is there, and writes nothing (would_write: where it would)
   export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment). The text goes to --out or
-          stdout; with --json stdout is msn-lib-export/1 (format, spectra_bytes, out, and the text when there is no --out)
+          stdout; with --json stdout is msn-lib-export/1 (format, text_bytes, out, and the text when there is no --out)
   search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn graph`) and of the same polarity, as the JSON
           msn-search/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
@@ -1212,21 +1212,21 @@ exit 0
 --- stdout
 mzlab-cli msn lib: the library of MSn trees (msn-lib/1).
 
-usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn graph options] [--out PATH] [--dry-run]
-       mzlab-cli msn lib build MANIFEST.tsv [--dir DIR] [--out LIB.json] [--dry-run]
+usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn graph options] [--out PATH] [--dry-run] [--json]
+       mzlab-cli msn lib build MANIFEST.tsv [--dir DIR] [--out LIB.json] [--dry-run] [--json]
        mzlab-cli msn lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH] [--json]
        mzlab-cli msn lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
-          The options are those of `msn graph` (--help of that command). stdout: msn-lib-op/1 (library, id, added); --dry-run only checks the
-          arguments, the infusion file and the library, and writes nothing
+          The options are those of `msn graph` (--help of that command). stdout: msn-lib-op/1 (library, id, added), --json is accepted for symmetry; --dry-run only checks the
+          arguments, the infusion file and the library, and writes nothing (would_write: where it would)
   build   one entry per row of the manifest (tab separated, header): id, neutral_formula, expected_adduct, file (relative to DIR, by default the folder
           of the manifest); optional smiles, activation. The ion is "<neutral_formula> <expected_adduct>". Writes LIB.json next to the manifest unless --out.
-          stdout: msn-lib-op/1 (library, ids, bytes); --dry-run checks the manifest and that every file is there, and writes nothing
+          stdout: msn-lib-op/1 (library, ids, bytes); --dry-run checks the manifest (id, file, formula and adduct of every row) and that every file is there, and writes nothing (would_write: where it would)
   export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment). The text goes to --out or
-          stdout; with --json stdout is msn-lib-export/1 (format, spectra_bytes, out, and the text when there is no --out)
+          stdout; with --json stdout is msn-lib-export/1 (format, text_bytes, out, and the text when there is no --out)
   search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn graph`) and of the same polarity, as the JSON
           msn-search/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
@@ -1243,7 +1243,7 @@ usage: mzlab-cli db normative pack IN OUT       the data release of the committe
        mzlab-cli db normative import-official READER CSV SIDECAR OUT [--file NAME] [--date YYYY-MM-DD]
                                              your own copy of the ECHA Candidate List (svhc) or Proposition 65 (ca_prop65) as a private .mzsus (no network)
        mzlab-cli db normative build --cache DIR --out DIR [--only ID...] [--update-pins] [--no-resolve] [--allow-large]
-                                 [--sources FILE] [--overrides FILE]
+                                 [--sources FILE] [--overrides FILE] [--json]
 
   --cache DIR     where downloads are kept (one file per URL with its SHA-256 and date); a warm cache makes the build offline and byte-identical
   --out DIR       writes lists/ID.csv, provenance.json and unresolved.tsv there
@@ -1253,6 +1253,7 @@ usage: mzlab-cli db normative pack IN OUT       the data release of the committe
   --allow-large   accept downloads above 90 MB (PubChem and SusDat files)
   --sources FILE  default OUT/sources.json
   --overrides FILE  default OUT/overrides.tsv (list_id;entry_ref;cas;inchikey;reason)
+  --json          stdout is the normative-build/1 document (lists, sources with pins, stale); without it stdout is empty and the lines go to stderr
 
 exit: 0 done; 1 a list kept its last good file (stale); 2 usage; 3 sources.json not valid or pin mismatch; 4 an input file cannot be read; 6 a download was refused, a source failed or a file cannot be written (the table is in docs/agenti/cli-agenti.md)
 --- stderr

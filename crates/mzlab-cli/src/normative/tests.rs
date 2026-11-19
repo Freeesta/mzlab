@@ -10,7 +10,7 @@ use crate::normative::fetch::Fetch;
 use crate::normative::{run_with, NormError};
 use mzlab_feat::attributio::reglists::schema::read_list;
 
-fn data(name: &str) -> Vec<u8> {
+pub(super) fn data(name: &str) -> Vec<u8> {
     std::fs::read(
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("tests/data/normative")
@@ -52,13 +52,19 @@ impl Fake {
         f.set("parent", gz(&data("cid_parent.tsv")));
         f
     }
-    fn set(&self, u: &str, b: Vec<u8>) {
+    pub(super) fn set(&self, u: &str, b: Vec<u8>) {
         self.pages
             .lock()
             .expect("lock")
             .insert(format!("https://fixture.test/{u}"), b);
     }
-    fn empty() -> Fake {
+    pub(super) fn drop_page(&self, u: &str) {
+        self.pages
+            .lock()
+            .expect("lock")
+            .remove(&format!("https://fixture.test/{u}"));
+    }
+    pub(super) fn empty() -> Fake {
         Fake::default()
     }
     fn count(&self) -> usize {
@@ -81,6 +87,9 @@ pub(super) struct Work {
 }
 
 impl Work {
+    pub(super) fn dir(&self) -> &Path {
+        &self.dir
+    }
     pub(super) fn new(name: &str) -> Work {
         let dir = std::env::temp_dir().join(format!("mzlab_norm_{name}_{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
@@ -417,22 +426,6 @@ fn normative_only_builds_the_named_lists() {
     assert_eq!(r.code, 0, "{}", r.stderr);
     assert!(!w.out("lists/T_US_EPA.csv").is_empty());
     assert!(w.out("lists/T_EU_WATER.csv").is_empty());
-}
-
-#[test]
-fn normative_usage_errors_have_exit_code_2() {
-    let r = run_with(
-        vec!["build".into(), "--cache".into(), "x".into()],
-        Fake::empty(),
-    );
-    assert_eq!(r.code, 2);
-    assert!(r.stderr.contains("err.normative.usage"));
-    let r = run_with(vec!["build".into(), "--bogus".into()], Fake::empty());
-    assert_eq!(r.code, 2);
-    // an unknown operation is a usage error too
-    let r = run_with(vec!["bogus".into()], Fake::empty());
-    assert_eq!(r.code, 2);
-    assert!(r.stdout.is_empty());
 }
 
 #[test]

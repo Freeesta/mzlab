@@ -87,6 +87,7 @@
   "error.generic": "Error without its own text; {detail} = technical message from the engine.",
   "err.cli.usage": "Engine error message of a command line the CLI cannot use; {message} = what is wrong.",
   "err.cli.file": "CLI error: a file cannot be read; {path} = the file.",
+  "err.msn.rules.document": "CLI error: a file given to msn rules sum is not an msn-rules/1 document; {path} = the file.",
   "err.cli.out": "CLI error: an output cannot be written; {path} = the path.",
   "err.cli.input.missing": "CLI error of flow run: an input of the plan was not found; {input} = its name.",
   "err.cli.command.unknown": "CLI error of commands: no command has this path; {path} = the words given.",

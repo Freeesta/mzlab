@@ -88,7 +88,7 @@ usage: mzlab-cli db normative pack IN OUT       the data release of the committe
        mzlab-cli db normative import-official READER CSV SIDECAR OUT [--file NAME] [--date YYYY-MM-DD]
                                              your own copy of the ECHA Candidate List (svhc) or Proposition 65 (ca_prop65) as a private .mzsus (no network)
        mzlab-cli db normative build --cache DIR --out DIR [--only ID...] [--update-pins] [--no-resolve] [--allow-large]
-                                 [--sources FILE] [--overrides FILE]
+                                 [--sources FILE] [--overrides FILE] [--json]
 
   --cache DIR     where downloads are kept (one file per URL with its SHA-256 and date); a warm cache makes the build offline and byte-identical
   --out DIR       writes lists/ID.csv, provenance.json and unresolved.tsv there
@@ -98,6 +98,7 @@ usage: mzlab-cli db normative pack IN OUT       the data release of the committe
   --allow-large   accept downloads above 90 MB (PubChem and SusDat files)
   --sources FILE  default OUT/sources.json
   --overrides FILE  default OUT/overrides.tsv (list_id;entry_ref;cas;inchikey;reason)
+  --json          stdout is the normative-build/1 document (lists, sources with pins, stale); without it stdout is empty and the lines go to stderr
 
 exit: 0 done; 1 a list kept its last good file (stale); 2 usage; 3 sources.json not valid or pin mismatch; 4 an input file cannot be read; 6 a download was refused, a source failed or a file cannot be written (the table is in docs/agenti/cli-agenti.md)";
 
@@ -216,7 +217,9 @@ fn report_json(rep: &build::Report) -> String {
             }
             None => o.raw("null,\"pin_ok\":null"),
         };
-        o.raw("}");
+        o.raw(",\"pin_updated\":")
+            .raw(if s.pin_updated { "true" } else { "false" })
+            .raw("}");
     }
     o.raw("]}\n");
     o.0

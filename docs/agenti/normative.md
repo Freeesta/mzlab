@@ -6,10 +6,9 @@ The pure part, with no network or disk, lives in `crates/mzlab-feat/src/normativ
 
 ## Usage
 - `mzlab-cli db normative build --cache DIR --out normative/ [--only ID...] [--update-pins] [--no-resolve] [--allow-large] [--sources FILE] [--overrides FILE] [--json]`.
-  - Streams: the per-list lines are progress on stderr, stdout is empty, or with `--json` the `normative-build/1` document (coverage per list, `sources` with SHA-256, `pin` and `pin_ok`, the `stale` lists with the reason, `pins_updated`).
+  - Streams: the per-list lines are progress on stderr, stdout is empty, or with `--json` the `normative-build/1` document (coverage per list, `sources` with SHA-256, `pin`, `pin_ok`, `pin_updated`, the `stale` lists with the reason, `pins_updated`).
   - Exit codes: 0 done, 1 a list is stale (the document stays on stdout, a verdict like `file validate`), 2 usage (unknown operation or option), 3 `sources.json` not valid or pin mismatch (`error/1`), 4 unreadable input, 6 download refused, source failed or output not writable.
   - `--cache` keeps one file per URL (`DIR/<sha256 URL>` plus `.json` with URL, date, SHA-256, bytes); with a warm cache there is no request and the output is byte-for-byte identical (the clock is read only at the first download).
-- Exit: 0 done; 1 a list is `stale` (it keeps the last good CSV, `stale:true` and `error` in `provenance.json`); 2 usage or `sources.json`; 3 different pin; 4 download above 90 MB (`--allow-large`); 5 source, reader or resolver in error; 6 file. Keys `err.normative.usage|sources|pin|large|fetch|parse|io`.
 - A list never empties silently: 0 entries is a read error.
 
 ## Sources and pins

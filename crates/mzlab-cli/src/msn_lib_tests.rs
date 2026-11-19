@@ -112,6 +112,21 @@ fn build_reads_a_manifest_and_export_gives_msp() {
     let o = run(&["msn", "lib", "build", m.to_str().unwrap()]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let lib = d.join("manifest.json");
+    // stdout is the one msn-lib-op/1 document of what was written
+    let v = mzlab_core::json::parse(&o.stdout).unwrap();
+    assert!(
+        o.stdout.starts_with(b"{\"schema\":\"msn-lib-op/1\""),
+        "{}",
+        String::from_utf8_lossy(&o.stdout)
+    );
+    assert!(o.stdout.ends_with(b"}\n"));
+    assert_eq!(v.get("op").unwrap().str(), Some("build"));
+    assert_eq!(v.get("dry_run").unwrap().bool(), Some(false));
+    assert_eq!(v.get("ids").unwrap().arr().len(), 1);
+    assert_eq!(
+        v.get("library_bytes").unwrap().f64(),
+        Some(std::fs::metadata(&lib).unwrap().len() as f64)
+    );
     // the same entry as `add` with the ion typed by hand
     let other = d.join("other.json");
     let f = msn();
@@ -354,4 +369,41 @@ fn export_json_is_one_document() {
     let v = mzlab_core::json::parse(&o.stdout).unwrap();
     assert!(v.get("text").is_none() && v.get("out").unwrap().str().is_some());
     assert_eq!(std::fs::read_to_string(&out).unwrap(), plain);
+}
+
+/// `build --dry-run` writes nothing, says where it would write, and refuses a row without its ion or with a missing file.
+#[test]
+fn build_dry_run_checks_every_row_and_writes_nothing() {
+    let d = dir("builddry");
+    std::fs::copy(msn(), d.join("msn.mzML")).unwrap();
+    let m = d.join("manifest.tsv");
+    let head = "id\tneutral_formula\texpected_adduct\tfile\n";
+    std::fs::write(&m, format!("{head}STD-1\tC14H14N3O5\t[M+H]+\tmsn.mzML\n")).unwrap();
+    let o = run(&["msn", "lib", "build", m.to_str().unwrap(), "--dry-run"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let v = mzlab_core::json::parse(&o.stdout).unwrap();
+    assert_eq!(v.get("schema").unwrap().str(), Some("msn-lib-op/1"));
+    assert_eq!(v.get("dry_run").unwrap().bool(), Some(true));
+    assert!(v
+        .get("would_write")
+        .unwrap()
+        .str()
+        .unwrap()
+        .ends_with("manifest.json"));
+    assert!(!d.join("manifest.json").exists());
+    for (row, what) in [
+        ("STD-1\tC14H14N3O5\t[M+H]+\tgone.mzML", "a missing file"),
+        ("STD-1\t\t[M+H]+\tmsn.mzML", "no formula"),
+        ("STD-1\tC14H14N3O5\t\tmsn.mzML", "no adduct"),
+    ] {
+        std::fs::write(&m, format!("{head}{row}\n")).unwrap();
+        let o = run(&["msn", "lib", "build", m.to_str().unwrap(), "--dry-run"]);
+        assert_ne!(o.code, 0, "{what}");
+        assert!(
+            String::from_utf8_lossy(&o.stdout).contains("\"schema\":\"error/1\""),
+            "{what}"
+        );
+        assert!(!d.join("manifest.json").exists(), "{what}");
+    }
+    let _ = std::fs::remove_dir_all(&d);
 }

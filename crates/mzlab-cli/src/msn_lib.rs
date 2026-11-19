@@ -4,6 +4,7 @@
 
 use std::path::{Path, PathBuf};
 
+use mzlab_core::elements::parse_formula;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Out;
 use mzlab_core::msngraph::{aggiungi, cerca, Options, OpzioniCerca};
@@ -12,21 +13,21 @@ use mzlab_core::msngraph::{export_text, LibFormato as Format};
 
 pub const HELP: &str = "mzlab-cli msn lib: the library of MSn trees (msn-lib/1).
 
-usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn graph options] [--out PATH] [--dry-run]
-       mzlab-cli msn lib build MANIFEST.tsv [--dir DIR] [--out LIB.json] [--dry-run]
+usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn graph options] [--out PATH] [--dry-run] [--json]
+       mzlab-cli msn lib build MANIFEST.tsv [--dir DIR] [--out LIB.json] [--dry-run] [--json]
        mzlab-cli msn lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH] [--json]
        mzlab-cli msn lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
-          The options are those of `msn graph` (--help of that command). stdout: msn-lib-op/1 (library, id, added); --dry-run only checks the
-          arguments, the infusion file and the library, and writes nothing
+          The options are those of `msn graph` (--help of that command). stdout: msn-lib-op/1 (library, id, added), --json is accepted for symmetry; --dry-run only checks the
+          arguments, the infusion file and the library, and writes nothing (would_write: where it would)
   build   one entry per row of the manifest (tab separated, header): id, neutral_formula, expected_adduct, file (relative to DIR, by default the folder
           of the manifest); optional smiles, activation. The ion is \"<neutral_formula> <expected_adduct>\". Writes LIB.json next to the manifest unless --out.
-          stdout: msn-lib-op/1 (library, ids, bytes); --dry-run checks the manifest and that every file is there, and writes nothing
+          stdout: msn-lib-op/1 (library, ids, bytes); --dry-run checks the manifest (id, file, formula and adduct of every row) and that every file is there, and writes nothing (would_write: where it would)
   export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment). The text goes to --out or
-          stdout; with --json stdout is msn-lib-export/1 (format, spectra_bytes, out, and the text when there is no --out)
+          stdout; with --json stdout is msn-lib-export/1 (format, text_bytes, out, and the text when there is no --out)
   search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn graph`) and of the same polarity, as the JSON
           msn-search/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
@@ -164,16 +165,20 @@ fn build(args: Vec<String>, tmp: &Path) -> Result<(String, String)> {
             return Err(bad("every row needs id and file"));
         }
         ids.push(id.to_string());
+        let (neutral, adduct) = (
+            column(&row, "neutral_formula"),
+            column(&row, "expected_adduct"),
+        );
+        if neutral.is_empty() || adduct.is_empty() {
+            return Err(Error::new("err.msnlib.noIon"));
+        }
+        parse_formula(neutral)?;
         if dry {
             // every file of the manifest must be there; no graph is made
             std::fs::metadata(folder.join(file)).map_err(io)?;
             continue;
         }
-        let ion = format!(
-            "{} {}",
-            column(&row, "neutral_formula"),
-            column(&row, "expected_adduct")
-        );
+        let ion = format!("{neutral} {adduct}");
         let none = |s: &str| (!s.is_empty()).then(|| s.to_string());
         let o = Options {
             formula: Some(ion),
@@ -186,7 +191,12 @@ fn build(args: Vec<String>, tmp: &Path) -> Result<(String, String)> {
     }
     let names: Vec<&str> = ids.iter().map(String::as_str).collect();
     if dry {
-        return Ok((op_json("build", &out, &names, 0, "", true), String::new()));
+        let extra =
+            ",\"would_write\":".to_string() + &Out::default().str(&out.display().to_string()).0;
+        return Ok((
+            op_json("build", &out, &names, 0, &extra, true),
+            String::new(),
+        ));
     }
     std::fs::write(&out, &text).map_err(io)?;
     Ok((

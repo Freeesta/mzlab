@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 use mzlab_core::json::{parse, round, Out, Value};
 use mzlab_core::msngraph::{tabella_regole, Tipo};
+use mzlab_core::Error;
 
 use crate::Outcome;
 
@@ -158,16 +159,17 @@ fn write_layer(o: &mut Out, (layer_name, pol): &(String, i64), s: &Layer) {
     o.raw("]}");
 }
 
-/// The summary of the `msn-rules/1` documents `docs`: one JSON object, the strata ordered by name and polarity.
-pub fn summed(docs: &[String]) -> Result<String, String> {
+/// The summary of the `msn-rules/1` documents `docs` (name, text): one JSON object, the strata ordered by name and polarity.
+/// A text that is not an `msn-rules/1` document is `err.msn.rules.document`, named by its file.
+pub fn summed(docs: &[(String, String)]) -> Result<String, Error> {
     let mut layers: BTreeMap<(String, i64), Layer> = BTreeMap::new();
     let mut skipped: BTreeMap<String, usize> = BTreeMap::new();
     let mut records = Vec::new();
-    for d in docs {
-        let doc = parse(d.as_bytes())
-            .map_err(|_| "err.cli.line message=not an msn-rules/1 document".to_string())?;
+    for (name, text) in docs {
+        let bad = || Error::new("err.msn.rules.document").with("path", name);
+        let doc = parse(text.as_bytes()).map_err(|_| bad())?;
         if doc.get("schema").and_then(Value::str) != Some("msn-rules/1") {
-            return Err("err.cli.line message=not an msn-rules/1 document".to_string());
+            return Err(bad());
         }
         records.extend(doc.get("records").map_or(&[][..], Value::arr).to_vec());
     }
@@ -240,7 +242,7 @@ pub fn run(args: Vec<String>) -> Outcome {
             return Outcome::fail(&format!("unknown option {x}"));
         } else {
             match std::fs::read_to_string(&x) {
-                Ok(t) => docs.push(t),
+                Ok(t) => docs.push((x, t)),
                 Err(e) => return failed(format!("{x}: {e}")),
             }
         }
@@ -250,6 +252,6 @@ pub fn run(args: Vec<String>) -> Outcome {
     }
     match summed(&docs) {
         Ok(t) => emit(t, &out),
-        Err(e) => failed(e),
+        Err(e) => Outcome::fail_error(&e),
     }
 }

@@ -52,6 +52,7 @@ embed!(
     "msn-lib-1.json",
     "msn-rules-1.json",
     "msn-rules-sum-1.json",
+    "msn-search-1.json",
     "msn-summary-1.json",
     "mzflow-2.json",
     "mzrun-2.json",

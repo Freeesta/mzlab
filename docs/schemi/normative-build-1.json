@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "normative-build/1",
   "title": "normative-build/1: the result of db normative build --json",
-  "description": "Coverage per regulatory list, the sources read with the SHA-256 and the pin each was checked against (pin and pin_ok are null when the URL is not pinned), and the lists that kept their last good file (stale; the command exits 1 and this document stays on stdout). Code: crates/mzlab-cli/src/normative/mod.rs.",
+  "description": "Coverage per regulatory list, the sources read with the SHA-256 and the pin each was checked against (pin and pin_ok are null when the URL has no pin; pin_updated says whether --update-pins replaced it), and the lists that kept their last good file (stale; the command exits 1 and this document stays on stdout). Code: crates/mzlab-cli/src/normative/mod.rs.",
   "type": "object",
   "required": [
     "schema",
@@ -86,7 +86,8 @@
           "url",
           "sha256",
           "pin",
-          "pin_ok"
+          "pin_ok",
+          "pin_updated"
         ],
         "properties": {
           "url": {
@@ -105,7 +106,12 @@
             "type": [
               "boolean",
               "null"
-            ]
+            ],
+            "description": "Whether what was read matches `pin` (the pin before this run); null when there was no pin."
+          },
+          "pin_updated": {
+            "type": "boolean",
+            "description": "True when --update-pins wrote the read SHA-256 as the new pin for this source."
           }
         }
       }

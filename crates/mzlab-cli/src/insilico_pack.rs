@@ -95,7 +95,7 @@ struct Piece {
 
 fn catalog(c: &Cat, pieces: &[Piece]) -> String {
     let mut o = Out::default();
-    o.raw("{\"format\":")
+    o.raw("{\"schema\":")
         .str(FORMAT)
         .raw(",\"compression\":\"zlib\",\"piece_raw\":");
     o.int(c.piece_raw as i64).raw(",\"columns\":[");

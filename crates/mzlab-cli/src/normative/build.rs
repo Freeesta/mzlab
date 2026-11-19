@@ -30,11 +30,12 @@ pub struct Failed {
     pub why: String,
 }
 
-/// One source read by a run: its URL, the SHA-256 of what was read and the pin it was checked against (`None`: not pinned).
+/// One source read by a run: its URL, the SHA-256 of what was read, the pin it was checked against (`None`: not pinned yet) and whether `--update-pins` wrote the read hash as the new pin.
 pub struct SourceRead {
     pub url: String,
     pub sha256: String,
     pub pin: Option<String>,
+    pub pin_updated: bool,
 }
 
 /// What a run did: one line per list, and the same facts as data (`normative-build/1`): coverage per list, the sources with their pins, the stale lists.
@@ -145,13 +146,15 @@ fn check_pins(
     }
     Ok(seen
         .into_iter()
-        .map(|(url, sha256)| SourceRead {
-            pin: pins
-                .iter()
-                .find(|(u, _)| *u == url)
-                .and_then(|(_, p)| p.clone()),
-            url,
-            sha256,
+        .map(|(url, sha256)| {
+            let listed = pins.iter().find(|(u, _)| *u == url);
+            let pin = listed.and_then(|(_, p)| p.clone());
+            SourceRead {
+                pin_updated: o.update_pins && listed.is_some() && pin.as_ref() != Some(&sha256),
+                pin,
+                url,
+                sha256,
+            }
         })
         .collect())
 }
@@ -214,8 +217,8 @@ pub fn run<F: Fetch>(cache: &Cache<F>, o: &Opts) -> Result<Report, NormError> {
         lines,
         stale: failed.len(),
         lists,
-        sources: sources_read,
         failed,
-        pins_updated: o.update_pins,
+        pins_updated: sources_read.iter().any(|s| s.pin_updated),
+        sources: sources_read,
     })
 }

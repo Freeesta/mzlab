@@ -53,6 +53,7 @@ I18N.add("en", {
   "err.cli.line": "The command line cannot be read: {message}.",
   "err.cli.set": "The setting “{set}” is not valid: {message}.",
   "err.cli.usage": "{message}",
+  "err.msn.rules.document": "The file {path} is not an msn-rules/1 document: pass the output of msn rules.",
   "err.cli.file": "The file {path} cannot be read.",
   "err.cli.out": "The output {path} cannot be written.",
   "err.cli.input.missing": "The input {input} was not found: pass the file, or the folder that holds it, with --in.",
