@@ -737,7 +737,7 @@ const LISTE = (() => {
 
       /** @type {Bag[]} */ let items = [];
       if (hasMz) {
-        try { items = await lookup(idx, qMz, byDa, tolVal); } catch (e) { if (mine === renderSeq) elCount.textContent = I18N.t("lst.lookupFailed", { why: String(/** @type {Error} */ (e).message || e) }); return; }
+        try { items = await lookup(idx, qMz, byDa, tolVal); } catch (e) { if (mine === renderSeq) { moreObs?.disconnect(); elTbody.innerHTML = ""; elWrap.scrollTop = 0; elCount.textContent = I18N.t("lst.lookupFailed", { why: String(/** @type {Error} */ (e).message || e) }); } return; }
         if (mine !== renderSeq) return;       // a newer render started while Rust answered
       } else {
         // Collect all items from active lists for browsing

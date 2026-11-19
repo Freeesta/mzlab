@@ -63,7 +63,7 @@ try:
                 import re
                 mzs = pg.evaluate("[...document.querySelectorAll('#lst-tbody tr:not(#lst-more) td:first-child')].map(t=>t.textContent)"); assert mzs and all(re.fullmatch(r"\d+\.\d{4}", m) for m in mzs), mzs[:5]      # exact m/z with 4 decimals in LR too
                 pg.fill("#lst-q", "63,3"); wait_for_js(pg, "document.querySelector('#lst-tbody').textContent.includes('PEG')", 5000); t = pg.inner_text("#lst-tbody"); assert "63." in t and "PEG" in t, t[:200]      # comma decimals rank by m/z
-                import json; prev = pg.evaluate("document.querySelector('#lst-tbody').textContent"); pg.fill("#lst-q", "peg"); wait_for_js(pg, "document.querySelector('#lst-tbody').textContent !== " + json.dumps(prev), 5000); t2 = pg.inner_text("#lst-tbody"); assert "PEG" in t2, t2[:200]      # text filters by name
+                import json; prev = pg.evaluate("document.querySelector('#lst-tbody').textContent"); pg.fill("#lst-q", "peg"); wait_for_js(pg, "document.querySelector('#lst-tbody').textContent !== " + json.dumps(prev) + " && [...document.querySelectorAll('#lst-tbody tr')].some(r => /PEG/.test(r.textContent))", 5000); t2 = pg.inner_text("#lst-tbody"); assert "PEG" in t2, t2[:200]      # text filters by name
                 assert pg.locator("#lst-pol-seg").count() == 0 and pg.locator("#lst-txt").count() == 0, "one field, no polarity toggle"
                 pols = set(pg.evaluate("[...document.querySelectorAll('#lst-tbody tr td:last-child .pol')].map(e=>e.textContent.trim())")); assert pols <= {"+", "\u2212", "\u00b1"} and pols, pols
                 # the Data-view drawer scrolls inside #lst-table-wrap (the observer root): scrolling it loads more rows
@@ -73,7 +73,7 @@ try:
                 wait_for_js(pg, f"document.querySelectorAll('#lst-tbody tr:not(#lst-more)').length>{n0}", 5000)
                 assert "Keller" not in pg.inner_text("#lst-ref-box") and pg.locator("#lst-ref-box a").count() == 0
                 assert not pg.is_visible("#sb-help")
-                pg.set_viewport_size({"width": 400, "height": 800}); pg.wait_for_timeout(200)
+                pg.set_viewport_size({"width": 400, "height": 800}); wait_for_js(pg, "window.innerWidth === 400", 5000)
                 assert pg.evaluate("document.documentElement.scrollWidth <= window.innerWidth"), "no horizontal scroll at 400 px"
                 pg.set_viewport_size({"width": 1440, "height": 900})
             finally:
@@ -100,6 +100,19 @@ try:
             assert pg.locator("#lst-tbody tr .pol").count() <= n_ppm
             pg.evaluate("CALCQUI.set({ppm:'5', da:'0.5', unit:{hr:null, lr:null}})")
         step("Reference lists: tolerance control of Adducts & losses, Da and ppm honoured, choice remembered", lists_tolerance)
+        def lists_lookup_failed():
+            # a failed Rust lookup clears the table (no stale rows, no old observer) and says why
+            pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())")
+            pg.evaluate("LISTE.open({})"); pg.wait_for_selector("#lst-tbody tr", timeout=8000)
+            pg.evaluate("window.__fetch0 = window.fetch; window.fetch = (u, o) => String(u).includes('reflist_match') ? Promise.reject(new Error('boom')) : window.__fetch0(u, o); 0")
+            try:
+                pg.fill("#lst-q", "63.04")
+                wait_for_js(pg, "document.querySelector('#lst-count').textContent === 'The lookup failed: boom'", 5000)
+                assert pg.locator("#lst-tbody tr").count() == 0 and pg.locator("#lst-more").count() == 0, "no stale rows or sentinel after a failed lookup"
+            finally:
+                pg.evaluate("window.fetch = window.__fetch0; 0")
+            pg.fill("#lst-q", "63.04"); wait_for_js(pg, "document.querySelectorAll('#lst-tbody tr').length > 0 && document.querySelector('#lst-count').textContent !== 'The lookup failed: boom'", 5000)
+        step("Reference lists: a failed lookup clears the table and shows its reason", lists_lookup_failed)
         def ptable():
             pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())")
             pg.click("#np-pt"); pg.wait_for_timeout(500)
