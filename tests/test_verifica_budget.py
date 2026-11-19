@@ -29,3 +29,11 @@ def test_parts_cover_every_test_once_and_part_one_is_lighter():
 def test_the_slowest_e2e_are_not_in_part_one():
     names = ["e2e_tpmine_lr_rust", "e2e_tpmine_ingresso", "e2e_tpmine_transf"] + [f"e2e_{i:03d}" for i in range(60)]
     assert not [x for x in verifica.parte_di(names, 1, 5) if x in verifica.SLOW]
+
+
+def test_plain_parts_cover_every_test_once_and_the_slowest_is_in_part_one():
+    names = ["e2e_giro_intestazione", "e2e_tpmine_lr_rust"] + [f"e2e_{i:03d}" for i in range(40)]
+    for n in (1, 2, 3):
+        parts = [verifica.parte_di(names, k, n, plain=True) for k in range(1, n + 1)]
+        assert sorted(x for p in parts for x in p) == sorted(names)
+        assert verifica.SLOW[0] == "e2e_giro_intestazione" and "e2e_giro_intestazione" in parts[0]

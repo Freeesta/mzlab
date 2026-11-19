@@ -65,12 +65,12 @@ fn a_known_version_opens() {
 #[test]
 fn a_header_version_above_the_known_one_is_newer_and_not_written() {
     let mut idx = index();
-    idx[8..12].copy_from_slice(&3u32.to_le_bytes());
-    assert_eq!(newer_version(&idx), Some(3));
+    idx[8..12].copy_from_slice(&4u32.to_le_bytes());
+    assert_eq!(newer_version(&idx), Some(4));
     let (k, p) = key(idx).expect("refused");
     assert_eq!(k, "error.newerFormat");
     assert!(
-        p.contains(&("kind".into(), "mzidx".into())) && p.contains(&("version".into(), "3".into())),
+        p.contains(&("kind".into(), "mzidx".into())) && p.contains(&("version".into(), "4".into())),
         "{p:?}"
     );
 }

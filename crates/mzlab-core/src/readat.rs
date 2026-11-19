@@ -16,6 +16,13 @@ impl ReadAt for Vec<u8> {
     }
 }
 
+/// A borrowed reader reads as the reader does (a caller that keeps its reader lends it to a parser that takes one by value).
+impl<T: ReadAt + ?Sized> ReadAt for &mut T {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
+        (**self).read_at(off, buf)
+    }
+}
+
 impl ReadAt for std::fs::File {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
         use std::io::{Read, Seek, SeekFrom};

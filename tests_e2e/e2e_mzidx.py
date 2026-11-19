@@ -48,7 +48,7 @@ try:
               const kv = await new Promise(ok => { const r = db.transaction("kv").objectStore("kv").get("schema"); r.onsuccess = () => ok(r.result); });
               const rows = await all("manifest"); db.close(); return { kv, paths: rows.map(x => x.path).sort(), tipi: [...new Set(rows.map(x => x.tipo))].sort(), idx: rows.filter(x => x.path.startsWith("idx/")).map(x => [x.versione_formato, !!x.crate, !!x.sorgente_sha256]) }; }""")
             assert m["kv"] == 3, m
-            assert m["idx"] == [[1, True, True]] * 3, m                      # the version, the crate and the source are read from each index
+            assert m["idx"] == [[3, True, True]] * 3, m                      # the version, the crate and the source are read from each index
             assert sum(p.startswith("files/") for p in m["paths"]) == 3 and sum(p.startswith("idx/") for p in m["paths"]) == 3, m
         step("the manifest has a row for every file and the schema is current", manifest)
         def open_and_draw():

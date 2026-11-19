@@ -72,7 +72,7 @@ try:
             if opener: opener()
             seen = set()
             todo = [c for c in pg.evaluate(CONTROLS, root) if c["k"] not in base and c["id"] not in SKIP]
-            todo.sort(key=lambda c: c["id"] in ("uip-x", "refx", "listex", "calcx", "sb-x"))      # the close buttons last
+            todo.sort(key=lambda c: c["id"] in ("uip-x", "refx", "calcx", "sb-x"))      # the close buttons last
             for c in todo[:cap]:
                 key = (c["grp"], c["tag"], c["id"] or c["name"] if c["grp"] != "refdlg" else "element")      # one element of the periodic table stands for all
                 if key in seen or c["name"] in ("English", "Italiano"): continue
