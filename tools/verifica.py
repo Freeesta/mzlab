@@ -315,10 +315,11 @@ T0 = time.time()
 
 
 def parte_di(names: list[str], k: int, n: int, plain: bool = False) -> list[str]:
-    """Part k of n (1-based) of the e2e `names`: the slow ones first, dealt round-robin, so the parts take about the same time and are the same on every call.
-    Part 1 also runs syntax, texts, pytest and prova_hr: it gets one slot per two rounds of the others, and the slowest e2e (SLOW, first in the rank) go to the other parts."""
+    """Part k of n (1-based) of the e2e `names`: the slow ones first, dealt in turn, so the parts take about the same time and are the same on every call.
+    Night (the CI of notte.yml): part 1 also runs syntax, texts, pytest and prova_hr, so it gets one slot per two rounds of the others and the slowest e2e (SLOW) go to the other parts.
+    plain (--fumo --parte): no part has that extra work; part 1 takes rank[0] (on Chromium/Linux e2e_giro_intestazione, ~370 s) and then one slot of every 3(n-1)+1."""
     rank = [x for x in SLOW if x in names] + [x for x in names if x not in SLOW]
-    wheel = [*range(2, n + 1), 1, *range(2, n + 1)] if n > 1 and not plain else [1, *range(2, n + 1), *range(2, n + 1), *range(2, n + 1)]      # plain (--fumo): part 1 gets the slowest test (e2e_giro_intestazione, ~370 s on a runner) and a quarter of the rest, so the parts end together
+    wheel = [*range(2, n + 1), 1, *range(2, n + 1)] if n > 1 and not plain else [1, *range(2, n + 1), *range(2, n + 1), *range(2, n + 1)]
     return [x for i, x in enumerate(rank) if wheel[i % len(wheel)] == k]
 
 
