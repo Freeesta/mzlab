@@ -72,8 +72,8 @@ const PINNED: &[(&str, [&str; 4])] = &[
         "LAB-A",
         [
             "341c0443e439db21387b7e932eaf583663ce6b9d90fcee7006e497a27222fe69",
-            "c624928b0f468a1dddab510cea7764f0ca63400e224e7113364762c17fa263ea",
-            "769eece3601b43de970b0bdcb385c5712354f3ec94f1bc12280d60dafc5311e5",
+            "8ca8ce98b77fc41fbd1e28685edbc83759beb5bde064e470111a054e68209113",
+            "660515dde622a5519f006b12951a59aba16377134494fb3a8b5318cfc89f86d3",
             "9aea18ce54aed30996187adbf32d15255a83ef102b2b4ca428a8b7b5b776d9ab",
         ],
     ),

@@ -1,4 +1,4 @@
-"""The facts of the open files without a model (flow/lazy/flow-llm-facts.js, docs/agenti/llm.md «Fatti senza modello»): in the profile «ricerca» with the assistant off, three
+"""The facts of the open files without a model (flow/lazy/flow-llm-facts.js, docs/agenti/llm.md «Fatti senza modello»): in the profile «research» with the assistant off, three
 synthetic files open, the Flow shows the «Files» card and the proposals of the parameters; the inspection and the proposal are the same bytes as `mzlab-cli llm inspect|params`
 (tests/data/llm/fatti/); «Apply» is one entry of Undo; the readers of the assistant get the inspection (accepted, not skipped); axe and target sizes; no request leaves the site.
 Run from the repo root: python3 tests_e2e/e2e_llm_fatti.py"""

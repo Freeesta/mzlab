@@ -17,4 +17,4 @@ def test_golden_validates():
 def test_unknown_sections_are_rejected():
     v = Draft202012Validator(SCHEMA)
     assert list(v.iter_errors({**GOLDEN, "spectra": []}))
-    assert list(v.iter_errors({**GOLDEN, "profile": "corso"}))
+    assert list(v.iter_errors({**GOLDEN, "profile": "course"}))

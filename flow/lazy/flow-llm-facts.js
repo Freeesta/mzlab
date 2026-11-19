@@ -1,8 +1,8 @@
 // @ts-check
-// Flow (profile «ricerca»): the facts of the open files that need no model. It collects from the engine routes (the same in the site and in the app: `api/session`, `api/scan_stats`,
+// Flow (profile «research»): the facts of the open files that need no model. It collects from the engine routes (the same in the site and in the app: `api/session`, `api/scan_stats`,
 // `api/mrm`, `api/metodo`, `api/campioni/proponi`) the sources of `inspection/1`, asks Rust (llm/ worker, no conversation, nothing leaves the site) for the inspection and the proposals
 // of the parameters, and shows them as the «Files» card with «Apply»/«Discard» (one entry of S.undo each). It also gives the readers of the assistant their inputs (`readerInput`) and the
-// charts their sources (`F.chartSources`). Loaded by flow-shell.js in the profile «ricerca», with or without the assistant. English only.
+// charts their sources (`F.chartSources`). Loaded by flow-shell.js in the profile «research», with or without the assistant. English only.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;

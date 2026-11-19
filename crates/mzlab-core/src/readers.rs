@@ -11,7 +11,7 @@ use crate::mzmlwrite::{Header, SpectrumExtra};
 /// Version of this contract; a `ReaderEntry` states the one it was written for.
 pub const CONTRATTO: u16 = 1;
 
-/// The formats the readers know (the `id` is the one of the registry and of `method/1.origine.formato`).
+/// The formats the readers know (the `id` is the one of the registry and of `method/1.origin.format`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Format {
     ThermoRaw,
@@ -252,7 +252,7 @@ pub trait Reader {
     fn scan_profile(&mut self, _c: usize, _k: usize) -> Result<Option<Spectrum>> {
         Ok(None)
     }
-    /// The header fields of scan `k` (collision energy, isolation, trailer): `nome`, `valore`, `unita`, `cv`.
+    /// The header fields of scan `k` (collision energy, isolation, trailer): `name`, `value`, `unit`, `cv`.
     fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>>;
     fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>>;
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram>;

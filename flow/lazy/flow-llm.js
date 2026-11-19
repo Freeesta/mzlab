@@ -1,7 +1,7 @@
 // @ts-check
 // Flow (administrator mode): the panel of the assistant, to the right of the canvas. It shows the conversation, the level, the estimated cost, what will be sent, and the cards where the user
 // decides (L0 «Apply»/«Discard» of a proposed plan, L1 «Allow»/«Deny», L2 a register of the edits with «Undo»). The loop is llm/llm-agente.js (the state machine is Rust); the tools are flow-llm-tools.js.
-// Loaded by flow-shell.js when the assistant is on (profile «ricerca», switched on in the settings, consent given), or after «Try the assistant» in the profile «demo» (fixed settings
+// Loaded by flow-shell.js when the assistant is on (profile «research», switched on in the settings, consent given), or after «Try the assistant» in the profile «demo» (fixed settings
 // of llm/llm-demo.js, two script chips whose sent text is fixed so that a strict recording replays it in any language). English only, but for the chip labels (lang/ keys).
 (() => {
   "use strict";

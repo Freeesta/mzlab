@@ -1,4 +1,4 @@
-//! The UV detector of a Thermo `.raw` acquired through Chromeleon, for `method/1.rivelatori`: the lines of the instrument script that give the channels
+//! The UV detector of a Thermo `.raw` acquired through Chromeleon, for `method/1.detectors`: the lines of the instrument script that give the channels
 //! (`UV_VIS_1.Wavelength = 260.0 [nm]`, `.Bandwidth`, `.RefWavelength`, `.RefBandwidth`), the 3D field (`3DFIELD.MinWavelength`, `.MaxWavelength`, `.BunchWidth`) and the
 //! sampling rate (`Data_Collection_Rate = 2 [Hz]`). The first line of each key wins (later lines change the value during the run).
 
@@ -19,7 +19,7 @@ fn first(blocks: &[String], key: &str) -> Option<f64> {
         .find_map(|l| number_of(l, key))
 }
 
-/// The `rivelatori` array (`None`: the method has no UV lines).
+/// The `detectors` array (`None`: the method has no UV lines).
 pub fn section(blocks: &[String]) -> Option<V> {
     let channels: Vec<V> = (1..=8)
         .filter_map(|k| {

@@ -60,7 +60,7 @@ pub fn methods() -> Step {
             wasm_ceiling_bytes: Some(FEAT_CEILING),
             native: true,
         },
-        errors: vec!["err.corsa.prov"],
+        errors: vec!["err.run_report.prov"],
         ..Step::core(
             "report.methods",
             "Methods text",

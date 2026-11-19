@@ -1,5 +1,5 @@
 //! The record the browser writes: the reports of the jobs of the base chain (the files of a native run, the estimates and the memory of `job_meta`) give, through
-//! the route `record_prov`/`record_corsa`, the `prov.json` and `report.json` of `flow run` byte for byte, apart from the times and the heap.
+//! the route `record_prov`/`record_run_report`, the `prov.json` and `report.json` of `flow run` byte for byte, apart from the times and the heap.
 
 use crate::flow_run_tests::{fixture, flow_run, p, untimed};
 use mzlab_core::budget::sha256_hex;
@@ -171,8 +171,8 @@ fn same_record(out: &Path, plan: &str, jobs: &[String]) -> String {
     let native = without_modules(&std::fs::read_to_string(out.join("prov.json")).unwrap());
     assert_eq!(untimed(&prov), untimed(&native));
     let mut c = Out::default();
-    c.raw("{\"prov\":").str(&prov).raw(",\"uscite\":[]}");
-    let run = mzlab_core::flow::sched_route("record_corsa", &c.0).unwrap();
+    c.raw("{\"prov\":").str(&prov).raw(",\"outputs\":[]}");
+    let run = mzlab_core::flow::sched_route("record_run_report", &c.0).unwrap();
     let native = without_modules(&std::fs::read_to_string(out.join("report.json")).unwrap());
     assert_eq!(untimed(&run), untimed(&native));
     prov

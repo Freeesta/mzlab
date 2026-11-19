@@ -43,14 +43,14 @@
   };
 
   /** the text of a problem; the keys are the err.flow.* of the Rust checker (docs/agenti/rust-flow.md) @param {any} p {instance, port, key, params} */
-  /** whether the assistant may exist on this page: profile «ricerca», switched on, a consent for the provider (llm-agente.js checks again) */
+  /** whether the assistant may exist on this page: profile «research», switched on, a consent for the provider (llm-agente.js checks again) */
   // the profile rule of uipProfile() in settings.js (not loaded yet when the Flow is built): administrator mode or the desktop app
   F.research = () => {
     const w = /** @type {any} */ (window), key = (/** @type {string} */ k) => (typeof NOMI !== "undefined" ? NOMI.KEY(k) : "mzlab." + k);
     let admin = false; try { admin = localStorage.getItem(key("admin")) === "1"; } catch (_) { /* blocked */ }
     return admin || !!w.MZLAB_DESKTOP;
   };
-  /** the profile «demo» of settings.js (uipProfile): a visitor outside «ricerca» may try the assistant of the public demo from the Flow page only */
+  /** the profile «demo» of settings.js (uipProfile): a visitor outside «research» may try the assistant of the public demo from the Flow page only */
   F.demo = () => { const u = /** @type {any} */ (globalThis).uipProfile; return !F.research() && typeof u === "function" && u() === "demo"; };
   F.llmOn = () => {
     const read = (/** @type {string} */ k) => { try { return JSON.parse(localStorage.getItem(k) || "{}") || {}; } catch (_) { return {}; } };

@@ -3,7 +3,7 @@ The basic rules of the assistant and of external agents that remain binding; the
 
 ## Principles
 - Explicit opt-in, per person: off by default on site and desktop; it is turned on in Settings with the consent window. No request to a provider before consent (an e2e counts the requests) and zero bytes downloaded by whoever does not turn it on; the caps of the existing `.wasm` files do not change.
-- Profile `corso`: the LLM does not exist (no button, no module, `context/1` rejected with `err.llm.profile.course` as defence in depth). Profile `ricerca`: it exists, off; at unit resolution an m/z is a candidate and the `hr` steps are not called. The profile is a teaching setting, not a security barrier.
+- Profile `course`: the LLM does not exist (no button, no module, `context/1` rejected with `err.llm.profile.course` as defence in depth). Profile `research`: it exists, off; at unit resolution an m/z is a candidate and the `hr` steps are not called. The profile is a teaching setting, not a security barrier.
 - Everything in Rust: requests, stream reading, agent loop, permissions, summaries, chart checking. JS only transport (fetch), interface and drawing. The `mzlab-llm` crate does no I/O: it builds `{url, headers without key, body}` and the transport adds the key.
 - Data: the LLM sees only summaries built by Rust (`context/1`, `inspection/1`), never raw files, whole spectra or paths; what is sent is shown first ("What will be sent").
 - Never silent: every action on the plan or on the runs is shown, logged (`llmlog/1` and `llm` in `prov/1`) and can be undone; generated code is never run by itself. There are no tools that delete files, write outside the run folder, change privacy or profile, or open the network.

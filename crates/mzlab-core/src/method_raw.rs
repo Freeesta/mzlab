@@ -1,7 +1,7 @@
 //! The Thermo `.raw` adapter of `method/1` (`method.rs`): the sequence row (vial, volume, id, comment, method), the instrument (model, serial number, versions of
-//! the InstID block), the people and the computer, the LC and the mass spectrometer methods embedded in the file (`method_raw/script.rs`) and, in `campi`,
+//! the InstID block), the people and the computer, the LC and the mass spectrometer methods embedded in the file (`method_raw/script.rs`) and, in `fields`,
 //! every other field of the container, of the scan trailer and of the method (`method_raw/fields.rs`). What is only guessed from position is marked in `docs/agenti/method.md`.
-//! The status log is in `campi` (`campi/status.rs`); when its schema is not found `avvisi` says so.
+//! The status log is in `fields` (`fields/status.rs`); when its schema is not found `warnings` says so.
 
 mod detectors;
 pub(crate) mod fields;
@@ -135,7 +135,7 @@ fn sampler(pairs: &[script::Pair]) -> Option<V> {
     obj(vec![("parameters", Some(V::Arr(params)))])
 }
 
-/// The texts of the method as they are (`grezzo`), cut to `GRAW_MAX` in all, the shortest given their room first (the LC script and the MS text are
+/// The texts of the method as they are (`raw`), cut to `GRAW_MAX` in all, the shortest given their room first (the LC script and the MS text are
 /// never pushed out by a long XML), without the characters outside the XML `Char` production.
 fn raw_texts(blocks: &[String]) -> Vec<V> {
     let mut order: Vec<usize> = (0..blocks.len()).collect();
@@ -194,7 +194,7 @@ fn open_warnings(raw: &RawFileReader) -> Vec<Option<V>> {
     skipped_warnings(&raw.warnings)
 }
 
-/// One `avvisi` entry per warning of the reader (`RawFileReader::warnings`, the analog controllers left out by `analog_traces_counted`).
+/// One `warnings` entry per warning of the reader (`RawFileReader::warnings`, the analog controllers left out by `analog_traces_counted`).
 fn skipped_warnings(warnings: &[opentfraw::Warning]) -> Vec<Option<V>> {
     warnings
         .iter()
@@ -318,7 +318,7 @@ fn tsq_experiment(blocks: &[String], exps: &mut Vec<V>, warn: &mut Vec<Option<V>
             }
             exps.extend(tsq::experiment(&t, exps.len() + 1));
         }
-        // a method that announces SRM transitions and gives no table that parses: the transitions stay in `grezzo`
+        // a method that announces SRM transitions and gives no table that parses: the transitions stay in `raw`
         None if blocks.iter().any(|b| tsq::announces_transitions(b)) => {
             warn.push(not_decoded("Method MS: transitions"));
         }
@@ -384,7 +384,7 @@ fn experiments_of(
     (exps, settings)
 }
 
-/// The scan trailer read once, each record decoded once: its fields for `campi` and its series for `serie_registro`.
+/// The scan trailer read once, each record decoded once: its fields for `fields` and its series for `log_series`.
 fn trailer_pass<R: Read + Seek>(
     raw: &RawFileReader,
     source: &mut R,
@@ -432,7 +432,7 @@ pub fn from_raw<R: Read + Seek>(
     let lc = lc.map(|mut v| {
         if let V::Obj(f) = &mut v {
             f.extend(pressure(&pairs).map(|p| ("pressure_max", p)));
-            f.extend(settings::solvents(&pairs).map(|s| ("solventi", s)));
+            f.extend(settings::solvents(&pairs).map(|s| ("solvents", s)));
         }
         v
     });

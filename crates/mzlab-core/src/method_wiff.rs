@@ -228,7 +228,7 @@ fn ms_sec(method: Option<&crate::methodinfo::Method>, st: Option<&str>) -> Optio
         .or_else(|| st.and_then(|s| obj(vec![("source", obj(vec![("type", text(s))]))])))
 }
 
-/// The document of sample `n` of the `.wiff` in `ole`; never an error: what is missing is absent, what cannot be read is in `avvisi`.
+/// The document of sample `n` of the `.wiff` in `ole`; never an error: what is missing is absent, what cannot be read is in `warnings`.
 pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
     let method = method_of_sample(ole, crate::wiff::method_no(ole, n))
         .or_else(|| or_fallback(method_of_sample(ole, n), ole, n));
@@ -344,7 +344,7 @@ fn lc_with_pressure(
     (lc, det)
 }
 
-/// The `campione` section: name and vial from the `DATA` strings (four or more), the method file, the injection volume.
+/// The `sample` section: name and vial from the `DATA` strings (four or more), the method file, the injection volume.
 fn campione(data: &[String], injection: Option<&str>) -> Option<V> {
     let named = data.len() >= 4;
     obj(vec![
@@ -379,7 +379,7 @@ fn source_type(log: &[String]) -> Option<String> {
         .map(String::from)
 }
 
-/// The `strumento` section from the "Config Table" record of the log, the acquisition software and its version (`CFR_INFO`).
+/// The `instrument` section from the "Config Table" record of the log, the acquisition software and its version (`CFR_INFO`).
 fn strumento(cfg: Option<&String>, software: &str, version: Option<&String>) -> Option<V> {
     let f = |k| cfg.and_then(|r| field(r, k)).and_then(text);
     let sw = obj(vec![
@@ -396,7 +396,7 @@ fn strumento(cfg: Option<&String>, software: &str, version: Option<&String>) -> 
     ])
 }
 
-/// The `operatore` section.
+/// The `operator` section.
 fn operator(user: Option<&str>, computer: Option<&str>) -> Option<V> {
     obj(vec![
         ("user", user.and_then(text)),
@@ -415,8 +415,8 @@ fn run_records<'a>(ms_rec: &impl Fn(&str) -> Option<&'a String>) -> Vec<V> {
         })
     };
     [
-        record("inizio", ms_rec("Start of Run")),
-        record("fine", ms_rec("End of Run")),
+        record("start", ms_rec("Start of Run")),
+        record("end", ms_rec("End of Run")),
     ]
     .into_iter()
     .flatten()
@@ -436,7 +436,7 @@ fn raw_log(log: &[String]) -> String {
     raw
 }
 
-/// What is missing or not decoded, for `avvisi`.
+/// What is missing or not decoded, for `warnings`.
 fn warnings(_ole: &Ole, _sample: &str, no_log: bool) -> Vec<Option<V>> {
     let mut warn = vec![];
     if no_log {

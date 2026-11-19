@@ -36,7 +36,7 @@ const METODO_DOC = (() => {
 
   function lc(/** @type {any} */ d) {
     const l = d.lc || {}, g = l.gradient || [], p = l.pressure_max;
-    const solv = (l.solventi || []).map((/** @type {any} */ x) => rowOf(T("method.doc.solvent", { ch: x.channel || "" }), x.name)).join("");
+    const solv = (l.solvents || []).map((/** @type {any} */ x) => rowOf(T("method.doc.solvent", { ch: x.channel || "" }), x.name)).join("");
     const rows = solv + rowOf(T("method.flow"), n(l.flow_mL_min)) + rowOf(T("method.oven"), l.oven_C != null ? n(l.oven_C) + " °C" : "") + rowOf(T("method.runTime"), l.duration_min != null ? n(l.duration_min) + " min" : "")
       + rowOf(T("method.doc.pmax"), p ? withUnit(p) : "");
     const tbl = g.length ? `<table><tr><th scope="col" class="num">${EH(T("method.time"))}</th><th scope="col" class="num">% B</th><th scope="col" class="num">${EH(T("method.flow"))}</th></tr>${g.map((/** @type {any} */ q) => `<tr><td class="num">${EH(n(q.t_min))}</td><td class="num">${EH(n(q.B_pct))}</td><td class="num">${EH(n(q.flow_mL_min))}</td></tr>`).join("")}</table>` : "";

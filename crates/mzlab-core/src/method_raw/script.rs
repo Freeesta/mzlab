@@ -90,8 +90,8 @@ pub fn setting(p: &[Pair], key: &str) -> Option<(f64, Option<String>)> {
         .and_then(|(_, _, v, u)| Some((v.replace(',', ".").parse::<f64>().ok()?, u.clone())))
 }
 
-/// The scan events of the XML method as `ms.periodi[0].esperimenti`: for each `ScanEvent` its `id` (`indice`), the mass range (`mz`) and its other numeric
-/// settings (`parametri`, with the unit the XML gives).
+/// The scan events of the XML method as `ms.periods[0].experiments`: for each `ScanEvent` its `id` (`index`), the mass range (`mz`) and its other numeric
+/// settings (`parameters`, with the unit the XML gives).
 pub fn experiments(items: &[Item]) -> Vec<V> {
     let mut out: Vec<(f64, Vec<Setting>)> = Vec::new();
     let units: Vec<(&str, &str)> = items

@@ -335,7 +335,7 @@ fn the_method_carries_the_lc_ms_sections() {
             // a dMRM method: the retention windows of each transition
             assert!(m.contains("\"type\":\"MRM\""), "{label}");
             assert!(m.contains("\"rt_min\":") && m.contains("\"window_rt_min\":"));
-            assert!(m.contains("\"frammentatore_V\":") && m.contains("\"polarity\":\"Negative\""));
+            assert!(m.contains("\"fragmentor_V\":") && m.contains("\"polarity\":\"Negative\""));
             qqq += 1;
         }
         if whole.contains("MTBLS599") {

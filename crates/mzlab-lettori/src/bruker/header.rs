@@ -1,5 +1,5 @@
 //! What a timsTOF run says about itself outside its spectra: `GlobalMetadata`, the properties of the first frame and the calibrations become the `method/1` document and the header of
-//! the mzML we write. Every key of `GlobalMetadata` goes into `campi` (nothing is lost); names, serials and paths are marked `identita`.
+//! the mzML we write. Every key of `GlobalMetadata` goes into `fields` (nothing is lost); names, serials and paths are marked `identity`.
 
 use super::tables::Data;
 
@@ -201,11 +201,11 @@ pub struct BrukerHeader {
     pub user: Option<String>,
     pub sample: Option<String>,
     pub tsf: bool,
-    /// Side tables found damaged (`Data::damaged`): named in `avvisi` as `meta.danneggiato`.
+    /// Side tables found damaged (`Data::damaged`): named in `warnings` as `meta.danneggiato`.
     pub damaged: Vec<&'static str>,
-    /// Spectra left out because their frame has no usable `MzCalibration`: counted in `avvisi` as `meta.danneggiato`.
+    /// Spectra left out because their frame has no usable `MzCalibration`: counted in `warnings` as `meta.danneggiato`.
     pub uncalibrated: usize,
-    /// (table, pages, records) of the database left out because they are damaged (`Sqlite::left_out`): counted in `avvisi` as `meta.danneggiato`.
+    /// (table, pages, records) of the database left out because they are damaged (`Sqlite::left_out`): counted in `warnings` as `meta.danneggiato`.
     pub left_out: Vec<(String, usize, usize)>,
 }
 

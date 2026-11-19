@@ -1,4 +1,4 @@
-"""Flow «This browser» prov/1 and run-report/1 (flow-web-prov.js, `record_prov` and `record_corsa` of the engine, `flow_job_meta`): over the five demo full-scan files the browser writes the record of the run of the base chain (index, detection, alignment, gap filling)
+"""Flow «This browser» prov/1 and run-report/1 (flow-web-prov.js, `record_prov` and `record_run_report` of the engine, `flow_job_meta`): over the five demo full-scan files the browser writes the record of the run of the base chain (index, detection, alignment, gap filling)
 that `mzlab-cli flow run` writes of the same plan, apart from the declared fields (times, memory peak, who ran it, reused or not); the files are kept in OPFS and the Report view opens the run-report/1. Builds the site and the .wasm of mzFinder (needs cargo,
 wasm-bindgen and python3: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_web_prov.py"""
 import json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
@@ -127,7 +127,7 @@ try:
             for name, nat_name in (("prov.json", "prov.json"), ("report.json", "report.json")):
                 nat = json.loads((run / "out" / nat_name).read_text()); web = json.loads(kept[name])
                 assert blank(nat) == blank(web), (name, diff(blank(nat), blank(web)))
-            assert kept["report"] == kept["report.json"] and r["record"]["corsa"] == kept["report.json"]
+            assert kept["report"] == kept["report.json"] and r["record"]["run_report"] == kept["report.json"]
         step("the prov/1 and the run-report/1 of the browser are the records of the native flow run apart from the declared fields", first)
 
         def again():

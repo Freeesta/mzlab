@@ -1,5 +1,5 @@
 //! The instrument log of a `.raw` as series over time: every numeric channel of the status log (`status:<section>/<label>`) and every numeric field of the scan trailer that changes
-//! (`trailer:<label>`, one point per scan). A channel with fewer than two different values stays in `campi` only. The list (`Voce`) carries no points; the points of one series are
+//! (`trailer:<label>`, one point per scan). A channel with fewer than two different values stays in `fields` only. The list (`Voce`) carries no points; the points of one series are
 //! computed when it is asked for (`Lettore::chromatogram`), never at opening. The series are not chromatograms of the file: they are not in the mzML nor in the `.mzidx`.
 
 use crate::method::{num, obj, text, V};
@@ -324,7 +324,7 @@ pub fn index(raw: &RawFileReader, rows: Rows) -> Vec<Entry> {
     out
 }
 
-/// The list as the `serie_registro` section of `method/1`: no points, the page asks for them one series at a time.
+/// The list as the `log_series` section of `method/1`: no points, the page asks for them one series at a time.
 pub fn sezione(entries: &[Entry]) -> Vec<V> {
     entries
         .iter()

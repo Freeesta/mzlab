@@ -143,7 +143,7 @@ pub fn parse(t: &str) -> Option<Vec<Entry>> {
     (!out.is_empty()).then_some(out)
 }
 
-/// The list as `inclusione` of an experiment.
+/// The list as `inclusion` of an experiment.
 pub fn section(list: &[Entry]) -> V {
     V::Arr(
         list.iter()

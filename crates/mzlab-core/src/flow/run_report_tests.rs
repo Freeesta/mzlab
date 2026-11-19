@@ -86,7 +86,7 @@ fn refuses_what_is_not_prov() {
     assert!(build(&v, &[])
         .unwrap_err()
         .to_string()
-        .contains("err.corsa.prov"));
+        .contains("err.run_report.prov"));
 }
 
 #[test]

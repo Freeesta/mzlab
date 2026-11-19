@@ -93,7 +93,7 @@ pub struct SrcFile {
     pub bytes: u64,
 }
 
-/// Where the document comes from (`origine`).
+/// Where the document comes from (`origin`).
 #[derive(Debug, Clone, Default)]
 pub struct Source {
     pub format: &'static str,
@@ -101,7 +101,7 @@ pub struct Source {
     pub sample: Option<u32>,
 }
 
-/// `origine`; `created` = when the source file was made, as the file says (local time of the instrument PC, no zone).
+/// `origin`; `created` = when the source file was made, as the file says (local time of the instrument PC, no zone).
 pub fn origin(src: &Source, created: Option<&str>) -> Option<V> {
     let files: Vec<V> = src
         .files
@@ -216,7 +216,7 @@ pub fn ms_section(m: &Method, source_type: Option<&str>) -> Option<V> {
     ])
 }
 
-/// `lc` and `rivelatori` of a method (the LC method XML).
+/// `lc` and `detectors` of a method (the LC method XML).
 pub fn lc_sections(lc: &Lc) -> (Option<V>, Option<V>) {
     let grad: Vec<V> = lc
         .gradient

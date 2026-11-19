@@ -49,7 +49,7 @@
 
   /** report.methods @param {any} x @param {any} spec @param {any} inst */
   const methods = async (x, spec, inst) => {
-    const given = fileText(x, inst, "run"), last = F.webProv && F.webProv.last && F.webProv.last.corsa, run = given !== null ? given : typeof last === "string" ? last : null;
+    const given = fileText(x, inst, "run"), last = F.webProv && F.webProv.last && F.webProv.last.run_report, run = given !== null ? given : typeof last === "string" ? last : null;
     if (run === null) { await x.call("block", { job: J().job(spec), by: "input.run" }); return {}; }
     const key = await J().sha(spec.key + "\n" + await J().sha(run));
     return make(x, spec, inst, key, inst.id + ".md", async () => (await kit().getPool()).ident("flowtab", "flow_methods", { params: paramsOf(x, inst), run: enc(run) }));

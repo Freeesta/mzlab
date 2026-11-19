@@ -1,6 +1,6 @@
 //! `method/1` of an mzML that mzLab did not write (`from_mzml_head`): what the header of the file says (instrument, serial, software, source files
 //! with SHA-1, `run@startTimeStamp`, sample, scan settings, data processing) and the scan parameters that are the same in the first scans.
-//! Only the start of the file is read: the header up to `<spectrumList` and at most `SCANS` spectra. Every field carries `origine = "mzml:<element>"`.
+//! Only the start of the file is read: the header up to `<spectrumList` and at most `SCANS` spectra. Every field carries `origin = "mzml:<element>"`.
 //! Spec: `docs/agenti/method.md`. The reference is the mzML 1.1 schema and the PSI-MS CV; nothing is copied from another program.
 
 use crate::error::Result;
@@ -111,7 +111,7 @@ fn run_attr(head: &str, k: &str) -> Option<String> {
         .and_then(|t| attr(t, k))
 }
 
-/// `strumento`: model, serial number and software the header names.
+/// `instrument`: model, serial number and software the header names.
 fn instrument(meta: &Metadata) -> Option<V> {
     obj(vec![
         ("model", text(&meta.instrument)),
@@ -130,7 +130,7 @@ fn software(meta: &Metadata) -> Vec<V> {
         .collect()
 }
 
-/// `campi` from the header: the scan settings, the sample, the processing steps and the instrument components, each with its own element as origin.
+/// `fields` from the header: the scan settings, the sample, the processing steps and the instrument components, each with its own element as origin.
 fn header_fields(head: &str) -> Vec<Field> {
     let mut out = vec![];
     let mut add = |origin: &str, b: &str| {
@@ -165,7 +165,7 @@ fn header_fields(head: &str) -> Vec<Field> {
     out
 }
 
-/// The parameters of the sampled scans: for each MS level, the ones that never change go to `ms` and the ones that change become an interval in `campi`.
+/// The parameters of the sampled scans: for each MS level, the ones that never change go to `ms` and the ones that change become an interval in `fields`.
 fn scan_part(scans: &str, fields: &mut Vec<Field>) -> Option<V> {
     let mut levels: Vec<(u32, Vec<Vec<f64>>)> = vec![];
     for sp in blocks(scans, "spectrum") {

@@ -287,7 +287,7 @@ fn experiments(d: &Data) -> Vec<Option<V>> {
     experiments
 }
 
-/// The `strumento` section: maker, model and the software that wrote the file.
+/// The `instrument` section: maker, model and the software that wrote the file.
 fn instrument(fam: Fam, m: &Meta) -> Option<V> {
     let s = |t: &Option<String>| t.as_deref().and_then(text);
     obj(vec![

@@ -289,7 +289,7 @@ pub fn generic_sentence(id: &str, params: &[(&str, &str)]) -> String {
 pub fn methods_text(params: &[(String, Value)], run: &[u8]) -> Result<String> {
     let doc = parse(run)?;
     if doc.get("schema").and_then(Value::str) != Some("run-report/1") {
-        return Err(Error::new("err.corsa.prov"));
+        return Err(Error::new("err.run_report.prov"));
     }
     let engine = doc.get("engine");
     let field = |k: &str| engine.map(|e| text(e, k)).unwrap_or_default();

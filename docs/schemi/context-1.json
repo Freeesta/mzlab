@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "context/1",
  "title": "context/1: what the assistant sees of the open work",
- "description": "Format «context/1» (crates/mzlab-llm/src/context.rs, docs/agenti/llm.md): summaries of what the engine already produced, cut to a token budget (ceil(bytes/3)). Never spectra, profile points, file bytes or paths. Numbers that are not whole are rounded to four significant digits; `truncated` names the sections dropped to fit. Only the «ricerca» profile has it.",
+ "description": "Format «context/1» (crates/mzlab-llm/src/context.rs, docs/agenti/llm.md): summaries of what the engine already produced, cut to a token budget (ceil(bytes/3)). Never spectra, profile points, file bytes or paths. Numbers that are not whole are rounded to four significant digits; `truncated` names the sections dropped to fit. Only the «research» profile has it.",
  "type": "object",
  "required": [
   "schema",

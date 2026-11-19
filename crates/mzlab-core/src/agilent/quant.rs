@@ -1,7 +1,7 @@
 //! The `method/1` document (`method.rs`) of an Agilent MassHunter method folder `*.m` that is not part of a run (the data-analysis method of a GC/MS:
 //! `DaMethod/Quant/quantitative.xml`, with the acquisition method files next to it when the folder is a whole copy). It has no sample and no instrument: it says
 //! WHAT the method looks for. Section `quantificazione`: the windows of the method and, for each compound, its expected RT, its extraction window, the qualifier ions
-//! with their relative response and range, the calibration levels and the curve settings; every name/value of the files goes to `campi` with `mappato` where the section
+//! with their relative response and range, the calibration levels and the curve settings; every name/value of the files goes to `fields` with `mapped` where the section
 //! carries it. What the file does not say is absent (a target ion of 0 is «not set», never an m/z).
 
 use super::meta::{self, text_of, tree, Node};
@@ -9,7 +9,7 @@ use crate::method::{self, num, obj, text, Source, SrcFile, V};
 use crate::method_fields::Field;
 use sha1::{Digest as _, Sha1};
 
-/// The compound-level elements the section carries (the rest stays in `campi` only).
+/// The compound-level elements the section carries (the rest stays in `fields` only).
 const COMPOUND: [&str; 22] = [
     "CompoundID",
     "CompoundName",

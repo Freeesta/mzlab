@@ -1,4 +1,4 @@
-//! `method/1.campi` of a Thermo `.raw`: every field the file holds that the sections of the document do not carry, as `{origine, chiave, valore, unita?, mappato?, identita?}`
+//! `method/1.fields` of a Thermo `.raw`: every field the file holds that the sections of the document do not carry, as `{origin, key, value, unit?, mapped?, identity?}`
 //! (spec: `docs/agenti/method.md`). Fixed places of the container (header, sequence row, InstID, run header), the 62 fields of the scan trailer
 //! (the value when it is the same in every scan, else the range), the lines of the LC script and the items of the XML method.
 
@@ -306,7 +306,7 @@ fn script_map(key: &str) -> Option<&'static str> {
     }
 }
 
-/// All the fields of the file, in a stable order (origin, key); the ones that name a person or a computer carry `identita`.
+/// All the fields of the file, in a stable order (origin, key); the ones that name a person or a computer carry `identity`.
 pub fn fields(
     raw: &RawFileReader,
     trailer: Vec<Field>,
@@ -333,7 +333,7 @@ pub fn fields(
                 .map_opt(script_map(k)),
         );
     }
-    // an XML item is a field only when a section carries it: an Orbitrap method has some 17 000 items, all kept as text in `grezzo`
+    // an XML item is a field only when a section carries it: an Orbitrap method has some 17 000 items, all kept as text in `raw`
     for it in xml.iter().filter(|it| it.name.contains("/ScanEvent/")) {
         all.push(
             Field::new("thermo-raw:InstrumentMethod/XML", &it.name, &it.value).map("ms.periods"),

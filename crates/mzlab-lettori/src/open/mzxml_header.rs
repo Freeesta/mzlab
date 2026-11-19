@@ -1,5 +1,5 @@
 //! The header of an mzXML (everything before the first `<scan`): the instrument, the files the data come from, the processing, the operator. It becomes the `method/1` document and the
-//! header of the mzML we write; every attribute of every element goes into `campi` (nothing is lost), the identifying ones (operator, paths) marked `identita`.
+//! header of the mzML we write; every attribute of every element goes into `fields` (nothing is lost), the identifying ones (operator, paths) marked `identity`.
 
 use mzlab_core::error::Result;
 use mzlab_core::method::{self, obj, text, Source, SrcFile, V};

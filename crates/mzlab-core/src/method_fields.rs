@@ -1,10 +1,10 @@
-//! The fields of `method/1.campi` (`{origine, chiave, valore, unita?, mappato?, identita?}`, spec: `docs/agenti/method.md`) and the ident of the acquisition that marks them
-//! `identita`: shared by the readers of Thermo (`method_raw::fields`) and Agilent, so they sit outside the Thermo feature.
+//! The fields of `method/1.fields` (`{origin, key, value, unit?, mapped?, identity?}`, spec: `docs/agenti/method.md`) and the ident of the acquisition that marks them
+//! `identity`: shared by the readers of Thermo (`method_raw::fields`) and Agilent, so they sit outside the Thermo feature.
 
 use crate::method::{obj, text, V};
 
 /// What identifies a computer or a place of the acquisition in the texts of the file (the user is a fixed field: a user name is often a word that
-/// the texts hold for other reasons, as «Fusion» in the model): fields whose value names them are marked `identita`.
+/// the texts hold for other reasons, as «Fusion» in the model): fields whose value names them are marked `identity`.
 #[derive(Default)]
 pub struct Ident {
     pub computer: String,

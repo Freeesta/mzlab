@@ -181,7 +181,7 @@ pub fn announces_transitions(t: &str) -> bool {
     })
 }
 
-/// The experiment of a TSQ method for `ms.periodi[0].esperimenti`: the type, the settings before the table and the transitions.
+/// The experiment of a TSQ method for `ms.periods[0].experiments`: the type, the settings before the table and the transitions.
 pub fn experiment(t: &Table, index: usize) -> Option<V> {
     let params: Vec<V> = t
         .settings

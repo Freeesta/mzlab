@@ -1,5 +1,5 @@
 //! What an ANDI file says about itself outside its scans: the global attributes and the `instrument_*` variables. They become the `method/1` document and the header of the mzML we write;
-//! every global attribute goes into `campi` (nothing is lost), the ones that identify a person, a serial or a path marked `identita`.
+//! every global attribute goes into `fields` (nothing is lost), the ones that identify a person, a serial or a path marked `identity`.
 
 use super::netcdf::{Cdf, Val};
 use mzlab_core::error::Result;

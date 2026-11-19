@@ -173,7 +173,7 @@ fn mark_scheduled(doc: &mut V, ole: &Ole, no: u32) {
     }
 }
 
-/// `doc` with the scheduled experiments marked and `campi` (the strings of `DabsInfo` and `SampleTable`, the tables of `GLPTables`, the DAD header).
+/// `doc` with the scheduled experiments marked and `fields` (the strings of `DabsInfo` and `SampleTable`, the tables of `GLPTables`, the DAD header).
 pub(super) fn extend(doc: Option<V>, ole: &Ole, n: u32, sample: &str) -> Option<V> {
     let mut doc = doc?;
     let no = crate::wiff::extended::method_no(ole, n);

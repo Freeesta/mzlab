@@ -1,6 +1,6 @@
 //! The `method/1` document (`docs/agenti/method.md`) and the header of the mzML of a MassLynx folder: the sample and the instrument of `_HEADER.TXT`, the functions of the method (range,
-//! collision energy, channels Q1/Q3/dwell/CE), the LC of `_INLET.INF`, the lock mass (declared, never applied). The user and the paths of the acquisition computer are marked `identita`.
-//! Every line of the text files goes to `campi` with the section it comes from; what the reader does not decode is named in `avvisi`.
+//! collision energy, channels Q1/Q3/dwell/CE), the LC of `_INLET.INF`, the lock mass (declared, never applied). The user and the paths of the acquisition computer are marked `identity`.
+//! Every line of the text files goes to `fields` with the section it comes from; what the reader does not decode is named in `warnings`.
 
 use super::folder::{base, read_error};
 use super::inf::Entry;
@@ -10,7 +10,7 @@ use mzlab_core::method::{self, num, obj, sha1_hex, text, Source, SrcFile, V};
 use mzlab_core::method_fields::Field;
 use mzlab_core::mzmlwrite::Header;
 
-/// The most files named in `origine` and the most fields kept.
+/// The most files named in `origin` and the most fields kept.
 const FILE_MAX: usize = 200;
 const FIELDS_MAX: usize = 4000;
 const FORMAT: &str = "waters-raw";

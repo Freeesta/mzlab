@@ -6,7 +6,9 @@ use super::{record, Artifact, Ctx, Outcome, Results, Run};
 use crate::budget::sha256_hex;
 use crate::error::{Error, Result};
 use crate::flow::sched::{JobId, Sched};
-use crate::flow::{check, corsa_build, parse, plan_json, prov_json, Agent, Mem, Output, Platform};
+use crate::flow::{
+    check, parse, plan_json, prov_json, run_report_build, Agent, Mem, Output, Platform,
+};
 use crate::json::{parse as parse_json, Value};
 use crate::step::{registry_from_value, DataType, Step};
 
@@ -121,7 +123,7 @@ fn record_reports(plan_text: &[u8], registry: &[Step], reports: &Value) -> Resul
     Ok((record(&plan, registry, &ids, results)?, plan_json(&plan)))
 }
 
-/// `op` `prov`: `{"plan": text, "registry": [step/1], "jobs": [...]}` gives the `prov/1` text; `corsa`: `{"prov": text, "uscite": [{"name","text"}]}` gives the
+/// `op` `prov`: `{"plan": text, "registry": [step/1], "jobs": [...]}` gives the `prov/1` text; `run_report`: `{"prov": text, "outputs": [{"name","text"}]}` gives the
 /// `run-report/1` text of that record with the `.json` files the steps made. `agent` is the program that ran (the caller knows its version).
 pub fn route(op: &str, body: &str, agent: &Agent) -> Result<String> {
     let b = parse_json(body.as_bytes())?;
@@ -134,10 +136,10 @@ pub fn route(op: &str, body: &str, agent: &Agent) -> Result<String> {
             let (run, text) = record_reports(plan.as_bytes(), &registry, jobs)?;
             Ok(prov_json(agent, Some(&sha256_hex(text.as_bytes())), &run))
         }
-        "corsa" => {
+        "run_report" => {
             let prov = parse_json(field("prov")?.as_bytes())?;
             let kept: Vec<(&str, &str)> = b
-                .get("uscite")
+                .get("outputs")
                 .map_or(&[][..], Value::arr)
                 .iter()
                 .filter_map(|u| Some((text(u, "name")?, text(u, "text")?)))
@@ -149,7 +151,7 @@ pub fn route(op: &str, body: &str, agent: &Agent) -> Result<String> {
                     bytes: t.as_bytes(),
                 })
                 .collect();
-            Ok(corsa_build(&prov, &uscite)?.json())
+            Ok(run_report_build(&prov, &uscite)?.json())
         }
         _ => Err(Error::new("err.route.unavailable")),
     }

@@ -199,7 +199,7 @@ const OUTPUT_KEYS: &[&str] = &[
 /// Builds the report from the `prov/1` of a run and the output files that go with it; a file that is not JSON of a known format is ignored.
 pub fn build(prov: &Value, uscite: &[Output]) -> Result<RunReport> {
     if prov.get("schema").and_then(|s| s.str()) != Some("prov/1") {
-        return Err(Error::new("err.corsa.prov"));
+        return Err(Error::new("err.run_report.prov"));
     }
     let agent = prov.get("agent");
     let mut engine = Vec::new();

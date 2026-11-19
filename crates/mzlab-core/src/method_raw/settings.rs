@@ -87,7 +87,7 @@ pub fn parse(blocks: &[&str]) -> Vec<Setting> {
     out
 }
 
-/// `ms.impostazioni`.
+/// `ms.settings`.
 pub fn section(settings: &[Setting]) -> Option<V> {
     let rows: Vec<V> = settings
         .iter()
@@ -119,7 +119,7 @@ fn param(e: &V, id: &str) -> Option<f64> {
 
 /// Completes the experiments with what the text says: an experiment whose parameter `NCE` is the mean of the steps of the text's stepped energy gets `nce`
 /// (the steps) and loses the mean; an experiment with `Isolation_high` (a small width in m/z) gets `isolamento_mz`, and `Isolation_low`/`Isolation_high` (limits
-/// they are not) leave `parametri`. Nothing is lost: every XML item stays in `campi`.
+/// they are not) leave `parameters`. Nothing is lost: every XML item stays in `fields`.
 pub fn refine(exps: Vec<V>, settings: &[Setting]) -> Vec<V> {
     let steps = settings
         .iter()

@@ -113,7 +113,7 @@ fn pair(r: Option<(f64, f64)>) -> Option<V> {
 }
 
 /// The `lock_mass` object of `ms.calibrazione`: the mode and the lists of the method, how many lock masses the trailer says and the range of the correction. The masses
-/// and the search window of the trailer stay in `campi` (`Lock Mass #n (m/z)`, `LM Search Window (ppm)`).
+/// and the search window of the trailer stay in `fields` (`Lock Mass #n (m/z)`, `LM Search Window (ppm)`).
 pub fn section<R: Read + Seek>(
     raw: &RawFileReader,
     source: &mut R,

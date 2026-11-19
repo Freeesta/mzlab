@@ -1,7 +1,7 @@
 //! The LC/MS part of the `method/1` document of an Agilent `.D` (feature `estesi`): the sections that `AcqData/AcqMethod.xml` (`lcmethod.rs`) fills for a QqQ or a
 //! Q-TOF run: `ms` (source, one experiment per time segment with its MRM transitions, dMRM windows, Q-TOF precursor lists), `lc` (flow, oven, gradient),
-//! `campionatore`, `rivelatori` (DAD) and the modules of `Devices.xml`, and the fields of the method as `campi` items. Only what the method says: a cell that is not
-//! a number stays a text in `campi`, an empty cell is absent.
+//! `autosampler`, `detectors` (DAD) and the modules of `Devices.xml`, and the fields of the method as `fields` items. Only what the method says: a cell that is not
+//! a number stays a text in `fields`, an empty cell is absent.
 
 use super::doc::param;
 use super::lcmethod::{LcMethod, MsTable, Rc};
@@ -60,7 +60,7 @@ pub(super) fn seg_name(seg: u32) -> String {
     }
 }
 
-/// The columns of the transitions table that `transizioni` carries: their cells are not repeated in `campi` (a dMRM method has thousands of rows).
+/// The columns of the transitions table that `transitions` carries: their cells are not repeated in `fields` (a dMRM method has thousands of rows).
 const TRANSITION_COLUMNS: [&str; 14] = [
     "Prec Ion",
     "Prod Ion",
@@ -78,8 +78,8 @@ const TRANSITION_COLUMNS: [&str; 14] = [
     "MS2 Res",
 ];
 
-/// Every parameter and cell of the method as a metadata item, so that `campi` lists them (the row of a table in the name: `Timetable[0003]/Flow`); the cells of
-/// the transitions are in `ms.periodi[].esperimenti[].transizioni` only.
+/// Every parameter and cell of the method as a metadata item, so that `fields` lists them (the row of a table in the name: `Timetable[0003]/Flow`); the cells of
+/// the transitions are in `ms.periods[].experiments[].transitions` only.
 pub(super) fn items(m: &LcMethod) -> Vec<meta::Item> {
     let mut out = Vec::new();
     for r in &m.rc {
@@ -120,7 +120,7 @@ pub(super) fn items(m: &LcMethod) -> Vec<meta::Item> {
     out
 }
 
-/// The section that carries a field of the method (`mappato`).
+/// The section that carries a field of the method (`mapped`).
 pub(super) fn mapped(origin: &str, name: &str, value: &str) -> Option<&'static str> {
     let in_rc = |p: &str| name.starts_with(p);
     if origin == RC_ORIGIN {
@@ -201,7 +201,7 @@ fn transitions(t: &MsTable) -> Vec<V> {
                 ("ce_eV", cell_num(t, k, "CE (V)")),
                 ("name", cell_text(t, k, "Cpd Name")),
                 ("group", cell_text(t, k, "Cpd Group")),
-                ("frammentatore_V", cell_num(t, k, "Frag (V)")),
+                ("fragmentor_V", cell_num(t, k, "Frag (V)")),
                 ("cell_acc_V", cell_num(t, k, "Cell Acc (V)")),
                 ("rt_min", cell_num(t, k, "Ret Time (min)")),
                 ("window_rt_min", cell_num(t, k, "Ret Window")),
@@ -351,7 +351,7 @@ pub(super) fn ms(d: &AgilentD) -> Option<V> {
     ])
 }
 
-/// `lc`, `campionatore` and `rivelatori` of the method, in this order.
+/// `lc`, `autosampler` and `detectors` of the method, in this order.
 pub(super) fn sections(d: &AgilentD) -> Vec<(&'static str, Option<V>)> {
     let Some(m) = &d.lcm else { return vec![] };
     vec![
@@ -379,7 +379,7 @@ pub(super) fn modules(d: &AgilentD) -> Option<V> {
     (!list.is_empty()).then_some(V::Arr(list))
 }
 
-/// The sections of an LC/MS run over the base ones: the sample from `sample_info.xml` when the folder has no sequence, the other modules in `strumento`, and
+/// The sections of an LC/MS run over the base ones: the sample from `sample_info.xml` when the folder has no sequence, the other modules in `instrument`, and
 /// the method's own `ms` where the GC/MS one is empty.
 pub(super) fn extend(
     d: &AgilentD,
@@ -426,7 +426,7 @@ pub(super) fn sample(d: &AgilentD) -> Option<V> {
 }
 
 impl AgilentD {
-    /// The LC/MS files of the folder: the method report (`AcqMethod.xml`, parsed into `lcm` and listed in `campi`), `Devices.xml` for every module, the other
+    /// The LC/MS files of the folder: the method report (`AcqMethod.xml`, parsed into `lcm` and listed in `fields`), `Devices.xml` for every module, the other
     /// small files (`extras`: text and XML are flattened, binaries are kept as size and SHA-1) and the members read by size only, and the member that holds the
     /// points. A method report that cannot be read is kept as undecoded bytes.
     pub fn with_lc_files(
@@ -451,7 +451,7 @@ impl AgilentD {
                     self.lcm = Some(m);
                 }
                 None => {
-                    // an older plain-XML method: every element is in `campi`, none is placed in a section
+                    // an older plain-XML method: every element is in `fields`, none is placed in a section
                     self.metadata.push(meta::Item {
                         origin: "AcqData/AcqMethod.xml".into(),
                         name: "undecoded bytes".into(),

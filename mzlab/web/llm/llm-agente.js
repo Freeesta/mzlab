@@ -59,7 +59,7 @@ export class AgentRun {
   /** @param {any} msg @returns {Promise<any>} */
   rpc(msg) { return new Promise((ok, no) => { const id = "a" + (++this.n); this.calls.set(id, { ok, no }); this.worker.postMessage({ ...msg, id }); }); }
 
-  /** starts the conversation with the level and model of the settings; `research` = the profile is «ricerca» (the machine refuses the course profile) */
+  /** starts the conversation with the level and model of the settings; `research` = the profile is «research» (the machine refuses the course profile) */
   async open(research = true) {
     const rec = recording;
     this.replaying = !!rec;
@@ -236,7 +236,7 @@ export class AgentRun {
   close() { this.worker.terminate(); if (this.client && this.client.close) this.client.close(); }
 }
 
-/** whether the assistant is on for this page: profile «ricerca», switched on in the settings and a consent for the provider (no conversation is opened before this is true; the facts of `factsRun` need none) */
+/** whether the assistant is on for this page: profile «research», switched on in the settings and a consent for the provider (no conversation is opened before this is true; the facts of `factsRun` need none) */
 export function assistantOn() {
   const s = readSettings();
   return s.on && !!s.provider && hasConsent(s.provider);

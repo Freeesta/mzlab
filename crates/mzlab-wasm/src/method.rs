@@ -9,7 +9,7 @@ use mzlab_core::method::{self, Source, SrcFile};
 use mzlab_core::mzmlhead::Mzml;
 use wasm_bindgen::prelude::*;
 
-/// How much of the mzML after `<run ` is read for the `method/1` document it carries (the texts of a `.raw` method and its `campi` take ~100 kB).
+/// How much of the mzML after `<run ` is read for the `method/1` document it carries (the texts of a `.raw` method and its `fields` take ~100 kB).
 const DOC_MAX: u64 = 1 << 20;
 /// How much of the start of an mzML is searched for the source files and the first `sample=N`.
 const HEAD: usize = 1 << 20;
