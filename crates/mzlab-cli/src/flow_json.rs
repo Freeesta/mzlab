@@ -1,4 +1,4 @@
-//! JSON answers of `mzlab-cli` for agents (`--json`): `flowcheck/1`, `flowdry/1`, `flowrun/1`, `errore/1` and the JSONL progress line, written beside
+//! JSON answers of `mzlab-cli` for agents (`--json`): `flowcheck/1`, `flowdry/1`, `flowrun/1`, `error/1` and the JSONL progress line, written beside
 //! the text forms of `flow_run.rs` and `flow_out.rs`, which stay as they are (stderr never changes). Also `mzlab-cli flow check`.
 
 use std::collections::HashMap;
@@ -68,53 +68,76 @@ pub(crate) fn check_json(problems: &[Problem]) -> String {
     o.0
 }
 
-/// `errore/1`: the exit code, the key and parameters of the error and the hint; `problems` (plan not valid) only when there are some.
+/// `error/1`: the exit code, the key and parameters of the error, its text without `error: `, the hint, the command that failed; `problems`
+/// (plan not valid) only when there are some. Built once, by `contract::finish`, for every command that fails.
 pub(crate) fn error_json(
     code: u8,
-    err: &Error,
+    f: &crate::Failure,
     message: &str,
-    hint: &str,
-    problems: &[Problem],
+    command: &str,
+    report: Option<&str>,
 ) -> String {
-    let params: Vec<(&str, String)> = err.params.iter().map(|(k, v)| (*k, v.clone())).collect();
+    let params: Vec<(&str, String)> = f
+        .params
+        .iter()
+        .map(|(k, v)| (k.as_str(), v.clone()))
+        .collect();
     let mut o = Out::default();
-    o.raw("{\"schema\":\"errore/1\",\"code\":")
+    o.raw("{\"schema\":\"error/1\",\"code\":")
         .int(i64::from(code))
         .raw(",\"error_key\":")
-        .str(err.key)
+        .str(&f.key)
         .raw(",\"params\":");
     params_obj(&mut o, &params);
     o.raw(",\"message\":")
         .str(message)
         .raw(",\"hint\":")
-        .str(hint);
-    if !problems.is_empty() {
-        o.raw(",\"problems\":");
-        problem_list(&mut o, problems);
+        .str(&f.hint)
+        .raw(",\"command\":")
+        .str(command);
+    if let Some(p) = &f.problems {
+        o.raw(",\"problems\":").raw(p);
+    }
+    if let Some(r) = report {
+        o.raw(",\"report\":").raw(r);
     }
     o.raw("}\n");
     o.0
 }
 
-/// The error outcome of `flow_run::fail` (stderr as ever); with `--json` the `errore/1` document is also on stdout.
-pub(crate) fn fail(st: Style, code: u8, err: &Error, msg: &str, hint: &str) -> Outcome {
-    let mut o = crate::flow_run::fail(code, msg, hint);
-    if st.json {
-        o.stdout = error_json(code, err, msg, hint, &[]).into_bytes();
-    }
+/// The failure of `flow run`/`flow check` with its code, text and hint (stderr as ever; `error/1` is written by the dispatcher).
+pub(crate) fn fail(err: &Error, msg: &str, hint: &str) -> Outcome {
+    let mut o = Outcome {
+        code: crate::exit::code_of(err),
+        stdout: Vec::new(),
+        stderr: format!("error: {msg}\nhint: {hint}\n"),
+        error: None,
+    };
+    o.error = Some(Box::new(crate::Failure {
+        key: err.key.to_string(),
+        params: err
+            .params
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.clone()))
+            .collect(),
+        hint: hint.to_string(),
+        problems: None,
+    }));
     o
 }
 
-/// Exit 3 for a plan that is not valid: one problem per line on stderr, and with `--json` the `errore/1` document with the list.
-pub(crate) fn invalid(st: Style, problems: &[Problem]) -> Outcome {
+/// Exit 3 for a plan that is not valid: one problem per line on stderr, and the list of problems in the `error/1` document.
+pub(crate) fn invalid(problems: &[Problem]) -> Outcome {
     let list: Vec<String> = problems.iter().map(problem_text).collect();
     let lines: Vec<String> = list.iter().map(|l| format!("  {l}")).collect();
     let hint = "fix the plan in the Flow page or with --set";
     let msg = format!("the plan is not valid:\n{}", lines.join("\n"));
-    let mut o = crate::flow_run::fail(3, &msg, hint);
-    if st.json {
-        let err = mzlab_core::flow::check_error(problems).with("problems", list.join(" "));
-        o.stdout = error_json(3, &err, &msg, hint, problems).into_bytes();
+    let err = mzlab_core::flow::check_error(problems).with("problems", list.join(" "));
+    let mut o = fail(&err, &msg, hint);
+    let mut j = Out::default();
+    problem_list(&mut j, problems);
+    if let Some(f) = o.error.as_mut() {
+        f.problems = Some(j.0);
     }
     o
 }
@@ -316,10 +339,10 @@ usage: mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]
 exit codes: 0 valid, 2 usage, 3 the plan is not valid (also a step that has no native executor: err.flow.step.native), 4 the plan cannot be read";
 
 /// The plan file and the `--set` texts of `flow check`; the outcome to return when the arguments are not usable (or `--help`).
-fn check_args(args: Vec<String>, st: Style) -> Result<(String, Vec<String>), Outcome> {
+fn check_args(args: Vec<String>) -> Result<(String, Vec<String>), Outcome> {
     let usage = |msg: &str| {
-        let err = Error::new("err.cli.usage").with("detail", msg);
-        fail(st, 2, &err, msg, "mzlab-cli flow check --help")
+        let err = Error::new("err.cli.usage").with("message", msg);
+        fail(&err, msg, "mzlab-cli flow check --help")
     };
     let (mut plan_path, mut sets) = (None, Vec::new());
     let mut it = args.into_iter();
@@ -327,11 +350,7 @@ fn check_args(args: Vec<String>, st: Style) -> Result<(String, Vec<String>), Out
         match x.as_str() {
             "--help" | "-h" => {
                 let help = format!("{CHECK_HELP}\n").into_bytes();
-                return Err(Outcome {
-                    code: 0,
-                    stdout: help,
-                    stderr: String::new(),
-                });
+                return Err(Outcome::ok(help));
             }
             "--json" => {}
             "--set" => match it.next() {
@@ -349,26 +368,20 @@ fn check_args(args: Vec<String>, st: Style) -> Result<(String, Vec<String>), Out
 }
 
 /// The plan of `path` read and with the `--set` texts applied, or the outcome that says why not.
-fn check_plan(path: &str, sets: &[String], reg: &[Step], st: Style) -> Result<Plan, Outcome> {
+fn check_plan(path: &str, sets: &[String], reg: &[Step]) -> Result<Plan, Outcome> {
     let text = std::fs::read(path).map_err(|e| {
         let err = Error::new("err.cli.file").with("path", path);
-        fail(
-            st,
-            4,
-            &err,
-            &format!("{path}: {e}"),
-            "check the path of the plan",
-        )
+        fail(&err, &format!("{path}: {e}"), "check the path of the plan")
     })?;
     let hint = "the plan must be the mzflow/2 file the Flow page downloads";
-    let mut plan = parse(&text).map_err(|e| fail(st, 3, &e, &e.to_string(), hint))?;
+    let mut plan = parse(&text).map_err(|e| fail(&e, &e.to_string(), hint))?;
     let (setting, plain): (Vec<&String>, Vec<&String>) = sets
         .iter()
         .partition(|s| s.contains(".algorithm=") || s.contains(".preset="));
     for s in setting.into_iter().chain(plain) {
         apply_set(&mut plan, reg, s).map_err(|e| {
             let err = Error::new("err.cli.set").with("set", s).with("message", &e);
-            fail(st, 2, &err, &e, "mzlab-cli flow check --help")
+            fail(&err, &e, "mzlab-cli flow check --help")
         })?;
     }
     Ok(plan)
@@ -380,12 +393,12 @@ pub(crate) fn check(args: Vec<String>) -> Outcome {
         json: args.iter().any(|a| a == "--json"),
         ..Style::default()
     };
-    let (path, sets) = match check_args(args, st) {
+    let (path, sets) = match check_args(args) {
         Ok(r) => r,
         Err(o) => return o,
     };
     let reg = steps();
-    let plan = match check_plan(&path, &sets, &reg, st) {
+    let plan = match check_plan(&path, &sets, &reg) {
         Ok(p) => p,
         Err(o) => return o,
     };
@@ -400,18 +413,17 @@ pub(crate) fn check(args: Vec<String>) -> Outcome {
                 code: 0,
                 stdout,
                 stderr: "ok: the plan is valid\n".into(),
+                error: None,
             }
         }
         Ok(Err(problems)) => {
-            let mut o = invalid(Style::default(), &problems);
+            let mut o = invalid(&problems);
             if st.json {
                 o.stdout = check_json(&problems).into_bytes();
             }
             o
         }
         Err(e) => fail(
-            st,
-            3,
             &e,
             &e.to_string(),
             "fix the plan in the Flow page or with --set",

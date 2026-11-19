@@ -35,6 +35,7 @@ mod tests {
             code: 0,
             stdout: b"id,mz\n".to_vec(),
             stderr: String::new(),
+            error: None,
         };
         assert_eq!(
             super::super::write_stdout(&o, &mut Broken(std::io::ErrorKind::StorageFull)),

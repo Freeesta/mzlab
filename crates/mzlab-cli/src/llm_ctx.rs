@@ -121,6 +121,9 @@ pub(crate) fn context(args: Vec<String>) -> Outcome {
     let Some(dir) = dir else {
         return Outcome::fail("usage: mzlab-cli llm context RUNDIR [--budget N] [--hide-names]");
     };
+    if !Path::new(&dir).is_dir() {
+        return Outcome::fail_error(&mzlab_core::Error::new("err.cli.file").with("path", &dir));
+    }
     match build(&sources(Path::new(&dir), hide), budget) {
         Ok(t) => Outcome::ok((t + "\n").into_bytes()),
         Err(e) => Outcome::fail_error(&e),
@@ -188,6 +191,7 @@ pub(crate) fn eval(args: Vec<String>) -> Outcome {
             )
             .into_bytes(),
             stderr: String::new(),
+            error: None,
         },
     }
 }

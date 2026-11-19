@@ -42,7 +42,7 @@ fn usage_errors_exit_2() {
         vec!["mol-export", "a", "--set", "colour=red"],
         vec!["mol-export", "/no/such/file.mol"],
     ] {
-        assert_eq!(run(&a).code, 2, "{a:?}");
+        assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
     }
     assert_eq!(run(&["mol-export", "--help"]).code, 0);
 }

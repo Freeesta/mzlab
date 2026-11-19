@@ -203,22 +203,24 @@ pub fn emit(t: String, out: &Option<PathBuf>) -> Outcome {
         None => (t.into_bytes(), String::new()),
         Some(p) => match std::fs::write(p, t) {
             Ok(()) => (vec![], String::new()),
-            Err(e) => return failed(format!("{}: {e}", p.display())),
+            Err(e) => {
+                return Outcome::fail_error(
+                    &mzlab_core::Error::new("err.cli.out")
+                        .with("path", format!("{}: {e}", p.display())),
+                )
+            }
         },
     };
     Outcome {
         code: 0,
         stdout,
         stderr,
+        error: None,
     }
 }
 
 fn failed(m: String) -> Outcome {
-    Outcome {
-        code: 2,
-        stdout: vec![],
-        stderr: format!("error: {m}\n(mzlab-cli msn-rules --help)\n"),
-    }
+    Outcome::fail(&m)
 }
 
 pub fn run(args: Vec<String>) -> Outcome {

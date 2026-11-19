@@ -130,7 +130,7 @@ mod tests {
             vec!["mol-label", "--nope"],
             vec!["mol-label", "/no/such/file.json"],
         ] {
-            assert_eq!(run(&a).code, 2, "{a:?}");
+            assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
         }
         assert_eq!(run(&["mol-label", "--help"]).code, 0);
     }

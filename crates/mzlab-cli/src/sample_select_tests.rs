@@ -48,7 +48,7 @@ fn select_names_the_samples_in_the_order_of_the_file_and_the_exit_codes_differ()
         (o.code, String::from_utf8_lossy(&o.stdout).as_ref()),
         (0, "2 3\n")
     );
-    // an id the file does not have: 5, the ids present named, an errore/1 with --json
+    // an id the file does not have: 5, the ids present named, an error/1 with --json
     let o = run(&["samples", "select", &wiff, "--sample", "1,9", "--json"]);
     assert_eq!(o.code, 5);
     assert!(
@@ -58,7 +58,7 @@ fn select_names_the_samples_in_the_order_of_the_file_and_the_exit_codes_differ()
     );
     let j = String::from_utf8_lossy(&o.stdout).into_owned();
     assert!(
-        j.contains("\"schema\":\"errore/1\"")
+        j.contains("\"schema\":\"error/1\"")
             && j.contains("\"code\":5")
             && j.contains("err.sample.unknown"),
         "{j}"
@@ -82,7 +82,7 @@ fn select_names_the_samples_in_the_order_of_the_file_and_the_exit_codes_differ()
         "--json",
     ]);
     assert_eq!(o.code, 4);
-    assert!(String::from_utf8_lossy(&o.stdout).contains("errore/1"));
+    assert!(String::from_utf8_lossy(&o.stdout).contains("error/1"));
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -154,9 +154,14 @@ fn channels_of_a_list_are_one_line_per_sample_each_the_bytes_of_its_own_run() {
     );
     let o = run(&["channels", &wiff, "--sample", "1,9"]);
     assert_eq!(
-        (o.code, o.stdout.len()),
-        (5, 0),
-        "no partial answer: {}",
+        (
+            o.code,
+            String::from_utf8_lossy(&o.stdout)
+                .matches("\"schema\":")
+                .count()
+        ),
+        (5, 1),
+        "no partial answer, one error/1: {}",
         o.stderr
     );
     let _ = std::fs::remove_dir_all(&dir);
@@ -187,11 +192,11 @@ fn features_takes_one_member_per_chosen_sample() {
 #[test]
 fn features_with_sample_reports_an_unreadable_file_not_a_single_sample_file() {
     let (dir, wiff) = pair("features_unreadable");
-    // a .wiff whose companion scan file is gone cannot be listed: the error is the file's, exit 1, not "single sample" (2)
+    // a .wiff whose companion scan file is gone cannot be listed: the error is the file's, exit 4, not "single sample" (2)
     let broken = dir.join("broken.wiff");
     std::fs::write(&broken, b"not a wiff container").unwrap();
     let o = run(&["features", broken.to_str().unwrap(), "--sample", "1"]);
-    assert_eq!(o.code, 1, "{}", o.stderr);
+    assert_eq!(o.code, 4, "{}", o.stderr);
     assert!(!o.stderr.contains("err.sample.single"), "{}", o.stderr);
     let _ = wiff;
     let _ = std::fs::remove_dir_all(&dir);

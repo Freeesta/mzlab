@@ -248,23 +248,13 @@ fn rows(a: &Args) -> Result<String, String> {
 }
 
 pub fn run(args: Vec<String>) -> Outcome {
-    let failed = |m: String| Outcome {
-        code: 2,
-        stdout: vec![],
-        stderr: format!("error: {m}\n(mzlab-cli msn-rules --help)\n"),
-    };
+    let failed = |m: String| Outcome::fail(&m);
     if args.first().map(String::as_str) == Some("sum") {
         return sum::run(args[1..].to_vec());
     }
     let a = match parse_args(args.into_iter()) {
         Ok(Some(a)) => a,
-        Ok(None) => {
-            return Outcome {
-                code: 0,
-                stdout: format!("{HELP}\n").into_bytes(),
-                stderr: String::new(),
-            }
-        }
+        Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => return failed(e),
     };
     match rows(&a) {

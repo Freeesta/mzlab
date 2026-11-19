@@ -277,22 +277,14 @@ pub fn read_piece(dir: &Path, catalogue: &[u8], file: &str) -> Result<Vec<u8>> {
 }
 
 fn fail(msg: &str) -> Outcome {
-    Outcome {
-        code: 2,
-        stdout: Vec::new(),
-        stderr: format!("error: {msg}\n{HELP}\n"),
-    }
+    Outcome::fail(msg)
 }
 
 /// `mzlab-cli insilico ...`
 pub fn run(args: Vec<String>) -> Outcome {
     if args.first().map(String::as_str) != Some("pack") {
         return if args.iter().any(|a| a == "--help") {
-            Outcome {
-                code: 0,
-                stdout: format!("{HELP}\n").into_bytes(),
-                stderr: String::new(),
-            }
+            Outcome::ok(format!("{HELP}\n").into_bytes())
         } else {
             fail("unknown subcommand")
         };
@@ -324,16 +316,8 @@ pub fn run(args: Vec<String>) -> Outcome {
         Err(e) => return fail(&format!("{csv}: {e}")),
     };
     match pack_with(&bytes, Path::new(out), &version, &doi, cut) {
-        Ok(t) => Outcome {
-            code: 0,
-            stdout: (t + "\n").into_bytes(),
-            stderr: String::new(),
-        },
-        Err(e) => Outcome {
-            code: 1,
-            stdout: Vec::new(),
-            stderr: format!("error: {}\n", e.key),
-        },
+        Ok(t) => Outcome::ok((t + "\n").into_bytes()),
+        Err(e) => Outcome::fail_error(&e),
     }
 }
 

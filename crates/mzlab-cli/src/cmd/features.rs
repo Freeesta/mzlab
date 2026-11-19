@@ -91,7 +91,7 @@ fn expand(a: &Args) -> mzlab_core::error::Result<(Vec<PathBuf>, Vec<String>)> {
 fn run(args: Vec<String>) -> Outcome {
     let a = match parse(args.into_iter()) {
         Ok(Some(a)) => a,
-        Ok(None) => return super::help(),
+        Ok(None) => return super::features_help(),
         Err(e) => return Outcome::fail(&e),
     };
     static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
@@ -104,15 +104,9 @@ fn run(args: Vec<String>) -> Outcome {
     let _ = std::fs::remove_dir_all(&tmp);
     let csv = match r {
         Ok(c) => c,
-        Err(e) if e.key.starts_with("err.sample.") => return crate::sample_select::fail(&e, false),
+        Err(e) if e.key.starts_with("err.sample.") => return crate::sample_select::fail(&e),
         // a file that cannot be listed is a data error (1) with its own message, not a usage error
-        Err(e) => {
-            return Outcome {
-                code: 1,
-                stdout: Vec::new(),
-                stderr: format!("error: {}\n", crate::error_text::human_error(&e)),
-            }
-        }
+        Err(e) => return Outcome::fail_error(&e),
     };
     match &a.out {
         None => Outcome::ok(csv.into_bytes()),

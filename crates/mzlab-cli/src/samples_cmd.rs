@@ -154,7 +154,7 @@ const LIST_HELP: &str = "mzlab-cli samples list: what each file holds, sample by
 usage: mzlab-cli samples list FILE... [--json] [--probe]
 
   FILE     a .wiff (its .wiff.scan beside it is not read), another vendor file or a .D / .raw folder
-  --json   one samples_list/1 JSON per line on stdout, in the order of the FILEs (a file that cannot be listed gives an errore/1 line); without it, a table
+  --json   one samples_list/1 JSON per line on stdout, in the order of the FILEs (a file that cannot be listed gives an error/1 line); without it, a table
   --probe  also compare the size of the .wiff.scan with where its indexed part ends and add `probe` to the JSON: {scan_bytes, indexed_end, status}
            (ok | short: the copy is cut, exit 1 | longer: bytes after the last indexed section | n/a: no data file)
 Per sample: id, name, scans (as the index counts them), size (bytes of its section), kinds (ms, ms2, sim, mrm, dad), polarity, rt [min, max] and
@@ -312,14 +312,7 @@ fn select_run(args: Vec<String>) -> Outcome {
     }
     if !file.exists() {
         let e = Error::new("err.session.fileNotFound").with("name", file.display());
-        let mut o = Outcome::fail_error(&e);
-        o.code = 4;
-        if json {
-            let msg = crate::error_text::human_error(&e);
-            o.stdout =
-                crate::flow_json::error_json(4, &e, &msg, "check the path", &[]).into_bytes();
-        }
-        return o;
+        return Outcome::fail_error(&e).with_hint("check the path");
     }
     let chosen = match &text {
         Some(t) => {
@@ -334,7 +327,7 @@ fn select_run(args: Vec<String>) -> Outcome {
         }),
     };
     match chosen {
-        Err(e) => crate::sample_select::fail(&e, json),
+        Err(e) => crate::sample_select::fail(&e),
         Ok(ids) => {
             let ids: Vec<String> = ids.iter().map(u32::to_string).collect();
             let out = if json {
@@ -392,12 +385,11 @@ fn list_run(args: Vec<String>) -> Outcome {
                 let msg = crate::error_text::human_error(&e);
                 err += &format!("error: {msg}\n");
                 if json {
-                    out += &crate::flow_json::error_json(
+                    out += &crate::contract::error_line(
                         c,
                         &e,
-                        &msg,
                         "check the path and that the whole pair was copied",
-                        &[],
+                        "samples list",
                     );
                 }
                 code = if c == 4 || code == 4 { 4 } else { code.max(c) };
@@ -408,6 +400,7 @@ fn list_run(args: Vec<String>) -> Outcome {
         code,
         stdout: out.into_bytes(),
         stderr: err,
+        error: None,
     }
 }
 
@@ -420,6 +413,9 @@ pub fn run(args: Vec<String>) -> Outcome {
         Some("table") => ("proponi", table(it.collect())),
         Some("group") => {
             let n: Vec<String> = it.collect();
+            if let Err(e) = crate::argv::no_options(&n) {
+                return Outcome::fail_error(&e);
+            }
             ("nome_gruppo", Ok(format!("{{\"names\":{}}}", list(&n))))
         }
         Some("list") => return list_run(it.collect()),

@@ -85,7 +85,7 @@ mod tests {
             vec!["mol-hilite", "--nope"],
             vec!["mol-hilite", "/no/such/file.json"],
         ] {
-            assert_eq!(run(&a).code, 2, "{a:?}");
+            assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
         }
         assert_eq!(run(&["mol-hilite", "--help"]).code, 0);
     }
