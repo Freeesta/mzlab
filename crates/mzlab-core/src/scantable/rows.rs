@@ -255,6 +255,7 @@ impl Rows {
             nce: head.nce,
             hr1,
             n_chromatograms,
+            chromatograms: Vec::new(),
             window: window.span,
             // the list counts the optical spectra too: they are not scans, so a file that holds them all is not cut
             declared: head.declared.saturating_sub(optical),

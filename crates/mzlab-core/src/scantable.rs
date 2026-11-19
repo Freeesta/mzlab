@@ -129,6 +129,8 @@ pub struct Table {
     pub nce: bool,
     pub hr1: bool,
     pub n_chromatograms: usize,
+    /// The header of each chromatogram of an mzML, in file order (`chromlist`): the index keeps it in `run`, so that opening the file does not scan the tail.
+    pub chromatograms: Vec<crate::mzmlhead::Chrom>,
     /// Lowest and highest m/z of the scan windows the method declares for the first 50 survey scans (`Run.scan_window_ms1`).
     pub window: Option<(f64, f64)>,
     /// Scans the file declares in `<spectrumList count>` less the optical (DAD) spectra it holds (0 when it does not say); more than `rows.len()` means the file is truncated.
@@ -161,8 +163,9 @@ impl Table {
         let w = self.window.map_or(String::new(), |(a, b)| {
             format!(",\"scan_window\":[{a:?},{b:?}]")
         });
+        let list = crate::chromlist::run_part(&self.chromatograms);
         format!(
-            "{{\"nce\":{},\"hr1\":{},\"n_chromatograms\":{}{w}}}",
+            "{{\"nce\":{},\"hr1\":{},\"n_chromatograms\":{}{w}{list}}}",
             self.nce, self.hr1, self.n_chromatograms
         )
     }
@@ -624,26 +627,6 @@ fn read_walked<R: ReadAt>(
     Ok(last_end)
 }
 
-/// The chromatograms after the last spectrum.
-fn count_chromatograms<R: ReadAt>(src: &mut Source<'_, R>, last_end: u64) -> Result<usize> {
-    let size = src.size;
-    let mut n_chrom = 0usize;
-    let mut pos = last_end;
-    while pos < size {
-        let chunk = src.read(pos, (pos + (1 << 20)).min(size))?;
-        let mut i = 0;
-        while let Some(p) = find(&chunk[i..], b"<chromatogram ") {
-            n_chrom += 1;
-            i += p + 1;
-        }
-        if pos + chunk.len() as u64 >= size {
-            break;
-        }
-        pos += chunk.len() as u64 - 13;
-    }
-    Ok(n_chrom)
-}
-
 /// Reads the scan table of an mzML of `size` bytes.
 pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
     read_in(r, size, None)
@@ -676,8 +659,11 @@ pub fn read_in<R: ReadAt>(r: &mut R, size: u64, budget: Option<&MemBudget>) -> R
         Some(e) => e,
         None => read_walked(&mut src, &mut rows, budget)?,
     };
-    let n_chrom = count_chromatograms(&mut src, last_end)?;
-    finished(rows.finish(n_chrom))
+    // the tail is read once, here: the headers it holds go to the index (`chromlist`), and the table counts them
+    let chroms = crate::mzmlhead::Mzml::new(&mut *src.r, size).chromatograms(last_end)?;
+    let mut t = rows.finish(chroms.len());
+    t.chromatograms = chroms;
+    finished(t)
 }
 
 /// A NaN or infinite retention time or TIC is a damaged file (`err.file.nonFinite`, the scan by its position), like the readers' guard

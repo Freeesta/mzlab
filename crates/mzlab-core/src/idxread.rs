@@ -383,13 +383,15 @@ impl<R: ReadAt> Index<R> {
         let n = sections.len();
         let source: Value = meta.get("source").cloned().unwrap_or(Value::Null);
         let layout = crate::layout::Layout::of_index(&source, &scans);
+        let run = meta.get("run").cloned().unwrap_or(Value::Null);
+        layout.seed(&run);
         Ok(Index {
             r,
             scans: std::sync::Arc::new(scans),
             keys,
             sections,
             source,
-            run: meta.get("run").cloned().unwrap_or(Value::Null),
+            run,
             cache: Vec::new(),
             arrays: vec![None; n],
             arrays_tick: vec![0; n],

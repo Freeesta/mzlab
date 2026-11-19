@@ -69,6 +69,7 @@ pub mod nuclides;
 pub mod itemroutes;
 pub mod infusion;
 pub mod iteminfo;
+pub mod chromlist;
 pub mod layout;
 mod cespread;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]

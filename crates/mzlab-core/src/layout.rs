@@ -52,6 +52,14 @@ impl Layout {
         l
     }
 
+    /// The chromatogram list an index kept in its `run` (`chromlist`), unless this layout already has one.
+    pub fn seed(&self, run: &crate::json::Value) {
+        let mut h = self.lock();
+        if h.chroms.is_none() {
+            h.chroms = crate::chromlist::of_run(run).map(Arc::new);
+        }
+    }
+
     fn lock(&self) -> std::sync::MutexGuard<'_, Held> {
         self.0.lock().unwrap_or_else(|e| e.into_inner())
     }
