@@ -22,31 +22,31 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli flow verify RECORD   whether the fingerprints of an mzrun/1 record match its files
        mzlab-cli flow command PLAN.json   the script that reruns the plan, on stdout
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product
-       mzlab-cli file list DIR [--json] [--out PATH]   what «Open folder» lists, .D / .raw folders included
+       mzlab-cli file list DIR [--json] [--out PATH]   what «Open folder» lists
        mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds in one call: container, samples, items, channels, proposed kind as JSON
        mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds, sample by sample, with SHA-256 and a status as JSON
        mzlab-cli file verify OUT.wiff --against SRC.wiff...   whether an output equals its sources
-       mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps with CE and its spread
+       mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps
        mzlab-cli file channels FILE [--sample LIST] [--out PATH]   the channels of a file as JSON
-       mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) found by name in the folder of the file
+       mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) by name
        mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1
        mzlab-cli file convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML; --dry-run, --json
-       mzlab-cli sample vars NAME...   how the file names split into variables, as JSON
-       mzlab-cli sample group NAME...   the group name the file names share, as JSON
-       mzlab-cli sample table NAME...   the sample table proposed for the file names
-       mzlab-cli sample list FILE...   what a file holds sample by sample, as JSON; exit 1 or 3 when a sample is refused
-       mzlab-cli sample select FILE --sample LIST   which samples --sample LIST picks
+       mzlab-cli sample vars NAME...   how file names split into variables
+       mzlab-cli sample group NAME...   the group name the file names share
+       mzlab-cli sample table NAME...   the sample table proposed for names
+       mzlab-cli sample list FILE...   what a file holds sample by sample, as JSON
+       mzlab-cli sample select FILE --sample LIST   which samples LIST picks
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
        mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   the trace of a channel (TIC, BPC, SRM, UV, analog) as JSON or rt_min,intensity CSV
        mzlab-cli trace xic FILE --mz M (--ppm P | --da D) [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH]   the extracted ion chromatogram as JSON or CSV
-       mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
-       mzlab-cli dad subtract FILE ...   the DAD / PDA matrix A minus B as JSON
+       mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace as JSON
+       mzlab-cli dad subtract FILE ...   the DAD matrix A minus B as JSON
        mzlab-cli dad spectrum FILE ...   the UV spectrum at a time as JSON
        mzlab-cli dad trace FILE ...   the UV trace at a wavelength as JSON
-       mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time as JSON
-       mzlab-cli dad delay FILE ...   the delay between the DAD and the MS as JSON
+       mzlab-cli dad ms-at FILE ...   the MS at a DAD time as JSON
+       mzlab-cli dad delay FILE ...   the DAD to MS delay as JSON
        mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
@@ -127,31 +127,31 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli flow verify RECORD   whether the fingerprints of an mzrun/1 record match its files
        mzlab-cli flow command PLAN.json   the script that reruns the plan, on stdout
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product
-       mzlab-cli file list DIR [--json] [--out PATH]   what «Open folder» lists, .D / .raw folders included
+       mzlab-cli file list DIR [--json] [--out PATH]   what «Open folder» lists
        mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds in one call: container, samples, items, channels, proposed kind as JSON
        mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds, sample by sample, with SHA-256 and a status as JSON
        mzlab-cli file verify OUT.wiff --against SRC.wiff...   whether an output equals its sources
-       mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps with CE and its spread
+       mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps
        mzlab-cli file channels FILE [--sample LIST] [--out PATH]   the channels of a file as JSON
-       mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) found by name in the folder of the file
+       mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) by name
        mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1
        mzlab-cli file convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML; --dry-run, --json
-       mzlab-cli sample vars NAME...   how the file names split into variables, as JSON
-       mzlab-cli sample group NAME...   the group name the file names share, as JSON
-       mzlab-cli sample table NAME...   the sample table proposed for the file names
-       mzlab-cli sample list FILE...   what a file holds sample by sample, as JSON; exit 1 or 3 when a sample is refused
-       mzlab-cli sample select FILE --sample LIST   which samples --sample LIST picks
+       mzlab-cli sample vars NAME...   how file names split into variables
+       mzlab-cli sample group NAME...   the group name the file names share
+       mzlab-cli sample table NAME...   the sample table proposed for names
+       mzlab-cli sample list FILE...   what a file holds sample by sample, as JSON
+       mzlab-cli sample select FILE --sample LIST   which samples LIST picks
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
        mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   the trace of a channel (TIC, BPC, SRM, UV, analog) as JSON or rt_min,intensity CSV
        mzlab-cli trace xic FILE --mz M (--ppm P | --da D) [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH]   the extracted ion chromatogram as JSON or CSV
-       mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
-       mzlab-cli dad subtract FILE ...   the DAD / PDA matrix A minus B as JSON
+       mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace as JSON
+       mzlab-cli dad subtract FILE ...   the DAD matrix A minus B as JSON
        mzlab-cli dad spectrum FILE ...   the UV spectrum at a time as JSON
        mzlab-cli dad trace FILE ...   the UV trace at a wavelength as JSON
-       mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time as JSON
-       mzlab-cli dad delay FILE ...   the delay between the DAD and the MS as JSON
+       mzlab-cli dad ms-at FILE ...   the MS at a DAD time as JSON
+       mzlab-cli dad delay FILE ...   the DAD to MS delay as JSON
        mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
@@ -232,31 +232,31 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli flow verify RECORD   whether the fingerprints of an mzrun/1 record match its files
        mzlab-cli flow command PLAN.json   the script that reruns the plan, on stdout
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product
-       mzlab-cli file list DIR [--json] [--out PATH]   what «Open folder» lists, .D / .raw folders included
+       mzlab-cli file list DIR [--json] [--out PATH]   what «Open folder» lists
        mzlab-cli file info FILE... [--sample LIST] [--out PATH]   what a file holds in one call: container, samples, items, channels, proposed kind as JSON
        mzlab-cli file inventory FILE.wiff... [--full]   what a .wiff + .wiff.scan holds, sample by sample, with SHA-256 and a status as JSON
        mzlab-cli file verify OUT.wiff --against SRC.wiff...   whether an output equals its sources
-       mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps with CE and its spread
+       mzlab-cli file items FILE [--no-points] [--out PATH]   what the page learns about a file as JSON: counts, ranges, ms2_exps
        mzlab-cli file channels FILE [--sample LIST] [--out PATH]   the channels of a file as JSON
-       mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) found by name in the folder of the file
+       mzlab-cli file pair FILE... [--json]   the other half of a SCIEX pair (.wiff + .wiff.scan) by name
        mzlab-cli file validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1
        mzlab-cli file convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML; --dry-run, --json
-       mzlab-cli sample vars NAME...   how the file names split into variables, as JSON
-       mzlab-cli sample group NAME...   the group name the file names share, as JSON
-       mzlab-cli sample table NAME...   the sample table proposed for the file names
-       mzlab-cli sample list FILE...   what a file holds sample by sample, as JSON; exit 1 or 3 when a sample is refused
-       mzlab-cli sample select FILE --sample LIST   which samples --sample LIST picks
+       mzlab-cli sample vars NAME...   how file names split into variables
+       mzlab-cli sample group NAME...   the group name the file names share
+       mzlab-cli sample table NAME...   the sample table proposed for names
+       mzlab-cli sample list FILE...   what a file holds sample by sample, as JSON
+       mzlab-cli sample select FILE --sample LIST   which samples LIST picks
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256
        mzlab-cli trace chrom FILE --id ID [--sample ID] [--rt A,B] [--n N] [--format json|csv] [--out PATH]   the trace of a channel (TIC, BPC, SRM, UV, analog) as JSON or rt_min,intensity CSV
        mzlab-cli trace xic FILE --mz M (--ppm P | --da D) [--rt A,B] [--ms-level N] [--polarity +|-] [--sample ID] [--format json|csv] [--out PATH]   the extracted ion chromatogram as JSON or CSV
-       mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
-       mzlab-cli dad subtract FILE ...   the DAD / PDA matrix A minus B as JSON
+       mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace as JSON
+       mzlab-cli dad subtract FILE ...   the DAD matrix A minus B as JSON
        mzlab-cli dad spectrum FILE ...   the UV spectrum at a time as JSON
        mzlab-cli dad trace FILE ...   the UV trace at a wavelength as JSON
-       mzlab-cli dad ms-at FILE ...   the MS linked to a DAD time as JSON
-       mzlab-cli dad delay FILE ...   the delay between the DAD and the MS as JSON
+       mzlab-cli dad ms-at FILE ...   the MS at a DAD time as JSON
+       mzlab-cli dad delay FILE ...   the DAD to MS delay as JSON
        mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
@@ -738,11 +738,11 @@ many hydrogens and have no column. With --db the answer is {"format": "subdb/1",
 === mzlab-cli sample --help
 exit 0
 --- stdout
-usage: mzlab-cli sample vars NAME...   how the file names split into variables, as JSON
-       mzlab-cli sample group NAME...   the group name the file names share, as JSON
-       mzlab-cli sample table NAME...   the sample table proposed for the file names
-       mzlab-cli sample list FILE...   what a file holds sample by sample, as JSON; exit 1 or 3 when a sample is refused
-       mzlab-cli sample select FILE --sample LIST   which samples --sample LIST picks
+usage: mzlab-cli sample vars NAME...   how file names split into variables
+       mzlab-cli sample group NAME...   the group name the file names share
+       mzlab-cli sample table NAME...   the sample table proposed for names
+       mzlab-cli sample list FILE...   what a file holds sample by sample, as JSON
+       mzlab-cli sample select FILE --sample LIST   which samples LIST picks
        mzlab-cli sample design propose [FILE...] [--samples S.json] [--out PATH]   propose a design from names
        mzlab-cli sample design validate DESIGN.json [--samples S.json]   check a design, name bad keys
        mzlab-cli sample design canonical DESIGN.json [--out PATH]   canonical bytes and SHA-256

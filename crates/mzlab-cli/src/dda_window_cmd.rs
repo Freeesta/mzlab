@@ -107,11 +107,8 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => return Outcome::fail(&e),
     };
-    if let Some(f) = std::iter::once(&c.file)
-        .chain(None::<&PathBuf>)
-        .find(|f| !f.exists())
-    {
-        let e = Error::new("err.session.fileNotFound").with("name", f.display());
+    if !c.file.exists() {
+        let e = Error::new("err.session.fileNotFound").with("name", c.file.display());
         return Outcome::fail_error(&e).with_hint("check the path");
     }
     static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);

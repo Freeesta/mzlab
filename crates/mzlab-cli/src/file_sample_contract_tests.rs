@@ -226,3 +226,21 @@ fn browser_wording_has_a_terminal_variant() {
         );
     }
 }
+
+#[test]
+fn items_json_flag_is_a_no_op_and_no_points_refuses_a_bad_info() {
+    let f = format!(
+        "{}/../../tests/golden/ref/msntree_rotta/msn.mzML",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let plain = text(&run(&["file", "items", &f]));
+    assert_eq!(text(&run(&["file", "items", "--json", &f])), plain);
+    // an info that is not a JSON object cannot lose its points silently
+    let bad = [mzlab_core::lr::OpenItem {
+        info: "not json".into(),
+        hr: false,
+    }];
+    let e = crate::items_cmd::document(&bad, true).unwrap_err();
+    assert_eq!(e.key, "err.file.index");
+    assert!(crate::items_cmd::document(&bad, false).is_ok());
+}

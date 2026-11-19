@@ -70,13 +70,13 @@ fn read(file: &PathBuf, tmp: &std::path::Path, no_points: bool) -> Result<String
         let size = shell.len() as u64;
         mzlab_core::lr::open_items(&mut r.idx, &mut Mzml::new(shell, size), &name, &sample)?
     };
-    Ok(document(&items, no_points))
+    document(&items, no_points)
 }
 
 /// `info` without its `ms2_events` (the only member that grows with the run: one point per MS2); every other member keeps its bytes.
-fn without_points(info: &str) -> String {
+fn without_points(info: &str) -> Result<String> {
     let Ok(mzlab_core::json::Value::Obj(members)) = mzlab_core::json::parse(info.as_bytes()) else {
-        return info.to_string();
+        return Err(Error::new("err.file.index").with("detail", "item info is not a JSON object"));
     };
     let kept = mzlab_core::json::Value::Obj(
         members
@@ -86,23 +86,26 @@ fn without_points(info: &str) -> String {
     );
     let mut o = mzlab_core::json::Out::default();
     mzlab_core::json::write_value(&mut o, &kept);
-    o.0
+    Ok(o.0)
 }
 
 /// The `items/1` document of the items a file opens as (`file items`, and the `items` member of `file info`).
-pub(crate) fn document(items: &[mzlab_core::lr::OpenItem], no_points: bool) -> String {
+pub(crate) fn document(items: &[mzlab_core::lr::OpenItem], no_points: bool) -> Result<String> {
     let body: Vec<String> = items
         .iter()
         .map(|i| {
             let info = if no_points {
-                without_points(&i.info)
+                without_points(&i.info)?
             } else {
                 i.info.to_string()
             };
-            format!("{{\"info\":{info},\"hr\":{}}}", i.hr)
+            Ok(format!("{{\"info\":{info},\"hr\":{}}}", i.hr))
         })
-        .collect();
-    format!("{{\"schema\":\"items/1\",\"items\":[{}]}}", body.join(","))
+        .collect::<Result<_>>()?;
+    Ok(format!(
+        "{{\"schema\":\"items/1\",\"items\":[{}]}}",
+        body.join(",")
+    ))
 }
 
 pub fn run(args: Vec<String>) -> Outcome {
