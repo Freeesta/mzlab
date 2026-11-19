@@ -29,7 +29,7 @@ try:
         pg.goto(url); pg.wait_for_selector("#start:not([hidden])", timeout=60000)
         def header():
             h = pg.inner_text("header")
-            for w in ("Adducts & losses", "Lists", "Table", "More"): assert w in h, (w, h)
+            for w in ("Adducts & losses", "Contaminants", "Table", "More"): assert w in h, (w, h)
             assert pg.locator("#np-ad").count() == 0 and pg.get_attribute("#np-pt", "aria-label") == "Periodic table"
             pg.click("#tb-more"); pg.wait_for_selector("#stmenu"); assert pg.get_attribute("#np-pc", "title").startswith("Look up the compound"), pg.get_attribute("#np-pc", "title")
             pg.keyboard.press("Escape")
@@ -37,7 +37,7 @@ try:
         step("header in English", header)
         def start():
             t = pg.inner_text("#start")
-            for w in ("Drop files here", ".mzML · .raw · .wiff (+ .wiff.scan) · .D (folder)", "Try the example files", "Add acquisition method", "OPTIONAL"): assert w in t.replace("optional", "OPTIONAL"), (w, t)
+            for w in ("Drop files here", ".mzML, .raw, .wiff (+ .wiff.scan), .D (folder)", "Try the example files", "Add acquisition method", "OPTIONAL"): assert w in t.replace("optional", "OPTIONAL"), (w, t)
             assert not italian_on_screen(pg), italian_on_screen(pg)
         step("start screen in English, no Italian words", start)
         def demo():

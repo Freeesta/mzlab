@@ -11,11 +11,12 @@ Plan and decisions: `wiff-sample-choice.md`. List what a file holds first: `mzla
 ## Commands
 - `samples select FILE --sample LIST [--json]`: the dry run; `{"samples":[1,3]}` (or ids on one line without `--json`); `errore/1` on stdout with `--json` on failure; exit 0, 2, 4 (missing file), 5.
 - `convert INPUT... --out DIR --sample LIST`: one `NAME-ID.mzML` per chosen sample, byte for byte the file a run without `--sample` writes for that sample (a single chosen sample keeps its `NAME-ID` name). Exit 5 before anything is written.
-- `channels FILE --sample LIST`: one `canali/1` line per sample, in the order of the file, each the bytes of its own single-sample run; the whole list is checked first (no partial answer); `--channel` needs one id.
+- `channels FILE --sample LIST`: one `channels/1` line per sample, in the order of the file, each the bytes of its own single-sample run; the whole list is checked first (no partial answer); `--channel` needs one id.
 - `features FILE... --sample LIST`: every file with several samples gives one series member per chosen sample (progress lines name it `FILE@ID`), single-sample files stay one member; without `--sample` a multi-sample file is its first sample, as before.
+- `samples select FILE --default [--budget-mb N] [--json]`: the samples the page dialog ticks first (`readers::selection::suggest`, the site's `sample_default`): all when their section bytes are at most a quarter of the budget (default 1024 MB), none otherwise; exactly one of `--sample` and `--default`.
 
 ## Not here
-- A `samples` property of a `flow run` input (plan inputs already name a sample as `NAME@ID`) and the partial identity of Q4: the mzML of a chosen sample is the same bytes as in a full run, so no identity changes here. The page dialog is PR 4, the OPFS range copy PR 5.
+- A `samples` property of a `flow run` input (plan inputs already name a sample as `NAME@ID`) and the partial identity of Q4: the mzML of a chosen sample is the same bytes as in a full run, so no identity changes here. The page dialog is PR 4 (`wiff-sample-dialog.md`), the OPFS range copy PR 5.
 - `dad --sample ID` keeps its single id.
 
 Tests: `crates/mzlab-cli/src/sample_select_tests.rs` (synthetic `tools/wiff_grande.py` pair; python3 is part of the test), `readers/selection.rs` unit tests.

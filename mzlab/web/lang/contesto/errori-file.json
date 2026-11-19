@@ -1,5 +1,6 @@
 {
   "err.file.notWiff": "{name} = file name.",
+  "err.file.wiffNoSource": "wiff verify called with fewer than two .wiff/.wiff.scan pairs (the file under test and at least one source). No parameters.",
   "err.file.wiffNoScan": "{name} = name of the .wiff file.",
   "err.file.wiffTruncated": "{name} = name of the .wiff file; {size} = file size in bytes; {needed} = bytes required by the file's sector table.",
   "err.file.cutShort": "Truncated vendor file (interrupted copy). {name} = file name; {size} = file size in bytes; {needed} = bytes required by the file's internal table.",

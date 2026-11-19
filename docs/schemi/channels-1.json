@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "channels/1",
+  "title": "channels/1: the channels of a file, `mzlab-cli channels` and `api/canali`",
+  "description": "What an agent reads first about a file: TIC, BPC, one channel per scan type or precursor, one per SRM transition, UV and detector traces. All times are in minutes. Code: crates/mzlab-core/src/channels/output.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "kind",
+    "channels"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "channels/1"
+    },
+    "kind": {
+      "type": "object",
+      "required": [
+        "proposed",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "description": "The experiment type the engine proposes (a proposal: the user's value wins).",
+      "properties": {
+        "proposed": {
+          "enum": [
+            "lc-full",
+            "lc-ms2-targeted",
+            "lc-dda",
+            "lc-mrm",
+            "lc-sim",
+            "msn-infusion",
+            "mixed",
+            "uv-only"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why the type was proposed, a stable code (for example ms1_only, few_precursors, srm_only)."
+        }
+      }
+    },
+    "channels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "family",
+          "generator",
+          "ms_level",
+          "polarity",
+          "code",
+          "label",
+          "group",
+          "n_points",
+          "rt_start_min",
+          "rt_end_min",
+          "has_spectra"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Channel id, the value of `--channel` and of `channel=` in the routes."
+          },
+          "family": {
+            "type": "string",
+            "description": "tic, bpc, ms, dd, srm, sim, uv or an."
+          },
+          "generator": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Index in `channels` of the channel it comes from (null: none)."
+          },
+          "ms_level": {
+            "type": "integer",
+            "description": "MS level, 0 when the channel has none (TIC, BPC, UV)."
+          },
+          "polarity": {
+            "type": "integer",
+            "description": "1 positive, -1 negative, 0 unknown or not applicable."
+          },
+          "code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Scan mode code (EMS, EPI, MRM, TWC, ...)."
+          },
+          "label": {
+            "type": "string",
+            "description": "Human name of the channel."
+          },
+          "group": {
+            "type": "string",
+            "description": "Key that puts the same channel of several files together (same scan type, precursor and polarity)."
+          },
+          "n_points": {
+            "type": "integer",
+            "description": "Number of scans or points of the trace."
+          },
+          "rt_start_min": {
+            "type": "number",
+            "description": "First retention time, minutes (0 when the channel is empty)."
+          },
+          "rt_end_min": {
+            "type": "number",
+            "description": "Last retention time, minutes (0 when the channel is empty)."
+          },
+          "has_spectra": {
+            "type": "boolean",
+            "description": "True when the channel has mass spectra to open."
+          }
+        }
+      }
+    }
+  }
+}

@@ -7,7 +7,7 @@ from __future__ import annotations
 import statistics
 import time
 from collections import Counter, defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 
 NOT_REAL = ("annullato", "aggregato")      # failed-job categories that are not a real red: superseded by a push / the gate repeating another red
 COO_COLUMNS = ["date", "merged", "median_open_to_merge_min", "max_open_to_merge_min", "open_prs_end", "chats_running", "note"]
@@ -131,3 +131,36 @@ def queue_table(ev: list[dict], out=print) -> None:
         f"oldest open {hm(u['piu_vecchia_aperta_s'] or 0)}, oldest green {hm(u['piu_vecchia_verde_s'] or 0)}")
     out("  mean/max: " + ", ".join(f"{n} {media([r[c] for r in co]):.1f}/{massimo([r[c] for r in co])}"
                                    for n, c in (("open", "aperte"), ("behind", "indietro"), ("conflict", "sporche"), ("green waiting", "verdi_in_attesa"))))
+
+
+def pr_recent_rows(data: str, pr_rows, api, ora=None, ore: int = 24) -> list[dict]:
+    """PR events of the last `ore` hours read from the API (no pull_request_target): opened, closed/merged, and one `push` row per new head
+    sha seen on a completed `test` run. Rows already in `data` are skipped before any detail call; the poll is idempotent."""
+    from ci_metrics import chiave, read_all
+    from ci_metrics_data import adesso_dt
+    ora = ora or adesso_dt()
+    since = (ora - timedelta(hours=ore)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    old = read_all(data)
+    seen = {chiave(r) for r in old}
+    opened = {r.get("pr") for r in old if r.get("tipo") == "pr" and r.get("azione") == "aperta"}
+    out: list[dict] = []
+
+    def key(n, azione, sha):
+        return ("pr", None, None, None, n, azione, sha, None)
+    for pr in api("/pulls?state=all&sort=updated&direction=desc&per_page=50"):
+        if pr["updated_at"] < since:
+            break
+        if pr["number"] not in opened and pr["created_at"] >= since:
+            out += pr_rows({"action": "opened", "pull_request": pr}, api)
+        if pr["state"] == "closed" and key(pr["number"], "unita" if pr.get("merged_at") else "chiusa", pr["head"]["sha"]) not in seen:
+            out += pr_rows({"action": "closed", "pull_request": api(f"/pulls/{pr['number']}")}, api)
+    pushed = set()
+    runs = api(f"/actions/runs?event=pull_request&status=completed&created=>={since[:10]}&per_page=100").get("workflow_runs", [])
+    for run in sorted(runs, key=lambda x: x["created_at"]):
+        n = ((run.get("pull_requests") or [{}])[0]).get("number")
+        k = (run["head_sha"], n)
+        if run["name"] != "test" or n is None or k in pushed or key(n, "push", run["head_sha"]) in seen:
+            continue
+        pushed.add(k)
+        out += [{**r, "ts_utc": run["created_at"]} for r in pr_rows({"action": "synchronize", "pull_request": {"number": n, "head": {"sha": run["head_sha"]}}}, api)]
+    return out

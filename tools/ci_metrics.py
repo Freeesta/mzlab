@@ -5,7 +5,7 @@ Used by .github/workflows/stat-ci.yml (the `registra-*` commands, one event per 
 Standard library only. The data file `eventi.jsonl` lives on the orphan branch `stat-ci` (docs/agenti/ci-fast.md).
 
     python3 tools/ci_metrics.py registra-run --evento E.json --nuovi N.jsonl   # workflow_run completed: run + failed jobs
-    python3 tools/ci_metrics.py registra-pr --evento E.json --nuovi N.jsonl    # pull_request_target: opened/push/merged/closed
+    python3 tools/ci_metrics.py registra-pr-recenti --dati D.jsonl --nuovi N.jsonl   # polled: PRs opened/closed/merged and pushed heads, read from the API
     python3 tools/ci_metrics.py registra-conflitti --evento E.json --dati D.jsonl --nuovi N.jsonl   # push to main: new `dirty` PRs
     python3 tools/ci_metrics.py registra-recenti --dati D.jsonl --nuovi N.jsonl --cursore C.json   # scheduled: runs completed after the cursor + runner load
     python3 tools/ci_metrics.py registra-coda --nuovi N.jsonl                  # snapshot of the open PRs (behind, dirty, green and waiting, oldest)
@@ -34,6 +34,7 @@ from datetime import datetime, timedelta, timezone
 import ci_metrics_data as dati_ci
 import ci_metrics_file as file_ci
 import ci_metrics_day as giorno_ci
+from ci_metrics_day import pr_recent_rows as _recent
 from ci_metrics_file import active, branch_events, leggi, read_all, segmenti  # noqa: F401
 
 # Estimated minutes lost for the events that have no measured duration (printed with the summary).
@@ -193,6 +194,10 @@ def pr_rows(event: dict, api=api_get) -> list[dict]:
     if pr.get("merged"):
         row["verde_a_unione_s"] = secs(green_at(pr["head"]["sha"], api), fine)
     return [row]
+
+
+def pr_recent_rows(data: str, api=api_get, ora: datetime | None = None, ore: int = 24) -> list[dict]:
+    return _recent(data, pr_rows, api, ora, ore)
 
 
 def fill_green(righe: list[dict], api=api_get, massimo: int = 30) -> int:
@@ -412,7 +417,7 @@ def write_rows(path: str, righe: list[dict]) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("comando", choices=["registra-run", "registra-pr", "registra-conflitti", "registra-recenti", "registra-coda", "accoda", "compatta", "riempi-verde", "esporta", "riepilogo", "percorso"])
+    ap.add_argument("comando", choices=["registra-run", "registra-pr-recenti", "registra-conflitti", "registra-recenti", "registra-coda", "accoda", "compatta", "riempi-verde", "esporta", "riepilogo", "percorso"])
     ap.add_argument("file", nargs="?", help="accoda: JSONL with the new lines")
     ap.add_argument("--evento", default=os.environ.get("GITHUB_EVENT_PATH"))
     ap.add_argument("--dati", help="events file (default: eventi.jsonl, plus its eventi-YYYY-MM[-N].jsonl parts; riepilogo and esporta: origin/stat-ci)")
@@ -461,10 +466,12 @@ def main() -> int:
                 json.dump({"ultimo": cursor}, f)
     elif a.comando == "registra-coda":
         righe = giorno_ci.queue_rows(api_get, adesso())
+    elif a.comando == "registra-pr-recenti":
+        righe = pr_recent_rows(data)
     else:
         with open(a.evento, encoding="utf-8") as f:
             event = json.load(f)
-        righe = {"registra-run": lambda: run_rows(event), "registra-pr": lambda: pr_rows(event),
+        righe = {"registra-run": lambda: run_rows(event),
                  "registra-conflitti": lambda: conflict_rows(event, data, provare=True)}[a.comando]()
     if a.nuovi:
         write_rows(a.nuovi, righe)

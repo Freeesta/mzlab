@@ -51,14 +51,14 @@ fn full_scan_file() {
         ]
     );
     assert_eq!(
-        c.tipo,
-        Tipo {
+        c.experiment,
+        ExperimentType {
             proposed: "lc-full",
             reason: "ms1_only"
         }
     );
     assert_eq!(c.v[2].label, "MS¹");
-    assert_eq!(c.v[2].omologo, "ms|1|||||");
+    assert_eq!(c.v[2].group, "ms|1|||||");
     assert!(c.v[2].spettri && !c.v[0].spettri);
 }
 
@@ -83,9 +83,9 @@ fn targeted_ms2_in_lc_has_one_channel_per_precursor() {
             entry("ms:ms2 300 @cid", "ms", 2, 20, Some(2)),
         ]
     );
-    assert_eq!(c.tipo.proposed, "lc-ms2-mirato");
+    assert_eq!(c.experiment.proposed, "lc-ms2-targeted");
     assert_eq!(c.v[3].label, "MS² 222 @CID35");
-    assert_eq!(c.v[3].omologo, "ms|2|222|cid|35||");
+    assert_eq!(c.v[3].group, "ms|2|222|cid|35||");
     // the partition: scans of the channel in file order, 4 bytes per scan
     assert_eq!(
         c.scansioni(3),
@@ -129,14 +129,14 @@ fn msn_in_blocks_is_a_tree_of_channels() {
         ]
     );
     assert_eq!(
-        c.tipo,
-        Tipo {
-            proposed: "infusione-msn",
+        c.experiment,
+        ExperimentType {
+            proposed: "msn-infusion",
             reason: "blocks"
         }
     );
     assert_eq!(c.v[4].label, "MS³ 317→261 @CID30");
-    assert_eq!(c.v[4].omologo, "ms|3|317>261|cid|30||");
+    assert_eq!(c.v[4].group, "ms|3|317>261|cid|30||");
 }
 
 #[test]
@@ -163,8 +163,8 @@ fn many_precursors_make_one_dda_channel() {
     assert_eq!(c.v[3].sigla, Some("DDA"));
     assert_eq!(c.v[3].label, "MS² DDA");
     assert_eq!(
-        c.tipo,
-        Tipo {
+        c.experiment,
+        ExperimentType {
             proposed: "lc-dda",
             reason: "many_precursors"
         }
@@ -225,11 +225,11 @@ fn mrm_file_has_a_summed_tic_and_one_channel_per_transition() {
     assert_eq!(c.v[0].source, Source::Somma);
     assert_eq!(c.v[1].source, Source::Cromatogramma(0));
     assert_eq!(c.v[1].label, "MRM 230→162 @25 «bentazone 1»");
-    assert_eq!(c.v[1].omologo, "srm|2|230.0>162.0||25||");
+    assert_eq!(c.v[1].group, "srm|2|230.0>162.0||25||");
     assert!(!c.v[1].spettri);
     assert_eq!(
-        c.tipo,
-        Tipo {
+        c.experiment,
+        ExperimentType {
             proposed: "lc-mrm",
             reason: "srm_only"
         }
@@ -257,7 +257,7 @@ fn mrm_with_product_ion_scans_is_mixed() {
         &Facts::default(),
         "c.mzML",
     );
-    assert_eq!(c.tipo.proposed, "misto");
+    assert_eq!(c.experiment.proposed, "mixed");
     let ids: Vec<&str> = c.v.iter().map(|x| x.id.as_str()).collect();
     assert_eq!(
         ids,
@@ -283,7 +283,7 @@ fn a_uv_flag_without_the_trace_header_lists_no_channel() {
         "u.mzML",
     );
     assert!(c.v.is_empty());
-    assert_eq!(c.tipo.proposed, "solo-uv");
+    assert_eq!(c.experiment.proposed, "uv-only");
 }
 
 #[test]
@@ -350,10 +350,10 @@ fn wiff_ida_dependent_scans_are_one_dd_channel() {
         ("dd:2:EPI", Some("EPI"), n_epi)
     );
     assert_eq!(dd[0].parent, Some(0));
-    assert_eq!(dd[0].omologo, "dd|2|EPI");
+    assert_eq!(dd[0].group, "dd|2|EPI");
     assert!(dd[0].spettri);
     assert_eq!(c.v.iter().filter(|x| x.famiglia == Famiglia::Ms).count(), 1);
-    assert_eq!(c.tipo.proposed, "lc-dda");
+    assert_eq!(c.experiment.proposed, "lc-dda");
 }
 
 #[test]
@@ -420,7 +420,7 @@ fn sim_channels_without_q1_stay_apart_by_their_place_in_the_experiment() {
     let sim: Vec<&str> =
         c.v.iter()
             .filter(|x| x.id.starts_with("sim:"))
-            .map(|x| x.omologo.as_str())
+            .map(|x| x.group.as_str())
             .collect();
     assert_eq!(
         sim,
@@ -432,7 +432,7 @@ fn sim_channels_without_q1_stay_apart_by_their_place_in_the_experiment() {
     );
     assert_eq!(
         c.v.iter()
-            .find(|x| x.omologo == "sim|1|#2|positive")
+            .find(|x| x.group == "sim|1|#2|positive")
             .map(|x| x.label.as_str()),
         Some("SIM #3 (+)")
     );
@@ -456,7 +456,7 @@ fn a_file_of_sim_chromatograms_only_is_typed_sim_also_with_a_uv_trace() {
         };
         let c = Channels::da(&[], &chroms, &facts, "s.mzML");
         assert_eq!(
-            (c.tipo.proposed, c.tipo.reason),
+            (c.experiment.proposed, c.experiment.reason),
             ("lc-sim", "sim_only"),
             "pda={pda}"
         );

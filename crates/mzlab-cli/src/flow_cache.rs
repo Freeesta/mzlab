@@ -110,7 +110,7 @@ impl Cache {
             job.instance.step_ref(),
             job.instance.id,
             env!("CARGO_PKG_VERSION"),
-            option_env!("MZLAB_COMMIT").unwrap_or("")
+            crate::flow_mzrun::build_commit().unwrap_or("")
         );
         let algorithm = job
             .resolved

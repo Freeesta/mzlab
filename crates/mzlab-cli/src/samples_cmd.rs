@@ -15,15 +15,16 @@ pub const HELP: &str = "mzlab-cli samples: how the names of a set of files split
 
 usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
        mzlab-cli samples group NAME...
-       mzlab-cli samples table [--names FILE|-]
+       mzlab-cli samples table [--names FILE|- | FILE...]
        mzlab-cli samples list FILE... [--json] [--probe]   (samples list --help)
-       mzlab-cli samples select FILE --sample LIST [--json]   (samples select --help)
+       mzlab-cli samples select FILE (--sample LIST | --default [--budget-mb N]) [--json]   (samples select --help)
 
   --names FILE|-  one file name per line (default: the standard input)
   --pos N         also the manual variable of the N-th token (1 = first, -1 = last), cut at --sep (default \"_-. \")
   --has a,b       also the manual variable of terms: a file goes to the first term equal to one of its tokens
   --substring     with --has: the term may be inside a token (O2 then catches H2O2)
   group           the name of a group made of NAMEs: their common tokens in order, empty when none
+  FILE...         with table: real files, named by their file name and hashed (SHA-256), so `flow record` can match the roles
   table           the sample table the names propose (campioni/2): role, time point (`tempo`, `unita_tempo`, `tempo_min`), series, replicate, concentration";
 
 fn names(src: &str) -> Result<Vec<String>, String> {
@@ -102,23 +103,46 @@ fn variabili(args: Vec<String>) -> Result<String, String> {
     Ok(body)
 }
 
-/// The body of `table`: the names, in the order given, as the files of `proponi` (no SHA-256, no file kind).
+/// The body of `table`: the names, in the order given, as the files of `proponi` (no file kind). The SHA-256 is empty for a name and the real one for a
+/// FILE path (hashed here, in the order given), which is what `flow record` matches a role by.
 fn table(args: Vec<String>) -> Result<String, String> {
-    let mut src = "-".to_string();
+    let mut src = None;
+    let mut paths = Vec::new();
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
-            "--names" => src = it.next().ok_or("--names needs a file")?,
-            o => return Err(format!("unknown option {o}")),
+            "--names" => src = Some(it.next().ok_or("--names needs a file")?),
+            o if o.starts_with("--") => return Err(format!("unknown option {o}")),
+            _ => paths.push(a),
         }
     }
-    let files: Vec<String> = names(&src)?
+    if src.is_some() && !paths.is_empty() {
+        return Err("--names and FILE paths do not go together".into());
+    }
+    let mut named: Vec<(String, String)> = Vec::new();
+    for p in &paths {
+        let (_, sha) =
+            crate::flow_hash::file_sha256(Path::new(p)).map_err(|e| format!("{p}: {e}"))?;
+        let name = Path::new(p)
+            .file_name()
+            .map_or(p.clone(), |n| n.to_string_lossy().into_owned());
+        named.push((name, sha));
+    }
+    if paths.is_empty() {
+        named = names(src.as_deref().unwrap_or("-"))?
+            .into_iter()
+            .map(|n| (n, String::new()))
+            .collect();
+    }
+    let files: Vec<String> = named
         .iter()
-        .map(|n| {
+        .map(|(n, sha)| {
             let mut o = Out::default();
             o.raw("{\"name\":")
                 .str(n)
-                .raw(",\"sha256\":\"\",\"kind\":\"\"}");
+                .raw(",\"sha256\":")
+                .str(sha)
+                .raw(",\"kind\":\"\"}");
             o.0
         })
         .collect();
@@ -243,24 +267,32 @@ fn list_table(json: &str, file: &str) -> String {
     t
 }
 
-const SELECT_HELP: &str = "mzlab-cli samples select: which samples of a file `--sample LIST` would open, checked against its container and index (nothing is read beyond them, nothing is written).
+const SELECT_HELP: &str = "mzlab-cli samples select: which samples of a file `--sample LIST` would open, or which ones the chooser of the site ticks first (`--default`), checked against its container and index (nothing is read beyond them, nothing is written).
 
-usage: mzlab-cli samples select FILE --sample LIST [--json]
+usage: mzlab-cli samples select FILE (--sample LIST | --default [--budget-mb N]) [--json]
 
   FILE         a .wiff (its .wiff.scan is not read), another vendor file or a .D / .raw folder
   --sample LIST  sample ids and ranges: 1,3,5 or 2-4 (the ids of `samples list`, not positions)
-  --json       {\"samples\":[ids]} on stdout, the ids in the order of the file: the same bytes as the site's `sample_selection`
+  --default    the samples the site's chooser ticks at the start (`sample_default`): all when their section bytes are small against the budget, none otherwise
+  --budget-mb N  the memory budget for --default in MB (default 1024; 0 = the default)
+  --json       {\"samples\":[ids]} on stdout, the ids in the order of the file: the same bytes as the site's `sample_selection` / `sample_default`
 The same LIST is taken by `convert`, `channels` and `features`.
-Exit codes: 0 selected; 2 usage (LIST is not a list); 4 the file is missing or unreadable; 5 an id the file does not have (the ids present are named).";
+Exit codes: 0 selected; 2 usage (LIST is not a list, both or neither of --sample and --default, a --budget-mb that is not a number of MB); 4 the file is missing or unreadable; 5 an id the file does not have (the ids present are named).";
 
-/// `samples select FILE --sample LIST [--json]`: the dry run of `--sample`.
+/// `samples select FILE (--sample LIST | --default [--budget-mb N]) [--json]`: the dry run of `--sample`, or the first ticks of the page chooser.
 fn select_run(args: Vec<String>) -> Outcome {
     let (mut file, mut text, mut json) = (None::<PathBuf>, None::<String>, false);
+    let (mut default, mut budget) = (false, 0.0f64);
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
             "--help" | "-h" => return Outcome::ok(format!("{SELECT_HELP}\n").into_bytes()),
             "--json" => json = true,
+            "--default" => default = true,
+            "--budget-mb" => match it.next().and_then(|v| v.parse::<f64>().ok()) {
+                Some(v) if v >= 0.0 => budget = v,
+                _ => return Outcome::fail("--budget-mb needs a number of MB"),
+            },
             "--sample" => match it.next() {
                 Some(v) => text = Some(v),
                 None => return Outcome::fail("--sample needs a list such as 1,3,5"),
@@ -272,9 +304,12 @@ fn select_run(args: Vec<String>) -> Outcome {
             _ => return Outcome::fail("samples select takes one FILE"),
         }
     }
-    let (Some(file), Some(text)) = (file, text) else {
-        return Outcome::fail("samples select needs a FILE and --sample LIST");
+    let (Some(file), text) = (file, text) else {
+        return Outcome::fail("samples select needs a FILE and --sample LIST or --default");
     };
+    if text.is_some() == default {
+        return Outcome::fail("samples select needs exactly one of --sample LIST and --default");
+    }
     if !file.exists() {
         let e = Error::new("err.session.fileNotFound").with("name", file.display());
         let mut o = Outcome::fail_error(&e);
@@ -286,8 +321,18 @@ fn select_run(args: Vec<String>) -> Outcome {
         }
         return o;
     }
-    let chosen =
-        crate::sample_select::parse(&text).and_then(|w| crate::sample_select::resolve(&file, &w));
+    let chosen = match &text {
+        Some(t) => {
+            crate::sample_select::parse(t).and_then(|w| crate::sample_select::resolve(&file, &w))
+        }
+        None => crate::sample_select::sized(&file).map(|(ids, sizes)| {
+            mzlab_core::readers::selection::suggest(
+                &ids,
+                &sizes,
+                mzlab_core::readers::selection::budget_bytes(budget),
+            )
+        }),
+    };
     match chosen {
         Err(e) => crate::sample_select::fail(&e, json),
         Ok(ids) => {

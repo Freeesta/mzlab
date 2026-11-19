@@ -442,7 +442,7 @@ class Item:
 
     # ------------------------------------------------------------------ analog traces (pressure, flow, temperature...)
     def analog_list(self) -> list[dict]:
-        """[{i, kind, id, unit, t0, t1, n}] of the non-MS traces that are not the PDA: read once (a few thousand points each)."""
+        """[{i, kind, id, unit, rt_min, rt_max, n}] of the non-MS traces that are not the PDA: read once (a few thousand points each)."""
         if self.__dict__.get("_analog") is None:
             out = []
             for c in self.run.chromatograms():
@@ -452,7 +452,7 @@ class Item:
                 if not len(t):
                     continue
                 out.append({"i": c["index"], "kind": c["kind"], "id": c["id"], "unit": self.run.chromatogram_unit(c["index"]),
-                            "t0": round(float(t[0]), 4), "t1": round(float(t[-1]), 4), "n": int(len(t))})
+                            "rt_min": round(float(t[0]), 4), "rt_max": round(float(t[-1]), 4), "n": int(len(t))})
             self._analog = out
         return self._analog
 

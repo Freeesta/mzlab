@@ -566,6 +566,17 @@ pub(crate) fn arrays(chunk: &[u8]) -> Vec<(String, &[u8])> {
 /// One chromatogram array: the same decoder as the spectra (`mzmlarray`), so a zlib bomb stops at `expected` values, never below 8M values (the
 /// declared length of a PDA matrix chromatogram is shorter than its array).
 pub(crate) fn decode(head: &str, data: &[u8], expected: usize) -> Result<Vec<f64>> {
+    Ok(decode_with(head, data, expected, &mut Inflate::new(), Want::F64)?.0)
+}
+
+/// `decode` with the caller's inflater (a loop over many arrays builds it once, not once per array) and the width the caller keeps.
+pub(crate) fn decode_with(
+    head: &str,
+    data: &[u8],
+    expected: usize,
+    inf: &mut Inflate,
+    want: Want,
+) -> Result<(Vec<f64>, Vec<f32>)> {
     if crate::numpress::ACCESSIONS
         .iter()
         .any(|a| has_accession(head, a))
@@ -579,15 +590,7 @@ pub(crate) fn decode(head: &str, data: &[u8], expected: usize) -> Result<Vec<f64
         .unwrap_or(crate::numarray::Num::F64);
     let zlib = has_accession(head, "MS:1000574");
     let text = String::from_utf8_lossy(data);
-    let (values, _) = decode_array(
-        num,
-        zlib,
-        &text,
-        expected.max(MIN_VALUES),
-        &mut Inflate::new(),
-        Want::F64,
-    )?;
-    Ok(values)
+    decode_array(num, zlib, &text, expected.max(MIN_VALUES), inf, want)
 }
 
 #[cfg(test)]

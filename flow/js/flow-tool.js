@@ -6,7 +6,7 @@
   "use strict";
   const T = /** @type {any} */ (window).QTOOLS;
   if (!T) return;
-  const ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="6" height="5" rx="1"/><rect x="15" y="15" width="6" height="5" rx="1"/><path d="M9 6.5h3a3 3 0 0 1 3 3v6"/></svg>';
+  const ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="6" height="5" rx="1"/><rect x="15" y="15" width="6" height="5" rx="1"/><path d="M9 6.5h1.5A1.5 1.5 0 0 1 12 8v8a1.5 1.5 0 0 0 1.5 1.5H15"/></svg>';
   // what the shell needs to draw (the order is the order of execution)
   const CORE = ["flow-registry.js", "flow-check.js", "flow-plan.js", "flow-inputs.js", "flow-ui.js", "flow-palette.js", "flow-form.js", "flow-liste.js", "flow-compare.js", "flow-chain.js", "flow-page.js", "flow-names.js", "flow-fix.js", "flow-canvas.js", "flow-inspect.js", "flow-issues.js", "flow-shell-css.js", "flow-shell.js"];
   // what is used only after a click or when a result arrives; the shell hooks guard for it and redraw when it is there (F.whenLate)

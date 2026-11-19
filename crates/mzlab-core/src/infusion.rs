@@ -1,13 +1,13 @@
 //! Is a file a direct infusion (syringe, FIA) with MSn on fixed precursors rather than an LC run? Decided from the rows of the `.mzidx`
 //! alone, plus two hints (the LC part of the `.raw` method, the file name). The shape of the TIC is not used: measured, it does not separate.
 //!
-//! - constant RT (or one scan): `rt_costante`;
+//! - constant RT (or one scan): `constant_rt`;
 //! - B, fixed precursors: at most 512 distinct MSn keys (a cascade down to MS8 at several energies has well over 64), median scans per key >= 10, keys with >= 5 scans cover >= 95 % of the MSn scans;
 //! - C, long blocks: >= 80 % of the MSn scans lie in consecutive runs of the same key at least 5 long (the MS1 scans are a key of their own), with at least
 //!   two distinct keys (segments of time): a single key over the whole run is a targeted MS2 of an LC run.
 //!
-//! Infusion = constant RT, or B and C (`blocchi`), or B and a `.raw` method without LC (`metodo_senza_lc`), or B and a name with
-//! `infus`/`fia`/`direct`/`syringe` (`nome`). A targeted LC run (PRM) has B but cycles its precursors (no C); a DDA run has neither.
+//! Infusion = constant RT, or B and C (`blocks`), or B and a `.raw` method without LC (`method_without_lc`), or B and a name with
+//! `infus`/`fia`/`direct`/`syringe` (`name`). A targeted LC run (PRM) has B but cycles its precursors (no C); a DDA run has neither.
 
 use std::collections::HashMap;
 
@@ -19,12 +19,12 @@ use crate::mzmlhead::Mzml;
 /// Why a file is an infusion, its deepest MSn level and its number of nominal MSn nodes (energies merged).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Infusione {
-    /// `rt_costante` | `blocchi` | `metodo_senza_lc` | `nome`
+    /// `constant_rt` | `blocks` | `method_without_lc` | `name`
     pub reason: &'static str,
-    pub livelli: u8,
+    pub levels: u8,
     pub nodes: usize,
     /// Distinct MSn keys (energies kept), the number that `MAX_KEYS` limits.
-    pub chiavi: usize,
+    pub keys: usize,
 }
 
 const MAX_KEYS: usize = 512;
@@ -102,7 +102,7 @@ fn name_says(name: &str) -> bool {
 /// only stays `full`, and one of constant RT (a product-ion scan of a low-resolution instrument) stays `ms2`.
 pub fn with_msn(scans: &[Scan], lc: Option<bool>, name: &str) -> bool {
     scans.iter().any(|s| s.level >= 2)
-        && infusione(scans, lc, name).is_some_and(|i| i.reason != "rt_costante")
+        && infusione(scans, lc, name).is_some_and(|i| i.reason != "constant_rt")
 }
 
 /// Whether the scans are an infusion (see the module), with `lc` = the `.raw` method has an LC part (`None`: unknown, e.g. an mzML).
@@ -116,14 +116,14 @@ pub fn infusione(scans: &[Scan], lc: Option<bool>, name: &str) -> Option<Infusio
     let levels = scans.iter().map(|s| s.level).max().unwrap_or(1);
     crate::sortc::slice_ord(&mut nominal);
     nominal.dedup();
-    let nodi = nominal.len();
-    let chiavi = keys.iter().collect::<std::collections::HashSet<_>>().len();
-    let out = |motivo| {
+    let n_nodes = nominal.len();
+    let n_keys = keys.iter().collect::<std::collections::HashSet<_>>().len();
+    let out = |reason| {
         Some(Infusione {
-            reason: motivo,
-            livelli: levels,
-            nodes: nodi,
-            chiavi,
+            reason,
+            levels,
+            nodes: n_nodes,
+            keys: n_keys,
         })
     };
     let (lo, hi) = scans
@@ -132,7 +132,7 @@ pub fn infusione(scans: &[Scan], lc: Option<bool>, name: &str) -> Option<Infusio
             (a.min(s.rt), b.max(s.rt))
         });
     if scans.len() == 1 || hi - lo < 1e-6 {
-        return out("rt_costante");
+        return out("constant_rt");
     }
     if !fixed_precursors(&keys) {
         return None;
@@ -148,29 +148,29 @@ pub fn infusione(scans: &[Scan], lc: Option<bool>, name: &str) -> Option<Infusio
     // one key over the whole run is a targeted MS2 of an LC run (a chromatographic peak), not an infusion: blocks need at least two segments
     let segments = keys.iter().collect::<std::collections::HashSet<_>>().len();
     if segments >= 2 && long_blocks(&order, msn.len()) {
-        out("blocchi")
+        out("blocks")
     } else if lc == Some(false) {
-        out("metodo_senza_lc")
+        out("method_without_lc")
     } else if name_says(name) {
-        out("nome")
+        out("name")
     } else {
         None
     }
 }
 
-/// `"msn":{motivo, livelli, nodi, chiavi}` of an infusion, else `"msn":null` (`iteminfo`, `sniff`).
+/// `"msn":{reason, levels, nodes, keys}` of an infusion, else `"msn":null` (`iteminfo`, `sniff`).
 pub(crate) fn json(o: &mut Out, m: Option<&Infusione>) {
     o.raw(",\"msn\":");
     match m {
         Some(m) => o
-            .raw("{\"motivo\":")
+            .raw("{\"reason\":")
             .str(m.reason)
-            .raw(",\"livelli\":")
-            .int(m.livelli as i64)
-            .raw(",\"nodi\":")
+            .raw(",\"levels\":")
+            .int(m.levels as i64)
+            .raw(",\"nodes\":")
             .int(m.nodes as i64)
-            .raw(",\"chiavi\":")
-            .int(m.chiavi as i64)
+            .raw(",\"keys\":")
+            .int(m.keys as i64)
             .raw("}"),
         None => o.raw("null"),
     };

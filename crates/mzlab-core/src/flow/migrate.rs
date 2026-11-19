@@ -1,4 +1,4 @@
-//! Step migrations: a plan, a `--set` or an `mzrun/1` preset that names an older version of a step (or the old names of its parameters) is rewritten to
+//! Step migrations: a plan, a `--set` or an `mzrun/2` preset that names an older version of a step (or the old names of its parameters) is rewritten to
 //! the current version before it is checked or run, so saved plans keep running and only the current names are printed. Applied by `parse` (and so by
 //! `check`, `run`, `line`, `command` and the scheduler), by `apply_set` and by `mzrun::migrate`.
 

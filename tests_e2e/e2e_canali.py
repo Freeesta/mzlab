@@ -18,8 +18,8 @@ S = D / "s"
 ds.full_scan(D / "DAD-t0.mzML", 0, np.random.default_rng(3), dad=True)
 def load(pg, files):
     stage(pg, files); pg.click("text=Load data"); ready(pg); wait_for_js(pg, f"E.files.length >= {len(files)}")
-def chans(pg, k): return pg.evaluate(f"CANALI.canali({k}).then(j => j.canali.map(c => c.fam + ':' + c.omo))")
-def kind(pg, k): return pg.evaluate(f"CANALI.canali({k}).then(j => j.tipo.proposto)")
+def chans(pg, k): return pg.evaluate(f"CANALI.canali({k}).then(j => j.channels.map(c => c.family + ':' + c.group))")
+def kind(pg, k): return pg.evaluate(f"CANALI.canali({k}).then(j => j.kind.proposed)")
 def idx(pg, label): return pg.evaluate(f"E.files.find(f => (f.label || f.name || '').includes({label!r})).k")
 r = Run(port=8873, wd="/tmp/wd_canali")
 try:
@@ -27,7 +27,7 @@ try:
         pg = r.page(p)
         load(pg, [S / "canali" / "K_MIRATO-t0.mzML", S / "B_FullMass-t0.mzML", S / "B_FullMass-t5.mzML", S / "canali" / "K_BLOCCHI-t0.mzML", S / "B_MRM-t0.mzML", S / "C_IDA-t0.mzML", D / "DAD-t0.mzML"])
         def types():
-            exp = {"K_MIRATO-t0": "lc-ms2-mirato", "K_BLOCCHI-t0": "infusione-msn", "B_MRM-t0": "lc-mrm", "B_FullMass-t0": "lc-full"}
+            exp = {"K_MIRATO-t0": "lc-ms2-targeted", "K_BLOCCHI-t0": "msn-infusion", "B_MRM-t0": "lc-mrm", "B_FullMass-t0": "lc-full"}
             for lab, t in exp.items():
                 k = idx(pg, lab)
                 assert kind(pg, k) == t, (lab, kind(pg, k))
@@ -35,7 +35,7 @@ try:
         def defaults():
             want = {"K_MIRATO-t0": ("ms", 2), "K_BLOCCHI-t0": ("ms", 3), "B_MRM-t0": ("srm", 2), "B_FullMass-t0": ("tic", 0)}
             for lab, (fam, liv) in want.items():
-                c = pg.evaluate(f"CANALI.iniziale(E.files.find(f => (f.label || f.name || '').includes({lab!r}))).then(c => c && [c.fam, c.liv])")
+                c = pg.evaluate(f"CANALI.iniziale(E.files.find(f => (f.label || f.name || '').includes({lab!r}))).then(c => c && [c.family, c.ms_level])")
                 assert c == [fam, liv], (lab, c)
         step("default channel by type (table in esperimenti.js)", defaults)
         def ida():
@@ -43,7 +43,7 @@ try:
             assert any(c.startswith("ms:") for c in v) and any(c.startswith("tic") for c in v), v
         step("EMS/EPI file: channels of scans", ida)
         def dad():
-            k = idx(pg, "DAD-t0"); assert kind(pg, k) in ("lc-full", "misto", "solo-uv"), kind(pg, k)
+            k = idx(pg, "DAD-t0"); assert kind(pg, k) in ("lc-full", "mixed", "uv-only"), kind(pg, k)
         step("DAD file opens", dad)
         pg.evaluate("setTab('full')"); ready(pg)
         # ticking every file leaves the one-file view: the steps below compare several files
@@ -60,9 +60,9 @@ try:
             assert all(not g or g not in et.split(" ") for et, g in sg), sg
         step("tree with levels, aria and a short title", tree)
         def two():
-            before = pg.evaluate("E.panels.find(p => p.type==='chrom').canali")
-            pg.click(".can-pop [role=treeitem][data-omo^='ms|1']"); ready(pg); frames(pg, 6)
-            c = pg.evaluate("E.panels.find(p => p.type==='chrom').canali"); assert c and len(c) == 2, (before, c)
+            before = pg.evaluate("E.panels.find(p => p.type==='chrom').channels")
+            pg.click(".can-pop [role=treeitem][data-group^='ms|1']"); ready(pg); frames(pg, 6)
+            c = pg.evaluate("E.panels.find(p => p.type==='chrom').channels"); assert c and len(c) == 2, (before, c)
             ns = pg.evaluate("E.panels.find(p => p.type==='chrom')._a.sr.length"); assert ns >= 4, ns
         step("two channels over several files = more traces", two)
         def table():
@@ -73,7 +73,7 @@ try:
         def keys():
             pg.focus(".can-pop [role=treeitem][aria-selected=true]")
             pg.keyboard.press("ArrowDown"); pg.keyboard.press(" "); ready(pg)
-            c = pg.evaluate("E.panels.find(p => p.type==='chrom').canali"); assert c and len(c) >= 2, c
+            c = pg.evaluate("E.panels.find(p => p.type==='chrom').channels"); assert c and len(c) >= 2, c
             pg.keyboard.press("Escape"); assert pg.evaluate("document.querySelector('.can-pop').hidden")
         step("keyboard: arrows, space, Escape", keys)
         def size():
@@ -83,17 +83,17 @@ try:
             pg.keyboard.press("Escape")
         step("targets of at least 24 px", size)
         def miss():
-            pg.evaluate("(() => { const p = E.panels.find(p => p.type==='chrom'); p.canali = [CANALI.albero(E.files.filter(f=>f.kind==='full')).find(n => n.omo.startsWith('ms|2')).omo]; draw(p); })()"); ready(pg); frames(pg, 6)
+            pg.evaluate("(() => { const p = E.panels.find(p => p.type==='chrom'); p.channels = [CANALI.albero(E.files.filter(f=>f.kind==='full')).find(n => n.group.startsWith('ms|2')).group]; draw(p); })()"); ready(pg); frames(pg, 6)
             t = pg.evaluate("E.panels.find(p => p.type==='chrom').leg.innerText"); assert "—" in t, t
         step("a file without the channel: «—» in the legend", miss)
         def xic():
-            d = pg.evaluate("""(async () => { const f = E.files.find(f => (f.label || f.name || '').includes('K_MIRATO-t0')); const c = (await CANALI.canali(f.k)).canali.find(c => c.liv === 2);
+            d = pg.evaluate("""(async () => { const f = E.files.find(f => (f.label || f.name || '').includes('K_MIRATO-t0')); const c = (await CANALI.canali(f.k)).channels.find(c => c.ms_level === 2);
               const a = await getXic(f.k, 129.96, 0.5, 2, c.id); const b = await getXic(f.k, 129.96, 0.5, 2); return [a.rt.length, b.rt.length]; })()""")
             assert d[0] > 0 and d[0] <= d[1], d
         step("XIC inside a channel (api/xic canale=)", xic)
         def restore():
-            rec = pg.evaluate("panelRec(E.panels.find(p => p.type==='chrom')).canali"); assert rec, rec
-        step("the panel saves the omologo, not the index", restore)
+            rec = pg.evaluate("panelRec(E.panels.find(p => p.type==='chrom')).channels"); assert rec, rec
+        step("the panel saves the group, not the index", restore)
         def miss_routes():
             assert pg.evaluate("(window.MZLAB_LR_MISS||[]).length") == 0, pg.evaluate("window.MZLAB_LR_MISS")
         step("no request left unanswered", miss_routes)
@@ -102,7 +102,9 @@ try:
         def mrm():
             pg.evaluate("setTab('mrm')"); ready(pg); wait_for_js(pg, "document.querySelector('[data-o=canali]')")
             pg.click("[data-o=canali]"); wait_for_js(pg, "document.querySelector('.can-pop [role=treeitem]')")
-            rows = pg.evaluate("document.querySelectorAll('.can-pop [role=treeitem]').length"); assert rows == 2, rows
+            # the two SRM transitions plus the DAD (TWC) row: the MRM picker also lists the UV trace of a file that carries a DAD
+            rows = pg.evaluate("document.querySelectorAll('.can-pop [role=treeitem]').length"); assert rows == 3, rows
+            srm = pg.evaluate("document.querySelectorAll(\".can-pop [role=treeitem][data-group^='srm']\").length"); assert srm == 2, srm
             pg.click(".can-pop [role=treeitem] >> nth=1"); ready(pg); frames(pg, 6)
             tr = pg.evaluate("E.panels.find(p => p.type==='mrm').tr"); assert isinstance(tr, list) and len(tr) == 1, tr
         step("MRM panel: srm channels give the transitions", mrm)

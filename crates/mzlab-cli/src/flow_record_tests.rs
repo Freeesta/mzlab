@@ -139,8 +139,16 @@ fn reports(out: &Path, plan: &str) -> Vec<String> {
     jobs
 }
 
-/// `modules` (the SHA-256 of the executable) is the one key only the CLI writes: the page passes the hashes of its own `.wasm`.
+/// `modules` (the SHA-256 of the executable) and the `commit` of the CLI build script are the keys only the CLI writes: the page passes the hashes of its
+/// own `.wasm`, which carries no commit.
 fn without_modules(text: &str) -> String {
+    let commit = text
+        .find("\"commit\":\"")
+        .map(|a| a..a + "\"commit\":\"".len() + 41 + 1);
+    let text = &match commit {
+        Some(r) => format!("{}{}", &text[..r.start], &text[r.end..]),
+        None => text.to_string(),
+    };
     // the citation is a CLI-side key of prov.json (the page's route writes the record without it), like the modules
     let text = &text.replacen(&format!("{},", crate::citation::member()), "", 1);
     let from = text.find(",\"modules\":{").unwrap();

@@ -148,6 +148,7 @@ I18N.add("en", {
   "error.liste.noMz": "The row has no Q1 m/z and no neutral formula to compute it from.",
   "error.liste.noName": "A row of the list has no name.",
   "error.liste.twice": "Two rows of the list have the same name.",
+  "warn.mzrun.roleSha": "Role of {file}: the SHA-256 {sha256} was taken from the input of the run with that name.",
   "warn.convert.fewerWorkers": "{workers} files are converted at once instead of {wanted}, so that each conversion has its share of the memory budget of this computer ({budget_mb} MB). The files written are the same; it only takes longer.",
   "warn.centroid.widthFallback": "Fewer than 8 isolated peaks were found in the profile scans, so the peak width was not measured: the centroids use the fallback width of 0.7 Da. On high-resolution data give the width (fwhm) yourself.",
   "warn.centroid.merged": "Some centroids are wider than one peak at their m/z (more than 1.12 times the width of the file there): two close peaks may have been read as one. This is a notice, not an identification: look at the profile scan before trusting that m/z.",

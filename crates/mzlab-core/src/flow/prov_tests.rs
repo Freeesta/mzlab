@@ -49,7 +49,7 @@ fn every_build_key_is_written_in_order_after_platform() {
 
 #[test]
 fn build_agent_names_this_build() {
-    let a = build_agent("mzLab");
+    let a = build_agent("mzLab", None);
     assert_eq!(a.version, env!("CARGO_PKG_VERSION"));
     assert_eq!(a.platform, Platform::current().name());
     assert!(a.target.is_some_and(|t| !t.is_empty()));
