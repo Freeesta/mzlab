@@ -13,7 +13,6 @@ ROOT = Path(__file__).resolve().parents[1]
 MZML = ROOT / "tests" / "golden" / "ref" / "msntree_rotta" / "msn.mzML"
 SCHEMA = json.loads((ROOT / "docs/schemi/msn-lib-1.json").read_text())
 GRAPH = json.loads((ROOT / "docs/schemi/msn-graph-1.json").read_text())
-pytestmark = pytest.mark.skipif(not shutil.which("cargo"), reason="cargo not available")
 
 MANIFEST = "id\tneutral_formula\texpected_adduct\tfile\nSTD-2\tC14H14N3O5\t[M+H]+\tmsn.mzML\nSTD-1\tC14H14N3O5\t[M+H]+\tmsn.mzML\n"
 

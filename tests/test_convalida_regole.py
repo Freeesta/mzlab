@@ -1,7 +1,6 @@
 """The validation of the fragmentation rules on a handful of public CC BY MassBank records (`tests/data/pubblici_gemini/`): the lines of
 `mzlab-cli msn rules`, summed, give the strata and the thresholds of the protocol. The full run on the pinned release is outside the CI."""
 import json
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -13,14 +12,13 @@ from cargo_util import cli_argv
 
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRIES = ROOT / "tests" / "data" / "pubblici_gemini"
-pytestmark = pytest.mark.skipif(not shutil.which("cargo"), reason="cargo not available")
 
 
 @pytest.fixture(scope="module")
 def sommario(tmp_path_factory):
     out = tmp_path_factory.mktemp("convalida") / "somma.json"
-    argv = cli_argv()      # the binary of the CI `prebuilt` job when installed; else the script runs `cargo run --release` itself, as before (~5 min on a cold shard)
-    binary = ["--cli", argv[0]] if len(argv) == 1 else []
+    argv = cli_argv()      # prebuilt binary if installed, else the cargo fallback (the script builds)
+    binary = ["--cli", argv[0]] if argv[0] != "cargo" else []
     r = subprocess.run([sys.executable, str(ROOT / "tools" / "validate_rules.py"), "--registri", str(REGISTRIES), *binary, "--out", str(out)], cwd=ROOT, capture_output=True, text=True)
     assert r.returncode == 0, r.stderr[-2000:]
     return json.loads(out.read_text())
