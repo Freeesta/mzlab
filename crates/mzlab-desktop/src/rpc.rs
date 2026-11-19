@@ -249,8 +249,8 @@ impl State {
         let end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
         let (rd, size) = self.src_slot(&mut eng.nat, slot, p["fid"].as_u64().unwrap_or(0) as u32)?;
         let mut m = Mzml::new(rd, size);
-        let chroms = m.chromatograms(end)?;
-        let facts = mzlab_core::iteminfo::facts_from(&mut m, end, chroms.len() as i64, true)?;
+        let chroms = r.idx.layout.chromatograms(&mut m, end)?;
+        let facts = r.idx.layout.facts(&mut m, end, chroms.len() as i64, true)?;
         r.pon_cromatogrammi(p["name"].as_str().unwrap_or(""), &chroms, &facts);
         text(r.canali().json())
     }

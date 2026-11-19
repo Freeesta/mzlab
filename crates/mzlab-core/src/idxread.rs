@@ -231,6 +231,8 @@ pub struct Index<R: ReadAt> {
     pub(crate) arrays_tick: Vec<u64>, // tick of the last use of each section's arrays (see idxcache.rs)
     pub(crate) fences: Vec<Option<Vec<f64>>>, // per section, the first m/z of each block (the `fence` array), read at the first search
     pub(crate) crcs: Vec<f64>, // the `crc32` of the 10 arrays of each section in turn (NaN when the section has none)
+    /// The chromatogram list and facts of the mzML, read once for all the open routes (`entry`, `items`, `canali`): see `layout.rs`.
+    pub layout: crate::layout::Layout,
 }
 
 /// Whether the header is of an index of a vendor file (version 2 with `READER_FLAG`) or of an mzML (version 1); `None` for any other.
@@ -379,18 +381,21 @@ impl<R: ReadAt> Index<R> {
         };
         crate::idxcheck::check(&sections, &keys, size)?;
         let n = sections.len();
+        let source: Value = meta.get("source").cloned().unwrap_or(Value::Null);
+        let layout = crate::layout::Layout::of_index(&source, &scans);
         Ok(Index {
             r,
             scans: std::sync::Arc::new(scans),
             keys,
             sections,
-            source: meta.get("source").cloned().unwrap_or(Value::Null),
+            source,
             run: meta.get("run").cloned().unwrap_or(Value::Null),
             cache: Vec::new(),
             arrays: vec![None; n],
             arrays_tick: vec![0; n],
             fences: vec![None; n],
             crcs,
+            layout,
         })
     }
 
@@ -410,6 +415,7 @@ impl<R: ReadAt> Index<R> {
             arrays_tick: vec![0; n],
             fences: vec![None; n],
             crcs: self.crcs.clone(),
+            layout: self.layout.clone(),
         }
     }
 
