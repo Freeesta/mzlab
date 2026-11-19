@@ -227,12 +227,10 @@ fn schema_keys(file: &str) -> std::collections::BTreeSet<String> {
         match v {
             Value::Obj(o) => {
                 for (k, x) in o {
-                    if k == "properties" {
-                        if let Value::Obj(p) = x {
-                            p.iter().for_each(|(n, _)| {
-                                d.insert(n.clone());
-                            });
-                        }
+                    if let (true, Value::Obj(p)) = (k == "properties", x) {
+                        p.iter().for_each(|(n, _)| {
+                            d.insert(n.clone());
+                        });
                     }
                     walk(x, d);
                 }
