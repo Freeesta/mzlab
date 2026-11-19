@@ -29,6 +29,14 @@ fn without(v: &Value, skip: &[&str]) -> Vec<(String, Value)> {
             .iter()
             .filter(|(k, _)| !skip.contains(&k.as_str()))
             .cloned()
+            // the chromatogram list of an mzML index (`run.chromatograms`) is not in the index of a vendor file
+            .map(|(k, v)| match (k.as_str(), v) {
+                ("run", Value::Obj(r)) => (
+                    k,
+                    Value::Obj(r.into_iter().filter(|(n, _)| n != "chromatograms").collect()),
+                ),
+                (_, v) => (k, v),
+            })
             .collect(),
         _ => panic!("not an object"),
     }
