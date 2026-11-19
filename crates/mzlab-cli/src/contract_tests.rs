@@ -218,6 +218,8 @@ const NO_FILE: &[&str] = &[
     "ion mz",
     "mol search",
     "help-md",
+    "commands",
+    "schema",
     "completions bash",
     "completions zsh",
     "completions fish",
