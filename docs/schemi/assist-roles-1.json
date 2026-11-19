@@ -1,13 +1,13 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
- "$id": "assist-ruoli/1",
- "title": "assist-ruoli/1: the subagents of the data assistant",
- "description": "Format «assist-ruoli/1» (crates/mzlab-llm/data/assist/assist-ruoli-1.json, docs/agenti/llm.md): for each subagent its prompt file, model, effort, output limit (and the smaller one of the public demo, provider mzlab-demo, which the proxy enforces), the schema of its output and the sources it is given. No model or effort is written in the code; the prompt files are exact copies of the ```text blocks of docs/studi/assistente-dati/prompt/0N_*.md.",
+ "$id": "assist-roles/1",
+ "title": "assist-roles/1: the subagents of the data assistant",
+ "description": "Format «assist-roles/1» (crates/mzlab-llm/data/assist/assist-roles-1.json, docs/agenti/llm.md): for each subagent its prompt file, model, effort, output limit (and the smaller one of the public demo, provider mzlab-demo, which the proxy enforces), the schema of its output and the sources it is given. No model or effort is written in the code; the prompt files are exact copies of the ```text blocks of docs/studi/assistente-dati/prompt/0N_*.md.",
  "type": "object",
  "additionalProperties": false,
  "required": ["schema", "roles", "orchestrator"],
  "properties": {
-  "schema": {"const": "assist-ruoli/1"},
+  "schema": {"const": "assist-roles/1"},
   "roles": {
    "type": "array",
    "minItems": 1,

@@ -104,11 +104,11 @@ test("the plan phase prompt mid-conversation raises the orchestrator cap to the 
   await refused(s, post(orchestratorBody({ system: plan })), 400, "err.llm.proxy.body", "system");
 });
 
-test("the allow-list holds every prompt of assist-ruoli-1.json, and the catalog as Rust sends it passes", async (t) => {
+test("the allow-list holds every prompt of assist-roles-1.json, and the catalog as Rust sends it passes", async (t) => {
   const s = await setup();
   if (!s) return t.skip("no wasm");
   const { readFileSync } = await import("node:fs");
-  const roles = JSON.parse(readFileSync(new URL("../../crates/mzlab-llm/data/assist/assist-ruoli-1.json", import.meta.url), "utf-8"));
+  const roles = JSON.parse(readFileSync(new URL("../../crates/mzlab-llm/data/assist/assist-roles-1.json", import.meta.url), "utf-8"));
   const named = new Set(Object.values(s.allow.system).map((e) => e.role));
   for (const r of roles.roles) assert.ok(named.has(r.role), r.role);
   assert.ok(named.has("orchestrator"));

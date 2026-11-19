@@ -1,4 +1,4 @@
-{"schema":"assist-ruoli/1","roles":[
+{"schema":"assist-roles/1","roles":[
 {"role":"router","prompt":"02_router.md","model":"claude-haiku-5-5","effort":"low","max_tokens":200,"demo_max_tokens":200,"output_schema":"router/1","input_sources":["state","message"]},
 {"role":"metadati","prompt":"03_metadati.md","model":"claude-sonnet-5-5","effort":"medium","max_tokens":4000,"demo_max_tokens":2000,"output_schema":"reading/1","input_sources":["inspection/1"]},
 {"role":"cromatografia","prompt":"04_cromatografia.md","model":"claude-sonnet-5-5","effort":"medium","max_tokens":4000,"demo_max_tokens":2000,"output_schema":"reading/1","input_sources":["inspection/1","qc/1"]},

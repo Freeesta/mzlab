@@ -1,4 +1,4 @@
-//! The subagents of the data assistant as data: `data/assist/assist-ruoli-1.json` says which prompt, model, effort and output limit each role has, and the
+//! The subagents of the data assistant as data: `data/assist/assist-roles-1.json` says which prompt, model, effort and output limit each role has, and the
 //! prompt files (fetched by the page, never part of the program) are exact copies of the blocks of `docs/studi/assistente-dati/prompt/`. Nothing about a model is written in the code. Used by the agent.
 //! With the provider of the public demo (`DEMO_PROVIDER`) every output limit is the smaller `demo_*` one, the cap the proxy enforces per role.
 
@@ -86,10 +86,10 @@ impl Prompts {
     }
 }
 
-/// The roles of `text_json` (an `assist-ruoli/1`); no role may repeat. The prompt files are checked by `Prompts::check`.
+/// The roles of `text_json` (an `assist-roles/1`); no role may repeat. The prompt files are checked by `Prompts::check`.
 pub fn roles(text_json: &str) -> Result<Vec<Role>> {
     let doc = parse(text_json.as_bytes())?;
-    if doc.get("schema").and_then(Value::str) != Some("assist-ruoli/1") {
+    if doc.get("schema").and_then(Value::str) != Some("assist-roles/1") {
         return Err(bad());
     }
     let mut out: Vec<Role> = Vec::new();

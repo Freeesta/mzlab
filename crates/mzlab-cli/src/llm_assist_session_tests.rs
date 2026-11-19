@@ -147,7 +147,7 @@ fn page(level: Level, replay: Option<Replay>, turns: Vec<Vec<Event>>) -> Page {
         Profile::Research,
     );
     let dir = assist_dir();
-    let rs = roles(&std::fs::read_to_string(dir.join("assist-ruoli-1.json")).unwrap()).unwrap();
+    let rs = roles(&std::fs::read_to_string(dir.join("assist-roles-1.json")).unwrap()).unwrap();
     let files: Vec<(String, String)> = rs
         .iter()
         .map(|r| r.prompt_file.clone())

@@ -54,7 +54,7 @@ const loadAssist = () => assistFiles || (assistFiles = (async () => {
     if (!r.ok) throw { key: "err.llm.module", params: { reason: "assist" } };
     return r.text();
   };
-  const roles = await get("assist-ruoli-1.json");
+  const roles = await get("assist-roles-1.json");
   const j = JSON.parse(roles), phase = j.orchestrator && j.orchestrator.phase_prompt;
   const names = [...new Set([...j.roles.map((/** @type {{prompt: string}} */ r) => r.prompt), ...(phase ? [phase] : [])])];
   return { roles, files: await Promise.all(names.map(async n => /** @type {[string, string]} */ ([n, await get(String(n))]))) };

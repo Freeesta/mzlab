@@ -1,4 +1,4 @@
-"""`reading/1`, `param-choices/1` and `assist-ruoli/1` of `mzlab-llm`: the schemas accept the examples of docs/studi/assistente-dati and reject an unknown action, a ninth finding and a role file with a made-up field."""
+"""`reading/1`, `param-choices/1` and `assist-roles/1` of `mzlab-llm`: the schemas accept the examples of docs/studi/assistente-dati and reject an unknown action, a ninth finding and a role file with a made-up field."""
 import json
 from pathlib import Path
 
@@ -36,8 +36,8 @@ def test_choices_valid_and_defects():
 
 
 def test_roles_file_is_valid_and_strict():
-    v = validator("assist-ruoli-1")
-    roles = json.loads((ROOT / "crates/mzlab-llm/data/assist/assist-ruoli-1.json").read_text())
+    v = validator("assist-roles-1")
+    roles = json.loads((ROOT / "crates/mzlab-llm/data/assist/assist-roles-1.json").read_text())
     assert not list(v.iter_errors(roles))
     roles["roles"][0]["temperature"] = 0
     assert list(v.iter_errors(roles))

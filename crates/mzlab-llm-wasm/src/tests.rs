@@ -189,7 +189,7 @@ fn doc(path: &str) -> String {
 /// The roles and the prompts as the page hands them over.
 fn assist_files() -> (String, String) {
     let dir = "crates/mzlab-llm/data/assist";
-    let roles = doc(&format!("{dir}/assist-ruoli-1.json"));
+    let roles = doc(&format!("{dir}/assist-roles-1.json"));
     let pairs: Vec<String> =
         std::fs::read_dir(format!("{}/../../{dir}", env!("CARGO_MANIFEST_DIR")))
             .unwrap()

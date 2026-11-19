@@ -1,5 +1,5 @@
 // The allow-list of the proxy, generated from the repository: the SHA-256 of every system prompt mzLab sends (with its role, models and the demo
-// `max_tokens` cap of that role, `demo_max_tokens` of assist-ruoli-1.json), of the phase prompt that may come mid-conversation, of the closed answer
+// `max_tokens` cap of that role, `demo_max_tokens` of assist-roles-1.json), of the phase prompt that may come mid-conversation, of the closed answer
 // schemas (from Rust) and of the demo tool catalog as the Anthropic request carries it (built by Rust from `docs/schemi/tools-demo-1.json`).
 // Usage: node build-allowlist.mjs <wasm dir> > allowlist.json
 
@@ -24,19 +24,19 @@ async function digests(text) {
 /** The demo `max_tokens` of a role (or of the orchestrator's `demo_max_tokens_plan`): a missing one stops the build. @param {any} entry @param {string} key */
 function cap(entry, key = "demo_max_tokens") {
   const n = entry[key];
-  if (!Number.isInteger(n) || n < 1) throw new Error(`no ${key} for ${entry.role || "orchestrator"} (assist-ruoli-1.json)`);
+  if (!Number.isInteger(n) || n < 1) throw new Error(`no ${key} for ${entry.role || "orchestrator"} (assist-roles-1.json)`);
   return n;
 }
 
-/** The demo caps per role as the allow-list holds them, read from assist-ruoli-1.json. */
+/** The demo caps per role as the allow-list holds them, read from assist-roles-1.json. */
 export function demoMaxTokens(root = ROOT) {
-  const roles = JSON.parse(read(root, `${ASSIST}/assist-ruoli-1.json`));
+  const roles = JSON.parse(read(root, `${ASSIST}/assist-roles-1.json`));
   const out = Object.fromEntries(roles.roles.map((r) => [r.role, cap(r)]));
   return { ...out, orchestrator: cap(roles.orchestrator), plan: cap(roles.orchestrator, "demo_max_tokens_plan") };
 }
 
 export async function buildAllowlist(rust, root = ROOT) {
-  const roles = JSON.parse(read(root, `${ASSIST}/assist-ruoli-1.json`));
+  const roles = JSON.parse(read(root, `${ASSIST}/assist-roles-1.json`));
   const system = {};
   const add = async (text, entry) => {
     for (const d of await digests(text)) system[d] = entry;

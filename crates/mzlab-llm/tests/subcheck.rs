@@ -11,7 +11,7 @@ use mzlab_llm::policy::{Level, Profile};
 use mzlab_llm::provider::{builtin, Provider};
 use mzlab_llm::subcheck::{check, request, Verdict, MAX_SUMMARY_TOKENS};
 
-const ROLES: &str = include_str!("../data/assist/assist-ruoli-1.json");
+const ROLES: &str = include_str!("../data/assist/assist-roles-1.json");
 const ROUTER: &str = include_str!("../data/assist/02_router.md");
 const META: &str = include_str!("../data/assist/03_metadati.md");
 const PHASE: &str = include_str!("../data/assist/06_piano.md");
