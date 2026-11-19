@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "index-build/1",
+  "title": "index-build/1: the indexes built into the cache, `mzlab-cli file index`",
+  "description": "Per file: whether its index was built or reused from the cache, the cache entry's file name, the SHA-256 the entry is keyed by and its size. Code: crates/mzlab-cli/src/file_index_cmd.rs, idx_cache.rs.",
+  "type": "object",
+  "required": ["schema", "cache", "files"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "index-build/1" },
+    "cache": { "type": "string" },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "sample", "status", "key", "sha256", "index_bytes"],
+        "additionalProperties": false,
+        "properties": {
+          "file": { "type": "string" },
+          "sample": { "type": ["integer", "null"] },
+          "status": { "enum": ["built", "reused"] },
+          "key": { "type": "string" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "index_bytes": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

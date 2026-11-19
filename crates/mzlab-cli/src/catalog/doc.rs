@@ -206,7 +206,7 @@ pub(crate) fn catalog_json(path: &[String]) -> String {
         .map(|(n, _)| {
             let f = Flag {
                 name: n.to_string(),
-                kind: "bool",
+                kind: if *n == "--cache" { "path" } else { "bool" },
                 ..Flag::default()
             };
             flag_json(&f, false, true)

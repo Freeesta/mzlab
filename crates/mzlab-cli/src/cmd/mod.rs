@@ -128,6 +128,7 @@ const JSON_DEFAULT: &[&str] = &[
     "file channels",
     "file items",
     "file info",
+    "file index",
     "file inventory",
     "trace chrom",
     "trace xic",

@@ -51,6 +51,7 @@ embed!(
     "interp-1.json",
     "ion_mz-1.json",
     "ion_pattern-1.json",
+    "index-build-1.json",
     "items-1.json",
     "label-1.json",
     "libmatch-1.json",

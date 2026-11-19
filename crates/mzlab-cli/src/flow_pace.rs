@@ -188,7 +188,12 @@ pub(crate) fn reads_as_mzml(path: &Path) -> bool {
 
 /// The `.mzidx` of one file (an mzML, or the sample `label` of any dataset a reader takes) at `idx`.
 pub(crate) fn build_index_of(path: &Path, label: &str, idx: &Path, budget: usize) -> Result<()> {
-    build_index_with(path, label, idx, budget, &mut |_, _| {}, &None).map(|_| ())
+    let build = || build_index_with(path, label, idx, budget, &mut |_, _| {}, &None).map(|_| ());
+    match crate::idx_cache::dir() {
+        // the cache hands the index over at `idx`, so every caller reads it where it always did
+        Some(dir) => crate::idx_cache::make(&dir, path, label, idx, false, build).map(|_| ()),
+        None => build(),
+    }
 }
 
 /// `build_index_of` telling `step(done, total)` how far pass 1 has got (scans of the sample, bytes of an mzML), at most once per 1 %; same bytes with any

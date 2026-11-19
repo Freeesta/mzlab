@@ -32,6 +32,7 @@ mod design_cmd;
 pub mod error_text;
 pub mod exit;
 mod extract;
+mod file_index_cmd;
 mod file_info_cmd;
 pub mod flow;
 #[cfg(test)]
@@ -152,6 +153,7 @@ mod flow_tablematch;
 #[cfg(test)]
 mod flow_tablematch_tests;
 mod flow_transitions;
+mod idx_cache;
 mod idx_open;
 pub mod insilico_pack;
 mod ion_pattern_cmd;
@@ -466,6 +468,9 @@ fn executed(args: &[String]) -> (&'static str, Outcome) {
         return ("", o);
     };
     let mut rest = args[n..].to_vec();
+    if let Err(m) = idx_cache::take_flag(&mut rest) {
+        return (e.name, Outcome::fail(&m));
+    }
     if cmd::wants_help(&rest) {
         return (e.name, cmd::help_of(e, &rest));
     }
@@ -475,5 +480,11 @@ fn executed(args: &[String]) -> (&'static str, Outcome) {
         }
         rest.retain(|a| a != "--json");
     }
-    (e.name, (e.run)(rest))
+    let mut o = (e.run)(rest);
+    // `index reused` / `index built`: what the cache did, beside the answer (a failure keeps its message first and alone)
+    let notes = idx_cache::take_notes();
+    if o.code == 0 {
+        o.stderr += &notes;
+    }
+    (e.name, o)
 }
