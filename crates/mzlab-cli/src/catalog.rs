@@ -1,10 +1,13 @@
 //! `mzlab-cli commands [--json] [PATH...]`: the catalog `commands/1` of every command, built from the rows of the command table. The usage line of
 //! `--help` is the one source: arguments and flags are read from it, so the help and the catalog cannot drift (`catalog_tests.rs`).
 
-use mzlab_core::json::Value;
-use mzlab_core::jsonb::{text, write, Obj};
-
 use crate::cmd::{entries, Entry};
+mod doc;
+pub(crate) use doc::catalog_json;
+#[cfg(test)]
+pub(crate) use doc::exits_of;
+use doc::under;
+
 use crate::{exit, Outcome};
 
 /// Flags every command accepts, listed once instead of on every command.
@@ -287,186 +290,6 @@ pub(crate) fn usage_of(e: &Entry) -> Usage {
         }
     }
     u
-}
-
-fn flag_json(f: &Flag, with_required: bool) -> Value {
-    let help = FLAG_HELP
-        .iter()
-        .chain(GLOBAL)
-        .find(|(n, _)| *n == f.name)
-        .map_or("", |(_, h)| *h);
-    // Members that are null or false are left out: `commands --json` stays small.
-    let mut o = Obj::new()
-        .put("name", text(&f.name))
-        .put("type", text(f.kind));
-    if let Some(u) = f.unit {
-        o = o.put("unit", text(u));
-    }
-    if let Some(d) = &f.default {
-        o = o.put("default", text(d));
-    }
-    if !f.values.is_empty() {
-        o = o.put(
-            "enum",
-            Value::Arr(f.values.iter().map(|v| text(v)).collect()),
-        );
-    }
-    o = o.put("help", text(help));
-    if f.repeat {
-        o = o.b("repeat", true);
-    }
-    if with_required && f.required {
-        o = o.b("required", true);
-    }
-    o.done()
-}
-
-/// The stdout of `name`: its format and the schema the entry names.
-fn stdout_json(e: &Entry) -> Value {
-    let json = crate::cmd::json_by_default(e.name);
-    let format = if json {
-        "json"
-    } else if CSV.contains(&e.name) {
-        "csv"
-    } else {
-        "text"
-    };
-    let mut o = Obj::new()
-        .put("format", text(format))
-        .put("schema", text(e.schema));
-    if !json && crate::cmd::reads_json(e.name) {
-        o = o.b("json_flag", true);
-    }
-    o.done()
-}
-
-/// The exit codes of `e`: the row's own list, else read from what the usage line shows: every command can end 0, 1 or 2; 3 for a plan or a verdict,
-/// 4 when it reads a file, 5 when it selects a sample or step, 6 when it writes `--out`.
-pub(crate) fn exits_of(e: &Entry, u: &Usage) -> Vec<u8> {
-    if !e.exits.is_empty() {
-        return e.exits.to_vec();
-    }
-    let has = |f: &str| u.flags.iter().any(|x| x.name == f);
-    let reads = u.args.iter().any(|a| a.kind == "path" || a.kind == "rest")
-        || u.flags
-            .iter()
-            .any(|f| f.kind == "path" && f.name != "--out");
-    let mut v = vec![exit::OK, exit::DATA, exit::USAGE];
-    let mut add = |on: bool, c: u8| {
-        if on {
-            v.push(c)
-        }
-    };
-    add(
-        e.name.starts_with("flow ") || crate::contract::VERDICT.contains(&e.name),
-        exit::INTEGRITY,
-    );
-    add(reads, exit::INPUT);
-    add(
-        has("--sample")
-            || has("--id")
-            || e.name.starts_with("sample ")
-            || e.name.starts_with("msn graph"),
-        exit::SELECTOR,
-    );
-    add(has("--out"), exit::OUTPUT);
-    v.sort_unstable();
-    v
-}
-
-/// The usage line without its optional parts: a command line that runs as it stands once the names are replaced.
-fn skeleton(u: &Usage) -> String {
-    let toks = tokens(&u.synopsis);
-    let kept: Vec<&str> = toks
-        .iter()
-        .map(String::as_str)
-        .filter(|t| !t.starts_with('[') && *t != "...")
-        .collect();
-    format!("mzlab-cli {}", kept.join(" "))
-}
-
-fn command_json(e: &Entry) -> Value {
-    let u = usage_of(e);
-    let exits: Vec<Value> = exits_of(e, &u)
-        .iter()
-        .map(|c| Value::Num(f64::from(*c)))
-        .collect();
-    let examples: Vec<String> = if e.examples.is_empty() {
-        vec![skeleton(&u)]
-    } else {
-        e.examples.iter().map(|x| x.to_string()).collect()
-    };
-    Obj::new()
-        .put("path", text(e.name))
-        .put("synopsis", text(&u.synopsis))
-        .put("summary", text(&u.summary))
-        .put(
-            "args",
-            Value::Arr(
-                u.args
-                    .iter()
-                    .map(|a| {
-                        Obj::new()
-                            .put("name", text(&a.name))
-                            .put("kind", text(a.kind))
-                            .b("required", a.required)
-                            .b("repeat", a.repeat)
-                            .done()
-                    })
-                    .collect(),
-            ),
-        )
-        .put(
-            "flags",
-            Value::Arr(u.flags.iter().map(|f| flag_json(f, true)).collect()),
-        )
-        .b("stdin", u.stdin)
-        .put("stdout", stdout_json(e))
-        .put("exit_codes", Value::Arr(exits))
-        .put(
-            "examples",
-            Value::Arr(examples.iter().map(|x| text(x)).collect()),
-        )
-        .done()
-}
-
-/// Whether the words `path` are the start of the name of `e`.
-fn under(e: &Entry, path: &[String]) -> bool {
-    let words: Vec<&str> = e.name.split(' ').collect();
-    path.len() <= words.len() && path.iter().zip(&words).all(|(p, w)| p == w)
-}
-
-/// The `commands/1` document for the entries under `path` (all of them when `path` is empty).
-pub(crate) fn catalog_json(path: &[String]) -> String {
-    let meaning = EXIT_MEANING
-        .iter()
-        .fold(Obj::new(), |o, (c, m)| o.put(&c.to_string(), text(m)))
-        .done();
-    let global: Vec<Value> = GLOBAL
-        .iter()
-        .map(|(n, _)| {
-            flag_json(
-                &Flag {
-                    name: n.to_string(),
-                    kind: "bool",
-                    ..Flag::default()
-                },
-                false,
-            )
-        })
-        .collect();
-    let commands: Vec<Value> = entries()
-        .filter(|e| under(e, path))
-        .map(command_json)
-        .collect();
-    let doc = Obj::new()
-        .put("schema", text("commands/1"))
-        .put("citation", text(&crate::citation::text()))
-        .put("exit_code_meaning", meaning)
-        .put("global_flags", Value::Arr(global))
-        .put("commands", Value::Arr(commands))
-        .done();
-    write(&doc) + "\n"
 }
 
 /// `mzlab-cli commands [--json] [PATH...]`.
