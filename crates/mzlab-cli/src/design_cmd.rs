@@ -210,6 +210,17 @@ fn list(v: &[String]) -> String {
     )
 }
 
+/// The `lang/en` key of the reason a reference was chosen (`REFERENCE_RULES`, or `given`); a new rule needs its arm here (tested).
+pub(super) fn reference_key(code: &str) -> &'static str {
+    match code {
+        "prefixRef" => "err.design.why.prefixRef",
+        "containsReference" => "err.design.why.containsReference",
+        "containsControl" => "err.design.why.containsControl",
+        "containsNoGas" => "err.design.why.containsNoGas",
+        _ => "err.design.why.given",
+    }
+}
+
 /// The automatic choices of `propose`, each with its value, a stable `why` code and the sentence of that code (`err.design.why.<code>`).
 fn choices_of(d: &mzlab_core::design::Design) -> Vec<String> {
     let names: Vec<String> = d.conditions.iter().map(|c| c.name.clone()).collect();
@@ -230,14 +241,9 @@ fn choices_of(d: &mzlab_core::design::Design) -> Vec<String> {
     let reference = d.reference.as_deref();
     let (why, text) = match reference {
         Some(r) => {
-            let code = mzlab_core::design::reference_rule(r).unwrap_or("prefixRef");
-            let key = match code {
-                "containsReference" => "err.design.why.containsReference",
-                "containsControl" => "err.design.why.containsControl",
-                "containsNoGas" => "err.design.why.containsNoGas",
-                _ => "err.design.why.prefixRef",
-            };
-            (code, say(key, r))
+            // a reference the design names that no rule matches (the file was edited): the plain statement that it is the one given
+            let code = mzlab_core::design::reference_rule(r).unwrap_or("given");
+            (code, say(reference_key(code), r))
         }
         None => ("noReference", say("err.design.why.noReference", "")),
     };

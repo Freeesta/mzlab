@@ -185,11 +185,25 @@ fn the_text_form_lists_a_command_per_line() {
     assert!(t.lines().all(|l| l.starts_with("flow ")));
 }
 
+/// The command `e` in full (the listing of `commands --json NAME`, which the compact whole listing leaves some members out of).
+fn full(e: &crate::cmd::Entry) -> serde_json::Value {
+    let mut args = vec!["commands", "--json"];
+    args.extend(e.name.split(' '));
+    let doc = json(&out(&args));
+    doc["commands"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|c| c["path"] == e.name)
+        .unwrap()
+        .clone()
+}
+
 /// Every flag says what it does, its type agrees with the value the usage line shows, and every command has exit codes and an example.
 #[test]
 fn flags_are_described_and_typed_like_the_usage_line() {
-    let doc = json(&out(&["commands", "--json"]));
-    for (e, c) in entries().zip(doc["commands"].as_array().unwrap()) {
+    for e in entries() {
+        let c = &full(e);
         let usage = e.help.split("   ").next().unwrap();
         for f in c["flags"].as_array().unwrap() {
             let name = f["name"].as_str().unwrap();
@@ -252,4 +266,42 @@ fn the_documents_have_schema_first_and_a_newline() {
         );
     }
     assert!(out(&["schema", "error/1"]).ends_with('\n'));
+}
+
+/// The whole listing says what is shared or derivable once, and gives each command in full under its path: nothing is lost, only moved.
+#[test]
+fn the_whole_listing_is_compact_and_the_path_listing_is_full() {
+    let doc = json(&out(&["commands", "--json"]));
+    assert_eq!(doc["compact"], true);
+    let shared = doc["flag_help"].as_object().unwrap();
+    assert!(shared.len() > 5 && shared.contains_key("--out"));
+    for (e, c) in entries().zip(doc["commands"].as_array().unwrap()) {
+        let whole = full(e);
+        assert!(whole.get("compact").is_none());
+        for (f, g) in c["flags"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(whole["flags"].as_array().unwrap())
+        {
+            let name = f["name"].as_str().unwrap();
+            // a flag with no help here takes the shared one, and it is the help of the full listing
+            let help = f.get("help").or_else(|| shared.get(name)).unwrap();
+            assert_eq!(help, &g["help"], "{}: {name}", e.name);
+        }
+        // a member left out is the derived one: the full listing of the command has it, equal to what the rule says
+        if c.get("exit_codes").is_none() {
+            assert!(!whole["exit_codes"].as_array().unwrap().is_empty());
+            assert_eq!(
+                whole["exit_codes"],
+                serde_json::json!(crate::catalog::exits_of(e, &crate::catalog::usage_of(e)))
+            );
+        }
+        if c.get("examples").is_none() {
+            let line = whole["examples"][0].as_str().unwrap();
+            assert!(line.starts_with(&format!("mzlab-cli {}", e.name)), "{line}");
+        }
+    }
+    let n = out(&["commands", "--json"]).len();
+    assert!(n < 33_000, "the compact listing is {n} bytes");
 }

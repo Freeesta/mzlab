@@ -144,3 +144,35 @@ fn validate_and_propose_with_samples_answer_json_documents() {
     assert!(pr.starts_with("{\"schema\":\"design_proposal/1\""), "{pr}");
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn json_that_is_not_samples_is_exit_3_under_validate_and_propose() {
+    let d = dir("notsamples");
+    let (_, _) = propose(&d);
+    std::fs::write(d.join("other.json"), r#"{"files":1}"#).unwrap();
+    let (design, other) = (p(&d, "design.json"), p(&d, "other.json"));
+    for args in [
+        vec!["sample", "design", "validate", &design, "--samples", &other],
+        vec!["sample", "design", "propose", "--samples", &other],
+    ] {
+        let o = run(&args);
+        assert_eq!(o.code, 3, "{args:?}: {}", o.stderr);
+        assert!(o.stderr.contains("error.badSamples"), "{}", o.stderr);
+    }
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// Every rule of `reference_rule` has its own reason text, and no two share one.
+#[test]
+fn every_reference_rule_has_its_own_lang_key() {
+    let mut keys = Vec::new();
+    for code in mzlab_core::design::REFERENCE_RULES {
+        let key = super::reference_key(code);
+        assert!(key.ends_with(code), "{code}: {key}");
+        assert!(crate::error_text::catalog_text(key).is_some(), "{key}");
+        keys.push(key);
+    }
+    keys.sort_unstable();
+    keys.dedup();
+    assert_eq!(keys.len(), mzlab_core::design::REFERENCE_RULES.len());
+}
