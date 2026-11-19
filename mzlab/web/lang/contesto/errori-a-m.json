@@ -114,6 +114,7 @@
   "err.design.why.containsNoGas": "Design proposal reason, a sentence in the `reason` of a choice of design_proposal/1; {name} = the condition chosen as reference.",
   "err.design.why.containsReference": "Design proposal reason, a sentence in the `reason` of a choice of design_proposal/1; {name} = the condition chosen as reference.",
   "err.design.why.defaultBatch": "Design proposal reason, a sentence in the `reason` of a choice of design_proposal/1.",
+  "err.design.why.given": "Design proposal reason, a sentence in the `reason` of a choice of design_proposal/1; {name} = the reference condition.",
   "err.design.why.noReference": "Design proposal reason, a sentence in the `reason` of a choice of design_proposal/1.",
   "err.design.why.nothingToCompare": "Design proposal reason, a sentence in the `reason` of a choice of design_proposal/1.",
   "err.design.why.prefixRef": "Design proposal reason, a sentence in the `reason` of a choice of design_proposal/1; {name} = the condition chosen as reference.",
