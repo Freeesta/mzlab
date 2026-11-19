@@ -13,7 +13,7 @@ usage: mzlab-cli mol link REQUEST.json|- [--out PATH]
                 - reads the standard input
   --out PATH    write there instead of the standard output
 
-The answer is {\"format\": \"link/1\", \"part\", \"preferred\": the PubChem row to put first, \"links\": [{\"id\", \"url\", \"copy\"}]};
+The answer is {\"schema\": \"link/1\", \"part\", \"preferred\": the PubChem row to put first, \"links\": [{\"id\", \"url\", \"copy\"}]};
 copy is the text to put on the clipboard before opening url (null when the URL carries the structure). Nothing is fetched.";
 
 pub fn run(args: Vec<String>) -> Outcome {

@@ -261,7 +261,7 @@ async function isoAsk(p) {
   const chg = ftxt.match(/^(.+?)([+\-−])$/);
   if (chg) { ftxt = chg[1]; if (!adt) adt = chg[2] === "+" ? "[M]+" : "[M]-"; }
   try { const r = await getFormula(ftxt, ""), ad = (adt || defAdduct(a.data.map(/** @param {any} x */ x => x.f))).trim();
-    const pat = (await QQQRef.unitIon(r.formula, ad)).peaks;
+    const pat = (await QQQRef.unitIon(r.formula, ad)).peaks.map((/** @type {Bag} */ q) => ({ ...q, rel: q.abundance_pct }));
     COMANDI.fai("spec.isotopes", p, () => {
       p.iso = { formula: r.formula, ad };
       // zoom on the pattern (double click: whole spectrum); a later change of zoom switches the simulation off

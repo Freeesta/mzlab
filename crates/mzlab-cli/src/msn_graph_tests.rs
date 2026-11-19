@@ -87,14 +87,35 @@ fn a_truth_file_gives_one_line_of_numbers() {
         (Some(3.0), Some(2.0), Some(2.0), Some(2.0))
     );
     assert!(n("ppm_max_correct").unwrap() <= 10.0);
+    assert!(r.starts_with("{\"schema\":\"msn-summary/1\""));
     // only numbers: no formula and no name of the file in the line
-    assert!(!r.contains('C') && !r.contains("msn"));
+    let body = r.trim_start_matches("{\"schema\":\"msn-summary/1\"");
+    assert!(!body.contains('C') && !body.contains("msn"));
+}
+
+/// `--summary` alone is the small document, a few hundred bytes, with no truth keys.
+#[test]
+fn summary_without_a_truth_file_is_a_small_document() {
+    let f = msn();
+    let o = run(&["msn", "graph", f.to_str().unwrap(), "--summary"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let v = mzlab_core::json::parse(&o.stdout).unwrap();
+    assert!(v.get("nodes").and_then(|x| x.f64()).unwrap() > 0.0);
+    assert!(v.get("truth_paths").is_none());
+    assert!(o.stdout.len() < 1000 && o.stdout.ends_with(b"\n"));
+    assert_eq!(
+        run(&["msn", "graph", f.to_str().unwrap(), "--truth", "t.json"]).code,
+        2
+    );
 }
 
 #[test]
 fn bad_arguments_are_refused() {
     assert_eq!(run(&["msn", "graph"]).code, 2);
-    assert_eq!(run(&["msn", "graph", "x.mzML", "--summary"]).code, 2);
+    assert_eq!(
+        run(&["msn", "graph", "x.mzML", "--truth", "t.json"]).code,
+        2
+    );
     assert_eq!(
         run(&["msn", "graph", "x.mzML", "--ppm-formula", "dieci"]).code,
         2
@@ -161,9 +182,9 @@ fn only_the_english_flags_are_accepted() {
     }
     assert_eq!(go(&["--no-such-flag"]).code, 2);
     // the refusals name the flags
-    let r = run(&["msn", "graph", "x.mzML", "--summary"]);
+    let r = run(&["msn", "graph", "x.mzML", "--truth", "t.json"]);
     assert_eq!(r.code, 2);
-    assert!(r.stderr.contains("--summary needs --truth"), "{}", r.stderr);
+    assert!(r.stderr.contains("--truth needs --summary"), "{}", r.stderr);
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -281,8 +302,8 @@ fn the_msn_json_outputs_hold_no_italian_word() {
     assert_eq!(t.code, 0, "{}", t.stderr);
     assert_english("msn graph --truth --summary", &t.stdout);
 
-    let lines = "{\"id\":\"R\",\"layer\":\"hcd\",\"pol\":1,\"v\":{\"n\":2,\"it\":100,\"a\":2,\"ia\":100,\"b\":0,\"ib\":0,\"c\":1,\"ic\":80,\"r\":{\"loss_c2h2o_acetyl\":1}}}\n";
-    let lf = d.join("lines.jsonl");
+    let lines = "{\"schema\":\"msn-rules/1\",\"records\":[{\"id\":\"R\",\"layer\":\"hcd\",\"pol\":1,\"v\":{\"n\":2,\"it\":100,\"a\":2,\"ia\":100,\"b\":0,\"ib\":0,\"c\":1,\"ic\":80,\"r\":{\"loss_c2h2o_acetyl\":1}}}]}\n";
+    let lf = d.join("lines.json");
     std::fs::write(&lf, lines).unwrap();
     let sum = run(&["msn", "rules", "sum", lf.to_str().unwrap()]);
     assert_eq!(sum.code, 0, "{}", sum.stderr);

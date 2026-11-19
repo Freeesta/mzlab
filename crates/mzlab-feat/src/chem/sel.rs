@@ -1,6 +1,6 @@
-//! `sel/1`: what the right-click «Info» of the drawing page shows for the selection or the whole drawing. The page sends the V2000 molfile of the
+//! `selection/1`: what the right-click «Info» of the drawing page shows for the selection or the whole drawing. The page sends the V2000 molfile of the
 //! piece as drawn, read by the molfile reader of the cuts (`graph::Mol::from_molfile`: open valences filled with H); formula, charge, monoisotopic
-//! mass and m/z are the ones of `etich/1` (same code), the average weight is `mzlab_mol::Mol::molecular_weight`, rings are the cycle count of the
+//! mass and m/z are the ones of `label/1` (same code), the average weight is `mzlab_mol::Mol::molecular_weight`, rings are the cycle count of the
 //! graph, aromatic bonds are the ones written aromatic (type 4) plus the Hückel perception of `mzlab-mol` on the Kekulé ones (our rule). Only the
 //! graph goes to `mzlab-mol`, not its molfile reader, so the `.wasm` `grafo` stays small. Values come from the structure only: nothing is fitted to data.
 
@@ -11,7 +11,7 @@ use mzlab_mol::{Atom, Bond, Mol};
 use super::graph;
 use super::labels::{shape, shape_json, AtomIn};
 
-/// The `M  RAD` code of every atom (0 = none), as `etich/1` reads it.
+/// The `M  RAD` code of every atom (0 = none), as `label/1` reads it.
 fn rad_codes(mf: &str, n: usize) -> Vec<i64> {
     let mut r = vec![0; n];
     for l in mf.lines().filter(|l| l.starts_with("M  RAD")) {
@@ -99,8 +99,8 @@ fn aromatic(g: &graph::Mol, m: &Mol) -> (usize, usize) {
     (on.iter().filter(|x| **x).count(), rings)
 }
 
-/// `sel/1` of a request `{"molfile": V2000 text, "part": bool}` (`part` = a selection, echoed so the page can say the numbers are for the piece):
-/// `{"format", "part", "label": the etich/1 structure, "average", "heavy", "atoms", "pieces", "rings", "aromaticAtoms", "aromaticRings"}`.
+/// `selection/1` of a request `{"molfile": V2000 text, "part": bool}` (`part` = a selection, echoed so the page can say the numbers are for the piece):
+/// `{"schema", "part", "label": the label/1 structure, "average", "heavy", "atoms", "pieces", "rings", "aromaticAtoms", "aromaticRings"}`.
 /// `average` is null when an element has no tabulated weight; a molfile the reader refuses keeps its key (`error.grafo.molfile`, `error.grafo.element`, ...).
 pub fn sel_json(request: &str) -> Result<String> {
     let v = json::parse(request.as_bytes()).map_err(|_| Error::new("error.sel.request"))?;
@@ -129,7 +129,7 @@ pub fn sel_json(request: &str) -> Result<String> {
     let np = pieces(n, g.bonds.iter().map(|b| (b.a, b.b)));
     let (na, ar_rings) = aromatic(&g, &m);
     let mut o = Out::default();
-    o.raw("{\"format\":\"sel/1\",\"part\":")
+    o.raw("{\"schema\":\"selection/1\",\"part\":")
         .raw(if part { "true" } else { "false" })
         .raw(",\"label\":");
     shape_json(&mut o, &s);

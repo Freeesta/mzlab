@@ -12,7 +12,7 @@ usage: mzlab-cli mol check REQUEST.json|- [--out PATH]
   REQUEST.json  {\"molfile\": \"...\"}: the V2000 or V3000 molfile of the drawing; - reads the standard input
   --out PATH    write there instead of the standard output
 
-The answer is {\"format\": \"check/1\", \"atoms\", \"pieces\", \"warnings\": [{code, level, atoms, bonds, ...}]}: codes valence,
+The answer is {\"schema\": \"check/1\", \"atoms\", \"pieces\", \"warnings\": [{code, level, atoms, bonds, ...}]}: codes valence,
 valenceCharge, charge, isotope, kekule, wedgeMultiple, wedgeNoCentre, wedgeUndecided (level warn) and query, queryBond, pieces (level note);
 atoms are 0-based in the order of the molfile. The check speaks of the drawing only, never of data.";
 

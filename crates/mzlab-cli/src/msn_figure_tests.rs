@@ -190,10 +190,16 @@ fn the_command_and_figure_write_the_same_bytes() {
         "--view",
         "radial",
     ]);
-    assert_eq!(made, format!("{0}/g.svg\n{0}/g.html\n", d.display()));
+    assert_eq!(
+        made,
+        format!(
+            "{{\"schema\":\"msn-figures/1\",\"files\":[\"{0}/g.svg\",\"{0}/g.html\"]}}\n",
+            d.display()
+        )
+    );
     // `figure` on the graph the command wrote
     let other = d.join("o");
-    cli(&[
+    let said = cli(&[
         "msn",
         "figure",
         g.to_str().unwrap(),
@@ -202,6 +208,11 @@ fn the_command_and_figure_write_the_same_bytes() {
         "--out",
         other.to_str().unwrap(),
     ]);
+    // `schema` is the first key and the document ends with exactly one newline, for `figure` as for `graph --figure`
+    for t in [&made, &said] {
+        assert!(t.starts_with("{\"schema\":\"msn-figures/1\","), "{t}");
+        assert!(t.ends_with("}\n") && !t.ends_with("\n\n"), "{t:?}");
+    }
     for e in ["svg", "html"] {
         assert_eq!(
             std::fs::read(d.join(format!("g.{e}"))).unwrap(),

@@ -9,7 +9,7 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-# `isotopi-tutti`: the natural abundances of every element for the isotope pattern of `anal/1`, as the app and the CLI have them (same bytes)
+# `isotopi-tutti`: the natural abundances of every element for the isotope pattern of `analysis/1`, as the app and the CLI have them (same bytes)
 mzlab-core = { path = "../mzlab-core", features = ["isotopi-tutti"] }
 # `sel` (with `chem`) only: no default features, so not `legacy`
 mzlab-feat = { path = "../mzlab-feat", default-features = false, features = ["sel"] }

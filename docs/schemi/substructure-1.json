@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "substructure/1",
+  "title": "substructure/1: where a substructure occurs in structures",
+  "description": "The answer of `mzlab-cli mol search --sub QUERY TARGET...`; match atoms are target atoms from 0 for each query atom. A hit is a suspect to check, never an identification. Code: crates/mzlab-feat/src/chem/substructure.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "atoms",
+    "stereo",
+    "hits",
+    "errors"
+  ],
+  "properties": {
+    "schema": {
+      "const": "substructure/1"
+    },
+    "atoms": {
+      "type": "integer"
+    },
+    "stereo": {
+      "type": "boolean"
+    },
+    "hits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "i",
+          "n",
+          "maps"
+        ],
+        "properties": {
+          "i": {
+            "type": "integer"
+          },
+          "n": {
+            "type": "integer"
+          },
+          "maps": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "i",
+          "error"
+        ],
+        "properties": {
+          "i": {
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

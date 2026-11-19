@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "label/1",
+  "title": "label/1: formula, charge and masses of drawn structures",
+  "description": "The answer of `mzlab-cli mol label`: one row per structure (or `{error,label}` when it has no formula) and the change across each reaction arrow (null when unreadable). Code: crates/mzlab-feat/src/chem/labels.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "structures",
+    "arrows"
+  ],
+  "properties": {
+    "schema": {
+      "const": "label/1"
+    },
+    "structures": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "formula",
+              "text",
+              "charge",
+              "mass",
+              "nominal"
+            ],
+            "properties": {
+              "formula": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "charge": {
+                "type": "integer"
+              },
+              "mass": {
+                "type": "number"
+              },
+              "nominal": {
+                "type": "integer"
+              },
+              "mz": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "unpaired": {
+                "type": "integer"
+              },
+              "electrons": {
+                "type": "integer"
+              },
+              "odd": {
+                "type": "boolean"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "delta": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "error",
+              "label"
+            ],
+            "properties": {
+              "error": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "arrows": {
+      "type": "array",
+      "items": {
+        "type": [
+          "object",
+          "null"
+        ]
+      }
+    }
+  }
+}

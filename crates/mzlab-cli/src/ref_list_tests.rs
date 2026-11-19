@@ -51,7 +51,7 @@ fn match_finds_the_number_in_the_list() {
     assert_eq!(o.code, 0);
     let t = String::from_utf8(o.stdout).unwrap();
     assert!(
-        t.contains("\"match\":") && t.contains("\"id\":\"A\""),
+        t.contains("\"match\":{\"schema\":\"reflist-match/1\"") && t.contains("\"i\":0"),
         "{t}"
     );
 }

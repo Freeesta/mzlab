@@ -1,11 +1,11 @@
-//! `mzlab-cli mol mech REQUEST.json|- [--out PATH]`: the `mecc/1` check of the curved arrows of a mechanism drawn on a structure (each arrow starts at
+//! `mzlab-cli mol mech REQUEST.json|- [--out PATH]`: the `mechanism/1` check of the curved arrows of a mechanism drawn on a structure (each arrow starts at
 //! a lone pair, a bond or a radical and ends at an atom or a bond; drawn lone pairs fit the atom), byte for byte what the Draw page and the app show.
 
 use std::path::PathBuf;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli mol mech: whether the curved arrows of a mechanism are well formed, as JSON (mecc/1). Form only: it never says
+pub const HELP: &str = "mzlab-cli mol mech: whether the curved arrows of a mechanism are well formed, as JSON (mechanism/1). Form only: it never says
 which mechanism is right.
 
 usage: mzlab-cli mol mech REQUEST.json|- [--out PATH]
@@ -15,7 +15,7 @@ usage: mzlab-cli mol mech REQUEST.json|- [--out PATH]
                 molfile; pair = full head (two electrons), single = half head (one); - reads the standard input
   --out PATH    write there instead of the standard output
 
-The answer is {\"format\": \"mecc/1\", \"arrows\": [{kind, from, to, electrons, ok, problem?}], \"lone\": [{atom, pairs, max?, ok}],
+The answer is {\"schema\": \"mechanism/1\", \"arrows\": [{kind, from, to, electrons, ok, problem?}], \"lone\": [{atom, pairs, max?, ok}],
 \"ok\"}; problem is noLonePair, noRadical, pairFromRadical, noBond or same.";
 
 pub fn run(args: Vec<String>) -> Outcome {

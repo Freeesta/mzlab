@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cip/1",
+  "title": "cip/1: R/S and E/Z descriptors of a drawing",
+  "description": "The answer of `mzlab-cli mol cip`; atoms are 0-based in molfile order; `skip` says why nothing was assigned (for example `query`). Code: crates/mzlab-feat/src/chem/cip.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "atoms",
+    "bonds"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cip/1"
+    },
+    "atoms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "atom",
+          "label"
+        ],
+        "properties": {
+          "atom": {
+            "type": "integer"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "bonds": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "a",
+          "b",
+          "label"
+        ],
+        "properties": {
+          "a": {
+            "type": "integer"
+          },
+          "b": {
+            "type": "integer"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "skip": {
+      "type": "string"
+    }
+  }
+}
