@@ -1,5 +1,5 @@
 //! `mzlab-cli mol search --sub QUERY TARGET... | --db LIST [--set stereo=1] [--set max=N] [--out PATH]`: where a drawn moiety occurs in the
-//! given structures (`sub/1`) or in a structure list (`substructure_db/1`), byte for byte what the desktop route `feat/grafo` (`kind: "sub"`) and the
+//! given structures (`substructure/1`) or in a structure list (`substructure_db/1`), byte for byte what the desktop route `feat/grafo` (`kind: "sub"`) and the
 //! `molkit` `.wasm` answer.
 
 use std::path::PathBuf;
@@ -8,7 +8,7 @@ use mzlab_core::json::Out;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli mol search: where a substructure occurs in structures, as JSON (sub/1).
+pub const HELP: &str = "mzlab-cli mol search: where a substructure occurs in structures, as JSON (substructure/1).
 
 usage: mzlab-cli mol search --sub QUERY TARGET... [--set NAME=VALUE...] [--out PATH]
        mzlab-cli mol search --sub QUERY --db LIST [--set NAME=VALUE...] [--out PATH]

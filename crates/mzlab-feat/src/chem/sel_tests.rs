@@ -1,4 +1,4 @@
-//! Unit tests of `sel/1` (`sel.rs`): Kekulé and aromatic-typed benzene, fused and saturated rings, charge, radical and pieces, request errors.
+//! Unit tests of `selection/1` (`sel.rs`): Kekulé and aromatic-typed benzene, fused and saturated rings, charge, radical and pieces, request errors.
 
 use super::*;
 

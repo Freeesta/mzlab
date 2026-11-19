@@ -1,4 +1,4 @@
-//! `sub/1`: where a drawn moiety occurs in a list of structures (feature `record`, matcher `mzlab_mol::SubQuery`). The request is
+//! `substructure/1`: where a drawn moiety occurs in a list of structures (feature `record`, matcher `mzlab_mol::SubQuery`). The request is
 //! `{"query", "targets": [..], "stereo", "max"}` with SMILES or molfiles as text; the answer lists, per target that
 //! contains the query, its distinct matches (target atoms of every query atom, merged query hydrogens left out). A hit is a suspect to
 //! check, never an identification. With `"db"` (the text of an SDF, a SMILES list or a molecules CSV such as the catalogue) instead of `targets` the
@@ -154,7 +154,7 @@ fn entries(text: &str) -> (&'static str, Vec<Entry>, usize) {
     ("smiles", smiles_list(text), 0)
 }
 
-/// The `substructure_db/1` answer: `sub/1` over the entries of a structure list, each hit with its name, id and structure.
+/// The `substructure_db/1` answer: `substructure/1` over the entries of a structure list, each hit with its name, id and structure.
 fn db_json(q: &SubQuery, opts: &SubOptions, db: &str) -> Result<String> {
     let (source, list, skipped) = entries(db);
     if list.is_empty() {
@@ -212,7 +212,7 @@ fn db_json(q: &SubQuery, opts: &SubOptions, db: &str) -> Result<String> {
     Ok(o.0)
 }
 
-/// The `sub/1` answer of a request (`substructure_db/1` when it carries a `db`).
+/// The `substructure/1` answer of a request (`substructure_db/1` when it carries a `db`).
 pub fn search_json(request: &str) -> Result<String> {
     let bad = || Error::new("error.sub.request");
     let v = json::parse(request.as_bytes()).map_err(|_| bad())?;

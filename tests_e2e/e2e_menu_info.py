@@ -1,4 +1,4 @@
-"""Drawing: «Info…» of the canvas menu opens a dialog with the `sel/1` numbers of the Rust graph (formula, monoisotopic mass, average weight,
+"""Drawing: «Info…» of the canvas menu opens a dialog with the `selection/1` numbers of the Rust graph (formula, monoisotopic mass, average weight,
 rings with the aromatic ones, heavy atoms) and InChI/InChIKey from Indigo, for the whole drawing or the selected piece (with the note that open valences
 are filled with H); every copy button copies its own value, and the dialog has no serious axe violation."""
 # covers: mzlab/web/disegno-menu.js, mzlab/web/disegno-selezione.js

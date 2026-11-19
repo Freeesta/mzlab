@@ -1,4 +1,4 @@
-//! Tests of `sub/1` and `substructure_db/1` (`substructure.rs`): hits and errors, and the three kinds of structure list (SMILES list, table, SDF).
+//! Tests of `substructure/1` and `substructure_db/1` (`substructure.rs`): hits and errors, and the three kinds of structure list (SMILES list, table, SDF).
 
 use super::*;
 

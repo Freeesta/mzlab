@@ -16,8 +16,9 @@ pub const SELECTOR: u8 = 5;
 /// An output that cannot be written, or an external source that failed.
 pub const OUTPUT: u8 = 6;
 
-/// The chemistry keys that are not usage: a valid request the chemistry cannot satisfy is data (1), a request or molfile that cannot be read is
-/// input (4); formula, adduct and SMILES syntax of an argument fall through to usage (2).
+/// The chemistry keys that are not usage, one rule: content that cannot be read (a request, a molfile, a structure list) is input (4); a valid
+/// request the chemistry cannot satisfy, or one over a size limit (`*.tooBig`, `error.sub.dbSize`), is data (1); formula, adduct and SMILES
+/// syntax of an argument or option falls through to usage (2).
 fn chem_code(key: &str) -> Option<u8> {
     const CHEM_DATA_KEYS: &[&str] = &[
         "err.formula.mzLow",
@@ -25,12 +26,12 @@ fn chem_code(key: &str) -> Option<u8> {
         "err.iso.element",
         "err.iso.adductTooMany",
         "error.grafo.delta.neg",
-        "error.grafo.molfile",
         "error.grafo.tooBig",
         "error.grafo.element",
         "error.grafo.mixture",
         "error.grafo.ring",
         "error.grafo.mech.atom",
+        "error.grafo.cut.bond",
         "error.grafo.cut.aromatic",
         "error.grafo.cut.order",
         "error.grafo.cut.radical",
@@ -39,12 +40,10 @@ fn chem_code(key: &str) -> Option<u8> {
         "error.sub.dbSize",
         "error.anal.abundance",
         "error.anal.empty",
-        "error.etich.element",
-        "error.etich.isotope",
         "error.hilite.query",
     ];
     const CHEM_INPUT_KEYS: &[&str] = &[
-        "error.etich.request",
+        "error.label.request",
         "error.anal.request",
         "error.check.request",
         "error.check.molfile",
@@ -55,6 +54,7 @@ fn chem_code(key: &str) -> Option<u8> {
         "error.link.request",
         "error.sel.request",
         "error.sdf.molfile",
+        "error.grafo.molfile",
         "error.grafo.mech.request",
         "error.sub.db",
         "error.sub.column",
@@ -210,13 +210,17 @@ mod tests {
             "err.formula.mzLow",
             "error.grafo.cut.aromatic",
             "error.hilite.query",
-            "error.etich.element",
+            "error.grafo.cut.bond",
             "err.iso.adductTooMany",
+            "error.sub.dbSize",
+            "error.grafo.tooBig",
         ] {
             assert_eq!(code_of_key(k), DATA, "{k}");
         }
         for k in [
-            "error.etich.request",
+            "error.label.request",
+            "error.grafo.molfile",
+            "error.sdf.molfile",
             "error.check.molfile",
             "err.search.request",
             "error.sub.db",

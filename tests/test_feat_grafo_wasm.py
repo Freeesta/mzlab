@@ -70,11 +70,11 @@ def test_fragments_of_a_radical_equal_the_app_fixture(pkg):
 
 
 def test_mechanism_check_through_wasm_equals_the_app_fixture_and_the_cli(pkg, tmp_path):
-    fx = json.loads((Path(__file__).parent / "dati" / "mecc_mclafferty.json").read_text(encoding="utf-8"))
+    fx = json.loads((Path(__file__).parent / "dati" / "mechanism_mclafferty.json").read_text(encoding="utf-8"))
     req = tmp_path / "req.json"
     req.write_text(json.dumps(fx["request"]), encoding="utf-8")
     site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "mech")
-    assert site.strip() == fx["mecc"]   # crates/mzlab-desktop/tests/labels.rs reads the same bytes
+    assert site.strip() == fx["mechanism"]   # crates/mzlab-desktop/tests/labels.rs reads the same bytes
     assert site == cli("mol", "mech", str(req), runner=run)
     r = json.loads(site)
     assert [a["ok"] for a in r["arrows"]] == [True] * 5 + [False] and r["arrows"][5]["problem"] == "pairFromRadical"

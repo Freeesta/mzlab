@@ -63,10 +63,10 @@ fn errors_have_their_keys() {
     let err = |r: &str| analysis_json(r).unwrap_err().key;
     assert_eq!(err("nope"), "error.anal.request");
     assert_eq!(err(r#"{"atoms":[]}"#), "error.anal.empty");
-    assert_eq!(err(r#"{"atoms":[{"el":"R#"}]}"#), "error.etich.element");
+    assert_eq!(err(r#"{"atoms":[{"el":"R#"}]}"#), "error.label.element");
     assert_eq!(
         err(r#"{"atoms":[{"el":"C","iso":99}]}"#),
-        "error.etich.isotope"
+        "error.label.isotope"
     );
 }
 

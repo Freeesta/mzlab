@@ -129,7 +129,7 @@ fn bond_ids(m: &Mol, pairs: &[(usize, usize)]) -> Result<Vec<usize>> {
                 let bd = &m.bonds[*k];
                 (bd.a, bd.b) == (a, b) || (bd.a, bd.b) == (b, a)
             })
-            .ok_or_else(|| Error::new("error.grafo.molfile"))?;
+            .ok_or_else(|| Error::new("error.grafo.cut.bond"))?;
         if m.bonds[k].order == 1.5 {
             return Err(Error::new("error.grafo.cut.aromatic"));
         }

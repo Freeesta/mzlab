@@ -113,7 +113,7 @@ fn cuts_json(m: &Mol, a: i32, b: i32) -> Result<String> {
         })
         .collect();
     if one && ks.is_empty() {
-        return Err(Error::new("error.grafo.molfile"));
+        return Err(Error::new("error.grafo.cut.bond"));
     }
     if one && on_ring[ks[0]] {
         return Err(Error::new("error.grafo.ring"));
