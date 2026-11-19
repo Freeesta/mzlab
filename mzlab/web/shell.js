@@ -104,6 +104,12 @@ const expSel=(/** @type {FileRiga} */ f,/** @type {string} */ attr,/** @type {st
 const expCell0=(/** @type {FileRiga} */ f)=>f.kind&&f.mixed&&f.mixed.length?`<b>${esc(mixedText(f.mixed))}</b>`:f.kind in GORD?expSel(f,`data-exp="${esc(f.name)}"`,TIPOF.manual(f.name),f.kindAuto||f.kind,TIPOF.why(f))+(f.polarity==="mixed"?` <span class="muted sm">${I18N.t("load.exp.polMixed")}</span>`:""):f.kind?`<b>${expn(f.kind,f)}</b>`:`<span class="muted">${I18N.t("load.exp.unread")}</span>`;
 const expCell=(/** @type {FileRiga} */ f)=>expWhy(f,expCell0(f));
 // the types of the files change in place (table, viewer, XIC button) and the table is sorted again
+// the loading table follows the Files panel (rename, delete, group, role, experiment): repainted unless the student is typing in it, which repaints itself on commit
+// roles, times and concentrations of the open files (the state the sample table and the panel write) go into the rows first: one source of truth
+function pullOpen(){const open=new Map(CAMPIONI.files().map((/** @type {any} */ g)=>[g.file,g]));
+  for(const f of ST.files){const g=open.get(f.name);if(!g)continue;RUOLI.setRole(f,CAMPIONI.kindOf(g));if(RUOLI.timed(f))f.time=g.time??null;
+    if(isCal(f)&&g.conc!=null){const a=Object.keys(CU).find(k=>CU[k][0]===g.cunit);f.conc=a?roundc(g.conc*CU[a][1]/CU[ST.unit][1]):g.conc}}}
+document.addEventListener("filelist",()=>{const el=$("#flist");if(!el||el.contains(document.activeElement))return;pullOpen();renderFiles()});
 function expSet(/** @type {string[]} */ names,/** @type {string | null | undefined} */ kind){names.forEach(n=>TIPOF.set(n,kind||null));ST.files.forEach((/** @type {FileRiga} */ f)=>{if(names.includes(f.name))Object.assign(f,TIPOF.apply(f,f.name))});TIPOF.viewer(names);CONVROWS.thaw();sortFiles();renderFiles()}
 function renderFiles(){if(window.GRUTAB&&GRUTAB.pre())return;const F=ST.files,el=$("#flist");
   const xh=(/** @type {string} */ h)=>window.COLS?COLS.head(h):h,xr=(/** @type {FileRiga} */ f,/** @type {string} */ h)=>window.COLS?COLS.row(f,h):h,hasCal=F.some((/** @type {FileRiga} */ f)=>f.use&&(isCal(f)||(f.conc!=null&&f.conc!==""))),tu=tunitGet(),tuSel=`<select id="tunit" title="${I18N.t("load.table.tunit.title")}" aria-label="${I18N.t("load.table.tunit.title")}">${Object.keys(TIME_UNITS).map(k=>`<option value="${k}" ${k===tu?"selected":""}>${tunitLabel(k)}</option>`).join("")}</select>`,unitSel=`<select id="cunit" title="${I18N.t("load.table.unit.title")}">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
@@ -145,7 +151,7 @@ function wireFiles(/** @type {HTMLElement} */ el,/** @type {FileRiga[]} */ F){
       if(keep)go();else setTimeout(go,0)};
     if(x.dataset.k==="conc")x.addEventListener("keydown",(/** @type {KeyboardEvent} */ e)=>{if(e.key==="Enter"){F[+x.dataset.i].gC=false;x.classList.remove("guess");x.title="";modeNote()}})});
   el.querySelectorAll("[data-dl]").forEach((/** @type {ElementoDati} */ b)=>b.onclick=()=>CONV.menu(b,b.dataset.dl||null));const npc=$("#cvcomp");if(npc)npc.onchange=()=>{CONV.compression=npc.value;CONV.paintSizes();const e=$("#cvest");if(e)e.textContent=CONV.estimate()};const dla=$("#dlall");if(dla)dla.onclick=()=>CONV.menu(dla,null);const rma=$("#rmall");if(rma)rma.onclick=confirmRemoveAll;const sva=$("#saveall");if(sva)sva.onclick=()=>CONVQ.saveAll();
-  const tuEl=$("#tunit");if(tuEl)tuEl.onchange=()=>{tunitSet(tuEl.value);renderFiles()};
+  const tuEl=$("#tunit");if(tuEl)tuEl.onchange=()=>{tunitSet(tuEl.value);renderFiles();if(typeof renderFileList==="function"&&E.files.length)renderFileList()};
   const cu=$("#cunit");if(cu)cu.onchange=()=>{const k=cu.value,r=CU[ST.unit][1]/CU[k][1];F.forEach((/** @type {FileRiga} */ f)=>{if(f.conc!=null)f.conc=roundc(f.conc*r)});ST.unit=k;renderFiles()};
   el.querySelectorAll("[data-rm]").forEach((/** @type {ElementoDati} */ b)=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];
     // in the browser the table × is the side panel ×: same take / Undo / free and the same re-indexing of the panels
