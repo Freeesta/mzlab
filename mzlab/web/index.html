@@ -105,7 +105,7 @@
  <script>/* Draw cards: the stored open/closed state before the first paint (disegno-riquadri.js wires the buttons) */(function(){try{var s=JSON.parse(localStorage.getItem(NOMI.KEY("disegno.schede"))||"{}");document.querySelectorAll("#v-draw aside>.card").forEach(function(c){var o=s[c.id];if(o==null)return;if(c.tagName==="DETAILS"){c.open=!!o;return}var b=c.querySelector(".rq-tg"),d=b&&document.getElementById(b.getAttribute("aria-controls"));if(d){b.setAttribute("aria-expanded",o?"true":"false");d.hidden=!o}})}catch(e){}})()</script>
  </aside>
 </section>
-<dialog id="refdlg"><div class="top" style="display:flex;align-items:center;gap:8px"><h3 id="reftitle"></h3><span class="sp"></span><button id="refx" class="x" data-i18n-title="common.close" title="Close">&times;</button></div><div id="refbody"></div></dialog>
+<dialog id="refdlg" aria-labelledby="reftitle"><div class="top" style="display:flex;align-items:center;gap:8px"><h3 id="reftitle"></h3><span class="sp"></span><button id="refx" class="x" data-i18n-title="common.close" title="Close">&times;</button></div><div id="refbody"></div></dialog>
 <dialog id="bigdlg" aria-labelledby="bigtt"><div class="top"><h3 id="bigtt" style="margin:0;flex:1"></h3><button id="bigx" class="x" data-i18n-title="common.close" title="Close">&times;</button></div><div id="bigbody"></div></dialog>
 <div id="loading" aria-busy="true" hidden><canvas aria-hidden="true" id="ldion" width="420" height="120"></canvas><div id="ldmsg" role="status" aria-live="off"></div><div id="ldact" hidden></div></div>
 <script src="static/avvio.js"></script>

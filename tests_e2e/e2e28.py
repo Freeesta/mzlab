@@ -62,10 +62,15 @@ try:
                 assert pg.locator("#lst-unit button.on").inner_text() == "Da" and pg.input_value("#lst-tol") == "0.5", "unit resolution: Da, as in Adducts & losses"
                 import re
                 mzs = pg.evaluate("[...document.querySelectorAll('#lst-tbody tr:not(#lst-more) td:first-child')].map(t=>t.textContent)"); assert mzs and all(re.fullmatch(r"\d+\.\d{4}", m) for m in mzs), mzs[:5]      # exact m/z with 4 decimals in LR too
-                pg.fill("#lst-q", "63,3"); t = pg.inner_text("#lst-tbody"); assert "63." in t and "PEG" in t, t[:200]      # comma decimals rank by m/z
-                pg.fill("#lst-q", "peg"); t2 = pg.inner_text("#lst-tbody"); assert "PEG" in t2, t2[:200]      # text filters by name
+                pg.fill("#lst-q", "63,3"); wait_for_js(pg, "document.querySelector('#lst-tbody').textContent.includes('PEG')", 5000); t = pg.inner_text("#lst-tbody"); assert "63." in t and "PEG" in t, t[:200]      # comma decimals rank by m/z
+                import json; prev = pg.evaluate("document.querySelector('#lst-tbody').textContent"); pg.fill("#lst-q", "peg"); wait_for_js(pg, "document.querySelector('#lst-tbody').textContent !== " + json.dumps(prev), 5000); t2 = pg.inner_text("#lst-tbody"); assert "PEG" in t2, t2[:200]      # text filters by name
                 assert pg.locator("#lst-pol-seg").count() == 0 and pg.locator("#lst-txt").count() == 0, "one field, no polarity toggle"
                 pols = set(pg.evaluate("[...document.querySelectorAll('#lst-tbody tr td:last-child .pol')].map(e=>e.textContent.trim())")); assert pols <= {"+", "\u2212", "\u00b1"} and pols, pols
+                # the Data-view drawer scrolls inside #lst-table-wrap (the observer root): scrolling it loads more rows
+                pg.fill("#lst-q", ""); wait_for_js(pg, "document.querySelector('#lst-more')", 5000)
+                n0 = pg.locator("#lst-tbody tr:not(#lst-more)").count()
+                pg.evaluate("(()=>{const w=document.querySelector('#lst-table-wrap');w.scrollTop=w.scrollHeight})()")
+                wait_for_js(pg, f"document.querySelectorAll('#lst-tbody tr:not(#lst-more)').length>{n0}", 5000)
                 assert "Keller" not in pg.inner_text("#lst-ref-box") and pg.locator("#lst-ref-box a").count() == 0
                 assert not pg.is_visible("#sb-help")
                 pg.set_viewport_size({"width": 400, "height": 800}); pg.wait_for_timeout(200)

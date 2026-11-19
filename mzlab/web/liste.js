@@ -760,6 +760,7 @@ const LISTE = (() => {
         });
       }
 
+      moreObs?.disconnect(); elTbody.innerHTML = ""; elWrap.scrollTop = 0;     // before the empty return: no stale observer or rows
       if (!items.length) {
         if (elCount) elCount.textContent = I18N.t("lst.count", { n: 0 });
         elTbody.innerHTML = `<tr><td colspan="${compact ? 4 : 9}" class="muted">${/** @type {any} */ (window).EMPTYLEAF("empty.lists")}</td></tr>`;
@@ -773,13 +774,12 @@ const LISTE = (() => {
         n += next.length;
         elTbody.querySelector("#lst-more")?.remove();
         const rows = next.map((/** @type {Bag} */ it) => listRowHtml(it, compact, hasMz, byDa)).join(""), cut = n < items.length;
-        const tail = cut ? `<tr id="lst-more"><td colspan="${compact ? 4 : 9}" class="sm muted">&hellip;</td></tr>` : "";
+        const tail = cut ? `<tr id="lst-more" aria-hidden="true"><td colspan="${compact ? 4 : 9}" class="sm muted">&hellip;</td></tr>` : "";
         elTbody.insertAdjacentHTML("beforeend", rows + tail);
         if (elCount) elCount.textContent = cut ? I18N.t("lst.count.cut", { n, m: items.length }) : I18N.t("lst.count", { n: items.length });
         const sentinel = elTbody.querySelector("#lst-more");
         if (sentinel) { moreObs?.disconnect(); moreObs = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) more(); }, { root: elWrap }); moreObs.observe(sentinel); }
       };
-      moreObs?.disconnect(); elTbody.innerHTML = ""; elWrap.scrollTop = 0;
       more();
     }
 

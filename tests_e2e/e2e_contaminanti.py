@@ -271,14 +271,19 @@ try:
             first = pg.locator("#refdlg #lst-tbody tr:not(#lst-more)").count()
             assert first <= 100, f"first chunk only: {first}"
             assert pg.locator("#refdlg #lst-more").count() == 1, "more rows are announced"
+            import re
+            m = re.search(r"(\d+)\D+first (\d+) shown", pg.inner_text("#refdlg #lst-count")); assert m and int(m.group(2)) % 100 == 0 and int(m.group(2)) < int(m.group(1)), pg.inner_text("#refdlg #lst-count")      # intermediate state: the first N of M
             pg.evaluate("(()=>{const w=document.querySelector('#refdlg #lst-table-wrap');w.scrollTop=w.scrollHeight})()")
             pg.wait_for_function(f"document.querySelectorAll('#refdlg #lst-tbody tr:not(#lst-more)').length>{first}", timeout=5000)
-            pg.evaluate("(async()=>{const w=document.querySelector('#refdlg #lst-table-wrap');for(let i=0;i<80&&document.querySelector('#refdlg #lst-more');i++){w.scrollTop=w.scrollHeight;await new Promise(r=>setTimeout(r,50))}})()")
-            pg.wait_for_function("!document.querySelector('#refdlg #lst-more')", timeout=15000)
+            pg.wait_for_function("(()=>{const w=document.querySelector('#refdlg #lst-table-wrap');w.scrollTop=w.scrollHeight;return !document.querySelector('#refdlg #lst-more')})()", timeout=15000)
             rows = pg.locator("#refdlg #lst-tbody tr").count()
             assert rows > 400, f"the whole list is reachable, not cut at 400: {rows}"
             assert str(rows) in pg.inner_text("#refdlg #lst-count"), pg.inner_text("#refdlg #lst-count")
-            shut(pg, "#refx")
+            assert pg.evaluate("document.querySelector('#refdlg').getAttribute('aria-labelledby')") == "reftitle" and pg.inner_text("#reftitle").strip(), "accessible name via #reftitle"
+            pg.click("#refx"); assert not pg.is_visible("#refdlg"), "the close button closes it"
+            pg.evaluate("QQQRef.open(\"lists\", {})"); pg.wait_for_selector("#refdlg[open]", timeout=5000)
+            assert pg.evaluate("document.querySelector('#refdlg').contains(document.activeElement)"), "focus is inside the dialog"
+            pg.keyboard.press("Escape"); pg.wait_for_function("!document.querySelector('#refdlg').open", timeout=5000)
         step("lists dialog is the large Periodic table dialog; rows load while scrolling with a live count", large_dialog_infinite_scroll)
 
     r2.close()
