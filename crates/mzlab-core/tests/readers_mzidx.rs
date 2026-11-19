@@ -52,6 +52,18 @@ fn without(v: &Value, skip: &[&str]) -> Vec<(String, Value)> {
             .iter()
             .filter(|(k, _)| !skip.contains(&k.as_str()))
             .cloned()
+            // the chromatogram list of an mzML index (`run.chromatograms`) is not in the index of a vendor file
+            .map(|(k, v)| match (k.as_str(), v) {
+                ("run", Value::Obj(r)) => (
+                    k,
+                    Value::Obj(
+                        r.into_iter()
+                            .filter(|(n, _)| n != "chromatograms")
+                            .collect(),
+                    ),
+                ),
+                (_, v) => (k, v),
+            })
             .collect(),
         _ => panic!("not an object"),
     }
@@ -124,7 +136,7 @@ fn same(label: &str, make: &dyn Fn() -> FileSet, c: usize) -> usize {
 /// Index `b` (from the reader) against `a` (from the mzML): header, sections, rows from the third column, metadata and source.
 fn compare(label: &str, a: &[u8], b: &[u8], sha256: &str, n_members: usize, id: u32) {
     // header: version and flags, the same layout of the sections
-    assert_eq!((u32_at(a, 8), u32_at(a, 12)), (1, 0), "{label}");
+    assert_eq!((u32_at(a, 8), u32_at(a, 12)), (3, 0), "{label}");
     assert_eq!((u32_at(b, 8), u32_at(b, 12)), (3, READER_FLAG), "{label}");
     assert_eq!(u64_at(b, 48), b.len() as u64);
     let scans_off = u64_at(a, 32) as usize;
@@ -148,7 +160,7 @@ fn compare(label: &str, a: &[u8], b: &[u8], sha256: &str, n_members: usize, id: 
         without(&mb, &["source", "version"]),
         "{label}: metadata"
     );
-    assert_eq!(mb.get("version").and_then(Value::f64), Some(2.0));
+    assert_eq!(mb.get("version").and_then(Value::f64), Some(3.0));
     let src = mb.get("source").unwrap();
     assert_eq!(src.get("members").unwrap().arr().len(), n_members);
     assert_eq!(src.get("sha256").and_then(Value::str), Some(sha256));
