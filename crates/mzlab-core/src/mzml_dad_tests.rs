@@ -359,7 +359,12 @@ fn uv_row_time_in_seconds_by_unit_name_or_accession() {
             format!("<binaryDataArray encodedLength=\"0\"><cvParam accession=\"MS:1000523\"/><cvParam accession=\"{acc}\"/><binary>{}</binary></binaryDataArray>", b64(v, true, false))
         };
         let b = format!("<spectrum><cvParam accession=\"MS:1000804\"/><cvParam accession=\"MS:1000016\" name=\"scan start time\" value=\"30\" {u}/><binaryDataArrayList count=\"2\">{}{}</binaryDataArrayList></spectrum>", arr("MS:1000617", &[200.0, 210.0]), arr("MS:1000515", &[1.0, 2.0]));
-        super::uv_row(b.as_bytes()).map(|r| r.0)
+        super::uv_row(
+            b.as_bytes(),
+            &mut crate::mzmlarray::Inflate::new(),
+            &super::Grid::default(),
+        )
+        .map(|r| r.0)
     };
     assert_eq!(full("unitName=\"second\""), Some(0.5));
     assert_eq!(full("unitAccession=\"UO:0000010\""), Some(0.5));

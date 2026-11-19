@@ -35,7 +35,7 @@ try:
         def defaults():
             want = {"K_MIRATO-t0": ("ms", 2), "K_BLOCCHI-t0": ("ms", 3), "B_MRM-t0": ("srm", 2), "B_FullMass-t0": ("tic", 0)}
             for lab, (fam, liv) in want.items():
-                c = pg.evaluate(f"CANALI.iniziale(E.files.find(f => (f.label || f.name || '').includes({lab!r}))).then(c => c && [c.fam, c.liv])")
+                c = pg.evaluate(f"CANALI.iniziale(E.files.find(f => (f.label || f.name || '').includes({lab!r}))).then(c => c && [c.family, c.ms_level])")
                 assert c == [fam, liv], (lab, c)
         step("default channel by type (table in esperimenti.js)", defaults)
         def ida():
@@ -93,7 +93,7 @@ try:
         step("XIC inside a channel (api/xic canale=)", xic)
         def restore():
             rec = pg.evaluate("panelRec(E.panels.find(p => p.type==='chrom')).channels"); assert rec, rec
-        step("the panel saves the omologo, not the index", restore)
+        step("the panel saves the group, not the index", restore)
         def miss_routes():
             assert pg.evaluate("(window.MZLAB_LR_MISS||[]).length") == 0, pg.evaluate("window.MZLAB_LR_MISS")
         step("no request left unanswered", miss_routes)
@@ -102,7 +102,9 @@ try:
         def mrm():
             pg.evaluate("setTab('mrm')"); ready(pg); wait_for_js(pg, "document.querySelector('[data-o=canali]')")
             pg.click("[data-o=canali]"); wait_for_js(pg, "document.querySelector('.can-pop [role=treeitem]')")
-            rows = pg.evaluate("document.querySelectorAll('.can-pop [role=treeitem]').length"); assert rows == 2, rows
+            # the two SRM transitions plus the DAD (TWC) row: the MRM picker also lists the UV trace of a file that carries a DAD
+            rows = pg.evaluate("document.querySelectorAll('.can-pop [role=treeitem]').length"); assert rows == 3, rows
+            srm = pg.evaluate("document.querySelectorAll(\".can-pop [role=treeitem][data-group^='srm']\").length"); assert srm == 2, srm
             pg.click(".can-pop [role=treeitem] >> nth=1"); ready(pg); frames(pg, 6)
             tr = pg.evaluate("E.panels.find(p => p.type==='mrm').tr"); assert isinstance(tr, list) and len(tr) == 1, tr
         step("MRM panel: srm channels give the transitions", mrm)

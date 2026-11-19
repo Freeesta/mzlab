@@ -1,0 +1,23 @@
+I18N.add("en", {
+  "lst.err.line": "Line {line}: {text}",
+  "lst.user.added": "List “{name}” added ({n, plural, one {# ion} other {# ions}})",
+  "lst.user.removed": "List removed",
+  "lst.user.skipped": "{n, plural, one {# row has an error and was left out} other {# rows have errors and were left out}}",
+  "lst.add.btn": "Add list…",
+  "lst.add.tpl": "Download template",
+  "lst.add.drop": "or drop a CSV file here (columns mz, name, formula, polarity, adduct, note)",
+  "lst.add.errs": "{n, plural, one {# row has an error} other {# rows have errors}}; nothing was added yet",
+  "lst.add.none": "The file has no usable row",
+  "lst.add.importValid": "Add the {n, plural, one {# valid row} other {# valid rows}}",
+  "lst.add.cancel": "Cancel",
+  "lst.info.h": "About the lists (source, version, coverage)",
+  "lst.info.count": "{n, plural, one {# ion} other {# ions}} from {m, plural, one {# compound} other {# compounds}}",
+  "lst.info.classes": "{n, plural, one {# class} other {# classes}}",
+  "lst.info.source": "Source: {source}",
+  "lst.info.unknown": "Source unknown",
+  "lst.info.noDate": "Version and date not documented",
+  "lst.info.local": "Your list, stored in this browser only",
+  "lst.info.file": "file {file}",
+  "lst.info.rename": "Rename",
+  "lst.info.remove": "Remove"
+});

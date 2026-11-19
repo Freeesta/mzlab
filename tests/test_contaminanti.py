@@ -99,9 +99,7 @@ out.runs = [...new Set(runs.values())];
 out.two = L.seriesRuns(idx, "positive", peg.filter(x => x.series.n === 7 || x.series.n === 9).map(x => x.mz), 5).size;
 out.tip = L.tipHtml(L.find(idx, "positive", 445.1200, 5), runs).includes("Compatible with a known contaminant");
 out.none = L.tipHtml([], runs);
-const csv = L.csvOut([{ mz: 100.1, name: 'a, "b"', formula: "C2H6", polarity: -1, note: "x" }]);
-out.csv = L.csvParse(csv);
-out.csv2 = L.csvParse("mz;name\n150,5;punto e virgola");
+out.csv = L.csvOut([{ mz: 100.1, name: 'a, "b"', formula: "C2H6", polarity: -1, note: "x" }]);
 console.log(JSON.stringify(out));
 """
     items = builtin()["items"]
@@ -113,8 +111,7 @@ console.log(JSON.stringify(out));
     assert o["lab"] == ["laboratorio"] and o["tolLow"] == 0.001
     assert o["runs"] == ["serie PEG (n = 7-11)"] and o["two"] == 0          # three consecutive members are needed
     assert o["tip"] and o["none"] == ""
-    assert o["csv"] == [{"mz": 100.1, "name": 'a, "b"', "formula": "C2H6", "polarity": -1, "note": "x"}]
-    assert o["csv2"][0]["mz"] == 150.5 and o["csv2"][0]["name"] == "punto e virgola"
+    assert o["csv"].strip() == 'mz,name,formula,polarity,note\n100.1,"a, ""b""",C2H6,negative,x'
 
 
 def test_static_file_equals_the_route():

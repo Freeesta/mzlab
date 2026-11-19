@@ -39,7 +39,7 @@ try:
         c = b.new_context(viewport={"width": 1500, "height": 1800}); c.set_default_timeout(120000); reqs = []
         c.on("request", lambda r: reqs.append(r.url)); pg = c.new_page()
         pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
-        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.pick','never');}catch(_){}")
         pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
         pg.goto(f"http://127.0.0.1:{PORT}/")
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
@@ -124,7 +124,7 @@ try:
         step("opening the Full Scan series without Pyodide, and no page error", nopy)
         def product_spectrum():                          # product-ion files: sample 2 holds two precursors (229.1, 305.0) in interleaved cycles, sample 1 only 305.0; the panel of 229.1 is drawn on either, also when its window holds only scans of the other precursor
             c2 = b.new_context(viewport={"width": 1500, "height": 1800}); c2.set_default_timeout(120000); pg = c2.new_page()          # a clean session of its own
-            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.pick','never');}catch(_){}")
             pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
             pg.set_input_files("#pick", [str(D / "prodotto.wiff"), str(D / "prodotto.wiff.scan")])
@@ -146,7 +146,7 @@ try:
         def empty_injection():                           # an injection in the sample table that acquired nothing (no Idx): listed as an empty sample under its number, as `mzlab-cli convert` writes gaps-2.mzML
             c5 = b.new_context(viewport={"width": 1500, "height": 1800}); c5.set_default_timeout(120000); pg = c5.new_page()
             pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
-            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.pick','never');}catch(_){}")
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
             pg.set_input_files("#pick", [str(D / "gaps.wiff"), str(D / "gaps.wiff.scan")])
             got = "ST.files.map(f => [f.name, f.kind || ''])"
@@ -159,7 +159,7 @@ try:
         def refused_sample():                            # one pair: a sample read, one that acquired nothing, one the engine refuses (a TOF experiment): the refused one is told with its reason, never as an empty injection (H6-15)
             c7 = b.new_context(viewport={"width": 1500, "height": 1800}); c7.set_default_timeout(120000); pg = c7.new_page()
             pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
-            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.pick','never');}catch(_){}")
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
             pg.set_input_files("#pick", [str(D / "rifiutato.wiff"), str(D / "rifiutato.wiff.scan")])
             told = r"Array.from(document.querySelectorAll('.fi')).filter(e => /rifiutato_s3/.test(e.innerText) && /(code|codice) 8\b/.test(e.innerText)).length"
@@ -173,7 +173,7 @@ try:
         def worker_lost():                               # the engine's worker is lost while it lists the samples of a pair: the row names the .wiff and says the engine stopped, never «type not accepted» with a bare {name}
             c8 = b.new_context(viewport={"width": 1500, "height": 1800}); c8.set_default_timeout(120000); pg = c8.new_page()
             pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
-            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.pick','never');}catch(_){}")
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange && !!window.MZLAB_RUST && !!window.MZLAB_RUST.nativeSamples", timeout=60000)
             pg.evaluate("""async () => { const { makeNativo } = await import('./static/rust-nativo-pagina.js'), rb = window.MZLAB_RUST;
               rb.nativeSamples = makeNativo({ rpc: async () => ({ dead: true }), base: n => n, current: () => null, abort: () => {} }).nativeSamples; }""")
@@ -193,7 +193,7 @@ try:
                 print("   (variante: skipped, build the modules: tools/build_lettori_wasm.sh site/static)"); return
             c3 = b.new_context(viewport={"width": 1500, "height": 1800}); c3.set_default_timeout(120000); asked = []; c3.on("request", lambda r: asked.append(r.url)); pg = c3.new_page()
             pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
-            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.pick','never');}catch(_){}")
             pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
             pg.add_init_script("window.MZLAB_TRACE = [];")      # the requests the page makes, with their timing: said by the message of a red run
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
@@ -211,7 +211,7 @@ try:
                 print("   (rejected: skipped, build the modules: tools/build_lettori_wasm.sh site/static)"); return
             c6 = b.new_context(viewport={"width": 1500, "height": 1800}); c6.set_default_timeout(120000); pg = c6.new_page()
             pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
-            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.pick','never');}catch(_){}")
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
             pg.set_input_files("#pick", [str(D / "tof.wiff"), str(D / "tof.wiff.scan")])
             pg.wait_for_function(r"document.querySelector('#unopen') && /(code|codice) 8\b/.test(document.querySelector('#unopen').innerText)", timeout=120000)   # the page speaks Italian or English
@@ -225,7 +225,7 @@ try:
                 print("   (download: skipped, build the modules: tools/build_lettori_wasm.sh site/static)"); return
             c4 = b.new_context(viewport={"width": 1500, "height": 1800}, accept_downloads=True); c4.set_default_timeout(120000); pg = c4.new_page()
             pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
-            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.pick','never');}catch(_){}")
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
             pg.set_input_files("#pick", [str(D / "one.wiff"), str(D / "one.wiff.scan")])
             shown(pg, 1)
