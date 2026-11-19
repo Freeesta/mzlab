@@ -69,7 +69,11 @@ if [ -e "$ok" ]; then
   # fail closed: an empty or non-numeric size must never pass the gate
   case "$size" in ''|*[!0-9]*) echo "::error::the $label .wasm size could not be read (got '$size')"; exit 1 ;; esac
   echo "$label .wasm (optimised): $size bytes"
-  if [ "$size" -ge "$limit" ]; then echo "::error::the $label .wasm is $size bytes (limit $limit)"; exit 1; fi
+  if [ "$size" -ge "$limit" ]; then
+    # the caps are measured on Linux and gated there (pages, release, sito-rust); the Windows e2e build of the same commit is ~1% larger, so there it is only reported
+    case "$(uname -s)" in MINGW*|MSYS*) echo "::warning::the $label .wasm is $size bytes (Linux cap $limit): not gated on Windows"; exit 0 ;; esac
+    echo "::error::the $label .wasm is $size bytes (limit $limit)"; exit 1
+  fi
 elif [ "${MZLAB_WASM_OPT_STRICT:-}" = 1 ]; then
   # production builds (pages.yml, sito-rust.yml, release.yml) fail closed: an unoptimised .wasm would skip the size gate
   echo "::error::wasm-opt could not be installed: the $label .wasm is not optimised and the size gate cannot run"; exit 1

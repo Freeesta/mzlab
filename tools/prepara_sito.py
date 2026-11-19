@@ -100,7 +100,7 @@ def main() -> int:
     run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-lib-wasm"], build_env("wasm32-unknown-unknown", commit=False))
     run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", "site/static/wasm-lib", str(WASM.with_name("mzlab_lib_wasm.wasm"))])
     # the readers (one .wasm per family of formats) and their manifest: without them a .wiff, .raw or .d asks the page for a file the site does not have
-    run([bash_exe(), *(["-x"] if os.name == "nt" else []), "tools/build_lettori_wasm.sh", "site/static"], build_env("wasm32-unknown-unknown", commit=False))
+    run([bash_exe(), "tools/build_lettori_wasm.sh", "site/static"], build_env("wasm32-unknown-unknown", commit=False))
     run([sys.executable, "tools/build_site.py", "--build-json"])      # the .wasm is in place now: build.json names its SHA-256
     return 0
 
