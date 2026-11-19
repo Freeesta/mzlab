@@ -73,7 +73,7 @@ function mergeFiles(/** @type {FileRiga[]} */ list,/** @type {boolean} */ defer=
     gC:o?o.gC:conc!=null,role:o&&o.role,prop:o&&o.prop,ed:o&&o.ed,ugrp:o&&o.ugrp}});
   if(typeof CONV!=="undefined")CONV.forget(Object.keys(old).filter(n=>!ST.files.some((/** @type {FileRiga} */ f)=>f.name===n)));
   if(list.some(f=>!old[f.name]))hrMixPreselect();
-  // roles and times proposed from the names by the engine (campioni/2)
+  // roles and times proposed from the names by the engine (samples/1)
   if(defer)FILETAB.soon();else FILETAB.flush(true)}
 // low- and high-resolution files cannot be opened together: the world of the session is the world of the first file read (OPENNOW); before it, the most numerous world is preselected
 const hrMixCount=()=>{const l=ST.files.filter((/** @type {FileRiga} */ f)=>f.kind in GORD);return {lr:l.filter((/** @type {FileRiga} */ f)=>!f.hr).length,hr:l.filter((/** @type {FileRiga} */ f)=>f.hr).length,onLr:l.filter((/** @type {FileRiga} */ f)=>f.use&&!f.hr).length,onHr:l.filter((/** @type {FileRiga} */ f)=>f.use&&f.hr).length}};
@@ -104,10 +104,8 @@ const expSel=(/** @type {FileRiga} */ f,/** @type {string} */ attr,/** @type {st
 const expCell0=(/** @type {FileRiga} */ f)=>f.kind&&f.mixed&&f.mixed.length?`<b>${esc(mixedText(f.mixed))}</b>`:f.kind in GORD?expSel(f,`data-exp="${esc(f.name)}"`,TIPOF.manual(f.name),f.kindAuto||f.kind,TIPOF.why(f))+(f.polarity==="mixed"?` <span class="muted sm">${I18N.t("load.exp.polMixed")}</span>`:""):f.kind?`<b>${expn(f.kind,f)}</b>`:`<span class="muted">${I18N.t("load.exp.unread")}</span>`;
 const expCell=(/** @type {FileRiga} */ f)=>expWhy(f,expCell0(f));
 // the types of the files change in place (table, viewer, XIC button) and the table is sorted again
-// the loading table follows the Files panel (rename, delete, group, role, experiment): repainted unless the student is typing in it, which repaints itself on commit
-// roles, times and concentrations of the open files (the state the sample table and the panel write) go into the rows first: one source of truth
-function pullOpen(){const open=new Map(CAMPIONI.files().map((/** @type {any} */ g)=>[g.file,g]));
-  for(const f of ST.files){const g=open.get(f.name);if(!g)continue;RUOLI.setRole(f,CAMPIONI.kindOf(g));if(RUOLI.timed(f))f.time=g.time??null;
+// the loading table follows the Files panel (rename, delete, group, role, experiment), repainted unless the student is typing in it; roles, times and concentrations of the open files go into the rows first: one source of truth
+function pullOpen(){const open=new Map(CAMPIONI.files().map((/** @type {any} */ g)=>[g.file,g]));for(const f of ST.files){const g=open.get(f.name);if(!g)continue;RUOLI.setRole(f,CAMPIONI.kindOf(g));if(RUOLI.timed(f))f.time=g.time??null;
     if(isCal(f)&&g.conc!=null){const a=Object.keys(CU).find(k=>CU[k][0]===g.cunit);f.conc=a?roundc(g.conc*CU[a][1]/CU[ST.unit][1]):g.conc}}}
 document.addEventListener("filelist",()=>{const el=$("#flist");if(!el||el.contains(document.activeElement))return;pullOpen();renderFiles()});
 function expSet(/** @type {string[]} */ names,/** @type {string | null | undefined} */ kind){names.forEach(n=>TIPOF.set(n,kind||null));ST.files.forEach((/** @type {FileRiga} */ f)=>{if(names.includes(f.name))Object.assign(f,TIPOF.apply(f,f.name))});TIPOF.viewer(names);CONVROWS.thaw();sortFiles();renderFiles()}
@@ -424,8 +422,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   FILETAB.flush();await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
 // a reloaded session: its files are already open, but the rows of the sample table (ST.files) are rebuilt from the engine's state, as for a first load;
 // they take the roles and times of the open files and ask no proposal from the names, which OPENNOW.sync would write over the saved ones
-function restoreRows(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){mergeFiles(d.files||[],true);const open=new Map(CAMPIONI.files().map((/** @type {any} */ g)=>[g.file,g]));
-  for(const f of ST.files){f.prop=1;const g=open.get(f.name);if(g){RUOLI.setRole(f,CAMPIONI.kindOf(g));if(RUOLI.timed(f))f.time=g.time??null}}
+function restoreRows(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){mergeFiles(d.files||[],true);const open=new Map(CAMPIONI.files().map((/** @type {any} */ g)=>[g.file,g]));for(const f of ST.files){f.prop=1;const g=open.get(f.name);if(g){RUOLI.setRole(f,CAMPIONI.kindOf(g));if(RUOLI.timed(f))f.time=g.time??null}}
   // a file the notebook does not name was still loading when the page went away: it opens as on a first load (more than 50: a large folder, unticked as after «Choose»); one the student removed stays unticked
   const late=ST.files.filter((/** @type {FileRiga} */ f)=>f.kind in GORD&&!OPENNOW.isOpen(f.name));late.forEach((/** @type {FileRiga} */ f)=>{if(nbNamed.has(f.name))f.use=false});
   const back=late.filter((/** @type {FileRiga} */ f)=>!nbNamed.has(f.name));if(back.length>50)back.forEach((/** @type {FileRiga} */ f)=>{f.use=false});else back.forEach((/** @type {FileRiga} */ f)=>OPENNOW.add(f.name));

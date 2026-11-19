@@ -1,5 +1,5 @@
-//! `mzlab-cli samples vars|group|table`: the name operations of `samples::route` (`variabili`, `nome_gruppo`, `proponi`), printing the JSON the page gets
-//! from `api/campioni/<op>`. The names come one per line from a file or the standard input. `samples list FILE...` is what the files hold, sample by
+//! `mzlab-cli samples vars|group|table`: the name operations of `samples::route` (`variables`, `group_name`, `propose`), printing the JSON the page gets
+//! from `api/samples/<op>`. The names come one per line from a file or the standard input. `samples list FILE...` is what the files hold, sample by
 //! sample, from their index alone (`samples_list/1`: the same JSON as the site's `native_samples` and the app's native listing).
 
 use std::io::Read;
@@ -11,7 +11,7 @@ use mzlab_core::readers::Limits;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli samples: how the names of a set of files split them (nomivar/1), as JSON.
+pub const HELP: &str = "mzlab-cli samples: how the names of a set of files split them (sample-vars/1), as JSON.
 
 usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
        mzlab-cli samples group NAME...
@@ -25,7 +25,7 @@ usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,
   --substring     with --has: the term may be inside a token (O2 then catches H2O2)
   group           the name of a group made of NAMEs: their common tokens in order, empty when none
   FILE...         with table: real files, named by their file name and hashed (SHA-256), so `flow record` can match the roles
-  table           the sample table the names propose (campioni/2): role, time point (`tempo`, `unita_tempo`, `tempo_min`), series, replicate, concentration";
+  table           the sample table the names propose (samples/1): role, time point (`time`, `time_unit`, `time_min`), series, replicate, concentration";
 
 fn names(src: &str) -> Result<Vec<String>, String> {
     let mut text = String::new();
@@ -55,7 +55,7 @@ fn list(names: &[String]) -> String {
 }
 
 /// The body of `vars`: the names and, when asked, the manual variable.
-fn variabili(args: Vec<String>) -> Result<String, String> {
+fn variables_args(args: Vec<String>) -> Result<String, String> {
     let (mut src, mut pos, mut sep, mut has, mut substring) =
         ("-".to_string(), None, None, None, false);
     let mut it = args.into_iter();
@@ -90,12 +90,12 @@ fn variabili(args: Vec<String>) -> Result<String, String> {
     if let Some(p) = pos {
         let mut o = Out::default();
         o.str(sep.as_deref().unwrap_or("_-. "));
-        body += &format!(",\"manuale\":{{\"pos\":{p},\"sep\":{}}}", o.0);
+        body += &format!(",\"manual\":{{\"pos\":{p},\"sep\":{}}}", o.0);
     }
     if let Some(h) = has {
         let terms: Vec<String> = h.split(',').map(|t| t.trim().to_string()).collect();
         body += &format!(
-            ",\"manuale\":{{\"has\":{},\"substring\":{substring}}}",
+            ",\"manual\":{{\"has\":{},\"substring\":{substring}}}",
             list(&terms)
         );
     }
@@ -103,7 +103,7 @@ fn variabili(args: Vec<String>) -> Result<String, String> {
     Ok(body)
 }
 
-/// The body of `table`: the names, in the order given, as the files of `proponi` (no file kind). The SHA-256 is empty for a name and the real one for a
+/// The body of `table`: the names, in the order given, as the files of `propose` (no file kind). The SHA-256 is empty for a name and the real one for a
 /// FILE path (hashed here, in the order given), which is what `flow record` matches a role by.
 fn table(args: Vec<String>) -> Result<String, String> {
     let mut src = None;
@@ -409,14 +409,14 @@ pub fn run(args: Vec<String>) -> Outcome {
     let first = it.next();
     let sub = first.as_deref();
     let (op, body) = match sub {
-        Some("vars") => ("variabili", variabili(it.collect())),
-        Some("table") => ("proponi", table(it.collect())),
+        Some("vars") => ("variables", variables_args(it.collect())),
+        Some("table") => ("propose", table(it.collect())),
         Some("group") => {
             let n: Vec<String> = it.collect();
             if let Err(e) = crate::argv::no_options(&n) {
                 return Outcome::fail_error(&e);
             }
-            ("nome_gruppo", Ok(format!("{{\"names\":{}}}", list(&n))))
+            ("group_name", Ok(format!("{{\"names\":{}}}", list(&n))))
         }
         Some("list") => return list_run(it.collect()),
         Some("select") => return select_run(it.collect()),

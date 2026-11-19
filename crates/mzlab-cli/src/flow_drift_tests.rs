@@ -4,7 +4,7 @@
 
 use std::path::Path;
 
-use mzlab_core::drawing::{self, Batch, Design};
+use mzlab_core::design::{self, Batch, Design};
 use mzlab_core::json::{parse, Value};
 use mzlab_core::samples::{self, Sample};
 use mzlab_feat::drift::{batches_of, correct, Method};
@@ -105,7 +105,7 @@ fn dir(tag: &str, files: &[File], areas: &[Vec<f64>]) -> std::path::PathBuf {
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(d.join("work")).unwrap();
     std::fs::write(d.join("table.mzfeat"), table(areas)).unwrap();
-    std::fs::write(d.join("design.json"), drawing::to_json(&design(files))).unwrap();
+    std::fs::write(d.join("design.json"), design::to_json(&design(files))).unwrap();
     std::fs::write(d.join("samples.json"), samples::to_json(&campioni_2(files))).unwrap();
     d
 }

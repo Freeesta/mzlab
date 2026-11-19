@@ -177,7 +177,7 @@ fn context_is_built_from_the_sources_of_the_page() {
         c.starts_with("{\"schema\":\"context/1\"") && c.contains("features.detect@1"),
         "{c}"
     );
-    assert!(context_build(r#"{"profile":"corso"}"#, 2000)
+    assert!(context_build(r#"{"profile":"course"}"#, 2000)
         .unwrap_err()
         .contains("err.llm.profile.course"));
 }

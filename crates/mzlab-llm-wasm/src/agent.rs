@@ -56,7 +56,7 @@ pub struct Agent {
 
 #[wasm_bindgen]
 impl Agent {
-    /// `tools_json`: `tools/1`; `level`: `L0|L1|L2`; `research`: false = the profile «corso», where every turn fails with `err.llm.profile.course`.
+    /// `tools_json`: `tools/1`; `level`: `L0|L1|L2`; `research`: false = the profile «course», where every turn fails with `err.llm.profile.course`.
     #[wasm_bindgen(constructor)]
     pub fn new(
         tools_json: &str,

@@ -51,9 +51,9 @@ def write_mzml(path, k, seed):
                     + f'<chromatogramList count="{len(chroms)}">' + "".join(chroms) + "</chromatogramList></run></mzML>", encoding="utf-8")
 
 def sample(k, n):
-    return {"composto": "", "concentrazione": None, "file": n + ".mzML", "istd": False, "note": "", "ordine_iniezione": k + 1, "replica": 1, "serie": "", "sha256": "", "tempo": k, "tempo_confermato": False,
-            "tempo_min": k, "tipo": "t0" if k == 0 else "sample", "tipo_bianco": None, "unita": None, "unita_tempo": "min"}
-SAMPLES = json.dumps({"campioni": [sample(k, n) for k, n in enumerate(NAMES)], "schema": "campioni/2"}, separators=(",", ":"))
+    return {"compound": "", "concentration": None, "file": n + ".mzML", "istd": False, "note": "", "injection_order": k + 1, "replicate": 1, "series": "", "sha256": "", "time": k, "time_confirmed": False,
+            "time_min": k, "kind": "t0" if k == 0 else "sample", "blank_kind": None, "concentration_unit": None, "time_unit": "min"}
+SAMPLES = json.dumps({"samples": [sample(k, n) for k, n in enumerate(NAMES)], "schema": "samples/1"}, separators=(",", ":"))
 
 def plan(group, view=False, params=None):
     """The plan: index → detect → align by ion → gap filling, and (with `group`) the grouping, of the gap-filled table or (with `view`) of a filter view of it, with `params`."""

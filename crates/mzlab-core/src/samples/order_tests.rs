@@ -6,21 +6,21 @@ fn names(v: &[&str]) -> Vec<String> {
     v.iter().map(|s| s.to_string()).collect()
 }
 
-const DOC: &str = r#"{"schema":"campioni/2","campioni":[{"file":"T10p25.mzML","tipo":"sample"},{"file":"T2p5.mzML","tipo":"sample"},{"file":"blank.mzML","tipo":"blank"}]}"#;
+const DOC: &str = r#"{"schema":"samples/1","samples":[{"file":"T10p25.mzML","kind":"sample"},{"file":"T2p5.mzML","kind":"sample"},{"file":"blank.mzML","kind":"blank"}]}"#;
 
 #[test]
 fn the_files_follow_the_names_of_the_table() {
     let got = order_like(DOC, &names(&["blank.mzidx", "T2p5", "dir/T10p25.mzML"])).unwrap();
     let files: Vec<String> = parse(got.as_bytes())
         .unwrap()
-        .get("campioni")
+        .get("samples")
         .unwrap()
         .arr()
         .iter()
         .map(|v| v.get("file").unwrap().str().unwrap().to_string())
         .collect();
     assert_eq!(files, ["blank.mzML", "T2p5.mzML", "T10p25.mzML"]);
-    assert!(got.contains(r#"{"file":"blank.mzML","tipo":"blank"}"#));
+    assert!(got.contains(r#"{"file":"blank.mzML","kind":"blank"}"#));
 }
 
 #[test]
@@ -33,7 +33,7 @@ fn the_same_order_or_no_names_keep_the_bytes() {
 
 #[test]
 fn an_exact_name_wins_over_a_longer_one() {
-    let doc = r#"{"schema":"campioni/2","campioni":[{"file":"S1.5.mzML"},{"file":"S1.mzML"}]}"#;
+    let doc = r#"{"schema":"samples/1","samples":[{"file":"S1.5.mzML"},{"file":"S1.mzML"}]}"#;
     let got = order_like(doc, &names(&["S1.mzML", "S1.5.mzML"])).unwrap();
     assert!(got.find("\"S1.mzML\"").unwrap() < got.find("\"S1.5.mzML\"").unwrap());
 }
@@ -41,7 +41,7 @@ fn an_exact_name_wins_over_a_longer_one() {
 #[test]
 fn a_missing_or_a_foreign_file_is_an_error_with_its_name() {
     let e = order_like(DOC, &names(&["T2p5", "T10p25", "T5"])).unwrap_err();
-    assert_eq!(e.key, "error.badCampioni");
+    assert_eq!(e.key, "error.badSamples");
     assert!(format!("{:?}", e.params).contains("T5"), "{:?}", e.params);
     let e = order_like(DOC, &names(&["T2p5", "T10p25"])).unwrap_err();
     assert!(
@@ -51,6 +51,6 @@ fn a_missing_or_a_foreign_file_is_an_error_with_its_name() {
     );
     assert_eq!(
         order_like("{}", &names(&["a"])).unwrap_err().key,
-        "error.badCampioni"
+        "error.badSamples"
     );
 }

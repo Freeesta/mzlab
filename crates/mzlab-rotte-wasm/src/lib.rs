@@ -1,5 +1,5 @@
 //! wasm-bindgen bridge of the routes that the engine `.wasm` (`mzlab-wasm`) does not carry: the statistics of the series (`stat_post`), `molecules/1`,
-//! `campioni/2` and `/3` (the Data view), the manual integrations (`api/manint`, `api/manvalley`) and the Flow's command, line, scheduler and the recipe and lineage of a job. A `.wasm` of its own, fetched by the worker of the engine on the
+//! `samples/1` (the Data view), the manual integrations (`api/manint`, `api/manvalley`) and the Flow's command, line, scheduler and the recipe and lineage of a job. A `.wasm` of its own, fetched by the worker of the engine on the
 //! first request of one of them (`load("rotte")` of `mzlab/web/rust-msngrafo.js`, called by `rust-worker.js`). Errors are JSON `{"error_key", "params"}` strings, as in the engine.
 #![forbid(unsafe_code)]
 use wasm_bindgen::prelude::*;
@@ -44,7 +44,7 @@ pub fn molecules(op: &str, input: &str) -> Result<String, JsValue> {
     mzlab_core::molecules::route(op, input).map_err(|e| error_json(&e))
 }
 
-/// `op` is `proponi`, `proponi3`, `valida`, `da_legacy`, `per_tp`, `canonico`, `digest`, `migra`, `modello`, `dal_file`, `csv_leggi` or `csv_scrivi` (see `samples::route`); JSON in, JSON out, an error is JSON with a key.
+/// `op` is `propose`, `validate`, `per_tp`, `canonical`, `digest`, `model`, `from_file`, `csv_read` or `csv_write` (see `samples::route`); JSON in, JSON out, an error is JSON with a key.
 #[wasm_bindgen]
 pub fn samples(op: &str, input: &str) -> Result<String, JsValue> {
     mzlab_core::samples::route_all(op, input).map_err(|e| error_json(&e))

@@ -1,4 +1,4 @@
-//! The byte scanner behind `csv_leggi`: splits a CSV text into records of cells (a slice of the text unless the cell holds a `""` or text after its closing quote).
+//! The byte scanner behind `csv_read`: splits a CSV text into records of cells (a slice of the text unless the cell holds a `""` or text after its closing quote).
 //! Same rules as the first char-by-char parser (kept as the reference in `csv_prove`).
 
 use std::borrow::Cow;

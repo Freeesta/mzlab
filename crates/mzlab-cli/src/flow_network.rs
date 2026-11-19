@@ -15,7 +15,7 @@ fn param(job: &Job, name: &str) -> Option<f64> {
     found.and_then(|(_, v)| v.f64())
 }
 
-/// `rete/1` text from the `tp` and `table` files and the optional `campioni/2` of the series.
+/// `rete/1` text from the `tp` and `table` files and the optional `samples/1` of the series.
 pub fn network_json(job: &Job, tp: &[u8], table: &[u8], samples: Option<&[u8]>) -> Result<String> {
     let d = NetworkParams::default();
     let params = NetworkParams {

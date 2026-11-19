@@ -53,7 +53,7 @@ pub struct TpInputs<'a> {
     pub rules: Option<&'a crate::hypo::Rules>,
 }
 
-/// The roles of the files (`campioni/2`, `mzlab_core::samples::per_tp`): gate 1 reads them instead of guessing from the minutes. The infusion is
+/// The roles of the files (`samples/1`, `mzlab_core::samples::per_tp`): gate 1 reads them instead of guessing from the minutes. The infusion is
 /// never a reference nor a treated file; standards, QC and files without a time take no part.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct TpRoles {
@@ -66,7 +66,7 @@ pub struct TpRoles {
     pub blank_kinds: Vec<String>,
     /// Minutes of every file: the time of a treated file, 0 for a t0, NaN for every other one.
     pub minutes: Vec<f64>,
-    /// With two or more conditions (`serie` of the samples), the treated files of each, in the order of the conditions; else empty. The network reads
+    /// With two or more conditions (`series` of the samples), the treated files of each, in the order of the conditions; else empty. The network reads
     /// its correlations inside each condition.
     pub conditions: Vec<Vec<usize>>,
 }
@@ -86,7 +86,7 @@ impl TpRoles {
         }
     }
 
-    /// The roles of the files from a `campioni/2` document (`error.badCampioni` when it is not one).
+    /// The roles of the files from a `samples/1` document (`error.badSamples` when it is not one).
     pub fn from_json(samples: &str) -> Result<TpRoles> {
         Ok(TpRoles::of(&mzlab_core::samples::from_json(samples.as_bytes())?))
     }

@@ -390,7 +390,7 @@ pub fn run_hypotheses(
 #[cfg(feature = "proofs")]
 /// L8-L9: the graph of the proofs on the `.mzfeat` of the series, read by offsets with `table_read(offset, length)`, written to `write(offset, bytes)`:
 /// `{"bytes", "sha256"}` of the `.mzfeat` with the `evid` section. `minutes[k]` is the treatment time of file `k` (NaN = a control); `parent_mz` NaN = no
-/// parent in the table. `campioni` (optional) is a `campioni/2`: gate 1 of the products then reads the roles of the files. `stored` (the `.mzfeatf` of the series, in the order of
+/// parent in the table. `samples` (optional) is a `samples/1`: gate 1 of the products then reads the roles of the files. `stored` (the `.mzfeatf` of the series, in the order of
 /// the indexes) with `mzidx_read`/`mzidx_sizes` (the `.mzidx` of the same files, read by offsets) let the proofs measure the rows: isotope patterns, MS2 purity, the share of the MS2
 /// the parent explains and its fragments; without them the bytes are the ones of before. The same bytes whatever `budget_mb` (0/NaN = 192): the graph whole, or made identity by identity (`error.memoryBudget` if not even so).
 #[wasm_bindgen]

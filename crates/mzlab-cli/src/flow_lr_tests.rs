@@ -33,7 +33,7 @@ fn fixture(tag: &str) -> PathBuf {
         .iter()
         .map(|n| (n.to_string(), String::new(), String::new()))
         .collect();
-    let samples = mzlab_core::samples::to_json(&mzlab_core::samples::proponi(&files));
+    let samples = mzlab_core::samples::to_json(&mzlab_core::samples::propose(&files));
     std::fs::write(d.join("samples.json"), samples).unwrap();
     std::fs::write(
         d.join("parent.json"),
@@ -101,7 +101,7 @@ fn page(d: &Path) -> (Vec<u8>, String) {
         .map(|n| format!(r#"{{"name":"{n}","kind":"full"}}"#))
         .collect();
     let files = format!(
-        r#"{{"files":[{}],"campioni":{}}}"#,
+        r#"{{"files":[{}],"samples":{}}}"#,
         names.join(","),
         samples.trim()
     );

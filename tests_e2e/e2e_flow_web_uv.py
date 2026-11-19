@@ -27,7 +27,8 @@ from lib_sito import add_wasm; add_wasm(site)
 from lib import build_feat; build_feat(site / "static", env)
 run = tmp / "run"; run.mkdir()
 shutil.copy2(ROOT / "mzlab" / "web" / "esempi" / NAMES[0], run / NAMES[0])
-CLI = ["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--"]
+from cli_cmd import cli_command
+CLI = cli_command()
 def plan(v, names=NAMES):
     return {"format": "mzflow/2", "inputs": [{"name": n, "sha256": "", "type": "mzml"} for n in names],
             "steps": [{"id": "uv", "step": "chrom.uv_peaks@1", "in": {"source": ["file:" + n for n in names]}, "params": VARIANTS[v]}]}

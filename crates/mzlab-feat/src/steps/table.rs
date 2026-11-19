@@ -245,11 +245,11 @@ pub(super) fn filter() -> Step {
             wasm_ceiling_bytes: Some(FEAT_CEILING),
             native: true,
         },
-        errors: vec!["error.badView", "error.badCampioni", "error.newerFormat", "error.qc.tooFew"],
+        errors: vec!["error.badView", "error.badSamples", "error.newerFormat", "error.qc.tooFew"],
         ..Step::core(
             "table.filter",
             "Filter table",
-            "Keeps the rows that pass an ordered list of rules over the samples (campioni/2); blanks and dark files never count as samples, and a rule that cannot be evaluated is an error.",
+            "Keeps the rows that pass an ordered list of rules over the samples (samples/1); blanks and dark files never count as samples, and a rule that cannot be evaluated is an error.",
         )
     }
 }
@@ -278,7 +278,7 @@ fn blank_params() -> Vec<Param> {
             .doc("The view shows sample minus ratio times the blank level, not below 0, instead of only filtering; area or normalised area only; the ratio is at least 1 when any blank option is set"),
         Param::choice("blank_match", "Blank matching", &["all", "batch", "matrix"])
             .default_str("all")
-            .doc("all compares every sample with all blanks; batch or matrix compares each sample only with the blanks of its batch or matrix (campioni/2 or /3), and a sample with none falls back to all blanks, listed per file in the counts as bianco_ripiego; not with the subtraction")
+            .doc("all compares every sample with all blanks; batch or matrix compares each sample only with the blanks of its batch or matrix (samples/1), and a sample with none falls back to all blanks, listed per file in the counts as bianco_ripiego; not with the subtraction")
             .tip("Compare each sample only with the blanks of its batch or matrix; others use all blanks."),
         Param::boolean("blank_keep_istd", "Keep the internal standard")
             .doc("The internal-standard row skips the blank rule, because it is spiked in the blanks too; needs the normalisation istd"),
@@ -378,7 +378,7 @@ pub(super) fn export_csv() -> Step {
             wasm_ceiling_bytes: Some(FEAT_CEILING),
             native: true,
         },
-        errors: vec!["error.badView", "error.badCampioni", "error.newerFormat"],
+        errors: vec!["error.badView", "error.badSamples", "error.newerFormat"],
         ..Step::core(
             "export.table_csv",
             "Export table as CSV",
@@ -475,7 +475,7 @@ pub(super) fn export_mztab() -> Step {
             wasm_ceiling_bytes: Some(FEAT_CEILING),
             native: true,
         },
-        errors: vec!["error.badView", "error.badCampioni", "error.newerFormat"],
+        errors: vec!["error.badView", "error.badSamples", "error.newerFormat"],
         ..Step::core(
             "export.mztab",
             "Export table as mzTab-M",

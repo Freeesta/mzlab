@@ -333,5 +333,5 @@ const soon = () => { clearTimeout(timer); timer = setTimeout(sync, 150); };
 const report = (say, log) => { st.say = say; st.log = log; st.sig = ""; };
 
 G.MANINT = { rows, report, opts: optCols, wrap: withCols, sync: soon, now: sync, valleys, parts, follow, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file), times: Object.fromEntries(st.ks.map(k => [E.files[k].label, E.files[k].time ?? null])) }) };
-document.addEventListener("campioni", soon);      // a time point typed in the sample table changes the column
+document.addEventListener("samples", soon);      // a time point typed in the sample table changes the column
 soon();

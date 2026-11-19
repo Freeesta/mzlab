@@ -1,8 +1,8 @@
 //! Groups of experiments, `gruppi/1` (`docs/agenti/groups.md`, schema `docs/schemi/gruppi-1.json`): the same degradation in several conditions,
-//! compared on ONE alignment. Input: the matrix rows x files, the metadata of the rows and the canonical `campioni/2`; output: per row and condition
+//! compared on ONE alignment. Input: the matrix rows x files, the metadata of the rows and the canonical `samples/1`; output: per row and condition
 //! the presence, mean area of the replicates, ratio to a reference condition, shape over time and the controls as "Prev." suggestions, the exact
 //! sets of conditions and the decay of the parent per condition. The module reads no file and never realigns: it uses the rows it receives.
-//! A condition is a non-empty `serie` of a `sample`; `serie == ""` marks a control shared by all conditions, and a control of the condition wins.
+//! A condition is a non-empty `series` of a `sample`; `series == ""` marks a control shared by all conditions, and a control of the condition wins.
 
 mod json;
 mod presence;
@@ -225,7 +225,7 @@ fn check(tb: &GroupTable, cs: &[Sample], o: &GroupOpts) -> Result<()> {
         return Err(size_err("rows"));
     }
     if cs.len() != tb.n_files {
-        return Err(size_err("campioni"));
+        return Err(size_err("samples"));
     }
     if o.norm != "raw" {
         return Err(bad_opt("norm", &o.norm));

@@ -571,7 +571,7 @@ many hydrogens and have no column. With --db the answer is {"format": "subdb/1",
 === mzlab-cli samples --help
 exit 0
 --- stdout
-mzlab-cli samples: how the names of a set of files split them (nomivar/1), as JSON.
+mzlab-cli samples: how the names of a set of files split them (sample-vars/1), as JSON.
 
 usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
        mzlab-cli samples group NAME...
@@ -585,7 +585,7 @@ usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,
   --substring     with --has: the term may be inside a token (O2 then catches H2O2)
   group           the name of a group made of NAMEs: their common tokens in order, empty when none
   FILE...         with table: real files, named by their file name and hashed (SHA-256), so `flow record` can match the roles
-  table           the sample table the names propose (campioni/2): role, time point (`tempo`, `unita_tempo`, `tempo_min`), series, replicate, concentration
+  table           the sample table the names propose (samples/1): role, time point (`time`, `time_unit`, `time_min`), series, replicate, concentration
 --- stderr
 
 === mzlab-cli peak-edges --help

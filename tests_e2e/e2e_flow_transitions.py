@@ -31,7 +31,8 @@ from lib_sito import add_wasm; add_wasm(site)
 from lib import build_feat; build_feat(site / "static", env)
 run = tmp / "run"; run.mkdir()
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_sim.py"), str(tmp / "w")], check=True, capture_output=True)
-CLI = ["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--"]
+from cli_cmd import cli_command
+CLI = cli_command()
 subprocess.run(CLI + ["convert", str(tmp / "w" / "sim.wiff"), "--out", str(run)], cwd=ROOT, check=True, capture_output=True)
 assert all((run / n).exists() for n in NAMES), sorted(p.name for p in run.iterdir())
 

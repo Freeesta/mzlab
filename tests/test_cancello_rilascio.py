@@ -98,4 +98,4 @@ def test_index_rows_one_sorted_short_row_per_file(tmp_path):
 def test_the_real_index_has_one_row_per_area_file():
     assert g.check_index_rows(g.ROOT)[1] == []
     rows = [line for line in (g.ROOT / "docs/agenti/INDICE.md").read_text(encoding="utf-8").splitlines() if line.startswith("|") and "`docs/agenti/" in line.rsplit("|", 2)[-2]]
-    assert sorted(line.rsplit("`", 2)[-2].rsplit("/", 1)[-1] for line in rows) == sorted(p.name for p in (g.ROOT / "docs/agenti").glob("*.md") if p.name != "INDICE.md")
+    assert sorted(line.rsplit("`", 2)[-2].rsplit("/", 1)[-1] for line in rows) == sorted(p.name for p in (g.ROOT / "docs/agenti").glob("*.md") if p.name not in ("INDICE.md", "mappa.md"))  # mappa.md is generated (tools/indice.py) and gitignored: the CI writes it before pytest

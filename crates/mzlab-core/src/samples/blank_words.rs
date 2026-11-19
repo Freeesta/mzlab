@@ -1,4 +1,4 @@
-//! Words of a file name that suggest a blank (`wash`, `MQ`, `milliq`, the whole token `H2O`, never `H2O2`), read from `data/nomi-bianco.json`;
+//! Words of a file name that suggest a blank (`wash`, `MQ`, `milliq`, the whole token `H2O`, never `H2O2`), read from `data/blank-names.json`;
 //! used by `names.rs` for the role Auto.
 //! A name with a time or an extra series token (`MQ_PMS_T00`) is a sample: the matrix MilliQ is not a blank.
 
@@ -13,8 +13,8 @@ struct Table {
 fn table() -> &'static Table {
     static T: OnceLock<Table> = OnceLock::new();
     T.get_or_init(|| {
-        let v = crate::json::parse(include_bytes!("../../data/nomi-bianco.json"))
-            .expect("nomi-bianco.json is valid");
+        let v = crate::json::parse(include_bytes!("../../data/blank-names.json"))
+            .expect("blank-names.json is valid");
         let list = |k: &str| -> Vec<String> {
             v.get(k)
                 .map(|a| {

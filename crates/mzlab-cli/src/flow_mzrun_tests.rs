@@ -15,7 +15,7 @@ fn cli(args: &[&str]) -> crate::Outcome {
     crate::execute(&args.iter().map(|s| s.to_string()).collect::<Vec<_>>())
 }
 
-/// A run folder as `flow run` leaves it (the commit is the one of this build, never patched in) and the `campioni/2` that gives every file its role;
+/// A run folder as `flow run` leaves it (the commit is the one of this build, never patched in) and the `samples/1` that gives every file its role;
 /// `hashed` false leaves each SHA-256 empty, as `samples table --names` does.
 fn run_folder(tag: &str, hashed: bool) -> (std::path::PathBuf, std::path::PathBuf) {
     let (dir, files) = fixture(tag);

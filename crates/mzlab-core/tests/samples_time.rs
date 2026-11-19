@@ -1,9 +1,9 @@
 //! The time point of a sample name: the spellings the parser reads (`t0`, `3h`, `1 h 30`, ...) and the names that only look like a time (`H20`, `80-20`, blanks).
 
-use mzlab_core::samples::{proponi, Sample};
+use mzlab_core::samples::{propose, Sample};
 
 fn one(name: &str, kind: &str) -> Sample {
-    proponi(&[(name.to_string(), "ab".to_string(), kind.to_string())]).remove(0)
+    propose(&[(name.to_string(), "ab".to_string(), kind.to_string())]).remove(0)
 }
 
 /// The time point of a name (minutes), the names being generic labels: the spellings the parser knows and the ones it must leave alone.

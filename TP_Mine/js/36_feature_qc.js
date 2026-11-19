@@ -36,13 +36,13 @@
     return Object.assign(new Error(j ? j.error_key : String(e && e.message || e)), j ? { key: j.error_key, params: j.params } : {});
   };
 
-  /** the campioni/1 of the engine with the roles and times the user confirmed (campioni/2, same order of the files): the types of campioni/1 have no infusion, which counts as a sample without a time */
+  /** the samples/1 the engine proposes with the roles and times the user confirmed (same order of the files): the table has no infusion role, so an infusion counts as a sample without a time */
   function withRoles(/** @type {string} */ proposed, /** @type {any[]} */ cs) {
     const doc = JSON.parse(proposed);
-    if (doc.campioni.length !== cs.length) return proposed;
-    doc.campioni.forEach((/** @type {any} */ s, /** @type {number} */ i) => {
-      const c = cs[i], inf = c.tipo === "infusion";
-      s.tipo = inf ? "sample" : c.tipo; s.tempo_min = inf ? null : c.tempo_min;
+    if (doc.samples.length !== cs.length) return proposed;
+    doc.samples.forEach((/** @type {any} */ s, /** @type {number} */ i) => {
+      const c = cs[i], inf = c.kind === "infusion";
+      s.kind = inf ? "sample" : c.kind; s.time_min = s.time = inf ? null : c.time_min; s.time_unit = "min"; s.time_confirmed = s.time != null;
     });
     return JSON.stringify(doc);
   }
@@ -84,7 +84,7 @@
     const sha = await G.UNT.sha256Hex(bytes);
     /** @type {(fn: () => string) => any} */ const run = fn => { try { return fn(); } catch (e) { throw fail(e); } };
     const proposed = run(() => m.table_samples(JSON.stringify({ files: a.names.map((/** @type {string} */ n, /** @type {number} */ i) => ({ name: n + ".mzML", sha256: (a.inputs[i] || {}).sha256 || "" })) })));
-    const samples = a.campioni ? withRoles(proposed, a.campioni) : proposed;
+    const samples = a.samples ? withRoles(proposed, a.samples) : proposed;
     return {
       samples, sha, size, bytes,
       qc: (/** @type {string} */ spec) => JSON.parse(run(() => m.table_qc(read, size, samples, spec))),
@@ -109,7 +109,7 @@
     const pool = (await import(url)).createDesktopPool();
     /** @type {(kind: string, p: Record<string, any>) => Promise<string>} */ const T = (kind, p) => pool.table(kind, p);       // its errors carry `key` and `params`
     const proposed = await T("samples", { files: JSON.stringify({ files: a.names.map((/** @type {string} */ n, /** @type {number} */ i) => ({ name: n + ".mzML", sha256: (a.inputs[i] || {}).sha256 || "" })) }) });
-    const samples = a.campioni ? withRoles(proposed, a.campioni) : proposed;
+    const samples = a.samples ? withRoles(proposed, a.samples) : proposed;
     // the app holds the table with the interpretation block once it is built: later requests name that one
     /** @type {(kind: string, spec: string, more?: Record<string, any>) => Promise<string>} */ const V = async (kind, spec, more) => { await gate; return T(kind, { samples, spec, sha256: sha, polarity: a.pol, ...more }); };
     return {

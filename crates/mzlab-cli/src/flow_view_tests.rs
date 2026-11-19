@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use mzlab_core::drawing;
+use mzlab_core::design;
 use mzlab_core::samples;
 use mzlab_core::step::DataType;
 use mzlab_feat::store::read_table;
@@ -34,7 +34,7 @@ fn dir(tag: &str) -> PathBuf {
     std::fs::write(d.join("table.mzfeat"), table()).unwrap();
     // the plan names it; the tests write the table of the view over it
     std::fs::write(d.join("mat.mzfeat"), table()).unwrap();
-    std::fs::write(d.join("design.json"), drawing::to_json(&design())).unwrap();
+    std::fs::write(d.join("design.json"), design::to_json(&design())).unwrap();
     std::fs::write(d.join("samples.json"), samples::to_json(&campioni_2())).unwrap();
     d
 }
@@ -228,7 +228,7 @@ fn the_table_of_a_view_keeps_the_rows_and_the_areas_of_the_view() {
     // another table, or a view without its samples, is refused
     let other = table_of_view(&mat, &view).unwrap_err();
     assert_eq!(other.key, "err.flow.export.view");
-    let cut = view.replace("\"campioni\":", "\"x\":");
+    let cut = view.replace("\"samples\":", "\"x\":");
     let t0 = std::fs::read(d.join("table.mzfeat")).unwrap();
     assert_eq!(
         table_of_view(&t0, &cut).unwrap_err().key,

@@ -1,5 +1,5 @@
 //! `inspection/1`: what the assistant is told about each open file and about the series, assembled from answers the engine already gives (`Item.info()`,
-//! `method/1`, the estimate of `features.estimate`, `campioni/2`, TIC and BPC, the scan statistics of `scan_stats`). This module reads no file and
+//! `method/1`, the estimate of `features.estimate`, `samples/1`, TIC and BPC, the scan statistics of `scan_stats`). This module reads no file and
 //! computes no spectrum: it names the kind of acquisition, the resolution class, the polarity and the cycle from facts, never from a file name, and it
 //! lets through only the keys listed here (a whitelist, so a field added to a source later cannot leak). Used by `mzlab-cli llm` and the `llm` module.
 

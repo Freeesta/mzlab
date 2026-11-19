@@ -116,7 +116,7 @@ fn an_unreadable_file_is_said_so() {
 
 #[test]
 fn the_course_profile_has_no_assistant() {
-    let e = build_text(r#"{"profile":"corso","files":[]}"#, 1000).unwrap_err();
+    let e = build_text(r#"{"profile":"course","files":[]}"#, 1000).unwrap_err();
     assert_eq!(e.key, "err.llm.profile.course");
 }
 

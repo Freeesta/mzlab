@@ -1,10 +1,10 @@
-//! Where in the name each proposed field comes from (`proponi_spiegato`): the span (in characters of the whole name, end excluded) of the word, the
+//! Where in the name each proposed field comes from (`propose_explained`): the span (in characters of the whole name, end excluded) of the word, the
 //! time, the series prefix, the written replicate or the concentration that decided it, so the page can highlight it. Only a locating step: it
 //! never changes a proposed value, and a field whose part cannot be found has no span.
 
 use super::Sample;
 
-/// The part of the name that decided `field` (`tipo`, `tipo_bianco`, `tempo`, `serie`, `replica`, `concentrazione`).
+/// The part of the name that decided `field` (`kind`, `blank_kind`, `time`, `series`, `replicate`, `concentration`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Position {
     pub field: &'static str,
@@ -12,7 +12,7 @@ pub struct Position {
     pub end: usize,
 }
 
-/// One file with what `proponi` proposes and why.
+/// One file with what `propose` proposes and why.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Proposal {
     pub sample: Sample,
@@ -229,18 +229,18 @@ pub fn of_file(name: &str, c: &Sample, stem: &str, time: Option<(usize, usize)>)
     }
     let by_time = time.map(|(a, b)| (a + off, b + off));
     if let Some((a, b)) = kind_span(&low, c, by_time) {
-        push(&mut items, "tipo", a, b);
+        push(&mut items, "kind", a, b);
     }
     if let Some((a, b)) = blank_span(&low, c) {
-        push(&mut items, "tipo_bianco", a, b);
+        push(&mut items, "blank_kind", a, b);
     }
     if let Some((a, b)) = by_time {
-        push(&mut items, "tempo", a, b);
+        push(&mut items, "time", a, b);
     }
     if let Some(v) = c.conc
         && let Some((a, b)) = conc_span(&stem_low, v, c.unit.as_deref())
     {
-        push(&mut items, "concentrazione", a + off, b + off);
+        push(&mut items, "concentration", a + off, b + off);
     }
     Spans {
         ok,
@@ -259,23 +259,23 @@ impl Spans {
         if !c.series.is_empty() {
             let n = c.series.chars().count();
             if n <= self.stem.len() {
-                push(&mut self.items, "serie", self.off, self.off + n);
+                push(&mut self.items, "series", self.off, self.off + n);
             }
         }
         if written_replicate {
             let end = self.stem.iter().rposition(|c| *c == ')');
             let start = self.stem.iter().rposition(|c| *c == '(');
             if let (Some(a), Some(b)) = (start, end) {
-                push(&mut self.items, "replica", a + self.off, b + 1 + self.off);
+                push(&mut self.items, "replicate", a + self.off, b + 1 + self.off);
             }
         }
         const ORDER: [&str; 6] = [
-            "tipo",
-            "tipo_bianco",
-            "tempo",
-            "serie",
-            "replica",
-            "concentrazione",
+            "kind",
+            "blank_kind",
+            "time",
+            "series",
+            "replicate",
+            "concentration",
         ];
         let mut v = Vec::with_capacity(self.items.len());
         for f in ORDER {
@@ -285,21 +285,21 @@ impl Spans {
     }
 }
 
-/// `{"campioni":<campioni/2>,"posizioni":[[{"campo","inizio","fine"}]]}`: one list of spans per file, in the order of the files.
+/// `{"samples":<samples/1>,"positions":[[{"field","start","end"}]]}`: one list of spans per file, in the order of the files.
 pub fn proposals_json(p: &[Proposal]) -> String {
     let cs: Vec<Sample> = p.iter().map(|x| x.sample.clone()).collect();
     let mut j = crate::json::Out::default();
-    j.raw("{\"campioni\":")
+    j.raw("{\"samples\":")
         .raw(&super::to_json(&cs))
-        .raw(",\"posizioni\":[");
+        .raw(",\"positions\":[");
     for (i, x) in p.iter().enumerate() {
         j.raw(if i > 0 { ",[" } else { "[" });
         for (k, q) in x.positions.iter().enumerate() {
-            j.raw(if k > 0 { ",{\"campo\":" } else { "{\"campo\":" })
+            j.raw(if k > 0 { ",{\"field\":" } else { "{\"field\":" })
                 .str(q.field)
-                .raw(",\"fine\":")
+                .raw(",\"end\":")
                 .int(q.end as i64)
-                .raw(",\"inizio\":")
+                .raw(",\"start\":")
                 .int(q.start as i64)
                 .raw("}");
         }

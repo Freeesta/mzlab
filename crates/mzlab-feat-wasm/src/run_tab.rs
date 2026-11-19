@@ -52,7 +52,7 @@ impl Grouped {
     }
 }
 
-/// The `runorder/1` text of the sample table `samples`; `design` holds the batches (`disegno/1`), empty for none (the batch of the sample table). `params_json` is the step's parameters merged with its defaults.
+/// The `runorder/1` text of the sample table `samples`; `design` holds the batches (`design/1`), empty for none (the batch of the sample table). `params_json` is the step's parameters merged with its defaults.
 /// Errors are JSON `{"error_key","params"}` texts.
 #[wasm_bindgen]
 pub fn flow_runorder(

@@ -28,7 +28,7 @@ fn inspect_build_gives_the_golden_bytes() {
 
 #[test]
 fn inspect_build_refuses_the_course_profile_as_json() {
-    let e = inspect_build(r#"{"profile":"corso","files":[]}"#, 1000).unwrap_err();
+    let e = inspect_build(r#"{"profile":"course","files":[]}"#, 1000).unwrap_err();
     assert!(e.contains("err.llm.profile.course"), "{e}");
 }
 

@@ -1,13 +1,13 @@
-//! The name model of `campioni/3`: a regex with named groups (`(?P<campione_id>[A-Z]\d+)_(?P<polarita>pos|neg)`) or a template with placeholders
-//! (`{campione_id}_{polarita}_{tempo}min_r{replica}`) read against the name of each file (folders and extension left out). A group named
-//! like a field gives it (`campione_id`, `polarita`, `matrice`, `lotto`, `gruppo`, `serie`, `tempo`, `unita_tempo`, `replica`, `concentrazione`, `unita`,
-//! `tipo`, `ordine_iniezione`, `note`, `composto`), any other name goes to a free column. Each value comes with the part of the name that gave it,
-//! in characters of the whole name, end excluded, as in `proponi_spiegato`. Times stay unconfirmed; a name the model does not match is left as it was.
+//! The name model of `samples/1`: a regex with named groups (`(?P<sample_id>[A-Z]\d+)_(?P<polarity>pos|neg)`) or a template with placeholders
+//! (`{sample_id}_{polarity}_{time}min_r{replicate}`) read against the name of each file (folders and extension left out). A group named
+//! like a field gives it (`sample_id`, `polarity`, `matrix`, `batch`, `group`, `series`, `time`, `time_unit`, `replicate`, `concentration`, `concentration_unit`,
+//! `kind`, `injection_order`, `note`, `compound`), any other name goes to a free column. Each value comes with the part of the name that gave it,
+//! in characters of the whole name, end excluded, as in `propose_explained`. Times stay unconfirmed; a name the model does not match is left as it was.
 
-use super::json::legacy_kind;
+use super::json::role_alias;
 use super::regex::Regex;
 use super::{
-    names::proponi, number_replicates, table_from_value, to_json3, Cell, Column, ColumnType,
+    names::propose, number_replicates, table_from_value, table_to_json, Cell, Column, ColumnType,
     Sample, Table,
 };
 use crate::error::{Error, Result};
@@ -31,11 +31,11 @@ pub struct Applied {
 
 fn pattern_of(field: &str) -> &'static str {
     match field {
-        "polarita" => r"positive|negative|pos|neg|\+1|-1|\+|-|p|n",
-        "tempo" => r"-?\d+(?:[.,pP]\d+)?",
-        "concentrazione" => r"-?\d+(?:[.,]\d+)?",
-        "replica" | "ordine_iniezione" => r"\d+",
-        "unita_tempo" => "min|sec|s|h|d",
+        "polarity" => r"positive|negative|pos|neg|\+1|-1|\+|-|p|n",
+        "time" => r"-?\d+(?:[.,pP]\d+)?",
+        "concentration" => r"-?\d+(?:[.,]\d+)?",
+        "replicate" | "injection_order" => r"\d+",
+        "time_unit" => "min|sec|s|h|d",
         _ => ".+?",
     }
 }
@@ -111,31 +111,31 @@ fn whole(v: &str) -> Option<u32> {
 /// Gives `c` the value of one group; false when the value is not one the field takes.
 fn set_field(c: &mut Sample, name: &str, v: &str, cols: &[Column]) -> bool {
     match name {
-        "campione_id" => c.sample_id = v.into(),
-        "matrice" => c.matrix = v.into(),
-        "lotto" => c.batch = v.into(),
-        "gruppo" => c.group = v.into(),
-        "serie" => c.series = v.into(),
+        "sample_id" => c.sample_id = v.into(),
+        "matrix" => c.matrix = v.into(),
+        "batch" => c.batch = v.into(),
+        "group" => c.group = v.into(),
+        "series" => c.series = v.into(),
         "note" => c.note = v.into(),
-        "composto" => c.compound = v.into(),
-        "unita" => c.unit = Some(v.into()),
-        "polarita" => return polarity(v).map(|p| c.polarity = Some(p)).is_some(),
-        "replica" => return whole(v).map(|n| c.replicate = n).is_some(),
-        "ordine_iniezione" => return whole(v).map(|n| c.order = n).is_some(),
-        "concentrazione" => return num(v).map(|x| c.conc = Some(x)).is_some(),
-        "tipo" => {
-            return legacy_kind(&v.to_lowercase())
+        "compound" => c.compound = v.into(),
+        "concentration_unit" => c.unit = Some(v.into()),
+        "polarity" => return polarity(v).map(|p| c.polarity = Some(p)).is_some(),
+        "replicate" => return whole(v).map(|n| c.replicate = n).is_some(),
+        "injection_order" => return whole(v).map(|n| c.order = n).is_some(),
+        "concentration" => return num(v).map(|x| c.conc = Some(x)).is_some(),
+        "kind" => {
+            return role_alias(&v.to_lowercase())
                 .map(|k| c.kind = k.into())
                 .is_some()
         }
-        "tempo" | "unita_tempo" => return true,
+        "time" | "time_unit" => return true,
         _ => {
             let numeric = cols
                 .iter()
-                .any(|k| k.name == name && k.kind == ColumnType::Numero);
+                .any(|k| k.name == name && k.kind == ColumnType::Number);
             let cell = match num(v).filter(|_| numeric) {
-                Some(x) => Cell::Numero(x),
-                None => Cell::Testo(v.into()),
+                Some(x) => Cell::Number(x),
+                None => Cell::Text(v.into()),
             };
             c.set_extra(name, cell);
         }
@@ -177,8 +177,8 @@ fn one(re: &Regex, c: &mut Sample, cols: &[Column]) -> Option<Vec<Pos>> {
         };
         let v: String = chars[*a..*b].iter().collect();
         match name.as_str() {
-            "tempo" => time = Some(v.clone()),
-            "unita_tempo" => unit = Some(v.clone()),
+            "time" => time = Some(v.clone()),
+            "time_unit" => unit = Some(v.clone()),
             _ => {}
         }
         if !v.is_empty() && set_field(c, name, &v, cols) {
@@ -190,25 +190,25 @@ fn one(re: &Regex, c: &mut Sample, cols: &[Column]) -> Option<Vec<Pos>> {
             used.push(name.as_str());
         }
     }
-    if used.contains(&"tempo") || used.contains(&"unita_tempo") {
+    if used.contains(&"time") || used.contains(&"time_unit") {
         set_time(c, time.as_deref(), unit.as_deref());
     }
     super::sample_id::apply(c, &used);
     Some(spans)
 }
 
-/// Applies `model` to the files of `t`; a bad model is `error.badModello`.
+/// Applies `model` to the files of `t`; a bad model is `error.badModel`.
 pub fn apply(model: &str, mut t: Table) -> Result<Applied> {
     let re = compile(model)?;
-    let mut positions = Vec::with_capacity(t.campioni.len());
+    let mut positions = Vec::with_capacity(t.samples.len());
     let mut unmatched = Vec::new();
-    let mut keep: Vec<Option<u32>> = Vec::with_capacity(t.campioni.len());
-    for (i, c) in t.campioni.iter_mut().enumerate() {
+    let mut keep: Vec<Option<u32>> = Vec::with_capacity(t.samples.len());
+    for (i, c) in t.samples.iter_mut().enumerate() {
         let before = c.replicate;
         let named = |n: &str| re.names.iter().any(|g| g.as_deref() == Some(n));
-        match one(&re, c, &t.colonne) {
+        match one(&re, c, &t.columns) {
             Some(p) => {
-                keep.push(named("replica").then_some(c.replicate));
+                keep.push(named("replicate").then_some(c.replicate));
                 positions.push(p);
             }
             None => {
@@ -218,8 +218,8 @@ pub fn apply(model: &str, mut t: Table) -> Result<Applied> {
             }
         }
     }
-    number_replicates(&mut t.campioni);
-    for (c, k) in t.campioni.iter_mut().zip(keep) {
+    number_replicates(&mut t.samples);
+    for (c, k) in t.samples.iter_mut().zip(keep) {
         if let Some(r) = k {
             c.replicate = r;
         }
@@ -231,15 +231,15 @@ pub fn apply(model: &str, mut t: Table) -> Result<Applied> {
     })
 }
 
-/// The binding: `{"modello", "campioni": <campioni/2 or /3>}` or `{"modello", "files":[{"name","sha256","kind"}]}` (proposed from the names first)
-/// → `{"campioni":<campioni/3>,"posizioni":[[{"campo","fine","inizio"}]],"senza_corrispondenza":[index]}`.
+/// The binding: `{"model", "samples": <samples/1 or /2>}` or `{"model", "files":[{"name","sha256","kind"}]}` (proposed from the names first)
+/// → `{"samples":<samples/1>,"positions":[[{"field","end","start"}]],"unmatched":[index]}`.
 pub fn apply_model(input: &str) -> Result<String> {
     let v = parse(input.as_bytes())?;
     let model = v
-        .get("modello")
+        .get("model")
         .and_then(|x| x.str())
         .ok_or_else(|| Error::new("error.badRequest"))?;
-    let t = match v.get("campioni") {
+    let t = match v.get("samples") {
         Some(d) => table_from_value(d)?,
         None => {
             let s = |f: &crate::json::Value, k: &str| {
@@ -253,29 +253,29 @@ pub fn apply_model(input: &str) -> Result<String> {
                 .map(|f| (s(f, "name"), s(f, "sha256"), s(f, "kind")))
                 .collect();
             Table {
-                campioni: proponi(&files),
-                colonne: Vec::new(),
+                samples: propose(&files),
+                columns: Vec::new(),
             }
         }
     };
     let a = apply(model, t)?;
     let mut j = Out::default();
-    j.raw("{\"campioni\":").raw(&to_json3(&a.table));
-    j.raw(",\"posizioni\":[");
+    j.raw("{\"samples\":").raw(&table_to_json(&a.table));
+    j.raw(",\"positions\":[");
     for (i, x) in a.positions.iter().enumerate() {
         j.raw(if i > 0 { ",[" } else { "[" });
         for (k, q) in x.iter().enumerate() {
-            j.raw(if k > 0 { ",{\"campo\":" } else { "{\"campo\":" })
+            j.raw(if k > 0 { ",{\"field\":" } else { "{\"field\":" })
                 .str(&q.field)
-                .raw(",\"fine\":")
+                .raw(",\"end\":")
                 .int(q.end as i64)
-                .raw(",\"inizio\":")
+                .raw(",\"start\":")
                 .int(q.start as i64)
                 .raw("}");
         }
         j.raw("]");
     }
-    j.raw("],\"senza_corrispondenza\":[");
+    j.raw("],\"unmatched\":[");
     for (i, n) in a.unmatched.iter().enumerate() {
         j.raw(if i > 0 { "," } else { "" }).int(*n as i64);
     }

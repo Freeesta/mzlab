@@ -15,14 +15,14 @@ window.GRUPPIPER = (() => {
   };
   const away = (/** @type {Event} */ e) => { if (box && !box.contains(/** @type {Node} */ (e.target)) && !btn().contains(/** @type {Node} */ (e.target))) close(false); };
   /** «MQ 20 · TW 9», cut at three values and «…». @param {any} v */
-  const preview = v => v.valori.slice(0, 3).map((/** @type {any} */ x) => x.etichetta + " " + x.file.length).join(" · ") + (v.valori.length > 3 ? " …" : "");
+  const preview = v => v.values.slice(0, 3).map((/** @type {any} */ x) => x.label + " " + x.files.length).join(" · ") + (v.values.length > 3 ? " …" : "");
   /** @typedef {{ label: string, sub?: string, checked?: boolean, disabled?: boolean, fn: () => void }} Item */
   function items(/** @type {any} */ ans) {
-    const ub = E.ugBy, vs = ans ? ans.variabili : [], list = /** @type {Item[]} */ ([]);
+    const ub = E.ugBy, vs = ans ? ans.variables : [], list = /** @type {Item[]} */ ([]);
     const name = (/** @type {any} */ v) => t(`groups.var.${v.id}`);
     if (view === "then") {
       list.push({ label: "‹ " + t("groups.back"), fn: () => draw("main") });
-      vs.filter((/** @type {any} */ v) => v.id !== ub?.by).forEach((/** @type {any} */ v) => list.push({ label: name(v), sub: preview(v), checked: ub?.then === v.id, fn: () => pick({ by: ub.by, then: ub.then === v.id ? undefined : v.id, manuale: ub.manuale }) }));
+      vs.filter((/** @type {any} */ v) => v.id !== ub?.by).forEach((/** @type {any} */ v) => list.push({ label: name(v), sub: preview(v), checked: ub?.then === v.id, fn: () => pick({ by: ub.by, then: ub.then === v.id ? undefined : v.id, manual: ub.manual }) }));
       return list;
     }
     if (anchor === "sb-by") {
@@ -30,9 +30,9 @@ window.GRUPPIPER = (() => {
       list.push({ label: t("groups.none"), checked: ub?.by === "flat", fn: () => pick({ by: "flat" }) });
     } else list.push({ label: t("groups.none"), checked: !ub && !GRUPPI.has(), fn: () => pick(null) });
     vs.forEach((/** @type {any} */ v) => list.push({ label: name(v), sub: preview(v), checked: ub?.by === v.id, fn: () => pick({ by: v.id }) }));
-    if (ub && ub.by !== "custom" && ub.by !== "flat" && ub.by !== "manuale" && vs.length > 1) list.push({ label: t("groups.then"), sub: ub.then ? t(`groups.var.${ub.then}`) : "", fn: () => draw("then") });
-    list.push({ label: t("groups.pos"), checked: ub?.by === "manuale" && !!ub.manuale?.pos, fn: () => { close(false); dialogPos(); } });
-    list.push({ label: t("groups.has"), checked: ub?.by === "manuale" && !!ub.manuale?.has, fn: () => { close(false); dialogHas(); } });
+    if (ub && ub.by !== "custom" && ub.by !== "flat" && ub.by !== "manual" && vs.length > 1) list.push({ label: t("groups.then"), sub: ub.then ? t(`groups.var.${ub.then}`) : "", fn: () => draw("then") });
+    list.push({ label: t("groups.pos"), checked: ub?.by === "manual" && !!ub.manual?.pos, fn: () => { close(false); dialogPos(); } });
+    list.push({ label: t("groups.has"), checked: ub?.by === "manual" && !!ub.manual?.has, fn: () => { close(false); dialogHas(); } });
     list.push({ label: t("groups.custom"), checked: ub?.by === "custom", disabled: true, fn: () => { /* shown only: set by a manual edit */ } });
     return list;
   }
@@ -43,7 +43,7 @@ window.GRUPPIPER = (() => {
     const ans = await GRUPPI.vars();
     if (!box) return;
     box.replaceChildren();
-    if (ans && ans.comune && view === "main") { const n = document.createElement("div"); n.className = "gby-note"; n.setAttribute("role", "presentation"); n.textContent = t("groups.common", { text: ans.comune }); box.append(n); }
+    if (ans && ans.common && view === "main") { const n = document.createElement("div"); n.className = "gby-note"; n.setAttribute("role", "presentation"); n.textContent = t("groups.common", { text: ans.common }); box.append(n); }
     if (!GRUPPI.names().length) { const n = document.createElement("div"); n.className = "gby-note"; n.setAttribute("role", "presentation"); n.textContent = t("groups.noFiles"); box.append(n); }
     items(ans).forEach(it => {
       const d = document.createElement("div");
@@ -90,11 +90,11 @@ window.GRUPPIPER = (() => {
       const s = spec(), my = ++tick; ok.disabled = true; if (!s) { pv.replaceChildren(); warn.textContent = ""; return; }
       GRUPPI.vars(s).then(ans => {
         if (my !== tick) return;
-        const man = ans?.manuale, shown = man ? rows(man) : [];
+        const man = ans?.manual, shown = man ? rows(man) : [];
         pv.replaceChildren(...shown.map(t => { const li = document.createElement("li"); li.textContent = t; return li; }));
         if (!shown.length) { const li = document.createElement("li"); li.textContent = t("groups.preview.none"); pv.append(li); }
-        warn.textContent = man?.multipli?.length ? t("groups.has.multi", { n: man.multipli.length }) : "";
-        ok.disabled = !man || !man.valori.length;
+        warn.textContent = man?.multiple?.length ? t("groups.has.multi", { n: man.multiple.length }) : "";
+        ok.disabled = !man || !man.values.length;
       });
     };
     fill(body, refresh);
@@ -105,7 +105,7 @@ window.GRUPPIPER = (() => {
     /** @type {HTMLElement | null} */ (d.querySelector("input"))?.focus();
   }
   const labeled = (/** @type {string} */ key, /** @type {HTMLElement} */ field) => { const l = document.createElement("label"); l.className = "gby-f"; const s = document.createElement("span"); s.textContent = t(key); l.append(s, field); return l; };
-  const rowsOf = (/** @type {any} */ man) => [...man.valori.map((/** @type {any} */ v) => v.etichetta + " · " + v.file.length), ...(man.senza?.length ? [t("groups.other") + " · " + man.senza.length] : [])];
+  const rowsOf = (/** @type {any} */ man) => [...man.values.map((/** @type {any} */ v) => v.label + " · " + v.files.length), ...(man.without?.length ? [t("groups.other") + " · " + man.without.length] : [])];
   function dialogPos() {
     const SEP = /** @type {[string, string][]} */ ([["_", "groups.sep.us"], ["-", "groups.sep.hy"], [".", "groups.sep.dot"], [" ", "groups.sep.sp"]]);
     /** @type {HTMLInputElement[]} */ let boxes = []; /** @type {HTMLInputElement} */ let n;
@@ -114,7 +114,7 @@ window.GRUPPIPER = (() => {
       boxes = SEP.map(([c, k]) => { const i = document.createElement("input"); i.type = "checkbox"; i.checked = true; i.value = c; i.onchange = refresh; const l = document.createElement("label"); l.className = "gby-c"; l.append(i, " " + t(k)); fs.append(l); return i; });
       n = document.createElement("input"); n.type = "number"; n.value = "1"; n.step = "1"; n.oninput = refresh;
       body.append(fs, labeled("groups.pos.n", n));
-    }, () => { const p = Number(n.value); return Number.isInteger(p) && p !== 0 ? { pos: p, sep: boxes.filter(b => b.checked).map(b => b.value).join("") || "_-. " } : null; }, rowsOf, m => ({ by: "manuale", manuale: m }));
+    }, () => { const p = Number(n.value); return Number.isInteger(p) && p !== 0 ? { pos: p, sep: boxes.filter(b => b.checked).map(b => b.value).join("") || "_-. " } : null; }, rowsOf, m => ({ by: "manual", manual: m }));
   }
   function dialogHas() {
     /** @type {HTMLInputElement} */ let terms; /** @type {HTMLInputElement} */ let sub;
@@ -123,7 +123,7 @@ window.GRUPPIPER = (() => {
       sub = document.createElement("input"); sub.type = "checkbox"; sub.onchange = refresh;
       const l = document.createElement("label"); l.className = "gby-c"; l.append(sub, " " + t("groups.has.sub"));
       body.append(labeled("groups.has.terms", terms), l);
-    }, () => { const has = terms.value.split(",").map(x => x.trim()).filter(Boolean); return has.length ? { has, substring: sub.checked } : null; }, rowsOf, m => ({ by: "manuale", manuale: m }));
+    }, () => { const has = terms.value.split(",").map(x => x.trim()).filter(Boolean); return has.length ? { has, substring: sub.checked } : null; }, rowsOf, m => ({ by: "manual", manual: m }));
   }
   return { open, close };
 })();

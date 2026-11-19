@@ -171,8 +171,8 @@ export function createDesktopPool(opts = {}) {
     async positions(smiles, transform, peaks, tol, ppm, positive, reatt) { return (await call("feat/grafo", { kind: "positions", smiles, transform, peaks, tol, ppm, positive, reatt: reatt || "" })).text(); },
     /** `reatt/1` of a SMILES (reactivity of the parent): the text of the native route `feat/grafo` @param {string} smiles @param {string} opts JSON `{"solvent": "water"|"none", "conformers": 1-16}` or "" */
     async reactivity(smiles, opts) { return (await call("feat/grafo", { kind: "reactivity", smiles, opts })).text(); },
-    /** an operation of campioni/2 (proponi, valida, per_tp, da_legacy, canonico, digest) of the native engine: the text it answers @param {string} op @param {string} input */
-    async campioni(op, input) { return (await call("finder/campioni", { cop: op, input })).text(); },
+    /** an operation of samples/1 (propose, validate, per_tp, canonical, digest) of the native engine: the text it answers @param {string} op @param {string} input */
+    async samples(op, input) { return (await call("finder/samples", { cop: op, input })).text(); },
     cancel() {},
     resume() {},
   };

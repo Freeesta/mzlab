@@ -1,4 +1,4 @@
-//! Shared builders of the proofs of `gruppi`: files of `campioni/2`, cells and the synthetic scenario of the fixture. Synthetic data only.
+//! Shared builders of the proofs of `gruppi`: files of `samples/1`, cells and the synthetic scenario of the fixture. Synthetic data only.
 #![allow(dead_code)]
 
 use mzlab_core::json::Out;
@@ -199,7 +199,7 @@ pub fn input_json(tb: &GroupTable, cs: &[Sample], opts: &GroupOpts) -> String {
     matrix(&mut o, tb, |i| f64::from(tb.state[i]));
     o.raw(",\"apex_rt\":");
     matrix(&mut o, tb, |i| f64::from(tb.apex_rt[i]));
-    o.raw("},\"campioni\":").raw(&samples::to_json(cs));
+    o.raw("},\"samples\":").raw(&samples::to_json(cs));
     o.raw(",\"opts\":{\"reference\":");
     match &opts.reference {
         Some(r) => o.str(r),

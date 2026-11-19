@@ -8,7 +8,7 @@ use std::process::Command;
 
 use mzlab_core::budget::MemBudget;
 use mzlab_core::idxread::Index;
-use mzlab_core::samples::{proponi, to_json};
+use mzlab_core::samples::{propose, to_json};
 use mzlab_feat::hypo::{generate, HypoParams, Inputs, Rules};
 use mzlab_feat::interp::ms2link::LinkParams;
 use mzlab_feat::interp::run::run_to_with;
@@ -81,7 +81,7 @@ pub(crate) fn fixture(out: &Path, parent: &str, hyp: &str) -> PathBuf {
         .iter()
         .map(|n| (format!("{n}.mzML"), String::new(), String::new()))
         .collect();
-    std::fs::write(dir.join("samples.json"), to_json(&proponi(&files))).unwrap();
+    std::fs::write(dir.join("samples.json"), to_json(&propose(&files))).unwrap();
     std::fs::write(dir.join("parent.json"), parent).unwrap();
     std::fs::write(dir.join("hyp.json"), hyp).unwrap();
     dir
@@ -264,7 +264,7 @@ fn a_series_without_t0_is_flagged_in_the_report() {
         })
         .collect();
     // the roles read from untimed names, under the names of the files of the table (the samples are matched to them by name)
-    let untimed = to_json(&proponi(&files)).replace("_untimed", "_t0");
+    let untimed = to_json(&propose(&files)).replace("_untimed", "_t0");
     assert!(crate::flow_link::no_t0(
         &TpRoles::from_json(&untimed).unwrap()
     ));
