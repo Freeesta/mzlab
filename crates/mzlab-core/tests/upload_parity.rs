@@ -115,11 +115,9 @@ fn upload_like_python() {
         for k in ["name", "size", "probe", "sha256"] {
             assert_eq!(src[k], want["source"][k], "{stem}: source.{k}");
         }
-        assert_eq!(
-            serde_json::from_str::<Value>(&t.run_json).unwrap(),
-            want["run"],
-            "{stem}: run"
-        );
+        // the whole `run`, the chromatogram list included: the Python reference writes the rows of `chromlist.rs`
+        let run: Value = serde_json::from_str(&t.run_json).unwrap();
+        same(&format!("{stem} run"), &run, &want["run"]);
         assert_eq!(t.hr1, want["hr1"].as_bool().unwrap(), "{stem}: hr1");
         files += 1;
     }
