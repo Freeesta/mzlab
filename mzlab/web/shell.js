@@ -284,17 +284,6 @@ async function moduloToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown
   out.panel=g;return out}
 // true where the engine converts .raw itself (desktop): the guide then appears only for the formats it cannot convert
 let CONVERT_RAW=false;
-function fileKind(/** @type {string} */ name){const n=name.toLowerCase();if(/\.(mzml|dam)$/.test(n))return null;const M=window.LETTORI_MOD;if(M&&M.extensions().some((/** @type {string} */ e)=>n.endsWith(e)))return null;return window.FORMATI_NOTI.classify(n)||"other"}
-function ssGet(/** @type {string} */ k){try{return sessionStorage.getItem(k)}catch(e){return null}}
-function ssSet(/** @type {string} */ k,/** @type {string} */ v){try{sessionStorage.setItem(k,v)}catch(e){}}
-const SEEN_GROUPS=new Set();
-function groupHash(/** @type {{ name: string, size: number }[]} */ files){const s=files.map(f=>f.name+":"+f.size).sort().join("|");let h=5381;for(let i=0;i<s.length;i++)h=(h*33^s.charCodeAt(i))>>>0;return h+"."+files.length}
-function groupSeen(/** @type {string} */ h){let a=[];try{a=JSON.parse(ssGet(NOMI.KEY("unopen"))||"[]")}catch(e){}return SEEN_GROUPS.has(h)||a.includes(h)}
-function groupMark(/** @type {string} */ h){SEEN_GROUPS.add(h);try{const a=JSON.parse(ssGet(NOMI.KEY("unopen"))||"[]");a.push(h);ssSet(NOMI.KEY("unopen"),JSON.stringify(a.slice(-50)))}catch(e){}}
-function namesCut(/** @type {string[]} */ a,/** @type {number} */ max){return a.slice(0,max).map(esc).join(", ")+(a.length>max?"…":"")}
-// ONE notice for the whole loading: files that cannot be opened in the browser (count + collapsible list), unknown formats and read errors, one line per kind
-function closeUnopen(){const u=$("#unopen");u.hidden=true;u.textContent=""}
-function openConvHelp(/** @type {boolean} */ focus){const d=$("#convhelp");d.hidden=false;d.open=true;if(focus){d.scrollIntoView({block:"nearest"});d.querySelector("summary").focus()}}
 function reportLoad(/** @type {CaricaRep} */ rep){
   const u=$("#unopen"),L=/** @type {string[]} */ ([]),T=/** @type {(k: string, p?: unknown) => string} */ ((k,p)=>I18N.t(k,p));let conv=/** @type {string[]} */ ([]);
   if(rep.unopen.length){
@@ -331,18 +320,8 @@ async function loneWiffs(/** @type {{ lone?: { e: { stem: string, wiff: File }, 
     const m=I18N.t("err.file.wiffNoScan",{name:e.wiff.name});(rep.errs[m]=rep.errs[m]||[]).push(e.wiff.name)}}
 const INFLIGHT=new Set(),fkey=(/** @type {FileRiga} */ f)=>f.name+"|"+f.size;
 // the same file (name and size) already in the list, or being read now, is not loaded again: a short notice and its row lights up for a moment
-function dropDups(/** @type {FileCarica[]} */ files){
-  // a file of the table that is not open (removed, set aside) is not a duplicate: picking it again ticks it, as its box in the table would
-  const row=(/** @type {FileCarica} */ f)=>ST.files.find((/** @type {FileRiga} */ g)=>g.name===f.name&&g.size===f.size),again=files.filter(f=>{const g=row(f);return !INFLIGHT.has(fkey(f))&&g&&g.kind in GORD&&!OPENNOW.isOpen(g.name)});
-  if(again.length){again.forEach(f=>OPENNOW.tick(row(f),true));renderFiles();files=files.filter(f=>!again.includes(f))}
-  const dups=files.filter(f=>INFLIGHT.has(fkey(f))||ST.files.some((/** @type {FileRiga} */ g)=>g.name===f.name&&g.size===f.size));if(!dups.length)return files;
-  const msg=dups.length===1?I18N.t("load.dup.one",{name:dups[0].name}):I18N.t("load.dup.many",{n:dups.length});CartCarica.note(msg);setTimeout(()=>{const n=$("#cartinfo");if(n&&n.textContent===msg)CartCarica.note("")},5000);
-  dups.forEach(f=>{const tr=[...document.querySelectorAll("#flist tr")].find(r=>r.querySelector(".ldname")?.getAttribute("title")===f.name);if(tr){tr.classList.add("dupflash");tr.scrollIntoView({block:"nearest"});setTimeout(()=>tr.classList.remove("dupflash"),1800)}});
-  return files.filter(f=>!dups.includes(f))}
 // the AbortControllers of the loadings under way: «Cancel» (rows of the list, overlay of «Load data») stops them all
 const LOADS=new Set();
-// the members of a file without their names, for the diagnosis: ".wiff 1.2 MB + .wiff.scan 57.0 MB"
-const memDesc=(/** @type {{ name: string, size: number }[]} */ fs)=>fs.map(b=>`${(String(b.name).match(/\.[^./\\]+(\.scan)?$/i)||["?"])[0]} ${(b.size/1048576).toFixed(1)} MB`).join(" + ");
 // «Cancel»: the files not started are not read, the engine stops the copies and the indexes running (lr_cancel), the module its conversions; the files already loaded stay
 async function cancelLoads(){for(const c of LOADS)c.abort();if(CONVQ.on())CONVQ.stop();const rb=window.MZLAB_RUST,names=CONVROWS.running().map((/** @type {{ name: string }} */ r)=>r.name);if(rb&&rb.rpc&&names.length)try{await rb.rpc({op:"lr_cancel",names})}catch(_){}}
 // downloads the example files in order: the bytes are the first 40 % of the bar of each row (Content-Length); a cancel stops the rows, an error drops them and says why
