@@ -70,7 +70,7 @@ impl<R: ReadAt> Routes<R> {
         Ok(Some(Filter::Node(Arc::new(mask))))
     }
 
-    /// `/api/msn_albero?k&tol=nom|<Da>|<n>ppm&ce=1|0`: the tree of the precursors of the file from its index alone (no spectrum), `msn_albero/1`.
+    /// `/api/msn_albero?k&tol=nom|<Da>|<n>ppm&ce=1|0`: the tree of the precursors of the file from its index alone (no spectrum), `msn-tree/1`.
     pub(crate) fn msn_tree_route(&mut self, q: &Query) -> Result<Option<String>> {
         let r = group_of(q, "tol", "ce")?;
         let a = self.tree_per(&r);
@@ -82,7 +82,7 @@ impl<R: ReadAt> Routes<R> {
             ix.map(|i| scans[i].rt).fold((f64::INFINITY, f64::NEG_INFINITY), |(a, b), t| (a.min(t), b.max(t)))
         };
         let mut o = Out::default();
-        o.raw("{\"format\":\"msn_albero/1\",\"ms1\":{\"n\":").int(a.ms1.len() as i64);
+        o.raw("{\"schema\":\"msn-tree/1\",\"ms1\":{\"n\":").int(a.ms1.len() as i64);
         let (t0, t1) = span(&mut a.ms1.iter().copied());
         o.raw(",\"rt0\":").opt(t0.is_finite().then(|| round(t0, 4))).raw(",\"rt1\":").opt(t1.is_finite().then(|| round(t1, 4)));
         // mean total ion current per scan of a group of scans

@@ -97,7 +97,7 @@ fn get(r: &mut Routes<std::fs::File>, path: &str, q: &str) -> Value {
 fn tree_route_and_node_filter() {
     let mut r = routes();
     let t = get(&mut r, "/api/msn_albero", "k=0");
-    assert_eq!(t["format"], "msn_albero/1");
+    assert_eq!(t["schema"], "msn-tree/1");
     let nodes = t["nodes"].as_array().unwrap();
     assert!(nodes.len() >= 3, "{t}");
     assert_eq!(t["levels"], serde_json::json!([2, 3]));

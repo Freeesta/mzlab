@@ -20,7 +20,7 @@
       out.push({ label: I18N.t("inf.frag"), tip: I18N.t("inf.frag.tip"), fn: async () => {
         const { j: tj, n } = await current(p), jj = tj || await tree(f.k);
         const parent = n ? n.id : null;
-        const kid = jj.nodes.filter((/** @type {any} */ x) => x.parent === parent && Math.abs(x.precursor - m) <= tolOf(m)).sort((/** @type {any} */ a, /** @type {any} */ b) => Math.abs(a.prec - m) - Math.abs(b.prec - m))[0];
+        const kid = jj.nodes.filter((/** @type {any} */ x) => x.parent === parent && Math.abs(x.precursor - m) <= tolOf(m)).sort((/** @type {any} */ a, /** @type {any} */ b) => Math.abs(a.precursor - m) - Math.abs(b.precursor - m))[0];
         if (!kid) return nearMsg(I18N.t("inf.frag.none"));
         pick(p, kid.id);
       } });

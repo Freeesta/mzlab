@@ -29,7 +29,7 @@ try:
         step("the file is one item of kind «MSn infusion»", one)
         def tree():
             j = pg.evaluate("fetch('api/msn_albero?k=0').then(r=>r.json())")
-            assert j["format"] == "msn_albero/1" and len(j["nodes"]) == NODES, (j["format"], len(j["nodes"]))
+            assert j["schema"] == "msn-tree/1" and len(j["nodes"]) == NODES, (j["schema"], len(j["nodes"]))
             assert sorted(set(n["level"] for n in j["nodes"])) == [2, 3, 4, 5], j["levels"]
         step("the tree has the nodes of the synthetic file", tree)
         def start():
@@ -65,6 +65,18 @@ try:
             assert r0["after"][4:] in r0["kid"], r0
             assert r0["again"] == "msn:" + r0["root"], r0
         step("«Fragment this ion» goes to the child node, «Back to the precursor» returns", frag)
+        def frag_two():
+            # two children of one parent inside the tolerance (same precursor, two energies): the nearest precursor wins, never an undefined order
+            r1 = pg.evaluate("""(async()=>{const till=async f=>{for(let i=0;i<600&&!f();i++) await new Promise(r=>requestAnimationFrame(r))};
+              const spec=()=>E.panels.find(p=>p.type==='spec');
+              const j=await fetch('api/msn_albero?k=0').then(r=>r.json());const root=j.nodes.find(n=>n.level===2);
+              await INF.pick(E.panels.find(p=>p.type==='chrom'), root.id); await till(()=>spec().filt==='msn:'+root.id&&spec()._a);
+              const kids=j.nodes.filter(n=>n.parent===root.id), m=kids[0].precursor+0.2, near=kids.filter(n=>Math.abs(n.precursor-m)<=0.5);
+              const it=INF.menuPeak(spec(), m).find(x=>x.label===I18N.t('inf.frag')); await it.fn(); await till(()=>/^msn:/.test(spec().filt)&&spec().filt!=='msn:'+root.id);
+              const best=Math.min(...near.map(n=>Math.abs(n.precursor-m)));
+              return {near:near.length, ok:near.some(n=>'msn:'+n.id===spec().filt&&Math.abs(n.precursor-m)===best)}})()""")
+            assert r1["near"] >= 2 and r1["ok"], r1
+        step("«Fragment this ion» with two children in tolerance picks the nearest precursor", frag_two)
         def total():
             q = pg.evaluate("""(async()=>{const j=await fetch('api/msn_albero?k=0').then(r=>r.json());const n=j.nodes.find(x=>x.level===2);
               const u=`api/spectrum?k=0&rt0=${n.rt0-1e-4}&rt1=${n.rt1+1e-4}&level=${n.level}&precursor=&filt=${encodeURIComponent('msn:'+n.id)}`;
