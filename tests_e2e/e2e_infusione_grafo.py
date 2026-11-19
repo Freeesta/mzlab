@@ -43,7 +43,7 @@ STAND_IN = """(fx) => {
       if (q.get("formula") === "C99H99+") j.warnings.push({ key: "warn.msngrafo.mostUnexplained", tree: "", node: null });
       return Promise.resolve(jr(j));
     }
-    if (path === "api/molecules/cerca") return Promise.resolve(jr([{ id: "ik:TESTONLY", name: "exampline", formula: "C14H15N3O5", mass: 305.1, smiles: "CCOC(=O)c1ccccc1N", adducts: ["[M+H]+"], score: 1 }]));
+    if (path === "api/molecules/search") return Promise.resolve(jr([{ id: "ik:TESTONLY", name: "exampline", formula: "C14H15N3O5", mass: 305.1, smiles: "CCOC(=O)c1ccccc1N", adducts: ["[M+H]+"], score: 1 }]));
     if (path === "api/molecules/get") return Promise.resolve(jr({ id: "ik:TESTONLY", name: "exampline", formula: "C14H15N3O5", mass: 305.1, smiles: "CCOC(=O)c1ccccc1N", adducts: ["[M+H]+"] }));
     if (path === "api/msnlib/add") { const b = JSON.parse(init.body), tag = "entry:" + b.molecule_id + "\\n"; const dup = (b.library || "").includes(tag); return Promise.resolve(jr({ library: dup ? b.library : (b.library || "") + tag, duplicate: dup })); }
     if (path === "api/msnlib/search") return Promise.resolve(jr({ schema: "msn-search/1", options: {}, candidates: [

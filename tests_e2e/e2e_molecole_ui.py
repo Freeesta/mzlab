@@ -267,8 +267,8 @@ try:
             add(nome="Nuova", formula="CH4")
             assert not pg.is_visible("#mol-errs"), "the old row is gone with the next save"
             left = pg.evaluate("""new Promise(ok => { const q = indexedDB.open('mzlab_lab'); q.onsuccess = () => { const g = q.result.transaction('molecole').objectStore('molecole').getAll();
-              g.onsuccess = () => { q.result.close(); ok(g.result.map(r => r.nome || r.name)); }; }; })""")
-            assert left == ["Nuova"], left
+              g.onsuccess = () => { q.result.close(); ok(g.result.map(r => ("nome" in r ? "OLD:" : "") + r.name)); }; }; })""")
+            assert left == ["Nuova"], left   # an `OLD:` entry would be a record of the old format that the save did not clear
             pg.keyboard.press("Escape")
         step("an old-format record is refused with a clear message; the catalogue works; the next save clears it", old_rows)
 

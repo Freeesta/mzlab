@@ -54,7 +54,7 @@ fn formula_of(q: &str) -> Option<String> {
     (f.iter().any(|(e, _)| e == "C") || f.len() > 1).then(|| fmt(&f))
 }
 
-/// The indices (in `ms`) and scores of the best `limite` molecules for `q`: the error in ppm for a mass, 0 for the same formula, 0..3 for a text. Fewer than
+/// The indices (in `ms`) and scores of the best `limit` molecules for `q`: the error in ppm for a mass, 0 for the same formula, 0..3 for a text. Fewer than
 /// two characters of text give nothing.
 pub fn search(ms: &[Molecule], q: &str, limit: usize, ppm: f64) -> Vec<(usize, f64)> {
     let q = q.trim();
