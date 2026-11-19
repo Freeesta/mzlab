@@ -9,10 +9,7 @@ use crate::{exit, Outcome};
 
 /// Flags every command accepts, listed once instead of on every command.
 const GLOBAL: &[(&str, &str)] = &[
-    (
-        "--json",
-        "the data as JSON on stdout; a failure is one error/1 document",
-    ),
+    ("--json", "JSON on stdout; a failure is one error/1"),
     ("--help", "the usage of the command on stdout, exit 0"),
 ];
 
@@ -58,11 +55,8 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--mz", "m/z"),
     ("--ppm", "tolerance, ppm"),
     ("--rt-tol", "RT window, minutes"),
-    (
-        "--inspection",
-        "an inspection/1 file, or - for stdin; no indexing",
-    ),
-    ("--answers", "answers file for the questions of the rules"),
+    ("--inspection", "inspection/1 file or - (no indexing)"),
+    ("--answers", "answers to the rules' questions"),
     ("--da", "tolerance, Da"),
     ("--n", "points kept per extreme"),
     ("--scan", "scan number"),
