@@ -96,7 +96,7 @@ const CONV = {
   async valid(/** @type {Blob} */ blob, /** @type {string} */ name) {
     const M = window.LETTORI_MOD;
     if (this.checked.has(blob) || !M || !M.valida) return true;
-    const j = JSON.parse(await M.valida(blob, name))[0], p = (j.problems || []).find((/** @type {Bag} */ x) => x.severity === "error");
+    const j = JSON.parse(await M.valida(blob, name)).files[0], p = (j.problems || []).find((/** @type {Bag} */ x) => x.severity === "error");
     if (j.valid) { this.checked.add(blob); return true; }
     const n = document.getElementById("up"), d = document.createElement("div");
     d.className = "note"; d.setAttribute("role", "alert");
