@@ -31,7 +31,7 @@ pub fn ione(q: &str, adduct: &str) -> Result<String> {
         if neutral <= 0.0 {
             return Err(Error::new("err.comp.mz"));
         }
-        o.raw(",\"formula\":\"\",\"kind\":\"mass\",\"massa\":")
+        o.raw(",\"formula\":\"\",\"kind\":\"mass\",\"mass\":")
             .num(round(neutral, 6));
         o.raw(",\"mz\":").opt(shift.map(|_| round(mz, 6)));
     } else {
@@ -42,7 +42,7 @@ pub fn ione(q: &str, adduct: &str) -> Result<String> {
         };
         let m = mass(&neutral);
         o.raw(",\"formula\":").str(&fmt(&neutral));
-        o.raw(",\"kind\":\"formula\",\"massa\":").num(round(m, 6));
+        o.raw(",\"kind\":\"formula\",\"mass\":").num(round(m, 6));
         o.raw(",\"mz\":").opt(shift.map(|s| round(m + s, 6)));
     }
     o.raw("}");

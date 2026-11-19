@@ -44,7 +44,7 @@ def record(name, synonyms, formula, smiles, inchikey, catalogs, extra):
         "id": "ik:" + inchikey, "name": name.strip(), "synonyms": "|".join(tidy(synonyms, name)), "molecular_formula": elements.fmt(f), "charge": "",
         "monoisotopic_mass": f"{round(elements.mass(f), 6):.6f}", "smiles": smiles.strip(), "inchikey": inchikey.strip(),
         "adducts": HRMS_ADDUCTS if "hrms" in catalogs else "", "collections": "", "classes": "|".join(sorted(extra.get("classes", []) + structure_classes(smiles))),
-        "cas": extra.get("cas", ""), "pubchem_cid": extra.get("cid", ""), "notes": extra.get("notes", ""), "origin": "catalogo", "catalog": "|".join(catalogs),
+        "cas": extra.get("cas", ""), "pubchem_cid": extra.get("cid", ""), "notes": extra.get("notes", ""), "origin": "catalog", "catalog": "|".join(catalogs),
     }
 
 

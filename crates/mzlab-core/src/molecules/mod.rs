@@ -22,7 +22,7 @@ use crate::json::round;
 
 pub const SCHEMA: &str = "molecules/1";
 /// Levels of a record, from the lowest: a later one replaces the same `id` of an earlier one.
-pub const LEVELS: [&str; 3] = ["catalogo", "importata", "utente"];
+pub const LEVELS: [&str; 3] = ["catalog", "imported", "user"];
 /// Largest difference (Da) between the control mass of a CSV row and the computed one.
 pub const MASS_TOL: f64 = 0.0005;
 
@@ -36,7 +36,7 @@ pub struct Proprieta {
     pub conditions: String,
 }
 
-/// Where a record comes from; `catalogo` only for the catalogue, `file` for an imported file, the dates are ISO.
+/// Where a record comes from; `catalog` only for the catalogue, `file` for an imported file, the dates are ISO.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Origin {
     pub tipo: String,
@@ -187,7 +187,7 @@ pub fn finalizza(m: &mut Molecule, control: Option<f64>) -> Result<(), Bad> {
     m.note = m.note.trim().to_string();
     properties(m)?;
     if m.origine.tipo.is_empty() {
-        m.origine.tipo = "utente".into();
+        m.origine.tipo = "user".into();
     }
     if !LEVELS.contains(&m.origine.tipo.as_str()) {
         return Err(("error.molecules.badOrigin", m.origine.tipo.clone()));

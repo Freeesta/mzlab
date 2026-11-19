@@ -22,7 +22,7 @@ export const TXT = {
 
 export const ADDUCTS = { 1: ["[M+H]+", "[M+Na]+", "[M+NH4]+", "[M+K]+"], [-1]: ["[M-H]-", "[M+HCOO]-", "[M+Cl]-", "[M+CH3COO]-"] };
 
-/** @typedef {{ id: string, name: string, formula: string, massa?: number, smiles: string | null, addotti?: string[] }} Molecola */
+/** @typedef {{ id: string, name: string, formula: string, mass?: number, smiles: string | null, adducts?: string[] }} Molecola */
 
 /** The state of the tab; it lives as long as the page. */
 export const G = {
@@ -63,7 +63,7 @@ export const polarityOf = (/** @type {any} */ f) => (f && f.polarity === "negati
 /** The adducts offered for a polarity and the one a name starts with (the first adduct of the molecule that fits, else the first of the list). */
 export function startAdduct(/** @type {1 | -1} */ pol, /** @type {Molecola | null} */ mol) {
   const list = ADDUCTS[pol];
-  return (mol && mol.addotti && mol.addotti.find(a => list.includes(a))) || list[0];
+  return (mol && mol.adducts && mol.adducts.find(a => list.includes(a))) || list[0];
 }
 
 /** The text of the ion the engine reads: what was typed when it has a charge or an adduct, else the formula and the chosen adduct. */

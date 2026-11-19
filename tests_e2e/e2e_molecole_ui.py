@@ -150,7 +150,7 @@ try:
             assert d.value.suggested_filename == "mzlab-molecules.csv" and text.splitlines()[0].startswith("id;name;synonyms;molecular_formula") and "Esempina" in text and "Provolone C" in text, text[:300]
             with pg.expect_download() as d: pg.click("#mol-json")
             doc = json.load(open(d.value.path(), encoding="utf-8"))
-            assert doc["schema"] == "molecules/1" and [m["nome"] for m in doc["molecole"]].count("Esempina") == 1 and len(doc["molecole"]) == 2, doc
+            assert doc["schema"] == "molecules/1" and [m["name"] for m in doc["molecules"]].count("Esempina") == 1 and len(doc["molecules"]) == 2, doc
             r.csv_text, r.json_text = text, json.dumps(doc)
         step("export CSV and JSON: the files of the engine (canonical)", exports)
 
@@ -177,7 +177,7 @@ try:
             assert "Yours" in pg.locator(ROWS, has_text="Importina X").first.inner_text()
             put("good.csv", ok); status("replaced: 1; yours, left as they are: 1")
             assert "Importina X" in names() and "Importina" not in names(), names()
-            doc = {"schema": "molecules/1", "molecole": [{"nome": "Json uno", "formula": "C2H6O"}]}
+            doc = {"schema": "molecules/1", "molecules": [{"name": "Json uno", "formula": "C2H6O"}]}
             put("uno.json", json.dumps(doc), "application/json")
             pg.wait_for_function("document.querySelector('#mol-body').textContent.includes('Json uno')", timeout=10000)
             assert "Imported" in pg.locator(ROWS, has_text="Json uno").first.inner_text()
@@ -191,8 +191,8 @@ try:
             pg.wait_for_function("document.querySelector('#mol-body').textContent.includes('Esempina')", timeout=10000)
             with pg.expect_download() as d: pg.click("#mol-json")
             back = json.load(open(d.value.path(), encoding="utf-8")); was = json.loads(r.json_text)
-            strip = lambda ms: sorted((m["id"], m["nome"], m["formula"], round(m["massa"], 4)) for m in ms)
-            assert strip(back["molecole"]) == strip(was["molecole"]), (back, was)
+            strip = lambda ms: sorted((m["id"], m["name"], m["formula"], round(m["mass"], 4)) for m in ms)
+            assert strip(back["molecules"]) == strip(was["molecules"]), (back, was)
         step("deleting all and importing the exported CSV gives back the same molecules", round_trip)
 
         def axe_window():
@@ -207,7 +207,7 @@ try:
 
         def combobox():
             pg.evaluate("""() => { const h = document.createElement('div'); h.id = 'molc-host'; h.style.cssText = 'position:fixed;left:20px;top:300px;width:420px;z-index:5000;background:var(--panel)'; document.body.appendChild(h);
-              window.__picked = []; window.__box = MOLDB.campo(h, { testi: { label: 'Molecule', placeholder: 'Name, formula or mass', none: 'No molecule found', count: n => n + ' found', manage: 'Manage' }, onScegli: m => window.__picked.push(m.nome) }); }""")
+              window.__picked = []; window.__box = MOLDB.campo(h, { testi: { label: 'Molecule', placeholder: 'Name, formula or mass', none: 'No molecule found', count: n => n + ' found', manage: 'Manage' }, onScegli: m => window.__picked.push(m.name) }); }""")
             i = "#molc-host input"
             assert pg.get_attribute(i, "role") == "combobox" and pg.get_attribute(i, "aria-expanded") == "false" and pg.get_attribute(i, "aria-autocomplete") == "list"
             assert pg.inner_text("#molc-host label") == "Molecule" and pg.get_attribute(i, "placeholder") == "Name, formula or mass"

@@ -18,22 +18,22 @@ const LISTE_TARGET = (function() {
    */
   async function listMolecules(adducts, doc) {
     if (!doc) await (await import("./molecole-archivio.js")).pronto();
-    const body = doc ? { molecole: doc, addotti: adducts } : { catalogo: "hrms", addotti: adducts };
-    const r = await fetch(ROUTE + "elenca", { method: "POST", body: JSON.stringify(body) });
-    if (!r.ok) throw new Error("elenca: " + r.status);
+    const body = doc ? { molecules: doc, adducts } : { catalog: "hrms", adducts };
+    const r = await fetch(ROUTE + "list", { method: "POST", body: JSON.stringify(body) });
+    if (!r.ok) throw new Error("list: " + r.status);
     const j = await r.json();
-    if (!Array.isArray(j)) throw new Error((j.errori && j.errori[0] && j.errori[0].testo) || "elenca");
+    if (!Array.isArray(j)) throw new Error((j.errors && j.errors[0] && j.errors[0].text) || "list");
     return j.map((/** @type {any} */ m) => ({
-      id: m.id, name_en: m.nome, name_it: m.nome, neutral_formula: m.formula, monoisotopic_mass: m.massa,
+      id: m.id, name_en: m.name, name_it: m.name, neutral_formula: m.formula, monoisotopic_mass: m.mass,
       mz: Object.fromEntries(adducts.map((a, i) => [a, m.mz[i]]))
     }));
   }
 
   /** Reads a molecules CSV with the engine and returns the document (or throws the first error). */
   async function readCsv(/** @type {string} */ csv, /** @type {string} */ file) {
-    const r = await fetch(ROUTE + "da_csv", { method: "POST", body: JSON.stringify({ csv, file }) });
+    const r = await fetch(ROUTE + "from_csv", { method: "POST", body: JSON.stringify({ csv, file }) });
     const j = await r.json();
-    if (j.errori && j.errori.length) throw new Error(`line ${j.errori[0].riga}: ${j.errori[0].testo}`);
+    if (j.errors && j.errors.length) throw new Error(`line ${j.errors[0].line}: ${j.errors[0].text}`);
     return j;
   }
 
@@ -207,7 +207,7 @@ const LISTE_TARGET = (function() {
       try {
         const doc = await readCsv(await file.text(), file.name);
         const opt = sel.querySelector('option[value="upload"]');
-        if (opt) opt.textContent = `${file.name} (${doc.molecole.length} substances)`;
+        if (opt) opt.textContent = `${file.name} (${doc.molecules.length} substances)`;
         sel.value = "upload";
         onCustomLoaded(doc);
       } catch (e_) { const e = /** @type {Lanciato} */ (e_);

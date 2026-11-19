@@ -77,9 +77,9 @@ export async function statRoute(path, body, { rpc }) {
   }
   if (path.startsWith("/api/flow/sched/")) return { status: 200, text: (await rpc({ op: "lr_flow_sched", sop: path.slice(16), body })).info };
   if (path.startsWith("/api/samples/")) return { status: 200, text: (await rpc({ op: "lr_samples", cop: path.slice(13), body })).info };
-  // molecules database (molecules/1): carica, cerca, get, elenca, da_csv, a_csv, a_json, valida, digest
-  // the molecules of the user kept between sessions: archivio/leggi gives a molecules/1 document, archivio/scrivi (the document as body) replaces them
-  if (path === "/api/molecules/archivio/leggi" || path === "/api/molecules/archivio/scrivi") return { status: 200, text: (await rpc({ op: "lr_molecole_archivio", mop: path.slice(24), body })).info };
+  // molecules database (molecules/1): load, search, get, list, from_csv, to_csv, to_json, validate, digest
+  // the molecules of the user kept between sessions: archive/read gives a molecules/1 document, archive/write (the document as body) replaces them
+  if (path === "/api/molecules/archive/read" || path === "/api/molecules/archive/write") return { status: 200, text: (await rpc({ op: "lr_molecules_archive", mop: path.slice(23), body })).info };
   if (path.startsWith("/api/molecules/")) return { status: 200, text: (await rpc({ op: "lr_molecules", mop: path.slice(15), body })).info };
   if (!/^\/api\/(stat\/(profile|blank|reference|pca|kmd)|kmd)$/.test(path)) return undefined;
   const r = (await rpc({ op: "lr_stat", path: path.slice(1), body })).info;

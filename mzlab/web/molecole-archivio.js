@@ -5,11 +5,11 @@
 // Every check, id, mass and conversion is done by the engine; this file only moves documents. Used by molecole-ui.js (the window) and molecole-campo.js (the search box).
 
 /**
- * @typedef {{ tipo: string, catalogo?: string[], file?: string, creato?: string, modificato?: string }} Origine
- * @typedef {{ id: string, nome: string, sinonimi?: string[], formula: string, carica?: number, massa?: number, smiles?: string | null, inchikey?: string | null,
- *   addotti?: string[], raccolte?: string[], classi?: string[], esterni?: { cas?: string, pubchem_cid?: string }, proprieta?: any[], note?: string, origine: Origine }} Molecola
- * @typedef {{ riga: number, chiave: string, testo: string }} ErroreRiga
- * @typedef {{ id: string, nome: string, formula: string, carica: number, massa: number, smiles: string | null, addotti: string[], punteggio: number }} Trovata
+ * @typedef {{ type: string, catalog?: string[], file?: string, created?: string, modified?: string }} Origine
+ * @typedef {{ id: string, name: string, synonyms?: string[], formula: string, charge?: number, mass?: number, smiles?: string | null, inchikey?: string | null,
+ *   adducts?: string[], collections?: string[], classes?: string[], external?: { cas?: string, pubchem_cid?: string }, properties?: any[], notes?: string, origin: Origine }} Molecola
+ * @typedef {{ line: number, key: string, text: string }} ErroreRiga
+ * @typedef {{ id: string, name: string, formula: string, charge: number, mass: number, smiles: string | null, adducts: string[], score: number }} Trovata
  */
 
 const SCHEMA = "molecules/1";
@@ -20,7 +20,7 @@ let mie = [];
 /** @type {ErroreRiga[]} */
 let erroriArchivio = [];
 
-/** One route of the engine: the answer as text (the CSV of `a_csv` is not JSON). */
+/** One route of the engine: the answer as text (the CSV of `to_csv` is not JSON). */
 async function testo(/** @type {string} */ op, /** @type {any} */ corpo) {
   const r = await fetch("api/molecules/" + op, { method: "POST", body: typeof corpo === "string" ? corpo : JSON.stringify(corpo) });
   if (!r.ok) throw new Error(`api/molecules/${op}: ${r.status}`);
@@ -28,7 +28,7 @@ async function testo(/** @type {string} */ op, /** @type {any} */ corpo) {
 }
 
 const json = async (/** @type {string} */ op, /** @type {any} */ corpo) => JSON.parse(await testo(op, corpo));
-const conErrori = (/** @type {any} */ j) => !!j && Array.isArray(j.errori) && j.errori.length > 0;
+const conErrori = (/** @type {any} */ j) => !!j && Array.isArray(j.errors) && j.errors.length > 0;
 
 /** Loads the catalogue and the archive of the user once; a stored document that the engine refuses leaves the catalogue alone (see `errori`). */
 export function pronto() {
@@ -36,14 +36,14 @@ export function pronto() {
     const [cat, doc] = await Promise.all([
       fetch("static/molecole/catalogo.csv").then(r => { if (!r.ok) throw new Error("catalogo.csv: " + r.status); return r.text(); }),
       // an app older than the page has no archive yet: the catalogue still works, saving fails with a message
-      testo("archivio/leggi", "").catch(() => `{"molecole":[],"schema":"${SCHEMA}"}`),
+      testo("archive/read", "").catch(() => `{"molecules":[],"schema":"${SCHEMA}"}`),
     ]);
-    const r = await json("carica", { catalogo: cat, utente: doc });
+    const r = await json("load", { catalog: cat, user: doc });
     if (conErrori(r)) {
-      erroriArchivio = r.errori;
+      erroriArchivio = r.errors;
       mie = [];
-      await json("carica", { catalogo: cat, utente: { schema: SCHEMA, molecole: [] } });
-    } else mie = JSON.parse(doc).molecole;
+      await json("load", { catalog: cat, user: { schema: SCHEMA, molecules: [] } });
+    } else mie = JSON.parse(doc).molecules;
   })().catch(e => { caricato = null; throw e; });
   return caricato;
 }
@@ -53,22 +53,22 @@ export const errori = () => erroriArchivio.slice();
 /** The records of the user (imported and own), ordered by id. */
 export const mieMolecole = () => mie.slice();
 /** The level of a molecule found by the search: the one of the user's copy when there is one, else the catalogue. */
-export const livello = (/** @type {string} */ id) => (mie.find(m => m.id === id) || { origine: { tipo: "catalogo" } }).origine.tipo;
+export const livello = (/** @type {string} */ id) => (mie.find(m => m.id === id) || { origin: { type: "catalog" } }).origin.type;
 
 export async function cerca(/** @type {string} */ q, limite = 8, ppm = 10, ampia = false) {
   await pronto();
-  return /** @type {Promise<Trovata[]>} */ (json("cerca", ampia ? { q, limite, ppm, ampia } : { q, limite, ppm }));
+  return /** @type {Promise<Trovata[]>} */ (json("search", ampia ? { q, limit: limite, ppm, wide: ampia } : { q, limit: limite, ppm }));
 }
 
 /** The names of the adduct table of the engine. */
-export const addotti = async () => /** @type {Promise<string[]>} */ (json("addotti", {}));
+export const addotti = async () => /** @type {Promise<string[]>} */ (json("adducts", {}));
 
-/** What a typed formula (an ion with the atoms of `adduct` inside) or m/z is as a neutral molecule: `{kind, adduct, formula, massa, mz}`; `adduct` is `neutral` or a name of `addotti()`. Rejects with the key of the engine's error. */
+/** What a typed formula (an ion with the atoms of `adduct` inside) or m/z is as a neutral molecule: `{kind, adduct, formula, mass, mz}`; `adduct` is `neutral` or a name of `addotti()`. Rejects with the key of the engine's error. */
 export async function ione(/** @type {string} */ q, /** @type {string} */ adduct) {
-  const r = await fetch("api/molecules/ione", { method: "POST", body: JSON.stringify({ q, adduct }) });
+  const r = await fetch("api/molecules/ion", { method: "POST", body: JSON.stringify({ q, adduct }) });
   const j = await r.json();
   if (!r.ok || j.error_key) throw Object.assign(new Error(j.error_key || "ione"), { key: j.error_key || "", params: j.params || {} });
-  return /** @type {{ kind: "formula" | "mass", adduct: string, formula: string, massa: number, mz: number | null }} */ (j);
+  return /** @type {{ kind: "formula" | "mass", adduct: string, formula: string, mass: number, mz: number | null }} */ (j);
 }
 
 export async function prendi(/** @type {string} */ id) {
@@ -78,12 +78,12 @@ export async function prendi(/** @type {string} */ id) {
 
 /** Writes the list as the whole archive of the user (engine check first) and reloads it into the engine. */
 async function scrivi(/** @type {Molecola[]} */ lista) {
-  const doc = await testo("a_json", { schema: SCHEMA, molecole: lista });
+  const doc = await testo("to_json", { schema: SCHEMA, molecules: lista });
   const j = JSON.parse(doc);
-  if (conErrori(j)) return { errori: /** @type {ErroreRiga[]} */ (j.errori) };
-  await testo("archivio/scrivi", doc);
-  await testo("carica", { utente: doc });
-  mie = j.molecole;
+  if (conErrori(j)) return { errori: /** @type {ErroreRiga[]} */ (j.errors) };
+  await testo("archive/write", doc);
+  await testo("load", { user: doc });
+  mie = j.molecules;
   return { ok: true };
 }
 
@@ -94,9 +94,9 @@ async function scrivi(/** @type {Molecola[]} */ lista) {
  */
 export async function salva(/** @type {Partial<Molecola>} */ rec, /** @type {string} */ id = "") {
   await pronto();
-  const prima = await json("a_json", { schema: SCHEMA, molecole: [{ ...rec, id }] });
-  if (conErrori(prima)) return { errori: prima.errori };
-  const finale = /** @type {Molecola} */ (prima.molecole[0]);
+  const prima = await json("to_json", { schema: SCHEMA, molecules: [{ ...rec, id }] });
+  if (conErrori(prima)) return { errori: prima.errors };
+  const finale = /** @type {Molecola} */ (prima.molecules[0]);
   if (!id && (mie.some(m => m.id === finale.id) || await prendi(finale.id))) return { esiste: finale };
   const r = await scrivi(mie.filter(m => m.id !== finale.id).concat(finale));
   return "ok" in r ? { ok: true, id: finale.id } : r;
@@ -118,13 +118,13 @@ export async function importa(/** @type {string} */ nome, /** @type {string} */ 
   let doc;
   if (/\.json$/i.test(nome)) {
     let j;
-    try { j = JSON.parse(contenuto); } catch (_) { return { errori: [{ riga: 0, chiave: "error.molecules.badJson", testo: "json" }] }; }
-    for (const r of (j && Array.isArray(j.molecole) ? j.molecole : [])) if (r && typeof r === "object") r.origine = { tipo: "importata", file: nome };
-    doc = await json("a_json", j);
-  } else doc = await json("da_csv", { csv: contenuto, file: nome, livello: "importata", raccolta: nome.replace(/\.[^.]*$/, "") });
-  if (conErrori(doc)) return { errori: doc.errori };
-  const nuove = /** @type {Molecola[]} */ (doc.molecole);
-  const tenuteId = new Set(nuove.filter(m => mie.some(x => x.id === m.id && x.origine.tipo === "utente")).map(m => m.id));
+    try { j = JSON.parse(contenuto); } catch (_) { return { errori: [{ line: 0, key: "error.molecules.badJson", text: "json" }] }; }
+    for (const r of (j && Array.isArray(j.molecules) ? j.molecules : [])) if (r && typeof r === "object") r.origin = { type: "imported", file: nome };
+    doc = await json("to_json", j);
+  } else doc = await json("from_csv", { csv: contenuto, file: nome, level: "imported", collection: nome.replace(/\.[^.]*$/, "") });
+  if (conErrori(doc)) return { errori: doc.errors };
+  const nuove = /** @type {Molecola[]} */ (doc.molecules);
+  const tenuteId = new Set(nuove.filter(m => mie.some(x => x.id === m.id && x.origin.type === "user")).map(m => m.id));
   const dentro = nuove.filter(m => !tenuteId.has(m.id));
   const ids = new Set(dentro.map(m => m.id));
   const sostituite = mie.filter(m => ids.has(m.id)).length;
@@ -135,8 +135,8 @@ export async function importa(/** @type {string} */ nome, /** @type {string} */ 
 /** The records of the user as a file: `{ nome, testo, tipo }` (CSV or canonical JSON). */
 export async function esporta(/** @type {"csv" | "json"} */ formato) {
   await pronto();
-  const doc = await testo("a_json", { schema: SCHEMA, molecole: mie });
+  const doc = await testo("to_json", { schema: SCHEMA, molecules: mie });
   return formato === "csv"
-    ? { nome: "mzlab-molecules.csv", testo: await testo("a_csv", doc), tipo: "text/csv;charset=utf-8" }
+    ? { nome: "mzlab-molecules.csv", testo: await testo("to_csv", doc), tipo: "text/csv;charset=utf-8" }
     : { nome: "mzlab-molecules.json", testo: doc, tipo: "application/json;charset=utf-8" };
 }

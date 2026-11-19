@@ -49,7 +49,7 @@ let token = 0;
 const q = (/** @type {string} */ s) => /** @type {any} */ ((/** @type {HTMLElement} */ (dlg)).querySelector(s));
 const stato = (/** @type {string} */ msg) => { q("#mol-st").textContent = msg; };
 /** The text of a row error: the key comes from the engine (`error.molecules.*`), the detail is the value that was wrong. */
-const testoErrore = (/** @type {ErroreRiga} */ e) => `${t(`error.molecules.${e.chiave.slice("error.molecules.".length)}`)}${e.testo ? ` (${e.testo})` : ""}`;
+const testoErrore = (/** @type {ErroreRiga} */ e) => `${t(`error.molecules.${e.key.slice("error.molecules.".length)}`)}${e.text ? ` (${e.text})` : ""}`;
 
 function mostraErrori(/** @type {ErroreRiga[]} */ errs, /** @type {string} */ titolo) {
   const box = q("#mol-errs");
@@ -57,7 +57,7 @@ function mostraErrori(/** @type {ErroreRiga[]} */ errs, /** @type {string} */ ti
   if (!errs.length) { box.hidden = true; return; }
   const p = document.createElement("p"), ul = document.createElement("ul");
   p.textContent = titolo;
-  ul.replaceChildren(...errs.slice(0, MAX_ERRORI).map(e => { const li = document.createElement("li"); li.textContent = (e.riga ? t("mol.err.row", { riga: e.riga }) + " " : "") + testoErrore(e); return li; }));
+  ul.replaceChildren(...errs.slice(0, MAX_ERRORI).map(e => { const li = document.createElement("li"); li.textContent = (e.line ? t("mol.err.row", { riga: e.line }) + " " : "") + testoErrore(e); return li; }));
   box.append(p, ul);
   if (errs.length > MAX_ERRORI) { const m = document.createElement("p"); m.textContent = t("mol.err.more", { n: errs.length - MAX_ERRORI }); box.append(m); }
   box.hidden = false;
@@ -120,26 +120,26 @@ function testi() {
   q("#mol-q input").placeholder = t("mol.search.placeholder");
 }
 
-function riga(/** @type {{ id: string, nome: string, formula: string, massa?: number }} */ m) {
+function riga(/** @type {{ id: string, name: string, formula: string, mass?: number }} */ m) {
   const tr = document.createElement("tr"), liv = A.livello(m.id);
   const cella = (/** @type {string} */ txt, /** @type {string} */ cls = "") => { const td = document.createElement("td"); td.textContent = txt; if (cls) td.className = cls; return td; };
   const nome = document.createElement("th");
-  nome.scope = "row"; nome.textContent = m.nome;
+  nome.scope = "row"; nome.textContent = m.name;
   const act = document.createElement("td");
   act.className = "mol-act";
   const bottone = (/** @type {string} */ testo, /** @type {string} */ aria, /** @type {() => void} */ fn) => { const b = document.createElement("button"); b.type = "button"; b.textContent = testo; b.setAttribute("aria-label", aria); b.onclick = fn; act.appendChild(b); };
-  bottone(t("mol.edit"), t("mol.edit.aria", { name: m.nome }), () => apriModulo(m.id));
-  if (liv !== "catalogo") bottone(t("mol.delete"), t("mol.delete.aria", { name: m.nome }), () => chiediElimina(m.id, m.nome));
-  tr.append(nome, cella(m.formula), cella(m.massa ? m.massa.toFixed(4) : "", "mol-n"), cella(t(`mol.level.${liv}`)), act);
+  bottone(t("mol.edit"), t("mol.edit.aria", { name: m.name }), () => apriModulo(m.id));
+  if (liv !== "catalog") bottone(t("mol.delete"), t("mol.delete.aria", { name: m.name }), () => chiediElimina(m.id, m.name));
+  tr.append(nome, cella(m.formula), cella(m.mass ? m.mass.toFixed(4) : "", "mol-n"), cella(t(`mol.level.${liv}`)), act);
   return tr;
 }
 
 /** The table: the molecules of the user, or the hits of the search when something is typed (the search is the one of the engine). */
 async function elenco() {
   const mio = ++token, tx = q("#mol-q input") ? q("#mol-q input").value.trim() : "";
-  /** @type {{ id: string, nome: string, formula: string, massa?: number }[]} */
+  /** @type {{ id: string, name: string, formula: string, mass?: number }[]} */
   let righe;
-  try { righe = tx.length >= 2 ? await A.cerca(tx, 50) : A.mieMolecole().sort((a, b) => a.nome.localeCompare(b.nome)); } catch (_) { stato(t("mol.err.load")); return; }
+  try { righe = tx.length >= 2 ? await A.cerca(tx, 50) : A.mieMolecole().sort((a, b) => a.name.localeCompare(b.name)); } catch (_) { stato(t("mol.err.load")); return; }
   if (mio !== token) return;
   q("#mol-cap").textContent = tx.length >= 2 ? t("mol.cap.results", { n: righe.length }) : t("mol.cap.mine", { n: righe.length });
   q("#mol-body").replaceChildren(...righe.map(riga));
@@ -165,9 +165,9 @@ async function apriModulo(/** @type {string | null} */ id) {
   inModifica = id;
   const base = id ? await A.prendi(id) : null;
   riempi(f, base);
-  q("#mol-fh").textContent = base ? t("mol.form.edit", { name: base.nome }) : t("mol.form.add");
+  q("#mol-fh").textContent = base ? t("mol.form.edit", { name: base.name }) : t("mol.form.add");
   const nota = q("#mol-fn");
-  nota.hidden = !(base && base.origine.tipo === "catalogo");
+  nota.hidden = !(base && base.origin.type === "catalog");
   nota.textContent = t("mol.form.copyNote");
   q("#mol-ferr").hidden = true;
   vista("modulo");
@@ -190,8 +190,8 @@ async function salvaModuloOra() {
   if ("errori" in lettura) return mostra(lettura.errori);
   const r = await A.salva(lettura.rec, inModifica || "");
   if ("errori" in r) return mostra(r.errori);
-  if ("esiste" in r) return mostra([{ riga: 0, chiave: "error.molecules.dupId", testo: r.esiste.nome }]);
-  const nome = lettura.rec.nome || "";
+  if ("esiste" in r) return mostra([{ line: 0, key: "error.molecules.dupId", text: r.esiste.name }]);
+  const nome = lettura.rec.name || "";
   tornaElenco();
   stato(t("mol.saved", { name: nome }));
 }

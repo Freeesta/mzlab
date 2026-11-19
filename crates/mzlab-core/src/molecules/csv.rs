@@ -255,7 +255,7 @@ fn row(
     };
     m.origine.catalog = items(at(15));
     m.origine.file = file
-        .filter(|_| m.origine.tipo == "importata")
+        .filter(|_| m.origine.tipo == "imported")
         .map(str::to_string);
     for p in &h.props {
         let v = cell(Some(p.value));

@@ -217,7 +217,7 @@ fn molecule(
             .with("param", "molecule")
             .with("detail", detail)
     };
-    let ms = from_csv(list, "importata", None).map_err(|e| {
+    let ms = from_csv(list, "imported", None).map_err(|e| {
         bad(format!(
             "molecules list: row {}: {}",
             e[0].line, e[0].detail

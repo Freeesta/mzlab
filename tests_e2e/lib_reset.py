@@ -72,7 +72,7 @@ SEED = r"""async ({ n, kb, ver }) => {
     q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); q.onblocked = () => no(new Error("blocked")); });
   const list = typeof LISTE !== "undefined" && LISTE.userList ? LISTE.userList("synt_list", "Synthetic", "synt.csv", []) : { id: "synt_list", name: "Synthetic", items: [] };
   await new Promise(ok => { const x = db.transaction(["liste_utente", "molecole", "kv"], "readwrite");
-    x.objectStore("liste_utente").put(list); x.objectStore("molecole").put({ id: "synt_mol", nome: "synthetic", smiles: "CCO" }); x.objectStore("kv").put("1", "synt_kv");
+    x.objectStore("liste_utente").put(list); x.objectStore("molecole").put({ id: "synt_mol", name: "synthetic", smiles: "CCO" }); x.objectStore("kv").put("1", "synt_kv");
     x.oncomplete = x.onerror = x.onabort = () => ok(); });
   db.close();
   for (const name of ["mzlab-libs", "mzlab-libdir", "synt-invented-db"]) await new Promise(ok => { const q = indexedDB.open(name, 1); q.onupgradeneeded = () => q.result.createObjectStore("s"); q.onsuccess = () => { q.result.close(); ok(); }; q.onerror = ok; });
