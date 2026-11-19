@@ -1882,7 +1882,7 @@
                   {
                     "enum":["msn-search","candidates"],
                     "default":"msn-search",
-                    "description":"msn-search: the msn-search/1 text of msn-lib search. candidates: the candidates/1 of the other algorithms (score = MS2 entropy similarity; the tree and loss scores and the proofs in the tree block), which annot.level reads"
+                    "description":"msn-search: the msn-search/1 text of msn lib search. candidates: the candidates/1 of the other algorithms (score = MS2 entropy similarity; the tree and loss scores and the proofs in the tree block), which annot.level reads"
                   }
                 ]
               }

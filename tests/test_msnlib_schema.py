@@ -23,7 +23,7 @@ def library(tmp_path_factory):
     d = tmp_path_factory.mktemp("msnlib")
     shutil.copy(MZML, d / "msn.mzML")
     (d / "manifest.tsv").write_text(MANIFEST)
-    r = subprocess.run(cli_argv("msn-lib", "build", str(d / "manifest.tsv")), cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run(cli_argv("msn", "lib", "build", str(d / "manifest.tsv")), cwd=ROOT, capture_output=True, text=True)
     assert r.returncode == 0, r.stderr[-2000:]
     return json.loads((d / "manifest.json").read_text())
 

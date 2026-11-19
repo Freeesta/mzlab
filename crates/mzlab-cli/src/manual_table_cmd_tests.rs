@@ -25,7 +25,7 @@ fn fixture(tag: &str) -> Option<PathBuf> {
             std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
             "python3 not available"
         );
-        eprintln!("SKIP manual-table: python3 not available");
+        eprintln!("SKIP peak table: python3 not available");
         return None;
     }
     Some(d)

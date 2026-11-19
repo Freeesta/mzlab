@@ -37,7 +37,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     }
     let [text] = pos.as_slice() else {
-        return Outcome::fail("ion-mz needs one text");
+        return Outcome::fail("ion mz needs one text");
     };
     match mzlab_core::elements::formula_mz(
         text,

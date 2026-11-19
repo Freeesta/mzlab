@@ -91,7 +91,7 @@ fn every_failure_code_is_one_error_document_under_json() {
 
 #[test]
 fn wiff_and_samples_list_keep_their_document_at_exit_1_and_3_and_a_non_verdict_command_wraps_it() {
-    // wiff list exits 3 (a sample refused), wiff verify exits 1 (a difference): the wiff.list/1 and wiff.verify/1 documents stay on stdout
+    // file info exits 3 (a sample refused), file verify exits 1 (a difference): the wiff.list/1 and wiff.verify/1 documents stay on stdout
     let out =
         std::env::temp_dir().join(format!("mzlab_cli_contract_wiffref_{}", std::process::id()));
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_riferimento.py");
@@ -129,7 +129,7 @@ fn wiff_and_samples_list_keep_their_document_at_exit_1_and_3_and_a_non_verdict_c
         );
     }
     let _ = std::fs::remove_dir_all(out);
-    // samples list at exit 1: a .wiff.scan shorter than its index says, asked with --probe
+    // sample list at exit 1: a .wiff.scan shorter than its index says, asked with --probe
     let (dir, wiff_file) = wiff("verdict_samples");
     let cut = dir.join("cut");
     std::fs::create_dir_all(&cut).unwrap();
@@ -151,7 +151,7 @@ fn wiff_and_samples_list_keep_their_document_at_exit_1_and_3_and_a_non_verdict_c
             && !t.contains("\"schema\":\"error/1\""),
         "{t}"
     );
-    // the other `samples` words are not verdicts: a failure of `samples select` is one error/1
+    // the other `samples` words are not verdicts: a failure of `sample select` is one error/1
     assert_eq!(
         run(&["sample", "select", &wiff_file, "--sample", "9", "--json"]).code,
         5

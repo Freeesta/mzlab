@@ -142,7 +142,7 @@ fn view_of(n: Option<String>) -> std::result::Result<mzlab_feat::msnfigure::View
 const FIGURE_USAGE: &str =
     "--figure needs --out and the graph itself (not --summary, --export or --structures)";
 
-/// The arguments after `msn-graph`; `Ok(None)` = `--help`.
+/// The arguments after `msn graph`; `Ok(None)` = `--help`.
 pub fn parse_args(
     mut a: impl Iterator<Item = String>,
 ) -> std::result::Result<Option<Args>, String> {
@@ -366,7 +366,7 @@ pub fn structures_text(
     mzlab_feat::chem::structures::strutture_testo(g, j, o.smiles.as_deref(), (nodo, ppm))
 }
 
-/// `msn-graph complete IN.json [--out PATH]`: the graph of the file with the key `view` added; the text and the file to write it to.
+/// `msn graph complete IN.json [--out PATH]`: the graph of the file with the key `view` added; the text and the file to write it to.
 pub fn complete_cmd(
     mut a: impl Iterator<Item = String>,
 ) -> std::result::Result<(String, Option<PathBuf>), String> {
@@ -384,7 +384,7 @@ pub fn complete_cmd(
     Ok((done + "\n", out))
 }
 
-/// The graph text `j` of `g` with the keys `interpretation` and `breaks` the options ask for (also used by `msn-lib add`).
+/// The graph text `j` of `g` with the keys `interpretation` and `breaks` the options ask for (also used by `msn lib add`).
 pub fn with_keys(a: &Args, g: &Graph, mut j: String) -> Result<String> {
     if let Some(ppm) = a.interpret {
         j = with_interpretation(&j, g, ppm);

@@ -237,7 +237,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         return Outcome::fail("usage: mzlab-cli file list DIR [--json] [--out PATH]");
     }
     let Some(dir) = dir else {
-        return Outcome::fail("folder list needs a DIR");
+        return Outcome::fail("file list needs a DIR");
     };
     if !dir.is_dir() {
         return Outcome {

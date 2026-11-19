@@ -1,5 +1,5 @@
 """The molkit .wasm (crates/mzlab-mol-wasm) gives the `check/1` and the `cip/1` of a drawing byte for byte like `mzlab-cli mol check` and
-`mol-cip` and the app fixtures (tests/dati/check_disegno.json and cip_disegno.json, read by crates/mzlab-desktop/tests/labels.rs too), and a bad
+`mol cip` and the app fixtures (tests/dati/check_disegno.json and cip_disegno.json, read by crates/mzlab-desktop/tests/labels.rs too), and a bad
 molfile as a keyed JSON error; the `subdb/1` of a structure list like `mzlab-cli mol search --db` and the app (tests/dati/sub_db.json); the Flow
 step `structure.moiety` (`flow_moiety`) like `mzlab-cli flow run --set` (tests/dati/moiety.json); the `hilite/1` of the evidence colours like
 `mzlab-cli mol hilite` and the app (tests/dati/hilite_disegno.json). Skipped without cargo, wasm-bindgen or node."""

@@ -30,32 +30,12 @@ fn edges_surround_the_peak_and_snmin_refuses_noise() {
         v["edges"][1].as_f64().unwrap(),
     );
     assert!(a < 2.25 && b > 2.25 && b - a < 1.2, "{s}");
-    let o = run(args(&[p, "--at", "6", "--set", "snMin=1000"]));
+    let o = run(args(&[p, "--at", "6", "--set", "sn_min=1000"]));
     assert_eq!(
         String::from_utf8(o.stdout).unwrap().trim(),
         "{\"edges\":null}"
     );
     assert_ne!(run(args(&[p, "--at", "2", "--set", "bogus=1"])).code, 0);
-    let _ = std::fs::remove_file(f);
-}
-
-#[test]
-fn snake_case_and_camel_case_set_the_same_field() {
-    let f = std::env::temp_dir().join("mzlab_peak_edges_alias.csv");
-    std::fs::write(&f, format!("rt,y\n{}", gauss_csv())).unwrap();
-    let p = f.to_str().unwrap();
-    for (old, new, v) in [
-        ("areaNoise", "area_noise", "3"),
-        ("edgeFrac", "edge_frac", "0.2"),
-        ("snMin", "sn_min", "1000"),
-        ("minHalf", "min_half", "0.5"),
-    ] {
-        for at in ["2.25", "6"] {
-            let a = run(args(&[p, "--at", at, "--set", &format!("{old}={v}")]));
-            let b = run(args(&[p, "--at", at, "--set", &format!("{new}={v}")]));
-            assert_eq!((a.code, a.stdout), (b.code, b.stdout), "{old}");
-        }
-    }
     let _ = std::fs::remove_file(f);
 }
 

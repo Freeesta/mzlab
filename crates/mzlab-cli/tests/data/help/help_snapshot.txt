@@ -32,7 +32,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli file convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML
        mzlab-cli sample vars NAME...   how the file names split into variables, as JSON
        mzlab-cli sample group NAME...   the group name the file names share, as JSON
-       mzlab-cli sample table NAME...   the samples table proposed for the file names
+       mzlab-cli sample table NAME...   the sample table proposed for the file names
        mzlab-cli sample list FILE...   what a file holds sample by sample, as JSON; exit 1 or 3 when a sample is refused
        mzlab-cli sample select FILE --sample LIST   which samples --sample LIST picks
        mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
@@ -127,7 +127,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli file convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML
        mzlab-cli sample vars NAME...   how the file names split into variables, as JSON
        mzlab-cli sample group NAME...   the group name the file names share, as JSON
-       mzlab-cli sample table NAME...   the samples table proposed for the file names
+       mzlab-cli sample table NAME...   the sample table proposed for the file names
        mzlab-cli sample list FILE...   what a file holds sample by sample, as JSON; exit 1 or 3 when a sample is refused
        mzlab-cli sample select FILE --sample LIST   which samples --sample LIST picks
        mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
@@ -222,7 +222,7 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli file convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML
        mzlab-cli sample vars NAME...   how the file names split into variables, as JSON
        mzlab-cli sample group NAME...   the group name the file names share, as JSON
-       mzlab-cli sample table NAME...   the samples table proposed for the file names
+       mzlab-cli sample table NAME...   the sample table proposed for the file names
        mzlab-cli sample list FILE...   what a file holds sample by sample, as JSON; exit 1 or 3 when a sample is refused
        mzlab-cli sample select FILE --sample LIST   which samples --sample LIST picks
        mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON
@@ -543,7 +543,7 @@ mzlab-cli mol anal: average mass, mass % per element and the theoretical isotope
 
 usage: mzlab-cli mol anal REQUEST.json|- [--out PATH]
 
-  REQUEST.json  {"atoms": [{"el", "iso", "h", "q", "r"}, ...]}: the atoms of one structure as mol-label reads them; - reads the standard input
+  REQUEST.json  {"atoms": [{"el", "iso", "h", "q", "r"}, ...]}: the atoms of one structure as mol label reads them; - reads the standard input
   --out PATH    write there instead of the standard output
 
 The answer is {"format": "anal/1", "structure": {the etich/1 fields}, "average", "composition": [{el, count, pct}],
@@ -710,7 +710,7 @@ exit 0
 --- stdout
 usage: mzlab-cli sample vars NAME...   how the file names split into variables, as JSON
        mzlab-cli sample group NAME...   the group name the file names share, as JSON
-       mzlab-cli sample table NAME...   the samples table proposed for the file names
+       mzlab-cli sample table NAME...   the sample table proposed for the file names
        mzlab-cli sample list FILE...   what a file holds sample by sample, as JSON; exit 1 or 3 when a sample is refused
        mzlab-cli sample select FILE --sample LIST   which samples --sample LIST picks
 
@@ -730,8 +730,6 @@ usage: mzlab-cli peak edges TRACE.csv|- --at MIN [--ref MIN] [--mrm] [--set NAME
   --mrm        the trace is an MRM transition
   --set        the page dialog: win, edge_frac, sn_min, multi, tail; engine only: area_noise, noise (mad|rms|manual), min_half, constrain, nr0, nr1
   output       {"edges":[t0,t1]}, or {"edges":null} when the S/N is under sn_min
-
-old names still accepted: areaNoise, edgeFrac, snMin, minHalf
 --- stderr
 
 === mzlab-cli peak edges --help
@@ -747,8 +745,6 @@ usage: mzlab-cli peak edges TRACE.csv|- --at MIN [--ref MIN] [--mrm] [--set NAME
   --mrm        the trace is an MRM transition
   --set        the page dialog: win, edge_frac, sn_min, multi, tail; engine only: area_noise, noise (mad|rms|manual), min_half, constrain, nr0, nr1
   output       {"edges":[t0,t1]}, or {"edges":null} when the S/N is under sn_min
-
-old names still accepted: areaNoise, edgeFrac, snMin, minHalf
 --- stderr
 
 === mzlab-cli peak table --help
@@ -794,7 +790,7 @@ mzlab-cli peak split: one integration drawn by hand on a transition / SIM trace,
 
 usage: mzlab-cli peak split FILE... --set tr=J --set a=MIN --set b=MIN [--set NAME=VALUE...] [--out PATH]
 
-  FILE        an mzML, or a vendor file the app reads, in the order of the page (as manual-table)
+  FILE        an mzML, or a vendor file the app reads, in the order of the page (as peak table)
   --set file=I        the sample (from 0, default 0) and --set tr=J its transition in the list of the file
   --set a=MIN --set b=MIN   the edges of the window
   --set baseline=zero|edges|line   default zero; line needs --set line=t0,y0,t1,y1
@@ -804,7 +800,7 @@ usage: mzlab-cli peak split FILE... --set tr=J --set a=MIN --set b=MIN [--set NA
   --set label=NAME    the name of the window (the last column of the table)
   --out PATH  write there instead of the standard output
 
-Without split: {"splits":[MIN,...]}, the times of the valleys. With split: the CSV of manual-table for this window, a row per part between drop
+Without split: {"splits":[MIN,...]}, the times of the valleys. With split: the CSV of peak table for this window, a row per part between drop
 lines on the window's baseline (overlap = drop, pv = Hp/Hv: the height of the part over the higher valley next to it; Ph. Eur. 2.2.46 takes the
 value of the smaller peak). The areas of the parts add up to the area of the whole window.
 --- stderr
@@ -820,8 +816,8 @@ usage: mzlab-cli peak auto TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VALUE
   --from/--to  the stretch whose apexes count (default: the whole trace)
   --set        the page dialog: hr_smooth (points, odd), hr_sn; engine only: hr_prom (% of the tallest), hr_scans, hr_half (points, 0 = auto), hr_slope (%);
                the area of every peak: baseline = zero (default: any background under the peak is part of the area), edges (the line b0-b1),
-               or line with base_y0, base_t0, base_y1, base_t1 (see peak-area --help);
-               area_unit: s = counts x s (default, as peak-area), min = counts x min (the old unit)
+               or line with base_y0, base_t0, base_y1, base_t1 (see peak area --help);
+               area_unit: s = counts x s (default, as peak area), min = counts x min (the old unit)
   output       {"peaks":[{"t0":MIN,"t1":MIN,"b0":BASELINE,"b1":BASELINE,"area":COUNTS_S,"baseline":MODE}...]}; with zero or line each
                peak also has "below" (COUNTS_S, the part under the line) and its area is the signed one against that line
 --- stderr
@@ -838,7 +834,7 @@ usage: mzlab-cli peak auto-lr TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VA
   --set        lr_half (Savitzky-Golay half window of the detection copy, points; 0 = 40 % of the FWHM of the tallest peak), lr_valley (% of the
                smaller peak the valley must go down to keep two peaks), lr_sn (smallest height over the noise), lr_min_pts, lr_despike (1/0:
                median of 3 against spikes), lr_split (drop = one baseline under touching peaks, valley = each baseline ends at the valley),
-               area_unit (s = counts x s, default, as peak-area; min = counts x min, the old unit)
+               area_unit (s = counts x s, default, as peak area; min = counts x min, the old unit)
   output       {"params":{half, half_auto, valley, sn, min_pts, despike, split, noise}, "peaks":[{lo, hi, t0, t1, rt, b0, b1, area, below,
                area_zero, height, sn, end0, end1}...]}: indices, min, counts; areas in counts x s (area_unit) of the raw trace against the straight line
                b0-b1 (signed; below = the part under it) and from zero; end = background | valley | cap (5 FWHM)
@@ -1006,8 +1002,6 @@ usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] [--out FOLDER] [--set 
   --help                   this text
 
 exit codes: 0 done, 1 a step failed (the others are written), 2 usage, 3 the plan is not valid, 4 an input is missing or does not match
-
-old names still accepted: --jsonl
 --- stderr
 
 === mzlab-cli flow check --help
@@ -1117,19 +1111,19 @@ exit 0
 --- stdout
 mzlab-cli msn lib: the library of MSn trees (msn-lib/1).
 
-usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
+usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn graph options] [--out PATH]
        mzlab-cli msn lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
        mzlab-cli msn lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH]
        mzlab-cli msn lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
-          The options are those of `msn-graph` (--help of that command)
+          The options are those of `msn graph` (--help of that command)
   build   one entry per row of the manifest (tab separated, header): id, neutral_formula, expected_adduct, file (relative to DIR, by default the folder
           of the manifest); optional smiles, activation. The ion is "<neutral_formula> <expected_adduct>". Writes LIB.json next to the manifest unless --out
   export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
-  search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
+  search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn graph`) and of the same polarity, as the JSON
           msn-search/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
           --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
@@ -1140,19 +1134,19 @@ exit 0
 --- stdout
 mzlab-cli msn lib: the library of MSn trees (msn-lib/1).
 
-usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
+usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn graph options] [--out PATH]
        mzlab-cli msn lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
        mzlab-cli msn lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH]
        mzlab-cli msn lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
-          The options are those of `msn-graph` (--help of that command)
+          The options are those of `msn graph` (--help of that command)
   build   one entry per row of the manifest (tab separated, header): id, neutral_formula, expected_adduct, file (relative to DIR, by default the folder
           of the manifest); optional smiles, activation. The ion is "<neutral_formula> <expected_adduct>". Writes LIB.json next to the manifest unless --out
   export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
-  search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
+  search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn graph`) and of the same polarity, as the JSON
           msn-search/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
           --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
@@ -1163,19 +1157,19 @@ exit 0
 --- stdout
 mzlab-cli msn lib: the library of MSn trees (msn-lib/1).
 
-usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
+usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn graph options] [--out PATH]
        mzlab-cli msn lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
        mzlab-cli msn lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH]
        mzlab-cli msn lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
-          The options are those of `msn-graph` (--help of that command)
+          The options are those of `msn graph` (--help of that command)
   build   one entry per row of the manifest (tab separated, header): id, neutral_formula, expected_adduct, file (relative to DIR, by default the folder
           of the manifest); optional smiles, activation. The ion is "<neutral_formula> <expected_adduct>". Writes LIB.json next to the manifest unless --out
   export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
-  search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
+  search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn graph`) and of the same polarity, as the JSON
           msn-search/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
           --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
@@ -1186,19 +1180,19 @@ exit 0
 --- stdout
 mzlab-cli msn lib: the library of MSn trees (msn-lib/1).
 
-usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
+usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn graph options] [--out PATH]
        mzlab-cli msn lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
        mzlab-cli msn lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH]
        mzlab-cli msn lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
-          The options are those of `msn-graph` (--help of that command)
+          The options are those of `msn graph` (--help of that command)
   build   one entry per row of the manifest (tab separated, header): id, neutral_formula, expected_adduct, file (relative to DIR, by default the folder
           of the manifest); optional smiles, activation. The ion is "<neutral_formula> <expected_adduct>". Writes LIB.json next to the manifest unless --out
   export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
-  search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
+  search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn graph`) and of the same polarity, as the JSON
           msn-search/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
           --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not
@@ -1266,9 +1260,9 @@ exit codes: 0 done (verify: everything equal), 1 verify found a difference, 2 us
 === mzlab-cli file info
 exit 2
 --- stdout
-{"schema":"error/1","code":2,"error_key":"err.cli.usage","params":{"message":"wiff list needs at least one .wiff"},"message":"wiff list needs at least one .wiff","hint":"","command":"file info"}
+{"schema":"error/1","code":2,"error_key":"err.cli.usage","params":{"message":"file info needs at least one .wiff"},"message":"file info needs at least one .wiff","hint":"","command":"file info"}
 --- stderr
-error: wiff list needs at least one .wiff
+error: file info needs at least one .wiff
 (mzlab-cli file info --help)
 
 === mzlab-cli file info nosuch

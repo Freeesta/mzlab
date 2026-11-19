@@ -128,7 +128,7 @@ def test_a_trace_below_zero_is_never_a_negative_area(tmp_path):
 
 
 def test_areas_are_counts_seconds_by_default_and_minutes_on_request(tmp_path):
-    """The default unit is counts x s (as peak-area); area_unit=min gives the old counts x min: the same peaks, every area 60 times larger."""
+    """The default unit is counts x s (as peak area); area_unit=min gives the old counts x min: the same peaks, every area 60 times larger."""
     t, y, _ = trace("singles", 1)
     f = str(write_csv(tmp_path / "unit.csv", np.round(t, 6), np.round(y, 3)))
     s = json.loads(cli("peak", "auto-lr", f).stdout)

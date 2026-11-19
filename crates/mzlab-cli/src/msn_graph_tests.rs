@@ -102,7 +102,7 @@ fn bad_arguments_are_refused() {
     assert_eq!(run(&["msn", "graph", "--help"]).code, 0);
 }
 
-/// Every flag of `msn-graph` that has a step parameter next to it; `t` is a truth file.
+/// Every flag of `msn graph` that has a step parameter next to it; `t` is a truth file.
 const SMILES: &str = "CCOC(=O)c1c[nH]c2ccccc12";
 
 fn flag_cases(t: &str) -> Vec<Vec<&str>> {
@@ -238,7 +238,7 @@ fn the_msn_json_outputs_hold_no_italian_word() {
     .concat();
     let g = run(&all);
     assert_eq!(g.code, 0, "{}", g.stderr);
-    assert_english("msn-graph", &g.stdout);
+    assert_english("msn graph", &g.stdout);
     let gp = d.join("g.json");
     std::fs::write(&gp, &g.stdout).unwrap();
     let plain = run(&[&["msn", "graph", f.to_str().unwrap()][..], &ion[..]].concat());
@@ -247,7 +247,7 @@ fn the_msn_json_outputs_hold_no_italian_word() {
 
     let c = run(&["msn", "complete", pp.to_str().unwrap()]);
     assert_eq!(c.code, 0, "{}", c.stderr);
-    assert_english("msn-graph complete", &c.stdout);
+    assert_english("msn graph complete", &c.stdout);
 
     let lib = d.join("lib.json");
     let (l, p) = (lib.to_str().unwrap(), pp.to_str().unwrap());
@@ -257,7 +257,7 @@ fn the_msn_json_outputs_hold_no_italian_word() {
     ]
     .concat();
     assert_eq!(run(&add).code, 0);
-    assert_english("msn-lib", std::fs::read(&lib).unwrap().as_slice());
+    assert_english("msn lib", std::fs::read(&lib).unwrap().as_slice());
     let s = run(&["msn", "lib", "search", l, p]);
     assert_eq!(s.code, 0, "{}", s.stderr);
     assert_english("msn-search", &s.stdout);
@@ -279,13 +279,13 @@ fn the_msn_json_outputs_hold_no_italian_word() {
     ]
     .concat());
     assert_eq!(t.code, 0, "{}", t.stderr);
-    assert_english("msn-graph --truth --summary", &t.stdout);
+    assert_english("msn graph --truth --summary", &t.stdout);
 
     let lines = "{\"id\":\"R\",\"layer\":\"hcd\",\"pol\":1,\"v\":{\"n\":2,\"it\":100,\"a\":2,\"ia\":100,\"b\":0,\"ib\":0,\"c\":1,\"ic\":80,\"r\":{\"loss_c2h2o_acetyl\":1}}}\n";
     let lf = d.join("lines.jsonl");
     std::fs::write(&lf, lines).unwrap();
     let sum = run(&["msn", "rules", "sum", lf.to_str().unwrap()]);
     assert_eq!(sum.code, 0, "{}", sum.stderr);
-    assert_english("msn-rules sum", &sum.stdout);
+    assert_english("msn rules sum", &sum.stdout);
     let _ = std::fs::remove_dir_all(&d);
 }

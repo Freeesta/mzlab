@@ -14,9 +14,7 @@ usage: mzlab-cli peak edges TRACE.csv|- --at MIN [--ref MIN] [--mrm] [--set NAME
   --ref MIN    base width of the peaks already integrated (used with --set constrain=PERCENT)
   --mrm        the trace is an MRM transition
   --set        the page dialog: win, edge_frac, sn_min, multi, tail; engine only: area_noise, noise (mad|rms|manual), min_half, constrain, nr0, nr1
-  output       {\"edges\":[t0,t1]}, or {\"edges\":null} when the S/N is under sn_min
-
-old names still accepted: areaNoise, edgeFrac, snMin, minHalf";
+  output       {\"edges\":[t0,t1]}, or {\"edges\":null} when the S/N is under sn_min";
 
 pub(crate) fn trace(src: &str) -> Result<(Vec<f64>, Vec<f64>), String> {
     let text = if src == "-" {
@@ -43,19 +41,7 @@ pub(crate) fn trace(src: &str) -> Result<(Vec<f64>, Vec<f64>), String> {
     Ok((x, y))
 }
 
-/// Old camelCase `--set` names still accepted on input, as `(old, new)`.
-const ALIASES: [(&str, &str); 4] = [
-    ("areaNoise", "area_noise"),
-    ("edgeFrac", "edge_frac"),
-    ("snMin", "sn_min"),
-    ("minHalf", "min_half"),
-];
-
 fn set(p: &mut LrParams, name: &str, v: &str) -> Result<(), String> {
-    let name = ALIASES
-        .iter()
-        .find(|(old, _)| *old == name)
-        .map_or(name, |(_, new)| new);
     if name == "noise" {
         p.noise = match v {
             "mad" => NoiseMode::Mad,
@@ -121,7 +107,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(()) => {}
     }
     let (Some(src), Some(at)) = (src, at) else {
-        return Outcome::fail("peak-edges needs a trace and --at (see --help)");
+        return Outcome::fail("peak edges needs a trace and --at (see --help)");
     };
     match trace(&src) {
         Err(e) => Outcome::fail(&e),

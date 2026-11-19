@@ -30,7 +30,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     }
     let [formula, adduct] = pos.as_slice() else {
-        return Outcome::fail("ion-pattern needs a formula and an adduct");
+        return Outcome::fail("ion pattern needs a formula and an adduct");
     };
     match mzlab_core::ionpattern::route(formula, adduct) {
         Ok(j) => crate::emit(format!("{j}\n"), &out),

@@ -60,7 +60,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     }
     let Some(file) = file else {
-        return Outcome::fail("ref-list needs a CSV file");
+        return Outcome::fail("db ref-list needs a CSV file");
     };
     let csv = match std::fs::read_to_string(&file) {
         Ok(t) => t,

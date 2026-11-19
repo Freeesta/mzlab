@@ -106,16 +106,16 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     }
     if !sub {
-        return Outcome::fail("mol-search needs --sub (the substructure search)");
+        return Outcome::fail("mol search needs --sub (the substructure search)");
     }
     let Some((query, targets)) = pos.split_first() else {
-        return Outcome::fail("mol-search --sub needs a query");
+        return Outcome::fail("mol search --sub needs a query");
     };
     if db.is_some() && !targets.is_empty() {
-        return Outcome::fail("mol-search --sub: give targets or --db, not both");
+        return Outcome::fail("mol search --sub: give targets or --db, not both");
     }
     if db.is_none() && targets.is_empty() {
-        return Outcome::fail("mol-search --sub needs at least one target or --db LIST");
+        return Outcome::fail("mol search --sub needs at least one target or --db LIST");
     }
     let req = match request(query, targets, db.as_deref(), &sets) {
         Ok(r) => r,

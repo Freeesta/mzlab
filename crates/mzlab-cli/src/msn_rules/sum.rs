@@ -1,4 +1,4 @@
-//! `mzlab-cli msn rules sum LINES...`: the lines of `msn-rules` added up per stratum (instrument and activation) and polarity: the coverage of the
+//! `mzlab-cli msn rules sum LINES...`: the lines of `msn rules` added up per stratum (instrument and activation) and polarity: the coverage of the
 //! rules of the structure against each decoy, the decoy rate of every rule and the thresholds of the protocol. All the arithmetic of the validation is here.
 
 use std::collections::BTreeMap;

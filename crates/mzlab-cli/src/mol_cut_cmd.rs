@@ -101,7 +101,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     }
     let [src] = pos.as_slice() else {
-        return Outcome::fail("mol-cut needs one molfile (or - for the standard input)");
+        return Outcome::fail("mol cut needs one molfile (or - for the standard input)");
     };
     if let Some((k, _)) = sets
         .iter()

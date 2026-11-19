@@ -3,7 +3,7 @@ three samples whose peaks drift 0.04 min from one to the next; no laboratory dat
 «Manual integrations» per sample (columns Channel, Sample, Name, Area, Start, End, Apex, Height, S/N, Baseline, Origin), the engine's decision per sample
 (applied inside the window, shifted to the apex that drifted out of it, no peak) in the Origin column, a name typed on one row for the whole group (Enter) or
 for that sample alone (Alt+Enter), a live status line «Integration applied to N files», no notice about a cap of files; the card is the bytes of `mzlab-cli
-manual-table` for the same windows (`follow`, `names`), and the shift of a window is `mzlab-cli peak table --set shifts=true`. Needs the site and the .wasm
+peak table` for the same windows (`follow`, `names`), and the shift of a window is `mzlab-cli peak table --set shifts=true`. Needs the site and the .wasm
 (python3 tools/prepara_sito.py) and cargo for the CLI. Run from the repo root: python3 tests_e2e/e2e_integrazione_multi.py"""
 # covers: mzlab/web/integrazioni-manuali.js, mzlab/web/integra-segue.js, crates/mzlab-core/src/manint.rs, tools/wiff_sim.py
 import json, shutil, subprocess, sys, os, tempfile
@@ -41,7 +41,7 @@ def all_ions(pg):
     wait_for_js(pg, "(() => { const p = E.panels.find(q => q.type === 'mrm' && q._a); return !!p && new Set(p._a.sr.map(s => s.k)).size === E.files.length; })()", timeout=60000)
 
 def cli_table(pg, st):
-    """manual-table on the .wiff for the windows the page sent (files numbered as the .wiff numbers its samples)."""
+    """peak table on the .wiff for the windows the page sent (files numbered as the .wiff numbers its samples)."""
     order = [n[:-5] for n in st["names"]]
     ws = []
     for x in json.loads(st["windows"]):

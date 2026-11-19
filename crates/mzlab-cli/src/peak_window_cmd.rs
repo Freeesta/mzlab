@@ -54,16 +54,16 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(()) => {}
     }
     let (Some(src), Some(end), Some(other)) = (src, end, other) else {
-        return Outcome::fail("peak-window needs a trace, --end and --other (see --help)");
+        return Outcome::fail("peak window needs a trace, --end and --other (see --help)");
     };
     if at.is_some() == step.is_some() {
-        return Outcome::fail("peak-window needs one of --at or --step");
+        return Outcome::fail("peak window needs one of --at or --step");
     }
     match trace(&src) {
         Err(e) => Outcome::fail(&e),
         Ok((x, _)) => match move_end_json(&x, end, other, at, step.unwrap_or(0), lo, hi) {
             Some(t) => Outcome::ok(format!("{t}\n").into_bytes()),
-            None => Outcome::fail("peak-window: no point of the trace is free for this end"),
+            None => Outcome::fail("peak window: no point of the trace is free for this end"),
         },
     }
 }

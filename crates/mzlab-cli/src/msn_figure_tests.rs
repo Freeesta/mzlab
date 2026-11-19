@@ -1,5 +1,5 @@
 //! The figures of the fragmentation graph: the golden SVGs of a synthetic graph (`tests/msn_figura/`, `MZLAB_UPDATE_FIGURE=1` rewrites them), the HTML with
-//! nothing outside it, and the same bytes from the command, `msn-graph --figure`, `msn-graph figure` and the step `msn.figure@1`.
+//! nothing outside it, and the same bytes from the command, `msn graph --figure`, `msn graph figure` and the step `msn.figure@1`.
 
 use std::path::PathBuf;
 
@@ -257,7 +257,7 @@ fn the_arguments_are_checked() {
     }
 }
 
-/// The step of the Flow writes the bytes of `msn-graph figure`.
+/// The step of the Flow writes the bytes of `msn graph figure`.
 #[test]
 fn the_step_writes_the_bytes_of_the_command() {
     let d = dir("step");

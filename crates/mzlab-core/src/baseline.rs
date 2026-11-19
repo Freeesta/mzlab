@@ -3,7 +3,7 @@
 //! the signed trapezoid integral of the trace minus the line; the part of the trace under the line is reported apart (`below`), never dropped.
 //! A `line` is never below zero: it is held at 0 wherever it would go below it (`at`), and the area it would have counted under zero is reported apart
 //! (`clamped`, only when it applies).
-//! One function for the Data view (`peak_area` of mzlab-wasm, `mzlab-cli peak area`), `peak-auto`, `chrom.transitions@2` and the SIM table.
+//! One function for the Data view (`peak_area` of mzlab-wasm, `mzlab-cli peak area`), `peak auto`, `chrom.transitions@2` and the SIM table.
 
 use crate::peakq_lr::near_idx;
 

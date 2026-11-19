@@ -50,7 +50,7 @@ def score(fs: list, cmd: str, sets: list) -> str:
     """One line: the windows of `mzlab-cli CMD --set ...` on every file against the true apexes and areas."""
     def one(x):
         f, tr = x
-        r = json.loads(subprocess.run([str(CLI), cmd, str(f), *[a for s in ["area_unit=min", *sets] for a in ("--set", s)]], capture_output=True, text=True, check=True).stdout)
+        r = json.loads(subprocess.run([str(CLI), *cmd.split(), str(f), *[a for s in ["area_unit=min", *sets] for a in ("--set", s)]], capture_output=True, text=True, check=True).stdout)
         ap, w = tr["apex"], [(p["t0"], p["t1"], p["area"]) for p in r["peaks"]]
         inside = [[a for a in ap if lo <= a <= hi] for lo, hi, _ in w]
         err = [abs(k[0][2] / ar - 1) for a, ar in zip(ap, tr["area"]) for k in [[x for x in w if x[0] <= a <= x[1]]] if len(k) == 1]
@@ -67,7 +67,7 @@ def score(fs: list, cmd: str, sets: list) -> str:
 
 
 def click(tmp: Path) -> str:
-    """The single click before this route (`peak-edges --at APEX --mrm` at every true apex) on the 150 peaks of the base cases, 10 seeds."""
+    """The single click before this route (`peak edges --at APEX --mrm` at every true apex) on the 150 peaks of the base cases, 10 seeds."""
     found = over = 0
     for case in J.CASES:
         if case in EXTRA:
@@ -90,17 +90,17 @@ def main(what: str) -> None:
         fs = {k: files(tmp, k) for k in SETS}
         if what in ("default", "all"):
             for k in SETS:
-                print(f"LR auto    {k:5s} defaults: {score(fs[k], 'peak-auto-lr', [])}", flush=True)
+                print(f"LR auto    {k:5s} defaults: {score(fs[k], 'peak auto-lr', [])}", flush=True)
         if what in ("hr", "all"):
             for k in SETS:
-                print(f"HR auto    {k:5s} peak-auto baseline=edges: {score(fs[k], 'peak-auto', ['baseline=edges'])}", flush=True)
+                print(f"HR auto    {k:5s} peak auto baseline=edges: {score(fs[k], 'peak auto', ['baseline=edges'])}", flush=True)
         if what in ("sweep", "all"):
             for k in SETS:
                 for half in (0, 2, 3, 4, 5):
-                    print(f"LR auto    {k:5s} lr_half={half} (0 = from the peaks): {score(fs[k], 'peak-auto-lr', [f'lr_half={half}'])}", flush=True)
+                    print(f"LR auto    {k:5s} lr_half={half} (0 = from the peaks): {score(fs[k], 'peak auto-lr', [f'lr_half={half}'])}", flush=True)
                 for sn in (3, 5, 8):
                     for val in (5, 10, 15, 20):
-                        print(f"LR auto    {k:5s} lr_sn={sn} lr_valley={val}: {score(fs[k], 'peak-auto-lr', [f'lr_sn={sn}', f'lr_valley={val}'])}", flush=True)
+                        print(f"LR auto    {k:5s} lr_sn={sn} lr_valley={val}: {score(fs[k], 'peak auto-lr', [f'lr_sn={sn}', f'lr_valley={val}'])}", flush=True)
         if what in ("click", "all"):
             print(click(tmp), flush=True)
 

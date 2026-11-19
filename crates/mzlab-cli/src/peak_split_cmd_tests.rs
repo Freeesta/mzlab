@@ -1,6 +1,6 @@
 //! `mzlab-cli peak split` on the SIM `.wiff` of `tools/wiff_sim.py` (skipped without python3): one window over the isomer pair of ionC in
 //! sample B finds one valley between the two apexes the writer put; cut there it gives two `drop` rows whose areas add up to the whole window,
-//! the bytes of `manual-table` for the same window with `splits`; bad settings fail.
+//! the bytes of `peak table` for the same window with `splits`; bad settings fail.
 
 use std::path::Path;
 
@@ -44,13 +44,13 @@ fn sim(tag: &str) -> Option<std::path::PathBuf> {
             std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
             "python3 not available"
         );
-        eprintln!("SKIP peak-split: python3 not available");
+        eprintln!("SKIP peak split: python3 not available");
         return None;
     }
     Some(d)
 }
 
-/// `manual-table` of one windows JSON on the `.wiff`.
+/// `peak table` of one windows JSON on the `.wiff`.
 fn table(d: &Path, windows: &str) -> String {
     let w = d.join("w.json");
     std::fs::write(&w, windows).unwrap();
@@ -121,7 +121,7 @@ fn the_isomer_pair_splits_once_and_its_parts_add_up() {
     assert_eq!(
         parts,
         table(&d, &split),
-        "the bytes of manual-table for the same window"
+        "the bytes of peak table for the same window"
     );
     let _ = std::fs::remove_dir_all(&d);
 }

@@ -94,7 +94,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
         }
     }
     if files.is_empty() == traces.is_none() {
-        return Err("manual-table needs at least one file, or --set traces=PATH (not both)".into());
+        return Err("peak table needs at least one file, or --set traces=PATH (not both)".into());
     }
     if params.is_some() && !auto {
         return Err("--set params=PATH goes with --set auto=true".into());
@@ -105,7 +105,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
     let windows = match (windows, auto) {
         (Some(w), _) => w,
         (None, true) => PathBuf::new(),
-        (None, false) => return Err("manual-table needs --set windows=PATH".into()),
+        (None, false) => return Err("peak table needs --set windows=PATH".into()),
     };
     Ok(Some(Request {
         files,

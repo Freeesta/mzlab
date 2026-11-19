@@ -1,6 +1,6 @@
 //! The native executor of `spectra.msn_graph@2`: the fragmentation graph `msn-graph/1` of an MSn infusion (mzML or a vendor file such as a Thermo `.raw`),
 //! the same bytes as `mzlab-cli msn graph FILE`. The step takes the options of `msngraph::Opzioni` that the command has, plus the name of the molecule
-//! looked up in a molecules list the user gives; its output is read by the page and by `msn-lib`.
+//! looked up in a molecules list the user gives; its output is read by the page and by `msn lib`.
 
 use std::path::Path;
 

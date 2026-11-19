@@ -58,7 +58,7 @@ console.log(w.sample_default(Uint32Array.from(JSON.parse(process.argv[3])), Floa
 
 
 def test_the_default_ticks_are_the_same_from_the_site_and_the_cli(work):
-    """`sample_default` (site) and `samples select --default` (CLI) tick all of a small set and none of a set that does not fit the budget."""
+    """`sample_default` (site) and `sample select --default` (CLI) tick all of a small set and none of a set that does not fit the budget."""
     (work / "d.js").write_text(DEFAULT, encoding="utf-8")
     sized = subprocess.run(cli_argv("samples", "list", str(work / "big" / "grande.wiff"), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8", check=True)
     smp = json.loads(sized.stdout)["samples"]

@@ -1,6 +1,6 @@
 # MSn user manual: from the `.raw` infusion to the tree, the library and the table
 
-For whoever launches the work from the shell or from a Flow plan; the graph design is in `msn-graph.md`, the library in `msnlib.md`. The program gives no verdicts: sub-formulas are candidates with ppm and evidence.
+For whoever launches the work from the shell or from a Flow plan; the graph design is in `msn graph.md`, the library in `msnlib.md`. The program gives no verdicts: sub-formulas are candidates with ppm and evidence.
 
 ## 1. Command line (`mzlab-cli`)
 - **Graph**: `mzlab-cli msn graph INFUSIONE.raw --formula "C13H24N4O3S [M+H]+" --out graph.json`. The file can be a Thermo `.raw` or an mzML; `--formula` accepts the ion (`C13H25N4O3S+`, `C13H24N4O3S+H`, `"FORMULA [M+H]+"`); without it, the graph has only the masses. Useful options: `--activation cid|hcd` (one type only), `--ppm-formula 10`, `--isotopes`, `--pick MZ=ION` (fixes the formula of a node), `--smiles` (written into the JSON). `--summary` prints one line of numbers.

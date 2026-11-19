@@ -48,7 +48,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     }
     let [src] = pos.as_slice() else {
-        return Outcome::fail("mol-export needs one molfile (or - for the standard input)");
+        return Outcome::fail("mol export needs one molfile (or - for the standard input)");
     };
     let text = match read(src) {
         Ok(t) => t,

@@ -86,7 +86,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         Err(m) => return Outcome::fail(&m),
     };
     let ([x], Some(tables)) = (o.pos.as_slice(), &o.tables) else {
-        return Outcome::fail("match-mz needs one number and --tables FILE.json");
+        return Outcome::fail("ion match needs one number and --tables FILE.json");
     };
     let Some(x) = x
         .replace(',', ".")

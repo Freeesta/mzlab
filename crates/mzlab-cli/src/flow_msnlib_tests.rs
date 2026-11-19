@@ -1,5 +1,5 @@
 //! `msn.library_export@1` and `msn.table_export@1` after `spectra.msn_graph@1` on the synthetic infusion of the route `/api/msntree`: the library has the bytes of
-//! `msn-lib add` + `msn-lib export --all --annotate`, and the tables read like the graph.
+//! `msn lib add` + `msn lib export --all --annotate`, and the tables read like the graph.
 
 use std::path::{Path, PathBuf};
 
@@ -40,7 +40,7 @@ fn cli(args: &[&str]) -> String {
     String::from_utf8(o.stdout).unwrap()
 }
 
-/// The text `msn-lib export` writes for the same infusion, entry `id`.
+/// The text `msn lib export` writes for the same infusion, entry `id`.
 fn command(d: &Path, flags: &[&str]) -> String {
     let (lib, file) = (d.join("lib.json"), msn());
     let (lib, file) = (lib.to_str().unwrap(), file.to_str().unwrap());

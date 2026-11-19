@@ -45,7 +45,7 @@ try:
             got = pg.evaluate(ASK, [MOL, LAYERS, [0, 1]])
             assert got == json.loads(FX["hilite_lr"]), got
             assert len(pg.evaluate(PAINTED)) == 3, pg.evaluate(PAINTED)
-        step("LR world, Cl and C1 selected: the hilite/1 of the fixture (= mol-hilite and the app), three layers painted", lr_selected)
+        step("LR world, Cl and C1 selected: the hilite/1 of the fixture (= mol hilite and the app), three layers painted", lr_selected)
 
         def hr_all():
             pg.evaluate("window.HR = true; window.__on = BANCO.on; BANCO.on = () => true")

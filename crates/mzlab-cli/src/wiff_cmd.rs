@@ -63,12 +63,12 @@ fn parse(args: Vec<String>) -> Result<Option<Req>, String> {
         }
     }
     match r.verb.as_str() {
-        "list" if r.files.is_empty() => return Err("wiff list needs at least one .wiff".into()),
-        "list" if !r.against.is_empty() => return Err("--against is for wiff verify".into()),
+        "list" if r.files.is_empty() => return Err("file info needs at least one .wiff".into()),
+        "list" if !r.against.is_empty() => return Err("--against is for file verify".into()),
         "verify" if r.files.len() != 1 || r.against.is_empty() => {
-            return Err("wiff verify takes OUT.wiff --against SRC.wiff...".into())
+            return Err("file verify takes OUT.wiff --against SRC.wiff...".into())
         }
-        "verify" if r.inventory => return Err("--inventory is for wiff list".into()),
+        "verify" if r.inventory => return Err("--inventory is for file info".into()),
         "list" | "verify" => {}
         v => return Err(format!("unknown wiff verb {v}")),
     }

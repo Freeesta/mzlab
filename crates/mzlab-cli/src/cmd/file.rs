@@ -24,7 +24,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("file convert", "mzlab-cli file convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML", crate::convert::run),
     Entry::new("sample vars", "mzlab-cli sample vars NAME...   how the file names split into variables, as JSON", |a| crate::samples_cmd::run(pre("vars", a))),
     Entry::new("sample group", "mzlab-cli sample group NAME...   the group name the file names share, as JSON", |a| crate::samples_cmd::run(pre("group", a))),
-    Entry::new("sample table", "mzlab-cli sample table NAME...   the samples table proposed for the file names", |a| crate::samples_cmd::run(pre("table", a))),
+    Entry::new("sample table", "mzlab-cli sample table NAME...   the sample table proposed for the file names", |a| crate::samples_cmd::run(pre("table", a))),
     Entry::new("sample list", "mzlab-cli sample list FILE...   what a file holds sample by sample, as JSON; exit 1 or 3 when a sample is refused", |a| crate::samples_cmd::run(pre("list", a))),
     Entry::new("sample select", "mzlab-cli sample select FILE --sample LIST   which samples --sample LIST picks", |a| crate::samples_cmd::run(pre("select", a))),
     Entry::new("trace background", "mzlab-cli trace background FILE [--set NAME=VALUE...]   the background trace of a file as JSON", crate::plain::background_cmd::run),

@@ -74,12 +74,12 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(()) => {}
     }
     let (Some(src), Some(from), Some(to)) = (src, from, to) else {
-        return Outcome::fail("peak-area needs a trace, --from and --to (see --help)");
+        return Outcome::fail("peak area needs a trace, --from and --to (see --help)");
     };
     let base = match baseline_of(&sets) {
         Ok(Baseline::Edges) => {
             return Outcome::fail(
-                "peak-area measures from zero or a line: --set baseline=zero|line",
+                "peak area measures from zero or a line: --set baseline=zero|line",
             )
         }
         Ok(b) => b,
@@ -89,7 +89,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         Err(e) => Outcome::fail(&e),
         Ok((x, y)) => match peak_area_json(&x, &y, from, to, base) {
             Some(t) => Outcome::ok(format!("{t}\n").into_bytes()),
-            None => Outcome::fail("peak-area: empty trace"),
+            None => Outcome::fail("peak area: empty trace"),
         },
     }
 }

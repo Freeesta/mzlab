@@ -1,5 +1,5 @@
 //! `mzlab-cli mol label REQUEST.json|- [--out PATH]`: the `etich/1` of the structures of a drawing (formula with isotopes, charge, monoisotopic
-//! and nominal mass, m/z, and what changes across each arrow), byte for byte what the Draw labels of the page and the app show; `mol-anal` the same
+//! and nominal mass, m/z, and what changes across each arrow), byte for byte what the Draw labels of the page and the app show; `mol anal` the same
 //! way gives the `anal/1` of one structure (the analysis card of Draw: average mass, mass %, theoretical isotope pattern).
 
 use std::path::PathBuf;
@@ -22,7 +22,7 @@ pub const HELP_ANAL: &str = "mzlab-cli mol anal: average mass, mass % per elemen
 
 usage: mzlab-cli mol anal REQUEST.json|- [--out PATH]
 
-  REQUEST.json  {\"atoms\": [{\"el\", \"iso\", \"h\", \"q\", \"r\"}, ...]}: the atoms of one structure as mol-label reads them; - reads the standard input
+  REQUEST.json  {\"atoms\": [{\"el\", \"iso\", \"h\", \"q\", \"r\"}, ...]}: the atoms of one structure as mol label reads them; - reads the standard input
   --out PATH    write there instead of the standard output
 
 The answer is {\"format\": \"anal/1\", \"structure\": {the etich/1 fields}, \"average\", \"composition\": [{el, count, pct}],
@@ -32,7 +32,7 @@ Theory for the drawn formula: nothing is compared with a spectrum.";
 pub fn run(args: Vec<String>) -> Outcome {
     run_json(
         args,
-        "mol-label",
+        "mol label",
         HELP,
         mzlab_feat::chem::labels::labels_json,
     )
@@ -41,7 +41,7 @@ pub fn run(args: Vec<String>) -> Outcome {
 pub fn run_anal(args: Vec<String>) -> Outcome {
     run_json(
         args,
-        "mol-anal",
+        "mol anal",
         HELP_ANAL,
         mzlab_feat::chem::analysis::analysis_json,
     )

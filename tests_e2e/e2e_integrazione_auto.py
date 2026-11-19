@@ -35,7 +35,7 @@ def all_ions(pg):
     wait_for_js(pg, "(() => { const p = E.panels.find(q => q.type === 'mrm' && q._a); return !!p && new Set(p._a.sr.map(s => s.k)).size === E.files.length; })()", timeout=60000)
 
 def cli_table(st):
-    """manual-table on the .wiff for the windows the page sent (files numbered as the .wiff numbers its samples)."""
+    """peak table on the .wiff for the windows the page sent (files numbered as the .wiff numbers its samples)."""
     order = [n[:-5] for n in st["names"]]
     ws = [{**x, "file": SAMPLES.index(order[x["file"]])} for x in json.loads(st["windows"])]
     w = D / "windows.json"; w.write_text(json.dumps(ws))

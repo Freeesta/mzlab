@@ -314,7 +314,7 @@ try:
             pg.keyboard.press("v")
             wait_for_js(pg, f"{P}.el.querySelectorAll('.ivl-mk').length === 1 && !!{P}.el.querySelector('.ivl-bar')", timeout=60000)
             got = pg.evaluate("([k, w]) => fetch(`api/manvalley?k=${k}&depth=0.1&w=${encodeURIComponent(JSON.stringify(w))}`).then(r => r.text())", [kb, one])
-            need(got == peak_split(), ("api/manvalley = peak-split", got, peak_split()))
+            need(got == peak_split(), ("api/manvalley = peak split", got, peak_split()))
             t0 = json.loads(got)["splits"][0]
             need(p0 < t0 < p1 and pg.evaluate(f"{P}._split.ts[0]") == t0, (t0, p0, p1))
             bar = pg.evaluate(f"(() => {{ const b = {P}.el.querySelector('.ivl-bar'), i = b.querySelector('input'); return [i.value, i.title === I18N.t('int.split.depth.tip'), i.getAttribute('aria-describedby'), [...b.querySelectorAll('button')].every(x => x.getBoundingClientRect().height >= 24), b.querySelector('.ivl-none').textContent]; }})()")
@@ -342,7 +342,7 @@ try:
             area = sum(float(x[5]) for x in parts)
             need(abs(area - float(whole[5])) <= 1e-4 * float(whole[5]), ("the parts add up to the window", area, whole))
             cut = table(one | {"splits": [t3]})
-            need(cut == peak_split(f"split={t3}"), ("api/manint of the split window = peak-split", cut))
+            need(cut == peak_split(f"split={t3}"), ("api/manint of the split window = peak split", cut))
             th = pg.evaluate("[...document.querySelectorAll('#manint thead th')].map(t => [t.textContent, t.title])")
             need([pg.evaluate("I18N.t('canali.manint.h.overlap')"), pg.evaluate("I18N.t('canali.manint.h.overlap.tip')")] in th and any(x[0] == "p/v" and x[1] for x in th), th)
             need(pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].filter(r => r.textContent.includes(I18N.t('canali.manint.drop'))).length") == 2, "two rows say «yes»")
@@ -398,7 +398,7 @@ try:
             need(pg.evaluate(f"{P}.ints.find(i => i.id === {it}).splits") is None, "no drop line: whole again")
             menu = pg.evaluate("AZIONI.voci.find(a => a.id === 'int.split')")
             need(menu and menu["scorciatoia"]["tasto"] == "v", menu)
-        step("«Split at the valleys»: the engine's drop line (= peak-split), moved by mouse, keys and finger, confirmed into one row per part (= manual-table), undo, depth, Esc", split)
+        step("«Split at the valleys»: the engine's drop line (= peak split), moved by mouse, keys and finger, confirmed into one row per part (= peak table), undo, depth, Esc", split)
         def split_hand():
             need = lambda c, m: c or throw(m)
             P = "E.panels.find(q => q.type === 'mrm' && q._a)"

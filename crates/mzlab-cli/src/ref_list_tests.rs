@@ -1,4 +1,4 @@
-//! Tests of `ref-list` on synthetic CSV files.
+//! Tests of `db ref-list` on synthetic CSV files.
 
 use crate::execute;
 

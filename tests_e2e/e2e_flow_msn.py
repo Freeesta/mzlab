@@ -23,7 +23,7 @@ _cli = subprocess.Popen(["cargo", "run", "--release", "--locked", "-q", "-p", "m
 def cli_text():
     out, err = _cli.communicate()
     # a failure of the reference command must show its stderr in the log (a bare CalledProcessError hid the cause)
-    if _cli.returncode: raise AssertionError("msn-graph reference failed (exit %d): %s" % (_cli.returncode, err[-3000:]))
+    if _cli.returncode: raise AssertionError("msn graph reference failed (exit %d): %s" % (_cli.returncode, err[-3000:]))
     return out
 mask = lambda t: re.sub(r'"sha256_idx":"[0-9a-f]*"', '"sha256_idx":""', t)
 RUN = """async (patch) => {

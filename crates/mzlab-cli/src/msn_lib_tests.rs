@@ -49,7 +49,7 @@ fn add_writes_the_entry_once_and_the_library_is_the_one_of_the_route() {
     let g = String::from_utf8(g.stdout).unwrap();
     assert!(
         first.contains(g.trim_end()),
-        "the entry holds the graph of msn-graph"
+        "the entry holds the graph of msn graph"
     );
     let again = run(&args);
     assert!(again.stderr.contains("already there"), "{}", again.stderr);
@@ -250,7 +250,7 @@ fn search_finds_the_entry_of_the_same_infusion_and_its_options_and_errors_work()
     let _ = std::fs::remove_dir_all(&d);
 }
 
-/// The Italian flags of `msn-lib` are gone: each is a usage error (exit 2), and the help lists only the English ones.
+/// The Italian flags of `msn lib` are gone: each is a usage error (exit 2), and the help lists only the English ones.
 #[test]
 fn the_italian_flags_are_refused() {
     let d = dir("alias");

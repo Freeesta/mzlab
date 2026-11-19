@@ -50,14 +50,14 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Ask>, String> {
             },
             o if o.starts_with("--") => return Err(format!("unknown option {o}")),
             _ if file.is_none() => file = Some(PathBuf::from(a)),
-            _ => return Err("dda-window takes one file".into()),
+            _ => return Err("spectrum dda-window takes one file".into()),
         }
     }
     Ok(Some(Ask {
-        file: file.ok_or("dda-window needs a file")?,
+        file: file.ok_or("spectrum dda-window needs a file")?,
         out,
-        from: from.ok_or("dda-window needs --from")?,
-        to: to.ok_or("dda-window needs --to")?,
+        from: from.ok_or("spectrum dda-window needs --from")?,
+        to: to.ok_or("spectrum dda-window needs --to")?,
         hr,
     }))
 }

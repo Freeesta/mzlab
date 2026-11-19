@@ -55,7 +55,7 @@ def main():
         cli = Path(sys.argv[1])
     tmp = OUTPUT.with_suffix(".no-view.json")
     tmp.write_text(json.dumps(build(), indent=1))
-    subprocess.run([str(cli), "msn-graph", "complete", str(tmp), "--out", str(OUTPUT)], check=True)
+    subprocess.run([str(cli), "msn", "graph", "complete", str(tmp), "--out", str(OUTPUT)], check=True)
     tmp.unlink()
     print(OUTPUT)
 

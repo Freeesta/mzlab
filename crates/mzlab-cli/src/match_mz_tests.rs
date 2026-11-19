@@ -1,4 +1,4 @@
-//! Tests of `match-mz` on synthetic tables.
+//! Tests of `ion match` on synthetic tables.
 
 use crate::execute;
 

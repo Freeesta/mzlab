@@ -1,4 +1,4 @@
-//! `--sample LIST`: `samples select`, `convert`, `channels` and `features` on a synthetic `.wiff` of three samples (`tools/wiff_grande.py`). python3 is part
+//! `--sample LIST`: `sample select`, `convert`, `channels` and `features` on a synthetic `.wiff` of three samples (`tools/wiff_grande.py`). python3 is part
 //! of the test: without it the test fails, it never skips.
 
 use std::path::{Path, PathBuf};

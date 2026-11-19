@@ -31,7 +31,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     }
     let [src] = pos.as_slice() else {
-        return Outcome::fail("mol-link needs one request file (or - for the standard input)");
+        return Outcome::fail("mol link needs one request file (or - for the standard input)");
     };
     let text = if src == "-" {
         let mut t = String::new();

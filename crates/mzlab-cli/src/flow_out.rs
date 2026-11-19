@@ -164,7 +164,7 @@ pub fn run_plan_notify(
     run_checked(&plan, text, &runner, workers)
 }
 
-/// Runs the checked plan `ready` like `run_checked` and prints the `flowlive/1` events on stdout, one line each, as they happen (`flow run --jsonl`);
+/// Runs the checked plan `ready` like `run_checked` and prints the `flowlive/1` events on stdout, one line each, as they happen (`flow run --events`);
 /// returns the run and its `prov/1` text (`text` is the plan as it was read).
 pub(crate) fn run_events(
     ready: &Plan,

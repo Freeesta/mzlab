@@ -27,7 +27,7 @@ def pkg(tmp_path_factory):
 
 
 def cli(mol, *sets):
-    a = cli_argv("mol-export", str(mol))
+    a = cli_argv("mol", "export", str(mol))
     for s in sets:
         a += ["--set", s]
     return run(*a)
