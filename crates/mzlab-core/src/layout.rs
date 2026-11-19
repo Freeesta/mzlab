@@ -18,7 +18,40 @@ struct Held {
 #[derive(Clone, Default)]
 pub struct Layout(Arc<Mutex<Held>>);
 
+/// The layouts of the files opened lately, by what identifies their bytes (`Layout::of`): a second index of the same file (the slot of a panel next to the
+/// one of the list, or one opened again) finds what the first one read. Content-addressed, so a changed file never finds a stale one.
+static RECENT: Mutex<Vec<(String, Layout)>> = Mutex::new(Vec::new());
+const KEEP: usize = 8;
+
 impl Layout {
+    /// `of` for an index: the `sha256` of its `source` and its scan table.
+    pub fn of_index(source: &crate::json::Value, scans: &[crate::idxread::Scan]) -> Layout {
+        let sha = source
+            .get("sha256")
+            .and_then(crate::json::Value::str)
+            .unwrap_or("");
+        Layout::of(sha, scans.len(), scans.last().map_or(0, |s| s.end))
+    }
+
+    /// The layout for the file with this `sha256` (of `source` in the index), `n_scans` scans ending at `scans_end`; a fresh one without a hash.
+    pub fn of(sha: &str, n_scans: usize, scans_end: u64) -> Layout {
+        if sha.is_empty() {
+            return Layout::default();
+        }
+        let key = format!("{sha}:{n_scans}:{scans_end}");
+        let mut v = RECENT.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(i) = v.iter().position(|(k, _)| *k == key) {
+            let hit = v.remove(i);
+            let l = hit.1.clone();
+            v.insert(0, hit);
+            return l;
+        }
+        let l = Layout::default();
+        v.insert(0, (key, l.clone()));
+        v.truncate(KEEP);
+        l
+    }
+
     fn lock(&self) -> std::sync::MutexGuard<'_, Held> {
         self.0.lock().unwrap_or_else(|e| e.into_inner())
     }

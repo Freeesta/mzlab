@@ -20,7 +20,12 @@ def run(pg, port, f):
     bm.wait(pg, "typeof E!=='undefined' && E.files.length >= 1 && E.pending.length === 0", timeout=1800000)
     pg.evaluate("() => { if (!E.files.some(f => f.vis && !f.gone)) soloFile(E.files.find(f => !f.gone)); }")
     bm.wait(pg, "E.files.some(f => f.vis && !f.gone)", timeout=600000)
-    pg.wait_for_timeout(1500)                                                 # the last answers of the worker carry the final `rdStat`
+    last, quiet = None, 0                                                     # the background requests (method, warnings) end after the open: wait until `rdStat` stops moving
+    while quiet < 4:
+        pg.wait_for_timeout(1000)
+        cur = pg.evaluate("(__B.rd || {}).n")
+        quiet = quiet + 1 if cur == last else 0
+        last = cur
     wall = round(time.time() - t0, 2)
     rd = pg.evaluate("__B.rd || null") or {}
     size = f.stat().st_size
