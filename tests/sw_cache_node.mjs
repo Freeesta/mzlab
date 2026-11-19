@@ -300,7 +300,7 @@ const NAVON = async w => (await w.ctx.caches.open("mzlab-opz")).put(new Request(
   const w = mondo();
   await pieno(w);
   w.st.hang = true;                                    // a hung manifest: the cached page must not wait for it
-  const res = await Promise.race([w.get("?nav=cache", { mode: "navigate" }), new Promise(r => setTimeout(r, 200, null))]);
+  const res = await Promise.race([w.get("?nav=cache", { mode: "navigate" }), new Promise(r => setTimeout(r, 3000, null))]);   // the hung manifest never answers, so the limit costs nothing when green; 200 ms was missed on a loaded Windows runner
   assert.ok(res, "answered without the network");
   assert.ok(res.dalCache, "the cache's own answer (the four headers: checked by get)");
   assert.equal(await res.text(), "<html>");

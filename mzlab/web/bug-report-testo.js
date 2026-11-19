@@ -92,7 +92,7 @@ export function campiDiagnostica(d, nomi = [], pulisci = s => s, only = null) {
   /** @type {Array<{key: string, label: string, value: any, lines: string[]}>} */
   const F = [], add = (/** @type {string} */ key, /** @type {string} */ label, /** @type {any} */ value, /** @type {string[]} */ lines) => { if (!only || only.includes(key)) F.push({ key, label, value, lines }); };
   const one = (/** @type {string} */ key, /** @type {string} */ label, /** @type {unknown} */ v, max = 160) => { if (v != null && v !== "") { const s = a(v, max); add(key, label, s, [`- ${label}: ${s}`]); } };
-  one("version", "mzLab", `${d.version || "?"} (${d.commit || "?"})`);
+  one("version", /** @type {any} */ (globalThis).APP_NAME || "Version", `${d.version || "?"} (${d.commit || "?"})`);
   one("date", "Date", d.date);
   one("ua", "Browser and system", d.ua, 220);
   one("mode", "Mode", d.mode);

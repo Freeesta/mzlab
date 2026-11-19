@@ -10,6 +10,7 @@ import json, shutil, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+from cli_cmd import cli_command
 
 steps = []
 def step(name, fn):
@@ -21,7 +22,7 @@ if not shutil.which("cargo"):
 D = Path(tempfile.mkdtemp(prefix="multi_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_sim.py"), str(D)], check=True, capture_output=True)
 TRUE = json.loads((D / "sim3.json").read_text())
-CLI = ["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--"]      # the release binary tools/verifica.py builds once before the tests
+CLI = cli_command()      # the release binary tools/verifica.py builds once before the tests
 cli = lambda *a: subprocess.run(CLI + [str(x) for x in a], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout
 throw = lambda m: (_ for _ in ()).throw(AssertionError(m))
 need = lambda c, m: c or throw(m)
