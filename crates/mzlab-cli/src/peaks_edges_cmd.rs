@@ -82,7 +82,11 @@ pub fn run(args: Vec<String>) -> Outcome {
                 }
                 "--mrm" => mrm = true,
                 "--noise" => {
-                    p.noise = match it.next().ok_or("--noise needs mad, rms or manual")?.as_str() {
+                    p.noise = match it
+                        .next()
+                        .ok_or("--noise needs mad, rms or manual")?
+                        .as_str()
+                    {
                         "mad" => NoiseMode::Mad,
                         "rms" => NoiseMode::Rms,
                         "manual" => NoiseMode::Manual,

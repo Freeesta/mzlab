@@ -142,7 +142,8 @@ fn the_baseline_mode_applies_to_every_peak() {
     }
     let o = run(args(&[
         p,
-        "--baseline", "line",
+        "--baseline",
+        "line",
         "--set",
         "base_y0=1000",
         "--set",
@@ -167,11 +168,7 @@ fn area_unit_min_keeps_the_old_counts_x_min() {
     std::fs::write(&f, format!("rt,y\n{}", body.join("\n"))).unwrap();
     let p = f.to_str().unwrap();
     let core = auto_integrate(&rt, &y, rt[0], rt[rt.len() - 1], AutoParams::default());
-    let o = run(args(&[
-        p,
-        "--baseline", "edges",
-        "--area-unit", "min",
-    ]));
+    let o = run(args(&[p, "--baseline", "edges", "--area-unit", "min"]));
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
     for (g, k) in v["peaks"].as_array().unwrap().iter().zip(&core) {
         assert_eq!(g["area"].as_f64().unwrap(), k.area);

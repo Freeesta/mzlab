@@ -88,7 +88,9 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
             "--help" | "-h" => return Ok(None),
             "--json" => json = true,
             "--out" => out = Some(PathBuf::from(it.next().ok_or("--out needs a path")?)),
-            "--windows" => windows = Some(PathBuf::from(it.next().ok_or("--windows needs a path")?)),
+            "--windows" => {
+                windows = Some(PathBuf::from(it.next().ok_or("--windows needs a path")?))
+            }
             "--params" => params = Some(PathBuf::from(it.next().ok_or("--params needs a path")?)),
             "--times" => times = Some(PathBuf::from(it.next().ok_or("--times needs a path")?)),
             "--traces" => traces = Some(PathBuf::from(it.next().ok_or("--traces needs a path")?)),

@@ -39,8 +39,10 @@ fn traces_give_the_columns_of_the_engine_byte_for_byte() {
     std::fs::write(&tp, &files).unwrap();
     std::fs::write(&wp, windows).unwrap();
     let o = run(&[
-        "--traces", &tp.display().to_string(),
-        "--windows", &wp.display().to_string(),
+        "--traces",
+        &tp.display().to_string(),
+        "--windows",
+        &wp.display().to_string(),
     ]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let want = mzlab_core::manint::table_text(&files, windows, false).unwrap();
@@ -52,8 +54,10 @@ fn traces_give_the_columns_of_the_engine_byte_for_byte() {
         .ends_with(mzlab_core::manint::EXT_HEAD.trim_start_matches(',')));
     let bad = run(&[
         "x.mzML",
-        "--traces", &tp.display().to_string(),
-        "--windows", &wp.display().to_string(),
+        "--traces",
+        &tp.display().to_string(),
+        "--windows",
+        &wp.display().to_string(),
     ]);
     assert_ne!(bad.code, 0);
 }
@@ -109,8 +113,10 @@ fn columns_and_json_are_the_engine_table_in_two_shapes() {
     );
     // an unknown group is refused with the engine's message, and --json goes with auto
     let bad = run(&[
-        "--traces", &tp.display().to_string(),
-        "--windows", &wp.display().to_string(),
+        "--traces",
+        &tp.display().to_string(),
+        "--windows",
+        &wp.display().to_string(),
         "--columns",
         "nope",
     ]);
@@ -118,5 +124,7 @@ fn columns_and_json_are_the_engine_table_in_two_shapes() {
     // --json with --auto is accepted: the answer is JSON already
     let auto = go(&["--auto", "--json"]);
     assert_eq!(auto.code, 0, "{}", auto.stderr);
-    assert!(String::from_utf8(auto.stdout).unwrap().starts_with("{\"tol\":"));
+    assert!(String::from_utf8(auto.stdout)
+        .unwrap()
+        .starts_with("{\"tol\":"));
 }

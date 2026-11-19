@@ -54,7 +54,10 @@ pub fn run(args: Vec<String>) -> Outcome {
             match a.as_str() {
                 "--from" => from = Some(num(it.next(), "--from")?),
                 "--to" => to = Some(num(it.next(), "--to")?),
-                "--baseline" => sets.push(("baseline".to_string(), it.next().ok_or("--baseline needs a mode")?)),
+                "--baseline" => sets.push((
+                    "baseline".to_string(),
+                    it.next().ok_or("--baseline needs a mode")?,
+                )),
                 "--set" => {
                     let kv = it.next().ok_or("--set needs NAME=VALUE")?;
                     let (k, v) = kv.split_once('=').ok_or("--set needs NAME=VALUE")?;
@@ -80,9 +83,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     let base = match baseline_of(&sets) {
         Ok(Baseline::Edges) => {
-            return Outcome::fail(
-                "peak area measures from zero or a line: --baseline zero|line",
-            )
+            return Outcome::fail("peak area measures from zero or a line: --baseline zero|line")
         }
         Ok(b) => b,
         Err(e) => return Outcome::fail(&e),

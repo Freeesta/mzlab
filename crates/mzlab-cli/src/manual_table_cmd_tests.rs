@@ -145,11 +145,7 @@ fn auto_finds_the_peaks_of_every_sample_and_its_windows_are_the_table_rows() {
     let w = d.join("sim3.wiff");
     let j = text(&table(&[&w], &["--auto"]));
     assert!(j.starts_with("{\"tol\":"), "{j}");
-    assert_eq!(
-        j,
-        text(&table(&[&w], &["--auto"])),
-        "deterministic"
-    );
+    assert_eq!(j, text(&table(&[&w], &["--auto"])), "deterministic");
     let v = parse(j.as_bytes()).unwrap();
     let n = v.get("windows").unwrap().arr().len();
     assert!(n >= 4, "{j}");
@@ -165,11 +161,7 @@ fn auto_finds_the_peaks_of_every_sample_and_its_windows_are_the_table_rows() {
     std::fs::write(&p, r#"{"sn":1000000}"#).unwrap();
     let none = text(&table(
         &[&w],
-        &[
-            "--auto",
-            "--params",
-            &p.display().to_string(),
-        ],
+        &["--auto", "--params", &p.display().to_string()],
     ));
     assert!(none.contains("\"windows\":[]"), "{none}");
     assert_ne!(
@@ -279,10 +271,7 @@ fn the_wiff_and_its_mzml_give_the_same_bytes() {
     }
     let refs: Vec<&Path> = files.iter().map(PathBuf::as_path).collect();
     let set = windows(&d, WINDOWS);
-    for extra in [
-        &["--windows", &set][..],
-        &["--windows", &set, "--sums"][..],
-    ] {
+    for extra in [&["--windows", &set][..], &["--windows", &set, "--sums"][..]] {
         assert_eq!(
             text(&table(&refs, extra)),
             text(&table(&[&d.join("sim3.wiff")], extra))
@@ -354,7 +343,10 @@ fn help_lists_the_header_columns_in_order() {
     let h = super::help();
     let head = mzlab_core::manint::HEAD.trim_end();
     assert_eq!(head.split(',').count(), 14);
-    assert!(h.contains(&format!("Columns, in this order: {head}.")), "{h}");
+    assert!(
+        h.contains(&format!("Columns, in this order: {head}.")),
+        "{h}"
+    );
     assert!(h.contains(mzlab_core::manint::EXT_HEAD.trim_start_matches(',')));
     for e in [
         mzlab_core::manint::SN_HEAD,

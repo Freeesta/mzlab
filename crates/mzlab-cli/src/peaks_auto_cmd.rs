@@ -56,8 +56,13 @@ pub fn run(args: Vec<String>) -> Outcome {
             match a.as_str() {
                 "--from" => from = Some(num(it.next(), "--from")?),
                 "--to" => to = Some(num(it.next(), "--to")?),
-                "--area-unit" => unit = AreaUnit::parse(&it.next().ok_or("--area-unit needs s or min")?)?,
-                "--baseline" => bases.push(("baseline".to_string(), it.next().ok_or("--baseline needs a mode")?)),
+                "--area-unit" => {
+                    unit = AreaUnit::parse(&it.next().ok_or("--area-unit needs s or min")?)?
+                }
+                "--baseline" => bases.push((
+                    "baseline".to_string(),
+                    it.next().ok_or("--baseline needs a mode")?,
+                )),
                 "--set" => {
                     let kv = it.next().ok_or("--set needs NAME=VALUE")?;
                     let (k, v) = kv.split_once('=').ok_or("--set needs NAME=VALUE")?;

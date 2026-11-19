@@ -52,7 +52,9 @@ pub fn run(args: Vec<String>) -> Outcome {
             match a.as_str() {
                 "--from" => from = Some(num(it.next(), "--from")?),
                 "--to" => to = Some(num(it.next(), "--to")?),
-                "--area-unit" => unit = AreaUnit::parse(&it.next().ok_or("--area-unit needs s or min")?)?,
+                "--area-unit" => {
+                    unit = AreaUnit::parse(&it.next().ok_or("--area-unit needs s or min")?)?
+                }
                 "--split" => {
                     p.split = match it.next().ok_or("--split needs drop or valley")?.as_str() {
                         "drop" => Split::Drop,
