@@ -20,9 +20,9 @@ import dati_sintetici as ds
 
 NAMES = ["B_FullMass-t0.mzML", "B_FullMass-t30.mzML", "B_FullMass-blank.mzML"]      # "Keep reliable rows" compares with the blank: a series without one is refused (error.filterNoBlank)
 def sample(n, t):
-    return {"composto": "", "concentrazione": None, "file": n, "istd": False, "note": "", "ordine_iniezione": NAMES.index(n) + 1, "replica": 1, "serie": "", "sha256": "", "tempo": t, "tempo_confermato": False,
-            "tempo_min": t, "tipo": "blank" if t is None else "t0" if t == 0 else "sample", "tipo_bianco": None, "unita": None, "unita_tempo": "min"}
-SAMPLES = json.dumps({"campioni": [sample(n, t) for n, t in zip(NAMES, (0, 30, None))], "schema": "campioni/2"}, separators=(",", ":"))
+    return {"compound": "", "concentration": None, "file": n, "istd": False, "note": "", "injection_order": NAMES.index(n) + 1, "replicate": 1, "series": "", "sha256": "", "time": t, "time_confirmed": False,
+            "time_min": t, "kind": "blank" if t is None else "t0" if t == 0 else "sample", "blank_kind": None, "concentration_unit": None, "time_unit": "min"}
+SAMPLES = json.dumps({"samples": [sample(n, t) for n, t in zip(NAMES, (0, 30, None))], "schema": "samples/1"}, separators=(",", ":"))
 
 tmp = Path(tempfile.mkdtemp(prefix="flow_lr_tpl_"))
 site = tmp / "site"; env = dict(os.environ, RUNNER_TEMP=str(tmp / "rt"))

@@ -1,4 +1,4 @@
-//! The model of the static figure: the scene read from `msngrafo/1` (ions, arcs, positions of the key `vista`), the text pieces of the LABEL RULE of
+//! The model of the static figure: the scene read from `msn-graph/1` (ions, arcs, positions of the key `view`), the text pieces of the LABEL RULE of
 //! `mzlab/web/msngrafo-vista.js` and the boxes of the ions. Used only by `msnfigura`.
 
 use std::collections::{HashMap, HashSet};
@@ -93,15 +93,15 @@ pub(crate) fn n(v: &Value, k: &str) -> Option<f64> {
 
 /// The rule ids shown under a loss: at most two (the weak ones tagged), `+n` for the rest; empty when no rule explains it.
 pub(crate) fn rule_of(j: &Value, da: &str, a: &str) -> String {
-    let Some(r) = j.get("regole").and_then(|r| r.get("archi")).and_then(|l| {
+    let Some(r) = j.get("rules").and_then(|r| r.get("edges")).and_then(|l| {
         l.arr()
             .iter()
-            .find(|x| s(x, "da").as_deref() == Some(da) && s(x, "a").as_deref() == Some(a))
+            .find(|x| s(x, "from").as_deref() == Some(da) && s(x, "to").as_deref() == Some(a))
     }) else {
         return String::new();
     };
-    let reg = r.get("regole").map_or(&[][..], |x| x.arr());
-    let comp = r.get("composta").map_or(&[][..], |x| x.arr());
+    let reg = r.get("rules").map_or(&[][..], |x| x.arr());
+    let comp = r.get("composite").map_or(&[][..], |x| x.arr());
     let ids: Vec<String> = if reg.is_empty() {
         comp.iter()
             .map(|c| {
@@ -115,7 +115,7 @@ pub(crate) fn rule_of(j: &Value, da: &str, a: &str) -> String {
     } else {
         reg.iter()
             .map(|x| {
-                let weak = if n(x, "priorita") == Some(3.0) {
+                let weak = if n(x, "priority") == Some(3.0) {
                     " (weak)"
                 } else {
                     ""
@@ -140,17 +140,17 @@ pub(crate) fn rule_of(j: &Value, da: &str, a: &str) -> String {
 
 fn read_ions(j: &Value) -> Result<Vec<Ion>> {
     let mut ions = Vec::new();
-    for x in j.get("nodi").map_or(&[][..], |a| a.arr()) {
+    for x in j.get("nodes").map_or(&[][..], |a| a.arr()) {
         let f = x.get("formula").filter(|f| !f.is_null());
         let cands = f
-            .and_then(|f| f.get("candidati"))
+            .and_then(|f| f.get("candidates"))
             .map_or(&[][..], |c| c.arr())
             .iter()
             .map(|c| Cand {
                 formula: s(c, "formula").unwrap_or_default(),
                 ppm: n(c, "ppm").unwrap_or(0.0),
                 evidence: c
-                    .get("prove")
+                    .get("proofs")
                     .map_or(&[][..], |p| p.arr())
                     .iter()
                     .filter_map(|p| p.str().map(str::to_string))
@@ -159,11 +159,11 @@ fn read_ions(j: &Value) -> Result<Vec<Ion>> {
             .collect();
         ions.push(Ion {
             id: s(x, "id").ok_or_else(bad)?,
-            level: n(x, "livello").unwrap_or(0.0) as i64,
+            level: n(x, "level").unwrap_or(0.0) as i64,
             mz: n(x, "mz").ok_or_else(bad)?,
-            isolated: x.get("isolato").and_then(|b| b.bool()).unwrap_or(false),
+            isolated: x.get("isolated").and_then(|b| b.bool()).unwrap_or(false),
             cands,
-            choice: f.and_then(|f| s(f, "scelta")),
+            choice: f.and_then(|f| s(f, "choice")),
             has_formula: f.is_some(),
         });
     }
@@ -172,28 +172,28 @@ fn read_ions(j: &Value) -> Result<Vec<Ion>> {
 
 fn read_pos(view: &Value) -> Result<HashMap<String, Pos>> {
     let mut pos = HashMap::new();
-    for x in view.get("nodi").map_or(&[][..], |a| a.arr()) {
+    for x in view.get("nodes").map_or(&[][..], |a| a.arr()) {
         let best = x.get("best");
-        let albero = x.get("albero");
-        let radial = x.get("radiale").filter(|r| !r.is_null());
+        let albero = x.get("tree");
+        let radial = x.get("radial").filter(|r| !r.is_null());
         pos.insert(
             s(x, "id").ok_or_else(bad)?,
             Pos {
                 livelli: x
-                    .get("livelli")
+                    .get("levels")
                     .map_or(&[][..], |l| l.arr())
                     .iter()
                     .filter_map(|l| l.f64())
                     .map(|l| l as i64)
                     .collect(),
                 rel: n(x, "rel"),
-                da: best.and_then(|b| s(b, "da")),
-                entranti: n(x, "entranti").unwrap_or(0.0) as i64,
-                common: x.get("comune").and_then(|b| b.bool()).unwrap_or(false),
+                da: best.and_then(|b| s(b, "from")),
+                entranti: n(x, "incoming").unwrap_or(0.0) as i64,
+                common: x.get("common").and_then(|b| b.bool()).unwrap_or(false),
                 col: albero.and_then(|a| n(a, "col")).unwrap_or(0.0) as i64,
-                row: albero.and_then(|a| n(a, "riga")).unwrap_or(0.0) as i64,
-                ring: radial.and_then(|a| n(a, "anello")).unwrap_or(0.0) as i64,
-                angolo: radial.and_then(|a| n(a, "angolo")).unwrap_or(0.0),
+                row: albero.and_then(|a| n(a, "row")).unwrap_or(0.0) as i64,
+                ring: radial.and_then(|a| n(a, "ring")).unwrap_or(0.0) as i64,
+                angolo: radial.and_then(|a| n(a, "angle")).unwrap_or(0.0),
             },
         );
     }
@@ -202,25 +202,25 @@ fn read_pos(view: &Value) -> Result<HashMap<String, Pos>> {
 
 fn read_edges(j: &Value) -> Result<Vec<Edge>> {
     let mut edges = Vec::new();
-    for a in j.get("archi").map_or(&[][..], |a| a.arr()) {
-        let (da, to) = (s(a, "da").ok_or_else(bad)?, s(a, "a").ok_or_else(bad)?);
-        let p = a.get("perdita");
+    for a in j.get("edges").map_or(&[][..], |a| a.arr()) {
+        let (da, to) = (s(a, "from").ok_or_else(bad)?, s(a, "to").ok_or_else(bad)?);
+        let p = a.get("loss");
         edges.push(Edge {
             measures: a
-                .get("misure")
+                .get("measurements")
                 .map_or(&[][..], |m| m.arr())
                 .iter()
                 .map(|m| Measure {
-                    livello: n(m, "livello").unwrap_or(0.0) as i64,
-                    att: s(m, "att"),
+                    livello: n(m, "level").unwrap_or(0.0) as i64,
+                    att: s(m, "activation"),
                     ce: n(m, "ce"),
                     rel: n(m, "rel").unwrap_or(0.0),
                 })
                 .collect(),
             formula: p.and_then(|p| s(p, "formula")),
-            from_mass: p.and_then(|p| n(p, "da_massa")).unwrap_or(0.0),
+            from_mass: p.and_then(|p| n(p, "da_mass")).unwrap_or(0.0),
             compat: p
-                .and_then(|p| p.get("compatibile"))
+                .and_then(|p| p.get("compatible"))
                 .map_or(&[][..], |c| c.arr())
                 .iter()
                 .filter_map(|c| c.str().map(str::to_string))
@@ -236,30 +236,30 @@ fn read_edges(j: &Value) -> Result<Vec<Edge>> {
 pub(crate) fn scena(graph: &str) -> Result<Scena> {
     let done = mzlab_core::msngraph::completa(graph).map_err(|_| bad())?;
     let j = parse(done.as_bytes()).map_err(|_| bad())?;
-    let view = j.get("vista").ok_or_else(bad)?;
+    let view = j.get("view").ok_or_else(bad)?;
     let ioni = read_ions(&j)?;
     let pos = read_pos(view)?;
     let archi = read_edges(&j)?;
     let best = view
-        .get("archi")
+        .get("edges")
         .map_or(&[][..], |a| a.arr())
         .iter()
         .filter(|a| a.get("best").and_then(|b| b.bool()) == Some(true))
         .map(|a| {
             format!(
                 "{}>{}",
-                s(a, "da").unwrap_or_default(),
-                s(a, "a").unwrap_or_default()
+                s(a, "from").unwrap_or_default(),
+                s(a, "to").unwrap_or_default()
             )
         })
         .collect();
-    let o = j.get("opzioni");
+    let o = j.get("options");
     Ok(Scena {
         ions: ioni,
         pos,
         edges: archi,
         best,
-        charge: if n(&j, "polarita") == Some(-1.0) {
+        charge: if n(&j, "polarity") == Some(-1.0) {
             "-"
         } else {
             "+"

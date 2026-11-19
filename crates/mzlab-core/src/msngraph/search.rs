@@ -1,4 +1,4 @@
-//! Tree search in an MSn library (`docs/agenti/msnlib.md` §2): an unknown graph `msngrafo/1` against the entries of a library `msnlib/1`. The entries whose precursor
+//! Tree search in an MSn library (`docs/agenti/msnlib.md` §2): an unknown graph `msn-graph/1` against the entries of a library `msn-lib/1`. The entries whose precursor
 //! is within a ppm window (same polarity) become candidates with three scores that stay apart (MS2 entropy, tree, shared losses) and the proofs behind them.
 //! Nothing is called a match: the page and `spectra.match` (algorithm `tree`) show the numbers. Text in, text out like `msn-lib`.
 
@@ -60,7 +60,7 @@ pub(super) struct G {
     losses: Vec<Loss>,
 }
 
-/// The options of the search from a request (`ppm_prec`, `tol_mz`, `min_prove`, `top`, `delta_max`; the route `api/msnlib/cerca`): absent = the default, not a number = `err.request.badNumber`.
+/// The options of the search from a request (`precursor_ppm`, `tol_mz`, `min_evidence`, `top`, `delta_max`; the route `api/msnlib/search`): absent = the default, not a number = `err.request.badNumber`.
 pub fn options_from_request(get: &dyn Fn(&str) -> Option<String>) -> Result<Options> {
     let num = |k: &str, por: f64| match get(k).filter(|v| !v.is_empty()) {
         None => Ok(por),
@@ -72,9 +72,9 @@ pub fn options_from_request(get: &dyn Fn(&str) -> Option<String>) -> Result<Opti
     };
     let d = Options::default();
     Ok(Options {
-        ppm_prec: num("ppm_prec", d.ppm_prec)?,
+        ppm_prec: num("precursor_ppm", d.ppm_prec)?,
         tol_mz: num("tol_mz", d.tol_mz)?,
-        min_evidence: num("min_prove", d.min_evidence as f64)? as usize,
+        min_evidence: num("min_evidence", d.min_evidence as f64)? as usize,
         top: num("top", d.top as f64)? as usize,
         delta_max: num("delta_max", d.delta_max)?,
     })
@@ -90,57 +90,57 @@ pub(super) fn text(v: Option<&Value>) -> String {
 
 pub(super) fn read_graph(g: &Value) -> Result<G> {
     let nodes: HashMap<String, f64> = g
-        .get("nodi")
+        .get("nodes")
         .map_or(&[][..], |x| x.arr())
         .iter()
         .filter_map(|n| Some((n.get("id")?.str()?.to_string(), n.get("mz")?.f64()?)))
         .collect();
     let root = g
-        .get("radici")
+        .get("roots")
         .and_then(|r| r.at(0))
         .and_then(|r| r.str())
         .and_then(|r| nodes.get(r).copied());
     let ion = g
-        .get("ione")
-        .and_then(|i| i.get("mz_teorico"))
+        .get("ion")
+        .and_then(|i| i.get("theoretical_mz"))
         .and_then(|x| x.f64());
     let mz = root.or(ion).ok_or_else(bad)?;
     let spectra = g
-        .get("spettri")
+        .get("spectra")
         .map_or(&[][..], |x| x.arr())
         .iter()
         .map(|s| Sp {
-            path: text(s.get("albero")),
-            level: s.get("livello").and_then(|x| x.f64()).unwrap_or(0.0) as i64,
-            act: text(s.get("att")),
+            path: text(s.get("tree")),
+            level: s.get("level").and_then(|x| x.f64()).unwrap_or(0.0) as i64,
+            act: text(s.get("activation")),
             ce: s.get("ce").and_then(|x| x.f64()).unwrap_or(0.0),
-            prec: text(s.get("precursore")),
+            prec: text(s.get("precursor")),
             peaks: s
-                .get("picchi")
+                .get("peaks")
                 .map_or(&[][..], |x| x.arr())
                 .iter()
                 .filter_map(|p| {
-                    let node = p.get("nodo").and_then(|n| n.str()).map(str::to_string);
+                    let node = p.get("node").and_then(|n| n.str()).map(str::to_string);
                     Some((p.get("mz")?.f64()?, p.get("rel")?.f64()?, node))
                 })
                 .collect(),
         })
         .collect();
     let losses = g
-        .get("archi")
+        .get("edges")
         .map_or(&[][..], |x| x.arr())
         .iter()
         .filter_map(|a| {
-            let l = a.get("perdita")?;
+            let l = a.get("loss")?;
             let formula = l.get("formula").and_then(|f| f.str()).map(str::to_string);
             Some(Loss {
                 formula,
-                mass: l.get("da_massa")?.f64()?,
+                mass: l.get("da_mass")?.f64()?,
             })
         })
         .collect();
     Ok(G {
-        pol: g.get("polarita").and_then(|p| p.f64()).unwrap_or(1.0),
+        pol: g.get("polarity").and_then(|p| p.f64()).unwrap_or(1.0),
         mz,
         nodes,
         spectra,
@@ -343,8 +343,8 @@ fn rank(a: &Option<f64>, b: &Option<f64>) -> std::cmp::Ordering {
 
 fn hits(lib: &Value, u: &G, o: &Options) -> Result<Vec<Hit>> {
     let mut out = Vec::new();
-    for v in lib.get("voci").map_or(&[][..], |x| x.arr()) {
-        let e = read_graph(v.get("grafo").ok_or_else(bad)?)?;
+    for v in lib.get("entries").map_or(&[][..], |x| x.arr()) {
+        let e = read_graph(v.get("graph").ok_or_else(bad)?)?;
         let ppm = (e.mz - u.mz) / u.mz * 1e6;
         if (e.pol < 0.0) != (u.pol < 0.0) {
             continue;
@@ -363,10 +363,10 @@ fn hits(lib: &Value, u: &G, o: &Options) -> Result<Vec<Hit>> {
         } else {
             continue;
         };
-        let act = v.get("attivazione").map_or(&[][..], |a| a.arr());
+        let act = v.get("activation").map_or(&[][..], |a| a.arr());
         out.push(Hit {
             id: text(v.get("id")),
-            ion: text(v.get("ione").and_then(|i| i.get("formula"))),
+            ion: text(v.get("ion").and_then(|i| i.get("formula"))),
             act: act
                 .iter()
                 .filter_map(|a| a.str())
@@ -400,56 +400,56 @@ fn write(o: &mut Out, h: &Hit) {
     };
     o.raw("{\"id\":")
         .str(&h.id)
-        .raw(",\"ione\":")
+        .raw(",\"ion\":")
         .str(&h.ion)
-        .raw(",\"att\":[");
+        .raw(",\"activation\":[");
     for (i, a) in h.act.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(a);
     }
     o.raw("],\"delta_ppm\":")
         .num(round(h.ppm, 2))
-        .raw(",\"punteggi\":{\"ms2\":");
+        .raw(",\"scores\":{\"ms2\":");
     opt(o, h.s.ms2);
-    o.raw(",\"albero\":");
+    o.raw(",\"tree\":");
     opt(o, h.s.tree);
-    o.raw(",\"perdite\":");
+    o.raw(",\"losses\":");
     opt(o, h.s.losses);
-    o.raw("},\"prove\":{\"picchi_comuni\":")
+    o.raw("},\"proofs\":{\"common_peaks\":")
         .int(h.s.shared as i64);
-    o.raw(",\"nodi_allineati\":").int(h.s.aligned as i64);
-    o.raw(",\"nodi_ignoto\":").int(h.s.total as i64);
-    o.raw(",\"perdite_comuni\":").int(h.s.common as i64);
-    o.raw(",\"perdite_ignoto\":").int(h.s.unknown as i64);
+    o.raw(",\"aligned_nodes\":").int(h.s.aligned as i64);
+    o.raw(",\"unknown_nodes\":").int(h.s.total as i64);
+    o.raw(",\"common_losses\":").int(h.s.common as i64);
+    o.raw(",\"unknown_losses\":").int(h.s.unknown as i64);
     match &h.analog {
-        None => o.raw("},\"analogo\":null}"),
+        None => o.raw("},\"analog\":null}"),
         Some(a) => o
-            .raw("},\"analogo\":{\"delta_da\":")
+            .raw("},\"analog\":{\"delta_da\":")
             .num(round(a.delta, 4))
-            .raw(",\"spostati\":")
+            .raw(",\"shifted\":")
             .int(a.shifted as i64)
-            .raw(",\"non_spostati\":")
+            .raw(",\"unshifted\":")
             .int(a.unshifted as i64)
-            .raw(",\"copertura\":")
+            .raw(",\"coverage\":")
             .num(round(a.cover, 4))
             .raw("}}"),
     };
 }
 
-/// The candidates of the library text `libreria` (`msnlib/1`) for the graph text `ignoto` (`msngrafo/1`), as the JSON `msncerca/1`.
+/// The candidates of the library text `libreria` (`msn-lib/1`) for the graph text `ignoto` (`msn-graph/1`), as the JSON `msn-search/1`.
 pub fn cerca(library: &str, ignoto: &str, o: &Options) -> Result<String> {
     let lib = parse(library.as_bytes()).map_err(|_| bad())?;
     let g = parse(ignoto.as_bytes()).map_err(|_| bad())?;
     let u = read_graph(&g)?;
     let found = hits(&lib, &u, o)?;
     let mut out = Out::default();
-    out.raw("{\"formato\":\"msncerca/1\",\"opzioni\":{\"ppm_prec\":")
+    out.raw("{\"schema\":\"msn-search/1\",\"options\":{\"precursor_ppm\":")
         .num(o.ppm_prec);
     out.raw(",\"tol_mz\":").num(o.tol_mz);
-    out.raw(",\"min_prove\":").int(o.min_evidence as i64);
+    out.raw(",\"min_evidence\":").int(o.min_evidence as i64);
     out.raw(",\"top\":").int(o.top as i64);
     out.raw(",\"delta_max\":")
         .num(o.delta_max)
-        .raw("},\"candidati\":[");
+        .raw("},\"candidates\":[");
     for (i, h) in found.iter().enumerate() {
         out.raw(if i > 0 { "," } else { "" });
         write(&mut out, h);

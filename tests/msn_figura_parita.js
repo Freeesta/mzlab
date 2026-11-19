@@ -1,5 +1,5 @@
 // Parity of the labels: the texts of the ions and of the losses that msngrafo-vista.js draws (page, Flow, stand-alone HTML) against the golden SVG of the Rust figure
-// (crates/mzlab-cli/src/msn_figura.rs, `testi`) on the same msngrafo/1. The drawer runs here on a minimal DOM. Exit code 1 on the first difference.
+// (crates/mzlab-cli/src/msn_figura.rs, `testi`) on the same msn-graph/1. The drawer runs here on a minimal DOM. Exit code 1 on the first difference.
 const fs = require("fs"), path = require("path"), vm = require("vm"), assert = require("assert");
 const dir = path.resolve(__dirname, "msn_figura");
 const src = fs.readFileSync(path.resolve(__dirname, "../mzlab/web/msngrafo-vista.js"), "utf8").split("\n").map(l => l.replace(/^export /, "")).join("\n");
@@ -29,13 +29,13 @@ const EN = {
   "msngrafo.v.aria.common": "reached from {n} precursors", "msngrafo.v.aria.collapsed": "{n} ions closed below", "msngrafo.v.common": "Reached from {n} different precursors",
   "msngrafo.v.compat": "compatible with {f}", "msngrafo.v.hidden": "{n} closed", "msngrafo.v.hyp": "hypothesis",
 };
-const PROVE = { perdita: "known loss", isotopi: "isotopes", msn: "MSn" };
+const PROVE = { loss: "known loss", isotopes: "isotopes", msn: "MSn" };
 const t = (k, p) => (EN[k] || k).replace(/\{(\w+)\}/g, (_, a) => String(p && p[a] !== undefined ? p[a] : ""));
 // the rule label of the tab (infusione-grafo-regole.js `arcLabel`), which the drawer takes as an option
 const ruleLabel = (j, a) => {
-  const r = j.regole && j.regole.archi.find(x => x.da === a.da && x.a === a.a);
-  if (!r || !(r.regole.length || r.composta.length)) return "";
-  const ids = r.regole.length ? r.regole.map(x => x.id + (x.priorita === 3 ? " (weak)" : "")) : r.composta.map(c => c.join(" + "));
+  const r = j.rules && j.rules.edges.find(x => x.from === a.from && x.to === a.to);
+  if (!r || !(r.rules.length || r.composite.length)) return "";
+  const ids = r.rules.length ? r.rules.map(x => x.id + (x.priority === 3 ? " (weak)" : "")) : r.composite.map(c => c.join(" + "));
   return ids.slice(0, 2).join(", ") + (ids.length > 2 ? ` +${ids.length - 2}` : "");
 };
 
@@ -50,15 +50,15 @@ for (const [name, mode, file] of [["g", "tree", "testi-albero.txt"], ["g", "radi
     lines.push(["node " + g.attrs["data-id"], ...texts].join(" | "));
   }
   // the arcs in the order the drawer draws them (the thin ones first), the radial view labels only the best path
-  const best = new Set(j.vista.archi.filter(a => a.best).map(a => a.da + ">" + a.a));
-  const arcs = j.archi.slice().sort((p, q) => Number(best.has(p.da + ">" + p.a)) - Number(best.has(q.da + ">" + q.a))).filter(a => mode === "tree" || best.has(a.da + ">" + a.a));
+  const best = new Set(j.view.edges.filter(a => a.best).map(a => a.from + ">" + a.to));
+  const arcs = j.edges.slice().sort((p, q) => Number(best.has(p.from + ">" + p.to)) - Number(best.has(q.from + ">" + q.to))).filter(a => mode === "tree" || best.has(a.from + ">" + a.to));
   const groups = svg.all().filter(e => e.cls.includes("ig-lossg"));
   assert.strictEqual(groups.length, arcs.length, "one label per arc");
   const arcLines = arcs.map((a, i) => {
     const tx = groups[i].children.filter(c => c.tag === "text");
     const first = tx.filter(c => c.cls.includes("ig-loss"))[0].textContent, second = (tx.filter(c => c.cls.includes("ig-loss"))[1] || { textContent: "" }).textContent;
     const rule = (tx.find(c => c.cls.includes("ig-rule")) || { textContent: "" }).textContent;
-    return `arc ${a.da}>${a.a} | ${first} | ${second} | ${rule}`;
+    return `arc ${a.from}>${a.to} | ${first} | ${second} | ${rule}`;
   });
   // the Rust side lists the arcs in the order of the graph: compare the sets of lines, ions in drawing order
   const rust = fs.readFileSync(path.join(dir, file), "utf8").replace(/\n$/, "").split("\n");

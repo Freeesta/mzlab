@@ -1,4 +1,4 @@
-//! wasm-bindgen bridge of `mzlab_feat::msnfigure`: the figure of a fragmentation graph `msngrafo/1` as SVG or stand-alone HTML, the bytes `flow run` writes for
+//! wasm-bindgen bridge of `mzlab_feat::msnfigure`: the figure of a fragmentation graph `msn-graph/1` as SVG or stand-alone HTML, the bytes `flow run` writes for
 //! `msn.figure@1`. A `.wasm` of its own, loaded by the pool of the Flow on the first `msn.figure` job; errors are JSON `{"error_key", "params"}` strings.
 use mzlab_core::error::Error;
 use mzlab_core::json::{parse, Value};

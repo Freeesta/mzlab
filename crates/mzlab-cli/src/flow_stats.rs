@@ -1,5 +1,5 @@
 //! The native executor of `table.stats@1`: Welch's t per comparison of the design, the one-way ANOVA, BH q-values and log2FC (`stat::compare`) on the
-//! areas of a `.mzfeat`. The conditions come from the design (`disegno/1`) and the samples file (`campioni/1` or `campioni/2`), matched to the columns of
+//! areas of a `.mzfeat`. The conditions come from the design (`design/1`) and the samples file (a `samples/1` document), matched to the columns of
 //! the table by file name, else by SHA-256. Writes `stat/1` (`mzlab_feat::flow_stat`, shared with the browser). Called by `flow.rs`.
 
 use crate::flow::{read_one, write_made, FileRunner};

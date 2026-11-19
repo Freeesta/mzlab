@@ -1,5 +1,5 @@
 // @ts-check
-// Flow (administrator mode): the sample list of a plan (input type `samples`, a campioni/3 document) kept in memory (S.samples[input name]) with its SHA-256 (the canonical form of the Rust of mzlab-core),
+// Flow (administrator mode): the sample list of a plan (input type `samples`, a samples/1 document) kept in memory (S.samples[input name]) with its SHA-256 (the canonical form of the Rust of mzlab-core),
 // which the plan records; the editor is the metadata grid (flow-meta-grid.js). Also the plan to run from the files open in Data.
 (() => {
   "use strict";
@@ -87,7 +87,7 @@
   };
 
   /** an empty entry of the table @param {number} i */
-  const blank = F.sampleBlank = i => ({ composto: "", concentrazione: null, file: "", istd: false, note: "", ordine_iniezione: i + 1, replica: 1, serie: "", sha256: "", tempo: null, tempo_confermato: false, tempo_min: null, tipo: "sample", tipo_bianco: null, unita: null, unita_tempo: "min" });
+  const blank = F.sampleBlank = i => ({ compound: "", concentration: null, file: "", istd: false, note: "", injection_order: i + 1, replicate: 1, series: "", sha256: "", time: null, time_confirmed: false, time_min: null, kind: "sample", blank_kind: null, concentration_unit: null, time_unit: "min" });
 
   /** the editor of one sample list: the metadata grid of flow-meta-grid.js @param {any} S @param {any} input the input of the plan */
   F.samplesEditor = (S, input) => (F.metaGrid ? F.metaGrid(S, input) : F.el("p", { class: "fl-note", text: "Loading the sample table…" }));

@@ -77,7 +77,7 @@ struct CondCx {
     blank: Vec<usize>,
 }
 
-/// `table_json` with the metadata `campioni/2` of the files and what the caller knows of the best hypothesis of each row. With two or more conditions
+/// `table_json` with the metadata `samples/1` of the files and what the caller knows of the best hypothesis of each row. With two or more conditions
 /// `times` stays the time axis of all the treated files; a row's `series`, `in_t0` and `in_blank` are the ones of the condition where the row is strongest
 /// (the files of the others count 0 in `series`, ties go to the first condition), and `gruppi` (`gruppi/1`) holds the detail of every condition together
 /// with `network` (the times of each condition and whether the network read it). With fewer than two conditions the text is the one of `table_json`.

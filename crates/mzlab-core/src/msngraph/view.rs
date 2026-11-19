@@ -1,4 +1,4 @@
-//! The key `vista` of `msngrafo/1`: what a drawer needs and the graph does not say outright, computed ONLY from the fields the JSON already has
+//! The key `view` of `msn-graph/1`: what a drawer needs and the graph does not say outright, computed ONLY from the fields the JSON already has
 //! (so an old graph is completed by `completa` with the same bytes): the MS levels of each ion, its intensity in the spectrum of its parent on
 //! the best path, the best path itself (`best-path/1`), the number of precursors, the tree layout (barycentre plus swaps against crossings)
 //! and the radial layout (ring, angle). Coordinates are abstract numbers: pixels and styles belong to the drawer. A proposal of a rule
@@ -41,7 +41,7 @@ fn num(v: &Value, k: &str) -> Result<f64> {
 
 pub(super) fn read(v: &Value) -> Result<Data> {
     super::version(v)?;
-    let nodes = v.get("nodi").ok_or_else(bad)?.arr();
+    let nodes = v.get("nodes").ok_or_else(bad)?.arr();
     let mut d = Data {
         id: vec![],
         mz: vec![],
@@ -55,30 +55,30 @@ pub(super) fn read(v: &Value) -> Result<Data> {
         index.insert(id, i);
         d.id.push(id.to_string());
         d.mz.push(num(n, "mz")?);
-        d.level.push((num(n, "livello")? as u8).max(1));
+        d.level.push((num(n, "level")? as u8).max(1));
         d.rel_max.push(num(n, "rel_max")?);
     }
-    for a in v.get("archi").ok_or_else(bad)?.arr() {
+    for a in v.get("edges").ok_or_else(bad)?.arr() {
         let node = |k: &str| {
             a.get(k)
                 .and_then(|x| x.str())
                 .and_then(|s| index.get(s).copied())
                 .ok_or_else(bad)
         };
-        let measures = a.get("misure").map_or(&[][..], |m| m.arr());
+        let measures = a.get("measurements").map_or(&[][..], |m| m.arr());
         let mut livelli: Vec<u8> = vec![];
         let mut rel = 0.0f64;
         for m in measures {
             let r = num(m, "rel")?;
             rel = rel.max(r);
             if r > 0.0 {
-                livelli.push(num(m, "livello")? as u8);
+                livelli.push(num(m, "level")? as u8);
             }
         }
         d.edges.push(EdgeD {
-            da: node("da")?,
-            a: node("a")?,
-            isolato: a.get("isolamento").and_then(|x| x.bool()).unwrap_or(false),
+            da: node("from")?,
+            a: node("to")?,
+            isolato: a.get("isolation").and_then(|x| x.bool()).unwrap_or(false),
             rel,
             levels: livelli,
         });
@@ -215,7 +215,7 @@ fn node_json(
     };
     o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
         .str(&d.id[i])
-        .raw(",\"livelli\":[");
+        .raw(",\"levels\":[");
     for (k, l) in levels.iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" }).int(*l as i64);
     }
@@ -223,26 +223,26 @@ fn node_json(
     opt(o, rel);
     o.raw(",\"rel_max\":");
     opt(o, Some(d.rel_max[i]));
-    o.raw(",\"best\":{\"da\":");
+    o.raw(",\"best\":{\"from\":");
     id(o, d, b.da);
-    o.raw(",\"passi\":").int(b.steps as i64).raw(",\"costo\":[");
+    o.raw(",\"steps\":").int(b.steps as i64).raw(",\"cost\":[");
     o.int(b.steps as i64).raw(",");
     opt(o, b.min_rel);
-    o.raw(",").int(b.isolati as i64).raw("]},\"entranti\":");
-    o.int(da.len() as i64).raw(",\"comune\":");
+    o.raw(",").int(b.isolati as i64).raw("]},\"incoming\":");
+    o.int(da.len() as i64).raw(",\"common\":");
     o.raw(if da.len() >= 2 { "true" } else { "false" });
-    o.raw(",\"albero\":{\"col\":")
+    o.raw(",\"tree\":{\"col\":")
         .int(pos.0 as i64)
-        .raw(",\"riga\":")
+        .raw(",\"row\":")
         .int(pos.1 as i64)
-        .raw("},\"radiale\":{\"anello\":")
+        .raw("},\"radial\":{\"ring\":")
         .int(rad.0 as i64)
-        .raw(",\"angolo\":")
+        .raw(",\"angle\":")
         .num(round(rad.1, 2))
         .raw("}}");
 }
 
-/// The value of the key `vista` of the graph `d` (its keys in a fixed order).
+/// The value of the key `view` of the graph `d` (its keys in a fixed order).
 fn view(d: &Data) -> String {
     let n = d.id.len();
     let best = paths(d);
@@ -259,21 +259,21 @@ fn view(d: &Data) -> String {
     let mut order: Vec<usize> = (0..n).collect();
     crate::sortc::any_by(&mut order, |a, b| pos[*a].cmp(&pos[*b]).then(a.cmp(b)));
     let mut o = Out::default();
-    o.raw("{\"versione\":1,\"algoritmo\":\"best-path/1\",\"regola\":")
+    o.raw("{\"version\":1,\"algorithm\":\"best-path/1\",\"rule\":")
         .str(RULE)
-        .raw(",\"ordine\":[");
+        .raw(",\"order\":[");
     for (k, &i) in order.iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" }).str(&d.id[i]);
     }
-    o.raw("],\"nodi\":[");
+    o.raw("],\"nodes\":[");
     for i in 0..n {
         node_json(&mut o, d, i, (&best[i], pos[i], rad[i]));
     }
-    o.raw("],\"archi\":[");
+    o.raw("],\"edges\":[");
     for (k, a) in d.edges.iter().enumerate() {
-        o.raw(if k > 0 { "," } else { "" }).raw("{\"da\":");
+        o.raw(if k > 0 { "," } else { "" }).raw("{\"from\":");
         id(&mut o, d, Some(a.da));
-        o.raw(",\"a\":");
+        o.raw(",\"to\":");
         id(&mut o, d, Some(a.a));
         o.raw(",\"best\":");
         o.raw(if best[a.a].da == Some(a.da) {
@@ -291,21 +291,21 @@ pub(super) fn with_view(json: String) -> String {
     completa(&json).unwrap_or(json)
 }
 
-/// The text of a graph with the key `vista` added at its end; `Err` when it is not an `msngrafo/1` or `/2` (`error.newerFormat` for a newer one). A graph that has `vista` is returned as it is.
+/// The text of a graph with the key `view` added at its end; `Err` when it is not an `msn-graph/1` or `/2` (`error.newerFormat` for a newer one). A graph that has `view` is returned as it is.
 pub fn completa(json: &str) -> Result<String> {
     let v = parse(json.as_bytes()).map_err(|_| bad())?;
-    if v.get("vista").is_some() {
+    if v.get("view").is_some() {
         read(&v)?;
         return Ok(json.to_string());
     }
     let testa = json.trim_end();
     let testa = testa.strip_suffix('}').ok_or_else(bad)?;
-    Ok(format!("{testa},\"vista\":{}}}", view(&read(&v)?)))
+    Ok(format!("{testa},\"view\":{}}}", view(&read(&v)?)))
 }
 
-/// `grafo` with the key `chiave` (its value is `valore`) added after the keys that are there, and before `vista`, which stays the last.
+/// `grafo` with the key `chiave` (its value is `valore`) added after the keys that are there, and before `view`, which stays the last.
 pub(super) fn with_key(graph: &str, key: &str, value: &str) -> String {
-    let (testa, tail) = match graph.rfind(",\"vista\":{") {
+    let (testa, tail) = match graph.rfind(",\"view\":{") {
         Some(p) => graph.split_at(p),
         None => (graph.strip_suffix('}').unwrap_or(graph), "}"),
     };

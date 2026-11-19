@@ -164,7 +164,7 @@ setTimeout(() => safe(async () => {
   await archiveReady;
   const rows = await safe(() => tx("manifest", "readonly", s => s.getAll())) || [];
   await limpia({ list: k => ARCH.list(k), remove: (k, n) => ARCH.remove(k, n), manifest: async () => rows, info: infoOf,
-    annota: (k, e, info) => tx("manifest", "readwrite", s => s.put(rowOf(k, e.name, e.size, e.lastModified, info))) });
+    annotate: (k, e, info) => tx("manifest", "readwrite", s => s.put(rowOf(k, e.name, e.size, e.lastModified, info))) });
 }), 8000);
 const within = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);              // a database held by another tab never answers: «start from scratch» does not wait for it
 async function lrSpace() {
@@ -218,9 +218,9 @@ async function msnGrafoOp(m, id) {                                              
   annuncia({ phase: "load", frac: 0 });
   const d = await derivata(name, p => { nat = true; annuncia(p); });
   const blob = d ? d.mzml : m.blob, rd = conAvanzamento(readerFor, blob, annuncia), idx = d ? d.idx : undefined, q = (m.query || "") + (BUDGET_MB > 0 ? (m.query ? "&" : "") + "budget_mb=" + BUDGET_MB : "");      // q: with the engine's budget, spectra over it end in the calm error.memoryBudget (phase msnGraph), not a trap that restarts the engine
-  if (m.cerca) return msnLibCerca(name, blob, q, m.libreria || "", rd, idx);
-  if (m.libreria == null) return msnGrafo(name, blob, q, rd, !!m.esporta, idx);
-  return msnLibAggiungi(name, blob, q, m.libreria, m.molecola || "", rd, idx);
+  if (m.library_search) return msnLibCerca(name, blob, q, m.library || "", rd, idx);
+  if (m.library == null) return msnGrafo(name, blob, q, rd, !!m.export, idx);
+  return msnLibAggiungi(name, blob, q, m.library, m.molecule || "", rd, idx);
 }
 const labOp = createLabOps({ engine: () => engine, ARCH, fileOf, lrOpen, slotOf, readerFor, jerr });      // methods (.dam) and the routes of one item about its acquisition
 async function lrMigrate() {                                              // what an earlier visit left in IndexedDB passes to OPFS
@@ -342,7 +342,7 @@ async function lrOp(m) {
     case "lr_flow_command": return { info: (await rotte()).flow_command(m.body || "") };                            // the copyable shell command of a mzflow/2 plan; "E" + JSON = an error
     case "lr_flow_line": { const r = await rotte(); try { return { info: r.flow_line(m.body || "") }; } catch (e) { return { info: "E" + String(e) }; } }   // the short line of a plan, or the plan with a line's --set applied; "E" + JSON = an error
     case "lr_flow_sched": return { info: (await rotte()).flow_sched(m.sop || "", m.body || "") };                   // the live scheduler of the Flow (sched_route): JSON in, JSON out
-    case "lr_campioni": return { info: (await rotte()).samples(m.cop || "", m.body || "") };                       // campioni/2 (proponi, valida, ...): JSON in, JSON out
+    case "lr_samples": return { info: (await rotte()).samples(m.cop || "", m.body || "") };                       // samples/1 (propose, validate, ...): JSON in, JSON out
     case "lr_molecules": return { info: (await rotte()).molecules(m.mop || "", m.body || "") };                     // molecules/1 (carica, cerca, get, da_csv, ...): JSON in, JSON out
     case "lr_molecole_archivio": return { info: await molecole(m.mop || "", m.body || "") };     // the molecules of the user, kept in the browser (IndexedDB) or, in the app, in a file
     case "lr_ricerca": return { info: search_number(m.body || "") }; case "lr_reflist": return { info: reflist_parse(m.body || "") };

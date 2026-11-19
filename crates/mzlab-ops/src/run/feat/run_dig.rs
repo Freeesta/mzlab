@@ -53,7 +53,7 @@ pub fn dig_inputs<I: ReadAt>(
             .raw(",\"kind\":\"full\"}");
     }
     let samples = mzlab_core::samples::order_like(samples.trim(), names)?;
-    files.raw("],\"campioni\":").raw(&samples).raw("}");
+    files.raw("],\"samples\":").raw(&samples).raw("}");
     let adduct = if adduct == "[M+H]+" && polarity < 0 {
         "[M-H]-"
     } else {

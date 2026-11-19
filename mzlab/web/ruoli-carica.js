@@ -1,8 +1,8 @@
 // @ts-strict
 "use strict";
-// Roles and times in the loading table (`campioni/2`, the Rust of mzlab-core). The proposals from the file names (`proponi`) come from the engine through `api/campioni/<op>`;
+// Roles and times in the loading table (`samples/1`, the Rust of mzlab-core). The proposals from the file names (`propose`) come from the engine through `api/samples/<op>`;
 // nothing is decided here. The time is optional and written in the table: the files open as soon as they are read, and the table writes through to them (OPENNOW).
-// An entry of ST.files keeps `type` (the base type the other routes know: sample | blank | standard) and, for this table, `role` (campioni/2 `tipo`), `prop` (the proposal was asked), `ed` (the student chose the role: a late proposal does not overwrite it), `gR` / `gT` (role / time from a proposal, untouched: yellow `guess` cells). The time `f.time` is in minutes. A sample at time 0 is the t0 (no role of its own); the time of a dark is negative (minutes before the time zero).
+// An entry of ST.files keeps `type` (the base type the other routes know: sample | blank | standard) and, for this table, `role` (samples/1 `kind`), `prop` (the proposal was asked), `ed` (the student chose the role: a late proposal does not overwrite it), `gR` / `gT` (role / time from a proposal, untouched: yellow `guess` cells). The time `f.time` is in minutes. A sample at time 0 is the t0 (no role of its own); the time of a dark is negative (minutes before the time zero).
 // The cells are in ruoli-celle.js (it adds its functions to RUOLI).
 const RUOLI = /** @type {any} */ ((() => {
   /** @type {(k: string, p?: any) => string} */
@@ -11,7 +11,7 @@ const RUOLI = /** @type {any} */ ((() => {
   const BASE = /** @type {Record<string, string>} */ ({ sample: "sample", blank: "blank", dark: "sample", infusion: "sample", std: "standard", qc: "sample" });
   const TIMED = new Set(["sample", "dark"]);        // roles with a time to write
   const eh = (/** @type {any} */ s) => EH(s == null ? "" : s);
-  const post = (/** @type {string} */ op, /** @type {any} */ body) => fetch("api/campioni/" + op, { method: "POST", body: JSON.stringify(body) }).then(r => r.json());
+  const post = (/** @type {string} */ op, /** @type {any} */ body) => fetch("api/samples/" + op, { method: "POST", body: JSON.stringify(body) }).then(r => r.json());
 
   /** the value of the role select of an entry: sample, blank, dark, infusion, std, qc (the old `t0` is a sample) */
   const val = (/** @type {Voce} */ f) => f.role === "calibration" ? "std" : f.role === "t0" ? "sample" : f.role || (f.type === "standard" ? "std" : f.type || "sample");
@@ -40,14 +40,14 @@ const RUOLI = /** @type {any} */ ((() => {
     todo.forEach(f => { f.prop = 1; });
     let doc;
     busy++;
-    try { doc = await post("proponi", { files: todo.map(f => ({ name: f.name, sha256: "", kind: f.kind || "" })) }); } catch (_) { return false; } finally { busy--; }
+    try { doc = await post("propose", { files: todo.map(f => ({ name: f.name, sha256: "", kind: f.kind || "" })) }); } catch (_) { return false; } finally { busy--; }
     let changed = false;
-    for (const c of (doc && doc.campioni) || []) {
+    for (const c of (doc && doc.samples) || []) {
       const f = get().find(x => x.name === c.file);
       if (!f || f.ed) continue;
-      const r = c.tipo === "calibration" ? "std" : c.tipo === "t0" ? "sample" : c.tipo;
+      const r = c.kind === "calibration" ? "std" : c.kind === "t0" ? "sample" : c.kind;
       setRole(f, r); f.gR = true;
-      if (TIMED.has(r) && c.tempo_min != null) { f.time = r === "dark" ? darkTime(c.tempo_min) : c.tempo_min; f.gT = true; }
+      if (TIMED.has(r) && c.time_min != null) { f.time = r === "dark" ? darkTime(c.time_min) : c.time_min; f.gT = true; }
       changed = true;
     }
     return changed;

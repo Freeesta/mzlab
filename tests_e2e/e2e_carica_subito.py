@@ -48,7 +48,7 @@ try:
             assert pg.evaluate("SUBREF.autoFile(E.tab).time") == 0                  # the dark never becomes the first by time
             leg = pg.evaluate("CAMPIONI.gradientLegend(E.files.filter(f => !f.gone))")
             assert "-30" not in leg and "−30" not in leg, leg                       # the dark is not a point of the gradient
-            ent = pg.evaluate("CDOC.session(E.files.filter(f => !f.gone)).map(e => [e.tipo, e.tempo_min, e.tipo_bianco])")
+            ent = pg.evaluate("CDOC.session(E.files.filter(f => !f.gone)).map(e => [e.kind, e.time_min, e.blank_kind])")
             assert ["dark", -30, None] in ent and not any(e[0] == "t0" for e in ent), ent
         step("t0 = sample at 0, dark time negative and out of the gradient and of the auto reference", t0_and_dark)
 finally:

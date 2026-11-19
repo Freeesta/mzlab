@@ -95,7 +95,7 @@ fn usage_errors_exit_2() {
         vec!["match-mz", "18", "--tables", &t, "--set", "nope=1"],
         vec!["match-mz", "18", "--tables", &t, "--nope"],
     ] {
-        assert_eq!(run(&a).code, 2, "{a:?}");
+        assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
     }
     assert_eq!(run(&["match-mz", "--help"]).code, 0);
 }

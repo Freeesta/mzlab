@@ -44,11 +44,11 @@ def write_mzml(path, gain, seed):
                     + f'<chromatogramList count="{len(chroms)}">' + "".join(chroms) + "</chromatogramList></run></mzML>", encoding="utf-8")
 
 def sample(f):
-    return {"composto": "", "concentrazione": f["conc"], "file": f["name"] + ".mzML", "istd": False, "note": "", "ordine_iniezione": f["order"], "replica": 1, "serie": "", "sha256": "", "tempo": None, "tempo_confermato": False,
-            "tempo_min": None, "tipo": f["kind"], "tipo_bianco": None, "unita": None, "unita_tempo": "min"}
-SAMPLES = json.dumps({"campioni": [sample(f) for f in FILES], "schema": "campioni/2"}, separators=(",", ":"))
-DESIGN = json.dumps({"condizioni": [{"livelli": {}, "nome": "", "repliche": 1}], "confronti": [], "fattori": [], "lotti": [{"file": f["name"] + ".mzML", "lotto": f["batch"], "sha256": ""} for f in FILES],
-                     "riferimento": None, "schema": "disegno/1"}, separators=(",", ":"))
+    return {"compound": "", "concentration": f["conc"], "file": f["name"] + ".mzML", "istd": False, "note": "", "injection_order": f["order"], "replicate": 1, "series": "", "sha256": "", "time": None, "time_confirmed": False,
+            "time_min": None, "kind": f["kind"], "blank_kind": None, "concentration_unit": None, "time_unit": "min"}
+SAMPLES = json.dumps({"samples": [sample(f) for f in FILES], "schema": "samples/1"}, separators=(",", ":"))
+DESIGN = json.dumps({"conditions": [{"levels": {}, "name": "", "replicates": 1}], "comparisons": [], "factors": [], "batches": [{"file": f["name"] + ".mzML", "batch": f["batch"], "sha256": ""} for f in FILES],
+                     "reference": None, "schema": "design/1"}, separators=(",", ":"))
 
 RUN_RECORD = (ROOT / "tests" / "golden" / "feat" / "methods-corsa.json").read_text()
 

@@ -1,5 +1,5 @@
 //! Correction of the drift of the areas, a view over the aligned table: one factor per cell (row and file), like `norm.rs` but along the order of injection.
-//! The areas of the `qc` files of each batch (`disegno/1`) are fitted against the position of the injection with a line or a local line (LOESS, tricube
+//! The areas of the `qc` files of each batch (`design/1`) are fitted against the position of the injection with a line or a local line (LOESS, tricube
 //! weights); a cell's factor is the reference level of the row over the curve at the injection of its file. The `.mzfeat` and the measured areas are never changed.
 //!
 //! The correction is refused, with a reason and no number, when a batch has fewer than `MIN_QC` QC files or when the first or the last injected file of a batch
@@ -7,7 +7,7 @@
 //! factors there (no guess). Sums run in a fixed order, so equal inputs give equal bytes. Reference: `tools/drift_reference.py` (golden `deriva.json`).
 
 use crate::sortc::SortC;
-use mzlab_core::drawing::{Design, DEFAULT_BATCH};
+use mzlab_core::design::{Design, DEFAULT_BATCH};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{round, Out};
 

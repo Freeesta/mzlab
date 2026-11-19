@@ -86,16 +86,20 @@ fn usage_errors_exit_with_2() {
             "--set",
             "hr=2",
         ],
-        vec![
+    ] {
+        assert_eq!(run(&a).code, 2, "{a:?}");
+    }
+    assert_eq!(
+        run(&[
             "dda-window",
             "/nonexistent/x.mzML",
             "--from",
             "1",
             "--to",
-            "2",
-        ],
-    ] {
-        assert_eq!(run(&a).code, 2, "{a:?}");
-    }
+            "2"
+        ])
+        .code,
+        4
+    );
     assert_eq!(run(&["dda-window", "--help"]).code, 0);
 }

@@ -1,4 +1,4 @@
-//! Name tokeniser of `variabili`: level-1 tokens (separators), level-2 atoms inside a token (`MQH2O2T00`), the vocabularies the classes come from, and the
+//! Name tokeniser of `variables`: level-1 tokens (separators), level-2 atoms inside a token (`MQH2O2T00`), the vocabularies the classes come from, and the
 //! comparison helpers (case folding, natural order). Used by `variables.rs` only.
 
 use super::blank_words::is_blank_name;
@@ -95,7 +95,7 @@ pub(super) fn is_matrix_word(tok: &str) -> bool {
     MATRICES.iter().any(|m| m.eq_ignore_ascii_case(tok))
 }
 
-/// A blank word of `nomi-bianco.json` (`wash`, `mq`).
+/// A blank word of `blank-names.json` (`wash`, `mq`).
 pub(super) fn is_blank_word(low: &str) -> bool {
     is_blank_name(low)
 }

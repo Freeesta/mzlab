@@ -58,10 +58,10 @@ async function hypotheses(base, names, list, structure, parent, adduct = "") {
   return JSON.parse(await rpc("feat/hypotheses", { names, rules: await rulesOf(base, list), structure, parent, recipe }));
 }
 
-/** the numbers of the table of the products: the roles of campioni/2 here, the table in the app ("null" after a low-resolution Dig) @param {{lc: string[], files: any[]} | null} hr @param {string} rows */
+/** the numbers of the table of the products: the roles of samples/1 here, the table in the app ("null" after a low-resolution Dig) @param {{lc: string[], files: any[]} | null} hr @param {string} rows */
 async function tpTable(hr, rows) {
   if (!hr) return "null";
-  const samples = await samplesOf((op, input) => rpc("finder/campioni", { cop: op, input }), hr.lc, hr.files);
+  const samples = await samplesOf((op, input) => rpc("finder/samples", { cop: op, input }), hr.lc, hr.files);
   return rpc("finder/tp_table", { samples, rows: rows || "" });
 }
 

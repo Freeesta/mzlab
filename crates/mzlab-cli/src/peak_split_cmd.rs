@@ -128,8 +128,7 @@ fn parse(args: Vec<String>) -> Result<Option<Request>, String> {
 fn cuts(c: &Request, files: &str, window: &str) -> Result<String, String> {
     let given = c.split.as_deref().unwrap_or_default();
     if given == "auto" {
-        let v = valleys_text(files, window, c.depth.unwrap_or(DEPTH))
-            .map_err(|e| crate::error_text::human_error(&e))?;
+        let v = valleys_text(files, window, c.depth.unwrap_or(DEPTH)).map_err(|e| e.to_string())?;
         return Ok(v
             .trim_start_matches("{\"splits\":[")
             .trim_end_matches("]}")
@@ -146,7 +145,7 @@ fn cuts(c: &Request, files: &str, window: &str) -> Result<String, String> {
 }
 
 fn answer(c: &Request, warn: &mut String) -> Result<String, String> {
-    let human = |e: mzlab_core::error::Error| crate::error_text::human_error(&e);
+    let human = |e: mzlab_core::error::Error| e.to_string();
     let files = crate::manual_table_cmd::files_json(&c.files, warn).map_err(human)?;
     let mut window = c.window.0.clone();
     window.push('}');
@@ -166,7 +165,11 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     let mut warn = String::new();
     match answer(&c, &mut warn) {
-        Err(e) => Outcome::fail(&format!("{warn}{e}")),
+        Err(e) => {
+            let mut o = Outcome::fail(&e);
+            o.stderr += &warn;
+            o
+        }
         Ok(t) => {
             let mut o = crate::emit(t, &c.out);
             o.stderr.insert_str(0, &warn);

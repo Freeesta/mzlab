@@ -1,6 +1,6 @@
 //! The Dig on a series that compares conditions (`docs/agenti/groups.md`): the 38 synthetic mzML of `tests/data/gruppi/` (6 conditions × 3 times × 2
 //! replicates, a blank and a standard of the parent; the truth is `attesi.json` and its `LEGGIMI.md`), the roles and conditions from
-//! `samples::proponi`. The pipeline runs natively as the pool of `feat-worker.js` runs it, then the Dig and the block `gruppi`.
+//! `samples::propose`. The pipeline runs natively as the pool of `feat-worker.js` runs it, then the Dig and the block `gruppi`.
 //! Criteria 1-4 of `docs/agenti/groups.md`.
 
 use mzlab_core::samples;
@@ -29,7 +29,7 @@ fn names() -> Vec<String> {
     v
 }
 
-/// `{"files": [...], "campioni": campioni/2}` as the page passes it (`with_cond`), the names in the order given; without the conditions
+/// `{"files": [...], "samples": samples/1}` as the page passes it (`with_cond`), the names in the order given; without the conditions
 /// a plain list, as the page passes a series of today.
 fn files_json(names: &[String], with_cond: bool) -> String {
     let list: Vec<String> = names
@@ -46,8 +46,8 @@ fn files_json(names: &[String], with_cond: bool) -> String {
         .iter()
         .map(|n| format!(r#"{{"name":"{n}","sha256":"","kind":"mzML"}}"#))
         .collect();
-    let doc = samples::route("proponi", &format!(r#"{{"files":[{}]}}"#, req.join(","))).unwrap();
-    format!(r#"{{"files":[{}],"campioni":{doc}}}"#, list.join(","))
+    let doc = samples::route("propose", &format!(r#"{{"files":[{}]}}"#, req.join(","))).unwrap();
+    format!(r#"{{"files":[{}],"samples":{doc}}}"#, list.join(","))
 }
 
 fn run(names: &[String], with_cond: bool, settings: &str) -> lr::LrDig {

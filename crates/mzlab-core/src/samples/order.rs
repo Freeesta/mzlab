@@ -1,4 +1,4 @@
-//! Puts the files of a samples document (`campioni/1`, `/2` or `/3`) in the order of the files of a table, matched by file name: the readers of the
+//! Puts the files of a samples document (`samples/1`) in the order of the files of a table, matched by file name: the readers of the
 //! roles pair the samples with the files by position, so every step that holds a table calls `order_like` first (`docs/agenti/samples.md`).
 
 use super::json::bad;
@@ -29,7 +29,7 @@ pub(super) fn stem(name: &str) -> &str {
 
 /// `text` with its files in the order of `names` (the files of the table, with or without folders and the extensions of `EXT`); the other fields are kept.
 /// The same text when the order is already that one, or when `names` is empty or has an empty name (a table that does not record its files).
-/// A name with no sample, or a sample naming no file of the table, is `error.badCampioni` with the name in `file`.
+/// A name with no sample, or a sample naming no file of the table, is `error.badSamples` with the name in `file`.
 pub fn order_like(text: &str, names: &[String]) -> Result<String> {
     if names.is_empty() || names.iter().any(|n| base(n).is_empty()) {
         return Ok(text.to_string());
@@ -38,7 +38,7 @@ pub fn order_like(text: &str, names: &[String]) -> Result<String> {
     let Value::Obj(fields) = &mut doc else {
         return Err(bad());
     };
-    let Some((_, Value::Arr(rows))) = fields.iter_mut().find(|(k, _)| k == "campioni") else {
+    let Some((_, Value::Arr(rows))) = fields.iter_mut().find(|(k, _)| k == "samples") else {
         return Err(bad());
     };
     let file = |v: &Value| base(v.get("file").and_then(|x| x.str()).unwrap_or("")).to_string();

@@ -1,10 +1,10 @@
 //! The comparison of conditions: Welch's t per feature for each requested pair, a one-way ANOVA over all the conditions, Benjamini-Hochberg q-values
 //! inside each family of tests, and log2FC with a pseudocount. The test works on log2(area + pseudocount) (a missing area is 0), so a feature that is
-//! absent in one condition still has a finite effect size. Fewer than `MIN_REPLICHE` files in a condition refuse the comparison with a reason: no number.
+//! absent in one condition still has a finite effect size. Fewer than `MIN_REPLICATES` files in a condition refuse the comparison with a reason: no number.
 
 use super::special::{f_upper, t_two_sided};
 use super::{Layout, Matrix};
-use mzlab_core::drawing::MIN_REPLICHE;
+use mzlab_core::design::MIN_REPLICATES;
 use mzlab_core::error::{Error, Result};
 
 /// Smallest pseudocount (area units), also the one used when no file gives a noise level.
@@ -189,7 +189,7 @@ pub fn benjamini_hochberg(p: &[f64]) -> Vec<f64> {
 
 fn compare_pair(m: &Matrix, lay: &Layout, a: usize, b: usize, pseudo: f64) -> Comparison {
     let (fa, fb) = (lay.files_of(a), lay.files_of(b));
-    let few = fa.len().min(fb.len()) < MIN_REPLICHE as usize;
+    let few = fa.len().min(fb.len()) < MIN_REPLICATES as usize;
     if few {
         return Comparison {
             a,
@@ -231,7 +231,7 @@ fn compare_pair(m: &Matrix, lay: &Layout, a: usize, b: usize, pseudo: f64) -> Co
 /// One-way ANOVA over every condition that has files.
 fn anova(m: &Matrix, lay: &Layout, groups: &[usize], pseudo: f64) -> Anova {
     let files: Vec<Vec<usize>> = groups.iter().map(|&g| lay.files_of(g)).collect();
-    if groups.len() < 2 || files.iter().any(|f| f.len() < MIN_REPLICHE as usize) {
+    if groups.len() < 2 || files.iter().any(|f| f.len() < MIN_REPLICATES as usize) {
         return Anova {
             refused: Some("fewReplicates"),
             rows: Vec::new(),
@@ -286,7 +286,7 @@ pub fn compare(
     let mut warnings = Vec::new();
     for &g in &groups {
         let n = lay.files_of(g).len();
-        if n < MIN_REPLICHE as usize {
+        if n < MIN_REPLICATES as usize {
             warnings.push(Warning {
                 code: "fewReplicates",
                 group: g,
@@ -301,7 +301,7 @@ pub fn compare(
     let heat_groups: Vec<usize> = groups
         .iter()
         .copied()
-        .filter(|&g| lay.files_of(g).len() >= MIN_REPLICHE as usize)
+        .filter(|&g| lay.files_of(g).len() >= MIN_REPLICATES as usize)
         .collect();
     let heat = heatmap(m, lay, &heat_groups, pseudo);
     let heat_row_order = cluster_order(&heat);

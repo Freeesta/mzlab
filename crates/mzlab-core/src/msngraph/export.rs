@@ -1,4 +1,4 @@
-//! The spectra of the `msngrafo/1` as CSV, MGF or MSP text (`api/msn_grafo/export`, `mzlab-cli msn-graph`): one block per spectrum of the
+//! The spectra of the `msn-graph/1` as CSV, MGF or MSP text (`api/msn_grafo/export`, `mzlab-cli msn-graph`): one block per spectrum of the
 //! tree, optionally only its clean peaks (those a node of the graph explains) and only the spectra of one node of the tree. Used by the
 //! `.wasm` module of the page and by the command line, so both write the same bytes.
 
@@ -19,18 +19,18 @@ impl Format {
             "csv" => Ok(Format::Csv),
             "mgf" => Ok(Format::Mgf),
             "msp" => Ok(Format::Msp),
-            _ => Err(Error::new("err.request.badNumber").with("name", "formato")),
+            _ => Err(Error::new("err.request.badNumber").with("name", "format")),
         }
     }
 }
 
-/// `formato=csv|mgf|msp&pulito=1&nodo=<id>` of `api/msn_grafo/export`; `get(name)` is the value of a parameter.
+/// `format=csv|mgf|msp&clean=1&node=<id>` of `api/msn_grafo/export`; `get(name)` is the value of a parameter.
 pub fn from_export_request(
     get: &dyn Fn(&str) -> Option<String>,
 ) -> Result<(Format, bool, Option<String>)> {
-    let f = Format::from_name(&get("formato").unwrap_or_default())?;
-    let clean = get("pulito").is_some_and(|v| v == "1" || v == "true");
-    Ok((f, clean, get("nodo").filter(|n| !n.is_empty())))
+    let f = Format::from_name(&get("format").unwrap_or_default())?;
+    let clean = get("clean").is_some_and(|v| v == "1" || v == "true");
+    Ok((f, clean, get("node").filter(|n| !n.is_empty())))
 }
 
 /// m/z of the precursor of a spectrum (0 for an MS1-less root).
@@ -45,7 +45,7 @@ fn peaks(s: &SpettroG, clean: bool) -> impl Iterator<Item = &(f64, f64, Option<u
 }
 
 fn csv(g: &Graph, sel: &[&SpettroG], clean: bool) -> String {
-    let mut t = String::from("albero,livello,attivazione,ce,precursore_mz,mz,rel,nodo\n");
+    let mut t = String::from("tree,level,activation,ce,precursor_mz,mz,rel,node\n");
     for s in sel {
         let pre = precursore(g, s);
         for (mz, rel, node) in peaks(s, clean) {
@@ -83,9 +83,9 @@ fn blocks(g: &Graph, sel: &[&SpettroG], clean: bool, mgf: bool) -> String {
 }
 
 /// Whether a spectrum is kept by `nodo`: `nK` (a node of the graph) = the spectra of which it is the precursor; `msn:<id>` or a bare tree id =
-/// the spectra of that node of the tree (`SpettroG::albero`); `tutto`, empty or absent = all.
+/// the spectra of that node of the tree (`SpettroG::albero`); `all`, empty or absent = all.
 fn wanted(s: &SpettroG, node: Option<&str>) -> bool {
-    let Some(n) = node.filter(|n| !n.is_empty() && *n != "tutto") else {
+    let Some(n) = node.filter(|n| !n.is_empty() && *n != "all") else {
         return true;
     };
     if let Some(k) = n.strip_prefix('n').and_then(|k| k.parse::<usize>().ok()) {
@@ -151,7 +151,7 @@ mod tests {
             (3, 3, 1)
         );
         // everything
-        assert_eq!((rows(Some("tutto")), rows(Some("")), rows(None)), (3, 3, 3));
+        assert_eq!((rows(Some("all")), rows(Some("")), rows(None)), (3, 3, 3));
     }
 
     #[test]

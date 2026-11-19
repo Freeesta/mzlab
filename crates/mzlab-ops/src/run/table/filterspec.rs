@@ -55,7 +55,7 @@ fn wants_labels(job: &[(String, Value)]) -> bool {
         )
 }
 
-/// The batch, matrix, series and group of every file of a `campioni/2` or `/3` document; empty for `campioni/1`, which has none.
+/// The batch, matrix, series and group of every file of a `samples/1` document.
 fn labels_of(samples: &[u8]) -> Labels {
     let Ok(list) = samples::from_json(samples) else {
         return Labels::default();

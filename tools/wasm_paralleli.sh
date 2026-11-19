@@ -21,8 +21,9 @@ wasm_pack() {
 wasm_wait() {
   local bad=0 p
   for p in $wasm_pids; do
-    wait "${p%%:*}" || bad=1
+    rc=0; wait "${p%%:*}" || rc=$?
     cat "$wasm_jobs/${p##*:}.log"
+    if [ "$rc" != 0 ]; then bad=1; echo "::error::wasm job ${p##*:} (pid ${p%%:*}) exited $rc"; fi      # never a silent failure
   done
   wasm_pids=""
   rm -rf "$wasm_jobs"

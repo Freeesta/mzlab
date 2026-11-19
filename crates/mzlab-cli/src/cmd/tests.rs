@@ -7,6 +7,7 @@ const SNAPSHOT: &str = include_str!("../../tests/data/help/help_snapshot.txt");
 #[test]
 fn every_help_and_usage_error_is_unchanged() {
     let mut n = 0;
+    let mut fresh = String::new();
     for chunk in SNAPSHOT.split("=== mzlab-cli ").skip(1) {
         let (line, _) = chunk.split_once('\n').unwrap();
         let args: Vec<String> = line.split_whitespace().map(String::from).collect();
@@ -19,8 +20,25 @@ fn every_help_and_usage_error_is_unchanged() {
         );
         // the version is the build's: the snapshot holds a placeholder
         let want = chunk.replace("{VERSION}", env!("CARGO_PKG_VERSION"));
-        assert_eq!(got, want, "mzlab-cli {line}");
+        fresh += &format!(
+            "=== mzlab-cli {}",
+            got.replace(env!("CARGO_PKG_VERSION"), "{VERSION}")
+        );
+        if std::env::var_os("MZLAB_UPDATE_HELP").is_none() {
+            assert_eq!(got, want, "mzlab-cli {line}");
+        }
         n += 1;
+    }
+    // MZLAB_UPDATE_HELP=1 rewrites the snapshot from the current output (review the diff before committing)
+    if std::env::var_os("MZLAB_UPDATE_HELP").is_some() {
+        std::fs::write(
+            concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/tests/data/help/help_snapshot.txt"
+            ),
+            fresh,
+        )
+        .unwrap();
     }
     assert!(n >= 60, "the snapshot lists {n} invocations");
 }

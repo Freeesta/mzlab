@@ -18,7 +18,7 @@ def step(name, fn):
 lib_msngrafo.prepare()
 tmp = Path(tempfile.mkdtemp(prefix="msnnat_"))
 folder = agilent_sintetico.write(tmp / "serie", "uno.D", 60)
-mask = lambda t: re.sub(r'"nome":"[^"]*","sha256_idx":"[0-9a-f]*"', '"nome":"","sha256_idx":""', t)      # the name of the sample (uno.mzML in the page, uno.D for the command line) and the index may differ
+mask = lambda t: re.sub(r'"name":"[^"]*","sha256_idx":"[0-9a-f]*"', '"name":"","sha256_idx":""', t)      # the name of the sample (uno.mzML in the page, uno.D for the command line) and the index may differ
 cli = subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(folder)], cwd=ROOT, capture_output=True, encoding="utf-8")
 want = cli.stdout.strip() if cli.returncode == 0 else None
 r = Run(port=8979, wd="/tmp/wd_msngrafo_nativo")
@@ -38,7 +38,7 @@ try:
             if want is not None:
                 assert st == 200 and mask(t) == mask(want), "the page and the command line differ"
             else:
-                assert st in (200, 400) and ('"formato":"msngrafo/2"' in t or "error_key" in t), (st, t[:200])
+                assert st in (200, 400) and ('"schema":"msn-graph/1"' in t or "error_key" in t), (st, t[:200])
         step("the graph of a sample of a maker's file is the one of the command line (not err.scan.outside)", graph)
         def bar():
             ev = pg.evaluate("window.__ev")

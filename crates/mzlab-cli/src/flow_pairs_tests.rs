@@ -6,7 +6,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-use mzlab_core::samples::{proponi, to_json};
+use mzlab_core::samples::{propose, to_json};
 use mzlab_core::step::{DataType, Step};
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::store::{write_table, Origin};
@@ -179,12 +179,12 @@ fn fixture(out: &Path) -> Fixture {
         .iter()
         .map(|n| (format!("{n}.mzML"), String::new(), String::new()))
         .collect();
-    let camp = proponi(&files);
+    let camp = propose(&files);
     add("samples.json", "samples", to_json(&camp).as_bytes());
     add(
         "design.json",
         "design",
-        mzlab_core::drawing::to_json(&mzlab_core::drawing::propose(&camp)).as_bytes(),
+        mzlab_core::design::to_json(&mzlab_core::design::propose(&camp)).as_bytes(),
     );
     add(
         "parent.json",

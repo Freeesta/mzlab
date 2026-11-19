@@ -1,5 +1,5 @@
-//! The experimental design, `disegno/1` (`docs/schemi/disegno-1.json`): conditions, reference, comparisons, factors and batches as data of the plan.
-//! `proponi` reads a `campioni/2` and proposes; the user confirms. `valida` gives stable codes (the pages put the words). No statistics here.
+//! The experimental design, `design/1` (`docs/schemi/design-1.json`): conditions, reference, comparisons, factors and batches as data of the plan.
+//! `propose` reads a `samples/1` and proposes; the user confirms. `validate` gives stable codes (the pages put the words). No statistics here.
 
 mod json;
 
@@ -8,16 +8,16 @@ pub use json::{digest, from_json, to_json};
 use crate::error::{Error, Result};
 use crate::samples::{Sample, Warning};
 
-pub const SCHEMA: &str = "disegno/1";
+pub const SCHEMA: &str = "design/1";
 /// The batch given to every file when the user says nothing.
 pub const DEFAULT_BATCH: &str = "1";
 /// Fewer replicates than this per time point give `fewReplicates`.
-pub const MIN_REPLICHE: u32 = 3;
+pub const MIN_REPLICATES: u32 = 3;
 
-/// One condition: the files of one `serie`, in the order of injection.
+/// One condition: the files of one `series`, in the order of injection.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Condition {
-    /// A `serie` of `campioni/2` ("" = the only series).
+    /// A `series` of `samples/1` ("" = the only series).
     pub name: String,
     /// The fewest sample files over the time points of the condition (derived, 0 when it has none).
     pub replicates: u32,
@@ -27,7 +27,7 @@ pub struct Condition {
 
 /// One comparison: two conditions, or every condition against the reference.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Confronto {
+pub enum DesignComparison {
     Pair(String, String),
     VsReference,
 }
@@ -51,7 +51,7 @@ pub struct Batch {
 pub struct Design {
     pub conditions: Vec<Condition>,
     pub reference: Option<String>,
-    pub comparisons: Vec<Confronto>,
+    pub comparisons: Vec<DesignComparison>,
     pub factors: Vec<Factor>,
     pub batches: Vec<Batch>,
 }
@@ -99,7 +99,7 @@ fn guess_reference(names: &[String]) -> Option<String> {
         .cloned()
 }
 
-/// The design the names suggest: conditions from `serie` in order of injection, the likely reference with "all against the reference", one batch.
+/// The design the names suggest: conditions from `series` in order of injection, the likely reference with "all against the reference", one batch.
 pub fn propose(cs: &[Sample]) -> Design {
     let mut ordered: Vec<&Sample> = samples_all(cs);
     crate::sortc::slice_by(&mut ordered, |a, b| {
@@ -116,7 +116,7 @@ pub fn propose(cs: &[Sample]) -> Design {
     }
     let reference = guess_reference(&names);
     let comparisons = if reference.is_some() && names.len() > 1 {
-        vec![Confronto::VsReference]
+        vec![DesignComparison::VsReference]
     } else {
         Vec::new()
     };
@@ -199,7 +199,7 @@ pub fn validate(d: &Design, cs: &[Sample]) -> Vec<Warning> {
     let mut out = Vec::new();
     for c in &d.conditions {
         let n = replicates(cs, &c.name);
-        if n > 0 && n < MIN_REPLICHE {
+        if n > 0 && n < MIN_REPLICATES {
             push(&mut out, "fewReplicates", "warning", &c.name);
         }
     }
@@ -222,14 +222,14 @@ pub fn validate(d: &Design, cs: &[Sample]) -> Vec<Warning> {
     let empty = |name: &str| samples(cs, name).next().is_none();
     for cmp in &d.comparisons {
         match cmp {
-            Confronto::Pair(a, b) => {
+            DesignComparison::Pair(a, b) => {
                 for n in [a, b] {
                     if empty(n) {
                         push(&mut out, "emptyComparison", "error", n);
                     }
                 }
             }
-            Confronto::VsReference => match &d.reference {
+            DesignComparison::VsReference => match &d.reference {
                 None => push(&mut out, "refMissing", "error", ""),
                 Some(r) => {
                     for n in std::iter::once(r).chain(d.conditions.iter().map(|c| &c.name)) {
@@ -244,21 +244,21 @@ pub fn validate(d: &Design, cs: &[Sample]) -> Vec<Warning> {
     out
 }
 
-/// The bindings: `op` is `proponi` (a `campioni/2`), `valida` (`{"disegno","campioni"}`), `canonico` or `digest` (a `disegno/1`); JSON in, JSON out.
+/// The bindings: `op` is `propose` (a `samples/1`), `validate` (`{"design","samples"}`), `canonical` or `digest` (a `design/1`); JSON in, JSON out.
 pub fn route(op: &str, input: &str) -> Result<String> {
     match op {
-        "proponi" => Ok(to_json(&propose(&crate::samples::from_json(
+        "propose" => Ok(to_json(&propose(&crate::samples::from_json(
             input.as_bytes(),
         )?))),
-        "valida" => {
+        "validate" => {
             let v = crate::json::parse(input.as_bytes())?;
-            let bad = || Error::new("error.badDisegno");
-            let d = json::read(v.get("disegno").ok_or_else(bad)?)?;
-            let cs = crate::samples::from_value(v.get("campioni").ok_or_else(bad)?)?;
+            let bad = || Error::new("error.badDesign");
+            let d = json::read(v.get("design").ok_or_else(bad)?)?;
+            let cs = crate::samples::from_value(v.get("samples").ok_or_else(bad)?)?;
             Ok(crate::samples::validate_json(&validate(&d, &cs)))
         }
-        "canonico" => Ok(to_json(&from_json(input.as_bytes())?)),
+        "canonical" => Ok(to_json(&from_json(input.as_bytes())?)),
         "digest" => Ok(digest(&from_json(input.as_bytes())?)),
-        _ => Err(Error::new("error.badDisegno").with("op", op)),
+        _ => Err(Error::new("error.badDesign").with("op", op)),
     }
 }

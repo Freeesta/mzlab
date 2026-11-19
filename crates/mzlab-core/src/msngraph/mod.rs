@@ -1,4 +1,4 @@
-//! The fragmentation graph of an MSn infusion (`msngrafo/2`, `docs/agenti/msn-graph.md`): the nodes of the precursor tree (`msnalbero`) and
+//! The fragmentation graph of an MSn infusion (`msn-graph/1`, `docs/agenti/msn-graph.md`): the nodes of the precursor tree (`msnalbero`) and
 //! their consensus spectra become ONE graph of ions, a node per ion seen at any level, energy or path, an arc per precursor → fragment
 //! observed in the spectrum of that precursor, with the neutral loss. A DAG ordered by m/z, never a verdict: with the formula of the ion
 //! of the root given by the user, each fragment gets the sub-formulas within the window of ppm (`formule`), and the others leave the graph.
@@ -59,21 +59,21 @@ use crate::error::{Error, Result};
 use crate::json::Value;
 use crate::msntree_build::Albero;
 
-/// The newest `msngrafo/N` this engine reads; `/1` (Italian `opzioni` keys) is read too.
-pub const MAX_VERSION: u32 = 2;
+/// The newest `msn-graph/N` this engine reads.
+pub const MAX_VERSION: u32 = 1;
 
-/// The version of the graph `v`: 1 or 2. A newer one is `error.newerFormat {kind: msngrafo, version}` (opened by a newer program, never rewritten),
+/// The version of the graph `v`: 1. A newer one is `error.newerFormat {kind: msn-graph, version}` (opened by a newer program, never rewritten),
 /// anything else `err.msngrafo.badGraph`.
 pub fn version(v: &Value) -> Result<u32> {
-    let f = v.get("formato").and_then(Value::str).unwrap_or_default();
+    let f = v.get("schema").and_then(Value::str).unwrap_or_default();
     let n: u32 = f
-        .strip_prefix("msngrafo/")
+        .strip_prefix("msn-graph/")
         .and_then(|n| n.parse().ok())
         .filter(|n| *n >= 1)
         .ok_or_else(|| Error::new("err.msngrafo.badGraph"))?;
     if n > MAX_VERSION {
         return Err(Error::new("error.newerFormat")
-            .with("kind", "msngrafo")
+            .with("kind", "msn-graph")
             .with("version", n));
     }
     Ok(n)
@@ -108,7 +108,7 @@ pub struct Options {
     pub evidence_min: usize,
     /// Formulas chosen by the user among the candidates: (m/z of the node, formula of the ion).
     pub choices: Vec<(f64, String)>,
-    /// The rules of `fragrules/1` (key `regole` and the evidence `regola` of the candidates); `None` = off.
+    /// The rules of `fragrules/1` (key `rules` and the evidence `regola` of the candidates); `None` = off.
     pub regole: Option<RuleParams>,
     /// What the structure of the user expects of the rules (`mzlab_feat::chem::rules::attese`); empty = no structure given.
     pub attese: Vec<Expectation>,

@@ -20,9 +20,9 @@ fn the_italian_command_names_are_refused() {
         run(&["peak-edges", "--help"]).stdout
     );
     let top = String::from_utf8_lossy(&run(&["--help"]).stdout).into_owned();
-    // the citation reminder is the footer, after the list of old names
+    // the citation reminder is the footer, after the list of commands
     let (body, footer) = top.trim_end().rsplit_once("\n\n").unwrap();
-    assert!(body.ends_with("old names still accepted: peaks-edges, --jsonl"));
+    assert!(body.contains("Exit codes: 0 ok;") && !body.contains("old names still accepted"));
     assert_eq!(footer, crate::citation::reminder());
     assert!(!top.contains("mzlab-cli canali") && !top.contains("mzlab-cli campioni"));
 }

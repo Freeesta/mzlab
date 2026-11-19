@@ -4,7 +4,7 @@
 
 use std::path::{Path, PathBuf};
 
-use mzlab_core::drawing::{Batch, Design};
+use mzlab_core::design::{Batch, Design};
 use mzlab_core::json::parse;
 use mzlab_feat::drift::{self, Method};
 use mzlab_feat::samples::{propose, Sample};

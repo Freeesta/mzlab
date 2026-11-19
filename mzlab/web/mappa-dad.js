@@ -56,6 +56,9 @@ export async function grid(V, p) {
   V.rt = [a.rt0 + i0 * dr, a.rt0 + i1 * dr]; V.mz = [a.mz0 + j0 * a.dmz, a.mz0 + j1 * a.dmz];
   return { nrt: i1 - i0, nmz: j1 - j0, mz0: V.mz[0], dmz: a.dmz, log: false, m };
 }
+import { msControls } from "./mappa-dad-ms.js";
+export * from "./mappa-dad-ms.js";
 
-/** The scale factor and RT shift boxes of the popover of a DAD map with a correction file. @param {any} p @param {Function} num */
-export const controls = (p, num) => `<label class="muted" title="${T("ctl.map.subfactor.title")}">${T("ctl.map.subfactor.lab")} ${num("subFactor", p.subFactor, -1000, 1000, 0.01, true)}</label><label class="muted" title="${T("ctl.map.subshift.title")}">${T("ctl.map.subshift.lab")} ${num("subShift", p.subShift || 0, -5, 5, 0.01, true)}</label>`;
+/** The scale factor and RT shift boxes of the popover of a DAD map with a correction file. @param {any} p @param {Function} num @param {Function} opt @param {boolean} isF */
+export const controls = (p, num, opt, isF) => (isF ? subBoxes(p, num) : "") + msControls(p, num, opt);
+const subBoxes = (/** @type {any} */ p, /** @type {Function} */ num) => `<label class="muted" title="${T("ctl.map.subfactor.title")}">${T("ctl.map.subfactor.lab")} ${num("subFactor", p.subFactor, -1000, 1000, 0.01, true)}</label><label class="muted" title="${T("ctl.map.subshift.title")}">${T("ctl.map.subshift.lab")} ${num("subShift", p.subShift || 0, -5, 5, 0.01, true)}</label>`;

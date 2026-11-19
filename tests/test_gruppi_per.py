@@ -22,17 +22,17 @@ globalThis.fileViewDo = fn => { steps++; fn(); };
 globalThis.renderFileList = () => { renders++; }; globalThis.cleanupOrphanPanels = () => {}; globalThis.uiSave = () => {};
 globalThis.lrTog = () => true; globalThis.ESP = { voce: () => ({ spettri: true }), unici() {} };
 globalThis.E = { files: ["MQ_H2O2_T00.mzML", "MQ_N2_T00.mzML", "TW_H2O2_T00.mzML", "QC_std.mzML"].map(file => ({ file })) };
-// the engine stub: the first token of the name is the matrix (none for QC), the second the condition; shaped as `nomivar/1`
+// the engine stub: the first token of the name is the matrix (none for QC), the second the condition; shaped as `sample-vars/1`
 const NAMES = n => n.replace(/\\.mzML$/, "").split("_");
 globalThis.ask = async () => null; globalThis.STORIA = null;
 globalThis.fetch = async (_url, { body }) => {
   // the engine's group name: the first token the names share
-  if (_url.endsWith("nome_gruppo")) { const t = JSON.parse(body).names.map(n => n.split("_")[0]); return { json: async () => ({ nome: t.every(x => x === t[0]) ? t[0] : "" }) }; }
-  const { files, manuale } = JSON.parse(body); fetched.push(files.map(f => f.name));
-  const col = (i, skip) => { const by = new Map(), senza = []; files.forEach((f, k) => { const t = NAMES(f.name)[i]; if (!t || skip(t)) senza.push(k); else by.set(t, [...(by.get(t) || []), k]); });
-    return { valori: [...by].sort((a, b) => b[1].length - a[1].length).map(([etichetta, file]) => ({ etichetta, file })), senza }; };
-  const ans = { files: files.map(f => ({ name: f.name })), comune: "", variabili: [{ id: "matrix", ...col(0, t => t === "QC") }, { id: "cond", ...col(1, t => t === "T00" || t === "std") }] };
-  if (manuale && manuale.has) { const c = col(1, () => false); ans.manuale = { id: "has", valori: c.valori.filter(v => manuale.has.includes(v.etichetta)), senza: files.map((_, k) => k).filter(k => !manuale.has.includes(NAMES(files[k].name)[1])), multipli: [] }; }
+  if (_url.endsWith("group_name")) { const t = JSON.parse(body).names.map(n => n.split("_")[0]); return { json: async () => ({ name: t.every(x => x === t[0]) ? t[0] : "" }) }; }
+  const { files, manual } = JSON.parse(body); fetched.push(files.map(f => f.name));
+  const col = (i, skip) => { const by = new Map(), unmatched = []; files.forEach((f, k) => { const t = NAMES(f.name)[i]; if (!t || skip(t)) unmatched.push(k); else by.set(t, [...(by.get(t) || []), k]); });
+    return { values: [...by].sort((a, b) => b[1].length - a[1].length).map(([label, files]) => ({ label, files })), without: unmatched }; };
+  const ans = { files: files.map(f => ({ name: f.name })), common: "", variables: [{ id: "matrix", ...col(0, t => t === "QC") }, { id: "cond", ...col(1, t => t === "T00" || t === "std") }] };
+  if (manual && manual.has) { const c = col(1, () => false); ans.manual = { id: "has", values: c.values.filter(v => manual.has.includes(v.label)), without: files.map((_, k) => k).filter(k => !manual.has.includes(NAMES(files[k].name)[1])), multiple: [] }; }
   return { json: async () => ans };
 };
 """
@@ -66,7 +66,7 @@ def test_then_by_joins_the_two_labels_and_orders_by_the_first_key():
 
 @needs_node
 def test_contains_sends_the_files_without_a_term_to_other():
-    out = run("""await GRUPPI.by({ by: "manuale", manuale: { has: ["N2"], substring: false } }); console.log(JSON.stringify([G(), E.ugOrder, E.ugBy.manuale]))""")
+    out = run("""await GRUPPI.by({ by: "manual", manual: { has: ["N2"], substring: false } }); console.log(JSON.stringify([G(), E.ugOrder, E.ugBy.manual]))""")
     assert out == [["Other", "N2", "Other", "Other"], ["N2", "Other"], {"has": ["N2"], "substring": False}]
 
 

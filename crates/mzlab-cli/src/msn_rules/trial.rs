@@ -128,7 +128,7 @@ fn peak_ids(g: &Graph, v: &Evaluation, prec: usize, node: usize) -> Vec<String> 
     ids
 }
 
-/// The three counts of the record on `picchi`, with the expectations of a structure (`attese`; the rules are evaluated only with `regole`).
+/// The three counts of the record on `picchi`, with the expectations of a structure (`expected`; the rules are evaluated only with `rules`).
 pub fn measure(
     r: &Registry,
     peaks: &[(f64, f64)],

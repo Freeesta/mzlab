@@ -81,7 +81,7 @@ mod tests {
             vec!["mol-sel", "--nope"],
             vec!["mol-sel", "/no/such/file.json"],
         ] {
-            assert_eq!(run(&a).code, 2, "{a:?}");
+            assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
         }
         assert_eq!(run(&["mol-sel", "--help"]).code, 0);
     }

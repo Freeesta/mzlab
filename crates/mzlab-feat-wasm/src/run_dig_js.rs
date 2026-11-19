@@ -27,7 +27,7 @@ impl DigPrepared {
     }
 }
 
-/// `tp.dig_lr` in the browser, up to the Dig: the parent file text and the structure text of its SMILES, the `campioni/2` `samples`, the names of the files in the order of the
+/// `tp.dig_lr` in the browser, up to the Dig: the parent file text and the structure text of its SMILES, the `samples/1` `samples`, the names of the files in the order of the
 /// table, the recipe text of the run, the stored peaks of each file (Uint8Arrays in the order of the indexes) and the `.mzidx` read as `index_read(k, offset, length)`.
 #[cfg(feature = "proofs")]
 #[wasm_bindgen::prelude::wasm_bindgen]

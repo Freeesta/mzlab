@@ -30,13 +30,7 @@ pub(crate) fn write_run(
     if let Err(e) = std::fs::create_dir_all(&out) {
         let err = Error::new("err.cli.out").with("path", out.display());
         let msg = format!("{}: {e}", out.display());
-        return fail(
-            st,
-            2,
-            &err,
-            &msg,
-            "--out must be a folder that can be written",
-        );
+        return fail(&err, &msg, "--out must be a folder that can be written");
     }
     let text = plan_json(plan);
     let mut order: Vec<String> = plan_order(ready)
@@ -61,8 +55,6 @@ pub(crate) fn write_run(
         Ok(r) => r,
         Err(e) => {
             return fail(
-                st,
-                3,
                 &e,
                 &e.to_string(),
                 "fix the plan in the Flow page or with --set",
@@ -72,8 +64,6 @@ pub(crate) fn write_run(
     if let Err(e) = std::fs::write(out.join("prov.json"), &prov) {
         let err = Error::new("err.cli.out").with("path", out.join("prov.json").display());
         return fail(
-            st,
-            2,
             &err,
             &format!("prov.json: {e}"),
             "--out must be a folder that can be written",
@@ -84,7 +74,7 @@ pub(crate) fn write_run(
     if let Err(e) = run_report {
         let err = Error::new("err.cli.out").with("path", out.join("corsa.json").display());
         let hint = "prov.json and the files of the steps are written";
-        return fail(st, 1, &err, &format!("corsa.json: {e}"), hint);
+        return fail(&err, &format!("corsa.json: {e}"), hint);
     }
     let mut o = summary(&run, steps, &out);
     if st.json {
@@ -107,11 +97,11 @@ fn summary(run: &Run, steps: usize, out: &Path) -> Outcome {
         stderr += &format!("done: {steps} steps; outputs in {}\n", out.display());
         0
     } else {
-        stderr += &format!(
-            "error: failed {}; not run {}\n",
-            failed.join(", "),
-            run.skipped.join(", ")
-        );
+        stderr += &format!("error: failed {}", failed.join(", "));
+        if !run.skipped.is_empty() {
+            stderr += &format!("; not run {}", run.skipped.join(", "));
+        }
+        stderr += "\n";
         // a memory refusal said in words, once per step, with the next step to try
         let mut told: Vec<&str> = Vec::new();
         for a in &run.activities {
@@ -138,6 +128,7 @@ fn summary(run: &Run, steps: usize, out: &Path) -> Outcome {
         code,
         stdout: Vec::new(),
         stderr,
+        error: None,
     }
 }
 

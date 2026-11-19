@@ -1,4 +1,4 @@
-//! Text export of an `msnlib/1` library (`mzlab-cli msn-lib export`, the Flow step `msn.library_export` and the page): one record per spectrum of every entry, as MSP or as MassBank `.txt` (MS_TYPE MS2, MS3, ...,
+//! Text export of an `msn-lib/1` library (`mzlab-cli msn-lib export`, the Flow step `msn.library_export` and the page): one record per spectrum of every entry, as MSP or as MassBank `.txt` (MS_TYPE MS2, MS3, ...,
 //! the path of precursors in the comment). With `annota` each peak a node explains carries its formula and the neutral loss from the precursor. Used by the CLI and
 //! the `.wasm` of the page, so both write the same bytes.
 
@@ -61,41 +61,41 @@ struct Rec {
 
 /// The peaks of a spectrum `s` of the graph `g`; with `annota` the formula of the node of each peak and the loss of the arc that comes from the precursor.
 fn peaks(g: &Value, s: &Value, clean: bool, annotate: bool) -> Vec<Pk> {
-    let all = s.get("picchi").map_or(&[][..], |p| p.arr());
+    let all = s.get("peaks").map_or(&[][..], |p| p.arr());
     let by_id = |list: &str, id: &str, key: &str| {
         g.get(list)
             .map_or(&[][..], |x| x.arr())
             .iter()
             .find(|n| n.get(key).and_then(|v| v.str()) == Some(id))
     };
-    let precursor = s.get("precursore").and_then(|p| p.str()).unwrap_or("");
+    let precursor = s.get("precursor").and_then(|p| p.str()).unwrap_or("");
     all.iter()
-        .filter(|p| !clean || p.get("nodo").is_some_and(|n| n.str().is_some()))
+        .filter(|p| !clean || p.get("node").is_some_and(|n| n.str().is_some()))
         .filter_map(|p| {
-            let node = p.get("nodo").and_then(|n| n.str()).filter(|_| annotate);
+            let node = p.get("node").and_then(|n| n.str()).filter(|_| annotate);
             let formula = node.and_then(|id| {
-                let f = by_id("nodi", id, "id")?.get("formula")?;
-                let name = f.get("scelta")?.str()?;
+                let f = by_id("nodes", id, "id")?.get("formula")?;
+                let name = f.get("choice")?.str()?;
                 let c = f
-                    .get("candidati")?
+                    .get("candidates")?
                     .arr()
                     .iter()
                     .find(|c| c.get("formula").and_then(|v| v.str()) == Some(name))?;
                 Some((
                     name.to_string(),
-                    c.get("mz_teorico")?.f64()?,
+                    c.get("theoretical_mz")?.f64()?,
                     c.get("ppm")?.f64()?,
                 ))
             });
             let loss = node.and_then(|id| {
-                let a = g.get("archi")?.arr().iter().find(|a| {
-                    a.get("da").and_then(|v| v.str()) == Some(precursor)
-                        && a.get("a").and_then(|v| v.str()) == Some(id)
+                let a = g.get("edges")?.arr().iter().find(|a| {
+                    a.get("from").and_then(|v| v.str()) == Some(precursor)
+                        && a.get("to").and_then(|v| v.str()) == Some(id)
                 })?;
-                let l = a.get("perdita")?;
+                let l = a.get("loss")?;
                 Some((
                     l.get("formula")?.str()?.to_string(),
-                    l.get("da_massa")?.f64()?,
+                    l.get("da_mass")?.f64()?,
                 ))
             });
             Some(Pk {
@@ -111,7 +111,7 @@ fn peaks(g: &Value, s: &Value, clean: bool, annotate: bool) -> Vec<Pk> {
 /// The precursor m/z of a spectrum: its node when the graph has one, else the last step of the path (`305@cid35>261@cid35` → 261).
 fn precursor_mz(s: &Value, nodes: &[Value], tree: &str) -> f64 {
     let node = s
-        .get("precursore")
+        .get("precursor")
         .and_then(|p| p.str())
         .and_then(|p| p.strip_prefix('n')?.parse::<usize>().ok())
         .and_then(|k| nodes.get(k))
@@ -126,28 +126,28 @@ fn precursor_mz(s: &Value, nodes: &[Value], tree: &str) -> f64 {
 fn records(lib: &str, clean: bool, all: bool, annotate: bool) -> Result<Vec<Rec>> {
     let v = parse(lib.as_bytes())?;
     let mut out = Vec::new();
-    for e in v.get("voci").map_or(&[][..], |x| x.arr()) {
-        let g = e.get("grafo").ok_or_else(|| Error::new("err.msnlib.bad"))?;
-        let nodes = g.get("nodi").map_or(&[][..], |x| x.arr());
+    for e in v.get("entries").map_or(&[][..], |x| x.arr()) {
+        let g = e.get("graph").ok_or_else(|| Error::new("err.msnlib.bad"))?;
+        let nodes = g.get("nodes").map_or(&[][..], |x| x.arr());
         let text = |v: Option<&Value>| v.and_then(|x| x.str()).unwrap_or("").to_string();
-        let ion = text(e.get("ione").and_then(|i| i.get("formula")));
+        let ion = text(e.get("ion").and_then(|i| i.get("formula")));
         let negative = g
-            .get("polarita")
+            .get("polarity")
             .and_then(|p| p.f64())
             .is_some_and(|p| p < 0.0);
-        for s in g.get("spettri").map_or(&[][..], |x| x.arr()) {
-            let level = s.get("livello").and_then(|x| x.f64()).unwrap_or(0.0) as i64;
+        for s in g.get("spectra").map_or(&[][..], |x| x.arr()) {
+            let level = s.get("level").and_then(|x| x.f64()).unwrap_or(0.0) as i64;
             if level != 2 && !all {
                 continue;
             }
-            let tree = text(s.get("albero"));
+            let tree = text(s.get("tree"));
             out.push(Rec {
                 id: text(e.get("id")),
                 ion: ion.clone(),
                 negative,
                 level,
                 mz: precursor_mz(s, nodes, &tree),
-                act: text(s.get("att")),
+                act: text(s.get("activation")),
                 ce: s.get("ce").and_then(|x| x.f64()).unwrap_or(0.0),
                 peaks: peaks(g, s, clean, annotate),
                 tree,

@@ -41,7 +41,7 @@ Paper tests of the workflow contract (`docs/agenti/rust-step.md`). Each workflow
   {"id":"grp","step":"features.align@1","in":{"peaks":"mrg.peaks","rtmap":"rt.rtmap","samples":"file:samples.json"},"params":{"bandwidth_s":30,"min_fraction":0.4}},
   {"id":"fill","step":"features.gapfill@1","in":{"table":"grp.table"}}]}
 ```
-- **Expressed**: the whole sequence; `sampleGroups` becomes a typed `samples` input (`campioni/2`), not a parameter.
+- **Expressed**: the whole sequence; `sampleGroups` becomes a typed `samples` input (`samples/1`), not a parameter.
 - **Not expressed today**: centWave and Obiwarp are not mzLab algorithms (in the descriptor they are `planned` entries of `algorithms[]`; only `masstrace` and `anchors` are `available`); `refineChromPeaks` has no step of ours. The vignette repeats the alignment with other parameters on a subset (`pdp_subs`): two instances of the same step on the same input = a branch of the graph (or a `meta.compare`).
 - **Corrections**: (7) XCMS changes the object in place (`adjustRtime` changes the RTs) → our steps produce NEW data (`rtmap`), inputs are immutable: this is what makes re-running and the hash cache possible; (8) sample groups are a type (`samples`), with their own hash.
 

@@ -36,7 +36,7 @@ fn add_writes_the_entry_once_and_the_library_is_the_one_of_the_route() {
     assert_eq!(o.code, 0, "{}", o.stderr);
     assert!(o.stderr.contains("added"), "{}", o.stderr);
     let first = std::fs::read_to_string(&lib).unwrap();
-    assert!(first.starts_with("{\"formato\":\"msnlib/1\""), "{first}");
+    assert!(first.starts_with("{\"schema\":\"msn-lib/1\""), "{first}");
     // the graph inside is the graph the command prints
     let g = run(&["msn-graph", f.to_str().unwrap(), "--formula", "C14H15N3O5+"]);
     let g = String::from_utf8(g.stdout).unwrap();
@@ -52,7 +52,7 @@ fn add_writes_the_entry_once_and_the_library_is_the_one_of_the_route() {
 
 #[test]
 fn an_entry_keeps_the_bond_breaks_of_its_graph_and_the_table_of_the_entry_shows_them() {
-    let d = dir("rotture");
+    let d = dir("breaks");
     let lib = d.join("lib.json");
     let (l, f) = (lib.to_str().unwrap(), msn());
     let o = run(&[
@@ -70,11 +70,8 @@ fn an_entry_keeps_the_bond_breaks_of_its_graph_and_the_table_of_the_entry_shows_
     ]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let v = mzlab_core::json::parse(&std::fs::read(&lib).unwrap()).unwrap();
-    let g = v.get("voci").unwrap().arr()[0].get("grafo").unwrap();
-    assert!(
-        g.get("rotture").is_some(),
-        "the entry holds the key rotture"
-    );
+    let g = v.get("entries").unwrap().arr()[0].get("graph").unwrap();
+    assert!(g.get("breaks").is_some(), "the entry holds the key rotture");
     let csv = mzlab_core::msngraph::table_text(g, "nodes", false);
     assert!(csv.lines().next().unwrap().contains("bond_break"), "{csv}");
     let e = run(&["msn-lib", "export", l, "--all"]);
@@ -128,7 +125,7 @@ fn usage_errors_are_exit_2_and_help_is_printed() {
     assert_eq!(run(&["msn-lib", "add"]).code, 2);
     assert_eq!(run(&["msn-lib", "nope"]).code, 2);
     let h = run(&["msn-lib", "--help"]);
-    assert!(String::from_utf8(h.stdout).unwrap().contains("msnlib/1"));
+    assert!(String::from_utf8(h.stdout).unwrap().contains("msn-lib/1"));
 }
 
 #[test]
@@ -200,9 +197,9 @@ fn search_finds_the_entry_of_the_same_infusion_and_its_options_and_errors_work()
     let o = run(&["msn-lib", "search", l, gp]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let t = String::from_utf8(o.stdout).unwrap();
-    assert!(t.starts_with("{\"formato\":\"msncerca/1\""), "{t}");
+    assert!(t.starts_with("{\"schema\":\"msn-search/1\""), "{t}");
     assert!(
-        t.contains("\"id\":\"STD-1\"") && t.contains("\"analogo\":null"),
+        t.contains("\"id\":\"STD-1\"") && t.contains("\"analog\":null"),
         "{t}"
     );
     // the same graph is its own best candidate, written to a file with --out and cut by --top
@@ -220,7 +217,7 @@ fn search_finds_the_entry_of_the_same_infusion_and_its_options_and_errors_work()
     assert_eq!(o.code, 0, "{}", o.stderr);
     assert!(std::fs::read_to_string(&out)
         .unwrap()
-        .contains("\"candidati\":[]"));
+        .contains("\"candidates\":[]"));
     assert_eq!(run(&["msn-lib", "search", l]).code, 2);
     assert_eq!(run(&["msn-lib", "search", l, gp, "--ppm", "x"]).code, 2);
     assert_eq!(run(&["msn-lib", "search", l, gp, "--nope"]).code, 2);

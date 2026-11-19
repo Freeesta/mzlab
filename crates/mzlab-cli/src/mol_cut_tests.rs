@@ -51,7 +51,7 @@ fn usage_errors_exit_2() {
         vec!["mol-cut", "-", "--set", "colour=red"],
         vec!["mol-cut", "-", "--set", "bonds"],
     ] {
-        assert_eq!(run(&a).code, 2, "{a:?}");
+        assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
     }
     assert_eq!(run(&["mol-cut", "--help"]).code, 0);
 }

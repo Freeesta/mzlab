@@ -170,5 +170,13 @@ I18N.add("en", {
   "mappa.rz.top": "Top edge grip of the panel: drag or use the up and down arrows (double click: default height)",
   "mappa.rz.bot": "Bottom edge grip of the panel: drag or use the up and down arrows (double click: default height)",
   "mappa.rz.title": "Drag to change the height",
-  "mappa.meta.date": "Date"
+  "mappa.meta.date": "Date",
+  "mappa.ms.side": "MS1 · {file} · RT {rt} (DAD {dad} {off})",
+  "mappa.ms.sideNone": "No MS scan at RT {rt} in {file}",
+  "mappa.ms.bot": "{kind} · {file} · time axis = MS RT − {off} min",
+  "mappa.ms.mz": "m/z",
+  "mappa.ms.wait": "Reading the MS…",
+  "mappa.ms.fail": "Cannot read the MS of {file}",
+  "mappa.ms.noAxis": "No MS scan list for {file}",
+  "mappa.ms.noMz": "Type an m/z for the EIC"
 });

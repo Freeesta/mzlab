@@ -211,7 +211,7 @@ pub(super) fn network() -> Step {
             Port::new("table", DataType::Table, "Feature table with the view of the products (tp/1)").requires(any_resolution()).accepts(&[DataType::Tp]),
             Port {
                 optional: true,
-                ..Port::new("samples", DataType::Samples, "Roles and times of the files (campioni/2), for the time course")
+                ..Port::new("samples", DataType::Samples, "Roles and times of the files (samples/1), for the time course")
             },
         ],
         outs: vec![Port::new("network", DataType::Transform, "Nodes in columns by step and arcs with the rule, the MS2 evidence and the reason")],

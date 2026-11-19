@@ -76,13 +76,13 @@
       det.hidden = !many; if (!many) { st.cond = null; $("#tp-files").hidden = false; return; }
       if (det.open && st.gnames.join("\n") !== condFiles().map(f => f.name).join("\n")) void mountConds();
     }
-    /** the table of conditions for the files now loaded; its answer (campioni/2 canonical, reference, conditions) is kept in st.cond */
+    /** the table of conditions for the files now loaded; its answer (samples/1 canonical, reference, conditions) is kept in st.cond */
     async function mountConds() {
       const W = /** @type {any} */ (window), names = condFiles().map(f => f.name), box = $("#tp-cfiles");
       try {
         await Promise.all([W.nbEnsure ? W.nbEnsure() : 0, W.TPLAZY.load("gruppi-campioni.js")]);
         const R = await import(URL.createObjectURL(new Blob([ctx().files["finder-ruoli.js"]], { type: "text/javascript" })));
-        const call = async (/** @type {string} */ op, /** @type {string} */ j) => { const r = await fetch("api/campioni/" + op, { method: "POST", body: j }); const t = await r.text(); if (!r.ok) throw new Error(t); return t; };
+        const call = async (/** @type {string} */ op, /** @type {string} */ j) => { const r = await fetch("api/samples/" + op, { method: "POST", body: j }); const t = await r.text(); if (!r.ok) throw new Error(t); return t; };
         if (st.gctl) st.gctl.unmount();
         st.gnames = names;
         st.gctl = await W.TPGRUPPI_FILES.mount(box, names, { R, call, nb: typeof NB !== "undefined" ? NB : null, save: typeof nbSave === "function" ? nbSave : undefined, onChange: (/** @type {any} */ r) => { st.cond = r; syncFiles(); } });
@@ -91,17 +91,17 @@
     /** the roles and times of the table of conditions, shown also in the plain list of the files */
     function syncFiles() {
       if (!st.cond) return;
-      const by = new Map(st.cond.campioni.map((/** @type {any} */ c, /** @type {number} */ i) => [st.gnames[i], c]));
-      for (const f of st.files) { const c = by.get(f.name); if (!c) continue; if (c.tipo in TYPE_OF) f.type = /** @type {any} */ (TYPE_OF)[c.tipo]; f.time = c.tempo_min; }
+      const by = new Map(st.cond.samples.map((/** @type {any} */ c, /** @type {number} */ i) => [st.gnames[i], c]));
+      for (const f of st.files) { const c = by.get(f.name); if (!c) continue; if (c.kind in TYPE_OF) f.type = /** @type {any} */ (TYPE_OF)[c.kind]; f.time = c.time_min; }
       $("#tp-files").hidden = useCond(); renderFilesSummary();
     }
     const renderFilesSummary = () => { const bl = st.files.filter(f => f.type === "blank").length; const t = $("#tp-fsum").textContent || ""; $("#tp-fsum").textContent = t.replace(/ · \d+ blanks?$/, "") + (bl ? " · " + bl + (bl === 1 ? " blank" : " blanks") : ""); };
     $("#tp-cond").addEventListener("toggle", () => { if (/** @type {HTMLDetailsElement} */ ($("#tp-cond")).open) void mountConds(); });
-    /** the files of the Dig: a list, or with two conditions or more the list with the campioni/2 of the table (the names are the ones of the files) */
+    /** the files of the Dig: a list, or with two conditions or more the list with the samples/1 of the table (the names are the ones of the files) */
     function digFiles(/** @type {any[]} */ list) {
       if (!useCond()) return JSON.stringify(list);
-      const by = new Map(st.cond.campioni.map((/** @type {any} */ c, /** @type {number} */ i) => [st.gnames[i], { ...c, file: st.gnames[i] }]));
-      return JSON.stringify({ files: list, campioni: { schema: "campioni/2", campioni: list.map(f => by.get(f.name)).filter(Boolean) } });
+      const by = new Map(st.cond.samples.map((/** @type {any} */ c, /** @type {number} */ i) => [st.gnames[i], { ...c, file: st.gnames[i] }]));
+      return JSON.stringify({ files: list, samples: { schema: "samples/1", samples: list.map(f => by.get(f.name)).filter(Boolean) } });
     }
     /** the options of the comparison of conditions (settings.gruppi): the reference and the fields of the notebook */
     function digGroups() {
@@ -403,7 +403,7 @@
           running = false; setBusy(false); lagNote(tStart); reattAuto("tpsDone"); return;
         }
         st.hs = null; st.pname = parent.name || ""; st.summary = JSON.parse(await callRaw("run", digFiles(files), JSON.stringify(parent), JSON.stringify(settings), $("#tp-tr").value));
-        if (window.TPMS2) window.TPMS2.setConditions(st.summary.gruppi ? new Map(st.files.filter(f => f.kind === "ms2").map(f => [f.name, (st.cond && st.cond.campioni[st.gnames.indexOf(f.name)] || {}).serie || ""])) : null);
+        if (window.TPMS2) window.TPMS2.setConditions(st.summary.gruppi ? new Map(st.files.filter(f => f.kind === "ms2").map(f => [f.name, (st.cond && st.cond.samples[st.gnames.indexOf(f.name)] || {}).series || ""])) : null);
         st.took = performance.now() - t0; st.sel = null; st.det = {}; if (window.TPLIVE) TPLIVE.stop(true); if (typeof DIAG !== "undefined") DIAG.LONG.marca("render"); render(); $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
         running = false; setBusy(false); reattAuto("tpsDone");
       } catch (e) {

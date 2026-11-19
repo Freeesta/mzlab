@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use mzlab_core::samples::{proponi, to_json};
+use mzlab_core::samples::{propose, to_json};
 use mzlab_feat::interp::store::append;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::store::{write_table, Origin, Slice};
@@ -103,7 +103,7 @@ fn the_plan_gives_the_network_of_the_engine() {
         .iter()
         .map(|n| (n.to_string(), String::new(), String::new()))
         .collect();
-    let samples = to_json(&proponi(&files));
+    let samples = to_json(&propose(&files));
     std::fs::write(d.join("samples.json"), &samples).unwrap();
 
     let got = run(&d, true);

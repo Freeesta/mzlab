@@ -398,7 +398,7 @@ pub fn match_text(job: &MatchJob, query: Named, library: Named) -> Result<String
     }
     let terms = flag(job, "score_terms", |v| v.bool() == Some(true));
     if alg == "tree" {
-        // the tree search reads msnlib/1 texts, not spectra: it is the wrapper's (`mzlab-cli`)
+        // the tree search reads msn-lib/1 texts, not spectra: it is the wrapper's (`mzlab-cli`)
         return Err(Error::new("err.flow.match.algorithm"));
     }
     let lib = open_library(library, decoys)?;

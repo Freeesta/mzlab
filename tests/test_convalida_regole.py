@@ -22,17 +22,17 @@ def sommario(tmp_path_factory):
 
 
 def test_the_strata_are_kept_apart_and_the_thresholds_are_declared(sommario):
-    assert sommario["soglie"] == {"minime": 20, "tasso_max": 0.3, "differenza_min": 0.5}
-    names = {(s["strato"], s["pol"]) for s in sommario["strati"]}
+    assert sommario["thresholds"] == {"min_count": 20, "max_rate": 0.3, "min_difference": 0.5}
+    names = {(s["layer"], s["pol"]) for s in sommario["layers"]}
     assert ("hcd", 1) in names and ("cid_trappola", 1) in names and ("qtof", 1) in names
-    assert sum(s["registri"] for s in sommario["strati"]) >= 20
+    assert sum(s["records"] for s in sommario["layers"]) >= 20
 
 
 def test_with_so_few_records_no_rule_is_measured(sommario):
-    esiti = {r["esito"] for s in sommario["strati"] for r in s["regole"]}
-    assert esiti <= {"non_misurata"}
-    for s in sommario["strati"]:
-        assert 0.0 <= s["copertura"]["c"] <= 1.0
+    esiti = {r["outcome"] for s in sommario["layers"] for r in s["rules"]}
+    assert esiti <= {"not_measured"}
+    for s in sommario["layers"]:
+        assert 0.0 <= s["coverage"]["c"] <= 1.0
 
 
 def test_the_script_computes_nothing_itself():
