@@ -10,9 +10,4 @@ fn run(args: Vec<String>) -> Outcome {
     Outcome::ok(super::list_md().into_bytes())
 }
 
-pub(crate) static TABLE: &[Entry] = &[Entry {
-    name: "help-md",
-    aliases: &[],
-    help: "",
-    run,
-}];
+pub(crate) static TABLE: &[Entry] = &[Entry::new("help-md", "", run)];

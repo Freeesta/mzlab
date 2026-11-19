@@ -1,4 +1,4 @@
-//! `mzlab-cli msn-graph --structures`: the cleavages of a structure that give the m/z of a node, on the synthetic infusion of `/api/msntree` and a
+//! `mzlab-cli msn graph --structures`: the cleavages of a structure that give the m/z of a node, on the synthetic infusion of `/api/msntree` and a
 //! public molecule (ethyl indole-3-carboxylate: its ester bond gives the acid of 162.05495, the node n3).
 
 use std::path::PathBuf;
@@ -13,7 +13,8 @@ fn msn() -> PathBuf {
 
 fn run(extra: &[&str]) -> crate::Outcome {
     let mut a = vec![
-        "msn-graph".to_string(),
+        "msn".to_string(),
+        "graph".to_string(),
         msn().to_str().unwrap().to_string(),
         "--formula".into(),
         "C14H15N3O5+".into(),
@@ -180,7 +181,8 @@ fn the_molfile_is_written_back_and_complete_adds_the_view_to_an_old_graph() {
     let (head, _) = with_n3.trim_end().split_once(",\"view\":").unwrap();
     std::fs::write(&old, format!("{head}}}")).unwrap();
     let o = execute(&[
-        "msn-graph".to_string(),
+        "msn".to_string(),
+        "graph".to_string(),
         "complete".into(),
         old.to_str().unwrap().into(),
     ]);
@@ -189,7 +191,8 @@ fn the_molfile_is_written_back_and_complete_adds_the_view_to_an_old_graph() {
     // what is not an msn-graph/1 is a keyed error
     std::fs::write(&old, "{\"schema\":\"msn-lib/1\"}").unwrap();
     let o = execute(&[
-        "msn-graph".to_string(),
+        "msn".to_string(),
+        "graph".to_string(),
         "complete".into(),
         old.to_str().unwrap().into(),
     ]);

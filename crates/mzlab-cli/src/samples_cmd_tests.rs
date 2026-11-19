@@ -1,4 +1,4 @@
-//! `mzlab-cli samples`: the answers are the ones of `samples::route` on the same names.
+//! `mzlab-cli sample`: the answers are the ones of `samples::route` on the same names.
 
 use mzlab_core::samples::route_all as route;
 
@@ -24,7 +24,7 @@ const BODY: &str = r#"{"files":[{"name":"MQ_H2O2_T00"},{"name":"MQ_H2O2_T05"},{"
 #[test]
 fn variables_is_the_route_answer() {
     let f = names_file("a");
-    let (code, out, err) = run(&["samples", "vars", "--names", f.to_str().unwrap()]);
+    let (code, out, err) = run(&["sample", "vars", "--names", f.to_str().unwrap()]);
     assert_eq!(code, 0, "{err}");
     assert_eq!(
         out,
@@ -32,7 +32,7 @@ fn variables_is_the_route_answer() {
     );
     assert!(out.contains("\"id\":\"matrix\""));
     let (_, out, _) = run(&[
-        "samples",
+        "sample",
         "vars",
         "--names",
         f.to_str().unwrap(),
@@ -48,7 +48,7 @@ fn variables_is_the_route_answer() {
     .unwrap();
     assert_eq!(out, want + "\n");
     let (_, out, _) = run(&[
-        "samples",
+        "sample",
         "vars",
         "--names",
         f.to_str().unwrap(),
@@ -84,7 +84,7 @@ const TIME_NAMES: [&str; 9] = [
 fn table_is_the_route_answer_with_the_time_points() {
     let p = std::env::temp_dir().join(format!("mzlab-cli-{}-names-time.txt", std::process::id()));
     std::fs::write(&p, TIME_NAMES.join("\n")).unwrap();
-    let (code, out, err) = run(&["samples", "table", "--names", p.to_str().unwrap()]);
+    let (code, out, err) = run(&["sample", "table", "--names", p.to_str().unwrap()]);
     assert_eq!(code, 0, "{err}");
     let files: Vec<String> = TIME_NAMES
         .iter()
@@ -107,32 +107,32 @@ fn table_is_the_route_answer_with_the_time_points() {
 
 #[test]
 fn group_name_is_the_route_answer() {
-    let (code, out, _) = run(&["samples", "group", "MQ_H2O2_T00", "MQ_H2O2_T01"]);
+    let (code, out, _) = run(&["sample", "group", "MQ_H2O2_T00", "MQ_H2O2_T01"]);
     assert_eq!((code, out.as_str()), (0, "{\"name\":\"MQ_H2O2\"}\n"));
-    let (_, out, _) = run(&["samples", "group"]);
+    let (_, out, _) = run(&["sample", "group"]);
     assert_eq!(out, "{\"name\":\"\"}\n");
 }
 
 #[test]
 fn bad_use_is_an_error_of_use() {
     for a in [
-        vec!["samples", "nope"],
+        vec!["sample", "nope"],
         vec![
-            "samples",
+            "sample",
             "vars",
             "--names",
             "/nonexistent/x.txt",
             "--substring",
         ],
-        vec!["samples", "vars", "--pos", "x"],
+        vec!["sample", "vars", "--pos", "x"],
     ] {
         assert_eq!(run(&a).0, 2, "{a:?}");
     }
     assert_eq!(
-        run(&["samples", "vars", "--names", "/nonexistent/x.txt"]).0,
+        run(&["sample", "vars", "--names", "/nonexistent/x.txt"]).0,
         4
     );
-    assert_eq!(run(&["samples", "--help"]).0, 0);
+    assert_eq!(run(&["sample", "--help"]).0, 0);
 }
 
 /// The Italian command and subcommand names are gone: usage errors (exit 2); the help has no old-names line.
@@ -140,16 +140,16 @@ fn bad_use_is_an_error_of_use() {
 fn the_italian_names_are_refused() {
     let f = names_file("alias");
     let n = f.to_str().unwrap();
-    assert_eq!(run(&["samples", "vars", "--names", n]).0, 0);
-    assert_eq!(run(&["samples", "group", "A_B", "A_C"]).0, 0);
+    assert_eq!(run(&["sample", "vars", "--names", n]).0, 0);
+    assert_eq!(run(&["sample", "group", "A_B", "A_C"]).0, 0);
     for bad in [
         vec!["campioni", "vars", "--names", n],
-        vec!["samples", "variabili", "--names", n],
-        vec!["samples", "nome-gruppo", "A_B", "A_C"],
+        vec!["sample", "variabili", "--names", n],
+        vec!["sample", "nome-gruppo", "A_B", "A_C"],
     ] {
         assert_eq!(run(&bad).0, 2, "{bad:?}");
     }
-    assert!(!run(&["samples", "--help"])
+    assert!(!run(&["sample", "--help"])
         .1
         .contains("old names still accepted"));
 }
@@ -176,7 +176,7 @@ fn pairs(tag: &str) -> std::path::PathBuf {
 fn list_gives_data_on_stdout_progress_on_stderr_and_exit_codes() {
     let d = pairs("a");
     let at = |n: &str| d.join(format!("{n}.wiff")).to_str().unwrap().to_string();
-    let (code, out, err) = run(&["samples", "list", &at("totale"), "--json"]);
+    let (code, out, err) = run(&["sample", "list", &at("totale"), "--json"]);
     assert_eq!((code, out.lines().count()), (0, 1), "{err}");
     assert!(
         out.starts_with(r#"{"schema":"samples_list/1","format":"SciexWiff""#),
@@ -184,22 +184,22 @@ fn list_gives_data_on_stdout_progress_on_stderr_and_exit_codes() {
     );
     assert!(err.contains("listing "), "{err}");
     // a refused sample is listed with its reason and the exit code says it
-    let (code, out, _) = run(&["samples", "list", &at("rifiutato"), "--json"]);
+    let (code, out, _) = run(&["sample", "list", &at("rifiutato"), "--json"]);
     assert_eq!(code, 1);
     assert!(out.contains(r#""why":"refused""#), "{out}");
     // the probe adds what the `.wiff.scan` is
-    let (code, out, _) = run(&["samples", "list", &at("totale"), "--json", "--probe"]);
+    let (code, out, _) = run(&["sample", "list", &at("totale"), "--json", "--probe"]);
     assert_eq!(code, 0);
     assert!(
         out.contains(r#""probe":{"scan_bytes":"#) && out.contains(r#""status":"ok""#),
         "{out}"
     );
     // a missing file is 4 and an error line, no usage is 2
-    let (code, out, _) = run(&["samples", "list", &at("nothing"), "--json"]);
+    let (code, out, _) = run(&["sample", "list", &at("nothing"), "--json"]);
     assert_eq!(code, 4);
     assert!(out.contains(r#""schema":"error/1""#), "{out}");
-    assert_eq!(run(&["samples", "list", "--json"]).0, 2);
-    assert_eq!(run(&["samples", "list", &at("totale"), "--bogus"]).0, 2);
+    assert_eq!(run(&["sample", "list", "--json"]).0, 2);
+    assert_eq!(run(&["sample", "list", &at("totale"), "--bogus"]).0, 2);
     let _ = std::fs::remove_dir_all(&d);
 }
 
@@ -280,14 +280,14 @@ fn the_json_has_only_the_keys_of_the_english_schema() {
     let f = names_file("it");
     let names = f.to_str().unwrap();
     for (args, allowed) in [
-        (vec!["samples", "vars", "--names", names], &vars),
+        (vec!["sample", "vars", "--names", names], &vars),
         (
-            vec!["samples", "vars", "--names", names, "--pos", "1"],
+            vec!["sample", "vars", "--names", names, "--pos", "1"],
             &vars,
         ),
-        (vec!["samples", "table", "--names", names], &table),
+        (vec!["sample", "table", "--names", names], &table),
         (
-            vec!["samples", "group", "MQ_H2O2_T00", "MQ_H2O2_T01"],
+            vec!["sample", "group", "MQ_H2O2_T00", "MQ_H2O2_T01"],
             &group,
         ),
     ] {

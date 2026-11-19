@@ -1,4 +1,4 @@
-"""`--sample LIST` is the same selection from the engine .wasm (`sample_selection`, through Node) and from `mzlab-cli samples select --json`: the same bytes for a list that
+"""`--sample LIST` is the same selection from the engine .wasm (`sample_selection`, through Node) and from `mzlab-cli sample select --json`: the same bytes for a list that
 fits the file, the same error key and parameters for an id the file does not have or a text that is not a list (the CLI adds its exit code: 5 and 2).
 Synthetic data only (tools/wiff_grande.py). python3 is part of the test (it fails without it); skipped only without cargo, wasm-bindgen or node."""
 import json

@@ -1,8 +1,8 @@
-//! The `--help` text of `mzlab-cli convert`.
+//! The `--help` text of `mzlab-cli file convert`.
 
-pub(crate) const HELP: &str = "mzlab-cli convert: vendor files to indexed mzML, the step convert.mzml of the Flow page.
+pub(crate) const HELP: &str = "mzlab-cli file convert: vendor files to indexed mzML, the step convert.mzml of the Flow page.
 
-usage: mzlab-cli convert INPUT... --out FOLDER [--sample LIST] [--compression KIND] [--zlib N] [--numpress] [--peaks WHICH] [--workers N] [--report FILE.json] [--fresh] [--set conv.NAME=VALUE...]
+usage: mzlab-cli file convert INPUT... --out FOLDER [--sample LIST] [--compression KIND] [--zlib N] [--numpress] [--peaks WHICH] [--workers N] [--report FILE.json] [--fresh] [--set conv.NAME=VALUE...]
 
   INPUT...             a file, a maker's folder (.D, .d, .raw) or a folder to look through; a .wiff is taken with its .wiff.scan, and a dataset
                        with several samples gives one mzML per sample
@@ -10,7 +10,7 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--sample LIST] [--compression KI
                        FOLDER/.convert
   --sample LIST        only these samples of a dataset with several (.wiff): ids and ranges, 1,3,5 or 2-4; the others are not read. The mzML of a
                        sample is the same bytes as in a run without it. An id the dataset does not have stops the run (exit 5); a dataset with one
-                       sample is converted as it is. `mzlab-cli samples select FILE --sample LIST` checks a list without converting
+                       sample is converted as it is. `mzlab-cli sample select FILE --sample LIST` checks a list without converting
   --compression KIND   standard (zlib level 2, default), smallest (zlib and MS-Numpress) or none (uncompressed): the short form of the two options below
   --zlib N, --numpress zlib level of the arrays, 0 (none) to 9 (smallest), default 2; MS-Numpress coding of m/z and intensities
   --peaks WHICH        the peaks written: file (those of the file, default; a profile file keeps its points and the run warns), profile (the

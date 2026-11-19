@@ -27,7 +27,7 @@ def _lines(path: Path) -> list[str]:
 
 
 def step_ids(root: Path) -> list[str]:
-    """Ids of every step/1 descriptor: `mzlab-cli steps --json` when the real tree has the binary, else the exported docs/schemi/steps-*-1.json."""
+    """Ids of every step/1 descriptor: `mzlab-cli flow steps --json` when the real tree has the binary, else the exported docs/schemi/steps-*-1.json."""
     exe = shutil.which("mzlab-cli") if root == ROOT else None
     if exe:
         r = subprocess.run([exe, "steps", "--json"], capture_output=True, text=True)
@@ -88,7 +88,12 @@ def known_commands(root: Path) -> set[str]:
         return set()
     src = lib.read_text(encoding="utf-8")
     plain = re.search(r"const PLAIN: \[&str; \d+\] = \[([^\]]*)\]", src)
-    return set(re.findall(r'Some\("([a-z][a-z-]*)"\)', src)) | set(re.findall(r'"([a-z][a-z-]*)"', plain.group(1) if plain else ""))
+    words = set(re.findall(r'Some\("([a-z][a-z-]*)"\)', src)) | set(re.findall(r'"([a-z][a-z-]*)"', plain.group(1) if plain else ""))
+    # the command table: every word of every `Entry::new("group sub ...", ...)` name
+    for f in sorted((root / "crates/mzlab-cli/src/cmd").glob("*.rs")):
+        for name in re.findall(r'Entry::new\(\s*"([a-z -]+)"', f.read_text(encoding="utf-8")):
+            words.update(name.split())
+    return words
 
 
 def check_guides(root: Path) -> Result:

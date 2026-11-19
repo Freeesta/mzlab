@@ -5,4 +5,4 @@
 3. Retention times: the scan window plus the limits of the integrated peaks of the linked chromatogram that touch it.
 4. CE: `ce_mid ± ce_spread` eV for a stepped CE, else `ce`; read from `ms2_exps` of the engine (`crates/mzlab-core/src/cespread.rs`), never typed; no CE, no row.
 5. Sample: the file label (MS², no overlay).
-Same data in site, app and CLI: `mzlab-cli items FILE` prints the `Item.info()` JSON (`ms2_exps` has `prec`, `ce`, `ce_mid`, `ce_spread`, `n`; the Python reference is `Item._ms2_exps` in `mzlab/explore.py`, checked by `iteminfo_parity`). Tests: `e2e_spettro_righe`, `items_cmd` and `cespread` unit tests, `iteminfo_parity`.
+Same data in site, app and CLI: `mzlab-cli file items FILE` prints the `Item.info()` JSON (`ms2_exps` has `prec`, `ce`, `ce_mid`, `ce_spread`, `n`; the Python reference is `Item._ms2_exps` in `mzlab/explore.py`, checked by `iteminfo_parity`). Tests: `e2e_spettro_righe`, `items_cmd` and `cespread` unit tests, `iteminfo_parity`.

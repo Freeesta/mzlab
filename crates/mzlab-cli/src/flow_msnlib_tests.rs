@@ -44,9 +44,19 @@ fn cli(args: &[&str]) -> String {
 fn command(d: &Path, flags: &[&str]) -> String {
     let (lib, file) = (d.join("lib.json"), msn());
     let (lib, file) = (lib.to_str().unwrap(), file.to_str().unwrap());
-    let added = cli(&["msn-lib", "add", lib, file, "--id", "STD", "--formula", ION]);
+    let added = cli(&[
+        "msn",
+        "lib",
+        "add",
+        lib,
+        file,
+        "--id",
+        "STD",
+        "--formula",
+        ION,
+    ]);
     assert!(added.is_empty());
-    let mut a = vec!["msn-lib", "export", lib];
+    let mut a = vec!["msn", "lib", "export", lib];
     a.extend(flags);
     cli(&a)
 }
@@ -109,7 +119,7 @@ fn the_options_pick_levels_peaks_and_notes() {
 #[test]
 fn the_tables_read_like_the_graph() {
     let d = dir("c");
-    let graph = cli(&["msn-graph", msn().to_str().unwrap(), "--formula", ION]);
+    let graph = cli(&["msn", "graph", msn().to_str().unwrap(), "--formula", ION]);
     let g = mzlab_core::json::parse(graph.as_bytes()).unwrap();
     let count = |k: &str| g.get(k).unwrap().arr().len();
     let rows = |t: &str| t.lines().count() - 1;

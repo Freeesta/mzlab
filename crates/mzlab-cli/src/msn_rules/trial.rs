@@ -1,4 +1,4 @@
-//! The numbers of `mzlab-cli msn-rules` for ONE library spectrum: how many of its peaks the graph explains by sub-formulas, by the rules of the formula
+//! The numbers of `mzlab-cli msn rules` for ONE library spectrum: how many of its peaks the graph explains by sub-formulas, by the rules of the formula
 //! and by the rules of the structure, with the rules that fired; the same on the three decoys (rewired structure, the spectrum of another record,
 //! losses shifted). Computed with the engine of the page (`msngrafo`), never a verdict.
 

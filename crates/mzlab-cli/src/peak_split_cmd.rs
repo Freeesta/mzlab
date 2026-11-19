@@ -1,4 +1,4 @@
-//! `mzlab-cli peak-split FILE... --set tr=J --set a=MIN --set b=MIN [--set NAME=VALUE...]`: one integration drawn by hand on a transition / SIM
+//! `mzlab-cli peak split FILE... --set tr=J --set a=MIN --set b=MIN [--set NAME=VALUE...]`: one integration drawn by hand on a transition / SIM
 //! trace and its valleys (`mzlab_core::manint`). Without `split` it prints where the window splits at `depth` (the bytes of the page's
 //! `api/manvalley`); with `split` it prints the table of the window cut there, a row per part (the bytes of `api/manint` for that window).
 
@@ -10,9 +10,9 @@ use mzlab_core::valley::DEPTH;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli peak-split: one integration drawn by hand on a transition / SIM trace, split at its valleys.
+pub const HELP: &str = "mzlab-cli peak split: one integration drawn by hand on a transition / SIM trace, split at its valleys.
 
-usage: mzlab-cli peak-split FILE... --set tr=J --set a=MIN --set b=MIN [--set NAME=VALUE...] [--out PATH]
+usage: mzlab-cli peak split FILE... --set tr=J --set a=MIN --set b=MIN [--set NAME=VALUE...] [--out PATH]
 
   FILE        an mzML, or a vendor file the app reads, in the order of the page (as manual-table)
   --set file=I        the sample (from 0, default 0) and --set tr=J its transition in the list of the file

@@ -1,6 +1,6 @@
 // @ts-check
 // MOL / SDF export of Draw: the molfile of the canvas goes to the Rust writer (`sdf` of the molkit .wasm, `sdf/1`; the app asks `feat/grafo`,
-// kind "sdf"; `mzlab-cli mol-export` gives the same bytes). A .mol keeps the whole canvas in one record; an .sdf has one record per structure
+// kind "sdf"; `mzlab-cli mol export` gives the same bytes). A .mol keeps the whole canvas in one record; an .sdf has one record per structure
 // with formula, exact mass, the m/z of the chosen ion and the mol1: identifier. This file builds the request and saves the returned text.
 import { molfileOf } from "./disegno-molfile.js";
 import { carica } from "./disegno-verifica.js";

@@ -1,4 +1,4 @@
-//! What the clamp of each baseline end of `peakq_lrauto` did, and its result as the JSON that the page (mzlab-wasm) and `mzlab-cli peak-auto-lr`
+//! What the clamp of each baseline end of `peakq_lrauto` did, and its result as the JSON that the page (mzlab-wasm) and `mzlab-cli peak auto-lr`
 //! both print, the same bytes. A child module of `peakq_lrauto`, split off to keep that file under the size limit.
 
 use super::{End, LrAuto, Split};
@@ -42,7 +42,7 @@ fn end_name(e: End) -> &'static str {
     }
 }
 
-/// The result as the JSON the page (`lr_auto_integrate` of mzlab-wasm) and `mzlab-cli peak-auto-lr` both print, the same bytes: the parameters used
+/// The result as the JSON the page (`lr_auto_integrate` of mzlab-wasm) and `mzlab-cli peak auto-lr` both print, the same bytes: the parameters used
 /// (`half_auto` true when the half window was chosen here, `baseline` always "engine": this route never reads the page's baseline setting) and every
 /// peak (times in min, baseline in counts with what its clamp did, areas in counts x min, never negative, `below` the part cut off under the line).
 pub fn lr_auto_json(rt: &[f64], r: &LrAuto) -> String {

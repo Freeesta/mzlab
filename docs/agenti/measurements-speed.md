@@ -16,7 +16,7 @@ Site loading (page, first paint, batches of files, first file of a batch) has it
 | 2026-10-22 | #1542 | detection: traces, 1-peak channels skipped (sum over the 15 files) | 1,10 s | 1,01 s | −8 % |
 | 22/10 | #1552 | index mzXML zlib (`MzxmlReader::completa`: TIC and base peak in one read; 12 files, 4 workers, 15 runs, `best`; `main` `84929497eee9f3ba0769aaa19463291ff070ef51`) | 2.41 s | 1.88 s | −22 % (total 1.14 → 0.98 s, −14 %) |
 | 22/10 | #1552 | index mzXML raw (same bench) | 1.71 s | 1.43 s | −16 % (total 0.98 → 0.93 s, −5 %) |
-| 23/10 | RM-1b | `mzlab-cli convert`, fingerprints once only (synthetic mzXML 320 MB → mzML 323 MB, `--zlib 0`, 3 alternated runs; `main` `788e416b90033bb946d8afe942f0f17870873f76`) | 2.93 s | 2.73 s | −7 % (machine with SHA-NI; PRIDE not re-measured) |
+| 23/10 | RM-1b | `mzlab-cli file convert`, fingerprints once only (synthetic mzXML 320 MB → mzML 323 MB, `--zlib 0`, 3 alternated runs; `main` `788e416b90033bb946d8afe942f0f17870873f76`) | 2.93 s | 2.73 s | −7 % (machine with SHA-NI; PRIDE not re-measured) |
 | 23/10 | RM-1 | mzML writer, block pool with spectra returned to the reader (synthetic lab-b, 69 MB, level 0, 4 threads, `--senza-conta`, 7 runs, median without the first run; `main` `56fc84cacaf4aa67b9041567fb295023a3b27018`) | 3.40 s | 0.61 s | −82 % (1 thread 1.57 → 1.65 s, unchanged) |
 | 23/10 | RM-1 | same, synthetic lab-a (70 MB), level 0, 4 threads | 0.86 s | 0.21 s | −76 % |
 | 23/10 | feature-veloce-1 | `mzlab-cli features`, index and detection per file on threads (12 synthetic HR mzML of 1,8 MB, ~3000 features, 4 CPU, `desktop` profile, 5 runs; CSV identical by `cmp`; `main` `74e59a26d31b8d0e2dea27566c28f6f00aa88459`) | 0.61 s | 0.37 s | −39 % |

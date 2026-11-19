@@ -1,13 +1,13 @@
-//! `mzlab-cli peak-edges TRACE.csv --at T`: the limits of the low-resolution peak under a click, from `mzlab_core::peakq_lr::lr_edges`, the same
+//! `mzlab-cli peak edges TRACE.csv --at T`: the limits of the low-resolution peak under a click, from `mzlab_core::peakq_lr::lr_edges`, the same
 //! function the page asks through `QUALITA.edges`. The trace is two columns (RT in min, intensity), comma, tab or space separated, header optional.
 
 use mzlab_core::peakq_lr::{lr_edges, LrParams, NoiseMode};
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli peak-edges: the limits of the peak at a time on a low-resolution trace, as JSON.
+pub const HELP: &str = "mzlab-cli peak edges: the limits of the peak at a time on a low-resolution trace, as JSON.
 
-usage: mzlab-cli peak-edges TRACE.csv|- --at MIN [--ref MIN] [--mrm] [--set NAME=VALUE...]
+usage: mzlab-cli peak edges TRACE.csv|- --at MIN [--ref MIN] [--mrm] [--set NAME=VALUE...]
 
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --at MIN     the time of the click
@@ -16,7 +16,7 @@ usage: mzlab-cli peak-edges TRACE.csv|- --at MIN [--ref MIN] [--mrm] [--set NAME
   --set        the page dialog: win, edge_frac, sn_min, multi, tail; engine only: area_noise, noise (mad|rms|manual), min_half, constrain, nr0, nr1
   output       {\"edges\":[t0,t1]}, or {\"edges\":null} when the S/N is under sn_min
 
-old names still accepted: peaks-edges, areaNoise, edgeFrac, snMin, minHalf";
+old names still accepted: areaNoise, edgeFrac, snMin, minHalf";
 
 pub(crate) fn trace(src: &str) -> Result<(Vec<f64>, Vec<f64>), String> {
     let text = if src == "-" {

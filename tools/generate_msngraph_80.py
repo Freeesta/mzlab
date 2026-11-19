@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Writes the synthetic 80-ion msn-graph/1 used by the layout checks (tests/msn_layout_80.js): one root, then 7 levels of 10 ions and a last one of 9, masses only, no real data.
-Built from the shape of tests_e2e/fixtures/msngrafo_esempio.json; `view` is then added by the engine (`mzlab-cli msn-graph complete`)."""
+Built from the shape of tests_e2e/fixtures/msngrafo_esempio.json; `view` is then added by the engine (`mzlab-cli msn complete`)."""
 import json, subprocess, sys
 from pathlib import Path
 

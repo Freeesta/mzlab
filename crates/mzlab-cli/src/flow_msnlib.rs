@@ -1,6 +1,6 @@
 //! The native executors of `msn.library_export@1` and `msn.table_export@1`: the fragmentation graph `msn-graph/1` of an infusion (`spectra.msn_graph`) written
 //! as a spectral library (MSP or MassBank, every MS level, with the formula and the neutral loss of each explained peak) or as a CSV table of its nodes,
-//! its modifications (the neutral losses between ions) or its peaks. Both read the graph text, so the plan and `mzlab-cli msn-lib export` write the same bytes.
+//! its modifications (the neutral losses between ions) or its peaks. Both read the graph text, so the plan and `mzlab-cli msn lib export` write the same bytes.
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};

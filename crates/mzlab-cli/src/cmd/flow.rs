@@ -22,18 +22,13 @@ fn report(args: Vec<String>) -> Outcome {
     crate::flow_report::run(args.into_iter()).map_or_else(|e| Outcome::fail(&e), Outcome::ok)
 }
 
-/// `mzlab-cli flow` with a word that is not a subcommand.
-fn usage(_: Vec<String>) -> Outcome {
-    Outcome::fail("usage: mzlab-cli flow run PLAN.json ... | mzlab-cli flow check PLAN.json | mzlab-cli flow report RUNDIR [--out FILE] | mzlab-cli flow record RUNDIR --roles ROLES.json | mzlab-cli flow verify RECORD | mzlab-cli flow command PLAN.json")
-}
-
 pub(crate) static TABLE: &[Entry] = &[
-    Entry { name: "flow run", aliases: &[], help: "mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan (flow run --help)", run: |a| crate::flow_run::run(a, None) },
-    Entry { name: "flow check", aliases: &[], help: "mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files (flow check --help)", run: crate::flow_json::check },
-    Entry { name: "steps", aliases: &[], help: "mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)", run: crate::steps_cmd::run },
-    Entry { name: "flow report", aliases: &[], help: "mzlab-cli flow report RUNDIR [--out FILE]   the run-report/1 report of a run folder (prov.json and the files beside it)", run: report },
-    Entry { name: "flow record", aliases: &[], help: "mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run (a role without sha256 takes it from the run inputs); flow verify RECORD [--json] checks its fingerprints", run: crate::flow_mzrun::record },
-    Entry { name: "flow verify", aliases: &[], help: "mzlab-cli flow verify RECORD   whether the fingerprints of an mzrun/1 record match its files", run: crate::flow_mzrun::check },
-    Entry { name: "flow command", aliases: &[], help: "mzlab-cli flow command PLAN.json   the script that reruns the plan, on stdout", run: command },
-    Entry { name: "flow", aliases: &[], help: "", run: usage },
+    Entry::new("flow run", "mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] --out FOLDER [--set INSTANCE.NAME=VALUE...]   a whole Flow plan", |a| crate::flow_run::run(a, None)),
+    Entry::new("flow check", "mzlab-cli flow check PLAN.json [--set INSTANCE.NAME=VALUE...] [--json]   is the plan valid, without the input files", crate::flow_json::check),
+    Entry::new("flow steps", "mzlab-cli flow steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only", crate::steps_cmd::run),
+    Entry::new("flow report", "mzlab-cli flow report RUNDIR [--out FILE]   the run-report/1 report of a run folder (prov.json and the files beside it)", report),
+    Entry::new("flow record", "mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run (a role without sha256 takes it from the run inputs)", crate::flow_mzrun::record),
+    Entry::new("flow verify", "mzlab-cli flow verify RECORD   whether the fingerprints of an mzrun/1 record match its files", crate::flow_mzrun::check),
+    Entry::new("flow command", "mzlab-cli flow command PLAN.json   the script that reruns the plan, on stdout", command),
+    Entry::new("explain-missing", "mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product", crate::flow_explain::run),
 ];

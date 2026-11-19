@@ -1,4 +1,4 @@
-//! `mzlab-cli convert` on a `.wiff` pair with one broken unit (`tools/wiff_isolation.py`): the healthy samples are written byte for byte as from the
+//! `mzlab-cli file convert` on a `.wiff` pair with one broken unit (`tools/wiff_isolation.py`): the healthy samples are written byte for byte as from the
 //! whole pair (the SHA-1 digests of the `.wiff.scan` and of the document aside), the damaged one fails alone with its cause; a NaN cps is never
 //! written and its cycle is counted; `manual-table` lists a sample at position 0 of the table. Skipped without python3.
 use std::path::{Path, PathBuf};

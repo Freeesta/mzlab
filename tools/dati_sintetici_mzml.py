@@ -1,5 +1,5 @@
 """The parts of a valid mzML that tools/dati_sintetici.py shares: cvList, file description, software and processing lists, the chromatogram type term
-(the PSI-MS rules of `mzlab-cli validate`)."""
+(the PSI-MS rules of `mzlab-cli file validate`)."""
 from pathlib import Path
 
 _CVLIST = ('<cvList count="2"><cv id="MS" fullName="Proteomics Standards Initiative Mass Spectrometry Ontology" version="4.1.163" URI="x"/>'

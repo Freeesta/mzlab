@@ -1,4 +1,4 @@
-//! `mzlab-cli manual-table` on the SIM `.wiff` of `tools/wiff_sim.py` (`sim3`: a blank and three named samples, seven ions at a 0.8 s cycle, an isomer
+//! `mzlab-cli peak table` on the SIM `.wiff` of `tools/wiff_sim.py` (`sim3`: a blank and three named samples, seven ions at a 0.8 s cycle, an isomer
 //! pair; skipped without python3): windows drawn at the peaks the writer put give one row each, grouped by channel, with an optional sum row; the same
 //! bytes from the `.wiff` and from its samples written as mzML; a copy of the `.wiff.scan` cut at 60 % warns and measures the points before the cut.
 
@@ -32,7 +32,7 @@ fn fixture(tag: &str) -> Option<PathBuf> {
 }
 
 fn table(args: &[&Path], extra: &[&str]) -> crate::Outcome {
-    let mut a = vec!["manual-table".to_string()];
+    let mut a = vec!["peak".to_string(), "table".to_string()];
     a.extend(args.iter().map(|p| p.to_string_lossy().into_owned()));
     a.extend(extra.iter().map(|s| s.to_string()));
     execute(&a)
@@ -323,6 +323,7 @@ fn a_scan_file_cut_short_gives_the_points_before_the_cut_and_a_warning() {
 fn channels_lists_the_sim_channels_of_the_wiff() {
     let Some(d) = fixture("channels") else { return };
     let o = execute(&[
+        "file".to_string(),
         "channels".to_string(),
         d.join("sim3.wiff").to_string_lossy().into_owned(),
     ]);

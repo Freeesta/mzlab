@@ -1,4 +1,4 @@
-//! `mzlab-cli peak-auto TRACE.csv`: every peak of a high-resolution trace with its baseline, from `mzlab_core::peakq_auto::auto_integrate`, the
+//! `mzlab-cli peak auto TRACE.csv`: every peak of a high-resolution trace with its baseline, from `mzlab_core::peakq_auto::auto_integrate`, the
 //! function behind the one-click integration of the page (`QUALITA.autoIntegrate`). The `--set` names are the snake_case of the page settings (`PK`).
 
 use mzlab_core::area_unit::AreaUnit;
@@ -9,9 +9,9 @@ use crate::peaks_edges_cmd::trace;
 use crate::plain::peak_area_cmd::{baseline_of, is_base};
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli peak-auto: every peak of a high-resolution trace with its baseline, as JSON.
+pub const HELP: &str = "mzlab-cli peak auto: every peak of a high-resolution trace with its baseline, as JSON.
 
-usage: mzlab-cli peak-auto TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VALUE...]
+usage: mzlab-cli peak auto TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VALUE...]
 
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --from/--to  the stretch whose apexes count (default: the whole trace)

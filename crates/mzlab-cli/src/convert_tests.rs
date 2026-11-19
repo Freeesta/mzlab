@@ -1,4 +1,4 @@
-//! `mzlab-cli convert` on a folder of synthetic vendor files: valid indexed mzML, the failed file named with its cause and code 1, the bytes of `flow run`
+//! `mzlab-cli file convert` on a folder of synthetic vendor files: valid indexed mzML, the failed file named with its cause and code 1, the bytes of `flow run`
 //! with a `convert.mzml` plan, the same bytes with 1 and 3 workers, the cache of the second run, a sample per mzML, the usage errors.
 
 use std::path::Path;
@@ -14,7 +14,7 @@ use crate::Outcome;
 mod wiff_notes;
 
 fn convert(args: &[&str]) -> Outcome {
-    let mut a = vec!["convert".to_string()];
+    let mut a = vec!["file".to_string(), "convert".to_string()];
     a.extend(args.iter().map(|x| x.to_string()));
     crate::execute(&a)
 }
@@ -363,7 +363,7 @@ fn help_lists_every_option() {
     assert!(
         String::from_utf8(crate::execute(&["--help".to_string()]).stdout)
             .unwrap()
-            .contains("mzlab-cli convert")
+            .contains("mzlab-cli file convert")
     );
 }
 

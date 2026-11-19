@@ -1,4 +1,4 @@
-//! `mzlab-cli wiff list|verify`: what a SCIEX `.wiff` + `.wiff.scan` pair holds (every sample with its section of the `.scan`, its streams, a status and SHA-256) and whether
+//! `mzlab-cli file info|verify`: what a SCIEX `.wiff` + `.wiff.scan` pair holds (every sample with its section of the `.scan`, its streams, a status and SHA-256) and whether
 //! an output pair equals the sources it was assembled from. Read only; the same engine code (`wiff::inventory`) as the site's `wiffwrite` module, so the JSON is byte-identical.
 //! Exit codes: 0 done, 1 verify found a difference, 2 usage or read error, 3 list found a sample that is not `ok`.
 
@@ -9,10 +9,10 @@ use mzlab_core::wiff::inventory;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli wiff: inspect and compare SCIEX .wiff + .wiff.scan pairs (read only), JSON on stdout for agents.
+pub const HELP: &str = "mzlab-cli file info: inspect and compare SCIEX .wiff + .wiff.scan pairs (read only), JSON on stdout for agents.
 
-usage: mzlab-cli wiff list FILE.wiff... [--inventory] [--out PATH]
-       mzlab-cli wiff verify OUT.wiff --against SRC.wiff... [--out PATH]
+usage: mzlab-cli file info FILE.wiff... [--inventory] [--out PATH]
+       mzlab-cli file verify OUT.wiff --against SRC.wiff... [--out PATH]
 
   list        wiff.list/1: per file the SHA-256, the container (version, sector sizes), the .scan size and the streams shared by all samples; per sample its number,
               name, method, scans, status (ok, refused, truncated, damaged, unindexed) with the reason, its section of the .scan (start, bytes, slack, SHA-256, first

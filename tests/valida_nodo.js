@@ -1,5 +1,5 @@
 // Runs `validate_mzml` of the `valida` module (wasm-bindgen --target nodejs) on the files given and prints the text of each: node valida_nodo.js PKG FILE...
-// Used by tests/test_valida_wasm.py (the same bytes as `mzlab-cli validate --json`).
+// Used by tests/test_valida_wasm.py (the same bytes as `mzlab-cli file validate --json`).
 const fs = require("fs");
 const path = require("path");
 const m = require(path.resolve(process.argv[2]));

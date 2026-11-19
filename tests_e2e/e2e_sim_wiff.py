@@ -2,9 +2,9 @@
 samples, seven ions at a 0.8 s cycle, an isomer pair in one channel; no laboratory data): dragging the pair with an msconvert log opens four files (the
 log is skipped with a note); windows integrated on the ion traces fill the card «Manual integrations» under the chart (collapsible and remembered,
 height of its rows up to a cap, then a scroll with a sticky header, nothing above it moves), one row per window grouped by channel, each with a name the user types; the card, its CSV
-export, the engine's sum rows and «Copy table» (tab-separated) are the bytes of `mzlab-cli manual-table` on the same .wiff and windows (after the provenance line);
-a row's Delete removes the integration; «Split at the valleys» (V) proposes the engine's drop line (`mzlab-cli peak-split`), moved by mouse, keys and finger and
-confirmed into one row per part; a window drawn on one sample is applied to the other samples chosen in the left panel, measured on each by the engine, with a row of the table; the channels of a sample equal `mzlab-cli channels`. The copy whose .wiff.scan is cut at 60 % measures the
+export, the engine's sum rows and «Copy table» (tab-separated) are the bytes of `mzlab-cli peak table` on the same .wiff and windows (after the provenance line);
+a row's Delete removes the integration; «Split at the valleys» (V) proposes the engine's drop line (`mzlab-cli peak split`), moved by mouse, keys and finger and
+confirmed into one row per part; a window drawn on one sample is applied to the other samples chosen in the left panel, measured on each by the engine, with a row of the table; the channels of a sample equal `mzlab-cli file channels`. The copy whose .wiff.scan is cut at 60 % measures the
 points before the cut. Needs the site and the .wasm (python3 tools/prepara_sito.py) and cargo for the CLI. Run from the repo root: python3 tests_e2e/e2e_sim_wiff.py"""
 # covers: mzlab/web/integrazioni-manuali.js, mzlab/web/integra-segue.js, mzlab/web/integra-valli.js, mzlab/web/sim-ui.js, tools/wiff_sim.py
 import json, shutil, subprocess, sys, os, tempfile
@@ -19,14 +19,14 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + str(e)[:900]))
 
 if not shutil.which("cargo"):
-    print("SKIP cargo is needed for mzlab-cli manual-table"); sys.exit(0)
+    print("SKIP cargo is needed for mzlab-cli peak table"); sys.exit(0)
 D = Path(tempfile.mkdtemp(prefix="sim_wiff_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_sim.py"), str(D)], check=True, capture_output=True)
 (D / "sim3.wiff.log").write_text("msconvert log (synthetic)\n")
 TRUE = json.loads((D / "sim3.json").read_text())
 CLI = cli_command()      # the release binary tools/verifica.py builds once before the tests: a `cargo run` inside the 150 s of the CI job would rebuild for minutes
 cli = lambda *a: subprocess.run(CLI + [str(x) for x in a], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout
-CHANNELS = json.loads(cli("channels", D / "sim3.wiff"))
+CHANNELS = json.loads(cli("file", "channels", D / "sim3.wiff"))
 throw = lambda m: (_ for _ in ()).throw(AssertionError(m))
 OWN = '#manint tbody tr[data-org="manual"]'          # the rows of the windows drawn by hand; the others are what the engine applied from them to the samples shown
 SHOWN = "(() => { const c = document.querySelector('#manint'); return !!c && !c.hidden && c.querySelectorAll('tbody tr[data-org=manual]').length === %d; })()"
@@ -50,7 +50,7 @@ def manual(st, files, sums=False, times=True):
     ws = [{**x, "file": TRUE["campioni"].index(order[x["file"]])} for x in json.loads(st["windows"])]
     w = D / "windows.json"; w.write_text(json.dumps(ws))
     tm = D / "times.json"; tm.write_text(json.dumps(st["times"]))      # the time points the page shows (the sample table), as the CLI reads them
-    return cli("manual-table", *files, "--set", f"windows={w}", *(["--set", f"times={tm}"] if times else []), *(["--set", "sums=true"] if sums else []))
+    return cli("peak", "table", *files, "--set", f"windows={w}", *(["--set", f"times={tm}"] if times else []), *(["--set", "sums=true"] if sums else []))
 
 def download(pg):
     with pg.expect_download() as d:
@@ -133,7 +133,7 @@ try:
             assert got.startswith("# mzLab ") and got.split("\n", 1)[1] == want.replace(",", "\t"), got
             sums = pg.evaluate("s => fetch(`api/manint?k=${s.ks.join(',')}&sums=1&w=${encodeURIComponent(s.windows)}`).then(r => r.text())", st)
             assert sums == manual(st, files, sums=True, times=False) and sums.count(",sum,") == 2, sums
-        step("the table, its CSV and the engine's sums are the bytes of mzlab-cli manual-table", parity)
+        step("the table, its CSV and the engine's sums are the bytes of mzlab-cli peak table", parity)
         def row_actions():
             need = lambda c, m: c or throw(m)
             need(pg.evaluate("[...document.querySelectorAll('#manint tbody tr[data-go]')].every(r => r.tabIndex === 0 && r.getAttribute('aria-label') && r.querySelectorAll('button').length === (r.dataset.org === 'manual' ? 1 : 0))"), "a row is one focusable control; an own row has one X, an applied one none")
@@ -308,8 +308,8 @@ try:
             whole = body(table(one))
             need(len(whole) == 1, whole); whole = whole[0]
             sets = [f"file={TRUE['campioni'].index('Sample_B')}", "tr=2", f"a={w['a']}", f"b={w['b']}", f"baseline={w.get('baseline', 'zero')}"] + ([f"line={','.join(str(v) for v in w['line'])}"] if "line" in w else [])
-            peak_split = lambda *extra: cli("peak-split", D / "sim3.wiff", *[x for kv in sets + list(extra) for x in ("--set", kv)])
-            # V on the chart with the integration selected: the engine's drop line at the depth shown, the bytes of mzlab-cli peak-split
+            peak_split = lambda *extra: cli("peak", "split", D / "sim3.wiff", *[x for kv in sets + list(extra) for x in ("--set", kv)])
+            # V on the chart with the integration selected: the engine's drop line at the depth shown, the bytes of mzlab-cli peak split
             pg.evaluate(f"(() => {{ const p = {P}; p.isel = {it}; draw(p); p.cv.focus(); }})()"); frames(pg, 2)
             pg.keyboard.press("v")
             wait_for_js(pg, f"{P}.el.querySelectorAll('.ivl-mk').length === 1 && !!{P}.el.querySelector('.ivl-bar')", timeout=60000)
@@ -336,7 +336,7 @@ try:
             wait_for_js(pg, f"!{P}.el.querySelector('.ivl-mk, .ivl-bar') && JSON.stringify({P}.ints.find(i => i.id === {it}).splits) === '[{t3}]'", timeout=10000)
             wait_for_js(pg, "MANINT.state().csv.includes(',drop,')", timeout=60000)
             st = pg.evaluate("MANINT.state()")
-            need(st["csv"] == manual(st, [D / "sim3.wiff"]), "the table with the parts = mzlab-cli manual-table")
+            need(st["csv"] == manual(st, [D / "sim3.wiff"]), "the table with the parts = mzlab-cli peak table")
             parts = [l.split(",") for l in st["csv"].strip().split("\n") if ",drop," in l]
             need(len(parts) == 2 and parts[0][7] == parts[1][6] and float(parts[0][12]) > 0 and float(parts[1][12]) > 0, parts)
             area = sum(float(x[5]) for x in parts)
@@ -455,7 +455,7 @@ try:
             k = pg.evaluate("E.files.find(f => f.label === 'Blank' || /Blank/.test(f.file)).k")
             got = pg.evaluate(f"fetch('api/canali?k={k}').then(r => r.json())")
             assert got["channels"] == CHANNELS["channels"], (got, CHANNELS)
-        step("the channels of a sample are those of mzlab-cli channels", channels)
+        step("the channels of a sample are those of mzlab-cli file channels", channels)
         step("the engine answered every request", lambda: (lambda m: m and throw(m))(pg.evaluate("window.MZLAB_LR_MISS || []")))
         step("no page error", lambda: (lambda e: e and throw(e))([x for x in r.errs if x[0] == "pageerror"]))
     r.close()

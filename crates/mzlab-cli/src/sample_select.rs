@@ -46,7 +46,7 @@ pub(crate) fn code_of(e: &Error) -> u8 {
 pub(crate) fn fail(e: &Error) -> Outcome {
     let o = Outcome::fail_error(e);
     if e.key.starts_with("err.sample.") {
-        o.with_hint("list the samples with `mzlab-cli samples list FILE --json`")
+        o.with_hint("list the samples with `mzlab-cli sample list FILE --json`")
     } else {
         o
     }

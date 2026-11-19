@@ -1,14 +1,14 @@
-//! `mzlab-cli mol-mech REQUEST.json|- [--out PATH]`: the `mecc/1` check of the curved arrows of a mechanism drawn on a structure (each arrow starts at
+//! `mzlab-cli mol mech REQUEST.json|- [--out PATH]`: the `mecc/1` check of the curved arrows of a mechanism drawn on a structure (each arrow starts at
 //! a lone pair, a bond or a radical and ends at an atom or a bond; drawn lone pairs fit the atom), byte for byte what the Draw page and the app show.
 
 use std::path::PathBuf;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli mol-mech: whether the curved arrows of a mechanism are well formed, as JSON (mecc/1). Form only: it never says
+pub const HELP: &str = "mzlab-cli mol mech: whether the curved arrows of a mechanism are well formed, as JSON (mecc/1). Form only: it never says
 which mechanism is right.
 
-usage: mzlab-cli mol-mech REQUEST.json|- [--out PATH]
+usage: mzlab-cli mol mech REQUEST.json|- [--out PATH]
 
   REQUEST.json  {\"molfile\": V2000 text, \"arrows\": [{\"kind\": \"pair\"|\"single\", \"from\": {\"lone\"|\"radical\": ATOM} or {\"bond\": [A, B]},
                 \"to\": {\"atom\": ATOM} or {\"bond\": [A, B]}}, ...], \"lone\": [[ATOM, PAIRS], ...]}: atoms are 0-based positions of the

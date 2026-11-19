@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Builds the in-silico candidate package of the site: downloads the pinned PubChemLite CSV (SHA-256 checked, `tools/genera_sospetti.py`) and runs the Rust packer on it.
 
-CI only (`pages.yml`, job packages). No computation here: `mzlab-cli insilico pack` makes the pieces and the catalogue. A network failure only warns: the site is then
+CI only (`pages.yml`, job packages). No computation here: `mzlab-cli db insilico pack` makes the pieces and the catalogue. A network failure only warns: the site is then
 published without the package and the button says so."""
 import argparse
 import subprocess

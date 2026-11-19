@@ -19,32 +19,32 @@ pub fn version() -> String {
     BRIDGE.to_string()
 }
 
-/// `check/1` of a request `{"molfile"}`, the same bytes as `mzlab-cli mol-check`.
+/// `check/1` of a request `{"molfile"}`, the same bytes as `mzlab-cli mol check`.
 #[wasm_bindgen]
 pub fn check(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::check::check_json(request).map_err(js_err)
 }
 
-/// `sub/1` of a request `{"query", "targets"}`, or `subdb/1` of `{"query", "db"}`: the same bytes as `mzlab-cli mol-search --sub`.
+/// `sub/1` of a request `{"query", "targets"}`, or `subdb/1` of `{"query", "db"}`: the same bytes as `mzlab-cli mol search --sub`.
 #[wasm_bindgen]
 pub fn substructure(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::substructure::search_json(request).map_err(js_err)
 }
 
-/// `sdf/1` text of a request `{"molfile", "format", "ion", "name"}`, the same bytes as `mzlab-cli mol-export`.
+/// `sdf/1` text of a request `{"molfile", "format", "ion", "name"}`, the same bytes as `mzlab-cli mol export`.
 #[wasm_bindgen]
 pub fn sdf(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::sdf::sdf_json(request).map_err(js_err)
 }
 
-/// `cip/1` of a request `{"molfile"}`, the same bytes as `mzlab-cli mol-cip`.
+/// `cip/1` of a request `{"molfile"}`, the same bytes as `mzlab-cli mol cip`.
 #[wasm_bindgen]
 pub fn cip(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::cip::cip_json(request).map_err(js_err)
 }
 
 /// `hilite/1` of a request `{"molfile", "world", "selected", "layers"}`: the atoms and bonds a piece of evidence colours on the drawing, the same
-/// bytes as `mzlab-cli mol-hilite`.
+/// bytes as `mzlab-cli mol hilite`.
 #[wasm_bindgen]
 pub fn hilite(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::hilite::hilite_json(request).map_err(js_err)

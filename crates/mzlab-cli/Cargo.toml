@@ -23,7 +23,7 @@ sha2 = { version = "0.11", default-features = false }
 flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
 
 
-# the PNG of a figure of the MSn graph (`mzlab-cli msn-graph --figure png`): rasterises the SVG, pure Rust; not in the default build, never in a .wasm
+# the PNG of a figure of the MSn graph (`mzlab-cli msn graph --figure png`): rasterises the SVG, pure Rust; not in the default build, never in a .wasm
 resvg = { version = "0.50", default-features = false, features = ["text", "system-fonts"], optional = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]

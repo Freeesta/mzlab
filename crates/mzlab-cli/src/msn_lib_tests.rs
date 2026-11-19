@@ -23,7 +23,8 @@ fn add_writes_the_entry_once_and_the_library_is_the_one_of_the_route() {
     let lib = d.join("lib.json");
     let (l, f) = (lib.to_str().unwrap(), msn());
     let args = [
-        "msn-lib",
+        "msn",
+        "lib",
         "add",
         l,
         f.to_str().unwrap(),
@@ -38,7 +39,13 @@ fn add_writes_the_entry_once_and_the_library_is_the_one_of_the_route() {
     let first = std::fs::read_to_string(&lib).unwrap();
     assert!(first.starts_with("{\"schema\":\"msn-lib/1\""), "{first}");
     // the graph inside is the graph the command prints
-    let g = run(&["msn-graph", f.to_str().unwrap(), "--formula", "C14H15N3O5+"]);
+    let g = run(&[
+        "msn",
+        "graph",
+        f.to_str().unwrap(),
+        "--formula",
+        "C14H15N3O5+",
+    ]);
     let g = String::from_utf8(g.stdout).unwrap();
     assert!(
         first.contains(g.trim_end()),
@@ -56,7 +63,8 @@ fn an_entry_keeps_the_bond_breaks_of_its_graph_and_the_table_of_the_entry_shows_
     let lib = d.join("lib.json");
     let (l, f) = (lib.to_str().unwrap(), msn());
     let o = run(&[
-        "msn-lib",
+        "msn",
+        "lib",
         "add",
         l,
         f.to_str().unwrap(),
@@ -74,7 +82,7 @@ fn an_entry_keeps_the_bond_breaks_of_its_graph_and_the_table_of_the_entry_shows_
     assert!(g.get("breaks").is_some(), "the entry holds the key rotture");
     let csv = mzlab_core::msngraph::table_text(g, "nodes", false);
     assert!(csv.lines().next().unwrap().contains("bond_break"), "{csv}");
-    let e = run(&["msn-lib", "export", l, "--all"]);
+    let e = run(&["msn", "lib", "export", l, "--all"]);
     assert_eq!(e.code, 0, "{}", e.stderr);
     let _ = std::fs::remove_dir_all(&d);
 }
@@ -89,14 +97,15 @@ fn build_reads_a_manifest_and_export_gives_msp() {
     )
     .unwrap();
     let m = d.join("manifest.tsv");
-    let o = run(&["msn-lib", "build", m.to_str().unwrap()]);
+    let o = run(&["msn", "lib", "build", m.to_str().unwrap()]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let lib = d.join("manifest.json");
     // the same entry as `add` with the ion typed by hand
     let other = d.join("other.json");
     let f = msn();
     let a = run(&[
-        "msn-lib",
+        "msn",
+        "lib",
         "add",
         other.to_str().unwrap(),
         f.to_str().unwrap(),
@@ -107,7 +116,7 @@ fn build_reads_a_manifest_and_export_gives_msp() {
     ]);
     assert_eq!(a.code, 0, "{}", a.stderr);
     assert_eq!(std::fs::read(&lib).unwrap(), std::fs::read(&other).unwrap());
-    let e = run(&["msn-lib", "export", lib.to_str().unwrap()]);
+    let e = run(&["msn", "lib", "export", lib.to_str().unwrap()]);
     let msp = String::from_utf8(e.stdout).unwrap();
     assert!(msp.starts_with("Name: STD-1 "), "{msp}");
     assert!(msp.contains("MS2") && !msp.contains("MS3"), "{msp}");
@@ -115,16 +124,16 @@ fn build_reads_a_manifest_and_export_gives_msp() {
         msp.contains("Formula: C14H15N3O5") && msp.contains("Ion_mode: P"),
         "{msp}"
     );
-    let all = run(&["msn-lib", "export", lib.to_str().unwrap(), "--all"]);
+    let all = run(&["msn", "lib", "export", lib.to_str().unwrap(), "--all"]);
     assert!(String::from_utf8(all.stdout).unwrap().contains("MS3"));
     let _ = std::fs::remove_dir_all(&d);
 }
 
 #[test]
 fn usage_errors_are_exit_2_and_help_is_printed() {
-    assert_eq!(run(&["msn-lib", "add"]).code, 2);
-    assert_eq!(run(&["msn-lib", "nope"]).code, 2);
-    let h = run(&["msn-lib", "--help"]);
+    assert_eq!(run(&["msn", "lib", "add"]).code, 2);
+    assert_eq!(run(&["msn", "lib", "nope"]).code, 2);
+    let h = run(&["msn", "lib", "add", "--help"]);
     assert!(String::from_utf8(h.stdout).unwrap().contains("msn-lib/1"));
 }
 
@@ -135,7 +144,8 @@ fn massbank_export_reads_back_like_the_msp_one_and_carries_ms_type_and_path() {
     let lib = d.join("lib.json");
     let f = msn();
     let a = run(&[
-        "msn-lib",
+        "msn",
+        "lib",
         "add",
         lib.to_str().unwrap(),
         f.to_str().unwrap(),
@@ -146,7 +156,14 @@ fn massbank_export_reads_back_like_the_msp_one_and_carries_ms_type_and_path() {
     ]);
     assert_eq!(a.code, 0, "{}", a.stderr);
     let export = |fmt: &str, extra: &[&str]| {
-        let mut args = vec!["msn-lib", "export", lib.to_str().unwrap(), "--format", fmt];
+        let mut args = vec![
+            "msn",
+            "lib",
+            "export",
+            lib.to_str().unwrap(),
+            "--format",
+            fmt,
+        ];
         args.extend_from_slice(extra);
         let o = run(&args);
         assert_eq!(o.code, 0, "{}", o.stderr);
@@ -178,7 +195,15 @@ fn massbank_export_reads_back_like_the_msp_one_and_carries_ms_type_and_path() {
     }
     assert!(!export("massbank", &[]).contains("MS_TYPE MS3"));
     assert_eq!(
-        run(&["msn-lib", "export", lib.to_str().unwrap(), "--format", "x"]).code,
+        run(&[
+            "msn",
+            "lib",
+            "export",
+            lib.to_str().unwrap(),
+            "--format",
+            "x"
+        ])
+        .code,
         2
     );
     let _ = std::fs::remove_dir_all(&d);
@@ -190,11 +215,11 @@ fn search_finds_the_entry_of_the_same_infusion_and_its_options_and_errors_work()
     let (lib, graph) = (d.join("lib.json"), d.join("g.json"));
     let (l, gp, f) = (lib.to_str().unwrap(), graph.to_str().unwrap(), msn());
     let ion = ["--formula", "C14H15N3O5+"];
-    let add = ["msn-lib", "add", l, f.to_str().unwrap(), "--id", "STD-1"];
+    let add = ["msn", "lib", "add", l, f.to_str().unwrap(), "--id", "STD-1"];
     assert_eq!(run(&[&add[..], &ion[..]].concat()).code, 0);
-    let g = run(&[&["msn-graph", f.to_str().unwrap()][..], &ion[..]].concat());
+    let g = run(&[&["msn", "graph", f.to_str().unwrap()][..], &ion[..]].concat());
     std::fs::write(&graph, &g.stdout).unwrap();
-    let o = run(&["msn-lib", "search", l, gp]);
+    let o = run(&["msn", "lib", "search", l, gp]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let t = String::from_utf8(o.stdout).unwrap();
     assert!(t.starts_with("{\"schema\":\"msn-search/1\""), "{t}");
@@ -205,7 +230,8 @@ fn search_finds_the_entry_of_the_same_infusion_and_its_options_and_errors_work()
     // the same graph is its own best candidate, written to a file with --out and cut by --top
     let out = d.join("r.json");
     let o = run(&[
-        "msn-lib",
+        "msn",
+        "lib",
         "search",
         l,
         gp,
@@ -218,9 +244,9 @@ fn search_finds_the_entry_of_the_same_infusion_and_its_options_and_errors_work()
     assert!(std::fs::read_to_string(&out)
         .unwrap()
         .contains("\"candidates\":[]"));
-    assert_eq!(run(&["msn-lib", "search", l]).code, 2);
-    assert_eq!(run(&["msn-lib", "search", l, gp, "--ppm", "x"]).code, 2);
-    assert_eq!(run(&["msn-lib", "search", l, gp, "--nope"]).code, 2);
+    assert_eq!(run(&["msn", "lib", "search", l]).code, 2);
+    assert_eq!(run(&["msn", "lib", "search", l, gp, "--ppm", "x"]).code, 2);
+    assert_eq!(run(&["msn", "lib", "search", l, gp, "--nope"]).code, 2);
     let _ = std::fs::remove_dir_all(&d);
 }
 
@@ -231,7 +257,8 @@ fn the_italian_flags_are_refused() {
     let lib = d.join("lib.json");
     let (l, f) = (lib.to_str().unwrap(), msn());
     let add = run(&[
-        "msn-lib",
+        "msn",
+        "lib",
         "add",
         l,
         f.to_str().unwrap(),
@@ -242,30 +269,37 @@ fn the_italian_flags_are_refused() {
     ]);
     assert_eq!(add.code, 0, "{}", add.stderr);
     let g = d.join("g.json");
-    let graph = run(&["msn-graph", f.to_str().unwrap(), "--formula", "C14H15N3O5+"]);
+    let graph = run(&[
+        "msn",
+        "graph",
+        f.to_str().unwrap(),
+        "--formula",
+        "C14H15N3O5+",
+    ]);
     std::fs::write(&g, &graph.stdout).unwrap();
     let gp = g.to_str().unwrap();
     for bad in [
-        vec!["msn-lib", "export", l, "--tutti"],
-        vec!["msn-lib", "export", l, "--pulito"],
-        vec!["msn-lib", "export", l, "--annota"],
-        vec!["msn-lib", "export", l, "--formato", "massbank"],
-        vec!["msn-lib", "search", l, gp, "--prove-min", "2"],
+        vec!["msn", "lib", "export", l, "--tutti"],
+        vec!["msn", "lib", "export", l, "--pulito"],
+        vec!["msn", "lib", "export", l, "--annota"],
+        vec!["msn", "lib", "export", l, "--formato", "massbank"],
+        vec!["msn", "lib", "search", l, gp, "--prove-min", "2"],
         vec![
-            "msn-lib",
+            "msn",
+            "lib",
             "add",
             l,
             f.to_str().unwrap(),
             "--attivazione",
             "cid",
         ],
-        vec!["msn-lib", "add", l, f.to_str().unwrap(), "--regole"],
+        vec!["msn", "lib", "add", l, f.to_str().unwrap(), "--regole"],
     ] {
         assert_eq!(run(&bad).code, 2, "{bad:?}");
     }
-    let ok = run(&["msn-lib", "search", l, gp, "--min-evidence", "2"]);
+    let ok = run(&["msn", "lib", "search", l, gp, "--min-evidence", "2"]);
     assert_eq!(ok.code, 0, "{}", ok.stderr);
-    let h = String::from_utf8(run(&["msn-lib", "--help"]).stdout).unwrap();
+    let h = String::from_utf8(run(&["msn", "lib", "add", "--help"]).stdout).unwrap();
     assert!(h.contains("--min-evidence N"));
     assert!(!h.contains("old names still accepted"));
     let _ = std::fs::remove_dir_all(&d);

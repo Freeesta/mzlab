@@ -1,4 +1,4 @@
-"""The msngrafo .wasm gives the same bytes as `mzlab-cli msn-graph` (the same core functions) on the public synthetic infusion, through Node.
+"""The msngrafo .wasm gives the same bytes as `mzlab-cli msn graph` (the same core functions) on the public synthetic infusion, through Node.
 Skipped without cargo, wasm-bindgen or node."""
 import json
 import shutil
@@ -33,7 +33,7 @@ def pkg(tmp_path_factory):
 ])
 def test_wasm_and_cli_give_the_same_graph(pkg, query, args):
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), query).stdout
-    want = cli("msn-graph", str(MZML), *args).stdout
+    want = cli("msn", "graph", str(MZML), *args).stdout
     assert got + "\n" == want  # the command line ends its output with a newline
     assert '"schema":"msn-graph/1"' in got
     assert ('"structures":{' in got) == ("structures=" in query)
@@ -45,7 +45,7 @@ def test_the_whole_structure_and_the_molfile_are_the_same_in_cli_and_wasm(pkg, t
     smiles = "CCOC(=O)c1c[nH]c2ccccc12"
     q = "formula=C14H15N3O5%2B&smiles=" + "CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12" + "&structures=all&molfile=" + urllib.parse.quote(mol.read_text(encoding="utf-8"))
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), q).stdout
-    want = cli("msn-graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", smiles, "--structures", "all", "--molfile", str(mol)).stdout
+    want = cli("msn", "graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", smiles, "--structures", "all", "--molfile", str(mol)).stdout
     assert got + "\n" == want
     doc = json.loads(got)
     assert doc["options"]["molfile"].startswith("\n  mzlab")
@@ -53,12 +53,12 @@ def test_the_whole_structure_and_the_molfile_are_the_same_in_cli_and_wasm(pkg, t
 
 
 def test_complete_adds_the_view_with_the_same_bytes_in_cli_and_wasm(pkg, tmp_path):
-    full = cli("msn-graph", str(MZML), "--formula", "C14H15N3O5+").stdout
+    full = cli("msn", "graph", str(MZML), "--formula", "C14H15N3O5+").stdout
     doc = json.loads(full)
     assert list(doc)[-1] == "view" and doc["view"]["algorithm"] == "best-path/1"
     old = tmp_path / "old.json"
     old.write_text(full[:full.index(',"view":')] + "}", encoding="utf-8")
-    via_cli = cli("msn-graph", "complete", str(old)).stdout
+    via_cli = cli("msn", "complete", str(old)).stdout
     via_wasm = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), str(old), "completa").stdout
     assert via_cli == full and via_wasm + "\n" == full
     notgraph = tmp_path / "x.json"
@@ -76,7 +76,7 @@ def test_a_bad_number_is_a_keyed_error(pkg):
 def test_wasm_and_cli_give_the_same_export(pkg, fmt, clean):
     q = f"format={fmt}" + ("&clean=1" if clean else "")
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), q, "export").stdout
-    want = cli("msn-graph", str(MZML), "--export", fmt, *(["--clean"] if clean else [])).stdout
+    want = cli("msn", "graph", str(MZML), "--export", fmt, *(["--clean"] if clean else [])).stdout
     assert got == want and got.strip()
 
 

@@ -1,4 +1,4 @@
-//! `mzlab-cli peak-auto-lr TRACE.csv`: every peak of a jagged low-resolution SIM/MRM trace, from `mzlab_core::peakq_lrauto`, the function behind
+//! `mzlab-cli peak auto-lr TRACE.csv`: every peak of a jagged low-resolution SIM/MRM trace, from `mzlab_core::peakq_lrauto`, the function behind
 //! «Integrate all peaks» of the page (`QUALITA.lrAuto`). The JSON is `lr_auto_json`, the bytes the page gets; `--set` names are those of the dialog.
 
 use mzlab_core::area_unit::{lr_auto_json_in, AreaUnit};
@@ -7,9 +7,9 @@ use mzlab_core::peakq_lrauto::{lr_auto_integrate, LrAutoParams, Split};
 use crate::peaks_edges_cmd::trace;
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli peak-auto-lr: every peak of a low-resolution trace (SIM, MRM), found on a smoothed copy and integrated on the raw points, as JSON.
+pub const HELP: &str = "mzlab-cli peak auto-lr: every peak of a low-resolution trace (SIM, MRM), found on a smoothed copy and integrated on the raw points, as JSON.
 
-usage: mzlab-cli peak-auto-lr TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VALUE...]
+usage: mzlab-cli peak auto-lr TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VALUE...]
 
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --from/--to  the stretch whose apexes count (default: the whole trace)

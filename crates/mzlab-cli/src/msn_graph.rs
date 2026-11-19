@@ -1,4 +1,4 @@
-//! `mzlab-cli msn-graph FILE --formula ION [...]`: the fragmentation graph `msn-graph/1` of an MSn infusion, from the engine of the app.
+//! `mzlab-cli msn graph FILE --formula ION [...]`: the fragmentation graph `msn-graph/1` of an MSn infusion, from the engine of the app.
 //! With `--truth FILE --summary` it prints only numbers: how many paths of a truth file (`{nodes: [{path: [nominal m/z...], formula}]}`)
 //! the graph finds and with which sub-formulas, so a check on private data leaves no data behind.
 
@@ -17,13 +17,13 @@ use mzlab_core::msntree_build::Grouping;
 use mzlab_core::mzmlwrite::Options as MzmlOpzioni;
 use mzlab_core::readers_mzml::Peaks;
 
-pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msn-graph/1) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
+pub const HELP: &str = "mzlab-cli msn graph: the fragmentation graph (msn-graph/1) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
 
-usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
-       mzlab-cli msn-graph FILE.mzML --formula ION --truth TRUTH.json --summary
-       mzlab-cli msn-graph compare A.json B.json [--out PATH]
-       mzlab-cli msn-graph complete IN.json [--out PATH]
-       mzlab-cli msn-graph figure IN.json [--figure svg,html,png] [--view tree|radial] [--out STEM]
+usage: mzlab-cli msn graph FILE.mzML [--formula ION] [options] [--out PATH]
+       mzlab-cli msn graph FILE.mzML --formula ION --truth TRUTH.json --summary
+       mzlab-cli msn compare A.json B.json [--out PATH]
+       mzlab-cli msn complete IN.json [--out PATH]
+       mzlab-cli msn figure IN.json [--figure svg,html,png] [--view tree|radial] [--out STEM]
 
   --formula ION        the ion of the root: C13H25N4O3S+, C13H24N4O3S+H or \"C13H24N4O3S [M+H]+\"; without it, masses only
   --smiles TEXT        written back in the JSON; with --structures, the structure that is cleaved
@@ -423,7 +423,7 @@ pub fn figure_files(a: &Args, graph: &str) -> std::result::Result<String, String
     Ok(made.iter().map(|p| format!("{}\n", p.display())).collect())
 }
 
-/// `mzlab-cli msn-graph ...`: the graph (or the line of numbers) to the standard output or `--out`.
+/// `mzlab-cli msn graph ...`: the graph (or the line of numbers) to the standard output or `--out`.
 pub(crate) fn cmd(args: impl Iterator<Item = String>) -> Outcome {
     let mut args = args.peekable();
     if args.next_if(|a| a == "compare").is_some() {

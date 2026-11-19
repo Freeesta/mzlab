@@ -607,7 +607,7 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], mode: u8, out: &mut [f64]) -> u32 {
 }
 
 /// Every peak whose apex is between `x0` and `x1` (minutes), by RT, into `out` as `[lo, hi, baseline at lo, baseline at hi, area]` (indices,
-/// counts, counts x s; counts x min when `area_unit` is 1, as `mzlab-cli peak-auto --set area_unit=min`): the one-click integration of
+/// counts, counts x s; counts x min when `area_unit` is 1, as `mzlab-cli peak auto --set area_unit=min`): the one-click integration of
 /// high-resolution traces (`peakq_auto`). `smooth` = Savitzky-Golay window of the apex picking (points), `snr` = prominence over the noise
 /// (`AutoParams::from_dialog`). Returns the number of peaks written.
 #[allow(clippy::too_many_arguments)]

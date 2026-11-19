@@ -1,6 +1,6 @@
 // @ts-strict
 // «Integrate every peak shown» (the ▾ next to the automatic tool, and the menu of a trace): every visible trace of the panel, every peak with its apex in
-// the stretch shown, in one undoable step. Low resolution: the engine's lr_auto_integrate (peakq_lrauto.rs, the bytes of `mzlab-cli peak-auto-lr`), which
+// the stretch shown, in one undoable step. Low resolution: the engine's lr_auto_integrate (peakq_lrauto.rs, the bytes of `mzlab-cli peak auto-lr`), which
 // finds the peaks on a smoothed copy, splits touching ones at the valley and integrates the raw trace above its baseline (ends never raised to zero, never above
 // the trace); high resolution keeps autoAll (peakq_auto.rs). Every choice the engine made goes on each record (`auto`, areas in counts x s) and in the
 // notice; the baseline is always the engine's line, never the dialog's baseline setting. Loaded by picchi.js (intAll); `runFiles` by the menu of the automatic tool.
@@ -52,7 +52,7 @@ export async function run(p) {
     split: T(last.split === "valley" ? "pk.split.1" : "pk.split.0"), c: clamped, e: 2 * add.length, below: n(below) }) + (skip ? ". " + T("int.lrAll.skip", { n: skip }) : ""));
 }
 
-/** «Integrate peaks in all selected files»: the engine (api/manauto, manint_auto.rs, the bytes of `mzlab-cli manual-table --set auto=true`) finds every peak of the SIM/MRM
+/** «Integrate peaks in all selected files»: the engine (api/manauto, manint_auto.rs, the bytes of `mzlab-cli peak table --set auto=true`) finds every peak of the SIM/MRM
  * traces of the files shown and puts the peaks at the same time in different files into one group; each becomes a record (`grp` = the group's mean apex, `org` = auto |
  * unmatched, the engine's baseline line as two manual anchors) in one undoable step. The areas are the table's (api/manint), the labels the usual ones. Windows that overlap an
  * integration already there are left out and counted; the per-file log of the peaks found goes under the card and every number the engine used in the notice.

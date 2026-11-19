@@ -1,4 +1,4 @@
-//! `mzlab-cli steps [--json] [--id ID[@V]]`: the registry of Flow steps of this very binary, so an agent reads the versions it will run.
+//! `mzlab-cli flow steps [--json] [--id ID[@V]]`: the registry of Flow steps of this very binary, so an agent reads the versions it will run.
 //! The JSON is the `step/1` array of the exported `docs/schemi/steps-*-1.json`, each step with `executable_native` and `citation` added at the end.
 
 use mzlab_core::error::Error;
@@ -9,9 +9,9 @@ use crate::flow::{executable, steps};
 use crate::flow_json::{fail, Style};
 use crate::Outcome;
 
-const HELP: &str = "mzlab-cli steps: the steps a Flow plan can use, from the registry of this program.
+const HELP: &str = "mzlab-cli flow steps: the steps a Flow plan can use, from the registry of this program.
 
-usage: mzlab-cli steps [--json] [--id ID[@VERSION]]
+usage: mzlab-cli flow steps [--json] [--id ID[@VERSION]]
 
   (no option)       one line per step: id@version, `native` when `flow run` executes it (else `page`: only the Flow page does), title
   --json            the step/1 descriptors as a JSON array, each with \"executable_native\" and \"citation\" at the end
@@ -31,7 +31,7 @@ fn with_native(s: &Step) -> String {
     )
 }
 
-/// `mzlab-cli steps ARGS...` (the arguments after `steps`).
+/// `mzlab-cli flow steps ARGS...` (the arguments after `steps`).
 pub(crate) fn run(args: Vec<String>) -> Outcome {
     let st = Style {
         json: args.iter().any(|a| a == "--json"),
@@ -39,7 +39,7 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
     };
     let usage = |msg: &str| {
         let err = Error::new("err.cli.usage").with("message", msg);
-        fail(&err, msg, "mzlab-cli steps --help")
+        fail(&err, msg, "mzlab-cli flow steps --help")
     };
     let mut id = None;
     let mut it = args.into_iter();
@@ -67,7 +67,7 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
             return fail(
                 &err,
                 &format!("unknown step {want}"),
-                "mzlab-cli steps lists the steps",
+                "mzlab-cli flow steps lists the steps",
             );
         };
         list = vec![last];

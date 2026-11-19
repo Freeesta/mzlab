@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vendor-reference harness: `mzlab-cli convert` output against an mzML written by an independent converter (msconvert,
+"""Vendor-reference harness: `mzlab-cli file convert` output against an mzML written by an independent converter (msconvert,
 ThermoRawFileParser) for the same vendor file. Datasets, tolerances and the expected-fail list are in
 `tools/external_reference.json` (public dataset names only; the files live in the private data repository).
     python3 tools/external_reference.py [--solo NAME] [--cli PATH] [--json FILE] [--keep DIR]

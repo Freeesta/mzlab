@@ -1,4 +1,4 @@
-"""A SCIEX .wiff dropped without its .scan: the `method/1` of a sample on the site (the `sciex` readers module, `wiff_metodo`) is the one `mzlab-cli convert` writes into the mzML of
+"""A SCIEX .wiff dropped without its .scan: the `method/1` of a sample on the site (the `sciex` readers module, `wiff_metodo`) is the one `mzlab-cli file convert` writes into the mzML of
 that sample, byte for byte, apart from `origine` (the site lists the .wiff only, the CLI the .wiff and its .scan). The file is synthetic (`metodocond` of tools/wiff_metodo_condiviso.py):
 three samples that share `Method1` (a scheduled MRM experiment, its GLPTables) and a DAD on sample 2, so the extended metadata (`campi`, feature `estesi`) must be there.
 The engine .wasm is built without `estesi` (its cap has no room): serving the call from it left `campi` out, which this test would catch. Skipped without cargo, wasm-bindgen or node."""
@@ -26,7 +26,7 @@ def work(tmp_path_factory):
     build("-p", "mzlab-cli")
     (d / "ref").mkdir()
     subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_metodo_condiviso.py"), str(d / "ref")], check=True, capture_output=True)
-    run(str(ROOT / "target/release/mzlab-cli"), "convert", str(d / "ref" / "metodocond.wiff"), "--out", str(d / "cli"), "--fresh", "--workers", "1")
+    run(str(ROOT / "target/release/mzlab-cli"), "file", "convert", str(d / "ref" / "metodocond.wiff"), "--out", str(d / "cli"), "--fresh", "--workers", "1")
     return d
 
 

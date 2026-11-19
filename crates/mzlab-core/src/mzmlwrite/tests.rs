@@ -158,7 +158,7 @@ fn a_cv_parameter_of_the_file_is_escaped_in_the_header() {
 }
 
 /// The collision energy and the dwell (ms) an SRM id spells are written (the dwell in seconds, as msconvert writes it) whatever readers the build carries: the `thermo` and `waters` readers modules of the
-/// site build mzlab-core without `sciex`, `mzlab-cli convert` with every feature, and both must write the same mzML.
+/// site build mzlab-core without `sciex`, `mzlab-cli file convert` with every feature, and both must write the same mzML.
 #[test]
 fn an_srm_id_with_energy_and_dwell_writes_them_in_every_build() {
     let ch = Chromatogram { index: 0, id: "SRM SIC Q1=364.5 Q3=159 ce=25 dwell=50".into(), kind: ChromKind::Srm, q1: Some(364.5), q3: Some(159.0), unit: "number of detector counts".into(), time: vec![0.5], intensity: vec![3.0] };

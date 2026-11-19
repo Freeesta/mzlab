@@ -1,5 +1,5 @@
 """Flow «This browser» with the MSn steps (flow/lazy/flow-web-msn.js): the template «Fragmentation tree of a standard» runs on the infusion open in the Data tab with the engine of the page
-(api/msn_grafo and api/msn_grafo/export, the .wasm msngrafo): the graph is the text of `mzlab-cli msn-graph`, the library is MSP with the formula and the loss of each explained peak, the
+(api/msn_grafo and api/msn_grafo/export, the .wasm msngrafo): the graph is the text of `mzlab-cli msn graph`, the library is MSP with the formula and the loss of each explained peak, the
 table is the CSV of the modifications, each step reports its events and keeps its text in OPFS; without the infusion open the run says so, a refusal of the memory says to use the desktop app,
 a plan with a molecule name and no ion asks for the ion. The file is the synthetic one of TP_Mine/tests/msn_synth.py. Needs the site (python3 tools/prepara_sito.py) with the .wasm msngrafo.
 Run from the repo root: python3 tests_e2e/e2e_flow_msn.py"""
@@ -19,7 +19,7 @@ D = synth("flowmsn")
 F = write_msn(D / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)
 ION = "C8H11N4O2+"
 # the reference command compiles mzlab-cli (minutes when cold): it runs in the background while the page loads and the plan runs, and the `graph` step collects it
-_cli = subprocess.Popen(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(F), "--formula", ION, "--interpret"], cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
+_cli = subprocess.Popen(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn", "graph", str(F), "--formula", ION, "--interpret"], cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
 def cli_text():
     out, err = _cli.communicate()
     # a failure of the reference command must show its stderr in the log (a bare CalledProcessError hid the cause)
@@ -80,7 +80,7 @@ try:
             t = got["r"]["files"][0]["text"]
             cli = cli_text()
             assert mask(t) == mask(cli), (len(t), len(cli))
-        step("the graph is the text of mzlab-cli msn-graph --interpret (the template starts with the interpretation on)", graph)
+        step("the graph is the text of mzlab-cli msn graph --interpret (the template starts with the interpretation on)", graph)
         def molecule_box():
             pg.evaluate("""() => { const S = document.querySelector('.flx-list').__flow, inst = S.plan.steps[0]; inst.params = { interpret: true };
               const box = FLOW.form(inst, FLOW.stepOf(S.reg, inst), () => {}); box.id = 'tmpform'; document.body.append(box); }""")

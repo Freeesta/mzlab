@@ -1,4 +1,4 @@
-"""Optional cross-check, not run in CI: the MS-Numpress arrays `mzlab-cli convert --compression smallest` writes for the synthetic dataset of every reader family,
+"""Optional cross-check, not run in CI: the MS-Numpress arrays `mzlab-cli file convert --compression smallest` writes for the synthetic dataset of every reader family,
 decoded by a second, independent implementation, the reference C++ as built in pyopenms. Every array gives back exactly `defaultArrayLength` values (an encoder
 pad the reference does not expect reads back as one value more) and the same numbers as the zlib conversion, within the codec's precision.
 Run: `pip install pyopenms` (test-only, never in the site), then `python3 -m pytest -q tools/numpress_pyopenms.py`; without pyopenms it fails, it is never skipped.

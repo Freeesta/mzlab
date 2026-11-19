@@ -1,4 +1,4 @@
-//! `mzlab-cli samples vars|group|table`: the name operations of `samples::route` (`variables`, `group_name`, `propose`), printing the JSON the page gets
+//! `mzlab-cli sample vars|group|table`: the name operations of `samples::route` (`variables`, `group_name`, `propose`), printing the JSON the page gets
 //! from `api/samples/<op>`. The names come one per line from a file or the standard input. `samples list FILE...` is what the files hold, sample by
 //! sample, from their index alone (`samples_list/1`: the same JSON as the site's `native_samples` and the app's native listing).
 
@@ -11,13 +11,13 @@ use mzlab_core::readers::Limits;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli samples: how the names of a set of files split them (sample-vars/1), as JSON.
+pub const HELP: &str = "mzlab-cli sample: how the names of a set of files split them (sample-vars/1), as JSON.
 
-usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
-       mzlab-cli samples group NAME...
-       mzlab-cli samples table [--names FILE|- | FILE...]
-       mzlab-cli samples list FILE... [--json] [--probe]   (samples list --help)
-       mzlab-cli samples select FILE (--sample LIST | --default [--budget-mb N]) [--json]   (samples select --help)
+usage: mzlab-cli sample vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
+       mzlab-cli sample group NAME...
+       mzlab-cli sample table [--names FILE|- | FILE...]
+       mzlab-cli sample list FILE... [--json] [--probe]   (samples list --help)
+       mzlab-cli sample select FILE (--sample LIST | --default [--budget-mb N]) [--json]   (samples select --help)
 
   --names FILE|-  one file name per line (default: the standard input)
   --pos N         also the manual variable of the N-th token (1 = first, -1 = last), cut at --sep (default \"_-. \")
@@ -149,9 +149,9 @@ fn table(args: Vec<String>) -> Result<String, String> {
     Ok(format!("{{\"files\":[{}]}}", files.join(",")))
 }
 
-const LIST_HELP: &str = "mzlab-cli samples list: what each file holds, sample by sample, from its container and index alone (samples_list/1).
+const LIST_HELP: &str = "mzlab-cli sample list: what each file holds, sample by sample, from its container and index alone (samples_list/1).
 
-usage: mzlab-cli samples list FILE... [--json] [--probe]
+usage: mzlab-cli sample list FILE... [--json] [--probe]
 
   FILE     a .wiff (its .wiff.scan beside it is not read), another vendor file or a .D / .raw folder
   --json   one samples_list/1 JSON per line on stdout, in the order of the FILEs (a file that cannot be listed gives an error/1 line); without it, a table
@@ -267,9 +267,9 @@ fn list_table(json: &str, file: &str) -> String {
     t
 }
 
-const SELECT_HELP: &str = "mzlab-cli samples select: which samples of a file `--sample LIST` would open, or which ones the chooser of the site ticks first (`--default`), checked against its container and index (nothing is read beyond them, nothing is written).
+const SELECT_HELP: &str = "mzlab-cli sample select: which samples of a file `--sample LIST` would open, or which ones the chooser of the site ticks first (`--default`), checked against its container and index (nothing is read beyond them, nothing is written).
 
-usage: mzlab-cli samples select FILE (--sample LIST | --default [--budget-mb N]) [--json]
+usage: mzlab-cli sample select FILE (--sample LIST | --default [--budget-mb N]) [--json]
 
   FILE         a .wiff (its .wiff.scan is not read), another vendor file or a .D / .raw folder
   --sample LIST  sample ids and ranges: 1,3,5 or 2-4 (the ids of `samples list`, not positions)

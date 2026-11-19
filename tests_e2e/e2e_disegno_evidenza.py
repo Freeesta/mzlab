@@ -1,5 +1,5 @@
 """Disegno, evidence colours (`hilite/1` of the molkit .wasm, `disegno-evidenza.js`): `TPDraw.highlight(layers)` on the synthetic 4-chlorophenol of
-tests/dati/hilite_disegno.json gives the `hilite/1` of the fixture (the bytes `mzlab-cli mol-hilite` and the app give), in the LR world only on the
+tests/dati/hilite_disegno.json gives the `hilite/1` of the fixture (the bytes `mzlab-cli mol hilite` and the app give), in the LR world only on the
 selected atoms and with nothing selected nowhere; in the HR world every layer is painted with Ketcher's highlights in the colours of the CSS
 variables, listed in a legend with words and in a data table (TDATI); an edit of the drawing and «Remove colours» (keyboard, 24 px) take them off.
 Run from the repo root after tools/build_site.py and tools/build_feat_wasm.sh site/static (molkit); SKIP without molkit there."""

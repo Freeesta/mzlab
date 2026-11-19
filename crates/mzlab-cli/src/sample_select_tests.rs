@@ -36,20 +36,20 @@ fn s(p: &Path) -> String {
 #[test]
 fn select_names_the_samples_in_the_order_of_the_file_and_the_exit_codes_differ() {
     let (dir, wiff) = pair("select");
-    let o = run(&["samples", "select", &wiff, "--sample", "3,1", "--json"]);
+    let o = run(&["sample", "select", &wiff, "--sample", "3,1", "--json"]);
     assert_eq!(
         (o.code, String::from_utf8_lossy(&o.stdout).as_ref()),
         (0, "{\"samples\":[1,3]}\n"),
         "{}",
         o.stderr
     );
-    let o = run(&["samples", "select", &wiff, "--sample", "2-3"]);
+    let o = run(&["sample", "select", &wiff, "--sample", "2-3"]);
     assert_eq!(
         (o.code, String::from_utf8_lossy(&o.stdout).as_ref()),
         (0, "2 3\n")
     );
     // an id the file does not have: 5, the ids present named, an error/1 with --json
-    let o = run(&["samples", "select", &wiff, "--sample", "1,9", "--json"]);
+    let o = run(&["sample", "select", &wiff, "--sample", "1,9", "--json"]);
     assert_eq!(o.code, 5);
     assert!(
         o.stderr.contains("no sample 9") && o.stderr.contains("1, 2, 3"),
@@ -65,16 +65,13 @@ fn select_names_the_samples_in_the_order_of_the_file_and_the_exit_codes_differ()
     );
     // not a list: usage, 2; a missing file: 4
     assert_eq!(
-        run(&["samples", "select", &wiff, "--sample", "1,,2"]).code,
+        run(&["sample", "select", &wiff, "--sample", "1,,2"]).code,
         2
     );
-    assert_eq!(
-        run(&["samples", "select", &wiff, "--sample", "3-1"]).code,
-        2
-    );
-    assert_eq!(run(&["samples", "select", &wiff]).code, 2);
+    assert_eq!(run(&["sample", "select", &wiff, "--sample", "3-1"]).code, 2);
+    assert_eq!(run(&["sample", "select", &wiff]).code, 2);
     let o = run(&[
-        "samples",
+        "sample",
         "select",
         &s(&dir.join("none.wiff")),
         "--sample",
@@ -90,9 +87,9 @@ fn select_names_the_samples_in_the_order_of_the_file_and_the_exit_codes_differ()
 fn convert_writes_only_the_chosen_samples_with_the_bytes_of_a_full_run() {
     let (dir, wiff) = pair("convert");
     let (all, some) = (s(&dir.join("all")), s(&dir.join("some")));
-    let o = run(&["convert", &wiff, "--out", &all]);
+    let o = run(&["file", "convert", &wiff, "--out", &all]);
     assert_eq!(o.code, 0, "{}", o.stderr);
-    let o = run(&["convert", &wiff, "--out", &some, "--sample", "1,3"]);
+    let o = run(&["file", "convert", &wiff, "--out", &some, "--sample", "1,3"]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let mut names: Vec<String> = std::fs::read_dir(&some)
         .unwrap()
@@ -117,7 +114,7 @@ fn convert_writes_only_the_chosen_samples_with_the_bytes_of_a_full_run() {
     // one chosen sample still gets its NAME-ID name
     let one = s(&dir.join("one"));
     assert_eq!(
-        run(&["convert", &wiff, "--out", &one, "--sample", "2"]).code,
+        run(&["file", "convert", &wiff, "--out", &one, "--sample", "2"]).code,
         0
     );
     assert_eq!(
@@ -126,7 +123,7 @@ fn convert_writes_only_the_chosen_samples_with_the_bytes_of_a_full_run() {
     );
     // a wrong id stops the run before anything is written
     let bad = s(&dir.join("bad"));
-    let o = run(&["convert", &wiff, "--out", &bad, "--sample", "4"]);
+    let o = run(&["file", "convert", &wiff, "--out", &bad, "--sample", "4"]);
     assert_eq!(o.code, 5, "{}", o.stderr);
     assert!(
         o.stderr.contains("no sample 4") && !dir.join("bad").join("grande-1.mzML").exists(),
@@ -134,7 +131,7 @@ fn convert_writes_only_the_chosen_samples_with_the_bytes_of_a_full_run() {
         o.stderr
     );
     assert_eq!(
-        run(&["convert", &wiff, "--out", &bad, "--sample", "x"]).code,
+        run(&["file", "convert", &wiff, "--out", &bad, "--sample", "x"]).code,
         2
     );
     let _ = std::fs::remove_dir_all(&dir);
@@ -143,16 +140,27 @@ fn convert_writes_only_the_chosen_samples_with_the_bytes_of_a_full_run() {
 #[test]
 fn channels_of_a_list_are_one_line_per_sample_each_the_bytes_of_its_own_run() {
     let (dir, wiff) = pair("channels");
-    let list = run(&["channels", &wiff, "--sample", "3,1"]);
+    let list = run(&["file", "channels", &wiff, "--sample", "3,1"]);
     assert_eq!(list.code, 0, "{}", list.stderr);
     let text = String::from_utf8(list.stdout).unwrap();
-    let one = |k: &str| String::from_utf8(run(&["channels", &wiff, "--sample", k]).stdout).unwrap();
+    let one = |k: &str| {
+        String::from_utf8(run(&["file", "channels", &wiff, "--sample", k]).stdout).unwrap()
+    };
     assert_eq!(text, format!("{}\n{}", one("1").trim_end(), one("3")));
     assert_eq!(
-        run(&["channels", &wiff, "--sample", "1,2", "--channel", "uv:twc"]).code,
+        run(&[
+            "file",
+            "channels",
+            &wiff,
+            "--sample",
+            "1,2",
+            "--channel",
+            "uv:twc"
+        ])
+        .code,
         2
     );
-    let o = run(&["channels", &wiff, "--sample", "1,9"]);
+    let o = run(&["file", "channels", &wiff, "--sample", "1,9"]);
     assert_eq!(
         (
             o.code,
@@ -205,13 +213,13 @@ fn features_with_sample_reports_an_unreadable_file_not_a_single_sample_file() {
 #[test]
 fn select_default_ticks_a_small_set_and_nothing_when_it_would_not_fit() {
     let (dir, wiff) = pair("default");
-    let big = run(&["samples", "select", &wiff, "--default", "--json"]);
+    let big = run(&["sample", "select", &wiff, "--default", "--json"]);
     assert_eq!(
         (big.code, String::from_utf8_lossy(&big.stdout).trim()),
         (0, "{\"samples\":[1,2,3]}")
     );
     let tight = run(&[
-        "samples",
+        "sample",
         "select",
         &wiff,
         "--default",
@@ -225,9 +233,9 @@ fn select_default_ticks_a_small_set_and_nothing_when_it_would_not_fit() {
     );
     // exactly one of the two ways to choose
     assert_eq!(
-        run(&["samples", "select", &wiff, "--default", "--sample", "1"]).code,
+        run(&["sample", "select", &wiff, "--default", "--sample", "1"]).code,
         2
     );
-    assert_eq!(run(&["samples", "select", &wiff]).code, 2);
+    assert_eq!(run(&["sample", "select", &wiff]).code, 2);
     let _ = std::fs::remove_dir_all(dir);
 }

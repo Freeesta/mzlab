@@ -1,4 +1,4 @@
-//! `mzlab-cli normative build` against invented fixtures served by a fake `Fetch`: canonical bytes, resolution steps, pins, stale lists and warm-cache
+//! `mzlab-cli db normative build` against invented fixtures served by a fake `Fetch`: canonical bytes, resolution steps, pins, stale lists and warm-cache
 //! rebuilds. No network; the fixtures in `tests/data/normative/` (next to the crate) are invented (CAS-shaped numbers that fail the checksum, InChIKey-shaped strings).
 
 use std::collections::HashMap;

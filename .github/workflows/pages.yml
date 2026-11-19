@@ -348,11 +348,11 @@ jobs:
         with:
           path: site/static/normative
           key: normative-${{ hashFiles('normative/lists/**', 'normative/provenance.json', 'crates/mzlab-cli/src/normative/**', 'crates/mzlab-feat/src/suspects.rs', 'Cargo.lock') }}
-      - name: Pack the regulatory lists (mzlab-cli normative pack, no network)
+      - name: Pack the regulatory lists (mzlab-cli db normative pack, no network)
         if: steps.normcache.outputs.cache-hit != 'true'
         run: |
           cargo build --locked --release -p mzlab-cli
-          target/release/mzlab-cli normative pack normative/ site/static/normative/
+          target/release/mzlab-cli db normative pack normative/ site/static/normative/
       - name: Save the regulatory-list package in the cache
         if: steps.normcache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -373,7 +373,7 @@ jobs:
         with:
           path: .insilico-fonti
           key: insilico-fonti-${{ steps.pin.outputs.fonti }}
-      - name: Pack the in-silico candidates (mzlab-cli insilico pack; a network failure only warns)
+      - name: Pack the in-silico candidates (mzlab-cli db insilico pack; a network failure only warns)
         if: steps.inscache.outputs.cache-hit != 'true'
         run: |
           cargo build --locked --release -p mzlab-cli

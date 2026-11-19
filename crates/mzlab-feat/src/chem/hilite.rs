@@ -1,7 +1,7 @@
 //! `hilite/1`: the atoms and bonds of the canvas that a piece of evidence points at, layer by layer, for the colours of Draw. A `moiety` layer is a
 //! substructure found in the drawing; `sites` (atoms) and `cuts` (bonds) come numbered on the SMILES the evidence was computed on (`reatt/1`, a cut of
 //! the MSn graph) and are carried onto the drawing through a match of that SMILES. In the LR world only what the student selected is kept. The colours
-//! show where the evidence is, never that it is true. Same bytes in the molkit `.wasm`, the app (`feat/grafo`, `kind: "hilite"`) and `mzlab-cli mol-hilite`.
+//! show where the evidence is, never that it is true. Same bytes in the molkit `.wasm`, the app (`feat/grafo`, `kind: "hilite"`) and `mzlab-cli mol hilite`.
 
 use crate::sortc::SortC;
 use mzlab_core::error::{Error, Result};

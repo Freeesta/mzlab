@@ -25,76 +25,13 @@ const ITALIAN: &[&str] = &[
     "campion", "somma", "tutti",
 ];
 
-/// Every command path whose `--help` is checked; the first word is a command (≤ 12), the others subcommands (≤ 8).
-const COMMANDS: &[&[&str]] = &[
-    &[],
-    &["features"],
-    &["flow", "run"],
-    &["flow", "check"],
-    &["steps"],
-    &["llm"],
-    &["msn-graph"],
-    &["msn-lib"],
-    &["msn-rules"],
-    &["channels"],
-    &["dad"],
-    &["dda-window"],
-    &["items"],
-    &["ion-pattern"],
-    &["elements"],
-    &["folder"],
-    &["ion-mz"],
-    &["match-mz"],
-    &["mol-label"],
-    &["mol-anal"],
-    &["mol-check"],
-    &["mol-export"],
-    &["mol-cut"],
-    &["mol-sel"],
-    &["mol-link"],
-    &["mol-mech"],
-    &["mol-search"],
-    &["samples"],
-    &["peak-edges"],
-    &["manual-table"],
-    &["peak-split"],
-    &["peak-area"],
-    &["peak-window"],
-    &["explain-missing"],
-    &["convert"],
-    &["validate"],
-    &["normative"],
-    &["insilico"],
-];
-
-/// Subcommands that have no help of their own: they are named in the usage lines of their command.
-const SUBCOMMANDS: &[&[&str]] = &[
-    &["flow", "run"],
-    &["flow", "check"],
-    &["flow", "report"],
-    &["flow", "record"],
-    &["flow", "verify"],
-    &["flow", "command"],
-    &["llm", "tools"],
-    &["llm", "replay"],
-    &["llm", "context"],
-    &["llm", "eval"],
-    &["msn-graph", "figure"],
-    &["msn-graph", "complete"],
-    &["msn-graph", "compare"],
-    &["msn-lib", "add"],
-    &["msn-lib", "build"],
-    &["msn-lib", "export"],
-    &["msn-lib", "search"],
-    &["msn-rules", "sum"],
-    &["samples", "vars"],
-    &["samples", "group"],
-    &["normative", "pack"],
-    &["normative", "listings"],
-    &["normative", "import-official"],
-    &["normative", "build"],
-    &["insilico", "pack"],
-];
+/// Every command path of the table (one per entry); the first word is a command (≤ 12), the others subcommands (≤ 10).
+fn command_paths() -> Vec<Vec<&'static str>> {
+    crate::cmd::entries()
+        .filter(|e| e.name != "help-md")
+        .map(|e| e.name.split(' ').collect())
+        .collect()
+}
 
 fn kebab(name: &str) -> bool {
     let mut parts = name.split('-');
@@ -147,9 +84,9 @@ fn flag_problem(flag: &str) -> Option<String> {
     italian_root(bare).map(|r| format!("{flag}: Italian root «{r}»"))
 }
 
-/// Why a command (`depth` 0) or subcommand (`depth` 1) breaks the grammar or the length targets (≤ 12, ≤ 8).
+/// Why a command (`depth` 0) or subcommand (`depth` 1) breaks the grammar or the length targets (≤ 12, ≤ 10).
 fn command_problem(name: &str, depth: usize) -> Option<String> {
-    let limit = if depth == 0 { 12 } else { 8 };
+    let limit = if depth == 0 { 12 } else { 10 };
     if !kebab(name) {
         return Some(format!("{name}: not kebab-case"));
     }
@@ -173,13 +110,10 @@ fn param_problem(name: &str) -> Option<String> {
     italian_root(name).map(|r| format!("{name}: Italian root «{r}»"))
 }
 
-/// The flags a help text prints, without the lines of «old names still accepted» (the only place an old name may appear).
+/// The flags a help text prints.
 fn printed_flags(help: &str) -> BTreeSet<String> {
     let mut found = BTreeSet::new();
-    for line in help
-        .lines()
-        .filter(|l| !l.starts_with("old names still accepted"))
-    {
+    for line in help.lines() {
         let b = line.as_bytes();
         for (i, &c) in b.iter().enumerate() {
             let boundary =
@@ -225,12 +159,13 @@ fn all_problems() -> (Vec<String>, BTreeSet<String>) {
             }
         }
     };
-    for path in COMMANDS.iter().chain(SUBCOMMANDS) {
+    let paths = command_paths();
+    for path in &paths {
         for (depth, word) in path.iter().enumerate() {
             note(word, command_problem(word, depth.min(1)));
         }
     }
-    for path in COMMANDS {
+    for path in std::iter::once(&Vec::new()).chain(&paths) {
         let help = help_of(path);
         assert!(help.contains("mzlab-cli"), "no help for {path:?}");
         for flag in printed_flags(&help) {
@@ -270,8 +205,9 @@ fn known_exceptions_still_break_a_rule() {
 }
 
 #[test]
-fn the_help_prints_the_new_msn_rules_subcommand() {
-    assert!(help_of(&[]).contains("msn-rules RECORD... | sum LINES..."));
+fn the_help_prints_the_msn_rules_subcommands() {
+    let h = help_of(&[]);
+    assert!(h.contains("mzlab-cli msn rules RECORD...") && h.contains("mzlab-cli msn rules sum"));
 }
 
 // A negative case per rule: a name that breaks it is reported.
@@ -295,7 +231,7 @@ fn a_flag_that_is_not_kebab_case_fails() {
 fn a_command_over_its_length_target_fails() {
     assert!(command_problem("explain-missing", 0).is_some());
     assert!(command_problem("import-official", 1).is_some());
-    assert!(command_problem("msn-graph", 0).is_none());
+    assert!(command_problem("completions", 0).is_none());
     assert!(command_problem("Flow", 0).is_some());
 }
 
@@ -324,12 +260,4 @@ fn an_italian_root_in_any_kind_of_name_fails() {
     assert!(command_problem("canali", 0).is_some());
     // a word that merely contains a root is fine
     assert!(param_problem("configuration").is_none());
-}
-
-#[test]
-fn old_names_are_only_allowed_on_the_old_names_line() {
-    let flags = printed_flags("  --out PATH\nold names still accepted: --canale, --jsonl");
-    assert_eq!(flags.into_iter().collect::<Vec<_>>(), ["--out"]);
-    let flags = printed_flags("  --canale ID  the channel");
-    assert!(flag_problem(flags.iter().next().unwrap()).is_some());
 }

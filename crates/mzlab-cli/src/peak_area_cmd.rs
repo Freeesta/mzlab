@@ -1,4 +1,4 @@
-//! `mzlab-cli peak-area TRACE.csv --from MIN --to MIN [--set baseline=zero|line]`: the area of the Data view between two boundaries measured from
+//! `mzlab-cli peak area TRACE.csv --from MIN --to MIN [--set baseline=zero|line]`: the area of the Data view between two boundaries measured from
 //! zero (the default) or from a line the user sets, from `mzlab_core::baseline::peak_area_json`, the text the page gets from `QUALITA.peakArea` (the same bytes).
 
 use mzlab_core::baseline::{peak_area_json, Baseline};
@@ -6,9 +6,9 @@ use mzlab_core::baseline::{peak_area_json, Baseline};
 use crate::peaks_edges_cmd::trace;
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli peak-area: the area of a peak between two boundaries, from zero or from a line you set, as JSON.
+pub const HELP: &str = "mzlab-cli peak area: the area of a peak between two boundaries, from zero or from a line you set, as JSON.
 
-usage: mzlab-cli peak-area TRACE.csv|- --from MIN --to MIN [--set baseline=zero|line] [--set NAME=VALUE...]
+usage: mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--set baseline=zero|line] [--set NAME=VALUE...]
 
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --from/--to  the boundaries (each taken to the nearest point of the trace)

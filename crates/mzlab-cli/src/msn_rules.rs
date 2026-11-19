@@ -1,4 +1,4 @@
-//! `mzlab-cli msn-rules RECORD...`: the rules of `fragrules/1` judged on public library spectra (MassBank records, MSP) with a known SMILES. One line of
+//! `mzlab-cli msn rules RECORD...`: the rules of `fragrules/1` judged on public library spectra (MassBank records, MSP) with a known SMILES. One line of
 //! numbers per record (`msn_rules_prova`); `msn-rules sum` adds the lines up (`msn_rules_somma`). The protocol is in `docs/agenti/msn-manual.md`.
 
 use std::collections::BTreeMap;
@@ -15,10 +15,10 @@ mod sum;
 mod tests;
 mod trial;
 
-pub const HELP: &str = "mzlab-cli msn-rules: the fragmentation rules judged on library spectra with a known structure.
+pub const HELP: &str = "mzlab-cli msn rules: the fragmentation rules judged on library spectra with a known structure.
 
-usage: mzlab-cli msn-rules RECORD... [--list FILE] [--smiles S] [--activation A] [--rules] [--decoy SEED] [--out PATH]
-       mzlab-cli msn-rules sum LINES... [--out PATH]
+usage: mzlab-cli msn rules RECORD... [--list FILE] [--smiles S] [--activation A] [--rules] [--decoy SEED] [--out PATH]
+       mzlab-cli msn rules sum LINES... [--out PATH]
 
   RECORD...         MassBank records (one spectrum each) or MSP files; --list: a file with one path per line
   --smiles S        the structure, when the record has none (one record)

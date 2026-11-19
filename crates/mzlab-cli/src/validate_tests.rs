@@ -1,4 +1,4 @@
-//! `mzlab-cli validate` in this process: exit codes, the lines, the JSON.
+//! `mzlab-cli file validate` in this process: exit codes, the lines, the JSON.
 use std::path::PathBuf;
 
 use mzlab_core::mzml::Spectrum;
@@ -54,7 +54,7 @@ fn run(args: &[&str]) -> crate::Outcome {
 #[test]
 fn a_valid_file_exits_0_with_a_summary_and_no_line() {
     let dir = folder("ok");
-    let o = run(&["validate", dir.join("good.mzML").to_str().unwrap()]);
+    let o = run(&["file", "validate", dir.join("good.mzML").to_str().unwrap()]);
     assert_eq!((o.code, o.stdout.len()), (0, 0), "{}", o.stderr);
     assert!(
         o.stderr.contains(
@@ -69,7 +69,7 @@ fn a_valid_file_exits_0_with_a_summary_and_no_line() {
 #[test]
 fn a_broken_file_exits_1_with_one_line_per_problem() {
     let dir = folder("bad");
-    let o = run(&["validate", dir.join("bad.mzML").to_str().unwrap()]);
+    let o = run(&["file", "validate", dir.join("bad.mzML").to_str().unwrap()]);
     assert_eq!(o.code, 1);
     let out = String::from_utf8(o.stdout).unwrap();
     let lines: Vec<&str> = out.lines().collect();
@@ -91,13 +91,13 @@ fn several_files_prefix_each_line_and_json_is_an_array() {
     let dir = folder("many");
     let (g, b) = (dir.join("good.mzML"), dir.join("bad.mzML"));
     let (g, b) = (g.to_str().unwrap(), b.to_str().unwrap());
-    let o = run(&["validate", g, b]);
+    let o = run(&["file", "validate", g, b]);
     assert_eq!(o.code, 1);
     assert!(String::from_utf8(o.stdout)
         .unwrap()
         .lines()
         .all(|l| l.starts_with("bad.mzML: error ")));
-    let o = run(&["validate", "--json", g, b]);
+    let o = run(&["file", "validate", "--json", g, b]);
     let v = mzlab_core::json::parse(&o.stdout).unwrap();
     assert_eq!(v.arr().len(), 2);
     assert_eq!(
@@ -119,14 +119,14 @@ fn several_files_prefix_each_line_and_json_is_an_array() {
 
 #[test]
 fn usage_errors_exit_2_and_unreadable_files_exit_4() {
-    assert_eq!(run(&["validate"]).code, 2);
-    assert_eq!(run(&["validate", "--nope", "x.mzML"]).code, 2);
-    let o = run(&["validate", "/no/such/file.mzML"]);
+    assert_eq!(run(&["file", "validate"]).code, 2);
+    assert_eq!(run(&["file", "validate", "--nope", "x.mzML"]).code, 2);
+    let o = run(&["file", "validate", "/no/such/file.mzML"]);
     assert_eq!(o.code, 4);
     assert!(o.stderr.contains("cannot be read"), "{}", o.stderr);
     let dir = std::env::temp_dir().join(format!("mzlab-validate-{}-dir", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
-    let o = run(&["validate", dir.to_str().unwrap()]);
+    let o = run(&["file", "validate", dir.to_str().unwrap()]);
     assert_eq!(
         (o.code, o.stdout.len()),
         (4, 0),
@@ -138,9 +138,9 @@ fn usage_errors_exit_2_and_unreadable_files_exit_4() {
         "{}",
         o.stderr
     );
-    let h = run(&["validate", "--help"]);
+    let h = run(&["file", "validate", "--help"]);
     assert_eq!(h.code, 0);
     assert!(String::from_utf8(h.stdout)
         .unwrap()
-        .contains("usage: mzlab-cli validate"));
+        .contains("usage: mzlab-cli file validate"));
 }

@@ -1,4 +1,4 @@
-//! `spectra.msn_graph@2` (and a saved `@1` plan, migrated): the plan gives the bytes of `mzlab-cli msn-graph` on the synthetic infusion of the route `/api/msntree`.
+//! `spectra.msn_graph@2` (and a saved `@1` plan, migrated): the plan gives the bytes of `mzlab-cli msn graph` on the synthetic infusion of the route `/api/msntree`.
 
 use std::path::{Path, PathBuf};
 
@@ -28,7 +28,11 @@ fn graph(d: &Path, params: &str) -> mzlab_core::Result<String> {
 }
 
 fn cli(args: &[&str]) -> String {
-    let mut a = vec!["msn-graph".to_string(), msn().to_str().unwrap().to_string()];
+    let mut a = vec![
+        "msn".to_string(),
+        "graph".to_string(),
+        msn().to_str().unwrap().to_string(),
+    ];
     a.extend(args.iter().map(|s| s.to_string()));
     let o = crate::execute(&a);
     assert_eq!(o.code, 0, "{}", o.stderr);

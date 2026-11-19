@@ -136,7 +136,7 @@ fn samples_table_on_real_files_gives_roles_that_record_accepts() {
         .map(|e| e.unwrap().path().to_string_lossy().into_owned())
         .collect();
     paths.sort();
-    let mut args = vec!["samples", "table"];
+    let mut args = vec!["sample", "table"];
     args.extend(paths.iter().map(String::as_str));
     let t = cli(&args);
     assert_eq!(t.code, 0, "{}", t.stderr);

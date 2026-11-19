@@ -1,4 +1,4 @@
-"""The molkit .wasm (crates/mzlab-mol-wasm) gives the `sdf/1` text of a drawing byte for byte like `mzlab-cli mol-export` and the app fixture
+"""The molkit .wasm (crates/mzlab-mol-wasm) gives the `sdf/1` text of a drawing byte for byte like `mzlab-cli mol export` and the app fixture
 (tests/dati/sdf_disegno.json, read by crates/mzlab-desktop/tests/labels.rs too), the .mol the same way, and a bad ion as a keyed JSON error.
 Skipped without cargo, wasm-bindgen or node."""
 import json

@@ -289,7 +289,7 @@ pub(crate) fn io(_: std::io::Error) -> Error {
 }
 
 /// The dwell time (userParam in seconds, read back by `mzmlhead`), then the precursor with its activation and the product of an SRM transition. The collision energy and the dwell
-/// are the ones the id spells (`ce=`, `dwell=` in ms), written by every build: a readers module without `sciex` gives the same mzML as `mzlab-cli convert`.
+/// are the ones the id spells (`ce=`, `dwell=` in ms), written by every build: a readers module without `sciex` gives the same mzML as `mzlab-cli file convert`.
 fn srm_windows(c: &Chromatogram, q1: f64, q3: f64) -> String {
     let dwell = crate::mzmlsrm::dwell_param(&c.id);
     let ce = crate::mzmlhead::srm_id(&c.id).2.map_or(String::new(), |e| format!("<cvParam cvRef=\"MS\" accession=\"MS:1000045\" name=\"collision energy\" value=\"{e}\" unitCvRef=\"UO\" unitAccession=\"UO:0000266\" unitName=\"electronvolt\"/>"));

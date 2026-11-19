@@ -1,13 +1,13 @@
-//! `mzlab-cli mol-link REQUEST.json|- [--out PATH]`: the `link/1` of a structure (the PubChem, ChEBI and BioTransformer URLs, percent-encoded),
+//! `mzlab-cli mol link REQUEST.json|- [--out PATH]`: the `link/1` of a structure (the PubChem, ChEBI and BioTransformer URLs, percent-encoded),
 //! byte for byte what the lookup rows of the Draw right-click menu open in the page and the app.
 
 use std::path::PathBuf;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli mol-link: the outside lookups of a drawn structure (PubChem, ChEBI, BioTransformer) as JSON (link/1).
+pub const HELP: &str = "mzlab-cli mol link: the outside lookups of a drawn structure (PubChem, ChEBI, BioTransformer) as JSON (link/1).
 
-usage: mzlab-cli mol-link REQUEST.json|- [--out PATH]
+usage: mzlab-cli mol link REQUEST.json|- [--out PATH]
 
   REQUEST.json  {\"smiles\": text, \"inchi\": text (optional), \"part\": true|false}: part = a selection;
                 - reads the standard input
@@ -64,7 +64,7 @@ mod tests {
         let req = r#"{"smiles":"C#N","inchi":"InChI=1S/CHN/c1-2/h1H","part":true}"#;
         let p = std::env::temp_dir().join(format!("mol_link_{}.json", std::process::id()));
         std::fs::write(&p, req).unwrap();
-        let o = run(&["mol-link", p.to_str().unwrap()]);
+        let o = run(&["mol", "link", p.to_str().unwrap()]);
         std::fs::remove_file(&p).ok();
         assert_eq!(o.code, 0);
         let want = mzlab_feat::chem::link::link_json(req).unwrap();
@@ -75,13 +75,13 @@ mod tests {
     #[test]
     fn usage_errors_exit_2() {
         for a in [
-            vec!["mol-link"],
-            vec!["mol-link", "a", "b"],
-            vec!["mol-link", "--nope"],
-            vec!["mol-link", "/no/such/file.json"],
+            vec!["mol", "link"],
+            vec!["mol", "link", "a", "b"],
+            vec!["mol", "link", "--nope"],
+            vec!["mol", "link", "/no/such/file.json"],
         ] {
             assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
         }
-        assert_eq!(run(&["mol-link", "--help"]).code, 0);
+        assert_eq!(run(&["mol", "link", "--help"]).code, 0);
     }
 }

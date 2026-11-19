@@ -1,4 +1,4 @@
-"""`samples_list/1` of a SCIEX `.wiff` pair is the same bytes from the engine .wasm (`native_samples(.., true)`, through Node) and from `mzlab-cli samples list --json`,
+"""`samples_list/1` of a SCIEX `.wiff` pair is the same bytes from the engine .wasm (`native_samples(.., true)`, through Node) and from `mzlab-cli sample list --json`,
 on every synthetic pair of tools/wiff_riferimento.py and on a pair of tools/wiff_grande.py (the app's native route is pinned to the same text by mzlab-desktop natives_tests.rs).
 Synthetic data only. python3 is part of the test (it fails without it); skipped only without cargo, wasm-bindgen or node."""
 import json
@@ -35,7 +35,7 @@ def site(work, wiff: Path):
 
 
 def app(wiff: Path):
-    """(exit code, stdout, stderr) of `mzlab-cli samples list --json`."""
+    """(exit code, stdout, stderr) of `mzlab-cli sample list --json`."""
     p = subprocess.run(cli_argv("samples", "list", str(wiff), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
     return p.returncode, p.stdout.strip(), p.stderr
 

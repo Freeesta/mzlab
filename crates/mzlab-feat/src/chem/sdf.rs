@@ -1,7 +1,7 @@
 //! `sdf/1`: the drawing as a plain molfile or SDF, written by `mzlab-mol` from its `mol/1` record. A `.mol` keeps the whole canvas in one
 //! record; an `.sdf` has one record per connected structure with the data items `MZLAB_FORMULA`, `MZLAB_EXACT_MASS` (the etich/1 numbers),
 //! `MZLAB_ION` and `MZLAB_MZ` (the chosen adduct of a neutral structure, or the drawn ion) and `MZLAB_HASH` (`mol1:` id of the canonical
-//! record). Same bytes in the molkit `.wasm`, the app (`feat/grafo`, `kind: "sdf"`) and `mzlab-cli mol-export`.
+//! record). Same bytes in the molkit `.wasm`, the app (`feat/grafo`, `kind: "sdf"`) and `mzlab-cli mol export`.
 
 use mzlab_core::elements::{self, ELECTRON, NO_ADDUCT};
 use mzlab_core::error::{Error, Result};

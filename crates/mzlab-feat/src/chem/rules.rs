@@ -1,6 +1,6 @@
 //! The structure side of the rules of `fragrules/1`: which rules of the table the structure of the user satisfies (required and excluded groups, the
 //! named `site`) and the products they expect (`regole_site`). The core (`mzlab_core::msngraph`) matches those products against the graph; used by
-//! `mzlab-cli msn-graph --rules` and the `.wasm` `msngrafo`. Evidence with a reason, never a verdict; `regole_tp/2` does not use it.
+//! `mzlab-cli msn graph --rules` and the `.wasm` `msngrafo`. Evidence with a reason, never a verdict; `regole_tp/2` does not use it.
 
 use super::graph::Mol;
 use super::rules_site::{NEW_GROUPS, SITES};
@@ -14,7 +14,7 @@ pub fn attese(smiles: &str, t: &Table) -> Result<Vec<Expectation>> {
     Ok(expected_mol(&Mol::parse(smiles)?, t))
 }
 
-/// `attese` of a structure already read (the decoys of `mzlab-cli msn-rules` are built as graphs).
+/// `attese` of a structure already read (the decoys of `mzlab-cli msn rules` are built as graphs).
 pub fn expected_mol(m: &Mol, t: &Table) -> Vec<Expectation> {
     let groups = m.groups_ext();
     let mut out = vec![];

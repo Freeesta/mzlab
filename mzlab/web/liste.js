@@ -115,7 +115,7 @@ const LISTE = (() => {
     return `<div class="cont"><div class="sm cont-h">${I18N.t("lst.compatible")}</div>${shown.map(row).join("")}${more > 0 ? `<div class="sm">${I18N.t("lst.more", { n: more })}</div>` : ""}</div>`;
   }
 
-  // The CSV of a list is read in Rust (reflist/1, `mzlab-cli ref-list`): the same items and the same line-numbered errors on the site, in the app and in the CLI.
+  // The CSV of a list is read in Rust (reflist/1, `mzlab-cli db ref-list`): the same items and the same line-numbered errors on the site, in the app and in the CLI.
   /** @param {string} text @param {string} [name] @returns {Promise<Bag>} */
   async function readCsv(text, name) {
     const r = await fetch("api/reflist", { method: "POST", body: JSON.stringify({ csv: String(text), name: name || "" }) });

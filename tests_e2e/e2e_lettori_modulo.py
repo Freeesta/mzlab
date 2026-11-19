@@ -90,7 +90,7 @@ try:
             assert res["mod"]["tic"] == res["eng"]["tic"] and len(res["mod"]["tic"].get("t", res["mod"]["tic"].get("rt", [1] * N))) > 0, (res["mod"]["tic"], res["eng"]["tic"])
         step("the TIC is the one of the engine's path", same_tic)
         def same_bytes():
-            # the module (feature `estesi`) writes the indexed form of `mzlab-cli convert` and the account `conversion/1` of its extended reader; the engine's wasm leaves both out for its size.
+            # the module (feature `estesi`) writes the indexed form of `mzlab-cli file convert` and the account `conversion/1` of its extended reader; the engine's wasm leaves both out for its size.
             # So compare the <mzML> element they share, without that one userParam (the spectra, the header and every other byte must match)
             import base64, re
             def core(b64):

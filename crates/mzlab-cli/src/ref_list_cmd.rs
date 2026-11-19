@@ -1,4 +1,4 @@
-//! `mzlab-cli ref-list FILE.csv [--name N] [--match X [--set unit=da|ppm tol=N pol=+|-]] [--out PATH]`: reads a CSV of reference ions (`reflist/1`,
+//! `mzlab-cli db ref-list FILE.csv [--name N] [--match X [--set unit=da|ppm tol=N pol=+|-]] [--out PATH]`: reads a CSV of reference ions (`reflist/1`,
 //! `mzlab_core::reflist`, the same bytes as the page and the app) and, with `--match`, what a number is compatible with in that list (`mz-match/1`).
 
 use std::path::PathBuf;
@@ -8,9 +8,9 @@ use mzlab_core::jsonb::{text, write, Obj};
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli ref-list: read a CSV list of reference ions as JSON (reflist/1), optionally match a number against it.
+pub const HELP: &str = "mzlab-cli db ref-list: read a CSV list of reference ions as JSON (reflist/1), optionally match a number against it.
 
-usage: mzlab-cli ref-list FILE.csv [--name N] [--match X] [--set unit=da|ppm] [--set tol=N] [--set pol=+|-] [--out PATH]
+usage: mzlab-cli db ref-list FILE.csv [--name N] [--match X] [--set unit=da|ppm] [--set tol=N] [--set pol=+|-] [--out PATH]
 
   FILE.csv        columns mz, name, formula, polarity, adduct, note (a header line is required; ; , or tab; # lines skipped);
                   a row needs an m/z or a formula

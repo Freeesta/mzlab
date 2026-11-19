@@ -1,4 +1,4 @@
-"""The module `valida` (crates/mzlab-lettori-wasm, feature `valida`) gives through Node the same bytes as `mzlab-cli validate --json`: a valid file, one with an accession
+"""The module `valida` (crates/mzlab-lettori-wasm, feature `valida`) gives through Node the same bytes as `mzlab-cli file validate --json`: a valid file, one with an accession
 that does not exist and a truncated one (made from the synthetic msconvert file of tools/mzml_msconvert_synthetic.py and the example mzML, as crates/mzlab-cli/src/validate_tests.rs does). Skipped without cargo, the wasm32 target,
 wasm-bindgen or node."""
 import shutil
@@ -42,7 +42,7 @@ def built(tmp_path_factory):
 def test_same_bytes_as_the_command_line(built, name, codes):
     pkg, files = built
     f = files / name
-    cli = run("target/release/mzlab-cli", "validate", str(f), "--json", ok=codes)
+    cli = run("target/release/mzlab-cli", "file", "validate", str(f), "--json", ok=codes)
     if cli:                         # a file the command cannot read has no JSON; the module then fails and the page says so
         assert run("node", "tests/valida_nodo.js", str(pkg / "mzlab_lettori_wasm.js"), str(f)) == cli
         assert ("\"valid\":true" in cli) == (codes == (0,)), cli[:200]

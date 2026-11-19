@@ -1,4 +1,4 @@
-//! `mzlab-cli mol-label REQUEST.json|- [--out PATH]`: the `etich/1` of the structures of a drawing (formula with isotopes, charge, monoisotopic
+//! `mzlab-cli mol label REQUEST.json|- [--out PATH]`: the `etich/1` of the structures of a drawing (formula with isotopes, charge, monoisotopic
 //! and nominal mass, m/z, and what changes across each arrow), byte for byte what the Draw labels of the page and the app show; `mol-anal` the same
 //! way gives the `anal/1` of one structure (the analysis card of Draw: average mass, mass %, theoretical isotope pattern).
 
@@ -6,9 +6,9 @@ use std::path::PathBuf;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli mol-label: formula, charge and masses of drawn structures and the change across reaction arrows, as JSON (etich/1).
+pub const HELP: &str = "mzlab-cli mol label: formula, charge and masses of drawn structures and the change across reaction arrows, as JSON (etich/1).
 
-usage: mzlab-cli mol-label REQUEST.json|- [--out PATH]
+usage: mzlab-cli mol label REQUEST.json|- [--out PATH]
 
   REQUEST.json  {\"structures\": [[{\"el\", \"iso\", \"h\", \"q\"}, ...], ...], \"arrows\": [[before, after], ...]}: element, mass number
                 (0 or absent = natural), implicit hydrogens and charge of every atom; - reads the standard input
@@ -18,9 +18,9 @@ usage: mzlab-cli mol-label REQUEST.json|- [--out PATH]
 The answer is {\"format\": \"etich/1\", \"structures\": [{formula, text, charge, mass, nominal, mz, delta?} or {error, label}],
 \"arrows\": [{gain, loss, isotopologue, dm, dnominal} or null]}.";
 
-pub const HELP_ANAL: &str = "mzlab-cli mol-anal: average mass, mass % per element and the theoretical isotope pattern of one drawn structure, as JSON (anal/1).
+pub const HELP_ANAL: &str = "mzlab-cli mol anal: average mass, mass % per element and the theoretical isotope pattern of one drawn structure, as JSON (anal/1).
 
-usage: mzlab-cli mol-anal REQUEST.json|- [--out PATH]
+usage: mzlab-cli mol anal REQUEST.json|- [--out PATH]
 
   REQUEST.json  {\"atoms\": [{\"el\", \"iso\", \"h\", \"q\", \"r\"}, ...]}: the atoms of one structure as mol-label reads them; - reads the standard input
   --out PATH    write there instead of the standard output
@@ -101,7 +101,7 @@ mod tests {
         let req = r#"{"structures":[[{"el":"C","iso":13,"h":4}]]}"#;
         let p = std::env::temp_dir().join(format!("mol_label_{}.json", std::process::id()));
         std::fs::write(&p, req).unwrap();
-        let o = run(&["mol-label", p.to_str().unwrap()]);
+        let o = run(&["mol", "label", p.to_str().unwrap()]);
         std::fs::remove_file(&p).ok();
         assert_eq!(o.code, 0);
         let want = mzlab_feat::chem::labels::labels_json(req).unwrap();
@@ -113,25 +113,25 @@ mod tests {
         let req = r#"{"atoms":[{"el":"C","h":3},{"el":"Br"}]}"#;
         let p = std::env::temp_dir().join(format!("mol_anal_{}.json", std::process::id()));
         std::fs::write(&p, req).unwrap();
-        let o = run(&["mol-anal", p.to_str().unwrap()]);
+        let o = run(&["mol", "anal", p.to_str().unwrap()]);
         std::fs::remove_file(&p).ok();
         assert_eq!(o.code, 0);
         let want = mzlab_feat::chem::analysis::analysis_json(req).unwrap();
         assert_eq!(String::from_utf8(o.stdout).unwrap(), format!("{want}\n"));
-        assert_eq!(run(&["mol-anal"]).code, 2);
-        assert_eq!(run(&["mol-anal", "--help"]).code, 0);
+        assert_eq!(run(&["mol", "anal"]).code, 2);
+        assert_eq!(run(&["mol", "anal", "--help"]).code, 0);
     }
 
     #[test]
     fn usage_errors_exit_2() {
         for a in [
-            vec!["mol-label"],
-            vec!["mol-label", "a", "b"],
-            vec!["mol-label", "--nope"],
-            vec!["mol-label", "/no/such/file.json"],
+            vec!["mol", "label"],
+            vec!["mol", "label", "a", "b"],
+            vec!["mol", "label", "--nope"],
+            vec!["mol", "label", "/no/such/file.json"],
         ] {
             assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
         }
-        assert_eq!(run(&["mol-label", "--help"]).code, 0);
+        assert_eq!(run(&["mol", "label", "--help"]).code, 0);
     }
 }

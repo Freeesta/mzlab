@@ -1,7 +1,7 @@
 //! `peak_area` of the engine: the measure of the Data view against zero or a line the user sets (`mzlab_core::baseline`), the same JSON
-//! bytes as `mzlab-cli peak-area`; the page reaches it through `peaks-worker.js` (`QUALITA.peakArea`). `window_end`: where a dragged end of the window
-//! goes (`mzlab_core::intwin`, the bytes of `mzlab-cli peak-window`, `QUALITA.windowEnd`). `lr_auto_integrate`: every peak of a low-resolution trace
-//! (`mzlab_core::peakq_lrauto`, the bytes of `mzlab-cli peak-auto-lr`, `QUALITA.lrAuto`).
+//! bytes as `mzlab-cli peak area`; the page reaches it through `peaks-worker.js` (`QUALITA.peakArea`). `window_end`: where a dragged end of the window
+//! goes (`mzlab_core::intwin`, the bytes of `mzlab-cli peak window`, `QUALITA.windowEnd`). `lr_auto_integrate`: every peak of a low-resolution trace
+//! (`mzlab_core::peakq_lrauto`, the bytes of `mzlab-cli peak auto-lr`, `QUALITA.lrAuto`).
 
 use mzlab_core::area_unit::{lr_auto_json_in, AreaUnit};
 use mzlab_core::baseline::{peak_area_json, Baseline};
@@ -10,7 +10,7 @@ use mzlab_core::peakq_lrauto::{lr_auto_integrate as lr_auto, LrAutoParams};
 use wasm_bindgen::prelude::*;
 
 /// The area of the Data view between the times `a` and `b` against zero (`mode` 1) or the line `line` = `[t0, y0, t1, y1]` (`mode` 2): the JSON of
-/// `baseline::peak_area_json`, the bytes `mzlab-cli peak-area` prints; empty for any other mode or an empty trace.
+/// `baseline::peak_area_json`, the bytes `mzlab-cli peak area` prints; empty for any other mode or an empty trace.
 #[wasm_bindgen]
 pub fn peak_area(rt: &[f64], y: &[f64], a: f64, b: f64, mode: u32, line: &[f64]) -> String {
     let base = match (mode, line) {
@@ -38,7 +38,7 @@ pub fn window_end(
 }
 
 /// Every peak of a low-resolution trace with its apex between `x0` and `x1` (min): the JSON of `peakq_lrauto::lr_auto_json`, the bytes
-/// `mzlab-cli peak-auto-lr` prints; `params` = the numbers of the dialog (`LrAutoParams::from_slice`).
+/// `mzlab-cli peak auto-lr` prints; `params` = the numbers of the dialog (`LrAutoParams::from_slice`).
 #[wasm_bindgen]
 pub fn lr_auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, params: &[f64]) -> String {
     let n = rt.len().min(y.len());

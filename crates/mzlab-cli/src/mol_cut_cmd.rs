@@ -1,4 +1,4 @@
-//! `mzlab-cli mol-cut MOLFILE|- --set bonds=A-B[,C-D...] [--set mode=...] [--set cation=...] [--set gap=N] [--out PATH]`: the `cut/1` of a cut across
+//! `mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,C-D...] [--set mode=...] [--set cation=...] [--set gap=N] [--out PATH]`: the `cut/1` of a cut across
 //! bonds of a drawn structure (homolytic, heterolytic or «+H»), byte for byte what the cut tool of the Draw page and of the app computes.
 
 use std::path::PathBuf;
@@ -7,9 +7,9 @@ use mzlab_core::json::Out;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli mol-cut: the pieces of a cut across bonds of a structure, as JSON (cut/1).
+pub const HELP: &str = "mzlab-cli mol cut: the pieces of a cut across bonds of a structure, as JSON (cut/1).
 
-usage: mzlab-cli mol-cut MOLFILE|- --set bonds=A-B[,C-D...] [--set NAME=VALUE...] [--out PATH]
+usage: mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,C-D...] [--set NAME=VALUE...] [--out PATH]
 
   MOLFILE         a V2000 molfile (- reads the standard input); atoms are numbered from 0 in file order
   --set bonds     the cut bonds as atom pairs, e.g. 0-1,4-5 (several bonds of a ring give two pieces)

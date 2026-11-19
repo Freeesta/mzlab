@@ -4,23 +4,25 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::cmd::{entries, subwords};
+use crate::cmd::entries;
 use crate::{execute, Outcome};
 
 /// The commands that read an input, each with a path that does not exist: exit 4, and under `--json` an error/1 with code 4.
 const MISSING: &[&[&str]] = &[
     &["features", "/nonexistent/x.mzML"],
     &[
+        "file",
         "convert",
         "/nonexistent/x.mzML",
         "--out",
         "/tmp/mzlab_contract_unused",
     ],
-    &["validate", "/nonexistent/x.mzML"],
-    &["channels", "/nonexistent/x.mzML"],
-    &["items", "/nonexistent/x.mzML"],
-    &["background", "/nonexistent/x.mzML"],
+    &["file", "validate", "/nonexistent/x.mzML"],
+    &["file", "channels", "/nonexistent/x.mzML"],
+    &["file", "items", "/nonexistent/x.mzML"],
+    &["trace", "background", "/nonexistent/x.mzML"],
     &[
+        "spectrum",
         "dda-window",
         "/nonexistent/x.mzML",
         "--from",
@@ -29,17 +31,19 @@ const MISSING: &[&[&str]] = &[
         "2",
     ],
     &["dad", "spectrum", "/nonexistent/x.mzML", "--rt", "1"],
-    &["samples", "list", "/nonexistent/x.mzML"],
-    &["samples", "select", "/nonexistent/x.mzML", "--sample", "1"],
-    &["folder", "list", "/nonexistent/dir"],
+    &["sample", "list", "/nonexistent/x.mzML"],
+    &["sample", "select", "/nonexistent/x.mzML", "--sample", "1"],
+    &["file", "list", "/nonexistent/dir"],
     &[
-        "manual-table",
+        "peak",
+        "table",
         "/nonexistent/x.mzML",
         "--set",
         "windows=/nonexistent/w.json",
     ],
     &[
-        "peak-split",
+        "peak",
+        "split",
         "/nonexistent/x.mzML",
         "--set",
         "tr=1",
@@ -48,11 +52,12 @@ const MISSING: &[&[&str]] = &[
         "--set",
         "b=2",
     ],
-    &["peak-edges", "/nonexistent/t.csv", "--at", "1"],
-    &["peak-auto", "/nonexistent/t.csv"],
-    &["peak-auto-lr", "/nonexistent/t.csv"],
+    &["peak", "edges", "/nonexistent/t.csv", "--at", "1"],
+    &["peak", "auto", "/nonexistent/t.csv"],
+    &["peak", "auto-lr", "/nonexistent/t.csv"],
     &[
-        "peak-area",
+        "peak",
+        "area",
         "/nonexistent/t.csv",
         "--from",
         "1",
@@ -60,7 +65,8 @@ const MISSING: &[&[&str]] = &[
         "2",
     ],
     &[
-        "peak-window",
+        "peak",
+        "window",
         "/nonexistent/t.csv",
         "--end",
         "1",
@@ -74,17 +80,18 @@ const MISSING: &[&[&str]] = &[
         "/nonexistent/t.mzfeat",
         "/nonexistent/e.csv",
     ],
-    &["match-mz", "1", "--tables", "/nonexistent/t.json"],
-    &["msn-graph", "/nonexistent/g.json"],
-    &["msn-lib", "export", "/nonexistent/lib.json"],
-    &["msn-rules", "sum", "/nonexistent/lines.json"],
+    &["ion", "match", "1", "--tables", "/nonexistent/t.json"],
+    &["msn", "graph", "/nonexistent/g.json"],
+    &["msn", "lib", "export", "/nonexistent/lib.json"],
+    &["msn", "rules", "sum", "/nonexistent/lines.json"],
     &[
+        "db",
         "insilico",
         "pack",
         "/nonexistent/x.csv",
         "/tmp/mzlab_contract_unused",
     ],
-    &["normative", "listings", "/nonexistent/pack"],
+    &["db", "normative", "listings", "/nonexistent/pack"],
     &[
         "llm",
         "replay",
@@ -111,29 +118,111 @@ const MISSING: &[&[&str]] = &[
     ],
     &["flow", "verify", "/nonexistent/r.json"],
     &["flow", "command", "/nonexistent/p.json"],
-    &["mol-label", "/nonexistent/r.json"],
-    &["mol-anal", "/nonexistent/r.json"],
-    &["mol-check", "/nonexistent/r.json"],
-    &["mol-cip", "/nonexistent/r.json"],
-    &["mol-hilite", "/nonexistent/r.json"],
-    &["mol-sel", "/nonexistent/r.json"],
-    &["mol-link", "/nonexistent/r.json"],
-    &["mol-export", "/nonexistent/r.json"],
-    &["mol-cut", "/nonexistent/m.mol", "--set", "bonds=1-2"],
-    &["mol-mech", "/nonexistent/r.json"],
-    &["wiff", "list", "/nonexistent/x.wiff"],
-    &["ref-list", "/nonexistent/l.csv"],
+    &["mol", "label", "/nonexistent/r.json"],
+    &["mol", "anal", "/nonexistent/r.json"],
+    &["mol", "check", "/nonexistent/r.json"],
+    &["mol", "cip", "/nonexistent/r.json"],
+    &["mol", "hilite", "/nonexistent/r.json"],
+    &["mol", "sel", "/nonexistent/r.json"],
+    &["mol", "link", "/nonexistent/r.json"],
+    &["mol", "export", "/nonexistent/r.json"],
+    &["mol", "cut", "/nonexistent/m.mol", "--set", "bonds=1-2"],
+    &["mol", "mech", "/nonexistent/r.json"],
+    &["file", "info", "/nonexistent/x.wiff"],
+    &["db", "ref-list", "/nonexistent/l.csv"],
+    &[
+        "dad",
+        "subtract",
+        "/nonexistent/x.mzML",
+        "/nonexistent/y.mzML",
+    ],
+    &["dad", "trace", "/nonexistent/x.mzML"],
+    &["dad", "ms-at", "/nonexistent/x.mzML", "--rt", "1"],
+    &["dad", "delay", "/nonexistent/x.mzML"],
+    &["msn", "complete", "/nonexistent/g.json"],
+    &[
+        "msn",
+        "compare",
+        "/nonexistent/a.json",
+        "/nonexistent/b.json",
+    ],
+    &[
+        "msn",
+        "figure",
+        "/nonexistent/g.json",
+        "--out",
+        "/tmp/mzlab_contract_unused",
+    ],
+    &[
+        "msn",
+        "lib",
+        "add",
+        "/nonexistent/l.json",
+        "/nonexistent/x.mzML",
+        "--id",
+        "a",
+        "--formula",
+        "C",
+    ],
+    &["msn", "lib", "build", "/nonexistent/m.tsv"],
+    &[
+        "msn",
+        "lib",
+        "search",
+        "/nonexistent/l.json",
+        "/nonexistent/g.json",
+    ],
+    &[
+        "db",
+        "normative",
+        "pack",
+        "/nonexistent/n",
+        "/tmp/mzlab_contract_unused",
+    ],
+    &[
+        "db",
+        "normative",
+        "import-official",
+        "svhc",
+        "/nonexistent/a.csv",
+        "/nonexistent/b",
+        "/tmp/mzlab_contract_unused",
+    ],
+    &["llm", "inspect", "/nonexistent/d"],
+    &["llm", "params", "/nonexistent/d"],
+    &[
+        "llm",
+        "eval",
+        "/nonexistent/d",
+        "--replay",
+        "/nonexistent/r",
+    ],
+    &[
+        "file",
+        "verify",
+        "/nonexistent/o.wiff",
+        "--against",
+        "/nonexistent/s.wiff",
+    ],
 ];
 
 /// The commands that read no input file: a formula, a number, a query, or nothing.
 const NO_FILE: &[&str] = &[
-    "elements",
-    "ion-pattern",
-    "ion-mz",
-    "mol-search",
+    "ion elements",
+    "sample vars",
+    "sample group",
+    "sample table",
+    "llm tools",
+    "db normative build",
+    "ion pattern",
+    "ion mz",
+    "mol search",
     "help-md",
-    "steps",
-    "pair",
+    "completions bash",
+    "completions zsh",
+    "completions fish",
+    "flow steps",
+    "file pair",
 ];
 
 pub(crate) fn run(a: &[&str]) -> Outcome {
@@ -144,19 +233,11 @@ pub(crate) fn text(o: &Outcome) -> String {
     String::from_utf8_lossy(&o.stdout).into_owned()
 }
 
-/// Every command path of the table: each entry, and each entry with each subcommand word its usage lines list.
+/// Every command path of the table: one per entry.
 fn paths() -> Vec<Vec<String>> {
-    let mut v: Vec<Vec<String>> = Vec::new();
-    for e in entries() {
-        let base: Vec<String> = e.name.split(' ').map(String::from).collect();
-        v.push(base.clone());
-        for w in subwords(e) {
-            let mut p = base.clone();
-            p.push(w.to_string());
-            v.push(p);
-        }
-    }
-    v
+    entries()
+        .map(|e| e.name.split(' ').map(String::from).collect())
+        .collect()
 }
 
 /// One error/1 document on stdout, with the code, and nothing else there.
@@ -245,15 +326,15 @@ fn an_unknown_option_is_exit_2_and_under_json_one_error_document_for_every_comma
 #[test]
 fn positional_commands_reject_unknown_options() {
     for a in [
-        vec!["samples", "group", "a.mzML", "--bogus"],
+        vec!["sample", "group", "a.mzML", "--bogus"],
         vec!["explain-missing", "t.mzfeat", "e.csv", "--bogus"],
-        vec!["normative", "bogus"],
-        vec!["normative", "pack", "a", "b", "--bogus"],
+        vec!["db", "normative", "bogus"],
+        vec!["db", "normative", "pack", "a", "b", "--bogus"],
         vec!["flow", "command", "plan.json", "--bogus"],
     ] {
         let o = run(&a);
         assert_eq!(o.code, 2, "{a:?}: {}", o.stderr);
-        assert!(o.stdout.is_empty() || a[0] == "samples", "{a:?}");
+        assert!(o.stdout.is_empty() || a[0] == "sample", "{a:?}");
     }
 }
 
@@ -286,8 +367,11 @@ fn a_missing_input_is_exit_4_for_every_command_that_reads_one() {
         }
     }
     for e in entries() {
-        let first = e.name.split(' ').next().unwrap();
-        let covered = MISSING.iter().any(|a| a[0] == first) || NO_FILE.contains(&e.name);
+        let words: Vec<&str> = e.name.split(' ').collect();
+        let covered = MISSING
+            .iter()
+            .any(|a| a.len() >= words.len() && a[..words.len()] == words[..])
+            || NO_FILE.contains(&e.name);
         assert!(
             covered,
             "{}: add a missing-input case to MISSING or list it in NO_FILE",
@@ -320,9 +404,10 @@ pub(crate) fn wiff(name: &str) -> (PathBuf, String) {
 fn an_unknown_selector_is_exit_5_with_error_1() {
     let (dir, f) = wiff("sample");
     for a in [
-        vec!["channels", &f, "--sample", "9"],
+        vec!["file", "channels", &f, "--sample", "9"],
         vec!["features", &f, "--sample", "9"],
         vec![
+            "file",
             "convert",
             &f,
             "--sample",
@@ -330,18 +415,15 @@ fn an_unknown_selector_is_exit_5_with_error_1() {
             "--out",
             "/tmp/mzlab_contract_unused",
         ],
-        vec!["samples", "select", &f, "--sample", "9"],
-        vec!["channels", &f, "--channel", "sim:nothing"],
-        vec!["steps", "--id", "no.such.step"],
-        vec!["msn-graph", "node", "--help-not-a-flag-but-a-node", "n999"],
+        vec!["sample", "select", &f, "--sample", "9"],
+        vec!["file", "channels", &f, "--channel", "sim:nothing"],
+        vec!["flow", "steps", "--id", "no.such.step"],
     ] {
-        if a[0] == "msn-graph" {
-            continue; // the node selector of msn-graph needs a graph file: covered by msn_graph_tests
-        }
+        // the node selector of `msn graph` needs a graph file: covered by msn_graph_tests
         let o = run(&a);
         assert_eq!(o.code, 5, "{a:?}: {}", o.stderr);
     }
-    let o = run(&["channels", &f, "--sample", "9", "--json"]);
+    let o = run(&["file", "channels", &f, "--sample", "9", "--json"]);
     assert_eq!(
         one_error(&o, 5, "channels --json")["error_key"],
         "err.sample.unknown"
@@ -352,11 +434,11 @@ fn an_unknown_selector_is_exit_5_with_error_1() {
 #[test]
 fn the_json_of_the_catalogs_starts_with_its_schema_and_every_stdout_ends_with_a_newline() {
     for a in [
-        vec!["steps", "--json", "--id", "features.detect"],
+        vec!["flow", "steps", "--json", "--id", "features.detect"],
         vec!["llm", "tools"],
-        vec!["samples", "group", "a_1.mzML", "a_2.mzML"],
-        vec!["ion-pattern", "C6H12O6", "[M+H]+"],
-        vec!["elements"],
+        vec!["sample", "group", "a_1.mzML", "a_2.mzML"],
+        vec!["ion", "pattern", "C6H12O6", "[M+H]+"],
+        vec!["ion", "elements"],
         vec!["help-md"],
         vec!["--version"],
     ] {
@@ -371,7 +453,7 @@ fn the_json_of_the_catalogs_starts_with_its_schema_and_every_stdout_ends_with_a_
         }
     }
     for a in [
-        vec!["steps", "--json", "--id", "features.detect"],
+        vec!["flow", "steps", "--json", "--id", "features.detect"],
         vec!["llm", "tools"],
     ] {
         let flat: String = text(&run(&a)).split_whitespace().collect();

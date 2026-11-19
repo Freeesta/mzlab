@@ -60,28 +60,6 @@ fn snake_case_and_camel_case_set_the_same_field() {
 }
 
 #[test]
-fn the_command_name_has_an_alias() {
-    let f = std::env::temp_dir().join("mzlab_peak_edges_cmd.csv");
-    std::fs::write(&f, format!("rt,y\n{}", gauss_csv())).unwrap();
-    let p = f.to_str().unwrap().to_string();
-    for extra in [
-        vec!["--at", "2.25"],
-        vec!["--at", "6", "--set", "snMin=1000"],
-        vec!["--help"],
-        vec![],
-    ] {
-        let go = |name: &str| {
-            let mut a = vec![name.to_string(), p.clone()];
-            a.extend(extra.iter().map(|s| s.to_string()));
-            crate::execute(&a)
-        };
-        let (a, b) = (go("peaks-edges"), go("peak-edges"));
-        assert_eq!((a.code, a.stdout), (b.code, b.stdout), "{extra:?}");
-    }
-    let _ = std::fs::remove_file(f);
-}
-
-#[test]
 fn dialog_numbers_at_their_defaults_are_the_engine_defaults() {
     use mzlab_core::peakq_lr::LrParams;
     let d = LrParams::default();

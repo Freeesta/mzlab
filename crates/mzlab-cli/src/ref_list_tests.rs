@@ -17,7 +17,7 @@ fn file(csv: &str) -> String {
 #[test]
 fn the_output_is_the_core_answer_byte_for_byte() {
     let csv = "mz;name\n100.1;A\n";
-    let o = run(&["ref-list", &file(csv), "--name", "L"]);
+    let o = run(&["db", "ref-list", &file(csv), "--name", "L"]);
     assert_eq!(o.code, 0);
     let body = r#"{"csv":"mz;name\n100.1;A\n","name":"L"}"#;
     let want = mzlab_core::reflist::route(body).unwrap();
@@ -26,7 +26,7 @@ fn the_output_is_the_core_answer_byte_for_byte() {
 
 #[test]
 fn row_errors_exit_one_and_keep_the_good_rows() {
-    let o = run(&["ref-list", &file("mz,name\n100.1,A\nbad,B\n")]);
+    let o = run(&["db", "ref-list", &file("mz,name\n100.1,A\nbad,B\n")]);
     assert_eq!(o.code, 1);
     let t = String::from_utf8(o.stdout).unwrap();
     assert!(
@@ -38,6 +38,7 @@ fn row_errors_exit_one_and_keep_the_good_rows() {
 #[test]
 fn match_finds_the_number_in_the_list() {
     let o = run(&[
+        "db",
         "ref-list",
         &file("mz,name\n100.1,A\n"),
         "--match",
@@ -57,6 +58,6 @@ fn match_finds_the_number_in_the_list() {
 
 #[test]
 fn usage_and_unreadable_file() {
-    assert_eq!(run(&["ref-list"]).code, 2);
-    assert_eq!(run(&["ref-list", "/nonexistent/x.csv"]).code, 4);
+    assert_eq!(run(&["db", "ref-list"]).code, 2);
+    assert_eq!(run(&["db", "ref-list", "/nonexistent/x.csv"]).code, 4);
 }

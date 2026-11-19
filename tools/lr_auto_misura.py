@@ -1,4 +1,4 @@
-"""The measurements behind «Integrate every peak shown» on low-resolution traces (mzlab_core::peakq_lrauto, `mzlab-cli peak-auto-lr`), reproducible:
+"""The measurements behind «Integrate every peak shown» on low-resolution traces (mzlab_core::peakq_lrauto, `mzlab-cli peak auto-lr`), reproducible:
 synthetic jagged SIM/MRM traces of tools/synthetic_data_jagged.py (seeded) plus two harder cases and extra spikes, scored against their truth.
 Two sets of 760 peaks: «mild» (4 % and 8 % jitter) and «harsh» (15 % and 25 %). `python3 tools/lr_auto_misura.py [default|sweep|hr|click|all]`
 prints one line per configuration: peaks found, windows holding two peaks (merged), windows with no peak (false), peaks cut in two (split), and the
@@ -75,7 +75,7 @@ def click(tmp: Path) -> str:
         for seed in range(1, 11):
             t, y, tr = J.trace(case, seed)
             f = J.write_csv(tmp / "click.csv", t, y)
-            w = [e for a in tr["apex"] for e in [json.loads(subprocess.run([str(CLI), "peak-edges", str(f), "--at", str(a), "--mrm"], capture_output=True,
+            w = [e for a in tr["apex"] for e in [json.loads(subprocess.run([str(CLI), "peak", "edges", str(f), "--at", str(a), "--mrm"], capture_output=True,
                                                                          text=True, check=True).stdout)["edges"]] if e]
             found += sum(any(lo <= a <= hi for lo, hi in w) for a in tr["apex"])
             over += sum(w[i][0] < w[j][1] - 1e-9 and w[j][0] < w[i][1] - 1e-9 for i in range(len(w)) for j in range(i + 1, len(w)))

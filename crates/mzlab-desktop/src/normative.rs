@@ -1,4 +1,4 @@
-//! The regulatory-list package in the desktop app: the same package as the site (`static/normative/`, written by `mzlab-cli normative pack`), kept as
+//! The regulatory-list package in the desktop app: the same package as the site (`static/normative/`, written by `mzlab-cli db normative pack`), kept as
 //! `normative.mzsus` in the folder of the libraries (`libraries.rs`) with its catalogue in `.mzlab/normative.catalogo.json`. First use fetches it from the site
 //! (pieces checked one by one with their SHA-256, the inflated file checked as a whole) or takes a package folder or `.mzsus` the user picked; after that
 //! it is read from disk, offline. Routes `normative/*` in `protocol.rs`. Every error is a key `normative.dl.err.*` of `lang/`.
@@ -242,7 +242,7 @@ pub fn install(
     Ok(status(folder))
 }
 
-/// The package the user picked: a `.mzsus`, or a package folder (`normative.mzsus` and `catalogo.json` as `mzlab-cli normative pack` writes them).
+/// The package the user picked: a `.mzsus`, or a package folder (`normative.mzsus` and `catalogo.json` as `mzlab-cli db normative pack` writes them).
 pub fn import(folder: &Folder, from: &Path) -> Result<Status, NormError> {
     let (file, cat) = if from.is_dir() {
         (from.join(FILE), Some(from.join("catalogo.json")))
@@ -275,7 +275,7 @@ pub fn import(folder: &Folder, from: &Path) -> Result<Status, NormError> {
     Ok(status(folder))
 }
 
-/// The `listings` JSON of the installed package (the text of `Suspects::listings_json`, as in the `.wasm` and `mzlab-cli normative listings`).
+/// The `listings` JSON of the installed package (the text of `Suspects::listings_json`, as in the `.wasm` and `mzlab-cli db normative listings`).
 pub fn listings_json(folder: &Folder) -> Result<String, NormError> {
     let st = folder
         .stat(FILE)

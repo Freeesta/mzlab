@@ -18,7 +18,7 @@ def load():
 def test_families():
     f = load().famiglia
     assert f(["build", "--release", "-p", "mzlab-cli", "--example", "flow"]) == "cli"
-    assert f(["run", "--release", "-q", "-p", "mzlab-cli", "--", "msn-graph"]) == "cli"
+    assert f(["run", "--release", "-q", "-p", "mzlab-cli", "--", "msn", "graph"]) == "cli"
     assert f(["build", "--release", "-p", "mzlab-feat-wasm", "--example", "native"]) == "feat"
     assert f(["build", "--release", "-p", "mzlab-feat-wasm", "--features", "untargeted"]) == "feat-untargeted"
     assert f(["build", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm"]) == "wasm"

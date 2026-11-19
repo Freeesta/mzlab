@@ -47,7 +47,7 @@ def wasm_channels(work, mzml):
 def test_wasm_and_cli_give_the_same_channels(work, which):
     mzml = files(work)[which]
     got = wasm_channels(work, mzml)
-    want = cli("channels", str(mzml)).stdout
+    want = cli("file", "channels", str(mzml)).stdout
     assert got.strip() == want.strip()
     doc = json.loads(got)
     assert doc["schema"] == "channels/1" and doc["channels"]

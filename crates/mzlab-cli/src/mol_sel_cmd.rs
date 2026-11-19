@@ -1,13 +1,13 @@
-//! `mzlab-cli mol-sel REQUEST.json|- [--out PATH]`: the `sel/1` of a selection or of the whole drawing (formula, charge, monoisotopic and average
+//! `mzlab-cli mol sel REQUEST.json|- [--out PATH]`: the `sel/1` of a selection or of the whole drawing (formula, charge, monoisotopic and average
 //! mass, m/z, heavy atoms, rings and aromatic rings), byte for byte what the Info of the Draw right-click menu shows in the page and the app.
 
 use std::path::PathBuf;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli mol-sel: formula, charge, masses, heavy atoms, rings and aromatic rings of a drawn structure, as JSON (sel/1).
+pub const HELP: &str = "mzlab-cli mol sel: formula, charge, masses, heavy atoms, rings and aromatic rings of a drawn structure, as JSON (sel/1).
 
-usage: mzlab-cli mol-sel REQUEST.json|- [--out PATH]
+usage: mzlab-cli mol sel REQUEST.json|- [--out PATH]
 
   REQUEST.json  {\"molfile\": V2000 text, \"part\": true|false}: the structure as drawn (open valences filled with H), part = a selection;
                 - reads the standard input
@@ -65,7 +65,7 @@ mod tests {
         let req = format!("{{\"molfile\":{mf:?},\"part\":true}}");
         let p = std::env::temp_dir().join(format!("mol_sel_{}.json", std::process::id()));
         std::fs::write(&p, &req).unwrap();
-        let o = run(&["mol-sel", p.to_str().unwrap()]);
+        let o = run(&["mol", "sel", p.to_str().unwrap()]);
         std::fs::remove_file(&p).ok();
         assert_eq!(o.code, 0);
         let want = mzlab_feat::chem::sel::sel_json(&req).unwrap();
@@ -76,13 +76,13 @@ mod tests {
     #[test]
     fn usage_errors_exit_2() {
         for a in [
-            vec!["mol-sel"],
-            vec!["mol-sel", "a", "b"],
-            vec!["mol-sel", "--nope"],
-            vec!["mol-sel", "/no/such/file.json"],
+            vec!["mol", "sel"],
+            vec!["mol", "sel", "a", "b"],
+            vec!["mol", "sel", "--nope"],
+            vec!["mol", "sel", "/no/such/file.json"],
         ] {
             assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
         }
-        assert_eq!(run(&["mol-sel", "--help"]).code, 0);
+        assert_eq!(run(&["mol", "sel", "--help"]).code, 0);
     }
 }

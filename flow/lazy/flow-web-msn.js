@@ -1,6 +1,6 @@
 // @ts-check
 // Flow (administrator mode): the functions of the MSn steps (spectra.msn_graph, msn.library_export, msn.table_export, and spectra.match with the `tree` algorithm). The infusion is the file the plan names that is open in the Data tab;
-// the graph, the library and the tables come from the routes of the engine of the page (`api/msn_grafo`, `api/msn_grafo/export`: the .wasm msngrafo, the same functions as `mzlab-cli msn-graph`
+// the graph, the library and the tables come from the routes of the engine of the page (`api/msn_grafo`, `api/msn_grafo/export`: the .wasm msngrafo, the same functions as `mzlab-cli msn graph`
 // and `msn-lib export`; the library search posts the library of the user, the one the Fragmentation graph card keeps, to `api/msnlib/search`), so the bytes are the ones of the command. Reports the same events as flow-web-run.js, keeps each result in OPFS (mzlab/flow/) and resolves with the texts. Docs: docs/agenti/flow-web.md.
 (() => {
   "use strict";

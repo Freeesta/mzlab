@@ -1,7 +1,7 @@
 //! `cip/1`: the CIP descriptors of the drawn stereo (R/S of tetrahedral centres, r/s when only R against S tells the ligands apart, E/Z of
 //! double bonds), from the molfile of the canvas. Only defined elements on a stereo site get a label; a unit whose ligands the rules cannot
 //! tell apart gets none. Descriptors of the other units feed rules 3 to 5 in two passes. Same bytes in the molkit `.wasm`, the app
-//! (`feat/grafo`, `kind: "cip"`) and `mzlab-cli mol-cip`.
+//! (`feat/grafo`, `kind: "cip"`) and `mzlab-cli mol cip`.
 
 use mzlab_core::elements;
 use mzlab_core::error::{Error, Result};

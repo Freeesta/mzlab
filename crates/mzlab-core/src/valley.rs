@@ -1,7 +1,7 @@
 //! The valleys of an integration window: where a drop line splits two peaks that overlap. A valley splits only when the smaller of its two maxima
 //! rises above it by at least `depth` × the highest point of the window (the trace minus the baseline, a 3-point mean to find the extrema), so the
 //! noise of a tail never splits it and a shoulder (no minimum between two maxima) is never split. The parts share the baseline and the split
-//! points, so their areas add up to the area of the whole window (`manint`, `mzlab-cli peak-split`).
+//! points, so their areas add up to the area of the whole window (`manint`, `mzlab-cli peak split`).
 
 use crate::baseline::integrate;
 

@@ -1,4 +1,4 @@
-"""The library written by `mzlab-cli msn-lib build` (two standards from the public synthetic infusion, never lab data) validates against
+"""The library written by `mzlab-cli msn lib build` (two standards from the public synthetic infusion, never lab data) validates against
 docs/schemi/msn-lib-1.json, every graph inside against docs/schemi/msn-graph-1.json, and the entries come out sorted by id."""
 import json
 import shutil

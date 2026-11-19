@@ -223,7 +223,7 @@ fn an_index_that_starts_just_after_queueing_holds_the_job_back() {
     wait(&c, "a.mzXML", "done");
 }
 
-/// A budget that gives each conversion less than its share runs fewer at once, and the page gets the very notice `mzlab-cli convert` prints.
+/// A budget that gives each conversion less than its share runs fewer at once, and the page gets the very notice `mzlab-cli file convert` prints.
 #[test]
 fn a_small_budget_converts_fewer_datasets_at_once_with_the_notice_of_the_cli() {
     let d = tempfile::tempdir().unwrap();
