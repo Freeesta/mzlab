@@ -47,7 +47,7 @@ function computePosition(rect, dialogWidth, dialogHeight, vw, vh) {
 
 // Opening steps of «Your data», kept only when on screen as the tour starts (files waiting for the first click).
 const PASSI_INIZIALI = [
-  { id: "campioni", opt: true, target: () => document.getElementById("wtable") },
+  { id: "samples", opt: true, target: () => document.getElementById("wtable") },
   { id: "primo", opt: true, target: () => document.getElementById("wtable")?.offsetParent ? document.querySelector("#flst .fl[data-k]") : null }
 ];
 /** Drops the optional steps whose target is not visible now. @template {{ opt?: boolean, target: () => any }} T @param {T[]} lista @returns {T[]} */

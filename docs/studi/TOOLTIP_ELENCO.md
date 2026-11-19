@@ -693,9 +693,9 @@ Check: scanner sites 660 = 650 listed + 10 excluded (appendix A); nothing is ski
 | 626 | ← |  | TP_Mine/js/52_attributio_banco.js:275 | Previous feature | 16 |  |
 | 627 | → |  | TP_Mine/js/52_attributio_banco.js:275 | Next feature | 12 |  |
 | 628 | Close |  | TP_Mine/js/52_attributio_banco.js:275 | Close Bench 2b | 14 |  |
-| 629 | Condition of ${n} |  | TP_Mine/lazy/gruppi-campioni.js:43 | Proposed from the name: Confirm conditions keeps it | 51 |  |
-| 630 | Time of ${n} |  | TP_Mine/lazy/gruppi-campioni.js:44 | Proposed from the name: Enter confirms | 38 |  |
-| 631 | Confirm conditions |  | TP_Mine/lazy/gruppi-campioni.js:96 | Keeps the conditions and the times proposed from the names | 58 |  |
+| 629 | Condition of ${n} |  | TP_Mine/lazy/groups-samples.js:43 | Proposed from the name: Confirm conditions keeps it | 51 |  |
+| 630 | Time of ${n} |  | TP_Mine/lazy/groups-samples.js:44 | Proposed from the name: Enter confirms | 38 |  |
+| 631 | Confirm conditions |  | TP_Mine/lazy/groups-samples.js:96 | Keeps the conditions and the times proposed from the names | 58 |  |
 | 632 |  |  | TP_Mine/lazy/gruppi-vista.js:155 | area | 4 |  |
 | 633 |  |  | TP_Mine/lazy/gruppi-vista.js:155 | area of the filled cell | 23 |  |
 | 634 | (−) |  | TP_Mine/lazy/gruppi-vista.js:166 | negative polarity | 17 |  |

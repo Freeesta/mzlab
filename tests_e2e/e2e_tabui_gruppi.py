@@ -101,7 +101,7 @@ try:
 
         def conditions():
             pg.click("#tp-cond > summary"); pg.wait_for_selector("#tp-cfiles table .tpg-cond", timeout=120000)
-            assert "gruppi-campioni.js" in lazy(), lazy()
+            assert "groups-samples.js" in lazy(), lazy()
             assert "gruppi-vista.js" not in lazy(), lazy()
             got = pg.evaluate("[...new Set([...document.querySelectorAll('#tp-cfiles .tpg-cond')].map(e => e.value).filter(Boolean))].sort()")
             assert got == sorted(COND), got

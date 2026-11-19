@@ -1,4 +1,4 @@
-"""Tabui: the table of the files with role, condition, time and replicate (TP_Mine/lazy/gruppi-campioni.js, samples/1), alone on a test page (a container the test adds; Tabui does not use it yet).
+"""Tabui: the table of the files with role, condition, time and replicate (TP_Mine/lazy/groups-samples.js, samples/1), alone on a test page (a container the test adds; Tabui does not use it yet).
 Names of two conditions (G_O2_t30, G_O2_t60, G_N2_t30, G_N2_t60) and a shared blank. Checks: opening Tabui downloads nothing from lazy/ (TPLAZY.load brings the script once); the conditions are proposed from the names (yellow until «Confirm conditions»), the blank is shared; «Set condition…» on two files, the reference condition, keyboard (Tab,
 arrows in a select, Enter on «Confirm conditions»); the notebook (NB.samples, NB.gruppi_opts) holds it and a reload gives the same table; MZLAB_LR_MISS empty. Builds the site
 (SKIP without cargo or wasm-bindgen); MZLAB_PIPE_SITE=<built site with the engine .wasm> reuses one. Run from the repo root."""
@@ -58,13 +58,13 @@ try:
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go", timeout=60000)
             assert not mine(), mine()
             idx = pg.evaluate("fetch('static/mzfinder/indice.json').then(r => r.json()).then(j => j.lazy)")
-            assert "gruppi-campioni.js" in idx, idx
+            assert "groups-samples.js" in idx, idx
         step("opening Tabui downloads nothing from lazy/ (the file is listed in indice.json)", lazy_idle)
 
         # the test page: a container in the page, the component mounted by the test (Tabui does not use it yet)
         MOUNT = """async (names) => {
             await window.nbEnsure();                                       // the notebook is read first, or a save would be refused
-            await window.TPLAZY.load("gruppi-campioni.js"); await window.TPLAZY.load("gruppi-campioni.js");
+            await window.TPLAZY.load("groups-samples.js"); await window.TPLAZY.load("groups-samples.js");
             const R = await import(URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["finder-ruoli.js"]], { type: "text/javascript" })));
             const call = async (op, j) => { const r = await fetch("api/samples/" + op, { method: "POST", body: j }); const t = await r.text(); if (!r.ok) throw new Error(t); return t; };
             let el = document.getElementById("tp-gfiles"); if (el) { el.textContent = ""; } else { el = document.createElement("div"); el.id = "tp-gfiles"; document.body.prepend(el); }
@@ -73,7 +73,7 @@ try:
         }"""
         def open_table():
             pg.evaluate(MOUNT, NAMES); pg.wait_for_selector(f"{G} table .tpg-cond", timeout=120000)
-            n = len([u for u in tags if u.endswith("/lazy/gruppi-campioni.js")])      # the script tags in the request log (the resource timing buffer is full of Flow's files; the warm-up fetch is not a tag)
+            n = len([u for u in tags if u.endswith("/lazy/groups-samples.js")])      # the script tags in the request log (the resource timing buffer is full of Flow's files; the warm-up fetch is not a tag)
             assert n == 1, ("the script is asked for once", n, mine())
             assert pg.locator(f"{G} tr .tpg-cond").count() == len(NAMES)
             assert pg.evaluate("window.GRCHANGES.length") >= 1, "the page is told what the table holds at once"

@@ -5,7 +5,7 @@ from lib import *
 import pathlib
 sys.path.insert(0, str(ROOT / "tools")); import dati_sintetici as ds, numpy as np
 AXE = axe_path()
-D = pathlib.Path(__file__).resolve().parent / "shots" / "gruppi_per_tmp"; D.mkdir(parents=True, exist_ok=True)
+D = pathlib.Path(__file__).resolve().parent / "shots" / "groups_for_tmp"; D.mkdir(parents=True, exist_ok=True)
 NAMES = ["MQ_blk", "MQ_Wash_1", "MQ_Wash_2", "TW_blk", "MQ_std_BTZ_1ppm", "QC_Std_5ppm_mid"]
 NAMES += [f"MQ_{c}_{t}" for c in ("H2O2", "N2", "O2", "PMS") for t in ("T00", "T01", "T02", "T05")]
 NAMES += [f"TW_{c}_{t}" for c in ("AIR", "H2O2") for t in ("T00", "T01", "T02", "T05")]
@@ -30,7 +30,7 @@ def open_menu(pg):
     pg.click("#sb-by"); wait_for_js(pg, f"!!document.querySelector('.gby-menu') && {ITEM}.length > 3", 10000)
 RUN = """(sel) => axe.run(document.querySelector(sel) || document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}})
   .then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | ')]))"""
-r = Run(port=8962, wd="/tmp/wd_gruppi_per")
+r = Run(port=8962, wd="/tmp/wd_groups_for")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 900})

@@ -1,9 +1,9 @@
 // @ts-strict
 // IndexedDB for mzLab ("mzlab_lab", migrated from legacy "qqq_lab"):
-// manages stores (files, kv, liste_utente, manifest, molecole), connection lifecycle, and transparent migration.
+// manages stores (files, kv, liste_utente, manifest, molecules), connection lifecycle, and transparent migration.
 export const DB_NAME = typeof NOMI !== "undefined" ? NOMI.DB : "mzlab_lab";
 export const DB_OLD = typeof NOMI !== "undefined" && NOMI.DB_OLD ? NOMI.DB_OLD : "qqq_lab";
-export const DB_VER = 4;
+export const DB_VER = 5;
 export const SCHEMA = 3;
 
 /**
@@ -16,7 +16,7 @@ export function upgrade(db) {
   if (!db.objectStoreNames.contains("liste_utente")) db.createObjectStore("liste_utente", { keyPath: "id" });
   if (!db.objectStoreNames.contains("manifest")) db.createObjectStore("manifest", { keyPath: "path" });
   // the molecules of the user (molecules/1 records, one per id); added in version 4, nothing else is touched
-  if (!db.objectStoreNames.contains("molecole")) db.createObjectStore("molecole", { keyPath: "id" });
+  if (!db.objectStoreNames.contains("molecules")) db.createObjectStore("molecules", { keyPath: "id" });
 }
 
 /** @param {string} name */
@@ -225,7 +225,7 @@ export function lab(onblocked) {
  * What the reset «Files» removes from the main database, written once: the page's wipe (reset.js), the engine's backstop after the reload (`lr_clear` with this
  * spec, rust-worker.js) and the desktop app's native store (`lr_clear`, store.rs) all apply it. Gone: the loaded files and their manifest (stores), the stored
  * folder handle (kv), the parts of the notebook that name files (open-files list, panels, sample roles). Everything else stays: drawing, saved lists
- * (liste_utente), molecules (molecole), the rest of the notebook.
+ * (liste_utente), molecules (store molecules), the rest of the notebook.
  */
 export const RESET_FILES = Object.freeze({ stores: ["files", "manifest"], kv: ["cartella.puntata"], notebook: ["session", "ui", "sampleCols", "sampleEx"] });
 
