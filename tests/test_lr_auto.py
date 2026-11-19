@@ -47,7 +47,7 @@ def answers(tmp_path_factory):
             t, y, truth = trace(name, seed)
             # the engine reads the same rounded numbers as the CSV
             t, y = np.round(t, 6), np.round(y, 3)
-            r = json.loads(cli("peak", "auto-lr", str(write_csv(d / f"{name}-{seed}.csv", t, y)), "--set", "area_unit=min").stdout)
+            r = json.loads(cli("peak", "auto-lr", str(write_csv(d / f"{name}-{seed}.csv", t, y)), "--area-unit", "min").stdout)
             out[(name, seed)] = (t, y, truth, r)
     return out
 
@@ -114,7 +114,7 @@ def test_a_trace_below_zero_is_never_a_negative_area(tmp_path):
         a = int(np.argmin(np.abs(t - truth["apex"][0])))
         y[a - 4] = -1000.0
         t, y = np.round(t, 6), np.round(y, 3)
-        r = json.loads(cli("peak", "auto-lr", str(write_csv(tmp_path / f"neg-{seed}.csv", t, y)), "--set", "area_unit=min").stdout)
+        r = json.loads(cli("peak", "auto-lr", str(write_csv(tmp_path / f"neg-{seed}.csv", t, y)), "--area-unit", "min").stdout)
         assert r["params"]["baseline"] == "engine"
         for p in r["peaks"]:
             lo, hi = p["lo"], p["hi"]
@@ -132,7 +132,7 @@ def test_areas_are_counts_seconds_by_default_and_minutes_on_request(tmp_path):
     t, y, _ = trace("singles", 1)
     f = str(write_csv(tmp_path / "unit.csv", np.round(t, 6), np.round(y, 3)))
     s = json.loads(cli("peak", "auto-lr", f).stdout)
-    m = json.loads(cli("peak", "auto-lr", f, "--set", "area_unit=min").stdout)
+    m = json.loads(cli("peak", "auto-lr", f, "--area-unit", "min").stdout)
     assert s["peaks"] and len(s["peaks"]) == len(m["peaks"])
     for a, b in zip(s["peaks"], m["peaks"]):
         for k in ("area", "below", "area_zero"):

@@ -308,7 +308,7 @@ try:
             whole = body(table(one))
             need(len(whole) == 1, whole); whole = whole[0]
             sets = [f"file={TRUE['campioni'].index('Sample_B')}", "tr=2", f"a={w['a']}", f"b={w['b']}", f"baseline={w.get('baseline', 'zero')}"] + ([f"line={','.join(str(v) for v in w['line'])}"] if "line" in w else [])
-            peak_split = lambda *extra: cli("peak", "split", D / "sim3.wiff", *[x for kv in sets + list(extra) for x in ("--set", kv)])
+            peak_split = lambda *extra: cli("peak", "split", D / "sim3.wiff", *[x for kv in sets + list(extra) for x in ("--" + kv.split("=", 1)[0], kv.split("=", 1)[1])])
             # V on the chart with the integration selected: the engine's drop line at the depth shown, the bytes of mzlab-cli peak split
             pg.evaluate(f"(() => {{ const p = {P}; p.isel = {it}; draw(p); p.cv.focus(); }})()"); frames(pg, 2)
             pg.keyboard.press("v")
