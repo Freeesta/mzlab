@@ -1,10 +1,11 @@
 // @ts-strict
 // @ts-noany
-// Page shell: helpers shared with explore.js (classic scripts share globals), start screen, views; fmtFormula / fmtAdduct (subscripts, superscripts) are defined in explore.js, loaded before this script.
+// Page shell: helpers shared with explore.js (classic scripts share globals), start screen, views.
 const $=(/** @type {string} */ s)=>document.querySelector(s);
 const fmt=(/** @type {number} */ v)=>v===0?"0":(Math.abs(v)>=1e4||Math.abs(v)<.01)?v.toExponential(1):(+v.toPrecision(3)).toString();
 const css=(/** @type {string} */ n)=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const esc=(/** @type {unknown} */ t)=>String(t).replace(/[&<>"]/g,c=>(/** @type {Record<string, string>} */ ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}))[c]);
+// fmtFormula / fmtAdduct (subscripts, superscripts) are defined in explore.js, loaded before this script
 async function api(/** @type {string} */ u){const r=await fetch(u);const j=await r.json();if(j.error)throw I18N.err(j);return j}
 // an error of any shape (Error, answer of api/, text) or nothing
 /** @param {unknown} [e_] */ function fail(e_){const e=/** @type {{ message?: string } | undefined} */(e_);$("#err").textContent=e?String(e.message||e):""}
@@ -25,6 +26,7 @@ function drawSized(/** @type {Bag} */ p){return p._sz===sizeKey(p)?undefined:dra
 function nice(/** @type {number} */ a,/** @type {number} */ b,/** @type {number} */ n){const s=(b-a)/n,p=Math.pow(10,Math.floor(Math.log10(s))),m=s/p,st=(m<1.5?1:m<3?2:m<7?5:10)*p,o=[];for(let t=Math.ceil(a/st)*st;t<=b+1e-9;t+=st)o.push(+t.toFixed(10));return o}
 function smooth(/** @type {number[]} */ y,/** @type {number} */ k){if(!k)return y;const n=y.length,o=new Array(n);for(let i=0;i<n;i++){const v=y[i],a=i?y[i-1]??v:v,c=i<n-1?y[i+1]??v:v;o[i]=(a+2*v+c)/4}return o}
 const M={l:66,r:14,t:14,b:40};   // plot margins (px): room for tick labels and axis titles
+
 async function init(){try{await bootSession();await Promise.all(E.panels.map((/** @type {{ ready?: unknown }} */ p)=>p.ready).filter(Boolean)).catch(()=>{});
   const d=await api("api/state");fail();window.qqReady=true;if(typeof AVVIO!=="undefined")AVVIO.segnaPronto();if(window.ldClearBootTimer)window.ldClearBootTimer();setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);if(typeof AVVIO!=="undefined")AVVIO.segnaSessione(!!S.sess);$("#newrun").hidden=!hasSess;if(!S.sess)showStart(d);else{if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();restoreRows(d);applyView();if(window.QQRESET)QQRESET.remind()}if(window.BARRA)BARRA.init()}catch(e){fail(e);if(typeof AVVIO!=="undefined")AVVIO.segnaFallito(e)}finally{if(!$("#loading").hidden)loading(false)}}
 
@@ -52,6 +54,7 @@ document.querySelectorAll("#nav button:not([data-late])").forEach(b=>b.onclick=(
 {const follow=()=>{const v=hashView()||"data";if(v!==S.view)setView(v,true)};addEventListener("popstate",follow);addEventListener("hashchange",follow)}   // a typed or pasted address fires both or only one, depending on the browser
 // a direct address shows its view at once, without waiting for the engine (the loading veil stays until the program is ready)
 if(S.view!=="data"){$("#v-draw").hidden=S.view!=="draw";document.documentElement.classList.toggle("in-draw",S.view==="draw");document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.view))}
+
 // ------------------------------------------------------------------ start screen: upload, check times and types, open
 const sz=(/** @type {number | null | undefined} */ b)=>b==null?"—":b>1e6?(b/1e6).toFixed(1)+" MB":Math.max(1,Math.round(b/1e3))+" kB";
 /** @param {unknown} [body] @param {BodyInit} [raw] */ async function post(/** @type {string} */ u,body,raw){const r=await fetch(u,{method:"POST",body:raw??JSON.stringify(body||{})});const j=await r.json();if(j.error)throw I18N.err(j);return j}
