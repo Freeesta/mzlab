@@ -13,7 +13,7 @@ ONE = {
 
 
 def doc(*proposals, **extra):
-    return {"schema": "param-proposal/1", "series": "s1", "proposals": list(proposals), "missing": [{"signal": "blank_files", "asks": "Q-blank"}],
+    return {"schema": "param-proposal/1", "series": "s1", "choices": [{"key": "reference_file", "value": "a.mzML", "reason": "the first file that opened and is not a blank"}], "proposals": list(proposals), "missing": [{"signal": "blank_files", "asks": "Q-blank"}],
             "warnings": ["warn.params.mixed_polarity"], **extra}
 
 
@@ -25,3 +25,8 @@ def test_proposal_without_proof_or_with_unknown_field_is_rejected():
     assert list(V.iter_errors(doc({k: v for k, v in ONE.items() if k != "proof"})))
     assert list(V.iter_errors(doc({**ONE, "free_text": "x"})))
     assert list(V.iter_errors(doc({**ONE, "confidence": "certain"})))
+
+
+def test_a_choice_needs_its_reason():
+    assert list(V.iter_errors(doc(ONE, choices=[{"key": "reference_file", "value": "a.mzML", "reason": ""}])))
+    assert list(V.iter_errors(doc(ONE, choices=[{"key": "reference_file", "value": "a.mzML"}])))
