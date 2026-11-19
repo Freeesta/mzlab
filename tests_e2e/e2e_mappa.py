@@ -84,6 +84,7 @@ try:
             pg.keyboard.press("Shift+ArrowRight"); pg.wait_for_function(f"function (p) {{ const q = MAPPA.point({M}), t = {M}._mz.xic.tr[0], k = t.rt.indexOf(q.rt); return q.rt > p.rt && k > 0 && t.y[k] >= t.y[k - 1] && t.y[k] >= t.y[k + 1]; }}", arg=p2, timeout=15000); p3 = pt()
             y = pg.evaluate(f"{M}._mz.xic.tr[0].y"); rts = pg.evaluate(f"{M}._mz.xic.tr[0].rt"); k = rts.index(p3["rt"])
             assert p3["rt"] > p2["rt"] and y[k] >= y[k - 1] and y[k] >= y[k + 1], (p2, p3)         # an apex of the XIC
+            wait_for_js(pg, f"{M}._mz.spec && Math.abs({M}._mz.spec.rt - {p3['rt']}) < 1e-6")      # the spectrum of the new scan has arrived: the key reads it, not the one of the scan before
             up, dn = pg.evaluate(f"[MAPPA.peakStep({M}._mz.spec,{p3['mz']},1),MAPPA.peakStep({M}._mz.spec,{p3['mz']},-1)]")
             want = up if up is not None else dn; assert want is not None, (up, dn)
             pg.keyboard.press("Shift+ArrowUp" if up is not None else "Shift+ArrowDown")              # next peak of the spectrum (above 3 x the MAD noise)
