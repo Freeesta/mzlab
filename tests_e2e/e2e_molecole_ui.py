@@ -254,6 +254,24 @@ try:
             assert res["files"] == "bytes" and res["kv"] == '{"session":[]}' and res["lst"] == {"id": "l1", "name": "My list"} and res["man"] == {"path": "files/a.mzML", "bytes": 5}, res
         step("database 3 -> 4: the new store is added, files / kv / liste_utente / manifest keep their rows", migration)
 
+        def old_rows():
+            # a record saved before the keys were English (`nome`): the window says so, the catalogue still works, the next save drops the old row
+            pg.evaluate("""new Promise((ok, no) => { const q = indexedDB.open('mzlab_lab'); q.onerror = () => no(q.error);
+              q.onsuccess = () => { const x = q.result.transaction('molecole', 'readwrite'), s = x.objectStore('molecole'); s.clear(); s.put({ id: 'u:000000000001', nome: 'Vecchia', formula: 'CH4' });
+                x.oncomplete = () => { q.result.close(); ok(); }; }; })""")
+            pg.reload(); pg.wait_for_function('window.qqReady===true', timeout=60000)
+            pg.evaluate(OPEN); pg.wait_for_selector("#moldlg .mol-box", state="visible")
+            pg.wait_for_selector("#mol-errs", state="visible")
+            txt = pg.inner_text("#mol-errs"); assert "older version" in txt and "Row 1:" in txt, txt
+            search("paracetamol"); assert names(), "the catalogue still works"
+            add(nome="Nuova", formula="CH4")
+            assert not pg.is_visible("#mol-errs"), "the old row is gone with the next save"
+            left = pg.evaluate("""new Promise(ok => { const q = indexedDB.open('mzlab_lab'); q.onsuccess = () => { const g = q.result.transaction('molecole').objectStore('molecole').getAll();
+              g.onsuccess = () => { q.result.close(); ok(g.result.map(r => r.nome || r.name)); }; }; })""")
+            assert left == ["Nuova"], left
+            pg.keyboard.press("Escape")
+        step("an old-format record is refused with a clear message; the catalogue works; the next save clears it", old_rows)
+
         def clean():
             assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length"), pg.evaluate("window.MZLAB_LR_MISS")
             bad = [e for e in r.errs if e[0] in ("pageerror", "console.error") or e[0].startswith("http")]

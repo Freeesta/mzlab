@@ -96,6 +96,7 @@ I18N.add("en", {
   "err.msnlib.bad": "The user library is not valid",
   "err.msngrafo.noMzml": "The maker's file produced no mzML: the graph cannot be built.",
   "error.molecules.noName": "The name is missing",
+  "error.molecules.oldFormat": "Saved by an older version in a format this one cannot read: add the molecule again",
   "error.molecules.badFormula": "The molecular formula cannot be read",
   "error.molecules.massMismatch": "The mass does not match the formula",
   "error.molecules.badMass": "The mass is not a number",

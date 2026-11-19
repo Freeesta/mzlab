@@ -3,7 +3,7 @@
 //! property is the column `prop:<key>[<unit>]` with `prop:<key>:source` (required) and `prop:<key>:conditions`. Every wrong row gives its own error and the
 //! file is refused if there is one. `to_csv` writes the canonical columns, the same bytes that `from_csv` reads back.
 
-use super::{finalizza, repeated, Molecule, Proprieta, RowError};
+use super::{finalize, repeated, Molecule, Property, RowError};
 
 /// Canonical columns, in order.
 pub const COLUMNS: [&str; 16] = [
@@ -204,7 +204,7 @@ fn items(s: &str) -> Vec<String> {
 fn row(
     h: &Header,
     cells: &[String],
-    tipo: &str,
+    level: &str,
     file: Option<&str>,
 ) -> Result<Molecule, (&'static str, String)> {
     let at = |k: usize| {
@@ -234,54 +234,54 @@ fn row(
     };
     let mut m = Molecule {
         id: at(0).into(),
-        nome: at(1).into(),
+        name: at(1).into(),
         synonyms: items(at(2)),
         formula: at(3).into(),
         load: charge,
         smiles: Some(at(6).into()),
         inchikey: Some(at(7).into()),
-        addotti: items(at(8)),
+        adducts: items(at(8)),
         collections: items(at(9)),
-        classi: items(at(10)),
+        classes: items(at(10)),
         cas: Some(at(11).into()),
         pubchem_cid: Some(at(12).into()),
-        note: at(13).into(),
+        notes: at(13).into(),
         ..Molecule::default()
     };
-    m.origine.tipo = if at(14).is_empty() {
-        tipo.into()
+    m.origin.kind = if at(14).is_empty() {
+        level.into()
     } else {
         at(14).to_lowercase()
     };
-    m.origine.catalog = items(at(15));
-    m.origine.file = file
-        .filter(|_| m.origine.tipo == "imported")
+    m.origin.catalog = items(at(15));
+    m.origin.file = file
+        .filter(|_| m.origin.kind == "imported")
         .map(str::to_string);
     for p in &h.props {
         let v = cell(Some(p.value));
         if v.is_empty() {
             continue;
         }
-        let valore = v
+        let val = v
             .parse::<f64>()
             .map_err(|_| ("error.molecules.badProperty", format!("{}: {v}", p.key)))?;
-        m.proprieta.push(Proprieta {
-            chiave: p.key.clone(),
-            value: valore,
-            unita: p.unit.clone(),
+        m.properties.push(Property {
+            key: p.key.clone(),
+            value: val,
+            unit: p.unit.clone(),
             provenance: cell(p.source),
             conditions: cell(p.conditions),
         });
     }
-    finalizza(&mut m, control)?;
+    finalize(&mut m, control)?;
     Ok(m)
 }
 
-/// The molecules of a CSV, in the order of the rows, or an error for every wrong row. A row without `origin` gets the level `tipo` (and `file` when it is
+/// The molecules of a CSV, in the order of the rows, or an error for every wrong row. A row without `origin` gets the level `level` (and `file` when it is
 /// imported).
 pub fn from_csv(
     text: &str,
-    tipo: &str,
+    level: &str,
     file: Option<&str>,
 ) -> Result<Vec<Molecule>, Vec<RowError>> {
     let recs = records(text, delimiter(text));
@@ -291,7 +291,7 @@ pub fn from_csv(
     let h = header(hline, head).map_err(|e| vec![e])?;
     let (mut out, mut errors) = (Vec::new(), Vec::new());
     for (line, cells) in body {
-        match row(&h, cells, tipo, file) {
+        match row(&h, cells, level, file) {
             Ok(m) => out.push((*line, m)),
             Err((key, detail)) => errors.push(err(*line, key, detail)),
         }
@@ -316,11 +316,7 @@ fn quote(s: &str) -> String {
 fn prop_columns(ms: &[Molecule]) -> Vec<(String, String)> {
     let mut v: Vec<(String, String)> = ms
         .iter()
-        .flat_map(|m| {
-            m.proprieta
-                .iter()
-                .map(|p| (p.chiave.clone(), p.unita.clone()))
-        })
+        .flat_map(|m| m.properties.iter().map(|p| (p.key.clone(), p.unit.clone())))
         .collect();
     crate::sortc::slice_ord(&mut v);
     v.dedup();
@@ -331,7 +327,7 @@ fn fixed_cells(m: &Molecule) -> Vec<String> {
     let opt = |s: &Option<String>| s.clone().unwrap_or_default();
     vec![
         m.id.clone(),
-        m.nome.clone(),
+        m.name.clone(),
         m.synonyms.join("|"),
         m.formula.clone(),
         if m.load == 0 {
@@ -339,17 +335,17 @@ fn fixed_cells(m: &Molecule) -> Vec<String> {
         } else {
             m.load.to_string()
         },
-        format!("{:.6}", m.massa),
+        format!("{:.6}", m.mass),
         opt(&m.smiles),
         opt(&m.inchikey),
-        m.addotti.join("|"),
+        m.adducts.join("|"),
         m.collections.join("|"),
-        m.classi.join("|"),
+        m.classes.join("|"),
         opt(&m.cas),
         opt(&m.pubchem_cid),
-        m.note.clone(),
-        m.origine.tipo.clone(),
-        m.origine.catalog.join("|"),
+        m.notes.clone(),
+        m.origin.kind.clone(),
+        m.origin.catalog.join("|"),
     ]
 }
 
@@ -358,9 +354,9 @@ pub fn to_csv(ms: &[Molecule]) -> String {
     let pc = prop_columns(ms);
     let cond = |k: &str, u: &str| {
         ms.iter().any(|m| {
-            m.proprieta
+            m.properties
                 .iter()
-                .any(|p| p.chiave == k && p.unita == u && !p.conditions.is_empty())
+                .any(|p| p.key == k && p.unit == u && !p.conditions.is_empty())
         })
     };
     let mut head: Vec<String> = COLUMNS.iter().map(|c| c.to_string()).collect();
@@ -380,7 +376,7 @@ pub fn to_csv(ms: &[Molecule]) -> String {
     for m in ms {
         let mut cells = fixed_cells(m);
         for (k, u) in &pc {
-            let p = m.proprieta.iter().find(|p| p.chiave == *k && p.unita == *u);
+            let p = m.properties.iter().find(|p| p.key == *k && p.unit == *u);
             cells.push(p.map_or(String::new(), |p| p.value.to_string()));
             cells.push(p.map_or(String::new(), |p| p.provenance.clone()));
             if cond(k, u) {

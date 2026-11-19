@@ -57,7 +57,7 @@ function mostraErrori(/** @type {ErroreRiga[]} */ errs, /** @type {string} */ ti
   if (!errs.length) { box.hidden = true; return; }
   const p = document.createElement("p"), ul = document.createElement("ul");
   p.textContent = titolo;
-  ul.replaceChildren(...errs.slice(0, MAX_ERRORI).map(e => { const li = document.createElement("li"); li.textContent = (e.line ? t("mol.err.row", { riga: e.line }) + " " : "") + testoErrore(e); return li; }));
+  ul.replaceChildren(...errs.slice(0, MAX_ERRORI).map(e => { const li = document.createElement("li"); li.textContent = (e.line ? t("mol.err.row", { row: e.line }) + " " : "") + testoErrore(e); return li; }));
   box.append(p, ul);
   if (errs.length > MAX_ERRORI) { const m = document.createElement("p"); m.textContent = t("mol.err.more", { n: errs.length - MAX_ERRORI }); box.append(m); }
   box.hidden = false;
@@ -192,6 +192,7 @@ async function salvaModuloOra() {
   if ("errori" in r) return mostra(r.errori);
   if ("esiste" in r) return mostra([{ line: 0, key: "error.molecules.dupId", text: r.esiste.name }]);
   const nome = lettura.rec.name || "";
+  mostraErrori([], "");   // a save writes the whole archive again: what the old archive had wrong is gone
   tornaElenco();
   stato(t("mol.saved", { name: nome }));
 }

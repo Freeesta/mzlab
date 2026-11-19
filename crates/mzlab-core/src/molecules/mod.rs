@@ -10,11 +10,11 @@ mod routes;
 mod search;
 
 pub use csv::{delimiter, from_csv, table, to_csv};
-pub use ion::ione;
+pub use ion::ion_of;
 pub use json::{digest, errors_json, from_json, hits_json, record_json, to_json};
 pub use levels::merge;
 pub use routes::route;
-pub use search::{cerca, search_wide};
+pub use search::{search, search_wide};
 
 use crate::budget::sha256_hex;
 use crate::elements::{fmt, mass, parse_formula, ELECTRON};
@@ -28,10 +28,10 @@ pub const MASS_TOL: f64 = 0.0005;
 
 /// An experimental or calculated datum of a molecule; unit (`1` when it has none) and source are always there.
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct Proprieta {
-    pub chiave: String,
+pub struct Property {
+    pub key: String,
     pub value: f64,
-    pub unita: String,
+    pub unit: String,
     pub provenance: String,
     pub conditions: String,
 }
@@ -39,7 +39,7 @@ pub struct Proprieta {
 /// Where a record comes from; `catalog` only for the catalogue, `file` for an imported file, the dates are ISO.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Origin {
-    pub tipo: String,
+    pub kind: String,
     pub catalog: Vec<String>,
     pub file: Option<String>,
     pub created: Option<String>,
@@ -49,23 +49,23 @@ pub struct Origin {
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Molecule {
     pub id: String,
-    pub nome: String,
+    pub name: String,
     pub synonyms: Vec<String>,
     /// Hill order, no sign.
     pub formula: String,
     pub load: i32,
-    /// Monoisotopic, Da, 6 decimals: computed by `finalizza`, never read.
-    pub massa: f64,
+    /// Monoisotopic, Da, 6 decimals: computed by `finalize`, never read.
+    pub mass: f64,
     pub smiles: Option<String>,
     pub inchikey: Option<String>,
-    pub addotti: Vec<String>,
+    pub adducts: Vec<String>,
     pub collections: Vec<String>,
-    pub classi: Vec<String>,
+    pub classes: Vec<String>,
     pub cas: Option<String>,
     pub pubchem_cid: Option<String>,
-    pub proprieta: Vec<Proprieta>,
-    pub note: String,
-    pub origine: Origin,
+    pub properties: Vec<Property>,
+    pub notes: String,
+    pub origin: Origin,
 }
 
 /// A wrong row (CSV: the 1-based line; JSON: the 1-based position of the record), an `error.molecules.*` key and the text that explains it.
@@ -124,28 +124,25 @@ fn id_ok(id: &str) -> bool {
 }
 
 fn properties(m: &mut Molecule) -> Result<(), Bad> {
-    for p in &mut m.proprieta {
+    for p in &mut m.properties {
         for s in [
-            &mut p.chiave,
-            &mut p.unita,
+            &mut p.key,
+            &mut p.unit,
             &mut p.provenance,
             &mut p.conditions,
         ] {
             *s = s.trim().to_string();
         }
-        if p.chiave.is_empty()
-            || p.unita.is_empty()
-            || p.provenance.is_empty()
-            || !p.value.is_finite()
+        if p.key.is_empty() || p.unit.is_empty() || p.provenance.is_empty() || !p.value.is_finite()
         {
-            return Err(("error.molecules.badProperty", p.chiave.clone()));
+            return Err(("error.molecules.badProperty", p.key.clone()));
         }
     }
-    crate::sortc::slice_by(&mut m.proprieta, |a, b| {
-        (&a.chiave, &a.unita).cmp(&(&b.chiave, &b.unita))
+    crate::sortc::slice_by(&mut m.properties, |a, b| {
+        (&a.key, &a.unit).cmp(&(&b.key, &b.unit))
     });
-    match m.proprieta.windows(2).find(|w| w[0].chiave == w[1].chiave) {
-        Some(w) => Err(("error.molecules.dupProperty", w[0].chiave.clone())),
+    match m.properties.windows(2).find(|w| w[0].key == w[1].key) {
+        Some(w) => Err(("error.molecules.dupProperty", w[0].key.clone())),
         None => Ok(()),
     }
 }
@@ -153,21 +150,21 @@ fn properties(m: &mut Molecule) -> Result<(), Bad> {
 /// Puts a record in its one form: trimmed text, lists tidy, formula in Hill order, mass computed from formula and charge (and checked against `control`
 /// when the file had one), the InChIKey valid, the `id` assigned when empty (never changed after). A record without a formula is a mass-only entry: its
 /// mass is `control` (a positive number), taken as it is.
-pub fn finalizza(m: &mut Molecule, control: Option<f64>) -> Result<(), Bad> {
-    m.nome = m.nome.trim().to_string();
-    if m.nome.is_empty() {
+pub fn finalize(m: &mut Molecule, control: Option<f64>) -> Result<(), Bad> {
+    m.name = m.name.trim().to_string();
+    if m.name.is_empty() {
         return Err(("error.molecules.noName", String::new()));
     }
     m.formula = m.formula.trim().to_string();
     match control.filter(|c| m.formula.is_empty() && *c > 0.0) {
-        Some(c) => m.massa = round(c, 6),
+        Some(c) => m.mass = round(c, 6),
         None => {
             let f = parse_formula(&m.formula)
                 .map_err(|_| ("error.molecules.badFormula", m.formula.clone()))?;
             m.formula = fmt(&f);
-            m.massa = round(mass(&f) - f64::from(m.load) * ELECTRON, 6);
-            if let Some(c) = control.filter(|c| (c - m.massa).abs() > MASS_TOL) {
-                return Err(("error.molecules.massMismatch", format!("{c} / {}", m.massa)));
+            m.mass = round(mass(&f) - f64::from(m.load) * ELECTRON, 6);
+            if let Some(c) = control.filter(|c| (c - m.mass).abs() > MASS_TOL) {
+                return Err(("error.molecules.massMismatch", format!("{c} / {}", m.mass)));
             }
         }
     }
@@ -175,22 +172,22 @@ pub fn finalizza(m: &mut Molecule, control: Option<f64>) -> Result<(), Bad> {
     if let Some(k) = m.inchikey.as_deref().filter(|k| !is_inchikey(k)) {
         return Err(("error.molecules.badInchikey", k.to_string()));
     }
-    let name = m.nome.to_lowercase();
+    let name = m.name.to_lowercase();
     tidy(&mut m.synonyms, true, &name)?;
-    tidy(&mut m.addotti, false, "")?;
+    tidy(&mut m.adducts, false, "")?;
     tidy(&mut m.collections, true, "")?;
-    tidy(&mut m.classi, true, "")?;
-    tidy(&mut m.origine.catalog, false, "")?;
+    tidy(&mut m.classes, true, "")?;
+    tidy(&mut m.origin.catalog, false, "")?;
     m.smiles = text_or_none(m.smiles.take());
     m.cas = text_or_none(m.cas.take());
     m.pubchem_cid = text_or_none(m.pubchem_cid.take());
-    m.note = m.note.trim().to_string();
+    m.notes = m.notes.trim().to_string();
     properties(m)?;
-    if m.origine.tipo.is_empty() {
-        m.origine.tipo = "user".into();
+    if m.origin.kind.is_empty() {
+        m.origin.kind = "user".into();
     }
-    if !LEVELS.contains(&m.origine.tipo.as_str()) {
-        return Err(("error.molecules.badOrigin", m.origine.tipo.clone()));
+    if !LEVELS.contains(&m.origin.kind.as_str()) {
+        return Err(("error.molecules.badOrigin", m.origin.kind.clone()));
     }
     if m.id.is_empty() {
         m.id = match &m.inchikey {

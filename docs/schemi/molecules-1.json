@@ -2,9 +2,9 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "molecules/1",
  "title": "molecules/1: the molecules database (catalogue, imported and user records)",
- "description": "Written by mzlab-core `molecules`. Canonical JSON: keys in alphabetical order, records sorted by id, lists tidy; its SHA-256 enters prov/1. The mass is computed from formula and charge (electron included), never read.",
+ "description": "Written by mzlab-core `molecules`. Canonical JSON: `schema` first, the other keys in alphabetical order, records sorted by id, lists tidy; its SHA-256 enters prov/1. The mass is computed from formula and charge (electron included), never read.",
  "type": "object",
- "required": ["molecules", "schema"],
+ "required": ["schema", "molecules"],
  "properties": {
   "schema": {"const": "molecules/1"},
   "molecules": {

@@ -4,7 +4,7 @@
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 use mzlab_core::json::{parse, Value};
-use mzlab_core::molecules::{cerca, from_csv, route, Molecule};
+use mzlab_core::molecules::{from_csv, route, search, Molecule};
 
 fn ms(csv: &str) -> Vec<Molecule> {
     from_csv(csv, "user", None).unwrap_or_else(|e| panic!("{e:?}"))
@@ -20,7 +20,7 @@ Atrazina;;C8H14ClN5;MXWJVTOOROXGIU-UHFFFAOYSA-N
 fn first_names(ms: &[Molecule], q: &str) -> Vec<String> {
     mzlab_core::molecules::search_wide(ms, q, 8, 10.0)
         .iter()
-        .map(|h| ms[h.0].nome.clone())
+        .map(|h| ms[h.0].name.clone())
         .collect()
 }
 
@@ -28,7 +28,7 @@ fn first_names(ms: &[Molecule], q: &str) -> Vec<String> {
 fn wide_search_finds_inchikeys_and_one_letter_slips() {
     let v = ms(PARENTS);
     // the plain search is unchanged: a name that is not written right finds nothing
-    assert!(cerca(&v, "bentazan", 8, 10.0).is_empty());
+    assert!(search(&v, "bentazan", 8, 10.0).is_empty());
     // a slip of one letter (replaced, dropped, added), in the name or in a synonym
     for q in ["bentazan", "bentazne", "bentazzon", "Bentazonee"] {
         assert_eq!(first_names(&v, q)[0], "Bentazon", "{q}");

@@ -25,12 +25,12 @@ fn score(name: &str, w: &str) -> Option<u8> {
 fn by_text(ms: &[Molecule], w: &str) -> Vec<(usize, u8)> {
     let mut hits: Vec<(usize, u8, usize)> = Vec::new();
     for (k, m) in ms.iter().enumerate() {
-        let best = std::iter::once(&m.nome)
+        let best = std::iter::once(&m.name)
             .chain(&m.synonyms)
             .filter_map(|n| score(&n.to_lowercase(), w))
             .min();
         if let Some(b) = best {
-            hits.push((k, b, m.nome.encode_utf16().count()));
+            hits.push((k, b, m.name.encode_utf16().count()));
         }
     }
     crate::sortc::slice_by_key(&mut hits, |h| (h.1, h.2));
@@ -41,8 +41,8 @@ fn by_mass(ms: &[Molecule], q: f64, ppm: f64) -> Vec<(usize, f64)> {
     let mut hits: Vec<(usize, f64)> = ms
         .iter()
         .enumerate()
-        .filter(|(_, m)| (q - m.massa).abs() <= m.massa * ppm * 1e-6)
-        .map(|(k, m)| (k, (q - m.massa).abs() / m.massa * 1e6))
+        .filter(|(_, m)| (q - m.mass).abs() <= m.mass * ppm * 1e-6)
+        .map(|(k, m)| (k, (q - m.mass).abs() / m.mass * 1e6))
         .collect();
     crate::sortc::slice_by(&mut hits, |a, b| a.1.total_cmp(&b.1));
     hits
@@ -56,7 +56,7 @@ fn formula_of(q: &str) -> Option<String> {
 
 /// The indices (in `ms`) and scores of the best `limite` molecules for `q`: the error in ppm for a mass, 0 for the same formula, 0..3 for a text. Fewer than
 /// two characters of text give nothing.
-pub fn cerca(ms: &[Molecule], q: &str, limit: usize, ppm: f64) -> Vec<(usize, f64)> {
+pub fn search(ms: &[Molecule], q: &str, limit: usize, ppm: f64) -> Vec<(usize, f64)> {
     let q = q.trim();
     let mut hits: Vec<(usize, f64)> = Vec::new();
     if let Some(mass) = q.parse::<f64>().ok().filter(|x| x.is_finite() && *x > 0.0) {
@@ -104,7 +104,7 @@ fn by_typo(ms: &[Molecule], w: &str) -> Vec<(usize, u8)> {
     let q: Vec<char> = w.chars().collect();
     let mut hits: Vec<(usize, u8, usize)> = Vec::new();
     for (k, m) in ms.iter().enumerate() {
-        let best = std::iter::once(&m.nome)
+        let best = std::iter::once(&m.name)
             .chain(&m.synonyms)
             .filter_map(|n| {
                 let c: Vec<char> = n.to_lowercase().chars().collect();
@@ -117,7 +117,7 @@ fn by_typo(ms: &[Molecule], w: &str) -> Vec<(usize, u8)> {
             })
             .min();
         if let Some(b) = best {
-            hits.push((k, b, m.nome.encode_utf16().count()));
+            hits.push((k, b, m.name.encode_utf16().count()));
         }
     }
     crate::sortc::slice_by_key(&mut hits, |h| (h.1, h.2));
@@ -141,11 +141,11 @@ fn by_inchikey(ms: &[Molecule], q: &str) -> Vec<usize> {
         .collect()
 }
 
-/// `cerca` for a box that picks a molecule: the same hits first, then the molecules of an InChIKey (score 0), and, only when nothing was found, the names one
+/// `search` for a box that picks a molecule: the same hits first, then the molecules of an InChIKey (score 0), and, only when nothing was found, the names one
 /// typing slip away (score 4 whole name, 5 start of a name, from four characters on).
 pub fn search_wide(ms: &[Molecule], q: &str, limit: usize, ppm: f64) -> Vec<(usize, f64)> {
     let q = q.trim();
-    let mut hits = cerca(ms, q, usize::MAX, ppm);
+    let mut hits = search(ms, q, usize::MAX, ppm);
     for k in by_inchikey(ms, q) {
         if !hits.iter().any(|h| h.0 == k) {
             hits.insert(0, (k, 0.0));

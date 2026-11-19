@@ -111,11 +111,28 @@ fn molecules_of_the_user_are_a_canonical_file_that_a_session_clear_leaves_alone(
     r("lr_clear", json!({}));
     let file = std::fs::read_to_string(data.path().join("app/molecules.json")).unwrap();
     assert_eq!(r("lr_molecules_archive", json!({"mop": "read", "body": ""})), file, "the page gets the bytes of the file");
-    assert!(file.starts_with("{\"molecules\":[{") && file.contains("\"id\":\"u:") && file.ends_with("\"schema\":\"molecules/1\"}"), "{file}");
+    assert!(file.starts_with("{\"schema\":\"molecules/1\",\"molecules\":[{") && file.contains("\"id\":\"u:"), "{file}");
     let st2 = State::new();
     st2.set_data_folder(data.path().join("app"));
     assert_eq!(text(st2.rpc("lr_molecules_archive", &json!({"mop": "read", "body": ""}), &[]).unwrap()), file, "a new run reads it back");
     assert!(st2.rpc("lr_molecules_archive", &json!({"mop": "write", "body": "{}"}), &[]).is_err(), "a document that is not molecules/1 is refused");
+}
+
+#[test]
+fn an_old_molecule_file_is_read_so_the_engine_refuses_it_and_the_next_save_removes_it() {
+    let data = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(data.path().join("app")).unwrap();
+    let old = r#"{"molecole":[{"nome":"Esempina","formula":"C10H15NO"}],"schema":"molecules/1"}"#;
+    std::fs::write(data.path().join("app/molecole.json"), old).unwrap();
+    let st = State::new();
+    st.set_data_folder(data.path().join("app"));
+    let r = |op: &str, p: serde_json::Value| text(st.rpc(op, &p, &[]).unwrap());
+    let got = r("lr_molecules_archive", json!({"mop": "read", "body": ""}));
+    assert_eq!(got, old, "the page gets the old bytes");
+    assert!(r("lr_molecules", json!({"mop": "load", "body": format!("{{\"user\":{got}}}")})).contains("error.molecules.oldFormat"));
+    let doc = r#"{"schema":"molecules/1","molecules":[{"name":"Nuova","formula":"CH4"}]}"#;
+    assert_eq!(r("lr_molecules_archive", json!({"mop": "write", "body": doc})), "{}");
+    assert!(!data.path().join("app/molecole.json").exists() && data.path().join("app/molecules.json").exists());
 }
 
 #[test]

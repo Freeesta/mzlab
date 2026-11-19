@@ -36,7 +36,7 @@ export function pronto() {
     const [cat, doc] = await Promise.all([
       fetch("static/molecole/catalogo.csv").then(r => { if (!r.ok) throw new Error("catalogo.csv: " + r.status); return r.text(); }),
       // an app older than the page has no archive yet: the catalogue still works, saving fails with a message
-      testo("archive/read", "").catch(() => `{"molecules":[],"schema":"${SCHEMA}"}`),
+      testo("archive/read", "").catch(() => `{"schema":"${SCHEMA}","molecules":[]}`),
     ]);
     const r = await json("load", { catalog: cat, user: doc });
     if (conErrori(r)) {
