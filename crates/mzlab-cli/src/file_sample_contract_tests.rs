@@ -240,3 +240,94 @@ fn items_json_flag_is_a_no_op_and_no_points_refuses_a_bad_info() {
     assert_eq!(e.key, "err.file.index");
     assert!(crate::items_cmd::document(&bad, false).is_ok());
 }
+
+/// The explicit `.exits()` list of each probed entry is the set of codes seen.
+fn assert_listed(seen: &std::collections::BTreeMap<&str, std::collections::BTreeSet<u8>>) {
+    for (name, codes) in seen {
+        let words: Vec<String> = name.split(' ').map(String::from).collect();
+        let (e, _) = crate::cmd::find(&words).unwrap();
+        let listed: std::collections::BTreeSet<u8> = e.exits.iter().copied().collect();
+        assert!(!listed.is_empty(), "{name} lists no codes");
+        assert_eq!(
+            &listed, codes,
+            "{name}: listed {listed:?}, produced {codes:?}"
+        );
+    }
+}
+
+/// Every explicit `.exits()` list of the file and sample entries is exactly the set of codes the command produces: each code is probed, none is left unlisted.
+#[test]
+fn the_explicit_exit_lists_are_the_codes_the_commands_produce() {
+    use crate::convert_fixtures::{folder, makers, mzxml};
+    use std::collections::{BTreeMap, BTreeSet};
+    let dir = folder("contract_exits");
+    let src = makers(&dir, false);
+    let (s, out) = (src.to_str().unwrap(), dir.join("out"));
+    let cut = dir.join("cut");
+    std::fs::create_dir_all(&cut).unwrap();
+    let opz = mzxml::Opz {
+        zlib: false,
+        ..mzxml::FLAT
+    };
+    let whole = mzxml::mzxml(&mzxml::run(), opz);
+    std::fs::write(cut.join("t.mzXML"), &whole[..whole.len() / 2]).unwrap();
+    let junk = dir.join("junk.txt");
+    std::fs::write(&junk, b"not a data file").unwrap();
+    let (_wdir, w) = crate::contract_tests::wiff("file_sample_exits");
+    let (o, j, c) = (
+        out.to_str().unwrap(),
+        junk.to_str().unwrap(),
+        cut.to_str().unwrap(),
+    );
+    let (m, o3) = (mzml(), format!("{o}3"));
+    let nodir = "/no/such/folder/x.json";
+    // converted first: the valid mzML of the `validate` probe
+    let probes: Vec<(&str, Vec<&str>, u8)> = vec![
+        ("file convert", vec![s, "--out", o], 0),
+        ("file convert", vec![j, "--out", o], 1),
+        ("file convert", vec![], 2),
+        ("file convert", vec![c, "--out", &o3], 3),
+        ("file convert", vec!["/no/such", "--out", o], 4),
+        ("file convert", vec![&w, "--sample", "9", "--out", o], 5),
+        ("file items", vec![&m], 0),
+        ("file items", vec![], 2),
+        ("file items", vec!["/no/such"], 4),
+        ("file items", vec![&m, "--out", nodir], 6),
+        ("file pair", vec![&w], 0),
+        ("file pair", vec!["/no/such/x.wiff"], 1),
+        ("file pair", vec![], 2),
+        ("file validate", vec![&m], 1),
+        ("file validate", vec![], 2),
+        ("file validate", vec!["/no/such.mzML"], 4),
+        ("sample list", vec![&w], 0),
+        ("sample list", vec![j], 1),
+        ("sample list", vec![], 2),
+        ("sample list", vec!["/no/such.wiff"], 4),
+        ("sample select", vec![&w, "--sample", "1"], 0),
+        ("sample select", vec![], 2),
+        ("sample select", vec!["/no/such.wiff", "--sample", "1"], 4),
+        ("sample select", vec![&w, "--sample", "9"], 5),
+    ];
+    let mut seen: BTreeMap<&str, BTreeSet<u8>> = BTreeMap::new();
+    for (name, rest, code) in &probes {
+        let mut a: Vec<&str> = name.split(' ').collect();
+        a.extend(rest);
+        let r = run(&a);
+        assert_eq!(r.code, *code, "{a:?}: {}", r.stderr);
+        seen.entry(name).or_default().insert(r.code);
+    }
+    // a valid mzML (the one `convert` wrote) is exit 0 of `validate`
+    let written = std::fs::read_dir(&out)
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .find(|e| e.path().extension().is_some_and(|x| x == "mzML"));
+    let v = run(&[
+        "file",
+        "validate",
+        written.unwrap().path().to_str().unwrap(),
+    ]);
+    assert_eq!(v.code, 0, "{}", v.stderr);
+    seen.entry("file validate").or_default().insert(0);
+    assert_listed(&seen);
+    let _ = std::fs::remove_dir_all(&dir);
+}
