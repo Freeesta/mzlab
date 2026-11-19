@@ -7,7 +7,7 @@ const MGF: &str = "BEGIN IONS\nTITLE=q0\nPEPMASS=151.0754\nCHARGE=1+\nIONMODE=Po
 const HEAD: &str = "Identifier,CompoundName,SMILES,MolecularFormula,MonoisotopicMass\n";
 const FAR: &str = "Z9,Far away,CCCCCCCC,C8H18,114.14085\n";
 const NEAR: &str = "A1,Candidate A,CCOC(=O)c1ccccc1,C9H10O2,150.06808\nA2,\"Candidate, B\",COC(=O)Cc1ccccc1,C9H10O2,150.06808\n";
-const CATALOGUE: &str = r#"{"format":"insilico/1","pieces":[{"file":"000.bin","mass_min":114.14085,"mass_max":114.14085},{"file":"001.bin","mass_min":150.06808,"mass_max":150.06808}]}"#;
+const CATALOGUE: &str = r#"{"schema":"insilico/1","pieces":[{"file":"000.bin","mass_min":114.14085,"mass_max":114.14085},{"file":"001.bin","mass_min":150.06808,"mass_max":150.06808}]}"#;
 
 fn params(extra: &str) -> Vec<(String, Value)> {
     json_params(&format!(
@@ -69,12 +69,12 @@ fn a_wider_window_reads_both_pieces_and_a_missing_piece_is_an_error() {
 
 #[test]
 fn the_catalogue_is_checked() {
-    assert!(Package::parse(br#"{"format":"normative/1","pieces":[]}"#).is_err());
+    assert!(Package::parse(br#"{"schema":"normative/1","pieces":[]}"#).is_err());
     assert!(Package::parse(
-        br#"{"format":"insilico/1","pieces":[{"file":"../x","mass_min":1,"mass_max":2}]}"#
+        br#"{"schema":"insilico/1","pieces":[{"file":"../x","mass_min":1,"mass_max":2}]}"#
     )
     .is_err());
-    assert!(Package::parse(br#"{"format":"insilico/1","pieces":[]}"#).is_err());
+    assert!(Package::parse(br#"{"schema":"insilico/1","pieces":[]}"#).is_err());
     assert!(is_package(CATALOGUE.as_bytes()) && !is_package(full_csv().as_bytes()));
 }
 

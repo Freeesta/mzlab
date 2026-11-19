@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "msn-lib-export/1",
+  "title": "msn-lib-export/1: the result of msn lib export --json",
+  "description": "The spectra of a library as MSP or MassBank text: `out` is the file the text went to, or null and then the text itself is in `text`. Code: crates/mzlab-cli/src/msn_lib.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "format",
+    "text_bytes",
+    "out"
+  ],
+  "properties": {
+    "schema": {
+      "const": "msn-lib-export/1"
+    },
+    "format": {
+      "enum": [
+        "msp",
+        "massbank"
+      ]
+    },
+    "text_bytes": {
+      "type": "integer"
+    },
+    "out": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "text": {
+      "type": "string"
+    }
+  }
+}

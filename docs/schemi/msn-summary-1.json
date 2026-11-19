@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "msn-summary/1",
+  "title": "msn-summary/1: numbers of a fragmentation graph",
+  "description": "What `mzlab-cli msn graph FILE --summary` prints instead of the whole graph (a few hundred bytes): counts only, no formula and no file name. With `--truth FILE` it also carries truth_paths, paths_found, correct_formula_among_candidates, unique_and_correct and ppm_max_correct. Code: crates/mzlab-cli/src/msn_graph.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "nodes",
+    "arcs",
+    "roots",
+    "polarity",
+    "annotated_fragments",
+    "discarded_heavy",
+    "discarded_isotope",
+    "discarded_weak",
+    "discarded_formula",
+    "warnings",
+    "per_level",
+    "peaks_per_level"
+  ],
+  "properties": {
+    "schema": {
+      "const": "msn-summary/1"
+    },
+    "nodes": {
+      "type": "integer"
+    },
+    "arcs": {
+      "type": "integer"
+    },
+    "roots": {
+      "type": "integer"
+    },
+    "polarity": {
+      "type": "integer"
+    },
+    "truth_paths": {
+      "type": "integer"
+    },
+    "paths_found": {
+      "type": "integer"
+    },
+    "correct_formula_among_candidates": {
+      "type": "integer"
+    },
+    "unique_and_correct": {
+      "type": "integer"
+    },
+    "ppm_max_correct": {
+      "type": "number"
+    },
+    "annotated_fragments": {
+      "type": "integer"
+    },
+    "discarded_heavy": {
+      "type": "integer"
+    },
+    "discarded_isotope": {
+      "type": "integer"
+    },
+    "discarded_weak": {
+      "type": "integer"
+    },
+    "discarded_formula": {
+      "type": "integer"
+    },
+    "warnings": {
+      "type": "integer"
+    },
+    "per_level": {
+      "type": "object",
+      "description": "MS level -> nodes",
+      "additionalProperties": {
+        "type": "integer"
+      }
+    },
+    "peaks_per_level": {
+      "type": "object",
+      "description": "MS level -> [peaks with a node, peaks without]",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

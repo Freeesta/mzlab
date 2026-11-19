@@ -53,6 +53,7 @@ I18N.add("en", {
   "err.cli.line": "The command line cannot be read: {message}.",
   "err.cli.set": "The setting “{set}” is not valid: {message}.",
   "err.cli.usage": "{message}",
+  "err.msn.rules.document": "The file {path} is not an msn-rules/1 document: pass the output of msn rules.",
   "err.cli.file": "The file {path} cannot be read.",
   "err.cli.design.samplesAndFiles": "--samples and FILE paths do not go together: give one or the other.",
   "err.cli.design.needsInput": "sample design {op} needs --samples SAMPLES.json or one or more FILE paths.",

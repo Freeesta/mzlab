@@ -37,8 +37,8 @@ impl Package {
     /// The pieces of an `insilico/1` catalogue; anything else is an error.
     pub fn parse(bytes: &[u8]) -> Result<Package> {
         let v = json::parse(bytes).map_err(|_| bad("json"))?;
-        if v.get("format").and_then(Value::str) != Some(FORMAT) {
-            return Err(bad("format"));
+        if v.get("schema").and_then(Value::str) != Some(FORMAT) {
+            return Err(bad("schema"));
         }
         let mut pieces = Vec::new();
         for p in v.get("pieces").map(Value::arr).unwrap_or(&[]) {
@@ -240,7 +240,7 @@ pub fn insilico_text(
 ) -> Result<String> {
     let o = opts(params);
     let pkg = if suspects.first() == Some(&b'{')
-        && json::parse(suspects).is_ok_and(|v| v.get("format").and_then(Value::str) == Some(FORMAT))
+        && json::parse(suspects).is_ok_and(|v| v.get("schema").and_then(Value::str) == Some(FORMAT))
     {
         Some(Package::parse(suspects)?)
     } else {

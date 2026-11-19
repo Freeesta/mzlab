@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "msn-search/1",
+  "title": "msn-search/1: the candidates of a search of the MSn library",
+  "description": "The result of `mzlab-cli msn lib search LIB GRAPH` (and the same search of the site and the flow step): the options used and the library entries whose precursor matches, with three separate scores and their proofs, no verdict. Code: crates/mzlab-core/src/msngraph/search.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "options",
+    "candidates"
+  ],
+  "properties": {
+    "schema": {
+      "const": "msn-search/1"
+    },
+    "options": {
+      "type": "object",
+      "required": [
+        "precursor_ppm",
+        "tol_mz",
+        "min_evidence",
+        "top",
+        "delta_max"
+      ],
+      "properties": {
+        "precursor_ppm": {
+          "type": "number"
+        },
+        "tol_mz": {
+          "type": "number"
+        },
+        "min_evidence": {
+          "type": "integer"
+        },
+        "top": {
+          "type": "integer"
+        },
+        "delta_max": {
+          "type": "number"
+        }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "ion",
+          "activation",
+          "delta_ppm",
+          "scores",
+          "proofs",
+          "analog"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "ion": {
+            "type": "string"
+          },
+          "activation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "delta_ppm": {
+            "type": "number"
+          },
+          "scores": {
+            "type": "object",
+            "required": [
+              "ms2",
+              "tree",
+              "losses"
+            ],
+            "properties": {
+              "ms2": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "tree": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "losses": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "description": "MS2 entropy, tree and shared-loss scores, each null when it cannot be measured."
+          },
+          "proofs": {
+            "type": "object",
+            "required": [
+              "common_peaks",
+              "aligned_nodes",
+              "unknown_nodes",
+              "common_losses",
+              "unknown_losses"
+            ],
+            "properties": {
+              "common_peaks": {
+                "type": "integer"
+              },
+              "aligned_nodes": {
+                "type": "integer"
+              },
+              "unknown_nodes": {
+                "type": "integer"
+              },
+              "common_losses": {
+                "type": "integer"
+              },
+              "unknown_losses": {
+                "type": "integer"
+              }
+            }
+          },
+          "analog": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "delta_da",
+                  "shifted",
+                  "unshifted",
+                  "coverage"
+                ],
+                "properties": {
+                  "delta_da": {
+                    "type": "number"
+                  },
+                  "shifted": {
+                    "type": "integer"
+                  },
+                  "unshifted": {
+                    "type": "integer"
+                  },
+                  "coverage": {
+                    "type": "number"
+                  }
+                }
+              }
+            ],
+            "description": "null for an entry of the same precursor; the shift and the fragments it explains for an analogue (--delta)."
+          }
+        }
+      }
+    }
+  }
+}

@@ -147,12 +147,16 @@ fn command_json(e: &Entry, compact: bool, uses: &BTreeMap<String, usize>) -> Val
                 u.args
                     .iter()
                     .map(|a| {
-                        Obj::new()
+                        let mut o = Obj::new()
                             .put("name", text(&a.name))
-                            .put("kind", text(a.kind))
-                            .b("required", a.required)
-                            .b("repeat", a.repeat)
-                            .done()
+                            .put("kind", text(a.kind));
+                        if a.required {
+                            o = o.b("required", true);
+                        }
+                        if a.repeat {
+                            o = o.b("repeat", true);
+                        }
+                        o.done()
                     })
                     .collect(),
             ),
@@ -166,8 +170,10 @@ fn command_json(e: &Entry, compact: bool, uses: &BTreeMap<String, usize>) -> Val
                     .collect(),
             ),
         )
-        .b("stdin", u.stdin)
         .put("stdout", stdout_json(e));
+    if u.stdin {
+        o = o.b("stdin", true);
+    }
     if !compact || exits != derived_exits(e, &u) {
         let v = exits.iter().map(|c| Value::Num(f64::from(*c))).collect();
         o = o.put("exit_codes", Value::Arr(v));

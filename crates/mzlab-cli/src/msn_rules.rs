@@ -18,7 +18,7 @@ mod trial;
 pub const HELP: &str = "mzlab-cli msn rules: the fragmentation rules judged on library spectra with a known structure.
 
 usage: mzlab-cli msn rules RECORD... [--list FILE] [--smiles S] [--activation A] [--rules] [--decoy SEED] [--out PATH]
-       mzlab-cli msn rules sum LINES... [--out PATH]
+       mzlab-cli msn rules sum DOC... [--out PATH]
 
   RECORD...         MassBank records (one spectrum each) or MSP files; --list: a file with one path per line
   --smiles S        the structure, when the record has none (one record)
@@ -26,10 +26,10 @@ usage: mzlab-cli msn rules RECORD... [--list FILE] [--smiles S] [--activation A]
   --rules           also the peaks explained with the rules of the formula and of the structure, and the peaks per rule id
   --decoy SEED      the same numbers on three decoys: the structure rewired (same formula), the spectrum of another record with the same nominal
                     precursor, the losses shifted by 0.0137 Da; SEED fixes the choice, the same seed gives the same lines
-  sum               the lines of the records added up per stratum (trap CID, HCD, Q-TOF, other beam) and polarity: coverage of (c) against the decoys,
+  sum               the msn-rules/1 documents of one or more runs added up per stratum (trap CID, HCD, Q-TOF, other beam) and polarity: coverage of (c) against the decoys,
                     peaks per rule, decoy rate per rule and the thresholds of the protocol (a rule with fewer than 20 applications is not measured)
 
-Peaks above 2 % of the base peak, 10 ppm (20 below m/z 150) for a fragment, 3 mDa for a loss. Output: a JSON line per record, numbers only.";
+Peaks above 2 % of the base peak, 10 ppm (20 below m/z 150) for a fragment, 3 mDa for a loss. Output: one JSON document (msn-rules/1) with a record per input, numbers only; `sum` reads such documents and prints msn-rules-sum/1.";
 
 /// Adducts the graph reads for the ion of the precursor.
 const ADDOTTI: [&str; 8] = [
@@ -244,7 +244,10 @@ fn rows(a: &Args) -> Result<String, String> {
             .iter()
             .map(|(f, s)| format!("{{\"id\":{f:?},\"skipped\":\"{s}\"}}")),
     );
-    Ok(out.join("\n") + "\n")
+    Ok(format!(
+        "{{\"schema\":\"msn-rules/1\",\"records\":[{}]}}\n",
+        out.join(",")
+    ))
 }
 
 pub fn run(args: Vec<String>) -> Outcome {

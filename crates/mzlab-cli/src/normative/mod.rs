@@ -5,6 +5,8 @@
 pub use mzlab_feat::normative::{csvrd, entry};
 
 pub mod build;
+#[cfg(test)]
+mod build_json_tests;
 pub mod build_out;
 pub mod build_rows;
 pub mod fetch;
@@ -86,7 +88,7 @@ usage: mzlab-cli db normative pack IN OUT       the data release of the committe
        mzlab-cli db normative import-official READER CSV SIDECAR OUT [--file NAME] [--date YYYY-MM-DD]
                                              your own copy of the ECHA Candidate List (svhc) or Proposition 65 (ca_prop65) as a private .mzsus (no network)
        mzlab-cli db normative build --cache DIR --out DIR [--only ID...] [--update-pins] [--no-resolve] [--allow-large]
-                                 [--sources FILE] [--overrides FILE]
+                                 [--sources FILE] [--overrides FILE] [--json]
 
   --cache DIR     where downloads are kept (one file per URL with its SHA-256 and date); a warm cache makes the build offline and byte-identical
   --out DIR       writes lists/ID.csv, provenance.json and unresolved.tsv there
@@ -96,6 +98,7 @@ usage: mzlab-cli db normative pack IN OUT       the data release of the committe
   --allow-large   accept downloads above 90 MB (PubChem and SusDat files)
   --sources FILE  default OUT/sources.json
   --overrides FILE  default OUT/overrides.tsv (list_id;entry_ref;cas;inchikey;reason)
+  --json          stdout is the normative-build/1 document (lists, sources with pins, stale); without it stdout is empty and the lines go to stderr
 
 exit: 0 done; 1 a list kept its last good file (stale); 2 usage; 3 sources.json not valid or pin mismatch; 4 an input file cannot be read; 6 a download was refused, a source failed or a file cannot be written (the table is in docs/agenti/cli-agenti.md)";
 
@@ -110,6 +113,7 @@ struct Args {
     cache: PathBuf,
     opts: build::Opts,
     large: bool,
+    json: bool,
 }
 
 fn parse(args: Vec<String>) -> Result<Option<Args>, NormError> {
@@ -125,6 +129,7 @@ fn parse(args: Vec<String>) -> Result<Option<Args>, NormError> {
     }
     let (mut cache, mut out, mut sources, mut overrides) = (None, None, None, None);
     let (mut only, mut update, mut resolve, mut large) = (Vec::new(), false, true, false);
+    let mut json = false;
     while let Some(a) = it.next() {
         let mut value = |name: &str| {
             it.next()
@@ -145,6 +150,7 @@ fn parse(args: Vec<String>) -> Result<Option<Args>, NormError> {
             "--update-pins" => update = true,
             "--no-resolve" => resolve = false,
             "--allow-large" => large = true,
+            "--json" => json = true,
             other => return Err(NormError::usage(&format!("unknown argument {other}"))),
         }
     }
@@ -153,6 +159,7 @@ fn parse(args: Vec<String>) -> Result<Option<Args>, NormError> {
     Ok(Some(Args {
         cache,
         large,
+        json,
         opts: build::Opts {
             sources: sources.unwrap_or_else(|| out.join("sources.json")),
             overrides: overrides.unwrap_or_else(|| out.join("overrides.tsv")),
@@ -164,23 +171,80 @@ fn parse(args: Vec<String>) -> Result<Option<Args>, NormError> {
     }))
 }
 
-fn finish(r: Result<build::Report, NormError>) -> Outcome {
+/// The `normative-build/1` document of a run: coverage per list, the sources read with their pins, the stale lists and why.
+fn report_json(rep: &build::Report) -> String {
+    let mut o = mzlab_core::json::Out::default();
+    o.raw("{\"schema\":\"normative-build/1\",\"stale_lists\":")
+        .int(rep.stale as i64);
+    o.raw(",\"pins_updated\":")
+        .raw(if rep.pins_updated { "true" } else { "false" });
+    o.raw(",\"lists\":[");
+    for (i, (id, c)) in rep.lists.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).raw("{\"id\":").str(id);
+        for (k, n) in [
+            "entries",
+            "screenable",
+            "groups",
+            "uvcb",
+            "inorganic",
+            "unresolved",
+        ]
+        .iter()
+        .zip(c)
+        {
+            o.raw(",").str(k).raw(":").int(*n as i64);
+        }
+        o.raw("}");
+    }
+    o.raw("],\"stale\":[");
+    for (i, f) in rep.failed.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"id\":")
+            .str(&f.id);
+        o.raw(",\"why\":").str(&f.why).raw("}");
+    }
+    o.raw("],\"sources\":[");
+    for (i, s) in rep.sources.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"url\":")
+            .str(&s.url);
+        o.raw(",\"sha256\":").str(&s.sha256).raw(",\"pin\":");
+        match &s.pin {
+            Some(p) => {
+                o.str(p)
+                    .raw(",\"pin_ok\":")
+                    .raw(if *p == s.sha256 { "true" } else { "false" })
+            }
+            None => o.raw("null,\"pin_ok\":null"),
+        };
+        o.raw(",\"pin_updated\":")
+            .raw(if s.pin_updated { "true" } else { "false" })
+            .raw("}");
+    }
+    o.raw("]}\n");
+    o.0
+}
+
+/// The result of `build`: the per-list lines are progress (stderr); stdout is the `normative-build/1` document under `--json` and nothing otherwise.
+/// Exit 1 when a list kept its last good file (stale).
+fn finish(r: Result<build::Report, NormError>, json: bool) -> Outcome {
     match r {
-        Ok(rep) => Outcome {
-            code: u8::from(rep.stale > 0),
-            stdout: rep
-                .lines
-                .iter()
-                .map(|l| format!("{l}\n"))
-                .collect::<String>()
-                .into_bytes(),
-            stderr: if rep.stale > 0 {
-                format!("{} list(s) kept their last good file (stale)\n", rep.stale)
-            } else {
-                String::new()
-            },
-            error: None,
-        },
+        Ok(rep) => {
+            let mut text: String = rep.lines.iter().map(|l| format!("{l}\n")).collect();
+            if rep.stale > 0 {
+                text += &format!("{} list(s) kept their last good file (stale)\n", rep.stale);
+            }
+            Outcome {
+                code: u8::from(rep.stale > 0),
+                stdout: if json {
+                    report_json(&rep).into_bytes()
+                } else {
+                    Vec::new()
+                },
+                stderr: text,
+                error: None,
+            }
+        }
         Err(e) => e.outcome(),
     }
 }
@@ -206,14 +270,18 @@ fn run_package(args: &[String]) -> Option<Outcome> {
         .map(Path::new)
         .collect();
     let r = match (args.first().map(String::as_str), paths.as_slice()) {
-        (Some("pack"), [i, o]) => pack::pack(i, o).map(|l| l.join("\n") + "\n"),
-        (Some("listings"), [p]) => pack::listings(p),
-        (Some("import-official"), _) => import_official::run(rest),
+        // the pieces written are progress, not data: stdout stays empty
+        (Some("pack"), [i, o]) => pack::pack(i, o).map(|l| (String::new(), l.join("\n") + "\n")),
+        (Some("listings"), [p]) => pack::listings(p).map(|t| (t, String::new())),
+        (Some("import-official"), _) => import_official::run(rest).map(|t| (t, String::new())),
         (Some("pack" | "listings"), _) => Err(NormError::usage("wrong number of paths")),
         _ => return None,
     };
     Some(match r {
-        Ok(t) => Outcome::ok(t.into_bytes()),
+        Ok((t, note)) => Outcome {
+            stderr: note,
+            ..Outcome::ok(t.into_bytes())
+        },
         Err(e) => e.outcome(),
     })
 }
@@ -228,7 +296,7 @@ pub fn run_with<F: fetch::Fetch>(args: Vec<String>, net: F) -> Outcome {
         Ok(Some(a)) => {
             let limit = if a.large { u64::MAX } else { fetch::LARGE };
             let cache = fetch::Cache::new(&a.cache, net, fetch::today, limit);
-            finish(build::run(&cache, &a.opts))
+            finish(build::run(&cache, &a.opts), a.json)
         }
         Err(e) => e.outcome(),
     }

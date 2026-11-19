@@ -1,6 +1,6 @@
 //! `mzlab-cli msn graph FILE --formula ION [...]`: the fragmentation graph `msn-graph/1` of an MSn infusion, from the engine of the app.
-//! With `--truth FILE --summary` it prints only numbers: how many paths of a truth file (`{nodes: [{path: [nominal m/z...], formula}]}`)
-//! the graph finds and with which sub-formulas, so a check on private data leaves no data behind.
+//! With `--summary` it prints only numbers (`msn-summary/1`, a few hundred bytes instead of the whole graph); with `--truth FILE` also how many paths
+//! of a truth file (`{nodes: [{path: [nominal m/z...], formula}]}`) the graph finds and with which sub-formulas, so a check on private data leaves no data behind.
 
 use std::path::{Path, PathBuf};
 
@@ -20,7 +20,7 @@ use mzlab_core::readers_mzml::Peaks;
 pub const HELP: &str = "mzlab-cli msn graph: the fragmentation graph (msn-graph/1) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
 
 usage: mzlab-cli msn graph FILE.mzML [--formula ION] [options] [--out PATH]
-       mzlab-cli msn graph FILE.mzML --formula ION --truth TRUTH.json --summary
+       mzlab-cli msn graph FILE.mzML [--formula ION] --summary [--truth TRUTH.json]
        mzlab-cli msn compare A.json B.json [--out PATH]
        mzlab-cli msn complete IN.json [--out PATH]
        mzlab-cli msn figure IN.json [--figure svg,html,png] [--view tree|radial] [--out STEM]
@@ -49,8 +49,8 @@ usage: mzlab-cli msn graph FILE.mzML [--formula ION] [options] [--out PATH]
   --activation A       only the spectra of this activation (cid, hcd, ...) (param activation)
   --isotopes           keep the M+1 peaks as nodes (param isotopes)
   --pick MZ=ION        the formula chosen for the node at MZ (repeatable) (param pick)
-  --truth FILE         paths and formulas expected ({nodes: [{path, formula}]})
-  --summary            one line of numbers instead of the graph
+  --truth FILE         with --summary: paths and formulas expected ({nodes: [{path, formula}]}), counted in the summary
+  --summary            msn-summary/1, only numbers (nodes, arcs, per level, discarded, warnings), instead of the graph
   --export FORMAT      the spectra of the tree as csv, mgf or msp text instead of the graph
   --clean              with --export: only the peaks a node of the graph explains
   --node ID            with --export: nK = the spectra of which node nK of the graph is the precursor; msn:<id> or <id> = those of that node of
@@ -200,8 +200,8 @@ pub fn parse_args(
     {
         return Err(FIGURE_USAGE.into());
     }
-    if summary && truth.is_none() {
-        return Err("--summary needs --truth".into());
+    if truth.is_some() && !summary {
+        return Err("--truth needs --summary".into());
     }
     o.regole = rules.then_some(rules_p);
     let export = export.map(|f| (f, clean, node));
@@ -301,9 +301,36 @@ fn per_level(o: &mut Out, g: &Graph) {
     o.raw("}");
 }
 
-/// One line of numbers: the graph against the paths of a truth file.
-pub fn summary(g: &Graph, truth: &str) -> Result<String> {
-    let v = parse(truth.as_bytes())?;
+/// The `msn-summary/1` document: numbers only (no formula, no file name), so a check on private data leaves no data behind. With a truth file it
+/// also says how many of its paths the graph finds and with which sub-formulas.
+pub fn summary(g: &Graph, truth: Option<&str>) -> Result<String> {
+    let mut o = Out::default();
+    o.raw("{\"schema\":\"msn-summary/1\",\"nodes\":")
+        .int(g.nodi.len() as i64);
+    o.raw(",\"arcs\":").int(g.archi.len() as i64);
+    o.raw(",\"roots\":").int(g.radici.len() as i64);
+    o.raw(",\"polarity\":").int(i64::from(g.polarita));
+    if let Some(t) = truth {
+        truth_keys(&mut o, g, &parse(t.as_bytes())?);
+    }
+    let annotated = g.nodi.iter().filter(|n| n.formula.is_some()).count();
+    o.raw(",\"annotated_fragments\":")
+        .int(annotated.saturating_sub(1) as i64);
+    o.raw(",\"discarded_heavy\":")
+        .int(g.scartati.pesanti as i64);
+    o.raw(",\"discarded_isotope\":")
+        .int(g.scartati.isotopi as i64);
+    o.raw(",\"discarded_weak\":").int(g.scartati.deboli as i64);
+    o.raw(",\"discarded_formula\":")
+        .int(g.scartati.formula as i64);
+    o.raw(",\"warnings\":").int(g.avvisi.len() as i64).raw(",");
+    per_level(&mut o, g);
+    o.raw("}\n");
+    Ok(o.0)
+}
+
+/// The keys that compare the graph with the paths of a truth file.
+fn truth_keys(o: &mut Out, g: &Graph, v: &mzlab_core::json::Value) {
     let expected: Vec<(Vec<i64>, String)> = v
         .get("nodes")
         .map_or(&[][..], |n| n.arr())
@@ -338,22 +365,12 @@ pub fn summary(g: &Graph, truth: &str) -> Result<String> {
             single += 1;
         }
     }
-    let mut o = Out::default();
-    o.raw("{\"truth_paths\":").int(expected.len() as i64);
+    o.raw(",\"truth_paths\":").int(expected.len() as i64);
     o.raw(",\"paths_found\":").int(found);
     o.raw(",\"correct_formula_among_candidates\":").int(between);
     o.raw(",\"unique_and_correct\":").int(single);
     o.raw(",\"ppm_max_correct\":")
         .num(mzlab_core::json::round(ppm_max, 2));
-    let annotated = g.nodi.iter().filter(|n| n.formula.is_some()).count();
-    o.raw(",\"annotated_fragments\":")
-        .int(annotated.saturating_sub(1) as i64);
-    o.raw(",\"discarded_formula\":")
-        .int(g.scartati.formula as i64);
-    o.raw(",\"warnings\":").int(g.avvisi.len() as i64).raw(",");
-    per_level(&mut o, g);
-    o.raw("}\n");
-    Ok(o.0)
 }
 
 /// The graph text `j` of `g` with the key `structures` of node `node` (`nK` or `K`): the cleavages of `o.smiles` that give its m/z within `ppm`.
@@ -408,19 +425,22 @@ pub fn execute(a: &Args, tmp: &Path) -> Result<String> {
     if !a.summary {
         return Ok(j + "\n");
     }
-    let v =
-        std::fs::read_to_string(a.truth.as_ref().expect("checked by parse_args")).map_err(io)?;
-    summary(&g, &v)
+    let v = a
+        .truth
+        .as_ref()
+        .map(|t| std::fs::read_to_string(t).map_err(io))
+        .transpose()?;
+    summary(&g, v.as_deref())
 }
 
-/// With `--figure`: writes the figures of the graph text `graph` next to the file of `--out`; the lines for the standard output (the files made).
+/// With `--figure`: writes the figures of the graph text `graph` next to the file of `--out`; the `msn-figures/1` document for the standard output (the files made).
 pub fn figure_files(a: &Args, graph: &str) -> std::result::Result<String, String> {
     let Some(out) = a.out.as_ref().filter(|_| !a.figure.is_empty()) else {
         return Ok(String::new());
     };
     let made = crate::msn_outputs::write_outputs(graph, &a.figure, a.view, &out.with_extension(""))
         .map_err(|e| e.to_string())?;
-    Ok(made.iter().map(|p| format!("{}\n", p.display())).collect())
+    Ok(crate::msn_outputs::files_json(&made))
 }
 
 /// `mzlab-cli msn graph ...`: the graph (or the line of numbers) to the standard output or `--out`.

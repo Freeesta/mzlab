@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "msn-lib-op/1",
+  "title": "msn-lib-op/1: what msn lib add or build did to a library",
+  "description": "The result of `mzlab-cli msn lib add|build`: the library file, the ids, its size and, for add, whether the entry was new. With --dry-run nothing is written (dry_run true; would_write names the file that would be written). Code: crates/mzlab-cli/src/msn_lib.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "op",
+    "library",
+    "ids",
+    "dry_run",
+    "library_bytes"
+  ],
+  "properties": {
+    "schema": {
+      "const": "msn-lib-op/1"
+    },
+    "op": {
+      "enum": [
+        "add",
+        "build"
+      ]
+    },
+    "library": {
+      "type": "string"
+    },
+    "ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "dry_run": {
+      "type": "boolean"
+    },
+    "library_bytes": {
+      "type": "integer"
+    },
+    "added": {
+      "type": "boolean"
+    },
+    "would_write": {
+      "type": "string"
+    }
+  }
+}

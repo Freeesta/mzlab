@@ -28,8 +28,9 @@ const COLUMNS: [&str; 5] = [
 const NOTICE: &str = "Candidate structures from PubChemLite for Exposomics (University of Luxembourg, LCSB), CC BY 4.0, built from PubChem. \
 Names, structures and masses are the source's; a ranked candidate is a hypothesis, never an identification.";
 
-const HELP: &str = "usage: mzlab-cli db insilico pack PUBCHEMLITE_CSV OUT [--version TEXT] [--doi TEXT] [--piece-raw BYTES]\n  \
-writes OUT/catalogo.json (insilico/1) and the mass-range pieces OUT/NNN.bin (zlib, cut every BYTES of rows, default 12 MiB); no network, same input, same bytes";
+const HELP: &str = "usage: mzlab-cli db insilico pack PUBCHEMLITE_CSV OUT [--version TEXT] [--doi TEXT] [--piece-raw BYTES] [--json]\n  \
+writes OUT/catalogo.json (insilico/1) and the mass-range pieces OUT/NNN.bin (zlib, cut every BYTES of rows, default 12 MiB); no network, same input, same bytes.\n  \
+stdout is empty, or with --json the insilico/1 catalogue; the one-line summary goes to stderr";
 
 fn io(e: impl std::fmt::Display) -> Error {
     Error::new("err.file.index").with("detail", e)
@@ -94,7 +95,7 @@ struct Piece {
 
 fn catalog(c: &Cat, pieces: &[Piece]) -> String {
     let mut o = Out::default();
-    o.raw("{\"format\":")
+    o.raw("{\"schema\":")
         .str(FORMAT)
         .raw(",\"compression\":\"zlib\",\"piece_raw\":");
     o.int(c.piece_raw as i64).raw(",\"columns\":[");
@@ -289,13 +290,14 @@ pub fn run(args: Vec<String>) -> Outcome {
             fail("unknown subcommand")
         };
     }
-    let (mut paths, mut version, mut doi, mut cut) =
-        (Vec::new(), String::new(), String::new(), PIECE_RAW);
+    let (mut paths, mut version, mut doi, mut cut, mut json) =
+        (Vec::new(), String::new(), String::new(), PIECE_RAW, false);
     let mut it = args[1..].iter();
     while let Some(a) = it.next() {
         match a.as_str() {
             "--version" => version = it.next().cloned().unwrap_or_default(),
             "--doi" => doi = it.next().cloned().unwrap_or_default(),
+            "--json" => json = true,
             "--piece-raw" => match it
                 .next()
                 .and_then(|v| v.parse::<usize>().ok())
@@ -316,7 +318,18 @@ pub fn run(args: Vec<String>) -> Outcome {
         Err(e) => return fail(&format!("{csv}: {e}")),
     };
     match pack_with(&bytes, Path::new(out), &version, &doi, cut) {
-        Ok(t) => Outcome::ok((t + "\n").into_bytes()),
+        // the prose summary is progress (stderr); stdout is the `insilico/1` catalogue under --json and nothing otherwise
+        Ok(t) => {
+            let mut o = match json {
+                true => std::fs::read(Path::new(out).join("catalogo.json")).map_or_else(
+                    |e| Outcome::fail(&format!("{out}/catalogo.json: {e}")),
+                    Outcome::ok,
+                ),
+                false => Outcome::ok(Vec::new()),
+            };
+            o.stderr = t + "\n";
+            o
+        }
         Err(e) => Outcome::fail_error(&e),
     }
 }

@@ -36,6 +36,11 @@ pub(super) fn addotto(text: &str, pol: i8) -> Option<&'static str> {
     })
 }
 
+/// Whether the text is an ion the graph can use in either polarity (a manifest is checked before any file is read; the polarity of the file is not known yet).
+pub fn ion_is_valid(text: &str) -> bool {
+    [1, -1].iter().any(|&pol| ione(text, pol).is_ok())
+}
+
 /// The root is looked for within this distance when no node is within the tolerance (the isolation window of the MS2).
 const WINDOW: f64 = 0.5;
 
