@@ -8,6 +8,9 @@ from pathlib import Path
 
 import pytest
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from cargo_util import cli_argv
+
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRIES = ROOT / "tests" / "data" / "pubblici_gemini"
 pytestmark = pytest.mark.skipif(not shutil.which("cargo"), reason="cargo not available")
@@ -16,7 +19,9 @@ pytestmark = pytest.mark.skipif(not shutil.which("cargo"), reason="cargo not ava
 @pytest.fixture(scope="module")
 def sommario(tmp_path_factory):
     out = tmp_path_factory.mktemp("convalida") / "somma.json"
-    r = subprocess.run([sys.executable, str(ROOT / "tools" / "validate_rules.py"), "--registri", str(REGISTRIES), "--out", str(out)], cwd=ROOT, capture_output=True, text=True)
+    argv = cli_argv()      # the binary of the CI `prebuilt` job when installed; else the script runs `cargo run --release` itself, as before (~5 min on a cold shard)
+    binary = ["--cli", argv[0]] if len(argv) == 1 else []
+    r = subprocess.run([sys.executable, str(ROOT / "tools" / "validate_rules.py"), "--registri", str(REGISTRIES), *binary, "--out", str(out)], cwd=ROOT, capture_output=True, text=True)
     assert r.returncode == 0, r.stderr[-2000:]
     return json.loads(out.read_text())
 

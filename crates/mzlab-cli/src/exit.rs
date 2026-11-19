@@ -117,6 +117,7 @@ pub fn code_of_key(key: &str) -> u8 {
         "err.flow.input.",
         "err.flow.unknownStep",
         "err.mzrun.",
+        "err.design.",
         "err.normative.pin",
         "err.normative.sources",
     ];

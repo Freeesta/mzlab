@@ -1,6 +1,6 @@
 //! One source of scans and traces for the routes, whatever the file: `Scansioni` (the peaks and the header fields of a row of the index) and
 //! `Tracce` (the chromatograms and the header of the file). Two implementations each: an mzML read by offset (every `ReadAt`, with the rows of an
-//! index of version 1; `MzmlTraces`) and one sample of a `Lettore` (`ReaderSource`, with the rows of an index of version 2, `docs/agenti/mzidx.md`).
+//! index of an mzML; `MzmlTraces`) and one sample of a `Lettore` (`ReaderSource`, with the rows of a vendor-file index, `docs/agenti/mzidx.md`).
 
 use crate::error::{Error, Result};
 use crate::idxread::{ReadAt, Scan};
@@ -26,7 +26,7 @@ pub trait Scansioni {
 }
 
 /// An mzML read by offset: the row gives `start..end` of the `<spectrum>`. A reader that stands for a vendor file (`ReadAt::lettore`) gives, for a row
-/// of an index of version 2, the peaks of its `Lettore` and the header fields the mzML of `readers_mzml::scrivi` would have (`scan_text`).
+/// of a vendor-file index, the peaks of its `Lettore` and the header fields the mzML of `readers_mzml::scrivi` would have (`scan_text`).
 impl<M: ReadAt> Scansioni for M {
     fn spettro(&mut self, sc: &Scan) -> Result<(Vec<f64>, Vec<f64>)> {
         Ok(self.spettro_mobilita(sc)?.0)
@@ -216,7 +216,7 @@ impl<M: ReadAt> Traces for MzmlTraces<'_, M> {
     }
 }
 
-/// Sample `c` of a reader: the rows of its index (version 2) carry `k`, the number of the scan in `Lettore::index(c)`.
+/// Sample `c` of a reader: the rows of its index (vendor-file index) carry `k`, the number of the scan in `Lettore::index(c)`.
 pub struct ReaderSource<'a> {
     pub l: &'a mut dyn Reader,
     pub c: usize,
