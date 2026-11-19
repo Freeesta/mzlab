@@ -291,28 +291,28 @@ fn flag_json(f: &Flag, with_required: bool) -> Value {
         .chain(GLOBAL)
         .find(|(n, _)| *n == f.name)
         .map_or("", |(_, h)| *h);
-    let default = match (&f.default, f.kind) {
-        (Some(d), _) => text(d),
-        (None, "bool") => Value::Bool(false),
-        _ => Value::Null,
-    };
+    // Members that are null or false are left out: `commands --json` stays small.
     let mut o = Obj::new()
         .put("name", text(&f.name))
-        .put("type", text(f.kind))
-        .put("unit", f.unit.map_or(Value::Null, text))
-        .put("default", default)
-        .put(
+        .put("type", text(f.kind));
+    if let Some(u) = f.unit {
+        o = o.put("unit", text(u));
+    }
+    if let Some(d) = &f.default {
+        o = o.put("default", text(d));
+    }
+    if !f.values.is_empty() {
+        o = o.put(
             "enum",
-            if f.values.is_empty() {
-                Value::Null
-            } else {
-                Value::Arr(f.values.iter().map(|v| text(v)).collect())
-            },
-        )
-        .put("help", text(help))
-        .b("repeat", f.repeat);
-    if with_required {
-        o = o.b("required", f.required);
+            Value::Arr(f.values.iter().map(|v| text(v)).collect()),
+        );
+    }
+    o = o.put("help", text(help));
+    if f.repeat {
+        o = o.b("repeat", true);
+    }
+    if with_required && f.required {
+        o = o.b("required", true);
     }
     o.done()
 }
