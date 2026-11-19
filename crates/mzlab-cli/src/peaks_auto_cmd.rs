@@ -2,8 +2,8 @@
 //! function behind the one-click integration of the page (`QUALITA.autoIntegrate`). The `--set` names are the snake_case of the page settings (`PK`).
 
 use mzlab_core::area_unit::AreaUnit;
-use mzlab_core::baseline::integrate;
-use mzlab_core::peakq_auto::{auto_integrate, AutoParams};
+use mzlab_core::baseline::{integrate, Baseline};
+use mzlab_core::peakq_auto::{auto_integrate, AutoParams, AutoPeak};
 
 use crate::peaks_edges_cmd::trace;
 use crate::plain::peak_area_cmd::{baseline_of, is_base};
@@ -20,9 +20,10 @@ usage: mzlab-cli peak auto TRACE.csv|- [--from MIN] [--to MIN] [--baseline zero|
   --area-unit  s = counts x s (default, as peak area), min = counts x min (the old unit)
   --set        numbers only; the page dialog: hr_smooth (points, odd), hr_sn; engine only: hr_prom (% of the tallest), hr_scans, hr_half (points, 0 = auto), hr_slope (%),
                and with --baseline line: base_y0, base_t0, base_y1, base_t1
-  output       {\"peaks\":[{\"t0\":MIN,\"t1\":MIN,\"b0\":COUNTS,\"b1\":COUNTS,\"area\":COUNTS_S,\"baseline\":\"edges\"}...]} with edges; with zero or line
-               each peak has \"t0\", \"t1\", \"area\" (signed, against that line), \"baseline\" and \"below\" (COUNTS_S, the part under the line) and NO b0/b1:
-               the ends of the detection baseline are not what the area is measured from, so they are left out";
+  output       {\"peaks\":[{\"t0\":MIN,\"t1\":MIN,\"b0\":COUNTS,\"b1\":COUNTS,\"area\":COUNTS_S,\"baseline\":MODE}...],\"choices\":[...]}; with edges b0/b1 are the detection baseline
+               ends, with line the line at t0 and t1; with zero or line each peak also has \"below\" (COUNTS_S, the part under the line) and its area is the
+               signed one against that line. With zero (the default) b0/b1 are not written (the area is measured from 0) and \"choices\" says so; base_*
+               numbers with a baseline other than line are an error (exit 2)";
 
 fn set(p: &mut AutoParams, name: &str, v: &str) -> Result<(), String> {
     let n: f64 = v.parse().map_err(|_| format!("{name} needs a number"))?;
@@ -44,6 +45,35 @@ fn set(p: &mut AutoParams, name: &str, v: &str) -> Result<(), String> {
 fn num(v: Option<String>, flag: &str) -> Result<f64, String> {
     v.and_then(|s| s.parse::<f64>().ok())
         .ok_or_else(|| format!("{flag} needs a number"))
+}
+
+/// One peak as JSON: edges keep the detection baseline ends; zero omits b0/b1 (logged in `choices`); a line writes its own ends.
+fn peak_json(x: &[f64], y: &[f64], k: &AutoPeak, base: &Baseline, f: f64) -> String {
+    if base.at(0.0).is_none() {
+        return format!(
+            "{{\"t0\":{},\"t1\":{},\"b0\":{},\"b1\":{},\"area\":{},\"baseline\":\"edges\"}}",
+            x[k.lo],
+            x[k.hi],
+            k.base_lo,
+            k.base_hi,
+            k.area * f
+        );
+    }
+    let at = |t: f64| base.at(t).unwrap_or(0.0);
+    let r = integrate(x, y, k.lo, k.hi, at);
+    let ends = if base.name() == "zero" {
+        String::new()
+    } else {
+        format!(",\"b0\":{},\"b1\":{}", at(x[k.lo]), at(x[k.hi]))
+    };
+    format!(
+        "{{\"t0\":{},\"t1\":{}{ends},\"area\":{},\"baseline\":\"{}\",\"below\":{}}}",
+        x[k.lo],
+        x[k.hi],
+        r.area * f,
+        base.name(),
+        r.below * f
+    )
 }
 
 pub fn run(args: Vec<String>) -> Outcome {
@@ -96,29 +126,19 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok((x, y)) => {
             let (x0, x1) = (from.unwrap_or(x[0]), to.unwrap_or(x[x.len() - 1]));
             let f = unit.factor();
+            let zero = base.name() == "zero";
             let rows: Vec<String> = auto_integrate(&x, &y, x0, x1, p)
                 .iter()
-                .map(|k| {
-                    match base.at(0.0) {
-                        None => format!(
-                            "{{\"t0\":{},\"t1\":{},\"b0\":{},\"b1\":{},\"area\":{},\"baseline\":\"edges\"}}",
-                            x[k.lo], x[k.hi], k.base_lo, k.base_hi, k.area * f
-                        ),
-                        Some(_) => {
-                            let r = integrate(&x, &y, k.lo, k.hi, |t| base.at(t).unwrap_or(0.0));
-                            format!(
-                                "{{\"t0\":{},\"t1\":{},\"area\":{},\"baseline\":\"{}\",\"below\":{}}}",
-                                x[k.lo],
-                                x[k.hi],
-                                r.area * f,
-                                base.name(),
-                                r.below * f
-                            )
-                        }
-                    }
-                })
+                .map(|k| peak_json(&x, &y, k, &base, f))
                 .collect();
-            Outcome::ok(format!("{{\"peaks\":[{}]}}\n", rows.join(",")).into_bytes())
+            let choices = if zero {
+                "[{\"key\":\"b0_b1\",\"choice\":\"omitted\",\"reason\":\"baseline=zero: the area is measured from 0, so the detection baseline ends are not used\"}]"
+            } else {
+                "[]"
+            };
+            Outcome::ok(
+                format!("{{\"peaks\":[{}],\"choices\":{choices}}}\n", rows.join(",")).into_bytes(),
+            )
         }
     }
 }

@@ -49,7 +49,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 
 - `db ref-list FILE.csv` (JSON `reflist/1`: items and line-numbered row errors; exit 1 = some rows wrong, 2 usage, 4 unreadable file; `--match X` adds `mz-match/1`): `reference-lists.md`.
 
-- `peak auto` and `peak auto-lr`: areas in counts x s; `--area-unit s|min` (`min` = the old counts x min).
+- `peak auto` and `peak auto-lr`: areas in counts x s; `--area-unit s|min` (`min` = the old counts x min). `peak auto` under `--baseline zero` (default) leaves out `b0`/`b1` and says so in `choices`; with `line` they are the line at `t0`/`t1`; `base_*` numbers without `--baseline line` are exit 2.
 
 ## Rules for the agent
 - The CLI uses no network (except `normative build` and `insilico pack`, which say so) and reads/writes only the paths it is given; never delete user files.

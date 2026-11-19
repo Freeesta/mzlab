@@ -54,7 +54,7 @@ fn peaks_are_the_core_result_and_set_names_are_accepted() {
     ]));
     assert_eq!(
         String::from_utf8(o.stdout).unwrap().trim(),
-        "{\"peaks\":[]}"
+        "{\"peaks\":[],\"choices\":[{\"key\":\"b0_b1\",\"choice\":\"omitted\",\"reason\":\"baseline=zero: the area is measured from 0, so the detection baseline ends are not used\"}]}"
     );
     let o = run(args(&[
         p,
@@ -157,6 +157,17 @@ fn the_baseline_mode_applies_to_every_peak() {
         .unwrap()
         .iter()
         .all(|g| g["baseline"] == "line" && g["below"].as_f64().unwrap() > 0.0));
+    // the line's own ends are written with a line, the omission is logged with zero, and base_* without a line contradict the mode
+    assert!(v["choices"].as_array().unwrap().is_empty());
+    assert!(v["peaks"][0]["b0"].as_f64().unwrap() > 0.0, "{v}");
+    let z: serde_json::Value = serde_json::from_slice(&run(args(&[p])).stdout).unwrap();
+    assert_eq!(z["choices"][0]["key"], "b0_b1", "{z}");
+    let bad = run(args(&[p, "--set", "base_y0=5"]));
+    assert_eq!(bad.code, 2, "{}", bad.stderr);
+    assert_ne!(
+        run(args(&[p, "--baseline", "edges", "--set", "base_y0=5"])).code,
+        0
+    );
     assert_ne!(run(args(&[p, "--baseline", "valley"])).code, 0);
 }
 

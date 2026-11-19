@@ -24,6 +24,10 @@ pub(crate) fn baseline_of(sets: &[(String, String)]) -> Result<Baseline, String>
             return Err(format!("{k} needs a number"));
         }
     }
+    let named = sets.iter().rev().find(|(n, _)| n == "baseline");
+    if named.is_none_or(|(_, m)| m != "line") && sets.iter().any(|(k, _)| k.starts_with("base_")) {
+        return Err("base_t0/base_y0/base_t1/base_y1 describe a line: they contradict a baseline other than --baseline line".into());
+    }
     let get = |k: &str| {
         sets.iter()
             .rev()
