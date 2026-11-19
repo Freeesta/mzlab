@@ -105,13 +105,20 @@
       const scope = ({ 1: "all", file: "files" })[u.searchParams.get("riparti") || ""] || null, fresh = !!scope;
       if (fresh) { await within(lr.reset(scope)); u.searchParams.delete("riparti"); u.searchParams.delete("ripn"); history.replaceState(null, "", u.pathname + u.search + u.hash); }
       await within(lr.boot(fresh)); window.MZLAB_LR = lr;
-      window.qqStep = ""; phase(null); perfMark("motore pronto");
+      window.qqStep = ""; phase(null); perfMark("motore pronto"); import(new URL("engine-recupera.js", SRC).href).then(m => m.recoverDone()).catch(() => {});
     }
     catch (e_) { const e = /** @type {Lanciato} */ (e_);
       window.MZLAB_LR_ERR = String(e && e.message || e); lr = null;
       if (window.ERRORI && window.ERRORI.segnala) window.ERRORI.segnala(e, "engine");
       // the technical text stays in MZLAB_LR_ERR and the console: the screen speaks the language of the page
-      if (e && e.key) fail(e.key); else { console.error("[mzLab] engine start failed", e); fail("load.err.engineStart"); }
+      if (e && e.key) fail(e.key);
+      else if (e && e.dead && !(window.MZLAB_RUST && window.MZLAB_RUST.offKey === "error.engineOffMemory")) {
+        // the engine died at start (and its restart too): a stored copy of the site of two deploys is the usual cause. Clear it and reload once; a second failure says so
+        console.error("[mzLab] engine start failed", e);
+        phase({ key: "load.engine.refreshing", pct: null });
+        const m = await import(new URL("engine-recupera.js", SRC).href);
+        if (await m.recoverEngine({ prefix: NOMI.CACHE_APP }) === "already") fail("load.err.engineStartPurged");
+      } else { console.error("[mzLab] engine start failed", e); fail("load.err.engineStart"); }
       throw e;
     }
   };
