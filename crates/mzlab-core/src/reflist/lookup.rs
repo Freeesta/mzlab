@@ -64,7 +64,7 @@ pub fn route(body: &str) -> Result<String> {
     );
     for side in sides {
         let mut a: Vec<usize> = (0..m.len()).filter(|&i| ion(i).1 != -side).collect();
-        a.sort_by(|&x, &y| ion(x).0.total_cmp(&ion(y).0));
+        crate::sortc::slice_by(&mut a, |&x, &y| ion(x).0.total_cmp(&ion(y).0));
         let from = a.partition_point(|&i| ion(i).0 < mz - t);
         for &i in a[from..].iter().take_while(|&&i| ion(i).0 <= mz + t) {
             if seen.insert(ion(i).2.to_bits()) {
@@ -73,7 +73,7 @@ pub fn route(body: &str) -> Result<String> {
             }
         }
     }
-    hits.sort_by(|a, b| {
+    crate::sortc::slice_by(&mut hits, |a, b| {
         let (x, y) = if da {
             (a.1.abs(), b.1.abs())
         } else {
