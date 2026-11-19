@@ -79,7 +79,6 @@
           "summary",
           "args",
           "flags",
-          "stdin",
           "stdout"
         ],
         "properties": {
@@ -98,9 +97,7 @@
               "type": "object",
               "required": [
                 "name",
-                "kind",
-                "required",
-                "repeat"
+                "kind"
               ],
               "properties": {
                 "name": {
