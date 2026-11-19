@@ -257,13 +257,12 @@ pub fn export_table_auto(
             ix.push(i);
         }
     }
-    let samples = samples_json.clone();
     let pol =
         pol::of_table(&mut table_reader(table_read.clone()), size as u64, &ix).map_err(js_err)?;
     core::table_file(
         &mut table_reader(table_read),
         size as u64,
-        &samples,
+        samples_json,
         &spec,
         table_sha256,
         pol,
@@ -286,11 +285,15 @@ pub fn table_view_auto(
         samples_json.as_bytes(),
     )
     .map_err(js_err)?;
-    let samples = samples_json.clone();
     let spec = filterspec::spec_from_json_with_samples(params_json, samples_json.as_bytes())
         .map_err(js_err)?;
-    core::view_json_origin(&mut table_reader(table_read), size as u64, &samples, &spec)
-        .map_err(js_err)
+    core::view_json_origin(
+        &mut table_reader(table_read),
+        size as u64,
+        &samples_json,
+        &spec,
+    )
+    .map_err(js_err)
 }
 
 /// The `.mzfeat` a `table.filter` view stands for (`mzlab_feat::view_table::table_of_view`, what `flow run` gives a step that reads a table from a view), made from the
