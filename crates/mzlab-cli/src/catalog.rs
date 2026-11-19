@@ -54,7 +54,10 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--mz", "m/z"),
     ("--ppm", "tolerance, ppm"),
     ("--rt-tol", "RT window, minutes"),
-    ("--inspection", "an inspection/1 file, or - for stdin; no indexing"),
+    (
+        "--inspection",
+        "an inspection/1 file, or - for stdin; no indexing",
+    ),
     ("--answers", "answers file for the questions of the rules"),
     ("--da", "tolerance, Da"),
     ("--n", "points kept per extreme"),
