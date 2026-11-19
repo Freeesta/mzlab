@@ -50,13 +50,13 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - On a failure after a command printed a document (a `flowrun/1` report, a `flowcheck/1`, a `verify/1`), `error/1` carries it as `report`: stdout is one JSON document either way. Every non-zero exit is one `error/1`, except the verdicts below.
 - Verdict commands, by command path in `VERDICT` (`crates/mzlab-cli/src/contract.rs`): `file validate`, `file pair`, `file inventory`, `file verify`, `sample list`, `db normative build` (a stale list), `llm eval` (a failed check) and `db ref-list` (some rows wrong: good rows in `items`, bad in `errors`). Their exit 1 or 3 is the answer the site computes byte for byte, so the document stays on stdout with its own verdict (`ok`, `valid`, `probe`, `errors`, `stale`); `sample select` is not a verdict. Exit 2, 4, 5 and 6 of these are an `error/1` with no verdict (`file validate`, missing file: 4).
   - `db normative build`: exit 1 (a stale list) keeps its `normative-build/1`; exit 3 (pin mismatch) has no document and is an `error/1`.
-- `peak table`: CSV on stdout with a stable header (`docs/agenti/transitions.md`), or `--json` = `{"columns": [NAME], "rows": [{NAME: TEXT}]}` (the same cells, as text); `--set columns=sn,fig,quality` adds the optional figure columns; `--json` and the CSV both go to stdout (data only; errors on stderr); exit 0 done, 2 usage or data error (unreadable file, bad window or column name).
-  `--set traces=PATH` takes the traces (chromatogram, XIC, DAD) as JSON instead of files; with a `panel` on a trace the header ends with `panel,conc,conc_unit,correction,below,area_unit`.
-  `--set shifts=true` and `--set auto=true` answer JSON.
+- `peak table`: CSV on stdout with a stable header (`docs/agenti/transitions.md`), or `--json` = `{"columns": [NAME], "rows": [{NAME: TEXT}]}` (the same cells, as text); `--columns sn,fig,quality` adds the optional figure columns; `--json` and the CSV both go to stdout (data only; errors on stderr); exit 0 done, 2 usage or data error (unreadable file, bad window or column name).
+  `--traces PATH` takes the traces (chromatogram, XIC, DAD) as JSON instead of files; with a `panel` on a trace the header ends with `panel,conc,conc_unit,correction,below,area_unit`.
+  `--shifts` and `--auto` answer JSON.
 
 - `db ref-list FILE.csv` (JSON `reflist/1`: items and line-numbered row errors; exit 1 = some rows wrong, 2 usage, 4 unreadable file; `--match X` adds `reflist-match/1`): `reference-lists.md`.
 
-- `peak auto` and `peak auto-lr`: areas in counts x s; `--set area_unit=s|min` (`min` = the old counts x min).
+- `peak auto` and `peak auto-lr`: areas in counts x s; `--area-unit s|min` (`min` = the old counts x min). `peak auto` under `--baseline zero` (default) leaves out `b0`/`b1` and says so in `choices`; with `line` they are the line at `t0`/`t1`; `base_*` numbers without `--baseline line` are exit 2.
 
 ## Flow and llm commands
 - `flow report RUNDIR` (`run-report/1`; exit 4 no folder or `prov.json`, 6 `--out` unwritable), `flow command PLAN.json --json` (`flowcommand/1`, the script in `script`; exit 0, 2, 4) and `explain-missing ... --json` (`explain-missing/1`, `columns` and `rows`; exit 0, 2, 4, 6) follow the contract; `flow report` ends with one `\n`.

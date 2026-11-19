@@ -43,11 +43,11 @@ fn text(o: &crate::Outcome) -> String {
     String::from_utf8(o.stdout.clone()).unwrap()
 }
 
-/// The windows file `w` in the fixture directory, as a `--set` value.
+/// The windows file `w` in the fixture directory, as a `--windows` value.
 fn windows(d: &Path, w: &str) -> String {
     let p = d.join("windows.json");
     std::fs::write(&p, w).unwrap();
-    format!("windows={}", p.display())
+    p.display().to_string()
 }
 
 /// Windows of 0.3 min around the peaks the writer put: ionA (transition 0) of samples A and C, the isomer pair of ionC (transition 2) of sample B.
@@ -61,9 +61,17 @@ fn one_row_per_window_grouped_by_channel_at_the_peaks_written() {
     let peaks = truth.get("picchi").unwrap().arr();
     let at = |s: usize, j: usize, k: usize| peaks[s].arr()[j].arr()[k].f64().unwrap();
     let set = windows(&d, WINDOWS);
-    let t = text(&table(&[&d.join("sim3.wiff")], &["--set", &set]));
+    let t = text(&table(&[&d.join("sim3.wiff")], &["--windows", &set]));
     let r: Vec<Vec<&str>> = t.lines().map(|l| l.split(',').collect()).collect();
     assert_eq!(r[0].join(","), mzlab_core::manint::HEAD.trim_end());
+    // the list the help prints after "Columns, in this order:" is the first line of the real output
+    let h = super::help();
+    let listed = h
+        .split("Columns, in this order: ")
+        .nth(1)
+        .and_then(|x| x.split(".\n").next())
+        .unwrap();
+    assert_eq!(listed, t.lines().next().unwrap());
     assert_eq!(r.len(), 5, "{t}");
     let key: Vec<String> = r[1..].iter().map(|x| x[..2].join(",")).collect();
     assert_eq!(
@@ -88,7 +96,7 @@ fn one_row_per_window_grouped_by_channel_at_the_peaks_written() {
     );
     let sums = text(&table(
         &[&d.join("sim3.wiff")],
-        &["--set", &set, "--set", "sums=true"],
+        &["--windows", &set, "--sums"],
     ));
     let s: Vec<&str> = sums.lines().collect();
     assert_eq!(s.len(), 7, "{sums}");
@@ -109,7 +117,7 @@ fn a_window_applied_to_the_other_samples_is_the_same_bytes_as_its_shifts() {
         &d,
         r#"[{"file":1,"tr":0,"a":1.89,"b":2.19,"follow":true,"label":"ionA peak","names":{"3":"C only"}}]"#,
     );
-    let t = text(&table(&[&w], &["--set", &set]));
+    let t = text(&table(&[&w], &["--windows", &set]));
     let r: Vec<Vec<&str>> = t.lines().skip(1).map(|l| l.split(',').collect()).collect();
     assert!(r.len() >= 2, "{t}");
     let by = |n: &str| r.iter().find(|x| x[1] == n).expect(n).clone();
@@ -130,26 +138,22 @@ fn a_window_applied_to_the_other_samples_is_the_same_bytes_as_its_shifts() {
     );
     let c = r.iter().find(|x| x[1] == "Sample_C").expect("sample C");
     assert_eq!(c[3], "C only", "a name for one sample alone");
-    let again = text(&table(&[&w], &["--set", &set]));
+    let again = text(&table(&[&w], &["--windows", &set]));
     assert_eq!(t, again, "deterministic");
-    let j = text(&table(&[&w], &["--set", &set, "--set", "shifts=true"]));
+    let j = text(&table(&[&w], &["--windows", &set, "--shifts"]));
     assert!(j.starts_with("[{\"file\":"), "{j}");
     let _ = std::fs::remove_dir_all(&d);
 }
 
-/// `auto=true` finds the peaks of every sample without a windows file: the same bytes twice, every window of the answer is a row of the table, and a
+/// `--auto` finds the peaks of every sample without a windows file: the same bytes twice, every window of the answer is a row of the table, and a
 /// `params` file moves the answer (a signal-to-noise nobody reaches finds no peak).
 #[test]
 fn auto_finds_the_peaks_of_every_sample_and_its_windows_are_the_table_rows() {
     let Some(d) = fixture("auto") else { return };
     let w = d.join("sim3.wiff");
-    let j = text(&table(&[&w], &["--set", "auto=true"]));
+    let j = text(&table(&[&w], &["--auto"]));
     assert!(j.starts_with("{\"tol\":"), "{j}");
-    assert_eq!(
-        j,
-        text(&table(&[&w], &["--set", "auto=true"])),
-        "deterministic"
-    );
+    assert_eq!(j, text(&table(&[&w], &["--auto"])), "deterministic");
     let v = parse(j.as_bytes()).unwrap();
     let n = v.get("windows").unwrap().arr().len();
     assert!(n >= 4, "{j}");
@@ -158,23 +162,18 @@ fn auto_finds_the_peaks_of_every_sample_and_its_windows_are_the_table_rows() {
         &d,
         &j[j.find("\"windows\":").unwrap() + 10..j.find(",\"log\"").unwrap()],
     );
-    let t = text(&table(&[&w], &["--set", &set]));
+    let t = text(&table(&[&w], &["--windows", &set]));
     assert_eq!(t.lines().count() - 1, n, "{t}");
     assert!(t.contains(",auto") || t.contains(",unmatched"), "{t}");
     let p = d.join("params.json");
     std::fs::write(&p, r#"{"sn":1000000}"#).unwrap();
     let none = text(&table(
         &[&w],
-        &[
-            "--set",
-            "auto=true",
-            "--set",
-            &format!("params={}", p.display()),
-        ],
+        &["--auto", "--params", &p.display().to_string()],
     ));
     assert!(none.contains("\"windows\":[]"), "{none}");
     assert_ne!(
-        table(&[&w], &["--set", "params=x.json"]).code,
+        table(&[&w], &["--params", "x.json"]).code,
         0,
         "params without auto"
     );
@@ -185,12 +184,12 @@ fn auto_finds_the_peaks_of_every_sample_and_its_windows_are_the_table_rows() {
 fn settings_and_windows_that_name_nothing_fail() {
     let Some(d) = fixture("bad") else { return };
     let w = d.join("sim3.wiff");
-    assert_ne!(table(&[&w], &[]).code, 0, "no windows");
+    assert_eq!(table(&[&w], &[]).code, 2, "no windows");
     let ok = windows(&d, WINDOWS);
-    assert_ne!(table(&[&w], &["--set", &ok, "--set", "sums=yes"]).code, 0);
-    assert_ne!(
-        table(&[&w], &["--set", &ok, "--set", "baseline=zero"]).code,
-        0
+    assert_eq!(table(&[&w], &["--windows", &ok, "--sums=yes"]).code, 2);
+    assert_eq!(
+        table(&[&w], &["--windows", &ok, "--set", "baseline=zero"]).code,
+        2
     );
     for bad in [
         r#"[{"file":4,"tr":0,"a":1,"b":2}]"#,
@@ -198,18 +197,18 @@ fn settings_and_windows_that_name_nothing_fail() {
         r#"[{"file":1,"tr":0,"a":1,"b":2,"baseline":"line"}]"#,
     ] {
         let set = windows(&d, bad);
-        assert_ne!(table(&[&w], &["--set", &set]).code, 0, "{bad}");
+        assert_eq!(table(&[&w], &["--windows", &set]).code, 2, "{bad}");
     }
     let empty = windows(&d, "[]");
     assert_eq!(
-        text(&table(&[&w], &["--set", &empty])),
+        text(&table(&[&w], &["--windows", &empty])),
         mzlab_core::manint::HEAD
     );
     let _ = std::fs::remove_dir_all(&d);
 }
 
 /// The `time_min` column: the time point each sample name carries (`sim_tempo.wiff`: a blank with a ratio, t0, 3 h, 8 h, a repeated 3 h and a name with
-/// H20 that is no time), and `--set times=PATH` replacing or clearing it for the samples it names.
+/// H20 that is no time), and `--times PATH` replacing or clearing it for the samples it names.
 #[test]
 fn the_time_point_of_each_sample_is_in_the_table_and_can_be_replaced() {
     let Some(d) = fixture("time") else { return };
@@ -241,12 +240,12 @@ fn the_time_point_of_each_sample_is_in_the_table_and_can_be_replaced() {
         .map(|(n, t)| (n.to_string(), t.to_string()))
         .collect()
     };
-    let t = text(&table(&[&w], &["--set", &set]));
+    let t = text(&table(&[&w], &["--windows", &set]));
     assert_eq!(pairs(&t), want(["", "0", "180", "480", "180", ""]), "{t}");
     let tp = d.join("times.json");
     std::fs::write(&tp, r#"{"RET 3h_2":45,"PERM 3h":null,"H20 demi":10}"#).unwrap();
-    let set_t = format!("times={}", tp.display());
-    let t = text(&table(&[&w], &["--set", &set, "--set", &set_t]));
+    let set_t = tp.display().to_string();
+    let t = text(&table(&[&w], &["--windows", &set, "--times", &set_t]));
     assert_eq!(pairs(&t), want(["", "0", "45", "480", "", "10"]), "{t}");
     let _ = std::fs::remove_dir_all(&d);
 }
@@ -280,10 +279,7 @@ fn the_wiff_and_its_mzml_give_the_same_bytes() {
     }
     let refs: Vec<&Path> = files.iter().map(PathBuf::as_path).collect();
     let set = windows(&d, WINDOWS);
-    for extra in [
-        &["--set", &set][..],
-        &["--set", &set, "--set", "sums=true"][..],
-    ] {
+    for extra in [&["--windows", &set][..], &["--windows", &set, "--sums"][..]] {
         assert_eq!(
             text(&table(&refs, extra)),
             text(&table(&[&d.join("sim3.wiff")], extra))
@@ -300,7 +296,7 @@ fn a_scan_file_cut_short_gives_the_points_before_the_cut_and_a_warning() {
         &d,
         r#"[{"file":1,"tr":0,"a":1.89,"b":2.19},{"file":2,"tr":0,"a":1.93,"b":2.23}]"#,
     );
-    let o = table(&[&d.join("sim3_cut.wiff")], &["--set", &set]);
+    let o = table(&[&d.join("sim3_cut.wiff")], &["--windows", &set]);
     assert!(
         o.stderr.contains("warning: Sample_B.mzML:")
             && o.stderr.contains("warning: Sample_C.mzML:")
@@ -310,10 +306,10 @@ fn a_scan_file_cut_short_gives_the_points_before_the_cut_and_a_warning() {
     );
     assert_eq!(
         text(&o),
-        text(&table(&[&d.join("sim3.wiff")], &["--set", &set]))
+        text(&table(&[&d.join("sim3.wiff")], &["--windows", &set]))
     );
     let c = windows(&d, r#"[{"file":3,"tr":0,"a":1.97,"b":2.27}]"#);
-    let o = table(&[&d.join("sim3_cut.wiff")], &["--set", &c]);
+    let o = table(&[&d.join("sim3_cut.wiff")], &["--windows", &c]);
     assert_ne!(o.code, 0);
     assert!(o.stderr.contains("warning: Sample_C.mzML:"), "{}", o.stderr);
     let _ = std::fs::remove_dir_all(&d);
@@ -347,4 +343,25 @@ fn a_lone_unnamed_sample_is_named_after_its_file_in_any_case() {
         wiff_name("x", "Named", &["named.mzML".into()]),
         "Named.wiff.mzML"
     );
+}
+
+/// The help lists the columns of the CSV header, in its order: both come from the same constants.
+#[test]
+fn help_lists_the_header_columns_in_order() {
+    let h = super::help();
+    let head = mzlab_core::manint::HEAD.trim_end();
+    assert_eq!(head.split(',').count(), 14);
+    assert!(
+        h.contains(&format!("Columns, in this order: {head}.")),
+        "{h}"
+    );
+    assert!(h.contains(mzlab_core::manint::EXT_HEAD.trim_start_matches(',')));
+    for e in [
+        mzlab_core::manint::SN_HEAD,
+        mzlab_core::manint::FIG_HEAD,
+        mzlab_core::manint::QUALITY_HEAD,
+    ] {
+        assert!(h.contains(e.trim_start_matches(',')), "{e}");
+    }
+    assert!(!h.contains("--set"), "peak table has no --set");
 }

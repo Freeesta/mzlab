@@ -37,7 +37,7 @@ try:
             def same(mode=mode, line=line, sets=sets, name=name):
                 page = pg.evaluate("([a,b,m,l])=>{const s=E.panels.find(q=>q.type==='xic')._a.sr[0];return QUALITA.peakArea(s.x,s.y,a,b,m,l)}", [a, b, mode, line])
                 assert page, "no answer from the engine"
-                args = sum((["--set", x] for x in (sets or ["baseline=zero"])), [])
+                args = sum((["--baseline", x.split("=")[1]] if x.startswith("baseline=") else ["--set", x] for x in (sets or ["baseline=zero"])), [])
                 cli = subprocess.run(CLI + ["peak", "area", str(csv), "--from", repr(a), "--to", repr(b), *args], cwd=ROOT, check=True, capture_output=True, text=True).stdout
                 assert page + "\n" == cli, (page, cli)
                 v = json.loads(page)

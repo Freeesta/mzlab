@@ -1,4 +1,4 @@
-//! `mzlab-cli peak split FILE... --set tr=J --set a=MIN --set b=MIN [--set NAME=VALUE...]`: one integration drawn by hand on a transition / SIM
+//! `mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--split ...]`: one integration drawn by hand on a transition / SIM
 //! trace and its valleys (`mzlab_core::manint`). Without `split` it prints where the window splits at `depth` (the bytes of the page's
 //! `api/manvalley`); with `split` it prints the table of the window cut there, a row per part (the bytes of `api/manint` for that window).
 
@@ -10,23 +10,28 @@ use mzlab_core::valley::DEPTH;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli peak split: one integration drawn by hand on a transition / SIM trace, split at its valleys.
+pub fn help() -> String {
+    format!(
+"mzlab-cli peak split: one integration drawn by hand on a transition / SIM trace, split at its valleys.
 
-usage: mzlab-cli peak split FILE... --set tr=J --set a=MIN --set b=MIN [--set NAME=VALUE...] [--out PATH]
+usage: mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--file I] [--baseline zero|edges|line] [--line T0,Y0,T1,Y1] [--depth X] [--split auto|MIN[,MIN...]] [--label NAME] [--out PATH]
 
   FILE        an mzML, or a vendor file the app reads, in the order of the page (as peak table)
-  --set file=I        the sample (from 0, default 0) and --set tr=J its transition in the list of the file
-  --set a=MIN --set b=MIN   the edges of the window
-  --set baseline=zero|edges|line   default zero; line needs --set line=t0,y0,t1,y1
-  --set depth=X       0..1, default 0.1: a valley splits when the smaller of its two peaks rises above it by X times the highest point of the
-                      window (trace minus baseline); a shoulder, without a minimum, is never split
-  --set split=auto|MIN[,MIN...]   cut the window there (auto = at the valleys found at depth) and print its table
-  --set label=NAME    the name of the window (the last column of the table)
+  --file I    the sample (from 0, default 0) and --tr J its transition in the list of the file
+  --a MIN --b MIN   the edges of the window
+  --baseline  default zero; line needs --line T0,Y0,T1,Y1
+  --depth X   0..1, default 0.1: a valley splits when the smaller of its two peaks rises above it by X times the highest point of the
+              window (trace minus baseline); a shoulder, without a minimum, is never split
+  --split     cut the window there (auto = at the valleys found at depth) and print its table
+  --label NAME    the name of the window (column 4, label, of the table)
   --out PATH  write there instead of the standard output
 
-Without split: {\"splits\":[MIN,...]}, the times of the valleys. With split: the CSV of peak table for this window, a row per part between drop
+Without --split: {{\"splits\":[MIN,...]}}, the times of the valleys. With --split: the CSV of peak table for this window (columns: {head}), a row per part between drop
 lines on the window's baseline (overlap = drop, pv = Hp/Hv: the height of the part over the higher valley next to it; Ph. Eur. 2.2.46 takes the
-value of the smaller peak). The areas of the parts add up to the area of the whole window.";
+value of the smaller peak). The areas of the parts add up to the area of the whole window.",
+        head = mzlab_core::manint::HEAD.trim_end()
+    )
+}
 
 #[derive(Default)]
 struct Request {
@@ -45,6 +50,26 @@ fn number(name: &str, v: &str) -> Result<f64, String> {
         .ok_or_else(|| format!("{name} needs a number, not {v}"))
 }
 
+/// `--line T0,Y0,T1,Y1`: four numbers.
+fn line_of(x: &str) -> Result<Vec<f64>, String> {
+    let v = x
+        .split(',')
+        .map(|n| number("--line", n))
+        .collect::<Result<Vec<_>, _>>()?;
+    if v.len() != 4 {
+        return Err("--line needs four numbers t0,y0,t1,y1".into());
+    }
+    Ok(v)
+}
+
+/// `--depth X`: between 0 and 1.
+fn depth_of(x: &str) -> Result<f64, String> {
+    match number("--depth", x)? {
+        d if (0.0..=1.0).contains(&d) => Ok(d),
+        _ => Err(format!("depth is between 0 and 1, not {x}")),
+    }
+}
+
 fn parse(args: Vec<String>) -> Result<Option<Request>, String> {
     let mut c = Request::default();
     let (mut file, mut tr, mut a, mut b, mut base, mut line, mut label) =
@@ -54,38 +79,24 @@ fn parse(args: Vec<String>) -> Result<Option<Request>, String> {
         match arg.as_str() {
             "--help" | "-h" => return Ok(None),
             "--out" => c.out = Some(PathBuf::from(it.next().ok_or("--out needs a path")?)),
-            "--set" => {
-                let v = it.next().ok_or("--set needs NAME=VALUE")?;
-                match v.split_once('=') {
-                    Some(("file", x)) => file = number("file", x)?,
-                    Some(("tr", x)) => tr = Some(number("tr", x)?),
-                    Some(("a", x)) => a = Some(number("a", x)?),
-                    Some(("b", x)) => b = Some(number("b", x)?),
-                    Some(("baseline", x @ ("zero" | "edges" | "line"))) => {
-                        base = Some(x.to_string())
-                    }
-                    Some(("baseline", x)) => {
-                        return Err(format!("baseline is zero, edges or line, not {x}"))
-                    }
-                    Some(("line", x)) => {
-                        let v = x
-                            .split(',')
-                            .map(|n| number("line", n))
-                            .collect::<Result<Vec<_>, _>>()?;
-                        if v.len() != 4 {
-                            return Err("line needs four numbers t0,y0,t1,y1".into());
-                        }
-                        line = Some(v);
-                    }
-                    Some(("depth", x)) => match number("depth", x)? {
-                        d if (0.0..=1.0).contains(&d) => c.depth = Some(d),
-                        _ => return Err(format!("depth is between 0 and 1, not {x}")),
-                    },
-                    Some(("split", x)) if !x.is_empty() => c.split = Some(x.to_string()),
-                    Some(("label", x)) => label = Some(x.to_string()),
-                    _ => return Err(format!("unknown setting {v}")),
+            "--file" => file = number("--file", &it.next().ok_or("--file needs a number")?)?,
+            "--tr" => tr = Some(number("--tr", &it.next().ok_or("--tr needs a number")?)?),
+            "--a" => a = Some(number("--a", &it.next().ok_or("--a needs a number")?)?),
+            "--b" => b = Some(number("--b", &it.next().ok_or("--b needs a number")?)?),
+            "--baseline" => match it.next().ok_or("--baseline needs a mode")?.as_str() {
+                x @ ("zero" | "edges" | "line") => base = Some(x.to_string()),
+                x => return Err(format!("baseline is zero, edges or line, not {x}")),
+            },
+            "--line" => line = Some(line_of(&it.next().ok_or("--line needs t0,y0,t1,y1")?)?),
+            "--depth" => c.depth = Some(depth_of(&it.next().ok_or("--depth needs a number")?)?),
+            "--split" => {
+                let x = it.next().ok_or("--split needs auto or times")?;
+                if x.is_empty() {
+                    return Err("--split needs auto or times".into());
                 }
+                c.split = Some(x);
             }
+            "--label" => label = Some(it.next().ok_or("--label needs a name")?),
             o if o.starts_with("--") => return Err(format!("unknown option {o}")),
             _ => c.files.push(PathBuf::from(arg)),
         }
@@ -94,7 +105,7 @@ fn parse(args: Vec<String>) -> Result<Option<Request>, String> {
         return Err("peak split needs at least one file".into());
     }
     let (Some(tr), Some(a), Some(b)) = (tr, a, b) else {
-        return Err("peak split needs --set tr=J --set a=MIN --set b=MIN".into());
+        return Err("peak split needs --tr J --a MIN --b MIN".into());
     };
     let w = &mut c.window;
     w.raw("{\"file\":")
@@ -160,7 +171,7 @@ fn answer(c: &Request, warn: &mut String) -> Result<String, String> {
 pub fn run(args: Vec<String>) -> Outcome {
     let c = match parse(args) {
         Ok(Some(a)) => a,
-        Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
+        Ok(None) => return Outcome::ok(format!("{}\n", help()).into_bytes()),
         Err(e) => return Outcome::fail(&e),
     };
     let mut warn = String::new();

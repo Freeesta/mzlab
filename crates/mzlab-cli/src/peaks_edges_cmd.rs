@@ -7,13 +7,14 @@ use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli peak edges: the limits of the peak at a time on a low-resolution trace, as JSON.
 
-usage: mzlab-cli peak edges TRACE.csv|- --at MIN [--ref MIN] [--mrm] [--set NAME=VALUE...]
+usage: mzlab-cli peak edges TRACE.csv|- --at MIN [--ref MIN] [--mrm] [--noise mad|rms|manual] [--set NAME=VALUE...]
 
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --at MIN     the time of the click
   --ref MIN    base width of the peaks already integrated (used with --set constrain=PERCENT)
   --mrm        the trace is an MRM transition
-  --set        the page dialog: win, edge_frac, sn_min, multi, tail; engine only: area_noise, noise (mad|rms|manual), min_half, constrain, nr0, nr1
+  --noise MODE the noise estimate: mad (default), rms or manual
+  --set        numbers only; the page dialog: win, edge_frac, sn_min, multi, tail; engine only: area_noise, min_half, constrain, nr0, nr1
   output       {\"edges\":[t0,t1]}, or {\"edges\":null} when the S/N is under sn_min";
 
 pub(crate) fn trace(src: &str) -> Result<(Vec<f64>, Vec<f64>), String> {
@@ -42,15 +43,6 @@ pub(crate) fn trace(src: &str) -> Result<(Vec<f64>, Vec<f64>), String> {
 }
 
 fn set(p: &mut LrParams, name: &str, v: &str) -> Result<(), String> {
-    if name == "noise" {
-        p.noise = match v {
-            "mad" => NoiseMode::Mad,
-            "rms" => NoiseMode::Rms,
-            "manual" => NoiseMode::Manual,
-            _ => return Err("noise is mad, rms or manual".into()),
-        };
-        return Ok(());
-    }
     let n: f64 = v.parse().map_err(|_| format!("{name} needs a number"))?;
     match name {
         "win" => p.win = n,
@@ -89,6 +81,18 @@ pub fn run(args: Vec<String>) -> Outcome {
                         .ok_or("--ref needs a number")?
                 }
                 "--mrm" => mrm = true,
+                "--noise" => {
+                    p.noise = match it
+                        .next()
+                        .ok_or("--noise needs mad, rms or manual")?
+                        .as_str()
+                    {
+                        "mad" => NoiseMode::Mad,
+                        "rms" => NoiseMode::Rms,
+                        "manual" => NoiseMode::Manual,
+                        _ => return Err("noise is mad, rms or manual".into()),
+                    }
+                }
                 "--set" => {
                     let kv = it.next().ok_or("--set needs NAME=VALUE")?;
                     let (k, v) = kv.split_once('=').ok_or("--set needs NAME=VALUE")?;

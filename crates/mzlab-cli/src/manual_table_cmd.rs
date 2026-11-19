@@ -1,4 +1,4 @@
-//! `mzlab-cli peak table FILE... --set windows=PATH [--set sums=true] [--out PATH]`: the table of the integrations drawn by hand in the Data view
+//! `mzlab-cli peak table FILE... --windows PATH [--sums] [--out PATH]`: the table of the integrations drawn by hand in the Data view
 //! (`mzlab_core::manint`), one row per window grouped by channel. Each file gives the `/api/mrm` transitions the engine gives the page (an mzML read as
 //! it is, a vendor file through the chromatograms of `readers_mzml::guscio`, as the site reads it), so the CSV is the bytes of the page's export. A
 //! `.wiff` gives one sample per sample of the file, named as the site names its mzML (`conversione.js::wiffName`).
@@ -14,37 +14,55 @@ use mzlab_core::readers::Limits;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli peak table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
+/// The help text; the column lists come from the constants that write the CSV header, so the help cannot drift from the bytes.
+pub fn help() -> String {
+    use mzlab_core::manint::{EXT_HEAD, FIG_HEAD, HEAD, QUALITY_HEAD, SN_HEAD};
+    let head = HEAD.trim_end();
+    let ext = EXT_HEAD.trim_start_matches(',');
+    let list = |h: &str| h.trim_start_matches(',').to_string();
+    format!(
+"mzlab-cli peak table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
 
-usage: mzlab-cli peak table (FILE... | --set traces=PATH) --set windows=PATH [--set sums=true] [--set times=PATH] [--set columns=sn,fig,quality] [--json] [--out PATH]
+usage: mzlab-cli peak table (FILE... | --traces PATH) --windows PATH [--sums] [--times PATH] [--columns sn,fig,quality] [--json] [--out PATH]
+       mzlab-cli peak table (FILE... | --traces PATH) --shifts --windows PATH
+       mzlab-cli peak table (FILE... | --traces PATH) --auto [--params PATH]
 
   FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in the order of the page
-  --set windows=PATH  a JSON list of windows [{\"file\": I, \"tr\": J, \"a\": MIN, \"b\": MIN, \"baseline\": \"zero\"|\"edges\"|\"line\", \"line\": [t0, y0, t1, y1], \"label\": NAME,
-                      \"follow\": true, \"names\": {\"I\": NAME}}]:
-                      I = the sample (from 0, in the order above), J = its transition in the list of the file, a and b the edges in min,
-                      NAME the name given to the window (at most 40 characters, optional). follow: apply the window to the same channel of every
-                      other sample that has no window of its own on it (the apex is searched within the window's width on each side; an apex
-                      outside the window moves it, no peak leaves it: column origin = manual|applied|shifted|no_peak); names: a name for one
-                      sample alone, by its place I
-  --set sums=true     after the windows of each channel a row sum with the sum of their areas
-  --set times=PATH    a JSON object {\"<sample>\": MINUTES or null} that replaces the time point a sample's name carries (null = none); the others keep theirs
-  --set shifts=true   instead of the table, where the FIRST window lands in the other samples, as JSON
-                      [{\"file\", \"tr\", \"a\", \"b\", \"shift\", \"origin\"}] (the bytes of the page's api/manfollow)
-  --set auto=true     instead of the table, every peak of every channel of every sample found by the engine and grouped by time, as JSON
-                      {\"windows\", \"log\", \"groups\", \"unmatched\"} (the bytes of the page's api/manauto); no windows file is needed
-  --set params=PATH   with auto=true: a JSON file {\"rt_tol\", \"half\", \"valley\", \"sn\", \"min_pts\", \"despike\", \"split\"}; a missing key keeps its default
-  --set traces=PATH   instead of FILEs: a JSON list [{\"name\", \"conc\"?, \"conc_unit\"?, \"transitions\": [{\"rt\": [MIN], \"y\": [..], \"panel\"?, \"label\"?, \"unit\"?, \"q1\"?, \"q3\"?, \"name\"?}]}] of
-                      traces you supply (a chromatogram, an XIC, a DAD trace); \"corr\" on a window is a note kept in its row. With a panel on a trace the
-                      table has five more columns after origin: panel, conc, conc_unit, correction, below (counts x s), area_unit
-  --set columns=LIST  more columns after the others, any of: sn (sn_zone: the height over the noise of the stretch a window names with \"noise\": [a, b], empty without),
-                      fig (w_half_min, plates, tailing, on the window's own baseline), quality (gaussian, asymmetry, noise_score); the bytes of the page's table
-  --json      the table as JSON {\"columns\": [NAME], \"rows\": [{NAME: TEXT}]} (every cell the text of the CSV, so a number keeps its digits); only for the table
+  --windows PATH  a JSON list of windows [{{\"file\": I, \"tr\": J, \"a\": MIN, \"b\": MIN, \"baseline\": \"zero\"|\"edges\"|\"line\", \"line\": [t0, y0, t1, y1], \"label\": NAME,
+                  \"follow\": true, \"names\": {{\"I\": NAME}}}}]:
+                  I = the sample (from 0, in the order above), J = its transition in the list of the file, a and b the edges in min,
+                  NAME the name given to the window (at most 40 characters, optional). follow: apply the window to the same channel of every
+                  other sample that has no window of its own on it (the apex is searched within the window's width on each side; an apex
+                  outside the window moves it, no peak leaves it: column origin = manual|applied|shifted|no_peak); names: a name for one
+                  sample alone, by its place I
+  --sums      after the windows of each channel a row sum with the sum of their areas
+  --times PATH    a JSON object {{\"<sample>\": MINUTES or null}} that replaces the time point a sample's name carries (null = none); the others keep theirs
+  --shifts    instead of the table, where the FIRST window lands in the other samples, as JSON
+              [{{\"file\", \"tr\", \"a\", \"b\", \"shift\", \"origin\"}}] (the bytes of the page's api/manfollow)
+  --auto      instead of the table, every peak of every channel of every sample found by the engine and grouped by time, as JSON
+              {{\"windows\", \"log\", \"groups\", \"unmatched\"}} (the bytes of the page's api/manauto); no windows file is needed
+  --params PATH   with --auto: a JSON file {{\"rt_tol_min\", \"half\", \"valley\", \"sn\", \"min_pts\", \"despike\", \"split\"}}; a missing key keeps its default
+  --traces PATH   instead of FILEs: a JSON list [{{\"name\", \"conc\"?, \"conc_unit\"?, \"transitions\": [{{\"rt\": [MIN], \"y\": [..], \"panel\"?, \"label\"?, \"unit\"?, \"q1\"?, \"q3\"?, \"name\"?}}]}}] of
+                  traces you supply (a chromatogram, an XIC, a DAD trace); \"corr\" on a window is a note kept in its row. With a panel on a trace the
+                  table has more columns after origin: {ext}
+  --columns LIST  more columns after the others, any of: sn ({sn}: the height over the noise of the stretch a window names with \"noise\": [a, b], empty without),
+                  fig ({fig}, on the window's own baseline), quality ({quality}); the bytes of the page's table
+  --json      the table as JSON {{\"columns\": [NAME], \"rows\": [{{NAME: TEXT}}]}} (every cell the text of the CSV, so a number keeps its digits); with --shifts or --auto the
+              answer is JSON already and --json changes nothing
   --out PATH  write there instead of the standard output
 
-Columns: channel (m/z of a SIM ion, q1>q3 of a transition, ion N without Q1), sample, time_min (the time point of the sample in minutes, read from its name
-(t0, 3h, 1 h 30, 90 s; none for a blank or when ambiguous), empty when unknown), label (the name of the window), area (counts x s), start_min,
-end_min, apex_rt_min, height, snr (peak1d around the window), baseline, overlap, pv. Rows grouped by channel, then by sample. Areas and heights in scientific notation with a decimal
-point (7.84077E+04), read as numbers by a spreadsheet in any locale.";
+Columns, in this order: {head}.
+channel = m/z of a SIM ion, q1>q3 of a transition, ion N without Q1; time_min = the time point of the sample in minutes, read from its name
+(t0, 3h, 1 h 30, 90 s; none for a blank or when ambiguous), empty when unknown; label = the name of the window; area in counts x s; snr = peak1d around
+the window. Rows grouped by channel, then by sample. Areas and heights in scientific notation with a decimal point (7.84077E+04), read as numbers by a
+spreadsheet in any locale.",
+        head = head,
+        ext = ext,
+        sn = list(SN_HEAD),
+        fig = list(FIG_HEAD),
+        quality = list(QUALITY_HEAD)
+    )
+}
 
 struct Request {
     files: Vec<PathBuf>,
@@ -70,42 +88,39 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
             "--help" | "-h" => return Ok(None),
             "--json" => json = true,
             "--out" => out = Some(PathBuf::from(it.next().ok_or("--out needs a path")?)),
-            "--set" => {
-                let v = it.next().ok_or("--set needs NAME=VALUE")?;
-                match v.split_once('=') {
-                    Some(("windows", w)) if !w.is_empty() => windows = Some(PathBuf::from(w)),
-                    Some(("sums", b @ ("true" | "false"))) => sums = b == "true",
-                    Some(("sums", b)) => return Err(format!("sums is true or false, not {b}")),
-                    Some(("shifts", b @ ("true" | "false"))) => shifts = b == "true",
-                    Some(("shifts", b)) => return Err(format!("shifts is true or false, not {b}")),
-                    Some(("auto", b @ ("true" | "false"))) => auto = b == "true",
-                    Some(("auto", b)) => return Err(format!("auto is true or false, not {b}")),
-                    Some(("params", p)) if !p.is_empty() => params = Some(PathBuf::from(p)),
-                    Some(("times", p)) if !p.is_empty() => times = Some(PathBuf::from(p)),
-                    Some(("traces", p)) if !p.is_empty() => traces = Some(PathBuf::from(p)),
-                    Some(("columns", l)) if !l.is_empty() => {
-                        columns = l.split(',').map(str::to_string).collect()
-                    }
-                    _ => return Err(format!("unknown setting {v}")),
-                }
+            "--windows" => {
+                windows = Some(PathBuf::from(it.next().ok_or("--windows needs a path")?))
             }
+            "--params" => params = Some(PathBuf::from(it.next().ok_or("--params needs a path")?)),
+            "--times" => times = Some(PathBuf::from(it.next().ok_or("--times needs a path")?)),
+            "--traces" => traces = Some(PathBuf::from(it.next().ok_or("--traces needs a path")?)),
+            "--columns" => {
+                let l = it.next().ok_or("--columns needs a list")?;
+                if l.is_empty() {
+                    return Err("--columns needs a list".into());
+                }
+                columns = l.split(',').map(str::to_string).collect();
+            }
+            "--sums" => sums = true,
+            "--shifts" => shifts = true,
+            "--auto" => auto = true,
             o if o.starts_with("--") => return Err(format!("unknown option {o}")),
             _ => files.push(PathBuf::from(a)),
         }
     }
     if files.is_empty() == traces.is_none() {
-        return Err("peak table needs at least one file, or --set traces=PATH (not both)".into());
+        return Err("peak table needs at least one file, or --traces PATH (not both)".into());
     }
     if params.is_some() && !auto {
-        return Err("--set params=PATH goes with --set auto=true".into());
+        return Err("--params PATH goes with --auto".into());
     }
-    if json && (auto || shifts) {
-        return Err("--json is for the table, which auto and shifts do not write".into());
+    if auto && shifts {
+        return Err("--auto and --shifts are two answers: pick one".into());
     }
     let windows = match (windows, auto) {
         (Some(w), _) => w,
         (None, true) => PathBuf::new(),
-        (None, false) => return Err("peak table needs --set windows=PATH".into()),
+        (None, false) => return Err("peak table needs --windows PATH".into()),
     };
     Ok(Some(Request {
         files,
@@ -356,7 +371,7 @@ fn csv_to_json(csv: &str) -> String {
 pub fn run(args: Vec<String>) -> Outcome {
     let c = match parse(args) {
         Ok(Some(a)) => a,
-        Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
+        Ok(None) => return Outcome::ok(format!("{}\n", help()).into_bytes()),
         Err(e) => return Outcome::fail(&e),
     };
     let mut warn = String::new();

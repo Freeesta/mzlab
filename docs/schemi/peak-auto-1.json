@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "peak-auto/1",
+  "title": "peak-auto/1: the peaks of `mzlab-cli peak auto`",
+  "description": "Every high-resolution peak of a trace found by the engine, with the area under the chosen baseline mode, and the automatic choices made on the way. Times in minutes, areas in counts x s (counts x min with --area-unit min). Code: crates/mzlab-cli/src/peaks_auto_cmd.rs, crates/mzlab-core/src/peakq_auto.rs.",
+  "type": "object",
+  "required": ["schema", "peaks", "choices"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "peak-auto/1" },
+    "peaks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["t0", "t1", "area", "baseline"],
+        "additionalProperties": false,
+        "properties": {
+          "t0": { "type": "number", "description": "Start of the peak, min." },
+          "t1": { "type": "number", "description": "End of the peak, min." },
+          "b0": { "type": "number", "description": "Baseline at t0, counts. Absent under baseline zero (the area is measured from 0); with line it is the line at t0; with edges the detection baseline end." },
+          "b1": { "type": "number", "description": "Baseline at t1, counts. Same rules as b0." },
+          "area": { "type": "number", "description": "Area under the baseline mode, counts x s." },
+          "baseline": { "enum": ["zero", "edges", "line"] },
+          "below": { "type": "number", "description": "The part of the trace under the baseline, same unit as area. Absent with edges." }
+        }
+      }
+    },
+    "choices": {
+      "type": "array",
+      "description": "Every automatic choice the command made, with its reason; empty when it made none.",
+      "items": {
+        "type": "object",
+        "required": ["key", "choice", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "key": { "type": "string" },
+          "choice": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -52,11 +52,11 @@ export async function run(p) {
     split: T(last.split === "valley" ? "pk.split.1" : "pk.split.0"), c: clamped, e: 2 * add.length, below: n(below) }) + (skip ? ". " + T("int.lrAll.skip", { n: skip }) : ""));
 }
 
-/** «Integrate peaks in all selected files»: the engine (api/manauto, manint_auto.rs, the bytes of `mzlab-cli peak table --set auto=true`) finds every peak of the SIM/MRM
+/** «Integrate peaks in all selected files»: the engine (api/manauto, manint_auto.rs, the bytes of `mzlab-cli peak table --auto`) finds every peak of the SIM/MRM
  * traces of the files shown and puts the peaks at the same time in different files into one group; each becomes a record (`grp` = the group's mean apex, `org` = auto |
  * unmatched, the engine's baseline line as two manual anchors) in one undoable step. The areas are the table's (api/manint), the labels the usual ones. Windows that overlap an
  * integration already there are left out and counted; the per-file log of the peaks found goes under the card and every number the engine used in the notice.
- * @param {Bag} p @param {Bag} [extra] engine numbers over the dialog's (`rt_tol`: how close two apexes are to be one peak, min) */
+ * @param {Bag} p @param {Bag} [extra] engine numbers over the dialog's (`rt_tol_min`: how close two apexes are to be one peak, min) */
 export async function runFiles(p, extra = {}) {
   if (!guardInt(p)) return;
   const a = p._a; if (!a || !a.sr || !ESP.mrm(p)) return;

@@ -61,7 +61,7 @@ try:
                 pg.evaluate(f"(async()=>{{const s={M}._a.sr[0];window.__csv=s.x.map((t,i)=>t+','+s.y[i]).join('\\n');window.__lr=await QUALITA.lrAuto(s.x,s.y,0,1e9,INTTUTTI.engineParams({{...PK,...{pk}}}))}})()")
                 wait_for_js(pg, "typeof window.__lr==='string'")
                 site, csv = pg.evaluate("window.__lr"), pg.evaluate("window.__csv")
-                out = subprocess.run(cli_argv("peak", "auto-lr", "-", *[a for x in sets for a in ("--set", x)]), input=csv, capture_output=True, text=True, cwd=ROOT, check=True).stdout
+                out = subprocess.run(cli_argv("peak", "auto-lr", "-", *[a for x in sets for a in ((("--split", x.split("=")[1])) if x.startswith("lr_split=") else ("--set", x))]), input=csv, capture_output=True, text=True, cwd=ROOT, check=True).stdout
                 assert out == site + "\n", (out[:300], site[:300])
                 assert json.loads(site)["params"]["split"] == ("valley" if sets else "drop") and len(json.loads(site)["peaks"]) == 3
                 pg.evaluate("window.__lr=null")
