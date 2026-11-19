@@ -71,7 +71,8 @@ fn the_list_of_the_index_is_the_list_of_the_file_and_costs_no_read() {
     }
 }
 
-/// The header and the meta of `idx` with the version changed (`from` -> `to` in the header) or a key of the `run` object renamed.
+/// A copy of `idx` with the header version set to `version` and/or a key of the `run` object of the meta renamed (`from` -> `to`, same length;
+/// the search starts at `"run":`, so a same-named key elsewhere in the meta is left alone).
 fn damaged(idx: &[u8], version: Option<u32>, rename: Option<(&[u8], &[u8])>) -> Vec<u8> {
     let mut out = idx.to_vec();
     if let Some(v) = version {
@@ -79,7 +80,12 @@ fn damaged(idx: &[u8], version: Option<u32>, rename: Option<(&[u8], &[u8])>) -> 
     }
     if let Some((from, to)) = rename {
         assert_eq!(from.len(), to.len());
-        let at = out.windows(from.len()).position(|w| w == from).unwrap();
+        let run = out.windows(6).position(|w| w == b"\"run\":").unwrap();
+        let at = run
+            + out[run..]
+                .windows(from.len())
+                .position(|w| w == from)
+                .unwrap();
         out[at..at + from.len()].copy_from_slice(to);
     }
     out
@@ -114,20 +120,31 @@ fn an_index_of_an_older_version_or_without_the_list_is_refused_not_scanned() {
     );
 }
 
+/// Three MS1 scans and no `chromatogramList` at all.
+fn no_chromatograms() -> Vec<u8> {
+    let s = srm_like(0);
+    let text = String::from_utf8(s).unwrap();
+    let at = text.find("<chromatogramList").unwrap();
+    format!("{}</run></mzML>\n", &text[..at]).into_bytes()
+}
+
 #[test]
 fn a_file_with_no_chromatograms_keeps_an_empty_list() {
-    let (data, idx, size) = index_of(srm_like(0), "srm_none.mzML");
-    let _ = (data, size);
+    let (data, idx, size) = index_of(no_chromatograms(), "none.mzML");
     let index = Index::open(idx.clone(), idx.len() as u64).unwrap();
     let end = index.scans.last().map_or(0, |s| s.end);
-    let mut m = Mzml::new(
-        Counting {
-            data: vec![],
-            bytes: 0,
-        },
-        0,
+    assert_eq!(
+        Mzml::new(data.clone(), size)
+            .chromatograms(end)
+            .unwrap()
+            .len(),
+        0
     );
-    // the two fixed traces (TIC, pump pressure) are there: the list is the file's, whatever it holds
-    assert_eq!(index.layout.chromatograms(&mut m, end).unwrap().len(), 2);
-    assert_eq!(m.r.bytes, 0);
+    let mut m = Mzml::new(Counting { data, bytes: 0 }, size);
+    assert_eq!(index.layout.chromatograms(&mut m, end).unwrap().len(), 0);
+    assert_eq!(m.r.bytes, 0, "the empty list comes from the index too");
+    assert_eq!(
+        index.run.get("n_chromatograms").and_then(|v| v.f64()),
+        Some(0.0)
+    );
 }

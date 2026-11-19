@@ -202,7 +202,12 @@ impl Rows {
 
 impl Rows {
     /// Links every MSn row to its parent (`_link_parents`) and closes the table.
-    pub(crate) fn finish(self, n_chromatograms: usize) -> Table {
+    /// `chromatograms`: the list of an mzML (`None` only for a vendor file, whose index carries none); `n_chromatograms` is its length for an mzML.
+    pub(crate) fn finish(
+        self,
+        n_chromatograms: usize,
+        chromatograms: Option<Vec<crate::mzmlhead::Chrom>>,
+    ) -> Table {
         let Rows {
             head,
             mut rows,
@@ -255,7 +260,7 @@ impl Rows {
             nce: head.nce,
             hr1,
             n_chromatograms,
-            chromatograms: None,
+            chromatograms,
             window: window.span,
             // the list counts the optical spectra too: they are not scans, so a file that holds them all is not cut
             declared: head.declared.saturating_sub(optical),

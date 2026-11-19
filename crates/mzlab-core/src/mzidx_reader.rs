@@ -1,4 +1,4 @@
-//! The `.mzidx` of a vendor file set (`docs/agenti/mzidx.md`, version 2), straight from a `Lettore`, with no mzML written and read again:
+//! The `.mzidx` of a vendor file set (`docs/agenti/mzidx.md`, version 3 with `READER_FLAG`), straight from a `Lettore`, with no mzML written and read again:
 //! the rows are the ones `scantable` reads from the header of each spectrum as `readers_mzml::scrivi` would write it (built from the scan itself,
 //! with no text), and the spectra given to the builder are the ones the mzML would give back. Only the first two columns of a row change:
 //! the `Posizione` of the scan in the members of the set and its number `k` in `Lettore::index`.
@@ -63,7 +63,7 @@ fn table(l: &mut dyn Reader, c: usize, mut before: Option<&mut First<'_>>) -> Re
         row(&mut rows, l, (c, k), &s, before.as_deref_mut())?;
     }
     skips.end(n)?;
-    Ok(rows.finish(chromatograms_written(l, c)?))
+    Ok(rows.finish(chromatograms_written(l, c)?, None))
 }
 
 /// The rows of a table with no scan yet, from the header of the reader.
@@ -136,10 +136,10 @@ pub(crate) fn rows_before_double(
     }
     skips.end(n)?;
     let ncr = chromatograms_written(l.simple(), c)?;
-    Ok((rows.finish(ncr), rows_cen.finish(ncr)))
+    Ok((rows.finish(ncr, None), rows_cen.finish(ncr, None)))
 }
 
-/// The rows of version 2: `[membro, offset, lunghezza]` (or `null` when the reader gives no position) and `k` in place of `start, end`.
+/// The rows of a vendor-file index: `[membro, offset, lunghezza]` (or `null` when the reader gives no position) and `k` in place of `start, end`.
 pub fn rows_json(t: &mut Table, entries: &[ScanEntry]) -> String {
     for (k, r) in t.rows.iter_mut().enumerate() {
         r.at = Some(Box::new(Where {

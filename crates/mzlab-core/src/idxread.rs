@@ -37,7 +37,7 @@ pub struct Scan {
     /// Bytes of the spectrum in the mzML (version 1; 0 in the index of a vendor file).
     pub start: u64,
     pub end: u64,
-    /// Index of a vendor file (version 2): where the scan lies in the members of the set (`None` when the reader does not say) and its number `k` in `Lettore::index`.
+    /// Index of a vendor file: where the scan lies in the members of the set (`None` when the reader does not say) and its number `k` in `Lettore::index`.
     pub position: Option<Position>,
     pub k: Option<usize>,
     pub level: u8,

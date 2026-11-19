@@ -7,6 +7,8 @@
 // the extras are set field by field: some exist only with `precursori`
 #![allow(clippy::field_reassign_with_default)]
 
+mod mzidx_meta;
+
 use mzlab_core::error::{Error, Result};
 use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
@@ -223,14 +225,9 @@ fn compare(label: &str, a: &Table, b: &Table) {
         equal(k, x, y);
     }
     assert_eq!(a.hr1, b.hr1, "{label}: hr1");
-    // the chromatogram list (the last key) is the mzML's own: a reader has none
+    // the chromatogram list is the mzML's own: a reader has none
     let run = |t: &Table| {
-        let mut v = t.run_json();
-        if let Some(i) = v.find(",\"chromatograms\":") {
-            v.truncate(i);
-            v.push('}');
-        }
-        v
+        mzidx_meta::run_without_list(&mzlab_core::json::parse(t.run_json().as_bytes()).unwrap())
     };
     assert_eq!(run(a), run(b), "{label}: run");
 }

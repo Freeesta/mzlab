@@ -661,9 +661,7 @@ pub fn read_in<R: ReadAt>(r: &mut R, size: u64, budget: Option<&MemBudget>) -> R
     };
     // the tail is read once, here: the headers it holds go to the index (`chromlist`), and the table counts them
     let chroms = crate::mzmlhead::Mzml::new(&mut *src.r, size).chromatograms(last_end)?;
-    let mut t = rows.finish(chroms.len());
-    t.chromatograms = Some(chroms);
-    finished(t)
+    finished(rows.finish(chroms.len(), Some(chroms)))
 }
 
 /// A NaN or infinite retention time or TIC is a damaged file (`err.file.nonFinite`, the scan by its position), like the readers' guard

@@ -7,7 +7,9 @@
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 mod agilent_synth;
+mod mzidx_meta;
 mod mzidx_sections;
+use mzidx_meta::without;
 mod readers_routes;
 
 use std::io::Cursor;
@@ -43,30 +45,6 @@ fn u32_at(b: &[u8], at: usize) -> u32 {
 
 fn json_at(b: &[u8], off: usize, len: usize) -> Value {
     json::parse(&b[u64_at(b, off) as usize..][..u64_at(b, len) as usize]).unwrap()
-}
-
-/// The object without the keys `skip`.
-fn without(v: &Value, skip: &[&str]) -> Vec<(String, Value)> {
-    match v {
-        Value::Obj(o) => o
-            .iter()
-            .filter(|(k, _)| !skip.contains(&k.as_str()))
-            .cloned()
-            // the chromatogram list of an mzML index (`run.chromatograms`) is not in the index of a vendor file
-            .map(|(k, v)| match (k.as_str(), v) {
-                ("run", Value::Obj(r)) => (
-                    k,
-                    Value::Obj(
-                        r.into_iter()
-                            .filter(|(n, _)| n != "chromatograms")
-                            .collect(),
-                    ),
-                ),
-                (_, v) => (k, v),
-            })
-            .collect(),
-        _ => panic!("not an object"),
-    }
 }
 
 fn file(name: &str, bytes: Vec<u8>) -> Member {
