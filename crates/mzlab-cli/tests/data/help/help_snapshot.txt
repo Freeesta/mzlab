@@ -50,13 +50,13 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
-       mzlab-cli peak auto TRACE.csv [--from MIN --to MIN] [--set NAME=VALUE...]   every peak of a high-resolution trace
-       mzlab-cli peak auto-lr TRACE.csv [--from MIN --to MIN] [--set NAME=VALUE...]   every peak of a low-resolution SIM/MRM trace, detected on a smoothed copy, integrated raw
-       mzlab-cli peak edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace
-       mzlab-cli peak area TRACE.csv ...   one peak from zero or a line
-       mzlab-cli peak window TRACE.csv ...   where a dragged window end goes
-       mzlab-cli peak split FILE... --set tr=J --set a=MIN --set b=MIN   one peak split at its valleys
-       mzlab-cli peak table FILE... --set windows=PATH   the integrations drawn by hand on transition / SIM traces, as CSV
+       mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every peak of a high-resolution trace
+       mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   every peak of a low-resolution SIM/MRM trace, detected on a smoothed copy, integrated raw
+       mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace
+       mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
+       mzlab-cli peak window TRACE.csv|- --end MIN --other MIN (--at MIN | --step N)   where a dragged window end goes
+       mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
+       mzlab-cli peak table (FILE... | --traces PATH) --windows PATH [--columns sn,fig,quality] [--json]   the integrations drawn by hand on transition / SIM traces, as CSV
        mzlab-cli msn graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion
        mzlab-cli msn complete GRAPH.json ...   the graph completed with the missing nodes
        mzlab-cli msn compare GRAPH.json GRAPH.json ...   two graphs side by side
@@ -155,13 +155,13 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
-       mzlab-cli peak auto TRACE.csv [--from MIN --to MIN] [--set NAME=VALUE...]   every peak of a high-resolution trace
-       mzlab-cli peak auto-lr TRACE.csv [--from MIN --to MIN] [--set NAME=VALUE...]   every peak of a low-resolution SIM/MRM trace, detected on a smoothed copy, integrated raw
-       mzlab-cli peak edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace
-       mzlab-cli peak area TRACE.csv ...   one peak from zero or a line
-       mzlab-cli peak window TRACE.csv ...   where a dragged window end goes
-       mzlab-cli peak split FILE... --set tr=J --set a=MIN --set b=MIN   one peak split at its valleys
-       mzlab-cli peak table FILE... --set windows=PATH   the integrations drawn by hand on transition / SIM traces, as CSV
+       mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every peak of a high-resolution trace
+       mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   every peak of a low-resolution SIM/MRM trace, detected on a smoothed copy, integrated raw
+       mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace
+       mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
+       mzlab-cli peak window TRACE.csv|- --end MIN --other MIN (--at MIN | --step N)   where a dragged window end goes
+       mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
+       mzlab-cli peak table (FILE... | --traces PATH) --windows PATH [--columns sn,fig,quality] [--json]   the integrations drawn by hand on transition / SIM traces, as CSV
        mzlab-cli msn graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion
        mzlab-cli msn complete GRAPH.json ...   the graph completed with the missing nodes
        mzlab-cli msn compare GRAPH.json GRAPH.json ...   two graphs side by side
@@ -260,13 +260,13 @@ usage: mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|po
        mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   one mass spectrum as JSON or mz,intensity CSV
        mzlab-cli spectrum list FILE [--ms-level N] [--id CHANNEL] [--sample ID] [--format json|csv] [--out PATH]   the scans of a file (number, level, rt, TIC, precursor, base peak)
        mzlab-cli spectrum dda-window FILE --from MIN --to MIN   the MS2 of a window by precursor
-       mzlab-cli peak auto TRACE.csv [--from MIN --to MIN] [--set NAME=VALUE...]   every peak of a high-resolution trace
-       mzlab-cli peak auto-lr TRACE.csv [--from MIN --to MIN] [--set NAME=VALUE...]   every peak of a low-resolution SIM/MRM trace, detected on a smoothed copy, integrated raw
-       mzlab-cli peak edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace
-       mzlab-cli peak area TRACE.csv ...   one peak from zero or a line
-       mzlab-cli peak window TRACE.csv ...   where a dragged window end goes
-       mzlab-cli peak split FILE... --set tr=J --set a=MIN --set b=MIN   one peak split at its valleys
-       mzlab-cli peak table FILE... --set windows=PATH   the integrations drawn by hand on transition / SIM traces, as CSV
+       mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every peak of a high-resolution trace
+       mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   every peak of a low-resolution SIM/MRM trace, detected on a smoothed copy, integrated raw
+       mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace
+       mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line
+       mzlab-cli peak window TRACE.csv|- --end MIN --other MIN (--at MIN | --step N)   where a dragged window end goes
+       mzlab-cli peak split FILE... --tr J --a MIN --b MIN [--baseline zero|edges|line] [--split auto|MIN,...]   one peak split at its valleys
+       mzlab-cli peak table (FILE... | --traces PATH) --windows PATH [--columns sn,fig,quality] [--json]   the integrations drawn by hand on transition / SIM traces, as CSV
        mzlab-cli msn graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion
        mzlab-cli msn complete GRAPH.json ...   the graph completed with the missing nodes
        mzlab-cli msn compare GRAPH.json GRAPH.json ...   two graphs side by side
@@ -858,7 +858,7 @@ usage: mzlab-cli peak auto TRACE.csv|- [--from MIN] [--to MIN] [--baseline zero|
   --area-unit  s = counts x s (default, as peak area), min = counts x min (the old unit)
   --set        numbers only; the page dialog: hr_smooth (points, odd), hr_sn; engine only: hr_prom (% of the tallest), hr_scans, hr_half (points, 0 = auto), hr_slope (%),
                and with --baseline line: base_y0, base_t0, base_y1, base_t1
-  output       {"peaks":[{"t0":MIN,"t1":MIN,"b0":COUNTS,"b1":COUNTS,"area":COUNTS_S,"baseline":MODE}...],"choices":[...]}; with edges b0/b1 are the detection baseline
+  output       {"schema":"peak_auto/1","peaks":[{"t0":MIN,"t1":MIN,"b0":COUNTS,"b1":COUNTS,"area":COUNTS_S,"baseline":MODE}...],"choices":[...]}; with edges b0/b1 are the detection baseline
                ends, with line the line at t0 and t1; with zero or line each peak also has "below" (COUNTS_S, the part under the line) and its area is the
                signed one against that line. With zero (the default) b0/b1 are not written (the area is measured from 0) and "choices" says so; base_*
                numbers with a baseline other than line are an error (exit 2)

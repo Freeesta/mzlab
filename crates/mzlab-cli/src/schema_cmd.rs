@@ -53,6 +53,7 @@ embed!(
     "mzflow-2.json",
     "mzrun-2.json",
     "param-choices-1.json",
+    "peak_auto-1.json",
     "param-proposal-1.json",
     "plausible-1.json",
     "prov-1.json",

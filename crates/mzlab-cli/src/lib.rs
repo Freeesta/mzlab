@@ -177,6 +177,8 @@ mod name_rule_tests;
 pub mod normative;
 mod pair_cmd;
 mod par;
+#[cfg(test)]
+mod peak_exits_tests;
 mod peaks_auto_cmd;
 mod peaks_auto_lr_cmd;
 mod peaks_edges_cmd;

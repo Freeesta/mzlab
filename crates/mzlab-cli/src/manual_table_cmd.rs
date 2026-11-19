@@ -96,6 +96,9 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
             "--traces" => traces = Some(PathBuf::from(it.next().ok_or("--traces needs a path")?)),
             "--columns" => {
                 let l = it.next().ok_or("--columns needs a list")?;
+                if l.is_empty() {
+                    return Err("--columns needs a list".into());
+                }
                 columns = l.split(',').map(str::to_string).collect();
             }
             "--sums" => sums = true,

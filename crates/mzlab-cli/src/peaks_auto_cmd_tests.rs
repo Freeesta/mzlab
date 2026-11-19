@@ -54,7 +54,7 @@ fn peaks_are_the_core_result_and_set_names_are_accepted() {
     ]));
     assert_eq!(
         String::from_utf8(o.stdout).unwrap().trim(),
-        "{\"peaks\":[],\"choices\":[{\"key\":\"b0_b1\",\"choice\":\"omitted\",\"reason\":\"baseline=zero: the area is measured from 0, so the detection baseline ends are not used\"}]}"
+        "{\"schema\":\"peak_auto/1\",\"peaks\":[],\"choices\":[{\"key\":\"b0_b1\",\"choice\":\"omitted\",\"reason\":\"baseline=zero: the area is measured from 0, so the detection baseline ends are not used\"}]}"
     );
     let o = run(args(&[
         p,
@@ -69,8 +69,8 @@ fn peaks_are_the_core_result_and_set_names_are_accepted() {
     ]));
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
     assert_eq!(v["peaks"].as_array().unwrap().len(), 1);
-    assert_ne!(run(args(&[p, "--set", "bogus=1"])).code, 0);
-    assert_ne!(run(args(&[p, "--set", "hr_sn=-1"])).code, 0);
+    assert_eq!(run(args(&[p, "--set", "bogus=1"])).code, 2);
+    assert_eq!(run(args(&[p, "--set", "hr_sn=-1"])).code, 2);
     let _ = std::fs::remove_file(f);
 }
 
@@ -166,11 +166,11 @@ fn the_baseline_mode_applies_to_every_peak() {
     assert!(run(args(&[p, "--baseline", "edges"])).stderr.is_empty());
     let bad = run(args(&[p, "--set", "base_y0=5"]));
     assert_eq!(bad.code, 2, "{}", bad.stderr);
-    assert_ne!(
+    assert_eq!(
         run(args(&[p, "--baseline", "edges", "--set", "base_y0=5"])).code,
-        0
+        2
     );
-    assert_ne!(run(args(&[p, "--baseline", "valley"])).code, 0);
+    assert_eq!(run(args(&[p, "--baseline", "valley"])).code, 2);
 }
 
 #[test]
@@ -187,5 +187,49 @@ fn area_unit_min_keeps_the_old_counts_x_min() {
         assert_eq!(g["area"].as_f64().unwrap(), k.area);
     }
     assert_eq!(run(args(&[p, "--area-unit", "s"])).code, 0);
-    assert_ne!(run(args(&[p, "--area-unit", "h"])).code, 0);
+    assert_eq!(run(args(&[p, "--area-unit", "h"])).code, 2);
+}
+
+/// The keys of the output are exactly those `docs/schemi/peak_auto-1.json` documents, for each baseline mode.
+#[test]
+fn the_output_keys_are_the_schemas() {
+    let schema: serde_json::Value =
+        serde_json::from_str(include_str!("../../../docs/schemi/peak_auto-1.json")).unwrap();
+    let props = |v: &serde_json::Value| -> Vec<String> {
+        v["properties"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .cloned()
+            .collect()
+    };
+    let (rt, y) = trace();
+    let f = std::env::temp_dir().join("mzlab_peaks_auto_schema.csv");
+    let body: Vec<String> = rt.iter().zip(&y).map(|(a, b)| format!("{a},{b}")).collect();
+    std::fs::write(&f, body.join("\n")).unwrap();
+    let p = f.to_str().unwrap();
+    let item = &schema["properties"]["peaks"]["items"];
+    for mode in ["zero", "edges"] {
+        let v: serde_json::Value =
+            serde_json::from_slice(&run(args(&[p, "--baseline", mode])).stdout).unwrap();
+        let text = String::from_utf8(run(args(&[p, "--baseline", mode])).stdout).unwrap();
+        assert!(
+            text.starts_with("{\"schema\":\"peak_auto/1\","),
+            "schema is the first key"
+        );
+        let top: Vec<&String> = v.as_object().unwrap().keys().collect();
+        assert_eq!(v["schema"], schema["properties"]["schema"]["const"]);
+        for k in top {
+            assert!(props(&schema).contains(k), "{k}");
+        }
+        for pk in v["peaks"].as_array().unwrap() {
+            for k in pk.as_object().unwrap().keys() {
+                assert!(props(item).contains(k), "{mode}: {k}");
+            }
+            for r in item["required"].as_array().unwrap() {
+                assert!(pk.get(r.as_str().unwrap()).is_some(), "{mode}: {r}");
+            }
+        }
+    }
+    let _ = std::fs::remove_file(f);
 }

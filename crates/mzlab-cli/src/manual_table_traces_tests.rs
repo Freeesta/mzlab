@@ -155,3 +155,11 @@ fn columns_and_json_are_the_engine_table_in_two_shapes() {
         .unwrap()
         .starts_with("{\"tol\":"));
 }
+
+/// An empty `--columns ""` is a usage error, like an empty `--split ""`, not an empty list that silently adds nothing.
+#[test]
+fn an_empty_columns_list_is_refused() {
+    let o = run(&["--traces", "x.json", "--windows", "w.json", "--columns", ""]);
+    assert_eq!(o.code, 2, "{}", o.stderr);
+    assert!(o.stderr.contains("--columns needs a list"), "{}", o.stderr);
+}

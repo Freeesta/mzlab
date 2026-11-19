@@ -8,7 +8,7 @@ use crate::cmd::entries;
 use crate::{execute, Outcome};
 
 /// The commands that read an input, each with a path that does not exist: exit 4, and under `--json` an error/1 with code 4.
-const MISSING: &[&[&str]] = &[
+pub(crate) const MISSING: &[&[&str]] = &[
     &[
         "sample",
         "design",
