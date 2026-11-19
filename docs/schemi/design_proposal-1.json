@@ -1,0 +1,45 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "design_proposal/1",
+ "title": "design_proposal/1: the design the sample names suggest, with each automatic choice",
+ "description": "The answer of `mzlab-cli sample design propose`: the proposed design/1 (the very bytes of the engine's `design_propose` route), every automatic choice with its value and the reason, and the evidence it came from. The user decides: edit the design or keep it; `--out` writes the bare design/1 for a plan's `design` input. Code: crates/mzlab-cli/src/design_cmd.rs.",
+ "type": "object",
+ "required": ["schema", "design", "choices", "evidence"],
+ "properties": {
+  "schema": {"const": "design_proposal/1"},
+  "design": {"$ref": "design/1"},
+  "choices": {
+   "type": "array",
+   "description": "conditions, reference, comparisons and batches, in that order",
+   "items": {
+    "type": "object",
+    "required": ["choice", "value", "why"],
+    "properties": {
+     "choice": {"enum": ["conditions", "reference", "comparisons", "batches"]},
+     "value": {"description": "conditions: the names; reference: a name or null; comparisons: vs_reference or none; batches: the default batch"},
+     "why": {"type": "string"}
+    }
+   }
+  },
+  "evidence": {
+   "type": "object",
+   "required": ["min_replicates", "sample_files", "conditions"],
+   "properties": {
+    "min_replicates": {"type": "integer", "description": "fewer files per time point than this make `validate` warn fewReplicates"},
+    "sample_files": {"type": "integer", "description": "the files with the role sample"},
+    "conditions": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": ["name", "replicates", "files"],
+      "properties": {
+       "name": {"type": "string"},
+       "replicates": {"type": "integer"},
+       "files": {"type": "array", "items": {"type": "string"}, "description": "the sample files of the condition, in the order of injection"}
+      }
+     }
+    }
+   }
+  }
+ }
+}

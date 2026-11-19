@@ -2,8 +2,10 @@
 //! `propose` reads a `samples/1` and proposes; the user confirms. `validate` gives stable codes (the pages put the words). No statistics here.
 
 mod json;
+mod problems;
 
-pub use json::{digest, from_json, to_json};
+pub use json::{digest, from_json, read, to_json};
+pub use problems::{problems, Problem};
 
 use crate::error::{Error, Result};
 use crate::samples::{Sample, Warning};
@@ -85,18 +87,25 @@ fn replicates(cs: &[Sample], name: &str) -> u32 {
         .unwrap_or(0)
 }
 
-/// The condition that is likely the reference: the first called ref…, reference, control or no gas.
-fn guess_reference(names: &[String]) -> Option<String> {
-    names
-        .iter()
-        .find(|n| {
-            let l = n.to_lowercase();
-            l.starts_with("ref")
-                || l.contains("reference")
-                || l.contains("control")
-                || l.replace(['_', '-', ' '], "").contains("nogas")
-        })
-        .cloned()
+/// Why `name` is likely the reference: the first rule it meets (`ref…`, `reference`, `control`, `nogas`), None when no rule does.
+pub fn reference_rule(name: &str) -> Option<&'static str> {
+    let l = name.to_lowercase();
+    if l.starts_with("ref") {
+        Some("starts with ref")
+    } else if l.contains("reference") {
+        Some("contains reference")
+    } else if l.contains("control") {
+        Some("contains control")
+    } else if l.replace(['_', '-', ' '], "").contains("nogas") {
+        Some("contains no gas")
+    } else {
+        None
+    }
+}
+
+/// The condition that is likely the reference: the first one a `reference_rule` accepts.
+pub fn guess_reference(names: &[String]) -> Option<String> {
+    names.iter().find(|n| reference_rule(n).is_some()).cloned()
 }
 
 /// The design the names suggest: conditions from `series` in order of injection, the likely reference with "all against the reference", one batch.

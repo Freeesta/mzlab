@@ -224,6 +224,24 @@ fn uv_auto_gives_the_band_the_engine_proposes() {
     }
 }
 
+/// `uv:auto` is a band document, not a trace: `--format csv` is a usage error (exit 2), never JSON in place of the CSV.
+#[test]
+fn uv_auto_refuses_csv() {
+    let f = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../mzlab/web/esempi/FullScan_t10.mzML");
+    let o = run(&[
+        "trace",
+        "chrom",
+        &f.to_string_lossy(),
+        "--id",
+        "uv:auto",
+        "--format",
+        "csv",
+    ]);
+    assert_eq!(o.code, 2, "{}", o.stderr);
+    assert!(o.stdout.is_empty() || String::from_utf8_lossy(&o.stdout).contains("error/1"));
+    assert!(o.stderr.contains("uv:auto"), "{}", o.stderr);
+}
+
 fn b64(v: &[f64]) -> String {
     const A: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let raw: Vec<u8> = v.iter().flat_map(|x| x.to_le_bytes()).collect();

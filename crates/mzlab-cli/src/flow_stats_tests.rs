@@ -32,8 +32,13 @@ pub(crate) fn rows() -> Vec<Vec<f64>> {
 }
 
 pub(crate) fn table() -> Vec<u8> {
+    table_for(&NAMES)
+}
+
+/// The same invented areas under other file names (one per column of `rows`).
+pub(crate) fn table_for(names: &[&str]) -> Vec<u8> {
     let rows = rows();
-    let mut t = Aligned::with_capacity(NAMES.len(), rows.len());
+    let mut t = Aligned::with_capacity(names.len(), rows.len());
     for (i, areas) in rows.iter().enumerate() {
         t.mz.push(200.0 + 10.0 * i as f64);
         t.rt.push(5.0 + i as f64);
@@ -47,7 +52,7 @@ pub(crate) fn table() -> Vec<u8> {
         }
     }
     let origin = Origin {
-        inputs: NAMES
+        inputs: names
             .iter()
             .map(|n| (n.to_string(), String::new()))
             .collect(),

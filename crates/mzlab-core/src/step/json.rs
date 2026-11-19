@@ -87,6 +87,10 @@ fn facets(o: &mut Out, f: &Facets) {
 
 fn port(o: &mut Out, p: &Port) {
     o.str("type").raw(":").str(p.ty.name());
+    if let Some(s) = p.ty.schema() {
+        key(o, "schema");
+        o.str(s);
+    }
     if p.many {
         key(o, "many");
         o.raw("true");

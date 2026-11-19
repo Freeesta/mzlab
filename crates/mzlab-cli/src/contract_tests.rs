@@ -9,6 +9,15 @@ use crate::{execute, Outcome};
 
 /// The commands that read an input, each with a path that does not exist: exit 4, and under `--json` an error/1 with code 4.
 const MISSING: &[&[&str]] = &[
+    &[
+        "sample",
+        "design",
+        "propose",
+        "--samples",
+        "/nonexistent/s.json",
+    ],
+    &["sample", "design", "validate", "/nonexistent/d.json"],
+    &["sample", "design", "canonical", "/nonexistent/d.json"],
     &["features", "/nonexistent/x.mzML"],
     &[
         "file",
