@@ -66,7 +66,7 @@ def test_the_site_and_the_app_list_every_synthetic_pair_with_the_same_bytes(work
             listed += 1
         else:
             # a pair no reader takes: the app answers with an error line, never a listing
-            assert rc in (1, 4) and '"schema":"errore/1"' in text and "samples_list/1" not in text, (wiff, rc, text)
+            assert rc in (1, 4) and '"schema":"error/1"' in text and "samples_list/1" not in text, (wiff, rc, text)
         assert "listing " in err, (wiff, err)  # progress goes to stderr
     assert listed > 10
 
@@ -84,6 +84,6 @@ def test_the_probe_adds_the_size_of_the_scan_file_and_a_cut_copy_exits_1(work):
     p = subprocess.run(cli_argv("samples", "list", str(cut / "grande.wiff"), "--json", "--probe"), cwd=ROOT, capture_output=True, encoding="utf-8")
     assert p.returncode == 1 and json.loads(p.stdout)["probe"]["status"] == "short", (p.returncode, p.stdout)
     missing = subprocess.run(cli_argv("samples", "list", str(work / "nothing.wiff"), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
-    assert missing.returncode == 4 and "errore/1" in missing.stdout
+    assert missing.returncode == 4 and "error/1" in missing.stdout
     usage = subprocess.run(cli_argv("samples", "list", "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
     assert usage.returncode == 2

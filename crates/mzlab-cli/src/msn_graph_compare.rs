@@ -1,6 +1,6 @@
-//! `mzlab-cli msn-graph compare A.json B.json`: the validation of an MSn tree (`docs/agenti/msnlib.md` §4). Two `msngrafo/1` graphs of the same standard (two days, same options)
+//! `mzlab-cli msn-graph compare A.json B.json`: the validation of an MSn tree (`docs/agenti/msnlib.md` §4). Two `msn-graph/1` graphs of the same standard (two days, same options)
 //! are checked on five criteria: the isolated nodes (same paths of precursors), the arcs with `rel` >= 10 % in both, the formulas proposed, the MS2 entropy per energy and the
-//! m/z shift of the matched nodes. The answer is a JSON with the numbers; `convalidata` is true when every criterion holds. Used by `lib.rs` (`msn_graph_cmd`).
+//! m/z shift of the matched nodes. The answer is a JSON with the numbers; `validated` is true when every criterion holds. Used by `lib.rs` (`msn_graph_cmd`).
 
 use std::path::PathBuf;
 
@@ -68,20 +68,20 @@ fn load(text: &str) -> Result<Graph> {
         }
     })?;
     let list = |k: &str| v.get(k).map_or(&[][..], |x| x.arr());
-    let nodes = list("nodi")
+    let nodes = list("nodes")
         .iter()
         .map(|n| Node {
             mz: num(n, "mz"),
-            isolated: n.get("isolato").and_then(|b| b.bool()).unwrap_or(false),
+            isolated: n.get("isolated").and_then(|b| b.bool()).unwrap_or(false),
             path: n
-                .get("albero")
+                .get("tree")
                 .and_then(|a| a.arr().first())
                 .and_then(|p| p.str())
                 .map(steps)
                 .unwrap_or_default(),
             formula: n
                 .get("formula")
-                .and_then(|f| f.get("scelta")?.str())
+                .and_then(|f| f.get("choice")?.str())
                 .map(str::to_string),
         })
         .collect::<Vec<_>>();
@@ -89,37 +89,41 @@ fn load(text: &str) -> Result<Graph> {
         let k = id?.strip_prefix('n')?.parse::<usize>().ok()?;
         nodes.get(k).map(|n| n.mz)
     };
-    let edges = list("archi")
+    let edges = list("edges")
         .iter()
         .filter_map(|a| {
             let rel = a
-                .get("misure")
+                .get("measurements")
                 .map_or(&[][..], |m| m.arr())
                 .iter()
                 .map(|m| num(m, "rel"))
                 .fold(0.0, f64::max);
             Some(Edge {
-                from: mz_of(a.get("da")?.str())?,
-                to: mz_of(a.get("a")?.str())?,
+                from: mz_of(a.get("from")?.str())?,
+                to: mz_of(a.get("to")?.str())?,
                 rel,
             })
         })
         .collect();
-    let spectra = list("spettri")
+    let spectra = list("spectra")
         .iter()
-        .filter(|s| num(s, "livello") == 2.0)
+        .filter(|s| num(s, "level") == 2.0)
         .map(|s| {
             let mut peaks: Vec<(f64, f64)> = s
-                .get("picchi")
+                .get("peaks")
                 .map_or(&[][..], |p| p.arr())
                 .iter()
                 .map(|p| (num(p, "mz"), num(p, "rel")))
                 .collect();
             peaks.sort_by(|x, y| x.0.total_cmp(&y.0));
             Spectrum {
-                att: s.get("att").and_then(|x| x.str()).unwrap_or("").into(),
+                att: s
+                    .get("activation")
+                    .and_then(|x| x.str())
+                    .unwrap_or("")
+                    .into(),
                 ce: num(s, "ce"),
-                path: steps(s.get("albero").and_then(|x| x.str()).unwrap_or("")),
+                path: steps(s.get("tree").and_then(|x| x.str()).unwrap_or("")),
                 peaks,
             }
         })
@@ -185,9 +189,9 @@ fn c_nodes(ga: &Graph, gb: &Graph, body: &mut Out) -> bool {
     let fields = [
         ("a", ia.len() as f64),
         ("b", ib.len() as f64),
-        ("comuni", common as f64),
+        ("common", common as f64),
     ];
-    criterion(body, "nodi_isolati", ok, &fields);
+    criterion(body, "isolated_nodes", ok, &fields);
     ok
 }
 
@@ -202,11 +206,11 @@ fn c_edges(ga: &Graph, gb: &Graph, body: &mut Out) -> bool {
     .len();
     let ok = common == fa.len() && common == fb.len();
     let fields = [
-        ("forti_a", fa.len() as f64),
-        ("forti_b", fb.len() as f64),
-        ("comuni", common as f64),
+        ("strong_a", fa.len() as f64),
+        ("strong_b", fb.len() as f64),
+        ("common", common as f64),
     ];
-    criterion(body, "archi", ok, &fields);
+    criterion(body, "edges", ok, &fields);
     ok
 }
 
@@ -227,8 +231,8 @@ fn c_formulas(ga: &Graph, gb: &Graph, pairs: &[(usize, usize, f64)], body: &mut 
             different += usize::from(x != y);
         }
     }
-    let fields = [("confrontati", seen as f64), ("diversi", different as f64)];
-    criterion(body, "formule", different == 0, &fields);
+    let fields = [("compared", seen as f64), ("different", different as f64)];
+    criterion(body, "formulas", different == 0, &fields);
     different == 0
 }
 
@@ -245,12 +249,12 @@ fn c_entropy(ga: &Graph, gb: &Graph, body: &mut Out) -> bool {
     let without = ga.spectra.len() + gb.spectra.len() - 2 * sp.len();
     let ok = without == 0 && minimum >= ENTROPY_MIN;
     let fields = [
-        ("minimo", minimum),
-        ("soglia", ENTROPY_MIN),
-        ("coppie", sp.len() as f64),
-        ("senza_controparte", without as f64),
+        ("min", minimum),
+        ("threshold", ENTROPY_MIN),
+        ("pairs", sp.len() as f64),
+        ("unpaired", without as f64),
     ];
-    criterion(body, "entropia_ms2", ok, &fields);
+    criterion(body, "ms2_entropy", ok, &fields);
     ok
 }
 
@@ -258,11 +262,11 @@ fn c_deviation(pairs: &[(usize, usize, f64)], body: &mut Out) -> bool {
     let maximum = pairs.iter().map(|c| c.2).fold(0.0, f64::max);
     let ok = maximum <= DEVIATION_MAX;
     let fields = [
-        ("massimo", maximum),
-        ("soglia", DEVIATION_MAX),
-        ("coppie", pairs.len() as f64),
+        ("max", maximum),
+        ("threshold", DEVIATION_MAX),
+        ("pairs", pairs.len() as f64),
     ];
-    criterion(body, "scarto_ppm", ok, &fields);
+    criterion(body, "deviation_ppm", ok, &fields);
     ok
 }
 
@@ -281,8 +285,8 @@ pub fn compare(a: &str, b: &str) -> Result<String> {
     ];
     let all = oks.iter().all(|&k| k);
     let mut o = Out::default();
-    o.raw("{\"formato\":\"msnconfronto/1\",\"ppm\":").num(PPM);
-    o.raw(",\"convalidata\":")
+    o.raw("{\"schema\":\"msn-compare/1\",\"ppm\":").num(PPM);
+    o.raw(",\"validated\":")
         .raw(if all { "true" } else { "false" });
     o.raw(&body.0).raw("}\n");
     Ok(o.0)

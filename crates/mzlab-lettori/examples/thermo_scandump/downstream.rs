@@ -1,4 +1,4 @@
-//! The outputs after the reader that `--downstream` adds to every scan row (docs/agenti/scandump.md): the mzML as written, the filter of `rawfilter`, the `.mzidx` row and the entry node of `msngrafo/1`.
+//! The outputs after the reader that `--downstream` adds to every scan row (docs/agenti/scandump.md): the mzML as written, the filter of `rawfilter`, the `.mzidx` row and the entry node of `msn-graph/1`.
 use std::io::{Cursor, Write};
 
 use mzlab_core::readers::Reader;

@@ -42,5 +42,23 @@ export function show(p, S, err, f, rf) {
   p.leg.insertAdjacentHTML("beforeend", h`<span class="sm subnote" title="${full.join(" ")}">${n.head}${n.warn.length ? ` (${n.warn.length})` : ""}</span>`);
 }
 
-/** The scale factor and RT shift boxes of the popover of a DAD map with a correction file. @param {any} p @param {Function} num */
-export const controls = (p, num) => `<label class="muted" title="${T("ctl.map.subfactor.title")}">${T("ctl.map.subfactor.lab")} ${num("subFactor", p.subFactor, -1000, 1000, 0.01, true)}</label><label class="muted" title="${T("ctl.map.subshift.title")}">${T("ctl.map.subshift.lab")} ${num("subShift", p.subShift || 0, -5, 5, 0.01, true)}</label>`;
+/**
+ * The matrix of the DAD map (plain, or minus the reference of the 3D viewer) cut to the window of the viewer, in the shape the 3D grid uses (nrt, nmz, mz0, dmz, row-major
+ * intensities). The window is snapped to the bins; the time axis is the one of the map (uniform). @param {any} V the state of the viewer @param {any} p the map panel
+ */
+export async function grid(V, p) {
+  let a;
+  if (V.ref != null) { const r = await sub(p, { k: V.k }, { k: V.ref, label: "" }); if (!r.sub) throw new Error(r.err); a = r.sub; } else a = await getMap(V.k, "pda", "");
+  const [r0, r1] = V.rt, [w0, w1] = V.mz, dr = (a.rt1 - a.rt0) / a.nrt, cl = (/** @type {number} */ v, /** @type {number} */ lo, /** @type {number} */ hi) => Math.max(lo, Math.min(hi, v));
+  const i0 = cl(Math.floor((r0 - a.rt0) / dr), 0, a.nrt - 1), i1 = cl(Math.ceil((r1 - a.rt0) / dr), i0 + 1, a.nrt), j0 = cl(Math.floor((w0 - a.mz0) / a.dmz), 0, a.nmz - 1), j1 = cl(Math.ceil((w1 - a.mz0) / a.dmz), j0 + 1, a.nmz);
+  const m = new Float32Array((i1 - i0) * (j1 - j0));
+  for (let i = i0; i < i1; i++) m.set(a.m.subarray(i * a.nmz + j0, i * a.nmz + j1), (i - i0) * (j1 - j0));
+  V.rt = [a.rt0 + i0 * dr, a.rt0 + i1 * dr]; V.mz = [a.mz0 + j0 * a.dmz, a.mz0 + j1 * a.dmz];
+  return { nrt: i1 - i0, nmz: j1 - j0, mz0: V.mz[0], dmz: a.dmz, log: false, m };
+}
+import { msControls } from "./mappa-dad-ms.js";
+export * from "./mappa-dad-ms.js";
+
+/** The scale factor and RT shift boxes of the popover of a DAD map with a correction file. @param {any} p @param {Function} num @param {Function} opt @param {boolean} isF */
+export const controls = (p, num, opt, isF) => (isF ? subBoxes(p, num) : "") + msControls(p, num, opt);
+const subBoxes = (/** @type {any} */ p, /** @type {Function} */ num) => `<label class="muted" title="${T("ctl.map.subfactor.title")}">${T("ctl.map.subfactor.lab")} ${num("subFactor", p.subFactor, -1000, 1000, 0.01, true)}</label><label class="muted" title="${T("ctl.map.subshift.title")}">${T("ctl.map.subshift.lab")} ${num("subShift", p.subShift || 0, -5, 5, 0.01, true)}</label>`;

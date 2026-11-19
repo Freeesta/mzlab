@@ -3,7 +3,10 @@
 use super::Entry;
 use crate::Outcome;
 
-fn run(_: Vec<String>) -> Outcome {
+fn run(args: Vec<String>) -> Outcome {
+    if let Some(a) = args.first() {
+        return Outcome::fail(&format!("unknown argument {a}"));
+    }
     Outcome::ok(super::list_md().into_bytes())
 }
 

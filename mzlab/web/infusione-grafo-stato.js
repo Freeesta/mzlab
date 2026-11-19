@@ -1,15 +1,15 @@
 // @ts-strict
 // State and requests of the «Fragmentation graph» tab of an MSn infusion: the ion typed or chosen by name, the settings, the user's formula choices
-// and the graph (msngrafo/2) that /api/msn_grafo answers. No chemistry here: the engine reads the ion text and does every calculation.
+// and the graph (msn-graph/1) that /api/msn_grafo answers. No chemistry here: the engine reads the ion text and does every calculation.
 // Used by infusione-grafo*.js.
 
 /** Texts of the evidences, of the parity of the electrons and of the warnings, spelled out so the catalogue check sees every key used. */
 export const TXT = {
   conf: { high: "msngrafo.int.high", medium: "msngrafo.int.medium", low: "msngrafo.int.low" },
-  prove: { perdita: "msngrafo.prove.perdita", isotopi: "msngrafo.prove.isotopi", msn: "msngrafo.prove.msn" },
+  proofs: { loss: "msngrafo.proofs.loss", isotopes: "msngrafo.proofs.isotopes", msn: "msngrafo.proofs.msn" },
   prog: { load: "msngrafo.prog.load", convert: "msngrafo.prog.convert", index: "msngrafo.prog.index", graph: "msngrafo.prog.graph" },
   stalled: { load: "msngrafo.stalled.load", convert: "msngrafo.stalled.convert", index: "msngrafo.stalled.index", graph: "msngrafo.stalled.graph" },
-  elettroni: { pari: "msngrafo.e.pari", dispari: "msngrafo.e.dispari" },
+  electrons: { even: "msngrafo.e.even", odd: "msngrafo.e.odd" },
   // Errors of the library route, named by the engine through error_key.
   err: { noIon: "err.msnlib.noIon", bad: "err.msnlib.bad" },
   warn: {
@@ -22,7 +22,7 @@ export const TXT = {
 
 export const ADDUCTS = { 1: ["[M+H]+", "[M+Na]+", "[M+NH4]+", "[M+K]+"], [-1]: ["[M-H]-", "[M+HCOO]-", "[M+Cl]-", "[M+CH3COO]-"] };
 
-/** @typedef {{ id: string, nome: string, formula: string, massa?: number, smiles: string | null, addotti?: string[] }} Molecola */
+/** @typedef {{ id: string, name: string, formula: string, massa?: number, smiles: string | null, addotti?: string[] }} Molecola */
 
 /** The state of the tab; it lives as long as the page. */
 export const G = {
@@ -32,8 +32,8 @@ export const G = {
   adduct: "",
   smiles: "",
   /** Defaults are the `opzioni` of the first answer. */
-  o: { ppm_formula: 10, mz_basso: 150, ppm_basso: 20, prove_min: 1, attivazione: "", isotopi: false },
-  /** @type {{ mz: number, formula: string }[]} */ scelte: [],
+  o: { ppm_formula: 10, low_mz: 150, low_ppm: 20, min_evidence: 1, activation: "", isotopes: false },
+  /** @type {{ mz: number, formula: string }[]} */ choices: [],
   /** @type {any} */ j: null,
   /** @type {string | null} */ sel: null,
   /** @type {string | null} */ error: null,
@@ -73,16 +73,16 @@ export function ionText() {
   return G.mol || !/[+\-[]/.test(t) ? `${t} ${G.adduct}` : t;
 }
 
-/** The parameters of a graph request (the options of msngrafo/1 and those of the precursor tree), as plain values. @returns {Record<string, any>} */
+/** The parameters of a graph request (the options of msn-graph/1 and those of the precursor tree), as plain values. @returns {Record<string, any>} */
 export function params(/** @type {number} */ k) {
   const { o } = G, ion = ionText();
   /** @type {Record<string, any>} */
-  const p = { k, tol: INF.O.tol, ce: INF.O.ce ? 1 : 0, ppm_formula: o.ppm_formula, mz_basso: o.mz_basso, ppm_basso: o.ppm_basso, prove_min: o.prove_min };
+  const p = { k, tol: INF.O.tol, ce: INF.O.ce ? 1 : 0, ppm_formula: o.ppm_formula, low_mz: o.low_mz, low_ppm: o.low_ppm, min_evidence: o.min_evidence };
   if (ion) p.formula = ion;
   if (ion && G.smiles) p.smiles = G.smiles;
-  if (o.attivazione) p.attivazione = o.attivazione;
-  if (o.isotopi) p.isotopi = 1;
-  if (G.scelte.length) p.scelte = G.scelte;
+  if (o.activation) p.activation = o.activation;
+  if (o.isotopes) p.isotopes = 1;
+  if (G.choices.length) p.choices = G.choices;
   return p;
 }
 
@@ -97,7 +97,7 @@ export function query(/** @type {number} */ k) {
 export const graphUrl = (/** @type {number} */ k) => "api/msn_grafo?" + query(k);
 
 /** The URL the tab draws from: the graph plus the interpretation of the losses and the fragmentation rules and, with a SMILES, the bond breaks of the structure (evidence for the arcs and the panel of a node; exports and the library do not carry them). */
-const viewUrl = (/** @type {number} */ k, /** @type {boolean} */ withCuts = true) => graphUrl(k) + "&interpreta=1&regole=1" + (withCuts && G.smiles && ionText() ? "&rotture=1" : "") + (G.smiles && G.molfile ? "&molfile=" + encodeURIComponent(G.molfile) + (withCuts ? "&strutture=tutti" : "") : "");
+const viewUrl = (/** @type {number} */ k, /** @type {boolean} */ withCuts = true) => graphUrl(k) + "&interpret=1&rules=1" + (withCuts && G.smiles && ionText() ? "&breaks=1" : "") + (G.smiles && G.molfile ? "&molfile=" + encodeURIComponent(G.molfile) + (withCuts ? "&structures=all" : "") : "");
 
 /** Asks for the graph of the file; keeps the answer in G.j or the error in G.error. @returns {Promise<boolean>} false when a newer request took over. */
 export async function fetchGraph(/** @type {number} */ k) {
@@ -111,10 +111,10 @@ export async function fetchGraph(/** @type {number} */ k) {
       url = viewUrl(k, false); G.key = url; j = await J(url);
     }
     if (G.key !== url) return false;
-    // msngrafo/2 names its options in English, /1 in Italian (the names of G.o)
-    if (G.j == null) { const o = j.opzioni || {}; for (const [n, en] of /** @type {const} */ ([["ppm_formula", "ppm_formula"], ["mz_basso", "low_mz"], ["ppm_basso", "wide_ppm"], ["prove_min", "min_evidence"]])) { const x = typeof o[en] === "number" ? o[en] : o[n]; if (typeof x === "number") G.o[n] = x; } }
+    // msn-graph/1 names its options in English, /1 in Italian (the names of G.o)
+    if (G.j == null) { const o = j.options || {}; for (const [n, en] of /** @type {const} */ ([["ppm_formula", "ppm_formula"], ["low_mz", "low_mz"], ["low_ppm", "wide_ppm"], ["min_evidence", "min_evidence"]])) { const x = typeof o[en] === "number" ? o[en] : o[n]; if (typeof x === "number") G.o[n] = x; } }
     G.j = j; G.error = null; G.errorObj = null; G.k = k;
-    if (G.sel && !j.nodi.some((/** @type {any} */ n) => n.id === G.sel)) G.sel = null;
+    if (G.sel && !j.nodes.some((/** @type {any} */ n) => n.id === G.sel)) G.sel = null;
   } catch (e) {
     if (G.key !== url) return false;
     G.error = /** @type {any} */ (e).message || String(e); G.errorObj = e;
@@ -126,27 +126,27 @@ export async function fetchGraph(/** @type {number} */ k) {
 const cuts = new Map();
 
 /**
- * The cleavages of the SMILES of the tab that explain a node: the value of `strutture_tutti` of the graph when it has it (no request), else the key `strutture` of the graph request plus `strutture=<id>`.
+ * The cleavages of the SMILES of the tab that explain a node: the value of `structures_all` of the graph when it has it (no request), else the key `structures` of the graph request plus `structures=<id>`.
  * Null when there is no SMILES, no ion, the node is a root, the engine answers without the key or the request fails.
  */
 export async function fetchStrutture(/** @type {any} */ n) {
-  if (G.ro || !G.smiles || !G.j || !ionText() || n.livello < 2) return null;
-  if (G.j.strutture_tutti) return G.j.strutture_tutti.find((/** @type {any} */ s) => s.nodo === n.id) || null;
-  const url = graphUrl(G.k) + "&strutture=" + n.id;
-  if (!cuts.has(url)) cuts.set(url, J(url).then((/** @type {any} */ j) => j.strutture || null).catch(() => null));
+  if (G.ro || !G.smiles || !G.j || !ionText() || n.level < 2) return null;
+  if (G.j.structures_all) return G.j.structures_all.find((/** @type {any} */ s) => s.node === n.id) || null;
+  const url = graphUrl(G.k) + "&structures=" + n.id;
+  if (!cuts.has(url)) cuts.set(url, J(url).then((/** @type {any} */ j) => j.structures || null).catch(() => null));
   return cuts.get(url);
 }
 
 /** The node of the answer by id. */
-export const nodeOf = (/** @type {string | null} */ id) => (G.j && id ? G.j.nodi.find((/** @type {any} */ n) => n.id === id) || null : null);
+export const nodeOf = (/** @type {string | null} */ id) => (G.j && id ? G.j.nodes.find((/** @type {any} */ n) => n.id === id) || null : null);
 
 /** The formula the engine chose or proposes for a node: the chosen one, else the only candidate (null when there are several). */
 export function chosen(/** @type {any} */ n) {
   const f = n && n.formula;
-  return f ? f.scelta || (f.candidati.length === 1 ? f.candidati[0].formula : null) : null;
+  return f ? f.choice || (f.candidates.length === 1 ? f.candidates[0].formula : null) : null;
 }
 
 /** Fixes a candidate of a node («Use»): a new request with the choice, found again by the engine in the node by its m/z. */
 export function useCandidate(/** @type {any} */ n, /** @type {string} */ formula) {
-  G.scelte = [...G.scelte.filter(s => Math.abs(s.mz - n.mz) > 1e-4), { mz: n.mz, formula }];
+  G.choices = [...G.choices.filter(s => Math.abs(s.mz - n.mz) > 1e-4), { mz: n.mz, formula }];
 }

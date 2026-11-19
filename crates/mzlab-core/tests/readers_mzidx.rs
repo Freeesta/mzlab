@@ -1,6 +1,6 @@
 //! The `.mzidx` built straight from a vendor file set (`upload::prepare_lettore` + `mzidx::build_lettore`, version 2) equals the one built from the
 //! mzML `readers_mzml::scrivi` writes for the same sample: the same sections byte for byte, the same rows but for their first two columns, the same
-//! metadata but for `source` and `version`; and the same index whatever the budget (one pass or many). The two sources of `sorgente` (the mzML by
+//! metadata but for `source` and `version`; and the same index whatever the budget (one pass or many). The two sources of `source` (the mzML by
 //! offset and the reader) give the same peaks and traces. Synthetic `.D` always, synthetic `.wiff` with
 //! python3, the real `.wiff`, `.D` and `.raw` with the private data repository (MZLAB_DATI or `mzlab-dati` beside this one); skipped without them.
 #![allow(clippy::indexing_slicing)]

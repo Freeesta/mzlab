@@ -1,4 +1,4 @@
-//! The native executor of `spectra.msn_graph@2`: the fragmentation graph `msngrafo/2` of an MSn infusion (mzML or a vendor file such as a Thermo `.raw`),
+//! The native executor of `spectra.msn_graph@2`: the fragmentation graph `msn-graph/1` of an MSn infusion (mzML or a vendor file such as a Thermo `.raw`),
 //! the same bytes as `mzlab-cli msn-graph FILE`. The step takes the options of `msngraph::Opzioni` that the command has, plus the name of the molecule
 //! looked up in a molecules list the user gives; its output is read by the page and by `msn-lib`.
 
@@ -24,7 +24,7 @@ pub fn msn_graph_step() -> Step {
                     .formats(&["csv"])
             },
         ],
-        outs: vec![Port::new("graph", DataType::Report, "Fragmentation graph (msngrafo/2)").format("msngrafo")],
+        outs: vec![Port::new("graph", DataType::Report, "Fragmentation graph (msn-graph/1)").format("msngrafo")],
         params: params(),
         runs_in: RunsIn {
             wasm: Some("wasip1 (mzlab-cli)"),
@@ -49,7 +49,7 @@ fn cleavage_params() -> Vec<Param> {
                 .label("Break the bonds")
                 .tip("Add the atom sets of the structure, with bonds cut, that give the m/z of each node.")
                 .default_bool(false)
-                .doc("Adds the key `rotture`: the sets of atoms of the structure (one or two bonds cut, a few hydrogens moved) that give the m/z of each node, the arcs they explain and the share of each spectrum's intensity explained (needs the structure; window `struct_ppm`)"),
+                .doc("Adds the key `breaks`: the sets of atoms of the structure (one or two bonds cut, a few hydrogens moved) that give the m/z of each node, the arcs they explain and the share of each spectrum's intensity explained (needs the structure; window `struct_ppm`)"),
             Param::integer("h_max", "Hydrogens moved")
                 .label("Hydrogens moved")
                 .tip("Maximum number of hydrogens moved beyond the plain cleavage.")
@@ -142,7 +142,7 @@ fn params() -> Vec<Param> {
                 .label("Node to cleave")
                 .tip("Node (nK) whose m/z is explained by structure cleavages; all for all nodes of level 2 or more.")
                 .default_str("")
-                .doc("Node nK of the graph: adds the key `strutture`, the bonds of the structure whose cleavage gives its m/z (needs the structure); `all` (or `tutti`) = the key `strutture_tutti` for every node of level 2 or more; empty = none"),
+                .doc("Node nK of the graph: adds the key `structures`, the bonds of the structure whose cleavage gives its m/z (needs the structure); `all` = the key `structures_all` for every node of level 2 or more; empty = none"),
             Param::number("struct_ppm", "Cleavage window")
                 .label("Cleavage window")
                 .tip("Maximum distance in ppm between a cleaved piece and the m/z of the node.")
@@ -154,7 +154,7 @@ fn params() -> Vec<Param> {
                 .label("Interpret losses")
                 .tip("Add to each arc the neutral loss, its mass error and the activations that saw it.")
                 .default_bool(false)
-                .doc("Adds the key `interpretazione`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the activations that saw it"),
+                .doc("Adds the key `interpretation`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the activations that saw it"),
             Param::number("loss_ppm", "Loss window")
                 .label("Loss window")
                 .tip("Maximum distance in ppm, relative to the precursor m/z, for matching a loss by mass.")
@@ -166,7 +166,7 @@ fn params() -> Vec<Param> {
                 .label("Apply fragmentation rules")
                 .tip("Add the rule that explains each loss, the even-electron check and the trap cut-off.")
                 .default_bool(false)
-                .doc("Adds the key `regole`: the rules of the table `fragrules/1` that the formulas alone decide (which rule explains the loss of an arc, even-electron check, trap cut-off, composite and stepped losses)"),
+                .doc("Adds the key `rules`: the rules of the table `fragrules/1` that the formulas alone decide (which rule explains the loss of an arc, even-electron check, trap cut-off, composite and stepped losses)"),
             Param::number("cutoff_q", "Trap cut-off q")
                 .label("Trap cut-off q")
                 .tip("Fragments below q/0.908 of the precursor m/z are treated as not observable.")

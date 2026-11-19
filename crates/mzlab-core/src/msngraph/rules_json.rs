@@ -1,4 +1,4 @@
-//! The text of the key `regole` of `msngrafo/1` (schema `docs/schemi/msngrafo-1.json`) from an evaluation (`regole_valuta`): fixed key order, rounded numbers.
+//! The text of the key `rules` of `msn-graph/1` (schema `docs/schemi/msn-graph-1.json`) from an evaluation (`regole_valuta`): fixed key order, rounded numbers.
 
 use super::rules::table;
 use super::rules_evaluate::{valuta, Applicata, EdgeVal, Evaluation, RuleParams, VERSION};
@@ -18,17 +18,17 @@ fn applied_json(o: &mut Out, r: &Applicata) {
         .str(r.id)
         .raw(",\"formula\":")
         .str(&r.formula)
-        .raw(",\"massa\":")
+        .raw(",\"mass\":")
         .num(round(r.massa, 5))
-        .raw(",\"errore_mda\":")
+        .raw(",\"error_mda\":")
         .num(round(r.mda_error, 2))
-        .raw(",\"radicale\":")
+        .raw(",\"radical\":")
         .raw(if r.radical { "true" } else { "false" })
-        .raw(",\"priorita\":")
+        .raw(",\"priority\":")
         .int(r.priorita as i64)
-        .raw(",\"energia\":")
+        .raw(",\"energy\":")
         .str(r.energy)
-        .raw(",\"perche\":")
+        .raw(",\"why\":")
         .str(r.perche)
         .raw(",\"refs\":");
     list(o, &r.refs);
@@ -36,23 +36,23 @@ fn applied_json(o: &mut Out, r: &Applicata) {
 }
 
 fn edge_json(o: &mut Out, g: &Graph, i: usize, a: &EdgeVal) {
-    o.raw("{\"da\":")
+    o.raw("{\"from\":")
         .str(&format!("n{}", g.archi[i].da))
-        .raw(",\"a\":")
+        .raw(",\"to\":")
         .str(&format!("n{}", g.archi[i].a))
-        .raw(",\"regole\":[");
+        .raw(",\"rules\":[");
     for (j, r) in a.rules.iter().enumerate() {
         o.raw(if j > 0 { "," } else { "" });
         applied_json(o, r);
     }
-    o.raw("],\"composta\":[");
+    o.raw("],\"composite\":[");
     for (j, (x, y)) in a.composta.iter().enumerate() {
         o.raw(if j > 0 { "," } else { "" });
         list(o, &[x, y]);
     }
     o.raw("],\"stepped\":")
         .raw(if a.stepped { "true" } else { "false" })
-        .raw(",\"avvisi\":");
+        .raw(",\"warnings\":");
     list(o, &a.warnings);
     o.raw("}");
 }
@@ -83,7 +83,7 @@ fn sources_and_thresholds(o: &mut Out, v: &Evaluation) {
             keys.push(k);
         }
     }
-    o.raw(",\"fonti\":[");
+    o.raw(",\"sources\":[");
     let all = t
         .rules
         .iter()
@@ -102,18 +102,18 @@ fn sources_and_thresholds(o: &mut Out, v: &Evaluation) {
         opts_text(o, r.pmid.as_deref());
         o.raw("}");
     }
-    o.raw("],\"soglie\":[");
+    o.raw("],\"thresholds\":[");
     for (i, s) in t.globali.thresholds.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"id\":")
             .str(&s.id)
-            .raw(",\"valore\":")
+            .raw(",\"value\":")
             .num(s.value)
-            .raw(",\"perche\":")
+            .raw(",\"why\":")
             .str(&s.perche)
-            .raw(",\"origine\":");
+            .raw(",\"origin\":");
         opts_text(o, s.origin.as_deref());
-        o.raw(",\"da_calibrare\":")
+        o.raw(",\"to_calibrate\":")
             .raw(if s.to_calibrate { "true" } else { "false" })
             .raw(",\"refs\":");
         let ks: Vec<&str> = s.refs.iter().map(|r| r.key.as_str()).collect();
@@ -123,54 +123,54 @@ fn sources_and_thresholds(o: &mut Out, v: &Evaluation) {
     o.raw("]");
 }
 
-/// The value of the key `regole` (see `docs/schemi/msngrafo-1.json`): keys in a fixed order, rounded numbers.
+/// The value of the key `rules` (see `docs/schemi/msn-graph-1.json`): keys in a fixed order, rounded numbers.
 pub fn rules_json(g: &Graph, v: &Evaluation, p: &RuleParams) -> String {
     let mut o = Out::default();
-    o.raw("{\"versione\":")
+    o.raw("{\"version\":")
         .int(VERSION as i64)
-        .raw(",\"tabella\":\"fragrules/1\",\"cutoff_q\":")
+        .raw(",\"table\":\"fragrules/1\",\"cutoff_q\":")
         .num(p.cutoff_q)
-        .raw(",\"toll_perdita_mda\":")
+        .raw(",\"loss_tolerance_mda\":")
         .num(p.toll_mda)
-        .raw(",\"addotto\":");
+        .raw(",\"adduct\":");
     match v.addotto {
         Some(a) => o.str(a),
         None => o.raw("null"),
     };
-    o.raw(",\"archi\":[");
+    o.raw(",\"edges\":[");
     for (i, a) in v.edges.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" });
         edge_json(&mut o, g, i, a);
     }
-    o.raw("],\"ioni\":[");
+    o.raw("],\"ions\":[");
     for (i, x) in v.ions.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"nodo\":")
+            .raw("{\"node\":")
             .str(&format!("n{}", x.nodo))
-            .raw(",\"regola\":")
+            .raw(",\"rule\":")
             .str(x.regola)
-            .raw(",\"errore_mda\":")
+            .raw(",\"error_mda\":")
             .num(round(x.errore_mda, 2))
             .raw("}");
     }
-    o.raw("],\"non_osservabili\":[");
+    o.raw("],\"unobservable\":[");
     for (i, x) in v.non_osservabili.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"nodo\":")
+            .raw("{\"node\":")
             .str(&format!("n{}", x.node))
-            .raw(",\"regola\":")
+            .raw(",\"rule\":")
             .str(x.rule)
             .raw(",\"mz\":")
             .num(round(x.mz, 4))
-            .raw(",\"soglia\":")
+            .raw(",\"threshold\":")
             .num(round(x.threshold, 4))
             .raw("}");
     }
-    o.raw("],\"conteggi\":{\"archi_spiegati\":")
+    o.raw("],\"counts\":{\"explained_edges\":")
         .int(v.explained as i64)
-        .raw(",\"archi_senza_regola\":")
+        .raw(",\"edges_without_rule\":")
         .int(v.without_rule as i64)
-        .raw(",\"intensita_spiegata\":")
+        .raw(",\"explained_intensity\":")
         .num(round(v.explained_intensity, 3))
         .raw("}");
     sources_and_thresholds(&mut o, v);
@@ -178,7 +178,7 @@ pub fn rules_json(g: &Graph, v: &Evaluation, p: &RuleParams) -> String {
     o.0
 }
 
-/// `grafo` (the text of an `msngrafo/1`) with the key `regole` added at the end; the text of a graph without it does not change.
+/// `grafo` (the text of an `msn-graph/1`) with the key `rules` added at the end; the text of a graph without it does not change.
 pub fn with_rules(graph: &str, g: &Graph, o: &Options, p: &RuleParams) -> String {
-    super::view::with_key(graph, "regole", &rules_json(g, &valuta(g, o, p), p))
+    super::view::with_key(graph, "rules", &rules_json(g, &valuta(g, o, p), p))
 }

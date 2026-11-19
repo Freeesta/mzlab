@@ -92,7 +92,7 @@ try:
             pg.evaluate("document.querySelector('#tmpform').remove()")
         step("the molecule box of the step fills the ion with its adduct, the name and the SMILES", molecule_box)
         def search():
-            added = pg.evaluate("""(async () => { const r = await fetch('api/msnlib/aggiungi', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ libreria: '', molecola_id: 'STD', k: 0, formula: '%s' }) }); const j = await r.json(); return j.error ? j : j.libreria })()""" % ION)
+            added = pg.evaluate("""(async () => { const r = await fetch('api/msnlib/add', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ library: '', molecule_id: 'STD', k: 0, formula: '%s' }) }); const j = await r.json(); return j.error ? j : j.library })()""" % ION)
             assert isinstance(added, str), added
             put = """async (t) => { const d = await navigator.storage.getDirectory(), w = await (await d.getFileHandle('msnlib.json', { create: true })).createWritable(); await w.write(t); await w.close() }"""
             pg.evaluate(put, "")
@@ -106,8 +106,8 @@ try:
               try { const r = await FLOW.runners.web.run(S); return { text: r.files.find(f => f.id === 'srch').text } } catch (e) { return { key: e.key } } finally { S.plan.steps.pop(); S.plan.inputs.pop() } }""")
             assert "text" in x, x
             j = json.loads(x["text"])
-            assert j["formato"] == "msncerca/1" and j["opzioni"]["min_prove"] == 3 and j["candidati"], x["text"][:300]
-        step("the library search of spectra.match (tree) posts the library of the card and gives msncerca/1", search)
+            assert j["schema"] == "msn-search/1" and j["options"]["min_evidence"] == 3 and j["candidates"], x["text"][:300]
+        step("the library search of spectra.match (tree) posts the library of the card and gives msn-search/1", search)
         def library():
             t = got["r"]["files"][1]["text"]
             assert "Name:" in t and "Num Peaks:" in t and "C8H11N4O2" in t, t[:300]
@@ -124,7 +124,7 @@ try:
             pg.evaluate("document.querySelectorAll('.flx-res').forEach(n => n.remove())")
             pg.click("#flx-run")
             pg.wait_for_selector(".flx-res .ig-node", timeout=60000)
-            assert pg.locator(".flx-res .ig-node").count() == len(g["nodi"]), "one box per ion"
+            assert pg.locator(".flx-res .ig-node").count() == len(g["nodes"]), "one box per ion"
             assert pg.locator(".flx-res [aria-pressed=true]").first.inner_text() == "Graph"
             wait_for_js(pg, "document.activeElement && document.activeElement.matches('.flx-res h3')", 10000)
             kinds = pg.evaluate("Object.values(document.querySelector('.flx-list').__flow.results).flat().map(r => r.type).sort()")
@@ -159,14 +159,14 @@ try:
             assert pg.evaluate("document.activeElement && document.activeElement.closest('.flx-res') !== null"), "the focus is inside the view"
             g = json.loads(got["r"]["files"][0]["text"])
             pg.click('.flx-res button:has-text("Radial")'); pg.wait_for_selector(".flx-res .ig-node", timeout=10000)
-            assert pg.locator(".flx-res .ig-node").count() == len(g["nodi"]), "the radial view draws every ion"
+            assert pg.locator(".flx-res .ig-node").count() == len(g["nodes"]), "the radial view draws every ion"
             pg.locator(".flx-res .ig-node").first.click(); pg.wait_for_selector(".flx-res .ig-cands", timeout=10000)
             pg.click('.flx-res button:has-text("Open in Data")')
             wait_for_js(pg, "document.getElementById('ig-wrap') && document.querySelector('#ig-wrap .ig-node')", 60000)
             pg.click('#nav button[data-v="flow"]'); pg.evaluate("document.querySelector('.flx-res') && document.querySelector('.flx-res').remove()")
         step("the cards: Raw files, Fragmentation graph, Export and View graph; the view opens with Tree/Radial, the ion panel and Open in Data", cards)
         def empty():
-            pg.evaluate("window.__f = window.__f || window.fetch; window.fetch = (u, i) => String(u).includes('api/msn_grafo') ? Promise.resolve(new Response(JSON.stringify({ formato: 'msngrafo/1', nodi: [], archi: [], spettri: [] }))) : window.__f(u, i); null")
+            pg.evaluate("window.__f = window.__f || window.fetch; window.fetch = (u, i) => String(u).includes('api/msn_grafo') ? Promise.resolve(new Response(JSON.stringify({ schema: 'msn-graph/1', nodes: [], edges: [], spectra: [] }))) : window.__f(u, i); null")
             try: x = pg.evaluate(RUN, {"formula": ION})
             finally: pg.evaluate("window.fetch = window.__f; null")
             assert x["err"] and x["err"]["key"] == "err.flow.msn.empty", x["err"]

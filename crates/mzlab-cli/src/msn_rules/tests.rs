@@ -42,7 +42,7 @@ fn a_record_gives_a_line_of_numbers_with_the_rule_that_explains_the_loss() {
     let o = run(&["msn-rules", &f, "--rules"]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let l = &rows(&o)[0];
-    assert_eq!(l.get("strato").unwrap().str(), Some("hcd"));
+    assert_eq!(l.get("layer").unwrap().str(), Some("hcd"));
     let v = l.get("v").unwrap();
     let n = |k: &str| v.get(k).unwrap().f64().unwrap();
     // one fragment peak (the precursor is not counted), explained by the sub-formula and by a rule of the structure
@@ -75,7 +75,7 @@ fn the_stratum_comes_from_the_instrument_and_the_mode() {
         );
         let l = rows(&run(&["msn-rules", &f])).remove(0);
         assert_eq!(
-            l.get("strato").unwrap().str(),
+            l.get("layer").unwrap().str(),
             Some(*expected),
             "{strumento} {modo}"
         );
@@ -97,7 +97,7 @@ fn a_record_that_cannot_be_judged_says_why() {
         "CC(=O)Nc1ccccc1",
     );
     let mode = registry("SYN-M", "LC-ESI-QFT", "ETD", "[M+H]+", "CC(=O)Nc1ccccc1");
-    for (t, reason) in [(without, "smiles"), (aduct, "ione"), (mode, "attivazione")] {
+    for (t, reason) in [(without, "smiles"), (aduct, "ion"), (mode, "activation")] {
         let f = write_outputs("x.txt", &t);
         let l = rows(&run(&["msn-rules", &f])).remove(0);
         assert_eq!(l.get("skipped").unwrap().str(), Some(reason));
@@ -143,14 +143,14 @@ fn a_nominal_mass_record_is_counted_apart() {
         format!("{{\"n\":2,\"it\":100,\"a\":1,\"ia\":{a},\"b\":0,\"ib\":0,\"c\":0,\"ic\":0,\"r\":{{}}}}")
     };
     let t = format!(
-        "{{\"id\":\"N\",\"strato\":\"fascio\",\"pol\":1,\"v\":{}}}\n{{\"id\":\"H\",\"strato\":\"fascio\",\"pol\":1,\"v\":{}}}\n",
+        "{{\"id\":\"N\",\"layer\":\"fascio\",\"pol\":1,\"v\":{}}}\n{{\"id\":\"H\",\"layer\":\"fascio\",\"pol\":1,\"v\":{}}}\n",
         m(20.0),
         m(90.0)
     );
     let s = parse(summed(&t).unwrap().as_bytes()).unwrap();
-    let st = &s.get("strati").unwrap().arr()[0];
-    assert_eq!(st.get("nominali").unwrap().f64(), Some(1.0));
-    assert_eq!(st.get("registri").unwrap().f64(), Some(1.0));
+    let st = &s.get("layers").unwrap().arr()[0];
+    assert_eq!(st.get("nominal").unwrap().f64(), Some(1.0));
+    assert_eq!(st.get("records").unwrap().f64(), Some(1.0));
 }
 
 #[test]
@@ -167,7 +167,7 @@ fn the_sum_applies_the_thresholds_of_the_protocol() {
             m(0.0, "")
         };
         t += &format!(
-            "{{\"id\":\"R{k}\",\"strato\":\"hcd\",\"pol\":1,\"v\":{},\"dp\":{},\"dl\":{dl}}}\n",
+            "{{\"id\":\"R{k}\",\"layer\":\"hcd\",\"pol\":1,\"v\":{},\"dp\":{},\"dl\":{dl}}}\n",
             m(80.0, "\"loss_c2h2o_acetyl\":1"),
             m(0.0, ""),
         );
@@ -175,44 +175,44 @@ fn the_sum_applies_the_thresholds_of_the_protocol() {
     t += "{\"id\":\"X\",\"skipped\":\"smiles\"}\n";
     let s = parse(summed(&t).unwrap().as_bytes()).unwrap();
     assert_eq!(
-        s.get("saltati").unwrap().get("smiles").unwrap().f64(),
+        s.get("skipped").unwrap().get("smiles").unwrap().f64(),
         Some(1.0)
     );
-    let st = &s.get("strati").unwrap().arr()[0];
-    assert_eq!(st.get("registri").unwrap().f64(), Some(25.0));
+    let st = &s.get("layers").unwrap().arr()[0];
+    assert_eq!(st.get("records").unwrap().f64(), Some(25.0));
     assert_eq!(
-        st.get("copertura").unwrap().get("c").unwrap().f64(),
+        st.get("coverage").unwrap().get("c").unwrap().f64(),
         Some(0.8)
     );
     let dl = st.get("decoy").unwrap().get("dl").unwrap();
     assert_eq!(
-        dl.get("differenza").unwrap().f64(),
+        dl.get("difference").unwrap().f64(),
         Some(0.8 - 0.6 * 10.0 / 25.0)
     );
     // dp and dl are both far enough (0.8 and 0.56 above) from the true ones
-    assert_eq!(st.get("soglia_copertura").unwrap().bool(), Some(true));
-    let r = &st.get("regole").unwrap().arr()[0];
-    assert_eq!(r.get("vero").unwrap().f64(), Some(25.0));
+    assert_eq!(st.get("coverage_threshold").unwrap().bool(), Some(true));
+    let r = &st.get("rules").unwrap().arr()[0];
+    assert_eq!(r.get("real").unwrap().f64(), Some(25.0));
     // 10 of 25 = 0.4 > 0.30 with 25 applications (at least 20): priority 3
-    assert_eq!(r.get("tasso").unwrap().f64(), Some(0.4));
-    assert_eq!(r.get("esito").unwrap().str(), Some("priorita_3"));
+    assert_eq!(r.get("rate").unwrap().f64(), Some(0.4));
+    assert_eq!(r.get("outcome").unwrap().str(), Some("priority_3"));
 }
 
 #[test]
 fn a_rule_with_fewer_than_twenty_applications_is_not_measured() {
     let m = "{\"n\":1,\"it\":10,\"a\":1,\"ia\":10,\"b\":0,\"ib\":0,\"c\":1,\"ic\":10,\"r\":{\"loss_c2h2o_acetyl\":1}}";
     let t =
-        format!("{{\"id\":\"R\",\"strato\":\"cid_trappola\",\"pol\":-1,\"v\":{m},\"dl\":{m}}}\n");
+        format!("{{\"id\":\"R\",\"layer\":\"cid_trappola\",\"pol\":-1,\"v\":{m},\"dl\":{m}}}\n");
     let s = parse(summed(&t).unwrap().as_bytes()).unwrap();
-    let st = &s.get("strati").unwrap().arr()[0];
+    let st = &s.get("layers").unwrap().arr()[0];
     assert_eq!(
-        st.get("regole").unwrap().arr()[0]
-            .get("esito")
+        st.get("rules").unwrap().arr()[0]
+            .get("outcome")
             .unwrap()
             .str(),
-        Some("non_misurata")
+        Some("not_measured")
     );
-    assert_eq!(st.get("soglia_copertura").unwrap().bool(), Some(false));
+    assert_eq!(st.get("coverage_threshold").unwrap().bool(), Some(false));
 }
 
 /// The Italian flags and the subcommand `somma` are gone: usage errors (exit 2); the English ones work.

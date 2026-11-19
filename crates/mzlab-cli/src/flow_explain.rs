@@ -39,6 +39,7 @@ fn parse(a: Vec<String>) -> Result<Args, String> {
                     .map_err(|_| "--rt-tol is not a number")?
             }
             "--out" => out = Some(val("--out")?),
+            _ if x.len() > 1 && x.starts_with('-') => return Err(format!("unknown option {x}")),
             _ => pos.push(x),
         }
     }
@@ -286,15 +287,21 @@ pub fn run(args: Vec<String>) -> Outcome {
     }
     let go = || -> Result<Outcome, String> {
         let a = parse(args)?;
-        let bytes = std::fs::read(&a.table).map_err(|e| e.to_string())?;
+        let bytes = std::fs::read(&a.table).map_err(|e| format!("{}: {e}", a.table))?;
         let (t, _) = mzlab_feat::store::read_table(&bytes).map_err(|e| e.to_string())?;
-        let text = std::fs::read_to_string(&a.expected).map_err(|e| e.to_string())?;
+        let text =
+            std::fs::read_to_string(&a.expected).map_err(|e| format!("{}: {e}", a.expected))?;
         let r = report(&t, &read_expected(&text), a.ppm, a.rt_tol);
         match &a.out {
             None => Ok(Outcome::ok(r.into_bytes())),
-            Some(p) => std::fs::write(p, r)
-                .map(|_| Outcome::ok(Vec::new()))
-                .map_err(|e| e.to_string()),
+            Some(p) => Ok(std::fs::write(p, r).map_or_else(
+                |e| {
+                    Outcome::fail_error(
+                        &mzlab_core::Error::new("err.cli.out").with("path", format!("{p}: {e}")),
+                    )
+                },
+                |_| Outcome::ok(Vec::new()),
+            )),
         }
     };
     go().unwrap_or_else(|e| Outcome::fail(&e))

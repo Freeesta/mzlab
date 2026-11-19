@@ -144,17 +144,17 @@ fn the_html_is_one_file_with_nothing_outside() {
             && h.contains("function drawVista")
             && !h.contains("\nexport ")
     );
-    // the graph (an msngrafo/1 fixture: older graphs still draw) is inside, and the text of a script cannot end its element early
-    assert!(h.contains("\"formato\":\"msngrafo/1\""));
+    // the graph (an msn-graph/1 fixture: older graphs still draw) is inside, and the text of a script cannot end its element early
+    assert!(h.contains("\"schema\":\"msn-graph/1\""));
     let end = html(&graph().replace("msn.mzML", "a</script><b>"), View::Albero).unwrap();
     // the five script elements of the page, no more
     assert_eq!(end.matches("</script>").count(), 5);
 }
 
 #[test]
-fn a_graph_without_vista_is_completed_first() {
+fn a_graph_without_view_is_completed_first() {
     let j = graph();
-    let at = j.rfind(",\"vista\":").unwrap();
+    let at = j.rfind(",\"view\":").unwrap();
     let old = format!("{}}}", &j[..at]);
     assert_eq!(
         svg(&old, View::Radial).unwrap(),
@@ -299,18 +299,13 @@ fn the_step_writes_the_bytes_of_the_command() {
     let _ = std::fs::remove_dir_all(&d);
 }
 
-/// The former Italian figure flags and view values (`--figura`, `--vista`, `albero`, `radiale`) are refused.
+/// A flag or a view value that does not exist is refused: no alias is kept.
 #[test]
-fn the_italian_figure_flags_and_values_are_refused() {
+fn an_unknown_figure_flag_or_value_is_refused() {
     let d = dir("alias");
     let g = fixtures().join("g.json");
     let stem = d.join("o");
-    let refused: [&[&str]; 4] = [
-        &["--figura", "svg"],
-        &["--vista", "radial"],
-        &["--view", "radiale"],
-        &["--view", "albero"],
-    ];
+    let refused: [&[&str]; 2] = [&["--no-such-flag", "svg"], &["--view", "cube"]];
     for flags in refused {
         let mut a = vec![
             "msn-graph",
@@ -329,7 +324,7 @@ fn the_italian_figure_flags_and_values_are_refused() {
         "figure".into(),
         g.display().to_string(),
         "--view".into(),
-        "cubo".into(),
+        "cube".into(),
     ]);
     assert_eq!(o.code, 2);
     assert!(

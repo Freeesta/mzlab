@@ -1,11 +1,11 @@
-//! The bond breaks of the structure of the user that explain the ions of an `msngrafo/1` (key `rotture`): per node the sets of atoms (one or
+//! The bond breaks of the structure of the user that explain the ions of an `msn-graph/1` (key `breaks`): per node the sets of atoms (one or
 //! two bonds cut, a few hydrogens moved) whose m/z is the node's, per arc whether the child's set lies inside the parent's, per spectrum the
 //! share of the intensity so explained. Hypotheses with their evidence, never an assignment. The calculation is `mzlab_feat::chem::breaks`
 //! (it needs the structure); here the types and the JSON, used by `mzlab-cli msn-graph --breaks` and the `.wasm` `msngrafo`.
 
 use crate::json::{round, Out};
 
-/// Version of the `rotture` key.
+/// Version of the `breaks` key.
 pub const VERSION: u32 = 1;
 
 /// One set of atoms of the structure that gives the m/z of a node.
@@ -85,11 +85,11 @@ fn list(o: &mut Out, v: &[usize]) {
     o.raw("]");
 }
 
-/// The value of the key `rotture` (see `docs/schemi/msngrafo-1.json`): keys in a fixed order, rounded numbers.
+/// The value of the key `breaks` (see `docs/schemi/msn-graph-1.json`): keys in a fixed order, rounded numbers.
 pub fn breaks_json(r: &Breaks) -> String {
     let (sp, tot, int) = r.counts();
     let mut o = Out::default();
-    o.raw("{\"versione\":")
+    o.raw("{\"version\":")
         .int(VERSION as i64)
         .raw(",\"smiles\":")
         .str(&r.smiles)
@@ -97,40 +97,40 @@ pub fn breaks_json(r: &Breaks) -> String {
         .num(r.ppm)
         .raw(",\"h_max\":")
         .int(r.h_max as i64)
-        .raw(",\"max_legami\":")
+        .raw(",\"max_bonds\":")
         .int(r.max_bonds as i64)
-        .raw(",\"atomi\":")
+        .raw(",\"atoms\":")
         .int(r.atoms as i64)
-        .raw(",\"legami\":")
+        .raw(",\"bonds\":")
         .int(r.legami as i64)
-        .raw(",\"avvisi\":[");
+        .raw(",\"warnings\":[");
     for (i, a) in r.warnings.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(a);
     }
-    o.raw("],\"conteggi\":{\"archi_spiegati\":")
+    o.raw("],\"counts\":{\"explained_edges\":")
         .int(sp as i64)
-        .raw(",\"archi\":")
+        .raw(",\"edges\":")
         .int(tot as i64)
-        .raw(",\"intensita_spiegata\":")
+        .raw(",\"explained_intensity\":")
         .num(round(int, 1))
-        .raw("},\"nodi\":[");
+        .raw("},\"nodes\":[");
     for (i, n) in r.nodes.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"nodo\":")
+            .raw("{\"node\":")
             .str(&format!("n{}", n.node))
             .raw(",\"n\":")
             .int(n.n as i64)
-            .raw(",\"ipotesi\":[");
+            .raw(",\"hypotheses\":[");
         for (k, h) in n.ipotesi.iter().enumerate() {
-            o.raw(if k > 0 { "," } else { "" }).raw("{\"legami\":");
+            o.raw(if k > 0 { "," } else { "" }).raw("{\"bonds\":");
             list(&mut o, &h.bonds);
-            o.raw(",\"pezzo\":");
+            o.raw(",\"piece\":");
             list(&mut o, &h.piece);
             o.raw(",\"formula\":")
                 .str(&h.formula)
                 .raw(",\"h\":")
                 .int(h.h as i64)
-                .raw(",\"mz_teorico\":")
+                .raw(",\"theoretical_mz\":")
                 .num(round(h.theoretical_mz, 5))
                 .raw(",\"ppm\":")
                 .num(round(h.ppm, 2))
@@ -138,25 +138,25 @@ pub fn breaks_json(r: &Breaks) -> String {
         }
         o.raw("]}");
     }
-    o.raw("],\"archi\":[");
+    o.raw("],\"edges\":[");
     for (i, a) in r.edges.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"da\":")
+            .raw("{\"from\":")
             .str(&format!("n{}", a.da))
-            .raw(",\"a\":")
+            .raw(",\"to\":")
             .str(&format!("n{}", a.a))
-            .raw(",\"spiegato\":")
+            .raw(",\"explained\":")
             .raw(if a.spiegato { "true" } else { "false" })
             .raw("}");
     }
-    o.raw("],\"spettri\":[");
+    o.raw("],\"spectra\":[");
     for (i, s) in r.spettri.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"albero\":")
+            .raw("{\"tree\":")
             .str(&s.albero)
-            .raw(",\"spiegata\":")
+            .raw(",\"explained\":")
             .num(round(s.explained, 1))
-            .raw(",\"totale\":")
+            .raw(",\"total\":")
             .num(round(s.total, 1))
             .raw("}");
     }
@@ -164,7 +164,7 @@ pub fn breaks_json(r: &Breaks) -> String {
     o.0
 }
 
-/// `grafo` (the text of an `msngrafo/1`) with the key `rotture` added at the end; the text of a graph without it does not change.
+/// `grafo` (the text of an `msn-graph/1`) with the key `breaks` added at the end; the text of a graph without it does not change.
 pub fn with_breaks(graph: &str, r: &Breaks) -> String {
-    super::view::with_key(graph, "rotture", &breaks_json(r))
+    super::view::with_key(graph, "breaks", &breaks_json(r))
 }

@@ -41,9 +41,9 @@ def test_a_bad_smiles_is_a_keyed_error(pkg):
 
 
 def test_graph_with_the_expectations_of_the_wasm_is_the_graph_of_the_command(pkg):
-    base = f"formula=C14H15N3O5%2B&regole=1&smiles={quote(SMILES, safe='')}"
-    query = f"{base}&attese={quote(expectations(pkg, SMILES), safe='')}"
+    base = f"formula=C14H15N3O5%2B&rules=1&smiles={quote(SMILES, safe='')}"
+    query = f"{base}&expected={quote(expectations(pkg, SMILES), safe='')}"
     got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "mzlab-msngrafo-wasm"), str(pkg / "msn.mzidx"), str(MZML), query).stdout
     want = cli("msn-graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", SMILES, "--rules").stdout
     assert got + "\n" == want
-    assert '"regole":' in got
+    assert '"rules":' in got

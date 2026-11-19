@@ -28,27 +28,27 @@ fn run(extra: &[&str]) -> String {
 fn the_ester_bond_is_a_hypothesis_of_the_node_and_the_key_keeps_the_view_last() {
     let base = run(&[]);
     let t = run(&["--breaks"]);
-    let (prefix, view) = base.trim_end().split_once(",\"vista\":").unwrap();
+    let (prefix, view) = base.trim_end().split_once(",\"view\":").unwrap();
     assert!(t.starts_with(prefix));
-    assert!(t.trim_end().ends_with(&format!(",\"vista\":{view}")));
+    assert!(t.trim_end().ends_with(&format!(",\"view\":{view}")));
     let v = mzlab_core::json::parse(t.as_bytes()).unwrap();
-    let r = v.get("rotture").unwrap();
-    assert_eq!(r.get("versione").unwrap().f64(), Some(1.0));
+    let r = v.get("breaks").unwrap();
+    assert_eq!(r.get("version").unwrap().f64(), Some(1.0));
     let n3 = r
-        .get("nodi")
+        .get("nodes")
         .unwrap()
         .arr()
         .iter()
-        .find(|n| n.get("nodo").unwrap().str() == Some("n3"))
+        .find(|n| n.get("node").unwrap().str() == Some("n3"))
         .expect("n3 has a hypothesis");
-    let h = &n3.get("ipotesi").unwrap().arr()[0];
+    let h = &n3.get("hypotheses").unwrap().arr()[0];
     assert_eq!(h.get("formula").unwrap().str(), Some("C9H7NO2"));
     assert_eq!(h.get("h").unwrap().f64(), Some(0.0));
-    assert_eq!(h.get("legami").unwrap().arr().len(), 1);
+    assert_eq!(h.get("bonds").unwrap().arr().len(), 1);
     assert!(h.get("ppm").unwrap().f64().unwrap().abs() < 1.0);
-    let c = r.get("conteggi").unwrap();
+    let c = r.get("counts").unwrap();
     assert!(
-        c.get("archi").unwrap().f64().unwrap() >= c.get("archi_spiegati").unwrap().f64().unwrap()
+        c.get("edges").unwrap().f64().unwrap() >= c.get("explained_edges").unwrap().f64().unwrap()
     );
 }
 
@@ -57,7 +57,7 @@ fn the_calculation_is_deterministic_and_needs_the_structure() {
     assert_eq!(run(&["--breaks"]), run(&["--breaks"]));
     // one bond only finds no more than two
     let one = run(&["--breaks", "--max-bonds", "1"]);
-    assert!(one.contains("\"max_legami\":1"));
+    assert!(one.contains("\"max_bonds\":1"));
     let f = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/golden/ref/msntree_rotta/msn.mzML");
     let o = execute(&[

@@ -33,7 +33,7 @@ State of the spectral matching engine and open work (§12); every choice carries
 ## 4. MSⁿ side panel
 - The "Identification with the libraries" panel (`ident-pannello.js`, tab of the info bar): MS² spectrum of the active cell, loaded libraries with automatic selection of the compatible ones, "Load file…" / "Load folder…", catalog menu (`ident-catalogo.js`), candidates table. The search goes through `LIB.call("search", {ids})` in the worker, not yet through `LibSet`.
 - **Behavior to build**: opening an MSⁿ spectrum (n ≥ 2) immediately starts `LibSet.search` on all the active libraries of the preset with the polarity of the spectrum; the panel shows the exact matches first, then the analogs, in < 100 ms perceived (identity) and without blocking (analogs queued, canceled if the spectrum changes: `AbortSignal` in the worker, `cancel(token)` in the engine). No "Search" button to press.
-- MS³+: the query uses the spectrum and the precursor of the open level; MSⁿ libraries (MSnLib, `msnlib/1`) go through `spectra.match` `tree`, outside this engine.
+- MS³+: the query uses the spectrum and the precursor of the open level; MSⁿ libraries (MSnLib, `msn-lib/1`) go through `spectra.match` `tree`, outside this engine.
 - LR (Principle 1): the search stays ("Search in the libraries…"), but `confidence` is empty and no badge suggests an identity; profile tolerances (0.5 Da / 0.3 Da). HR: instrument profile tolerances (precursor ppm, peaks 10 ppm, minimum 0.005 Da).
 - Panel interface: keys in `lang/it.js`/`lang/en.js` (the panel is in the Data view, not in Tabui).
 

@@ -41,7 +41,7 @@ fn parse(args: &[String]) -> Result<Args, NormError> {
 }
 
 fn read(p: &Path) -> Result<Vec<u8>, NormError> {
-    std::fs::read(p).map_err(|e| NormError::io(p, &e))
+    std::fs::read(p).map_err(|e| NormError::input(p, &e))
 }
 
 /// The summary JSON on stdout; the `.mzsus` is written to OUT.

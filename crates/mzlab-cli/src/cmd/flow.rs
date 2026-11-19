@@ -5,6 +5,9 @@ use crate::Outcome;
 
 /// `mzlab-cli flow command PLAN.json`: the script that reruns the plan, on stdout.
 fn command(args: Vec<String>) -> Outcome {
+    if let Err(e) = crate::argv::no_options(&args) {
+        return Outcome::fail_error(&e);
+    }
     let [path] = args.as_slice() else {
         return Outcome::fail("usage: mzlab-cli flow command PLAN.json");
     };
@@ -30,7 +33,7 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry { name: "steps", aliases: &[], help: "mzlab-cli steps [--json] [--id ID[@V]]   the Flow steps of this program, native or page only (steps --help)", run: crate::steps_cmd::run },
     Entry { name: "flow report", aliases: &[], help: "mzlab-cli flow report RUNDIR [--out FILE]   the run-report/1 report of a run folder (prov.json and the files beside it)", run: report },
     Entry { name: "flow record", aliases: &[], help: "mzlab-cli flow record RUNDIR --roles ROLES.json [--out FILE]   the mzrun/2 record of a run (a role without sha256 takes it from the run inputs); flow verify RECORD [--json] checks its fingerprints", run: crate::flow_mzrun::record },
-    Entry { name: "flow verify", aliases: &[], help: "", run: crate::flow_mzrun::check },
-    Entry { name: "flow command", aliases: &[], help: "", run: command },
+    Entry { name: "flow verify", aliases: &[], help: "mzlab-cli flow verify RECORD   whether the fingerprints of an mzrun/1 record match its files", run: crate::flow_mzrun::check },
+    Entry { name: "flow command", aliases: &[], help: "mzlab-cli flow command PLAN.json   the script that reruns the plan, on stdout", run: command },
     Entry { name: "flow", aliases: &[], help: "", run: usage },
 ];

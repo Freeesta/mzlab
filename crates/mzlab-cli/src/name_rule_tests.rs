@@ -12,8 +12,6 @@ const KNOWN: &[&str] = &[
     "explain-missing",
     // the subcommand that takes the official lists the user owns; a shorter verb would hide what is imported
     "import-official",
-    // persisted `spectra.match` parameter, Italian until a step version bump
-    "min_prove",
     // persisted parameters of the Attributio annotation steps, long but clear (not in the inventory)
     "putative_library_level3",
     "min_replicate_fraction",
