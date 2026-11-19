@@ -1,11 +1,11 @@
-//! `mzlab-cli mol sel REQUEST.json|- [--out PATH]`: the `sel/1` of a selection or of the whole drawing (formula, charge, monoisotopic and average
+//! `mzlab-cli mol sel REQUEST.json|- [--out PATH]`: the `selection/1` of a selection or of the whole drawing (formula, charge, monoisotopic and average
 //! mass, m/z, heavy atoms, rings and aromatic rings), byte for byte what the Info of the Draw right-click menu shows in the page and the app.
 
 use std::path::PathBuf;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli mol sel: formula, charge, masses, heavy atoms, rings and aromatic rings of a drawn structure, as JSON (sel/1).
+pub const HELP: &str = "mzlab-cli mol sel: formula, charge, masses, heavy atoms, rings and aromatic rings of a drawn structure, as JSON (selection/1).
 
 usage: mzlab-cli mol sel REQUEST.json|- [--out PATH]
 
@@ -13,7 +13,7 @@ usage: mzlab-cli mol sel REQUEST.json|- [--out PATH]
                 - reads the standard input
   --out PATH    write there instead of the standard output
 
-The answer is {\"format\": \"sel/1\", \"part\", \"label\": {formula, text, charge, mass, nominal, mz, ...} (as etich/1), \"average\",
+The answer is {\"schema\": \"selection/1\", \"part\", \"label\": {formula, text, charge, mass, nominal, mz, ...} (as label/1), \"average\",
 \"heavy\", \"atoms\", \"pieces\", \"rings\", \"aromaticAtoms\", \"aromaticRings\"}.";
 
 pub fn run(args: Vec<String>) -> Outcome {

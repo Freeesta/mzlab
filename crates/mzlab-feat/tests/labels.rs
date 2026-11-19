@@ -1,4 +1,4 @@
-//! `etich/1` against reference values of RDKit 2026.09 (monoisotopic masses, formulas with isotopes): [13CH4], CD3OH, cisplatin, a dianion, the
+//! `label/1` against reference values of RDKit 2026.09 (monoisotopic masses, formulas with isotopes): [13CH4], CD3OH, cisplatin, a dianion, the
 //! arrow benzene -> [13C]benzene (an isotopologue), and the errors of an R group and of an unknown isotope.
 use mzlab_feat::chem::labels::labels_json;
 

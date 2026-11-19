@@ -1,4 +1,4 @@
-//! `etich/1`: formula, charge, monoisotopic and nominal mass of the structures of a drawing, and what changes across a reaction arrow. The page sends
+//! `label/1`: formula, charge, monoisotopic and nominal mass of the structures of a drawing, and what changes across a reaction arrow. The page sends
 //! the atoms as Ketcher shows them (element, isotope, implicit H, charge), so the numbers are the ones of the canvas; isotopes count with their own
 //! mass (`elements::nuclide`), every element with a known nuclide is accepted. Hill order with isotopes after their element: `C[13C]H3D`.
 
@@ -280,7 +280,7 @@ fn arrow_json(o: &mut Out, a: &Shape, b: &Shape) {
         .raw("}");
 }
 
-/// `etich/1` of a request `{"structures": [[{el, iso, h, q, r}, ...], ...], "arrows": [[before, after], ...]}` (`r` the radical code, optional). A structure
+/// `label/1` of a request `{"structures": [[{el, iso, h, q, r}, ...], ...], "arrows": [[before, after], ...]}` (`r` the radical code, optional). A structure
 /// gives `unpaired`, `electrons`, `odd` and `kind` besides formula and masses. A structure with an atom that is no element (R group, atom list, `*`) or an
 /// isotope outside the table is `{"error": key, "label"}`; an arrow touching one is `null`. `"deltas": ["+O", ...]` (optional, by structure index) adds the
 /// delta of the brackets drawn on a structure: formula and masses are those of structure plus delta, and the structure gives `delta` written back.
@@ -301,7 +301,7 @@ pub fn labels_json(request: &str) -> Result<String> {
         })
         .collect();
     let mut o = Out::default();
-    o.raw("{\"format\":\"etich/1\",\"structures\":[");
+    o.raw("{\"schema\":\"label/1\",\"structures\":[");
     for (i, s) in shapes.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" });
         match s {

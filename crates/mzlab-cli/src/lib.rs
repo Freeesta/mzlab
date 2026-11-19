@@ -373,6 +373,8 @@ pub fn execute(args: &[String]) -> Outcome {
 mod tests;
 
 #[cfg(test)]
+mod chem_contract_tests;
+#[cfg(test)]
 mod convert_fixtures;
 #[cfg(test)]
 mod convert_tests;

@@ -54,9 +54,12 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(t) => t,
         Err(e) => return Outcome::fail(&e),
     };
+    if !matches!(set[0].as_str(), "mol" | "sdf") {
+        return Outcome::fail("--set format must be mol or sdf");
+    }
     match mzlab_feat::chem::sdf::export(&text, &set[0], &set[1], &set[2]) {
         Ok(t) => crate::emit(t, &out),
-        Err(e) => Outcome::fail(&e.to_string()),
+        Err(e) => Outcome::fail_error(&e),
     }
 }
 

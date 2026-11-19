@@ -1,6 +1,6 @@
-//! The route `feat/grafo` with `kind: "labels"` gives the same `etich/1` as `mzlab_feat::chem::labels::labels_json` (the function of the `.wasm`
+//! The route `feat/grafo` with `kind: "labels"` gives the same `label/1` as `mzlab_feat::chem::labels::labels_json` (the function of the `.wasm`
 //! `grafo` and of `mzlab-cli mol label`), with the request as an object or as text (a bracket delta too), and keeps the key of an error; `kind: "cut"` gives `cut/1` the same way;
-//! `kind: "analysis"` gives `anal/1`, `kind: "sel"` `sel/1` and `kind: "link"` `link/1` (every case of `tests/dati/link_golden.json`) the same way; `kind: "fragments"` gives the `frag/1` bytes of the fixture `tests/dati/frag_radicale.json`, `kind: "check"` the `check/1` bytes of `tests/dati/check_disegno.json`, `kind: "cip"` the `cip/1` bytes of `tests/dati/cip_disegno.json`, `kind: "sdf"` the `sdf/1` bytes of `tests/dati/sdf_disegno.json`, and `kind: "mech"` the `mecc/1` bytes of `tests/dati/mecc_mclafferty.json`.
+//! `kind: "analysis"` gives `analysis/1`, `kind: "sel"` `selection/1` and `kind: "link"` `link/1` (every case of `tests/dati/link_golden.json`) the same way; `kind: "fragments"` gives the `frag/1` bytes of the fixture `tests/dati/frag_radicale.json`, `kind: "check"` the `check/1` bytes of `tests/dati/check_disegno.json`, `kind: "cip"` the `cip/1` bytes of `tests/dati/cip_disegno.json`, `kind: "sdf"` the `sdf/1` bytes of `tests/dati/sdf_disegno.json`, and `kind: "mech"` the `mechanism/1` bytes of `tests/dati/mecc_mclafferty.json`.
 
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
@@ -81,7 +81,7 @@ fn sel_route_equals_the_function() {
     let mf = "\n  qqq\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.0000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  END";
     let req = json!({"molfile": mf, "part": true});
     let direct = mzlab_feat::chem::sel::sel_json(&req.to_string()).unwrap();
-    assert!(direct.contains("\"sel/1\""));
+    assert!(direct.contains("\"selection/1\""));
     for request in [req.clone(), json!(req.to_string())] {
         let p = json!({"kind": "sel", "request": request});
         assert_eq!(text(st.rpc("feat/grafo", &p, &[]).unwrap()), direct);

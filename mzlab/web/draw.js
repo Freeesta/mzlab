@@ -483,7 +483,7 @@ document.addEventListener("click", e => { const tg = /** @type {any} */ (e.targe
 // ------------------------------------------------------------------ formula and mass written under each structure
 // Optional (checkboxes "#lb-f" formula, "#lb-m" mass + "#lb-dec" decimals). Drawn in an overlay group of Ketcher's own SVG, so the label follows zoom and scroll
 // but is NOT part of the structure (undo, .ket and SMILES are untouched). Added as text to the exported images.
-// one entry per connected structure: formula (Hill order, isotopes as [13C] and D), charge, masses from the engine (`etich/1`), bounding box (Ketcher coordinates, y down)
+// one entry per connected structure: formula (Hill order, isotopes as [13C] and D), charge, masses from the engine (`label/1`), bounding box (Ketcher coordinates, y down)
 function drawing() {
   if (!K) return { structs: [], arrows: [] };
   const st = K.editor.struct(), ids = [...st.atoms.keys()], up = new Map(ids.map(i => [i, i]));

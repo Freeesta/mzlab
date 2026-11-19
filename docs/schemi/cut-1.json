@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cut/1",
+  "title": "cut/1: pieces of a cut across bonds",
+  "description": "The answer of `mzlab-cli mol cut`: the pieces are candidates to judge, no cut is ranked. Code: crates/mzlab-feat/src/chem/cut.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "mode",
+    "atoms",
+    "pieces"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cut/1"
+    },
+    "mode": {
+      "enum": [
+        "homolytic",
+        "heterolytic",
+        "hydrogen"
+      ]
+    },
+    "atoms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "i",
+          "charge",
+          "radical",
+          "h",
+          "pin"
+        ],
+        "properties": {
+          "i": {
+            "type": "integer"
+          },
+          "charge": {
+            "type": "integer"
+          },
+          "radical": {
+            "type": "integer"
+          },
+          "h": {
+            "type": "integer"
+          },
+          "pin": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "pieces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "atoms",
+          "shift",
+          "label"
+        ],
+        "properties": {
+          "atoms": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "shift": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "label": {
+            "type": "object",
+            "required": [
+              "formula",
+              "text",
+              "charge",
+              "mass",
+              "nominal"
+            ],
+            "properties": {
+              "formula": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "charge": {
+                "type": "integer"
+              },
+              "mass": {
+                "type": "number"
+              },
+              "nominal": {
+                "type": "integer"
+              },
+              "mz": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "unpaired": {
+                "type": "integer"
+              },
+              "electrons": {
+                "type": "integer"
+              },
+              "odd": {
+                "type": "boolean"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "delta": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

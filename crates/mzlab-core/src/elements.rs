@@ -382,7 +382,7 @@ fn shifted_mz(text: &str, d: f64) -> Result<String> {
     let z = base + d;
     if d < 0.0 && -d > base && base >= MZ_MIN {
         let mut o = Out::default();
-        o.raw("{\"formula\":\"\",\"range\":[")
+        o.raw("{\"schema\":\"ion_mz/1\",\"formula\":\"\",\"range\":[")
             .num(round(base, 5))
             .raw(",")
             .num(round(-d, 5))
@@ -393,7 +393,7 @@ fn shifted_mz(text: &str, d: f64) -> Result<String> {
         return Err(Error::new("err.formula.mzLow").with("mz", round(z, 4)));
     }
     let mut o = Out::default();
-    o.raw("{\"formula\":\"\",\"offset\":")
+    o.raw("{\"schema\":\"ion_mz/1\",\"formula\":\"\",\"offset_da\":")
         .num(d)
         .raw(",\"adduct\":\"\",\"mz\":")
         .num(round(z, 4))
@@ -435,9 +435,9 @@ pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
         return Err(Error::new("err.formula.mzLow").with("mz", round(m + d, 4)));
     }
     let mut o = Out::default();
-    o.raw("{\"formula\":")
+    o.raw("{\"schema\":\"ion_mz/1\",\"formula\":")
         .str(&fmt(&f))
-        .raw(",\"neutral\":")
+        .raw(",\"neutral_da\":")
         .num(round(m, 4))
         .raw(",\"nominal_neutral\":")
         .int(nom as i64)
@@ -474,7 +474,7 @@ pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
         row(&mut o, z, z - m);
     }
     if let Some(d) = offset {
-        o.raw(",\"offset\":").num(d);
+        o.raw(",\"offset_da\":").num(d);
     }
     o.raw("}");
     Ok(o.0)

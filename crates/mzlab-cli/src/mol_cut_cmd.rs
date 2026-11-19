@@ -19,7 +19,7 @@ usage: mzlab-cli mol cut MOLFILE|- --set bonds=A-B[,C-D...] [--set NAME=VALUE...
   --set gap       how far the pieces move apart, in bond lengths (default 1)
   --out PATH      write there instead of the standard output
 
-The answer is {\"format\": \"cut/1\", \"mode\", \"atoms\": [{i, charge, radical, h, pin}], \"pieces\": [{atoms, shift, label}]}:
+The answer is {\"schema\": \"cut/1\", \"mode\", \"atoms\": [{i, charge, radical, h, pin}], \"pieces\": [{atoms, shift, label}]}:
 every piece with formula, charge, exact mass, m/z (charged pieces only), unpaired electrons, electron count and kind. The pieces are
 candidates to judge; no cut is ranked.";
 

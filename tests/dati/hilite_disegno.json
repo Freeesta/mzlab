@@ -76,8 +76,8 @@
    }
   ]
  },
- "hilite": "{\"format\":\"hilite/1\",\"layers\":[{\"kind\":\"moiety\",\"label\":\"phenol\",\"atoms\":[1,2,3,4,5,6,7],\"bonds\":[[1,2],[1,7],[2,3],[3,4],[4,5],[4,6],[6,7]]},{\"kind\":\"sites\",\"label\":\"reactive sites\",\"atoms\":[0,5],\"bonds\":[]},{\"kind\":\"cuts\",\"label\":\"cut supported by a peak\",\"atoms\":[],\"bonds\":[[0,1]]},{\"kind\":\"moiety\",\"label\":\"amine\",\"atoms\":[],\"bonds\":[],\"skip\":\"noMatch\"}]}",
- "hilite_lr": "{\"format\":\"hilite/1\",\"layers\":[{\"kind\":\"moiety\",\"label\":\"phenol\",\"atoms\":[1],\"bonds\":[]},{\"kind\":\"sites\",\"label\":\"reactive sites\",\"atoms\":[0],\"bonds\":[]},{\"kind\":\"cuts\",\"label\":\"cut supported by a peak\",\"atoms\":[],\"bonds\":[[0,1]]},{\"kind\":\"moiety\",\"label\":\"amine\",\"atoms\":[],\"bonds\":[],\"skip\":\"noMatch\"}]}",
+ "hilite": "{\"schema\":\"highlight/1\",\"layers\":[{\"kind\":\"moiety\",\"label\":\"phenol\",\"atoms\":[1,2,3,4,5,6,7],\"bonds\":[[1,2],[1,7],[2,3],[3,4],[4,5],[4,6],[6,7]]},{\"kind\":\"sites\",\"label\":\"reactive sites\",\"atoms\":[0,5],\"bonds\":[]},{\"kind\":\"cuts\",\"label\":\"cut supported by a peak\",\"atoms\":[],\"bonds\":[[0,1]]},{\"kind\":\"moiety\",\"label\":\"amine\",\"atoms\":[],\"bonds\":[],\"skip\":\"noMatch\"}]}",
+ "hilite_lr": "{\"schema\":\"highlight/1\",\"layers\":[{\"kind\":\"moiety\",\"label\":\"phenol\",\"atoms\":[1],\"bonds\":[]},{\"kind\":\"sites\",\"label\":\"reactive sites\",\"atoms\":[0],\"bonds\":[]},{\"kind\":\"cuts\",\"label\":\"cut supported by a peak\",\"atoms\":[],\"bonds\":[[0,1]]},{\"kind\":\"moiety\",\"label\":\"amine\",\"atoms\":[],\"bonds\":[],\"skip\":\"noMatch\"}]}",
  "errors": [
   [
    {

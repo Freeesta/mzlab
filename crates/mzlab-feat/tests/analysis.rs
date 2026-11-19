@@ -1,4 +1,4 @@
-//! `anal/1` against the independent reference `tools/analisi_riferimento.py` (its own AME2020 masses and IUPAC abundances, exact convolution):
+//! `analysis/1` against the independent reference `tools/analisi_riferimento.py` (its own AME2020 masses and IUPAC abundances, exact convolution):
 //! the engine's masses are OpenChemLib's (`nuclides`), the reference's NIST ones: they differ by up to 4 µDa per atom (I-127), hence 10 µDa on m/z.
 //! 22 small molecules in `tests/dati/anal_golden.json` (CHNOS, F, P, Cl, Br, I, Na, drawn isotopes, cations and anions), then the errors.
 use mzlab_feat::chem::analysis::analysis_json;
@@ -19,7 +19,7 @@ fn every_golden_molecule_matches_the_reference() {
         let got: Value =
             serde_json::from_str(&analysis_json(&c["request"].to_string()).unwrap()).unwrap();
         let (want, s) = (&c["expect"], &got["structure"]);
-        assert_eq!(got["format"], "anal/1");
+        assert_eq!(got["schema"], "analysis/1");
         assert_eq!(s["charge"], c["charge"], "{name}");
         close(&got["average"], &want["average"], 5e-5, name);
         let (gc, wc) = (
@@ -48,7 +48,7 @@ fn every_golden_molecule_matches_the_reference() {
             close(&g["rel"], &w["rel"], 2e-3, name);
             close(&g["abund"], &w["abund"], 2e-4, name);
         }
-        // the lightest stick of a formula without heavier-than-monoisotopic drawn atoms is the monoisotopic m/z of `etich/1`
+        // the lightest stick of a formula without heavier-than-monoisotopic drawn atoms is the monoisotopic m/z of `label/1`
         let mono = if s["charge"] == 0 {
             &s["mass"]
         } else {
