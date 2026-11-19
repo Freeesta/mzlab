@@ -59,7 +59,7 @@ embed!(
     "samples-1.json",
     "schemas-1.json",
     "screen-1.json",
-    "steps-compact-1.json",
+    "compact-steps-1.json",
     "tabcheck-1.json",
     "tools-compact-1.json",
     "tools-schema-1.json",
