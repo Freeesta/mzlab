@@ -65,3 +65,35 @@ fn a_session_slot_shares_the_scan_table_of_the_list_slot() {
         .map(|e| e.key);
     assert_eq!(e, Some("error.noIndex"));
 }
+
+#[test]
+fn the_chooser_answers_are_the_engines() {
+    use crate::rpc_nat::nat_choose;
+    let t = |op: &str, p: serde_json::Value| text(nat_choose(op, &p).unwrap());
+    assert_eq!(
+        t(
+            "natselect",
+            serde_json::json!({"present": [1, 2, 3], "text": "3,1"})
+        ),
+        "{\"samples\":[1,3]}"
+    );
+    assert_eq!(
+        t(
+            "natdefault",
+            serde_json::json!({"ids": [1, 2], "sizes": [10, 20], "budget_mb": 1})
+        ),
+        "{\"samples\":[1,2]}"
+    );
+    assert_eq!(
+        t(
+            "natdefault",
+            serde_json::json!({"ids": [1], "sizes": [900000000], "budget_mb": 1024})
+        ),
+        "{\"samples\":[]}"
+    );
+    assert!(nat_choose(
+        "natselect",
+        &serde_json::json!({"present": [1], "text": "9"})
+    )
+    .is_err());
+}
