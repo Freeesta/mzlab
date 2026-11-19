@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "normative-build/1",
+  "title": "normative-build/1: the result of db normative build --json",
+  "description": "Coverage per regulatory list, the sources read with the SHA-256 and the pin each was checked against (pin and pin_ok are null when the URL is not pinned), and the lists that kept their last good file (stale; the command exits 1 and this document stays on stdout). Code: crates/mzlab-cli/src/normative/mod.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "stale_lists",
+    "pins_updated",
+    "lists",
+    "stale",
+    "sources"
+  ],
+  "properties": {
+    "schema": {
+      "const": "normative-build/1"
+    },
+    "stale_lists": {
+      "type": "integer"
+    },
+    "pins_updated": {
+      "type": "boolean"
+    },
+    "lists": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "entries",
+          "screenable",
+          "groups",
+          "uvcb",
+          "inorganic",
+          "unresolved"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "entries": {
+            "type": "integer"
+          },
+          "screenable": {
+            "type": "integer"
+          },
+          "groups": {
+            "type": "integer"
+          },
+          "uvcb": {
+            "type": "integer"
+          },
+          "inorganic": {
+            "type": "integer"
+          },
+          "unresolved": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "stale": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "why"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "url",
+          "sha256",
+          "pin",
+          "pin_ok"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "pin": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pin_ok": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

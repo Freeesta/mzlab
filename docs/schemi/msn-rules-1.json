@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "msn-rules/1",
+  "title": "msn-rules/1: fragmentation rules judged on library records",
+  "description": "What `mzlab-cli msn rules` prints: one record per input (id, layer, pol, v and, with --decoy, ds, dp, dl; or id and skipped with the reason), numbers only. `msn rules sum` reads these documents. Code: crates/mzlab-cli/src/msn_rules.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "records"
+  ],
+  "properties": {
+    "schema": {
+      "const": "msn-rules/1"
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "layer": {
+            "type": "string"
+          },
+          "pol": {
+            "type": "integer"
+          },
+          "skipped": {
+            "type": "string"
+          },
+          "v": {
+            "type": "object"
+          },
+          "ds": {
+            "type": "object"
+          },
+          "dp": {
+            "type": "object"
+          },
+          "dl": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

@@ -5,24 +5,28 @@
 use std::path::{Path, PathBuf};
 
 use mzlab_core::error::{Error, Result};
+use mzlab_core::json::Out;
 use mzlab_core::msngraph::{aggiungi, cerca, Options, OpzioniCerca};
 
 use mzlab_core::msngraph::{export_text, LibFormato as Format};
 
 pub const HELP: &str = "mzlab-cli msn lib: the library of MSn trees (msn-lib/1).
 
-usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn graph options] [--out PATH]
-       mzlab-cli msn lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
-       mzlab-cli msn lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH]
+usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn graph options] [--out PATH] [--dry-run]
+       mzlab-cli msn lib build MANIFEST.tsv [--dir DIR] [--out LIB.json] [--dry-run]
+       mzlab-cli msn lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH] [--json]
        mzlab-cli msn lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
-          The options are those of `msn graph` (--help of that command)
+          The options are those of `msn graph` (--help of that command). stdout: msn-lib-op/1 (library, id, added); --dry-run only checks the
+          arguments, the infusion file and the library, and writes nothing
   build   one entry per row of the manifest (tab separated, header): id, neutral_formula, expected_adduct, file (relative to DIR, by default the folder
-          of the manifest); optional smiles, activation. The ion is \"<neutral_formula> <expected_adduct>\". Writes LIB.json next to the manifest unless --out
+          of the manifest); optional smiles, activation. The ion is \"<neutral_formula> <expected_adduct>\". Writes LIB.json next to the manifest unless --out.
+          stdout: msn-lib-op/1 (library, ids, bytes); --dry-run checks the manifest and that every file is there, and writes nothing
   export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
-          --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
+          --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment). The text goes to --out or
+          stdout; with --json stdout is msn-lib-export/1 (format, spectra_bytes, out, and the text when there is no --out)
   search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn graph`) and of the same polarity, as the JSON
           msn-search/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
@@ -40,14 +44,34 @@ fn read_lib(path: &Path) -> Result<String> {
     }
 }
 
-/// `add LIB FILE --id ID [msn graph options]`: returns the notice for stderr.
-fn add(args: Vec<String>, tmp: &Path) -> Result<String> {
+/// The `msn-lib-op/1` document of `add` and `build`: what was done (or, with `dry_run`, would be done) to which library.
+fn op_json(op: &str, lib: &Path, ids: &[&str], bytes: usize, extra: &str, dry: bool) -> String {
+    let mut o = Out::default();
+    o.raw("{\"schema\":\"msn-lib-op/1\",\"op\":").str(op);
+    o.raw(",\"library\":").str(&lib.display().to_string());
+    o.raw(",\"ids\":[");
+    for (i, id) in ids.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).str(id);
+    }
+    o.raw("],\"dry_run\":")
+        .raw(if dry { "true" } else { "false" });
+    o.raw(",\"library_bytes\":")
+        .int(bytes as i64)
+        .raw(extra)
+        .raw("}\n");
+    o.0
+}
+
+/// `add LIB FILE --id ID [msn graph options]`: the `msn-lib-op/1` document and the notice for stderr.
+fn add(args: Vec<String>, tmp: &Path) -> Result<(String, String)> {
     let bad = |m: &str| Error::new("err.cli.line").with("message", m);
-    let (mut lib, mut id, mut rest) = (None, None, Vec::new());
+    let (mut lib, mut id, mut rest, mut dry) = (None, None, Vec::new(), false);
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
         match x.as_str() {
             "--id" => id = it.next(),
+            "--dry-run" => dry = true,
+            "--json" => {}
             _ if lib.is_none() => lib = Some(PathBuf::from(x)),
             _ => rest.push(x),
         }
@@ -59,15 +83,30 @@ fn add(args: Vec<String>, tmp: &Path) -> Result<String> {
     let a = crate::msn_graph::parse_args(rest.into_iter())
         .map_err(|m| bad(&m))?
         .ok_or_else(|| bad("--help is not an option here"))?;
+    let out = a.out.clone().unwrap_or_else(|| lib.clone());
+    if dry {
+        // the infusion and the library are read, the graph is not made
+        std::fs::metadata(&a.file).map_err(io)?;
+        let bytes = read_lib(&lib)?.len();
+        let extra =
+            ",\"would_write\":".to_string() + &Out::default().str(&out.display().to_string()).0;
+        return Ok((
+            op_json("add", &out, &[&id], bytes, &extra, true),
+            String::new(),
+        ));
+    }
     let (g, json) = crate::msn_graph::graph(&a.file, &a.o, tmp)?;
     let json = crate::msn_graph::with_keys(&a, &g, json)?;
     let (text, duplicate) = aggiungi(&read_lib(&lib)?, &id, &g, &json)?;
-    let out = a.out.clone().unwrap_or(lib);
-    std::fs::write(&out, text).map_err(io)?;
-    Ok(format!(
-        "{}: {id} {}\n",
-        out.display(),
-        if duplicate { "already there" } else { "added" }
+    std::fs::write(&out, &text).map_err(io)?;
+    let extra = format!(",\"added\":{}", !duplicate);
+    Ok((
+        op_json("add", &out, &[&id], text.len(), &extra, false),
+        format!(
+            "{}: {id} {}\n",
+            out.display(),
+            if duplicate { "already there" } else { "added" }
+        ),
     ))
 }
 
@@ -95,12 +134,14 @@ fn column<'a>(row: &'a [(String, String)], name: &str) -> &'a str {
         .map_or("", |(_, v)| v.as_str())
 }
 
-fn build(args: Vec<String>, tmp: &Path) -> Result<String> {
+fn build(args: Vec<String>, tmp: &Path) -> Result<(String, String)> {
     let bad = |m: &str| Error::new("err.cli.line").with("message", m);
-    let (mut manifest, mut dir, mut out) = (None, None, None);
+    let (mut manifest, mut dir, mut out, mut dry) = (None, None, None, false);
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
         match x.as_str() {
+            "--dry-run" => dry = true,
+            "--json" => {}
             "--dir" => dir = it.next().map(PathBuf::from),
             "--out" => out = it.next().map(PathBuf::from),
             _ if x.starts_with("--") => return Err(bad(&format!("unknown option {x}"))),
@@ -116,8 +157,18 @@ fn build(args: Vec<String>, tmp: &Path) -> Result<String> {
     });
     let out = out.unwrap_or_else(|| manifest.with_extension("json"));
     let mut text = String::new();
+    let mut ids = Vec::new();
     for row in rows(&std::fs::read_to_string(&manifest).map_err(io)?)? {
         let (id, file) = (column(&row, "id"), column(&row, "file"));
+        if id.is_empty() || file.is_empty() {
+            return Err(bad("every row needs id and file"));
+        }
+        ids.push(id.to_string());
+        if dry {
+            // every file of the manifest must be there; no graph is made
+            std::fs::metadata(folder.join(file)).map_err(io)?;
+            continue;
+        }
         let ion = format!(
             "{} {}",
             column(&row, "neutral_formula"),
@@ -130,19 +181,24 @@ fn build(args: Vec<String>, tmp: &Path) -> Result<String> {
             activation: none(column(&row, "activation")),
             ..Options::default()
         };
-        if id.is_empty() || file.is_empty() {
-            return Err(bad("every row needs id and file"));
-        }
         let (g, json) = crate::msn_graph::graph(&folder.join(file), &o, tmp)?;
         text = aggiungi(&text, id, &g, &json)?.0;
     }
+    let names: Vec<&str> = ids.iter().map(String::as_str).collect();
+    if dry {
+        return Ok((op_json("build", &out, &names, 0, "", true), String::new()));
+    }
     std::fs::write(&out, &text).map_err(io)?;
-    Ok(format!("{}: {} bytes\n", out.display(), text.len()))
+    Ok((
+        op_json("build", &out, &names, text.len(), "", false),
+        format!("{}: {} bytes\n", out.display(), text.len()),
+    ))
 }
 
-fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
+fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>, bool, &'static str)> {
     let bad = |m: &str| Error::new("err.cli.line").with("message", m);
     let (mut lib, mut out, mut clean, mut all, mut annotate) = (None, None, false, false, false);
+    let mut json = false;
     let mut lib_format = Format::Msp;
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
@@ -150,6 +206,7 @@ fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
             "--clean" => clean = true,
             "--all" => all = true,
             "--annotate" => annotate = true,
+            "--json" => json = true,
             "--format" => lib_format = Format::parse(&it.next().unwrap_or_default())?,
             "--out" => out = it.next().map(PathBuf::from),
             _ if x.starts_with("--") => return Err(bad(&format!("unknown option {x}"))),
@@ -158,6 +215,10 @@ fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
         }
     }
     let lib = lib.ok_or_else(|| bad("a library file is needed"))?;
+    let name = match lib_format {
+        Format::Msp => "msp",
+        _ => "massbank",
+    };
     Ok((
         export_text(
             &std::fs::read_to_string(&lib).map_err(io)?,
@@ -165,7 +226,23 @@ fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
             (clean, all, annotate),
         )?,
         out,
+        json,
+        name,
     ))
+}
+
+/// The `msn-lib-export/1` document of `export --json`: the text is in it only when it did not go to `--out`.
+fn export_json(text: &str, out: &Option<PathBuf>, format: &str) -> String {
+    let mut o = Out::default();
+    o.raw("{\"schema\":\"msn-lib-export/1\",\"format\":")
+        .str(format);
+    o.raw(",\"text_bytes\":").int(text.len() as i64);
+    match out {
+        Some(p) => o.raw(",\"out\":").str(&p.display().to_string()),
+        None => o.raw(",\"out\":null,\"text\":").str(text),
+    };
+    o.raw("}\n");
+    o.0
 }
 
 /// `search LIB GRAPH [options]`: the text of `msn-search/1` and the file it goes to, if any.
@@ -217,10 +294,23 @@ pub fn run(args: Vec<String>, tmp: &Path) -> Result<(Vec<u8>, String)> {
         return Ok((format!("{HELP}\n").into_bytes(), String::new()));
     }
     match sub.as_str() {
-        "add" => Ok((Vec::new(), add(rest, tmp)?)),
-        "build" => Ok((Vec::new(), build(rest, tmp)?)),
+        "add" => {
+            let (doc, note) = add(rest, tmp)?;
+            Ok((doc.into_bytes(), note))
+        }
+        "build" => {
+            let (doc, note) = build(rest, tmp)?;
+            Ok((doc.into_bytes(), note))
+        }
         "export" => {
-            let (t, out) = export(rest)?;
+            let (t, out, json, format) = export(rest)?;
+            if json {
+                let doc = export_json(&t, &out, format);
+                if let Some(p) = &out {
+                    std::fs::write(p, &t).map_err(io)?;
+                }
+                return Ok((doc.into_bytes(), String::new()));
+            }
             deliver(t, out)
         }
         "search" => {

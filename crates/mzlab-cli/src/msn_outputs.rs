@@ -69,8 +69,20 @@ pub fn write_outputs(graph: &str, fs: &[Format], view: View, stem: &Path) -> Res
     Ok(out)
 }
 
+/// The `msn-figures/1` document for the files made: what the commands print on stdout, so it stays one JSON document.
+pub fn files_json(made: &[PathBuf]) -> String {
+    let mut o = mzlab_core::json::Out::default();
+    o.raw("{\"schema\":\"msn-figures/1\",\"files\":[");
+    for (i, p) in made.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" })
+            .str(&p.display().to_string());
+    }
+    o.raw("]}\n");
+    o.0
+}
+
 /// `msn graph figure IN.json [--figure svg,html,png] [--view tree|radial] [--out STEM]`: the figures of a graph already made; the stem defaults to the file
-/// without its extension. Returns the message for the standard output.
+/// without its extension. Returns the `msn-figures/1` document for the standard output.
 pub fn figure_cmd(mut a: impl Iterator<Item = String>) -> std::result::Result<String, String> {
     let (mut file, mut out, mut fs, mut view) =
         (None, None, vec![Format::Svg, Format::Html], View::Albero);
@@ -90,5 +102,5 @@ pub fn figure_cmd(mut a: impl Iterator<Item = String>) -> std::result::Result<St
     let json = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
     let stem = out.unwrap_or_else(|| file.with_extension(""));
     let made = write_outputs(&json, &fs, view, &stem).map_err(|e| e.to_string())?;
-    Ok(made.iter().map(|p| format!("{}\n", p.display())).collect())
+    Ok(files_json(&made))
 }

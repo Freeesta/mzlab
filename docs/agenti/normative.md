@@ -5,7 +5,10 @@ Area: `crates/mzlab-cli/src/normative/` (native only, `#[cfg(not(target_family =
 The pure part, with no network or disk, lives in `crates/mzlab-feat/src/normative/` (feature `attributio`): `csvrd`, `entry`, `import_csv`, `resolve` (the core; loading the sources stays in `mzlab-cli`), `rows`, `pack` (package writer), `sidecar`, `official`.
 
 ## Usage
-- `mzlab-cli db normative build --cache DIR --out normative/ [--only ID...] [--update-pins] [--no-resolve] [--allow-large] [--sources FILE] [--overrides FILE]`. `--cache` keeps one file per URL (`DIR/<sha256 URL>` plus `.json` with URL, date, SHA-256, bytes); with a warm cache there is no request and the output is byte-for-byte identical (the clock is read only at the first download).
+- `mzlab-cli db normative build --cache DIR --out normative/ [--only ID...] [--update-pins] [--no-resolve] [--allow-large] [--sources FILE] [--overrides FILE] [--json]`.
+  - Streams: the per-list lines are progress on stderr, stdout is empty, or with `--json` the `normative-build/1` document (coverage per list, `sources` with SHA-256, `pin` and `pin_ok`, the `stale` lists with the reason, `pins_updated`).
+  - Exit codes: 0 done, 1 a list is stale (the document stays on stdout, a verdict like `file validate`), 2 usage (unknown operation or option), 3 `sources.json` not valid or pin mismatch (`error/1`), 4 unreadable input, 6 download refused, source failed or output not writable.
+  - `--cache` keeps one file per URL (`DIR/<sha256 URL>` plus `.json` with URL, date, SHA-256, bytes); with a warm cache there is no request and the output is byte-for-byte identical (the clock is read only at the first download).
 - Exit: 0 done; 1 a list is `stale` (it keeps the last good CSV, `stale:true` and `error` in `provenance.json`); 2 usage or `sources.json`; 3 different pin; 4 download above 90 MB (`--allow-large`); 5 source, reader or resolver in error; 6 file. Keys `err.normative.usage|sources|pin|large|fetch|parse|io`.
 - A list never empties silently: 0 entries is a read error.
 
@@ -37,7 +40,7 @@ EU_PS_2013_39, EU_PS_2026_805, EU_WL_2025_439, EU_DWD_WL, EU_GWD, EU_POPS_2019_1
 Phase 2 (not built): REACH XIV/XVII and CLP Annex VI from Cellar, COSM, RoHS, FCM bisphenols, 37/2010 Tab. 1, TSCA, CosIng.
 
 ## Package (`pack.rs`)
-- `mzlab-cli db normative pack IN OUT` (no network): reads `IN/lists/*.csv` and `IN/provenance.json` and writes `OUT/normative.mzsus` (a `.mzsus` with the `listings` extension, `docs/agenti/suspects.md`: one row per skeleton of the `screenable` rows with mass and formula, memberships sorted by catalog order and `entry_ref`, rows by mass and key), the 4 MiB zlib pieces `NNN.bin` and `catalogo.json`.
+- `mzlab-cli db normative pack IN OUT` (no network): reads `IN/lists/*.csv` and `IN/provenance.json` and writes `OUT/normative.mzsus` (a `.mzsus` with the `listings` extension, `docs/agenti/suspects.md`: one row per skeleton of the `screenable` rows with mass and formula, memberships sorted by catalog order and `entry_ref`, rows by mass and key), the 4 MiB zlib pieces `NNN.bin` and `catalogo.json` (the pieces written go to stderr, stdout is empty).
 - `catalogo.json` (`normative/1`: format, raw and compressed bytes, SHA-256 of the raw data, `skipped_no_mass`, lists with `tags`, `coverage`, `csv_sha256`, attributions, pieces with SHA-256). Same inputs, same bytes; `screenable` rows without mass or formula (metals and inorganic salts) do not enter and are counted.
 - Every list of the manifest also carries `retrieved` (the latest date of `inputs[].retrieved` of its provenance).
 - Step `annot.regulatory@1` (`list_membership`, `crates/mzlab-feat/src/flow_regulatory.rs`): compares the identities of an `annot/1` (`entry`, otherwise `inchikey`) with the package via B1 `match_campaign`: same full key = `InChIKey`, same first block = `first block` (stereo, charge or isotopes may differ), never by name or formula; parameters `lists`, `include` (as in `screen.suspects`) and `window` (mass).

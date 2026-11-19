@@ -190,7 +190,13 @@ fn the_command_and_figure_write_the_same_bytes() {
         "--view",
         "radial",
     ]);
-    assert_eq!(made, format!("{0}/g.svg\n{0}/g.html\n", d.display()));
+    assert_eq!(
+        made,
+        format!(
+            "{{\"schema\":\"msn-figures/1\",\"files\":[\"{0}/g.svg\",\"{0}/g.html\"]}}\n",
+            d.display()
+        )
+    );
     // `figure` on the graph the command wrote
     let other = d.join("o");
     cli(&[

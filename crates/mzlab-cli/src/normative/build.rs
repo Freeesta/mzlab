@@ -30,10 +30,21 @@ pub struct Failed {
     pub why: String,
 }
 
-/// What a run did, one line per list.
+/// One source read by a run: its URL, the SHA-256 of what was read and the pin it was checked against (`None`: not pinned).
+pub struct SourceRead {
+    pub url: String,
+    pub sha256: String,
+    pub pin: Option<String>,
+}
+
+/// What a run did: one line per list, and the same facts as data (`normative-build/1`): coverage per list, the sources with their pins, the stale lists.
 pub struct Report {
     pub lines: Vec<String>,
     pub stale: usize,
+    pub lists: Vec<(String, [usize; 6])>,
+    pub sources: Vec<SourceRead>,
+    pub failed: Vec<Failed>,
+    pub pins_updated: bool,
 }
 
 type Read = Vec<(usize, Vec<Entry>, Vec<Input>)>;
@@ -100,7 +111,7 @@ fn check_pins(
     sources: &mut Sources,
     read: &Read,
     resolver_inputs: &[Input],
-) -> Result<(), NormError> {
+) -> Result<Vec<SourceRead>, NormError> {
     let pins = sources.pins();
     let mut seen: Vec<(String, String)> = Vec::new();
     for x in read
@@ -132,7 +143,17 @@ fn check_pins(
         sources.set_pins(&known);
         std::fs::write(&o.sources, sources.to_text()).map_err(|e| NormError::io(&o.sources, &e))?;
     }
-    Ok(())
+    Ok(seen
+        .into_iter()
+        .map(|(url, sha256)| SourceRead {
+            pin: pins
+                .iter()
+                .find(|(u, _)| *u == url)
+                .and_then(|(_, p)| p.clone()),
+            url,
+            sha256,
+        })
+        .collect())
 }
 
 pub fn run<F: Fetch>(cache: &Cache<F>, o: &Opts) -> Result<Report, NormError> {
@@ -154,7 +175,7 @@ pub fn run<F: Fetch>(cache: &Cache<F>, o: &Opts) -> Result<Report, NormError> {
 
     let mut resolver_inputs: Vec<Input> = Vec::new();
     let resolver = make_resolver(cache, o, &sources, &read, &mut resolver_inputs)?;
-    check_pins(o, &mut sources, &read, &resolver_inputs)?;
+    let sources_read = check_pins(o, &mut sources, &read, &resolver_inputs)?;
 
     let built: Vec<Built> = read
         .into_iter()
@@ -172,8 +193,29 @@ pub fn run<F: Fetch>(cache: &Cache<F>, o: &Opts) -> Result<Report, NormError> {
         })
         .collect();
     lines.extend(failed.iter().map(|f| format!("{} stale: {}", f.id, f.why)));
+    let lists = built
+        .iter()
+        .map(|b| {
+            let c = b.coverage;
+            (
+                b.id.clone(),
+                [
+                    c.entries,
+                    c.screenable,
+                    c.groups,
+                    c.uvcb,
+                    c.inorganic,
+                    c.unresolved,
+                ],
+            )
+        })
+        .collect();
     Ok(Report {
         lines,
         stale: failed.len(),
+        lists,
+        sources: sources_read,
+        failed,
+        pins_updated: o.update_pins,
     })
 }

@@ -246,3 +246,29 @@ fn flow_run_on_the_package_equals_flow_run_on_the_csv() {
     assert_eq!(a, b);
     assert!(String::from_utf8_lossy(&a).contains("\"id\":\"A1\""));
 }
+
+/// The prose summary is progress (stderr); stdout is empty, or with `--json` the `insilico/1` catalogue that was written.
+#[test]
+fn the_command_keeps_stdout_for_the_catalogue_only() {
+    let d = dir("stdout");
+    let csv = d.join("in.csv");
+    std::fs::write(&csv, pubchemlite()).unwrap();
+    let (c, o) = (csv.to_str().unwrap(), d.join("out"));
+    let o = o.to_str().unwrap();
+    let r = crate::execute(&["db", "insilico", "pack", c, o].map(String::from));
+    assert_eq!(r.code, 0, "{}", r.stderr);
+    assert!(
+        r.stdout.is_empty() && r.stderr.contains("candidates"),
+        "{}",
+        r.stderr
+    );
+    let j = crate::execute(&["db", "insilico", "pack", c, o, "--json"].map(String::from));
+    assert_eq!(j.code, 0, "{}", j.stderr);
+    let v = json::parse(&j.stdout).unwrap();
+    assert_eq!(v.get("format").and_then(Value::str), Some(FORMAT));
+    let written = std::fs::read_to_string(Path::new(o).join("catalogo.json")).unwrap();
+    assert_eq!(
+        String::from_utf8(j.stdout).unwrap().trim_end(),
+        written.trim_end()
+    );
+}

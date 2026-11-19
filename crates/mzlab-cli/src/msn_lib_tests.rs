@@ -33,9 +33,21 @@ fn add_writes_the_entry_once_and_the_library_is_the_one_of_the_route() {
         "--formula",
         "C14H15N3O5+",
     ];
+    // --dry-run checks the files and writes nothing
+    let mut dry = args.to_vec();
+    dry.push("--dry-run");
+    let planned = run(&dry);
+    assert_eq!(planned.code, 0, "{}", planned.stderr);
+    assert!(!lib.exists());
+    let v = mzlab_core::json::parse(&planned.stdout).unwrap();
+    assert_eq!(v.get("schema").unwrap().str(), Some("msn-lib-op/1"));
+    assert_eq!(v.get("dry_run").unwrap().bool(), Some(true));
     let o = run(&args);
     assert_eq!(o.code, 0, "{}", o.stderr);
     assert!(o.stderr.contains("added"), "{}", o.stderr);
+    let v = mzlab_core::json::parse(&o.stdout).unwrap();
+    assert_eq!(v.get("added").unwrap().bool(), Some(true));
+    assert_eq!(v.get("ids").unwrap().arr()[0].str(), Some("STD-1"));
     let first = std::fs::read_to_string(&lib).unwrap();
     assert!(first.starts_with("{\"schema\":\"msn-lib/1\""), "{first}");
     // the graph inside is the graph the command prints
@@ -303,4 +315,43 @@ fn the_italian_flags_are_refused() {
     assert!(h.contains("--min-evidence N"));
     assert!(!h.contains("old names still accepted"));
     let _ = std::fs::remove_dir_all(&d);
+}
+
+/// `export --json` is one `msn-lib-export/1` document: the text inside it without `--out`, and the file named with it.
+#[test]
+fn export_json_is_one_document() {
+    let d = dir("exjson");
+    let lib = d.join("lib.json");
+    let (l, f) = (lib.to_str().unwrap(), msn());
+    let add = run(&[
+        "msn",
+        "lib",
+        "add",
+        l,
+        f.to_str().unwrap(),
+        "--id",
+        "S",
+        "--formula",
+        "C14H15N3O5+",
+    ]);
+    assert_eq!(add.code, 0, "{}", add.stderr);
+    let plain = String::from_utf8(run(&["msn", "lib", "export", l]).stdout).unwrap();
+    let o = run(&["msn", "lib", "export", l, "--json"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let v = mzlab_core::json::parse(&o.stdout).unwrap();
+    assert_eq!(v.get("schema").unwrap().str(), Some("msn-lib-export/1"));
+    assert_eq!(v.get("text").unwrap().str(), Some(plain.as_str()));
+    let out = d.join("lib.msp");
+    let o = run(&[
+        "msn",
+        "lib",
+        "export",
+        l,
+        "--json",
+        "--out",
+        out.to_str().unwrap(),
+    ]);
+    let v = mzlab_core::json::parse(&o.stdout).unwrap();
+    assert!(v.get("text").is_none() && v.get("out").unwrap().str().is_some());
+    assert_eq!(std::fs::read_to_string(&out).unwrap(), plain);
 }

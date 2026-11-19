@@ -42,6 +42,8 @@ const FLAG_HELP: &[(&str, &str)] = &[
         "the JSON file of tables (losses, adduct shifts, contaminants) to match against",
     ),
     ("--sub", "the substructure query"),
+    ("--dry-run", "check only, write nothing"),
+    ("--summary", "numbers only, msn-summary/1"),
     ("--strict", "also compare the SHA-256 of the request"),
     ("--rules", "judge with the fragmentation rules"),
     ("--roles", "the JSON file that names the role of each file"),

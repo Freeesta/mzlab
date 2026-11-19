@@ -55,7 +55,7 @@ fn command(d: &Path, flags: &[&str]) -> String {
         "--formula",
         ION,
     ]);
-    assert!(added.is_empty());
+    assert!(added.starts_with("{\"schema\":\"msn-lib-op/1\""), "{added}");
     let mut a = vec!["msn", "lib", "export", lib];
     a.extend(flags);
     cli(&a)
