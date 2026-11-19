@@ -40,7 +40,7 @@ try:
             q = r.b.new_page(viewport={"width": 1500, "height": 1400}, reduced_motion="reduce")
             q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             try:
-                q.goto(f"http://127.0.0.1:{r.port}/", wait_until="commit"); q.wait_for_selector("#drop", timeout=120000)   # WebKit on a loaded runner needs over 30 s for the load event: wait for the page itself, not for every resource
+                q.goto(f"http://127.0.0.1:{r.port}/", timeout=120000); q.wait_for_selector("#drop", timeout=120000)   # WebKit on a loaded runner needs over 30 s for the load event; the load is what wires the file picker, so it is waited for, with the budget of the next wait
                 q.set_input_files("#pick", [str(F)])
                 q.wait_for_function("[...document.querySelectorAll('#flist input[data-k=use]')].some(i => (i.closest('tr,li,label,div') || i).textContent.includes('MSn_synth_t01'))", timeout=180000)
                 q.click("text=Load data"); q.wait_for_function("E.files.some(f => f.kind === 'infusion')", timeout=90000)
