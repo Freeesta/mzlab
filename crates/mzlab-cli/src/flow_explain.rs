@@ -376,7 +376,8 @@ fn csv_of(rows: &[Vec<String>]) -> String {
     out
 }
 
-/// The whole report (header and one line per expected product).
+/// The whole report (header and one line per expected product); the command goes through `rows`, the tests read the text.
+#[cfg(test)]
 pub fn report(t: &Aligned, expected: &[(String, f64, f64)], ppm: f64, rt_tol: f64) -> String {
     csv_of(&rows(t, expected, ppm, rt_tol))
 }
