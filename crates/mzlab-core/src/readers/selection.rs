@@ -133,8 +133,14 @@ mod tests {
     fn small_sets_are_ticked_and_big_ones_are_not() {
         assert_eq!(suggest(&[1, 2], &[10, 20], 400), [1, 2]);
         assert!(suggest(&[1, 2], &[10, 20], 100).is_empty());
-        assert_eq!(suggest_json(&[1, 2], &[10], 400), "{\"schema\":\"sample-select/1\",\"samples\":[1,2]}");
-        assert_eq!(suggest_json(&[1], &[500], 400), "{\"schema\":\"sample-select/1\",\"samples\":[]}");
+        assert_eq!(
+            suggest_json(&[1, 2], &[10], 400),
+            "{\"schema\":\"sample-select/1\",\"samples\":[1,2]}"
+        );
+        assert_eq!(
+            suggest_json(&[1], &[500], 400),
+            "{\"schema\":\"sample-select/1\",\"samples\":[]}"
+        );
     }
 
     #[test]
