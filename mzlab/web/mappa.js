@@ -321,23 +321,23 @@ window.MAPPA = (() => {
   }
   // preview: the row / column of the matrix of the map (the region on finer bins when the zoom has one) at the point; null for a difference map
   function preview(/** @type {Pannello} */ p, /** @type {Record<string, any>} */ pt) {
-    const s = st(p), a = p._a, R = s.reg && (p.zoom || p.zoomY) ? s.reg : null, m = R ? { v: R.v, nrt: R.nrt, nmz: R.nmz, rt0: R.rt0, rt1: R.rt1, mz0: R.mz0, dmz: R.dmz } : a && a.mat;
+    const s = st(p), a = p._a, R = s.reg && (p.zoom || p.zoomY) && !(a && a.pda) ? s.reg : null, m = R ? { v: R.v, nrt: R.nrt, nmz: R.nmz, rt0: R.rt0, rt1: R.rt1, mz0: R.mz0, dmz: R.dmz } : a && a.mat;
     if (!m || !pt) return null;
     const i = Math.floor((pt.rt - m.rt0) / (m.rt1 - m.rt0) * m.nrt), j = Math.floor((pt.mz - m.mz0) / m.dmz);
     const out = {};
-    if (i >= 0 && i < m.nrt) { const c = MIRINO.column(m.v, m.nmz, i, m.mz0, m.dmz); out.spec = { mz: c.x, y: c.y, rt: pt.rt, signed: !!a.ref }; }
-    if (j >= 0 && j < m.nmz) { const r = MIRINO.trace(m.v, m.nrt, m.nmz, j, m.rt0, m.rt1); out.xic = { c: pt.mz, tol: m.dmz / 2, tr: [{ k: a.f.k, rt: r.x, y: r.y }], signed: !!a.ref }; }
+    if (i >= 0 && i < m.nrt) { const c = MIRINO.column(m.v, m.nmz, i, m.mz0, m.dmz); out.spec = { mz: c.x, y: c.y, rt: pt.rt, signed: !!a.ref, uv: !!a.pda }; }
+    if (j >= 0 && j < m.nmz) { const r = MIRINO.trace(m.v, m.nrt, m.nmz, j, m.rt0, m.rt1); out.xic = { c: pt.mz, tol: m.dmz / 2, tr: [{ k: a.f.k, rt: r.x, y: r.y }], signed: !!a.ref, uv: !!a.pda }; }
     return out;
   }
   // exact where the page has it, a preview for the rest
   function show(/** @type {Pannello} */ p, /** @type {Record<string, any>} */ pt) {
     const s = st(p); if (s.sp.hidden && s.xc.hidden) return;
-    const sp = specFor(p, pt), xi = xicFor(p, pt), pv = !sp || !xi ? preview(p, pt) : null;
+    const uv = !!(p._a && p._a.pda), sp = uv ? null : specFor(p, pt), xi = uv ? null : xicFor(p, pt), pv = uv || !sp || !xi ? preview(p, pt) : null;      // a DAD map: UV spectrum and trace read from its matrix (exact), never the MS routes
     if (MEAS && pv) window.__mirPrev = (window.__mirPrev || 0) + 1;
     // what the two plots hold (read by e2e_mappa_mirino)
-    s.shown = { pt, sp: sp ? sp.key : null, xi: xi ? xi.key : null };
-    drawSide(p, pt, sp || (pv && pv.spec) || s.spec, !sp); drawBottom(p, pt, xi || (pv && pv.xic) || s.xic, !xi);
-    return sp && xi;
+    s.shown = { pt, sp: sp ? sp.key : null, xi: xi ? xi.key : null, uv: uv ? pv : null };
+    drawSide(p, pt, sp || (pv && pv.spec) || s.spec, !sp && !uv); drawBottom(p, pt, xi || (pv && pv.xic) || s.xic, !xi && !uv);
+    return uv || (sp && xi);
   }
   const ask = MIRINO.latest(() => { const p = ask.panel; return p ? exact(p) : null; });
   const ticKey = (/** @type {Record<string, any>} */ a) => `${a.f.k}|${a.ref ? a.ref.k : ""}|${a.f.lv || 1}`;
@@ -353,7 +353,7 @@ window.MAPPA = (() => {
   async function exact(/** @type {Pannello} */ p) {
     const q = point(p); if (!q) return;
     const s = st(p), t1 = performance.now();
-    await Promise.all([fetchSpec(p, q.rt), fetchXic(p, q.mz), fetchTic(p)]);
+    if (!(p._a && p._a.pda)) await Promise.all([fetchSpec(p, q.rt), fetchXic(p, q.mz), fetchTic(p)]);
     const t2 = performance.now(), r = point(p); if (!r || !p._a) return;
     // an answer for a point the sight has left is not drawn: the newest point is already queued
     const done = show(p, r); readout(p);
@@ -428,7 +428,7 @@ window.MAPPA = (() => {
     if (pr) ymax = Math.max(ymax, pr.max);
     if (!ymax) { g.fillText(T("mappa.side.empty"), x0 + 4, Math.max(10, mapTop + 10)); return; }
     const xz = sg ? (x0 + x1) / 2 : x0, len = (/** @type {number} */ v) => (sg ? (x1 - x0) / 2 : x1 - x0) * v / ymax;
-    if (window.TDATI) { s.sp.setAttribute("aria-label", T("mappa.side.title")); TDATI.addButton(s.sp, () => ({ title: T(sg ? "mappa.side.diff" : "mappa.side.title"), head: ["m/z", T("tdati.col.int")], rows: vis.slice(0, 300).map(i => [TDATI.num(sp.mz[i], 4), TDATI.num(sp.y[i], 1)]) }), true); }
+    if (window.TDATI) { s.sp.setAttribute("aria-label", T("mappa.side.title")); TDATI.addButton(s.sp, () => ({ title: T(sg ? "mappa.side.diff" : "mappa.side.title"), head: [sp.uv ? "nm" : "m/z", T("tdati.col.int")], rows: vis.slice(0, 300).map(i => [TDATI.num(sp.mz[i], 4), TDATI.num(sp.y[i], 1)]) }), true); }
     g.strokeStyle = a.f.color || ecss("--accent"); g.globalAlpha = prev ? .5 : 1;
     if (sg) {
       g.beginPath(); g.moveTo(xz + .5, mapTop); g.lineTo(xz + .5, mapBot); g.strokeStyle = ink; g.stroke();
@@ -442,7 +442,7 @@ window.MAPPA = (() => {
     }
     g.globalAlpha = 1;
     // a preview has bins, not peaks: no m/z labels
-    if (prev) { g.fillStyle = ink; g.fillText(T("mappa.preview"), x0 + 4, Math.min(H - 4, mapBot + 14)); return; }
+    if (prev || sp.uv) { g.fillStyle = ink; g.fillText(sp.uv ? T(sg ? "mappa.uv.sideDiff" : "mappa.uv.side", { rt: sp.rt.toFixed(2) }) : T("mappa.preview"), x0 + 4, Math.min(H - 4, mapBot + 14)); return; }
     const dn = DENS[PREF.dens] || DENS.mid, cen = xicCentre(a.f, pt.mz), tol = xicTol(a.f, pt.mz);
     // best S/N of each slice of the window; the peak of the sight always
     const kept = MAPREND.pick(sp.mz, sp.y, { lo: a.y0, hi: a.y1, bands: dn.bands, quota: dn.quota, act: [cen - tol, cen + tol] });
@@ -507,7 +507,7 @@ window.MAPPA = (() => {
     });
     g.fillStyle = ecss("--ink"); g.textAlign = "left";
     const lo = xi.c - xi.tol, hi = xi.c + xi.tol;
-    g.fillText(prev ? `XIC · ${T("mappa.preview")}` : `XIC${sg ? " A − B" : ""} ${lo.toFixed(isHrF(a.f) ? 4 : 1)}–${hi.toFixed(isHrF(a.f) ? 4 : 1)} · max ${fmt(ymax)}${tic ? " · " + T("mappa.bot.tic") : ""}`, ml + 4, mt + 8);
+    g.fillText(xi.uv ? T(sg ? "mappa.uv.botDiff" : "mappa.uv.bot", { lo: lo.toFixed(1), hi: hi.toFixed(1), max: fmt(ymax) }) : prev ? `XIC · ${T("mappa.preview")}` : `XIC${sg ? " A − B" : ""} ${lo.toFixed(isHrF(a.f) ? 4 : 1)}–${hi.toFixed(isHrF(a.f) ? 4 : 1)} · max ${fmt(ymax)}${tic ? " · " + T("mappa.bot.tic") : ""}`, ml + 4, mt + 8);
     if (pt.rt >= a.x0 && pt.rt <= a.x1) { g.strokeStyle = ecss("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(pt.rt) + .5, mt); g.lineTo(X(pt.rt) + .5, H - mb); g.stroke(); g.setLineDash([]); }
   }
 

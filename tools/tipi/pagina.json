@@ -176,6 +176,7 @@
     "../../mzlab/web/apertura-area.js",
     "../../mzlab/web/area-lavoro.js",
     "../../mzlab/web/drop-unico.js",
+    "../../mzlab/web/upload-helpers.js",
     "../../mzlab/web/shell.js",
     "../../mzlab/web/an-esi.js",
     "../../mzlab/web/an-fticr.js",
