@@ -570,6 +570,31 @@ const LISTE = (() => {
     /** @type {HTMLElement} */ (elAddErr.querySelector("#lst-add-cancel")).onclick = () => { elAddErr.hidden = true; };
   }
 
+  // one row of the results table (compact: the short unit-resolution table)
+  const listRowHtml = (/** @type {Bag} */ it, /** @type {boolean} */ compact, /** @type {boolean} */ hasMz, /** @type {boolean} */ byDa) => {
+    const delta = hasMz ? (byDa ? (it.diffDa != null ? (it.diffDa >= 0 ? "+" : "") + it.diffDa.toFixed(3) + " Da" : "")
+                                : (it.err != null ? (it.err >= 0 ? "+" : "") + it.err.toFixed(1) + " ppm" : "")) : "";
+    const polBadge = it.pol === 1 ? `<span class="pol pos" title="${I18N.t("lst.pol.pos")}" style="font-size:12px">+</span>` : it.pol === -1 ? `<span class="pol neg" title="${I18N.t("lst.pol.neg")}" style="font-size:12px">&minus;</span>` : `<span class="pol both" title="${I18N.t("lst.pol.both")}" style="font-size:12px">&plusmn;</span>`;
+    const seriesInfo = it.series ? `<span class="sm" title="${I18N.t("lst.member", { n: it.series.n })}">${I18N.t(it.series.n === 1 ? "lst.unitShort.one" : "lst.unitShort.many", { n: it.series.n })}</span>` : "";
+    if (compact) return `<tr>
+      <td class="num font-mono"><b>${it.mz.toFixed(4)}</b></td>
+      <td class="lst-name" title="${EH(it.name)}"><b>${EH(it.name)}</b></td>
+      <td>${EH(it.adduct || I18N.t("lst.mzOnly"))}</td>
+      <td>${polBadge}</td>
+    </tr>`;
+    return `<tr>
+      <td class="num font-mono"><b>${it.mz.toFixed(4)}</b></td>
+      <td class="num sm muted">${delta}</td>
+      <td class="lst-name" title="${EH(it.name)}"><b>${EH(it.name)}</b></td>
+      <td>${seriesInfo}</td>
+      <td>${EH(it.adduct || I18N.t("lst.mzOnly"))}</td>
+      <td>${it.formula ? fmtSub(it.formula) : "<span class='muted'>&ndash;</span>"}</td>
+      <td>${polBadge}</td>
+      <td class="sm muted">${EH(it.cls || "")}</td>
+      <td class="sm lst-src-col">${EH(srcName(it.list, it.listName || it.list))}</td>
+    </tr>`;
+  };
+
   function mount(/** @type {HTMLElement} */ container, /** @type {Bag} */ opt = {}) {
     if (!container) return;
     ensure();
@@ -721,36 +746,15 @@ const LISTE = (() => {
       }
 
       // infinite scroll: a chunk of rows at a time, the next one when the end of the table comes into view; the count follows what is on screen
-      const rowHtml = (/** @type {Bag} */ it) => {
-        const delta = hasMz ? (byDa ? (it.diffDa != null ? (it.diffDa >= 0 ? "+" : "") + it.diffDa.toFixed(3) + " Da" : "")
-                                    : (it.err != null ? (it.err >= 0 ? "+" : "") + it.err.toFixed(1) + " ppm" : "")) : "";
-        const polBadge = it.pol === 1 ? `<span class="pol pos" title="${I18N.t("lst.pol.pos")}" style="font-size:12px">+</span>` : it.pol === -1 ? `<span class="pol neg" title="${I18N.t("lst.pol.neg")}" style="font-size:12px">&minus;</span>` : `<span class="pol both" title="${I18N.t("lst.pol.both")}" style="font-size:12px">&plusmn;</span>`;
-        const seriesInfo = it.series ? `<span class="sm" title="${I18N.t("lst.member", { n: it.series.n })}">${I18N.t(it.series.n === 1 ? "lst.unitShort.one" : "lst.unitShort.many", { n: it.series.n })}</span>` : "";
-        if (compact) return `<tr>
-          <td class="num font-mono"><b>${it.mz.toFixed(4)}</b></td>
-          <td class="lst-name" title="${EH(it.name)}"><b>${EH(it.name)}</b></td>
-          <td>${EH(it.adduct || I18N.t("lst.mzOnly"))}</td>
-          <td>${polBadge}</td>
-        </tr>`;
-        return `<tr>
-          <td class="num font-mono"><b>${it.mz.toFixed(4)}</b></td>
-          <td class="num sm muted">${delta}</td>
-          <td class="lst-name" title="${EH(it.name)}"><b>${EH(it.name)}</b></td>
-          <td>${seriesInfo}</td>
-          <td>${EH(it.adduct || I18N.t("lst.mzOnly"))}</td>
-          <td>${it.formula ? fmtSub(it.formula) : "<span class='muted'>&ndash;</span>"}</td>
-          <td>${polBadge}</td>
-          <td class="sm muted">${EH(it.cls || "")}</td>
-          <td class="sm lst-src-col">${EH(srcName(it.list, it.listName || it.list))}</td>
-        </tr>`;
-      };
       let n = 0;
       const more = () => {
         const next = items.slice(n, n + CHUNK);
         n += next.length;
         elTbody.querySelector("#lst-more")?.remove();
-        elTbody.insertAdjacentHTML("beforeend", next.map(rowHtml).join("") + (n < items.length ? `<tr id="lst-more"><td colspan="${compact ? 4 : 9}" class="sm muted">&hellip;</td></tr>` : ""));
-        if (elCount) elCount.textContent = n < items.length ? I18N.t("lst.count.cut", { n, m: items.length }) : I18N.t("lst.count", { n: items.length });
+        const rows = next.map((/** @type {Bag} */ it) => listRowHtml(it, compact, hasMz, byDa)).join(""), cut = n < items.length;
+        const tail = cut ? `<tr id="lst-more"><td colspan="${compact ? 4 : 9}" class="sm muted">&hellip;</td></tr>` : "";
+        elTbody.insertAdjacentHTML("beforeend", rows + tail);
+        if (elCount) elCount.textContent = cut ? I18N.t("lst.count.cut", { n, m: items.length }) : I18N.t("lst.count", { n: items.length });
         const sentinel = elTbody.querySelector("#lst-more");
         if (sentinel) { moreObs?.disconnect(); moreObs = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) more(); }, { root: elWrap }); moreObs.observe(sentinel); }
       };
