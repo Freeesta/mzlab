@@ -31,8 +31,7 @@ fn the_area_is_the_text_of_the_page() {
         "1.7",
         "--to",
         "2.3",
-        "--set",
-        "baseline=zero",
+        "--baseline", "zero",
     ]));
     assert_eq!(o.code, 0);
     let want = peak_area_json(&rt, &y, 1.7, 2.3, Baseline::Zero).unwrap();
@@ -49,8 +48,7 @@ fn the_area_is_the_text_of_the_page() {
         "1.7",
         "--to",
         "2.3",
-        "--set",
-        "baseline=line",
+        "--baseline", "line",
         "--set",
         "base_y0=52000",
     ]));
@@ -79,8 +77,7 @@ fn no_baseline_named_is_from_zero() {
         "1.7",
         "--to",
         "2.3",
-        "--set",
-        "baseline=zero",
+        "--baseline", "zero",
     ]));
     assert_eq!((plain.code, &plain.stdout), (0, &zero.stdout));
     assert!(String::from_utf8(plain.stdout)
@@ -98,8 +95,7 @@ fn edges_and_bad_numbers_are_refused() {
             "1",
             "--to",
             "3",
-            "--set",
-            "baseline=edges"
+            "--baseline", "edges"
         ]))
         .code,
         0
@@ -111,8 +107,7 @@ fn edges_and_bad_numbers_are_refused() {
             "1",
             "--to",
             "3",
-            "--set",
-            "baseline=line"
+            "--baseline", "line"
         ]))
         .code,
         0
@@ -124,8 +119,7 @@ fn edges_and_bad_numbers_are_refused() {
             "1",
             "--to",
             "3",
-            "--set",
-            "baseline=line",
+            "--baseline", "line",
             "--set",
             "base_y0=x"
         ]))
@@ -136,7 +130,7 @@ fn edges_and_bad_numbers_are_refused() {
         run(args(&[&p, "--from", "1", "--to", "3", "--set", "hr_sn=3"])).code,
         0
     );
-    assert_ne!(run(args(&[&p, "--set", "baseline=zero"])).code, 0);
+    assert_ne!(run(args(&[&p, "--baseline", "zero"])).code, 0);
     assert_eq!(run(args(&["--help"])).code, 0);
 }
 
@@ -151,8 +145,7 @@ fn a_line_dragged_past_its_points_is_held_at_zero_in_the_same_bytes_as_the_page(
         y1: 0.0,
     };
     let sets = [
-        "--set",
-        "baseline=line",
+        "--baseline", "line",
         "--set",
         "base_t0=1.9",
         "--set",
@@ -194,8 +187,7 @@ fn a_line_with_a_point_under_zero_is_held_at_zero_in_the_same_bytes_as_the_page(
         "1.7",
         "--to",
         "2.3",
-        "--set",
-        "baseline=line",
+        "--baseline", "line",
         "--set",
         "base_t0=1.7",
         "--set",

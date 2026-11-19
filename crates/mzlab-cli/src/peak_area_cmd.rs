@@ -1,4 +1,4 @@
-//! `mzlab-cli peak area TRACE.csv --from MIN --to MIN [--set baseline=zero|line]`: the area of the Data view between two boundaries measured from
+//! `mzlab-cli peak area TRACE.csv --from MIN --to MIN [--baseline zero|line]`: the area of the Data view between two boundaries measured from
 //! zero (the default) or from a line the user sets, from `mzlab_core::baseline::peak_area_json`, the text the page gets from `QUALITA.peakArea` (the same bytes).
 
 use mzlab_core::baseline::{peak_area_json, Baseline};
@@ -8,11 +8,12 @@ use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli peak area: the area of a peak between two boundaries, from zero or from a line you set, as JSON.
 
-usage: mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--set baseline=zero|line] [--set NAME=VALUE...]
+usage: mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]
 
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --from/--to  the boundaries (each taken to the nearest point of the trace)
-  --set        baseline: zero (y = 0, the default: any background under the peak is part of the area) or line; a line: base_y0 (counts), base_t0, base_y1, base_t1 (min, counts;
+  --baseline   zero (y = 0, the default: any background under the peak is part of the area) or line
+  --set        numbers of a line: base_y0 (counts), base_t0, base_y1, base_t1 (min, counts;
                base_y1 absent = base_y0, a level). edges, the line between the boundaries, is the page's own (picchi.js)
   output       {\"baseline\":MODE,\"area\":COUNTS_S,\"below\":COUNTS_S,\"height\":COUNTS,\"rt\":MIN}: area signed, below = the part under the line";
 
@@ -53,10 +54,11 @@ pub fn run(args: Vec<String>) -> Outcome {
             match a.as_str() {
                 "--from" => from = Some(num(it.next(), "--from")?),
                 "--to" => to = Some(num(it.next(), "--to")?),
+                "--baseline" => sets.push(("baseline".to_string(), it.next().ok_or("--baseline needs a mode")?)),
                 "--set" => {
                     let kv = it.next().ok_or("--set needs NAME=VALUE")?;
                     let (k, v) = kv.split_once('=').ok_or("--set needs NAME=VALUE")?;
-                    if !is_base(k) {
+                    if !is_base(k) || k == "baseline" {
                         return Err(format!("unknown parameter {k}"));
                     }
                     sets.push((k.to_string(), v.to_string()));
@@ -79,7 +81,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     let base = match baseline_of(&sets) {
         Ok(Baseline::Edges) => {
             return Outcome::fail(
-                "peak area measures from zero or a line: --set baseline=zero|line",
+                "peak area measures from zero or a line: --baseline zero|line",
             )
         }
         Ok(b) => b,

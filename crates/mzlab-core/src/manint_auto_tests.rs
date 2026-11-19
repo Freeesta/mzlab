@@ -40,12 +40,12 @@ fn peaks_at_the_same_time_are_one_group_and_one_alone_has_no_counterpart() {
 #[test]
 fn the_tolerance_decides_whether_a_drifted_peak_is_the_same() {
     let f = files(&[&[(3.0, 8e4)], &[(3.5, 6e4)]]);
-    let tight = auto_text(&f, "{\"rt_tol\":0.1}").unwrap();
+    let tight = auto_text(&f, "{\"rt_tol_min\":0.1}").unwrap();
     assert_eq!(
         (num(&tight, "groups"), num(&tight, "unmatched")),
         (2.0, 2.0)
     );
-    let wide = auto_text(&f, "{\"rt_tol\":0.6}").unwrap();
+    let wide = auto_text(&f, "{\"rt_tol_min\":0.6}").unwrap();
     assert_eq!((num(&wide, "groups"), num(&wide, "unmatched")), (1.0, 0.0));
 }
 

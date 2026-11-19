@@ -11,16 +11,18 @@ use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli peak auto: every peak of a high-resolution trace with its baseline, as JSON.
 
-usage: mzlab-cli peak auto TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VALUE...]
+usage: mzlab-cli peak auto TRACE.csv|- [--from MIN] [--to MIN] [--baseline zero|edges|line] [--area-unit s|min] [--set NAME=VALUE...]
 
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --from/--to  the stretch whose apexes count (default: the whole trace)
-  --set        the page dialog: hr_smooth (points, odd), hr_sn; engine only: hr_prom (% of the tallest), hr_scans, hr_half (points, 0 = auto), hr_slope (%);
-               the area of every peak: baseline = zero (default: any background under the peak is part of the area), edges (the line b0-b1),
-               or line with base_y0, base_t0, base_y1, base_t1 (see peak area --help);
-               area_unit: s = counts x s (default, as peak area), min = counts x min (the old unit)
-  output       {\"peaks\":[{\"t0\":MIN,\"t1\":MIN,\"b0\":BASELINE,\"b1\":BASELINE,\"area\":COUNTS_S,\"baseline\":MODE}...]}; with zero or line each
-               peak also has \"below\" (COUNTS_S, the part under the line) and its area is the signed one against that line";
+  --baseline   the baseline of the area of every peak: zero (default: any background under the peak is part of the area), edges (the line b0-b1
+               found at the peak ends) or line (with --set base_y0, base_t0, base_y1, base_t1, see peak area --help)
+  --area-unit  s = counts x s (default, as peak area), min = counts x min (the old unit)
+  --set        numbers only; the page dialog: hr_smooth (points, odd), hr_sn; engine only: hr_prom (% of the tallest), hr_scans, hr_half (points, 0 = auto), hr_slope (%),
+               and with --baseline line: base_y0, base_t0, base_y1, base_t1
+  output       {\"peaks\":[{\"t0\":MIN,\"t1\":MIN,\"b0\":COUNTS,\"b1\":COUNTS,\"area\":COUNTS_S,\"baseline\":\"edges\"}...]} with edges; with zero or line
+               each peak has \"t0\", \"t1\", \"area\" (signed, against that line), \"baseline\" and \"below\" (COUNTS_S, the part under the line) and NO b0/b1:
+               the ends of the detection baseline are not what the area is measured from, so they are left out";
 
 fn set(p: &mut AutoParams, name: &str, v: &str) -> Result<(), String> {
     let n: f64 = v.parse().map_err(|_| format!("{name} needs a number"))?;
@@ -54,12 +56,12 @@ pub fn run(args: Vec<String>) -> Outcome {
             match a.as_str() {
                 "--from" => from = Some(num(it.next(), "--from")?),
                 "--to" => to = Some(num(it.next(), "--to")?),
+                "--area-unit" => unit = AreaUnit::parse(&it.next().ok_or("--area-unit needs s or min")?)?,
+                "--baseline" => bases.push(("baseline".to_string(), it.next().ok_or("--baseline needs a mode")?)),
                 "--set" => {
                     let kv = it.next().ok_or("--set needs NAME=VALUE")?;
                     let (k, v) = kv.split_once('=').ok_or("--set needs NAME=VALUE")?;
-                    if k == "area_unit" {
-                        unit = AreaUnit::parse(v)?;
-                    } else if is_base(k) {
+                    if is_base(k) && k != "baseline" {
                         bases.push((k.to_string(), v.to_string()));
                     } else {
                         set(&mut p, k, v)?;
@@ -92,16 +94,17 @@ pub fn run(args: Vec<String>) -> Outcome {
             let rows: Vec<String> = auto_integrate(&x, &y, x0, x1, p)
                 .iter()
                 .map(|k| {
-                    let head = format!(
-                        "{{\"t0\":{},\"t1\":{},\"b0\":{},\"b1\":{}",
-                        x[k.lo], x[k.hi], k.base_lo, k.base_hi
-                    );
                     match base.at(0.0) {
-                        None => format!("{head},\"area\":{},\"baseline\":\"edges\"}}", k.area * f),
+                        None => format!(
+                            "{{\"t0\":{},\"t1\":{},\"b0\":{},\"b1\":{},\"area\":{},\"baseline\":\"edges\"}}",
+                            x[k.lo], x[k.hi], k.base_lo, k.base_hi, k.area * f
+                        ),
                         Some(_) => {
                             let r = integrate(&x, &y, k.lo, k.hi, |t| base.at(t).unwrap_or(0.0));
                             format!(
-                                "{head},\"area\":{},\"baseline\":\"{}\",\"below\":{}}}",
+                                "{{\"t0\":{},\"t1\":{},\"area\":{},\"baseline\":\"{}\",\"below\":{}}}",
+                                x[k.lo],
+                                x[k.hi],
                                 r.area * f,
                                 base.name(),
                                 r.below * f

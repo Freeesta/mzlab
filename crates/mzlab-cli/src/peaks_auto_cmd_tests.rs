@@ -30,7 +30,7 @@ fn peaks_are_the_core_result_and_set_names_are_accepted() {
     let body: Vec<String> = rt.iter().zip(&y).map(|(a, b)| format!("{a},{b}")).collect();
     std::fs::write(&f, format!("rt,y\n{}", body.join("\n"))).unwrap();
     let p = f.to_str().unwrap();
-    let o = run(args(&[p, "--set", "baseline=edges"]));
+    let o = run(args(&[p, "--baseline", "edges"]));
     assert_eq!(o.code, 0);
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
     let core = auto_integrate(&rt, &y, rt[0], rt[rt.len() - 1], AutoParams::default());
@@ -119,7 +119,7 @@ fn the_baseline_mode_applies_to_every_peak() {
     let p = f.to_str().unwrap();
     // no mode named = zero
     assert_eq!(
-        run(args(&[p, "--set", "baseline=zero"])).stdout,
+        run(args(&[p, "--baseline", "zero"])).stdout,
         run(args(&[p])).stdout
     );
     let core = auto_integrate(&rt, &y, rt[0], rt[rt.len() - 1], AutoParams::default());
@@ -128,11 +128,10 @@ fn the_baseline_mode_applies_to_every_peak() {
     let got = v["peaks"].as_array().unwrap();
     assert_eq!(got.len(), core.len());
     for (g, k) in got.iter().zip(&core) {
-        // same boundaries and baseline ends, the area now from zero (the background of about 560 counts inside it)
-        assert_eq!(
-            (g["t0"].as_f64().unwrap(), g["b0"].as_f64().unwrap()),
-            (rt[k.lo], k.base_lo)
-        );
+        // same boundaries, the area now from zero (the background of about 560 counts inside it); the detection
+        // baseline ends are not what that area is measured from, so b0/b1 are left out
+        assert_eq!(g["t0"].as_f64().unwrap(), rt[k.lo]);
+        assert!(g.get("b0").is_none() && g.get("b1").is_none(), "{g}");
         let z = integrate(&rt, &y, k.lo, k.hi, |_| 0.0);
         assert_eq!(
             (g["area"].as_f64().unwrap(), g["below"].as_f64().unwrap()),
@@ -143,8 +142,7 @@ fn the_baseline_mode_applies_to_every_peak() {
     }
     let o = run(args(&[
         p,
-        "--set",
-        "baseline=line",
+        "--baseline", "line",
         "--set",
         "base_y0=1000",
         "--set",
@@ -158,7 +156,7 @@ fn the_baseline_mode_applies_to_every_peak() {
         .unwrap()
         .iter()
         .all(|g| g["baseline"] == "line" && g["below"].as_f64().unwrap() > 0.0));
-    assert_ne!(run(args(&[p, "--set", "baseline=valley"])).code, 0);
+    assert_ne!(run(args(&[p, "--baseline", "valley"])).code, 0);
 }
 
 #[test]
@@ -171,15 +169,13 @@ fn area_unit_min_keeps_the_old_counts_x_min() {
     let core = auto_integrate(&rt, &y, rt[0], rt[rt.len() - 1], AutoParams::default());
     let o = run(args(&[
         p,
-        "--set",
-        "baseline=edges",
-        "--set",
-        "area_unit=min",
+        "--baseline", "edges",
+        "--area-unit", "min",
     ]));
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
     for (g, k) in v["peaks"].as_array().unwrap().iter().zip(&core) {
         assert_eq!(g["area"].as_f64().unwrap(), k.area);
     }
-    assert_eq!(run(args(&[p, "--set", "area_unit=s"])).code, 0);
-    assert_ne!(run(args(&[p, "--set", "area_unit=h"])).code, 0);
+    assert_eq!(run(args(&[p, "--area-unit", "s"])).code, 0);
+    assert_ne!(run(args(&[p, "--area-unit", "h"])).code, 0);
 }

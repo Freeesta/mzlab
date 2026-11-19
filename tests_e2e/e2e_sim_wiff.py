@@ -50,7 +50,7 @@ def manual(st, files, sums=False, times=True):
     ws = [{**x, "file": TRUE["campioni"].index(order[x["file"]])} for x in json.loads(st["windows"])]
     w = D / "windows.json"; w.write_text(json.dumps(ws))
     tm = D / "times.json"; tm.write_text(json.dumps(st["times"]))      # the time points the page shows (the sample table), as the CLI reads them
-    return cli("peak", "table", *files, "--set", f"windows={w}", *(["--set", f"times={tm}"] if times else []), *(["--set", "sums=true"] if sums else []))
+    return cli("peak", "table", *files, "--windows", str(w), *(["--times", str(tm)] if times else []), *(["--sums"] if sums else []))
 
 def download(pg):
     with pg.expect_download() as d:

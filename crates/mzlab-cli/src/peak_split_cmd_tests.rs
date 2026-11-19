@@ -8,6 +8,7 @@ use mzlab_core::json::parse;
 
 use crate::execute;
 
+/// `set` items are `name=value`, passed as `--name value`.
 fn run(file: &Path, set: &[&str]) -> crate::Outcome {
     let mut a = vec![
         "peak".to_string(),
@@ -15,8 +16,9 @@ fn run(file: &Path, set: &[&str]) -> crate::Outcome {
         file.to_string_lossy().into_owned(),
     ];
     for s in set {
-        a.push("--set".into());
-        a.push(s.to_string());
+        let (k, v) = s.split_once('=').unwrap_or((s, ""));
+        a.push(format!("--{k}"));
+        a.push(v.to_string());
     }
     execute(&a)
 }
@@ -58,8 +60,8 @@ fn table(d: &Path, windows: &str) -> String {
         "peak".into(),
         "table".into(),
         d.join("sim3.wiff").to_string_lossy().into_owned(),
-        "--set".into(),
-        format!("windows={}", w.display()),
+        "--windows".into(),
+        w.display().to_string(),
     ]))
 }
 
