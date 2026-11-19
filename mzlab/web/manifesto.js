@@ -4,10 +4,10 @@
 // The values are read from the file itself (the meta of `.mzidx` and of `.mzfeatf`/`.mzfeat`), so every producer is covered, also the one that writes OPFS without the archive.
 
 /** the format versions that the readers of this page understand: `idx` = version of the `.mzidx` header, `feat` = `feat_version` of the meta (crates/mzlab-feat/src/lib.rs) */
-export const CORRENTI = { idx: 1, feat: 3 };
+export const CORRENTI = { idx: 3, feat: 3 };
 
-/** the highest versions that the readers of this page understand (the idx header knows 1 = mzML and 2 = vendor file); a file above them was written by a newer program and is left as it is */
-export const MASSIMI = { idx: 2, feat: 3 };
+/** the highest versions that the readers of this page understand (the idx header knows 3: an mzML with its chromatogram list, or a vendor file; older ones are made again); a file above them was written by a newer program and is left as it is */
+export const MASSIMI = { idx: 3, feat: 3 };
 
 const MAX_META = 16 << 20;
 /** @typedef {{ versione_formato: number | null, crate: string | null, sorgente_sha256: string | null }} Info */

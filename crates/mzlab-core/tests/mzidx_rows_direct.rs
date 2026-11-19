@@ -6,8 +6,10 @@
 #![allow(clippy::disallowed_methods)]
 
 mod fake_reader;
+mod mzidx_meta;
 
 use fake_reader::Finto;
+use mzidx_meta::without;
 use mzlab_core::json::{self, Value};
 use mzlab_core::mzmlwrite::Header;
 use mzlab_core::readers::Reader;
@@ -21,17 +23,6 @@ fn u64_at(b: &[u8], at: usize) -> u64 {
 
 fn json_at(b: &[u8], off: usize, len: usize) -> Value {
     json::parse(&b[u64_at(b, off) as usize..][..u64_at(b, len) as usize]).unwrap()
-}
-
-fn without(v: &Value, skip: &[&str]) -> Vec<(String, Value)> {
-    match v {
-        Value::Obj(o) => o
-            .iter()
-            .filter(|(k, _)| !skip.contains(&k.as_str()))
-            .cloned()
-            .collect(),
-        _ => panic!("not an object"),
-    }
 }
 
 /// Index through the mzML (the oracle) and the two ways straight from the reader, with several budgets.

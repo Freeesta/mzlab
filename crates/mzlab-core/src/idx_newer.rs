@@ -1,7 +1,7 @@
 //! Header of an index written by a newer program (`error.newerFormat`, docs/agenti/new-format.md).
 
-/// Highest header version this reader knows (1 = mzML, 2 = vendor file).
-pub const VERSION_MAX: u32 = 2;
+/// Highest header version this reader knows (3: an mzML index with its chromatogram list, or a vendor file with `READER_FLAG`; older ones are rebuilt).
+pub const VERSION_MAX: u32 = 3;
 
 /// The version of an index written by a newer program (a newer magic `MZIDX00N`, or a known magic with a header version above `VERSION_MAX`); `None` when the header is one this reader knows or is no index.
 pub fn newer_version(h: &[u8]) -> Option<u32> {
