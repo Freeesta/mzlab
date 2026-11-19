@@ -1,4 +1,6 @@
 """`.mzidx` (mzlab/reader/mzidx.py, docs/agenti/mzidx.md): the arrays read from the index are IDENTICAL to the table built in memory from the mzML."""
+import json
+import struct
 import sys
 from pathlib import Path
 
@@ -223,3 +225,32 @@ def test_rounded_is_round_for_every_value():
         for nd in (1, 4):
             ref = [round(float(v), nd) for v in a]
             assert [repr(x) for x in ref] == [repr(x) for x in rounded(a, nd)]
+
+
+def test_the_reference_writes_version_3_with_the_chromatogram_list(synth, tmp_path):
+    f = synth[0]
+    p = tmp_path / "v3.mzidx"
+    run = Run(f, index_path=p)
+    run.table(1)
+    run.close()
+    blob = p.read_bytes()
+    magic, ver, flags, meta_off, meta_len, *_ = mzidx.HEADER.unpack_from(blob)
+    assert (ver, flags) == (3, 0)
+    meta = json.loads(blob[meta_off:meta_off + meta_len])
+    assert meta["version"] == 3
+    rows = meta["run"]["chromatograms"]
+    assert len(rows) == meta["run"]["n_chromatograms"]
+    assert all(len(r) == 10 for r in rows), rows[:2]
+
+
+@pytest.mark.parametrize("version", [1, 2, 4])
+def test_the_reference_refuses_other_versions(synth, tmp_path, version):
+    p = tmp_path / "other.mzidx"
+    run = Run(synth[0], index_path=p)
+    run.table(1)
+    run.close()
+    blob = bytearray(p.read_bytes())
+    blob[8:12] = struct.pack("<I", version)
+    p.write_bytes(bytes(blob))
+    with pytest.raises(ValueError):
+        mzidx.open(p)

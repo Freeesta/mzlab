@@ -67,6 +67,14 @@ impl DataType {
     pub fn from_name(name: &str) -> Option<DataType> {
         DataType::ALL.into_iter().find(|t| t.name() == name)
     }
+    /// The JSON Schema a datum of this type is written in, when it is a JSON document of its own (`docs/schemi/`, `mzlab-cli schema NAME`).
+    pub fn schema(self) -> Option<&'static str> {
+        match self {
+            DataType::Samples => Some("samples/1"),
+            DataType::Design => Some("design/1"),
+            _ => None,
+        }
+    }
     pub fn name(self) -> &'static str {
         match self {
             DataType::Raw => "raw",

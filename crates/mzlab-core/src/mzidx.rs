@@ -655,7 +655,7 @@ fn f64_bytes(v: &[f64]) -> Vec<u8> {
 pub type Pass<'a> = dyn FnMut(&mut dyn FnMut(Spectrum)) -> Result<()> + 'a;
 
 /// Builds the index. `pass` decodes the whole stream once per call (it must start from the beginning every time).
-/// `nativo`: the rows locate the scans in a vendor file set (version 2, `idxread::READER_FLAG`), otherwise in an mzML (version 1).
+/// `nativo`: the rows locate the scans in a vendor file set (`idxread::READER_FLAG`), otherwise in an mzML; both are version 3.
 #[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // the indexes come from the table, checked against `n_scans`
 pub fn build(
     table: &ScanTable,
@@ -725,9 +725,9 @@ pub(crate) fn build_after(
     late_source: Option<&mut dyn FnMut() -> Result<String>>,
 ) -> Result<Stats> {
     let (version, flags) = if nativo {
-        (2u32, crate::idxread::READER_FLAG)
+        (3u32, crate::idxread::READER_FLAG)
     } else {
-        (1, 0)
+        (3, 0)
     };
     let n_scans = table.level.len();
     if table.polarity.len() != n_scans || table.rt.len() != n_scans || table.tic.len() != n_scans {
@@ -1007,7 +1007,7 @@ pub fn build_mzml_spill<R: std::io::Read + Seek>(
     build_mzml_late(table, src, out, budget, spill, None)
 }
 
-/// The same for sample `c` of a vendor file set (version 2): every pass reads the scans of `Lettore::index(c)` in order (`mzidx_lettore`).
+/// The same for sample `c` of a vendor file set (vendor-file index): every pass reads the scans of `Lettore::index(c)` in order (`mzidx_lettore`).
 pub fn build_reader(
     table: &ScanTable,
     l: &mut dyn crate::readers::Reader,
