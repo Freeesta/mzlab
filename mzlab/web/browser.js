@@ -79,6 +79,8 @@
   window.MZLAB_RUST_READY = rustReady;
   // reset.js: the worker holds sync handles on the files
   window.qqEngineStop = () => { try { if (window.MZLAB_RUST) window.MZLAB_RUST.stop(); } catch (_) { /* gone already */ } };
+  // the engine died at start though its .wasm came up (up !== false: a missing or broken .wasm is not a cache matter) and not for memory: the stored site copy is a suspect
+  const engineCacheSuspect = async (/** @type {any} */ e) => { const r = window.MZLAB_RUST; return !!(e && e.dead && r && r.offKey !== "error.engineOffMemory" && await r.up !== false); };
   let lr = null;
   const lrInit = async () => {
     if (window.MZLAB_PHONE) throw new Error("phone: engine not started");
@@ -112,12 +114,11 @@
       if (window.ERRORI && window.ERRORI.segnala) window.ERRORI.segnala(e, "engine");
       // the technical text stays in MZLAB_LR_ERR and the console: the screen speaks the language of the page
       if (e && e.key) fail(e.key);
-      else if (e && e.dead && !(window.MZLAB_RUST && window.MZLAB_RUST.offKey === "error.engineOffMemory") && await (window.MZLAB_RUST && window.MZLAB_RUST.up) !== false) {       // up false: the .wasm itself is missing or does not compile (a build without it): clearing the cache cannot help
-        // the engine died at start (and its restart too): a stored copy of the site of two deploys is the usual cause. Clear it and reload once; a second failure says so
+      else if (await engineCacheSuspect(e)) {
         console.error("[mzLab] engine start failed", e);
         phase({ key: "load.engine.refreshing", pct: null });
         const m = await import(new URL("engine-recupera.js", SRC).href);
-        if (await m.recoverEngine({ prefix: NOMI.CACHE_APP }) === "already") fail("load.err.engineStartPurged");
+        if (await m.recoverEngine() === "already") fail("load.err.engineStartPurged");
       } else { console.error("[mzLab] engine start failed", e); fail("load.err.engineStart"); }
       throw e;
     }

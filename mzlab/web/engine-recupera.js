@@ -1,17 +1,14 @@
 // @ts-strict
-// Recovery when the engine cannot start (rust-bridge.js lost its worker twice: typically a service-worker cache that holds wasm/JS of two
-// deploys): drop the site's app caches and the worker, reload ONCE. A session flag stops a loop; the caller shows the error if it was used.
+// Recovery when the engine cannot start (rust-bridge.js lost its worker twice: a stored copy of the site is a suspect): the reset flow drops it, ONCE.
+// A session flag stops a loop; the caller shows the error if it was used.
 const FLAG = "mzlab.engineRecover";
 
-/** @returns {Promise<"reloading" | "already">} */
-export async function recoverEngine({ log = console.warn, reload = () => location.reload(), prefix = "mzlab-app-", storage = sessionStorage, cacheApi = globalThis.caches, sw = navigator.serviceWorker } = {}) {
+/** One recovery per session: the reset flow's "engine" mode (reset.js) drops the app caches and the worker, keeps the files, and reloads with a `ripn` nonce
+ * (so the isolating reload that follows an unregister still happens once). @returns {Promise<"reloading" | "already">} */
+export async function recoverEngine({ log = console.warn, run = (/** @type {string} */ m) => /** @type {any} */ (window).QQRESET.run(m), storage = sessionStorage } = {}) {
   try { if (storage.getItem(FLAG)) return "already"; storage.setItem(FLAG, "1"); } catch (_) { return "already"; }     // no storage: no way to bound the retries
-  const dropped = [];
-  try { for (const k of cacheApi ? await cacheApi.keys() : []) if (k.startsWith(prefix) && await cacheApi.delete(k)) dropped.push(k); } catch (_) { /* reload anyway */ }
-  let unregistered = 0;
-  try { for (const r of sw ? await sw.getRegistrations() : []) if (await r.unregister()) unregistered++; } catch (_) { /* reload anyway */ }
-  log("[mzLab] engine did not start: dropped caches [" + dropped.join(", ") + "], unregistered " + unregistered + " service worker(s), reloading once");
-  reload();
+  log("[mzLab] engine did not start: dropping the stored copy of the site and reloading once");
+  try { await run("engine"); } catch (_) { return "already"; }
   return "reloading";
 }
 

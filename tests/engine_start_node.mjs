@@ -48,20 +48,16 @@ const quiet = console.warn; console.warn = () => {};
   assert.ok(e && e.dead, "the second loss is reported as a dead engine");
 }
 console.warn = quiet;
-// E3: recovery drops only the app caches, unregisters the workers, reloads once
+// E3: the recovery goes through the reset flow's "engine" mode, once; an engine that came up clears the flag
 {
   const store = new Map(), st = { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: k => store.delete(k) };
-  const caches = new Map([["mzlab-app-abc", 1], ["mzlab-big-x", 1], ["other", 1]]);
-  const cacheApi = { keys: async () => [...caches.keys()], delete: async k => caches.delete(k) };
-  let unreg = 0, reloads = 0;
-  const sw = { getRegistrations: async () => [{ unregister: async () => { unreg++; return true; } }] };
-  const opt = { log: () => {}, reload: () => { reloads++; }, prefix: "mzlab-app-", storage: st, cacheApi, sw };
+  const modes = [], opt = { log: () => {}, run: async m => { modes.push(m); }, storage: st };
   assert.equal(await recoverEngine(opt), "reloading");
-  assert.deepEqual([...caches.keys()], ["mzlab-big-x", "other"]);
-  assert.equal(unreg, 1); assert.equal(reloads, 1);
+  assert.deepEqual(modes, ["engine"]);
   assert.equal(await recoverEngine(opt), "already");                            // the second failure: no loop
-  assert.equal(reloads, 1);
+  assert.equal(modes.length, 1);
   recoverDone(st);
-  assert.equal(await recoverEngine(opt), "reloading");                          // an engine that came up clears the flag
+  assert.equal(await recoverEngine(opt), "reloading");
+  assert.equal(await recoverEngine({ ...opt, storage: { getItem: () => { throw new Error("denied"); }, setItem() {} } }), "already");   // no storage: no way to bound the retries
 }
 console.log("ok");
