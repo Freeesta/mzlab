@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "folder/1",
+  "title": "folder/1: what «Open folder» lists in a folder",
+  "description": "The answer of `mzlab-cli file list DIR`: items in the order of their paths; a bundle (Agilent .D, Bruker .d, Waters .raw) is one row. mtime is in ms since 1970 (latest member). Code: crates/mzlab-cli/src/folder_cmd.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "root",
+    "max_depth",
+    "cap",
+    "truncated",
+    "items"
+  ],
+  "properties": {
+    "schema": {
+      "const": "folder/1"
+    },
+    "root": {
+      "type": "string"
+    },
+    "max_depth": {
+      "type": "integer"
+    },
+    "cap": {
+      "type": "integer"
+    },
+    "truncated": {
+      "type": "boolean"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "name",
+          "dir",
+          "kind",
+          "bundle",
+          "members",
+          "size",
+          "mtime"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "dir": {
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "data",
+              "method",
+              "library",
+              "table",
+              "scan"
+            ]
+          },
+          "bundle": {
+            "enum": [
+              "d",
+              "waters-raw",
+              null
+            ]
+          },
+          "members": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "size": {
+            "type": "integer"
+          },
+          "mtime": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  }
+}

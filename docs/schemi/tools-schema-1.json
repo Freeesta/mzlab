@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tools/1",
+  "title": "tools/1: the catalog of the assistant tools",
+  "description": "The catalog `mzlab-cli llm tools [--demo]` prints and `docs/schemi/tools-1.json` / `tools-demo-1.json` hold (those two are data snapshots; this is their JSON Schema, in a file of its own because the name tools-1.json is taken). The CLI adds `citation` and `cli_catalog` (the command that lists every command). Code: crates/mzlab-llm/src/tools.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "tools"
+  ],
+  "properties": {
+    "schema": {
+      "const": "tools/1"
+    },
+    "citation": {
+      "type": "string"
+    },
+    "cli_catalog": {
+      "type": "string"
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "class",
+          "description",
+          "input_schema"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "class": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "input_schema": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

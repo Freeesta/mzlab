@@ -57,6 +57,8 @@ I18N.add("en", {
   "err.cli.out": "The output {path} cannot be written.",
   "err.cli.input.missing": "The input {input} was not found: pass the file, or the folder that holds it, with --in.",
   "err.cli.input.twice": "The input {input} was given more than once.",
+  "err.cli.command.unknown": "No command is named “{path}”: mzlab-cli commands lists them.",
+  "err.cli.schema.unknown": "No schema is named “{name}”: mzlab-cli schema --list lists them.",
   "err.cli.json.unsupported": "This command has no JSON form: run it without --json.",
   "err.conv.noProfile": "This file has only centroided peaks and no profile data, so it cannot be converted to a profile mzML. Use the centroid mzML as it is.",
   "err.conv.mzlabNoProfile": "This file has only the instrument's centroids and no profile data, so mzLab cannot compute its own centroids. Convert with peaks = file to keep the instrument's centroids.",

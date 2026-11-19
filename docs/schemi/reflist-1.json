@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "reflist/1",
+  "title": "reflist/1: a CSV list of reference ions read by the engine",
+  "description": "The answer of `mzlab-cli db ref-list FILE.csv` and of the page route: the rows read as `items` and every wrong row as an `errors` entry with its line (exit 1 when there are errors). With `--match X` the CLI adds `match` (mz-match/1). Code: crates/mzlab-core/src/reflist.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "name",
+    "compounds",
+    "items",
+    "errors"
+  ],
+  "properties": {
+    "schema": {
+      "const": "reflist/1"
+    },
+    "name": {
+      "type": "string"
+    },
+    "compounds": {
+      "type": "integer"
+    },
+    "match": {
+      "type": "object"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "line",
+          "name",
+          "formula",
+          "adduct",
+          "mz",
+          "pol",
+          "note"
+        ],
+        "properties": {
+          "line": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "formula": {
+            "type": "string"
+          },
+          "adduct": {
+            "type": "string"
+          },
+          "mz": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "pol": {},
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "line",
+          "key",
+          "field",
+          "value"
+        ],
+        "properties": {
+          "line": {
+            "type": "integer"
+          },
+          "key": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
