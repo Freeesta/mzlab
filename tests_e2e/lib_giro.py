@@ -103,6 +103,14 @@ def floating_outside_data(pg, v):
     assert not dead, f"dead buttons in {v}: {dead}"
 
 
+def clean(r):
+    """No console error and no failed request in the pages of this test (the optional modules and the sandboxed Ketcher note are known)."""
+    errs = [e for e in r.errs if "wasm-feat/manifest.json" not in str(e)          # the optional modules are not built for the e2e site (tools/prepara_sito.py)
+            and not (e[0] == "console.error" and "404" in str(e[1]))               # its console twin
+            and "allow-scripts and allow-same-origin" not in str(e)]               # Chromium's note on the sandboxed Ketcher iframe (docs/agenti/drawing.md)
+    assert not errs, errs[:5]
+
+
 def make_step(steps):
     """The `step(name, fn)` of a test: runs it, records ok or the failing line; the time is printed so a slow step shows in the log."""
     import time, traceback

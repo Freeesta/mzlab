@@ -8,7 +8,6 @@ from lib_giro import *
 steps = []
 step = make_step(steps)
 r = Run(port=8996, wd="/tmp/wd_giro_intestazione_tempo")
-VIEWS = ["draw", "flow", "tpmine"]
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
@@ -59,12 +58,7 @@ try:
                 d, xs = spread(q, k); assert d <= MOVE_PX, f"{k} moved {d} px when the late part arrived {xs}"
         step("Flow, first opening: Run, Terminal and More do not shift when the late part of the bar arrives", flow_bar_still)
 
-        def clean():
-            errs = [e for e in r.errs if "wasm-feat/manifest.json" not in str(e)          # the optional modules are not built for the e2e site (tools/prepara_sito.py)
-                    and not (e[0] == "console.error" and "404" in str(e[1]))               # its console twin
-                    and "allow-scripts and allow-same-origin" not in str(e)]               # Chromium's note on the sandboxed Ketcher iframe (docs/agenti/drawing.md)
-            assert not errs, errs[:5]
-        step("no console error, no failed request", clean)
+        step("no console error, no failed request", lambda: clean(r))
 finally:
     try: r.close()
     except Exception: pass

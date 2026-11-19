@@ -2,7 +2,6 @@
 # covers: mzlab/web/barra.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
-from lib_hr import synth, load
 from lib_giro import *
 
 steps = []
@@ -18,6 +17,7 @@ try:
             step(f"no samples, {v}: every header button opens and closes, nothing moves", lambda v=v: (view(pg, v), walk(pg, f"{v}, empty"), view(pg, "data")))
         for v in VIEWS:
             step(f"no samples, {v}: the tool buttons open their window", lambda v=v: (floating_outside_data(pg, v), view(pg, "data")))
+        step("no console error, no failed request", lambda: clean(r))
 finally:
     try: r.close()
     except Exception: pass

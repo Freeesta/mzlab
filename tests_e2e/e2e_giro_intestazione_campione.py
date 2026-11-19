@@ -2,7 +2,6 @@
 # covers: mzlab/web/barra.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
-from lib_hr import synth, load
 from lib_giro import *
 
 steps = []
@@ -39,6 +38,7 @@ try:
                 if m: bad.append(f"{sel}: {m}")
             assert not bad, " | ".join(bad)
         step("one sample: adding a chromatogram, spectrum and map panel and closing it with its × gives the work area back as it was", add_close_panels)
+        step("no console error, no failed request", lambda: clean(r))
 finally:
     try: r.close()
     except Exception: pass

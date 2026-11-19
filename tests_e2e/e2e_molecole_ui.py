@@ -60,7 +60,7 @@ try:
         step("Tab and Shift+Tab stay inside the window", tab_trap)
 
         def adds():
-            add(nome="Exampline", sinonimi="Ex-1\nEsempinum", formula="C10H15NO", smiles="CC(N)Cc1ccccc1O", note="invented")
+            add(nome="Exampline", sinonimi="Ex-1\nExampleum", formula="C10H15NO", smiles="CC(N)Cc1ccccc1O", note="invented")
             assert names() == ["Exampline"], names()
             row = pg.locator(ROWS).first
             assert "C10H15NO" in row.inner_text() and "165.1154" in row.inner_text() and "Yours" in row.inner_text(), row.inner_text()
@@ -211,7 +211,7 @@ try:
             i = "#molc-host input"
             assert pg.get_attribute(i, "role") == "combobox" and pg.get_attribute(i, "aria-expanded") == "false" and pg.get_attribute(i, "aria-autocomplete") == "list"
             assert pg.inner_text("#molc-host label") == "Molecule" and pg.get_attribute(i, "placeholder") == "Name, formula or mass"
-            pg.click(i); pg.keyboard.type("esemp")
+            pg.click(i); pg.keyboard.type("examp")
             pg.wait_for_selector("#molc-host [role=listbox]", state="visible")
             assert pg.get_attribute(i, "aria-expanded") == "true" and pg.get_attribute(i, "aria-controls") == pg.get_attribute("#molc-host [role=listbox]", "id")
             assert pg.locator("#molc-host [role=option]").count() == 1 and pg.inner_text("#molc-host [role=status]") == "1 found", pg.locator("#molc-host [role=option]").all_inner_texts()

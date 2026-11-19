@@ -2,7 +2,6 @@
 # covers: mzlab/web/barra.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
-from lib_hr import synth, load
 from lib_giro import *
 
 steps = []
@@ -17,6 +16,7 @@ try:
         step("no samples, Data: every header button opens and closes, nothing moves", lambda: walk(pg, "data, empty"))
         step("no samples, draw: every header button opens and closes, nothing moves", lambda: (view(pg, "draw"), walk(pg, "draw, empty"), view(pg, "data")))
         step("no samples: Data → each view → Data moves nothing", lambda: round_trip(pg, VIEWS))
+        step("no console error, no failed request", lambda: clean(r))
 finally:
     try: r.close()
     except Exception: pass
