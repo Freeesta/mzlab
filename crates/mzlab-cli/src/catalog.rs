@@ -20,10 +20,7 @@ const GLOBAL: &[(&str, &str)] = &[
 const FLAG_HELP: &[(&str, &str)] = &[
     ("--out", "write to this file, not stdout"),
     ("--set", "one NAME=VALUE setting; repeat the flag for more"),
-    (
-        "--sample",
-        "sample ids: 1,3,5 or 2-4",
-    ),
+    ("--sample", "sample ids: 1,3,5 or 2-4"),
     ("--from", "start of the window, minutes"),
     ("--to", "end of the window, minutes"),
     ("--at", "retention time, minutes"),
@@ -50,10 +47,7 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ("--roles", "the JSON file that names the role of each file"),
     ("--name", "the name the answer carries"),
     ("--match", "also answer what this number is compatible with"),
-    (
-        "--full",
-        "every part, with SHA-256",
-    ),
+    ("--full", "every part, with SHA-256"),
     ("--rt", "window in min: A or A,B"),
     ("--ms-level", "MS level, default 1"),
     ("--polarity", "keep one polarity: + or -"),
