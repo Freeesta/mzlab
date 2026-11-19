@@ -265,3 +265,7 @@ fn uv_row(
 #[cfg(test)]
 #[path = "mzml_dad_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "mzml_dad_grid_tests.rs"]
+mod grid_tests;
