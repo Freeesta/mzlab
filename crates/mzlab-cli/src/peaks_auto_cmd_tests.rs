@@ -54,7 +54,7 @@ fn peaks_are_the_core_result_and_set_names_are_accepted() {
     ]));
     assert_eq!(
         String::from_utf8(o.stdout).unwrap().trim(),
-        "{\"schema\":\"peak_auto/1\",\"peaks\":[],\"choices\":[{\"key\":\"b0_b1\",\"choice\":\"omitted\",\"reason\":\"baseline=zero: the area is measured from 0, so the detection baseline ends are not used\"}]}"
+        "{\"schema\":\"peak-auto/1\",\"peaks\":[],\"choices\":[{\"key\":\"b0_b1\",\"choice\":\"omitted\",\"reason\":\"baseline=zero: the area is measured from 0, so the detection baseline ends are not used\"}]}"
     );
     let o = run(args(&[
         p,
@@ -190,11 +190,11 @@ fn area_unit_min_keeps_the_old_counts_x_min() {
     assert_eq!(run(args(&[p, "--area-unit", "h"])).code, 2);
 }
 
-/// The keys of the output are exactly those `docs/schemi/peak_auto-1.json` documents, for each baseline mode.
+/// The keys of the output are exactly those `docs/schemi/peak-auto-1.json` documents, for each baseline mode.
 #[test]
 fn the_output_keys_are_the_schemas() {
     let schema: serde_json::Value =
-        serde_json::from_str(include_str!("../../../docs/schemi/peak_auto-1.json")).unwrap();
+        serde_json::from_str(include_str!("../../../docs/schemi/peak-auto-1.json")).unwrap();
     let props = |v: &serde_json::Value| -> Vec<String> {
         v["properties"]
             .as_object()
@@ -214,7 +214,7 @@ fn the_output_keys_are_the_schemas() {
             serde_json::from_slice(&run(args(&[p, "--baseline", mode])).stdout).unwrap();
         let text = String::from_utf8(run(args(&[p, "--baseline", mode])).stdout).unwrap();
         assert!(
-            text.starts_with("{\"schema\":\"peak_auto/1\","),
+            text.starts_with("{\"schema\":\"peak-auto/1\","),
             "schema is the first key"
         );
         let top: Vec<&String> = v.as_object().unwrap().keys().collect();

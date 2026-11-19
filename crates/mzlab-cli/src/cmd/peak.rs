@@ -3,7 +3,7 @@
 use super::Entry;
 
 pub(crate) static TABLE: &[Entry] = &[
-    Entry::new("peak auto", "mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every peak of a high-resolution trace", crate::peaks_auto_cmd::run).schema("peak_auto/1"),
+    Entry::new("peak auto", "mzlab-cli peak auto TRACE.csv|- [--from MIN --to MIN] [--baseline zero|edges|line] [--set NAME=VALUE...]   every peak of a high-resolution trace", crate::peaks_auto_cmd::run).schema("peak-auto/1"),
     Entry::new("peak auto-lr", "mzlab-cli peak auto-lr TRACE.csv|- [--from MIN --to MIN] [--split drop|valley] [--set NAME=VALUE...]   every peak of a low-resolution SIM/MRM trace, detected on a smoothed copy, integrated raw", crate::peaks_auto_lr_cmd::run),
     Entry::new("peak edges", "mzlab-cli peak edges TRACE.csv|- --at MIN [--noise mad|rms|manual] [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace", crate::peaks_edges_cmd::run),
     Entry::new("peak area", "mzlab-cli peak area TRACE.csv|- --from MIN --to MIN [--baseline zero|line] [--set NAME=VALUE...]   one peak from zero or a line", crate::plain::peak_area_cmd::run),

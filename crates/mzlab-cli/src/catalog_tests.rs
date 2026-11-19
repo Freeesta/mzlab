@@ -373,6 +373,5 @@ fn the_whole_listing_is_compact_and_the_path_listing_is_full() {
         "some command lists its own codes"
     );
     let n = out(&["commands", "--json"]).len();
-    // 33,000 before the peak rows listed their real typed flags (they said `--set tr=J`, `...`); the hard cap of 40,000 stays
-    assert!(n < 34_500, "the compact listing is {n} bytes");
+    assert!(n < 33_000, "the compact listing is {n} bytes");
 }

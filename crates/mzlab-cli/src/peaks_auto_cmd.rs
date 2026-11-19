@@ -20,7 +20,7 @@ usage: mzlab-cli peak auto TRACE.csv|- [--from MIN] [--to MIN] [--baseline zero|
   --area-unit  s = counts x s (default, as peak area), min = counts x min (the old unit)
   --set        numbers only; the page dialog: hr_smooth (points, odd), hr_sn; engine only: hr_prom (% of the tallest), hr_scans, hr_half (points, 0 = auto), hr_slope (%),
                and with --baseline line: base_y0, base_t0, base_y1, base_t1
-  output       {\"schema\":\"peak_auto/1\",\"peaks\":[{\"t0\":MIN,\"t1\":MIN,\"b0\":COUNTS,\"b1\":COUNTS,\"area\":COUNTS_S,\"baseline\":MODE}...],\"choices\":[...]}; with edges b0/b1 are the detection baseline
+  output       {\"schema\":\"peak-auto/1\",\"peaks\":[{\"t0\":MIN,\"t1\":MIN,\"b0\":COUNTS,\"b1\":COUNTS,\"area\":COUNTS_S,\"baseline\":MODE}...],\"choices\":[...]}; with edges b0/b1 are the detection baseline
                ends, with line the line at t0 and t1; with zero or line each peak also has \"below\" (COUNTS_S, the part under the line) and its area is the
                signed one against that line. With zero (the default) b0/b1 are not written (the area is measured from 0) and \"choices\" says so; base_*
                numbers with a baseline other than line are an error (exit 2)";
@@ -146,7 +146,7 @@ pub fn run(args: Vec<String>) -> Outcome {
             let (choices, note) = choices_of(zero);
             let mut o = Outcome::ok(
                 format!(
-                    "{{\"schema\":\"peak_auto/1\",\"peaks\":[{}],\"choices\":{choices}}}\n",
+                    "{{\"schema\":\"peak-auto/1\",\"peaks\":[{}],\"choices\":{choices}}}\n",
                     rows.join(",")
                 )
                 .into_bytes(),

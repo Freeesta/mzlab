@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "peak_auto/1",
-  "title": "peak_auto/1: the peaks of `mzlab-cli peak auto`",
+  "$id": "peak-auto/1",
+  "title": "peak-auto/1: the peaks of `mzlab-cli peak auto`",
   "description": "Every high-resolution peak of a trace found by the engine, with the area under the chosen baseline mode, and the automatic choices made on the way. Times in minutes, areas in counts x s (counts x min with --area-unit min). Code: crates/mzlab-cli/src/peaks_auto_cmd.rs, crates/mzlab-core/src/peakq_auto.rs.",
   "type": "object",
   "required": ["schema", "peaks", "choices"],
   "additionalProperties": false,
   "properties": {
-    "schema": { "const": "peak_auto/1" },
+    "schema": { "const": "peak-auto/1" },
     "peaks": {
       "type": "array",
       "items": {
