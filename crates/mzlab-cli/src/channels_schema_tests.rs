@@ -1,4 +1,4 @@
-//! The keys of `mzlab-cli channels` are exactly those `docs/schemi/channels-1.json` documents (each with its unit).
+//! The keys of `mzlab-cli file channels` are exactly those `docs/schemi/channels-1.json` documents (each with its unit).
 
 use mzlab_core::json::{parse, Value};
 
@@ -19,7 +19,11 @@ fn every_channel_key_is_in_the_schema() {
     std::fs::create_dir_all(&dir).unwrap();
     let f = dir.join("a.mzML");
     std::fs::write(&f, crate::tests::mzml(10.0)).unwrap();
-    let o = execute(&["channels".into(), f.to_string_lossy().into_owned()]);
+    let o = execute(&[
+        "file".into(),
+        "channels".into(),
+        f.to_string_lossy().into_owned(),
+    ]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let v = parse(&o.stdout).unwrap();
     assert_eq!(keys(&v), props(&schema));

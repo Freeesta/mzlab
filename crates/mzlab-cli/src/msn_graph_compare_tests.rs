@@ -93,7 +93,8 @@ fn the_command_compares_two_graphs_of_the_same_infusion() {
         |args: &[&str]| crate::execute(&args.iter().map(|s| s.to_string()).collect::<Vec<_>>());
     let g = d.join("g.json");
     let o = go(&[
-        "msn-graph",
+        "msn",
+        "graph",
         mzml,
         "--formula",
         "C14H15N3O5+",
@@ -101,18 +102,13 @@ fn the_command_compares_two_graphs_of_the_same_infusion() {
         g.to_str().unwrap(),
     ]);
     assert_eq!(o.code, 0, "{}", o.stderr);
-    let o = go(&[
-        "msn-graph",
-        "compare",
-        g.to_str().unwrap(),
-        g.to_str().unwrap(),
-    ]);
+    let o = go(&["msn", "compare", g.to_str().unwrap(), g.to_str().unwrap()]);
     let r = String::from_utf8(o.stdout).unwrap();
     assert_eq!(o.code, 0, "{}", o.stderr);
     assert!(
         r.contains("\"validated\":true") && r.contains("\"min\":1"),
         "{r}"
     );
-    assert_eq!(go(&["msn-graph", "compare", g.to_str().unwrap()]).code, 2);
+    assert_eq!(go(&["msn", "compare", g.to_str().unwrap()]).code, 2);
     let _ = std::fs::remove_dir_all(&d);
 }

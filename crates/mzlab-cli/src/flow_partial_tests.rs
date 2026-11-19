@@ -1,5 +1,5 @@
 //! `convert.mzml` on a cut file (H6-8): the run record says what the read lost. `prov.json`, `report.json` and `flowrun/1` carry the cause among the
-//! warnings and the counts as the note of the file, the same counts `mzlab-cli convert` writes in `conversion/1`, also when the step comes from the cache;
+//! warnings and the counts as the note of the file, the same counts `mzlab-cli file convert` writes in `conversion/1`, also when the step comes from the cache;
 //! the whole file says nothing.
 use mzlab_core::json::{parse, Value};
 
@@ -79,11 +79,11 @@ fn a_cut_file_is_in_the_record_of_the_run_with_its_counts() {
     std::fs::create_dir_all(dir.join("data")).unwrap();
     std::fs::write(dir.join("data/t.mzXML"), mzxml_file(true)).unwrap();
     std::fs::write(dir.join("plan.json"), PLAN).unwrap();
-    // the counts of `mzlab-cli convert` on the same file
+    // the counts of `mzlab-cli file convert` on the same file
     let report = dir.join("r.json");
     let (data, conv) = (dir.join("data"), dir.join("conv"));
     let args = [p(&data), "--out", p(&conv), "--report", p(&report)];
-    let mut a = vec!["convert".to_string()];
+    let mut a = vec!["file".to_string(), "convert".to_string()];
     a.extend(args.iter().map(|x| x.to_string()));
     let conv = crate::execute(&a);
     assert_eq!(conv.code, 3, "{}", conv.stderr);

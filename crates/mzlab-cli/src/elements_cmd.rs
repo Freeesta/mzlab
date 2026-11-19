@@ -1,13 +1,13 @@
-//! `mzlab-cli elements --json [--out PATH]`: the periodic table for MS (`elements/1`, `mzlab_core::periodic`), byte for byte what the dialog
+//! `mzlab-cli ion elements --json [--out PATH]`: the periodic table for MS (`elements/1`, `mzlab_core::periodic`), byte for byte what the dialog
 //! «Periodic table» of the page and the app reads.
 
 use std::path::PathBuf;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli elements: the periodic table for mass spectrometry as JSON (elements/1).
+pub const HELP: &str = "mzlab-cli ion elements: the periodic table for mass spectrometry as JSON (elements/1).
 
-usage: mzlab-cli elements --json [--out PATH]
+usage: mzlab-cli ion elements --json [--out PATH]
 
   --json         the only format (accepted so that the command reads like the others)
   --out PATH     write there instead of the standard output
@@ -43,11 +43,11 @@ mod tests {
 
     #[test]
     fn the_command_prints_the_route_json() {
-        let o = run(&["elements", "--json"]);
+        let o = run(&["ion", "elements", "--json"]);
         assert_eq!(o.code, 0);
         let want = mzlab_core::periodic::elements_json();
         assert_eq!(String::from_utf8(o.stdout).unwrap(), format!("{want}\n"));
-        assert_eq!(run(&["elements", "--nope"]).code, 2);
-        assert_eq!(run(&["elements", "--help"]).code, 0);
+        assert_eq!(run(&["ion", "elements", "--nope"]).code, 2);
+        assert_eq!(run(&["ion", "elements", "--help"]).code, 0);
     }
 }

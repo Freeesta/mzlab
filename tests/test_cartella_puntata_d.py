@@ -1,5 +1,5 @@
 """«Open folder» and folder datasets (.D / .d / Waters .raw): the list of the page (CartPP.collect, run by node over a fake handle built from the disk) is the list of
-`mzlab-cli folder list` (the scan of the desktop app) on one synthetic tree, and a pointed .D walks and groups exactly like a dropped one (CartCarica.entryOfHandle)."""
+`mzlab-cli file list` (the scan of the desktop app) on one synthetic tree, and a pointed .D walks and groups exactly like a dropped one (CartCarica.entryOfHandle)."""
 import json
 import shutil
 import subprocess
@@ -53,7 +53,7 @@ def tree(tmp_path_factory):
 
 
 def cli_rows(r):
-    out = subprocess.run(cargo_util.cli_argv("folder", "list", str(r), "--json"), check=True, capture_output=True, encoding="utf-8", cwd=ROOT).stdout
+    out = subprocess.run(cargo_util.cli_argv("file", "list", str(r), "--json"), check=True, capture_output=True, encoding="utf-8", cwd=ROOT).stdout
     j = json.loads(out)
     assert j["schema"] == "folder/1" and j["truncated"] is False
     return [(i["path"], i["kind"], i["bundle"]) for i in j["items"]]

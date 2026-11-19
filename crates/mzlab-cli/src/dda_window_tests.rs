@@ -1,4 +1,4 @@
-//! `mzlab-cli dda-window`: on a synthetic Orbitrap DDA file of `tools/dati_sintetici.py` (skipped without python3 and numpy, `MZLAB_GOLDEN_STRICT=1`
+//! `mzlab-cli spectrum dda-window`: on a synthetic Orbitrap DDA file of `tools/dati_sintetici.py` (skipped without python3 and numpy, `MZLAB_GOLDEN_STRICT=1`
 //! fails instead) the CLI gives the bytes of the engine of the page (`Routes::handle("/api/dda_window")` on the index built in memory, as the site builds it).
 
 use std::path::Path;
@@ -48,7 +48,7 @@ fn cli_gives_the_bytes_of_the_engine() {
         ("0", "1000", true),
         ("500", "600", true),
     ] {
-        let mut args = vec!["dda-window", &fp, "--from", a, "--to", b];
+        let mut args = vec!["spectrum", "dda-window", &fp, "--from", a, "--to", b];
         if !hr {
             args.extend(["--set", "hr=0"]);
         }
@@ -72,11 +72,21 @@ fn cli_gives_the_bytes_of_the_engine() {
 #[test]
 fn usage_errors_exit_with_2() {
     for a in [
-        vec!["dda-window"],
-        vec!["dda-window", "a.mzML", "--from", "1"],
-        vec!["dda-window", "a", "b", "--from", "1", "--to", "2"],
-        vec!["dda-window", "a", "--from", "x", "--to", "2"],
+        vec!["spectrum", "dda-window"],
+        vec!["spectrum", "dda-window", "a.mzML", "--from", "1"],
         vec![
+            "spectrum",
+            "dda-window",
+            "a",
+            "b",
+            "--from",
+            "1",
+            "--to",
+            "2",
+        ],
+        vec!["spectrum", "dda-window", "a", "--from", "x", "--to", "2"],
+        vec![
+            "spectrum",
             "dda-window",
             "a",
             "--from",
@@ -91,6 +101,7 @@ fn usage_errors_exit_with_2() {
     }
     assert_eq!(
         run(&[
+            "spectrum",
             "dda-window",
             "/nonexistent/x.mzML",
             "--from",
@@ -101,5 +112,5 @@ fn usage_errors_exit_with_2() {
         .code,
         4
     );
-    assert_eq!(run(&["dda-window", "--help"]).code, 0);
+    assert_eq!(run(&["spectrum", "dda-window", "--help"]).code, 0);
 }

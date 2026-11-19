@@ -1,7 +1,7 @@
 // @ts-strict
 // The two points where an integrated area meets its baseline (the ends of the window on the line) as 24 px handles over the chart: drag with mouse, finger
 // or pen, or ← → one point (Shift: five). Where the end goes (onto a point of the trace, never past the other end or a neighbouring integration) is the
-// engine's (QUALITA.windowEnd, mzlab_core::intwin, the bytes of `mzlab-cli peak-window`); this file only asks, moves the end and redraws. Loaded by barre-maniglie.js.
+// engine's (QUALITA.windowEnd, mzlab_core::intwin, the bytes of `mzlab-cli peak window`); this file only asks, moves the end and redraws. Loaded by barre-maniglie.js.
 // On SIM/MRM panels the ends are the two anchors of the integration (`it.snap`): each on the trace, at zero or where the user put it (manual: ↑ ↓ or a drag
 // off the line); S or the menu (context menu, Shift+F10) sets the mode. picchi.js (snapBase) turns the two modes into the baseline.
 /** @typedef {Record<string, any>} Bag */

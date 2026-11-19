@@ -1,4 +1,4 @@
-//! What `mzlab-cli convert` says of each file it converted: spectra and `conversion/1` read back from the head of the mzML (so a file taken from the cache is
+//! What `mzlab-cli file convert` says of each file it converted: spectra and `conversion/1` read back from the head of the mzML (so a file taken from the cache is
 //! described the same way) and the `--report` JSON, one object per input.
 
 use std::fs::File;

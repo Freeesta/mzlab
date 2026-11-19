@@ -1,4 +1,4 @@
-"""The rule «which file is the companion of which» in a SCIEX pair: the engine's (crates/mzlab-lettori/src/pair.rs, through `mzlab-cli pair --json`)
+"""The rule «which file is the companion of which» in a SCIEX pair: the engine's (crates/mzlab-lettori/src/pair.rs, through `mzlab-cli file pair --json`)
 and the page's twin (mzlab/web/wiff-pair.js, run by node) give the same answer for every name of a synthetic folder, case variants and decoys included."""
 import json, shutil, subprocess, tempfile
 from pathlib import Path
@@ -25,7 +25,7 @@ def test_site_and_engine_pair_the_same_files():
         site = json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, text=True).stdout)
         for n in listing:
             half, want, found = site[n]
-            r = subprocess.run([str(cli_bin()), "pair", str(d / n), "--json"], capture_output=True, text=True)
+            r = subprocess.run([str(cli_bin()), "file", "pair", str(d / n), "--json"], capture_output=True, text=True)
             if not half:
                 assert r.returncode == 2, n
                 assert found is None

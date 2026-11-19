@@ -122,7 +122,7 @@ Oldest or zero-basename-reference groups that are live, with what reads them.
 | `tests/data/xtb/` (102) | 1 072 831 | 2026-10-16 | `crates/mzlab-chem/tests/xtb_671.rs` (`"{name}{}_fukui.csv"`). |
 | `crates/mzlab-llm/tests/data/` (52) | 40 355 | 2026-10-21 | Adapter tests read the folder by provider/case name. |
 | `tests/data/llm/` (27) | 16 169 | 2026-10-21 | `llm_eval_tests.rs`, `llm_replay_tests.rs` (`llm eval CASES_DIR`). |
-| `normative/lists/` (17) | 1 735 954 | 2026-10-30 | `mzlab-cli normative pack`, `hashFiles('normative/lists/**')`. |
+| `normative/lists/` (17) | 1 735 954 | 2026-10-30 | `mzlab-cli db normative pack`, `hashFiles('normative/lists/**')`. |
 | `fuzz/regressioni/` (3) | 89 557 | 2026-10-31 | `crates/mzlab-lettori/tests/fuzz_readers.rs` reads the folder. |
 | `vendor/opentfraw/` (33) | 509 320 | 2026-10-12 | Path dependency of `mzlab-core` feature `thermo`; all its modules are reached. |
 | `crates/mzlab-desktop/icons/` (6) | 394 257 | 2026-10-10 | Tauri `icon` list in `tauri.conf.json`. |

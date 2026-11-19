@@ -7,7 +7,7 @@ Graph of the top-level modules of `crates/mzlab-feat/src` (those in `lib.rs`, wi
 - The script is throwaway (not a repository tool): its result is pasted in the body of each PR, before → after.
 
 ## The cycle today
-- **50 modules, 43 369 lines** (out of 115 modules and 108 958 lines of code). `attributio` (27 772 lines) is outside it: it depends on `aligned`, `rowident`, `untargeted` and `interp`, no module of the cycle depends on it. Other cycles: 4 modules (`weakfile`, `slabs`, `spill`, `series`, 1 115 lines), 2 (`suspects`, `suspects_listings`). Outside the cycle: `chem`, `steps`, `hypo`, `axis`, `aligned_meta`, `kinetic` and the others.
+- **50 modules, 43 369 lines** (out of 115 modules and 108 958 lines of code). `attributio` (27 772 lines) is outside it: it depends on `aligned`, `rowident`, `untargeted` and `interp`, no module of the cycle depends on it. Other cycles: 4 modules (`weakfile`, `slabs`, `spill`, `series`, 1 115 lines), 2 (`suspects`, `suspects_listings`). Outside the cycle: `chem`, `flow steps`, `hypo`, `axis`, `aligned_meta`, `kinetic` and the others.
 - Members, lines: `legacy` 15 177 · `untargeted` 5 476 · `interp` 3 421 · `evid` 1 932 · `tp` 1 725 · `family` 1 503 · `groups` 1 396 · `transitions` 746 · `network` 692 · `lists` 673 · `broad` 554 · `rtwarp` 550 · `params` 493 · `quality` 487 · `store_read` 459 · `store` 457 · `filters` 447
 - (continued) `filters_blank` 445 · `centwave` 421 · `resolve` 412 · `ms2spec` 405 · `align` 389 · `trace` 385 · `sweep` 362 · `broad_gt` 334 · `gapfill` 320 · `famalign` 315 · `channels` 300 · `ms2` 285 · `rtmap` 249 · `isotopes` 242 · `norm` 234 · `export` 231 · `post` 208 · `recipe` 196 · `qc` 159 · `pipeline` 148
 - (continued) `table` 140 · `aligned` 132 · `rowmeta` 130 · `broad_blank` 130 · `view` 124 · `filters_nts` 81 · `rowident` 78 · `export_ms` 74 · `lrnoise` 59 · `broad_front` 58 · `params_unit` 47 · `params_height` 45 · `report` 43.
@@ -15,7 +15,7 @@ Graph of the top-level modules of `crates/mzlab-feat/src` (those in `lib.rs`, wi
 
 ## What a light build compiles today
 - `attributio` already sits behind the `attributio` feature: `mzlab-feat-wasm --no-default-features --features untargeted` (wasm32, release) reads 305 files and 62 883 lines of `mzlab-feat`, none of `attributio/` (dep-info); `flow_tab` and `flow_stat` (same features as `mzlab-feat`, a single unit) 280 files and 57 176 lines.
-- After a change to `attributio/mod.rs` the three builds do not recompile `mzlab-feat` (0.1-1.6 s); after a change to `legacy.rs` they recompile it in 40 s (4 CPU). The weight of the light builds is the rest of the node: `legacy` 12 460 lines read, `untargeted` 5 475, `steps` 4 039, `evid` 1 932, `tp` 1 725.
+- After a change to `attributio/mod.rs` the three builds do not recompile `mzlab-feat` (0.1-1.6 s); after a change to `legacy.rs` they recompile it in 40 s (4 CPU). The weight of the light builds is the rest of the node: `legacy` 12 460 lines read, `untargeted` 5 475, `flow steps` 4 039, `evid` 1 932, `tp` 1 725.
 - Closure of the modules that use `run_tab.rs` and `run_stat.rs` (`flow_drift`, `flow_export_annot`, `flow_stat`, `ionnet`, `methods`, `plausible`, `runorder`, `transitions`): 80 modules, 86 938 lines in the graph with all features; after cuts 1-8 below: 68 modules, 46 267 lines, still pulled in by `transitions` → `legacy` and `groups` → `legacy`.
 
 ## Back edges, by how many modules they keep in the cycle

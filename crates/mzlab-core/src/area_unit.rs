@@ -1,4 +1,4 @@
-//! The unit of the areas the automatic integrations export: counts x s (default, as `peak-area` and the manual integration give) or counts x min
+//! The unit of the areas the automatic integrations export: counts x s (default, as `peak area` and the manual integration give) or counts x min
 //! (the engine's internal unit, the old output). Converted at the export boundary only; the engines keep minutes.
 
 use crate::peakq_lrauto::{lr_auto_json, LrAuto};

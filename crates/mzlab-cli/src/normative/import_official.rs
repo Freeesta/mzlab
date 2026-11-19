@@ -1,4 +1,4 @@
-//! `mzlab-cli normative import-official READER CSV SIDECAR OUT [--file NAME] [--date YYYY-MM-DD]`: the user's own copy of an official list (READER `svhc` or
+//! `mzlab-cli db normative import-official READER CSV SIDECAR OUT [--file NAME] [--date YYYY-MM-DD]`: the user's own copy of an official list (READER `svhc` or
 //! `ca_prop65`, a CSV) becomes the private `.mzsus` OUT, using the CAS sidecar (`mzlab-cas/1`, plain text) for the structures; the summary JSON goes to stdout.
 //! The same function runs in the app (`normative/import-official`) and in the browser (the lazy `normative` .wasm); `tests/test_normative_import_parity.py` compares them.
 

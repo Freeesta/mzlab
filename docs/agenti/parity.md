@@ -12,9 +12,9 @@ Rule (`CLAUDE.md`): every function exists in the site (`.wasm` + OPFS) and in th
 ## Page engine (ops of `rust-worker.js`)
 | Function | Site | App | CLI | Test |
 |---|---|---|---|---|
-| Common routes (TIC, XIC, spectra, MRM, maps, channels, info, statistics) | engine `.wasm` | `rpc.rs` | `channels`, `manual-table` | `crates/mzlab-desktop/tests/parity_routes.rs` (37 steps, `.wasm` with `MZLAB_WASM_PKG` = app), `test_canali_wasm.py` |
+| Common routes (TIC, XIC, spectra, MRM, maps, channels, info, statistics) | engine `.wasm` | `rpc.rs` | `channels`, `peak table` | `crates/mzlab-desktop/tests/parity_routes.rs` (37 steps, `.wasm` with `MZLAB_WASM_PKG` = app), `test_canali_wasm.py` |
 | Run type proposed by the channels (`channels::experiment_of`): no SRM scans = `lc-mrm`, SIM only = `lc-sim` (also with a DAD), DAD only = `uv-only` | engine `.wasm` | `rpc.rs` | `channels` | `channels/tests.rs` (`a_file_of_sim_chromatograms_only_is_typed_sim_also_with_a_uv_trace`); the three faces call the same function |
-| MSn graph (`msngrafo`), centroids (`lr_index_cen`, `mzml2cen`), SRM for mzFinder (`natsrm`) | yes | `rpc_msn.rs` | `msn-graph` | `parity_msn.rs` (app = core), `test_msngrafo_wasm.py` (`.wasm` = CLI) |
+| MSn graph (`msngrafo`), centroids (`lr_index_cen`, `mzml2cen`), SRM for mzFinder (`natsrm`) | yes | `rpc_msn.rs` | `msn graph` | `parity_msn.rs` (app = core), `test_msngrafo_wasm.py` (`.wasm` = CLI) |
 | Instrument log of a `.raw` (`natregistro`, `/api/registro`) | `thermo` module (`registroDi`) | `rpc_nat.rs` | - (no command; the CLI's `method/1` lists the series) | `crates/mzlab-desktop/tests/natregistry.rs` (app = log reader + `mzlab_lettori::json::chromatogram_json`, the function the module calls); the synthetic `.raw` has no status log: the test goes through the TIC and through the error of an absent series |
 | Background mass (`masscal`) | yes | `rpc.rs` | - | `parity_masscal.rs` |
 | Copyable command, short line (`lr_flow_command`, `flow/line`) | `.wasm` `rotte` | `rpc_lr.rs`, `flow/line` | `flow run` | `parity_flow_command.rs` |
@@ -22,7 +22,7 @@ Rule (`CLAUDE.md`): every function exists in the site (`.wasm` + OPFS) and in th
 | Site-only by nature | `module`, `policy`, `budget`, `down`, `lr_gunzip`, `lr_cen_have`, `lr_cen_adopt`; `lr_flow_line`/`lr_flow_sched` (the app uses `flow/line`, `flow/live/*`) | - | - | `SOLO_SITO` |
 | Load "Cancel" (`lr_cancel`) | stops copies and indexes | `IdxBuilder::cancel`: the file's index builds stop at the next read or write and leave no files (neither `.part` nor index); `lr_remove` also removes the file's indexes | - | `crates/mzlab-desktop/tests/cancel.rs`, `idxbuild_tests.rs` (app); `e2e_annulla_orfani.py` (site) |
 
-## Flow steps (`mzlab-cli steps`, site executors in `F.liveJobs`)
+## Flow steps (`mzlab-cli flow steps`, site executors in `F.liveJobs`)
 | Steps | Site | App/CLI | Test |
 |---|---|---|---|
 | `index.mzidx`, `features.detect/align/gapfill`, `spectra.centroid` | yes | yes | `e2e_flow_web.py`, `e2e_flow_centroid_web.py`, `test_feat_wasm.py` |
@@ -50,7 +50,7 @@ Rule (`CLAUDE.md`): every function exists in the site (`.wasm` + OPFS) and in th
 | Features from a `.raw` and from its mzML | - | `features` | limit: same result only for centroid acquisitions; a profile `.raw` uses the vendor centroids, its profile mzML uses mzLab's centroiding (area of `features` and of the Thermo reader) |
 
 ## Checks on real data (outside the repository)
-- `.mzidx` of 6 mzML, channels (7 inputs), `manual-table` of a `.wiff` (windows on SIM ions, with and without sums): site and CLI equal byte for byte; differences found and closed: TIC of the `.wiff` (f32/f64), SRM and precursor energy, type of a SIM-only run, source name of the native index.
+- `.mzidx` of 6 mzML, channels (7 inputs), `peak table` of a `.wiff` (windows on SIM ions, with and without sums): site and CLI equal byte for byte; differences found and closed: TIC of the `.wiff` (f32/f64), SRM and precursor energy, type of a SIM-only run, source name of the native index.
 
 ## Priorities
 - In order: conversion parity for every readers module; missing branches in the app for the page engine ops; site <-> app route parity route by route; `prov/1` in the site Flow; table and export steps in the site; centroids of a profile mzML in the site Flow; Attributio steps in the site; plan check in Rust instead of `flow-check.js`; direct reading in the site of the other families; a single "where it runs" registry (`runs_in` of the descriptor aligned with the real executors).

@@ -23,8 +23,8 @@ impl Engine {
         };
         let end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
         let mut m = self.nat.mzml(slot, read, size)?;
-        let chroms = m.chromatograms(end).map_err(|e| error_json(&e))?;
-        let facts = mzlab_core::iteminfo::facts_from(&mut m, end, chroms.len() as i64, true).map_err(|e| error_json(&e))?;
+        let chroms = r.idx.layout.chromatograms(&mut m, end).map_err(|e| error_json(&e))?;
+        let facts = r.idx.layout.facts(&mut m, end, chroms.len() as i64, true).map_err(|e| error_json(&e))?;
         r.pon_cromatogrammi(name, &chroms, &facts);
         Ok(r.canali().json())
     }

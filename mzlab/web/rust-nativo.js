@@ -247,7 +247,7 @@ async function orphansDi(/** @type {any} */ ARCH, /** @type {(n: string) => Prom
 /** runs fn while holding the dataset's shared Web Lock (directly where the browser has none) */
 const held = (/** @type {string} */ key, /** @type {() => Promise<any>} */ fn) => { const L = locks(); return L ? L.request(LOCK + key, { mode: "shared" }, fn) : fn(); };
 
-/** The writer of «Download .mzML» for a stub: a .wiff sample is written by the `sciex` module with the options of `mzlab-cli convert` (no optical matrix), the engine alone
+/** The writer of «Download .mzML» for a stub: a .wiff sample is written by the `sciex` module with the options of `mzlab-cli file convert` (no optical matrix), the engine alone
  * leaves out what `estesi` writes (SRM dwell and energy, isolation offsets, TIC and BPC of a Full Scan); the other samples by the engine. Rejects with `err.file.moduleLoad`. */
 async function writerOf(/** @type {Stub} */ st, /** @type {Function} */ native_to_mzml) {
   if (st.centroid || !st.members.some(x => /\.wiff$/i.test(x.name)))

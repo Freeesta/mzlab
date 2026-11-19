@@ -1,13 +1,13 @@
-//! `mzlab-cli match-mz X --tables FILE.json [--set NAME=VALUE...] [--out PATH]`: what a number is compatible with (neutral loss, adduct shift,
+//! `mzlab-cli ion match X --tables FILE.json [--set NAME=VALUE...] [--out PATH]`: what a number is compatible with (neutral loss, adduct shift,
 //! known contaminant), the `mz-match/1` JSON of `mzlab_core::search::match_number`, byte for byte what the page and the app answer.
 
 use std::path::PathBuf;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli match-mz: what a number is compatible with, as JSON. Candidates with their error, never an identification.
+pub const HELP: &str = "mzlab-cli ion match: what a number is compatible with, as JSON. Candidates with their error, never an identification.
 
-usage: mzlab-cli match-mz X --tables FILE.json [--set NAME=VALUE...] [--out PATH]
+usage: mzlab-cli ion match X --tables FILE.json [--set NAME=VALUE...] [--out PATH]
 
   X               the number: a neutral-loss mass, an adduct shift or the m/z of a known contaminant
   --tables FILE   the tables to look in, one JSON object {\"losses\":[{id,f}], \"adducts\":[{id,k,add|sub,z}], \"contam\":[{id,mz,pol}]}
@@ -86,7 +86,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         Err(m) => return Outcome::fail(&m),
     };
     let ([x], Some(tables)) = (o.pos.as_slice(), &o.tables) else {
-        return Outcome::fail("match-mz needs one number and --tables FILE.json");
+        return Outcome::fail("ion match needs one number and --tables FILE.json");
     };
     let Some(x) = x
         .replace(',', ".")

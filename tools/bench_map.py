@@ -286,7 +286,7 @@ def main():
                 prof = wd / f"profile_{nm}"; shutil.rmtree(prof, ignore_errors=True)      # a profile on disk: the quota of a real browser (an incognito context refuses ~1 GB)
                 b = ctx = p.chromium.launch_persistent_context(str(prof), executable_path=os.environ.get("MZLAB_CHROMIUM") or None, viewport={"width": 1440, "height": 950})
                 ctx.set_default_timeout(600000)
-                ctx.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}" + INIT)
+                ctx.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({status:'skipped'}));}catch(_){}" + INIT)
                 pg = ctx.pages[0] if ctx.pages else ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
                 try:
                     o = run_case(pg, a.port, nm, kind, ns, npk, wd); o["page_errors"] = errs[:3]; res.append(o)

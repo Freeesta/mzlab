@@ -1,5 +1,5 @@
 //! The figures of the fragmentation graph: the golden SVGs of a synthetic graph (`tests/msn_figura/`, `MZLAB_UPDATE_FIGURE=1` rewrites them), the HTML with
-//! nothing outside it, and the same bytes from the command, `msn-graph --figure`, `msn-graph figure` and the step `msn.figure@1`.
+//! nothing outside it, and the same bytes from the command, `msn graph --figure`, `msn graph figure` and the step `msn.figure@1`.
 
 use std::path::PathBuf;
 
@@ -176,7 +176,8 @@ fn the_command_and_figure_write_the_same_bytes() {
     let msn = fixtures().join("../golden/ref/msntree_rotta/msn.mzML");
     let (g, mol) = (d.join("g.json"), fixtures().join("molecola.mol"));
     let made = cli(&[
-        "msn-graph",
+        "msn",
+        "graph",
         msn.to_str().unwrap(),
         "--formula",
         "C14H15N3O5+",
@@ -193,7 +194,7 @@ fn the_command_and_figure_write_the_same_bytes() {
     // `figure` on the graph the command wrote
     let other = d.join("o");
     cli(&[
-        "msn-graph",
+        "msn",
         "figure",
         g.to_str().unwrap(),
         "--view",
@@ -219,7 +220,8 @@ fn the_command_and_figure_write_the_same_bytes() {
 fn the_png_needs_its_feature() {
     let d = dir("png");
     let r = crate::execute(&[
-        "msn-graph".to_string(),
+        "msn".to_string(),
+        "graph".to_string(),
         "figure".to_string(),
         fixtures().join("g.json").display().to_string(),
         "--figure".to_string(),
@@ -246,16 +248,16 @@ fn the_png_needs_its_feature() {
 #[test]
 fn the_arguments_are_checked() {
     for a in [
-        &["msn-graph", "f.mzML", "--figure", "svg"][..],
-        &["msn-graph", "f.mzML", "--figure", "gif", "--out", "x"],
-        &["msn-graph", "f.mzML", "--view", "cubo"],
+        &["msn", "graph", "f.mzML", "--figure", "svg"][..],
+        &["msn", "graph", "f.mzML", "--figure", "gif", "--out", "x"],
+        &["msn", "graph", "f.mzML", "--view", "cubo"],
     ] {
         let o = crate::execute(&a.iter().map(|s| s.to_string()).collect::<Vec<_>>());
         assert_eq!(o.code, 2, "{a:?}");
     }
 }
 
-/// The step of the Flow writes the bytes of `msn-graph figure`.
+/// The step of the Flow writes the bytes of `msn graph figure`.
 #[test]
 fn the_step_writes_the_bytes_of_the_command() {
     let d = dir("step");
@@ -308,7 +310,7 @@ fn an_unknown_figure_flag_or_value_is_refused() {
     let refused: [&[&str]; 2] = [&["--no-such-flag", "svg"], &["--view", "cube"]];
     for flags in refused {
         let mut a = vec![
-            "msn-graph",
+            "msn",
             "figure",
             g.to_str().unwrap(),
             "--out",
@@ -320,7 +322,8 @@ fn an_unknown_figure_flag_or_value_is_refused() {
     }
     // the refusal names the English values
     let o = crate::execute(&[
-        "msn-graph".into(),
+        "msn".into(),
+        "graph".into(),
         "figure".into(),
         g.display().to_string(),
         "--view".into(),

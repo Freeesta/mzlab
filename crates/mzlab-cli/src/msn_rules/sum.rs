@@ -1,4 +1,4 @@
-//! `mzlab-cli msn-rules sum LINES...`: the lines of `msn-rules` added up per stratum (instrument and activation) and polarity: the coverage of the
+//! `mzlab-cli msn rules sum LINES...`: the lines of `msn rules` added up per stratum (instrument and activation) and polarity: the coverage of the
 //! rules of the structure against each decoy, the decoy rate of every rule and the thresholds of the protocol. All the arithmetic of the validation is here.
 
 use std::collections::BTreeMap;
@@ -228,6 +228,8 @@ pub fn run(args: Vec<String>) -> Outcome {
     while let Some(x) = a.next() {
         if x == "--out" {
             out = a.next().map(PathBuf::from);
+        } else if x.starts_with("--") {
+            return Outcome::fail(&format!("unknown option {x}"));
         } else if let Err(e) = std::fs::read_to_string(&x).map(|t| text.push_str(&t)) {
             return failed(format!("{x}: {e}"));
         }

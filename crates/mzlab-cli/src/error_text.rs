@@ -162,7 +162,7 @@ fn render_params(msg: &str, key: &str, par: Vec<(String, String)>) -> String {
     format!("{t} ({key}{rest})")
 }
 
-/// A usage, input or selector failure (codes 2, 4, 5) ends with the help of the command that was run: `(mzlab-cli channels --help)`, not another's.
+/// A usage, input or selector failure (codes 2, 4, 5) ends with the help of the command that was run: `(mzlab-cli file channels --help)`, not another's.
 pub(crate) fn with_help(args: &[String], mut o: crate::Outcome) -> crate::Outcome {
     if !matches!(o.code, 2 | 4 | 5)
         || !o.stderr.starts_with("error: ")
@@ -174,15 +174,12 @@ pub(crate) fn with_help(args: &[String], mut o: crate::Outcome) -> crate::Outcom
         o.stderr += "(mzlab-cli --help)\n";
         return o;
     }
-    let word = |i: usize| {
-        args.get(i)
-            .map(|a| crate::plain::canonical(a))
-            .filter(|a| !a.is_empty() && a.chars().all(|c| c.is_ascii_lowercase() || c == '-'))
-    };
-    let command = match (word(0), word(1)) {
-        (Some(c @ ("flow" | "llm")), Some(sub)) => format!("{c} {sub} "),
-        (Some(c), _) if c != "-h" && c != "--help" && !c.starts_with('-') => format!("{c} "),
-        _ => String::new(),
+    let command = match crate::cmd::find(args) {
+        Some((e, _)) => format!("{} ", e.name),
+        None => match args.first() {
+            Some(_) => crate::cmd::group_of(args).map_or(String::new(), |(p, _)| format!("{p} ")),
+            None => String::new(),
+        },
     };
     o.stderr += &format!("(mzlab-cli {command}--help)\n");
     o

@@ -1,4 +1,4 @@
-//! Tests of `mzlab-cli mol-cut` (`mol_cut_cmd.rs`): the same JSON as `cut_json`, and usage errors exit 2.
+//! Tests of `mzlab-cli mol cut` (`mol_cut_cmd.rs`): the same JSON as `cut_json`, and usage errors exit 2.
 
 use crate::execute;
 
@@ -14,7 +14,8 @@ fn the_command_prints_the_function_json() {
     std::fs::write(&p, ETHANOL).unwrap();
     let f = p.to_str().unwrap();
     let o = run(&[
-        "mol-cut",
+        "mol",
+        "cut",
         f,
         "--set",
         "bonds=1-2",
@@ -25,7 +26,7 @@ fn the_command_prints_the_function_json() {
         "--set",
         "gap=0.5",
     ]);
-    let home = run(&["mol-cut", f, "--set", "bonds=0-1"]);
+    let home = run(&["mol", "cut", f, "--set", "bonds=0-1"]);
     std::fs::remove_file(&p).ok();
     assert_eq!(o.code, 0);
     let mut q = mzlab_core::json::Out::default();
@@ -44,14 +45,14 @@ fn the_command_prints_the_function_json() {
 #[test]
 fn usage_errors_exit_2() {
     for a in [
-        vec!["mol-cut"],
-        vec!["mol-cut", "a", "b"],
-        vec!["mol-cut", "--nope"],
-        vec!["mol-cut", "/no/such/file.mol"],
-        vec!["mol-cut", "-", "--set", "colour=red"],
-        vec!["mol-cut", "-", "--set", "bonds"],
+        vec!["mol", "cut"],
+        vec!["mol", "cut", "a", "b"],
+        vec!["mol", "cut", "--nope"],
+        vec!["mol", "cut", "/no/such/file.mol"],
+        vec!["mol", "cut", "-", "--set", "colour=red"],
+        vec!["mol", "cut", "-", "--set", "bonds"],
     ] {
         assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
     }
-    assert_eq!(run(&["mol-cut", "--help"]).code, 0);
+    assert_eq!(run(&["mol", "cut", "--help"]).code, 0);
 }

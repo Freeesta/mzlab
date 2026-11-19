@@ -211,7 +211,7 @@ impl State {
         }
     }
 
-    /// «Validate mzML»: the report of `mzlab-cli validate --json` for a registered mzML (the page's `valida` module gives the same bytes).
+    /// «Validate mzML»: the report of `mzlab-cli file validate --json` for a registered mzML (the page's `valida` module gives the same bytes).
     fn validate_mzml(&self, name: &str) -> Result<Answer> {
         let entry = self.store.lock().unwrap_or_else(|e| e.into_inner()).get(name).filter(|e| e.nat.is_none());
         let entry = entry.ok_or_else(|| Error::new("err.file.unknown").with("detail", name))?;

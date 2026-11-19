@@ -1,4 +1,4 @@
-//! `mzlab-cli convert INPUT... --out FOLDER`: vendor files, maker folders and folders of them to indexed mzML. A thin caller of the executor of the step
+//! `mzlab-cli file convert INPUT... --out FOLDER`: vendor files, maker folders and folders of them to indexed mzML. A thin caller of the executor of the step
 //! `convert.mzml` (`flow_base::convert_job`): it builds the one-step plan, runs it with the cache of the folder and places `NAME.mzML` beside it.
 //! Exit codes: 0 done, 1 some file failed (the others are written), 2 usage, 3 plan not valid, 4 an input is missing. Rules: `docs/agenti/cli.md`.
 
@@ -361,9 +361,10 @@ fn prepared(
         .find(|s| s.id == "convert.mzml")
         .map_or(1, |s| s.version);
     let mut plan = parse(plan_text(entries, version).as_bytes())
-        .map_err(|e| fail(3, &e.to_string(), "this is a bug of mzlab-cli convert"))?;
+        .map_err(|e| fail(3, &e.to_string(), "this is a bug of mzlab-cli file convert"))?;
     for set in sets {
-        apply_set(&mut plan, &reg, set).map_err(|e| fail(2, &e, "mzlab-cli convert --help"))?;
+        apply_set(&mut plan, &reg, set)
+            .map_err(|e| fail(2, &e, "mzlab-cli file convert --help"))?;
     }
     let found: HashMap<String, PathBuf> = entries
         .iter()
@@ -381,13 +382,13 @@ fn prepared(
             Err(fail(
                 2,
                 &format!("the settings are not valid:\n{}", list.join("\n")),
-                "see mzlab-cli convert --help",
+                "see mzlab-cli file convert --help",
             ))
         }
         Err(e) => Err(fail(
             3,
             &e.to_string(),
-            "this is a bug of mzlab-cli convert",
+            "this is a bug of mzlab-cli file convert",
         )),
     }
 }
@@ -416,15 +417,19 @@ fn make_work(work: &Path, out: &Path) -> Result<(), Outcome> {
     })
 }
 
-/// `mzlab-cli convert ARGS...` (the arguments after `convert`).
+/// `mzlab-cli file convert ARGS...` (the arguments after `convert`).
 pub fn run(args: Vec<String>) -> Outcome {
     let a = match parse_args(args) {
         Ok(Some(a)) => a,
         Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
-        Err(e) => return fail(2, &e, "mzlab-cli convert --help"),
+        Err(e) => return fail(2, &e, "mzlab-cli file convert --help"),
     };
     let Some(out) = a.out.clone() else {
-        return fail(2, "convert needs --out FOLDER", "mzlab-cli convert --help");
+        return fail(
+            2,
+            "convert needs --out FOLDER",
+            "mzlab-cli file convert --help",
+        );
     };
     let work = out.join(".convert");
     if let Err(o) = make_work(&work, &out) {
@@ -469,7 +474,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     }
     let run = match run_checked(&ready, text.as_bytes(), &runner, workers) {
         Ok((run, _)) => run,
-        Err(e) => return fail(3, &e.to_string(), "this is a bug of mzlab-cli convert"),
+        Err(e) => return fail(3, &e.to_string(), "this is a bug of mzlab-cli file convert"),
     };
     let ended = ended.lock().unwrap_or_else(|e| e.into_inner());
     let roots = file_roots(&plan);

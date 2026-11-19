@@ -1,4 +1,4 @@
-//! `mzlab-cli items` on a small mzML written here: a stepped CE (20/35/50 on one precursor) gives `ce_mid` 35 and `ce_spread` 15 in the JSON
+//! `mzlab-cli file items` on a small mzML written here: a stepped CE (20/35/50 on one precursor) gives `ce_mid` 35 and `ce_spread` 15 in the JSON
 //! (the same `ms2_exps` the page reads), a single CE gives null for both.
 
 use mzlab_core::json::parse;
@@ -20,7 +20,11 @@ fn mzml(ces: &[f64]) -> String {
 fn exps(ces: &[f64], tag: &str) -> Vec<(f64, Option<f64>, Option<f64>)> {
     let p = std::env::temp_dir().join(format!("items-{}-{tag}.mzML", std::process::id()));
     std::fs::write(&p, mzml(ces)).unwrap();
-    let o = execute(&["items".to_string(), p.to_string_lossy().into_owned()]);
+    let o = execute(&[
+        "file".to_string(),
+        "items".to_string(),
+        p.to_string_lossy().into_owned(),
+    ]);
     let _ = std::fs::remove_file(&p);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let v = parse(&o.stdout).unwrap();
@@ -77,7 +81,11 @@ fn every_item_key_is_in_the_schema() {
         .unwrap();
     let p = std::env::temp_dir().join(format!("items-{}-schema.mzML", std::process::id()));
     std::fs::write(&p, mzml(&[20.0, 35.0, 50.0])).unwrap();
-    let o = execute(&["items".to_string(), p.to_string_lossy().into_owned()]);
+    let o = execute(&[
+        "file".to_string(),
+        "items".to_string(),
+        p.to_string_lossy().into_owned(),
+    ]);
     let _ = std::fs::remove_file(&p);
     assert!(o.stdout.starts_with(b"{\"schema\":\"items/1\",\"items\":["));
     let v = parse(&o.stdout).unwrap();

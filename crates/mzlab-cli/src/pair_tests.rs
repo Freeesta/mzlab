@@ -1,4 +1,4 @@
-//! `mzlab-cli pair` and the companion rule on a synthetic folder: names only (empty files), then a real synthetic pair (`tools/wiff_grande.py`, needs
+//! `mzlab-cli file pair` and the companion rule on a synthetic folder: names only (empty files), then a real synthetic pair (`tools/wiff_grande.py`, needs
 //! python3 and numpy: it fails without them) opened from either half, also when the case of the names differs.
 
 use std::path::Path;
@@ -34,7 +34,7 @@ fn either_half_finds_the_other_ignoring_case_and_lists_only_names() {
     let w = d.join("Run 1.wiff").to_string_lossy().into_owned();
     let s = d.join("run 1.WIFF.SCAN").to_string_lossy().into_owned();
     for (input, half, found) in [(&w, "wiff", "run 1.WIFF.SCAN"), (&s, "scan", "Run 1.wiff")] {
-        let o = cli(&["pair", input, "--json"]);
+        let o = cli(&["file", "pair", input, "--json"]);
         assert_eq!(o.code, 0, "{}", o.stderr);
         let v = parse(&o.stdout).unwrap();
         assert_eq!(v.get("schema").unwrap().str(), Some("wiffpair/1"));
@@ -50,7 +50,12 @@ fn either_half_finds_the_other_ignoring_case_and_lists_only_names() {
 fn a_missing_companion_exits_1_and_says_what_was_looked_for() {
     let d = tmp("missing");
     touch(&d, &["lone.wiff", "plain.mzML"]);
-    let o = cli(&["pair", &d.join("lone.wiff").to_string_lossy(), "--json"]);
+    let o = cli(&[
+        "file",
+        "pair",
+        &d.join("lone.wiff").to_string_lossy(),
+        "--json",
+    ]);
     assert_eq!(o.code, 1);
     let v = parse(&o.stdout).unwrap();
     assert_eq!(v.get("ok").unwrap().bool(), Some(false));
@@ -63,7 +68,7 @@ fn a_missing_companion_exits_1_and_says_what_was_looked_for() {
         .str()
         .unwrap()
         .contains("mzlab-pair-"));
-    let plain = cli(&["pair", &d.join("lone.wiff").to_string_lossy()]);
+    let plain = cli(&["file", "pair", &d.join("lone.wiff").to_string_lossy()]);
     assert_eq!(plain.code, 1);
     assert!(String::from_utf8_lossy(&plain.stdout).contains("missing\tlone.wiff.scan"));
     let _ = std::fs::remove_dir_all(&d);
@@ -74,14 +79,14 @@ fn usage_errors_exit_2() {
     let d = tmp("usage");
     touch(&d, &["a.mzML", "b.scan"]);
     for a in [
-        vec!["pair"],
-        vec!["pair", "--nope"],
-        vec!["pair", d.join("a.mzML").to_str().unwrap()],
-        vec!["pair", d.join("b.scan").to_str().unwrap()],
+        vec!["file", "pair"],
+        vec!["file", "pair", "--nope"],
+        vec!["file", "pair", d.join("a.mzML").to_str().unwrap()],
+        vec!["file", "pair", d.join("b.scan").to_str().unwrap()],
     ] {
         assert_eq!(cli(&a).code, 2, "{a:?}");
     }
-    assert_eq!(cli(&["pair", "--help"]).code, 0);
+    assert_eq!(cli(&["file", "pair", "--help"]).code, 0);
     let _ = std::fs::remove_dir_all(&d);
 }
 
@@ -96,7 +101,13 @@ fn a_synthetic_pair_opens_from_either_half() {
     // the scan renamed in capitals: the engine's rule still pairs them
     std::fs::rename(d.join("Pair.wiff.scan"), d.join("PAIR.WIFF.SCAN")).unwrap();
     let ids = |f: &str| {
-        let o = cli(&["channels", &d.join(f).to_string_lossy(), "--sample", "2"]);
+        let o = cli(&[
+            "file",
+            "channels",
+            &d.join(f).to_string_lossy(),
+            "--sample",
+            "2",
+        ]);
         assert_eq!(o.code, 0, "{}", o.stderr);
         o.stdout
     };

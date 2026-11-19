@@ -1,4 +1,4 @@
-//! Tests of `mzlab-cli mol-search --sub` (`mol_search_cmd.rs`): the same JSON as `search_json`, files and literal SMILES, `--db` lists giving the
+//! Tests of `mzlab-cli mol search --sub` (`mol_search_cmd.rs`): the same JSON as `search_json`, files and literal SMILES, `--db` lists giving the
 //! answers of `tests/dati/sub_db.json` (shared with the molkit `.wasm` and the app), usage errors exit 2.
 
 use crate::execute;
@@ -13,7 +13,8 @@ fn the_command_prints_the_function_json() {
     std::fs::write(&p, "Oc1ccc(Cl)cc1Cl").unwrap();
     let f = p.to_str().unwrap();
     let o = run(&[
-        "mol-search",
+        "mol",
+        "search",
         "--sub",
         "Oc1ccccc1Cl",
         f,
@@ -36,21 +37,21 @@ fn the_command_prints_the_function_json() {
 #[test]
 fn usage_errors_exit_2() {
     for a in [
-        vec!["mol-search"],
-        vec!["mol-search", "C", "CC"],
-        vec!["mol-search", "--sub", "C"],
-        vec!["mol-search", "--sub", "--nope", "C", "CC"],
-        vec!["mol-search", "--sub", "C", "CC", "--set", "colour=red"],
-        vec!["mol-search", "--sub", "C", "CC", "--set", "max=0"],
-        vec!["mol-search", "--sub", "C", "CC", "--set", "stereo=yes"],
-        vec!["mol-search", "--sub", "C1C", "CC"],
-        vec!["mol-search", "--sub", "C", "CC", "--db", "-"],
-        vec!["mol-search", "--sub", "C", "--db"],
-        vec!["mol-search", "--sub", "C", "--db", "/no/such/list.sdf"],
+        vec!["mol", "search"],
+        vec!["mol", "search", "C", "CC"],
+        vec!["mol", "search", "--sub", "C"],
+        vec!["mol", "search", "--sub", "--nope", "C", "CC"],
+        vec!["mol", "search", "--sub", "C", "CC", "--set", "colour=red"],
+        vec!["mol", "search", "--sub", "C", "CC", "--set", "max=0"],
+        vec!["mol", "search", "--sub", "C", "CC", "--set", "stereo=yes"],
+        vec!["mol", "search", "--sub", "C1C", "CC"],
+        vec!["mol", "search", "--sub", "C", "CC", "--db", "-"],
+        vec!["mol", "search", "--sub", "C", "--db"],
+        vec!["mol", "search", "--sub", "C", "--db", "/no/such/list.sdf"],
     ] {
         assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
     }
-    assert_eq!(run(&["mol-search", "--help"]).code, 0);
+    assert_eq!(run(&["mol", "search", "--help"]).code, 0);
 }
 
 #[test]
@@ -65,7 +66,8 @@ fn a_structure_list_gives_the_shared_fixture() {
         let p = std::env::temp_dir().join(format!("mol_search_db_{}_{k}.txt", std::process::id()));
         std::fs::write(&p, r["db"].as_str().unwrap()).unwrap();
         let mut a = vec![
-            "mol-search",
+            "mol",
+            "search",
             "--sub",
             r["query"].as_str().unwrap(),
             "--db",

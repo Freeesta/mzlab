@@ -1,36 +1,73 @@
 //! The table of commands: each family file lists its commands as `Entry` values; `find` looks a command up and `help` prints `--help` from the same rows.
 //! A command with an empty `help` is listed on the line of another one.
 
+mod completions;
+mod db;
 mod docs;
 mod features;
+mod file;
 mod flow;
-mod library;
-mod llm;
-mod mol;
-mod spectra;
-mod traces;
+mod ion;
+mod msn;
+mod peak;
 
 use crate::Outcome;
 
 pub(crate) struct Entry {
-    /// One word, or two for a subcommand (`flow run`).
+    /// The path of command words (`flow run`, `msn lib add`): one to three words.
     pub name: &'static str,
-    /// Old spellings still accepted on input.
-    pub aliases: &'static [&'static str],
-    /// The usage line(s) after `mzlab-cli `, as printed by `--help`; empty when another entry's line covers this command.
+    /// The usage line after `mzlab-cli `, as printed by `--help`; empty for a hidden command.
     pub help: &'static str,
     pub run: fn(Vec<String>) -> Outcome,
+    /// One sentence for the command catalog; empty until the catalog fills it.
+    #[allow(dead_code)]
+    pub synopsis: &'static str,
+    /// The `schema` of the JSON document the command prints, `""` when it has none or several.
+    #[allow(dead_code)]
+    pub schema: &'static str,
+    /// The exit codes the command can give (`exit.rs`).
+    #[allow(dead_code)]
+    pub exits: &'static [u8],
+}
+
+impl Entry {
+    pub(crate) const fn new(
+        name: &'static str,
+        help: &'static str,
+        run: fn(Vec<String>) -> Outcome,
+    ) -> Self {
+        Entry {
+            name,
+            help,
+            run,
+            synopsis: "",
+            schema: "",
+            exits: &[0, 1, 2, 3, 4, 5, 6],
+        }
+    }
+
+    pub(crate) const fn schema(mut self, schema: &'static str) -> Self {
+        self.schema = schema;
+        self
+    }
+}
+
+/// `word` first among `rest`: the arguments of a subcommand whose entry sits in the table and whose code still reads its own word.
+pub(crate) fn pre(word: &str, mut rest: Vec<String>) -> Vec<String> {
+    rest.insert(0, word.to_string());
+    rest
 }
 
 /// The families in the order of the help text.
-static FAMILIES: [&[Entry]; 8] = [
+static FAMILIES: [&[Entry]; 9] = [
     features::TABLE,
     flow::TABLE,
-    llm::TABLE,
-    spectra::TABLE,
-    mol::TABLE,
-    traces::TABLE,
-    library::TABLE,
+    file::TABLE,
+    peak::TABLE,
+    msn::TABLE,
+    ion::TABLE,
+    db::TABLE,
+    completions::TABLE,
     docs::TABLE,
 ];
 
@@ -43,86 +80,122 @@ const JSON_FLAG: &[&str] = &[
     "flow run",
     "flow check",
     "flow verify",
-    "steps",
-    "validate",
-    "pair",
-    "samples",
-    "dad",
-    "elements",
-    "folder",
-    "manual-table",
+    "flow steps",
+    "file validate",
+    "file pair",
+    "file list",
+    "ion elements",
+    "peak table",
 ];
 
 /// Commands whose stdout is JSON anyway: `--json` changes nothing, except that a failure is an `error/1` as well.
 const JSON_DEFAULT: &[&str] = &[
     "flow report",
     "flow record",
-    "msn-lib",
-    "msn-rules",
-    "msn-graph",
-    "llm",
-    "mol-label",
-    "mol-anal",
-    "mol-check",
-    "mol-cip",
-    "mol-hilite",
-    "mol-sel",
-    "mol-link",
-    "mol-cut",
-    "mol-mech",
-    "mol-search",
-    "channels",
-    "items",
-    "dda-window",
-    "ion-pattern",
-    "ion-mz",
-    "match-mz",
-    "background",
-    "wiff",
-    "ref-list",
-    "peak-edges",
-    "peak-auto",
-    "peak-auto-lr",
-    "peak-area",
-    "peak-window",
+    "msn lib add",
+    "msn lib build",
+    "msn lib export",
+    "msn lib search",
+    "msn rules",
+    "msn rules sum",
+    "msn graph",
+    "msn complete",
+    "msn compare",
+    "msn figure",
+    "mol label",
+    "mol anal",
+    "mol check",
+    "mol cip",
+    "mol hilite",
+    "mol sel",
+    "mol link",
+    "mol cut",
+    "mol mech",
+    "mol search",
+    "file channels",
+    "file items",
+    "file info",
+    "file verify",
+    "spectrum dda-window",
+    "ion pattern",
+    "ion mz",
+    "ion match",
+    "trace background",
+    "db ref-list",
+    "peak edges",
+    "peak auto",
+    "peak auto-lr",
+    "peak area",
+    "peak window",
+    "llm tools",
+    "llm inspect",
+    "llm params",
+    "llm context",
+    "llm replay",
+    "llm eval",
 ];
 
-/// Whether the stdout of `name` is JSON without a flag (`dad` and `samples` too: they take `--json` as a no-op).
+/// Whether the stdout of `name` is JSON without a flag (`dad` and `sample` commands too: they take `--json` as a no-op).
 pub(crate) fn json_by_default(name: &str) -> bool {
-    JSON_DEFAULT.contains(&name) || matches!(name, "dad" | "samples")
+    JSON_DEFAULT.contains(&name) || name.starts_with("dad ") || name.starts_with("sample ")
 }
 
 /// Whether `name` reads `--json` itself.
 pub(crate) fn reads_json(name: &str) -> bool {
-    JSON_FLAG.contains(&name)
+    JSON_FLAG.contains(&name) || name.starts_with("dad ") || name.starts_with("sample ")
 }
 
-/// The entry of `args` and how many words of `args` its name takes; two-word names are tried in table order before their one-word fallback.
+/// The entry of `args` and how many words of `args` its name takes: the longest name that `args` start with.
 pub(crate) fn find(args: &[String]) -> Option<(&'static Entry, usize)> {
-    let first = canonical(args.first()?);
-    entries().find_map(|e| match e.name.split_once(' ') {
-        Some((a, b)) => (a == first && args.get(1).is_some_and(|x| x == b)).then_some((e, 2)),
-        None => (e.name == first).then_some((e, 1)),
-    })
-}
-
-/// The current name of a command given by an old spelling.
-pub(crate) fn canonical(word: &str) -> &str {
     entries()
-        .find(|e| e.aliases.contains(&word))
-        .map_or(word, |e| e.name)
+        .filter_map(|e| {
+            let words: Vec<&str> = e.name.split(' ').collect();
+            (args.len() >= words.len() && words.iter().zip(args).all(|(w, a)| w == a))
+                .then_some((e, words.len()))
+        })
+        .max_by_key(|(_, n)| *n)
 }
 
-/// The command list of `docs/agenti/cli.md` (between its marker lines), written by `mzlab-cli help-md` and `tools/cli_doc.py`: the names in table order, wrapped under 480 characters.
+/// The group (`flow`, `msn lib`) that `args` start with and that has subcommands: its path and the entries under it.
+pub(crate) fn group_of(args: &[String]) -> Option<(String, Vec<&'static Entry>)> {
+    let first = args.first()?;
+    let mut path = first.clone();
+    let mut inside: Vec<&Entry> = Vec::new();
+    for k in 1..=2 {
+        let p = format!("{path} ");
+        let now: Vec<&Entry> = entries().filter(|e| e.name.starts_with(&p)).collect();
+        if now.is_empty() {
+            break;
+        }
+        inside = now;
+        match args.get(k).filter(|w| !w.starts_with('-')) {
+            Some(w) if entries().any(|e| e.name.starts_with(&format!("{path} {w} "))) => {
+                path = format!("{path} {w}")
+            }
+            _ => break,
+        }
+    }
+    (!inside.is_empty()).then_some((path, inside))
+}
+
+/// The command list of `docs/agenti/cli.md` (between its marker lines), written by `mzlab-cli help-md` and `tools/cli_doc.py`: one item per group
+/// with its subcommands (`flow run|check|...`), wrapped under 480 characters.
 pub(crate) fn list_md() -> String {
+    let mut items: Vec<(String, Vec<&str>)> = Vec::new();
+    for e in entries().filter(|e| e.name != "help-md") {
+        let (key, last) = e.name.rsplit_once(' ').unwrap_or(("", e.name));
+        match items.last_mut() {
+            Some((k, v)) if k == key && !key.is_empty() => v.push(last),
+            _ => items.push((key.to_string(), vec![last])),
+        }
+    }
     let mut out = String::new();
     let mut line = String::new();
-    for e in entries().filter(|e| e.name != "help-md" && e.name != "flow") {
-        let old: Vec<String> = e.aliases.iter().map(|a| format!("`{a}`")).collect();
-        let item = if old.is_empty() {
-            format!("`{}`", e.name)
+    for (key, subs) in items {
+        let item = if key.is_empty() {
+            format!("`{}`", subs[0])
         } else {
-            format!("`{}` (old: {})", e.name, old.join(", "))
+            format!("`{key} {}`", subs.join("|"))
         };
         if !line.is_empty() && line.len() + item.len() + 2 > 480 {
             out += &format!("{line}\n");
@@ -140,7 +213,7 @@ pub(crate) fn list_md() -> String {
 const TOP: &str = "mzlab-cli: LC-MS analysis from the command line, the engine of the mzLab app; the files never leave this computer.
 
 Start here:
-  mzlab-cli steps --json                  the catalog of the Flow steps: ids, parameters, ports (what an analysis can be made of)
+  mzlab-cli flow steps --json                  the catalog of the Flow steps: ids, parameters, ports (what an analysis can be made of)
   mzlab-cli flow check PLAN.json --json   is a plan valid, with every problem named
   mzlab-cli flow run PLAN.json --in FILE... --out FOLDER   run a whole plan
   mzlab-cli COMMAND --help                the help of one command: on stdout, exit 0
@@ -207,50 +280,37 @@ pub(crate) fn wants_help(rest: &[String]) -> bool {
         .any(|a| a == "--help" || a == "-h")
 }
 
-/// The subcommand words an entry lists in its usage lines (`mzlab-cli samples vars|group|list|select ...`).
-pub(crate) fn subwords(e: &Entry) -> Vec<&str> {
-    let marker = format!("mzlab-cli {} ", e.name);
-    e.help
-        .split("\n       ")
-        .filter_map(|l| l.strip_prefix(marker.as_str()))
-        .filter_map(|r| r.split(' ').next())
-        .filter(|w| {
-            w.contains('|')
-                && w.chars()
-                    .all(|c| c.is_ascii_lowercase() || c == '|' || c == '-')
-        })
-        .flat_map(|w| w.split('|'))
-        .collect()
-}
-
-/// The help of `e` for `--help`/`-h` anywhere in its arguments `rest`: nothing but `--help` (after a subcommand word the usage line lists) is
-/// given to the command, so no file named before the flag is ever read; a command that has no text of its own for it prints its usage lines
-/// from the table. Always exit 0, on stdout.
-pub(crate) fn help_of(e: &Entry, rest: &[String]) -> Outcome {
-    let mut ask = Vec::new();
-    if let Some(w) = rest.first().filter(|w| subwords(e).contains(&w.as_str())) {
-        ask.push(w.clone());
-    }
-    ask.push("--help".to_string());
-    let own = (e.run)(ask);
-    if own.code == 0 && !own.stdout.is_empty() && own.stderr.is_empty() {
+/// The help of `e` for `--help`/`-h` anywhere in its arguments: nothing but `--help` is given to the command, so no file named before the flag is ever
+/// read; a command that has no text of its own for it prints its usage line from the table. Always exit 0, on stdout.
+pub(crate) fn help_of(e: &Entry, _rest: &[String]) -> Outcome {
+    let own = (e.run)(vec!["--help".to_string()]);
+    if own.code == 0
+        && !own.stdout.is_empty()
+        && own.stderr.is_empty()
+        && !own.stdout.starts_with(b"{")
+    {
         return own;
     }
-    let lines: Vec<&str> = if !e.help.is_empty() {
-        vec![e.help]
-    } else {
-        let group = format!("{} ", e.name);
-        entries()
-            .filter(|x| x.name.starts_with(&group) && !x.help.is_empty())
-            .map(|x| x.help)
-            .collect()
-    };
-    let text = if lines.is_empty() {
+    let text = if e.help.is_empty() {
         format!("usage: mzlab-cli {} ...\n", e.name)
     } else {
-        format!("usage: {}\n", lines.join("\n       "))
+        format!("usage: {}\n", e.help)
     };
     Outcome::ok(format!("{text}\n{}\n", crate::citation::reminder()).into_bytes())
+}
+
+/// `mzlab-cli GROUP --help`, or a group word with no subcommand: the usage lines of the group.
+pub(crate) fn group_help(inside: &[&Entry]) -> String {
+    let lines: Vec<&str> = inside
+        .iter()
+        .map(|e| e.help)
+        .filter(|h| !h.is_empty())
+        .collect();
+    format!(
+        "usage: {}\n\n{}\n",
+        lines.join("\n       "),
+        crate::citation::reminder()
+    )
 }
 
 #[cfg(test)]

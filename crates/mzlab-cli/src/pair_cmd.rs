@@ -1,4 +1,4 @@
-//! `mzlab-cli pair FILE... [--json]`: where the companion of a SCIEX `.wiff` or `.wiff.scan` stands, by the rule the site and the app follow
+//! `mzlab-cli file pair FILE... [--json]`: where the companion of a SCIEX `.wiff` or `.wiff.scan` stands, by the rule the site and the app follow
 //! (`mzlab_lettori::pair`). Only names are listed in the folder of each file, no file is read; `convert`, `channels` and `flow run` use the same rule
 //! to take a `.wiff` given alone together with its `.wiff.scan`.
 
@@ -8,9 +8,9 @@ use mzlab_core::json::Out;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli pair: find the other half of a SCIEX pair (.wiff + .wiff.scan, same base name, any case) in the folder of the file given.
+pub const HELP: &str = "mzlab-cli file pair: find the other half of a SCIEX pair (.wiff + .wiff.scan, same base name, any case) in the folder of the file given.
 
-usage: mzlab-cli pair FILE... [--json]
+usage: mzlab-cli file pair FILE... [--json]
 
   FILE   a .wiff or a .wiff.scan; the file beside it is looked for by name (no file is opened or read)
   --json one wiffpair/1 object on the standard output: {schema, ok, pairs: [{input, half, wanted, found, size, looked_in}]}; found is null when missing

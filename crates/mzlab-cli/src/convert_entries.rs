@@ -1,4 +1,4 @@
-//! The mzML files `mzlab-cli convert` makes from its inputs: one per dataset, or one per sample of a dataset with several (`NAME-ID.mzML`),
+//! The mzML files `mzlab-cli file convert` makes from its inputs: one per dataset, or one per sample of a dataset with several (`NAME-ID.mzML`),
 //! the names that would clash keeping their extension; a sample with no scans is marked so that its progress line says it is empty.
 
 use std::path::{Path, PathBuf};

@@ -15,7 +15,7 @@ const CartPP = (() => {
   /** @type {[string, RegExp][]} */
   const TIPI = [["data", /\.(mzml|raw|wiff)$/i], ["method", /\.dam$/i], ["library", /\.(msp|mgf|mzlib|jsonl|ndjson)$/i], ["table", /\.(csv|tsv)$/i]];
   const kindOf = name => { for (const [t, re] of TIPI) if (re.test(name)) return t; return null; };
-  // folder datasets (the same the drop path reads, and `mzlab-cli folder list`): any *.d folder (Agilent .D, Bruker .d: the loader says what is missing), a *.raw folder that holds _FUNC001.DAT (Waters)
+  // folder datasets (the same the drop path reads, and `mzlab-cli file list`): any *.d folder (Agilent .D, Bruker .d: the loader says what is missing), a *.raw folder that holds _FUNC001.DAT (Waters)
   async function bundleOf(name, h) {
     if (/\.d$/i.test(name) && name.length > 2) return "d";
     if (/\.raw$/i.test(name) && name.length > 4) { for await (const [n] of h.entries()) if (/^_func001\.dat$/i.test(n)) return "waters-raw"; }

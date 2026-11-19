@@ -1,4 +1,4 @@
-//! Text export of an `msn-lib/1` library (`mzlab-cli msn-lib export`, the Flow step `msn.library_export` and the page): one record per spectrum of every entry, as MSP or as MassBank `.txt` (MS_TYPE MS2, MS3, ...,
+//! Text export of an `msn-lib/1` library (`mzlab-cli msn lib export`, the Flow step `msn.library_export` and the page): one record per spectrum of every entry, as MSP or as MassBank `.txt` (MS_TYPE MS2, MS3, ...,
 //! the path of precursors in the comment). With `annota` each peak a node explains carries its formula and the neutral loss from the precursor. Used by the CLI and
 //! the `.wasm` of the page, so both write the same bytes.
 

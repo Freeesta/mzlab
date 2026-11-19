@@ -1,6 +1,6 @@
 // Runs `wiff_list` or `wiff_verify` of the `wiffwrite` module (wasm-bindgen --target nodejs) on .wiff + .wiff.scan pairs and prints the text:
 //   node wiff_inventory_node.js PKG list [--inventory] FILE.wiff...    |    node wiff_inventory_node.js PKG verify OUT.wiff SRC.wiff...
-// Used by tests/test_wiff_inventory_wasm.py (the same bytes as `mzlab-cli wiff list|verify`).
+// Used by tests/test_wiff_inventory_wasm.py (the same bytes as `mzlab-cli file info|verify`).
 const fs = require("fs");
 const path = require("path");
 const m = require(path.resolve(process.argv[2]));

@@ -1,4 +1,4 @@
-//! The in-silico candidate package in the desktop app: the same package as the site (`static/insilico/`, written by `mzlab-cli insilico pack`), kept as `insilico/NNN.bin` and
+//! The in-silico candidate package in the desktop app: the same package as the site (`static/insilico/`, written by `mzlab-cli db insilico pack`), kept as `insilico/NNN.bin` and
 //! `insilico/catalogo.json` under the folder of the libraries (`libraries.rs`; the package is a folder of its own, written here with checked names, not through the page's `lib/*` routes). First use fetches it from the site (each piece checked with its size and SHA-256, and inflated once
 //! to check the rows too); after that it is read from disk, offline: `spectra.insilico` takes `insilico/catalogo.json` as its `suspects` file and reads the pieces next to it.
 //! Routes `insilico/*` in `protocol.rs`. Every error is a key `normative.dl.err.*` (the keys of the other package) of `lang/`.

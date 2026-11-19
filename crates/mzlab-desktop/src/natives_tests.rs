@@ -7,7 +7,7 @@ use std::process::Command;
 
 const LISTING: &str = r#"{"schema":"samples_list/1","format":"SciexWiff","bytes":5504,"scan":{"bytes":384,"indexed_end":384},"samples":[{"id":1,"name":"rifiutato_s1","scans":1,"kinds":["ms"],"polarity":"+","rt":[0.016666666666666666,0.016666666666666666],"tic":{"apex_rt":0.016666666666666666,"apex":1,"sum":1}},{"id":2,"name":"rifiutato_s2","scans":0,"why":"empty"},{"id":3,"name":"rifiutato_s3","scans":0,"why":"refused","refused":{"error_key":"err.file.wiffScanType","params":{"code":"8","experiment":"1","type":"TOF MS"}}}]}"#;
 
-/// The same pair listed from its container and index alone (`listing`): what `mzlab-cli samples list --json` prints and the site's `native_samples(.., true)` returns.
+/// The same pair listed from its container and index alone (`listing`): what `mzlab-cli sample list --json` prints and the site's `native_samples(.., true)` returns.
 const LISTING_CHEAP: &str = r#"{"schema":"samples_list/1","format":"SciexWiff","bytes":5504,"scan":{"bytes":384,"indexed_end":384},"samples":[{"id":1,"name":"rifiutato_s1","scans":1,"size":126,"kinds":["ms"],"polarity":"+","rt":[0.016666666666666666,0.016666666666666666],"tic":{"apex_rt":0.016666666666666666,"apex":1,"sum":1}},{"id":2,"name":"rifiutato_s2","scans":0,"size":0,"why":"empty"},{"id":3,"name":"rifiutato_s3","scans":0,"size":0,"why":"refused","refused":{"error_key":"err.file.wiffScanType","params":{"code":"8","experiment":"1","type":"TOF MS"}}}]}"#;
 
 #[test]

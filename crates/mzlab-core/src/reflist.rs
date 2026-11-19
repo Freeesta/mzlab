@@ -1,5 +1,5 @@
 //! Reference lists of known m/z values (`reflist/1`): the CSV a person adds as a list in the Known contaminants panel, read here for the page,
-//! the app and `mzlab-cli ref-list`. A good row is an ion (m/z, adduct, polarity); a wrong row gives an error with its line number.
+//! the app and `mzlab-cli db ref-list`. A good row is an ion (m/z, adduct, polarity); a wrong row gives an error with its line number.
 
 use crate::elements::{adducts, ion_mz, mass, parse_formula};
 use crate::error::{Error, Result};

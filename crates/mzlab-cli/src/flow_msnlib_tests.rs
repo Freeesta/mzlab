@@ -1,5 +1,5 @@
 //! `msn.library_export@1` and `msn.table_export@1` after `spectra.msn_graph@1` on the synthetic infusion of the route `/api/msntree`: the library has the bytes of
-//! `msn-lib add` + `msn-lib export --all --annotate`, and the tables read like the graph.
+//! `msn lib add` + `msn lib export --all --annotate`, and the tables read like the graph.
 
 use std::path::{Path, PathBuf};
 
@@ -40,13 +40,23 @@ fn cli(args: &[&str]) -> String {
     String::from_utf8(o.stdout).unwrap()
 }
 
-/// The text `msn-lib export` writes for the same infusion, entry `id`.
+/// The text `msn lib export` writes for the same infusion, entry `id`.
 fn command(d: &Path, flags: &[&str]) -> String {
     let (lib, file) = (d.join("lib.json"), msn());
     let (lib, file) = (lib.to_str().unwrap(), file.to_str().unwrap());
-    let added = cli(&["msn-lib", "add", lib, file, "--id", "STD", "--formula", ION]);
+    let added = cli(&[
+        "msn",
+        "lib",
+        "add",
+        lib,
+        file,
+        "--id",
+        "STD",
+        "--formula",
+        ION,
+    ]);
     assert!(added.is_empty());
-    let mut a = vec!["msn-lib", "export", lib];
+    let mut a = vec!["msn", "lib", "export", lib];
     a.extend(flags);
     cli(&a)
 }
@@ -109,7 +119,7 @@ fn the_options_pick_levels_peaks_and_notes() {
 #[test]
 fn the_tables_read_like_the_graph() {
     let d = dir("c");
-    let graph = cli(&["msn-graph", msn().to_str().unwrap(), "--formula", ION]);
+    let graph = cli(&["msn", "graph", msn().to_str().unwrap(), "--formula", ION]);
     let g = mzlab_core::json::parse(graph.as_bytes()).unwrap();
     let count = |k: &str| g.get(k).unwrap().arr().len();
     let rows = |t: &str| t.lines().count() - 1;

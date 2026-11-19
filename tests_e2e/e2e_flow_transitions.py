@@ -1,5 +1,5 @@
 """Flow «This browser» runs chrom.transitions@2 (flow/lazy/flow-web-transitions.js, `flow_transitions` of the `flowtab` .wasm): the two samples of the synthetic SIM .wiff
-(tools/wiff_sim.py) converted to mzML by `mzlab-cli convert`, a transition table with two isomers on one ion, a negative ion and a row without RT; the CSV the browser keeps is
+(tools/wiff_sim.py) converted to mzML by `mzlab-cli file convert`, a transition table with two isomers on one ion, a negative ion and a row without RT; the CSV the browser keeps is
 the one of `mzlab-cli flow run` byte for byte for the three outputs (areas from zero, the default) and for the areas from the edge line (`baseline` = edges), the job runs `via: "browser"`, past the memory budget the read is refused or asked for (`error.memoryBudget`, phase read) and no request is left unserved (`MZLAB_LR_MISS`). Builds the site and the
 .wasm of mzFinder (needs cargo, wasm-bindgen and python3: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_transitions.py"""
 import hashlib, json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
@@ -33,7 +33,7 @@ run = tmp / "run"; run.mkdir()
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_sim.py"), str(tmp / "w")], check=True, capture_output=True)
 from cli_cmd import cli_command
 CLI = cli_command()
-subprocess.run(CLI + ["convert", str(tmp / "w" / "sim.wiff"), "--out", str(run)], cwd=ROOT, check=True, capture_output=True)
+subprocess.run(CLI + ["file", "convert", str(tmp / "w" / "sim.wiff"), "--out", str(run)], cwd=ROOT, check=True, capture_output=True)
 assert all((run / n).exists() for n in NAMES), sorted(p.name for p in run.iterdir())
 
 ZERO = "peaks_edges"   # the peaks output with the areas from the line between the edges (the default is zero)

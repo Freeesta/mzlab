@@ -1,4 +1,4 @@
-//! The graph of ONE spectrum: an MS2 with its precursor (a library record, a single scan) as a tree of one level. Used by `mzlab-cli msn-rules` to
+//! The graph of ONE spectrum: an MS2 with its precursor (a library record, a single scan) as a tree of one level. Used by `mzlab-cli msn rules` to
 //! judge the rules of `fragrules/1` on public spectra; the graph is the one of an infusion, the root being the ion of the precursor m/z.
 
 use super::{build, Graph, Input, Options, Spettro};

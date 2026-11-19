@@ -29,7 +29,7 @@ fn sample(name: &str, bytes: &[u8]) {
 
 #[test]
 fn steps_json_has_the_ids_of_the_exports_and_the_native_flags() {
-    let all = run_cli(&["steps", "--json"]);
+    let all = run_cli(&["flow", "steps", "--json"]);
     assert_eq!(all.code, 0, "{}", all.stderr);
     let list = json(&all.stdout);
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/schemi");
@@ -72,22 +72,22 @@ fn steps_json_has_the_ids_of_the_exports_and_the_native_flags() {
         "{text}"
     );
 
-    let one = run_cli(&["steps", "--json", "--id", "features.table"]);
+    let one = run_cli(&["flow", "steps", "--json", "--id", "features.table"]);
     assert_eq!(one.code, 0);
     assert_eq!(str_of(&json(&one.stdout), "id"), "features.table");
-    let at = run_cli(&["steps", "--id", "features.detect@2"]);
+    let at = run_cli(&["flow", "steps", "--id", "features.detect@2"]);
     assert!(
         at.stdout.starts_with(b"features.detect@2  native  "),
         "{}",
         String::from_utf8_lossy(&at.stdout)
     );
-    let lines = run_cli(&["steps"]);
+    let lines = run_cli(&["flow", "steps"]);
     assert_eq!(
         String::from_utf8(lines.stdout).unwrap().lines().count(),
         list.arr().len()
     );
 
-    let unknown = run_cli(&["steps", "--json", "--id", "nope.nothing"]);
+    let unknown = run_cli(&["flow", "steps", "--json", "--id", "nope.nothing"]);
     assert_eq!(unknown.code, 5);
     let err = json(&unknown.stdout);
     assert_eq!(
@@ -101,7 +101,10 @@ fn steps_json_has_the_ids_of_the_exports_and_the_native_flags() {
         "{}",
         unknown.stderr
     );
-    assert_eq!(run_cli(&["steps", "--id", "nope"]).stdout, Vec::<u8>::new());
+    assert_eq!(
+        run_cli(&["flow", "steps", "--id", "nope"]).stdout,
+        Vec::<u8>::new()
+    );
 }
 
 #[test]

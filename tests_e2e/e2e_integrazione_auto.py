@@ -2,8 +2,8 @@
 tools/wiff_sim.py, `sim3`: a blank and three samples whose peaks drift 0.04 min from one to the next, an isomer pair of one ion in one sample only; no laboratory
 data), groups the peaks at the same time, and the page adds them in one undoable step: one row of the card «Manual integrations» per peak, grouped by ion then by
 peak (Origin «Automatic», or «No counterpart» for the peak no other file has), the area labels the usual ones, a live status with every number the engine used, the
-per-file log of the peaks found under the card, no layout shift. The card is the bytes of `mzlab-cli manual-table` for the same windows and `api/manauto` is the
-bytes of `mzlab-cli manual-table --set auto=true`. Needs the site and the .wasm (python3 tools/prepara_sito.py) and cargo for the CLI.
+per-file log of the peaks found under the card, no layout shift. The card is the bytes of `mzlab-cli peak table` for the same windows and `api/manauto` is the
+bytes of `mzlab-cli peak table --set auto=true`. Needs the site and the .wasm (python3 tools/prepara_sito.py) and cargo for the CLI.
 Run from the repo root: python3 tests_e2e/e2e_integrazione_auto.py"""
 # covers: mzlab/web/integra-tutti.js, mzlab/web/integrazioni-manuali.js, mzlab/web/integra-segue.js, crates/mzlab-core/src/manint_auto.rs, tools/wiff_sim.py
 import json, shutil, subprocess, sys, os, tempfile
@@ -18,7 +18,7 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + str(e)[:900]))
 
 if not shutil.which("cargo"):
-    print("SKIP cargo is needed for mzlab-cli manual-table"); sys.exit(0)
+    print("SKIP cargo is needed for mzlab-cli peak table"); sys.exit(0)
 D = Path(tempfile.mkdtemp(prefix="auto_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_sim.py"), str(D)], check=True, capture_output=True)
 TRUE = json.loads((D / "sim3.json").read_text())
@@ -35,12 +35,12 @@ def all_ions(pg):
     wait_for_js(pg, "(() => { const p = E.panels.find(q => q.type === 'mrm' && q._a); return !!p && new Set(p._a.sr.map(s => s.k)).size === E.files.length; })()", timeout=60000)
 
 def cli_table(st):
-    """manual-table on the .wiff for the windows the page sent (files numbered as the .wiff numbers its samples)."""
+    """peak table on the .wiff for the windows the page sent (files numbered as the .wiff numbers its samples)."""
     order = [n[:-5] for n in st["names"]]
     ws = [{**x, "file": SAMPLES.index(order[x["file"]])} for x in json.loads(st["windows"])]
     w = D / "windows.json"; w.write_text(json.dumps(ws))
     t = D / "times.json"; t.write_text(json.dumps(st["times"]))      # the time points the page shows (the helper fills the ones the names lack)
-    return cli("manual-table", D / "sim3.wiff", "--set", f"windows={w}", "--set", f"times={t}")
+    return cli("peak", "table", D / "sim3.wiff", "--set", f"windows={w}", "--set", f"times={t}")
 
 r = Run(port=8879, wd="/tmp/wd_integrazione_auto")
 try:
@@ -87,12 +87,12 @@ try:
         step("every peak has its area label (the usual ones)", labels)
         def parity():
             st = pg.evaluate("MANINT.state()")
-            need(st["csv"] == cli_table(st), "the card is the bytes of mzlab-cli manual-table")
+            need(st["csv"] == cli_table(st), "the card is the bytes of mzlab-cli peak table")
             ks = pg.evaluate("n => n.map(x => E.files.find(f => f.label === x || f.file.startsWith(x + '.')).k)", SAMPLES)
             q = json.dumps({"half": 0, "valley": 10, "sn": 5, "split": "drop"})
             site = pg.evaluate("([ks, q]) => fetch(`api/manauto?k=${ks.join(',')}&p=${encodeURIComponent(q)}`).then(r => r.text())", [ks, q])
             pf = D / "params.json"; pf.write_text(q)
-            need(site == cli("manual-table", D / "sim3.wiff", "--set", "auto=true", "--set", f"params={pf}").strip(), "api/manauto is the bytes of the CLI")
+            need(site == cli("peak", "table", D / "sim3.wiff", "--set", "auto=true", "--set", f"params={pf}").strip(), "api/manauto is the bytes of the CLI")
         step("the card is the CLI's table and api/manauto is the CLI's auto=true", parity)
         def once():
             n = len(pg.evaluate(ROWS))

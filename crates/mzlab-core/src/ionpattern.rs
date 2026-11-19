@@ -1,6 +1,6 @@
 //! Unit-resolution isotope pattern of an ion (`api/ion_pattern`): the isotopologues of a formula plus an adduct of the catalogue, grouped by
 //! nominal mass offset (M, M+1, M+2...), each group with its total probability and probability-weighted m/z. Used by the spectrum view
-//! (simulated pattern) of the page, the app and `mzlab-cli ion-pattern`; the fine structure of high resolution is `isoscore::fine_pattern`.
+//! (simulated pattern) of the page, the app and `mzlab-cli ion pattern`; the fine structure of high resolution is `isoscore::fine_pattern`.
 
 use crate::adduct_table::composition;
 use crate::elements::{parse_formula, ELECTRON};

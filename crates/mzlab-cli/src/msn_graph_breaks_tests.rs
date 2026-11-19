@@ -1,4 +1,4 @@
-//! `mzlab-cli msn-graph --breaks`: the bond breaks of a structure that give the ions of the graph, on the synthetic infusion of `/api/msntree` and
+//! `mzlab-cli msn graph --breaks`: the bond breaks of a structure that give the ions of the graph, on the synthetic infusion of `/api/msntree` and
 //! ethyl indole-3-carboxylate (the ester bond gives the acid of 162.05495, the node n3).
 
 use std::path::PathBuf;
@@ -11,7 +11,8 @@ fn run(extra: &[&str]) -> String {
     let f = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/golden/ref/msntree_rotta/msn.mzML");
     let mut a = vec![
-        "msn-graph".to_string(),
+        "msn".to_string(),
+        "graph".to_string(),
         f.to_str().unwrap().to_string(),
         "--formula".into(),
         "C14H15N3O5+".into(),
@@ -61,7 +62,8 @@ fn the_calculation_is_deterministic_and_needs_the_structure() {
     let f = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/golden/ref/msntree_rotta/msn.mzML");
     let o = execute(&[
-        "msn-graph".to_string(),
+        "msn".to_string(),
+        "graph".to_string(),
         f.to_str().unwrap().to_string(),
         "--formula".into(),
         "C14H15N3O5+".into(),

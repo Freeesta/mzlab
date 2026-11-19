@@ -14,7 +14,7 @@ use crate::natives;
 use crate::rpc::{io_error, text, Answer, Eng};
 
 /// `natdefault {ids, sizes, budget_mb?}` / `natselect {present, text}`: the answers the page's sample chooser asks of the engine (`readers::selection`, the twins of the
-/// site worker's ops; the same bytes as `sample_default`, `sample_selection` and `mzlab-cli samples select`). The budget is the engine's own on each side (the site worker's `BUDGET_MB`, the app's `ram::native_budget_mb`), as the page has no number for it; `budget_mb` overrides it.
+/// site worker's ops; the same bytes as `sample_default`, `sample_selection` and `mzlab-cli sample select`). The budget is the engine's own on each side (the site worker's `BUDGET_MB`, the app's `ram::native_budget_mb`), as the page has no number for it; `budget_mb` overrides it.
 pub(crate) fn nat_choose(op: &str, p: &Value) -> Result<Answer> {
     use mzlab_core::readers::selection;
     let nums = |k: &str| -> Vec<f64> {
@@ -128,7 +128,7 @@ impl State {
         readers_mzml::write_with(&mut *l, nat.c, &mut out, &mut tell, opz)?;
         std::io::Write::flush(&mut out).map_err(|e| io_error(&e))?;
         drop(out);
-        // the same check as `mzlab-cli convert`: an mzML the validator calls INVALID is not handed out
+        // the same check as `mzlab-cli file convert`: an mzML the validator calls INVALID is not handed out
         let back = std::fs::File::open(&tmp).map_err(|e| io_error(&e))?;
         if let Err(e) = mzlab_core::mzml_validate::check_written(std::io::BufReader::new(back)) {
             let _ = std::fs::remove_file(&tmp);

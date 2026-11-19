@@ -1,4 +1,4 @@
-//! `mzlab-cli msn-lib add|build|export`: the library of MSn trees `msn-lib/1` of the standards (`docs/agenti/msnlib.md`). `add` puts the graph of one infusion
+//! `mzlab-cli msn lib add|build|export`: the library of MSn trees `msn-lib/1` of the standards (`docs/agenti/msnlib.md`). `add` puts the graph of one infusion
 //! into a library file, `build` does it for every row of a manifest, `export` writes the MS2 spectra of the entries as MSP or MassBank. The library is always written by the
 //! same function as the route `api/msnlib/add` (`mzlab_core::msngraph::aggiungi`).
 
@@ -9,21 +9,21 @@ use mzlab_core::msngraph::{aggiungi, cerca, Options, OpzioniCerca};
 
 use mzlab_core::msngraph::{export_text, LibFormato as Format};
 
-pub const HELP: &str = "mzlab-cli msn-lib: the library of MSn trees (msn-lib/1).
+pub const HELP: &str = "mzlab-cli msn lib: the library of MSn trees (msn-lib/1).
 
-usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
-       mzlab-cli msn-lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
-       mzlab-cli msn-lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH]
-       mzlab-cli msn-lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
+usage: mzlab-cli msn lib add LIB.json FILE.mzML --id ID --formula ION [msn graph options] [--out PATH]
+       mzlab-cli msn lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
+       mzlab-cli msn lib export LIB.json [--clean] [--all] [--annotate] [--format msp|massbank] [--out PATH]
+       mzlab-cli msn lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-evidence N] [--top N] [--delta N] [--out PATH]
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
-          The options are those of `msn-graph` (--help of that command)
+          The options are those of `msn graph` (--help of that command)
   build   one entry per row of the manifest (tab separated, header): id, neutral_formula, expected_adduct, file (relative to DIR, by default the folder
           of the manifest); optional smiles, activation. The ion is \"<neutral_formula> <expected_adduct>\". Writes LIB.json next to the manifest unless --out
   export  the MS2 spectra of every entry as MSP text (--all: every MS level); --clean keeps the peaks a node of the graph explains;
           --annotate writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
           --format massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
-  search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
+  search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn graph`) and of the same polarity, as the JSON
           msn-search/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
           --min-evidence: peaks shared in the best MS2 pair (1); --top: candidates kept (10);
           --delta: also entries up to N Da away in precursor (0 = off), as analogues with the fragments shifted by the difference and the ones that are not";
@@ -40,7 +40,7 @@ fn read_lib(path: &Path) -> Result<String> {
     }
 }
 
-/// `add LIB FILE --id ID [msn-graph options]`: returns the notice for stderr.
+/// `add LIB FILE --id ID [msn graph options]`: returns the notice for stderr.
 fn add(args: Vec<String>, tmp: &Path) -> Result<String> {
     let bad = |m: &str| Error::new("err.cli.line").with("message", m);
     let (mut lib, mut id, mut rest) = (None, None, Vec::new());
@@ -103,6 +103,7 @@ fn build(args: Vec<String>, tmp: &Path) -> Result<String> {
         match x.as_str() {
             "--dir" => dir = it.next().map(PathBuf::from),
             "--out" => out = it.next().map(PathBuf::from),
+            _ if x.starts_with("--") => return Err(bad(&format!("unknown option {x}"))),
             _ if manifest.is_none() => manifest = Some(PathBuf::from(x)),
             _ => return Err(bad(&format!("unknown argument {x}"))),
         }
@@ -151,6 +152,7 @@ fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
             "--annotate" => annotate = true,
             "--format" => lib_format = Format::parse(&it.next().unwrap_or_default())?,
             "--out" => out = it.next().map(PathBuf::from),
+            _ if x.starts_with("--") => return Err(bad(&format!("unknown option {x}"))),
             _ if lib.is_none() => lib = Some(PathBuf::from(x)),
             _ => return Err(bad(&format!("unknown argument {x}"))),
         }
@@ -227,12 +229,12 @@ pub fn run(args: Vec<String>, tmp: &Path) -> Result<(Vec<u8>, String)> {
         }
         _ => Err(Error::new("err.cli.line").with(
             "message",
-            "usage: mzlab-cli msn-lib add|build|export|search",
+            "usage: mzlab-cli msn lib add|build|export|search",
         )),
     }
 }
 
-/// `mzlab-cli msn-lib ...`: the library of MSn trees; the data on stdout, the notices on stderr.
+/// `mzlab-cli msn lib ...`: the library of MSn trees; the data on stdout, the notices on stderr.
 pub(crate) fn cmd(args: Vec<String>) -> crate::Outcome {
     static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);

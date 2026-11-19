@@ -1,4 +1,4 @@
-//! `mzlab-cli mol-export`: the command prints the bytes of `chem::sdf::export`; usage errors exit 2.
+//! `mzlab-cli mol export`: the command prints the bytes of `chem::sdf::export`; usage errors exit 2.
 
 use crate::execute;
 
@@ -14,14 +14,15 @@ fn the_command_prints_the_function_text() {
     std::fs::write(&p, MOL).unwrap();
     let path = p.to_str().unwrap();
     let o = run(&[
-        "mol-export",
+        "mol",
+        "export",
         path,
         "--set",
         "ion=[M+H]+",
         "--set",
         "name=methanol",
     ]);
-    let m = run(&["mol-export", path, "--set", "format=mol"]);
+    let m = run(&["mol", "export", path, "--set", "format=mol"]);
     std::fs::remove_file(&p).ok();
     assert_eq!(o.code, 0);
     let want = mzlab_feat::chem::sdf::export(MOL, "sdf", "[M+H]+", "methanol").unwrap();
@@ -36,13 +37,13 @@ fn the_command_prints_the_function_text() {
 #[test]
 fn usage_errors_exit_2() {
     for a in [
-        vec!["mol-export"],
-        vec!["mol-export", "a", "b"],
-        vec!["mol-export", "--nope"],
-        vec!["mol-export", "a", "--set", "colour=red"],
-        vec!["mol-export", "/no/such/file.mol"],
+        vec!["mol", "export"],
+        vec!["mol", "export", "a", "b"],
+        vec!["mol", "export", "--nope"],
+        vec!["mol", "export", "a", "--set", "colour=red"],
+        vec!["mol", "export", "/no/such/file.mol"],
     ] {
         assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
     }
-    assert_eq!(run(&["mol-export", "--help"]).code, 0);
+    assert_eq!(run(&["mol", "export", "--help"]).code, 0);
 }

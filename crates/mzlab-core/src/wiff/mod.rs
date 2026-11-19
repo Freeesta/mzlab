@@ -229,7 +229,7 @@ fn bad(detail: &str) -> Error {
 }
 
 /// The numbers of the samples of the sample table, in order: an injection that acquired nothing (no `Idx` stream) is a sample with no scans,
-/// listed like the others so that the site and `mzlab-cli convert` both show it as empty instead of dropping it unsaid.
+/// listed like the others so that the site and `mzlab-cli file convert` both show it as empty instead of dropping it unsaid.
 pub fn samples(ole: &Ole) -> Vec<u32> {
     let mut v: Vec<u32> = ole
         .read(&format!("{SAMPLES}SampleIdxTable"))

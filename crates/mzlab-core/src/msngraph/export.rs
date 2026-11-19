@@ -1,4 +1,4 @@
-//! The spectra of the `msn-graph/1` as CSV, MGF or MSP text (`api/msn_grafo/export`, `mzlab-cli msn-graph`): one block per spectrum of the
+//! The spectra of the `msn-graph/1` as CSV, MGF or MSP text (`api/msn_grafo/export`, `mzlab-cli msn graph`): one block per spectrum of the
 //! tree, optionally only its clean peaks (those a node of the graph explains) and only the spectra of one node of the tree. Used by the
 //! `.wasm` module of the page and by the command line, so both write the same bytes.
 

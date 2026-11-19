@@ -1,4 +1,4 @@
-//! `mzlab-cli normative build`: the builder of the regulatory lists (EU and US) from the official sources. Readers turn each source into entries, `resolve`
+//! `mzlab-cli db normative build`: the builder of the regulatory lists (EU and US) from the official sources. Readers turn each source into entries, `resolve`
 //! turns CAS numbers into structures, and the result is one A1+ CSV per list plus `provenance.json`. Native only; nothing here runs at analysis time.
 //! Area file: `docs/agenti/normative.md`.
 
@@ -79,13 +79,13 @@ impl NormError {
     }
 }
 
-pub const HELP: &str = "mzlab-cli normative: the regulatory lists built from the official sources.
+pub const HELP: &str = "mzlab-cli db normative: the regulatory lists built from the official sources.
 
-usage: mzlab-cli normative pack IN OUT       the data release of the committed lists: OUT/normative.mzsus, zlib pieces and catalogo.json (no network)
-       mzlab-cli normative listings PATH     the listings JSON of a package folder or a .mzsus file
-       mzlab-cli normative import-official READER CSV SIDECAR OUT [--file NAME] [--date YYYY-MM-DD]
+usage: mzlab-cli db normative pack IN OUT       the data release of the committed lists: OUT/normative.mzsus, zlib pieces and catalogo.json (no network)
+       mzlab-cli db normative listings PATH     the listings JSON of a package folder or a .mzsus file
+       mzlab-cli db normative import-official READER CSV SIDECAR OUT [--file NAME] [--date YYYY-MM-DD]
                                              your own copy of the ECHA Candidate List (svhc) or Proposition 65 (ca_prop65) as a private .mzsus (no network)
-       mzlab-cli normative build --cache DIR --out DIR [--only ID...] [--update-pins] [--no-resolve] [--allow-large]
+       mzlab-cli db normative build --cache DIR --out DIR [--only ID...] [--update-pins] [--no-resolve] [--allow-large]
                                  [--sources FILE] [--overrides FILE]
 
   --cache DIR     where downloads are kept (one file per URL with its SHA-256 and date); a warm cache makes the build offline and byte-identical
@@ -185,7 +185,7 @@ fn finish(r: Result<build::Report, NormError>) -> Outcome {
     }
 }
 
-/// `mzlab-cli normative ...` with the real network.
+/// `mzlab-cli db normative ...` with the real network.
 pub fn run(args: Vec<String>) -> Outcome {
     run_with(args, fetch::Http::default())
 }

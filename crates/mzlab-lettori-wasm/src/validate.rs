@@ -1,4 +1,4 @@
-//! The module `valida` of the page: the mzML validation of `mzlab-cli validate` (action «Validate mzML»), reading the file through the page's `read` callback.
+//! The module `valida` of the page: the mzML validation of `mzlab-cli file validate` (action «Validate mzML»), reading the file through the page's `read` callback.
 //! `validate_mzml` returns the JSON text the command prints with `--json` for one file (`mzlab_core::mzml_validate::json_un_file`). A module of its own because of the PSI-MS table.
 use std::io::Read;
 
@@ -50,7 +50,7 @@ pub fn family() -> String {
     "valida".into()
 }
 
-/// Validates the mzML `name` of `size` bytes (`read(0, offset, length) -> Uint8Array`): the JSON array `mzlab-cli validate --json` prints for it.
+/// Validates the mzML `name` of `size` bytes (`read(0, offset, length) -> Uint8Array`): the JSON array `mzlab-cli file validate --json` prints for it.
 #[wasm_bindgen]
 pub fn validate_mzml(name: &str, size: f64, read: Function) -> Result<String, JsValue> {
     let s = JsStream {

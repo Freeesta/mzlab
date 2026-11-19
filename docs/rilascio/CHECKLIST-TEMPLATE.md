@@ -7,7 +7,7 @@ Copy to `CHECKLIST-vX.Y.Z.md` (same folder), tick every box with `[x]`: `tools/g
 - [ ] every area file of `docs/agenti/` is cited in §5 of `CLAUDE.md`
 
 ## Guides for agents
-- [ ] every step of `mzlab-cli steps` has its row in `docs/agenti/cli.md`
+- [ ] every step of `mzlab-cli flow steps` has its row in `docs/agenti/cli.md`
 - [ ] `docs/agenti/for-agents.md` and `llms.txt` (if it exists) cite only existing commands
 
 ## Guides for us

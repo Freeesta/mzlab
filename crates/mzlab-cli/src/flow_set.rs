@@ -1,4 +1,4 @@
-//! The datasets of vendor files on disk as `convert.mzml` and `mzlab-cli convert` take them: a file, a `.wiff` with its `.wiff.scan`, or the files of a
+//! The datasets of vendor files on disk as `convert.mzml` and `mzlab-cli file convert` take them: a file, a `.wiff` with its `.wiff.scan`, or the files of a
 //! `.D`/`.d`/`.raw` folder (the `FileSet` of a reader of the registry), their SHA-256, and the sample a plan input names (`NAME@ID`).
 
 use std::fs::File;

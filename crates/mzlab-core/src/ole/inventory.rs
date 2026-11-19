@@ -1,4 +1,4 @@
-//! What the container says about itself beyond the streams (`wiffwrite` feature, for `mzlab-cli wiff list --inventory`): sector sizes, the SHA-256 of the
+//! What the container says about itself beyond the streams (`wiffwrite` feature, for `mzlab-cli file info --inventory`): sector sizes, the SHA-256 of the
 //! file and the directory metadata of every entry (CLSID, state bits, creation and modification times), which the reader never looks at and a rewrite
 //! of the file must carry. Read only.
 

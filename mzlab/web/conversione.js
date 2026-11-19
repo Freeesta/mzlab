@@ -62,7 +62,7 @@ const CONV = {
     catch (e_) { const e = /** @type {Lanciato} */ (e_); if (e.cancelled) { ui.done(); g.end(); } else { ui.fail(e.json ? I18N.err(e.json).message : e.message); g.end(); } return null; }
   },
   // a sample the readers module converted at the loading, written again in the chosen compression without the optical matrix: the file of
-  // `mzlab-cli convert --compression C` (conv.dad false), as the download of a sample the engine reads; null if it was cancelled or failed
+  // `mzlab-cli file convert --compression C` (conv.dad false), as the download of a sample the engine reads; null if it was cancelled or failed
   async again(/** @type {string} */ name, /** @type {{ fam: string, mem: { name: string, blob: Blob }[], c: number, gz?: File }} */ src) {
     const M = window.LETTORI_MOD, box = document.getElementById("up");
     if (!M || !box) return null;
@@ -91,7 +91,7 @@ const CONV = {
     saveBlob(blob, name, 60000);
     return true;
   },
-  // the check of `mzlab-cli convert` (the app makes it natively): an mzML the validator calls INVALID is not saved; each Blob is checked once
+  // the check of `mzlab-cli file convert` (the app makes it natively): an mzML the validator calls INVALID is not saved; each Blob is checked once
   checked: new WeakSet(),
   async valid(/** @type {Blob} */ blob, /** @type {string} */ name) {
     const M = window.LETTORI_MOD;
@@ -144,7 +144,7 @@ const CONVQ = {
   /** @param {string} op @param {string} [name] */ async call(op, name) {
     let j = null; try { j = await window.MZLAB_RUST.convQueue(op, name); } catch (_) { /* the queue is optional: the file loads without it */ }
     if (!j) return;
-    // the memory budget runs fewer conversions at once than the default: said once, calmly (the same text mzlab-cli convert prints)
+    // the memory budget runs fewer conversions at once than the default: said once, calmly (the same text mzlab-cli file convert prints)
     if (j.notice && !this.noted) { this.noted = true; const box = document.getElementById("up"); if (box) { const d = document.createElement("div"); d.className = "note"; d.setAttribute("role", "status"); d.textContent = I18N.t(j.notice.key, j.notice.params); box.appendChild(d); setTimeout(() => d.remove(), 12000); } }
     const prev = [...this.st];
     this.st = new Map(j.jobs.map((/** @type {Bag} */ x) => [x.name, { state: x.state, error: x.error }]));

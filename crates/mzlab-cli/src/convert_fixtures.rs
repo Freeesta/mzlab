@@ -1,4 +1,4 @@
-//! The synthetic vendor files of the tests of `mzlab-cli convert`: an mzXML and a netCDF (the encoders of the tests of `mzlab-lettori`, included
+//! The synthetic vendor files of the tests of `mzlab-cli file convert`: an mzXML and a netCDF (the encoders of the tests of `mzlab-lettori`, included
 //! from there), a folder of a maker that no reader takes, and a `.wiff` + `.wiff.scan` pair made by `tools/wiff_grande.py` (skipped without python3).
 
 use std::path::{Path, PathBuf};

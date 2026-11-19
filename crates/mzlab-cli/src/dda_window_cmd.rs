@@ -1,4 +1,4 @@
-//! `mzlab-cli dda-window FILE --from MIN --to MIN [--set hr=0|1] [--out PATH]`: the MS2 started from the survey scans of a time window, grouped by
+//! `mzlab-cli spectrum dda-window FILE --from MIN --to MIN [--set hr=0|1] [--out PATH]`: the MS2 started from the survey scans of a time window, grouped by
 //! precursor, the JSON of `api/dda_window` (`mzlab_core::ddafinestra`, the «N MS²» list of the DDA trio of the page). The route reads the file as
 //! its source, as the page and the app: a precursor intensity the reader lacks comes from the parent survey scan.
 
@@ -12,9 +12,9 @@ use mzlab_core::source::ReaderSource;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli dda-window: the MS2 started from the survey scans of a time window, one group per precursor, as JSON (the «N MS²» list of the page).
+pub const HELP: &str = "mzlab-cli spectrum dda-window: the MS2 started from the survey scans of a time window, one group per precursor, as JSON (the «N MS²» list of the page).
 
-usage: mzlab-cli dda-window FILE --from MIN --to MIN [--set hr=1|0] [--out PATH]
+usage: mzlab-cli spectrum dda-window FILE --from MIN --to MIN [--set hr=1|0] [--out PATH]
 
   FILE        an mzML, or any single file the app reads (.raw, mzXML, ...)
   --from MIN  start of the window (minutes); --to MIN its end (equal = one scan)
@@ -50,14 +50,14 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Ask>, String> {
             },
             o if o.starts_with("--") => return Err(format!("unknown option {o}")),
             _ if file.is_none() => file = Some(PathBuf::from(a)),
-            _ => return Err("dda-window takes one file".into()),
+            _ => return Err("spectrum dda-window takes one file".into()),
         }
     }
     Ok(Some(Ask {
-        file: file.ok_or("dda-window needs a file")?,
+        file: file.ok_or("spectrum dda-window needs a file")?,
         out,
-        from: from.ok_or("dda-window needs --from")?,
-        to: to.ok_or("dda-window needs --to")?,
+        from: from.ok_or("spectrum dda-window needs --from")?,
+        to: to.ok_or("spectrum dda-window needs --to")?,
         hr,
     }))
 }

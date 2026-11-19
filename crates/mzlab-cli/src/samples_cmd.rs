@@ -1,5 +1,5 @@
-//! `mzlab-cli samples vars|group|table`: the name operations of `samples::route` (`variables`, `group_name`, `propose`), printing the JSON the page gets
-//! from `api/samples/<op>`. The names come one per line from a file or the standard input. `samples list FILE...` is what the files hold, sample by
+//! `mzlab-cli sample vars|group|table`: the name operations of `samples::route` (`variables`, `group_name`, `propose`), printing the JSON the page gets
+//! from `api/samples/<op>`. The names come one per line from a file or the standard input. `sample list FILE...` is what the files hold, sample by
 //! sample, from their index alone (`samples_list/1`: the same JSON as the site's `native_samples` and the app's native listing).
 
 use std::io::Read;
@@ -11,13 +11,13 @@ use mzlab_core::readers::Limits;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli samples: how the names of a set of files split them (sample-vars/1), as JSON.
+pub const HELP: &str = "mzlab-cli sample: how the names of a set of files split them (sample-vars/1), as JSON.
 
-usage: mzlab-cli samples vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
-       mzlab-cli samples group NAME...
-       mzlab-cli samples table [--names FILE|- | FILE...]
-       mzlab-cli samples list FILE... [--json] [--probe]   (samples list --help)
-       mzlab-cli samples select FILE (--sample LIST | --default [--budget-mb N]) [--json]   (samples select --help)
+usage: mzlab-cli sample vars [--names FILE|-] [--pos N [--sep CHARS]] [--has a,b [--substring]]
+       mzlab-cli sample group NAME...
+       mzlab-cli sample table [--names FILE|- | FILE...]
+       mzlab-cli sample list FILE... [--json] [--probe]   (sample list --help)
+       mzlab-cli sample select FILE (--sample LIST | --default [--budget-mb N]) [--json]   (sample select --help)
 
   --names FILE|-  one file name per line (default: the standard input)
   --pos N         also the manual variable of the N-th token (1 = first, -1 = last), cut at --sep (default \"_-. \")
@@ -149,9 +149,9 @@ fn table(args: Vec<String>) -> Result<String, String> {
     Ok(format!("{{\"files\":[{}]}}", files.join(",")))
 }
 
-const LIST_HELP: &str = "mzlab-cli samples list: what each file holds, sample by sample, from its container and index alone (samples_list/1).
+const LIST_HELP: &str = "mzlab-cli sample list: what each file holds, sample by sample, from its container and index alone (samples_list/1).
 
-usage: mzlab-cli samples list FILE... [--json] [--probe]
+usage: mzlab-cli sample list FILE... [--json] [--probe]
 
   FILE     a .wiff (its .wiff.scan beside it is not read), another vendor file or a .D / .raw folder
   --json   one samples_list/1 JSON per line on stdout, in the order of the FILEs (a file that cannot be listed gives an error/1 line); without it, a table
@@ -267,19 +267,19 @@ fn list_table(json: &str, file: &str) -> String {
     t
 }
 
-const SELECT_HELP: &str = "mzlab-cli samples select: which samples of a file `--sample LIST` would open, or which ones the chooser of the site ticks first (`--default`), checked against its container and index (nothing is read beyond them, nothing is written).
+const SELECT_HELP: &str = "mzlab-cli sample select: which samples of a file `--sample LIST` would open, or which ones the chooser of the site ticks first (`--default`), checked against its container and index (nothing is read beyond them, nothing is written).
 
-usage: mzlab-cli samples select FILE (--sample LIST | --default [--budget-mb N]) [--json]
+usage: mzlab-cli sample select FILE (--sample LIST | --default [--budget-mb N]) [--json]
 
   FILE         a .wiff (its .wiff.scan is not read), another vendor file or a .D / .raw folder
-  --sample LIST  sample ids and ranges: 1,3,5 or 2-4 (the ids of `samples list`, not positions)
+  --sample LIST  sample ids and ranges: 1,3,5 or 2-4 (the ids of `sample list`, not positions)
   --default    the samples the site's chooser ticks at the start (`sample_default`): all when their section bytes are small against the budget, none otherwise
   --budget-mb N  the memory budget for --default in MB (default 1024; 0 = the default)
   --json       {\"samples\":[ids]} on stdout, the ids in the order of the file: the same bytes as the site's `sample_selection` / `sample_default`
 The same LIST is taken by `convert`, `channels` and `features`.
 Exit codes: 0 selected; 2 usage (LIST is not a list, both or neither of --sample and --default, a --budget-mb that is not a number of MB); 4 the file is missing or unreadable; 5 an id the file does not have (the ids present are named).";
 
-/// `samples select FILE (--sample LIST | --default [--budget-mb N]) [--json]`: the dry run of `--sample`, or the first ticks of the page chooser.
+/// `sample select FILE (--sample LIST | --default [--budget-mb N]) [--json]`: the dry run of `--sample`, or the first ticks of the page chooser.
 fn select_run(args: Vec<String>) -> Outcome {
     let (mut file, mut text, mut json) = (None::<PathBuf>, None::<String>, false);
     let (mut default, mut budget) = (false, 0.0f64);
@@ -298,17 +298,17 @@ fn select_run(args: Vec<String>) -> Outcome {
                 None => return Outcome::fail("--sample needs a list such as 1,3,5"),
             },
             o if o.starts_with('-') && o.len() > 1 => {
-                return Outcome::fail(&format!("unknown option {o} (samples select --help)"))
+                return Outcome::fail(&format!("unknown option {o} (sample select --help)"))
             }
             _ if file.is_none() => file = Some(PathBuf::from(a)),
-            _ => return Outcome::fail("samples select takes one FILE"),
+            _ => return Outcome::fail("sample select takes one FILE"),
         }
     }
     let (Some(file), text) = (file, text) else {
-        return Outcome::fail("samples select needs a FILE and --sample LIST or --default");
+        return Outcome::fail("sample select needs a FILE and --sample LIST or --default");
     };
     if text.is_some() == default {
-        return Outcome::fail("samples select needs exactly one of --sample LIST and --default");
+        return Outcome::fail("sample select needs exactly one of --sample LIST and --default");
     }
     if !file.exists() {
         let e = Error::new("err.session.fileNotFound").with("name", file.display());
@@ -340,7 +340,7 @@ fn select_run(args: Vec<String>) -> Outcome {
     }
 }
 
-/// `samples list FILE... [--json] [--probe]`.
+/// `sample list FILE... [--json] [--probe]`.
 fn list_run(args: Vec<String>) -> Outcome {
     let (mut files, mut json, mut probe) = (Vec::<PathBuf>::new(), false, false);
     for a in args {
@@ -349,13 +349,13 @@ fn list_run(args: Vec<String>) -> Outcome {
             "--json" => json = true,
             "--probe" => probe = true,
             o if o.starts_with('-') && o.len() > 1 => {
-                return Outcome::fail(&format!("unknown option {o} (samples list --help)"))
+                return Outcome::fail(&format!("unknown option {o} (sample list --help)"))
             }
             _ => files.push(PathBuf::from(a)),
         }
     }
     if files.is_empty() {
-        return Outcome::fail("samples list needs at least one FILE");
+        return Outcome::fail("sample list needs at least one FILE");
     }
     let (mut out, mut err, mut code) = (String::new(), String::new(), 0u8);
     for f in &files {
@@ -389,7 +389,7 @@ fn list_run(args: Vec<String>) -> Outcome {
                         c,
                         &e,
                         "check the path and that the whole pair was copied",
-                        "samples list",
+                        "sample list",
                     );
                 }
                 code = if c == 4 || code == 4 { 4 } else { code.max(c) };

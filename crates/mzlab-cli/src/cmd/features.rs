@@ -124,9 +124,8 @@ fn run(args: Vec<String>) -> Outcome {
     }
 }
 
-pub(crate) static TABLE: &[Entry] = &[Entry {
-    name: "features",
-    aliases: &[],
-    help: "mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|pos|neg | --params FILE.json]",
+pub(crate) static TABLE: &[Entry] = &[Entry::new(
+    "features",
+    "mzlab-cli features FILE... [--sample LIST] [--out PATH] [--preset auto|pos|neg | --params FILE.json]",
     run,
-}];
+)];

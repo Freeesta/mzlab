@@ -19,7 +19,7 @@ pub struct Migration {
     pub from_only: bool,
 }
 
-/// `spectra.msn_graph@1 → @2`: the Italian parameters take the English names of the `msn-graph` flags.
+/// `spectra.msn_graph@1 → @2`: the Italian parameters take the English names of the `msn graph` flags.
 const MSN_GRAPH_1_2: &[(&str, &str)] = &[
     ("mz_basso", "low_mz"),
     ("ppm_basso", "wide_ppm"),

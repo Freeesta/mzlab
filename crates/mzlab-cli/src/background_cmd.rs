@@ -1,4 +1,4 @@
-//! `mzlab-cli background FILE`: the TIC or BPC of a file without its chemical background, the JSON of `api/tic_background`
+//! `mzlab-cli trace background FILE`: the TIC or BPC of a file without its chemical background, the JSON of `api/tic_background`
 //! (`mzlab_core::ticbg_route`, the same function as the site and the app). `--set NAME=VALUE` are the query names of the route.
 
 use std::collections::HashMap;
@@ -9,9 +9,9 @@ use mzlab_core::routes::{Query, Routes};
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli background: the TIC or BPC of a file without its chemical background, as JSON.
+pub const HELP: &str = "mzlab-cli trace background: the TIC or BPC of a file without its chemical background, as JSON.
 
-usage: mzlab-cli background FILE [--blank FILE] [--set NAME=VALUE...] [--out PATH]
+usage: mzlab-cli trace background FILE [--blank FILE] [--set NAME=VALUE...] [--out PATH]
 
   FILE        an mzML, or any single file the app reads (.raw, mzXML, ...)
   --blank     a blank sample: with mode=blank its persistent ions and their levels are the background

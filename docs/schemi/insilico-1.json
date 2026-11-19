@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "insilico/1",
  "title": "insilico/1: catalogue of the in-silico candidate package",
- "description": "Format «insilico/1» (crates/mzlab-cli/src/insilico_pack.rs, docs/agenti/insilico.md), written by `mzlab-cli insilico pack` next to the pieces NNN.bin. The pieces are zlib CSV (columns Identifier, CompoundName, SMILES, MolecularFormula, MonoisotopicMass) sorted by mass; spectra.insilico@1 reads only the pieces whose mass range overlaps the db_ppm window of a precursor. Same input, same bytes.",
+ "description": "Format «insilico/1» (crates/mzlab-cli/src/insilico_pack.rs, docs/agenti/insilico.md), written by `mzlab-cli db insilico pack` next to the pieces NNN.bin. The pieces are zlib CSV (columns Identifier, CompoundName, SMILES, MolecularFormula, MonoisotopicMass) sorted by mass; spectra.insilico@1 reads only the pieces whose mass range overlaps the db_ppm window of a precursor. Same input, same bytes.",
  "type": "object",
  "additionalProperties": false,
  "required": [
