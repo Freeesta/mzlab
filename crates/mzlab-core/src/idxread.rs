@@ -34,7 +34,7 @@ pub use crate::readat::read_error;
 /// One row of the scan table (`SCAN_COLUMNS`).
 #[derive(Debug, Clone, Default)]
 pub struct Scan {
-    /// Bytes of the spectrum in the mzML (version 1; 0 in the index of a vendor file).
+    /// Bytes of the spectrum in the mzML (0 in the index of a vendor file).
     pub start: u64,
     pub end: u64,
     /// Index of a vendor file: where the scan lies in the members of the set (`None` when the reader does not say) and its number `k` in `Lettore::index`.
