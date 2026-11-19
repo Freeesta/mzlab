@@ -335,10 +335,13 @@ def test_render_drop_state_transitions_and_fallback_dom():
 
 
 def test_duplicate_file_while_waiting_real_upload_drop_dups():
-    """Test duplicate files while pending and after ready via real code extracted from shell.js."""
+    """Test duplicate files while pending and after ready via real code extracted from shell.js and upload-helpers.js."""
     shell_src = (WEB / "shell.js").read_text(encoding="utf-8")
     m = re.search(r"const INFLIGHT=new Set\(\)[\s\S]*?async function upload\(files,into(?:,demo)?\)\{[\s\S]*?finally\{[\s\S]*?\}\}\}", shell_src)
-    assert m is not None, "Could not extract upload and dropDups from shell.js"
+    assert m is not None, "Could not extract upload from shell.js"
+    helpers_src = (WEB / "upload-helpers.js").read_text(encoding="utf-8")
+    d = re.search(r"function dropDups\([\s\S]*?\n  return files\.filter\(f=>!dups\.includes\(f\)\)\}", helpers_src)
+    assert d is not None, "Could not extract dropDups from upload-helpers.js"
 
     code = f"""
     const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
@@ -371,6 +374,7 @@ def test_duplicate_file_while_waiting_real_upload_drop_dups():
       }}
     }}
 
+    {d.group(0)}
     {m.group(0)}
 
     AVVIO._resetTest('pending');
