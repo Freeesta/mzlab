@@ -10,7 +10,7 @@ fn node(mz: f64, level: u8) -> GNode {
     GNode {
         mz,
         dev_ppm: 0.0,
-        level: level,
+        level,
         tree: vec![],
         observations: 1,
         rel_max: 100.0,
