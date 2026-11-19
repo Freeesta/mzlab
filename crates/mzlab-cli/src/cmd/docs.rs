@@ -1,4 +1,4 @@
-//! `help-md`: the command list of the docs, printed from the table (hidden: it has no line in `--help`).
+//! `commands` and `schema` (the self-describing catalog) and `help-md`, the command list of the docs (hidden: it has no line in `--help`).
 
 use super::Entry;
 use crate::Outcome;
@@ -10,9 +10,14 @@ fn run(args: Vec<String>) -> Outcome {
     Outcome::ok(super::list_md().into_bytes())
 }
 
-pub(crate) static TABLE: &[Entry] = &[Entry {
-    name: "help-md",
-    aliases: &[],
-    help: "",
-    run,
-}];
+pub(crate) static TABLE: &[Entry] = &[
+    Entry::new("commands", "mzlab-cli commands [--json] [PATH...]   every command with its arguments, flags, output schema and exit codes (commands/1)", crate::catalog::run)
+        .schema("commands/1")
+        .exits(&[0, 2, 5])
+        .examples(&["mzlab-cli commands --json", "mzlab-cli commands --json flow"]),
+    Entry::new("schema", "mzlab-cli schema [--list | NAME]   the JSON Schema NAME (error/1, mzflow/2, ...) or the list of them (schemas/1)", crate::schema_cmd::run)
+        .schema("schemas/1")
+        .exits(&[0, 2, 5])
+        .examples(&["mzlab-cli schema --list", "mzlab-cli schema mzflow/2"]),
+    Entry::new("help-md", "", run).exits(&[0, 2]),
+];

@@ -1,4 +1,4 @@
-"""`--sample LIST` is the same selection from the engine .wasm (`sample_selection`, through Node) and from `mzlab-cli samples select --json`: the same bytes for a list that
+"""`--sample LIST` is the same selection from the engine .wasm (`sample_selection`, through Node) and from `mzlab-cli sample select --json`: the same bytes for a list that
 fits the file, the same error key and parameters for an id the file does not have or a text that is not a list (the CLI adds its exit code: 5 and 2).
 Synthetic data only (tools/wiff_grande.py). python3 is part of the test (it fails without it); skipped only without cargo, wasm-bindgen or node."""
 import json
@@ -35,7 +35,7 @@ def site(work, ids, text):
 
 
 def app(work, text):
-    p = subprocess.run(cli_argv("samples", "select", str(work / "big" / "grande.wiff"), "--sample", text, "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
+    p = subprocess.run(cli_argv("sample", "select", str(work / "big" / "grande.wiff"), "--sample", text, "--json"), cwd=ROOT, capture_output=True, encoding="utf-8")
     return p.returncode, p.stdout.strip()
 
 
@@ -58,13 +58,13 @@ console.log(w.sample_default(Uint32Array.from(JSON.parse(process.argv[3])), Floa
 
 
 def test_the_default_ticks_are_the_same_from_the_site_and_the_cli(work):
-    """`sample_default` (site) and `samples select --default` (CLI) tick all of a small set and none of a set that does not fit the budget."""
+    """`sample_default` (site) and `sample select --default` (CLI) tick all of a small set and none of a set that does not fit the budget."""
     (work / "d.js").write_text(DEFAULT, encoding="utf-8")
-    sized = subprocess.run(cli_argv("samples", "list", str(work / "big" / "grande.wiff"), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8", check=True)
+    sized = subprocess.run(cli_argv("sample", "list", str(work / "big" / "grande.wiff"), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8", check=True)
     smp = json.loads(sized.stdout)["samples"]
     ids, sizes = [x["id"] for x in smp], [x.get("size", 0) for x in smp]
     for mb in (1024, 0.0001, 0):                   # 0 is the default budget: the same answer from both
         site_out = subprocess.run(["node", str(work / "d.js"), str(work / "pkg" / "mzlab_wasm.js"), json.dumps(ids), json.dumps(sizes), str(mb)], cwd=ROOT, capture_output=True, encoding="utf-8", check=True).stdout.strip()
-        cli_out = subprocess.run(cli_argv("samples", "select", str(work / "big" / "grande.wiff"), "--default", "--budget-mb", str(mb), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8", check=True).stdout.strip()
+        cli_out = subprocess.run(cli_argv("sample", "select", str(work / "big" / "grande.wiff"), "--default", "--budget-mb", str(mb), "--json"), cwd=ROOT, capture_output=True, encoding="utf-8", check=True).stdout.strip()
         assert site_out == cli_out, (mb, site_out, cli_out)
         assert json.loads(cli_out)["samples"] == ([] if mb == 0.0001 else ids), (mb, cli_out)       # a tiny budget ticks nothing, the real and the default ones tick the small set

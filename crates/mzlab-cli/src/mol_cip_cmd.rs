@@ -1,13 +1,13 @@
-//! `mzlab-cli mol-cip REQUEST.json|- [--out PATH]`: the `cip/1` of a drawing (R/S of its defined centres, E/Z of its defined double bonds),
+//! `mzlab-cli mol cip REQUEST.json|- [--out PATH]`: the `cip/1` of a drawing (R/S of its defined centres, E/Z of its defined double bonds),
 //! byte for byte what the CIP labels of Draw show on the page and in the app.
 
 use std::path::PathBuf;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli mol-cip: the CIP descriptors of the stereo drawn in a structure (R/S, r/s, E/Z), as JSON (cip/1).
+pub const HELP: &str = "mzlab-cli mol cip: the CIP descriptors of the stereo drawn in a structure (R/S, r/s, E/Z), as JSON (cip/1).
 
-usage: mzlab-cli mol-cip REQUEST.json|- [--out PATH]
+usage: mzlab-cli mol cip REQUEST.json|- [--out PATH]
 
   REQUEST.json  {\"molfile\": \"...\"}: the V2000 or V3000 molfile of the drawing; - reads the standard input
   --out PATH    write there instead of the standard output
@@ -31,7 +31,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     }
     let [src] = pos.as_slice() else {
-        return Outcome::fail("mol-cip needs one request file (or - for the standard input)");
+        return Outcome::fail("mol cip needs one request file (or - for the standard input)");
     };
     let text = if src == "-" {
         let mut t = String::new();
@@ -67,7 +67,7 @@ mod tests {
         let req = fx["request"].to_string();
         let p = std::env::temp_dir().join(format!("mol_cip_{}.json", std::process::id()));
         std::fs::write(&p, req).unwrap();
-        let o = run(&["mol-cip", p.to_str().unwrap()]);
+        let o = run(&["mol", "cip", p.to_str().unwrap()]);
         std::fs::remove_file(&p).ok();
         assert_eq!(o.code, 0);
         assert_eq!(
@@ -79,13 +79,13 @@ mod tests {
     #[test]
     fn usage_errors_exit_2() {
         for a in [
-            vec!["mol-cip"],
-            vec!["mol-cip", "a", "b"],
-            vec!["mol-cip", "--nope"],
-            vec!["mol-cip", "/no/such/file.json"],
+            vec!["mol", "cip"],
+            vec!["mol", "cip", "a", "b"],
+            vec!["mol", "cip", "--nope"],
+            vec!["mol", "cip", "/no/such/file.json"],
         ] {
             assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
         }
-        assert_eq!(run(&["mol-cip", "--help"]).code, 0);
+        assert_eq!(run(&["mol", "cip", "--help"]).code, 0);
     }
 }

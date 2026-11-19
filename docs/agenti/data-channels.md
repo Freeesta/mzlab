@@ -1,5 +1,5 @@
 # Data channels: one file = a set of channels
-The "experiment type" is a label and a heuristic for the defaults; the tools work on the selected channel. The engine (§2: `channels.rs`, `channels_uv.rs`, `api/canali`, `canale=`, `mzlab-cli channels`) and the page selector (§5) exist; §1 says where the kind still decides, §4 the open work.
+The "experiment type" is a label and a heuristic for the defaults; the tools work on the selected channel. The engine (§2: `channels.rs`, `channels_uv.rs`, `api/canali`, `canale=`, `mzlab-cli file channels`) and the page selector (§5) exist; §1 says where the kind still decides, §4 the open work.
 
 ## 1. Where the kind still decides (evidence in the code)
 **Classification (Rust).** `item_info` (`crates/mzlab-core/src/iteminfo.rs:459-530`) gives every item a `kind` ∈ `full|ms2|mrm|infusion|empty`: `infusion` if `infusion::infusione` (`infusion.rs:110`) recognizes fixed precursors (B: ≤64 MSn keys, median ≥10 scans) and long blocks (C) or a `.raw` method without LC or a name `infus|fia|direct|syringe`; then `ms2` (MSn), `full` (MS1 only), `mrm` (SRM only). A "mixed" file is split into items (`file_parts`, `iteminfo.rs:92`: level × scan type PREC/NL/NG/EMC/TDF/ER × polarity + "MRM"), each with its own `kind`.
@@ -68,7 +68,7 @@ pub struct Channels { pub v: Vec<Channel>, pub scan_ids: Vec<u32>, pub experimen
 - `GET api/chrom?k&canale=<id>&kind=tic|bpc&mz0&mz1` → channel trace (for `srm:`/`uv:`/`an:` it redirects to the current reader: `api/mrm`, `pda_trace`, `analog`).
 - `GET api/xic?k&mz&tol&canale=<id>` → XIC inside the scans of the channel (without `canale=`: per level).
 - `GET api/scanlist?k&canale=<id>`, `api/spectrum?k&canale=<id>&rt|scan&modo=somma`.
-Adapter: `canale=ms:<k>` ≡ `filt=<k>`, `canale=msn:<node>` stays, `level`/`prec` stay accepted and translated; no old route disappears while a test uses it. In JS a single module `canali.js`: `canali(k)` (cache), `traccia(k, id, opz)`, `byGroup(files, group)`. CLI: `mzlab-cli channels FILE` (`cli.md`).
+Adapter: `canale=ms:<k>` ≡ `filt=<k>`, `canale=msn:<node>` stays, `level`/`prec` stay accepted and translated; no old route disappears while a test uses it. In JS a single module `canali.js`: `canali(k)` (cache), `traccia(k, id, opz)`, `byGroup(files, group)`. CLI: `mzlab-cli file channels FILE` (`cli.md`).
 
 **Construction per format.**
 - mzML/mzXML and Thermo `.raw`: keys from `Scan::key()`; SIM = MS1 key with "SIM"; `srm`/`pda`/`pressure` chromatograms from the tail (`mzmlhead`).
@@ -101,3 +101,10 @@ MRM/SIM selector (`ESP.mrm`): click on the name = only that channel; box `.can-h
 Choice memory (`MRM_MEM` in `tabs.js`, session only): every drawing of an MRM/SIM panel remembers `p.tr` per type (SIM ions / transitions) if it is not the layout's automatic choice (`p._trAuto`); at the next layout (sample removed and put back, removed, another sample) `mrmRecall` reopens the remembered channels that the shown files have, the same for all overlaid samples; if there are none, the quantifier/qualifier as usual. Test: `e2e_sim_memoria.py`.
 SIM ions only (`can-sim`): one column, the m/z (or "ion N"), the polarity only if the files have both; engine name, dwell, points and time in the `title`. Test: `e2e_sim_ui.py`.
 One trace per file × channel, "—" in the legend if the file does not have the channel, XIC inside the channel with `canale=`. The engine serves `api/canali` (`Routes::canali`, wasm method `canali`) and `canale=` on chrom/xic/scanlist/spectrum/nearest_scan; transitions and UV go through `api/mrm`. The initial channel per type is in `ESP.predefinito` (`esperimenti.js`).
+
+## Extraction commands (`file info`, `trace`, `spectrum`)
+- `file info FILE... [--sample LIST]` → `file_info/1`: per file the container, size and every sample (id, name, scans); the samples read (the first, or `--sample`) also hold `items` (= `file items`), `channels` (= `file channels`) and `kind`. It replaces `items` + `channels` in the common case. `file channels` no longer takes `--channel`.
+- `trace chrom FILE --id ID [--rt A,B] [--sample ID] [--format json|csv]`: any id `channels` lists. `uv:auto` answers the band `api/uvpropose` proposes (`uvband/1`); `uv:twc` spectra are `dad spectrum`. Points are the route's own number tokens (`api/chrom`, `uvxic`, `analog`, MRM rounding 4/1 decimals). CSV header `rt_min,intensity`, readable by `peak auto-lr -`.
+- `trace xic FILE --mz M (--ppm P | --da D) [--rt A,B] [--ms-level N] [--polarity +|-]`: the bytes of `api/xic`; evidence holds the tolerance in Da and ppm and the scans in the section.
+- `spectrum get FILE (--rt A[,B] | --scan N) [--ms-level N]`: `spectrum/1`, the bytes of `api/spectrum` (an RT picks the nearest scan of the level; a scan keeps its own level and precursor). `spectrum list` → `scanlist/1` (CSV: `scan_id,scan_no,ms_level,rt_min,tic,precursor_mz,base_peak_mz,base_peak_intensity`).
+- An unknown channel id or scan: exit 5 (`err.canali.unknown`, `err.scan.unknown`). The `.wiff` inventory command is `file inventory [--full]`. Schemas: `docs/schemi/{trace,spectrum,scanlist,uvband,file_info}-1.json`.

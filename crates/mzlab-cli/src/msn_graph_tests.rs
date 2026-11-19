@@ -17,7 +17,13 @@ fn run(a: &[&str]) -> crate::Outcome {
 #[test]
 fn the_graph_of_a_file_with_the_formula_of_its_ion() {
     let f = msn();
-    let o = run(&["msn-graph", f.to_str().unwrap(), "--formula", "C14H15N3O5+"]);
+    let o = run(&[
+        "msn",
+        "graph",
+        f.to_str().unwrap(),
+        "--formula",
+        "C14H15N3O5+",
+    ]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let v = mzlab_core::json::parse(&o.stdout).unwrap();
     assert_eq!(v.get("schema").unwrap().str(), Some("msn-graph/1"));
@@ -56,7 +62,8 @@ fn a_truth_file_gives_one_line_of_numbers() {
     std::fs::write(&truth, t).unwrap();
     let f = msn();
     let o = run(&[
-        "msn-graph",
+        "msn",
+        "graph",
         f.to_str().unwrap(),
         "--formula",
         "C14H15N3O5 [M]+",
@@ -86,16 +93,16 @@ fn a_truth_file_gives_one_line_of_numbers() {
 
 #[test]
 fn bad_arguments_are_refused() {
-    assert_eq!(run(&["msn-graph"]).code, 2);
-    assert_eq!(run(&["msn-graph", "x.mzML", "--summary"]).code, 2);
+    assert_eq!(run(&["msn", "graph"]).code, 2);
+    assert_eq!(run(&["msn", "graph", "x.mzML", "--summary"]).code, 2);
     assert_eq!(
-        run(&["msn-graph", "x.mzML", "--ppm-formula", "dieci"]).code,
+        run(&["msn", "graph", "x.mzML", "--ppm-formula", "dieci"]).code,
         2
     );
-    assert_eq!(run(&["msn-graph", "--help"]).code, 0);
+    assert_eq!(run(&["msn", "graph", "--help"]).code, 0);
 }
 
-/// Every flag of `msn-graph` that has a step parameter next to it; `t` is a truth file.
+/// Every flag of `msn graph` that has a step parameter next to it; `t` is a truth file.
 const SMILES: &str = "CCOC(=O)c1c[nH]c2ccccc12";
 
 fn flag_cases(t: &str) -> Vec<Vec<&str>> {
@@ -138,7 +145,13 @@ fn only_the_english_flags_are_accepted() {
     let t = truth.to_str().unwrap();
     let f = msn();
     let go = |flags: &[&str]| {
-        let mut a = vec!["msn-graph", f.to_str().unwrap(), "--formula", "C14H15N3O5+"];
+        let mut a = vec![
+            "msn",
+            "graph",
+            f.to_str().unwrap(),
+            "--formula",
+            "C14H15N3O5+",
+        ];
         a.extend(flags);
         run(&a)
     };
@@ -148,7 +161,7 @@ fn only_the_english_flags_are_accepted() {
     }
     assert_eq!(go(&["--no-such-flag"]).code, 2);
     // the refusals name the flags
-    let r = run(&["msn-graph", "x.mzML", "--summary"]);
+    let r = run(&["msn", "graph", "x.mzML", "--summary"]);
     assert_eq!(r.code, 2);
     assert!(r.stderr.contains("--summary needs --truth"), "{}", r.stderr);
     let _ = std::fs::remove_dir_all(&dir);
@@ -157,7 +170,7 @@ fn only_the_english_flags_are_accepted() {
 /// The help shows the English flags and the step parameter next to them, and no former name.
 #[test]
 fn help_shows_the_english_flags_only() {
-    let h = String::from_utf8(run(&["msn-graph", "--help"]).stdout).unwrap();
+    let h = String::from_utf8(run(&["msn", "graph", "--help"]).stdout).unwrap();
     assert!(h.contains("--low-mz N") && h.contains("(param low_mz)"));
     assert!(!h.contains("old names still accepted"));
 }
@@ -217,7 +230,7 @@ fn the_msn_json_outputs_hold_no_italian_word() {
     let ion = ["--formula", "C14H15N3O5+"];
     let smi = ["--smiles", "CCOC(=O)c1c[nH]c2ccccc12"];
     let all = [
-        &["msn-graph", f.to_str().unwrap()][..],
+        &["msn", "graph", f.to_str().unwrap()][..],
         &ion[..],
         &smi[..],
         &["--interpret", "--rules", "--breaks", "--structures", "all"][..],
@@ -225,31 +238,31 @@ fn the_msn_json_outputs_hold_no_italian_word() {
     .concat();
     let g = run(&all);
     assert_eq!(g.code, 0, "{}", g.stderr);
-    assert_english("msn-graph", &g.stdout);
+    assert_english("msn graph", &g.stdout);
     let gp = d.join("g.json");
     std::fs::write(&gp, &g.stdout).unwrap();
-    let plain = run(&[&["msn-graph", f.to_str().unwrap()][..], &ion[..]].concat());
+    let plain = run(&[&["msn", "graph", f.to_str().unwrap()][..], &ion[..]].concat());
     let pp = d.join("p.json");
     std::fs::write(&pp, &plain.stdout).unwrap();
 
-    let c = run(&["msn-graph", "complete", pp.to_str().unwrap()]);
+    let c = run(&["msn", "complete", pp.to_str().unwrap()]);
     assert_eq!(c.code, 0, "{}", c.stderr);
-    assert_english("msn-graph complete", &c.stdout);
+    assert_english("msn graph complete", &c.stdout);
 
     let lib = d.join("lib.json");
     let (l, p) = (lib.to_str().unwrap(), pp.to_str().unwrap());
     let add = [
-        &["msn-lib", "add", l, f.to_str().unwrap(), "--id", "STD-1"][..],
+        &["msn", "lib", "add", l, f.to_str().unwrap(), "--id", "STD-1"][..],
         &ion[..],
     ]
     .concat();
     assert_eq!(run(&add).code, 0);
-    assert_english("msn-lib", std::fs::read(&lib).unwrap().as_slice());
-    let s = run(&["msn-lib", "search", l, p]);
+    assert_english("msn lib", std::fs::read(&lib).unwrap().as_slice());
+    let s = run(&["msn", "lib", "search", l, p]);
     assert_eq!(s.code, 0, "{}", s.stderr);
     assert_english("msn-search", &s.stdout);
 
-    let cmp = run(&["msn-graph", "compare", p, p]);
+    let cmp = run(&["msn", "compare", p, p]);
     assert_eq!(cmp.code, 0, "{}", cmp.stderr);
     assert_english("msn-compare", &cmp.stdout);
 
@@ -260,19 +273,19 @@ fn the_msn_json_outputs_hold_no_italian_word() {
     )
     .unwrap();
     let t = run(&[
-        &["msn-graph", f.to_str().unwrap()][..],
+        &["msn", "graph", f.to_str().unwrap()][..],
         &ion[..],
         &["--truth", truth.to_str().unwrap(), "--summary"][..],
     ]
     .concat());
     assert_eq!(t.code, 0, "{}", t.stderr);
-    assert_english("msn-graph --truth --summary", &t.stdout);
+    assert_english("msn graph --truth --summary", &t.stdout);
 
     let lines = "{\"id\":\"R\",\"layer\":\"hcd\",\"pol\":1,\"v\":{\"n\":2,\"it\":100,\"a\":2,\"ia\":100,\"b\":0,\"ib\":0,\"c\":1,\"ic\":80,\"r\":{\"loss_c2h2o_acetyl\":1}}}\n";
     let lf = d.join("lines.jsonl");
     std::fs::write(&lf, lines).unwrap();
-    let sum = run(&["msn-rules", "sum", lf.to_str().unwrap()]);
+    let sum = run(&["msn", "rules", "sum", lf.to_str().unwrap()]);
     assert_eq!(sum.code, 0, "{}", sum.stderr);
-    assert_english("msn-rules sum", &sum.stdout);
+    assert_english("msn rules sum", &sum.stdout);
     let _ = std::fs::remove_dir_all(&d);
 }

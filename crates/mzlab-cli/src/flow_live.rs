@@ -1,7 +1,7 @@
 //! A plan that runs on this computer and takes changes while it runs (`flow::live::LiveRun`): the scheduler of `mzlab_core::flow::sched` decides which job
 //! is ready, a pool of threads runs the jobs with the `FileRunner` of `flow.rs` (the loop is `flow::work`, the very one of `execute`), and `update` swaps
 //! the plan under it: a job whose `plan_key` is unchanged goes on, one whose key changed is cancelled through its flag and runs again. Used by the desktop
-//! app (routes `flow/live/<op>`) and by `mzlab-cli flow run --jsonl`. Design and rules: `docs/agenti/flow-live.md`.
+//! app (routes `flow/live/<op>`) and by `mzlab-cli flow run --events`. Design and rules: `docs/agenti/flow-live.md`.
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};

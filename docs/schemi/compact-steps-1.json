@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "steps-compact/1",
+  "title": "steps-compact/1: the Flow steps without their prose",
+  "description": "The answer of `mzlab-cli flow steps --compact`: per step the id, version, title, ports with their data types, the names of the parameters and of the algorithms, and whether `flow run` executes it. The full descriptors (step/1) are `flow steps --json [--id ID]`. Code: crates/mzlab-cli/src/steps_cmd.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "citation",
+    "steps"
+  ],
+  "properties": {
+    "schema": {
+      "const": "steps-compact/1"
+    },
+    "citation": {
+      "type": "string"
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "title",
+          "in",
+          "out",
+          "params",
+          "algorithms",
+          "executable_native"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "in": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "type"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "many": {
+                  "const": true
+                },
+                "optional": {
+                  "const": true
+                }
+              }
+            }
+          },
+          "out": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "type"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "many": {
+                  "const": true
+                },
+                "optional": {
+                  "const": true
+                }
+              }
+            }
+          },
+          "params": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "algorithms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "executable_native": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

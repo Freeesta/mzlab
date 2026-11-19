@@ -1,4 +1,4 @@
-//! `mzlab-cli peak-window TRACE.csv --end MIN --other MIN (--at MIN | --step N) [--min MIN] [--max MIN]`: where a dragged end of an integration
+//! `mzlab-cli peak window TRACE.csv --end MIN --other MIN (--at MIN | --step N) [--min MIN] [--max MIN]`: where a dragged end of an integration
 //! window goes, from `mzlab_core::intwin::move_end_json`, the text the page gets from `QUALITA.windowEnd` (the same bytes).
 
 use mzlab_core::intwin::move_end_json;
@@ -6,9 +6,9 @@ use mzlab_core::intwin::move_end_json;
 use crate::peaks_edges_cmd::trace;
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli peak-window: where one end of an integration window goes when it is dragged along the trace, as JSON.
+pub const HELP: &str = "mzlab-cli peak window: where one end of an integration window goes when it is dragged along the trace, as JSON.
 
-usage: mzlab-cli peak-window TRACE.csv|- --end MIN --other MIN (--at MIN | --step N) [--min MIN] [--max MIN]
+usage: mzlab-cli peak window TRACE.csv|- --end MIN --other MIN (--at MIN | --step N) [--min MIN] [--max MIN]
 
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --end        the end being moved; --other the other end of the window
@@ -54,16 +54,16 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(()) => {}
     }
     let (Some(src), Some(end), Some(other)) = (src, end, other) else {
-        return Outcome::fail("peak-window needs a trace, --end and --other (see --help)");
+        return Outcome::fail("peak window needs a trace, --end and --other (see --help)");
     };
     if at.is_some() == step.is_some() {
-        return Outcome::fail("peak-window needs one of --at or --step");
+        return Outcome::fail("peak window needs one of --at or --step");
     }
     match trace(&src) {
         Err(e) => Outcome::fail(&e),
         Ok((x, _)) => match move_end_json(&x, end, other, at, step.unwrap_or(0), lo, hi) {
             Some(t) => Outcome::ok(format!("{t}\n").into_bytes()),
-            None => Outcome::fail("peak-window: no point of the trace is free for this end"),
+            None => Outcome::fail("peak window: no point of the trace is free for this end"),
         },
     }
 }

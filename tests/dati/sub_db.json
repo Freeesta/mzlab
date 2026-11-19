@@ -1,5 +1,5 @@
 {
- "about": "Synthetic structure lists for the subdb/1 substructure search: the same answer from the molkit .wasm (tests/test_molkit_wasm.py), mzlab-cli mol-search --db (mol_search_tests.rs) and the app route feat/grafo (crates/mzlab-desktop/tests/substructure.rs).",
+ "about": "Synthetic structure lists for the subdb/1 substructure search: the same answer from the molkit .wasm (tests/test_molkit_wasm.py), mzlab-cli mol search --db (mol_search_tests.rs) and the app route feat/grafo (crates/mzlab-desktop/tests/substructure.rs).",
  "cases": [
   {
    "name": "sdf",

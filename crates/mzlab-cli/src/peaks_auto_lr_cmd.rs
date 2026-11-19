@@ -1,4 +1,4 @@
-//! `mzlab-cli peak-auto-lr TRACE.csv`: every peak of a jagged low-resolution SIM/MRM trace, from `mzlab_core::peakq_lrauto`, the function behind
+//! `mzlab-cli peak auto-lr TRACE.csv`: every peak of a jagged low-resolution SIM/MRM trace, from `mzlab_core::peakq_lrauto`, the function behind
 //! «Integrate all peaks» of the page (`QUALITA.lrAuto`). The JSON is `lr_auto_json`, the bytes the page gets; `--set` names are those of the dialog.
 
 use mzlab_core::area_unit::{lr_auto_json_in, AreaUnit};
@@ -7,16 +7,16 @@ use mzlab_core::peakq_lrauto::{lr_auto_integrate, LrAutoParams, Split};
 use crate::peaks_edges_cmd::trace;
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli peak-auto-lr: every peak of a low-resolution trace (SIM, MRM), found on a smoothed copy and integrated on the raw points, as JSON.
+pub const HELP: &str = "mzlab-cli peak auto-lr: every peak of a low-resolution trace (SIM, MRM), found on a smoothed copy and integrated on the raw points, as JSON.
 
-usage: mzlab-cli peak-auto-lr TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VALUE...]
+usage: mzlab-cli peak auto-lr TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VALUE...]
 
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --from/--to  the stretch whose apexes count (default: the whole trace)
   --set        lr_half (Savitzky-Golay half window of the detection copy, points; 0 = 40 % of the FWHM of the tallest peak), lr_valley (% of the
                smaller peak the valley must go down to keep two peaks), lr_sn (smallest height over the noise), lr_min_pts, lr_despike (1/0:
                median of 3 against spikes), lr_split (drop = one baseline under touching peaks, valley = each baseline ends at the valley),
-               area_unit (s = counts x s, default, as peak-area; min = counts x min, the old unit)
+               area_unit (s = counts x s, default, as peak area; min = counts x min, the old unit)
   output       {\"params\":{half, half_auto, valley, sn, min_pts, despike, split, noise}, \"peaks\":[{lo, hi, t0, t1, rt, b0, b1, area, below,
                area_zero, height, sn, end0, end1}...]}: indices, min, counts; areas in counts x s (area_unit) of the raw trace against the straight line
                b0-b1 (signed; below = the part under it) and from zero; end = background | valley | cap (5 FWHM)";
@@ -81,7 +81,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(()) => {}
     }
     let Some(src) = src else {
-        return Outcome::fail("peak-auto-lr needs a trace (see --help)");
+        return Outcome::fail("peak auto-lr needs a trace (see --help)");
     };
     match trace(&src) {
         Err(e) => Outcome::fail(&e),

@@ -1,4 +1,4 @@
-//! `mzlab-cli msn-graph FILE --formula ION [...]`: the fragmentation graph `msn-graph/1` of an MSn infusion, from the engine of the app.
+//! `mzlab-cli msn graph FILE --formula ION [...]`: the fragmentation graph `msn-graph/1` of an MSn infusion, from the engine of the app.
 //! With `--truth FILE --summary` it prints only numbers: how many paths of a truth file (`{nodes: [{path: [nominal m/z...], formula}]}`)
 //! the graph finds and with which sub-formulas, so a check on private data leaves no data behind.
 
@@ -17,13 +17,13 @@ use mzlab_core::msntree_build::Grouping;
 use mzlab_core::mzmlwrite::Options as MzmlOpzioni;
 use mzlab_core::readers_mzml::Peaks;
 
-pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msn-graph/1) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
+pub const HELP: &str = "mzlab-cli msn graph: the fragmentation graph (msn-graph/1) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
 
-usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
-       mzlab-cli msn-graph FILE.mzML --formula ION --truth TRUTH.json --summary
-       mzlab-cli msn-graph compare A.json B.json [--out PATH]
-       mzlab-cli msn-graph complete IN.json [--out PATH]
-       mzlab-cli msn-graph figure IN.json [--figure svg,html,png] [--view tree|radial] [--out STEM]
+usage: mzlab-cli msn graph FILE.mzML [--formula ION] [options] [--out PATH]
+       mzlab-cli msn graph FILE.mzML --formula ION --truth TRUTH.json --summary
+       mzlab-cli msn compare A.json B.json [--out PATH]
+       mzlab-cli msn complete IN.json [--out PATH]
+       mzlab-cli msn figure IN.json [--figure svg,html,png] [--view tree|radial] [--out STEM]
 
   --formula ION        the ion of the root: C13H25N4O3S+, C13H24N4O3S+H or \"C13H24N4O3S [M+H]+\"; without it, masses only
   --smiles TEXT        written back in the JSON; with --structures, the structure that is cleaved
@@ -142,7 +142,7 @@ fn view_of(n: Option<String>) -> std::result::Result<mzlab_feat::msnfigure::View
 const FIGURE_USAGE: &str =
     "--figure needs --out and the graph itself (not --summary, --export or --structures)";
 
-/// The arguments after `msn-graph`; `Ok(None)` = `--help`.
+/// The arguments after `msn graph`; `Ok(None)` = `--help`.
 pub fn parse_args(
     mut a: impl Iterator<Item = String>,
 ) -> std::result::Result<Option<Args>, String> {
@@ -366,7 +366,7 @@ pub fn structures_text(
     mzlab_feat::chem::structures::strutture_testo(g, j, o.smiles.as_deref(), (nodo, ppm))
 }
 
-/// `msn-graph complete IN.json [--out PATH]`: the graph of the file with the key `view` added; the text and the file to write it to.
+/// `msn graph complete IN.json [--out PATH]`: the graph of the file with the key `view` added; the text and the file to write it to.
 pub fn complete_cmd(
     mut a: impl Iterator<Item = String>,
 ) -> std::result::Result<(String, Option<PathBuf>), String> {
@@ -384,7 +384,7 @@ pub fn complete_cmd(
     Ok((done + "\n", out))
 }
 
-/// The graph text `j` of `g` with the keys `interpretation` and `breaks` the options ask for (also used by `msn-lib add`).
+/// The graph text `j` of `g` with the keys `interpretation` and `breaks` the options ask for (also used by `msn lib add`).
 pub fn with_keys(a: &Args, g: &Graph, mut j: String) -> Result<String> {
     if let Some(ppm) = a.interpret {
         j = with_interpretation(&j, g, ppm);
@@ -423,7 +423,7 @@ pub fn figure_files(a: &Args, graph: &str) -> std::result::Result<String, String
     Ok(made.iter().map(|p| format!("{}\n", p.display())).collect())
 }
 
-/// `mzlab-cli msn-graph ...`: the graph (or the line of numbers) to the standard output or `--out`.
+/// `mzlab-cli msn graph ...`: the graph (or the line of numbers) to the standard output or `--out`.
 pub(crate) fn cmd(args: impl Iterator<Item = String>) -> Outcome {
     let mut args = args.peekable();
     if args.next_if(|a| a == "compare").is_some() {

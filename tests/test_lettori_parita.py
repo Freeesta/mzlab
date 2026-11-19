@@ -1,4 +1,4 @@
-"""Parity of the readers: the mzML that a readers module (.wasm, `to_mzml`, what the site writes in OPFS) gives for a dataset is byte for byte the one `mzlab-cli convert` writes
+"""Parity of the readers: the mzML that a readers module (.wasm, `to_mzml`, what the site writes in OPFS) gives for a dataset is byte for byte the one `mzlab-cli file convert` writes
 (what the desktop app writes). One synthetic dataset per family (no laboratory data): Python generators for aperti, agilent, waters, shimadzu, sciex; the Rust example `synthetic`
 (crates/mzlab-lettori/examples, the writers of the reader tests) for thermo, bruker, andi. The modules run in Node (wasm-bindgen --target nodejs). Needs the wasm32 target and wasm-bindgen-cli (the version of Cargo.lock); without them the test is skipped,
 with MZLAB_GOLDEN_STRICT=1 it fails."""
@@ -92,7 +92,7 @@ def da_wasm(tools, fam, ds: Path) -> bytes:
 def da_cli(tools, fam, ds: Path, *extra: str, code: int = 0) -> bytes:
     """The mzML the CLI writes; `code` 3 for a cut dataset (written, with the scans missing named on stderr)."""
     out = tools["tmp"] / f"cli_{fam}"
-    r = run([str(tools["cli"]), "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1", *extra])
+    r = run([str(tools["cli"]), "file", "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1", *extra])
     assert r.returncode == code, r.stdout[-1500:] + r.stderr[-1500:]
     if code == 3:
         assert "partial read, " in r.stderr, r.stderr[-1500:]
@@ -172,7 +172,7 @@ def test_module_mzml_equals_the_cli_one(tools, fam):
 
 def test_waters_index_marks_equal_the_cli(tools):
     """A folder with the index marks set both ways (0x18 scans get the polynomial of `_HEADER.TXT`, 0x4C scans keep the stored m/z; a flag bit above the 22-bit count):
-    the module and `mzlab-cli convert` write the same mzML, byte for byte."""
+    the module and `mzlab-cli file convert` write the same mzML, byte for byte."""
     import waters_sintetico
     ds = waters_sintetico.write_flags(tools["tmp"] / "in_waters_flags")
     cli = da_cli(tools, "waters_flags", ds)
@@ -284,7 +284,7 @@ def test_one_undecodable_agilent_scan_is_left_out_on_both_faces(tools):
     b[at:at + 8] = struct.pack("<d", float("nan"))
     f.write_bytes(bytes(b))
     out = tools["tmp"] / "cli_damaged"
-    r = run([str(tools["cli"]), "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1"])
+    r = run([str(tools["cli"]), "file", "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1"])
     assert r.returncode == 3, r.stderr[-1500:]
     assert "partial read, 59 of 60 scans (warn.file.damaged)" in r.stderr, r.stderr[-1500:]
     cli = next(out.glob("*.mzML")).read_bytes()
@@ -314,7 +314,7 @@ def test_one_damaged_agilent_index_record_is_left_out_on_both_faces(tools):
     g.write_bytes(bytes(m))
     for d, read in ((ds, 59), (old, 30)):
         out = tools["tmp"] / f"cli_badrec_{d.name}"
-        r = run([str(tools["cli"]), "convert", str(d), "--out", str(out), "--fresh", "--workers", "1"])
+        r = run([str(tools["cli"]), "file", "convert", str(d), "--out", str(out), "--fresh", "--workers", "1"])
         assert r.returncode == 3, r.stderr[-1500:]
         assert f"partial read, {read} of 60 scans (warn.agilent.damaged)" in r.stderr, r.stderr[-1500:]
         cli = next(out.glob("*.mzML")).read_bytes()
@@ -338,7 +338,7 @@ def test_a_gc_run_with_data_ms_on_top_and_only_contents_in_acqdata_reads_on_both
 
 def test_wiff_with_dad_and_method_equals_cli_with_dad(tools):
     """A 3200 QTRAP variant (version-1 blocks) with an optical detector and an LC method: the module writes the matrix (`MS:1000804` spectra) and the method
-    (`mzLab method/1`), byte for byte what `mzlab-cli convert --set conv.dad=true` writes."""
+    (`mzLab method/1`), byte for byte what `mzlab-cli file convert --set conv.dad=true` writes."""
     d = tools["tmp"] / "in_dadmetodo"
     r = run([sys.executable, str(ROOT / "tools/wiff_riferimento.py"), str(d)])
     assert r.returncode == 0, r.stderr[-1500:]
@@ -352,7 +352,7 @@ def test_wiff_with_dad_and_method_equals_cli_with_dad(tools):
 
 def test_wiff_with_device_traces_equals_cli(tools):
     """A 3200 QTRAP variant with device traces (two pressures, a flow, a temperature: tools/wiff_dispositivi.py): the module writes them as chromatograms,
-    the pressures in pascal as a `pressure array`, byte for byte what `mzlab-cli convert` writes."""
+    the pressures in pascal as a `pressure array`, byte for byte what `mzlab-cli file convert` writes."""
     d = tools["tmp"] / "in_dispositivi"
     r = run([sys.executable, str(ROOT / "tools/wiff_riferimento.py"), str(d)])
     assert r.returncode == 0, r.stderr[-1500:]
@@ -364,7 +364,7 @@ def test_wiff_with_device_traces_equals_cli(tools):
 
 def test_wiff_with_sparse_product_scans_equals_cli(tools):
     """A 3200 QTRAP product-ion sample of sparse scans (tools/wiff_prodotto_rado.py: 0 to 5 points, padded streams, an index value at +26 that is not
-    the point count): the module writes every scan, byte for byte what `mzlab-cli convert` writes."""
+    the point count): the module writes every scan, byte for byte what `mzlab-cli file convert` writes."""
     d = tools["tmp"] / "in_rado"
     r = run([sys.executable, str(ROOT / "tools/wiff_prodotto_rado.py"), str(d)])
     assert r.returncode == 0, r.stderr[-1500:]

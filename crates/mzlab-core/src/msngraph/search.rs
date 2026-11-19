@@ -1,6 +1,6 @@
 //! Tree search in an MSn library (`docs/agenti/msnlib.md` §2): an unknown graph `msn-graph/1` against the entries of a library `msn-lib/1`. The entries whose precursor
 //! is within a ppm window (same polarity) become candidates with three scores that stay apart (MS2 entropy, tree, shared losses) and the proofs behind them.
-//! Nothing is called a match: the page and `spectra.match` (algorithm `tree`) show the numbers. Text in, text out like `msn-lib`.
+//! Nothing is called a match: the page and `spectra.match` (algorithm `tree`) show the numbers. Text in, text out like `msn lib`.
 
 use std::collections::HashMap;
 

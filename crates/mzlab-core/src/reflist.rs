@@ -1,5 +1,5 @@
 //! Reference lists of known m/z values (`reflist/1`): the CSV a person adds as a list in the Known contaminants panel, read here for the page,
-//! the app and `mzlab-cli ref-list`. A good row is an ion (m/z, adduct, polarity); a wrong row gives an error with its line number.
+//! the app and `mzlab-cli db ref-list`. A good row is an ion (m/z, adduct, polarity); a wrong row gives an error with its line number.
 
 use crate::elements::{adducts, ion_mz, mass, parse_formula};
 use crate::error::{Error, Result};
@@ -115,7 +115,7 @@ fn error(line: usize, key: &str, field: &str, value: &str) -> Value {
         .done()
 }
 
-/// `{"csv": TEXT, "name": optional}` -> `reflist/1`: `{format, name, compounds, items:[{line,name,formula,adduct,mz,pol,note}], errors:[{line,key,field,value}]}`.
+/// `{"csv": TEXT, "name": optional}` -> `reflist/1`: `{schema, name, compounds, items:[{line,name,formula,adduct,mz,pol,note}], errors:[{line,key,field,value}]}`.
 /// A row needs an m/z or a formula; with a formula only, the ion is `[M+H]+` (negative polarity: `[M-H]-`) unless the adduct column says another.
 pub fn route(body: &str) -> Result<String> {
     let req = parse(body.as_bytes()).map_err(|_| Error::new("err.reflist.request"))?;
@@ -156,7 +156,7 @@ pub fn route(body: &str) -> Result<String> {
         .collect::<std::collections::BTreeSet<_>>()
         .len();
     let o = Obj::new()
-        .put("format", text("reflist/1"))
+        .put("schema", text("reflist/1"))
         .put("name", text(name))
         .i("compounds", compounds as i64)
         .put("items", Value::Arr(items))

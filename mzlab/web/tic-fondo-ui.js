@@ -12,7 +12,7 @@ export const applies = p => p.type === "chrom" && (p.kind === "tic" || p.kind ==
 /** @param {Bag} p */
 export const on = p => applies(p) && !!(p.ticbg && p.ticbg.on);
 
-/** the request of one file: only what differs from the engine defaults is written, so the URL matches `mzlab-cli background --set` @param {Bag} p @param {Bag} f */
+/** the request of one file: only what differs from the engine defaults is written, so the URL matches `mzlab-cli trace background --set` @param {Bag} p @param {Bag} f */
 export function url(p, f) {
   const o = p.ticbg || {}, q = new URLSearchParams({ k: String(f.k), level: String(p.flv ?? f.lv ?? 1), kind: p.kind });
   if (o.mode && o.mode !== "auto") q.set("mode", o.mode);

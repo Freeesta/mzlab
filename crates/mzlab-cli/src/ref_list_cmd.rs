@@ -1,4 +1,4 @@
-//! `mzlab-cli ref-list FILE.csv [--name N] [--match X [--set unit=da|ppm tol=N pol=+|-]] [--out PATH]`: reads a CSV of reference ions (`reflist/1`,
+//! `mzlab-cli db ref-list FILE.csv [--name N] [--match X [--set unit=da|ppm tol=N pol=+|-]] [--out PATH]`: reads a CSV of reference ions (`reflist/1`,
 //! `mzlab_core::reflist`, the same bytes as the page and the app) and, with `--match`, what a number is compatible with in that list (`mz-match/1`).
 
 use std::path::PathBuf;
@@ -8,9 +8,9 @@ use mzlab_core::jsonb::{text, write, Obj};
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli ref-list: read a CSV list of reference ions as JSON (reflist/1), optionally match a number against it.
+pub const HELP: &str = "mzlab-cli db ref-list: read a CSV list of reference ions as JSON (reflist/1), optionally match a number against it.
 
-usage: mzlab-cli ref-list FILE.csv [--name N] [--match X] [--set unit=da|ppm] [--set tol=N] [--set pol=+|-] [--out PATH]
+usage: mzlab-cli db ref-list FILE.csv [--name N] [--match X] [--set unit=da|ppm] [--set tol=N] [--set pol=+|-] [--out PATH]
 
   FILE.csv        columns mz, name, formula, polarity, adduct, note (a header line is required; ; , or tab; # lines skipped);
                   a row needs an m/z or a formula
@@ -18,7 +18,7 @@ usage: mzlab-cli ref-list FILE.csv [--name N] [--match X] [--set unit=da|ppm] [-
   --match X       also answer what the number X is compatible with in the list (mz-match/1 under \"match\")
   --out PATH      write there instead of the standard output
 
-The answer is {\"format\":\"reflist/1\",\"name\",\"compounds\",\"items\":[{line,name,formula,adduct,mz,pol,note}],\"errors\":[{line,key,field,value}]}.
+The answer is {\"schema\":\"reflist/1\",\"name\",\"compounds\",\"items\":[{line,name,formula,adduct,mz,pol,note}],\"errors\":[{line,key,field,value}]}.
 Exit codes: 0 all rows read; 1 some rows have errors (listed with their line, the good rows are in items); 2 usage; 4 unreadable file.";
 
 pub fn run(args: Vec<String>) -> Outcome {
@@ -60,7 +60,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     }
     let Some(file) = file else {
-        return Outcome::fail("ref-list needs a CSV file");
+        return Outcome::fail("db ref-list needs a CSV file");
     };
     let csv = match std::fs::read_to_string(&file) {
         Ok(t) => t,

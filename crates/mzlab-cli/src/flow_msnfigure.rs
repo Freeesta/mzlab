@@ -1,5 +1,5 @@
 //! The native executor of `msn.figure@1`: the figure of the fragmentation graph `msn-graph/1` of `spectra.msn_graph` as an SVG, a stand-alone HTML or a PNG,
-//! the same bytes as `mzlab-cli msn-graph figure` and, for svg and html, as the `.wasm` `msnfigura` of the browser. It is a step of its own, after the
+//! the same bytes as `mzlab-cli msn figure` and, for svg and html, as the `.wasm` `msnfigura` of the browser. It is a step of its own, after the
 //! graph: the figure needs only the graph (the raw file is not read again), and a Flow output holds one file, so each format is one run of the step
 //! (`--set figure.format=html`).
 

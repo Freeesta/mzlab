@@ -14,7 +14,7 @@ Confirmed findings A1-A6 (area 1). Part of the scientific-correctness study; met
 ### A2 - wrong result - fine pattern cut 6.5 Da above the lightest isotopologue
 - Place: `crates/mzlab-core/src/isoscore.rs:133` (`fine_pattern` = `fine_pattern_cut(.., MAX_SHIFT + 0.5)`), used by `isotope_score` (`isoscore.rs:214`).
 - Expected: decaBDE C12Br10O, z = -1: 16 unit clusters up to m/z 967.16, base peak 959.17, 955.17 at 50.3 % (binomial of 10 Br).
-- Observed: `fine_pattern` returns 5 peaks, 951.1768-955.1727, with 955.1727 at 100 %; `fine_pattern_cut(.., INFINITY)` (the `isofine` route) and `mzlab-cli ion-pattern` give the full pattern. Any formula with 8 or more Br, or an element whose main isotope lies more than 6 Da above its lightest one (Sn 120 against 112), is scored against a truncated pattern.
+- Observed: `fine_pattern` returns 5 peaks, 951.1768-955.1727, with 955.1727 at 100 %; `fine_pattern_cut(.., INFINITY)` (the `isofine` route) and `mzlab-cli ion pattern` give the full pattern. Any formula with 8 or more Br, or an element whose main isotope lies more than 6 Da above its lightest one (Sn 120 against 112), is scored against a truncated pattern.
 - Fix: cut on cumulative probability, or relative to the most abundant isotopologue.
 
 ### A3 - convention unclear - the sign of the mass error differs between routes
@@ -33,9 +33,9 @@ Confirmed findings A1-A6 (area 1). Part of the scientific-correctness study; met
 ### A5 - convention unclear, doc mismatch - `nominal` is the rounded monoisotopic mass
 - Place: `crates/mzlab-core/src/elements.rs` (`formula_mz`: `nominal_neutral`, `nominal`), `crates/mzlab-core/src/adduct_table.rs:186-187`.
 - Expected: nominal mass = sum of the mass numbers of the most abundant isotopes (Murray et al., Pure Appl. Chem. 2013, 85, 1515): tristearin C57H110O6 = 890.
-- Observed: `mzlab-cli ion-mz C57H110O6` -> neutral 890.8302, `nominal_neutral` 891, [M+H]+ `nominal` 892; `mzlab-cli mol-anal` on the same formula -> `nominal` 890.
+- Observed: `mzlab-cli ion mz C57H110O6` -> neutral 890.8302, `nominal_neutral` 891, [M+H]+ `nominal` 892; `mzlab-cli mol anal` on the same formula -> `nominal` 890.
 - Fix: compute it from integer isotope masses, or rename the field (rounded m/z).
-- Status: FIXED in `formula_mz` (`ion-mz`, `/api/formula`): `nominal_neutral` is the sum of the mass numbers of the main isotopes (890), `nominal` of an ion that plus the adduct shift (891); the old rounded values are the keys `neutral0` and `mz0` (the page search uses them). OPEN: the `nominal` column of `adduct_table.rs` (the calculator) is still the rounded m/z of a unit-resolution instrument.
+- Status: FIXED in `formula_mz` (`ion mz`, `/api/formula`): `nominal_neutral` is the sum of the mass numbers of the main isotopes (890), `nominal` of an ion that plus the adduct shift (891); the old rounded values are the keys `neutral0` and `mz0` (the page search uses them). OPEN: the `nominal` column of `adduct_table.rs` (the calculator) is still the rounded m/z of a unit-resolution instrument.
 
 ### A6 - precision loss (at most 0.15 ppm) - four mass tables from different evaluations
 - Place: `crates/mzlab-core/src/elements.rs` `MASS` (AME2016, correct to 1e-9 u) against `crates/mzlab-core/src/nuclides.rs` and `isotable.rs` (generated from OpenChemLib), `crates/mzlab-feat/src/attributio/review/adduct.rs` `MASS`, and the typed shifts in `crates/mzlab-feat/src/adducts.rs` and `crates/mzlab-target/src/entry.rs`.

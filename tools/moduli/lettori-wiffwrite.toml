@@ -6,4 +6,4 @@ wasm_opt = "@estesi"
 parte = "lettori"
 tetto = 249856
 misura = 246520
-nota = "new module, own cap: measured plus margin, rounded to 1 KiB; the read-only .wiff inventory and verify (mzlab-cli wiff list|verify), its own module, loaded only on use"
+nota = "new module, own cap: measured plus margin, rounded to 1 KiB; the read-only .wiff inventory and verify (mzlab-cli file inventory|verify), its own module, loaded only on use"

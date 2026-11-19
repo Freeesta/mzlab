@@ -21,8 +21,7 @@ fn scratch(name: &str, file: &str, bytes: &[u8]) -> (PathBuf, String) {
 #[test]
 fn the_table_of_verdict_commands_names_entries_and_each_keeps_its_document_at_exit_1() {
     for v in crate::contract::VERDICT {
-        let first = v.split(' ').next().unwrap();
-        assert!(entries().any(|e| e.name == first), "{v} is not a command");
+        assert!(entries().any(|e| e.name == *v), "{v} is not a command");
     }
     // a pair with no companion, an mzML with an error, a list with a wrong row: exit 1 is the answer, the document stays on stdout
     let (d1, lone) = scratch("verdict_pair", "lone.wiff", b"x");
@@ -33,9 +32,9 @@ fn the_table_of_verdict_commands_names_entries_and_each_keeps_its_document_at_ex
         b"name,formula,adduct\nx,NOTAFORMULA,[M+H]+\n",
     );
     for (a, key) in [
-        (vec!["pair", &lone, "--json"], "\"wiffpair/1\""),
-        (vec!["validate", &bad, "--json"], "\"valid\":false"),
-        (vec!["ref-list", &list], "\"reflist/1\""),
+        (vec!["file", "pair", &lone, "--json"], "\"wiffpair/1\""),
+        (vec!["file", "validate", &bad, "--json"], "\"valid\":false"),
+        (vec!["db", "ref-list", &list], "\"reflist/1\""),
     ] {
         let o = run(&a);
         assert_eq!(o.code, 1, "{a:?}: {}", o.stderr);
@@ -60,13 +59,22 @@ fn every_failure_code_is_one_error_document_under_json() {
     let (wdir, wiff_file) = wiff("codes_wiff");
     for (code, a) in [
         (1, vec!["dad", "spectrum", &example, "--rt", "1", "--json"]),
-        (2, vec!["steps", "--bogus", "--json"]),
+        (2, vec!["flow", "steps", "--bogus", "--json"]),
         (3, vec!["flow", "check", &junk, "--json"]),
-        (4, vec!["channels", "/nonexistent/x.mzML", "--json"]),
-        (5, vec!["channels", &wiff_file, "--sample", "9", "--json"]),
+        (4, vec!["file", "channels", "/nonexistent/x.mzML", "--json"]),
+        (
+            5,
+            vec!["file", "channels", &wiff_file, "--sample", "9", "--json"],
+        ),
         (
             6,
-            vec!["elements", "--out", "/nonexistent/dir/e.json", "--json"],
+            vec![
+                "ion",
+                "elements",
+                "--out",
+                "/nonexistent/dir/e.json",
+                "--json",
+            ],
         ),
     ] {
         let v = one_error(&run(&a), code, &format!("{a:?}"));
@@ -83,7 +91,7 @@ fn every_failure_code_is_one_error_document_under_json() {
 
 #[test]
 fn wiff_and_samples_list_keep_their_document_at_exit_1_and_3_and_a_non_verdict_command_wraps_it() {
-    // wiff list exits 3 (a sample refused), wiff verify exits 1 (a difference): the wiff.list/1 and wiff.verify/1 documents stay on stdout
+    // file inventory exits 3 (a sample refused), file verify exits 1 (a difference): the wiff.list/1 and wiff.verify/1 documents stay on stdout
     let out =
         std::env::temp_dir().join(format!("mzlab_cli_contract_wiffref_{}", std::process::id()));
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_riferimento.py");
@@ -99,10 +107,14 @@ fn wiff_and_samples_list_keep_their_document_at_exit_1_and_3_and_a_non_verdict_c
     );
     let f = |n: &str| out.join(n).to_string_lossy().into_owned();
     for (a, code, schema) in [
-        (vec!["wiff", "list", &f("periods.wiff")], 3, "wiff.list/1"),
+        (
+            vec!["file", "inventory", &f("periods.wiff")],
+            3,
+            "wiff.list/1",
+        ),
         (
             vec![
-                "wiff",
+                "file",
                 "verify",
                 &f("one.wiff"),
                 "--against",
@@ -121,7 +133,7 @@ fn wiff_and_samples_list_keep_their_document_at_exit_1_and_3_and_a_non_verdict_c
         );
     }
     let _ = std::fs::remove_dir_all(out);
-    // samples list at exit 1: a .wiff.scan shorter than its index says, asked with --probe
+    // sample list at exit 1: a .wiff.scan shorter than its index says, asked with --probe
     let (dir, wiff_file) = wiff("verdict_samples");
     let cut = dir.join("cut");
     std::fs::create_dir_all(&cut).unwrap();
@@ -129,7 +141,7 @@ fn wiff_and_samples_list_keep_their_document_at_exit_1_and_3_and_a_non_verdict_c
     let data = std::fs::read(format!("{wiff_file}.scan")).unwrap();
     std::fs::write(cut.join("grande.wiff.scan"), &data[..data.len() - 500]).unwrap();
     let o = run(&[
-        "samples",
+        "sample",
         "list",
         cut.join("grande.wiff").to_str().unwrap(),
         "--json",
@@ -143,9 +155,9 @@ fn wiff_and_samples_list_keep_their_document_at_exit_1_and_3_and_a_non_verdict_c
             && !t.contains("\"schema\":\"error/1\""),
         "{t}"
     );
-    // the other `samples` words are not verdicts: a failure of `samples select` is one error/1
+    // the other `samples` words are not verdicts: a failure of `sample select` is one error/1
     assert_eq!(
-        run(&["samples", "select", &wiff_file, "--sample", "9", "--json"]).code,
+        run(&["sample", "select", &wiff_file, "--sample", "9", "--json"]).code,
         5
     );
     let _ = std::fs::remove_dir_all(dir);

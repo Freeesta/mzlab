@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tools-compact/1",
+  "title": "tools-compact/1: the assistant tools by name",
+  "description": "The answer of `mzlab-cli llm tools --compact`: per tool its name, class and the names of its inputs; the full catalog (tools/1) with the descriptions and input schemas is `mzlab-cli llm tools`. Code: crates/mzlab-cli/src/llm.rs.",
+  "type": "object",
+  "required": [
+    "schema",
+    "citation",
+    "catalog",
+    "tools"
+  ],
+  "properties": {
+    "schema": {
+      "const": "tools-compact/1"
+    },
+    "citation": {
+      "type": "string"
+    },
+    "catalog": {
+      "type": "string"
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "class",
+          "inputs"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "class": {
+            "type": "string"
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-//! `mzlab-cli convert` on a large synthetic `.wiff` container (more FAT sectors than the header lists, so a DIFAT sector) cut inside the FAT sectors the DIFAT
+//! `mzlab-cli file convert` on a large synthetic `.wiff` container (more FAT sectors than the header lists, so a DIFAT sector) cut inside the FAT sectors the DIFAT
 //! lists: the same key as the engine gives (`wiffTruncated`, shared by the site and the app), never «not a .wiff». Synthetic bytes, no lab data.
 use super::super::convert;
 use crate::convert_fixtures::folder;

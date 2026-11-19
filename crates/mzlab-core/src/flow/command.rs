@@ -31,7 +31,7 @@ pub fn command(plan: &Plan) -> String {
     let mut s = String::from("# Rerun this mzLab Flow plan on the command line.\n");
     // there are no prebuilt binaries: the program is built once from a clone of the repository
     s += "# mzlab-cli is built once from a clone of the repository (needs Rust): run this from the clone.\n";
-    s += "command -v mzlab-cli >/dev/null || cargo install --path crates/mzlab-cli\n";
+    s += "command -v mzlab-cli >/dev/null || cargo install --path crates/mzlab-cli --profile cli\n";
     if !names.is_empty() {
         s += &format!("# Files expected in MZLAB_IN: {}\n", names.join(", "));
     }
@@ -61,7 +61,7 @@ mod tests {
         assert!(s.ends_with("--out \"$RUN/out\"\n"));
         // the check for the program comes first and the folder is quoted once, in single quotes
         assert!(s.contains(
-            "command -v mzlab-cli >/dev/null || cargo install --path crates/mzlab-cli\n"
+            "command -v mzlab-cli >/dev/null || cargo install --path crates/mzlab-cli --profile cli\n"
         ));
         assert!(s.contains(&format!("MZLAB_IN='{FOLDER_PLACEHOLDER}'\n")));
         assert!(s.contains("RUN=\"mzlab-run-$(date +%Y%m%d-%H%M%S)\"\n"));

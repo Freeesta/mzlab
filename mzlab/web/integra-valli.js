@@ -1,6 +1,6 @@
 // @ts-strict
 // «Split at the valleys» of an integration on a SIM/MRM panel: the engine proposes the drop lines (`api/manvalley`, mzlab_core::valley, the bytes of
-// `mzlab-cli peak-split`) at the depth shown in the bar over the window; the user drags them (mouse, finger, pen; ← → one point, Shift five, Delete
+// `mzlab-cli peak split`) at the depth shown in the bar over the window; the user drags them (mouse, finger, pen; ← → one point, Shift five, Delete
 // removes one), then Split keeps them on the record (`it.splits`, undoable, saved) or Esc / Cancel drops them. A split record shows its drop lines
 // from the baseline to the trace (`paint`, on the canvas); the table gives one row per part (integrazioni-manuali.js). «Split by hand» (`startManual`) is the same
 // drop lines placed by a click at the time under the pointer (a thin guide follows it), kept at once (one undo step per click, drag, key) until Esc. Loaded by integra-estremi.js.

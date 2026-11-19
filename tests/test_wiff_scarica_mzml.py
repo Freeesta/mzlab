@@ -1,5 +1,5 @@
 """«Download .mzML» of a .wiff sample on the site (rust-nativo.js `toMzml`: `to_mzml_with` of the `sciex` module, no optical matrix) is byte for byte the file of
-`mzlab-cli convert` with the same `--compression` (conv.dad false), for a Full Scan, a product-ion, a dense MRM pair and one with a DAD (the engine alone leaves out what `estesi` writes: SRM dwell and
+`mzlab-cli file convert` with the same `--compression` (conv.dad false), for a Full Scan, a product-ion, a dense MRM pair and one with a DAD (the engine alone leaves out what `estesi` writes: SRM dwell and
 energy, isolation offsets, the TIC and BPC of a Full Scan). Synthetic pairs of tools/wiff_riferimento.py only. Skipped without cargo, wasm-bindgen or node."""
 import os
 import shutil
@@ -31,7 +31,7 @@ def test_the_download_is_the_file_of_the_cli(work, stem, comp):
     pair = [work / "ref" / f"{stem}.wiff", work / "ref" / f"{stem}.wiff.scan"]
     site, out = work / f"{stem}.{comp}.mzML", work / f"{stem}.{comp}"
     run("node", str(ROOT / "tests" / "mzml_scarica_node.js"), str(work / "mod"), str(site), "0", comp, *map(str, pair))
-    run(str(ROOT / "target/release/mzlab-cli"), "convert", str(pair[0]), "--out", str(out), "--fresh", "--workers", "1", "--compression", comp)
+    run(str(ROOT / "target/release/mzlab-cli"), "file", "convert", str(pair[0]), "--out", str(out), "--fresh", "--workers", "1", "--compression", comp)
     cli = sorted(out.glob("*.mzML"))      # NAME.mzML, or NAME-ID.mzML per sample of a pair with several: sample 0 is the first
     assert cli and site.read_bytes() == cli[0].read_bytes(), cli
 
@@ -39,11 +39,11 @@ def test_the_download_is_the_file_of_the_cli(work, stem, comp):
 @pytest.mark.parametrize("comp", ["standard", "smallest", "none"])
 def test_a_sample_of_the_readers_module_downloads_as_the_cli_writes_it(work, comp):
     """The second sample of `mistopi` only the readers module reads (converted at the loading, shell.js `moduloToMzml`): «Download .mzML» writes it again with
-    `to_mzml_with` without the optical matrix (conversione.js `again`), the file of `mzlab-cli convert` with the same compression (conv.dad false)."""
+    `to_mzml_with` without the optical matrix (conversione.js `again`), the file of `mzlab-cli file convert` with the same compression (conv.dad false)."""
     pair = [work / "ref" / "mistopi.wiff", work / "ref" / "mistopi.wiff.scan"]
     site, out = work / f"mistopi.{comp}.mzML", work / f"mistopi.{comp}"
     run("node", str(ROOT / "tests" / "mzml_scarica_node.js"), str(work / "mod"), str(site), "1", comp, *map(str, pair))
-    run(str(ROOT / "target/release/mzlab-cli"), "convert", str(pair[0]), "--out", str(out), "--fresh", "--workers", "1", "--compression", comp)
+    run(str(ROOT / "target/release/mzlab-cli"), "file", "convert", str(pair[0]), "--out", str(out), "--fresh", "--workers", "1", "--compression", comp)
     cli = sorted(out.glob("*.mzML"))
     assert len(cli) == 2 and site.read_bytes() == cli[1].read_bytes(), cli
 
@@ -51,12 +51,12 @@ def test_a_sample_of_the_readers_module_downloads_as_the_cli_writes_it(work, com
 @pytest.mark.parametrize("comp", ["standard", "smallest"])
 def test_a_sample_with_an_optical_detector_downloads_without_its_matrix(work, comp):
     """`dadmetodo` has a DAD: the file of the loading (the UV panel reads it) carries the optical matrix, «Download .mzML» does not: it is the file of
-    `mzlab-cli convert` with the same compression and conv.dad false, also in "standard" where the file of the loading is already written."""
+    `mzlab-cli file convert` with the same compression and conv.dad false, also in "standard" where the file of the loading is already written."""
     pair = [work / "ref" / "dadmetodo.wiff", work / "ref" / "dadmetodo.wiff.scan"]
     site, load, out = work / f"dad.{comp}.mzML", work / "dad.load.mzML", work / f"dad.{comp}"
     run("node", str(ROOT / "tests" / "mzml_scarica_node.js"), str(work / "mod"), str(site), "0", comp, *map(str, pair))
     subprocess.run(["node", str(ROOT / "tests" / "mzml_scarica_node.js"), str(work / "mod"), str(load), "0", "standard", *map(str, pair)], check=True, env={**os.environ, "MZLAB_DAD": "1"})
-    run(str(ROOT / "target/release/mzlab-cli"), "convert", str(pair[0]), "--out", str(out), "--fresh", "--workers", "1", "--compression", comp)
+    run(str(ROOT / "target/release/mzlab-cli"), "file", "convert", str(pair[0]), "--out", str(out), "--fresh", "--workers", "1", "--compression", comp)
     cli = sorted(out.glob("*.mzML"))
     assert cli and site.read_bytes() == cli[0].read_bytes(), cli
     uv = b'accession="MS:1000804"'      # electromagnetic radiation spectrum: one per instant of the detector

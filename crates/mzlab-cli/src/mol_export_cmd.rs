@@ -1,13 +1,13 @@
-//! `mzlab-cli mol-export MOLFILE|- [--set format=sdf|mol] [--set ion=ADDUCT] [--set name=TEXT] [--out PATH]`: the drawing as a plain
+//! `mzlab-cli mol export MOLFILE|- [--set format=sdf|mol] [--set ion=ADDUCT] [--set name=TEXT] [--out PATH]`: the drawing as a plain
 //! molfile or SDF (`sdf/1`), byte for byte the «Export» MOL/SDF of the Draw page and of the app.
 
 use std::path::PathBuf;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli mol-export: a drawing as a plain .mol or .sdf file (sdf/1).
+pub const HELP: &str = "mzlab-cli mol export: a drawing as a plain .mol or .sdf file (sdf/1).
 
-usage: mzlab-cli mol-export MOLFILE|- [--set NAME=VALUE...] [--out PATH]
+usage: mzlab-cli mol export MOLFILE|- [--set NAME=VALUE...] [--out PATH]
 
   MOLFILE        a V2000 or V3000 molfile (- reads the standard input)
   --set format   sdf (default: one record per connected structure, with data items) or mol (the whole drawing in one record)
@@ -48,7 +48,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     }
     let [src] = pos.as_slice() else {
-        return Outcome::fail("mol-export needs one molfile (or - for the standard input)");
+        return Outcome::fail("mol export needs one molfile (or - for the standard input)");
     };
     let text = match read(src) {
         Ok(t) => t,

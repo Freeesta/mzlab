@@ -256,7 +256,7 @@ fn tree() -> Algorithm {
                 .doc("A candidate needs this many peaks shared with the unknown in its best MS2 pair"),
             Param::choice("tree_output", "Output", &["msn-search", "candidates"])
                 .default_str("msn-search")
-                .doc("msn-search: the msn-search/1 text of msn-lib search. candidates: the candidates/1 of the other algorithms (score = MS2 entropy similarity; the tree and loss scores and the proofs in the tree block), which annot.level reads"),
+                .doc("msn-search: the msn-search/1 text of msn lib search. candidates: the candidates/1 of the other algorithms (score = MS2 entropy similarity; the tree and loss scores and the proofs in the tree block), which annot.level reads"),
         ],
         ..algorithm(
             "tree",

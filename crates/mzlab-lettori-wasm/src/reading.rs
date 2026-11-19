@@ -315,7 +315,7 @@ fn open_sample(
 
 /// Sample `c` of a dataset as mzML, sent to `sink(Uint8Array)` in pieces of about 64 KB; `progress(done, total)` counts the spectra written. Gives the spectra the file declares beyond the ones read (`Reader::losses`).
 /// Indexed mzML with no processing steps and the optical matrix when the sample has one (the page reads UV spectra and the PDA from this file only):
-/// the form `mzlab-cli convert --set conv.dad=true` writes (`flow_base.rs` `write_mzml_with`), byte for byte.
+/// the form `mzlab-cli file convert --set conv.dad=true` writes (`flow_base.rs` `write_mzml_with`), byte for byte.
 #[wasm_bindgen]
 pub fn to_mzml(
     names: js_sys::Array,
@@ -329,7 +329,7 @@ pub fn to_mzml(
 }
 
 /// `to_mzml` with the optical matrix only when `dad` and the compression of «Download .mzML» (`mzmlwrite::compression_options`): with `dad` false the file of
-/// `mzlab-cli convert` with the same `conv.numpress`, byte for byte (the download of a `.wiff` sample, also one the engine reads: the engine leaves out what `estesi` writes).
+/// `mzlab-cli file convert` with the same `conv.numpress`, byte for byte (the download of a `.wiff` sample, also one the engine reads: the engine leaves out what `estesi` writes).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
 pub fn to_mzml_with(

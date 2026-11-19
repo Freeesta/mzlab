@@ -1,6 +1,6 @@
 """The two ends of an integrated area on its baseline (integra-estremi.js, the point from mzlab_core::intwin through QUALITA.windowEnd) as handles:
 24 px sliders with a name, on the baseline; the keyboard moves an end one point (Shift five), the mouse and a finger drag it onto a point of the trace,
-never past the other end; the area follows from the engine; the live text and the data table carry the new ends; the page and `mzlab-cli peak-window`
+never past the other end; the area follows from the engine; the live text and the data table carry the new ends; the page and `mzlab-cli peak window`
 give the same bytes; the default baseline stays zero; light and dark theme on a 1024x768 touch viewport. Synthetic low-resolution file only."""
 # covers: mzlab/web/integra-base.js, mzlab/web/integra-estremi.js
 import sys, os, subprocess, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -50,7 +50,7 @@ def page_end(pg, cur, other, at, st):
 
 def cli_end(csv, cur, other, at, st):
     move = ["--at", repr(at)] if at is not None else ["--step", str(st)]
-    return subprocess.run(CLI + ["peak-window", str(csv), "--end", repr(cur), "--other", repr(other), *move], cwd=ROOT, check=True, capture_output=True, text=True).stdout
+    return subprocess.run(CLI + ["peak", "window", str(csv), "--end", repr(cur), "--other", repr(other), *move], cwd=ROOT, check=True, capture_output=True, text=True).stdout
 
 r = Run(port=8987, wd="/tmp/wd_integra_estremi")
 try:

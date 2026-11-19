@@ -77,7 +77,7 @@ No migration from older notebooks or `.mzflow` files: a document with other key 
 - Role, time and concentration belong to the name parser (`role_and_time`, `guess_conc`); the `t0` role counts as `sample`. A name without separators (`MQH2O2T00`) is cut into atoms (known word, chemical piece with element symbols, `T00`); `H2O2`, `TiO2`, `Na2SO4` stay whole.
 - Matrix = first word of letters only (neither role nor condition) with 2-6 values on ≥ 2 files each; condition = the tokens between matrix and time (without a time no value: `BTZ`, `mid`, `Wash` are not conditions); replicate = number ≤ 20 at the end if the same name without it appears with another number.
 - Score = coverage × balance (1 − normalized Σp², only + × /: same bits in `.wasm` and app). Hidden: constants, identifiers (categorical with one file per value, ≥ 3), score < 0.05. Order: above 0.25 the fixed `matrix cond time role matcond folder`, then by score (`conc`, `rep`).
-- `has`: whole token (`O2` does not take `H2O2`) or `substring`; a file goes to the first term, those with several are in `multiple`, those with none in `without`. CLI `mzlab-cli samples vars|group`.
+- `has`: whole token (`O2` does not take `H2O2`) or `substring`; a file goes to the first term, those with several are in `multiple`, those with none in `without`. CLI `mzlab-cli sample vars|group`.
 - Tests: `crates/mzlab-core/tests/samples_variables.rs` (list of the study in `crates/mzlab-core/tests/samples_variables/federico.json`), `crates/mzlab-cli/src/samples_cmd_tests.rs`, parity `.wasm` = app in `parity_routes.rs` (`name_steps`).
 
 ## Free columns and metadata of the table (`docs/schemi/samples-1.json`, `sample_id.rs`, `columns.rs`, `json3.rs`, `validate3.rs`, `csv.rs`, `model.rs`, `regex.rs`, `from_file.rs`)

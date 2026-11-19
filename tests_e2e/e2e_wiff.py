@@ -143,7 +143,7 @@ try:
             try: pg.wait_for_function("document.querySelector('#tp-files') && /serie\\s+Full scan/.test(document.querySelector('#tp-files').innerText)", timeout=60000)
             except Exception: raise AssertionError(pg.evaluate("[document.querySelector('#tp-files').innerText, document.querySelector('#tp-fsum').innerText, (document.querySelector('#tp-msg')||{}).innerText, Array.from(document.querySelectorAll('#flist tr')).length]"), diag(pg))
         step("mzFinder lists the converted Full Scan file", mzfinder)
-        def empty_injection():                           # an injection in the sample table that acquired nothing (no Idx): listed as an empty sample under its number, as `mzlab-cli convert` writes gaps-2.mzML
+        def empty_injection():                           # an injection in the sample table that acquired nothing (no Idx): listed as an empty sample under its number, as `mzlab-cli file convert` writes gaps-2.mzML
             c5 = b.new_context(viewport={"width": 1500, "height": 1800}); c5.set_default_timeout(120000); pg = c5.new_page()
             pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.pick','never');}catch(_){}")
@@ -220,7 +220,7 @@ try:
             assert not errs, errs
             c6.close()
         step("a pair the module refuses is named by its .wiff in the notice", rejected_named)
-        def download_is_convert():                       # «Download .mzML» of a sample the engine reads: written by the sciex module as `mzlab-cli convert` writes it (indexed, TIC and BPC of the Full Scan)
+        def download_is_convert():                       # «Download .mzML» of a sample the engine reads: written by the sciex module as `mzlab-cli file convert` writes it (indexed, TIC and BPC of the Full Scan)
             if not (ROOT / "site" / "static" / "wasm-lettori" / "manifest.json").exists():
                 print("   (download: skipped, build the modules: tools/build_lettori_wasm.sh site/static)"); return
             c4 = b.new_context(viewport={"width": 1500, "height": 1800}, accept_downloads=True); c4.set_default_timeout(120000); pg = c4.new_page()
@@ -235,7 +235,7 @@ try:
             assert t.rstrip().endswith("</indexedmzML>") and 'id="BPC"' in t, (t[:300], t[-300:])
             assert not errs, errs
             c4.close()
-        step("«Download .mzML» of a .wiff sample is the file of mzlab-cli convert (sciex module)", download_is_convert)
+        step("«Download .mzML» of a .wiff sample is the file of mzlab-cli file convert (sciex module)", download_is_convert)
         b.close()
 finally:
     srv.terminate()

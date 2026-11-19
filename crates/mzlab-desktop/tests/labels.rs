@@ -1,5 +1,5 @@
 //! The route `feat/grafo` with `kind: "labels"` gives the same `etich/1` as `mzlab_feat::chem::labels::labels_json` (the function of the `.wasm`
-//! `grafo` and of `mzlab-cli mol-label`), with the request as an object or as text (a bracket delta too), and keeps the key of an error; `kind: "cut"` gives `cut/1` the same way;
+//! `grafo` and of `mzlab-cli mol label`), with the request as an object or as text (a bracket delta too), and keeps the key of an error; `kind: "cut"` gives `cut/1` the same way;
 //! `kind: "analysis"` gives `anal/1`, `kind: "sel"` `sel/1` and `kind: "link"` `link/1` (every case of `tests/dati/link_golden.json`) the same way; `kind: "fragments"` gives the `frag/1` bytes of the fixture `tests/dati/frag_radicale.json`, `kind: "check"` the `check/1` bytes of `tests/dati/check_disegno.json`, `kind: "cip"` the `cip/1` bytes of `tests/dati/cip_disegno.json`, `kind: "sdf"` the `sdf/1` bytes of `tests/dati/sdf_disegno.json`, and `kind: "mech"` the `mecc/1` bytes of `tests/dati/mecc_mclafferty.json`.
 
 use mzlab_desktop::rpc::Answer;
@@ -142,7 +142,7 @@ fn analysis_route_equals_the_function() {
 
 #[test]
 fn check_route_gives_the_bytes_of_the_fixture() {
-    // the same fixture is checked against the `.wasm` `grafo` and `mzlab-cli mol-check` in tests/test_feat_grafo_wasm.py
+    // the same fixture is checked against the `.wasm` `grafo` and `mzlab-cli mol check` in tests/test_feat_grafo_wasm.py
     let fx: serde_json::Value =
         serde_json::from_str(include_str!("../../../tests/dati/check_disegno.json")).unwrap();
     let st = State::new();
@@ -163,7 +163,7 @@ fn check_route_gives_the_bytes_of_the_fixture() {
 
 #[test]
 fn sdf_route_gives_the_bytes_of_the_fixture() {
-    // the same fixture is checked against the molkit `.wasm` and `mzlab-cli mol-export` in tests/test_molkit_sdf.py
+    // the same fixture is checked against the molkit `.wasm` and `mzlab-cli mol export` in tests/test_molkit_sdf.py
     let fx: serde_json::Value =
         serde_json::from_str(include_str!("../../../tests/dati/sdf_disegno.json")).unwrap();
     let st = State::new();
@@ -184,7 +184,7 @@ fn sdf_route_gives_the_bytes_of_the_fixture() {
 
 #[test]
 fn cip_route_gives_the_bytes_of_the_fixture() {
-    // the same fixture is checked against the molkit `.wasm` and `mzlab-cli mol-cip` in tests/test_molkit_wasm.py
+    // the same fixture is checked against the molkit `.wasm` and `mzlab-cli mol cip` in tests/test_molkit_wasm.py
     let fx: serde_json::Value =
         serde_json::from_str(include_str!("../../../tests/dati/cip_disegno.json")).unwrap();
     let st = State::new();
@@ -219,7 +219,7 @@ fn link_route_gives_the_golden_bytes() {
 
 #[test]
 fn hilite_route_gives_the_bytes_of_the_fixture() {
-    // the same fixture is checked against the molkit `.wasm` and `mzlab-cli mol-hilite` in tests/test_molkit_wasm.py
+    // the same fixture is checked against the molkit `.wasm` and `mzlab-cli mol hilite` in tests/test_molkit_wasm.py
     let fx: serde_json::Value =
         serde_json::from_str(include_str!("../../../tests/dati/hilite_disegno.json")).unwrap();
     let st = State::new();

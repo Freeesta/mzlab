@@ -1,4 +1,4 @@
-//! How many datasets the conversion queue converts at once: the threads of `mzlab-cli convert` on the memory budget of the computer
+//! How many datasets the conversion queue converts at once: the threads of `mzlab-cli file convert` on the memory budget of the computer
 //! (`budget_auto::convert_workers`), and the notice `conv_list` gives the page when the budget runs fewer than the default, the line the CLI prints.
 
 use serde_json::{json, Value};
@@ -37,7 +37,7 @@ impl Queue {
     }
 
     /// The notice of a budget that runs fewer conversions at once than the default, while more datasets wait than it runs: the very one
-    /// `mzlab-cli convert` prints.
+    /// `mzlab-cli file convert` prints.
     pub(super) fn notice(&self) -> Option<Value> {
         let n = (self.workers == 0)
             .then(|| {

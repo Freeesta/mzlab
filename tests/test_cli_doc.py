@@ -20,10 +20,10 @@ def test_the_command_list_of_the_doc_is_current():
     assert r.returncode == 0, r.stdout + r.stderr
 
 
-def test_the_list_names_every_command_and_old_name():
+def test_the_list_names_every_command_group():
     block = cli_doc.listing()
-    for name in ("features", "flow run", "mol-label", "validate", "channels"):
-        assert f"`{name}`" in block
-    assert "`peak-edges` (old: `peaks-edges`)" in block
+    for name in ("features", "flow run|check", "mol label|anal", "file list", "peak auto|auto-lr|edges"):
+        assert name in block
+    assert "old:" not in block
     assert "canali" not in block
     assert "help-md" not in block

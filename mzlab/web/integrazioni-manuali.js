@@ -1,7 +1,7 @@
 // @ts-check
 // The card «Manual integrations» of the Data view (#manint, under the panels): every window drawn by hand on an ion or transition trace (the `p.ints`
 // of the transition panels, kept in the session), measured again by the engine (`api/manint`, mzlab_core::manint) as one row per window grouped by
-// channel, with the name the user gives it; the CSV export is the engine's bytes, as `mzlab-cli manual-table`. Loaded by grafici.js on the first integration.
+// channel, with the name the user gives it; the CSV export is the engine's bytes, as `mzlab-cli peak table`. Loaded by grafici.js on the first integration.
 const G = /** @type {any} */ (window);
 const t = (/** @type {string} */ k, /** @type {Record<string, any>} */ p = {}) => G.I18N.t(k, p);
 
@@ -99,8 +99,17 @@ const windowsOf = (recs, ks) => JSON.stringify(recs.filter(r => !r.fol).map(r =>
 function recOf(row, head) {
   const iS = col(head, "sample"), iA = col(head, "start_min"), iB = col(head, "end_min");
   const mine = st.recs.filter(r => sampleOf(E.files[r.k].file || "") === row[iS] && r.label === row[0]);
-  return mine.find(r => !r.fol && +Math.min(r.it.a, r.it.b).toFixed(3) <= +row[iA] && +row[iB] <= +Math.max(r.it.a, r.it.b).toFixed(3))
-    || mine.filter(r => r.fol).sort((x, y) => Math.abs(x.it.a - +row[iA]) - Math.abs(y.it.a - +row[iA]))[0] || null;   // a window applied from another sample: the nearest one of the channel
+  return live(mine.find(r => !r.fol && +Math.min(r.it.a, r.it.b).toFixed(3) <= +row[iA] && +row[iB] <= +Math.max(r.it.a, r.it.b).toFixed(3))
+    || mine.filter(r => r.fol).sort((x, y) => Math.abs(x.it.a - +row[iA]) - Math.abs(y.it.a - +row[iA]))[0] || null);   // a window applied from another sample: the nearest one of the channel
+}
+/** The same window of two copies of a record: an undo or redo rebuilds p.ints from JSON, so the objects differ but the id stays. @param {any} a @param {any} b */
+const sameInt = (a, b) => a === b || (a.id != null && a.id === b.id);
+/** The record with the integration the panel holds now (delInts, noise picks and renames act by identity): the records of the last sync name the objects an undo replaced;
+ * null when the window is gone. A window that follows the sample shown is not in p.ints, and stays as it is. @param {Rec | null} rec */
+function live(rec) {
+  if (!rec || rec.fol) return rec;
+  const it = rec.p.ints.find((/** @type {any} */ i) => sameInt(i, rec.it));
+  return !it ? null : it === rec.it ? rec : { ...rec, it };
 }
 
 /** An area or height of the CSV (7.84077E+04) in the one form of the page; a baseline by its name; the time of a sample (minutes) as its tag («3h»). @param {string} v @param {string} col */
@@ -229,14 +238,14 @@ function draw() {
   });
   // the name of a row: kept on blur or Enter, Esc gives back the name it had
   el.querySelectorAll("input[data-nm]").forEach(n => {
-    const inp = /** @type {HTMLInputElement} */ (n), rec = recOf(body[Number(inp.dataset.nm)], head), was = inp.value;
-    if (rec && st.focus === rec.it) { st.focus = null; inp.focus(); }
+    const inp = /** @type {HTMLInputElement} */ (n), at = () => recOf(body[Number(inp.dataset.nm)], head), was = inp.value, first = at();      // `at` at the event: an undo in between replaces the integration
+    if (first && st.focus === first.it) { st.focus = null; inp.focus(); }
     inp.addEventListener("keydown", e => {
       e.stopPropagation();
       if (e.key === "Escape") { e.preventDefault(); inp.value = was; inp.blur(); }
-      else if (e.key === "Enter") { e.preventDefault(); if (rec && rename(rec, inp.value, e.altKey)) st.focus = rec.it; }
+      else if (e.key === "Enter") { e.preventDefault(); const rec = at(); if (rec && rename(rec, inp.value, e.altKey)) st.focus = rec.it; }
     });
-    inp.addEventListener("blur", () => { if (rec) rename(rec, inp.value); });
+    inp.addEventListener("blur", () => { const rec = at(); if (rec) rename(rec, inp.value); });
   });
   if (X) X.bind(el);
   el.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
@@ -294,7 +303,7 @@ async function valleys(it, depth) {
 /** The parts of a split record as the engine measured them (the rows of the table: apex, area, height), left to right; null when the record is not split or the
  * table does not have its parts yet. Drawn as one label each (grafici.js). @param {any} it */
 function parts(it) {
-  const rec = st.recs.find(r => r.it === it); if (!rec || !it.splits || !it.splits.length) return null;
+  const rec = st.recs.find(r => sameInt(r.it, it)); if (!rec || !it.splits || !it.splits.length) return null;
   const all = rows(st.csv), head = all[0] || [], c = (/** @type {string} */ n) => head.indexOf(n), f = E.files[rec.k], lo = +Math.min(it.a, it.b).toFixed(3), hi = +Math.max(it.a, it.b).toFixed(3);
   const mine = all.slice(1).filter(r => r[c("sample")] === sampleOf(f && f.file || "") && r[0] === rec.label && +r[c("start_min")] >= lo && +r[c("end_min")] <= hi);
   const cuts = new Set(it.splits.filter((/** @type {number} */ x) => x > lo && x < hi)).size;

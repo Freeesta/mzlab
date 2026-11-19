@@ -75,7 +75,7 @@ These two routes carry a guard against a write outside the run folder and a pani
 
 ## How to regenerate the malformed inputs (none committed)
 
-- C3 (guard check): `python3 tools/agilent_sintetico.py OUT synt.D 12`, then edit `OUT/synt.D/AcqData/Contents.xml` so `AcquiredTime` has a multi-byte character at byte 19 (e.g. `2025-05-15T16:00:4é`); `mzlab-cli convert OUT/synt.D --out X` finishes with the time read as absent, no abort.
+- C3 (guard check): `python3 tools/agilent_sintetico.py OUT synt.D 12`, then edit `OUT/synt.D/AcqData/Contents.xml` so `AcquiredTime` has a multi-byte character at byte 19 (e.g. `2025-05-15T16:00:4é`); `mzlab-cli file convert OUT/synt.D --out X` finishes with the time read as absent, no abort.
 - C2 (guard check): a folder with a one-record `lib.msp`, a one-spectrum `q.mgf` and a `plan.json` with an absolute-path or `../` step `id`; `mzlab-cli flow run plan.json --out run` and `flow check` both refuse it with `err.flow.instance.id`.
 - C1 residual: an engine-level test in `crates/mzlab-desktop/tests/` built like `feat_attributio.rs`, `kind:"decision"` with `folder` set to an absolute existing temp folder and `path` a plain `x.csv`, writes `x.csv` there with the content-controlled cells; a dot file or non-`.csv` `path` is refused. S1/S2/S3 need the window build (`--features app`) and were read in the code, not run.
 - Readers: the mutation harness is `MZLAB_MUTAZIONI=N cargo test -p mzlab-lettori --features tutte --test reader_mutations`; the seeds come from the test builders in `crates/mzlab-lettori/tests/common*` and from `tools/*_sintetico.py` and `tools/wiff_riferimento.py`.

@@ -1,7 +1,7 @@
 """XWC on the built site with the Rust engine: the DAD TWC panel of a synthetic MRM `.wiff` (tools/wiff_dad_mrm.py, no laboratory data) has the «XWC» split
 button; one click opens the band the engine proposes (274 ± 2 nm, the strongest peak) under the TWC, the popover takes λ and bandwidth by keyboard
 (Shift+Enter adds 230 nm to the same panel as one more trace with its own series key, undoable; Esc closes); the UV spectrum has the button too, with the
-band of its time; `api/uvpropose` of the demo FullScan_t10.mzML is the JSON of `mzlab-cli channels --channel uv:auto`; a TWC-only mzML has no button and
+band of its time; `api/uvpropose` of the demo FullScan_t10.mzML is the body of `mzlab-cli trace chrom FILE --id uv:auto` (`uvband/1`); a TWC-only mzML has no button and
 no toast. Run from the repo root: python3 tests_e2e/e2e_xwc.py"""
 # covers: tools/wiff_dad_mrm.py, mzlab/web/xwc.js
 import json, shutil, subprocess, sys, os, tempfile
@@ -92,10 +92,12 @@ try:
                 return
             site = q.evaluate("fetch('api/uvpropose?k=0').then(r => r.text())")
             win = q.evaluate("fetch('api/uvpropose?k=0&rt0=1&rt1=2').then(r => r.text())")
-            run = lambda *a: subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "channels", str(DEMO), "--channel", "uv:auto", *a], cwd=ROOT, capture_output=True, text=True, check=True).stdout
-            assert site + "\n" == run(), (site, run())
-            assert win + "\n" == run("--rt", "1,2"), (win, run("--rt", "1,2"))
-        step("FullScan_t10.mzML: api/uvpropose (with and without a window) is the JSON of mzlab-cli channels --channel uv:auto, byte for byte", parity)
+            run = lambda *a: subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "trace", "chrom", str(DEMO), "--id", "uv:auto", *a], cwd=ROOT, capture_output=True, text=True, check=True).stdout
+            # `uvband/1` wraps the route's members (after `evidence`) unchanged: the page's bytes sit inside the document
+            for text, doc in ((site, run()), (win, run("--rt", "1,2"))):
+                assert doc.startswith('{"schema":"uvband/1","id":"uv:auto",') and doc.endswith("}\n"), doc
+                assert text[1:-1] + "}\n" == doc[doc.rindex(text[1:-1]):], (text, doc)
+        step("FullScan_t10.mzML: api/uvpropose (with and without a window) is the body of mzlab-cli trace chrom --id uv:auto (uvband/1), byte for byte", parity)
         q.close()
 
         q = r.page(p); load(q, [T0])

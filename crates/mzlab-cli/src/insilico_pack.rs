@@ -28,7 +28,7 @@ const COLUMNS: [&str; 5] = [
 const NOTICE: &str = "Candidate structures from PubChemLite for Exposomics (University of Luxembourg, LCSB), CC BY 4.0, built from PubChem. \
 Names, structures and masses are the source's; a ranked candidate is a hypothesis, never an identification.";
 
-const HELP: &str = "usage: mzlab-cli insilico pack PUBCHEMLITE_CSV OUT [--version TEXT] [--doi TEXT] [--piece-raw BYTES]\n  \
+const HELP: &str = "usage: mzlab-cli db insilico pack PUBCHEMLITE_CSV OUT [--version TEXT] [--doi TEXT] [--piece-raw BYTES]\n  \
 writes OUT/catalogo.json (insilico/1) and the mass-range pieces OUT/NNN.bin (zlib, cut every BYTES of rows, default 12 MiB); no network, same input, same bytes";
 
 fn io(e: impl std::fmt::Display) -> Error {
@@ -280,7 +280,7 @@ fn fail(msg: &str) -> Outcome {
     Outcome::fail(msg)
 }
 
-/// `mzlab-cli insilico ...`
+/// `mzlab-cli db insilico ...`
 pub fn run(args: Vec<String>) -> Outcome {
     if args.first().map(String::as_str) != Some("pack") {
         return if args.iter().any(|a| a == "--help") {

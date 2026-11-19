@@ -1,5 +1,5 @@
 """The validation of the fragmentation rules on a handful of public CC BY MassBank records (`tests/data/pubblici_gemini/`): the lines of
-`mzlab-cli msn-rules`, summed, give the strata and the thresholds of the protocol. The full run on the pinned release is outside the CI."""
+`mzlab-cli msn rules`, summed, give the strata and the thresholds of the protocol. The full run on the pinned release is outside the CI."""
 import json
 import shutil
 import subprocess
@@ -37,4 +37,4 @@ def test_with_so_few_records_no_rule_is_measured(sommario):
 
 def test_the_script_computes_nothing_itself():
     testo = (ROOT / "tools" / "validate_rules.py").read_text()
-    assert "msn-rules" in testo and "sum" in testo
+    assert '"msn", "rules"' in testo and "sum" in testo

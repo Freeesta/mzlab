@@ -722,7 +722,7 @@
   "structures": {
    "type": "object",
    "additionalProperties": false,
-   "description": "Present only when asked (mzlab-cli msn-graph --structures NODE): the cleavages of the structure (options.smiles) of ONE node whose piece gives its m/z. Candidates with their evidence, never identifications: the broken bond is a hypothesis. The rest of the document keeps its bytes without it.",
+   "description": "Present only when asked (mzlab-cli msn graph --structures NODE): the cleavages of the structure (options.smiles) of ONE node whose piece gives its m/z. Candidates with their evidence, never identifications: the broken bond is a hypothesis. The rest of the document keeps its bytes without it.",
    "required": [
     "node",
     "smiles",
@@ -928,7 +928,7 @@
   "interpretation": {
    "type": "object",
    "additionalProperties": false,
-   "description": "Present only when asked (mzlab-cli msn-graph --interpret): for each arc the neutral loss as evidence (name, formula, exact mass, ppm, source, confidence) and the activations that observed it. Never a verdict. The rest of the document keeps its bytes without it.",
+   "description": "Present only when asked (mzlab-cli msn graph --interpret): for each arc the neutral loss as evidence (name, formula, exact mass, ppm, source, confidence) and the activations that observed it. Never a verdict. The rest of the document keeps its bytes without it.",
    "required": [
     "version",
     "ppm",
@@ -1316,7 +1316,7 @@
      }
     }
    },
-   "description": "Present only when asked (mzlab-cli msn-graph --rules): the rules of fragrules/1 that the formulas alone decide and, when the options give a SMILES, those its structure allows (groups, sites, cleavages), as evidence with their references. Never a verdict. The rest of the document keeps its bytes without it."
+   "description": "Present only when asked (mzlab-cli msn graph --rules): the rules of fragrules/1 that the formulas alone decide and, when the options give a SMILES, those its structure allows (groups, sites, cleavages), as evidence with their references. Never a verdict. The rest of the document keeps its bytes without it."
   },
   "structures_all": {
    "type": "array",
@@ -1328,7 +1328,7 @@
   "breaks": {
    "type": "object",
    "additionalProperties": false,
-   "description": "Present only when asked (mzlab-cli msn-graph --breaks): the sets of atoms of the structure (options.smiles) with one or two bonds cut and a few hydrogens moved whose m/z is a node's, the arcs whose child piece lies inside the parent's, and the share of each spectrum's intensity on explained arcs. Hypotheses with their evidence, never an assignment.",
+   "description": "Present only when asked (mzlab-cli msn graph --breaks): the sets of atoms of the structure (options.smiles) with one or two bonds cut and a few hydrogens moved whose m/z is a node's, the arcs whose child piece lies inside the parent's, and the share of each spectrum's intensity on explained arcs. Hypotheses with their evidence, never an assignment.",
    "required": [
     "version",
     "smiles",

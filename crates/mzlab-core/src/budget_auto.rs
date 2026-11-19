@@ -213,7 +213,7 @@ pub fn share_mb(auto_mb: f64, workers: usize) -> f64 {
 /// The memory in MB one file conversion is given: it reads one scan at a time, so its peak (about 50 MB) does not grow with the file; the rest is margin.
 pub const CONVERT_JOB_MB: f64 = 128.0;
 
-/// The conversions that run at once by default (`mzlab-cli convert` and the queue of the desktop app): the cores but one, 1 to 4.
+/// The conversions that run at once by default (`mzlab-cli file convert` and the queue of the desktop app): the cores but one, 1 to 4.
 pub fn convert_wanted() -> usize {
     std::thread::available_parallelism().map_or(1, |n| n.get().saturating_sub(1).clamp(1, 4))
 }

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "items/1",
-  "title": "items/1: what is learned about a file, `mzlab-cli items`",
+  "title": "items/1: what is learned about a file, `mzlab-cli file items`",
   "description": "One item per part of a mixed file. `info` is the same text the page and the app read (`Item.info()`); `hr` tells high resolution. Retention times are in minutes, m/z in Da/Th, collision energy in eV unless `nce` is true (then %). `ms2_events` is [[rt_min, mz], ...] . Code: crates/mzlab-core/src/iteminfo.rs, crates/mzlab-cli/src/items_cmd.rs. Deliberate exceptions to unit suffixes in key names: `time`, `conc` and `cunit` mirror the sample record of the series (renamed with the sample formats, not here: `time` is minutes, `conc` is in `cunit`); `prof1`/`prof2` keep the site's high-resolution profile `{hr, an, dec, tol, unit}` that `HR.prof()` reads across the page (`tol` is in `unit`, Da or ppm).",
   "type": "object",
   "required": [

@@ -1,13 +1,13 @@
-//! `mzlab-cli mol-check REQUEST.json|- [--out PATH]`: the `check/1` of a drawing (what is wrong in it: valence, charge, isotope, wedges,
+//! `mzlab-cli mol check REQUEST.json|- [--out PATH]`: the `check/1` of a drawing (what is wrong in it: valence, charge, isotope, wedges,
 //! aromatic rings, query atoms, separate pieces), byte for byte what the Check panel of Draw shows on the page and in the app.
 
 use std::path::PathBuf;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli mol-check: what is wrong in a drawing (valence, charge, isotope, wedges, aromatic rings, query atoms), as JSON (check/1).
+pub const HELP: &str = "mzlab-cli mol check: what is wrong in a drawing (valence, charge, isotope, wedges, aromatic rings, query atoms), as JSON (check/1).
 
-usage: mzlab-cli mol-check REQUEST.json|- [--out PATH]
+usage: mzlab-cli mol check REQUEST.json|- [--out PATH]
 
   REQUEST.json  {\"molfile\": \"...\"}: the V2000 or V3000 molfile of the drawing; - reads the standard input
   --out PATH    write there instead of the standard output
@@ -31,7 +31,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     }
     let [src] = pos.as_slice() else {
-        return Outcome::fail("mol-check needs one request file (or - for the standard input)");
+        return Outcome::fail("mol check needs one request file (or - for the standard input)");
     };
     let text = if src == "-" {
         let mut t = String::new();
@@ -64,7 +64,7 @@ mod tests {
         let req = r#"{"molfile":"\n  t\n\n  1  0  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\nM  CHG  1   1   2\nM  END\n"}"#;
         let p = std::env::temp_dir().join(format!("mol_check_{}.json", std::process::id()));
         std::fs::write(&p, req).unwrap();
-        let o = run(&["mol-check", p.to_str().unwrap()]);
+        let o = run(&["mol", "check", p.to_str().unwrap()]);
         std::fs::remove_file(&p).ok();
         assert_eq!(o.code, 0);
         assert!(String::from_utf8_lossy(&o.stdout).contains(r#""code":"charge""#));
@@ -75,13 +75,13 @@ mod tests {
     #[test]
     fn usage_errors_exit_2() {
         for a in [
-            vec!["mol-check"],
-            vec!["mol-check", "a", "b"],
-            vec!["mol-check", "--nope"],
-            vec!["mol-check", "/no/such/file.json"],
+            vec!["mol", "check"],
+            vec!["mol", "check", "a", "b"],
+            vec!["mol", "check", "--nope"],
+            vec!["mol", "check", "/no/such/file.json"],
         ] {
             assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
         }
-        assert_eq!(run(&["mol-check", "--help"]).code, 0);
+        assert_eq!(run(&["mol", "check", "--help"]).code, 0);
     }
 }

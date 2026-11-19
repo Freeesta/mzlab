@@ -1,13 +1,13 @@
-//! `mzlab-cli mol-hilite REQUEST.json|- [--out PATH]`: the `hilite/1` of a drawing (the atoms and bonds a piece of evidence points at, layer by
+//! `mzlab-cli mol hilite REQUEST.json|- [--out PATH]`: the `hilite/1` of a drawing (the atoms and bonds a piece of evidence points at, layer by
 //! layer), byte for byte what the evidence colours of Draw show on the page and in the app.
 
 use std::path::PathBuf;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli mol-hilite: the atoms and bonds of a drawing that a piece of evidence points at, as JSON (hilite/1).
+pub const HELP: &str = "mzlab-cli mol hilite: the atoms and bonds of a drawing that a piece of evidence points at, as JSON (hilite/1).
 
-usage: mzlab-cli mol-hilite REQUEST.json|- [--out PATH]
+usage: mzlab-cli mol hilite REQUEST.json|- [--out PATH]
 
   REQUEST.json  {\"molfile\": \"...\", \"world\": \"hr\"|\"lr\", \"selected\": [atom], \"layers\": [...]}; - reads the standard input
   --out PATH    write there instead of the standard output
@@ -32,7 +32,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     }
     let [src] = pos.as_slice() else {
-        return Outcome::fail("mol-hilite needs one request file (or - for the standard input)");
+        return Outcome::fail("mol hilite needs one request file (or - for the standard input)");
     };
     let text = if src == "-" {
         let mut t = String::new();
@@ -68,7 +68,7 @@ mod tests {
         let req = fx["request"].to_string();
         let p = std::env::temp_dir().join(format!("mol_hilite_{}.json", std::process::id()));
         std::fs::write(&p, req).unwrap();
-        let o = run(&["mol-hilite", p.to_str().unwrap()]);
+        let o = run(&["mol", "hilite", p.to_str().unwrap()]);
         std::fs::remove_file(&p).ok();
         assert_eq!(o.code, 0);
         assert_eq!(
@@ -80,13 +80,13 @@ mod tests {
     #[test]
     fn usage_errors_exit_2() {
         for a in [
-            vec!["mol-hilite"],
-            vec!["mol-hilite", "a", "b"],
-            vec!["mol-hilite", "--nope"],
-            vec!["mol-hilite", "/no/such/file.json"],
+            vec!["mol", "hilite"],
+            vec!["mol", "hilite", "a", "b"],
+            vec!["mol", "hilite", "--nope"],
+            vec!["mol", "hilite", "/no/such/file.json"],
         ] {
             assert_eq!(run(&a).code, crate::exit::usage_or_missing(&a), "{a:?}");
         }
-        assert_eq!(run(&["mol-hilite", "--help"]).code, 0);
+        assert_eq!(run(&["mol", "hilite", "--help"]).code, 0);
     }
 }

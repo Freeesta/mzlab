@@ -1,4 +1,4 @@
-//! `mzlab-cli msn-graph compare A.json B.json`: the validation of an MSn tree (`docs/agenti/msnlib.md` §4). Two `msn-graph/1` graphs of the same standard (two days, same options)
+//! `mzlab-cli msn compare A.json B.json`: the validation of an MSn tree (`docs/agenti/msnlib.md` §4). Two `msn-graph/1` graphs of the same standard (two days, same options)
 //! are checked on five criteria: the isolated nodes (same paths of precursors), the arcs with `rel` >= 10 % in both, the formulas proposed, the MS2 entropy per energy and the
 //! m/z shift of the matched nodes. The answer is a JSON with the numbers; `validated` is true when every criterion holds. Used by `lib.rs` (`msn_graph_cmd`).
 
@@ -315,7 +315,7 @@ pub fn run_compare(args: impl Iterator<Item = String>) -> Result<(String, Option
     }
     let [a, b] = files.as_slice() else {
         return Err(usage(
-            "usage: mzlab-cli msn-graph compare A.json B.json [--out PATH]",
+            "usage: mzlab-cli msn compare A.json B.json [--out PATH]",
         ));
     };
     let read = |p: &PathBuf| {

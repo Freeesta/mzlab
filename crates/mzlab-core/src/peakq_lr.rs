@@ -1,11 +1,11 @@
 //! Edges of the peak under a click on a low-resolution trace (`autoEdges` of the page, the one-click integration of an XIC or MRM trace).
 //! Quadratic Savitzky-Golay smoothing that follows the peak width, noise from the residual, edges where the smoothed trace falls below the local
-//! baseline plus a fraction of the height or turns up again. Used by `lr_edges` of mzlab-wasm (page and desktop) and `mzlab peaks-edges`.
+//! baseline plus a fraction of the height or turns up again. Used by `lr_edges` of mzlab-wasm (page and desktop) and `mzlab-cli peak edges`.
 
 use crate::sortc;
 
 /// Parameters of the detector. The dialog «Peak detection» of the page sets five of them (`from_dialog`); the rest keep these defaults
-/// there and are set only with `mzlab-cli peak-edges --set`.
+/// there and are set only with `mzlab-cli peak edges --set`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LrParams {
     /// Baseline window around the apex (min).

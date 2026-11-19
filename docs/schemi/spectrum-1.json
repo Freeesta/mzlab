@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "spectrum/1",
+  "title": "spectrum/1: one spectrum, `mzlab-cli spectrum get`",
+  "description": "The spectrum at an RT window or a scan. x is m/z. CSV (`--format csv`) has the header mz,intensity. Code: crates/mzlab-cli/src/spectrum_cmd.rs.",
+  "type": "object",
+  "required": [
+    "file",
+    "sample",
+    "x_unit",
+    "y_unit",
+    "ms_level",
+    "n_points",
+    "points",
+    "evidence"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "spectrum/1"
+    },
+    "file": {
+      "type": "string"
+    },
+    "sample": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Sample id of a multi-sample file (.wiff); null for an mzML."
+    },
+    "x_unit": {
+      "const": "m/z"
+    },
+    "y_unit": {
+      "type": "string"
+    },
+    "ms_level": {
+      "type": "integer"
+    },
+    "n_points": {
+      "type": "integer"
+    },
+    "points": {
+      "type": "array",
+      "description": "[x, y] pairs; the number tokens are the page route's own bytes.",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        },
+        "minItems": 2,
+        "maxItems": 2
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "description": "query (the route query), scan (scan_id, scan_no, rt_min, ms_level) and answer (the route's own members)."
+    }
+  }
+}

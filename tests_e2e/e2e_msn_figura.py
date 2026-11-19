@@ -1,4 +1,4 @@
-"""The stand-alone HTML of `mzlab-cli msn-graph figure` (80 ions of tests_e2e/fixtures/msngrafo_grande.json), opened from file://: size, no network request, no console error,
+"""The stand-alone HTML of `mzlab-cli msn figure` (80 ions of tests_e2e/fixtures/msngrafo_grande.json), opened from file://: size, no network request, no console error,
 the two views, the keyboard, «Copy data», the SVG and PNG downloads and axe-core clean. No server and no engine are involved."""
 import sys, os, subprocess, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pathlib import Path
@@ -15,7 +15,7 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:600]))
 
 tmp = Path(tempfile.mkdtemp(prefix="msnfig"))
-subprocess.run([CLI, "msn-graph", "figure", str(ROOT / "tests_e2e" / "fixtures" / "msngrafo_grande.json"), "--figure", "svg,html", "--out", str(tmp / "g")], check=True, capture_output=True)
+subprocess.run([CLI, "msn", "figure", str(ROOT / "tests_e2e" / "fixtures" / "msngrafo_grande.json"), "--figure", "svg,html", "--out", str(tmp / "g")], check=True, capture_output=True)
 html = tmp / "g.html"
 step("one file of at most 2 MB", lambda: (html.stat().st_size <= 2_000_000) or (_ for _ in ()).throw(AssertionError(html.stat().st_size)))
 try:

@@ -3,7 +3,7 @@ three samples whose peaks drift 0.04 min from one to the next; no laboratory dat
 «Manual integrations» per sample (columns Channel, Sample, Name, Area, Start, End, Apex, Height, S/N, Baseline, Origin), the engine's decision per sample
 (applied inside the window, shifted to the apex that drifted out of it, no peak) in the Origin column, a name typed on one row for the whole group (Enter) or
 for that sample alone (Alt+Enter), a live status line «Integration applied to N files», no notice about a cap of files; the card is the bytes of `mzlab-cli
-manual-table` for the same windows (`follow`, `names`), and the shift of a window is `mzlab-cli manual-table --set shifts=true`. Needs the site and the .wasm
+peak table` for the same windows (`follow`, `names`), and the shift of a window is `mzlab-cli peak table --set shifts=true`. Needs the site and the .wasm
 (python3 tools/prepara_sito.py) and cargo for the CLI. Run from the repo root: python3 tests_e2e/e2e_integrazione_multi.py"""
 # covers: mzlab/web/integrazioni-manuali.js, mzlab/web/integra-segue.js, crates/mzlab-core/src/manint.rs, tools/wiff_sim.py
 import json, shutil, subprocess, sys, os, tempfile
@@ -18,7 +18,7 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + str(e)[:900]))
 
 if not shutil.which("cargo"):
-    print("SKIP cargo is needed for mzlab-cli manual-table"); sys.exit(0)
+    print("SKIP cargo is needed for mzlab-cli peak table"); sys.exit(0)
 D = Path(tempfile.mkdtemp(prefix="multi_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_sim.py"), str(D)], check=True, capture_output=True)
 TRUE = json.loads((D / "sim3.json").read_text())
@@ -41,7 +41,7 @@ def all_ions(pg):
     wait_for_js(pg, "(() => { const p = E.panels.find(q => q.type === 'mrm' && q._a); return !!p && new Set(p._a.sr.map(s => s.k)).size === E.files.length; })()", timeout=60000)
 
 def cli_table(pg, st):
-    """manual-table on the .wiff for the windows the page sent (files numbered as the .wiff numbers its samples)."""
+    """peak table on the .wiff for the windows the page sent (files numbered as the .wiff numbers its samples)."""
     order = [n[:-5] for n in st["names"]]
     ws = []
     for x in json.loads(st["windows"]):
@@ -50,7 +50,7 @@ def cli_table(pg, st):
         ws.append(y)
     w = D / "windows.json"; w.write_text(json.dumps(ws))
     t = D / "times.json"; t.write_text(json.dumps(st["times"]))      # the time points the page shows (the helper fills the ones the names lack)
-    return cli("manual-table", D / "sim3.wiff", "--set", f"windows={w}", "--set", f"times={t}")
+    return cli("peak", "table", D / "sim3.wiff", "--set", f"windows={w}", "--set", f"times={t}")
 
 r = Run(port=8878, wd="/tmp/wd_integrazione_multi")
 try:
@@ -79,10 +79,10 @@ try:
         step("a window drawn on Sample_A is applied to the other samples: a label, a row each, the engine's origin", applied)
         def parity():
             st = pg.evaluate("MANINT.state()")
-            need(st["csv"] == cli_table(pg, st), "the table is the bytes of mzlab-cli manual-table")
+            need(st["csv"] == cli_table(pg, st), "the table is the bytes of mzlab-cli peak table")
             w = json.loads(st["windows"])
             need(len(w) == 1 and w[0].get("follow") is True, w)
-        step("the card is the bytes of mzlab-cli manual-table", parity)
+        step("the card is the bytes of mzlab-cli peak table", parity)
         def shifted():
             pg.evaluate(INTEG, ["Sample_A", 1, PK[1][1][0] - 0.02, PK[1][1][0] + 0.02])     # a narrow window: the next samples drift 0.04 min out of it
             wait_for_js(pg, COUNT % 8, timeout=60000)
@@ -103,10 +103,10 @@ try:
               return { ok, n: rows.length, lab, missing: lab.filter(t => !txt.has(t)) }; })()""")
             need(cmp["ok"] and cmp["n"] >= 4 and not cmp["missing"], ("card = engine numbers = chart labels", cmp))
             w1 = D / "w1.json"; w1.write_text(json.dumps([{"file": 1, "tr": 1, "a": PK[1][1][0] - 0.02, "b": PK[1][1][0] + 0.02, "baseline": "zero"}]))
-            sh = json.loads(cli("manual-table", D / "sim3.wiff", "--set", "shifts=true", "--set", f"windows={w1}"))
+            sh = json.loads(cli("peak", "table", D / "sim3.wiff", "--set", "shifts=true", "--set", f"windows={w1}"))
             ks = pg.evaluate("n => n.map(x => E.files.find(f => f.label === x || f.file.startsWith(x + '.')).k)", SAMPLES)
             site = pg.evaluate("([ks, w]) => fetch(`api/manfollow?k=${ks.join(',')}&w=${encodeURIComponent(w)}`).then(r => r.text())", [ks, w1.read_text()[1:-1]])
-            need(site == cli("manual-table", D / "sim3.wiff", "--set", "shifts=true", "--set", f"windows={w1}").strip(), ("api/manfollow is the bytes of the CLI", site))
+            need(site == cli("peak", "table", D / "sim3.wiff", "--set", "shifts=true", "--set", f"windows={w1}").strip(), ("api/manfollow is the bytes of the CLI", site))
             by = {x["file"]: x for x in sh}
             need(abs(by[2]["shift"] - 0.04) < 0.01 and by[2]["origin"] == "shifted", by)
             need(by[3]["origin"] in ("shifted", "no_peak") and by[0]["origin"] == "no_peak", by)
@@ -126,7 +126,7 @@ try:
             got = [pg.evaluate(f"document.querySelector('{n0 % i}').value") for i in (1, 2, 3, 4)]
             need(got == ["Caffeine 2", "Caffeine 2", "Caffeine 2", "Caffeine C"], got)
             st = pg.evaluate("MANINT.state()")
-            need(st["csv"] == cli_table(pg, st), "the names are the bytes of mzlab-cli manual-table (`names`)")
+            need(st["csv"] == cli_table(pg, st), "the names are the bytes of mzlab-cli peak table (`names`)")
             tip = pg.evaluate("document.querySelector('#manint thead th:nth-child(4)').title")
             need(0 < len(tip) <= 60, tip)
             pg.evaluate("STORIA.annulla()"); frames(pg, 3)
@@ -136,10 +136,12 @@ try:
             need(pg.evaluate("!document.querySelector('.mrm-all')") and not pg.evaluate("[...document.querySelectorAll('#dpanels *')].some(e => /primi 12|first 12/.test(e.textContent) && e.children.length === 0)"), "no «first 12 of N files» notice")
         step("no notice about a cap of files", no_notice)
         def delete_group():
+            # what an undo leaves behind until the next sync: p.ints rebuilt from JSON (new objects, same ids) while the card still holds the records of the old ones
+            pg.evaluate("(() => { const p = E.panels.find(q => q.type === 'mrm'); p.ints = JSON.parse(JSON.stringify(p.ints)); })()")
             pg.click("#manint tbody tr:nth-child(2) [data-del]")
             wait_for_js(pg, COUNT % 4, timeout=60000)
             need(pg.evaluate("E.panels.find(q => q.type === 'mrm').ints.length") == 1, "deleting the window drawn takes its applied rows with it")
-        step("deleting the window drawn removes the rows applied from it", delete_group)
+        step("deleting the window drawn removes the rows applied from it, also right after an undo", delete_group)
         def only_selected():
             pg.evaluate("(() => { E.files.forEach(f => { f.vis = f.file.startsWith('Sample_A') || f.file.startsWith('Sample_B'); }); draw(E.panels.find(q => q.type === 'mrm')); })()")
             wait_for_js(pg, "(() => { const p = E.panels.find(q => q.type === 'mrm' && q._a); return !!p && new Set(p._a.sr.map(s => s.k)).size === 2; })()", timeout=60000)

@@ -1,56 +1,37 @@
-//! `mzlab-cli channels FILE [--out PATH]`: the channels (`channels/1`) of a file, the JSON of `api/canali`. An mzML also gives its SRM and SIC chromatograms;
+//! `mzlab-cli file channels FILE [--out PATH]`: the channels (`channels/1`) of a file, the JSON of `api/canali`. An mzML also gives its SRM and SIC chromatograms;
 //! any other file the app reads gives the channels of one sample (`--sample ID`, else the first): its scans and its chromatograms (the mzML shell the site
-//! reads), what the site and the app list for that sample.
+//! reads), what the site and the app list for that sample. The traces themselves are `trace chrom`.
 
-use std::fs::File;
 use std::path::PathBuf;
 
-use mzlab_core::error::{Error, Result};
-use mzlab_core::mzmlhead::Mzml;
-use mzlab_core::routes::Routes;
+use mzlab_core::error::Result;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli channels: the channels of a file (TIC, BPC, one per scan type or precursor, one per SRM transition) as JSON (channels/1).
+pub const HELP: &str = "mzlab-cli file channels: the channels of a file (TIC, BPC, one per scan type or precursor, one per SRM transition, UV, analog) as JSON (channels/1).
 
-usage: mzlab-cli channels FILE [--sample LIST] [--channel ID [--rt T0[,T1]] [--n N]] [--out PATH]
+usage: mzlab-cli file channels FILE [--sample LIST] [--out PATH]
 
-  FILE        an mzML, or any single file the app reads (.raw, mzXML, ...); SRM, SIC, UV and analog channels only for an mzML
+  FILE        an mzML, or any single file the app reads (.raw, mzXML, ...)
   --sample LIST the samples of a file with several (.wiff), by their ids: one id, or a list and ranges (1,3,5 or 2-4: one channels/1 line each, in the order
               of the file, only those samples are read); default the first, the others are named on the standard error; an id the file does not have: exit 5
-  --channel ID the trace of a UV or analog channel (uv:twc, uv:<nm>±<bw>, an:<i>) instead of the list; with --rt (minutes) the UV spectrum of uv:twc;
-              uv:auto prints the XWC band proposed from the DAD matrix ({nm, bw, rt, n}), in the --rt window when given
-  --n N       points at most per extreme of an analog trace (default 2000)
-  --out PATH  write there instead of the standard output";
+  --out PATH  write there instead of the standard output
+the trace of a channel is `mzlab-cli trace chrom FILE --id ID`";
 
-/// What was asked: the file, its sample, the channel to read (`--channel`, `--rt`, `--n`) and where to write.
+/// What was asked: the file, its sample and where to write.
 struct Request {
     file: PathBuf,
     sample: Option<Vec<u32>>,
     out: Option<PathBuf>,
-    channel: Option<String>,
-    rt: Option<(f64, f64)>,
-    n: i64,
 }
 
 fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
-    let (mut file, mut out, mut channel, mut rt, mut n, mut sample) =
-        (None, None, None, None, 2000, None);
+    let (mut file, mut out, mut sample) = (None, None, None);
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
             "--help" | "-h" => return Ok(None),
             "--out" => out = Some(PathBuf::from(it.next().ok_or("--out needs a path")?)),
-            "--channel" => channel = Some(it.next().ok_or("--channel needs a channel id")?),
-            "--rt" => {
-                let v = it.next().ok_or("--rt needs minutes")?;
-                let num = |x: &str| x.parse::<f64>().ok().filter(|x| x.is_finite());
-                let (a, b) = v.split_once(',').unwrap_or((&v, &v));
-                rt = Some((
-                    num(a).ok_or("--rt needs minutes")?,
-                    num(b).ok_or("--rt needs minutes")?,
-                ));
-            }
             "--sample" => {
                 let v = it.next().ok_or("--sample needs a sample id or list")?;
                 sample = Some(
@@ -58,115 +39,27 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
                         .map_err(|e| crate::error_text::human_error(&e))?,
                 )
             }
-            "--n" => {
-                n = (it.next().ok_or("--n needs a number")?)
-                    .parse()
-                    .map_err(|_| "--n needs a number")?
-            }
             o if o.starts_with("--") => return Err(format!("unknown option {o}")),
             _ if file.is_none() => file = Some(PathBuf::from(a)),
             _ => return Err("channels takes one file".into()),
         }
     }
-    let mzml = |f: &PathBuf| f.to_string_lossy().to_lowercase().ends_with(".mzml");
-    if sample.is_some() && file.as_ref().is_some_and(mzml) {
+    if sample.is_some() && file.as_ref().is_some_and(|f| crate::extract::is_mzml(f)) {
         return Err(
             "--sample is for a file of several samples (.wiff, ...), an mzML holds one".into(),
         );
-    }
-    if channel.is_some() && sample.as_ref().is_some_and(|s| s.len() > 1) {
-        return Err("--channel reads one sample: give one id to --sample".into());
-    }
-    if channel.is_none() && (rt.is_some() || n != 2000) {
-        return Err("--rt and --n need --channel".into());
     }
     Ok(Some(Request {
         file: file.ok_or("channels needs a file")?,
         sample,
         out,
-        channel,
-        rt,
-        n,
     }))
 }
 
-fn io(e: std::io::Error) -> Error {
-    Error::new("err.file.index").with("detail", e)
-}
-
-/// The JSON of `api/canali` for `file`, indexes kept in `tmp`; with `--channel`, the trace (or with `--rt` the UV spectrum) of that UV or analog channel
-/// of an mzML: what `api/chrom?canale=` and `api/uvspec?canale=` answer. The note names the other samples when `--sample` was not given.
+/// The JSON of `api/canali` for `file`, indexes kept in `tmp`. The note names the other samples when `--sample` was not given.
 fn read(c: &Request, sample: Option<u32>, tmp: &std::path::Path) -> Result<(String, String)> {
-    let file = &c.file;
-    let name = file
-        .file_name()
-        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    let mzml = name.to_lowercase().ends_with(".mzml");
-    let label = sample.map_or(String::new(), |id| format!("{name}@{id}"));
-    // the sample of a file with several, checked before its index is built: its ids name the others
-    let mut l = match mzml {
-        true => None,
-        false => Some(mzlab_lettori::apri(
-            crate::flow_set::file_set(file)?,
-            &mzlab_core::readers::Limits::desktop(),
-        )?),
-    };
-    let ids: Vec<u32> = l
-        .iter()
-        .flat_map(|l| l.samples().iter().map(|s| s.id))
-        .collect();
-    let list = ids
-        .iter()
-        .map(|i| i.to_string())
-        .collect::<Vec<_>>()
-        .join(", ");
-    if let Some(id) = sample {
-        mzlab_core::readers::selection::resolve(&ids, &[id])?;
-    }
-    let idx = tmp.join("0.mzidx");
-    crate::flow_pace::build_index_of(
-        file,
-        &label,
-        &idx,
-        mzlab_core::budget_auto::native_index_budget(),
-    )?;
-    let mut r = Routes::new(crate::open(&idx)?);
-    if let (Some(id), false) = (&c.channel, mzml) {
-        return Err(Error::new("err.canali.unknown").with("id", id));
-    }
-    if mzml {
-        let scans_end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
-        let f = File::open(file).map_err(io)?;
-        let size = f.metadata().map_err(io)?.len();
-        let mut m = Mzml::new(f, size);
-        let chroms = m.chromatograms(scans_end)?;
-        if let Some(id) = &c.channel {
-            let t = match c.rt {
-                Some((a, b)) => mzlab_core::channels_uv::spettro(&mut m, id, a, b),
-                None => mzlab_core::channels_uv::trace(&mut m, &chroms, id, c.n),
-            };
-            return t.map(|t| (t, String::new()));
-        }
-        let facts = mzlab_core::iteminfo::facts_from(&mut m, scans_end, chroms.len() as i64, true)?;
-        r.pon_cromatogrammi(&name, &chroms, &facts);
-        return Ok((r.canali().json(), String::new()));
-    }
-    // the sample of the index: its chromatograms (SIM, SRM, UV) from the mzML shell the site reads (`readers_mzml::guscio`)
-    let mut l = l.take().ok_or_else(|| Error::new("error.badIndex"))?;
-    let k = crate::flow_set::sample_index(&label, &ids)?;
-    let note = if sample.is_none() && ids.len() > 1 {
-        format!("note: {name} has {} samples (ids {}): these are the channels of sample {}; --sample ID for another\n", ids.len(), list, ids[k])
-    } else {
-        String::new()
-    };
-    let shell = mzlab_core::readers_mzml::guscio(l.as_mut(), k)?;
-    let end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
-    let size = shell.len() as u64;
-    let mut m = Mzml::new(shell, size);
-    let chroms = m.chromatograms(end)?;
-    let facts = mzlab_core::iteminfo::facts_from(&mut m, end, chroms.len() as i64, true)?;
-    r.pon_cromatogrammi(&name, &chroms, &facts);
-    Ok((r.canali().json(), note))
+    let mut s = crate::extract::open_sample(&c.file, sample, tmp)?;
+    Ok((s.routes.canali().json(), s.note))
 }
 
 pub fn run(args: Vec<String>) -> Outcome {
@@ -175,11 +68,9 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => return Outcome::fail(&e),
     };
-    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-canali{k}", std::process::id()));
-    let r = std::fs::create_dir_all(&tmp).map_err(io).and_then(|_| {
-        let mzml = c.file.to_string_lossy().to_lowercase().ends_with(".mzml");
+    let io = crate::extract::io;
+    let r = crate::extract::with_tmp("canali", |tmp| {
+        let mzml = crate::extract::is_mzml(&c.file);
         // the whole list is checked before the first sample is read: no partial answer for a list with a wrong id
         let ids = match &c.sample {
             Some(w) if !mzml => crate::sample_select::resolve(&c.file, w)?
@@ -198,7 +89,6 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
         Ok((text.join("\n"), notes))
     });
-    let _ = std::fs::remove_dir_all(&tmp);
     match r {
         Err(e) => crate::sample_select::fail(&e),
         Ok((t, note)) => {

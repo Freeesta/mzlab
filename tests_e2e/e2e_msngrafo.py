@@ -1,5 +1,5 @@
 """api/msn_grafo on the built site: the .wasm msngrafo (crates/mzlab-msngrafo-wasm, wasm-feat/msngrafo/) answers the graph of a synthetic MSn infusion from the .mzidx and the
-mzML in OPFS, with the same bytes as `mzlab-cli msn-graph` (only the SHA-256 of the index may differ), a bad number is a keyed error, the export route gives CSV, MGF or MSP text, api/msnlib/add adds an entry to the library once,
+mzML in OPFS, with the same bytes as `mzlab-cli msn graph` (only the SHA-256 of the index may differ), a bad number is a keyed error, the export route gives CSV, MGF or MSP text, api/msnlib/add adds an entry to the library once,
 MZLAB_LR_MISS stays empty and the .wasm is under 545000 bytes. Needs the site (python3 tools/prepara_sito.py); the module is built here when it is not in site/static/wasm-feat."""
 import hashlib, json, re, shutil, subprocess, sys
 sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
@@ -19,7 +19,7 @@ lib_msngrafo.prepare()
 D = synth("msngrafo")
 F = write_msn(D / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)
 ION = "C8H11N4O2+"
-cli = subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(F), "--formula", ION], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout.rstrip("\n")
+cli = subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn", "graph", str(F), "--formula", ION], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout.rstrip("\n")
 mask = lambda t: re.sub(r'"sha256_idx":"[0-9a-f]*"', '"sha256_idx":""', t)
 r = Run(port=8978, wd="/tmp/wd_msngrafo")
 try:
@@ -34,7 +34,7 @@ try:
         step("the graph of the site is the one of the command line", same)
         def cuts():
             smi, q = "CNC(=O)c1cnc(N)nc1C", "k=0&formula=C8H11N4O2%2B&smiles=CNC%28%3DO%29c1cnc%28N%29nc1C&structures=n3"
-            want = subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(F), "--formula", ION, "--smiles", smi, "--structures", "n3"], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout.rstrip("\n")
+            want = subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn", "graph", str(F), "--formula", ION, "--smiles", smi, "--structures", "n3"], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout.rstrip("\n")
             t = pg.evaluate(f"fetch('api/msn_grafo?{q}').then(r=>r.text())")
             assert mask(t) == mask(want) and '"structures":{' in t, "the site and the command line differ"
             assert '"structures"' not in pg.evaluate("fetch('api/msn_grafo?k=0&formula=C8H11N4O2%2B&smiles=CCO').then(r=>r.text())")

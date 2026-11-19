@@ -1,6 +1,6 @@
 // @ts-nocheck
 // The rows of the card «Manual integrations» for the windows drawn on the traces the page makes itself (chromatogram, XIC, DAD): the panels that are not
-// transition panels. The engine measures them (POST api/mantraces, mzlab_core::manint::table_text, the same bytes as `mzlab-cli manual-table --set traces=`),
+// transition panels. The engine measures them (POST api/mantraces, mzlab_core::manint::table_text, the same bytes as `mzlab-cli peak table --set traces=`),
 // with the panel, the concentration of the sample, the correction note and what lies under the baseline. Loaded by integrazioni-manuali.js, which draws the card.
 const G = window;
 const t = (k, p = {}) => G.I18N.t(k, p);

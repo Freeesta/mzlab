@@ -1,4 +1,4 @@
-//! `mzlab-cli msn-rules`: a synthetic MassBank record through the command, the strata, the decoys and the sums. Synthetic spectra only.
+//! `mzlab-cli msn rules`: a synthetic MassBank record through the command, the strata, the decoys and the sums. Synthetic spectra only.
 
 use super::sum::summed;
 use crate::execute;
@@ -39,7 +39,7 @@ fn a_record_gives_a_line_of_numbers_with_the_rule_that_explains_the_loss() {
         "a.txt",
         &registry("SYN-A", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
     );
-    let o = run(&["msn-rules", &f, "--rules"]);
+    let o = run(&["msn", "rules", &f, "--rules"]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let l = &rows(&o)[0];
     assert_eq!(l.get("layer").unwrap().str(), Some("hcd"));
@@ -73,7 +73,7 @@ fn the_stratum_comes_from_the_instrument_and_the_mode() {
                 "CC(=O)Nc1ccccc1",
             ),
         );
-        let l = rows(&run(&["msn-rules", &f])).remove(0);
+        let l = rows(&run(&["msn", "rules", &f])).remove(0);
         assert_eq!(
             l.get("layer").unwrap().str(),
             Some(*expected),
@@ -99,7 +99,7 @@ fn a_record_that_cannot_be_judged_says_why() {
     let mode = registry("SYN-M", "LC-ESI-QFT", "ETD", "[M+H]+", "CC(=O)Nc1ccccc1");
     for (t, reason) in [(without, "smiles"), (aduct, "ion"), (mode, "activation")] {
         let f = write_outputs("x.txt", &t);
-        let l = rows(&run(&["msn-rules", &f])).remove(0);
+        let l = rows(&run(&["msn", "rules", &f])).remove(0);
         assert_eq!(l.get("skipped").unwrap().str(), Some(reason));
     }
 }
@@ -115,10 +115,10 @@ fn the_decoys_explain_less_and_the_same_seed_gives_the_same_lines() {
         &registry("SYN-D2", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1O")
             .replace("C8H9NO", "C8H9NO2"),
     );
-    let args = ["msn-rules", &a, "--rules", "--decoy", "5"];
+    let args = ["msn", "rules", &a, "--rules", "--decoy", "5"];
     let (x, y) = (run(&args), run(&args));
     assert_eq!(x.stdout, y.stdout);
-    let l = &rows(&run(&["msn-rules", &a, "--rules", "--decoy", "5"]))[0];
+    let l = &rows(&run(&["msn", "rules", &a, "--rules", "--decoy", "5"]))[0];
     // the losses shifted by 13.7 mDa fall out of every window: nothing is explained
     let dl = l.get("dl").unwrap();
     assert_eq!(dl.get("a").unwrap().f64(), Some(0.0));
@@ -126,14 +126,14 @@ fn the_decoys_explain_less_and_the_same_seed_gives_the_same_lines() {
     // a lone record has no other spectrum of its nominal precursor
     assert!(l.get("dp").is_none());
     // two records with the same nominal precursor but another structure give each other the spectrum
-    let l2 = rows(&run(&["msn-rules", &a, &b, "--rules", "--decoy", "5"]));
+    let l2 = rows(&run(&["msn", "rules", &a, &b, "--rules", "--decoy", "5"]));
     assert!(l2.iter().all(|l| l.get("dp").is_some()));
     // the same compound at another energy (same neutral formula) is not a decoy
     let a2 = write_outputs(
         "d3.txt",
         &registry("SYN-D3", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
     );
-    let l3 = rows(&run(&["msn-rules", &a, &a2, "--rules", "--decoy", "5"]));
+    let l3 = rows(&run(&["msn", "rules", &a, &a2, "--rules", "--decoy", "5"]));
     assert!(l3.iter().all(|l| l.get("dp").is_none()));
 }
 
@@ -223,34 +223,34 @@ fn the_italian_names_are_refused() {
         &registry("SYN-AL", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
     );
     let list = write_outputs("al.lst", &format!("{f}\n"));
-    let lines = run(&["msn-rules", &f, "--rules"]);
+    let lines = run(&["msn", "rules", &f, "--rules"]);
     let lf = write_outputs(
         "al.lines",
         &String::from_utf8(lines.stdout.clone()).unwrap(),
     );
     for ok in [
-        vec!["msn-rules", &f, "--rules"],
-        vec!["msn-rules", &f, "--activation", "cid"],
-        vec!["msn-rules", "--list", &list, "--rules"],
-        vec!["msn-rules", "sum", &lf],
+        vec!["msn", "rules", &f, "--rules"],
+        vec!["msn", "rules", &f, "--activation", "cid"],
+        vec!["msn", "rules", "--list", &list, "--rules"],
+        vec!["msn", "rules", "sum", &lf],
     ] {
         let o = run(&ok);
         assert_eq!(o.code, 0, "{ok:?}: {}", o.stderr);
         assert!(!o.stdout.is_empty(), "{ok:?}");
     }
     for bad in [
-        vec!["msn-rules", &f, "--regole"],
-        vec!["msn-rules", &f, "--attivazione", "cid"],
-        vec!["msn-rules", "--lista", &list, "--rules"],
+        vec!["msn", "rules", &f, "--regole"],
+        vec!["msn", "rules", &f, "--attivazione", "cid"],
+        vec!["msn", "rules", "--lista", &list, "--rules"],
     ] {
         assert_eq!(run(&bad).code, 2, "{bad:?}");
     }
     // `somma` is no longer the sum command: it is read as an input path
     assert_ne!(
-        run(&["msn-rules", "somma", &lf]).stdout,
-        run(&["msn-rules", "sum", &lf]).stdout
+        run(&["msn", "rules", "somma", &lf]).stdout,
+        run(&["msn", "rules", "sum", &lf]).stdout
     );
-    let h = String::from_utf8(run(&["msn-rules", "--help"]).stdout).unwrap();
-    assert!(h.contains("--activation A") && h.contains("msn-rules sum"));
+    let h = String::from_utf8(run(&["msn", "rules", "--help"]).stdout).unwrap();
+    assert!(h.contains("--activation A") && h.contains("msn rules sum"));
     assert!(!h.contains("old names still accepted"));
 }

@@ -1,4 +1,4 @@
-//! `mzlab-cli items FILE [--out PATH]`: the items of a file as the page and the app list them (`Item.info()`, `lr::open_items`): counts, ranges,
+//! `mzlab-cli file items FILE [--out PATH]`: the items of a file as the page and the app list them (`Item.info()`, `lr::open_items`): counts, ranges,
 //! polarity and `ms2_exps` (precursor, CE, and for a stepped CE its centre `ce_mid` and half width `ce_spread`). Stable keys, JSON only (units: `docs/schemi/items-1.json`).
 
 use std::fs::File;
@@ -10,9 +10,9 @@ use mzlab_core::routes::Routes;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli items: what the page learns about a file (one item, or one per part of a mixed file) as {\"schema\":\"items/1\",\"items\":[{info, hr}]}.
+pub const HELP: &str = "mzlab-cli file items: what the page learns about a file (one item, or one per part of a mixed file) as {\"schema\":\"items/1\",\"items\":[{info, hr}]}.
 
-usage: mzlab-cli items FILE [--out PATH]
+usage: mzlab-cli file items FILE [--out PATH]
 
   FILE        an mzML, or any single file the app reads (.raw, mzXML, ...); a file of several samples gives its first
   --out PATH  write there instead of the standard output
@@ -65,14 +65,16 @@ fn read(file: &PathBuf, tmp: &std::path::Path) -> Result<String> {
         let size = shell.len() as u64;
         mzlab_core::lr::open_items(&mut r.idx, &mut Mzml::new(shell, size), &name, &sample)?
     };
+    Ok(document(&items))
+}
+
+/// The `items/1` document of the items a file opens as (`file items`, and the `items` member of `file info`).
+pub(crate) fn document(items: &[mzlab_core::lr::OpenItem]) -> String {
     let body: Vec<String> = items
         .iter()
         .map(|i| format!("{{\"info\":{},\"hr\":{}}}", i.info, i.hr))
         .collect();
-    Ok(format!(
-        "{{\"schema\":\"items/1\",\"items\":[{}]}}",
-        body.join(",")
-    ))
+    format!("{{\"schema\":\"items/1\",\"items\":[{}]}}", body.join(","))
 }
 
 pub fn run(args: Vec<String>) -> Outcome {

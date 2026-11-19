@@ -1,0 +1,224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "commands/1",
+  "title": "commands/1: every command of mzlab-cli, its arguments, flags and outputs",
+  "description": "The answer of `mzlab-cli commands --json [PATH...]`, built from the same table as `--help`: `synopsis` is the usage line, `args` and `flags` are read from it, so help and catalog cannot differ. `stdout.schema` names a schema that `mzlab-cli schema NAME` prints (empty when the command prints none, or several). `exit_codes` lists the codes of the command, `exit_code_meaning` (top level) says what each means. Code: crates/mzlab-cli/src/catalog.rs. A flag object leaves out `unit`, `default` and `enum` when they are null, and `repeat` and `required` when false.",
+  "type": "object",
+  "required": [
+    "schema",
+    "citation",
+    "exit_code_meaning",
+    "global_flags",
+    "commands"
+  ],
+  "properties": {
+    "schema": {
+      "const": "commands/1"
+    },
+    "citation": {
+      "type": "string"
+    },
+    "exit_code_meaning": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "global_flags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "type",
+          "help"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^--"
+          },
+          "type": {
+            "enum": [
+              "bool",
+              "int",
+              "number",
+              "string",
+              "path",
+              "list",
+              "enum",
+              "set"
+            ]
+          },
+          "unit": {
+            "type": "string"
+          },
+          "default": {},
+          "enum": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "help": {
+            "type": "string"
+          },
+          "repeat": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "synopsis",
+          "summary",
+          "args",
+          "flags",
+          "stdin",
+          "stdout",
+          "exit_codes",
+          "examples"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "synopsis": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "kind",
+                "required",
+                "repeat"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "kind": {
+                  "enum": [
+                    "path",
+                    "value",
+                    "rest"
+                  ]
+                },
+                "required": {
+                  "type": "boolean"
+                },
+                "repeat": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "flags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "type",
+                "help"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^--"
+                },
+                "type": {
+                  "enum": [
+                    "bool",
+                    "int",
+                    "number",
+                    "string",
+                    "path",
+                    "list",
+                    "enum",
+                    "set"
+                  ]
+                },
+                "unit": {
+                  "type": "string"
+                },
+                "default": {},
+                "enum": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "help": {
+                  "type": "string"
+                },
+                "repeat": {
+                  "type": "boolean"
+                },
+                "required": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "stdin": {
+            "type": "boolean"
+          },
+          "stdout": {
+            "type": "object",
+            "required": [
+              "format",
+              "schema"
+            ],
+            "properties": {
+              "format": {
+                "enum": [
+                  "json",
+                  "csv",
+                  "text"
+                ]
+              },
+              "schema": {
+                "type": "string"
+              },
+              "json_flag": {
+                "type": "boolean"
+              }
+            }
+          },
+          "exit_codes": {
+            "type": "array",
+            "items": {
+              "enum": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            }
+          },
+          "examples": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

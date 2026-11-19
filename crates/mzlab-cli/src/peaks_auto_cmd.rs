@@ -1,4 +1,4 @@
-//! `mzlab-cli peak-auto TRACE.csv`: every peak of a high-resolution trace with its baseline, from `mzlab_core::peakq_auto::auto_integrate`, the
+//! `mzlab-cli peak auto TRACE.csv`: every peak of a high-resolution trace with its baseline, from `mzlab_core::peakq_auto::auto_integrate`, the
 //! function behind the one-click integration of the page (`QUALITA.autoIntegrate`). The `--set` names are the snake_case of the page settings (`PK`).
 
 use mzlab_core::area_unit::AreaUnit;
@@ -9,16 +9,16 @@ use crate::peaks_edges_cmd::trace;
 use crate::plain::peak_area_cmd::{baseline_of, is_base};
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli peak-auto: every peak of a high-resolution trace with its baseline, as JSON.
+pub const HELP: &str = "mzlab-cli peak auto: every peak of a high-resolution trace with its baseline, as JSON.
 
-usage: mzlab-cli peak-auto TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VALUE...]
+usage: mzlab-cli peak auto TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VALUE...]
 
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --from/--to  the stretch whose apexes count (default: the whole trace)
   --set        the page dialog: hr_smooth (points, odd), hr_sn; engine only: hr_prom (% of the tallest), hr_scans, hr_half (points, 0 = auto), hr_slope (%);
                the area of every peak: baseline = zero (default: any background under the peak is part of the area), edges (the line b0-b1),
-               or line with base_y0, base_t0, base_y1, base_t1 (see peak-area --help);
-               area_unit: s = counts x s (default, as peak-area), min = counts x min (the old unit)
+               or line with base_y0, base_t0, base_y1, base_t1 (see peak area --help);
+               area_unit: s = counts x s (default, as peak area), min = counts x min (the old unit)
   output       {\"peaks\":[{\"t0\":MIN,\"t1\":MIN,\"b0\":BASELINE,\"b1\":BASELINE,\"area\":COUNTS_S,\"baseline\":MODE}...]}; with zero or line each
                peak also has \"below\" (COUNTS_S, the part under the line) and its area is the signed one against that line";
 
@@ -78,7 +78,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(()) => {}
     }
     let Some(src) = src else {
-        return Outcome::fail("peak-auto needs a trace (see --help)");
+        return Outcome::fail("peak auto needs a trace (see --help)");
     };
     let base = match baseline_of(&bases) {
         Ok(b) => b,

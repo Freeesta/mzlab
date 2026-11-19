@@ -1,5 +1,5 @@
 """The baseline modes of a peak integration (mzlab_core::baseline): the page's QUALITA.peakArea (peak_area of the engine .wasm, peaks-worker.js) and
-`mzlab-cli peak-area` give the same bytes for the same trace, from zero and from a line that cuts through the peak (a level and a sloped line);
+`mzlab-cli peak area` give the same bytes for the same trace, from zero and from a line that cuts through the peak (a level and a sloped line);
 from zero the area is the trapezoid of the trace. The trace is an XIC of the synthetic low-resolution file, written to a CSV with every digit."""
 # covers: mzlab/web/integra-base.js
 import sys, os, subprocess, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -38,7 +38,7 @@ try:
                 page = pg.evaluate("([a,b,m,l])=>{const s=E.panels.find(q=>q.type==='xic')._a.sr[0];return QUALITA.peakArea(s.x,s.y,a,b,m,l)}", [a, b, mode, line])
                 assert page, "no answer from the engine"
                 args = sum((["--set", x] for x in (sets or ["baseline=zero"])), [])
-                cli = subprocess.run(CLI + ["peak-area", str(csv), "--from", repr(a), "--to", repr(b), *args], cwd=ROOT, check=True, capture_output=True, text=True).stdout
+                cli = subprocess.run(CLI + ["peak", "area", str(csv), "--from", repr(a), "--to", repr(b), *args], cwd=ROOT, check=True, capture_output=True, text=True).stdout
                 assert page + "\n" == cli, (page, cli)
                 v = json.loads(page)
                 if name == "zero":
@@ -47,7 +47,7 @@ try:
                     assert abs(v["area"] - trap) <= 1e-9 * trap and v["below"] == 0 and v["baseline"] == "zero", (v, trap)
                 else:
                     assert v["baseline"] == "line" and v["below"] > 0 and abs(v["area"] + v["below"]) > 0, v
-            step(f"{name}: the page and mzlab-cli peak-area give the same bytes", same)
+            step(f"{name}: the page and mzlab-cli peak area give the same bytes", same)
 finally:
     r.close()
 for s in steps: print(s)

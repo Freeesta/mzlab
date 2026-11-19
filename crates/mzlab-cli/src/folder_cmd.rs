@@ -1,4 +1,4 @@
-//! `mzlab-cli folder list DIR --json`: what «Open folder» lists in a pointed folder (`folder/1`). ONE scan for the CLI and the desktop app (the site's twin is
+//! `mzlab-cli file list DIR --json`: what «Open folder» lists in a pointed folder (`folder/1`). ONE scan for the CLI and the desktop app (the site's twin is
 //! `CartPP.collect` in `mzlab/web/cartella-puntata.js`, proved equal on a synthetic tree by `tests/test_cartella_puntata.py`): the compatible files, plus the
 //! directory-based formats the drop path reads (`CartCarica.load`): Agilent `.D` / Bruker `.d` folders and Waters `.raw` folders (with `_FUNC001.DAT`).
 
@@ -13,9 +13,9 @@ use crate::Outcome;
 pub const MAX_DEPTH: usize = 3;
 pub const CAP: usize = 3000;
 
-pub const HELP: &str = "mzlab-cli folder: what «Open folder» of the page and the app lists in a folder (folder/1), as JSON.
+pub const HELP: &str = "mzlab-cli file list: what «Open folder» of the page and the app lists in a folder (folder/1), as JSON.
 
-usage: mzlab-cli folder list DIR [--json] [--out PATH]
+usage: mzlab-cli file list DIR [--json] [--out PATH]
 
   --json         the only format (accepted so that the command reads like the others)
   --out PATH     write there instead of the standard output
@@ -234,10 +234,10 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     }
     if sub.as_deref() != Some("list") {
-        return Outcome::fail("usage: mzlab-cli folder list DIR [--json] [--out PATH]");
+        return Outcome::fail("usage: mzlab-cli file list DIR [--json] [--out PATH]");
     }
     let Some(dir) = dir else {
-        return Outcome::fail("folder list needs a DIR");
+        return Outcome::fail("file list needs a DIR");
     };
     if !dir.is_dir() {
         return Outcome {

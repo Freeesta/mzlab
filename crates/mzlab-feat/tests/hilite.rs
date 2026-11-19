@@ -1,4 +1,4 @@
-//! `hilite/1` on the synthetic drawing of `tests/dati/hilite_disegno.json` (the fixture the molkit `.wasm`, the app and `mzlab-cli mol-hilite` are checked
+//! `hilite/1` on the synthetic drawing of `tests/dati/hilite_disegno.json` (the fixture the molkit `.wasm`, the app and `mzlab-cli mol hilite` are checked
 //! against too): the HR request colours every layer, the LR one only what is selected, and every bad request gives its error key.
 use mzlab_feat::chem::hilite::hilite_json;
 use serde_json::Value;

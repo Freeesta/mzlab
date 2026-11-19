@@ -1,4 +1,4 @@
-"""Download of the regulatory-list package on the built site: `mzlab-cli normative pack` writes the committed lists into site/static/normative/ and the test serves
+"""Download of the regulatory-list package on the built site: `mzlab-cli db normative pack` writes the committed lists into site/static/normative/ and the test serves
 them. First use downloads the pieces into the Cache Storage `mzlab-libs` and hands the raw `.mzsus` over; a reload with the network cut is served from the cache;
 a corrupted piece is refused (SHA-256) and installs nothing; «check for updates» only compares catalogues. Nothing leaves the machine.
 Needs the site: python tools/build_site.py (and cargo, to build mzlab-cli once); delete site/ afterwards."""
@@ -24,7 +24,7 @@ if not cli.exists():
     subprocess.run(["cargo", "build", "--locked", "--release", "-p", "mzlab-cli"], cwd=ROOT, check=True)
 OUT = ROOT / "site" / "static" / "normative"
 shutil.rmtree(OUT, ignore_errors=True)
-subprocess.run([str(cli), "normative", "pack", str(ROOT / "normative"), str(OUT)], check=True, capture_output=True)
+subprocess.run([str(cli), "db", "normative", "pack", str(ROOT / "normative"), str(OUT)], check=True, capture_output=True)
 lib_copy_file(ROOT / "mzlab" / "web" / "normative-scarica.js", ROOT / "site" / "static" / "normative-scarica.js")
 RAW = (OUT / "normative.mzsus").read_bytes()
 CAT = json.loads((OUT / "catalogo.json").read_text(encoding="utf-8"))

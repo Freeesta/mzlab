@@ -1,5 +1,5 @@
 //! The route `feat/grafo` with `kind: "sub"` gives the same `sub/1` as `mzlab_feat::chem::substructure::search_json` (the function of
-//! `mzlab-cli mol-search --sub`), with the request as an object or as text, and keeps the key of an error; a structure list (`db`) gives the
+//! `mzlab-cli mol search --sub`), with the request as an object or as text, and keeps the key of an error; a structure list (`db`) gives the
 //! `subdb/1` answers of `tests/dati/sub_db.json`, the same bytes as the molkit `.wasm` and the CLI.
 
 use mzlab_desktop::rpc::Answer;

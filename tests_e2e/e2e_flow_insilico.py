@@ -1,5 +1,5 @@
 """Flow «This browser» spectra.insilico with the downloadable candidate package (flow/lazy/flow-web-insilico.js, mzlab/web/insilico-scarica.js, docs/agenti/insilico.md):
-`mzlab-cli insilico pack` writes a tiny invented package (several mass-range pieces) into the site; nothing of it is requested before the click on the button, the first click
+`mzlab-cli db insilico pack` writes a tiny invented package (several mass-range pieces) into the site; nothing of it is requested before the click on the button, the first click
 shows the size (the catalogue only), the second stores the pieces in the Cache Storage `mzlab-libs`. The plan ms2 -> insilico then reaches `done` with `via: "browser"` and its
 `candidates/1` is the file `mzlab-cli flow run` writes for the same plan, byte for byte; a run with the network cut after a reload still reads the pieces from the cache; the
 engine had no route it could not serve; axe finds nothing serious on the button. Builds the site and the .wasm (needs cargo, wasm-bindgen, python3 and numpy: SKIP without).
@@ -71,7 +71,7 @@ csv = tmp / "list.csv"; csv.write_text("\n".join(rows) + "\n")
 pack = tmp / "pack"
 cli = ROOT / "target" / "release" / "mzlab-cli"
 subprocess.run(["cargo", "build", "--locked", "--release", "-q", "-p", "mzlab-cli"], cwd=ROOT, check=True)
-subprocess.run([str(cli), "insilico", "pack", str(csv), str(pack), "--version", "test", "--doi", "10.0/test", "--piece-raw", "16000"], check=True, capture_output=True)
+subprocess.run([str(cli), "db", "insilico", "pack", str(csv), str(pack), "--version", "test", "--doi", "10.0/test", "--piece-raw", "16000"], check=True, capture_output=True)
 CAT = json.loads((pack / "catalogo.json").read_text())
 assert len(CAT["pieces"]) >= 3, "the test package needs several pieces"
 CATTEXT = (pack / "catalogo.json").read_text()

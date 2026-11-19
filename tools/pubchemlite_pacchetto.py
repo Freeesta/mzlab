@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Builds the in-silico candidate package of the site: downloads the pinned PubChemLite CSV (SHA-256 checked, `tools/genera_sospetti.py`) and runs the Rust packer on it.
 
-CI only (`pages.yml`, job packages). No computation here: `mzlab-cli insilico pack` makes the pieces and the catalogue. A network failure only warns: the site is then
+CI only (`pages.yml`, job packages). No computation here: `mzlab-cli db insilico pack` makes the pieces and the catalogue. A network failure only warns: the site is then
 published without the package and the button says so."""
 import argparse
 import subprocess
@@ -24,7 +24,7 @@ def main() -> int:
     except (OSError, RuntimeError) as e:
         print(f"::warning::PubChemLite not downloaded ({e}): the site is published without the in-silico candidate package")
         return 0
-    r = subprocess.run([str(a.cli), "insilico", "pack", str(csv), str(a.out), "--version", src["versione"], "--doi", src["doi"]], check=False)
+    r = subprocess.run([str(a.cli), "db", "insilico", "pack", str(csv), str(a.out), "--version", src["versione"], "--doi", src["doi"]], check=False)
     return r.returncode
 
 

@@ -20,9 +20,9 @@ shimadzu = ["lettura", "mzlab-lettori/shimadzu"]
 bruker = ["lettura", "mzlab-lettori/bruker"]
 # the readers code of the families (probe, to_mzml, the sessions); the `valida` module has none of it
 lettura = []
-# the mzML validator alone: the module `valida` of the page (`mzlab-cli validate` in a .wasm)
+# the mzML validator alone: the module `valida` of the page (`mzlab-cli file validate` in a .wasm)
 valida = ["mzlab-core/valida"]
-# the read-only .wiff inventory and verify (`mzlab-cli wiff list|verify`) alone: the module `wiffwrite` of the page
+# the read-only .wiff inventory and verify (`mzlab-cli file inventory|verify`) alone: the module `wiffwrite` of the page
 wiffwrite = ["mzlab-core/wiffwrite"]
 tutte = ["lettura", "mzlab-lettori/tutte"]
 

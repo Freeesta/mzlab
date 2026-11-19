@@ -1,4 +1,4 @@
-//! `mzlab-cli validate FILE...`: is this mzML valid? Structure, PSI-MS vocabulary and, for `indexedmzML`, offsets and SHA-1 (`mzlab_core::mzml_validate`).
+//! `mzlab-cli file validate FILE...`: is this mzML valid? Structure, PSI-MS vocabulary and, for `indexedmzML`, offsets and SHA-1 (`mzlab_core::mzml_validate`).
 //! One line per finding on the standard output; the summary of each file on the standard error. Exit 0: no error in any file; 1: errors; 2: usage; 4: a
 //! file that cannot be read.
 
@@ -10,9 +10,9 @@ use mzlab_core::mzml_validate::{json_file, validate, Problem, Report, Severity};
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli validate: is the mzML valid (structure, PSI-MS vocabulary, index and SHA-1)?
+pub const HELP: &str = "mzlab-cli file validate: is the mzML valid (structure, PSI-MS vocabulary, index and SHA-1)?
 
-usage: mzlab-cli validate FILE.mzML... [--json] [--help]
+usage: mzlab-cli file validate FILE.mzML... [--json] [--help]
 
   FILE...   one or more mzML (plain or indexedmzML)
   --json    one JSON array on the standard output, an object per file: {file, valid, indexed, spectra, chromatograms, problems: [{severity, path, code, message}]}

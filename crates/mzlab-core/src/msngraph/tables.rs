@@ -5,7 +5,7 @@ use super::lib_export::{export_text, Format};
 use crate::error::Result;
 use crate::json::{Out, Value};
 
-/// The library text of the graph `g` (written as `json`): the entry is wrapped as a one-entry `msn-lib/1` and given to the writer of `msn-lib export`.
+/// The library text of the graph `g` (written as `json`): the entry is wrapped as a one-entry `msn-lib/1` and given to the writer of `msn lib export`.
 pub fn library_text(
     g: &Value,
     json: &str,

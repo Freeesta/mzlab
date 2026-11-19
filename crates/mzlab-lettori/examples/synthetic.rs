@@ -1,5 +1,5 @@
 //! Writes the synthetic Thermo, Bruker and ANDI datasets of the reader tests (invented numbers, no lab data) to a folder, so that
-//! tests/test_lettori_parita.py can feed the same bytes to the .wasm modules and to `mzlab-cli convert`. A test tool: it never enters a .wasm.
+//! tests/test_lettori_parita.py can feed the same bytes to the .wasm modules and to `mzlab-cli file convert`. A test tool: it never enters a .wasm.
 //!   sintetici OUTDIR
 use mzlab_core::readers::{FileSet, Member};
 use std::path::Path;

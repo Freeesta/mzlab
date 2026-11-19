@@ -11,6 +11,9 @@ use mzlab_ops::run::feat::run;
 use mzlab_ops::run::table::core::{samples_json, table_file};
 
 mod argv;
+mod catalog;
+#[cfg(test)]
+mod catalog_tests;
 mod channels_cmd;
 pub mod citation;
 mod cmd;
@@ -26,6 +29,8 @@ mod convert_report;
 mod dad_cmd;
 pub mod error_text;
 pub mod exit;
+mod extract;
+mod file_info_cmd;
 pub mod flow;
 #[cfg(test)]
 mod flow_align_join_tests;
@@ -177,7 +182,10 @@ mod peaks_edges_cmd;
 mod plain;
 mod sample_select;
 mod samples_cmd;
+mod schema_cmd;
+mod spectrum_cmd;
 mod steps_cmd;
+mod trace_cmd;
 #[cfg(not(target_family = "wasm"))]
 mod validate;
 mod wiff_cmd;
@@ -433,10 +441,20 @@ fn executed(args: &[String]) -> (&'static str, Outcome) {
         return ("", o);
     }
     let Some((e, n)) = cmd::find(args) else {
-        let o = Outcome::fail_error(&Error::new("err.cli.usage").with(
-            "message",
-            format!("unknown command {}", plain::canonical(&args[0])),
-        ));
+        if let Some((path, inside)) = cmd::group_of(args) {
+            let n = path.split(' ').count();
+            if args.len() == n || cmd::wants_help(&args[n..]) {
+                return ("", Outcome::ok(cmd::group_help(&inside).into_bytes()));
+            }
+            let o = Outcome::fail_error(&Error::new("err.cli.usage").with(
+                "message",
+                format!("unknown subcommand {} of {path}", args[n]),
+            ));
+            return ("", o);
+        }
+        let o = Outcome::fail_error(
+            &Error::new("err.cli.usage").with("message", format!("unknown command {}", args[0])),
+        );
         return ("", o);
     };
     let mut rest = args[n..].to_vec();

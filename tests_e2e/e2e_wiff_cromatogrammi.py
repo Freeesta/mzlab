@@ -1,6 +1,6 @@
 """The chromatograms of a .wiff sample read by the engine on the site (synthetic pairs of tools/wiff_cromatogrammi.py: Full Scan and MRM experiments in one
 sample, two MRM experiments, Full Scan alone; no laboratory data): the index counts one TIC per experiment with data, the BPCs and the SRM chromatograms, as
-`mzlab-cli convert` lists them (tests/test_wiff_cromatogrammi.py compares the arrays); an index of an older generation of the readers (`"reader":1` in its
+`mzlab-cli file convert` lists them (tests/test_wiff_cromatogrammi.py compares the arrays); an index of an older generation of the readers (`"reader":1` in its
 `source`) is refused when the sample is opened again and built once more. Needs the site and the .wasm (python3 tools/prepara_sito.py).
 Run from the repo root: python3 tests_e2e/e2e_wiff_cromatogrammi.py"""
 # covers: tools/wiff_cromatogrammi.py, crates/mzlab-core/src/wiff/

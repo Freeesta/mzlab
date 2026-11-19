@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vendor-reference harness: `mzlab-cli convert` output against an mzML written by an independent converter (msconvert,
+"""Vendor-reference harness: `mzlab-cli file convert` output against an mzML written by an independent converter (msconvert,
 ThermoRawFileParser) for the same vendor file. Datasets, tolerances and the expected-fail list are in
 `tools/external_reference.json` (public dataset names only; the files live in the private data repository).
     python3 tools/external_reference.py [--solo NAME] [--cli PATH] [--json FILE] [--keep DIR]
@@ -349,7 +349,7 @@ def find_cli(given: str | None) -> Path:
 def convert(cli: Path, src: Path, sample: str | None, peaks: str, out: Path) -> Path:
     arg = f"{src}@{sample}" if sample else str(src)
     rep = out / "report.json"
-    p = subprocess.run([str(cli), "convert", arg, "--out", str(out), "--compression", "none", "--peaks", peaks,
+    p = subprocess.run([str(cli), "file", "convert", arg, "--out", str(out), "--compression", "none", "--peaks", peaks,
                         "--fresh", "--workers", "1", "--report", str(rep)], capture_output=True, text=True, timeout=1800)
     rows = json.loads(rep.read_text()) if rep.exists() else []
     good = [r for r in rows if r.get("uscita")]

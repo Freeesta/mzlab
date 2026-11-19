@@ -54,16 +54,16 @@ window.QUALITA = {
     return call({ op: "edges", rt: f64(x), y: f64(y), at, mrm: !!mrm, params: f64(params) });
   },
   /** Every low-resolution peak with its apex between x0 and x1 (min) by the engine (peakq_lrauto.rs): detection on a smoothed copy, valleys by depth, areas on the raw
-   * trace. pk = PK of picchi.js (lrHalf, lrValley, lrSn, lrSplit). The JSON text of `mzlab-cli peak-auto-lr` ({ params, peaks }); null without the engine. */
+   * trace. pk = PK of picchi.js (lrHalf, lrValley, lrSn, lrSplit). The JSON text of `mzlab-cli peak auto-lr` ({ params, peaks }); null without the engine. */
   lrAuto(x, y, x0, x1, pk) {
     const params = [pk.lrHalf, pk.lrValley, pk.lrSn, NaN, NaN, pk.lrSplit];
     return call({ op: "lrauto", rt: f64(x), y: f64(y), x0, x1, params: f64(params) });
   },
   /** Area of the peak between the times a and b (min) from zero (mode 1) or from the line `line` = [t0, y0, t1, y1] (mode 2), by the engine (baseline.rs):
-   * the JSON text { baseline, area (signed, counts x s), below (the part under the line), height, rt }, the bytes of `mzlab-cli peak-area`; null without the engine. */
+   * the JSON text { baseline, area (signed, counts x s), below (the part under the line), height, rt }, the bytes of `mzlab-cli peak area`; null without the engine. */
   peakArea(x, y, a, b, mode, line) { return call({ op: "area", rt: f64(x), y: f64(y), a, b, mode, line: f64(line || []) }); },
   /** Where the end `cur` of a window (other end `other`) goes, by the engine (intwin.rs): onto a point of the trace, before/after the other end, between the neighbours'
-   * borders lo/hi (null: none); `at` = the pointer (null: move `step` points). The JSON text { t, i }, the bytes of `mzlab-cli peak-window`; null without the engine or no free point. */
+   * borders lo/hi (null: none); `at` = the pointer (null: move `step` points). The JSON text { t, i }, the bytes of `mzlab-cli peak window`; null without the engine or no free point. */
   windowEnd(x, cur, other, at, step, lo, hi) { const n = v => (v == null ? NaN : v); return call({ op: "wend", rt: f64(x), cur, other, at: n(at), step: step | 0, lo: n(lo), hi: n(hi) }); },
   /** The peaks worth a label (at most maxN, height >= rel of the tallest, S/N >= snr), by RT: [{ apex, rt, height, snr }] (apex = index into the trace), or null. */
   labels(x, y, maxN, rel, snr, ends) { return call({ op: "labels", rt: f64(x), y: f64(y), maxN, rel, snr, ends: !!ends }); },
