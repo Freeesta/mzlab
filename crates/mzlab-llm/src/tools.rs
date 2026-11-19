@@ -9,7 +9,7 @@ use mzlab_core::json::{parse, Out, Value};
 use mzlab_core::step::{Kind, Param, Step};
 #[path = "tools_demo.rs"]
 mod demo;
-pub use demo::{demo_catalog, demo_catalog_json, DEMO_TOOLS};
+pub use demo::{demo_catalog, demo_catalog_json, demo_catalog_json_with, DEMO_TOOLS};
 
 /// What a tool may do, read by the policy of the autonomy level.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -439,9 +439,27 @@ pub fn catalog_json(steps: &[Step], ui: &[UiTool], executable: &dyn Fn(&str) -> 
     tools_file(&catalog(steps, ui, executable))
 }
 
+/// `catalog_json` with `extra` (JSON members, no leading comma) right after `schema`: the keys only the CLI adds (`citation`, `cli_catalog`).
+pub fn catalog_json_with(
+    steps: &[Step],
+    ui: &[UiTool],
+    executable: &dyn Fn(&str) -> bool,
+    extra: &str,
+) -> String {
+    tools_file_with(&catalog(steps, ui, executable), extra)
+}
+
 pub(crate) fn tools_file(tools: &[Tool]) -> String {
+    tools_file_with(tools, "")
+}
+
+pub(crate) fn tools_file_with(tools: &[Tool], extra: &str) -> String {
     let mut o = Out::default();
-    o.raw("{\"schema\":\"tools/1\",\"tools\":[");
+    o.raw("{\"schema\":\"tools/1\",");
+    if !extra.is_empty() {
+        o.raw(extra).raw(",");
+    }
+    o.raw("\"tools\":[");
     for (i, t) in tools.iter().enumerate() {
         if i > 0 {
             o.raw(",");

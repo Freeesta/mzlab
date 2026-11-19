@@ -7,7 +7,9 @@ use std::path::PathBuf;
 use mzlab_llm::conv::{Conversation, Role};
 use mzlab_llm::fake::Replay;
 use mzlab_llm::provider::{builtin, request};
-use mzlab_llm::tools::{catalog, catalog_json, demo_catalog_json, UI_TOOLS};
+use mzlab_llm::tools::{
+    catalog, catalog_json, catalog_json_with, demo_catalog_json, demo_catalog_json_with, UI_TOOLS,
+};
 
 use crate::flow::{executable, steps};
 use crate::{emit, Outcome};
@@ -64,19 +66,16 @@ pub(crate) fn run(args: Vec<String>) -> Outcome {
     if compact {
         return emit(compact_json(demo), &out);
     }
-    // the citation is a CLI-only key: the files of docs/schemi and the catalog of the site stay as they are
-    let text = if demo {
-        demo_tools_json()
-    } else {
-        tools_json()
-    };
-    // `cli_catalog` is CLI-only too: the catalog of the commands beside the catalog of the tools, so the agent catalogs agree
-    let text = crate::citation::after(&text, "\"schema\":\"tools/1\",", "\n  ");
-    let text = text.replacen(
-        "\"schema\":\"tools/1\",",
-        "\"schema\":\"tools/1\",\n  \"cli_catalog\":\"mzlab-cli commands --json\",",
-        1,
+    // `citation` and `cli_catalog` are CLI-only keys, written with the document: the files of docs/schemi and the catalog of the site stay as they are
+    let extra = format!(
+        "{},\"cli_catalog\":\"mzlab-cli commands --json\"",
+        crate::citation::member()
     );
+    let text = if demo {
+        demo_catalog_json_with(&steps(), UI_TOOLS, &executable, &extra)
+    } else {
+        catalog_json_with(&steps(), UI_TOOLS, &executable, &extra)
+    };
     emit(text, &out)
 }
 

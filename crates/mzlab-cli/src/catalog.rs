@@ -39,6 +39,33 @@ const FLAG_HELP: &[(&str, &str)] = &[
     ),
     ("--demo", "the subset of the public demo"),
     ("--preset", "polarity preset of the Pipeline panel"),
+    ("--turn", "the turn of the conversation to replay"),
+    (
+        "--tables",
+        "the JSON file of tables (losses, adduct shifts, contaminants) to match against",
+    ),
+    ("--sub", "the substructure query"),
+    ("--strict", "also compare the SHA-256 of the request"),
+    ("--rules", "judge with the fragmentation rules"),
+    ("--roles", "the JSON file that names the role of each file"),
+    ("--name", "the name the answer carries"),
+    ("--match", "also answer what this number is compatible with"),
+    (
+        "--inventory",
+        "list every part of the file with its SHA-256",
+    ),
+    ("--formula", "the ion formula the graph starts from"),
+    ("--decoy", "the seed of the decoy spectra"),
+    ("--conv", "the conversation file"),
+    ("--cache", "the folder of the downloaded official sources"),
+    ("--adduct", "the adduct, with its signed shift"),
+    ("--compact", "the small form: names and ports, no prose"),
+    ("--list", "list the names instead of printing one"),
+    (
+        "--replay",
+        "the folder of recordings to score the cases against",
+    ),
+    ("--against", "the sources the output is compared with"),
     (
         "--params",
         "the numbers of the Pipeline panel as a JSON file",
@@ -56,7 +83,12 @@ const FLAG_TYPE: &[(&str, &str, Option<&str>)] = &[
 ];
 
 /// Defaults the commands apply when the flag is absent (only those the code states).
-const FLAG_DEFAULT: &[(&str, &str, &str)] = &[("features", "--preset", "auto")];
+const FLAG_DEFAULT: &[(&str, &str, &str)] = &[
+    ("features", "--preset", "auto"),
+    ("llm context", "--budget", "8000"),
+    ("llm inspect", "--budget", "30000"),
+    ("llm params", "--budget", "30000"),
+];
 
 /// Commands whose stdout is a CSV table.
 const CSV: &[&str] = &["features", "peak table"];
@@ -210,7 +242,7 @@ fn read(toks: &[String], optional: bool, u: &mut Usage) {
             }
             let path = [
                 "FILE", "PATH", "DIR", "TRACE", "RECORD", "PLAN", "GRAPH", "MOLFILE", "REQUEST",
-                "CSV", "INPUT", "OUT", "RUNDIR", "TABLE", "REG", "CASES", ".json", ".csv", ".mzML",
+                "CSV", "INPUT", "OUT", "RUNDIR", "TABLE", "REG", "CASES", "LINES", ".json", ".csv", ".mzML",
                 ".wiff",
             ]
             .iter()
@@ -301,9 +333,62 @@ fn stdout_json(e: &Entry) -> Value {
     o.done()
 }
 
+/// The exit codes of `e`: the row's own list, else read from what the usage line shows: every command can end 0, 1 or 2; 3 for a plan or a verdict,
+/// 4 when it reads a file, 5 when it selects a sample or step, 6 when it writes `--out`.
+pub(crate) fn exits_of(e: &Entry, u: &Usage) -> Vec<u8> {
+    if !e.exits.is_empty() {
+        return e.exits.to_vec();
+    }
+    let has = |f: &str| u.flags.iter().any(|x| x.name == f);
+    let reads = u.args.iter().any(|a| a.kind == "path" || a.kind == "rest")
+        || u.flags
+            .iter()
+            .any(|f| f.kind == "path" && f.name != "--out");
+    let mut v = vec![exit::OK, exit::DATA, exit::USAGE];
+    let mut add = |on: bool, c: u8| {
+        if on {
+            v.push(c)
+        }
+    };
+    add(
+        e.name.starts_with("flow ") || crate::contract::VERDICT.contains(&e.name),
+        exit::INTEGRITY,
+    );
+    add(reads, exit::INPUT);
+    add(
+        has("--sample")
+            || has("--id")
+            || e.name.starts_with("sample ")
+            || e.name.starts_with("msn graph"),
+        exit::SELECTOR,
+    );
+    add(has("--out"), exit::OUTPUT);
+    v.sort_unstable();
+    v
+}
+
+/// The usage line without its optional parts: a command line that runs as it stands once the names are replaced.
+fn skeleton(u: &Usage) -> String {
+    let toks = tokens(&u.synopsis);
+    let kept: Vec<&str> = toks
+        .iter()
+        .map(String::as_str)
+        .filter(|t| !t.starts_with('[') && *t != "...")
+        .collect();
+    format!("mzlab-cli {}", kept.join(" "))
+}
+
 fn command_json(e: &Entry) -> Value {
     let u = usage_of(e);
-    let exits: Vec<Value> = e.exits.iter().map(|c| Value::Num(f64::from(*c))).collect();
+    let exits: Vec<Value> = exits_of(e, &u)
+        .iter()
+        .map(|c| Value::Num(f64::from(*c)))
+        .collect();
+    let examples: Vec<String> = if e.examples.is_empty() {
+        vec![skeleton(&u)]
+    } else {
+        e.examples.iter().map(|x| x.to_string()).collect()
+    };
     Obj::new()
         .put("path", text(e.name))
         .put("synopsis", text(&u.synopsis))
@@ -333,7 +418,7 @@ fn command_json(e: &Entry) -> Value {
         .put("exit_codes", Value::Arr(exits))
         .put(
             "examples",
-            Value::Arr(e.examples.iter().map(|x| text(x)).collect()),
+            Value::Arr(examples.iter().map(|x| text(x)).collect()),
         )
         .done()
 }

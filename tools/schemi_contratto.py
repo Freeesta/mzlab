@@ -3,7 +3,7 @@
 with its `$id` and a root `$ref` to one definition, so `mzlab-cli schema mzflow/2|prov/1` serves a schema that validates by itself.
 
     python3 tools/schemi_contratto.py           # rewrite the two files
-    python3 tools/schemi_contratto.py --check   # exit 1 if they are stale (the pytest in tests/test_schemi_contratto.py runs this)
+    python3 tools/schemi_contratto.py --check   # exit 1 if they are stale (tests/test_cli_catalog.py runs this)
 """
 from __future__ import annotations
 

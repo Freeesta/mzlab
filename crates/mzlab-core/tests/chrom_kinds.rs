@@ -26,10 +26,21 @@ fn kinds_and_units() {
         chrom(4, "UV 254", r#"<cvParam cvRef="MS" accession="MS:1000812" name="x" value=""/>"#, ""),
     ]
     .join("");
-    let xml = format!(r#"<mzML><run id="r"><chromatogramList count="5">{cl}</chromatogramList></run></mzML>"#);
+    let xml = format!(
+        r#"<mzML><run id="r"><chromatogramList count="5">{cl}</chromatogramList></run></mzML>"#
+    );
     let run = read(xml.as_bytes()).unwrap();
     let k: Vec<ChromKind> = run.chromatograms.iter().map(|c| c.kind).collect();
-    assert_eq!(k, [ChromKind::Tic, ChromKind::Pda, ChromKind::Pressure, ChromKind::Analog, ChromKind::Pda]);
+    assert_eq!(
+        k,
+        [
+            ChromKind::Tic,
+            ChromKind::Pda,
+            ChromKind::Pressure,
+            ChromKind::Analog,
+            ChromKind::Pda
+        ]
+    );
     assert_eq!(run.chromatograms[2].unit, "pascal");
     assert_eq!(run.chromatograms[3].unit, "degree Celsius");
 }
@@ -46,7 +57,10 @@ fn integer_arrays_are_read_as_integers() {
 </binaryDataArrayList></chromatogram></chromatogramList></run></mzML>"#
         )
     };
-    for (acc, y) in [("MS:1000519", "BQAAAAYAAAA="), ("MS:1000522", "BQAAAAAAAAAGAAAAAAAAAA==")] {
+    for (acc, y) in [
+        ("MS:1000519", "BQAAAAYAAAA="),
+        ("MS:1000522", "BQAAAAAAAAAGAAAAAAAAAA=="),
+    ] {
         let run = read(one(acc, y).as_bytes()).unwrap();
         assert_eq!(run.chromatograms[0].intensity, [5.0, 6.0], "{acc}");
     }

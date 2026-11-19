@@ -165,3 +165,72 @@ fn the_text_form_lists_a_command_per_line() {
     assert!(t.lines().any(|l| l.starts_with("flow run  ")));
     assert!(t.lines().all(|l| l.starts_with("flow ")));
 }
+
+/// Every flag says what it does, its type agrees with the value the usage line shows, and every command has exit codes and an example.
+#[test]
+fn flags_are_described_and_typed_like_the_usage_line() {
+    let doc = json(&out(&["commands", "--json"]));
+    for (e, c) in entries().zip(doc["commands"].as_array().unwrap()) {
+        let usage = e.help.split("   ").next().unwrap();
+        for f in c["flags"].as_array().unwrap() {
+            let name = f["name"].as_str().unwrap();
+            assert!(
+                !f["help"].as_str().unwrap().is_empty(),
+                "{}: {name} has no help (FLAG_HELP)",
+                e.name
+            );
+            // the word after the flag, if it is a value and not the next flag or a closing bracket
+            let after = usage.split(name).nth(1).unwrap_or("");
+            let value = after
+                .split_whitespace()
+                .next()
+                .filter(|w| !w.starts_with(['-', '[', '|', ']']) && !w.starts_with("..."));
+            match value {
+                None => assert_eq!(f["type"], "bool", "{}: {name}", e.name),
+                Some(v) => {
+                    assert_ne!(f["type"], "bool", "{}: {name} takes {v}", e.name);
+                    if f["type"] == "enum" {
+                        let alts: Vec<String> = v
+                            .trim_end_matches(']')
+                            .split('|')
+                            .map(String::from)
+                            .collect();
+                        assert_eq!(f["enum"], serde_json::json!(alts), "{}: {name}", e.name);
+                    }
+                }
+            }
+        }
+        assert!(
+            !c["exit_codes"].as_array().unwrap().is_empty(),
+            "{}",
+            e.name
+        );
+        assert!(!c["examples"].as_array().unwrap().is_empty(), "{}", e.name);
+        assert!(c["exit_codes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|x| x.as_u64().unwrap() <= 6));
+    }
+}
+
+/// Every JSON document the catalog commands print has `schema` first and ends with a newline; a raw schema is the file itself.
+#[test]
+fn the_documents_have_schema_first_and_a_newline() {
+    for (a, schema) in [
+        (&["commands", "--json"][..], "commands/1"),
+        (&["schema", "--list"], "schemas/1"),
+        (&["flow", "steps", "--compact"], "steps-compact/1"),
+        (&["llm", "tools", "--compact"], "tools-compact/1"),
+        (&["llm", "tools"], "tools/1"),
+    ] {
+        let t = out(a);
+        assert!(t.ends_with('\n'), "{a:?}");
+        let compact: String = t.chars().filter(|c| !c.is_whitespace()).take(40).collect();
+        assert!(
+            compact.starts_with(&format!("{{\"schema\":\"{schema}\"")),
+            "{a:?}: {compact}"
+        );
+    }
+    assert!(out(&["schema", "error/1"]).ends_with('\n'));
+}

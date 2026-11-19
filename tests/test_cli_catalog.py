@@ -45,3 +45,17 @@ def test_the_commands_of_the_cli_validate_against_their_schemas(cli):
 
 def test_the_contract_schemas_are_current():
     subprocess.run(["python3", str(ROOT / "tools/schemi_contratto.py"), "--check"], check=True)
+
+
+def test_ref_list_and_tools_validate_against_their_schemas(cli, tmp_path):
+    csv = tmp_path / "list.csv"
+    csv.write_text("mz,name,formula,polarity,adduct,note\n149.0233,phthalate,C8H5O3,+,[M+H]+,x\nbad,,,,,\n")
+    exe = ROOT / "target/debug/mzlab-cli"
+    r = subprocess.run([str(exe), "db", "ref-list", str(csv)], capture_output=True, text=True)
+    assert r.returncode in (0, 1)
+    doc = json.loads(r.stdout)
+    assert list(doc)[0] == "schema" and doc["schema"] == "reflist/1"
+    assert not list(Draft202012Validator(cli("schema", "reflist/1")).iter_errors(doc))
+    tools = cli("llm", "tools")
+    assert list(tools)[0] == "schema"
+    assert not list(Draft202012Validator(cli("schema", "tools/1")).iter_errors(tools))

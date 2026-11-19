@@ -18,7 +18,7 @@ usage: mzlab-cli db ref-list FILE.csv [--name N] [--match X] [--set unit=da|ppm]
   --match X       also answer what the number X is compatible with in the list (mz-match/1 under \"match\")
   --out PATH      write there instead of the standard output
 
-The answer is {\"format\":\"reflist/1\",\"name\",\"compounds\",\"items\":[{line,name,formula,adduct,mz,pol,note}],\"errors\":[{line,key,field,value}]}.
+The answer is {\"schema\":\"reflist/1\",\"name\",\"compounds\",\"items\":[{line,name,formula,adduct,mz,pol,note}],\"errors\":[{line,key,field,value}]}.
 Exit codes: 0 all rows read; 1 some rows have errors (listed with their line, the good rows are in items); 2 usage; 4 unreadable file.";
 
 pub fn run(args: Vec<String>) -> Outcome {

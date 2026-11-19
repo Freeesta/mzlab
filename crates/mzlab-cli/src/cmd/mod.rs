@@ -21,7 +21,7 @@ pub(crate) struct Entry {
     pub run: fn(Vec<String>) -> Outcome,
     /// The `schema` of the JSON document the command prints, `""` when it has none or several (`mzlab-cli schema NAME` prints it).
     pub schema: &'static str,
-    /// The exit codes the command can give (`exit.rs`).
+    /// The exit codes the command can give (`exit.rs`); empty: the catalog reads them from the usage line (`catalog::exits_of`).
     pub exits: &'static [u8],
     /// Command lines for the catalog (`commands --json`).
     pub examples: &'static [&'static str],
@@ -38,7 +38,7 @@ impl Entry {
             help,
             run,
             schema: "",
-            exits: &[0, 1, 2, 3, 4, 5, 6],
+            exits: &[],
             examples: &[],
         }
     }

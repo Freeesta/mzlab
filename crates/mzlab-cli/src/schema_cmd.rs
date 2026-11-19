@@ -62,6 +62,8 @@ embed!(
     "steps-compact-1.json",
     "tabcheck-1.json",
     "tools-compact-1.json",
+    "tools-schema-1.json",
+    "reflist-1.json",
     "tp-1.json",
     "verify-1.json",
 );
