@@ -10,8 +10,8 @@ fn node(mz: f64, level: u8) -> GNode {
     GNode {
         mz,
         dev_ppm: 0.0,
-        livello: level,
-        albero: vec![],
+        level: level,
+        tree: vec![],
         observations: 1,
         rel_max: 100.0,
         isotope_of: None,
@@ -38,7 +38,7 @@ fn arco(da: usize, a: usize) -> Edge {
 
 fn graph() -> Graph {
     Graph {
-        nodi: vec![
+        nodes: vec![
             node(190.08626, 1),
             node(162.05495, 2),
             node(144.04439, 3),
@@ -48,7 +48,7 @@ fn graph() -> Graph {
         radici: vec![0],
         polarita: 1,
         spettri: vec![SpettroG {
-            albero: "190@cid35".into(),
+            tree: "190@cid35".into(),
             level: 2,
             att: "cid".into(),
             ce: 35.0,

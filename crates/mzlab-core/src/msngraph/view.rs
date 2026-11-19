@@ -4,7 +4,7 @@
 //! and the radial layout (ring, angle). Coordinates are abstract numbers: pixels and styles belong to the drawer. A proposal of a rule
 //! stated in the JSON, never a mechanism.
 
-use super::layout::{albero, Network};
+use super::layout::{tree, Network};
 use super::layout_radial::radiale;
 use crate::error::{Error, Result};
 use crate::json::{parse, round, Out, Value};
@@ -184,7 +184,7 @@ fn opt(o: &mut Out, v: Option<f64>) {
     };
 }
 
-/// One element of `vista.nodi`: node `i` with its best path, its tree position (column, row) and its radial place (ring, angle).
+/// One element of `vista.nodes`: node `i` with its best path, its tree position (column, row) and its radial place (ring, angle).
 fn node_json(
     o: &mut Out,
     d: &Data,
@@ -252,7 +252,7 @@ fn view(d: &Data) -> String {
         mz: &d.mz,
         edges: &pairs,
     };
-    let pos = albero(&rete);
+    let pos = tree(&rete);
     let parent: Vec<Option<usize>> = best.iter().map(|b| b.da).collect();
     let steps: Vec<usize> = best.iter().map(|b| b.steps).collect();
     let rad = radiale(&parent, &steps, &d.mz);

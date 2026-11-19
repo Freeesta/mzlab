@@ -27,7 +27,7 @@ def fp(smiles):
 
 def main():
     rng = np.random.default_rng(7)
-    smiles = [m["smiles"] for m in json.loads(SRC.read_text())["molecole"]]
+    smiles = [m["smiles"] for m in json.loads(SRC.read_text())["molecules"]]
     rows = []
     for s in smiles:
         mol = Chem.MolFromSmiles(s)

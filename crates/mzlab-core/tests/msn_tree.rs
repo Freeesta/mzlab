@@ -1,4 +1,4 @@
-//! The options of the one tree builder (`msnalbero`: tolerance, energies, blocks), `/api/msn_albero` and the filter `msn:<id>` of the other
+//! The options of the one tree builder (`msntree_build`: tolerance, energies, blocks), `/api/msn_tree` and the filter `msn:<id>` of the other
 //! routes on the committed synthetic MSn file (`tests/golden/ref/msntree_rotta`), and the parent of a node without the generation before in
 //! `/api/msntree` (the nearest ancestor). Synthetic data only.
 
@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 use mzlab_core::idxread::Index;
 use mzlab_core::msntree::{msn_tree, TreeScan};
-use mzlab_core::msntree_build::{albero_di, blocks, Grouping, Tol};
+use mzlab_core::msntree_build::{blocks, tree_of, Grouping, Tol};
 use mzlab_core::routes::{Query, Routes};
 use serde_json::Value;
 
@@ -40,17 +40,17 @@ fn tolerance_energies_and_blocks() {
         (2, Some(&a)),
     ];
     // the default is that of mzFinder: nominal masses, one energy one node
-    let t = albero_di(scans.clone(), &Grouping::default());
-    let ids: Vec<&str> = t.nodi.iter().map(|n| n.id.as_str()).collect();
+    let t = tree_of(scans.clone(), &Grouping::default());
+    let ids: Vec<&str> = t.nodes.iter().map(|n| n.id.as_str()).collect();
     assert_eq!(ids, ["195@cid30", "195@cid35", "195@cid30>138@cid35"]);
-    assert_eq!(t.nodi[0].scansioni, [1, 2, 4, 6, 8]);
+    assert_eq!(t.nodes[0].scans, [1, 2, 4, 6, 8]);
     // within 0.01 Da: 195.0876 and 195.0880 are one precursor, 195.2101 another
     let da = Grouping {
         tol: Tol::Da(0.01),
         energies: true,
     };
-    let t = albero_di(scans.clone(), &da);
-    let ids: Vec<&str> = t.nodi.iter().map(|n| n.id.as_str()).collect();
+    let t = tree_of(scans.clone(), &da);
+    let ids: Vec<&str> = t.nodes.iter().map(|n| n.id.as_str()).collect();
     assert_eq!(
         ids,
         [
@@ -60,22 +60,22 @@ fn tolerance_energies_and_blocks() {
             "195.0878@cid30>138.0662@cid35"
         ]
     );
-    assert_eq!((t.nodi[3].genitore, t.nodi[3].salto), (Some(0), 0));
+    assert_eq!((t.nodes[3].parent, t.nodes[3].skip), (Some(0), 0));
     // 10 ppm (2 mDa at m/z 195) does the same; energies merged: one node per precursor
     let ppm = Grouping {
         tol: Tol::Ppm(10.0),
         energies: false,
     };
-    let t = albero_di(scans.clone(), &ppm);
-    let ids: Vec<&str> = t.nodi.iter().map(|n| n.id.as_str()).collect();
+    let t = tree_of(scans.clone(), &ppm);
+    let ids: Vec<&str> = t.nodes.iter().map(|n| n.id.as_str()).collect();
     assert_eq!(
         ids,
         ["195.0878@cid", "195.2101@cid", "195.0878@cid>138.0662@cid"]
     );
-    assert_eq!(t.nodi[0].scansioni, [1, 2, 4, 5, 8]);
-    assert!(t.nodi[0].key[0].2.is_nan());
+    assert_eq!(t.nodes[0].scans, [1, 2, 4, 5, 8]);
+    assert!(t.nodes[0].key[0].2.is_nan());
     // blocks: runs with no scan of another node between them (an MS1 does not break a run)
-    let t = albero_di(scans, &Grouping::default());
+    let t = tree_of(scans, &Grouping::default());
     assert_eq!(blocks(&t, 9)[0], [(1, 4), (6, 6), (8, 8)]);
 }
 
@@ -96,18 +96,18 @@ fn get(r: &mut Routes<std::fs::File>, path: &str, q: &str) -> Value {
 #[test]
 fn tree_route_and_node_filter() {
     let mut r = routes();
-    let t = get(&mut r, "/api/msn_albero", "k=0");
+    let t = get(&mut r, "/api/msn_tree", "k=0");
     assert_eq!(t["schema"], "msn-tree/1");
     let nodes = t["nodes"].as_array().unwrap();
     assert!(nodes.len() >= 3, "{t}");
     assert_eq!(t["levels"], serde_json::json!([2, 3]));
-    let tree = mzlab_core::msntree_build::albero(&r.idx.scans, &Grouping::default());
-    for (n, want) in nodes.iter().zip(&tree.nodi) {
+    let tree = mzlab_core::msntree_build::tree(&r.idx.scans, &Grouping::default());
+    for (n, want) in nodes.iter().zip(&tree.nodes) {
         let (id, level) = (n["id"].as_str().unwrap(), n["level"].as_u64().unwrap());
         assert_eq!(id, want.id);
-        assert_eq!(n["n"].as_u64().unwrap() as usize, want.scansioni.len());
+        assert_eq!(n["n"].as_u64().unwrap() as usize, want.scans.len());
         // a cycled method: one block per scan
-        assert_eq!(n["blocks"].as_array().unwrap().len(), want.scansioni.len());
+        assert_eq!(n["blocks"].as_array().unwrap().len(), want.scans.len());
         let q = format!("k=0&level={level}&filt=msn:{id}");
         let list = get(&mut r, "/api/scanlist", &q);
         let sids: Vec<usize> = list["sid"]
@@ -117,14 +117,14 @@ fn tree_route_and_node_filter() {
             .map(|v| v.as_u64().unwrap() as usize)
             .collect();
         assert_eq!(
-            sids, want.scansioni,
+            sids, want.scans,
             "{id}: the scans of the filter are the scans of the node"
         );
         // the TIC of the node: one point per scan of the node, the TIC of the level at those scans
         let tic = get(&mut r, "/api/chrom", &format!("{q}&kind=tic"));
         let all = get(&mut r, "/api/chrom", &format!("k=0&level={level}&kind=tic"));
         let (rt, y) = (tic["rt"].as_array().unwrap(), tic["y"].as_array().unwrap());
-        assert_eq!(rt.len(), want.scansioni.len());
+        assert_eq!(rt.len(), want.scans.len());
         let at = |t: &Value| {
             all["rt"]
                 .as_array()
@@ -146,12 +146,12 @@ fn tree_route_and_node_filter() {
         );
         assert_eq!(
             near["sid"].as_u64().unwrap() as usize,
-            want.scansioni[0],
+            want.scans[0],
             "{id}: {near}"
         );
     }
     // energies merged: the ids lose the energy; an unknown node and a bad tolerance are keyed errors
-    let merged = get(&mut r, "/api/msn_albero", "k=0&tol=0.01&ce=0");
+    let merged = get(&mut r, "/api/msn_tree", "k=0&tol=0.01&ce=0");
     assert!(merged["nodes"][0]["ce"].is_null(), "{merged}");
     let err = |r: &mut Routes<std::fs::File>, q: &str| {
         r.handle("/api/scanlist", &Query::parse(q)).unwrap_err().key
@@ -209,15 +209,11 @@ fn msntree_hangs_a_lone_node_from_the_nearest_ancestor() {
 #[test]
 fn nodes_carry_the_mean_tic_per_scan() {
     let mut r = routes();
-    let t = get(&mut r, "/api/msn_albero", "k=0");
-    let tree = mzlab_core::msntree_build::albero(&r.idx.scans, &Grouping::default());
-    for (n, want) in t["nodes"].as_array().unwrap().iter().zip(&tree.nodi) {
-        let mean = want
-            .scansioni
-            .iter()
-            .map(|&i| r.idx.scans[i].tic)
-            .sum::<f64>()
-            / want.scansioni.len() as f64;
+    let t = get(&mut r, "/api/msn_tree", "k=0");
+    let tree = mzlab_core::msntree_build::tree(&r.idx.scans, &Grouping::default());
+    for (n, want) in t["nodes"].as_array().unwrap().iter().zip(&tree.nodes) {
+        let mean =
+            want.scans.iter().map(|&i| r.idx.scans[i].tic).sum::<f64>() / want.scans.len() as f64;
         assert!(
             (n["tic"].as_f64().unwrap() - mean).abs() <= 0.05,
             "{}: {} vs {mean}",

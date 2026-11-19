@@ -30,7 +30,7 @@ fn in_script(t: &str) -> String {
 pub fn html(graph: &str, view: View) -> Result<String> {
     let done =
         mzlab_core::msngraph::completa(graph).map_err(|_| Error::new("err.msnfigura.bad"))?;
-    let (albero, radial) = (svg(&done, View::Albero)?, svg(&done, View::Radial)?);
+    let (tree, radial) = (svg(&done, View::Tree)?, svg(&done, View::Radial)?);
     let root = molecule_svg(&done)?.unwrap_or_default();
     let apri = if view == View::Radial {
         "radial"
@@ -44,7 +44,7 @@ pub fn html(graph: &str, view: View) -> Result<String> {
     for (marker, text) in [
         ("/*DATA*/", in_script(done.trim_end())),
         ("/*ROOT*/", in_script(&root)),
-        ("/*SVG_TREE*/", in_script(&albero)),
+        ("/*SVG_TREE*/", in_script(&tree)),
         ("/*SVG_RADIAL*/", in_script(&radial)),
         ("/*VISTA_JS*/", in_script(&view_js())),
         ("/*PAGE_JS*/", in_script(&page)),

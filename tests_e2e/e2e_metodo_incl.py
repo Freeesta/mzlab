@@ -25,7 +25,7 @@ try:
             {"mz": par["mz"], "formula": "C10H12N2O", "species": "[M+H]+", "charge": 1, "polarity": "positive", "t_start_min": par["rt"] - 0.5, "t_end_min": par["rt"] + 0.5, "nce": [20, 35, 60], "name": "entry one"},
             {"mz": 123.4567, "polarity": "positive", "t_start_min": 1, "t_end_min": 2, "name": "entry two"},
             {"mz": par["mz"], "t_start_min": 1, "t_end_min": 2, "name": "right m/z, wrong window"}]}]}]}}
-        pg.evaluate("(d => { const f = window.fetch; window.fetch = function (u, ...a) { return String(u).startsWith('api/metodo') ? Promise.resolve(new Response(JSON.stringify({ source: 'raw', metodo: d }), { headers: { 'content-type': 'application/json' } })) : f.call(this, u, ...a); }; })(%s)" % json.dumps(doc))
+        pg.evaluate("(d => { const f = window.fetch; window.fetch = function (u, ...a) { return String(u).startsWith('api/metodo') ? Promise.resolve(new Response(JSON.stringify({ source: 'raw', method: d }), { headers: { 'content-type': 'application/json' } })) : f.call(this, u, ...a); }; })(%s)" % json.dumps(doc))
         pg.evaluate("E.cur = E.files.findIndex(f => f.dda && f.kind === 'full')")
         def table():
             pg.click("#np-method"); pg.wait_for_selector("#mincl", timeout=60000)

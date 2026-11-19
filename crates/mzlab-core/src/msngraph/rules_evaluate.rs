@@ -260,7 +260,7 @@ fn score_edge(c: &Ctx, i: usize, prev: Option<&[EdgeVal]>) -> EdgeVal {
         vec![]
     };
     let mut avvisi = vec![];
-    let from_even = g.nodi[a.da]
+    let from_even = g.nodes[a.da]
         .formula
         .as_ref()
         .and_then(|f| {
@@ -316,7 +316,7 @@ fn below_threshold(c: &Ctx) -> Vec<Unobservable> {
         .filter(|s| activation_type(&s.att) == Activation::CidTrap)
     {
         let Some(n) = s.precursore else { continue };
-        let mz = g.nodi[n].mz;
+        let mz = g.nodes[n].mz;
         let soglia = c.p.cutoff_q / Q_LIMIT * mz;
         for r in applicabili(c, g.polarita, g.radici.contains(&n), Tipo::Loss)
             .iter()
@@ -345,7 +345,7 @@ fn rule_ions(c: &Ctx) -> Vec<RuleIon> {
     }
     for r in applicabili(c, g.polarita, true, Tipo::Ion) {
         let mz = r.massa - g.polarita as f64 * ELECTRON;
-        for (n, x) in g.nodi.iter().enumerate() {
+        for (n, x) in g.nodes.iter().enumerate() {
             let giu = (x.mz - mz) * 1000.0;
             let gia = v
                 .iter()
@@ -404,7 +404,7 @@ pub(super) fn evaluate_with(
             g.spettri.iter().any(|s| {
                 s.precursore == Some(g.archi[i].da)
                     && activation_type(&s.att) == Activation::CidTrap
-                    && g.nodi[n].mz < p.cutoff_q / Q_LIMIT * g.nodi[g.archi[i].da].mz
+                    && g.nodes[n].mz < p.cutoff_q / Q_LIMIT * g.nodes[g.archi[i].da].mz
             })
         };
         if node_threshold(g.archi[i].a) {

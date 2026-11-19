@@ -10,7 +10,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use super::fragtree::{elements_of, fmt, substructures, vec_of, Graph, Space, Subs};
 use super::ms2::consensus_arrays;
 use super::Res;
-use mzlab_core::msntree_build::{albero_di, Grouping};
+use mzlab_core::msntree_build::{tree_of, Grouping};
 
 mod atoms;
 pub mod json;
@@ -307,7 +307,7 @@ pub fn build_tree(
     let top = vec_of(ion, &els).ok_or_else(|| format!("unknown formula: {ion}"))?;
     let space = Space::new(&top, &els);
     let ion_mz = ion_mass(&top, &els);
-    let a = albero_di(
+    let a = tree_of(
         scans.iter().map(|s| (s.level, s.path.as_deref())),
         &Grouping::default(),
     );
@@ -317,9 +317,9 @@ pub fn build_tree(
         keys.push(Vec::new());
         groups.insert(Vec::new(), a.ms1.clone());
     }
-    for n in &a.nodi {
+    for n in &a.nodes {
         keys.push(key_of(&n.key));
-        groups.insert(key_of(&n.key), n.scansioni.clone());
+        groups.insert(key_of(&n.key), n.scans.clone());
     }
     let cons: HashMap<Key, Cons> = keys
         .iter()
@@ -346,10 +346,10 @@ pub fn build_tree(
     let (r, ri) = root(&tree, &top, n_root, cons.get(&Vec::new()), root_obs);
     tree.nodes.push(r);
     info.insert(Vec::new(), ri);
-    for n in &a.nodi {
+    for n in &a.nodes {
         let k = &key_of(&n.key);
-        let (pk, parent) = match n.genitore {
-            Some(g) => (key_of(&a.nodi[g].key), a.nodi[g].id.clone()),
+        let (pk, parent) = match n.parent {
+            Some(g) => (key_of(&a.nodes[g].key), a.nodes[g].id.clone()),
             None => (Vec::new(), "MS1".to_string()),
         };
         let c = &cons[k];
@@ -357,8 +357,8 @@ pub fn build_tree(
         let (mut node, inf) = grow(&tree, k, &info[&pk], c, &mz);
         node.id = n.id.clone();
         node.parent = Some(parent);
-        node.via = usize::from(n.salto);
-        node.n_scans = n.scansioni.len();
+        node.via = usize::from(n.skip);
+        node.n_scans = n.scans.len();
         tree.nodes.push(node);
         info.insert(k.clone(), inf);
     }

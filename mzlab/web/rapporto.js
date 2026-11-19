@@ -51,10 +51,10 @@ const RAPPORTO = (() => {
     for (const f of files.filter(x => (x.lv || 1) === 1 || true)) acq.push(await fileInfo(f));
     return {
       formato: FORMAT, creato: new Date().toISOString(), lingua: wf.lingua, alta_risoluzione: hr,
-      programma: wf.programma,
-      disegno_studio: { file: wf.file.map(f => ({ ...f, ruolo: roleOf(f.nome) })), n_file: wf.file.length, ruoli: Object.fromEntries(["sample", "blank", "qc", "standard", "dark"].map(r => [r, wf.file.filter(f => roleOf(f.nome) === r).length])) },
+      programma: wf.program,
+      disegno_studio: { file: wf.file.map(f => ({ ...f, role: roleOf(f.nome) })), n_file: wf.file.length, ruoli: Object.fromEntries(["sample", "blank", "qc", "standard", "dark"].map(r => [r, wf.file.filter(f => roleOf(f.nome) === r).length])) },
       acquisizione: acq,
-      elaborazione: { parametri: wf.parametri, pannelli: wf.pannelli, operazioni: wf.operazioni },
+      elaborazione: { parametri: wf.parametri, pannelli: wf.pannelli, operations: wf.operations },
       qaqc: qaFeat() ? qa : undefined,
       livelli_confidenza: hr ? (wf.candidati || candidates()) : undefined,
     };
@@ -74,13 +74,13 @@ table{border-collapse:collapse;width:100%;font-size:12px;margin:6px 0}th,td{bord
     const P = rep.programma || {}, D = rep.disegno_studio, A = rep.acquisizione, X = rep.elaborazione, Q = rep.qaqc;
     const qaOn = !!Q;      // section 4 (QA/QC) exists only when QA/QC is on: the numbering of the next one follows
     let h = `<!doctype html><html lang="${eh(rep.lingua || "en")}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${eh(t("rep.title"))}</title><style>${CSS}</style></head><body>`;
-    h += `<h1>${eh(t("rep.title"))}</h1><p class="m">${eh(t("rep.sub", { name: P.nome || "", ver: P.versione || "", commit: P.commit || "", date: (rep.creato || "").slice(0, 19).replace("T", " ") }))}</p><p class="m">${eh(t(qaOn ? "rep.note" : "rep.note.plain"))}</p>`;
+    h += `<h1>${eh(t("rep.title"))}</h1><p class="m">${eh(t("rep.sub", { name: P.name || "", ver: P.version || "", commit: P.commit || "", date: (rep.creato || "").slice(0, 19).replace("T", " ") }))}</p><p class="m">${eh(t(qaOn ? "rep.note" : "rep.note.plain"))}</p>`;
     h += `<h2>1. ${eh(t("rep.s1"))}</h2><p>${eh(t("rep.s1.sum", { n: D.n_file, s: D.ruoli.sample, b: D.ruoli.blank, q: D.ruoli.qc, st: D.ruoli.standard, d: D.ruoli.dark }))}</p>`;
-    h += tab([t("qaqc.col.file"), t("qaqc.col.type"), t("rep.size"), t("rep.time"), "SHA-256"], D.file.map(f => [f.nome, roleTxt(f.ruolo), f.dimensione, f.tempo == null ? "–" : String(f.tempo), `<${f.sha256}>`].map((c, i) => (i === 4 ? String(c).slice(1, -1) : c))));
+    h += tab([t("qaqc.col.file"), t("qaqc.col.type"), t("rep.size"), t("rep.time"), "SHA-256"], D.file.map(f => [f.nome, roleTxt(f.role), f.dimensione, f.tempo == null ? "–" : String(f.tempo), `<${f.sha256}>`].map((c, i) => (i === 4 ? String(c).slice(1, -1) : c))));
     h += `<h2>2. ${eh(t("rep.s2"))}</h2><p class="m">${eh(t("rep.s2.note"))}</p>`;
     h += tab([t("qaqc.col.file"), t("rep.instr"), t("rep.analyzers"), t("rep.software"), t("rep.start"), t("rep.scans"), "RT (min)"], A.map(a => [a.nome, a.errore || [a.strumento, a.seriale].filter(Boolean).join(" · "), (a.analizzatori || []).join(", "), (a.software || []).join(", "), a.inizio || "–", a.scansioni == null ? "–" : String(a.scansioni), a.rt && a.rt.length ? a.rt.join(" – ") : "–"]));
-    h += `<h2>3. ${eh(t("rep.s3"))}</h2><p>${eh(t("rep.s3.prog", { name: P.nome || "", ver: P.versione || "", commit: P.commit || "" }))}</p><h3>${eh(t("rep.params"))}</h3>${tab([t("rep.param"), t("rep.value")], kv(X.parametri).filter(r => r[0] !== "qaqc"))}`;
-    h += `<h3>${eh(t("rep.ops"))}</h3>` + (X.operazioni && X.operazioni.length ? tab([t("rep.when"), t("rep.op"), t("rep.detail")], X.operazioni.map(o => { const { op, t: when, ...rest } = o; return [when || "", op || "", Object.keys(rest).length ? JSON.stringify(rest) : ""]; })) : `<p class="m">–</p>`);
+    h += `<h2>3. ${eh(t("rep.s3"))}</h2><p>${eh(t("rep.s3.prog", { name: P.name || "", ver: P.version || "", commit: P.commit || "" }))}</p><h3>${eh(t("rep.params"))}</h3>${tab([t("rep.param"), t("rep.value")], kv(X.parametri).filter(r => r[0] !== "qaqc"))}`;
+    h += `<h3>${eh(t("rep.ops"))}</h3>` + (X.operations && X.operations.length ? tab([t("rep.when"), t("rep.op"), t("rep.detail")], X.operations.map(o => { const { op, t: when, ...rest } = o; return [when || "", op || "", Object.keys(rest).length ? JSON.stringify(rest) : ""]; })) : `<p class="m">–</p>`);
     if (qaOn) {
       h += `<h2>4. ${eh(t("rep.s4"))}</h2><p class="m">${eh(t("rep.s4.note"))}</p>`;
       if (!Q.ioni.length) h += `<p class="m">${eh(t("rep.s4.none"))}</p>`;

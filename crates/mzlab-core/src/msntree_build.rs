@@ -42,23 +42,23 @@ pub struct Node {
     pub id: String,
     /// ((nominal m/z, activation, collision energy), ...) of the path.
     pub key: Vec<(f64, String, f64)>,
-    /// Index into `Albero::nodi` of the parent; `None` = the root MS1.
-    pub genitore: Option<usize>,
+    /// Index into `Tree::nodes` of the parent; `None` = the root MS1.
+    pub parent: Option<usize>,
     /// Generations missing between the parent and the node (`via`).
-    pub salto: u8,
-    pub livello: u8,
+    pub skip: u8,
+    pub level: u8,
     /// Indices of its scans in the input.
-    pub scansioni: Vec<usize>,
+    pub scans: Vec<usize>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct Albero {
+pub struct Tree {
     /// The level-1 scans (the root).
     pub ms1: Vec<usize>,
     /// The nodes in the order (length of the path, path); a parent always comes before its children.
-    pub nodi: Vec<Node>,
+    pub nodes: Vec<Node>,
     /// MSn scans without a usable path (none in the filter, or not as long as the level asks).
-    pub scartate: usize,
+    pub discarded: usize,
 }
 
 type Key = Vec<(i64, String, u64)>;
@@ -204,7 +204,7 @@ fn find_parent(
 }
 
 /// `consensus_arrays(mzs, ints, ppm, min_frac, min_rel)`: (m/z, mean relative intensity over all the spectra, number of spectra with the peak).
-pub fn consenso(
+pub fn consensus(
     spectra: &[(Vec<f64>, Vec<f64>)],
     ppm: f64,
     min_frac: f64,
@@ -257,16 +257,16 @@ pub fn consenso(
 }
 
 /// The tree of the scans of an MSn file (`.mzidx`).
-pub fn albero(scans: &[Scan], r: &Grouping) -> Albero {
-    albero_di(scans.iter().map(|s| (s.level, s.path.as_deref())), r)
+pub fn tree(scans: &[Scan], r: &Grouping) -> Tree {
+    tree_of(scans.iter().map(|s| (s.level, s.path.as_deref())), r)
 }
 
 /// A scan as (level, path of the filter).
 pub type ScanPath<'a> = (u8, Option<&'a [(f64, String, f64)]>);
 
 /// The tree of scans given as (level, path of the filter).
-pub fn albero_di<'a>(scans: impl IntoIterator<Item = ScanPath<'a>>, r: &Grouping) -> Albero {
-    let mut out = Albero::default();
+pub fn tree_of<'a>(scans: impl IntoIterator<Item = ScanPath<'a>>, r: &Grouping) -> Tree {
+    let mut out = Tree::default();
     let mut groups: HashMap<Key, Vec<usize>> = HashMap::new();
     let scans: Vec<_> = scans.into_iter().collect();
     let usable = |&(level, path): &ScanPath<'a>| {
@@ -280,7 +280,7 @@ pub fn albero_di<'a>(scans: impl IntoIterator<Item = ScanPath<'a>>, r: &Grouping
                 .entry(key_of(p, &codes, r.energies))
                 .or_default()
                 .push(i),
-            None => out.scartate += 1,
+            None => out.discarded += 1,
         }
     }
     let mut keys: Vec<Key> = groups.keys().cloned().collect();
@@ -300,12 +300,12 @@ pub fn albero_di<'a>(scans: impl IntoIterator<Item = ScanPath<'a>>, r: &Grouping
             .enumerate()
             .map(|(s, (m, a, ce))| (codes.mz(s, *m), a.clone(), f64::from_bits(*ce)))
             .collect();
-        out.nodi.push(Node {
+        out.nodes.push(Node {
             id: node_id(&chiave),
-            livello: (k.len() + 1) as u8,
-            genitore: at.get(&pk).copied(),
-            salto: (depth - 1) as u8,
-            scansioni: groups[k].clone(),
+            level: (k.len() + 1) as u8,
+            parent: at.get(&pk).copied(),
+            skip: (depth - 1) as u8,
+            scans: groups[k].clone(),
             key: chiave,
         });
     }
@@ -314,21 +314,21 @@ pub fn albero_di<'a>(scans: impl IntoIterator<Item = ScanPath<'a>>, r: &Grouping
 
 /// The blocks of each node: runs of its scans with no scan of another node between them (MS1 and unusable scans do not break a run),
 /// as (first, last) indices of the input. A tree from Tune has a few long blocks per node; a cycled method one block per scan.
-pub fn blocks(a: &Albero, n_scans: usize) -> Vec<Vec<(usize, usize)>> {
+pub fn blocks(a: &Tree, n_scans: usize) -> Vec<Vec<(usize, usize)>> {
     let mut owned = vec![0usize; n_scans + 1];
-    for n in &a.nodi {
-        for &i in &n.scansioni {
+    for n in &a.nodes {
+        for &i in &n.scans {
             owned[i + 1] = 1;
         }
     }
     for i in 1..owned.len() {
         owned[i] += owned[i - 1];
     }
-    a.nodi
+    a.nodes
         .iter()
         .map(|n| {
             let mut out: Vec<(usize, usize)> = vec![];
-            for &i in &n.scansioni {
+            for &i in &n.scans {
                 match out.last_mut() {
                     Some(b) if owned[i] == owned[b.1 + 1] => b.1 = i,
                     _ => out.push((i, i)),

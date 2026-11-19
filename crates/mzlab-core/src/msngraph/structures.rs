@@ -75,7 +75,7 @@ impl Graph {
     /// The input of the cleavages of node `nodo`; `None` when there is no such node. The peaks are those of the spectra of which the node is the precursor
     /// (the highest relative intensity when several energies give the same m/z), ordered by m/z.
     pub fn structures_input(&self, node: usize) -> Option<StructuresInput> {
-        let n: &GNode = self.nodi.get(node)?;
+        let n: &GNode = self.nodes.get(node)?;
         let mut peaks: Vec<(f64, f64)> = Vec::new();
         for s in self.spettri.iter().filter(|s| s.precursore == Some(node)) {
             for &(mz, rel, _) in &s.picchi {

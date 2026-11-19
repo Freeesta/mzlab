@@ -103,15 +103,15 @@ pub(super) fn baricentro_pos(r: &Network) -> Vec<(usize, usize)> {
 
 /// Fills `pos` (column, row) of every node.
 pub(super) fn posa(g: &mut Graph) {
-    let livello: Vec<u8> = g.nodi.iter().map(|x| x.livello).collect();
-    let mz: Vec<f64> = g.nodi.iter().map(|x| x.mz).collect();
+    let level: Vec<u8> = g.nodes.iter().map(|x| x.level).collect();
+    let mz: Vec<f64> = g.nodes.iter().map(|x| x.mz).collect();
     let archi: Vec<(usize, usize)> = g.archi.iter().map(|a| (a.da, a.a)).collect();
     let pos = baricentro_pos(&Network {
-        level: &livello,
+        level: &level,
         mz: &mz,
         edges: &archi,
     });
-    for (n, p) in g.nodi.iter_mut().zip(pos) {
+    for (n, p) in g.nodes.iter_mut().zip(pos) {
         n.pos = p;
     }
 }
@@ -160,7 +160,7 @@ const GIRI: usize = 8;
 
 /// The tree view: the barycentre order, then passes of swaps of two adjacent rows of a column while a swap removes more crossings than it
 /// makes (the pairs of arcs of the two nodes are the only ones that change), at most `GIRI` passes; deterministic.
-pub(super) fn albero(r: &Network) -> Vec<(usize, usize)> {
+pub(super) fn tree(r: &Network) -> Vec<(usize, usize)> {
     let n = r.mz.len();
     // more sweeps of the barycentre while they leave fewer crossings
     let mut cols = baricentro(r, 1);

@@ -28,7 +28,7 @@ try:
             assert pg.evaluate("ESP.etichetta('infusion')") == name
         step("the file is one item of kind «MSn infusion»", one)
         def tree():
-            j = pg.evaluate("fetch('api/msn_albero?k=0').then(r=>r.json())")
+            j = pg.evaluate("fetch('api/msn_tree?k=0').then(r=>r.json())")
             assert j["schema"] == "msn-tree/1" and len(j["nodes"]) == NODES, (j["schema"], len(j["nodes"]))
             assert sorted(set(n["level"] for n in j["nodes"])) == [2, 3, 4, 5], j["levels"]
         step("the tree has the nodes of the synthetic file", tree)
@@ -56,7 +56,7 @@ try:
         def frag():
             r0 = pg.evaluate("""(async()=>{const till=async f=>{for(let i=0;i<600&&!f();i++) await new Promise(r=>requestAnimationFrame(r))};
               const spec=()=>E.panels.find(p=>p.type==='spec'),shown=(id)=>()=>{const s=spec();return s.filt==='msn:'+id&&s._a&&s._a.data&&s._a.data[0]&&s._a.data[0].d.y.length>0};
-              const j=await fetch('api/msn_albero?k=0').then(r=>r.json());const root=j.nodes.find(n=>n.level===2);
+              const j=await fetch('api/msn_tree?k=0').then(r=>r.json());const root=j.nodes.find(n=>n.level===2);
               await INF.pick(E.panels.find(p=>p.type==='chrom'), root.id); await till(shown(root.id));
               const kid=j.nodes.find(n=>n.parent===root.id);
               const it=INF.menuPeak(spec(), kid.precursor).find(x=>x.label===I18N.t('inf.frag')); await it.fn(); await till(shown(kid.id));
@@ -69,7 +69,7 @@ try:
             # two children of one parent inside the tolerance (same precursor, two energies): the nearest precursor wins, never an undefined order
             r1 = pg.evaluate("""(async()=>{const till=async f=>{for(let i=0;i<600&&!f();i++) await new Promise(r=>requestAnimationFrame(r))};
               const spec=()=>E.panels.find(p=>p.type==='spec');
-              const j=await fetch('api/msn_albero?k=0').then(r=>r.json());const root=j.nodes.find(n=>n.level===2);
+              const j=await fetch('api/msn_tree?k=0').then(r=>r.json());const root=j.nodes.find(n=>n.level===2);
               await INF.pick(E.panels.find(p=>p.type==='chrom'), root.id); await till(()=>spec().filt==='msn:'+root.id&&spec()._a);
               const kids=j.nodes.filter(n=>n.parent===root.id), m=kids[0].precursor+0.2, near=kids.filter(n=>Math.abs(n.precursor-m)<=0.5);
               const it=INF.menuPeak(spec(), m).find(x=>x.label===I18N.t('inf.frag')); await it.fn(); await till(()=>/^msn:/.test(spec().filt)&&spec().filt!=='msn:'+root.id);
@@ -78,7 +78,7 @@ try:
             assert r1["near"] >= 2 and r1["ok"], r1
         step("«Fragment this ion» with two children in tolerance picks the nearest precursor", frag_two)
         def total():
-            q = pg.evaluate("""(async()=>{const j=await fetch('api/msn_albero?k=0').then(r=>r.json());const n=j.nodes.find(x=>x.level===2);
+            q = pg.evaluate("""(async()=>{const j=await fetch('api/msn_tree?k=0').then(r=>r.json());const n=j.nodes.find(x=>x.level===2);
               const u=`api/spectrum?k=0&rt0=${n.rt0-1e-4}&rt1=${n.rt1+1e-4}&level=${n.level}&precursor=&filt=${encodeURIComponent('msn:'+n.id)}`;
               const a=await fetch(u).then(r=>r.json()),b=await fetch(u+'&modo=somma').then(r=>r.json());
               return {n:a.scans,ma:Math.max(...a.y),mb:Math.max(...b.y),nb:b.scans}})()""")

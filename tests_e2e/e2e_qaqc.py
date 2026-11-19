@@ -81,7 +81,7 @@ try:
             return rep
         def lr_report():
             rep = report(False)
-            assert any(x["ruolo"] == "blank" for x in rep["disegno_studio"]["file"]) and rep["qaqc"]["rapporto_campione_bianco"]["soglia"] == 10
+            assert any(x["role"] == "blank" for x in rep["disegno_studio"]["file"]) and rep["qaqc"]["rapporto_campione_bianco"]["soglia"] == 10
         step("LR: study report (JSON and HTML) with SHA-256, instrument, parameters, QA/QC, NORMAN order", lr_report)
 
         r.close(); r = Run(port=8932, wd="/tmp/wdqaqchr"); pg = r.page(p, qaqc=True)

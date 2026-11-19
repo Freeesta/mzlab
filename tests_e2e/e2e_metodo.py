@@ -46,7 +46,7 @@ try:
         def none_yet():
             r = pg.evaluate(JSON, "api/metodo?k=0")
             assert r["status"] == 200 and r["j"]["source"] == "mzml", r
-            m = r["j"]["metodo"]
+            m = r["j"]["method"]
             assert m["schema"] == "method/1" and m["origin"]["format"] == "mzml", r
         step("an mzML without method: /api/metodo builds method/1 from its header", none_yet)
         def lone_with_match():
@@ -59,7 +59,7 @@ try:
         def route():
             r = pg.evaluate(JSON, "api/metodo?k=0")
             assert r["status"] == 200 and r["j"]["source"] == "wiff", r
-            m = r["j"]["metodo"]
+            m = r["j"]["method"]
             assert m["schema"] == "method/1" and m["origin"]["format"] == "sciex-wiff" and m["origin"]["file"][0]["sha1"] == sha, m["origin"]
             assert m["origin"]["sample"] == 1, m["origin"]
         step("/api/metodo gives the method/1 of the .wiff sample", route)

@@ -134,7 +134,7 @@ Oldest or zero-basename-reference groups that are live, with what reads them.
 ## Duplicates (identical blobs)
 All intentional; no action:
 - `tests/data/untargeted/mzmine39/` and `mzmine410/` share `adap.csv`, `adap_asse.csv`, `adap_scansioni.csv`, `isotopes.csv`: two mzmine versions with equal results, each read by its own `_410` test.
-- `tests_e2e/fixtures/msngrafo_esempio.json` = `msngrafo_esempio_vista.json` (each name read by its own e2e); `tests/msn_figura/testi-albero.txt` = `testi-radiale.txt` (two golden outputs).
+- `tests_e2e/fixtures/msngrafo_esempio.json` = `msngrafo_esempio_vista.json` (each name read by its own e2e); `tests/msn_figura/testi-tree.txt` = `testi-radial.txt` (two golden outputs).
 - Three `*_truncated.events` and two `*_text.events` in `crates/mzlab-llm/tests/data` (same normalised events per provider); `rust-toolchain.toml` = `tools/banco_wasm/rust-toolchain.toml` (separate workspace); two empty `__init__.py`.
 
 ## Checked and clean

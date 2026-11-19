@@ -27,9 +27,9 @@ fn nodes_parents_and_skipped_generations() {
         (3, Some(&bad)),
         (2, None),
     ];
-    let t = albero_di(scans, &Grouping::default());
-    assert_eq!((t.ms1.clone(), t.scartate), (vec![0], 2));
-    let ids: Vec<&str> = t.nodi.iter().map(|n| n.id.as_str()).collect();
+    let t = tree_of(scans, &Grouping::default());
+    assert_eq!((t.ms1.clone(), t.discarded), (vec![0], 2));
+    let ids: Vec<&str> = t.nodes.iter().map(|n| n.id.as_str()).collect();
     assert_eq!(
         ids,
         [
@@ -40,14 +40,14 @@ fn nodes_parents_and_skipped_generations() {
             "195@cid30>150@cid35>110@cid35"
         ]
     );
-    assert_eq!(t.nodi[0].scansioni, [1, 2]);
+    assert_eq!(t.nodes[0].scans, [1, 2]);
     // the same nominal path with another energy is the parent; with no node of that path, the nearest ancestor (one generation skipped)
-    assert_eq!(t.nodi[2].genitore, Some(1));
+    assert_eq!(t.nodes[2].parent, Some(1));
     assert_eq!(
-        (t.nodi[3].genitore, t.nodi[3].salto, t.nodi[3].livello),
+        (t.nodes[3].parent, t.nodes[3].skip, t.nodes[3].level),
         (Some(2), 0, 4)
     );
-    assert_eq!((t.nodi[4].genitore, t.nodi[4].salto), (Some(0), 1));
+    assert_eq!((t.nodes[4].parent, t.nodes[4].skip), (Some(0), 1));
 }
 
 #[test]
@@ -56,7 +56,7 @@ fn consensus_keeps_the_peaks_of_half_the_scans() {
         (vec![100.0, 150.0], vec![10.0, 5.0]),
         (vec![100.0005], vec![8.0]),
     ];
-    let (mz, rel, n) = consenso(&s, 10.0, 0.5, 0.0);
+    let (mz, rel, n) = consensus(&s, 10.0, 0.5, 0.0);
     assert_eq!(n, [2, 1]);
     assert!(
         (mz[0] - 100.00025).abs() < 1e-9

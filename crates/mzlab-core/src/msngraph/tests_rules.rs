@@ -146,7 +146,7 @@ fn the_trap_cutoff_hides_what_is_below_it_and_follows_q() {
     let n = of_root(0.5);
     assert_eq!(n.len(), 1);
     assert_eq!(n[0].rule, "big");
-    assert!((n[0].threshold - 0.5 / 0.908 * g.nodi[root].mz).abs() < 1e-6);
+    assert!((n[0].threshold - 0.5 / 0.908 * g.nodes[root].mz).abs() < 1e-6);
     // the cut-off belongs to the trap: a beam spectrum has none
     let ob = con(Some("hcd"));
     let (gb, _) = shifted_graph(&ob, &[0, 1, 2, 3], false, 0.0);
@@ -255,5 +255,5 @@ fn a_single_spectrum_is_a_graph_of_one_level_with_the_precursor_as_root() {
         .picchi
         .iter()
         .any(|p| (p.1 - 100.0).abs() < 1e-9 && p.2.is_some()));
-    assert!(g.nodi[g.archi[0].a].formula.is_some());
+    assert!(g.nodes[g.archi[0].a].formula.is_some());
 }

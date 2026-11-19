@@ -89,7 +89,7 @@ pub fn breaks(g: &Graph, smiles: &str, p: Params) -> Result<Breaks, String> {
         edges: vec![],
         spettri: vec![],
     };
-    let mut hyps: Vec<Vec<Hypothesis>> = vec![vec![]; g.nodi.len()];
+    let mut hyps: Vec<Vec<Hypothesis>> = vec![vec![]; g.nodes.len()];
     if mixture {
         Mol::parse(smiles.split('.').next().unwrap_or("")).map_err(|_| "Invalid SMILES")?;
         out.warnings.push("warn.msngrafo.structMixture");
@@ -143,7 +143,7 @@ pub fn breaks(g: &Graph, smiles: &str, p: Params) -> Result<Breaks, String> {
             }
         }
         out.spettri.push(SpectrumBreak {
-            albero: s.albero.clone(),
+            tree: s.tree.clone(),
             explained: sp,
             total: tot,
         });
@@ -215,10 +215,10 @@ fn nodes_at(
     hypotheses: &mut [Vec<Hypothesis>],
 ) {
     let (g, tol) = (cx.g, mz * cx.p.ppm * 1e-6);
-    let lo = cx.order.partition_point(|&n| g.nodi[n].mz < mz - tol);
+    let lo = cx.order.partition_point(|&n| g.nodes[n].mz < mz - tol);
     for &n in cx.order[lo..]
         .iter()
-        .take_while(|&&n| g.nodi[n].mz <= mz + tol)
+        .take_while(|&&n| g.nodes[n].mz <= mz + tol)
     {
         // the fewest cuts come first, so a repeated piece keeps the simplest way to get it
         if hypotheses[n].iter().any(|x| x.piece == chunk && x.h == k) {
@@ -237,7 +237,7 @@ fn nodes_at(
             formula: elements::fmt(&f),
             h: k,
             theoretical_mz: mz,
-            ppm: (g.nodi[n].mz - mz) / mz * 1e6,
+            ppm: (g.nodes[n].mz - mz) / mz * 1e6,
         });
     }
 }
@@ -252,8 +252,8 @@ fn enumera(g: &Graph, m: &Mol, out: &mut Breaks, hypotheses: &mut [Vec<Hypothesi
         })
         .collect();
     cand.truncate(MAX_BONDS);
-    let mut ordine: Vec<usize> = (0..g.nodi.len()).collect();
-    ordine.sortc_by(|&a, &b| g.nodi[a].mz.total_cmp(&g.nodi[b].mz));
+    let mut ordine: Vec<usize> = (0..g.nodes.len()).collect();
+    ordine.sortc_by(|&a, &b| g.nodes[a].mz.total_cmp(&g.nodes[b].mz));
     let ctx = Ctx {
         g,
         m,

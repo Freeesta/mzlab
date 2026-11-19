@@ -9,7 +9,7 @@ The "experiment type" is a label and a heuristic for the defaults; the tools wor
 - Panel tabs per kind: `explore.js:162` `tabFiles(t)` = files with `kind===t`; every block of panels belongs to a kind.
 - Chromatogram: on the `ms2` tab forced to the TIC of the MS2 of a precursor, without m/z range, blank, background, log (`ms2Chrom` in `pannelli.js`; a `pda`/`press`/`an:*` chromatogram of the tab is ordinary); distinct selectors for the same concept: `kind` (tic/bpc/pda/press/an:*/reg, 660-662, 678), `prec` (663-664, tolerance 0.6 Da or `ptol` of the panel, `grafici.js:85-86`), MS2 `tr` (`api/ms2tr`, 676-677, q3±0.5), MRM `tr` (687-689), `filt` only in the HR Bench (`banco.js:38-71, 252-272`).
 - MRM: a separate panel type `"mrm"` (`tabs.js:146-156`, `api/mrm`), excluded from table, profile, QA/QC, map (`tabella.js:61`, `profilo.js:20`, `qaqc.js:30`, `lr-map.js:10`).
-- Infusion: tree `api/msn_albero` (`infusione.js:9-64`), tabs "alb"/"gra" only if `INF.any()`/`INF.single()` (`barra.js:105-106`), filters `msn:<id>`, entries of the peak menu (`infusione-menu.js`).
+- Infusion: tree `api/msn_tree` (`infusione.js:9-64`), tabs "alb"/"gra" only if `INF.any()`/`INF.single()` (`barra.js:105-106`), filters `msn:<id>`, entries of the peak menu (`infusione-menu.js`).
 - PDA: `kind=pda` of the chromatogram with nm in `mz0/mz1` (`uv-spettro.js:60-63`), UV spectrum `api/uvspec`; analog `api/analog?i` (`grafici.js:53-61`).
 - The XIC lens works in the spectrum's channel (`api/xic?canale`, `xic-lente.js`); whether it is proposed is decided by the type (`ESP.predefinito`, field `lente`).
 

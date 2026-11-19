@@ -128,7 +128,7 @@ fn testa(o: &mut Out, g: &Graph, op: &Options, source: Option<(&str, &str)>) {
     o.raw("]");
     ione(o, g);
     candidates(o, g);
-    o.raw(",\"counts\":{\"nodes\":").int(g.nodi.len() as i64);
+    o.raw(",\"counts\":{\"nodes\":").int(g.nodes.len() as i64);
     o.raw(",\"edges\":")
         .int(g.archi.len() as i64)
         .raw(",\"discarded_heavy\":")
@@ -145,7 +145,7 @@ fn testa(o: &mut Out, g: &Graph, op: &Options, source: Option<(&str, &str)>) {
             .raw("{\"key\":")
             .str(a.chiave)
             .raw(",\"tree\":")
-            .str(&a.albero)
+            .str(&a.tree)
             .raw(",\"node\":");
         id(o, a.nodo);
         o.raw("}");
@@ -161,11 +161,11 @@ fn node(o: &mut Out, i: usize, n: &GNode) {
     o.raw(",\"dev_ppm\":")
         .num(round(n.dev_ppm, 2))
         .raw(",\"level\":")
-        .int(n.livello as i64)
+        .int(n.level as i64)
         .raw(",\"isolated\":");
-    bool_(o, !n.albero.is_empty());
+    bool_(o, !n.tree.is_empty());
     o.raw(",\"tree\":[");
-    for (j, t) in n.albero.iter().enumerate() {
+    for (j, t) in n.tree.iter().enumerate() {
         o.raw(if j > 0 { "," } else { "" }).str(t);
     }
     o.raw("],\"observations\":")
@@ -271,7 +271,7 @@ fn edge(o: &mut Out, a: &Edge) {
     for (j, m) in a.misure.iter().enumerate() {
         o.raw(if j > 0 { "," } else { "" })
             .raw("{\"tree\":")
-            .str(&m.albero)
+            .str(&m.tree)
             .raw(",\"level\":")
             .int(m.level as i64);
         o.raw(",\"activation\":")
@@ -279,7 +279,7 @@ fn edge(o: &mut Out, a: &Edge) {
             .raw(",\"ce\":")
             .num(m.ce);
         o.raw(",\"n_scans\":")
-            .int(m.n_scansioni as i64)
+            .int(m.n_scans as i64)
             .raw(",\"rel\":")
             .num(round(m.rel, 1))
             .raw("}");
@@ -289,7 +289,7 @@ fn edge(o: &mut Out, a: &Edge) {
 
 fn spettro(o: &mut Out, s: &SpettroG) {
     o.raw("{\"tree\":")
-        .str(&s.albero)
+        .str(&s.tree)
         .raw(",\"level\":")
         .int(s.level as i64);
     o.raw(",\"activation\":")
@@ -319,7 +319,7 @@ pub fn json(g: &Graph, op: &Options, source: Option<(&str, &str)>) -> String {
     let mut o = Out::default();
     testa(&mut o, g, op, source);
     o.raw(",\"nodes\":[");
-    for (i, n) in g.nodi.iter().enumerate() {
+    for (i, n) in g.nodes.iter().enumerate() {
         if i > 0 {
             o.raw(",");
         }

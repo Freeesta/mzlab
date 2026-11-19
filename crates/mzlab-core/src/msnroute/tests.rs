@@ -11,20 +11,20 @@ fn routes() -> Routes<std::fs::File> {
 #[test]
 fn sum_is_mean_times_n() {
     let mut r = routes();
-    let tree = albero(&r.idx.scans, &Grouping::default());
-    for n in &tree.nodi {
+    let tree = tree(&r.idx.scans, &Grouping::default());
+    for n in &tree.nodes {
         let f = format!("msn:{}", n.id);
         let mean = r
-            .binned(n.livello, 0.0, 1e9, None, 0.1, Some(&f))
+            .binned(n.level, 0.0, 1e9, None, 0.1, Some(&f))
             .unwrap()
             .unwrap();
         let sum = r
             .with_opts(&Query::parse("modo=somma"), |r| {
-                r.binned(n.livello, 0.0, 1e9, None, 0.1, Some(&f))
+                r.binned(n.level, 0.0, 1e9, None, 0.1, Some(&f))
             })
             .unwrap()
             .unwrap();
-        assert_eq!((mean.n, sum.n), (n.scansioni.len(), n.scansioni.len()));
+        assert_eq!((mean.n, sum.n), (n.scans.len(), n.scans.len()));
         assert_eq!(mean.mz, sum.mz);
         for (a, b) in mean.y.iter().zip(&sum.y) {
             assert!(
@@ -36,18 +36,14 @@ fn sum_is_mean_times_n() {
         }
     }
     // the option lasts one request
-    assert!(!r.msn.opz.somma);
+    assert!(!r.msn.opts.sum);
 }
 
 #[test]
 fn scanavg_sums_too() {
     let mut r = routes();
-    let tree = albero(&r.idx.scans, &Grouping::default());
-    let sids: Vec<String> = tree.nodi[0]
-        .scansioni
-        .iter()
-        .map(|i| i.to_string())
-        .collect();
+    let tree = tree(&r.idx.scans, &Grouping::default());
+    let sids: Vec<String> = tree.nodes[0].scans.iter().map(|i| i.to_string()).collect();
     let mut mzml = std::fs::File::open(
         std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/golden/ref/msntree_rotta/msn.mzML"),

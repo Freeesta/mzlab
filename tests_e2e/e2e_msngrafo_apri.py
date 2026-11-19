@@ -28,7 +28,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1500})
         pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "typeof INFGAPRI !== 'x' && !!document.querySelector('#pick')")
-        ASK = "(window.__qqU||[]).filter(u=>/api\\/(upload|explore|msn_grafo|msn_albero)/.test(u))"
+        ASK = "(window.__qqU||[]).filter(u=>/api\\/(upload|explore|msn_grafo|msn_tree)/.test(u))"
         def opened(path, via="pick"):
             pg.set_input_files("#pick", str(path))
             pg.wait_for_selector("#ig-ro .ig-node", timeout=30000)
