@@ -33,7 +33,11 @@ fn without(v: &Value, skip: &[&str]) -> Vec<(String, Value)> {
             .map(|(k, v)| match (k.as_str(), v) {
                 ("run", Value::Obj(r)) => (
                     k,
-                    Value::Obj(r.into_iter().filter(|(n, _)| n != "chromatograms").collect()),
+                    Value::Obj(
+                        r.into_iter()
+                            .filter(|(n, _)| n != "chromatograms")
+                            .collect(),
+                    ),
                 ),
                 (_, v) => (k, v),
             })
