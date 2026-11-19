@@ -60,6 +60,7 @@ const INTEGRITY_PREFIXES: &[&str] = &[
     "err.flow.input.",
     "err.flow.unknownStep",
     "err.mzrun.",
+    "err.design.",
     "err.llm.eval.case",
     "err.llm.replay.format",
     "err.normative.pin",
