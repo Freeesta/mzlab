@@ -4,7 +4,7 @@ A server that can answer a path with other bytes stands for a stored copy of the
 2 the same fault on the network too: ONE recovery reload, then the banner «load.err.engineStartPurged» (no loop);
 3 a .wasm that does not compile (not a cache matter): no recovery reload, the page ends in its own start error.
 Build the site first: python3 tools/prepara_sito.py. Run from the repo root: python3 tests_e2e/e2e_motore_recupero.py"""
-import os, sys, threading
+import os, re, sys, threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
@@ -14,6 +14,7 @@ sys.path.insert(0, str(HERE)); import lib  # noqa: F401,E402
 from lib import free_port, wait_for_js  # noqa: E402
 
 SITE = Path(os.environ.get("MZLAB_PIPE_SITE") or ROOT / "site")
+BIG = "mzlab-big-" + re.search(r'CACHE_BIG : "mzlab-big-"\) \+ "([\w-]+)"', (SITE / "sw.js").read_text()).group(1)       # the worker keeps only its own big cache: the probe is named like it
 GLUE, WASM = "/static/wasm/mzlab_wasm.js", "/static/wasm/mzlab_wasm_bg.wasm"
 OLD_GLUE = b"export default function init() { return Promise.resolve({}); }\n"      # no named exports: rust-worker.js fails to link, the worker dies at start
 MIME = {"js": "text/javascript", "html": "text/html", "css": "text/css", "json": "application/json", "wasm": "application/wasm"}
@@ -72,11 +73,13 @@ try:
             pg.evaluate("""async glue => { const n = (await caches.keys()).find(k => k.startsWith('mzlab-app-')), c = await caches.open(n);
                 await c.put(new URL(glue, location.origin).href, new Response('export default function init() { return Promise.resolve({}); }\\n', { headers: { 'Content-Type': 'text/javascript' } })); }""", GLUE)
             pg.evaluate("sessionStorage.removeItem('mzlab.engineRecover')")
+            pg.evaluate("n => caches.open(n).then(c => c.put('/probe', new Response('x')))", BIG)      # a vendor copy: the "engine" mode must leave it
             seen.update(recover=0, ripn=0)
             pg.reload()                                                                  # the stored copy now mixes two versions: the engine dies, the page recovers
             wait_for_js(pg, "!!window.MZLAB_LR", 180000)
             assert seen["recover"] == 1, ("recovery logged", seen)
             assert seen["ripn"] == 2, ("one recovery load (ripn) and the single isolating reload after it", seen)
+            assert pg.evaluate("caches.keys()").count(BIG) == 1, "the big caches survive the engine mode"
             assert pg.evaluate("sessionStorage.getItem('mzlab.engineRecover')") is None, "the flag is cleared once the engine is up"
             assert pg.evaluate("window.qqFailed") is None, pg.evaluate("window.qqFailed")
             b.close()

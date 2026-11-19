@@ -80,7 +80,10 @@
   // reset.js: the worker holds sync handles on the files
   window.qqEngineStop = () => { try { if (window.MZLAB_RUST) window.MZLAB_RUST.stop(); } catch (_) { /* gone already */ } };
   // the engine died at start though its .wasm came up (up !== false: a missing or broken .wasm is not a cache matter) and not for memory: the stored site copy is a suspect
-  const engineCacheSuspect = async (/** @type {any} */ e) => { const r = window.MZLAB_RUST; return !!(e && e.dead && r && r.offKey !== "error.engineOffMemory" && await r.up !== false); };
+  const engineCacheSuspect = async (/** @type {any} */ e) => {
+    const r = window.MZLAB_RUST;
+    return !!(e && e.dead && r && r.offKey !== "error.engineOffMemory" && await r.up !== false);
+  };
   let lr = null;
   const lrInit = async () => {
     if (window.MZLAB_PHONE) throw new Error("phone: engine not started");
