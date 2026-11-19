@@ -258,6 +258,16 @@ fn checked_inspection(bytes: Vec<u8>, from: &str) -> Result<String, Outcome> {
     }
 }
 
+/// The answers file: unreadable is an input error (4), not JSON a usage error (2).
+fn read_answers(p: &str) -> Result<Value, Outcome> {
+    use mzlab_core::error::Error;
+    let bytes = std::fs::read(p).map_err(|e| {
+        Outcome::fail_error(&Error::new("err.cli.file").with("path", format!("{p}: {e}")))
+    })?;
+    parse(&bytes)
+        .map_err(|_| Outcome::fail_error(&Error::new("err.llm.answers.invalid").with("from", p)))
+}
+
 /// The inspection a file holds, or the bytes of the reader that stands for standard input (`-`).
 pub(crate) fn read_inspection_from(
     from: &str,
@@ -301,10 +311,7 @@ pub(crate) fn params_with(args: Vec<String>, stdin: &mut dyn std::io::Read) -> O
             .map_err(|e| Outcome::fail(&e))?,
         };
         let answers = match &o.answers {
-            Some(p) => std::fs::read(p)
-                .map_err(|e| format!("{p}: {e}"))
-                .and_then(|b| parse(&b).map_err(|e| e.to_string()))
-                .map_err(|e| Outcome::fail(&e))?,
+            Some(p) => read_answers(p)?,
             None => Value::Null,
         };
         let insp = parse(insp.as_bytes()).map_err(|e| Outcome::fail(&e.to_string()))?;

@@ -62,7 +62,7 @@ fn cli(args: &[&str]) -> String {
 
 #[test]
 fn llm_inspect_and_params_give_the_golden_bytes() {
-    let Some(dir) = folder() else { return };
+    let dir = strict_folder();
     let d = dir.to_str().unwrap();
     let insp = cli(&["llm", "inspect", d]);
     assert_eq!(
@@ -232,4 +232,64 @@ fn params_on_a_bad_or_missing_inspection_fails_with_the_contract_codes() {
     assert!(String::from_utf8(o.stdout)
         .unwrap()
         .contains("\"schema\":\"error/1\""));
+}
+
+#[test]
+fn a_bad_answers_file_takes_the_declared_codes_with_one_error_document() {
+    let dir = strict_folder();
+    let d = dir.to_str().unwrap();
+    // beside the folder, not in it: a folder is read whole
+    let bad = dir.with_file_name("answers-bad.json");
+    std::fs::write(&bad, "not json").unwrap();
+    let missing = dir.with_file_name("answers-missing.json");
+    for (answers, code) in [(&bad, 2), (&missing, 4)] {
+        let o = execute(&args(&[
+            "llm",
+            "params",
+            d,
+            "--answers",
+            answers.to_str().unwrap(),
+            "--json",
+        ]));
+        assert_eq!(o.code, code, "{answers:?}: {}", o.stderr);
+        let out = String::from_utf8(o.stdout).unwrap();
+        assert!(out.contains("\"schema\":\"error/1\""), "{out}");
+        assert!(declared("llm params").contains(&o.code));
+    }
+    std::fs::remove_file(bad).ok();
+}
+
+/// The exit codes a command declares in its table row.
+fn declared(name: &str) -> &'static [u8] {
+    crate::cmd::entries()
+        .find(|e| e.name == name)
+        .unwrap()
+        .exits
+}
+
+#[test]
+fn flow_command_and_llm_context_errors_stay_among_their_declared_codes() {
+    let tmp = std::env::temp_dir().join(format!("mzlab-exits-{}", std::process::id()));
+    std::fs::create_dir_all(&tmp).unwrap();
+    let bad = tmp.join("plan-bad.json");
+    std::fs::write(&bad, "not json").unwrap();
+    let bad = bad.to_str().unwrap();
+    for (a, code) in [
+        (vec!["flow", "command", bad, "--json"], 3),
+        (
+            vec!["flow", "command", "/nonexistent/plan.json", "--json"],
+            4,
+        ),
+        (vec!["flow", "command", "--json"], 2),
+        (vec!["llm", "context", "/nonexistent/run", "--json"], 4),
+        (vec!["llm", "context", "--json"], 2),
+    ] {
+        let o = execute(&args(&a));
+        assert_eq!(o.code, code, "{a:?}: {}", o.stderr);
+        let name = format!("{} {}", a[0], a[1]);
+        assert!(declared(&name).contains(&o.code), "{name}: {}", o.code);
+        let out = String::from_utf8(o.stdout).unwrap();
+        assert!(out.contains("\"schema\":\"error/1\""), "{a:?}: {out}");
+    }
+    std::fs::remove_dir_all(tmp).ok();
 }

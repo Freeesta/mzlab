@@ -25,7 +25,7 @@ Principles and choices: `llm-choices.md`. The `mzlab-llm` crate (workspace membe
 - `log::Log::event(turn, &Event)` builds `llmlog/1` in memory (the caller writes the file); `log::has_secret` rejects `sk-`, `sk-ant-`, `AIza` at the start of a word followed by a character (`err.llm.log.secret`).
 - `cost::estimate(&Usage, &Model) -> Option<f64>`: in the price's currency, caches read and written as input; `None` if `in` or `out` is 0.
 - `spend` (`spend.rs`): `Prices` in micro-dollars per million tokens (`list()` from the providers, `parse` of the `PRICES` variable), `cost(model, &Usage)` with the caches and the high tier, `max_cost`; `Meter::admit(model, input_estimate, max_tokens) -> Ticket` reserves the worst case and never lets the cap be exceeded (`err.llm.limit.spend`), `charge(ticket, model, &Usage)` replaces it with the true cost, `release` returns it, `soft_notice()` is true once at 80 %. `Ledger` (`spend/ledger.rs`) is the shared ledger of the public proxy (`docs/agenti/assistant-proxy.md`).
-- `mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]`: the events of a turn, one line per event (`docs/agenti/cli.md`).
+- `mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]`: the `replay/1` of a turn; exit 3 wrong-format recording, 1 no turn left, 4 missing file (`docs/agenti/cli.md`).
 
 ## Profile, settings, consent (`mzlab/web/llm/`)
 - Profile (`settings.js`, `uipProfile()`): not a user choice: `research` with administrator mode (5 clicks on the logo) or in the desktop app, otherwise `demo` if `UIP_DEMO` (D2) is true, otherwise `course`. With `demo` the settings have no assistant and only the Flow page shows "Try the assistant" (`F.demo()`);

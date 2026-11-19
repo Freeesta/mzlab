@@ -8,6 +8,7 @@
   "err.llm.tools": "Invalid tool catalog; {field} = field that is missing or wrong.",
   "err.llm.assist.call": "Engine error message; {field} = field.",
   "err.llm.inspection.invalid": "CLI error of llm params: the file given to --inspection is not an inspection/1; {from} = its path or - for standard input.",
+  "err.llm.answers.invalid": "CLI error of llm params: the file given to --answers is not JSON; {from} = its path.",
   "err.llm.inspection.settled": "CLI error of llm params: --budget or --hide-names given together with --inspection.",
   "err.llm.inputs.twice": "CLI error of llm inspect and llm params: the same file named twice; {path} = the path.",
   "err.llm.eval.case": "CLI error of llm eval: a case file that is not a llm-eval/1; {field} = the field that is missing or wrong.",
