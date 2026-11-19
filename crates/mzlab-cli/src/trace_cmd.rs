@@ -134,7 +134,7 @@ fn uv_answer(s: &mut Sample, id: &str, n: i64, win: Option<(f64, f64)>) -> Resul
                 "mAU".into()
             }
         });
-    return Ok(Answer {
+    Ok(Answer {
         text,
         y_unit,
         evidence: family_ev(
