@@ -106,7 +106,7 @@ try:
         load(pg, [F], 6000, 1)
         wait_for_js(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
         tree = pg.evaluate("fetch('api/msn_albero?k=0').then(r=>r.json())")
-        for n, tid in zip([n for n in FX["nodes"] if n["isolated"]], [n["id"] for n in tree["nodes"]]): n["tree"] = [tid]
+        for n, tid in zip([n for n in FX["nodes"] if n["isolated"]], [n["id"] for n in tree["nodi"]]): n["tree"] = [tid]
         pg.evaluate(STAND_IN.replace('\\\\', '\\'), FX)
         def graph():
             drawer(pg, "gra"); pg.wait_for_selector(".ig-node", timeout=30000)
