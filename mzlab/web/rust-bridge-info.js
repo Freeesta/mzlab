@@ -10,11 +10,11 @@ import { cercaRoute, grafoRoute, libreriaRoute } from "./rust-msngrafo-pagina.js
 export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) {
   if (path === "/api/manint" || path === "/api/manvalley" || path === "/api/manfollow" || path === "/api/manauto") return manintRoute(u, { slots, rpc, stats, t0 }, path.slice(8));
   if (path === "/api/mantraces") return tracesRoute({ rpc, stats, t0 }, init);   // POST {files, windows, sums}: the traces the page supplies (chromatogram, XIC, DAD)
-  if (path === "/api/msnlib/add") {                               // add an entry to the msnlib/1 library of the user (POST)
+  if (path === "/api/msnlib/add") {                               // add an entry to the msn-lib/1 library of the user (POST)
     const r = await libreriaRoute({ slots, rpc, stats }, init);
     return r && { ...r, ms: performance.now() - t0 };
   }
-  if (path === "/api/msnlib/search") {                                  // search the msnlib/1 library of the user for the graph of a file (POST)
+  if (path === "/api/msnlib/search") {                                  // search the msn-lib/1 library of the user for the graph of a file (POST)
     const r = await cercaRoute({ slots, rpc, stats }, init);
     return r && { ...r, ms: performance.now() - t0 };
   }
