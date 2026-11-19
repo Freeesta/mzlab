@@ -15,10 +15,10 @@ D = HERE / "shots" / "registro_tmp"; D.mkdir(parents=True, exist_ok=True)
 F = D / "REG_t0.mzML"; ds.full_scan(F, 0, np.random.default_rng(5))
 FAKE = """(() => {
   const orig = window.fetch.bind(window), ids = [
-    {id: 'status:Ion Source/Spray Voltage (kV)', gruppo: 'Ion Source', nome: 'Spray Voltage', unita: 'kV', n: 40, min: 3.4, max: 3.6},
-    {id: 'status:Ion Source/Sheath Gas (arb)', gruppo: 'Ion Source', nome: 'Sheath Gas', unita: 'arb', n: 40, min: 10, max: 12},
-    {id: 'status:Vacuum/Fore Pressure (mbar)', gruppo: 'Vacuum', nome: 'Fore Pressure', unita: 'mbar', n: 40, min: 1.2, max: 1.4},
-    {id: 'trailer:Ion Injection Time (ms)', gruppo: '', nome: 'Ion Injection Time', unita: 'ms', n: 100, min: 1, max: 50}];
+    {id: 'status:Ion Source/Spray Voltage (kV)', group: 'Ion Source', name: 'Spray Voltage', unit: 'kV', n: 40, min: 3.4, max: 3.6},
+    {id: 'status:Ion Source/Sheath Gas (arb)', group: 'Ion Source', name: 'Sheath Gas', unit: 'arb', n: 40, min: 10, max: 12},
+    {id: 'status:Vacuum/Fore Pressure (mbar)', group: 'Vacuum', name: 'Fore Pressure', unit: 'mbar', n: 40, min: 1.2, max: 1.4},
+    {id: 'trailer:Ion Injection Time (ms)', group: '', name: 'Ion Injection Time', unit: 'ms', n: 100, min: 1, max: 50}];
   const json = o => new Response(JSON.stringify(o), {status: 200, headers: {'Content-Type': 'application/json'}});
   window.fetch = async (u, o) => {
     const s = String(u);
