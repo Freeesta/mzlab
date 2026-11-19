@@ -86,7 +86,7 @@ test("the closed body: only the prompts, schemas, catalog and limits of mzLab pa
   await refused(s, post(B(), { session: "x" }), 400, "err.llm.proxy.body", "session");
   await refused(s, post(B({ messages: [{ role: "user", content: "z".repeat(125_000) }] })), 400, "err.llm.proxy.body", "size");
   // what the site sends passes: the orchestrator, the router with its schema, a data block of any size within 120 KB
-  for (const body of [B(), routerBody(s.rust), B({ messages: [{ role: "user", content: [{ type: "text", text: "ok" }, { type: "text", text: JSON.stringify({ schema: "ispezione/1", pad: "p".repeat(50_000) }) }] }] })]) {
+  for (const body of [B(), routerBody(s.rust), B({ messages: [{ role: "user", content: [{ type: "text", text: "ok" }, { type: "text", text: JSON.stringify({ schema: "inspection/1", pad: "p".repeat(50_000) }) }] }] })]) {
     const r = await drain(await s.handle(post(body), IP));
     assert.equal(r.status, 200, r.text);
   }
@@ -104,15 +104,15 @@ test("the plan phase prompt mid-conversation raises the orchestrator cap to the 
   await refused(s, post(orchestratorBody({ system: plan })), 400, "err.llm.proxy.body", "system");
 });
 
-test("the allow-list holds every prompt of assist-ruoli-1.json, and the catalog as Rust sends it passes", async (t) => {
+test("the allow-list holds every prompt of assist-roles-1.json, and the catalog as Rust sends it passes", async (t) => {
   const s = await setup();
   if (!s) return t.skip("no wasm");
   const { readFileSync } = await import("node:fs");
-  const roles = JSON.parse(readFileSync(new URL("../../crates/mzlab-llm/data/assist/assist-ruoli-1.json", import.meta.url), "utf-8"));
+  const roles = JSON.parse(readFileSync(new URL("../../crates/mzlab-llm/data/assist/assist-roles-1.json", import.meta.url), "utf-8"));
   const named = new Set(Object.values(s.allow.system).map((e) => e.role));
   for (const r of roles.roles) assert.ok(named.has(r.role), r.role);
   assert.ok(named.has("orchestrator"));
-  assert.equal(s.allow.schemas.length, 3, "router/1, lettura/1, param-scelte/1");
+  assert.equal(s.allow.schemas.length, 3, "router/1, reading/1, param-choices/1");
   const toolsOf = (file) => {
     const llm = new s.rust.Llm(readFileSync(new URL(`../../docs/schemi/${file}`, import.meta.url), "utf-8"));
     const conv = { schema: "llm-conv/1", provider: "mzlab-demo", model: "claude-sonnet-5-5", system: "x", max_output_tokens: 1, messages: [{ role: "user", parts: [{ text: "x" }] }] };
@@ -120,10 +120,10 @@ test("the allow-list holds every prompt of assist-ruoli-1.json, and the catalog 
     llm.free();
     return (typeof req.body === "string" ? JSON.parse(req.body) : req.body).tools;
   };
-  const tools = toolsOf("strumenti-demo-1.json");
+  const tools = toolsOf("tools-demo-1.json");
   assert.equal(tools.length, 12);
   // the whole catalog (flow_run, code_export, ui_show...) is not the demo's
-  await refused(s, post(orchestratorBody({ tools: toolsOf("strumenti-1.json") })), 400, "err.llm.proxy.body", "tools");
+  await refused(s, post(orchestratorBody({ tools: toolsOf("tools-1.json") })), 400, "err.llm.proxy.body", "tools");
   // the caps of the allow-list are the demo_* limits of the roles file
   const caps = demoMaxTokens();
   for (const e of Object.values(s.allow.system)) assert.equal(e.max_tokens, caps[e.role], e.role);

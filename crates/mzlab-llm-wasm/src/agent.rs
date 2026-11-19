@@ -56,7 +56,7 @@ pub struct Agent {
 
 #[wasm_bindgen]
 impl Agent {
-    /// `tools_json`: `tools/1`; `level`: `L0|L1|L2`; `research`: false = the profile «corso», where every turn fails with `err.llm.profile.course`.
+    /// `tools_json`: `tools/1`; `level`: `L0|L1|L2`; `research`: false = the profile «course», where every turn fails with `err.llm.profile.course`.
     #[wasm_bindgen(constructor)]
     pub fn new(
         tools_json: &str,
@@ -91,7 +91,7 @@ impl Agent {
         Ok(n)
     }
 
-    /// A user message with the optional `contesto/1` object that goes with it.
+    /// A user message with the optional `context/1` object that goes with it.
     pub fn user(&mut self, text: &str, context_json: &str) -> Result<String, String> {
         if !context_json.is_empty() {
             let c = parse(context_json.as_bytes()).map_err(fail)?;

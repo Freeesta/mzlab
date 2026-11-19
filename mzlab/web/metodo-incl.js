@@ -1,6 +1,6 @@
 // @ts-strict
 "use strict";
-// The inclusion list of a Thermo method (metodo/1: ms.periodi[].esperimenti[].inclusione) in the Method window, read only, at the head of "Method recorded in the file" (metodo-doc.js).
+// The inclusion list of a Thermo method (method/1: ms.periods[].experiments[].inclusion) in the Method window, read only, at the head of "Method recorded in the file" (metodo-doc.js).
 // Each row has two short buttons, «XIC» and «MS2», that run the actions "metodo.xic" and "metodo.ms2" of the registry azioni/1 (so the right-click menu and Shift+F10 have them too);
 // the XIC is the usual one (openXic with `diretto`, pannelli.js), the MS2 is the one DDA.ms2For finds for the precursor inside the RT window of the entry (dda.js). Nothing here is turned into expected products.
 
@@ -10,20 +10,20 @@ const METODO_INCL = (() => {
   const n = (/** @type {any} */ v) => (v == null ? "" : String(+(+v).toFixed(4)));
   /** @type {{ f: any, items: any[], ms2: Map<number, any> }} */
   let cur = { f: null, items: [], ms2: new Map() };
-  const win = (/** @type {any} */ v) => (v.t_inizio_min != null && v.t_fine_min != null ? [v.t_inizio_min, v.t_fine_min] : null);
-  const rtText = (/** @type {any} */ v) => (v.t_inizio_min != null || v.t_fine_min != null ? `${n(v.t_inizio_min)}–${n(v.t_fine_min)}` : "");
-  const polText = (/** @type {any} */ v) => (v.polarita === "positive" ? T("method.doc.incl.pos") : v.polarita === "negative" ? T("method.doc.incl.neg") : "");
+  const win = (/** @type {any} */ v) => (v.t_start_min != null && v.t_end_min != null ? [v.t_start_min, v.t_end_min] : null);
+  const rtText = (/** @type {any} */ v) => (v.t_start_min != null || v.t_end_min != null ? `${n(v.t_start_min)}–${n(v.t_end_min)}` : "");
+  const polText = (/** @type {any} */ v) => (v.polarity === "positive" ? T("method.doc.incl.pos") : v.polarity === "negative" ? T("method.doc.incl.neg") : "");
   const noMs2 = () => (cur.f && cur.f.dda ? T("method.doc.btn.ms2.none") : T("method.doc.btn.ms2.nodda"));
   // text of an attribute: the Method window writes every "m/z" in italics with a replace over the whole page, which must not reach inside a tag
   const attr = (/** @type {string} */ t) => EH(t).replace(/m\/z/g, "m&#47;z");
   function html(/** @type {any} */ d, /** @type {any} */ f) {
-    const items = ((d.ms || {}).periodi || []).flatMap((/** @type {any} */ p) => p.esperimenti || []).flatMap((/** @type {any} */ e) => e.inclusione || []);
+    const items = ((d.ms || {}).periods || []).flatMap((/** @type {any} */ p) => p.experiments || []).flatMap((/** @type {any} */ e) => e.inclusion || []);
     cur = { f, items, ms2: new Map() };
     if (!items.length) return "";
     const has = (/** @type {string} */ k) => items.some(x => x[k] != null && x[k] !== "");
     const cols = [["mz", "m/z", (/** @type {any} */ v) => n(v.mz)], ["rt", T("method.doc.incl.rt"), rtText], ["pol", T("method.doc.incl.pol"), polText],
-      ["nce", T("method.doc.incl.ce"), (/** @type {any} */ v) => (v.nce || []).map(n).join(", ")], ["formula", T("method.doc.incl.formula"), (/** @type {any} */ v) => v.formula], ["specie", T("method.doc.incl.species"), (/** @type {any} */ v) => v.specie],
-      ["nome", T("method.doc.incl.name"), (/** @type {any} */ v) => v.nome]].filter(c => c[0] === "mz" || (c[0] === "rt" ? has("t_inizio_min") || has("t_fine_min") : c[0] === "pol" ? has("polarita") : has(c[0])));
+      ["nce", T("method.doc.incl.ce"), (/** @type {any} */ v) => (v.nce || []).map(n).join(", ")], ["formula", T("method.doc.incl.formula"), (/** @type {any} */ v) => v.formula], ["species", T("method.doc.incl.species"), (/** @type {any} */ v) => v.species],
+      ["name", T("method.doc.incl.name"), (/** @type {any} */ v) => v.name]].filter(c => c[0] === "mz" || (c[0] === "rt" ? has("t_start_min") || has("t_end_min") : c[0] === "pol" ? has("polarity") : has(c[0])));
     const head = cols.map(c => `<th scope="col"${c[0] === "mz" || c[0] === "rt" ? ' class="num"' : ""}>${EH(String(c[1]))}</th>`).join("") + `<th scope="col">${EH(T("method.doc.incl.act"))}</th>`;
     const btn = "min-width:36px;min-height:26px;margin-right:4px";
     const body = items.map((v, i) => `<tr data-i="${i}">${cols.map(c => `<td${c[0] === "mz" || c[0] === "rt" ? ' class="num"' : ""}>${EH(String(c[2](v) || ""))}</td>`).join("")}<td>`
@@ -53,7 +53,7 @@ const METODO_INCL = (() => {
       if (!b || /** @type {HTMLButtonElement} */ (b).disabled) return;
       if (b.dataset.ia === "tab") {
         TDATI.table({ title: T("method.doc.incl.title"), head: ["m/z", T("method.doc.incl.rt"), T("method.doc.incl.pol"), T("method.doc.incl.ce"), T("method.doc.incl.formula"), T("method.doc.incl.species"), T("method.doc.incl.name")],
-          rows: cur.items.map(v => [n(v.mz), rtText(v), polText(v), (v.nce || []).map(n).join(", "), v.formula || "", v.specie || "", v.nome || ""]) });
+          rows: cur.items.map(v => [n(v.mz), rtText(v), polText(v), (v.nce || []).map(n).join(", "), v.formula || "", v.species || "", v.name || ""]) });
         return;
       }
       const i = at(b); if (i >= 0) AZIONI.esegui("metodo." + b.dataset.ia, ctxOf(i));

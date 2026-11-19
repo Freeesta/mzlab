@@ -1,6 +1,6 @@
 """Assistant panel in Flow (docs/agenti/llm.md, «Pannello nel Flow»): recordings answer the model, no request leaves the site. L0: the proposed plan of E1 is shown as a difference, «Apply» puts it
 on the canvas as one entry of Undo (Ctrl+Z removes it); L1: every edit asks («Allow»/«Deny», a refusal changes nothing); L2: two steps and a parameter by themselves, a run on the web executor
-(a stub: the plumbing, not the numbers), a read of the result, then every action is undone from the register; «Stop» ends a turn in the middle; the profile «corso» has the Flow but no assistant and downloads nothing of llm/.
+(a stub: the plumbing, not the numbers), a read of the result, then every action is undone from the register; «Stop» ends a turn in the middle; the profile «course» has the Flow but no assistant and downloads nothing of llm/.
 Also axe, targets of 24 px, prefers-reduced-motion and the click budget (MISURA clic_assistente). Run from the repo root: python3 tests_e2e/e2e_llm.py"""
 import json, socket, subprocess, sys, tempfile
 from pathlib import Path
@@ -57,16 +57,16 @@ errs = []; reqs = []
 try:
     with sync_playwright() as p:
         b = p.chromium.launch()
-        def fresh(level="L0", profile="ricerca", on=True, reduced=False, recording=None, stub=True):
+        def fresh(level="L0", profile="research", on=True, reduced=False, recording=None, stub=True):
             c = b.new_context(viewport={"width": 1500, "height": 1000}, reduced_motion="reduce" if reduced else "no-preference"); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("console", lambda m: CON.append(m.text[:200])); LAST[:] = [pg]; pg.on("request", lambda r: reqs.append(r.url))
             settings = json.dumps({"on": on, "provider": "anthropic", "model": "claude-sonnet-5-5", "level": level, "l2max": 5})
             pg.add_init_script("try{%slocalStorage.setItem('mzlab.llm',%s);localStorage.setItem('mzlab.llm.consenso',%s);}catch(_){}"
-                               % ("localStorage.setItem('mzlab.admin','1');" if profile == "ricerca" else "", json.dumps(settings), json.dumps(json.dumps({"anthropic": {"classes": ["plan", "summary", "names"]}}))))
+                               % ("localStorage.setItem('mzlab.admin','1');" if profile == "research" else "", json.dumps(settings), json.dumps(json.dumps({"anthropic": {"classes": ["plan", "summary", "names"]}}))))
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
-            if profile == "corso": return pg      # no administrator mode: the Flow, but no assistant
+            if profile == "course": return pg      # no administrator mode: the Flow, but no assistant
             pg.wait_for_selector(TAB, timeout=60000); pg.click(TAB); pg.wait_for_selector("#flx-root", timeout=30000)
-            if profile == "ricerca" and on:
+            if profile == "research" and on:
                 pos = "() => ['#flx-run', '#flx-more'].map(q => { const r = document.querySelector(q).getBoundingClientRect(); return [Math.round(r.x), Math.round(r.y)]; })"
                 before = pg.evaluate(pos)
                 pg.wait_for_selector("#flx-assistant", timeout=30000)
@@ -84,15 +84,15 @@ try:
             pg.evaluate("document.activeElement && document.activeElement.blur()")
             pg.evaluate("document.querySelector('#flx-root').dispatchEvent(new KeyboardEvent('keydown', {key: 'z', ctrlKey: true, bubbles: true}))")
 
-        def corso():
-            pg = fresh(profile="corso"); reqs.clear()
+        def course_profile():
+            pg = fresh(profile="course"); reqs.clear()
             wait_for_js(pg, "document.readyState === 'complete' && !!document.querySelector('#nav')")
-            # the Flow tab is open to everyone: the profile corso gets the Flow, but nothing of the assistant
+            # the Flow tab is open to everyone: the profile course gets the Flow, but nothing of the assistant
             pg.click(TAB); pg.wait_for_selector("#flx-root", timeout=30000); pg.evaluate("window.FLOW.whenLate")   # the lazy parts of the Flow have loaded
             assert pg.locator("#flx-assistant").count() == 0 and pg.locator("#flx-llm").count() == 0
-            assert not [r for r in reqs if "/llm/" in r or "flow-llm" in r], "nothing of the assistant is downloaded with the profile corso"
+            assert not [r for r in reqs if "/llm/" in r or "flow-llm" in r], "nothing of the assistant is downloaded with the profile course"
             pg.context.close()
-        step("profile corso: the Flow without the assistant, no file of llm/", corso)
+        step("profile course: the Flow without the assistant, no file of llm/", course_profile)
 
         def l0():
             pg = fresh("L0", recording=E1); before = nsteps(pg)

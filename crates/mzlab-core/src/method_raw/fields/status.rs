@@ -1,4 +1,4 @@
-//! The status log of the instrument (`opentfraw::status_log`) as fields of `metodo/1`: the value of each channel when it is the same in every
+//! The status log of the instrument (`opentfraw::status_log`) as fields of `method/1`: the value of each channel when it is the same in every
 //! record, else `min..max`; the series over time are `StatusLog::series`. The titles of the sections (`====  Ion Source:  ====`) carry no value.
 
 use super::{shown, Field};

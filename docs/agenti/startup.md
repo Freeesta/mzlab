@@ -32,7 +32,7 @@ Applies to Data, mzFlow and Drawing (Tabui excluded): interface immediately, the
 
 - **Budget** with warm cache: first paint ≤ 300 ms, interactive ≤ 1 s; with cold cache no ceiling, but the shell appears anyway before any `.wasm`.
 - **Immediate shell**: the page's HTML and CSS with placeholders (panel skeleton, bar, titles) and small classic scripts; no `.wasm`, catalog JSON, model or heavy library on the path to first paint and interactivity.
-- **Everything else lazy**: `.wasm` modules, catalogs (`steps-cli-1.json`, `strumenti-1.json`), data and heavy scripts load in the background or at first use of what requires them.
+- **Everything else lazy**: `.wasm` modules, catalogs (`steps-cli-1.json`, `tools-1.json`), data and heavy scripts load in the background or at first use of what requires them.
   - `.wasm`: `WebAssembly.compileStreaming`/`instantiateStreaming` (response with `application/wasm`), instance in a Web Worker where the pattern already exists (`rust-worker.js`), never on the main thread.
   - Large JSON: `fetch` in parallel, parse in a worker or at idle; never sequential `fetch` when they are independent.
   - Idle prefetch (`requestIdleCallback`, falling back to `setTimeout`) of what the user will almost certainly use; never before the first paint.

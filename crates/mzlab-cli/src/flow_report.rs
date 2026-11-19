@@ -1,16 +1,16 @@
-//! `mzlab-cli flow report RUNDIR [--out FILE]`: the `corsa/1` report of a run folder, the one `examples/flow.rs` leaves (`prov.json` next to the files the steps made).
+//! `mzlab-cli flow report RUNDIR [--out FILE]`: the `run-report/1` report of a run folder, the one `examples/flow.rs` leaves (`prov.json` next to the files the steps made).
 
 use std::path::{Path, PathBuf};
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::flow::{corsa_build, Output};
+use mzlab_core::flow::{run_report_build, Output};
 use mzlab_core::json::parse;
 
 fn io(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
 }
 
-/// The `corsa/1` text of the folder: `prov.json` and every `.json` file beside it.
+/// The `run-report/1` text of the folder: `prov.json` and every `.json` file beside it.
 pub fn report(dir: &Path) -> Result<String> {
     let prov = std::fs::read(dir.join("prov.json")).map_err(io)?;
     let mut names: Vec<PathBuf> = std::fs::read_dir(dir)
@@ -32,7 +32,7 @@ pub fn report(dir: &Path) -> Result<String> {
         .iter()
         .map(|(n, b)| Output { name: n, bytes: b })
         .collect();
-    Ok(corsa_build(&parse(&prov)?, &outputs)?.json())
+    Ok(run_report_build(&parse(&prov)?, &outputs)?.json())
 }
 
 /// The arguments after `flow report`.

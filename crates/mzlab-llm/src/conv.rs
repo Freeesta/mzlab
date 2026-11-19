@@ -17,7 +17,7 @@ pub enum Role {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Part {
     Text(String),
-    /// A `contesto/1` object, sent as its JSON text.
+    /// A `context/1` object, sent as its JSON text.
     Context(Value),
     Image {
         png_b64: String,

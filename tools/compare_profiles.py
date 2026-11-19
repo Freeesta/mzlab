@@ -5,7 +5,7 @@ import argparse, subprocess, sys, tempfile, time
 from pathlib import Path
 
 # Files whose bytes legitimately change between runs (timings, heap peaks).
-VARIABLE = {"prov.json", "corsa.json"}
+VARIABLE = {"prov.json", "report.json"}
 
 
 def run(binary, plan, indir, out, workers):

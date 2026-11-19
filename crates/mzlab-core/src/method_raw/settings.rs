@@ -87,20 +87,20 @@ pub fn parse(blocks: &[&str]) -> Vec<Setting> {
     out
 }
 
-/// `ms.impostazioni`.
+/// `ms.settings`.
 pub fn section(settings: &[Setting]) -> Option<V> {
     let rows: Vec<V> = settings
         .iter()
         .filter_map(|s| {
             obj(vec![
                 ("id", text(s.id)),
-                ("etichetta", text(&s.label)),
+                ("label", text(&s.label)),
                 (
-                    "valori",
+                    "values",
                     Some(V::Arr(s.numbers.iter().map(|x| V::Num(*x)).collect())),
                 ),
-                ("valore", text(&s.text)),
-                ("unita", text(&s.unit)),
+                ("value", text(&s.text)),
+                ("unit", text(&s.unit)),
             ])
         })
         .collect();
@@ -108,8 +108,8 @@ pub fn section(settings: &[Setting]) -> Option<V> {
 }
 
 fn param(e: &V, id: &str) -> Option<f64> {
-    match e.get("parametri") {
-        Some(V::Arr(a)) => a.iter().find_map(|p| match (p.get("id"), p.get("valore")) {
+    match e.get("parameters") {
+        Some(V::Arr(a)) => a.iter().find_map(|p| match (p.get("id"), p.get("value")) {
             (Some(V::Str(i)), Some(V::Num(v))) if i.eq_ignore_ascii_case(id) => Some(*v),
             _ => None,
         }),
@@ -119,7 +119,7 @@ fn param(e: &V, id: &str) -> Option<f64> {
 
 /// Completes the experiments with what the text says: an experiment whose parameter `NCE` is the mean of the steps of the text's stepped energy gets `nce`
 /// (the steps) and loses the mean; an experiment with `Isolation_high` (a small width in m/z) gets `isolamento_mz`, and `Isolation_low`/`Isolation_high` (limits
-/// they are not) leave `parametri`. Nothing is lost: every XML item stays in `campi`.
+/// they are not) leave `parameters`. Nothing is lost: every XML item stays in `fields`.
 pub fn refine(exps: Vec<V>, settings: &[Setting]) -> Vec<V> {
     let steps = settings
         .iter()
@@ -142,7 +142,7 @@ pub fn refine(exps: Vec<V>, settings: &[Setting]) -> Vec<V> {
                 _ => &["isolation_high", "isolation_low"],
             };
             for (k, v) in &mut f {
-                if let (&mut "parametri", V::Arr(a)) = (&mut *k, v) {
+                if let (&mut "parameters", V::Arr(a)) = (&mut *k, v) {
                     a.retain(|p| {
                         !matches!(p.get("id"), Some(V::Str(i)) if drop.contains(&i.to_ascii_lowercase().as_str()))
                     });
@@ -153,7 +153,7 @@ pub fn refine(exps: Vec<V>, settings: &[Setting]) -> Vec<V> {
                 f.push(("nce", V::Arr(st.iter().map(|x| V::Num(*x)).collect())));
             }
             if let Some(w) = window {
-                f.push(("isolamento_mz", V::Num(w)));
+                f.push(("isolation_mz", V::Num(w)));
             }
             V::Obj(f)
         })
@@ -169,8 +169,8 @@ pub fn solvents(pairs: &[super::script::Pair]) -> Option<V> {
             let ch = k.rsplit('.').next()?.strip_prefix('%')?.chars().next()?;
             ch.is_ascii_alphabetic().then_some(())?;
             obj(vec![
-                ("canale", text(&ch.to_ascii_uppercase().to_string())),
-                ("nome", text(v)),
+                ("channel", text(&ch.to_ascii_uppercase().to_string())),
+                ("name", text(v)),
             ])
         })
         .collect();

@@ -1,5 +1,5 @@
 //! `mzlab-cli ref-list FILE.csv [--name N] [--match X [--set unit=da|ppm tol=N pol=+|-]] [--out PATH]`: reads a CSV of reference ions (`reflist/1`,
-//! `mzlab_core::reflist`, the same bytes as the page and the app) and, with `--match`, what a number is compatible with in that list (`ricerca/1`).
+//! `mzlab_core::reflist`, the same bytes as the page and the app) and, with `--match`, what a number is compatible with in that list (`mz-match/1`).
 
 use std::path::PathBuf;
 
@@ -15,7 +15,7 @@ usage: mzlab-cli ref-list FILE.csv [--name N] [--match X] [--set unit=da|ppm] [-
   FILE.csv        columns mz, name, formula, polarity, adduct, note (a header line is required; ; , or tab; # lines skipped);
                   a row needs an m/z or a formula
   --name N        the list name carried in the answer
-  --match X       also answer what the number X is compatible with in the list (ricerca/1 under \"match\")
+  --match X       also answer what the number X is compatible with in the list (mz-match/1 under \"match\")
   --out PATH      write there instead of the standard output
 
 The answer is {\"format\":\"reflist/1\",\"name\",\"compounds\",\"items\":[{line,name,formula,adduct,mz,pol,note}],\"errors\":[{line,key,field,value}]}.
@@ -93,7 +93,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     o
 }
 
-/// The list answer with the `ricerca/1` of the number `x` against its items added under "match".
+/// The list answer with the `mz-match/1` of the number `x` against its items added under "match".
 fn with_match(
     list: &str,
     x: &str,

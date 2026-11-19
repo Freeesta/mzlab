@@ -1,5 +1,5 @@
-//! What a timsTOF run says about itself outside its spectra: `GlobalMetadata`, the properties of the first frame and the calibrations become the `metodo/1` document and the header of
-//! the mzML we write. Every key of `GlobalMetadata` goes into `campi` (nothing is lost); names, serials and paths are marked `identita`.
+//! What a timsTOF run says about itself outside its spectra: `GlobalMetadata`, the properties of the first frame and the calibrations become the `method/1` document and the header of
+//! the mzML we write. Every key of `GlobalMetadata` goes into `fields` (nothing is lost); names, serials and paths are marked `identity`.
 
 use super::tables::Data;
 
@@ -41,10 +41,10 @@ impl BrukerHeader {
         for (k, v) in d.meta.iter().filter(|(_, v)| !v.trim().is_empty()) {
             let c = Field::new("bruker:global", k, v.trim());
             let c = match k.as_str() {
-                "OperatorName" => c.map("operatore.utente"),
-                "SampleName" => c.map("campione.nome"),
-                "InstrumentName" => c.map("strumento.modello"),
-                "InstrumentSerialNumber" => c.map("strumento.serie"),
+                "OperatorName" => c.map("operator.user"),
+                "SampleName" => c.map("sample.name"),
+                "InstrumentName" => c.map("instrument.model"),
+                "InstrumentSerialNumber" => c.map("instrument.series"),
                 _ => c,
             };
             add(c, identity(k));
@@ -81,7 +81,7 @@ impl BrukerHeader {
         t
     }
 
-    /// The `metodo/1` document. `files`: the members read, with the SHA-1 of the database when it was computed.
+    /// The `method/1` document. `files`: the members read, with the SHA-1 of the database when it was computed.
     pub fn document(&self, files: Vec<SrcFile>) -> String {
         let src = Source {
             format: if self.tsf { "bruker-tsf" } else { "bruker-tdf" },
@@ -92,34 +92,34 @@ impl BrukerHeader {
         let sw = self
             .software
             .as_ref()
-            .and_then(|(n, v)| obj(vec![("nome", text(n)), ("versione", s(v))]));
+            .and_then(|(n, v)| obj(vec![("name", text(n)), ("version", s(v))]));
         let nondec = obj(vec![
-            ("chiave", Some(V::s("meta.nonDecodificato"))),
+            ("key", Some(V::s("meta.nonDecodificato"))),
             (
-                "dove",
+                "place",
                 text("TimsCalibration: 1/K0 of each scan (the spectra carry their scan range)"),
             ),
         ]);
         let doc = obj(vec![
             ("schema", Some(V::s(method::SCHEMA))),
-            ("origine", method::origin(&src, self.created.as_deref())),
-            ("campione", obj(vec![("nome", s(&self.sample))])),
+            ("origin", method::origin(&src, self.created.as_deref())),
+            ("sample", obj(vec![("name", s(&self.sample))])),
             (
-                "strumento",
+                "instrument",
                 obj(vec![
-                    ("produttore", s(&self.maker)),
-                    ("modello", s(&self.model)),
-                    ("serie", s(&self.series)),
+                    ("manufacturer", s(&self.maker)),
+                    ("model", s(&self.model)),
+                    ("series", s(&self.series)),
                     ("firmware", s(&self.firmware)),
                     ("software", sw.map(|x| V::Arr(vec![x]))),
                 ]),
             ),
-            ("operatore", obj(vec![("utente", s(&self.user))])),
+            ("operator", obj(vec![("user", s(&self.user))])),
             (
-                "campi",
+                "fields",
                 Some(V::Arr(self.fields.iter().filter_map(Field::json).collect())),
             ),
-            ("avvisi", self.notes(nondec)),
+            ("warnings", self.notes(nondec)),
         ]);
         doc.map_or_else(String::new, |d| d.json())
     }
@@ -145,8 +145,8 @@ impl BrukerHeader {
         });
         out.extend(damaged.chain(uncal).filter_map(|d| {
             obj(vec![
-                ("chiave", Some(V::s("meta.danneggiato"))),
-                ("dove", text(&d)),
+                ("key", Some(V::s("meta.danneggiato"))),
+                ("place", text(&d)),
             ])
         }));
         (!out.is_empty()).then_some(V::Arr(out))
@@ -201,11 +201,11 @@ pub struct BrukerHeader {
     pub user: Option<String>,
     pub sample: Option<String>,
     pub tsf: bool,
-    /// Side tables found damaged (`Data::damaged`): named in `avvisi` as `meta.danneggiato`.
+    /// Side tables found damaged (`Data::damaged`): named in `warnings` as `meta.danneggiato`.
     pub damaged: Vec<&'static str>,
-    /// Spectra left out because their frame has no usable `MzCalibration`: counted in `avvisi` as `meta.danneggiato`.
+    /// Spectra left out because their frame has no usable `MzCalibration`: counted in `warnings` as `meta.danneggiato`.
     pub uncalibrated: usize,
-    /// (table, pages, records) of the database left out because they are damaged (`Sqlite::left_out`): counted in `avvisi` as `meta.danneggiato`.
+    /// (table, pages, records) of the database left out because they are damaged (`Sqlite::left_out`): counted in `warnings` as `meta.danneggiato`.
     pub left_out: Vec<(String, usize, usize)>,
 }
 

@@ -229,6 +229,6 @@ def test_the_metadata_map_covers_every_row_of_the_cards():
                 inside = False
     found = {(r["scheda"], r["campo_produttore"]): r["metodo"] for r in mappa}
     assert set(found) == set(expectations), (set(expectations) ^ set(found))
-    assert found == expectations, "metodo/1 column differs from the data sheet: update mappa_metadati.tsv"
+    assert found == expectations, "method/1 column differs from the data sheet: update mappa_metadati.tsv"
     assert {r["normalizzazione"] for r in mappa} <= {"testo", "iso8601", "numero", "nessuna"}
     assert {r["stato"] for r in mappa} <= {"L", "C", "N", "?"}

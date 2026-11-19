@@ -1,5 +1,5 @@
 //! Rules `R-pol-1` … `R-gap-1` of `docs/studi/assistente-dati/03-parametri.md` §5: polarity, m/z axis and tolerances, noise, peak width and points.
-//! One function per rule, each reading only the signals of `ispezione/1` it names. Used by `params_rules::propose`.
+//! One function per rule, each reading only the signals of `inspection/1` it names. Used by `params_rules::propose`.
 
 use mzlab_core::json::Value;
 
@@ -231,7 +231,7 @@ fn snr(_sig: &Sig, answers: &Value, acc: &mut Acc) {
     }
 }
 
-/// R-width-1: from half to twice the median FWHM, in seconds (the percentiles of the widths are not in `ispezione/1`, so it never reaches `high`).
+/// R-width-1: from half to twice the median FWHM, in seconds (the percentiles of the widths are not in `inspection/1`, so it never reaches `high`).
 fn width(sig: &Sig, width_s: Option<f64>, acc: &mut Acc) {
     let Some(w) = width_s else {
         return acc.ask("peak_width", "Q-width");

@@ -37,7 +37,7 @@ pub(super) fn read_head<R: ReadAt>(src: &mut Source<'_, R>) -> Result<Head> {
 }
 
 /// How far past the `<run ` tag at `lo` the header text reaches in `text`: through the `<spectrumList …>` tag when it starts within `RUN_MAX`
-/// bytes (a writer's run userParams, mzLab's own `metodo/1` among them, push it well past the tag), else 2000 bytes, enough for the tag itself.
+/// bytes (a writer's run userParams, mzLab's own `method/1` among them, push it well past the tag), else 2000 bytes, enough for the tag itself.
 pub(super) fn run_end(text: &[u8], lo: usize) -> usize {
     const RUN_MAX: usize = 1 << 20;
     let t = &text[lo..text.len().min(lo + RUN_MAX)];

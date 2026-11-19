@@ -173,7 +173,7 @@
       if (k === "z" && !e.shiftKey) { e.preventDefault(); S.undo(); } else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); S.redo(); }
     });
     sec.textContent = ""; sec.append(root);
-    // the facts of the files (no model, nothing leaves the site) in the profile «ricerca»; the assistant only if it is switched on (settings) with a consent
+    // the facts of the files (no model, nothing leaves the site) in the profile «research»; the assistant only if it is switched on (settings) with a consent
     if (F.research()) {
       const L = /** @type {any} */ (window).TPLAZY;
       const facts = L.load("flow-llm-errors.js", "flow-llm-facts.js").then(() => F.llmFacts.mount({ S, host: factsHost, root, redraw })).catch(() => { /* the facts are optional */ });

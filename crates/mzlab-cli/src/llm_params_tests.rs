@@ -7,7 +7,7 @@ use mzlab_llm::params_rules::{propose_text, target_param, TARGETS};
 use crate::flow::steps;
 
 /// A unit-resolution full-scan series (G01): 3 QC, 1 blank, 6 samples; the measures are the ones the synthetic files give.
-pub(crate) const G01: &str = r#"{"schema":"ispezione/1","files":[{"alias":"f1","status":"ok","class":"unit","class_basis":["mass_decimals:1"],"model":"3200 QTRAP",
+pub(crate) const G01: &str = r#"{"schema":"inspection/1","files":[{"alias":"f1","status":"ok","class":"unit","class_basis":["mass_decimals:1"],"model":"3200 QTRAP",
 "polarity":"positive","mode":"centroid","acquisition":["full_scan"],"cycle_ms1_s":1.054,"ms2_per_cycle":0,"dead_min":1.1,"noise":120,
 "mass_error":{"unit":"Da","value":0.12,"sigma":0.04,"n":40},"peak_width":{"fwhm_min":0.14,"n":25},"rt_range_min":[0.5,20],
 "gradient":[{"t_min":0,"B_pct":5},{"t_min":20,"B_pct":95}]}],
@@ -15,7 +15,7 @@ pub(crate) const G01: &str = r#"{"schema":"ispezione/1","files":[{"alias":"f1","
 "qc":{"schema":"qc/1","qc":["f2","f6","f10"],"confidence":"high","proposal":{"features.align.rt_gap":0.14,"features.align.rt_warp":false}}}}"#;
 
 /// A data-dependent Orbitrap series (G08): no QC, no blank.
-pub(crate) const G08: &str = r#"{"schema":"ispezione/1","files":[{"alias":"f1","status":"ok","class":"high","class_basis":["analyzer:FTMS"],"model":"Orbitrap Exploris 120",
+pub(crate) const G08: &str = r#"{"schema":"inspection/1","files":[{"alias":"f1","status":"ok","class":"high","class_basis":["analyzer:FTMS"],"model":"Orbitrap Exploris 120",
 "polarity":"positive","mode":"centroid","acquisition":["full_scan","dda"],"cycle_ms1_s":0.9,"ms2_per_cycle":10,"noise":5000,
 "isolation":{"windows":10,"width_mz":[1.2,1.2]},"mass_error":{"unit":"ppm","value":1.2,"sigma":1.4,"n":60},"peak_width":{"fwhm_min":0.1,"n":40},
 "rt_range_min":[0.5,30]}],"series":{"files":1,"polarities":["positive"],"classes":["high"],"roles":{"sample":4}}}"#;
@@ -95,7 +95,7 @@ fn proposals_name_registry_steps_and_stay_in_range() {
         let v = run(text, r#"{"identify":true}"#);
         assert_eq!(
             v.get("schema").and_then(Value::str),
-            Some("proposta-param/1")
+            Some("param-proposal/1")
         );
         for p in v.get("proposals").unwrap().arr() {
             let step = p.get("step").and_then(Value::str).unwrap();
@@ -119,7 +119,7 @@ fn proposals_name_registry_steps_and_stay_in_range() {
                 .get("proof")
                 .and_then(Value::str)
                 .unwrap()
-                .starts_with("ispezione:f1:"));
+                .starts_with("inspection:f1:"));
             assert!(!p.get("signals").unwrap().arr().is_empty(), "{step} {name}");
         }
     }

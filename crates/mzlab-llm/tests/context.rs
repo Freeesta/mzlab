@@ -1,4 +1,4 @@
-//! `contesto/1` on synthetic sources (12 files and a table of 800 rows within 8000 estimated tokens, same bytes, golden file), the schema validator
+//! `context/1` on synthetic sources (12 files and a table of 800 rows within 8000 estimated tokens, same bytes, golden file), the schema validator
 //! of the tool arguments and the compaction of a long conversation. `MZLAB_UPDATE_LLM=1 cargo test -p mzlab-llm` rewrites the golden file.
 
 use std::path::PathBuf;
@@ -10,7 +10,7 @@ use mzlab_llm::conv::{Conversation, Message, Part, Role};
 use mzlab_llm::schema::validate;
 
 fn golden() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/contesto_12_file.json")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/context_12_files.json")
 }
 
 fn j(text: &str) -> Value {
@@ -42,7 +42,7 @@ fn sources(hide: bool) -> Value {
     q.str(&csv);
     let quoted = q.0;
     let text = format!(
-        "{{\"profile\":\"ricerca\",\"hide_names\":{hide},\"files\":[{}],\"features_csv\":{}}}",
+        "{{\"profile\":\"research\",\"hide_names\":{hide},\"files\":[{}],\"features_csv\":{}}}",
         files.join(","),
         quoted
     );

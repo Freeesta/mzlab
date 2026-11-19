@@ -1,6 +1,6 @@
 #![cfg(feature = "waters")]
 //! The folder of `comune_waters`, changed one member at a time: the SRM ids carry the polarity of `_extern.inf` and the decimals of `_FUNCTNS.INF`, a scan with fewer
-//! channels gives no point (not 0), and a missing member or a count two sources disagree on is named in the notices of `metodo/1`.
+//! channels gives no point (not 0), and a missing member or a count two sources disagree on is named in the notices of `method/1`.
 mod common_waters;
 use common_waters::*;
 use mzlab_core::readers::{Limits, Reader};
@@ -16,15 +16,15 @@ fn notices(l: &mut Box<dyn Reader>) -> Vec<String> {
     let doc = &h
         .run_params
         .iter()
-        .find(|(k, _)| k == "mzLab metodo/1")
+        .find(|(k, _)| k == "mzLab method/1")
         .unwrap()
         .1;
     let v: serde_json::Value = serde_json::from_str(doc).unwrap();
-    v["avvisi"]
+    v["warnings"]
         .as_array()
         .map(|a| {
             a.iter()
-                .map(|x| x["dove"].as_str().unwrap_or("").to_string())
+                .map(|x| x["place"].as_str().unwrap_or("").to_string())
                 .collect()
         })
         .unwrap_or_default()

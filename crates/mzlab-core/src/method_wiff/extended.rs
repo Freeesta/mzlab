@@ -1,4 +1,4 @@
-//! What `metodo/1` of a `.wiff` says more when the file is not from the 3200 QTRAP (feature `estesi`, the `sciex` readers module): the scheduled-MRM
+//! What `method/1` of a `.wiff` says more when the file is not from the 3200 QTRAP (feature `estesi`, the `sciex` readers module): the scheduled-MRM
 //! flag and window of each experiment, the strings of `DabsInfo` / `SampleTable`, the tables of `GLPTables` (calibration and tuning of the instrument,
 //! with the Analyst version that wrote the file) and the header of the DAD (points, channels and range). Layouts measured on the files of
 //! `dati/formati/sciex/wiff/` (`docs/agenti/wiff.md`); nothing here is read from a position that no file confirms.
@@ -61,7 +61,7 @@ fn glp(ole: &Ole, no: u32) -> Vec<Field> {
         const VERSION: &str = "File was created with the software version:";
         if let Some(at) = run.find(VERSION) {
             let v = run[at + VERSION.len()..].trim();
-            out.push(Field::new(&path, "software", v).map("strumento.software"));
+            out.push(Field::new(&path, "software", v).map("instrument.software"));
             continue;
         }
         let title = run
@@ -114,12 +114,12 @@ fn dad(ole: &Ole, sample: &str) -> Vec<Field> {
         return vec![];
     }
     vec![
-        Field::new(&path, "punti", points),
-        Field::new(&path, "canali", channels),
-        Field::new(&path, "durata", minutes).unit("min"),
-        Field::new(&path, "lunghezza_onda_min", from).unit("nm"),
-        Field::new(&path, "lunghezza_onda_max", to).unit("nm"),
-        Field::new(&path, "passo", step).unit("nm"),
+        Field::new(&path, "points", points),
+        Field::new(&path, "channels", channels),
+        Field::new(&path, "duration", minutes).unit("min"),
+        Field::new(&path, "wavelength_min", from).unit("nm"),
+        Field::new(&path, "wavelength_max", to).unit("nm"),
+        Field::new(&path, "step", step).unit("nm"),
     ]
 }
 
@@ -142,24 +142,24 @@ fn field_mut<'a>(v: &'a mut V, key: &str) -> Option<&'a mut V> {
 /// The experiments of the `ms` section, with `programmato` / `finestra_s` for the scheduled ones. In a scheduled experiment the number the method
 /// keeps in the dwell field of a transition is its target retention time (min): the field is renamed `rt_min`.
 fn mark_scheduled(doc: &mut V, ole: &Ole, no: u32) {
-    let Some(V::Arr(periods)) = field_mut(doc, "ms").and_then(|m| field_mut(m, "periodi")) else {
+    let Some(V::Arr(periods)) = field_mut(doc, "ms").and_then(|m| field_mut(m, "periods")) else {
         return;
     };
     for p in periods {
-        let Some(V::Arr(exps)) = field_mut(p, "esperimenti") else {
+        let Some(V::Arr(exps)) = field_mut(p, "experiments") else {
             continue;
         };
         for e in exps {
-            let Some(V::Num(i)) = e.get("indice").cloned() else {
+            let Some(V::Num(i)) = e.get("index").cloned() else {
                 continue;
             };
             let Some(window) = scheduled(ole, no, i as usize) else {
                 continue;
             };
             if let V::Obj(f) = e {
-                f.push(("programmato", V::Bool(true)));
-                f.push(("finestra_s", V::Num(window as f64)));
-                if let Some((_, V::Arr(t))) = f.iter_mut().find(|(k, _)| *k == "transizioni") {
+                f.push(("scheduled", V::Bool(true)));
+                f.push(("window_s", V::Num(window as f64)));
+                if let Some((_, V::Arr(t))) = f.iter_mut().find(|(k, _)| *k == "transitions") {
                     for tr in t {
                         if let V::Obj(tf) = tr {
                             tf.iter_mut()
@@ -173,7 +173,7 @@ fn mark_scheduled(doc: &mut V, ole: &Ole, no: u32) {
     }
 }
 
-/// `doc` with the scheduled experiments marked and `campi` (the strings of `DabsInfo` and `SampleTable`, the tables of `GLPTables`, the DAD header).
+/// `doc` with the scheduled experiments marked and `fields` (the strings of `DabsInfo` and `SampleTable`, the tables of `GLPTables`, the DAD header).
 pub(super) fn extend(doc: Option<V>, ole: &Ole, n: u32, sample: &str) -> Option<V> {
     let mut doc = doc?;
     let no = crate::wiff::extended::method_no(ole, n);
@@ -193,7 +193,7 @@ pub(super) fn extend(doc: Option<V>, ole: &Ole, n: u32, sample: &str) -> Option<
     fields.extend(dad(ole, sample));
     let list: Vec<V> = fields.iter().filter_map(Field::json).collect();
     if let (V::Obj(f), false) = (&mut doc, list.is_empty()) {
-        f.push(("campi", V::Arr(list)));
+        f.push(("fields", V::Arr(list)));
     }
     Some(doc)
 }

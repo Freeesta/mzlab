@@ -130,7 +130,7 @@ pub(super) fn sub_result(
     send(s, out);
 }
 
-/// The context of the next user message: the `contesto/1` of the page and the readings that passed their validation.
+/// The context of the next user message: the `context/1` of the page and the readings that passed their validation.
 pub(super) fn context_parts(s: &mut State) -> Vec<Part> {
     let mut parts: Vec<Part> = s.context.take().into_iter().map(Part::Context).collect();
     if let Some(a) = &mut s.assist {

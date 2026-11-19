@@ -19,10 +19,10 @@ fn an_entry_keeps_its_time_and_text_and_the_level_only_when_the_text_says_it() {
     assert_eq!(
         j,
         [
-            r#"{"t_min":1.5,"testo":"Warning: spray unstable","livello":"Warning"}"#,
-            r#"{"t_min":12,"testo":"Info - reagent vial 1 configuration:","livello":"Info"}"#,
-            r#"{"t_min":20.25,"testo":"Calibration failed"}"#,
-            r#"{"t_min":30,"testo":"Informed consent"}"#,
+            r#"{"t_min":1.5,"text":"Warning: spray unstable","level":"Warning"}"#,
+            r#"{"t_min":12,"text":"Info - reagent vial 1 configuration:","level":"Info"}"#,
+            r#"{"t_min":20.25,"text":"Calibration failed"}"#,
+            r#"{"t_min":30,"text":"Informed consent"}"#,
         ]
     );
 }

@@ -1,8 +1,8 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
- "$id": "ispezione/1",
- "title": "ispezione/1: what the engine found in the open files, for the assistant",
- "description": "Format «ispezione/1» (crates/mzlab-llm/src/inspect.rs, docs/agenti/llm.md): per file the type, polarity, resolution class, levels, acquisition, ranges, cycle and the method fields the engine already read, plus the series sections (`qc/1` drift of the QC files, blank signals). Built only from a whitelist of fields: never paths, operator, serial, computer name, raw bytes or spectra. Numbers rounded to four significant digits; `truncated` names the sections dropped to fit the budget. Only the «ricerca» profile has it.",
+ "$id": "inspection/1",
+ "title": "inspection/1: what the engine found in the open files, for the assistant",
+ "description": "Format «inspection/1» (crates/mzlab-llm/src/inspect.rs, docs/agenti/llm.md): per file the type, polarity, resolution class, levels, acquisition, ranges, cycle and the method fields the engine already read, plus the series sections (`qc/1` drift of the QC files, blank signals). Built only from a whitelist of fields: never paths, operator, serial, computer name, raw bytes or spectra. Numbers rounded to four significant digits; `truncated` names the sections dropped to fit the budget. Only the «research» profile has it.",
  "type": "object",
  "additionalProperties": false,
  "required": [
@@ -14,10 +14,10 @@
  ],
  "properties": {
   "schema": {
-   "const": "ispezione/1"
+   "const": "inspection/1"
   },
   "profile": {
-   "const": "ricerca"
+   "const": "research"
   },
   "budget_tokens": {
    "type": "integer",

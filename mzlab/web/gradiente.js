@@ -1,18 +1,18 @@
 // @ts-strict
 // @ts-noany
-// LC gradient (%B) of a file, read-only: from the .dam (the server) or from the file's own method document (metodo/1); nothing can be typed or imported.
+// LC gradient (%B) of a file, read-only: from the .dam (the server) or from the file's own method document (method/1); nothing can be typed or imported.
 // The model is {source: dam|raw|file, points: [{t, b, flow?, curve?}], run_time?, solvents?}. Classic globals are used as they are (E, J, I18N, EH).
 const cache = new Map();                                     // file name -> model | null (what the server answered)
 const nameOf = (/** @type {FileAperto} */ f) => f.file.split("#")[0];
 /** @param {string} k @param {Bag} [p] */ const T = (k, p) => I18N.t(k, p);
 
 
-// The pump program that the file's own method document (metodo/1: .raw, .wiff, .D, Waters) carries, as a gradient model; null when it has fewer than two %B points.
+// The pump program that the file's own method document (method/1: .raw, .wiff, .D, Waters) carries, as a gradient model; null when it has fewer than two %B points.
 async function fromMethod(/** @type {FileAperto} */ f) {
   let lc = null;
   try { lc = (((await J("api/metodo?k=" + f.k)) || {}).metodo || {}).lc; } catch (_) { return null; }
-  const pts = ((lc && lc.gradiente) || []).filter((/** @type {Bag} */ q) => q.t_min != null && q.B_pct != null).map((/** @type {Bag} */ q) => ({ t: +q.t_min, b: +q.B_pct, ...(q.flusso_mL_min != null ? { flow: +q.flusso_mL_min } : {}) }));
-  return pts.length > 1 ? { source: "file", points: pts, run_time: lc.durata_min != null ? +lc.durata_min : pts[pts.length - 1].t } : null;
+  const pts = ((lc && lc.gradient) || []).filter((/** @type {Bag} */ q) => q.t_min != null && q.B_pct != null).map((/** @type {Bag} */ q) => ({ t: +q.t_min, b: +q.B_pct, ...(q.flow_mL_min != null ? { flow: +q.flow_mL_min } : {}) }));
+  return pts.length > 1 ? { source: "file", points: pts, run_time: lc.duration_min != null ? +lc.duration_min : pts[pts.length - 1].t } : null;
 }
 // The gradient of file f: the .dam first (the server), then the file's own method.
 async function get(/** @type {FileAperto} */ f) {

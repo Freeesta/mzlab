@@ -1,4 +1,4 @@
-//! `conv/1` in the `<run>` of every conversion: the reader, the version, the fields counted and each gap the format declares with its reason; and
+//! `conversion/1` in the `<run>` of every conversion: the reader, the version, the fields counted and each gap the format declares with its reason; and
 //! the traces of a reader that are not mass-spectrometer chromatograms (pressure, device) written with their term.
 
 mod agilent_synth;
@@ -10,11 +10,11 @@ use mzlab_core::mzml::{self, ChromKind, Chromatogram};
 use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options};
 use mzlab_core::readers::FileSet;
 
-/// The `conv/1` document of an mzML as `Conversione` writes it.
+/// The `conversion/1` document of an mzML as `Conversione` writes it.
 pub fn conv_di(xml: &[u8]) -> json::Value {
     let t = String::from_utf8_lossy(xml);
-    let key = "name=\"mzLab conv/1\" value=\"";
-    let v = &t[t.find(key).expect("conv/1 in the run") + key.len()..];
+    let key = "name=\"mzLab conversion/1\" value=\"";
+    let v = &t[t.find(key).expect("conversion/1 in the run") + key.len()..];
     let v = &v[..v.find("\"/>").unwrap()];
     let v = v
         .replace("&quot;", "\"")
@@ -26,17 +26,30 @@ pub fn conv_di(xml: &[u8]) -> json::Value {
 
 /// Every declared gap has a field and a reason; the document names the reader and the version of the program.
 pub fn check(doc: &json::Value, reader: &str) {
-    assert_eq!(doc.get("schema").and_then(|s| s.str()), Some("conv/1"));
-    assert_eq!(doc.get("lettore").and_then(|s| s.str()), Some(reader));
+    for old in [
+        "lettore",
+        "versione",
+        "compressore",
+        "campi_cv",
+        "campi_user",
+        "non_portati",
+    ] {
+        assert!(doc.get(old).is_none(), "Italian key {old} in conversion/1");
+    }
     assert_eq!(
-        doc.get("versione").and_then(|s| s.str()),
+        doc.get("schema").and_then(|s| s.str()),
+        Some("conversion/1")
+    );
+    assert_eq!(doc.get("reader").and_then(|s| s.str()), Some(reader));
+    assert_eq!(
+        doc.get("version").and_then(|s| s.str()),
         Some(env!("CARGO_PKG_VERSION"))
     );
-    assert!(doc.get("campi_cv").and_then(|n| n.f64()).is_some());
-    assert!(doc.get("campi_user").and_then(|n| n.f64()).is_some());
-    for g in doc.get("non_portati").expect("non_portati").arr() {
-        let field = g.get("campo").and_then(|s| s.str()).unwrap_or("");
-        let reason = g.get("motivo").and_then(|s| s.str()).unwrap_or("");
+    assert!(doc.get("cv_fields").and_then(|n| n.f64()).is_some());
+    assert!(doc.get("user_fields").and_then(|n| n.f64()).is_some());
+    for g in doc.get("not_carried").expect("not_carried").arr() {
+        let field = g.get("field").and_then(|s| s.str()).unwrap_or("");
+        let reason = g.get("reason").and_then(|s| s.str()).unwrap_or("");
         assert!(
             !field.is_empty() && !reason.is_empty(),
             "a gap without a reason: {field:?}"
@@ -56,12 +69,12 @@ fn an_agilent_conversion_carries_conv_with_its_gaps_and_reasons() {
     let doc = conv_di(&xml);
     check(&doc, "agilent-d");
     assert!(
-        !doc.get("non_portati").unwrap().arr().is_empty(),
+        !doc.get("not_carried").unwrap().arr().is_empty(),
         "the format declares what it leaves out"
     );
 }
 
-/// A whole folder reads every scan it declares; one cut short in a record says, in `conv/1`, how many scans it declares, how many were read and why.
+/// A whole folder reads every scan it declares; one cut short in a record says, in `conversion/1`, how many scans it declares, how many were read and why.
 #[test]
 fn a_cut_folder_writes_the_scans_declared_and_read_in_conv() {
     const MSTS: &[u8] = b"<?xml version=\"1.0\"?><TimeSegments><TimeSegment><StartTime>3</StartTime><EndTime>3.1</EndTime><NumOfScans>4</NumOfScans></TimeSegment></TimeSegments>";
@@ -78,15 +91,15 @@ fn a_cut_folder_writes_the_scans_declared_and_read_in_conv() {
     let n = |d: &json::Value, k: &str| d.get(k).and_then(|v| v.f64()).unwrap();
     let whole = doc(&idx);
     check(&whole, "agilent-d");
-    assert_eq!(whole.get("parziale").and_then(|p| p.bool()), Some(false));
-    assert_eq!(n(&whole, "dichiarate"), n(&whole, "lette"));
-    assert!(whole.get("perdita").is_none());
+    assert_eq!(whole.get("partial").and_then(|p| p.bool()), Some(false));
+    assert_eq!(n(&whole, "declared"), n(&whole, "read"));
+    assert!(whole.get("loss").is_none());
     let cut = doc(&idx[..idx.len() - 7]);
     check(&cut, "agilent-d");
-    assert_eq!(cut.get("parziale").and_then(|p| p.bool()), Some(true));
-    assert_eq!((n(&cut, "lette"), n(&cut, "dichiarate")), (2.0, 3.0));
+    assert_eq!(cut.get("partial").and_then(|p| p.bool()), Some(true));
+    assert_eq!((n(&cut, "read"), n(&cut, "declared")), (2.0, 3.0));
     assert_eq!(
-        cut.get("perdita").and_then(|s| s.str()),
+        cut.get("loss").and_then(|s| s.str()),
         Some("warn.file.truncated")
     );
 }

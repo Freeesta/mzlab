@@ -1,4 +1,4 @@
-//! `mzlab-cli llm context RUNDIR` writes the `contesto/1` the assistant would get from a run folder; `mzlab-cli llm eval CASES_DIR --replay DIR` scores
+//! `mzlab-cli llm context RUNDIR` writes the `context/1` the assistant would get from a run folder; `mzlab-cli llm eval CASES_DIR --replay DIR` scores
 //! the evaluation cases against their recordings (CI), `--provider ID --key-file F` is for trying a real model by hand (no transport yet).
 //! The logic lives in `mzlab-llm`; this file only reads folders and prints.
 
@@ -58,10 +58,10 @@ fn plan_source(dir: &Path) -> Option<Value> {
 
 fn sources(dir: &Path, hide: bool) -> Value {
     let mut o: Vec<(String, Value)> = vec![
-        ("profile".into(), Value::Str("ricerca".into())),
+        ("profile".into(), Value::Str("research".into())),
         ("hide_names".into(), Value::Bool(hide)),
     ];
-    let run = json(&dir.join("corsa.json"));
+    let run = json(&dir.join("report.json"));
     if let Some(c) = &run {
         let files = c.get("inputs").map_or(&[][..], Value::arr).iter().map(|i| {
             Value::Obj(vec![(

@@ -11,7 +11,7 @@ use crate::mzmlwrite::{Header, SpectrumExtra};
 /// Version of this contract; a `ReaderEntry` states the one it was written for.
 pub const CONTRATTO: u16 = 1;
 
-/// The formats the readers know (the `id` is the one of the registry and of `metodo/1.origine.formato`).
+/// The formats the readers know (the `id` is the one of the registry and of `method/1.origin.format`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Format {
     ThermoRaw,
@@ -252,7 +252,7 @@ pub trait Reader {
     fn scan_profile(&mut self, _c: usize, _k: usize) -> Result<Option<Spectrum>> {
         Ok(None)
     }
-    /// The header fields of scan `k` (collision energy, isolation, trailer): `nome`, `valore`, `unita`, `cv`.
+    /// The header fields of scan `k` (collision energy, isolation, trailer): `name`, `value`, `unit`, `cv`.
     fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>>;
     fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>>;
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram>;
@@ -275,7 +275,7 @@ pub trait Reader {
     fn dad_data(&mut self, _c: usize) -> Result<Option<crate::wiff::dad::DadData>> {
         Ok(None)
     }
-    /// The `metodo/1` document of the sample (`docs/agenti/method.md`).
+    /// The `method/1` document of the sample (`docs/agenti/method.md`).
     fn method(&mut self, c: usize) -> Result<String>;
     /// The header of the mzML of sample `c` (instrument, sources, hashes); `None`: `readers_mzml::scrivi` makes a plain one from the format.
     fn mzml_header(&mut self, _c: usize) -> Result<Option<Header>> {
@@ -293,7 +293,7 @@ pub trait Reader {
     fn scan_extra(&mut self, _c: usize, _k: usize, s: &Spectrum) -> SpectrumExtra {
         self.extra_mzml(s)
     }
-    /// What the format holds and the mzML of the conversion does not carry, as (field, reason) with the reasons of `conv`: the account `conv/1` gives.
+    /// What the format holds and the mzML of the conversion does not carry, as (field, reason) with the reasons of `conv`: the account `conversion/1` gives.
     #[rustfmt::skip]    fn not_carried(&self) -> &'static [(&'static str, &'static str)] { &[] }
     #[rustfmt::skip]    fn unindexed(&self) -> (usize, usize) { (0, 0) }
     #[rustfmt::skip]    fn listing(&mut self) -> Listing { Listing::default() } // `unindexed`: data sections the index lacks (an incomplete copy): (recovered, left out); `listing`: what `list_samples` adds, from the index alone; a wrapper forwards it

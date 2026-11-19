@@ -82,7 +82,7 @@ impl Sessions {
         ))
     }
 
-    /// The `metodo/1` document of sample `c`.
+    /// The `method/1` document of sample `c`.
     pub fn method(&mut self, h: u32, c: usize) -> Result<String> {
         self.reader(h)?.method(c)
     }

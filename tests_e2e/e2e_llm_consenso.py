@@ -1,6 +1,6 @@
 """Assistant (settings → «Assistant»): without the administrator mode (profile «demo») the settings have no assistant and nothing of llm/ loads until the Flow page's
-«Try the assistant» is pressed (then the consent for `mzlab-demo`, level L1, the two chips, a replayed answer); with UIP_DEMO off (profile «corso») the Flow has no
-assistant element and nothing of llm/ loads. With the administrator mode («ricerca») nothing of llm/; with the switch off nothing loads either; turning it on asks the consent
+«Try the assistant» is pressed (then the consent for `mzlab-demo`, level L1, the two chips, a replayed answer); with UIP_DEMO off (profile «course») the Flow has no
+assistant element and nothing of llm/ loads. With the administrator mode («research») nothing of llm/; with the switch off nothing loads either; turning it on asks the consent
 (dialog: focus inside, Esc closes), then the preview «What will be sent», the transport document and the recording served from 'self'. No request leaves the site
 (any other host fails the test) and axe finds no serious violation in the section.
 With a fake proxy (tests_e2e/finto_proxy.mjs: the real proxy/ code on adapters/memoria.js, routed from https://localhost:<port>, the host written into
@@ -29,12 +29,12 @@ try:
         seen = []
         pg.on("request", lambda q: seen.append(q.url))
         def llm_urls(): return [u for u in seen if "/llm/" in u or "wasm-feat/llm" in u]
-        def corso():
+        def course_profile():
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
             
-            assert pg.locator("#uip-llm").count() == 0, "no LLM element with the profile corso"
+            assert pg.locator("#uip-llm").count() == 0, "no LLM element with the profile course"
             assert not llm_urls(), llm_urls()
-        step("demo: the settings have no LLM element and no llm/ file", corso)
+        step("demo: the settings have no LLM element and no llm/ file", course_profile)
         def demo_flow():
             pg.keyboard.press("Escape")
             pg.click(TAB); pg.wait_for_selector("#flx-root", timeout=30000); pg.evaluate("window.FLOW.whenLate")
@@ -62,12 +62,12 @@ try:
             q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
             q.route("**/static/settings.js", lambda rt: (lambda x: rt.fulfill(response=x, body=x.text().replace("const UIP_DEMO = true", "const UIP_DEMO = false")))(rt.fetch()))
             q.goto("http://127.0.0.1:%d/" % r.port); ready(q)
-            assert q.evaluate("uipProfile()") == "corso", q.evaluate("uipProfile()")
+            assert q.evaluate("uipProfile()") == "course", q.evaluate("uipProfile()")
             q.click(TAB); q.wait_for_selector("#flx-root", timeout=30000); q.evaluate("window.FLOW.whenLate")
             assert q.locator("#flx-assistant-try").count() == 0 and q.locator("#flx-assistant").count() == 0, "no element of the assistant"
             assert not [u for u in urls if "/llm/" in u or "wasm-feat/llm" in u or "flow-llm" in u], urls
             c.close()
-        step("corso (UIP_DEMO off): the Flow without any element of the assistant, no llm/ file", course_flow)
+        step("course (UIP_DEMO off): the Flow without any element of the assistant, no llm/ file", course_flow)
         def search_off():
             pg.evaluate("localStorage.setItem('mzlab.admin','1')"); seen.clear(); pg.reload(); ready(pg)
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
@@ -75,7 +75,7 @@ try:
             pg.wait_for_selector("#uip-llm #llm-on")
             assert not pg.is_checked("#llm-on")
             assert not llm_urls(), llm_urls()
-        step("ricerca with the switch off: no request to llm/", search_off)
+        step("research with the switch off: no request to llm/", search_off)
         def consent():
             pg.click("#uip-llm label:has(#llm-on)")
             pg.wait_for_selector("dialog[open]")

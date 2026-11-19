@@ -19,17 +19,17 @@ pub(crate) mod facts;
 const HELP: &str = "mzlab-cli llm tools [--demo] [--out FILE]   the catalog tools/1 of the assistant tools (stdout, or FILE); --demo: the subset of the public demo
 mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the normalized events of a recording, one JSON line per event (stdout);
   the turn defaults to the number of assistant messages of the conversation; --strict also compares the SHA-256 of the request
-mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 the assistant gets from a run folder (stdout)
+mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the context/1 the assistant gets from a run folder (stdout)
 mzlab-cli llm eval CASES_DIR --replay DIR   score the evaluation cases against their recordings DIR/<id>.jsonl (exit 1 if one fails)
-mzlab-cli llm inspect DIR [--budget N] [--hide-names]   the ispezione/1 of the mzML files of a folder, without a model (stdout)
-mzlab-cli llm params DIR [--answers FILE] [--budget N] [--hide-names]   the proposta-param/1 of the rules for the same files (stdout)";
+mzlab-cli llm inspect DIR [--budget N] [--hide-names]   the inspection/1 of the mzML files of a folder, without a model (stdout)
+mzlab-cli llm params DIR [--answers FILE] [--budget N] [--hide-names]   the param-proposal/1 of the rules for the same files (stdout)";
 
-/// The catalog text, the one `docs/schemi/strumenti-1.json` holds.
+/// The catalog text, the one `docs/schemi/tools-1.json` holds.
 pub fn tools_json() -> String {
     catalog_json(&steps(), UI_TOOLS, &executable)
 }
 
-/// The demo catalog text, the one `docs/schemi/strumenti-demo-1.json` holds.
+/// The demo catalog text, the one `docs/schemi/tools-demo-1.json` holds.
 pub fn demo_tools_json() -> String {
     demo_catalog_json(&steps(), UI_TOOLS, &executable)
 }

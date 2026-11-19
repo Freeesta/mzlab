@@ -1,5 +1,5 @@
 //! The module `aperti` reads an mzXML (docs/agenti/readers-open.md): files built here in every form (32 and 64 bit, zlib or not, with and without `<index>`, flat and nested), SRM scans,
-//! the `metodo/1` document and the header of the mzML we write. The real-data parity is in `open_mzxml_hostile.rs` (it needs `MZLAB_DATI`).
+//! the `method/1` document and the header of the mzML we write. The real-data parity is in `open_mzxml_hostile.rs` (it needs `MZLAB_DATI`).
 #![cfg(feature = "aperti")]
 
 mod common;
@@ -140,14 +140,14 @@ fn the_method_and_the_header_carry_instrument_file_and_software() {
     let mut l = open_mzxml(mzxml(&run(), FLAT));
     let m = l.method(0).unwrap();
     for t in [
-        "\"formato\":\"mzxml\"",
+        "\"format\":\"mzxml\"",
         "Thermo Scientific",
         "Q Exactive",
         "Xcalibur",
         "msconvert",
-        "\"tipo\":\"ESI\"",
+        "\"type\":\"ESI\"",
         "Orbitrap",
-        "\"utente\":\"Mario Verdi\"",
+        "\"user\":\"Mario Verdi\"",
     ] {
         assert!(m.contains(t), "{t} missing in {m}");
     }
@@ -161,7 +161,7 @@ fn the_method_and_the_header_carry_instrument_file_and_software() {
         h.source_sha1,
         vec!["0123456789abcdef0123456789abcdef01234567".to_string()]
     );
-    assert!(h.run_params.iter().any(|(k, _)| k == "mzLab metodo/1"));
+    assert!(h.run_params.iter().any(|(k, _)| k == "mzLab method/1"));
     let mzml = String::from_utf8(written_mzml(&mut l)).unwrap();
     assert!(mzml.contains("<spectrumList count=\"5\""));
     assert!(mzml.contains("Q Exactive"));
@@ -207,10 +207,10 @@ fn the_parent_file_path_is_marked_as_identity() {
     let mut l = open_mzxml(mzxml(&run(), FLAT));
     let m = l.method(0).unwrap();
     let field = |key: &str| {
-        let i = m.find(&format!("\"chiave\":\"{key}\"")).unwrap();
+        let i = m.find(&format!("\"key\":\"{key}\"")).unwrap();
         let end = i + m[i..].find('}').unwrap();
         m[i..end].to_string()
     };
-    assert!(field("fileName").contains("\"identita\":true"), "{m}");
-    assert!(!field("fileType").contains("identita"), "{m}");
+    assert!(field("fileName").contains("\"identity\":true"), "{m}");
+    assert!(!field("fileType").contains("identity"), "{m}");
 }

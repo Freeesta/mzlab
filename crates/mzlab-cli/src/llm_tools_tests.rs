@@ -1,8 +1,8 @@
 //! The catalog `tools/1` against the registry: every step and every `--set` name is reachable through it, defaults sit inside their limits, the
-//! file `docs/schemi/strumenti-1.json` is the export (`MZLAB_UPDATE_STEPS=1 cargo test -p mzlab-cli --lib llm_tools` rewrites it) and the bytes are stable;
-//! the same for the demo subset `docs/schemi/strumenti-demo-1.json`, whose tools are those of the whole catalog, byte for byte.
+//! file `docs/schemi/tools-1.json` is the export (`MZLAB_UPDATE_STEPS=1 cargo test -p mzlab-cli --lib llm_tools` rewrites it) and the bytes are stable;
+//! the same for the demo subset `docs/schemi/tools-demo-1.json`, whose tools are those of the whole catalog, byte for byte.
 
-// The tests of `proposta-param/1`, of `reading`, of the scope rule and of `llm inspect|params` ride on this module (the crate root is at its line limit).
+// The tests of `param-proposal/1`, of `reading`, of the scope rule and of `llm inspect|params` ride on this module (the crate root is at its line limit).
 #[path = "llm_facts_tests.rs"]
 mod facts;
 #[path = "llm_params_tests.rs"]
@@ -216,12 +216,12 @@ fn exported(name: &str, make: fn() -> String) {
 
 #[test]
 fn the_file_is_the_export_and_the_bytes_are_stable() {
-    exported("strumenti-1.json", tools_json);
+    exported("tools-1.json", tools_json);
 }
 
 #[test]
 fn the_demo_file_is_the_export_and_the_bytes_are_stable() {
-    exported("strumenti-demo-1.json", demo_tools_json);
+    exported("tools-demo-1.json", demo_tools_json);
 }
 
 #[test]

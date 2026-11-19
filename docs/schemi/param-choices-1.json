@@ -1,13 +1,13 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
- "$id": "param-scelte/1",
- "title": "param-scelte/1: the choices of the parameter subagent on the proposals of the rules",
- "description": "Format «param-scelte/1» (crates/mzlab-llm/src/reading.rs, docs/studi/assistente-dati/prompt/05_proposta-parametri.md): one choice for each proposal of `proposta-param/1`. `source` is `rule:<id>` when the value of the rule is kept and `model` when it is changed (with the reason); `reading::validate` checks that every proposal has its choice, that every value is inside the limits of the step/1 descriptor and that every number of a reason is in the input.",
+ "$id": "param-choices/1",
+ "title": "param-choices/1: the choices of the parameter subagent on the proposals of the rules",
+ "description": "Format «param-choices/1» (crates/mzlab-llm/src/reading.rs, docs/studi/assistente-dati/prompt/05_proposta-parametri.md): one choice for each proposal of `param-proposal/1`. `source` is `rule:<id>` when the value of the rule is kept and `model` when it is changed (with the reason); `reading::validate` checks that every proposal has its choice, that every value is inside the limits of the step/1 descriptor and that every number of a reason is in the input.",
  "type": "object",
  "additionalProperties": false,
  "required": ["schema", "choices"],
  "properties": {
-  "schema": {"const": "param-scelte/1"},
+  "schema": {"const": "param-choices/1"},
   "choices": {
    "type": "array",
    "items": {

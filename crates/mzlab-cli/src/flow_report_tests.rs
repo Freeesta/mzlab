@@ -35,7 +35,7 @@ fn the_report_is_stable_and_follows_the_inputs() {
     assert_eq!(a, crate::flow_report::report(&dir.join("work")).unwrap());
     assert_eq!(sha_of(&a, "q.mgf"), sha_of(&report(&dir), "q.mgf"));
     let v = parse(a.as_bytes()).unwrap();
-    assert_eq!(v.get("schema").unwrap().str(), Some("corsa/1"));
+    assert_eq!(v.get("schema").unwrap().str(), Some("run-report/1"));
     assert_eq!(
         v.get("steps").unwrap().arr()[0]
             .get("status")

@@ -14,7 +14,7 @@ Professional free LC-MS analysis program: in the browser only (https://freeesta.
 - Before pushing: `python3 tools/pre_pr.py` (fast; in cloud skips browser tests; `--completo` forces all). Changed e2e only: `python3 tools/verifica.py --cambiati`; full round once: `python3 tools/verifica.py`. Levels and known reds: `docs/agenti/test.md`.
 - Tests needing the site: `python3 tools/build_site.py` first, delete `site/` afterwards.
 - Limits: `python3 tools/controlla.py`; i18n: `python3 tools/controlla_i18n.py`.
-- Generated files (schemas, `mappa.md`, `strumenti-1.json`, ...): regenerate with their tool, never by hand.
+- Generated files (schemas, `mappa.md`, `tools-1.json`, ...): regenerate with their tool, never by hand.
 
 ## Rules
 - **Parity**: every function (Flow step, reader, converter, export, model, engine route) exists in the site (`.wasm` + OPFS) and in the app (native + CLI) with a byte-for-byte parity test; one half alone is incomplete unless a real technical limit is stated in the PR body.

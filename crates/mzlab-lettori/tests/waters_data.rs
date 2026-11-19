@@ -101,11 +101,11 @@ fn every_real_folder_opens_and_its_scans_add_up_to_the_index() {
         }
         let m = l.method(0).unwrap();
         let doc = common_waters::check_schema(&m, rel);
-        assert_eq!(doc["origine"]["formato"], "waters-raw", "{rel}");
+        assert_eq!(doc["origin"]["format"], "waters-raw", "{rel}");
         assert!(m.len() < 400_000, "{rel}: metodo of {} B", m.len());
         let h = l.mzml_header(0).unwrap().unwrap();
         assert!(
-            h.run_params.iter().any(|(k, _)| k == "mzLab metodo/1"),
+            h.run_params.iter().any(|(k, _)| k == "mzLab method/1"),
             "{rel}"
         );
     }

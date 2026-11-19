@@ -57,18 +57,18 @@ fn the_method_and_the_header_carry_the_header_txt_and_hide_the_operator() {
     let mut l = open();
     let m = l.method(0).unwrap();
     let doc = check_schema(&m, "synthetic");
-    assert_eq!(doc["origine"]["formato"], "waters-raw");
-    assert_eq!(doc["campione"]["nome"], "synthetic sample");
-    assert_eq!(doc["campione"]["vial"], "1:34");
+    assert_eq!(doc["origin"]["format"], "waters-raw");
+    assert_eq!(doc["sample"]["name"], "synthetic sample");
+    assert_eq!(doc["sample"]["vial"], "1:34");
     assert!(m.contains("XEVO-TQXS"), "instrument");
     let h = l.mzml_header(0).unwrap().unwrap();
     let doc = &h
         .run_params
         .iter()
-        .find(|(k, _)| k == "mzLab metodo/1")
+        .find(|(k, _)| k == "mzLab method/1")
         .unwrap()
         .1;
-    assert!(doc.contains("identita"), "operator marked as identity");
+    assert!(doc.contains("identity"), "operator marked as identity");
     assert!(
         h.sources.iter().any(|s| s.contains("_FUNC001.DAT")),
         "sources: {:?}",

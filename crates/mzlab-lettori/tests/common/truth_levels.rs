@@ -325,7 +325,7 @@ pub fn metadata(l: &mut dyn Reader, v: &Value, c: usize) -> Outcome {
     }
     let method: Value = match l.method(c).ok().and_then(|m| serde_json::from_str(&m).ok()) {
         Some(m) => m,
-        None => return Outcome::Defect(vec!["metodo/1 cannot be read".into()]),
+        None => return Outcome::Defect(vec!["method/1 cannot be read".into()]),
     };
     let (mut defects, mut absent) = (Vec::new(), Vec::new());
     for (name, f) in fields {
@@ -340,7 +340,7 @@ pub fn metadata(l: &mut dyn Reader, v: &Value, c: usize) -> Outcome {
         let Some(b) = text(&f["valore"]) else {
             continue;
         };
-        let equal = if path.contains("file_creato") || name.contains("TimeStamp") {
+        let equal = if path.contains("file_created") || name.contains("TimeStamp") {
             instant(&a) == instant(&b)
         } else {
             a == b

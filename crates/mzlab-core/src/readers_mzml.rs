@@ -245,7 +245,7 @@ impl Conversion<'_> {
         let mut h = file_header(l, c)?;
         let mut pick = pick_di(self.peaks, l, c, &mut h)?;
         h.run_params
-            .push(("mzLab conv/1".into(), crate::conv::resoconto(l, c)?));
+            .push(("mzLab conversion/1".into(), crate::conv::resoconto(l, c)?));
         let mut w = match self.steps {
             Some(steps) => {
                 h.steps = steps.to_vec();

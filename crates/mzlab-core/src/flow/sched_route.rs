@@ -217,7 +217,7 @@ fn record_agent() -> Agent {
 
 /// One call. `new` builds the scheduler of the session (`plan`, `registry`, `version`, `identities`); `update` takes `plan`; the other ops are the methods of
 /// `Sched` (`next`, `started`, `progress`, `finished`, `cached`, `block`, `unblock`, `retry`, `pause`, `resume`, `jobs`, `nodes`, `events`, `rev`,
-/// `set_identity`, `set_resources`); `drop` forgets it. `record_prov` and `record_corsa` write the record of a run the page made (`run_web.rs`).
+/// `set_identity`, `set_resources`); `drop` forgets it. `record_prov` and `record_run_report` write the record of a run the page made (`run_web.rs`).
 pub fn route(op: &str, body: &str) -> Result<String> {
     if let Some(kind) = op.strip_prefix("record_") {
         return super::record_route(kind, body, &record_agent());

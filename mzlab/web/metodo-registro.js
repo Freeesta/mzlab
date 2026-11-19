@@ -1,12 +1,12 @@
 // @ts-strict
-// The error log of a Thermo .raw in the Method window (`metodo/1.registro`): what the instrument reported while it acquired, each entry with its time. A click on the time moves the cursor of the
+// The error log of a Thermo .raw in the Method window (`method/1.log`): what the instrument reported while it acquired, each entry with its time. A click on the time moves the cursor of the
 // first chromatogram of the tab to that RT (the spectrum of the scan nearest in time follows, as for a click on the chromatogram). Only what the file says is shown, as it says it; every text goes through EH().
 // Loaded as a module after the classic scripts; metodo-doc.js uses window.METODO_REGISTRO.
 
-/** @typedef {{ t_min?: number, testo?: string, livello?: string }} Voce */
+/** @typedef {{ t_min?: number, text?: string, level?: string }} Voce */
 
 /** the rows that have a time (the entries of a .wiff have none: metodo-doc.js lists them as they are) */
-const timed = (/** @type {Voce[]} */ reg) => reg.filter(x => typeof x.t_min === "number" && x.testo);
+const timed = (/** @type {Voce[]} */ reg) => reg.filter(x => typeof x.t_min === "number" && x.text);
 
 /** the table of the entries for the open item `f` */
 function html(/** @type {Voce[]} */ reg, /** @type {{ k: number }} */ f) {
@@ -14,7 +14,7 @@ function html(/** @type {Voce[]} */ reg, /** @type {{ k: number }} */ f) {
   if (!rows.length) return "";
   const tr = rows.map(x => {
     const t = /** @type {number} */ (x.t_min), s = (+t.toFixed(3)).toString();
-    return `<tr><td class="num"><button type="button" class="bt" data-mreg-rt="${EH(s)}" data-mreg-k="${f.k}" aria-label="${EH(I18N.t("method.reg.go", { t: s }))}" title="${EH(I18N.t("method.reg.go", { t: s }))}">${EH(s)}</button></td><td>${EH(x.livello || "")}</td><td>${EH(String(x.testo))}</td></tr>`;
+    return `<tr><td class="num"><button type="button" class="bt" data-mreg-rt="${EH(s)}" data-mreg-k="${f.k}" aria-label="${EH(I18N.t("method.reg.go", { t: s }))}" title="${EH(I18N.t("method.reg.go", { t: s }))}">${EH(s)}</button></td><td>${EH(x.level || "")}</td><td>${EH(String(x.text))}</td></tr>`;
   }).join("");
   return `<table><tr><th scope="col" class="num">${EH(I18N.t("method.time"))}</th><th scope="col">${EH(I18N.t("method.reg.level"))}</th><th scope="col">${EH(I18N.t("method.reg.text"))}</th></tr>${tr}</table>`;
 }

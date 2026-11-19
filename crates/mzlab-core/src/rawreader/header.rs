@@ -6,7 +6,7 @@ use crate::method::{self, sha1_hex};
 use crate::mzmlwrite::Header;
 
 /// The header of the mzML: the instrument, the run terms the Thermo converter writes (`opentfraw.*`), the start of the acquisition, the SHA-1 of the
-/// file and the `metodo/1` document, so that the download of a `.raw` loses none of them.
+/// file and the `method/1` document, so that the download of a `.raw` loses none of them.
 fn file_header(l: &mut RawReader) -> Header {
     if l.sha1.is_none() {
         let len = l.src.len;
@@ -46,7 +46,7 @@ fn file_header(l: &mut RawReader) -> Header {
     }
 }
 
-/// The fields of `testata` that `scantable::Head::da_testata` reads (sources, instrument, analyzers), without the SHA-1 of the file or the `metodo/1`
+/// The fields of `testata` that `scantable::Head::da_testata` reads (sources, instrument, analyzers), without the SHA-1 of the file or the `method/1`
 /// document: the table is the same, the header costs a fraction.
 fn table_header(l: &mut RawReader) -> Header {
     let t = opentfraw::mzml::run_terms(&l.raw);

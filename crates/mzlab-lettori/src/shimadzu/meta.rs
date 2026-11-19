@@ -1,5 +1,5 @@
 //! What a Shimadzu file says besides its scans: the property streams (`prop.rs`), the instrument names found in its configuration streams, and the list of what is not decoded. It becomes
-//! the `metodo/1` document and the header of the mzML we write (the operator and the paths are in the document of the reader, not in the one of the mzML).
+//! the `method/1` document and the header of the mzML we write (the operator and the paths are in the document of the reader, not in the one of the mzML).
 
 use mzlab_core::method::{self, num, obj, text, Source, SrcFile, V};
 use mzlab_core::method_fields::Field;
@@ -257,8 +257,8 @@ fn experiments(d: &Data) -> Vec<Option<V>> {
         .enumerate()
         .map(|(i, e)| {
             obj(vec![
-                ("indice", num(Some((i + 1) as f64))),
-                ("tipo", Some(V::s(event_kind(&e.filter)))),
+                ("index", num(Some((i + 1) as f64))),
+                ("type", Some(V::s(event_kind(&e.filter)))),
                 ("mz", Some(V::Arr(vec![V::Num(e.mz.0), V::Num(e.mz.1)]))),
             ])
         })
@@ -273,38 +273,38 @@ fn experiments(d: &Data) -> Vec<Option<V>> {
                     ("q1", num(Some(q1))),
                     ("q3", num(Some(q3))),
                     (
-                        "polarita",
+                        "polarity",
                         (p != 0).then(|| V::s(if p < 0 { "negative" } else { "positive" })),
                     ),
                 ])
             });
         experiments.push(obj(vec![
-            ("indice", num(Some((experiments.len() + 1) as f64))),
-            ("tipo", Some(V::s("MRM"))),
-            ("transizioni", Some(V::Arr(tr.collect()))),
+            ("index", num(Some((experiments.len() + 1) as f64))),
+            ("type", Some(V::s("MRM"))),
+            ("transitions", Some(V::Arr(tr.collect()))),
         ]));
     }
     experiments
 }
 
-/// The `strumento` section: maker, model and the software that wrote the file.
+/// The `instrument` section: maker, model and the software that wrote the file.
 fn instrument(fam: Fam, m: &Meta) -> Option<V> {
     let s = |t: &Option<String>| t.as_deref().and_then(text);
     obj(vec![
-        ("produttore", Some(V::s("Shimadzu"))),
-        ("modello", s(&m.model)),
+        ("manufacturer", Some(V::s("Shimadzu"))),
+        ("model", s(&m.model)),
         (
             "software",
             obj(vec![
-                ("nome", Some(V::s(software(fam)))),
-                ("versione", s(&m.software)),
+                ("name", Some(V::s(software(fam)))),
+                ("version", s(&m.software)),
             ])
             .map(|v| V::Arr(vec![v])),
         ),
     ])
 }
 
-/// The `metodo/1` document. `con_identita` false leaves out the operator and the fields that name a person, a computer, a serial or a path (the one inside an mzML).
+/// The `method/1` document. `con_identita` false leaves out the operator and the fields that name a person, a computer, a serial or a path (the one inside an mzML).
 pub(super) fn document(
     (nome, dim, sha1): (&str, u64, &str),
     fam: Fam,
@@ -325,28 +325,28 @@ pub(super) fn document(
     let experiments = experiments(d);
     let warnings = m.warnings.iter().filter_map(|location| {
         obj(vec![
-            ("chiave", Some(V::s("meta.nonDecodificato"))),
-            ("dove", text(location)),
+            ("key", Some(V::s("meta.nonDecodificato"))),
+            ("place", text(location)),
         ])
     });
     let doc = obj(vec![
         ("schema", Some(V::s(method::SCHEMA))),
-        ("origine", method::origin(&src, m.created.as_deref())),
-        ("strumento", instrument(fam, m)),
+        ("origin", method::origin(&src, m.created.as_deref())),
+        ("instrument", instrument(fam, m)),
         (
-            "campione",
+            "sample",
             obj(vec![
-                ("nome", s(&m.campione)),
+                ("name", s(&m.campione)),
                 ("id", s(&m.id)),
                 ("vial", s(&m.vial)),
-                ("iniezione_uL", num(m.injection_ul)),
-                ("metodo_file", s(&m.method_file)),
+                ("injection_uL", num(m.injection_ul)),
+                ("method_file", s(&m.method_file)),
             ]),
         ),
         (
-            "operatore",
+            "operator",
             if with_identity {
-                obj(vec![("utente", s(&m.operatore))])
+                obj(vec![("user", s(&m.operatore))])
             } else {
                 None
             },
@@ -355,13 +355,13 @@ pub(super) fn document(
             "ms",
             obj(vec![
                 (
-                    "sorgente",
-                    (fam == Fam::Gc).then(|| V::Obj(vec![("tipo", V::s("EI"))])),
+                    "source",
+                    (fam == Fam::Gc).then(|| V::Obj(vec![("type", V::s("EI"))])),
                 ),
                 (
-                    "periodi",
+                    "periods",
                     obj(vec![(
-                        "esperimenti",
+                        "experiments",
                         Some(V::Arr(experiments.into_iter().flatten().collect())),
                     )])
                     .map(|p| V::Arr(vec![p])),
@@ -369,7 +369,7 @@ pub(super) fn document(
             ]),
         ),
         (
-            "campi",
+            "fields",
             Some(V::Arr(
                 m.fields
                     .iter()
@@ -378,7 +378,7 @@ pub(super) fn document(
                     .collect(),
             )),
         ),
-        ("avvisi", Some(V::Arr(warnings.collect()))),
+        ("warnings", Some(V::Arr(warnings.collect()))),
     ]);
     doc.map_or_else(String::new, |d| d.json())
 }

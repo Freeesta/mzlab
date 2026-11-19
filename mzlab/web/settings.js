@@ -108,12 +108,12 @@ function uipReset(d) {
 // Administrator mode (5 clicks on the logo): the exit row shows only while it is on; 
 function uipAdminOn() { try { return localStorage.getItem(NOMI.KEY("admin")) === "1"; } catch (_) { return false; } }
 
-// Profile of the program, never a setting: «ricerca» (the assistant can be turned on) when the administrator mode is on or in the desktop app; else «demo» while UIP_DEMO is true (only the
-// Flow page offers «Try the assistant» of the public demo, fixed settings in llm/llm-demo.js; Theory, Practice and Data have no element of it), else «corso» (no element, nothing downloaded).
-// The old explicit choice `mzlab.profilo` ("corso"/"ricerca", a plain string) is dropped; the same key now also holds the JSON state of the time profile (profilo.js), which is left alone.
+// Profile of the program, never a setting: «research» (the assistant can be turned on) when the administrator mode is on or in the desktop app; else «demo» while UIP_DEMO is true (only the
+// Flow page offers «Try the assistant» of the public demo, fixed settings in llm/llm-demo.js; Theory, Practice and Data have no element of it), else «course» (no element, nothing downloaded).
+// A plain string left under `mzlab.profilo` by an old explicit profile choice is dropped; the key holds the JSON state of the time profile (profilo.js), which is left alone.
 const UIP_DEMO = true;      // D2: false switches the public demo of the assistant off for every visitor
-function uipProfile() { return uipAdminOn() || window.MZLAB_DESKTOP ? "ricerca" : UIP_DEMO ? "demo" : "corso"; }
-try { const v = localStorage.getItem(NOMI.KEY("profilo")); if (v === "corso" || v === "ricerca") localStorage.removeItem(NOMI.KEY("profilo")); } catch (_) { /* blocked */ }
+function uipProfile() { return uipAdminOn() || window.MZLAB_DESKTOP ? "research" : UIP_DEMO ? "demo" : "course"; }
+try { const v = localStorage.getItem(NOMI.KEY("profilo")); if (v && v[0] !== "{") localStorage.removeItem(NOMI.KEY("profilo")); } catch (_) { /* blocked */ }
 
 // known contaminants on HR spectra: off by default; on only if explicitly turned on (read from the same key as liste.js, which may not be loaded yet)
 function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminanti.on")) === "true"; } catch (_) { return false; } }
@@ -160,7 +160,7 @@ function uipOpen(btn) {
   d.innerHTML = `<div class="a-hd"><h2>${T("settings.title")}</h2><button type="button" class="x" id="uip-x" aria-label="${esc(T("settings.close"))}" title="${esc(T("settings.close.tip"))}"></button></div>`
     + list + flat("uip-g-data", "data", "settings.g.data", dataItems) + flat("uip-g-app", "app", "settings.g.app", appItems)
     + tour + C.bugRow(T("settings.g.bug"), T("settings.g.bug.tip")) + C.bugRow(T("settings.g.sug"), T("settings.g.sug.tip"), "sug")
-    + (prof === "ricerca" ? grp("uip-g-llm", "app", "llm.g", '<div id="uip-llm"></div>', false, "llm.g.tip") : "") + grp("uip-g-diag", "cont", "settings.g.diag", mem ? mem.html : "", false, "settings.g.diag.tip")
+    + (prof === "research" ? grp("uip-g-llm", "app", "llm.g", '<div id="uip-llm"></div>', false, "llm.g.tip") : "") + grp("uip-g-diag", "cont", "settings.g.diag", mem ? mem.html : "", false, "settings.g.diag.tip")
     + `<div class="row"><button type="button" id="uip-reset" title="${esc(T("settings.reset.title"))}">${T("settings.reset")}</button></div>`;
   document.body.appendChild(d);
   d.querySelectorAll("details.imp-g").forEach(g => g.addEventListener("toggle", () => { try { localStorage.setItem(UIP_GROUP_KEY(g.id), /** @type {HTMLDetailsElement} */ (g).open ? "1" : "0"); } catch (_) { /* not remembered */ } }));

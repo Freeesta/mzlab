@@ -98,7 +98,7 @@ fn a_nan_cps_is_never_written_and_its_cycle_is_counted() {
         o.stderr
     );
     let r = std::fs::read_to_string(&report).unwrap();
-    assert!(r.contains("\"unita\":\"cicli\""), "{r}");
+    assert!(r.contains("\"unit\":\"cycles\""), "{r}");
     let f = std::fs::File::open(dir.join("out/x-1.mzML")).unwrap();
     let size = f.metadata().unwrap().len();
     let mut m = mzlab_core::mzmlhead::Mzml::new(f, size);

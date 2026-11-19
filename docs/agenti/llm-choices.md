@@ -3,19 +3,19 @@ The basic rules of the assistant and of external agents that remain binding; the
 
 ## Principles
 - Explicit opt-in, per person: off by default on site and desktop; it is turned on in Settings with the consent window. No request to a provider before consent (an e2e counts the requests) and zero bytes downloaded by whoever does not turn it on; the caps of the existing `.wasm` files do not change.
-- Profile `corso`: the LLM does not exist (no button, no module, `contesto/1` rejected with `err.llm.profile.course` as defence in depth). Profile `ricerca`: it exists, off; at unit resolution an m/z is a candidate and the `hr` steps are not called. The profile is a teaching setting, not a security barrier.
+- Profile `course`: the LLM does not exist (no button, no module, `context/1` rejected with `err.llm.profile.course` as defence in depth). Profile `research`: it exists, off; at unit resolution an m/z is a candidate and the `hr` steps are not called. The profile is a teaching setting, not a security barrier.
 - Everything in Rust: requests, stream reading, agent loop, permissions, summaries, chart checking. JS only transport (fetch), interface and drawing. The `mzlab-llm` crate does no I/O: it builds `{url, headers without key, body}` and the transport adds the key.
-- Data: the LLM sees only summaries built by Rust (`contesto/1`, `ispezione/1`), never raw files, whole spectra or paths; what is sent is shown first ("What will be sent").
+- Data: the LLM sees only summaries built by Rust (`context/1`, `inspection/1`), never raw files, whole spectra or paths; what is sent is shown first ("What will be sent").
 - Never silent: every action on the plan or on the runs is shown, logged (`llmlog/1` and `llm` in `prov/1`) and can be undone; generated code is never run by itself. There are no tools that delete files, write outside the run folder, change privacy or profile, or open the network.
 
 ## Choices
 - Providers: adapters in Rust (`anthropic`, `openai_compat`, `gemini`) on top of a thin transport; no SDK in JS and no third-party gateway. A new compatible provider is one line of `fornitori-1.json`. The prices in the descriptor are displayed estimates, never billing: 0 = unknown, no invented number.
 - Site network: the CSP of `index.html` is not widened; providers live in the own CSP of `llm/trasporto.html`, an iframe created only after consent. The desktop uses native routes without changing the webview CSP. An arbitrary endpoint (university server) is valid only in the desktop.
 - Consent per provider and data class, revocable; a new class (for example images) requires it. Images are sent only with a `vision` model and a click on a chart (PNG of the chart, never a screenshot).
-- Catalogue: a few fixed meta-tools with arguments generated from the registry (`strumenti/1`), not one tool per step; a new step enters by itself and the coverage test proves that every step and parameter is reachable.
+- Catalogue: a few fixed meta-tools with arguments generated from the registry (`tools/1`), not one tool per step; a new step enters by itself and the coverage test proves that every step and parameter is reachable.
 - Charts only as a `grafico/1` specification validated in Rust and drawn by the page with its data table; the LLM never writes SVG, HTML or JS to insert in the page. Python code on the site: forbidden.
 - Tokens without a tokenizer: conservative estimate `ceil(byte/3)`. No local model in the `.wasm` or on the site: they run in a local server of the user.
-- External agents: no server, the agent calls `mzlab-cli` from the shell; `--json` changes neither exit codes, `--out` files nor bytes of `prov.json`/`corsa.json`; stdout carries a single JSON document, stderr stays for people (or JSONL with `--progress jsonl`). A Python or Node wrapper is rejected.
+- External agents: no server, the agent calls `mzlab-cli` from the shell; `--json` changes neither exit codes, `--out` files nor bytes of `prov.json`/`report.json`; stdout carries a single JSON document, stderr stays for people (or JSONL with `--progress jsonl`). A Python or Node wrapper is rejected.
 
 ## Risks to keep in mind
 - Provider CORS and local models from the site (`http://localhost` from an https page, Private Network Access, `OLLAMA_ORIGINS`): a provider that does not allow browser calls is `site_allowed: false`, desktop only.

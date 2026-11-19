@@ -1,5 +1,5 @@
-//! Facts of one file for `ispezione/1`: polarity, resolution class, acquisition type, ranges, MRM, gradient and estimates read from the engine
-//! answers (`Item.info()`, `metodo/1`, `features.estimate`) by whitelisted keys only. Used by `inspect`.
+//! Facts of one file for `inspection/1`: polarity, resolution class, acquisition type, ranges, MRM, gradient and estimates read from the engine
+//! answers (`Item.info()`, `method/1`, `features.estimate`) by whitelisted keys only. Used by `inspect`.
 
 use mzlab_core::json::Value;
 
@@ -145,7 +145,7 @@ pub(crate) fn mrm_section(src: &Value, items: &[Value]) -> Option<Value> {
 }
 
 pub(crate) fn gradient(method: &Value) -> Option<Value> {
-    let g = path(method, &["lc", "gradiente"])?.arr();
+    let g = path(method, &["lc", "gradient"])?.arr();
     let points: Vec<Value> = g
         .iter()
         .filter_map(|p| {
@@ -196,18 +196,18 @@ pub(crate) fn signals(src: &Value) -> Vec<[f64; 3]> {
 pub(crate) fn put_instrument(o: &mut Obj, method: &Value, items: &[Value]) {
     o.put(
         "format",
-        text(path(method, &["origine", "formato"])).map(Value::Str),
+        text(path(method, &["origin", "format"])).map(Value::Str),
     );
     o.put(
         "vendor",
-        text(path(method, &["strumento", "produttore"])).map(Value::Str),
+        text(path(method, &["instrument", "manufacturer"])).map(Value::Str),
     );
-    let model = text(path(method, &["strumento", "modello"]))
+    let model = text(path(method, &["instrument", "model"]))
         .or_else(|| items.iter().find_map(|i| text(i.get("instrument"))));
     o.put("model", model.map(Value::Str));
     o.put(
         "source",
-        text(path(method, &["ms", "sorgente", "tipo"])).map(Value::Str),
+        text(path(method, &["ms", "source", "type"])).map(Value::Str),
     );
 }
 

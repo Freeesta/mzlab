@@ -9,7 +9,7 @@ const CONV: &str = r#"{"schema":"llm-conv/1","provider":"anthropic","model":"cla
 fn tools() -> String {
     std::fs::read_to_string(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../docs/schemi/strumenti-1.json"
+        "/../../docs/schemi/tools-1.json"
     ))
     .unwrap()
 }
@@ -172,12 +172,12 @@ fn agent_in_the_course_profile_does_nothing() {
 
 #[test]
 fn context_is_built_from_the_sources_of_the_page() {
-    let c = context_build(r#"{"profile":"ricerca","plan":{"sha256":"x","instances":[{"id":"a","step":"features.detect@1"}],"problems":[]}}"#, 2000).unwrap();
+    let c = context_build(r#"{"profile":"research","plan":{"sha256":"x","instances":[{"id":"a","step":"features.detect@1"}],"problems":[]}}"#, 2000).unwrap();
     assert!(
-        c.starts_with("{\"schema\":\"contesto/1\"") && c.contains("features.detect@1"),
+        c.starts_with("{\"schema\":\"context/1\"") && c.contains("features.detect@1"),
         "{c}"
     );
-    assert!(context_build(r#"{"profile":"corso"}"#, 2000)
+    assert!(context_build(r#"{"profile":"course"}"#, 2000)
         .unwrap_err()
         .contains("err.llm.profile.course"));
 }
@@ -189,7 +189,7 @@ fn doc(path: &str) -> String {
 /// The roles and the prompts as the page hands them over.
 fn assist_files() -> (String, String) {
     let dir = "crates/mzlab-llm/data/assist";
-    let roles = doc(&format!("{dir}/assist-ruoli-1.json"));
+    let roles = doc(&format!("{dir}/assist-roles-1.json"));
     let pairs: Vec<String> =
         std::fs::read_dir(format!("{}/../../{dir}", env!("CARGO_MANIFEST_DIR")))
             .unwrap()
@@ -219,8 +219,8 @@ fn assist() -> Assist {
     .unwrap()
 }
 
-const INPUT: &str = r#"{"ispezione/1":{"files":[{"alias":"f1","polarity":"positive"}]}}"#;
-const GOOD: &str = r#"{"schema":"lettura/1","kind":"acquisition","findings":[{"id":"F1","topic":"polarity","statement":"f1 is positive","evidence":["ispezione.files.f1.polarity"],"confidence":"high","action":{"type":"none"}}]}"#;
+const INPUT: &str = r#"{"inspection/1":{"files":[{"alias":"f1","polarity":"positive"}]}}"#;
+const GOOD: &str = r#"{"schema":"reading/1","kind":"acquisition","findings":[{"id":"F1","topic":"polarity","statement":"f1 is positive","evidence":["inspection.files.f1.polarity"],"confidence":"high","action":{"type":"none"}}]}"#;
 
 #[test]
 fn assist_asks_a_role_and_gives_the_orchestrator_only_what_passed() {
@@ -234,7 +234,7 @@ fn assist_asks_a_role_and_gives_the_orchestrator_only_what_passed() {
         .contains("err.llm.assist.call"));
     let ok = a.check("metadati", INPUT, GOOD, 0).unwrap();
     assert!(
-        ok.starts_with("{\"verdict\":\"accepted\",\"summary\":{\"schema\":\"lettura/1\""),
+        ok.starts_with("{\"verdict\":\"accepted\",\"summary\":{\"schema\":\"reading/1\""),
         "{ok}"
     );
     let bad = GOOD.replace("f1 is positive", "f1 is positive at 14.3 min");
@@ -309,7 +309,7 @@ fn repo(rel: &str) -> String {
 #[test]
 fn the_demo_body_of_the_site_is_the_one_the_app_sends() {
     // the digest of tests/data/llm/demo/body.sha256 is the app's (crates/mzlab-desktop/src/llm_tests.rs)
-    let l = Llm::new(&repo("docs/schemi/strumenti-demo-1.json")).unwrap();
+    let l = Llm::new(&repo("docs/schemi/tools-demo-1.json")).unwrap();
     let r = l.build(&repo("tests/data/llm/demo/conv.json")).unwrap();
     let sha = mzlab_core::budget::sha256_hex(r.body.as_bytes());
     assert_eq!(repo("tests/data/llm/demo/body.sha256").trim(), sha);
