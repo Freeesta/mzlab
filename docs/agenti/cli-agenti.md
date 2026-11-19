@@ -39,7 +39,7 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 ## Commands with and without `--json`
 - With a `--json` flag: `flow run`, `flow check`, `flow steps`, `file validate`, `dad` (all its answers are JSON; `--json` adds `error/1`), `sample select` (`--sample LIST` or `--default [--budget-mb N]`; `{"samples":[ids]}` or `error/1`; exit 0, 2 usage, 4 missing file, 5 unknown id), `sample list` (`samples_list/1`, one line per file; exit 0 ok, 1 some file or sample refused or, with `--probe`, a `.wiff.scan` shorter than its index, 2 usage, 4 missing or unreadable input; stdout holds the data, `listing FILE` progress and warnings go to stderr).
 - `file inventory [--full] FILE...` (`wiff.list/1`; exit 0 all samples `ok`, 2 usage, 4 unreadable input, 3 a sample not `ok`) and `file verify OUT --against SRC...` (`wiff.verify/1`; exit 0 equal, 1 a difference or a sample not `ok`, 2 usage, 4 unreadable input): read-only, always JSON, data on stdout (`docs/agenti/wiff-writer.md`).
-- No JSON form: `features` (CSV), `convert`, `normative`, `insilico pack`, `explain-missing`, `flow command` and `mol export` (a script or a file): `--json` fails with `err.cli.json.unsupported` (exit 2, one `error/1`), never "unknown option". The other commands print JSON (or take `--json`); for them `--json` changes nothing except that a failure is an `error/1` too.
+- No JSON form: `features` (CSV), `convert`, `normative`, `insilico pack` and `mol export` (a script or a file): `--json` fails with `err.cli.json.unsupported` (exit 2, one `error/1`), never "unknown option". The other commands print JSON (or take `--json`); for them `--json` changes nothing except that a failure is an `error/1` too.
 - `mzlab-cli --help` starts with "Start here" (`flow steps --json`, `flow check PLAN.json --json`, `flow run`, `COMMAND --help`), the contract for scripts and the exit codes; `features --help` is the help of `features` alone.
 - On a failure after a command printed a document (a `flowrun/1` report, a `flowcheck/1`, a `verify/1`), `error/1` carries it as `report`: stdout is one JSON document either way. Every non-zero exit is one `error/1`, except the verdicts below.
 - Verdict commands, by command path in `VERDICT` (`crates/mzlab-cli/src/contract.rs`): `file validate`, `file pair`, `file inventory`, `file verify`, `sample list` and `db ref-list` (some rows wrong: the good rows are in `items`, the bad ones in `errors`). Their exit 1 or 3 is the answer the site computes byte for byte, so the document stays on stdout with its own verdict (`ok`, `valid`, `probe`, `errors`); `sample select` is not a verdict, and exit 2, 4, 5 and 6 of these are an `error/1` too.
@@ -50,6 +50,11 @@ How an agent (Claude Code, Cowork or any other) should drive `mzlab-cli` from a 
 - `db ref-list FILE.csv` (JSON `reflist/1`: items and line-numbered row errors; exit 1 = some rows wrong, 2 usage, 4 unreadable file; `--match X` adds `mz-match/1`): `reference-lists.md`.
 
 - `peak auto` and `peak auto-lr`: areas in counts x s; `--set area_unit=s|min` (`min` = the old counts x min).
+
+## Flow and llm commands
+- `flow report RUNDIR` (`run-report/1`; exit 4 no folder or `prov.json`, 6 `--out` unwritable), `flow command PLAN.json --json` (`flowcommand/1`, the script in `script`) and `explain-missing ... --json` (`explain-missing/1`, `columns` and `rows`) follow the contract.
+- `llm inspect FILE|DIR...` indexes the files in parallel (a folder gives its mzML by name, files keep the order given; same bytes for any number of workers). `llm params --inspection FILE|-` reuses an inspection (no indexing, its budget and `--hide-names` are the ones it was made with), so `llm inspect A B | llm params --inspection -` equals `llm params A B`; each proposal carries its rule, signals and confidence.
+- `llm replay` (`replay/1`) and `llm eval` (`evalrun/1`, a verdict command: exit 1 keeps the document on stdout) are one JSON document each.
 
 ## Rules for the agent
 - The CLI uses no network (except `normative build` and `insilico pack`, which say so) and reads/writes only the paths it is given; never delete user files.
