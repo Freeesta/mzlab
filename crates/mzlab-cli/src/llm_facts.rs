@@ -46,15 +46,25 @@ fn files_of(dir: &Path) -> Result<Vec<PathBuf>, String> {
 }
 
 /// The files the arguments name: a folder gives its mzML files sorted by name, a file stays where it was given (the order of the series is the user's).
-pub(crate) fn inputs(args: &[String]) -> Result<Vec<PathBuf>, String> {
-    let mut v = Vec::new();
+/// A file named twice (also through a folder) is refused: it would shift the injection order of the others.
+pub(crate) fn inputs(args: &[String]) -> Result<Vec<PathBuf>, Outcome> {
+    let mut v: Vec<PathBuf> = Vec::new();
     for a in args {
         let p = Path::new(a);
         if p.is_dir() {
-            v.extend(files_of(p)?);
+            v.extend(files_of(p).map_err(|e| Outcome::fail(&e))?);
         } else {
-            std::fs::metadata(p).map_err(|e| format!("{a}: {e}"))?;
+            std::fs::metadata(p).map_err(|e| Outcome::fail(&format!("{a}: {e}")))?;
             v.push(p.to_path_buf());
+        }
+    }
+    let key = |p: &PathBuf| std::fs::canonicalize(p).unwrap_or_else(|_| p.clone());
+    let mut seen = std::collections::BTreeSet::new();
+    for p in &v {
+        if !seen.insert(key(p)) {
+            return Err(Outcome::fail_error(
+                &mzlab_core::error::Error::new("err.llm.inputs.twice").with("path", p.display()),
+            ));
         }
     }
     Ok(v)
@@ -217,26 +227,22 @@ pub(crate) fn inspect(args: Vec<String>) -> Outcome {
     if o.inspection.is_some() || o.answers.is_some() {
         return Outcome::fail(USAGE);
     }
-    let go = || -> Result<String, String> {
+    let go = || -> Result<String, Outcome> {
         let files = inputs(&o.inputs)?;
         inspection(&files, o.hide.unwrap_or(false), o.budget.unwrap_or(BUDGET))
+            .map_err(|e| Outcome::fail(&e))
     };
-    go().map_or_else(
-        |e| Outcome::fail(&e),
-        |t| Outcome::ok((t + "\n").into_bytes()),
-    )
+    go().map_or_else(|e| e, |t| Outcome::ok((t + "\n").into_bytes()))
 }
 
-/// The inspection a file or standard input (`-`) holds.
-fn read_inspection(from: &str) -> Result<String, String> {
-    let bytes = if from == "-" {
-        let mut b = Vec::new();
-        std::io::Read::read_to_end(&mut std::io::stdin(), &mut b).map_err(|e| format!("-: {e}"))?;
-        b
-    } else {
-        std::fs::read(from).map_err(|e| format!("{from}: {e}"))?
+/// The inspection in `bytes` (read from `from`, a path or `-`): it must be an `inspection/1`.
+fn checked_inspection(bytes: Vec<u8>, from: &str) -> Result<String, Outcome> {
+    let invalid = || {
+        Outcome::fail_error(
+            &mzlab_core::error::Error::new("err.llm.inspection.invalid").with("from", from),
+        )
     };
-    let text = String::from_utf8(bytes).map_err(|_| format!("{from}: not UTF-8 text"))?;
+    let text = String::from_utf8(bytes).map_err(|_| invalid())?;
     let ok = parse(text.as_bytes())
         .ok()
         .and_then(|v| {
@@ -248,44 +254,61 @@ fn read_inspection(from: &str) -> Result<String, String> {
     if ok {
         Ok(text)
     } else {
-        Err(format!(
-            "{from}: not an inspection/1 document (the output of llm inspect)"
-        ))
+        Err(invalid())
     }
+}
+
+/// The inspection a file holds, or the bytes of the reader that stands for standard input (`-`).
+pub(crate) fn read_inspection_from(
+    from: &str,
+    stdin: &mut dyn std::io::Read,
+) -> Result<String, Outcome> {
+    let mut b = Vec::new();
+    if from == "-" {
+        stdin
+            .read_to_end(&mut b)
+            .map_err(|e| Outcome::fail(&format!("-: {e}")))?;
+    } else {
+        b = std::fs::read(from).map_err(|e| Outcome::fail(&format!("{from}: {e}")))?;
+    }
+    checked_inspection(b, from)
 }
 
 /// `llm params FILE|DIR... [--answers FILE] [--budget N] [--hide-names]` or `llm params --inspection FILE|- [--answers FILE]`: the rules on the
 /// inspection of the same files, or on one already made (no second indexing; its budget and hidden names are the ones it was made with).
 pub(crate) fn params(args: Vec<String>) -> Outcome {
+    params_with(args, &mut std::io::stdin())
+}
+
+/// `params` with the reader that stands for standard input given (`--inspection -`).
+pub(crate) fn params_with(args: Vec<String>, stdin: &mut dyn std::io::Read) -> Outcome {
     const USAGE: &str = "usage: mzlab-cli llm params FILE|DIR... [--answers FILE] [--budget N] [--hide-names] | --inspection FILE|- [--answers FILE]";
     let o = match opts(args, USAGE) {
         Ok(o) => o,
         Err(e) => return e,
     };
     if o.inspection.is_some() && (o.budget.is_some() || o.hide.is_some()) {
-        return Outcome::fail(
-            "--budget and --hide-names belong to the inspection: give them to llm inspect",
-        );
+        return Outcome::fail_error(&mzlab_core::error::Error::new("err.llm.inspection.settled"));
     }
-    let go = || -> Result<String, String> {
+    let mut go = || -> Result<String, Outcome> {
         let insp = match &o.inspection {
-            Some(from) => read_inspection(from)?,
+            Some(from) => read_inspection_from(from, stdin)?,
             None => inspection(
                 &inputs(&o.inputs)?,
                 o.hide.unwrap_or(false),
                 o.budget.unwrap_or(BUDGET),
-            )?,
+            )
+            .map_err(|e| Outcome::fail(&e))?,
         };
         let answers = match &o.answers {
-            Some(p) => parse(&std::fs::read(p).map_err(|e| format!("{p}: {e}"))?)
-                .map_err(|e| e.to_string())?,
+            Some(p) => std::fs::read(p)
+                .map_err(|e| format!("{p}: {e}"))
+                .and_then(|b| parse(&b).map_err(|e| e.to_string()))
+                .map_err(|e| Outcome::fail(&e))?,
             None => Value::Null,
         };
-        let insp = parse(insp.as_bytes()).map_err(|e| e.to_string())?;
-        propose(&insp, &answers, &steps()).map_err(|e| e.to_string())
+        let insp = parse(insp.as_bytes()).map_err(|e| Outcome::fail(&e.to_string()))?;
+        propose(&insp, &answers, &steps()).map_err(|e| Outcome::fail(&e.to_string()))
     };
-    go().map_or_else(
-        |e| Outcome::fail(&e),
-        |t| Outcome::ok((t + "\n").into_bytes()),
-    )
+    go().map_or_else(|e| e, |t| Outcome::ok((t + "\n").into_bytes()))
 }

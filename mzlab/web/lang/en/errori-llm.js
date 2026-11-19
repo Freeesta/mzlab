@@ -26,5 +26,8 @@ I18N.add("en", {
   "err.llm.consent": "The consent for this provider is gone or the assistant is switched off: nothing was sent.",
   "err.llm.key.missing": "The provider's key is missing: set it in the settings. Nothing was sent.",
   "err.llm.module": "The assistant module did not load: reload the page and try again.",
-  "err.llm.assist.call": "The assistant request is incomplete: “{field}” is missing."
+  "err.llm.assist.call": "The assistant request is incomplete: “{field}” is missing.",
+  "err.llm.inspection.invalid": "{from} is not an inspection/1 document: pass the output of llm inspect.",
+  "err.llm.inspection.settled": "The budget and the hidden names are part of the inspection: give them to llm inspect, not to llm params.",
+  "err.llm.inputs.twice": "The file {path} was given more than once (also inside a named folder): list each file once."
 });

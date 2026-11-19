@@ -5,10 +5,24 @@
  "description": "Format «param-proposal/1» (crates/mzlab-llm/src/params_rules.rs, docs/agenti/llm.md): one proposal per parameter with the rule `R-*` of docs/studi/assistente-dati/03-parametri.md §5, the signals it used, the confidence, whether the value is inside the limits of the step/1 (`range_ok`) and where the proof is; a signal that is absent is a question in `missing`, never an invented value. The same input gives the same bytes.",
  "type": "object",
  "additionalProperties": false,
- "required": ["schema", "series", "proposals", "missing", "warnings"],
+ "required": ["schema", "series", "choices", "proposals", "missing", "warnings"],
  "properties": {
   "schema": {"const": "param-proposal/1"},
   "series": {"type": "string"},
+  "choices": {
+   "type": "array",
+   "description": "the automatic choices behind the proposals (the file the rules read, its resolution class, whether answers were given), each with its reason",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["key", "value", "reason"],
+    "properties": {
+     "key": {"type": "string"},
+     "value": {"type": ["string", "boolean", "null"]},
+     "reason": {"type": "string", "minLength": 1}
+    }
+   }
+  },
   "proposals": {
    "type": "array",
    "items": {

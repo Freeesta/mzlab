@@ -88,3 +88,26 @@ fn the_report_and_command_follow_the_contract() {
     assert_eq!(v["script"], text.as_str());
     std::fs::remove_dir_all(dir).ok();
 }
+
+/// A successful report is one document with exactly one trailing newline, on stdout and in the `--out` file.
+#[test]
+fn a_report_ends_with_exactly_one_newline() {
+    let dir = crate::flow_ident_tests::fixture("onenl");
+    let _ = report(&dir);
+    let w = dir.join("work");
+    let w = w.to_str().unwrap();
+    let run = |a: &[&str]| crate::execute(&a.iter().map(|s| s.to_string()).collect::<Vec<_>>());
+    let o = run(&["flow", "report", w]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let t = String::from_utf8(o.stdout).unwrap();
+    assert!(t.starts_with("{\"schema\":\"run-report/1\""), "{t}");
+    assert!(t.ends_with('\n') && !t.ends_with("\n\n"));
+    let file = dir.join("r.json");
+    let o = run(&["flow", "report", w, "--out", file.to_str().unwrap()]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert!(o.stdout.is_empty());
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), t);
+    let bad = run(&["flow", "report", w, "--out", "/nonexistent/dir/r.json"]);
+    assert_eq!(bad.code, 6, "{}", bad.stderr);
+    let _ = std::fs::remove_dir_all(&dir);
+}

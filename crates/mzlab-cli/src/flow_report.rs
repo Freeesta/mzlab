@@ -58,7 +58,13 @@ pub fn run(args: Vec<String>) -> Outcome {
         return Outcome::fail("usage: mzlab-cli flow report RUNDIR [--out FILE]");
     };
     match report(Path::new(&dir)) {
-        Ok(text) => crate::emit(text + "\n", &out),
+        Ok(mut text) => {
+            // one trailing newline, whether or not the document already ends with one
+            if !text.ends_with('\n') {
+                text.push('\n');
+            }
+            crate::emit(text, &out)
+        }
         Err(e) => Outcome::fail_error(&e),
     }
 }

@@ -66,3 +66,38 @@ fn a_family_member_is_absorbed_not_missing() {
     assert_eq!(l[1][12], "no_row_mz");
     assert_eq!(l[1][28..], ["", "", ""]);
 }
+
+/// `--json` is the CSV as one document: the same cells, and an id with spaces and quotes kept whole.
+#[test]
+fn json_is_the_csv_as_one_document() {
+    let e = read_expected("id,mz,rt\n\"p 1\",300.0005,5.1\nb,400.0,5.0\n");
+    let csv = report(&table(), &e, 5.0, 0.3);
+    let text = json_of(&csv);
+    assert!(
+        text.starts_with("{\"schema\":\"explain-missing/1\",\"columns\":[\"id\",\"mz\""),
+        "{text}"
+    );
+    assert!(text.ends_with("}\n") && !text.ends_with("\n\n"));
+    let v: serde_json::Value = serde_json::from_str(&text).unwrap();
+    let want: Vec<Vec<&str>> = csv
+        .lines()
+        .skip(1)
+        .map(|l| l.split(',').collect())
+        .collect();
+    let rows = v["rows"].as_array().unwrap();
+    assert_eq!(rows.len(), want.len());
+    for (got, want) in rows.iter().zip(&want) {
+        let got: Vec<&str> = got
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| c.as_str().unwrap())
+            .collect();
+        assert_eq!(&got, want);
+    }
+    assert_eq!(rows[0][0], "\"p 1\"");
+    assert_eq!(
+        v["columns"].as_array().unwrap().len(),
+        rows[0].as_array().unwrap().len()
+    );
+}
