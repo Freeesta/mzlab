@@ -338,6 +338,8 @@ jobs:
       - id: mtime
         name: Reuse the compiled crates of the cache
         if: steps.solo.outputs.solo != 'true'
+        env:
+          MZLAB_CACHE_JOB: browser   # the record of the cache names the job that saved it; the job was called `browser` before it was split in shards
         run: python3 tools/ci_cargo_mtime.py restore
       - name: Install
         if: steps.solo.outputs.kind != 'doc'
@@ -366,6 +368,8 @@ jobs:
       # incremental data only bloats the cache; the record vouches for the sources of the crates this run compiled, so the next run reuses them
       - name: Record the tree of the cache
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && github.ref == 'refs/heads/main' && matrix.parte == 1 && steps.rcache.outputs.cache-hit != 'true' }}
+        env:
+          MZLAB_CACHE_JOB: browser   # same name as the restore step and as e2e-cambiati, which restores this cache
         run: |
           find target -maxdepth 4 -type d -name incremental -prune -exec rm -rf {} + || true
           python3 tools/ci_cargo_mtime.py record
