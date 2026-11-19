@@ -29,9 +29,9 @@ pub(crate) static TABLE: &[Entry] = &[
     Entry::new("db insilico pack", "mzlab-cli db insilico pack CSV OUT   the spectra.insilico candidate package (native only)", insilico),
     Entry::new("db ref-list", "mzlab-cli db ref-list FILE.csv [--name N] [--match X]   read a CSV list of reference ions as JSON (reflist/1) with line-numbered row errors; exit 1 if rows are wrong", crate::plain::ref_list_cmd::run).schema("reflist/1"),
     Entry::new("llm tools", "mzlab-cli llm tools [--out FILE] [--demo] [--compact]   the catalog tools/1 of the assistant tools", |a| crate::llm::run(pre("tools", a))).examples(&["mzlab-cli llm tools --compact"]).schema("tools/1"),
-    Entry::new("llm inspect", "mzlab-cli llm inspect FILE|DIR... [--budget N] [--hide-names]   the inspection/1 of mzML files, indexed in parallel", |a| crate::llm::run(pre("inspect", a))).schema("inspection/1").exits(&[0, 2, 4]),
-    Entry::new("llm params", "mzlab-cli llm params [FILE|DIR...] [--inspection FILE|-] [--answers FILE] [--budget N] [--hide-names]   the param-proposal/1 of the rules; --inspection reuses an inspection", |a| crate::llm::run(pre("params", a))).schema("param-proposal/1").exits(&[0, 2, 4]),
+    Entry::new("llm inspect", "mzlab-cli llm inspect FILE|DIR... [--budget N] [--hide-names]   the inspection/1 of mzML files", |a| crate::llm::run(pre("inspect", a))).schema("inspection/1").exits(&[0, 2, 4]),
+    Entry::new("llm params", "mzlab-cli llm params [FILE|DIR...] [--inspection FILE|-] [--answers FILE] [--budget N] [--hide-names]   the param-proposal/1 of the rules", |a| crate::llm::run(pre("params", a))).schema("param-proposal/1").exits(&[0, 2, 4]),
     Entry::new("llm context", "mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the context/1 of a run folder", |a| crate::llm::run(pre("context", a))).schema("context/1").exits(&[0, 2, 4]),
-    Entry::new("llm replay", "mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   the events a recording gives for a conversation", |a| crate::llm::run(pre("replay", a))).schema("replay/1").exits(&[0, 1, 2, 3, 4]),
-    Entry::new("llm eval", "mzlab-cli llm eval CASES_DIR --replay DIR   score the cases (exit 1 if one fails)", |a| crate::llm::run(pre("eval", a))).schema("evalrun/1").exits(&[0, 1, 2, 3, 4]),
+    Entry::new("llm replay", "mzlab-cli llm replay REG.jsonl --conv CONV.json [--turn N] [--strict]   events a recording gives", |a| crate::llm::run(pre("replay", a))).schema("replay/1").exits(&[0, 1, 2, 3, 4]),
+    Entry::new("llm eval", "mzlab-cli llm eval CASES_DIR --replay DIR   score the cases", |a| crate::llm::run(pre("eval", a))).schema("evalrun/1").exits(&[0, 1, 2, 3, 4]),
 ];
