@@ -244,6 +244,7 @@ I18N.add("en", {
   "lst.th.source": "Source",
   "lst.userDelete": "Delete this list",
   "lst.loadingLists": "Loading the lists…",
+  "lst.lookupFailed": "The lookup failed: {why}",
   "lst.member": "Number of repeat units (monomers) in the polymer chain",
   "lst.unitName.one": "{name}, 1 repeat unit",
   "lst.unitName.many": "{name}, {n} repeat units",

@@ -232,5 +232,7 @@ fn item<'a>(line: usize, get: impl Fn(usize) -> &'a str) -> std::result::Result<
         .done())
 }
 
+pub mod lookup;
+
 #[cfg(test)]
 mod tests;

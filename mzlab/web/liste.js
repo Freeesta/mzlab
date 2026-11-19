@@ -65,6 +65,24 @@ const LISTE = (() => {
     for (const a of idx ? arrays(idx, pol) : []) for (let i = lower(a, mz - t); i < a.length && a[i].mz <= mz + t; i++) if (a[i].list === listId) return true;
     return false;
   }
+  // The table of the panel asks Rust (reflist-match/1, `api/reflist_match`): the active ions go as three columns (m/z, polarity, one group per
+  // distinct list:id:adduct:mz), the answer is positions in that list. Same entries and order as find(), which the synchronous hover and menu callers keep.
+  const flatCache = new WeakMap();
+  const flatOf = (/** @type {Bag} */ idx) => {
+    let f = flatCache.get(idx);
+    if (!f) {
+      const items = [...new Set([...idx.pos, ...idx.neg])], groups = new Map();
+      f = { items, cols: { mz: items.map(i => i.mz), pol: items.map(i => i.pol ?? 0), group: items.map(i => { const k = i.list + ":" + i.id + ":" + i.adduct + ":" + i.mz; return groups.get(k) ?? (groups.set(k, groups.size), groups.size - 1); }) } };
+      flatCache.set(idx, f);
+    }
+    return f;
+  };
+  async function lookup(/** @type {Bag} */ idx, /** @type {number} */ mz, /** @type {boolean} */ byDa, /** @type {number} */ tol) {
+    const f = flatOf(idx), r = await fetch("api/reflist_match", { method: "POST", body: JSON.stringify({ mz, unit: byDa ? "da" : "ppm", tol, items: f.cols }) });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || r.statusText);
+    return j.hits.map((/** @type {Bag} */ h) => ({ ...f.items[h.i], diffDa: h.diff, err: h.err }));
+  }
   // Nominal search at unit resolution (default ±0.5 Da, ordered by proximity |Δ m/z|)
   function findNominal(/** @type {Bag} */ idx, /** @type {string | number | null | undefined} */ pol, /** @type {number} */ mz, tolDaVal = 0.5) {
     return find(idx, pol, mz, tolDaVal, true);
@@ -671,7 +689,9 @@ const LISTE = (() => {
     elAdd.ondragleave = () => { elAdd.style.background = ""; };
     elAdd.ondrop = (/** @type {DragEvent} */ e) => { e.preventDefault(); elAdd.style.background = ""; const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) addFile(f, elAddErr, redrawAll_); };
 
-    function render() {
+    let renderSeq = 0;
+    async function render() {
+      const mine = ++renderSeq;
       container.classList.toggle("lst-onelist", ST.lists.length + ST.userLists.length < 2);
       const idx = ST.idx;
       if (!idx) {
@@ -689,7 +709,8 @@ const LISTE = (() => {
 
       /** @type {Bag[]} */ let items = [];
       if (hasMz) {
-        items = byDa ? findNominal(idx, 0, qMz, tolVal) : find(idx, 0, qMz, tolVal, false);
+        try { items = await lookup(idx, qMz, byDa, tolVal); } catch (e) { if (mine === renderSeq) elCount.textContent = I18N.t("lst.lookupFailed", { why: String(/** @type {Error} */ (e).message || e) }); return; }
+        if (mine !== renderSeq) return;       // a newer render started while Rust answered
       } else {
         // Collect all items from active lists for browsing
         const act = activeMap();
